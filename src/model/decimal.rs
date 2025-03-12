@@ -250,7 +250,7 @@ pub fn decimal_to_f64(value: Decimal) -> Result<f64, DecimalError> {
 ///
 /// This function attempts to convert an f64 floating-point number to a Decimal value.
 /// If the conversion fails (for example, if the f64 represents NaN, infinity, or is otherwise
-/// not representable as a Decimal), it returns a DecimalError with detailed information about 
+/// not representable as a Decimal), it returns a DecimalError with detailed information about
 /// the failure.
 ///
 /// # Parameters

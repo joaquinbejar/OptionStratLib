@@ -95,7 +95,6 @@
 //! info!("Debug View: {:?}", option);
 //! ```
 
-
 /// Core utilities for handling decimal numbers in financial calculations.
 pub mod decimal;
 

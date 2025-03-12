@@ -255,7 +255,7 @@ pub struct BasicMetrics {
 ///
 /// # Overview
 /// The `ShapeMetrics` structure encapsulates shape-related properties and critical
-/// points describing a curve's geometrical behavior. It's primarily used for 
+/// points describing a curve's geometrical behavior. It's primarily used for
 /// mathematical and statistical analysis of curves representing data distributions
 /// or mathematical functions.
 ///
@@ -354,11 +354,11 @@ pub struct RangeMetrics {
     /// The maximum point in the dataset, containing the largest x and y coordinates observed.
     pub max: Point2D,
 
-    /// The numerical difference between the maximum and minimum values, 
+    /// The numerical difference between the maximum and minimum values,
     /// representing the total span of the data.
     pub range: Decimal,
 
-    /// A tuple of three values representing the first quartile (Q1), 
+    /// A tuple of three values representing the first quartile (Q1),
     /// median (Q2), and third quartile (Q3) of the dataset.
     pub quartiles: (Decimal, Decimal, Decimal),
 

@@ -10,7 +10,7 @@ use crate::geometrics::{BasicMetrics, ShapeMetrics};
 /// # Overview
 /// The `AnalysisResult` structure encapsulates both basic statistical metrics and
 /// shape-related characteristics of a dataset or curve. It serves as a complete analysis
-/// output that can be used to understand both the statistical properties and the 
+/// output that can be used to understand both the statistical properties and the
 /// geometrical behavior of the data.
 ///
 /// This structure is particularly useful for comprehensive data analysis in financial modeling,
@@ -61,9 +61,9 @@ pub struct AnalysisResult {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::curves::Point2D;
     use crate::geometrics::analysis::metrics::{BasicMetrics, ShapeMetrics};
     use rust_decimal_macros::dec;
-    use crate::curves::Point2D;
 
     /// Creates a sample BasicMetrics for testing
     fn create_sample_basic_metrics() -> BasicMetrics {
@@ -80,9 +80,15 @@ mod tests {
         ShapeMetrics {
             skewness: dec!(0.25),
             kurtosis: dec!(3.2),
-            peaks: vec![Point2D::new(dec!(1.0), dec!(10.0)), Point2D::new(dec!(5.0), dec!(15.0))],
+            peaks: vec![
+                Point2D::new(dec!(1.0), dec!(10.0)),
+                Point2D::new(dec!(5.0), dec!(15.0)),
+            ],
             valleys: vec![Point2D::new(dec!(3.0), dec!(5.0))],
-            inflection_points: vec![Point2D::new(dec!(2.0), dec!(7.5)), Point2D::new(dec!(4.0), dec!(12.0))],
+            inflection_points: vec![
+                Point2D::new(dec!(2.0), dec!(7.5)),
+                Point2D::new(dec!(4.0), dec!(12.0)),
+            ],
         }
     }
 
