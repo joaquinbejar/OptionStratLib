@@ -6,29 +6,85 @@
 use crate::chains::chain::OptionData;
 use std::fmt::{Display, Formatter, Result};
 
+/// Represents the various configurations of option strategy legs with different complexities.
+///
+/// This enum provides structured representations for common option strategies that can consist
+/// of two, three, four, or six legs. Each variant holds references to the corresponding `OptionData`
+/// objects that make up the strategy. This allows for organized storage and manipulation of
+/// multi-leg option strategies with varying complexity.
+///
+/// # Variants
+///
+/// * `TwoLegs` - Represents option strategies with two legs, such as vertical spreads,
+///   straddles, or strangles.
+///
+/// * `ThreeLegs` - Represents option strategies with three legs, such as butterflies
+///   or some ratio spreads.
+///
+/// * `FourLegs` - Represents option strategies with four legs, such as iron condors,
+///   iron butterflies, or double calendars.
+///
+/// * `SixLegs` - Represents more complex option strategies with six legs, such as
+///   double butterflies or advanced combinations of simpler strategies.
+///
+/// # Usage
+///
+/// This enum is typically used when implementing option strategy analysis, pricing models,
+/// or visualizations where the number and configuration of legs determine the calculation
+/// approach.
 #[derive(Debug, Clone)]
 pub enum StrategyLegs<'a> {
+    /// Two-legged option strategy configuration
+    ///
+    /// Common examples include vertical spreads (bull/bear spreads), straddles, and strangles.
     TwoLegs {
+        /// First option contract in the strategy
         first: &'a OptionData,
+        /// Second option contract in the strategy
         second: &'a OptionData,
     },
+
+    /// Three-legged option strategy configuration
+    ///
+    /// Common examples include butterfly spreads and some ratio spreads.
     ThreeLegs {
+        /// First option contract in the strategy
         first: &'a OptionData,
+        /// Second option contract in the strategy
         second: &'a OptionData,
+        /// Third option contract in the strategy
         third: &'a OptionData,
     },
+
+    /// Four-legged option strategy configuration
+    ///
+    /// Common examples include iron condors, iron butterflies, and condor spreads.
     FourLegs {
+        /// First option contract in the strategy
         first: &'a OptionData,
+        /// Second option contract in the strategy
         second: &'a OptionData,
+        /// Third option contract in the strategy
         third: &'a OptionData,
+        /// Fourth option contract in the strategy
         fourth: &'a OptionData,
     },
+
+    /// Six-legged option strategy configuration
+    ///
+    /// Used for complex strategies like double butterflies or combinations of simpler strategies.
     SixLegs {
+        /// First option contract in the strategy
         first: &'a OptionData,
+        /// Second option contract in the strategy
         second: &'a OptionData,
+        /// Third option contract in the strategy
         third: &'a OptionData,
+        /// Fourth option contract in the strategy
         fourth: &'a OptionData,
+        /// Fifth option contract in the strategy
         fifth: &'a OptionData,
+        /// Sixth option contract in the strategy
         sixth: &'a OptionData,
     },
 }
