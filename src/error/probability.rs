@@ -153,7 +153,7 @@ pub enum ProbabilityError {
 /// # Variants
 ///
 /// * `InvalidProbability` - Represents errors where a probability value falls outside
-///   the valid range [0,1] or otherwise violates mathematical constraints of probability theory.
+///   the valid range \[0,1\] or otherwise violates mathematical constraints of probability theory.
 ///
 /// * `ExpectedValueError` - Represents errors in the calculation of expected values,
 ///   such as invalid inputs, numerical overflow/underflow, or unsupported distributions.
@@ -175,7 +175,7 @@ pub enum ProbabilityCalculationErrorKind {
     /// Error indicating an invalid probability value
     ///
     /// This variant is used when a probability calculation produces a result that
-    /// violates fundamental probability constraints (e.g., not in range [0,1])
+    /// violates fundamental probability constraints (e.g., not in range \[0,1\])
     /// or other mathematical properties required for valid statistical analysis.
     InvalidProbability {
         /// The problematic probability value that caused the error
