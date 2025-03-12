@@ -58,6 +58,60 @@ impl ProfitLossRange {
         })
     }
 
+    /// Calculates the probability of an asset's price falling within a specified range at expiration.
+    ///
+    /// This method computes the probability that the underlying asset's price will be between the 
+    /// lower and upper bounds of a price range at the expiration date, based on various market factors
+    /// and statistical models.
+    ///
+    /// # Parameters
+    ///
+    /// * `current_price` - The current market price of the underlying asset.
+    /// * `volatility_adj` - Optional adjustment for volatility parameters, including base volatility and
+    ///   standard deviation adjustments. If None, default volatility settings will be used.
+    /// * `trend` - Optional price trend parameters, including drift rate and confidence level. 
+    ///   If None, no trend assumption will be applied.
+    /// * `expiration_date` - The date when the probability calculation applies, specified either as
+    ///   days to expiration or an absolute datetime.
+    /// * `risk_free_rate` - Optional risk-free interest rate used in probability calculations.
+    ///   If None, a default value will be used.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<(), ProbabilityError>` - Returns Ok(()) if the calculation was successful, 
+    ///   updating the internal probability field. Returns Err with a ProbabilityError if the 
+    ///   calculation failed, such as due to invalid price ranges.
+    ///
+    /// # Errors
+    ///
+    /// This function can return the following errors:
+    /// * `ProbabilityError::PriceError` - If the lower bound exceeds the upper bound.
+    /// * Other errors may be propagated from the underlying `calculate_single_point_probability` function.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rust_decimal_macros::dec;
+    /// use optionstratlib::model::ProfitLossRange;
+    /// use optionstratlib::{pos, spos, ExpirationDate, Positive};
+    /// use optionstratlib::strategies::probabilities::VolatilityAdjustment;
+    /// let mut range = ProfitLossRange {
+    ///     lower_bound: spos!(50.0),
+    ///     upper_bound: spos!(60.0),
+    ///     probability: Positive::ZERO,
+    /// };
+    ///
+    /// let result = range.calculate_probability(
+    ///     pos!(55.0),
+    ///     Some(VolatilityAdjustment { 
+    ///         base_volatility: pos!(0.2), 
+    ///         std_dev_adjustment: pos!(1.0) 
+    ///     }),
+    ///     None,
+    ///     ExpirationDate::Days(pos!(30.0)),
+    ///     Some(dec!(0.03)),
+    /// );
+    /// ```
     pub fn calculate_probability(
         &mut self,
         current_price: Positive,
