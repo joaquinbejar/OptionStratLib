@@ -77,52 +77,182 @@ impl Error for PriceErrorKind {}
 impl Error for BreakEvenErrorKind {}
 impl Error for ProfitLossErrorKind {}
 
+/// Represents the different types of errors that can occur in options trading strategies.
+///
+/// This enum acts as a comprehensive error type for the options strategy module,
+/// grouping more specific error categories for better error handling. Each variant
+/// corresponds to a different domain of potential failures within options strategy
+/// operations.
+///
+/// # Variants
+///
+/// * `PriceError` - Errors related to pricing operations such as invalid prices or ranges
+/// * `BreakEvenError` - Errors encountered when calculating strategy break-even points
+/// * `ProfitLossError` - Errors related to profit/loss calculations including maximum values
+/// * `OperationError` - General strategy operation errors including unsupported operations
+/// * `StdError` - Standard errors with a descriptive reason
+/// * `NotImplemented` - For features or operations that are not yet implemented
+///
+/// # Usage
+///
+/// This error type is designed to be returned from functions that perform operations
+/// on options trading strategies, providing structured and detailed error information
+/// to facilitate debugging and error handling.
 #[derive(Debug)]
 pub enum StrategyError {
     /// Errors related to price calculations
     PriceError(PriceErrorKind),
+
     /// Errors related to break-even points
     BreakEvenError(BreakEvenErrorKind),
+
     /// Errors related to profit/loss calculations
     ProfitLossError(ProfitLossErrorKind),
+
     /// Errors related to strategy operations
     OperationError(OperationErrorKind),
 
+    /// Standard error with descriptive reason
     StdError {
+        /// Detailed explanation of the standard error
         reason: String,
     },
 
+    /// Indicates a feature or operation that has not been implemented yet
     NotImplemented,
 }
 
+/// Represents different types of errors that can occur during price-related operations.
+///
+/// This enum provides specific error variants for price calculations, validations,
+/// and operations. Each variant contains detailed information about the error context
+/// to facilitate debugging and error handling in pricing operations.
+///
 #[derive(Debug)]
 pub enum PriceErrorKind {
     /// Error when underlying price is not available or invalid
-    InvalidUnderlyingPrice { reason: String },
+    ///
+    /// This error occurs when the price of the underlying asset cannot be determined
+    /// or is considered invalid for calculations (e.g., negative values, NaN, etc.)
+    ///
+    /// # Fields
+    ///
+    InvalidUnderlyingPrice {
+        /// * `reason` - A detailed explanation of why the price is considered invalid
+        reason: String,
+    },
+
     /// Error in price range calculation
+    ///
+    /// This error occurs when a price range specification is invalid, such as when
+    /// the end price is less than the start price, or when price points are outside
+    /// of valid bounds.
+    ///
     InvalidPriceRange {
+        /// * `start` - The beginning price of the attempted range
         start: f64,
+        /// * `end` - The ending price of the attempted range
         end: f64,
+        /// * `reason` - A detailed explanation of why the price range is invalid
         reason: String,
     },
 }
 
+/// Represents the type of errors that can occur during break-even point calculations.
+///
+/// Break-even points are critical price levels at which an options strategy neither generates
+/// profit nor loss. This enum categorizes the various errors that might occur when attempting
+/// to calculate these points, providing clear error handling paths for client code.
+///
+/// # Variants
+///
+/// * `CalculationError` - Indicates a failure in the mathematical calculation process
+///   for break-even points, including the specific reason for the failure.
+///
+/// * `NoBreakEvenPoints` - Indicates that no break-even points exist for the given strategy.
+///   This may occur with certain strategies that are always profitable or always unprofitable
+///   across all possible price ranges.
+///
+/// # Examples
+///
+/// ```
+/// use optionstratlib::error::strategies::BreakEvenErrorKind;
+///
+/// // When a calculation fails due to invalid input
+/// let error = BreakEvenErrorKind::CalculationError { 
+///     reason: String::from("Division by zero when calculating ratio") 
+/// };
+///
+/// // When a strategy has no break-even points
+/// let no_points_error = BreakEvenErrorKind::NoBreakEvenPoints;
+/// ```
+///
+/// # Related Errors
+///
+/// This error type is typically used within the context of `StrategyError` to provide
+/// detailed information about failures in strategy analysis, particularly when evaluating
+/// profit/loss scenarios at different price points.
 #[derive(Debug)]
 pub enum BreakEvenErrorKind {
-    /// Error calculating break-even points
-    CalculationError { reason: String },
-    /// No break-even points found
+    /// Error that occurs when the break-even calculation process fails
+    ///
+    /// The `reason` field provides specific details about why the calculation failed,
+    /// which can be useful for debugging or providing user feedback.
+    CalculationError {
+        /// Detailed explanation of what caused the calculation to fail
+        reason: String
+    },
+
+    /// Error indicating that no break-even points exist for the given strategy
+    ///
+    /// This typically occurs with strategies that maintain a consistent profit or loss
+    /// profile regardless of the underlying asset's price.
     NoBreakEvenPoints,
 }
 
+/// Represents error types that can occur during profit and loss calculations.
+///
+/// This enum provides structured error information for various failure scenarios
+/// that may occur when calculating profit, loss, and related metrics for options
+/// strategies or financial instruments.
+///
+/// # Error Categories
+///
+/// The enum categorizes errors into three main types:
+/// * Maximum profit calculation errors
+/// * Maximum loss calculation errors
+/// * Profit range and breakeven calculation errors
+///
+/// Each variant includes a detailed reason string to help diagnose the specific
+/// cause of the error and facilitate troubleshooting.
 #[derive(Debug)]
 pub enum ProfitLossErrorKind {
-    /// Error calculating maximum profit
-    MaxProfitError { reason: String },
-    /// Error calculating maximum loss
-    MaxLossError { reason: String },
-    /// Error in profit range calculation
-    ProfitRangeError { reason: String },
+    /// Error that occurs when calculating maximum profit.
+    ///
+    /// This might happen due to issues such as invalid input parameters,
+    /// computational limitations, or logical inconsistencies in the profit model.
+    MaxProfitError {
+        /// Detailed explanation of why the maximum profit calculation failed
+        reason: String
+    },
+
+    /// Error that occurs when calculating maximum loss.
+    ///
+    /// This might happen due to issues such as invalid input parameters,
+    /// computational limitations, or logical inconsistencies in the loss model.
+    MaxLossError {
+        /// Detailed explanation of why the maximum loss calculation failed
+        reason: String
+    },
+
+    /// Error that occurs during profit range calculation.
+    ///
+    /// This might happen when trying to determine profit/loss at different price
+    /// points, breakeven points, or when analyzing the profit curve of a strategy.
+    ProfitRangeError {
+        /// Detailed explanation of why the profit range calculation failed
+        reason: String
+    },
 }
 
 impl fmt::Display for StrategyError {
@@ -180,11 +310,38 @@ impl fmt::Display for ProfitLossErrorKind {
     }
 }
 
-// Type alias for convenience
+/// A specialized result type for strategy operations.
+///
+/// This type alias provides a convenient way to handle results from strategy-related
+/// operations that might fail with a `StrategyError`. It follows the standard Rust
+/// pattern of using `Result<T, E>` for operations that can fail.
+///
+/// This makes error handling more readable and concise throughout the strategy-related
+/// code, compared to explicitly writing `Result<T, StrategyError>` everywhere.
 pub type StrategyResult<T> = Result<T, StrategyError>;
 
 // Implementation helpers
 impl StrategyError {
+    /// Creates a `StrategyError` for an unsupported operation on a specific strategy type.
+    ///
+    /// This helper method creates a structured error describing an operation that cannot be performed
+    /// on a particular strategy type, encapsulating both the attempted operation name and the strategy
+    /// type that doesn't support it.
+    ///
+    /// # Parameters
+    /// * `operation` - The name of the operation that was attempted but is not supported
+    /// * `strategy_type` - The type of strategy for which the operation is not supported
+    ///
+    /// # Returns
+    /// A `StrategyError::OperationError` variant with the `NotSupported` kind
+    ///
+    /// # Example
+    /// ```
+    /// use optionstratlib::error::strategies::StrategyError;
+    ///
+    /// // Creating an error when trying to calculate butterfly spread adjustment on an iron condor
+    /// let error = StrategyError::operation_not_supported("butterfly_adjustment", "IronCondor");
+    /// ```
     pub fn operation_not_supported(operation: &str, strategy_type: &str) -> Self {
         StrategyError::OperationError(OperationErrorKind::NotSupported {
             operation: operation.to_string(),
@@ -192,6 +349,29 @@ impl StrategyError {
         })
     }
 
+    /// Creates a `StrategyError` for invalid parameters provided to an operation.
+    ///
+    /// This helper method builds a structured error for cases when an operation fails due to
+    /// invalid or insufficient parameters, providing context about both the operation and
+    /// the specific validation issue.
+    ///
+    /// # Parameters
+    /// * `operation` - The name of the operation that failed due to invalid parameters
+    /// * `reason` - A descriptive explanation of why the parameters are invalid
+    ///
+    /// # Returns
+    /// A `StrategyError::OperationError` variant with the `InvalidParameters` kind
+    ///
+    /// # Example
+    /// ```
+    /// use optionstratlib::error::strategies::StrategyError;
+    ///
+    /// // Creating an error when strike prices are invalid for a strategy
+    /// let error = StrategyError::invalid_parameters(
+    ///     "create_vertical_spread",
+    ///     "Short strike must be higher than long strike for call spreads"
+    /// );
+    /// ```
     pub fn invalid_parameters(operation: &str, reason: &str) -> Self {
         StrategyError::OperationError(OperationErrorKind::InvalidParameters {
             operation: operation.to_string(),
