@@ -180,7 +180,6 @@
 //! - Thread-safe random number generation
 //! - Supports various time frames (daily, weekly, monthly)
 
-
 /// Contains data structures and types that represent stochastic processes.
 ///
 /// This module defines the mathematical models and their parameters used in

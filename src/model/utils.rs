@@ -11,7 +11,7 @@ use rust_decimal_macros::dec;
 
 /// Converts a vector of `Positive` values to a vector of `f64` values.
 ///
-/// This utility function transforms a collection of `Positive` type values 
+/// This utility function transforms a collection of `Positive` type values
 /// to standard floating-point values by applying the `to_f64()` method to each element.
 /// The function consumes the input vector and returns a new vector containing the converted values.
 ///
@@ -157,7 +157,6 @@ pub fn create_sample_position(
     }
 }
 
-
 /// Creates a sample Options object with a specific expiration date.
 ///
 /// This utility function simplifies the creation of option contracts for testing
@@ -202,7 +201,6 @@ pub fn create_sample_option_with_date(
         None,
     )
 }
-
 
 /// Creates a simplified sample option contract for testing or demonstration purposes.
 ///
@@ -255,7 +253,6 @@ pub fn create_sample_option_simplest(option_style: OptionStyle, side: Side) -> O
     )
 }
 
-
 /// Creates a sample option with specified parameters and default values.
 ///
 /// This function provides a convenient way to create an `Options` instance with common default values
@@ -270,7 +267,7 @@ pub fn create_sample_option_simplest(option_style: OptionStyle, side: Side) -> O
 /// # Returns
 /// An `Options` instance representing a European option on AAPL stock with:
 /// * 30 days until expiration
-/// * 20% implied volatility 
+/// * 20% implied volatility
 /// * Quantity of 1.0
 /// * Underlying price of $100.0
 /// * 5% risk-free rate
@@ -282,8 +279,8 @@ pub fn create_sample_option_simplest(option_style: OptionStyle, side: Side) -> O
 /// use optionstratlib::model::utils::create_sample_option_simplest_strike;
 /// use optionstratlib::{pos, OptionStyle, Side};
 /// let long_call = create_sample_option_simplest_strike(
-///     Side::Long, 
-///     OptionStyle::Call, 
+///     Side::Long,
+///     OptionStyle::Call,
 ///     pos!(105.0)
 /// );
 /// ```

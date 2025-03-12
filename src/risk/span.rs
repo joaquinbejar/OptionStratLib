@@ -38,8 +38,6 @@ pub struct SPANMargin {
 
 #[allow(dead_code)]
 impl SPANMargin {
-
-
     /// Creates a new SPAN margin calculator with the specified risk parameters.
     ///
     /// This constructor initializes a SPANMargin structure with the key parameters needed
@@ -116,7 +114,7 @@ impl SPANMargin {
     /// Calculates a risk array for a given position using SPAN (Standard Portfolio Analysis of Risk) methodology.
     ///
     /// This function generates multiple price and volatility scenarios for the underlying asset and
-    /// calculates potential losses for each scenario combination. The resulting vector contains loss 
+    /// calculates potential losses for each scenario combination. The resulting vector contains loss
     /// values for all scenarios, which can be used for risk analysis and margin calculations.
     ///
     /// # Parameters
@@ -124,23 +122,23 @@ impl SPANMargin {
     /// - `position`: Reference to the `Position` for which to calculate risk.
     ///
     /// # Returns
-    /// A vector of `Decimal` values representing potential losses under different price and 
+    /// A vector of `Decimal` values representing potential losses under different price and
     /// volatility scenarios. Each value corresponds to the theoretical loss in a specific scenario.
     ///
     /// # Algorithm
     /// The function:
     /// 1. Generates multiple price scenarios based on the underlying asset price.
     /// 2. Generates multiple volatility scenarios based on the option's implied volatility.
-    /// 3. Creates a risk matrix by calculating the potential loss for each price-volatility 
+    /// 3. Creates a risk matrix by calculating the potential loss for each price-volatility
     ///    scenario combination.
     ///
     /// # Example Use Case
-    /// This is typically used in risk management systems to determine the appropriate 
+    /// This is typically used in risk management systems to determine the appropriate
     /// margin requirements for option positions.
     fn calculate_risk_array(&self, position: &Position) -> Vec<Decimal> {
         let mut risk_array = Vec::new();
         let option = &position.option;
-        let price_scenarios = self.generate_price_scenarios(option.underlying_price.into());
+        let price_scenarios = self.generate_price_scenarios(option.underlying_price);
         let volatility_scenarios = self.generate_volatility_scenarios(option.implied_volatility);
         for &price in &price_scenarios {
             for &volatility in &volatility_scenarios {
@@ -231,10 +229,10 @@ impl SPANMargin {
         (scenario_price - current_price)
             * option.quantity
             * if option.is_short() {
-            Decimal::NEGATIVE_ONE
-        } else {
-            Decimal::ONE
-        }
+                Decimal::NEGATIVE_ONE
+            } else {
+                Decimal::ONE
+            }
     }
 
     /// Calculates the minimum margin requirement for short option positions.

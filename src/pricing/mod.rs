@@ -147,8 +147,6 @@
 //! For high-frequency calculations, consider using the Black-Scholes model
 //! when applicable, as it provides the fastest computation times.
 
-
-
 /// Binomial tree model implementation for option pricing.
 ///
 /// This module provides functionality to price options using binomial tree methods,

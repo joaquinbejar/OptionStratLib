@@ -26,7 +26,7 @@ pub struct PnLRange {
 
 /// Implements serialization for `PnLRange` using a custom string format.
 ///
-/// This implementation serializes a `PnLRange` instance as a string in the format 
+/// This implementation serializes a `PnLRange` instance as a string in the format
 /// "[lower, upper)" where:
 /// - `lower` is the inclusive lower bound of the range
 /// - `upper` is the exclusive upper bound of the range

@@ -39,16 +39,16 @@ use std::sync::Arc;
 ///
 /// # Fields
 ///
-/// * `risk_free_rate` - Optional annualized risk-free interest rate used in financial modeling 
+/// * `risk_free_rate` - Optional annualized risk-free interest rate used in financial modeling
 ///   for discounting and theoretical pricing calculations.
 ///
 /// * `dividend_yield` - Optional annualized dividend yield of an asset, expressed as a percentage
 ///   and constrained to be non-negative through the `Positive` type wrapper.
 ///
-/// * `time_frame` - Specifies the temporal granularity of the simulation (e.g., daily, monthly, 
+/// * `time_frame` - Specifies the temporal granularity of the simulation (e.g., daily, monthly,
 ///   yearly). Determines how time intervals are scaled and interpreted in the simulation.
 ///
-/// * `volatility_window` - The number of data points to consider when calculating rolling 
+/// * `volatility_window` - The number of data points to consider when calculating rolling
 ///   volatility measures. Defines the lookback period for volatility estimation.
 ///
 /// * `initial_volatility` - Optional starting volatility value for the simulation. Constrained
@@ -74,7 +74,7 @@ use std::sync::Arc;
 /// # Design Considerations
 ///
 /// The configuration uses `Option` types for parameters that might not always be required or
-/// could have sensible defaults provided by the simulation implementation. The `Positive` 
+/// could have sensible defaults provided by the simulation implementation. The `Positive`
 /// type wrapper ensures that certain financial parameters maintain their required non-negative
 /// constraint.
 #[derive(Clone)]

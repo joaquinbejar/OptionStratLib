@@ -61,7 +61,7 @@ pub trait Payoff {
 /// This structure encapsulates all the necessary variables to calculate the payoff of different
 /// option types, including standard options (calls and puts) as well as exotic options like
 /// Asian and Lookback options.
-/// 
+///
 /// # Usage
 ///
 /// This structure is typically used within the options pricing module to calculate
@@ -73,7 +73,7 @@ pub struct PayoffInfo {
     ///   This value is used as the reference price for calculating option payoffs.
     pub spot: Positive,
     /// * `strike` - The strike price specified in the option contract.
-    ///   This is the price at which the option holder can buy (for calls) or sell (for puts) 
+    ///   This is the price at which the option holder can buy (for calls) or sell (for puts)
     ///   the underlying asset.
     pub strike: Positive,
     /// * `style` - Defines whether the option is a Call or Put.
@@ -86,13 +86,13 @@ pub struct PayoffInfo {
     ///   Asian options base their payoff on the average price of the underlying asset over a specified period.
     pub spot_prices: Option<Vec<f64>>, // Asian
     /// * `spot_min` - The minimum observed price of the underlying asset during the option's life.
-    ///   This field is used specifically for Lookback options where the payoff depends on the 
+    ///   This field is used specifically for Lookback options where the payoff depends on the
     ///   minimum price reached.
-    pub spot_min: Option<f64>,         // Lookback
+    pub spot_min: Option<f64>, // Lookback
     /// * `spot_max` - The maximum observed price of the underlying asset during the option's life.
     ///   This field is used specifically for Lookback options where the payoff depends on the
     ///   maximum price reached.
-    pub spot_max: Option<f64>,         // Lookback
+    pub spot_max: Option<f64>, // Lookback
 }
 
 impl Default for PayoffInfo {
@@ -113,7 +113,7 @@ impl PayoffInfo {
     /// Returns the length of the spot prices collection if it exists.
     ///
     /// This method provides a safe way to check the length of the historical spot prices
-    /// vector without direct access to the optional field. It's particularly useful when 
+    /// vector without direct access to the optional field. It's particularly useful when
     /// working with Asian options, which use a collection of historical prices to calculate
     /// their payoff based on average price.
     ///

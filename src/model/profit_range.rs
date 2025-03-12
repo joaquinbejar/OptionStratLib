@@ -60,7 +60,7 @@ impl ProfitLossRange {
 
     /// Calculates the probability of an asset's price falling within a specified range at expiration.
     ///
-    /// This method computes the probability that the underlying asset's price will be between the 
+    /// This method computes the probability that the underlying asset's price will be between the
     /// lower and upper bounds of a price range at the expiration date, based on various market factors
     /// and statistical models.
     ///
@@ -69,7 +69,7 @@ impl ProfitLossRange {
     /// * `current_price` - The current market price of the underlying asset.
     /// * `volatility_adj` - Optional adjustment for volatility parameters, including base volatility and
     ///   standard deviation adjustments. If None, default volatility settings will be used.
-    /// * `trend` - Optional price trend parameters, including drift rate and confidence level. 
+    /// * `trend` - Optional price trend parameters, including drift rate and confidence level.
     ///   If None, no trend assumption will be applied.
     /// * `expiration_date` - The date when the probability calculation applies, specified either as
     ///   days to expiration or an absolute datetime.
@@ -78,8 +78,8 @@ impl ProfitLossRange {
     ///
     /// # Returns
     ///
-    /// * `Result<(), ProbabilityError>` - Returns Ok(()) if the calculation was successful, 
-    ///   updating the internal probability field. Returns Err with a ProbabilityError if the 
+    /// * `Result<(), ProbabilityError>` - Returns Ok(()) if the calculation was successful,
+    ///   updating the internal probability field. Returns Err with a ProbabilityError if the
     ///   calculation failed, such as due to invalid price ranges.
     ///
     /// # Errors
@@ -103,9 +103,9 @@ impl ProfitLossRange {
     ///
     /// let result = range.calculate_probability(
     ///     pos!(55.0),
-    ///     Some(VolatilityAdjustment { 
-    ///         base_volatility: pos!(0.2), 
-    ///         std_dev_adjustment: pos!(1.0) 
+    ///     Some(VolatilityAdjustment {
+    ///         base_volatility: pos!(0.2),
+    ///         std_dev_adjustment: pos!(1.0)
     ///     }),
     ///     None,
     ///     ExpirationDate::Days(pos!(30.0)),

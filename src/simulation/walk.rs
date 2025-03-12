@@ -16,6 +16,7 @@ use crate::pricing::payoff::Profit;
 use crate::simulation::model::WalkResult;
 use crate::simulation::utils::calculate_extra_metrics;
 use crate::strategies::Strategable;
+use crate::utils::Len;
 use crate::utils::time::{TimeFrame, convert_time_frame, units_per_year};
 use crate::visualization::model::ChartPoint;
 use crate::visualization::utils::Graph;
@@ -29,7 +30,6 @@ use statrs::distribution::Normal;
 use std::collections::HashMap;
 use std::error::Error;
 use tracing::{debug, info, trace, warn};
-use crate::utils::Len;
 
 /// The `Walkable` trait defines a generic structure for creating and manipulating
 /// entities capable of simulating or managing a random walk sequence of values.
@@ -470,7 +470,7 @@ pub trait Walkable {
 /// This struct models financial asset price movements with advanced features for
 /// sophisticated financial simulations.
 ///
-/// `RandomWalkGraph` provides functionality for modeling asset price paths using random walk 
+/// `RandomWalkGraph` provides functionality for modeling asset price paths using random walk
 /// principles, with support for financial parameters like risk-free rates and dividend yields.
 /// It can be used to generate, store, and analyze price paths with customizable characteristics.
 ///
@@ -564,7 +564,7 @@ pub struct RandomWalkGraph {
     pub volatilities: Vec<Positive>,
 }
 
-/// Implements the `Len` trait for `RandomWalkGraph`, providing methods to check the 
+/// Implements the `Len` trait for `RandomWalkGraph`, providing methods to check the
 /// size and emptiness of the random walk data.
 ///
 /// This implementation allows `RandomWalkGraph` instances to report their length and
