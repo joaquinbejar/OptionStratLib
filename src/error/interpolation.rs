@@ -228,16 +228,6 @@ mod tests {
     }
 
     #[test]
-    fn test_error_trait() {
-        // Test that InterpolationError implements the Error trait correctly
-        let err = InterpolationError::Linear("test error".to_string());
-        let _: &dyn StdError = &err;
-
-        // If this compiles, it means InterpolationError correctly implements Error
-        assert!(true);
-    }
-
-    #[test]
     fn test_from_box_dyn_error() {
         // Create a Box<dyn Error> and convert it to an InterpolationError
         let mock_error = Box::new(MockError("boxed error".to_string())) as Box<dyn StdError>;

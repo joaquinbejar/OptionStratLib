@@ -70,20 +70,6 @@ use crate::model::types::{OptionStyle, Side};
 use std::error::Error;
 use std::fmt;
 
-/// # Position Error System
-///
-/// Comprehensive error handling for position management in trading strategies.
-/// This module defines a hierarchical error structure for tracking and managing
-/// errors related to positions in financial trading strategies.
-///
-/// The error system is organized into three main categories:
-/// - Strategy operation errors
-/// - Position validation errors
-/// - Position limit errors
-///
-/// This structure allows for precise error handling and reporting throughout the
-/// position management lifecycle in trading applications.
-
 /// Represents errors that can occur when managing positions in strategies
 ///
 /// This enum provides a top-level categorization of position-related errors,
