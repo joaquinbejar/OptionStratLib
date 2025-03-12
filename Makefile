@@ -86,7 +86,7 @@ doc:
 	cargo clippy -- -W missing-docs
 
 .PHONY: publish
-publish: readme coverage
+publish: readme
 	cargo login ${CARGO_REGISTRY_TOKEN}
 	cargo package
 	cargo publish
