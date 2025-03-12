@@ -116,6 +116,7 @@ pub struct PlotBuilder<T: Plottable> {
     ///
     /// This field holds the instance of a type implementing the `Plottable` trait
     /// which contains the actual data points to be represented in the visualization.
+    #[allow(dead_code)]
     pub(crate) data: T,
 
     /// Configuration settings that control the appearance and behavior of the plot.
