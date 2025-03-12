@@ -199,7 +199,7 @@
 //!
 //! The implementation focuses on numerical stability and accurate moment calculations,
 //! particularly for extreme market conditions.
-//! 
+//!
 
 /// * `chain` - Public module for handling option chains and related functionalities
 pub mod chain;

@@ -1643,14 +1643,6 @@ impl OptionChain {
     /// * `Result<(), Box<dyn Error>>` - Ok(()) if successful, or an Error if the file couldn't be created
     ///   or written to.
     ///
-    /// # Examples
-    ///
-    /// ```
-    /// use optionstratlib::chains::chain::OptionChain;
-    /// use optionstratlib::pos;
-    /// let option_chain = OptionChain::new("AAPL", pos!(150.0), "2024-01-15".to_string(), None, None);
-    /// option_chain.save_to_csv("data/options").unwrap();
-    /// ```
     ///
     /// # Note
     ///
@@ -1705,15 +1697,6 @@ impl OptionChain {
     ///
     /// * `Result<(), Box<dyn Error>>` - Ok(()) if successful, or an Error if the file couldn't be created
     ///   or written to.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use optionstratlib::chains::chain::OptionChain;
-    /// use optionstratlib::pos;
-    /// let option_chain = OptionChain::new("AAPL", pos!(150.0), "2024-01-15".to_string(), None, None);
-    /// option_chain.save_to_json("data/options").unwrap();
-    /// ```
     ///
     /// # Note
     ///

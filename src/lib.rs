@@ -691,7 +691,7 @@
 //!  
 //!  We appreciate your interest and look forward to your contributions!
 //!  
-//! 
+//!
 
 /// # OptionsStratLib: Financial Options Trading Library
 ///
@@ -746,7 +746,7 @@ pub mod geometrics;
 /// * `greeks` - Calculation and management of option sensitivity metrics (Delta, Gamma, etc.).
 ///
 /// Comprehensive implementation of options Greeks (sensitivity measures) including
-/// Delta, Gamma, Theta, Vega, and Rho. Includes analytical formulas, numerical 
+/// Delta, Gamma, Theta, Vega, and Rho. Includes analytical formulas, numerical
 /// approximations, and visualization tools for risk analysis.
 pub mod greeks;
 
