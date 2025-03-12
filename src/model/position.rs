@@ -367,9 +367,8 @@ impl Position {
     ///     pos!(0.65),  // opening fee
     ///     pos!(0.65),  // closing fee
     /// );
-    /// let unrealized_pnl = position.unrealized_pnl(current_price)?;
+    /// let unrealized_pnl = position.unrealized_pnl(current_price).unwrap();
     /// println!("Current unrealized PnL: {}", unrealized_pnl);
-    /// Ok(())
     /// ```
     pub fn unrealized_pnl(&self, price: Positive) -> Result<Decimal, PositionError> {
         match self.option.side {

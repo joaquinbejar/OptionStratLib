@@ -11,6 +11,20 @@ use rust_decimal::{Decimal, MathematicalOps};
 use rust_decimal_macros::dec;
 use std::ops::{Add, AddAssign, Div, Mul, MulAssign, Sub};
 
+/// Represents the daily interest rate factor used for financial calculations,
+/// approximately equivalent to 1/252 (a standard value for the number of trading days in a year).
+///
+/// This constant converts annual interest rates to daily rates by providing a division factor.
+/// The value 0.00396825397 corresponds to 1/252, where 252 is the typical number of trading
+/// days in a financial year.
+///
+/// # Usage
+///
+/// This constant is commonly used in financial calculations such as:
+/// - Converting annual interest rates to daily rates
+/// - Time value calculations for options pricing
+/// - Discounting cash flows on a daily basis
+/// - Interest accrual calculations
 pub const ONE_DAY: Decimal = dec!(0.00396825397);
 
 /// Asserts that two Decimal values are approximately equal within a given epsilon
@@ -29,12 +43,64 @@ macro_rules! assert_decimal_eq {
     };
 }
 
+/// Defines statistical operations for collections of decimal values.
+///
+/// This trait provides methods to calculate common statistical measures
+/// for sequences or collections of `Decimal` values. It allows implementing
+/// types to offer standardized statistical analysis capabilities.
+///
+/// ## Key Features
+///
+/// * Basic statistical calculations for `Decimal` collections
+/// * Consistent interface for various collection types
+/// * Precision-preserving operations using the `Decimal` type
+///
+/// ## Available Statistics
+///
+/// * `mean`: Calculates the arithmetic mean (average) of the values
+/// * `std_dev`: Calculates the standard deviation, measuring the dispersion from the mean
+///
+/// ## Example
+///
+/// ```rust
+/// use rust_decimal::Decimal;
+/// use rust_decimal_macros::dec;
+/// use optionstratlib::model::decimal::DecimalStats;
+///
+/// struct DecimalSeries(Vec<Decimal>);
+///
+/// impl DecimalStats for DecimalSeries {
+///     fn mean(&self) -> Decimal {
+///         let sum: Decimal = self.0.iter().sum();
+///         if self.0.is_empty() {
+///             dec!(0)
+///         } else {
+///             sum / Decimal::from(self.0.len())
+///         }
+///     }
+///     
+///     fn std_dev(&self) -> Decimal {
+///         // Implementation of standard deviation calculation
+///         // ...
+///         dec!(0) // Placeholder return
+///     }
+/// }
+/// ```
 pub trait DecimalStats {
+    /// Calculates the arithmetic mean (average) of the collection.
+    ///
+    /// The mean is the sum of all values divided by the count of values.
+    /// This method should handle empty collections appropriately.
     fn mean(&self) -> Decimal;
 
+    /// Calculates the standard deviation of the collection.
+    ///
+    /// The standard deviation measures the amount of variation or dispersion
+    /// from the mean. A low standard deviation indicates that values tend to be
+    /// close to the mean, while a high standard deviation indicates values are
+    /// spread out over a wider range.
     fn std_dev(&self) -> Decimal;
 }
-
 impl From<Positive> for Decimal {
     fn from(pos: Positive) -> Self {
         pos.0
@@ -144,6 +210,34 @@ impl PartialEq<Positive> for Decimal {
     }
 }
 
+/// Converts a Decimal value to an f64.
+///
+/// This function attempts to convert a Decimal value to an f64 floating-point number.
+/// If the conversion fails, it returns a DecimalError with detailed information about
+/// the failure.
+///
+/// # Parameters
+///
+/// * `value` - The Decimal value to convert
+///
+/// # Returns
+///
+/// * `Result<f64, DecimalError>` - The converted f64 value if successful, or a DecimalError
+///   if the conversion fails
+///
+/// # Example
+///
+/// ```rust
+/// use rust_decimal::Decimal;
+/// use rust_decimal_macros::dec;
+/// use optionstratlib::model::decimal::decimal_to_f64;
+///
+/// let decimal = dec!(3.14159);
+/// match decimal_to_f64(decimal) {
+///     Ok(float) => println!("Converted to f64: {}", float),
+///     Err(e) => println!("Conversion error: {:?}", e)
+/// }
+/// ```
 pub fn decimal_to_f64(value: Decimal) -> Result<f64, DecimalError> {
     value.to_f64().ok_or(DecimalError::ConversionError {
         from_type: format!("Decimal: {}", value),
@@ -152,6 +246,34 @@ pub fn decimal_to_f64(value: Decimal) -> Result<f64, DecimalError> {
     })
 }
 
+/// Converts an f64 floating-point number to a Decimal.
+///
+/// This function attempts to convert an f64 floating-point number to a Decimal value.
+/// If the conversion fails (for example, if the f64 represents NaN, infinity, or is otherwise
+/// not representable as a Decimal), it returns a DecimalError with detailed information about 
+/// the failure.
+///
+/// # Parameters
+///
+/// * `value` - The f64 value to convert
+///
+/// # Returns
+///
+/// * `Result<Decimal, DecimalError>` - The converted Decimal value if successful, or a DecimalError
+///   if the conversion fails
+///
+/// # Example
+///
+/// ```rust
+/// use rust_decimal::Decimal;
+/// use optionstratlib::model::decimal::f64_to_decimal;
+///
+/// let float = 3.14159;
+/// match f64_to_decimal(float) {
+///     Ok(decimal) => println!("Converted to Decimal: {}", decimal),
+///     Err(e) => println!("Conversion error: {:?}", e)
+/// }
+/// ```
 pub fn f64_to_decimal(value: f64) -> Result<Decimal, DecimalError> {
     Decimal::from_f64(value).ok_or(DecimalError::ConversionError {
         from_type: format!("f64: {}", value),
@@ -166,6 +288,21 @@ impl HasX for Decimal {
     }
 }
 
+/// Converts a Decimal value to f64 without error checking.
+///
+/// This macro converts a Decimal type to an f64 floating-point value.
+/// It's an "unchecked" version that doesn't handle potential conversion errors.
+///
+/// # Parameters
+/// * `$val` - A Decimal value to be converted to f64
+///
+/// # Example
+/// ```rust
+/// use rust_decimal_macros::dec;
+/// use optionstratlib::d2fu;
+/// let decimal_value = dec!(10.5);
+/// let float_value = d2fu!(decimal_value);
+/// ```
 #[macro_export]
 macro_rules! d2fu {
     ($val:expr) => {
@@ -173,6 +310,21 @@ macro_rules! d2fu {
     };
 }
 
+/// Converts a Decimal value to f64 with error propagation.
+///
+/// This macro converts a Decimal type to an f64 floating-point value.
+/// It propagates any errors that might occur during conversion using the `?` operator.
+///
+/// # Parameters
+/// * `$val` - A Decimal value to be converted to f64
+///
+/// # Example
+/// ```rust
+/// use rust_decimal_macros::dec;
+/// use optionstratlib::d2f;
+/// let decimal_value = dec!(10.5);
+/// let float_value = d2f!(decimal_value);
+/// ```
 #[macro_export]
 macro_rules! d2f {
     ($val:expr) => {
@@ -180,6 +332,20 @@ macro_rules! d2f {
     };
 }
 
+/// Converts an f64 value to Decimal without error checking.
+///
+/// This macro converts an f64 floating-point value to a Decimal type.
+/// It's an "unchecked" version that doesn't handle potential conversion errors.
+///
+/// # Parameters
+/// * `$val` - An f64 value to be converted to Decimal
+///
+/// # Example
+/// ```rust
+/// use optionstratlib::f2du;
+/// let float_value = 10.5;
+/// let decimal_value = f2du!(float_value);
+/// ```
 #[macro_export]
 macro_rules! f2du {
     ($val:expr) => {
@@ -187,6 +353,20 @@ macro_rules! f2du {
     };
 }
 
+/// Converts an f64 value to Decimal with error propagation.
+///
+/// This macro converts an f64 floating-point value to a Decimal type.
+/// It propagates any errors that might occur during conversion using the `?` operator.
+///
+/// # Parameters
+/// * `$val` - An f64 value to be converted to Decimal
+///
+/// # Example
+/// ```rust
+/// use optionstratlib::f2d;
+/// let float_value = 10.5;
+/// let decimal_value = f2d!(float_value);
+/// ```
 #[macro_export]
 macro_rules! f2d {
     ($val:expr) => {
