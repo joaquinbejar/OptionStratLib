@@ -318,13 +318,6 @@ macro_rules! d2fu {
 /// # Parameters
 /// * `$val` - A Decimal value to be converted to f64
 ///
-/// # Example
-/// ```rust
-/// use rust_decimal_macros::dec;
-/// use optionstratlib::d2f;
-/// let decimal_value = dec!(10.5);
-/// let float_value = d2f!(decimal_value);
-/// ```
 #[macro_export]
 macro_rules! d2f {
     ($val:expr) => {
@@ -361,12 +354,6 @@ macro_rules! f2du {
 /// # Parameters
 /// * `$val` - An f64 value to be converted to Decimal
 ///
-/// # Example
-/// ```rust
-/// use optionstratlib::f2d;
-/// let float_value = 10.5;
-/// let decimal_value = f2d!(float_value);
-/// ```
 #[macro_export]
 macro_rules! f2d {
     ($val:expr) => {
