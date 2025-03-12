@@ -65,23 +65,107 @@ use std::error::Error;
 use std::fmt;
 
 /// Custom errors that can occur during Options operations
+///
+/// This enum provides a structured error system for handling various failure scenarios
+/// that may arise during option trading operations, calculations, and data management.
+/// Each variant represents a specific category of error with contextual information
+/// to help with debugging and error handling.
+///
+/// # Variants
+///
+/// * `ValidationError` - Errors that occur when validating option parameters
+///   such as strike prices, expiration dates, or option styles.
+///
+/// * `PricingError` - Errors that occur during option price calculation
+///   using various pricing models like Black-Scholes, Binomial, etc.
+///
+/// * `GreeksCalculationError` - Errors that occur when calculating option Greeks
+///   (delta, gamma, theta, vega, rho) which measure option price sensitivities.
+///
+/// * `TimeError` - Errors related to time calculations, such as determining
+///   days to expiration, time decay, or handling calendar adjustments.
+///
+/// * `PayoffError` - Errors that occur when calculating potential payoffs
+///   for options at different price points or expiration scenarios.
+///
+/// * `UpdateError` - Errors that occur when attempting to update option data
+///   or parameters in an existing option object.
+///
+/// * `OtherError` - A catch-all for errors that don't fit into other categories
+///   but still need to be represented in the options domain.
+///
+/// # Usage
+///
+/// This error type is typically returned in Result objects from functions that
+/// perform operations on option contracts, pricing calculations, or option strategy
+/// analysis where various error conditions need to be handled.
 #[derive(Debug)]
 pub enum OptionsError {
     /// Error when validating option parameters
-    ValidationError { field: String, reason: String },
+    ///
+    /// Used when input parameters for option contracts fail validation.
+    ValidationError {
+        /// The field name that failed validation
+        field: String,
+        /// Detailed explanation of the validation failure
+        reason: String,
+    },
+
     /// Error during price calculation
-    PricingError { method: String, reason: String },
+    ///
+    /// Used when an option pricing algorithm encounters problems.
+    PricingError {
+        /// The pricing method that failed (e.g., "Black-Scholes", "Binomial")
+        method: String,
+        /// Detailed explanation of the pricing calculation failure
+        reason: String,
+    },
+
     /// Error when calculating greeks
-    GreeksCalculationError { greek: String, reason: String },
+    ///
+    /// Used when calculations for option sensitivities (Greeks) fail.
+    GreeksCalculationError {
+        /// The specific Greek that failed to calculate (delta, gamma, theta, etc.)
+        greek: String,
+        /// Detailed explanation of the Greek calculation failure
+        reason: String,
+    },
+
     /// Error when dealing with time calculations
-    TimeError { operation: String, reason: String },
+    ///
+    /// Used for failures in time-related calculations like time to expiry.
+    TimeError {
+        /// The time-related operation that failed
+        operation: String,
+        /// Detailed explanation of the time calculation failure
+        reason: String,
+    },
+
     /// Error when performing payoff calculations
-    PayoffError { reason: String },
+    ///
+    /// Used when potential profit/loss calculations for options fail.
+    PayoffError {
+        /// Detailed explanation of the payoff calculation failure
+        reason: String,
+    },
+
     /// Error during option data updates
-    UpdateError { field: String, reason: String },
+    ///
+    /// Used when attempts to update option parameters or data fail.
+    UpdateError {
+        /// The field that failed to update
+        field: String,
+        /// Detailed explanation of the update failure
+        reason: String,
+    },
 
     /// Error when performing other operations
-    OtherError { reason: String },
+    ///
+    /// A general-purpose error for cases not covered by other variants.
+    OtherError {
+        /// Detailed explanation of the error
+        reason: String,
+    },
 }
 
 impl fmt::Display for OptionsError {
@@ -114,11 +198,86 @@ impl fmt::Display for OptionsError {
 
 impl Error for OptionsError {}
 
-// Convenient type alias for Results with OptionsError
+/// A specialized result type for operations related to Options calculations and processing.
+///
+/// This type alias simplifies error handling for functions that can fail with various
+/// options-specific errors. It uses the [`OptionsError`] enum to provide structured
+/// error information about validation failures, pricing issues, Greeks calculations,
+/// time-related problems, and other option-specific errors.
+///
+/// # Type Parameters
+///
+/// * `T` - The success type that will be returned if the operation succeeds.
+///
+/// # Examples
+///
+/// ```rust
+/// use optionstratlib::error::{OptionsResult, OptionsError};
+///
+/// fn calculate_call_price(strike: f64, spot: f64) -> OptionsResult<f64> {
+///     if strike <= 0.0 {
+///         return Err(OptionsError::ValidationError {
+///             field: "strike".to_string(),
+///             reason: "Strike price must be positive".to_string()
+///         });
+///     }
+///     
+///     // Calculation logic would go here
+///     let price = 0.0; // Placeholder
+///     Ok(price)
+/// }
+/// ```
+///
+/// # Usage Context
+///
+/// This result type is commonly used throughout the library for:
+///
+/// * Option pricing calculations
+/// * Parameter validation
+/// * Greeks calculations
+/// * Expiration and time value calculations
+/// * Option payoff analysis
+///
+/// [`OptionsError`]: enum.OptionsError.html
 pub type OptionsResult<T> = Result<T, OptionsError>;
 
-// Helper methods for creating common options errors
+/// Helper methods for creating common options errors.
+///
+/// This implementation provides convenient factory methods for creating different
+/// variants of `OptionsError` without having to manually construct the enum variants.
+/// Each method corresponds to a specific error type and properly formats the error fields.
+///
+/// # Methods
+///
+/// * `validation_error` - Creates an error for parameter validation failures
+/// * `pricing_error` - Creates an error for pricing calculation issues
+/// * `greeks_error` - Creates an error for problems with Greeks calculations
+/// * `time_error` - Creates an error for time-related calculations
+/// * `payoff_error` - Creates an error for payoff calculation problems
+/// * `update_error` - Creates an error for option data update issues
+///
+/// # Examples
+///
+/// ```
+/// use optionstratlib::error::OptionsError;
+/// let error = OptionsError::validation_error("strike_price", "must be positive");
+///
+/// // Create a pricing error
+/// let error = OptionsError::pricing_error("black_scholes", "invalid volatility input");
+/// ```
 impl OptionsError {
+    /// Creates a validation error with the specified field name and reason.
+    ///
+    /// This method is used when option parameters fail validation checks.
+    ///
+    /// # Parameters
+    ///
+    /// * `field` - The name of the field that failed validation
+    /// * `reason` - The reason why validation failed
+    ///
+    /// # Returns
+    ///
+    /// An `OptionsError::ValidationError` variant with formatted fields
     pub fn validation_error(field: &str, reason: &str) -> Self {
         OptionsError::ValidationError {
             field: field.to_string(),
@@ -126,6 +285,18 @@ impl OptionsError {
         }
     }
 
+    /// Creates a pricing error with the specified pricing method and reason.
+    ///
+    /// This method is used when an error occurs during option price calculation.
+    ///
+    /// # Parameters
+    ///
+    /// * `method` - The name of the pricing method that encountered an error
+    /// * `reason` - The description of what went wrong
+    ///
+    /// # Returns
+    ///
+    /// An `OptionsError::PricingError` variant with formatted fields
     pub fn pricing_error(method: &str, reason: &str) -> Self {
         OptionsError::PricingError {
             method: method.to_string(),
@@ -133,6 +304,19 @@ impl OptionsError {
         }
     }
 
+    /// Creates a Greeks calculation error with the specified Greek name and reason.
+    ///
+    /// This method is used when an error occurs during the calculation of option Greeks
+    /// (delta, gamma, theta, vega, etc.).
+    ///
+    /// # Parameters
+    ///
+    /// * `greek` - The name of the Greek calculation that failed
+    /// * `reason` - The description of what went wrong
+    ///
+    /// # Returns
+    ///
+    /// An `OptionsError::GreeksCalculationError` variant with formatted fields
     pub fn greeks_error(greek: &str, reason: &str) -> Self {
         OptionsError::GreeksCalculationError {
             greek: greek.to_string(),
@@ -140,6 +324,19 @@ impl OptionsError {
         }
     }
 
+    /// Creates a time calculation error with the specified operation and reason.
+    ///
+    /// This method is used when an error occurs during time-related calculations,
+    /// such as time to expiration, day count conventions, or calendar adjustments.
+    ///
+    /// # Parameters
+    ///
+    /// * `operation` - The name of the time operation that failed
+    /// * `reason` - The description of what went wrong
+    ///
+    /// # Returns
+    ///
+    /// An `OptionsError::TimeError` variant with formatted fields
     pub fn time_error(operation: &str, reason: &str) -> Self {
         OptionsError::TimeError {
             operation: operation.to_string(),
@@ -147,12 +344,36 @@ impl OptionsError {
         }
     }
 
+    /// Creates a payoff calculation error with the specified reason.
+    ///
+    /// This method is used when an error occurs during the calculation of option payoffs.
+    ///
+    /// # Parameters
+    ///
+    /// * `reason` - The description of what went wrong
+    ///
+    /// # Returns
+    ///
+    /// An `OptionsError::PayoffError` variant with formatted reason
     pub fn payoff_error(reason: &str) -> Self {
         OptionsError::PayoffError {
             reason: reason.to_string(),
         }
     }
 
+    /// Creates an update error with the specified field and reason.
+    ///
+    /// This method is used when an error occurs during the update of option parameters
+    /// or other option data.
+    ///
+    /// # Parameters
+    ///
+    /// * `field` - The name of the field that failed to update
+    /// * `reason` - The description of what went wrong
+    ///
+    /// # Returns
+    ///
+    /// An `OptionsError::UpdateError` variant with formatted fields
     pub fn update_error(field: &str, reason: &str) -> Self {
         OptionsError::UpdateError {
             field: field.to_string(),
