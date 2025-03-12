@@ -7,16 +7,49 @@ use std::error::Error;
 
 type BinomialTreeResult = Result<(Vec<Vec<Decimal>>, Vec<Vec<Decimal>>), Box<dyn Error>>;
 
+/// Parameters for pricing options using the Binomial Tree model.
+///
+/// This structure encapsulates all the necessary parameters required to calculate
+/// the price of an option using the binomial pricing model. The binomial model is
+/// a discrete-time, lattice-based approach to option pricing that can handle various
+/// option types and styles.
+///
+/// The model builds a tree of possible future asset prices to determine the option's
+/// value at each node, working backwards from expiration to the present value.
+/// This approach is particularly valuable for American options or other early-exercise
+/// scenarios.
 #[derive(Clone)]
 pub struct BinomialPricingParams<'a> {
+    /// The current price of the underlying asset, represented as a positive value.
     pub asset: Positive,
+
+    /// The volatility of the underlying asset, expressed as a positive value.
+    /// This represents the standard deviation of the asset's returns.
     pub volatility: Positive,
+
+    /// The risk-free interest rate used in the pricing model.
     pub int_rate: Decimal,
+
+    /// The strike price of the option, represented as a positive value.
     pub strike: Positive,
+
+    /// The time to expiration of the option in years, represented as a positive value.
     pub expiry: Positive,
+
+    /// The number of steps to use in the binomial tree calculation.
+    /// Higher values increase accuracy but also computational cost.
     pub no_steps: usize,
+
+    /// The type of option (European, American, etc.) which determines
+    /// when the option can be exercised.
     pub option_type: &'a OptionType,
+
+    /// The style of the option (Call or Put) which determines whether the option
+    /// gives the right to buy or sell the underlying asset.
     pub option_style: &'a OptionStyle,
+
+    /// Indicates whether the option position is long (buying the option) or
+    /// short (selling/writing the option).
     pub side: &'a Side,
 }
 
