@@ -75,62 +75,284 @@ use std::error::Error;
 use std::fmt;
 
 /// Represents all possible errors that can occur during probability analysis calculations
+///
+/// This enum serves as the top-level error type for the probability analysis system,
+/// encapsulating various categories of errors that might occur during financial calculations
+/// related to probabilities, prices, ranges, and expirations.
+///
+/// # Variants
+///
+/// * `CalculationError` - Errors that occur during probability calculations themselves,
+///   such as invalid probability values, expected value errors, or problems with
+///   volatility adjustments.
+///
+/// * `RangeError` - Errors related to profit and loss ranges, such as invalid profit
+///   ranges, loss ranges, or break-even point calculations.
+///
+/// * `ExpirationError` - Errors related to expiration dates and risk-free rates in
+///   options calculations.
+///
+/// * `PriceError` - Errors related to price parameters, such as invalid underlying
+///   prices or invalid price ranges.
+///
+/// * `StdError` - Standard errors from external systems or libraries, wrapped as strings.
+///
+/// * `NoPositions` - Error indicating that no positions were available for analysis.
+///
+/// # Usage
+///
+/// This error type is typically returned from functions that perform financial probability
+/// analysis, risk assessment, or option pricing. It provides a structured way to handle
+/// the various error conditions that might arise during these calculations.
 #[derive(Debug)]
 pub enum ProbabilityError {
     /// Errors related to probability calculations
+    ///
+    /// Wraps a `ProbabilityCalculationErrorKind` that provides specific details
+    /// about what went wrong during probability calculations.
     CalculationError(ProbabilityCalculationErrorKind),
+
     /// Errors related to profit/loss ranges
+    ///
+    /// Wraps a `ProfitLossRangeErrorKind` that provides specific details
+    /// about what went wrong with profit or loss range calculations.
     RangeError(ProfitLossRangeErrorKind),
+
     /// Errors related to expiration dates
+    ///
+    /// Wraps an `ExpirationErrorKind` that provides specific details
+    /// about what went wrong with expiration dates or risk-free rates.
     ExpirationError(ExpirationErrorKind),
+
     /// Errors related to price parameters
+    ///
+    /// Wraps a `PriceErrorKind` that provides specific details
+    /// about what went wrong with price-related calculations.
     PriceError(PriceErrorKind),
 
+    /// Standard error from an external system or library
+    ///
+    /// Contains a string description of an error from a standard library
+    /// or external dependency.
     StdError(String),
 
+    /// Error indicating no positions are available for analysis
+    ///
+    /// Contains a string description explaining why positions are missing
+    /// or why they cannot be analyzed.
     NoPositions(String),
 }
 
-/// Specific errors that can occur during probability calculations
+/// Error types that can occur during financial probability calculations.
+///
+/// This enum represents specific error categories that may arise when performing
+/// probability-related calculations for financial models, risk assessments, and
+/// statistical analysis of market scenarios. It provides structured error information
+/// with detailed context about what caused the calculation to fail.
+///
+/// # Variants
+///
+/// * `InvalidProbability` - Represents errors where a probability value falls outside
+///   the valid range [0,1] or otherwise violates mathematical constraints of probability theory.
+///
+/// * `ExpectedValueError` - Represents errors in the calculation of expected values,
+///   such as invalid inputs, numerical overflow/underflow, or unsupported distributions.
+///
+/// * `VolatilityAdjustmentError` - Represents errors that occur when attempting to
+///   adjust calculations for volatility, including invalid volatility inputs or
+///   mathematical errors in the adjustment process.
+///
+/// * `TrendError` - Represents errors related to price trend calculations, such as
+///   insufficient historical data, invalid trend parameters, or statistical anomalies.
+///
+/// # Usage
+///
+/// This error type is typically used in financial modeling components that deal with
+/// probabilistic outcomes, such as Monte Carlo simulations, risk models, and
+/// probability-based trading strategies.
 #[derive(Debug)]
 pub enum ProbabilityCalculationErrorKind {
-    /// Error in probability calculation
-    InvalidProbability { value: f64, reason: String },
-    /// Error in expected value calculation
-    ExpectedValueError { reason: String },
-    /// Error in volatility adjustments
-    VolatilityAdjustmentError { reason: String },
-    /// Error in price trends
-    TrendError { reason: String },
+    /// Error indicating an invalid probability value
+    ///
+    /// This variant is used when a probability calculation produces a result that
+    /// violates fundamental probability constraints (e.g., not in range [0,1])
+    /// or other mathematical properties required for valid statistical analysis.
+    InvalidProbability {
+        /// The problematic probability value that caused the error
+        value: f64,
+        /// Detailed explanation of why the probability is invalid
+        reason: String,
+    },
+
+    /// Error in the calculation of expected values
+    ///
+    /// This variant is used when expected value calculations fail due to
+    /// mathematical constraints, invalid inputs, or problems with the
+    /// underlying probability distribution.
+    ExpectedValueError {
+        /// Detailed explanation of the error in expected value calculation
+        reason: String,
+    },
+
+    /// Error when adjusting calculations for volatility
+    ///
+    /// This variant is used when volatility-related adjustments to probability
+    /// calculations encounter problems, such as extreme volatility values or
+    /// mathematical errors in the adjustment algorithms.
+    VolatilityAdjustmentError {
+        /// Detailed explanation of the volatility adjustment error
+        reason: String,
+    },
+
+    /// Error in price trend calculations or analysis
+    ///
+    /// This variant is used when trend-related probability calculations fail,
+    /// such as issues with trend detection, invalid trend parameters, or
+    /// insufficient data for meaningful trend analysis.
+    TrendError {
+        /// Detailed explanation of the trend calculation error
+        reason: String,
+    },
 }
 
-/// Errors related to profit and loss range calculations
+/// Enum representing errors that occur during profit and loss range calculations in options strategies.
+///
+/// This enum captures three main categories of errors that can occur when calculating, validating,
+/// or processing profit and loss ranges and break-even points in financial calculations. It provides
+/// structured error information with detailed descriptions of why the ranges are invalid.
+///
+/// # Variants
+///
+/// * `InvalidProfitRange` - Represents errors related to profit range calculations,
+///   such as inconsistent boundaries, mathematically impossible ranges, or other
+///   logical errors in profit projections.
+///
+/// * `InvalidLossRange` - Represents errors related to loss range calculations,
+///   including boundary issues, logical inconsistencies, or other problems that
+///   prevent accurate loss estimation.
+///
+/// * `InvalidBreakEvenPoints` - Represents errors in break-even point calculations,
+///   which can include missing break-even points, multiple unexpected points, or
+///   other calculation anomalies.
+///
+/// # Usage
+///
+/// This error type is typically used in financial strategy analysis, particularly in
+/// options trading calculations where understanding the ranges of potential profit and loss
+/// is critical for risk assessment and decision making.
 #[derive(Debug)]
 pub enum ProfitLossRangeErrorKind {
-    /// Error in profit ranges
-    InvalidProfitRange { range: String, reason: String },
-    /// Error in loss ranges
-    InvalidLossRange { range: String, reason: String },
-    /// Error in break-even points
-    InvalidBreakEvenPoints { reason: String },
+    /// Error indicating an invalid or problematic profit range calculation
+    ///
+    /// This variant is used when the calculated profit range contains errors,
+    /// inconsistencies, or values that don't align with the underlying strategy.
+    InvalidProfitRange {
+        /// String representation of the problematic range
+        range: String,
+        /// Detailed explanation of why the profit range is invalid
+        reason: String,
+    },
+
+    /// Error indicating an invalid or problematic loss range calculation
+    ///
+    /// This variant is used when the calculated loss range contains errors,
+    /// inconsistencies, or values that don't make mathematical sense.
+    InvalidLossRange {
+        /// String representation of the problematic range
+        range: String,
+        /// Detailed explanation of why the loss range is invalid
+        reason: String,
+    },
+
+    /// Error indicating problems with break-even point calculations
+    ///
+    /// This variant is used when break-even points couldn't be properly calculated,
+    /// are missing, or contain unexpected values.
+    InvalidBreakEvenPoints {
+        /// Detailed explanation of the issue with break-even calculations
+        reason: String,
+    },
 }
 
-/// Errors related to expiration dates and rates
+/// Enum representing errors related to expiration dates and interest rates in options calculations.
+///
+/// This enum captures two main categories of errors that can occur when validating or
+/// processing expiration dates and risk-free rates for financial calculations. It provides
+/// structured error information that includes detailed reasons for the error occurrence.
+///
+/// # Variants
+///
+/// * `InvalidExpiration` - Represents errors related to option expiration dates,
+///   such as dates in the past, invalid formats, or dates that don't align with
+///   market standards.
+///
+/// * `InvalidRiskFreeRate` - Represents errors related to risk-free rate values,
+///   such as negative rates, unreasonably high rates, or other invalid inputs
+///   that would cause calculation issues.
+///
+/// # Usage
+///
+/// This error type is typically used in option pricing models, risk assessment,
+/// and other financial calculations where expiration dates and risk-free rates
+/// are critical input parameters.
 #[derive(Debug)]
 pub enum ExpirationErrorKind {
-    /// Error in expiration date
-    InvalidExpiration { reason: String },
-    /// Error in risk-free rate
-    InvalidRiskFreeRate { rate: Option<f64>, reason: String },
+    /// Error indicating an invalid or problematic expiration date
+    ///
+    /// This variant is used when the provided expiration date doesn't meet
+    /// the required criteria for option calculations.
+    InvalidExpiration {
+        /// Detailed explanation of why the expiration date is invalid
+        reason: String,
+    },
+
+    /// Error indicating an invalid or problematic risk-free rate
+    ///
+    /// This variant is used when the provided risk-free rate is outside
+    /// acceptable bounds or otherwise unsuitable for financial calculations.
+    InvalidRiskFreeRate {
+        /// The problematic rate value that caused the error, if available
+        rate: Option<f64>,
+        /// Detailed explanation of why the risk-free rate is invalid
+        reason: String,
+    },
 }
 
-/// Errors related to price calculations and validations
+/// Enum that represents various errors that can occur during price calculations and validations.
+///
+/// This enum provides specific error variants for different types of pricing issues that may
+/// arise in financial calculations, particularly in options pricing contexts. Each variant
+/// contains detailed information about the error condition to aid in debugging and error handling.
+///
+/// ## Error Types
+///
+/// * `InvalidUnderlyingPrice` - Errors related to the underlying asset price
+/// * `InvalidPriceRange` - Errors related to price range validations
+///
 #[derive(Debug)]
 pub enum PriceErrorKind {
-    /// Error in underlying price
-    InvalidUnderlyingPrice { price: f64, reason: String },
-    /// Error in price range
-    InvalidPriceRange { range: String, reason: String },
+    /// Error indicating that the underlying asset price is invalid.
+    ///
+    /// This error occurs when the price of the underlying asset does not meet
+    /// required validation criteria (e.g., non-negative, within expected bounds).
+    ///
+    InvalidUnderlyingPrice {
+        /// * `price` - The invalid price value that triggered the error       
+        price: f64,
+        /// * `reason` - A detailed explanation of why the price is considered invalid
+        reason: String,
+    },
+    /// Error indicating that a price range specification is invalid.
+    ///
+    /// This error occurs when a specified price range is inconsistent, malformed,
+    /// or does not meet required validation criteria for financial calculations.
+    ///
+    InvalidPriceRange {
+        /// * `range` - String representation of the invalid price range      
+        range: String,
+        /// * `reason` - A detailed explanation of why the price range is considered invalid
+        reason: String,
+    },
 }
 
 impl fmt::Display for ProbabilityError {
