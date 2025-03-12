@@ -6,32 +6,40 @@
 use plotters::prelude::RGBColor;
 use std::path::Path;
 
-/// Plot configuration options
+/// Plot configuration options for data visualization.
+///
+/// This structure provides comprehensive customization capabilities for plots,
+/// including titles, axis labels, colors, dimensions, and visual styling.
+/// It serves as the central configuration object for the plotting system.
+///
+/// Use with `PlotBuilder` to create customized visualizations that can be
+/// rendered and saved to files through the `Plottable` trait implementation.
 #[derive(Clone, Debug)]
 pub struct PlotOptions {
-    /// Plot title
+    /// Optional plot title displayed at the top of the visualization
     pub title: Option<String>,
-    /// X-axis label
+    /// Optional label for the X-axis
     pub x_label: Option<String>,
-    /// Y-axis label
+    /// Optional label for the Y-axis
     pub y_label: Option<String>,
-    /// Z-axis label
+    /// Optional label for the Z-axis (used in 3D plots)
     pub z_label: Option<String>,
-    /// Line colors for each curve
+    /// Optional collection of RGB colors to use for individual data series lines
+    /// Each color in the vector corresponds to a different curve in the plot
     pub line_colors: Option<Vec<RGBColor>>,
-    /// Line width
+    /// Width of plotted lines in pixels
     pub line_width: u32,
-    /// Background color
+    /// Background color of the entire plot area as an RGB value
     pub background_color: RGBColor,
-    /// Plot width
+    /// Width of the plot in pixels
     pub width: u32,
-    /// Plot height
+    /// Height of the plot in pixels
     pub height: u32,
-    /// Curve names
+    /// Optional names for each curve/data series to be displayed in the legend
     pub curve_name: Option<Vec<String>>,
-
+    /// Optional size of points in scatter plots, measured in pixels
     pub point_size: Option<u32>,
-
+    /// Optional font size for axis labels and other text elements
     pub labels_size: Option<f64>,
 }
 
@@ -68,83 +76,230 @@ impl Default for PlotOptions {
     }
 }
 
-/// Trait for plotting curves
+/// Trait for defining objects that can be visualized as plots.
+///
+/// The `Plottable` trait provides a standardized interface for types that can be
+/// represented graphically. It enables visualization of data structures through
+/// a fluent builder pattern, allowing for customizable plot creation.
+///
+/// Implementers of this trait can be visualized using the plotting system with
+/// configurable options for appearance, labels, colors, and other visual attributes.
+///
 pub trait Plottable {
+    /// The error type returned by plotting operations.
+    ///
+    /// This associated type allows implementers to define their specific
+    /// error handling approach for plot generation and rendering.
     type Error;
 
-    /// Creates a plot builder
+    /// Creates a plot builder for configuring and generating visualizations.
+    ///
+    /// Returns a `PlotBuilder` instance that provides a fluent interface for
+    /// customizing plot appearance and behavior before rendering.
     fn plot(&self) -> PlotBuilder<Self>
     where
         Self: Sized;
 }
-
-/// Plot Builder for configurable curve visualization
-#[allow(dead_code)]
+/// A builder for creating and configuring data visualizations.
+///
+/// `PlotBuilder` provides a fluent interface for customizing plots with various
+/// styling and labeling options. It works with any type that implements the
+/// `Plottable` trait, allowing for consistent visualization capabilities across
+/// different data structures.
+///
+/// This builder is typically created via the `plot()` method on types that implement
+/// the `Plottable` trait. After configuring the plot with the desired options,
+/// it can be rendered and saved using the methods from `PlotBuilderExt`.
+///
 pub struct PlotBuilder<T: Plottable> {
-    /// Data to be plotted
+    /// The data to be visualized in the plot.
+    ///
+    /// This field holds the instance of a type implementing the `Plottable` trait
+    /// which contains the actual data points to be represented in the visualization.
     pub(crate) data: T,
-    /// Plot configuration options
+
+    /// Configuration settings that control the appearance and behavior of the plot.
+    ///
+    /// This includes visual styling like colors, dimensions, and line widths,
+    /// as well as textual elements like titles and axis labels.
+    /// See `PlotOptions` for the complete set of available configuration options.
     pub(crate) options: PlotOptions,
 }
 
 impl<T: Plottable> PlotBuilder<T> {
-    /// Set plot title
+    /// Sets the title of the plot.
+    ///
+    /// This method configures the main title that appears at the top of the visualization.
+    ///
+    /// # Parameters
+    /// * `title` - The text to display as the plot title
+    ///
+    /// # Returns
+    /// The `PlotBuilder` instance with the updated title setting
+    ///
     pub fn title(mut self, title: impl Into<String>) -> Self {
         self.options.title = Some(title.into());
         self
     }
 
-    /// Set x-axis label
+    /// Sets the label for the x-axis.
+    ///
+    /// This method configures the descriptive text displayed along the horizontal axis.
+    ///
+    /// # Parameters
+    /// * `label` - The text to display as the x-axis label
+    ///
+    /// # Returns
+    /// The `PlotBuilder` instance with the updated x-axis label
+    ///
     pub fn x_label(mut self, label: impl Into<String>) -> Self {
         self.options.x_label = Some(label.into());
         self
     }
 
-    /// Set y-axis label
+    /// Sets the label for the y-axis.
+    ///
+    /// This method configures the descriptive text displayed along the vertical axis.
+    ///
+    /// # Parameters
+    /// * `label` - The text to display as the y-axis label
+    ///
+    /// # Returns
+    /// The `PlotBuilder` instance with the updated y-axis label
+    ///
     pub fn y_label(mut self, label: impl Into<String>) -> Self {
         self.options.y_label = Some(label.into());
         self
     }
 
+    /// Sets the label for the z-axis.
+    ///
+    /// This method configures the descriptive text displayed along the z-axis
+    /// in three-dimensional plots.
+    ///
+    /// # Parameters
+    /// * `label` - The text to display as the z-axis label
+    ///
+    /// # Returns
+    /// The `PlotBuilder` instance with the updated z-axis label
+    ///
     pub fn z_label(mut self, label: impl Into<String>) -> Self {
         self.options.z_label = Some(label.into());
         self
     }
 
+    /// Sets the size of data points in scatter plots.
+    ///
+    /// This method configures the diameter of individual data points
+    /// when rendering scatter plots.
+    ///
+    /// # Parameters
+    /// * `size` - The size of points in pixels
+    ///
+    /// # Returns
+    /// The `PlotBuilder` instance with the updated point size setting
+    ///
     pub fn point_size(mut self, size: u32) -> Self {
         self.options.point_size = Some(size);
         self
     }
 
+    /// Sets the font size for labels and text elements.
+    ///
+    /// This method configures the font size used for axis labels, titles,
+    /// and other textual elements in the visualization.
+    ///
+    /// # Parameters
+    /// * `size` - The font size as a floating point value
+    ///
+    /// # Returns
+    /// The `PlotBuilder` instance with the updated label size setting
+    ///
     pub fn label_size(mut self, size: f64) -> Self {
         self.options.labels_size = Some(size);
         self
     }
 
+    /// Sets custom names for each data series/curve in the plot.
+    ///
+    /// This method configures the names displayed in the legend to identify
+    /// different data series in the visualization.
+    ///
+    /// # Parameters
+    /// * `label` - A vector of strings, each representing the name of a curve
+    ///
+    /// # Returns
+    /// The `PlotBuilder` instance with the updated curve names
+    ///
     pub fn curve_name(mut self, label: Vec<String>) -> Self {
         self.options.curve_name = Some(label);
         self
     }
 
-    /// Set line colors
+    /// Sets the colors for data series lines.
+    ///
+    /// This method configures the colors used to render each data series or curve
+    /// in the visualization.
+    ///
+    /// # Parameters
+    /// * `colors` - A vector of RGB colors to use for the plot lines
+    ///
+    /// # Returns
+    /// The `PlotBuilder` instance with the updated line colors
+    ///
     pub fn line_colors(mut self, colors: Vec<RGBColor>) -> Self {
         self.options.line_colors = Some(colors);
         self
     }
 
-    /// Set line width
+    /// Sets the width of plot lines.
+    ///
+    /// This method configures the thickness of lines used to render data series
+    /// in the visualization.
+    ///
+    /// # Parameters
+    /// * `width` - The width of lines in pixels
+    ///
+    /// # Returns
+    /// The `PlotBuilder` instance with the updated line width setting
+    ///
     pub fn line_width(mut self, width: u32) -> Self {
         self.options.line_width = width;
         self
     }
 
-    /// Set plot dimensions
+    /// Sets the overall dimensions of the plot.
+    ///
+    /// This method configures the width and height of the generated plot image.
+    ///
+    /// # Parameters
+    /// * `width` - The width of the plot in pixels
+    /// * `height` - The height of the plot in pixels
+    ///
+    /// # Returns
+    /// The `PlotBuilder` instance with the updated dimensions
+    ///
     pub fn dimensions(mut self, width: u32, height: u32) -> Self {
         self.options.width = width;
         self.options.height = height;
         self
     }
 
+    /// Saves the configured plot to a file.
+    ///
+    /// This method renders the plot with all configured options and writes
+    /// the result to the specified file path.
+    ///
+    /// # Parameters
+    /// * `path` - The file path where the plot should be saved
+    ///
+    /// # Returns
+    /// A `Result` indicating success or containing an error if the save operation failed
+    ///
+    /// # Errors
+    /// This method will return an error if the plot cannot be rendered or saved,
+    /// with the specific error type determined by the `Plottable` implementation.
+    ///
     pub fn save(self, path: impl AsRef<Path>) -> Result<(), T::Error>
     where
         Self: PlotBuilderExt<T>,
@@ -153,9 +308,33 @@ impl<T: Plottable> PlotBuilder<T> {
     }
 }
 
-/// Plotting extension methods
+/// Extension methods for the plot building process.
+///
+/// This trait extends the `PlotBuilder` functionality to provide methods for
+/// outputting and saving plots. It serves as the final step in the plot creation
+/// pipeline after configuring visualization options.
+///
+/// `PlotBuilderExt` complements the builder pattern used in the plotting system by
+/// providing output capabilities that work with any type implementing the `Plottable` trait.
+/// This separation of concerns allows for a clean interface where plot configuration
+/// and rendering/output are logically separated.
 pub trait PlotBuilderExt<T: Plottable> {
-    /// Save plot to file
+    /// Saves the configured plot to a file at the specified path.
+    ///
+    /// This method renders the plot with all configured options and writes the
+    /// resulting visualization to the given file path. The file format is determined
+    /// by the path's extension (e.g., .png, .svg).
+    ///
+    /// # Arguments
+    ///
+    /// * `path` - The file path where the plot should be saved. Can be any type
+    ///   that can be converted to a `Path`.
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(())` if the plot was successfully saved
+    /// * `Err(T::Error)` if an error occurred during rendering or saving
+    ///
     fn save(self, path: impl AsRef<Path>) -> Result<(), T::Error>;
 }
 
