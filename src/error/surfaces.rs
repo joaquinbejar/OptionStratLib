@@ -9,12 +9,61 @@ use crate::error::{
 use std::error::Error;
 use std::fmt;
 
+/// Error variants that can occur when working with surface-related operations.
+///
+/// This enum categorizes different types of errors that might occur when handling 
+/// mathematical or geometrical surfaces, particularly in the context of pricing
+/// models, interpolation, or volatility surfaces.
+///
+/// ## Error Categories
+///
+/// - Geometry errors (points in 3D space)
+/// - Operation-specific errors
+/// - Standard library errors
+/// - Surface construction errors
+/// - Analysis-related failures
+///
+/// This error type is designed to provide detailed context about what went wrong
+/// when working with financial or mathematical surface calculations, which is useful
+/// for debugging and error handling in financial modeling applications.
 #[derive(Debug)]
 pub enum SurfaceError {
-    Point3DError { reason: &'static str },
+    /// Error related to 3D point calculations or validations.
+    ///
+    /// This typically occurs when coordinates are invalid, out of expected range,
+    /// or when mathematical operations on points fail.
+    Point3DError {
+        /// A reference to a static string that explains the reason for an error or a condition.
+        reason: &'static str 
+    },
+
+    /// Error indicating a specific operation failed.
+    ///
+    /// Contains detailed information about why the operation could not be completed,
+    /// including whether the operation isn't supported for the given surface type
+    /// or was provided with invalid parameters.
     OperationError(OperationErrorKind),
-    StdError { reason: String },
+
+    /// Error originating from the standard library or external dependencies.
+    ///
+    /// Encapsulates errors that were generated outside of the surface module,
+    /// providing a clear transition between external and internal error handling.
+    StdError {
+        /// A reference to a static string that explains the reason for an error or a condition.
+        reason: String 
+    },
+
+    /// Error that occurred during the construction of a surface.
+    ///
+    /// This is typically used when input data is valid but inconsistent or insufficient
+    /// to construct a well-formed surface object.
     ConstructionError(String),
+
+    /// Error that occurred during the analysis of a surface.
+    ///
+    /// This is used when operations like finding extrema, calculating slopes,
+    /// or evaluating a surface at specific points fail due to mathematical
+    /// or algorithmic constraints.
     AnalysisError(String),
 }
 
