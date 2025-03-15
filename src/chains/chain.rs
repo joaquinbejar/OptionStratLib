@@ -28,7 +28,7 @@ use num_traits::{FromPrimitive, ToPrimitive};
 use rust_decimal::{Decimal, MathematicalOps};
 use serde::de::{MapAccess, Visitor};
 use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
-use std::cmp::Ordering;
+use std::cmp::{Ordering, PartialEq};
 use std::collections::{BTreeMap, BTreeSet};
 use std::error::Error;
 use std::fmt;
@@ -792,7 +792,7 @@ impl OptionData {
     pub fn is_valid_optimal_side(
         &self,
         underlying_price: Positive,
-        side: &FindOptimalSide,
+        side: &FindOptimalSide, // Note: now mutable
     ) -> bool {
         match side {
             FindOptimalSide::Upper => self.strike_price >= underlying_price,
@@ -800,6 +800,11 @@ impl OptionData {
             FindOptimalSide::All => true,
             FindOptimalSide::Range(start, end) => {
                 self.strike_price >= *start && self.strike_price <= *end
+            }
+            FindOptimalSide::Deltable(_threshold) => true,
+            FindOptimalSide::Center => {
+                error!("Center should be managed by the strategy");
+                false
             }
         }
     }
@@ -1377,6 +1382,11 @@ impl OptionChain {
                 FindOptimalSide::Range(start, end) => {
                     option.strike_price >= start && option.strike_price <= end
                 }
+                FindOptimalSide::Deltable(_threshold) => true,
+                FindOptimalSide::Center => {
+                    error!("Center should be managed by the strategy");
+                    false
+                }
             })
             .collect()
     }
@@ -1414,6 +1424,8 @@ impl OptionChain {
                 FindOptimalSide::Range(start, end) => {
                     option.strike_price >= start && option.strike_price <= end
                 }
+                FindOptimalSide::Deltable(_threshold) => true,
+                FindOptimalSide::Center => true,
             })
             .map(|option| option.get_options_in_strike(price_params, Side::Long, OptionStyle::Call))
             .collect()

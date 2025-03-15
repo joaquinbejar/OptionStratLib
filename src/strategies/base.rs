@@ -805,6 +805,11 @@ pub trait Optimizable: Validable + Strategies {
             FindOptimalSide::Range(start, end) => {
                 option.strike_price >= *start && option.strike_price <= *end
             }
+            FindOptimalSide::Deltable(_threshold) => true,
+            FindOptimalSide::Center => {
+                error!("Center should be managed by the strategy");
+                false
+            }
         }
     }
 

@@ -628,6 +628,8 @@ impl Optimizable for PoorMansCoveredCall {
                 }
                 valid
             }
+            FindOptimalSide::Deltable(_threshold) => true,
+            FindOptimalSide::Center => option.strike_price <= self.get_underlying_price(),
         }
     }
 
@@ -670,6 +672,8 @@ impl Optimizable for PoorMansCoveredCall {
                 }
                 valid
             }
+            FindOptimalSide::Deltable(_threshold) => true,
+            FindOptimalSide::Center => option.strike_price >= self.get_underlying_price(),
         }
     }
 

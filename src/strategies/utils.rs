@@ -10,17 +10,81 @@ use std::fmt::Display;
 /// Defines the strategy for finding optimal pricing sides.
 ///
 /// This enumeration specifies which side of a price curve to consider when
-/// finding optimal prices, or allows for searching across all prices or a specific range.
-#[derive(Debug, Clone, Copy)]
+/// finding optimal prices, or allows for searching across all prices or within
+/// a specific range. It's used to control price discovery algorithms and to refine
+/// the search space for optimal option pricing strategies.
+///
+/// # Variants
+///
+/// * `Upper` - Consider only the upper side of the price curve. This is useful when
+///   expecting the market to move upward or when optimizing for maximum upside potential.
+///
+/// * `Lower` - Consider only the lower side of the price curve. This is useful when
+///   expecting the market to move downward or when optimizing for downside protection.
+///
+/// * `All` - Consider the entire price curve, searching all possible price points
+///   without any directional bias.
+///
+/// * `Range` - Consider prices within a specific range defined by start and end prices.
+///   This allows for a more targeted search within a predetermined price band.
+///
+/// * `Deltable` - Select strikes in a strategy that ensure delta neutrality within
+///   the specified threshold. This is useful for creating market-neutral strategies.
+///
+/// * `Center` - Focus the search around a center point of the price curve, allowing for
+///   balanced optimization around a specific price level.
+///
+/// # Usage
+///
+/// This enum is typically used in option pricing and strategy optimization contexts
+/// to control how the algorithm searches for optimal pricing points.
+///
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum FindOptimalSide {
     /// Consider only the upper side of the price curve.
+    ///
+    /// Use this when you expect the market to trend upward or when you want to
+    /// optimize for maximum upside potential in your option strategy.
     Upper,
+
     /// Consider only the lower side of the price curve.
+    ///
+    /// Use this when you expect the market to trend downward or when you want to
+    /// optimize for downside protection in your option strategy.
     Lower,
+
     /// Consider the entire price curve.
+    ///
+    /// This performs a comprehensive search across all available price points
+    /// without any directional bias. It's useful when you want to find the globally
+    /// optimal solution regardless of market direction.
     All,
+
     /// Consider prices within a specific range defined by start and end prices.
+    ///
+    /// # Parameters
+    ///
+    /// * First `Positive` - The starting price of the range (inclusive).
+    /// * Second `Positive` - The ending price of the range (inclusive).
     Range(Positive, Positive),
+
+    /// Select strikes in a strategy that ensure delta neutrality within the specified threshold.
+    ///
+    /// This option is particularly useful for creating market-neutral strategies where the
+    /// overall position delta remains close to zero.
+    ///
+    /// # Parameters
+    ///
+    /// * `Positive` - The maximum deviation from perfect delta neutrality that is allowed.
+    ///   For example, a value of 0.05 means the strategy's delta can range from -0.05 to 0.05.
+    Deltable(Positive),
+
+    /// Focus the search around a center point of the price curve.
+    ///
+    /// This variant is useful when you have a specific price target in mind and want to
+    /// optimize strategy parameters around that central point. It's commonly used for
+    /// constructing balanced spreads or when you have a precise market outlook.
+    Center,
 }
 
 impl Display for FindOptimalSide {
@@ -30,6 +94,8 @@ impl Display for FindOptimalSide {
             FindOptimalSide::Lower => write!(f, "Lower"),
             FindOptimalSide::All => write!(f, "All"),
             FindOptimalSide::Range(start, end) => write!(f, "Range: {} - {}", start, end),
+            FindOptimalSide::Deltable(threshold) => write!(f, "Deltable: {}", threshold),
+            FindOptimalSide::Center => write!(f, "Center"),
         }
     }
 }
