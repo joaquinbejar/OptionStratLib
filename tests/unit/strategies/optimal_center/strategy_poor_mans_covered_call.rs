@@ -1,4 +1,4 @@
-use optionstratlib::OptionStyle;
+use optionstratlib::Side;
 use optionstratlib::strategies::base::Positionable;
 #[cfg(not(target_arch = "wasm32"))]
 use {
@@ -42,12 +42,12 @@ fn test_poor_mans_covered_call_integration() -> Result<(), Box<dyn Error>> {
     strategy.best_area(&option_chain, FindOptimalSide::Center);
     let positions = strategy.get_positions()?;
     for position in positions {
-        match position.option.option_style {
-            OptionStyle::Call => {
-                assert!(position.option.strike_price >= underlying_price)
-            }
-            OptionStyle::Put => {
+        match position.option.side {
+            Side::Long => {
                 assert!(position.option.strike_price <= underlying_price)
+            }
+            Side::Short => {
+                assert!(position.option.strike_price >= underlying_price)
             }
         }
     }
