@@ -619,9 +619,17 @@ impl Optimizable for CallButterfly {
             .get_triple_iter()
             // Filter out invalid combinations based on FindOptimalSide
             .filter(move |(long, short_low, short_high)| {
-                long.is_valid_optimal_side(underlying_price, &side)
-                    && short_low.is_valid_optimal_side(underlying_price, &side)
-                    && short_high.is_valid_optimal_side(underlying_price, &side)
+                if side == FindOptimalSide::Center {
+                    long.is_valid_optimal_side(underlying_price, &FindOptimalSide::Lower)
+                        && short_low
+                            .is_valid_optimal_side(underlying_price, &FindOptimalSide::Lower)
+                        && short_high
+                            .is_valid_optimal_side(underlying_price, &FindOptimalSide::Upper)
+                } else {
+                    long.is_valid_optimal_side(underlying_price, &side)
+                        && short_low.is_valid_optimal_side(underlying_price, &side)
+                        && short_high.is_valid_optimal_side(underlying_price, &side)
+                }
             })
             // Filter out options with invalid bid/ask prices
             .filter(|(long, short_low, short_high)| {
