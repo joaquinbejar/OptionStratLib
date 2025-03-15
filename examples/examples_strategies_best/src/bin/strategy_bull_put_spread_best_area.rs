@@ -34,7 +34,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         pos!(0.82),     // open_fee_short_put
         pos!(0.82),     // close_fee_short_put
     );
-    strategy.best_area(&option_chain, FindOptimalSide::All);
+    strategy.best_area(&option_chain, FindOptimalSide::Center);
     debug!("Option Chain: {}", option_chain);
     debug!("Strategy:  {:#?}", strategy);
 
