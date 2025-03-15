@@ -1,3 +1,5 @@
+use optionstratlib::OptionStyle;
+use optionstratlib::strategies::base::Positionable;
 #[cfg(not(target_arch = "wasm32"))]
 use {
     optionstratlib::chains::chain::OptionChain,
@@ -8,8 +10,6 @@ use {
     rust_decimal_macros::dec,
     std::error::Error,
 };
-use optionstratlib::OptionStyle;
-use optionstratlib::strategies::base::Positionable;
 
 #[test]
 #[cfg(not(target_arch = "wasm32"))]
@@ -40,15 +40,15 @@ fn test_long_straddle_integration() -> Result<(), Box<dyn Error>> {
         OptionChain::load_from_json("./examples/Chains/SP500-18-oct-2024-5781.88.json")?;
     strategy.best_area(&option_chain, FindOptimalSide::Center);
     let positions = strategy.get_positions()?;
-    let atm_strike =  option_chain.atm_strike()?;
+    let atm_strike = option_chain.atm_strike()?;
     for position in positions {
         match position.option.option_style {
             OptionStyle::Call => {
                 assert!(position.option.strike_price == atm_strike)
-            },
+            }
             OptionStyle::Put => {
                 assert!(position.option.strike_price == atm_strike)
-            },
+            }
         }
     }
 
