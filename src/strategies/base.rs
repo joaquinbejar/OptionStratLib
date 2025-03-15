@@ -807,8 +807,7 @@ pub trait Optimizable: Validable + Strategies {
             }
             FindOptimalSide::Deltable(_threshold) => true,
             FindOptimalSide::Center => {
-                error!("Center should be managed by the strategy");
-                false
+                panic!("Center should be managed by the strategy");
             }
         }
     }

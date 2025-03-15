@@ -803,8 +803,7 @@ impl OptionData {
             }
             FindOptimalSide::Deltable(_threshold) => true,
             FindOptimalSide::Center => {
-                error!("Center should be managed by the strategy");
-                false
+                panic!("Center should be managed by the strategy");
             }
         }
     }
@@ -1384,8 +1383,7 @@ impl OptionChain {
                 }
                 FindOptimalSide::Deltable(_threshold) => true,
                 FindOptimalSide::Center => {
-                    error!("Center should be managed by the strategy");
-                    false
+                    panic!("Center should be managed by the strategy");
                 }
             })
             .collect()
@@ -1425,7 +1423,9 @@ impl OptionChain {
                     option.strike_price >= start && option.strike_price <= end
                 }
                 FindOptimalSide::Deltable(_threshold) => true,
-                FindOptimalSide::Center => true,
+                FindOptimalSide::Center => {
+                    panic!("Center should be managed by the strategy");
+                }
             })
             .map(|option| option.get_options_in_strike(price_params, Side::Long, OptionStyle::Call))
             .collect()
