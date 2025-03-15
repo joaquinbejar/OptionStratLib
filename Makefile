@@ -78,12 +78,15 @@ fix:
 	cargo fix --allow-staged --allow-dirty
 
 .PHONY: pre-push
-pre-push: fix fmt lint-fix test readme
+pre-push: fix fmt lint-fix test readme doc
 
 .PHONY: doc
 doc:
-	cargo doc --open
 	cargo clippy -- -W missing-docs
+
+.PHONY: doc-open
+doc-open:
+	cargo doc --open
 
 .PHONY: publish
 publish: readme
