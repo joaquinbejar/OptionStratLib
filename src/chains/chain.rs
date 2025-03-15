@@ -7566,3 +7566,169 @@ mod tests_theta_calculations {
         }
     }
 }
+
+
+#[cfg(test)]
+#[cfg(not(target_arch = "wasm32"))]
+mod tests_atm_strike {
+    use super::*;
+    use crate::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
+    use crate::model::types::ExpirationDate;
+    use crate::utils::logger::setup_logger;
+    use crate::{pos, spos};
+    use rust_decimal_macros::dec;
+
+    fn create_standard_chain() -> OptionChain {
+        setup_logger();
+        let params = OptionChainBuildParams::new(
+            "SP500".to_string(),
+            None,
+            10,
+            pos!(1.0),
+            0.0,
+            pos!(0.02),
+            2,
+            OptionDataPriceParams::new(
+                pos!(100.0),
+                ExpirationDate::Days(pos!(30.0)),
+                spos!(0.17),
+                Decimal::ZERO,
+                pos!(0.05),
+                Some("SP500".to_string()),
+            ),
+        );
+
+        OptionChain::build_chain(&params)
+    }
+
+    #[test]
+    fn test_atm_strike_exact_match() {
+        let chain = create_standard_chain();
+
+        // The default chain has a strike at 100.0 which matches the underlying price
+        let result = chain.atm_strike();
+        assert!(result.is_ok(), "Should find the ATM strike");
+
+        let strike = result.unwrap();
+        assert_eq!(*strike, pos!(100.0), "Should return strike at exactly 100.0");
+    }
+
+    #[test]
+    fn test_atm_strike_approximate_match() {
+        let mut chain = create_standard_chain();
+
+        // Modify the underlying price to a value that doesn't have an exact match
+        chain.underlying_price = pos!(100.5);
+
+        let result = chain.atm_strike();
+        assert!(result.is_ok(), "Should find the closest strike");
+
+        let strike = result.unwrap();
+        assert_eq!(*strike, pos!(100.0), "Should return the closest strike (100.0)");
+
+        // Modify the underlying price to test the other direction
+        chain.underlying_price = pos!(101.0);
+
+        let result = chain.atm_strike();
+        assert!(result.is_ok(), "Should find the closest strike");
+
+        let strike = result.unwrap();
+        assert_eq!(*strike, pos!(101.0), "Should return the closest strike (101.0)");
+    }
+
+    #[test]
+    fn test_atm_strike_empty_chain() {
+        let chain = OptionChain::new(
+            "EMPTY",
+            pos!(100.0),
+            "2023-12-15".to_string(),
+            None,
+            None,
+        );
+
+        let result = chain.atm_strike();
+        assert!(result.is_err(), "Should return error for empty chain");
+
+        let error = result.unwrap_err().to_string();
+        assert!(error.contains("empty option chain"), "Error should mention empty chain");
+        assert!(error.contains("EMPTY"), "Error should include the symbol");
+    }
+
+    #[test]
+    fn test_atm_strike_extreme_underlying() {
+        let mut chain = create_standard_chain();
+
+        // Set underlying price far from any strike
+        chain.underlying_price = pos!(150.0);
+
+        let result = chain.atm_strike();
+        assert!(result.is_ok(), "Should find the closest strike even for extreme values");
+
+        let strike = result.unwrap();
+
+        // The farthest strike in the standard chain should be around 110.0
+        assert_eq!(*strike, pos!(110.0), "Should return the highest available strike");
+
+        // Test with very low underlying price
+        chain.underlying_price = pos!(80.0);
+
+        let result = chain.atm_strike();
+        assert!(result.is_ok(), "Should find the closest strike for low values");
+
+        let strike = result.unwrap();
+
+        // The lowest strike in the standard chain should be around 90.0
+        assert_eq!(*strike, pos!(90.0), "Should return the lowest available strike");
+    }
+
+    #[test]
+    fn test_atm_strike_equidistant() {
+        let mut chain = create_standard_chain();
+
+        // Set underlying price exactly between two strikes
+        chain.underlying_price = pos!(100.5);
+
+        // Set up a custom chain with known strikes
+        let mut options = BTreeSet::new();
+        options.insert(OptionData::new(
+            pos!(100.0),
+            spos!(1.0),
+            spos!(1.1),
+            spos!(1.0),
+            spos!(1.1),
+            spos!(0.2),
+            Some(dec!(0.5)),
+            Some(dec!(-0.5)),
+            Some(dec!(0.1)),
+            spos!(100.0),
+            Some(50),
+        ));
+
+        options.insert(OptionData::new(
+            pos!(101.0),
+            spos!(0.9),
+            spos!(1.0),
+            spos!(1.1),
+            spos!(1.2),
+            spos!(0.2),
+            Some(dec!(0.55)),
+            Some(dec!(-0.45)),
+            Some(dec!(0.1)),
+            spos!(100.0),
+            Some(50),
+        ));
+
+        chain.options = options;
+
+        let result = chain.atm_strike();
+        assert!(result.is_ok(), "Should find a strike when equidistant");
+
+        let strike = result.unwrap();
+
+        // When equidistant, should return one of the two closest strikes
+        assert!(
+            *strike == pos!(100.0) || *strike == pos!(101.0),
+            "Should return one of the equidistant strikes"
+        );
+    }
+}
