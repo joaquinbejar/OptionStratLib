@@ -536,9 +536,14 @@ impl Optimizable for BearCallSpread {
         option_chain
             .get_double_iter()
             // Filter out invalid combinations based on FindOptimalSide
-            .filter(move |&option| {
-                option.0.is_valid_optimal_side(underlying_price, &side)
-                    && option.1.is_valid_optimal_side(underlying_price, &side)
+            .filter(move |&(short, long)| {
+                if side == FindOptimalSide::Center {
+                    long.is_valid_optimal_side(underlying_price, &FindOptimalSide::Upper)
+                        && short.is_valid_optimal_side(underlying_price, &FindOptimalSide::Lower)
+                } else {
+                    long.is_valid_optimal_side(underlying_price, &side)
+                        && short.is_valid_optimal_side(underlying_price, &side)
+                }
             })
             // Filter out options with invalid bid/ask prices
             .filter(|(short, long)| {
