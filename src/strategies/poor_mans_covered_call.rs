@@ -565,13 +565,11 @@ impl Optimizable for PoorMansCoveredCall {
                         debug!("Invalid option");
                         continue;
                     }
-                } else {
-                    if !self.is_valid_short_option(short_call_option, &side)
-                        || !self.is_valid_long_option(long_call_option, &side)
-                    {
-                        debug!("Invalid option");
-                        continue;
-                    }
+                } else if !self.is_valid_short_option(short_call_option, &side)
+                    || !self.is_valid_long_option(long_call_option, &side)
+                {
+                    debug!("Invalid option");
+                    continue;
                 }
 
 
