@@ -673,10 +673,20 @@ impl Optimizable for IronCondor {
             .get_quad_iter()
             // Filter out invalid combinations based on FindOptimalSide
             .filter(move |(long_put, short_put, short_call, long_call)| {
-                long_put.is_valid_optimal_side(underlying_price, &side)
-                    && short_put.is_valid_optimal_side(underlying_price, &side)
-                    && short_call.is_valid_optimal_side(underlying_price, &side)
-                    && long_call.is_valid_optimal_side(underlying_price, &side)
+                if side == FindOptimalSide::Center {
+                    long_put.is_valid_optimal_side(underlying_price, &FindOptimalSide::Lower)
+                        && short_put
+                            .is_valid_optimal_side(underlying_price, &FindOptimalSide::Lower)
+                        && short_call
+                            .is_valid_optimal_side(underlying_price, &FindOptimalSide::Upper)
+                        && long_call
+                            .is_valid_optimal_side(underlying_price, &FindOptimalSide::Upper)
+                } else {
+                    long_put.is_valid_optimal_side(underlying_price, &side)
+                        && short_put.is_valid_optimal_side(underlying_price, &side)
+                        && short_call.is_valid_optimal_side(underlying_price, &side)
+                        && long_call.is_valid_optimal_side(underlying_price, &side)
+                }
             })
             // Filter out options with invalid bid/ask prices
             .filter(|(long_put, short_put, short_call, long_call)| {
