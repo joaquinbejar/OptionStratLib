@@ -1509,6 +1509,62 @@ impl OptionChain {
         self.options.insert(option_data);
     }
 
+    /// Returns the strike price closest to the underlying price (at-the-money).
+    ///
+    /// This method searches through all available options in the chain to find the one
+    /// with a strike price that most closely matches the current underlying price.
+    /// This is useful for finding at-the-money (ATM) options when there isn't an exact
+    /// match for the underlying price.
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(&Positive)` - Reference to the strike price closest to the underlying price
+    /// * `Err(Box<dyn Error>)` - Error if the option chain is empty or if the operation fails
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use tracing::{error, info};
+    /// use optionstratlib::chains::chain::OptionChain;
+    /// use optionstratlib::pos;
+    ///
+    /// let chain = OptionChain::new("SPY", pos!(450.75), "2023-12-15".to_string(), None, None);
+    /// // Add options to the chain...
+    ///
+    /// match chain.atm_strike() {
+    ///     Ok(strike) => info!("Closest strike to underlying: {}", strike),
+    ///     Err(e) => error!("Error finding ATM strike: {}", e),
+    /// }
+    /// ```
+    pub fn atm_strike(&self) -> Result<&Positive, Box<dyn Error>> {
+        // Check for empty option chain
+        if self.options.is_empty() {
+            return Err(format!(
+                "Cannot find ATM strike for empty option chain: {}",
+                self.symbol
+            ).into());
+        }
+
+        // First check for exact match
+        if let Some(exact_match) = self.options.iter().find(|opt| opt.strike_price == self.underlying_price) {
+            return Ok(&exact_match.strike_price);
+        }
+
+        // Find the option with strike price closest to underlying price
+        self.options
+            .iter()
+            .min_by(|a, b| {
+                let a_distance = (a.strike_price.to_dec() - self.underlying_price.to_dec()).abs();
+                let b_distance = (b.strike_price.to_dec() - self.underlying_price.to_dec()).abs();
+                a_distance.partial_cmp(&b_distance).unwrap_or(Ordering::Equal)
+            })
+            .map(|opt| &opt.strike_price)
+            .ok_or_else(|| format!(
+                "Failed to find ATM strike for option chain: {}",
+                self.symbol
+            ).into())
+    }
+
     /// Returns a formatted title string for the option chain.
     ///
     /// This method creates a title by combining the option chain's symbol, expiration date,
