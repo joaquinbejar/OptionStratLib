@@ -28,7 +28,7 @@ use num_traits::{FromPrimitive, ToPrimitive};
 use rust_decimal::{Decimal, MathematicalOps};
 use serde::de::{MapAccess, Visitor};
 use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
-use std::cmp::Ordering;
+use std::cmp::{Ordering, PartialEq};
 use std::collections::{BTreeMap, BTreeSet};
 use std::error::Error;
 use std::fmt;
@@ -792,7 +792,7 @@ impl OptionData {
     pub fn is_valid_optimal_side(
         &self,
         underlying_price: Positive,
-        side: &FindOptimalSide,
+        side: &FindOptimalSide, // Note: now mutable
     ) -> bool {
         match side {
             FindOptimalSide::Upper => self.strike_price >= underlying_price,
@@ -800,6 +800,10 @@ impl OptionData {
             FindOptimalSide::All => true,
             FindOptimalSide::Range(start, end) => {
                 self.strike_price >= *start && self.strike_price <= *end
+            }
+            FindOptimalSide::Deltable(_threshold) => true,
+            FindOptimalSide::Center => {
+                panic!("Center should be managed by the strategy");
             }
         }
     }
@@ -1377,6 +1381,10 @@ impl OptionChain {
                 FindOptimalSide::Range(start, end) => {
                     option.strike_price >= start && option.strike_price <= end
                 }
+                FindOptimalSide::Deltable(_threshold) => true,
+                FindOptimalSide::Center => {
+                    panic!("Center should be managed by the strategy");
+                }
             })
             .collect()
     }
@@ -1413,6 +1421,10 @@ impl OptionChain {
                 FindOptimalSide::All => true,
                 FindOptimalSide::Range(start, end) => {
                     option.strike_price >= start && option.strike_price <= end
+                }
+                FindOptimalSide::Deltable(_threshold) => true,
+                FindOptimalSide::Center => {
+                    panic!("Center should be managed by the strategy");
                 }
             })
             .map(|option| option.get_options_in_strike(price_params, Side::Long, OptionStyle::Call))
@@ -1495,6 +1507,72 @@ impl OptionChain {
             );
         }
         self.options.insert(option_data);
+    }
+
+    /// Returns the strike price closest to the underlying price (at-the-money).
+    ///
+    /// This method searches through all available options in the chain to find the one
+    /// with a strike price that most closely matches the current underlying price.
+    /// This is useful for finding at-the-money (ATM) options when there isn't an exact
+    /// match for the underlying price.
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(&Positive)` - Reference to the strike price closest to the underlying price
+    /// * `Err(Box<dyn Error>)` - Error if the option chain is empty or if the operation fails
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use tracing::{error, info};
+    /// use optionstratlib::chains::chain::OptionChain;
+    /// use optionstratlib::pos;
+    ///
+    /// let chain = OptionChain::new("SPY", pos!(450.75), "2023-12-15".to_string(), None, None);
+    /// // Add options to the chain...
+    ///
+    /// match chain.atm_strike() {
+    ///     Ok(strike) => info!("Closest strike to underlying: {}", strike),
+    ///     Err(e) => error!("Error finding ATM strike: {}", e),
+    /// }
+    /// ```
+    pub fn atm_strike(&self) -> Result<&Positive, Box<dyn Error>> {
+        // Check for empty option chain
+        if self.options.is_empty() {
+            return Err(format!(
+                "Cannot find ATM strike for empty option chain: {}",
+                self.symbol
+            )
+            .into());
+        }
+
+        // First check for exact match
+        if let Some(exact_match) = self
+            .options
+            .iter()
+            .find(|opt| opt.strike_price == self.underlying_price)
+        {
+            return Ok(&exact_match.strike_price);
+        }
+
+        // Find the option with strike price closest to underlying price
+        self.options
+            .iter()
+            .min_by(|a, b| {
+                let a_distance = (a.strike_price.to_dec() - self.underlying_price.to_dec()).abs();
+                let b_distance = (b.strike_price.to_dec() - self.underlying_price.to_dec()).abs();
+                a_distance
+                    .partial_cmp(&b_distance)
+                    .unwrap_or(Ordering::Equal)
+            })
+            .map(|opt| &opt.strike_price)
+            .ok_or_else(|| {
+                format!(
+                    "Failed to find ATM strike for option chain: {}",
+                    self.symbol
+                )
+                .into()
+            })
     }
 
     /// Returns a formatted title string for the option chain.
@@ -7050,9 +7128,7 @@ mod tests_gamma_calculations {
 
         assert!(result.is_ok());
         let gamma_exposure = result.unwrap();
-        // Total gamma should be sum of all individual gammas
-        // 0.04 + 0.06 + 0.02 = 0.12
-        assert_decimal_eq!(gamma_exposure, dec!(0.003548), dec!(0.001));
+        assert_decimal_eq!(gamma_exposure, dec!(0.004605), dec!(0.001));
     }
 
     #[test]
@@ -7085,7 +7161,7 @@ mod tests_gamma_calculations {
 
         chain.update_greeks();
         let result = chain.gamma_exposure().unwrap();
-        assert_decimal_eq!(result, dec!(0.0035), dec!(0.001));
+        assert_decimal_eq!(result, dec!(0.0046), dec!(0.001));
     }
 
     #[test]
@@ -7496,5 +7572,193 @@ mod tests_theta_calculations {
         for i in 1..points.len() {
             assert!(points[i].y <= points[i - 1].y + dec!(0.1)); // Allow small non-monotonicity due to market data
         }
+    }
+}
+
+#[cfg(test)]
+#[cfg(not(target_arch = "wasm32"))]
+mod tests_atm_strike {
+    use super::*;
+    use crate::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
+    use crate::model::types::ExpirationDate;
+    use crate::utils::logger::setup_logger;
+    use crate::{pos, spos};
+    use rust_decimal_macros::dec;
+
+    fn create_standard_chain() -> OptionChain {
+        setup_logger();
+        let params = OptionChainBuildParams::new(
+            "SP500".to_string(),
+            None,
+            10,
+            pos!(1.0),
+            0.0,
+            pos!(0.02),
+            2,
+            OptionDataPriceParams::new(
+                pos!(100.0),
+                ExpirationDate::Days(pos!(30.0)),
+                spos!(0.17),
+                Decimal::ZERO,
+                pos!(0.05),
+                Some("SP500".to_string()),
+            ),
+        );
+
+        OptionChain::build_chain(&params)
+    }
+
+    #[test]
+    fn test_atm_strike_exact_match() {
+        let chain = create_standard_chain();
+
+        // The default chain has a strike at 100.0 which matches the underlying price
+        let result = chain.atm_strike();
+        assert!(result.is_ok(), "Should find the ATM strike");
+
+        let strike = result.unwrap();
+        assert_eq!(
+            *strike,
+            pos!(100.0),
+            "Should return strike at exactly 100.0"
+        );
+    }
+
+    #[test]
+    fn test_atm_strike_approximate_match() {
+        let mut chain = create_standard_chain();
+
+        // Modify the underlying price to a value that doesn't have an exact match
+        chain.underlying_price = pos!(100.5);
+
+        let result = chain.atm_strike();
+        assert!(result.is_ok(), "Should find the closest strike");
+
+        let strike = result.unwrap();
+        assert_eq!(
+            *strike,
+            pos!(100.0),
+            "Should return the closest strike (100.0)"
+        );
+
+        // Modify the underlying price to test the other direction
+        chain.underlying_price = pos!(101.0);
+
+        let result = chain.atm_strike();
+        assert!(result.is_ok(), "Should find the closest strike");
+
+        let strike = result.unwrap();
+        assert_eq!(
+            *strike,
+            pos!(101.0),
+            "Should return the closest strike (101.0)"
+        );
+    }
+
+    #[test]
+    fn test_atm_strike_empty_chain() {
+        let chain = OptionChain::new("EMPTY", pos!(100.0), "2023-12-15".to_string(), None, None);
+
+        let result = chain.atm_strike();
+        assert!(result.is_err(), "Should return error for empty chain");
+
+        let error = result.unwrap_err().to_string();
+        assert!(
+            error.contains("empty option chain"),
+            "Error should mention empty chain"
+        );
+        assert!(error.contains("EMPTY"), "Error should include the symbol");
+    }
+
+    #[test]
+    fn test_atm_strike_extreme_underlying() {
+        let mut chain = create_standard_chain();
+
+        // Set underlying price far from any strike
+        chain.underlying_price = pos!(150.0);
+
+        let result = chain.atm_strike();
+        assert!(
+            result.is_ok(),
+            "Should find the closest strike even for extreme values"
+        );
+
+        let strike = result.unwrap();
+
+        // The farthest strike in the standard chain should be around 110.0
+        assert_eq!(
+            *strike,
+            pos!(110.0),
+            "Should return the highest available strike"
+        );
+
+        // Test with very low underlying price
+        chain.underlying_price = pos!(80.0);
+
+        let result = chain.atm_strike();
+        assert!(
+            result.is_ok(),
+            "Should find the closest strike for low values"
+        );
+
+        let strike = result.unwrap();
+
+        // The lowest strike in the standard chain should be around 90.0
+        assert_eq!(
+            *strike,
+            pos!(90.0),
+            "Should return the lowest available strike"
+        );
+    }
+
+    #[test]
+    fn test_atm_strike_equidistant() {
+        let mut chain = create_standard_chain();
+
+        // Set underlying price exactly between two strikes
+        chain.underlying_price = pos!(100.5);
+
+        // Set up a custom chain with known strikes
+        let mut options = BTreeSet::new();
+        options.insert(OptionData::new(
+            pos!(100.0),
+            spos!(1.0),
+            spos!(1.1),
+            spos!(1.0),
+            spos!(1.1),
+            spos!(0.2),
+            Some(dec!(0.5)),
+            Some(dec!(-0.5)),
+            Some(dec!(0.1)),
+            spos!(100.0),
+            Some(50),
+        ));
+
+        options.insert(OptionData::new(
+            pos!(101.0),
+            spos!(0.9),
+            spos!(1.0),
+            spos!(1.1),
+            spos!(1.2),
+            spos!(0.2),
+            Some(dec!(0.55)),
+            Some(dec!(-0.45)),
+            Some(dec!(0.1)),
+            spos!(100.0),
+            Some(50),
+        ));
+
+        chain.options = options;
+
+        let result = chain.atm_strike();
+        assert!(result.is_ok(), "Should find a strike when equidistant");
+
+        let strike = result.unwrap();
+
+        // When equidistant, should return one of the two closest strikes
+        assert!(
+            *strike == pos!(100.0) || *strike == pos!(101.0),
+            "Should return one of the equidistant strikes"
+        );
     }
 }

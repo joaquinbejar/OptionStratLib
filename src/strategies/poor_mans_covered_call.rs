@@ -558,7 +558,14 @@ impl Optimizable for PoorMansCoveredCall {
                     continue;
                 }
 
-                if !self.is_valid_short_option(short_call_option, &side)
+                if side == FindOptimalSide::Center {
+                    if !self.is_valid_short_option(short_call_option, &FindOptimalSide::Upper)
+                        || !self.is_valid_long_option(long_call_option, &FindOptimalSide::Lower)
+                    {
+                        debug!("Invalid option");
+                        continue;
+                    }
+                } else if !self.is_valid_short_option(short_call_option, &side)
                     || !self.is_valid_long_option(long_call_option, &side)
                 {
                     debug!("Invalid option");
@@ -628,6 +635,8 @@ impl Optimizable for PoorMansCoveredCall {
                 }
                 valid
             }
+            FindOptimalSide::Deltable(_threshold) => true,
+            FindOptimalSide::Center => option.strike_price <= self.get_underlying_price(),
         }
     }
 
@@ -670,6 +679,8 @@ impl Optimizable for PoorMansCoveredCall {
                 }
                 valid
             }
+            FindOptimalSide::Deltable(_threshold) => true,
+            FindOptimalSide::Center => option.strike_price >= self.get_underlying_price(),
         }
     }
 

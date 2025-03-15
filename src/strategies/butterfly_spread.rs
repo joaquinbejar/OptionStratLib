@@ -1,29 +1,26 @@
-use super::base::{
-    BreakEvenable, Optimizable, Positionable, Strategable, Strategies, StrategyType, Validable,
-};
-use crate::Options;
 use crate::chains::StrategyLegs;
 use crate::chains::chain::OptionChain;
 use crate::chains::utils::OptionDataGroup;
 use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
-use crate::error::position::{PositionError, PositionValidationErrorKind};
-use crate::error::probability::ProbabilityError;
-use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
-use crate::error::{GreeksError, OperationErrorKind};
+use crate::error::position::PositionValidationErrorKind;
+use crate::error::strategies::ProfitLossErrorKind;
+use crate::error::{
+    GreeksError, OperationErrorKind, PositionError, ProbabilityError, StrategyError,
+};
 use crate::greeks::Greeks;
-use crate::model::ProfitLossRange;
-use crate::model::position::Position;
-use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use crate::model::utils::mean_and_std;
+use crate::model::{Position, ProfitLossRange};
 use crate::pnl::utils::{PnL, PnLCalculator};
-use crate::pricing::payoff::Profit;
-use crate::strategies::delta_neutral::DeltaNeutrality;
+use crate::pricing::Profit;
+use crate::strategies::base::{BreakEvenable, Optimizable, Positionable, StrategyType, Validable};
 use crate::strategies::probabilities::{ProbabilityAnalysis, VolatilityAdjustment};
-use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
-use crate::strategies::{StrategyBasics, StrategyConstructor};
+use crate::strategies::utils::OptimizationCriteria;
+use crate::strategies::{
+    DeltaNeutrality, FindOptimalSide, Strategable, Strategies, StrategyBasics, StrategyConstructor,
+};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
-use crate::{Positive, pos};
+use crate::{ExpirationDate, OptionStyle, OptionType, Options, Positive, Side, pos};
 use chrono::Utc;
 use num_traits::ToPrimitive;
 use plotters::prelude::full_palette::ORANGE;
@@ -611,9 +608,23 @@ impl Optimizable for LongButterflySpread {
             .get_triple_iter()
             // Filter out invalid combinations based on FindOptimalSide
             .filter(move |(long_low, short, long_high)| {
-                long_low.is_valid_optimal_side(underlying_price, &side)
-                    && short.is_valid_optimal_side(underlying_price, &side)
-                    && long_high.is_valid_optimal_side(underlying_price, &side)
+                if side == FindOptimalSide::Center {
+                    let atm_strike = match option_chain.atm_strike() {
+                        Ok(atm_strike) => atm_strike,
+                        _ => return false,
+                    };
+                    long_low.is_valid_optimal_side(underlying_price, &FindOptimalSide::Lower)
+                        && short.is_valid_optimal_side(
+                            underlying_price,
+                            &FindOptimalSide::Range(*atm_strike, *atm_strike),
+                        )
+                        && long_high
+                            .is_valid_optimal_side(underlying_price, &FindOptimalSide::Upper)
+                } else {
+                    long_low.is_valid_optimal_side(underlying_price, &side)
+                        && short.is_valid_optimal_side(underlying_price, &side)
+                        && long_high.is_valid_optimal_side(underlying_price, &side)
+                }
             })
             .filter(move |(long_low, short, long_high)| {
                 long_low.strike_price < short.strike_price
@@ -1556,9 +1567,23 @@ impl Optimizable for ShortButterflySpread {
             .get_triple_iter()
             // Filter out invalid combinations based on FindOptimalSide
             .filter(move |(short_low, long, short_high)| {
-                short_low.is_valid_optimal_side(underlying_price, &side)
-                    && long.is_valid_optimal_side(underlying_price, &side)
-                    && short_high.is_valid_optimal_side(underlying_price, &side)
+                if side == FindOptimalSide::Center {
+                    let atm_strike = match option_chain.atm_strike() {
+                        Ok(atm_strike) => atm_strike,
+                        _ => return false,
+                    };
+                    short_low.is_valid_optimal_side(underlying_price, &FindOptimalSide::Lower)
+                        && long.is_valid_optimal_side(
+                            underlying_price,
+                            &FindOptimalSide::Range(*atm_strike, *atm_strike),
+                        )
+                        && short_high
+                            .is_valid_optimal_side(underlying_price, &FindOptimalSide::Upper)
+                } else {
+                    short_low.is_valid_optimal_side(underlying_price, &side)
+                        && long.is_valid_optimal_side(underlying_price, &side)
+                        && short_high.is_valid_optimal_side(underlying_price, &side)
+                }
             })
             .filter(move |(short_low, long, short_high)| {
                 short_low.strike_price < long.strike_price

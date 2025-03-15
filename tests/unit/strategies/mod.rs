@@ -5,4 +5,5 @@
 ******************************************************************************/
 mod delta;
 mod optimal;
+mod optimal_center;
 mod simple;

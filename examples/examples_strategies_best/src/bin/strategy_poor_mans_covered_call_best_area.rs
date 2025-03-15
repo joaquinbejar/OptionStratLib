@@ -1,7 +1,6 @@
 use optionstratlib::ExpirationDate;
 use optionstratlib::Positive;
 use optionstratlib::chains::chain::OptionChain;
-use optionstratlib::constants::ZERO;
 use optionstratlib::pos;
 use optionstratlib::strategies::base::{Optimizable, Strategies};
 use optionstratlib::strategies::poor_mans_covered_call::PoorMansCoveredCall;
@@ -37,7 +36,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         pos!(0.85),                        // close_fee_short_put
     );
     // strategy.best_area(&option_chain, FindOptimalSide::Range(pos!(5700.0), pos!(6100.0)));
-    strategy.best_area(&option_chain, FindOptimalSide::All);
+    strategy.best_area(&option_chain, FindOptimalSide::Center);
     debug!("Strategy:  {:#?}", strategy);
     let price_range = strategy.best_range_to_show(pos!(1.0)).unwrap();
     let range = strategy.range_of_profit().unwrap_or(Positive::ZERO);

@@ -10,7 +10,7 @@ use num_traits::{FromPrimitive, ToPrimitive};
 use rust_decimal::{Decimal, MathematicalOps};
 use serde::de::Visitor;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use std::cmp::Ordering;
+use std::cmp::{Ordering, PartialEq};
 use std::fmt;
 use std::iter::Sum;
 use std::ops::{Add, AddAssign, Div, Mul, MulAssign, Neg, Sub};
@@ -398,6 +398,12 @@ impl Positive {
     /// `true` if the value is zero, `false` otherwise.
     pub fn is_zero(&self) -> bool {
         self.0.is_zero()
+    }
+}
+
+impl PartialEq<&Positive> for Positive {
+    fn eq(&self, other: &&Positive) -> bool {
+        self == *other
     }
 }
 

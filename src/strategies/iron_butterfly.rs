@@ -663,9 +663,22 @@ impl Optimizable for IronButterfly {
             .get_triple_iter()
             // Filter out invalid combinations based on FindOptimalSide
             .filter(move |(low, mid, high)| {
-                low.is_valid_optimal_side(underlying_price, &side)
-                    && mid.is_valid_optimal_side(underlying_price, &side)
-                    && high.is_valid_optimal_side(underlying_price, &side)
+                if side == FindOptimalSide::Center {
+                    let atm_strike = match option_chain.atm_strike() {
+                        Ok(atm_strike) => atm_strike,
+                        Err(_) => return false,
+                    };
+                    low.is_valid_optimal_side(underlying_price, &FindOptimalSide::Lower)
+                        && mid.is_valid_optimal_side(
+                            underlying_price,
+                            &FindOptimalSide::Range(*atm_strike, *atm_strike),
+                        )
+                        && high.is_valid_optimal_side(underlying_price, &FindOptimalSide::Upper)
+                } else {
+                    low.is_valid_optimal_side(underlying_price, &side)
+                        && mid.is_valid_optimal_side(underlying_price, &side)
+                        && high.is_valid_optimal_side(underlying_price, &side)
+                }
             })
             // Filter out options with invalid bid/ask prices
             .filter(|(low, mid, high)| {

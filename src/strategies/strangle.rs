@@ -566,8 +566,14 @@ impl Optimizable for ShortStrangle {
             .get_double_iter()
             // Filter out invalid combinations based on FindOptimalSide
             .filter(move |(short_put, short_call)| {
-                short_put.is_valid_optimal_side(underlying_price, &side)
-                    && short_call.is_valid_optimal_side(underlying_price, &side)
+                if side == FindOptimalSide::Center {
+                    short_put.is_valid_optimal_side(underlying_price, &FindOptimalSide::Lower)
+                        && short_call
+                            .is_valid_optimal_side(underlying_price, &FindOptimalSide::Upper)
+                } else {
+                    short_put.is_valid_optimal_side(underlying_price, &side)
+                        && short_call.is_valid_optimal_side(underlying_price, &side)
+                }
             })
             .filter(move |(short_put, short_call)| short_put.strike_price < short_call.strike_price)
             // Filter out options with invalid bid/ask prices
@@ -1426,8 +1432,14 @@ impl Optimizable for LongStrangle {
             .get_double_iter()
             // Filter out invalid combinations based on FindOptimalSide
             .filter(move |(long_put, long_call)| {
-                long_put.is_valid_optimal_side(underlying_price, &side)
-                    && long_call.is_valid_optimal_side(underlying_price, &side)
+                if side == FindOptimalSide::Center {
+                    long_put.is_valid_optimal_side(underlying_price, &FindOptimalSide::Lower)
+                        && long_call
+                            .is_valid_optimal_side(underlying_price, &FindOptimalSide::Upper)
+                } else {
+                    long_put.is_valid_optimal_side(underlying_price, &side)
+                        && long_call.is_valid_optimal_side(underlying_price, &side)
+                }
             })
             .filter(move |(long_put, long_call)| long_put.strike_price < long_call.strike_price)
             // Filter out options with invalid bid/ask prices

@@ -538,7 +538,20 @@ impl Optimizable for ShortStraddle {
         option_chain
             .get_single_iter()
             // Filter out invalid combinations based on FindOptimalSide
-            .filter(move |both| both.is_valid_optimal_side(underlying_price, &side))
+            .filter(move |both| {
+                if side == FindOptimalSide::Center {
+                    let atm_strike = match option_chain.atm_strike() {
+                        Ok(atm_strike) => atm_strike,
+                        Err(_) => return false,
+                    };
+                    both.is_valid_optimal_side(
+                        underlying_price,
+                        &FindOptimalSide::Range(*atm_strike, *atm_strike),
+                    )
+                } else {
+                    both.is_valid_optimal_side(underlying_price, &side)
+                }
+            })
             .filter(|both| {
                 both.call_ask.unwrap_or(Positive::ZERO) > Positive::ZERO
                     && both.call_bid.unwrap_or(Positive::ZERO) > Positive::ZERO
@@ -1317,7 +1330,20 @@ impl Optimizable for LongStraddle {
         option_chain
             .get_single_iter()
             // Filter out invalid combinations based on FindOptimalSide
-            .filter(move |both| both.is_valid_optimal_side(underlying_price, &side))
+            .filter(move |both| {
+                if side == FindOptimalSide::Center {
+                    let atm_strike = match option_chain.atm_strike() {
+                        Ok(atm_strike) => atm_strike,
+                        Err(_) => return false,
+                    };
+                    both.is_valid_optimal_side(
+                        underlying_price,
+                        &FindOptimalSide::Range(*atm_strike, *atm_strike),
+                    )
+                } else {
+                    both.is_valid_optimal_side(underlying_price, &side)
+                }
+            })
             .filter(|both| {
                 both.call_ask.unwrap_or(Positive::ZERO) > Positive::ZERO
                     && both.call_bid.unwrap_or(Positive::ZERO) > Positive::ZERO
