@@ -395,10 +395,10 @@ mod tests_simulate_returns {
 
 #[cfg(test)]
 mod tests_simulate_returns_bis {
-    use num_traits::ToPrimitive;
     use super::*;
     use crate::model::decimal::DecimalStats;
     use crate::{assert_decimal_eq, pos};
+    use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
     use tracing::debug;
 
@@ -463,19 +463,31 @@ mod tests_simulate_returns_bis {
         let std_upper_bound = expected_std * dec!(1.3);
 
         // Log the values and ranges for debugging
-        debug!("Sample Mean: {}, Expected Range: [{}, {}]", 
-           sample_mean, mean_lower_bound, mean_upper_bound);
-        debug!("Sample Std: {}, Expected Range: [{}, {}]", 
-           sample_std, std_lower_bound, std_upper_bound);
+        debug!(
+            "Sample Mean: {}, Expected Range: [{}, {}]",
+            sample_mean, mean_lower_bound, mean_upper_bound
+        );
+        debug!(
+            "Sample Std: {}, Expected Range: [{}, {}]",
+            sample_std, std_lower_bound, std_upper_bound
+        );
 
         // Assert that the sample statistics are within the expected ranges
-        assert!(sample_mean >= mean_lower_bound && sample_mean <= mean_upper_bound,
-                "Sample mean {} is outside the expected range [{}, {}]",
-                sample_mean, mean_lower_bound, mean_upper_bound);
+        assert!(
+            sample_mean >= mean_lower_bound && sample_mean <= mean_upper_bound,
+            "Sample mean {} is outside the expected range [{}, {}]",
+            sample_mean,
+            mean_lower_bound,
+            mean_upper_bound
+        );
 
-        assert!(sample_std >= std_lower_bound.to_dec() && sample_std <= std_upper_bound.to_dec(),
-                "Sample std dev {} is outside the expected range [{}, {}]",
-                sample_std, std_lower_bound, std_upper_bound);
+        assert!(
+            sample_std >= std_lower_bound.to_dec() && sample_std <= std_upper_bound.to_dec(),
+            "Sample std dev {} is outside the expected range [{}, {}]",
+            sample_std,
+            std_lower_bound,
+            std_upper_bound
+        );
     }
 
     #[test]
