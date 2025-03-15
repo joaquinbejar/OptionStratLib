@@ -49,7 +49,6 @@ fn test_call_butterfly_integration() -> Result<(), Box<dyn Error>> {
         if position.option.side == Side::Long {
             assert!(position.option.strike_price <= underlying_price)
         }
-
     }
 
     Ok(())

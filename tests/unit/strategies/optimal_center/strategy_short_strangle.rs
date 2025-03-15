@@ -1,3 +1,5 @@
+use optionstratlib::OptionStyle;
+use optionstratlib::strategies::base::Positionable;
 #[cfg(not(target_arch = "wasm32"))]
 use {
     optionstratlib::chains::chain::OptionChain,
@@ -8,8 +10,6 @@ use {
     rust_decimal_macros::dec,
     std::error::Error,
 };
-use optionstratlib::OptionStyle;
-use optionstratlib::strategies::base::Positionable;
 
 #[test]
 #[cfg(not(target_arch = "wasm32"))]
@@ -42,13 +42,13 @@ fn test_short_strangle_with_greeks_integration() -> Result<(), Box<dyn Error>> {
     strategy.best_area(&option_chain, FindOptimalSide::Center);
     let positions = strategy.get_positions()?;
     for position in positions {
-        match position.option.option_style { 
+        match position.option.option_style {
             OptionStyle::Call => {
                 assert!(position.option.strike_price >= underlying_price)
-            },
+            }
             OptionStyle::Put => {
                 assert!(position.option.strike_price <= underlying_price)
-            },
+            }
         }
     }
     Ok(())

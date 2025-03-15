@@ -572,7 +572,6 @@ impl Optimizable for PoorMansCoveredCall {
                     continue;
                 }
 
-
                 let legs = StrategyLegs::TwoLegs {
                     first: long_call_option,
                     second: short_call_option,

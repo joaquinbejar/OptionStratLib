@@ -1542,11 +1542,16 @@ impl OptionChain {
             return Err(format!(
                 "Cannot find ATM strike for empty option chain: {}",
                 self.symbol
-            ).into());
+            )
+            .into());
         }
 
         // First check for exact match
-        if let Some(exact_match) = self.options.iter().find(|opt| opt.strike_price == self.underlying_price) {
+        if let Some(exact_match) = self
+            .options
+            .iter()
+            .find(|opt| opt.strike_price == self.underlying_price)
+        {
             return Ok(&exact_match.strike_price);
         }
 
@@ -1556,13 +1561,18 @@ impl OptionChain {
             .min_by(|a, b| {
                 let a_distance = (a.strike_price.to_dec() - self.underlying_price.to_dec()).abs();
                 let b_distance = (b.strike_price.to_dec() - self.underlying_price.to_dec()).abs();
-                a_distance.partial_cmp(&b_distance).unwrap_or(Ordering::Equal)
+                a_distance
+                    .partial_cmp(&b_distance)
+                    .unwrap_or(Ordering::Equal)
             })
             .map(|opt| &opt.strike_price)
-            .ok_or_else(|| format!(
-                "Failed to find ATM strike for option chain: {}",
-                self.symbol
-            ).into())
+            .ok_or_else(|| {
+                format!(
+                    "Failed to find ATM strike for option chain: {}",
+                    self.symbol
+                )
+                .into()
+            })
     }
 
     /// Returns a formatted title string for the option chain.
@@ -7565,7 +7575,6 @@ mod tests_theta_calculations {
     }
 }
 
-
 #[cfg(test)]
 #[cfg(not(target_arch = "wasm32"))]
 mod tests_atm_strike {
@@ -7608,7 +7617,11 @@ mod tests_atm_strike {
         assert!(result.is_ok(), "Should find the ATM strike");
 
         let strike = result.unwrap();
-        assert_eq!(*strike, pos!(100.0), "Should return strike at exactly 100.0");
+        assert_eq!(
+            *strike,
+            pos!(100.0),
+            "Should return strike at exactly 100.0"
+        );
     }
 
     #[test]
@@ -7622,7 +7635,11 @@ mod tests_atm_strike {
         assert!(result.is_ok(), "Should find the closest strike");
 
         let strike = result.unwrap();
-        assert_eq!(*strike, pos!(100.0), "Should return the closest strike (100.0)");
+        assert_eq!(
+            *strike,
+            pos!(100.0),
+            "Should return the closest strike (100.0)"
+        );
 
         // Modify the underlying price to test the other direction
         chain.underlying_price = pos!(101.0);
@@ -7631,24 +7648,25 @@ mod tests_atm_strike {
         assert!(result.is_ok(), "Should find the closest strike");
 
         let strike = result.unwrap();
-        assert_eq!(*strike, pos!(101.0), "Should return the closest strike (101.0)");
+        assert_eq!(
+            *strike,
+            pos!(101.0),
+            "Should return the closest strike (101.0)"
+        );
     }
 
     #[test]
     fn test_atm_strike_empty_chain() {
-        let chain = OptionChain::new(
-            "EMPTY",
-            pos!(100.0),
-            "2023-12-15".to_string(),
-            None,
-            None,
-        );
+        let chain = OptionChain::new("EMPTY", pos!(100.0), "2023-12-15".to_string(), None, None);
 
         let result = chain.atm_strike();
         assert!(result.is_err(), "Should return error for empty chain");
 
         let error = result.unwrap_err().to_string();
-        assert!(error.contains("empty option chain"), "Error should mention empty chain");
+        assert!(
+            error.contains("empty option chain"),
+            "Error should mention empty chain"
+        );
         assert!(error.contains("EMPTY"), "Error should include the symbol");
     }
 
@@ -7660,23 +7678,37 @@ mod tests_atm_strike {
         chain.underlying_price = pos!(150.0);
 
         let result = chain.atm_strike();
-        assert!(result.is_ok(), "Should find the closest strike even for extreme values");
+        assert!(
+            result.is_ok(),
+            "Should find the closest strike even for extreme values"
+        );
 
         let strike = result.unwrap();
 
         // The farthest strike in the standard chain should be around 110.0
-        assert_eq!(*strike, pos!(110.0), "Should return the highest available strike");
+        assert_eq!(
+            *strike,
+            pos!(110.0),
+            "Should return the highest available strike"
+        );
 
         // Test with very low underlying price
         chain.underlying_price = pos!(80.0);
 
         let result = chain.atm_strike();
-        assert!(result.is_ok(), "Should find the closest strike for low values");
+        assert!(
+            result.is_ok(),
+            "Should find the closest strike for low values"
+        );
 
         let strike = result.unwrap();
 
         // The lowest strike in the standard chain should be around 90.0
-        assert_eq!(*strike, pos!(90.0), "Should return the lowest available strike");
+        assert_eq!(
+            *strike,
+            pos!(90.0),
+            "Should return the lowest available strike"
+        );
     }
 
     #[test]

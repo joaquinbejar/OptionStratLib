@@ -1,4 +1,3 @@
-
 mod strategy_bear_call_spread;
 mod strategy_bear_put_spread;
 mod strategy_bull_call_spread;

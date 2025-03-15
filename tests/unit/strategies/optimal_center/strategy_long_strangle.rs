@@ -1,3 +1,5 @@
+use optionstratlib::OptionStyle;
+use optionstratlib::strategies::base::Positionable;
 #[cfg(not(target_arch = "wasm32"))]
 use {
     optionstratlib::chains::chain::OptionChain,
@@ -8,8 +10,6 @@ use {
     rust_decimal_macros::dec,
     std::error::Error,
 };
-use optionstratlib::OptionStyle;
-use optionstratlib::strategies::base::Positionable;
 
 #[test]
 #[cfg(not(target_arch = "wasm32"))]
@@ -45,10 +45,10 @@ fn test_long_strangle_integration() -> Result<(), Box<dyn Error>> {
         match position.option.option_style {
             OptionStyle::Call => {
                 assert!(position.option.strike_price >= underlying_price)
-            },
+            }
             OptionStyle::Put => {
                 assert!(position.option.strike_price <= underlying_price)
-            },
+            }
         }
     }
 

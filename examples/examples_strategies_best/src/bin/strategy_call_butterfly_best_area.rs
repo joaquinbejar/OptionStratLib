@@ -35,18 +35,15 @@ fn main() -> Result<(), Box<dyn Error>> {
         Positive::ZERO, // short_quantity
         Positive::ZERO, // premium_long_itm
         Positive::ZERO, // premium_long_otm
-        pos!(0.95),       //    open_fee_long
-        pos!(0.95),       //    close_fee_long
-        pos!(0.95),   //    open_fee_short_low
-        pos!(0.95),   //    close_fee_short_low
-        pos!(0.95),   //    open_fee_short_high
-        pos!(0.95),   //    close_fee_short_high
+        pos!(0.95),     //    open_fee_long
+        pos!(0.95),     //    close_fee_long
+        pos!(0.95),     //    open_fee_short_low
+        pos!(0.95),     //    close_fee_short_low
+        pos!(0.95),     //    open_fee_short_high
+        pos!(0.95),     //    close_fee_short_high
     );
 
-    strategy.best_area(
-        &option_chain,
-        FindOptimalSide::Center,
-    );
+    strategy.best_area(&option_chain, FindOptimalSide::Center);
     let price_range = strategy.best_range_to_show(pos!(1.0)).unwrap();
     let range = strategy.range_of_profit().unwrap_or(Positive::ZERO);
     info!("Title: {}", strategy.title());

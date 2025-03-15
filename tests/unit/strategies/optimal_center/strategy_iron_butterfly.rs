@@ -1,3 +1,5 @@
+use optionstratlib::strategies::base::Positionable;
+use optionstratlib::{OptionStyle, Side, assert_pos_relative_eq};
 #[cfg(not(target_arch = "wasm32"))]
 use {
     optionstratlib::chains::chain::OptionChain,
@@ -8,8 +10,6 @@ use {
     rust_decimal_macros::dec,
     std::error::Error,
 };
-use optionstratlib::{assert_pos_relative_eq, OptionStyle, Side};
-use optionstratlib::strategies::base::Positionable;
 
 #[test]
 #[cfg(not(target_arch = "wasm32"))]
@@ -46,10 +46,10 @@ fn test_iron_butterfly_integration() -> Result<(), Box<dyn Error>> {
         match (position.option.option_style, position.option.side) {
             (OptionStyle::Call, Side::Long) => {
                 assert!(position.option.strike_price >= underlying_price)
-            },
+            }
             (OptionStyle::Put, Side::Long) => {
                 assert!(position.option.strike_price <= underlying_price)
-            },
+            }
             _ => {
                 let atm_strike = option_chain.atm_strike()?;
                 assert_pos_relative_eq!(position.option.strike_price, *atm_strike, pos!(0.01));
