@@ -1,6 +1,6 @@
 [package]
 name = "optionstratlib"
-version = "0.3.9"
+version = "0.3.10"
 edition = "2024"
 authors = ["Joaquin Bejar <jb@taunais.com>"]
 description = "OptionStratLib is a comprehensive Rust library for options trading and strategy development across multiple asset classes."
