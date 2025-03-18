@@ -14,6 +14,7 @@ use crate::geometrics::GeometricObject;
 use crate::model::types::ExpirationDate;
 use crate::pricing::payoff::Profit;
 use crate::simulation::model::WalkResult;
+use crate::simulation::types::Walktypable;
 use crate::simulation::utils::calculate_extra_metrics;
 use crate::strategies::Strategable;
 use crate::utils::Len;
@@ -35,7 +36,10 @@ use tracing::{debug, info, trace, warn};
 /// entities capable of simulating or managing a random walk sequence of values.
 /// Implementations of this trait must handle a vector of `Positive` values, which
 /// serve as the primary storage for the y-axis values used in simulations or computations.
-pub trait Walkable {
+pub trait Walkable<Xtype, Ytype>
+where
+    Ytype: Copy + Walktypable + std::fmt::Display,
+{
     /// Provides read-only access to the vector of `Positive` values representing
     /// the y-axis data points of a structure implementing this method.
     ///
@@ -46,7 +50,7 @@ pub trait Walkable {
     /// This method is typically used to retrieve the internal `Positive` values
     /// for further processing, analysis, or visualization while maintaining
     /// the immutability of the vector.
-    fn get_y_values(&self) -> &Vec<Positive>;
+    fn get_y_values(&self) -> &Vec<Ytype>;
 
     /// Computes and retrieves the x-axis values corresponding to the y-axis values
     /// stored within the structure as a `Vec<Positive>`.
@@ -69,6 +73,27 @@ pub trait Walkable {
             .collect()
     }
 
+    /// Returns a reference to the vector of `Xtype` elements associated with this object.
+    ///
+    /// This method provides read-only access to the collection of `Xtype` elements
+    /// stored within this object. The default implementation is a placeholder
+    /// that will panic if called, indicating that implementing types must
+    /// override this method with their own implementation.
+    ///
+    /// # Returns
+    ///
+    /// * `&Vec<Xtype>` - A reference to the vector containing the `Xtype` elements.
+    ///
+    /// # Panics
+    ///
+    /// By default, this method panics with a message indicating that it has not been
+    /// implemented for the type in question. Implementing types should override this
+    /// method to provide their own implementation.
+    ///
+    fn get_x_type(&self) -> &Vec<Xtype> {
+        unimplemented!("get_x_type not implemented for this type")
+    }
+
     /// Provides mutable access to the vector of `Positive` values representing
     /// the y-axis data points of a structure implementing this method.
     ///
@@ -79,7 +104,7 @@ pub trait Walkable {
     /// This method is intended for situations where modifications to the y-axis
     /// data are required, such as appending, updating, or resizing the vector.
     /// It ensures controlled and safe mutable access.
-    fn get_y_values_ref(&mut self) -> &mut Vec<Positive>;
+    fn get_y_values_ref(&mut self) -> &mut Vec<Ytype>;
 
     /// Generates a random walk sequence of values using a normal distribution.
     ///
@@ -104,7 +129,7 @@ pub trait Walkable {
     fn generate_random_walk(
         &mut self,
         n_steps: usize,
-        initial_price: Positive,
+        initial_price: Ytype,
         drift: f64,
         volatility: Positive,
         volatility_change: Positive,
@@ -150,10 +175,12 @@ pub trait Walkable {
             let volatility_term = vol * sqrt_dt * z;
 
             let log_return = drift_term + volatility_term;
-            let next_price = current_price.to_f64() * f64::exp(log_return);
+            // let next_price = current_price.to_f64() * f64::exp(log_return);
+            let next_price = current_price.walk_next(log_return)?;
 
             // Ensure price doesn't go below zero
-            current_price = pos!(next_price.max(ZERO));
+            // current_price = pos!(next_price.max(ZERO));
+            current_price = next_price.walk_max()?;
             values.push(current_price);
 
             trace!(
@@ -199,7 +226,7 @@ pub trait Walkable {
     fn generate_random_walk_timeframe(
         &mut self,
         n_steps: usize,
-        initial_price: Positive,
+        initial_price: Ytype,
         drift: f64,
         volatility: Positive,        // daily volatility
         volatility_change: Positive, // daily VoV
@@ -260,10 +287,12 @@ pub trait Walkable {
             let volatility_term = vol * sqrt_dt * z;
 
             let log_return = drift_term + volatility_term;
-            let next_price = current_price.to_f64() * f64::exp(log_return);
+            // let next_price = current_price.to_f64() * f64::exp(log_return);
+            let next_price = current_price.walk_next(log_return)?;
 
             // Ensure price doesn't go below zero
-            current_price = pos!(next_price.max(ZERO));
+            // current_price = pos!(next_price.max(ZERO));
+            current_price = next_price.walk_max()?;
             values.push(current_price);
 
             trace!(
@@ -362,8 +391,8 @@ pub trait Walkable {
         let days = convert_time_frame(values_len, &time_frame, &TimeFrame::Day);
         strategy.set_expiration_date(ExpirationDate::Days(days))?;
 
-        let initially = values.first().unwrap().to_dec();
-        let finally = values.last().unwrap().to_dec();
+        let initially = values.first().unwrap().walk_dec()?;
+        let finally = values.last().unwrap().walk_dec()?;
         let volatilities = self.get_volatilities()?;
 
         // Validate volatility data
@@ -376,7 +405,11 @@ pub trait Walkable {
             .into());
         }
 
-        let extra_metrics = calculate_extra_metrics(values).unwrap_or_else(|err| {
+        let values_positive = values
+            .iter()
+            .map(|x| x.walk_positive().unwrap())
+            .collect::<Vec<_>>();
+        let extra_metrics = calculate_extra_metrics(&values_positive).unwrap_or_else(|err| {
             warn!("Failed to calculate extra metrics: {}", err);
             HashMap::new()
         });
@@ -405,7 +438,7 @@ pub trait Walkable {
 
         // Reverse i for expiration date descending
         for (i, (price, volatility)) in values.iter().zip(volatilities.iter()).enumerate().rev() {
-            let price_dec = price.to_dec();
+            let price_dec = price.walk_dec()?;
             let days_left = convert_time_frame(pos!(i as f64), &time_frame, &TimeFrame::Day);
 
             // Debug log to track calculations
@@ -417,10 +450,15 @@ pub trait Walkable {
                 volatility
             );
 
+            let underlying_price = price.walk_positive()?;
             let pnl = if !days_left.is_zero() {
-                strategy.calculate_pnl(price, ExpirationDate::Days(days_left), volatility)?
+                strategy.calculate_pnl(
+                    &underlying_price,
+                    ExpirationDate::Days(days_left),
+                    volatility,
+                )?
             } else {
-                strategy.calculate_pnl_at_expiration(price)?
+                strategy.calculate_pnl_at_expiration(&underlying_price)?
             };
 
             // Ensure unwrap is safe
@@ -835,7 +873,7 @@ impl Default for RandomWalkGraph {
 ///
 /// This trait implementation provides essential functionality for working with random
 /// walk simulations while enforcing logical data constraints.
-impl Walkable for RandomWalkGraph {
+impl Walkable<Positive, Positive> for RandomWalkGraph {
     fn get_y_values(&self) -> &Vec<Positive> {
         assert_ne!(
             self.values.len(),

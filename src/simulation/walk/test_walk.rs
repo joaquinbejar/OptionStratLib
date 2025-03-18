@@ -20,7 +20,7 @@ mod tests_random_walk {
         }
     }
 
-    impl Walkable for TestWalk {
+    impl Walkable<Positive, Positive> for TestWalk {
         fn get_y_values(&self) -> &Vec<Positive> {
             &self.values
         }
@@ -208,7 +208,7 @@ mod tests_random_walk_timeframe {
         }
     }
 
-    impl Walkable for TestWalker {
+    impl Walkable<Positive, Positive> for TestWalker {
         fn get_y_values(&self) -> &Vec<Positive> {
             &self.values
         }

@@ -5,12 +5,14 @@
 ******************************************************************************/
 
 use crate::constants::EPSILON;
+use crate::simulation::types::Walktypable;
 use approx::{AbsDiffEq, RelativeEq};
 use num_traits::{FromPrimitive, ToPrimitive};
 use rust_decimal::{Decimal, MathematicalOps};
 use serde::de::Visitor;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::cmp::{Ordering, PartialEq};
+use std::error::Error;
 use std::fmt;
 use std::iter::Sum;
 use std::ops::{Add, AddAssign, Div, Mul, MulAssign, Neg, Sub};
@@ -398,6 +400,21 @@ impl Positive {
     /// `true` if the value is zero, `false` otherwise.
     pub fn is_zero(&self) -> bool {
         self.0.is_zero()
+    }
+}
+
+impl Walktypable for Positive {
+    fn walk_next(&self, exp: f64) -> Result<Positive, Box<dyn Error>> {
+        let value = self.to_f64() * f64::exp(exp);
+        Ok(pos!(value))
+    }
+
+    fn walk_max(&self) -> Result<Positive, Box<dyn Error>> {
+        Ok(*self.max(&Positive::ZERO))
+    }
+
+    fn walk_dec(&self) -> Result<Decimal, Box<dyn Error>> {
+        Ok(self.to_dec())
     }
 }
 

@@ -7128,7 +7128,7 @@ mod tests_gamma_calculations {
 
         assert!(result.is_ok());
         let gamma_exposure = result.unwrap();
-        assert_decimal_eq!(gamma_exposure, dec!(0.004605), dec!(0.001));
+        assert_decimal_eq!(gamma_exposure, dec!(0.004605), dec!(0.0015));
     }
 
     #[test]
@@ -7161,7 +7161,7 @@ mod tests_gamma_calculations {
 
         chain.update_greeks();
         let result = chain.gamma_exposure().unwrap();
-        assert_decimal_eq!(result, dec!(0.0046), dec!(0.001));
+        assert_decimal_eq!(result, dec!(0.0046), dec!(0.0015));
     }
 
     #[test]

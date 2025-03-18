@@ -199,6 +199,33 @@ mod simulator;
 /// result formatting, and other helper functions used across the library.
 mod utils;
 
+/// Module for defining custom types and traits used throughout the application.
+///
+/// This module contains the fundamental trait definitions and type structures that
+/// establish the core interfaces for data traversal, value extraction, and sequential
+/// access patterns within the application. The centerpiece of this module is the
+/// `Walktypable` trait, which provides a standardized way to interact with various
+/// data structures and sequences.
+///
+/// # Key Components
+///
+/// * `Walktypable` - A trait for traversing and extracting values from various data structures,
+///   providing methods to access sequential or calculated values in a consistent manner.
+///
+/// # Usage
+///
+/// The types defined in this module are typically used as the foundation for implementing
+/// more complex behaviors in other parts of the application, particularly in simulation
+/// contexts, financial calculations, or other scenarios where structured data traversal
+/// is required.
+///
+/// # Related Modules
+///
+/// * `walk` - Likely contains implementations of walking algorithms using the traits defined here
+/// * `model` - Might use these types for data modeling
+/// * `simulator` - Probably leverages these types for simulation scenarios
+pub mod types;
+
 /// Public API for creating and running random walk simulations.
 ///
 /// This module exposes the main interfaces for setting up and executing
