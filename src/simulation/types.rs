@@ -42,9 +42,7 @@ pub trait Walktypable: Sized {
     ///
     /// * `Ok(Ytype)` - The next value in the sequence or calculation.
     /// * `Err(Box<dyn std::error::Error>)` - An error if the next value cannot be determined.
-    fn walk_next(&self, _exp: f64) -> Result<Self, Box<dyn std::error::Error>> {
-        unimplemented!("next not implemented for this type")
-    }
+    fn walk_next(&self, _exp: f64) -> Result<Self, Box<dyn std::error::Error>>;
 
     /// Retrieves the maximum value accessible in the implementing type.
     ///
@@ -54,9 +52,7 @@ pub trait Walktypable: Sized {
     ///
     /// * `Ok(Ytype)` - The maximum value found.
     /// * `Err(Box<dyn std::error::Error>)` - An error if the maximum cannot be determined.
-    fn walk_max(&self) -> Result<Self, Box<dyn std::error::Error>> {
-        unimplemented!("max not implemented for this type")
-    }
+    fn walk_max(&self) -> Result<Self, Box<dyn std::error::Error>>;
 
     /// Converts or extracts a decimal representation from the implementing type.
     ///
@@ -67,9 +63,7 @@ pub trait Walktypable: Sized {
     ///
     /// * `Ok(Decimal)` - The decimal representation of a value from the implementing type.
     /// * `Err(Box<dyn std::error::Error>)` - An error if the decimal conversion fails.
-    fn walk_dec(&self) -> Result<Decimal, Box<dyn std::error::Error>> {
-        unimplemented!("dec not implemented for this type")
-    }
+    fn walk_dec(&self) -> Result<Decimal, Box<dyn std::error::Error>>;
 
     /// Retrieves a guaranteed positive value from the implementing type.
     ///
@@ -80,9 +74,7 @@ pub trait Walktypable: Sized {
     ///
     /// * `Ok(Positive)` - A wrapper type containing a guaranteed positive value.
     /// * `Err(Box<dyn std::error::Error>)` - An error if a positive value cannot be determined.
-    fn walk_positive(&self) -> Result<Positive, Box<dyn std::error::Error>> {
-        unimplemented!("min not implemented for this type")
-    }
+    fn walk_positive(&self) -> Result<Positive, Box<dyn std::error::Error>>;
 
     /// Retrieves the current value in the walk sequence without advancing the iterator.
     ///

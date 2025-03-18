@@ -416,6 +416,10 @@ impl Walktypable for Positive {
     fn walk_dec(&self) -> Result<Decimal, Box<dyn Error>> {
         Ok(self.to_dec())
     }
+
+    fn walk_positive(&self) -> Result<Positive, Box<dyn Error>> {
+        Ok(*self)
+    }
 }
 
 impl PartialEq<&Positive> for Positive {

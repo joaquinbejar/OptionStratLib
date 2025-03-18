@@ -38,7 +38,7 @@ use tracing::{debug, info, trace, warn};
 /// serve as the primary storage for the y-axis values used in simulations or computations.
 pub trait Walkable<Xtype, Ytype>
 where
-    Ytype: Copy + Walktypable + std::fmt::Display,
+    Ytype: Clone + Walktypable + std::fmt::Display,
 {
     /// Provides read-only access to the vector of `Positive` values representing
     /// the y-axis data points of a structure implementing this method.
@@ -147,7 +147,7 @@ where
         let values = self.get_y_values_ref();
         values.clear();
         values.reserve(n_steps);
-        values.push(initial_price);
+        values.push(initial_price.clone());
 
         let mut current_price = initial_price;
         let mut volatilities = Vec::with_capacity(n_steps);
@@ -181,7 +181,7 @@ where
             // Ensure price doesn't go below zero
             // current_price = pos!(next_price.max(ZERO));
             current_price = next_price.walk_max()?;
-            values.push(current_price);
+            values.push(current_price.clone());
 
             trace!(
                 "Current price: {}, Volatility: {}",
@@ -248,7 +248,7 @@ where
         let values = self.get_y_values_ref();
         values.clear();
         values.reserve(n_steps);
-        values.push(initial_price);
+        values.push(initial_price.clone());
 
         let mut current_price = initial_price;
         let mut volatilities = Vec::with_capacity(n_steps);
@@ -293,7 +293,7 @@ where
             // Ensure price doesn't go below zero
             // current_price = pos!(next_price.max(ZERO));
             current_price = next_price.walk_max()?;
-            values.push(current_price);
+            values.push(current_price.clone());
 
             trace!(
                 "Current price: {}, Volatility: {}",
@@ -573,9 +573,9 @@ where
 /// - Can be used in combination with the `Walkable` trait for generating price paths
 ///   programmatically and iterating through the results sequentially.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RandomWalkGraph {
+pub struct RandomWalkGraph<Ytype = Positive> {
     /// Values representing the y-axis data of the random walk.
-    pub(crate) values: Vec<Positive>,
+    pub(crate) values: Vec<Ytype>,
 
     /// Text for the graph's title.
     title_text: String,

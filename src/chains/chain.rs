@@ -1040,7 +1040,7 @@ impl fmt::Display for OptionData {
 ///
 /// This struct is typically used as the primary container for options market data analysis,
 /// serving as input to pricing models, strategy backtesting, and risk management tools.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct OptionChain {
     /// The ticker symbol for the underlying asset (e.g., "AAPL", "SPY").
     pub symbol: String,
