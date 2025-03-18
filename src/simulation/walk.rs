@@ -347,7 +347,7 @@ where
     /// # Returns
     /// * `Result<RandomWalkGraph, Box<dyn Error>>` - A random walk graph instance on success
     ///   or an error if the generation process fails
-    fn get_random_walk(&self) -> Result<RandomWalkGraph, Box<dyn Error>>;
+    fn get_random_walk(&self) -> Result<RandomWalkGraph<Ytype>, Box<dyn Error>>;
 
     /// Simulates a strategy over a price walk and analyzes its performance.
     ///
