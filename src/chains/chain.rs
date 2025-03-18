@@ -2547,6 +2547,36 @@ impl OptionChain {
     pub fn theta_curve(&self) -> Result<Curve, CurveError> {
         self.curve(&BasicAxisTypes::Theta, &OptionStyle::Call, &Side::Long)
     }
+
+    /// Updates the expiration date for the option chain and recalculates Greeks.
+    ///
+    /// This method changes the expiration date of the option chain to the provided value
+    /// and then triggers a recalculation of all Greek values for every option in the chain.
+    /// The Greeks are financial measures that indicate how option prices are expected to change
+    /// in response to different factors.
+    ///
+    /// # Parameters
+    ///
+    /// * `expiration` - A string representing the new expiration date for the option chain.
+    ///   This should be in a standard date format compatible with the system.
+    ///
+    /// # Effects
+    ///
+    /// * Updates the `expiration_date` field of the option chain.
+    /// * Calls `update_greeks()` to recalculate and update the Greek values for all options
+    ///   in the chain based on the new expiration date.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use optionstratlib::chains::chain::OptionChain;
+    /// let mut chain = OptionChain::new("AAPL", Default::default(), "".to_string(), None, None);
+    /// chain.update_expiration_date("2023-12-15".to_string());
+    /// ```
+    pub fn update_expiration_date(&mut self, expiration: String) {
+        self.expiration_date = expiration;
+        self.update_greeks();
+    }
 }
 
 impl Len for OptionChain {
