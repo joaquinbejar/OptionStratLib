@@ -63,7 +63,7 @@
 //! use optionstratlib::simulation::{RandomWalkGraph, Walkable};
 //!
 //! // Create a new random walk graph
-//! let mut walk = RandomWalkGraph::new(
+//! let mut walk: RandomWalkGraph<Positive>  = RandomWalkGraph::new(
 //!     "Asset Price Simulation".to_string(),
 //!     Some(dec!(0.05)),   // risk-free rate
 //!     spos!(0.02),   // dividend yield
@@ -92,7 +92,7 @@
 //! use optionstratlib::pos;
 //! use optionstratlib::simulation::{RandomWalkGraph, Walkable};
 //!
-//! let mut walk = RandomWalkGraph::new(
+//! let mut walk: RandomWalkGraph<Positive>  = RandomWalkGraph::new(
 //!     "Price Path".to_string(),
 //!     Some(dec!(0.05)),
 //!     Some(pos!(0.02)),
@@ -130,7 +130,7 @@
 //! use optionstratlib::simulation::RandomWalkGraph;
 //! use optionstratlib::utils::time::TimeFrame;
 //!
-//! let mut walk = RandomWalkGraph::new(
+//! let mut walk: RandomWalkGraph<Positive>  = RandomWalkGraph::new(
 //!     "Price Path".to_string(),
 //!     Some(dec!(0.05)),
 //!     spos!(0.02),

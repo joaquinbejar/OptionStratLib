@@ -145,7 +145,7 @@ mod tests_iterator {
         let years = 3.0;
         let steps = 252 * years as usize; // 2 years
 
-        let mut walk = RandomWalkGraph::new(
+        let mut walk: RandomWalkGraph<Positive> = RandomWalkGraph::new(
             "Test Walk".to_string(),
             Some(dec!(0.05)), // risk_free_rate
             Some(pos!(0.02)), // dividend_yield
@@ -399,7 +399,7 @@ mod tests_random_walk_iterator {
 
     // Helper function to create a test RandomWalkGraph
     fn create_test_walk() -> RandomWalkGraph {
-        let mut walk = RandomWalkGraph::new(
+        let mut walk: RandomWalkGraph<Positive> = RandomWalkGraph::new(
             "Test Walk".to_string(),
             Some(dec!(0.05)), // risk_free_rate
             Some(pos!(0.02)), // dividend_yield
@@ -457,7 +457,7 @@ mod tests_random_walk_iterator {
 
     #[test]
     fn test_iterator_empty_walk() {
-        let walk = RandomWalkGraph::new(
+        let walk: RandomWalkGraph<Positive> = RandomWalkGraph::new(
             "Empty Walk".to_string(),
             None,
             None,
@@ -517,7 +517,7 @@ mod tests_random_walk_iterator {
 
     #[test]
     fn test_default_values() {
-        let mut walk = RandomWalkGraph::new(
+        let mut walk: RandomWalkGraph<Positive> = RandomWalkGraph::new(
             "Default Walk".to_string(),
             None, // No risk_free_rate
             None, // No dividend_yield
@@ -577,7 +577,8 @@ mod tests_curvable {
 
     #[test]
     fn test_curve_empty_graph() {
-        let graph = RandomWalkGraph::new("Empty".to_string(), None, None, TimeFrame::Day, 4, None);
+        let graph: RandomWalkGraph<Positive> =
+            RandomWalkGraph::new("Empty".to_string(), None, None, TimeFrame::Day, 4, None);
 
         let curve = graph.curve().unwrap();
         assert_eq!(curve.points.len(), 0);

@@ -5,6 +5,7 @@
 ******************************************************************************/
 use crate::Positive;
 use rust_decimal::Decimal;
+use tracing::error;
 
 /// A trait for traversing and extracting values from various data structures.
 ///
@@ -28,7 +29,7 @@ use rust_decimal::Decimal;
 /// Each method returns a `Result` type which either contains the requested value
 /// or a boxed error if the operation cannot be completed.
 ///
-pub trait Walktypable: Sized {
+pub trait Walktypable: Sized + Clone + std::fmt::Display {
     /// Generates or retrieves the next value in a sequence.
     ///
     /// This method is used to iterate through values or generate the next
@@ -75,6 +76,25 @@ pub trait Walktypable: Sized {
     /// * `Ok(Positive)` - A wrapper type containing a guaranteed positive value.
     /// * `Err(Box<dyn std::error::Error>)` - An error if a positive value cannot be determined.
     fn walk_positive(&self) -> Result<Positive, Box<dyn std::error::Error>>;
+
+    /// Retrieves a guaranteed positive value from the implementing type.
+    ///
+    /// This method is useful in contexts where negative values would be invalid,
+    /// such as prices, rates, or other strictly positive quantities.
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(Positive)` - A wrapper type containing a guaranteed positive value.
+    /// * `Err(Box<dyn std::error::Error>)` - An error if a positive value cannot be determined.
+    fn walk_f64(&self) -> f64 {
+        match self.walk_positive() {
+            Ok(p) => p.to_f64(),
+            Err(_) => {
+                error!("Unable to convert to f64: {}", self.to_string());
+                0.0
+            }
+        }
+    }
 
     /// Retrieves the current value in the walk sequence without advancing the iterator.
     ///
