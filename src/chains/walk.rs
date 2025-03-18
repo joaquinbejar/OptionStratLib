@@ -49,7 +49,8 @@ impl Walktypable for OptionChain {
     /// * `Result<Self, Box<dyn Error>>` - A new `OptionChain` with updated option prices
     ///   and potentially rebalanced strikes, or an error if any calculation fails.
     fn walk_next(&self, exp: f64) -> Result<Self, Box<dyn Error>> {
-        let next_underlying_price = pos!(self.underlying_price.to_f64() * f64::exp(exp));
+        let next_underlying_price = pos!(self.underlying_price.to_f64() * f64::exp(exp)).max(Positive::ZERO);
+        
         let mut chain = OptionChain::new(
             &self.symbol,
             next_underlying_price,
@@ -135,15 +136,11 @@ impl Walktypable for OptionChain {
         Ok(chain)
     }
 
-    fn walk_max(&self) -> Result<Self, Box<dyn Error>> {
-        todo!()
-    }
-
     fn walk_dec(&self) -> Result<Decimal, Box<dyn Error>> {
-        todo!()
+        Ok(self.underlying_price.to_dec())
     }
 
     fn walk_positive(&self) -> Result<Positive, Box<dyn Error>> {
-        todo!()
+        Ok(self.underlying_price)
     }
 }

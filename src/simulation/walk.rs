@@ -148,8 +148,7 @@ where
         values.clear();
         values.reserve(n_steps);
         values.push(initial_price.clone());
-
-        let mut current_price = initial_price;
+        
         let mut volatilities = Vec::with_capacity(n_steps);
         volatilities.push(current_volatility); // Add initial volatility
 
@@ -175,12 +174,7 @@ where
             let volatility_term = vol * sqrt_dt * z;
 
             let log_return = drift_term + volatility_term;
-            // let next_price = current_price.to_f64() * f64::exp(log_return);
-            let next_price = current_price.walk_next(log_return)?;
-
-            // Ensure price doesn't go below zero
-            // current_price = pos!(next_price.max(ZERO));
-            current_price = next_price.walk_max()?;
+            let current_price = initial_price.walk_next(log_return)?;
             values.push(current_price.clone());
 
             trace!(
@@ -249,8 +243,7 @@ where
         values.clear();
         values.reserve(n_steps);
         values.push(initial_price.clone());
-
-        let mut current_price = initial_price;
+        
         let mut volatilities = Vec::with_capacity(n_steps);
         volatilities.push(current_volatility); // Add initial volatility
 
@@ -287,12 +280,7 @@ where
             let volatility_term = vol * sqrt_dt * z;
 
             let log_return = drift_term + volatility_term;
-            // let next_price = current_price.to_f64() * f64::exp(log_return);
-            let next_price = current_price.walk_next(log_return)?;
-
-            // Ensure price doesn't go below zero
-            // current_price = pos!(next_price.max(ZERO));
-            current_price = next_price.walk_max()?;
+            let current_price = initial_price.walk_next(log_return)?;
             values.push(current_price.clone());
 
             trace!(

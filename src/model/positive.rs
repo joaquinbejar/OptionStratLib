@@ -406,11 +406,7 @@ impl Positive {
 impl Walktypable for Positive {
     fn walk_next(&self, exp: f64) -> Result<Positive, Box<dyn Error>> {
         let value = self.to_f64() * f64::exp(exp);
-        Ok(pos!(value))
-    }
-
-    fn walk_max(&self) -> Result<Positive, Box<dyn Error>> {
-        Ok(*self.max(&Positive::ZERO))
+        Ok(pos!(value).max(Positive::ZERO))
     }
 
     fn walk_dec(&self) -> Result<Decimal, Box<dyn Error>> {

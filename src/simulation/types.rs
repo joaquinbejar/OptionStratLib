@@ -45,16 +45,6 @@ pub trait Walktypable: Sized + Clone + std::fmt::Display {
     /// * `Err(Box<dyn std::error::Error>)` - An error if the next value cannot be determined.
     fn walk_next(&self, _exp: f64) -> Result<Self, Box<dyn std::error::Error>>;
 
-    /// Retrieves the maximum value accessible in the implementing type.
-    ///
-    /// This method is useful for finding upper bounds or peak values within data structures.
-    ///
-    /// # Returns
-    ///
-    /// * `Ok(Ytype)` - The maximum value found.
-    /// * `Err(Box<dyn std::error::Error>)` - An error if the maximum cannot be determined.
-    fn walk_max(&self) -> Result<Self, Box<dyn std::error::Error>>;
-
     /// Converts or extracts a decimal representation from the implementing type.
     ///
     /// This method provides a way to get a precise decimal value, which is particularly
