@@ -18,6 +18,7 @@ use rust_decimal::{Decimal, MathematicalOps};
 use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
+use std::fmt::{Display, Formatter};
 use std::ops::Index;
 
 /// Represents a mathematical curve as a collection of 2D points.
@@ -67,6 +68,15 @@ pub struct Curve {
     pub x_range: (Decimal, Decimal),
 }
 
+impl Display for Curve {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        for point in self.points.iter() {
+            write!(f, "{}\n", point)?;
+        }
+        Ok(())
+    }
+}
+
 impl Default for Curve {
     fn default() -> Self {
         Curve {
@@ -75,6 +85,7 @@ impl Default for Curve {
         }
     }
 }
+
 impl Curve {
     /// Creates a new curve from a vector of points.
     ///

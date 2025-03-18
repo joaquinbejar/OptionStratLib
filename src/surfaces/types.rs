@@ -11,6 +11,7 @@ use rust_decimal::Decimal;
 use rust_decimal::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
+use std::fmt::Display;
 
 /// Represents a point in three-dimensional space with `x`, `y` and `z` coordinates.
 ///
@@ -50,6 +51,13 @@ pub struct Point3D {
     /// The z-coordinate in the Cartesian system
     pub z: Decimal,
 }
+
+impl Display for Point3D {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "(x: {}, y: {}, z: {})", self.x, self.y, self.z)
+    }
+}
+
 impl PartialEq for Point3D {
     fn eq(&self, other: &Self) -> bool {
         self.x == other.x && self.y == other.y
