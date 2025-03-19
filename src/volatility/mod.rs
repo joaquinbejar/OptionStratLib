@@ -174,4 +174,4 @@ pub use utils::{
     simulate_heston_volatility, uncertain_volatility_bounds,
 };
 
-pub use traits::VolatilitySmile;
+pub use traits::{AtmIvProvider, VolatilitySmile};

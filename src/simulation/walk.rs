@@ -148,7 +148,7 @@ where
         values.clear();
         values.reserve(n_steps);
         values.push(initial_price.clone());
-        
+
         let mut volatilities = Vec::with_capacity(n_steps);
         volatilities.push(current_volatility); // Add initial volatility
 
@@ -243,7 +243,7 @@ where
         values.clear();
         values.reserve(n_steps);
         values.push(initial_price.clone());
-        
+
         let mut volatilities = Vec::with_capacity(n_steps);
         volatilities.push(current_volatility); // Add initial volatility
 

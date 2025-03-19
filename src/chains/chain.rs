@@ -13,13 +13,14 @@ use crate::chains::{
 use crate::curves::{BasicCurves, Curve, Point2D};
 use crate::error::chains::ChainError;
 use crate::error::{CurveError, SurfaceError};
-use crate::geometrics::{Len, LinearInterpolation};
+use crate::geometrics::LinearInterpolation;
 use crate::greeks::{Greeks, delta, gamma};
 use crate::model::{
     BasicAxisTypes, ExpirationDate, OptionStyle, OptionType, Options, Position, Side,
 };
 use crate::strategies::utils::FindOptimalSide;
 use crate::surfaces::{BasicSurfaces, Point3D, Surface};
+use crate::utils::Len;
 use crate::utils::others::get_random_element;
 use crate::volatility::VolatilitySmile;
 use crate::{Positive, pos};
@@ -1538,10 +1539,34 @@ impl OptionChain {
     /// }
     /// ```
     pub fn atm_strike(&self) -> Result<&Positive, Box<dyn Error>> {
+        let option_data = self.atm_option_data()?;
+        Ok(&option_data.strike_price)
+    }
+
+    /// Retrieves the OptionData for the at-the-money (ATM) option.
+    ///
+    /// This function attempts to find the ATM option within the option chain.
+    /// First, it checks for an option with a strike price that exactly matches the
+    /// underlying asset's price. If an exact match is not found, it searches for the
+    /// option with the strike price closest to the underlying price.
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(&OptionData)` - If a suitable ATM option is found, returns a reference to it.
+    /// * `Err(Box<dyn Error>)` - If the option chain is empty or no ATM option can be found,
+    ///   returns an error describing the failure.
+    ///
+    /// # Errors
+    ///
+    /// This function returns an error in the following cases:
+    ///
+    /// * The option chain (`self.options`) is empty.
+    /// * No option with a strike price close to the underlying price can be found.
+    pub fn atm_option_data(&self) -> Result<&OptionData, Box<dyn Error>> {
         // Check for empty option chain
         if self.options.is_empty() {
             return Err(format!(
-                "Cannot find ATM strike for empty option chain: {}",
+                "Cannot find ATM OptionData for empty option chain: {}",
                 self.symbol
             )
             .into());
@@ -1553,27 +1578,26 @@ impl OptionChain {
             .iter()
             .find(|opt| opt.strike_price == self.underlying_price)
         {
-            return Ok(&exact_match.strike_price);
+            return Ok(exact_match);
         }
 
         // Find the option with strike price closest to underlying price
-        self.options
-            .iter()
-            .min_by(|a, b| {
-                let a_distance = (a.strike_price.to_dec() - self.underlying_price.to_dec()).abs();
-                let b_distance = (b.strike_price.to_dec() - self.underlying_price.to_dec()).abs();
-                a_distance
-                    .partial_cmp(&b_distance)
-                    .unwrap_or(Ordering::Equal)
-            })
-            .map(|opt| &opt.strike_price)
-            .ok_or_else(|| {
-                format!(
-                    "Failed to find ATM strike for option chain: {}",
-                    self.symbol
-                )
-                .into()
-            })
+        let option_data = self.options.iter().min_by(|a, b| {
+            let a_distance = (a.strike_price.to_dec() - self.underlying_price.to_dec()).abs();
+            let b_distance = (b.strike_price.to_dec() - self.underlying_price.to_dec()).abs();
+            a_distance
+                .partial_cmp(&b_distance)
+                .unwrap_or(Ordering::Equal)
+        });
+
+        match option_data {
+            Some(opt) => Ok(opt),
+            None => Err(format!(
+                "Failed to find ATM OptionData for option chain: {}",
+                self.symbol
+            )
+            .into()),
+        }
     }
 
     /// Returns a formatted title string for the option chain.
@@ -2333,15 +2357,35 @@ impl OptionChain {
     /// * ATM strike is defined as the strike equal to the current underlying price
     /// * Important for volatility skew calculations and option pricing
     /// * Returns implied volatility as a decimal for precise calculations
-    pub fn get_atm_implied_volatility(&self) -> Result<Decimal, String> {
-        let atm_strike = self.underlying_price;
+    pub fn get_atm_implied_volatility(&self) -> Result<Decimal, String> {  // keep it for back compatibility 
+        match self.atm_implied_volatility() {
+            Ok(iv) => match iv {
+                Some(iv) => Ok(iv.value()),
+                None => Err("No ATM implied volatility available".to_string()),
+            },
+            Err(e) => Err(e.to_string()),
+        }
+    }
 
-        self.options
-            .iter()
-            .find(|opt| opt.strike_price == atm_strike)
-            .and_then(|opt| opt.implied_volatility)
-            .map(|iv| iv.value())
-            .ok_or_else(|| "No ATM implied volatility available".to_string())
+    /// Retrieves the At-The-Money (ATM) implied volatility.
+    ///
+    /// This function retrieves the implied volatility of the ATM option.
+    /// It calls `self.atm_option_data()` to find the ATM option and then
+    /// returns a reference to its implied volatility.
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(&Option<Positive>)` - If the ATM option is found, returns a reference
+    ///   to its implied volatility, which is an `Option<Positive>`.
+    /// * `Err(Box<dyn Error>)` - If the ATM option cannot be found, returns an error.
+    ///
+    /// # Errors
+    ///
+    /// This function returns an error if the underlying `atm_option_data()` call fails,
+    /// which can happen if the option chain is empty or no suitable ATM option is found.
+    pub fn atm_implied_volatility(&self) -> Result<&Option<Positive>, Box<dyn Error>> {
+        let option_data = self.atm_option_data()?;
+        Ok(&option_data.implied_volatility)
     }
 
     /// Calculates the total gamma exposure for all options in the chain.
@@ -5758,7 +5802,7 @@ mod rnd_analysis_tests {
             assert!(result.is_err());
             assert_eq!(
                 result.unwrap_err().to_string(),
-                "No ATM implied volatility available"
+                "Cannot find ATM OptionData for empty option chain: TEST"
             );
         }
 

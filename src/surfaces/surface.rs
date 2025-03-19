@@ -31,6 +31,7 @@ use crate::geometrics::{
 };
 use crate::surfaces::Point3D;
 use crate::surfaces::types::Axis;
+use crate::utils::Len;
 #[cfg(not(target_arch = "wasm32"))]
 use num_traits::ToPrimitive;
 use rayon::iter::{
@@ -930,6 +931,16 @@ impl SplineInterpolation<Point3D, Point2D> for Surface {
 
         // Return the final interpolated point
         y_interpolated.map(|z| Point3D::new(xy.x, xy.y, z))
+    }
+}
+
+impl Len for Surface {
+    fn len(&self) -> usize {
+        self.points.len()
+    }
+
+    fn is_empty(&self) -> bool {
+        self.points.is_empty()
     }
 }
 

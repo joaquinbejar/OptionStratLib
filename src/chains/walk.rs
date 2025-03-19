@@ -29,7 +29,6 @@ impl Walkable<Positive, OptionChain> for OptionChain {
 /// Trait for types that can be "walked" or iterated through, typically used for
 /// option chains to simulate price movements and rebalance strikes.
 impl Walktypable for OptionChain {
-
     /// Calculates the next state of the option chain based on an exponential change
     /// in the underlying asset's price.
     ///
@@ -49,8 +48,9 @@ impl Walktypable for OptionChain {
     /// * `Result<Self, Box<dyn Error>>` - A new `OptionChain` with updated option prices
     ///   and potentially rebalanced strikes, or an error if any calculation fails.
     fn walk_next(&self, exp: f64) -> Result<Self, Box<dyn Error>> {
-        let next_underlying_price = pos!(self.underlying_price.to_f64() * f64::exp(exp)).max(Positive::ZERO);
-        
+        let next_underlying_price =
+            pos!(self.underlying_price.to_f64() * f64::exp(exp)).max(Positive::ZERO);
+
         let mut chain = OptionChain::new(
             &self.symbol,
             next_underlying_price,

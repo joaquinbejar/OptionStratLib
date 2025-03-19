@@ -4,7 +4,10 @@
    Date: 18/3/25
 ******************************************************************************/
 use crate::Positive;
+use crate::volatility::AtmIvProvider;
 use rust_decimal::Decimal;
+use std::error::Error;
+use std::fmt::Display;
 use tracing::error;
 
 /// A trait for traversing and extracting values from various data structures.
@@ -29,7 +32,7 @@ use tracing::error;
 /// Each method returns a `Result` type which either contains the requested value
 /// or a boxed error if the operation cannot be completed.
 ///
-pub trait Walktypable: Sized + Clone + std::fmt::Display {
+pub trait Walktypable: Sized + Clone + Display + AtmIvProvider {
     /// Generates or retrieves the next value in a sequence.
     ///
     /// This method is used to iterate through values or generate the next
@@ -43,7 +46,7 @@ pub trait Walktypable: Sized + Clone + std::fmt::Display {
     ///
     /// * `Ok(Ytype)` - The next value in the sequence or calculation.
     /// * `Err(Box<dyn std::error::Error>)` - An error if the next value cannot be determined.
-    fn walk_next(&self, _exp: f64) -> Result<Self, Box<dyn std::error::Error>>;
+    fn walk_next(&self, _exp: f64) -> Result<Self, Box<dyn Error>>;
 
     /// Converts or extracts a decimal representation from the implementing type.
     ///
@@ -54,7 +57,7 @@ pub trait Walktypable: Sized + Clone + std::fmt::Display {
     ///
     /// * `Ok(Decimal)` - The decimal representation of a value from the implementing type.
     /// * `Err(Box<dyn std::error::Error>)` - An error if the decimal conversion fails.
-    fn walk_dec(&self) -> Result<Decimal, Box<dyn std::error::Error>>;
+    fn walk_dec(&self) -> Result<Decimal, Box<dyn Error>>;
 
     /// Retrieves a guaranteed positive value from the implementing type.
     ///
@@ -65,7 +68,7 @@ pub trait Walktypable: Sized + Clone + std::fmt::Display {
     ///
     /// * `Ok(Positive)` - A wrapper type containing a guaranteed positive value.
     /// * `Err(Box<dyn std::error::Error>)` - An error if a positive value cannot be determined.
-    fn walk_positive(&self) -> Result<Positive, Box<dyn std::error::Error>>;
+    fn walk_positive(&self) -> Result<Positive, Box<dyn Error>>;
 
     /// Retrieves a guaranteed positive value from the implementing type.
     ///
@@ -108,7 +111,7 @@ pub trait Walktypable: Sized + Clone + std::fmt::Display {
     /// * The iterator is in an invalid state (e.g., before first element or past the end)
     /// * The current position cannot be accessed due to implementation constraints
     ///
-    fn walk_current(&self) -> Result<&Self, Box<dyn std::error::Error>> {
+    fn walk_current(&self) -> Result<&Self, Box<dyn Error>> {
         Ok(self)
     }
 }

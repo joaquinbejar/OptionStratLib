@@ -4,14 +4,16 @@
    Date: 9/1/25
 ******************************************************************************/
 use crate::curves::Point2D;
+use crate::curves::traits::StatisticalCurve;
 use crate::curves::utils::detect_peaks_and_valleys;
 use crate::error::{CurveError, InterpolationError, MetricsError};
 use crate::geometrics::{
     Arithmetic, AxisOperations, BasicMetrics, BiLinearInterpolation, ConstructionMethod,
     ConstructionParams, CubicInterpolation, GeometricObject, GeometricTransformations, Interpolate,
-    InterpolationType, Len, LinearInterpolation, MergeAxisInterpolate, MergeOperation,
-    MetricsExtractor, RangeMetrics, RiskMetrics, ShapeMetrics, SplineInterpolation, TrendMetrics,
+    InterpolationType, LinearInterpolation, MergeAxisInterpolate, MergeOperation, MetricsExtractor,
+    RangeMetrics, RiskMetrics, ShapeMetrics, SplineInterpolation, TrendMetrics,
 };
+use crate::utils::Len;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use rayon::prelude::*;
 use rust_decimal::{Decimal, MathematicalOps};
@@ -71,7 +73,7 @@ pub struct Curve {
 impl Display for Curve {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         for point in self.points.iter() {
-            write!(f, "{}\n", point)?;
+            writeln!(f, "{}", point)?;
         }
         Ok(())
     }
@@ -122,6 +124,10 @@ impl Curve {
 impl Len for Curve {
     fn len(&self) -> usize {
         self.points.len()
+    }
+
+    fn is_empty(&self) -> bool {
+        self.points.is_empty()
     }
 }
 
@@ -932,6 +938,12 @@ impl SplineInterpolation<Point2D, Decimal> for Curve {
     }
 }
 
+impl StatisticalCurve for Curve {
+    fn get_x_values(&self) -> Vec<Decimal> {
+        self.points.iter().map(|p| p.x).collect()
+    }
+}
+
 /// A default implementation for the `Curve` type using a provided default strategy.
 ///
 /// This implementation provides a basic approach to computing curve metrics
@@ -1041,7 +1053,7 @@ impl MetricsExtractor for Curve {
             - Decimal::from(3);
 
         // Peaks and Valleys detection
-        let (peaks, valleys) = detect_peaks_and_valleys(&self.points);
+        let (peaks, valleys) = detect_peaks_and_valleys(&self.points, dec!(0.1), 2);
 
         Ok(ShapeMetrics {
             skewness,
