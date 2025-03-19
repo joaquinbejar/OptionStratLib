@@ -27,7 +27,6 @@ use crate::{Positive, pos};
 use chrono::{NaiveDate, Utc};
 use num_traits::{FromPrimitive, ToPrimitive};
 use rust_decimal::{Decimal, MathematicalOps};
-use rust_decimal_macros::dec;
 use serde::de::{MapAccess, Visitor};
 use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
 use std::cmp::{Ordering, PartialEq};
@@ -1311,8 +1310,8 @@ impl OptionChain {
                 .expiration_date
                 .get_date_string()
                 .unwrap(),
-            None,
-            None,
+            Some(params.price_params.risk_free_rate),
+            Some(params.price_params.dividend_yield),
         );
         let strikes = generate_list_of_strikes(
             params.price_params.underlying_price,
@@ -1356,6 +1355,119 @@ impl OptionChain {
         }
         debug!("Option chain: {}", option_chain);
         option_chain
+    }
+
+    /// Generates build parameters that would reproduce the current option chain.
+    ///
+    /// This method creates an `OptionChainBuildParams` object with configuration values
+    /// extracted from the current chain. This is useful for:
+    /// - Recreating a similar chain with modified parameters
+    /// - Saving the chain's configuration for later reconstruction
+    /// - Generating additional chains with consistent parameters
+    ///
+    /// # Returns
+    ///
+    /// An `OptionChainBuildParams` structure containing the parameters needed to rebuild
+    /// this option chain. The method calculates appropriate values for chain size, strike interval,
+    /// and estimated spread based on the current data.
+    ///
+    pub fn to_build_params(&self) -> Result<OptionChainBuildParams, Box<dyn Error>> {
+        // Calculate chain size based on the distance from ATM strike
+        let atm_strike = self.atm_strike()?;
+        let strike_interval = self.get_strike_interval();
+
+        // Calculate the number of strikes above and below the ATM strike
+        let mut chain_size = 0;
+        let strike_prices: Vec<Positive> =
+            self.options.iter().map(|opt| opt.strike_price).collect();
+
+        if !strike_prices.is_empty() {
+            // Find the maximum distance from ATM in number of strikes
+            let min_strike = strike_prices.iter().min().unwrap();
+            let max_strike = strike_prices.iter().max().unwrap();
+
+            let strikes_below = ((atm_strike.to_dec() - min_strike.to_dec())
+                / strike_interval.to_dec())
+            .ceil()
+            .to_u64()
+            .unwrap_or(0) as usize;
+
+            let strikes_above = ((max_strike.to_dec() - atm_strike.to_dec())
+                / strike_interval.to_dec())
+            .ceil()
+            .to_u64()
+            .unwrap_or(0) as usize;
+
+            chain_size = strikes_below.max(strikes_above);
+        }
+
+        // Default to a reasonable chain size if calculation fails
+        if chain_size == 0 {
+            chain_size = 10;
+        }
+
+        // Estimate the average bid-ask spread from the available options
+        let mut total_spread = Decimal::ZERO;
+        let mut count = 0;
+
+        for option in &self.options {
+            if let (Some(ask), Some(bid)) = (option.call_ask, option.call_bid) {
+                total_spread += (ask.to_dec() - bid.to_dec()).abs();
+                count += 1;
+            }
+
+            if let (Some(ask), Some(bid)) = (option.put_ask, option.put_bid) {
+                total_spread += (ask.to_dec() - bid.to_dec()).abs();
+                count += 1;
+            }
+        }
+
+        // Default spread if we couldn't calculate it
+        let spread = if count > 0 {
+            Positive(total_spread / Decimal::from(count))
+        } else {
+            pos!(0.02) // 0.02 is a reasonable default spread
+        };
+
+        // Get ATM implied volatility with a default fallback
+        let implied_volatility = match self.atm_implied_volatility() {
+            Ok(Some(iv)) => Some(*iv),
+            _ => Some(pos!(0.2)), // 20% is a reasonable default IV
+        };
+
+        // Estimate skew factor (this is simplistic - a more sophisticated calculation could be added)
+        let skew_factor = 0.0; // Neutral skew as default
+
+        // Create the price parameters
+        let price_params = OptionDataPriceParams::new(
+            self.underlying_price,
+            ExpirationDate::from_string(&self.expiration_date)?,
+            implied_volatility,
+            self.risk_free_rate.unwrap_or(Decimal::ZERO),
+            self.dividend_yield.unwrap_or(Positive::ZERO),
+            Some(self.symbol.clone()),
+        );
+
+        // Determine a reasonable number of decimal places based on the underlying price
+        let decimal_places = if self.underlying_price >= pos!(100.0) {
+            2
+        } else {
+            3
+        };
+
+        // Volume is typically available in the option data
+        let volume = self.options.iter().filter_map(|opt| opt.volume).next();
+
+        Ok(OptionChainBuildParams::new(
+            self.symbol.clone(),
+            volume,
+            chain_size,
+            strike_interval,
+            skew_factor,
+            spread,
+            decimal_places,
+            price_params,
+        ))
     }
 
     /// Filters option data in the chain based on specified criteria.
@@ -2682,153 +2794,6 @@ impl OptionChain {
                 Positive(rounded_interval)
             }
         }
-    }
-
-    /// Calculates the option pricing parameters, particularly the implied volatility,
-    /// for a new strike price, extrapolating or interpolating from existing option data.
-    ///
-    /// This function determines the appropriate implied volatility (IV) to use for a new option strike
-    /// price based on the implied volatilities of existing options. It handles cases where the new
-    /// strike price is within the range of existing strikes (interpolation) or outside the range
-    /// (extrapolation). If there are fewer than two existing options, a default IV is used.
-    ///
-    /// # Arguments
-    ///
-    /// * `strike_price` - The strike price of the new option for which to determine the IV.
-    ///
-    /// * `underlying_price` - The current price of the underlying asset.
-    ///
-    /// # Returns
-    ///
-    /// An `OptionDataPriceParams` struct containing the necessary parameters for pricing the new option,
-    /// including the extrapolated or interpolated implied volatility. Returns a `ChainError` if
-    /// there are issues with the expiration date format.
-    pub(crate) fn get_params_for_new_strike(
-        &self,
-        strike_price: Positive,
-        underlying_price: Positive,
-    ) -> Result<OptionDataPriceParams, ChainError> {
-        // If there are fewer than 2 options, use default IV
-        if self.options.len() < 2 {
-            return Ok(OptionDataPriceParams::new(
-                underlying_price,
-                ExpirationDate::from_string(&self.expiration_date)?,
-                Some(pos!(0.2)), // Default IV
-                self.risk_free_rate.unwrap_or(Decimal::ZERO),
-                self.dividend_yield.unwrap_or(Positive::ZERO),
-                Some(self.symbol.clone()),
-            ));
-        }
-
-        // Sort options by strike price
-        let mut sorted_options: Vec<&OptionData> = self.options.iter().collect();
-        sorted_options.sort_by(|a, b| a.strike_price.partial_cmp(&b.strike_price).unwrap());
-
-        // Determine if the new strike is beyond the existing range
-        if strike_price < sorted_options[0].strike_price {
-            // Extrapolate for strikes below the lowest existing strike
-            let iv1 = sorted_options[0]
-                .implied_volatility
-                .unwrap_or_else(|| pos!(0.2));
-            let iv2 = sorted_options[1]
-                .implied_volatility
-                .unwrap_or_else(|| pos!(0.2));
-            let k1 = sorted_options[0].strike_price;
-            let k2 = sorted_options[1].strike_price;
-
-            // Calculate slope of volatility curve
-            let slope = (iv2.to_dec() - iv1.to_dec()) / (k2.to_dec() - k1.to_dec());
-
-            // Extrapolate implied volatility
-            let distance = k1.to_dec() - strike_price.to_dec();
-            let new_iv = iv1.to_dec() - slope * distance;
-
-            // Ensure IV doesn't go below a minimum threshold
-            let final_iv = Positive(new_iv.max(dec!(0.05)));
-
-            return Ok(OptionDataPriceParams::new(
-                underlying_price,
-                ExpirationDate::from_string(&self.expiration_date)?,
-                Some(final_iv),
-                self.risk_free_rate.unwrap_or(Decimal::ZERO),
-                self.dividend_yield.unwrap_or(Positive::ZERO),
-                Some(self.symbol.clone()),
-            ));
-        } else if strike_price > sorted_options.last().unwrap().strike_price {
-            // Extrapolate for strikes above the highest existing strike
-            let n = sorted_options.len();
-            let iv1 = sorted_options[n - 2]
-                .implied_volatility
-                .unwrap_or_else(|| pos!(0.2));
-            let iv2 = sorted_options[n - 1]
-                .implied_volatility
-                .unwrap_or_else(|| pos!(0.2));
-            let k1 = sorted_options[n - 2].strike_price;
-            let k2 = sorted_options[n - 1].strike_price;
-
-            // Calculate slope of volatility curve
-            let slope = (iv2.to_dec() - iv1.to_dec()) / (k2.to_dec() - k1.to_dec());
-
-            // Extrapolate implied volatility
-            let distance = strike_price.to_dec() - k2.to_dec();
-            let new_iv = iv2.to_dec() + slope * distance;
-
-            // Ensure IV doesn't go below a minimum threshold
-            let final_iv = Positive(new_iv.max(dec!(0.05)));
-
-            return Ok(OptionDataPriceParams::new(
-                underlying_price,
-                ExpirationDate::from_string(&self.expiration_date)?,
-                Some(final_iv),
-                self.risk_free_rate.unwrap_or(Decimal::ZERO),
-                self.dividend_yield.unwrap_or(Positive::ZERO),
-                Some(self.symbol.clone()),
-            ));
-        }
-
-        // Find the two strikes that bracket the target strike price
-        let mut lower_strike_index = 0;
-        let mut upper_strike_index = 0;
-
-        for i in 0..sorted_options.len() - 1 {
-            if sorted_options[i].strike_price <= strike_price
-                && strike_price <= sorted_options[i + 1].strike_price
-            {
-                lower_strike_index = i;
-                upper_strike_index = i + 1;
-                break;
-            }
-        }
-
-        // Get implied volatilities for the two nearby strikes
-        let lower_iv = sorted_options[lower_strike_index]
-            .implied_volatility
-            .unwrap_or_else(|| pos!(0.2));
-        let upper_iv = sorted_options[upper_strike_index]
-            .implied_volatility
-            .unwrap_or_else(|| pos!(0.2));
-        let lower_strike = sorted_options[lower_strike_index].strike_price;
-        let upper_strike = sorted_options[upper_strike_index].strike_price;
-
-        // Linear interpolation of implied volatility
-        let strike_range = upper_strike.to_dec() - lower_strike.to_dec();
-        let iv_range = upper_iv.to_dec() - lower_iv.to_dec();
-
-        // Calculate position of new strike within the range (0 to 1)
-        let position = (strike_price.to_dec() - lower_strike.to_dec()) / strike_range;
-
-        // Interpolate the implied volatility
-        let interpolated_iv = lower_iv.to_dec() + position * iv_range;
-
-        // Create new price parameters with the interpolated IV
-        Ok(OptionDataPriceParams::new(
-            underlying_price,
-            ExpirationDate::from_string(&self.expiration_date)?,
-            Some(Positive(interpolated_iv)),
-            self.risk_free_rate.unwrap_or(Decimal::ZERO),
-            self.dividend_yield.unwrap_or(Positive::ZERO),
-            Some(self.symbol.clone()),
-        ))
     }
 }
 
@@ -8053,7 +8018,6 @@ mod tests_atm_strike {
 #[cfg(test)]
 mod tests_option_chain_utils {
     use super::*;
-    use crate::assert_pos_relative_eq;
     use crate::chains::utils::OptionChainBuildParams;
     use crate::chains::utils::OptionDataPriceParams;
     use crate::model::types::ExpirationDate;
@@ -8231,155 +8195,57 @@ mod tests_option_chain_utils {
             "Fractional intervals should round to minimum of 1.0"
         );
     }
+}
 
-    #[test]
-    fn test_get_params_for_new_strike_inside_range() {
-        let chain = create_custom_strike_chain();
+#[cfg(test)]
+#[cfg(not(target_arch = "wasm32"))]
+mod tests_to_build_params {
+    use super::*;
+    use crate::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
+    use crate::model::types::ExpirationDate;
+    use crate::utils::logger::setup_logger;
+    use crate::{pos, spos};
+    use rust_decimal_macros::dec;
 
-        // Test interpolation for a strike between 100 and 105
-        let result = chain.get_params_for_new_strike(pos!(102.5), pos!(100.0));
-
-        assert!(
-            result.is_ok(),
-            "Should successfully get params for strike within range"
+    fn create_standard_chain() -> OptionChain {
+        setup_logger();
+        let params = OptionChainBuildParams::new(
+            "SP500".to_string(),
+            None,
+            22,
+            pos!(25.0),
+            0.000001,
+            pos!(0.03),
+            2,
+            OptionDataPriceParams::new(
+                pos!(5000.0),
+                ExpirationDate::Days(pos!(30.0)),
+                spos!(0.1),
+                dec!(0.05),
+                pos!(0.05),
+                Some("SP500".to_string()),
+            ),
         );
 
-        let params = result.unwrap();
-
-        // Expected IV should be linearly interpolated between 0.17 at 100.0 and 0.175 at 105.0
-        // Position is 0.5, so IV should be 0.17 + 0.5 * (0.175 - 0.17) = 0.1725
-        assert_pos_relative_eq!(
-            params.implied_volatility.unwrap(),
-            pos!(0.1725),
-            pos!(0.0001)
-        );
+        OptionChain::build_chain(&params)
     }
 
     #[test]
-    fn test_get_params_for_new_strike_below_range() {
-        let chain = create_custom_strike_chain();
+    fn test_to_build_params_simple() {
+        let chain = create_standard_chain();
+        info!("{}", chain);
+        let mut params = chain.to_build_params().unwrap();
 
-        // Test extrapolation for a strike below the lowest existing strike (90.0)
-        let result = chain.get_params_for_new_strike(pos!(85.0), pos!(100.0));
-
-        assert!(
-            result.is_ok(),
-            "Should successfully get params for strike below range"
+        params.skew_factor = 0.000001;
+        params.price_params.underlying_price =
+            pos!(params.price_params.underlying_price.to_f64() * f64::exp(0.2)).max(Positive::ZERO);
+        params.price_params.implied_volatility = Some(
+            pos!(params.price_params.implied_volatility.unwrap().to_f64() * f64::exp(0.2))
+                .max(Positive::ZERO),
         );
+        info!("{}", params);
 
-        let params = result.unwrap();
-
-        // Expected IV should be extrapolated based on slope between 90.0 (IV=0.22) and 92.5 (IV=0.20)
-        // Slope = (0.20 - 0.22) / (92.5 - 90.0) = -0.008
-        // New IV = 0.22 - (-0.008) * (90 - 85) = 0.22 + 0.04 = 0.26
-        assert_pos_relative_eq!(params.implied_volatility.unwrap(), pos!(0.26), pos!(0.0001));
-    }
-
-    #[test]
-    fn test_get_params_for_new_strike_above_range() {
-        let chain = create_custom_strike_chain();
-
-        // Test extrapolation for a strike above the highest existing strike (125.0)
-        let result = chain.get_params_for_new_strike(pos!(130.0), pos!(100.0));
-
-        assert!(
-            result.is_ok(),
-            "Should successfully get params for strike above range"
-        );
-
-        let params = result.unwrap();
-
-        // Expected IV should be extrapolated based on slope between 115.0 (IV=0.19) and 125.0 (IV=0.21)
-        // Slope = (0.21 - 0.19) / (125.0 - 115.0) = 0.002
-        // New IV = 0.21 + 0.002 * (130 - 125) = 0.21 + 0.01 = 0.22
-        assert_pos_relative_eq!(params.implied_volatility.unwrap(), pos!(0.22), pos!(0.0001));
-    }
-
-    #[test]
-    fn test_get_params_for_new_strike_exact_match() {
-        let chain = create_custom_strike_chain();
-
-        // Test with a strike that exactly matches an existing one
-        let result = chain.get_params_for_new_strike(pos!(100.0), pos!(100.0));
-
-        assert!(
-            result.is_ok(),
-            "Should successfully get params for exact strike match"
-        );
-
-        let params = result.unwrap();
-
-        // Should get exact IV without interpolation
-        assert_pos_relative_eq!(params.implied_volatility.unwrap(), pos!(0.17), pos!(0.0001));
-    }
-
-    #[test]
-    fn test_get_params_for_new_strike_empty_chain() {
-        let chain = OptionChain::new("EMPTY", pos!(100.0), "2024-01-01".to_string(), None, None);
-
-        // Test with empty chain
-        let result = chain.get_params_for_new_strike(pos!(100.0), pos!(100.0));
-
-        assert!(result.is_ok(), "Should handle empty chain gracefully");
-
-        let params = result.unwrap();
-
-        // Should use default IV of 0.2
-        assert_pos_relative_eq!(params.implied_volatility.unwrap(), pos!(0.2), pos!(0.0001));
-    }
-
-    #[test]
-    fn test_get_params_for_new_strike_minimum_iv() {
-        let mut chain = create_custom_strike_chain();
-
-        // Replace an option with very low IV to test minimum threshold
-        let mut options: Vec<OptionData> = chain.options.into_iter().collect();
-        options[0].implied_volatility = Some(pos!(0.01)); // Set first strike (90.0) to have very low IV
-        options[1].implied_volatility = Some(pos!(0.1)); // And second strike (92.5) to have higher IV
-
-        // Put options back into chain
-        chain.options = BTreeSet::from_iter(options);
-
-        // Test extrapolation that would go below minimum threshold
-        let result = chain.get_params_for_new_strike(pos!(85.0), pos!(100.0));
-
-        assert!(
-            result.is_ok(),
-            "Should successfully get params even with very low IVs"
-        );
-
-        let params = result.unwrap();
-
-        // Extrapolation would give negative IV, but should be capped at minimum of 0.05
-        assert_pos_relative_eq!(params.implied_volatility.unwrap(), pos!(0.05), pos!(0.0001));
-    }
-
-    #[test]
-    fn test_get_params_for_new_strike_verify_other_params() {
-        let chain = create_custom_strike_chain();
-
-        // Test that other parameters are correctly passed through
-        let result = chain.get_params_for_new_strike(pos!(110.0), pos!(105.0));
-
-        assert!(result.is_ok(), "Should successfully get params");
-
-        let params = result.unwrap();
-
-        // Verify all other parameters match what we expect
-        assert_eq!(
-            params.underlying_price,
-            pos!(105.0),
-            "Underlying price should match input"
-        );
-        assert_eq!(
-            params.risk_free_rate,
-            dec!(0.05),
-            "Risk-free rate should match chain's rate"
-        );
-        assert_eq!(
-            params.dividend_yield,
-            pos!(0.02),
-            "Dividend yield should match chain's yield"
-        );
+        let new_chain = OptionChain::build_chain(&params);
+        info!("{}", new_chain);
     }
 }
