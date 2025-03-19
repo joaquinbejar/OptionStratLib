@@ -152,6 +152,7 @@ impl Walktypable for OptionChain {
         chain.update_greeks();
         
         // TODO: apply volatility smile base in option_chain.curve volatility
+        // TODO: Expiration Date: should be ingressed  to reduce in each iteration
         Ok(chain)
     }
 
