@@ -1,9 +1,9 @@
-use optionstratlib::OptionStyle;
-use optionstratlib::strategies::base::Positionable;
 #[cfg(not(target_arch = "wasm32"))]
 use {
+    optionstratlib::OptionStyle,
     optionstratlib::chains::chain::OptionChain,
     optionstratlib::strategies::base::Optimizable,
+    optionstratlib::strategies::base::Positionable,
     optionstratlib::strategies::{FindOptimalSide, LongStrangle},
     optionstratlib::utils::setup_logger,
     optionstratlib::{ExpirationDate, Positive, pos},
