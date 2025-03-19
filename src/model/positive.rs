@@ -5,12 +5,15 @@
 ******************************************************************************/
 
 use crate::constants::EPSILON;
+use crate::model::utils::ToRound;
+use crate::simulation::types::Walktypable;
 use approx::{AbsDiffEq, RelativeEq};
 use num_traits::{FromPrimitive, ToPrimitive};
 use rust_decimal::{Decimal, MathematicalOps};
 use serde::de::Visitor;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::cmp::{Ordering, PartialEq};
+use std::error::Error;
 use std::fmt;
 use std::iter::Sum;
 use std::ops::{Add, AddAssign, Div, Mul, MulAssign, Neg, Sub};
@@ -360,6 +363,41 @@ impl Positive {
         Positive(self.0.round_dp(decimal_places))
     }
 
+    /// Formats the value with a fixed number of decimal places, filling with zeros if needed.
+    ///
+    /// Unlike `round_to` which just rounds the value, this method ensures the string
+    /// representation always has exactly the specified number of decimal places.
+    ///
+    /// # Arguments
+    ///
+    /// * `decimal_places` - The exact number of decimal places to display
+    ///
+    /// # Returns
+    ///
+    /// A String representation of the value with exactly the specified number of decimal places.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use optionstratlib::pos;
+    ///
+    /// let value = pos!(10.5);
+    /// assert_eq!(value.format_fixed_places(2), "10.50");
+    ///
+    /// let value = pos!(10.0);
+    /// assert_eq!(value.format_fixed_places(3), "10.000");
+    ///
+    /// let value = pos!(10.567);
+    /// assert_eq!(value.format_fixed_places(2), "10.57"); // Rounds to 2 places
+    /// ```
+    pub fn format_fixed_places(&self, decimal_places: u32) -> String {
+        // First round to the specified number of decimal places
+        let rounded = self.round_to(decimal_places).to_f64();
+
+        // Use format! with the precision specifier to ensure exactly decimal_places are shown
+        format!("{:.1$}", rounded, decimal_places as usize)
+    }
+
     /// Calculates the exponential function e^x for this value.
     ///
     /// # Returns
@@ -398,6 +436,31 @@ impl Positive {
     /// `true` if the value is zero, `false` otherwise.
     pub fn is_zero(&self) -> bool {
         self.0.is_zero()
+    }
+}
+
+impl ToRound for Positive {
+    fn round(&self) -> Decimal {
+        self.round().to_dec()
+    }
+
+    fn round_to(&self, decimal_places: u32) -> Decimal {
+        self.round_to(decimal_places).to_dec()
+    }
+}
+
+impl Walktypable for Positive {
+    fn walk_next(&self, exp: f64) -> Result<Positive, Box<dyn Error>> {
+        let value = self.to_f64() * f64::exp(exp);
+        Ok(pos!(value).max(Positive::ZERO))
+    }
+
+    fn walk_dec(&self) -> Result<Decimal, Box<dyn Error>> {
+        Ok(self.to_dec())
+    }
+
+    fn walk_positive(&self) -> Result<Positive, Box<dyn Error>> {
+        Ok(*self)
     }
 }
 
@@ -1320,5 +1383,25 @@ mod tests_serialization {
         let result = serde_json::from_str::<Positive>(json);
 
         assert!(result.is_ok());
+    }
+}
+
+#[cfg(test)]
+mod tests_format_fixed_places {
+    use crate::pos;
+
+    #[test]
+    fn test_format_fixed_places() {
+        let value = pos!(10.5);
+        assert_eq!(value.format_fixed_places(2), "10.50");
+
+        let value = pos!(10.0);
+        assert_eq!(value.format_fixed_places(3), "10.000");
+
+        let value = pos!(10.567);
+        assert_eq!(value.format_fixed_places(2), "10.57");
+
+        let value = pos!(0.1);
+        assert_eq!(value.format_fixed_places(4), "0.1000");
     }
 }

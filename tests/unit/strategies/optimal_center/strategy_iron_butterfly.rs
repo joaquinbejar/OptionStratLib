@@ -1,12 +1,12 @@
-use optionstratlib::strategies::base::Positionable;
-use optionstratlib::{OptionStyle, Side, assert_pos_relative_eq};
 #[cfg(not(target_arch = "wasm32"))]
 use {
     optionstratlib::chains::chain::OptionChain,
     optionstratlib::strategies::base::Optimizable,
+    optionstratlib::strategies::base::Positionable,
     optionstratlib::strategies::{FindOptimalSide, IronButterfly},
     optionstratlib::utils::setup_logger,
     optionstratlib::{ExpirationDate, Positive, pos},
+    optionstratlib::{OptionStyle, Side, assert_pos_relative_eq},
     rust_decimal_macros::dec,
     std::error::Error,
 };

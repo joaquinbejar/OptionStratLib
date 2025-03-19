@@ -14,6 +14,7 @@ use crate::geometrics::GeometricObject;
 use crate::model::types::ExpirationDate;
 use crate::pricing::payoff::Profit;
 use crate::simulation::model::WalkResult;
+use crate::simulation::types::Walktypable;
 use crate::simulation::utils::calculate_extra_metrics;
 use crate::strategies::Strategable;
 use crate::utils::Len;
@@ -35,7 +36,10 @@ use tracing::{debug, info, trace, warn};
 /// entities capable of simulating or managing a random walk sequence of values.
 /// Implementations of this trait must handle a vector of `Positive` values, which
 /// serve as the primary storage for the y-axis values used in simulations or computations.
-pub trait Walkable {
+pub trait Walkable<Xtype, Ytype>
+where
+    Ytype: Walktypable,
+{
     /// Provides read-only access to the vector of `Positive` values representing
     /// the y-axis data points of a structure implementing this method.
     ///
@@ -46,7 +50,7 @@ pub trait Walkable {
     /// This method is typically used to retrieve the internal `Positive` values
     /// for further processing, analysis, or visualization while maintaining
     /// the immutability of the vector.
-    fn get_y_values(&self) -> &Vec<Positive>;
+    fn get_y_values(&self) -> &Vec<Ytype>;
 
     /// Computes and retrieves the x-axis values corresponding to the y-axis values
     /// stored within the structure as a `Vec<Positive>`.
@@ -69,6 +73,27 @@ pub trait Walkable {
             .collect()
     }
 
+    /// Returns a reference to the vector of `Xtype` elements associated with this object.
+    ///
+    /// This method provides read-only access to the collection of `Xtype` elements
+    /// stored within this object. The default implementation is a placeholder
+    /// that will panic if called, indicating that implementing types must
+    /// override this method with their own implementation.
+    ///
+    /// # Returns
+    ///
+    /// * `&Vec<Xtype>` - A reference to the vector containing the `Xtype` elements.
+    ///
+    /// # Panics
+    ///
+    /// By default, this method panics with a message indicating that it has not been
+    /// implemented for the type in question. Implementing types should override this
+    /// method to provide their own implementation.
+    ///
+    fn get_x_type(&self) -> &Vec<Xtype> {
+        unimplemented!("get_x_type not implemented for this type")
+    }
+
     /// Provides mutable access to the vector of `Positive` values representing
     /// the y-axis data points of a structure implementing this method.
     ///
@@ -79,7 +104,7 @@ pub trait Walkable {
     /// This method is intended for situations where modifications to the y-axis
     /// data are required, such as appending, updating, or resizing the vector.
     /// It ensures controlled and safe mutable access.
-    fn get_y_values_ref(&mut self) -> &mut Vec<Positive>;
+    fn get_y_values_ref(&mut self) -> &mut Vec<Ytype>;
 
     /// Generates a random walk sequence of values using a normal distribution.
     ///
@@ -104,7 +129,7 @@ pub trait Walkable {
     fn generate_random_walk(
         &mut self,
         n_steps: usize,
-        initial_price: Positive,
+        initial_price: Ytype,
         drift: f64,
         volatility: Positive,
         volatility_change: Positive,
@@ -122,9 +147,8 @@ pub trait Walkable {
         let values = self.get_y_values_ref();
         values.clear();
         values.reserve(n_steps);
-        values.push(initial_price);
+        values.push(initial_price.clone());
 
-        let mut current_price = initial_price;
         let mut volatilities = Vec::with_capacity(n_steps);
         volatilities.push(current_volatility); // Add initial volatility
 
@@ -150,11 +174,8 @@ pub trait Walkable {
             let volatility_term = vol * sqrt_dt * z;
 
             let log_return = drift_term + volatility_term;
-            let next_price = current_price.to_f64() * f64::exp(log_return);
-
-            // Ensure price doesn't go below zero
-            current_price = pos!(next_price.max(ZERO));
-            values.push(current_price);
+            let current_price = initial_price.walk_next(log_return)?;
+            values.push(current_price.clone());
 
             trace!(
                 "Current price: {}, Volatility: {}",
@@ -199,7 +220,7 @@ pub trait Walkable {
     fn generate_random_walk_timeframe(
         &mut self,
         n_steps: usize,
-        initial_price: Positive,
+        initial_price: Ytype,
         drift: f64,
         volatility: Positive,        // daily volatility
         volatility_change: Positive, // daily VoV
@@ -221,9 +242,8 @@ pub trait Walkable {
         let values = self.get_y_values_ref();
         values.clear();
         values.reserve(n_steps);
-        values.push(initial_price);
+        values.push(initial_price.clone());
 
-        let mut current_price = initial_price;
         let mut volatilities = Vec::with_capacity(n_steps);
         volatilities.push(current_volatility); // Add initial volatility
 
@@ -260,11 +280,8 @@ pub trait Walkable {
             let volatility_term = vol * sqrt_dt * z;
 
             let log_return = drift_term + volatility_term;
-            let next_price = current_price.to_f64() * f64::exp(log_return);
-
-            // Ensure price doesn't go below zero
-            current_price = pos!(next_price.max(ZERO));
-            values.push(current_price);
+            let current_price = initial_price.walk_next(log_return)?;
+            values.push(current_price.clone());
 
             trace!(
                 "Current price: {}, Volatility: {}",
@@ -318,7 +335,7 @@ pub trait Walkable {
     /// # Returns
     /// * `Result<RandomWalkGraph, Box<dyn Error>>` - A random walk graph instance on success
     ///   or an error if the generation process fails
-    fn get_random_walk(&self) -> Result<RandomWalkGraph, Box<dyn Error>>;
+    fn get_random_walk(&self) -> Result<RandomWalkGraph<Ytype>, Box<dyn Error>>;
 
     /// Simulates a strategy over a price walk and analyzes its performance.
     ///
@@ -362,8 +379,8 @@ pub trait Walkable {
         let days = convert_time_frame(values_len, &time_frame, &TimeFrame::Day);
         strategy.set_expiration_date(ExpirationDate::Days(days))?;
 
-        let initially = values.first().unwrap().to_dec();
-        let finally = values.last().unwrap().to_dec();
+        let initially = values.first().unwrap().walk_dec()?;
+        let finally = values.last().unwrap().walk_dec()?;
         let volatilities = self.get_volatilities()?;
 
         // Validate volatility data
@@ -376,7 +393,11 @@ pub trait Walkable {
             .into());
         }
 
-        let extra_metrics = calculate_extra_metrics(values).unwrap_or_else(|err| {
+        let values_positive = values
+            .iter()
+            .map(|x| x.walk_positive().unwrap())
+            .collect::<Vec<_>>();
+        let extra_metrics = calculate_extra_metrics(&values_positive).unwrap_or_else(|err| {
             warn!("Failed to calculate extra metrics: {}", err);
             HashMap::new()
         });
@@ -405,7 +426,7 @@ pub trait Walkable {
 
         // Reverse i for expiration date descending
         for (i, (price, volatility)) in values.iter().zip(volatilities.iter()).enumerate().rev() {
-            let price_dec = price.to_dec();
+            let price_dec = price.walk_dec()?;
             let days_left = convert_time_frame(pos!(i as f64), &time_frame, &TimeFrame::Day);
 
             // Debug log to track calculations
@@ -417,10 +438,15 @@ pub trait Walkable {
                 volatility
             );
 
+            let underlying_price = price.walk_positive()?;
             let pnl = if !days_left.is_zero() {
-                strategy.calculate_pnl(price, ExpirationDate::Days(days_left), volatility)?
+                strategy.calculate_pnl(
+                    &underlying_price,
+                    ExpirationDate::Days(days_left),
+                    volatility,
+                )?
             } else {
-                strategy.calculate_pnl_at_expiration(price)?
+                strategy.calculate_pnl_at_expiration(&underlying_price)?
             };
 
             // Ensure unwrap is safe
@@ -535,9 +561,12 @@ pub trait Walkable {
 /// - Can be used in combination with the `Walkable` trait for generating price paths
 ///   programmatically and iterating through the results sequentially.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RandomWalkGraph {
+pub struct RandomWalkGraph<Ytype = Positive>
+where
+    Ytype: Walktypable,
+{
     /// Values representing the y-axis data of the random walk.
-    pub(crate) values: Vec<Positive>,
+    pub(crate) values: Vec<Ytype>,
 
     /// Text for the graph's title.
     title_text: String,
@@ -579,13 +608,14 @@ pub struct RandomWalkGraph {
 /// ## Example
 ///
 /// ```
+/// use optionstratlib::Positive;
 /// use optionstratlib::simulation::RandomWalkGraph;
 /// use optionstratlib::utils::{Len, TimeFrame};
-/// let walk = RandomWalkGraph::new("".to_string(), None, None, TimeFrame::Microsecond, 0, None);
+/// let walk: RandomWalkGraph<Positive>  = RandomWalkGraph::new("".to_string(), None, None, TimeFrame::Microsecond, 0, None);
 /// let point_count = walk.len();
 /// let has_data = !walk.is_empty();
 /// ```
-impl Len for RandomWalkGraph {
+impl<Ytype: Walktypable> Len for RandomWalkGraph<Ytype> {
     /// Returns the number of price points in the random walk graph.
     ///
     /// This method directly reflects the size of the internal `values` vector,
@@ -603,7 +633,7 @@ impl Len for RandomWalkGraph {
     }
 }
 
-impl RandomWalkGraph {
+impl<Ytype: Walktypable> RandomWalkGraph<Ytype> {
     /// Creates a new `RandomWalkGraph` instance.
     ///
     /// Initializes a random walk graph with desired parameters including title, optional
@@ -643,6 +673,41 @@ impl RandomWalkGraph {
         }
     }
 
+    /// Retrieves the initial volatility of the random walk.
+    ///
+    /// This function returns an `Option<Positive>` representing the initial
+    /// volatility value. If no initial volatility was set, it returns `None`.
+    ///
+    /// # Returns
+    ///
+    /// An `Option<Positive>` containing the initial volatility, or `None` if not set.
+    pub fn get_initial_volatility(&self) -> Option<Positive> {
+        self.initial_volatility
+    }
+
+    /// Sets the initial volatility of the random walk.
+    ///
+    /// This function allows updating the initial volatility of the random walk
+    /// with a new `Positive` value wrapped in an `Option`.
+    ///
+    /// # Arguments
+    ///
+    /// * `initial_volatility` - A reference to an `Option<Positive>` containing
+    ///   the new initial volatility value.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` indicating success or failure. On success, it returns `Ok(())`.
+    /// On failure, it returns an `Err` containing a boxed `Error` trait object
+    /// describing the error.
+    pub fn set_initial_volatility(
+        &mut self,
+        initial_volatility: &Option<Positive>,
+    ) -> Result<(), Box<dyn Error>> {
+        self.initial_volatility = *initial_volatility;
+        Ok(())
+    }
+
     /// Calculates the current volatility of the random walk data.
     ///
     /// This method computes the volatility of the random walk based on historical returns
@@ -669,7 +734,7 @@ impl RandomWalkGraph {
         // Calculate log returns instead of simple returns
         let log_returns: Vec<f64> = self.values[start_idx..end_idx]
             .windows(2)
-            .map(|w| (w[1].to_f64() / w[0].to_f64()).ln())
+            .map(|w| (w[1].walk_f64() / w[0].walk_f64()).ln())
             .collect();
         if log_returns.is_empty() {
             return Some(target_volatility);
@@ -726,8 +791,11 @@ impl RandomWalkGraph {
         self.values
             .iter()
             .enumerate()
-            .map(|(index, &value)| {
-                ChartPoint::new((index as f64, value), format!("Step {}", index))
+            .map(|(index, value)| {
+                ChartPoint::new(
+                    (index as f64, value.walk_positive().unwrap()),
+                    format!("Step {}", index),
+                )
             })
             .collect()
     }
@@ -747,9 +815,10 @@ impl RandomWalkGraph {
     ///
     /// ```rust
     ///
+    /// use optionstratlib::Positive;
     /// use optionstratlib::simulation::RandomWalkGraph;
     /// use optionstratlib::utils::{Len, TimeFrame};
-    /// let mut walk = RandomWalkGraph::new("".to_string(), None, None, TimeFrame::Microsecond, 0, None);
+    /// let mut walk : RandomWalkGraph<Positive>  = RandomWalkGraph::new("".to_string(), None, None, TimeFrame::Microsecond, 0, None);
     ///
     /// // Consume half the walk in some operation
     /// for _ in 0..walk.len() / 2 {
@@ -771,7 +840,7 @@ impl RandomWalkGraph {
     }
 }
 
-impl Default for RandomWalkGraph {
+impl<Ytype: Walktypable> Default for RandomWalkGraph<Ytype> {
     fn default() -> Self {
         Self {
             values: Vec::new(),
@@ -835,8 +904,8 @@ impl Default for RandomWalkGraph {
 ///
 /// This trait implementation provides essential functionality for working with random
 /// walk simulations while enforcing logical data constraints.
-impl Walkable for RandomWalkGraph {
-    fn get_y_values(&self) -> &Vec<Positive> {
+impl<Ytype: Walktypable> Walkable<Positive, Ytype> for RandomWalkGraph<Ytype> {
+    fn get_y_values(&self) -> &Vec<Ytype> {
         assert_ne!(
             self.values.len(),
             0,
@@ -845,11 +914,20 @@ impl Walkable for RandomWalkGraph {
         &self.values
     }
 
-    fn get_y_values_ref(&mut self) -> &mut Vec<Positive> {
+    fn get_y_values_ref(&mut self) -> &mut Vec<Ytype> {
         &mut self.values
     }
 
-    fn get_random_walk(&self) -> Result<RandomWalkGraph, Box<dyn Error>> {
+    fn save_volatility(&mut self, volatility: Positive) -> Result<(), Box<dyn Error>> {
+        self.volatilities.push(volatility);
+        Ok(())
+    }
+
+    fn get_volatilities(&self) -> Result<Vec<Positive>, Box<dyn Error>> {
+        Ok(self.volatilities.clone())
+    }
+
+    fn get_random_walk(&self) -> Result<RandomWalkGraph<Ytype>, Box<dyn Error>> {
         Ok(Self {
             values: self.values.clone(),
             title_text: self.title_text.clone(),
@@ -862,20 +940,11 @@ impl Walkable for RandomWalkGraph {
             volatilities: self.volatilities.clone(),
         })
     }
-
-    fn save_volatility(&mut self, volatility: Positive) -> Result<(), Box<dyn Error>> {
-        self.volatilities.push(volatility);
-        Ok(())
-    }
-
-    fn get_volatilities(&self) -> Result<Vec<Positive>, Box<dyn Error>> {
-        Ok(self.volatilities.clone())
-    }
 }
 
 /// Implements a `Profit` trait for `RandomWalkGraph`, providing functionality
 /// for calculating potential profit at a given price level.
-impl Profit for RandomWalkGraph {
+impl<Ytype: Walktypable> Profit for RandomWalkGraph<Ytype> {
     /// Calculates the profit at a specified price, returning it as a `Decimal`.
     ///
     /// # Arguments
@@ -943,7 +1012,7 @@ impl Profit for RandomWalkGraph {
 ///   struct, which holds metadata and internal data for simulating random walks.
 /// - The `values` field in `RandomWalkGraph` must contain valid `Positive` elements
 ///   that can be converted to `f64` for visualization purposes.
-impl Graph for RandomWalkGraph {
+impl<Ytype: Walktypable> Graph for RandomWalkGraph<Ytype> {
     /// Retrieves the title text for the graph.
     fn title(&self) -> String {
         self.title_text.clone()
@@ -958,9 +1027,9 @@ impl Graph for RandomWalkGraph {
     /// A vector of `f64` values as the processed y-axis data.
     fn get_values(&self, _data: &[Positive]) -> Vec<f64> {
         info!("Number of values: {}", self.values.len());
-        info!("First value: {:?}", self.values.first().unwrap());
-        info!("Last value: {:?}", self.values.last().unwrap());
-        self.values.iter().map(|x| x.to_f64()).collect()
+        info!("First value: {}", self.values.first().unwrap());
+        info!("Last value: {}", self.values.last().unwrap());
+        self.values.iter().map(|x| x.walk_f64()).collect()
     }
 }
 
@@ -1003,7 +1072,7 @@ impl Graph for RandomWalkGraph {
 ///
 /// This design is useful for simulations or models where price and
 /// volatility data need to be processed in a time-series format.
-impl Iterator for RandomWalkGraph {
+impl<Ytype: Walktypable> Iterator for RandomWalkGraph<Ytype> {
     type Item = OptionDataPriceParams;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -1012,7 +1081,7 @@ impl Iterator for RandomWalkGraph {
         }
         let risk_free_rate = self.risk_free_rate.unwrap_or(Decimal::ZERO);
         let dividend_yield = self.dividend_yield.unwrap_or(Positive::ZERO);
-        let price = self.values[self.current_index];
+        let price: Ytype = self.values[self.current_index].clone();
         let remaining_step = pos!((self.values.len() - self.current_index) as f64);
         let left_time = convert_time_frame(remaining_step, &self.time_frame, &TimeFrame::Day);
         if left_time.is_zero() {
@@ -1022,7 +1091,7 @@ impl Iterator for RandomWalkGraph {
         let implied_volatility = self.calculate_current_volatility();
         self.current_index += 1;
         Some(OptionDataPriceParams {
-            underlying_price: price,
+            underlying_price: price.walk_positive().unwrap(),
             expiration_date,
             implied_volatility,
             risk_free_rate,
@@ -1075,13 +1144,13 @@ impl Iterator for RandomWalkGraph {
 /// - [`Curvable`]: The trait that defines the `curve` method.
 /// - [`Curve`]: The resulting curve object.
 /// - [`RandomWalkGraph`]: The struct for which this method is implemented.
-impl Curvable for RandomWalkGraph {
+impl<Ytype: Walktypable> Curvable for RandomWalkGraph<Ytype> {
     fn curve(&self) -> Result<Curve, CurveError> {
         let points = self
             .values
             .iter()
             .enumerate()
-            .map(|(i, p)| Point2D::new(i, p.to_dec()))
+            .map(|(i, p)| Point2D::new(i, p.walk_dec().unwrap()))
             .collect();
         Ok(Curve::from_vector(points))
     }

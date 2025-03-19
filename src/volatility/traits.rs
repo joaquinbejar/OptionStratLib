@@ -1,4 +1,7 @@
+use crate::Positive;
+use crate::chains::chain::OptionChain;
 use crate::curves::Curve;
+use std::error::Error;
 
 /// A trait defining a volatility smile representation.
 ///
@@ -76,4 +79,40 @@ pub trait VolatilitySmile {
     /// - The `Curve` returned should ideally conform to the constraints and
     ///   ordering requirements specified in the `Curve` documentation.
     fn smile(&self) -> Curve;
+}
+
+/// Trait for providing at-the-money implied volatility.
+///
+/// This trait defines a method to retrieve the at-the-money (ATM) implied volatility.
+/// Implementations should return a `Positive` value representing the ATM IV, or an error
+/// if the value cannot be determined.
+pub trait AtmIvProvider {
+    /// Get the at-the-money implied volatility
+    ///
+    /// This method attempts to return the at-the-money implied volatility as an `Option<Positive>`.
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(Some(Positive))` - If the ATM implied volatility is successfully retrieved.
+    /// * `Ok(None)` - If the ATM implied volatility is not available or not applicable.
+    /// * `Err(Box<dyn Error>)` - If an error occurs during the retrieval process.
+    fn atm_iv(&self) -> Result<&Option<Positive>, Box<dyn Error>>;
+}
+
+impl AtmIvProvider for Positive {
+    fn atm_iv(&self) -> Result<&Option<Positive>, Box<dyn Error>> {
+        Ok(&None)
+    }
+}
+
+impl AtmIvProvider for OptionChain {
+    fn atm_iv(&self) -> Result<&Option<Positive>, Box<dyn Error>> {
+        match self.atm_implied_volatility() {
+            Ok(iv) => Ok(iv),
+            Err(e) => Err(Box::new(std::io::Error::new(
+                std::io::ErrorKind::NotFound,
+                format!("ATM IV not available: {}", e),
+            ))),
+        }
+    }
 }

@@ -2,6 +2,7 @@ use crate::error::MetricsError;
 use crate::geometrics::{
     BasicMetrics, Metrics, RangeMetrics, RiskMetrics, ShapeMetrics, TrendMetrics,
 };
+use crate::utils::Len;
 
 /// A trait for extracting comprehensive metrics from a curve.
 ///
@@ -26,7 +27,7 @@ use crate::geometrics::{
 /// Implement this trait for specific curve types or analysis strategies to provide
 /// custom metric computation logic tailored to different domains or requirements.
 ///
-pub trait MetricsExtractor {
+pub trait MetricsExtractor: Len {
     /// Computes basic statistical metrics for the curve.
     ///
     /// # Returns
@@ -126,6 +127,12 @@ mod tests {
         Point2D::new(Decimal::from_f64(x).unwrap(), Decimal::from_f64(y).unwrap())
     }
 
+    impl Len for MockCurve {
+        fn len(&self) -> usize {
+            1
+        }
+    }
+
     // Implementation of CurveMetricsExtractor for our mock struct
     impl MetricsExtractor for MockCurve {
         fn compute_basic_metrics(&self) -> Result<BasicMetrics, MetricsError> {
@@ -179,6 +186,12 @@ mod tests {
 
     // Mock struct for testing error cases
     struct ErrorMockCurve;
+
+    impl Len for ErrorMockCurve {
+        fn len(&self) -> usize {
+            1
+        }
+    }
 
     impl MetricsExtractor for ErrorMockCurve {
         fn compute_basic_metrics(&self) -> Result<BasicMetrics, MetricsError> {

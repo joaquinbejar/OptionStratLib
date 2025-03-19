@@ -7,6 +7,7 @@ use crate::Positive;
 use crate::chains::chain::OptionData;
 use crate::error::chains::ChainError;
 use crate::model::types::ExpirationDate;
+use crate::model::utils::ToRound;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
@@ -99,6 +100,7 @@ pub enum OptionDataGroup<'a> {
 ///
 /// This structure is typically used as input to option chain generation functions to create
 /// realistic synthetic option data for testing, simulation, or educational purposes.
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct OptionChainBuildParams {
     /// The ticker symbol of the underlying asset
     pub(crate) symbol: String,
@@ -123,6 +125,58 @@ pub struct OptionChainBuildParams {
 
     /// Core pricing parameters required for option valuation
     pub(crate) price_params: OptionDataPriceParams,
+}
+
+use rust_decimal_macros::dec;
+use std::fmt;
+
+impl Display for OptionChainBuildParams {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f, "Option Chain Build Parameters:")?;
+        writeln!(f, "  Symbol: {}", self.symbol)?;
+
+        if let Some(volume) = self.volume {
+            writeln!(f, "  Volume: {}", volume)?;
+        } else {
+            writeln!(f, "  Volume: None")?;
+        }
+
+        writeln!(f, "  Chain Size: {}", self.chain_size)?;
+        writeln!(f, "  Strike Interval: {}", self.strike_interval)?;
+        writeln!(f, "  Skew Factor: {}", self.skew_factor)?;
+        writeln!(f, "  Spread: {}", self.spread.round_to(3))?;
+        writeln!(f, "  Decimal Places: {}", self.decimal_places)?;
+        writeln!(f, "  Price Parameters:")?;
+        writeln!(
+            f,
+            "    Underlying Price: {}",
+            self.price_params.underlying_price
+        )?;
+        writeln!(
+            f,
+            "    Expiration Date: {}",
+            &self.price_params.expiration_date
+        )?;
+
+        if let Some(iv) = self.price_params.implied_volatility {
+            writeln!(f, "    Implied Volatility: {:.2}%", iv * 100.0)?;
+        } else {
+            writeln!(f, "    Implied Volatility: None")?;
+        }
+
+        writeln!(
+            f,
+            "    Risk-Free Rate: {:.2}%",
+            self.price_params.risk_free_rate * dec!(100.0)
+        )?;
+        writeln!(
+            f,
+            "    Dividend Yield: {:.2}%",
+            self.price_params.dividend_yield * dec!(100.0)
+        )?;
+
+        Ok(())
+    }
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -561,6 +615,10 @@ pub(crate) fn parse<T: std::str::FromStr>(s: &str) -> Option<T> {
         Ok(value) => Some(value),
         Err(_) => None,
     }
+}
+
+pub(crate) fn empty_string_round_to_2<T: ToString + ToRound>(input: Option<T>) -> String {
+    input.map_or_else(|| "".to_string(), |v| v.round_to(2).to_string())
 }
 
 pub(crate) fn default_empty_string<T: ToString>(input: Option<T>) -> String {

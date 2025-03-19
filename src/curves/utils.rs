@@ -7,6 +7,7 @@ use crate::curves::{Curve, Point2D};
 use crate::geometrics::GeometricObject;
 use rust_decimal::Decimal;
 use std::collections::BTreeSet;
+use tracing::warn;
 
 /// Creates a linear curve defined by a starting point, an ending point, and a slope.
 ///
@@ -157,43 +158,123 @@ pub fn create_constant_curve(start: Decimal, end: Decimal, value: Decimal) -> Cu
     Curve::from_vector(points)
 }
 
-/// Detects peaks and valleys in a set of points
+/// Detects peaks and valleys in a set of points with configurable sensitivity
 ///
 /// # Arguments
 ///
 /// * `points` - A reference to a BTreeSet of Point2D
+/// * `min_prominence` - Minimum vertical distance between a peak/valley and surrounding points
+/// * `window_size` - Number of points to consider on each side (default: 1)
 ///
 /// # Returns
 ///
 /// A tuple containing two vectors:
 /// - The first vector contains the peaks (local maxima)
 /// - The second vector contains the valleys (local minima)
-pub fn detect_peaks_and_valleys(points: &BTreeSet<Point2D>) -> (Vec<Point2D>, Vec<Point2D>) {
+pub fn detect_peaks_and_valleys(
+    points: &BTreeSet<Point2D>,
+    min_prominence: Decimal,
+    window_size: usize,
+) -> (Vec<Point2D>, Vec<Point2D>) {
     let points_vec: Vec<Point2D> = points.iter().cloned().collect();
-
     let mut peaks = Vec::new();
     let mut valleys = Vec::new();
 
-    // Need at least 3 points to detect peaks and valleys
-    if points_vec.len() < 3 {
+    // Need at least 2*window_size + 1 points to detect peaks and valleys
+    if points_vec.len() < 2 * window_size + 1 {
+        warn!(
+            "Not enough points to detect peaks and valleys with window size {}. Need at least {} points, but got {}.",
+            window_size,
+            2 * window_size + 1,
+            points_vec.len()
+        );
         return (peaks, valleys);
     }
 
-    for i in 1..points_vec.len() - 1 {
-        let prev = &points_vec[i - 1];
+    for i in window_size..points_vec.len() - window_size {
         let current = &points_vec[i];
-        let next = &points_vec[i + 1];
+        let mut is_peak = true;
+        let mut is_valley = true;
 
-        // Peak: y value is higher than its immediate neighbors
-        if current.y > prev.y && current.y > next.y {
-            peaks.push(*current);
+        // Check if the current point is higher or lower than all points in the window
+        for j in 1..=window_size {
+            let before = &points_vec[i - j];
+            let after = &points_vec[i + j];
+
+            // For a peak, current needs to be higher than all points in window
+            if current.y <= before.y || current.y <= after.y {
+                is_peak = false;
+            }
+
+            // For a valley, current needs to be lower than all points in window
+            if current.y >= before.y || current.y >= after.y {
+                is_valley = false;
+            }
+
+            // No need to check further if neither peak nor valley
+            if !is_peak && !is_valley {
+                break;
+            }
         }
 
-        // Valley: y value is lower than its immediate neighbors
-        if current.y < prev.y && current.y < next.y {
-            valleys.push(*current);
+        // Check prominence (how much a peak/valley "stands out")
+        if is_peak {
+            let prominence = calculate_prominence(&points_vec, i, true);
+            if prominence >= min_prominence {
+                peaks.push(*current);
+            }
+        } else if is_valley {
+            let prominence = calculate_prominence(&points_vec, i, false);
+            if prominence >= min_prominence {
+                valleys.push(*current);
+            }
         }
     }
 
     (peaks, valleys)
+}
+
+/// Calculate prominence (vertical distance from a peak/valley to its surroundings)
+fn calculate_prominence(points: &[Point2D], index: usize, is_peak: bool) -> Decimal {
+    let current = points[index].y;
+
+    // Find highest/lowest points to the left and right
+    let left_bound = if is_peak {
+        points
+            .iter()
+            .take(index)
+            .map(|p| p.y)
+            .min()
+            .unwrap_or(Decimal::MAX)
+    } else {
+        points
+            .iter()
+            .take(index)
+            .map(|p| p.y)
+            .max()
+            .unwrap_or(Decimal::MIN)
+    };
+
+    let right_bound = if is_peak {
+        points
+            .iter()
+            .skip(index + 1)
+            .map(|p| p.y)
+            .min()
+            .unwrap_or(Decimal::MAX)
+    } else {
+        points
+            .iter()
+            .skip(index + 1)
+            .map(|p| p.y)
+            .max()
+            .unwrap_or(Decimal::MIN)
+    };
+
+    // Calculate prominence
+    if is_peak {
+        current - Decimal::max(left_bound, right_bound)
+    } else {
+        Decimal::min(left_bound, right_bound) - current
+    }
 }

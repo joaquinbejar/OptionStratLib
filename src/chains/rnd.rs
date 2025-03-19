@@ -668,7 +668,7 @@ mod tests {
             assert!(result.is_err());
             assert_eq!(
                 result.unwrap_err().to_string(),
-                "No ATM implied volatility available"
+                "Cannot find ATM OptionData for empty option chain: TEST"
             );
         }
 
