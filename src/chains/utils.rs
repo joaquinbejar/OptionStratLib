@@ -7,6 +7,7 @@ use crate::Positive;
 use crate::chains::chain::OptionData;
 use crate::error::chains::ChainError;
 use crate::model::types::ExpirationDate;
+use crate::model::utils::ToRound;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
@@ -561,6 +562,10 @@ pub(crate) fn parse<T: std::str::FromStr>(s: &str) -> Option<T> {
         Ok(value) => Some(value),
         Err(_) => None,
     }
+}
+
+pub(crate) fn empty_string_round_to_2<T: ToString + ToRound>(input: Option<T>) -> String {
+    input.map_or_else(|| "".to_string(), |v| v.round_to(2).to_string())
 }
 
 pub(crate) fn default_empty_string<T: ToString>(input: Option<T>) -> String {

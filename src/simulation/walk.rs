@@ -673,6 +673,41 @@ impl<Ytype: Walktypable> RandomWalkGraph<Ytype> {
         }
     }
 
+    /// Retrieves the initial volatility of the random walk.
+    ///
+    /// This function returns an `Option<Positive>` representing the initial
+    /// volatility value. If no initial volatility was set, it returns `None`.
+    ///
+    /// # Returns
+    ///
+    /// An `Option<Positive>` containing the initial volatility, or `None` if not set.
+    pub fn get_initial_volatility(&self) -> Option<Positive> {
+        self.initial_volatility
+    }
+
+    /// Sets the initial volatility of the random walk.
+    ///
+    /// This function allows updating the initial volatility of the random walk
+    /// with a new `Positive` value wrapped in an `Option`.
+    ///
+    /// # Arguments
+    ///
+    /// * `initial_volatility` - A reference to an `Option<Positive>` containing
+    ///   the new initial volatility value.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` indicating success or failure. On success, it returns `Ok(())`.
+    /// On failure, it returns an `Err` containing a boxed `Error` trait object
+    /// describing the error.
+    pub fn set_initial_volatility(
+        &mut self,
+        initial_volatility: &Option<Positive>,
+    ) -> Result<(), Box<dyn Error>> {
+        self.initial_volatility = *initial_volatility;
+        Ok(())
+    }
+
     /// Calculates the current volatility of the random walk data.
     ///
     /// This method computes the volatility of the random walk based on historical returns

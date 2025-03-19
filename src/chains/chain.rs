@@ -5,7 +5,7 @@
 ******************************************************************************/
 use crate::chains::utils::{
     OptionChainBuildParams, OptionChainParams, OptionDataPriceParams, RandomPositionsParams,
-    adjust_volatility, default_empty_string, generate_list_of_strikes,
+    adjust_volatility, default_empty_string, empty_string_round_to_2, generate_list_of_strikes,
 };
 use crate::chains::{
     DeltasInStrike, FourOptions, OptionsInStrike, RNDAnalysis, RNDParameters, RNDResult,
@@ -987,15 +987,17 @@ impl fmt::Display for OptionData {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "{:<10} {:<10} {:<10} {:<10} {:<10} {:<10} {:<10} {:.3}{:<8} {:.3}{:<4} {:.3}{:<5} {:.2}{:<8} {:<10} {:<10}",
+            "{:<10} {:<10} {:<10} {:<10} {:<10} {:<10} {:<10} {:<6}{:<7} {:.3}{:<4} {:.3}{:<5} {:.4}{:<8} {:<10} {:<10}",
             self.strike_price.to_string(),
-            default_empty_string(self.call_bid),
-            default_empty_string(self.call_ask),
-            default_empty_string(self.call_middle),
-            default_empty_string(self.put_bid),
-            default_empty_string(self.put_ask),
-            default_empty_string(self.put_middle),
-            self.implied_volatility.unwrap_or(Positive::ZERO),
+            empty_string_round_to_2(self.call_bid),
+            empty_string_round_to_2(self.call_ask),
+            empty_string_round_to_2(self.call_middle),
+            empty_string_round_to_2(self.put_bid),
+            empty_string_round_to_2(self.put_ask),
+            empty_string_round_to_2(self.put_middle),
+            self.implied_volatility
+                .unwrap_or(Positive::ZERO)
+                .format_fixed_places(3),
             " ".to_string(),
             self.delta_call.unwrap_or(Decimal::ZERO),
             " ".to_string(),
@@ -2357,7 +2359,8 @@ impl OptionChain {
     /// * ATM strike is defined as the strike equal to the current underlying price
     /// * Important for volatility skew calculations and option pricing
     /// * Returns implied volatility as a decimal for precise calculations
-    pub fn get_atm_implied_volatility(&self) -> Result<Decimal, String> {  // keep it for back compatibility 
+    pub fn get_atm_implied_volatility(&self) -> Result<Decimal, String> {
+        // keep it for back compatibility
         match self.atm_implied_volatility() {
             Ok(iv) => match iv {
                 Some(iv) => Ok(iv.value()),

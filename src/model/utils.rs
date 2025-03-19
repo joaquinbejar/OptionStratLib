@@ -7,6 +7,7 @@ use crate::model::Position;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use crate::{Options, Positive, pos};
 use chrono::{NaiveDateTime, TimeZone, Utc};
+use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 
 /// Converts a vector of `Positive` values to a vector of `f64` values.
@@ -348,6 +349,28 @@ pub fn mean_and_std(vec: Vec<Positive>) -> (Positive, Positive) {
         / vec.len() as f64;
     let std = variance.to_f64().sqrt();
     (mean, pos!(std))
+}
+
+/// Trait for rounding operations on numeric types, specifically for financial calculations.
+///
+/// This trait provides methods to round a number to the nearest integer and to a specified
+/// number of decimal places, ensuring precision and accuracy in financial computations.
+///
+pub trait ToRound {
+    /// Rounds the number to the nearest integer.
+    ///
+    /// This method rounds the number to the nearest whole number, removing any fractional part.
+    fn round(&self) -> Decimal;
+
+    /// Rounds the number to a specified number of decimal places.
+    ///
+    /// This method rounds the number to the specified number of digits after the decimal point,
+    /// providing control over the precision of the rounded value.
+    ///
+    /// # Arguments
+    ///
+    /// * `decimal_places` - The number of decimal places to round to.
+    fn round_to(&self, decimal_places: u32) -> Decimal;
 }
 
 #[cfg(test)]
