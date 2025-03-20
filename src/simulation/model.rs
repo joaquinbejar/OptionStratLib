@@ -245,10 +245,15 @@ mod tests_simulation_result {
         result.average_pnl = dec!(150.0);
 
         // Set Sharpe ratio above threshold
-        let mut risk_levels = RiskMetricsSimulation::default();
-        risk_levels.sharpe_ratio = dec!(1.5); // Above threshold of 1.0
+        let risk_levels = RiskMetricsSimulation {
+            var_95: Default::default(),
+            var_99: Default::default(),
+            cvar_95: Default::default(),
+            severe_loss_probability: Default::default(),
+            max_drawdown: Default::default(),
+            sharpe_ratio: dec!(1.5),
+        };
         result.risk_levels = risk_levels;
-
         assert!(result.is_favorable());
     }
 
@@ -258,8 +263,14 @@ mod tests_simulation_result {
         let mut result = SimulationResult::new(100);
         result.average_pnl = dec!(-50.0);
 
-        let mut risk_levels = RiskMetricsSimulation::default();
-        risk_levels.sharpe_ratio = dec!(1.5); // Even with good Sharpe ratio
+        let risk_levels = RiskMetricsSimulation {
+            var_95: Default::default(),
+            var_99: Default::default(),
+            cvar_95: Default::default(),
+            severe_loss_probability: Default::default(),
+            max_drawdown: Default::default(),
+            sharpe_ratio: dec!(1.5),
+        };
         result.risk_levels = risk_levels;
 
         assert!(!result.is_favorable());
@@ -268,8 +279,14 @@ mod tests_simulation_result {
         let mut result = SimulationResult::new(100);
         result.average_pnl = dec!(150.0); // Positive average PnL
 
-        let mut risk_levels = RiskMetricsSimulation::default();
-        risk_levels.sharpe_ratio = dec!(0.5); // Below threshold of 1.0
+        let risk_levels = RiskMetricsSimulation {
+            var_95: Default::default(),
+            var_99: Default::default(),
+            cvar_95: Default::default(),
+            severe_loss_probability: Default::default(),
+            max_drawdown: Default::default(),
+            sharpe_ratio: dec!(0.5),
+        };
         result.risk_levels = risk_levels;
 
         assert!(!result.is_favorable());
@@ -280,8 +297,14 @@ mod tests_simulation_result {
         let mut result = SimulationResult::new(100);
 
         // High risk: severe_loss_probability > 0.25
-        let mut risk_levels = RiskMetricsSimulation::default();
-        risk_levels.severe_loss_probability = pos!(0.3); // Above threshold
+        let risk_levels = RiskMetricsSimulation {
+            var_95: Default::default(),
+            var_99: Default::default(),
+            cvar_95: Default::default(),
+            severe_loss_probability: pos!(0.3),
+            max_drawdown: Default::default(),
+            sharpe_ratio: Default::default(),
+        };
         result.risk_levels = risk_levels;
 
         assert_eq!(result.risk_category(), RiskCategory::High);
@@ -293,9 +316,14 @@ mod tests_simulation_result {
         result.average_pnl = dec!(100.0);
 
         // Medium risk: VaR > average_pnl * 2
-        let mut risk_levels = RiskMetricsSimulation::default();
-        risk_levels.severe_loss_probability = pos!(0.2); // Below high risk threshold
-        risk_levels.var_95 = dec!(-250.0); // Absolute value greater than 100 * 2
+        let risk_levels = RiskMetricsSimulation {
+            var_95: Default::default(),
+            var_99: Default::default(),
+            cvar_95: dec!(-250.0),
+            severe_loss_probability: pos!(0.2),
+            max_drawdown: Default::default(),
+            sharpe_ratio: Default::default(),
+        };
         result.risk_levels = risk_levels;
 
         assert_eq!(result.risk_category(), RiskCategory::Medium);
@@ -307,9 +335,15 @@ mod tests_simulation_result {
         result.average_pnl = dec!(100.0);
 
         // Low risk: All metrics below thresholds
-        let mut risk_levels = RiskMetricsSimulation::default();
-        risk_levels.severe_loss_probability = pos!(0.2); // Below high risk threshold
-        risk_levels.var_95 = dec!(-150.0); // Absolute value less than 100 * 2
+        let risk_levels = RiskMetricsSimulation {
+            var_95: Default::default(),
+            var_99: Default::default(),
+            cvar_95: dec!(-150.0),
+            severe_loss_probability: pos!(0.2),
+            max_drawdown: Default::default(),
+            sharpe_ratio: Default::default(),
+        };
+
         result.risk_levels = risk_levels;
 
         assert_eq!(result.risk_category(), RiskCategory::Low);

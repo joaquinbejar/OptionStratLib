@@ -154,15 +154,14 @@ mod tests_risk_metrics {
 
     #[test]
     fn test_risk_metrics_simulation_field_access() {
-        let mut metrics = RiskMetricsSimulation::default();
-
-        // Modify each field
-        metrics.var_95 = dec!(-30.0);
-        metrics.var_99 = dec!(-45.0);
-        metrics.cvar_95 = dec!(-35.0);
-        metrics.severe_loss_probability = pos!(0.05);
-        metrics.max_drawdown = pos!(0.15);
-        metrics.sharpe_ratio = dec!(1.0);
+        let metrics = RiskMetricsSimulation {
+            var_95: dec!(-30.0),
+            var_99: dec!(-45.0),
+            cvar_95: dec!(-35.0),
+            severe_loss_probability: pos!(0.05),
+            max_drawdown: pos!(0.15),
+            sharpe_ratio: dec!(1.0),
+        };
 
         // Verify modifications
         assert_eq!(metrics.var_95, dec!(-30.0));
