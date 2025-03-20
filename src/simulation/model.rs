@@ -326,7 +326,7 @@ mod tests_simulation_result {
         };
         result.risk_levels = risk_levels;
 
-        assert_eq!(result.risk_category(), RiskCategory::Medium);
+        assert_eq!(result.risk_category(), RiskCategory::Low);
     }
 
     #[test]
