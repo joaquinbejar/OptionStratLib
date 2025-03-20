@@ -324,7 +324,7 @@ mod tests {
     use super::*;
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_invalid_value_error() {
         let error = DecimalError::invalid_value(-1.0, "Value cannot be negative");
         assert!(matches!(error, DecimalError::InvalidValue { .. }));
@@ -332,7 +332,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_arithmetic_error() {
         let error = DecimalError::arithmetic_error("division", "Division by zero");
         assert!(matches!(error, DecimalError::ArithmeticError { .. }));
@@ -340,7 +340,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_conversion_error() {
         let error = DecimalError::conversion_error("f64", "Decimal", "Value out of range");
         assert!(matches!(error, DecimalError::ConversionError { .. }));
@@ -348,7 +348,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_out_of_bounds_error() {
         let error = DecimalError::out_of_bounds(150.0, 0.0, 100.0);
         assert!(matches!(error, DecimalError::OutOfBounds { .. }));
@@ -356,7 +356,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_invalid_precision_error() {
         let error = DecimalError::invalid_precision(-1, "Precision must be non-negative");
         assert!(matches!(error, DecimalError::InvalidPrecision { .. }));

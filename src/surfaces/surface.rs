@@ -32,7 +32,7 @@ use crate::geometrics::{
 use crate::surfaces::Point3D;
 use crate::surfaces::types::Axis;
 use crate::utils::Len;
-#[cfg(not(target_arch = "wasm32"))]
+
 use num_traits::ToPrimitive;
 use rayon::iter::{
     IndexedParallelIterator, IntoParallelIterator, IntoParallelRefIterator, ParallelIterator,
@@ -275,7 +275,6 @@ impl Surface {
     /// // Will produce: [(1.5, 2.0, 3.0), (2.5, 3.0, 4.0)]
     /// let points = surface.get_f64_points();
     /// ```
-    #[cfg(not(target_arch = "wasm32"))]
     pub fn get_f64_points(&self) -> Vec<(f64, f64, f64)> {
         self.points
             .iter()

@@ -48,9 +48,9 @@
 use crate::curves::Curve;
 use crate::error::CurveError;
 use crate::geometrics::{PlotBuilder, PlotBuilderExt, PlotOptions, Plottable};
-#[cfg(not(target_arch = "wasm32"))]
+
 use num_traits::ToPrimitive;
-#[cfg(not(target_arch = "wasm32"))]
+
 use plotters::prelude::*;
 use std::path::Path;
 
@@ -151,13 +151,6 @@ impl Plottable for Vec<Curve> {
 
 /// Plotting implementation for single Curve
 impl PlotBuilderExt<Curve> for PlotBuilder<Curve> {
-    #[cfg(target_arch = "wasm32")]
-    fn save(self, _path: impl AsRef<Path>) -> Result<(), CurveError> {
-        // Do nothing in wasm
-        Ok(())
-    }
-
-    #[cfg(not(target_arch = "wasm32"))]
     fn save(self, path: impl AsRef<Path>) -> Result<(), CurveError> {
         // Convert points to f64
         let points: Vec<(f64, f64)> = self
@@ -312,13 +305,6 @@ impl PlotBuilderExt<Curve> for PlotBuilder<Curve> {
 /// - The precision of `Point2D::x` and `Point2D::y` values is preserved by converting them from
 ///   `Decimal` to `f64` when plotting.
 impl PlotBuilderExt<Vec<Curve>> for PlotBuilder<Vec<Curve>> {
-    #[cfg(target_arch = "wasm32")]
-    fn save(self, _path: impl AsRef<Path>) -> Result<(), CurveError> {
-        // Do nothing in wasm
-        Ok(())
-    }
-
-    #[cfg(not(target_arch = "wasm32"))]
     fn save(self, path: impl AsRef<Path>) -> Result<(), CurveError> {
         // Prepare all curve points
         let all_curve_points: Vec<Vec<(f64, f64)>> = self
@@ -687,12 +673,6 @@ mod tests_extended {
     }
 
     impl PlotBuilderExt<Plot> for PlotBuilder<Plot> {
-        #[cfg(target_arch = "wasm32")]
-        fn save(self, _path: impl AsRef<Path>) -> Result<(), CurveError> {
-            Ok(())
-        }
-
-        #[cfg(not(target_arch = "wasm32"))]
         fn save(self, _path: impl AsRef<Path>) -> Result<(), CurveError> {
             Ok(())
         }
@@ -750,17 +730,6 @@ mod tests_extended {
 
     #[test]
     fn test_save_standard() {
-        let plot = Plot {
-            options: PlotOptions::default(),
-        }
-        .plot();
-        let result = plot.save("test_path.png");
-        assert!(result.is_ok());
-    }
-
-    #[test]
-    #[cfg(target_arch = "wasm32")]
-    fn test_save_wasm() {
         let plot = Plot {
             options: PlotOptions::default(),
         }

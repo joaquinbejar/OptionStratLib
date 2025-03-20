@@ -23,11 +23,10 @@ use crate::visualization::model::ChartPoint;
 use crate::visualization::utils::Graph;
 use crate::{Positive, pos};
 use num_traits::FromPrimitive;
-use rand::distributions::Distribution;
-use rand::thread_rng as rng;
+use rand::rng;
+use rand_distr::{Distribution, Normal};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
-use statrs::distribution::Normal;
 use std::collections::HashMap;
 use std::error::Error;
 use tracing::{debug, info, trace, warn};
@@ -155,11 +154,13 @@ where
         for _ in 0..n_steps - 1 {
             // Potentially update volatility (stochastic volatility model)
             if volatility_change > Positive::ZERO {
-                current_volatility = Normal::new(volatility.into(), volatility_change.into())
-                    .unwrap()
-                    .sample(&mut thread_rng)
-                    .max(ZERO)
-                    .into();
+                let mut t1_rng = rng();
+                current_volatility =
+                    Normal::new(f64::from(volatility), f64::from(volatility_change))
+                        .unwrap()
+                        .sample(&mut t1_rng)
+                        .max(ZERO)
+                        .into();
             }
 
             volatilities.push(current_volatility);
@@ -231,6 +232,7 @@ where
             return Err(Box::from("Number of steps must be greater than zero"));
         }
 
+        // let mut thread_rng = rng();
         let mut thread_rng = rng();
         let mut current_volatility = volatility;
 
@@ -253,6 +255,7 @@ where
                 // Use a smaller step for volatility evolution
                 // This makes volatility more stable than using completely random changes
                 let vol_drift = 0.0; // Mean-reverting to initial volatility
+
                 let vol_term = volatility_change.to_f64()
                     * sqrt_dt
                     * Normal::new(0.0, 1.0).unwrap().sample(&mut thread_rng);

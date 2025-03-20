@@ -141,7 +141,7 @@ pub trait StatisticalCurve: MetricsExtractor {
         // Generate initial y-values from the normal distribution
         let mut y_values: Vec<f64> = (0..num_points)
             .map(|_| {
-                let u: f64 = rng.gen_range(0.0..1.0); // Generate a value between 0 and 1
+                let u: f64 = rng.random_range(0.0..1.0); // Generate a value between 0 and 1
                 normal.inverse_cdf(u) // Convert to normal distribution using inverse CDF
             })
             .collect();
@@ -197,7 +197,7 @@ pub trait StatisticalCurve: MetricsExtractor {
 
         // Ensure mode value is included
         if num_points > 3 {
-            let index = rng.gen_range(0..(num_points / 3));
+            let index = rng.random_range(0..(num_points / 3));
             y_values[index] = basic_metrics.mode.to_f64().unwrap_or(y_values[index]);
         }
 

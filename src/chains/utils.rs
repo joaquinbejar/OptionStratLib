@@ -650,7 +650,7 @@ mod tests_rounder {
     use crate::pos;
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_rounder() {
         assert_eq!(rounder(pos!(151.0), pos!(5.0)), pos!(150.0));
         assert_eq!(rounder(pos!(154.0), pos!(5.0)), pos!(155.0));
@@ -675,7 +675,7 @@ mod tests_generate_list_of_strikes {
     use crate::Positive;
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_generate_list_of_strikes_basic() {
         let reference_price = Positive::THOUSAND;
         let chain_size = 3;
@@ -693,7 +693,7 @@ mod tests_generate_list_of_strikes {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_generate_list_of_strikes_zero_chain_size() {
         let reference_price = Positive::new(1000.0).unwrap();
         let chain_size = 0;
@@ -706,7 +706,7 @@ mod tests_generate_list_of_strikes {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_generate_list_of_strikes_large_interval() {
         let reference_price = Positive::new(1000.0).unwrap();
         let chain_size = 3;
@@ -724,7 +724,7 @@ mod tests_generate_list_of_strikes {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_generate_list_of_strikes_duplicate_strikes() {
         let reference_price = Positive::new(1000.0).unwrap();
         let chain_size = 1;
@@ -744,7 +744,7 @@ mod tests_parse {
     use std::f64::consts::PI;
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_parse_valid_integer() {
         let input = "42";
         let result: Option<i32> = parse(input);
@@ -752,7 +752,7 @@ mod tests_parse {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_parse_invalid_integer() {
         let input = "not_a_number";
         let result: Option<i32> = parse(input);
@@ -760,7 +760,7 @@ mod tests_parse {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_parse_valid_float() {
         let input = &*PI.to_string();
         let result: Option<f64> = parse(input);
@@ -768,7 +768,7 @@ mod tests_parse {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_positive_f64() {
         let input = "42.01";
         let result: Option<Positive> = parse(input);
@@ -882,7 +882,7 @@ mod tests_default_empty_string {
     use super::*;
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_default_empty_string_with_some_value() {
         let input = Some(42);
         let result = default_empty_string(input);
@@ -890,7 +890,7 @@ mod tests_default_empty_string {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_default_empty_string_with_float() {
         let input = Some(42.01223);
         let result = default_empty_string(input);
@@ -898,7 +898,7 @@ mod tests_default_empty_string {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_default_empty_string_with_none() {
         let input: Option<i32> = None;
         let result = default_empty_string(input);
@@ -906,7 +906,7 @@ mod tests_default_empty_string {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_default_empty_string_with_string_value() {
         let input = Some("Hello");
         let result = default_empty_string(input);
@@ -939,7 +939,7 @@ mod tests_random_positions_params {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_new_params() {
         let params = create_test_params();
         assert_eq!(params.qty_puts_long, Some(1));
@@ -956,7 +956,7 @@ mod tests_random_positions_params {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_total_positions() {
         let params = create_test_params();
         assert_eq!(params.total_positions(), 4);
@@ -995,7 +995,7 @@ mod tests_random_positions_params {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_clone() {
         let params = create_test_params();
         let cloned = params.clone();
@@ -1003,7 +1003,7 @@ mod tests_random_positions_params {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_debug() {
         let params = create_test_params();
         let debug_output = format!("{:?}", params);
@@ -1017,14 +1017,14 @@ mod tests_adjust_volatility {
     use crate::spos;
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_adjust_volatility_none() {
         let result = adjust_volatility(None, 0.1, 10.0);
         assert_eq!(result, None);
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_adjust_volatility_zero_skew() {
         let vol = spos!(0.2);
         let result = adjust_volatility(vol, 0.0, 10.0);
@@ -1032,7 +1032,7 @@ mod tests_adjust_volatility {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_adjust_volatility_positive_distance() {
         let vol = spos!(0.2);
         let result = adjust_volatility(vol, 0.1, 10.0);
@@ -1041,7 +1041,7 @@ mod tests_adjust_volatility {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_adjust_volatility_negative_distance() {
         let vol = spos!(0.2);
         let result = adjust_volatility(vol, 0.1, -10.0);
@@ -1059,7 +1059,7 @@ mod tests_option_data_price_params {
     use rust_decimal_macros::dec;
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_new_price_params() {
         let params = OptionDataPriceParams::new(
             pos!(100.0),
@@ -1077,7 +1077,7 @@ mod tests_option_data_price_params {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_default_price_params() {
         let params = OptionDataPriceParams::default();
         assert_eq!(params.underlying_price, Positive::ZERO);
@@ -1087,7 +1087,7 @@ mod tests_option_data_price_params {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_display_price_params() {
         let params = OptionDataPriceParams::new(
             pos!(100.0),
@@ -1105,7 +1105,7 @@ mod tests_option_data_price_params {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_display_price_params_no_volatility() {
         let params = OptionDataPriceParams::new(
             pos!(100.0),
@@ -1120,7 +1120,7 @@ mod tests_option_data_price_params {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_option_data_price_params_getters() {
         // Setup test parameters
         let underlying_price = pos!(100.0);
@@ -1147,7 +1147,7 @@ mod tests_option_data_price_params {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_option_data_price_params_getters_with_none_volatility() {
         let params = OptionDataPriceParams::new(
             pos!(100.0),
@@ -1162,7 +1162,7 @@ mod tests_option_data_price_params {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_option_data_price_params_getters_with_datetime_expiration() {
         use chrono::{Duration, Utc};
 
@@ -1182,7 +1182,7 @@ mod tests_option_data_price_params {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_option_data_price_params_getters_zero_values() {
         let params = OptionDataPriceParams::new(
             Positive::ZERO,
@@ -1211,7 +1211,7 @@ mod tests_option_chain_build_params {
     use rust_decimal_macros::dec;
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_new_chain_build_params() {
         let price_params = OptionDataPriceParams::new(
             pos!(100.0),
@@ -1243,7 +1243,7 @@ mod tests_option_chain_build_params {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_chain_build_params_without_volume() {
         let price_params = OptionDataPriceParams::default();
 
@@ -1269,7 +1269,7 @@ mod tests_random_positions_params_extended {
     use rust_decimal_macros::dec;
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_partial_positions() {
         let params = RandomPositionsParams::new(
             Some(2),
@@ -1294,7 +1294,7 @@ mod tests_random_positions_params_extended {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_no_positions() {
         let params = RandomPositionsParams::new(
             None,
@@ -1315,7 +1315,7 @@ mod tests_random_positions_params_extended {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_expiration_date() {
         let params = RandomPositionsParams::new(
             None,
@@ -1347,7 +1347,7 @@ mod tests_sample {
     use rust_decimal_macros::dec;
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_chain() {
         let chain = OptionDataPriceParams::new(
             Positive::new(2000.0).unwrap(),

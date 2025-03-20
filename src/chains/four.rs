@@ -194,7 +194,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_create_options() {
         let mut option_data = create_test_option_data();
         let price_params = create_test_price_params();
@@ -205,7 +205,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_four_options_properties() {
         let mut option_data = create_test_option_data();
         let price_params = create_test_price_params();
@@ -238,7 +238,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_create_options_with_no_symbol() {
         let mut option_data = create_test_option_data();
         let mut price_params = create_test_price_params();
@@ -250,7 +250,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_create_options_with_no_iv() {
         let mut option_data = create_test_option_data();
         option_data.implied_volatility = None;
@@ -269,7 +269,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_four_options_equality() {
         // Create two identical option data objects
         let mut option_data1 = create_test_option_data();
@@ -293,7 +293,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_four_options_debug() {
         let mut option_data = create_test_option_data();
         let price_params = create_test_price_params();
@@ -307,7 +307,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_four_options_clone() {
         let mut option_data = create_test_option_data();
         let price_params = create_test_price_params();

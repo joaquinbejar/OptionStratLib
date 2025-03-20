@@ -16,15 +16,13 @@ use crate::strategies::Strategable;
 use crate::surfaces::{Point3D, Surfacable, Surface};
 use crate::utils::time::TimeFrame;
 use crate::visualization::utils::{GraphBackend, random_color};
-#[cfg(not(target_arch = "wasm32"))]
+
 use plotters::backend::BitMapBackend;
 use plotters::prelude::{
     BLACK, ChartBuilder, IntoDrawingArea, IntoFont, LineSeries, PathElement, SeriesLabelPosition,
     WHITE,
 };
 use plotters::style::Color;
-#[cfg(target_arch = "wasm32")]
-use plotters_canvas::CanvasBackend;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeSet, HashMap};
@@ -467,17 +465,8 @@ impl Simulator {
         }
 
         let root = match backend {
-            #[cfg(not(target_arch = "wasm32"))]
             GraphBackend::Bitmap { file_path, size } => {
                 let root = BitMapBackend::new(file_path, size).into_drawing_area();
-                root.fill(&WHITE)?;
-                root
-            }
-            #[cfg(target_arch = "wasm32")]
-            GraphBackend::Canvas { canvas } => {
-                let root = CanvasBackend::with_canvas_object(canvas)
-                    .unwrap()
-                    .into_drawing_area();
                 root.fill(&WHITE)?;
                 root
             }

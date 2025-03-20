@@ -1,4 +1,3 @@
-#[cfg(not(target_arch = "wasm32"))]
 use {
     approx::assert_relative_eq,
     num_traits::ToPrimitive,
@@ -11,7 +10,7 @@ use {
     std::error::Error,
 };
 #[test]
-#[cfg(not(target_arch = "wasm32"))]
+
 fn test_short_butterfly_spread_integration() -> Result<(), Box<dyn Error>> {
     setup_logger();
 

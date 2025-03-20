@@ -3,18 +3,14 @@ use crate::constants::{DARK_GREEN, DARK_RED};
 use crate::pricing::payoff::Profit;
 use crate::visualization::model::{ChartPoint, ChartVerticalLine};
 use num_traits::ToPrimitive;
-#[cfg(not(target_arch = "wasm32"))]
 use plotters::backend::BitMapBackend;
-#[cfg(target_arch = "wasm32")]
-use plotters_canvas::CanvasBackend;
-
 use plotters::element::{Circle, Text};
 use plotters::prelude::RGBColor;
 use plotters::prelude::{
     Cartesian2d, ChartContext, Color, DrawingBackend, IntoDrawingArea, IntoFont, LineSeries,
     Ranged, WHITE,
 };
-use rand::Rng;
+use rand::{Rng, rng};
 use std::error::Error;
 use std::ops::Add;
 
@@ -41,12 +37,8 @@ Defines the backend for rendering graphs.  Different backends are available depe
 
 # Backends
 
-* **Bitmap (Native Targets):** Renders the graph to a bitmap image file.  This is available for all targets except WebAssembly (`wasm32`).
-* **Canvas (WebAssembly):** Renders the graph to an HTML5 canvas element. This is only available for the WebAssembly target (`wasm32`).
-
-
+* **Bitmap (Native Targets):** Renders the graph to a bitmap image file.  This is available for all targets except WebAssembly
 */
-#[cfg(not(target_arch = "wasm32"))]
 pub enum GraphBackend<'a> {
     /// Bitmap backend.  Writes the graph to an image file.
     Bitmap {
@@ -54,20 +46,6 @@ pub enum GraphBackend<'a> {
         file_path: &'a str,
         /// Dimensions of the output image (width, height).
         size: (u32, u32),
-    },
-}
-
-/**
-Available backends for rendering the graph.
-
-Currently, only a Canvas backend is supported when targeting WebAssembly.
-*/
-#[cfg(target_arch = "wasm32")]
-pub enum GraphBackend {
-    /// Canvas backend. Renders the graph to an HTML5 canvas element.
-    Canvas {
-        /// The HTML5 canvas element to render to.
-        canvas: web_sys::HtmlCanvasElement,
     },
 }
 
@@ -229,17 +207,8 @@ pub trait Graph: Profit {
 
         // Set up the drawing area
         let root = match backend {
-            #[cfg(not(target_arch = "wasm32"))]
             GraphBackend::Bitmap { file_path, size } => {
                 let root = BitMapBackend::new(file_path, size).into_drawing_area();
-                root.fill(&WHITE)?;
-                root
-            }
-            #[cfg(target_arch = "wasm32")]
-            GraphBackend::Canvas { canvas } => {
-                let root = CanvasBackend::with_canvas_object(canvas)
-                    .unwrap()
-                    .into_drawing_area();
                 root.fill(&WHITE)?;
                 root
             }
@@ -530,12 +499,12 @@ where
 /// 2. Saturated enough to be visible
 /// 3. Neither too dark nor too light
 pub fn random_color() -> RGBColor {
-    let mut rng = rand::thread_rng();
+    let mut thread_rng = rng();
 
     // Generate HSL values
-    let h = rng.gen_range(0.0..360.0); // Hue: Full range for maximum variety
-    let s = rng.gen_range(0.6..0.9); // Saturation: 60-90% for vivid colors
-    let l = rng.gen_range(0.35..0.65); // Lightness: 35-65% for medium brightness
+    let h = thread_rng.random_range(0.0..360.0); // Hue: Full range for maximum variety
+    let s = thread_rng.random_range(0.6..0.9); // Saturation: 60-90% for vivid colors
+    let l = thread_rng.random_range(0.35..0.65); // Lightness: 35-65% for medium brightness
 
     // Convert HSL to RGB
     let rgb = hsl_to_rgb(h, s, l);
@@ -602,7 +571,7 @@ mod tests_calculate_axis_range {
     use crate::pos;
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_calculate_axis_range() {
         let x_data = vec![pos!(1.0), pos!(2.0), pos!(3.0), pos!(4.0), pos!(5.0)];
         let y_data = vec![-10.0, -5.0, 0.0, 5.0, 10.0];
@@ -616,7 +585,7 @@ mod tests_calculate_axis_range {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_calculate_axis_range_single_value() {
         let x_data = vec![pos!(1.0)];
         let y_data = vec![0.0];
@@ -630,7 +599,7 @@ mod tests_calculate_axis_range {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_calculate_axis_range_zero_values() {
         let x_data = vec![Positive::ZERO, Positive::ZERO, Positive::ZERO];
         let y_data = vec![0.0, 0.0, 0.0];
@@ -644,7 +613,7 @@ mod tests_calculate_axis_range {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_calculate_axis_range_large_values() {
         let x_data = vec![pos!(1e6), pos!(2e6), pos!(3e6)];
         let y_data = vec![1e9, 2e9, 3e9];
@@ -708,8 +677,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
-    #[cfg(not(target_arch = "wasm32"))]
+
     fn test_graph_trait() -> Result<(), Box<dyn Error>> {
         let mock_graph = MockGraph;
         let x_axis_data = vec![Positive::ZERO, pos!(50.0), pos!(100.0)];
@@ -725,8 +693,7 @@ mod tests {
         Ok(())
     }
 
-    #[cfg_attr(not(target_arch = "wasm32"), test)]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[test]
     fn test_get_values() {
         let mock_graph = MockGraph;
         let x_axis_data = vec![Positive::ZERO, pos!(50.0), pos!(100.0)];
@@ -734,8 +701,8 @@ mod tests {
         assert_eq!(values, vec![0.0, 100.0, 200.0]);
     }
 
-    #[cfg_attr(not(target_arch = "wasm32"), test)]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[test]
+
     fn test_default_get_vertical_lines() {
         struct DefaultGraph;
         impl Profit for DefaultGraph {
@@ -752,8 +719,8 @@ mod tests {
         graph.get_vertical_lines();
     }
 
-    #[cfg_attr(not(target_arch = "wasm32"), test)]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[test]
+
     fn test_default_get_points() {
         struct DefaultGraph;
         impl Profit for DefaultGraph {
@@ -770,20 +737,20 @@ mod tests {
         graph.get_points();
     }
 
-    #[cfg_attr(not(target_arch = "wasm32"), test)]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[test]
+
     fn test_draw_points_on_chart() -> Result<(), Box<dyn Error>> {
         Ok(())
     }
 
-    #[cfg_attr(not(target_arch = "wasm32"), test)]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[test]
+
     fn test_draw_vertical_lines_on_chart() -> Result<(), Box<dyn Error>> {
         Ok(())
     }
 
-    #[cfg_attr(not(target_arch = "wasm32"), test)]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[test]
+
     fn test_calculate_axis_range_empty() {
         let x_data: Vec<Positive> = vec![];
         let y_data: Vec<f64> = vec![];
@@ -801,7 +768,7 @@ mod tests_extended {
     use crate::pos;
     use crate::visualization::model::LabelOffsetType;
     use crate::visualization::model::{ChartPoint, ChartVerticalLine};
-    #[cfg(not(target_arch = "wasm32"))]
+
     use plotters::prelude::PathElement;
     use plotters::style::RGBColor;
     use rust_decimal::Decimal;
@@ -847,7 +814,7 @@ mod tests_extended {
     }
 
     #[test]
-    #[cfg(not(target_arch = "wasm32"))]
+
     fn test_graph_with_empty_data() -> Result<(), Box<dyn Error>> {
         let mock_graph = MockGraph;
         let x_axis_data: Vec<Positive> = vec![];
@@ -871,7 +838,7 @@ mod tests_extended {
     }
 
     #[test]
-    #[cfg(not(target_arch = "wasm32"))]
+
     fn test_graph_with_single_point() -> Result<(), Box<dyn Error>> {
         let mock_graph = MockGraph;
         let x_axis_data = vec![pos!(50.0)];
@@ -888,7 +855,7 @@ mod tests_extended {
     }
 
     #[test]
-    #[cfg(not(target_arch = "wasm32"))]
+
     fn test_graph_with_negative_values() -> Result<(), Box<dyn Error>> {
         struct NegativeGraph;
 
@@ -919,7 +886,7 @@ mod tests_extended {
     }
 
     #[test]
-    #[cfg(not(target_arch = "wasm32"))]
+
     fn test_multiple_vertical_lines() -> Result<(), Box<dyn Error>> {
         struct MultiLineGraph;
 
@@ -977,7 +944,7 @@ mod tests_extended {
     }
 
     #[test]
-    #[cfg(not(target_arch = "wasm32"))]
+
     fn test_multiple_points() -> Result<(), Box<dyn Error>> {
         struct MultiPointGraph;
 
@@ -1031,7 +998,7 @@ mod tests_extended {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_get_values_error_handling() {
         struct ErrorGraph;
 
@@ -1079,7 +1046,7 @@ mod tests_extended {
     }
 
     #[test]
-    #[cfg(not(target_arch = "wasm32"))]
+
     fn test_custom_canvas_sizes() -> Result<(), Box<dyn Error>> {
         let mock_graph = MockGraph;
         let x_axis_data = vec![pos!(50.0)];
@@ -1101,7 +1068,7 @@ mod tests_extended {
     }
 
     #[test]
-    #[cfg(not(target_arch = "wasm32"))]
+
     fn test_bitmap_backend_initialization() {
         let backend = GraphBackend::Bitmap {
             file_path: "test_chart.png",
@@ -1116,7 +1083,7 @@ mod tests_extended {
     }
 
     #[test]
-    #[cfg(not(target_arch = "wasm32"))]
+
     fn test_chart_initialization() -> Result<(), Box<dyn Error>> {
         let root = BitMapBackend::new("test_chart_next.png", (800, 600)).into_drawing_area();
         root.fill(&WHITE).unwrap();
@@ -1149,7 +1116,7 @@ mod tests_extended {
     }
 
     #[test]
-    #[cfg(not(target_arch = "wasm32"))]
+
     fn test_point_rendering() {
         let root = BitMapBackend::new("test_chart_points.png", (800, 600)).into_drawing_area();
         root.fill(&WHITE).unwrap();
@@ -1203,7 +1170,7 @@ mod tests_extended {
     }
 
     #[test]
-    #[cfg(not(target_arch = "wasm32"))]
+
     fn test_line_rendering() {
         let root = BitMapBackend::new("test_chart_lines.png", (800, 600)).into_drawing_area();
         root.fill(&WHITE).unwrap();

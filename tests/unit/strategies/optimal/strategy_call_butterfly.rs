@@ -1,4 +1,3 @@
-#[cfg(not(target_arch = "wasm32"))]
 use {
     approx::assert_relative_eq,
     num_traits::ToPrimitive,
@@ -12,7 +11,7 @@ use {
 };
 
 #[test]
-#[cfg(not(target_arch = "wasm32"))]
+
 fn test_call_butterfly_integration() -> Result<(), Box<dyn Error>> {
     setup_logger();
 

@@ -563,7 +563,7 @@ mod tests {
     use super::*;
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_invalid_probability_error() {
         let error = ProbabilityError::invalid_probability(1.2, "Probability cannot exceed 1.0");
         assert!(matches!(
@@ -575,7 +575,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_string_conversion() {
         let error = ProbabilityError::from("Test error message".to_string());
         assert!(matches!(
@@ -587,7 +587,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_error_formatting() {
         let error = ProbabilityError::invalid_probability(1.2, "Probability cannot exceed 1.0");
         let error_string = error.to_string();
@@ -597,7 +597,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_expiration_error_display() {
         let error = ProbabilityError::ExpirationError(ExpirationErrorKind::InvalidExpiration {
             reason: "Cannot be in the past".to_string(),
@@ -606,7 +606,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_price_error_display() {
         let error = ProbabilityError::PriceError(PriceErrorKind::InvalidUnderlyingPrice {
             price: -10.0,
@@ -617,7 +617,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_str_conversion() {
         let error = ProbabilityError::from("Test error message");
         assert!(matches!(
@@ -635,7 +635,7 @@ mod tests_extended {
     use crate::error::strategies;
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_invalid_probability_error() {
         let error = ProbabilityError::invalid_probability(1.2, "Probability cannot exceed 1.0");
         assert!(matches!(
@@ -647,7 +647,7 @@ mod tests_extended {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_string_conversion() {
         let error = ProbabilityError::from("Test error message".to_string());
         assert!(matches!(
@@ -659,7 +659,7 @@ mod tests_extended {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_error_formatting() {
         let error = ProbabilityError::invalid_probability(1.2, "Probability cannot exceed 1.0");
         let error_string = error.to_string();
@@ -669,7 +669,7 @@ mod tests_extended {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_profit_loss_range_error_display() {
         let error = ProbabilityError::RangeError(ProfitLossRangeErrorKind::InvalidProfitRange {
             range: "100-200".to_string(),
@@ -686,7 +686,7 @@ mod tests_extended {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_calculation_error_display() {
         let error = ProbabilityError::CalculationError(
             ProbabilityCalculationErrorKind::VolatilityAdjustmentError {
@@ -703,7 +703,7 @@ mod tests_extended {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_expiration_error() {
         let error = ProbabilityError::ExpirationError(ExpirationErrorKind::InvalidRiskFreeRate {
             rate: Some(0.05),
@@ -714,7 +714,7 @@ mod tests_extended {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_strategy_error_conversion() {
         let strategy_error = StrategyError::ProfitLossError(ProfitLossErrorKind::MaxProfitError {
             reason: "Invalid max profit".to_string(),
@@ -729,7 +729,7 @@ mod tests_extended {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_strategy_break_even_error_conversion() {
         let strategy_error = StrategyError::BreakEvenError(BreakEvenErrorKind::NoBreakEvenPoints);
         let prob_error: ProbabilityError = strategy_error.into();
@@ -742,7 +742,7 @@ mod tests_extended {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_strategy_operation_error_conversion() {
         let strategy_error = StrategyError::OperationError(OperationErrorKind::NotSupported {
             operation: "test".to_string(),
@@ -758,7 +758,7 @@ mod tests_extended {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_box_dyn_error_conversion() {
         let io_error = std::io::Error::new(std::io::ErrorKind::Other, "test error");
         let boxed_error: Box<dyn Error> = Box::new(io_error);
@@ -767,14 +767,14 @@ mod tests_extended {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_no_positions_error() {
         let error = ProbabilityError::NoPositions("No positions found".to_string());
         assert!(error.to_string().contains("No positions found"));
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_probability_result_type() {
         let success: ProbabilityResult<f64> = Ok(0.5);
         let failure: ProbabilityResult<f64> =

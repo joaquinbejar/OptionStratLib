@@ -1,4 +1,3 @@
-#[cfg(not(target_arch = "wasm32"))]
 use {
     optionstratlib::OptionStyle,
     optionstratlib::chains::chain::OptionChain,
@@ -12,7 +11,7 @@ use {
 };
 
 #[test]
-#[cfg(not(target_arch = "wasm32"))]
+
 fn test_long_straddle_integration() -> Result<(), Box<dyn Error>> {
     setup_logger();
 
