@@ -4,20 +4,23 @@
    Date: 9/1/25
 ******************************************************************************/
 use crate::curves::Point2D;
+use crate::curves::traits::StatisticalCurve;
 use crate::curves::utils::detect_peaks_and_valleys;
 use crate::error::{CurveError, InterpolationError, MetricsError};
 use crate::geometrics::{
     Arithmetic, AxisOperations, BasicMetrics, BiLinearInterpolation, ConstructionMethod,
     ConstructionParams, CubicInterpolation, GeometricObject, GeometricTransformations, Interpolate,
-    InterpolationType, Len, LinearInterpolation, MergeAxisInterpolate, MergeOperation,
-    MetricsExtractor, RangeMetrics, RiskMetrics, ShapeMetrics, SplineInterpolation, TrendMetrics,
+    InterpolationType, LinearInterpolation, MergeAxisInterpolate, MergeOperation, MetricsExtractor,
+    RangeMetrics, RiskMetrics, ShapeMetrics, SplineInterpolation, TrendMetrics,
 };
+use crate::utils::Len;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use rayon::prelude::*;
 use rust_decimal::{Decimal, MathematicalOps};
 use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
+use std::fmt::{Display, Formatter};
 use std::ops::Index;
 
 /// Represents a mathematical curve as a collection of 2D points.
@@ -67,6 +70,15 @@ pub struct Curve {
     pub x_range: (Decimal, Decimal),
 }
 
+impl Display for Curve {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        for point in self.points.iter() {
+            writeln!(f, "{}", point)?;
+        }
+        Ok(())
+    }
+}
+
 impl Default for Curve {
     fn default() -> Self {
         Curve {
@@ -75,6 +87,7 @@ impl Default for Curve {
         }
     }
 }
+
 impl Curve {
     /// Creates a new curve from a vector of points.
     ///
@@ -111,6 +124,10 @@ impl Curve {
 impl Len for Curve {
     fn len(&self) -> usize {
         self.points.len()
+    }
+
+    fn is_empty(&self) -> bool {
+        self.points.is_empty()
     }
 }
 
@@ -921,6 +938,12 @@ impl SplineInterpolation<Point2D, Decimal> for Curve {
     }
 }
 
+impl StatisticalCurve for Curve {
+    fn get_x_values(&self) -> Vec<Decimal> {
+        self.points.iter().map(|p| p.x).collect()
+    }
+}
+
 /// A default implementation for the `Curve` type using a provided default strategy.
 ///
 /// This implementation provides a basic approach to computing curve metrics
@@ -1030,7 +1053,7 @@ impl MetricsExtractor for Curve {
             - Decimal::from(3);
 
         // Peaks and Valleys detection
-        let (peaks, valleys) = detect_peaks_and_valleys(&self.points);
+        let (peaks, valleys) = detect_peaks_and_valleys(&self.points, dec!(0.1), 2);
 
         Ok(ShapeMetrics {
             skewness,
@@ -1630,7 +1653,7 @@ mod tests_curves {
     use rust_decimal_macros::dec;
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_new_with_decimal() {
         let x = dec!(1.5);
         let y = dec!(2.5);
@@ -1640,7 +1663,7 @@ mod tests_curves {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_new_with_positive() {
         let x = pos!(1.5_f64);
         let y = pos!(2.5_f64);
@@ -1650,7 +1673,7 @@ mod tests_curves {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_to_tuple_with_decimal() {
         let point = Point2D::new(dec!(1.5), dec!(2.5));
         let tuple: (Decimal, Decimal) = point.to_tuple().unwrap();
@@ -1658,7 +1681,7 @@ mod tests_curves {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_to_tuple_with_positive() {
         let point = Point2D::new(dec!(1.5), dec!(2.5));
         let tuple: (Positive, Positive) = point.to_tuple().unwrap();
@@ -1666,7 +1689,7 @@ mod tests_curves {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_from_tuple_with_decimal() {
         let x = dec!(1.5);
         let y = dec!(2.5);
@@ -1675,7 +1698,7 @@ mod tests_curves {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_from_tuple_with_positive() {
         let x = pos!(1.5_f64);
         let y = pos!(2.5_f64);
@@ -1684,7 +1707,7 @@ mod tests_curves {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_new_with_mixed_types() {
         let x = dec!(1.5);
         let y = pos!(2.5_f64);
@@ -1694,7 +1717,7 @@ mod tests_curves {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_create_constant_curve() {
         let curve = create_constant_curve(dec!(1.0), dec!(2.0), dec!(5.0));
         assert_eq!(curve.get_points().len(), 11);
@@ -1704,7 +1727,7 @@ mod tests_curves {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_create_linear_curve() {
         let curve = create_linear_curve(dec!(1.0), dec!(2.0), dec!(2.0));
         assert_eq!(curve.get_points().len(), 11);
@@ -1723,7 +1746,7 @@ mod tests_linear_interpolate {
     use rust_decimal_macros::dec;
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_linear_interpolation_exact_points() {
         let curve = Curve::new(BTreeSet::from_iter(vec![
             Point2D::new(Decimal::ZERO, Decimal::ZERO),
@@ -1745,7 +1768,7 @@ mod tests_linear_interpolate {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_linear_interpolation_midpoint() {
         let curve = Curve::new(BTreeSet::from_iter(vec![
             Point2D::new(Decimal::ZERO, Decimal::ZERO),
@@ -1761,7 +1784,7 @@ mod tests_linear_interpolate {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_linear_interpolation_quarter_points() {
         let curve = Curve::new(BTreeSet::from_iter(vec![
             Point2D::new(Decimal::ZERO, Decimal::ZERO),
@@ -1784,7 +1807,7 @@ mod tests_linear_interpolate {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_linear_interpolation_out_of_range() {
         let curve = Curve::new(BTreeSet::from_iter(vec![
             Point2D::new(dec!(0.0), dec!(0.0)),
@@ -1804,7 +1827,7 @@ mod tests_linear_interpolate {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_linear_interpolation_insufficient_points() {
         let curve = Curve::new(BTreeSet::from_iter(vec![Point2D::new(
             dec!(0.0),
@@ -1819,7 +1842,7 @@ mod tests_linear_interpolate {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_linear_interpolation_non_monotonic() {
         let curve = Curve::new(BTreeSet::from_iter(vec![
             Point2D::new(dec!(0.0), dec!(0.0)),
@@ -1842,7 +1865,7 @@ mod tests_bilinear_interpolate {
     use rust_decimal_macros::dec;
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_bilinear_interpolation() {
         let curve = Curve::new(BTreeSet::from_iter(vec![
             Point2D::new(Decimal::ZERO, Decimal::ZERO),
@@ -1867,7 +1890,7 @@ mod tests_bilinear_interpolate {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_bilinear_interpolation_out_of_range() {
         let curve = Curve::new(BTreeSet::from_iter(vec![
             Point2D::new(dec!(0.0), dec!(0.0)),
@@ -1889,7 +1912,7 @@ mod tests_bilinear_interpolate {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_bilinear_interpolation_insufficient_points() {
         let curve = Curve::new(BTreeSet::from_iter(vec![
             Point2D::new(dec!(0.0), dec!(0.0)),
@@ -1905,7 +1928,7 @@ mod tests_bilinear_interpolate {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_bilinear_interpolation_quarter_points() {
         let curve = Curve::new(BTreeSet::from_iter(vec![
             Point2D::new(Decimal::ZERO, Decimal::ZERO), // p11 (0,0)
@@ -1936,7 +1959,7 @@ mod tests_bilinear_interpolate {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_bilinear_interpolation_boundaries() {
         let curve = Curve::new(BTreeSet::from_iter(vec![
             Point2D::new(dec!(0.0), dec!(0.0)),
@@ -1958,7 +1981,7 @@ mod tests_bilinear_interpolate {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_out_of_range() {
         let curve = Curve::new(BTreeSet::from_iter(vec![
             Point2D::new(Decimal::ZERO, Decimal::ZERO),
@@ -1988,7 +2011,7 @@ mod tests_cubic_interpolate {
     use tracing::info;
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_cubic_interpolation_exact_points() {
         let curve = Curve::new(BTreeSet::from_iter(vec![
             Point2D::new(dec!(0.0), dec!(0.0)),
@@ -2006,7 +2029,7 @@ mod tests_cubic_interpolate {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_cubic_interpolation_midpoints() {
         let curve = Curve::new(BTreeSet::from_iter(vec![
             Point2D::new(dec!(0.0), dec!(0.0)),
@@ -2025,7 +2048,7 @@ mod tests_cubic_interpolate {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_cubic_interpolation_insufficient_points() {
         let curve = Curve::new(BTreeSet::from_iter(vec![
             Point2D::new(dec!(0.0), dec!(0.0)),
@@ -2041,7 +2064,7 @@ mod tests_cubic_interpolate {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_cubic_interpolation_out_of_range() {
         let curve = Curve::new(BTreeSet::from_iter(vec![
             Point2D::new(dec!(0.0), dec!(0.0)),
@@ -2063,7 +2086,7 @@ mod tests_cubic_interpolate {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_cubic_interpolation_monotonicity() {
         let curve = Curve::new(BTreeSet::from_iter(vec![
             Point2D::new(dec!(0.0), dec!(0.0)),
@@ -2095,7 +2118,7 @@ mod tests_spline_interpolate {
     use rust_decimal_macros::dec;
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_spline_interpolation_exact_points() {
         let curve = Curve::new(BTreeSet::from_iter(vec![
             Point2D::new(dec!(0.0), dec!(0.0)),
@@ -2112,7 +2135,7 @@ mod tests_spline_interpolate {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_spline_interpolation_midpoints() {
         let curve = Curve::new(BTreeSet::from_iter(vec![
             Point2D::new(dec!(0.0), dec!(0.0)),
@@ -2130,7 +2153,7 @@ mod tests_spline_interpolate {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_spline_interpolation_insufficient_points() {
         let curve = Curve::new(BTreeSet::from_iter(vec![
             Point2D::new(dec!(0.0), dec!(0.0)),
@@ -2145,7 +2168,7 @@ mod tests_spline_interpolate {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_spline_interpolation_out_of_range() {
         let curve = Curve::new(BTreeSet::from_iter(vec![
             Point2D::new(dec!(0.0), dec!(0.0)),
@@ -2166,7 +2189,7 @@ mod tests_spline_interpolate {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_spline_interpolation_smoothness() {
         let curve = Curve::new(BTreeSet::from_iter(vec![
             Point2D::new(dec!(0.0), dec!(0.0)),
@@ -2218,7 +2241,7 @@ mod tests_curve_arithmetic {
     use crate::geometrics::InterpolationType;
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_merge_curves_add() {
         let curve1 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(1.0));
         let curve2 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(2.0));
@@ -2243,7 +2266,7 @@ mod tests_curve_arithmetic {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_merge_curves_subtract() {
         let curve1 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(3.0));
         let curve2 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(1.0));
@@ -2266,7 +2289,7 @@ mod tests_curve_arithmetic {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_merge_curves_multiply() {
         let curve1 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(2.0));
         let curve2 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(3.0));
@@ -2291,7 +2314,7 @@ mod tests_curve_arithmetic {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_merge_curves_divide() {
         let curve1 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(6.0));
         let curve2 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(2.0));
@@ -2321,7 +2344,7 @@ mod tests_curve_arithmetic {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_merge_curves_max() {
         let curve1 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(2.0));
         let curve2 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(3.0));
@@ -2347,7 +2370,7 @@ mod tests_curve_arithmetic {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_merge_curves_min() {
         let curve1 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(2.0));
         let curve2 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(3.0));
@@ -2373,7 +2396,7 @@ mod tests_curve_arithmetic {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_merge_with_single_operation() {
         let curve1 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(2.0));
         let curve2 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(3.0));
@@ -2393,7 +2416,7 @@ mod tests_curve_arithmetic {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_merge_curves_error_handling() {
         // Test with empty slice
         let result = Curve::merge(&[], MergeOperation::Add);
@@ -2409,7 +2432,7 @@ mod tests_curve_arithmetic {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_merge_multiple_curves() {
         let curve1 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(1.0));
         let curve2 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(2.0));

@@ -10,6 +10,7 @@ use crate::greeks::Greeks;
 use crate::utils::time::TimeFrame;
 use crate::{Positive, pos};
 use num_traits::{FromPrimitive, ToPrimitive};
+use rand::random;
 use rust_decimal::{Decimal, MathematicalOps};
 use rust_decimal_macros::dec;
 use std::error::Error;
@@ -203,8 +204,7 @@ pub fn simulate_heston_volatility(
     let mut v = Positive(v0);
     let mut volatilities = vec![v.sqrt()];
     for _ in 1..steps {
-        let dw = Decimal::from_f64(rand::random::<f64>() * dt.sqrt().unwrap().to_f64().unwrap())
-            .unwrap();
+        let dw = Decimal::from_f64(random::<f64>() * dt.sqrt().unwrap().to_f64().unwrap()).unwrap();
         v += kappa * (theta - v) * dt + xi * v.sqrt() * dw;
         v = v.max(Positive::ZERO); // Ensure variance doesn't become negative
         volatilities.push(v.sqrt());
@@ -369,8 +369,8 @@ mod tests_annualize_volatility {
     use super::*;
     use crate::assert_pos_relative_eq;
 
-    #[cfg_attr(not(target_arch = "wasm32"), test)]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[test]
+
     fn test_annualize_daily_volatility() {
         let daily_vol = pos!(0.01); // 1% daily volatility
         let annual_vol = annualized_volatility(daily_vol, TimeFrame::Day).unwrap();
@@ -378,8 +378,8 @@ mod tests_annualize_volatility {
         assert_pos_relative_eq!(annual_vol, expected, pos!(1e-10));
     }
 
-    #[cfg_attr(not(target_arch = "wasm32"), test)]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[test]
+
     fn test_deannualize_annual_volatility() {
         let annual_vol = pos!(0.20); // 20% annual volatility
         let daily_vol = de_annualized_volatility(annual_vol, TimeFrame::Day).unwrap();
@@ -387,8 +387,8 @@ mod tests_annualize_volatility {
         assert_pos_relative_eq!(daily_vol, expected, pos!(1e-10));
     }
 
-    #[cfg_attr(not(target_arch = "wasm32"), test)]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[test]
+
     fn test_custom_timeframe() {
         let custom_periods = pos!(100.0);
         let vol = pos!(0.05);
@@ -397,8 +397,8 @@ mod tests_annualize_volatility {
         assert_pos_relative_eq!(annual_vol, expected, pos!(1e-10));
     }
 
-    #[cfg_attr(not(target_arch = "wasm32"), test)]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[test]
+
     fn test_conversion_roundtrip() {
         let original_vol = pos!(0.15);
         let annualized = annualized_volatility(original_vol, TimeFrame::Day).unwrap();
@@ -406,8 +406,8 @@ mod tests_annualize_volatility {
         assert_pos_relative_eq!(original_vol, roundtrip, pos!(1e-10));
     }
 
-    #[cfg_attr(not(target_arch = "wasm32"), test)]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[test]
+
     fn test_different_timeframes() {
         let daily_vol = pos!(0.01);
         let weekly_vol = annualized_volatility(daily_vol, TimeFrame::Day).unwrap();
@@ -421,24 +421,24 @@ mod tests_constant_volatility {
     use super::*;
     use crate::assert_pos_relative_eq;
 
-    #[cfg_attr(not(target_arch = "wasm32"), test)]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[test]
+
     fn test_constant_volatility_single_value() {
         let returns = [dec!(0.05)];
         let result = constant_volatility(&returns).unwrap();
         assert_eq!(result, ZERO);
     }
 
-    #[cfg_attr(not(target_arch = "wasm32"), test)]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[test]
+
     fn test_constant_volatility_identical_values() {
         let returns = [dec!(0.02), dec!(0.02), dec!(0.02), dec!(0.02)];
         let result = constant_volatility(&returns).unwrap();
         assert_eq!(result, ZERO);
     }
 
-    #[cfg_attr(not(target_arch = "wasm32"), test)]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[test]
+
     fn test_constant_volatility_varying_values() {
         let returns = [dec!(0.01), dec!(0.03), dec!(0.02), dec!(0.04)];
         let result = constant_volatility(&returns).unwrap();
@@ -451,32 +451,32 @@ mod tests_historical_volatility {
     use super::*;
     use crate::assert_pos_relative_eq;
 
-    #[cfg_attr(not(target_arch = "wasm32"), test)]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[test]
+
     fn test_historical_volatility_empty_returns() {
         let returns: [Decimal; 0] = [];
         let result = historical_volatility(&returns, 3).unwrap();
         assert!(result.is_empty());
     }
 
-    #[cfg_attr(not(target_arch = "wasm32"), test)]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[test]
+
     fn test_historical_volatility_single_value() {
         let returns = [dec!(0.02)];
         let result = historical_volatility(&returns, 3).unwrap();
         assert!(result.is_empty());
     }
 
-    #[cfg_attr(not(target_arch = "wasm32"), test)]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[test]
+
     fn test_historical_volatility_insufficient_data() {
         let returns = [dec!(0.01), dec!(0.02)];
         let result = historical_volatility(&returns, 3).unwrap();
         assert!(result.is_empty());
     }
 
-    #[cfg_attr(not(target_arch = "wasm32"), test)]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[test]
+
     fn test_historical_volatility_exact_window() {
         let returns = [dec!(0.01), dec!(0.02), dec!(0.03)];
         let result = historical_volatility(&returns, 3).unwrap();
@@ -484,8 +484,8 @@ mod tests_historical_volatility {
         assert_pos_relative_eq!(result[0], pos!(0.01), pos!(1e-10));
     }
 
-    #[cfg_attr(not(target_arch = "wasm32"), test)]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[test]
+
     fn test_historical_volatility_larger_window() {
         let returns = [dec!(0.01), dec!(0.02), dec!(0.03), dec!(0.04)];
         let result = historical_volatility(&returns, 3).unwrap();
@@ -500,8 +500,8 @@ mod tests_ewma_volatility {
     use super::*;
     use crate::assert_pos_relative_eq;
 
-    #[cfg_attr(not(target_arch = "wasm32"), test)]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[test]
+
     fn test_ewma_volatility_single_return() {
         let returns = [dec!(0.02)];
         let lambda = dec!(0.94);
@@ -510,8 +510,8 @@ mod tests_ewma_volatility {
         assert_eq!(result[0], pos!(0.02)); // The volatility is simply the return itself
     }
 
-    #[cfg_attr(not(target_arch = "wasm32"), test)]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[test]
+
     fn test_ewma_volatility_constant_returns() {
         let returns = [dec!(0.02), dec!(0.02), dec!(0.02), dec!(0.02)];
         let lambda = dec!(0.94);
@@ -551,8 +551,8 @@ mod tests_ewma_volatility {
         }
     }
 
-    #[cfg_attr(not(target_arch = "wasm32"), test)]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[test]
+
     fn test_ewma_volatility_varying_returns() {
         let returns = [dec!(0.01), dec!(0.02), dec!(0.03), dec!(0.04)];
         let lambda = dec!(0.94);
@@ -569,8 +569,8 @@ mod tests_ewma_volatility {
         );
     }
 
-    #[cfg_attr(not(target_arch = "wasm32"), test)]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[test]
+
     fn test_ewma_volatility_low_lambda() {
         let returns = [dec!(0.01), dec!(0.02), dec!(0.03), dec!(0.04)];
         let lambda = dec!(0.5); // Low lambda means faster decay
@@ -582,8 +582,8 @@ mod tests_ewma_volatility {
         assert!(*last > *result.first().unwrap());
     }
 
-    #[cfg_attr(not(target_arch = "wasm32"), test)]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[test]
+
     fn test_ewma_volatility_high_lambda() {
         let returns = [dec!(0.01), dec!(0.02), dec!(0.03), dec!(0.04)];
         let lambda = dec!(0.99); // High lambda means slower decay

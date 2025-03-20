@@ -8,9 +8,7 @@
 //! The `PlotBuilder` struct is used to configure and build the plots. It offers various methods
 //! to customize plot appearance, such as setting titles, labels, dimensions, and colors.
 //!
-//! The `save` method is used to save the generated plot to a file.  It handles platform-specific
-//! differences, providing a no-op implementation for WASM targets where direct file saving
-//! is not supported.
+//! The `save` method is used to save the generated plot to a file.
 //!
 //! The module also includes a set of utility functions for applying shading to points on a surface,
 //! aiding in the visualization of 3D surfaces.  Error handling is managed using the `SurfaceError` type.
@@ -47,9 +45,9 @@
 use crate::error::SurfaceError;
 use crate::geometrics::{PlotBuilder, PlotBuilderExt, PlotOptions, Plottable};
 use crate::surfaces::Surface;
-#[cfg(not(target_arch = "wasm32"))]
+
 use crate::visualization::utils::apply_shade;
-#[cfg(not(target_arch = "wasm32"))]
+
 use plotters::prelude::*;
 use std::path::Path;
 
@@ -150,13 +148,6 @@ impl Plottable for Vec<Surface> {
 
 /// Plotting implementation for single Surface
 impl PlotBuilderExt<Surface> for PlotBuilder<Surface> {
-    #[cfg(target_arch = "wasm32")]
-    fn save(self, _path: impl AsRef<Path>) -> Result<(), SurfaceError> {
-        // Do nothing in wasm
-        Ok(())
-    }
-
-    #[cfg(not(target_arch = "wasm32"))]
     fn save(self, path: impl AsRef<Path>) -> Result<(), SurfaceError> {
         // Convert points to f64
         let points: Vec<(f64, f64, f64)> = self.data.get_f64_points();
@@ -441,12 +432,6 @@ mod tests_extended {
     }
 
     impl PlotBuilderExt<Plot> for PlotBuilder<Plot> {
-        #[cfg(target_arch = "wasm32")]
-        fn save(self, _path: impl AsRef<Path>) -> Result<(), SurfaceError> {
-            Ok(())
-        }
-
-        #[cfg(not(target_arch = "wasm32"))]
         fn save(self, _path: impl AsRef<Path>) -> Result<(), SurfaceError> {
             Ok(())
         }
@@ -504,17 +489,6 @@ mod tests_extended {
 
     #[test]
     fn test_save_standard() {
-        let plot = Plot {
-            options: PlotOptions::default(),
-        }
-        .plot();
-        let result = plot.save("test_path.png");
-        assert!(result.is_ok());
-    }
-
-    #[test]
-    #[cfg(target_arch = "wasm32")]
-    fn test_save_wasm() {
         let plot = Plot {
             options: PlotOptions::default(),
         }

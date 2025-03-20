@@ -11,7 +11,7 @@ use rust_decimal_macros::dec;
 use std::error::Error;
 
 #[test]
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
 fn test_bull_call_spread_basic_integration() -> Result<(), Box<dyn Error>> {
     setup_logger();
 

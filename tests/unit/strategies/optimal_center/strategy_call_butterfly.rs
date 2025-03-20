@@ -1,9 +1,8 @@
-use optionstratlib::Side;
-use optionstratlib::strategies::base::Positionable;
-#[cfg(not(target_arch = "wasm32"))]
 use {
+    optionstratlib::Side,
     optionstratlib::chains::chain::OptionChain,
     optionstratlib::strategies::base::Optimizable,
+    optionstratlib::strategies::base::Positionable,
     optionstratlib::strategies::{CallButterfly, FindOptimalSide},
     optionstratlib::utils::setup_logger,
     optionstratlib::{ExpirationDate, Positive, pos},
@@ -12,7 +11,7 @@ use {
 };
 // long 276.06, short 269.62 short 58.5
 #[test]
-#[cfg(not(target_arch = "wasm32"))]
+
 fn test_call_butterfly_integration() -> Result<(), Box<dyn Error>> {
     setup_logger();
 

@@ -831,14 +831,14 @@ mod tests_bear_call_spread_strategies {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_get_underlying_price() {
         let spread = create_test_spread();
         assert_eq!(spread.get_underlying_price(), pos!(100.0));
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_max_profit_positive() {
         let spread = create_test_spread();
         let result = spread.max_profit();
@@ -851,7 +851,7 @@ mod tests_bear_call_spread_strategies {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_max_profit_zero() {
         let mut spread = create_test_spread();
         // Modify premiums to create negative net premium
@@ -864,7 +864,7 @@ mod tests_bear_call_spread_strategies {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_max_loss() {
         let spread = create_test_spread();
         let result = spread.max_loss();
@@ -878,7 +878,7 @@ mod tests_bear_call_spread_strategies {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_total_cost() {
         let spread = create_test_spread();
         let expected_cost = 7.0;
@@ -890,7 +890,7 @@ mod tests_bear_call_spread_strategies {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_net_premium_received() {
         let spread = create_test_spread();
         let expected_premium = spread.short_call.net_premium_received().unwrap()
@@ -903,7 +903,7 @@ mod tests_bear_call_spread_strategies {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_fees() {
         let spread = create_test_spread();
         let expected_fees = (spread.short_call.open_fee
@@ -919,7 +919,7 @@ mod tests_bear_call_spread_strategies {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_profit_area() {
         let spread = create_test_spread();
         let high = spread.max_profit().unwrap_or(Positive::ZERO);
@@ -933,7 +933,7 @@ mod tests_bear_call_spread_strategies {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_profit_ratio_normal() {
         let spread = create_test_spread();
         let max_profit = spread.max_profit().unwrap();
@@ -947,7 +947,7 @@ mod tests_bear_call_spread_strategies {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_profit_ratio_zero_profit() {
         let mut spread = create_test_spread();
         // Modify premiums to create zero max profit
@@ -962,7 +962,7 @@ mod tests_bear_call_spread_strategies {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_profit_ratio_zero_loss() {
         let mut spread = create_test_spread();
         // Modify strikes to create zero max loss scenario
@@ -972,7 +972,7 @@ mod tests_bear_call_spread_strategies {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_get_break_even_points() {
         let spread = create_test_spread();
         let break_even_points = spread.get_break_even_points().unwrap();
@@ -993,7 +993,7 @@ mod tests_bear_call_spread_strategies {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_with_different_quantities() {
         let spread = BearCallSpread::new(
             "TEST".to_string(),
@@ -1019,7 +1019,7 @@ mod tests_bear_call_spread_strategies {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_with_different_strikes() {
         let spread = BearCallSpread::new(
             "TEST".to_string(),
@@ -1084,7 +1084,7 @@ mod tests_bear_call_spread_positionable {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_add_short_position() {
         let mut spread = BearCallSpread::new(
             "TEST".to_string(),
@@ -1112,7 +1112,7 @@ mod tests_bear_call_spread_positionable {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_add_long_position() {
         let mut spread = BearCallSpread::new(
             "TEST".to_string(),
@@ -1140,7 +1140,7 @@ mod tests_bear_call_spread_positionable {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_get_positions() {
         let spread = BearCallSpread::new(
             "TEST".to_string(),
@@ -1170,7 +1170,7 @@ mod tests_bear_call_spread_positionable {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_add_multiple_positions() {
         let mut spread = BearCallSpread::new(
             "TEST".to_string(),
@@ -1201,7 +1201,7 @@ mod tests_bear_call_spread_positionable {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_replace_positions() {
         let mut spread = BearCallSpread::new(
             "TEST".to_string(),
@@ -1231,7 +1231,7 @@ mod tests_bear_call_spread_positionable {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_positions_integrity() {
         let mut spread = BearCallSpread::new(
             "TEST".to_string(),
@@ -1297,14 +1297,14 @@ mod tests_bear_call_spread_validable {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_valid_spread() {
         let spread = create_valid_spread();
         assert!(spread.validate());
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_invalid_strike_order() {
         let spread = BearCallSpread::new(
             "TEST".to_string(),
@@ -1327,7 +1327,7 @@ mod tests_bear_call_spread_validable {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_equal_strikes() {
         let spread = BearCallSpread::new(
             "TEST".to_string(),
@@ -1350,7 +1350,7 @@ mod tests_bear_call_spread_validable {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_invalid_short_call() {
         let mut spread = create_valid_spread();
         // Invalidate short call by setting an invalid quantity
@@ -1359,7 +1359,7 @@ mod tests_bear_call_spread_validable {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_invalid_long_call() {
         let mut spread = create_valid_spread();
         // Invalidate long call by setting an invalid quantity
@@ -1368,7 +1368,6 @@ mod tests_bear_call_spread_validable {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     #[should_panic]
     fn test_invalid_expiration_dates() {
         let spread = BearCallSpread::new(
@@ -1392,7 +1391,7 @@ mod tests_bear_call_spread_validable {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_invalid_underlying_price() {
         let spread = BearCallSpread::new(
             "TEST".to_string(),
@@ -1415,7 +1414,7 @@ mod tests_bear_call_spread_validable {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_strikes_too_close() {
         let spread = BearCallSpread::new(
             "TEST".to_string(),
@@ -1439,7 +1438,7 @@ mod tests_bear_call_spread_validable {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_validation_with_different_quantities() {
         let spread = BearCallSpread::new(
             "TEST".to_string(),
@@ -1494,7 +1493,7 @@ mod tests_bear_call_spread_profit {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_profit_below_short_strike() {
         let spread = create_test_spread();
         let profit = spread
@@ -1509,7 +1508,7 @@ mod tests_bear_call_spread_profit {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_profit_at_short_strike() {
         let spread = create_test_spread();
         let profit = spread
@@ -1523,7 +1522,7 @@ mod tests_bear_call_spread_profit {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_profit_between_strikes() {
         let spread = create_test_spread();
         let test_price = pos!(100.0);
@@ -1540,7 +1539,7 @@ mod tests_bear_call_spread_profit {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_profit_at_long_strike() {
         let spread = create_test_spread();
         let profit = spread
@@ -1558,7 +1557,7 @@ mod tests_bear_call_spread_profit {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_profit_above_long_strike() {
         let spread = create_test_spread();
         let profit = spread
@@ -1572,7 +1571,7 @@ mod tests_bear_call_spread_profit {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_profit_at_get_break_even_points() {
         let spread = create_test_spread();
         let break_even = spread.get_break_even_points().unwrap()[0];
@@ -1586,7 +1585,7 @@ mod tests_bear_call_spread_profit {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_profit_with_different_quantities() {
         let spread = BearCallSpread::new(
             "TEST".to_string(),
@@ -1626,7 +1625,7 @@ mod tests_bear_call_spread_profit {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_profit_with_fees() {
         let spread = BearCallSpread::new(
             "SP500".to_string(),
@@ -1739,7 +1738,7 @@ mod tests_bear_call_spread_optimizable {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_filter_combinations_valid() {
         let strategy = create_test_strategy();
         let chain = create_mock_option_chain();
@@ -1770,7 +1769,7 @@ mod tests_bear_call_spread_optimizable {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_find_optimal_ratio() {
         let mut strategy = create_test_strategy();
         let chain = create_mock_option_chain();
@@ -1785,7 +1784,7 @@ mod tests_bear_call_spread_optimizable {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_find_optimal_area() {
         let mut strategy = create_test_strategy();
         let chain = create_mock_option_chain();
@@ -1800,7 +1799,7 @@ mod tests_bear_call_spread_optimizable {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_create_strategy() {
         let strategy = create_test_strategy();
         let chain = create_mock_option_chain();
@@ -1831,7 +1830,7 @@ mod tests_bear_call_spread_optimizable {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_filter_combinations_empty_chain() {
         let strategy = create_test_strategy();
         let empty_chain =
@@ -1844,7 +1843,7 @@ mod tests_bear_call_spread_optimizable {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_filter_combinations_invalid_prices() {
         let mut chain = create_mock_option_chain();
         // Add an option with invalid prices
@@ -1880,7 +1879,7 @@ mod tests_bear_call_spread_optimizable {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_find_optimal_no_valid_combinations() {
         let mut strategy = create_test_strategy();
         let mut empty_chain =
@@ -1912,7 +1911,6 @@ mod tests_bear_call_spread_optimizable {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     #[should_panic]
     fn test_create_strategy_invalid_legs() {
         let strategy = create_test_strategy();
@@ -1961,7 +1959,7 @@ mod tests_bear_call_spread_graph {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_title() {
         let spread = create_test_spread();
         let title = spread.title();
@@ -1971,7 +1969,7 @@ mod tests_bear_call_spread_graph {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_vertical_lines() {
         let spread = create_test_spread();
         let lines = spread.get_vertical_lines();
@@ -1982,7 +1980,7 @@ mod tests_bear_call_spread_graph {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_get_points() {
         let spread = create_test_spread();
         let points = spread.get_points();
@@ -2000,7 +1998,7 @@ mod tests_bear_call_spread_graph {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_get_values() {
         let spread = create_test_spread();
         let test_prices = vec![
@@ -2093,7 +2091,7 @@ mod tests_bear_call_spread_probability {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_get_expiration() {
         let spread = create_test_spread();
         let result = spread.get_expiration();
@@ -2105,14 +2103,14 @@ mod tests_bear_call_spread_probability {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_get_risk_free_rate() {
         let spread = create_test_spread();
         assert_eq!(spread.get_risk_free_rate().unwrap().to_f64().unwrap(), 0.05);
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_get_profit_ranges() {
         let spread = create_test_spread();
         let result = spread.get_profit_ranges();
@@ -2128,7 +2126,7 @@ mod tests_bear_call_spread_probability {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_get_loss_ranges() {
         let spread = create_test_spread();
         let result = spread.get_loss_ranges();
@@ -2144,7 +2142,7 @@ mod tests_bear_call_spread_probability {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_probability_of_profit() {
         let spread = create_test_spread();
         let result = spread.probability_of_profit(None, None);
@@ -2156,7 +2154,7 @@ mod tests_bear_call_spread_probability {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_probability_with_volatility_adjustment() {
         let spread = create_test_spread();
         let vol_adj = Some(VolatilityAdjustment {
@@ -2173,7 +2171,7 @@ mod tests_bear_call_spread_probability {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_probability_with_trend() {
         let spread = create_test_spread();
         let trend = Some(PriceTrend {
@@ -2190,7 +2188,7 @@ mod tests_bear_call_spread_probability {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_analyze_probabilities() {
         let spread = create_test_spread();
         let result = spread.analyze_probabilities(None, None);
@@ -2206,7 +2204,7 @@ mod tests_bear_call_spread_probability {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_calculate_extreme_probabilities() {
         let spread = create_test_spread();
         let result = spread.calculate_extreme_probabilities(None, None);
@@ -2251,7 +2249,7 @@ mod tests_delta {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn create_test_reducing_adjustments() {
         let strike = pos!(5870.0);
         let strategy = get_strategy(strike, pos!(5860.0));
@@ -2293,7 +2291,7 @@ mod tests_delta {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn create_test_increasing_adjustments() {
         let strike = pos!(5820.0);
         let strategy = get_strategy(pos!(5800.0), strike);
@@ -2335,7 +2333,7 @@ mod tests_delta {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn create_test_no_adjustments() {
         let strategy = get_strategy(pos!(5820.0), pos!(5820.0));
 
@@ -2383,7 +2381,7 @@ mod tests_delta_size {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn create_test_reducing_adjustments() {
         let strike = pos!(5840.4);
         let strategy = get_strategy(strike, pos!(5820.5));
@@ -2426,7 +2424,7 @@ mod tests_delta_size {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn create_test_increasing_adjustments() {
         let strike = pos!(5820.414);
         let strategy = get_strategy(pos!(5800.0), strike);
@@ -2467,7 +2465,7 @@ mod tests_delta_size {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn create_test_no_adjustments() {
         let strategy = get_strategy(pos!(5820.0), pos!(5820.0));
 

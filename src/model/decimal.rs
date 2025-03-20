@@ -268,7 +268,7 @@ pub fn decimal_to_f64(value: Decimal) -> Result<f64, DecimalError> {
 /// use rust_decimal::Decimal;
 /// use optionstratlib::model::decimal::f64_to_decimal;
 ///
-/// let float = 3.14159;
+/// let float = std::f64::consts::PI;
 /// match f64_to_decimal(float) {
 ///     Ok(decimal) => println!("Converted to Decimal: {}", decimal),
 ///     Err(e) => println!("Conversion error: {:?}", e)
@@ -367,7 +367,7 @@ pub mod tests {
     use std::str::FromStr;
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_f64_to_decimal_valid() {
         let value = 42.42;
         let result = f64_to_decimal(value);
@@ -376,7 +376,7 @@ pub mod tests {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_f64_to_decimal_zero() {
         let value = 0.0;
         let result = f64_to_decimal(value);
@@ -385,7 +385,7 @@ pub mod tests {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_decimal_to_f64_valid() {
         let decimal = Decimal::from_str("42.42").unwrap();
         let result = decimal_to_f64(decimal);
@@ -394,7 +394,7 @@ pub mod tests {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_decimal_to_f64_zero() {
         let decimal = Decimal::from_str("0").unwrap();
         let result = decimal_to_f64(decimal);

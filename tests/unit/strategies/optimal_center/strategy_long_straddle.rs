@@ -1,9 +1,8 @@
-use optionstratlib::OptionStyle;
-use optionstratlib::strategies::base::Positionable;
-#[cfg(not(target_arch = "wasm32"))]
 use {
+    optionstratlib::OptionStyle,
     optionstratlib::chains::chain::OptionChain,
     optionstratlib::strategies::base::Optimizable,
+    optionstratlib::strategies::base::Positionable,
     optionstratlib::strategies::{FindOptimalSide, LongStraddle},
     optionstratlib::utils::setup_logger,
     optionstratlib::{ExpirationDate, Positive, pos},
@@ -12,7 +11,7 @@ use {
 };
 
 #[test]
-#[cfg(not(target_arch = "wasm32"))]
+
 fn test_long_straddle_integration() -> Result<(), Box<dyn Error>> {
     setup_logger();
 

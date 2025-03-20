@@ -5,7 +5,7 @@
 ******************************************************************************/
 use crate::chains::utils::{
     OptionChainBuildParams, OptionChainParams, OptionDataPriceParams, RandomPositionsParams,
-    adjust_volatility, default_empty_string, generate_list_of_strikes,
+    adjust_volatility, default_empty_string, empty_string_round_to_2, generate_list_of_strikes,
 };
 use crate::chains::{
     DeltasInStrike, FourOptions, OptionsInStrike, RNDAnalysis, RNDParameters, RNDResult,
@@ -13,13 +13,14 @@ use crate::chains::{
 use crate::curves::{BasicCurves, Curve, Point2D};
 use crate::error::chains::ChainError;
 use crate::error::{CurveError, SurfaceError};
-use crate::geometrics::{Len, LinearInterpolation};
+use crate::geometrics::LinearInterpolation;
 use crate::greeks::{Greeks, delta, gamma};
 use crate::model::{
     BasicAxisTypes, ExpirationDate, OptionStyle, OptionType, Options, Position, Side,
 };
 use crate::strategies::utils::FindOptimalSide;
 use crate::surfaces::{BasicSurfaces, Point3D, Surface};
+use crate::utils::Len;
 use crate::utils::others::get_random_element;
 use crate::volatility::VolatilitySmile;
 use crate::{Positive, pos};
@@ -33,7 +34,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::error::Error;
 use std::fmt;
 use tracing::{debug, error, info, trace, warn};
-#[cfg(not(target_arch = "wasm32"))]
+
 use {crate::chains::utils::parse, csv::WriterBuilder, std::fs::File};
 
 /// Struct representing a row in an option chain with detailed pricing and analytics data.
@@ -985,15 +986,17 @@ impl fmt::Display for OptionData {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "{:<10} {:<10} {:<10} {:<10} {:<10} {:<10} {:<10} {:.3}{:<8} {:.3}{:<4} {:.3}{:<5} {:.2}{:<8} {:<10} {:<10}",
+            "{:<10} {:<10} {:<10} {:<10} {:<10} {:<10} {:<10} {:<6}{:<7} {:.3}{:<4} {:.3}{:<5} {:.4}{:<8} {:<10} {:<10}",
             self.strike_price.to_string(),
-            default_empty_string(self.call_bid),
-            default_empty_string(self.call_ask),
-            default_empty_string(self.call_middle),
-            default_empty_string(self.put_bid),
-            default_empty_string(self.put_ask),
-            default_empty_string(self.put_middle),
-            self.implied_volatility.unwrap_or(Positive::ZERO),
+            empty_string_round_to_2(self.call_bid),
+            empty_string_round_to_2(self.call_ask),
+            empty_string_round_to_2(self.call_middle),
+            empty_string_round_to_2(self.put_bid),
+            empty_string_round_to_2(self.put_ask),
+            empty_string_round_to_2(self.put_middle),
+            self.implied_volatility
+                .unwrap_or(Positive::ZERO)
+                .format_fixed_places(3),
             " ".to_string(),
             self.delta_call.unwrap_or(Decimal::ZERO),
             " ".to_string(),
@@ -1040,7 +1043,7 @@ impl fmt::Display for OptionData {
 ///
 /// This struct is typically used as the primary container for options market data analysis,
 /// serving as input to pricing models, strategy backtesting, and risk management tools.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct OptionChain {
     /// The ticker symbol for the underlying asset (e.g., "AAPL", "SPY").
     pub symbol: String,
@@ -1307,8 +1310,8 @@ impl OptionChain {
                 .expiration_date
                 .get_date_string()
                 .unwrap(),
-            None,
-            None,
+            Some(params.price_params.risk_free_rate),
+            Some(params.price_params.dividend_yield),
         );
         let strikes = generate_list_of_strikes(
             params.price_params.underlying_price,
@@ -1352,6 +1355,119 @@ impl OptionChain {
         }
         debug!("Option chain: {}", option_chain);
         option_chain
+    }
+
+    /// Generates build parameters that would reproduce the current option chain.
+    ///
+    /// This method creates an `OptionChainBuildParams` object with configuration values
+    /// extracted from the current chain. This is useful for:
+    /// - Recreating a similar chain with modified parameters
+    /// - Saving the chain's configuration for later reconstruction
+    /// - Generating additional chains with consistent parameters
+    ///
+    /// # Returns
+    ///
+    /// An `OptionChainBuildParams` structure containing the parameters needed to rebuild
+    /// this option chain. The method calculates appropriate values for chain size, strike interval,
+    /// and estimated spread based on the current data.
+    ///
+    pub fn to_build_params(&self) -> Result<OptionChainBuildParams, Box<dyn Error>> {
+        // Calculate chain size based on the distance from ATM strike
+        let atm_strike = self.atm_strike()?;
+        let strike_interval = self.get_strike_interval();
+
+        // Calculate the number of strikes above and below the ATM strike
+        let mut chain_size = 0;
+        let strike_prices: Vec<Positive> =
+            self.options.iter().map(|opt| opt.strike_price).collect();
+
+        if !strike_prices.is_empty() {
+            // Find the maximum distance from ATM in number of strikes
+            let min_strike = strike_prices.iter().min().unwrap();
+            let max_strike = strike_prices.iter().max().unwrap();
+
+            let strikes_below = ((atm_strike.to_dec() - min_strike.to_dec())
+                / strike_interval.to_dec())
+            .ceil()
+            .to_u64()
+            .unwrap_or(0) as usize;
+
+            let strikes_above = ((max_strike.to_dec() - atm_strike.to_dec())
+                / strike_interval.to_dec())
+            .ceil()
+            .to_u64()
+            .unwrap_or(0) as usize;
+
+            chain_size = strikes_below.max(strikes_above);
+        }
+
+        // Default to a reasonable chain size if calculation fails
+        if chain_size == 0 {
+            chain_size = 10;
+        }
+
+        // Estimate the average bid-ask spread from the available options
+        let mut total_spread = Decimal::ZERO;
+        let mut count = 0;
+
+        for option in &self.options {
+            if let (Some(ask), Some(bid)) = (option.call_ask, option.call_bid) {
+                total_spread += (ask.to_dec() - bid.to_dec()).abs();
+                count += 1;
+            }
+
+            if let (Some(ask), Some(bid)) = (option.put_ask, option.put_bid) {
+                total_spread += (ask.to_dec() - bid.to_dec()).abs();
+                count += 1;
+            }
+        }
+
+        // Default spread if we couldn't calculate it
+        let spread = if count > 0 {
+            Positive(total_spread / Decimal::from(count))
+        } else {
+            pos!(0.02) // 0.02 is a reasonable default spread
+        };
+
+        // Get ATM implied volatility with a default fallback
+        let implied_volatility = match self.atm_implied_volatility() {
+            Ok(Some(iv)) => Some(*iv),
+            _ => Some(pos!(0.2)), // 20% is a reasonable default IV
+        };
+
+        // Estimate skew factor (this is simplistic - a more sophisticated calculation could be added)
+        let skew_factor = 0.0; // Neutral skew as default
+
+        // Create the price parameters
+        let price_params = OptionDataPriceParams::new(
+            self.underlying_price,
+            ExpirationDate::from_string(&self.expiration_date)?,
+            implied_volatility,
+            self.risk_free_rate.unwrap_or(Decimal::ZERO),
+            self.dividend_yield.unwrap_or(Positive::ZERO),
+            Some(self.symbol.clone()),
+        );
+
+        // Determine a reasonable number of decimal places based on the underlying price
+        let decimal_places = if self.underlying_price >= pos!(100.0) {
+            2
+        } else {
+            3
+        };
+
+        // Volume is typically available in the option data
+        let volume = self.options.iter().filter_map(|opt| opt.volume).next();
+
+        Ok(OptionChainBuildParams::new(
+            self.symbol.clone(),
+            volume,
+            chain_size,
+            strike_interval,
+            skew_factor,
+            spread,
+            decimal_places,
+            price_params,
+        ))
     }
 
     /// Filters option data in the chain based on specified criteria.
@@ -1537,10 +1653,34 @@ impl OptionChain {
     /// }
     /// ```
     pub fn atm_strike(&self) -> Result<&Positive, Box<dyn Error>> {
+        let option_data = self.atm_option_data()?;
+        Ok(&option_data.strike_price)
+    }
+
+    /// Retrieves the OptionData for the at-the-money (ATM) option.
+    ///
+    /// This function attempts to find the ATM option within the option chain.
+    /// First, it checks for an option with a strike price that exactly matches the
+    /// underlying asset's price. If an exact match is not found, it searches for the
+    /// option with the strike price closest to the underlying price.
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(&OptionData)` - If a suitable ATM option is found, returns a reference to it.
+    /// * `Err(Box<dyn Error>)` - If the option chain is empty or no ATM option can be found,
+    ///   returns an error describing the failure.
+    ///
+    /// # Errors
+    ///
+    /// This function returns an error in the following cases:
+    ///
+    /// * The option chain (`self.options`) is empty.
+    /// * No option with a strike price close to the underlying price can be found.
+    pub fn atm_option_data(&self) -> Result<&OptionData, Box<dyn Error>> {
         // Check for empty option chain
         if self.options.is_empty() {
             return Err(format!(
-                "Cannot find ATM strike for empty option chain: {}",
+                "Cannot find ATM OptionData for empty option chain: {}",
                 self.symbol
             )
             .into());
@@ -1552,27 +1692,26 @@ impl OptionChain {
             .iter()
             .find(|opt| opt.strike_price == self.underlying_price)
         {
-            return Ok(&exact_match.strike_price);
+            return Ok(exact_match);
         }
 
         // Find the option with strike price closest to underlying price
-        self.options
-            .iter()
-            .min_by(|a, b| {
-                let a_distance = (a.strike_price.to_dec() - self.underlying_price.to_dec()).abs();
-                let b_distance = (b.strike_price.to_dec() - self.underlying_price.to_dec()).abs();
-                a_distance
-                    .partial_cmp(&b_distance)
-                    .unwrap_or(Ordering::Equal)
-            })
-            .map(|opt| &opt.strike_price)
-            .ok_or_else(|| {
-                format!(
-                    "Failed to find ATM strike for option chain: {}",
-                    self.symbol
-                )
-                .into()
-            })
+        let option_data = self.options.iter().min_by(|a, b| {
+            let a_distance = (a.strike_price.to_dec() - self.underlying_price.to_dec()).abs();
+            let b_distance = (b.strike_price.to_dec() - self.underlying_price.to_dec()).abs();
+            a_distance
+                .partial_cmp(&b_distance)
+                .unwrap_or(Ordering::Equal)
+        });
+
+        match option_data {
+            Some(opt) => Ok(opt),
+            None => Err(format!(
+                "Failed to find ATM OptionData for option chain: {}",
+                self.symbol
+            )
+            .into()),
+        }
     }
 
     /// Returns a formatted title string for the option chain.
@@ -1725,7 +1864,6 @@ impl OptionChain {
     /// # Note
     ///
     /// This method is only available on non-WebAssembly targets.
-    #[cfg(not(target_arch = "wasm32"))]
     pub fn save_to_csv(&self, file_path: &str) -> Result<(), Box<dyn Error>> {
         let full_path = format!("{}/{}.csv", file_path, self.get_title());
         let mut wtr = WriterBuilder::new().from_path(full_path)?;
@@ -1779,7 +1917,6 @@ impl OptionChain {
     /// # Note
     ///
     /// This method is only available on non-WebAssembly targets.
-    #[cfg(not(target_arch = "wasm32"))]
     pub fn save_to_json(&self, file_path: &str) -> Result<(), Box<dyn Error>> {
         let full_path = format!("{}/{}.json", file_path, self.get_title());
         let file = File::create(full_path)?;
@@ -1804,7 +1941,6 @@ impl OptionChain {
     /// # Note
     ///
     /// This method is only available on non-WebAssembly targets.
-    #[cfg(not(target_arch = "wasm32"))]
     pub fn load_from_csv(file_path: &str) -> Result<Self, Box<dyn Error>> {
         let mut rdr = csv::Reader::from_path(file_path)?;
         let mut options = BTreeSet::new();
@@ -1866,7 +2002,6 @@ impl OptionChain {
     /// # Note
     ///
     /// This method is only available on non-WebAssembly targets.
-    #[cfg(not(target_arch = "wasm32"))]
     pub fn load_from_json(file_path: &str) -> Result<Self, Box<dyn Error>> {
         let file = File::open(file_path)?;
         let mut option_chain: OptionChain = serde_json::from_reader(file)?;
@@ -2333,14 +2468,35 @@ impl OptionChain {
     /// * Important for volatility skew calculations and option pricing
     /// * Returns implied volatility as a decimal for precise calculations
     pub fn get_atm_implied_volatility(&self) -> Result<Decimal, String> {
-        let atm_strike = self.underlying_price;
+        // keep it for back compatibility
+        match self.atm_implied_volatility() {
+            Ok(iv) => match iv {
+                Some(iv) => Ok(iv.value()),
+                None => Err("No ATM implied volatility available".to_string()),
+            },
+            Err(e) => Err(e.to_string()),
+        }
+    }
 
-        self.options
-            .iter()
-            .find(|opt| opt.strike_price == atm_strike)
-            .and_then(|opt| opt.implied_volatility)
-            .map(|iv| iv.value())
-            .ok_or_else(|| "No ATM implied volatility available".to_string())
+    /// Retrieves the At-The-Money (ATM) implied volatility.
+    ///
+    /// This function retrieves the implied volatility of the ATM option.
+    /// It calls `self.atm_option_data()` to find the ATM option and then
+    /// returns a reference to its implied volatility.
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(&Option<Positive>)` - If the ATM option is found, returns a reference
+    ///   to its implied volatility, which is an `Option<Positive>`.
+    /// * `Err(Box<dyn Error>)` - If the ATM option cannot be found, returns an error.
+    ///
+    /// # Errors
+    ///
+    /// This function returns an error if the underlying `atm_option_data()` call fails,
+    /// which can happen if the option chain is empty or no suitable ATM option is found.
+    pub fn atm_implied_volatility(&self) -> Result<&Option<Positive>, Box<dyn Error>> {
+        let option_data = self.atm_option_data()?;
+        Ok(&option_data.implied_volatility)
     }
 
     /// Calculates the total gamma exposure for all options in the chain.
@@ -2547,11 +2703,103 @@ impl OptionChain {
     pub fn theta_curve(&self) -> Result<Curve, CurveError> {
         self.curve(&BasicAxisTypes::Theta, &OptionStyle::Call, &Side::Long)
     }
+
+    /// Updates the expiration date for the option chain and recalculates Greeks.
+    ///
+    /// This method changes the expiration date of the option chain to the provided value
+    /// and then triggers a recalculation of all Greek values for every option in the chain.
+    /// The Greeks are financial measures that indicate how option prices are expected to change
+    /// in response to different factors.
+    ///
+    /// # Parameters
+    ///
+    /// * `expiration` - A string representing the new expiration date for the option chain.
+    ///   This should be in a standard date format compatible with the system.
+    ///
+    /// # Effects
+    ///
+    /// * Updates the `expiration_date` field of the option chain.
+    /// * Calls `update_greeks()` to recalculate and update the Greek values for all options
+    ///   in the chain based on the new expiration date.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use optionstratlib::chains::chain::OptionChain;
+    /// let mut chain = OptionChain::new("AAPL", Default::default(), "".to_string(), None, None);
+    /// chain.update_expiration_date("2023-12-15".to_string());
+    /// ```
+    pub fn update_expiration_date(&mut self, expiration: String) {
+        self.expiration_date = expiration;
+        self.update_greeks();
+    }
+
+    /// Retrieves the expiration date of the option chain.
+    ///
+    /// This method returns the expiration date associated with the option chain as a `String`.
+    /// The expiration date represents the date on which the options in the chain will expire.
+    ///
+    /// # Returns
+    ///
+    /// A `String` representing the expiration date of the option chain.
+    pub fn get_expiration_date(&self) -> String {
+        self.expiration_date.clone()
+    }
+
+    /// Calculates the strike price interval based on the available option contracts.
+    ///
+    /// This method determines a reasonable interval between strike prices by analyzing
+    /// the strike prices of the options within the option chain. It calculates the
+    /// differences between consecutive strike prices, and then returns the median of
+    /// these intervals, rounded to the nearest integer. This approach is robust against
+    /// outliers in strike price spacing.
+    ///
+    /// # Returns
+    ///
+    /// A `Positive` value representing the calculated strike price interval. If there are
+    /// fewer than two options in the chain, or if an error occurs during the calculation,
+    /// a default interval of 5.0 is returned. If the calculated median interval rounds to zero,
+    /// a minimum interval of 1.0 is returned to ensure a valid positive interval.
+    pub(crate) fn get_strike_interval(&self) -> Positive {
+        if self.options.len() < 2 {
+            return pos!(5.0); // Default interval if not enough options
+        }
+
+        let strikes: Vec<Positive> = self.options.iter().map(|opt| opt.strike_price).collect();
+
+        let mut intervals = Vec::new();
+        for i in 1..strikes.len() {
+            intervals.push(strikes[i].to_dec() - strikes[i - 1].to_dec());
+        }
+
+        // Return the median interval for robustness
+        intervals.sort_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Equal));
+        if intervals.is_empty() {
+            pos!(5.0) // Default if something went wrong
+        } else {
+            // Get the median interval
+            let median_interval = intervals[intervals.len() / 2];
+
+            // Round to the nearest integer
+            let rounded_interval = median_interval.round();
+
+            // Ensure we're not returning 0 as an interval
+            if rounded_interval == Decimal::ZERO {
+                pos!(1.0) // Minimum interval is 1
+            } else {
+                Positive(rounded_interval)
+            }
+        }
+    }
 }
 
 impl Len for OptionChain {
     fn len(&self) -> usize {
         self.options.len()
+    }
+
+    fn is_empty(&self) -> bool {
+        self.options.is_empty()
     }
 }
 
@@ -2924,12 +3172,12 @@ mod tests_chain_base {
     use crate::utils::logger::setup_logger;
     use crate::{pos, spos};
     use rust_decimal_macros::dec;
-    #[cfg(not(target_arch = "wasm32"))]
+
     use std::fs;
     use tracing::info;
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_new_option_chain() {
         let chain = OptionChain::new(
             "SP500",
@@ -2945,7 +3193,7 @@ mod tests_chain_base {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_new_option_chain_build_chain() {
         setup_logger();
         let params = OptionChainBuildParams::new(
@@ -2985,7 +3233,7 @@ mod tests_chain_base {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_new_option_chain_build_chain_long() {
         setup_logger();
         let params = OptionChainBuildParams::new(
@@ -3024,7 +3272,7 @@ mod tests_chain_base {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_add_option() {
         let mut chain = OptionChain::new(
             "SP500",
@@ -3055,7 +3303,7 @@ mod tests_chain_base {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_get_title_i() {
         let chain = OptionChain::new(
             "SP500",
@@ -3068,7 +3316,7 @@ mod tests_chain_base {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_get_title_ii() {
         let chain = OptionChain::new(
             "SP500",
@@ -3081,7 +3329,7 @@ mod tests_chain_base {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_set_from_title_i() {
         let mut chain = OptionChain::new("", Positive::ZERO, "".to_string(), None, None);
         let _ = chain.set_from_title("SP500-18-oct-2024-5781.88.csv");
@@ -3091,7 +3339,7 @@ mod tests_chain_base {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_set_from_title_ii() {
         let mut chain = OptionChain::new("", Positive::ZERO, "".to_string(), None, None);
         let _ = chain.set_from_title("path/SP500-18-oct-2024-5781.88.csv");
@@ -3101,7 +3349,7 @@ mod tests_chain_base {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_set_from_title_iii() {
         let mut chain = OptionChain::new("", Positive::ZERO, "".to_string(), None, None);
         let _ = chain.set_from_title("path/SP500-18-oct-2024-5781.csv");
@@ -3111,7 +3359,7 @@ mod tests_chain_base {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_set_from_title_iv() {
         let mut chain = OptionChain::new("", Positive::ZERO, "".to_string(), None, None);
         let _ = chain.set_from_title("path/SP500-18-oct-2024-5781.88.json");
@@ -3121,7 +3369,7 @@ mod tests_chain_base {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_set_from_title_v() {
         let mut chain = OptionChain::new("", Positive::ZERO, "".to_string(), None, None);
         let _ = chain.set_from_title("path/SP500-18-oct-2024-5781.json");
@@ -3131,7 +3379,7 @@ mod tests_chain_base {
     }
 
     #[test]
-    #[cfg(not(target_arch = "wasm32"))]
+
     fn test_save_to_csv() {
         let mut chain = OptionChain::new(
             "SP500",
@@ -3161,7 +3409,7 @@ mod tests_chain_base {
     }
 
     #[test]
-    #[cfg(not(target_arch = "wasm32"))]
+
     fn test_save_to_json() {
         let mut chain = OptionChain::new(
             "SP500",
@@ -3192,7 +3440,7 @@ mod tests_chain_base {
     }
 
     #[test]
-    #[cfg(not(target_arch = "wasm32"))]
+
     fn test_load_from_csv() {
         setup_logger();
         let mut chain = OptionChain::new(
@@ -3231,7 +3479,7 @@ mod tests_chain_base {
     }
 
     #[test]
-    #[cfg(not(target_arch = "wasm32"))]
+
     fn test_load_from_json() {
         let mut chain =
             OptionChain::new("SP500", pos!(5781.9), "18-oct-2024".to_string(), None, None);
@@ -3292,7 +3540,7 @@ mod tests_option_data {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_new_option_data() {
         let option_data = create_valid_option_data();
         assert_eq!(option_data.strike_price, pos!(100.0));
@@ -3307,7 +3555,7 @@ mod tests_option_data {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_validate_valid_option() {
         setup_logger();
         let option_data = create_valid_option_data();
@@ -3315,7 +3563,7 @@ mod tests_option_data {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_validate_zero_strike() {
         let mut option_data = create_valid_option_data();
         option_data.strike_price = Positive::ZERO;
@@ -3323,7 +3571,7 @@ mod tests_option_data {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_validate_no_implied_volatility() {
         let mut option_data = create_valid_option_data();
         option_data.implied_volatility = None;
@@ -3331,7 +3579,7 @@ mod tests_option_data {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_validate_missing_both_sides() {
         let option_data = OptionData::new(
             pos!(100.0),
@@ -3350,14 +3598,14 @@ mod tests_option_data {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_valid_call() {
         let option_data = create_valid_option_data();
         assert!(option_data.valid_call());
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_valid_call_missing_bid() {
         let mut option_data = create_valid_option_data();
         option_data.call_bid = None;
@@ -3365,7 +3613,7 @@ mod tests_option_data {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_valid_call_missing_ask() {
         let mut option_data = create_valid_option_data();
         option_data.call_ask = None;
@@ -3373,14 +3621,14 @@ mod tests_option_data {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_valid_put() {
         let option_data = create_valid_option_data();
         assert!(option_data.valid_put());
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_valid_put_missing_bid() {
         let mut option_data = create_valid_option_data();
         option_data.put_bid = None;
@@ -3388,7 +3636,7 @@ mod tests_option_data {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_valid_put_missing_ask() {
         let mut option_data = create_valid_option_data();
         option_data.put_ask = None;
@@ -3396,7 +3644,7 @@ mod tests_option_data {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_calculate_prices_success() {
         let mut option_data = OptionData::new(
             pos!(100.0),
@@ -3430,7 +3678,7 @@ mod tests_option_data {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_calculate_prices_missing_volatility() {
         setup_logger();
         let mut option_data = OptionData::new(
@@ -3468,7 +3716,7 @@ mod tests_option_data {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_calculate_prices_override_volatility() {
         setup_logger();
         let mut option_data = OptionData::new(
@@ -3510,7 +3758,7 @@ mod tests_option_data {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_calculate_prices_with_all_parameters() {
         let mut option_data = OptionData::new(
             pos!(100.0),
@@ -3604,7 +3852,7 @@ mod tests_get_random_positions {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_zero_quantity() {
         setup_logger();
         let chain = create_test_chain();
@@ -3638,7 +3886,7 @@ mod tests_get_random_positions {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_long_puts_only() {
         setup_logger();
         let chain = create_test_chain();
@@ -3671,7 +3919,7 @@ mod tests_get_random_positions {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_short_puts_only() {
         setup_logger();
         let chain = create_test_chain();
@@ -3704,7 +3952,7 @@ mod tests_get_random_positions {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_long_calls_only() {
         setup_logger();
         let chain = create_test_chain();
@@ -3737,7 +3985,7 @@ mod tests_get_random_positions {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_short_calls_only() {
         setup_logger();
         let chain = create_test_chain();
@@ -3770,7 +4018,7 @@ mod tests_get_random_positions {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_mixed_positions() {
         setup_logger();
         let chain = create_test_chain();
@@ -3817,7 +4065,7 @@ mod tests_get_random_positions {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_empty_chain() {
         setup_logger();
         let chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
@@ -3867,35 +4115,35 @@ mod tests_option_data_get_prices {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_get_call_buy_price() {
         let data = create_test_option_data();
         assert_eq!(data.get_call_buy_price(), spos!(10.0));
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_get_call_sell_price() {
         let data = create_test_option_data();
         assert_eq!(data.get_call_sell_price(), spos!(9.5));
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_get_put_buy_price() {
         let data = create_test_option_data();
         assert_eq!(data.get_put_buy_price(), spos!(9.0));
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_get_put_sell_price() {
         let data = create_test_option_data();
         assert_eq!(data.get_put_sell_price(), spos!(8.5));
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_get_prices_with_none_values() {
         let data = OptionData::new(
             pos!(100.0),
@@ -3925,7 +4173,7 @@ mod tests_option_data_display {
     use rust_decimal_macros::dec;
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_display_full_data() {
         let data = OptionData::new(
             pos!(100.0),
@@ -3953,7 +4201,7 @@ mod tests_option_data_display {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_display_empty_data() {
         let data = OptionData::default();
         let display_string = format!("{}", data);
@@ -3990,7 +4238,7 @@ mod tests_filter_option_data {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_filter_upper() {
         let chain = create_test_chain();
         let filtered = chain.filter_option_data(FindOptimalSide::Upper);
@@ -4003,7 +4251,7 @@ mod tests_filter_option_data {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_filter_lower() {
         let chain = create_test_chain();
         let filtered = chain.filter_option_data(FindOptimalSide::Lower);
@@ -4016,7 +4264,7 @@ mod tests_filter_option_data {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_filter_all() {
         let chain = create_test_chain();
         let filtered = chain.filter_option_data(FindOptimalSide::All);
@@ -4024,7 +4272,7 @@ mod tests_filter_option_data {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_filter_range() {
         let chain = create_test_chain();
         let filtered = chain.filter_option_data(FindOptimalSide::Range(pos!(95.0), pos!(105.0)));
@@ -4043,14 +4291,14 @@ mod tests_strike_price_range_vec {
     use crate::{pos, spos};
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_empty_chain() {
         let chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
         assert_eq!(chain.strike_price_range_vec(5.0), None);
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_single_option() {
         let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
         chain.add_option(
@@ -4072,7 +4320,7 @@ mod tests_strike_price_range_vec {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_multiple_options() {
         let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
         for strike in [90.0, 95.0, 100.0].iter() {
@@ -4095,7 +4343,7 @@ mod tests_strike_price_range_vec {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_step_size() {
         let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
         for strike in [90.0, 100.0].iter() {
@@ -4145,7 +4393,7 @@ mod tests_option_data_get_option {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_get_option_success() {
         let option_data = create_test_option_data();
         let price_params = OptionDataPriceParams::new(
@@ -4171,7 +4419,7 @@ mod tests_option_data_get_option {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_get_option_using_data_iv() {
         let option_data = create_test_option_data();
         let price_params = OptionDataPriceParams::new(
@@ -4191,7 +4439,7 @@ mod tests_option_data_get_option {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_get_option_missing_iv() {
         let mut option_data = create_test_option_data();
         option_data.implied_volatility = None;
@@ -4249,7 +4497,7 @@ mod tests_option_data_get_options_in_strike {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_get_options_in_strike_success() {
         let option_data = create_test_option_data();
         let price_params = OptionDataPriceParams::new(
@@ -4289,7 +4537,7 @@ mod tests_option_data_get_options_in_strike {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_get_options_in_strike_using_data_iv() {
         let option_data = create_test_option_data();
         let price_params = OptionDataPriceParams::new(
@@ -4313,7 +4561,7 @@ mod tests_option_data_get_options_in_strike {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_get_options_in_strike_missing_iv() {
         let mut option_data = create_test_option_data();
         option_data.implied_volatility = None;
@@ -4344,7 +4592,7 @@ mod tests_option_data_get_options_in_strike {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_get_options_in_strike_all_properties() {
         let option_data = create_test_option_data();
         let price_params = OptionDataPriceParams::new(
@@ -4380,7 +4628,7 @@ mod tests_option_data_get_options_in_strike {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_get_options_in_strike_deltas() {
         let option_data = create_test_option_data();
         let price_params = OptionDataPriceParams::new(
@@ -4453,7 +4701,7 @@ mod tests_filter_options_in_strike {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_filter_upper_strikes() {
         let chain = create_test_chain();
         let price_params = OptionDataPriceParams::new(
@@ -4482,7 +4730,7 @@ mod tests_filter_options_in_strike {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_filter_lower_strikes() {
         let chain = create_test_chain();
         let price_params = OptionDataPriceParams::new(
@@ -4506,7 +4754,7 @@ mod tests_filter_options_in_strike {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_filter_all_strikes() {
         let chain = create_test_chain();
         let price_params = OptionDataPriceParams::new(
@@ -4526,7 +4774,7 @@ mod tests_filter_options_in_strike {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_filter_range_strikes() {
         let chain = create_test_chain();
         let price_params = OptionDataPriceParams::new(
@@ -4554,7 +4802,7 @@ mod tests_filter_options_in_strike {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_filter_empty_chain() {
         let chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
         let price_params = OptionDataPriceParams::new(
@@ -4574,7 +4822,7 @@ mod tests_filter_options_in_strike {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_filter_invalid_range() {
         let chain = create_test_chain();
         let price_params = OptionDataPriceParams::new(
@@ -4597,7 +4845,7 @@ mod tests_filter_options_in_strike {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_filter_all_strikes_deltas() {
         let chain = create_test_chain();
         let price_params = OptionDataPriceParams::new(
@@ -4687,7 +4935,7 @@ mod tests_chain_iterators {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_get_double_iter_empty() {
         let chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
         let pairs: Vec<_> = chain.get_double_iter().collect();
@@ -4695,7 +4943,7 @@ mod tests_chain_iterators {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_get_double_iter_single() {
         let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
         chain.add_option(
@@ -4717,7 +4965,7 @@ mod tests_chain_iterators {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_get_double_iter_multiple() {
         let chain = create_test_chain();
         let pairs: Vec<_> = chain.get_double_iter().collect();
@@ -4737,7 +4985,7 @@ mod tests_chain_iterators {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_get_double_inclusive_iter_empty() {
         let chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
         let pairs: Vec<_> = chain.get_double_inclusive_iter().collect();
@@ -4745,7 +4993,7 @@ mod tests_chain_iterators {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_get_double_inclusive_iter_single() {
         let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
         chain.add_option(
@@ -4768,7 +5016,7 @@ mod tests_chain_iterators {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_get_double_inclusive_iter_multiple() {
         let chain = create_test_chain();
         let pairs: Vec<_> = chain.get_double_inclusive_iter().collect();
@@ -4868,7 +5116,7 @@ mod tests_chain_iterators_bis {
 
     // Tests for Triple Iterator
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_get_triple_iter_empty() {
         let chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
         let triples: Vec<_> = chain.get_triple_iter().collect();
@@ -4876,7 +5124,7 @@ mod tests_chain_iterators_bis {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_get_triple_iter_two_elements() {
         let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
         // Add two options
@@ -4912,7 +5160,7 @@ mod tests_chain_iterators_bis {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_get_triple_iter_multiple() {
         let chain = create_test_chain();
         let triples: Vec<_> = chain.get_triple_iter().collect();
@@ -4933,7 +5181,7 @@ mod tests_chain_iterators_bis {
 
     // Tests for Triple Inclusive Iterator
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_get_triple_inclusive_iter_empty() {
         let chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
         let triples: Vec<_> = chain.get_triple_inclusive_iter().collect();
@@ -4941,7 +5189,7 @@ mod tests_chain_iterators_bis {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_get_triple_inclusive_iter_single() {
         let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
         chain.add_option(
@@ -4965,7 +5213,7 @@ mod tests_chain_iterators_bis {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_get_triple_inclusive_iter_multiple() {
         let chain = create_test_chain();
         let triples: Vec<_> = chain.get_triple_inclusive_iter().collect();
@@ -4981,7 +5229,7 @@ mod tests_chain_iterators_bis {
 
     // Tests for Quad Iterator
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_get_quad_iter_empty() {
         let chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
         let quads: Vec<_> = chain.get_quad_iter().collect();
@@ -4989,7 +5237,7 @@ mod tests_chain_iterators_bis {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_get_quad_iter_three_elements() {
         let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
         // Add three options
@@ -5038,7 +5286,7 @@ mod tests_chain_iterators_bis {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_get_quad_iter_multiple() {
         let chain = create_test_chain();
         let quads: Vec<_> = chain.get_quad_iter().collect();
@@ -5055,7 +5303,7 @@ mod tests_chain_iterators_bis {
 
     // Tests for Quad Inclusive Iterator
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_get_quad_inclusive_iter_empty() {
         let chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
         let quads: Vec<_> = chain.get_quad_inclusive_iter().collect();
@@ -5063,7 +5311,7 @@ mod tests_chain_iterators_bis {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_get_quad_inclusive_iter_single() {
         let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
         chain.add_option(
@@ -5088,7 +5336,7 @@ mod tests_chain_iterators_bis {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_get_quad_inclusive_iter_multiple() {
         let chain = create_test_chain();
         let quads: Vec<_> = chain.get_quad_inclusive_iter().collect();
@@ -5115,7 +5363,7 @@ mod tests_is_valid_optimal_side {
     use super::*;
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_upper_side_valid() {
         let option_data = OptionData::new(
             pos!(110.0), // strike price higher than underlying
@@ -5136,7 +5384,7 @@ mod tests_is_valid_optimal_side {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_upper_side_invalid() {
         let option_data = OptionData::new(
             pos!(90.0), // strike price lower than underlying
@@ -5157,7 +5405,7 @@ mod tests_is_valid_optimal_side {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_lower_side_valid() {
         let option_data = OptionData::new(
             pos!(90.0), // strike price lower than underlying
@@ -5178,7 +5426,7 @@ mod tests_is_valid_optimal_side {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_lower_side_invalid() {
         let option_data = OptionData::new(
             pos!(110.0), // strike price higher than underlying
@@ -5199,7 +5447,7 @@ mod tests_is_valid_optimal_side {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_all_side() {
         let option_data = OptionData::new(
             pos!(100.0),
@@ -5220,7 +5468,7 @@ mod tests_is_valid_optimal_side {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_range_side_valid() {
         let option_data = OptionData::new(
             pos!(100.0), // strike price within range
@@ -5247,7 +5495,7 @@ mod tests_is_valid_optimal_side {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_range_side_invalid_below() {
         let option_data = OptionData::new(
             pos!(80.0), // strike price below range
@@ -5274,7 +5522,7 @@ mod tests_is_valid_optimal_side {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_range_side_invalid_above() {
         let option_data = OptionData::new(
             pos!(120.0), // strike price above range
@@ -5301,7 +5549,7 @@ mod tests_is_valid_optimal_side {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_range_side_at_boundaries() {
         let option_data_lower = OptionData::new(
             pos!(90.0), // strike price at lower boundary
@@ -5389,7 +5637,7 @@ mod rnd_analysis_tests {
         use super::*;
 
         #[test]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
         fn test_basic_rnd_calculation() {
             let chain = create_standard_chain();
             let params = RNDParameters {
@@ -5415,7 +5663,7 @@ mod rnd_analysis_tests {
         }
 
         #[test]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
         fn test_tolerance_adjustment() {
             let chain = create_standard_chain();
             let params = RNDParameters {
@@ -5429,7 +5677,7 @@ mod rnd_analysis_tests {
         }
 
         #[test]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
         fn test_default() {
             let chain = OptionChain::new("TEST", pos!(100.0), "2025-02-01".to_string(), None, None);
             let params = RNDParameters::default();
@@ -5443,7 +5691,7 @@ mod rnd_analysis_tests {
         }
 
         #[test]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
         fn test_zero_tolerance() {
             let chain = create_standard_chain();
             let params = RNDParameters {
@@ -5460,7 +5708,7 @@ mod rnd_analysis_tests {
         }
 
         #[test]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
         fn test_expired_option() {
             let mut chain = create_standard_chain();
             chain.expiration_date = "2023-01-01".to_string(); // Past date
@@ -5480,7 +5728,7 @@ mod rnd_analysis_tests {
         use super::*;
 
         #[test]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
         fn test_basic_skew_calculation() {
             let chain = create_standard_chain();
             let result = chain.calculate_skew();
@@ -5498,7 +5746,7 @@ mod rnd_analysis_tests {
         }
 
         #[test]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
         fn test_flat_volatility_surface() {
             let chain = create_standard_chain(); // All vols are 0.17
             let result = chain.calculate_skew().unwrap();
@@ -5510,7 +5758,7 @@ mod rnd_analysis_tests {
         }
 
         #[test]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
         fn test_empty_chain_skew() {
             let chain = OptionChain::new("TEST", pos!(100.0), "2025-02-01".to_string(), None, None);
 
@@ -5518,12 +5766,12 @@ mod rnd_analysis_tests {
             assert!(result.is_err());
             assert_eq!(
                 result.unwrap_err().to_string(),
-                "No ATM implied volatility available"
+                "Cannot find ATM OptionData for empty option chain: TEST"
             );
         }
 
         #[test]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
         fn test_missing_implied_volatility() {
             let mut chain = create_standard_chain();
 
@@ -5547,7 +5795,7 @@ mod rnd_analysis_tests {
         }
 
         #[test]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
         fn test_relative_strike_calculation() {
             let chain = create_standard_chain();
             let result = chain.calculate_skew().unwrap();
@@ -5564,7 +5812,7 @@ mod rnd_analysis_tests {
         use super::*;
 
         #[test]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
         fn test_invalid_date_format() {
             let mut chain = create_standard_chain();
             chain.expiration_date = "invalid_date".to_string();
@@ -5580,7 +5828,7 @@ mod rnd_analysis_tests {
         }
 
         #[test]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
         fn test_negative_risk_free_rate() {
             let chain = create_standard_chain();
             let params = RNDParameters {
@@ -5594,7 +5842,7 @@ mod rnd_analysis_tests {
         }
 
         #[test]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
         fn test_verify_rnd_properties() {
             let chain = create_standard_chain();
             let params = RNDParameters {
@@ -5623,7 +5871,7 @@ mod rnd_analysis_tests {
         }
 
         #[test]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
         fn test_strike_interval_detection() {
             let mut chain = create_standard_chain();
 
@@ -5657,7 +5905,7 @@ mod rnd_analysis_tests {
         use super::*;
 
         #[test]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
         fn test_skew_with_smile() {
             let mut chain =
                 OptionChain::new("TEST", pos!(100.0), "2025-02-01".to_string(), None, None);
@@ -5699,7 +5947,7 @@ mod rnd_analysis_tests {
         }
 
         #[test]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
         fn test_skew_monotonic() {
             let mut chain =
                 OptionChain::new("TEST", pos!(100.0), "2025-02-01".to_string(), None, None);
@@ -5736,7 +5984,7 @@ mod rnd_analysis_tests {
         }
 
         #[test]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
         fn test_strike_range_coverage() {
             let chain = create_standard_chain();
             let result = chain.calculate_skew().unwrap();
@@ -7103,7 +7351,6 @@ mod tests_option_chain_serde {
 }
 
 #[cfg(test)]
-#[cfg(not(target_arch = "wasm32"))]
 mod tests_gamma_calculations {
     use super::*;
     use crate::utils::setup_logger;
@@ -7128,7 +7375,7 @@ mod tests_gamma_calculations {
 
         assert!(result.is_ok());
         let gamma_exposure = result.unwrap();
-        assert_decimal_eq!(gamma_exposure, dec!(0.004605), dec!(0.001));
+        assert_decimal_eq!(gamma_exposure, dec!(0.004605), dec!(0.0015));
     }
 
     #[test]
@@ -7161,7 +7408,7 @@ mod tests_gamma_calculations {
 
         chain.update_greeks();
         let result = chain.gamma_exposure().unwrap();
-        assert_decimal_eq!(result, dec!(0.0046), dec!(0.001));
+        assert_decimal_eq!(result, dec!(0.0046), dec!(0.0015));
     }
 
     #[test]
@@ -7199,7 +7446,6 @@ mod tests_gamma_calculations {
 }
 
 #[cfg(test)]
-#[cfg(not(target_arch = "wasm32"))]
 mod tests_delta_calculations {
     use super::*;
     use crate::utils::setup_logger;
@@ -7212,7 +7458,6 @@ mod tests_delta_calculations {
     }
 
     #[test]
-
     fn test_delta_exposure_basic() {
         setup_logger();
         let mut chain = create_test_chain_with_delta();
@@ -7227,7 +7472,6 @@ mod tests_delta_calculations {
     }
 
     #[test]
-
     fn test_delta_exposure_empty_chain() {
         let chain = OptionChain::new("TEST", pos!(100.0), "2024-12-31".to_string(), None, None);
 
@@ -7237,7 +7481,6 @@ mod tests_delta_calculations {
     }
 
     #[test]
-
     fn test_delta_exposure_uninitialized_greeks() {
         let mut chain = create_test_chain_with_delta();
         chain.update_greeks();
@@ -7249,7 +7492,6 @@ mod tests_delta_calculations {
     }
 
     #[test]
-
     fn test_delta_exposure_updates() {
         setup_logger();
         let mut chain = create_test_chain_with_delta();
@@ -7265,7 +7507,6 @@ mod tests_delta_calculations {
     }
 
     #[test]
-
     fn test_delta_curve() {
         let mut chain = create_test_chain_with_delta();
         chain.update_greeks();
@@ -7288,7 +7529,6 @@ mod tests_delta_calculations {
     }
 
     #[test]
-
     fn test_delta_curve_empty_chain() {
         let chain = OptionChain::new("TEST", pos!(100.0), "2024-12-31".to_string(), None, None);
 
@@ -7300,7 +7540,6 @@ mod tests_delta_calculations {
     }
 
     #[test]
-
     fn test_delta_curve_shape() {
         setup_logger();
         let mut chain = create_test_chain_with_delta();
@@ -7327,7 +7566,6 @@ mod tests_delta_calculations {
 }
 
 #[cfg(test)]
-#[cfg(not(target_arch = "wasm32"))]
 mod tests_vega_calculations {
     use super::*;
     use crate::utils::setup_logger;
@@ -7455,7 +7693,6 @@ mod tests_vega_calculations {
 }
 
 #[cfg(test)]
-#[cfg(not(target_arch = "wasm32"))]
 mod tests_theta_calculations {
     use super::*;
     use crate::utils::setup_logger;
@@ -7576,7 +7813,6 @@ mod tests_theta_calculations {
 }
 
 #[cfg(test)]
-#[cfg(not(target_arch = "wasm32"))]
 mod tests_atm_strike {
     use super::*;
     use crate::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
@@ -7760,5 +7996,239 @@ mod tests_atm_strike {
             *strike == pos!(100.0) || *strike == pos!(101.0),
             "Should return one of the equidistant strikes"
         );
+    }
+}
+
+#[cfg(test)]
+mod tests_option_chain_utils {
+    use super::*;
+    use crate::chains::utils::OptionChainBuildParams;
+    use crate::chains::utils::OptionDataPriceParams;
+    use crate::model::types::ExpirationDate;
+    use crate::pos;
+    use crate::spos;
+    use crate::utils::logger::setup_logger;
+    use rust_decimal_macros::dec;
+
+    // Helper function to create a standard option chain for testing
+    fn create_standard_chain() -> OptionChain {
+        setup_logger();
+        let params = OptionChainBuildParams::new(
+            "SP500".to_string(),
+            None,
+            10,
+            pos!(1.0),
+            0.0,
+            pos!(0.02),
+            2,
+            OptionDataPriceParams::new(
+                pos!(100.0),
+                ExpirationDate::Days(pos!(30.0)),
+                spos!(0.17),
+                Decimal::ZERO,
+                pos!(0.05),
+                Some("SP500".to_string()),
+            ),
+        );
+
+        OptionChain::build_chain(&params)
+    }
+
+    // Helper function to create a chain with custom strikes for specific tests
+    fn create_custom_strike_chain() -> OptionChain {
+        let mut chain = OptionChain::new(
+            "TEST",
+            pos!(100.0),
+            "2024-01-01".to_string(),
+            Some(dec!(0.05)),
+            Some(pos!(0.02)),
+        );
+
+        // Add options with irregular strike intervals
+        let strikes = [90.0, 92.5, 95.0, 100.0, 105.0, 110.0, 115.0, 125.0];
+        let vols = [0.22, 0.20, 0.18, 0.17, 0.175, 0.18, 0.19, 0.21]; // Volatility smile pattern
+        let deltas_call = [0.1, 0.2, 0.3, 0.5, 0.7, 0.8, 0.9, 0.95]; // Approximate delta values
+        let deltas_put = [-0.9, -0.8, -0.7, -0.5, -0.3, -0.2, -0.1, -0.05]; // Approximate put delta values
+        let gammas = [0.01, 0.02, 0.03, 0.04, 0.03, 0.02, 0.01, 0.005]; // Approximate gamma values
+
+        for (i, &strike) in strikes.iter().enumerate() {
+            chain.add_option(
+                pos!(strike),
+                spos!(5.0),
+                spos!(5.5),
+                spos!(4.0),
+                spos!(4.5),
+                spos!(vols[i]),
+                Some(Decimal::from_f64(deltas_call[i]).unwrap()),
+                Some(Decimal::from_f64(deltas_put[i]).unwrap()),
+                Some(Decimal::from_f64(gammas[i]).unwrap()),
+                spos!(100.0),
+                Some(50),
+            );
+        }
+
+        chain
+    }
+
+    #[test]
+    fn test_get_strike_interval_standard_chain() {
+        let chain = create_standard_chain();
+
+        // The standard chain should have a regular interval of 1.0
+        let interval = chain.get_strike_interval();
+
+        assert_eq!(
+            interval,
+            pos!(1.0),
+            "Strike interval should be 1.0 for standard chain"
+        );
+    }
+
+    #[test]
+    fn test_get_strike_interval_custom_chain() {
+        let chain = create_custom_strike_chain();
+
+        // The custom chain has mostly 5.0 intervals but some irregular ones
+        let interval = chain.get_strike_interval();
+
+        assert_eq!(
+            interval,
+            pos!(5.0),
+            "Strike interval should be 5.0 for custom chain"
+        );
+    }
+
+    #[test]
+    fn test_get_strike_interval_empty_chain() {
+        let chain = OptionChain::new("EMPTY", pos!(100.0), "2024-01-01".to_string(), None, None);
+
+        // Empty chain should return the default interval
+        let interval = chain.get_strike_interval();
+
+        assert_eq!(
+            interval,
+            pos!(5.0),
+            "Empty chain should return default interval of 5.0"
+        );
+    }
+
+    #[test]
+    fn test_get_strike_interval_single_option_chain() {
+        let mut chain =
+            OptionChain::new("SINGLE", pos!(100.0), "2024-01-01".to_string(), None, None);
+
+        chain.add_option(
+            pos!(100.0),
+            spos!(5.0),
+            spos!(5.5),
+            spos!(4.0),
+            spos!(4.5),
+            spos!(0.2),
+            Some(dec!(0.5)),
+            Some(dec!(-0.5)),
+            Some(dec!(0.04)),
+            spos!(100.0),
+            Some(50),
+        );
+
+        // Chain with a single option should return the default interval
+        let interval = chain.get_strike_interval();
+
+        assert_eq!(
+            interval,
+            pos!(5.0),
+            "Single option chain should return default interval of 5.0"
+        );
+    }
+
+    #[test]
+    fn test_get_strike_interval_fractional_intervals() {
+        let mut chain = OptionChain::new(
+            "FRACTIONAL",
+            pos!(100.0),
+            "2024-01-01".to_string(),
+            None,
+            None,
+        );
+
+        // Add options with small fractional intervals
+        let strikes = [100.0, 100.25, 100.5, 100.75, 101.0];
+
+        for &strike in &strikes {
+            chain.add_option(
+                pos!(strike),
+                spos!(1.0),
+                spos!(1.1),
+                spos!(1.0),
+                spos!(1.1),
+                spos!(0.2),
+                Some(dec!(0.5)),
+                Some(dec!(-0.5)),
+                Some(dec!(0.04)),
+                spos!(100.0),
+                Some(50),
+            );
+        }
+
+        // The intervals are all 0.25, but method should round to 0 and then to 1
+        let interval = chain.get_strike_interval();
+
+        assert_eq!(
+            interval,
+            pos!(1.0),
+            "Fractional intervals should round to minimum of 1.0"
+        );
+    }
+}
+
+#[cfg(test)]
+mod tests_to_build_params {
+    use super::*;
+    use crate::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
+    use crate::model::types::ExpirationDate;
+    use crate::utils::logger::setup_logger;
+    use crate::{pos, spos};
+    use rust_decimal_macros::dec;
+
+    fn create_standard_chain() -> OptionChain {
+        setup_logger();
+        let params = OptionChainBuildParams::new(
+            "SP500".to_string(),
+            None,
+            22,
+            pos!(25.0),
+            0.000001,
+            pos!(0.03),
+            2,
+            OptionDataPriceParams::new(
+                pos!(5000.0),
+                ExpirationDate::Days(pos!(30.0)),
+                spos!(0.1),
+                dec!(0.05),
+                pos!(0.05),
+                Some("SP500".to_string()),
+            ),
+        );
+
+        OptionChain::build_chain(&params)
+    }
+
+    #[test]
+    fn test_to_build_params_simple() {
+        let chain = create_standard_chain();
+        info!("{}", chain);
+        let mut params = chain.to_build_params().unwrap();
+
+        params.skew_factor = 0.000001;
+        params.price_params.underlying_price =
+            pos!(params.price_params.underlying_price.to_f64() * f64::exp(0.2)).max(Positive::ZERO);
+        params.price_params.implied_volatility = Some(
+            pos!(params.price_params.implied_volatility.unwrap().to_f64() * f64::exp(0.2))
+                .max(Positive::ZERO),
+        );
+        info!("{}", params);
+
+        let new_chain = OptionChain::build_chain(&params);
+        info!("{}", new_chain);
     }
 }

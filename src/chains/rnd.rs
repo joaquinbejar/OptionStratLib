@@ -449,7 +449,6 @@ mod tests {
         use super::*;
 
         #[test]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
         fn test_default_parameters() {
             let params = RNDParameters::default();
             assert_eq!(params.risk_free_rate, Decimal::ZERO);
@@ -458,7 +457,6 @@ mod tests {
         }
 
         #[test]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
         fn test_custom_parameters() {
             let params = RNDParameters {
                 risk_free_rate: dec!(0.05),
@@ -484,7 +482,6 @@ mod tests {
         }
 
         #[test]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
         fn test_calculate_mean_normal_case() {
             let densities = create_test_densities();
             let stats = RNDStatistics::new(&densities);
@@ -492,7 +489,6 @@ mod tests {
         }
 
         #[test]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
         fn test_calculate_mean_empty_densities() {
             let densities = BTreeMap::new();
             let stats = RNDStatistics::new(&densities);
@@ -500,7 +496,6 @@ mod tests {
         }
 
         #[test]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
         fn test_calculate_variance_normal_case() {
             let densities = create_test_densities();
             let stats = RNDStatistics::new(&densities);
@@ -508,7 +503,6 @@ mod tests {
         }
 
         #[test]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
         fn test_calculate_variance_empty_densities() {
             let densities = BTreeMap::new();
             let stats = RNDStatistics::new(&densities);
@@ -516,7 +510,6 @@ mod tests {
         }
 
         #[test]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
         fn test_calculate_skewness_normal_case() {
             let densities = create_test_densities();
             let stats = RNDStatistics::new(&densities);
@@ -525,7 +518,6 @@ mod tests {
         }
 
         #[test]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
         fn test_calculate_skewness_empty_densities() {
             let densities = BTreeMap::new();
             let stats = RNDStatistics::new(&densities);
@@ -533,7 +525,6 @@ mod tests {
         }
 
         #[test]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
         fn test_calculate_kurtosis_normal_case() {
             let densities = create_test_densities();
             let stats = RNDStatistics::new(&densities);
@@ -542,7 +533,7 @@ mod tests {
         }
 
         #[test]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
         fn test_calculate_kurtosis_empty_densities() {
             let densities = BTreeMap::new();
             let stats = RNDStatistics::new(&densities);
@@ -550,7 +541,7 @@ mod tests {
         }
 
         #[test]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
         fn test_calculate_volatility_normal_case() {
             let densities = create_test_densities();
             let stats = RNDStatistics::new(&densities);
@@ -559,7 +550,7 @@ mod tests {
         }
 
         #[test]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
         fn test_calculate_volatility_empty_densities() {
             let densities = BTreeMap::new();
             let stats = RNDStatistics::new(&densities);
@@ -571,7 +562,7 @@ mod tests {
         use super::*;
 
         #[test]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
         fn test_calculate_rnd_normal_case() {
             let chain = create_test_option_chain();
             let params = RNDParameters {
@@ -590,7 +581,7 @@ mod tests {
         }
 
         #[test]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
         fn test_calculate_rnd_empty_chain() {
             let chain = create_empty_chain();
             let params = RNDParameters::default();
@@ -604,7 +595,7 @@ mod tests {
         }
 
         #[test]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
         fn test_calculate_rnd_zero_tolerance() {
             let chain = create_test_option_chain();
             let params = RNDParameters {
@@ -621,7 +612,7 @@ mod tests {
         }
 
         #[test]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
         fn test_calculate_rnd_high_risk_free_rate() {
             let chain = create_test_option_chain();
             let params = RNDParameters {
@@ -644,7 +635,7 @@ mod tests {
         use super::*;
 
         #[test]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
         fn test_calculate_skew_normal_case() {
             let chain = create_test_option_chain();
             let result = chain.calculate_skew();
@@ -660,7 +651,7 @@ mod tests {
         }
 
         #[test]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
         fn test_calculate_skew_empty_chain() {
             let chain = create_empty_chain();
             let result = chain.calculate_skew();
@@ -668,12 +659,12 @@ mod tests {
             assert!(result.is_err());
             assert_eq!(
                 result.unwrap_err().to_string(),
-                "No ATM implied volatility available"
+                "Cannot find ATM OptionData for empty option chain: TEST"
             );
         }
 
         #[test]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
         fn test_calculate_skew_missing_implied_volatility() {
             let mut chain = create_test_option_chain();
             // Add an option without implied volatility
@@ -700,7 +691,7 @@ mod tests {
         use super::*;
 
         #[test]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
         fn test_get_call_price() {
             let chain = create_test_option_chain();
 
@@ -714,7 +705,7 @@ mod tests {
         }
 
         #[test]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
         fn test_get_atm_implied_volatility() {
             let chain = create_test_option_chain();
 
@@ -733,7 +724,7 @@ mod tests {
         use super::*;
 
         #[test]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
         fn test_full_rnd_workflow() {
             let chain = create_test_option_chain();
             let params = RNDParameters {
@@ -754,7 +745,7 @@ mod tests {
         }
 
         #[test]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
         fn test_extreme_market_conditions() {
             let mut chain =
                 OptionChain::new("TEST", pos!(100.0), "2024-12-31".to_string(), None, None);
@@ -813,7 +804,7 @@ mod additional_tests {
         use crate::{assert_decimal_eq, pos};
 
         #[test]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
         fn test_asymmetric_distribution() {
             let mut densities = BTreeMap::new();
             densities.insert(pos!(90.0), dec!(0.1));
@@ -825,7 +816,7 @@ mod additional_tests {
         }
 
         #[test]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
         fn test_extreme_values_distribution() {
             let mut densities = BTreeMap::new();
             densities.insert(pos!(50.0), dec!(0.01));
@@ -838,7 +829,7 @@ mod additional_tests {
         }
 
         #[test]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
         fn test_uniform_distribution() {
             let mut densities = BTreeMap::new();
 
@@ -854,7 +845,7 @@ mod additional_tests {
         }
 
         #[test]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
         fn test_bimodal_distribution() {
             let mut densities = BTreeMap::new();
 
@@ -944,7 +935,7 @@ mod additional_tests {
         }
 
         #[test]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
         fn test_calculate_rnd_wide_spread() {
             let chain = create_wide_spread_chain();
             let params = RNDParameters {
@@ -962,7 +953,7 @@ mod additional_tests {
         }
 
         #[test]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
         fn test_calculate_rnd_high_volatility() {
             let chain = create_high_vol_chain();
             let params = RNDParameters {
@@ -980,7 +971,7 @@ mod additional_tests {
         }
 
         #[test]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
         fn test_calculate_rnd_different_tolerances() {
             let chain = create_test_option_chain();
 
@@ -1009,7 +1000,7 @@ mod additional_tests {
         use crate::{pos, spos};
 
         #[test]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
         fn test_numerical_stability_small_values() {
             let mut chain =
                 OptionChain::new("TEST", pos!(1.0), "2024-12-31".to_string(), None, None);
@@ -1039,7 +1030,7 @@ mod additional_tests {
         }
 
         #[test]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
         fn test_numerical_stability_large_values() {
             let mut chain =
                 OptionChain::new("TEST", pos!(10000.0), "2024-12-31".to_string(), None, None);
@@ -1082,7 +1073,7 @@ mod statistical_validation_tests {
         use tracing::info;
 
         #[test]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
         fn test_simple_mean() {
             let mut densities = BTreeMap::new();
             densities.insert(pos!(100.0), dec!(0.5));
@@ -1093,7 +1084,7 @@ mod statistical_validation_tests {
         }
 
         #[test]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
         fn test_normal_distribution_step_by_step() {
             let mut densities = BTreeMap::new();
             densities.insert(pos!(80.0), dec!(0.1));
@@ -1143,7 +1134,7 @@ mod statistical_validation_tests {
         }
 
         #[test]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
         fn test_kurtosis_calculation_comparison() {
             let mut densities = BTreeMap::new();
             densities.insert(pos!(80.0), dec!(0.1));
@@ -1202,7 +1193,7 @@ mod statistical_validation_tests {
         }
 
         #[test]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
         fn test_normal_distribution_detailed() {
             let mut densities = BTreeMap::new();
             densities.insert(pos!(80.0), dec!(0.1));
@@ -1263,7 +1254,7 @@ mod statistical_validation_tests {
         }
 
         #[test]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
         fn test_simple_variance() {
             let mut densities = BTreeMap::new();
             densities.insert(pos!(90.0), dec!(0.5));
@@ -1278,7 +1269,7 @@ mod statistical_validation_tests {
         }
 
         #[test]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
         fn test_discrete_uniform() {
             let mut densities = BTreeMap::new();
             for i in 1..=5 {
@@ -1293,7 +1284,7 @@ mod statistical_validation_tests {
         }
 
         #[test]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
         fn test_normalization() {
             let mut densities = BTreeMap::new();
             densities.insert(pos!(100.0), dec!(2.0));
@@ -1303,7 +1294,7 @@ mod statistical_validation_tests {
         }
 
         #[test]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
         fn test_small_values() {
             let mut densities = BTreeMap::new();
             densities.insert(pos!(1.0), dec!(0.001));
@@ -1317,7 +1308,7 @@ mod statistical_validation_tests {
         }
 
         #[test]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
         fn test_extreme_values() {
             let mut densities = BTreeMap::new();
             densities.insert(pos!(1000000.0), dec!(0.3));
@@ -1331,7 +1322,7 @@ mod statistical_validation_tests {
         }
 
         #[test]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
         fn test_gap_distribution() {
             let mut densities = BTreeMap::new();
             densities.insert(pos!(10.0), dec!(0.45));
@@ -1345,7 +1336,7 @@ mod statistical_validation_tests {
         }
 
         #[test]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
         fn test_gap_distribution_detailed() {
             let mut densities = BTreeMap::new();
             densities.insert(pos!(10.0), dec!(0.45));
@@ -1405,7 +1396,7 @@ mod statistical_validation_tests {
         }
 
         #[test]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
         fn test_moment_properties() {
             let mut densities = BTreeMap::new();
             densities.insert(pos!(95.0), dec!(0.3));
@@ -1440,7 +1431,7 @@ mod statistical_validation_tests {
         }
 
         #[test]
-        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
         fn test_raw_moments() {
             let mut densities = BTreeMap::new();
             densities.insert(pos!(90.0), dec!(0.2));
@@ -1490,7 +1481,7 @@ mod chain_test {
         OptionChain::build_chain(&option_chain_params)
     }
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_chain_creation() {
         let option_chain_params = OptionChainBuildParams::new(
             "SP500".to_string(),
@@ -1536,7 +1527,7 @@ mod chain_test {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_rnd_calculation_debug() {
         let option_chain_params = OptionChainBuildParams::new(
             "SP500".to_string(),
@@ -1581,7 +1572,7 @@ mod chain_test {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_rnd_calculation_tolerance_comparison() {
         let chain = create_test_option_chain();
 

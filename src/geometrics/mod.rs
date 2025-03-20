@@ -27,5 +27,5 @@ pub use interpolation::types::InterpolationType;
 pub use operations::{
     Arithmetic, AxisOperations, GeometricTransformations, MergeAxisInterpolate, MergeOperation,
 };
-pub use utils::{GeometricObject, Len};
+pub use utils::GeometricObject;
 pub use visualization::{PlotBuilder, PlotBuilderExt, PlotOptions, Plottable};

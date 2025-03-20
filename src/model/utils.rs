@@ -7,6 +7,7 @@ use crate::model::Position;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
 use crate::{Options, Positive, pos};
 use chrono::{NaiveDateTime, TimeZone, Utc};
+use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 
 /// Converts a vector of `Positive` values to a vector of `f64` values.
@@ -350,12 +351,34 @@ pub fn mean_and_std(vec: Vec<Positive>) -> (Positive, Positive) {
     (mean, pos!(std))
 }
 
+/// Trait for rounding operations on numeric types, specifically for financial calculations.
+///
+/// This trait provides methods to round a number to the nearest integer and to a specified
+/// number of decimal places, ensuring precision and accuracy in financial computations.
+///
+pub trait ToRound {
+    /// Rounds the number to the nearest integer.
+    ///
+    /// This method rounds the number to the nearest whole number, removing any fractional part.
+    fn round(&self) -> Decimal;
+
+    /// Rounds the number to a specified number of decimal places.
+    ///
+    /// This method rounds the number to the specified number of digits after the decimal point,
+    /// providing control over the precision of the rounded value.
+    ///
+    /// # Arguments
+    ///
+    /// * `decimal_places` - The number of decimal places to round to.
+    fn round_to(&self, decimal_places: u32) -> Decimal;
+}
+
 #[cfg(test)]
 mod tests_positive_f64_to_f64 {
     use super::*;
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_positive_f64_to_f64_non_empty() {
         let positive_vec = vec![
             Positive::new(10.0).unwrap(),
@@ -369,7 +392,7 @@ mod tests_positive_f64_to_f64 {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_positive_f64_to_f64_single_element() {
         let positive_vec = vec![Positive::new(42.0).unwrap()];
 
@@ -379,7 +402,6 @@ mod tests_positive_f64_to_f64 {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     #[should_panic]
     fn test_positive_f64_to_f64_invalid_positivef64() {
         Positive::new(-10.0).unwrap();
@@ -393,7 +415,7 @@ mod tests_mean_and_std {
     use approx::assert_relative_eq;
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_basic_mean_and_std() {
         let values = vec![
             pos!(2.0),
@@ -412,7 +434,7 @@ mod tests_mean_and_std {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_identical_values() {
         let values = vec![pos!(5.0), pos!(5.0), pos!(5.0), pos!(5.0)];
         let (mean, std) = mean_and_std(values);
@@ -422,7 +444,7 @@ mod tests_mean_and_std {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_single_value() {
         let values = vec![pos!(3.0)];
         let (mean, std) = mean_and_std(values);
@@ -432,7 +454,7 @@ mod tests_mean_and_std {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_small_numbers() {
         let values = vec![pos!(0.1), pos!(0.2), pos!(0.3)];
         let (mean, std) = mean_and_std(values);
@@ -442,7 +464,7 @@ mod tests_mean_and_std {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_large_numbers() {
         let values = vec![pos!(1000.0), pos!(2000.0), pos!(3000.0)];
         let (mean, std) = mean_and_std(values);
@@ -452,7 +474,7 @@ mod tests_mean_and_std {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_mixed_range() {
         let values = vec![pos!(0.5), pos!(5.0), pos!(50.0), pos!(500.0)];
         let (mean, std) = mean_and_std(values);
@@ -462,7 +484,6 @@ mod tests_mean_and_std {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     #[should_panic]
     fn test_empty_vector() {
         let values: Vec<Positive> = vec![];
@@ -470,7 +491,7 @@ mod tests_mean_and_std {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_symmetric_distribution() {
         let values = vec![pos!(1.0), pos!(2.0), pos!(3.0), pos!(4.0), pos!(5.0)];
         let (mean, std) = mean_and_std(values);
@@ -480,7 +501,7 @@ mod tests_mean_and_std {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_result_is_positive() {
         let values = vec![pos!(1.0), pos!(2.0), pos!(3.0)];
         let (mean, std) = mean_and_std(values);
@@ -490,7 +511,7 @@ mod tests_mean_and_std {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_precision() {
         let values = vec![pos!(1.23456789), pos!(2.34567890), pos!(3.45678901)];
         let (mean, std) = mean_and_std(values);
@@ -500,7 +521,7 @@ mod tests_mean_and_std {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_precision_bis() {
         let values = vec![pos!(0.123456789), pos!(0.134567890), pos!(0.145678901)];
         let (mean, std) = mean_and_std(values);

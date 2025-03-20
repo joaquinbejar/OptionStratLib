@@ -10,6 +10,7 @@ use rust_decimal::Decimal;
 use rust_decimal::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
+use std::fmt::Display;
 use std::hash::{Hash, Hasher};
 
 /// Represents a point in two-dimensional space with `x` and `y` coordinates.
@@ -55,6 +56,12 @@ pub struct Point2D {
     /// The y-coordinate in the Cartesian plane, represented as a high-precision `Decimal`
     /// value to ensure accuracy in mathematical operations.
     pub y: Decimal,
+}
+
+impl Display for Point2D {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "(x: {}, y: {})", self.x, self.y)
+    }
 }
 
 impl PartialEq for Point2D {

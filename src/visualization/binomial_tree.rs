@@ -4,11 +4,8 @@
    Date: 4/8/24
 ******************************************************************************/
 
-use plotters::prelude::*;
-#[cfg(target_arch = "wasm32")]
-use plotters_canvas::CanvasBackend;
-
 use super::utils::GraphBackend;
+use plotters::prelude::*;
 
 /// This function draws a binomial tree of asset prices and option prices using the plotters library and saves it to a specified file.
 ///
@@ -54,17 +51,8 @@ pub fn draw_binomial_tree(
     backend: GraphBackend,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let root = match backend {
-        #[cfg(not(target_arch = "wasm32"))]
         GraphBackend::Bitmap { file_path, size } => {
             let root = BitMapBackend::new(file_path, size).into_drawing_area();
-            root.fill(&WHITE)?;
-            root
-        }
-        #[cfg(target_arch = "wasm32")]
-        GraphBackend::Canvas { canvas } => {
-            let root = CanvasBackend::with_canvas_object(canvas)
-                .unwrap()
-                .into_drawing_area();
             root.fill(&WHITE)?;
             root
         }
@@ -165,7 +153,6 @@ pub fn draw_binomial_tree(
 }
 
 #[cfg(test)]
-#[cfg(not(target_arch = "wasm32"))]
 mod tests_draw_binomial_tree {
 
     use {
@@ -182,8 +169,8 @@ mod tests_draw_binomial_tree {
 
     // Native-only test
     #[test]
-    // #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
-    // #[cfg(not(target_arch = "wasm32"))]
+    //
+    //
     fn test_draw_binomial_tree_bitmap() -> Result<(), Box<dyn std::error::Error>> {
         let (asset_tree, option_tree) = setup_test_data();
         let backend = GraphBackend::Bitmap {

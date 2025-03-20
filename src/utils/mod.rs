@@ -187,6 +187,6 @@ pub mod time;
 mod traits;
 
 pub use logger::{setup_logger, setup_logger_with_level};
-pub use others::{approx_equal, get_random_element, process_n_times_iter};
+pub use others::{approx_equal, get_random_element, process_n_times_iter, random_decimal};
 pub use time::TimeFrame;
 pub use traits::Len;

@@ -165,7 +165,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_two_legs_creation() {
         let option1 = create_test_option(dec!(100.0));
         let option2 = create_test_option(dec!(110.0));
@@ -185,7 +185,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_four_legs_creation() {
         let option1 = create_test_option(dec!(100.0));
         let option2 = create_test_option(dec!(110.0));
@@ -216,7 +216,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_six_legs_creation() {
         let option1 = create_test_option(dec!(100.0));
         let option2 = create_test_option(dec!(110.0));
@@ -255,7 +255,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_display_two_legs() {
         let option1 = create_test_option(dec!(100.0));
         let option2 = create_test_option(dec!(110.0));
@@ -272,7 +272,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_display_four_legs() {
         let option1 = create_test_option(dec!(100.0));
         let option2 = create_test_option(dec!(110.0));
@@ -295,7 +295,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_display_six_legs() {
         let option1 = create_test_option(dec!(100.0));
         let option2 = create_test_option(dec!(110.0));
@@ -324,7 +324,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_clone() {
         let option1 = create_test_option(dec!(100.0));
         let option2 = create_test_option(dec!(110.0));
@@ -346,7 +346,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_display_three_legs() {
         let option1 = create_test_option(dec!(100.0));
         let option2 = create_test_option(dec!(110.0));

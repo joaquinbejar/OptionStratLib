@@ -20,7 +20,7 @@ mod tests_random_walk {
         }
     }
 
-    impl Walkable for TestWalk {
+    impl Walkable<Positive, Positive> for TestWalk {
         fn get_y_values(&self) -> &Vec<Positive> {
             &self.values
         }
@@ -35,7 +35,7 @@ mod tests_random_walk {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_walk_initialization() {
         let mut walk = TestWalk::new();
         let initial_price = pos!(100.0);
@@ -48,7 +48,7 @@ mod tests_random_walk {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_random_walk_length() {
         let mut walk = TestWalk::new();
         let n_steps = 100;
@@ -62,7 +62,7 @@ mod tests_random_walk {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_random_walk_starts_at_initial_price() {
         let mut walk = TestWalk::new();
 
@@ -73,7 +73,7 @@ mod tests_random_walk {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_all_values_are_positive() {
         let mut walk = TestWalk::new();
         let n_steps = 1000;
@@ -87,7 +87,7 @@ mod tests_random_walk {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_zero_std_dev_change() {
         let mut walk = TestWalk::new();
 
@@ -104,7 +104,7 @@ mod tests_random_walk {
     }
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_edge_cases() {
         let mut walk = TestWalk::new();
 
@@ -139,13 +139,13 @@ mod tests_iterator {
     use tracing::debug;
 
     #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+
     fn test_random_walk_iterator() {
         setup_logger_with_level("debug");
         let years = 3.0;
         let steps = 252 * years as usize; // 2 years
 
-        let mut walk = RandomWalkGraph::new(
+        let mut walk: RandomWalkGraph<Positive> = RandomWalkGraph::new(
             "Test Walk".to_string(),
             Some(dec!(0.05)), // risk_free_rate
             Some(pos!(0.02)), // dividend_yield
@@ -208,7 +208,7 @@ mod tests_random_walk_timeframe {
         }
     }
 
-    impl Walkable for TestWalker {
+    impl Walkable<Positive, Positive> for TestWalker {
         fn get_y_values(&self) -> &Vec<Positive> {
             &self.values
         }
@@ -399,7 +399,7 @@ mod tests_random_walk_iterator {
 
     // Helper function to create a test RandomWalkGraph
     fn create_test_walk() -> RandomWalkGraph {
-        let mut walk = RandomWalkGraph::new(
+        let mut walk: RandomWalkGraph<Positive> = RandomWalkGraph::new(
             "Test Walk".to_string(),
             Some(dec!(0.05)), // risk_free_rate
             Some(pos!(0.02)), // dividend_yield
@@ -457,7 +457,7 @@ mod tests_random_walk_iterator {
 
     #[test]
     fn test_iterator_empty_walk() {
-        let walk = RandomWalkGraph::new(
+        let walk: RandomWalkGraph<Positive> = RandomWalkGraph::new(
             "Empty Walk".to_string(),
             None,
             None,
@@ -517,7 +517,7 @@ mod tests_random_walk_iterator {
 
     #[test]
     fn test_default_values() {
-        let mut walk = RandomWalkGraph::new(
+        let mut walk: RandomWalkGraph<Positive> = RandomWalkGraph::new(
             "Default Walk".to_string(),
             None, // No risk_free_rate
             None, // No dividend_yield
@@ -577,7 +577,8 @@ mod tests_curvable {
 
     #[test]
     fn test_curve_empty_graph() {
-        let graph = RandomWalkGraph::new("Empty".to_string(), None, None, TimeFrame::Day, 4, None);
+        let graph: RandomWalkGraph<Positive> =
+            RandomWalkGraph::new("Empty".to_string(), None, None, TimeFrame::Day, 4, None);
 
         let curve = graph.curve().unwrap();
         assert_eq!(curve.points.len(), 0);
