@@ -285,3 +285,357 @@ mod tests_serialization {
         assert!(deserialized.positions.is_empty());
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::model::utils::create_sample_option_with_date;
+    use crate::{OptionStyle, Side, assert_decimal_eq, pos};
+    use chrono::{DateTime, NaiveDateTime, Utc};
+    use rust_decimal_macros::dec;
+    use serde_json;
+
+    fn sample_date() -> NaiveDateTime {
+        let tomorrow_timestamp = Utc::now().timestamp() + 86400;
+        DateTime::from_timestamp(tomorrow_timestamp, 0)
+            .unwrap()
+            .naive_utc()
+    }
+
+    #[test]
+    fn test_strategy_request() {
+        let strategy_request = StrategyRequest::new(
+            StrategyType::BearCallSpread,
+            vec![
+                Position::new(
+                    create_sample_option_with_date(
+                        OptionStyle::Call,
+                        Side::Short,
+                        pos!(920.0),
+                        pos!(1.0),
+                        pos!(900.0),
+                        pos!(0.35),
+                        sample_date(),
+                    ),
+                    pos!(4.5),
+                    Utc::now(),
+                    pos!(1.0),
+                    pos!(1.2),
+                ),
+                Position::new(
+                    create_sample_option_with_date(
+                        OptionStyle::Call,
+                        Side::Long,
+                        pos!(920.0),
+                        pos!(1.0),
+                        pos!(910.0),
+                        pos!(0.35),
+                        sample_date(),
+                    ),
+                    pos!(3.5),
+                    Utc::now(),
+                    pos!(1.0),
+                    pos!(1.2),
+                ),
+            ],
+        );
+
+        let serialized = serde_json::to_string(&strategy_request).unwrap();
+
+        // Verify structure
+        assert!(serialized.contains("\"strategy_type\":\"BearCallSpread\""));
+        assert!(serialized.contains("\"positions\":["));
+        assert!(serialized.contains("\"underlying_symbol\":\"AAPL\""));
+        assert!(serialized.contains("\"premium\":4.5"));
+        assert!(serialized.contains("\"open_fee\":1"));
+        assert!(serialized.contains("\"close_fee\":1.2"));
+    }
+
+    #[test]
+    fn test_strategy_bull_call_spread() {
+        let strategy_request = StrategyRequest::new(
+            StrategyType::BullCallSpread,
+            vec![
+                Position::new(
+                    create_sample_option_with_date(
+                        OptionStyle::Call,
+                        Side::Long,
+                        pos!(920.0),
+                        pos!(1.0),
+                        pos!(900.0),
+                        pos!(0.35),
+                        sample_date(),
+                    ),
+                    pos!(4.5),
+                    Utc::now(),
+                    pos!(1.0),
+                    pos!(1.2),
+                ),
+                Position::new(
+                    create_sample_option_with_date(
+                        OptionStyle::Call,
+                        Side::Short,
+                        pos!(920.0),
+                        pos!(1.0),
+                        pos!(910.0),
+                        pos!(0.35),
+                        sample_date(),
+                    ),
+                    pos!(3.5),
+                    Utc::now(),
+                    pos!(1.0),
+                    pos!(1.2),
+                ),
+            ],
+        );
+
+        let strategy = strategy_request.get_strategy().unwrap();
+        let greeks_result = strategy.greeks();
+        assert!(greeks_result.is_ok());
+        let greeks = greeks_result.unwrap();
+        assert_decimal_eq!(greeks.delta, dec!(0.1579), dec!(1e-4));
+        assert_decimal_eq!(greeks.gamma, dec!(0.0309), dec!(1e-4));
+        assert_decimal_eq!(greeks.theta, dec!(-4.5486), dec!(1e-4));
+        assert_decimal_eq!(greeks.vega, dec!(0.2508), dec!(1e-4));
+        assert_decimal_eq!(greeks.rho, dec!(0.0398), dec!(1e-4));
+    }
+
+    #[test]
+    fn test_strategy_bear_call_spread() {
+        let strategy_request = StrategyRequest::new(
+            StrategyType::BearCallSpread,
+            vec![
+                Position::new(
+                    create_sample_option_with_date(
+                        OptionStyle::Call,
+                        Side::Short,
+                        pos!(920.0),
+                        pos!(1.0),
+                        pos!(900.0),
+                        pos!(0.35),
+                        sample_date(),
+                    ),
+                    pos!(4.5),
+                    Utc::now(),
+                    pos!(1.0),
+                    pos!(1.2),
+                ),
+                Position::new(
+                    create_sample_option_with_date(
+                        OptionStyle::Call,
+                        Side::Long,
+                        pos!(920.0),
+                        pos!(1.0),
+                        pos!(910.0),
+                        pos!(0.35),
+                        sample_date(),
+                    ),
+                    pos!(3.5),
+                    Utc::now(),
+                    pos!(1.0),
+                    pos!(1.2),
+                ),
+            ],
+        );
+
+        let strategy = strategy_request.get_strategy().unwrap();
+        let greeks_result = strategy.greeks();
+        assert!(greeks_result.is_ok());
+        let greeks = greeks_result.unwrap();
+        assert_decimal_eq!(greeks.delta, dec!(-0.1579), dec!(1e-4));
+        assert_decimal_eq!(greeks.gamma, dec!(0.0309), dec!(1e-4));
+        assert_decimal_eq!(greeks.theta, dec!(-4.5486), dec!(1e-4));
+        assert_decimal_eq!(greeks.vega, dec!(0.2508), dec!(1e-4));
+        assert_decimal_eq!(greeks.rho, dec!(0.0398), dec!(1e-4));
+    }
+
+    #[test]
+    fn test_strategy_bear_put_spread() {
+        let strategy_request = StrategyRequest::new(
+            StrategyType::BearPutSpread,
+            vec![
+                Position::new(
+                    create_sample_option_with_date(
+                        OptionStyle::Put,
+                        Side::Long,
+                        pos!(920.0),
+                        pos!(1.0),
+                        pos!(900.0),
+                        pos!(0.35),
+                        sample_date(),
+                    ),
+                    pos!(4.5),
+                    Utc::now(),
+                    pos!(1.0),
+                    pos!(1.2),
+                ),
+                Position::new(
+                    create_sample_option_with_date(
+                        OptionStyle::Put,
+                        Side::Short,
+                        pos!(920.0),
+                        pos!(1.0),
+                        pos!(910.0),
+                        pos!(0.35),
+                        sample_date(),
+                    ),
+                    pos!(3.5),
+                    Utc::now(),
+                    pos!(1.0),
+                    pos!(1.2),
+                ),
+            ],
+        );
+
+        let strategy = strategy_request.get_strategy().unwrap();
+        let greeks_result = strategy.greeks();
+        assert!(greeks_result.is_ok());
+        let greeks = greeks_result.unwrap();
+        assert_decimal_eq!(greeks.delta, dec!(0.1579), dec!(1e-4));
+        assert_decimal_eq!(greeks.gamma, dec!(0.0309), dec!(1e-4));
+        assert_decimal_eq!(greeks.theta, dec!(-4.3511), dec!(1e-4));
+        assert_decimal_eq!(greeks.vega, dec!(0.2508), dec!(1e-4));
+        assert_decimal_eq!(greeks.rho, dec!(-0.0097), dec!(1e-4));
+    }
+
+    #[test]
+    fn test_strategy_bull_put_spread() {
+        let strategy_request = StrategyRequest::new(
+            StrategyType::BullPutSpread,
+            vec![
+                Position::new(
+                    create_sample_option_with_date(
+                        OptionStyle::Put,
+                        Side::Short,
+                        pos!(920.0),
+                        pos!(1.0),
+                        pos!(900.0),
+                        pos!(0.35),
+                        sample_date(),
+                    ),
+                    pos!(4.5),
+                    Utc::now(),
+                    pos!(1.0),
+                    pos!(1.2),
+                ),
+                Position::new(
+                    create_sample_option_with_date(
+                        OptionStyle::Put,
+                        Side::Long,
+                        pos!(920.0),
+                        pos!(1.0),
+                        pos!(910.0),
+                        pos!(0.35),
+                        sample_date(),
+                    ),
+                    pos!(3.5),
+                    Utc::now(),
+                    pos!(1.0),
+                    pos!(1.2),
+                ),
+            ],
+        );
+
+        let strategy = strategy_request.get_strategy().unwrap();
+        let greeks_result = strategy.greeks();
+        assert!(greeks_result.is_ok());
+        let greeks = greeks_result.unwrap();
+        assert_decimal_eq!(greeks.delta, dec!(-0.1579), dec!(1e-4));
+        assert_decimal_eq!(greeks.gamma, dec!(0.0309), dec!(1e-4));
+        assert_decimal_eq!(greeks.theta, dec!(-4.3511), dec!(1e-4));
+        assert_decimal_eq!(greeks.vega, dec!(0.2508), dec!(1e-4));
+        assert_decimal_eq!(greeks.rho, dec!(-0.0097), dec!(1e-4));
+    }
+
+    #[test]
+    fn test_strategy_covered_call() {
+        let strategy_request = StrategyRequest::new(StrategyType::CoveredCall, vec![]);
+        let result = strategy_request.get_strategy();
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_strategy_protective_put() {
+        let strategy_request = StrategyRequest::new(StrategyType::ProtectivePut, vec![]);
+        let result = strategy_request.get_strategy();
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_strategy_collar() {
+        let strategy_request = StrategyRequest::new(StrategyType::Collar, vec![]);
+        let result = strategy_request.get_strategy();
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_strategy_long_call() {
+        let strategy_request = StrategyRequest::new(StrategyType::LongCall, vec![]);
+        let result = strategy_request.get_strategy();
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_strategy_long_put() {
+        let strategy_request = StrategyRequest::new(StrategyType::LongPut, vec![]);
+        let result = strategy_request.get_strategy();
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_strategy_short_call() {
+        let strategy_request = StrategyRequest::new(StrategyType::ShortCall, vec![]);
+        let result = strategy_request.get_strategy();
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_strategy_short_put() {
+        let strategy_request = StrategyRequest::new(StrategyType::ShortPut, vec![]);
+        let result = strategy_request.get_strategy();
+        assert!(result.is_err());
+    }
+
+    #[test]
+    #[ignore]
+    fn test_strategy_custom() {
+        let strategy_request = StrategyRequest::new(
+            StrategyType::Custom,
+            vec![
+                Position::new(
+                    create_sample_option_with_date(
+                        OptionStyle::Put,
+                        Side::Short,
+                        pos!(920.0),
+                        pos!(1.0),
+                        pos!(900.0),
+                        pos!(0.35),
+                        sample_date(),
+                    ),
+                    pos!(4.5),
+                    Utc::now(),
+                    pos!(1.0),
+                    pos!(1.2),
+                ),
+                Position::new(
+                    create_sample_option_with_date(
+                        OptionStyle::Put,
+                        Side::Long,
+                        pos!(920.0),
+                        pos!(1.0),
+                        pos!(910.0),
+                        pos!(0.35),
+                        sample_date(),
+                    ),
+                    pos!(3.5),
+                    Utc::now(),
+                    pos!(1.0),
+                    pos!(1.2),
+                ),
+            ],
+        );
+
+        let result = strategy_request.get_strategy();
+        assert!(result.is_ok());
+    }
+}

@@ -176,3 +176,204 @@ pub struct WalkResult {
 
     pub volatilities: Vec<Positive>,
 }
+
+#[cfg(test)]
+mod tests_simulation_result {
+    use super::*;
+    use crate::pnl::model::PnLRange;
+    use crate::pos;
+    use crate::risk::{RiskCategory, RiskMetricsSimulation};
+    use rust_decimal_macros::dec;
+    use std::collections::HashMap;
+
+    /// Helper function to create a sample WalkResult for testing
+    fn create_test_walk_result() -> WalkResult {
+        WalkResult {
+            initially: dec!(100.0),
+            finally: dec!(120.0),
+            payoff: dec!(20.0),
+            change_percentage: dec!(20.0),
+            diff: dec!(20.0),
+            max_value: (dec!(130.0), dec!(30.0)),
+            min_value: (dec!(95.0), dec!(-5.0)),
+            positive_points: vec![(dec!(105.0), dec!(5.0)), (dec!(120.0), dec!(20.0))],
+            negative_points: vec![(dec!(95.0), dec!(-5.0))],
+            pnl_at_prices: {
+                let mut map = HashMap::new();
+                map.insert(dec!(90.0), dec!(-10.0));
+                map.insert(dec!(100.0), dec!(0.0));
+                map.insert(dec!(110.0), dec!(10.0));
+                map
+            },
+            extra_metrics: {
+                let mut map = HashMap::new();
+                map.insert("max_drawdown".to_string(), dec!(5.0));
+                map
+            },
+            volatilities: vec![pos!(0.15), pos!(0.18)],
+        }
+    }
+
+    #[test]
+    fn test_simulation_result_new() {
+        let result = SimulationResult::new(100);
+
+        assert_eq!(result.iterations, 100);
+        assert_eq!(result.profit_probability, pos!(0.01));
+        assert_eq!(result.loss_probability, pos!(0.01));
+        assert_eq!(result.max_profit, pos!(0.01));
+        assert_eq!(result.max_loss, pos!(0.01));
+        assert_eq!(result.average_pnl, dec!(0.0));
+        assert_eq!(result.pnl_std_dev, pos!(0.01));
+        assert!(result.pnl_distribution.is_empty());
+        assert!(result.additional_metrics.is_empty());
+        assert!(result.walk_results.is_empty());
+    }
+
+    #[test]
+    fn test_simulation_result_default() {
+        let result = SimulationResult::default();
+
+        assert_eq!(result.iterations, 0);
+        assert_eq!(result.profit_probability, pos!(0.01));
+        assert_eq!(result.loss_probability, pos!(0.01));
+    }
+
+    #[test]
+    fn test_is_favorable_positive() {
+        let mut result = SimulationResult::new(100);
+        result.average_pnl = dec!(150.0);
+
+        // Set Sharpe ratio above threshold
+        let mut risk_levels = RiskMetricsSimulation::default();
+        risk_levels.sharpe_ratio = dec!(1.5); // Above threshold of 1.0
+        result.risk_levels = risk_levels;
+
+        assert!(result.is_favorable());
+    }
+
+    #[test]
+    fn test_is_favorable_negative() {
+        // Test case 1: Negative average PnL
+        let mut result = SimulationResult::new(100);
+        result.average_pnl = dec!(-50.0);
+
+        let mut risk_levels = RiskMetricsSimulation::default();
+        risk_levels.sharpe_ratio = dec!(1.5); // Even with good Sharpe ratio
+        result.risk_levels = risk_levels;
+
+        assert!(!result.is_favorable());
+
+        // Test case 2: Low Sharpe ratio
+        let mut result = SimulationResult::new(100);
+        result.average_pnl = dec!(150.0); // Positive average PnL
+
+        let mut risk_levels = RiskMetricsSimulation::default();
+        risk_levels.sharpe_ratio = dec!(0.5); // Below threshold of 1.0
+        result.risk_levels = risk_levels;
+
+        assert!(!result.is_favorable());
+    }
+
+    #[test]
+    fn test_risk_category_high() {
+        let mut result = SimulationResult::new(100);
+
+        // High risk: severe_loss_probability > 0.25
+        let mut risk_levels = RiskMetricsSimulation::default();
+        risk_levels.severe_loss_probability = pos!(0.3); // Above threshold
+        result.risk_levels = risk_levels;
+
+        assert_eq!(result.risk_category(), RiskCategory::High);
+    }
+
+    #[test]
+    fn test_risk_category_medium() {
+        let mut result = SimulationResult::new(100);
+        result.average_pnl = dec!(100.0);
+
+        // Medium risk: VaR > average_pnl * 2
+        let mut risk_levels = RiskMetricsSimulation::default();
+        risk_levels.severe_loss_probability = pos!(0.2); // Below high risk threshold
+        risk_levels.var_95 = dec!(-250.0); // Absolute value greater than 100 * 2
+        result.risk_levels = risk_levels;
+
+        assert_eq!(result.risk_category(), RiskCategory::Medium);
+    }
+
+    #[test]
+    fn test_risk_category_low() {
+        let mut result = SimulationResult::new(100);
+        result.average_pnl = dec!(100.0);
+
+        // Low risk: All metrics below thresholds
+        let mut risk_levels = RiskMetricsSimulation::default();
+        risk_levels.severe_loss_probability = pos!(0.2); // Below high risk threshold
+        risk_levels.var_95 = dec!(-150.0); // Absolute value less than 100 * 2
+        result.risk_levels = risk_levels;
+
+        assert_eq!(result.risk_category(), RiskCategory::Low);
+    }
+
+    #[test]
+    fn test_probability_in_range() {
+        let mut result = SimulationResult::new(100);
+
+        // Add some PnL distribution data
+        let mut pnl_distribution = HashMap::new();
+        pnl_distribution.insert(PnLRange::new_decimal(dec!(-100.0), dec!(0.0)), dec!(0.4));
+        pnl_distribution.insert(PnLRange::new_decimal(dec!(0.0), dec!(100.0)), dec!(0.3));
+        result.pnl_distribution = pnl_distribution;
+
+        // Test existing range
+        let range1 = PnLRange::new_decimal(dec!(-100.0), dec!(0.0));
+        assert_eq!(result.probability_in_range(&range1), dec!(0.4));
+
+        // Test another existing range
+        let range2 = PnLRange::new_decimal(dec!(0.0), dec!(100.0));
+        assert_eq!(result.probability_in_range(&range2), dec!(0.3));
+
+        // Test non-existing range
+        let range3 = PnLRange::new_decimal(dec!(100.0), dec!(200.0));
+        assert_eq!(result.probability_in_range(&range3), dec!(0.0));
+    }
+
+    #[test]
+    fn test_walk_result_fields() {
+        let walk_result = create_test_walk_result();
+
+        assert_eq!(walk_result.initially, dec!(100.0));
+        assert_eq!(walk_result.finally, dec!(120.0));
+        assert_eq!(walk_result.payoff, dec!(20.0));
+        assert_eq!(walk_result.change_percentage, dec!(20.0));
+        assert_eq!(walk_result.diff, dec!(20.0));
+
+        // Test max and min values
+        assert_eq!(walk_result.max_value, (dec!(130.0), dec!(30.0)));
+        assert_eq!(walk_result.min_value, (dec!(95.0), dec!(-5.0)));
+
+        // Test points collections
+        assert_eq!(walk_result.positive_points.len(), 2);
+        assert_eq!(walk_result.negative_points.len(), 1);
+
+        // Test PnL at prices
+        assert_eq!(
+            walk_result.pnl_at_prices.get(&dec!(100.0)),
+            Some(&dec!(0.0))
+        );
+        assert_eq!(
+            walk_result.pnl_at_prices.get(&dec!(110.0)),
+            Some(&dec!(10.0))
+        );
+
+        // Test extra metrics
+        assert_eq!(
+            walk_result.extra_metrics.get("max_drawdown"),
+            Some(&dec!(5.0))
+        );
+
+        // Test volatilities
+        assert_eq!(walk_result.volatilities.len(), 2);
+        assert_eq!(walk_result.volatilities[0], pos!(0.15));
+    }
+}
