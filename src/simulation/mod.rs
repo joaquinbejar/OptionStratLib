@@ -127,5 +127,7 @@ pub mod randomwalk;
 /// - Incremental state changes need to be managed
 ///
 pub mod step;
+mod display;
+mod traits;
 
 

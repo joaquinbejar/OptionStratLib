@@ -15,6 +15,7 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::cmp::{Ordering, PartialEq};
 use std::error::Error;
 use std::fmt;
+use std::fmt::Display;
 use std::iter::Sum;
 use std::ops::{Add, AddAssign, Div, Mul, MulAssign, Neg, Sub};
 use std::str::FromStr;
@@ -679,7 +680,7 @@ impl PartialEq<f64> for Positive {
     }
 }
 
-impl fmt::Display for Positive {
+impl Display for Positive {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if *self == Positive::INFINITY {
             write!(f, r#""infinity""#)

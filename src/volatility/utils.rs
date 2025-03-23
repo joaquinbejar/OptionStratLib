@@ -402,18 +402,18 @@ pub fn adjust_volatility(
 /// let process = generate_ou_process(
 ///     pos!(1.0),       // initial value
 ///     pos!(1.5),       // long-term mean
-///     dec!(0.1),       // speed of reversion
-///     dec!(0.2),       // volatility
-///     dec!(0.01),      // time step
+///     pos!(0.1),       // speed of reversion
+///     pos!(0.2),       // volatility
+///     pos!(0.01),      // time step
 ///     1000             // number of steps
 /// );
 /// ```
 pub fn generate_ou_process(
     x0: Positive,
     mu: Positive,
-    theta: Decimal,
-    sigma: Decimal,
-    dt: Decimal,
+    theta: Positive,
+    volatility: Positive,
+    dt: Positive,
     steps: usize,
 ) -> Vec<Positive> {
     let mut x = x0.to_dec();
@@ -421,8 +421,8 @@ pub fn generate_ou_process(
     result.push(Positive(x));
 
     for _ in 1..steps {
-        let dw = decimal_normal_sample() * dt.sqrt().unwrap();
-        x += theta * (mu - x) * dt + sigma * dw;
+        let dw = decimal_normal_sample() * dt.sqrt();
+        x += theta * (mu - x) * dt + volatility * dw;
         x = x.max(Decimal::ZERO);
         result.push(Positive(x));
     }
@@ -1236,9 +1236,9 @@ mod tests_generate_ou_process {
         let process = generate_ou_process(
             pos!(1.0),
             pos!(1.5),
-            dec!(0.1),
-            dec!(0.2),
-            dec!(0.01),
+            pos!(0.1),
+            pos!(0.2),
+            pos!(0.01),
             steps,
         );
         assert_eq!(process.len(), steps);
@@ -1247,7 +1247,7 @@ mod tests_generate_ou_process {
     #[test]
     fn test_all_values_positive() {
         let process =
-            generate_ou_process(pos!(1.0), pos!(1.5), dec!(0.2), dec!(0.3), dec!(0.01), 1000);
+            generate_ou_process(pos!(1.0), pos!(1.5), pos!(0.2), pos!(0.3), pos!(0.01), 1000);
 
         for value in process {
             assert!(value > pos!(0.0), "Found non-positive value: {:?}", value);
@@ -1259,9 +1259,9 @@ mod tests_generate_ou_process {
         let process = generate_ou_process(
             pos!(0.1),
             pos!(1.0),
-            dec!(1.0),  // high theta for fast reversion
-            dec!(0.01), // low volatility
-            dec!(0.01),
+            pos!(1.0),  // high theta for fast reversion
+            pos!(0.01), // low volatility
+            pos!(0.01),
             1000,
         );
 

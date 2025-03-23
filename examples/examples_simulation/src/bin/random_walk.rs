@@ -6,8 +6,10 @@ use optionstratlib::utils::setup_logger;
 use optionstratlib::utils::time::TimeFrame;
 use optionstratlib::{ExpirationDate, pos, spos, Positive};
 use rust_decimal_macros::dec;
+use tracing::info;
 
-fn generator(_walk_params: WalkParams<Positive, Positive>) -> Vec<Step<Positive, Positive>> {
+fn generator(walk_params: WalkParams<Positive, Positive>) -> Vec<Step<Positive, Positive>> {
+    info!("{}", walk_params);
     vec![Step {
         x: Xstep::new(pos!(0.0), TimeFrame::Day, ExpirationDate::Days(pos!(30.0))),
         y: Ystep::new(pos!(100.0)),

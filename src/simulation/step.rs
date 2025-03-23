@@ -3,9 +3,12 @@
    Email: jb@taunais.com
    Date: 23/3/25
 ******************************************************************************/
+use std::fmt::{Display, Formatter};
+use std::ops::AddAssign;
 use crate::utils::TimeFrame;
 use crate::utils::time::convert_time_frame;
 use crate::{ExpirationDate, Positive};
+
 
 /// Represents a combined x-y step in a two-dimensional simulation or analysis.
 ///
@@ -40,8 +43,8 @@ use crate::{ExpirationDate, Positive};
 #[derive(Debug, Copy, Clone)]
 pub struct Step<X, Y>
 where
-    X: std::ops::AddAssign + Into<Positive> + Copy,
-    Y: Copy + Into<Positive>,
+    X: Copy + Into<Positive> + AddAssign + Display ,
+    Y: Copy + Into<Positive> + Display,
 {
     /// The x-axis step containing temporal information and an associated value
     pub x: Xstep<X>,
@@ -64,8 +67,8 @@ where
 ///
 impl<X, Y> Step<X, Y>
 where
-    X: std::ops::AddAssign + Into<Positive> + Copy,
-    Y: Copy + Into<Positive>,
+    X: Copy + Into<Positive> + AddAssign + Display ,
+    Y: Copy + Into<Positive> + Display,
 {
     /// Creates a new Step with the given X and Y coordinates
     ///
@@ -131,6 +134,21 @@ where
     }
 }
 
+impl<X,Y> Display for Step<X,Y> 
+where
+    X: Copy + Into<Positive> + AddAssign + Display,
+    Y: Copy + Into<Positive> + Display,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "Step {{ x: {}, y: {} }}",
+            self.x, self.y
+        )
+    }
+
+}
+
 /// A step entity in a Y-axis progression with an associated numeric value.
 ///
 /// `Ystep` represents a discrete point in a sequence, maintaining both an integer index
@@ -155,7 +173,7 @@ where
 #[derive(Debug, Copy, Clone)]
 pub struct Ystep<T>
 where
-    T: Copy + Into<Positive>,
+    T: Copy + Into<Positive> + Display,
 {
     /// An integer index representing the step's position in a sequence
     index: i32,
@@ -167,7 +185,7 @@ where
 /// A step value holder for simulation values that must be positive.
 ///
 /// `Ystep<T>` maintains an index counter and a value of type `T`, where `T`
-/// must be copyable and convertible to a `Positive` value.
+/// must be copCopy + Into<Positive> + Display and convertible to a `Positive` value.
 ///
 /// This struct is typically used in financial simulations where values need
 /// to be tracked across simulation steps while ensuring they remain positive.
@@ -190,7 +208,7 @@ where
 /// ```
 impl<T> Ystep<T>
 where
-    T: Copy + Into<Positive>,
+    T: Copy + Into<Positive> + Display,
 {
     /// Creates a new `Ystep` instance with the specified value.
     ///
@@ -228,6 +246,19 @@ where
     }
 }
 
+impl<T> Display for Ystep<T>
+where
+    T: Copy + Into<Positive> + Display,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "Ystep {{ index: {}, value: {} }}",
+            self.index, self.value
+        )
+    }
+}
+
 /// Represents a step in a time series with an indexed value at a specific time point.
 ///
 /// This struct encapsulates a value at a specific point in a time series, tracking not only
@@ -258,7 +289,7 @@ where
 #[derive(Debug, Copy, Clone)]
 pub struct Xstep<T>
 where
-    T: std::ops::AddAssign + Into<Positive> + Copy,
+    T: Copy + Into<Positive> + AddAssign + Display,
 {
     index: i32,
     value: T,
@@ -295,7 +326,7 @@ where
 /// ```
 impl<T> Xstep<T>
 where
-    T: std::ops::AddAssign + Into<Positive> + Copy,
+    T: Copy + Into<Positive> + AddAssign + Display,
 {
     /// Creates a new `Xstep` with the specified value, time unit, and datetime.
     ///
@@ -369,6 +400,19 @@ where
     }
 }
 
+impl<T> Display for Xstep<T>
+where
+    T: Copy + Into<Positive> + AddAssign + Display,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "Xstep {{ index: {}, value: {}, time_unit: {:?}, datetime: {} }}",
+            self.index, self.value, self.time_unit, self.datetime
+        )
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -384,9 +428,15 @@ mod tests {
         }
     }
 
-    impl std::ops::AddAssign for TestValue {
+    impl AddAssign for TestValue {
         fn add_assign(&mut self, other: Self) {
             self.0 += other.0;
+        }
+    }
+
+    impl Display for  TestValue {
+        fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+            write!(f, "{}", self.0)
         }
     }
 
@@ -717,9 +767,15 @@ mod tests_step {
         }
     }
 
-    impl std::ops::AddAssign for TestValue {
+    impl AddAssign for TestValue {
         fn add_assign(&mut self, other: Self) {
             self.0 += other.0;
+        }
+    }
+
+    impl Display for TestValue {
+        fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+            write!(f, "{}", self.0)
         }
     }
 

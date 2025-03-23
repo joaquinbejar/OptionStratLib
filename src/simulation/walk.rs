@@ -4,31 +4,11 @@
    Date: 22/10/24
 ******************************************************************************/
 
-
-use crate::chains::utils::OptionDataPriceParams;
-use crate::constants::ZERO;
-use crate::curves::{Curvable, Curve, Point2D};
-use crate::error::CurveError;
-use crate::geometrics::GeometricObject;
-use crate::model::types::ExpirationDate;
-use crate::pricing::payoff::Profit;
-use crate::simulation::step::Step;
-use crate::simulation::types::Walktypable;
-use crate::strategies::Strategable;
-use crate::utils::Len;
-use crate::utils::time::{TimeFrame, convert_time_frame, units_per_year};
-use crate::visualization::model::ChartPoint;
-use crate::visualization::utils::Graph;
-use crate::{Positive, pos};
-use num_traits::FromPrimitive;
-use rand::rng;
-use rand_distr::{Distribution, Normal};
+use crate::simulation::step::{Step};
+use crate::Positive;
 use rust_decimal::Decimal;
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::error::Error;
-use tracing::{debug, info, trace, warn};
-
+use std::fmt::Display;
+use std::ops::AddAssign;
 
 /// Enum defining different types of random walks
 #[derive(Debug, Clone, Copy)]
@@ -53,12 +33,22 @@ pub enum WalkType {
         volatility: Positive,
     },
 
+    /// Log-Returns model (simulates directly log-returns instead of prices)
+    LogReturns {
+        /// Time step size (fraction of year: daily=1/365, weekly=1/52, etc.)
+        dt: Positive,
+        /// Expected return (mean of log returns)
+        expected_return: Decimal,
+        /// Volatility parameter (annualized standard deviation of log returns)
+        volatility: Positive,
+        /// Optional autocorrelation parameter (-1 to 1)
+        autocorrelation: Option<Decimal>,
+    },
+
     /// Mean-reverting process (Ornstein-Uhlenbeck)
     MeanReverting {
         /// Time step size (fraction of year: daily=1/365, weekly=1/52, etc.)
         dt: Positive,
-        /// Drift parameter (contribution to expected change outside of mean reversion)
-        drift: Decimal,
         /// Volatility parameter (annualized standard deviation)
         volatility: Positive,
         /// Mean reversion speed (rate at which process reverts to mean)
@@ -125,8 +115,15 @@ pub enum WalkType {
         drift: Decimal,
         /// Volatility parameter (may be interpreted differently based on custom implementation)
         volatility: Positive,
+        /// Volatility of Volatility parameter (annualized standard deviation)
+        vov: Positive,
+        /// Mean reversion speed (rate at which process reverts to mean)
+        vol_speed: Positive,
+        /// Long-term mean (equilibrium level)
+        vol_mean: Positive,
     },
 }
+
 
 
 /// Parameters for stochastic process simulations (random walks).
@@ -158,8 +155,8 @@ pub enum WalkType {
 #[derive(Debug, Copy, Clone)]
 pub struct WalkParams<X, Y>
 where
-    X: std::ops::AddAssign + Into<Positive> + Copy,
-    Y: std::ops::AddAssign + Into<Positive> + Copy + Walktypable,
+    X: Copy + Into<Positive> + AddAssign + Display,
+    Y: Copy + Into<Positive> + Display ,
 {
     /// Number of steps or data points to generate in the simulation
     /// Determines the resolution and length of the resulting random walk
@@ -171,6 +168,6 @@ where
 
     /// The specific stochastic process to use for generating the random walk
     /// Determines the mathematical properties and behavior of the simulated path
-    pub walk_type: WalkType
+    pub walk_type: WalkType,
 }
 

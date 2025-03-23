@@ -3,12 +3,13 @@
    Email: jb@taunais.com
    Date: 23/3/25
 ******************************************************************************/
+use std::fmt::Display;
 use crate::Positive;
-use crate::simulation::step::Step;
+use crate::simulation::step::{Step};
 use crate::simulation::types::Walktypable;
 use crate::simulation::walk::WalkParams;
 use crate::utils::Len;
-use std::ops::{Index, IndexMut};
+use std::ops::{AddAssign, Index, IndexMut};
 
 /// A struct that represents a two-dimensional random walk simulation.
 ///
@@ -28,8 +29,8 @@ use std::ops::{Index, IndexMut};
 ///
 pub struct RandomWalk<X, Y>
 where
-    X: std::ops::AddAssign + Into<Positive> + Copy,
-    Y: std::ops::AddAssign + Into<Positive> + Copy + Walktypable,
+    X: Copy + Into<Positive> + AddAssign + Display,
+    Y: Copy + Into<Positive> + Display + Walktypable,
 {
     /// The descriptive title of the random walk
     title: String,
@@ -40,8 +41,8 @@ where
 
 impl<X, Y> RandomWalk<X, Y>
 where
-    X: std::ops::AddAssign + Into<Positive> + Copy,
-    Y: std::ops::AddAssign + Into<Positive> + Copy + Walktypable,
+    X: Copy + Into<Positive> + AddAssign + Display,
+    Y: Copy + Into<Positive> + Display + Walktypable,
 {
     /// Creates a new random walk instance with the given title and steps.
     ///
@@ -61,8 +62,8 @@ where
     pub fn new<F>(title: String, params: WalkParams<X, Y>, generator: F) -> Self
     where
         F: FnOnce(WalkParams<X, Y>) -> Vec<Step<X, Y>>,
-        X: std::ops::AddAssign + Into<Positive> + Copy,
-        Y: std::ops::AddAssign + Into<Positive> + Copy + Walktypable,
+        X: Copy + Into<Positive> + AddAssign + Display,
+        Y: Copy + Into<Positive> + Display + Walktypable,
     {
         let steps = generator(params);
         Self { title, steps }
@@ -165,8 +166,8 @@ where
 ///   and implement the `Walktypable` trait.
 impl<X, Y> Len for RandomWalk<X, Y>
 where
-    X: std::ops::AddAssign + Into<Positive> + Copy,
-    Y: std::ops::AddAssign + Into<Positive> + Copy + Walktypable,
+    X: Copy + Into<Positive> + AddAssign + Display,
+    Y: Copy + Into<Positive> + Display + Walktypable,
 {
     /// Returns the number of steps in the random walk.
     ///
@@ -198,8 +199,8 @@ where
 /// * `Y` - The type for y-axis values, with constraints as described above.
 impl<X, Y> Index<usize> for RandomWalk<X, Y>
 where
-    X: std::ops::AddAssign + Into<Positive> + Copy,
-    Y: std::ops::AddAssign + Into<Positive> + Copy + Walktypable,
+    X: Copy + Into<Positive> + AddAssign + Display,
+    Y: Copy + Into<Positive> + Display + Walktypable,
 {
     /// The type returned when indexing the random walk.
     type Output = Step<X, Y>;
@@ -233,8 +234,8 @@ where
 /// * `Y` - The type for y-axis values, with constraints as described above.
 impl<X, Y> IndexMut<usize> for RandomWalk<X, Y>
 where
-    X: std::ops::AddAssign + Into<Positive> + Copy,
-    Y: std::ops::AddAssign + Into<Positive> + Copy + Walktypable,
+    X: Copy + Into<Positive> + AddAssign + Display,
+    Y: Copy + Into<Positive> + Display + Walktypable,
 {
     /// Provides mutable access to a specific step in the random walk by index.
     ///
