@@ -230,6 +230,35 @@ impl Positive {
         self.0
     }
 
+    /// Returns the inner `Decimal` ref.
+    ///
+    /// # Returns
+    ///
+    /// The wrapped `Decimal` ref.
+    pub fn to_dec_ref(&self) -> &Decimal {
+        &self.0
+    }
+
+    /// Returns a mutable reference to the inner `Decimal` value.
+    ///
+    /// This method provides controlled access to the underlying `Decimal` value
+    /// within the `Positive` wrapper, allowing it to be modified while maintaining
+    /// encapsulation of the inner value. It's important to note that direct mutation
+    /// should be used with caution to ensure the positive value invariant is maintained.
+    ///
+    /// # Returns
+    ///
+    /// * `&mut Decimal` - A mutable reference to the wrapped `Decimal` value.
+    ///
+    /// # Usage
+    ///
+    /// This method is typically used in contexts where the wrapped value needs to be
+    /// modified in-place while preserving the wrapper's type safety guarantees.
+    /// Care should be taken to ensure any modification preserves the positive value constraint.
+    pub fn to_dec_ref_mut(&mut self) -> &mut Decimal {
+        &mut self.0
+    }
+
     /// Converts the value to a 64-bit floating-point number.
     ///
     /// # Returns

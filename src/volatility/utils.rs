@@ -7,6 +7,7 @@ use crate::Options;
 use crate::constants::{MAX_VOLATILITY, MIN_VOLATILITY, TOLERANCE, ZERO};
 use crate::error::VolatilityError;
 use crate::greeks::Greeks;
+use crate::model::decimal::decimal_normal_sample;
 use crate::utils::time::TimeFrame;
 use crate::{Positive, pos};
 use num_traits::{FromPrimitive, ToPrimitive};
@@ -362,6 +363,71 @@ pub fn adjust_volatility(
     let scale_factor = pos!((from_periods / to_periods).to_f64().sqrt());
 
     Ok(volatility * scale_factor)
+}
+
+/// Generates a mean-reverting Ornstein-Uhlenbeck process time series
+///
+/// This function simulates a discrete-time Ornstein-Uhlenbeck stochastic process, which is
+/// commonly used in financial mathematics to model mean-reverting processes such as interest rates,
+/// volatility, or commodity prices. The process follows the stochastic differential equation:
+///
+/// dX_t = θ(μ - X_t)dt + σdW_t
+///
+/// Where:
+/// - θ (theta) is the speed of reversion to the mean
+/// - μ (mu) is the long-term mean level
+/// - σ (sigma) is the volatility or intensity of random fluctuations
+/// - W_t is a Wiener process (standard Brownian motion)
+///
+/// # Arguments
+/// * `x0` - Initial value of the process
+/// * `mu` - Long-term mean the process reverts to
+/// * `theta` - Speed of mean reversion (higher values cause faster reversion)
+/// * `sigma` - Volatility parameter controlling the intensity of random fluctuations
+/// * `dt` - Time step size for the simulation
+/// * `steps` - Number of time steps to simulate
+///
+/// # Returns
+/// A vector containing the simulated values of the Ornstein-Uhlenbeck process at each time step
+///
+/// # Examples
+///
+/// ```rust
+/// use rust_decimal_macros::dec;
+/// use optionstratlib::pos;
+/// use optionstratlib::volatility::generate_ou_process;
+///
+/// // Simulate an OU process with initial value 1.0, mean 1.5,
+/// // reversion speed 0.1, volatility 0.2, time step 0.01, for 1000 steps
+/// let process = generate_ou_process(
+///     pos!(1.0),       // initial value
+///     pos!(1.5),       // long-term mean
+///     dec!(0.1),       // speed of reversion
+///     dec!(0.2),       // volatility
+///     dec!(0.01),      // time step
+///     1000             // number of steps
+/// );
+/// ```
+pub fn generate_ou_process(
+    x0: Positive,
+    mu: Positive,
+    theta: Decimal,
+    sigma: Decimal,
+    dt: Decimal,
+    steps: usize,
+) -> Vec<Positive> {
+    let mut x = x0.to_dec();
+    let mut result = Vec::with_capacity(steps);
+    result.push(Positive(x));
+
+    for _ in 1..steps {
+        let dw = decimal_normal_sample() * dt.sqrt().unwrap();
+        x += theta * (mu - x) * dt + sigma * dw;
+        x = x.max(Decimal::ZERO);
+        result.push(Positive(x));
+    }
+
+    result
 }
 
 #[cfg(test)]
@@ -1156,5 +1222,51 @@ mod tests_adjust_volatility {
         let result = adjust_volatility(large_vol, TimeFrame::Day, TimeFrame::Minute).unwrap();
         assert!(result > Positive::ZERO);
         assert!(result < large_vol);
+    }
+}
+
+#[cfg(test)]
+mod tests_generate_ou_process {
+    use super::*;
+    use rust_decimal_macros::dec;
+
+    #[test]
+    fn test_process_length() {
+        let steps = 500;
+        let process = generate_ou_process(
+            pos!(1.0),
+            pos!(1.5),
+            dec!(0.1),
+            dec!(0.2),
+            dec!(0.01),
+            steps,
+        );
+        assert_eq!(process.len(), steps);
+    }
+
+    #[test]
+    fn test_all_values_positive() {
+        let process =
+            generate_ou_process(pos!(1.0), pos!(1.5), dec!(0.2), dec!(0.3), dec!(0.01), 1000);
+
+        for value in process {
+            assert!(value > pos!(0.0), "Found non-positive value: {:?}", value);
+        }
+    }
+
+    #[test]
+    fn test_mean_reversion_tendency() {
+        let process = generate_ou_process(
+            pos!(0.1),
+            pos!(1.0),
+            dec!(1.0),  // high theta for fast reversion
+            dec!(0.01), // low volatility
+            dec!(0.01),
+            1000,
+        );
+
+        let last = process.last().unwrap().to_dec();
+        let diff = (last - dec!(1.0)).abs();
+        assert!(diff < dec!(0.1), "Final value too far from mean: {}", last);
     }
 }

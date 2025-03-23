@@ -32,17 +32,48 @@ use std::collections::HashMap;
 use std::error::Error;
 use tracing::{debug, info, trace, warn};
 
+/// Parameters for stochastic process simulations (random walks).
+///
+/// This struct defines the configuration for generating random walks or price path simulations,
+/// particularly useful in financial modeling, option pricing, and risk analysis contexts.
+///
+/// The generic parameters allow flexibility in the types of steps and values used in the walk,
+/// with appropriate trait bounds to ensure mathematical operations can be performed correctly.
+///
+/// # Type Parameters
+///
+/// * `X` - The type for the x-axis steps (typically time), must support addition and conversion to positive values
+/// * `Y` - The type for the y-axis values (typically price or rate), must support addition, conversion to positive values,
+///         and implement the `Walktypable` trait for traversal operations
+///
 #[derive(Debug, Copy, Clone)]
 pub struct WalkParams<X, Y>
 where
     X: std::ops::AddAssign + Into<Positive> + Copy,
     Y: std::ops::AddAssign + Into<Positive> + Copy + Walktypable,
 {
+    /// Number of steps or data points to generate in the simulation
     pub size: usize,
+
+    /// Initial step values (starting point) for the random walk
+    /// Typically represents initial time and price/rate values
     pub init_step: Step<X, Y>,
+
+    /// Drift parameter representing the expected change in the process
+    /// In financial context, often represents expected return or growth rate
     pub drift: Decimal,
+
+    /// Volatility parameter representing the standard deviation of random fluctuations
+    /// Controls how much the random walk can deviate from its expected path
     pub volatility: Positive,
+
+    /// Optional parameter for scheduled changes in volatility during the simulation
+    /// Useful for modeling regime changes or volatility clustering
     pub volatility_change: Option<Positive>,
+
+    /// Optional extra parameter for extension purposes
+    /// Can be used for additional model parameters specific to certain simulation types
+    pub extra: Option<Positive>,
 }
 
 /// The `Walkable` trait defines a generic structure for creating and manipulating

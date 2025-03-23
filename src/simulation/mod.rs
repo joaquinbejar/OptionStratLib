@@ -233,6 +233,19 @@ pub mod types;
 /// It serves as the primary entry point for library users.
 pub mod walk;
 
+/// # Random Walk Module
+///
+/// This module provides implementations of various random walk algorithms and related utilities.
+/// Random walks are mathematical objects that describe a path consisting of a succession of random steps
+/// in some mathematical space.
+///
+/// ## Usage
+///
+/// Typically used for stochastic process simulation and analysis, Monte Carlo methods,
+/// and modeling natural phenomena with random components.
+///
+pub mod randomwalk;
+
 /// Module containing functionality for stepping through data or calculations.
 ///
 /// This module provides components and utilities for managing step-based operations,
@@ -245,7 +258,6 @@ pub mod walk;
 /// - Incremental state changes need to be managed
 ///
 pub mod step;
-pub mod randomwalk;
 
 pub use model::SimulationResult;
 pub use simulator::{SimulationConfig, Simulator, WalkId};
