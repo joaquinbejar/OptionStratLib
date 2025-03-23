@@ -6,6 +6,7 @@
 use crate::constants::*;
 use crate::{Positive, pos};
 use chrono::{Duration, Local, NaiveTime, Utc};
+use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
 
 /// Represents different timeframes for volatility calculations.
@@ -125,7 +126,7 @@ pub fn units_per_year(time_frame: &TimeFrame) -> Positive {
         TimeFrame::Minute => pos!(525600.0),              // 365 * 24 * 60
         TimeFrame::Hour => pos!(8760.0),                  // 365 * 24
         TimeFrame::Day => pos!(365.0),                    // 365
-        TimeFrame::Week => pos!(52.14285714),             // 365 / 7
+        TimeFrame::Week => Positive(dec!(365.0) / dec!(7.0)), // 365 / 7
         TimeFrame::Month => pos!(12.0),                   // 12
         TimeFrame::Quarter => pos!(4.0),                  // 4
         TimeFrame::Year => pos!(1.0),                     // 1
@@ -184,7 +185,6 @@ pub fn convert_time_frame(
     // seconds per year / minutes per year = 31536000 / 525600 = 60
     // So 60 seconds = 1 minute
     let conversion_factor = to_units_per_year / from_units_per_year;
-
     // Apply the conversion
     value * conversion_factor
 }
@@ -442,6 +442,12 @@ mod tests {
     fn test_convert_days_to_weeks() {
         let result = convert_time_frame(pos!(7.0), &TimeFrame::Day, &TimeFrame::Week);
         assert_pos_relative_eq!(result, pos!(1.0), pos!(1e-10));
+    }
+
+    #[test]
+    fn test_convert_weeks_to_days() {
+        let result = convert_time_frame(pos!(2.0), &TimeFrame::Week, &TimeFrame::Day);
+        assert_pos_relative_eq!(result, pos!(14.0), pos!(1e-10));
     }
 
     #[test]

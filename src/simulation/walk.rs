@@ -14,6 +14,7 @@ use crate::geometrics::GeometricObject;
 use crate::model::types::ExpirationDate;
 use crate::pricing::payoff::Profit;
 use crate::simulation::model::WalkResult;
+use crate::simulation::step::Step;
 use crate::simulation::types::Walktypable;
 use crate::simulation::utils::calculate_extra_metrics;
 use crate::strategies::Strategable;
@@ -30,6 +31,19 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::error::Error;
 use tracing::{debug, info, trace, warn};
+
+#[derive(Debug, Copy, Clone)]
+pub struct WalkParams<X, Y>
+where
+    X: std::ops::AddAssign + Into<Positive> + Copy,
+    Y: std::ops::AddAssign + Into<Positive> + Copy + Walktypable,
+{
+    pub size: usize,
+    pub init_step: Step<X, Y>,
+    pub drift: Decimal,
+    pub volatility: Positive,
+    pub volatility_change: Option<Positive>,
+}
 
 /// The `Walkable` trait defines a generic structure for creating and manipulating
 /// entities capable of simulating or managing a random walk sequence of values.

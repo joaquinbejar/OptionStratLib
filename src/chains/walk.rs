@@ -4,15 +4,20 @@
    Date: 18/3/25
 ******************************************************************************/
 use crate::chains::chain::OptionChain;
+use crate::simulation::step::{Step, Xstep};
 use crate::simulation::types::Walktypable;
 use crate::simulation::{RandomWalkGraph, Walkable};
 use crate::{Positive, pos};
 use rust_decimal::Decimal;
 use std::error::Error;
 
-impl Walkable<Positive, OptionChain> for OptionChain {
+impl Walkable<Xstep<Positive>, OptionChain> for OptionChain {
     fn get_y_values(&self) -> &Vec<OptionChain> {
         todo!()
+    }
+
+    fn get_x_type(&self) -> &Vec<Xstep<Positive>> {
+        unimplemented!("get_x_type not implemented for this type")
     }
 
     fn get_y_values_ref(&mut self) -> &mut Vec<OptionChain> {

@@ -233,6 +233,20 @@ pub mod types;
 /// It serves as the primary entry point for library users.
 pub mod walk;
 
+/// Module containing functionality for stepping through data or calculations.
+///
+/// This module provides components and utilities for managing step-based operations,
+/// such as iterative calculations, data processing steps, or any process that requires
+/// incremental progression through a series of operations.
+///
+/// The stepping functionality is particularly useful for scenarios where:
+/// - Operations need to be performed in a specific sequence
+/// - Progress tracking is required through a multi-stage process
+/// - Incremental state changes need to be managed
+///
+pub mod step;
+pub mod randomwalk;
+
 pub use model::SimulationResult;
 pub use simulator::{SimulationConfig, Simulator, WalkId};
 pub use walk::{RandomWalkGraph, Walkable};
