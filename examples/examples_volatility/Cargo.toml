@@ -6,6 +6,7 @@ edition = "2024"
 [dependencies]
 optionstratlib = { path = "../.." }
 tracing = "0.1.41"
-statrs = "0.17.1"
-rust_decimal = "1.36.0"
-rust_decimal_macros = "1.36.0"
+statrs = "0.18.0"
+rust_decimal = "1.37.1"
+rust_decimal_macros = "1.37.1"
+plotters = "0.3.7"

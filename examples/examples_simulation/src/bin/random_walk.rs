@@ -1,16 +1,18 @@
-/******************************************************************************
-   Author: Joaquín Béjar García
-   Email: jb@taunais.com
-   Date: 22/10/24
-******************************************************************************/
-use optionstratlib::simulation::walk::{RandomWalkGraph, Walkable};
+
+use optionstratlib::simulation::randomwalk::RandomWalk;
+use optionstratlib::simulation::step::{Step, Xstep, Ystep};
+use optionstratlib::simulation::walk::{WalkParams, WalkType};
 use optionstratlib::utils::setup_logger;
 use optionstratlib::utils::time::TimeFrame;
-use optionstratlib::visualization::utils::{Graph, GraphBackend};
-use optionstratlib::{pos, spos};
+use optionstratlib::{ExpirationDate, pos, spos, Positive};
 use rust_decimal_macros::dec;
-use tracing::info;
 
+fn generator(_walk_params: WalkParams<Positive, Positive>) -> Vec<Step<Positive, Positive>> {
+    vec![Step {
+        x: Xstep::new(pos!(0.0), TimeFrame::Day, ExpirationDate::Days(pos!(30.0))),
+        y: Ystep::new(pos!(100.0)),
+    }]
+}
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     setup_logger();
     let years = 3.0;
@@ -23,26 +25,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let dividend_yield = spos!(0.02);
     let volatility_window = 20;
     let initial_volatility = Some(std_dev);
-    let mut random_walk = RandomWalkGraph::new(
-        "Random Walk".to_string(),
-        risk_free_rate,
-        dividend_yield,
-        TimeFrame::Day,
-        volatility_window,
-        initial_volatility,
-    );
-    random_walk.generate_random_walk(n_steps, initial_price, mean, std_dev, std_dev_change)?;
-    random_walk.graph(
-        &random_walk.get_x_values(),
-        GraphBackend::Bitmap {
-            file_path: "Draws/Simulation/random_walk.png",
-            size: (1200, 800),
-        },
-        20,
-    )?;
 
-    for (i, price_params) in random_walk.enumerate() {
-        info!("Step {}: Params: {}", i, price_params,);
-    }
+    let walk_params = WalkParams {
+        size: n_steps,
+        init_step: Step {
+            x: Xstep::new(pos!(0.0), TimeFrame::Day, ExpirationDate::Days(pos!(30.0))),
+            y: Ystep::new(pos!(100.0)),
+        },
+        walk_type: WalkType::GeometricBrownian {
+            dt: pos!(1.0 / 252.0),
+            drift: dec!(0.0),
+            volatility: initial_volatility.unwrap(),
+        },
+    };
+
+    let mut random_walk = RandomWalk::new("Random Walk".to_string(), walk_params, generator);
+
     Ok(())
 }

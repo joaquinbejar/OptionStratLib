@@ -6,28 +6,10 @@
 use crate::chains::chain::OptionChain;
 use crate::simulation::step::Xstep;
 use crate::simulation::types::Walktypable;
-use crate::simulation::{RandomWalkGraph, Walkable};
 use crate::{Positive, pos};
 use rust_decimal::Decimal;
 use std::error::Error;
 
-impl Walkable<Xstep<Positive>, OptionChain> for OptionChain {
-    fn get_y_values(&self) -> &Vec<OptionChain> {
-        todo!()
-    }
-
-    fn get_x_type(&self) -> &Vec<Xstep<Positive>> {
-        unimplemented!("get_x_type not implemented for this type")
-    }
-
-    fn get_y_values_ref(&mut self) -> &mut Vec<OptionChain> {
-        todo!()
-    }
-
-    fn get_random_walk(&self) -> Result<RandomWalkGraph<OptionChain>, Box<dyn Error>> {
-        todo!()
-    }
-}
 
 /// Trait for types that can be "walked" or iterated through, typically used for
 /// option chains to simulate price movements and rebalance strikes.
