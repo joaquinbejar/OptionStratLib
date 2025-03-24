@@ -6,7 +6,6 @@ use rust_decimal::{Decimal, MathematicalOps};
 use std::error::Error;
 use std::fmt::{Debug, Display};
 use std::ops::AddAssign;
-use crate::simulation::step::Step;
 
 pub trait WalkTypeAble<X, Y>
 where
