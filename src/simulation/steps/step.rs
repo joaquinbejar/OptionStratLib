@@ -3,7 +3,7 @@
    Email: jb@taunais.com
    Date: 23/3/25
 ******************************************************************************/
-use crate::simulation::step::{Xstep, Ystep};
+use crate::simulation::steps::{Xstep, Ystep};
 use crate::utils::TimeFrame;
 use crate::{ExpirationDate, Positive};
 use std::error::Error;
@@ -156,7 +156,7 @@ where
     Y: Copy + Into<Positive> + Display,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Step {{ x: {}, y: {} }}\n", self.x, self.y)
+        writeln!(f, "Step {{ x: {}, y: {} }}", self.x, self.y)
     }
 }
 

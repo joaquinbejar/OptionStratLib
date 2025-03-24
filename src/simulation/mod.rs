@@ -126,7 +126,7 @@ pub mod randomwalk;
 /// - Progress tracking is required through a multi-stage process
 /// - Incremental state changes need to be managed
 ///
-pub mod step;
+pub mod steps;
 mod display;
 mod traits;
 

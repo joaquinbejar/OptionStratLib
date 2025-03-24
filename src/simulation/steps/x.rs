@@ -67,7 +67,7 @@ where
 ///
 /// // Create a step with 7 days as the value, using days as the time unit
 /// use optionstratlib::{pos, ExpirationDate};
-/// use optionstratlib::simulation::step::Xstep;
+/// use optionstratlib::simulation::steps::Xstep;
 /// use optionstratlib::utils::TimeFrame;
 /// let step = Xstep::new(7, TimeFrame::Day, ExpirationDate::Days(pos!(30.0)));
 ///

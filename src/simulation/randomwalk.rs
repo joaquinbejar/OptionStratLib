@@ -4,7 +4,7 @@
    Date: 23/3/25
 ******************************************************************************/
 use crate::Positive;
-use crate::simulation::step::Step;
+use crate::simulation::steps::Step;
 use crate::simulation::walk::WalkParams;
 use crate::utils::Len;
 use std::fmt::Display;
@@ -260,7 +260,7 @@ where
     Y: Copy + Into<Positive> + Display,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "RandomWalk Title: {}, Steps:  \n", self.title)?;
+        writeln!(f, "RandomWalk Title: {}, Steps:  ", self.title)?;
         for step in &self.steps {
             write!(f, "\t{}", step)?;
         }

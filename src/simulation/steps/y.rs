@@ -56,7 +56,7 @@ where
 ///
 /// ```rust
 /// use rust_decimal_macros::dec;
-/// use optionstratlib::simulation::step::Ystep;
+/// use optionstratlib::simulation::steps::Ystep;
 ///
 /// // Create a new step with initial value
 /// let step = Ystep::new(1, dec!(10.5));

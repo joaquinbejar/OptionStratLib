@@ -1,6 +1,6 @@
 use optionstratlib::simulation::WalkTypeAble;
 use optionstratlib::simulation::randomwalk::RandomWalk;
-use optionstratlib::simulation::step::{Step, Xstep, Ystep};
+use optionstratlib::simulation::steps::{Step, Xstep, Ystep};
 use optionstratlib::simulation::walk::{WalkParams, WalkType};
 use optionstratlib::utils::setup_logger;
 use optionstratlib::utils::time::TimeFrame;
