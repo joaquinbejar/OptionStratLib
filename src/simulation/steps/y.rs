@@ -109,6 +109,15 @@ where
         &self.value
     }
 
+    /// Returns an immutable reference to the stored value.
+    ///
+    /// # Returns
+    ///
+    /// A reference to the stored value of type `T`
+    pub fn positive(&self) -> Positive {
+        self.value.into()
+    }
+
     /// Returns an immutable reference to the index of this step.
     ///
     /// The index represents the step's position in a sequence, typically

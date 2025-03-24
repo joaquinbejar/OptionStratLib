@@ -794,6 +794,10 @@ impl Graph for Position {
         self.option.title()
     }
 
+    fn get_x_values(&self) -> Vec<Positive> {
+        todo!()
+    }
+
     /// Calculates position profit/loss values at expiration for a range of underlying prices.
     ///
     /// This method transforms a slice of potential underlying prices into their corresponding
@@ -804,7 +808,8 @@ impl Graph for Position {
     ///
     /// # Returns
     /// A `Vec<f64>` containing the calculated profit/loss values for each input price
-    fn get_values(&self, data: &[Positive]) -> Vec<f64> {
+    fn get_y_values(&self) -> Vec<f64> {
+        let data = self.get_x_values();
         data.iter()
             .map(|&price| {
                 self.pnl_at_expiration(&Some(&price))
@@ -2039,7 +2044,6 @@ mod tests_pnl_calculator {
 #[cfg(test)]
 mod tests_graph {
     use super::*;
-    use crate::pos;
 
     #[test]
 
@@ -2052,9 +2056,7 @@ mod tests_graph {
 
     fn test_get_values() {
         let position = Position::default();
-        let prices = vec![pos!(90.0), pos!(100.0), pos!(110.0)];
-        let values = position.get_values(&prices);
-
+        let values = position.get_y_values();
         assert_eq!(values.len(), 3);
         assert!(!values.iter().any(|&x| x.is_nan()));
     }

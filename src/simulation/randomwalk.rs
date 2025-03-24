@@ -4,9 +4,13 @@
    Date: 23/3/25
 ******************************************************************************/
 use crate::Positive;
+use crate::pricing::Profit;
 use crate::simulation::WalkParams;
 use crate::simulation::steps::Step;
 use crate::utils::Len;
+use crate::visualization::utils::Graph;
+use rust_decimal::Decimal;
+use std::error::Error;
 use std::fmt::Display;
 use std::ops::{AddAssign, Index, IndexMut};
 
@@ -265,5 +269,39 @@ where
             write!(f, "\t{}", step)?;
         }
         Ok(())
+    }
+}
+
+impl<X, Y> Profit for RandomWalk<X, Y>
+where
+    X: AddAssign + Copy + Display + Into<Positive>,
+    Y: Copy + Display + Into<Positive>,
+{
+    fn calculate_profit_at(&self, _price: Positive) -> Result<Decimal, Box<dyn Error>> {
+        unimplemented!()
+    }
+}
+
+impl<X, Y> Graph for RandomWalk<X, Y>
+where
+    X: Copy + Into<Positive> + AddAssign + Display,
+    Y: Copy + Into<Positive> + Display,
+{
+    fn title(&self) -> String {
+        self.title.clone()
+    }
+
+    fn get_x_values(&self) -> Vec<Positive> {
+        self.steps
+            .iter()
+            .map(|step| step.get_graph_x_value())
+            .collect()
+    }
+
+    fn get_y_values(&self) -> Vec<f64> {
+        self.steps
+            .iter()
+            .map(|step| step.get_graph_y_value().to_f64())
+            .collect()
     }
 }

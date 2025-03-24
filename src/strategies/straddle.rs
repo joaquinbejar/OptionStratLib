@@ -668,6 +668,11 @@ impl Graph for ShortStraddle {
         }
     }
 
+    fn get_x_values(&self) -> Vec<Positive> {
+        self.best_range_to_show(Positive::from(1.0))
+            .unwrap_or_else(|_| vec![self.short_call.option.strike_price])
+    }
+
     fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<f64, f64>> {
         let max_value = f64::INFINITY;
         let min_value = f64::NEG_INFINITY;
@@ -1444,6 +1449,11 @@ impl Graph for LongStraddle {
         }
     }
 
+    fn get_x_values(&self) -> Vec<Positive> {
+        self.best_range_to_show(Positive::from(1.0))
+            .unwrap_or_else(|_| vec![self.long_call.option.strike_price])
+    }
+
     fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<f64, f64>> {
         let max_value = f64::INFINITY;
         let min_value = f64::NEG_INFINITY;
@@ -1822,14 +1832,8 @@ mod tests_short_straddle {
         assert_eq!(vertical_lines.len(), 1);
         assert_eq!(vertical_lines[0].label, "Current Price: 150");
 
-        let data = vec![
-            pos!(140.0),
-            pos!(145.0),
-            pos!(150.0),
-            pos!(155.0),
-            pos!(160.0),
-        ];
-        let values = strategy.get_values(&data);
+        let data = strategy.get_x_values();
+        let values = strategy.get_y_values();
         for (i, &price) in data.iter().enumerate() {
             assert_eq!(
                 values[i],
@@ -2202,14 +2206,8 @@ mod tests_long_straddle {
         assert_eq!(vertical_lines.len(), 1);
         assert_eq!(vertical_lines[0].label, "Current Price: 150");
 
-        let data = vec![
-            pos!(130.0),
-            pos!(140.0),
-            pos!(150.0),
-            pos!(160.0),
-            pos!(170.0),
-        ];
-        let values = strategy.get_values(&data);
+        let data = strategy.get_x_values();
+        let values = strategy.get_y_values();
         for (i, &price) in data.iter().enumerate() {
             assert_eq!(
                 values[i],

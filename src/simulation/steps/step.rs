@@ -5,7 +5,7 @@
 ******************************************************************************/
 use crate::simulation::steps::{Xstep, Ystep};
 use crate::utils::TimeFrame;
-use crate::{ExpirationDate, Positive};
+use crate::{ExpirationDate, Positive, pos};
 use serde::ser::SerializeStruct;
 use serde::{Serialize, Serializer};
 use std::error::Error;
@@ -147,6 +147,14 @@ where
             x: previous_x,
             y: Ystep::new(self.y.index() - 1, new_y_value),
         })
+    }
+
+    pub fn get_graph_x_value(&self) -> Positive {
+        pos!(*self.x.index() as f64)
+    }
+
+    pub fn get_graph_y_value(&self) -> Positive {
+        (*self.y.value()).into()
     }
 }
 

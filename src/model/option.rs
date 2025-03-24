@@ -739,7 +739,12 @@ impl Graph for Options {
         )
     }
 
-    fn get_values(&self, data: &[Positive]) -> Vec<f64> {
+    fn get_x_values(&self) -> Vec<Positive> {
+        unimplemented!()
+    }
+
+    fn get_y_values(&self) -> Vec<f64> {
+        let data = self.get_x_values();
         data.iter()
             .map(|&price| self.intrinsic_value(price).unwrap().to_f64().unwrap())
             .collect()
@@ -1664,7 +1669,6 @@ mod tests_greek_trait {
 mod tests_graph {
     use super::*;
     use crate::model::utils::create_sample_option_simplest;
-    use crate::pos;
     use crate::visualization::utils::Graph;
     use approx::assert_relative_eq;
 
@@ -1680,8 +1684,7 @@ mod tests_graph {
 
     fn test_get_values() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        let prices = vec![pos!(90.0), pos!(100.0), pos!(110.0)];
-        let values = option.get_values(&prices);
+        let values = option.get_y_values();
 
         assert_eq!(values.len(), 3);
         assert_relative_eq!(values[0], 0.0, epsilon = 1e-6);
@@ -1712,8 +1715,7 @@ mod tests_graph {
 
     fn test_get_values_put_option() {
         let option = create_sample_option_simplest(OptionStyle::Put, Side::Long);
-        let prices = vec![pos!(90.0), pos!(100.0), pos!(110.0)];
-        let values = option.get_values(&prices);
+        let values = option.get_y_values();
 
         assert_eq!(values.len(), 3);
         assert_relative_eq!(values[0], 10.0, epsilon = 1e-6);
@@ -1725,8 +1727,7 @@ mod tests_graph {
 
     fn test_get_values_short_option() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Short);
-        let prices = vec![pos!(90.0), pos!(100.0), pos!(110.0)];
-        let values = option.get_values(&prices);
+        let values = option.get_y_values();
 
         assert_eq!(values.len(), 3);
         assert_relative_eq!(values[0], 0.0, epsilon = 1e-6);

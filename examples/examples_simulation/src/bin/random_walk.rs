@@ -1,9 +1,9 @@
-use optionstratlib::simulation::WalkTypeAble;
 use optionstratlib::simulation::randomwalk::RandomWalk;
 use optionstratlib::simulation::steps::{Step, Xstep, Ystep};
-use optionstratlib::simulation::walk::{WalkParams, WalkType};
+use optionstratlib::simulation::{WalkParams, WalkType, WalkTypeAble};
 use optionstratlib::utils::setup_logger;
 use optionstratlib::utils::time::TimeFrame;
+use optionstratlib::visualization::utils::{Graph, GraphBackend};
 use optionstratlib::{ExpirationDate, Positive, pos, spos};
 use rust_decimal_macros::dec;
 use tracing::info;
@@ -33,7 +33,7 @@ fn generator(walk_params: WalkParams<Positive, Positive>) -> Vec<Step<Positive, 
     for y_step in y_steps.iter() {
         previous_x_step = match previous_x_step.next() {
             Ok(x_step) => x_step,
-            Err(e) => break,
+            Err(_) => break,
         };
         previous_y_step = previous_y_step.next(y_step.clone());
         let step = Step {
@@ -80,6 +80,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut random_walk = RandomWalk::new("Random Walk".to_string(), walk_params, generator);
     info!("Random Walk: {}", random_walk);
+
+    random_walk.graph(
+        GraphBackend::Bitmap {
+            file_path: "Draws/Simulation/random_walk.png",
+            size: (1200, 800),
+        },
+        20,
+    )?;
 
     Ok(())
 }

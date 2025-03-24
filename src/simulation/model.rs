@@ -209,3 +209,448 @@ impl Display for WalkType {
         }
     }
 }
+
+#[cfg(test)]
+mod tests_walk_type {
+    use super::*;
+    use crate::pos;
+    use rust_decimal_macros::dec;
+
+    #[test]
+    fn test_brownian_creation() {
+        let walk = WalkType::Brownian {
+            dt: pos!(0.01),
+            drift: dec!(0.05),
+            volatility: pos!(0.2),
+        };
+
+        if let WalkType::Brownian {
+            dt,
+            drift,
+            volatility,
+        } = walk
+        {
+            assert_eq!(dt, pos!(0.01));
+            assert_eq!(drift, dec!(0.05));
+            assert_eq!(volatility, pos!(0.2));
+        } else {
+            panic!("Expected Brownian variant");
+        }
+    }
+
+    #[test]
+    fn test_geometric_brownian_creation() {
+        let walk = WalkType::GeometricBrownian {
+            dt: pos!(0.01),
+            drift: dec!(0.05),
+            volatility: pos!(0.2),
+        };
+
+        if let WalkType::GeometricBrownian {
+            dt,
+            drift,
+            volatility,
+        } = walk
+        {
+            assert_eq!(dt, pos!(0.01));
+            assert_eq!(drift, dec!(0.05));
+            assert_eq!(volatility, pos!(0.2));
+        } else {
+            panic!("Expected GeometricBrownian variant");
+        }
+    }
+
+    #[test]
+    fn test_log_returns_creation() {
+        let walk = WalkType::LogReturns {
+            dt: pos!(0.01),
+            expected_return: dec!(0.05),
+            volatility: pos!(0.2),
+            autocorrelation: Some(dec!(0.1)),
+        };
+
+        if let WalkType::LogReturns {
+            dt,
+            expected_return,
+            volatility,
+            autocorrelation,
+        } = walk
+        {
+            assert_eq!(dt, pos!(0.01));
+            assert_eq!(expected_return, dec!(0.05));
+            assert_eq!(volatility, pos!(0.2));
+            assert_eq!(autocorrelation, Some(dec!(0.1)));
+        } else {
+            panic!("Expected LogReturns variant");
+        }
+    }
+
+    #[test]
+    fn test_mean_reverting_creation() {
+        let walk = WalkType::MeanReverting {
+            dt: pos!(0.01),
+            volatility: pos!(0.2),
+            speed: pos!(0.1),
+            mean: pos!(100.0),
+        };
+
+        if let WalkType::MeanReverting {
+            dt,
+            volatility,
+            speed,
+            mean,
+        } = walk
+        {
+            assert_eq!(dt, pos!(0.01));
+            assert_eq!(volatility, pos!(0.2));
+            assert_eq!(speed, pos!(0.1));
+            assert_eq!(mean, pos!(100.0));
+        } else {
+            panic!("Expected MeanReverting variant");
+        }
+    }
+
+    #[test]
+    fn test_jump_diffusion_creation() {
+        let walk = WalkType::JumpDiffusion {
+            dt: pos!(0.01),
+            drift: dec!(0.05),
+            volatility: pos!(0.2),
+            intensity: pos!(1.0),
+            jump_mean: dec!(-0.05),
+            jump_volatility: pos!(0.3),
+        };
+
+        if let WalkType::JumpDiffusion {
+            dt,
+            drift,
+            volatility,
+            intensity,
+            jump_mean,
+            jump_volatility,
+        } = walk
+        {
+            assert_eq!(dt, pos!(0.01));
+            assert_eq!(drift, dec!(0.05));
+            assert_eq!(volatility, pos!(0.2));
+            assert_eq!(intensity, pos!(1.0));
+            assert_eq!(jump_mean, dec!(-0.05));
+            assert_eq!(jump_volatility, pos!(0.3));
+        } else {
+            panic!("Expected JumpDiffusion variant");
+        }
+    }
+
+    #[test]
+    fn test_garch_creation() {
+        let walk = WalkType::Garch {
+            dt: pos!(0.01),
+            drift: dec!(0.05),
+            volatility: pos!(0.2),
+            alpha: pos!(0.1),
+            beta: pos!(0.8),
+            omega: pos!(0.02),
+        };
+
+        if let WalkType::Garch {
+            dt,
+            drift,
+            volatility,
+            alpha,
+            beta,
+            omega,
+        } = walk
+        {
+            assert_eq!(dt, pos!(0.01));
+            assert_eq!(drift, dec!(0.05));
+            assert_eq!(volatility, pos!(0.2));
+            assert_eq!(alpha, pos!(0.1));
+            assert_eq!(beta, pos!(0.8));
+            assert_eq!(omega, pos!(0.02));
+        } else {
+            panic!("Expected Garch variant");
+        }
+    }
+
+    #[test]
+    fn test_heston_creation() {
+        let walk = WalkType::Heston {
+            dt: pos!(0.01),
+            drift: dec!(0.05),
+            volatility: pos!(0.2),
+            kappa: pos!(2.0),
+            theta: pos!(0.04),
+            xi: pos!(0.3),
+            rho: dec!(-0.7),
+        };
+
+        if let WalkType::Heston {
+            dt,
+            drift,
+            volatility,
+            kappa,
+            theta,
+            xi,
+            rho,
+        } = walk
+        {
+            assert_eq!(dt, pos!(0.01));
+            assert_eq!(drift, dec!(0.05));
+            assert_eq!(volatility, pos!(0.2));
+            assert_eq!(kappa, pos!(2.0));
+            assert_eq!(theta, pos!(0.04));
+            assert_eq!(xi, pos!(0.3));
+            assert_eq!(rho, dec!(-0.7));
+        } else {
+            panic!("Expected Heston variant");
+        }
+    }
+
+    #[test]
+    fn test_custom_creation() {
+        let walk = WalkType::Custom {
+            dt: pos!(0.01),
+            drift: dec!(0.05),
+            volatility: pos!(0.2),
+            vov: pos!(0.25),
+            vol_speed: pos!(0.15),
+            vol_mean: pos!(0.3),
+        };
+
+        if let WalkType::Custom {
+            dt,
+            drift,
+            volatility,
+            vov,
+            vol_speed,
+            vol_mean,
+        } = walk
+        {
+            assert_eq!(dt, pos!(0.01));
+            assert_eq!(drift, dec!(0.05));
+            assert_eq!(volatility, pos!(0.2));
+            assert_eq!(vov, pos!(0.25));
+            assert_eq!(vol_speed, pos!(0.15));
+            assert_eq!(vol_mean, pos!(0.3));
+        } else {
+            panic!("Expected Custom variant");
+        }
+    }
+
+    #[test]
+    fn test_display_brownian() {
+        let walk = WalkType::Brownian {
+            dt: pos!(0.01),
+            drift: dec!(0.05),
+            volatility: pos!(0.2),
+        };
+
+        let display = format!("{}", walk);
+        assert!(display.contains("Brownian"));
+        assert!(display.contains("dt: 0.01"));
+        assert!(display.contains("drift: 0.05"));
+        assert!(display.contains("volatility: 0.2"));
+    }
+
+    #[test]
+    fn test_display_geometric_brownian() {
+        let walk = WalkType::GeometricBrownian {
+            dt: pos!(0.01),
+            drift: dec!(0.05),
+            volatility: pos!(0.2),
+        };
+
+        let display = format!("{}", walk);
+        assert!(display.contains("GeometricBrownian"));
+        assert!(display.contains("dt: 0.01"));
+        assert!(display.contains("drift: 0.05"));
+        assert!(display.contains("volatility: 0.2"));
+    }
+
+    #[test]
+    fn test_display_log_returns() {
+        let walk = WalkType::LogReturns {
+            dt: pos!(0.01),
+            expected_return: dec!(0.05),
+            volatility: pos!(0.2),
+            autocorrelation: Some(dec!(0.1)),
+        };
+
+        let display = format!("{}", walk);
+        assert!(display.contains("LogReturns"));
+        assert!(display.contains("dt: 0.01"));
+        assert!(display.contains("expected_return: 0.05"));
+        assert!(display.contains("volatility: 0.2"));
+        assert!(display.contains("autocorrelation: Some(0.1)"));
+    }
+
+    #[test]
+    fn test_display_mean_reverting() {
+        let walk = WalkType::MeanReverting {
+            dt: pos!(0.01),
+            volatility: pos!(0.2),
+            speed: pos!(0.1),
+            mean: pos!(100.0),
+        };
+
+        let display = format!("{}", walk);
+        assert!(display.contains("MeanReverting"));
+        assert!(display.contains("dt: 0.01"));
+        assert!(display.contains("volatility: 0.2"));
+        assert!(display.contains("speed: 0.1"));
+        assert!(display.contains("mean: 100"));
+    }
+
+    #[test]
+    fn test_display_jump_diffusion() {
+        let walk = WalkType::JumpDiffusion {
+            dt: pos!(0.01),
+            drift: dec!(0.05),
+            volatility: pos!(0.2),
+            intensity: pos!(1.0),
+            jump_mean: dec!(-0.05),
+            jump_volatility: pos!(0.3),
+        };
+
+        let display = format!("{}", walk);
+        assert!(display.contains("JumpDiffusion"));
+        assert!(display.contains("dt: 0.01"));
+        assert!(display.contains("drift: 0.05"));
+        assert!(display.contains("volatility: 0.2"));
+        assert!(display.contains("intensity: 1"));
+        assert!(display.contains("jump_mean: -0.05"));
+        assert!(display.contains("jump_volatility: 0.3"));
+    }
+
+    #[test]
+    fn test_display_garch() {
+        let walk = WalkType::Garch {
+            dt: pos!(0.01),
+            drift: dec!(0.05),
+            volatility: pos!(0.2),
+            alpha: pos!(0.1),
+            beta: pos!(0.8),
+            omega: pos!(0.02),
+        };
+
+        let display = format!("{}", walk);
+        assert!(display.contains("Garch"));
+        assert!(display.contains("dt: 0.01"));
+        assert!(display.contains("drift: 0.05"));
+        assert!(display.contains("volatility: 0.2"));
+        assert!(display.contains("alpha: 0.1"));
+        assert!(display.contains("beta: 0.8"));
+        assert!(display.contains("omega: 0.02"));
+    }
+
+    #[test]
+    fn test_display_heston() {
+        let walk = WalkType::Heston {
+            dt: pos!(0.01),
+            drift: dec!(0.05),
+            volatility: pos!(0.2),
+            kappa: pos!(2.0),
+            theta: pos!(0.04),
+            xi: pos!(0.3),
+            rho: dec!(-0.7),
+        };
+
+        let display = format!("{}", walk);
+        assert!(display.contains("Heston"));
+        assert!(display.contains("dt: 0.01"));
+        assert!(display.contains("drift: 0.05"));
+        assert!(display.contains("volatility: 0.2"));
+        assert!(display.contains("kappa: 2"));
+        assert!(display.contains("theta: 0.04"));
+        assert!(display.contains("xi: 0.3"));
+        assert!(display.contains("rho: -0.7"));
+    }
+
+    #[test]
+    fn test_display_custom() {
+        let walk = WalkType::Custom {
+            dt: pos!(0.01),
+            drift: dec!(0.05),
+            volatility: pos!(0.2),
+            vov: pos!(0.25),
+            vol_speed: pos!(0.15),
+            vol_mean: pos!(0.3),
+        };
+
+        let display = format!("{}", walk);
+        assert!(display.contains("Custom"));
+        assert!(display.contains("dt: 0.01"));
+        assert!(display.contains("drift: 0.05"));
+        assert!(display.contains("volatility: 0.2"));
+        assert!(display.contains("vov: 0.25"));
+        assert!(display.contains("vol_speed: 0.15"));
+        assert!(display.contains("vol_mean: 0.3"));
+    }
+
+    #[test]
+    fn test_log_returns_without_autocorrelation() {
+        let walk = WalkType::LogReturns {
+            dt: pos!(0.01),
+            expected_return: dec!(0.05),
+            volatility: pos!(0.2),
+            autocorrelation: None,
+        };
+
+        if let WalkType::LogReturns {
+            dt,
+            expected_return,
+            volatility,
+            autocorrelation,
+        } = walk
+        {
+            assert_eq!(dt, pos!(0.01));
+            assert_eq!(expected_return, dec!(0.05));
+            assert_eq!(volatility, pos!(0.2));
+            assert_eq!(autocorrelation, None);
+        } else {
+            panic!("Expected LogReturns variant");
+        }
+
+        let display = format!("{}", walk);
+        assert!(display.contains("LogReturns"));
+        assert!(display.contains("autocorrelation: None"));
+    }
+
+    #[test]
+    fn test_clone() {
+        let walk = WalkType::Brownian {
+            dt: pos!(0.01),
+            drift: dec!(0.05),
+            volatility: pos!(0.2),
+        };
+
+        let cloned = walk;
+
+        if let WalkType::Brownian {
+            dt,
+            drift,
+            volatility,
+        } = cloned
+        {
+            assert_eq!(dt, pos!(0.01));
+            assert_eq!(drift, dec!(0.05));
+            assert_eq!(volatility, pos!(0.2));
+        } else {
+            panic!("Expected Brownian variant");
+        }
+    }
+
+    #[test]
+    fn test_clone_equality() {
+        let walk = WalkType::Brownian {
+            dt: pos!(0.01),
+            drift: dec!(0.05),
+            volatility: pos!(0.2),
+        };
+
+        let cloned = walk;
+
+        // Using Debug formatting to compare
+        assert_eq!(format!("{:?}", walk), format!("{:?}", cloned));
+    }
+}

@@ -6,14 +6,12 @@
 
 use crate::constants::EPSILON;
 use crate::model::utils::ToRound;
-use crate::simulation::types::Walktypable;
 use approx::{AbsDiffEq, RelativeEq};
 use num_traits::{FromPrimitive, ToPrimitive};
 use rust_decimal::{Decimal, MathematicalOps};
 use serde::de::Visitor;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::cmp::{Ordering, PartialEq};
-use std::error::Error;
 use std::fmt;
 use std::fmt::Display;
 use std::iter::Sum;
@@ -476,21 +474,6 @@ impl ToRound for Positive {
 
     fn round_to(&self, decimal_places: u32) -> Decimal {
         self.round_to(decimal_places).to_dec()
-    }
-}
-
-impl Walktypable for Positive {
-    fn walk_next(&self, exp: f64) -> Result<Positive, Box<dyn Error>> {
-        let value = self.to_f64() * f64::exp(exp);
-        Ok(pos!(value).max(Positive::ZERO))
-    }
-
-    fn walk_dec(&self) -> Result<Decimal, Box<dyn Error>> {
-        Ok(self.to_dec())
-    }
-
-    fn walk_positive(&self) -> Result<Positive, Box<dyn Error>> {
-        Ok(*self)
     }
 }
 

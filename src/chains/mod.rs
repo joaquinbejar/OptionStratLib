@@ -218,7 +218,6 @@ mod four;
 
 /// * `rnd` - Private module for random number generation and stochastic processes
 mod rnd;
-mod walk;
 
 pub use four::FourOptions;
 pub use legs::StrategyLegs;

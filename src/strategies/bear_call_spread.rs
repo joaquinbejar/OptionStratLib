@@ -645,6 +645,11 @@ impl Graph for BearCallSpread {
         )
     }
 
+    fn get_x_values(&self) -> Vec<Positive> {
+        self.best_range_to_show(Positive::from(1.0))
+            .unwrap_or_else(|_| vec![self.short_call.option.strike_price])
+    }
+
     fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<f64, f64>> {
         let underlying_price = self.short_call.option.underlying_price.to_f64();
         vec![ChartVerticalLine {
@@ -2001,15 +2006,7 @@ mod tests_bear_call_spread_graph {
 
     fn test_get_values() {
         let spread = create_test_spread();
-        let test_prices = vec![
-            pos!(95.0),
-            pos!(100.0),
-            pos!(105.0),
-            pos!(110.0),
-            pos!(115.0),
-        ];
-
-        let values = spread.get_values(&test_prices);
+        let values = spread.get_y_values();
         assert_eq!(values.len(), 5);
         assert_eq!(
             values[0],
