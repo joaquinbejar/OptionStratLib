@@ -3,12 +3,11 @@
    Email: jb@taunais.com
    Date: 23/3/25
 ******************************************************************************/
-use std::fmt::Display;
 use crate::Positive;
-use crate::simulation::step::{Step};
-use crate::simulation::types::Walktypable;
+use crate::simulation::step::Step;
 use crate::simulation::walk::WalkParams;
 use crate::utils::Len;
+use std::fmt::Display;
 use std::ops::{AddAssign, Index, IndexMut};
 
 /// A struct that represents a two-dimensional random walk simulation.
@@ -30,7 +29,7 @@ use std::ops::{AddAssign, Index, IndexMut};
 pub struct RandomWalk<X, Y>
 where
     X: Copy + Into<Positive> + AddAssign + Display,
-    Y: Copy + Into<Positive> + Display + Walktypable,
+    Y: Copy + Into<Positive> + Display,
 {
     /// The descriptive title of the random walk
     title: String,
@@ -42,7 +41,7 @@ where
 impl<X, Y> RandomWalk<X, Y>
 where
     X: Copy + Into<Positive> + AddAssign + Display,
-    Y: Copy + Into<Positive> + Display + Walktypable,
+    Y: Copy + Into<Positive> + Display,
 {
     /// Creates a new random walk instance with the given title and steps.
     ///
@@ -63,7 +62,7 @@ where
     where
         F: FnOnce(WalkParams<X, Y>) -> Vec<Step<X, Y>>,
         X: Copy + Into<Positive> + AddAssign + Display,
-        Y: Copy + Into<Positive> + Display + Walktypable,
+        Y: Copy + Into<Positive> + Display,
     {
         let steps = generator(params);
         Self { title, steps }
@@ -167,7 +166,7 @@ where
 impl<X, Y> Len for RandomWalk<X, Y>
 where
     X: Copy + Into<Positive> + AddAssign + Display,
-    Y: Copy + Into<Positive> + Display + Walktypable,
+    Y: Copy + Into<Positive> + Display,
 {
     /// Returns the number of steps in the random walk.
     ///
@@ -200,7 +199,7 @@ where
 impl<X, Y> Index<usize> for RandomWalk<X, Y>
 where
     X: Copy + Into<Positive> + AddAssign + Display,
-    Y: Copy + Into<Positive> + Display + Walktypable,
+    Y: Copy + Into<Positive> + Display,
 {
     /// The type returned when indexing the random walk.
     type Output = Step<X, Y>;
@@ -235,7 +234,7 @@ where
 impl<X, Y> IndexMut<usize> for RandomWalk<X, Y>
 where
     X: Copy + Into<Positive> + AddAssign + Display,
-    Y: Copy + Into<Positive> + Display + Walktypable,
+    Y: Copy + Into<Positive> + Display,
 {
     /// Provides mutable access to a specific step in the random walk by index.
     ///
@@ -252,5 +251,19 @@ where
     /// Panics if the index is out of bounds.
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
         &mut self.steps[index]
+    }
+}
+
+impl<X, Y> Display for RandomWalk<X, Y>
+where
+    X: Copy + Into<Positive> + AddAssign + Display,
+    Y: Copy + Into<Positive> + Display,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "RandomWalk Title: {}, Steps:  \n", self.title)?;
+        for step in &self.steps {
+            write!(f, "\t{}", step)?;
+        }
+        Ok(())
     }
 }

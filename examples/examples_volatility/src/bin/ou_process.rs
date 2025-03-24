@@ -27,9 +27,9 @@ use optionstratlib::utils::setup_logger;
 pub fn plot_multiple_ou_simulations(
     x0: Positive,
     mu: Positive,
-    theta: Decimal,
-    sigma: Decimal,
-    dt: Decimal,
+    theta: Positive,
+    sigma: Positive,
+    dt: Positive,
     steps: usize,
     num_simulations: usize,
     output_file: &str,
@@ -55,8 +55,8 @@ pub fn plot_multiple_ou_simulations(
             format!(
                 "Ornstein-Uhlenbeck Process Simulations (μ={}, θ={}, σ={})",
                 mu.to_f64(),
-                theta.to_f64().unwrap_or(0.0),
-                sigma.to_f64().unwrap_or(0.0)
+                theta.to_f64(),
+                sigma.to_f64()
             ),
             ("sans-serif", 20).into_font(),
         )
@@ -133,9 +133,9 @@ pub fn main() -> Result<(), Box<dyn Error>> {
     // Example parameters
     let x0 = pos!(20.0);
     let mu = pos!(20.0);
-    let theta = Decimal::from_f64(0.15).unwrap();
-    let sigma = Decimal::from_f64(2.0).unwrap();
-    let dt = Decimal::from_f64(0.1).unwrap();
+    let theta = pos!(0.15);
+    let sigma = pos!(2.0);
+    let dt = pos!(0.1);
     let steps = 1000;
 
     // Plot multiple simulations

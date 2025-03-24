@@ -4,15 +4,18 @@ use crate::simulation::walk::{WalkParams, WalkType};
 use crate::volatility::generate_ou_process;
 use rust_decimal::{Decimal, MathematicalOps};
 use std::error::Error;
-use std::fmt::Display;
+use std::fmt::{Debug, Display};
 use std::ops::AddAssign;
+use crate::simulation::step::Step;
 
-pub trait WalkTypeAble<X, Y>: Sized
+pub trait WalkTypeAble<X, Y>
 where
-    X: Copy + Into<Positive> + AddAssign + Display,
-    Y: Copy + Into<Positive> + Display,
+    X: Copy + Into<Positive> + AddAssign + Display ,
+    Y: Copy + Into<Positive> + Display ,
 {
-    fn brownian(&self, params: WalkParams<X, Y>) -> Result<Vec<Positive>, Box<dyn Error>> {
+    
+    
+    fn brownian(&self, params: &WalkParams<X, Y>) -> Result<Vec<Positive>, Box<dyn Error>> {
         match params.walk_type {
             WalkType::Brownian {
                 dt,
@@ -34,7 +37,7 @@ where
 
     fn geometric_brownian(
         &self,
-        params: WalkParams<X, Y>,
+        params: &WalkParams<X, Y>,
     ) -> Result<Vec<Positive>, Box<dyn Error>> {
         match params.walk_type {
             WalkType::GeometricBrownian {
@@ -55,7 +58,7 @@ where
         }
     }
 
-    fn log_returns(&self, params: WalkParams<X, Y>) -> Result<Vec<Positive>, Box<dyn Error>> {
+    fn log_returns(&self, params: &WalkParams<X, Y>) -> Result<Vec<Positive>, Box<dyn Error>> {
         match params.walk_type {
             WalkType::LogReturns {
                 dt,
@@ -83,7 +86,7 @@ where
         }
     }
 
-    fn mean_reverting(&self, params: WalkParams<X, Y>) -> Result<Vec<Positive>, Box<dyn Error>> {
+    fn mean_reverting(&self, params: &WalkParams<X, Y>) -> Result<Vec<Positive>, Box<dyn Error>> {
         match params.walk_type {
             WalkType::MeanReverting {
                 dt,
@@ -102,7 +105,7 @@ where
         }
     }
 
-    fn jump_diffusion(&self, params: WalkParams<X, Y>) -> Result<Vec<Positive>, Box<dyn Error>> {
+    fn jump_diffusion(&self, params: &WalkParams<X, Y>) -> Result<Vec<Positive>, Box<dyn Error>> {
         match params.walk_type {
             WalkType::JumpDiffusion {
                 dt,
@@ -129,7 +132,7 @@ where
         }
     }
 
-    fn garch(&self, params: WalkParams<X, Y>) -> Result<Vec<Positive>, Box<dyn Error>> {
+    fn garch(&self, params: &WalkParams<X, Y>) -> Result<Vec<Positive>, Box<dyn Error>> {
         match params.walk_type {
             WalkType::Garch { .. } => {
                 // Implement GARCH process simulation here
@@ -139,7 +142,7 @@ where
         }
     }
 
-    fn heston(&self, params: WalkParams<X, Y>) -> Result<Vec<Positive>, Box<dyn Error>> {
+    fn heston(&self, params: &WalkParams<X, Y>) -> Result<Vec<Positive>, Box<dyn Error>> {
         match params.walk_type {
             WalkType::Heston { .. } => {
                 // Implement Heston process simulation here
@@ -149,7 +152,7 @@ where
         }
     }
 
-    fn custom(&self, params: WalkParams<X, Y>) -> Result<Vec<Positive>, Box<dyn Error>> {
+    fn custom(&self, params: &WalkParams<X, Y>) -> Result<Vec<Positive>, Box<dyn Error>> {
         match params.walk_type {
             WalkType::Custom {
                 dt,
@@ -177,5 +180,18 @@ where
             }
             _ => Err("Invalid walk type for Custom motion".into()),
         }
+    }
+}
+
+
+impl<X, Y> Debug for Box<dyn WalkTypeAble<X, Y>> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "WalkTypeAble")
+    }
+}
+
+impl<X, Y> Clone for Box<dyn WalkTypeAble<X, Y>> {
+    fn clone(&self) -> Self {
+        todo!()
     }
 }

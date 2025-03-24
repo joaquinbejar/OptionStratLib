@@ -130,4 +130,6 @@ pub mod step;
 mod display;
 mod traits;
 
+pub use traits::WalkTypeAble;
+
 

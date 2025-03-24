@@ -9,6 +9,7 @@ use crate::Positive;
 use rust_decimal::Decimal;
 use std::fmt::Display;
 use std::ops::AddAssign;
+use crate::simulation::WalkTypeAble;
 
 /// Enum defining different types of random walks
 #[derive(Debug, Clone, Copy)]
@@ -152,11 +153,11 @@ pub enum WalkType {
 /// It provides the foundation for various financial simulations including price path forecasting, Monte Carlo simulations for
 /// options pricing, and risk analysis models.
 ///
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Clone)]
 pub struct WalkParams<X, Y>
 where
-    X: Copy + Into<Positive> + AddAssign + Display,
-    Y: Copy + Into<Positive> + Display ,
+    X: Copy + Into<Positive> + AddAssign + Display + Sized,
+    Y: Copy + Into<Positive> + Display + Sized,
 {
     /// Number of steps or data points to generate in the simulation
     /// Determines the resolution and length of the resulting random walk
@@ -169,5 +170,7 @@ where
     /// The specific stochastic process to use for generating the random walk
     /// Determines the mathematical properties and behavior of the simulated path
     pub walk_type: WalkType,
+    
+    pub walker: Box<dyn WalkTypeAble<X, Y>>,
 }
 

@@ -85,7 +85,7 @@ where
     pub fn new(x_value: X, time_unit: TimeFrame, datetime: ExpirationDate, y_value: Y) -> Self {
         Self {
             x: Xstep::new(x_value, time_unit, datetime),
-            y: Ystep::new(y_value),
+            y: Ystep::new(0 , y_value),
         }
     }
 
@@ -142,7 +142,7 @@ where
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "Step {{ x: {}, y: {} }}",
+            "Step {{ x: {}, y: {} }}\n",
             self.x, self.y
         )
     }
@@ -176,7 +176,7 @@ where
     T: Copy + Into<Positive> + Display,
 {
     /// An integer index representing the step's position in a sequence
-    index: i32,
+    index: usize,
 
     /// The positive numeric value associated with this step
     value: T,
@@ -201,7 +201,7 @@ where
 /// use optionstratlib::simulation::step::Ystep;
 ///
 /// // Create a new step with initial value
-/// let step = Ystep::new(dec!(10.5));
+/// let step = Ystep::new(1, dec!(10.5));
 ///
 /// // Access the current value
 /// assert_eq!(*step.value(), dec!(10.5));
@@ -221,9 +221,15 @@ where
     /// # Returns
     ///
     /// A new `Ystep<T>` instance
-    pub fn new(value: T) -> Self {
-        Self { index: 0, value }
+    pub fn new(index: usize, value: T) -> Self {
+        Self { index, value }
     }
+
+    pub fn next(&self, value: T) -> Self {
+        let index = self.index + 1;
+        Self { index, value }
+    }
+
 
     /// Returns an immutable reference to the stored value.
     ///
@@ -745,7 +751,7 @@ mod tests_ystep {
     fn test_ystep_new() {
         // Test creation with a simple value
         let value = 42.5;
-        let step = Ystep::new(value);
+        let step = Ystep::new(0, value);
 
         assert_eq!(step.index, 0);
         assert_eq!(step.value, 42.5);
