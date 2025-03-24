@@ -164,3 +164,140 @@ mod tests_ystep {
         assert_eq!(step.value, 42.5);
     }
 }
+
+
+#[cfg(test)]
+mod tests_serialize {
+    use super::*;
+    use crate::pos;
+    use rust_decimal_macros::dec;
+    use serde_json::{json, Value};
+
+    #[test]
+    fn test_basic_serialization() {
+        let step = Ystep::new(5, 10.5f64);
+        let serialized = serde_json::to_string(&step).unwrap();
+        let parsed: Value = serde_json::from_str(&serialized).unwrap();
+
+        assert_eq!(parsed["index"], 5);
+        assert_eq!(parsed["value"], 10.5);
+    }
+
+    #[test]
+    fn test_serialized_structure() {
+        let step = Ystep::new(42, 15.75f64);
+        let serialized = serde_json::to_string(&step).unwrap();
+        let parsed: Value = serde_json::from_str(&serialized).unwrap();
+
+        // Check structure
+        assert!(parsed.is_object());
+        assert_eq!(parsed.as_object().unwrap().len(), 2);
+        assert!(parsed.get("index").unwrap().is_i64());
+        assert!(parsed.get("value").unwrap().is_number());
+
+        // Check values
+        assert_eq!(parsed["index"], json!(42));
+        assert_eq!(parsed["value"], json!(15.75));
+    }
+
+    #[test]
+    fn test_type_conversion() {
+        // Test with different types but same values
+        let step_f64 = Ystep::new(1, 2.5f64);
+        let step_decimal = Ystep::new(1, dec!(2.5));
+        let step_positive = Ystep::new(1, pos!(2.5));
+
+        // Serialize all
+        let json_f64 = serde_json::to_string(&step_f64).unwrap();
+        let json_decimal = serde_json::to_string(&step_decimal).unwrap();
+        let json_positive = serde_json::to_string(&step_positive).unwrap();
+
+        // Parse to compare values
+        let parsed_f64: Value = serde_json::from_str(&json_f64).unwrap();
+        let parsed_decimal: Value = serde_json::from_str(&json_decimal).unwrap();
+        let parsed_positive: Value = serde_json::from_str(&json_positive).unwrap();
+
+        // All should have the same value representation
+        assert_eq!(parsed_f64["value"], json!(2.5));
+        assert_eq!(parsed_decimal["value"], json!(2.5));
+        assert_eq!(parsed_positive["value"], json!(2.5));
+    }
+
+    #[test]
+    fn test_json_format_identity() {
+        // Test with different types but same values
+        let step_f64 = Ystep::new(3, 4.01f64);
+        let step_decimal = Ystep::new(3, dec!(4.01));
+        let step_positive = Ystep::new(3, pos!(4.01));
+
+        // Serialize all
+        let json_f64 = serde_json::to_string(&step_f64).unwrap();
+        let json_decimal = serde_json::to_string(&step_decimal).unwrap();
+        let json_positive = serde_json::to_string(&step_positive).unwrap();
+
+        // All should serialize to identical JSON
+        assert_eq!(json_f64, json_decimal);
+        assert_eq!(json_decimal, json_positive);
+    }
+
+    #[test]
+    fn test_edge_cases() {
+        // Test with zero
+        let step_zero = Ystep::new(0, 0.1f64);
+        let json_zero = serde_json::to_string(&step_zero).unwrap();
+        let parsed_zero: Value = serde_json::from_str(&json_zero).unwrap();
+        assert_eq!(parsed_zero["value"], json!(0.1));
+
+        // Test with very small value
+        let step_small = Ystep::new(1, 0.000001f64);
+        let json_small = serde_json::to_string(&step_small).unwrap();
+        let parsed_small: Value = serde_json::from_str(&json_small).unwrap();
+        assert!(parsed_small["value"].as_f64().unwrap() > 0.0);
+        assert!(parsed_small["value"].as_f64().unwrap() < 0.0001);
+
+        // Test with large value
+        let step_large = Ystep::new(2, 1_000_000.01f64);
+        let json_large = serde_json::to_string(&step_large).unwrap();
+        let parsed_large: Value = serde_json::from_str(&json_large).unwrap();
+        assert_eq!(parsed_large["value"], json!(1_000_000.01));
+    }
+
+    #[test]
+    fn test_decimal_precision() {
+        let step = Ystep::new(1, 1.23456789f64);
+        let serialized = serde_json::to_string(&step).unwrap();
+        let parsed: Value = serde_json::from_str(&serialized).unwrap();
+
+        // Check precision is maintained (to reasonable float precision)
+        let value = parsed["value"].as_f64().unwrap();
+        assert!((value - 1.23456789).abs() < 0.0000001);
+    }
+
+    #[test]
+    fn test_next_serialization() {
+        let step = Ystep::new(1, 5.0f64);
+        let next_step = step.next(10.0f64);
+
+        let serialized = serde_json::to_string(&next_step).unwrap();
+        let parsed: Value = serde_json::from_str(&serialized).unwrap();
+
+        // Check next step has incremented index
+        assert_eq!(parsed["index"], 2);
+        assert_eq!(parsed["value"], 10.0);
+    }
+
+    #[test]
+    fn test_pretty_serialization() {
+        let step = Ystep::new(7, 15.25f64);
+        let serialized = serde_json::to_string_pretty(&step).unwrap();
+
+        // Check it contains appropriate formatting
+        assert!(serialized.contains("\n"));
+        assert!(serialized.contains("  "));
+
+        // Ensure it can be parsed back
+        let parsed: Value = serde_json::from_str(&serialized).unwrap();
+        assert_eq!(parsed["index"], 7);
+        assert_eq!(parsed["value"], 15.25);
+    }
+}

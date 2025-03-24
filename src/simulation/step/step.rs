@@ -3,12 +3,14 @@
    Email: jb@taunais.com
    Date: 23/3/25
 ******************************************************************************/
+use crate::simulation::step::{Xstep, Ystep};
+use crate::utils::TimeFrame;
+use crate::{ExpirationDate, Positive};
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 use std::ops::AddAssign;
-use crate::utils::TimeFrame;
-use crate::{ ExpirationDate, Positive};
-use crate::simulation::step::{Xstep, Ystep};
+use serde::{Serialize, Serializer};
+use serde::ser::SerializeStruct;
 
 /// Represents a combined x-y step in a two-dimensional simulation or analysis.
 ///
@@ -43,7 +45,7 @@ use crate::simulation::step::{Xstep, Ystep};
 #[derive(Debug, Copy, Clone)]
 pub struct Step<X, Y>
 where
-    X: Copy + Into<Positive> + AddAssign + Display ,
+    X: Copy + Into<Positive> + AddAssign + Display,
     Y: Copy + Into<Positive> + Display,
 {
     /// The x-axis step containing temporal information and an associated value
@@ -67,7 +69,7 @@ where
 ///
 impl<X, Y> Step<X, Y>
 where
-    X: Copy + Into<Positive> + AddAssign + Display ,
+    X: Copy + Into<Positive> + AddAssign + Display,
     Y: Copy + Into<Positive> + Display,
 {
     /// Creates a new Step with the given X and Y coordinates
@@ -85,7 +87,7 @@ where
     pub fn new(x_value: X, time_unit: TimeFrame, datetime: ExpirationDate, y_value: Y) -> Self {
         Self {
             x: Xstep::new(x_value, time_unit, datetime),
-            y: Ystep::new(0 , y_value),
+            y: Ystep::new(0, y_value),
         }
     }
 
@@ -102,12 +104,15 @@ where
     ///
     /// A new `Step<X, Y>` instance that represents the next step in the sequence
     pub fn next(&self, new_y_value: Y) -> Result<Self, Box<dyn Error>> {
-        
-        let next_x = match self.x.next(){
+        let next_x = match self.x.next() {
             Ok(x_step) => x_step,
-            Err(e) => return Err( 
-                format!("Cannot generate next step. Expiration date is already reached: {}", e).into()
-            ),
+            Err(e) => {
+                return Err(format!(
+                    "Cannot generate next step. Expiration date is already reached: {}",
+                    e
+                )
+                .into());
+            }
         };
         Ok(Self {
             x: next_x,
@@ -128,11 +133,15 @@ where
     ///
     /// A new `Step<X, Y>` instance that represents the previous step in the sequence
     pub fn previous(&self, new_y_value: Y) -> Result<Self, Box<dyn Error>> {
-        let previous_x = match self.x.previous(){
+        let previous_x = match self.x.previous() {
             Ok(x_step) => x_step,
-            Err(e) => return Err(
-                format!("Cannot generate previous step. Expiration date is already reached: {}", e).into()
-            ),
+            Err(e) => {
+                return Err(format!(
+                    "Cannot generate previous step. Expiration date is already reached: {}",
+                    e
+                )
+                .into());
+            }
         };
         Ok(Self {
             x: previous_x,
@@ -141,22 +150,31 @@ where
     }
 }
 
-impl<X,Y> Display for Step<X,Y> 
+impl<X, Y> Display for Step<X, Y>
 where
     X: Copy + Into<Positive> + AddAssign + Display,
     Y: Copy + Into<Positive> + Display,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "Step {{ x: {}, y: {} }}\n",
-            self.x, self.y
-        )
+        write!(f, "Step {{ x: {}, y: {} }}\n", self.x, self.y)
     }
-
 }
 
-
+impl<X, Y> Serialize for Step<X, Y>
+where
+    X: Copy + Into<Positive> + AddAssign + Display + Serialize,
+    Y: Copy + Into<Positive> + Display + Serialize,
+{
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut state = serializer.serialize_struct("Step", 2)?;
+        state.serialize_field("x", &self.x)?;
+        state.serialize_field("y", &self.y)?;
+        state.end()
+    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -179,7 +197,7 @@ mod tests {
         }
     }
 
-    impl Display for  TestValue {
+    impl Display for TestValue {
         fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
             write!(f, "{}", self.0)
         }
@@ -226,7 +244,7 @@ mod tests {
 
         let step = Xstep::new(value, time_unit, datetime);
         let next_step = step.next().unwrap();
-        
+
         assert_eq!(*step.index(), 0);
         assert_eq!(step.step_size_in_time(), &TestValue(5));
         assert_eq!(*step.time_unit(), TimeFrame::Day);
@@ -236,7 +254,6 @@ mod tests {
         assert_eq!(next_step.step_size_in_time(), &TestValue(5));
         assert_eq!(*next_step.time_unit(), TimeFrame::Day);
         assert_eq!(*next_step.datetime(), ExpirationDate::Days(pos!(25.0)));
-        
     }
 
     #[test]
@@ -345,7 +362,10 @@ mod tests {
         assert_eq!(*back_to_original.index(), 0);
         assert_eq!(*original.datetime(), ExpirationDate::Days(pos!(50.0)));
         assert_eq!(*forward.datetime(), ExpirationDate::Days(pos!(45.0)));
-        assert_eq!(*back_to_original.datetime(), ExpirationDate::Days(pos!(50.0)));
+        assert_eq!(
+            *back_to_original.datetime(),
+            ExpirationDate::Days(pos!(50.0))
+        );
     }
 }
 
@@ -450,7 +470,7 @@ mod tests_positive {
 
         let step = Xstep::new(value, time_unit, datetime);
         let prev_step = step.previous().unwrap();
-        
+
         assert_eq!(*prev_step.index(), -1);
         assert_eq!(*prev_step.step_size_in_time(), pos!(3.0));
         assert_eq!(*prev_step.time_unit(), TimeFrame::Month);
@@ -493,7 +513,10 @@ mod tests_positive {
         assert_eq!(*back_to_original.index(), 0);
         assert_eq!(*original.datetime(), ExpirationDate::Days(pos!(50.0)));
         assert_eq!(*forward.datetime(), ExpirationDate::Days(pos!(45.0)));
-        assert_eq!(*back_to_original.datetime(), ExpirationDate::Days(pos!(50.0)));
+        assert_eq!(
+            *back_to_original.datetime(),
+            ExpirationDate::Days(pos!(50.0))
+        );
     }
 }
 
@@ -672,5 +695,94 @@ mod tests_step {
 
         assert_eq!(*next_step.x.datetime(), ExpirationDate::Days(pos!(25.0)));
         assert_eq!(*next_step.y.value(), pos!(55.0));
+    }
+}
+
+#[cfg(test)]
+mod tests_step_serialization {
+    use super::*;
+    use chrono::{TimeZone, Utc};
+    use serde_json::{self, Value};
+    use crate::pos;
+
+    // Helper function to create a test step with f64 values
+    fn create_test_step() -> Step<f64, f64> {
+        let x_value = 1.5;
+        let time_unit = TimeFrame::Day;
+        let expiration_date = ExpirationDate::Days(pos!(30.0));
+        let y_value = 100.0;
+
+        Step::new(x_value, time_unit, expiration_date, y_value)
+    }
+
+    #[test]
+    fn test_step_serialization_with_days() {
+        let step = create_test_step();
+
+        // Serialize to JSON string
+        let serialized = serde_json::to_string(&step).unwrap();
+
+        // Parse the JSON string back to Value for easier assertions
+        let json_value: Value = serde_json::from_str(&serialized).unwrap();
+
+        // Verify the structure is correct
+        assert!(json_value.is_object());
+        assert!(json_value.get("x").is_some());
+        assert!(json_value.get("y").is_some());
+
+        // Verify x fields
+        let x = &json_value["x"];
+        assert_eq!(x["index"], 0);
+        assert_eq!(x["step_size_in_time"], 1.5);
+
+        // Verify y fields
+        let y = &json_value["y"];
+        assert_eq!(y["index"], 0);
+        assert_eq!(y["value"], 100.0);
+    }
+
+    #[test]
+    #[should_panic(expected = "ExpirationDate::DateTime is not supported for Step yet")]
+    fn test_step_with_datetime_panics() {
+        // Based on the test in Xstep serialization, the constructor panics with DateTime
+        let x_value = 2.5;
+        let time_unit = TimeFrame::Hour;
+        let expiration_date = ExpirationDate::DateTime(
+            Utc.with_ymd_and_hms(2024, 12, 31, 23, 59, 59).unwrap()
+        );
+        let y_value = 200.0;
+
+        Step::new(x_value, time_unit, expiration_date, y_value);
+    }
+
+    #[test]
+    fn test_step_serialize() {
+        let x_value = pos!(5.0);
+        let time_unit = TimeFrame::Day;
+        let datetime = ExpirationDate::Days(pos!(30.0));
+        let y_value = 42.5;
+        let step = Step::new(x_value, time_unit, datetime, y_value);
+    
+        // Serialize to JSON string
+        let serialized = serde_json::to_string(&step).unwrap();
+        assert_eq!(serialized, r#"{"x":{"index":0,"step_size_in_time":5,"time_unit":"Day","datetime":{"days":30.0}},"y":{"index":0,"value":42.5}}"#);
+    }
+
+    #[test]
+    fn test_step_pretty_serialization() {
+        let step = create_test_step();
+
+        // Serialize to pretty JSON string
+        let serialized = serde_json::to_string_pretty(&step).unwrap();
+
+        // Verify the serialized string contains expected formatting
+        assert!(serialized.contains("{\n"));
+        assert!(serialized.contains("  \"x\": {"));
+        assert!(serialized.contains("  \"y\": {"));
+
+        // Make sure the content is still correct by deserializing
+        let deserialized: Value = serde_json::from_str(&serialized).unwrap();
+        assert_eq!(deserialized["x"]["step_size_in_time"], 1.5);
+        assert_eq!(deserialized["y"]["value"], 100.0);
     }
 }

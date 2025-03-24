@@ -211,3 +211,150 @@ where
         state.end()
     }
 }
+
+#[cfg(test)]
+mod tests_serialize {
+    use super::*;
+    use crate::pos;
+    use crate::model::types::ExpirationDate;
+    use rust_decimal_macros::dec;
+    use serde_json::{json, Value};
+
+    #[test]
+    fn test_serialized_structure() {
+        // Create an Xstep with f64
+        let mut step = Xstep::new(
+            1.5f64,
+            TimeFrame::Day,
+            ExpirationDate::Days(pos!(30.0)),
+        );
+        step.index = 42;
+
+        // Serialize to JSON
+        let serialized = serde_json::to_string(&step).unwrap();
+        let parsed: Value = serde_json::from_str(&serialized).unwrap();
+
+        // Check all fields exist and have correct types
+        assert!(parsed.is_object());
+        assert!(parsed.get("index").unwrap().is_i64());
+        assert!(parsed.get("step_size_in_time").unwrap().is_number());
+        assert!(parsed.get("time_unit").unwrap().is_object() || parsed.get("time_unit").unwrap().is_string());
+        assert!(parsed.get("datetime").unwrap().is_object());
+
+        // Check field values
+        assert_eq!(parsed["index"], json!(42));
+        assert_eq!(parsed["step_size_in_time"], json!(1.5));
+    }
+
+    #[test]
+    fn test_serialization_value_conversion() {
+        // Create instances with different types but same value
+        let step_f64 = Xstep::new(2.5f64, TimeFrame::Day, ExpirationDate::Days(pos!(1.0)));
+        let step_decimal = Xstep::new(dec!(2.5), TimeFrame::Day, ExpirationDate::Days(pos!(1.0)));
+        let step_positive = Xstep::new(pos!(2.5), TimeFrame::Day, ExpirationDate::Days(pos!(1.0)));
+
+        // Serialize all three
+        let json_f64 = serde_json::to_string(&step_f64).unwrap();
+        let json_decimal = serde_json::to_string(&step_decimal).unwrap();
+        let json_positive = serde_json::to_string(&step_positive).unwrap();
+
+        // Parse to access and check the step_size_in_time values
+        let parsed_f64: Value = serde_json::from_str(&json_f64).unwrap();
+        let parsed_decimal: Value = serde_json::from_str(&json_decimal).unwrap();
+        let parsed_positive: Value = serde_json::from_str(&json_positive).unwrap();
+
+        // All should serialize to the same value
+        assert_eq!(parsed_f64["step_size_in_time"], json!(2.5));
+        assert_eq!(parsed_decimal["step_size_in_time"], json!(2.5));
+        assert_eq!(parsed_positive["step_size_in_time"], json!(2.5));
+    }
+
+    #[test]
+    fn test_serialization_format_identity() {
+        // Create instances with different types
+        let step_f64 = Xstep::new(3.1f64, TimeFrame::Hour, ExpirationDate::Days(pos!(1.0)));
+        let step_decimal = Xstep::new(dec!(3.1), TimeFrame::Hour, ExpirationDate::Days(pos!(1.0)));
+        let step_positive = Xstep::new(pos!(3.1), TimeFrame::Hour, ExpirationDate::Days(pos!(1.0)));
+
+        // Serialize all three
+        let json_f64 = serde_json::to_string(&step_f64).unwrap();
+        let json_decimal = serde_json::to_string(&step_decimal).unwrap();
+        let json_positive = serde_json::to_string(&step_positive).unwrap();
+
+        // They should all serialize to identical JSON
+        assert_eq!(json_f64, json_decimal);
+        assert_eq!(json_decimal, json_positive);
+    }
+
+    #[test]
+    fn test_serialization_edge_cases() {
+        // Test with zero
+        let step_zero = Xstep::new(0.01f64, TimeFrame::Minute, ExpirationDate::Days(pos!(0.0)));
+        let json_zero = serde_json::to_string(&step_zero).unwrap();
+        let parsed_zero: Value = serde_json::from_str(&json_zero).unwrap();
+        assert_eq!(parsed_zero["step_size_in_time"], json!(0.01));
+
+        // Test with very small number
+        let step_small = Xstep::new(0.00001f64, TimeFrame::Minute, ExpirationDate::Days(pos!(1.0)));
+        let json_small = serde_json::to_string(&step_small).unwrap();
+        let parsed_small: Value = serde_json::from_str(&json_small).unwrap();
+        assert!(parsed_small["step_size_in_time"].as_f64().unwrap() > 0.0);
+        assert!(parsed_small["step_size_in_time"].as_f64().unwrap() < 0.0001);
+
+        // Test with very large number
+        let step_large = Xstep::new(1_000_000.01f64, TimeFrame::Minute, ExpirationDate::Days(pos!(1.0)));
+        let json_large = serde_json::to_string(&step_large).unwrap();
+        let parsed_large: Value = serde_json::from_str(&json_large).unwrap();
+        assert_eq!(parsed_large["step_size_in_time"], json!(1_000_000.01));
+    }
+
+    #[test]
+    fn test_serialization_precision() {
+        // Create a step with a value that has many decimal places
+        let step = Xstep::new(
+            1.23456789f64,
+            TimeFrame::Day,
+            ExpirationDate::Days(pos!(1.0))
+        );
+
+        // Serialize and parse
+        let serialized = serde_json::to_string(&step).unwrap();
+        let parsed: Value = serde_json::from_str(&serialized).unwrap();
+
+        // Check precision is maintained (to reasonable float precision)
+        let value = parsed["step_size_in_time"].as_f64().unwrap();
+        assert!((value - 1.23456789).abs() < 0.0000001);
+    }
+
+    #[test]
+    fn test_datetime_serialization() {
+        // Test with Days expiration
+        let step_days = Xstep::new(
+            1.0f64,
+            TimeFrame::Day,
+            ExpirationDate::Days(pos!(30.0)),
+        );
+
+        let serialized_days = serde_json::to_string(&step_days).unwrap();
+        let parsed_days: Value = serde_json::from_str(&serialized_days).unwrap();
+
+        assert!(parsed_days["datetime"].is_object());
+        assert!(parsed_days["datetime"].get("days").is_some());
+
+        // Note: We don't test DateTime because the new constructor explicitly 
+        // panics for DateTime variant, which matches the implementation
+
+    }
+
+    #[test]
+    #[should_panic(expected = "ExpirationDate::DateTime is not supported for Step yet")]
+    fn test_datetime_constructor_panics() {
+        // Test that the constructor panics with DateTime variant
+        let date_time = chrono::Utc::now();
+        let _step = Xstep::new(
+            1.0f64,
+            TimeFrame::Day,
+            ExpirationDate::DateTime(date_time),
+        );
+    }
+}
