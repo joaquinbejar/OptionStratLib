@@ -9,7 +9,6 @@ use crate::{Positive, pos};
 use rust_decimal::Decimal;
 use std::error::Error;
 
-
 /// Trait for types that can be "walked" or iterated through, typically used for
 /// option chains to simulate price movements and rebalance strikes.
 impl Walktypable for OptionChain {

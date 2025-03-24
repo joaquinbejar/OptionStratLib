@@ -1,11 +1,11 @@
 /******************************************************************************
-    Author: Joaquín Béjar García
-    Email: jb@taunais.com 
-    Date: 24/3/25
- ******************************************************************************/
-use std::fmt::{Display, Formatter};
-use serde::{Serialize, Serializer};
+   Author: Joaquín Béjar García
+   Email: jb@taunais.com
+   Date: 24/3/25
+******************************************************************************/
 use crate::Positive;
+use serde::{Serialize, Serializer};
+use std::fmt::{Display, Formatter};
 
 /// A step entity in a Y-axis progression with an associated numeric value.
 ///
@@ -43,7 +43,7 @@ where
 /// A step value holder for simulation values that must be positive.
 ///
 /// `Ystep<T>` maintains an index counter and a value of type `T`, where `T`
-/// must be copCopy + Into<Positive> + Display and convertible to a `Positive` value.
+/// must be copCopy + `Into<Positive>` + Display and convertible to a `Positive` value.
 ///
 /// This struct is typically used in financial simulations where values need
 /// to be tracked across simulation steps while ensuring they remain positive.
@@ -83,11 +83,22 @@ where
         Self { index, value }
     }
 
+    /// Creates a new step with an incremented index and the provided value.
+    ///
+    /// This method produces a new step instance that represents the next step in a sequence,
+    /// with an index one higher than the current step and storing the provided value.
+    ///
+    /// # Parameters
+    ///
+    /// * `value` - The value to store in the new step
+    ///
+    /// # Returns
+    ///
+    /// A new `Ystep<T>` instance with incremented index
     pub fn next(&self, value: T) -> Self {
         let index = self.index + 1;
         Self { index, value }
     }
-
 
     /// Returns an immutable reference to the stored value.
     ///
@@ -98,6 +109,14 @@ where
         &self.value
     }
 
+    /// Returns an immutable reference to the index of this step.
+    ///
+    /// The index represents the step's position in a sequence, typically
+    /// indicating how many steps have occurred since initialization.
+    ///
+    /// # Returns
+    ///
+    /// A reference to the index as an `i32` value
     pub fn index(&self) -> &i32 {
         &self.index
     }
@@ -123,12 +142,11 @@ where
         write!(
             f,
             "Ystep {{ index: {}, value: {} }}",
-            self.index, positive_value.round_to(3)
+            self.index,
+            positive_value.round_to(3)
         )
     }
 }
-
-
 
 impl<T> Serialize for Ystep<T>
 where
@@ -165,13 +183,12 @@ mod tests_ystep {
     }
 }
 
-
 #[cfg(test)]
 mod tests_serialize {
     use super::*;
     use crate::pos;
     use rust_decimal_macros::dec;
-    use serde_json::{json, Value};
+    use serde_json::{Value, json};
 
     #[test]
     fn test_basic_serialization() {

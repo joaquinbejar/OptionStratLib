@@ -1,16 +1,16 @@
 /******************************************************************************
-    Author: Joaquín Béjar García
-    Email: jb@taunais.com 
-    Date: 24/3/25
- ******************************************************************************/
+   Author: Joaquín Béjar García
+   Email: jb@taunais.com
+   Date: 24/3/25
+******************************************************************************/
+use crate::utils::TimeFrame;
+use crate::utils::time::convert_time_frame;
+use crate::{ExpirationDate, Positive};
+use serde::{Serialize, Serializer};
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 use std::ops::AddAssign;
-use serde::{Serialize, Serializer};
 use tracing::debug;
-use crate::{ExpirationDate, Positive};
-use crate::utils::time::convert_time_frame;
-use crate::utils::TimeFrame;
 
 /// Represents a step in a time series with an indexed value at a specific time point.
 ///
@@ -111,18 +111,49 @@ where
             datetime,
         }
     }
-    
+
+    /// Returns a reference to the index of the time step.
+    ///
+    /// The index represents the position of this step in a sequence of time steps.
+    ///
+    /// # Returns
+    ///
+    /// * `&i32` - A reference to the index value.
     pub fn index(&self) -> &i32 {
         &self.index
     }
-    
+
+    /// Returns a reference to the step size in time units.
+    ///
+    /// This represents the magnitude of this time step in the context of its time frame,
+    /// such as the number of days, hours, or other time units.
+    ///
+    /// # Returns
+    ///
+    /// * `&T` - A reference to the step size value.
     pub fn step_size_in_time(&self) -> &T {
         &self.step_size_in_time
     }
-    
+
+    /// Returns a reference to the time unit associated with this step.
+    ///
+    /// The time unit defines the granularity of the time measurement (e.g., day, hour, minute).
+    ///
+    /// # Returns
+    ///
+    /// * `&TimeFrame` - A reference to the time unit enumeration.
     pub fn time_unit(&self) -> &TimeFrame {
         &self.time_unit
     }
+
+    /// Returns a reference to the datetime associated with this step.
+    ///
+    /// This represents the specific point in time (as an expiration date) that
+    /// this step corresponds to, which can be either a relative value or an absolute datetime.
+    ///
+    /// # Returns
+    ///
+    /// * `&ExpirationDate` - A reference to the expiration date.
     pub fn datetime(&self) -> &ExpirationDate {
         &self.datetime
     }
@@ -138,10 +169,13 @@ where
     pub fn next(&self) -> Result<Self, Box<dyn Error>> {
         let days = self.datetime.get_days().unwrap();
         if days == Positive::ZERO {
-            return Err(
-                "Cannot generate next step. Expiration date is already reached.".into());
+            return Err("Cannot generate next step. Expiration date is already reached.".into());
         }
-        let days_to_rest = convert_time_frame(self.step_size_in_time.into(), &self.time_unit, &TimeFrame::Day);
+        let days_to_rest = convert_time_frame(
+            self.step_size_in_time.into(),
+            &self.time_unit,
+            &TimeFrame::Day,
+        );
         let datetime = if days_to_rest <= days {
             ExpirationDate::Days(days - days_to_rest)
         } else {
@@ -149,7 +183,8 @@ where
         };
         debug!(
             "days_to_rest: {}, days: {}, datetime: {}",
-            days_to_rest, days, datetime);
+            days_to_rest, days, datetime
+        );
         Ok(Self {
             index: self.index + 1,
             step_size_in_time: self.step_size_in_time,
@@ -168,7 +203,11 @@ where
     /// A new `Xstep<T>` instance with updated index and datetime values.
     pub fn previous(&self) -> Result<Self, Box<dyn Error>> {
         let days = self.datetime.get_days().unwrap();
-        let days_to_rest = convert_time_frame(self.step_size_in_time.into(), &self.time_unit, &TimeFrame::Day);
+        let days_to_rest = convert_time_frame(
+            self.step_size_in_time.into(),
+            &self.time_unit,
+            &TimeFrame::Day,
+        );
         let datetime = ExpirationDate::Days(days + days_to_rest);
         Ok(Self {
             index: self.index - 1,
@@ -215,19 +254,15 @@ where
 #[cfg(test)]
 mod tests_serialize {
     use super::*;
-    use crate::pos;
     use crate::model::types::ExpirationDate;
+    use crate::pos;
     use rust_decimal_macros::dec;
-    use serde_json::{json, Value};
+    use serde_json::{Value, json};
 
     #[test]
     fn test_serialized_structure() {
         // Create an Xstep with f64
-        let mut step = Xstep::new(
-            1.5f64,
-            TimeFrame::Day,
-            ExpirationDate::Days(pos!(30.0)),
-        );
+        let mut step = Xstep::new(1.5f64, TimeFrame::Day, ExpirationDate::Days(pos!(30.0)));
         step.index = 42;
 
         // Serialize to JSON
@@ -238,7 +273,10 @@ mod tests_serialize {
         assert!(parsed.is_object());
         assert!(parsed.get("index").unwrap().is_i64());
         assert!(parsed.get("step_size_in_time").unwrap().is_number());
-        assert!(parsed.get("time_unit").unwrap().is_object() || parsed.get("time_unit").unwrap().is_string());
+        assert!(
+            parsed.get("time_unit").unwrap().is_object()
+                || parsed.get("time_unit").unwrap().is_string()
+        );
         assert!(parsed.get("datetime").unwrap().is_object());
 
         // Check field values
@@ -295,14 +333,22 @@ mod tests_serialize {
         assert_eq!(parsed_zero["step_size_in_time"], json!(0.01));
 
         // Test with very small number
-        let step_small = Xstep::new(0.00001f64, TimeFrame::Minute, ExpirationDate::Days(pos!(1.0)));
+        let step_small = Xstep::new(
+            0.00001f64,
+            TimeFrame::Minute,
+            ExpirationDate::Days(pos!(1.0)),
+        );
         let json_small = serde_json::to_string(&step_small).unwrap();
         let parsed_small: Value = serde_json::from_str(&json_small).unwrap();
         assert!(parsed_small["step_size_in_time"].as_f64().unwrap() > 0.0);
         assert!(parsed_small["step_size_in_time"].as_f64().unwrap() < 0.0001);
 
         // Test with very large number
-        let step_large = Xstep::new(1_000_000.01f64, TimeFrame::Minute, ExpirationDate::Days(pos!(1.0)));
+        let step_large = Xstep::new(
+            1_000_000.01f64,
+            TimeFrame::Minute,
+            ExpirationDate::Days(pos!(1.0)),
+        );
         let json_large = serde_json::to_string(&step_large).unwrap();
         let parsed_large: Value = serde_json::from_str(&json_large).unwrap();
         assert_eq!(parsed_large["step_size_in_time"], json!(1_000_000.01));
@@ -314,7 +360,7 @@ mod tests_serialize {
         let step = Xstep::new(
             1.23456789f64,
             TimeFrame::Day,
-            ExpirationDate::Days(pos!(1.0))
+            ExpirationDate::Days(pos!(1.0)),
         );
 
         // Serialize and parse
@@ -329,11 +375,7 @@ mod tests_serialize {
     #[test]
     fn test_datetime_serialization() {
         // Test with Days expiration
-        let step_days = Xstep::new(
-            1.0f64,
-            TimeFrame::Day,
-            ExpirationDate::Days(pos!(30.0)),
-        );
+        let step_days = Xstep::new(1.0f64, TimeFrame::Day, ExpirationDate::Days(pos!(30.0)));
 
         let serialized_days = serde_json::to_string(&step_days).unwrap();
         let parsed_days: Value = serde_json::from_str(&serialized_days).unwrap();
@@ -341,9 +383,8 @@ mod tests_serialize {
         assert!(parsed_days["datetime"].is_object());
         assert!(parsed_days["datetime"].get("days").is_some());
 
-        // Note: We don't test DateTime because the new constructor explicitly 
+        // Note: We don't test DateTime because the new constructor explicitly
         // panics for DateTime variant, which matches the implementation
-
     }
 
     #[test]
@@ -351,10 +392,6 @@ mod tests_serialize {
     fn test_datetime_constructor_panics() {
         // Test that the constructor panics with DateTime variant
         let date_time = chrono::Utc::now();
-        let _step = Xstep::new(
-            1.0f64,
-            TimeFrame::Day,
-            ExpirationDate::DateTime(date_time),
-        );
+        let _step = Xstep::new(1.0f64, TimeFrame::Day, ExpirationDate::DateTime(date_time));
     }
 }

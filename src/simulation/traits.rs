@@ -1,19 +1,57 @@
 use crate::Positive;
 use crate::model::decimal::decimal_normal_sample;
-use crate::simulation::walk::{WalkParams, WalkType};
+use crate::simulation::{WalkParams, WalkType};
 use crate::volatility::generate_ou_process;
 use rust_decimal::{Decimal, MathematicalOps};
 use std::error::Error;
 use std::fmt::{Debug, Display};
 use std::ops::AddAssign;
 
+/// Trait for implementing various random walk models and stochastic processes.
+///
+/// This trait provides methods to generate different types of stochastic processes commonly
+/// used in financial modeling, time series analysis, and simulation studies. Each method
+/// implements a specific type of random walk based on the parameters provided.
+///
+/// The trait is generic over types `X` and `Y`, which represent the x-axis (typically time)
+/// and y-axis (typically price or value) components respectively.
+///
+/// # Type Parameters
+///
+/// * `X` - The type for the x-axis values (typically time), must be `Copy`, convertible to `Positive`,
+///   implement `AddAssign`, and implement `Display`.
+/// * `Y` - The type for the y-axis values (typically price), must be `Copy`, convertible to `Positive`,
+///   and implement `Display`.
+///
+/// # Methods
+///
+/// The trait provides methods for generating the following stochastic processes:
+/// - Brownian motion (standard random walk)
+/// - Geometric Brownian motion
+/// - Log returns process with optional autocorrelation
+/// - Mean reverting (Ornstein-Uhlenbeck) process
+/// - Jump diffusion process
+/// - GARCH (Generalized Autoregressive Conditional Heteroskedasticity)
+/// - Heston stochastic volatility model
+/// - Custom stochastic process with mean-reverting volatility
 pub trait WalkTypeAble<X, Y>
 where
-    X: Copy + Into<Positive> + AddAssign + Display ,
-    Y: Copy + Into<Positive> + Display ,
+    X: Copy + Into<Positive> + AddAssign + Display,
+    Y: Copy + Into<Positive> + Display,
 {
-    
-    
+    /// Generates a Brownian motion (standard random walk) process.
+    ///
+    /// Brownian motion is a continuous-time stochastic process where changes
+    /// are normally distributed with a drift term and volatility.
+    ///
+    /// # Parameters
+    ///
+    /// * `params` - Walk parameters including initial value, time step, drift, and volatility.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<Vec<Positive>, Box<dyn Error>>` - A vector of positive values representing
+    ///   the generated Brownian motion path, or an error if parameters are invalid.
     fn brownian(&self, params: &WalkParams<X, Y>) -> Result<Vec<Positive>, Box<dyn Error>> {
         match params.walk_type {
             WalkType::Brownian {
@@ -34,6 +72,20 @@ where
         }
     }
 
+    /// Generates a Geometric Brownian motion process.
+    ///
+    /// Geometric Brownian motion is a continuous-time stochastic process where the logarithm of the
+    /// randomly varying quantity follows Brownian motion. It's commonly used to model stock prices
+    /// in the Black-Scholes options pricing model.
+    ///
+    /// # Parameters
+    ///
+    /// * `params` - Walk parameters including initial value, time step, drift, and volatility.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<Vec<Positive>, Box<dyn Error>>` - A vector of positive values representing
+    ///   the generated Geometric Brownian motion path, or an error if parameters are invalid.
     fn geometric_brownian(
         &self,
         params: &WalkParams<X, Y>,
@@ -57,6 +109,21 @@ where
         }
     }
 
+    /// Generates a Log Returns process, potentially with autocorrelation.
+    ///
+    /// This process models returns (percentage changes) directly, rather than absolute values,
+    /// and can include autocorrelation to capture the tendency of returns to be influenced
+    /// by previous returns.
+    ///
+    /// # Parameters
+    ///
+    /// * `params` - Walk parameters including initial value, time step, expected return,
+    ///   volatility, and optional autocorrelation coefficient.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<Vec<Positive>, Box<dyn Error>>` - A vector of positive values representing
+    ///   the generated Log Returns path, or an error if parameters are invalid.
     fn log_returns(&self, params: &WalkParams<X, Y>) -> Result<Vec<Positive>, Box<dyn Error>> {
         match params.walk_type {
             WalkType::LogReturns {
@@ -85,6 +152,21 @@ where
         }
     }
 
+    /// Generates a Mean Reverting (Ornstein-Uhlenbeck) process.
+    ///
+    /// The Ornstein-Uhlenbeck process models a value that tends to drift toward a long-term mean,
+    /// with the strength of the reversion proportional to the distance from the mean.
+    /// It's commonly used for interest rates, volatility, and other mean-reverting financial variables.
+    ///
+    /// # Parameters
+    ///
+    /// * `params` - Walk parameters including initial value, mean level, reversion speed,
+    ///   volatility, and time step.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<Vec<Positive>, Box<dyn Error>>` - A vector of positive values representing
+    ///   the generated Mean Reverting path, or an error if parameters are invalid.
     fn mean_reverting(&self, params: &WalkParams<X, Y>) -> Result<Vec<Positive>, Box<dyn Error>> {
         match params.walk_type {
             WalkType::MeanReverting {
@@ -104,6 +186,21 @@ where
         }
     }
 
+    /// Generates a Jump Diffusion process.
+    ///
+    /// Jump Diffusion combines continuous Brownian motion with discrete jumps that occur
+    /// according to a Poisson process. This model is useful for capturing sudden market
+    /// movements like crashes or spikes that standard Brownian motion cannot adequately model.
+    ///
+    /// # Parameters
+    ///
+    /// * `params` - Walk parameters including initial value, drift, volatility, jump intensity,
+    ///   jump mean size, and jump volatility.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<Vec<Positive>, Box<dyn Error>>` - A vector of positive values representing
+    ///   the generated Jump Diffusion path, or an error if parameters are invalid.
     fn jump_diffusion(&self, params: &WalkParams<X, Y>) -> Result<Vec<Positive>, Box<dyn Error>> {
         match params.walk_type {
             WalkType::JumpDiffusion {
@@ -131,6 +228,23 @@ where
         }
     }
 
+    /// Generates a GARCH (Generalized Autoregressive Conditional Heteroskedasticity) process.
+    ///
+    /// GARCH models time-varying volatility clustering, where periods of high volatility
+    /// tend to be followed by high volatility, and low volatility by low volatility.
+    ///
+    /// # Parameters
+    ///
+    /// * `params` - Walk parameters for the GARCH process.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<Vec<Positive>, Box<dyn Error>>` - A vector of positive values representing
+    ///   the generated GARCH path, or an error if parameters are invalid.
+    ///
+    /// # Note
+    ///
+    /// This implementation is currently a placeholder and returns an empty vector.
     fn garch(&self, params: &WalkParams<X, Y>) -> Result<Vec<Positive>, Box<dyn Error>> {
         match params.walk_type {
             WalkType::Garch { .. } => {
@@ -141,6 +255,23 @@ where
         }
     }
 
+    /// Generates a Heston stochastic volatility model.
+    ///
+    /// The Heston model extends Geometric Brownian Motion by allowing the volatility
+    /// itself to be a stochastic process, following a mean-reverting square-root process.
+    ///
+    /// # Parameters
+    ///
+    /// * `params` - Walk parameters for the Heston process.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<Vec<Positive>, Box<dyn Error>>` - A vector of positive values representing
+    ///   the generated Heston model path, or an error if parameters are invalid.
+    ///
+    /// # Note
+    ///
+    /// This implementation is currently a placeholder and returns an empty vector.
     fn heston(&self, params: &WalkParams<X, Y>) -> Result<Vec<Positive>, Box<dyn Error>> {
         match params.walk_type {
             WalkType::Heston { .. } => {
@@ -151,6 +282,21 @@ where
         }
     }
 
+    /// Generates a custom stochastic process with mean-reverting volatility.
+    ///
+    /// This implements a process where the underlying value follows Brownian motion,
+    /// but with volatility that follows an Ornstein-Uhlenbeck (mean-reverting) process.
+    /// This allows for modeling more complex dynamics than standard models.
+    ///
+    /// # Parameters
+    ///
+    /// * `params` - Walk parameters including drift, initial volatility, volatility of volatility (vov),
+    ///   volatility mean reversion speed, volatility mean level, and time step.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<Vec<Positive>, Box<dyn Error>>` - A vector of positive values representing
+    ///   the generated custom process path, or an error if parameters are invalid.
     fn custom(&self, params: &WalkParams<X, Y>) -> Result<Vec<Positive>, Box<dyn Error>> {
         match params.walk_type {
             WalkType::Custom {
@@ -182,7 +328,6 @@ where
     }
 }
 
-
 impl<X, Y> Debug for Box<dyn WalkTypeAble<X, Y>> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "WalkTypeAble")
@@ -191,6 +336,6 @@ impl<X, Y> Debug for Box<dyn WalkTypeAble<X, Y>> {
 
 impl<X, Y> Clone for Box<dyn WalkTypeAble<X, Y>> {
     fn clone(&self) -> Self {
-        todo!()
+        panic!("Box<dyn WalkTypeAble<X, Y>> cannot be cloned. Use clone_box() instead.")
     }
 }

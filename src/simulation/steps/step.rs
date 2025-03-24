@@ -6,11 +6,11 @@
 use crate::simulation::steps::{Xstep, Ystep};
 use crate::utils::TimeFrame;
 use crate::{ExpirationDate, Positive};
+use serde::ser::SerializeStruct;
+use serde::{Serialize, Serializer};
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 use std::ops::AddAssign;
-use serde::{Serialize, Serializer};
-use serde::ser::SerializeStruct;
 
 /// Represents a combined x-y step in a two-dimensional simulation or analysis.
 ///
@@ -701,9 +701,9 @@ mod tests_step {
 #[cfg(test)]
 mod tests_step_serialization {
     use super::*;
+    use crate::pos;
     use chrono::{TimeZone, Utc};
     use serde_json::{self, Value};
-    use crate::pos;
 
     // Helper function to create a test step with f64 values
     fn create_test_step() -> Step<f64, f64> {
@@ -747,9 +747,8 @@ mod tests_step_serialization {
         // Based on the test in Xstep serialization, the constructor panics with DateTime
         let x_value = 2.5;
         let time_unit = TimeFrame::Hour;
-        let expiration_date = ExpirationDate::DateTime(
-            Utc.with_ymd_and_hms(2024, 12, 31, 23, 59, 59).unwrap()
-        );
+        let expiration_date =
+            ExpirationDate::DateTime(Utc.with_ymd_and_hms(2024, 12, 31, 23, 59, 59).unwrap());
         let y_value = 200.0;
 
         Step::new(x_value, time_unit, expiration_date, y_value);
@@ -762,10 +761,13 @@ mod tests_step_serialization {
         let datetime = ExpirationDate::Days(pos!(30.0));
         let y_value = 42.5;
         let step = Step::new(x_value, time_unit, datetime, y_value);
-    
+
         // Serialize to JSON string
         let serialized = serde_json::to_string(&step).unwrap();
-        assert_eq!(serialized, r#"{"x":{"index":0,"step_size_in_time":5,"time_unit":"Day","datetime":{"days":30.0}},"y":{"index":0,"value":42.5}}"#);
+        assert_eq!(
+            serialized,
+            r#"{"x":{"index":0,"step_size_in_time":5,"time_unit":"Day","datetime":{"days":30.0}},"y":{"index":0,"value":42.5}}"#
+        );
     }
 
     #[test]

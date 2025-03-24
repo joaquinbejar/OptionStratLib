@@ -62,12 +62,6 @@ mod model;
 /// implementations, including time-stepping algorithms and state management.
 mod simulator;
 
-/// Utility functions and helpers for statistical analysis and data manipulation.
-///
-/// This module includes tools for data processing, statistical calculations,
-/// result formatting, and other helper functions used across the library.
-mod utils;
-
 /// Module for defining custom types and traits used throughout the application.
 ///
 /// This module contains the fundamental trait definitions and type structures that
@@ -95,13 +89,6 @@ mod utils;
 /// * `simulator` - Probably leverages these types for simulation scenarios
 pub mod types;
 
-/// Public API for creating and running random walk simulations.
-///
-/// This module exposes the main interfaces for setting up and executing
-/// various types of random walks, analyzing results, and extracting statistics.
-/// It serves as the primary entry point for library users.
-pub mod walk;
-
 /// # Random Walk Module
 ///
 /// This module provides implementations of various random walk algorithms and related utilities.
@@ -127,9 +114,35 @@ pub mod randomwalk;
 /// - Incremental state changes need to be managed
 ///
 pub mod steps;
-mod display;
+
+/// Module containing trait definitions for the financial modeling library.
+///
+/// This module defines the core traits that establish behavior contracts for
+/// various components of the financial modeling system. These traits provide
+/// interfaces for implementing different financial models, pricing methods,
+/// and data processing techniques.
+///
+///
+/// # Usage
+///
+/// Traits defined in this module are typically implemented by concrete types
+/// throughout the library to ensure consistent behavior and interoperability
+/// between different components of the system.
 mod traits;
 
+/// Module containing parameter definitions and structures for financial models.
+///
+/// This module defines the various parameter types, configurations, and constants
+/// used across different financial models in the library. It provides structured
+/// representation of inputs required for financial calculations and simulations.
+///
+/// # Usage
+///
+/// Parameter structures from this module are used as inputs to the various
+/// financial models, pricing functions, and simulation methods throughout the library.
+/// They encapsulate all the necessary inputs while ensuring proper validation.
+mod params;
+
+pub use model::WalkType;
+pub use params::WalkParams;
 pub use traits::WalkTypeAble;
-
-

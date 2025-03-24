@@ -1,3 +1,4 @@
+use optionstratlib::utils::setup_logger;
 use optionstratlib::volatility::generate_ou_process;
 use optionstratlib::{Positive, pos};
 use plotters::prelude::*;
@@ -5,8 +6,6 @@ use rust_decimal::Decimal;
 use rust_decimal::prelude::{FromPrimitive, ToPrimitive};
 use std::error::Error;
 use tracing::info;
-use optionstratlib::utils::setup_logger;
-
 
 /// Creates multiple OU process simulations and plots them.
 ///

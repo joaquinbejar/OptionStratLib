@@ -4,8 +4,8 @@
    Date: 23/3/25
 ******************************************************************************/
 use crate::Positive;
+use crate::simulation::WalkParams;
 use crate::simulation::steps::Step;
-use crate::simulation::walk::WalkParams;
 use crate::utils::Len;
 use std::fmt::Display;
 use std::ops::{AddAssign, Index, IndexMut};

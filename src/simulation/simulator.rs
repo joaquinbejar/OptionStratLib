@@ -66,13 +66,13 @@
 //             .flat_map(|(i, (_, walk))| {
 //                 let curve = walk.curve().unwrap();
 //                 let points2d = curve.points;
-// 
+//
 //                 points2d
 //                     .into_iter()
 //                     .map(move |point| Point3D::from_tuple(i, point.x, point.y).unwrap())
 //             })
 //             .collect();
-// 
+//
 //         Ok(Surface::new(points))
 //     }
 // }
