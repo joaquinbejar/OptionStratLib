@@ -35,9 +35,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         pos!(0.55),
         pos!(0.54),
     );
-    let price_range: Vec<Positive> = (2400..2600)
-        .map(|x| Positive::new(x as f64).unwrap())
-        .collect();
+
     info!("Title: {}", strategy.title());
     info!("Break Even {:?}", strategy.get_break_even_points());
     info!("Net Premium Received: {}", strategy.net_premium_received()?);
@@ -53,7 +51,6 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // Generate the intrinsic value graph
     strategy.graph(
-        &price_range,
         GraphBackend::Bitmap {
             file_path: "Draws/Strategy/bull_call_spread_value_chart.png",
             size: (1400, 933),

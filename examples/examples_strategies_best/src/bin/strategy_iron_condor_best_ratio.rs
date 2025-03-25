@@ -44,7 +44,6 @@ fn main() -> Result<(), Box<dyn Error>> {
     debug!("Option Chain: {}", option_chain);
     debug!("Strategy:  {:#?}", strategy);
 
-    let price_range = strategy.best_range_to_show(pos!(1.0)).unwrap();
     let range = strategy.range_of_profit().unwrap_or(Positive::ZERO);
     info!("Title: {}", strategy.title());
     info!("Break Even Points: {:?}", strategy.break_even_points);
@@ -71,7 +70,6 @@ fn main() -> Result<(), Box<dyn Error>> {
     if strategy.profit_ratio()? > Positive::ZERO.into() {
         debug!("Strategy:  {:#?}", strategy);
         strategy.graph(
-            &price_range,
             GraphBackend::Bitmap {
                 file_path: "Draws/Strategy/iron_condor_profit_loss_chart_best_ratio.png",
                 size: (1400, 933),

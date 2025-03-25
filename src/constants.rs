@@ -104,3 +104,18 @@ pub(crate) const MAX_ITERATIONS_IV: u32 = 1000;
 /// Convergence tolerance for implied volatility calculations.
 /// Determines when the implied volatility solver has reached sufficient precision.
 pub(crate) const IV_TOLERANCE: Decimal = dec!(1e-5);
+
+/// Standard deviation multiplier used for scaling graph boundaries.
+///
+/// This constant defines how many standard deviations from the mean should be
+/// displayed on statistical graphs or charts. A value of 4.0 means the graph
+/// will show data within 4 standard deviations from the mean in each direction,
+/// covering approximately 99.994% of normally distributed data.
+///
+/// # Usage
+///
+/// This constant is used when setting the boundaries or range of statistical plots,
+/// particularly when displaying probability distributions, confidence intervals,
+/// or data with normal/Gaussian characteristics.
+///
+pub(crate) const STDDEV_MULTIPLAYER_GRAPH: f64 = 4.0;

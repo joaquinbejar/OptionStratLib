@@ -44,7 +44,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         FindOptimalSide::Range(pos!(21600.0), pos!(21700.0)),
     );
     debug!("Strategy:  {:#?}", strategy);
-    let price_range = strategy.best_range_to_show(pos!(1.0)).unwrap();
     let range = strategy.range_of_profit().unwrap_or(Positive::ZERO);
     info!("Title: {}", strategy.title());
     info!("Break Even Points: {:?}", strategy.break_even_points);
@@ -75,7 +74,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     if strategy.profit_ratio()? > Positive::ZERO.into() {
         debug!("Strategy:  {:#?}", strategy);
         strategy.graph(
-            &price_range,
             GraphBackend::Bitmap {
                 file_path: "Draws/Chains/short_strangle_chain_raw_delta.png",
                 size: (1400, 933),

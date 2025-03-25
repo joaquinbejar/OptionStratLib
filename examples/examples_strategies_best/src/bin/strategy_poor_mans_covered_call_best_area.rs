@@ -35,10 +35,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         pos!(0.85),                        // open_fee_short_put
         pos!(0.85),                        // close_fee_short_put
     );
-    // strategy.best_area(&option_chain, FindOptimalSide::Range(pos!(5700.0), pos!(6100.0)));
     strategy.best_area(&option_chain, FindOptimalSide::Center);
     debug!("Strategy:  {:#?}", strategy);
-    let price_range = strategy.best_range_to_show(pos!(1.0)).unwrap();
     let range = strategy.range_of_profit().unwrap_or(Positive::ZERO);
     info!("Title: {}", strategy.title());
     info!("Break Even Points: {:?}", strategy.break_even_points);
@@ -65,7 +63,6 @@ fn main() -> Result<(), Box<dyn Error>> {
     if strategy.profit_ratio()? > Positive::ZERO.into() {
         debug!("Strategy:  {:#?}", strategy);
         strategy.graph(
-            &price_range,
             GraphBackend::Bitmap {
                 file_path: "Draws/Strategy/poor_mans_covered_call_profit_loss_chart_best_area.png",
                 size: (1400, 933),

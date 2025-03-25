@@ -43,8 +43,6 @@ fn main() -> Result<(), Box<dyn Error>> {
         pos!(0.05),
     );
 
-    let price_range = strategy.best_range_to_show(pos!(1.0)).unwrap();
-
     info!("Title: {}", strategy.title());
     info!("Break Even Points: {:?}", strategy.break_even_points);
     info!(
@@ -65,7 +63,6 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // Generate the profit/loss graph
     strategy.graph(
-        &price_range,
         GraphBackend::Bitmap {
             file_path: "Draws/Strategy/short_butterfly_spread_profit_loss_chart.png",
             size: (1400, 933),

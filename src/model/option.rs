@@ -1,5 +1,5 @@
 use crate::chains::chain::OptionData;
-use crate::constants::{IV_TOLERANCE, MAX_ITERATIONS_IV, ZERO};
+use crate::constants::{IV_TOLERANCE, MAX_ITERATIONS_IV, STDDEV_MULTIPLAYER_GRAPH, ZERO};
 use crate::error::{GreeksError, OptionsError, OptionsResult, VolatilityError};
 use crate::greeks::Greeks;
 use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
@@ -759,8 +759,8 @@ impl Graph for Options {
     fn get_x_values(&self) -> Vec<Positive> {
         let steps = 999;
         let stddev = self.strike_price * self.implied_volatility;
-        let min = self.strike_price - 5.0 * stddev;
-        let max = self.strike_price + 5.0 * stddev;
+        let min = self.strike_price - STDDEV_MULTIPLAYER_GRAPH * stddev;
+        let max = self.strike_price + STDDEV_MULTIPLAYER_GRAPH * stddev;
         let step_size = (max - min) / steps as f64;
 
         (0..=steps)
@@ -1713,7 +1713,7 @@ mod tests_graph {
         assert_eq!(values.len(), 1000);
         assert_relative_eq!(values[0], 0.0, epsilon = 1e-6);
         assert_relative_eq!(values[1], 0.0, epsilon = 1e-6);
-        assert_relative_eq!(values[values.len() - 1], 100.0, epsilon = 1e-6);
+        assert_relative_eq!(values[values.len() - 1], 80.0, epsilon = 1e-6);
     }
 
     #[test]
@@ -1742,7 +1742,7 @@ mod tests_graph {
         let values = option.get_y_values();
 
         assert_eq!(values.len(), 1000);
-        assert_relative_eq!(values[0], 100.0, epsilon = 1e-6);
+        assert_relative_eq!(values[0], 80.0, epsilon = 1e-6);
         assert_relative_eq!(values[values.len() - 1], 0.0, epsilon = 1e-6);
     }
 
@@ -1755,7 +1755,7 @@ mod tests_graph {
         assert_eq!(values.len(), 1000);
         assert_relative_eq!(values[0], 0.0, epsilon = 1e-6);
         assert_relative_eq!(values[1], 0.0, epsilon = 1e-6);
-        assert_relative_eq!(values[values.len() - 1], -100.0, epsilon = 1e-6);
+        assert_relative_eq!(values[values.len() - 1], -80.0, epsilon = 1e-6);
     }
 }
 

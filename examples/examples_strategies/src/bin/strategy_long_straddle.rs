@@ -59,7 +59,6 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // Generate the profit/loss graph
     strategy.graph(
-        &price_range,
         GraphBackend::Bitmap {
             file_path: "Draws/Strategy/long_straddle_profit_loss_chart.png",
             size: (1400, 933),
