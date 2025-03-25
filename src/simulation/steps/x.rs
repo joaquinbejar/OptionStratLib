@@ -158,6 +158,21 @@ where
         &self.datetime
     }
 
+    /// Calculates the number of days left until the expiry date associated with this step.
+    ///
+    /// This method delegates to the underlying `ExpirationDate` component to determine
+    /// the days remaining until expiration. It provides a consistent way to access time-to-expiry
+    /// regardless of how the date was originally specified (as days or as an absolute datetime).
+    ///
+    /// # Returns
+    ///
+    /// * `Result<Positive, Box<dyn Error>>` - A positive decimal value representing the number of days
+    ///   until expiration, or an error if the calculation cannot be performed.
+    ///
+    pub fn days_left(&self) -> Result<Positive, Box<dyn Error>> {
+        self.datetime.get_days()
+    }
+
     /// Generates the next step by reducing the expiration days by the step value.
     ///
     /// This method calculates a new `Xstep` instance with its index incremented by 1,
@@ -248,6 +263,33 @@ where
         state.serialize_field("time_unit", &self.time_unit)?;
         state.serialize_field("datetime", &self.datetime)?;
         state.end()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::model::types::ExpirationDate;
+    use crate::pos;
+
+    #[test]
+    fn test_days_left() {
+        let mut step = Xstep::new(1.5f64, TimeFrame::Day, ExpirationDate::Days(pos!(30.0)));
+        step.index = 42;
+
+        assert_eq!(step.days_left().unwrap(), pos!(30.0));
+        let step1 = step.next().unwrap();
+        assert_eq!(*step1.index(), 43);
+        assert_eq!(step1.days_left().unwrap(), pos!(28.5));
+        let step2 = step1.next().unwrap();
+        assert_eq!(*step2.index(), 44);
+        assert_eq!(step2.days_left().unwrap(), pos!(27.0));
+        let step3 = step2.next().unwrap();
+        assert_eq!(*step3.index(), 45);
+        assert_eq!(step3.days_left().unwrap(), pos!(25.5));
+        let step4 = step3.previous().unwrap();
+        assert_eq!(*step4.index(), 44);
+        assert_eq!(step4.days_left().unwrap(), pos!(27.0));
     }
 }
 

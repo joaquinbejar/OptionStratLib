@@ -2,20 +2,18 @@ use optionstratlib::simulation::randomwalk::RandomWalk;
 use optionstratlib::simulation::steps::{Step, Xstep, Ystep};
 use optionstratlib::simulation::{WalkParams, WalkType, WalkTypeAble};
 use optionstratlib::utils::setup_logger;
-use optionstratlib::utils::time::TimeFrame;
+use optionstratlib::utils::time::{TimeFrame, convert_time_frame};
 use optionstratlib::visualization::utils::{Graph, GraphBackend};
-use optionstratlib::{ExpirationDate, Positive, pos, spos};
+use optionstratlib::{ExpirationDate, Positive, pos};
 use rust_decimal_macros::dec;
-use tracing::info;
+use tracing::{debug, info};
 
-struct Walker {
-    x: Positive,
-    y: Positive,
-}
+#[warn(dead_code)]
+struct Walker {}
 
 impl Walker {
-    fn new(x: Positive, y: Positive) -> Self {
-        Walker { x, y }
+    fn new() -> Self {
+        Walker {}
     }
 }
 
@@ -50,36 +48,28 @@ fn generator(walk_params: WalkParams<Positive, Positive>) -> Vec<Step<Positive, 
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     setup_logger();
-    let years = 3.0;
-    // let n_steps = 252 * years as usize;
-    let n_steps = 35;
-    let initial_price = pos!(7000.0);
-    let mean = 0.0;
-    let std_dev = pos!(0.2);
-    let std_dev_change = pos!(0.001);
-    let risk_free_rate = Some(dec!(0.0));
-    let dividend_yield = spos!(0.02);
-    let volatility_window = 20;
-    let initial_volatility = Some(std_dev);
-
-    let walker = Box::new(Walker::new(pos!(0.0), initial_price));
+    let n_steps = 43_200; // 30 days in minutes
+    let initial_price = pos!(100.0);
+    let std_dev = pos!(20.0);
+    let walker = Box::new(Walker::new());
+    let days = pos!(30.0);
 
     let walk_params = WalkParams {
         size: n_steps,
         init_step: Step {
-            x: Xstep::new(pos!(1.0), TimeFrame::Day, ExpirationDate::Days(pos!(30.0))),
-            y: Ystep::new(0, pos!(100.0)),
+            x: Xstep::new(Positive::ONE, TimeFrame::Minute, ExpirationDate::Days(days)),
+            y: Ystep::new(0, initial_price),
         },
         walk_type: WalkType::GeometricBrownian {
-            dt: pos!(1.0 / 252.0),
+            dt: convert_time_frame(pos!(1.0) / days, &TimeFrame::Minute, &TimeFrame::Day), // TODO
             drift: dec!(0.0),
-            volatility: initial_volatility.unwrap(),
+            volatility: std_dev,
         },
         walker: walker,
     };
 
-    let mut random_walk = RandomWalk::new("Random Walk".to_string(), walk_params, generator);
-    info!("Random Walk: {}", random_walk);
+    let random_walk = RandomWalk::new("Random Walk".to_string(), walk_params, generator);
+    debug!("Random Walk: {}", random_walk);
 
     random_walk.graph(
         GraphBackend::Bitmap {

@@ -161,6 +161,22 @@ where
         pos!(*self.x.index() as f64)
     }
 
+    /// Returns the number of days left until expiration for the x-axis component of this step.
+    ///
+    /// This method provides a convenient way to access the time-to-expiry value from the
+    /// x-component of the step without having to handle the potential error result that
+    /// the underlying `days_left()` method returns. It's useful for graphing and visualization
+    /// contexts where the days remaining until expiration need to be accessed directly.
+    ///
+    /// # Returns
+    ///
+    /// * `Positive` - A guaranteed positive decimal value representing the number of days
+    ///   until expiration. This value is extracted from the step's x-component's expiration date.
+    ///
+    pub fn get_graph_x_in_days_left(&self) -> Positive {
+        self.x.days_left().unwrap()
+    }
+
     /// Returns the y-value prepared for graphing operations
     ///
     /// Converts the current y-axis value to a `Positive` value that can be used

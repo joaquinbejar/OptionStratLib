@@ -292,9 +292,10 @@ where
     }
 
     fn get_x_values(&self) -> Vec<Positive> {
+        // TODO: invert in the graph
         self.steps
             .iter()
-            .map(|step| step.get_graph_x_value())
+            .map(|step| step.get_graph_x_in_days_left())
             .collect()
     }
 
