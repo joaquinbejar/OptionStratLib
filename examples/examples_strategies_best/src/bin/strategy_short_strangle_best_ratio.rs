@@ -1,7 +1,6 @@
 use optionstratlib::ExpirationDate;
 use optionstratlib::Positive;
 use optionstratlib::chains::chain::OptionChain;
-use optionstratlib::constants::ZERO;
 use optionstratlib::greeks::Greeks;
 use optionstratlib::pos;
 use optionstratlib::strategies::ShortStrangle;

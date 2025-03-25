@@ -1,7 +1,6 @@
 use optionstratlib::ExpirationDate;
 use optionstratlib::Positive;
 use optionstratlib::chains::chain::OptionChain;
-use optionstratlib::constants::ZERO;
 use optionstratlib::pos;
 use optionstratlib::strategies::base::{Optimizable, Strategies};
 use optionstratlib::strategies::butterfly_spread::LongButterflySpread;

@@ -29,7 +29,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         pos!(1.0),      // quantity
         Positive::ZERO, // premium_short_call
         Positive::ZERO, // premium_short_put
-        pos!(0.82),     // open_fee_short_call
+        pos!(0.81),     // open_fee_short_call
         pos!(0.82),     // close_fee_short_call
         pos!(0.82),     // open_fee_short_put
         pos!(0.82),     // close_fee_short_put

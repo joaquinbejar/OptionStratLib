@@ -332,7 +332,7 @@ pub(crate) fn calculate_axis_range(
         return (max_x_value, min_x_value, min_y_temp, max_y_temp);
     }
 
-    let margin_value = margin.unwrap_or(1.0);
+    let margin_value = margin.unwrap_or(1.1);
 
     let adjusted_max_profit = (max_y_temp * margin_value - max_y_temp).abs();
     let adjusted_min_profit = (min_y_temp * margin_value - min_y_temp).abs();
