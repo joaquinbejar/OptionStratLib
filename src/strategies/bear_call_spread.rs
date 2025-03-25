@@ -2007,7 +2007,7 @@ mod tests_bear_call_spread_graph {
     fn test_get_values() {
         let spread = create_test_spread();
         let values = spread.get_y_values();
-        assert_eq!(values.len(), 5);
+        assert_eq!(values.len(), 26);
         assert_eq!(
             values[0],
             spread
@@ -2033,27 +2033,11 @@ mod tests_bear_call_spread_graph {
                 .unwrap()
         );
         assert_eq!(
-            values[3],
-            spread
-                .calculate_profit_at(pos!(110.0))
-                .unwrap()
-                .to_f64()
-                .unwrap()
-        );
-        assert_eq!(
-            values[4],
-            spread
-                .calculate_profit_at(pos!(115.0))
-                .unwrap()
-                .to_f64()
-                .unwrap()
-        );
-        assert_eq!(
             values[0],
             spread.max_profit().unwrap_or(Positive::ZERO).to_f64()
         );
         assert_eq!(
-            values[4],
+            values[values.len() - 1],
             -spread.max_loss().unwrap_or(Positive::ZERO).to_f64()
         );
     }

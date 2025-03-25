@@ -232,12 +232,13 @@ impl PartialEq<Positive> for Decimal {
 /// ```rust
 /// use rust_decimal::Decimal;
 /// use rust_decimal_macros::dec;
+/// use tracing::info;
 /// use optionstratlib::model::decimal::decimal_to_f64;
 ///
 /// let decimal = dec!(3.14159);
 /// match decimal_to_f64(decimal) {
-///     Ok(float) => println!("Converted to f64: {}", float),
-///     Err(e) => println!("Conversion error: {:?}", e)
+///     Ok(float) => info!("Converted to f64: {}", float),
+///     Err(e) => info!("Conversion error: {:?}", e)
 /// }
 /// ```
 pub fn decimal_to_f64(value: Decimal) -> Result<f64, DecimalError> {
@@ -268,12 +269,13 @@ pub fn decimal_to_f64(value: Decimal) -> Result<f64, DecimalError> {
 ///
 /// ```rust
 /// use rust_decimal::Decimal;
+/// use tracing::info;
 /// use optionstratlib::model::decimal::f64_to_decimal;
 ///
 /// let float = std::f64::consts::PI;
 /// match f64_to_decimal(float) {
-///     Ok(decimal) => println!("Converted to Decimal: {}", decimal),
-///     Err(e) => println!("Conversion error: {:?}", e)
+///     Ok(decimal) => info!("Converted to Decimal: {}", decimal),
+///     Err(e) => info!("Conversion error: {:?}", e)
 /// }
 /// ```
 pub fn f64_to_decimal(value: f64) -> Result<Decimal, DecimalError> {

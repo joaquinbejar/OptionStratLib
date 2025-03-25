@@ -94,9 +94,10 @@ impl BasicAxisTypes {
     /// # Example
     ///
     /// ```rust
+    /// use tracing::info;
     /// use optionstratlib::model::BasicAxisTypes;
     /// for axis_type in BasicAxisTypes::iter() {
-    ///     println!("Processing axis type: {:?}", axis_type);
+    ///     info!("Processing axis type: {:?}", axis_type);
     ///     // Perform operations with each axis type
     /// }
     /// ```

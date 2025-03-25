@@ -585,7 +585,6 @@
 //!
 //!     // Generate the intrinsic value graph
 //!     option.graph(
-//!         &price_range,
 //!         GraphBackend::Bitmap {
 //!             file_path: "Draws/Options/intrinsic_value_chart.png",
 //!             size: (1400, 933),
@@ -649,7 +648,6 @@
 //!
 //!     // Generate the profit/loss graph
 //!     strategy.graph(
-//!         &price_range,
 //!         GraphBackend::Bitmap {
 //!             file_path: "Draws/Strategy/bull_call_spread_profit_loss_chart.png",
 //!             size: (1400, 933),

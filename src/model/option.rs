@@ -739,8 +739,33 @@ impl Graph for Options {
         )
     }
 
+    /// Generates a vector of evenly spaced x-values for option pricing/plotting.
+    ///
+    /// This method creates a range of x-values (potential stock prices) centered around
+    /// the strike price and spanning 5 standard deviations in each direction.
+    /// The standard deviation is calculated as the product of strike price and implied volatility.
+    ///
+    /// # Returns
+    ///
+    /// A vector of `Positive` values representing potential stock prices, with 1000 total points
+    /// (999 steps plus endpoints) evenly distributed across the range.
+    ///
+    /// # Implementation Details
+    ///
+    /// * The range extends 5 standard deviations above and below the strike price
+    /// * Uses 1000 total points (steps + 1) for smooth visualization
+    /// * All returned values are guaranteed positive through the use of the `pos!` macro
+    ///
     fn get_x_values(&self) -> Vec<Positive> {
-        unimplemented!()
+        let steps = 999;
+        let stddev = self.strike_price * self.implied_volatility;
+        let min = self.strike_price - 5.0 * stddev;
+        let max = self.strike_price + 5.0 * stddev;
+        let step_size = (max - min) / steps as f64;
+
+        (0..=steps)
+            .map(|i| min + pos!(i as f64) * step_size)
+            .collect()
     }
 
     fn get_y_values(&self) -> Vec<f64> {
@@ -1685,11 +1710,10 @@ mod tests_graph {
     fn test_get_values() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         let values = option.get_y_values();
-
-        assert_eq!(values.len(), 3);
+        assert_eq!(values.len(), 1000);
         assert_relative_eq!(values[0], 0.0, epsilon = 1e-6);
         assert_relative_eq!(values[1], 0.0, epsilon = 1e-6);
-        assert_relative_eq!(values[2], 10.0, epsilon = 1e-6);
+        assert_relative_eq!(values[values.len() - 1], 100.0, epsilon = 1e-6);
     }
 
     #[test]
@@ -1717,10 +1741,9 @@ mod tests_graph {
         let option = create_sample_option_simplest(OptionStyle::Put, Side::Long);
         let values = option.get_y_values();
 
-        assert_eq!(values.len(), 3);
-        assert_relative_eq!(values[0], 10.0, epsilon = 1e-6);
-        assert_relative_eq!(values[1], 0.0, epsilon = 1e-6);
-        assert_relative_eq!(values[2], 0.0, epsilon = 1e-6);
+        assert_eq!(values.len(), 1000);
+        assert_relative_eq!(values[0], 100.0, epsilon = 1e-6);
+        assert_relative_eq!(values[values.len() - 1], 0.0, epsilon = 1e-6);
     }
 
     #[test]
@@ -1729,10 +1752,10 @@ mod tests_graph {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Short);
         let values = option.get_y_values();
 
-        assert_eq!(values.len(), 3);
+        assert_eq!(values.len(), 1000);
         assert_relative_eq!(values[0], 0.0, epsilon = 1e-6);
         assert_relative_eq!(values[1], 0.0, epsilon = 1e-6);
-        assert_relative_eq!(values[2], -10.0, epsilon = 1e-6);
+        assert_relative_eq!(values[values.len() - 1], -100.0, epsilon = 1e-6);
     }
 }
 

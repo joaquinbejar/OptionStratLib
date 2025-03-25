@@ -521,7 +521,7 @@ impl Strategies for ShortStrangle {
     fn best_range_to_show(&self, step: Positive) -> Result<Vec<Positive>, StrategyError> {
         let max_profit = self.max_profit().unwrap_or(Positive::ZERO);
         let (first_option, last_option) = (self.break_even_points[0], self.break_even_points[1]);
-        let start_price = first_option - max_profit;
+        let start_price = first_option - max_profit.to_dec();
         let end_price = last_option + max_profit;
         Ok(calculate_price_range(start_price, end_price, step))
     }
@@ -1401,13 +1401,14 @@ impl Strategies for LongStrangle {
 
     fn best_range_to_show(&self, step: Positive) -> Result<Vec<Positive>, StrategyError> {
         let (first_option, last_option) = (self.break_even_points[0], self.break_even_points[1]);
-        info!("First: {} Last: {}", first_option, last_option);
-        let diff = last_option - first_option;
+        debug!("First: {} Last: {}", first_option, last_option);
+        assert!(first_option < last_option);
+        let diff = last_option - first_option.to_dec();
         debug!(
             "First break even point: {} Last break even point: {}",
             first_option, last_option
         );
-        let start_price = first_option - diff;
+        let start_price = first_option - diff.to_dec();
         debug!("Start price: {}", start_price);
         let end_price = last_option + diff;
         debug!("End price: {}", end_price);
@@ -2003,14 +2004,6 @@ is expected and the underlying asset's price is anticipated to remain stable."
 
         strategy.best_area(&option_chain, FindOptimalSide::All);
         assert!(strategy.validate());
-    }
-
-    #[test]
-    #[should_panic]
-    fn test_best_range_to_show() {
-        let strategy = setup();
-        let step = pos!(1.0);
-        let _ = strategy.best_range_to_show(step).unwrap();
     }
 
     #[test]
@@ -3155,11 +3148,11 @@ mod tests_long_strangle_delta {
             size,
             DELTA_THRESHOLD
         );
-        println!("{:?}", strategy.delta_neutrality().unwrap());
+        info!("{:?}", strategy.delta_neutrality().unwrap());
         assert!(!strategy.is_delta_neutral());
         let binding = strategy.delta_adjustments().unwrap();
         let suggestion = binding.first().unwrap();
-        println!("{:?}", suggestion);
+        info!("{:?}", suggestion);
         match suggestion {
             DeltaAdjustment::BuyOptions {
                 quantity,

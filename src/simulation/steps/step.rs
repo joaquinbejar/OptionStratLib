@@ -149,10 +149,26 @@ where
         })
     }
 
+    /// Returns the x-value prepared for graphing operations
+    ///
+    /// Converts the current x-axis index to a `Positive` value that can be used
+    /// in graphing and visualization functions.
+    ///
+    /// # Returns
+    ///
+    /// A `Positive` representation of the x-axis index as a floating point value
     pub fn get_graph_x_value(&self) -> Positive {
         pos!(*self.x.index() as f64)
     }
 
+    /// Returns the y-value prepared for graphing operations
+    ///
+    /// Converts the current y-axis value to a `Positive` value that can be used
+    /// in graphing and visualization functions.
+    ///
+    /// # Returns
+    ///
+    /// A `Positive` representation of the y-axis value
     pub fn get_graph_y_value(&self) -> Positive {
         (*self.y.value()).into()
     }

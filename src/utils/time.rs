@@ -194,9 +194,10 @@ pub fn convert_time_frame(
 /// # Examples
 ///
 /// ```
+/// use tracing::info;
 /// use optionstratlib::utils::time::get_tomorrow_formatted;
 /// let tomorrow = get_tomorrow_formatted();
-/// println!("{}", tomorrow); // Output will vary depending on the current date.
+/// info!("{}", tomorrow); // Output will vary depending on the current date.
 /// ```
 pub fn get_tomorrow_formatted() -> String {
     let tomorrow = Local::now().date_naive() + Duration::days(1);

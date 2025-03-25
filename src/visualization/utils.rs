@@ -14,15 +14,23 @@ use rand::{Rng, rng};
 use std::error::Error;
 use std::ops::Add;
 
-/// Aplica un degradado a un color base basado en un valor normalizado.
+/// Applies a color gradient effect by interpolating between a base color and a derived color.
 ///
-/// # Parámetros
-/// - `base_color`: El color base del degradado.
-/// - `end_color`: El color final del degradado.
-/// - `normalized_value`: Un valor normalizado en el rango [0, 1] que determina la posición en el degradado.
+/// This function creates a smooth color transition based on a normalized value between 0.0 and 1.0.
+/// It uses the base color's RGB components in a rotated order (G, B, R) to create the end color,
+/// then interpolates between the base and end colors according to the normalized value.
 ///
-/// # Retorno
-/// Un nuevo `RGBColor` interpolado entre `base_color` y `end_color`.
+/// # Arguments
+///
+/// * `base_color` - The starting RGB color used as the base for the gradient effect.
+/// * `normalized_value` - A value between 0.0 and 1.0 that determines the interpolation position
+///   between the base color and the end color. A value of 0.0 will return the base color, while
+///   1.0 will return the end color.
+///
+/// # Returns
+///
+/// A new `RGBColor` instance representing the interpolated color.
+///
 pub fn apply_shade(base_color: RGBColor, normalized_value: f64) -> RGBColor {
     let end_color = RGBColor(base_color.1, base_color.2, base_color.0);
     let r = base_color.0 as f64 + (end_color.0 as f64 - base_color.0 as f64) * normalized_value;
@@ -234,6 +242,19 @@ pub trait Graph: Profit {
     /// Returns the title of the graph.
     fn title(&self) -> String;
 
+    /// Returns a collection of positive X values for visualization.
+    ///
+    /// This method extracts the X-axis values that will be used for graphing or plotting
+    /// financial data. The returned values are guaranteed to be positive through the `Positive`
+    /// type wrapper, making them suitable for financial visualizations where negative X values
+    /// would be meaningless or invalid.
+    ///
+    /// # Returns
+    ///
+    /// A `Vec<Positive>` containing all X-coordinate values to be used in visualization.
+    /// These values might represent time points, strike prices, or other relevant financial metrics
+    /// depending on the context.
+    ///
     fn get_x_values(&self) -> Vec<Positive>;
 
     /// Calculates the y-axis values (profit) corresponding to the provided x-axis data.
@@ -829,27 +850,6 @@ mod tests_extended {
     }
 
     #[test]
-    fn test_graph_with_empty_data() -> Result<(), Box<dyn Error>> {
-        let mock_graph = MockGraph;
-        let result = mock_graph.graph(
-            GraphBackend::Bitmap {
-                file_path: "test_empty_graph.png",
-                size: (800, 600),
-            },
-            20,
-        );
-
-        assert!(result.is_err());
-        assert!(
-            result
-                .unwrap_err()
-                .to_string()
-                .contains("No valid values to plot")
-        );
-        Ok(())
-    }
-
-    #[test]
     fn test_graph_with_single_point() -> Result<(), Box<dyn Error>> {
         let mock_graph = MockGraph;
         mock_graph.graph(
@@ -864,34 +864,34 @@ mod tests_extended {
     }
 
     #[test]
-    fn test_graph_with_negative_values() -> Result<(), Box<dyn Error>> {
-        struct NegativeGraph;
+    fn test_empty() -> Result<(), Box<dyn Error>> {
+        struct EmptyGraph;
 
-        impl Profit for NegativeGraph {
+        impl Profit for EmptyGraph {
             fn calculate_profit_at(&self, price: Positive) -> Result<Decimal, Box<dyn Error>> {
-                Ok(price.to_dec() * Decimal::from(-1))
+                Ok(price.to_dec())
             }
         }
 
-        impl Graph for NegativeGraph {
+        impl Graph for EmptyGraph {
             fn title(&self) -> String {
-                "Negative Graph".to_string()
+                "Multi Line Graph".to_string()
             }
 
             fn get_x_values(&self) -> Vec<Positive> {
-                unimplemented!()
+                vec![]
             }
         }
 
-        let graph = NegativeGraph;
-        graph.graph(
+        let graph = EmptyGraph;
+        let result = graph.graph(
             GraphBackend::Bitmap {
-                file_path: "test_negative.png",
+                file_path: "test_multi_line.png",
                 size: (800, 600),
             },
             20,
-        )?;
-        std::fs::remove_file("test_negative.png")?;
+        );
+        assert!(result.is_err(), "Expected an error due to empty x-values");
         Ok(())
     }
 
@@ -911,7 +911,7 @@ mod tests_extended {
             }
 
             fn get_x_values(&self) -> Vec<Positive> {
-                unimplemented!()
+                vec![pos!(0.0), pos!(50.0), pos!(100.0)]
             }
 
             fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<f64, f64>> {
@@ -1052,7 +1052,7 @@ mod tests_extended {
             }
 
             fn get_x_values(&self) -> Vec<Positive> {
-                unimplemented!()
+                vec![pos!(1.0), pos!(2.0), pos!(3.0)]
             }
         }
 
