@@ -35,11 +35,11 @@ fn generator(walk_params: WalkParams<Positive, OptionChain>) -> Vec<Step<Positiv
             Err(_) => break,
         };
         // convert y_step to OptionChain
-        let y_step_chain : OptionChain = create_chain_from_step(y_step, other_params);
-        previous_y_step = previous_y_step.next(y_step_chain);
+        let y_step_chain : OptionChain = create_chain_from_step(&y_step, &walk_params);
+        previous_y_step = previous_y_step.next(y_step_chain).clone();
         let step = Step {
             x: previous_x_step,
-            y: previous_y_step,
+            y: previous_y_step.clone(),
         };
         steps.push(step)
     }
