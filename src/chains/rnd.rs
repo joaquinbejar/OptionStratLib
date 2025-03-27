@@ -51,7 +51,7 @@
 //!             None,
 //!             10,
 //!             pos!(1.0),
-//!             0.00001,
+//!             dec!(0.00001),
 //!             pos!(0.02),
 //!             2,
 //!             OptionDataPriceParams::new(
@@ -1465,7 +1465,7 @@ mod chain_test {
             None,
             10,
             pos!(1.0),
-            0.00001,
+            dec!(0.00001),
             pos!(0.02),
             2,
             OptionDataPriceParams::new(
@@ -1488,7 +1488,7 @@ mod chain_test {
             None,
             10,
             pos!(1.0),
-            0.00001,
+            dec!(0.00001),
             pos!(0.02),
             2,
             OptionDataPriceParams::new(
@@ -1512,16 +1512,20 @@ mod chain_test {
         let rnd_result = chain.calculate_rnd(&params).unwrap();
         assert!(!rnd_result.densities.is_empty());
 
-        assert_decimal_eq!(rnd_result.statistics.mean, dec!(99.873684), dec!(0.00001));
-        assert_decimal_eq!(rnd_result.statistics.skewness, dec!(0.03886), dec!(0.00001));
+        assert_decimal_eq!(rnd_result.statistics.mean, dec!(99.74), dec!(0.00001));
+        assert_decimal_eq!(
+            rnd_result.statistics.skewness,
+            dec!(-0.09488),
+            dec!(0.00001)
+        );
         assert_decimal_eq!(
             rnd_result.statistics.kurtosis,
-            dec!(-0.6919233),
+            dec!(-0.2244418),
             dec!(0.00001)
         );
         assert_decimal_eq!(
             rnd_result.statistics.variance.to_dec(),
-            dec!(17.98404432),
+            dec!(23.35239999),
             dec!(0.00001)
         );
     }
@@ -1534,7 +1538,7 @@ mod chain_test {
             None,
             10,
             pos!(1.0),
-            0.00001,
+            dec!(0.00001),
             pos!(0.02),
             2,
             OptionDataPriceParams::new(

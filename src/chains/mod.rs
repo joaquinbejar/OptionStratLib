@@ -21,6 +21,7 @@
 //! ## Example Usage
 //!
 //! ```rust
+//! use rust_decimal::Decimal;
 //! use rust_decimal_macros::dec;
 //! use optionstratlib::chains::chain::{OptionChain, OptionData};
 //! use optionstratlib::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
@@ -31,7 +32,7 @@
 //!             None,
 //!             10,
 //!             pos!(1.0),
-//!             0.0,
+//!             Decimal::ZERO,
 //!             pos!(0.02),
 //!             2,
 //!             OptionDataPriceParams::new(
@@ -137,7 +138,7 @@
 //!     Some(Positive::ONE),
 //!     5,
 //!     Positive::ONE,
-//!     0.0001,
+//!     dec!(0.0001),
 //!     Positive::new(0.02).unwrap(),
 //!     2,
 //!     chain,

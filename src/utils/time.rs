@@ -204,6 +204,27 @@ pub fn get_tomorrow_formatted() -> String {
     tomorrow.format("%d-%b-%Y").to_string().to_lowercase()
 }
 
+/// Formats a date a specified number of days from the current date.
+///
+/// This function calculates the date that is `days` days from the current date and
+/// formats it as a lowercase string in the format "dd-mmm-yyyy".  For example,
+/// if the current date is 2024-11-20 and `days` is 1, the returned string will be
+/// "21-nov-2024".
+///
+/// # Arguments
+///
+/// * `days`: The number of days to offset from the current date.  This can be
+///   positive or negative.
+///
+/// # Returns
+///
+/// A lowercase string representing the calculated date in "dd-mmm-yyyy" format.
+///
+pub fn get_x_days_formatted(days: i64) -> String {
+    let tomorrow = Local::now().date_naive() + Duration::days(days);
+    tomorrow.format("%d-%b-%Y").to_string().to_lowercase()
+}
+
 /// Returns the current date formatted as "dd-mmm-yyyy" in lowercase.
 ///
 /// # Examples

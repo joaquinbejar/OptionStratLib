@@ -19,7 +19,7 @@ use std::fmt::{Display, Formatter};
 ///
 /// # Type Parameters
 ///
-/// * `T` - A type that is `Copy` and can be converted into a `Positive` value.
+/// * `T` - A type that can be converted into a `Positive` value.
 ///   This ensures that all values stored in `Ystep` are non-negative.
 ///
 /// # Fields
@@ -28,10 +28,10 @@ use std::fmt::{Display, Formatter};
 ///
 /// * `value` - A positive numeric value associated with this step.
 ///
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Clone)]
 pub struct Ystep<T>
 where
-    T: Copy + Into<Positive> + Display,
+    T: Into<Positive> + Display + Clone,
 {
     /// An integer index representing the step's position in a sequence
     index: i32,
@@ -43,14 +43,14 @@ where
 /// A step value holder for simulation values that must be positive.
 ///
 /// `Ystep<T>` maintains an index counter and a value of type `T`, where `T`
-/// must be copCopy + `Into<Positive>` + Display and convertible to a `Positive` value.
+/// must be `Into<Positive>` + Display and convertible to a `Positive` value.
 ///
 /// This struct is typically used in financial simulations where values need
 /// to be tracked across simulation steps while ensuring they remain positive.
 ///
 /// # Type Parameters
 ///
-/// * `T` - The value type that must implement `Copy` and be convertible to `Positive`
+/// * `T` - The value type that must be convertible to `Positive`
 ///
 /// # Examples
 ///
@@ -66,7 +66,7 @@ where
 /// ```
 impl<T> Ystep<T>
 where
-    T: Copy + Into<Positive> + Display,
+    T: Into<Positive> + Display + Clone,
 {
     /// Creates a new `Ystep` instance with the specified value.
     ///
@@ -115,7 +115,7 @@ where
     ///
     /// A reference to the stored value of type `T`
     pub fn positive(&self) -> Positive {
-        self.value.into()
+        self.value.clone().into()
     }
 
     /// Returns an immutable reference to the index of this step.
@@ -144,10 +144,10 @@ where
 
 impl<T> Display for Ystep<T>
 where
-    T: Copy + Into<Positive> + Display,
+    T: Into<Positive> + Display + Clone,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let positive_value: Positive = self.value.into();
+        let positive_value: Positive = self.positive();
         write!(
             f,
             "Ystep {{ index: {}, value: {} }}",
@@ -159,14 +159,14 @@ where
 
 impl<T> Serialize for Ystep<T>
 where
-    T: Copy + Into<Positive> + Display + Serialize,
+    T: Into<Positive> + Display + Serialize + Clone,
 {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
         // Convert value to Positive for consistent serialization
-        let value: Positive = self.value.into();
+        let value: Positive = self.positive();
 
         // Use a struct with 2 fields to represent Ystep
         use serde::ser::SerializeStruct;

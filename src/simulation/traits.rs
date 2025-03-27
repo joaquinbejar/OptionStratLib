@@ -37,7 +37,7 @@ use std::ops::AddAssign;
 pub trait WalkTypeAble<X, Y>
 where
     X: Copy + Into<Positive> + AddAssign + Display,
-    Y: Copy + Into<Positive> + Display,
+    Y: Into<Positive> + Display + Clone,
 {
     /// Generates a Brownian motion (standard random walk) process.
     ///
@@ -60,7 +60,7 @@ where
                 volatility,
             } => {
                 let mut values = Vec::new();
-                let mut current_value: Positive = (*params.init_step.y.value()).into();
+                let mut current_value: Positive = params.ystep_as_positive();
                 for _ in 0..params.size {
                     let random_step = decimal_normal_sample() * volatility * dt;
                     current_value += drift * dt + random_step;
@@ -97,7 +97,7 @@ where
                 volatility,
             } => {
                 let mut values = Vec::new();
-                let mut current_value: Positive = (*params.init_step.y.value()).into();
+                let mut current_value: Positive = params.ystep_as_positive();
                 for _ in 0..params.size {
                     let random_step = decimal_normal_sample() * volatility * dt;
                     current_value *= (drift * dt + random_step).exp();
@@ -133,7 +133,7 @@ where
                 autocorrelation,
             } => {
                 let mut values = Vec::new();
-                let mut current_value: Positive = (*params.init_step.y.value()).into();
+                let mut current_value: Positive = params.ystep_as_positive();
                 let mut prev_log_return = Decimal::ZERO;
                 for _ in 0..params.size {
                     let random_step = decimal_normal_sample() * volatility * dt;
@@ -175,13 +175,14 @@ where
                 speed,
                 mean,
             } => Ok(generate_ou_process(
-                (*params.init_step.y.value()).into(),
+                params.ystep_as_positive(),
                 mean,
                 speed,
                 volatility,
                 dt,
                 params.size,
             )),
+
             _ => Err("Invalid walk type for Mean Reverting motion".into()),
         }
     }
@@ -212,7 +213,7 @@ where
                 jump_volatility,
             } => {
                 let mut values = Vec::new();
-                let mut current_value: Positive = (*params.init_step.y.value()).into();
+                let mut current_value: Positive = params.ystep_as_positive();
                 for _ in 0..params.size {
                     let random_step = decimal_normal_sample() * volatility * dt;
                     current_value += drift * dt + random_step;
@@ -263,7 +264,7 @@ where
                 }
 
                 let mut values = Vec::with_capacity(params.size);
-                let mut current_value: Positive = (*params.init_step.y.value()).into();
+                let mut current_value: Positive = params.ystep_as_positive();
 
                 // Initialize variance using the provided initial volatility
                 let mut variance = volatility * volatility;
@@ -357,7 +358,7 @@ where
                 }
 
                 let mut values = Vec::with_capacity(params.size);
-                let mut price: Positive = (*params.init_step.y.value()).into();
+                let mut price: Positive = params.ystep_as_positive();
 
                 // Initial variance is the square of initial volatility
                 let mut variance = volatility.to_dec() * volatility.to_dec();
@@ -425,9 +426,7 @@ where
                     generate_ou_process(volatility, vol_mean, vol_speed, vov, dt, params.size);
                 let mut values = Vec::new();
 
-                // Fix for the Positive conversion issue:
-                // Clone the value first (since it's a reference) and then convert to Positive
-                let mut current_value: Positive = (*params.init_step.y.value()).into();
+                let mut current_value: Positive = params.ystep_as_positive();
 
                 // Use iterator instead of index-based loop
                 for &vol in volatilities.iter().take(params.size) {

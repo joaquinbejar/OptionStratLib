@@ -4,6 +4,7 @@
    Date: 30/12/24
 ******************************************************************************/
 
+use crate::chains::chain::OptionChain;
 use crate::constants::EPSILON;
 use crate::model::utils::ToRound;
 use approx::{AbsDiffEq, RelativeEq};
@@ -596,6 +597,24 @@ impl From<Decimal> for Positive {
 impl From<&Decimal> for Positive {
     fn from(value: &Decimal) -> Self {
         Positive::new_decimal(*value).expect("Value must be positive")
+    }
+}
+
+impl From<&Positive> for Positive {
+    fn from(value: &Positive) -> Self {
+        Positive(value.0)
+    }
+}
+
+impl From<&OptionChain> for Positive {
+    fn from(value: &OptionChain) -> Self {
+        value.underlying_price
+    }
+}
+
+impl From<OptionChain> for Positive {
+    fn from(value: OptionChain) -> Self {
+        value.underlying_price
     }
 }
 

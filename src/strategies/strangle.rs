@@ -342,7 +342,7 @@ impl BreakEvenable for ShortStrangle {
         let total_premium = self.net_premium_received()?;
 
         self.break_even_points.push(
-            (self.short_put.option.strike_price - (total_premium / self.short_put.option.quantity))
+            (self.short_put.option.strike_price - (total_premium / self.short_put.option.quantity).to_dec())
                 .round_to(2),
         );
 
@@ -578,8 +578,8 @@ impl Optimizable for ShortStrangle {
             .filter(move |(short_put, short_call)| short_put.strike_price < short_call.strike_price)
             // Filter out options with invalid bid/ask prices
             .filter(|(short_put, short_call)| {
-                short_put.call_ask.unwrap_or(Positive::ZERO) > Positive::ZERO
-                    && short_call.call_bid.unwrap_or(Positive::ZERO) > Positive::ZERO
+                short_put.put_ask.unwrap_or(Positive::ZERO) > Positive::ZERO
+                    && short_call.call_ask.unwrap_or(Positive::ZERO) > Positive::ZERO
             })
             // Filter out options that don't meet strategy constraints
             .filter(move |(short_put, short_call)| {
@@ -632,12 +632,22 @@ impl Optimizable for ShortStrangle {
         }
     }
 
+    fn are_valid_prices(&self, legs: &StrategyLegs) -> bool {
+        let (short_put, short_call) = match legs {
+            StrategyLegs::TwoLegs { first, second } => (first, second),
+            _ => panic!("Invalid number of legs for this strategy"),
+        };
+        short_put.put_ask.unwrap_or(Positive::ZERO) > Positive::ZERO
+            && short_call.call_ask.unwrap_or(Positive::ZERO) > Positive::ZERO
+    }
+
     fn create_strategy(&self, chain: &OptionChain, legs: &StrategyLegs) -> Self::Strategy {
         let (put, call) = match legs {
             StrategyLegs::TwoLegs { first, second } => (first, second),
             _ => panic!("Invalid number of legs for this strategy"),
         };
         if !call.validate() || !put.validate() {
+            println!("Call: {}\nPut: {}", call, put);
             panic!("Invalid options");
         }
         ShortStrangle::new(
@@ -1503,6 +1513,15 @@ impl Optimizable for LongStrangle {
         }
     }
 
+    fn are_valid_prices(&self, legs: &StrategyLegs) -> bool {
+        let (long_put, long_call) = match legs {
+            StrategyLegs::TwoLegs { first, second } => (first, second),
+            _ => panic!("Invalid number of legs for this strategy"),
+        };
+        long_call.call_bid.unwrap_or(Positive::ZERO) > Positive::ZERO
+            && long_put.put_bid.unwrap_or(Positive::ZERO) > Positive::ZERO
+    }
+
     fn create_strategy(&self, chain: &OptionChain, legs: &StrategyLegs) -> Self::Strategy {
         let (put, call) = match legs {
             StrategyLegs::TwoLegs { first, second } => (first, second),
@@ -2016,10 +2035,10 @@ is expected and the underlying asset's price is anticipated to remain stable."
         let max_strike = option_chain.options.last().unwrap().strike_price;
 
         // Test FindOptimalSide::Upper
-        assert!(strategy.is_valid_short_option(option_data, &FindOptimalSide::Upper));
+        assert!(strategy.is_valid_short_option(option_data, &FindOptimalSide::Lower));
 
         // Test FindOptimalSide::Lower
-        assert!(!strategy.is_valid_short_option(option_data, &FindOptimalSide::Lower));
+        assert!(!strategy.is_valid_short_option(option_data, &FindOptimalSide::Upper));
 
         // Test FindOptimalSide::All
         assert!(strategy.is_valid_short_option(option_data, &FindOptimalSide::All));
@@ -2038,7 +2057,7 @@ is expected and the underlying asset's price is anticipated to remain stable."
     fn test_create_strategy() {
         let strategy = setup();
         let chain = create_test_option_chain();
-        let call_option = chain.options.first().unwrap();
+        let call_option = chain.atm_option_data().unwrap();
         let put_option = chain.options.last().unwrap();
 
         let legs = StrategyLegs::TwoLegs {
@@ -2050,7 +2069,7 @@ is expected and the underlying asset's price is anticipated to remain stable."
         assert!(new_strategy.validate());
 
         let call_option = chain.options.last().unwrap();
-        let put_option = chain.options.first().unwrap();
+        let put_option = chain.atm_option_data().unwrap();
 
         let legs = StrategyLegs::TwoLegs {
             first: call_option,
@@ -2088,7 +2107,7 @@ is expected and the underlying asset's price is anticipated to remain stable."
             spos!(1.0),
             10,
             pos!(10.0),
-            0.00001,
+            dec!(0.00001),
             pos!(0.01),
             2,
             option_data_price_params,
@@ -2355,7 +2374,7 @@ mod tests_long_strangle {
         let mut strategy = setup_long_strangle();
         let option_chain = create_test_option_chain();
 
-        strategy.best_ratio(&option_chain, FindOptimalSide::All);
+        strategy.best_ratio(&option_chain, FindOptimalSide::Upper);
         assert!(strategy.validate());
     }
 
@@ -2365,7 +2384,7 @@ mod tests_long_strangle {
         let mut strategy = setup_long_strangle();
         let option_chain = create_test_option_chain();
 
-        strategy.best_area(&option_chain, FindOptimalSide::All);
+        strategy.best_area(&option_chain, FindOptimalSide::Upper);
         assert!(strategy.validate());
     }
 
@@ -2404,20 +2423,18 @@ mod tests_long_strangle {
     fn test_are_valid_prices() {
         let strategy = setup_long_strangle();
         let option_chain = create_test_option_chain();
-        let call_option = option_chain.options.first().unwrap();
+        let call_option = option_chain.atm_option_data().unwrap();
         let put_option = option_chain.options.last().unwrap();
 
         let legs = StrategyLegs::TwoLegs {
             first: call_option,
             second: put_option,
         };
+
         assert!(strategy.are_valid_prices(&legs));
 
-        let mut invalid_call = call_option.clone();
-        invalid_call.call_ask = Some(Positive::ZERO);
-
         let legs = StrategyLegs::TwoLegs {
-            first: &invalid_call,
+            first: &option_chain.options.first().unwrap(),
             second: put_option,
         };
         assert!(!strategy.are_valid_prices(&legs));
@@ -2428,7 +2445,7 @@ mod tests_long_strangle {
     fn test_create_strategy() {
         let strategy = setup_long_strangle();
         let chain = create_test_option_chain();
-        let call_option = chain.options.first().unwrap();
+        let call_option = chain.atm_option_data().unwrap();
         let put_option = chain.options.last().unwrap();
         let legs = StrategyLegs::TwoLegs {
             first: call_option,
@@ -2437,7 +2454,7 @@ mod tests_long_strangle {
         let new_strategy = strategy.create_strategy(&chain, &legs);
         assert!(new_strategy.validate());
         let call_option = chain.options.last().unwrap();
-        let put_option = chain.options.first().unwrap();
+        let put_option = chain.atm_option_data().unwrap();
 
         let legs = StrategyLegs::TwoLegs {
             first: call_option,
@@ -2475,7 +2492,7 @@ mod tests_long_strangle {
             spos!(1.0),
             10,
             pos!(5.0),
-            0.00001,
+            dec!(0.00001),
             pos!(0.01),
             2,
             option_data_price_params,

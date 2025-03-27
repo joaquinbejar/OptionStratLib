@@ -1,5 +1,5 @@
 use crate::Positive;
-use crate::simulation::steps::Step;
+use crate::simulation::steps::{Step, Ystep};
 use crate::simulation::{WalkType, WalkTypeAble};
 use std::fmt::{Display, Formatter};
 use std::ops::AddAssign;
@@ -35,7 +35,7 @@ use std::ops::AddAssign;
 pub struct WalkParams<X, Y>
 where
     X: Copy + Into<Positive> + AddAssign + Display + Sized,
-    Y: Copy + Into<Positive> + Display + Sized,
+    Y: Into<Positive> + Display + Sized + Clone,
 {
     /// Number of steps or data points to generate in the simulation
     /// Determines the resolution and length of the resulting random walk
@@ -54,10 +54,32 @@ where
     pub walker: Box<dyn WalkTypeAble<X, Y>>,
 }
 
+impl<X, Y> WalkParams<X, Y>
+where
+    X: Copy + Into<Positive> + AddAssign + Display + Sized,
+    Y: Into<Positive> + Display + Sized + Clone,
+{
+    pub fn y(&self) -> &Y {
+        self.init_step.y.value()
+    }
+
+    pub fn ystep_ref(&self) -> &Ystep<Y> {
+        &self.init_step.y
+    }
+
+    pub fn ystep(&self) -> Ystep<Y> {
+        self.init_step.y.clone()
+    }
+
+    pub fn ystep_as_positive(&self) -> Positive {
+        self.ystep_ref().positive()
+    }
+}
+
 impl<X, Y> Display for WalkParams<X, Y>
 where
     X: Copy + Into<Positive> + AddAssign + Display,
-    Y: Copy + Into<Positive> + Display,
+    Y: Into<Positive> + Display + Clone,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
@@ -159,7 +181,7 @@ mod tests {
 
         let walk_params = WalkParams {
             size: 50,
-            init_step,
+            init_step: init_step.clone(),
             walk_type: WalkType::GeometricBrownian {
                 dt: pos!(1.0 / 252.0),
                 drift: dec!(0.0),

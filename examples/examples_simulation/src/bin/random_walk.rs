@@ -19,11 +19,11 @@ impl Walker {
 
 impl WalkTypeAble<Positive, Positive> for Walker {}
 
-fn generator(walk_params: WalkParams<Positive, Positive>) -> Vec<Step<Positive, Positive>> {
+fn generator(walk_params: &WalkParams<Positive, Positive>) -> Vec<Step<Positive, Positive>> {
     info!("{}", walk_params);
     let mut y_steps = walk_params.walker.geometric_brownian(&walk_params).unwrap();
     let _ = y_steps.remove(0);
-    let mut steps: Vec<Step<Positive, Positive>> = vec![walk_params.init_step];
+    let mut steps: Vec<Step<Positive, Positive>> = vec![walk_params.init_step.clone()];
 
     let mut previous_x_step = walk_params.init_step.x.clone();
     let mut previous_y_step = walk_params.init_step.y.clone();
@@ -36,7 +36,7 @@ fn generator(walk_params: WalkParams<Positive, Positive>) -> Vec<Step<Positive, 
         previous_y_step = previous_y_step.next(y_step.clone());
         let step = Step {
             x: previous_x_step,
-            y: previous_y_step,
+            y: previous_y_step.clone(),
         };
         steps.push(step)
     }
@@ -68,7 +68,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         walker: walker,
     };
 
-    let random_walk = RandomWalk::new("Random Walk".to_string(), walk_params, generator);
+    let random_walk = RandomWalk::new("Random Walk".to_string(), &walk_params, generator);
     debug!("Random Walk: {}", random_walk);
 
     random_walk.graph(
