@@ -2,7 +2,6 @@ use optionstratlib::ExpirationDate;
 use optionstratlib::Positive;
 use optionstratlib::chains::chain::OptionChain;
 use optionstratlib::chains::utils::RandomPositionsParams;
-use optionstratlib::constants::ZERO;
 use optionstratlib::model::position::Position;
 use optionstratlib::pos;
 use optionstratlib::strategies::base::{Optimizable, Strategies};
@@ -49,12 +48,6 @@ fn main() -> Result<(), Box<dyn Error>> {
     );
     strategy.best_area(&option_chain, FindOptimalSide::All);
     debug!("Strategy:  {:#?}", strategy);
-    let price_range = strategy.best_range_to_show(pos!(1.0)).unwrap();
-    info!(
-        "Price Range from: {} to: {}",
-        price_range.first().unwrap(),
-        price_range.last().unwrap()
-    );
     let range = strategy.range_of_profit().unwrap_or(Positive::ZERO);
     info!("Title: {}", strategy.title());
     info!("Break Even Points: {:?}", strategy.break_even_points);
@@ -75,7 +68,6 @@ fn main() -> Result<(), Box<dyn Error>> {
     if strategy.profit_ratio()? > Positive::ZERO.into() {
         debug!("Strategy:  {:#?}", strategy);
         strategy.graph(
-            &price_range,
             GraphBackend::Bitmap {
                 file_path: "Draws/Strategy/custom_profit_loss_chart_best_area.png",
                 size: (1400, 933),

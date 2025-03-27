@@ -766,6 +766,11 @@ impl Graph for LongButterflySpread {
         format!("{}\n\t{}", strategy_title, leg_titles.join("\n\t"))
     }
 
+    fn get_x_values(&self) -> Vec<Positive> {
+        self.best_range_to_show(Positive::from(1.0))
+            .unwrap_or_else(|_| vec![self.short_call.option.strike_price])
+    }
+
     fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<f64, f64>> {
         vec![ChartVerticalLine {
             x_coordinate: self.long_call_low.option.underlying_price.to_f64(),
@@ -1716,6 +1721,11 @@ impl Graph for ShortButterflySpread {
         ];
 
         format!("{}\n\t{}", strategy_title, leg_titles.join("\n\t"))
+    }
+
+    fn get_x_values(&self) -> Vec<Positive> {
+        self.best_range_to_show(Positive::from(1.0))
+            .unwrap_or_else(|_| vec![self.long_call.option.strike_price])
     }
 
     fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<f64, f64>> {

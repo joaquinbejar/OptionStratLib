@@ -9,7 +9,7 @@ use criterion::{Criterion, black_box, criterion_group, criterion_main};
 use optionstratlib::model::Position;
 use optionstratlib::pnl::utils::PnLCalculator;
 use optionstratlib::visualization::utils::Graph;
-use optionstratlib::{ExpirationDate, OptionStyle, OptionType, Options, Positive, Side, pos};
+use optionstratlib::{ExpirationDate, OptionStyle, OptionType, Options, Side, pos};
 use rust_decimal_macros::dec;
 
 fn create_test_option() -> Options {
@@ -114,10 +114,9 @@ pub(crate) fn benchmark_time_calculations(c: &mut Criterion) {
 pub(crate) fn benchmark_graphics(c: &mut Criterion) {
     let mut group = c.benchmark_group("Graphics Operations");
     let position = create_test_position();
-    let prices: Vec<Positive> = (90..=110).map(|x| pos!(x as f64)).collect();
 
     group.bench_function("get_values", |bencher| {
-        bencher.iter(|| black_box(position.get_values(&prices)))
+        bencher.iter(|| black_box(position.get_y_values()))
     });
 
     group.bench_function("get_vertical_lines", |bencher| {

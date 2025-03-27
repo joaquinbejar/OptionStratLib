@@ -6,6 +6,7 @@
 use crate::constants::*;
 use crate::{Positive, pos};
 use chrono::{Duration, Local, NaiveTime, Utc};
+use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
 
 /// Represents different timeframes for volatility calculations.
@@ -125,7 +126,7 @@ pub fn units_per_year(time_frame: &TimeFrame) -> Positive {
         TimeFrame::Minute => pos!(525600.0),              // 365 * 24 * 60
         TimeFrame::Hour => pos!(8760.0),                  // 365 * 24
         TimeFrame::Day => pos!(365.0),                    // 365
-        TimeFrame::Week => pos!(52.14285714),             // 365 / 7
+        TimeFrame::Week => Positive(dec!(365.0) / dec!(7.0)), // 365 / 7
         TimeFrame::Month => pos!(12.0),                   // 12
         TimeFrame::Quarter => pos!(4.0),                  // 4
         TimeFrame::Year => pos!(1.0),                     // 1
@@ -184,7 +185,6 @@ pub fn convert_time_frame(
     // seconds per year / minutes per year = 31536000 / 525600 = 60
     // So 60 seconds = 1 minute
     let conversion_factor = to_units_per_year / from_units_per_year;
-
     // Apply the conversion
     value * conversion_factor
 }
@@ -194,12 +194,34 @@ pub fn convert_time_frame(
 /// # Examples
 ///
 /// ```
+/// use tracing::info;
 /// use optionstratlib::utils::time::get_tomorrow_formatted;
 /// let tomorrow = get_tomorrow_formatted();
-/// println!("{}", tomorrow); // Output will vary depending on the current date.
+/// info!("{}", tomorrow); // Output will vary depending on the current date.
 /// ```
 pub fn get_tomorrow_formatted() -> String {
     let tomorrow = Local::now().date_naive() + Duration::days(1);
+    tomorrow.format("%d-%b-%Y").to_string().to_lowercase()
+}
+
+/// Formats a date a specified number of days from the current date.
+///
+/// This function calculates the date that is `days` days from the current date and
+/// formats it as a lowercase string in the format "dd-mmm-yyyy".  For example,
+/// if the current date is 2024-11-20 and `days` is 1, the returned string will be
+/// "21-nov-2024".
+///
+/// # Arguments
+///
+/// * `days`: The number of days to offset from the current date.  This can be
+///   positive or negative.
+///
+/// # Returns
+///
+/// A lowercase string representing the calculated date in "dd-mmm-yyyy" format.
+///
+pub fn get_x_days_formatted(days: i64) -> String {
+    let tomorrow = Local::now().date_naive() + Duration::days(days);
     tomorrow.format("%d-%b-%Y").to_string().to_lowercase()
 }
 
@@ -442,6 +464,12 @@ mod tests {
     fn test_convert_days_to_weeks() {
         let result = convert_time_frame(pos!(7.0), &TimeFrame::Day, &TimeFrame::Week);
         assert_pos_relative_eq!(result, pos!(1.0), pos!(1e-10));
+    }
+
+    #[test]
+    fn test_convert_weeks_to_days() {
+        let result = convert_time_frame(pos!(2.0), &TimeFrame::Week, &TimeFrame::Day);
+        assert_pos_relative_eq!(result, pos!(14.0), pos!(1e-10));
     }
 
     #[test]

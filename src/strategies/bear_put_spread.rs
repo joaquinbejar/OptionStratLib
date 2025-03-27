@@ -623,6 +623,11 @@ impl Graph for BearPutSpread {
         )
     }
 
+    fn get_x_values(&self) -> Vec<Positive> {
+        self.best_range_to_show(Positive::from(1.0))
+            .unwrap_or_else(|_| vec![self.short_put.option.strike_price])
+    }
+
     fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<f64, f64>> {
         let underlying_price = self.long_put.option.underlying_price.to_f64();
         vec![ChartVerticalLine {

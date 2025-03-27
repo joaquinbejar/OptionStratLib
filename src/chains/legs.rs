@@ -3,7 +3,7 @@
    Email: jb@taunais.com
    Date: 7/12/24
 ******************************************************************************/
-use crate::chains::chain::OptionData;
+use crate::chains::OptionData;
 use std::fmt::{Display, Formatter, Result};
 
 /// Represents the various configurations of option strategy legs with different complexities.

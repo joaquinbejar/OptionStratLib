@@ -36,14 +36,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     info!("Title: {}", option.title());
     info!("Greeks: {:?}", option.greeks());
 
-    // Define a range of prices for the graph
-    let price_range: Vec<Positive> = (50..150)
-        .map(|x| Positive::new(x as f64).unwrap())
-        .collect();
-
     // Generate the intrinsic value graph
     option.graph(
-        &price_range,
         GraphBackend::Bitmap {
             file_path: "Draws/Options/intrinsic_value_chart.png",
             size: (1400, 933),

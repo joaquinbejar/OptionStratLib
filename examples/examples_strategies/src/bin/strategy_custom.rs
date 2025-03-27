@@ -143,12 +143,6 @@ fn main() -> Result<(), Box<dyn Error>> {
         200,
         pos!(0.01),
     );
-    let price_range = strategy.best_range_to_show(pos!(1.0)).unwrap();
-    info!(
-        "Range: {} {}",
-        price_range.first().unwrap(),
-        price_range.last().unwrap()
-    );
 
     info!("Title: {}", strategy.title());
     info!(
@@ -195,7 +189,6 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // Generate the profit/loss graph
     strategy.graph(
-        &price_range,
         GraphBackend::Bitmap {
             file_path: "Draws/Strategy/custom_strategy_profit_loss_chart.png",
             size: (1400, 933),

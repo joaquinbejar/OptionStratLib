@@ -1114,6 +1114,7 @@ mod tests {
     use super::*;
     use crate::strategies::ShortStrangle;
     use crate::{ExpirationDate, pos};
+    use tracing::info;
 
     #[test]
     fn test_delta_response_serialization() {
@@ -1143,6 +1144,6 @@ mod tests {
 
         // serialize and pretty print
         let serialized = serde_json::to_string_pretty(&response).unwrap();
-        println!("{}", serialized);
+        info!("{}", serialized);
     }
 }

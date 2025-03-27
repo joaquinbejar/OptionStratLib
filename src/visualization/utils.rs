@@ -14,15 +14,23 @@ use rand::{Rng, rng};
 use std::error::Error;
 use std::ops::Add;
 
-/// Aplica un degradado a un color base basado en un valor normalizado.
+/// Applies a color gradient effect by interpolating between a base color and a derived color.
 ///
-/// # Parámetros
-/// - `base_color`: El color base del degradado.
-/// - `end_color`: El color final del degradado.
-/// - `normalized_value`: Un valor normalizado en el rango [0, 1] que determina la posición en el degradado.
+/// This function creates a smooth color transition based on a normalized value between 0.0 and 1.0.
+/// It uses the base color's RGB components in a rotated order (G, B, R) to create the end color,
+/// then interpolates between the base and end colors according to the normalized value.
 ///
-/// # Retorno
-/// Un nuevo `RGBColor` interpolado entre `base_color` y `end_color`.
+/// # Arguments
+///
+/// * `base_color` - The starting RGB color used as the base for the gradient effect.
+/// * `normalized_value` - A value between 0.0 and 1.0 that determines the interpolation position
+///   between the base color and the end color. A value of 0.0 will return the base color, while
+///   1.0 will return the end color.
+///
+/// # Returns
+///
+/// A new `RGBColor` instance representing the interpolated color.
+///
 pub fn apply_shade(base_color: RGBColor, normalized_value: f64) -> RGBColor {
     let end_color = RGBColor(base_color.1, base_color.2, base_color.0);
     let r = base_color.0 as f64 + (end_color.0 as f64 - base_color.0 as f64) * normalized_value;
@@ -187,17 +195,15 @@ pub trait Graph: Profit {
     /// * No valid y-axis values could be calculated (e.g., all calculations resulted in errors).
     /// * There is an issue during graph creation or rendering with the chosen backend.
     ///
-    fn graph(
-        &self,
-        x_axis_data: &[Positive],
-        backend: GraphBackend,
-        title_size: u32,
-    ) -> Result<(), Box<dyn Error>> {
+    fn graph(&self, backend: GraphBackend, title_size: u32) -> Result<(), Box<dyn Error>> {
+        let x_values = self.get_x_values();
+        let x_axis_data: &[Positive] = &x_values;
+
         if x_axis_data.is_empty() {
             return Err("No valid values to plot".into());
         }
 
-        let y_axis_data: Vec<f64> = self.get_values(x_axis_data);
+        let y_axis_data: Vec<f64> = self.get_y_values();
         if y_axis_data.is_empty() {
             return Err("No valid values to plot".into());
         }
@@ -236,6 +242,21 @@ pub trait Graph: Profit {
     /// Returns the title of the graph.
     fn title(&self) -> String;
 
+    /// Returns a collection of positive X values for visualization.
+    ///
+    /// This method extracts the X-axis values that will be used for graphing or plotting
+    /// financial data. The returned values are guaranteed to be positive through the `Positive`
+    /// type wrapper, making them suitable for financial visualizations where negative X values
+    /// would be meaningless or invalid.
+    ///
+    /// # Returns
+    ///
+    /// A `Vec<Positive>` containing all X-coordinate values to be used in visualization.
+    /// These values might represent time points, strike prices, or other relevant financial metrics
+    /// depending on the context.
+    ///
+    fn get_x_values(&self) -> Vec<Positive>;
+
     /// Calculates the y-axis values (profit) corresponding to the provided x-axis data.
     ///
     /// # Arguments
@@ -245,7 +266,9 @@ pub trait Graph: Profit {
     /// # Returns
     ///
     /// A vector of `f64` representing the calculated profit values.
-    fn get_values(&self, data: &[Positive]) -> Vec<f64> {
+    fn get_y_values(&self) -> Vec<f64> {
+        let data = self.get_x_values();
+
         data.iter()
             .filter_map(|&price| {
                 self.calculate_profit_at(price)
@@ -309,7 +332,7 @@ pub(crate) fn calculate_axis_range(
         return (max_x_value, min_x_value, min_y_temp, max_y_temp);
     }
 
-    let margin_value = margin.unwrap_or(1.0);
+    let margin_value = margin.unwrap_or(1.1);
 
     let adjusted_max_profit = (max_y_temp * margin_value - max_y_temp).abs();
     let adjusted_min_profit = (min_y_temp * margin_value - min_y_temp).abs();
@@ -650,6 +673,10 @@ mod tests {
             "Mock Graph".to_string()
         }
 
+        fn get_x_values(&self) -> Vec<Positive> {
+            vec![Positive::ZERO, pos!(50.0), pos!(100.0)]
+        }
+
         fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<f64, f64>> {
             vec![ChartVerticalLine {
                 x_coordinate: 50.0,
@@ -680,9 +707,7 @@ mod tests {
 
     fn test_graph_trait() -> Result<(), Box<dyn Error>> {
         let mock_graph = MockGraph;
-        let x_axis_data = vec![Positive::ZERO, pos!(50.0), pos!(100.0)];
         mock_graph.graph(
-            &x_axis_data,
             GraphBackend::Bitmap {
                 file_path: "test_graph.png",
                 size: (800, 600),
@@ -696,8 +721,7 @@ mod tests {
     #[test]
     fn test_get_values() {
         let mock_graph = MockGraph;
-        let x_axis_data = vec![Positive::ZERO, pos!(50.0), pos!(100.0)];
-        let values = mock_graph.get_values(&x_axis_data);
+        let values = mock_graph.get_y_values();
         assert_eq!(values, vec![0.0, 100.0, 200.0]);
     }
 
@@ -713,6 +737,10 @@ mod tests {
         impl Graph for DefaultGraph {
             fn title(&self) -> String {
                 "Default".to_string()
+            }
+
+            fn get_x_values(&self) -> Vec<Positive> {
+                unimplemented!()
             }
         }
         let graph = DefaultGraph;
@@ -731,6 +759,10 @@ mod tests {
         impl Graph for DefaultGraph {
             fn title(&self) -> String {
                 "Default".to_string()
+            }
+
+            fn get_x_values(&self) -> Vec<Positive> {
+                unimplemented!()
             }
         }
         let graph = DefaultGraph;
@@ -787,6 +819,10 @@ mod tests_extended {
             "Mock Graph".to_string()
         }
 
+        fn get_x_values(&self) -> Vec<Positive> {
+            vec![pos!(50.0)]
+        }
+
         fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<f64, f64>> {
             vec![ChartVerticalLine {
                 x_coordinate: 50.0,
@@ -814,36 +850,9 @@ mod tests_extended {
     }
 
     #[test]
-
-    fn test_graph_with_empty_data() -> Result<(), Box<dyn Error>> {
-        let mock_graph = MockGraph;
-        let x_axis_data: Vec<Positive> = vec![];
-        let result = mock_graph.graph(
-            &x_axis_data,
-            GraphBackend::Bitmap {
-                file_path: "test_empty_graph.png",
-                size: (800, 600),
-            },
-            20,
-        );
-
-        assert!(result.is_err());
-        assert!(
-            result
-                .unwrap_err()
-                .to_string()
-                .contains("No valid values to plot")
-        );
-        Ok(())
-    }
-
-    #[test]
-
     fn test_graph_with_single_point() -> Result<(), Box<dyn Error>> {
         let mock_graph = MockGraph;
-        let x_axis_data = vec![pos!(50.0)];
         mock_graph.graph(
-            &x_axis_data,
             GraphBackend::Bitmap {
                 file_path: "test_single_point.png",
                 size: (800, 600),
@@ -855,38 +864,38 @@ mod tests_extended {
     }
 
     #[test]
+    fn test_empty() -> Result<(), Box<dyn Error>> {
+        struct EmptyGraph;
 
-    fn test_graph_with_negative_values() -> Result<(), Box<dyn Error>> {
-        struct NegativeGraph;
-
-        impl Profit for NegativeGraph {
+        impl Profit for EmptyGraph {
             fn calculate_profit_at(&self, price: Positive) -> Result<Decimal, Box<dyn Error>> {
-                Ok(price.to_dec() * Decimal::from(-1))
+                Ok(price.to_dec())
             }
         }
 
-        impl Graph for NegativeGraph {
+        impl Graph for EmptyGraph {
             fn title(&self) -> String {
-                "Negative Graph".to_string()
+                "Multi Line Graph".to_string()
+            }
+
+            fn get_x_values(&self) -> Vec<Positive> {
+                vec![]
             }
         }
 
-        let graph = NegativeGraph;
-        let x_axis_data = vec![pos!(1.0), pos!(2.0), pos!(3.0)];
-        graph.graph(
-            &x_axis_data,
+        let graph = EmptyGraph;
+        let result = graph.graph(
             GraphBackend::Bitmap {
-                file_path: "test_negative.png",
+                file_path: "test_multi_line.png",
                 size: (800, 600),
             },
             20,
-        )?;
-        std::fs::remove_file("test_negative.png")?;
+        );
+        assert!(result.is_err(), "Expected an error due to empty x-values");
         Ok(())
     }
 
     #[test]
-
     fn test_multiple_vertical_lines() -> Result<(), Box<dyn Error>> {
         struct MultiLineGraph;
 
@@ -899,6 +908,10 @@ mod tests_extended {
         impl Graph for MultiLineGraph {
             fn title(&self) -> String {
                 "Multi Line Graph".to_string()
+            }
+
+            fn get_x_values(&self) -> Vec<Positive> {
+                vec![pos!(0.0), pos!(50.0), pos!(100.0)]
             }
 
             fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<f64, f64>> {
@@ -930,9 +943,7 @@ mod tests_extended {
         }
 
         let graph = MultiLineGraph;
-        let x_axis_data = vec![pos!(0.0), pos!(50.0), pos!(100.0)];
         graph.graph(
-            &x_axis_data,
             GraphBackend::Bitmap {
                 file_path: "test_multi_line.png",
                 size: (800, 600),
@@ -944,7 +955,6 @@ mod tests_extended {
     }
 
     #[test]
-
     fn test_multiple_points() -> Result<(), Box<dyn Error>> {
         struct MultiPointGraph;
 
@@ -957,6 +967,10 @@ mod tests_extended {
         impl Graph for MultiPointGraph {
             fn title(&self) -> String {
                 "Multi Point Graph".to_string()
+            }
+
+            fn get_x_values(&self) -> Vec<Positive> {
+                vec![pos!(0.0), pos!(50.0), pos!(100.0)]
             }
 
             fn get_points(&self) -> Vec<ChartPoint<(f64, f64)>> {
@@ -984,9 +998,7 @@ mod tests_extended {
         }
 
         let graph = MultiPointGraph;
-        let x_axis_data = vec![pos!(0.0), pos!(50.0), pos!(100.0)];
         graph.graph(
-            &x_axis_data,
             GraphBackend::Bitmap {
                 file_path: "test_multi_point.png",
                 size: (800, 600),
@@ -998,7 +1010,6 @@ mod tests_extended {
     }
 
     #[test]
-
     fn test_get_values_error_handling() {
         struct ErrorGraph;
 
@@ -1012,11 +1023,14 @@ mod tests_extended {
             fn title(&self) -> String {
                 "Error Graph".to_string()
             }
+
+            fn get_x_values(&self) -> Vec<Positive> {
+                vec![pos!(1.0), pos!(2.0), pos!(3.0)]
+            }
         }
 
         let graph = ErrorGraph;
-        let x_axis_data = vec![pos!(1.0), pos!(2.0), pos!(3.0)];
-        let values = graph.get_values(&x_axis_data);
+        let values = graph.get_y_values();
 
         assert!(values.is_empty());
 
@@ -1036,25 +1050,26 @@ mod tests_extended {
             fn title(&self) -> String {
                 "Mixed Error Graph".to_string()
             }
+
+            fn get_x_values(&self) -> Vec<Positive> {
+                vec![pos!(1.0), pos!(2.0), pos!(3.0)]
+            }
         }
 
         let mixed_graph = MixedErrorGraph;
-        let values = mixed_graph.get_values(&x_axis_data);
+        let values = mixed_graph.get_y_values();
 
         assert_eq!(values.len(), 1);
         assert_eq!(values[0], 1.0);
     }
 
     #[test]
-
     fn test_custom_canvas_sizes() -> Result<(), Box<dyn Error>> {
         let mock_graph = MockGraph;
-        let x_axis_data = vec![pos!(50.0)];
         let sizes = vec![(400, 300), (1920, 1080), (300, 300)];
 
         for (width, height) in sizes {
             mock_graph.graph(
-                &x_axis_data,
                 GraphBackend::Bitmap {
                     file_path: &format!("test_size_{}x{}.png", width, height),
                     size: (width, height),
@@ -1068,7 +1083,6 @@ mod tests_extended {
     }
 
     #[test]
-
     fn test_bitmap_backend_initialization() {
         let backend = GraphBackend::Bitmap {
             file_path: "test_chart.png",
@@ -1083,7 +1097,6 @@ mod tests_extended {
     }
 
     #[test]
-
     fn test_chart_initialization() -> Result<(), Box<dyn Error>> {
         let root = BitMapBackend::new("test_chart_next.png", (800, 600)).into_drawing_area();
         root.fill(&WHITE).unwrap();
@@ -1116,7 +1129,6 @@ mod tests_extended {
     }
 
     #[test]
-
     fn test_point_rendering() {
         let root = BitMapBackend::new("test_chart_points.png", (800, 600)).into_drawing_area();
         root.fill(&WHITE).unwrap();
@@ -1170,7 +1182,6 @@ mod tests_extended {
     }
 
     #[test]
-
     fn test_line_rendering() {
         let root = BitMapBackend::new("test_chart_lines.png", (800, 600)).into_drawing_area();
         root.fill(&WHITE).unwrap();

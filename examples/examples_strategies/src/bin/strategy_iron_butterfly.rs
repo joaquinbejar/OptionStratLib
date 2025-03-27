@@ -35,8 +35,6 @@ fn main() -> Result<(), Box<dyn Error>> {
     if !strategy.validate() {
         return Err("Invalid strategy".into());
     }
-
-    let price_range = strategy.best_range_to_show(pos!(1.0)).unwrap();
     let range = strategy.break_even_points[1] - strategy.break_even_points[0];
 
     info!("Title: {}", strategy.title());
@@ -63,7 +61,6 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // Generate the profit/loss graph
     strategy.graph(
-        &price_range,
         GraphBackend::Bitmap {
             file_path: "Draws/Strategy/iron_butterfly_profit_loss_chart.png",
             size: (1400, 933),

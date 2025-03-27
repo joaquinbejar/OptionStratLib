@@ -1,9 +1,3 @@
-/******************************************************************************
-   Author: Joaquín Béjar García
-   Email: jb@taunais.com
-   Date: 25/9/24
-******************************************************************************/
-
 //!
 //! The "Poor Man's Covered Call" is an options strategy designed to simulate a traditional covered call,
 //! but with a lower capital requirement. In a standard covered call, an investor holds a long position
@@ -30,14 +24,13 @@
 //! This strategy is often used by investors who are moderately bullish on an asset but wish to reduce the cost
 //! and risk associated with traditional covered call strategies.
 //!
-
 use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, Strategies, StrategyType, Validable,
 };
 use crate::Options;
 use crate::Positive;
-use crate::chains::StrategyLegs;
-use crate::chains::chain::{OptionChain, OptionData};
+use crate::chains::chain::OptionChain;
+use crate::chains::{OptionData, StrategyLegs};
 use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
 use crate::error::position::{PositionError, PositionValidationErrorKind};
 use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
@@ -754,6 +747,11 @@ impl Graph for PoorMansCoveredCall {
         }
     }
 
+    fn get_x_values(&self) -> Vec<Positive> {
+        self.best_range_to_show(Positive::from(1.0))
+            .unwrap_or_else(|_| vec![self.short_call.option.strike_price])
+    }
+
     fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<f64, f64>> {
         let vertical_lines = vec![ChartVerticalLine {
             x_coordinate: self.short_call.option.underlying_price.to_f64(),
@@ -1205,6 +1203,7 @@ mod tests_pmcc_validation {
 #[cfg(test)]
 mod tests_pmcc_optimization {
     use super::*;
+    use crate::chains::OptionData;
     use crate::constants::DAYS_IN_A_YEAR;
     use crate::{pos, spos};
     use rust_decimal_macros::dec;

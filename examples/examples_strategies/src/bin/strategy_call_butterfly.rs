@@ -41,7 +41,6 @@ fn main() -> Result<(), Box<dyn Error>> {
         pos!(0.73),     // close_fee_short
         pos!(0.72),     // open_fee_short
     );
-    let price_range = strategy.best_range_to_show(pos!(1.0)).unwrap();
     let range = strategy.range_of_profit().unwrap_or(Positive::ZERO);
 
     info!("Title: {}", strategy.title());
@@ -69,7 +68,6 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // Generate the profit/loss graph
     strategy.graph(
-        &price_range,
         GraphBackend::Bitmap {
             file_path: "Draws/Strategy/call_butterfly_profit_loss_chart.png",
             size: (1400, 933),

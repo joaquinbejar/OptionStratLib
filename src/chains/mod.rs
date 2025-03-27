@@ -21,8 +21,9 @@
 //! ## Example Usage
 //!
 //! ```rust
+//! use rust_decimal::Decimal;
 //! use rust_decimal_macros::dec;
-//! use optionstratlib::chains::chain::{OptionChain, OptionData};
+//! use optionstratlib::chains::OptionChain;
 //! use optionstratlib::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
 //! use optionstratlib::{pos, spos, ExpirationDate, Positive};
 //!
@@ -31,7 +32,7 @@
 //!             None,
 //!             10,
 //!             pos!(1.0),
-//!             0.0,
+//!             Decimal::ZERO,
 //!             pos!(0.02),
 //!             2,
 //!             OptionDataPriceParams::new(
@@ -137,7 +138,7 @@
 //!     Some(Positive::ONE),
 //!     5,
 //!     Positive::ONE,
-//!     0.0001,
+//!     dec!(0.0001),
 //!     Positive::new(0.02).unwrap(),
 //!     2,
 //!     chain,
@@ -218,9 +219,15 @@ mod four;
 
 /// * `rnd` - Private module for random number generation and stochastic processes
 mod rnd;
-mod walk;
 
+mod optiondata;
+
+mod generators;
+
+pub use chain::OptionChain;
 pub use four::FourOptions;
+pub use generators::{generator_optionchain, generator_positive};
 pub use legs::StrategyLegs;
+pub use optiondata::OptionData;
 pub use options::{DeltasInStrike, OptionsInStrike};
 pub use rnd::{RNDAnalysis, RNDParameters, RNDResult};

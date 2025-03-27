@@ -636,6 +636,11 @@ impl Graph for BullCallSpread {
         )
     }
 
+    fn get_x_values(&self) -> Vec<Positive> {
+        self.best_range_to_show(Positive::from(1.0))
+            .unwrap_or_else(|_| vec![self.short_call.option.strike_price])
+    }
+
     fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<f64, f64>> {
         let underlying_price = self.long_call.option.underlying_price.to_f64();
         vec![ChartVerticalLine {
@@ -1227,7 +1232,7 @@ mod tests_bull_call_spread_validation {
 #[cfg(test)]
 mod tests_bull_call_spread_optimization {
     use super::*;
-    use crate::chains::chain::OptionData;
+    use crate::chains::OptionData;
     use crate::model::types::ExpirationDate;
     use crate::spos;
     use num_traits::ToPrimitive;

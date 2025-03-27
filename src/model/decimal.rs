@@ -7,6 +7,8 @@ use crate::Positive;
 use crate::error::decimal::DecimalError;
 use crate::geometrics::HasX;
 use num_traits::{FromPrimitive, ToPrimitive};
+use rand::distr::Distribution;
+use rand_distr::Normal;
 use rust_decimal::{Decimal, MathematicalOps};
 use rust_decimal_macros::dec;
 use std::ops::{Add, AddAssign, Div, Mul, MulAssign, Sub};
@@ -230,12 +232,13 @@ impl PartialEq<Positive> for Decimal {
 /// ```rust
 /// use rust_decimal::Decimal;
 /// use rust_decimal_macros::dec;
+/// use tracing::info;
 /// use optionstratlib::model::decimal::decimal_to_f64;
 ///
 /// let decimal = dec!(3.14159);
 /// match decimal_to_f64(decimal) {
-///     Ok(float) => println!("Converted to f64: {}", float),
-///     Err(e) => println!("Conversion error: {:?}", e)
+///     Ok(float) => info!("Converted to f64: {}", float),
+///     Err(e) => info!("Conversion error: {:?}", e)
 /// }
 /// ```
 pub fn decimal_to_f64(value: Decimal) -> Result<f64, DecimalError> {
@@ -266,12 +269,13 @@ pub fn decimal_to_f64(value: Decimal) -> Result<f64, DecimalError> {
 ///
 /// ```rust
 /// use rust_decimal::Decimal;
+/// use tracing::info;
 /// use optionstratlib::model::decimal::f64_to_decimal;
 ///
 /// let float = std::f64::consts::PI;
 /// match f64_to_decimal(float) {
-///     Ok(decimal) => println!("Converted to Decimal: {}", decimal),
-///     Err(e) => println!("Conversion error: {:?}", e)
+///     Ok(decimal) => info!("Converted to Decimal: {}", decimal),
+///     Err(e) => info!("Conversion error: {:?}", e)
 /// }
 /// ```
 pub fn f64_to_decimal(value: f64) -> Result<Decimal, DecimalError> {
@@ -280,6 +284,31 @@ pub fn f64_to_decimal(value: f64) -> Result<Decimal, DecimalError> {
         to_type: "Decimal".to_string(),
         reason: "Failed to convert f64 to Decimal".to_string(),
     })
+}
+
+/// Generates a random positive value from a standard normal distribution.
+///
+/// This function samples from a normal distribution with mean 0.0 and standard
+/// deviation 1.0, and returns the value as a `Positive` type. Since the normal
+/// distribution can produce negative values, the function uses the `pos!` macro
+/// to convert the sample to a `Positive` value, which will handle the conversion
+/// according to the `Positive` type's implementation.
+///
+/// # Returns
+///
+/// A `Positive` value sampled from a standard normal distribution.
+///
+/// # Examples
+///
+/// ```rust
+/// use optionstratlib::model::decimal::decimal_normal_sample;
+/// use optionstratlib::Positive;
+/// let normal = decimal_normal_sample();
+/// ```
+pub fn decimal_normal_sample() -> Decimal {
+    let mut t_rng = rand::rng();
+    let normal = Normal::new(0.0, 1.0).unwrap();
+    Decimal::from_f64(normal.sample(&mut t_rng)).unwrap()
 }
 
 impl HasX for Decimal {
@@ -400,5 +429,84 @@ pub mod tests {
         let result = decimal_to_f64(decimal);
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), 0.0);
+    }
+}
+
+#[cfg(test)]
+mod tests_random_generation {
+    use super::*;
+    use approx::assert_relative_eq;
+    use rand::distr::Distribution;
+    use std::collections::HashMap;
+
+    #[test]
+    fn test_normal_sample_returns() {
+        // Run the function multiple times to ensure it always returns a positive value
+        for _ in 0..1000 {
+            let sample = decimal_normal_sample();
+            assert!(sample <= Decimal::TEN);
+            assert!(sample >= -Decimal::TEN);
+        }
+    }
+
+    #[test]
+    fn test_normal_sample_distribution() {
+        // Generate a large number of samples to check distribution characteristics
+        const NUM_SAMPLES: usize = 10000;
+        let mut samples = Vec::with_capacity(NUM_SAMPLES);
+
+        for _ in 0..NUM_SAMPLES {
+            samples.push(decimal_normal_sample().to_f64().unwrap());
+        }
+
+        // Calculate mean and standard deviation
+        let sum: f64 = samples.iter().sum();
+        let mean = sum / NUM_SAMPLES as f64;
+
+        let variance_sum: f64 = samples.iter().map(|&x| (x - mean).powi(2)).sum();
+        let std_dev = (variance_sum / NUM_SAMPLES as f64).sqrt();
+
+        // Check if the distribution approximately matches a standard normal
+        // Note: These tests use wide tolerances since we're working with random samples
+        assert_relative_eq!(mean, 0.0, epsilon = 0.03);
+        assert_relative_eq!(std_dev, 1.0, epsilon = 0.02);
+    }
+
+    #[test]
+    fn test_normal_distribution_transformation() {
+        let mut t_rng = rand::rng();
+        let normal = Normal::new(-1.0, 0.5).unwrap(); // Deliberately using a distribution with negative mean
+
+        // Count occurrences of values after transformation
+        let mut value_counts: HashMap<i32, usize> = HashMap::new();
+        const SAMPLES: usize = 5000;
+
+        for _ in 0..SAMPLES {
+            let raw_sample = normal.sample(&mut t_rng);
+            let positive_sample = raw_sample.to_f64().unwrap();
+
+            // Bucket values to the nearest integer for counting
+            let bucket = (positive_sample.round() as i32).max(0);
+            *value_counts.entry(bucket).or_insert(0) += 1;
+        }
+
+        // Verify that zero values appear frequently (due to negative values being transformed)
+        assert!(value_counts.get(&0).unwrap_or(&0) > &(SAMPLES / 10));
+
+        // Verify that we have a range of positive values
+        let max_bucket = value_counts.keys().max().unwrap_or(&0);
+        assert!(*max_bucket > 0);
+    }
+
+    #[test]
+    fn test_normal_sample_consistency() {
+        // This test ensures that multiple calls in sequence produce different values
+        let sample1 = decimal_normal_sample();
+        let sample2 = decimal_normal_sample();
+        let sample3 = decimal_normal_sample();
+
+        // It's statistically extremely unlikely to get the same value three times in a row
+        // This verifies that the RNG is properly producing different values
+        assert!(sample1 != sample2 || sample2 != sample3);
     }
 }

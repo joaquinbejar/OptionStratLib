@@ -811,6 +811,11 @@ impl Graph for IronButterfly {
         }
     }
 
+    fn get_x_values(&self) -> Vec<Positive> {
+        self.best_range_to_show(Positive::from(1.0))
+            .unwrap_or_else(|_| vec![self.short_call.option.strike_price])
+    }
+
     fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<f64, f64>> {
         let vertical_lines = vec![ChartVerticalLine {
             x_coordinate: self.short_call.option.underlying_price.to_f64(),
@@ -1640,7 +1645,7 @@ mod tests_iron_butterfly_strategies {
 #[cfg(test)]
 mod tests_iron_butterfly_optimizable {
     use super::*;
-    use crate::chains::chain::OptionData;
+    use crate::chains::OptionData;
     use crate::model::types::ExpirationDate;
     use crate::pos;
     use crate::spos;

@@ -37,12 +37,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         Positive::ONE,
         Positive::ONE,
     );
-    let price_range: Vec<Positive> = (50..150)
-        .map(|x| Positive::new(x as f64).unwrap())
-        .collect();
 
     position.graph(
-        &price_range,
         GraphBackend::Bitmap {
             file_path: "Draws/Position/pnl_at_expiration_chart.png",
             size: (1400, 933),

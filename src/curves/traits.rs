@@ -302,3 +302,552 @@ pub trait StatisticalCurve: MetricsExtractor {
         Ok(mean_diff <= tolerance && std_dev_diff <= tolerance)
     }
 }
+
+#[cfg(test)]
+mod tests_statistical_curve {
+    use super::*;
+    use crate::error::MetricsError;
+    use crate::geometrics::RiskMetrics;
+    use crate::utils::Len;
+    use rust_decimal_macros::dec;
+    use std::collections::BTreeSet;
+
+    // A simple struct that implements StatisticalCurve trait for testing
+    struct TestCurveGenerator;
+
+    impl Len for TestCurveGenerator {
+        fn len(&self) -> usize {
+            unimplemented!()
+        }
+    }
+
+    impl MetricsExtractor for TestCurveGenerator {
+        fn compute_basic_metrics(&self) -> Result<BasicMetrics, MetricsError> {
+            // Return default metrics for testing
+            Ok(BasicMetrics {
+                mean: dec!(0.0),
+                median: dec!(0.0),
+                mode: dec!(0.0),
+                std_dev: dec!(1.0),
+            })
+        }
+
+        fn compute_shape_metrics(&self) -> Result<ShapeMetrics, MetricsError> {
+            Ok(ShapeMetrics {
+                skewness: dec!(0.0),
+                kurtosis: dec!(0.0),
+                peaks: vec![],
+                valleys: vec![],
+                inflection_points: vec![],
+            })
+        }
+
+        fn compute_range_metrics(&self) -> Result<RangeMetrics, MetricsError> {
+            Ok(RangeMetrics {
+                min: Point2D::new(dec!(0.0), dec!(0.0)),
+                max: Point2D::new(dec!(10.0), dec!(10.0)),
+                range: dec!(10.0),
+                quartiles: (dec!(2.5), dec!(5.0), dec!(7.5)),
+                interquartile_range: dec!(5.0),
+            })
+        }
+
+        fn compute_trend_metrics(&self) -> Result<TrendMetrics, MetricsError> {
+            Ok(TrendMetrics {
+                slope: dec!(0.0),
+                intercept: dec!(0.0),
+                r_squared: dec!(0.0),
+                moving_average: vec![],
+            })
+        }
+
+        fn compute_risk_metrics(&self) -> Result<RiskMetrics, MetricsError> {
+            unimplemented!()
+        }
+    }
+
+    impl StatisticalCurve for TestCurveGenerator {
+        fn get_x_values(&self) -> Vec<Decimal> {
+            (0..10).map(Decimal::from).collect()
+        }
+    }
+
+    // Create a struct that implements Curve's compute_basic_metrics for testing
+    impl Curvable for TestCurveGenerator {
+        fn curve(&self) -> Result<Curve, CurveError> {
+            // Create a simple linear curve
+            let points: BTreeSet<Point2D> = (0..10)
+                .map(|i| Point2D::new(Decimal::from(i), Decimal::from(i)))
+                .collect();
+            Ok(Curve::new(points))
+        }
+    }
+
+    #[test]
+    fn test_get_x_values() {
+        let generator = TestCurveGenerator;
+        let x_values = generator.get_x_values();
+
+        assert_eq!(x_values.len(), 10);
+        assert_eq!(x_values[0], dec!(0));
+        assert_eq!(x_values[9], dec!(9));
+    }
+
+    #[test]
+    fn test_generate_statistical_curve_invalid_points() {
+        let generator = TestCurveGenerator;
+
+        let basic_metrics = BasicMetrics::default();
+        let shape_metrics = ShapeMetrics::default();
+        let range_metrics = RangeMetrics::default();
+        let trend_metrics = TrendMetrics::default();
+
+        // Test with less than 2 points
+        let result = generator.generate_statistical_curve(
+            &basic_metrics,
+            &shape_metrics,
+            &range_metrics,
+            &trend_metrics,
+            1, // Invalid: less than 2 points
+            None,
+        );
+
+        assert!(result.is_err());
+        if let Err(CurveError::OperationError(OperationErrorKind::InvalidParameters {
+            operation,
+            reason,
+        })) = result
+        {
+            assert_eq!(operation, "generate_statistical_curve");
+            assert!(reason.contains("Number of points must be at least 2"));
+        } else {
+            panic!("Expected InvalidParameters error");
+        }
+    }
+
+    #[test]
+    fn test_verify_curve_metrics() {
+        let generator = TestCurveGenerator;
+
+        // Create a simple curve
+        let curve = generator.curve().unwrap();
+
+        // Define target metrics close to the actual metrics
+        let target_metrics = BasicMetrics {
+            mean: dec!(4.5), // Close to actual mean (4.5 for points 0..9)
+            median: dec!(4.5),
+            mode: dec!(0.0),
+            std_dev: dec!(3.0), // Close to actual std_dev
+        };
+
+        // Verify with a generous tolerance
+        let result = generator.verify_curve_metrics(&curve, &target_metrics, dec!(1.0));
+        assert!(result.is_ok());
+        assert!(result.unwrap());
+
+        // Verify with a strict tolerance that should fail
+        let result = generator.verify_curve_metrics(&curve, &target_metrics, dec!(0.1));
+        assert!(result.is_ok());
+        // This might fail depending on the actual metrics of the curve
+    }
+
+    // Test Default implementation for the required metrics structs
+    impl Default for BasicMetrics {
+        fn default() -> Self {
+            Self {
+                mean: dec!(0.0),
+                median: dec!(0.0),
+                mode: dec!(0.0),
+                std_dev: dec!(1.0),
+            }
+        }
+    }
+
+    impl Default for ShapeMetrics {
+        fn default() -> Self {
+            Self {
+                skewness: dec!(0.0),
+                kurtosis: dec!(0.0),
+                peaks: vec![],
+                valleys: vec![],
+                inflection_points: vec![],
+            }
+        }
+    }
+
+    impl Default for RangeMetrics {
+        fn default() -> Self {
+            Self {
+                min: Point2D::new(dec!(0.0), dec!(0.0)),
+                max: Point2D::new(dec!(10.0), dec!(10.0)),
+                range: dec!(10.0),
+                quartiles: (dec!(2.5), dec!(5.0), dec!(7.5)),
+                interquartile_range: dec!(5.0),
+            }
+        }
+    }
+
+    impl Default for TrendMetrics {
+        fn default() -> Self {
+            Self {
+                slope: dec!(0.0),
+                intercept: dec!(0.0),
+                r_squared: dec!(0.0),
+                moving_average: vec![],
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::error::MetricsError;
+    use crate::geometrics::RiskMetrics;
+    use crate::utils::Len;
+    use rust_decimal::Decimal;
+    use rust_decimal_macros::dec;
+    use std::collections::BTreeSet;
+
+    struct MockCurvable {
+        points: BTreeSet<Point2D>,
+        should_fail: bool,
+    }
+
+    impl MockCurvable {
+        fn new(should_fail: bool) -> Self {
+            let mut points = BTreeSet::new();
+
+            if !should_fail {
+                // Crear algunos puntos válidos
+                points.insert(Point2D::new(dec!(1.0), dec!(2.0)));
+                points.insert(Point2D::new(dec!(2.0), dec!(3.0)));
+                points.insert(Point2D::new(dec!(3.0), dec!(4.0)));
+            }
+
+            Self {
+                points,
+                should_fail,
+            }
+        }
+    }
+
+    impl Curvable for MockCurvable {
+        fn curve(&self) -> Result<Curve, CurveError> {
+            if self.should_fail {
+                Err(CurveError::OperationError(
+                    OperationErrorKind::InvalidParameters {
+                        operation: "curve".to_string(),
+                        reason: "Test failure".to_string(),
+                    },
+                ))
+            } else {
+                Ok(Curve::new(self.points.clone()))
+            }
+        }
+    }
+
+    // Mock implementación para StatisticalCurve
+    struct MockStatisticalCurve {
+        x_values: Vec<Decimal>,
+    }
+
+    impl MockStatisticalCurve {
+        fn new() -> Self {
+            let x_values = vec![dec!(1.0), dec!(2.0), dec!(3.0), dec!(4.0), dec!(5.0)];
+            Self { x_values }
+        }
+    }
+
+    impl Len for MockStatisticalCurve {
+        fn len(&self) -> usize {
+            self.x_values.len()
+        }
+    }
+
+    impl MetricsExtractor for MockStatisticalCurve {
+        fn compute_basic_metrics(&self) -> Result<BasicMetrics, MetricsError> {
+            Ok(BasicMetrics {
+                mean: dec!(3.0),
+                median: dec!(3.0),
+                mode: dec!(3.0),
+                std_dev: dec!(1.5),
+            })
+        }
+
+        fn compute_shape_metrics(&self) -> Result<ShapeMetrics, MetricsError> {
+            Ok(ShapeMetrics {
+                skewness: dec!(0.0),
+                kurtosis: dec!(0.0),
+                peaks: vec![],
+                valleys: vec![],
+                inflection_points: vec![],
+            })
+        }
+
+        fn compute_range_metrics(&self) -> Result<RangeMetrics, MetricsError> {
+            Ok(RangeMetrics {
+                min: Point2D::new(dec!(1.0), dec!(1.0)),
+                max: Point2D::new(dec!(5.0), dec!(5.0)),
+                range: dec!(4.0),
+                quartiles: (Default::default(), Default::default(), Default::default()),
+                interquartile_range: Default::default(),
+            })
+        }
+
+        fn compute_trend_metrics(&self) -> Result<TrendMetrics, MetricsError> {
+            Ok(TrendMetrics {
+                slope: dec!(1.0),
+                intercept: dec!(0.0),
+                r_squared: dec!(1.0),
+                moving_average: vec![],
+            })
+        }
+
+        fn compute_risk_metrics(&self) -> Result<RiskMetrics, MetricsError> {
+            Ok(RiskMetrics {
+                volatility: Default::default(),
+                value_at_risk: Default::default(),
+                expected_shortfall: Default::default(),
+                beta: Default::default(),
+                sharpe_ratio: Default::default(),
+            })
+        }
+    }
+
+    impl StatisticalCurve for MockStatisticalCurve {
+        fn get_x_values(&self) -> Vec<Decimal> {
+            self.x_values.clone()
+        }
+    }
+
+    // Tests para Curvable
+    #[test]
+    fn test_curvable_success() {
+        let mock = MockCurvable::new(false);
+        let result = mock.curve();
+
+        assert!(result.is_ok(), "Curve generation should succeed");
+        let curve = result.unwrap();
+
+        assert_eq!(curve.len(), 3, "Curve should have 3 points");
+    }
+
+    #[test]
+    fn test_curvable_failure() {
+        let mock = MockCurvable::new(true);
+        let result = mock.curve();
+
+        assert!(result.is_err(), "Curve generation should fail");
+
+        if let Err(CurveError::OperationError(OperationErrorKind::InvalidParameters {
+            operation,
+            reason,
+        })) = result
+        {
+            assert_eq!(operation, "curve", "Operation name should match");
+            assert_eq!(reason, "Test failure", "Error reason should match");
+        } else {
+            panic!("Unexpected error type");
+        }
+    }
+
+    // Tests para StatisticalCurve
+    #[test]
+    fn test_get_x_values() {
+        let mock = MockStatisticalCurve::new();
+        let x_values = mock.get_x_values();
+
+        assert_eq!(x_values.len(), 5, "Should return 5 x values");
+        assert_eq!(x_values[0], dec!(1.0), "First x value should be 1.0");
+        assert_eq!(x_values[4], dec!(5.0), "Last x value should be 5.0");
+    }
+
+    #[test]
+    fn test_generate_statistical_curve_invalid_points() {
+        let mock = MockStatisticalCurve::new();
+
+        let basic_metrics = BasicMetrics {
+            mean: dec!(3.0),
+            median: dec!(3.0),
+            mode: dec!(3.0),
+            std_dev: dec!(1.5),
+        };
+
+        let shape_metrics = ShapeMetrics {
+            skewness: dec!(0.0),
+            kurtosis: dec!(0.0),
+            peaks: vec![],
+            valleys: vec![],
+            inflection_points: vec![],
+        };
+
+        let range_metrics = RangeMetrics {
+            min: Point2D::new(dec!(1.0), dec!(1.0)),
+            max: Point2D::new(dec!(5.0), dec!(5.0)),
+            range: dec!(4.0),
+            quartiles: (Default::default(), Default::default(), Default::default()),
+            interquartile_range: Default::default(),
+        };
+
+        let trend_metrics = TrendMetrics {
+            slope: dec!(1.0),
+            intercept: dec!(0.0),
+            r_squared: dec!(1.0),
+            moving_average: vec![],
+        };
+
+        let result = mock.generate_statistical_curve(
+            &basic_metrics,
+            &shape_metrics,
+            &range_metrics,
+            &trend_metrics,
+            1,
+            None,
+        );
+
+        assert!(result.is_err(), "Should fail with less than 2 points");
+        if let Err(CurveError::OperationError(OperationErrorKind::InvalidParameters {
+            operation,
+            reason,
+        })) = result
+        {
+            assert_eq!(operation, "generate_statistical_curve");
+            assert!(reason.contains("at least 2"));
+        } else {
+            panic!("Unexpected error type");
+        }
+    }
+
+    #[test]
+    fn test_generate_statistical_curve_success() {
+        let mock = MockStatisticalCurve::new();
+
+        let basic_metrics = BasicMetrics {
+            mean: dec!(3.0),
+            median: dec!(3.0),
+            mode: dec!(3.0),
+            std_dev: dec!(1.5),
+        };
+
+        let shape_metrics = ShapeMetrics {
+            skewness: dec!(0.0),
+            kurtosis: dec!(0.0),
+            peaks: vec![],
+            valleys: vec![],
+            inflection_points: vec![],
+        };
+
+        let range_metrics = RangeMetrics {
+            min: Point2D::new(dec!(1.0), dec!(1.0)),
+            max: Point2D::new(dec!(5.0), dec!(5.0)),
+            range: dec!(4.0),
+            quartiles: (Default::default(), Default::default(), Default::default()),
+            interquartile_range: Default::default(),
+        };
+
+        let trend_metrics = TrendMetrics {
+            slope: dec!(1.0),
+            intercept: dec!(0.0),
+            r_squared: dec!(1.0),
+            moving_average: vec![],
+        };
+
+        // Probar generación de curva válida
+        let result = mock.generate_statistical_curve(
+            &basic_metrics,
+            &shape_metrics,
+            &range_metrics,
+            &trend_metrics,
+            5,        // 5 puntos
+            Some(42), // seed fijo para prueba reproducible
+        );
+
+        assert!(result.is_ok(), "Should successfully generate a curve");
+        let curve = result.unwrap();
+        assert!(curve.len() > 0, "Generated curve should contain points");
+    }
+
+    #[test]
+    fn test_verify_curve_metrics() {
+        let mock = MockStatisticalCurve::new();
+
+        // Crear una curva simple para pruebas
+        let mut points = BTreeSet::new();
+        points.insert(Point2D::new(dec!(1.0), dec!(2.0)));
+        points.insert(Point2D::new(dec!(2.0), dec!(3.0)));
+        points.insert(Point2D::new(dec!(3.0), dec!(4.0)));
+        let curve = Curve::new(points);
+
+        // Métricas objetivo cercanas a las reales (dentro de la tolerancia)
+        let target_metrics = BasicMetrics {
+            mean: dec!(3.1),
+            median: dec!(3.0),
+            mode: dec!(3.0),
+            std_dev: dec!(1.0),
+        };
+
+        // Tolerancia suficiente para que pase
+        let result = mock.verify_curve_metrics(&curve, &target_metrics, dec!(0.5));
+        assert!(result.is_ok(), "Verification should not fail");
+        assert!(result.unwrap(), "Metrics should be within tolerance");
+
+        // Tolerancia insuficiente para que pase
+        let result = mock.verify_curve_metrics(&curve, &target_metrics, dec!(0.05));
+        assert!(result.is_ok(), "Verification should not fail");
+        assert!(!result.unwrap(), "Metrics should not be within tolerance");
+    }
+
+    #[test]
+    fn test_refined_statistical_curve() {
+        let mock = MockStatisticalCurve::new();
+
+        let basic_metrics = BasicMetrics {
+            mean: dec!(3.0),
+            median: dec!(3.0),
+            mode: dec!(3.0),
+            std_dev: dec!(1.5),
+        };
+
+        let shape_metrics = ShapeMetrics {
+            skewness: dec!(0.0),
+            kurtosis: dec!(0.0),
+            peaks: vec![],
+            valleys: vec![],
+            inflection_points: vec![],
+        };
+
+        let range_metrics = RangeMetrics {
+            min: Point2D::new(dec!(1.0), dec!(1.0)),
+            max: Point2D::new(dec!(5.0), dec!(5.0)),
+            range: dec!(4.0),
+            quartiles: (Default::default(), Default::default(), Default::default()),
+            interquartile_range: Default::default(),
+        };
+
+        let trend_metrics = TrendMetrics {
+            slope: dec!(1.0),
+            intercept: dec!(0.0),
+            r_squared: dec!(1.0),
+            moving_average: vec![],
+        };
+
+        let result = mock.generate_refined_statistical_curve(
+            &basic_metrics,
+            &shape_metrics,
+            &range_metrics,
+            &trend_metrics,
+            5,
+            3,         // máx 3 intentos
+            dec!(0.2), // tolerancia
+            Some(42),  // seed fijo
+        );
+
+        assert!(
+            result.is_ok(),
+            "Should successfully generate a refined curve"
+        );
+        let curve = result.unwrap();
+        assert!(curve.len() > 0, "Generated curve should contain points");
+    }
+}

@@ -4,13 +4,12 @@
    Date: 25/10/24
 ******************************************************************************/
 use crate::Positive;
-use crate::chains::chain::OptionData;
+use crate::chains::OptionData;
 use crate::error::chains::ChainError;
 use crate::model::types::ExpirationDate;
 use crate::model::utils::ToRound;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeSet;
 use std::fmt::Display;
 
 /// Enum representing a grouping of option data references for analysis or display purposes.
@@ -115,7 +114,7 @@ pub struct OptionChainBuildParams {
     pub(crate) strike_interval: Positive,
 
     /// Factor controlling the volatility skew pattern (positive for smile, negative for skew)
-    pub(crate) skew_factor: f64,
+    pub(crate) skew_factor: Decimal,
 
     /// Bid-ask spread to apply to option prices
     pub(crate) spread: Positive,
@@ -127,6 +126,7 @@ pub struct OptionChainBuildParams {
     pub(crate) price_params: OptionDataPriceParams,
 }
 
+use num_traits::FromPrimitive;
 use rust_decimal_macros::dec;
 use std::fmt;
 
@@ -220,7 +220,7 @@ impl OptionChainBuildParams {
         volume: Option<Positive>,
         chain_size: usize,
         strike_interval: Positive,
-        skew_factor: f64,
+        skew_factor: Decimal,
         spread: Positive,
         decimal_places: i32,
         price_params: OptionDataPriceParams,
@@ -235,6 +235,55 @@ impl OptionChainBuildParams {
             decimal_places,
             price_params,
         }
+    }
+
+    /// Sets the underlying asset price.
+    ///
+    /// This function updates the `underlying_price` field within the `price_params`
+    /// structure.  The underlying price represents the current market price of the asset
+    /// on which the option is based.  This value is crucial for option pricing calculations.
+    ///
+    /// # Arguments
+    ///
+    /// * `price` - A `Positive` value representing the new underlying asset price.  The
+    ///   `Positive` type ensures that the price is always a non-negative value.
+    ///
+    pub fn set_underlying_price(&mut self, price: &Positive) {
+        self.price_params.underlying_price = *price;
+    }
+
+    /// Retrieves the implied volatility.
+    ///
+    /// This function returns the implied volatility associated with the option,
+    /// stored within the `price_params` structure. Implied volatility represents the
+    /// market's expectation of the future volatility of the underlying asset.  It's
+    /// a key input in option pricing models.  The function returns an `Option<Positive>`
+    /// as the implied volatility might not always be available or calculated.
+    ///
+    /// # Returns
+    ///
+    /// * `Option<Positive>` - The implied volatility, wrapped in an `Option`.  If the
+    ///   implied volatility has been set, the `Option` will contain a `Positive` value.
+    ///   Otherwise, it will return `None`.
+    pub fn get_implied_volatility(&self) -> Option<Positive> {
+        self.price_params.implied_volatility
+    }
+
+    /// Sets the implied volatility.
+    ///
+    /// This function updates the `implied_volatility` field within the `price_params`
+    /// structure. The implied volatility reflects the market's view on the future price
+    /// fluctuations of the underlying asset. This parameter plays a significant role in
+    /// determining option prices.
+    ///
+    /// # Arguments
+    ///
+    /// * `volatility` - An `Option<Positive>` representing the implied volatility.  Providing
+    ///   `Some(Positive)` will set the volatility to the given value.  Providing `None`
+    ///   clears any previously set implied volatility, useful when the volatility needs to be
+    ///   recalculated or derived from other data.
+    pub fn set_implied_volatility(&mut self, volatility: Option<Positive>) {
+        self.price_params.implied_volatility = volatility
     }
 }
 
@@ -561,43 +610,16 @@ impl RandomPositionsParams {
     }
 }
 
-pub(crate) fn generate_list_of_strikes(
-    reference_price: Positive,
-    chain_size: usize,
-    strike_interval: Positive,
-) -> BTreeSet<Positive> {
-    let mut strikes = BTreeSet::new();
-    let reference_price_rounded = rounder(reference_price, strike_interval);
-
-    for i in 0..=chain_size {
-        let next_strike = i as f64 * strike_interval;
-        if reference_price_rounded < next_strike {
-            // panic!("Reference price is lower than the next strike: {}, {}", next_strike, reference_price_rounded);
-            break;
-        }
-        let lower_strike = (reference_price_rounded - (i as f64 * strike_interval)).floor();
-        let upper_strike = (reference_price_rounded + (i as f64 * strike_interval)).floor();
-
-        if i == 0 {
-            strikes.insert(reference_price_rounded);
-        } else {
-            strikes.insert(lower_strike);
-            strikes.insert(upper_strike);
-        }
-    }
-    strikes
-}
-
 pub(crate) fn adjust_volatility(
     volatility: Option<Positive>,
-    skew_factor: f64,
+    skew_factor: Decimal,
     atm_distance: f64,
 ) -> Option<Positive> {
     volatility?;
-    let skew = skew_factor * atm_distance.abs();
-    let smile = skew_factor * atm_distance.powi(2);
+    let skew: Decimal = skew_factor * Decimal::from_f64(atm_distance.abs()).unwrap();
+    let smile: Decimal = skew_factor * Decimal::from_f64(atm_distance.powi(2)).unwrap();
 
-    let volatility_skew = volatility.unwrap() * (1.0 + skew + smile);
+    let volatility_skew = volatility.unwrap() * (Decimal::ONE + skew + smile);
     Some(volatility_skew)
 }
 
@@ -666,74 +688,6 @@ mod tests_rounder {
         assert_eq!(rounder(pos!(43.0), pos!(15.0)), pos!(45.0));
         assert_eq!(rounder(pos!(37.5), pos!(15.0)), pos!(45.0));
         assert_eq!(rounder(pos!(37.4), pos!(15.0)), pos!(30.0));
-    }
-}
-
-#[cfg(test)]
-mod tests_generate_list_of_strikes {
-    use super::*;
-    use crate::Positive;
-
-    #[test]
-
-    fn test_generate_list_of_strikes_basic() {
-        let reference_price = Positive::THOUSAND;
-        let chain_size = 3;
-        let strike_interval = Positive::TEN;
-
-        let strikes = generate_list_of_strikes(reference_price, chain_size, strike_interval);
-
-        assert_eq!(strikes.len(), 7);
-
-        assert!(strikes.contains(&Positive::new(970.0).unwrap()));
-        assert!(strikes.contains(&Positive::new(980.0).unwrap()));
-        assert!(strikes.contains(&reference_price));
-        assert!(strikes.contains(&Positive::new(1010.0).unwrap()));
-        assert!(strikes.contains(&Positive::new(1030.0).unwrap()));
-    }
-
-    #[test]
-
-    fn test_generate_list_of_strikes_zero_chain_size() {
-        let reference_price = Positive::new(1000.0).unwrap();
-        let chain_size = 0;
-        let strike_interval = Positive::new(10.0).unwrap();
-
-        let strikes = generate_list_of_strikes(reference_price, chain_size, strike_interval);
-
-        assert_eq!(strikes.len(), 1);
-        assert!(strikes.contains(&reference_price));
-    }
-
-    #[test]
-
-    fn test_generate_list_of_strikes_large_interval() {
-        let reference_price = Positive::new(1000.0).unwrap();
-        let chain_size = 3;
-        let strike_interval = Positive::new(100.0).unwrap();
-
-        let strikes = generate_list_of_strikes(reference_price, chain_size, strike_interval);
-
-        assert!(strikes.contains(&Positive::new(700.0).unwrap()));
-        assert!(strikes.contains(&Positive::new(800.0).unwrap()));
-        assert!(strikes.contains(&Positive::new(900.0).unwrap()));
-        assert!(strikes.contains(&reference_price));
-        assert!(strikes.contains(&Positive::new(1100.0).unwrap()));
-        assert!(strikes.contains(&Positive::new(1200.0).unwrap()));
-        assert!(strikes.contains(&Positive::new(1300.0).unwrap()));
-    }
-
-    #[test]
-
-    fn test_generate_list_of_strikes_duplicate_strikes() {
-        let reference_price = Positive::new(1000.0).unwrap();
-        let chain_size = 1;
-        let strike_interval = Positive::new(0.0).unwrap();
-
-        let strikes = generate_list_of_strikes(reference_price, chain_size, strike_interval);
-
-        assert_eq!(strikes.len(), 1);
-        assert!(strikes.contains(&reference_price));
     }
 }
 
@@ -1019,7 +973,7 @@ mod tests_adjust_volatility {
     #[test]
 
     fn test_adjust_volatility_none() {
-        let result = adjust_volatility(None, 0.1, 10.0);
+        let result = adjust_volatility(None, dec!(0.1), 10.0);
         assert_eq!(result, None);
     }
 
@@ -1027,7 +981,7 @@ mod tests_adjust_volatility {
 
     fn test_adjust_volatility_zero_skew() {
         let vol = spos!(0.2);
-        let result = adjust_volatility(vol, 0.0, 10.0);
+        let result = adjust_volatility(vol, dec!(0.0), 10.0);
         assert_eq!(result, vol);
     }
 
@@ -1035,7 +989,7 @@ mod tests_adjust_volatility {
 
     fn test_adjust_volatility_positive_distance() {
         let vol = spos!(0.2);
-        let result = adjust_volatility(vol, 0.1, 10.0);
+        let result = adjust_volatility(vol, dec!(0.1), 10.0);
         assert!(result.is_some());
         assert!(result.unwrap() > vol.unwrap());
     }
@@ -1044,7 +998,7 @@ mod tests_adjust_volatility {
 
     fn test_adjust_volatility_negative_distance() {
         let vol = spos!(0.2);
-        let result = adjust_volatility(vol, 0.1, -10.0);
+        let result = adjust_volatility(vol, dec!(0.1), -10.0);
         assert!(result.is_some());
         assert!(result.unwrap() > vol.unwrap());
     }
@@ -1227,7 +1181,7 @@ mod tests_option_chain_build_params {
             spos!(1000.0),
             10,
             pos!(5.0),
-            0.1,
+            dec!(0.1),
             pos!(0.02),
             2,
             price_params,
@@ -1237,7 +1191,7 @@ mod tests_option_chain_build_params {
         assert_eq!(params.volume, spos!(1000.0));
         assert_eq!(params.chain_size, 10);
         assert_eq!(params.strike_interval, pos!(5.0));
-        assert_eq!(params.skew_factor, 0.1);
+        assert_eq!(params.skew_factor, dec!(0.1));
         assert_eq!(params.spread, pos!(0.02));
         assert_eq!(params.decimal_places, 2);
     }
@@ -1252,7 +1206,7 @@ mod tests_option_chain_build_params {
             None,
             10,
             pos!(5.0),
-            0.1,
+            dec!(0.1),
             pos!(0.02),
             2,
             price_params,
@@ -1363,7 +1317,7 @@ mod tests_sample {
             Some(Positive::ONE),
             5,
             Positive::ONE,
-            0.0001,
+            dec!(0.0001),
             Positive::new(0.02).unwrap(),
             2,
             chain,

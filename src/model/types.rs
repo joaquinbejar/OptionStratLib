@@ -1,4 +1,4 @@
-use crate::constants::{DAYS_IN_A_YEAR, ZERO};
+use crate::constants::{DAYS_IN_A_YEAR, EPSILON, ZERO};
 use crate::pricing::payoff::{Payoff, PayoffInfo, standard_payoff};
 use crate::{Positive, pos};
 use chrono::{DateTime, Duration, NaiveDate, Utc};
@@ -17,7 +17,7 @@ use std::fmt;
 ///
 /// `ExpirationDate` is used throughout the options modeling system to handle
 /// time-based calculations such as time decay (theta) and option valuation.
-#[derive(Clone, PartialEq, Copy)]
+#[derive(Clone, Copy)]
 pub enum ExpirationDate {
     /// Represents expiration as a positive number of days from the current date.
     /// This is typically used for relative time specifications.
@@ -27,6 +27,18 @@ pub enum ExpirationDate {
     /// This is used when a precise expiration moment is known.
     DateTime(DateTime<Utc>),
 }
+
+impl PartialEq for ExpirationDate {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (ExpirationDate::Days(a), ExpirationDate::Days(b)) => (a.0 - b.0).abs() < EPSILON,
+            (ExpirationDate::DateTime(a), ExpirationDate::DateTime(b)) => a == b,
+            _ => false, // Different variants are never equal
+        }
+    }
+}
+
+impl Eq for ExpirationDate {}
 
 impl ExpirationDate {
     /// Calculates the time to expiration in years.
@@ -70,6 +82,41 @@ impl ExpirationDate {
                     return Ok(Positive::ZERO);
                 }
                 Ok(pos!(num_days) / DAYS_IN_A_YEAR)
+            }
+        }
+    }
+
+    /// Calculates the number of days until expiration for this `ExpirationDate` instance.
+    ///
+    /// This method converts both variants of `ExpirationDate` to a common representation:
+    /// the number of days until expiration. This is useful for calculations that need
+    /// time-to-expiry in a standardized format.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<Positive, Box<dyn Error>>` - A `Positive` value representing the number of days
+    ///   until expiration, or an error if the calculation fails.
+    ///
+    /// # Details
+    ///
+    /// * For `ExpirationDate::Days` variant: Returns the stored days value directly.
+    /// * For `ExpirationDate::DateTime` variant: Calculates the difference between the stored
+    ///   datetime and the current time, converting it to days.
+    ///
+    /// If the calculation results in zero or negative days (meaning the expiration date
+    /// is in the past), the method returns `Positive::ZERO` to indicate immediate expiration.
+    ///
+    pub fn get_days(&self) -> Result<Positive, Box<dyn Error>> {
+        match self {
+            ExpirationDate::Days(days) => Ok(*days),
+            ExpirationDate::DateTime(datetime) => {
+                let now = Utc::now();
+                let duration = datetime.signed_duration_since(now);
+                let num_days = duration.num_seconds() as f64 / (24.0 * 60.0 * 60.0);
+                if num_days <= 0.0 {
+                    return Ok(Positive::ZERO);
+                }
+                Ok(pos!(num_days))
             }
         }
     }

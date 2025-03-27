@@ -618,8 +618,8 @@ impl Optimizable for BullPutSpread {
     ///
     /// # See Also
     ///
-    /// - [`OptionChain::get_double_iter`](crate::chains::chain::OptionChain::get_double_iter)
-    /// - [`OptionData::is_valid_optimal_side`](crate::chains::chain::OptionData::is_valid_optimal_side)
+    /// - [`OptionChain::get_double_iter`](crate::chains::OptionChain::get_double_iter)
+    /// - [`OptionData::is_valid_optimal_side`](crate::chains::OptionData::is_valid_optimal_side)
     /// - [`BullPutSpread::validate`](crate::strategies::bull_put_spread::BullPutSpread::validate)
     fn filter_combinations<'a>(
         &'a self,
@@ -735,6 +735,11 @@ impl Graph for BullPutSpread {
             self.long_put.title(),
             self.short_put.title()
         )
+    }
+
+    fn get_x_values(&self) -> Vec<Positive> {
+        self.best_range_to_show(Positive::from(1.0))
+            .unwrap_or_else(|_| vec![self.long_put.option.strike_price])
     }
 
     fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<f64, f64>> {
@@ -1299,7 +1304,7 @@ mod tests_bull_put_spread_validation {
 #[cfg(test)]
 mod tests_bull_put_spread_optimization {
     use super::*;
-    use crate::chains::chain::OptionData;
+    use crate::chains::OptionData;
     use crate::model::types::ExpirationDate;
     use crate::spos;
     use num_traits::ToPrimitive;

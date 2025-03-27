@@ -29,7 +29,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         pos!(1.0),      // quantity
         Positive::ZERO, // premium_short_call
         Positive::ZERO, // premium_short_put
-        pos!(0.82),     // open_fee_short_call
+        pos!(0.81),     // open_fee_short_call
         pos!(0.82),     // close_fee_short_call
         pos!(0.82),     // open_fee_short_put
         pos!(0.82),     // close_fee_short_put
@@ -38,7 +38,6 @@ fn main() -> Result<(), Box<dyn Error>> {
     debug!("Option Chain: {}", option_chain);
     debug!("Strategy:  {:#?}", strategy);
 
-    let price_range = strategy.best_range_to_show(pos!(1.0)).unwrap();
     let range = strategy.range_of_profit().unwrap_or(Positive::ZERO);
     info!("Title: {}", strategy.title());
     info!("Break Even Points: {:?}", strategy.break_even_points);
@@ -65,7 +64,6 @@ fn main() -> Result<(), Box<dyn Error>> {
     if strategy.profit_ratio()? > Positive::ZERO.into() {
         debug!("Strategy:  {:#?}", strategy);
         strategy.graph(
-            &price_range,
             GraphBackend::Bitmap {
                 file_path: "Draws/Strategy/bear_call_spread_profit_loss_chart_best_area.png",
                 size: (1400, 933),

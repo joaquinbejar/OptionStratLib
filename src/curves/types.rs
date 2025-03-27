@@ -513,3 +513,206 @@ mod tests_point2d_serde {
         assert!(result.is_ok());
     }
 }
+
+#[cfg(test)]
+mod tests_edge_cases {
+    use super::*;
+    use rust_decimal_macros::dec;
+
+    #[test]
+    fn test_to_tuple_positive_constraint_x() {
+        use crate::Positive;
+
+        // Create a point with negative x
+        let point = Point2D::new(dec!(-1.0), dec!(2.0));
+
+        // Try to convert to a tuple where T must be positive
+        let result: Result<(Positive, Decimal), _> = point.to_tuple();
+
+        // Should fail with appropriate error
+        assert!(result.is_err());
+        match result {
+            Err(CurveError::Point2DError { reason }) => {
+                assert_eq!(reason, "x must be positive for type T");
+            }
+            _ => panic!("Unexpected error type"),
+        }
+    }
+
+    #[test]
+    fn test_to_tuple_positive_constraint_y() {
+        use crate::Positive;
+
+        // Create a point with negative y
+        let point = Point2D::new(dec!(1.0), dec!(-2.0));
+
+        // Try to convert to a tuple where U must be positive
+        let result: Result<(Decimal, Positive), _> = point.to_tuple();
+
+        // Should fail with appropriate error
+        assert!(result.is_err());
+        match result {
+            Err(CurveError::Point2DError { reason }) => {
+                assert_eq!(reason, "y must be positive for type U");
+            }
+            _ => panic!("Unexpected error type"),
+        }
+    }
+
+    #[test]
+    fn test_to_tuple_positive_constraint_both_pass() {
+        use crate::Positive;
+
+        // Create a point with positive x and y
+        let point = Point2D::new(dec!(1.0), dec!(2.0));
+
+        // Try to convert to a tuple where both T and U must be positive
+        let result: Result<(Positive, Positive), _> = point.to_tuple();
+
+        // Should succeed
+        assert!(result.is_ok());
+        let (x, y) = result.unwrap();
+        assert_eq!(x.value(), dec!(1.0));
+        assert_eq!(y.value(), dec!(2.0));
+    }
+
+    #[test]
+    fn test_debug_output() {
+        let point = Point2D::new(dec!(3.5), dec!(-2.25));
+        let debug_str = format!("{:?}", point);
+
+        // Debug output should contain both x and y values
+        assert!(debug_str.contains("3.5"));
+        assert!(debug_str.contains("-2.25"));
+    }
+
+    #[test]
+    fn test_comparison_operators() {
+        let p1 = Point2D::new(dec!(1.0), dec!(2.0));
+        let p2 = Point2D::new(dec!(2.0), dec!(1.0));
+        let p3 = Point2D::new(dec!(1.0), dec!(3.0));
+
+        // Test comparison operators
+        assert!(p1 < p2);
+        assert!(p1 <= p2);
+        assert!(p2 > p1);
+        assert!(p2 >= p1);
+
+        // Same x, different y
+        assert!(p1 < p3);
+        assert!(p1 <= p3);
+        assert!(p3 > p1);
+        assert!(p3 >= p1);
+    }
+
+    #[test]
+    fn test_ordering_consistency() {
+        let points = vec![
+            Point2D::new(dec!(3.0), dec!(1.0)),
+            Point2D::new(dec!(1.0), dec!(3.0)),
+            Point2D::new(dec!(2.0), dec!(2.0)),
+            Point2D::new(dec!(1.0), dec!(1.0)),
+        ];
+
+        let mut sorted = points.clone();
+        sorted.sort();
+
+        // Expect points to be sorted by x-coordinate first, then by y
+        assert_eq!(sorted[0].x, dec!(1.0));
+        assert_eq!(sorted[0].y, dec!(1.0));
+
+        assert_eq!(sorted[1].x, dec!(1.0));
+        assert_eq!(sorted[1].y, dec!(3.0));
+
+        assert_eq!(sorted[2].x, dec!(2.0));
+        assert_eq!(sorted[2].y, dec!(2.0));
+
+        assert_eq!(sorted[3].x, dec!(3.0));
+        assert_eq!(sorted[3].y, dec!(1.0));
+    }
+}
+
+#[cfg(test)]
+mod tests_performance {
+    use super::*;
+    use std::time::{Duration, Instant};
+
+    #[test]
+    fn test_creation_performance() {
+        let start = Instant::now();
+
+        for i in 0..10000 {
+            let x = Decimal::from(i);
+            let y = Decimal::from(i * 2);
+            let _ = Point2D::new(x, y);
+        }
+
+        let duration = start.elapsed();
+        // Ensure creation is reasonably fast (adjust threshold as needed)
+        assert!(duration < Duration::from_millis(100));
+    }
+
+    #[test]
+    fn test_to_tuple_performance() {
+        let points: Vec<Point2D> = (0..10000)
+            .map(|i| Point2D::new(Decimal::from(i), Decimal::from(i * 2)))
+            .collect();
+
+        let start = Instant::now();
+
+        for point in &points {
+            let _: Result<(Decimal, Decimal), _> = point.to_tuple();
+        }
+
+        let duration = start.elapsed();
+        // Ensure conversion is reasonably fast (adjust threshold as needed)
+        assert!(duration < Duration::from_millis(100));
+    }
+
+    #[test]
+    fn test_comparison_performance() {
+        let points: Vec<Point2D> = (0..10000)
+            .map(|i| Point2D::new(Decimal::from(i % 100), Decimal::from(i / 100)))
+            .collect();
+
+        let start = Instant::now();
+
+        // Sort points (exercises comparison operators)
+        let mut sorted = points.clone();
+        sorted.sort();
+
+        let duration = start.elapsed();
+        // Ensure sorting is reasonably fast (adjust threshold as needed)
+        assert!(duration < Duration::from_millis(200));
+    }
+
+    #[test]
+    fn test_from_f64_tuple_performance() {
+        let start = Instant::now();
+
+        for i in 0..10000 {
+            let _ = Point2D::from_f64_tuple(i as f64, (i * 2) as f64);
+        }
+
+        let duration = start.elapsed();
+        // Ensure conversion is reasonably fast (adjust threshold as needed)
+        assert!(duration < Duration::from_millis(200));
+    }
+
+    #[test]
+    fn test_to_f64_tuple_performance() {
+        let points: Vec<Point2D> = (0..10000)
+            .map(|i| Point2D::new(Decimal::from(i), Decimal::from(i * 2)))
+            .collect();
+
+        let start = Instant::now();
+
+        for point in &points {
+            let _ = point.to_f64_tuple();
+        }
+
+        let duration = start.elapsed();
+        // Ensure conversion is reasonably fast (adjust threshold as needed)
+        assert!(duration < Duration::from_millis(200));
+    }
+}

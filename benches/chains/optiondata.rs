@@ -1,5 +1,5 @@
 use criterion::{Criterion, black_box};
-use optionstratlib::chains::chain::OptionData;
+use optionstratlib::chains::OptionData;
 use optionstratlib::chains::utils::OptionDataPriceParams;
 use optionstratlib::{ExpirationDate, Positive, pos};
 use rust_decimal_macros::dec;

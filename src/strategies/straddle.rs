@@ -355,8 +355,9 @@ impl BreakEvenable for ShortStraddle {
         let total_premium = self.net_premium_received()?;
 
         self.break_even_points.push(
-            (self.short_put.option.strike_price - (total_premium / self.short_put.option.quantity))
-                .round_to(2),
+            (self.short_put.option.strike_price
+                - (total_premium / self.short_put.option.quantity).to_dec())
+            .round_to(2),
         );
 
         self.break_even_points.push(
@@ -554,7 +555,7 @@ impl Optimizable for ShortStraddle {
             })
             .filter(|both| {
                 both.call_ask.unwrap_or(Positive::ZERO) > Positive::ZERO
-                    && both.call_bid.unwrap_or(Positive::ZERO) > Positive::ZERO
+                    && both.put_ask.unwrap_or(Positive::ZERO) > Positive::ZERO
             })
             // Filter out options that don't meet strategy constraints
             .filter(move |both| {
@@ -612,6 +613,7 @@ impl Optimizable for ShortStraddle {
             _ => panic!("Invalid number of legs for this strategy"),
         };
         if !call.validate() || !put.validate() {
+            println!("CALL: {}\nPUT: {}", call, put);
             panic!("Invalid options");
         }
         ShortStraddle::new(
@@ -666,6 +668,11 @@ impl Graph for ShortStraddle {
         } else {
             format!("{}\n\t{}", strategy_title, leg_titles.join("\n\t"))
         }
+    }
+
+    fn get_x_values(&self) -> Vec<Positive> {
+        self.best_range_to_show(Positive::from(1.0))
+            .unwrap_or_else(|_| vec![self.short_call.option.strike_price])
     }
 
     fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<f64, f64>> {
@@ -1444,6 +1451,11 @@ impl Graph for LongStraddle {
         }
     }
 
+    fn get_x_values(&self) -> Vec<Positive> {
+        self.best_range_to_show(Positive::from(1.0))
+            .unwrap_or_else(|_| vec![self.long_call.option.strike_price])
+    }
+
     fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<f64, f64>> {
         let max_value = f64::INFINITY;
         let min_value = f64::NEG_INFINITY;
@@ -1822,14 +1834,8 @@ mod tests_short_straddle {
         assert_eq!(vertical_lines.len(), 1);
         assert_eq!(vertical_lines[0].label, "Current Price: 150");
 
-        let data = vec![
-            pos!(140.0),
-            pos!(145.0),
-            pos!(150.0),
-            pos!(155.0),
-            pos!(160.0),
-        ];
-        let values = strategy.get_values(&data);
+        let data = strategy.get_x_values();
+        let values = strategy.get_y_values();
         for (i, &price) in data.iter().enumerate() {
             assert_eq!(
                 values[i],
@@ -1886,6 +1892,7 @@ mod tests_short_straddle {
         let mut strategy = setup();
         let option_chain = create_test_option_chain();
 
+        println!("{}", option_chain);
         strategy.best_ratio(&option_chain, FindOptimalSide::All);
         assert!(strategy.validate());
     }
@@ -1918,14 +1925,15 @@ mod tests_short_straddle {
         let strategy = setup();
         let option_chain = create_test_option_chain();
         let option_data = option_chain.options.first().unwrap();
+
         let min_strike = option_chain.options.first().unwrap().strike_price;
         let max_strike = option_chain.options.last().unwrap().strike_price;
 
         // Test FindOptimalSide::Upper
-        assert!(strategy.is_valid_short_option(option_data, &FindOptimalSide::Upper));
+        assert!(strategy.is_valid_short_option(option_data, &FindOptimalSide::Lower));
 
         // Test FindOptimalSide::Lower
-        assert!(!strategy.is_valid_short_option(option_data, &FindOptimalSide::Lower));
+        assert!(!strategy.is_valid_short_option(option_data, &FindOptimalSide::Upper));
 
         // Test FindOptimalSide::All
         assert!(strategy.is_valid_short_option(option_data, &FindOptimalSide::All));
@@ -1944,7 +1952,7 @@ mod tests_short_straddle {
     fn test_create_strategy() {
         let strategy = setup();
         let chain = create_test_option_chain();
-        let call_option = chain.options.first().unwrap();
+        let call_option = chain.options.last().unwrap();
         let put_option = chain.options.last().unwrap();
 
         let legs = StrategyLegs::TwoLegs {
@@ -1955,7 +1963,7 @@ mod tests_short_straddle {
         assert!(new_strategy.validate());
 
         let call_option = chain.options.last().unwrap();
-        let put_option = chain.options.first().unwrap();
+        let put_option = chain.options.last().unwrap();
 
         let legs = StrategyLegs::TwoLegs {
             first: call_option,
@@ -1992,7 +2000,7 @@ mod tests_short_straddle {
             spos!(1.0),
             10,
             pos!(10.0),
-            0.00001,
+            dec!(0.00001),
             pos!(0.01),
             2,
             option_data_price_params,
@@ -2202,14 +2210,8 @@ mod tests_long_straddle {
         assert_eq!(vertical_lines.len(), 1);
         assert_eq!(vertical_lines[0].label, "Current Price: 150");
 
-        let data = vec![
-            pos!(130.0),
-            pos!(140.0),
-            pos!(150.0),
-            pos!(160.0),
-            pos!(170.0),
-        ];
-        let values = strategy.get_values(&data);
+        let data = strategy.get_x_values();
+        let values = strategy.get_y_values();
         for (i, &price) in data.iter().enumerate() {
             assert_eq!(
                 values[i],
@@ -2234,7 +2236,7 @@ mod tests_long_straddle {
         let mut strategy = setup_long_straddle();
         let option_chain = create_test_option_chain();
 
-        strategy.best_ratio(&option_chain, FindOptimalSide::All);
+        strategy.best_ratio(&option_chain, FindOptimalSide::Upper);
         assert!(strategy.validate());
     }
 
@@ -2244,7 +2246,7 @@ mod tests_long_straddle {
         let mut strategy = setup_long_straddle();
         let option_chain = create_test_option_chain();
 
-        strategy.best_area(&option_chain, FindOptimalSide::All);
+        strategy.best_area(&option_chain, FindOptimalSide::Upper);
         assert!(strategy.validate());
     }
 
@@ -2283,8 +2285,8 @@ mod tests_long_straddle {
     fn test_are_valid_prices() {
         let strategy = setup_long_straddle();
         let option_chain = create_test_option_chain();
-        let call_option = option_chain.options.first().unwrap();
-        let put_option = option_chain.options.last().unwrap();
+        let call_option = option_chain.atm_option_data().unwrap();
+        let put_option = call_option;
 
         let legs = StrategyLegs::TwoLegs {
             first: call_option,
@@ -2307,8 +2309,8 @@ mod tests_long_straddle {
     fn test_create_strategy() {
         let strategy = setup_long_straddle();
         let chain = create_test_option_chain();
-        let call_option = chain.options.first().unwrap();
-        let put_option = chain.options.last().unwrap();
+        let call_option = chain.atm_option_data().unwrap();
+        let put_option = call_option;
         let legs = StrategyLegs::TwoLegs {
             first: put_option,
             second: call_option,
@@ -2345,7 +2347,7 @@ mod tests_long_straddle {
             spos!(1.0),
             10,
             pos!(5.0),
-            0.00001,
+            dec!(0.00001),
             pos!(0.01),
             2,
             option_data_price_params,

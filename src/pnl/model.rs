@@ -3,6 +3,8 @@
    Email: jb@taunais.com
    Date: 26/2/25
 ******************************************************************************/
+use num_traits::ToPrimitive;
+use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize, Serializer};
 
 /// Represents a range of Profit and Loss (PnL) values for bucketing or categorizing financial results.
@@ -22,6 +24,69 @@ pub struct PnLRange {
     pub lower: i32,
     /// Upper bound of this PnL bucket (exclusive)
     pub upper: i32,
+}
+
+impl PnLRange {
+    /// Creates a new PnL range with the specified lower and upper bounds.
+    ///
+    /// This constructor creates a range where the lower bound is inclusive and the upper bound is exclusive,
+    /// following the conventional [lower, upper) interval notation.
+    ///
+    /// # Parameters
+    ///
+    /// * `lower` - The inclusive lower bound of the range
+    /// * `upper` - The exclusive upper bound of the range
+    ///
+    /// # Returns
+    ///
+    /// A new `PnLRange` instance with the specified bounds.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use optionstratlib::pnl::model::PnLRange;
+    /// let range = PnLRange::new(-100, 100);
+    /// // Creates a PnL range from -100 (inclusive) to 100 (exclusive)
+    /// ```
+    pub fn new(lower: i32, upper: i32) -> Self {
+        Self { lower, upper }
+    }
+
+    /// Creates a new PnL range from Decimal values by converting them to i32.
+    ///
+    /// This constructor provides a convenient way to create a PnLRange from decimal values,
+    /// automatically converting them to integers for efficient bucketing and categorization.
+    ///
+    /// # Parameters
+    ///
+    /// * `lower` - The inclusive lower bound as a Decimal value
+    /// * `upper` - The exclusive upper bound as a Decimal value
+    ///
+    /// # Returns
+    ///
+    /// A new `PnLRange` instance with the bounds converted to integers.
+    ///
+    /// # Panics
+    ///
+    /// This function will panic if either the lower or upper Decimal value cannot be
+    /// converted to an i32 (e.g., if the value is outside the i32 range or is not
+    /// representable as an integer).
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rust_decimal_macros::dec;
+    /// use optionstratlib::pnl::model::PnLRange;
+    ///
+    /// let range = PnLRange::new_decimal(dec!(-50.5), dec!(75.25));
+    /// // Creates a PnL range from -50 (inclusive) to 75 (exclusive)
+    /// ```
+    pub fn new_decimal(lower: Decimal, upper: Decimal) -> Self {
+        Self {
+            lower: lower.to_i32().unwrap(),
+            upper: upper.to_i32().unwrap(),
+        }
+    }
 }
 
 /// Implements serialization for `PnLRange` using a custom string format.

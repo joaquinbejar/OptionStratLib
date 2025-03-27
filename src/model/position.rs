@@ -4,7 +4,7 @@
    Date: 18/8/24
 ******************************************************************************/
 use crate::Options;
-use crate::chains::chain::OptionData;
+use crate::chains::OptionData;
 use crate::error::position::PositionValidationErrorKind;
 use crate::error::{GreeksError, PositionError};
 use crate::greeks::Greeks;
@@ -34,6 +34,7 @@ use tracing::{debug, trace};
 /// ```rust
 /// use optionstratlib::{Options, pos, Side, OptionStyle};
 /// use chrono::Utc;
+/// use tracing::info;
 /// use optionstratlib::model::Position;
 /// use optionstratlib::model::utils::create_sample_option_simplest;
 ///
@@ -47,7 +48,7 @@ use tracing::{debug, trace};
 /// );
 ///
 /// let total_cost = position.total_cost().unwrap();
-/// println!("Total position cost: {}", total_cost);
+/// info!("Total position cost: {}", total_cost);
 /// ```
 #[derive(Clone, PartialEq, Serialize, Deserialize)]
 pub struct Position {
@@ -220,6 +221,7 @@ impl Position {
     /// use optionstratlib::model::Position;
     /// use optionstratlib::model::utils::create_sample_option_simplest;
     /// use chrono::Utc;
+    /// use tracing::info;
     ///
     /// // Create a short position
     /// let option = create_sample_option_simplest(OptionStyle::Call, Side::Short);
@@ -233,7 +235,7 @@ impl Position {
     ///
     /// // Calculate premium received
     /// let received = position.premium_received().unwrap();
-    /// println!("Premium received: {}", received);
+    /// info!("Premium received: {}", received);
     /// ```
     pub fn premium_received(&self) -> Result<Positive, PositionError> {
         match self.option.side {
@@ -355,6 +357,7 @@ impl Position {
     ///
     /// ```rust
     /// use chrono::Utc;
+    /// use tracing::info;
     /// use optionstratlib::model::Position;
     /// use optionstratlib::model::utils::create_sample_option_simplest;
     /// use optionstratlib::{pos, OptionStyle, Side};
@@ -368,7 +371,7 @@ impl Position {
     ///     pos!(0.65),  // closing fee
     /// );
     /// let unrealized_pnl = position.unrealized_pnl(current_price).unwrap();
-    /// println!("Current unrealized PnL: {}", unrealized_pnl);
+    /// info!("Current unrealized PnL: {}", unrealized_pnl);
     /// ```
     pub fn unrealized_pnl(&self, price: Positive) -> Result<Decimal, PositionError> {
         match self.option.side {
@@ -794,6 +797,27 @@ impl Graph for Position {
         self.option.title()
     }
 
+    /// Generates a vector of evenly spaced x-values for option pricing/plotting.
+    ///
+    /// This method creates a range of x-values (potential stock prices) centered around
+    /// the strike price and spanning 5 standard deviations in each direction.
+    /// The standard deviation is calculated as the product of strike price and implied volatility.
+    ///
+    /// # Returns
+    ///
+    /// A vector of `Positive` values representing potential stock prices, with 1000 total points
+    /// (999 steps plus endpoints) evenly distributed across the range.
+    ///
+    /// # Implementation Details
+    ///
+    /// * The range extends 5 standard deviations above and below the strike price
+    /// * Uses 1000 total points (steps + 1) for smooth visualization
+    /// * All returned values are guaranteed positive through the use of the `pos!` macro
+    ///
+    fn get_x_values(&self) -> Vec<Positive> {
+        self.option.get_x_values()
+    }
+
     /// Calculates position profit/loss values at expiration for a range of underlying prices.
     ///
     /// This method transforms a slice of potential underlying prices into their corresponding
@@ -804,7 +828,8 @@ impl Graph for Position {
     ///
     /// # Returns
     /// A `Vec<f64>` containing the calculated profit/loss values for each input price
-    fn get_values(&self, data: &[Positive]) -> Vec<f64> {
+    fn get_y_values(&self) -> Vec<f64> {
+        let data = self.get_x_values();
         data.iter()
             .map(|&price| {
                 self.pnl_at_expiration(&Some(&price))
@@ -2039,7 +2064,6 @@ mod tests_pnl_calculator {
 #[cfg(test)]
 mod tests_graph {
     use super::*;
-    use crate::pos;
 
     #[test]
 
@@ -2052,10 +2076,8 @@ mod tests_graph {
 
     fn test_get_values() {
         let position = Position::default();
-        let prices = vec![pos!(90.0), pos!(100.0), pos!(110.0)];
-        let values = position.get_values(&prices);
-
-        assert_eq!(values.len(), 3);
+        let values = position.get_y_values();
+        assert_eq!(values.len(), 1000);
         assert!(!values.iter().any(|&x| x.is_nan()));
     }
 
@@ -2074,6 +2096,7 @@ mod tests_position_serde {
     use crate::model::utils::create_sample_position;
     use crate::pos;
     use serde_json;
+    use tracing::info;
 
     #[test]
     fn test_position_serialization() {
@@ -2130,8 +2153,7 @@ mod tests_position_serde {
         );
         let serialized = serde_json::to_string_pretty(&position).unwrap();
 
-        // Print the pretty JSON for debugging
-        println!("Serialized Position:\n{}", serialized);
+        info!("Serialized Position:\n{}", serialized);
 
         let value: serde_json::Value = serde_json::from_str(&serialized).unwrap();
 

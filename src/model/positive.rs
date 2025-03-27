@@ -4,17 +4,17 @@
    Date: 30/12/24
 ******************************************************************************/
 
+use crate::chains::chain::OptionChain;
 use crate::constants::EPSILON;
 use crate::model::utils::ToRound;
-use crate::simulation::types::Walktypable;
 use approx::{AbsDiffEq, RelativeEq};
 use num_traits::{FromPrimitive, ToPrimitive};
 use rust_decimal::{Decimal, MathematicalOps};
 use serde::de::Visitor;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::cmp::{Ordering, PartialEq};
-use std::error::Error;
 use std::fmt;
+use std::fmt::Display;
 use std::iter::Sum;
 use std::ops::{Add, AddAssign, Div, Mul, MulAssign, Neg, Sub};
 use std::str::FromStr;
@@ -228,6 +228,35 @@ impl Positive {
     /// The wrapped `Decimal` value.
     pub fn to_dec(&self) -> Decimal {
         self.0
+    }
+
+    /// Returns the inner `Decimal` ref.
+    ///
+    /// # Returns
+    ///
+    /// The wrapped `Decimal` ref.
+    pub fn to_dec_ref(&self) -> &Decimal {
+        &self.0
+    }
+
+    /// Returns a mutable reference to the inner `Decimal` value.
+    ///
+    /// This method provides controlled access to the underlying `Decimal` value
+    /// within the `Positive` wrapper, allowing it to be modified while maintaining
+    /// encapsulation of the inner value. It's important to note that direct mutation
+    /// should be used with caution to ensure the positive value invariant is maintained.
+    ///
+    /// # Returns
+    ///
+    /// * `&mut Decimal` - A mutable reference to the wrapped `Decimal` value.
+    ///
+    /// # Usage
+    ///
+    /// This method is typically used in contexts where the wrapped value needs to be
+    /// modified in-place while preserving the wrapper's type safety guarantees.
+    /// Care should be taken to ensure any modification preserves the positive value constraint.
+    pub fn to_dec_ref_mut(&mut self) -> &mut Decimal {
+        &mut self.0
     }
 
     /// Converts the value to a 64-bit floating-point number.
@@ -449,21 +478,6 @@ impl ToRound for Positive {
     }
 }
 
-impl Walktypable for Positive {
-    fn walk_next(&self, exp: f64) -> Result<Positive, Box<dyn Error>> {
-        let value = self.to_f64() * f64::exp(exp);
-        Ok(pos!(value).max(Positive::ZERO))
-    }
-
-    fn walk_dec(&self) -> Result<Decimal, Box<dyn Error>> {
-        Ok(self.to_dec())
-    }
-
-    fn walk_positive(&self) -> Result<Positive, Box<dyn Error>> {
-        Ok(*self)
-    }
-}
-
 impl PartialEq<&Positive> for Positive {
     fn eq(&self, other: &&Positive) -> bool {
         self == *other
@@ -586,6 +600,24 @@ impl From<&Decimal> for Positive {
     }
 }
 
+impl From<&Positive> for Positive {
+    fn from(value: &Positive) -> Self {
+        Positive(value.0)
+    }
+}
+
+impl From<&OptionChain> for Positive {
+    fn from(value: &OptionChain) -> Self {
+        value.underlying_price
+    }
+}
+
+impl From<OptionChain> for Positive {
+    fn from(value: OptionChain) -> Self {
+        value.underlying_price
+    }
+}
+
 impl Mul<f64> for Positive {
     type Output = Positive;
 
@@ -650,7 +682,7 @@ impl PartialEq<f64> for Positive {
     }
 }
 
-impl fmt::Display for Positive {
+impl Display for Positive {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if *self == Positive::INFINITY {
             write!(f, r#""infinity""#)

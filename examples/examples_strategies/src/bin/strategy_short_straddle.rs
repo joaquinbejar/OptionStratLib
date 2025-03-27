@@ -31,7 +31,6 @@ fn main() -> Result<(), Box<dyn Error>> {
         pos!(7.01),     // open_fee_short_put
         pos!(7.01),     // close_fee_short_put
     );
-    let price_range = strategy.best_range_to_show(pos!(1.0)).unwrap();
     let range = strategy.break_even_points[1] - strategy.break_even_points[0];
 
     info!("Title: {}", strategy.title());
@@ -59,7 +58,6 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // Generate the profit/loss graph
     strategy.graph(
-        &price_range,
         GraphBackend::Bitmap {
             file_path: "Draws/Strategy/short_straddle_profit_loss_chart.png",
             size: (1400, 933),
