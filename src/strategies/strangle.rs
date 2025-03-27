@@ -342,8 +342,9 @@ impl BreakEvenable for ShortStrangle {
         let total_premium = self.net_premium_received()?;
 
         self.break_even_points.push(
-            (self.short_put.option.strike_price - (total_premium / self.short_put.option.quantity).to_dec())
-                .round_to(2),
+            (self.short_put.option.strike_price
+                - (total_premium / self.short_put.option.quantity).to_dec())
+            .round_to(2),
         );
 
         self.break_even_points.push(
@@ -2434,7 +2435,7 @@ mod tests_long_strangle {
         assert!(strategy.are_valid_prices(&legs));
 
         let legs = StrategyLegs::TwoLegs {
-            first: &option_chain.options.first().unwrap(),
+            first: option_chain.options.first().unwrap(),
             second: put_option,
         };
         assert!(!strategy.are_valid_prices(&legs));

@@ -244,7 +244,7 @@ mod tests_approx_equal {
 #[cfg(test)]
 mod tests_get_random_element {
     use super::*;
-    use crate::chains::chain::OptionData;
+    use crate::chains::OptionData;
     use crate::pos;
     use std::collections::BTreeSet;
 

@@ -23,7 +23,7 @@
 //! ```rust
 //! use rust_decimal::Decimal;
 //! use rust_decimal_macros::dec;
-//! use optionstratlib::chains::chain::{OptionChain, OptionData};
+//! use optionstratlib::chains::OptionChain;
 //! use optionstratlib::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
 //! use optionstratlib::{pos, spos, ExpirationDate, Positive};
 //!
@@ -220,7 +220,11 @@ mod four;
 /// * `rnd` - Private module for random number generation and stochastic processes
 mod rnd;
 
+mod optiondata;
+
+pub use chain::OptionChain;
 pub use four::FourOptions;
 pub use legs::StrategyLegs;
+pub use optiondata::OptionData;
 pub use options::{DeltasInStrike, OptionsInStrike};
 pub use rnd::{RNDAnalysis, RNDParameters, RNDResult};

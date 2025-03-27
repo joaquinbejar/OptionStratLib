@@ -4,7 +4,7 @@
    Date: 25/10/24
 ******************************************************************************/
 use crate::Positive;
-use crate::chains::chain::OptionData;
+use crate::chains::OptionData;
 use crate::error::chains::ChainError;
 use crate::model::types::ExpirationDate;
 use crate::model::utils::ToRound;
@@ -235,6 +235,55 @@ impl OptionChainBuildParams {
             decimal_places,
             price_params,
         }
+    }
+
+    /// Sets the underlying asset price.
+    ///
+    /// This function updates the `underlying_price` field within the `price_params`
+    /// structure.  The underlying price represents the current market price of the asset
+    /// on which the option is based.  This value is crucial for option pricing calculations.
+    ///
+    /// # Arguments
+    ///
+    /// * `price` - A `Positive` value representing the new underlying asset price.  The
+    ///   `Positive` type ensures that the price is always a non-negative value.
+    ///
+    pub fn set_underlying_price(&mut self, price: &Positive) {
+        self.price_params.underlying_price = *price;
+    }
+
+    /// Retrieves the implied volatility.
+    ///
+    /// This function returns the implied volatility associated with the option,
+    /// stored within the `price_params` structure. Implied volatility represents the
+    /// market's expectation of the future volatility of the underlying asset.  It's
+    /// a key input in option pricing models.  The function returns an `Option<Positive>`
+    /// as the implied volatility might not always be available or calculated.
+    ///
+    /// # Returns
+    ///
+    /// * `Option<Positive>` - The implied volatility, wrapped in an `Option`.  If the
+    ///   implied volatility has been set, the `Option` will contain a `Positive` value.
+    ///   Otherwise, it will return `None`.
+    pub fn get_implied_volatility(&self) -> Option<Positive> {
+        self.price_params.implied_volatility
+    }
+
+    /// Sets the implied volatility.
+    ///
+    /// This function updates the `implied_volatility` field within the `price_params`
+    /// structure. The implied volatility reflects the market's view on the future price
+    /// fluctuations of the underlying asset. This parameter plays a significant role in
+    /// determining option prices.
+    ///
+    /// # Arguments
+    ///
+    /// * `volatility` - An `Option<Positive>` representing the implied volatility.  Providing
+    ///   `Some(Positive)` will set the volatility to the given value.  Providing `None`
+    ///   clears any previously set implied volatility, useful when the volatility needs to be
+    ///   recalculated or derived from other data.
+    pub fn set_implied_volatility(&mut self, volatility: Option<Positive>) {
+        self.price_params.implied_volatility = volatility
     }
 }
 

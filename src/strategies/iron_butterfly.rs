@@ -1645,7 +1645,7 @@ mod tests_iron_butterfly_strategies {
 #[cfg(test)]
 mod tests_iron_butterfly_optimizable {
     use super::*;
-    use crate::chains::chain::OptionData;
+    use crate::chains::OptionData;
     use crate::model::types::ExpirationDate;
     use crate::pos;
     use crate::spos;

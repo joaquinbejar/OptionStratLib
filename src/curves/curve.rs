@@ -1042,7 +1042,8 @@ impl MetricsExtractor for Curve {
             .iter()
             .map(|&x| (x / std_dev).powu(3))
             .sum::<Decimal>()
-            / (Decimal::from(y_values.len()) * Decimal::ONE_HUNDRED);
+            // / (Decimal::from(y_values.len()) * Decimal::ONE_HUNDRED);
+            / (Decimal::from(y_values.len()));
 
         // Kurtosis calculation (Fisher's definition - adjust to excess kurtosis)
         let kurtosis = centered_values

@@ -1,4 +1,4 @@
-use crate::chains::chain::OptionData;
+use crate::chains::OptionData;
 use crate::constants::{IV_TOLERANCE, MAX_ITERATIONS_IV, STDDEV_MULTIPLAYER_GRAPH, ZERO};
 use crate::error::{GreeksError, OptionsError, OptionsResult, VolatilityError};
 use crate::greeks::Greeks;

@@ -355,8 +355,9 @@ impl BreakEvenable for ShortStraddle {
         let total_premium = self.net_premium_received()?;
 
         self.break_even_points.push(
-            (self.short_put.option.strike_price - (total_premium / self.short_put.option.quantity).to_dec())
-                .round_to(2),
+            (self.short_put.option.strike_price
+                - (total_premium / self.short_put.option.quantity).to_dec())
+            .round_to(2),
         );
 
         self.break_even_points.push(
@@ -578,7 +579,7 @@ impl Optimizable for ShortStraddle {
         let mut best_value = Decimal::MIN;
         let strategy_clone = self.clone();
         let options_iter = strategy_clone.filter_combinations(option_chain, side);
-        
+
         for option_data_group in options_iter {
             // Unpack the OptionDataGroup into individual options
             let both = match option_data_group {
@@ -1924,7 +1925,7 @@ mod tests_short_straddle {
         let strategy = setup();
         let option_chain = create_test_option_chain();
         let option_data = option_chain.options.first().unwrap();
-        
+
         let min_strike = option_chain.options.first().unwrap().strike_price;
         let max_strike = option_chain.options.last().unwrap().strike_price;
 

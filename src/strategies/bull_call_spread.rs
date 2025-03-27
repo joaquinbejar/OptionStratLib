@@ -1232,7 +1232,7 @@ mod tests_bull_call_spread_validation {
 #[cfg(test)]
 mod tests_bull_call_spread_optimization {
     use super::*;
-    use crate::chains::chain::OptionData;
+    use crate::chains::OptionData;
     use crate::model::types::ExpirationDate;
     use crate::spos;
     use num_traits::ToPrimitive;

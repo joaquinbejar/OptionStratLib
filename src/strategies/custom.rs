@@ -3,7 +3,8 @@
    Email: jb@taunais.com
    Date: 2/10/24
 ******************************************************************************/
-use crate::chains::chain::{OptionChain, OptionData};
+use crate::chains::OptionData;
+use crate::chains::chain::OptionChain;
 use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
 use crate::error::position::PositionError;
 use crate::error::strategies::StrategyError;

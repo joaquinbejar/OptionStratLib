@@ -4,10 +4,7 @@
    Date: 8/2/25
 ******************************************************************************/
 
-use crate::chains::chain::OptionData;
-use crate::chains::utils::OptionDataPriceParams;
-use crate::error::ChainError;
-use crate::{OptionStyle, OptionType, Options, Positive, Side};
+use crate::Options;
 use std::sync::Arc;
 
 /// Represents a combination of four option positions that form a complete option strategy.
@@ -62,105 +59,12 @@ impl PartialEq for FourOptions {
     }
 }
 
-impl OptionData {
-    /// Creates a complete set of four standard option contracts based on specified pricing parameters.
-    ///
-    /// This method constructs four option contracts (long call, short call, long put, short put)
-    /// with identical strike prices and expiration dates, all based on the same underlying asset.
-    /// The resulting options are stored within the `OptionData` instance for further analysis
-    /// or trading strategy evaluation.
-    ///
-    /// # Parameters
-    ///
-    /// * `price_params` - A reference to `OptionDataPriceParams` containing essential pricing inputs
-    ///   including underlying price, expiration date, risk-free rate, dividend yield, and optionally
-    ///   the underlying symbol and implied volatility.
-    ///
-    /// # Returns
-    ///
-    /// * `Result<(), ChainError>` - Returns `Ok(())` if option creation succeeds, or a `ChainError`
-    ///   if any issues occur during creation.
-    ///
-    pub fn create_options(
-        &mut self,
-        price_params: &OptionDataPriceParams,
-    ) -> Result<(), ChainError> {
-        let symbol = if let Some(underlying_symbol) = price_params.underlying_symbol.clone() {
-            underlying_symbol
-        } else {
-            "NA".to_string()
-        };
-        let long_call = Arc::new(Options::new(
-            OptionType::European,
-            Side::Long,
-            symbol.clone(),
-            self.strike_price,
-            price_params.expiration_date,
-            self.implied_volatility.unwrap_or(Positive::ZERO),
-            Positive::ONE,
-            price_params.underlying_price,
-            price_params.risk_free_rate,
-            OptionStyle::Call,
-            price_params.dividend_yield,
-            None,
-        ));
-        let short_call = Arc::new(Options::new(
-            OptionType::European,
-            Side::Short,
-            symbol.clone(),
-            self.strike_price,
-            price_params.expiration_date,
-            self.implied_volatility.unwrap_or(Positive::ZERO),
-            Positive::ONE,
-            price_params.underlying_price,
-            price_params.risk_free_rate,
-            OptionStyle::Call,
-            price_params.dividend_yield,
-            None,
-        ));
-        let long_put = Arc::new(Options::new(
-            OptionType::European,
-            Side::Long,
-            symbol.clone(),
-            self.strike_price,
-            price_params.expiration_date,
-            self.implied_volatility.unwrap_or(Positive::ZERO),
-            Positive::ONE,
-            price_params.underlying_price,
-            price_params.risk_free_rate,
-            OptionStyle::Put,
-            price_params.dividend_yield,
-            None,
-        ));
-        let short_put = Arc::new(Options::new(
-            OptionType::European,
-            Side::Short,
-            symbol.clone(),
-            self.strike_price,
-            price_params.expiration_date,
-            self.implied_volatility.unwrap_or(Positive::ZERO),
-            Positive::ONE,
-            price_params.underlying_price,
-            price_params.risk_free_rate,
-            OptionStyle::Put,
-            price_params.dividend_yield,
-            None,
-        ));
-        self.options = Some(Box::new(FourOptions {
-            long_call,
-            short_call,
-            long_put,
-            short_put,
-        }));
-        Ok(())
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::chains::OptionData;
+    use crate::chains::utils::OptionDataPriceParams;
     use crate::model::types::ExpirationDate;
-    use crate::{assert_pos_relative_eq, pos, spos};
+    use crate::{OptionStyle, OptionType, Positive, Side, assert_pos_relative_eq, pos, spos};
     use rust_decimal_macros::dec;
     use std::sync::Arc;
 

@@ -3,9 +3,9 @@
    Email: jb@taunais.com
    Date: 21/8/24
 ******************************************************************************/
-use crate::chains::StrategyLegs;
-use crate::chains::chain::{OptionChain, OptionData};
+use crate::chains::chain::OptionChain;
 use crate::chains::utils::OptionDataGroup;
+use crate::chains::{OptionData, StrategyLegs};
 use crate::constants::{STRIKE_PRICE_LOWER_BOUND_MULTIPLIER, STRIKE_PRICE_UPPER_BOUND_MULTIPLIER};
 use crate::error::OperationErrorKind;
 use crate::error::position::PositionError;

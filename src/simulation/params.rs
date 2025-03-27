@@ -54,23 +54,60 @@ where
     pub walker: Box<dyn WalkTypeAble<X, Y>>,
 }
 
+/// Access methods for the initial y-axis step value.
+///
+/// These methods provide different ways to access and utilize the initial
+/// value of the y-axis step, which is typically associated with the starting
+/// price or other relevant metric in a financial simulation.  The y value
+/// is wrapped in a `Ystep<Y>` which keeps track of the step index and
+/// ensures the value can be converted to a positive number.
 impl<X, Y> WalkParams<X, Y>
 where
     X: Copy + Into<Positive> + AddAssign + Display + Sized,
     Y: Into<Positive> + Display + Sized + Clone,
 {
+    /// Returns an immutable reference to the initial y-axis value.
+    ///
+    /// This provides direct access to the underlying value without copying.
+    ///
+    /// # Returns
+    ///
+    /// An immutable reference to the initial y-axis value of type `&Y`.
     pub fn y(&self) -> &Y {
         self.init_step.y.value()
     }
 
+    /// Returns an immutable reference to the `Ystep<Y>` object.
+    ///
+    /// This allows access to the full `Ystep` functionality, including
+    /// the step index.
+    ///
+    /// # Returns
+    ///
+    /// An immutable reference to the initial `Ystep<Y>` object.
     pub fn ystep_ref(&self) -> &Ystep<Y> {
         &self.init_step.y
     }
 
+    /// Returns a copy of the `Ystep<Y>` object.
+    ///
+    /// This creates a new independent copy of the `Ystep`.
+    ///
+    /// # Returns
+    ///
+    /// A copy of the initial `Ystep<Y>` object.
     pub fn ystep(&self) -> Ystep<Y> {
         self.init_step.y.clone()
     }
 
+    /// Returns the initial y-axis step value as a `Positive` number.
+    ///
+    /// This ensures the value is positive, which is often a requirement
+    /// in financial calculations.
+    ///
+    /// # Returns
+    ///
+    /// The initial y-axis value as a `Positive` number.
     pub fn ystep_as_positive(&self) -> Positive {
         self.ystep_ref().positive()
     }

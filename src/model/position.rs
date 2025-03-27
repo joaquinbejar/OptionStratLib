@@ -4,7 +4,7 @@
    Date: 18/8/24
 ******************************************************************************/
 use crate::Options;
-use crate::chains::chain::OptionData;
+use crate::chains::OptionData;
 use crate::error::position::PositionValidationErrorKind;
 use crate::error::{GreeksError, PositionError};
 use crate::greeks::Greeks;
