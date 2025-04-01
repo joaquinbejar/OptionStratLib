@@ -651,13 +651,16 @@ impl Optimizable for ShortStrangle {
             println!("Call: {}\nPut: {}", call, put);
             panic!("Invalid options");
         }
+        let implied_volatility = call.implied_volatility.unwrap();
+        assert!(implied_volatility <= Positive::ONE);
+
         ShortStrangle::new(
             chain.symbol.clone(),
             chain.underlying_price,
             call.strike_price,
             put.strike_price,
             self.short_call.option.expiration_date,
-            call.implied_volatility.unwrap() / 100.0,
+            implied_volatility,
             self.short_call.option.risk_free_rate,
             self.short_call.option.dividend_yield,
             self.short_call.option.quantity,
@@ -1528,13 +1531,15 @@ impl Optimizable for LongStrangle {
             StrategyLegs::TwoLegs { first, second } => (first, second),
             _ => panic!("Invalid number of legs for this strategy"),
         };
+        let implied_volatility = call.implied_volatility.unwrap();
+        assert!(implied_volatility <= Positive::ONE);
         LongStrangle::new(
             chain.symbol.clone(),
             chain.underlying_price,
             call.strike_price,
             put.strike_price,
             self.long_call.option.expiration_date,
-            call.implied_volatility.unwrap() / 100.0,
+            implied_volatility,
             self.long_call.option.risk_free_rate,
             self.long_call.option.dividend_yield,
             self.long_call.option.quantity,

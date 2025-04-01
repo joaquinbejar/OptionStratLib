@@ -231,3 +231,4 @@ pub use legs::StrategyLegs;
 pub use optiondata::OptionData;
 pub use options::{DeltasInStrike, OptionsInStrike};
 pub use rnd::{RNDAnalysis, RNDParameters, RNDResult};
+pub use utils::OptionChainBuildParams;

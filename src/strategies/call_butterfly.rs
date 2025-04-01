@@ -704,6 +704,8 @@ impl Optimizable for CallButterfly {
         if !long_call.validate() || !short_call_low.validate() || !short_call_high.validate() {
             panic!("Invalid options");
         }
+        let implied_volatility = long_call.implied_volatility.unwrap();
+        assert!(implied_volatility<= Positive::ONE);
         CallButterfly::new(
             option_chain.symbol.clone(),
             option_chain.underlying_price,
@@ -711,7 +713,7 @@ impl Optimizable for CallButterfly {
             short_call_low.strike_price,
             short_call_high.strike_price,
             self.long_call.option.expiration_date,
-            long_call.implied_volatility.unwrap(),
+            implied_volatility,
             self.long_call.option.risk_free_rate,
             self.long_call.option.dividend_yield,
             self.long_call.option.quantity,

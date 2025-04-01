@@ -3,6 +3,7 @@
    Email: jb@taunais.com
    Date: 27/3/25
 ******************************************************************************/
+use core::option::Option;
 use crate::chains::OptionChain;
 use crate::simulation::WalkParams;
 use crate::simulation::steps::{Step, Ystep};

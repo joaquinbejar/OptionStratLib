@@ -347,7 +347,10 @@ impl OptionData {
         let implied_volatility = match price_params.implied_volatility {
             Some(iv) => iv,
             None => match self.implied_volatility {
-                Some(iv) => iv / Positive::HUNDRED,
+                Some(iv) => {
+                    assert!(iv <= Positive::ONE, "Implied volatility must be <= 1");
+                    iv
+                } ,
                 None => {
                     return Err(ChainError::invalid_volatility(
                         None,
@@ -894,7 +897,8 @@ impl OptionData {
             match option.calculate_implied_volatility(call_price.to_dec()) {
                 Ok(iv) => {
                     debug!("Successfully calculated call IV: {}", iv);
-                    self.implied_volatility = Some(iv * Positive::HUNDRED);
+                    assert!(iv <= Positive::ONE, "Volatility should be <= 1");
+                    self.implied_volatility = Some(iv);
                     return Ok(());
                 }
                 Err(e) => {
@@ -918,7 +922,7 @@ impl OptionData {
             match option.calculate_implied_volatility(put_price.to_dec()) {
                 Ok(iv) => {
                     debug!("Successfully calculated put IV: {}", iv);
-                    self.implied_volatility = Some(iv * Positive::HUNDRED);
+                    self.implied_volatility = Some(iv);
                     return Ok(());
                 }
                 Err(e) => {
@@ -946,7 +950,7 @@ impl OptionData {
     pub(super) fn check_and_convert_implied_volatility(&mut self) {
         if let Some(iv) = self.implied_volatility {
             if iv > pos!(1.0) {
-                self.implied_volatility = Some(iv / pos!(100.0));
+                self.implied_volatility = Some(iv / Positive::HUNDRED);
             }
         }
     }

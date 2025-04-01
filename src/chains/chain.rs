@@ -5162,13 +5162,13 @@ mod tests_option_data_implied_volatility {
         assert!(result.is_ok(), "Failed to calculate IV: {:?}", result);
         assert!(option_data.implied_volatility.is_some());
         assert_pos_relative_eq!(
-            option_data.implied_volatility.unwrap() / pos!(100.0),
+            option_data.implied_volatility.unwrap(),
             pos!(0.13008),
             pos!(0.0001)
         );
 
-        let iv = option_data.implied_volatility.unwrap() / pos!(100.0);
-        assert!(iv > pos!(0.0) && iv < pos!(2.0));
+        let iv = option_data.implied_volatility.unwrap();
+        assert!(iv > pos!(0.0) && iv <= pos!(1.0));
     }
 
     #[test]
@@ -5457,9 +5457,9 @@ mod tests_chain_implied_volatility {
 
         for option in chain.options.iter() {
             assert_pos_relative_eq!(
-                option.implied_volatility.unwrap() / pos!(100.0),
+                option.implied_volatility.unwrap() ,
                 original_iv.unwrap(),
-                pos!(0.001)
+                pos!(0.1)
             );
         }
     }

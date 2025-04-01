@@ -747,14 +747,17 @@ impl Optimizable for IronButterfly {
                 second: short_strike,
                 third: _,
                 fourth: long_call,
-            } => IronButterfly::new(
+            } => {
+                let implied_volatility = short_strike.implied_volatility.unwrap();
+                assert!(implied_volatility<= Positive::ONE);
+                IronButterfly::new(
                 chain.symbol.clone(),
                 chain.underlying_price,
                 short_strike.strike_price,
                 long_call.strike_price,
                 long_put.strike_price,
                 self.short_call.option.expiration_date,
-                short_strike.implied_volatility.unwrap() / 100.0,
+                implied_volatility,
                 self.short_call.option.risk_free_rate,
                 self.short_call.option.dividend_yield,
                 self.short_call.option.quantity,
@@ -764,7 +767,7 @@ impl Optimizable for IronButterfly {
                 long_put.put_ask.unwrap(),
                 self.fees().unwrap() / 8.0,
                 self.fees().unwrap() / 8.0,
-            ),
+            )},
             _ => panic!("Invalid number of legs for Iron Butterfly strategy"),
         }
     }
