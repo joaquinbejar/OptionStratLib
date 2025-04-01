@@ -606,7 +606,7 @@ impl Optimizable for BearCallSpread {
             _ => panic!("Invalid number of legs for this strategy"),
         };
         let implied_volatility = short.implied_volatility.unwrap();
-        assert!(implied_volatility<= Positive::ONE);
+        assert!(implied_volatility <= Positive::ONE);
         BearCallSpread::new(
             chain.symbol.clone(),
             chain.underlying_price,

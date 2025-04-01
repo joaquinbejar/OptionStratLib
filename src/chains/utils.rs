@@ -8,12 +8,12 @@ use crate::chains::OptionData;
 use crate::error::chains::ChainError;
 use crate::model::types::ExpirationDate;
 use crate::model::utils::ToRound;
-use rust_decimal::Decimal;
-use serde::{Deserialize, Serialize};
-use std::fmt::Display;
 use num_traits::FromPrimitive;
+use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
+use serde::{Deserialize, Serialize};
 use std::fmt;
+use std::fmt::Display;
 
 /// Enum representing a grouping of option data references for analysis or display purposes.
 ///
@@ -128,8 +128,6 @@ pub struct OptionChainBuildParams {
     /// Core pricing parameters required for option valuation
     pub(crate) price_params: OptionDataPriceParams,
 }
-
-
 
 #[allow(clippy::too_many_arguments)]
 impl OptionChainBuildParams {
@@ -365,7 +363,11 @@ impl OptionDataPriceParams {
         underlying_symbol: Option<String>,
     ) -> Self {
         if implied_volatility.is_some() {
-            assert!(implied_volatility <= Some(Positive::ONE), "Implied volatility must be between 0 and 1");
+            assert!(
+                implied_volatility <= Some(Positive::ONE),
+                "Implied volatility: {} must be between 0 and 1",
+                implied_volatility.unwrap()
+            );
         }
         Self {
             underlying_price,
@@ -624,7 +626,7 @@ pub(crate) fn adjust_volatility(
     let smile: Decimal = skew_factor * Decimal::from_f64(atm_distance.powi(2)).unwrap();
 
     let volatility_skew = volatility.unwrap() * (Decimal::ONE + skew + smile);
-    Some(volatility_skew)
+    Some(volatility_skew.min(Positive::ONE))
 }
 
 #[allow(dead_code)]

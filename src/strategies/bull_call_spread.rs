@@ -597,7 +597,7 @@ impl Optimizable for BullCallSpread {
             _ => panic!("Invalid number of legs for this strategy"),
         };
         let implied_volatility = long.implied_volatility.unwrap();
-        assert!(implied_volatility<= Positive::ONE);
+        assert!(implied_volatility <= Positive::ONE);
         BullCallSpread::new(
             chain.symbol.clone(),
             chain.underlying_price,

@@ -30,25 +30,46 @@ pub struct OhlcvCandle {
 #[derive(Debug)]
 pub enum OhlcvError {
     /// IO errors
-    IoError { reason: String },
+    IoError {
+        /// Reason for the error
+        reason: String,
+    },
 
     /// ZIP errors
-    ZipError { reason: String },
+    ZipError {
+        /// Reason for the error
+        reason: String,
+    },
 
     /// CSV parsing errors
-    CsvError { reason: String },
+    CsvError {
+        /// Reason for the error
+        reason: String,
+    },
 
     /// Date parsing errors
-    DateParseError { reason: String },
+    DateParseError {
+        /// Reason for the error
+        reason: String,
+    },
 
     /// Decimal parsing errors
-    DecimalParseError { reason: String },
+    DecimalParseError {
+        /// Reason for the error
+        reason: String,
+    },
 
     /// Invalid parameters error
-    InvalidParameter { reason: String },
+    InvalidParameter {
+        /// Reason for the error
+        reason: String,
+    },
 
     /// General error
-    OtherError { reason: String },
+    OtherError {
+        /// Reason for the error
+        reason: String,
+    },
 }
 
 impl std::fmt::Display for OhlcvError {
@@ -160,7 +181,8 @@ pub fn read_ohlcv_from_zip(
         // Skip header if present (line 0)
         if line_num == 0
             && line_result
-                .as_ref().is_ok_and(|l| l.contains("date") || l.contains("Date"))
+                .as_ref()
+                .is_ok_and(|l| l.contains("date") || l.contains("Date"))
         {
             continue;
         }
@@ -205,5 +227,3 @@ pub fn read_ohlcv_from_zip(
 
     Ok(candles)
 }
-
-

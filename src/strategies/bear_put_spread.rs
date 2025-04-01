@@ -587,7 +587,7 @@ impl Optimizable for BearPutSpread {
             _ => panic!("Invalid number of legs for this strategy"),
         };
         let implied_volatility = long.implied_volatility.unwrap();
-        assert!(implied_volatility<= Positive::ONE);
+        assert!(implied_volatility <= Positive::ONE);
         BearPutSpread::new(
             chain.symbol.clone(),
             chain.underlying_price,
@@ -1422,7 +1422,7 @@ mod tests_bear_put_spread_optimization {
         assert!(new_strategy.validate());
         assert_eq!(new_strategy.long_put.option.strike_price, pos!(105.0));
         assert_eq!(new_strategy.short_put.option.strike_price, pos!(95.0));
-        assert_eq!(new_strategy.long_put.option.implied_volatility, 0.2); 
+        assert_eq!(new_strategy.long_put.option.implied_volatility, 0.2);
 
         // Verify premiums are set correctly
         assert_eq!(new_strategy.long_put.premium, 1.7); // put_ask from long option

@@ -1,28 +1,26 @@
+use optionstratlib::chains::OptionChain;
+use optionstratlib::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
+use optionstratlib::pnl::utils::PnLCalculator;
+use optionstratlib::strategies::base::Optimizable;
+use optionstratlib::strategies::{FindOptimalSide, ShortStrangle};
+use optionstratlib::utils::{read_ohlcv_from_zip, setup_logger};
+use optionstratlib::{ExpirationDate, Positive, pos, spos};
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use tracing::info;
-use optionstratlib::chains::OptionChain;
-use optionstratlib::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
-use optionstratlib::{pos, spos, ExpirationDate, Positive};
-use optionstratlib::pnl::utils::PnLCalculator;
-use optionstratlib::strategies::{FindOptimalSide, ShortStrangle};
-use optionstratlib::strategies::base::Optimizable;
-use optionstratlib::utils::{read_ohlcv_from_zip, setup_logger};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     setup_logger();
     let ohlc = read_ohlcv_from_zip("examples/Data/gc-1m.zip", "01/05/2007", "08/05/2008")?;
-    let close_prices = ohlc
-        .iter()
-        .map(|candle| candle.close)
-        .collect::<Vec<_>>();
+    let close_prices = ohlc.iter().map(|candle| candle.close).collect::<Vec<_>>();
 
     let symbol = "GC".to_string();
     let underlying_price = Positive::from(close_prices[0]);
     let expiration_date = ExpirationDate::Days(pos!(7.0));
     let chain_params = OptionChainBuildParams::new(
         symbol.clone(),
-        None, 30,
+        None,
+        30,
         pos!(1.0),
         dec!(0.00003),
         pos!(0.02),
@@ -58,8 +56,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
     strategy.best_area(&option_chain, FindOptimalSide::Center);
     info!("Strategy:  {:#?}", strategy);
-    let iv = option_chain.atm_implied_volatility()?.unwrap_or(Positive::ZERO);
-    let pnl = strategy.calculate_pnl(&underlying_price, expiration_date, &iv )?;
+    let iv = option_chain
+        .atm_implied_volatility()?
+        .unwrap_or(Positive::ZERO);
+    let pnl = strategy.calculate_pnl(&underlying_price, expiration_date, &iv)?;
     info!("PnL: {:#?}", pnl);
     Ok(())
 }

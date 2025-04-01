@@ -350,7 +350,7 @@ impl OptionData {
                 Some(iv) => {
                     assert!(iv <= Positive::ONE, "Implied volatility must be <= 1");
                     iv
-                } ,
+                }
                 None => {
                     return Err(ChainError::invalid_volatility(
                         None,
@@ -897,7 +897,11 @@ impl OptionData {
             match option.calculate_implied_volatility(call_price.to_dec()) {
                 Ok(iv) => {
                     debug!("Successfully calculated call IV: {}", iv);
-                    assert!(iv <= Positive::ONE, "Volatility should be <= 1");
+                    assert!(
+                        iv <= Positive::ONE,
+                        "Volatility should be <= 1 and is: {}",
+                        iv
+                    );
                     self.implied_volatility = Some(iv);
                     return Ok(());
                 }

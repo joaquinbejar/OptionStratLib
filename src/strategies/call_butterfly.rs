@@ -705,7 +705,7 @@ impl Optimizable for CallButterfly {
             panic!("Invalid options");
         }
         let implied_volatility = long_call.implied_volatility.unwrap();
-        assert!(implied_volatility<= Positive::ONE);
+        assert!(implied_volatility <= Positive::ONE);
         CallButterfly::new(
             option_chain.symbol.clone(),
             option_chain.underlying_price,

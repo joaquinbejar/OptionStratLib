@@ -617,7 +617,7 @@ impl Optimizable for ShortStraddle {
             panic!("Invalid options");
         }
         let implied_volatility = call.implied_volatility.unwrap();
-        assert!(implied_volatility<= Positive::ONE);
+        assert!(implied_volatility <= Positive::ONE);
         ShortStraddle::new(
             chain.symbol.clone(),
             chain.underlying_price,
@@ -1413,7 +1413,7 @@ impl Optimizable for LongStraddle {
             _ => panic!("Invalid number of legs for this strategy"),
         };
         let implied_volatility = call.implied_volatility.unwrap();
-        assert!(implied_volatility<= Positive::ONE);
+        assert!(implied_volatility <= Positive::ONE);
         LongStraddle::new(
             chain.symbol.clone(),
             chain.underlying_price,
