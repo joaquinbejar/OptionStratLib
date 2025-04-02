@@ -216,7 +216,7 @@ impl Transaction {
     /// # Returns
     ///
     /// A Result containing the PnL or an error
-    pub fn calculate_pnl(&self) -> Result<PnL, TransactionError> {
+    pub fn pnl(&self) -> Result<PnL, TransactionError> {
         match self.status {
             TransactionStatus::Open => self.calculate_open_pnl(),
             TransactionStatus::Closed
@@ -316,7 +316,7 @@ mod tests {
         );
 
         // 2. Calculate initial PnL (should be negative as we paid premium + fees)
-        let initial_pnl = long_call.calculate_pnl().unwrap();
+        let initial_pnl = long_call.pnl().unwrap();
         assert!(initial_pnl.realized.unwrap() < Decimal::ZERO);
         assert_eq!(initial_pnl.realized.unwrap(), dec!(-6.0)); // Premium + fees = -$6.00
 
@@ -341,7 +341,7 @@ mod tests {
         );
 
         // 4. Calculate closing PnL (should be positive as closing premium > initial premium + fees)
-        let closing_pnl = closed_call.calculate_pnl().unwrap();
+        let closing_pnl = closed_call.pnl().unwrap();
         assert!(closing_pnl.realized.unwrap() > Decimal::ZERO);
         assert_eq!(closing_pnl.realized.unwrap(), dec!(11.0)); // Selling premium - fees = $12.00 - $1.00 = $11.00
 
@@ -369,7 +369,7 @@ mod tests {
         );
 
         // Calculate initial PnL
-        let initial_pnl = long_call.calculate_pnl().unwrap();
+        let initial_pnl = long_call.pnl().unwrap();
         assert_eq!(initial_pnl.realized.unwrap(), dec!(-6.0));
 
         // Price has decreased from $100 to $95
@@ -392,7 +392,7 @@ mod tests {
         );
 
         // Calculate closing PnL
-        let closing_pnl = closed_call.calculate_pnl().unwrap();
+        let closing_pnl = closed_call.pnl().unwrap();
         assert_eq!(closing_pnl.realized.unwrap(), dec!(1.0)); // Selling premium - fees = $2.00 - $1.00 = $1.00
 
         // Verify total loss
@@ -420,7 +420,7 @@ mod tests {
         );
 
         // 2. Calculate initial PnL (should be positive as we receive premium - fees)
-        let initial_pnl = short_call.calculate_pnl().unwrap();
+        let initial_pnl = short_call.pnl().unwrap();
         assert!(initial_pnl.realized.unwrap() > Decimal::ZERO);
         assert_eq!(initial_pnl.realized.unwrap(), dec!(4.0)); // Premium - fees = $5.00 - $1.00 = $4.00
 
@@ -444,7 +444,7 @@ mod tests {
         );
 
         // 5. Calculate closing PnL (should be negative as we're paying to close)
-        let closing_pnl = closed_call.calculate_pnl().unwrap();
+        let closing_pnl = closed_call.pnl().unwrap();
         assert_eq!(closing_pnl.realized.unwrap(), dec!(-3.0)); // Premium paid + fees = $2.00 + $1.00 = $3.00
 
         // 6. Verify total profit
@@ -471,7 +471,7 @@ mod tests {
         );
 
         // 2. Calculate initial PnL
-        let initial_pnl = short_call.calculate_pnl().unwrap();
+        let initial_pnl = short_call.pnl().unwrap();
         assert_eq!(initial_pnl.realized.unwrap(), dec!(4.0)); // Premium - fees = $4.00
 
         // 3. Simulate price increase from $100 to $110 (unfavorable for short call)
@@ -494,7 +494,7 @@ mod tests {
         );
 
         // 5. Calculate closing PnL
-        let closing_pnl = closed_call.calculate_pnl().unwrap();
+        let closing_pnl = closed_call.pnl().unwrap();
         assert_eq!(closing_pnl.realized.unwrap(), dec!(-13.0)); // Premium paid + fees = $12.00 + $1.00 = $13.00
 
         // 6. Verify total loss
@@ -521,7 +521,7 @@ mod tests {
         );
 
         // 2. Calculate initial PnL (should be negative as we paid premium + fees)
-        let initial_pnl = long_put.calculate_pnl().unwrap();
+        let initial_pnl = long_put.pnl().unwrap();
         assert!(initial_pnl.realized.unwrap() < Decimal::ZERO);
         assert_eq!(initial_pnl.realized.unwrap(), dec!(-5.0)); // Premium + fees = -$5.00
 
@@ -545,7 +545,7 @@ mod tests {
         );
 
         // 5. Calculate closing PnL
-        let closing_pnl = closed_put.calculate_pnl().unwrap();
+        let closing_pnl = closed_put.pnl().unwrap();
         assert_eq!(closing_pnl.realized.unwrap(), dec!(9.0)); // Selling premium - fees = $10.00 - $1.00 = $9.00
 
         // 6. Verify total profit
@@ -572,7 +572,7 @@ mod tests {
         );
 
         // 2. Calculate initial PnL
-        let initial_pnl = long_put.calculate_pnl().unwrap();
+        let initial_pnl = long_put.pnl().unwrap();
         assert_eq!(initial_pnl.realized.unwrap(), dec!(-5.0)); // Premium + fees = -$5.00
 
         // 3. Simulate price increase from $100 to $105 (unfavorable for long put)
@@ -595,7 +595,7 @@ mod tests {
         );
 
         // 5. Calculate closing PnL
-        let closing_pnl = closed_put.calculate_pnl().unwrap();
+        let closing_pnl = closed_put.pnl().unwrap();
         assert_eq!(closing_pnl.realized.unwrap(), dec!(1.0)); // Selling premium - fees = $2.00 - $1.00 = $1.00
 
         // 6. Verify total loss
@@ -622,7 +622,7 @@ mod tests {
         );
 
         // 2. Calculate initial PnL (should be positive as we receive premium - fees)
-        let initial_pnl = short_put.calculate_pnl().unwrap();
+        let initial_pnl = short_put.pnl().unwrap();
         assert!(initial_pnl.realized.unwrap() > Decimal::ZERO);
         assert_eq!(initial_pnl.realized.unwrap(), dec!(3.0)); // Premium - fees = $4.00 - $1.00 = $3.00
 
@@ -646,7 +646,7 @@ mod tests {
         );
 
         // 5. Calculate closing PnL
-        let closing_pnl = closed_put.calculate_pnl().unwrap();
+        let closing_pnl = closed_put.pnl().unwrap();
         assert_eq!(closing_pnl.realized.unwrap(), dec!(-2.5)); // Premium paid + fees = $1.50 + $1.00 = $2.50
 
         // 6. Verify total profit
@@ -673,7 +673,7 @@ mod tests {
         );
 
         // 2. Calculate initial PnL
-        let initial_pnl = short_put.calculate_pnl().unwrap();
+        let initial_pnl = short_put.pnl().unwrap();
         assert_eq!(initial_pnl.realized.unwrap(), dec!(3.0)); // Premium - fees = $3.00
 
         // 3. Simulate price decrease from $100 to $90 (unfavorable for short put)
@@ -696,7 +696,7 @@ mod tests {
         );
 
         // 5. Calculate closing PnL
-        let closing_pnl = closed_put.calculate_pnl().unwrap();
+        let closing_pnl = closed_put.pnl().unwrap();
         assert_eq!(closing_pnl.realized.unwrap(), dec!(-11.0)); // Premium paid + fees = $10.00 + $1.00 = $11.00
 
         // 6. Verify total loss
