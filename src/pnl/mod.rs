@@ -105,6 +105,11 @@
 /// * [`model`] - Core data structures for financial analysis and PnL modeling
 pub mod model;
 
+mod traits;
+mod transaction;
 /// * [`utils`] - Utility functions for data manipulation and calculations
 pub mod utils;
-mod transaction;
+
+pub use traits::{PnLCalculator, TransactionAble};
+pub use transaction::{Transaction, TransactionStatus};
+pub use utils::PnL;

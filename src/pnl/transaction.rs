@@ -144,7 +144,6 @@ impl Transaction {
     pub fn option_style(&self) -> OptionStyle {
         self.option_style
     }
-    
 
     /// Gets the quantity of contracts.
     pub fn quantity(&self) -> Positive {
@@ -225,7 +224,7 @@ impl Transaction {
             | TransactionStatus::Assigned => self.calculate_closed_pnl(),
         }
     }
-    
+
     /// Calculates PnL for an open position.
     ///
     /// # Parameters
@@ -241,7 +240,7 @@ impl Transaction {
                 message: "Unsupported option type in Transaction".to_string(),
             });
         }
-        
+
         let realized = match self.side {
             Side::Long => -(self.premium + self.fees).to_dec() * self.quantity,
             Side::Short => (self.premium - self.fees).to_dec() * self.quantity,
@@ -255,7 +254,7 @@ impl Transaction {
             Utc::now(),
         ))
     }
-    
+
     /// Calculates PnL for a closed position.
     ///
     /// # Parameters
@@ -271,7 +270,7 @@ impl Transaction {
                 message: "Unsupported option type in Transaction".to_string(),
             });
         }
-        
+
         let realized = match self.side {
             Side::Short => -(self.premium + self.fees).to_dec() * self.quantity,
             Side::Long => (self.premium - self.fees).to_dec() * self.quantity,
@@ -284,10 +283,8 @@ impl Transaction {
             self.fees,
             Utc::now(),
         ))
-        
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -302,17 +299,17 @@ mod tests {
         // 1. Create an open long call position
         let open_date = Utc::now();
         let mut long_call = Transaction::new(
-            TransactionStatus::Open,              // Initial status is Open
-            Some(open_date),                      // Transaction date
-            OptionType::European,                 // European option
-            Side::Long,                           // Long position
-            OptionStyle::Call,                    // Call option
-            pos!(1.0),                            // 1 contract
-            pos!(5.0),                            // Premium paid: $5.00
-            pos!(1.0),                            // Fees: $1.00
-            Some(pos!(100.0)),                    // Underlying price at open: $100.00
-            Some(pos!(30.0)),                     // 30 days to expiration
-            Some(pos!(0.2)),                      // IV: 20%
+            TransactionStatus::Open, // Initial status is Open
+            Some(open_date),         // Transaction date
+            OptionType::European,    // European option
+            Side::Long,              // Long position
+            OptionStyle::Call,       // Call option
+            pos!(1.0),               // 1 contract
+            pos!(5.0),               // Premium paid: $5.00
+            pos!(1.0),               // Fees: $1.00
+            Some(pos!(100.0)),       // Underlying price at open: $100.00
+            Some(pos!(30.0)),        // 30 days to expiration
+            Some(pos!(0.2)),         // IV: 20%
         );
 
         // 2. Calculate initial PnL (should be negative as we paid premium + fees)
@@ -327,17 +324,17 @@ mod tests {
         // Close the position
         let closed_date = Utc::now();
         let closed_call = Transaction::new(
-            TransactionStatus::Closed,            // Status is now Closed
-            Some(closed_date),                    // Closing date
-            OptionType::European,                 // European option
-            Side::Long,                           // Long position
-            OptionStyle::Call,                    // Call option
-            pos!(1.0),                            // 1 contract
-            pos!(12.0),                           // Closing premium: $12.00 (higher due to price increase)
-            pos!(1.0),                            // Closing fees: $1.00
-            Some(pos!(110.0)),                    // Underlying price at close: $110.00
-            Some(pos!(20.0)),                     // 20 days to expiration (10 days elapsed)
-            Some(pos!(0.22)),                     // IV: 22%
+            TransactionStatus::Closed, // Status is now Closed
+            Some(closed_date),         // Closing date
+            OptionType::European,      // European option
+            Side::Long,                // Long position
+            OptionStyle::Call,         // Call option
+            pos!(1.0),                 // 1 contract
+            pos!(12.0),                // Closing premium: $12.00 (higher due to price increase)
+            pos!(1.0),                 // Closing fees: $1.00
+            Some(pos!(110.0)),         // Underlying price at close: $110.00
+            Some(pos!(20.0)),          // 20 days to expiration (10 days elapsed)
+            Some(pos!(0.22)),          // IV: 22%
         );
 
         // 4. Calculate closing PnL (should be positive as closing premium > initial premium + fees)
@@ -361,8 +358,8 @@ mod tests {
             Side::Long,
             OptionStyle::Call,
             pos!(1.0),
-            pos!(5.0),                // Premium paid: $5.00
-            pos!(1.0),                // Fees: $1.00
+            pos!(5.0), // Premium paid: $5.00
+            pos!(1.0), // Fees: $1.00
             Some(pos!(100.0)),
             Some(pos!(30.0)),
             Some(pos!(0.2)),
@@ -384,8 +381,8 @@ mod tests {
             Side::Long,
             OptionStyle::Call,
             pos!(1.0),
-            pos!(2.0),                // Closing premium: $2.00 (lower due to price decrease)
-            pos!(1.0),                // Closing fees: $1.00
+            pos!(2.0), // Closing premium: $2.00 (lower due to price decrease)
+            pos!(1.0), // Closing fees: $1.00
             Some(pos!(95.0)),
             Some(pos!(20.0)),
             Some(pos!(0.18)),
@@ -399,7 +396,6 @@ mod tests {
         let total_profit = closing_pnl.realized.unwrap() + initial_pnl.realized.unwrap();
         assert_eq!(total_profit, dec!(-5.0)); // Net loss of $5.00 ($1.00 - $6.00)
     }
-    
 
     #[test]
     fn test_short_call_position_profitable_close() {
@@ -409,14 +405,14 @@ mod tests {
             TransactionStatus::Open,
             Some(open_date),
             OptionType::European,
-            Side::Short,              // Short position
-            OptionStyle::Call,        // Call option
-            pos!(1.0),                // 1 contract
-            pos!(5.0),                // Premium received: $5.00
-            pos!(1.0),                // Fees: $1.00
-            Some(pos!(100.0)),        // Underlying price at open: $100.00
-            Some(pos!(30.0)),         // 30 days to expiration
-            Some(pos!(0.2)),          // IV: 20%
+            Side::Short,       // Short position
+            OptionStyle::Call, // Call option
+            pos!(1.0),         // 1 contract
+            pos!(5.0),         // Premium received: $5.00
+            pos!(1.0),         // Fees: $1.00
+            Some(pos!(100.0)), // Underlying price at open: $100.00
+            Some(pos!(30.0)),  // 30 days to expiration
+            Some(pos!(0.2)),   // IV: 20%
         );
 
         // 2. Calculate initial PnL (should be positive as we receive premium - fees)
@@ -436,8 +432,8 @@ mod tests {
             Side::Short,
             OptionStyle::Call,
             pos!(1.0),
-            pos!(2.0),                // Closing premium: $2.00 (lower due to price decrease)
-            pos!(1.0),                // Closing fees: $1.00
+            pos!(2.0), // Closing premium: $2.00 (lower due to price decrease)
+            pos!(1.0), // Closing fees: $1.00
             Some(pos!(95.0)),
             Some(pos!(20.0)),
             Some(pos!(0.18)),
@@ -463,8 +459,8 @@ mod tests {
             Side::Short,
             OptionStyle::Call,
             pos!(1.0),
-            pos!(5.0),                // Premium received: $5.00
-            pos!(1.0),                // Fees: $1.00
+            pos!(5.0), // Premium received: $5.00
+            pos!(1.0), // Fees: $1.00
             Some(pos!(100.0)),
             Some(pos!(30.0)),
             Some(pos!(0.2)),
@@ -486,8 +482,8 @@ mod tests {
             Side::Short,
             OptionStyle::Call,
             pos!(1.0),
-            pos!(12.0),            // Closing premium: $12.00 (higher due to price increase)
-            pos!(1.0),                // Closing fees: $1.00
+            pos!(12.0), // Closing premium: $12.00 (higher due to price increase)
+            pos!(1.0),  // Closing fees: $1.00
             Some(pos!(110.0)),
             Some(pos!(20.0)),
             Some(pos!(0.22)),
@@ -510,14 +506,14 @@ mod tests {
             TransactionStatus::Open,
             Some(open_date),
             OptionType::European,
-            Side::Long,               // Long position
-            OptionStyle::Put,         // Put option
-            pos!(1.0),                // 1 contract
-            pos!(4.0),                // Premium paid: $4.00
-            pos!(1.0),                // Fees: $1.00
-            Some(pos!(100.0)),        // Underlying price at open: $100.00
-            Some(pos!(30.0)),         // 30 days to expiration
-            Some(pos!(0.2)),          // IV: 20%
+            Side::Long,        // Long position
+            OptionStyle::Put,  // Put option
+            pos!(1.0),         // 1 contract
+            pos!(4.0),         // Premium paid: $4.00
+            pos!(1.0),         // Fees: $1.00
+            Some(pos!(100.0)), // Underlying price at open: $100.00
+            Some(pos!(30.0)),  // 30 days to expiration
+            Some(pos!(0.2)),   // IV: 20%
         );
 
         // 2. Calculate initial PnL (should be negative as we paid premium + fees)
@@ -537,8 +533,8 @@ mod tests {
             Side::Long,
             OptionStyle::Put,
             pos!(1.0),
-            pos!(10.0),               // Closing premium: $10.00 (higher due to price decrease)
-            pos!(1.0),                // Closing fees: $1.00
+            pos!(10.0), // Closing premium: $10.00 (higher due to price decrease)
+            pos!(1.0),  // Closing fees: $1.00
             Some(pos!(90.0)),
             Some(pos!(20.0)),
             Some(pos!(0.25)),
@@ -564,8 +560,8 @@ mod tests {
             Side::Long,
             OptionStyle::Put,
             pos!(1.0),
-            pos!(4.0),                // Premium paid: $4.00
-            pos!(1.0),                // Fees: $1.00
+            pos!(4.0), // Premium paid: $4.00
+            pos!(1.0), // Fees: $1.00
             Some(pos!(100.0)),
             Some(pos!(30.0)),
             Some(pos!(0.2)),
@@ -587,8 +583,8 @@ mod tests {
             Side::Long,
             OptionStyle::Put,
             pos!(1.0),
-            pos!(2.0),                // Closing premium: $2.00 (lower due to price increase)
-            pos!(1.0),                // Closing fees: $1.00
+            pos!(2.0), // Closing premium: $2.00 (lower due to price increase)
+            pos!(1.0), // Closing fees: $1.00
             Some(pos!(105.0)),
             Some(pos!(20.0)),
             Some(pos!(0.18)),
@@ -611,14 +607,14 @@ mod tests {
             TransactionStatus::Open,
             Some(open_date),
             OptionType::European,
-            Side::Short,              // Short position
-            OptionStyle::Put,         // Put option
-            pos!(1.0),                // 1 contract
-            pos!(4.0),                // Premium received: $4.00
-            pos!(1.0),                // Fees: $1.00
-            Some(pos!(100.0)),        // Underlying price at open: $100.00
-            Some(pos!(30.0)),         // 30 days to expiration
-            Some(pos!(0.2)),          // IV: 20%
+            Side::Short,       // Short position
+            OptionStyle::Put,  // Put option
+            pos!(1.0),         // 1 contract
+            pos!(4.0),         // Premium received: $4.00
+            pos!(1.0),         // Fees: $1.00
+            Some(pos!(100.0)), // Underlying price at open: $100.00
+            Some(pos!(30.0)),  // 30 days to expiration
+            Some(pos!(0.2)),   // IV: 20%
         );
 
         // 2. Calculate initial PnL (should be positive as we receive premium - fees)
@@ -638,8 +634,8 @@ mod tests {
             Side::Short,
             OptionStyle::Put,
             pos!(1.0),
-            pos!(1.5),                // Closing premium: $1.50 (lower due to price increase)
-            pos!(1.0),                // Closing fees: $1.00
+            pos!(1.5), // Closing premium: $1.50 (lower due to price increase)
+            pos!(1.0), // Closing fees: $1.00
             Some(pos!(105.0)),
             Some(pos!(20.0)),
             Some(pos!(0.15)),
@@ -665,8 +661,8 @@ mod tests {
             Side::Short,
             OptionStyle::Put,
             pos!(1.0),
-            pos!(4.0),                // Premium received: $4.00
-            pos!(1.0),                // Fees: $1.00
+            pos!(4.0), // Premium received: $4.00
+            pos!(1.0), // Fees: $1.00
             Some(pos!(100.0)),
             Some(pos!(30.0)),
             Some(pos!(0.2)),
@@ -688,8 +684,8 @@ mod tests {
             Side::Short,
             OptionStyle::Put,
             pos!(1.0),
-            pos!(10.0),               // Closing premium: $10.00 (higher due to price decrease)
-            pos!(1.0),                // Closing fees: $1.00
+            pos!(10.0), // Closing premium: $10.00 (higher due to price decrease)
+            pos!(1.0),  // Closing fees: $1.00
             Some(pos!(90.0)),
             Some(pos!(20.0)),
             Some(pos!(0.25)),

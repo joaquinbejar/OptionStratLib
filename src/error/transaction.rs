@@ -7,8 +7,6 @@ pub struct TransactionError {
     pub message: String,
 }
 
-
-
 impl Display for TransactionError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "TransactionError: {}", self.message)
