@@ -1,6 +1,6 @@
 use optionstratlib::chains::OptionChain;
 use optionstratlib::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
-use optionstratlib::pnl::utils::PnLCalculator;
+use optionstratlib::pnl::PnLCalculator;
 use optionstratlib::strategies::base::Optimizable;
 use optionstratlib::strategies::{FindOptimalSide, ShortStrangle};
 use optionstratlib::utils::{read_ohlcv_from_zip, setup_logger};
