@@ -49,9 +49,28 @@ pub trait PnLCalculator {
     ) -> Result<PnL, Box<dyn Error>>;
 }
 
+/// # TransactionAble
+///
+/// A trait that defines the ability to manage financial transactions within an entity.
+///
+/// This trait provides a standardized interface for adding and retrieving transaction records,
+/// enabling consistent transaction management across different implementations.
+///
+/// ## Required Methods
+///
+/// - `add_transaction`: Adds a new transaction to the implementing entity
+/// - `get_transactions`: Retrieves all transactions from the implementing entity
+///
+/// ## Error Handling
+///
+/// Both methods return a `Result` type that may contain a `TransactionError` if the operation fails.
+/// This allows for proper error propagation and handling in transaction-related operations.
+///
 pub trait TransactionAble {
+    /// Adds a new transaction to the implementing entity.
     fn add_transaction(&mut self, transaction: Transaction) -> Result<(), TransactionError>;
 
+    /// Retrieves all transactions from the implementing entity.
     fn get_transactions(&self) -> Result<Vec<Transaction>, TransactionError>;
 }
 
