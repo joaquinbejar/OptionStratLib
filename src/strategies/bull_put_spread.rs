@@ -700,13 +700,15 @@ impl Optimizable for BullPutSpread {
             StrategyLegs::TwoLegs { first, second } => (first, second),
             _ => panic!("Invalid number of legs for this strategy"),
         };
+        let implied_volatility = long.implied_volatility.unwrap();
+        assert!(implied_volatility <= Positive::ONE);
         BullPutSpread::new(
             chain.symbol.clone(),
             chain.underlying_price,
             long.strike_price,
             short.strike_price,
             self.long_put.option.expiration_date,
-            long.implied_volatility.unwrap() / 100.0,
+            implied_volatility,
             self.long_put.option.risk_free_rate,
             self.long_put.option.dividend_yield,
             self.long_put.option.quantity,

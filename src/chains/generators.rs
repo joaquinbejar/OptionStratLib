@@ -7,6 +7,7 @@ use crate::chains::OptionChain;
 use crate::simulation::WalkParams;
 use crate::simulation::steps::{Step, Ystep};
 use crate::{Positive, pos};
+use core::option::Option;
 use tracing::{debug, info};
 
 /// Creates a new `OptionChain` from a previous `Ystep` and a new price.

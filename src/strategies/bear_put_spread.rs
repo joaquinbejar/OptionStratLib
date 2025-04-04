@@ -586,13 +586,15 @@ impl Optimizable for BearPutSpread {
             StrategyLegs::TwoLegs { first, second } => (first, second),
             _ => panic!("Invalid number of legs for this strategy"),
         };
+        let implied_volatility = long.implied_volatility.unwrap();
+        assert!(implied_volatility <= Positive::ONE);
         BearPutSpread::new(
             chain.symbol.clone(),
             chain.underlying_price,
             long.strike_price,
             short.strike_price,
             self.long_put.option.expiration_date,
-            long.implied_volatility.unwrap() / 100.0,
+            implied_volatility,
             self.long_put.option.risk_free_rate,
             self.long_put.option.dividend_yield,
             self.long_put.option.quantity,
@@ -1420,7 +1422,7 @@ mod tests_bear_put_spread_optimization {
         assert!(new_strategy.validate());
         assert_eq!(new_strategy.long_put.option.strike_price, pos!(105.0));
         assert_eq!(new_strategy.short_put.option.strike_price, pos!(95.0));
-        assert_eq!(new_strategy.long_put.option.implied_volatility, 0.002); // 0.2 / 100
+        assert_eq!(new_strategy.long_put.option.implied_volatility, 0.2);
 
         // Verify premiums are set correctly
         assert_eq!(new_strategy.long_put.premium, 1.7); // put_ask from long option

@@ -311,7 +311,7 @@ pub fn create_sample_option_simplest_strike(
 /// # Arguments
 ///
 /// * `vec` - A `Vec<Positive>` containing the data for which the mean and standard deviation
-///           are to be calculated.
+///   are to be calculated.
 ///
 /// # Returns
 ///

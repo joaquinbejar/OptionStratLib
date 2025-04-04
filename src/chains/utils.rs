@@ -8,8 +8,11 @@ use crate::chains::OptionData;
 use crate::error::chains::ChainError;
 use crate::model::types::ExpirationDate;
 use crate::model::utils::ToRound;
+use num_traits::FromPrimitive;
 use rust_decimal::Decimal;
+use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
+use std::fmt;
 use std::fmt::Display;
 
 /// Enum representing a grouping of option data references for analysis or display purposes.
@@ -126,59 +129,6 @@ pub struct OptionChainBuildParams {
     pub(crate) price_params: OptionDataPriceParams,
 }
 
-use num_traits::FromPrimitive;
-use rust_decimal_macros::dec;
-use std::fmt;
-
-impl Display for OptionChainBuildParams {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        writeln!(f, "Option Chain Build Parameters:")?;
-        writeln!(f, "  Symbol: {}", self.symbol)?;
-
-        if let Some(volume) = self.volume {
-            writeln!(f, "  Volume: {}", volume)?;
-        } else {
-            writeln!(f, "  Volume: None")?;
-        }
-
-        writeln!(f, "  Chain Size: {}", self.chain_size)?;
-        writeln!(f, "  Strike Interval: {}", self.strike_interval)?;
-        writeln!(f, "  Skew Factor: {}", self.skew_factor)?;
-        writeln!(f, "  Spread: {}", self.spread.round_to(3))?;
-        writeln!(f, "  Decimal Places: {}", self.decimal_places)?;
-        writeln!(f, "  Price Parameters:")?;
-        writeln!(
-            f,
-            "    Underlying Price: {}",
-            self.price_params.underlying_price
-        )?;
-        writeln!(
-            f,
-            "    Expiration Date: {}",
-            &self.price_params.expiration_date
-        )?;
-
-        if let Some(iv) = self.price_params.implied_volatility {
-            writeln!(f, "    Implied Volatility: {:.2}%", iv * 100.0)?;
-        } else {
-            writeln!(f, "    Implied Volatility: None")?;
-        }
-
-        writeln!(
-            f,
-            "    Risk-Free Rate: {:.2}%",
-            self.price_params.risk_free_rate * dec!(100.0)
-        )?;
-        writeln!(
-            f,
-            "    Dividend Yield: {:.2}%",
-            self.price_params.dividend_yield * dec!(100.0)
-        )?;
-
-        Ok(())
-    }
-}
-
 #[allow(clippy::too_many_arguments)]
 impl OptionChainBuildParams {
     /// Implementation of the constructor for `OptionChainBuildParams`.
@@ -287,6 +237,55 @@ impl OptionChainBuildParams {
     }
 }
 
+impl Display for OptionChainBuildParams {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f, "Option Chain Build Parameters:")?;
+        writeln!(f, "  Symbol: {}", self.symbol)?;
+
+        if let Some(volume) = self.volume {
+            writeln!(f, "  Volume: {}", volume)?;
+        } else {
+            writeln!(f, "  Volume: None")?;
+        }
+
+        writeln!(f, "  Chain Size: {}", self.chain_size)?;
+        writeln!(f, "  Strike Interval: {}", self.strike_interval)?;
+        writeln!(f, "  Skew Factor: {}", self.skew_factor)?;
+        writeln!(f, "  Spread: {}", self.spread.round_to(3))?;
+        writeln!(f, "  Decimal Places: {}", self.decimal_places)?;
+        writeln!(f, "  Price Parameters:")?;
+        writeln!(
+            f,
+            "    Underlying Price: {}",
+            self.price_params.underlying_price
+        )?;
+        writeln!(
+            f,
+            "    Expiration Date: {}",
+            &self.price_params.expiration_date
+        )?;
+
+        if let Some(iv) = self.price_params.implied_volatility {
+            writeln!(f, "    Implied Volatility: {:.2}%", iv * 100.0)?;
+        } else {
+            writeln!(f, "    Implied Volatility: None")?;
+        }
+
+        writeln!(
+            f,
+            "    Risk-Free Rate: {:.2}%",
+            self.price_params.risk_free_rate * dec!(100.0)
+        )?;
+        writeln!(
+            f,
+            "    Dividend Yield: {:.2}%",
+            self.price_params.dividend_yield * dec!(100.0)
+        )?;
+
+        Ok(())
+    }
+}
+
 /// Parameters required for pricing an option contract.
 ///
 /// This structure encapsulates all necessary inputs for option pricing models
@@ -363,6 +362,13 @@ impl OptionDataPriceParams {
         dividend_yield: Positive,
         underlying_symbol: Option<String>,
     ) -> Self {
+        if implied_volatility.is_some() {
+            assert!(
+                implied_volatility <= Some(Positive::ONE),
+                "Implied volatility: {} must be between 0 and 1",
+                implied_volatility.unwrap()
+            );
+        }
         Self {
             underlying_price,
             expiration_date,
@@ -620,7 +626,7 @@ pub(crate) fn adjust_volatility(
     let smile: Decimal = skew_factor * Decimal::from_f64(atm_distance.powi(2)).unwrap();
 
     let volatility_skew = volatility.unwrap() * (Decimal::ONE + skew + smile);
-    Some(volatility_skew)
+    Some(volatility_skew.min(Positive::ONE))
 }
 
 #[allow(dead_code)]
@@ -633,10 +639,7 @@ pub(crate) fn parse<T: std::str::FromStr>(s: &str) -> Option<T> {
         }
     };
 
-    match input {
-        Ok(value) => Some(value),
-        Err(_) => None,
-    }
+    input.ok()
 }
 
 pub(crate) fn empty_string_round_to_2<T: ToString + ToRound>(input: Option<T>) -> String {

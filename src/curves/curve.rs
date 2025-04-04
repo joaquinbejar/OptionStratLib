@@ -448,13 +448,13 @@ impl BiLinearInterpolation<Point2D, Decimal> for Curve {
     ///
     /// # Parameters
     /// - `x`: The x-coordinate at which the interpolation is to be performed. This should be a `Decimal` value
-    ///        within the range of the curve's known points.
+    ///   within the range of the curve's known points.
     ///
     /// # Returns
     /// - On success, returns a `Point2D` instance representing the interpolated point at the given `x` value.
     /// - On failure, returns a `CurvesError`:
     ///   - `CurvesError::InterpolationError`: If there are fewer than four points available for interpolation or
-    ///                                         if the required conditions for interpolation are not met.
+    ///     if the required conditions for interpolation are not met.
     ///
     /// # Function Description
     /// - The function retrieves the set of points defining the curve using `self.get_points()`.
@@ -464,7 +464,7 @@ impl BiLinearInterpolation<Point2D, Decimal> for Curve {
     ///   for bilinear interpolation using `self.find_bracket_points()`.
     /// - From the bracketing points, it computes:
     ///   - `dx`: A normalized value representing the relative position of `x` between its bracketing x-coordinates
-    ///           in the `[`0,1`]` interval.
+    ///     in the `[`0,1`]` interval.
     ///   - `bottom`: The interpolated y-value along the bottom edge of the grid.
     ///   - `top`: The interpolated y-value along the top edge of the grid.
     ///   - `y`: The final interpolated value along the y-dimension from `bottom` to `top`.

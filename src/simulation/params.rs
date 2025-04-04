@@ -16,7 +16,7 @@ use std::ops::AddAssign;
 ///
 /// * `X` - The type for the x-axis steps (typically time), must support addition and conversion to positive values
 /// * `Y` - The type for the y-axis values (typically price or rate), must support addition, conversion to positive values,
-///         and implement the `Walktypable` trait for traversal operations
+///   and implement the `Walktypable` trait for traversal operations
 ///
 /// # Fields
 ///

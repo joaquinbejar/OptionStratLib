@@ -760,25 +760,30 @@ impl Optimizable for IronCondor {
                 second: short_put,
                 third: short_call,
                 fourth: long_call,
-            } => IronCondor::new(
-                chain.symbol.clone(),
-                chain.underlying_price,
-                short_call.strike_price,
-                short_put.strike_price,
-                long_call.strike_price,
-                long_put.strike_price,
-                self.short_call.option.expiration_date,
-                short_put.implied_volatility.unwrap() / 100.0,
-                self.short_call.option.risk_free_rate,
-                self.short_call.option.dividend_yield,
-                self.short_call.option.quantity,
-                short_call.call_bid.unwrap(),
-                short_put.put_bid.unwrap(),
-                long_call.call_ask.unwrap(),
-                long_put.put_ask.unwrap(),
-                self.fees().unwrap() / 8.0,
-                self.fees().unwrap() / 8.0,
-            ),
+            } => {
+                let implied_volatility = short_call.implied_volatility.unwrap();
+                assert!(implied_volatility <= Positive::ONE);
+
+                IronCondor::new(
+                    chain.symbol.clone(),
+                    chain.underlying_price,
+                    short_call.strike_price,
+                    short_put.strike_price,
+                    long_call.strike_price,
+                    long_put.strike_price,
+                    self.short_call.option.expiration_date,
+                    implied_volatility,
+                    self.short_call.option.risk_free_rate,
+                    self.short_call.option.dividend_yield,
+                    self.short_call.option.quantity,
+                    short_call.call_bid.unwrap(),
+                    short_put.put_bid.unwrap(),
+                    long_call.call_ask.unwrap(),
+                    long_put.put_ask.unwrap(),
+                    self.fees().unwrap() / 8.0,
+                    self.fees().unwrap() / 8.0,
+                )
+            }
             _ => panic!("Invalid number of legs for Iron Condor strategy"),
         }
     }

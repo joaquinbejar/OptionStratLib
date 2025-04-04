@@ -682,6 +682,8 @@ impl Optimizable for PoorMansCoveredCall {
             StrategyLegs::TwoLegs { first, second } => (first, second),
             _ => panic!("Invalid number of legs for this strategy"),
         };
+        let implied_volatility = short.implied_volatility.unwrap();
+        assert!(implied_volatility <= Positive::ONE);
 
         PoorMansCoveredCall::new(
             chain.symbol.clone(),
@@ -690,7 +692,7 @@ impl Optimizable for PoorMansCoveredCall {
             short.strike_price,
             self.long_call.option.expiration_date,
             self.short_call.option.expiration_date,
-            short.implied_volatility.unwrap() / 100.0,
+            implied_volatility,
             self.short_call.option.risk_free_rate,
             self.short_call.option.dividend_yield,
             self.short_call.option.quantity,

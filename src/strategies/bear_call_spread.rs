@@ -605,13 +605,15 @@ impl Optimizable for BearCallSpread {
             StrategyLegs::TwoLegs { first, second } => (first, second),
             _ => panic!("Invalid number of legs for this strategy"),
         };
+        let implied_volatility = short.implied_volatility.unwrap();
+        assert!(implied_volatility <= Positive::ONE);
         BearCallSpread::new(
             chain.symbol.clone(),
             chain.underlying_price,
             short.strike_price,
             long.strike_price,
             self.short_call.option.expiration_date,
-            short.implied_volatility.unwrap() / 100.0,
+            implied_volatility,
             self.short_call.option.risk_free_rate,
             self.short_call.option.dividend_yield,
             self.short_call.option.quantity,

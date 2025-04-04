@@ -339,6 +339,13 @@ impl OptionChain {
 
         fn create_chain_data(s: &Positive, p: &OptionChainBuildParams) -> OptionData {
             let atm_distance = s.to_dec() - p.price_params.underlying_price;
+            if let Some(iv) = p.price_params.implied_volatility {
+                assert!(
+                    iv <= Positive::ONE,
+                    "Implied volatility should be between 0 and 1"
+                );
+            }
+
             let adjusted_volatility = adjust_volatility(
                 p.price_params.implied_volatility,
                 p.skew_factor,
@@ -1066,6 +1073,15 @@ impl OptionChain {
     pub fn load_from_json(file_path: &str) -> Result<Self, Box<dyn Error>> {
         let file = File::open(file_path)?;
         let mut option_chain: OptionChain = serde_json::from_reader(file)?;
+        option_chain.mutate_single_options(|option| {
+            option.implied_volatility = option.implied_volatility.map(|iv| {
+                if iv >= Positive::ONE {
+                    iv / Positive::HUNDRED
+                } else {
+                    iv
+                }
+            });
+        });
         option_chain.update_mid_prices();
         option_chain.update_greeks();
         // if implied volatility is in percentage, convert it to decimal
@@ -1278,6 +1294,59 @@ impl OptionChain {
         self.options
             .iter()
             .filter(|option| option.implied_volatility.is_some())
+    }
+
+    /// Applies a mutation function to each option in the chain that has an implied volatility value.
+    ///
+    /// This method filters the option chain to include only options with defined implied volatility,
+    /// applies the provided function to each option, and then updates the chain with these modified options.
+    /// The options collection is completely replaced with the new, modified set.
+    ///
+    /// # Arguments
+    ///
+    /// * `f` - A mutable closure that takes a mutable reference to an `OptionData` and applies
+    ///   some transformation or modification to it.
+    ///
+    pub fn mutate_single_options<F>(&mut self, mut f: F)
+    where
+        F: FnMut(&mut OptionData),
+    {
+        let modified_options = self
+            .options
+            .iter()
+            .filter(|&option| option.implied_volatility.is_some())
+            .cloned()
+            .map(|mut option| {
+                f(&mut option);
+                option
+            })
+            .collect::<BTreeSet<_>>();
+
+        self.options = modified_options;
+    }
+
+    /// Returns an iterator that provides mutable access to individual options in the chain.
+    ///
+    /// This method enables modifying options in the chain while maintaining the collection's integrity.
+    /// It works by:
+    /// 1. Filtering options that have implied volatility
+    /// 2. Removing each option from the internal collection
+    /// 3. Providing mutable access to each option
+    ///
+    /// The caller is responsible for reinserting modified options back into the chain.
+    /// After modifications, options should be reinserted into the chain using appropriate methods.
+    ///
+    /// # Returns
+    ///
+    /// An iterator yielding mutable references to `OptionData` instances.
+    ///
+    /// # Examples
+    ///
+    pub fn get_single_iter_mut(&mut self) -> impl Iterator<Item = OptionData> {
+        self.options
+            .iter()
+            .filter(|&option| option.implied_volatility.is_some())
+            .cloned()
     }
 
     /// Returns an iterator that generates pairs of distinct option combinations from the `OptionChain`.
@@ -2372,7 +2441,7 @@ mod tests_chain_base {
             spos!(276.06),
             spos!(13.22),
             spos!(14.90),
-            spos!(16.31),
+            spos!(0.1631),
             Some(dec!(0.5)),
             Some(dec!(0.5)),
             Some(dec!(0.5)),
@@ -2479,7 +2548,7 @@ mod tests_chain_base {
             spos!(276.06),
             spos!(13.22),
             spos!(14.90),
-            spos!(16.31),
+            spos!(0.1631),
             Some(dec!(0.5)),
             Some(dec!(0.5)),
             Some(dec!(0.5)),
@@ -2509,7 +2578,7 @@ mod tests_chain_base {
             spos!(276.06),
             spos!(13.22),
             spos!(14.90),
-            spos!(16.31),
+            spos!(0.1631),
             Some(dec!(0.5)),
             Some(dec!(0.5)),
             Some(dec!(0.5)),
@@ -2541,7 +2610,7 @@ mod tests_chain_base {
             spos!(276.06),
             spos!(13.22),
             spos!(14.90),
-            spos!(16.31),
+            spos!(0.1631),
             Some(dec!(0.5)),
             Some(dec!(0.5)),
             Some(dec!(0.5)),
@@ -2574,7 +2643,7 @@ mod tests_chain_base {
             spos!(276.06),
             spos!(13.22),
             spos!(14.90),
-            spos!(16.31),
+            spos!(0.1631),
             Some(dec!(0.5)),
             Some(dec!(0.5)),
             Some(dec!(0.5)),
@@ -3520,7 +3589,7 @@ mod tests_option_data_get_option {
         assert!(result.is_ok());
 
         let option = result.unwrap();
-        assert_eq!(option.implied_volatility, 0.002); // Uses IV from option_data
+        assert_eq!(option.implied_volatility, 0.2); // Uses IV from option_data
     }
 
     #[test]
@@ -3639,10 +3708,10 @@ mod tests_option_data_get_options_in_strike {
         assert!(result.is_ok());
 
         let options = result.unwrap();
-        assert_eq!(options.long_call.implied_volatility, 0.002);
-        assert_eq!(options.short_call.implied_volatility, 0.002);
-        assert_eq!(options.long_put.implied_volatility, 0.002);
-        assert_eq!(options.short_put.implied_volatility, 0.002);
+        assert_eq!(options.long_call.implied_volatility, 0.2);
+        assert_eq!(options.short_call.implied_volatility, 0.2);
+        assert_eq!(options.long_put.implied_volatility, 0.2);
+        assert_eq!(options.short_put.implied_volatility, 0.2);
     }
 
     #[test]
@@ -5162,13 +5231,13 @@ mod tests_option_data_implied_volatility {
         assert!(result.is_ok(), "Failed to calculate IV: {:?}", result);
         assert!(option_data.implied_volatility.is_some());
         assert_pos_relative_eq!(
-            option_data.implied_volatility.unwrap() / pos!(100.0),
+            option_data.implied_volatility.unwrap(),
             pos!(0.13008),
             pos!(0.0001)
         );
 
-        let iv = option_data.implied_volatility.unwrap() / pos!(100.0);
-        assert!(iv > pos!(0.0) && iv < pos!(2.0));
+        let iv = option_data.implied_volatility.unwrap();
+        assert!(iv > pos!(0.0) && iv <= pos!(1.0));
     }
 
     #[test]
@@ -5234,7 +5303,7 @@ mod tests_option_data_implied_volatility {
         assert!(option_data.implied_volatility.is_some());
         let volatility = pos!(0.13008);
         assert_pos_relative_eq!(
-            option_data.implied_volatility.unwrap() / pos!(100.0),
+            option_data.implied_volatility.unwrap(),
             volatility,
             pos!(0.0001)
         );
@@ -5244,7 +5313,7 @@ mod tests_option_data_implied_volatility {
             .unwrap();
         assert_eq!(
             option.implied_volatility,
-            option_data.implied_volatility.unwrap() / pos!(100.0)
+            option_data.implied_volatility.unwrap()
         );
 
         let option = option_data
@@ -5252,7 +5321,7 @@ mod tests_option_data_implied_volatility {
             .unwrap();
         assert_eq!(
             option.implied_volatility,
-            option_data.implied_volatility.unwrap() / pos!(100.0)
+            option_data.implied_volatility.unwrap()
         );
 
         let option = option_data
@@ -5260,7 +5329,7 @@ mod tests_option_data_implied_volatility {
             .unwrap();
         assert_eq!(
             option.implied_volatility,
-            option_data.implied_volatility.unwrap() / pos!(100.0)
+            option_data.implied_volatility.unwrap()
         );
     }
 }
@@ -5336,16 +5405,16 @@ mod tests_chain_implied_volatility {
     fn test_update_implied_volatilities_today() {
         let mut chain = OptionChain::new(
             "TEST",
-            pos!(21637.0),
+            pos!(21537.0),
             get_today_or_tomorrow_formatted(),
             Some(dec!(0.0)),
             Some(pos!(0.0)),
         );
 
         chain.add_option(
-            pos!(21395.0),        // strike
-            spos!(250.0),         // call_bid
-            spos!(254.0),         // call_ask
+            pos!(21495.0),        // strike
+            spos!(70.0),          // call_bid
+            spos!(73.0),          // call_ask
             Some(Positive::ZERO), // put_bid
             spos!(4.0),           // put_ask
             None,                 // implied_volatility (empezamos sin IV)
@@ -5357,9 +5426,9 @@ mod tests_chain_implied_volatility {
         );
 
         chain.add_option(
-            pos!(21700.0), // ATM strike
-            spos!(30.2),   // call_bid
-            spos!(35.1),   // call_ask
+            pos!(21560.0), // ATM strike
+            spos!(5.2),    // call_bid
+            spos!(8.1),    // call_ask
             spos!(93.2),   // put_bid
             spos!(98.0),   // put_ask
             None,          // implied_volatility
@@ -5457,9 +5526,9 @@ mod tests_chain_implied_volatility {
 
         for option in chain.options.iter() {
             assert_pos_relative_eq!(
-                option.implied_volatility.unwrap() / pos!(100.0),
+                option.implied_volatility.unwrap(),
                 original_iv.unwrap(),
-                pos!(0.001)
+                pos!(0.1)
             );
         }
     }

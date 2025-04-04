@@ -181,6 +181,7 @@ mod metrics;
 /// * Dimensional and data completeness errors
 mod surfaces;
 
+mod transaction;
 /// ### Volatility Errors (`VolatilityError`)
 /// Handles:
 /// * Implied volatility calculation failures
@@ -201,4 +202,5 @@ pub use position::PositionError;
 pub use probability::ProbabilityError;
 pub use strategies::StrategyError;
 pub use surfaces::SurfaceError;
+pub use transaction::TransactionError;
 pub use volatility::VolatilityError;

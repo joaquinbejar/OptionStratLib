@@ -396,7 +396,7 @@ pub fn big_n(x: Decimal) -> Result<Decimal, DecimalError> {
 /// # Arguments
 ///
 /// * `option` - A reference to an `Options` struct containing the underlying price,
-///              the risk-free rate, and the implied volatility of the option.
+///   the risk-free rate, and the implied volatility of the option.
 /// * `time_to_expiry` - The time remaining until option expiry in years.
 ///
 /// # Returns

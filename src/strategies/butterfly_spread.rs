@@ -696,27 +696,32 @@ impl Optimizable for LongButterflySpread {
                 first: low_strike,
                 second: middle_strike,
                 third: high_strike,
-            } => LongButterflySpread::new(
-                chain.symbol.clone(),
-                chain.underlying_price,
-                low_strike.strike_price,
-                middle_strike.strike_price,
-                high_strike.strike_price,
-                self.long_call_low.option.expiration_date,
-                middle_strike.implied_volatility.unwrap() / 100.0,
-                self.long_call_low.option.risk_free_rate,
-                self.long_call_low.option.dividend_yield,
-                self.long_call_low.option.quantity,
-                low_strike.call_ask.unwrap(),
-                middle_strike.call_bid.unwrap(),
-                high_strike.call_ask.unwrap(),
-                self.short_call.open_fee,
-                self.short_call.close_fee,
-                self.long_call_low.open_fee,
-                self.long_call_low.close_fee,
-                self.long_call_high.open_fee,
-                self.long_call_high.close_fee,
-            ),
+            } => {
+                let implied_volatility = middle_strike.implied_volatility.unwrap();
+                assert!(implied_volatility <= Positive::ONE);
+
+                LongButterflySpread::new(
+                    chain.symbol.clone(),
+                    chain.underlying_price,
+                    low_strike.strike_price,
+                    middle_strike.strike_price,
+                    high_strike.strike_price,
+                    self.long_call_low.option.expiration_date,
+                    implied_volatility,
+                    self.long_call_low.option.risk_free_rate,
+                    self.long_call_low.option.dividend_yield,
+                    self.long_call_low.option.quantity,
+                    low_strike.call_ask.unwrap(),
+                    middle_strike.call_bid.unwrap(),
+                    high_strike.call_ask.unwrap(),
+                    self.short_call.open_fee,
+                    self.short_call.close_fee,
+                    self.long_call_low.open_fee,
+                    self.long_call_low.close_fee,
+                    self.long_call_high.open_fee,
+                    self.long_call_high.close_fee,
+                )
+            }
             _ => panic!("Invalid number of legs for Long Butterfly strategy"),
         }
     }
@@ -1660,27 +1665,32 @@ impl Optimizable for ShortButterflySpread {
                 first: low_strike,
                 second: middle_strike,
                 third: high_strike,
-            } => ShortButterflySpread::new(
-                chain.symbol.clone(),
-                chain.underlying_price,
-                low_strike.strike_price,
-                middle_strike.strike_price,
-                high_strike.strike_price,
-                self.short_call_low.option.expiration_date,
-                middle_strike.implied_volatility.unwrap() / 100.0,
-                self.short_call_low.option.risk_free_rate,
-                self.short_call_low.option.dividend_yield,
-                self.short_call_low.option.quantity,
-                low_strike.call_bid.unwrap(),
-                middle_strike.call_ask.unwrap(),
-                high_strike.call_bid.unwrap(),
-                self.long_call.open_fee,
-                self.long_call.close_fee,
-                self.short_call_low.open_fee,
-                self.short_call_low.close_fee,
-                self.short_call_high.open_fee,
-                self.short_call_high.close_fee,
-            ),
+            } => {
+                let implied_volatility = middle_strike.implied_volatility.unwrap();
+                assert!(implied_volatility <= Positive::ONE);
+
+                ShortButterflySpread::new(
+                    chain.symbol.clone(),
+                    chain.underlying_price,
+                    low_strike.strike_price,
+                    middle_strike.strike_price,
+                    high_strike.strike_price,
+                    self.short_call_low.option.expiration_date,
+                    implied_volatility,
+                    self.short_call_low.option.risk_free_rate,
+                    self.short_call_low.option.dividend_yield,
+                    self.short_call_low.option.quantity,
+                    low_strike.call_bid.unwrap(),
+                    middle_strike.call_ask.unwrap(),
+                    high_strike.call_bid.unwrap(),
+                    self.long_call.open_fee,
+                    self.long_call.close_fee,
+                    self.short_call_low.open_fee,
+                    self.short_call_low.close_fee,
+                    self.short_call_high.open_fee,
+                    self.short_call_high.close_fee,
+                )
+            }
             _ => panic!("Invalid number of legs for Short Butterfly strategy"),
         }
     }

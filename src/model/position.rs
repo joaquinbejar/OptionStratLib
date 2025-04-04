@@ -6,10 +6,11 @@
 use crate::Options;
 use crate::chains::OptionData;
 use crate::error::position::PositionValidationErrorKind;
-use crate::error::{GreeksError, PositionError};
+use crate::error::{GreeksError, PositionError, TransactionError};
 use crate::greeks::Greeks;
 use crate::model::types::{ExpirationDate, OptionStyle, Side};
-use crate::pnl::utils::{PnL, PnLCalculator};
+use crate::pnl::utils::PnL;
+use crate::pnl::{PnLCalculator, Transaction, TransactionAble};
 use crate::pricing::payoff::Profit;
 use crate::visualization::model::ChartVerticalLine;
 use crate::visualization::utils::Graph;
@@ -664,6 +665,16 @@ impl Greeks for Position {
     /// - `Err(GreeksError)` - If there is an error accessing the option data
     fn get_options(&self) -> Result<Vec<&Options>, GreeksError> {
         Ok(vec![&self.option])
+    }
+}
+
+impl TransactionAble for Position {
+    fn add_transaction(&mut self, _transaction: Transaction) -> Result<(), TransactionError> {
+        todo!()
+    }
+
+    fn get_transactions(&self) -> Result<Vec<Transaction>, TransactionError> {
+        todo!()
     }
 }
 
