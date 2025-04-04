@@ -639,10 +639,7 @@ pub(crate) fn parse<T: std::str::FromStr>(s: &str) -> Option<T> {
         }
     };
 
-    match input {
-        Ok(value) => Some(value),
-        Err(_) => None,
-    }
+    input.ok()
 }
 
 pub(crate) fn empty_string_round_to_2<T: ToString + ToRound>(input: Option<T>) -> String {

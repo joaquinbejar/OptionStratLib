@@ -74,7 +74,7 @@ pub fn simulate_returns(
     let mut rng = rand::rng();
 
     // Generate pairs of normally distributed random numbers using Box-Muller transform
-    for _ in 0..(length + 1) / 2 {
+    for _ in 0..length.div_ceil(2) {
         let (n1, n2) = generate_normal_pair(&mut rng)?;
 
         // Scale the random numbers by mean and std_dev

@@ -14,10 +14,10 @@
 //!   appearance, including titles, labels, dimensions, colors, and more.  It provides
 //!   a builder pattern for configuring the plot.
 //! * **Platform Compatibility:** Handles platform-specific differences for saving plots.
-//!    Provides a no-op implementation for WASM targets where direct file saving is not
-//!    supported.
+//!   Provides a no-op implementation for WASM targets where direct file saving is not
+//!   supported.
 //! * **Shading:** Utility functions are included to apply shading to surface points,
-//!    enhancing 3D visualization.
+//!   enhancing 3D visualization.
 //! * **Error Handling:** Uses the `SurfaceError` type for robust error management.
 //!
 

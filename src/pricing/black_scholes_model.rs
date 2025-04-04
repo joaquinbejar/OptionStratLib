@@ -115,7 +115,7 @@ fn calculate_long_position(
 /// # Parameters:
 /// - `option`: A reference to an instance of `Options` that contains the option details.
 /// - `time_to_expiry`: An optional `f64` value representing the already known time to expiry.
-///    If not provided, it will be calculated based on the current date and the option's expiration date.
+///   If not provided, it will be calculated based on the current date and the option's expiration date.
 ///
 /// # Returns:
 /// A tuple containing:
