@@ -1,7 +1,7 @@
 use optionstratlib::chains::OptionChain;
 use optionstratlib::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
-use optionstratlib::pnl::PnLCalculator;
-use optionstratlib::strategies::base::Optimizable;
+use optionstratlib::pnl::{PnL, PnLCalculator, PnLMetricsStep};
+use optionstratlib::strategies::base::{Optimizable, Positionable};
 use optionstratlib::strategies::{FindOptimalSide, ShortStrangle};
 use optionstratlib::utils::{read_ohlcv_from_zip, setup_logger};
 use optionstratlib::{ExpirationDate, Positive, pos, spos};
@@ -12,11 +12,14 @@ use tracing::info;
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     setup_logger();
     let ohlc = read_ohlcv_from_zip("examples/Data/gc-1m.zip", "01/05/2007", "08/05/2008")?;
-    let close_prices = ohlc.iter().map(|candle| candle.close).collect::<Vec<_>>();
-
+    let close_prices = ohlc
+        .iter()
+        .map(|candle| Positive::new_decimal(candle.close).unwrap())
+        .collect::<Vec<_>>();
+    let days = pos!(7.0);
     let symbol = "GC".to_string();
-    let underlying_price = Positive::from(close_prices[0]);
-    let expiration_date = ExpirationDate::Days(pos!(7.0));
+    let underlying_price = close_prices[0];
+    let expiration_date = ExpirationDate::Days(days);
     let chain_params = OptionChainBuildParams::new(
         symbol.clone(),
         None,
@@ -59,7 +62,62 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let iv = option_chain
         .atm_implied_volatility()?
         .unwrap_or(Positive::ZERO);
-    let pnl = strategy.calculate_pnl(&underlying_price, expiration_date, &iv)?;
-    info!("PnL: {:#?}", pnl);
+    let positions = strategy.get_positions()?;
+    let mut time_passed = Positive::ZERO;
+
+    let mut pnl_metrics: PnLMetricsStep = PnLMetricsStep::default();
+    for price in &close_prices {
+        if time_passed >= days {
+            break;
+        } else {
+            let pnl = &positions
+                .iter()
+                .map(|position| {
+                    let expiration_date = ExpirationDate::Days(days - time_passed);
+                    match position.calculate_pnl(&price, expiration_date, &iv) {
+                        Ok(pnl) => pnl,
+                        _ => position.calculate_pnl_at_expiration(&price).unwrap(),
+                    }
+                })
+                .map(|pnl| {
+                    let unrealized = pnl.unrealized.unwrap();
+                    match unrealized.is_sign_positive() {
+                        true => {
+                            pnl_metrics.winning_steps += 1;
+                            if unrealized > pnl_metrics.max_unrealized_pnl.to_dec() {
+                                pnl_metrics.max_unrealized_pnl = Positive::new_decimal(unrealized).unwrap();
+                            }
+                        }
+                        false => {
+                            pnl_metrics.losing_steps += 1;
+                            if unrealized.abs() > pnl_metrics.min_unrealized_pnl.to_dec() {
+                                pnl_metrics.min_unrealized_pnl =
+                                    Positive::new_decimal(unrealized.abs()).unwrap();
+                            }
+                        }
+                    }
+
+                    pnl
+                })
+                .sum::<PnL>();
+
+            info!(
+                "Days: {} Price: {} {:?}",
+                (days - time_passed.to_dec()).round_to(3),
+                price,
+                pnl
+            );
+            pnl_metrics.pnl = pnl.clone();
+            pnl_metrics.step_duration = days;
+            if pnl_metrics.pnl.realized.unwrap().is_sign_positive() {
+                pnl_metrics.win = true;
+            } else {
+                pnl_metrics.win = false;
+            }
+            time_passed += pos!(1.0) / (pos!(24.0) * pos!(60.0)); // 1 minute
+        }
+    }
+    info!("PnL: {:?}", pnl_metrics);
+
     Ok(())
 }
