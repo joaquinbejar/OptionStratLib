@@ -700,3 +700,326 @@ mod tests {
         assert_eq!(total_profit, dec!(-8.0)); // Net loss of $6.00 ($3.00 - $11.00)
     }
 }
+
+#[cfg(test)]
+mod tests_transaction_getters {
+    use super::*;
+    use crate::pos;
+    use chrono::Utc;
+
+    fn create_test_transaction() -> Transaction {
+        Transaction::new(
+            TransactionStatus::Open,
+            Some(Utc::now()),
+            OptionType::European,
+            Side::Long,
+            OptionStyle::Call,
+            pos!(2.0),
+            pos!(5.0),
+            pos!(1.0),
+            Some(pos!(100.0)),
+            Some(pos!(30.0)),
+            Some(pos!(0.2)),
+        )
+    }
+
+    #[test]
+    fn test_date_time_getter() {
+        let transaction = create_test_transaction();
+        assert!(transaction.date_time().is_some());
+    }
+
+    #[test]
+    fn test_option_type_getter() {
+        let transaction = create_test_transaction();
+        assert_eq!(transaction.option_type(), OptionType::European);
+    }
+
+    #[test]
+    fn test_side_getter() {
+        let transaction = create_test_transaction();
+        assert_eq!(transaction.side(), Side::Long);
+    }
+
+    #[test]
+    fn test_option_style_getter() {
+        let transaction = create_test_transaction();
+        assert_eq!(transaction.option_style(), OptionStyle::Call);
+    }
+
+    #[test]
+    fn test_quantity_getter() {
+        let transaction = create_test_transaction();
+        assert_eq!(transaction.quantity(), pos!(2.0));
+    }
+
+    #[test]
+    fn test_premium_getter() {
+        let transaction = create_test_transaction();
+        assert_eq!(transaction.premium(), pos!(5.0));
+    }
+
+    #[test]
+    fn test_fees_getter() {
+        let transaction = create_test_transaction();
+        assert_eq!(transaction.fees(), pos!(1.0));
+    }
+
+    #[test]
+    fn test_underlying_price_getter() {
+        let transaction = create_test_transaction();
+        assert_eq!(transaction.underlying_price(), Some(pos!(100.0)));
+    }
+
+    #[test]
+    fn test_days_to_expiration_getter() {
+        let transaction = create_test_transaction();
+        assert_eq!(transaction.days_to_expiration(), Some(pos!(30.0)));
+    }
+
+    #[test]
+    fn test_implied_volatility_getter() {
+        let transaction = create_test_transaction();
+        assert_eq!(transaction.implied_volatility(), Some(pos!(0.2)));
+    }
+}
+
+#[cfg(test)]
+mod tests_transaction_updaters {
+    use super::*;
+    use crate::pos;
+    use chrono::Utc;
+
+    fn create_test_transaction() -> Transaction {
+        Transaction::new(
+            TransactionStatus::Open,
+            Some(Utc::now()),
+            OptionType::European,
+            Side::Long,
+            OptionStyle::Call,
+            pos!(2.0),
+            pos!(5.0),
+            pos!(1.0),
+            Some(pos!(100.0)),
+            Some(pos!(30.0)),
+            Some(pos!(0.2)),
+        )
+    }
+
+    #[test]
+    fn test_update_implied_volatility() {
+        let mut transaction = create_test_transaction();
+        transaction.update_implied_volatility(pos!(0.25));
+        assert_eq!(transaction.implied_volatility(), Some(pos!(0.25)));
+    }
+
+    #[test]
+    fn test_update_underlying_price() {
+        let mut transaction = create_test_transaction();
+        transaction.update_underlying_price(pos!(110.0));
+        assert_eq!(transaction.underlying_price(), Some(pos!(110.0)));
+    }
+
+    #[test]
+    fn test_update_days_to_expiration() {
+        let mut transaction = create_test_transaction();
+        transaction.update_days_to_expiration(pos!(25.0));
+        assert_eq!(transaction.days_to_expiration(), Some(pos!(25.0)));
+    }
+}
+
+#[cfg(test)]
+mod tests_transaction_status_pnl {
+    use super::*;
+    use crate::pos;
+    use chrono::Utc;
+    use rust_decimal_macros::dec;
+
+    #[test]
+    fn test_open_european_long_call_pnl() {
+        let transaction = Transaction::new(
+            TransactionStatus::Open,
+            Some(Utc::now()),
+            OptionType::European,
+            Side::Long,
+            OptionStyle::Call,
+            pos!(2.0),
+            pos!(5.0),
+            pos!(1.0),
+            Some(pos!(100.0)),
+            Some(pos!(30.0)),
+            Some(pos!(0.2)),
+        );
+
+        let pnl = transaction.pnl().unwrap();
+        assert_eq!(pnl.realized.unwrap(), dec!(-12.0)); // (-(5.0 + 1.0) * 2.0)
+    }
+
+    #[test]
+    fn test_open_european_short_call_pnl() {
+        let transaction = Transaction::new(
+            TransactionStatus::Open,
+            Some(Utc::now()),
+            OptionType::European,
+            Side::Short,
+            OptionStyle::Call,
+            pos!(2.0),
+            pos!(5.0),
+            pos!(1.0),
+            Some(pos!(100.0)),
+            Some(pos!(30.0)),
+            Some(pos!(0.2)),
+        );
+
+        let pnl = transaction.pnl().unwrap();
+        assert_eq!(pnl.realized.unwrap(), dec!(8.0)); // ((5.0 - 1.0) * 2.0)
+    }
+
+    #[test]
+    fn test_closed_european_long_call_pnl() {
+        let transaction = Transaction::new(
+            TransactionStatus::Closed,
+            Some(Utc::now()),
+            OptionType::European,
+            Side::Long,
+            OptionStyle::Call,
+            pos!(2.0),
+            pos!(5.0),
+            pos!(1.0),
+            Some(pos!(100.0)),
+            Some(pos!(30.0)),
+            Some(pos!(0.2)),
+        );
+
+        let pnl = transaction.pnl().unwrap();
+        assert_eq!(pnl.realized.unwrap(), dec!(8.0)); // ((5.0 - 1.0) * 2.0)
+    }
+
+    #[test]
+    fn test_closed_european_short_call_pnl() {
+        let transaction = Transaction::new(
+            TransactionStatus::Closed,
+            Some(Utc::now()),
+            OptionType::European,
+            Side::Short,
+            OptionStyle::Call,
+            pos!(2.0),
+            pos!(5.0),
+            pos!(1.0),
+            Some(pos!(100.0)),
+            Some(pos!(30.0)),
+            Some(pos!(0.2)),
+        );
+
+        let pnl = transaction.pnl().unwrap();
+        assert_eq!(pnl.realized.unwrap(), dec!(-12.0)); // (-(5.0 + 1.0) * 2.0)
+    }
+
+    #[test]
+    fn test_expired_european_long_call_pnl() {
+        let transaction = Transaction::new(
+            TransactionStatus::Expired,
+            Some(Utc::now()),
+            OptionType::European,
+            Side::Long,
+            OptionStyle::Call,
+            pos!(2.0),
+            pos!(5.0),
+            pos!(1.0),
+            Some(pos!(100.0)),
+            Some(pos!(0.0)),
+            Some(pos!(0.2)),
+        );
+
+        let pnl = transaction.pnl().unwrap();
+        assert_eq!(pnl.realized.unwrap(), dec!(8.0)); // ((5.0 - 1.0) * 2.0)
+    }
+
+    #[test]
+    fn test_exercised_european_long_call_pnl() {
+        let transaction = Transaction::new(
+            TransactionStatus::Exercised,
+            Some(Utc::now()),
+            OptionType::European,
+            Side::Long,
+            OptionStyle::Call,
+            pos!(2.0),
+            pos!(5.0),
+            pos!(1.0),
+            Some(pos!(110.0)),
+            Some(pos!(0.0)),
+            Some(pos!(0.2)),
+        );
+
+        let pnl = transaction.pnl().unwrap();
+        assert_eq!(pnl.realized.unwrap(), dec!(8.0)); // ((5.0 - 1.0) * 2.0)
+    }
+
+    #[test]
+    fn test_assigned_european_short_call_pnl() {
+        let transaction = Transaction::new(
+            TransactionStatus::Assigned,
+            Some(Utc::now()),
+            OptionType::European,
+            Side::Short,
+            OptionStyle::Call,
+            pos!(2.0),
+            pos!(5.0),
+            pos!(1.0),
+            Some(pos!(110.0)),
+            Some(pos!(0.0)),
+            Some(pos!(0.2)),
+        );
+
+        let pnl = transaction.pnl().unwrap();
+        assert_eq!(pnl.realized.unwrap(), dec!(-12.0)); // (-(5.0 + 1.0) * 2.0)
+    }
+
+    #[test]
+    fn test_unsupported_option_type_open() {
+        let transaction = Transaction::new(
+            TransactionStatus::Open,
+            Some(Utc::now()),
+            OptionType::American, // Unsupported type
+            Side::Long,
+            OptionStyle::Call,
+            pos!(2.0),
+            pos!(5.0),
+            pos!(1.0),
+            Some(pos!(100.0)),
+            Some(pos!(30.0)),
+            Some(pos!(0.2)),
+        );
+
+        let result = transaction.pnl();
+        assert!(result.is_err());
+        assert_eq!(
+            result.unwrap_err().message,
+            "Unsupported option type in Transaction"
+        );
+    }
+
+    #[test]
+    fn test_unsupported_option_type_closed() {
+        let transaction = Transaction::new(
+            TransactionStatus::Closed,
+            Some(Utc::now()),
+            OptionType::American, // Unsupported type
+            Side::Long,
+            OptionStyle::Call,
+            pos!(2.0),
+            pos!(5.0),
+            pos!(1.0),
+            Some(pos!(100.0)),
+            Some(pos!(30.0)),
+            Some(pos!(0.2)),
+        );
+
+        let result = transaction.pnl();
+        assert!(result.is_err());
+        assert_eq!(
+            result.unwrap_err().message,
+            "Unsupported option type in Transaction"
+        );
+    }
+}
