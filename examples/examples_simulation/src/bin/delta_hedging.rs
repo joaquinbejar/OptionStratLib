@@ -1,20 +1,52 @@
-use std::process::exit;
+use std::error::Error;
 use optionstratlib::chains::OptionChain;
 use optionstratlib::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
 use optionstratlib::pnl::{PnL, PnLCalculator, PnLMetricsStep};
 use optionstratlib::strategies::base::{Optimizable, Positionable};
 use optionstratlib::strategies::{FindOptimalSide, ShortStrangle};
 use optionstratlib::utils::{read_ohlcv_from_zip, setup_logger, OhlcvCandle, TimeFrame};
-use optionstratlib::{ExpirationDate, Positive, pos, spos};
+use optionstratlib::{ExpirationDate, Positive, pos};
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use tracing::info;
 use optionstratlib::utils::others::calculate_log_returns;
 use optionstratlib::volatility::{annualized_volatility, constant_volatility, historical_volatility};
 
+/// Extracts volatility metrics from a series of OHLCV candles.
+///
+/// This function processes a vector of OHLCV candles and calculates three important volatility measures:
+/// 1. A constant volatility value calculated from the entire dataset
+/// 2. A vector of historical volatilities using a 60-period moving window
+/// 3. The original close prices converted to Positive values
+///
+/// The function performs the following steps:
+/// - Extracts close prices from candles and converts them to Positive values
+/// - Calculates logarithmic returns from those prices
+/// - Computes annualized volatility for each log return using a minute timeframe
+/// - Calculates constant volatility across all returns
+/// - Calculates historical volatility using a 60-period moving window
+/// - Pads the historical volatility vector to match the original data length
+///
+/// # Arguments
+///
+/// * `ohlc` - A reference to a vector of OhlcvCandle structs containing price data
+///
+/// # Returns
+///
+/// A tuple containing:
+/// - A constant volatility value (Positive)
+/// - A vector of historical volatilities (Vec<Positive>)
+/// - A vector of close prices (Vec<Positive>)
+///
+/// # Errors
+///
+/// Returns an error if any of the intermediate calculations fail, such as:
+/// - Failed to calculate log returns
+/// - Failed to calculate constant or historical volatility
+///
 fn get_volatilities_from_ohlcv(
     ohlc: &Vec<OhlcvCandle>,
-) -> Result<(Positive, Vec<Positive>, Vec<Positive>), Box<dyn std::error::Error>> {
+) -> Result<(Positive, Vec<Positive>, Vec<Positive>), Box<dyn Error>> {
     let close_prices = ohlc
         .iter()
         .map(|candle| Positive::new_decimal(candle.close).unwrap())
@@ -40,21 +72,18 @@ fn get_volatilities_from_ohlcv(
     ) )
 }
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> Result<(), Box<dyn Error>> {
     setup_logger();
     // let ohlc = read_ohlcv_from_zip("examples/Data/cl-1m-sample.zip", Some("01/05/2007"), Some("08/05/2008"))?;
     let ohlc = read_ohlcv_from_zip("examples/Data/cl-1m-sample.zip", None, None)?;
-
-
+    let (volatility, historical_volatility, close_prices) = get_volatilities_from_ohlcv(&ohlc)?;
+    info!("Annualized volatility {:?}", volatility);
+    info!("Historical Volatility Length{:?}", historical_volatility.len());
+    info!("Prices Length{:?}", close_prices.len());
     
-    let (constant_volatility, historical_volatility, close_prices) = get_volatilities_from_ohlcv(&ohlc)?;
-    println!("annualized_volatility {:?}", constant_volatility);
-    println!("historical_volatility {:?}", historical_volatility.len());
-    println!("close_prices {:?}", close_prices.len());
-    
-    exit(0);
+
     let days = pos!(7.0);
-    let symbol = "GC".to_string();
+    let symbol = "CL".to_string();
     let underlying_price = close_prices[0];
     let expiration_date = ExpirationDate::Days(days);
     let chain_params = OptionChainBuildParams::new(
@@ -68,7 +97,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         OptionDataPriceParams::new(
             underlying_price,
             expiration_date,
-            spos!(0.17),
+            Some(volatility),
             dec!(0.0),
             pos!(0.0),
             Some(symbol.clone()),
@@ -83,27 +112,27 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         Positive::ZERO,   // call_strike
         Positive::ZERO,   // put_strike
         expiration_date,
-        Positive::ZERO, // implied_volatility
+        volatility, // implied_volatility
         Decimal::ZERO,  // risk_free_rate
         Positive::ZERO, // dividend_yield
-        pos!(1.0),      // quantity
+        Positive::ONE,      // quantity
         Positive::ZERO, // premium_short_call
         Positive::ZERO, // premium_short_put
-        pos!(0.82),     // open_fee_short_call
-        pos!(0.82),     // close_fee_short_call
-        pos!(0.82),     // open_fee_short_put
-        pos!(0.82),     // close_fee_short_put
+        pos!(0.05),     // open_fee_short_call
+        pos!(0.05),     // close_fee_short_call
+        pos!(0.05),     // open_fee_short_put
+        pos!(0.05),     // close_fee_short_put
     );
-    strategy.best_area(&option_chain, FindOptimalSide::Center);
+    strategy.best_ratio(&option_chain, FindOptimalSide::Center);
     info!("Strategy:  {:#?}", strategy);
-    let iv = option_chain
-        .atm_implied_volatility()?
-        .unwrap_or(Positive::ZERO);
+
+
     let positions = strategy.get_positions()?;
     let mut time_passed = Positive::ZERO;
 
     let mut pnl_metrics: PnLMetricsStep = PnLMetricsStep::default();
-    for price in &close_prices {
+    for (i, price) in close_prices.into_iter().enumerate() {
+        let iv = historical_volatility[i].round_to(3);
         if time_passed >= days {
             break;
         } else {
@@ -139,9 +168,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .sum::<PnL>();
 
             info!(
-                "Days: {} Price: {} {:?}",
+                "Days: {} Price: {} IV: {} {:?}",
                 (days - time_passed.to_dec()).round_to(3),
                 price,
+                iv,
                 pnl
             );
             pnl_metrics.pnl = pnl.clone();
