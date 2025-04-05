@@ -166,6 +166,95 @@ where
         .collect())
 }
 
+/// # Calculate Logarithmic Returns
+///
+/// Computes the logarithmic returns from a series of close prices. Logarithmic returns
+/// are calculated as the natural logarithm of the ratio between consecutive prices.
+///
+/// Logarithmic returns are commonly used in financial analysis because:
+/// - They are additive over time, unlike percentage returns
+/// - They better approximate a normal distribution
+/// - They're suitable for statistical analysis of financial time series
+///
+/// ## Parameters
+///
+/// * `close_prices` - A slice of `Decimal` values representing sequential close prices
+///
+/// ## Returns
+///
+/// * `Result<Vec<Decimal>, DecimalError>` - A vector of logarithmic returns if successful,
+///   or an error if the calculation fails
+///
+/// ## Errors
+///
+/// This function returns a `DecimalError` in the following cases:
+/// - If any price value is zero or negative
+/// - If there's a failure when converting `Decimal` to `f64` for logarithm calculation
+/// - If there's a failure when converting the logarithm result back to `Decimal`
+///
+/// ## Examples
+///
+/// ```rust
+/// use rust_decimal::Decimal;
+/// use rust_decimal_macros::dec;
+/// use optionstratlib::utils::others::calculate_log_returns;
+///
+/// let prices = vec![dec!(100), dec!(110), dec!(105), dec!(112)];
+/// let log_returns = calculate_log_returns(&prices).unwrap();
+/// // Returns approximately [0.09531, -0.04652, 0.06374]
+/// ```
+///
+/// ## Notes
+///
+/// - Returns an empty vector if fewer than 2 price points are provided
+/// - For consecutive prices P₁ and P₂, the log return is ln(P₂/P₁)
+pub fn calculate_log_returns(close_prices: &[Decimal]) -> Result<Vec<Decimal>, DecimalError> {
+    if close_prices.len() < 2 {
+        return Ok(Vec::new());
+    }
+
+    let mut log_returns = Vec::with_capacity(close_prices.len() - 1);
+
+    for i in 1..close_prices.len() {
+        let current_price = close_prices[i];
+        let previous_price = close_prices[i - 1];
+
+        // Check for non-positive prices
+        if previous_price <= Decimal::ZERO || current_price <= Decimal::ZERO {
+            return Err(DecimalError::InvalidValue {
+                value: current_price.to_f64().unwrap_or(0.0),
+                reason: "Price must be positive".to_string(),
+            });
+        }
+
+        // Calculate price ratio
+        let ratio = current_price / previous_price;
+
+        // Calculate natural logarithm
+        let ratio_f64 = match ratio.to_f64() {
+            Some(val) => val,
+            None => return Err(DecimalError::ConversionError {
+                from_type: "Decimal".to_string(),
+                to_type: "f64".to_string(),
+                reason: "Failed to convert Decimal to f64".to_string(),
+            }),
+        };
+
+        let log_return = match Decimal::try_from(ratio_f64.ln()) {
+            Ok(val) => val,
+            Err(_) => return Err(DecimalError::ConversionError {
+                from_type: "f64".to_string(),
+                to_type: "Decimal".to_string(),
+                reason: "Failed to convert logarithm result to Decimal".to_string(),
+            }),
+        };
+
+        log_returns.push(log_return);
+    }
+
+    Ok(log_returns)
+}
+
 #[cfg(test)]
 mod tests_approx_equal {
     use super::*;
@@ -561,5 +650,152 @@ mod tests_random_decimal {
         for i in 0..9 {
             assert_ne!(decimals[i], decimals[i + 1]);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests_log_returns {
+    use super::*;
+    use rust_decimal_macros::dec;
+    use approx::assert_relative_eq;
+
+    // Helper function to convert Decimal to f64 for testing
+    fn to_f64(d: &Decimal) -> f64 {
+        d.to_f64().unwrap()
+    }
+
+    #[test]
+    fn test_empty_input() {
+        let prices: Vec<Decimal> = Vec::new();
+        let result = calculate_log_returns(&prices);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().len(), 0);
+    }
+
+    #[test]
+    fn test_single_input() {
+        let prices = vec![dec!(100.0)];
+        let result = calculate_log_returns(&prices);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().len(), 0);
+    }
+
+    #[test]
+    fn test_basic_calculation() {
+        let prices = vec![dec!(100.0), dec!(110.0), dec!(105.0)];
+        let result = calculate_log_returns(&prices).unwrap();
+
+        assert_eq!(result.len(), 2);
+
+        // Manually calculate expected values
+        // ln(110.0/100.0) ≈ ln(1.1) ≈ 0.09531
+        // ln(105.0/110.0) ≈ ln(0.9545) ≈ -0.04652
+        assert_relative_eq!(to_f64(&result[0]), 0.09531018, epsilon = 0.00001);
+        assert_relative_eq!(to_f64(&result[1]), -0.04652, epsilon = 0.00001);
+    }
+
+    #[test]
+    fn test_zero_price() {
+        let prices = vec![dec!(100.0), dec!(0.0), dec!(105.0)];
+        let result = calculate_log_returns(&prices);
+
+        assert!(result.is_err());
+        if let Err(DecimalError::InvalidValue { reason, .. }) = result {
+            assert!(reason.contains("positive"));
+        } else {
+            panic!("Expected InvalidValue error");
+        }
+    }
+
+    #[test]
+    fn test_negative_price() {
+        let prices = vec![dec!(100.0), dec!(-50.0), dec!(105.0)];
+        let result = calculate_log_returns(&prices);
+
+        assert!(result.is_err());
+        if let Err(DecimalError::InvalidValue { reason, .. }) = result {
+            assert!(reason.contains("positive"));
+        } else {
+            panic!("Expected InvalidValue error");
+        }
+    }
+
+    #[test]
+    fn test_realistic_stock_prices() {
+        let prices = vec![
+            dec!(150.25),
+            dec!(151.50),
+            dec!(149.75),
+            dec!(152.25),
+            dec!(153.00)
+        ];
+
+        let result = calculate_log_returns(&prices).unwrap();
+
+        assert_eq!(result.len(), 4);
+
+        assert_relative_eq!(to_f64(&result[0]), 0.00829, epsilon = 0.00001);
+        assert_relative_eq!(to_f64(&result[1]), -0.01161, epsilon = 0.00001);
+        assert_relative_eq!(to_f64(&result[2]), 0.01656, epsilon = 0.00001);
+        assert_relative_eq!(to_f64(&result[3]), 0.00491, epsilon = 0.00001);
+    }
+
+    #[test]
+    fn test_large_price_movements() {
+        // Test with some large price movements (both up and down)
+        let prices = vec![
+            dec!(100.0),  // Starting price
+            dec!(200.0),  // 100% increase
+            dec!(50.0),   // 75% decrease
+            dec!(300.0)   // 500% increase
+        ];
+
+        let result = calculate_log_returns(&prices).unwrap();
+
+        assert_eq!(result.len(), 3);
+
+        // Expected returns:
+        // ln(200.0/100.0) = ln(2.0) ≈ 0.6931
+        // ln(50.0/200.0) = ln(0.25) ≈ -1.3863
+        // ln(300.0/50.0) = ln(6.0) ≈ 1.7918
+
+        assert_relative_eq!(to_f64(&result[0]), 0.6931, epsilon = 0.0001);
+        assert_relative_eq!(to_f64(&result[1]), -1.3863, epsilon = 0.0001);
+        assert_relative_eq!(to_f64(&result[2]), 1.7918, epsilon = 0.0001);
+    }
+
+    #[test]
+    fn test_no_change_prices() {
+        // Test with prices that don't change
+        let prices = vec![dec!(100.0), dec!(100.0), dec!(100.0)];
+        let result = calculate_log_returns(&prices).unwrap();
+
+        assert_eq!(result.len(), 2);
+        // ln(1.0) = 0
+        assert_relative_eq!(to_f64(&result[0]), 0.0, epsilon = 0.00001);
+        assert_relative_eq!(to_f64(&result[1]), 0.0, epsilon = 0.00001);
+    }
+
+    #[test]
+    fn test_very_small_price_changes() {
+        // Test with very small price changes
+        let prices = vec![
+            dec!(100.000),
+            dec!(100.001),
+            dec!(100.002)
+        ];
+
+        let result = calculate_log_returns(&prices).unwrap();
+
+        assert_eq!(result.len(), 2);
+
+        // Expected returns are very small
+        // ln(100.001/100.000) ≈ ln(1.00001) ≈ 0.00001
+        // ln(100.002/100.001) ≈ ln(1.00001) ≈ 0.00001
+
+        assert!(to_f64(&result[0]) > 0.0);
+        assert!(to_f64(&result[0]) < 0.0001);
+        assert!(to_f64(&result[1]) > 0.0);
+        assert!(to_f64(&result[1]) < 0.0001);
     }
 }
