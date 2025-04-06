@@ -114,4 +114,4 @@ mod metrics;
 pub use traits::{PnLCalculator, TransactionAble};
 pub use transaction::{Transaction, TransactionStatus};
 pub use utils::PnL;
-pub use metrics::{PnLMetrics, PnLMetricsStep};
+pub use metrics::{PnLMetrics, PnLMetricsStep, save_pnl_metrics, load_pnl_metrics};

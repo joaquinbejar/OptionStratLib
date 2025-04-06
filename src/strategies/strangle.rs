@@ -627,7 +627,7 @@ impl Optimizable for ShortStrangle {
 
             if current_value > best_value {
                 // Update the best value and replace the current strategy
-                info!("Found better value: {}", current_value);
+                debug!("Found better value: {}", current_value);
                 best_value = current_value;
                 *self = strategy.clone();
             }

@@ -1,14 +1,14 @@
 use std::error::Error;
 use optionstratlib::chains::OptionChain;
 use optionstratlib::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
-use optionstratlib::pnl::{PnL, PnLCalculator, PnLMetricsStep};
+use optionstratlib::pnl::{save_pnl_metrics, PnL, PnLCalculator, PnLMetricsStep};
 use optionstratlib::strategies::base::{Optimizable, Positionable};
 use optionstratlib::strategies::{FindOptimalSide, ShortStrangle};
 use optionstratlib::utils::{read_ohlcv_from_zip, setup_logger, OhlcvCandle, TimeFrame};
 use optionstratlib::{ExpirationDate, Positive, pos};
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
-use tracing::info;
+use tracing::{debug, info};
 use optionstratlib::utils::others::calculate_log_returns;
 use optionstratlib::volatility::{annualized_volatility, constant_volatility, historical_volatility};
 
@@ -72,25 +72,33 @@ fn get_volatilities_from_ohlcv(
     ) )
 }
 
-fn main() -> Result<(), Box<dyn Error>> {
-    setup_logger();
-    // let ohlc = read_ohlcv_from_zip("examples/Data/cl-1m-sample.zip", Some("01/05/2007"), Some("08/05/2008"))?;
-    let ohlc = read_ohlcv_from_zip("examples/Data/cl-1m-sample.zip", None, None)?;
-    let (volatility, historical_volatility, close_prices) = get_volatilities_from_ohlcv(&ohlc)?;
-    info!("Annualized volatility {:?}", volatility);
-    info!("Historical Volatility Length{:?}", historical_volatility.len());
-    info!("Prices Length{:?}", close_prices.len());
-    
 
-    let days = pos!(7.0);
-    let symbol = "CL".to_string();
+fn core(
+    ohlc: &Vec<OhlcvCandle>,
+    days: Positive,
+    symbol: String,
+    fee: Positive,
+    step: u32
+) -> Result<PnLMetricsStep, Box<dyn Error>> {
+    let mut pnl_metrics: PnLMetricsStep = PnLMetricsStep::default();
+    pnl_metrics.step_duration = days;
+
+    let mut ohlc_plus = ohlc.clone();
+    if let Some(last) = ohlc_plus.last().cloned() {
+        ohlc_plus.push(last);
+    }
+    
+    let (volatility, historical_volatility, close_prices) = get_volatilities_from_ohlcv(&ohlc_plus)?;
+    info!("Step: {} Annualized volatility {:?}", step, volatility);
+    
     let underlying_price = close_prices[0];
+    pnl_metrics.initial_price = underlying_price;
     let expiration_date = ExpirationDate::Days(days);
     let chain_params = OptionChainBuildParams::new(
         symbol.clone(),
         None,
         30,
-        pos!(1.0),
+        Positive::ONE,
         dec!(0.00003),
         pos!(0.02),
         2,
@@ -98,13 +106,13 @@ fn main() -> Result<(), Box<dyn Error>> {
             underlying_price,
             expiration_date,
             Some(volatility),
-            dec!(0.0),
-            pos!(0.0),
+            Decimal::ZERO,
+            Positive::ZERO,
             Some(symbol.clone()),
         ),
     );
     let option_chain = OptionChain::build_chain(&chain_params);
-    info!("{}", option_chain);
+    debug!("{}", option_chain);
 
     let mut strategy = ShortStrangle::new(
         symbol,
@@ -118,19 +126,20 @@ fn main() -> Result<(), Box<dyn Error>> {
         Positive::ONE,      // quantity
         Positive::ZERO, // premium_short_call
         Positive::ZERO, // premium_short_put
-        pos!(0.05),     // open_fee_short_call
-        pos!(0.05),     // close_fee_short_call
-        pos!(0.05),     // open_fee_short_put
-        pos!(0.05),     // close_fee_short_put
+        fee,     // open_fee_short_call
+        fee,     // close_fee_short_call
+        fee,     // open_fee_short_put
+        fee,     // close_fee_short_put
     );
     strategy.best_ratio(&option_chain, FindOptimalSide::Center);
-    info!("Strategy:  {:#?}", strategy);
-
-
+    debug!("Strategy:  {:#?}", strategy);
+    
     let positions = strategy.get_positions()?;
+    positions.iter().for_each(|position| {
+        pnl_metrics.strikes.push(position.option.strike_price);
+    });
     let mut time_passed = Positive::ZERO;
-
-    let mut pnl_metrics: PnLMetricsStep = PnLMetricsStep::default();
+    
     for (i, price) in close_prices.into_iter().enumerate() {
         let iv = historical_volatility[i].round_to(3);
         if time_passed >= days {
@@ -167,7 +176,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 })
                 .sum::<PnL>();
 
-            info!(
+            debug!(
                 "Days: {} Price: {} IV: {} {:?}",
                 (days - time_passed.to_dec()).round_to(3),
                 price,
@@ -175,7 +184,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 pnl
             );
             pnl_metrics.pnl = pnl.clone();
-            pnl_metrics.step_duration = days;
+            pnl_metrics.final_price = price;
             if pnl_metrics.pnl.realized.unwrap().is_sign_positive() {
                 pnl_metrics.win = true;
             } else {
@@ -184,7 +193,32 @@ fn main() -> Result<(), Box<dyn Error>> {
             time_passed += pos!(1.0) / (pos!(24.0) * pos!(60.0)); // 1 minute
         }
     }
-    info!("PnL: {:?}", pnl_metrics);
+    pnl_metrics.step_number = step;
+    Ok( pnl_metrics)
+}
 
+
+fn main() -> Result<(), Box<dyn Error>> {
+    setup_logger();
+    // let ohlc = read_ohlcv_from_zip("examples/Data/cl-1m-sample.zip", None, None)?;
+    let ohlc = read_ohlcv_from_zip("examples/Data/gc-1m.zip", Some("01/05/2007"), Some("08/05/2008"))?;
+    // let ohlc = read_ohlcv_from_zip("examples/Data/gc-1m.zip", None, None)?;
+
+    let days = pos!(5.0);
+    let chunk_size = (days * 24.0 * 60.0).to_i64() as usize;
+    info!("Chunk size: {} # Steps: {}", chunk_size, ohlc.len() / chunk_size);
+    let mut pnl_results: Vec<PnLMetricsStep> = Vec::new();
+
+    for (step, chunk) in ohlc.chunks_exact(chunk_size).enumerate() {
+        let ohlc = chunk.to_vec();
+        let pnl_metrics = core(&ohlc, days, "GC".to_string(), pos!(0.10), step as u32)?;
+        info!("PnL: {:?}", pnl_metrics);
+        pnl_results.push(pnl_metrics);
+        // break
+    }
+    
+    save_pnl_metrics(&pnl_results,"examples/Data/gc-1m_short_strangle_metrics.json")?;
+    
+    
     Ok(())
 }
