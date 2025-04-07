@@ -568,13 +568,23 @@ impl Optimizable for ShortStrangle {
             .get_double_iter()
             // Filter out invalid combinations based on FindOptimalSide
             .filter(move |(short_put, short_call)| {
-                if side == FindOptimalSide::Center {
-                    short_put.is_valid_optimal_side(underlying_price, &FindOptimalSide::Lower)
-                        && short_call
-                            .is_valid_optimal_side(underlying_price, &FindOptimalSide::Upper)
-                } else {
-                    short_put.is_valid_optimal_side(underlying_price, &side)
-                        && short_call.is_valid_optimal_side(underlying_price, &side)
+                match side {
+                    FindOptimalSide::DeltaRange(min, max) => {
+                        let (_, delta_put) = short_put.current_deltas();
+                        let (delta_call,_) = short_call.current_deltas();
+                         delta_put.unwrap() > min && delta_put.unwrap() < max &&
+                            delta_call.unwrap() > min && delta_call.unwrap() < max
+                    }
+                    FindOptimalSide::Center=> {
+                            short_put.is_valid_optimal_side(underlying_price, &FindOptimalSide::Lower)
+                                && short_call
+                                    .is_valid_optimal_side(underlying_price, &FindOptimalSide::Upper)
+                    }
+                    _ => {
+                        short_put.is_valid_optimal_side(underlying_price, &side)
+                               && short_call.is_valid_optimal_side(underlying_price, &side)
+                    }
+
                 }
             })
             .filter(move |(short_put, short_call)| short_put.strike_price < short_call.strike_price)
@@ -1451,15 +1461,24 @@ impl Optimizable for LongStrangle {
         let strategy = self.clone();
         option_chain
             .get_double_iter()
-            // Filter out invalid combinations based on FindOptimalSide
             .filter(move |(long_put, long_call)| {
-                if side == FindOptimalSide::Center {
-                    long_put.is_valid_optimal_side(underlying_price, &FindOptimalSide::Lower)
-                        && long_call
+                match side {
+                    FindOptimalSide::DeltaRange(min, max) => {
+                        let (_, delta_put) = long_put.current_deltas();
+                        let (delta_call,_) = long_call.current_deltas();
+                        delta_put.unwrap() > min && delta_put.unwrap() < max && 
+                            delta_call.unwrap() > min && delta_call.unwrap() < max
+                    }
+                    FindOptimalSide::Center=> {
+                        long_put.is_valid_optimal_side(underlying_price, &FindOptimalSide::Lower)
+                            && long_call
                             .is_valid_optimal_side(underlying_price, &FindOptimalSide::Upper)
-                } else {
-                    long_put.is_valid_optimal_side(underlying_price, &side)
-                        && long_call.is_valid_optimal_side(underlying_price, &side)
+                    }
+                    _ => {
+                        long_put.is_valid_optimal_side(underlying_price, &side)
+                            && long_call.is_valid_optimal_side(underlying_price, &side)
+                    }
+                    
                 }
             })
             .filter(move |(long_put, long_call)| long_put.strike_price < long_call.strike_price)
@@ -1474,6 +1493,7 @@ impl Optimizable for LongStrangle {
                     first: long_put,
                     second: long_call,
                 };
+                
                 let strategy = strategy.create_strategy(option_chain, &legs);
                 strategy.validate() && strategy.max_profit().is_ok() && strategy.max_loss().is_ok()
             })

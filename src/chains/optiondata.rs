@@ -800,6 +800,11 @@ impl OptionData {
             FindOptimalSide::Center => {
                 panic!("Center should be managed by the strategy");
             }
+            FindOptimalSide::DeltaRange(min,max) => {
+                
+                (self.delta_put.is_some() && self.delta_put.unwrap() >= *min && self.delta_put.unwrap() <= *max) ||
+                    (self.delta_call.is_some() && self.delta_call.unwrap() >= *min && self.delta_call.unwrap() <= *max)
+            },
         }
     }
 
@@ -1049,6 +1054,24 @@ impl OptionData {
             short_put,
         }));
         Ok(())
+    }
+
+    /// Returns a tuple containing the current delta values for both call and put options.
+    ///
+    /// This method provides access to the option's delta values, which measure the rate of change
+    /// of the option price with respect to changes in the underlying asset price. Delta values 
+    /// typically range from -1 to 1 and are a key metric for understanding option price sensitivity.
+    ///
+    /// # Returns
+    ///
+    /// A tuple containing:
+    /// * First element: `Option<Decimal>` - The delta value for the call option. May be `None` if 
+    ///   the delta value is not available or could not be calculated.
+    /// * Second element: `Option<Decimal>` - The delta value for the put option. May be `None` if
+    ///   the delta value is not available or could not be calculated.
+    ///
+    pub fn current_deltas(&self) -> (Option<Decimal>, Option<Decimal>) {
+        (self.delta_call, self.delta_put)
     }
 }
 

@@ -131,7 +131,7 @@ fn core(
         fee,     // open_fee_short_put
         fee,     // close_fee_short_put
     );
-    strategy.best_ratio(&option_chain, FindOptimalSide::Center);
+    strategy.best_ratio(&option_chain, FindOptimalSide::DeltaRange(dec!(-0.3), dec!(0.3)));
     debug!("Strategy:  {:#?}", strategy);
     
     let positions = strategy.get_positions()?;
@@ -218,7 +218,5 @@ fn main() -> Result<(), Box<dyn Error>> {
     }
     
     save_pnl_metrics(&pnl_results,"examples/Data/gc-1m_short_strangle_metrics.json")?;
-    
-    
     Ok(())
 }

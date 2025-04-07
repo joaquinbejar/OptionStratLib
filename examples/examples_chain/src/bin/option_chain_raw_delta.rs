@@ -12,12 +12,15 @@ use optionstratlib::visualization::utils::{Graph, GraphBackend};
 use optionstratlib::{ExpirationDate, Positive, pos};
 use rust_decimal::Decimal;
 use tracing::{debug, info};
+use optionstratlib::utils::time::get_tomorrow_formatted;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     setup_logger();
+
     let mut option_chain =
-        OptionChain::load_from_json("examples/Chains/DAX-30-jan-2025-21637.0.json")?;
+        OptionChain::load_from_json("examples/Chains/SP500-18-oct-2024-5781.88.json")?;
     info!("Chain loaded");
+    option_chain.update_expiration_date(get_tomorrow_formatted());
     option_chain.update_greeks();
     info!("{}", &option_chain);
 

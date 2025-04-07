@@ -569,6 +569,10 @@ impl OptionChain {
                 FindOptimalSide::Center => {
                     panic!("Center should be managed by the strategy");
                 }
+                FindOptimalSide::DeltaRange(min,max) => {
+                    (option.delta_put.is_some() && option.delta_put.unwrap() >= min && option.delta_put.unwrap() <= max) ||
+                    (option.delta_call.is_some() && option.delta_call.unwrap() >= min && option.delta_call.unwrap() <= max)
+                },
             })
             .collect()
     }
@@ -610,6 +614,10 @@ impl OptionChain {
                 FindOptimalSide::Center => {
                     panic!("Center should be managed by the strategy");
                 }
+                FindOptimalSide::DeltaRange(min,max) => {
+                    (option.delta_put.is_some() && option.delta_put.unwrap() >= min && option.delta_put.unwrap() <= max) ||
+                        (option.delta_call.is_some() && option.delta_call.unwrap() >= min && option.delta_call.unwrap() <= max)
+                },
             })
             .map(|option| option.get_options_in_strike(price_params, Side::Long, OptionStyle::Call))
             .collect()

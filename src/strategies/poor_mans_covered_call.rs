@@ -54,7 +54,7 @@ use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{RED, ShapeStyle};
 use rust_decimal::Decimal;
 use std::error::Error;
-use tracing::{debug, error};
+use tracing::debug;
 
 const PMCC_DESCRIPTION: &str = "A Poor Man's Covered Call (PMCC) is an options strategy that simulates a covered call \
     using long-term equity anticipation securities (LEAPS) instead of the underlying stock. \
@@ -586,94 +586,6 @@ impl Optimizable for PoorMansCoveredCall {
                     *self = strategy.clone();
                 }
             }
-        }
-    }
-
-    fn is_valid_short_option(&self, option: &OptionData, side: &FindOptimalSide) -> bool {
-        let underlying_price = self.short_call.option.underlying_price;
-        if underlying_price == Positive::ZERO {
-            error!("Invalid underlying_price option");
-            return false;
-        }
-
-        match side {
-            FindOptimalSide::Upper => {
-                let valid = option.strike_price >= underlying_price;
-                if !valid {
-                    debug!(
-                        "Short Option is out of range: {} <= {}",
-                        option.strike_price, underlying_price
-                    );
-                }
-                valid
-            }
-            FindOptimalSide::Lower => {
-                let valid = option.strike_price <= underlying_price;
-                if !valid {
-                    debug!(
-                        "Short Option is out of range: {} >= {}",
-                        option.strike_price, underlying_price
-                    );
-                }
-                valid
-            }
-            FindOptimalSide::All => true,
-            FindOptimalSide::Range(start, end) => {
-                let valid = option.strike_price >= *start && option.strike_price <= *end;
-                if !valid {
-                    debug!(
-                        " Short Option is out of range: {} >= {} && {} <= {}",
-                        option.strike_price, *start, option.strike_price, *end
-                    );
-                }
-                valid
-            }
-            FindOptimalSide::Deltable(_threshold) => true,
-            FindOptimalSide::Center => option.strike_price <= self.get_underlying_price(),
-        }
-    }
-
-    fn is_valid_long_option(&self, option: &OptionData, side: &FindOptimalSide) -> bool {
-        let underlying_price = self.long_call.option.underlying_price;
-        if underlying_price == Positive::ZERO {
-            error!("Invalid underlying_price option");
-            return false;
-        }
-
-        match side {
-            FindOptimalSide::Upper => {
-                let valid = option.strike_price >= underlying_price;
-                if !valid {
-                    debug!(
-                        "Long Option is out of range: {} <= {}",
-                        option.strike_price, underlying_price
-                    );
-                }
-                valid
-            }
-            FindOptimalSide::Lower => {
-                let valid = option.strike_price <= underlying_price;
-                if !valid {
-                    debug!(
-                        "Long Option is out of range: {} >= {}",
-                        option.strike_price, underlying_price
-                    );
-                }
-                valid
-            }
-            FindOptimalSide::All => true,
-            FindOptimalSide::Range(start, end) => {
-                let valid = option.strike_price >= *start && option.strike_price <= *end;
-                if !valid {
-                    debug!(
-                        "Long Option is out of range: {} >= {} && {} <= {}",
-                        option.strike_price, *start, option.strike_price, *end
-                    );
-                }
-                valid
-            }
-            FindOptimalSide::Deltable(_threshold) => true,
-            FindOptimalSide::Center => option.strike_price >= self.get_underlying_price(),
         }
     }
 
