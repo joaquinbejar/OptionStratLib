@@ -1,4 +1,6 @@
 use std::error::Error;
+use std::sync::{Arc, Mutex};
+use rayon::prelude::IntoParallelRefIterator;
 use optionstratlib::chains::OptionChain;
 use optionstratlib::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
 use optionstratlib::pnl::{save_pnl_metrics, PnL, PnLCalculator, PnLMetricsStep};
@@ -8,9 +10,13 @@ use optionstratlib::utils::{read_ohlcv_from_zip, setup_logger, OhlcvCandle, Time
 use optionstratlib::{ExpirationDate, Positive, pos};
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
-use tracing::{debug, info};
+use tracing::{debug, error, info};
 use optionstratlib::utils::others::calculate_log_returns;
 use optionstratlib::volatility::{annualized_volatility, constant_volatility, historical_volatility};
+use rayon::ThreadPoolBuilder;
+use rayon::iter::IndexedParallelIterator;
+use rayon::iter::ParallelIterator;
+use itertools::Itertools;
 
 /// Extracts volatility metrics from a series of OHLCV candles.
 ///
@@ -131,7 +137,7 @@ fn core(
         fee,     // open_fee_short_put
         fee,     // close_fee_short_put
     );
-    strategy.best_ratio(&option_chain, FindOptimalSide::DeltaRange(dec!(-0.3), dec!(0.3)));
+    strategy.best_ratio(&option_chain, FindOptimalSide::DeltaRange(dec!(-0.05), dec!(0.05)));
     debug!("Strategy:  {:#?}", strategy);
     
     let positions = strategy.get_positions()?;
@@ -198,25 +204,87 @@ fn core(
 }
 
 
+// fn main() -> Result<(), Box<dyn Error>> {
+//     setup_logger();
+//     // let ohlc = read_ohlcv_from_zip("examples/Data/cl-1m-sample.zip", None, None)?;
+//     // let ohlc = read_ohlcv_from_zip("examples/Data/gc-1m.zip", Some("01/05/2007"), Some("08/05/2008"))?;
+//     let ohlc = read_ohlcv_from_zip("examples/Data/gc-1m.zip", None, None)?;
+// 
+//     let days = pos!(5.0);
+//     let chunk_size = (days * 24.0 * 60.0).to_i64() as usize;
+//     info!("Chunk size: {} # Steps: {}", chunk_size, ohlc.len() / chunk_size);
+//     let mut pnl_results: Vec<PnLMetricsStep> = Vec::new();
+// 
+//     for (step, chunk) in ohlc.chunks_exact(chunk_size).enumerate() {
+//         let ohlc = chunk.to_vec();
+//         let pnl_metrics = core(&ohlc, days, "GC".to_string(), pos!(0.10), step as u32)?;
+//         info!("PnL: {:?}", pnl_metrics);
+//         pnl_results.push(pnl_metrics);
+//         // break
+//     }
+//     
+//     save_pnl_metrics(&pnl_results,"examples/Data/gc-1m_short_strangle_metrics_delta30.json")?;
+//     Ok(())
+// }
+
+
 fn main() -> Result<(), Box<dyn Error>> {
     setup_logger();
-    // let ohlc = read_ohlcv_from_zip("examples/Data/cl-1m-sample.zip", None, None)?;
-    let ohlc = read_ohlcv_from_zip("examples/Data/gc-1m.zip", Some("01/05/2007"), Some("08/05/2008"))?;
-    // let ohlc = read_ohlcv_from_zip("examples/Data/gc-1m.zip", None, None)?;
+    // let ohlc = read_ohlcv_from_zip("examples/Data/gc-1m.zip", Some("01/05/2007"), Some("08/05/2008"))?;
+    let ohlc = read_ohlcv_from_zip("examples/Data/gc-1m.zip", None, None)?;
 
     let days = pos!(5.0);
     let chunk_size = (days * 24.0 * 60.0).to_i64() as usize;
     info!("Chunk size: {} # Steps: {}", chunk_size, ohlc.len() / chunk_size);
-    let mut pnl_results: Vec<PnLMetricsStep> = Vec::new();
 
-    for (step, chunk) in ohlc.chunks_exact(chunk_size).enumerate() {
-        let ohlc = chunk.to_vec();
-        let pnl_metrics = core(&ohlc, days, "GC".to_string(), pos!(0.10), step as u32)?;
-        info!("PnL: {:?}", pnl_metrics);
-        pnl_results.push(pnl_metrics);
-        // break
-    }
-    
-    save_pnl_metrics(&pnl_results,"examples/Data/gc-1m_short_strangle_metrics.json")?;
+    // Create chunks vector
+    let chunks: Vec<_> = ohlc.chunks_exact(chunk_size).collect();
+    let num_chunks = chunks.len();
+
+    // Create a thread-safe container for results with step info
+    // Using a tuple to store the step and the result
+    let pnl_results = Arc::new(Mutex::new(Vec::<(u32, PnLMetricsStep)>::with_capacity(num_chunks)));
+
+    // Configure the thread pool
+    let num_threads = num_cpus::get()-1;
+    info!("Using {} threads for parallel processing", num_threads);
+
+    // Create and execute the thread pool
+    ThreadPoolBuilder::new()
+        .num_threads(num_threads)
+        .build()?
+        .install(|| {
+            chunks.par_iter()
+                .enumerate()
+                .for_each(|(step, chunk)| {
+                    let step_u32 = step as u32;
+                    let ohlc = chunk.to_vec();
+                    match core(&ohlc, days, "GC".to_string(), pos!(0.10), step_u32) {
+                        Ok(pnl_metrics) => {
+                            info!("PnL: {:?}", pnl_metrics);
+                            // Store both the step and the metrics
+                            let mut results = pnl_results.lock().unwrap();
+                            results.push((step_u32, pnl_metrics));
+                        }
+                        Err(e) => {
+                            error!("Error processing chunk {}: {:?}", step, e);
+                        }
+                    }
+                });
+        });
+
+    // Get the final results
+    let final_results = Arc::try_unwrap(pnl_results)
+        .expect("Thread pool should be done with the results")
+        .into_inner()?;
+
+    // Sort results by step and extract just the PnLMetricsStep
+    let sorted_results: Vec<PnLMetricsStep> = final_results
+        .into_iter()
+        .sorted_by_key(|(step, _)| *step)
+        .map(|(_, metrics)| metrics)
+        .collect();
+
+    save_pnl_metrics(&sorted_results, "examples/Data/gc-1m_short_strangle_metrics_delta05.json")?;
     Ok(())
 }
