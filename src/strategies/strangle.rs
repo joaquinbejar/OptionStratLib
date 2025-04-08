@@ -479,6 +479,16 @@ impl Strategies for ShortStrangle {
         self.short_call.option.underlying_price
     }
 
+    fn set_underlying_price(&mut self, price: &Positive) -> Result<(), StrategyError>{
+        self.short_call.option.underlying_price = *price;
+        self.short_put.option.underlying_price = *price;
+        Ok(())
+    }
+    fn volume(&mut self) -> Result<Positive, StrategyError> {
+        let volume = self.short_call.option.quantity + self.short_put.option.quantity;
+        Ok(volume)
+    }
+
     fn max_profit(&self) -> Result<Positive, StrategyError> {
         let max_profit = self.net_premium_received().unwrap().to_f64();
         if max_profit < ZERO {
@@ -1387,6 +1397,16 @@ impl Strategable for LongStrangle {
 impl Strategies for LongStrangle {
     fn get_underlying_price(&self) -> Positive {
         self.long_call.option.underlying_price
+    }
+    
+    fn set_underlying_price(&mut self, price: &Positive) -> Result<(), StrategyError> {
+        self.long_call.option.underlying_price = *price;
+        self.long_put.option.underlying_price = *price;
+        Ok(())
+    }
+    fn volume(&mut self) -> Result<Positive, StrategyError> {
+        let volume = self.long_call.option.quantity + self.long_put.option.quantity;
+        Ok(volume)
     }
 
     fn max_profit(&self) -> Result<Positive, StrategyError> {
