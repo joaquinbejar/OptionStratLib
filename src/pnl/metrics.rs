@@ -1,11 +1,12 @@
-use std::fs::File;
-use std::io;
-use std::io::Write;
+use crate::Positive;
+use crate::pnl::PnL;
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
-use crate::pnl::PnL;
-use crate::Positive;
+use std::fmt;
+use std::fs::File;
+use std::io;
+use std::io::Write;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PnLMetricsStep {
@@ -20,6 +21,9 @@ pub struct PnLMetricsStep {
     pub initial_price: Positive,
     pub final_price: Positive,
     pub strikes: Vec<Positive>,
+    pub initial_volumes: Vec<Positive>,
+    pub final_volumes: Vec<Positive>,
+    pub delta_adjustments: Positive,
 }
 
 impl Default for PnLMetricsStep {
@@ -36,10 +40,13 @@ impl Default for PnLMetricsStep {
             initial_price: Positive::ZERO,
             final_price: Positive::ZERO,
             strikes: Vec::new(),
+            initial_volumes: Vec::new(),
+            final_volumes: Vec::new(),
+            delta_adjustments: Positive::ZERO,
         }
     }
 }
-        
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PnLMetrics {
     pub total_pnl: Decimal,
@@ -58,10 +65,9 @@ pub struct PnLMetrics {
     pub profit_factor: Decimal,
     pub recovery_factor: Decimal,
     pub expected_payoff: Decimal,
-    pub simulation_duration: Decimal, 
+    pub simulation_duration: Decimal,
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
-
 }
 
 impl Default for PnLMetrics {
@@ -83,13 +89,59 @@ impl Default for PnLMetrics {
             profit_factor: Decimal::ZERO,
             recovery_factor: Decimal::ZERO,
             expected_payoff: Decimal::ZERO,
-            simulation_duration: Decimal::ZERO, 
+            simulation_duration: Decimal::ZERO,
             start_time: Utc::now(),
             end_time: Utc::now(),
         }
     }
 }
 
+impl fmt::Display for PnLMetricsStep {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // Format vectors with rounded values
+        fn format_vec(values: &[Positive]) -> String {
+            let formatted: Vec<String> = values
+                .iter()
+                .map(|v| v.to_dec().round_dp(3).to_string())
+                .collect();
+            format!("[{}]", formatted.join(", "))
+        }
+
+        write!(
+            f,
+            "PnLMetricsStep: {{\
+             {}, \
+             win: {}, \
+             step_number: {}, \
+             step_duration: {}, \
+             max_unrealized_pnl: {}, \
+             min_unrealized_pnl: {}, \
+             winning_steps: {}, \
+             losing_steps: {}, \
+             initial_price: {}, \
+             final_price: {}, \
+             strikes: {}, \
+             initial_volumes: {}, \
+             final_volumes: {}, \
+             delta_adjustments: {}\
+             }}",
+            self.pnl,
+            self.win,
+            self.step_number,
+            self.step_duration.round_to(3),
+            self.max_unrealized_pnl.round_to(3),
+            self.min_unrealized_pnl.round_to(3),
+            self.winning_steps,
+            self.losing_steps,
+            self.initial_price.round_to(3),
+            self.final_price.round_to(3),
+            format_vec(&self.strikes),
+            format_vec(&self.initial_volumes),
+            format_vec(&self.final_volumes),
+            self.delta_adjustments
+        )
+    }
+}
 
 /// Serializes a vector of PnLMetricsStep to compact JSON and saves it to a file
 ///
