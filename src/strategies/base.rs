@@ -351,7 +351,34 @@ pub trait Strategies: Validable + Positionable + BreakEvenable {
     /// # Panics
     /// Panics if the underlying price is not applicable for this strategy.
     fn get_underlying_price(&self) -> Positive {
-        panic!("Underlying price is not applicable for this strategy");
+        panic!("Get Underlying price is not applicable for this strategy");
+    }
+
+    /// Sets the underlying price for a strategy.
+    ///
+    /// # Arguments
+    ///
+    /// * `price` - A reference to a `Positive` value representing the new price to set
+    ///
+    /// # Returns
+    ///
+    /// A `Result` that will always panic with an informative message
+    ///
+    /// # Errors
+    ///
+    /// This function always panics as it's not applicable for the current strategy type.
+    /// It's implemented this way to fulfill a trait requirement but intentionally prevents
+    /// usage for strategies where underlying price setting doesn't make sense.
+    ///
+    /// # Panics
+    ///
+    /// Always panics with the message "Set Underlying price is not applicable for this strategy"
+    fn set_underlying_price(&mut self, _price: &Positive) -> Result<(), StrategyError> {
+        panic!("Set Underlying price is not applicable for this strategy");
+    }
+
+    fn volume(&mut self) -> Result<Positive, StrategyError> {
+        panic!("volumee is not applicable for this strategy");
     }
 
     /// Calculates the maximum possible profit for the strategy.
