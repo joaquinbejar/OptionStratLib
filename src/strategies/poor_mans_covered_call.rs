@@ -2078,6 +2078,7 @@ mod tests_poor_mans_covered_call_position_management {
     use crate::model::types::{ExpirationDate, OptionStyle, Side};
     use crate::pos;
     use rust_decimal_macros::dec;
+    use tracing::error;
 
     fn create_test_short_poor_mans_covered_call() -> PoorMansCoveredCall {
         PoorMansCoveredCall::new(

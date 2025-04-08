@@ -1,6 +1,7 @@
 use crate::error::TransactionError;
 use crate::pnl::transaction::Transaction;
 use crate::pnl::utils::PnL;
+use crate::strategies::DeltaAdjustment;
 use crate::{ExpirationDate, Positive};
 use std::error::Error;
 
@@ -47,6 +48,28 @@ pub trait PnLCalculator {
         &self,
         _underlying_price: &Positive,
     ) -> Result<PnL, Box<dyn Error>>;
+
+    /// Calculates the Profit and Loss (PnL) for a series of delta adjustments in a trading strategy.
+    ///
+    /// # Arguments
+    ///
+    /// * `_adjustments` - A vector of `DeltaAdjustment` instances representing the adjustments made
+    ///                    to maintain delta neutrality in a trading strategy.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<PnL, Box<dyn Error>>` - If successful, returns a `PnL` object containing information 
+    ///                                   about realized and unrealized profits/losses, costs, and income.
+    ///                                   Otherwise, returns an error.
+    ///
+    /// # Panics
+    ///
+    /// This function always panics with the message "adjustments_pnl is not implemented for this Strategy."
+    /// It serves as a placeholder or trait method that must be implemented by specific strategy implementations.
+    ///
+    fn adjustments_pnl(&self, _adjustments: &DeltaAdjustment) -> Result<PnL, Box<dyn Error>> {
+        panic!("adjustments_pnl is not implemented for this Strategy.")
+    }
 }
 
 /// # TransactionAble
