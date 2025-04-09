@@ -429,9 +429,10 @@ impl Positionable for ShortStrangle {
     /// * `Err(PositionError)` if position was not found or validation failed
     fn modify_position(&mut self, position: &Position) -> Result<(), PositionError> {
         if !position.validate() {
+            let  err_msg = format!("modify_position: Invalid position data: \n{}", position);
             return Err(PositionError::ValidationError(
                 PositionValidationErrorKind::InvalidPosition {
-                    reason: "Invalid position data".to_string(),
+                    reason: err_msg,
                 },
             ));
         }
@@ -487,11 +488,9 @@ impl Strategies for ShortStrangle {
                 .calculate_price_black_scholes()?
                 .abs(),
         );
-
         self.short_put.option.underlying_price = *price;
         self.short_put.premium =
             Positive::from(self.short_put.option.calculate_price_black_scholes()?.abs());
-
         Ok(())
     }
 
@@ -1454,9 +1453,10 @@ impl Positionable for LongStrangle {
     /// * `Err(PositionError)` if position was not found or validation failed
     fn modify_position(&mut self, position: &Position) -> Result<(), PositionError> {
         if !position.validate() {
+            let  err_msg = format!("modify_position: Invalid position data: \n{}", position);
             return Err(PositionError::ValidationError(
                 PositionValidationErrorKind::InvalidPosition {
-                    reason: "Invalid position data".to_string(),
+                    reason: err_msg,
                 },
             ));
         }
