@@ -5,8 +5,8 @@
 //! generating price ranges.
 
 use crate::model::positive::Positive;
-use std::fmt::Display;
 use rust_decimal::Decimal;
+use std::fmt::Display;
 
 /// Defines the strategy for finding optimal pricing sides.
 ///
@@ -88,7 +88,7 @@ pub enum FindOptimalSide {
     Center,
 
     /// Select strikes in a strategy that ensure delta is within a specified range.
-    DeltaRange(Decimal, Decimal)
+    DeltaRange(Decimal, Decimal),
 }
 
 impl Display for FindOptimalSide {

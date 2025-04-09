@@ -3,12 +3,12 @@
    Email: jb@taunais.com
    Date: 16/8/24
 ******************************************************************************/
-use std::fmt;
 use crate::Positive;
 pub use crate::pnl::PnLCalculator;
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
+use std::fmt;
 use std::iter::Sum;
 use std::ops::Add; // TODO: Remove this line when TransactionAble is implemented
 

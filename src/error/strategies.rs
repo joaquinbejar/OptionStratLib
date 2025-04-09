@@ -67,8 +67,8 @@
 //! ## Type Alias
 //!
 //! Provides `StrategyResult<T>` for convenient error handling in strategy operations.
-use crate::error::{OptionsError, PositionError};
 use crate::error::common::OperationErrorKind;
+use crate::error::{OptionsError, PositionError};
 use std::error::Error;
 use std::fmt;
 

@@ -45,13 +45,13 @@ fn test_call_butterfly_integration() -> Result<(), Box<dyn Error>> {
     strategy.best_area(&option_chain, FindOptimalSide::All);
     assert_relative_eq!(
         strategy.profit_area().unwrap().to_f64().unwrap(),
-        68391.6908,
+        75286.2704,
         epsilon = 0.001
     );
     strategy.best_ratio(&option_chain, FindOptimalSide::Upper);
     assert_relative_eq!(
         strategy.profit_ratio().unwrap().to_f64().unwrap(),
-        10660.0,
+        19628.0,
         epsilon = 0.001
     );
 

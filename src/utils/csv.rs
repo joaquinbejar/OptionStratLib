@@ -161,10 +161,7 @@ pub fn read_ohlcv_from_zip(
     if let (Some(start_date), Some(end_date)) = (&start, &end) {
         if start_date > end_date {
             return Err(OhlcvError::InvalidParameter {
-                reason: format!(
-                    "Start date {} is after end date {}",
-                    start_date, end_date
-                ),
+                reason: format!("Start date {} is after end date {}", start_date, end_date),
             });
         }
     }
@@ -195,8 +192,8 @@ pub fn read_ohlcv_from_zip(
         // Skip header if present (line 0)
         if line_num == 0
             && line_result
-            .as_ref()
-            .is_ok_and(|l| l.contains("date") || l.contains("Date"))
+                .as_ref()
+                .is_ok_and(|l| l.contains("date") || l.contains("Date"))
         {
             continue;
         }
@@ -219,8 +216,7 @@ pub fn read_ohlcv_from_zip(
         let date = NaiveDate::parse_from_str(parts[0], "%d/%m/%Y")?;
 
         // Skip records outside our date range if dates are specified
-        if (start.is_some() && date < start.unwrap()) ||
-            (end.is_some() && date > end.unwrap()) {
+        if (start.is_some() && date < start.unwrap()) || (end.is_some() && date > end.unwrap()) {
             continue;
         }
 
@@ -379,7 +375,11 @@ mod ohlcv_tests {
     #[test]
     fn test_read_ohlcv_nonexistent_file() {
         // Call function with nonexistent file
-        let result = read_ohlcv_from_zip("nonexistent_file.zip", Some("01/01/2022"), Some("31/12/2022"));
+        let result = read_ohlcv_from_zip(
+            "nonexistent_file.zip",
+            Some("01/01/2022"),
+            Some("31/12/2022"),
+        );
 
         // Verify results
         assert!(
@@ -546,7 +546,7 @@ mod ohlcv_tests {
         let (zip_path, _temp_file) = create_test_zip(csv_data)?;
 
         // Call our function with date range that only matches some data
-        let candles = read_ohlcv_from_zip(&zip_path, Some("02/01/2022"),Some("03/01/2022"))?;
+        let candles = read_ohlcv_from_zip(&zip_path, Some("02/01/2022"), Some("03/01/2022"))?;
 
         // Verify results
         assert_eq!(candles.len(), 2, "Should return exactly 2 candles");
@@ -680,7 +680,11 @@ mod ohlcv_tests {
         let candles = read_ohlcv_from_zip(&zip_path, None, None)?;
 
         // Verify results - should include all 3 candles
-        assert_eq!(candles.len(), 3, "Should return all 3 candles when no dates specified");
+        assert_eq!(
+            candles.len(),
+            3,
+            "Should return all 3 candles when no dates specified"
+        );
 
         // Verify all candles are included
         assert_eq!(
@@ -713,7 +717,11 @@ mod ohlcv_tests {
         let candles = read_ohlcv_from_zip(&zip_path, Some("02/01/2022"), None)?;
 
         // Verify results - should include candles from 02/01/2022 onwards
-        assert_eq!(candles.len(), 2, "Should return 2 candles from start date onwards");
+        assert_eq!(
+            candles.len(),
+            2,
+            "Should return 2 candles from start date onwards"
+        );
 
         // Verify correct candles are included
         assert_eq!(
@@ -845,13 +853,5 @@ mod ohlcv_tests {
         );
 
         Ok(())
-    }
-
-    #[test]
-    fn test_read_ohlcv_updates_in_existing_tests() {
-        // Update all occurrences of read_ohlcv_from_zip to use Some() for dates
-        // This test doesn't need implementation, just a reminder that all
-        // existing tests should be updated to use Some() for date parameters
-        assert!(true);
     }
 }

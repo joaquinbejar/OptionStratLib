@@ -8,11 +8,11 @@ use optionstratlib::greeks::Greeks;
 use optionstratlib::strategies::base::Optimizable;
 use optionstratlib::strategies::{DeltaNeutrality, FindOptimalSide, ShortStrangle, Strategies};
 use optionstratlib::utils::setup_logger;
+use optionstratlib::utils::time::get_tomorrow_formatted;
 use optionstratlib::visualization::utils::{Graph, GraphBackend};
 use optionstratlib::{ExpirationDate, Positive, pos};
 use rust_decimal::Decimal;
 use tracing::{debug, info};
-use optionstratlib::utils::time::get_tomorrow_formatted;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     setup_logger();

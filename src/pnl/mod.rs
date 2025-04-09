@@ -112,8 +112,8 @@ mod transaction;
 pub mod utils;
 
 pub use metrics::{
-    PnLMetrics, PnLMetricsStep, create_pnl_metrics_document, load_pnl_metrics, save_pnl_metrics,
-    save_pnl_metrics_with_document, PnLMetricsDocument
+    PnLMetrics, PnLMetricsDocument, PnLMetricsStep, create_pnl_metrics_document, load_pnl_metrics,
+    save_pnl_metrics, save_pnl_metrics_with_document,
 };
 pub use traits::{PnLCalculator, TransactionAble};
 pub use transaction::{Transaction, TransactionStatus};

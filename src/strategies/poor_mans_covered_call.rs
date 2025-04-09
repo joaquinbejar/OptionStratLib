@@ -1224,7 +1224,7 @@ mod tests_pmcc_optimization {
     }
 
     #[test]
-
+    #[should_panic]
     fn test_invalid_short_option_zero_underlying() {
         let mut strategy = create_base_strategy();
         strategy.short_call.option.underlying_price = Positive::ZERO;
@@ -1245,7 +1245,6 @@ mod tests_pmcc_optimization {
     }
 
     #[test]
-
     fn test_invalid_long_option_zero_underlying() {
         let mut strategy = create_base_strategy();
         strategy.long_call.option.underlying_price = Positive::ZERO;

@@ -1,22 +1,24 @@
-use std::error::Error;
-use std::sync::{Arc, Mutex};
-use rayon::prelude::IntoParallelRefIterator;
+use itertools::Itertools;
 use optionstratlib::chains::OptionChain;
 use optionstratlib::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
-use optionstratlib::pnl::{save_pnl_metrics, PnL, PnLCalculator, PnLMetricsStep};
+use optionstratlib::pnl::{PnL, PnLCalculator, PnLMetricsStep, save_pnl_metrics};
 use optionstratlib::strategies::base::{Optimizable, Positionable};
 use optionstratlib::strategies::{FindOptimalSide, ShortStrangle};
-use optionstratlib::utils::{read_ohlcv_from_zip, setup_logger, OhlcvCandle, TimeFrame};
-use optionstratlib::{ExpirationDate, Positive, pos};
-use rust_decimal::Decimal;
-use rust_decimal_macros::dec;
-use tracing::{debug, error, info};
 use optionstratlib::utils::others::calculate_log_returns;
-use optionstratlib::volatility::{annualized_volatility, constant_volatility, historical_volatility};
+use optionstratlib::utils::{OhlcvCandle, TimeFrame, read_ohlcv_from_zip, setup_logger};
+use optionstratlib::volatility::{
+    annualized_volatility, constant_volatility, historical_volatility,
+};
+use optionstratlib::{ExpirationDate, Positive, pos};
 use rayon::ThreadPoolBuilder;
 use rayon::iter::IndexedParallelIterator;
 use rayon::iter::ParallelIterator;
-use itertools::Itertools;
+use rayon::prelude::IntoParallelRefIterator;
+use rust_decimal::Decimal;
+use rust_decimal_macros::dec;
+use std::error::Error;
+use std::sync::{Arc, Mutex};
+use tracing::{debug, error, info};
 
 /// Extracts volatility metrics from a series of OHLCV candles.
 ///
@@ -70,21 +72,16 @@ fn get_volatilities_from_ohlcv(
     if let Some(&last) = historical_volatility.last() {
         historical_volatility.extend_from_slice(&[last].repeat(60));
     }
-    
-    Ok( (
-        constant_volatility,
-        historical_volatility,
-        close_prices
-    ) )
-}
 
+    Ok((constant_volatility, historical_volatility, close_prices))
+}
 
 fn core(
     ohlc: &Vec<OhlcvCandle>,
     days: Positive,
     symbol: String,
     fee: Positive,
-    step: u32
+    step: u32,
 ) -> Result<PnLMetricsStep, Box<dyn Error>> {
     let mut pnl_metrics: PnLMetricsStep = PnLMetricsStep::default();
     pnl_metrics.step_duration = days;
@@ -93,10 +90,11 @@ fn core(
     if let Some(last) = ohlc_plus.last().cloned() {
         ohlc_plus.push(last);
     }
-    
-    let (volatility, historical_volatility, close_prices) = get_volatilities_from_ohlcv(&ohlc_plus)?;
+
+    let (volatility, historical_volatility, close_prices) =
+        get_volatilities_from_ohlcv(&ohlc_plus)?;
     info!("Step: {} Annualized volatility {:?}", step, volatility);
-    
+
     let underlying_price = close_prices[0];
     pnl_metrics.initial_price = underlying_price;
     let expiration_date = ExpirationDate::Days(days);
@@ -126,26 +124,29 @@ fn core(
         Positive::ZERO,   // call_strike
         Positive::ZERO,   // put_strike
         expiration_date,
-        volatility, // implied_volatility
+        volatility,     // implied_volatility
         Decimal::ZERO,  // risk_free_rate
         Positive::ZERO, // dividend_yield
-        Positive::ONE,      // quantity
+        Positive::ONE,  // quantity
         Positive::ZERO, // premium_short_call
         Positive::ZERO, // premium_short_put
-        fee,     // open_fee_short_call
-        fee,     // close_fee_short_call
-        fee,     // open_fee_short_put
-        fee,     // close_fee_short_put
+        fee,            // open_fee_short_call
+        fee,            // close_fee_short_call
+        fee,            // open_fee_short_put
+        fee,            // close_fee_short_put
     );
-    strategy.best_ratio(&option_chain, FindOptimalSide::DeltaRange(dec!(-0.05), dec!(0.05)));
+    strategy.best_ratio(
+        &option_chain,
+        FindOptimalSide::DeltaRange(dec!(-0.05), dec!(0.05)),
+    );
     debug!("Strategy:  {:#?}", strategy);
-    
+
     let positions = strategy.get_positions()?;
     positions.iter().for_each(|position| {
         pnl_metrics.strikes.push(position.option.strike_price);
     });
     let mut time_passed = Positive::ZERO;
-    
+
     for (i, price) in close_prices.into_iter().enumerate() {
         let iv = historical_volatility[i].round_to(3);
         if time_passed >= days {
@@ -166,7 +167,8 @@ fn core(
                         true => {
                             pnl_metrics.winning_steps += 1;
                             if unrealized > pnl_metrics.max_unrealized_pnl.to_dec() {
-                                pnl_metrics.max_unrealized_pnl = Positive::new_decimal(unrealized).unwrap();
+                                pnl_metrics.max_unrealized_pnl =
+                                    Positive::new_decimal(unrealized).unwrap();
                             }
                         }
                         false => {
@@ -200,21 +202,20 @@ fn core(
         }
     }
     pnl_metrics.step_number = step;
-    Ok( pnl_metrics)
+    Ok(pnl_metrics)
 }
-
 
 // fn main() -> Result<(), Box<dyn Error>> {
 //     setup_logger();
 //     // let ohlc = read_ohlcv_from_zip("examples/Data/cl-1m-sample.zip", None, None)?;
 //     // let ohlc = read_ohlcv_from_zip("examples/Data/gc-1m.zip", Some("01/05/2007"), Some("08/05/2008"))?;
 //     let ohlc = read_ohlcv_from_zip("examples/Data/gc-1m.zip", None, None)?;
-// 
+//
 //     let days = pos!(5.0);
 //     let chunk_size = (days * 24.0 * 60.0).to_i64() as usize;
 //     info!("Chunk size: {} # Steps: {}", chunk_size, ohlc.len() / chunk_size);
 //     let mut pnl_results: Vec<PnLMetricsStep> = Vec::new();
-// 
+//
 //     for (step, chunk) in ohlc.chunks_exact(chunk_size).enumerate() {
 //         let ohlc = chunk.to_vec();
 //         let pnl_metrics = core(&ohlc, days, "GC".to_string(), pos!(0.10), step as u32)?;
@@ -222,11 +223,10 @@ fn core(
 //         pnl_results.push(pnl_metrics);
 //         // break
 //     }
-//     
+//
 //     save_pnl_metrics(&pnl_results,"examples/Data/gc-1m_short_strangle_metrics_delta30.json")?;
 //     Ok(())
 // }
-
 
 fn main() -> Result<(), Box<dyn Error>> {
     setup_logger();
@@ -235,7 +235,11 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let days = pos!(5.0);
     let chunk_size = (days * 24.0 * 60.0).to_i64() as usize;
-    info!("Chunk size: {} # Steps: {}", chunk_size, ohlc.len() / chunk_size);
+    info!(
+        "Chunk size: {} # Steps: {}",
+        chunk_size,
+        ohlc.len() / chunk_size
+    );
 
     // Create chunks vector
     let chunks: Vec<_> = ohlc.chunks_exact(chunk_size).collect();
@@ -243,10 +247,12 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // Create a thread-safe container for results with step info
     // Using a tuple to store the step and the result
-    let pnl_results = Arc::new(Mutex::new(Vec::<(u32, PnLMetricsStep)>::with_capacity(num_chunks)));
+    let pnl_results = Arc::new(Mutex::new(Vec::<(u32, PnLMetricsStep)>::with_capacity(
+        num_chunks,
+    )));
 
     // Configure the thread pool
-    let num_threads = num_cpus::get()-1;
+    let num_threads = num_cpus::get() - 1;
     info!("Using {} threads for parallel processing", num_threads);
 
     // Create and execute the thread pool
@@ -254,23 +260,21 @@ fn main() -> Result<(), Box<dyn Error>> {
         .num_threads(num_threads)
         .build()?
         .install(|| {
-            chunks.par_iter()
-                .enumerate()
-                .for_each(|(step, chunk)| {
-                    let step_u32 = step as u32;
-                    let ohlc = chunk.to_vec();
-                    match core(&ohlc, days, "GC".to_string(), pos!(0.10), step_u32) {
-                        Ok(pnl_metrics) => {
-                            info!("PnL: {:?}", pnl_metrics);
-                            // Store both the step and the metrics
-                            let mut results = pnl_results.lock().unwrap();
-                            results.push((step_u32, pnl_metrics));
-                        }
-                        Err(e) => {
-                            error!("Error processing chunk {}: {:?}", step, e);
-                        }
+            chunks.par_iter().enumerate().for_each(|(step, chunk)| {
+                let step_u32 = step as u32;
+                let ohlc = chunk.to_vec();
+                match core(&ohlc, days, "GC".to_string(), pos!(0.10), step_u32) {
+                    Ok(pnl_metrics) => {
+                        info!("PnL: {:?}", pnl_metrics);
+                        // Store both the step and the metrics
+                        let mut results = pnl_results.lock().unwrap();
+                        results.push((step_u32, pnl_metrics));
                     }
-                });
+                    Err(e) => {
+                        error!("Error processing chunk {}: {:?}", step, e);
+                    }
+                }
+            });
         });
 
     // Get the final results
@@ -285,6 +289,9 @@ fn main() -> Result<(), Box<dyn Error>> {
         .map(|(_, metrics)| metrics)
         .collect();
 
-    save_pnl_metrics(&sorted_results, "examples/Data/gc-1m_short_strangle_metrics_delta05.json")?;
+    save_pnl_metrics(
+        &sorted_results,
+        "examples/Data/gc-1m_short_strangle_metrics_delta05.json",
+    )?;
     Ok(())
 }

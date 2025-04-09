@@ -54,13 +54,13 @@ pub trait PnLCalculator {
     /// # Arguments
     ///
     /// * `_adjustments` - A vector of `DeltaAdjustment` instances representing the adjustments made
-    ///                    to maintain delta neutrality in a trading strategy.
+    ///   to maintain delta neutrality in a trading strategy.
     ///
     /// # Returns
     ///
-    /// * `Result<PnL, Box<dyn Error>>` - If successful, returns a `PnL` object containing information 
-    ///                                   about realized and unrealized profits/losses, costs, and income.
-    ///                                   Otherwise, returns an error.
+    /// * `Result<PnL, Box<dyn Error>>` - If successful, returns a `PnL` object containing information
+    ///   about realized and unrealized profits/losses, costs, and income.
+    ///   Otherwise, returns an error.
     ///
     /// # Panics
     ///

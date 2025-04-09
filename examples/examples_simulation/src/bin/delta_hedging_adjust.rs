@@ -2,7 +2,9 @@ use itertools::Itertools;
 use optionstratlib::chains::OptionChain;
 use optionstratlib::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
 use optionstratlib::model::types::Action;
-use optionstratlib::pnl::{PnL, PnLCalculator, PnLMetricsStep, create_pnl_metrics_document, save_pnl_metrics_with_document};
+use optionstratlib::pnl::{
+    PnL, PnLCalculator, PnLMetricsStep, create_pnl_metrics_document, save_pnl_metrics_with_document,
+};
 use optionstratlib::strategies::base::{Optimizable, Positionable};
 use optionstratlib::strategies::{
     DeltaAdjustment, DeltaNeutrality, FindOptimalSide, ShortStrangle, Strategies,
@@ -170,7 +172,7 @@ fn core(
 
         let mut pnl_init: PnL = PnL::default();
         let delta_info = strategy.delta_neutrality()?;
-        if delta_info.net_delta.abs() >= delta_adjustment_at  {
+        if delta_info.net_delta.abs() >= delta_adjustment_at {
             pnl_metrics.delta_adjustments += Positive::ONE;
             trace!("buy net_delta: {}", delta_info.net_delta);
 
@@ -290,8 +292,8 @@ fn core(
 //         Some("01/10/2007"),
 //     )?;
 //     // let ohlc = read_ohlcv_from_zip("examples/Data/gc-1m.zip", None, None)?;
-// 
-//     
+//
+//
 //     let symbol = "GC".to_string();
 //     let fee= pos!(0.10);
 //     let deltas = vec![dec!(0.25)];
@@ -302,7 +304,7 @@ fn core(
 //         symbol,
 //         (MISPLACEMENT * Decimal::ONE_HUNDRED).to_i32().unwrap(),
 //     );
-//     
+//
 //     for delta in deltas {
 //         for days in &dayss {
 //             for daa in &delta_adjustment_at {
@@ -313,7 +315,7 @@ fn core(
 //                     ohlc.len() / chunk_size
 //                 );
 //                 let mut pnl_results: Vec<PnLMetricsStep> = Vec::new();
-// 
+//
 //                 for (step, chunk) in ohlc.chunks_exact(chunk_size).enumerate() {
 //                     let ohlc = chunk.to_vec();
 //                     let pnl_metrics = core(
@@ -329,8 +331,8 @@ fn core(
 //                     pnl_results.push(pnl_metrics);
 //                     // break
 //                 }
-// 
-// 
+//
+//
 //                 let pnl_metrics_document = create_pnl_metrics_document(
 //                     pnl_results,
 //                     *days,
@@ -346,7 +348,6 @@ fn core(
 //     Ok(())
 // }
 
-
 fn main() -> Result<(), Box<dyn Error>> {
     setup_logger();
     // let ohlc = read_ohlcv_from_zip("examples/Data/gc-1m.zip", Some("01/05/2007"), Some("08/05/2008"))?;
@@ -358,9 +359,24 @@ fn main() -> Result<(), Box<dyn Error>> {
         symbol,
         (MISPLACEMENT * Decimal::ONE_HUNDRED).to_i32().unwrap(),
     );
-    let fee= pos!(0.10);
-    let deltas = vec![dec!(0.15),dec!(0.20),dec!(0.25),dec!(0.30),dec!(0.35),dec!(0.40)];
-    let dayss = vec![pos!(5.0), pos!(15.0), pos!(25.0), pos!(35.0), pos!(45.0), pos!(60.0), pos!(90.0)];
+    let fee = pos!(0.10);
+    let deltas = vec![
+        dec!(0.15),
+        dec!(0.20),
+        dec!(0.25),
+        dec!(0.30),
+        dec!(0.35),
+        dec!(0.40),
+    ];
+    let dayss = vec![
+        pos!(5.0),
+        pos!(15.0),
+        pos!(25.0),
+        pos!(35.0),
+        pos!(45.0),
+        pos!(60.0),
+        pos!(90.0),
+    ];
     let delta_adjustment_at = vec![dec!(0.5), dec!(1.0), dec!(2.0)];
     for delta in deltas {
         for days in &dayss {
@@ -378,9 +394,9 @@ fn main() -> Result<(), Box<dyn Error>> {
 
                 // Create a thread-safe container for results with step info
                 // Using a tuple to store the step and the result
-                let pnl_results = Arc::new(Mutex::new(Vec::<(u32, PnLMetricsStep)>::with_capacity(
-                    num_chunks,
-                )));
+                let pnl_results = Arc::new(Mutex::new(
+                    Vec::<(u32, PnLMetricsStep)>::with_capacity(num_chunks),
+                ));
 
                 // Configure the thread pool
                 let num_threads = num_cpus::get() - 1;

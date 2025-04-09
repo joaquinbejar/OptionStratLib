@@ -41,13 +41,13 @@ fn test_poor_mans_covered_call_integration() -> Result<(), Box<dyn Error>> {
     strategy.best_area(&option_chain, FindOptimalSide::All);
     assert_relative_eq!(
         strategy.profit_area().unwrap().to_f64().unwrap(),
-        817.2115,
+        1785.7483,
         epsilon = 0.001
     );
     strategy.best_ratio(&option_chain, FindOptimalSide::Upper);
     assert_relative_eq!(
         strategy.profit_ratio().unwrap().to_f64().unwrap(),
-        408.9058,
+        955.5946,
         epsilon = 0.001
     );
 

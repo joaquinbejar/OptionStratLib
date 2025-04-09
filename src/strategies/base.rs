@@ -836,11 +836,13 @@ pub trait Optimizable: Validable + Strategies {
             FindOptimalSide::Center => {
                 panic!("Center should be managed by the strategy");
             }
-            FindOptimalSide::DeltaRange(min,max) => {
+            FindOptimalSide::DeltaRange(min, max) => {
                 let (delta_call, delta_put) = option.current_deltas();
-                (delta_put.is_some() && delta_put.unwrap() >= *min && delta_put.unwrap() <= *max) ||
-                    (delta_call.is_some() && delta_call.unwrap() >= *min && delta_call.unwrap() <= *max)
-            },
+                (delta_put.is_some() && delta_put.unwrap() >= *min && delta_put.unwrap() <= *max)
+                    || (delta_call.is_some()
+                        && delta_call.unwrap() >= *min
+                        && delta_call.unwrap() <= *max)
+            }
         }
     }
 
