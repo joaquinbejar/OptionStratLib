@@ -622,10 +622,6 @@ impl Position {
                 debug!("Premium must be greater than zero for short positions.");
                 return false;
             }
-            if self.premium < self.open_fee + self.close_fee {
-                debug!("Premium must be greater than the sum of the fees.");
-                return false;
-            }
         }
         if !self.option.validate() {
             debug!("Option is not valid.");
