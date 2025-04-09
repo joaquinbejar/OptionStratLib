@@ -4,9 +4,13 @@ use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::fmt;
-use std::fs::File;
+use std::fs::{File, OpenOptions};
 use std::io;
-use std::io::Write;
+use std::io::{Read, Write};
+use std::path::Path;
+use std::sync::{Arc, Mutex};
+use std::collections::HashMap;
+use lazy_static::lazy_static;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PnLMetricsStep {
@@ -190,3 +194,152 @@ pub fn load_pnl_metrics(file_path: &str) -> io::Result<Vec<PnLMetricsStep>> {
 
     Ok(metrics)
 }
+
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PnLMetricsDocument {
+    pub days: Positive,
+    pub symbol: String,
+    pub fee: Positive,
+    pub delta: Decimal,
+    pub delta_adjustment_at: Decimal,
+    pub metrics: Vec<PnLMetricsStep>,
+}
+
+pub fn create_pnl_metrics_document(
+    metrics: Vec<PnLMetricsStep>,
+    days: Positive,
+    symbol: String,
+    fee: Positive,
+    delta: Decimal,
+    delta_adjustment_at: Decimal
+) -> PnLMetricsDocument {
+    PnLMetricsDocument {
+        days,
+        symbol,
+        fee,
+        delta,
+        delta_adjustment_at,
+        metrics,
+    }
+}
+
+
+// Global file locks map
+lazy_static! {
+    static ref FILE_LOCKS: Mutex<HashMap<String, Arc<Mutex<()>>>> = Mutex::new(HashMap::new());
+}
+
+// Helper function to get or create a lock for a specific file
+fn get_file_lock(file_path: &str) -> Arc<Mutex<()>> {
+    let mut locks = FILE_LOCKS.lock().unwrap();
+    locks
+        .entry(file_path.to_string())
+        .or_insert_with(|| Arc::new(Mutex::new(())))
+        .clone()
+}
+
+pub fn save_pnl_metrics_with_document(
+    document: &PnLMetricsDocument,
+    file_path: &str
+) -> io::Result<()> {
+    // Get a lock for this specific file
+    let file_lock = get_file_lock(file_path);
+    let _guard = file_lock.lock().unwrap();
+
+    // Check if file exists
+    let file_exists = Path::new(file_path).exists();
+
+    if file_exists {
+        // Read existing content
+        let mut file = OpenOptions::new()
+            .read(true)
+            .open(file_path)?;
+
+        let mut content = String::new();
+        file.read_to_string(&mut content)?;
+
+        // Parse existing content
+        let mut documents: Vec<PnLMetricsDocument> = if content.trim().is_empty() {
+            Vec::new()
+        } else {
+            serde_json::from_str(&content)
+                .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?
+        };
+
+        // Add new document
+        documents.push(document.clone());
+
+        // Write back all documents
+        let json = serde_json::to_string(&documents)
+            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
+
+        let mut file = OpenOptions::new()
+            .write(true)
+            .truncate(true)
+            .open(file_path)?;
+
+        file.write_all(json.as_bytes())?;
+    } else {
+        // Create new file with single document in an array
+        let documents = vec![document.clone()];
+        let json = serde_json::to_string(&documents)
+            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
+
+        let mut file = File::create(file_path)?;
+        file.write_all(json.as_bytes())?;
+    }
+
+    // Lock is automatically released when _guard goes out of scope
+    Ok(())
+}
+
+// pub fn save_pnl_metrics_with_document(
+//     document: &PnLMetricsDocument,
+//     file_path: &str
+// ) -> io::Result<()> {
+//     // Check if file exists
+//     let file_exists = Path::new(file_path).exists();
+// 
+//     if file_exists {
+//         // Read existing content
+//         let mut file = OpenOptions::new()
+//             .read(true)
+//             .open(file_path)?;
+// 
+//         let mut content = String::new();
+//         file.read_to_string(&mut content)?;
+// 
+//         // Parse existing content
+//         let mut documents: Vec<PnLMetricsDocument> = if content.trim().is_empty() {
+//             Vec::new()
+//         } else {
+//             serde_json::from_str(&content)
+//                 .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?
+//         };
+// 
+//         // Add new document - clone it to convert from &PnLMetricsDocument to PnLMetricsDocument
+//         documents.push(document.clone());
+// 
+//         // Write back all documents
+//         let json = serde_json::to_string(&documents)
+//             .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
+// 
+//         let mut file = OpenOptions::new()
+//             .write(true)
+//             .truncate(true)
+//             .open(file_path)?;
+// 
+//         file.write_all(json.as_bytes())?;
+//     } else {
+//         // Create new file with single document in an array
+//         let documents = vec![document.clone()];
+//         let json = serde_json::to_string(&documents)
+//             .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
+// 
+//         let mut file = File::create(file_path)?;
+//         file.write_all(json.as_bytes())?;
+//     }
+// 
+//     Ok(())
+// }

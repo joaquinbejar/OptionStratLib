@@ -105,13 +105,16 @@
 /// * [`model`] - Core data structures for financial analysis and PnL modeling
 pub mod model;
 
+mod metrics;
 mod traits;
 mod transaction;
 /// * [`utils`] - Utility functions for data manipulation and calculations
 pub mod utils;
-mod metrics;
 
+pub use metrics::{
+    PnLMetrics, PnLMetricsStep, create_pnl_metrics_document, load_pnl_metrics, save_pnl_metrics,
+    save_pnl_metrics_with_document, PnLMetricsDocument
+};
 pub use traits::{PnLCalculator, TransactionAble};
 pub use transaction::{Transaction, TransactionStatus};
 pub use utils::PnL;
-pub use metrics::{PnLMetrics, PnLMetricsStep, save_pnl_metrics, load_pnl_metrics};
