@@ -1332,3 +1332,80 @@ mod tests_sample {
         assert_eq!(built_chain.underlying_price, Positive::new(2000.0).unwrap());
     }
 }
+
+#[cfg(test)]
+mod utils_coverage_tests {
+    use super::*;
+    use crate::chains::utils::{adjust_volatility, empty_string_round_to_2};
+    use crate::{pos, spos};
+
+    // Test for lines 218-219, 246, 269, 271
+    #[test]
+    fn test_option_chain_build_params_getters_setters() {
+        let price_params = OptionDataPriceParams::new(
+            pos!(100.0),
+            ExpirationDate::Days(pos!(30.0)),
+            spos!(0.2),
+            dec!(0.05),
+            pos!(0.02),
+            Some("TEST".to_string()),
+        );
+
+        let mut params = OptionChainBuildParams::new(
+            "TEST".to_string(),
+            None,
+            10,
+            pos!(5.0),
+            dec!(0.1),
+            pos!(0.02),
+            2,
+            price_params,
+        );
+
+        // Test get_implied_volatility
+        let iv = params.get_implied_volatility();
+        assert_eq!(iv, spos!(0.2));
+
+        // Test set_underlying_price
+        params.set_underlying_price(&pos!(110.0));
+        assert_eq!(params.price_params.underlying_price, pos!(110.0));
+
+        // Test set_implied_volatility
+        params.set_implied_volatility(spos!(0.25));
+        assert_eq!(params.get_implied_volatility(), spos!(0.25));
+
+        // Test setting to None
+        params.set_implied_volatility(None);
+        assert_eq!(params.get_implied_volatility(), None);
+    }
+
+    // Test for lines 368-369
+    #[test]
+    fn test_empty_string_round_to_2() {
+        // Test with Some value
+        let value = Some(pos!(123.456));
+        let result = empty_string_round_to_2(value);
+        assert_eq!(result, "123.46");
+
+        // Test with None
+        let value: Option<Positive> = None;
+        let result = empty_string_round_to_2(value);
+        assert_eq!(result, "");
+    }
+
+    // Test for lines 636-637, 642, 655
+    #[test]
+    fn test_adjust_volatility_edge_cases() {
+        // Test with None volatility
+        let result = adjust_volatility(None, dec!(0.1), 10.0);
+        assert_eq!(result, None);
+
+        // Test with zero skew factor
+        let result = adjust_volatility(spos!(0.2), dec!(0.0), 10.0);
+        assert_eq!(result, spos!(0.2));
+
+        // Test when adjusted volatility would exceed 1.0
+        let result = adjust_volatility(spos!(0.9), dec!(0.5), 10.0); // This would make vol > 1.0
+        assert_eq!(result, Some(Positive::ONE)); // Should cap at 1.0
+    }
+}

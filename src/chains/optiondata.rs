@@ -527,19 +527,43 @@ impl OptionData {
             self.create_options(price_params)?;
         }
         let options = self.options.as_ref().unwrap();
+        trace!("Options: {:?}", options);
+        match options.long_call.calculate_price_black_scholes() {
+            Ok(call_ask) => {
+                trace!("Call Ask: {}", call_ask);
+                self.call_ask = Some(Positive(call_ask.abs()));
+            }
+            Err(_) => self.call_ask = None,
+        }
 
-        let call_ask = options.long_call.calculate_price_black_scholes()?;
-        self.call_ask = Some(Positive(call_ask.abs()));
+        match options.short_call.calculate_price_black_scholes() {
+            Ok(call_bid) => {
+                trace!("Call Bid: {}", call_bid);
+                self.call_bid = Some(Positive(call_bid.abs()));
+            }
+            Err(_) => self.call_bid = None,
+        }
 
-        let call_bid = options.short_call.calculate_price_black_scholes()?;
-        self.call_bid = Some(Positive(call_bid.abs()));
+        match options.long_put.calculate_price_black_scholes() {
+            Ok(put_ask) => {
+                trace!("Put Ask: {}", put_ask);
+                self.put_ask = Some(Positive(put_ask.abs()));
+            }
+            Err(_) => self.put_ask = None,
+        }
 
-        let put_ask = options.long_put.calculate_price_black_scholes()?;
-        self.put_ask = Some(Positive(put_ask.abs()));
+        match options.short_put.calculate_price_black_scholes() {
+            Ok(put_bid) => {
+                trace!("Put Bid: {}", put_bid);
+                self.put_bid = Some(Positive(put_bid.abs()));
+            }
+            Err(_) => self.put_bid = None,
+        }
 
-        let put_bid = options.short_put.calculate_price_black_scholes()?;
-        self.put_bid = Some(Positive(put_bid.abs()));
-
+        trace!(
+            "Prices: {:?} {:?} {:?} {:?}",
+            self.call_ask, self.call_bid, self.put_ask, self.put_bid
+        );
         self.set_mid_prices();
         Ok(())
     }
@@ -888,6 +912,10 @@ impl OptionData {
         if self.call_middle.is_none() || self.put_middle.is_none() {
             info!("Calculation middel prices for IV calculation:");
             self.calculate_prices(price_params, false)?;
+            trace!(
+                "call_middle {:?} put_middle {:?}",
+                self.call_middle, self.put_middle
+            );
         }
 
         // Try to calculate IV for calls if we have mid price
@@ -1139,5 +1167,150 @@ impl fmt::Display for OptionData {
             default_empty_string(self.open_interest),
         )?;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod optiondata_coverage_tests {
+    use super::*;
+    use crate::utils::logger::setup_logger;
+    use crate::{ExpirationDate, spos};
+    use rust_decimal_macros::dec;
+
+    // Helper function to create test option data
+    fn create_test_option_data() -> OptionData {
+        OptionData::new(
+            pos!(100.0),
+            spos!(9.5),
+            spos!(10.0),
+            spos!(8.5),
+            spos!(9.0),
+            spos!(0.2),
+            Some(dec!(-0.3)),
+            Some(dec!(0.7)),
+            Some(dec!(0.5)),
+            spos!(1000.0),
+            Some(500),
+        )
+    }
+
+    #[test]
+    fn test_current_deltas() {
+        let option_data = create_test_option_data();
+
+        // Test current deltas
+        let (call_delta, put_delta) = option_data.current_deltas();
+
+        assert!(call_delta.is_some());
+        assert!(put_delta.is_some());
+        assert_eq!(call_delta.unwrap(), dec!(-0.3));
+        assert_eq!(put_delta.unwrap(), dec!(0.7));
+    }
+
+    #[test]
+    fn test_calculate_prices_with_refresh() {
+        setup_logger();
+        let mut option_data = create_test_option_data();
+
+        let price_params = OptionDataPriceParams::new(
+            pos!(100.0),
+            ExpirationDate::Days(pos!(30.0)),
+            spos!(0.25), // Different IV to force recalculation
+            dec!(0.05),
+            pos!(0.02),
+            Some("TEST".to_string()),
+        );
+
+        // Calculate prices with refresh flag set to true
+        let result = option_data.calculate_prices(&price_params, true);
+        assert!(result.is_ok());
+
+        // Check that prices were updated
+        assert!(option_data.call_bid.is_some());
+        assert!(option_data.call_ask.is_some());
+        assert!(option_data.put_bid.is_some());
+        assert!(option_data.put_ask.is_some());
+
+        // Check that mid prices were set
+        assert!(option_data.call_middle.is_some());
+        assert!(option_data.put_middle.is_some());
+    }
+
+    #[test]
+    fn test_apply_spread() {
+        let mut option_data = create_test_option_data();
+
+        // Record original values
+        let original_call_bid = option_data.call_bid;
+        let original_call_ask = option_data.call_ask;
+
+        // Apply a spread
+        option_data.apply_spread(pos!(0.5), 2);
+
+        // Check that values were updated
+        assert_ne!(option_data.call_bid, original_call_bid);
+        assert_ne!(option_data.call_ask, original_call_ask);
+
+        // Test with a spread that would make bid negative (should set to None)
+        let mut option_data = create_test_option_data();
+        option_data.call_bid = spos!(0.1);
+        option_data.apply_spread(pos!(1.0), 2);
+
+        // Bid should be None as it would be negative
+        assert_eq!(option_data.call_bid, None);
+    }
+
+    #[test]
+    fn test_calculate_gamma_no_implied_volatility() {
+        setup_logger();
+        let mut option_data = create_test_option_data();
+
+        let price_params = OptionDataPriceParams::new(
+            pos!(100.0),
+            ExpirationDate::Days(pos!(30.0)),
+            spos!(0.2),
+            dec!(0.05),
+            pos!(0.02),
+            Some("TEST".to_string()),
+        );
+
+        // Calculate gamma
+        option_data.calculate_gamma(&price_params);
+
+        // Check that gamma was set
+        assert!(option_data.gamma.is_some());
+
+        // Test with missing implied volatility
+        let mut option_data_no_iv = create_test_option_data();
+        option_data_no_iv.implied_volatility = None;
+
+        option_data_no_iv.calculate_gamma(&price_params);
+    }
+
+    // Test for lines 1076-1077
+    #[test]
+    fn test_get_deltas() {
+        let option_data = create_test_option_data();
+
+        let price_params = OptionDataPriceParams::new(
+            pos!(100.0),
+            ExpirationDate::Days(pos!(30.0)),
+            spos!(0.2),
+            dec!(0.05),
+            pos!(0.02),
+            Some("TEST".to_string()),
+        );
+
+        // Get deltas
+        let result = option_data.get_deltas(&price_params);
+        assert!(result.is_ok());
+
+        let deltas = result.unwrap();
+
+        // Check that all deltas are present
+        assert!(deltas.long_call != dec!(0.0));
+        assert!(deltas.short_call != dec!(0.0));
+        assert!(deltas.long_put != dec!(0.0));
+        assert!(deltas.short_put != dec!(0.0));
     }
 }
