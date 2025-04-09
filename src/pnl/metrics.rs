@@ -12,21 +12,47 @@ use std::io::{Read, Write};
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 
+/// # PnLMetricsStep
+///
+/// Represents a single step in a profit and loss (PnL) metrics analysis simulation.
+///
+/// This structure captures detailed financial performance data for a specific step in
+/// a multi-step simulation of an options trading strategy. It records not only the
+/// basic profit/loss information but also tracks performance metrics, price changes,
+/// and position adjustments that occurred during this particular step.
+///
+///
+/// This structure is serializable and deserializable through Serde, making it suitable
+/// for persistence and data exchange operations in trading simulations and backtesting.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PnLMetricsStep {
+    /// `pnl`: The profit and loss calculation for this step, including realized and unrealized components.
     pub pnl: PnL,
+    /// `win`: A boolean indicating whether this step resulted in a winning outcome.
     pub win: bool,
+    /// `step_number`: The sequential number of this step within the simulation.
     pub step_number: u32,
+    /// `step_duration`: The duration of this step.
     pub step_duration: Positive,
+    /// `max_unrealized_pnl`: The maximum unrealized profit and loss observed during this step.
     pub max_unrealized_pnl: Positive,
+    /// `min_unrealized_pnl`: The minimum unrealized profit and loss observed during this step.
     pub min_unrealized_pnl: Positive,
+    /// `winning_steps`: The cumulative number of winning steps up to this point in the simulation.
     pub winning_steps: u32,
+    /// `losing_steps`: The cumulative number of losing steps up to this point in the simulation.
     pub losing_steps: u32,
+    /// `initial_price`: The initial price at the beginning of this step.
     pub initial_price: Positive,
+    /// `final_price`: The final price at the end of this step.
     pub final_price: Positive,
+    /// `strikes`: A vector of strike prices relevant to the options strategy in this step.
     pub strikes: Vec<Positive>,
+    /// `initial_volumes`: A vector of initial volumes for each option in the strategy at the start of this step.
     pub initial_volumes: Vec<Positive>,
+    /// `final_volumes`: A vector of final volumes for each option in the strategy at the end of this step.
     pub final_volumes: Vec<Positive>,
+    /// `delta_adjustments`: The delta adjustments made during this step.
     pub delta_adjustments: Positive,
 }
 
@@ -51,26 +77,53 @@ impl Default for PnLMetricsStep {
     }
 }
 
+/// `PnLMetrics` struct holds various metrics related to Profit and Loss (PnL) analysis.
+///
+/// This struct captures a comprehensive set of metrics including total PnL, maximum profit and loss,
+/// win/loss rates, average win/loss amounts, maximum drawdown, Sharpe and Sortino ratios,
+/// profit and recovery factors, expected payoff, simulation duration, and start/end times.
+///
+/// It is designed to provide a detailed overview of the performance and risk characteristics
+/// of a trading strategy or simulation.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PnLMetrics {
+    /// The total profit and loss.
     pub total_pnl: Decimal,
+    /// The maximum profit achieved.
     pub max_profit: Positive,
+    /// The maximum loss incurred.
     pub max_loss: Positive,
+    /// The win rate, i.e., the proportion of winning trades.
     pub win_rate: Decimal,
+    /// The loss rate, i.e., the proportion of losing trades.
     pub loss_rate: Decimal,
+    /// The total number of steps in the simulation or trading period.
     pub total_steps: u32,
+    /// The number of steps that resulted in a win.
     pub winning_steps: u32,
+    /// The number of steps that resulted in a loss.
     pub losing_steps: u32,
+    /// The average win amount.
     pub avg_win: Decimal,
+    /// The average loss amount.
     pub avg_loss: Decimal,
+    /// The maximum drawdown experienced.
     pub max_drawdown: Positive,
+    /// The Sharpe ratio, a measure of risk-adjusted return.
     pub sharpe_ratio: Decimal,
+    /// The Sortino ratio, a variation of the Sharpe ratio that only considers downside risk.
     pub sortino_ratio: Decimal,
+    /// The profit factor, calculated as gross profit divided by gross loss.
     pub profit_factor: Decimal,
+    /// The recovery factor, a measure of how quickly losses are recovered.
     pub recovery_factor: Decimal,
+    /// The expected payoff per trade or step.
     pub expected_payoff: Decimal,
+    /// The duration of the simulation or trading period.
     pub simulation_duration: Decimal,
+    /// The start time of the simulation or trading period.
     pub start_time: DateTime<Utc>,
+    /// The end time of the simulation or trading period.
     pub end_time: DateTime<Utc>,
 }
 
@@ -195,16 +248,45 @@ pub fn load_pnl_metrics(file_path: &str) -> io::Result<Vec<PnLMetricsStep>> {
     Ok(metrics)
 }
 
+/// Represents a document containing profit and loss (PnL) metrics for a specific asset over a period.
+///
+/// This struct encapsulates the PnL metrics, symbol, fees, delta and delta adjustments.
+///
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PnLMetricsDocument {
+    /// * `days`: The numbers of days considered in the metrics.
     pub days: Positive,
+    /// * `symbol`: The trading symbol of the asset.
     pub symbol: String,
+    /// * `fee`: The fee associated with the trading.
     pub fee: Positive,
+    /// * `delta`: The delta value of the asset.
     pub delta: Decimal,
+    /// * `delta_adjustment_at`: The delta adjustment applied to the asset.
     pub delta_adjustment_at: Decimal,
+    /// * `metrics`: A vector of `PnLMetricsStep` structs, each representing a step in the PnL calculation.
     pub metrics: Vec<PnLMetricsStep>,
 }
 
+/// Creates a `PnLMetricsDocument` instance.
+///
+/// This function constructs a `PnLMetricsDocument` from provided profit and loss metrics
+/// and associated parameters. It encapsulates the simulation results and configuration
+/// details, providing a structured representation of the analysis.
+///
+/// # Arguments
+///
+/// * `metrics`: A vector of `PnLMetricsStep` representing the individual steps in the
+///   profit and loss simulation.
+/// * `days`: A `Positive` value indicating the number of days over which the simulation was run.
+/// * `symbol`: A `String` representing the financial symbol (e.g., stock ticker) used in the simulation.
+/// * `fee`: A `Positive` value representing the transaction fee applied during the simulation.
+/// * `delta`: A `Decimal` representing the delta value used in the simulation.
+/// * `delta_adjustment_at`: A `Decimal` representing the delta adjustment threshold used in the simulation.
+///
+/// # Returns
+///
+/// A `PnLMetricsDocument` instance containing the provided metrics and parameters.
 pub fn create_pnl_metrics_document(
     metrics: Vec<PnLMetricsStep>,
     days: Positive,
@@ -237,6 +319,56 @@ fn get_file_lock(file_path: &str) -> Arc<Mutex<()>> {
         .clone()
 }
 
+/// Saves PnL metrics to a JSON file, handling concurrent access and file existence.
+///
+/// This function either appends the provided `PnLMetricsDocument` to an existing JSON file
+/// or creates a new file containing the document within a JSON array. It uses file locking
+/// to prevent race conditions when multiple processes or threads attempt to write to the same
+/// file simultaneously.
+///
+/// # Arguments
+///
+/// * `document` - A reference to the `PnLMetricsDocument` to be saved.  The document is cloned before saving.
+/// * `file_path` - A string slice representing the path to the JSON file.
+///
+/// # Errors
+///
+/// Returns an `io::Error` if:
+///
+/// * The file cannot be opened for reading or writing.
+/// * The existing file content cannot be read.
+/// * The existing file content cannot be parsed as a JSON array of `PnLMetricsDocument`.
+/// * The updated JSON array cannot be serialized.
+/// * The file cannot be truncated.
+/// * The data cannot be written to the file.
+///
+/// # Thread Safety
+///
+/// This function is thread-safe.  It uses a file-based lock to prevent concurrent writes to the file.
+///
+/// # Example
+///
+/// ```no_run
+/// use rust_decimal::Decimal;
+/// use optionstratlib::pnl::{save_pnl_metrics_with_document, PnLMetricsDocument};
+/// use optionstratlib::pos;
+///
+/// // Assume 'document' is a valid PnLMetricsDocument instance
+/// let document = PnLMetricsDocument {
+///     days: pos!(10.0),
+///     symbol: "AAPL".to_string(),
+///     fee: pos!(0.01),
+///     delta: Decimal::new(5, 1),
+///     delta_adjustment_at: Decimal::new(0, 0),
+///     metrics: vec![],
+/// };
+/// let file_path = "pnl_metrics.json";
+///
+/// match save_pnl_metrics_with_document(&document, file_path) {
+///     Ok(_) => println!("PnL metrics saved successfully."),
+///     Err(e) => eprintln!("Error saving PnL metrics: {}", e),
+/// }
+/// ```
 pub fn save_pnl_metrics_with_document(
     document: &PnLMetricsDocument,
     file_path: &str,

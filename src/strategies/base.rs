@@ -377,6 +377,19 @@ pub trait Strategies: Validable + Positionable + BreakEvenable {
         panic!("Set Underlying price is not applicable for this strategy");
     }
 
+    /// Returns the volume for this strategy.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing a `Positive` value representing the volume, or a `StrategyError` if the operation is not applicable.
+    ///
+    /// # Errors
+    ///
+    /// Returns a `StrategyError` of type `OperationError` if volume is not applicable for this strategy.
+    ///
+    /// # Panics
+    ///
+    /// This function will panic with the message "volume is not applicable for this strategy".
     fn volume(&mut self) -> Result<Positive, StrategyError> {
         panic!("volumee is not applicable for this strategy");
     }

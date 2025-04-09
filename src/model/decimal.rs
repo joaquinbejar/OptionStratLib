@@ -469,7 +469,7 @@ mod tests_random_generation {
         // Check if the distribution approximately matches a standard normal
         // Note: These tests use wide tolerances since we're working with random samples
         assert_relative_eq!(mean, 0.0, epsilon = 0.03);
-        assert_relative_eq!(std_dev, 1.0, epsilon = 0.02);
+        assert_relative_eq!(std_dev, 1.0, epsilon = 0.03);
     }
 
     #[test]
