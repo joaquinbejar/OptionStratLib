@@ -1168,7 +1168,6 @@ mod tests_option_chain_build_params {
     use rust_decimal_macros::dec;
 
     #[test]
-
     fn test_new_chain_build_params() {
         let price_params = OptionDataPriceParams::new(
             pos!(100.0),
@@ -1197,10 +1196,18 @@ mod tests_option_chain_build_params {
         assert_eq!(params.skew_factor, dec!(0.1));
         assert_eq!(params.spread, pos!(0.02));
         assert_eq!(params.decimal_places, 2);
+        
+        let display = format!("{}", params);
+        assert!(display.contains("TEST"));
+        assert!(display.contains("Volume: 1000"));
+        assert!(display.contains("Chain Size: 10"));
+        assert!(display.contains("Strike Interval: 5"));
+        assert!(display.contains("Skew Factor: 0.1"));
+        assert!(display.contains("Spread: 0.02"));
+        assert!(display.contains("Decimal Places: 2"));
     }
 
     #[test]
-
     fn test_chain_build_params_without_volume() {
         let price_params = OptionDataPriceParams::default();
 

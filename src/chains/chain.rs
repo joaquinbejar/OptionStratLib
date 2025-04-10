@@ -7440,9 +7440,9 @@ mod chain_coverage_tests {
         // Save to JSON to trigger serialization
         let result = chain.save_to_json(".");
         assert!(result.is_ok());
-
+        let file = format!("./{}.json", chain.get_title());
         // Load from JSON to trigger deserialization
-        let loaded_chain = OptionChain::load_from_json("./TEST-2025-05-09-100.json");
+        let loaded_chain = OptionChain::load_from_json(&file);
         assert!(loaded_chain.is_ok());
 
         let loaded_chain = loaded_chain.unwrap();
@@ -7450,7 +7450,7 @@ mod chain_coverage_tests {
         assert_eq!(loaded_chain.underlying_price, pos!(100.0));
 
         // Clean up the test file
-        std::fs::remove_file("./TEST-2025-05-09-100.json").unwrap();
+        std::fs::remove_file(file).unwrap();
     }
 
     #[test]
