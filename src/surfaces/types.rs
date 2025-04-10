@@ -491,7 +491,6 @@ mod tests_point3d_serde {
         };
 
         let serialized = serde_json::to_string(&point).unwrap();
-        println!("{}", serialized);
         let deserialized: Point3D = serde_json::from_str(&serialized).unwrap();
 
         assert_eq!(point, deserialized);
@@ -539,3 +538,4 @@ mod tests_point3d_serde {
         assert!(result.is_ok());
     }
 }
+
