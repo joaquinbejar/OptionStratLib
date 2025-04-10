@@ -241,3 +241,93 @@ mod tests {
         assert_eq!(random_walk.len(), n_steps);
     }
 }
+
+#[cfg(test)]
+mod generators_coverage_tests {
+    use super::*;
+    use crate::ExpirationDate;
+    use crate::chains::generators::{generator_optionchain, generator_positive};
+    use crate::simulation::steps::{Step, Xstep, Ystep};
+    use crate::simulation::{WalkParams, WalkType, WalkTypeAble};
+    use crate::utils::TimeFrame;
+    use crate::utils::time::get_tomorrow_formatted;
+    use rust_decimal_macros::dec;
+
+    struct TestWalker {}
+    impl TestWalker {
+        fn new() -> Self {
+            TestWalker {}
+        }
+    }
+    impl WalkTypeAble<Positive, Positive> for TestWalker {}
+    impl WalkTypeAble<Positive, OptionChain> for TestWalker {}
+
+    // Test for line 73 in generators.rs
+    #[test]
+    fn test_generator_optionchain_early_return() {
+        // Create a small walk with only one step to test early return
+        let chain = OptionChain::new(
+            "TEST",
+            pos!(100.0),
+            get_tomorrow_formatted(),
+            Some(dec!(0.05)),
+            Some(pos!(0.02)),
+        );
+
+        let walker = Box::new(TestWalker::new());
+
+        let walk_params = WalkParams {
+            size: 1, // Just one step to trigger early return
+            init_step: Step {
+                x: Xstep::new(
+                    Positive::ONE,
+                    TimeFrame::Minute,
+                    ExpirationDate::Days(pos!(30.0)),
+                ),
+                y: Ystep::new(0, chain),
+            },
+            walk_type: WalkType::GeometricBrownian {
+                dt: pos!(0.01),
+                drift: dec!(0.0),
+                volatility: pos!(0.2),
+            },
+            walker,
+        };
+
+        let steps = generator_optionchain(&walk_params);
+
+        // We should just get the initial step back
+        assert_eq!(steps.len(), 1);
+    }
+
+    // Test for line 118 in generators.rs
+    #[test]
+    fn test_generator_positive_early_return() {
+        // Create a small walk with only one step to test early return
+        let initial_price = pos!(100.0);
+        let walker = Box::new(TestWalker::new());
+
+        let walk_params = WalkParams {
+            size: 1, // Just one step to trigger early return
+            init_step: Step {
+                x: Xstep::new(
+                    Positive::ONE,
+                    TimeFrame::Minute,
+                    ExpirationDate::Days(pos!(30.0)),
+                ),
+                y: Ystep::new(0, initial_price),
+            },
+            walk_type: WalkType::GeometricBrownian {
+                dt: pos!(0.01),
+                drift: dec!(0.0),
+                volatility: pos!(0.2),
+            },
+            walker,
+        };
+
+        let steps = generator_positive(&walk_params);
+
+        // We should just get the initial step back
+        assert_eq!(steps.len(), 1);
+    }
+}

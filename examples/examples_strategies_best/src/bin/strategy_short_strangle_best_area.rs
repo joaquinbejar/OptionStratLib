@@ -3,20 +3,24 @@ use optionstratlib::Positive;
 use optionstratlib::chains::chain::OptionChain;
 use optionstratlib::greeks::Greeks;
 use optionstratlib::pos;
-use optionstratlib::strategies::ShortStrangle;
 use optionstratlib::strategies::base::{Optimizable, Strategies};
 use optionstratlib::strategies::utils::FindOptimalSide;
+use optionstratlib::strategies::{DeltaNeutrality, ShortStrangle};
 use optionstratlib::utils::setup_logger;
+use optionstratlib::utils::time::get_tomorrow_formatted;
 use optionstratlib::visualization::utils::{Graph, GraphBackend};
 use rust_decimal::Decimal;
+use rust_decimal_macros::dec;
 use std::error::Error;
 use tracing::{debug, info};
 
 fn main() -> Result<(), Box<dyn Error>> {
     setup_logger();
 
-    let option_chain =
+    let mut option_chain =
         OptionChain::load_from_json("./examples/Chains/SP500-18-oct-2024-5781.88.json")?;
+    option_chain.update_expiration_date(get_tomorrow_formatted());
+    info!("Option Chain:  {}", option_chain);
     let underlying_price = option_chain.underlying_price;
     let mut strategy = ShortStrangle::new(
         "SP500".to_string(),
@@ -36,7 +40,11 @@ fn main() -> Result<(), Box<dyn Error>> {
         pos!(0.82),     // close_fee_short_put
     );
     // strategy.best_area(&option_chain, FindOptimalSide::Range(pos!(5700.0), pos!(6100.0)));
-    strategy.best_area(&option_chain, FindOptimalSide::Center);
+    strategy.best_area(
+        &option_chain,
+        FindOptimalSide::DeltaRange(dec!(-0.3), dec!(0.3)),
+    );
+    // strategy.best_area(&option_chain, FindOptimalSide::Center);
     debug!("Strategy:  {:#?}", strategy);
     let range = strategy.range_of_profit().unwrap_or(Positive::ZERO);
     info!("Title: {}", strategy.title());
@@ -60,7 +68,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         (range / 2.0) / underlying_price * 100.0
     );
     info!("Profit Area: {:.2}%", strategy.profit_area()?);
-
+    info!("Delta:  {:#?}", strategy.delta_neutrality()?);
     if strategy.profit_ratio()? > Positive::ZERO.into() {
         debug!("Strategy:  {:#?}", strategy);
         strategy.graph(

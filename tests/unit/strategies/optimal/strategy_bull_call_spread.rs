@@ -41,13 +41,13 @@ fn test_bull_call_spread_integration() -> Result<(), Box<dyn Error>> {
     strategy.best_area(&option_chain, FindOptimalSide::All);
     assert_relative_eq!(
         strategy.profit_area().unwrap().to_f64().unwrap(),
-        417.3849,
+        905.82940,
         epsilon = 0.001
     );
     strategy.best_ratio(&option_chain, FindOptimalSide::Upper);
     assert_relative_eq!(
         strategy.profit_ratio().unwrap().to_f64().unwrap(),
-        473.3944,
+        1260.5442,
         epsilon = 0.001
     );
 

@@ -716,3 +716,69 @@ mod tests_performance {
         assert!(duration < Duration::from_millis(200));
     }
 }
+
+#[cfg(test)]
+mod tests_point2d_specific_cases {
+    use super::*;
+    use crate::Positive;
+    use crate::error::CurveError;
+    use rust_decimal_macros::dec;
+
+    #[test]
+    fn test_to_tuple_positive_constraints() {
+
+        // Create a point with non-positive x (x = 0)
+        let point = Point2D::new(dec!(0.0), dec!(1.0));
+
+        // Test conversion where T must be positive
+        let result: Result<(Positive, Decimal), _> = point.to_tuple();
+
+        // Should fail with appropriate error
+        assert!(result.is_err());
+        match result {
+            Err(CurveError::Point2DError { reason }) => {
+                assert_eq!(reason, "x must be positive for type T");
+            }
+            _ => panic!("Expected Point2DError"),
+        }
+
+        // Create a point with non-positive y (y = 0)
+        let point = Point2D::new(dec!(1.0), dec!(0.0));
+
+        // Test conversion where U must be positive
+        let result: Result<(Decimal, Positive), _> = point.to_tuple();
+
+        // Should fail with appropriate error
+        assert!(result.is_err());
+        match result {
+            Err(CurveError::Point2DError { reason }) => {
+                assert_eq!(reason, "y must be positive for type U");
+            }
+            _ => panic!("Expected Point2DError"),
+        }
+    }
+
+    #[test]
+    fn test_from_f64_tuple_error_handling() {
+
+        // Test with invalid f64 values (infinity)
+        let result = Point2D::from_f64_tuple(f64::INFINITY, 1.0);
+        assert!(result.is_err());
+        match result {
+            Err(CurveError::Point2DError { reason }) => {
+                assert_eq!(reason, "Error converting f64 to Decimal");
+            }
+            _ => panic!("Expected Point2DError"),
+        }
+
+        // Test with NaN
+        let result = Point2D::from_f64_tuple(1.0, f64::NAN);
+        assert!(result.is_err());
+        match result {
+            Err(CurveError::Point2DError { reason }) => {
+                assert_eq!(reason, "Error converting f64 to Decimal");
+            }
+            _ => panic!("Expected Point2DError"),
+        }
+    }
+}

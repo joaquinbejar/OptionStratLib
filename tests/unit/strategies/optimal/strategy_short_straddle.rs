@@ -40,7 +40,7 @@ fn test_short_straddle_integration() -> Result<(), Box<dyn Error>> {
     strategy.best_area(&option_chain, FindOptimalSide::All);
     assert_relative_eq!(
         strategy.profit_area().unwrap().to_f64().unwrap(),
-        58.7383,
+        83.4227689,
         epsilon = 0.001
     );
     strategy.best_ratio(&option_chain, FindOptimalSide::Upper);

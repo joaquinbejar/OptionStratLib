@@ -54,7 +54,7 @@ use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{RED, ShapeStyle};
 use rust_decimal::Decimal;
 use std::error::Error;
-use tracing::{debug, error};
+use tracing::debug;
 
 const PMCC_DESCRIPTION: &str = "A Poor Man's Covered Call (PMCC) is an options strategy that simulates a covered call \
     using long-term equity anticipation securities (LEAPS) instead of the underlying stock. \
@@ -586,94 +586,6 @@ impl Optimizable for PoorMansCoveredCall {
                     *self = strategy.clone();
                 }
             }
-        }
-    }
-
-    fn is_valid_short_option(&self, option: &OptionData, side: &FindOptimalSide) -> bool {
-        let underlying_price = self.short_call.option.underlying_price;
-        if underlying_price == Positive::ZERO {
-            error!("Invalid underlying_price option");
-            return false;
-        }
-
-        match side {
-            FindOptimalSide::Upper => {
-                let valid = option.strike_price >= underlying_price;
-                if !valid {
-                    debug!(
-                        "Short Option is out of range: {} <= {}",
-                        option.strike_price, underlying_price
-                    );
-                }
-                valid
-            }
-            FindOptimalSide::Lower => {
-                let valid = option.strike_price <= underlying_price;
-                if !valid {
-                    debug!(
-                        "Short Option is out of range: {} >= {}",
-                        option.strike_price, underlying_price
-                    );
-                }
-                valid
-            }
-            FindOptimalSide::All => true,
-            FindOptimalSide::Range(start, end) => {
-                let valid = option.strike_price >= *start && option.strike_price <= *end;
-                if !valid {
-                    debug!(
-                        " Short Option is out of range: {} >= {} && {} <= {}",
-                        option.strike_price, *start, option.strike_price, *end
-                    );
-                }
-                valid
-            }
-            FindOptimalSide::Deltable(_threshold) => true,
-            FindOptimalSide::Center => option.strike_price <= self.get_underlying_price(),
-        }
-    }
-
-    fn is_valid_long_option(&self, option: &OptionData, side: &FindOptimalSide) -> bool {
-        let underlying_price = self.long_call.option.underlying_price;
-        if underlying_price == Positive::ZERO {
-            error!("Invalid underlying_price option");
-            return false;
-        }
-
-        match side {
-            FindOptimalSide::Upper => {
-                let valid = option.strike_price >= underlying_price;
-                if !valid {
-                    debug!(
-                        "Long Option is out of range: {} <= {}",
-                        option.strike_price, underlying_price
-                    );
-                }
-                valid
-            }
-            FindOptimalSide::Lower => {
-                let valid = option.strike_price <= underlying_price;
-                if !valid {
-                    debug!(
-                        "Long Option is out of range: {} >= {}",
-                        option.strike_price, underlying_price
-                    );
-                }
-                valid
-            }
-            FindOptimalSide::All => true,
-            FindOptimalSide::Range(start, end) => {
-                let valid = option.strike_price >= *start && option.strike_price <= *end;
-                if !valid {
-                    debug!(
-                        "Long Option is out of range: {} >= {} && {} <= {}",
-                        option.strike_price, *start, option.strike_price, *end
-                    );
-                }
-                valid
-            }
-            FindOptimalSide::Deltable(_threshold) => true,
-            FindOptimalSide::Center => option.strike_price >= self.get_underlying_price(),
         }
     }
 
@@ -1312,7 +1224,7 @@ mod tests_pmcc_optimization {
     }
 
     #[test]
-
+    #[should_panic]
     fn test_invalid_short_option_zero_underlying() {
         let mut strategy = create_base_strategy();
         strategy.short_call.option.underlying_price = Positive::ZERO;
@@ -1333,7 +1245,6 @@ mod tests_pmcc_optimization {
     }
 
     #[test]
-
     fn test_invalid_long_option_zero_underlying() {
         let mut strategy = create_base_strategy();
         strategy.long_call.option.underlying_price = Positive::ZERO;
@@ -2166,6 +2077,7 @@ mod tests_poor_mans_covered_call_position_management {
     use crate::model::types::{ExpirationDate, OptionStyle, Side};
     use crate::pos;
     use rust_decimal_macros::dec;
+    use tracing::error;
 
     fn create_test_short_poor_mans_covered_call() -> PoorMansCoveredCall {
         PoorMansCoveredCall::new(

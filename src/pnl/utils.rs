@@ -8,6 +8,7 @@ pub use crate::pnl::PnLCalculator;
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
+use std::fmt;
 use std::iter::Sum;
 use std::ops::Add; // TODO: Remove this line when TransactionAble is implemented
 
@@ -101,6 +102,28 @@ impl PnL {
             initial_income,
             date_time,
         }
+    }
+}
+
+impl fmt::Display for PnL {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // Helper function to format Option<Decimal> with rounding
+        fn format_decimal(value: &Option<Decimal>) -> String {
+            match value {
+                Some(dec) => dec.round_dp(3).to_string(),
+                None => "N/A".to_string(),
+            }
+        }
+
+        write!(
+            f,
+            "PnL: {{ realized: {}, unrealized: {}, initial_costs: {}, initial_income: {}, date_time: {} }}",
+            format_decimal(&self.realized),
+            format_decimal(&self.unrealized),
+            self.initial_costs.round_to(3),
+            self.initial_income.round_to(3),
+            self.date_time
+        )
     }
 }
 

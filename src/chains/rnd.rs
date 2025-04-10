@@ -1627,3 +1627,81 @@ mod chain_test {
         assert!(chain.calculate_rnd(&params_2).is_ok());
     }
 }
+
+#[cfg(test)]
+mod rnd_coverage_tests {
+    use super::*;
+    use crate::chains::OptionChain;
+    use crate::chains::RNDAnalysis;
+    use crate::chains::RNDResult;
+    use crate::{pos, spos};
+    use std::collections::BTreeMap;
+
+    // Test for line 322 in rnd.rs
+    #[test]
+    fn test_rnd_result_new() {
+        // Create a simple densities map
+        let mut densities = BTreeMap::new();
+        densities.insert(pos!(90.0), dec!(0.2));
+        densities.insert(pos!(100.0), dec!(0.6));
+        densities.insert(pos!(110.0), dec!(0.2));
+
+        // Create a new RNDResult
+        let result = RNDResult::new(densities);
+
+        // Check that statistics were calculated
+        assert_eq!(result.statistics.mean, dec!(100.0));
+        assert!(result.statistics.variance > Positive::ZERO);
+        assert!(result.statistics.volatility > Positive::ZERO);
+    }
+
+    // Test for line 369 in rnd.rs
+    #[test]
+    fn test_calculate_skew_with_custom_chain() {
+        // Create a custom chain with specific volatility pattern
+        let mut chain = OptionChain::new(
+            "TEST",
+            pos!(100.0),
+            "2024-06-30".to_string(),
+            Some(dec!(0.05)),
+            Some(pos!(0.0)),
+        );
+
+        // Add options with volatility smile pattern
+        let strikes = [80.0, 90.0, 100.0, 110.0, 120.0];
+        let vols = [0.25, 0.20, 0.17, 0.20, 0.25]; // Smile pattern
+
+        for (i, strike) in strikes.iter().enumerate() {
+            chain.add_option(
+                pos!(*strike),
+                spos!(10.0),
+                spos!(10.5),
+                spos!(10.0),
+                spos!(10.5),
+                spos!(vols[i]),
+                None,
+                None,
+                None,
+                spos!(1000.0),
+                None,
+            );
+        }
+
+        // Calculate skew
+        let result = chain.calculate_skew();
+        assert!(result.is_ok());
+
+        let skew = result.unwrap();
+
+        // Confirm we got the right number of data points
+        assert_eq!(skew.len(), 5);
+
+        // With a symmetric smile, the skew around ATM should be symmetric
+        let atm_index = skew.iter().position(|(k, _)| *k == pos!(1.0)).unwrap();
+        let lower = skew[atm_index - 1].1;
+        let higher = skew[atm_index + 1].1;
+
+        // The absolute skew values should be similar in a smile
+        assert!((lower.abs() - higher.abs()).abs() < dec!(0.05));
+    }
+}

@@ -617,15 +617,9 @@ impl Position {
     /// assert!(position.validate());
     /// ```
     pub fn validate(&self) -> bool {
-        if self.option.side == Side::Short {
-            if self.premium == Positive::ZERO {
-                debug!("Premium must be greater than zero for short positions.");
-                return false;
-            }
-            if self.premium < self.open_fee + self.close_fee {
-                debug!("Premium must be greater than the sum of the fees.");
-                return false;
-            }
+        if self.option.side == Side::Short && self.premium == Positive::ZERO {
+            debug!("Premium must be greater than zero for short positions.");
+            return false;
         }
         if !self.option.validate() {
             debug!("Option is not valid.");
@@ -724,8 +718,10 @@ impl PnLCalculator for Position {
         let unrealized = price_at_sell - price_at_buy;
         let initial_cost = self.total_cost()?;
         let initial_income = self.premium_received()?;
+
+        let realized = initial_income.to_dec() - initial_cost.to_dec();
         Ok(PnL::new(
-            None,
+            Some(realized),
             Some(unrealized),
             initial_cost,
             initial_income,
@@ -752,13 +748,15 @@ impl PnLCalculator for Position {
         &self,
         underlying_price: &Positive,
     ) -> Result<PnL, Box<dyn Error>> {
-        let realized = self.pnl_at_expiration(&Some(underlying_price))?;
         let initial_cost = self.total_cost()?;
         let initial_income = self.premium_received()?;
         let date_time = self.option.expiration_date.get_date()?;
+
+        let realized = self.option.intrinsic_value(*underlying_price)? - initial_cost.to_dec()
+            + initial_income.to_dec();
         Ok(PnL::new(
             Some(realized),
-            None,
+            Some(Decimal::ZERO),
             initial_cost,
             initial_income,
             date_time,

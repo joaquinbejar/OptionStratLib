@@ -29,11 +29,11 @@ use crate::model::utils::mean_and_std;
 use crate::pnl::PnLCalculator;
 use crate::pnl::utils::PnL;
 use crate::pricing::payoff::Profit;
-use crate::strategies::StrategyConstructor;
 use crate::strategies::delta_neutral::DeltaNeutrality;
 use crate::strategies::probabilities::core::ProbabilityAnalysis;
 use crate::strategies::probabilities::utils::VolatilityAdjustment;
 use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria, calculate_price_range};
+use crate::strategies::{DeltaAdjustment, StrategyConstructor};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
 use crate::{Options, Positive};
@@ -43,7 +43,7 @@ use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{RED, ShapeStyle};
 use rust_decimal::Decimal;
 use std::error::Error;
-use tracing::{debug, info, trace};
+use tracing::{debug, error, info, trace};
 
 const SHORT_STRANGLE_DESCRIPTION: &str = "A short strangle involves selling an out-of-the-money call and an \
 out-of-the-money put with the same expiration date. This strategy is used when low volatility \
@@ -429,10 +429,9 @@ impl Positionable for ShortStrangle {
     /// * `Err(PositionError)` if position was not found or validation failed
     fn modify_position(&mut self, position: &Position) -> Result<(), PositionError> {
         if !position.validate() {
+            let err_msg = format!("modify_position: Invalid position data: \n{}", position);
             return Err(PositionError::ValidationError(
-                PositionValidationErrorKind::InvalidPosition {
-                    reason: "Invalid position data".to_string(),
-                },
+                PositionValidationErrorKind::InvalidPosition { reason: err_msg },
             ));
         }
 
@@ -477,6 +476,25 @@ impl Strategable for ShortStrangle {
 impl Strategies for ShortStrangle {
     fn get_underlying_price(&self) -> Positive {
         self.short_call.option.underlying_price
+    }
+
+    fn set_underlying_price(&mut self, price: &Positive) -> Result<(), StrategyError> {
+        self.short_call.option.underlying_price = *price;
+        self.short_call.premium = Positive::from(
+            self.short_call
+                .option
+                .calculate_price_black_scholes()?
+                .abs(),
+        );
+        self.short_put.option.underlying_price = *price;
+        self.short_put.premium =
+            Positive::from(self.short_put.option.calculate_price_black_scholes()?.abs());
+        Ok(())
+    }
+
+    fn volume(&mut self) -> Result<Positive, StrategyError> {
+        let volume = self.short_call.option.quantity + self.short_put.option.quantity;
+        Ok(volume)
     }
 
     fn max_profit(&self) -> Result<Positive, StrategyError> {
@@ -567,12 +585,21 @@ impl Optimizable for ShortStrangle {
         option_chain
             .get_double_iter()
             // Filter out invalid combinations based on FindOptimalSide
-            .filter(move |(short_put, short_call)| {
-                if side == FindOptimalSide::Center {
+            .filter(move |(short_put, short_call)| match side {
+                FindOptimalSide::DeltaRange(min, max) => {
+                    let (_, delta_put) = short_put.current_deltas();
+                    let (delta_call, _) = short_call.current_deltas();
+                    delta_put.unwrap() > min
+                        && delta_put.unwrap() < max
+                        && delta_call.unwrap() > min
+                        && delta_call.unwrap() < max
+                }
+                FindOptimalSide::Center => {
                     short_put.is_valid_optimal_side(underlying_price, &FindOptimalSide::Lower)
                         && short_call
                             .is_valid_optimal_side(underlying_price, &FindOptimalSide::Upper)
-                } else {
+                }
+                _ => {
                     short_put.is_valid_optimal_side(underlying_price, &side)
                         && short_call.is_valid_optimal_side(underlying_price, &side)
                 }
@@ -627,7 +654,7 @@ impl Optimizable for ShortStrangle {
 
             if current_value > best_value {
                 // Update the best value and replace the current strategy
-                info!("Found better value: {}", current_value);
+                debug!("Found better value: {}", current_value);
                 best_value = current_value;
                 *self = strategy.clone();
             }
@@ -929,6 +956,101 @@ impl PnLCalculator for ShortStrangle {
             + self
                 .short_put
                 .calculate_pnl_at_expiration(underlying_price)?)
+    }
+
+    fn adjustments_pnl(&self, adjustment: &DeltaAdjustment) -> Result<PnL, Box<dyn Error>> {
+        let pnl = {
+            match adjustment {
+                DeltaAdjustment::BuyOptions {
+                    quantity,
+                    strike,
+                    option_style,
+                    side,
+                } => {
+                    match (side, option_style) {
+                        (Side::Short, OptionStyle::Call) => {
+                            let mut position = self.short_call.clone();
+                            position.option.side = Side::Short; // Buy the short call
+                            position.option.quantity = *quantity;
+                            position.option.strike_price = *strike;
+
+                            PnL {
+                                realized: None,
+                                unrealized: None,
+                                initial_costs: position.total_cost().unwrap(),
+                                initial_income: position.premium_received().unwrap(),
+                                date_time: Utc::now(),
+                            }
+                        }
+                        (Side::Short, OptionStyle::Put) => {
+                            let mut position = self.short_put.clone();
+                            position.option.side = Side::Short; // Buy the short put
+                            position.option.quantity = *quantity;
+                            position.option.strike_price = *strike;
+
+                            PnL {
+                                realized: None,
+                                unrealized: None,
+                                initial_costs: position.total_cost().unwrap(),
+                                initial_income: position.premium_received().unwrap(),
+                                date_time: Utc::now(),
+                            }
+                        }
+                        _ => {
+                            error!("Invalid side or option style {} {}", side, option_style);
+                            PnL::default()
+                        }
+                    }
+                }
+                DeltaAdjustment::SellOptions {
+                    quantity,
+                    strike,
+                    option_style,
+                    side,
+                } => {
+                    match (side, option_style) {
+                        (Side::Short, OptionStyle::Call) => {
+                            let mut position = self.short_call.clone();
+                            position.option.side = Side::Long; // Sell the short call 
+                            position.option.quantity = *quantity;
+                            position.option.strike_price = *strike;
+
+                            PnL {
+                                realized: None,
+                                unrealized: None,
+                                initial_costs: position.total_cost().unwrap(),
+                                initial_income: position.premium_received().unwrap(),
+                                date_time: Utc::now(),
+                            }
+                        }
+                        (Side::Short, OptionStyle::Put) => {
+                            let mut position = self.short_put.clone();
+                            position.option.side = Side::Long; // Sell the short put
+                            position.option.quantity = *quantity;
+                            position.option.strike_price = *strike;
+
+                            PnL {
+                                realized: None,
+                                unrealized: None,
+                                initial_costs: position.total_cost().unwrap(),
+                                initial_income: position.premium_received().unwrap(),
+                                date_time: Utc::now(),
+                            }
+                        }
+                        _ => {
+                            error!("Invalid side or option style {} {}", side, option_style);
+                            PnL::default()
+                        }
+                    }
+                }
+                _ => {
+                    error!("Invalid adjustment type {}", adjustment);
+                    PnL::default()
+                }
+            }
+        };
+
+        Ok(pnl)
     }
 }
 
@@ -1329,10 +1451,9 @@ impl Positionable for LongStrangle {
     /// * `Err(PositionError)` if position was not found or validation failed
     fn modify_position(&mut self, position: &Position) -> Result<(), PositionError> {
         if !position.validate() {
+            let err_msg = format!("modify_position: Invalid position data: \n{}", position);
             return Err(PositionError::ValidationError(
-                PositionValidationErrorKind::InvalidPosition {
-                    reason: "Invalid position data".to_string(),
-                },
+                PositionValidationErrorKind::InvalidPosition { reason: err_msg },
             ));
         }
 
@@ -1377,6 +1498,23 @@ impl Strategable for LongStrangle {
 impl Strategies for LongStrangle {
     fn get_underlying_price(&self) -> Positive {
         self.long_call.option.underlying_price
+    }
+
+    fn set_underlying_price(&mut self, price: &Positive) -> Result<(), StrategyError> {
+        self.long_call.option.underlying_price = *price;
+        self.long_call.premium =
+            Positive::from(self.long_call.option.calculate_price_black_scholes()?.abs());
+
+        self.long_put.option.underlying_price = *price;
+        self.long_put.premium =
+            Positive::from(self.long_put.option.calculate_price_black_scholes()?.abs());
+
+        Ok(())
+    }
+
+    fn volume(&mut self) -> Result<Positive, StrategyError> {
+        let volume = self.long_call.option.quantity + self.long_put.option.quantity;
+        Ok(volume)
     }
 
     fn max_profit(&self) -> Result<Positive, StrategyError> {
@@ -1451,13 +1589,21 @@ impl Optimizable for LongStrangle {
         let strategy = self.clone();
         option_chain
             .get_double_iter()
-            // Filter out invalid combinations based on FindOptimalSide
-            .filter(move |(long_put, long_call)| {
-                if side == FindOptimalSide::Center {
+            .filter(move |(long_put, long_call)| match side {
+                FindOptimalSide::DeltaRange(min, max) => {
+                    let (_, delta_put) = long_put.current_deltas();
+                    let (delta_call, _) = long_call.current_deltas();
+                    delta_put.unwrap() > min
+                        && delta_put.unwrap() < max
+                        && delta_call.unwrap() > min
+                        && delta_call.unwrap() < max
+                }
+                FindOptimalSide::Center => {
                     long_put.is_valid_optimal_side(underlying_price, &FindOptimalSide::Lower)
                         && long_call
                             .is_valid_optimal_side(underlying_price, &FindOptimalSide::Upper)
-                } else {
+                }
+                _ => {
                     long_put.is_valid_optimal_side(underlying_price, &side)
                         && long_call.is_valid_optimal_side(underlying_price, &side)
                 }
@@ -1474,6 +1620,7 @@ impl Optimizable for LongStrangle {
                     first: long_put,
                     second: long_call,
                 };
+
                 let strategy = strategy.create_strategy(option_chain, &legs);
                 strategy.validate() && strategy.max_profit().is_ok() && strategy.max_loss().is_ok()
             })
@@ -1797,6 +1944,87 @@ impl PnLCalculator for LongStrangle {
             + self
                 .long_put
                 .calculate_pnl_at_expiration(underlying_price)?)
+    }
+
+    fn adjustments_pnl(&self, adjustment: &DeltaAdjustment) -> Result<PnL, Box<dyn Error>> {
+        let pnl = {
+            match adjustment {
+                DeltaAdjustment::BuyOptions {
+                    quantity,
+                    strike,
+                    option_style,
+                    side,
+                } => {
+                    match (side, option_style) {
+                        (Side::Long, OptionStyle::Call) => {
+                            let mut position = self.long_call.clone();
+                            position.option.side = Side::Long; // Buy the call
+                            position.option.quantity = *quantity;
+                            position.option.strike_price = *strike;
+                            PnL {
+                                realized: None,
+                                unrealized: None,
+                                initial_costs: position.total_cost().unwrap(),
+                                initial_income: position.premium_received().unwrap(),
+                                date_time: Utc::now(),
+                            }
+                        }
+                        (Side::Long, OptionStyle::Put) => {
+                            let mut position = self.long_put.clone();
+                            position.option.side = Side::Long; // Buy the put
+                            position.option.quantity = *quantity;
+                            position.option.strike_price = *strike;
+                            PnL {
+                                realized: None,
+                                unrealized: None,
+                                initial_costs: position.total_cost().unwrap(),
+                                initial_income: position.premium_received().unwrap(),
+                                date_time: Utc::now(),
+                            }
+                        }
+                        _ => PnL::default(),
+                    }
+                }
+                DeltaAdjustment::SellOptions {
+                    quantity,
+                    strike,
+                    option_style,
+                    side,
+                } => {
+                    match (side, option_style) {
+                        (Side::Long, OptionStyle::Call) => {
+                            let mut position = self.long_call.clone();
+                            position.option.side = Side::Short; // Sell the call 
+                            position.option.quantity = *quantity;
+                            position.option.strike_price = *strike;
+                            PnL {
+                                realized: None,
+                                unrealized: None,
+                                initial_costs: position.total_cost().unwrap(),
+                                initial_income: position.premium_received().unwrap(),
+                                date_time: Utc::now(),
+                            }
+                        }
+                        (Side::Long, OptionStyle::Put) => {
+                            let mut position = self.long_put.clone();
+                            position.option.side = Side::Short; // Sell the put
+                            position.option.quantity = *quantity;
+                            position.option.strike_price = *strike;
+                            PnL {
+                                realized: None,
+                                unrealized: None,
+                                initial_costs: position.total_cost().unwrap(),
+                                initial_income: position.premium_received().unwrap(),
+                                date_time: Utc::now(),
+                            }
+                        }
+                        _ => PnL::default(),
+                    }
+                }
+                _ => PnL::default(),
+            }
+        };
+        Ok(pnl)
     }
 }
 
@@ -2997,7 +3225,6 @@ mod tests_short_strangle_delta {
     }
 
     #[test]
-
     fn create_test_reducing_adjustments() {
         let strategy = get_strategy(pos!(7450.0), pos!(7250.0));
         let size = dec!(0.086108);
@@ -3036,7 +3263,6 @@ mod tests_short_strangle_delta {
     }
 
     #[test]
-
     fn create_test_increasing_adjustments() {
         let strike = pos!(7050.0);
         let strategy = get_strategy(pos!(7150.0), strike);
@@ -3112,7 +3338,6 @@ mod tests_short_strangle_delta {
     }
 
     #[test]
-
     fn create_test_no_adjustments() {
         let strategy = get_strategy(pos!(7445.5), pos!(7050.0));
 
@@ -4911,5 +5136,121 @@ mod tests_short_strangle_pnl {
         assert!(pnl.unrealized.unwrap() < dec!(0.0));
         // But still not at maximum theoretical loss
         assert!(pnl.unrealized.unwrap() > dec!(-100.0));
+    }
+}
+
+#[cfg(test)]
+mod test_adjustments_pnl {
+    use crate::greeks::Greeks;
+    use crate::pnl::PnLCalculator;
+    use crate::strategies::{
+        DELTA_THRESHOLD, DeltaAdjustment, DeltaNeutrality, ShortStrangle, Strategies,
+    };
+    use crate::utils::setup_logger;
+    use crate::{
+        ExpirationDate, OptionStyle, Positive, Side, assert_decimal_eq, assert_pos_relative_eq, pos,
+    };
+
+    use rust_decimal_macros::dec;
+    use tracing::info;
+
+    fn get_strategy(call_strike: Positive, put_strike: Positive) -> ShortStrangle {
+        let underlying_price = pos!(7138.5);
+        ShortStrangle::new(
+            "CL".to_string(),
+            underlying_price, // underlying_price
+            call_strike,      // call_strike 7450 (delta -0.415981)
+            put_strike,       // put_strike 7050 (delta 0.417810)
+            ExpirationDate::Days(pos!(45.0)),
+            pos!(0.3745),   // implied_volatility
+            dec!(0.05),     // risk_free_rate
+            Positive::ZERO, // dividend_yield
+            pos!(1.0),      // quantity
+            pos!(84.2),     // premium_short_call
+            pos!(353.2),    // premium_short_put
+            pos!(7.01),     // open_fee_short_call
+            pos!(7.01),     // close_fee_short_call
+            pos!(7.01),     // open_fee_short_put
+            pos!(7.01),     // close_fee_short_put
+        )
+    }
+
+    #[test]
+    fn create_test_reducing_adjustments() {
+        setup_logger();
+        let mut strategy = get_strategy(pos!(7450.0), pos!(7250.0));
+        info!("short_call: {}", strategy.short_call.premium);
+        info!("short_put: {}", strategy.short_put.premium);
+        info!(
+            "{}",
+            strategy.calculate_pnl_at_expiration(&pos!(7138.5)).unwrap()
+        );
+        let size = dec!(0.086108);
+        let delta = pos!(0.171500192678);
+        let k = pos!(7250.0);
+        assert_decimal_eq!(
+            strategy.delta_neutrality().unwrap().net_delta,
+            size,
+            DELTA_THRESHOLD
+        );
+        info!("delta: {}", strategy.delta_neutrality().unwrap().net_delta);
+        assert!(!strategy.is_delta_neutral());
+        let binding = strategy.delta_adjustments().unwrap();
+
+        match &binding[1] {
+            DeltaAdjustment::SellOptions {
+                quantity,
+                strike,
+                option_style,
+                side,
+            } => {
+                assert_pos_relative_eq!(*quantity, delta, Positive(DELTA_THRESHOLD));
+                assert_pos_relative_eq!(*strike, k, Positive(DELTA_THRESHOLD));
+                assert_eq!(*option_style, OptionStyle::Put);
+                assert_eq!(*side, Side::Short);
+            }
+            _ => panic!("Invalid suggestion"),
+        }
+
+        let pnl = strategy.adjustments_pnl(&binding[1]).unwrap();
+        assert!(pnl.realized.is_none());
+        assert!(pnl.unrealized.is_none());
+        assert_pos_relative_eq!(pnl.initial_costs, pos!(62.978300), pos!(1e-6));
+        assert_pos_relative_eq!(pnl.initial_income, Positive::ZERO, pos!(1e-6));
+
+        let short_call = strategy.short_call.option.clone();
+        let mut short_put = strategy.short_put.option.clone();
+        short_put.quantity = short_put.quantity - delta.to_dec();
+        assert_decimal_eq!(
+            short_call.delta().unwrap(),
+            -short_put.delta().unwrap(),
+            DELTA_THRESHOLD
+        );
+        let new_underlying_price = pos!(7350.0);
+        strategy
+            .set_underlying_price(&new_underlying_price)
+            .unwrap();
+        assert!(!strategy.is_delta_neutral());
+        let binding = strategy.delta_adjustments().unwrap();
+        info!("binding: {:?}", binding);
+        match &binding[1] {
+            DeltaAdjustment::BuyOptions {
+                quantity,
+                strike,
+                option_style,
+                side,
+            } => {
+                assert_pos_relative_eq!(*quantity, pos!(0.2166976643), Positive(DELTA_THRESHOLD));
+                assert_pos_relative_eq!(*strike, pos!(7250.0), Positive(DELTA_THRESHOLD));
+                assert_eq!(*option_style, OptionStyle::Put);
+                assert_eq!(*side, Side::Short);
+            }
+            _ => panic!("Invalid suggestion"),
+        }
+        let pnl = strategy.adjustments_pnl(&binding[1]).unwrap();
+        assert!(pnl.realized.is_none());
+        assert!(pnl.unrealized.is_none());
+        assert_pos_relative_eq!(pnl.initial_costs, pos!(3.038101), pos!(1e-6));
+        assert_pos_relative_eq!(pnl.initial_income, pos!(67.949767), pos!(1e-6));
     }
 }

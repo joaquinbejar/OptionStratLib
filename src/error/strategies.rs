@@ -67,8 +67,8 @@
 //! ## Type Alias
 //!
 //! Provides `StrategyResult<T>` for convenient error handling in strategy operations.
-use crate::error::PositionError;
 use crate::error::common::OperationErrorKind;
+use crate::error::{OptionsError, PositionError};
 use std::error::Error;
 use std::fmt;
 
@@ -384,6 +384,15 @@ impl From<PositionError> for StrategyError {
     fn from(err: PositionError) -> Self {
         StrategyError::OperationError(OperationErrorKind::InvalidParameters {
             operation: "Position".to_string(),
+            reason: err.to_string(),
+        })
+    }
+}
+
+impl From<OptionsError> for StrategyError {
+    fn from(err: OptionsError) -> Self {
+        StrategyError::OperationError(OperationErrorKind::InvalidParameters {
+            operation: "Options".to_string(),
             reason: err.to_string(),
         })
     }

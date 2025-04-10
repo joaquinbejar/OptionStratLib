@@ -51,7 +51,7 @@ fn test_long_butterfly_spread_integration() -> Result<(), Box<dyn Error>> {
     strategy.best_ratio(&option_chain, FindOptimalSide::Upper);
     assert_relative_eq!(
         strategy.profit_ratio().unwrap().to_f64().unwrap(),
-        1349.2753,
+        1745.0184,
         epsilon = 0.001
     );
 

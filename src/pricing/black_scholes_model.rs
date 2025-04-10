@@ -8,6 +8,7 @@ use crate::greeks::{big_n, calculate_d_values};
 use crate::model::types::{OptionStyle, OptionType, Side};
 use rust_decimal::{Decimal, MathematicalOps};
 use std::error::Error;
+use tracing::trace;
 
 /// Computes the price of an option using the Black-Scholes model.
 ///
@@ -153,7 +154,14 @@ fn calculate_call_option_price(
 
     let result = option.underlying_price.to_dec() * big_n_d1
         - option.strike_price.to_dec() * (-option.risk_free_rate * t).exp() * big_n_d2;
-
+    trace!(
+        "Call Option Price: {} - {} * {} * {} = {}",
+        option.underlying_price,
+        option.strike_price,
+        (-option.risk_free_rate * t).exp(),
+        big_n_d2,
+        result
+    );
     Ok(result)
 }
 
