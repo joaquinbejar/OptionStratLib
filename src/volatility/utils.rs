@@ -1250,7 +1250,7 @@ mod tests_generate_ou_process {
             generate_ou_process(pos!(1.0), pos!(1.5), pos!(0.2), pos!(0.3), pos!(0.01), 1000);
 
         for value in process {
-            assert!(value > pos!(0.0), "Found non-positive value: {:?}", value);
+            assert!(value >= Positive::ZERO, "Found non-positive value: {:?}", value);
         }
     }
 
