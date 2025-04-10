@@ -726,7 +726,6 @@ mod tests_point2d_specific_cases {
 
     #[test]
     fn test_to_tuple_positive_constraints() {
-
         // Create a point with non-positive x (x = 0)
         let point = Point2D::new(dec!(0.0), dec!(1.0));
 
@@ -760,7 +759,6 @@ mod tests_point2d_specific_cases {
 
     #[test]
     fn test_from_f64_tuple_error_handling() {
-
         // Test with invalid f64 values (infinity)
         let result = Point2D::from_f64_tuple(f64::INFINITY, 1.0);
         assert!(result.is_err());
