@@ -278,3 +278,77 @@ fn calculate_prominence(points: &[Point2D], index: usize, is_peak: bool) -> Deci
         Decimal::min(left_bound, right_bound) - current
     }
 }
+
+#[cfg(test)]
+mod tests_utils {
+    use rust_decimal_macros::dec;
+    use std::collections::BTreeSet;
+    use crate::curves::Point2D;
+    use crate::curves::utils::{calculate_prominence, detect_peaks_and_valleys};
+
+    #[test]
+    fn test_detect_peaks_and_valleys_insufficient_points() {
+        // Test when there are not enough points for the window size
+        let points = BTreeSet::from_iter(vec![
+            Point2D::new(dec!(1.0), dec!(2.0)),
+            Point2D::new(dec!(2.0), dec!(3.0)),
+        ]);
+
+        // Use window_size = 1, which requires at least 3 points (2*1+1)
+        let (peaks, valleys) = detect_peaks_and_valleys(&points, dec!(0.1), 1);
+
+        // Should return empty vectors with a warning log
+        assert!(peaks.is_empty());
+        assert!(valleys.is_empty());
+    }
+
+    #[test]
+    fn test_calculate_prominence() {
+        // Test calculate_prominence function (lines 185-189, 191)
+        let points = vec![
+            Point2D::new(dec!(0.0), dec!(0.0)),
+            Point2D::new(dec!(1.0), dec!(2.0)), // peak
+            Point2D::new(dec!(2.0), dec!(1.0)),
+            Point2D::new(dec!(3.0), dec!(-1.0)), // valley
+            Point2D::new(dec!(4.0), dec!(0.0)),
+        ];
+
+        // Test prominence for a peak
+        let peak_prominence = calculate_prominence(&points, 1, true);
+        assert_eq!(peak_prominence, dec!(2.0)); 
+
+        // Test prominence for a valley
+        let valley_prominence = calculate_prominence(&points, 3, false);
+        assert_eq!(valley_prominence, dec!(1.0)); 
+    }
+
+    #[test]
+    fn test_detect_peaks_and_valleys_with_prominence() {
+        // Create a curve with clear peaks and valleys
+        let points = BTreeSet::from_iter(vec![
+            Point2D::new(dec!(0.0), dec!(0.0)),
+            Point2D::new(dec!(1.0), dec!(3.0)), 
+            Point2D::new(dec!(2.0), dec!(-2.0)),
+            Point2D::new(dec!(3.0), dec!(2.0)), 
+            Point2D::new(dec!(4.0), dec!(-1.0)),
+            Point2D::new(dec!(5.0), dec!(0.0)),
+        ]);
+
+        // With low prominence threshold, should detect all peaks and valleys
+        let (peaks, valleys) = detect_peaks_and_valleys(&points, dec!(0.1), 1);
+        assert_eq!(peaks.len(), 2);
+        assert_eq!(valleys.len(), 2);
+
+        // With high prominence threshold, should only detect the most prominent peaks
+        let (peaks, valleys) = detect_peaks_and_valleys(&points, dec!(4.0), 1);
+        assert!(peaks.is_empty());
+        assert!(!valleys.is_empty());
+
+        // With medium prominence threshold
+        let (peaks, valleys) = detect_peaks_and_valleys(&points, dec!(2.0), 1);
+        assert_eq!(peaks.len(), 2);
+        assert_eq!(valleys.len(), 1);
+        assert_eq!(peaks[0].y, dec!(3.0));
+        assert_eq!(valleys[0].y, dec!(-2.0));
+    }
+}
