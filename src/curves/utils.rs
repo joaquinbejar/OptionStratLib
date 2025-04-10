@@ -281,10 +281,10 @@ fn calculate_prominence(points: &[Point2D], index: usize, is_peak: bool) -> Deci
 
 #[cfg(test)]
 mod tests_utils {
-    use rust_decimal_macros::dec;
-    use std::collections::BTreeSet;
     use crate::curves::Point2D;
     use crate::curves::utils::{calculate_prominence, detect_peaks_and_valleys};
+    use rust_decimal_macros::dec;
+    use std::collections::BTreeSet;
 
     #[test]
     fn test_detect_peaks_and_valleys_insufficient_points() {
@@ -315,11 +315,11 @@ mod tests_utils {
 
         // Test prominence for a peak
         let peak_prominence = calculate_prominence(&points, 1, true);
-        assert_eq!(peak_prominence, dec!(2.0)); 
+        assert_eq!(peak_prominence, dec!(2.0));
 
         // Test prominence for a valley
         let valley_prominence = calculate_prominence(&points, 3, false);
-        assert_eq!(valley_prominence, dec!(1.0)); 
+        assert_eq!(valley_prominence, dec!(1.0));
     }
 
     #[test]
@@ -327,9 +327,9 @@ mod tests_utils {
         // Create a curve with clear peaks and valleys
         let points = BTreeSet::from_iter(vec![
             Point2D::new(dec!(0.0), dec!(0.0)),
-            Point2D::new(dec!(1.0), dec!(3.0)), 
+            Point2D::new(dec!(1.0), dec!(3.0)),
             Point2D::new(dec!(2.0), dec!(-2.0)),
-            Point2D::new(dec!(3.0), dec!(2.0)), 
+            Point2D::new(dec!(3.0), dec!(2.0)),
             Point2D::new(dec!(4.0), dec!(-1.0)),
             Point2D::new(dec!(5.0), dec!(0.0)),
         ]);

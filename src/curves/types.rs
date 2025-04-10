@@ -721,12 +721,11 @@ mod tests_performance {
 mod tests_point2d_specific_cases {
     use super::*;
     use crate::Positive;
-    use rust_decimal_macros::dec;
     use crate::error::CurveError;
+    use rust_decimal_macros::dec;
 
     #[test]
     fn test_to_tuple_positive_constraints() {
-        // Test the positive value checking conditions (lines 62-63)
 
         // Create a point with non-positive x (x = 0)
         let point = Point2D::new(dec!(0.0), dec!(1.0));
@@ -761,10 +760,9 @@ mod tests_point2d_specific_cases {
 
     #[test]
     fn test_from_f64_tuple_error_handling() {
-        // Test line 181-182 for error handling in from_f64_tuple
 
         // Test with invalid f64 values (infinity)
-        let result = Point2D::from_f64_tuple(std::f64::INFINITY, 1.0);
+        let result = Point2D::from_f64_tuple(f64::INFINITY, 1.0);
         assert!(result.is_err());
         match result {
             Err(CurveError::Point2DError { reason }) => {
@@ -774,7 +772,7 @@ mod tests_point2d_specific_cases {
         }
 
         // Test with NaN
-        let result = Point2D::from_f64_tuple(1.0, std::f64::NAN);
+        let result = Point2D::from_f64_tuple(1.0, f64::NAN);
         assert!(result.is_err());
         match result {
             Err(CurveError::Point2DError { reason }) => {

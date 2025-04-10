@@ -1196,7 +1196,7 @@ mod tests_option_chain_build_params {
         assert_eq!(params.skew_factor, dec!(0.1));
         assert_eq!(params.spread, pos!(0.02));
         assert_eq!(params.decimal_places, 2);
-        
+
         let display = format!("{}", params);
         assert!(display.contains("TEST"));
         assert!(display.contains("Volume: 1000"));

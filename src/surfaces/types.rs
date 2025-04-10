@@ -538,4 +538,3 @@ mod tests_point3d_serde {
         assert!(result.is_ok());
     }
 }
-

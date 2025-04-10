@@ -3713,7 +3713,6 @@ mod tests_axis_merge_and_transformations {
         assert!(result.is_empty());
     }
 
-
     #[test]
     fn test_derivative_edge_cases() {
         // Test derivative_at edge cases (lines 1467-1468, 1470-1471)

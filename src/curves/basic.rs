@@ -97,12 +97,12 @@ pub trait BasicCurves {
 mod tests_basic_curves_trait {
     use super::*;
     use crate::curves::Point2D;
+    use crate::error::OperationErrorKind;
     use crate::model::types::{OptionStyle, Side};
     use crate::{ExpirationDate, OptionType, Positive, pos};
     use rust_decimal_macros::dec;
     use std::collections::BTreeSet;
     use std::sync::Arc;
-    use crate::error::OperationErrorKind;
 
     // Helper function to create a sample Options for testing
     fn create_test_option() -> Arc<Options> {
@@ -283,7 +283,11 @@ mod tests_basic_curves_trait {
         let result = test_curves.get_curve_strike_versus(&BasicAxisTypes::Expiration, &option);
 
         assert!(result.is_err());
-        if let Err(CurveError::OperationError(OperationErrorKind::InvalidParameters { operation, reason })) = result {
+        if let Err(CurveError::OperationError(OperationErrorKind::InvalidParameters {
+            operation,
+            reason,
+        })) = result
+        {
             assert_eq!(operation, "get_axis_value");
             assert!(reason.contains("Axis: Expiration not supported"));
         } else {
@@ -297,10 +301,14 @@ mod tests_basic_curves_trait {
         let test_curves = TestBasicCurves;
 
         // Test with different combinations of option style and side
-        let curve_call_long = test_curves.curve(&BasicAxisTypes::Delta, &OptionStyle::Call, &Side::Long);
-        let curve_call_short = test_curves.curve(&BasicAxisTypes::Delta, &OptionStyle::Call, &Side::Short);
-        let curve_put_long = test_curves.curve(&BasicAxisTypes::Delta, &OptionStyle::Put, &Side::Long);
-        let curve_put_short = test_curves.curve(&BasicAxisTypes::Delta, &OptionStyle::Put, &Side::Short);
+        let curve_call_long =
+            test_curves.curve(&BasicAxisTypes::Delta, &OptionStyle::Call, &Side::Long);
+        let curve_call_short =
+            test_curves.curve(&BasicAxisTypes::Delta, &OptionStyle::Call, &Side::Short);
+        let curve_put_long =
+            test_curves.curve(&BasicAxisTypes::Delta, &OptionStyle::Put, &Side::Long);
+        let curve_put_short =
+            test_curves.curve(&BasicAxisTypes::Delta, &OptionStyle::Put, &Side::Short);
 
         assert!(curve_call_long.is_ok());
         assert!(curve_call_short.is_ok());

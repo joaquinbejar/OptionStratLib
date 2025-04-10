@@ -137,13 +137,13 @@ pub trait StatisticalCurve: MetricsExtractor {
                 basic_metrics.mean.to_f64().unwrap_or(0.0),
                 basic_metrics.std_dev.to_f64().unwrap_or(1.0),
             )
-                .map_err(|e| {
-                    error!(
-                "Failed to create normal distribution with mean {} and std_dev {}: {}",
-                basic_metrics.mean, basic_metrics.std_dev, e
-            );
-                    CurveError::MetricsError(e.to_string())
-                })?;
+            .map_err(|e| {
+                error!(
+                    "Failed to create normal distribution with mean {} and std_dev {}: {}",
+                    basic_metrics.mean, basic_metrics.std_dev, e
+                );
+                CurveError::MetricsError(e.to_string())
+            })?;
 
             // Generate initial y-values from the normal distribution
             (0..num_points)
@@ -155,7 +155,6 @@ pub trait StatisticalCurve: MetricsExtractor {
         } else {
             vec![basic_metrics.mean.to_f64().unwrap_or(0.0); num_points]
         };
-
 
         // Apply transformations to match skewness and kurtosis (simplified approach)
         let skewness = shape_metrics.skewness.to_f64().unwrap_or(0.0);
@@ -1062,7 +1061,7 @@ mod tests_statistical_curve_generation {
 
         // Since compute_basic_metrics is set to fail, verification should also fail
         let result = generator.verify_curve_metrics(&curve, &target_metrics, dec!(0.0000001));
-        assert!(!result.is_err()); // TODO: fix this
+        assert!(result.is_ok()); // TODO: fix this
     }
 
     #[test]
