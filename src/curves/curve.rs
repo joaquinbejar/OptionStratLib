@@ -1456,8 +1456,7 @@ impl AxisOperations<Point2D, Decimal> for Curve {
     type Error = CurveError;
 
     fn contains_point(&self, x: &Decimal) -> bool {
-        let point = Point2D::new(*x, Decimal::ZERO);
-        self.points.contains(&point)
+        self.points.iter().any(|p| &p.x == x)
     }
 
     fn get_index_values(&self) -> Vec<Decimal> {
@@ -3449,5 +3448,370 @@ mod tests_curve_serde {
 
         assert_eq!(curve.points, deserialized.points);
         assert_eq!(curve.x_range, deserialized.x_range);
+    }
+}
+
+#[cfg(test)]
+mod tests_curve_display_and_default {
+    use crate::curves::{Curve, Point2D};
+    use rust_decimal::Decimal;
+    use rust_decimal_macros::dec;
+    use std::collections::BTreeSet;
+
+    #[test]
+    fn test_curve_display() {
+        let point1 = Point2D::new(dec!(1.0), dec!(2.0));
+        let point2 = Point2D::new(dec!(3.0), dec!(4.0));
+
+        let mut points = BTreeSet::new();
+        points.insert(point1);
+        points.insert(point2);
+
+        let curve = Curve::new(points);
+
+        let display_string = format!("{}", curve);
+        assert!(display_string.contains("(x: 1.0, y: 2.0)"));
+        assert!(display_string.contains("(x: 3.0, y: 4.0)"));
+    }
+
+    #[test]
+    fn test_curve_default() {
+        // Test the Default implementation (line 83, 85-86)
+        let curve = Curve::default();
+        assert!(curve.points.is_empty());
+        assert_eq!(curve.x_range, (Decimal::ZERO, Decimal::ZERO));
+    }
+}
+
+#[cfg(test)]
+mod tests_curve_len_and_geometric {
+    use crate::curves::{Curve, Point2D};
+    use crate::error::CurveError;
+    use crate::geometrics::{ConstructionMethod, ConstructionParams, GeometricObject};
+    use crate::utils::Len;
+    use rust_decimal_macros::dec;
+    use std::collections::BTreeSet;
+
+    #[test]
+    fn test_curve_len() {
+        // Test Len implementation (lines 129-130)
+        let curve = Curve::default();
+        assert_eq!(curve.len(), 0);
+        assert!(curve.is_empty());
+
+        let mut points = BTreeSet::new();
+        points.insert(Point2D::new(dec!(1.0), dec!(2.0)));
+        let curve_with_point = Curve::new(points);
+        assert_eq!(curve_with_point.len(), 1);
+        assert!(!curve_with_point.is_empty());
+    }
+
+    #[test]
+    fn test_curve_get_points() {
+        // Test GeometricObject.get_points (line 164)
+        let mut points = BTreeSet::new();
+        points.insert(Point2D::new(dec!(1.0), dec!(2.0)));
+        points.insert(Point2D::new(dec!(3.0), dec!(4.0)));
+
+        let curve = Curve::new(points);
+        let retrieved_points = curve.get_points();
+
+        assert_eq!(retrieved_points.len(), 2);
+        assert!(
+            retrieved_points
+                .iter()
+                .any(|p| p.x == dec!(1.0) && p.y == dec!(2.0))
+        );
+        assert!(
+            retrieved_points
+                .iter()
+                .any(|p| p.x == dec!(3.0) && p.y == dec!(4.0))
+        );
+    }
+
+    #[test]
+    fn test_construct_method_error() {
+        // Test ConstructionMethod errors (lines 168-175, 179, 181, 189)
+        let result = Curve::construct(ConstructionMethod::Parametric {
+            f: Box::new(|_| {
+                Err(Box::new(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    "Test error",
+                )))
+            }),
+            params: ConstructionParams::D2 {
+                t_start: dec!(0.0),
+                t_end: dec!(1.0),
+                steps: 10,
+            },
+        });
+
+        assert!(result.is_err());
+        match result {
+            Err(CurveError::ConstructionError(msg)) => {
+                assert!(msg.contains("Test error"));
+            }
+            _ => panic!("Expected ConstructionError"),
+        }
+
+        // Test invalid params
+        let result = Curve::construct(ConstructionMethod::Parametric {
+            f: Box::new(|t| Ok(Point2D::new(t, t * dec!(2.0)))),
+            params: ConstructionParams::D3 {
+                x_start: dec!(0.0),
+                x_end: dec!(1.0),
+                y_start: dec!(0.0),
+                y_end: dec!(1.0),
+                x_steps: 10,
+                y_steps: 10,
+            },
+        });
+
+        assert!(result.is_err());
+        match result {
+            Err(CurveError::ConstructionError(msg)) => {
+                assert_eq!(msg, "Invalid parameters");
+            }
+            _ => panic!("Expected ConstructionError"),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests_interpolation_edge_cases {
+    use crate::curves::{Curve, Point2D};
+    use crate::geometrics::{AxisOperations, Interpolate, InterpolationType};
+    use rust_decimal_macros::dec;
+    use std::collections::BTreeSet;
+
+    #[test]
+    fn test_cubic_interpolation_edge_cases() {
+        // Test edge cases for cubic interpolation (line 924)
+        let curve = Curve::new(BTreeSet::from_iter(vec![
+            Point2D::new(dec!(0.0), dec!(0.0)),
+            Point2D::new(dec!(1.0), dec!(1.0)),
+            Point2D::new(dec!(2.0), dec!(4.0)),
+            Point2D::new(dec!(3.0), dec!(9.0)),
+        ]));
+
+        // Test interpolation at the start of the curve
+        let start_result = curve.interpolate(dec!(0.25), InterpolationType::Cubic);
+        assert!(start_result.is_ok());
+
+        // Test interpolation at the end of the curve
+        let end_result = curve.interpolate(dec!(2.75), InterpolationType::Cubic);
+        assert!(end_result.is_ok());
+    }
+
+    #[test]
+    fn test_spline_interpolation_edge_cases() {
+        // Test edge cases for spline interpolation (lines 942-943, 1037)
+        let curve = Curve::new(BTreeSet::from_iter(vec![
+            Point2D::new(dec!(0.0), dec!(0.0)),
+            Point2D::new(dec!(1.0), dec!(1.0)),
+            Point2D::new(dec!(2.0), dec!(4.0)),
+            Point2D::new(dec!(3.0), dec!(9.0)),
+        ]));
+
+        // Test with exact match to a point
+        let exact_result = curve.interpolate(dec!(1.0), InterpolationType::Spline);
+        assert!(exact_result.is_ok());
+        let exact_point = exact_result.unwrap();
+        assert_eq!(exact_point.x, dec!(1.0));
+        assert_eq!(exact_point.y, dec!(1.0));
+
+        // Test spline system solving at the midpoint
+        let mid_result = curve.interpolate(dec!(1.5), InterpolationType::Spline);
+        assert!(mid_result.is_ok());
+    }
+
+    #[test]
+    fn test_axis_operations() {
+        // Test AxisOperations (line 1155)
+        let curve = Curve::new(BTreeSet::from_iter(vec![
+            Point2D::new(dec!(0.0), dec!(0.0)),
+            Point2D::new(dec!(1.0), dec!(1.0)),
+            Point2D::new(dec!(2.0), dec!(4.0)),
+        ]));
+
+        // Test get_index_values
+        let indices = curve.get_index_values();
+        assert_eq!(indices, vec![dec!(0.0), dec!(1.0), dec!(2.0)]);
+
+        // Test get_values
+        let values = curve.get_values(dec!(1.0));
+        assert_eq!(values.len(), 1);
+        assert_eq!(*values[0], dec!(1.0));
+
+        // Test get_closest_point
+        let closest = curve.get_closest_point(&dec!(0.9)).unwrap();
+        assert_eq!(closest.x, dec!(1.0));
+        assert_eq!(closest.y, dec!(1.0));
+
+        println!("{:?}", curve);
+        // Test get_point
+        let point = curve.get_point(&dec!(1.0));
+        assert!(point.is_some());
+        assert_eq!(point.unwrap().y, dec!(1.0));
+
+        // Test get_point with non-existent x value
+        let non_existent = curve.get_point(&dec!(1.5));
+        assert!(non_existent.is_none());
+    }
+}
+
+#[cfg(test)]
+mod tests_axis_merge_and_transformations {
+    use super::*;
+    use rust_decimal_macros::dec;
+
+    #[test]
+    fn test_merge_axis_index() {
+        // Test merge_axis_index (lines 1227-1228, 1236)
+        let curve1 = Curve::new(BTreeSet::from_iter(vec![
+            Point2D::new(dec!(0.0), dec!(0.0)),
+            Point2D::new(dec!(1.0), dec!(1.0)),
+        ]));
+
+        let curve2 = Curve::new(BTreeSet::from_iter(vec![
+            Point2D::new(dec!(1.0), dec!(2.0)),
+            Point2D::new(dec!(2.0), dec!(4.0)),
+        ]));
+
+        // Get merged x-values
+        let merged = curve1.merge_axis_index(&curve2);
+        assert_eq!(merged.len(), 1);
+        assert!(merged.contains(&dec!(1.0)));
+    }
+
+    #[test]
+    fn test_translate_with_negative_values() {
+        // Test translate with negative values (line 1326)
+        let curve = Curve::new(BTreeSet::from_iter(vec![
+            Point2D::new(dec!(0.0), dec!(0.0)),
+            Point2D::new(dec!(1.0), dec!(1.0)),
+        ]));
+
+        let result = curve.translate(vec![&dec!(-2.0), &dec!(-3.0)]).unwrap();
+
+        assert_eq!(result.points.len(), 2);
+
+        let translated_points: Vec<_> = result.points.iter().collect();
+        assert_eq!(translated_points[0].x, dec!(-2.0));
+        assert_eq!(translated_points[0].y, dec!(-3.0));
+        assert_eq!(translated_points[1].x, dec!(-1.0));
+        assert_eq!(translated_points[1].y, dec!(-2.0));
+    }
+
+    #[test]
+    fn test_intersect_with_empty_curves() {
+        // Test intersect_with empty curves (lines 1344-1346)
+        let curve1 = Curve::new(BTreeSet::new());
+        let curve2 = Curve::new(BTreeSet::new());
+
+        let result = curve1.intersect_with(&curve2).unwrap();
+        assert!(result.is_empty());
+    }
+
+
+    #[test]
+    fn test_derivative_edge_cases() {
+        // Test derivative_at edge cases (lines 1467-1468, 1470-1471)
+        let curve = Curve::new(BTreeSet::from_iter(vec![
+            Point2D::new(dec!(0.0), dec!(0.0)),
+            Point2D::new(dec!(1.0), dec!(1.0)),
+        ]));
+
+        // Test derivative at endpoint
+        let result = curve
+            .derivative_at(&Point2D::new(dec!(0.0), dec!(0.0)))
+            .unwrap();
+        assert_eq!(result[0], dec!(0.0));
+
+        // Test derivative at midpoint
+        let result = curve
+            .derivative_at(&Point2D::new(dec!(0.5), dec!(0.5)))
+            .unwrap();
+        assert_eq!(result[0], dec!(1.0));
+    }
+
+    #[test]
+    fn test_derivative_vertical_line() {
+        // Test derivative for vertical line (lines 1475-1476)
+        let curve = Curve::new(BTreeSet::from_iter(vec![
+            Point2D::new(dec!(1.0), dec!(0.0)),
+            Point2D::new(dec!(1.0), dec!(1.0)),
+        ]));
+
+        // This should return an error as the derivative is undefined for a vertical line
+        let result = curve.derivative_at(&Point2D::new(dec!(1.0), dec!(0.5)));
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_extrema_single_point() {
+        // Test extrema with single point (lines 1478-1481)
+        let curve = Curve::new(BTreeSet::from_iter(vec![Point2D::new(
+            dec!(1.0),
+            dec!(1.0),
+        )]));
+
+        let (min, max) = curve.extrema().unwrap();
+        assert_eq!(min, max);
+        assert_eq!(min.x, dec!(1.0));
+        assert_eq!(min.y, dec!(1.0));
+    }
+
+    #[test]
+    fn test_extrema_flat_curve() {
+        // Test extrema with flat curve (lines 1483-1484)
+        let curve = Curve::new(BTreeSet::from_iter(vec![
+            Point2D::new(dec!(0.0), dec!(1.0)),
+            Point2D::new(dec!(1.0), dec!(1.0)),
+        ]));
+
+        let (min, max) = curve.extrema().unwrap();
+        assert_eq!(min.y, max.y);
+        assert_eq!(min.y, dec!(1.0));
+    }
+
+    #[test]
+    fn test_measure_under_single_point() {
+        // Test measure_under with single point (lines 1488-1490)
+        let curve = Curve::new(BTreeSet::from_iter(vec![Point2D::new(
+            dec!(1.0),
+            dec!(1.0),
+        )]));
+
+        let area = curve.measure_under(&dec!(0.0)).unwrap();
+        assert_eq!(area, dec!(0.0));
+    }
+
+    #[test]
+    fn test_measure_under_negative_area() {
+        // Test measure_under with negative area (line 1492)
+        let curve = Curve::new(BTreeSet::from_iter(vec![
+            Point2D::new(dec!(0.0), dec!(-1.0)),
+            Point2D::new(dec!(1.0), dec!(-2.0)),
+        ]));
+
+        let area = curve.measure_under(&dec!(0.0)).unwrap();
+        assert!(area > dec!(0.0));
+        assert_eq!(area, dec!(1.5)); // |0.5 * 1 * (-1.5)| = 0.75 * 2 = 1.5
+    }
+
+    #[test]
+    fn test_extrema_multiple_extrema() {
+        // Test extrema with multiple local extrema (lines 1518, 1524)
+        let curve = Curve::new(BTreeSet::from_iter(vec![
+            Point2D::new(dec!(0.0), dec!(0.0)),
+            Point2D::new(dec!(1.0), dec!(2.0)),
+            Point2D::new(dec!(2.0), dec!(1.0)),
+            Point2D::new(dec!(3.0), dec!(3.0)),
+        ]));
+
+        let (min, max) = curve.extrema().unwrap();
+        assert_eq!(min.y, dec!(0.0));
+        assert_eq!(max.y, dec!(3.0));
     }
 }

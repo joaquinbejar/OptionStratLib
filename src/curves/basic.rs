@@ -102,6 +102,7 @@ mod tests_basic_curves_trait {
     use rust_decimal_macros::dec;
     use std::collections::BTreeSet;
     use std::sync::Arc;
+    use crate::error::OperationErrorKind;
 
     // Helper function to create a sample Options for testing
     fn create_test_option() -> Arc<Options> {
@@ -268,5 +269,42 @@ mod tests_basic_curves_trait {
             }
             _ => panic!("Expected OperationError with InvalidParameters"),
         }
+    }
+
+    // Add to src/curves/basic.rs in the tests_basic_curves_trait module
+
+    #[test]
+    fn test_invalid_axis_error_message() {
+        // Test the specific error message format for an unsupported axis
+        let test_curves = TestBasicCurves;
+        let option = create_test_option();
+
+        // Line 81: Tests the specific error formatting for the OperationErrorKind::InvalidParameters
+        let result = test_curves.get_curve_strike_versus(&BasicAxisTypes::Expiration, &option);
+
+        assert!(result.is_err());
+        if let Err(CurveError::OperationError(OperationErrorKind::InvalidParameters { operation, reason })) = result {
+            assert_eq!(operation, "get_axis_value");
+            assert!(reason.contains("Axis: Expiration not supported"));
+        } else {
+            panic!("Expected OperationError with InvalidParameters");
+        }
+    }
+
+    // Add a test for the curve method with different option styles and sides
+    #[test]
+    fn test_curve_with_various_params() {
+        let test_curves = TestBasicCurves;
+
+        // Test with different combinations of option style and side
+        let curve_call_long = test_curves.curve(&BasicAxisTypes::Delta, &OptionStyle::Call, &Side::Long);
+        let curve_call_short = test_curves.curve(&BasicAxisTypes::Delta, &OptionStyle::Call, &Side::Short);
+        let curve_put_long = test_curves.curve(&BasicAxisTypes::Delta, &OptionStyle::Put, &Side::Long);
+        let curve_put_short = test_curves.curve(&BasicAxisTypes::Delta, &OptionStyle::Put, &Side::Short);
+
+        assert!(curve_call_long.is_ok());
+        assert!(curve_call_short.is_ok());
+        assert!(curve_put_long.is_ok());
+        assert!(curve_put_short.is_ok());
     }
 }

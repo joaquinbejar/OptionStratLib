@@ -47,3 +47,7 @@ pub trait Surfacable {
     ///   - Description: Generates a surface or returns an error if something goes wrong during the process.
     fn surface(&self) -> Result<Surface, SurfaceError>;
 }
+
+
+
+
