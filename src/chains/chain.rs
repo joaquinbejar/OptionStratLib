@@ -7169,6 +7169,177 @@ mod tests_atm_strike {
 }
 
 #[cfg(test)]
+mod tests_atm_strike_bis {
+    use super::*;
+    use crate::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
+    use crate::model::types::ExpirationDate;
+    use crate::utils::logger::setup_logger;
+    use crate::{pos, spos};
+    use rust_decimal_macros::dec;
+
+    fn create_standard_chain() -> OptionChain {
+        setup_logger();
+        let params = OptionChainBuildParams::new(
+            "SP500".to_string(),
+            None,
+            10,
+            pos!(1.0),
+            Decimal::ZERO,
+            pos!(0.02),
+            2,
+            OptionDataPriceParams::new(
+                pos!(100.0),
+                ExpirationDate::Days(pos!(30.0)),
+                spos!(0.17),
+                Decimal::ZERO,
+                pos!(0.05),
+                Some("SP500".to_string()),
+            ),
+        );
+
+        OptionChain::build_chain(&params)
+    }
+    
+
+    #[test]
+    fn test_atm_strike_approximate_match() {
+        let mut chain = create_standard_chain();
+
+        // Modify the underlying price to a value that doesn't have an exact match
+        chain.underlying_price = pos!(100.5);
+
+        let result = chain.atm_strike();
+        assert!(result.is_ok(), "Should find the closest strike");
+
+        let strike = result.unwrap();
+        assert_eq!(
+            *strike,
+            pos!(100.0),
+            "Should return the closest strike (100.0)"
+        );
+
+        // Modify the underlying price to test the other direction
+        chain.underlying_price = pos!(101.0);
+
+        let result = chain.atm_strike();
+        assert!(result.is_ok(), "Should find the closest strike");
+
+        let strike = result.unwrap();
+        assert_eq!(
+            *strike,
+            pos!(101.0),
+            "Should return the closest strike (101.0)"
+        );
+    }
+
+    #[test]
+    fn test_atm_strike_empty_chain() {
+        let chain = OptionChain::new("EMPTY", pos!(100.0), "2023-12-15".to_string(), None, None);
+
+        let result = chain.atm_strike();
+        assert!(result.is_err(), "Should return error for empty chain");
+
+        let error = result.unwrap_err().to_string();
+        assert!(
+            error.contains("empty option chain"),
+            "Error should mention empty chain"
+        );
+        assert!(error.contains("EMPTY"), "Error should include the symbol");
+    }
+
+    #[test]
+    fn test_atm_strike_extreme_underlying() {
+        let mut chain = create_standard_chain();
+
+        // Set underlying price far from any strike
+        chain.underlying_price = pos!(150.0);
+
+        let result = chain.atm_strike();
+        assert!(
+            result.is_ok(),
+            "Should find the closest strike even for extreme values"
+        );
+
+        let strike = result.unwrap();
+
+        // The farthest strike in the standard chain should be around 110.0
+        assert!(
+            *strike >= pos!(110.0),
+            "Should return the highest available strike"
+        );
+
+        // Test with very low underlying price
+        chain.underlying_price = pos!(80.0);
+
+        let result = chain.atm_strike();
+        assert!(
+            result.is_ok(),
+            "Should find the closest strike for low values"
+        );
+
+        let strike = result.unwrap();
+
+        // The lowest strike in the standard chain should be around 90.0
+        assert_eq!(
+            *strike,
+            pos!(86.0),
+            "Should return the lowest available strike"
+        );
+    }
+
+    #[test]
+    fn test_atm_strike_equidistant() {
+        let mut chain = create_standard_chain();
+
+        // Set underlying price exactly between two strikes
+        chain.underlying_price = pos!(100.5);
+
+        // Set up a custom chain with known strikes
+        let mut options = BTreeSet::new();
+        options.insert(OptionData::new(
+            pos!(100.0),
+            spos!(1.0),
+            spos!(1.1),
+            spos!(1.0),
+            spos!(1.1),
+            spos!(0.2),
+            Some(dec!(0.5)),
+            Some(dec!(-0.5)),
+            Some(dec!(0.1)),
+            spos!(100.0),
+            Some(50),
+        ));
+
+        options.insert(OptionData::new(
+            pos!(101.0),
+            spos!(0.9),
+            spos!(1.0),
+            spos!(1.1),
+            spos!(1.2),
+            spos!(0.2),
+            Some(dec!(0.55)),
+            Some(dec!(-0.45)),
+            Some(dec!(0.1)),
+            spos!(100.0),
+            Some(50),
+        ));
+
+        chain.options = options;
+
+        let result = chain.atm_strike();
+        assert!(result.is_ok(), "Should find a strike when equidistant");
+
+        let strike = result.unwrap();
+
+        // When equidistant, should return one of the two closest strikes
+        assert!(
+            *strike == pos!(100.0) || *strike == pos!(101.0),
+            "Should return one of the equidistant strikes"
+        );
+    }
+}
+
+#[cfg(test)]
 mod tests_option_chain_utils {
     use super::*;
     use crate::chains::utils::OptionChainBuildParams;
@@ -7238,20 +7409,7 @@ mod tests_option_chain_utils {
 
         chain
     }
-
-    #[test]
-    fn test_get_strike_interval_standard_chain() {
-        let chain = create_standard_chain();
-
-        // The standard chain should have a regular interval of 1.0
-        let interval = chain.get_strike_interval();
-
-        assert_eq!(
-            interval,
-            pos!(1.0),
-            "Strike interval should be 1.0 for standard chain"
-        );
-    }
+    
 
     #[test]
     fn test_get_strike_interval_custom_chain() {
@@ -7351,7 +7509,191 @@ mod tests_option_chain_utils {
 }
 
 #[cfg(test)]
-mod tests_to_build_params {
+mod tests_option_chain_utils_bis {
+    use super::*;
+    use crate::chains::utils::OptionChainBuildParams;
+    use crate::chains::utils::OptionDataPriceParams;
+    use crate::model::types::ExpirationDate;
+    use crate::pos;
+    use crate::spos;
+    use crate::utils::logger::setup_logger;
+    use rust_decimal_macros::dec;
+
+    // Helper function to create a standard option chain for testing
+    fn create_standard_chain() -> OptionChain {
+        setup_logger();
+        let params = OptionChainBuildParams::new(
+            "SP500".to_string(),
+            None,
+            10,
+            pos!(1.0),
+            Decimal::ZERO,
+            pos!(0.02),
+            2,
+            OptionDataPriceParams::new(
+                pos!(100.0),
+                ExpirationDate::Days(pos!(30.0)),
+                spos!(0.17),
+                Decimal::ZERO,
+                pos!(0.05),
+                Some("SP500".to_string()),
+            ),
+        );
+
+        OptionChain::build_chain(&params)
+    }
+
+    // Helper function to create a chain with custom strikes for specific tests
+    fn create_custom_strike_chain() -> OptionChain {
+        let mut chain = OptionChain::new(
+            "TEST",
+            pos!(100.0),
+            "2024-01-01".to_string(),
+            Some(dec!(0.05)),
+            Some(pos!(0.02)),
+        );
+
+        // Add options with irregular strike intervals
+        let strikes = [90.0, 92.5, 95.0, 100.0, 105.0, 110.0, 115.0, 125.0];
+        let vols = [0.22, 0.20, 0.18, 0.17, 0.175, 0.18, 0.19, 0.21]; // Volatility smile pattern
+        let deltas_call = [0.1, 0.2, 0.3, 0.5, 0.7, 0.8, 0.9, 0.95]; // Approximate delta values
+        let deltas_put = [-0.9, -0.8, -0.7, -0.5, -0.3, -0.2, -0.1, -0.05]; // Approximate put delta values
+        let gammas = [0.01, 0.02, 0.03, 0.04, 0.03, 0.02, 0.01, 0.005]; // Approximate gamma values
+
+        for (i, &strike) in strikes.iter().enumerate() {
+            chain.add_option(
+                pos!(strike),
+                spos!(5.0),
+                spos!(5.5),
+                spos!(4.0),
+                spos!(4.5),
+                spos!(vols[i]),
+                Some(Decimal::from_f64(deltas_call[i]).unwrap()),
+                Some(Decimal::from_f64(deltas_put[i]).unwrap()),
+                Some(Decimal::from_f64(gammas[i]).unwrap()),
+                spos!(100.0),
+                Some(50),
+            );
+        }
+
+        chain
+    }
+
+    // Test for lines 2197, 2199-2200, 2202, 2204-2206, 2211, 2214-2217
+    #[test]
+    fn test_get_strike_interval_standard_chain() {
+        let chain = create_standard_chain();
+
+        // The standard chain should have a regular interval of 1.0
+        let interval = chain.get_strike_interval();
+
+        assert_eq!(
+            interval,
+            pos!(1.0),
+            "Strike interval should be 1.0 for standard chain"
+        );
+    }
+
+    #[test]
+    fn test_get_strike_interval_custom_chain() {
+        let chain = create_custom_strike_chain();
+
+        // The custom chain has mostly 5.0 intervals but some irregular ones
+        let interval = chain.get_strike_interval();
+
+        assert_eq!(
+            interval,
+            pos!(5.0),
+            "Strike interval should be 5.0 for custom chain"
+        );
+    }
+
+    #[test]
+    fn test_get_strike_interval_empty_chain() {
+        let chain = OptionChain::new("EMPTY", pos!(100.0), "2024-01-01".to_string(), None, None);
+
+        // Empty chain should return the default interval
+        let interval = chain.get_strike_interval();
+
+        assert_eq!(
+            interval,
+            pos!(5.0),
+            "Empty chain should return default interval of 5.0"
+        );
+    }
+
+    #[test]
+    fn test_get_strike_interval_single_option_chain() {
+        let mut chain =
+            OptionChain::new("SINGLE", pos!(100.0), "2024-01-01".to_string(), None, None);
+
+        chain.add_option(
+            pos!(100.0),
+            spos!(5.0),
+            spos!(5.5),
+            spos!(4.0),
+            spos!(4.5),
+            spos!(0.2),
+            Some(dec!(0.5)),
+            Some(dec!(-0.5)),
+            Some(dec!(0.04)),
+            spos!(100.0),
+            Some(50),
+        );
+
+        // Chain with a single option should return the default interval
+        let interval = chain.get_strike_interval();
+
+        assert_eq!(
+            interval,
+            pos!(5.0),
+            "Single option chain should return default interval of 5.0"
+        );
+    }
+
+    // Test for lines 2220-2221, 2226, 2241, 2249, 2257-2258
+    #[test]
+    fn test_get_strike_interval_fractional_intervals() {
+        let mut chain = OptionChain::new(
+            "FRACTIONAL",
+            pos!(100.0),
+            "2024-01-01".to_string(),
+            None,
+            None,
+        );
+
+        // Add options with small fractional intervals
+        let strikes = [100.0, 100.25, 100.5, 100.75, 101.0];
+
+        for &strike in &strikes {
+            chain.add_option(
+                pos!(strike),
+                spos!(1.0),
+                spos!(1.1),
+                spos!(1.0),
+                spos!(1.1),
+                spos!(0.2),
+                Some(dec!(0.5)),
+                Some(dec!(-0.5)),
+                Some(dec!(0.04)),
+                spos!(100.0),
+                Some(50),
+            );
+        }
+
+        // The intervals are all 0.25, but method should round to 0 and then to 1
+        let interval = chain.get_strike_interval();
+
+        assert_eq!(
+            interval,
+            pos!(1.0),
+            "Fractional intervals should round to minimum of 1.0"
+        );
+    }
+}
+
+#[cfg(test)]
+mod tests_to_build_params_bis {
     use super::*;
     use crate::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
     use crate::model::types::ExpirationDate;
@@ -7432,26 +7774,7 @@ mod chain_coverage_tests {
 
         OptionChain::build_chain(&params)
     }
-
-    #[test]
-    fn test_deserializer_field_handling() {
-        let chain = create_test_chain();
-
-        // Save to JSON to trigger serialization
-        let result = chain.save_to_json(".");
-        assert!(result.is_ok());
-        let file = format!("./{}.json", chain.get_title());
-        // Load from JSON to trigger deserialization
-        let loaded_chain = OptionChain::load_from_json(&file);
-        assert!(loaded_chain.is_ok());
-
-        let loaded_chain = loaded_chain.unwrap();
-        assert_eq!(loaded_chain.symbol, "TEST");
-        assert_eq!(loaded_chain.underlying_price, pos!(100.0));
-
-        // Clean up the test file
-        std::fs::remove_file(file).unwrap();
-    }
+    
 
     #[test]
     fn test_option_chain_display() {
@@ -7661,3 +7984,265 @@ mod chain_coverage_tests {
         assert!(theta_curve.is_ok());
     }
 }
+
+#[cfg(test)]
+mod chain_coverage_tests_bis {
+    use super::*;
+    use crate::spos;
+    use crate::utils::logger::setup_logger;
+    use rust_decimal_macros::dec;
+
+    // Helper function to create a test chain with specific characteristics
+    fn create_test_chain() -> OptionChain {
+        let params = OptionChainBuildParams::new(
+            "TEST".to_string(),
+            None,
+            5,
+            pos!(5.0),
+            dec!(0.00001),
+            pos!(0.02),
+            2,
+            OptionDataPriceParams::new(
+                pos!(100.0),
+                ExpirationDate::Days(pos!(30.0)),
+                spos!(0.2),
+                dec!(0.05),
+                pos!(0.0),
+                Some("TEST".to_string()),
+            ),
+        );
+
+        OptionChain::build_chain(&params)
+    }
+
+    // Test for lines 98, 104, 108, 135, 138-139, 154-155, 157, 161, 163, 167, 169, 173, 175, 179, 181, 185, 187
+    #[test]
+    fn test_deserializer_field_handling() {
+        let chain = create_test_chain();
+
+        // Save to JSON to trigger serialization
+        let result = chain.save_to_json(".");
+        assert!(result.is_ok());
+        let file = format!("./{}.json", chain.get_title());
+        // Load from JSON to trigger deserialization
+        let loaded_chain = OptionChain::load_from_json(&file);
+        assert!(loaded_chain.is_ok());
+
+        let loaded_chain = loaded_chain.unwrap();
+        assert_eq!(loaded_chain.symbol, "TEST");
+        assert_eq!(loaded_chain.underlying_price, pos!(100.0));
+
+        // Clean up the test file
+        std::fs::remove_file(file).unwrap();
+    }
+
+    // Test for many display-related lines
+    #[test]
+    fn test_option_chain_display() {
+        setup_logger();
+        let chain = create_test_chain();
+
+        // Test the Display implementation - covers many lines
+        let display_output = format!("{}", chain);
+
+        // Verify expected content in the display output
+        assert!(display_output.contains("Symbol: TEST"));
+        assert!(display_output.contains("Underlying Price: 100"));
+        assert!(display_output.contains("Strike"));
+        assert!(display_output.contains("Call Bid"));
+        assert!(display_output.contains("Put Ask"));
+    }
+
+    // Test for lines 198-199, 201-207
+    #[test]
+    fn test_get_title_variants() {
+        let chain = OptionChain::new(
+            "SP500 Index", // With space
+            pos!(5781.88),
+            "18 Oct 2024".to_string(), // With spaces
+            Some(dec!(0.05)),
+            Some(pos!(0.02)),
+        );
+
+        let title = chain.get_title();
+        assert_eq!(title, "SP500-Index-18-Oct-2024-5781.88");
+    }
+
+    // Test for line 345
+    #[test]
+    fn test_update_expiration_date() {
+        let mut chain = create_test_chain();
+        let original_date = chain.get_expiration_date();
+
+        // Update to a new date
+        chain.update_expiration_date("2025-12-31".to_string());
+
+        // Verify the date was updated
+        assert_ne!(chain.get_expiration_date(), original_date);
+        assert_eq!(chain.get_expiration_date(), "2025-12-31");
+    }
+
+    // Test for lines 467-468, 491, 500, 504, 506, 512, 523
+    #[test]
+    fn test_atm_option_data_edge_cases() {
+        // Test with empty chain
+        let empty_chain =
+            OptionChain::new("EMPTY", pos!(100.0), "2024-01-01".to_string(), None, None);
+        let result = empty_chain.atm_option_data();
+        assert!(result.is_err());
+
+        // Test with a single option exactly at the money
+        let mut single_option_chain =
+            OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
+        single_option_chain.add_option(
+            pos!(100.0),
+            spos!(5.0),
+            spos!(5.5),
+            spos!(4.5),
+            spos!(5.0),
+            spos!(0.2),
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+
+        let result = single_option_chain.atm_option_data();
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().strike_price, pos!(100.0));
+    }
+
+    // Test for lines 568, 570, 572-578, 617, 619, 621-627
+    #[test]
+    fn test_update_mid_prices_and_greeks() {
+        let mut chain = create_test_chain();
+
+        // Get original values
+        let original_options = chain.options.clone();
+
+        // Call the update methods
+        chain.update_mid_prices();
+        chain.update_greeks();
+        chain.update_implied_volatilities();
+
+        // Verify that values have been updated
+        for (original, updated) in original_options.iter().zip(chain.options.iter()) {
+            // The objects should have the same strike but potentially different values
+            assert_eq!(original.strike_price, updated.strike_price);
+
+            // Midpoints should now be set in the updated version
+            if original.call_bid.is_some() && original.call_ask.is_some() {
+                assert!(updated.call_middle.is_some());
+            }
+
+            if original.put_bid.is_some() && original.put_ask.is_some() {
+                assert!(updated.put_middle.is_some());
+            }
+
+            // Greeks should be set
+            assert!(updated.delta_call.is_some() || updated.delta_put.is_some());
+        }
+    }
+
+    // Test for lines 691-692, 705, 793-795, 797
+    #[test]
+    fn test_strike_price_range_vec() {
+        let chain = create_test_chain();
+
+        // Test with different step sizes
+        let range_1 = chain.strike_price_range_vec(1.0);
+        assert!(range_1.is_some());
+
+        let range_5 = chain.strike_price_range_vec(5.0);
+        assert!(range_5.is_some());
+
+        // Compare ranges
+        if let (Some(range_1), Some(range_5)) = (range_1, range_5) {
+            assert!(range_1.len() >= range_5.len());
+        }
+
+        // Test with empty chain
+        let empty_chain =
+            OptionChain::new("EMPTY", pos!(100.0), "2024-01-01".to_string(), None, None);
+        let range = empty_chain.strike_price_range_vec(5.0);
+        assert!(range.is_none());
+    }
+
+    // Test for lines 845, 855, 922, 1007, 1033, 1035, 1065-1066
+    #[test]
+    fn test_get_params_and_atm_strike() {
+        let chain = create_test_chain();
+
+        // Test get_params
+        let atm_strike = chain.atm_strike().unwrap();
+        let params_result = chain.get_params(*atm_strike);
+        assert!(params_result.is_ok());
+
+        let params = params_result.unwrap();
+        assert_eq!(params.underlying_price, chain.underlying_price);
+
+        // Test with invalid strike
+        let invalid_strike = pos!(9999.0);
+        let invalid_params_result = chain.get_params(invalid_strike);
+        assert!(invalid_params_result.is_err());
+    }
+
+    // Test for lines 1361-1362, 1364
+    #[test]
+    fn test_calculate_delta_exposure() {
+        let mut chain = create_test_chain();
+
+        // Update Greeks to ensure they are populated
+        chain.update_greeks();
+
+        // Now test delta exposure
+        let delta_exposure = chain.delta_exposure();
+        assert!(delta_exposure.is_ok());
+    }
+
+    // Test for lines 1640, 1691, 1693-1694, 1724, 1726-1727, 1757, 1759-1760, 1790, 1792-1793
+    #[test]
+    fn test_all_exposures() {
+        let mut chain = create_test_chain();
+
+        // Update Greeks to ensure they are populated
+        chain.update_greeks();
+
+        // Test various exposure calculations
+        let gamma_exposure = chain.gamma_exposure();
+        assert!(gamma_exposure.is_ok());
+
+        let delta_exposure = chain.delta_exposure();
+        assert!(delta_exposure.is_ok());
+
+        let vega_exposure = chain.vega_exposure();
+        assert!(vega_exposure.is_ok());
+
+        let theta_exposure = chain.theta_exposure();
+        assert!(theta_exposure.is_ok());
+    }
+
+    // Test for lines 1910-1911, 1943, 1966-1967, 1978-1979, 2018-2019
+    #[test]
+    fn test_all_curves() {
+        let mut chain = create_test_chain();
+
+        // Update Greeks to ensure they are populated
+        chain.update_greeks();
+
+        // Test various curve calculations
+        let gamma_curve = chain.gamma_curve();
+        assert!(gamma_curve.is_ok());
+
+        let delta_curve = chain.delta_curve();
+        assert!(delta_curve.is_ok());
+
+        let vega_curve = chain.vega_curve();
+        assert!(vega_curve.is_ok());
+
+        let theta_curve = chain.theta_curve();
+        assert!(theta_curve.is_ok());
+    }
+}
+
