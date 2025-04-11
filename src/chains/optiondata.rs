@@ -459,7 +459,7 @@ impl OptionData {
     ///
     /// * The underlying option cannot be retrieved based on the provided parameters.
     /// * The Black-Scholes model fails to calculate a valid option premium.
-    fn get_position(
+    pub fn get_position(
         &self,
         price_params: &OptionDataPriceParams,
         side: Side,
@@ -1589,7 +1589,7 @@ mod tests_get_position {
 
         assert!(result.is_ok());
         let position = result.unwrap();
-        
+
         // An ITM call should have higher premium
         assert!(
             position.premium >= pos!(10.0),
@@ -1616,7 +1616,7 @@ mod tests_get_position {
 
         assert!(result.is_ok());
         let position = result.unwrap();
-        
+
         // A deep OTM put should have low premium
         assert!(
             position.premium <= pos!(9.0),
@@ -1654,7 +1654,7 @@ mod tests_get_position {
             assert!(position.premium > Positive::ZERO);
         }
     }
-    
+
     #[test]
     fn test_get_position_with_custom_all_params() {
         // This test checks that all custom parameters are correctly applied
@@ -1710,7 +1710,11 @@ mod tests_get_position {
         let position = result.unwrap();
 
         // For a long call, should use call_ask (10.0)
-        assert_eq!(position.premium, pos!(10.0), "Should use call_ask price for long call");
+        assert_eq!(
+            position.premium,
+            pos!(10.0),
+            "Should use call_ask price for long call"
+        );
     }
 
     #[test]
@@ -1733,7 +1737,11 @@ mod tests_get_position {
         let position = result.unwrap();
 
         // For a short call, should use call_bid (9.5)
-        assert_eq!(position.premium, pos!(9.5), "Should use call_bid price for short call");
+        assert_eq!(
+            position.premium,
+            pos!(9.5),
+            "Should use call_bid price for short call"
+        );
     }
 
     #[test]
@@ -1756,7 +1764,11 @@ mod tests_get_position {
         let position = result.unwrap();
 
         // For a long put, should use put_ask (9.0)
-        assert_eq!(position.premium, pos!(9.0), "Should use put_ask price for long put");
+        assert_eq!(
+            position.premium,
+            pos!(9.0),
+            "Should use put_ask price for long put"
+        );
     }
 
     #[test]
@@ -1779,7 +1791,11 @@ mod tests_get_position {
         let position = result.unwrap();
 
         // For a short put, should use put_bid (8.5)
-        assert_eq!(position.premium, pos!(8.5), "Should use put_bid price for short put");
+        assert_eq!(
+            position.premium,
+            pos!(8.5),
+            "Should use put_bid price for short put"
+        );
     }
 
     #[test]
@@ -1811,15 +1827,23 @@ mod tests_get_position {
             None,
         );
 
-        assert!(result.is_ok(), "Should successfully create position using Black-Scholes");
+        assert!(
+            result.is_ok(),
+            "Should successfully create position using Black-Scholes"
+        );
 
         let position = result.unwrap();
 
         // Premium should be calculated using Black-Scholes
-        assert!(position.premium > Positive::ZERO, "Should calculate premium using Black-Scholes");
+        assert!(
+            position.premium > Positive::ZERO,
+            "Should calculate premium using Black-Scholes"
+        );
 
         // Let's verify it matches direct Black-Scholes calculation
-        let option = option_data.get_option(&price_params, Side::Long, OptionStyle::Call).unwrap();
+        let option = option_data
+            .get_option(&price_params, Side::Long, OptionStyle::Call)
+            .unwrap();
         let bs_price = option.calculate_price_black_scholes().unwrap().abs();
         let bs_price_positive = Positive::from(bs_price);
 
@@ -1851,7 +1875,11 @@ mod tests_get_position {
         assert_eq!(position.date, custom_date);
 
         // Should still use market price (10.0 for long call)
-        assert_eq!(position.premium, pos!(10.0), "Should use call_ask even with custom date");
+        assert_eq!(
+            position.premium,
+            pos!(10.0),
+            "Should use call_ask even with custom date"
+        );
     }
 
     #[test]
@@ -1881,7 +1909,11 @@ mod tests_get_position {
         assert_eq!(position.close_fee, close_fee);
 
         // Should still use market price (8.5 for short put)
-        assert_eq!(position.premium, pos!(8.5), "Should use put_bid even with custom fees");
+        assert_eq!(
+            position.premium,
+            pos!(8.5),
+            "Should use put_bid even with custom fees"
+        );
     }
 
     #[test]
@@ -1903,12 +1935,17 @@ mod tests_get_position {
         );
 
         // Should still succeed but fall back to Black-Scholes
-        assert!(result.is_ok(), "Should fall back to Black-Scholes when specific price is missing");
+        assert!(
+            result.is_ok(),
+            "Should fall back to Black-Scholes when specific price is missing"
+        );
 
         let position = result.unwrap();
 
         // Let's verify it matches direct Black-Scholes calculation
-        let option = option_data.get_option(&price_params, Side::Long, OptionStyle::Call).unwrap();
+        let option = option_data
+            .get_option(&price_params, Side::Long, OptionStyle::Call)
+            .unwrap();
         let bs_price = option.calculate_price_black_scholes().unwrap().abs();
         let bs_price_positive = Positive::from(bs_price);
 
@@ -2765,5 +2802,3 @@ mod tests_current_deltas {
         assert_eq!(put_delta, None);
     }
 }
-
-

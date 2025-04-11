@@ -9,7 +9,7 @@ use crate::chains::utils::{
 };
 use crate::chains::{OptionData, OptionsInStrike, RNDAnalysis, RNDParameters, RNDResult};
 use crate::curves::{BasicCurves, Curve, Point2D};
-use crate::error::chains::ChainError;
+use crate::error::chains::{ChainError, OptionDataErrorKind};
 use crate::error::{CurveError, SurfaceError};
 use crate::geometrics::{LinearInterpolation, MetricsExtractor};
 use crate::greeks::Greeks;
@@ -1955,6 +1955,93 @@ impl OptionChain {
                 Positive(rounded_interval)
             }
         }
+    }
+
+    /// Retrieves a `Position` with a delta closest to the specified `target_delta`.
+    ///
+    /// This function searches the option chain for an option whose delta is less than or equal to
+    /// the `target_delta`. It then selects the option with the highest delta value (for calls) or
+    /// the most negative delta value (for puts) that meets this criteria.  A `Position` is
+    /// constructed from the selected option.
+    ///
+    /// # Arguments
+    ///
+    /// * `target_delta` - The target delta value to search for.
+    /// * `side` - The side of the position (Long or Short).
+    /// * `option_style` - The style of the option (Call or Put).
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing the `Position` if a suitable option is found, or a `ChainError` if no
+    /// option with a delta less than or equal to the `target_delta` is found.
+    ///
+    /// # Errors
+    ///
+    /// Returns a `ChainError::OptionDataError` with `OptionDataErrorKind::InvalidDelta` if no option
+    /// is found with a delta less than or equal to the specified `target_delta`.
+    pub fn get_position_with_delta(
+        &self,
+        target_delta: Positive,
+        side: Side,
+        option_style: OptionStyle,
+    ) -> Result<Position, ChainError> {
+        // Find options with deltas less than or equal to target
+        let filtered_options = self
+            .get_single_iter()
+            .filter_map(|option_data| {
+                // Get the appropriate delta based on option style
+                let option_delta = match option_style {
+                    OptionStyle::Call => option_data.delta_call,
+                    OptionStyle::Put => option_data.delta_put,
+                };
+
+                // Only include options with deltas less than or equal to target
+                // For puts (which have negative deltas), we need to compare absolute values
+                option_delta.and_then(|delta| {
+                    if option_style == OptionStyle::Call {
+                        // For calls: delta ≤ target_delta
+                        if delta.abs() <= target_delta.to_dec().abs() {
+                            Some((option_data, delta))
+                        } else {
+                            None
+                        }
+                    } else {
+                        // For puts: |delta| ≤ |target_delta|
+                        if delta.abs() <= target_delta.to_dec().abs() {
+                            Some((option_data, delta))
+                        } else {
+                            None
+                        }
+                    }
+                })
+            })
+            .collect::<Vec<_>>();
+
+        // Find the option with the highest delta value that's still ≤ target
+        filtered_options
+            .into_iter()
+            .max_by(|a, b| {
+                // For calls: Higher delta is better
+                // For puts: More negative delta is better (higher absolute value)
+                a.1.abs()
+                    .partial_cmp(&b.1.abs())
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            })
+            .map(|(option_data, _)| {
+                // Create position from the selected option
+                let params = self.get_params(option_data.strike_price).unwrap();
+                option_data
+                    .get_position(&params, side, option_style, None, None, None)
+                    .unwrap()
+            })
+            .ok_or(ChainError::OptionDataError(
+                OptionDataErrorKind::InvalidDelta {
+                    delta: Some(target_delta.to_f64()),
+                    reason:
+                        "No option with delta less than or equal to the specified delta was found"
+                            .to_string(),
+                },
+            ))
     }
 }
 
@@ -7199,7 +7286,6 @@ mod tests_atm_strike_bis {
 
         OptionChain::build_chain(&params)
     }
-    
 
     #[test]
     fn test_atm_strike_approximate_match() {
@@ -7342,37 +7428,9 @@ mod tests_atm_strike_bis {
 #[cfg(test)]
 mod tests_option_chain_utils {
     use super::*;
-    use crate::chains::utils::OptionChainBuildParams;
-    use crate::chains::utils::OptionDataPriceParams;
-    use crate::model::types::ExpirationDate;
     use crate::pos;
     use crate::spos;
-    use crate::utils::logger::setup_logger;
     use rust_decimal_macros::dec;
-
-    // Helper function to create a standard option chain for testing
-    fn create_standard_chain() -> OptionChain {
-        setup_logger();
-        let params = OptionChainBuildParams::new(
-            "SP500".to_string(),
-            None,
-            10,
-            pos!(1.0),
-            Decimal::ZERO,
-            pos!(0.02),
-            2,
-            OptionDataPriceParams::new(
-                pos!(100.0),
-                ExpirationDate::Days(pos!(30.0)),
-                spos!(0.17),
-                Decimal::ZERO,
-                pos!(0.05),
-                Some("SP500".to_string()),
-            ),
-        );
-
-        OptionChain::build_chain(&params)
-    }
 
     // Helper function to create a chain with custom strikes for specific tests
     fn create_custom_strike_chain() -> OptionChain {
@@ -7409,7 +7467,6 @@ mod tests_option_chain_utils {
 
         chain
     }
-    
 
     #[test]
     fn test_get_strike_interval_custom_chain() {
@@ -7774,7 +7831,6 @@ mod chain_coverage_tests {
 
         OptionChain::build_chain(&params)
     }
-    
 
     #[test]
     fn test_option_chain_display() {
@@ -8246,3 +8302,403 @@ mod chain_coverage_tests_bis {
     }
 }
 
+#[cfg(test)]
+mod tests_get_position_with_delta {
+    use super::*;
+    use crate::error::chains::OptionDataErrorKind;
+    use crate::utils::logger::setup_logger;
+    use crate::{pos, spos};
+    use rust_decimal_macros::dec;
+    use tracing::info;
+
+    // Helper function to create a test option chain with various deltas
+    fn create_test_chain_with_deltas() -> OptionChain {
+        let mut chain = OptionChain::new(
+            "TEST",
+            pos!(100.0),
+            "2024-12-31".to_string(),
+            Some(dec!(0.05)),
+            Some(pos!(0.02)),
+        );
+
+        // Add options with different deltas
+        // For calls: higher strike = lower delta
+        // For puts: higher strike = higher delta (more negative)
+
+        // Far ITM call, high delta / Far OTM put, low delta
+        chain.add_option(
+            pos!(80.0),
+            spos!(20.0),
+            spos!(20.5),
+            spos!(0.5),
+            spos!(0.7),
+            spos!(0.25),
+            Some(dec!(0.9)),  // High call delta (0.9)
+            Some(dec!(-0.1)), // Low put delta (-0.1)
+            Some(dec!(0.02)),
+            spos!(100.0),
+            Some(50),
+        );
+
+        // ITM call / OTM put
+        chain.add_option(
+            pos!(90.0),
+            spos!(11.0),
+            spos!(11.5),
+            spos!(1.5),
+            spos!(1.8),
+            spos!(0.25),
+            Some(dec!(0.7)),  // Call delta (0.7)
+            Some(dec!(-0.3)), // Put delta (-0.3)
+            Some(dec!(0.04)),
+            spos!(200.0),
+            Some(100),
+        );
+
+        // ATM call and put
+        chain.add_option(
+            pos!(100.0),
+            spos!(5.0),
+            spos!(5.3),
+            spos!(5.0),
+            spos!(5.3),
+            spos!(0.25),
+            Some(dec!(0.5)),  // ATM call delta (0.5)
+            Some(dec!(-0.5)), // ATM put delta (-0.5)
+            Some(dec!(0.05)),
+            spos!(500.0),
+            Some(250),
+        );
+
+        // OTM call / ITM put
+        chain.add_option(
+            pos!(110.0),
+            spos!(1.5),
+            spos!(1.8),
+            spos!(11.0),
+            spos!(11.5),
+            spos!(0.25),
+            Some(dec!(0.3)),  // Call delta (0.3)
+            Some(dec!(-0.7)), // Put delta (-0.7)
+            Some(dec!(0.04)),
+            spos!(200.0),
+            Some(100),
+        );
+
+        // Far OTM call, low delta / Far ITM put, high delta
+        chain.add_option(
+            pos!(120.0),
+            spos!(0.5),
+            spos!(0.7),
+            spos!(20.0),
+            spos!(20.5),
+            spos!(0.25),
+            Some(dec!(0.1)),  // Low call delta (0.1)
+            Some(dec!(-0.9)), // High put delta (-0.9)
+            Some(dec!(0.02)),
+            spos!(100.0),
+            Some(50),
+        );
+
+        chain
+    }
+
+    #[test]
+    fn test_get_position_with_delta_long_call() {
+        setup_logger();
+        let chain = create_test_chain_with_deltas();
+        info!("{}", chain);
+        // Request a long call with delta of 0.6 or lower
+        let result = chain.get_position_with_delta(pos!(0.6), Side::Long, OptionStyle::Call);
+
+        assert!(result.is_ok(), "Should find a suitable call option");
+
+        let position = result.unwrap();
+
+        assert_eq!(
+            position.option.strike_price,
+            pos!(100.0),
+            "Should select option with strike 100.0 (delta 0.5)"
+        );
+        assert_eq!(position.option.side, Side::Long);
+        assert_eq!(position.option.option_style, OptionStyle::Call);
+    }
+
+    #[test]
+    fn test_get_position_with_delta_short_put() {
+        setup_logger();
+        let chain = create_test_chain_with_deltas();
+
+        // Request a short put with delta of -0.4
+        let result = chain.get_position_with_delta(pos!(0.4), Side::Short, OptionStyle::Put);
+
+        assert!(result.is_ok(), "Should find a suitable put option");
+
+        let position = result.unwrap();
+
+        // Should select the option with delta -0.5 (closest to -0.3)
+        assert_eq!(
+            position.option.strike_price,
+            pos!(90.0),
+            "Should select option with strike 90.0 (delta -0.3)"
+        );
+        assert_eq!(position.option.side, Side::Short);
+        assert_eq!(position.option.option_style, OptionStyle::Put);
+    }
+
+    #[test]
+    fn test_get_position_with_delta_exact_match() {
+        let chain = create_test_chain_with_deltas();
+
+        // Request a long call with delta of exactly 0.5
+        let result = chain.get_position_with_delta(pos!(0.5), Side::Long, OptionStyle::Call);
+
+        assert!(result.is_ok(), "Should find an exact match");
+
+        let position = result.unwrap();
+
+        // Should select the option with delta exactly 0.5
+        assert_eq!(
+            position.option.strike_price,
+            pos!(100.0),
+            "Should select option with strike 100.0 (delta exactly 0.5)"
+        );
+    }
+
+    #[test]
+    fn test_get_position_with_delta_high_target() {
+        let chain = create_test_chain_with_deltas();
+
+        // Request a long call with very high delta of 0.95
+        let result = chain.get_position_with_delta(pos!(0.95), Side::Long, OptionStyle::Call);
+
+        assert!(result.is_ok(), "Should find the highest available delta");
+
+        let position = result.unwrap();
+
+        // Should select the option with highest delta (0.9)
+        assert_eq!(
+            position.option.strike_price,
+            pos!(80.0),
+            "Should select option with strike 80.0 (highest delta 0.9)"
+        );
+    }
+
+    #[test]
+    fn test_get_position_with_delta_low_target() {
+        setup_logger();
+        let chain = create_test_chain_with_deltas();
+        info!("{}", chain);
+        // Request a long call with very low delta of 0.05
+        let result = chain.get_position_with_delta(pos!(0.05), Side::Long, OptionStyle::Call);
+
+        assert!(result.is_err(), "Shouldn't find the lowest available delta");
+    }
+
+    #[test]
+    fn test_get_position_with_delta_put_high_target() {
+        let chain = create_test_chain_with_deltas();
+
+        // Request a long put with high delta (for puts, high means more negative)
+        let result = chain.get_position_with_delta(pos!(0.95), Side::Long, OptionStyle::Put);
+
+        assert!(result.is_ok(), "Should find highest available put delta");
+
+        let position = result.unwrap();
+
+        // Should select the option with highest delta (most negative: -0.9)
+        assert_eq!(
+            position.option.strike_price,
+            pos!(120.0),
+            "Should select option with strike 120.0 (highest put delta -0.9)"
+        );
+    }
+
+    #[test]
+    fn test_get_position_with_delta_empty_chain() {
+        let empty_chain = OptionChain::new(
+            "TEST",
+            pos!(100.0),
+            "2024-12-31".to_string(),
+            Some(dec!(0.05)),
+            Some(pos!(0.02)),
+        );
+
+        // Request any position on an empty chain
+        let result = empty_chain.get_position_with_delta(pos!(0.5), Side::Long, OptionStyle::Call);
+
+        // Should fail because there are no options
+        assert!(result.is_err(), "Should fail with empty chain");
+
+        match result.unwrap_err() {
+            ChainError::OptionDataError(OptionDataErrorKind::InvalidDelta { delta, reason }) => {
+                assert_eq!(delta, Some(0.5));
+                assert!(
+                    reason.contains("No option with delta"),
+                    "Error message should mention missing delta: {}",
+                    reason
+                );
+            }
+            err => panic!("Unexpected error type: {}", err),
+        }
+    }
+
+    #[test]
+    fn test_get_position_with_delta_missing_deltas() {
+        let mut chain = OptionChain::new(
+            "TEST",
+            pos!(100.0),
+            "2024-12-31".to_string(),
+            Some(dec!(0.05)),
+            Some(pos!(0.02)),
+        );
+
+        // Add options without delta values
+        chain.add_option(
+            pos!(90.0),
+            spos!(10.0),
+            spos!(10.5),
+            spos!(1.5),
+            spos!(1.8),
+            spos!(0.25),
+            None, // No call delta
+            None, // No put delta
+            Some(dec!(0.04)),
+            spos!(200.0),
+            Some(100),
+        );
+
+        chain.add_option(
+            pos!(100.0),
+            spos!(5.0),
+            spos!(5.3),
+            spos!(5.0),
+            spos!(5.3),
+            spos!(0.25),
+            None, // No call delta
+            None, // No put delta
+            Some(dec!(0.05)),
+            spos!(500.0),
+            Some(250),
+        );
+
+        // Request a position but no option has delta values
+        let result = chain.get_position_with_delta(pos!(0.5), Side::Long, OptionStyle::Call);
+
+        // Should fail because there are no options with delta values
+        assert!(result.is_err(), "Should fail with missing deltas");
+
+        match result.unwrap_err() {
+            ChainError::OptionDataError(OptionDataErrorKind::InvalidDelta { delta, reason }) => {
+                assert_eq!(delta, Some(0.5));
+                assert!(
+                    reason.contains("No option with delta"),
+                    "Error message should mention missing delta: {}",
+                    reason
+                );
+            }
+            err => panic!("Unexpected error type: {}", err),
+        }
+    }
+
+    #[test]
+    fn test_get_position_with_delta_multiple_candidates() {
+        let mut chain = OptionChain::new(
+            "TEST",
+            pos!(100.0),
+            "2024-12-31".to_string(),
+            Some(dec!(0.05)),
+            Some(pos!(0.02)),
+        );
+
+        // Add multiple options with the same delta
+        chain.add_option(
+            pos!(95.0),
+            spos!(11.0),
+            spos!(11.5),
+            spos!(1.5),
+            spos!(1.8),
+            spos!(0.25),
+            Some(dec!(0.6)), // Same call delta
+            Some(dec!(-0.4)),
+            Some(dec!(0.04)),
+            spos!(200.0),
+            Some(100),
+        );
+
+        chain.add_option(
+            pos!(105.0),
+            spos!(10.0),
+            spos!(10.5),
+            spos!(2.5),
+            spos!(2.8),
+            spos!(0.25),
+            Some(dec!(0.6)), // Same call delta
+            Some(dec!(-0.4)),
+            Some(dec!(0.04)),
+            spos!(200.0),
+            Some(100),
+        );
+
+        // Request a position matching the delta
+        let result = chain.get_position_with_delta(pos!(0.6), Side::Long, OptionStyle::Call);
+
+        assert!(result.is_ok(), "Should find one of the matching options");
+
+        let position = result.unwrap();
+
+        // Should select one of the options with delta 0.6
+        // The implementation should be deterministic, always picking the same one
+        assert!(
+            position.option.strike_price == pos!(95.0)
+                || position.option.strike_price == pos!(105.0),
+            "Should select one of the options with delta 0.6"
+        );
+    }
+
+    #[test]
+    fn test_get_position_with_delta_side_combinations() {
+        setup_logger();
+        let chain = create_test_chain_with_deltas();
+        info!("{}", chain);
+        // Test all combinations of Side and OptionStyle
+        let combinations = vec![
+            (Side::Long, OptionStyle::Call, pos!(0.5)),
+            (Side::Short, OptionStyle::Call, pos!(0.5)),
+            (Side::Long, OptionStyle::Put, pos!(0.5)), // Remember put deltas are negative
+            (Side::Short, OptionStyle::Put, pos!(0.5)),
+        ];
+
+        for (side, style, delta) in combinations {
+            let result = chain.get_position_with_delta(delta, side, style);
+
+            assert!(
+                result.is_ok(),
+                "Should find position for {:?} {:?}",
+                side,
+                style
+            );
+
+            let position = result.unwrap();
+
+            // Verify the position has the correct side and style
+            assert_eq!(
+                position.option.side, side,
+                "Position should have requested side"
+            );
+            assert_eq!(
+                position.option.option_style, style,
+                "Position should have requested style"
+            );
+
+            // For this test with delta 0.5, all combinations should select the ATM option
+            assert_eq!(
+                position.option.strike_price,
+                pos!(100.0),
+                "Should select ATM option with strike 100.0 for {:?} {:?}",
+                side,
+                style
+            );
+        }
+    }
+}
