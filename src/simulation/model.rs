@@ -1,9 +1,10 @@
 use crate::Positive;
 use rust_decimal::Decimal;
 use std::fmt::{Display, Formatter};
+use serde::{Deserialize, Serialize};
 
 /// Enum defining different types of random walks
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
 pub enum WalkType {
     /// Standard Brownian motion (normal increments)
     Brownian {
