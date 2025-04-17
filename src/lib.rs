@@ -3,7 +3,7 @@
 
 //!
 //! <div style="text-align: center;">
-//! <img src="https://raw.githubusercontent.com/joaquinbejar/OptionStratLib/refs/heads/main/doc/images/logo.png" alt="OptionStratLib" style="width: 100%; height: 200px;">
+//! <img src="https://raw.githubusercontent.com/joaquinbejar/OptionStratLib/refs/heads/main/doc/images/logo.png" alt="OptionStratLib" style="width: 100%; height: 41%;">
 //! </div>
 //!
 //!  [![Dual License](https://img.shields.io/badge/license-MIT%20and%20Apache%202.0-blue)](./LICENSE)
