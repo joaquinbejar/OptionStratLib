@@ -3,12 +3,12 @@
    Email: jb@taunais.com
    Date: 23/10/24
 ******************************************************************************/
-use std::fmt;
 use crate::constants::*;
 use crate::{Positive, pos};
 use chrono::{Duration, Local, NaiveTime, Utc};
 use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
+use std::fmt;
 
 /// Represents different timeframes for volatility calculations.
 ///
