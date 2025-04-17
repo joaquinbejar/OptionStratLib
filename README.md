@@ -30,7 +30,6 @@
  7. [Testing](#testing)
  8. [Contribution and Contact](#contribution-and-contact)
 
- <a name="introduction"></a>
  ## Introduction
 
  OptionStratLib is a comprehensive Rust library for options trading and strategy development across multiple asset classes. This versatile toolkit enables traders, quants, and developers to:
