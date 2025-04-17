@@ -18,7 +18,7 @@
  [![Dependencies](https://img.shields.io/librariesio/github/joaquinbejar/OptionStratLib)](https://libraries.io/github/joaquinbejar/OptionStratLib)
  [![Documentation](https://img.shields.io/badge/docs-latest-blue.svg)](https://docs.rs/optionstratlib)
 
- # OptionStratLib v0.4.4: Financial Options Library
+ # OptionStratLib v0.4.5: Financial Options Library
 
  ## Table of Contents
  1. [Introduction](#introduction)
@@ -30,6 +30,7 @@
  7. [Testing](#testing)
  8. [Contribution and Contact](#contribution-and-contact)
 
+ <a name="introduction"></a>
  ## Introduction
 
  OptionStratLib is a comprehensive Rust library for options trading and strategy development across multiple asset classes. This versatile toolkit enables traders, quants, and developers to:
@@ -409,11 +410,11 @@
  ## Strategies Classifications
 
  ```mermaid
- ---
- config:
- layout: fixed
- ---
- flowchart TD
+---
+config:
+  layout: fixed
+---
+flowchart TD
  start["Options Strategies"] --> bullish["Bullish"] & bearish["Bearish"] & neutral["Neutral"]
  bullish --> bull_high["High Volatility"] & bull_low["Low Volatility"]
  bull_high --> bull_high_lim["Limited Risk"] & bull_high_unlim["Unlimited Risk"]
@@ -425,11 +426,12 @@
  bull_high_lim_opt --> bull_call(("Bull Call Spread"))
  bull_high_lim_stock --> protective_put(("Protective Put"))
  bull_high_unlim_opt --> long_call(("Long Call"))
- bull_high_unlim_stock --> pmcc@{ label: "Poor Man's Covered Call" }
+ bull_high_unlim_stock --> pmcc(("Poor Man's Covered Call"))
  bull_low_lim_opt --> bull_put(("Bull Put Spread"))
  bull_low_lim_stock --> collar(("Collar"))
  bull_low_unlim_opt --> naked_put(("Naked Put"))
  bull_low_unlim_stock --> covered_call(("Covered Call"))
+
  bearish --> bear_high["High Volatility"] & bear_low["Low Volatility"]
  bear_high --> bear_high_lim["Limited Risk"] & bear_high_unlim["Unlimited Risk"]
  bear_low --> bear_low_lim["Limited Risk"] & bear_low_unlim["Unlimited Risk"]
@@ -445,6 +447,7 @@
  bear_low_lim_stock --> reverse_collar(("Reverse Collar"))
  bear_low_unlim_opt --> naked_call(("Naked Call"))
  bear_low_unlim_stock --> protective_call(("Protective Call"))
+
  neutral --> neut_high["High Volatility"] & neut_low["Low Volatility"]
  neut_high --> neut_high_lim["Limited Risk"] & neut_high_unlim["Unlimited Risk"]
  neut_low --> neut_low_lim["Limited Risk"] & neut_low_unlim["Unlimited Risk"]
@@ -460,8 +463,6 @@
  neut_high_unlim_stock --> reversal(("Reversal"))
  neut_low_lim_stock --> married_combo(("Married Combo"))
  neut_low_unlim_stock --> ratio_spread(("Ratio Spread"))
- pmcc@{ shape: circle}
-
  ```
 
  ## Setup Instructions
