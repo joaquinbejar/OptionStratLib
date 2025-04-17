@@ -181,3 +181,7 @@ workflow-test:
 
 .PHONY: workflow
 workflow: workflow-build workflow-lint workflow-test workflow-coverage
+
+.PHONY: generate_markdown
+generate_markdown:
+	./doc/generate_md_docs.sh
