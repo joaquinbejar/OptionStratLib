@@ -738,7 +738,7 @@ impl OptionData {
         if self.implied_volatility.is_none() {
             trace!("Implied volatility not found, calculating it");
             if let Err(e) = self.calculate_implied_volatility(price_params) {
-                error!("Failed to calculate implied volatility: {}", e);
+                debug!("Failed to calculate implied volatility: {}", e);
                 return;
             }
         }
@@ -751,7 +751,7 @@ impl OptionData {
         let option: Options = match self.get_option(price_params, Side::Long, OptionStyle::Call) {
             Ok(option) => option,
             Err(e) => {
-                error!("Failed to get option for delta calculation: {}", e);
+                debug!("Failed to get option for delta calculation: {}", e);
                 return;
             }
         };
@@ -759,7 +759,7 @@ impl OptionData {
         match delta(&option) {
             Ok(d) => self.delta_call = Some(d),
             Err(e) => {
-                error!("Delta calculation failed: {}", e);
+                debug!("Delta calculation failed: {}", e);
                 self.delta_call = None;
             }
         }
@@ -767,7 +767,7 @@ impl OptionData {
         let option: Options = match self.get_option(price_params, Side::Long, OptionStyle::Put) {
             Ok(option) => option,
             Err(e) => {
-                error!("Failed to get option for delta calculation: {}", e);
+                debug!("Failed to get option for delta calculation: {}", e);
                 return;
             }
         };
@@ -775,7 +775,7 @@ impl OptionData {
         match delta(&option) {
             Ok(d) => self.delta_put = Some(d),
             Err(e) => {
-                error!("Delta calculation failed: {}", e);
+                debug!("Delta calculation failed: {}", e);
                 self.delta_put = None;
             }
         }
@@ -810,7 +810,7 @@ impl OptionData {
         if self.implied_volatility.is_none() {
             trace!("Implied volatility not found, calculating it");
             if let Err(e) = self.calculate_implied_volatility(price_params) {
-                error!("Failed to calculate implied volatility: {}", e);
+                debug!("Failed to calculate implied volatility: {}", e);
                 return;
             }
         }
@@ -821,14 +821,14 @@ impl OptionData {
         let option: Options = match self.get_option(price_params, Side::Long, OptionStyle::Call) {
             Ok(option) => option,
             Err(e) => {
-                error!("Failed to get option for delta calculation: {}", e);
+                debug!("Failed to get option for delta calculation: {}", e);
                 return;
             }
         };
         match gamma(&option) {
             Ok(d) => self.gamma = Some(d),
             Err(e) => {
-                error!("Gamma calculation failed: {}", e);
+                debug!("Gamma calculation failed: {}", e);
                 self.gamma = None;
             }
         }
