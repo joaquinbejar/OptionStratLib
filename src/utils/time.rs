@@ -8,6 +8,7 @@ use crate::{Positive, pos};
 use chrono::{Duration, Local, NaiveTime, Utc};
 use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
+use std::fmt;
 
 /// Represents different timeframes for volatility calculations.
 ///
@@ -105,6 +106,24 @@ impl TimeFrame {
             TimeFrame::Quarter => QUARTERS_PER_YEAR,         // Quarters in a year
             TimeFrame::Year => Positive::ONE,                // Base unit
             TimeFrame::Custom(periods) => *periods,          // Custom periods per year
+        }
+    }
+}
+
+impl fmt::Display for TimeFrame {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            TimeFrame::Microsecond => write!(f, "microsecond"),
+            TimeFrame::Millisecond => write!(f, "millisecond"),
+            TimeFrame::Second => write!(f, "second"),
+            TimeFrame::Minute => write!(f, "minute"),
+            TimeFrame::Hour => write!(f, "hour"),
+            TimeFrame::Day => write!(f, "day"),
+            TimeFrame::Week => write!(f, "week"),
+            TimeFrame::Month => write!(f, "month"),
+            TimeFrame::Quarter => write!(f, "quarter"),
+            TimeFrame::Year => write!(f, "year"),
+            TimeFrame::Custom(periods) => write!(f, "custom ({})", periods),
         }
     }
 }

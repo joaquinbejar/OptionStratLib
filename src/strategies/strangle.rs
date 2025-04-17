@@ -676,7 +676,7 @@ impl Optimizable for ShortStrangle {
             _ => panic!("Invalid number of legs for this strategy"),
         };
         if !call.validate() || !put.validate() {
-            println!("Call: {}\nPut: {}", call, put);
+            info!("Call: {}\nPut: {}", call, put);
             panic!("Invalid options");
         }
         let implied_volatility = call.implied_volatility.unwrap();

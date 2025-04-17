@@ -1,9 +1,11 @@
 use crate::Positive;
+use crate::utils::TimeFrame;
 use rust_decimal::Decimal;
+use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 
 /// Enum defining different types of random walks
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum WalkType {
     /// Standard Brownian motion (normal increments)
     Brownian {
@@ -114,6 +116,24 @@ pub enum WalkType {
         /// Long-term mean (equilibrium level)
         vol_mean: Positive,
     },
+
+    /// Represents historical price data for a given timeframe.
+    ///
+    /// This encapsulates the historical price data, including the timeframe
+    /// over which the data was collected and a vector of positive price values.
+    /// It is typically used to store and process historical market data for
+    /// financial analysis and simulation purposes.
+    ///
+    /// # Fields
+    ///
+    /// * `timeframe`: The `TimeFrame` over which the historical data is relevant.
+    /// * `prices`: A `Vec` of `Positive` values representing the historical prices.
+    Historical {
+        /// The timeframe of the historical data.
+        timeframe: TimeFrame,
+        /// The vector of positive price values.
+        prices: Vec<Positive>,
+    },
 }
 
 impl Display for WalkType {
@@ -205,6 +225,11 @@ impl Display for WalkType {
                 f,
                 "Custom {{ dt: {}, drift: {}, volatility: {}, vov: {}, vol_speed: {}, vol_mean: {} }}",
                 dt, drift, volatility, vov, vol_speed, vol_mean
+            ),
+            WalkType::Historical { timeframe, prices } => write!(
+                f,
+                "Historical {{ timeframe: {}, prices: {:?} }}",
+                timeframe, prices
             ),
         }
     }
@@ -648,7 +673,7 @@ mod tests_walk_type {
             volatility: pos!(0.2),
         };
 
-        let cloned = walk;
+        let cloned = walk.clone();
 
         // Using Debug formatting to compare
         assert_eq!(format!("{:?}", walk), format!("{:?}", cloned));

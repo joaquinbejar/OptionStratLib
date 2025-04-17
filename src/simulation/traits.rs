@@ -439,6 +439,47 @@ where
             _ => Err("Invalid walk type for Custom motion".into()),
         }
     }
+
+    /// Generates a historical walk based on the given parameters.
+    ///
+    /// This function processes the historical walk by extracting a specified number of elements
+    /// from the provided price data (`prices`) based on the `size` defined in `params`.
+    ///
+    /// # Parameters
+    ///
+    /// * `self`: Reference to the instance of the object.
+    /// * `params`: A reference to `WalkParams<X, Y>` containing the configuration details for the walk.
+    ///   - Expected to have a `walk_type` of `WalkType::Historical` with associated timeframe and price data.
+    ///   - `params.size` determines the number of historical prices to include in the result.
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(Vec<Positive>)`: A vector containing the first `params.size` elements from the given price data (`prices`),
+    ///   if there are at least `params.size` elements available.
+    /// * `Err(Box<dyn Error>)`: If the `walk_type` is not `WalkType::Historical` or if the provided price data
+    ///   does not contain enough elements to fulfill the requested size (`params.size`).
+    ///
+    /// # Errors
+    ///
+    /// * Returns an error if:
+    ///     - The `walk_type` in `params` is not `WalkType::Historical`.
+    ///     - The `prices` do not contain at least `params.size` elements.
+    ///
+    fn historical(&self, params: &WalkParams<X, Y>) -> Result<Vec<Positive>, Box<dyn Error>> {
+        match &params.walk_type {
+            WalkType::Historical {
+                timeframe: _timeframe,
+                prices,
+            } => {
+                if prices.len() >= params.size {
+                    Ok(prices[0..params.size].to_vec())
+                } else {
+                    Err("Historical prices are not enough to generate the walk".into())
+                }
+            }
+            _ => Err("Invalid walk type for Custom motion".into()),
+        }
+    }
 }
 
 impl<X, Y> Debug for Box<dyn WalkTypeAble<X, Y>> {

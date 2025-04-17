@@ -3583,6 +3583,7 @@ mod tests_interpolation_edge_cases {
     use crate::geometrics::{AxisOperations, Interpolate, InterpolationType};
     use rust_decimal_macros::dec;
     use std::collections::BTreeSet;
+    use tracing::info;
 
     #[test]
     fn test_cubic_interpolation_edge_cases() {
@@ -3648,7 +3649,7 @@ mod tests_interpolation_edge_cases {
         assert_eq!(closest.x, dec!(1.0));
         assert_eq!(closest.y, dec!(1.0));
 
-        println!("{:?}", curve);
+        info!("{:?}", curve);
         // Test get_point
         let point = curve.get_point(&dec!(1.0));
         assert!(point.is_some());

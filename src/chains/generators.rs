@@ -4,10 +4,14 @@
    Date: 27/3/25
 ******************************************************************************/
 use crate::chains::OptionChain;
-use crate::simulation::WalkParams;
 use crate::simulation::steps::{Step, Ystep};
+use crate::simulation::{WalkParams, WalkType};
+use crate::utils::TimeFrame;
+use crate::utils::others::calculate_log_returns;
+use crate::volatility::{adjust_volatility, constant_volatility};
 use crate::{Positive, pos};
 use core::option::Option;
+use rust_decimal::Decimal;
 use tracing::{debug, info};
 
 /// Creates a new `OptionChain` from a previous `Ystep` and a new price.
@@ -61,11 +65,65 @@ pub fn generator_optionchain(
     walk_params: &WalkParams<Positive, OptionChain>,
 ) -> Vec<Step<Positive, OptionChain>> {
     debug!("{}", walk_params);
-    let mut y_steps = walk_params.walker.geometric_brownian(walk_params).unwrap();
-    let _ = y_steps.remove(0);
+    let (mut y_steps, volatility) = match &walk_params.walk_type {
+        WalkType::Brownian { volatility, .. } => (
+            walk_params.walker.brownian(walk_params).unwrap(),
+            Some(*volatility),
+        ),
+        WalkType::GeometricBrownian { volatility, .. } => (
+            walk_params.walker.geometric_brownian(walk_params).unwrap(),
+            Some(*volatility),
+        ),
+        WalkType::LogReturns { volatility, .. } => (
+            walk_params.walker.log_returns(walk_params).unwrap(),
+            Some(*volatility),
+        ),
+        WalkType::MeanReverting { volatility, .. } => (
+            walk_params.walker.mean_reverting(walk_params).unwrap(),
+            Some(*volatility),
+        ),
+        WalkType::JumpDiffusion { volatility, .. } => (
+            walk_params.walker.jump_diffusion(walk_params).unwrap(),
+            Some(*volatility),
+        ),
+        WalkType::Garch { volatility, .. } => (
+            walk_params.walker.garch(walk_params).unwrap(),
+            Some(*volatility),
+        ),
+        WalkType::Heston { volatility, .. } => (
+            walk_params.walker.heston(walk_params).unwrap(),
+            Some(*volatility),
+        ),
+        WalkType::Custom { volatility, .. } => (
+            walk_params.walker.custom(walk_params).unwrap(),
+            Some(*volatility),
+        ),
+        WalkType::Historical { timeframe, prices } => {
+            let log_returns: Vec<Decimal> = calculate_log_returns(prices)
+                .unwrap()
+                .iter()
+                .map(|p| p.to_dec())
+                .collect();
+            let constant_volatility = constant_volatility(&log_returns).unwrap();
+            let implied_volatility =
+                adjust_volatility(constant_volatility, *timeframe, TimeFrame::Year).unwrap();
+            (
+                walk_params.walker.historical(walk_params).unwrap(),
+                Some(implied_volatility),
+            )
+        }
+    };
+
+    let _ = y_steps.remove(0); // remove initial step from y_steps to avoid early return
     let mut steps: Vec<Step<Positive, OptionChain>> = vec![walk_params.init_step.clone()];
     let mut previous_x_step = walk_params.init_step.x;
     let mut previous_y_step = walk_params.ystep();
+
+    if let Some(volatility) = volatility {
+        volatility
+    } else {
+        pos!(0.20)
+    };
 
     for y_step in y_steps.iter() {
         previous_x_step = match previous_x_step.next() {
@@ -74,7 +132,7 @@ pub fn generator_optionchain(
         };
         // convert y_step to OptionChain
         let y_step_chain: OptionChain =
-            create_chain_from_step(&previous_y_step, y_step, Some(pos!(0.20))).unwrap();
+            create_chain_from_step(&previous_y_step, y_step, volatility).unwrap();
         previous_y_step = previous_y_step.next(y_step_chain).clone();
         let step = Step {
             x: previous_x_step,
@@ -192,9 +250,9 @@ mod tests {
                 y: Ystep::new(0, initial_chain),
             },
             walk_type: WalkType::GeometricBrownian {
-                dt: convert_time_frame(pos!(1.0) / days, &TimeFrame::Minute, &TimeFrame::Day), // TODO
+                dt: convert_time_frame(pos!(1.0) / days, &TimeFrame::Minute, &TimeFrame::Day),
                 drift: dec!(0.0),
-                volatility: std_dev,
+                volatility: std_dev / 100.0,
             },
             walker,
         };
@@ -230,7 +288,7 @@ mod tests {
                 y: Ystep::new(0, initial_price),
             },
             walk_type: WalkType::GeometricBrownian {
-                dt: convert_time_frame(pos!(1.0) / days, &TimeFrame::Minute, &TimeFrame::Day), // TODO
+                dt: convert_time_frame(pos!(1.0) / days, &TimeFrame::Minute, &TimeFrame::Day),
                 drift: dec!(0.0),
                 volatility: std_dev,
             },

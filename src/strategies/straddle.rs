@@ -613,7 +613,7 @@ impl Optimizable for ShortStraddle {
             _ => panic!("Invalid number of legs for this strategy"),
         };
         if !call.validate() || !put.validate() {
-            println!("CALL: {}\nPUT: {}", call, put);
+            info!("CALL: {}\nPUT: {}", call, put);
             panic!("Invalid options");
         }
         let implied_volatility = call.implied_volatility.unwrap();
@@ -1896,7 +1896,7 @@ mod tests_short_straddle {
         let mut strategy = setup();
         let option_chain = create_test_option_chain();
 
-        println!("{}", option_chain);
+        info!("{}", option_chain);
         strategy.best_ratio(&option_chain, FindOptimalSide::All);
         assert!(strategy.validate());
     }

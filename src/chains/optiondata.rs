@@ -7,8 +7,10 @@ use crate::chains::utils::{OptionDataPriceParams, default_empty_string, empty_st
 use crate::chains::{DeltasInStrike, FourOptions, OptionsInStrike};
 use crate::error::ChainError;
 use crate::greeks::{delta, gamma};
+use crate::model::Position;
 use crate::strategies::FindOptimalSide;
 use crate::{OptionStyle, OptionType, Options, Positive, Side, pos};
+use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
@@ -428,6 +430,77 @@ impl OptionData {
         ))
     }
 
+    /// Retrieves a `Position` based on the provided parameters, calculating the option premium using the Black-Scholes model.
+    ///
+    /// This method fetches an option based on the provided parameters, calculates its theoretical
+    /// premium using the Black-Scholes model, and constructs a `Position` struct containing the option
+    /// details, premium, opening date, and associated fees.
+    ///
+    /// # Arguments
+    ///
+    /// * `price_params` - Option pricing parameters encapsulated in `OptionDataPriceParams`.
+    /// * `side` - The side of the option, either `Side::Long` or `Side::Short`.
+    /// * `option_style` - The style of the option, either `OptionStyle::Call` or `OptionStyle::Put`.
+    /// * `date` - An optional `DateTime<Utc>` representing the opening date of the position.
+    ///   If `None`, the current UTC timestamp is used.
+    /// * `open_fee` - An optional `Positive` value representing the opening fee for the position.
+    ///   If `None`, defaults to `Positive::ZERO`.
+    /// * `close_fee` - An optional `Positive` value representing the closing fee for the position.
+    ///   If `None`, defaults to `Positive::ZERO`.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<Position, ChainError>` - A `Result` containing the constructed `Position` on success,
+    ///   or a `ChainError` if any error occurred during option retrieval or premium calculation.
+    ///
+    /// # Errors
+    ///
+    /// This method can return a `ChainError` if:
+    ///
+    /// * The underlying option cannot be retrieved based on the provided parameters.
+    /// * The Black-Scholes model fails to calculate a valid option premium.
+    pub fn get_position(
+        &self,
+        price_params: &OptionDataPriceParams,
+        side: Side,
+        option_style: OptionStyle,
+        date: Option<DateTime<Utc>>,
+        open_fee: Option<Positive>,
+        close_fee: Option<Positive>,
+    ) -> Result<Position, ChainError> {
+        let option = self.get_option(price_params, side, option_style)?;
+        let premium = match (side, option_style) {
+            (Side::Long, OptionStyle::Call) => self.get_call_buy_price(),
+            (Side::Short, OptionStyle::Call) => self.get_call_sell_price(),
+            (Side::Long, OptionStyle::Put) => self.get_put_buy_price(),
+            (Side::Short, OptionStyle::Put) => self.get_put_sell_price(),
+        };
+        let premium = match premium {
+            Some(premium) => premium,
+            None => {
+                let premium_dec = option.calculate_price_black_scholes()?.abs();
+                Positive::from(premium_dec)
+            }
+        };
+        let date = if let Some(date) = date {
+            date
+        } else {
+            Utc::now()
+        };
+        let open_fee = if let Some(open_fee) = open_fee {
+            open_fee
+        } else {
+            Positive::ZERO
+        };
+        let close_fee = if let Some(close_fee) = close_fee {
+            close_fee
+        } else {
+            Positive::ZERO
+        };
+
+        Ok(Position::new(option, premium, date, open_fee, close_fee))
+    }
+
     /// Returns a collection of option positions (calls and puts, long and short) at the same strike price.
     ///
     /// This method creates a comprehensive set of option positions all sharing the same strike price
@@ -665,7 +738,7 @@ impl OptionData {
         if self.implied_volatility.is_none() {
             trace!("Implied volatility not found, calculating it");
             if let Err(e) = self.calculate_implied_volatility(price_params) {
-                error!("Failed to calculate implied volatility: {}", e);
+                debug!("Failed to calculate implied volatility: {}", e);
                 return;
             }
         }
@@ -678,7 +751,7 @@ impl OptionData {
         let option: Options = match self.get_option(price_params, Side::Long, OptionStyle::Call) {
             Ok(option) => option,
             Err(e) => {
-                error!("Failed to get option for delta calculation: {}", e);
+                debug!("Failed to get option for delta calculation: {}", e);
                 return;
             }
         };
@@ -686,7 +759,7 @@ impl OptionData {
         match delta(&option) {
             Ok(d) => self.delta_call = Some(d),
             Err(e) => {
-                error!("Delta calculation failed: {}", e);
+                debug!("Delta calculation failed: {}", e);
                 self.delta_call = None;
             }
         }
@@ -694,7 +767,7 @@ impl OptionData {
         let option: Options = match self.get_option(price_params, Side::Long, OptionStyle::Put) {
             Ok(option) => option,
             Err(e) => {
-                error!("Failed to get option for delta calculation: {}", e);
+                debug!("Failed to get option for delta calculation: {}", e);
                 return;
             }
         };
@@ -702,7 +775,7 @@ impl OptionData {
         match delta(&option) {
             Ok(d) => self.delta_put = Some(d),
             Err(e) => {
-                error!("Delta calculation failed: {}", e);
+                debug!("Delta calculation failed: {}", e);
                 self.delta_put = None;
             }
         }
@@ -737,7 +810,7 @@ impl OptionData {
         if self.implied_volatility.is_none() {
             trace!("Implied volatility not found, calculating it");
             if let Err(e) = self.calculate_implied_volatility(price_params) {
-                error!("Failed to calculate implied volatility: {}", e);
+                debug!("Failed to calculate implied volatility: {}", e);
                 return;
             }
         }
@@ -748,14 +821,14 @@ impl OptionData {
         let option: Options = match self.get_option(price_params, Side::Long, OptionStyle::Call) {
             Ok(option) => option,
             Err(e) => {
-                error!("Failed to get option for delta calculation: {}", e);
+                debug!("Failed to get option for delta calculation: {}", e);
                 return;
             }
         };
         match gamma(&option) {
             Ok(d) => self.gamma = Some(d),
             Err(e) => {
-                error!("Gamma calculation failed: {}", e);
+                debug!("Gamma calculation failed: {}", e);
                 self.gamma = None;
             }
         }
@@ -1312,5 +1385,1420 @@ mod optiondata_coverage_tests {
         assert!(deltas.short_call != dec!(0.0));
         assert!(deltas.long_put != dec!(0.0));
         assert!(deltas.short_put != dec!(0.0));
+    }
+}
+
+#[cfg(test)]
+mod tests_get_position {
+    use super::*;
+    use crate::model::types::ExpirationDate;
+    use crate::utils::logger::setup_logger;
+    use crate::{assert_pos_relative_eq, pos, spos};
+    use chrono::{Duration, Utc};
+    use rust_decimal_macros::dec;
+
+    // Helper function to create a standard test option data
+    fn create_test_option_data() -> OptionData {
+        OptionData::new(
+            pos!(100.0),      // strike_price
+            spos!(9.5),       // call_bid
+            spos!(10.0),      // call_ask
+            spos!(8.5),       // put_bid
+            spos!(9.0),       // put_ask
+            spos!(0.2),       // implied_volatility
+            Some(dec!(-0.3)), // delta_call
+            Some(dec!(0.7)),  // delta_put
+            Some(dec!(0.5)),  // gamma
+            spos!(1000.0),    // volume
+            Some(500),        // open_interest
+        )
+    }
+
+    // Helper function to create standard price parameters
+    fn create_test_price_params() -> OptionDataPriceParams {
+        OptionDataPriceParams::new(
+            pos!(100.0),                      // underlying_price
+            ExpirationDate::Days(pos!(30.0)), // expiration_date
+            spos!(0.2),                       // implied_volatility
+            dec!(0.05),                       // risk_free_rate
+            pos!(0.02),                       // dividend_yield
+            Some("TEST".to_string()),         // underlying_symbol
+        )
+    }
+
+    #[test]
+    fn test_get_position_long_call() {
+        setup_logger();
+        let option_data = create_test_option_data();
+        let price_params = create_test_price_params();
+
+        // Test getting a long call position
+        let result = option_data.get_position(
+            &price_params,
+            Side::Long,
+            OptionStyle::Call,
+            None, // Default to current date
+            None, // Default to zero fees
+            None, // Default to zero fees
+        );
+
+        assert!(result.is_ok(), "Should successfully create position");
+
+        let position = result.unwrap();
+
+        // Verify position properties
+        assert_eq!(position.option.side, Side::Long);
+        assert_eq!(position.option.option_style, OptionStyle::Call);
+        assert_eq!(position.option.strike_price, pos!(100.0));
+        assert!(
+            position.premium > Positive::ZERO,
+            "Premium should be positive"
+        );
+
+        // Verify fees are set to zero by default
+        assert_eq!(position.open_fee, Positive::ZERO);
+        assert_eq!(position.close_fee, Positive::ZERO);
+    }
+
+    #[test]
+    fn test_get_position_short_put() {
+        let option_data = create_test_option_data();
+        let price_params = create_test_price_params();
+
+        // Test getting a short put position
+        let result = option_data.get_position(
+            &price_params,
+            Side::Short,
+            OptionStyle::Put,
+            None, // Default to current date
+            None, // Default to zero fees
+            None, // Default to zero fees
+        );
+
+        assert!(result.is_ok(), "Should successfully create position");
+
+        let position = result.unwrap();
+
+        // Verify position properties
+        assert_eq!(position.option.side, Side::Short);
+        assert_eq!(position.option.option_style, OptionStyle::Put);
+        assert_eq!(position.option.strike_price, pos!(100.0));
+        assert!(
+            position.premium > Positive::ZERO,
+            "Premium should be positive"
+        );
+    }
+
+    #[test]
+    fn test_get_position_with_custom_date() {
+        let option_data = create_test_option_data();
+        let price_params = create_test_price_params();
+
+        // Create a custom date (one week ago)
+        let custom_date = Utc::now() - Duration::days(7);
+
+        // Test with custom date
+        let result = option_data.get_position(
+            &price_params,
+            Side::Long,
+            OptionStyle::Call,
+            Some(custom_date),
+            None,
+            None,
+        );
+
+        assert!(result.is_ok());
+        let position = result.unwrap();
+
+        // Verify the date was set correctly
+        assert_eq!(position.date, custom_date);
+    }
+
+    #[test]
+    fn test_get_position_with_fees() {
+        let option_data = create_test_option_data();
+        let price_params = create_test_price_params();
+
+        // Custom fees
+        let open_fee = pos!(1.5);
+        let close_fee = pos!(2.0);
+
+        // Test with custom fees
+        let result = option_data.get_position(
+            &price_params,
+            Side::Long,
+            OptionStyle::Put,
+            None,
+            Some(open_fee),
+            Some(close_fee),
+        );
+
+        assert!(result.is_ok());
+        let position = result.unwrap();
+
+        // Verify fees were set correctly
+        assert_eq!(position.open_fee, open_fee);
+        assert_eq!(position.close_fee, close_fee);
+    }
+
+    #[test]
+    fn test_get_position_missing_volatility() {
+        let mut option_data = create_test_option_data();
+        option_data.implied_volatility = None;
+
+        let mut price_params = create_test_price_params();
+        price_params.implied_volatility = None;
+
+        // Test with missing volatility
+        let result = option_data.get_position(
+            &price_params,
+            Side::Long,
+            OptionStyle::Call,
+            None,
+            None,
+            None,
+        );
+
+        // Should fail due to missing volatility
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        match err {
+            ChainError::OptionDataError(detail) => {
+                assert!(detail.to_string().contains("volatility"));
+            }
+            _ => panic!("Wrong error type returned"),
+        }
+    }
+
+    #[test]
+    fn test_get_position_in_the_money_call() {
+        let option_data = create_test_option_data();
+
+        // Create params with underlying price higher than strike (ITM call)
+        let mut price_params = create_test_price_params();
+        price_params.underlying_price = pos!(120.0);
+
+        let result = option_data.get_position(
+            &price_params,
+            Side::Long,
+            OptionStyle::Call,
+            None,
+            None,
+            None,
+        );
+
+        assert!(result.is_ok());
+        let position = result.unwrap();
+
+        // An ITM call should have higher premium
+        assert!(
+            position.premium >= pos!(10.0),
+            "ITM call premium should be significant"
+        );
+    }
+
+    #[test]
+    fn test_get_position_deep_out_of_money_put() {
+        let option_data = create_test_option_data();
+
+        // Create params with underlying price much higher than strike (deep OTM put)
+        let mut price_params = create_test_price_params();
+        price_params.underlying_price = pos!(150.0);
+
+        let result = option_data.get_position(
+            &price_params,
+            Side::Long,
+            OptionStyle::Put,
+            None,
+            None,
+            None,
+        );
+
+        assert!(result.is_ok());
+        let position = result.unwrap();
+
+        // A deep OTM put should have low premium
+        assert!(
+            position.premium <= pos!(9.0),
+            "Deep OTM put premium should be low"
+        );
+    }
+
+    #[test]
+    fn test_get_position_all_combinations() {
+        let option_data = create_test_option_data();
+        let price_params = create_test_price_params();
+
+        // Test all combinations of Side and OptionStyle
+        let combinations = vec![
+            (Side::Long, OptionStyle::Call),
+            (Side::Long, OptionStyle::Put),
+            (Side::Short, OptionStyle::Call),
+            (Side::Short, OptionStyle::Put),
+        ];
+
+        for (side, style) in combinations {
+            let result = option_data.get_position(&price_params, side, style, None, None, None);
+
+            assert!(
+                result.is_ok(),
+                "Failed to create position: {:?}, {:?}",
+                side,
+                style
+            );
+            let position = result.unwrap();
+
+            // Verify position properties
+            assert_eq!(position.option.side, side);
+            assert_eq!(position.option.option_style, style);
+            assert!(position.premium > Positive::ZERO);
+        }
+    }
+
+    #[test]
+    fn test_get_position_with_custom_all_params() {
+        // This test checks that all custom parameters are correctly applied
+        let option_data = create_test_option_data();
+        let price_params = create_test_price_params();
+
+        // Create a custom date
+        let custom_date = Utc::now() - Duration::days(14);
+
+        // Custom fees
+        let open_fee = pos!(2.5);
+        let close_fee = pos!(1.75);
+
+        // Test with all custom parameters
+        let result = option_data.get_position(
+            &price_params,
+            Side::Short,
+            OptionStyle::Put,
+            Some(custom_date),
+            Some(open_fee),
+            Some(close_fee),
+        );
+
+        assert!(result.is_ok());
+        let position = result.unwrap();
+
+        // Verify all parameters were applied correctly
+        assert_eq!(position.option.side, Side::Short);
+        assert_eq!(position.option.option_style, OptionStyle::Put);
+        assert_eq!(position.date, custom_date);
+        assert_eq!(position.open_fee, open_fee);
+        assert_eq!(position.close_fee, close_fee);
+    }
+
+    #[test]
+    fn test_get_position_uses_market_price_long_call() {
+        setup_logger();
+        let option_data = create_test_option_data();
+        let price_params = create_test_price_params();
+
+        // Test getting a long call position
+        let result = option_data.get_position(
+            &price_params,
+            Side::Long,
+            OptionStyle::Call,
+            None, // Default to current date
+            None, // Default to zero fees
+            None, // Default to zero fees
+        );
+
+        assert!(result.is_ok(), "Should successfully create position");
+
+        let position = result.unwrap();
+
+        // For a long call, should use call_ask (10.0)
+        assert_eq!(
+            position.premium,
+            pos!(10.0),
+            "Should use call_ask price for long call"
+        );
+    }
+
+    #[test]
+    fn test_get_position_uses_market_price_short_call() {
+        let option_data = create_test_option_data();
+        let price_params = create_test_price_params();
+
+        // Test getting a short call position
+        let result = option_data.get_position(
+            &price_params,
+            Side::Short,
+            OptionStyle::Call,
+            None, // Default to current date
+            None, // Default to zero fees
+            None, // Default to zero fees
+        );
+
+        assert!(result.is_ok(), "Should successfully create position");
+
+        let position = result.unwrap();
+
+        // For a short call, should use call_bid (9.5)
+        assert_eq!(
+            position.premium,
+            pos!(9.5),
+            "Should use call_bid price for short call"
+        );
+    }
+
+    #[test]
+    fn test_get_position_uses_market_price_long_put() {
+        let option_data = create_test_option_data();
+        let price_params = create_test_price_params();
+
+        // Test getting a long put position
+        let result = option_data.get_position(
+            &price_params,
+            Side::Long,
+            OptionStyle::Put,
+            None, // Default to current date
+            None, // Default to zero fees
+            None, // Default to zero fees
+        );
+
+        assert!(result.is_ok(), "Should successfully create position");
+
+        let position = result.unwrap();
+
+        // For a long put, should use put_ask (9.0)
+        assert_eq!(
+            position.premium,
+            pos!(9.0),
+            "Should use put_ask price for long put"
+        );
+    }
+
+    #[test]
+    fn test_get_position_uses_market_price_short_put() {
+        let option_data = create_test_option_data();
+        let price_params = create_test_price_params();
+
+        // Test getting a short put position
+        let result = option_data.get_position(
+            &price_params,
+            Side::Short,
+            OptionStyle::Put,
+            None, // Default to current date
+            None, // Default to zero fees
+            None, // Default to zero fees
+        );
+
+        assert!(result.is_ok(), "Should successfully create position");
+
+        let position = result.unwrap();
+
+        // For a short put, should use put_bid (8.5)
+        assert_eq!(
+            position.premium,
+            pos!(8.5),
+            "Should use put_bid price for short put"
+        );
+    }
+
+    #[test]
+    fn test_get_position_fallback_to_black_scholes() {
+        // Test with option data that doesn't have market prices
+        let option_data = OptionData::new(
+            pos!(100.0),      // strike_price
+            None,             // call_bid (missing)
+            None,             // call_ask (missing)
+            None,             // put_bid (missing)
+            None,             // put_ask (missing)
+            spos!(0.2),       // implied_volatility
+            Some(dec!(-0.3)), // delta_call
+            Some(dec!(0.7)),  // delta_put
+            Some(dec!(0.5)),  // gamma
+            spos!(1000.0),    // volume
+            Some(500),        // open_interest
+        );
+
+        let price_params = create_test_price_params();
+
+        // Test getting a long call position
+        let result = option_data.get_position(
+            &price_params,
+            Side::Long,
+            OptionStyle::Call,
+            None,
+            None,
+            None,
+        );
+
+        assert!(
+            result.is_ok(),
+            "Should successfully create position using Black-Scholes"
+        );
+
+        let position = result.unwrap();
+
+        // Premium should be calculated using Black-Scholes
+        assert!(
+            position.premium > Positive::ZERO,
+            "Should calculate premium using Black-Scholes"
+        );
+
+        // Let's verify it matches direct Black-Scholes calculation
+        let option = option_data
+            .get_option(&price_params, Side::Long, OptionStyle::Call)
+            .unwrap();
+        let bs_price = option.calculate_price_black_scholes().unwrap().abs();
+        let bs_price_positive = Positive::from(bs_price);
+
+        assert_pos_relative_eq!(position.premium, bs_price_positive, pos!(0.00001));
+    }
+
+    #[test]
+    fn test_get_position_with_custom_date_uses_market_price() {
+        let option_data = create_test_option_data();
+        let price_params = create_test_price_params();
+
+        // Create a custom date (one week ago)
+        let custom_date = Utc::now() - Duration::days(7);
+
+        // Test with custom date for long call
+        let result = option_data.get_position(
+            &price_params,
+            Side::Long,
+            OptionStyle::Call,
+            Some(custom_date),
+            None,
+            None,
+        );
+
+        assert!(result.is_ok());
+        let position = result.unwrap();
+
+        // Verify the date was set correctly
+        assert_eq!(position.date, custom_date);
+
+        // Should still use market price (10.0 for long call)
+        assert_eq!(
+            position.premium,
+            pos!(10.0),
+            "Should use call_ask even with custom date"
+        );
+    }
+
+    #[test]
+    fn test_get_position_with_fees_uses_market_price() {
+        let option_data = create_test_option_data();
+        let price_params = create_test_price_params();
+
+        // Custom fees
+        let open_fee = pos!(1.5);
+        let close_fee = pos!(2.0);
+
+        // Test with custom fees for short put
+        let result = option_data.get_position(
+            &price_params,
+            Side::Short,
+            OptionStyle::Put,
+            None,
+            Some(open_fee),
+            Some(close_fee),
+        );
+
+        assert!(result.is_ok());
+        let position = result.unwrap();
+
+        // Verify fees were set correctly
+        assert_eq!(position.open_fee, open_fee);
+        assert_eq!(position.close_fee, close_fee);
+
+        // Should still use market price (8.5 for short put)
+        assert_eq!(
+            position.premium,
+            pos!(8.5),
+            "Should use put_bid even with custom fees"
+        );
+    }
+
+    #[test]
+    fn test_get_position_missing_specific_price() {
+        // Test with option data missing just one price
+        let mut option_data = create_test_option_data();
+        option_data.call_ask = None; // Remove call ask price
+
+        let price_params = create_test_price_params();
+
+        // Try to get a long call position which needs call_ask
+        let result = option_data.get_position(
+            &price_params,
+            Side::Long,
+            OptionStyle::Call,
+            None,
+            None,
+            None,
+        );
+
+        // Should still succeed but fall back to Black-Scholes
+        assert!(
+            result.is_ok(),
+            "Should fall back to Black-Scholes when specific price is missing"
+        );
+
+        let position = result.unwrap();
+
+        // Let's verify it matches direct Black-Scholes calculation
+        let option = option_data
+            .get_option(&price_params, Side::Long, OptionStyle::Call)
+            .unwrap();
+        let bs_price = option.calculate_price_black_scholes().unwrap().abs();
+        let bs_price_positive = Positive::from(bs_price);
+
+        assert_pos_relative_eq!(position.premium, bs_price_positive, pos!(0.00001));
+    }
+}
+
+#[cfg(test)]
+mod tests_check_convert_implied_volatility {
+    use super::*;
+    use crate::pos;
+
+    #[test]
+    fn test_check_and_convert_implied_volatility_over_one() {
+        // Line 219: Test the conversion of implied volatility when it's greater than 1.0
+        let mut option_data = OptionData::new(
+            pos!(100.0),
+            None,
+            None,
+            None,
+            None,
+            Some(pos!(20.0)), // This is 2000% volatility, should be converted to 20%
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+
+        // Call the method being tested
+        option_data.check_and_convert_implied_volatility();
+
+        // Assert that the volatility is now converted to a proper decimal (e.g., 0.2 instead of 20.0)
+        assert_eq!(option_data.implied_volatility, Some(pos!(0.2)));
+    }
+
+    #[test]
+    fn test_check_and_convert_implied_volatility_under_one() {
+        // Test that volatility under 1.0 is not modified
+        let mut option_data = OptionData::new(
+            pos!(100.0),
+            None,
+            None,
+            None,
+            None,
+            Some(pos!(0.15)), // This is 15% volatility, should remain as is
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+
+        // Original implied volatility
+        let original_iv = option_data.implied_volatility;
+
+        // Call the method being tested
+        option_data.check_and_convert_implied_volatility();
+
+        // Assert that the volatility is unchanged
+        assert_eq!(option_data.implied_volatility, original_iv);
+    }
+
+    #[test]
+    fn test_check_and_convert_implied_volatility_none() {
+        // Test that None volatility remains None
+        let mut option_data = OptionData::new(
+            pos!(100.0),
+            None,
+            None,
+            None,
+            None,
+            None, // No implied volatility
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+
+        // Call the method being tested
+        option_data.check_and_convert_implied_volatility();
+
+        // Assert that the volatility is still None
+        assert_eq!(option_data.implied_volatility, None);
+    }
+}
+
+#[cfg(test)]
+mod tests_get_option_for_iv {
+    use super::*;
+    use crate::model::types::ExpirationDate;
+    use crate::{pos, spos};
+    use rust_decimal_macros::dec;
+
+    // Helper function to create a standard OptionDataPriceParams for testing
+    fn create_test_price_params() -> OptionDataPriceParams {
+        OptionDataPriceParams::new(
+            pos!(100.0),
+            ExpirationDate::Days(pos!(30.0)),
+            Some(pos!(0.2)),
+            dec!(0.05),
+            pos!(0.02),
+            None,
+        )
+    }
+
+    #[test]
+    fn test_get_option_for_iv_success() {
+        // Line 473, 475, 480, 485, 490: Test get_option_for_iv method
+        let option_data = OptionData::new(
+            pos!(100.0),
+            spos!(5.0),
+            spos!(5.5),
+            spos!(4.5),
+            spos!(5.0),
+            Some(pos!(0.2)),
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+
+        let params = create_test_price_params();
+        let initial_iv = pos!(0.25); // Different from the option_data IV to confirm it's using this value
+
+        // Call the method being tested
+        let result =
+            option_data.get_option_for_iv(&params, Side::Long, OptionStyle::Call, initial_iv);
+
+        // Assert success and check properties
+        assert!(result.is_ok());
+        let option = result.unwrap();
+
+        assert_eq!(option.option_type, OptionType::European);
+        assert_eq!(option.side, Side::Long);
+        assert_eq!(option.strike_price, pos!(100.0));
+        assert_eq!(option.expiration_date, params.expiration_date);
+        assert_eq!(option.implied_volatility, initial_iv.to_f64()); // Should use the provided initial_iv
+        assert_eq!(option.quantity, pos!(1.0));
+        assert_eq!(option.underlying_price, params.underlying_price);
+        assert_eq!(option.risk_free_rate, params.risk_free_rate);
+        assert_eq!(option.option_style, OptionStyle::Call);
+        assert_eq!(option.dividend_yield, params.dividend_yield);
+    }
+
+    #[test]
+    fn test_get_option_for_iv_put() {
+        // Test get_option_for_iv with Put option style
+        let option_data = OptionData::new(
+            pos!(100.0),
+            spos!(5.0),
+            spos!(5.5),
+            spos!(4.5),
+            spos!(5.0),
+            Some(pos!(0.2)),
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+
+        let params = create_test_price_params();
+        let initial_iv = pos!(0.3);
+
+        // Call the method with Put option style
+        let result =
+            option_data.get_option_for_iv(&params, Side::Long, OptionStyle::Put, initial_iv);
+
+        // Assert success and check option style
+        assert!(result.is_ok());
+        let option = result.unwrap();
+        assert_eq!(option.option_style, OptionStyle::Put);
+    }
+
+    #[test]
+    fn test_get_option_for_iv_short() {
+        // Test get_option_for_iv with Short side
+        let option_data = OptionData::new(
+            pos!(100.0),
+            spos!(5.0),
+            spos!(5.5),
+            spos!(4.5),
+            spos!(5.0),
+            Some(pos!(0.2)),
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+
+        let params = create_test_price_params();
+        let initial_iv = pos!(0.2);
+
+        // Call the method with Short side
+        let result =
+            option_data.get_option_for_iv(&params, Side::Short, OptionStyle::Call, initial_iv);
+
+        // Assert success and check side
+        assert!(result.is_ok());
+        let option = result.unwrap();
+        assert_eq!(option.side, Side::Short);
+    }
+}
+
+#[cfg(test)]
+mod tests_some_price_is_none {
+    use super::*;
+    use crate::{pos, spos};
+
+    #[test]
+    fn test_some_price_is_none_all_prices_present() {
+        // Line 626: Test some_price_is_none when all prices are present
+        let option_data = OptionData::new(
+            pos!(100.0),
+            spos!(5.0), // call_bid
+            spos!(5.5), // call_ask
+            spos!(4.5), // put_bid
+            spos!(5.0), // put_ask
+            Some(pos!(0.2)),
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+
+        // All prices are present, should return false
+        assert!(!option_data.some_price_is_none());
+    }
+
+    #[test]
+    fn test_some_price_is_none_with_missing_call_bid() {
+        // Test with missing call_bid
+        let option_data = OptionData::new(
+            pos!(100.0),
+            None,       // call_bid is None
+            spos!(5.5), // call_ask
+            spos!(4.5), // put_bid
+            spos!(5.0), // put_ask
+            Some(pos!(0.2)),
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+
+        // One price is missing, should return true
+        assert!(option_data.some_price_is_none());
+    }
+
+    #[test]
+    fn test_some_price_is_none_with_missing_call_ask() {
+        // Test with missing call_ask
+        let option_data = OptionData::new(
+            pos!(100.0),
+            spos!(5.0), // call_bid
+            None,       // call_ask is None
+            spos!(4.5), // put_bid
+            spos!(5.0), // put_ask
+            Some(pos!(0.2)),
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+
+        // One price is missing, should return true
+        assert!(option_data.some_price_is_none());
+    }
+
+    #[test]
+    fn test_some_price_is_none_with_missing_put_bid() {
+        // Test with missing put_bid
+        let option_data = OptionData::new(
+            pos!(100.0),
+            spos!(5.0), // call_bid
+            spos!(5.5), // call_ask
+            None,       // put_bid is None
+            spos!(5.0), // put_ask
+            Some(pos!(0.2)),
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+
+        // One price is missing, should return true
+        assert!(option_data.some_price_is_none());
+    }
+
+    #[test]
+    fn test_some_price_is_none_with_missing_put_ask() {
+        // Test with missing put_ask
+        let option_data = OptionData::new(
+            pos!(100.0),
+            spos!(5.0), // call_bid
+            spos!(5.5), // call_ask
+            spos!(4.5), // put_bid
+            None,       // put_ask is None
+            Some(pos!(0.2)),
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+
+        // One price is missing, should return true
+        assert!(option_data.some_price_is_none());
+    }
+
+    #[test]
+    fn test_some_price_is_none_with_all_prices_missing() {
+        // Test with all prices missing
+        let option_data = OptionData::new(
+            pos!(100.0),
+            None, // call_bid is None
+            None, // call_ask is None
+            None, // put_bid is None
+            None, // put_ask is None
+            Some(pos!(0.2)),
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+
+        // All prices are missing, should return true
+        assert!(option_data.some_price_is_none());
+    }
+}
+
+#[cfg(test)]
+mod tests_is_valid_optimal_side_deltable {
+    use super::*;
+    use crate::pos;
+    use rust_decimal_macros::dec;
+
+    #[test]
+    fn test_is_valid_optimal_side_deltable() {
+        // Line 742-744: Test is_valid_optimal_side for Deltable threshold
+        let option_data = OptionData::new(
+            pos!(100.0),
+            None,
+            None,
+            None,
+            None,
+            Some(pos!(0.2)),
+            Some(dec!(0.3)),  // delta_call
+            Some(dec!(-0.3)), // delta_put
+            None,
+            None,
+            None,
+        );
+
+        // Deltable should always return true
+        let result =
+            option_data.is_valid_optimal_side(pos!(100.0), &FindOptimalSide::Deltable(pos!(0.5)));
+
+        assert!(result);
+    }
+
+    #[test]
+    fn test_is_valid_optimal_side_center_panics() {
+        // Lines 758-760: Test is_valid_optimal_side for Center (which should panic)
+        let option_data = OptionData::new(
+            pos!(100.0),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+
+        // Testing for panic
+        let result = std::panic::catch_unwind(|| {
+            option_data.is_valid_optimal_side(pos!(100.0), &FindOptimalSide::Center);
+        });
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_is_valid_optimal_side_delta_range_valid_call() {
+        // Lines 812-814: Test is_valid_optimal_side for DeltaRange with valid call delta
+        let option_data = OptionData::new(
+            pos!(100.0),
+            None,
+            None,
+            None,
+            None,
+            None,
+            Some(dec!(0.3)), // delta_call within range
+            None,
+            None,
+            None,
+            None,
+        );
+
+        // DeltaRange with min=0.2, max=0.4, which includes our delta_call=0.3
+        let result = option_data.is_valid_optimal_side(
+            pos!(100.0),
+            &FindOptimalSide::DeltaRange(dec!(0.2), dec!(0.4)),
+        );
+
+        assert!(result);
+    }
+
+    #[test]
+    fn test_is_valid_optimal_side_delta_range_valid_put() {
+        // Test is_valid_optimal_side for DeltaRange with valid put delta
+        let option_data = OptionData::new(
+            pos!(100.0),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            Some(dec!(0.3)), // delta_put within range
+            None,
+            None,
+            None,
+        );
+
+        // DeltaRange with min=0.2, max=0.4, which includes our delta_put=0.3
+        let result = option_data.is_valid_optimal_side(
+            pos!(100.0),
+            &FindOptimalSide::DeltaRange(dec!(0.2), dec!(0.4)),
+        );
+
+        assert!(result);
+    }
+
+    #[test]
+    fn test_is_valid_optimal_side_delta_range_invalid() {
+        // Test is_valid_optimal_side for DeltaRange with invalid deltas
+        let option_data = OptionData::new(
+            pos!(100.0),
+            None,
+            None,
+            None,
+            None,
+            None,
+            Some(dec!(0.1)), // delta_call outside range
+            Some(dec!(0.5)), // delta_put outside range
+            None,
+            None,
+            None,
+        );
+
+        // DeltaRange with min=0.2, max=0.4, which excludes both delta values
+        let result = option_data.is_valid_optimal_side(
+            pos!(100.0),
+            &FindOptimalSide::DeltaRange(dec!(0.2), dec!(0.4)),
+        );
+
+        assert!(!result);
+    }
+
+    #[test]
+    fn test_is_valid_optimal_side_delta_range_no_deltas() {
+        // Test is_valid_optimal_side for DeltaRange when no deltas are present
+        let option_data = OptionData::new(
+            pos!(100.0),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None, // No delta_call
+            None, // No delta_put
+            None,
+            None,
+            None,
+        );
+
+        // DeltaRange with min=0.2, max=0.4, but no deltas to check
+        let result = option_data.is_valid_optimal_side(
+            pos!(100.0),
+            &FindOptimalSide::DeltaRange(dec!(0.2), dec!(0.4)),
+        );
+
+        assert!(!result);
+    }
+}
+
+#[cfg(test)]
+mod tests_set_mid_prices {
+    use super::*;
+    use crate::{pos, spos};
+
+    #[test]
+    fn test_set_mid_prices_with_both_call_prices() {
+        // Line 852: Test set_mid_prices with both call bid and ask present
+        let mut option_data = OptionData::new(
+            pos!(100.0),
+            spos!(9.0),  // call_bid
+            spos!(11.0), // call_ask
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+
+        // Call the method being tested
+        option_data.set_mid_prices();
+
+        // Assert that call_middle is set to (9.0 + 11.0) / 2 = 10.0
+        assert_eq!(option_data.call_middle, Some(pos!(10.0)));
+        // put_middle should still be None
+        assert_eq!(option_data.put_middle, None);
+    }
+
+    #[test]
+    fn test_set_mid_prices_with_both_put_prices() {
+        // Test set_mid_prices with both put bid and ask present
+        let mut option_data = OptionData::new(
+            pos!(100.0),
+            None,
+            None,
+            spos!(8.0),  // put_bid
+            spos!(12.0), // put_ask
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+
+        // Call the method being tested
+        option_data.set_mid_prices();
+
+        // Assert that put_middle is set to (8.0 + 12.0) / 2 = 10.0
+        assert_eq!(option_data.put_middle, Some(pos!(10.0)));
+        // call_middle should still be None
+        assert_eq!(option_data.call_middle, None);
+    }
+
+    #[test]
+    fn test_set_mid_prices_with_all_prices() {
+        // Test set_mid_prices with all prices present
+        let mut option_data = OptionData::new(
+            pos!(100.0),
+            spos!(9.0),  // call_bid
+            spos!(11.0), // call_ask
+            spos!(8.0),  // put_bid
+            spos!(12.0), // put_ask
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+
+        // Call the method being tested
+        option_data.set_mid_prices();
+
+        // Assert that both middle prices are correctly calculated
+        assert_eq!(option_data.call_middle, Some(pos!(10.0)));
+        assert_eq!(option_data.put_middle, Some(pos!(10.0)));
+    }
+
+    #[test]
+    fn test_set_mid_prices_with_missing_call_bid() {
+        // Test set_mid_prices with missing call_bid
+        let mut option_data = OptionData::new(
+            pos!(100.0),
+            None,        // call_bid is missing
+            spos!(11.0), // call_ask
+            spos!(8.0),  // put_bid
+            spos!(12.0), // put_ask
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+
+        // Call the method being tested
+        option_data.set_mid_prices();
+
+        // Assert that call_middle is None due to missing bid
+        assert_eq!(option_data.call_middle, None);
+        // put_middle should still be calculated
+        assert_eq!(option_data.put_middle, Some(pos!(10.0)));
+    }
+
+    #[test]
+    fn test_set_mid_prices_with_missing_call_ask() {
+        // Test set_mid_prices with missing call_ask
+        let mut option_data = OptionData::new(
+            pos!(100.0),
+            spos!(9.0),  // call_bid
+            None,        // call_ask is missing
+            spos!(8.0),  // put_bid
+            spos!(12.0), // put_ask
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+
+        // Call the method being tested
+        option_data.set_mid_prices();
+
+        // Assert that call_middle is None due to missing ask
+        assert_eq!(option_data.call_middle, None);
+        // put_middle should still be calculated
+        assert_eq!(option_data.put_middle, Some(pos!(10.0)));
+    }
+}
+
+#[cfg(test)]
+mod tests_get_mid_prices {
+    use super::*;
+    use crate::{pos, spos};
+
+    #[test]
+    fn test_get_mid_prices_with_both_mid_prices() {
+        // Lines 885, 887, 889-895: Test get_mid_prices when both mid prices are set
+        let mut option_data = OptionData::new(
+            pos!(100.0),
+            spos!(9.0),
+            spos!(11.0),
+            spos!(8.0),
+            spos!(12.0),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+
+        // First set the mid prices
+        option_data.set_mid_prices();
+
+        // Then test getting them
+        let (call_mid, put_mid) = option_data.get_mid_prices();
+
+        // Verify returned values
+        assert_eq!(call_mid, Some(pos!(10.0)));
+        assert_eq!(put_mid, Some(pos!(10.0)));
+    }
+
+    #[test]
+    fn test_get_mid_prices_with_only_call_mid() {
+        // Test get_mid_prices when only call_middle is set
+        let mut option_data = OptionData::new(
+            pos!(100.0),
+            spos!(9.0),
+            spos!(11.0),
+            None, // missing put_bid
+            spos!(12.0),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+
+        // First set the mid prices
+        option_data.set_mid_prices();
+
+        // Then test getting them
+        let (call_mid, put_mid) = option_data.get_mid_prices();
+
+        // Verify returned values
+        assert_eq!(call_mid, Some(pos!(10.0)));
+        assert_eq!(put_mid, None);
+    }
+
+    #[test]
+    fn test_get_mid_prices_with_only_put_mid() {
+        // Test get_mid_prices when only put_middle is set
+        let mut option_data = OptionData::new(
+            pos!(100.0),
+            None, // missing call_bid
+            spos!(11.0),
+            spos!(8.0),
+            spos!(12.0),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+
+        // First set the mid prices
+        option_data.set_mid_prices();
+
+        // Then test getting them
+        let (call_mid, put_mid) = option_data.get_mid_prices();
+
+        // Verify returned values
+        assert_eq!(call_mid, None);
+        assert_eq!(put_mid, Some(pos!(10.0)));
+    }
+
+    #[test]
+    fn test_get_mid_prices_with_no_mid_prices() {
+        // Test get_mid_prices when no mid prices are set
+        let option_data = OptionData::new(
+            pos!(100.0),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+
+        // Mid prices haven't been set, should both be None
+        let (call_mid, put_mid) = option_data.get_mid_prices();
+
+        // Verify returned values
+        assert_eq!(call_mid, None);
+        assert_eq!(put_mid, None);
+    }
+}
+
+#[cfg(test)]
+mod tests_current_deltas {
+    use super::*;
+    use crate::pos;
+    use rust_decimal_macros::dec;
+
+    #[test]
+    fn test_current_deltas_with_both_deltas() {
+        // Lines 933-934: Test current_deltas method when both deltas are present
+        let option_data = OptionData::new(
+            pos!(100.0),
+            None,
+            None,
+            None,
+            None,
+            None,
+            Some(dec!(0.5)),  // delta_call
+            Some(dec!(-0.5)), // delta_put
+            None,
+            None,
+            None,
+        );
+
+        // Get current deltas
+        let (call_delta, put_delta) = option_data.current_deltas();
+
+        // Verify returned values
+        assert_eq!(call_delta, Some(dec!(0.5)));
+        assert_eq!(put_delta, Some(dec!(-0.5)));
+    }
+
+    #[test]
+    fn test_current_deltas_with_only_call_delta() {
+        // Test current_deltas with only call delta
+        let option_data = OptionData::new(
+            pos!(100.0),
+            None,
+            None,
+            None,
+            None,
+            None,
+            Some(dec!(0.5)), // delta_call
+            None,            // No delta_put
+            None,
+            None,
+            None,
+        );
+
+        // Get current deltas
+        let (call_delta, put_delta) = option_data.current_deltas();
+
+        // Verify returned values
+        assert_eq!(call_delta, Some(dec!(0.5)));
+        assert_eq!(put_delta, None);
+    }
+
+    #[test]
+    fn test_current_deltas_with_only_put_delta() {
+        // Test current_deltas with only put delta
+        let option_data = OptionData::new(
+            pos!(100.0),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,             // No delta_call
+            Some(dec!(-0.5)), // delta_put
+            None,
+            None,
+            None,
+        );
+
+        // Get current deltas
+        let (call_delta, put_delta) = option_data.current_deltas();
+
+        // Verify returned values
+        assert_eq!(call_delta, None);
+        assert_eq!(put_delta, Some(dec!(-0.5)));
+    }
+
+    #[test]
+    fn test_current_deltas_with_no_deltas() {
+        // Test current_deltas with no deltas
+        let option_data = OptionData::new(
+            pos!(100.0),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None, // No delta_call
+            None, // No delta_put
+            None,
+            None,
+            None,
+        );
+
+        // Get current deltas
+        let (call_delta, put_delta) = option_data.current_deltas();
+
+        // Verify returned values
+        assert_eq!(call_delta, None);
+        assert_eq!(put_delta, None);
     }
 }
