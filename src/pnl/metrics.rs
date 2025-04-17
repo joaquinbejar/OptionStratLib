@@ -350,6 +350,7 @@ fn get_file_lock(file_path: &str) -> Arc<Mutex<()>> {
 ///
 /// ```no_run
 /// use rust_decimal::Decimal;
+/// use tracing::{error, info};
 /// use optionstratlib::pnl::{save_pnl_metrics_with_document, PnLMetricsDocument};
 /// use optionstratlib::pos;
 ///
@@ -365,8 +366,8 @@ fn get_file_lock(file_path: &str) -> Arc<Mutex<()>> {
 /// let file_path = "pnl_metrics.json";
 ///
 /// match save_pnl_metrics_with_document(&document, file_path) {
-///     Ok(_) => println!("PnL metrics saved successfully."),
-///     Err(e) => eprintln!("Error saving PnL metrics: {}", e),
+///     Ok(_) => info!("PnL metrics saved successfully."),
+///     Err(e) => error!("Error saving PnL metrics: {}", e),
 /// }
 /// ```
 pub fn save_pnl_metrics_with_document(
