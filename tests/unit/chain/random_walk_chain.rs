@@ -61,7 +61,7 @@ fn generator(walk_params: &WalkParams<Positive, OptionChain>) -> Vec<Step<Positi
             x: previous_x_step,
             y: previous_y_step.clone(),
         };
-        println!("{}", step);
+        info!("{}", step);
         assert!(*step.x.index() >= 1);
         assert_eq!(*step.x.time_unit(), TimeFrame::Minute);
         assert_eq!(*step.x.step_size_in_time(), Positive::ONE);

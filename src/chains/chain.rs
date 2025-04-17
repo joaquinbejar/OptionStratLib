@@ -34,6 +34,9 @@ use std::fmt;
 use tracing::{debug, error, warn};
 use {crate::chains::utils::parse, csv::WriterBuilder, std::fs::File};
 
+/// A constant representing the divisor for the skew factor, set to 1000.
+const SKEW_FACTOR_DIVISOR: Decimal = Decimal::ONE_THOUSAND;
+
 /// Represents an option chain for a specific underlying asset and expiration date.
 ///
 /// An option chain contains all available option contracts (calls and puts) for a given
@@ -502,9 +505,7 @@ impl OptionChain {
 
         let volatility_curve =
             self.curve(&BasicAxisTypes::Volatility, &OptionStyle::Call, &Side::Long)?;
-        let skew_factor =
-            volatility_curve.compute_shape_metrics()?.skewness / Decimal::from(100000);
-        // let skew_factor = Decimal::ZERO;
+        let skew_factor = volatility_curve.compute_shape_metrics()?.skewness / SKEW_FACTOR_DIVISOR;
 
         // Create the price parameters
         let price_params = OptionDataPriceParams::new(
