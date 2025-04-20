@@ -1,7 +1,6 @@
 #![allow(unknown_lints)]
 #![allow(clippy::literal_string_with_formatting_args)]
 
-
 //!  # OptionStratLib v0.4.4: Financial Options Library
 //!  
 //!  ## Table of Contents
@@ -653,7 +652,6 @@
 //!  make coverage
 //!  ```
 //!  
-
 
 /// # OptionsStratLib: Financial Options Trading Library
 ///

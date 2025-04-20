@@ -679,3 +679,304 @@ mod tests_walk_type {
         assert_eq!(format!("{:?}", walk), format!("{:?}", cloned));
     }
 }
+
+#[cfg(test)]
+mod tests_serialize {
+    use rust_decimal_macros::dec;
+    use crate::pos;
+    use super::*;
+    use serde_json::{from_str, to_string};
+
+    #[test]
+    fn test_brownian_serialization() {
+        let walk_type = WalkType::Brownian {
+            dt: pos!(0.0027), // ~1/365 for daily
+            drift: dec!(0.05),
+            volatility: pos!(0.2),
+        };
+
+        let json = to_string(&walk_type).unwrap();
+
+        // Check basic structure and field inclusion
+        assert!(json.contains("\"Brownian\""));
+        assert!(json.contains("\"dt\""));
+        assert!(json.contains("\"drift\""));
+        assert!(json.contains("\"volatility\""));
+
+        // Check specific values
+        assert!(json.contains("0.0027"));
+        assert!(json.contains("0.05"));
+        assert!(json.contains("0.2"));
+
+        // Deserialize and verify
+        let deserialized: WalkType = from_str(&json).unwrap();
+        assert_eq!(walk_type, deserialized);
+    }
+
+    #[test]
+    fn test_geometric_brownian_serialization() {
+        let walk_type = WalkType::GeometricBrownian {
+            dt: pos!(0.0192), // ~1/52 for weekly
+            drift: dec!(0.07),
+            volatility: pos!(0.25),
+        };
+
+        let json = to_string(&walk_type).unwrap();
+
+        assert!(json.contains("\"GeometricBrownian\""));
+        assert!(json.contains("\"dt\""));
+        assert!(json.contains("\"drift\""));
+        assert!(json.contains("\"volatility\""));
+
+        assert!(json.contains("0.0192"));
+        assert!(json.contains("0.07"));
+        assert!(json.contains("0.25"));
+
+        let deserialized: WalkType = from_str(&json).unwrap();
+        assert_eq!(walk_type, deserialized);
+    }
+
+    #[test]
+    fn test_log_returns_serialization() {
+        let walk_type = WalkType::LogReturns {
+            dt: pos!(0.0833), // ~1/12 for monthly
+            expected_return: dec!(0.06),
+            volatility: pos!(0.18),
+            autocorrelation: Some(dec!(0.1)),
+        };
+
+        let json = to_string(&walk_type).unwrap();
+
+        assert!(json.contains("\"LogReturns\""));
+        assert!(json.contains("\"dt\""));
+        assert!(json.contains("\"expected_return\""));
+        assert!(json.contains("\"volatility\""));
+        assert!(json.contains("\"autocorrelation\""));
+
+        assert!(json.contains("0.0833"));
+        assert!(json.contains("0.06"));
+        assert!(json.contains("0.18"));
+        assert!(json.contains("0.1"));
+
+        let deserialized: WalkType = from_str(&json).unwrap();
+        assert_eq!(walk_type, deserialized);
+    }
+
+    #[test]
+    fn test_log_returns_with_none_autocorrelation() {
+        let walk_type = WalkType::LogReturns {
+            dt: pos!(0.0833),
+            expected_return: dec!(0.06),
+            volatility: pos!(0.18),
+            autocorrelation: None,
+        };
+
+        let json = to_string(&walk_type).unwrap();
+
+        // Check that autocorrelation is null
+        assert!(json.contains("\"autocorrelation\":null"));
+
+        let deserialized: WalkType = from_str(&json).unwrap();
+        assert_eq!(walk_type, deserialized);
+    }
+
+    #[test]
+    fn test_mean_reverting_serialization() {
+        let walk_type = WalkType::MeanReverting {
+            dt: pos!(0.0027),
+            volatility: pos!(0.3),
+            speed: pos!(0.5),
+            mean: pos!(100.0),
+        };
+
+        let json = to_string(&walk_type).unwrap();
+
+        assert!(json.contains("\"MeanReverting\""));
+        assert!(json.contains("\"dt\""));
+        assert!(json.contains("\"volatility\""));
+        assert!(json.contains("\"speed\""));
+        assert!(json.contains("\"mean\""));
+
+        assert!(json.contains("0.0027"));
+        assert!(json.contains("0.3"));
+        assert!(json.contains("0.5"));
+        assert!(json.contains("100"));
+
+        let deserialized: WalkType = from_str(&json).unwrap();
+        assert_eq!(walk_type, deserialized);
+    }
+
+    #[test]
+    fn test_jump_diffusion_serialization() {
+        let walk_type = WalkType::JumpDiffusion {
+            dt: pos!(0.0027),
+            drift: dec!(0.04),
+            volatility: pos!(0.15),
+            intensity: pos!(3.0),  // 3 jumps per year expected
+            jump_mean: dec!(-0.05), // Negative mean for downward jumps
+            jump_volatility: pos!(0.1),
+        };
+
+        let json = to_string(&walk_type).unwrap();
+
+        assert!(json.contains("\"JumpDiffusion\""));
+        assert!(json.contains("\"dt\""));
+        assert!(json.contains("\"drift\""));
+        assert!(json.contains("\"volatility\""));
+        assert!(json.contains("\"intensity\""));
+        assert!(json.contains("\"jump_mean\""));
+        assert!(json.contains("\"jump_volatility\""));
+
+        assert!(json.contains("0.0027"));
+        assert!(json.contains("0.04"));
+        assert!(json.contains("0.15"));
+        assert!(json.contains("3"));
+        assert!(json.contains("-0.05"));
+        assert!(json.contains("0.1"));
+
+        let deserialized: WalkType = from_str(&json).unwrap();
+        assert_eq!(walk_type, deserialized);
+    }
+
+    #[test]
+    fn test_garch_serialization() {
+        let walk_type = WalkType::Garch {
+            dt: pos!(0.0027),
+            drift: dec!(0.03),
+            volatility: pos!(0.2),
+            alpha: pos!(0.1),
+            beta: pos!(0.8),
+            omega: pos!(0.000002),
+        };
+
+        let json = to_string(&walk_type).unwrap();
+
+        assert!(json.contains("\"Garch\""));
+        assert!(json.contains("\"dt\""));
+        assert!(json.contains("\"drift\""));
+        assert!(json.contains("\"volatility\""));
+        assert!(json.contains("\"alpha\""));
+        assert!(json.contains("\"beta\""));
+        assert!(json.contains("\"omega\""));
+
+        let deserialized: WalkType = from_str(&json).unwrap();
+        assert_eq!(walk_type, deserialized);
+    }
+
+    #[test]
+    fn test_heston_serialization() {
+        let walk_type = WalkType::Heston {
+            dt: pos!(0.0027),
+            drift: dec!(0.05),
+            volatility: pos!(0.2),
+            kappa: pos!(1.5),
+            theta: pos!(0.04),
+            xi: pos!(0.3),
+            rho: dec!(-0.7),
+        };
+
+        let json = to_string(&walk_type).unwrap();
+
+        assert!(json.contains("\"Heston\""));
+        assert!(json.contains("\"dt\""));
+        assert!(json.contains("\"drift\""));
+        assert!(json.contains("\"volatility\""));
+        assert!(json.contains("\"kappa\""));
+        assert!(json.contains("\"theta\""));
+        assert!(json.contains("\"xi\""));
+        assert!(json.contains("\"rho\""));
+
+        let deserialized: WalkType = from_str(&json).unwrap();
+        assert_eq!(walk_type, deserialized);
+    }
+
+    #[test]
+    fn test_custom_serialization() {
+        let walk_type = WalkType::Custom {
+            dt: pos!(0.0027),
+            drift: dec!(0.05),
+            volatility: pos!(0.2),
+            vov: pos!(0.1),
+            vol_speed: pos!(0.5),
+            vol_mean: pos!(0.2),
+        };
+
+        let json = to_string(&walk_type).unwrap();
+
+        assert!(json.contains("\"Custom\""));
+        assert!(json.contains("\"dt\""));
+        assert!(json.contains("\"drift\""));
+        assert!(json.contains("\"volatility\""));
+        assert!(json.contains("\"vov\""));
+        assert!(json.contains("\"vol_speed\""));
+        assert!(json.contains("\"vol_mean\""));
+
+        let deserialized: WalkType = from_str(&json).unwrap();
+        assert_eq!(walk_type, deserialized);
+    }
+
+    #[test]
+    fn test_historical_serialization() {
+        let walk_type = WalkType::Historical {
+            timeframe: TimeFrame::Day,
+            prices: vec![pos!(100.0), pos!(101.5), pos!(99.8), pos!(102.3), pos!(103.1)],
+        };
+
+        let json = to_string(&walk_type).unwrap();
+
+        assert!(json.contains("\"Historical\""));
+        assert!(json.contains("\"timeframe\""));
+        assert!(json.contains("\"prices\""));
+        assert!(json.contains("Day"));
+        assert!(json.contains("100"));
+        assert!(json.contains("101.5"));
+        assert!(json.contains("99.8"));
+        assert!(json.contains("102.3"));
+        assert!(json.contains("103.1"));
+
+        let deserialized: WalkType = from_str(&json).unwrap();
+        assert_eq!(walk_type, deserialized);
+    }
+
+    #[test]
+    fn test_deserialize_from_json_string() {
+        let json = r#"{
+            "GeometricBrownian": {
+                "dt": 0.0027,
+                "drift": 0.06,
+                "volatility": 0.22
+            }
+        }"#;
+
+        let walk_type: WalkType = from_str(json).unwrap();
+
+        match walk_type {
+            WalkType::GeometricBrownian { dt, drift, volatility } => {
+                assert_eq!(dt, pos!(0.0027));
+                assert_eq!(drift, dec!(0.06));
+                assert_eq!(volatility, pos!(0.22));
+            },
+            _ => panic!("Wrong variant deserialized"),
+        }
+    }
+
+    #[test]
+    fn test_negative_decimal_values() {
+        let walk_type = WalkType::JumpDiffusion {
+            dt: pos!(0.0027),
+            drift: dec!(-0.03), // Negative drift
+            volatility: pos!(0.15),
+            intensity: pos!(2.0),
+            jump_mean: dec!(-0.1), // Negative jump mean
+            jump_volatility: pos!(0.05),
+        };
+
+        let json = to_string(&walk_type).unwrap();
+
+        assert!(json.contains("-0.03"));
+        assert!(json.contains("-0.1"));
+
+        let deserialized: WalkType = from_str(&json).unwrap();
+        assert_eq!(walk_type, deserialized);
+    }
+}

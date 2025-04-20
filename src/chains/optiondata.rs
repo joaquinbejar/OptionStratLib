@@ -222,6 +222,23 @@ impl OptionData {
         true
     }
 
+    /// Retrieves the strike price.
+    ///
+    /// This method returns the strike price associated with the object. The strike price
+    /// is represented as a [`Positive`] value, ensuring that it is always greater than zero.
+    ///
+    /// # Returns
+    /// * [`Positive`] - The strike price of the object.
+    ///
+    /// # Notes
+    /// The method assumes that the strike price has been properly initialized and is
+    /// a valid positive number.
+    ///
+    /// [`Positive`]: struct.Positive.html
+    pub fn strike(&self) -> Positive {
+        self.strike_price
+    }
+
     /// Checks if this option data contains valid call option information.
     ///
     /// A call option is considered valid when all required data is present:
