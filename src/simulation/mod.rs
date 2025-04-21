@@ -60,7 +60,7 @@ mod model;
 ///
 /// This module contains the core simulation logic that powers the random walk
 /// implementations, including time-stepping algorithms and state management.
-mod simulator;
+pub mod simulator;
 
 /// # Random Walk Module
 ///

@@ -682,9 +682,9 @@ mod tests_walk_type {
 
 #[cfg(test)]
 mod tests_serialize {
-    use rust_decimal_macros::dec;
-    use crate::pos;
     use super::*;
+    use crate::pos;
+    use rust_decimal_macros::dec;
     use serde_json::{from_str, to_string};
 
     #[test]
@@ -812,7 +812,7 @@ mod tests_serialize {
             dt: pos!(0.0027),
             drift: dec!(0.04),
             volatility: pos!(0.15),
-            intensity: pos!(3.0),  // 3 jumps per year expected
+            intensity: pos!(3.0),   // 3 jumps per year expected
             jump_mean: dec!(-0.05), // Negative mean for downward jumps
             jump_volatility: pos!(0.1),
         };
@@ -919,7 +919,13 @@ mod tests_serialize {
     fn test_historical_serialization() {
         let walk_type = WalkType::Historical {
             timeframe: TimeFrame::Day,
-            prices: vec![pos!(100.0), pos!(101.5), pos!(99.8), pos!(102.3), pos!(103.1)],
+            prices: vec![
+                pos!(100.0),
+                pos!(101.5),
+                pos!(99.8),
+                pos!(102.3),
+                pos!(103.1),
+            ],
         };
 
         let json = to_string(&walk_type).unwrap();
@@ -951,11 +957,15 @@ mod tests_serialize {
         let walk_type: WalkType = from_str(json).unwrap();
 
         match walk_type {
-            WalkType::GeometricBrownian { dt, drift, volatility } => {
+            WalkType::GeometricBrownian {
+                dt,
+                drift,
+                volatility,
+            } => {
                 assert_eq!(dt, pos!(0.0027));
                 assert_eq!(drift, dec!(0.06));
                 assert_eq!(volatility, pos!(0.22));
-            },
+            }
             _ => panic!("Wrong variant deserialized"),
         }
     }
