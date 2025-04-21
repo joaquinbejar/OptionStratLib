@@ -113,6 +113,20 @@ macro_rules! build_chart {
     };
 }
 
+#[macro_export]
+macro_rules! build_chart_inverted {
+    ($root:expr, $title:expr, $title_size:expr, $min_x:expr, $max_x:expr, $min_y:expr, $max_y:expr) => {
+        plotters::prelude::ChartBuilder::on($root)
+            .caption($title, ("sans-serif", $title_size))
+            .margin(10)
+            .top_x_label_area_size(40)
+            .x_label_area_size(40)
+            .y_label_area_size(60)
+            .right_y_label_area_size(60)
+            .build_cartesian_2d($max_x..$min_x, $min_y..$max_y)?
+    };
+}
+
 /// Configures the chart mesh, labels, and draws a horizontal line at y = 0.
 ///
 /// # Arguments
