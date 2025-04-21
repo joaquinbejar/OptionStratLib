@@ -1295,7 +1295,7 @@ impl OptionChain {
 
         Ok(positions)
     }
-    
+
     /// Returns an iterator over the `OptionData` elements.
     ///
     /// This method provides an iterator that yields references to
