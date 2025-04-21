@@ -1295,6 +1295,18 @@ impl OptionChain {
 
         Ok(positions)
     }
+    
+    /// Returns an iterator over the `OptionData` elements.
+    ///
+    /// This method provides an iterator that yields references to
+    /// the `OptionData` items contained within the structure.
+    ///
+    /// # Returns
+    ///
+    /// An iterator where each item is a reference to an `OptionData`.
+    pub fn iter(&self) -> impl Iterator<Item = &OptionData> {
+        self.get_single_iter()
+    }
 
     /// Returns an iterator over the `options` field in the `OptionChain` structure.
     ///
