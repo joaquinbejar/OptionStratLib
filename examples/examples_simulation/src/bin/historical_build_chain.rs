@@ -40,6 +40,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         TimeFrame::Minute,
         TimeFrame::Year,
     )?;
+    let symbol = "CL".to_string();
 
     info!("Volatility {}", implied_volatility);
     info!("Prices Lenght: {}", prices.len());
@@ -50,7 +51,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // let std_dev = implied_volatility * 100.0;
     let risk_free_rate = dec!(0.02);
     let dividend_yield = pos!(0.01);
-    let symbol = "AAPL".to_string();
     let volume = Some(Positive::ONE);
     let chain_size = 30;
     let strike_interval = pos!(1.0);
@@ -67,7 +67,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         Some(symbol.clone()),
     );
     let build_params = OptionChainBuildParams::new(
-        symbol,
+        symbol.clone(),
         volume,
         chain_size,
         strike_interval,
@@ -89,6 +89,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         walk_type: WalkType::Historical {
             timeframe: TimeFrame::Minute,
             prices,
+            symbol: Some(symbol),
         },
         walker: walker,
     };

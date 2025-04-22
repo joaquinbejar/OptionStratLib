@@ -133,6 +133,16 @@ pub enum WalkType {
         timeframe: TimeFrame,
         /// The vector of positive price values.
         prices: Vec<Positive>,
+
+        /// A field representing an optional symbol.
+        ///
+        /// This field stores an optional `String` that can represent a symbol.
+        /// It can hold a `Some(String)` value if a symbol is provided, or `None` if no symbol is specified.
+        ///
+        /// # Use Case
+        ///
+        /// This field can be utilized in scenarios where a symbol (e.g., stock ticker, identifier) may or may not be required.
+        symbol: Option<String>,
     },
 }
 
@@ -226,10 +236,14 @@ impl Display for WalkType {
                 "Custom {{ dt: {}, drift: {}, volatility: {}, vov: {}, vol_speed: {}, vol_mean: {} }}",
                 dt, drift, volatility, vov, vol_speed, vol_mean
             ),
-            WalkType::Historical { timeframe, prices } => write!(
+            WalkType::Historical {
+                timeframe,
+                prices,
+                symbol,
+            } => write!(
                 f,
-                "Historical {{ timeframe: {}, prices: {:?} }}",
-                timeframe, prices
+                "Historical {{ timeframe: {}, prices: {:?}, symbol: {:?} }}",
+                timeframe, prices, symbol
             ),
         }
     }
@@ -926,6 +940,7 @@ mod tests_serialize {
                 pos!(102.3),
                 pos!(103.1),
             ],
+            symbol: None,
         };
 
         let json = to_string(&walk_type).unwrap();

@@ -187,6 +187,25 @@ impl OptionData {
         }
     }
 
+    /// Retrieves the implied volatility of the underlying asset or option.
+    ///
+    /// # Returns
+    ///
+    /// An `Option<Positive>` where:
+    /// - `Some(Positive)` contains the implied volatility if it is available.
+    /// - `None` if the implied volatility is not set or available.
+    ///
+    /// # Notes
+    ///
+    /// The implied volatility represents the market's forecast of a likely movement
+    /// in an asset's price and is often used in option pricing models.
+    ///
+    /// Ensure that the `Positive` type enforces constraints to prevent invalid values
+    /// such as negative volatility.
+    pub fn volatility(&self) -> Option<Positive> {
+        self.implied_volatility
+    }
+
     /// Validates the option data to ensure it meets the required criteria for calculations.
     ///
     /// This method performs a series of validation checks to ensure that the option data
@@ -1193,6 +1212,21 @@ impl OptionData {
     ///
     pub fn current_deltas(&self) -> (Option<Decimal>, Option<Decimal>) {
         (self.delta_call, self.delta_put)
+    }
+
+    /// Returns the current gamma value.
+    ///
+    /// This function retrieves the optional `gamma` field of the struct.
+    /// If the `gamma` field has been set, it returns a `Some(Decimal)` value;
+    /// otherwise, it returns `None`.
+    ///
+    /// # Returns
+    ///
+    /// * `Option<Decimal>` - The current gamma value wrapped in `Some` if it exists,
+    ///   or `None` if the gamma value is not set.
+    ///
+    pub fn current_gamma(&self) -> Option<Decimal> {
+        self.gamma
     }
 }
 

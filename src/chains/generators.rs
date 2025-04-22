@@ -98,21 +98,30 @@ pub fn generator_optionchain(
             walk_params.walker.custom(walk_params).unwrap(),
             Some(*volatility),
         ),
-        WalkType::Historical { timeframe, prices } => {
-            let log_returns: Vec<Decimal> = calculate_log_returns(prices)
-                .unwrap()
-                .iter()
-                .map(|p| p.to_dec())
-                .collect();
-            let constant_volatility = constant_volatility(&log_returns).unwrap();
-            let implied_volatility =
-                adjust_volatility(constant_volatility, *timeframe, TimeFrame::Year).unwrap();
-            (
-                walk_params.walker.historical(walk_params).unwrap(),
-                Some(implied_volatility),
-            )
+        WalkType::Historical {
+            timeframe, prices, ..
+        } => {
+            if prices.is_empty() || prices.len() < walk_params.size {
+                (Vec::new(), None)
+            } else {
+                let log_returns: Vec<Decimal> = calculate_log_returns(prices)
+                    .unwrap()
+                    .iter()
+                    .map(|p| p.to_dec())
+                    .collect();
+                let constant_volatility = constant_volatility(&log_returns).unwrap();
+                let implied_volatility =
+                    adjust_volatility(constant_volatility, *timeframe, TimeFrame::Year).unwrap();
+                (
+                    walk_params.walker.historical(walk_params).unwrap(),
+                    Some(implied_volatility),
+                )
+            }
         }
     };
+    if y_steps.is_empty() {
+        return vec![];
+    }
 
     let _ = y_steps.remove(0); // remove initial step from y_steps to avoid early return
     let mut steps: Vec<Step<Positive, OptionChain>> = vec![walk_params.init_step.clone()];

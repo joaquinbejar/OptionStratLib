@@ -470,6 +470,7 @@ where
             WalkType::Historical {
                 timeframe: _timeframe,
                 prices,
+                symbol: _symbol,
             } => {
                 if prices.len() >= params.size {
                     Ok(prices[0..params.size].to_vec())
