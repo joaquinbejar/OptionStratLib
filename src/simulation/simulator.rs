@@ -1,79 +1,672 @@
-/******************************************************************************
-   Author: Joaquín Béjar García
-   Email: jb@taunais.com
-   Date: 22/2/25
-******************************************************************************/
+use crate::pricing::Profit;
+use crate::simulation::WalkParams;
+use crate::simulation::randomwalk::RandomWalk;
+use crate::simulation::steps::Step;
+use crate::utils::Len;
+use crate::visualization::utils::{
+    Graph, GraphBackend, calculate_axis_range, draw_points_on_chart, draw_vertical_lines_on_chart,
+    random_color,
+};
+use crate::{Positive, build_chart_inverted};
+use plotters::element::PathElement;
+use plotters::prelude::{
+    BLACK, BitMapBackend, IntoDrawingArea, LineSeries, RGBColor, SeriesLabelPosition, WHITE,
+};
+use plotters::style::Color;
+use rust_decimal::Decimal;
+use std::error::Error;
+use std::fmt::Display;
+use std::ops::{AddAssign, Index, IndexMut};
 
-/*
-/// Implementation of the `Surfacable` trait for the `Simulator` type.
+/// Represents a generic simulator for managing and simulating random walks.
 ///
-/// This implementation allows the `Simulator` object to generate a [`Surface`]
-/// representation based on the random walks it manages.
+/// # Type Parameters
+/// * `X`: A type that represents the state or value within the random walk. It must adhere to the following bounds:
+///    - `Copy`: Allows for efficient copying of values.
+///    - `Into<Positive>`: Ensures values can be converted into a `Positive` type (potentially for validation or numerical operations).
+///    - `AddAssign`: Allows addition and assignment (`+=`) operations.
+///    - `Display`: Enables the formatting of values as strings for user-facing output.
 ///
-/// # Process
-/// The `surface` method generates a surface by:
-/// 1. Iterating over all random walks in the simulator.
-/// 2. Extracting their associated `Curve` points via each walk's `curve()` method.
-/// 3. Mapping these points into a collection of three-dimensional points, [`Point3D`],
-///    where each point's `z` coordinate is represented by the index of the walk,
-///    and its `x` and `y` coordinates are taken from the walk's `Curve` data.
-/// 4. Constructing a [`Surface`] using the resulting set of [`Point3D`] points.
+/// * `Y`: A type that represents the step or transition within the random walk. It must adhere to the following bounds:
+///    - `Into<Positive>`: Ensures values can be converted into a `Positive` type.
+///    - `Display`: Enables the formatting of values as strings for user-facing output.
+///    - `Clone`: Allows for creating deep copies of the values.
 ///
-/// # Returns
-/// - **`Ok(Surface)`**: If the surface is successfully created from the `Point3D` points.
-/// - **`Err(SurfaceError)`**: If any errors occur during surface construction. Possible
-///   errors include:
-///   - Invalid point conversion via [`Point3D::from_tuple`] (e.g., invalid coordinate transformations).
-///   - Failures in the associated random walks' `curve()` methods.
-///   - Issues during the collection or instantiation of the final surface.
+/// # Fields
+/// * `title` (`String`): The name or description of the simulator, primarily used for identification or display purposes.
+/// * `random_walks` (`Vec<RandomWalk<X, Y>>`): A collection of `RandomWalk` instances, where each random walk adheres to the defined types `X` and `Y`.
 ///
-/// # Notes
-/// - The resulting surface's points are stored in a `BTreeSet`, which inherently ensures
-///   that the points are sorted and unique. This provides a natural order and prevents
-///   duplicate points from being included.
-/// - The `z` coordinate of each `Point3D` is determined by the index of the walk in the simulator.
-/// - This implementation heavily relies on the [`Surface::new`] and [`Point3D::from_tuple`]
-///   helper methods.
+/// # Usage
+/// This struct is used as a high-level container to manage multiple random walks and perform simulations. Adding specific
+/// functionality such as initializing, running simulations, or generating statistical data depends on additional methods provided
+/// separately.
 ///
-/// # Implementation Details
-/// - `Simulator` maintains its walks in a `HashMap`. The `surface` method iterates through the
-///   walks using the `enumerate()` function, which provides a unique index for each walk.
-/// - The method uses the `flat_map()` iterator to efficiently transform the collection of walks
-///   into the desired set of points.
-///
-/// # Errors
-/// The method returns a [`SurfaceError`] in any of the following cases:
-/// - If the `curve()` method of a random walk fails (e.g., invalid curve generation or
-///   missing values).
-/// - If a conversion error occurs while creating `Point3D` instances (e.g., invalid
-///   input arguments).
-/// - If issues occur while constructing the `Surface` itself.
-///
-/// # Example
-/// This implementation allows the `Simulator` to generate a 3D surface representation of
-/// random walks, which can subsequently be visualized, analyzed, or processed.
-///
-/// # See Also
-/// - [`Surface`]: The resulting 3D surface representation.
-/// - [`Point3D`]: Used to represent points in 3D space in the generated surface.
-/// - [`SurfaceError`]: Enumerates possible error types during surface generation.
-// impl Surfacable for Simulator {
-//     fn surface(&self) -> Result<Surface, SurfaceError> {
-//         let points: BTreeSet<Point3D> = self
-//             .walks
-//             .iter()
-//             .enumerate()
-//             .flat_map(|(i, (_, walk))| {
-//                 let curve = walk.curve().unwrap();
-//                 let points2d = curve.points;
-//
-//                 points2d
-//                     .into_iter()
-//                     .map(move |point| Point3D::from_tuple(i, point.x, point.y).unwrap())
-//             })
-//             .collect();
-//
-//         Ok(Surface::new(points))
-//     }
-// }
-*/
+/// Note: This struct is generic and requires types provided for both state (`X`) and step/transition (`Y`) that meet the respective
+/// trait bounds.
+pub struct Simulator<X, Y>
+where
+    X: Copy + Into<Positive> + AddAssign + Display,
+    Y: Into<Positive> + Display + Clone,
+{
+    title: String,
+    random_walks: Vec<RandomWalk<X, Y>>,
+}
+
+impl<X, Y> Simulator<X, Y>
+where
+    X: Copy + Into<Positive> + AddAssign + Display,
+    Y: Into<Positive> + Display + Clone,
+{
+    /// Creates a new random walk instance with the given title and steps.
+    ///
+    /// This constructor takes a title, walk parameters, and a generator function
+    /// that produces the actual steps of the random walk based on the provided parameters.
+    ///
+    /// # Parameters
+    ///
+    /// * `title` - A descriptive title for the random walk
+    /// * `params` - Parameters that define the properties of the random walk
+    /// * `generator` - A function that generates the steps of the random walk
+    ///
+    /// # Returns
+    ///
+    /// A new `RandomWalk` instance with the generated steps.
+    ///
+    pub fn new<F>(title: String, size: usize, params: &WalkParams<X, Y>, generator: F) -> Self
+    where
+        F: Fn(&WalkParams<X, Y>) -> Vec<Step<X, Y>> + Clone,
+        X: Copy + Into<Positive> + AddAssign + Display,
+        Y: Into<Positive> + Display + Clone,
+    {
+        let mut random_walks = Vec::new();
+        for i in 0..size {
+            let title = format!("{}_{}", title, i);
+            let random_walk = RandomWalk::new(title, params, &generator);
+            random_walks.push(random_walk);
+        }
+        Self {
+            title,
+            random_walks,
+        }
+    }
+
+    /// Returns the title of the random walk.
+    ///
+    /// # Returns
+    ///
+    /// A string slice containing the title of the random walk.
+    pub fn get_title(&self) -> &str {
+        &self.title
+    }
+
+    /// Updates the title of the random walk.
+    ///
+    /// # Parameters
+    ///
+    /// * `title` - The new title to set
+    pub fn set_title(&mut self, title: String) {
+        self.title = title;
+    }
+
+    /// Retrieves the steps of the random walks contained within the current object.
+    ///
+    /// This method returns a vector of references to `RandomWalk` instances stored
+    /// in the `random_walks` collection member of the struct. Each `RandomWalk`
+    /// instance represents a step in the random walk process.
+    ///
+    /// # Returns
+    ///
+    /// A `Vec` containing references to `RandomWalk<X, Y>` values, where
+    /// `X` and `Y` are the types used within the random walk structure.
+    ///
+    /// # Note
+    ///
+    /// The returned vector contains borrowed references to the `RandomWalk`
+    /// elements within the struct, and the lifetime of these references
+    /// is tied to the lifetime of the parent object.
+    pub fn get_steps(&self) -> Vec<&RandomWalk<X, Y>> {
+        self.random_walks.iter().collect::<Vec<&RandomWalk<X, Y>>>()
+    }
+
+    /// Retrieves a reference to the `RandomWalk` at the specified index.
+    ///
+    /// # Arguments
+    ///
+    /// * `index` - The index of the desired `RandomWalk` within the `random_walks` collection.
+    ///
+    /// # Returns
+    ///
+    /// A reference to the `RandomWalk<X, Y>` located at the given `index`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the `index` is out of bounds for the `random_walks` collection.
+    ///
+    pub fn get_step(&self, index: usize) -> &RandomWalk<X, Y> {
+        &self.random_walks[index]
+    }
+
+    /// Retrieves a mutable reference to a `RandomWalk` at the specified index.
+    ///
+    /// # Arguments
+    ///
+    /// * `index` - The zero-based index of the `RandomWalk` to access within the `random_walks` collection.
+    ///
+    /// # Returns
+    ///
+    /// A mutable reference to the `RandomWalk` object at the given index.
+    ///
+    /// # Panics
+    ///
+    /// This function panics if the provided `index` is out of bounds, i.e., if `index >= self.random_walks.len()`.
+    ///
+    pub fn get_step_mut(&mut self, index: usize) -> &mut RandomWalk<X, Y> {
+        &mut self.random_walks[index]
+    }
+
+    /// Returns a reference to the first `RandomWalk` element in the `random_walks` collection, if it exists.
+    ///
+    /// # Returns
+    /// - `Some(&RandomWalk<X, Y>)` if the `random_walks` collection is not empty.
+    /// - `None` if the `random_walks` collection is empty.
+    ///
+    pub fn first(&self) -> Option<&RandomWalk<X, Y>> {
+        self.random_walks.first()
+    }
+
+    /// Returns the last random walk in the collection, if it exists.
+    ///
+    /// # Returns
+    /// - `Some(&RandomWalk<X, Y>)`: A reference to the last `RandomWalk` in the collection.
+    /// - `None`: If the collection is empty.
+    ///
+    /// # Note
+    /// The `last` method does not consume the collection; it returns a read-only reference to the last element.
+    pub fn last(&self) -> Option<&RandomWalk<X, Y>> {
+        self.random_walks.last()
+    }
+}
+
+impl<X, Y> Len for Simulator<X, Y>
+where
+    X: Copy + Into<Positive> + AddAssign + Display,
+    Y: Into<Positive> + Display + Clone,
+{
+    /// Returns the number of elements in the `random_walks` collection.
+    ///
+    /// # Returns
+    /// - `usize`: The total count of elements in the `random_walks` collection.
+    ///
+    /// This method is typically used when you need to determine the size
+    /// of the internal `random_walks` data structure.
+    fn len(&self) -> usize {
+        self.random_walks.len()
+    }
+
+    /// Checks if the `random_walks` collection is empty.
+    ///
+    /// # Returns
+    /// * `true` - If the `random_walks` collection contains no elements.
+    /// * `false` - If the `random_walks` collection contains one or more elements.
+    ///
+    fn is_empty(&self) -> bool {
+        self.random_walks.is_empty()
+    }
+}
+
+impl<X, Y> Index<usize> for Simulator<X, Y>
+where
+    X: Copy + Into<Positive> + AddAssign + Display,
+    Y: Into<Positive> + Display + Clone,
+{
+    /// Defines an alias `Output` for the type `RandomWalk<X, Y>`.
+    ///
+    /// # Type Parameters
+    /// - `X`: Represents the type of the first parameter used in the `RandomWalk`.
+    /// - `Y`: Represents the type of the second parameter used in the `RandomWalk`.
+    ///
+    /// `Output` can be used as a shorthand to refer to a `RandomWalk` instance
+    /// with specific `X` and `Y` types, improving code readability and reducing
+    /// verbosity in the type definitions or method signatures.
+    type Output = RandomWalk<X, Y>;
+
+    /// Retrieves a reference to the element at the specified index in the `random_walks` vector.
+    ///
+    /// # Parameters
+    /// - `index`: The zero-based index of the element to retrieve from the `random_walks` vector.
+    ///
+    /// # Returns
+    /// A reference to the element at the specified `index` in the `random_walks` vector.
+    ///
+    /// # Panics
+    /// This function will panic if the given `index` is out of bounds, i.e., greater than or equal to
+    /// the length of the `random_walks` vector.
+    ///
+    /// Note: This implementation assumes that `Self` implements the `Index` trait and
+    /// that `random_walks` is a field in the implementing struct.
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.random_walks[index]
+    }
+}
+
+impl<X, Y> IndexMut<usize> for Simulator<X, Y>
+where
+    X: Copy + Into<Positive> + AddAssign + Display,
+    Y: Into<Positive> + Display + Clone,
+{
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        &mut self.random_walks[index]
+    }
+}
+
+impl<X, Y> Display for Simulator<X, Y>
+where
+    X: Copy + Into<Positive> + AddAssign + Display,
+    Y: Into<Positive> + Display + Clone,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "{}", self.title)?;
+        for random_walk in &self.random_walks {
+            writeln!(f, "\t{}", random_walk)?;
+        }
+        Ok(())
+    }
+}
+
+impl<X, Y> Profit for Simulator<X, Y>
+where
+    X: AddAssign + Copy + Display + Into<Positive>,
+    Y: Clone + Display + Into<Positive>,
+{
+    fn calculate_profit_at(&self, _price: Positive) -> Result<Decimal, Box<dyn Error>> {
+        unimplemented!()
+    }
+}
+
+impl<X, Y> Graph for Simulator<X, Y>
+where
+    X: Copy + Into<Positive> + AddAssign + Display,
+    Y: Into<Positive> + Display + Clone,
+{
+    fn graph(&self, backend: GraphBackend, title_size: u32) -> Result<(), Box<dyn Error>> {
+        let all_x_values: Vec<Positive> = self
+            .random_walks
+            .iter()
+            .flat_map(|walk| walk.get_x_values())
+            .collect();
+
+        if all_x_values.is_empty() {
+            return Err("No valid X values to plot".into());
+        }
+
+        let all_y_values: Vec<f64> = self
+            .random_walks
+            .iter()
+            .flat_map(|walk| walk.get_y_values())
+            .collect();
+
+        if all_y_values.is_empty() {
+            return Err("No valid Y values to plot".into());
+        }
+
+        let (max_x_value, min_x_value, max_y_value, min_y_value) =
+            calculate_axis_range(&all_x_values, &all_y_values, Some(1.005));
+
+        let root = match backend {
+            GraphBackend::Bitmap { file_path, size } => {
+                let root = BitMapBackend::new(file_path, size).into_drawing_area();
+                root.fill(&WHITE)?;
+                root
+            }
+        };
+
+        let mut chart = build_chart_inverted!(
+            &root,
+            self.title(),
+            title_size,
+            min_x_value.to_f64(),
+            max_x_value.to_f64(),
+            min_y_value,
+            max_y_value
+        );
+
+        chart
+            .configure_mesh()
+            .x_labels(20)
+            .y_labels(20)
+            .x_label_formatter(&|x| format!("{:.2}", x))
+            .y_label_formatter(&|y| format!("{:.2}", y))
+            .draw()?;
+
+        let colors: Vec<RGBColor> = (0..self.random_walks.len())
+            .map(|_| random_color())
+            .collect();
+
+        for (i, walk) in self.random_walks.iter().enumerate() {
+            let x_values: Vec<f64> = walk.get_x_values().iter().map(|x| x.to_f64()).collect();
+
+            let y_values = walk.get_y_values();
+
+            if !x_values.is_empty() && !y_values.is_empty() && x_values.len() == y_values.len() {
+                let color_index = i % colors.len();
+                let line_color = colors[color_index];
+
+                chart
+                    .draw_series(LineSeries::new(
+                        x_values.iter().zip(y_values.iter()).map(|(&x, &y)| (x, y)),
+                        line_color,
+                    ))?
+                    .label(format!("Walk {}", i))
+                    .legend(move |(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], line_color));
+            }
+        }
+
+        chart
+            .configure_series_labels()
+            .background_style(WHITE.mix(0.8))
+            .border_style(BLACK)
+            .position(SeriesLabelPosition::UpperLeft) // Posición en la parte superior izquierda
+            .draw()?;
+
+        draw_points_on_chart(&mut chart, &self.get_points())?;
+        draw_vertical_lines_on_chart(&mut chart, &self.get_vertical_lines())?;
+
+        root.present()?;
+        Ok(())
+    }
+
+    fn title(&self) -> String {
+        self.title.clone()
+    }
+
+    fn get_x_values(&self) -> Vec<Positive> {
+        self.random_walks
+            .iter()
+            .flat_map(|step| step.get_x_values())
+            .collect()
+    }
+
+    fn get_y_values(&self) -> Vec<f64> {
+        self.random_walks
+            .iter()
+            .flat_map(|step| step.get_y_values())
+            .collect()
+    }
+}
+
+impl<'a, X, Y> IntoIterator for &'a Simulator<X, Y>
+where
+    X: Copy + Into<Positive> + AddAssign + Display,
+    Y: Into<Positive> + Display + Clone,
+{
+    type Item = &'a RandomWalk<X, Y>;
+    type IntoIter = std::slice::Iter<'a, RandomWalk<X, Y>>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.random_walks.iter()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::simulation::{
+        WalkParams, WalkType, WalkTypeAble,
+        steps::{Step, Xstep, Ystep},
+    };
+    use crate::utils::{TimeFrame, time::convert_time_frame};
+    use crate::{ExpirationDate, Positive, pos};
+    use rust_decimal_macros::dec;
+
+    // Helper structs and functions for testing
+    struct TestWalker;
+    impl WalkTypeAble<Positive, Positive> for TestWalker {}
+
+    fn test_generator(params: &WalkParams<Positive, Positive>) -> Vec<Step<Positive, Positive>> {
+        vec![params.init_step.clone()]
+    }
+
+    // Test Simulator creation
+    #[test]
+    fn test_simulator_creation() {
+        let walker = Box::new(TestWalker);
+        let initial_price = pos!(100.0);
+        let init_step = Step {
+            x: Xstep::new(
+                Positive::ONE,
+                TimeFrame::Minute,
+                ExpirationDate::Days(pos!(30.0)),
+            ),
+            y: Ystep::new(0, initial_price),
+        };
+
+        let walk_params = WalkParams {
+            size: 5,
+            init_step,
+            walk_type: WalkType::GeometricBrownian {
+                dt: convert_time_frame(pos!(1.0) / pos!(30.0), &TimeFrame::Minute, &TimeFrame::Day),
+                drift: dec!(0.0),
+                volatility: pos!(0.2),
+            },
+            walker,
+        };
+
+        let simulator = Simulator::new(
+            "Test Simulator".to_string(),
+            5,
+            &walk_params,
+            test_generator,
+        );
+
+        assert_eq!(simulator.get_title(), "Test Simulator");
+        assert_eq!(simulator.len(), 5);
+        assert!(!simulator.is_empty());
+    }
+
+    // Test title methods
+    #[test]
+    fn test_simulator_title_methods() {
+        let walker = Box::new(TestWalker);
+        let initial_price = pos!(100.0);
+        let init_step = Step {
+            x: Xstep::new(
+                Positive::ONE,
+                TimeFrame::Minute,
+                ExpirationDate::Days(pos!(30.0)),
+            ),
+            y: Ystep::new(0, initial_price),
+        };
+
+        let walk_params = WalkParams {
+            size: 3,
+            init_step,
+            walk_type: WalkType::GeometricBrownian {
+                dt: convert_time_frame(pos!(1.0) / pos!(30.0), &TimeFrame::Minute, &TimeFrame::Day),
+                drift: dec!(0.0),
+                volatility: pos!(0.2),
+            },
+            walker,
+        };
+
+        let mut simulator = Simulator::new(
+            "Original Title".to_string(),
+            3,
+            &walk_params,
+            test_generator,
+        );
+
+        assert_eq!(simulator.get_title(), "Original Title");
+
+        simulator.set_title("New Title".to_string());
+        assert_eq!(simulator.get_title(), "New Title");
+    }
+
+    // Test step access methods
+    #[test]
+    fn test_simulator_step_access() {
+        let walker = Box::new(TestWalker);
+        let initial_price = pos!(100.0);
+        let init_step = Step {
+            x: Xstep::new(
+                Positive::ONE,
+                TimeFrame::Minute,
+                ExpirationDate::Days(pos!(30.0)),
+            ),
+            y: Ystep::new(0, initial_price),
+        };
+
+        let walk_params = WalkParams {
+            size: 3,
+            init_step,
+            walk_type: WalkType::GeometricBrownian {
+                dt: convert_time_frame(pos!(1.0) / pos!(30.0), &TimeFrame::Minute, &TimeFrame::Day),
+                drift: dec!(0.0),
+                volatility: pos!(0.2),
+            },
+            walker,
+        };
+
+        let simulator = Simulator::new(
+            "Test Simulator".to_string(),
+            3,
+            &walk_params,
+            test_generator,
+        );
+
+        // Test get_steps
+        let steps = simulator.get_steps();
+        assert_eq!(steps.len(), 3);
+
+        // Test get_step
+        let step = simulator.get_step(1);
+        assert_eq!(step.get_title(), "Test Simulator_1");
+
+        // Test first and last
+        assert!(simulator.first().is_some());
+        assert!(simulator.last().is_some());
+        assert_eq!(simulator.first().unwrap().get_title(), "Test Simulator_0");
+        assert_eq!(simulator.last().unwrap().get_title(), "Test Simulator_2");
+    }
+
+    // Test Index and IndexMut traits
+    #[test]
+    fn test_simulator_indexing() {
+        let walker = Box::new(TestWalker);
+        let initial_price = pos!(100.0);
+        let init_step = Step {
+            x: Xstep::new(
+                Positive::ONE,
+                TimeFrame::Minute,
+                ExpirationDate::Days(pos!(30.0)),
+            ),
+            y: Ystep::new(0, initial_price),
+        };
+
+        let walk_params = WalkParams {
+            size: 3,
+            init_step,
+            walk_type: WalkType::GeometricBrownian {
+                dt: convert_time_frame(pos!(1.0) / pos!(30.0), &TimeFrame::Minute, &TimeFrame::Day),
+                drift: dec!(0.0),
+                volatility: pos!(0.2),
+            },
+            walker,
+        };
+
+        let mut simulator = Simulator::new(
+            "Test Simulator".to_string(),
+            3,
+            &walk_params,
+            test_generator,
+        );
+
+        // Test immutable indexing
+        assert_eq!(simulator[0].get_title(), "Test Simulator_0");
+        assert_eq!(simulator[1].get_title(), "Test Simulator_1");
+        assert_eq!(simulator[2].get_title(), "Test Simulator_2");
+
+        // Test mutable indexing
+        simulator[1].set_title("Modified Title".to_string());
+        assert_eq!(simulator[1].get_title(), "Modified Title");
+    }
+
+    // Test display formatting
+    #[test]
+    fn test_simulator_display() {
+        let walker = Box::new(TestWalker);
+        let initial_price = pos!(100.0);
+        let init_step = Step {
+            x: Xstep::new(
+                Positive::ONE,
+                TimeFrame::Minute,
+                ExpirationDate::Days(pos!(30.0)),
+            ),
+            y: Ystep::new(0, initial_price),
+        };
+
+        let walk_params = WalkParams {
+            size: 2,
+            init_step,
+            walk_type: WalkType::GeometricBrownian {
+                dt: convert_time_frame(pos!(1.0) / pos!(30.0), &TimeFrame::Minute, &TimeFrame::Day),
+                drift: dec!(0.0),
+                volatility: pos!(0.2),
+            },
+            walker,
+        };
+
+        let simulator = Simulator::new("Display Test".to_string(), 2, &walk_params, test_generator);
+
+        let display_output = format!("{}", simulator);
+        assert!(display_output.starts_with("Display Test"));
+        assert!(display_output.contains("Display Test_0"));
+        assert!(display_output.contains("Display Test_1"));
+    }
+
+    // Test simulator with empty collection
+    #[test]
+    fn test_simulator_empty() {
+        let simulator: Simulator<Positive, Positive> = Simulator {
+            title: "Empty Simulator".to_string(),
+            random_walks: Vec::new(),
+        };
+
+        assert_eq!(simulator.get_title(), "Empty Simulator");
+        assert_eq!(simulator.len(), 0);
+        assert!(simulator.is_empty());
+        assert!(simulator.first().is_none());
+        assert!(simulator.last().is_none());
+    }
+
+    // Test panic scenarios (these would typically be in separate test functions)
+    #[test]
+    #[should_panic(expected = "index out of bounds")]
+    fn test_simulator_index_out_of_bounds() {
+        let walker = Box::new(TestWalker);
+        let initial_price = pos!(100.0);
+        let init_step = Step {
+            x: Xstep::new(
+                Positive::ONE,
+                TimeFrame::Minute,
+                ExpirationDate::Days(pos!(30.0)),
+            ),
+            y: Ystep::new(0, initial_price),
+        };
+
+        let walk_params = WalkParams {
+            size: 3,
+            init_step,
+            walk_type: WalkType::GeometricBrownian {
+                dt: convert_time_frame(pos!(1.0) / pos!(30.0), &TimeFrame::Minute, &TimeFrame::Day),
+                drift: dec!(0.0),
+                volatility: pos!(0.2),
+            },
+            walker,
+        };
+
+        let simulator = Simulator::new("Panic Test".to_string(), 3, &walk_params, test_generator);
+
+        // This should panic
+        let _ = simulator[3];
+    }
+}

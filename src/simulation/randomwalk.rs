@@ -3,12 +3,16 @@
    Email: jb@taunais.com
    Date: 23/3/25
 ******************************************************************************/
-use crate::Positive;
+use crate::constants::{DARK_GREEN, DARK_RED};
 use crate::pricing::Profit;
 use crate::simulation::WalkParams;
 use crate::simulation::steps::Step;
 use crate::utils::Len;
-use crate::visualization::utils::Graph;
+use crate::visualization::utils::{
+    Graph, GraphBackend, calculate_axis_range, draw_points_on_chart, draw_vertical_lines_on_chart,
+};
+use crate::{Positive, build_chart_inverted, create_drawing_area};
+use plotters::prelude::{BLACK, BitMapBackend, IntoDrawingArea, LineSeries, WHITE};
 use rust_decimal::Decimal;
 use std::error::Error;
 use std::fmt::Display;
@@ -287,12 +291,86 @@ where
     X: Copy + Into<Positive> + AddAssign + Display,
     Y: Into<Positive> + Display + Clone,
 {
+    fn graph(&self, backend: GraphBackend, title_size: u32) -> Result<(), Box<dyn Error>> {
+        // Get X values from the random walk
+        let x_values = self.get_x_values();
+        let x_axis_data: &[Positive] = &x_values;
+
+        // Check if there are valid X values to plot
+        if x_axis_data.is_empty() {
+            return Err("No valid values to plot".into());
+        }
+
+        // Get Y values from the random walk
+        let y_axis_data: Vec<f64> = self.get_y_values();
+
+        // Check if there are valid Y values to plot
+        if y_axis_data.is_empty() {
+            return Err("No valid values to plot".into());
+        }
+
+        // Calculate the range for both axes
+        let (max_x_value, min_x_value, max_y_value, min_y_value) =
+            calculate_axis_range(x_axis_data, &y_axis_data, Some(1.005));
+
+        // Set up the drawing area based on the backend
+        let root = match backend {
+            GraphBackend::Bitmap { file_path, size } => {
+                create_drawing_area!(file_path, size.0, size.1)
+            }
+        };
+
+        // Here's the key change: We manually build the chart with inverted X-axis
+        let mut chart = build_chart_inverted!(
+            &root,
+            self.title(),
+            title_size,
+            min_x_value.to_f64(),
+            max_x_value.to_f64(),
+            min_y_value,
+            max_y_value
+        );
+
+        // Configure the chart same as the original
+        chart
+            .configure_mesh()
+            .disable_mesh() // Keep the original style (no grid)
+            .x_labels(20)
+            .y_labels(20)
+            .draw()?;
+
+        // Draw a horizontal line at y = 0
+        chart.draw_series(LineSeries::new(
+            vec![(max_x_value.to_f64(), 0.0), (min_x_value.to_f64(), 0.0)],
+            &BLACK,
+        ))?;
+
+        // Draw the line segments using the original style
+        let mut last_point: Option<(f64, f64)> = None;
+        for (&x, &y) in x_axis_data.iter().zip(y_axis_data.iter()) {
+            if let Some((last_x, last_y)) = last_point {
+                let color_to_use = if y > 0.0 { &DARK_GREEN } else { &DARK_RED };
+
+                let points: Vec<(f64, f64)> = vec![(last_x, last_y), (x.to_f64(), y)];
+                chart.draw_series(LineSeries::new(points, color_to_use))?;
+            }
+            last_point = Some((x.to_f64(), y));
+        }
+
+        // Draw any additional points and vertical lines
+        draw_points_on_chart(&mut chart, &self.get_points())?;
+        draw_vertical_lines_on_chart(&mut chart, &self.get_vertical_lines())?;
+
+        // Present the final chart
+        root.present()?;
+        Ok(())
+    }
+
     fn title(&self) -> String {
         self.title.clone()
     }
 
     fn get_x_values(&self) -> Vec<Positive> {
-        // TODO: invert in the graph
         self.steps
             .iter()
             .map(|step| step.get_graph_x_in_days_left())

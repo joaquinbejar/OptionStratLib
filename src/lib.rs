@@ -1,7 +1,6 @@
 #![allow(unknown_lints)]
 #![allow(clippy::literal_string_with_formatting_args)]
 
-
 //!  # OptionStratLib v0.4.4: Financial Options Library
 //!  
 //!  ## Table of Contents
@@ -393,10 +392,11 @@
 //!  ## Strategies Classifications
 //!  
 //!  ```mermaid
-//!  ---
-//!  config:
-//!  layout: fixed
-//!  ---
+//!  %%{
+//!   init: {
+//!     'flowchart': { 'layout': 'fixed' }
+//!   }
+//!  }%%
 //!  flowchart TD
 //!  start["Options Strategies"] --> bullish["Bullish"] & bearish["Bearish"] & neutral["Neutral"]
 //!  bullish --> bull_high["High Volatility"] & bull_low["Low Volatility"]
@@ -653,7 +653,6 @@
 //!  make coverage
 //!  ```
 //!  
-
 
 /// # OptionsStratLib: Financial Options Trading Library
 ///

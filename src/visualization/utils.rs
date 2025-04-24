@@ -113,6 +113,55 @@ macro_rules! build_chart {
     };
 }
 
+/// A macro to quickly build an inverted chart using the Plotters library.
+///
+/// This macro simplifies the process of creating a Cartesian 2D chart with inverted x-axis and
+/// standard y-axis bounds, along with customizable parameters.
+///
+/// # Parameters
+///
+/// * `$root`: The drawing area root (typically a backend, such as a canvas, image, etc.) where the chart will be drawn.
+/// * `$title`: A string slice representing the title of the chart.
+/// * `$title_size`: A numeric value specifying the size of the chart title's font.
+/// * `$min_x`: The minimum value for the x-axis (rightmost bound due to the inversion).
+/// * `$max_x`: The maximum value for the x-axis (leftmost bound due to the inversion).
+/// * `$min_y`: The minimum value for the y-axis (bottom bound).
+/// * `$max_y`: The maximum value for the y-axis (top bound).
+///
+/// # Behavior
+///
+/// * Sets margins and sizes for the chart's label areas (top, x-axis, y-axis, and right y-axis).
+/// * Inverts the x-axis interval (`$max_x..$min_x`) while retaining the standard interval for the y-axis (`$min_y..$max_y`).
+/// * Attaches a title with the specified font and size.
+///
+/// # Returns
+///
+/// Returns a `Result` containing a `Cartesian2d` chart context on success or an error if chart building fails.
+///
+/// This will create a chart with:
+/// - Title: "Inverted Axis Chart" with font size 20.
+/// - X-axis: Range flipped from 100 (left) to 0 (right).
+/// - Y-axis: Standard range from 0 (bottom) to 50 (top).
+///
+/// # Notes
+///
+/// * Ensure `plotters` library is included in your `Cargo.toml` to use this macro.
+/// * The macro also handles typical chart margins and label-area sizes by default.
+/// * Handle any errors returned from the macro while building the chart.
+#[macro_export]
+macro_rules! build_chart_inverted {
+    ($root:expr, $title:expr, $title_size:expr, $min_x:expr, $max_x:expr, $min_y:expr, $max_y:expr) => {
+        plotters::prelude::ChartBuilder::on($root)
+            .caption($title, ("sans-serif", $title_size))
+            .margin(10)
+            .top_x_label_area_size(40)
+            .x_label_area_size(40)
+            .y_label_area_size(60)
+            .right_y_label_area_size(60)
+            .build_cartesian_2d($max_x..$min_x, $min_y..$max_y)?
+    };
+}
+
 /// Configures the chart mesh, labels, and draws a horizontal line at y = 0.
 ///
 /// # Arguments
