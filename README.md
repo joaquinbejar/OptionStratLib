@@ -406,11 +406,10 @@
  ## Strategies Classifications
 
  ```mermaid
- %%{
-  init: {
-    'flowchart': { 'layout': 'fixed' }
-  }
- }%%
+ ---
+ config:
+ layout: fixed
+ ---
  flowchart TD
  start["Options Strategies"] --> bullish["Bullish"] & bearish["Bearish"] & neutral["Neutral"]
  bullish --> bull_high["High Volatility"] & bull_low["Low Volatility"]
