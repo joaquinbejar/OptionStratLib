@@ -9,6 +9,7 @@ use crate::greeks::utils::{big_n, d1, d2, n};
 use crate::model::types::OptionStyle;
 use crate::{Options, Positive, Side};
 use rust_decimal::{Decimal, MathematicalOps};
+use serde::{Deserialize, Serialize};
 
 /// Represents a complete set of option Greeks, which measure the sensitivity of an option's
 /// price to various market factors.
@@ -45,6 +46,31 @@ pub struct Greek {
     pub rho_d: Decimal,
     /// Measures the option's theoretical value not explained by other Greeks
     pub alpha: Decimal,
+}
+
+/// A struct representing a snapshot of the Greeks, financial measures used to assess risk and
+/// sensitivity of derivative instruments such as options.
+///
+/// The Greeks provide insights into how various factors, such as price movement, time decay,
+/// or volatility, affect the theoretical value of derivatives. This struct supports serialization
+/// and deserialization for storage or communication purposes, and implements common traits like
+/// `Debug`, `Clone`, and `PartialEq`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct GreeksSnapshot {
+    /// Measures sensitivity to changes in the underlying asset's price (first derivative)
+    pub delta: Decimal,
+    /// Measures the rate of change in delta (second derivative of the option price)
+    pub gamma: Decimal,
+    /// Measures the time decay of an option's value (sensitivity to the passage of time)
+    pub theta: Decimal,
+    /// Measures sensitivity to changes in implied volatility
+    pub vega: Decimal,
+    /// Measures sensitivity to changes in the risk-free interest rate
+    pub rho: Option<Decimal>,
+    /// Measures sensitivity to changes in the dividend yield
+    pub rho_d: Option<Decimal>,
+    /// Measures the option's theoretical value not explained by other Greeks
+    pub alpha: Option<Decimal>,
 }
 
 /// Trait that provides option Greeks calculation functionality for financial instruments.
