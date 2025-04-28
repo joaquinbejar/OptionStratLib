@@ -2058,6 +2058,12 @@ impl OptionChain {
     }
 }
 
+impl Default for OptionChain {
+    fn default() -> Self {
+        Self::new("", Default::default(), "".to_string(), None, None)
+    }
+}
+
 impl Len for OptionChain {
     fn len(&self) -> usize {
         self.options.len()

@@ -231,6 +231,19 @@ impl ShortStrangle {
     }
 }
 
+impl Default for ShortStrangle {
+    fn default() -> Self {
+        ShortStrangle {
+            name: "Short Strangle".to_string(),
+            kind: StrategyType::ShortStrangle,
+            description: SHORT_STRANGLE_DESCRIPTION.to_string(),
+            break_even_points: Vec::new(),
+            short_call: Position::default(),
+            short_put: Position::default(),
+        }
+    }
+}
+
 impl StrategyConstructor for ShortStrangle {
     fn get_strategy(vec_options: &[Position]) -> Result<Self, StrategyError> {
         // Need exactly 2 options for a short strangle
