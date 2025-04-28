@@ -1268,6 +1268,19 @@ impl LongStrangle {
     }
 }
 
+impl Default for LongStrangle {
+    fn default() -> Self {
+        LongStrangle {
+            name: "Long Strangle".to_string(),
+            kind: StrategyType::ShortStrangle,
+            description: LONG_STRANGLE_DESCRIPTION.to_string(),
+            break_even_points: Vec::new(),
+            long_call: Position::default(),
+            long_put: Position::default(),
+        }
+    }
+}
+
 impl StrategyConstructor for LongStrangle {
     fn get_strategy(vec_options: &[Position]) -> Result<Self, StrategyError> {
         // Need exactly 2 options for a long strangle
