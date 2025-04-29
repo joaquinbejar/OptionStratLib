@@ -6,7 +6,7 @@
 use crate::Positive;
 use crate::chains::OptionData;
 use crate::error::chains::ChainError;
-use crate::model::types::ExpirationDate;
+use crate::model::ExpirationDate;
 use crate::model::utils::ToRound;
 use num_traits::FromPrimitive;
 use rust_decimal::Decimal;

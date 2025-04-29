@@ -38,8 +38,8 @@
 //! ```rust
 //! use rust_decimal_macros::dec;
 //! use optionstratlib::greeks::{delta, gamma, rho, theta, vega};
-//! use optionstratlib::Options;
-//! use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+//! use optionstratlib::{ExpirationDate, Options};
+//! use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
 //! use optionstratlib::pos;
 //! use optionstratlib::Positive;
 //!

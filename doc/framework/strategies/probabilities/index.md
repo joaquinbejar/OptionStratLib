@@ -75,7 +75,7 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
 ``` {.rust .rust-example-rendered}
 use rust_decimal_macros::dec;
 use tracing::info;
-use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
 use optionstratlib::strategies::probabilities::{ProbabilityAnalysis, VolatilityAdjustment, PriceTrend, StrategyProbabilityAnalysis};
 use optionstratlib::Positive;
 use optionstratlib::pos;

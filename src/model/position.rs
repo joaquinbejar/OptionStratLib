@@ -3,17 +3,17 @@
    Email: jb@taunais.com
    Date: 18/8/24
 ******************************************************************************/
-use crate::Options;
 use crate::chains::OptionData;
 use crate::error::position::PositionValidationErrorKind;
 use crate::error::{GreeksError, PositionError, TransactionError};
 use crate::greeks::Greeks;
-use crate::model::types::{ExpirationDate, OptionStyle, Side};
+use crate::model::types::{OptionStyle, Side};
 use crate::pnl::utils::PnL;
 use crate::pnl::{PnLCalculator, Transaction, TransactionAble};
 use crate::pricing::payoff::Profit;
 use crate::visualization::model::ChartVerticalLine;
 use crate::visualization::utils::Graph;
+use crate::{ExpirationDate, Options};
 use crate::{Positive, pos};
 use chrono::{DateTime, Utc};
 use num_traits::ToPrimitive;
@@ -880,7 +880,7 @@ impl Graph for Position {
 mod tests_position {
     use super::*;
     use crate::constants::ZERO;
-    use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+    use crate::model::types::{OptionStyle, OptionType, Side};
     use crate::pos;
     use chrono::Duration;
     use rust_decimal_macros::dec;
@@ -1436,7 +1436,7 @@ mod tests_valid_position {
 #[cfg(test)]
 mod tests_position_break_even {
     use super::*;
-    use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+    use crate::model::types::{OptionStyle, OptionType, Side};
     use crate::pos;
     use rust_decimal_macros::dec;
 
@@ -1588,7 +1588,7 @@ mod tests_position_break_even {
 #[cfg(test)]
 mod tests_position_max_loss_profit {
     use super::*;
-    use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+    use crate::model::types::{OptionStyle, OptionType, Side};
     use crate::pos;
     use approx::assert_relative_eq;
     use rust_decimal_macros::dec;

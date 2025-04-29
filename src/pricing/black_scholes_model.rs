@@ -267,8 +267,10 @@ mod tests_black_scholes {
     use super::*;
     use crate::constants::DAYS_IN_A_YEAR;
     use crate::greeks::{d1, d2};
-    use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
-    use crate::{Options, Positive, assert_decimal_eq, assert_pos_relative_eq, pos};
+    use crate::model::types::{OptionStyle, OptionType, Side};
+    use crate::{
+        ExpirationDate, Options, Positive, assert_decimal_eq, assert_pos_relative_eq, pos,
+    };
     use rust_decimal_macros::dec;
 
     fn mock_options_call() -> Options {
@@ -921,8 +923,8 @@ mod tests_black_scholes_trait_bis {
 #[cfg(test)]
 mod tests_black_scholes_bis {
     use super::*;
-    use crate::model::types::{ExpirationDate, OptionStyle, Side};
-    use crate::{Positive, assert_decimal_eq, pos};
+    use crate::model::types::{OptionStyle, Side};
+    use crate::{ExpirationDate, Positive, assert_decimal_eq, pos};
     use rust_decimal_macros::dec;
 
     fn create_base_option(side: Side, style: OptionStyle) -> Options {

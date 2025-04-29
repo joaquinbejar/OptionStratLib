@@ -24,7 +24,7 @@ use crate::error::{GreeksError, OperationErrorKind};
 use crate::greeks::Greeks;
 use crate::model::ProfitLossRange;
 use crate::model::position::Position;
-use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+use crate::model::types::{OptionStyle, OptionType, Side};
 use crate::model::utils::mean_and_std;
 use crate::pnl::PnLCalculator;
 use crate::pnl::utils::PnL;
@@ -36,7 +36,7 @@ use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria, calculate_
 use crate::strategies::{DeltaAdjustment, StrategyConstructor};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
-use crate::{Options, Positive};
+use crate::{ExpirationDate, Options, Positive};
 use chrono::Utc;
 use num_traits::{FromPrimitive, ToPrimitive};
 use plotters::prelude::full_palette::ORANGE;
@@ -2765,7 +2765,7 @@ mod tests_long_strangle {
 #[cfg(test)]
 mod tests_short_strangle_probability {
     use super::*;
-    use crate::model::types::ExpirationDate;
+    use crate::model::ExpirationDate;
     use crate::pos;
     use crate::strategies::probabilities::utils::PriceTrend;
     use rust_decimal_macros::dec;
@@ -2913,7 +2913,7 @@ mod tests_short_strangle_probability {
 #[cfg(test)]
 mod tests_short_strangle_probability_bis {
     use super::*;
-    use crate::model::types::ExpirationDate;
+    use crate::model::ExpirationDate;
     use crate::pos;
     use crate::strategies::probabilities::utils::PriceTrend;
     use rust_decimal_macros::dec;
@@ -3065,7 +3065,7 @@ mod tests_short_strangle_probability_bis {
 #[cfg(test)]
 mod tests_long_strangle_probability {
     use super::*;
-    use crate::model::types::ExpirationDate;
+    use crate::model::ExpirationDate;
     use crate::pos;
     use crate::strategies::probabilities::utils::PriceTrend;
     use rust_decimal_macros::dec;
@@ -3221,7 +3221,7 @@ mod tests_long_strangle_probability {
 mod tests_short_strangle_delta {
     use super::*;
     use crate::greeks::Greeks;
-    use crate::model::types::{ExpirationDate, OptionStyle};
+    use crate::model::types::OptionStyle;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use crate::strategies::strangle::Positive;
@@ -3382,7 +3382,7 @@ mod tests_short_strangle_delta {
 mod tests_long_strangle_delta {
     use super::*;
     use crate::greeks::Greeks;
-    use crate::model::types::{ExpirationDate, OptionStyle};
+    use crate::model::types::OptionStyle;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use crate::strategies::strangle::{LongStrangle, Positive};
@@ -3515,7 +3515,7 @@ mod tests_long_strangle_delta {
 mod tests_short_strangle_delta_size {
     use super::*;
     use crate::greeks::Greeks;
-    use crate::model::types::{Action, ExpirationDate, OptionStyle};
+    use crate::model::types::{Action, OptionStyle};
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use crate::strategies::strangle::Positive;
@@ -3807,7 +3807,7 @@ mod tests_short_strangle_delta_size {
 mod tests_long_strangle_delta_size {
     use super::*;
     use crate::greeks::Greeks;
-    use crate::model::types::{Action, ExpirationDate, OptionStyle};
+    use crate::model::types::{Action, OptionStyle};
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use crate::strategies::strangle::{LongStrangle, Positive};
@@ -4087,7 +4087,7 @@ mod tests_long_strangle_delta_size {
 mod tests_strangle_position_management {
     use super::*;
     use crate::error::position::PositionValidationErrorKind;
-    use crate::model::types::{ExpirationDate, OptionStyle, Side};
+    use crate::model::types::{OptionStyle, Side};
     use crate::pos;
     use rust_decimal_macros::dec;
 
@@ -4290,7 +4290,7 @@ mod tests_strangle_position_management {
 #[cfg(test)]
 mod tests_adjust_option_position_short {
     use super::*;
-    use crate::model::types::{ExpirationDate, OptionStyle, Side};
+    use crate::model::types::{OptionStyle, Side};
     use crate::pos;
     use rust_decimal_macros::dec;
 
@@ -4419,7 +4419,7 @@ mod tests_adjust_option_position_short {
 #[cfg(test)]
 mod tests_adjust_option_position_long {
     use super::*;
-    use crate::model::types::{ExpirationDate, OptionStyle, Side};
+    use crate::model::types::{OptionStyle, Side};
     use crate::pos;
     use rust_decimal_macros::dec;
 

@@ -801,7 +801,7 @@ impl PnLCalculator for BearPutSpread {
 #[cfg(test)]
 mod tests_bear_put_spread_strategy {
     use super::*;
-    use crate::model::types::ExpirationDate;
+    use crate::model::ExpirationDate;
     use crate::pos;
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
@@ -1027,7 +1027,7 @@ mod tests_bear_put_spread_strategy {
 #[cfg(test)]
 mod tests_bear_put_spread_validation {
     use super::*;
-    use crate::model::types::ExpirationDate;
+    use crate::model::ExpirationDate;
     use chrono::Utc;
     use rust_decimal_macros::dec;
 
@@ -1203,7 +1203,7 @@ mod tests_bear_put_spread_optimization {
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
-    use crate::model::types::ExpirationDate;
+    use crate::model::ExpirationDate;
     use crate::spos;
 
     fn create_test_chain() -> OptionChain {
@@ -1491,7 +1491,7 @@ mod tests_bear_put_spread_optimization {
 #[cfg(test)]
 mod tests_bear_put_spread_optimizable {
     use super::*;
-    use crate::model::types::ExpirationDate;
+    use crate::model::ExpirationDate;
     use crate::spos;
     use crate::strategies::utils::FindOptimalSide;
     use crate::utils::setup_logger;
@@ -1740,7 +1740,7 @@ mod tests_bear_put_spread_optimizable {
 #[cfg(test)]
 mod tests_bear_put_spread_profit {
     use super::*;
-    use crate::model::types::ExpirationDate;
+    use crate::model::ExpirationDate;
     use crate::pos;
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
@@ -2092,7 +2092,7 @@ mod tests_bear_put_spread_probability {
 #[cfg(test)]
 mod tests_bear_put_spread_graph {
     use super::*;
-    use crate::model::types::ExpirationDate;
+    use crate::model::ExpirationDate;
     use crate::pos;
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
@@ -2269,7 +2269,7 @@ mod tests_bear_put_spread_graph {
 #[cfg(test)]
 mod tests_delta {
     use super::*;
-    use crate::model::types::{ExpirationDate, OptionStyle};
+    use crate::model::types::OptionStyle;
     use crate::strategies::bear_put_spread::BearPutSpread;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
@@ -2399,7 +2399,7 @@ mod tests_delta {
 #[cfg(test)]
 mod tests_delta_size {
     use super::*;
-    use crate::model::types::{ExpirationDate, OptionStyle};
+    use crate::model::types::OptionStyle;
     use crate::strategies::bear_put_spread::BearPutSpread;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
@@ -2533,7 +2533,7 @@ mod tests_delta_size {
 mod tests_bear_call_spread_position_management {
     use super::*;
     use crate::error::position::PositionValidationErrorKind;
-    use crate::model::types::{ExpirationDate, OptionStyle, Side};
+    use crate::model::types::{OptionStyle, Side};
     use crate::pos;
     use rust_decimal_macros::dec;
     use tracing::error;
@@ -2643,7 +2643,7 @@ mod tests_bear_call_spread_position_management {
 #[cfg(test)]
 mod tests_adjust_option_position {
     use super::*;
-    use crate::model::types::{ExpirationDate, OptionStyle, Side};
+    use crate::model::types::{OptionStyle, Side};
     use crate::pos;
     use rust_decimal_macros::dec;
 

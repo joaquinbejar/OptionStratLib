@@ -5,7 +5,7 @@
 ******************************************************************************/
 use crate::Positive;
 use crate::error::probability::{PriceErrorKind, ProbabilityError};
-use crate::model::types::ExpirationDate;
+use crate::model::ExpirationDate;
 use crate::strategies::probabilities::utils::{
     PriceTrend, VolatilityAdjustment, calculate_single_point_probability,
 };

@@ -71,8 +71,8 @@
 //! ```rust
 //! use rust_decimal_macros::dec;
 //! use tracing::info;
-//! use optionstratlib::Options;
-//! use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+//! use optionstratlib::{ExpirationDate, Options};
+//! use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
 //! use optionstratlib::pos;
 //! use optionstratlib::Positive;
 //!
@@ -122,8 +122,12 @@ pub mod utils;
 /// Components for defining and working with chart axes in strategy visualizations.
 mod axis;
 
+/// Components for defining and working with expiration dates.
+mod expiration;
+
 pub use axis::BasicAxisTypes;
+pub use expiration::ExpirationDate;
 pub use option::Options;
 pub use position::Position;
 pub use profit_range::ProfitLossRange;
-pub use types::{ExpirationDate, OptionStyle, OptionType, Side};
+pub use types::{OptionStyle, OptionType, Side};

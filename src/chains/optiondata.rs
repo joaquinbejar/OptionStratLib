@@ -1442,7 +1442,7 @@ mod optiondata_coverage_tests {
 #[cfg(test)]
 mod tests_get_position {
     use super::*;
-    use crate::model::types::ExpirationDate;
+    use crate::model::ExpirationDate;
     use crate::utils::logger::setup_logger;
     use crate::{assert_pos_relative_eq, pos, spos};
     use chrono::{Duration, Utc};
@@ -2088,7 +2088,7 @@ mod tests_check_convert_implied_volatility {
 #[cfg(test)]
 mod tests_get_option_for_iv {
     use super::*;
-    use crate::model::types::ExpirationDate;
+    use crate::model::ExpirationDate;
     use crate::{pos, spos};
     use rust_decimal_macros::dec;
 

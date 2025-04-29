@@ -86,7 +86,7 @@ use tracing::{error, info};
 use optionstratlib::constants::ZERO;
 use optionstratlib::greeks::delta;
 use optionstratlib::Options;
-use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
 use optionstratlib::{pos, Positive};
 let option = Options {
     option_type: OptionType::European,side:

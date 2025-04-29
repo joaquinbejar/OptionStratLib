@@ -542,8 +542,9 @@
 use optionstratlib::greeks::Greeks;
 use optionstratlib::Options;
 use optionstratlib::Positive;
-use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+use optionstratlib::model::types::{OptionStyle, OptionType, Side};
 use optionstratlib::pos;
+use optionstratlib::ExpirationDate;
 use optionstratlib::utils::setup_logger;
 use optionstratlib::visualization::utils::Graph;
 use optionstratlib::visualization::utils::GraphBackend;
@@ -552,7 +553,7 @@ use tracing::info;
 
 fn create_sample_option() -> Options {
     use rust_decimal_macros::dec;
-use optionstratlib::pos;Options::new(
+use optionstratlib::{pos, ExpirationDate};Options::new(
         OptionType::European,
         Side::Long,
         "AAPL".to_string(),

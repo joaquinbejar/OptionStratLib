@@ -269,7 +269,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model::types::ExpirationDate;
+    use crate::model::ExpirationDate;
     use crate::pos;
 
     #[test]
@@ -296,7 +296,7 @@ mod tests {
 #[cfg(test)]
 mod tests_serialize {
     use super::*;
-    use crate::model::types::ExpirationDate;
+    use crate::model::ExpirationDate;
     use crate::pos;
     use rust_decimal_macros::dec;
     use serde_json::{Value, json};

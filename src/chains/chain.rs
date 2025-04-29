@@ -2444,7 +2444,7 @@ impl BasicSurfaces for OptionChain {
 #[cfg(test)]
 mod tests_chain_base {
     use super::*;
-    use crate::model::types::ExpirationDate;
+    use crate::model::ExpirationDate;
     use crate::utils::logger::setup_logger;
     use crate::{pos, spos};
     use rust_decimal_macros::dec;
@@ -2791,7 +2791,7 @@ mod tests_chain_base {
 #[cfg(test)]
 mod tests_option_data {
     use super::*;
-    use crate::model::types::ExpirationDate;
+    use crate::model::ExpirationDate;
     use crate::spos;
     use crate::utils::logger::setup_logger;
     use crate::{assert_pos_relative_eq, pos};
@@ -3072,7 +3072,7 @@ mod tests_option_data {
 mod tests_get_random_positions {
     use super::*;
     use crate::error::chains::ChainBuildErrorKind;
-    use crate::model::types::ExpirationDate;
+    use crate::model::ExpirationDate;
     use crate::utils::logger::setup_logger;
     use crate::{pos, spos};
     use rust_decimal_macros::dec;
@@ -3647,7 +3647,7 @@ mod tests_strike_price_range_vec {
 mod tests_option_data_get_option {
     use super::*;
     use crate::error::chains::OptionDataErrorKind;
-    use crate::model::types::ExpirationDate;
+    use crate::model::ExpirationDate;
     use crate::{pos, spos};
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
@@ -3751,7 +3751,7 @@ mod tests_option_data_get_options_in_strike {
     use super::*;
     use crate::error::chains::OptionDataErrorKind;
     use crate::greeks::Greeks;
-    use crate::model::types::ExpirationDate;
+    use crate::model::ExpirationDate;
     use crate::{assert_decimal_eq, pos, spos};
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
@@ -3950,7 +3950,7 @@ mod tests_option_data_get_options_in_strike {
 #[cfg(test)]
 mod tests_filter_options_in_strike {
     use super::*;
-    use crate::model::types::ExpirationDate;
+    use crate::model::ExpirationDate;
     use crate::{pos, spos};
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
@@ -5659,7 +5659,7 @@ mod tests_chain_implied_volatility {
 #[cfg(test)]
 mod tests_option_data_delta {
     use super::*;
-    use crate::model::types::ExpirationDate;
+    use crate::model::ExpirationDate;
     use crate::utils::setup_logger_with_level;
     use crate::{pos, spos};
     use rust_decimal_macros::dec;
@@ -7092,7 +7092,7 @@ mod tests_theta_calculations {
 mod tests_atm_strike {
     use super::*;
     use crate::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
-    use crate::model::types::ExpirationDate;
+    use crate::model::ExpirationDate;
     use crate::utils::logger::setup_logger;
     use crate::{pos, spos};
     use rust_decimal_macros::dec;
@@ -7278,7 +7278,7 @@ mod tests_atm_strike {
 mod tests_atm_strike_bis {
     use super::*;
     use crate::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
-    use crate::model::types::ExpirationDate;
+    use crate::model::ExpirationDate;
     use crate::utils::logger::setup_logger;
     use crate::{pos, spos};
     use rust_decimal_macros::dec;
@@ -7589,7 +7589,7 @@ mod tests_option_chain_utils_bis {
     use super::*;
     use crate::chains::utils::OptionChainBuildParams;
     use crate::chains::utils::OptionDataPriceParams;
-    use crate::model::types::ExpirationDate;
+    use crate::model::ExpirationDate;
     use crate::pos;
     use crate::spos;
     use crate::utils::logger::setup_logger;
@@ -7772,7 +7772,7 @@ mod tests_option_chain_utils_bis {
 mod tests_to_build_params_bis {
     use super::*;
     use crate::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
-    use crate::model::types::ExpirationDate;
+    use crate::model::ExpirationDate;
     use crate::utils::logger::setup_logger;
     use crate::{pos, spos};
     use rust_decimal_macros::dec;

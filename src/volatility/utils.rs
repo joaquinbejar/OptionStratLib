@@ -665,9 +665,9 @@ mod tests_ewma_volatility {
 #[cfg(test)]
 mod tests_implied_volatility {
     use super::*;
-    use crate::assert_pos_relative_eq;
-    use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+    use crate::model::types::{OptionStyle, OptionType, Side};
     use crate::pos;
+    use crate::{ExpirationDate, assert_pos_relative_eq};
     use rust_decimal_macros::dec;
 
     fn create_test_option() -> Options {
@@ -994,9 +994,9 @@ mod tests_heston_volatility {
 #[cfg(test)]
 mod tests_uncertain_volatility_bounds {
     use super::*;
-    use crate::assert_pos_relative_eq;
-    use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+    use crate::model::types::{OptionStyle, OptionType, Side};
     use crate::pos;
+    use crate::{ExpirationDate, assert_pos_relative_eq};
     use rust_decimal_macros::dec;
 
     // Helper function to create a test option

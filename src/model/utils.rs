@@ -4,8 +4,8 @@
    Date: 21/8/24
 ******************************************************************************/
 use crate::model::Position;
-use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
-use crate::{Options, Positive, pos};
+use crate::model::types::{OptionStyle, OptionType, Side};
+use crate::{ExpirationDate, Options, Positive, pos};
 use chrono::{NaiveDateTime, TimeZone, Utc};
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;

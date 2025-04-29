@@ -61,7 +61,7 @@ let vol = constant_volatility(&returns);
 ``` {.rust .rust-example-rendered}
 use rust_decimal_macros::dec;
 use optionstratlib::Options;
-use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
 use optionstratlib::volatility::implied_volatility;
 use optionstratlib::Positive;
 use optionstratlib::pos;

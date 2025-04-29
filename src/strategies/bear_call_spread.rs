@@ -30,7 +30,6 @@ Key characteristics:
 use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, Strategies, StrategyType, Validable,
 };
-use crate::Options;
 use crate::Positive;
 use crate::chains::StrategyLegs;
 use crate::chains::chain::OptionChain;
@@ -43,7 +42,7 @@ use crate::error::{GreeksError, OperationErrorKind};
 use crate::greeks::Greeks;
 use crate::model::ProfitLossRange;
 use crate::model::position::Position;
-use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+use crate::model::types::{OptionStyle, OptionType, Side};
 use crate::model::utils::mean_and_std;
 use crate::pnl::utils::{PnL, PnLCalculator};
 use crate::pricing::payoff::Profit;
@@ -54,6 +53,7 @@ use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
 use crate::strategies::{StrategyBasics, StrategyConstructor};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
+use crate::{ExpirationDate, Options};
 use chrono::Utc;
 use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{RED, ShapeStyle};
@@ -811,7 +811,7 @@ impl PnLCalculator for BearCallSpread {
 #[cfg(test)]
 mod tests_bear_call_spread_strategies {
     use super::*;
-    use crate::model::types::ExpirationDate;
+    use crate::model::ExpirationDate;
     use crate::{assert_pos_relative_eq, pos};
     use approx::assert_relative_eq;
     use num_traits::ToPrimitive;
@@ -1056,8 +1056,8 @@ mod tests_bear_call_spread_strategies {
 mod tests_bear_call_spread_positionable {
     use super::*;
     use crate::model::position::Position;
-    use crate::model::types::{ExpirationDate, OptionStyle};
-    use crate::{Options, pos};
+    use crate::model::types::OptionStyle;
+    use crate::{ExpirationDate, Options, pos};
     use chrono::Utc;
     use rust_decimal_macros::dec;
 
@@ -1279,7 +1279,7 @@ mod tests_bear_call_spread_positionable {
 #[cfg(test)]
 mod tests_bear_call_spread_validable {
     use super::*;
-    use crate::model::types::ExpirationDate;
+    use crate::model::ExpirationDate;
     use crate::pos;
     use rust_decimal_macros::dec;
 
@@ -1472,7 +1472,7 @@ mod tests_bear_call_spread_validable {
 #[cfg(test)]
 mod tests_bear_call_spread_profit {
     use super::*;
-    use crate::model::types::ExpirationDate;
+    use crate::model::ExpirationDate;
     use crate::pos;
     use crate::pricing::payoff::Profit;
     use approx::assert_relative_eq;
@@ -1667,7 +1667,7 @@ mod tests_bear_call_spread_profit {
 #[cfg(test)]
 mod tests_bear_call_spread_optimizable {
     use super::*;
-    use crate::model::types::ExpirationDate;
+    use crate::model::ExpirationDate;
     use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
     use crate::{pos, spos};
     use num_traits::ToPrimitive;
@@ -2203,7 +2203,7 @@ mod tests_bear_call_spread_probability {
 #[cfg(test)]
 mod tests_delta {
     use super::*;
-    use crate::model::types::{ExpirationDate, OptionStyle};
+    use crate::model::types::OptionStyle;
     use crate::strategies::bear_call_spread::BearCallSpread;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
@@ -2334,11 +2334,11 @@ mod tests_delta {
 #[cfg(test)]
 mod tests_delta_size {
     use crate::greeks::Greeks;
-    use crate::model::types::{ExpirationDate, OptionStyle};
+    use crate::model::types::OptionStyle;
     use crate::strategies::bear_call_spread::BearCallSpread;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
-    use crate::{Positive, Side, assert_decimal_eq, assert_pos_relative_eq, pos};
+    use crate::{ExpirationDate, Positive, Side, assert_decimal_eq, assert_pos_relative_eq, pos};
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
 
@@ -2467,7 +2467,7 @@ mod tests_delta_size {
 mod tests_bear_call_spread_position_management {
     use super::*;
     use crate::error::position::PositionValidationErrorKind;
-    use crate::model::types::{ExpirationDate, OptionStyle, Side};
+    use crate::model::types::{OptionStyle, Side};
     use crate::pos;
     use rust_decimal_macros::dec;
     use tracing::error;
@@ -2577,7 +2577,7 @@ mod tests_bear_call_spread_position_management {
 #[cfg(test)]
 mod tests_adjust_option_position_short {
     use super::*;
-    use crate::model::types::{ExpirationDate, OptionStyle, Side};
+    use crate::model::types::{OptionStyle, Side};
     use crate::pos;
     use rust_decimal_macros::dec;
 
