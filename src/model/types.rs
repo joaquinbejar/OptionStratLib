@@ -8,6 +8,7 @@ use serde::ser::SerializeMap;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::error::Error;
 use std::fmt;
+use std::hash::{Hash, Hasher};
 
 /// Represents the expiration of an option contract or financial instrument.
 ///
@@ -17,7 +18,7 @@ use std::fmt;
 ///
 /// `ExpirationDate` is used throughout the options modeling system to handle
 /// time-based calculations such as time decay (theta) and option valuation.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Ord, PartialOrd)]
 pub enum ExpirationDate {
     /// Represents expiration as a positive number of days from the current date.
     /// This is typically used for relative time specifications.
@@ -26,6 +27,25 @@ pub enum ExpirationDate {
     /// Represents expiration as an absolute point in time using UTC datetime.
     /// This is used when a precise expiration moment is known.
     DateTime(DateTime<Utc>),
+}
+
+impl Hash for ExpirationDate {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        // First, hash a discriminant value to differentiate between variants
+        match self {
+            ExpirationDate::Days(_) => 0u8.hash(state),
+            ExpirationDate::DateTime(_) => 1u8.hash(state),
+        }
+
+        // Then hash the actual contents based on which variant it is
+        match self {
+            ExpirationDate::Days(days) => days.hash(state),
+            ExpirationDate::DateTime(date_time) => {
+                // For DateTime, hash the timestamp as nanoseconds
+                date_time.timestamp_nanos_opt().hash(state);
+            }
+        }
+    }
 }
 
 impl PartialEq for ExpirationDate {
@@ -1729,5 +1749,98 @@ mod tests_serialization {
         let json = r#"{"invalid":{"0":30}}"#;
         let result = serde_json::from_str::<ExpirationDate>(json);
         assert!(result.is_err());
+    }
+}
+
+#[cfg(test)]
+mod tests_hash {
+    use super::*;
+    use std::collections::hash_map::DefaultHasher;
+    use std::hash::{Hash, Hasher};
+    use chrono::{Duration, TimeZone};
+
+    // Helper function to calculate hash value for any hashable type
+    fn calculate_hash<T: Hash>(t: &T) -> u64 {
+        let mut hasher = DefaultHasher::new();
+        t.hash(&mut hasher);
+        hasher.finish()
+    }
+
+    #[test]
+    fn test_same_days_expiration_same_hash() {
+        let exp1 = ExpirationDate::Days(Positive::new(30.0).unwrap());
+        let exp2 = ExpirationDate::Days(Positive::new(30.0).unwrap());
+
+        assert_eq!(calculate_hash(&exp1), calculate_hash(&exp2));
+    }
+
+    #[test]
+    fn test_different_days_expiration_different_hash() {
+        let exp1 = ExpirationDate::Days(Positive::new(30.0).unwrap());
+        let exp2 = ExpirationDate::Days(Positive::new(45.0).unwrap());
+
+        assert_ne!(calculate_hash(&exp1), calculate_hash(&exp2));
+    }
+
+    #[test]
+    fn test_same_datetime_expiration_same_hash() {
+        let date1 = Utc.with_ymd_and_hms(2025, 1, 1, 0, 0, 0).unwrap();
+        let date2 = Utc.with_ymd_and_hms(2025, 1, 1, 0, 0, 0).unwrap();
+
+        let exp1 = ExpirationDate::DateTime(date1);
+        let exp2 = ExpirationDate::DateTime(date2);
+
+        assert_eq!(calculate_hash(&exp1), calculate_hash(&exp2));
+    }
+
+    #[test]
+    fn test_different_datetime_expiration_different_hash() {
+        let date1 = Utc.with_ymd_and_hms(2025, 1, 1, 0, 0, 0).unwrap();
+        let date2 = Utc.with_ymd_and_hms(2025, 1, 2, 0, 0, 0).unwrap();
+
+        let exp1 = ExpirationDate::DateTime(date1);
+        let exp2 = ExpirationDate::DateTime(date2);
+
+        assert_ne!(calculate_hash(&exp1), calculate_hash(&exp2));
+    }
+
+    #[test]
+    fn test_different_variants_different_hash() {
+        let date = Utc.with_ymd_and_hms(2025, 1, 1, 0, 0, 0).unwrap();
+
+        let exp1 = ExpirationDate::Days(Positive::new(30.0).unwrap());
+        let exp2 = ExpirationDate::DateTime(date);
+
+        assert_ne!(calculate_hash(&exp1), calculate_hash(&exp2));
+    }
+
+    #[test]
+    fn test_hash_consistency_over_time() {
+        let date = Utc::now();
+        let exp = ExpirationDate::DateTime(date);
+
+        let hash1 = calculate_hash(&exp);
+
+        // Sleep for a short time to ensure the test remains stable
+        std::thread::sleep(std::time::Duration::from_millis(10));
+
+        let hash2 = calculate_hash(&exp);
+
+        assert_eq!(hash1, hash2, "Hash should be consistent over time");
+    }
+
+    #[test]
+    fn test_different_but_equivalent_dates_different_hash() {
+        // Two dates that are 30 days apart
+        let now = Utc::now();
+        let thirty_days_later = now + Duration::days(30);
+
+        // One as Days variant, one as DateTime variant
+        let exp1 = ExpirationDate::Days(Positive::new(30.0).unwrap());
+        let exp2 = ExpirationDate::DateTime(thirty_days_later);
+
+        // Even though they might represent the same expiration in practice,
+        // they should hash differently because they're different variants
+        assert_ne!(calculate_hash(&exp1), calculate_hash(&exp2));
     }
 }

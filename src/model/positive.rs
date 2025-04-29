@@ -36,7 +36,7 @@ use std::str::FromStr;
 /// use optionstratlib::pos;
 /// let strike_price = pos!(100.0);
 /// ```
-#[derive(PartialEq, Clone, Copy)]
+#[derive(PartialEq, Clone, Copy, Hash)]
 pub struct Positive(pub(crate) Decimal);
 
 /// Macro for creating a new `Positive` value with simplified syntax.
