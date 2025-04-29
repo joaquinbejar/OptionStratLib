@@ -780,6 +780,13 @@ pub mod visualization;
 /// volatility skew/smile analysis.
 pub mod volatility;
 
+/// * `series` - Functionality for working with collections of option chains across expirations.
+///
+/// Provides tools to manage, filter, and analyze multiple option chains grouped by expiration dates.
+/// Includes utilities for constructing series data, navigating expirations, and performing
+/// cross-expiration analysis and visualization.
+pub mod series;
+
 pub use model::Options;
 pub use model::positive::Positive;
 pub use model::types::{ExpirationDate, OptionStyle, OptionType, Side};
