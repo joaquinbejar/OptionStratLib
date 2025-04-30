@@ -18,6 +18,7 @@ use std::fmt::Display;
 use std::iter::Sum;
 use std::ops::{Add, AddAssign, Div, Mul, MulAssign, Neg, Sub};
 use std::str::FromStr;
+use crate::series::OptionSeries;
 
 /// A wrapper type that represents a guaranteed positive decimal value.
 ///
@@ -614,6 +615,18 @@ impl From<&OptionChain> for Positive {
 
 impl From<OptionChain> for Positive {
     fn from(value: OptionChain) -> Self {
+        value.underlying_price
+    }
+}
+
+impl From<&OptionSeries> for Positive {
+    fn from(value: &OptionSeries) -> Self {
+        value.underlying_price
+    }
+}
+
+impl From<OptionSeries> for Positive {
+    fn from(value: OptionSeries) -> Self {
         value.underlying_price
     }
 }
