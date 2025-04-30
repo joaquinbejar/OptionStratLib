@@ -58,15 +58,24 @@ impl OptionSeries {
         keys
     }
 
-    pub fn build_series(_params: &OptionSeriesBuildParams) -> Self {
-        // Self {
-        //     symbol: "".to_string(),
-        //     underlying_price: Default::default(),
-        //     chains: Default::default(),
-        //     risk_free_rate: None,
-        //     dividend_yield: None,
-        // }
-        todo!()
+    pub fn build_series(params: &OptionSeriesBuildParams) -> Self {
+        let mut chains: BTreeMap<ExpirationDate, OptionChain> = BTreeMap::new();
+        for series in params.series.clone().into_iter() {
+            let expiration_date: ExpirationDate = ExpirationDate::Days(series);
+            let mut chain: OptionChain = OptionChain::build_chain(&params.chain_params);
+            chain.update_expiration_date(expiration_date.to_string());
+            
+            assert_eq!(expiration_date.to_string(), chain.get_expiration_date());
+            chains.insert(expiration_date, chain);
+        }
+        
+        Self {
+            symbol: params.chain_params.symbol.clone(),
+            underlying_price: params.chain_params.price_params.underlying_price,
+            chains,
+            risk_free_rate: Some(params.chain_params.price_params.risk_free_rate),
+            dividend_yield: Some(params.chain_params.price_params.dividend_yield),
+        }
     }
 
     pub fn to_build_params(&self) -> Result<OptionSeriesBuildParams, Box<dyn Error>> {
