@@ -5,3 +5,7 @@
 //! cross-expiration analysis and visualization.
 
 mod model;
+mod params;
+
+pub use model::OptionSeries;
+pub use params::OptionSeriesBuildParams;
