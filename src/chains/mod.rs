@@ -226,7 +226,7 @@ mod generators;
 
 pub use chain::OptionChain;
 pub use four::FourOptions;
-pub use generators::{generator_optionchain, generator_positive, generator_optionseries};
+pub use generators::{generator_optionchain, generator_optionseries, generator_positive};
 pub use legs::StrategyLegs;
 pub use optiondata::OptionData;
 pub use options::{DeltasInStrike, OptionsInStrike};

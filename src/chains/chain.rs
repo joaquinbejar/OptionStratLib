@@ -450,25 +450,27 @@ impl OptionChain {
             // Find the maximum distance from ATM in number of strikes
             let min_strike = strike_prices.iter().min().unwrap();
             let max_strike = strike_prices.iter().max().unwrap();
-
+        
             let strikes_below = ((atm_strike.to_dec() - min_strike.to_dec())
                 / strike_interval.to_dec())
             .ceil()
             .to_u64()
             .unwrap_or(0) as usize;
-
+        
             let strikes_above = ((max_strike.to_dec() - atm_strike.to_dec())
                 / strike_interval.to_dec())
             .ceil()
             .to_u64()
             .unwrap_or(0) as usize;
-
+        
             chain_size = strikes_below.max(strikes_above);
         }
 
         // Default to a reasonable chain size if calculation fails
         if chain_size == 0 {
             chain_size = 10;
+        } else {
+            chain_size = self.len();
         }
 
         // Estimate the average bid-ask spread from the available options
@@ -2055,6 +2057,50 @@ impl OptionChain {
                             .to_string(),
                 },
             ))
+    }
+
+    pub fn calculate_optimal_chain_params(&self) -> Result<(Positive, usize), ChainError> {
+        let params = self.to_build_params()?;
+        let underlying_price = params.price_params.underlying_price;
+        let strike_interval = if underlying_price < pos!(25.0) {
+            if underlying_price < pos!(10.0) {
+                pos!(1.0)
+            } else {
+                pos!(2.5)
+            }
+        } else if underlying_price < pos!(100.0) {
+            pos!(5.0)
+        } else if underlying_price < pos!(1000.0) {
+            pos!(10.0)
+        } else {
+            // Round to nearest integer
+            (underlying_price * pos!(0.01)).round()
+        };
+
+        // Step 2: Determine how many strikes to include
+        // This depends on:
+        // - The implied volatility
+        // - The time to expiration
+        // - Common market practice (usually 10-15 strikes above and below ATM)
+
+        // Get implied volatility, using a default if not provided
+        let iv = params.price_params.implied_volatility.unwrap_or(pos!(0.2));
+
+        // Get time to expiration in years
+        let time_to_exp = params.price_params.expiration_date.get_days()?;
+
+        // Calculate expected price movement based on volatility and time
+        // Using 1.96 standard deviations (95% confidence interval)
+        let expected_move = underlying_price * iv * time_to_exp.sqrt() * pos!(1.96);
+
+        // Calculate number of strikes needed to cover this move, plus a buffer
+        let strikes_needed = ((expected_move / strike_interval).ceiling() + pos!(5.0)).to_usize();
+
+        // Ensure we have at least 10 strikes in each direction, but not more than 25
+        // (for computational efficiency)
+        let num_strikes = strikes_needed.max(10).min(25);
+
+        Ok((strike_interval, num_strikes))
     }
 }
 

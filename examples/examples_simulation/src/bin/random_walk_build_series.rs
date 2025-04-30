@@ -1,16 +1,15 @@
-use optionstratlib::chains::chain::OptionChain;
 use optionstratlib::chains::utils::OptionDataPriceParams;
-use optionstratlib::chains::{OptionChainBuildParams, generator_optionchain, generator_optionseries};
+use optionstratlib::chains::{OptionChainBuildParams, generator_optionseries};
+use optionstratlib::series::{OptionSeries, OptionSeriesBuildParams};
 use optionstratlib::simulation::randomwalk::RandomWalk;
 use optionstratlib::simulation::steps::{Step, Xstep, Ystep};
 use optionstratlib::simulation::{WalkParams, WalkType, WalkTypeAble};
 use optionstratlib::utils::setup_logger;
-use optionstratlib::utils::time::{TimeFrame, convert_time_frame, get_x_days_formatted};
+use optionstratlib::utils::time::{TimeFrame, convert_time_frame};
 use optionstratlib::visualization::utils::{Graph, GraphBackend};
 use optionstratlib::{ExpirationDate, Positive, pos};
 use rust_decimal_macros::dec;
 use tracing::{debug, info};
-use optionstratlib::series::{OptionSeries, OptionSeriesBuildParams};
 
 #[warn(dead_code)]
 struct Walker {}
@@ -59,12 +58,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         decimal_places,
         price_params,
     );
-    
+
     let series_params = OptionSeriesBuildParams::new(
         build_params.clone(),
-        vec![pos!(0.0),pos!(2.0),pos!(5.0),pos!(15.0), pos!(30.0), pos!(45.0), pos!(60.0), pos!(120.0)],
+        vec![
+            pos!(1.0),
+            pos!(2.0),
+            pos!(5.0),
+            pos!(15.0),
+            pos!(30.0),
+            pos!(45.0),
+            pos!(60.0),
+            pos!(120.0),
+        ],
     );
-    let mut initial_series = OptionSeries::build_series(&series_params);
+    let initial_series = OptionSeries::build_series(&series_params);
     let walker = Box::new(Walker::new());
 
     let walk_params = WalkParams {
@@ -76,11 +84,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         walk_type: WalkType::GeometricBrownian {
             dt: convert_time_frame(pos!(1.0) / days, &TimeFrame::Minute, &TimeFrame::Day),
             drift: dec!(0.0),
-            volatility: std_dev,
+            volatility: implied_volatility.unwrap(),
         },
         walker,
     };
-
     let random_walk = RandomWalk::new(
         "Random Walk".to_string(),
         &walk_params,
@@ -90,12 +97,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     random_walk.graph(
         GraphBackend::Bitmap {
-            file_path: "Draws/Simulation/random_walk_build_chain.png",
+            file_path: "Draws/Simulation/random_walk_build_series.png",
             size: (1200, 800),
         },
         20,
     )?;
-    info!("Last Chain: {}", random_walk.last().unwrap().y.value());
+    let last = random_walk.last().unwrap().y.value();
+    info!("Last Series: {}", last);
 
     Ok(())
 }

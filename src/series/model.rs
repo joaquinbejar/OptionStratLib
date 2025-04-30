@@ -1,11 +1,13 @@
-use crate::chains::{OptionChain, OptionChainBuildParams};
+use crate::chains::OptionChain;
 use crate::series::params::OptionSeriesBuildParams;
+use crate::utils::Len;
 use crate::{ExpirationDate, Positive};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::error::Error;
 use std::fmt;
+use crate::chains::utils::calculate_optimal_chain_params;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OptionSeries {
@@ -50,25 +52,29 @@ impl OptionSeries {
     }
 
     pub fn get_expiration_dates(&self) -> Result<Vec<Positive>, Box<dyn Error>> {
-        let keys: Result<Vec<Positive>, Box<dyn Error>> = self.chains
-            .iter()
-            .map(|(e, _)| e.get_days().map_err(|err| err.into()))
+        let keys: Result<Vec<Positive>, Box<dyn Error>> = self
+            .chains.keys().map(|e| e.get_days())
             .collect();
 
         keys
     }
 
     pub fn build_series(params: &OptionSeriesBuildParams) -> Self {
+        let mut params = params.clone();
         let mut chains: BTreeMap<ExpirationDate, OptionChain> = BTreeMap::new();
         for series in params.series.clone().into_iter() {
             let expiration_date: ExpirationDate = ExpirationDate::Days(series);
+            params.chain_params.price_params.expiration_date = expiration_date;
+
+            let (optimal_strike_interval, num_strikes) = calculate_optimal_chain_params(&params.chain_params).unwrap();
+            params.chain_params.strike_interval = optimal_strike_interval;
+            params.chain_params.chain_size = num_strikes;
             let mut chain: OptionChain = OptionChain::build_chain(&params.chain_params);
-            chain.update_expiration_date(expiration_date.to_string());
             
-            assert_eq!(expiration_date.to_string(), chain.get_expiration_date());
+            chain.update_expiration_date(expiration_date.get_date_string().unwrap());
             chains.insert(expiration_date, chain);
         }
-        
+
         Self {
             symbol: params.chain_params.symbol.clone(),
             underlying_price: params.chain_params.price_params.underlying_price,
@@ -80,23 +86,22 @@ impl OptionSeries {
 
     pub fn to_build_params(&self) -> Result<OptionSeriesBuildParams, Box<dyn Error>> {
         let chain_params = self.chains.first_key_value();
-        let mut series = vec![];
-        let chain_params = match chain_params { 
-            Some((expiration_date, option_chain)) => {
-                series.push(expiration_date.get_days()?);
-                option_chain.to_build_params()?
-            },
+        let series = self.get_expiration_dates()?;
+        let chain_params = match chain_params {
+            Some((_, option_chain)) => option_chain.to_build_params()?,
             None => {
-              return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, "No chains found")));  
-            },
+                return Err(Box::new(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    "No chains found",
+                )));
+            }
         };
-        
+
         Ok(OptionSeriesBuildParams {
             chain_params,
             series,
         })
     }
-    
 }
 
 impl Default for OptionSeries {
@@ -127,5 +132,15 @@ impl fmt::Display for OptionSeries {
             "OptionSeries {{ symbol: {}, underlying_price: {}{}{}\n{} }}",
             self.symbol, self.underlying_price, risk_free_rate, dividend_yield, chains
         )
+    }
+}
+
+impl Len for OptionSeries {
+    fn len(&self) -> usize {
+        self.chains.len()
+    }
+
+    fn is_empty(&self) -> bool {
+        self.chains.is_empty()
     }
 }

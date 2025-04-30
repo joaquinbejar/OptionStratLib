@@ -4,6 +4,7 @@
    Date: 27/3/25
 ******************************************************************************/
 use crate::chains::OptionChain;
+use crate::series::OptionSeries;
 use crate::simulation::steps::{Step, Ystep};
 use crate::simulation::{WalkParams, WalkType};
 use crate::utils::TimeFrame;
@@ -11,10 +12,9 @@ use crate::utils::others::calculate_log_returns;
 use crate::volatility::{adjust_volatility, constant_volatility};
 use crate::{Positive, pos};
 use core::option::Option;
-use std::error::Error;
 use rust_decimal::Decimal;
+use std::error::Error;
 use tracing::{debug, info};
-use crate::series::OptionSeries;
 
 /// Creates a new `OptionChain` from a previous `Ystep` and a new price.
 ///
@@ -49,15 +49,15 @@ fn create_chain_from_step(
     Ok(new_chain)
 }
 
-/// Creates a new `OptionSeries` from a given previous `Ystep` series, a new price, 
+/// Creates a new `OptionSeries` from a given previous `Ystep` series, a new price,
 /// and an optional volatility value.
 ///
 /// # Parameters
 /// - `previous_y_step`: A reference to the previous `Ystep` series of type `OptionSeries`.
 ///   It represents the state of the series prior to this computation.
-/// - `new_price`: A reference to a `Positive` value representing the new price to use as an input 
+/// - `new_price`: A reference to a `Positive` value representing the new price to use as an input
 ///   for the computation.
-/// - `volatility`: An optional `Positive` value representing the volatility used in the calculation. 
+/// - `volatility`: An optional `Positive` value representing the volatility used in the calculation.
 ///   If `None`, a default behavior or calculation is assumed.
 ///
 /// # Returns
@@ -70,9 +70,10 @@ fn create_chain_from_step(
 /// - The `new_price` or optional `volatility`, if provided, result in an invalid computation.
 /// - Any other unexpected error occurs during the processing.
 ///
-fn create_series_from_step(    previous_y_step: &Ystep<OptionSeries>,
-                               new_price: &Positive,
-                               volatility: Option<Positive>,
+fn create_series_from_step(
+    previous_y_step: &Ystep<OptionSeries>,
+    new_price: &Positive,
+    volatility: Option<Positive>,
 ) -> Result<OptionSeries, Box<dyn Error>> {
     let series = previous_y_step.value();
     let mut series_params = series.to_build_params()?;

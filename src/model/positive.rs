@@ -7,6 +7,7 @@
 use crate::chains::chain::OptionChain;
 use crate::constants::EPSILON;
 use crate::model::utils::ToRound;
+use crate::series::OptionSeries;
 use approx::{AbsDiffEq, RelativeEq};
 use num_traits::{FromPrimitive, ToPrimitive};
 use rust_decimal::{Decimal, MathematicalOps};
@@ -18,7 +19,6 @@ use std::fmt::Display;
 use std::iter::Sum;
 use std::ops::{Add, AddAssign, Div, Mul, MulAssign, Neg, Sub};
 use std::str::FromStr;
-use crate::series::OptionSeries;
 
 /// A wrapper type that represents a guaranteed positive decimal value.
 ///
@@ -286,6 +286,19 @@ impl Positive {
         self.0.to_i64().unwrap()
     }
 
+    /// Converts the value to a usize signed integer.
+    ///
+    /// # Returns
+    ///
+    /// The value as an `usize`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the value cannot be represented as an `usize`.
+    pub fn to_usize(&self) -> usize {
+        self.0.to_usize().unwrap()
+    }
+
     /// Returns the maximum of two `Positive` values.
     ///
     /// # Arguments
@@ -466,6 +479,15 @@ impl Positive {
     /// `true` if the value is zero, `false` otherwise.
     pub fn is_zero(&self) -> bool {
         self.0.is_zero()
+    }
+
+    /// Returns the smallest integer greater than or equal to the value.
+    pub fn ceiling(&self) -> Positive {
+        let value = self.to_dec();
+        // Ceiling operation: find the smallest integer greater than or equal to value
+        let ceiling_value = value.ceil();
+        // Convert back to Positive
+        Positive::from(ceiling_value)
     }
 }
 

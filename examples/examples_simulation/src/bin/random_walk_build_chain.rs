@@ -71,7 +71,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         walk_type: WalkType::GeometricBrownian {
             dt: convert_time_frame(pos!(1.0) / days, &TimeFrame::Minute, &TimeFrame::Day),
             drift: dec!(0.0),
-            volatility: std_dev,
+            volatility: implied_volatility.unwrap(),
         },
         walker: walker,
     };

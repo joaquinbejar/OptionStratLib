@@ -3,11 +3,11 @@
    Email: jb@taunais.com
    Date: 25/10/24
 ******************************************************************************/
-use crate::Positive;
 use crate::chains::OptionData;
 use crate::error::chains::ChainError;
 use crate::model::ExpirationDate;
 use crate::model::utils::ToRound;
+use crate::{Positive, pos};
 use num_traits::FromPrimitive;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
@@ -667,6 +667,137 @@ pub(crate) fn rounder(reference_price: Positive, strike_interval: Positive) -> P
     };
 
     rounded.into()
+}
+
+/// Calculates the optimal strike interval for an option chain to achieve exactly `chain_size` strikes,
+/// scaling the interval with both expected move and time to expiration.
+///
+/// This function:
+/// 1. Computes expected move at 95% confidence using underlying price, implied volatility, and time.
+/// 2. Derives a base interval based on the underlying price, scaled by a time factor to adjust for longer expiries.
+/// 3. Determines a raw interval needed to span the expected move across the desired number of strikes.
+/// 4. Takes the maximum of base and raw intervals, and rounds to a clean market-friendly value.
+///
+/// # Arguments
+/// * `params` - Build parameters containing pricing inputs and desired chain size.
+///
+/// # Returns
+/// `(strike_interval, num_strikes)`:
+/// - `strike_interval`: calculated spacing between strikes.
+/// - `num_strikes`: always equals `params.chain_size`.
+///
+/// # Errors
+/// Returns `ChainError` if the expiration date cannot convert to days.
+pub fn calculate_optimal_chain_params(
+    params: &OptionChainBuildParams,
+) -> Result<(Positive, usize), ChainError> {
+    let p = &params.price_params;
+    let price = p.underlying_price;
+
+    // Use default 20% vol if none provided
+    let iv = p.implied_volatility.unwrap_or(pos!(0.2));
+
+    // Time to expiration in days and years
+    let days = p.expiration_date.get_days()?;
+    let t_years = days / pos!(365.0);
+
+    // Expected move at 95% confidence (1.96 sigma)
+    let expected_move = price * iv * t_years.sqrt() * pos!(1.96);
+
+    // Time scaling factor: sqrt(days/30)
+    // Larger for longer expiries, smaller for short ones
+    let time_factor = (days / pos!(30.0)).sqrt();
+
+    // Static base interval based on underlying price tiers
+    let base_static = if price < pos!(25.0) {
+        if price < pos!(10.0) {
+            pos!(1.0)
+        } else {
+            pos!(2.5)
+        }
+    } else if price < pos!(100.0) {
+        pos!(5.0)
+    } else if price < pos!(1000.0) {
+        pos!(10.0)
+    } else {
+        // For very high-priced assets, use 1% of price
+        price * pos!(0.01)
+    };
+
+    // Adjust base interval by time factor and round
+    let base_interval = (base_static * time_factor).round();
+
+    // Calculate half the number of intervals for the desired strikes
+    let num_strikes = params.chain_size;
+    let half_intervals = ((num_strikes - 1) as f64) / 2.0;
+
+    // Raw interval needed to span the expected move
+    let raw_interval = expected_move / pos!(half_intervals);
+
+    // Choose the larger of raw and base intervals
+    let target_interval = raw_interval.max(base_interval);
+
+    // println!(
+    //     "Base interval: {}, half_intervals: {}, raw_interval:{}, target_interval: {}",
+    //     base_interval,
+    //     half_intervals,
+    //     raw_interval.ceiling(),
+    //     target_interval.ceiling()
+    // );
+
+    // Round to a clean market-friendly interval
+    let strike_interval = round_to_clean_interval(target_interval, price);
+
+    Ok((strike_interval, num_strikes))
+}
+
+/// Rounds an interval to clean market-friendly values like 0.25, 0.5, 1, 2.5, 5, 10, etc.
+fn round_to_clean_interval(interval: Positive, price: Positive) -> Positive {
+    let v = interval.to_f64();
+
+    if price < pos!(25.0) {
+        if v <= 0.25 {
+            pos!(0.25)
+        } else if v <= 0.5 {
+            pos!(0.5)
+        } else if v <= 1.0 {
+            pos!(1.0)
+        } else if v <= 2.5 {
+            pos!(2.5)
+        } else {
+            pos!(5.0)
+        }
+    } else if price < pos!(100.0) {
+        if v <= 1.0 {
+            pos!(1.0)
+        } else if v <= 2.5 {
+            pos!(2.5)
+        } else if v <= 5.0 {
+            pos!(5.0)
+        } else {
+            pos!(10.0)
+        }
+    } else {
+        if v <= 5.0 {
+            pos!(1.0)
+        } else if v <= 8.0 {
+            pos!(2.0)
+        } else if v <= 12.5 {
+            pos!(5.0)
+        } else if v <= 15.0 {
+            pos!(10.0)
+        } else if v <= 20.0 {
+            pos!(15.0)
+        } else if v <= 25.0 {
+            pos!(20.0)
+        } else if v <= 35.0 {
+            pos!(25.0)
+        } else if v <= 50.0 {
+            pos!(50.0)
+        } else {
+            pos!(100.0)
+        }
+    }
 }
 
 #[cfg(test)]
