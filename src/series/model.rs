@@ -49,12 +49,43 @@ impl OptionSeries {
         }
     }
 
-    pub fn build_series(params: &OptionSeriesBuildParams) -> Self {
+    pub fn get_expiration_dates(&self) -> Result<Vec<Positive>, Box<dyn Error>> {
+        let keys: Result<Vec<Positive>, Box<dyn Error>> = self.chains
+            .iter()
+            .map(|(e, _)| e.get_days().map_err(|err| err.into()))
+            .collect();
+
+        keys
+    }
+
+    pub fn build_series(_params: &OptionSeriesBuildParams) -> Self {
+        // Self {
+        //     symbol: "".to_string(),
+        //     underlying_price: Default::default(),
+        //     chains: Default::default(),
+        //     risk_free_rate: None,
+        //     dividend_yield: None,
+        // }
         todo!()
     }
 
     pub fn to_build_params(&self) -> Result<OptionSeriesBuildParams, Box<dyn Error>> {
-        todo!()
+        let chain_params = self.chains.first_key_value();
+        let mut series = vec![];
+        let chain_params = match chain_params { 
+            Some((expiration_date, option_chain)) => {
+                series.push(expiration_date.get_days()?);
+                option_chain.to_build_params()?
+            },
+            None => {
+              return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, "No chains found")));  
+            },
+        };
+        
+        Ok(OptionSeriesBuildParams {
+            chain_params,
+            series,
+        })
     }
     
 }
