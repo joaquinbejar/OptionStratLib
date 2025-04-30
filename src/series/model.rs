@@ -4,6 +4,7 @@ use crate::{ExpirationDate, Positive};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
+use std::error::Error;
 use std::fmt;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -51,6 +52,11 @@ impl OptionSeries {
     pub fn build_series(params: &OptionSeriesBuildParams) -> Self {
         todo!()
     }
+
+    pub fn to_build_params(&self) -> Result<OptionSeriesBuildParams, Box<dyn Error>> {
+        todo!()
+    }
+    
 }
 
 impl Default for OptionSeries {

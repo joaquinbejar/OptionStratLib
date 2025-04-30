@@ -21,6 +21,14 @@ impl OptionSeriesBuildParams {
         }
     }
     
+    pub fn set_underlying_price(&mut self, price: &Positive) {
+        self.chain_params.set_underlying_price(price);
+    }
+    
+    pub fn set_implied_volatility(&mut self, volatility: Option<Positive>) {
+        self.chain_params.set_implied_volatility(volatility);   
+    }
+    
 }
 
 impl fmt::Display for OptionSeriesBuildParams {
