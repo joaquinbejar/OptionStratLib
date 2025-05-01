@@ -266,7 +266,7 @@ pub enum ChainBuildErrorKind {
     /// volatility values, typically related to skew modeling.
     VolatilityAdjustmentError {
         /// The skew factor that caused the error
-        skew_factor: f64,
+        smile_curve: f64,
         /// Detailed explanation of the volatility adjustment issue
         reason: String,
     },
@@ -440,13 +440,13 @@ impl fmt::Display for ChainBuildErrorKind {
                 write!(f, "Invalid parameter '{}': {}", parameter, reason)
             }
             ChainBuildErrorKind::VolatilityAdjustmentError {
-                skew_factor,
+                smile_curve,
                 reason,
             } => {
                 write!(
                     f,
                     "Volatility adjustment error (skew factor: {}): {}",
-                    skew_factor, reason
+                    smile_curve, reason
                 )
             }
             ChainBuildErrorKind::StrikeGenerationError {
@@ -735,7 +735,7 @@ mod tests_extended {
         assert!(error.to_string().contains("must be positive"));
 
         let error = ChainBuildErrorKind::VolatilityAdjustmentError {
-            skew_factor: 0.5,
+            smile_curve: 0.5,
             reason: "invalid adjustment".to_string(),
         };
         assert!(error.to_string().contains("0.5"));

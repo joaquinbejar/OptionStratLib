@@ -16,7 +16,7 @@ use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::fmt;
 use std::sync::Arc;
-use tracing::{debug, error, info, trace};
+use tracing::{debug, error, trace};
 
 /// Struct representing a row in an option chain with detailed pricing and analytics data.
 ///
@@ -1019,7 +1019,7 @@ impl OptionData {
             self.call_middle, self.put_middle
         );
         if self.call_middle.is_none() || self.put_middle.is_none() {
-            info!("Calculation middel prices for IV calculation:");
+            debug!("Calculation middel prices for IV calculation:");
             self.calculate_prices(price_params, false)?;
             trace!(
                 "call_middle {:?} put_middle {:?}",

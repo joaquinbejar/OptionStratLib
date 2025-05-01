@@ -5,13 +5,13 @@
 ******************************************************************************/
 use crate::chains::utils::{
     OptionChainBuildParams, OptionChainParams, OptionDataPriceParams, RandomPositionsParams,
-    adjust_volatility, default_empty_string, rounder,
+    adjust_volatility, default_empty_string, rounder, strike_step,
 };
 use crate::chains::{OptionData, OptionsInStrike, RNDAnalysis, RNDParameters, RNDResult};
 use crate::curves::{BasicCurves, Curve, Point2D};
 use crate::error::chains::{ChainError, OptionDataErrorKind};
 use crate::error::{CurveError, SurfaceError};
-use crate::geometrics::{LinearInterpolation, MetricsExtractor};
+use crate::geometrics::LinearInterpolation;
 use crate::greeks::Greeks;
 use crate::model::{
     BasicAxisTypes, ExpirationDate, OptionStyle, OptionType, Options, Position, Side,
@@ -25,6 +25,7 @@ use crate::{Positive, pos};
 use chrono::{NaiveDate, Utc};
 use num_traits::{FromPrimitive, ToPrimitive};
 use rust_decimal::{Decimal, MathematicalOps};
+use rust_decimal_macros::dec;
 use serde::de::{MapAccess, Visitor};
 use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
 use std::cmp::Ordering;
@@ -34,8 +35,20 @@ use std::fmt;
 use tracing::{debug, error, warn};
 use {crate::chains::utils::parse, csv::WriterBuilder, std::fs::File};
 
-/// A constant representing the divisor for the skew factor, set to 1000.
-const SKEW_FACTOR_DIVISOR: Decimal = Decimal::ONE_THOUSAND;
+/// A constant representing the skew value for the smile curve in financial modeling.
+///
+/// The skew smile curve is often used in options pricing to represent the implied volatility
+/// skew relative to strike prices. It helps adjust for market conditions and asset-specific
+/// behaviors in pricing models.
+pub const SKEW_SMILE_CURVE: Decimal = dec!(0.1);
+
+/// A constant representing the skew slope value used in calculations.
+///
+/// `SKEW_SLOPE` is defined as a `Decimal` with a value of `-0.2`.
+/// It is typically used in scenarios where a slope factor is applied,
+/// such as in financial models or data analysis where skewness impacts outcomes.
+///
+pub const SKEW_SLOPE: Decimal = dec!(-0.2);
 
 /// Represents an option chain for a specific underlying asset and expiration date.
 ///
@@ -318,7 +331,8 @@ impl OptionChain {
     ///     "SPY".to_string(),
     ///     spos!(1000.0),
     ///     10,
-    ///     pos!(5.0),
+    ///     spos!(5.0),
+    ///     dec!(-0.2),
     ///     dec!(0.1),
     ///     pos!(0.02),
     ///     2,
@@ -328,6 +342,18 @@ impl OptionChain {
     /// let chain = OptionChain::build_chain(&build_params);
     /// ```
     pub fn build_chain(params: &OptionChainBuildParams) -> Self {
+        let strike_interval = if let Some(strike_interval) = params.strike_interval {
+            strike_interval
+        } else {
+            strike_step(
+                params.price_params.underlying_price,
+                params.price_params.implied_volatility.unwrap(),
+                params.price_params.expiration_date.get_days().unwrap(),
+                params.chain_size,
+                None,
+            )
+        };
+
         let mut option_chain = OptionChain::new(
             &params.symbol,
             params.price_params.underlying_price,
@@ -340,8 +366,7 @@ impl OptionChain {
             Some(params.price_params.dividend_yield),
         );
 
-        fn create_chain_data(s: &Positive, p: &OptionChainBuildParams) -> OptionData {
-            let atm_distance = s.to_dec() - p.price_params.underlying_price;
+        fn create_chain_data(strike: &Positive, p: &OptionChainBuildParams) -> OptionData {
             if let Some(iv) = p.price_params.implied_volatility {
                 assert!(
                     iv <= Positive::ONE,
@@ -350,12 +375,14 @@ impl OptionChain {
             }
 
             let adjusted_volatility = adjust_volatility(
-                p.price_params.implied_volatility,
-                p.skew_factor,
-                atm_distance.to_f64().unwrap(),
+                &p.price_params.implied_volatility,
+                &Some(p.skew_slope),
+                &Some(p.smile_curve),
+                strike,
+                &p.price_params.underlying_price,
             );
             let mut option_data = OptionData::new(
-                *s,
+                *strike,
                 None,
                 None,
                 None,
@@ -384,27 +411,28 @@ impl OptionChain {
             } else {
                 warn!(
                     "Failed to calculate prices for strike: {} error: {}",
-                    s,
+                    strike,
                     result_calculate_prices.unwrap_err()
                 );
             }
             option_data
         }
-        let atm_strike = rounder(params.price_params.underlying_price, params.strike_interval);
+
+        let atm_strike = rounder(params.price_params.underlying_price, strike_interval);
         let atm_strike_option_data = create_chain_data(&atm_strike.clone(), params);
         option_chain.options.insert(atm_strike_option_data);
 
         let mut counter = Positive::ONE;
         loop {
-            let next_upper_strike = atm_strike + (params.strike_interval * counter);
+            let next_upper_strike = atm_strike + (strike_interval * counter);
             let next_upper_option_data = create_chain_data(&next_upper_strike, params);
             option_chain.options.insert(next_upper_option_data.clone());
 
-            let strike_step = (params.strike_interval * counter).to_dec();
+            let strike_step = (strike_interval * counter).to_dec();
             if strike_step > atm_strike.to_dec() {
                 break;
             }
-            let next_lower_strike = atm_strike - (params.strike_interval * counter).to_dec();
+            let next_lower_strike = atm_strike - (strike_interval * counter).to_dec();
             let next_lower_option_data = create_chain_data(&next_lower_strike, params);
             option_chain.options.insert(next_lower_option_data.clone());
 
@@ -450,19 +478,19 @@ impl OptionChain {
             // Find the maximum distance from ATM in number of strikes
             let min_strike = strike_prices.iter().min().unwrap();
             let max_strike = strike_prices.iter().max().unwrap();
-        
+
             let strikes_below = ((atm_strike.to_dec() - min_strike.to_dec())
                 / strike_interval.to_dec())
             .ceil()
             .to_u64()
             .unwrap_or(0) as usize;
-        
+
             let strikes_above = ((max_strike.to_dec() - atm_strike.to_dec())
                 / strike_interval.to_dec())
             .ceil()
             .to_u64()
             .unwrap_or(0) as usize;
-        
+
             chain_size = strikes_below.max(strikes_above);
         }
 
@@ -505,9 +533,8 @@ impl OptionChain {
             _ => Some(pos!(0.2)), // 20% is a reasonable default IV
         };
 
-        let volatility_curve =
-            self.curve(&BasicAxisTypes::Volatility, &OptionStyle::Call, &Side::Long)?;
-        let skew_factor = volatility_curve.compute_shape_metrics()?.skewness / SKEW_FACTOR_DIVISOR;
+        let skew_slope = SKEW_SLOPE;
+        let smile_curve = SKEW_SMILE_CURVE;
 
         // Create the price parameters
         let price_params = OptionDataPriceParams::new(
@@ -533,8 +560,9 @@ impl OptionChain {
             self.symbol.clone(),
             volume,
             chain_size,
-            strike_interval,
-            skew_factor,
+            Some(strike_interval),
+            skew_slope,
+            smile_curve,
             spread,
             decimal_places,
             price_params,
@@ -2058,50 +2086,6 @@ impl OptionChain {
                 },
             ))
     }
-
-    pub fn calculate_optimal_chain_params(&self) -> Result<(Positive, usize), ChainError> {
-        let params = self.to_build_params()?;
-        let underlying_price = params.price_params.underlying_price;
-        let strike_interval = if underlying_price < pos!(25.0) {
-            if underlying_price < pos!(10.0) {
-                pos!(1.0)
-            } else {
-                pos!(2.5)
-            }
-        } else if underlying_price < pos!(100.0) {
-            pos!(5.0)
-        } else if underlying_price < pos!(1000.0) {
-            pos!(10.0)
-        } else {
-            // Round to nearest integer
-            (underlying_price * pos!(0.01)).round()
-        };
-
-        // Step 2: Determine how many strikes to include
-        // This depends on:
-        // - The implied volatility
-        // - The time to expiration
-        // - Common market practice (usually 10-15 strikes above and below ATM)
-
-        // Get implied volatility, using a default if not provided
-        let iv = params.price_params.implied_volatility.unwrap_or(pos!(0.2));
-
-        // Get time to expiration in years
-        let time_to_exp = params.price_params.expiration_date.get_days()?;
-
-        // Calculate expected price movement based on volatility and time
-        // Using 1.96 standard deviations (95% confidence interval)
-        let expected_move = underlying_price * iv * time_to_exp.sqrt() * pos!(1.96);
-
-        // Calculate number of strikes needed to cover this move, plus a buffer
-        let strikes_needed = ((expected_move / strike_interval).ceiling() + pos!(5.0)).to_usize();
-
-        // Ensure we have at least 10 strikes in each direction, but not more than 25
-        // (for computational efficiency)
-        let num_strikes = strikes_needed.max(10).min(25);
-
-        Ok((strike_interval, num_strikes))
-    }
 }
 
 impl Default for OptionChain {
@@ -2522,7 +2506,8 @@ mod tests_chain_base {
             "SP500".to_string(),
             None,
             10,
-            pos!(1.0),
+            spos!(1.0),
+            dec!(-0.3),
             Decimal::ZERO,
             pos!(0.02),
             2,
@@ -2543,15 +2528,15 @@ mod tests_chain_base {
         assert!(chain.options.len() >= 21);
         assert_eq!(chain.underlying_price, pos!(100.0));
         let first = chain.options.iter().next().unwrap();
-        assert_eq!(first.call_ask.unwrap(), 14.01);
-        assert_eq!(first.call_bid.unwrap(), 13.99);
+        assert_eq!(first.call_ask.unwrap(), 13.01);
+        assert_eq!(first.call_bid.unwrap(), 12.99);
         assert_eq!(first.put_ask, None);
         assert_eq!(first.put_bid, None);
         let last = chain.options.iter().next_back().unwrap();
         assert_eq!(last.call_ask, None);
         assert_eq!(last.call_bid, None);
-        assert_eq!(last.put_ask, spos!(14.02));
-        assert_eq!(last.put_bid, spos!(14.0));
+        assert_eq!(last.put_ask, spos!(13.02));
+        assert_eq!(last.put_bid, spos!(13.0));
     }
 
     #[test]
@@ -2562,8 +2547,9 @@ mod tests_chain_base {
             "SP500".to_string(),
             None,
             25,
-            pos!(25.0),
-            dec!(0.000002),
+            spos!(25.0),
+            dec!(-0.3),
+            dec!(0.2),
             pos!(0.02),
             2,
             OptionDataPriceParams::new(
@@ -2582,15 +2568,15 @@ mod tests_chain_base {
         assert!(chain.options.len() > 1);
         assert_eq!(chain.underlying_price, pos!(5878.10));
         let first = chain.options.iter().next().unwrap();
-        assert_eq!(first.call_ask.unwrap(), 303.11);
-        assert_eq!(first.call_bid.unwrap(), 303.09);
+        assert_eq!(first.call_ask.unwrap(), 253.11);
+        assert_eq!(first.call_bid.unwrap(), 253.09);
         assert_eq!(first.put_ask, None);
         assert_eq!(first.put_bid, None);
         let last = chain.options.iter().next_back().unwrap();
         assert_eq!(last.call_ask, None);
         assert_eq!(last.call_bid, None);
-        assert_eq!(last.put_ask, spos!(296.92));
-        assert_eq!(last.put_bid, spos!(296.90));
+        assert_eq!(last.put_ask, spos!(246.92));
+        assert_eq!(last.put_bid, spos!(246.90));
     }
 
     #[test]
@@ -7149,7 +7135,8 @@ mod tests_atm_strike {
             "SP500".to_string(),
             None,
             10,
-            pos!(1.0),
+            spos!(1.0),
+            dec!(-0.3),
             Decimal::ZERO,
             pos!(0.02),
             2,
@@ -7263,7 +7250,7 @@ mod tests_atm_strike {
         // The lowest strike in the standard chain should be around 90.0
         assert_eq!(
             *strike,
-            pos!(86.0),
+            pos!(87.0),
             "Should return the lowest available strike"
         );
     }
@@ -7335,7 +7322,8 @@ mod tests_atm_strike_bis {
             "SP500".to_string(),
             None,
             10,
-            pos!(1.0),
+            spos!(1.0),
+            dec!(-0.3),
             Decimal::ZERO,
             pos!(0.02),
             2,
@@ -7433,7 +7421,7 @@ mod tests_atm_strike_bis {
         // The lowest strike in the standard chain should be around 90.0
         assert_eq!(
             *strike,
-            pos!(86.0),
+            pos!(87.0),
             "Should return the lowest available strike"
         );
     }
@@ -7648,7 +7636,8 @@ mod tests_option_chain_utils_bis {
             "SP500".to_string(),
             None,
             10,
-            pos!(1.0),
+            spos!(1.0),
+            dec!(-0.3),
             Decimal::ZERO,
             pos!(0.02),
             2,
@@ -7830,8 +7819,9 @@ mod tests_to_build_params_bis {
             "SP500".to_string(),
             None,
             22,
-            pos!(25.0),
-            dec!(0.000001),
+            spos!(25.0),
+            dec!(-0.1),
+            dec!(0.1),
             pos!(0.03),
             2,
             OptionDataPriceParams::new(
@@ -7853,7 +7843,7 @@ mod tests_to_build_params_bis {
         info!("{}", chain);
         let mut params = chain.to_build_params().unwrap();
 
-        params.skew_factor = dec!(0.000001);
+        params.smile_curve = dec!(0.000001);
         params.price_params.underlying_price =
             pos!(params.price_params.underlying_price.to_f64() * f64::exp(0.2)).max(Positive::ZERO);
         params.price_params.implied_volatility = Some(
@@ -7880,8 +7870,9 @@ mod chain_coverage_tests {
             "TEST".to_string(),
             None,
             5,
-            pos!(5.0),
-            dec!(0.00001),
+            spos!(5.0),
+            dec!(-0.3),
+            dec!(0.1),
             pos!(0.02),
             2,
             OptionDataPriceParams::new(
@@ -8119,8 +8110,9 @@ mod chain_coverage_tests_bis {
             "TEST".to_string(),
             None,
             5,
-            pos!(5.0),
-            dec!(0.00001),
+            spos!(5.0),
+            dec!(-0.3),
+            dec!(0.1),
             pos!(0.02),
             2,
             OptionDataPriceParams::new(
