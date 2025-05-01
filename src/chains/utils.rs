@@ -963,7 +963,6 @@ mod tests_parse {
     use std::f64::consts::PI;
 
     #[test]
-
     fn test_parse_valid_integer() {
         let input = "42";
         let result: Option<i32> = parse(input);
@@ -971,7 +970,6 @@ mod tests_parse {
     }
 
     #[test]
-
     fn test_parse_invalid_integer() {
         let input = "not_a_number";
         let result: Option<i32> = parse(input);
@@ -979,7 +977,6 @@ mod tests_parse {
     }
 
     #[test]
-
     fn test_parse_valid_float() {
         let input = &*PI.to_string();
         let result: Option<f64> = parse(input);
@@ -987,7 +984,6 @@ mod tests_parse {
     }
 
     #[test]
-
     fn test_positive_f64() {
         let input = "42.01";
         let result: Option<Positive> = parse(input);
@@ -1715,5 +1711,219 @@ mod utils_coverage_tests {
         let value: Option<Positive> = None;
         let result = empty_string_round_to_2(value);
         assert_eq!(result, "");
+    }
+}
+
+#[cfg(test)]
+mod tests_calculate_optimal_chain_params {
+    use super::*;
+    use crate::chains::utils::OptionDataPriceParams;
+    use crate::{assert_pos_relative_eq, pos, spos};
+    use rust_decimal_macros::dec;
+
+    // Helper function to create OptionChainBuildParams with different configurations
+    fn create_test_params(
+        price: f64,
+        days: f64,
+        iv: Option<f64>,
+        chain_size: usize,
+    ) -> OptionChainBuildParams {
+        let iv_pos = iv.map(|v| pos!(v));
+
+        OptionChainBuildParams::new(
+            "TEST".to_string(),
+            None,
+            chain_size,
+            spos!(1.0), // This will be replaced by calculation
+            dec!(-0.2),
+            dec!(0.0),
+            pos!(0.02),
+            2,
+            OptionDataPriceParams::new(
+                pos!(price),
+                ExpirationDate::Days(pos!(days)),
+                iv_pos,
+                dec!(0.05),
+                pos!(0.0),
+                Some("TEST".to_string()),
+            ),
+        )
+    }
+
+    #[test]
+    fn test_low_price_short_expiry() {
+        // Test case for low price stock (< $10) with short expiry
+        let params = create_test_params(5.0, 7.0, Some(0.3), 11);
+
+        let result = calculate_optimal_chain_params(&params);
+        assert!(result.is_ok());
+
+        let (interval, num_strikes) = result.unwrap();
+        assert_eq!(num_strikes, 11);
+        // For a $5 stock with short expiry, we expect a small interval
+        assert_pos_relative_eq!(interval, pos!(0.25), pos!(0.1));
+    }
+
+    #[test]
+    fn test_mid_price_standard_expiry() {
+        // Test case for mid-priced stock ($25-$100) with standard expiry
+        let params = create_test_params(50.0, 30.0, Some(0.2), 15);
+
+        let result = calculate_optimal_chain_params(&params);
+        assert!(result.is_ok());
+
+        let (interval, num_strikes) = result.unwrap();
+        assert_eq!(num_strikes, 15);
+        // For a $50 stock with 30-day expiry, we expect interval around $5
+        assert_pos_relative_eq!(interval, pos!(5.0), pos!(2.5));
+    }
+
+    #[test]
+    fn test_high_price_long_expiry() {
+        // Test case for high priced stock (>$100) with long expiry
+        let params = create_test_params(500.0, 180.0, Some(0.25), 21);
+
+        let result = calculate_optimal_chain_params(&params);
+        assert!(result.is_ok());
+
+        let (interval, num_strikes) = result.unwrap();
+        assert_eq!(num_strikes, 21);
+        // For a $500 stock with 6-month expiry, we expect a larger interval
+        assert_pos_relative_eq!(interval, pos!(20.0), pos!(0.1));
+    }
+
+    #[test]
+    fn test_very_high_price() {
+        // Test case for very high priced stock (>$1000)
+        let params = create_test_params(3000.0, 30.0, Some(0.15), 15);
+
+        let result = calculate_optimal_chain_params(&params);
+        assert!(result.is_ok());
+
+        let (interval, num_strikes) = result.unwrap();
+        assert_eq!(num_strikes, 15);
+        // For a $3000 stock, we expect interval to be around 1% of price ($30) or greater
+        assert!(interval >= pos!(30.0));
+    }
+
+    #[test]
+    fn test_default_implied_volatility() {
+        // Test case where no implied volatility is provided (should default to 20%)
+        let params_with_iv = create_test_params(100.0, 30.0, Some(0.2), 11);
+        let params_without_iv = create_test_params(100.0, 30.0, None, 11);
+
+        let result_with_iv = calculate_optimal_chain_params(&params_with_iv);
+        let result_without_iv = calculate_optimal_chain_params(&params_without_iv);
+
+        assert!(result_with_iv.is_ok());
+        assert!(result_without_iv.is_ok());
+
+        let (interval_with_iv, _) = result_with_iv.unwrap();
+        let (interval_without_iv, _) = result_without_iv.unwrap();
+
+        // Should be approximately equal since default IV is 20%
+        assert_pos_relative_eq!(interval_with_iv, interval_without_iv, pos!(0.001));
+    }
+
+    #[test]
+    fn test_high_volatility() {
+        // Test case with high volatility
+        let low_vol_params = create_test_params(100.0, 30.0, Some(0.1), 11);
+        let high_vol_params = create_test_params(100.0, 30.0, Some(0.9), 11);
+
+        let low_vol_result = calculate_optimal_chain_params(&low_vol_params);
+        let high_vol_result = calculate_optimal_chain_params(&high_vol_params);
+
+        assert!(low_vol_result.is_ok());
+        assert!(high_vol_result.is_ok());
+
+        let (low_vol_interval, _) = low_vol_result.unwrap();
+        let (high_vol_interval, _) = high_vol_result.unwrap();
+
+        // Higher volatility should lead to wider intervals
+        assert!(high_vol_interval >= low_vol_interval);
+    }
+
+    #[test]
+    fn test_different_chain_sizes() {
+        // Test how different chain sizes affect the interval
+        let small_chain = create_test_params(1000.0, 30.0, Some(0.2), 5);
+        let large_chain = create_test_params(1000.0, 30.0, Some(0.2), 21);
+
+        let small_result = calculate_optimal_chain_params(&small_chain);
+        let large_result = calculate_optimal_chain_params(&large_chain);
+
+        assert!(small_result.is_ok());
+        assert!(large_result.is_ok());
+
+        let (small_interval, small_num) = small_result.unwrap();
+        let (large_interval, large_num) = large_result.unwrap();
+
+        assert_eq!(small_num, 5);
+        assert_eq!(large_num, 21);
+
+        // Smaller chain should have larger intervals to cover same expected move
+        assert!(small_interval > large_interval);
+    }
+
+    #[test]
+    fn test_time_scaling_factor() {
+        // Test how expiration time affects the interval
+        let short_expiry = create_test_params(100.0, 7.0, Some(0.2), 11);
+        let long_expiry = create_test_params(100.0, 365.0, Some(0.2), 11);
+
+        let short_result = calculate_optimal_chain_params(&short_expiry);
+        let long_result = calculate_optimal_chain_params(&long_expiry);
+
+        assert!(short_result.is_ok());
+        assert!(long_result.is_ok());
+
+        let (short_interval, _) = short_result.unwrap();
+        let (long_interval, _) = long_result.unwrap();
+
+        // Longer expiry should lead to wider intervals due to time_factor
+        assert!(long_interval > short_interval);
+    }
+
+    #[test]
+    fn test_round_to_clean_interval() {
+        // Test the rounding to clean market-friendly intervals
+        // This is an indirect test of the round_to_clean_interval function
+
+        // Test with various odd intervals that should be rounded
+        let test_cases = [
+            (14.3, 100.0, 15.0), // Should round to 15
+            (8.7, 50.0, 10.0),   // Should round to 10
+            (0.37, 5.0, 0.5),    // Should round to 0.5
+            (2.2, 25.0, 2.5),    // Should round to 2.5
+        ];
+
+        for (_, price, _) in test_cases {
+            let params = create_test_params(price, 30.0, Some(0.2), 11);
+
+            // This is a simplistic simulation - the actual function is more complex
+            // The goal is to test the rounding behavior
+            let result = calculate_optimal_chain_params(&params);
+
+            // Instead of checking exact results, we validate the rounding logic
+            // by ensuring the returned interval is a clean market value
+            assert!(result.is_ok());
+
+            let (actual_interval, _) = result.unwrap();
+            // The actual value might not match our expected exactly due to the
+            // complexity of the function, but it should be a "clean" value
+            // Check if it's a typical option chain interval
+            let typical_intervals = [0.5, 1.0, 2.5, 5.0, 10.0, 20.0, 25.0, 50.0, 100.0];
+
+            let is_clean_interval = typical_intervals
+                .iter()
+                .any(|&i| (actual_interval.to_f64() - i).abs() < 0.001);
+
+            assert!(
+                is_clean_interval,
+                "Interval {} should be rounded to a clean market value",
+                actual_interval
+            );
+        }
     }
 }

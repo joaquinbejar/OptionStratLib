@@ -3,14 +3,16 @@ use crate::series::params::OptionSeriesBuildParams;
 use crate::utils::Len;
 use crate::{ExpirationDate, Positive};
 use rust_decimal::Decimal;
+use serde::de::{self, MapAccess, Visitor};
 use serde::{Deserialize, Serialize};
+use serde::{Deserializer, Serializer};
 use std::collections::BTreeMap;
 use std::error::Error;
 use std::fmt;
 
 /// Represents a series of option chains for an underlying asset,
 /// providing detailed information about its options market and related financial data.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
 pub struct OptionSeries {
     /// The ticker symbol for the underlying asset (e.g., "AAPL", "SPY").
     pub symbol: String,
@@ -142,7 +144,6 @@ impl OptionSeries {
     /// - This method assumes that valid expiration dates and series data are provided. Ensure proper
     ///   validation of `params` prior to calling this method.
     /// - The use of a `BTreeMap` ensures that the resulting chains are sorted based on the expiration dates.
-    /// ```
     pub fn build_series(params: &OptionSeriesBuildParams) -> Self {
         let mut params = params.clone();
         let mut chains: BTreeMap<ExpirationDate, OptionChain> = BTreeMap::new();
@@ -248,5 +249,651 @@ impl Len for OptionSeries {
 
     fn is_empty(&self) -> bool {
         self.chains.is_empty()
+    }
+}
+
+// Custom serialization implementation
+impl Serialize for OptionSeries {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        use serde::ser::SerializeStruct;
+        let mut state = serializer.serialize_struct("OptionSeries", 5)?;
+
+        state.serialize_field("symbol", &self.symbol)?;
+        state.serialize_field("underlying_price", &self.underlying_price)?;
+
+        // Serialize chains as a map of string dates to OptionChain
+        let chains_map: BTreeMap<String, &OptionChain> = self
+            .chains
+            .iter()
+            .map(|(date, chain)| (date.get_date_string().unwrap(), chain))
+            .collect();
+        state.serialize_field("chains", &chains_map)?;
+
+        // Serialize optional fields
+        if let Some(rate) = &self.risk_free_rate {
+            state.serialize_field("risk_free_rate", rate)?;
+        }
+
+        if let Some(yield_val) = &self.dividend_yield {
+            state.serialize_field("dividend_yield", yield_val)?;
+        }
+
+        state.end()
+    }
+}
+
+// Custom deserialization implementation
+impl<'de> Deserialize<'de> for OptionSeries {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        // Define the fields we expect to see
+        #[derive(Deserialize)]
+        #[serde(field_identifier, rename_all = "snake_case")]
+        enum Field {
+            Symbol,
+            UnderlyingPrice,
+            Chains,
+            RiskFreeRate,
+            DividendYield,
+        }
+
+        // Create a visitor to handle the deserialization
+        struct OptionSeriesVisitor;
+
+        impl<'de> Visitor<'de> for OptionSeriesVisitor {
+            type Value = OptionSeries;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("struct OptionSeries")
+            }
+
+            fn visit_map<V>(self, mut map: V) -> Result<OptionSeries, V::Error>
+            where
+                V: MapAccess<'de>,
+            {
+                let mut symbol = None;
+                let mut underlying_price = None;
+                let mut string_chains: Option<BTreeMap<String, OptionChain>> = None;
+                let mut risk_free_rate = None;
+                let mut dividend_yield = None;
+
+                while let Some(key) = map.next_key()? {
+                    match key {
+                        Field::Symbol => {
+                            if symbol.is_some() {
+                                return Err(de::Error::duplicate_field("symbol"));
+                            }
+                            symbol = Some(map.next_value()?);
+                        }
+                        Field::UnderlyingPrice => {
+                            if underlying_price.is_some() {
+                                return Err(de::Error::duplicate_field("underlying_price"));
+                            }
+                            underlying_price = Some(map.next_value()?);
+                        }
+                        Field::Chains => {
+                            if string_chains.is_some() {
+                                return Err(de::Error::duplicate_field("chains"));
+                            }
+                            string_chains = Some(map.next_value()?);
+                        }
+                        Field::RiskFreeRate => {
+                            if risk_free_rate.is_some() {
+                                return Err(de::Error::duplicate_field("risk_free_rate"));
+                            }
+                            risk_free_rate = Some(map.next_value()?);
+                        }
+                        Field::DividendYield => {
+                            if dividend_yield.is_some() {
+                                return Err(de::Error::duplicate_field("dividend_yield"));
+                            }
+                            dividend_yield = Some(map.next_value()?);
+                        }
+                    }
+                }
+
+                let symbol = symbol.ok_or_else(|| de::Error::missing_field("symbol"))?;
+                let underlying_price =
+                    underlying_price.ok_or_else(|| de::Error::missing_field("underlying_price"))?;
+                let string_chains =
+                    string_chains.ok_or_else(|| de::Error::missing_field("chains"))?;
+
+                // Convert string dates back to ExpirationDate objects
+                let mut chains = BTreeMap::new();
+                for (date_str, chain) in string_chains {
+                    let expiration_date = ExpirationDate::from_string_to_days(&date_str)
+                        .map_err(|e| de::Error::custom(format!("Invalid date format: {}", e)))?;
+                    chains.insert(expiration_date, chain);
+                }
+
+                Ok(OptionSeries {
+                    symbol,
+                    underlying_price,
+                    chains,
+                    risk_free_rate,
+                    dividend_yield,
+                })
+            }
+        }
+
+        // Define the fields for our struct
+        const FIELDS: &[&str] = &[
+            "symbol",
+            "underlying_price",
+            "chains",
+            "risk_free_rate",
+            "dividend_yield",
+        ];
+
+        // Use our visitor to deserialize
+        deserializer.deserialize_struct("OptionSeries", FIELDS, OptionSeriesVisitor)
+    }
+}
+
+#[cfg(test)]
+mod tests_option_series {
+    use super::*;
+    use crate::chains::OptionChain;
+    use crate::series::params::OptionSeriesBuildParams;
+    use crate::utils::Len;
+    use crate::utils::time::get_x_days_formatted_pos;
+    use crate::{pos, spos};
+    use rust_decimal_macros::dec;
+    use tracing::debug;
+
+    // Helper function to create a simple OptionChain for testing
+    fn create_test_chain(expiration_days: Positive) -> OptionChain {
+        let date = get_x_days_formatted_pos(expiration_days);
+        let mut chain = OptionChain::new(
+            "TEST",
+            pos!(100.0),
+            date,
+            Some(dec!(0.05)),
+            Some(pos!(0.02)),
+        );
+
+        // Add a simple option to the chain
+        chain.add_option(
+            pos!(100.0),
+            spos!(5.0),
+            spos!(5.5),
+            spos!(4.5),
+            spos!(5.0),
+            spos!(0.2),
+            None,
+            None,
+            None,
+            spos!(100.0),
+            Some(50),
+        );
+
+        chain
+    }
+
+    // Helper function to create a basic OptionSeries for testing
+    fn create_test_series() -> OptionSeries {
+        let mut series = OptionSeries::new("TEST".to_string(), pos!(100.0));
+
+        // Add chains with different expiration dates
+        series.chains.insert(
+            ExpirationDate::Days(pos!(1.0)),
+            create_test_chain(pos!(1.0)),
+        );
+        series.chains.insert(
+            ExpirationDate::Days(pos!(7.0)),
+            create_test_chain(pos!(7.0)),
+        );
+        series.chains.insert(
+            ExpirationDate::Days(pos!(30.0)),
+            create_test_chain(pos!(30.0)),
+        );
+
+        series.risk_free_rate = Some(dec!(0.05));
+        series.dividend_yield = Some(pos!(0.02));
+
+        series
+    }
+
+    mod tests_construction {
+        use super::*;
+
+        #[test]
+        fn test_new_construction() {
+            let series = OptionSeries::new("SPY".to_string(), pos!(450.0));
+
+            assert_eq!(series.symbol, "SPY");
+            assert_eq!(series.underlying_price, pos!(450.0));
+            assert!(series.chains.is_empty());
+            assert_eq!(series.risk_free_rate, None);
+            assert_eq!(series.dividend_yield, None);
+        }
+
+        #[test]
+        fn test_default_construction() {
+            let series = OptionSeries::default();
+
+            assert_eq!(series.symbol, "");
+            assert_eq!(series.underlying_price, Positive::ZERO);
+            assert!(series.chains.is_empty());
+            assert_eq!(series.risk_free_rate, None);
+            assert_eq!(series.dividend_yield, None);
+        }
+    }
+
+    mod tests_odte_method {
+        use super::*;
+
+        #[test]
+        fn test_odte_with_valid_chain() {
+            let mut series = OptionSeries::new("TEST".to_string(), pos!(100.0));
+
+            // Add a chain with expiration of 1 day or less
+            series.chains.insert(
+                ExpirationDate::Days(pos!(0.5)),
+                create_test_chain(pos!(0.5)),
+            );
+
+            let odte_chain = series.odte();
+            assert!(odte_chain.is_some());
+            assert_eq!(odte_chain.unwrap().symbol, "TEST");
+        }
+
+        #[test]
+        fn test_odte_with_invalid_chain() {
+            let mut series = OptionSeries::new("TEST".to_string(), pos!(100.0));
+
+            // Add a chain with expiration longer than 1 day
+            series.chains.insert(
+                ExpirationDate::Days(pos!(2.0)),
+                create_test_chain(pos!(2.0)),
+            );
+
+            let odte_chain = series.odte();
+            assert!(odte_chain.is_none());
+        }
+
+        #[test]
+        fn test_odte_with_empty_chains() {
+            let series = OptionSeries::new("TEST".to_string(), pos!(100.0));
+
+            // No chains added
+            let odte_chain = series.odte();
+            assert!(odte_chain.is_none());
+        }
+
+        #[test]
+        fn test_odte_with_exact_one_day() {
+            let mut series = OptionSeries::new("TEST".to_string(), pos!(100.0));
+
+            // Add a chain with exactly 1 day expiration
+            series.chains.insert(
+                ExpirationDate::Days(pos!(1.0)),
+                create_test_chain(Positive::ONE),
+            );
+
+            let odte_chain = series.odte();
+            assert!(odte_chain.is_some());
+        }
+    }
+
+    mod tests_get_expiration_dates {
+        use super::*;
+
+        #[test]
+        fn test_get_expiration_dates_normal_case() {
+            let series = create_test_series();
+
+            let result = series.get_expiration_dates();
+            assert!(result.is_ok());
+
+            let dates = result.unwrap();
+            assert_eq!(dates.len(), 3);
+
+            // Verify the dates are in the correct order (BTreeMap sorts keys)
+            assert_eq!(dates[0], pos!(1.0));
+            assert_eq!(dates[1], pos!(7.0));
+            assert_eq!(dates[2], pos!(30.0));
+        }
+
+        #[test]
+        fn test_get_expiration_dates_empty_chains() {
+            let series = OptionSeries::new("TEST".to_string(), pos!(100.0));
+
+            let result = series.get_expiration_dates();
+            assert!(result.is_ok());
+
+            let dates = result.unwrap();
+            assert!(dates.is_empty());
+        }
+    }
+
+    mod tests_build_series {
+        use super::*;
+        use crate::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
+
+        #[test]
+        fn test_build_series_basic() {
+            // Create price params
+            let price_params = OptionDataPriceParams::new(
+                pos!(100.0),
+                ExpirationDate::Days(pos!(30.0)),
+                spos!(0.20),
+                dec!(0.05),
+                pos!(0.02),
+                Some("TEST".to_string()),
+            );
+
+            // Create chain build params
+            let chain_params = OptionChainBuildParams::new(
+                "TEST".to_string(),
+                None,
+                5,
+                spos!(5.0),
+                dec!(-0.2),
+                dec!(0.0),
+                pos!(0.01),
+                2,
+                price_params,
+            );
+
+            // Create series build params with multiple expiration dates
+            let series_params = OptionSeriesBuildParams {
+                chain_params,
+                series: vec![pos!(7.0), pos!(14.0), pos!(30.0)],
+            };
+
+            // Build the series
+            let series = OptionSeries::build_series(&series_params);
+
+            // Verify the series properties
+            assert_eq!(series.symbol, "TEST");
+            assert_eq!(series.underlying_price, pos!(100.0));
+            assert_eq!(series.chains.len(), 3);
+            assert_eq!(series.risk_free_rate, Some(dec!(0.05)));
+            assert_eq!(series.dividend_yield, Some(pos!(0.02)));
+
+            // Verify chain expiration dates
+            let expirations = series.get_expiration_dates().unwrap();
+            assert_eq!(expirations, vec![pos!(7.0), pos!(14.0), pos!(30.0)]);
+        }
+    }
+
+    mod tests_to_build_params {
+        use super::*;
+
+        #[test]
+        fn test_to_build_params_normal_case() {
+            let series = create_test_series();
+
+            let result = series.to_build_params();
+            assert!(result.is_ok());
+
+            let params = result.unwrap();
+            assert_eq!(params.series.len(), 3);
+            assert_eq!(params.chain_params.symbol, "TEST");
+        }
+
+        #[test]
+        fn test_to_build_params_empty_series() {
+            let series = OptionSeries::new("TEST".to_string(), pos!(100.0));
+
+            let result = series.to_build_params();
+            assert!(result.is_err());
+
+            // Verify the error message
+            let error = result.unwrap_err();
+            assert_eq!(error.to_string(), "No chains found");
+        }
+    }
+
+    mod tests_display {
+        use super::*;
+
+        #[test]
+        fn test_display_full_series() {
+            let series = create_test_series();
+
+            let display = format!("{}", series);
+
+            // Verify the display string contains the important parts
+            assert!(display.contains("symbol: TEST"));
+            assert!(display.contains("underlying_price: 100"));
+            assert!(display.contains("risk_free_rate: 0.05"));
+            assert!(display.contains("dividend_yield: 0.02"));
+
+            let date = get_x_days_formatted_pos(Positive::ONE);
+            let matches = format!("Expiration Date: {}", date);
+            assert!(display.contains(&matches));
+
+            let date = get_x_days_formatted_pos(pos!(7.0));
+            let matches = format!("Expiration Date: {}", date);
+            assert!(display.contains(&matches));
+
+            let date = get_x_days_formatted_pos(pos!(30.0));
+            let matches = format!("Expiration Date: {}", date);
+            assert!(display.contains(&matches));
+        }
+
+        #[test]
+        fn test_display_minimal_series() {
+            let series = OptionSeries::new("SPY".to_string(), pos!(450.0));
+
+            let display = format!("{}", series);
+
+            // Verify the minimal display string
+            assert!(display.contains("symbol: SPY"));
+            assert!(display.contains("underlying_price: 450"));
+
+            // Should not include optional fields
+            assert!(!display.contains("risk_free_rate"));
+            assert!(!display.contains("dividend_yield"));
+        }
+    }
+
+    mod tests_len {
+        use super::*;
+
+        #[test]
+        fn test_len_normal_case() {
+            let series = create_test_series();
+
+            assert_eq!(series.len(), 3);
+            assert!(!series.is_empty());
+        }
+
+        #[test]
+        fn test_len_empty_chains() {
+            let series = OptionSeries::new("TEST".to_string(), pos!(100.0));
+
+            assert_eq!(series.len(), 0);
+            assert!(series.is_empty());
+        }
+    }
+
+    mod tests_serialization {
+        use super::*;
+        use serde_json;
+
+        #[test]
+        fn test_serialization_minimal() {
+            let original = OptionSeries::new("TEST".to_string(), pos!(100.0));
+
+            // Serialize
+            let serialized = serde_json::to_string(&original).unwrap();
+
+            // Verify serialized structure
+            assert!(serialized.contains("\"symbol\":\"TEST\""));
+            assert!(serialized.contains("\"underlying_price\":100"));
+            assert!(serialized.contains("\"chains\":{}"));
+
+            // Deserialize
+            let deserialized: OptionSeries = serde_json::from_str(&serialized).unwrap();
+
+            // Verify key properties
+            assert_eq!(deserialized.symbol, original.symbol);
+            assert_eq!(deserialized.underlying_price, original.underlying_price);
+            assert_eq!(deserialized.chains.len(), 0);
+            assert_eq!(deserialized.risk_free_rate, None);
+            assert_eq!(deserialized.dividend_yield, None);
+        }
+
+        #[test]
+        fn test_serialization_deserialization() {
+            // Set up the logger if not already done
+            crate::utils::logger::setup_logger();
+
+            let original = create_test_series();
+
+            // Serialize
+            let serialized = serde_json::to_string(&original);
+            assert!(
+                serialized.is_ok(),
+                "Serialization failed: {:?}",
+                serialized.err()
+            );
+
+            let serialized_string = serialized.unwrap();
+            debug!("Serialized string: {}", serialized_string);
+
+            // Deserialize
+            let deserialized_result: Result<OptionSeries, _> =
+                serde_json::from_str(&serialized_string);
+            assert!(
+                deserialized_result.is_ok(),
+                "Deserialization failed: {:?}",
+                deserialized_result.err()
+            );
+
+            let deserialized = deserialized_result.unwrap();
+
+            // Verify key properties
+            assert_eq!(deserialized.symbol, original.symbol);
+            assert_eq!(deserialized.underlying_price, original.underlying_price);
+            assert_eq!(deserialized.risk_free_rate, original.risk_free_rate);
+            assert_eq!(deserialized.dividend_yield, original.dividend_yield);
+
+            // Verify chains length - this might be the issue
+            assert_eq!(
+                deserialized.chains.len(),
+                original.chains.len(),
+                "Chain counts don't match: original={}, deserialized={}",
+                original.chains.len(),
+                deserialized.chains.len()
+            );
+
+            // Debugging chain contents
+            for (exp, chain) in &original.chains {
+                debug!(
+                    "Original chain for expiration {}: {} options",
+                    exp,
+                    chain.options.len()
+                );
+                if !deserialized.chains.contains_key(exp) {
+                    debug!("Deserialized chains is missing expiration {}", exp);
+                }
+            }
+
+            for (exp, chain) in &deserialized.chains {
+                debug!(
+                    "Deserialized chain for expiration {}: {} options",
+                    exp,
+                    chain.options.len()
+                );
+            }
+
+            // Verify expiration dates
+            let original_dates = original.get_expiration_dates().unwrap();
+            let deserialized_dates = deserialized.get_expiration_dates().unwrap();
+            assert_eq!(deserialized_dates, original_dates);
+        }
+
+        #[test]
+        fn test_serialization_empty_series() {
+            let original = OptionSeries::new("TEST".to_string(), pos!(100.0));
+
+            // Serialize
+            let serialized = serde_json::to_string(&original);
+            assert!(
+                serialized.is_ok(),
+                "Serialization failed: {:?}",
+                serialized.err()
+            );
+
+            // Verify serialized structure contains expected fields
+            let serialized_string = serialized.unwrap();
+            assert!(serialized_string.contains("\"symbol\":\"TEST\""));
+            assert!(serialized_string.contains("\"underlying_price\":100"));
+            assert!(serialized_string.contains("\"chains\":{}"));
+
+            // Deserialize
+            let deserialized: Result<OptionSeries, _> = serde_json::from_str(&serialized_string);
+            assert!(
+                deserialized.is_ok(),
+                "Deserialization failed: {:?}",
+                deserialized.err()
+            );
+
+            let deserialized = deserialized.unwrap();
+
+            // Verify key properties
+            assert_eq!(deserialized.symbol, original.symbol);
+            assert_eq!(deserialized.underlying_price, original.underlying_price);
+            assert_eq!(deserialized.chains.len(), 0);
+            assert_eq!(deserialized.risk_free_rate, None);
+            assert_eq!(deserialized.dividend_yield, None);
+        }
+
+        #[test]
+        fn test_serialization_individual_chain() {
+            // This test verifies if individual OptionChain serialization works
+            let chain = create_test_chain(pos!(7.0));
+
+            // Serialize just the chain
+            let serialized = serde_json::to_string(&chain);
+            assert!(
+                serialized.is_ok(),
+                "Chain serialization failed: {:?}",
+                serialized.err()
+            );
+
+            // Deserialize the chain
+            let deserialized: Result<OptionChain, _> = serde_json::from_str(&serialized.unwrap());
+            assert!(
+                deserialized.is_ok(),
+                "Chain deserialization failed: {:?}",
+                deserialized.err()
+            );
+
+            let deserialized_chain = deserialized.unwrap();
+            assert_eq!(deserialized_chain.symbol, chain.symbol);
+            assert_eq!(deserialized_chain.underlying_price, chain.underlying_price);
+        }
+    }
+
+    mod tests_clone {
+        use super::*;
+
+        #[test]
+        fn test_clone() {
+            let original = create_test_series();
+            let cloned = original.clone();
+
+            // Verify key properties
+            assert_eq!(cloned.symbol, original.symbol);
+            assert_eq!(cloned.underlying_price, original.underlying_price);
+            assert_eq!(cloned.chains.len(), original.chains.len());
+            assert_eq!(cloned.risk_free_rate, original.risk_free_rate);
+            assert_eq!(cloned.dividend_yield, original.dividend_yield);
+
+            // Verify chains are properly cloned
+            let original_expirations = original.get_expiration_dates().unwrap();
+            let cloned_expirations = cloned.get_expiration_dates().unwrap();
+            assert_eq!(cloned_expirations, original_expirations);
+        }
     }
 }

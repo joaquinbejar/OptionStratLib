@@ -1,6 +1,6 @@
+use optionstratlib::chains::OptionChainBuildParams;
 use optionstratlib::chains::utils::OptionDataPriceParams;
-use optionstratlib::chains::{OptionChainBuildParams, generator_optionseries};
-use optionstratlib::series::{OptionSeries, OptionSeriesBuildParams};
+use optionstratlib::series::{OptionSeries, OptionSeriesBuildParams, generator_optionseries};
 use optionstratlib::simulation::randomwalk::RandomWalk;
 use optionstratlib::simulation::steps::{Step, Xstep, Ystep};
 use optionstratlib::simulation::{WalkParams, WalkType, WalkTypeAble};

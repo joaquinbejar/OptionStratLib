@@ -410,6 +410,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::chains::generator_positive;
     use crate::simulation::{
         WalkParams, WalkType, WalkTypeAble,
         steps::{Step, Xstep, Ystep},
@@ -668,5 +669,63 @@ mod tests {
 
         // This should panic
         let _ = simulator[3];
+    }
+
+    #[test]
+    fn test_simulator_graph() -> Result<(), Box<dyn Error>> {
+        struct Walker {}
+
+        impl Walker {
+            fn new() -> Self {
+                Walker {}
+            }
+        }
+
+        impl WalkTypeAble<Positive, Positive> for Walker {}
+
+        let simulator_size: usize = 5;
+        let n_steps = 10;
+        let initial_price = pos!(100.0);
+        let std_dev = pos!(20.0);
+        let walker = Box::new(Walker::new());
+        let days = pos!(30.0);
+
+        let walk_params = WalkParams {
+            size: n_steps,
+            init_step: Step {
+                x: Xstep::new(Positive::ONE, TimeFrame::Minute, ExpirationDate::Days(days)),
+                y: Ystep::new(0, initial_price),
+            },
+            walk_type: WalkType::GeometricBrownian {
+                dt: convert_time_frame(pos!(1.0) / days, &TimeFrame::Minute, &TimeFrame::Day),
+                drift: dec!(0.0),
+                volatility: std_dev,
+            },
+            walker,
+        };
+
+        let simulator = Simulator::new(
+            "Simulator".to_string(),
+            simulator_size,
+            &walk_params,
+            generator_positive,
+        );
+
+        let file_path = "Draws/Simulation/simulator_test.png";
+        assert!(
+            simulator
+                .graph(
+                    GraphBackend::Bitmap {
+                        file_path,
+                        size: (1200, 800),
+                    },
+                    20,
+                )
+                .is_ok()
+        );
+
+        assert!(std::fs::remove_file(file_path).is_ok());
+
+        Ok(())
     }
 }

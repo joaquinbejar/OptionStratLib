@@ -4,8 +4,10 @@
 //! Includes utilities for constructing series data, navigating expirations, and performing
 //! cross-expiration analysis and visualization.
 
+mod generators;
 mod model;
 mod params;
 
+pub use generators::generator_optionseries;
 pub use model::OptionSeries;
 pub use params::OptionSeriesBuildParams;

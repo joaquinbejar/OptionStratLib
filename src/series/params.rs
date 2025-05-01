@@ -100,3 +100,51 @@ impl fmt::Display for OptionSeriesBuildParams {
         )
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::chains::utils::OptionDataPriceParams;
+    use crate::utils::time::get_tomorrow_formatted;
+    use crate::{ExpirationDate, pos, spos};
+    use rust_decimal_macros::dec;
+
+    #[test]
+    fn test_display_empty_series() {
+        let tomorrow = get_tomorrow_formatted();
+        let expiration = ExpirationDate::from_string_to_days(&tomorrow).unwrap();
+        let expiration_as_string = expiration.to_string();
+        let price_params = OptionDataPriceParams::new(
+            pos!(100.0),
+            expiration,
+            spos!(0.2),
+            dec!(0.05),
+            pos!(0.02),
+            None,
+        );
+        let chain_params = OptionChainBuildParams::new(
+            "TEST".to_string(),
+            spos!(1000.0),
+            10,
+            spos!(5.0),
+            dec!(-0.2),
+            dec!(0.1),
+            pos!(0.02),
+            2,
+            price_params,
+        );
+
+        let params = OptionSeriesBuildParams {
+            chain_params,
+            series: vec![],
+        };
+
+        assert_eq!(
+            params.to_string(),
+            format!(
+                "chain_params: Option Chain Build Parameters:\n  Symbol: TEST\n  Volume: 1000\n  Chain Size: 10\n  Strike Interval: 5\n  Skew Factor: 0.1\n  Spread: 0.02\n  Decimal Places: 2\n  Price Parameters:\n    Underlying Price: 100\n    Expiration Date: {}\n    Implied Volatility: 20%\n    Risk-Free Rate: 5.00%\n    Dividend Yield: 2.00%\n , series: ",
+                expiration_as_string
+            )
+        );
+    }
+}

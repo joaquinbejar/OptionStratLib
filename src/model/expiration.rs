@@ -314,6 +314,32 @@ impl ExpirationDate {
         // If none of the above worked, return error
         Err(format!("Failed to parse ExpirationDate from string: {s}").into())
     }
+
+    /// Converts a string representation of an expiration date into a `Days` variant of `ExpirationDate`.
+    ///
+    /// # Arguments
+    /// * `s` - A string slice representing the expiration date. The string should adhere
+    ///   to a format that `ExpirationDate::from_string` can parse.
+    ///
+    /// # Returns
+    /// * `Ok(Self)` - If the string is successfully parsed and converted into days.
+    ///   The result is an `ExpirationDate::Days` variant containing the
+    ///   floored number of days.
+    /// * `Err(Box<dyn Error>)` - If parsing or conversion fails, an error wrapped in a
+    ///   `Box<dyn Error>` is returned.
+    ///
+    /// # Errors
+    /// This function may return an error in the following cases:
+    /// * The provided string `s` is not in a valid or expected format.
+    /// * The computed number of days could not be retrieved from the parsed expiration date.
+    ///
+    /// # Note
+    /// The function assumes that `floor()` truncates any remaining fractional days.
+    pub fn from_string_to_days(s: &str) -> Result<Self, Box<dyn Error>> {
+        let expiration_date = ExpirationDate::from_string(s)?;
+        let days = expiration_date.get_days()?.floor();
+        Ok(ExpirationDate::Days(days))
+    }
 }
 
 impl Default for ExpirationDate {
