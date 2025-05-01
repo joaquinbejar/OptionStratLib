@@ -35,8 +35,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let symbol = "AAPL".to_string();
     let volume = Some(Positive::ONE);
     let chain_size = 30;
-    let strike_interval = pos!(1.0);
-    let skew_factor = dec!(0.00001);
+    let strike_interval = None;
+    let skew_slope = dec!(-0.3);
+    let smile_curve = dec!(0.1);
     let spread = pos!(0.01);
     let decimal_places = 2;
 
@@ -53,7 +54,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         volume,
         chain_size,
         strike_interval,
-        skew_factor,
+        skew_slope,
+        smile_curve,
         spread,
         decimal_places,
         price_params,
