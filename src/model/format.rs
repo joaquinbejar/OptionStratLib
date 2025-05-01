@@ -3,11 +3,11 @@
    Email: jb@taunais.com
    Date: 20/8/24
 ******************************************************************************/
+use crate::ExpirationDate;
 use crate::model::option::{ExoticParams, Options};
 use crate::model::position::Position;
 use crate::model::types::{
-    AsianAveragingType, BarrierType, BinaryType, ExpirationDate, LookbackType, OptionStyle,
-    OptionType, Side,
+    AsianAveragingType, BarrierType, BinaryType, LookbackType, OptionStyle, OptionType, Side,
 };
 use crate::strategies::base::Strategy;
 use chrono::{Duration, Utc};

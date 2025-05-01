@@ -1,7 +1,7 @@
 #![allow(unknown_lints)]
 #![allow(clippy::literal_string_with_formatting_args)]
 
-//!  # OptionStratLib v0.4.5: Financial Options Library
+//!  # OptionStratLib v0.4.6: Financial Options Library
 //!  
 //!  ## Table of Contents
 //!  1. [Introduction](#introduction)
@@ -528,8 +528,9 @@
 //! use optionstratlib::greeks::Greeks;
 //! use optionstratlib::Options;
 //! use optionstratlib::Positive;
-//! use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+//! use optionstratlib::model::types::{OptionStyle, OptionType, Side};
 //! use optionstratlib::pos;
+//! use optionstratlib::ExpirationDate;
 //! use optionstratlib::utils::setup_logger;
 //! use optionstratlib::visualization::utils::Graph;
 //! use optionstratlib::visualization::utils::GraphBackend;
@@ -538,7 +539,7 @@
 //!
 //! fn create_sample_option() -> Options {
 //!     use rust_decimal_macros::dec;
-//! use optionstratlib::pos;Options::new(
+//! use optionstratlib::{pos, ExpirationDate};Options::new(
 //!         OptionType::European,
 //!         Side::Long,
 //!         "AAPL".to_string(),
@@ -652,7 +653,6 @@
 //!  make coverage
 //!  ```
 //!  
-
 
 /// # OptionsStratLib: Financial Options Trading Library
 ///
@@ -781,6 +781,14 @@ pub mod visualization;
 /// volatility skew/smile analysis.
 pub mod volatility;
 
+/// * `series` - Functionality for working with collections of option chains across expirations.
+///
+/// Provides tools to manage, filter, and analyze multiple option chains grouped by expiration dates.
+/// Includes utilities for constructing series data, navigating expirations, and performing
+/// cross-expiration analysis and visualization.
+pub mod series;
+
+pub use model::ExpirationDate;
 pub use model::Options;
 pub use model::positive::Positive;
-pub use model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+pub use model::types::{OptionStyle, OptionType, Side};

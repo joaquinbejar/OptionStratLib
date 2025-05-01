@@ -121,6 +121,7 @@ impl Serialize for PnLRange {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rust_decimal::Decimal;
     use serde_json;
     use std::collections::HashMap;
 
@@ -149,7 +150,7 @@ mod tests {
                 lower: -10,
                 upper: 0,
             },
-            rust_decimal::Decimal::new(25, 2), // 0.25
+            Decimal::new(25, 2), // 0.25
         );
 
         map.insert(
@@ -157,7 +158,7 @@ mod tests {
                 lower: 0,
                 upper: 10,
             },
-            rust_decimal::Decimal::new(50, 2), // 0.50
+            Decimal::new(50, 2), // 0.50
         );
 
         map.insert(
@@ -165,7 +166,7 @@ mod tests {
                 lower: 10,
                 upper: 20,
             },
-            rust_decimal::Decimal::new(25, 2), // 0.25
+            Decimal::new(25, 2), // 0.25
         );
 
         // Serialize the map to JSON
@@ -183,7 +184,7 @@ mod tests {
         #[derive(Serialize)]
         struct SimulationResult {
             name: String,
-            distribution: HashMap<PnLRange, rust_decimal::Decimal>,
+            distribution: HashMap<PnLRange, Decimal>,
         }
 
         let mut distribution = HashMap::new();
@@ -192,7 +193,7 @@ mod tests {
                 lower: -5,
                 upper: 5,
             },
-            rust_decimal::Decimal::new(100, 2), // 1.00
+            Decimal::new(100, 2), // 1.00
         );
 
         let result = SimulationResult {

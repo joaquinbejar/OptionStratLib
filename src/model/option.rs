@@ -2,7 +2,7 @@ use crate::chains::OptionData;
 use crate::constants::{IV_TOLERANCE, MAX_ITERATIONS_IV, STDDEV_MULTIPLAYER_GRAPH, ZERO};
 use crate::error::{GreeksError, OptionsError, OptionsResult, VolatilityError};
 use crate::greeks::Greeks;
-use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+use crate::model::types::{OptionStyle, OptionType, Side};
 use crate::pnl::utils::{PnL, PnLCalculator};
 use crate::pricing::{
     BinomialPricingParams, Payoff, PayoffInfo, Profit, black_scholes, generate_binomial_tree,
@@ -10,7 +10,7 @@ use crate::pricing::{
 };
 use crate::visualization::model::ChartVerticalLine;
 use crate::visualization::utils::Graph;
-use crate::{Positive, pos};
+use crate::{ExpirationDate, Positive, pos};
 use num_traits::{FromPrimitive, ToPrimitive};
 use plotters::prelude::{BLACK, ShapeStyle};
 use rust_decimal::Decimal;

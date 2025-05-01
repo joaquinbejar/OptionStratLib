@@ -50,7 +50,8 @@
 //!             "SP500".to_string(),
 //!             None,
 //!             10,
-//!             pos!(1.0),
+//!             spos!(1.0),
+//!             dec!(-0.2),
 //!             dec!(0.00001),
 //!             pos!(0.02),
 //!             2,
@@ -1464,8 +1465,9 @@ mod chain_test {
             "SP500".to_string(),
             None,
             10,
-            pos!(1.0),
-            dec!(0.00001),
+            spos!(1.0),
+            dec!(-0.2),
+            dec!(0.1),
             pos!(0.02),
             2,
             OptionDataPriceParams::new(
@@ -1487,8 +1489,9 @@ mod chain_test {
             "SP500".to_string(),
             None,
             10,
-            pos!(1.0),
-            dec!(0.00001),
+            spos!(1.0),
+            dec!(-0.2),
+            dec!(0.1),
             pos!(0.02),
             2,
             OptionDataPriceParams::new(
@@ -1512,20 +1515,16 @@ mod chain_test {
         let rnd_result = chain.calculate_rnd(&params).unwrap();
         assert!(!rnd_result.densities.is_empty());
 
-        assert_decimal_eq!(rnd_result.statistics.mean, dec!(99.74), dec!(0.00001));
-        assert_decimal_eq!(
-            rnd_result.statistics.skewness,
-            dec!(-0.09488),
-            dec!(0.00001)
-        );
+        assert_decimal_eq!(rnd_result.statistics.mean, dec!(99.9897959), dec!(0.00001));
+        assert_decimal_eq!(rnd_result.statistics.skewness, dec!(0.05804), dec!(0.00001));
         assert_decimal_eq!(
             rnd_result.statistics.kurtosis,
-            dec!(-0.2244418),
+            dec!(-0.5219887),
             dec!(0.00001)
         );
         assert_decimal_eq!(
             rnd_result.statistics.variance.to_dec(),
-            dec!(23.35239999),
+            dec!(20.68356934),
             dec!(0.00001)
         );
     }
@@ -1537,8 +1536,9 @@ mod chain_test {
             "SP500".to_string(),
             None,
             10,
-            pos!(1.0),
-            dec!(0.00001),
+            spos!(1.0),
+            dec!(-0.2),
+            dec!(0.1),
             pos!(0.02),
             2,
             OptionDataPriceParams::new(

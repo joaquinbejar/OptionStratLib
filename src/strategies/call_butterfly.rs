@@ -6,7 +6,6 @@
 use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, Strategies, StrategyType, Validable,
 };
-use crate::Options;
 use crate::chains::StrategyLegs;
 use crate::chains::chain::OptionChain;
 use crate::chains::utils::OptionDataGroup;
@@ -15,7 +14,7 @@ use crate::error::position::{PositionError, PositionValidationErrorKind};
 use crate::error::strategies::{BreakEvenErrorKind, ProfitLossErrorKind, StrategyError};
 use crate::error::{GreeksError, OperationErrorKind, ProbabilityError};
 use crate::greeks::Greeks;
-use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+use crate::model::types::{OptionStyle, OptionType, Side};
 use crate::model::utils::mean_and_std;
 use crate::model::{Position, ProfitLossRange};
 use crate::pnl::utils::{PnL, PnLCalculator};
@@ -26,6 +25,7 @@ use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
 use crate::strategies::{StrategyBasics, StrategyConstructor};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
+use crate::{ExpirationDate, Options};
 use crate::{Positive, spos};
 use chrono::Utc;
 use num_traits::ToPrimitive;
@@ -1154,7 +1154,7 @@ mod tests_call_butterfly_validation {
 #[cfg(test)]
 mod tests_call_butterfly_graph {
     use super::*;
-    use crate::model::types::ExpirationDate;
+    use crate::model::ExpirationDate;
     use crate::pos;
     use approx::assert_relative_eq;
     use rust_decimal_macros::dec;
@@ -1295,7 +1295,7 @@ mod tests_call_butterfly_graph {
 #[cfg(test)]
 mod tests_call_butterfly_delta {
     use super::*;
-    use crate::model::types::{ExpirationDate, OptionStyle};
+    use crate::model::types::OptionStyle;
     use crate::strategies::call_butterfly::CallButterfly;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
@@ -1443,7 +1443,7 @@ mod tests_call_butterfly_delta {
 #[cfg(test)]
 mod tests_call_butterfly_delta_size {
     use super::*;
-    use crate::model::types::{ExpirationDate, OptionStyle};
+    use crate::model::types::OptionStyle;
     use crate::strategies::call_butterfly::CallButterfly;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
@@ -1991,7 +1991,7 @@ mod tests_call_butterfly_probability {
 mod tests_call_butterfly_position_management {
     use super::*;
     use crate::error::position::PositionValidationErrorKind;
-    use crate::model::types::{ExpirationDate, OptionStyle, Side};
+    use crate::model::types::{OptionStyle, Side};
     use crate::pos;
     use rust_decimal_macros::dec;
 
@@ -2168,7 +2168,7 @@ mod tests_call_butterfly_position_management {
 #[cfg(test)]
 mod tests_adjust_option_position {
     use super::*;
-    use crate::model::types::{ExpirationDate, OptionStyle, Side};
+    use crate::model::types::{OptionStyle, Side};
     use crate::pos;
     use rust_decimal_macros::dec;
 

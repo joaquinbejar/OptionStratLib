@@ -353,7 +353,6 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
 mod tests_probability_analysis {
     use super::*;
     use crate::error::strategies::StrategyError;
-    use crate::model::types::ExpirationDate;
     use crate::pos;
     use crate::pricing::payoff::Profit;
     use crate::strategies::base::{BreakEvenable, Positionable, Strategies, Validable};

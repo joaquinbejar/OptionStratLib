@@ -1983,7 +1983,7 @@ impl PnLCalculator for ShortButterflySpread {
 #[cfg(test)]
 mod tests_long_butterfly_spread {
     use super::*;
-    use crate::model::types::ExpirationDate;
+    use crate::model::ExpirationDate;
     use crate::pos;
     use rust_decimal_macros::dec;
 
@@ -2220,7 +2220,7 @@ mod tests_long_butterfly_spread {
 #[cfg(test)]
 mod tests_short_butterfly_spread {
     use super::*;
-    use crate::model::types::ExpirationDate;
+    use crate::model::ExpirationDate;
     use crate::pos;
     use rust_decimal_macros::dec;
 
@@ -2828,7 +2828,7 @@ mod tests_short_butterfly_validation {
 #[cfg(test)]
 mod tests_butterfly_strategies {
     use super::*;
-    use crate::model::types::ExpirationDate;
+    use crate::model::ExpirationDate;
     use crate::pos;
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
@@ -3131,7 +3131,7 @@ mod tests_butterfly_strategies {
 #[cfg(test)]
 mod tests_butterfly_optimizable {
     use super::*;
-    use crate::model::types::ExpirationDate;
+    use crate::model::ExpirationDate;
     use crate::pos;
     use crate::spos;
     use rust_decimal_macros::dec;
@@ -3304,7 +3304,7 @@ mod tests_butterfly_optimizable {
 #[cfg(test)]
 mod tests_long_butterfly_profit {
     use super::*;
-    use crate::model::types::ExpirationDate;
+    use crate::model::ExpirationDate;
     use crate::pos;
     use approx::assert_relative_eq;
     use rust_decimal::Decimal;
@@ -3425,7 +3425,7 @@ mod tests_long_butterfly_profit {
 #[cfg(test)]
 mod tests_short_butterfly_profit {
     use super::*;
-    use crate::model::types::ExpirationDate;
+    use crate::model::ExpirationDate;
     use crate::pos;
     use approx::assert_relative_eq;
     use rust_decimal::Decimal;
@@ -3576,7 +3576,7 @@ mod tests_short_butterfly_profit {
 #[cfg(test)]
 mod tests_long_butterfly_graph {
     use super::*;
-    use crate::model::types::ExpirationDate;
+    use crate::model::ExpirationDate;
     use crate::pos;
     use rust_decimal_macros::dec;
 
@@ -3695,7 +3695,7 @@ mod tests_long_butterfly_graph {
 #[cfg(test)]
 mod tests_short_butterfly_graph {
     use super::*;
-    use crate::model::types::ExpirationDate;
+    use crate::model::ExpirationDate;
     use crate::pos;
     use approx::assert_relative_eq;
     use rust_decimal_macros::dec;
@@ -3806,7 +3806,7 @@ mod tests_short_butterfly_graph {
 #[cfg(test)]
 mod tests_butterfly_probability {
     use super::*;
-    use crate::model::types::ExpirationDate;
+    use crate::model::ExpirationDate;
     use crate::pos;
     use rust_decimal_macros::dec;
 
@@ -4044,7 +4044,7 @@ mod tests_butterfly_probability {
 #[cfg(test)]
 mod tests_long_butterfly_delta {
     use super::*;
-    use crate::model::types::{ExpirationDate, OptionStyle};
+    use crate::model::types::OptionStyle;
     use crate::strategies::butterfly_spread::LongButterflySpread;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
@@ -4195,7 +4195,7 @@ mod tests_long_butterfly_delta {
 #[cfg(test)]
 mod tests_long_butterfly_delta_size {
     use super::*;
-    use crate::model::types::{ExpirationDate, OptionStyle};
+    use crate::model::types::OptionStyle;
     use crate::strategies::butterfly_spread::LongButterflySpread;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
@@ -4348,7 +4348,7 @@ mod tests_long_butterfly_delta_size {
 #[cfg(test)]
 mod tests_short_butterfly_delta {
     use super::*;
-    use crate::model::types::{ExpirationDate, OptionStyle};
+    use crate::model::types::OptionStyle;
     use crate::strategies::butterfly_spread::ShortButterflySpread;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
@@ -4499,7 +4499,7 @@ mod tests_short_butterfly_delta {
 #[cfg(test)]
 mod tests_short_butterfly_delta_size {
     use super::*;
-    use crate::model::types::{ExpirationDate, OptionStyle};
+    use crate::model::types::OptionStyle;
     use crate::strategies::butterfly_spread::ShortButterflySpread;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
@@ -4649,7 +4649,7 @@ mod tests_short_butterfly_delta_size {
 mod tests_short_butterfly_position_management {
     use super::*;
     use crate::error::position::PositionValidationErrorKind;
-    use crate::model::types::{ExpirationDate, OptionStyle, Side};
+    use crate::model::types::{OptionStyle, Side};
     use crate::pos;
     use rust_decimal_macros::dec;
     use tracing::error;
@@ -4829,7 +4829,7 @@ mod tests_short_butterfly_position_management {
 mod tests_long_butterfly_position_management {
     use super::*;
     use crate::error::position::PositionValidationErrorKind;
-    use crate::model::types::{ExpirationDate, OptionStyle, Side};
+    use crate::model::types::{OptionStyle, Side};
     use crate::pos;
     use rust_decimal_macros::dec;
     use tracing::error;
@@ -5004,7 +5004,7 @@ mod tests_long_butterfly_position_management {
 #[cfg(test)]
 mod tests_adjust_option_position_short {
     use super::*;
-    use crate::model::types::{ExpirationDate, OptionStyle, Side};
+    use crate::model::types::{OptionStyle, Side};
     use crate::pos;
     use rust_decimal_macros::dec;
 
@@ -5134,7 +5134,7 @@ mod tests_adjust_option_position_short {
 #[cfg(test)]
 mod tests_adjust_option_position_long {
     use super::*;
-    use crate::model::types::{ExpirationDate, OptionStyle, Side};
+    use crate::model::types::{OptionStyle, Side};
     use crate::pos;
     use rust_decimal_macros::dec;
 

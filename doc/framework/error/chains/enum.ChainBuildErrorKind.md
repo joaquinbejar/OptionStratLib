@@ -18,7 +18,7 @@ pub enum ChainBuildErrorKind {
         reason: String,
     },
     VolatilityAdjustmentError {
-        skew_factor: f64,
+        smile_curve: f64,
         reason: String,
     },
     StrikeGenerationError {
@@ -119,8 +119,8 @@ volatility values, typically related to skew modeling.
 #### Fields
 
 :::: sub-variant-field
-[[§](#variant.VolatilityAdjustmentError.field.skew_factor){.anchor
-.field}`skew_factor: `[`f64`](https://doc.rust-lang.org/1.86.0/std/primitive.f64.html){.primitive}]{#variant.VolatilityAdjustmentError.field.skew_factor
+[[§](#variant.VolatilityAdjustmentError.field.smile_curve){.anchor
+.field}`smile_curve: `[`f64`](https://doc.rust-lang.org/1.86.0/std/primitive.f64.html){.primitive}]{#variant.VolatilityAdjustmentError.field.smile_curve
 .section-header}
 
 ::: docblock

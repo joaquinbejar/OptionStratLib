@@ -91,7 +91,7 @@ Tools for analyzing potential outcomes:
 use rust_decimal_macros::dec;
 use tracing::info;
 use optionstratlib::Options;
-use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
 use optionstratlib::pos;
 use optionstratlib::Positive;
 

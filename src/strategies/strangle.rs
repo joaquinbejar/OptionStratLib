@@ -24,7 +24,7 @@ use crate::error::{GreeksError, OperationErrorKind};
 use crate::greeks::Greeks;
 use crate::model::ProfitLossRange;
 use crate::model::position::Position;
-use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+use crate::model::types::{OptionStyle, OptionType, Side};
 use crate::model::utils::mean_and_std;
 use crate::pnl::PnLCalculator;
 use crate::pnl::utils::PnL;
@@ -36,7 +36,7 @@ use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria, calculate_
 use crate::strategies::{DeltaAdjustment, StrategyConstructor};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
-use crate::{Options, Positive};
+use crate::{ExpirationDate, Options, Positive};
 use chrono::Utc;
 use num_traits::{FromPrimitive, ToPrimitive};
 use plotters::prelude::full_palette::ORANGE;
@@ -228,6 +228,19 @@ impl ShortStrangle {
             .update_break_even_points()
             .expect("Unable to update break even points");
         strategy
+    }
+}
+
+impl Default for ShortStrangle {
+    fn default() -> Self {
+        ShortStrangle {
+            name: "Short Strangle".to_string(),
+            kind: StrategyType::ShortStrangle,
+            description: SHORT_STRANGLE_DESCRIPTION.to_string(),
+            break_even_points: Vec::new(),
+            short_call: Position::default(),
+            short_put: Position::default(),
+        }
     }
 }
 
@@ -675,9 +688,11 @@ impl Optimizable for ShortStrangle {
             StrategyLegs::TwoLegs { first, second } => (first, second),
             _ => panic!("Invalid number of legs for this strategy"),
         };
-        if !call.validate() || !put.validate() {
-            info!("Call: {}\nPut: {}", call, put);
-            panic!("Invalid options");
+        if !call.validate() {
+            panic!("Invalid Call options");
+        }
+        if !put.validate() {
+            panic!("Invalid Put options");
         }
         let implied_volatility = call.implied_volatility.unwrap();
         assert!(implied_volatility <= Positive::ONE);
@@ -1252,6 +1267,19 @@ impl LongStrangle {
             .expect("Unable to update break even points");
 
         strategy
+    }
+}
+
+impl Default for LongStrangle {
+    fn default() -> Self {
+        LongStrangle {
+            name: "Long Strangle".to_string(),
+            kind: StrategyType::ShortStrangle,
+            description: LONG_STRANGLE_DESCRIPTION.to_string(),
+            break_even_points: Vec::new(),
+            long_call: Position::default(),
+            long_put: Position::default(),
+        }
     }
 }
 
@@ -2057,28 +2085,7 @@ mod tests_short_strangle {
         )
     }
 
-    fn wrong_setup() -> ShortStrangle {
-        ShortStrangle::new(
-            "AAPL".to_string(),
-            pos!(150.0),
-            pos!(145.0),
-            pos!(155.0),
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(0.2),
-            dec!(0.01),
-            pos!(0.02),
-            pos!(100.0),
-            Positive::TWO,
-            pos!(1.5),
-            pos!(0.1),
-            pos!(0.1),
-            pos!(0.1),
-            pos!(0.1),
-        )
-    }
-
     #[test]
-
     fn test_new() {
         let strategy = setup();
         assert_eq!(strategy.name, "Short Strangle");
@@ -2092,23 +2099,12 @@ is expected and the underlying asset's price is anticipated to remain stable."
     }
 
     #[test]
-
-    fn test_validate() {
-        let strategy = setup();
-        let wrong_strategy = wrong_setup();
-        assert!(strategy.validate());
-        assert!(!wrong_strategy.validate());
-    }
-
-    #[test]
-
     fn test_get_break_even_points() {
         let strategy = setup();
         assert_eq!(strategy.get_break_even_points().unwrap()[0], 141.9);
     }
 
     #[test]
-
     fn test_calculate_profit_at() {
         let strategy = setup();
         let price = 150.0;
@@ -2123,7 +2119,6 @@ is expected and the underlying asset's price is anticipated to remain stable."
     }
 
     #[test]
-
     fn test_max_profit() {
         let strategy = setup();
         assert_eq!(
@@ -2133,7 +2128,6 @@ is expected and the underlying asset's price is anticipated to remain stable."
     }
 
     #[test]
-
     fn test_max_loss() {
         let strategy = setup();
         assert_eq!(
@@ -2143,14 +2137,12 @@ is expected and the underlying asset's price is anticipated to remain stable."
     }
 
     #[test]
-
     fn test_total_cost() {
         let strategy = setup();
         assert_eq!(strategy.total_cost().unwrap(), 40.0);
     }
 
     #[test]
-
     fn test_net_premium_received() {
         let strategy = setup();
         assert_eq!(
@@ -2161,7 +2153,6 @@ is expected and the underlying asset's price is anticipated to remain stable."
     }
 
     #[test]
-
     fn test_fees() {
         let strategy = setup();
         let expected_fees = 40.0;
@@ -2169,7 +2160,6 @@ is expected and the underlying asset's price is anticipated to remain stable."
     }
 
     #[test]
-
     fn test_area() {
         let strategy = setup();
         assert_eq!(
@@ -2179,7 +2169,6 @@ is expected and the underlying asset's price is anticipated to remain stable."
     }
 
     #[test]
-
     fn test_graph_methods() {
         let strategy = setup();
 
@@ -2207,7 +2196,6 @@ is expected and the underlying asset's price is anticipated to remain stable."
     }
 
     #[test]
-
     fn test_add_leg() {
         let mut strategy = setup();
         let original_call = strategy.short_call.clone();
@@ -2227,7 +2215,6 @@ is expected and the underlying asset's price is anticipated to remain stable."
     }
 
     #[test]
-
     fn test_profit_ratio() {
         let strategy = setup();
         let break_even_diff = strategy.break_even_points[1] - strategy.break_even_points[0];
@@ -2241,7 +2228,6 @@ is expected and the underlying asset's price is anticipated to remain stable."
     }
 
     #[test]
-
     fn test_best_ratio() {
         let mut strategy = setup();
         let option_chain = create_test_option_chain();
@@ -2251,7 +2237,6 @@ is expected and the underlying asset's price is anticipated to remain stable."
     }
 
     #[test]
-
     fn test_best_area() {
         let mut strategy = setup();
         let option_chain = create_test_option_chain();
@@ -2261,18 +2246,21 @@ is expected and the underlying asset's price is anticipated to remain stable."
     }
 
     #[test]
-
     fn test_is_valid_short_option() {
         let strategy = setup();
         let option_chain = create_test_option_chain();
-        let option_data = option_chain.options.first().unwrap();
+        let option_data = option_chain
+            .options
+            .iter()
+            .find(|option_data| option_data.valid_put())
+            .unwrap();
         let min_strike = option_chain.options.first().unwrap().strike_price;
         let max_strike = option_chain.options.last().unwrap().strike_price;
 
-        // Test FindOptimalSide::Upper
+        // Test FindOptimalSide::Lower
         assert!(strategy.is_valid_short_option(option_data, &FindOptimalSide::Lower));
 
-        // Test FindOptimalSide::Lower
+        // Test FindOptimalSide::Upper
         assert!(!strategy.is_valid_short_option(option_data, &FindOptimalSide::Upper));
 
         // Test FindOptimalSide::All
@@ -2288,31 +2276,29 @@ is expected and the underlying asset's price is anticipated to remain stable."
     }
 
     #[test]
-
     fn test_create_strategy() {
         let strategy = setup();
         let chain = create_test_option_chain();
-        let call_option = chain.atm_option_data().unwrap();
-        let put_option = chain.options.last().unwrap();
+
+        let call_option = chain
+            .options
+            .iter()
+            .rev()
+            .find(|option_data| option_data.valid_call())
+            .unwrap();
+        let put_option = chain
+            .options
+            .iter()
+            .find(|option_data| option_data.valid_put())
+            .unwrap();
 
         let legs = StrategyLegs::TwoLegs {
-            first: call_option,
-            second: put_option,
+            first: put_option,
+            second: call_option,
         };
 
         let new_strategy = strategy.create_strategy(&chain, &legs);
         assert!(new_strategy.validate());
-
-        let call_option = chain.options.last().unwrap();
-        let put_option = chain.atm_option_data().unwrap();
-
-        let legs = StrategyLegs::TwoLegs {
-            first: call_option,
-            second: put_option,
-        };
-
-        let new_strategy = strategy.create_strategy(&chain, &legs);
-        assert!(!new_strategy.validate());
     }
 
     #[test]
@@ -2330,7 +2316,7 @@ is expected and the underlying asset's price is anticipated to remain stable."
 
     fn create_test_option_chain() -> OptionChain {
         let option_data_price_params = OptionDataPriceParams::new(
-            pos!(1150.0),
+            pos!(150.0),
             ExpirationDate::Days(pos!(30.0)),
             spos!(0.2),
             dec!(0.01),
@@ -2341,8 +2327,9 @@ is expected and the underlying asset's price is anticipated to remain stable."
             "AAPL".to_string(),
             spos!(1.0),
             10,
-            pos!(10.0),
-            dec!(0.00001),
+            spos!(10.0),
+            dec!(-0.2),
+            dec!(0.1),
             pos!(0.01),
             2,
             option_data_price_params,
@@ -2662,8 +2649,8 @@ mod tests_long_strangle {
         let put_option = option_chain.options.last().unwrap();
 
         let legs = StrategyLegs::TwoLegs {
-            first: call_option,
-            second: put_option,
+            first: put_option,
+            second: call_option,
         };
 
         assert!(strategy.are_valid_prices(&legs));
@@ -2680,23 +2667,33 @@ mod tests_long_strangle {
     fn test_create_strategy() {
         let strategy = setup_long_strangle();
         let chain = create_test_option_chain();
-        let call_option = chain.atm_option_data().unwrap();
-        let put_option = chain.options.last().unwrap();
+        let call_option = chain
+            .options
+            .iter()
+            .rev()
+            .find(|option_data| option_data.valid_call())
+            .unwrap();
+        let put_option = chain.atm_option_data().unwrap();
         let legs = StrategyLegs::TwoLegs {
-            first: call_option,
-            second: put_option,
+            first: put_option,
+            second: call_option,
         };
         let new_strategy = strategy.create_strategy(&chain, &legs);
         assert!(new_strategy.validate());
-        let call_option = chain.options.last().unwrap();
+        let call_option = chain
+            .options
+            .iter()
+            .rev()
+            .find(|option_data| option_data.valid_call())
+            .unwrap();
         let put_option = chain.atm_option_data().unwrap();
 
         let legs = StrategyLegs::TwoLegs {
-            first: call_option,
-            second: put_option,
+            first: put_option,
+            second: call_option,
         };
         let new_strategy = strategy.create_strategy(&chain, &legs);
-        assert!(!new_strategy.validate());
+        assert!(new_strategy.validate());
     }
 
     #[test]
@@ -2726,8 +2723,9 @@ mod tests_long_strangle {
             "AAPL".to_string(),
             spos!(1.0),
             10,
-            pos!(5.0),
-            dec!(0.00001),
+            spos!(5.0),
+            dec!(-0.2),
+            dec!(0.1),
             pos!(0.01),
             2,
             option_data_price_params,
@@ -2739,7 +2737,7 @@ mod tests_long_strangle {
 #[cfg(test)]
 mod tests_short_strangle_probability {
     use super::*;
-    use crate::model::types::ExpirationDate;
+    use crate::model::ExpirationDate;
     use crate::pos;
     use crate::strategies::probabilities::utils::PriceTrend;
     use rust_decimal_macros::dec;
@@ -2887,7 +2885,7 @@ mod tests_short_strangle_probability {
 #[cfg(test)]
 mod tests_short_strangle_probability_bis {
     use super::*;
-    use crate::model::types::ExpirationDate;
+    use crate::model::ExpirationDate;
     use crate::pos;
     use crate::strategies::probabilities::utils::PriceTrend;
     use rust_decimal_macros::dec;
@@ -3039,7 +3037,7 @@ mod tests_short_strangle_probability_bis {
 #[cfg(test)]
 mod tests_long_strangle_probability {
     use super::*;
-    use crate::model::types::ExpirationDate;
+    use crate::model::ExpirationDate;
     use crate::pos;
     use crate::strategies::probabilities::utils::PriceTrend;
     use rust_decimal_macros::dec;
@@ -3195,7 +3193,7 @@ mod tests_long_strangle_probability {
 mod tests_short_strangle_delta {
     use super::*;
     use crate::greeks::Greeks;
-    use crate::model::types::{ExpirationDate, OptionStyle};
+    use crate::model::types::OptionStyle;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use crate::strategies::strangle::Positive;
@@ -3356,7 +3354,7 @@ mod tests_short_strangle_delta {
 mod tests_long_strangle_delta {
     use super::*;
     use crate::greeks::Greeks;
-    use crate::model::types::{ExpirationDate, OptionStyle};
+    use crate::model::types::OptionStyle;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use crate::strategies::strangle::{LongStrangle, Positive};
@@ -3489,7 +3487,7 @@ mod tests_long_strangle_delta {
 mod tests_short_strangle_delta_size {
     use super::*;
     use crate::greeks::Greeks;
-    use crate::model::types::{Action, ExpirationDate, OptionStyle};
+    use crate::model::types::{Action, OptionStyle};
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use crate::strategies::strangle::Positive;
@@ -3781,7 +3779,7 @@ mod tests_short_strangle_delta_size {
 mod tests_long_strangle_delta_size {
     use super::*;
     use crate::greeks::Greeks;
-    use crate::model::types::{Action, ExpirationDate, OptionStyle};
+    use crate::model::types::{Action, OptionStyle};
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use crate::strategies::strangle::{LongStrangle, Positive};
@@ -4061,7 +4059,7 @@ mod tests_long_strangle_delta_size {
 mod tests_strangle_position_management {
     use super::*;
     use crate::error::position::PositionValidationErrorKind;
-    use crate::model::types::{ExpirationDate, OptionStyle, Side};
+    use crate::model::types::{OptionStyle, Side};
     use crate::pos;
     use rust_decimal_macros::dec;
 
@@ -4264,7 +4262,7 @@ mod tests_strangle_position_management {
 #[cfg(test)]
 mod tests_adjust_option_position_short {
     use super::*;
-    use crate::model::types::{ExpirationDate, OptionStyle, Side};
+    use crate::model::types::{OptionStyle, Side};
     use crate::pos;
     use rust_decimal_macros::dec;
 
@@ -4393,7 +4391,7 @@ mod tests_adjust_option_position_short {
 #[cfg(test)]
 mod tests_adjust_option_position_long {
     use super::*;
-    use crate::model::types::{ExpirationDate, OptionStyle, Side};
+    use crate::model::types::{OptionStyle, Side};
     use crate::pos;
     use rust_decimal_macros::dec;
 

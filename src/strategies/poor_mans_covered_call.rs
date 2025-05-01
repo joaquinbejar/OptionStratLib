@@ -27,7 +27,6 @@
 use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, Strategies, StrategyType, Validable,
 };
-use crate::Options;
 use crate::Positive;
 use crate::chains::chain::OptionChain;
 use crate::chains::{OptionData, StrategyLegs};
@@ -38,7 +37,7 @@ use crate::error::{GreeksError, OperationErrorKind, ProbabilityError};
 use crate::greeks::Greeks;
 use crate::model::ProfitLossRange;
 use crate::model::position::Position;
-use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+use crate::model::types::{OptionStyle, OptionType, Side};
 use crate::model::utils::mean_and_std;
 use crate::pnl::utils::{PnL, PnLCalculator};
 use crate::pricing::payoff::Profit;
@@ -48,6 +47,7 @@ use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
 use crate::strategies::{StrategyBasics, StrategyConstructor};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
+use crate::{ExpirationDate, Options};
 use chrono::Utc;
 use num_traits::FromPrimitive;
 use plotters::prelude::full_palette::ORANGE;
@@ -1601,7 +1601,7 @@ mod tests_pmcc_best_ratio {
 #[cfg(test)]
 mod tests_short_straddle_delta {
     use super::*;
-    use crate::model::types::{ExpirationDate, OptionStyle};
+    use crate::model::types::OptionStyle;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use crate::strategies::poor_mans_covered_call::PoorMansCoveredCall;
@@ -1731,7 +1731,7 @@ mod tests_short_straddle_delta {
 #[cfg(test)]
 mod tests_short_straddle_delta_size {
     use super::*;
-    use crate::model::types::{ExpirationDate, OptionStyle};
+    use crate::model::types::OptionStyle;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use crate::strategies::poor_mans_covered_call::PoorMansCoveredCall;
@@ -2074,7 +2074,7 @@ mod tests_poor_mans_covered_call_probability {
 mod tests_poor_mans_covered_call_position_management {
     use super::*;
     use crate::error::position::PositionValidationErrorKind;
-    use crate::model::types::{ExpirationDate, OptionStyle, Side};
+    use crate::model::types::{OptionStyle, Side};
     use crate::pos;
     use rust_decimal_macros::dec;
     use tracing::error;
@@ -2185,7 +2185,7 @@ mod tests_poor_mans_covered_call_position_management {
 #[cfg(test)]
 mod tests_adjust_option_position {
     use super::*;
-    use crate::model::types::{ExpirationDate, OptionStyle, Side};
+    use crate::model::types::{OptionStyle, Side};
     use crate::pos;
     use rust_decimal_macros::dec;
 

@@ -23,7 +23,7 @@ use crate::error::{GreeksError, OperationErrorKind};
 use crate::greeks::Greeks;
 use crate::model::ProfitLossRange;
 use crate::model::position::Position;
-use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+use crate::model::types::{OptionStyle, OptionType, Side};
 use crate::model::utils::mean_and_std;
 use crate::pnl::utils::{PnL, PnLCalculator};
 use crate::pricing::payoff::Profit;
@@ -34,7 +34,7 @@ use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
 use crate::strategies::{StrategyBasics, StrategyConstructor};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
-use crate::{Options, Positive};
+use crate::{ExpirationDate, Options, Positive};
 use chrono::Utc;
 use num_traits::FromPrimitive;
 use plotters::prelude::full_palette::ORANGE;
@@ -612,10 +612,15 @@ impl Optimizable for ShortStraddle {
             StrategyLegs::TwoLegs { first, second } => (first, second),
             _ => panic!("Invalid number of legs for this strategy"),
         };
-        if !call.validate() || !put.validate() {
-            info!("CALL: {}\nPUT: {}", call, put);
-            panic!("Invalid options");
+
+        if !call.validate() {
+            panic!("Invalid Call option");
         }
+
+        if !put.validate() {
+            panic!("Invalid Put option");
+        }
+
         let implied_volatility = call.implied_volatility.unwrap();
         assert!(implied_volatility <= Positive::ONE);
         ShortStraddle::new(
@@ -1929,14 +1934,13 @@ mod tests_short_straddle {
         let strategy = setup();
         let option_chain = create_test_option_chain();
         let option_data = option_chain.options.first().unwrap();
-
         let min_strike = option_chain.options.first().unwrap().strike_price;
         let max_strike = option_chain.options.last().unwrap().strike_price;
 
-        // Test FindOptimalSide::Upper
+        // Test FindOptimalSide::Lower
         assert!(strategy.is_valid_short_option(option_data, &FindOptimalSide::Lower));
 
-        // Test FindOptimalSide::Lower
+        // Test FindOptimalSide::Upper
         assert!(!strategy.is_valid_short_option(option_data, &FindOptimalSide::Upper));
 
         // Test FindOptimalSide::All
@@ -1956,18 +1960,17 @@ mod tests_short_straddle {
     fn test_create_strategy() {
         let strategy = setup();
         let chain = create_test_option_chain();
-        let call_option = chain.options.last().unwrap();
-        let put_option = chain.options.last().unwrap();
-
-        let legs = StrategyLegs::TwoLegs {
-            first: call_option,
-            second: put_option,
-        };
-        let new_strategy = strategy.create_strategy(&chain, &legs);
-        assert!(new_strategy.validate());
-
-        let call_option = chain.options.last().unwrap();
-        let put_option = chain.options.last().unwrap();
+        let call_option = chain
+            .options
+            .iter()
+            .rev()
+            .find(|option_data| option_data.valid_call())
+            .unwrap();
+        let put_option = chain
+            .options
+            .iter()
+            .find(|option_data| option_data.valid_put())
+            .unwrap();
 
         let legs = StrategyLegs::TwoLegs {
             first: call_option,
@@ -1992,7 +1995,7 @@ mod tests_short_straddle {
 
     fn create_test_option_chain() -> OptionChain {
         let option_data_price_params = OptionDataPriceParams::new(
-            pos!(1150.0),
+            pos!(150.0),
             ExpirationDate::Days(pos!(30.0)),
             spos!(0.2),
             dec!(0.01),
@@ -2003,8 +2006,9 @@ mod tests_short_straddle {
             "AAPL".to_string(),
             spos!(1.0),
             10,
-            pos!(10.0),
-            dec!(0.00001),
+            spos!(10.0),
+            dec!(-0.2),
+            dec!(0.1),
             pos!(0.01),
             2,
             option_data_price_params,
@@ -2350,8 +2354,9 @@ mod tests_long_straddle {
             "AAPL".to_string(),
             spos!(1.0),
             10,
-            pos!(5.0),
-            dec!(0.00001),
+            spos!(5.0),
+            dec!(-0.2),
+            dec!(0.1),
             pos!(0.01),
             2,
             option_data_price_params,
@@ -2363,7 +2368,7 @@ mod tests_long_straddle {
 #[cfg(test)]
 mod tests_short_straddle_probability {
     use super::*;
-    use crate::model::types::ExpirationDate;
+    use crate::model::ExpirationDate;
     use crate::pos;
     use crate::strategies::probabilities::utils::PriceTrend;
     use rust_decimal_macros::dec;
@@ -2510,7 +2515,7 @@ mod tests_short_straddle_probability {
 #[cfg(test)]
 mod tests_short_straddle_probability_bis {
     use super::*;
-    use crate::model::types::ExpirationDate;
+    use crate::model::ExpirationDate;
     use crate::pos;
     use crate::strategies::probabilities::utils::PriceTrend;
     use rust_decimal_macros::dec;
@@ -2659,7 +2664,7 @@ mod tests_short_straddle_probability_bis {
 #[cfg(test)]
 mod tests_long_straddle_probability {
     use super::*;
-    use crate::model::types::ExpirationDate;
+    use crate::model::ExpirationDate;
     use crate::pos;
     use crate::strategies::probabilities::utils::PriceTrend;
     use rust_decimal_macros::dec;
@@ -2814,7 +2819,7 @@ mod tests_long_straddle_probability {
 mod tests_short_straddle_delta {
     use super::*;
     use crate::greeks::Greeks;
-    use crate::model::types::{ExpirationDate, OptionStyle};
+    use crate::model::types::OptionStyle;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use crate::strategies::straddle::Positive;
@@ -2942,7 +2947,7 @@ mod tests_short_straddle_delta {
 mod tests_long_straddle_delta {
     use super::*;
     use crate::greeks::Greeks;
-    use crate::model::types::{ExpirationDate, OptionStyle};
+    use crate::model::types::OptionStyle;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use crate::strategies::straddle::{LongStraddle, Positive};
@@ -3071,12 +3076,12 @@ mod tests_long_straddle_delta {
 #[cfg(test)]
 mod tests_short_straddle_delta_size {
     use crate::greeks::Greeks;
-    use crate::model::types::{ExpirationDate, OptionStyle};
+    use crate::model::types::OptionStyle;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use crate::strategies::straddle::Positive;
     use crate::strategies::straddle::ShortStraddle;
-    use crate::{Side, assert_decimal_eq, assert_pos_relative_eq, pos};
+    use crate::{ExpirationDate, Side, assert_decimal_eq, assert_pos_relative_eq, pos};
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
     use std::str::FromStr;
@@ -3205,11 +3210,11 @@ mod tests_short_straddle_delta_size {
 #[cfg(test)]
 mod tests_long_straddle_delta_size {
     use crate::greeks::Greeks;
-    use crate::model::types::{ExpirationDate, OptionStyle};
+    use crate::model::types::OptionStyle;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use crate::strategies::straddle::{LongStraddle, Positive};
-    use crate::{Side, assert_decimal_eq, assert_pos_relative_eq, pos};
+    use crate::{ExpirationDate, Side, assert_decimal_eq, assert_pos_relative_eq, pos};
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
     use std::str::FromStr;
@@ -3337,7 +3342,7 @@ mod tests_long_straddle_delta_size {
 mod tests_straddle_position_management {
     use super::*;
     use crate::error::position::PositionValidationErrorKind;
-    use crate::model::types::{ExpirationDate, OptionStyle, Side};
+    use crate::model::types::{OptionStyle, Side};
     use crate::pos;
     use rust_decimal_macros::dec;
     use tracing::error;
@@ -3541,7 +3546,7 @@ mod tests_straddle_position_management {
 #[cfg(test)]
 mod tests_adjust_option_position {
     use super::*;
-    use crate::model::types::{ExpirationDate, OptionStyle, Side};
+    use crate::model::types::{OptionStyle, Side};
     use crate::pos;
     use rust_decimal_macros::dec;
 

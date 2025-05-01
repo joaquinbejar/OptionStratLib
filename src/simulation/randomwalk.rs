@@ -282,7 +282,7 @@ where
     Y: Into<Positive> + Display + Clone,
 {
     fn calculate_profit_at(&self, _price: Positive) -> Result<Decimal, Box<dyn Error>> {
-        unimplemented!()
+        Err("Profit calculation not implemented for RandomWalk".into())
     }
 }
 
@@ -390,14 +390,17 @@ mod tests_random_walk {
     use super::*;
     use crate::ExpirationDate;
     use crate::Positive;
+    use crate::chains::generator_positive;
     use crate::pos;
     use crate::simulation::WalkParams;
     use crate::simulation::WalkType;
     use crate::simulation::WalkTypeAble;
-    use crate::simulation::steps::Step;
+    use crate::simulation::steps::{Step, Xstep, Ystep};
     use crate::utils::TimeFrame;
+    use crate::utils::time::convert_time_frame;
     use num_traits::ToPrimitive;
     use rust_decimal::Decimal;
+    use rust_decimal_macros::dec;
     use std::error::Error;
     use std::fmt::Display;
     use std::ops::AddAssign;
@@ -827,5 +830,76 @@ mod tests_random_walk {
 
         assert_eq!(walk.len(), 3);
         assert_eq!(*walk[0].y.value(), TestY(100.0));
+    }
+
+    #[test]
+    fn test_graph() -> Result<(), Box<dyn Error>> {
+        struct Walker {}
+
+        impl Walker {
+            fn new() -> Self {
+                Walker {}
+            }
+        }
+
+        impl WalkTypeAble<Positive, Positive> for Walker {}
+
+        let n_steps = 43_200; // 30 days in minutes
+        let initial_price = pos!(100.0);
+        let std_dev = pos!(20.0);
+        let walker = Box::new(Walker::new());
+        let days = pos!(30.0);
+
+        let walk_params = WalkParams {
+            size: n_steps,
+            init_step: Step {
+                x: Xstep::new(Positive::ONE, TimeFrame::Minute, ExpirationDate::Days(days)),
+                y: Ystep::new(0, initial_price),
+            },
+            walk_type: WalkType::GeometricBrownian {
+                dt: convert_time_frame(pos!(1.0) / days, &TimeFrame::Minute, &TimeFrame::Day),
+                drift: dec!(0.0),
+                volatility: std_dev,
+            },
+            walker,
+        };
+
+        let random_walk =
+            RandomWalk::new("Random Walk".to_string(), &walk_params, generator_positive);
+        assert!(random_walk.calculate_profit_at(pos!(100.0)).is_err());
+
+        let steps = random_walk.get_steps();
+        let y = steps.first().unwrap().y.clone();
+        assert_eq!(y.value(), 100.0);
+        let result_next = steps.first().unwrap().next(pos!(100.0));
+        assert!(result_next.is_ok());
+        let next = result_next.unwrap();
+        assert!(
+            next.to_string()
+                .contains("Step { x: Xstep { index: 1, value: 1, time_unit: Minute, datetime:")
+        );
+
+        let previous_next = steps.first().unwrap().previous(pos!(100.0));
+        assert!(previous_next.is_ok());
+        let previous = previous_next.unwrap();
+        assert!(
+            previous
+                .to_string()
+                .contains("Step { x: Xstep { index: -1, value: 1, time_unit: Minute, datetime:")
+        );
+
+        assert_eq!(next.get_graph_x_value()?, Decimal::ONE);
+
+        let file_path = "Draws/Simulation/random_walk_test.png";
+        random_walk.graph(
+            GraphBackend::Bitmap {
+                file_path,
+                size: (1200, 800),
+            },
+            20,
+        )?;
+        assert!(std::fs::remove_file(file_path).is_ok());
+
+        Ok(())
     }
 }

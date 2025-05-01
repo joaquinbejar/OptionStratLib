@@ -12,6 +12,7 @@ use crate::volatility::{adjust_volatility, constant_volatility};
 use crate::{Positive, pos};
 use core::option::Option;
 use rust_decimal::Decimal;
+use std::error::Error;
 use tracing::{debug, info};
 
 /// Creates a new `OptionChain` from a previous `Ystep` and a new price.
@@ -35,7 +36,7 @@ fn create_chain_from_step(
     previous_y_step: &Ystep<OptionChain>,
     new_price: &Positive,
     volatility: Option<Positive>,
-) -> Result<OptionChain, Box<dyn std::error::Error>> {
+) -> Result<OptionChain, Box<dyn Error>> {
     let chain = previous_y_step.value();
     let mut chain_params = chain.to_build_params()?;
     chain_params.set_underlying_price(new_price);
@@ -393,6 +394,317 @@ mod generators_coverage_tests {
         };
 
         let steps = generator_positive(&walk_params);
+
+        // We should just get the initial step back
+        assert_eq!(steps.len(), 1);
+    }
+
+    #[test]
+    fn test_generator_optionchain_brownian() {
+        // Create a small walk with only one step to test early return
+        let chain = OptionChain::new(
+            "TEST",
+            pos!(100.0),
+            get_tomorrow_formatted(),
+            Some(dec!(0.05)),
+            Some(pos!(0.02)),
+        );
+
+        let walker = Box::new(TestWalker::new());
+
+        let walk_params = WalkParams {
+            size: 1, // Just one step to trigger early return
+            init_step: Step {
+                x: Xstep::new(
+                    Positive::ONE,
+                    TimeFrame::Minute,
+                    ExpirationDate::Days(pos!(30.0)),
+                ),
+                y: Ystep::new(0, chain),
+            },
+            walk_type: WalkType::Brownian {
+                dt: pos!(0.01),
+                drift: dec!(0.0),
+                volatility: pos!(0.2),
+            },
+            walker,
+        };
+
+        let steps = generator_optionchain(&walk_params);
+
+        // We should just get the initial step back
+        assert_eq!(steps.len(), 1);
+    }
+
+    #[test]
+    fn test_generator_optionchain_log_returns() {
+        // Create a small walk with only one step to test early return
+        let chain = OptionChain::new(
+            "TEST",
+            pos!(100.0),
+            get_tomorrow_formatted(),
+            Some(dec!(0.05)),
+            Some(pos!(0.02)),
+        );
+
+        let walker = Box::new(TestWalker::new());
+
+        let walk_params = WalkParams {
+            size: 1, // Just one step to trigger early return
+            init_step: Step {
+                x: Xstep::new(
+                    Positive::ONE,
+                    TimeFrame::Minute,
+                    ExpirationDate::Days(pos!(30.0)),
+                ),
+                y: Ystep::new(0, chain),
+            },
+            walk_type: WalkType::LogReturns {
+                dt: pos!(0.01),
+                expected_return: Default::default(),
+                volatility: pos!(0.2),
+                autocorrelation: None,
+            },
+            walker,
+        };
+
+        let steps = generator_optionchain(&walk_params);
+
+        // We should just get the initial step back
+        assert_eq!(steps.len(), 1);
+    }
+
+    #[test]
+    fn test_generator_optionchain_mean_reverting() {
+        // Create a small walk with only one step to test early return
+        let chain = OptionChain::new(
+            "TEST",
+            pos!(100.0),
+            get_tomorrow_formatted(),
+            Some(dec!(0.05)),
+            Some(pos!(0.02)),
+        );
+
+        let walker = Box::new(TestWalker::new());
+
+        let walk_params = WalkParams {
+            size: 1, // Just one step to trigger early return
+            init_step: Step {
+                x: Xstep::new(
+                    Positive::ONE,
+                    TimeFrame::Minute,
+                    ExpirationDate::Days(pos!(30.0)),
+                ),
+                y: Ystep::new(0, chain),
+            },
+            walk_type: WalkType::MeanReverting {
+                dt: pos!(0.01),
+                volatility: pos!(0.2),
+                speed: Default::default(),
+                mean: Default::default(),
+            },
+            walker,
+        };
+
+        let steps = generator_optionchain(&walk_params);
+
+        // We should just get the initial step back
+        assert_eq!(steps.len(), 1);
+    }
+
+    #[test]
+    fn test_generator_optionchain_jump_diffusion() {
+        // Create a small walk with only one step to test early return
+        let chain = OptionChain::new(
+            "TEST",
+            pos!(100.0),
+            get_tomorrow_formatted(),
+            Some(dec!(0.05)),
+            Some(pos!(0.02)),
+        );
+
+        let walker = Box::new(TestWalker::new());
+
+        let walk_params = WalkParams {
+            size: 1, // Just one step to trigger early return
+            init_step: Step {
+                x: Xstep::new(
+                    Positive::ONE,
+                    TimeFrame::Minute,
+                    ExpirationDate::Days(pos!(30.0)),
+                ),
+                y: Ystep::new(0, chain),
+            },
+            walk_type: WalkType::JumpDiffusion {
+                dt: pos!(0.01),
+                drift: Default::default(),
+                volatility: pos!(0.2),
+                intensity: Default::default(),
+                jump_mean: Default::default(),
+                jump_volatility: Default::default(),
+            },
+            walker,
+        };
+
+        let steps = generator_optionchain(&walk_params);
+
+        // We should just get the initial step back
+        assert_eq!(steps.len(), 1);
+    }
+
+    #[test]
+    fn test_generator_optionchain_garch() {
+        // Create a small walk with only one step to test early return
+        let chain = OptionChain::new(
+            "TEST",
+            pos!(100.0),
+            get_tomorrow_formatted(),
+            Some(dec!(0.05)),
+            Some(pos!(0.02)),
+        );
+
+        let walker = Box::new(TestWalker::new());
+
+        let walk_params = WalkParams {
+            size: 1, // Just one step to trigger early return
+            init_step: Step {
+                x: Xstep::new(
+                    Positive::ONE,
+                    TimeFrame::Minute,
+                    ExpirationDate::Days(pos!(30.0)),
+                ),
+                y: Ystep::new(0, chain),
+            },
+            walk_type: WalkType::Garch {
+                dt: pos!(0.01),
+                drift: Default::default(),
+                volatility: pos!(0.2),
+                alpha: Default::default(),
+                beta: Default::default(),
+                omega: Default::default(),
+            },
+            walker,
+        };
+
+        let steps = generator_optionchain(&walk_params);
+
+        // We should just get the initial step back
+        assert_eq!(steps.len(), 1);
+    }
+
+    #[test]
+    fn test_generator_optionchain_heston() {
+        // Create a small walk with only one step to test early return
+        let chain = OptionChain::new(
+            "TEST",
+            pos!(100.0),
+            get_tomorrow_formatted(),
+            Some(dec!(0.05)),
+            Some(pos!(0.02)),
+        );
+
+        let walker = Box::new(TestWalker::new());
+
+        let walk_params = WalkParams {
+            size: 1, // Just one step to trigger early return
+            init_step: Step {
+                x: Xstep::new(
+                    Positive::ONE,
+                    TimeFrame::Minute,
+                    ExpirationDate::Days(pos!(30.0)),
+                ),
+                y: Ystep::new(0, chain),
+            },
+            walk_type: WalkType::Heston {
+                dt: pos!(0.01),
+                drift: Default::default(),
+                volatility: pos!(0.2),
+                kappa: Default::default(),
+                theta: Default::default(),
+                xi: Default::default(),
+                rho: Default::default(),
+            },
+            walker,
+        };
+
+        let steps = generator_optionchain(&walk_params);
+
+        // We should just get the initial step back
+        assert_eq!(steps.len(), 1);
+    }
+
+    #[test]
+    fn test_generator_optionchain_custom() {
+        // Create a small walk with only one step to test early return
+        let chain = OptionChain::new(
+            "TEST",
+            pos!(100.0),
+            get_tomorrow_formatted(),
+            Some(dec!(0.05)),
+            Some(pos!(0.02)),
+        );
+
+        let walker = Box::new(TestWalker::new());
+
+        let walk_params = WalkParams {
+            size: 1, // Just one step to trigger early return
+            init_step: Step {
+                x: Xstep::new(
+                    Positive::ONE,
+                    TimeFrame::Minute,
+                    ExpirationDate::Days(pos!(30.0)),
+                ),
+                y: Ystep::new(0, chain),
+            },
+            walk_type: WalkType::Custom {
+                dt: pos!(0.01),
+                drift: Default::default(),
+                volatility: pos!(0.2),
+                vov: Default::default(),
+                vol_speed: Default::default(),
+                vol_mean: Default::default(),
+            },
+            walker,
+        };
+
+        let steps = generator_optionchain(&walk_params);
+
+        // We should just get the initial step back
+        assert_eq!(steps.len(), 1);
+    }
+
+    #[test]
+    fn test_generator_optionchain_historical() {
+        // Create a small walk with only one step to test early return
+        let chain = OptionChain::new(
+            "TEST",
+            pos!(100.0),
+            get_tomorrow_formatted(),
+            Some(dec!(0.05)),
+            Some(pos!(0.02)),
+        );
+
+        let walker = Box::new(TestWalker::new());
+
+        let walk_params = WalkParams {
+            size: 1, // Just one step to trigger early return
+            init_step: Step {
+                x: Xstep::new(
+                    Positive::ONE,
+                    TimeFrame::Minute,
+                    ExpirationDate::Days(pos!(30.0)),
+                ),
+                y: Ystep::new(0, chain),
+            },
+            walk_type: WalkType::Historical {
+                timeframe: TimeFrame::Microsecond,
+                prices: vec![pos!(100.0), pos!(101.0), pos!(102.0)],
+                symbol: None,
+            },
+            walker,
+        };
+
+        let steps = generator_optionchain(&walk_params);
 
         // We should just get the initial step back
         assert_eq!(steps.len(), 1);

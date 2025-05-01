@@ -244,6 +244,33 @@ pub fn get_x_days_formatted(days: i64) -> String {
     tomorrow.format("%d-%b-%Y").to_string().to_lowercase()
 }
 
+/// Returns a formatted date string representing the date `x` days in the future.
+///
+/// This function takes a `Positive` number of days, calculates the ceiling value
+/// as an integer, adds that many days to the current local date, and returns the
+/// resulting date formatted in the "dd-MMM-yyyy" format in lowercase.
+///
+/// # Arguments
+///
+/// * `days` - A `Positive` value representing a positive number of days.
+///
+/// # Returns
+///
+/// A `String` containing the formatted date in lowercase. The format of the date
+/// is "dd-MMM-yyyy", where:
+/// - `dd` is the day of the month, zero-padded to 2 digits.
+/// - `MMM` is the three-letter abbreviated name of the month.
+/// - `yyyy` is the 4-digit year.
+///
+/// # Note
+/// - The function uses the local time zone and the `chrono` crate for date manipulation.
+/// - The `Positive` type is expected to provide a `.ceiling()` method that converts it to an integer-compatible representation.
+pub fn get_x_days_formatted_pos(days: Positive) -> String {
+    let ceiling = days.ceiling().to_i64();
+    let tomorrow = Local::now().date_naive() + Duration::days(ceiling);
+    tomorrow.format("%d-%b-%Y").to_string().to_lowercase()
+}
+
 /// Returns the current date formatted as "dd-mmm-yyyy" in lowercase.
 ///
 /// # Examples

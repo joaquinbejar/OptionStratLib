@@ -9,7 +9,7 @@ use optionstratlib::utils::time::{TimeFrame, get_x_days_formatted};
 use optionstratlib::utils::{read_ohlcv_from_zip, setup_logger};
 use optionstratlib::visualization::utils::{Graph, GraphBackend};
 use optionstratlib::volatility::{adjust_volatility, constant_volatility};
-use optionstratlib::{ExpirationDate, Positive, pos};
+use optionstratlib::{ExpirationDate, Positive, pos, spos};
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use tracing::{debug, info};
@@ -53,8 +53,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let dividend_yield = pos!(0.01);
     let volume = Some(Positive::ONE);
     let chain_size = 30;
-    let strike_interval = pos!(1.0);
-    let skew_factor = dec!(0.0005);
+    let strike_interval = spos!(1.0);
+    let skew_slope = dec!(-0.3);
+    let smile_curve = dec!(0.5);
     let spread = pos!(0.01);
     let decimal_places = 2;
 
@@ -71,7 +72,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         volume,
         chain_size,
         strike_interval,
-        skew_factor,
+        skew_slope,
+        smile_curve,
         spread,
         decimal_places,
         price_params,

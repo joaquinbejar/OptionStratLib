@@ -9,6 +9,7 @@ use crate::greeks::utils::{big_n, d1, d2, n};
 use crate::model::types::OptionStyle;
 use crate::{Options, Positive, Side};
 use rust_decimal::{Decimal, MathematicalOps};
+use serde::{Deserialize, Serialize};
 
 /// Represents a complete set of option Greeks, which measure the sensitivity of an option's
 /// price to various market factors.
@@ -45,6 +46,31 @@ pub struct Greek {
     pub rho_d: Decimal,
     /// Measures the option's theoretical value not explained by other Greeks
     pub alpha: Decimal,
+}
+
+/// A struct representing a snapshot of the Greeks, financial measures used to assess risk and
+/// sensitivity of derivative instruments such as options.
+///
+/// The Greeks provide insights into how various factors, such as price movement, time decay,
+/// or volatility, affect the theoretical value of derivatives. This struct supports serialization
+/// and deserialization for storage or communication purposes, and implements common traits like
+/// `Debug`, `Clone`, and `PartialEq`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct GreeksSnapshot {
+    /// Measures sensitivity to changes in the underlying asset's price (first derivative)
+    pub delta: Decimal,
+    /// Measures the rate of change in delta (second derivative of the option price)
+    pub gamma: Decimal,
+    /// Measures the time decay of an option's value (sensitivity to the passage of time)
+    pub theta: Decimal,
+    /// Measures sensitivity to changes in implied volatility
+    pub vega: Decimal,
+    /// Measures sensitivity to changes in the risk-free interest rate
+    pub rho: Option<Decimal>,
+    /// Measures sensitivity to changes in the dividend yield
+    pub rho_d: Option<Decimal>,
+    /// Measures the option's theoretical value not explained by other Greeks
+    pub alpha: Option<Decimal>,
 }
 
 /// Trait that provides option Greeks calculation functionality for financial instruments.
@@ -294,8 +320,8 @@ pub trait Greeks {
 /// use tracing::{error, info};
 /// use optionstratlib::constants::ZERO;
 /// use optionstratlib::greeks::delta;
-/// use optionstratlib::Options;
-/// use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+/// use optionstratlib::{ExpirationDate, Options};
+/// use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
 /// use optionstratlib::{pos, Positive};
 /// let option = Options {
 ///     option_type: OptionType::European,side:
@@ -459,8 +485,8 @@ pub fn delta(option: &Options) -> Result<Decimal, GreeksError> {
 /// use rust_decimal_macros::dec;
 /// use tracing::{error, info};
 /// use optionstratlib::greeks::gamma;
-/// use optionstratlib::Options;
-/// use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+/// use optionstratlib::{ExpirationDate, Options};
+/// use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
 /// use optionstratlib::pos;
 /// let option = Options {
 ///     option_type: OptionType::European,
@@ -591,8 +617,8 @@ pub fn gamma(option: &Options) -> Result<Decimal, GreeksError> {
 /// use rust_decimal_macros::dec;
 /// use tracing::{error, info};
 /// use optionstratlib::greeks::theta;
-/// use optionstratlib::Options;
-/// use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+/// use optionstratlib::{ExpirationDate, Options};
+/// use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
 /// use optionstratlib::pos;
 /// let option = Options {
 ///     option_type: OptionType::European,
@@ -721,8 +747,8 @@ pub fn theta(option: &Options) -> Result<Decimal, GreeksError> {
 /// use rust_decimal_macros::dec;
 /// use tracing::{error, info};
 /// use optionstratlib::greeks::vega;
-/// use optionstratlib::Options;
-/// use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+/// use optionstratlib::{ExpirationDate, Options};
+/// use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
 /// use optionstratlib::pos;
 ///
 /// let option = Options {
@@ -845,8 +871,8 @@ pub fn vega(option: &Options) -> Result<Decimal, GreeksError> {
 /// use rust_decimal_macros::dec;
 /// use tracing::{error, info};
 /// use optionstratlib::greeks::rho;
-/// use optionstratlib::Options;
-/// use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+/// use optionstratlib::{ExpirationDate, Options};
+/// use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
 /// use optionstratlib::pos;
 ///
 /// let option = Options {
@@ -978,8 +1004,8 @@ pub fn rho(option: &Options) -> Result<Decimal, GreeksError> {
 /// use rust_decimal_macros::dec;
 /// use tracing::{error, info};
 /// use optionstratlib::greeks::rho_d;
-/// use optionstratlib::Options;
-/// use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+/// use optionstratlib::{ExpirationDate, Options};
+/// use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
 /// use optionstratlib::pos;
 ///
 /// let option = Options {
@@ -1057,11 +1083,11 @@ pub fn alpha(option: &Options) -> Result<Decimal, GreeksError> {
 pub mod tests_delta_equations {
     use super::*;
     use crate::constants::{DAYS_IN_A_YEAR, ZERO};
-    use crate::model::types::{ExpirationDate, OptionStyle, Side};
+    use crate::model::types::{OptionStyle, Side};
     use crate::model::utils::create_sample_option;
     use crate::strategies::DELTA_THRESHOLD;
     use crate::utils::logger::setup_logger;
-    use crate::{assert_decimal_eq, pos};
+    use crate::{ExpirationDate, assert_decimal_eq, pos};
     use approx::assert_relative_eq;
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
@@ -1308,10 +1334,10 @@ pub mod tests_delta_equations {
 pub mod tests_gamma_equations {
     use super::*;
     use crate::constants::DAYS_IN_A_YEAR;
-    use crate::model::types::{ExpirationDate, OptionStyle, Side};
+    use crate::model::types::{OptionStyle, Side};
     use crate::model::utils::create_sample_option;
-    use crate::pos;
     use crate::utils::logger::setup_logger;
+    use crate::{ExpirationDate, pos};
     use approx::assert_relative_eq;
     use num_traits::ToPrimitive;
     use tracing::info;
@@ -1435,9 +1461,9 @@ pub mod tests_gamma_equations {
 #[cfg(test)]
 mod tests_gamma_equations_values {
     use super::*;
-    use crate::model::types::{ExpirationDate, OptionStyle, Side};
+    use crate::model::types::{OptionStyle, Side};
     use crate::utils::logger::setup_logger;
-    use crate::{OptionType, pos};
+    use crate::{ExpirationDate, OptionType, pos};
     use approx::assert_relative_eq;
     use num_traits::ToPrimitive;
     use tracing::info;
@@ -1513,8 +1539,8 @@ mod tests_gamma_equations_values {
 pub mod tests_vega_equation {
     use super::*;
     use crate::constants::DAYS_IN_A_YEAR;
-    use crate::model::types::{ExpirationDate, OptionType, Side};
-    use crate::{Positive, pos};
+    use crate::model::types::{OptionType, Side};
+    use crate::{ExpirationDate, Positive, pos};
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
@@ -1646,8 +1672,8 @@ pub mod tests_vega_equation {
 pub mod tests_rho_equations {
     use super::*;
     use crate::constants::DAYS_IN_A_YEAR;
-    use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
-    use crate::{assert_decimal_eq, pos};
+    use crate::model::types::{OptionStyle, OptionType, Side};
+    use crate::{ExpirationDate, assert_decimal_eq, pos};
     use approx::assert_relative_eq;
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
@@ -1736,9 +1762,9 @@ pub mod tests_rho_equations {
 pub mod tests_theta_long_equations {
     use super::*;
     use crate::constants::DAYS_IN_A_YEAR;
-    use crate::model::types::{ExpirationDate, Side};
+    use crate::model::types::Side;
     use crate::model::utils::create_sample_option;
-    use crate::pos;
+    use crate::{ExpirationDate, pos};
     use approx::assert_relative_eq;
     use num_traits::ToPrimitive;
 
@@ -1841,9 +1867,9 @@ pub mod tests_theta_long_equations {
 pub mod tests_theta_short_equations {
     use super::*;
     use crate::constants::DAYS_IN_A_YEAR;
-    use crate::model::types::{ExpirationDate, Side};
+    use crate::model::types::Side;
     use crate::model::utils::create_sample_option;
-    use crate::pos;
+    use crate::{ExpirationDate, pos};
     use approx::assert_relative_eq;
     use num_traits::ToPrimitive;
 
@@ -1945,8 +1971,8 @@ pub mod tests_theta_short_equations {
 #[cfg(test)]
 mod tests_greeks_trait {
     use super::*;
-    use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
-    use crate::{assert_decimal_eq, pos};
+    use crate::model::types::{OptionStyle, OptionType, Side};
+    use crate::{ExpirationDate, assert_decimal_eq, pos};
     use rust_decimal_macros::dec;
 
     // A simple struct for testing the Greeks trait

@@ -269,13 +269,15 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model::types::ExpirationDate;
+    use crate::model::ExpirationDate;
     use crate::pos;
 
     #[test]
     fn test_days_left() {
         let mut step = Xstep::new(1.5f64, TimeFrame::Day, ExpirationDate::Days(pos!(30.0)));
         step.index = 42;
+
+        assert!(step.next().is_ok());
 
         assert_eq!(step.days_left().unwrap(), pos!(30.0));
         let step1 = step.next().unwrap();
@@ -296,7 +298,7 @@ mod tests {
 #[cfg(test)]
 mod tests_serialize {
     use super::*;
-    use crate::model::types::ExpirationDate;
+    use crate::model::ExpirationDate;
     use crate::pos;
     use rust_decimal_macros::dec;
     use serde_json::{Value, json};

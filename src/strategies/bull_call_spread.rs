@@ -28,7 +28,7 @@ use crate::error::{GreeksError, OperationErrorKind};
 use crate::greeks::Greeks;
 use crate::model::ProfitLossRange;
 use crate::model::position::Position;
-use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+use crate::model::types::{OptionStyle, OptionType, Side};
 use crate::model::utils::mean_and_std;
 use crate::pnl::utils::{PnL, PnLCalculator};
 use crate::pricing::payoff::Profit;
@@ -39,7 +39,7 @@ use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
 use crate::strategies::{StrategyBasics, StrategyConstructor};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
-use crate::{Options, Positive, pos};
+use crate::{ExpirationDate, Options, Positive, pos};
 use chrono::Utc;
 use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{RED, ShapeStyle};
@@ -836,7 +836,7 @@ fn bull_call_spread_test() -> BullCallSpread {
 #[cfg(test)]
 mod tests_bull_call_spread_strategy {
     use super::*;
-    use crate::model::types::ExpirationDate;
+    use crate::model::ExpirationDate;
     use crate::pos;
     use approx::assert_relative_eq;
     use num_traits::ToPrimitive;
@@ -1025,7 +1025,7 @@ mod tests_bull_call_spread_strategy {
 #[cfg(test)]
 mod tests_bull_call_spread_validation {
     use super::*;
-    use crate::model::types::ExpirationDate;
+    use crate::model::ExpirationDate;
     use chrono::Utc;
     use rust_decimal_macros::dec;
 
@@ -1235,7 +1235,7 @@ mod tests_bull_call_spread_validation {
 mod tests_bull_call_spread_optimization {
     use super::*;
     use crate::chains::OptionData;
-    use crate::model::types::ExpirationDate;
+    use crate::model::ExpirationDate;
     use crate::spos;
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
@@ -1576,7 +1576,7 @@ mod tests_bull_call_spread_optimization {
 #[cfg(test)]
 mod tests_bull_call_spread_profit {
     use super::*;
-    use crate::model::types::ExpirationDate;
+    use crate::model::ExpirationDate;
     use crate::pos;
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
@@ -1726,7 +1726,7 @@ mod tests_bull_call_spread_profit {
 #[cfg(test)]
 mod tests_bull_call_spread_graph {
     use super::*;
-    use crate::model::types::ExpirationDate;
+    use crate::model::ExpirationDate;
     use crate::pos;
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
@@ -2115,11 +2115,11 @@ mod tests_bull_call_spread_probability {
 #[cfg(test)]
 mod tests_delta {
     use crate::greeks::Greeks;
-    use crate::model::types::{ExpirationDate, OptionStyle};
+    use crate::model::types::OptionStyle;
     use crate::strategies::bull_call_spread::BullCallSpread;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
-    use crate::{Positive, Side, assert_decimal_eq, assert_pos_relative_eq, pos};
+    use crate::{ExpirationDate, Positive, Side, assert_decimal_eq, assert_pos_relative_eq, pos};
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
 
@@ -2246,11 +2246,11 @@ mod tests_delta {
 #[cfg(test)]
 mod tests_delta_size {
     use crate::greeks::Greeks;
-    use crate::model::types::{ExpirationDate, OptionStyle};
+    use crate::model::types::OptionStyle;
     use crate::strategies::bull_call_spread::BullCallSpread;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
-    use crate::{Positive, Side, assert_decimal_eq, assert_pos_relative_eq, pos};
+    use crate::{ExpirationDate, Positive, Side, assert_decimal_eq, assert_pos_relative_eq, pos};
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
 
@@ -2377,7 +2377,7 @@ mod tests_delta_size {
 mod tests_bull_call_spread_position_management {
     use super::*;
     use crate::error::position::PositionValidationErrorKind;
-    use crate::model::types::{ExpirationDate, OptionStyle, Side};
+    use crate::model::types::{OptionStyle, Side};
     use crate::pos;
     use rust_decimal_macros::dec;
 
@@ -2486,7 +2486,7 @@ mod tests_bull_call_spread_position_management {
 #[cfg(test)]
 mod tests_adjust_option_position {
     use super::*;
-    use crate::model::types::{ExpirationDate, OptionStyle, Side};
+    use crate::model::types::{OptionStyle, Side};
     use crate::pos;
     use rust_decimal_macros::dec;
 

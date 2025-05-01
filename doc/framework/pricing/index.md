@@ -103,7 +103,7 @@ implementations:
 use rust_decimal_macros::dec;
 use optionstratlib::pricing::telegraph::{TelegraphProcess, telegraph};
 use optionstratlib::Options;
-use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
 use optionstratlib::Positive;
 use optionstratlib::pos;
 
@@ -135,7 +135,7 @@ let price = telegraph(&option, 1000, Some(dec!(0.5)), Some(dec!(0.3)));
 ``` {.rust .rust-example-rendered}
 use rust_decimal_macros::dec;
 use optionstratlib::Options;
-use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
 use optionstratlib::Positive;
 use optionstratlib::pos;
 use optionstratlib::pricing::{

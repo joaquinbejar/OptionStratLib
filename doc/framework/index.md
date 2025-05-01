@@ -622,7 +622,7 @@ analysis:
  use optionstratlib::greeks::Greeks;
  use optionstratlib::Options;
  use optionstratlib::Positive;
- use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+ use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
  use optionstratlib::pos;
  use optionstratlib::utils::setup_logger;
  use optionstratlib::visualization::utils::Graph;

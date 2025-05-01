@@ -8,7 +8,7 @@ use optionstratlib::model::Options;
 use optionstratlib::model::types::{OptionStyle, Side};
 use optionstratlib::surfaces::{Point3D, Surface};
 use optionstratlib::utils::setup_logger;
-use optionstratlib::{Positive, pos};
+use optionstratlib::{ExpirationDate, OptionType, Positive, pos};
 use rust_decimal_macros::dec;
 
 fn main() -> Result<(), SurfaceError> {
@@ -31,11 +31,11 @@ fn main() -> Result<(), SurfaceError> {
             let strike = Positive::new_decimal(t.y).unwrap();
             let underlying = Positive::new_decimal(t.x).unwrap();
             let option = Options::new(
-                optionstratlib::model::types::OptionType::European,
+                OptionType::European,
                 Side::Long,
                 "Example".to_string(),
                 strike, // Strike price
-                optionstratlib::model::types::ExpirationDate::Days(pos!(30.0)),
+                ExpirationDate::Days(pos!(30.0)),
                 pos!(0.2),         // Implied volatility
                 Positive::ONE,     // Quantity
                 underlying,        // Underlying price

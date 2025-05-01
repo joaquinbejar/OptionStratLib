@@ -95,7 +95,7 @@ use rust_decimal_macros::dec;
 use tracing::{error, info};
 use optionstratlib::greeks::rho_d;
 use optionstratlib::Options;
-use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
 use optionstratlib::pos;
 
 let option = Options {

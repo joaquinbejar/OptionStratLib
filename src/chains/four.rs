@@ -63,7 +63,7 @@ impl PartialEq for FourOptions {
 mod tests {
     use crate::chains::OptionData;
     use crate::chains::utils::OptionDataPriceParams;
-    use crate::model::types::ExpirationDate;
+    use crate::model::ExpirationDate;
     use crate::{OptionStyle, OptionType, Positive, Side, assert_pos_relative_eq, pos, spos};
     use rust_decimal_macros::dec;
     use std::sync::Arc;

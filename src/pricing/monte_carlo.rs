@@ -64,8 +64,8 @@ pub fn monte_carlo_option_pricing(
 mod tests {
     use super::*;
     use crate::constants::{DAYS_IN_A_YEAR, ZERO};
-    use crate::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
-    use crate::{Positive, assert_decimal_eq, f2du, pos};
+    use crate::model::types::{OptionStyle, OptionType, Side};
+    use crate::{ExpirationDate, Positive, assert_decimal_eq, f2du, pos};
     use rust_decimal::MathematicalOps;
     use rust_decimal_macros::dec;
 

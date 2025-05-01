@@ -11,7 +11,6 @@ use {
 };
 
 #[test]
-
 fn test_short_strangle_with_greeks_integration() -> Result<(), Box<dyn Error>> {
     setup_logger();
 
@@ -38,6 +37,7 @@ fn test_short_strangle_with_greeks_integration() -> Result<(), Box<dyn Error>> {
 
     let option_chain =
         OptionChain::load_from_json("./examples/Chains/SP500-18-oct-2024-5781.88.json")?;
+
     strategy.best_area(&option_chain, FindOptimalSide::All);
     assert_relative_eq!(
         strategy.profit_area().unwrap().to_f64().unwrap(),

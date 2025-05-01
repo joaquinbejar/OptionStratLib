@@ -15,7 +15,7 @@
 
 
 
- # OptionStratLib v0.4.5: Financial Options Library
+ # OptionStratLib v0.4.6: Financial Options Library
 
  ## Table of Contents
  1. [Introduction](#introduction)
@@ -406,11 +406,10 @@
  ## Strategies Classifications
 
  ```mermaid
- %%{
-  init: {
-    'flowchart': { 'layout': 'fixed' }
-  }
- }%%
+ ---
+ config:
+ layout: fixed
+ ---
  flowchart TD
  start["Options Strategies"] --> bullish["Bullish"] & bearish["Bearish"] & neutral["Neutral"]
  bullish --> bull_high["High Volatility"] & bull_low["Low Volatility"]
@@ -543,8 +542,9 @@
 use optionstratlib::greeks::Greeks;
 use optionstratlib::Options;
 use optionstratlib::Positive;
-use optionstratlib::model::types::{ExpirationDate, OptionStyle, OptionType, Side};
+use optionstratlib::model::types::{OptionStyle, OptionType, Side};
 use optionstratlib::pos;
+use optionstratlib::ExpirationDate;
 use optionstratlib::utils::setup_logger;
 use optionstratlib::visualization::utils::Graph;
 use optionstratlib::visualization::utils::GraphBackend;
@@ -553,7 +553,7 @@ use tracing::info;
 
 fn create_sample_option() -> Options {
     use rust_decimal_macros::dec;
-use optionstratlib::pos;Options::new(
+use optionstratlib::{pos, ExpirationDate};Options::new(
         OptionType::European,
         Side::Long,
         "AAPL".to_string(),
