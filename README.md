@@ -15,7 +15,7 @@
 
 
 
- # OptionStratLib v0.4.6: Financial Options Library
+ # OptionStratLib v0.4.7: Financial Options Library
 
  ## Table of Contents
  1. [Introduction](#introduction)
