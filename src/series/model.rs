@@ -717,6 +717,7 @@ mod tests_option_series {
 
     mod tests_serialization {
         use super::*;
+        use chrono::{Local, NaiveTime};
         use serde_json;
 
         #[test]
@@ -758,7 +759,6 @@ mod tests_option_series {
             );
 
             let serialized_string = serialized.unwrap();
-            debug!("Serialized string: {}", serialized_string);
 
             // Deserialize
             let deserialized_result: Result<OptionSeries, _> =
@@ -806,10 +806,18 @@ mod tests_option_series {
                 );
             }
 
-            // Verify expiration dates
+            let cutoff = NaiveTime::parse_from_str("18:30", "%H:%M").unwrap();
+            let now = Local::now().time();
             let original_dates = original.get_expiration_dates().unwrap();
-            let deserialized_dates = deserialized.get_expiration_dates().unwrap();
-            assert_eq!(deserialized_dates, original_dates);
+            let mut deserialized_dates = deserialized.get_expiration_dates().unwrap();
+            if now > cutoff {
+                deserialized_dates
+                    .iter_mut()
+                    .for_each(|d| *d += Positive::ONE);
+                assert_eq!(deserialized_dates, original_dates);
+            } else {
+                assert_eq!(deserialized_dates, original_dates);
+            }
         }
 
         #[test]

@@ -5491,7 +5491,7 @@ mod tests_option_data_implied_volatility {
 #[cfg(test)]
 mod tests_chain_implied_volatility {
     use super::*;
-    use crate::utils::time::{get_today_or_tomorrow_formatted, get_tomorrow_formatted};
+    use crate::utils::time::get_tomorrow_formatted;
     use crate::{assert_pos_relative_eq, pos, spos};
     use rust_decimal_macros::dec;
 
@@ -5560,7 +5560,7 @@ mod tests_chain_implied_volatility {
         let mut chain = OptionChain::new(
             "TEST",
             pos!(21537.0),
-            get_today_or_tomorrow_formatted(),
+            get_tomorrow_formatted(),
             Some(dec!(0.0)),
             Some(pos!(0.0)),
         );

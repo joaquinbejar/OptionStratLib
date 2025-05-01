@@ -5,7 +5,9 @@
 ******************************************************************************/
 use crate::simulation::steps::{Xstep, Ystep};
 use crate::utils::TimeFrame;
-use crate::{ExpirationDate, Positive, pos};
+use crate::{ExpirationDate, Positive};
+use num_traits::FromPrimitive;
+use rust_decimal::Decimal;
 use serde::ser::SerializeStruct;
 use serde::{Serialize, Serializer};
 use std::error::Error;
@@ -157,8 +159,11 @@ where
     /// # Returns
     ///
     /// A `Positive` representation of the x-axis index as a floating point value
-    pub fn get_graph_x_value(&self) -> Positive {
-        pos!(*self.x.index() as f64)
+    pub fn get_graph_x_value(&self) -> Result<Decimal, Box<dyn Error>> {
+        match Decimal::from_i32(*self.x.index()) {
+            Some(x) => Ok(x),
+            None => Err("Cannot convert x-axis index to decimal".into()),
+        }
     }
 
     /// Returns the number of days left until expiration for the x-axis component of this step.
@@ -606,6 +611,28 @@ mod tests_step {
         // Check Y properties
         assert_eq!(*step.y.index(), 0);
         assert_eq!(*step.y.value(), 42.5);
+
+        let result_next = step.next(100.0);
+        assert!(result_next.is_ok());
+        let next = result_next.unwrap();
+
+        assert!(
+            next.to_string()
+                .contains("Step { x: Xstep { index: 1, value: 5, time_unit: Day, datetime:")
+        );
+
+        let previous_next = step.previous(100.0);
+        assert!(previous_next.is_ok());
+        let previous = previous_next.unwrap();
+
+        assert!(
+            previous
+                .to_string()
+                .contains("Step { x: Xstep { index: -1, value: 5, time_unit: Day, datetime:")
+        );
+
+        assert_eq!(next.get_graph_x_value().unwrap(), Decimal::ONE);
+        assert_eq!(previous.get_graph_x_value().unwrap(), Decimal::NEGATIVE_ONE);
     }
 
     #[test]

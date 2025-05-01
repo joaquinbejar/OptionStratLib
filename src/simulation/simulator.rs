@@ -710,18 +710,18 @@ mod tests {
             &walk_params,
             generator_positive,
         );
-        
+
         let y_values = simulator.get_y_values();
         let x_values = simulator.get_x_values();
-        
-        assert_eq!(y_values.len() , simulator_size * n_steps);
+
+        assert_eq!(y_values.len(), simulator_size * n_steps);
         assert_eq!(x_values.len(), simulator_size * n_steps);
-        
+
         let mut iter = simulator.into_iter();
         assert!(iter.any(|step| step.get_y_values().len() == n_steps));
         assert!(iter.any(|step| step.get_x_values().len() == n_steps));
         assert!(simulator.calculate_profit_at(pos!(100.0)).is_err());
-        
+
         let step = simulator.get_step_mut(0);
         assert!(step.first().is_some());
 

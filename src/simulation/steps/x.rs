@@ -277,6 +277,8 @@ mod tests {
         let mut step = Xstep::new(1.5f64, TimeFrame::Day, ExpirationDate::Days(pos!(30.0)));
         step.index = 42;
 
+        assert!(step.next().is_ok());
+
         assert_eq!(step.days_left().unwrap(), pos!(30.0));
         let step1 = step.next().unwrap();
         assert_eq!(*step1.index(), 43);
