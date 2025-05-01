@@ -38,7 +38,7 @@ skew characteristics of the resulting option chain.
 - `strike_interval` - The fixed price difference between adjacent strike
   prices in the chain.
 
-- `skew_factor` - Controls the volatility skew pattern in the option
+- `smile_curve` - Controls the volatility skew pattern in the option
   chain. Positive values create a volatility smile, negative values
   create an inverted skew.
 
@@ -73,7 +73,7 @@ simulation, or educational purposes.
 [Source](../../../src/optionstratlib/chains/utils.rs.html#168-188){.src
 .rightside}
 
-#### pub fn [new](#method.new){.fn}( symbol: [String](https://doc.rust-lang.org/1.86.0/alloc/string/struct.String.html "struct alloc::string::String"){.struct}, volume: [Option](https://doc.rust-lang.org/1.86.0/core/option/enum.Option.html "enum core::option::Option"){.enum}\<[Positive](../../model/positive/struct.Positive.html "struct optionstratlib::model::positive::Positive"){.struct}\>, chain_size: [usize](https://doc.rust-lang.org/1.86.0/std/primitive.usize.html){.primitive}, strike_interval: [Positive](../../model/positive/struct.Positive.html "struct optionstratlib::model::positive::Positive"){.struct}, skew_factor: Decimal, spread: [Positive](../../model/positive/struct.Positive.html "struct optionstratlib::model::positive::Positive"){.struct}, decimal_places: [i32](https://doc.rust-lang.org/1.86.0/std/primitive.i32.html){.primitive}, price_params: [OptionDataPriceParams](struct.OptionDataPriceParams.html "struct optionstratlib::chains::utils::OptionDataPriceParams"){.struct}, ) -\> Self {#pub-fn-new-symbol-string-volume-optionpositive-chain_size-usize-strike_interval-positive-skew_factor-decimal-spread-positive-decimal_places-i32-price_params-optiondatapriceparams---self .code-header}
+#### pub fn [new](#method.new){.fn}( symbol: [String](https://doc.rust-lang.org/1.86.0/alloc/string/struct.String.html "struct alloc::string::String"){.struct}, volume: [Option](https://doc.rust-lang.org/1.86.0/core/option/enum.Option.html "enum core::option::Option"){.enum}\<[Positive](../../model/positive/struct.Positive.html "struct optionstratlib::model::positive::Positive"){.struct}\>, chain_size: [usize](https://doc.rust-lang.org/1.86.0/std/primitive.usize.html){.primitive}, strike_interval: [Positive](../../model/positive/struct.Positive.html "struct optionstratlib::model::positive::Positive"){.struct}, smile_curve: Decimal, spread: [Positive](../../model/positive/struct.Positive.html "struct optionstratlib::model::positive::Positive"){.struct}, decimal_places: [i32](https://doc.rust-lang.org/1.86.0/std/primitive.i32.html){.primitive}, price_params: [OptionDataPriceParams](struct.OptionDataPriceParams.html "struct optionstratlib::chains::utils::OptionDataPriceParams"){.struct}, ) -\> Self {#pub-fn-new-symbol-string-volume-optionpositive-chain_size-usize-strike_interval-positive-smile_curve-decimal-spread-positive-decimal_places-i32-price_params-optiondatapriceparams---self .code-header}
 :::
 
 ::: docblock
@@ -99,7 +99,7 @@ chains with customizable parameters.
 - `strike_interval` - The fixed price difference between adjacent strike
   prices in the chain, represented as a positive decimal value.
 
-- `skew_factor` - A factor controlling the volatility skew pattern in
+- `smile_curve` - A factor controlling the volatility skew pattern in
   the option chain. Positive values create a volatility smile, negative
   values create an inverted skew.
 
