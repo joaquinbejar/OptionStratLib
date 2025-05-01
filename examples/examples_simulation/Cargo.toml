@@ -9,3 +9,5 @@ tracing = "0.1.41"
 rust_decimal = { version = "1.36.0", features = ["maths", "serde"] }
 rust_decimal_macros = "1.36.0"
 rand = "0.9.1"
+rayon = "1.10.0"
+indicatif = "0.17.11"
