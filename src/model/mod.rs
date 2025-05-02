@@ -124,6 +124,7 @@ mod axis;
 
 /// Components for defining and working with expiration dates.
 mod expiration;
+mod trade;
 
 pub use axis::BasicAxisTypes;
 pub use expiration::ExpirationDate;

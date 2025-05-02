@@ -40,7 +40,7 @@ mod datetime_format {
 /// `Action` is used to indicate whether a security is being acquired or disposed of,
 /// and is commonly paired with other transaction details such as price, quantity,
 /// and timing information.
-#[derive(Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Action {
     /// Represents a purchase transaction, where assets are acquired.
     Buy,
@@ -67,7 +67,7 @@ pub enum Side {
     Short,
 }
 
-/// Specifies the style of an options contract.
+/// Specifies the style of an option contract.
 ///
 /// This enum defines the fundamental classification of options contracts based on
 /// their exercise characteristics. The style determines when and how an option
@@ -75,7 +75,7 @@ pub enum Side {
 ///
 /// `OptionStyle` is a critical attribute for options contracts as it directly
 /// affects valuation, pricing models, and exercise strategies.
-#[derive(Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive( Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum OptionStyle {
     /// Represents a call option, which gives the holder the right (but not obligation)
     /// to buy the underlying asset at the strike price before or at expiration.
@@ -89,7 +89,7 @@ pub enum OptionStyle {
 
 /// Represents the type of option in a financial context.
 /// Options can be categorized into various types based on their characteristics and the conditions under which they can be exercised.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum OptionType {
     /// A European option can only be exercised at the expiry date.
     /// This type of option does not allow the holder to exercise the option before the specified expiration date.

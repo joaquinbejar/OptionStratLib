@@ -97,7 +97,7 @@ pub struct DrawdownAnalysis {
 ///
 /// This struct captures the key dates, the magnitude (severity) of the drawdown,
 /// and its duration, including the time it takes to recover back to the initial peak value.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct DrawdownEvent {
     /// The date and time when the drawdown period started (the peak before the decline).
     pub start_date: NaiveDateTime,
@@ -186,7 +186,7 @@ pub struct TimeSeriesData {
 /// This struct is used to log and analyze the performance and characteristics of specific trades,
 /// particularly in the context of options trading. It includes timestamps, financial details,
 /// associated strategy information, and reasons for exit.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct TradeRecord {
     /// A unique identifier (`Uuid`) for this specific trade record.
     pub id: Uuid,

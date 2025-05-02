@@ -126,7 +126,7 @@ pub struct MarketConditionMetrics {
 ///
 /// This struct holds various performance metrics calculated using a sliding window approach,
 /// allowing for the analysis of how a strategy's performance characteristics change over time.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct RollingMetrics {
     /// The size of the rolling window used for calculations.
     /// This indicates the number of data points included in each rolling calculation.
