@@ -22,7 +22,7 @@ use std::fmt;
 /// * `Expired` - The transaction reached its expiration date without being exercised
 /// * `Exercised` - The option was exercised, converting it to a position in the underlying asset
 /// * `Assigned` - For short options, indicates the counterparty exercised the option
-#[derive(Debug, Default, Copy, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum TradeStatus {
     /// * `open` - The transaction is open and active
     #[default]
@@ -43,7 +43,28 @@ pub enum TradeStatus {
     /// This enum represents different categories or classifications, including the "Other" category.
     ///
     /// Use the `Other` case to represent items or instances that do not fall into predefined categories.
-    Other,
+    Other(String),
+}
+
+/// A trait representing the status management of a trade. 
+///
+/// This trait provides methods for transitioning a trade into various predefined statuses.
+/// Implementations of this trait should define how a trade moves between these statuses.
+///
+/// Each method returns a `Trade` instance representing the trade in its updated status.
+pub trait TradeStatusAble {
+    /// - `open`: Return a `Trade` instance representing the trade in its open status.
+    fn open(&self) -> Trade;
+    /// - `closed`: Return a `Trade` instance representing the trade in its closed status.
+    fn closed(&self) -> Trade;
+    /// - `expired`: Return a `Trade` instance representing the trade in its expired status.
+    fn expired(&self) -> Trade;
+    /// - `exercised`: Return a `Trade` instance representing the trade in its exercised status.
+    fn exercised(&self) -> Trade;
+    /// - `assigned`: Return a `Trade` instance representing the trade in its assigned status.
+    fn assigned(&self) -> Trade;
+    /// - `status_other`: Return a `Trade` instance representing undeclared status.
+    fn status_other(&self) -> Trade;
 }
 
 /// Represents a trade with detailed information such as action, side, option style,
@@ -200,6 +221,7 @@ impl Trade {
         match (self.action, self.side) {
             (Action::Buy, Side::Long) | (Action::Sell, Side::Short) => premium + fees,
             (Action::Buy, Side::Short) | (Action::Sell, Side::Long) => fees,
+            _ => Positive::ZERO,
         }
     }
 
@@ -235,6 +257,7 @@ impl Trade {
         match (self.action, self.side) {
             (Action::Buy, Side::Long) | (Action::Sell, Side::Short) => Positive::ZERO,
             (Action::Buy, Side::Short) | (Action::Sell, Side::Long) => premium,
+            _ => Positive::ZERO,
         }
     }
 
@@ -312,9 +335,14 @@ impl fmt::Display for Trade {
 }
 
 impl TradeAble for Trade {
-    fn trade(&self) -> &Trade {
+    fn trade(&self) -> Trade {
+        self.clone()
+    }
+
+    fn trade_ref(&self) -> &Trade {
         self
     }
+
     fn trade_mut(&mut self) -> &mut Trade {
         self
     }
@@ -337,7 +365,17 @@ pub trait TradeAble {
     ///
     /// Note: Since this method returns a reference (`&Trade`), you cannot modify the `Trade` directly
     /// through this method.
-    fn trade(&self) -> &Trade;
+    fn trade(&self) -> Trade;
+
+    /// Returns a reference to the `Trade` associated with the current instance.
+    ///
+    /// # Returns
+    /// A reference to the `Trade` object tied to this instance.
+    ///
+    /// # Note
+    /// The returned reference has the same lifetime as the instance it is called on.
+    fn trade_ref(&self) -> &Trade;
+    
     /// Provides a mutable reference to the `Trade` instance contained within the current structure.
     ///
     /// # Returns
@@ -564,7 +602,7 @@ mod tests {
         let trait_obj: &dyn TradeAble = &tr;
 
         // The reference handed back by trade() must be the very same object.
-        assert!(std::ptr::eq(trait_obj.trade(), &tr));
+        assert!(std::ptr::eq(trait_obj.trade_ref(), &tr));
     }
 
     #[test]
@@ -577,5 +615,95 @@ mod tests {
         }
         // Change is visible on the original value
         assert!(tr.is_closed());
+    }
+
+    /* ---------- TradeStatusAble ---------- */
+
+    /// helper: assert that two trades son idénticos salvo el campo `status`
+    fn assert_same_except_status(a: &Trade, b: &Trade) {
+        let mut aa = a.clone(); aa.status = b.status.clone();
+        assert_eq!(aa, *b);
+    }
+    
+    impl TradeStatusAble for Trade {
+        fn open(&self) -> Trade {
+            let mut tr = self.clone();
+            tr.status = TradeStatus::Open;
+            tr
+        }
+
+        fn closed(&self) -> Trade {
+            let mut tr = self.clone();
+            tr.status = TradeStatus::Closed;
+            tr
+        }
+
+        fn expired(&self) -> Trade {
+            let mut tr = self.clone();
+            tr.status = TradeStatus::Expired;
+            tr
+        }
+
+        fn exercised(&self) -> Trade {
+            let mut tr = self.clone();
+            tr.status = TradeStatus::Exercised;
+            tr
+        }
+
+        fn assigned(&self) -> Trade {
+            let mut tr = self.clone();
+            tr.status = TradeStatus::Assigned;
+            tr
+        }
+
+        fn status_other(&self) -> Trade {
+            let mut tr = self.clone();
+            tr.status = TradeStatus::Other("other".to_string());
+            tr
+        }
+    }
+
+    #[test]
+    fn status_transitions_return_new_trade() {
+        let base = sample_trade_bis(Action::Buy, Side::Long, TradeStatus::Open);
+
+        // Closed
+        let closed = base.closed();
+        assert_eq!(closed.status, TradeStatus::Closed);
+        assert_same_except_status(&base, &closed);
+        assert_eq!(base.status, TradeStatus::Open); // original untouched
+
+        // Expired
+        let expired = base.expired();
+        assert_eq!(expired.status, TradeStatus::Expired);
+        assert_same_except_status(&base, &expired);
+
+        // Exercised
+        let exercised = base.exercised();
+        assert_eq!(exercised.status, TradeStatus::Exercised);
+        assert_same_except_status(&base, &exercised);
+
+        // Assigned
+        let assigned = base.assigned();
+        assert_eq!(assigned.status, TradeStatus::Assigned);
+        assert_same_except_status(&base, &assigned);
+
+        // Open (idempotent transition)
+        let reopened = closed.open();
+        assert_eq!(reopened.status, TradeStatus::Open);
+        assert_same_except_status(&base, &reopened);
+    }
+
+    #[test]
+    fn status_other_sets_custom_string() {
+        let base = sample_trade_bis(Action::Buy, Side::Long, TradeStatus::Open);
+        let other = base.status_other();
+        if let TradeStatus::Other(s) = &other.status {
+            // default impl should put some non-empty tag
+            assert!(!s.is_empty(), "status_other() must fill the string");
+        } else {
+            panic!("status_other() did not return TradeStatus::Other");
+        }
+        assert_same_except_status(&base, &other);
     }
 }

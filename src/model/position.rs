@@ -7,7 +7,7 @@ use crate::chains::OptionData;
 use crate::error::position::PositionValidationErrorKind;
 use crate::error::{GreeksError, PositionError, TransactionError};
 use crate::greeks::Greeks;
-use crate::model::types::{OptionStyle, Side};
+use crate::model::types::{Action, OptionStyle, Side};
 use crate::pnl::utils::PnL;
 use crate::pnl::{PnLCalculator, Transaction, TransactionAble};
 use crate::pricing::payoff::Profit;
@@ -22,6 +22,8 @@ use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::error::Error;
 use tracing::{debug, trace};
+use crate::model::{Trade, TradeAble, TradeStatus};
+use crate::model::trade::TradeStatusAble;
 
 /// The `Position` struct represents a financial position in an options market.
 ///
@@ -669,6 +671,78 @@ impl TransactionAble for Position {
 
     fn get_transactions(&self) -> Result<Vec<Transaction>, TransactionError> {
         todo!()
+    }
+}
+
+impl TradeAble for Position {
+    fn trade(&self) -> Trade {
+        Trade {
+            id: uuid::Uuid::new_v4(),
+            action: Action::Buy,
+            side: self.option.side,
+            option_style: self.option.option_style,
+            fee: self.open_fee + self.close_fee,
+            symbol: None,
+            strike: self.option.strike_price,
+            expiry: self.option.expiration_date.get_date().unwrap(),
+            timestamp: Utc::now().timestamp_nanos_opt().unwrap(),
+            quantity: self.option.quantity,
+            premium: self.premium,
+            underlying_price: self.option.underlying_price,
+            notes: None,
+            status: TradeStatus::Other("Not yet initialized".to_string()),
+        }
+    }
+
+    fn trade_ref(&self) -> &Trade {
+        unimplemented!()
+    }
+
+    fn trade_mut(&mut self) -> &mut Trade {
+        unimplemented!()
+    }
+}
+
+impl TradeStatusAble for Position {
+    fn open(&self) -> Trade {
+        let mut trade = self.trade();
+        trade.status = TradeStatus::Open;
+        trade
+    }
+
+    fn closed(&self) -> Trade {
+        let mut trade = self.trade();
+        trade.status = TradeStatus::Closed;
+        trade.action = Action::Sell;
+        trade
+    }
+
+    fn expired(&self) -> Trade {
+        let mut trade = self.trade();
+        trade.status = TradeStatus::Expired;
+        trade.action = Action::Sell;
+        trade
+    }
+
+    fn exercised(&self) -> Trade {
+        let mut trade = self.trade();
+        trade.status = TradeStatus::Exercised;
+        trade.action = Action::Sell;
+        trade
+    }
+
+    fn assigned(&self) -> Trade {
+        let mut trade = self.trade();
+        trade.status = TradeStatus::Assigned;
+        trade.action = Action::Other;
+        trade
+    }
+
+    fn status_other(&self) -> Trade {
+        let mut trade = self.trade();
+        trade.status = TradeStatus::Other("Not yet initialized".to_string());
+        trade.action = Action::Other;
+        trade
     }
 }
 

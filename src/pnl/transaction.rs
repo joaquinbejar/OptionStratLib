@@ -189,7 +189,7 @@ impl Transaction {
             | TradeStatus::Expired
             | TradeStatus::Exercised
             | TradeStatus::Assigned
-            | TradeStatus::Other => self.calculate_closed_pnl(),
+            | TradeStatus::Other(_) => self.calculate_closed_pnl(),
         }
     }
 
