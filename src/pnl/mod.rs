@@ -116,5 +116,5 @@ pub use metrics::{
     save_pnl_metrics, save_pnl_metrics_with_document,
 };
 pub use traits::{PnLCalculator, TransactionAble};
-pub use transaction::{Transaction, TransactionStatus};
+pub use transaction::Transaction;
 pub use utils::PnL;

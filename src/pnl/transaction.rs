@@ -1,42 +1,9 @@
 use crate::error::TransactionError;
+use crate::model::TradeStatus;
 use crate::pnl::utils::PnL;
 use crate::{OptionStyle, OptionType, Positive, Side};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-
-/// # Transaction Status
-///
-/// Represents the current state of an options transaction in the system.
-///
-/// This enum tracks the lifecycle status of option transactions as they move
-/// through various states from creation to completion. Each status represents
-/// a meaningful business state that affects how the transaction is processed,
-/// displayed, and included in profit and loss calculations.
-///
-/// ## Status Values
-///
-/// * `Open` - The transaction is currently active and has not been closed or settled
-/// * `Closed` - The transaction has been manually closed before expiration
-/// * `Expired` - The transaction reached its expiration date without being exercised
-/// * `Exercised` - The option was exercised, converting it to a position in the underlying asset
-/// * `Assigned` - For short options, indicates the counterparty exercised the option
-#[derive(Debug, Copy, Clone, Serialize, Deserialize, PartialEq)]
-pub enum TransactionStatus {
-    /// * `open` - The transaction is open and active
-    Open,
-
-    /// * `closed` - The transaction has been closed
-    Closed,
-
-    /// * `expired` - The transaction has expired
-    Expired,
-
-    /// * `exercised` - The transaction has been exercised
-    Exercised,
-
-    /// * `assigned` - The transaction has been assigned
-    Assigned,
-}
 
 /// # Transaction
 ///
@@ -49,7 +16,7 @@ pub enum TransactionStatus {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Transaction {
     /// * `status` - The current status of the transaction (e.g., open, closed, expired)
-    status: TransactionStatus,
+    status: TradeStatus,
     /// * `date_time` - The date and time when the transaction occurred
     date_time: Option<DateTime<Utc>>,
     /// * `option_type` - The type of options contract (e.g., European, American)
@@ -94,7 +61,7 @@ impl Transaction {
     /// A new `Transaction` instance
     #[allow(clippy::too_many_arguments)]
     pub fn new(
-        status: TransactionStatus,
+        status: TradeStatus,
         date_time: Option<DateTime<Utc>>,
         option_type: OptionType,
         side: Side,
@@ -217,11 +184,12 @@ impl Transaction {
     /// A Result containing the PnL or an error
     pub fn pnl(&self) -> Result<PnL, TransactionError> {
         match self.status {
-            TransactionStatus::Open => self.calculate_open_pnl(),
-            TransactionStatus::Closed
-            | TransactionStatus::Expired
-            | TransactionStatus::Exercised
-            | TransactionStatus::Assigned => self.calculate_closed_pnl(),
+            TradeStatus::Open => self.calculate_open_pnl(),
+            TradeStatus::Closed
+            | TradeStatus::Expired
+            | TradeStatus::Exercised
+            | TradeStatus::Assigned
+            | TradeStatus::Other => self.calculate_closed_pnl(),
         }
     }
 
@@ -299,17 +267,17 @@ mod tests {
         // 1. Create an open long call position
         let open_date = Utc::now();
         let mut long_call = Transaction::new(
-            TransactionStatus::Open, // Initial status is Open
-            Some(open_date),         // Transaction date
-            OptionType::European,    // European option
-            Side::Long,              // Long position
-            OptionStyle::Call,       // Call option
-            pos!(1.0),               // 1 contract
-            pos!(5.0),               // Premium paid: $5.00
-            pos!(1.0),               // Fees: $1.00
-            Some(pos!(100.0)),       // Underlying price at open: $100.00
-            Some(pos!(30.0)),        // 30 days to expiration
-            Some(pos!(0.2)),         // IV: 20%
+            TradeStatus::Open,    // Initial status is Open
+            Some(open_date),      // Transaction date
+            OptionType::European, // European option
+            Side::Long,           // Long position
+            OptionStyle::Call,    // Call option
+            pos!(1.0),            // 1 contract
+            pos!(5.0),            // Premium paid: $5.00
+            pos!(1.0),            // Fees: $1.00
+            Some(pos!(100.0)),    // Underlying price at open: $100.00
+            Some(pos!(30.0)),     // 30 days to expiration
+            Some(pos!(0.2)),      // IV: 20%
         );
 
         // 2. Calculate initial PnL (should be negative as we paid premium + fees)
@@ -324,17 +292,17 @@ mod tests {
         // Close the position
         let closed_date = Utc::now();
         let closed_call = Transaction::new(
-            TransactionStatus::Closed, // Status is now Closed
-            Some(closed_date),         // Closing date
-            OptionType::European,      // European option
-            Side::Long,                // Long position
-            OptionStyle::Call,         // Call option
-            pos!(1.0),                 // 1 contract
-            pos!(12.0),                // Closing premium: $12.00 (higher due to price increase)
-            pos!(1.0),                 // Closing fees: $1.00
-            Some(pos!(110.0)),         // Underlying price at close: $110.00
-            Some(pos!(20.0)),          // 20 days to expiration (10 days elapsed)
-            Some(pos!(0.22)),          // IV: 22%
+            TradeStatus::Closed,  // Status is now Closed
+            Some(closed_date),    // Closing date
+            OptionType::European, // European option
+            Side::Long,           // Long position
+            OptionStyle::Call,    // Call option
+            pos!(1.0),            // 1 contract
+            pos!(12.0),           // Closing premium: $12.00 (higher due to price increase)
+            pos!(1.0),            // Closing fees: $1.00
+            Some(pos!(110.0)),    // Underlying price at close: $110.00
+            Some(pos!(20.0)),     // 20 days to expiration (10 days elapsed)
+            Some(pos!(0.22)),     // IV: 22%
         );
 
         // 4. Calculate closing PnL (should be positive as closing premium > initial premium + fees)
@@ -352,7 +320,7 @@ mod tests {
         // Create an open long call position
         let open_date = Utc::now();
         let mut long_call = Transaction::new(
-            TransactionStatus::Open,
+            TradeStatus::Open,
             Some(open_date),
             OptionType::European,
             Side::Long,
@@ -375,7 +343,7 @@ mod tests {
         // Close the position for less than we paid
         let closed_date = Utc::now();
         let closed_call = Transaction::new(
-            TransactionStatus::Closed,
+            TradeStatus::Closed,
             Some(closed_date),
             OptionType::European,
             Side::Long,
@@ -402,7 +370,7 @@ mod tests {
         // 1. Create an open short call position
         let open_date = Utc::now();
         let mut short_call = Transaction::new(
-            TransactionStatus::Open,
+            TradeStatus::Open,
             Some(open_date),
             OptionType::European,
             Side::Short,       // Short position
@@ -426,7 +394,7 @@ mod tests {
         // 4. Close the position by buying it back for less than we received
         let closed_date = Utc::now();
         let closed_call = Transaction::new(
-            TransactionStatus::Closed,
+            TradeStatus::Closed,
             Some(closed_date),
             OptionType::European,
             Side::Short,
@@ -453,7 +421,7 @@ mod tests {
         // 1. Create an open short call position
         let open_date = Utc::now();
         let mut short_call = Transaction::new(
-            TransactionStatus::Open,
+            TradeStatus::Open,
             Some(open_date),
             OptionType::European,
             Side::Short,
@@ -476,7 +444,7 @@ mod tests {
         // 4. Close the position by buying it back for more than we received
         let closed_date = Utc::now();
         let closed_call = Transaction::new(
-            TransactionStatus::Closed,
+            TradeStatus::Closed,
             Some(closed_date),
             OptionType::European,
             Side::Short,
@@ -503,7 +471,7 @@ mod tests {
         // 1. Create an open long put position
         let open_date = Utc::now();
         let mut long_put = Transaction::new(
-            TransactionStatus::Open,
+            TradeStatus::Open,
             Some(open_date),
             OptionType::European,
             Side::Long,        // Long position
@@ -527,7 +495,7 @@ mod tests {
         // 4. Close the position by selling it for more than we paid
         let closed_date = Utc::now();
         let closed_put = Transaction::new(
-            TransactionStatus::Closed,
+            TradeStatus::Closed,
             Some(closed_date),
             OptionType::European,
             Side::Long,
@@ -554,7 +522,7 @@ mod tests {
         // 1. Create an open long put position
         let open_date = Utc::now();
         let mut long_put = Transaction::new(
-            TransactionStatus::Open,
+            TradeStatus::Open,
             Some(open_date),
             OptionType::European,
             Side::Long,
@@ -577,7 +545,7 @@ mod tests {
         // 4. Close the position by selling it for less than we paid
         let closed_date = Utc::now();
         let closed_put = Transaction::new(
-            TransactionStatus::Closed,
+            TradeStatus::Closed,
             Some(closed_date),
             OptionType::European,
             Side::Long,
@@ -604,7 +572,7 @@ mod tests {
         // 1. Create an open short put position
         let open_date = Utc::now();
         let mut short_put = Transaction::new(
-            TransactionStatus::Open,
+            TradeStatus::Open,
             Some(open_date),
             OptionType::European,
             Side::Short,       // Short position
@@ -628,7 +596,7 @@ mod tests {
         // 4. Close the position by buying it back for less than we received
         let closed_date = Utc::now();
         let closed_put = Transaction::new(
-            TransactionStatus::Closed,
+            TradeStatus::Closed,
             Some(closed_date),
             OptionType::European,
             Side::Short,
@@ -655,7 +623,7 @@ mod tests {
         // 1. Create an open short put position
         let open_date = Utc::now();
         let mut short_put = Transaction::new(
-            TransactionStatus::Open,
+            TradeStatus::Open,
             Some(open_date),
             OptionType::European,
             Side::Short,
@@ -678,7 +646,7 @@ mod tests {
         // 4. Close the position by buying it back for more than we received
         let closed_date = Utc::now();
         let closed_put = Transaction::new(
-            TransactionStatus::Closed,
+            TradeStatus::Closed,
             Some(closed_date),
             OptionType::European,
             Side::Short,
@@ -709,7 +677,7 @@ mod tests_transaction_getters {
 
     fn create_test_transaction() -> Transaction {
         Transaction::new(
-            TransactionStatus::Open,
+            TradeStatus::Open,
             Some(Utc::now()),
             OptionType::European,
             Side::Long,
@@ -792,7 +760,7 @@ mod tests_transaction_updaters {
 
     fn create_test_transaction() -> Transaction {
         Transaction::new(
-            TransactionStatus::Open,
+            TradeStatus::Open,
             Some(Utc::now()),
             OptionType::European,
             Side::Long,
@@ -838,7 +806,7 @@ mod tests_transaction_status_pnl {
     #[test]
     fn test_open_european_long_call_pnl() {
         let transaction = Transaction::new(
-            TransactionStatus::Open,
+            TradeStatus::Open,
             Some(Utc::now()),
             OptionType::European,
             Side::Long,
@@ -858,7 +826,7 @@ mod tests_transaction_status_pnl {
     #[test]
     fn test_open_european_short_call_pnl() {
         let transaction = Transaction::new(
-            TransactionStatus::Open,
+            TradeStatus::Open,
             Some(Utc::now()),
             OptionType::European,
             Side::Short,
@@ -878,7 +846,7 @@ mod tests_transaction_status_pnl {
     #[test]
     fn test_closed_european_long_call_pnl() {
         let transaction = Transaction::new(
-            TransactionStatus::Closed,
+            TradeStatus::Closed,
             Some(Utc::now()),
             OptionType::European,
             Side::Long,
@@ -898,7 +866,7 @@ mod tests_transaction_status_pnl {
     #[test]
     fn test_closed_european_short_call_pnl() {
         let transaction = Transaction::new(
-            TransactionStatus::Closed,
+            TradeStatus::Closed,
             Some(Utc::now()),
             OptionType::European,
             Side::Short,
@@ -918,7 +886,7 @@ mod tests_transaction_status_pnl {
     #[test]
     fn test_expired_european_long_call_pnl() {
         let transaction = Transaction::new(
-            TransactionStatus::Expired,
+            TradeStatus::Expired,
             Some(Utc::now()),
             OptionType::European,
             Side::Long,
@@ -938,7 +906,7 @@ mod tests_transaction_status_pnl {
     #[test]
     fn test_exercised_european_long_call_pnl() {
         let transaction = Transaction::new(
-            TransactionStatus::Exercised,
+            TradeStatus::Exercised,
             Some(Utc::now()),
             OptionType::European,
             Side::Long,
@@ -958,7 +926,7 @@ mod tests_transaction_status_pnl {
     #[test]
     fn test_assigned_european_short_call_pnl() {
         let transaction = Transaction::new(
-            TransactionStatus::Assigned,
+            TradeStatus::Assigned,
             Some(Utc::now()),
             OptionType::European,
             Side::Short,
@@ -978,7 +946,7 @@ mod tests_transaction_status_pnl {
     #[test]
     fn test_unsupported_option_type_open() {
         let transaction = Transaction::new(
-            TransactionStatus::Open,
+            TradeStatus::Open,
             Some(Utc::now()),
             OptionType::American, // Unsupported type
             Side::Long,
@@ -1002,7 +970,7 @@ mod tests_transaction_status_pnl {
     #[test]
     fn test_unsupported_option_type_closed() {
         let transaction = Transaction::new(
-            TransactionStatus::Closed,
+            TradeStatus::Closed,
             Some(Utc::now()),
             OptionType::American, // Unsupported type
             Side::Long,

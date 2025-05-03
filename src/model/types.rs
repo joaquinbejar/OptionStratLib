@@ -75,7 +75,7 @@ pub enum Side {
 ///
 /// `OptionStyle` is a critical attribute for options contracts as it directly
 /// affects valuation, pricing models, and exercise strategies.
-#[derive( Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum OptionStyle {
     /// Represents a call option, which gives the holder the right (but not obligation)
     /// to buy the underlying asset at the strike price before or at expiration.

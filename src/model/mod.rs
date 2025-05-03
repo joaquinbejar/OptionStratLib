@@ -131,4 +131,5 @@ pub use expiration::ExpirationDate;
 pub use option::Options;
 pub use position::Position;
 pub use profit_range::ProfitLossRange;
+pub use trade::{Trade, TradeAble, TradeStatus};
 pub use types::{OptionStyle, OptionType, Side};

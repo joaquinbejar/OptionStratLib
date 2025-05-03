@@ -4,13 +4,14 @@
    Date: 16/8/24
 ******************************************************************************/
 use crate::Positive;
+use crate::model::Trade;
 pub use crate::pnl::PnLCalculator;
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::iter::Sum;
-use std::ops::Add; // TODO: Remove this line when TransactionAble is implemented
+use std::ops::Add;
 
 /// Represents the Profit and Loss (PnL) of a financial instrument.
 ///
@@ -223,6 +224,30 @@ impl Add for &PnL {
             } else {
                 other.date_time
             },
+        }
+    }
+}
+
+impl From<Trade> for PnL {
+    fn from(value: Trade) -> Self {
+        PnL {
+            realized: Some(value.net()),
+            unrealized: None,
+            initial_costs: value.cost(),
+            initial_income: value.income(),
+            date_time: value.datetime(),
+        }
+    }
+}
+
+impl From<&Trade> for PnL {
+    fn from(value: &Trade) -> Self {
+        PnL {
+            realized: Some(value.net()),
+            unrealized: None,
+            initial_costs: value.cost(),
+            initial_income: value.income(),
+            date_time: value.datetime(),
         }
     }
 }
