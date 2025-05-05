@@ -2483,7 +2483,6 @@ mod tests_chain_base {
     use tracing::info;
 
     #[test]
-
     fn test_new_option_chain() {
         let chain = OptionChain::new(
             "SP500",
@@ -2499,7 +2498,6 @@ mod tests_chain_base {
     }
 
     #[test]
-
     fn test_new_option_chain_build_chain() {
         setup_logger();
         let params = OptionChainBuildParams::new(
@@ -2516,7 +2514,7 @@ mod tests_chain_base {
                 ExpirationDate::Days(pos!(30.0)),
                 spos!(0.17),
                 Decimal::ZERO,
-                pos!(0.05),
+                pos!(0.0),
                 Some("SP500".to_string()),
             ),
         );
@@ -2540,7 +2538,6 @@ mod tests_chain_base {
     }
 
     #[test]
-
     fn test_new_option_chain_build_chain_long() {
         setup_logger();
         let params = OptionChainBuildParams::new(
@@ -2557,7 +2554,7 @@ mod tests_chain_base {
                 ExpirationDate::Days(pos!(60.0)),
                 spos!(0.03),
                 Decimal::ZERO,
-                pos!(0.05),
+                pos!(0.0),
                 Some("SP500".to_string()),
             ),
         );
@@ -2580,7 +2577,6 @@ mod tests_chain_base {
     }
 
     #[test]
-
     fn test_add_option() {
         let mut chain = OptionChain::new(
             "SP500",
@@ -2611,7 +2607,6 @@ mod tests_chain_base {
     }
 
     #[test]
-
     fn test_get_title_i() {
         let chain = OptionChain::new(
             "SP500",
@@ -2624,7 +2619,6 @@ mod tests_chain_base {
     }
 
     #[test]
-
     fn test_get_title_ii() {
         let chain = OptionChain::new(
             "SP500",
@@ -2637,7 +2631,6 @@ mod tests_chain_base {
     }
 
     #[test]
-
     fn test_set_from_title_i() {
         let mut chain = OptionChain::new("", Positive::ZERO, "".to_string(), None, None);
         let _ = chain.set_from_title("SP500-18-oct-2024-5781.88.csv");
@@ -2647,7 +2640,6 @@ mod tests_chain_base {
     }
 
     #[test]
-
     fn test_set_from_title_ii() {
         let mut chain = OptionChain::new("", Positive::ZERO, "".to_string(), None, None);
         let _ = chain.set_from_title("path/SP500-18-oct-2024-5781.88.csv");
@@ -2657,7 +2649,6 @@ mod tests_chain_base {
     }
 
     #[test]
-
     fn test_set_from_title_iii() {
         let mut chain = OptionChain::new("", Positive::ZERO, "".to_string(), None, None);
         let _ = chain.set_from_title("path/SP500-18-oct-2024-5781.csv");
@@ -2667,7 +2658,6 @@ mod tests_chain_base {
     }
 
     #[test]
-
     fn test_set_from_title_iv() {
         let mut chain = OptionChain::new("", Positive::ZERO, "".to_string(), None, None);
         let _ = chain.set_from_title("path/SP500-18-oct-2024-5781.88.json");
@@ -2687,7 +2677,6 @@ mod tests_chain_base {
     }
 
     #[test]
-
     fn test_save_to_csv() {
         let mut chain = OptionChain::new(
             "SP500",
@@ -2717,7 +2706,6 @@ mod tests_chain_base {
     }
 
     #[test]
-
     fn test_save_to_json() {
         let mut chain = OptionChain::new(
             "SP500",
@@ -2748,7 +2736,6 @@ mod tests_chain_base {
     }
 
     #[test]
-
     fn test_load_from_csv() {
         setup_logger();
         let mut chain = OptionChain::new(
@@ -2787,7 +2774,6 @@ mod tests_chain_base {
     }
 
     #[test]
-
     fn test_load_from_json() {
         let mut chain =
             OptionChain::new("SP500", pos!(5781.9), "18-oct-2024".to_string(), None, None);
@@ -2848,7 +2834,6 @@ mod tests_option_data {
     }
 
     #[test]
-
     fn test_new_option_data() {
         let option_data = create_valid_option_data();
         assert_eq!(option_data.strike_price, pos!(100.0));
@@ -2863,7 +2848,6 @@ mod tests_option_data {
     }
 
     #[test]
-
     fn test_validate_valid_option() {
         setup_logger();
         let option_data = create_valid_option_data();
@@ -2871,7 +2855,6 @@ mod tests_option_data {
     }
 
     #[test]
-
     fn test_validate_zero_strike() {
         let mut option_data = create_valid_option_data();
         option_data.strike_price = Positive::ZERO;
@@ -2879,7 +2862,6 @@ mod tests_option_data {
     }
 
     #[test]
-
     fn test_validate_no_implied_volatility() {
         let mut option_data = create_valid_option_data();
         option_data.implied_volatility = None;
@@ -2887,7 +2869,6 @@ mod tests_option_data {
     }
 
     #[test]
-
     fn test_validate_missing_both_sides() {
         let option_data = OptionData::new(
             pos!(100.0),
@@ -2906,14 +2887,12 @@ mod tests_option_data {
     }
 
     #[test]
-
     fn test_valid_call() {
         let option_data = create_valid_option_data();
         assert!(option_data.valid_call());
     }
 
     #[test]
-
     fn test_valid_call_missing_bid() {
         let mut option_data = create_valid_option_data();
         option_data.call_bid = None;
@@ -2921,7 +2900,6 @@ mod tests_option_data {
     }
 
     #[test]
-
     fn test_valid_call_missing_ask() {
         let mut option_data = create_valid_option_data();
         option_data.call_ask = None;
@@ -2929,14 +2907,12 @@ mod tests_option_data {
     }
 
     #[test]
-
     fn test_valid_put() {
         let option_data = create_valid_option_data();
         assert!(option_data.valid_put());
     }
 
     #[test]
-
     fn test_valid_put_missing_bid() {
         let mut option_data = create_valid_option_data();
         option_data.put_bid = None;
@@ -2944,7 +2920,6 @@ mod tests_option_data {
     }
 
     #[test]
-
     fn test_valid_put_missing_ask() {
         let mut option_data = create_valid_option_data();
         option_data.put_ask = None;
@@ -2952,7 +2927,6 @@ mod tests_option_data {
     }
 
     #[test]
-
     fn test_calculate_prices_success() {
         let mut option_data = OptionData::new(
             pos!(100.0),
@@ -2986,7 +2960,6 @@ mod tests_option_data {
     }
 
     #[test]
-
     fn test_calculate_prices_missing_volatility() {
         setup_logger();
         let mut option_data = OptionData::new(
@@ -3024,7 +2997,6 @@ mod tests_option_data {
     }
 
     #[test]
-
     fn test_calculate_prices_override_volatility() {
         setup_logger();
         let mut option_data = OptionData::new(
@@ -3046,7 +3018,7 @@ mod tests_option_data {
             ExpirationDate::Days(pos!(30.0)),
             spos!(0.12),
             dec!(0.05),
-            pos!(0.01),
+            pos!(0.0),
             None,
         );
         let result = option_data.calculate_prices(&price_params, false);
@@ -3066,7 +3038,6 @@ mod tests_option_data {
     }
 
     #[test]
-
     fn test_calculate_prices_with_all_parameters() {
         let mut option_data = OptionData::new(
             pos!(100.0),
@@ -3160,7 +3131,6 @@ mod tests_get_random_positions {
     }
 
     #[test]
-
     fn test_zero_quantity() {
         setup_logger();
         let chain = create_test_chain();
@@ -3194,7 +3164,6 @@ mod tests_get_random_positions {
     }
 
     #[test]
-
     fn test_long_puts_only() {
         setup_logger();
         let chain = create_test_chain();
@@ -3227,7 +3196,6 @@ mod tests_get_random_positions {
     }
 
     #[test]
-
     fn test_short_puts_only() {
         setup_logger();
         let chain = create_test_chain();
@@ -3260,7 +3228,6 @@ mod tests_get_random_positions {
     }
 
     #[test]
-
     fn test_long_calls_only() {
         setup_logger();
         let chain = create_test_chain();
@@ -3293,7 +3260,6 @@ mod tests_get_random_positions {
     }
 
     #[test]
-
     fn test_short_calls_only() {
         setup_logger();
         let chain = create_test_chain();
@@ -3326,7 +3292,6 @@ mod tests_get_random_positions {
     }
 
     #[test]
-
     fn test_mixed_positions() {
         setup_logger();
         let chain = create_test_chain();
@@ -3373,7 +3338,6 @@ mod tests_get_random_positions {
     }
 
     #[test]
-
     fn test_empty_chain() {
         setup_logger();
         let chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
@@ -3423,35 +3387,30 @@ mod tests_option_data_get_prices {
     }
 
     #[test]
-
     fn test_get_call_buy_price() {
         let data = create_test_option_data();
         assert_eq!(data.get_call_buy_price(), spos!(10.0));
     }
 
     #[test]
-
     fn test_get_call_sell_price() {
         let data = create_test_option_data();
         assert_eq!(data.get_call_sell_price(), spos!(9.5));
     }
 
     #[test]
-
     fn test_get_put_buy_price() {
         let data = create_test_option_data();
         assert_eq!(data.get_put_buy_price(), spos!(9.0));
     }
 
     #[test]
-
     fn test_get_put_sell_price() {
         let data = create_test_option_data();
         assert_eq!(data.get_put_sell_price(), spos!(8.5));
     }
 
     #[test]
-
     fn test_get_prices_with_none_values() {
         let data = OptionData::new(
             pos!(100.0),
@@ -3481,7 +3440,6 @@ mod tests_option_data_display {
     use rust_decimal_macros::dec;
 
     #[test]
-
     fn test_display_full_data() {
         let data = OptionData::new(
             pos!(100.0),
@@ -3509,7 +3467,6 @@ mod tests_option_data_display {
     }
 
     #[test]
-
     fn test_display_empty_data() {
         let data = OptionData::default();
         let display_string = format!("{}", data);

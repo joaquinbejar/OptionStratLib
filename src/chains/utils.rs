@@ -885,7 +885,7 @@ mod tests_strike_step {
     fn long_discrepancy() {
         let symbol = "AAPL".to_string();
         let risk_free_rate = dec!(0.02);
-        let dividend_yield = pos!(0.01);
+        let dividend_yield = pos!(0.0);
         let volume = Some(Positive::ONE);
         let spread = pos!(0.01);
         let decimal_places = 2;

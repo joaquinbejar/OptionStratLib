@@ -1483,7 +1483,6 @@ mod chain_test {
         OptionChain::build_chain(&option_chain_params)
     }
     #[test]
-
     fn test_chain_creation() {
         let option_chain_params = OptionChainBuildParams::new(
             "SP500".to_string(),
@@ -1499,7 +1498,7 @@ mod chain_test {
                 ExpirationDate::Days(pos!(30.0)),
                 spos!(0.17),
                 Decimal::ZERO,
-                pos!(0.05),
+                pos!(0.0),
                 None,
             ),
         );
@@ -1530,7 +1529,6 @@ mod chain_test {
     }
 
     #[test]
-
     fn test_rnd_calculation_debug() {
         let option_chain_params = OptionChainBuildParams::new(
             "SP500".to_string(),
@@ -1576,7 +1574,6 @@ mod chain_test {
     }
 
     #[test]
-
     fn test_rnd_calculation_tolerance_comparison() {
         let chain = create_test_option_chain();
 
