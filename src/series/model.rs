@@ -717,7 +717,7 @@ mod tests_option_series {
 
     mod tests_serialization {
         use super::*;
-        use chrono::{Local, NaiveTime};
+        use chrono::{NaiveTime, Utc};
         use serde_json;
 
         #[test]
@@ -806,10 +806,15 @@ mod tests_option_series {
                 );
             }
 
+            // Parse the cutoff time (20:30)
             let cutoff = NaiveTime::parse_from_str("18:30", "%H:%M").unwrap();
-            let now = Local::now().time();
+
+            // Get the current time in UTC
+            let now = Utc::now().time();
+
             let original_dates = original.get_expiration_dates().unwrap();
             let mut deserialized_dates = deserialized.get_expiration_dates().unwrap();
+
             if now > cutoff {
                 deserialized_dates
                     .iter_mut()

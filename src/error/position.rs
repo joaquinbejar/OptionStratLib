@@ -66,6 +66,7 @@
 //! All error types implement `std::error::Error` and `std::fmt::Display` for proper
 //! error handling and formatting capabilities.
 
+use crate::error::StrategyError;
 use crate::model::types::{OptionStyle, Side};
 use std::error::Error;
 use std::fmt;
@@ -526,6 +527,16 @@ impl From<String> for PositionError {
     fn from(err: String) -> Self {
         PositionError::ValidationError(PositionValidationErrorKind::StdError {
             reason: err.to_string(),
+        })
+    }
+}
+
+// Implement conversion from StrategyError to PositionError
+impl From<StrategyError> for PositionError {
+    fn from(error: StrategyError) -> Self {
+        PositionError::StrategyError(StrategyErrorKind::UnsupportedOperation {
+            operation: "".to_string(),
+            strategy_type: error.to_string(),
         })
     }
 }

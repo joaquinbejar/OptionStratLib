@@ -22,10 +22,10 @@ use crate::error::probability::ProbabilityError;
 use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
 use crate::error::{GreeksError, OperationErrorKind};
 use crate::greeks::Greeks;
-use crate::model::ProfitLossRange;
 use crate::model::position::Position;
-use crate::model::types::{OptionStyle, OptionType, Side};
+use crate::model::types::{Action, OptionStyle, OptionType, Side};
 use crate::model::utils::mean_and_std;
+use crate::model::{ProfitLossRange, Trade, TradeStatusAble};
 use crate::pnl::PnLCalculator;
 use crate::pnl::utils::PnL;
 use crate::pricing::payoff::Profit;
@@ -42,6 +42,7 @@ use num_traits::{FromPrimitive, ToPrimitive};
 use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{RED, ShapeStyle};
 use rust_decimal::Decimal;
+use std::collections::HashMap;
 use std::error::Error;
 use tracing::{debug, error, info, trace};
 
@@ -472,6 +473,43 @@ impl Positionable for ShortStrangle {
             self.short_put = position.clone();
         }
 
+        // Update values passed in new position
+        self.update_volatility(&position.option.implied_volatility)?;
+        self.update_expiration_date(position.option.expiration_date)?;
+        self.update_underlying_price(&position.option.underlying_price)?;
+        self.update_break_even_points()?;
+        Ok(())
+    }
+
+    fn replace_position(&mut self, position: &Position) -> Result<(), PositionError> {
+        if !position.validate() {
+            let err_msg = format!("modify_position: Invalid position data: \n{}", position);
+            return Err(PositionError::ValidationError(
+                PositionValidationErrorKind::InvalidPosition { reason: err_msg },
+            ));
+        }
+
+        if position.option.side == Side::Long {
+            return Err(PositionError::invalid_position_type(
+                position.option.side,
+                "Position side is Long, it is not valid for ShortStrangle".to_string(),
+            ));
+        }
+
+        if position.option.option_style == OptionStyle::Call {
+            self.short_call = position.clone();
+        }
+
+        if position.option.option_style == OptionStyle::Put {
+            self.short_put = position.clone();
+        }
+
+        // Update values passed in new position
+        self.update_volatility(&position.option.implied_volatility)?;
+        self.update_expiration_date(position.option.expiration_date)?;
+        self.update_underlying_price(&position.option.underlying_price)?;
+        self.update_break_even_points()?;
+
         Ok(())
     }
 }
@@ -619,6 +657,133 @@ impl Strategies for ShortStrangle {
         self.short_put.premium =
             Positive(self.short_put.option.calculate_price_black_scholes()?.abs());
         Ok(())
+    }
+
+    fn roll_in(&mut self, position: &Position) -> Result<HashMap<Action, Trade>, StrategyError> {
+        match (&position.option.option_style, &position.option.side) {
+            (OptionStyle::Call, Side::Short) => {
+                if self.short_call.option.strike_price <= position.option.strike_price {
+                    return Err(StrategyError::operation_not_supported(
+                        "Trying a Roll-out in a Roll-in operation",
+                        &self.name,
+                    ));
+                } else {
+                    if self.short_call.option.underlying_price != position.option.underlying_price {
+                        self.update_underlying_price(&position.option.underlying_price)?;
+                    }
+                    if self.short_call.option.implied_volatility
+                        != position.option.implied_volatility
+                    {
+                        self.update_volatility(&position.option.implied_volatility)?;
+                    }
+                    if self.short_call.option.expiration_date != position.option.expiration_date {
+                        self.update_expiration_date(position.option.expiration_date)?;
+                    }
+                }
+                let mut result: HashMap<Action, Trade> = HashMap::new();
+
+                let close_trade = self.short_call.close();
+                result.insert(Action::Sell, close_trade);
+                self.replace_position(position)?;
+                let open_trade = self.short_call.open();
+                result.insert(Action::Buy, open_trade);
+                Ok(result)
+            }
+            (OptionStyle::Put, Side::Short) => {
+                if self.short_put.option.strike_price >= position.option.strike_price {
+                    return Err(StrategyError::operation_not_supported(
+                        "Trying a Roll-out in a Roll-in operation",
+                        &self.name,
+                    ));
+                } else {
+                    if self.short_put.option.underlying_price != position.option.underlying_price {
+                        self.update_underlying_price(&position.option.underlying_price)?;
+                    }
+                    if self.short_put.option.implied_volatility
+                        != position.option.implied_volatility
+                    {
+                        self.update_volatility(&position.option.implied_volatility)?;
+                    }
+                    if self.short_put.option.expiration_date != position.option.expiration_date {
+                        self.update_expiration_date(position.option.expiration_date)?;
+                    }
+                }
+                let mut result: HashMap<Action, Trade> = HashMap::new();
+                let close_trade = self.short_put.close();
+                result.insert(Action::Sell, close_trade);
+                self.replace_position(position)?;
+                let open_trade = self.short_put.open();
+                result.insert(Action::Buy, open_trade);
+                Ok(result)
+            }
+            _ => Err(StrategyError::operation_not_supported(
+                "Roll-in is not supported for Long Options this strategy",
+                &self.name,
+            )),
+        }
+    }
+
+    fn roll_out(&mut self, position: &Position) -> Result<HashMap<Action, Trade>, StrategyError> {
+        match (&position.option.option_style, &position.option.side) {
+            (OptionStyle::Call, Side::Short) => {
+                if self.short_call.option.strike_price >= position.option.strike_price {
+                    return Err(StrategyError::operation_not_supported(
+                        "Trying a Roll-in in a Roll-out operation",
+                        &self.name,
+                    ));
+                } else {
+                    if self.short_call.option.underlying_price != position.option.underlying_price {
+                        self.update_underlying_price(&position.option.underlying_price)?;
+                    }
+                    if self.short_call.option.implied_volatility
+                        != position.option.implied_volatility
+                    {
+                        self.update_volatility(&position.option.implied_volatility)?;
+                    }
+                    if self.short_call.option.expiration_date != position.option.expiration_date {
+                        self.update_expiration_date(position.option.expiration_date)?;
+                    }
+                }
+                let mut result: HashMap<Action, Trade> = HashMap::new();
+                let close_trade = self.short_call.close();
+                result.insert(Action::Sell, close_trade);
+                self.replace_position(position)?;
+                let open_trade = self.short_call.open();
+                result.insert(Action::Buy, open_trade);
+                Ok(result)
+            }
+            (OptionStyle::Put, Side::Short) => {
+                if self.short_put.option.strike_price <= position.option.strike_price {
+                    return Err(StrategyError::operation_not_supported(
+                        "Trying a Roll-in in a Roll-out operation",
+                        &self.name,
+                    ));
+                } else {
+                    if self.short_put.option.underlying_price != position.option.underlying_price {
+                        self.update_underlying_price(&position.option.underlying_price)?;
+                    }
+                    if self.short_put.option.implied_volatility
+                        != position.option.implied_volatility
+                    {
+                        self.update_volatility(&position.option.implied_volatility)?;
+                    }
+                    if self.short_put.option.expiration_date != position.option.expiration_date {
+                        self.update_expiration_date(position.option.expiration_date)?;
+                    }
+                }
+                let mut result: HashMap<Action, Trade> = HashMap::new();
+                let close_trade = self.short_put.close();
+                result.insert(Action::Sell, close_trade);
+                self.replace_position(position)?;
+                let open_trade = self.short_put.open();
+                result.insert(Action::Buy, open_trade);
+                Ok(result)
+            }
+            _ => Err(StrategyError::operation_not_supported(
+                "Roll-in is not supported for Long Options this strategy",
+                &self.name,
+            )),
+        }
     }
 }
 
@@ -5295,5 +5460,333 @@ mod test_adjustments_pnl {
         assert!(pnl.unrealized.is_none());
         assert_pos_relative_eq!(pnl.initial_costs, pos!(3.038101), pos!(1e-6));
         assert_pos_relative_eq!(pnl.initial_income, pos!(67.949767), pos!(1e-6));
+    }
+}
+
+#[cfg(test)]
+mod tests_short_strangle_roll {
+    use super::*;
+    use crate::model::utils::create_sample_position;
+    use crate::{assert_pos_relative_eq, pos};
+
+    fn create_test_strangle() -> Result<ShortStrangle, StrategyError> {
+        // Create short call position
+        let short_call = create_sample_position(
+            OptionStyle::Call,
+            Side::Short,
+            pos!(100.0), // Underlying price
+            pos!(1.0),   // Quantity
+            pos!(105.0), // Strike price
+            pos!(0.2),   // Implied volatility
+        );
+
+        // Create short put position
+        let short_put = create_sample_position(
+            OptionStyle::Put,
+            Side::Short,
+            pos!(100.0), // Same underlying price
+            pos!(1.0),   // Quantity
+            pos!(95.0),  // Strike price
+            pos!(0.2),   // Implied volatility
+        );
+
+        ShortStrangle::get_strategy(&vec![short_call, short_put])
+    }
+
+    #[test]
+    fn test_calculate_roll_in_call() {
+        let mut strangle = create_test_strangle().unwrap();
+
+        info!("strangle: {:?}", strangle);
+        let roll_in_short_call = create_sample_position(
+            OptionStyle::Call,
+            Side::Short,
+            pos!(98.0),  // Underlying price
+            pos!(1.0),   // Quantity
+            pos!(103.0), // Strike price
+            pos!(0.2),   // Implied volatility
+        );
+
+        let result = strangle.roll_in(&roll_in_short_call);
+        assert!(result.is_ok(), "{}", result.err().unwrap());
+        let trades = result.unwrap();
+        info!("strangle: {:?}", strangle);
+
+        assert_pos_relative_eq!(
+            strangle.short_call.option.underlying_price,
+            pos!(98.0),
+            pos!(1e-6)
+        );
+        assert_pos_relative_eq!(
+            strangle.short_put.option.underlying_price,
+            pos!(98.0),
+            pos!(1e-6)
+        );
+        assert_pos_relative_eq!(strangle.short_call.option.quantity, pos!(1.0), pos!(1e-6));
+        assert_pos_relative_eq!(
+            strangle.short_call.option.strike_price,
+            pos!(103.0),
+            pos!(1e-6)
+        );
+        assert_pos_relative_eq!(
+            strangle.short_call.option.implied_volatility,
+            pos!(0.2),
+            pos!(1e-6)
+        );
+        assert_pos_relative_eq!(
+            strangle.short_put.option.implied_volatility,
+            pos!(0.2),
+            pos!(1e-6)
+        );
+
+        let open = trades.get(&Action::Buy);
+        let close = trades.get(&Action::Sell);
+        assert!(open.is_some());
+        assert!(close.is_some());
+        let open = open.unwrap();
+        let close = close.unwrap();
+        info!("open: {}", open);
+        info!("close: {}", close);
+        assert_pos_relative_eq!(open.quantity, pos!(1.0), pos!(1e-6));
+        assert_pos_relative_eq!(close.quantity, pos!(1.0), pos!(1e-6));
+        assert_pos_relative_eq!(open.underlying_price, pos!(98.0), pos!(1e-6));
+        assert_pos_relative_eq!(close.underlying_price, pos!(98.0), pos!(1e-6));
+    }
+
+    #[test]
+    fn test_calculate_roll_in_call_fail() {
+        let mut strangle = create_test_strangle().unwrap();
+        let roll_in_short_call = create_sample_position(
+            OptionStyle::Call,
+            Side::Short,
+            pos!(98.0),  // Underlying price
+            pos!(1.0),   // Quantity
+            pos!(107.0), // Strike price
+            pos!(0.2),   // Implied volatility
+        );
+        let result = strangle.roll_in(&roll_in_short_call);
+        assert!(result.is_err(), "{}", result.err().unwrap());
+    }
+
+    #[test]
+    fn test_calculate_roll_in_put() {
+        let mut strangle = create_test_strangle().unwrap();
+        let roll_in_short_put = create_sample_position(
+            OptionStyle::Put,
+            Side::Short,
+            pos!(102.0), // Underlying price
+            pos!(1.0),   // Quantity
+            pos!(97.0),  // Strike price
+            pos!(0.2),   // Implied volatility
+        );
+
+        let result = strangle.roll_in(&roll_in_short_put);
+        assert!(result.is_ok(), "{}", result.err().unwrap());
+        let trades = result.unwrap();
+
+        assert_pos_relative_eq!(
+            strangle.short_call.option.underlying_price,
+            pos!(102.0),
+            pos!(1e-6)
+        );
+        assert_pos_relative_eq!(
+            strangle.short_put.option.underlying_price,
+            pos!(102.0),
+            pos!(1e-6)
+        );
+        assert_pos_relative_eq!(strangle.short_put.option.quantity, pos!(1.0), pos!(1e-6));
+        assert_pos_relative_eq!(
+            strangle.short_put.option.strike_price,
+            pos!(97.0),
+            pos!(1e-6)
+        );
+        assert_pos_relative_eq!(
+            strangle.short_put.option.implied_volatility,
+            pos!(0.2),
+            pos!(1e-6)
+        );
+        assert_pos_relative_eq!(
+            strangle.short_call.option.implied_volatility,
+            pos!(0.2),
+            pos!(1e-6)
+        );
+
+        let open = trades.get(&Action::Buy);
+        let close = trades.get(&Action::Sell);
+        assert!(open.is_some());
+        assert!(close.is_some());
+        let open = open.unwrap();
+        let close = close.unwrap();
+        info!("open: {}", open);
+        info!("close: {}", close);
+        assert_pos_relative_eq!(open.quantity, pos!(1.0), pos!(1e-6));
+        assert_pos_relative_eq!(close.quantity, pos!(1.0), pos!(1e-6));
+        assert_pos_relative_eq!(open.underlying_price, pos!(102.0), pos!(1e-6));
+        assert_pos_relative_eq!(close.underlying_price, pos!(102.0), pos!(1e-6));
+    }
+
+    #[test]
+    fn test_calculate_roll_in_put_fail() {
+        let mut strangle = create_test_strangle().unwrap();
+        let roll_in_short_put = create_sample_position(
+            OptionStyle::Put,
+            Side::Short,
+            pos!(98.0), // Underlying price
+            pos!(1.0),  // Quantity
+            pos!(93.0), // Strike price
+            pos!(0.2),  // Implied volatility
+        );
+        let result = strangle.roll_in(&roll_in_short_put);
+        assert!(result.is_err(), "{}", result.err().unwrap());
+    }
+
+    #[test]
+    fn test_calculate_roll_out_call() {
+        let mut strangle = create_test_strangle().unwrap();
+
+        info!("strangle: {:?}", strangle);
+        let roll_out_short_call = create_sample_position(
+            OptionStyle::Call,
+            Side::Short,
+            pos!(102.0), // Underlying price
+            pos!(1.0),   // Quantity
+            pos!(110.0), // Strike price (further OTM than original 105)
+            pos!(0.2),   // Implied volatility
+        );
+
+        let result = strangle.roll_out(&roll_out_short_call);
+        assert!(result.is_ok(), "{}", result.err().unwrap());
+        let trades = result.unwrap();
+        info!("strangle: {:?}", strangle);
+
+        assert_pos_relative_eq!(
+            strangle.short_call.option.underlying_price,
+            pos!(102.0),
+            pos!(1e-6)
+        );
+        assert_pos_relative_eq!(
+            strangle.short_put.option.underlying_price,
+            pos!(102.0),
+            pos!(1e-6)
+        );
+        assert_pos_relative_eq!(strangle.short_call.option.quantity, pos!(1.0), pos!(1e-6));
+        assert_pos_relative_eq!(
+            strangle.short_call.option.strike_price,
+            pos!(110.0),
+            pos!(1e-6)
+        );
+        assert_pos_relative_eq!(
+            strangle.short_call.option.implied_volatility,
+            pos!(0.2),
+            pos!(1e-6)
+        );
+        assert_pos_relative_eq!(
+            strangle.short_put.option.implied_volatility,
+            pos!(0.2),
+            pos!(1e-6)
+        );
+
+        let open = trades.get(&Action::Buy);
+        let close = trades.get(&Action::Sell);
+        assert!(open.is_some());
+        assert!(close.is_some());
+        let open = open.unwrap();
+        let close = close.unwrap();
+        info!("open: {}", open);
+        info!("close: {}", close);
+        assert_pos_relative_eq!(open.quantity, pos!(1.0), pos!(1e-6));
+        assert_pos_relative_eq!(close.quantity, pos!(1.0), pos!(1e-6));
+        assert_pos_relative_eq!(open.underlying_price, pos!(102.0), pos!(1e-6));
+        assert_pos_relative_eq!(close.underlying_price, pos!(102.0), pos!(1e-6));
+    }
+
+    #[test]
+    fn test_calculate_roll_out_call_fail() {
+        let mut strangle = create_test_strangle().unwrap();
+        let roll_out_short_call = create_sample_position(
+            OptionStyle::Call,
+            Side::Short,
+            pos!(102.0), // Underlying price
+            pos!(1.0),   // Quantity
+            pos!(103.0), // Strike price (closer to ATM than original 105)
+            pos!(0.2),   // Implied volatility
+        );
+        let result = strangle.roll_out(&roll_out_short_call);
+        assert!(result.is_err(), "{}", result.err().unwrap());
+    }
+
+    #[test]
+    fn test_calculate_roll_out_put() {
+        let mut strangle = create_test_strangle().unwrap();
+
+        info!("strangle: {:?}", strangle);
+        let roll_out_short_put = create_sample_position(
+            OptionStyle::Put,
+            Side::Short,
+            pos!(98.0), // Underlying price
+            pos!(1.0),  // Quantity
+            pos!(90.0), // Strike price (further OTM than original 95)
+            pos!(0.2),  // Implied volatility
+        );
+
+        let result = strangle.roll_out(&roll_out_short_put);
+        assert!(result.is_ok(), "{}", result.err().unwrap());
+        let trades = result.unwrap();
+        info!("strangle: {:?}", strangle);
+
+        assert_pos_relative_eq!(
+            strangle.short_call.option.underlying_price,
+            pos!(98.0),
+            pos!(1e-6)
+        );
+        assert_pos_relative_eq!(
+            strangle.short_put.option.underlying_price,
+            pos!(98.0),
+            pos!(1e-6)
+        );
+        assert_pos_relative_eq!(strangle.short_put.option.quantity, pos!(1.0), pos!(1e-6));
+        assert_pos_relative_eq!(
+            strangle.short_put.option.strike_price,
+            pos!(90.0),
+            pos!(1e-6)
+        );
+        assert_pos_relative_eq!(
+            strangle.short_put.option.implied_volatility,
+            pos!(0.2),
+            pos!(1e-6)
+        );
+        assert_pos_relative_eq!(
+            strangle.short_call.option.implied_volatility,
+            pos!(0.2),
+            pos!(1e-6)
+        );
+
+        let open = trades.get(&Action::Buy);
+        let close = trades.get(&Action::Sell);
+        assert!(open.is_some());
+        assert!(close.is_some());
+        let open = open.unwrap();
+        let close = close.unwrap();
+        info!("open: {}", open);
+        info!("close: {}", close);
+        assert_pos_relative_eq!(open.quantity, pos!(1.0), pos!(1e-6));
+        assert_pos_relative_eq!(close.quantity, pos!(1.0), pos!(1e-6));
+        assert_pos_relative_eq!(open.underlying_price, pos!(98.0), pos!(1e-6));
+        assert_pos_relative_eq!(close.underlying_price, pos!(98.0), pos!(1e-6));
+    }
+
+    #[test]
+    fn test_calculate_roll_out_put_fail() {
+        let mut strangle = create_test_strangle().unwrap();
+        let roll_out_short_put = create_sample_position(
+            OptionStyle::Put,
+            Side::Short,
+            pos!(98.0), // Underlying price
+            pos!(1.0),  // Quantity
+            pos!(97.0), // Strike price (closer to ATM than original 95)
+            pos!(0.2),  // Implied volatility
+        );
+        let result = strangle.roll_out(&roll_out_short_put);
+        assert!(result.is_err(), "{}", result.err().unwrap());
     }
 }

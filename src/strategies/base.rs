@@ -11,7 +11,9 @@ use crate::error::OperationErrorKind;
 use crate::error::position::PositionError;
 use crate::error::strategies::{BreakEvenErrorKind, StrategyError};
 use crate::greeks::Greeks;
+use crate::model::Trade;
 use crate::model::position::Position;
+use crate::model::types::Action;
 use crate::pnl::utils::PnLCalculator;
 use crate::pricing::Profit;
 use crate::strategies::probabilities::ProbabilityAnalysis;
@@ -22,6 +24,7 @@ use crate::{ExpirationDate, OptionStyle, Positive, Side};
 use itertools::Itertools;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::str::FromStr;
 use std::{f64, fmt};
 use tracing::error;
@@ -763,6 +766,70 @@ pub trait Strategies: Validable + Positionable + BreakEvenable {
     ) -> Result<(), StrategyError> {
         unimplemented!("Update expiration date is not implemented for this strategy")
     }
+
+    /// Attempts to execute the roll-in functionality for the strategy.
+    ///
+    /// # Parameters
+    /// - `&mut self`: A mutable reference to the current instance of the strategy.
+    /// - `_position: &Position`: A reference to the `Position` object, representing the current position
+    ///   in the market. This parameter is currently unused in the implementation.
+    ///
+    /// # Returns
+    /// - `Result<HashMap<Action, Trade>, StrategyError>`:
+    ///   - `Ok(HashMap<Action, Trade>)`: On success, a map of actions to trades, representing the changes
+    ///     made during the roll-in process.
+    ///   - `Err(StrategyError)`: If an error occurs during the roll-in operation.
+    ///
+    /// # Errors
+    /// - Returns a `StrategyError` if the roll-in operation fails (not currently implemented).
+    ///
+    /// # Panics
+    /// - This function will panic if called, as it is currently unimplemented.
+    ///
+    /// # Note
+    /// - This method is not implemented and will panic upon invocation. Future implementations should
+    ///   define the specific logic for handling the roll-in operation for the associated strategy.
+    fn roll_in(&mut self, _position: &Position) -> Result<HashMap<Action, Trade>, StrategyError> {
+        unimplemented!("roll_in is not implemented for this strategy")
+    }
+
+    /// Executes the roll-out strategy for the provided position.
+    ///
+    /// This function is intended to evaluate and execute trading actions based
+    /// on the given `Position`. It returns a mapping of `Action` to `Trade` that
+    /// represents the proposed trades resulting from the strategy. However, this
+    /// method currently is not implemented and will panic if called.
+    ///
+    /// # Arguments
+    ///
+    /// * `_position` - A reference to a `Position` object which represents the
+    ///   current state of a trading position.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<HashMap<Action, Trade>, StrategyError>` - A `Result` object
+    ///   containing:
+    ///   - `Ok(HashMap<Action, Trade>)` with the mapping of actions to trades if
+    ///     successfully implemented in the future.
+    ///   - `Err(StrategyError)` if an error occurs during execution (currently
+    ///     always unimplemented).
+    ///
+    /// # Errors
+    ///
+    /// * Returns an error of type `StrategyError` if the strategy encounters
+    ///   execution issues (in this case, always unimplemented).
+    ///
+    /// # Panics
+    ///
+    /// This function will panic with a message "roll_out is not implemented for this
+    /// strategy" since it is currently not implemented.
+    ///
+    /// # Note
+    ///
+    /// Until implemented, calling this method will result in a runtime panic.
+    fn roll_out(&mut self, _position: &Position) -> Result<HashMap<Action, Trade>, StrategyError> {
+        unimplemented!("roll_out is not implemented for this strategy")
+    }
 }
 
 /// Trait for strategies that can calculate and update break-even points.
@@ -1034,6 +1101,26 @@ pub trait Positionable {
     ///   This function currently uses `unimplemented!()`.
     fn modify_position(&mut self, _position: &Position) -> Result<(), PositionError> {
         unimplemented!("Modify position is not implemented for this strategy")
+    }
+
+    ///
+    /// Attempts to replace the current position with a new position.
+    ///
+    /// # Parameters
+    /// - `_position`: A reference to a `Position` object that represents the new position to replace the current one.
+    ///
+    /// # Returns
+    /// - `Ok(())`: If the position replacement is successful.
+    /// - `Err(PositionError)`: If an error occurs while replacing the position.
+    ///
+    /// # Notes
+    /// This function is currently not implemented for this strategy and will panic with a `not implemented` message when called.
+    ///
+    /// # Panics
+    /// This function will always panic with `unimplemented!()` since it hasn't been implemented yet.
+    ///
+    fn replace_position(&mut self, _position: &Position) -> Result<(), PositionError> {
+        unimplemented!("Replace position is not implemented for this strategy")
     }
 }
 
