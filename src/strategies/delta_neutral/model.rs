@@ -43,6 +43,7 @@ use crate::error::{GreeksError, PositionError, StrategyError};
 use crate::greeks::Greeks;
 use crate::greeks::calculate_delta_neutral_sizes;
 use crate::model::types::{Action, OptionStyle};
+use crate::model::{Trade, TradeStatusAble};
 use crate::strategies::Strategies;
 use crate::strategies::base::Positionable;
 use crate::{Options, Positive, Side};
@@ -751,6 +752,104 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
             )));
         }
         Ok(())
+    }
+
+    /// Generates a `Trade` object based on the given delta adjustment action.
+    ///
+    /// # Parameters
+    /// - `_action`: An `Action` representing the delta adjustment based on which the trade will be formulated.
+    ///
+    /// # Returns
+    /// A `Trade` object derived from the delta adjustment logic.
+    ///
+    /// # Notes
+    /// - This function is currently unimplemented. Ensure to provide implementation logic
+    ///   that determines the `Trade` based on the `Action` delta adjustment.
+    /// - Replace the `unimplemented!()` macro with the actual implementation when ready.
+    ///
+    fn trade_from_delta_adjustment(
+        &mut self,
+        action: Action,
+    ) -> Result<Vec<Trade>, Box<dyn Error>> {
+        let adjustments = self.delta_adjustments()?;
+        let mut trades = Vec::new();
+
+        // Process a single BuyOptions or SellOptions adjustment
+        let mut process_single_adjustment =
+            |adj: &DeltaAdjustment| -> Result<Option<Trade>, Box<dyn Error>> {
+                match adj {
+                    DeltaAdjustment::BuyOptions {
+                        quantity,
+                        strike,
+                        option_style,
+                        side,
+                    } => {
+                        if quantity.is_zero() {
+                            return Ok(None);
+                        }
+                        let positions = self.get_position(option_style, side, strike)?;
+                        if let Some(position) = positions.first() {
+                            let mut position_clone = (*position).clone();
+                            position_clone.option.quantity = *quantity;
+                            Ok(Some(position_clone.open()))
+                        } else {
+                            Ok(None)
+                        }
+                    }
+                    DeltaAdjustment::SellOptions {
+                        quantity,
+                        strike,
+                        option_style,
+                        side,
+                    } => {
+                        if quantity.is_zero() {
+                            return Ok(None);
+                        }
+                        let positions = self.get_position(option_style, side, strike)?;
+                        if let Some(position) = positions.first() {
+                            let mut position_clone = (*position).clone();
+                            position_clone.option.quantity = *quantity;
+                            Ok(Some(position_clone.close()))
+                        } else {
+                            Ok(None)
+                        }
+                    }
+                    _ => Ok(None),
+                }
+            };
+
+        for adjustment in adjustments {
+            match (&action, adjustment) {
+                // For Buy action, only process BuyOptions adjustments
+                (Action::Buy, adj @ DeltaAdjustment::BuyOptions { .. }) => {
+                    if let Some(trade) = process_single_adjustment(&adj)? {
+                        trades.push(trade);
+                    }
+                }
+
+                // For Sell action, only process SellOptions adjustments
+                (Action::Sell, adj @ DeltaAdjustment::SellOptions { .. }) => {
+                    if let Some(trade) = process_single_adjustment(&adj)? {
+                        trades.push(trade);
+                    }
+                }
+
+                // For Other action, process both adjustments in SameSize
+                (Action::Other, DeltaAdjustment::SameSize(a, b)) => {
+                    if let Some(trade) = process_single_adjustment(&a)? {
+                        trades.push(trade);
+                    }
+                    if let Some(trade) = process_single_adjustment(&b)? {
+                        trades.push(trade);
+                    }
+                }
+
+                // Ignore other combinations
+                _ => {}
+            }
+        }
+
+        Ok(trades)
     }
 }
 

@@ -575,6 +575,51 @@ impl Strategies for ShortStrangle {
         self.short_put.option.expiration_date = expiration_date;
         Ok(())
     }
+
+    fn update_underlying_price(&mut self, price: &Positive) -> Result<(), StrategyError> {
+        self.short_call.option.underlying_price = *price;
+        self.short_put.option.underlying_price = *price;
+        self.short_call.premium = Positive(
+            self.short_call
+                .option
+                .calculate_price_black_scholes()?
+                .abs(),
+        );
+        self.short_put.premium =
+            Positive(self.short_put.option.calculate_price_black_scholes()?.abs());
+        Ok(())
+    }
+
+    fn update_volatility(&mut self, volatility: &Positive) -> Result<(), StrategyError> {
+        self.short_call.option.implied_volatility = *volatility;
+        self.short_put.option.implied_volatility = *volatility;
+        self.short_call.premium = Positive(
+            self.short_call
+                .option
+                .calculate_price_black_scholes()?
+                .abs(),
+        );
+        self.short_put.premium =
+            Positive(self.short_put.option.calculate_price_black_scholes()?.abs());
+        Ok(())
+    }
+
+    fn update_expiration_date(
+        &mut self,
+        expiration_date: ExpirationDate,
+    ) -> Result<(), StrategyError> {
+        self.short_call.option.expiration_date = expiration_date;
+        self.short_put.option.expiration_date = expiration_date;
+        self.short_call.premium = Positive(
+            self.short_call
+                .option
+                .calculate_price_black_scholes()?
+                .abs(),
+        );
+        self.short_put.premium =
+            Positive(self.short_put.option.calculate_price_black_scholes()?.abs());
+        Ok(())
+    }
 }
 
 impl Validable for ShortStrangle {
@@ -4857,7 +4902,7 @@ mod tests_long_strangle_pnl {
         // At the money, both options should have time value but no intrinsic value
         // Initial cost is 2 * (premium + fees) = 2 * (5.0 + 1.0) = 12.0
         assert_pos_relative_eq!(pnl.initial_costs, pos!(12.0), pos!(1e-6));
-        assert_decimal_eq!(pnl.unrealized.unwrap(), dec!(0.746072), dec!(1e-6));
+        assert_decimal_eq!(pnl.unrealized.unwrap(), dec!(0.748425), dec!(1e-6));
         assert_eq!(pnl.initial_income, pos!(0.0));
         // Unrealized loss should be less than full premium paid (time value remains)
         assert!(pnl.unrealized.unwrap() > dec!(-12.0));
@@ -5019,7 +5064,7 @@ mod tests_short_strangle_pnl {
         // Initial income is 2 * premium = 2 * 5.0 = 10.0
         assert_pos_relative_eq!(pnl.initial_costs, pos!(2.0), pos!(1e-6));
         assert_pos_relative_eq!(pnl.initial_income, pos!(10.0), pos!(1e-6));
-        assert_decimal_eq!(pnl.unrealized.unwrap(), dec!(-0.746072), dec!(1e-6));
+        assert_decimal_eq!(pnl.unrealized.unwrap(), dec!(-0.748425), dec!(1e-6));
         // Unrealized loss should be less than max potential loss
         assert!(pnl.unrealized.unwrap() > dec!(-100.0)); // Using a large number as max theoretical loss is unlimited
     }

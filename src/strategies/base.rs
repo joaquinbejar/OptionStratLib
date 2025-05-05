@@ -694,6 +694,75 @@ pub trait Strategies: Validable + Positionable + BreakEvenable {
     ) -> Result<(), StrategyError> {
         unimplemented!("Set expiration date is not implemented for this strategy")
     }
+
+    /// Updates the underlying price for the strategy.
+    ///
+    /// # Parameters
+    /// - `_price`: A reference to a `Positive` value representing the new underlying price to update.
+    ///
+    /// # Returns
+    /// - `Ok(())` if the operation succeeds.
+    /// - `Err(StrategyError)` if there is an error during the operation.
+    ///
+    /// # Notes
+    /// This function is currently unimplemented and will panic if called.
+    /// It serves as a placeholder for strategies where updating the underlying
+    /// price has not yet been implemented.
+    ///
+    /// # Panics
+    /// Always panics with the message "Update underlying price is not implemented for this strategy".
+    ///
+    fn update_underlying_price(&mut self, _price: &Positive) -> Result<(), StrategyError> {
+        unimplemented!("Update underlying price is not implemented for this strategy")
+    }
+
+    /// Updates the volatility for the strategy.
+    ///
+    /// # Parameters
+    /// - `_volatility`: A reference to a `Positive` value representing the new volatility to set.
+    ///
+    /// # Returns
+    /// - `Ok(())`: If the update operation succeeds (currently unimplemented).
+    /// - `Err(StrategyError)`: If there is an error during the update process (place-holder as functionality is not implemented).
+    ///
+    /// # Notes
+    /// This method is currently unimplemented, and calling it will result in the `unimplemented!` macro being triggered, which causes a panic.
+    /// This function is a stub and should be implemented to handle setting the volatility specific to the strategy.
+    ///
+    fn update_volatility(&mut self, _volatility: &Positive) -> Result<(), StrategyError> {
+        unimplemented!("Update volatility is not implemented for this strategy")
+    }
+
+    /// Updates the expiration date for the current strategy.
+    ///
+    /// This function is designed to be overridden or modified in specific strategy implementations.
+    /// As it stands, calling this function will result in a panic, as it is not implemented for the
+    /// current strategy by default.
+    ///
+    /// # Parameters
+    /// - `_expiration_date`: The new `ExpirationDate` to update the strategy with. This argument is
+    ///   currently unused in this default implementation.
+    ///
+    /// # Returns
+    /// This function returns a `Result`:
+    /// - `Ok(())` if the update is successful. However, as this method is unimplemented,
+    ///   the success branch is not reachable for the default implementation.
+    /// - `Err(StrategyError)` if an error occurs. In this implementation, it will not return an error
+    ///   but rather panic.
+    ///
+    /// # Errors
+    /// None are returned because the function panics with an unimplemented message in this base
+    /// implementation.
+    ///
+    /// # Panics
+    /// Always panics with the message `"Update expiration date is not implemented for this strategy"`.
+    ///
+    fn update_expiration_date(
+        &mut self,
+        _expiration_date: ExpirationDate,
+    ) -> Result<(), StrategyError> {
+        unimplemented!("Update expiration date is not implemented for this strategy")
+    }
 }
 
 /// Trait for strategies that can calculate and update break-even points.
