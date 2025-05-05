@@ -32,7 +32,7 @@ chrono = { version = ">=0.4.40", features = ["serde"] }
 approx = "0.5.1"
 plotters = { version = "0.3.7" }
 statrs = "0.18.0"
-rand = { version = "0.9.0" }
+rand = { version = "0.9.1" }
 rand_distr = "0.5.1"
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.19"}
