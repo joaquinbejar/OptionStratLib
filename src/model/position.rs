@@ -7,7 +7,9 @@ use crate::chains::OptionData;
 use crate::error::position::PositionValidationErrorKind;
 use crate::error::{GreeksError, PositionError, TransactionError};
 use crate::greeks::Greeks;
+use crate::model::trade::TradeStatusAble;
 use crate::model::types::{Action, OptionStyle, Side};
+use crate::model::{Trade, TradeAble, TradeStatus};
 use crate::pnl::utils::PnL;
 use crate::pnl::{PnLCalculator, Transaction, TransactionAble};
 use crate::pricing::payoff::Profit;
@@ -22,8 +24,6 @@ use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::error::Error;
 use tracing::{debug, trace};
-use crate::model::{Trade, TradeAble, TradeStatus};
-use crate::model::trade::TradeStatusAble;
 
 /// The `Position` struct represents a financial position in an options market.
 ///
@@ -710,7 +710,7 @@ impl TradeStatusAble for Position {
         trade
     }
 
-    fn closed(&self) -> Trade {
+    fn close(&self) -> Trade {
         let mut trade = self.trade();
         trade.status = TradeStatus::Closed;
         trade.action = Action::Sell;
@@ -1989,7 +1989,7 @@ mod tests_pnl_calculator {
             pos!(100.0),
             dec!(0.05),
             option_style,
-            pos!(0.01),
+            pos!(0.0),
             None,
         );
 

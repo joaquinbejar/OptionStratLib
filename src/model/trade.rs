@@ -4,7 +4,9 @@ use crate::{OptionStyle, Positive, Side};
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
-use std::fmt;
+use std::fs::File;
+use std::io::Write;
+use std::{fmt, io};
 
 /// # Transaction Status
 ///
@@ -46,7 +48,7 @@ pub enum TradeStatus {
     Other(String),
 }
 
-/// A trait representing the status management of a trade. 
+/// A trait representing the status management of a trade.
 ///
 /// This trait provides methods for transitioning a trade into various predefined statuses.
 /// Implementations of this trait should define how a trade moves between these statuses.
@@ -56,7 +58,7 @@ pub trait TradeStatusAble {
     /// - `open`: Return a `Trade` instance representing the trade in its open status.
     fn open(&self) -> Trade;
     /// - `closed`: Return a `Trade` instance representing the trade in its closed status.
-    fn closed(&self) -> Trade;
+    fn close(&self) -> Trade;
     /// - `expired`: Return a `Trade` instance representing the trade in its expired status.
     fn expired(&self) -> Trade;
     /// - `exercised`: Return a `Trade` instance representing the trade in its exercised status.
@@ -348,6 +350,39 @@ impl TradeAble for Trade {
     }
 }
 
+/// Saves a list of trades to a file in JSON format.
+///
+/// # Parameters
+/// - `trades`: A slice containing trade data to be saved. Each trade must implement serialization.
+/// - `file_path`: The path to the file where the trade data will be saved. If the file already exists, its contents will be overwritten.
+///
+/// # Returns
+/// - `Ok(())` if the trades are successfully saved to the file.
+/// - `Err(io::Error)` if an I/O error occurs during file creation or writing, or if serialization fails.
+///
+/// # JSON Formatting
+/// The trades are serialized to JSON using compact formatting (without pretty printing).
+///
+/// # Errors
+/// This function will return an error if:
+/// - Serialization of the `trades` slice to JSON fails.
+/// - The file cannot be created or opened at the specified `file_path`.
+/// - Writing to the file fails.
+///
+pub fn save_trades(trades: &[Trade], file_path: &str) -> io::Result<()> {
+    // Serialize to compact JSON without pretty formatting
+    let json =
+        serde_json::to_string(trades).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
+
+    // Create or open the file for writing
+    let mut file = File::create(file_path)?;
+
+    // Write the JSON string to the file
+    file.write_all(json.as_bytes())?;
+
+    Ok(())
+}
+
 /// A trait that provides functionality for accessing and modifying trade-related data.
 ///
 /// Implementors of this trait should provide mechanisms to retrieve both immutable
@@ -375,7 +410,7 @@ pub trait TradeAble {
     /// # Note
     /// The returned reference has the same lifetime as the instance it is called on.
     fn trade_ref(&self) -> &Trade;
-    
+
     /// Provides a mutable reference to the `Trade` instance contained within the current structure.
     ///
     /// # Returns
@@ -621,10 +656,11 @@ mod tests {
 
     /// helper: assert that two trades son idénticos salvo el campo `status`
     fn assert_same_except_status(a: &Trade, b: &Trade) {
-        let mut aa = a.clone(); aa.status = b.status.clone();
+        let mut aa = a.clone();
+        aa.status = b.status.clone();
         assert_eq!(aa, *b);
     }
-    
+
     impl TradeStatusAble for Trade {
         fn open(&self) -> Trade {
             let mut tr = self.clone();
@@ -632,7 +668,7 @@ mod tests {
             tr
         }
 
-        fn closed(&self) -> Trade {
+        fn close(&self) -> Trade {
             let mut tr = self.clone();
             tr.status = TradeStatus::Closed;
             tr
@@ -668,7 +704,7 @@ mod tests {
         let base = sample_trade_bis(Action::Buy, Side::Long, TradeStatus::Open);
 
         // Closed
-        let closed = base.closed();
+        let closed = base.close();
         assert_eq!(closed.status, TradeStatus::Closed);
         assert_same_except_status(&base, &closed);
         assert_eq!(base.status, TradeStatus::Open); // original untouched

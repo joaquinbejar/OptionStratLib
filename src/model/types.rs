@@ -46,9 +46,9 @@ pub enum Action {
     Buy,
     /// Represents a selling transaction, where assets are disposed of.
     Sell,
-    
+
     /// Action is not applicable to this type of transaction.
-    Other
+    Other,
 }
 
 /// Defines the directional exposure of a financial position.
