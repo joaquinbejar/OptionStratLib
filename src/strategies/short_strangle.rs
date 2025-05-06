@@ -43,13 +43,11 @@ use plotters::prelude::ShapeStyle;
 use plotters::prelude::full_palette::ORANGE;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
-use serde_json::to_string_pretty;
 use std::collections::HashMap;
 use std::error::Error;
-use std::fmt;
 use tracing::{debug, error, trace};
 
-const SHORT_STRANGLE_DESCRIPTION: &str = "A short strangle involves selling an out-of-the-money call and an \
+pub(super) const SHORT_STRANGLE_DESCRIPTION: &str = "A short strangle involves selling an out-of-the-money call and an \
 out-of-the-money put with the same expiration date. This strategy is used when low volatility \
 is expected and the underlying asset's price is anticipated to remain stable.";
 
@@ -101,9 +99,9 @@ pub struct ShortStrangle {
     /// Price points at which the strategy neither makes nor loses money
     pub break_even_points: Vec<Positive>,
     /// The short call leg of the strategy (typically out-of-the-money)
-    short_call: Position,
+    pub(super) short_call: Position,
     /// The short put leg of the strategy (typically out-of-the-money)
-    short_put: Position,
+    pub(super) short_put: Position,
 }
 
 impl ShortStrangle {
@@ -232,28 +230,6 @@ impl ShortStrangle {
             .update_break_even_points()
             .expect("Unable to update break even points");
         strategy
-    }
-}
-
-impl fmt::Display for ShortStrangle {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match to_string_pretty(self) {
-            Ok(pretty_json) => write!(f, "{}", pretty_json),
-            Err(e) => write!(f, "Error serializing ShortStrangle to JSON: {}", e),
-        }
-    }
-}
-
-impl Default for ShortStrangle {
-    fn default() -> Self {
-        ShortStrangle {
-            name: "Short Strangle".to_string(),
-            kind: StrategyType::ShortStrangle,
-            description: SHORT_STRANGLE_DESCRIPTION.to_string(),
-            break_even_points: Vec::new(),
-            short_call: Position::default(),
-            short_put: Position::default(),
-        }
     }
 }
 
@@ -3320,222 +3296,6 @@ mod tests_strangle_position_management {
     }
 }
 
-#[cfg(test)]
-mod tests_serialization {
-    use super::*;
-    use crate::pos;
-    use chrono::Utc;
-    use rust_decimal_macros::dec;
-    use serde_json;
-
-    // Helper function to create a sample ShortStrangle for testing
-    fn create_test_short_strangle() -> ShortStrangle {
-        // Create sample option positions
-        let short_call_option = Options::new(
-            OptionType::European,
-            Side::Short,
-            "TEST".to_string(),
-            pos!(110.0), // strike_price
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(0.25),  // implied_volatility
-            pos!(1.0),   // quantity
-            pos!(100.0), // underlying_price
-            dec!(0.05),  // risk_free_rate
-            OptionStyle::Call,
-            pos!(0.02), // dividend_yield
-            None,
-        );
-
-        let short_put_option = Options::new(
-            OptionType::European,
-            Side::Short,
-            "TEST".to_string(),
-            pos!(90.0), // strike_price
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(0.25),  // implied_volatility
-            pos!(1.0),   // quantity
-            pos!(100.0), // underlying_price
-            dec!(0.05),  // risk_free_rate
-            OptionStyle::Put,
-            pos!(0.02), // dividend_yield
-            None,
-        );
-
-        // Create positions for the options
-        let short_call = Position::new(
-            short_call_option,
-            pos!(3.0),  // premium
-            Utc::now(), // date
-            pos!(0.5),  // open_fee
-            pos!(0.5),  // close_fee
-        );
-
-        let short_put = Position::new(
-            short_put_option,
-            pos!(2.5),  // premium
-            Utc::now(), // date
-            pos!(0.5),  // open_fee
-            pos!(0.5),  // close_fee
-        );
-
-        // Create a ShortStrangle with the positions
-        ShortStrangle {
-            name: "Test Strangle".to_string(),
-            kind: StrategyType::ShortStrangle,
-            description: "A test short strangle strategy".to_string(),
-            break_even_points: vec![pos!(87.5), pos!(112.5)],
-            short_call,
-            short_put,
-        }
-    }
-
-    #[test]
-    fn test_short_strangle_serialization() {
-        let strangle = create_test_short_strangle();
-
-        println!("{}", strangle);
-
-        // Serialize to JSON string
-        let serialized =
-            serde_json::to_string(&strangle).expect("Failed to serialize ShortStrangle");
-
-        // Basic verification that the serialized string contains expected values
-        assert!(serialized.contains("Test Strangle"));
-        assert!(serialized.contains("ShortStrangle"));
-        assert!(serialized.contains("A test short strangle strategy"));
-        assert!(serialized.contains("87.5"));
-        assert!(serialized.contains("112.5"));
-        assert!(serialized.contains("110")); // short_call strike
-        assert!(serialized.contains("90")); // short_put strike
-    }
-
-    #[test]
-    fn test_short_strangle_deserialization() {
-        let original = create_test_short_strangle();
-
-        // Serialize and then deserialize
-        let serialized = serde_json::to_string(&original).expect("Failed to serialize");
-        let deserialized: ShortStrangle =
-            serde_json::from_str(&serialized).expect("Failed to deserialize ShortStrangle");
-
-        // Verify that the deserialized object matches the original
-        assert_eq!(deserialized.name, original.name);
-        assert_eq!(deserialized.kind, original.kind);
-        assert_eq!(deserialized.description, original.description);
-        assert_eq!(deserialized.break_even_points, original.break_even_points);
-
-        // Check the positions' properties
-        assert_eq!(
-            deserialized.short_call.option.strike_price,
-            original.short_call.option.strike_price
-        );
-        assert_eq!(
-            deserialized.short_call.option.option_style,
-            original.short_call.option.option_style
-        );
-        assert_eq!(
-            deserialized.short_put.option.strike_price,
-            original.short_put.option.strike_price
-        );
-        assert_eq!(
-            deserialized.short_put.option.option_style,
-            original.short_put.option.option_style
-        );
-    }
-
-    #[test]
-    fn test_short_strangle_json_structure() {
-        let strangle = create_test_short_strangle();
-
-        // Serialize to a pretty-printed JSON string for inspection
-        let serialized = serde_json::to_string_pretty(&strangle).expect("Failed to serialize");
-
-        // Parse back to a JSON Value to inspect structure
-        let json_value: serde_json::Value = serde_json::from_str(&serialized).unwrap();
-
-        // Verify top-level fields
-        assert!(json_value.get("name").is_some());
-        assert!(json_value.get("kind").is_some());
-        assert!(json_value.get("description").is_some());
-        assert!(json_value.get("break_even_points").is_some());
-        assert!(json_value.get("short_call").is_some());
-        assert!(json_value.get("short_put").is_some());
-
-        // Verify short_call structure
-        let short_call = json_value.get("short_call").unwrap();
-        assert!(short_call.get("option").is_some());
-        assert!(short_call.get("premium").is_some());
-
-        // Verify short_put structure
-        let short_put = json_value.get("short_put").unwrap();
-        assert!(short_put.get("option").is_some());
-        assert!(short_put.get("premium").is_some());
-    }
-
-    #[test]
-    fn test_short_strangle_roundtrip_with_modified_values() {
-        let mut strangle = create_test_short_strangle();
-
-        // Modify some values
-        strangle.name = "Modified Strangle".to_string();
-        strangle.description = "A modified test short strangle".to_string();
-
-        // Serialize and deserialize
-        let serialized = serde_json::to_string(&strangle).expect("Failed to serialize");
-        let deserialized: ShortStrangle =
-            serde_json::from_str(&serialized).expect("Failed to deserialize ShortStrangle");
-
-        // Verify the modified values are preserved
-        assert_eq!(deserialized.name, "Modified Strangle");
-        assert_eq!(deserialized.description, "A modified test short strangle");
-    }
-
-    #[test]
-    fn test_short_strangle_deserialization_error_handling() {
-        // Invalid JSON missing required fields
-        let invalid_json = r#"{"name":"Invalid","kind":"ShortStrangle"}"#;
-
-        // Should return an error because required fields are missing
-        let result: Result<ShortStrangle, _> = serde_json::from_str(invalid_json);
-        assert!(result.is_err());
-
-        // Error should be about missing fields
-        let error_message = format!("{}", result.unwrap_err());
-        assert!(error_message.contains("missing field"));
-    }
-
-    #[test]
-    fn test_short_strangle_with_custom_break_even_points() {
-        // Create a short strangle with custom break-even points
-        let mut strangle = create_test_short_strangle();
-        strangle.break_even_points = vec![pos!(85.0), pos!(115.0)];
-
-        // Serialize and deserialize
-        let serialized = serde_json::to_string(&strangle).expect("Failed to serialize");
-        let deserialized: ShortStrangle =
-            serde_json::from_str(&serialized).expect("Failed to deserialize ShortStrangle");
-
-        // Verify the custom break-even points were preserved
-        assert_eq!(deserialized.break_even_points.len(), 2);
-        assert_eq!(deserialized.break_even_points[0], pos!(85.0));
-        assert_eq!(deserialized.break_even_points[1], pos!(115.0));
-    }
-
-    #[test]
-    fn test_short_strangle_with_empty_break_even_points() {
-        // Create a short strangle with empty break-even points
-        let mut strangle = create_test_short_strangle();
-        strangle.break_even_points = vec![];
-
-        // Serialize and deserialize
-        let serialized = serde_json::to_string(&strangle).expect("Failed to serialize");
-        let deserialized: ShortStrangle =
-            serde_json::from_str(&serialized).expect("Failed to deserialize ShortStrangle");
-
-        // Verify the empty break-even points were preserved
-        assert!(deserialized.break_even_points.is_empty());
-    }
-}
 #[cfg(test)]
 mod test_short_strangle_implementations {
     use super::*;

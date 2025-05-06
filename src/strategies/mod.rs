@@ -256,6 +256,20 @@ pub mod short_straddle;
 /// Utility functions for options calculations and analysis
 pub mod utils;
 
+/// Display implementation for strategies
+pub mod display;
+
+/// Default implementation for strategies
+pub mod default;
+/// Long Call strategy implementation
+pub mod long_call;
+/// Long Put strategy implementation
+pub mod long_put;
+/// Short Call strategy implementation
+pub mod short_call;
+/// Short Put strategy implementation
+pub mod short_put;
+
 pub use base::Strategies;
 pub use base::{Strategable, StrategyBasics};
 pub use bear_call_spread::BearCallSpread;
@@ -270,9 +284,13 @@ pub use custom::CustomStrategy;
 pub use delta_neutral::{DELTA_THRESHOLD, DeltaAdjustment, DeltaInfo, DeltaNeutrality};
 pub use iron_butterfly::IronButterfly;
 pub use iron_condor::IronCondor;
+pub use long_call::LongCall;
+pub use long_put::LongPut;
 pub use long_straddle::LongStraddle;
 pub use long_strangle::LongStrangle;
 pub use poor_mans_covered_call::PoorMansCoveredCall;
+pub use short_call::ShortCall;
+pub use short_put::ShortPut;
 pub use short_straddle::ShortStraddle;
 pub use short_strangle::ShortStrangle;
 pub use utils::FindOptimalSide;

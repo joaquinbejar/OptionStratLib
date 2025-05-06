@@ -43,12 +43,10 @@ use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{RED, ShapeStyle};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
-use serde_json::to_string_pretty;
 use std::error::Error;
-use std::fmt;
 use tracing::{debug, info};
 
-const LONG_STRANGLE_DESCRIPTION: &str = "A long strangle involves buying an out-of-the-money call and an \
+pub(super) const LONG_STRANGLE_DESCRIPTION: &str = "A long strangle involves buying an out-of-the-money call and an \
 out-of-the-money put with the same expiration date. This strategy is used when high volatility \
 is expected and a significant move in the underlying asset's price is anticipated, but the \
 direction is uncertain.";
@@ -120,9 +118,9 @@ pub struct LongStrangle {
     /// Price points where the strategy breaks even (typically two points)
     pub break_even_points: Vec<Positive>,
     /// The long call position component of the strategy
-    long_call: Position,
+    pub(super) long_call: Position,
     /// The long put position component of the strategy
-    long_put: Position,
+    pub(super) long_put: Position,
 }
 
 impl LongStrangle {
@@ -246,28 +244,6 @@ impl LongStrangle {
             .expect("Unable to update break even points");
 
         strategy
-    }
-}
-
-impl Default for LongStrangle {
-    fn default() -> Self {
-        LongStrangle {
-            name: "Long Strangle".to_string(),
-            kind: StrategyType::ShortStrangle,
-            description: LONG_STRANGLE_DESCRIPTION.to_string(),
-            break_even_points: Vec::new(),
-            long_call: Position::default(),
-            long_put: Position::default(),
-        }
-    }
-}
-
-impl fmt::Display for LongStrangle {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match to_string_pretty(self) {
-            Ok(pretty_json) => write!(f, "{}", pretty_json),
-            Err(e) => write!(f, "Error serializing ShortStrangle to JSON: {}", e),
-        }
     }
 }
 

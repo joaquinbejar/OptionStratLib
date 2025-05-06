@@ -3,6 +3,7 @@ use optionstratlib::Positive;
 use optionstratlib::chains::chain::OptionChain;
 use optionstratlib::greeks::Greeks;
 use optionstratlib::pos;
+use optionstratlib::strategies::ShortStraddle;
 use optionstratlib::strategies::base::{Optimizable, Strategies};
 use optionstratlib::strategies::utils::FindOptimalSide;
 use optionstratlib::utils::setup_logger;
@@ -10,7 +11,6 @@ use optionstratlib::visualization::utils::{Graph, GraphBackend};
 use rust_decimal::Decimal;
 use std::error::Error;
 use tracing::{debug, info};
-use optionstratlib::strategies::ShortStraddle;
 
 fn main() -> Result<(), Box<dyn Error>> {
     setup_logger();

@@ -369,32 +369,6 @@ impl BreakEvenable for CallButterfly {
     }
 }
 
-impl Default for CallButterfly {
-    fn default() -> Self {
-        CallButterfly::new(
-            "".to_string(),
-            Positive::ZERO,
-            Positive::ZERO,
-            Positive::ZERO,
-            Positive::ZERO,
-            ExpirationDate::Days(Positive::ZERO),
-            Positive::ZERO,
-            Decimal::ZERO,
-            Positive::ZERO,
-            Positive::ONE,
-            Positive::ZERO,
-            Positive::ZERO,
-            Positive::ZERO,
-            Positive::ZERO,
-            Positive::ZERO,
-            Positive::ZERO,
-            Positive::ZERO,
-            Positive::ZERO,
-            Positive::ZERO,
-        )
-    }
-}
-
 impl Positionable for CallButterfly {
     fn add_position(&mut self, position: &Position) -> Result<(), PositionError> {
         match position.option.side {

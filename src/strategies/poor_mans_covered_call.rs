@@ -57,7 +57,7 @@ use serde::{Deserialize, Serialize};
 use std::error::Error;
 use tracing::debug;
 
-const PMCC_DESCRIPTION: &str = "A Poor Man's Covered Call (PMCC) is an options strategy that simulates a covered call \
+pub(super) const PMCC_DESCRIPTION: &str = "A Poor Man's Covered Call (PMCC) is an options strategy that simulates a covered call \
     using long-term equity anticipation securities (LEAPS) instead of the underlying stock. \
     It involves buying a long-term in-the-money call option and selling a short-term out-of-the-money call option. \
     This strategy aims to generate income while reducing the capital required compared to a traditional covered call.";
@@ -112,9 +112,9 @@ pub struct PoorMansCoveredCall {
     /// Price points where the strategy neither makes nor loses money
     pub break_even_points: Vec<Positive>,
     /// The long-term in-the-money call option (usually a LEAP)
-    long_call: Position,
+    pub(super) long_call: Position,
     /// The shorter-term out-of-the-money call option that is sold
-    short_call: Position,
+    pub(super) short_call: Position,
 }
 impl PoorMansCoveredCall {
     /// # Creates a new Poor Man's Covered Call strategy instance
