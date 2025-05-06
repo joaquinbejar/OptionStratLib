@@ -36,7 +36,7 @@ use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria, calculate_
 use crate::strategies::{DeltaAdjustment, StrategyConstructor};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
-use crate::{ExpirationDate, Options, Positive};
+use crate::{ExpirationDate, Options, Positive, test_strategy_traits};
 use chrono::Utc;
 use num_traits::{FromPrimitive, ToPrimitive};
 use plotters::prelude::ShapeStyle;
@@ -3296,32 +3296,4 @@ mod tests_strangle_position_management {
     }
 }
 
-#[cfg(test)]
-mod test_short_strangle_implementations {
-    use super::*;
-    use static_assertions::assert_impl_all;
-    use std::fmt;
-
-    #[test]
-    fn test_traits() {
-        assert_impl_all!(ShortStrangle:
-        Default,
-        StrategyConstructor ,
-        BreakEvenable ,
-        Positionable ,
-        Strategable ,
-        Strategies ,
-        Validable ,
-        Optimizable ,
-        Profit ,
-        Graph ,
-        ProbabilityAnalysis ,
-        Greeks ,
-        DeltaNeutrality ,
-        PnLCalculator,
-        Serialize,
-        Deserialize<'static>,
-        fmt::Display,
-        );
-    }
-}
+test_strategy_traits!(ShortStrangle, test_short_strangle_implementations);

@@ -1,9 +1,14 @@
 use crate::model::Position;
 use crate::strategies::base::StrategyType;
+use crate::strategies::long_call::LONG_CALL_DESCRIPTION;
+use crate::strategies::long_put::LONG_PUT_DESCRIPTION;
+use crate::strategies::poor_mans_covered_call::PMCC_DESCRIPTION;
+use crate::strategies::short_call::SHORT_CALL_DESCRIPTION;
+use crate::strategies::short_put::SHORT_PUT_DESCRIPTION;
 use crate::strategies::{
     BearCallSpread, BearPutSpread, BullCallSpread, BullPutSpread, CallButterfly, CustomStrategy,
-    IronButterfly, IronCondor, LongButterflySpread, LongStraddle, LongStrangle,
-    PoorMansCoveredCall, ShortButterflySpread, ShortStraddle, ShortStrangle,
+    IronButterfly, IronCondor, LongButterflySpread, LongCall, LongPut, LongStraddle, LongStrangle,
+    PoorMansCoveredCall, ShortButterflySpread, ShortCall, ShortPut, ShortStraddle, ShortStrangle,
 };
 
 impl Default for BullCallSpread {
@@ -82,7 +87,14 @@ impl Default for ShortStrangle {
 }
 impl Default for PoorMansCoveredCall {
     fn default() -> Self {
-        todo!()
+        PoorMansCoveredCall {
+            name: "Poor Man's Covered Call".to_string(),
+            kind: StrategyType::PoorMansCoveredCall,
+            description: PMCC_DESCRIPTION.to_string(),
+            break_even_points: Vec::new(),
+            long_call: Position::default(),
+            short_call: Position::default(),
+        }
     }
 }
 impl Default for CallButterfly {
@@ -119,7 +131,47 @@ impl Default for CustomStrategy {
 // impl JsonDisplay for CoveredCall {}
 // impl JsonDisplay for ProtectivePut {}
 // impl JsonDisplay for Collar {}
-// impl JsonDisplay for LongCall {}
-// impl JsonDisplay for LongPut {}
-// impl JsonDisplay for ShortCall {}
-// impl JsonDisplay for ShortPut {}
+impl Default for LongCall {
+    fn default() -> Self {
+        LongCall {
+            name: "Long Call".to_string(),
+            kind: StrategyType::LongCall,
+            description: LONG_CALL_DESCRIPTION.to_string(),
+            break_even_points: Vec::new(),
+            long_call: Position::default(),
+        }
+    }
+}
+impl Default for LongPut {
+    fn default() -> Self {
+        LongPut {
+            name: "Long Put".to_string(),
+            kind: StrategyType::LongPut,
+            description: LONG_PUT_DESCRIPTION.to_string(),
+            break_even_points: Vec::new(),
+            long_put: Position::default(),
+        }
+    }
+}
+impl Default for ShortCall {
+    fn default() -> Self {
+        ShortCall {
+            name: "Short Call".to_string(),
+            kind: StrategyType::ShortCall,
+            description: SHORT_CALL_DESCRIPTION.to_string(),
+            break_even_points: Vec::new(),
+            short_call: Position::default(),
+        }
+    }
+}
+impl Default for ShortPut {
+    fn default() -> Self {
+        ShortPut {
+            name: "Short Put".to_string(),
+            kind: StrategyType::ShortPut,
+            description: SHORT_PUT_DESCRIPTION.to_string(),
+            break_even_points: Vec::new(),
+            short_put: Position::default(),
+        }
+    }
+}

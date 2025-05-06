@@ -184,14 +184,7 @@ impl PoorMansCoveredCall {
         open_fee_short_call: Positive,
         close_fee_short_call: Positive,
     ) -> Self {
-        let mut strategy = PoorMansCoveredCall {
-            name: "Poor Man's Covered Call".to_string(),
-            kind: StrategyType::PoorMansCoveredCall,
-            description: PMCC_DESCRIPTION.to_string(),
-            break_even_points: Vec::new(),
-            long_call: Position::default(),
-            short_call: Position::default(),
-        };
+        let mut strategy = PoorMansCoveredCall::default();
 
         // Long Call (LEAPS)
         let long_call_option = Options::new(
