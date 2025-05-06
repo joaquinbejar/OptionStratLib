@@ -464,17 +464,6 @@ pub fn calculate_delta_neutral_sizes(
         ));
     }
 
-    // We need to solve the system of equations:
-    // 1) size1 + size2 = total_size
-    // 2) size1 * delta1 + size2 * delta2 = 0 (delta neutral)
-
-    // From equation 1: size2 = total_size - size1
-    // Substituting into equation 2:
-    // size1 * delta1 + (total_size - size1) * delta2 = 0
-    // size1 * delta1 + total_size * delta2 - size1 * delta2 = 0
-    // size1 * (delta1 - delta2) = -total_size * delta2
-    // size1 = (-total_size * delta2) / (delta1 - delta2)
-
     let size1: Positive = Positive((-total_size.to_dec() * delta2) / (delta1 - delta2));
     let size2 = total_size - size1;
 

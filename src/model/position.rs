@@ -712,6 +712,9 @@ impl TradeStatusAble for Position {
 
     fn close(&self) -> Trade {
         let mut trade = self.trade();
+        if trade.premium <= pos!(0.01) {
+            trade.premium = Positive::ZERO;
+        }
         trade.status = TradeStatus::Closed;
         trade.action = Action::Sell;
         trade
