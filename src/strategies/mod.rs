@@ -265,6 +265,7 @@ pub mod default;
 pub mod long_call;
 /// Long Put strategy implementation
 pub mod long_put;
+pub mod macros;
 /// Short Call strategy implementation
 pub mod short_call;
 /// Short Put strategy implementation
