@@ -2086,7 +2086,7 @@ impl OptionChain {
                 },
             ))
     }
-    
+
     /// Retrieves a collection of strike prices from the chain of options.
     ///
     /// This method iterates through the options in the chain, extracts the `strike_price`
@@ -2099,7 +2099,7 @@ impl OptionChain {
     /// - If an error occurs, it returns an `Err` variant containing a `ChainError`.
     ///
     /// # Errors
-    /// This function will return an error if there is any issue in processing the options chain 
+    /// This function will return an error if there is any issue in processing the options chain
     /// that prevents successful extraction of strike prices.
     ///
     /// # Note
@@ -2107,21 +2107,23 @@ impl OptionChain {
     /// - An empty vector will be returned if there are no options in the chain.
     ///
     /// # Dependencies
-    /// The method depends on `self.iter()` to provide access to the underlying collection of options. 
+    /// The method depends on `self.iter()` to provide access to the underlying collection of options.
     /// Each option is expected to have a `strike_price` field.
-    pub fn get_strikes(&self) ->  Result<Vec<Positive>, ChainError> {
-        Ok(self.options.iter()
+    pub fn get_strikes(&self) -> Result<Vec<Positive>, ChainError> {
+        Ok(self
+            .options
+            .iter()
             .map(|option| option.strike_price)
             .collect())
     }
-    
+
     /// Retrieves an `OptionData` instance from an option chain that has a strike price
     /// closest to the given price.
     ///
     /// # Arguments
     ///
     /// * `price` - A reference to a `Positive`, which represents the price to compare
-    /// against the strike prices in the option chain.
+    ///   against the strike prices in the option chain.
     ///
     /// # Returns
     ///
@@ -2163,7 +2165,7 @@ impl OptionChain {
                 "Cannot find option data for empty option chain: {}",
                 self.symbol
             )
-                .into());
+            .into());
         }
 
         // Find the option with strike price closest to the price parameter
@@ -2181,7 +2183,7 @@ impl OptionChain {
                 "Failed to find option data for price {} in chain: {}",
                 price, self.symbol
             )
-                .into()),
+            .into()),
         }
     }
 }
@@ -8818,8 +8820,8 @@ mod tests_get_position_with_delta {
 #[cfg(test)]
 mod tests_get_strikes_and_optiondata {
     use super::*;
-    use crate::{pos, spos};
     use crate::utils::logger::setup_logger;
+    use crate::{pos, spos};
     use rust_decimal_macros::dec;
 
     // Helper function to create a test chain with specific strikes
@@ -8872,7 +8874,10 @@ mod tests_get_strikes_and_optiondata {
         assert!(result.is_ok(), "Should handle empty chain");
 
         let strikes = result.unwrap();
-        assert!(strikes.is_empty(), "Should return empty vector for empty chain");
+        assert!(
+            strikes.is_empty(),
+            "Should return empty vector for empty chain"
+        );
     }
 
     #[test]
@@ -8884,7 +8889,11 @@ mod tests_get_strikes_and_optiondata {
         assert!(result.is_ok(), "Should find exact strike");
 
         let option_data = result.unwrap();
-        assert_eq!(option_data.strike_price, pos!(100.0), "Should return option with strike 100.0");
+        assert_eq!(
+            option_data.strike_price,
+            pos!(100.0),
+            "Should return option with strike 100.0"
+        );
     }
 
     #[test]
@@ -8896,36 +8905,58 @@ mod tests_get_strikes_and_optiondata {
         assert!(result.is_ok(), "Should find closest strike");
 
         let option_data = result.unwrap();
-        assert_eq!(option_data.strike_price, pos!(105.0), "Should return closest strike 105.0");
+        assert_eq!(
+            option_data.strike_price,
+            pos!(105.0),
+            "Should return closest strike 105.0"
+        );
 
         // Test with price between two strikes but closer to 100
         let result = chain.get_optiondata_with_strike(&pos!(97.0));
         assert!(result.is_ok(), "Should find closest strike");
 
         let option_data = result.unwrap();
-        assert_eq!(option_data.strike_price, pos!(95.0), "Should return closest strike 95.0");
+        assert_eq!(
+            option_data.strike_price,
+            pos!(95.0),
+            "Should return closest strike 95.0"
+        );
 
         // Test with price below lowest strike
         let result = chain.get_optiondata_with_strike(&pos!(85.0));
         assert!(result.is_ok(), "Should find closest strike for low price");
 
         let option_data = result.unwrap();
-        assert_eq!(option_data.strike_price, pos!(90.0), "Should return lowest strike 90.0");
+        assert_eq!(
+            option_data.strike_price,
+            pos!(90.0),
+            "Should return lowest strike 90.0"
+        );
 
         // Test with price above highest strike
         let result = chain.get_optiondata_with_strike(&pos!(115.0));
         assert!(result.is_ok(), "Should find closest strike for high price");
 
         let option_data = result.unwrap();
-        assert_eq!(option_data.strike_price, pos!(110.0), "Should return highest strike 110.0");
+        assert_eq!(
+            option_data.strike_price,
+            pos!(110.0),
+            "Should return highest strike 110.0"
+        );
 
         // Test with price exactly between two strikes (equidistant case)
         let result = chain.get_optiondata_with_strike(&pos!(102.5));
-        assert!(result.is_ok(), "Should handle price exactly between strikes");
+        assert!(
+            result.is_ok(),
+            "Should handle price exactly between strikes"
+        );
 
         let option_data = result.unwrap();
-        assert_eq!(option_data.strike_price, pos!(100.0),
-                   "For equidistant strikes, should return the lower strike due to BTreeSet ordering");
+        assert_eq!(
+            option_data.strike_price,
+            pos!(100.0),
+            "For equidistant strikes, should return the lower strike due to BTreeSet ordering"
+        );
     }
 
     #[test]
@@ -8934,7 +8965,10 @@ mod tests_get_strikes_and_optiondata {
 
         // Test with price exactly between two strikes
         let result = chain.get_optiondata_with_strike(&pos!(97.5));
-        assert!(result.is_ok(), "Should handle price exactly between strikes");
+        assert!(
+            result.is_ok(),
+            "Should handle price exactly between strikes"
+        );
 
         let option_data = result.unwrap();
         // Could be either 95.0 or 100.0 depending on implementation details
@@ -8957,12 +8991,16 @@ mod tests_get_strikes_and_optiondata {
             error_msg.contains("empty option chain"),
             "Error should mention empty chain"
         );
-        assert!(error_msg.contains("EMPTY"), "Error should include the symbol");
+        assert!(
+            error_msg.contains("EMPTY"),
+            "Error should include the symbol"
+        );
     }
 
     #[test]
     fn test_get_optiondata_with_strike_single_option() {
-        let mut chain = OptionChain::new("SINGLE", pos!(100.0), "2024-01-01".to_string(), None, None);
+        let mut chain =
+            OptionChain::new("SINGLE", pos!(100.0), "2024-01-01".to_string(), None, None);
 
         // Add a single option
         chain.add_option(
@@ -8984,7 +9022,11 @@ mod tests_get_strikes_and_optiondata {
         assert!(result.is_ok(), "Should find option in single-option chain");
 
         let option_data = result.unwrap();
-        assert_eq!(option_data.strike_price, pos!(100.0), "Should return the only available strike");
+        assert_eq!(
+            option_data.strike_price,
+            pos!(100.0),
+            "Should return the only available strike"
+        );
     }
 
     #[test]
@@ -8994,15 +9036,42 @@ mod tests_get_strikes_and_optiondata {
         // Add options in non-sorted order
         chain.add_option(
             pos!(105.0),
-            None, None, None, None, None, None, None, None, None, None
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
         );
         chain.add_option(
             pos!(95.0),
-            None, None, None, None, None, None, None, None, None, None
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
         );
         chain.add_option(
             pos!(100.0),
-            None, None, None, None, None, None, None, None, None, None
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
         );
 
         let result = chain.get_strikes();
