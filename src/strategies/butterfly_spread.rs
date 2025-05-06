@@ -26,6 +26,7 @@ use num_traits::ToPrimitive;
 use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{RED, ShapeStyle};
 use rust_decimal::Decimal;
+use serde::{Deserialize, Serialize};
 use std::error::Error;
 use tracing::{debug, info};
 
@@ -55,7 +56,7 @@ const LONG_BUTTERFLY_DESCRIPTION: &str = "A long butterfly spread is created by 
 /// - Profitability range is constrained between the break-even points
 ///
 /// # Attributes
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct LongButterflySpread {
     /// Name identifier for the strategy
     pub name: String,
@@ -1030,7 +1031,7 @@ const SHORT_BUTTERFLY_DESCRIPTION: &str = "A short butterfly spread is created b
 /// - Two short calls at the middle strike price (represented as `short_call_low` and `short_call_high`)
 /// - Long call at the highest strike price
 ///
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ShortButterflySpread {
     /// The name of the strategy, typically including the underlying asset
     pub name: String,

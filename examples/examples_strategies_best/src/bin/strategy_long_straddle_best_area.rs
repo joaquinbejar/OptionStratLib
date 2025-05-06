@@ -4,7 +4,7 @@ use optionstratlib::chains::chain::OptionChain;
 use optionstratlib::greeks::Greeks;
 use optionstratlib::pos;
 use optionstratlib::strategies::base::{Optimizable, Strategies};
-use optionstratlib::strategies::straddle::LongStraddle;
+use optionstratlib::strategies::long_straddle::LongStraddle;
 use optionstratlib::strategies::utils::FindOptimalSide;
 use optionstratlib::utils::setup_logger;
 use optionstratlib::visualization::utils::{Graph, GraphBackend};

@@ -48,10 +48,12 @@ zip = "2.6.1"
 lazy_static = "1.5.0"
 uuid = { version = "1.16.0", features = ["v4", "serde"] }
 
+
 [dev-dependencies]
 criterion = { version = "0.5.1", default-features = false, features = ["html_reports"] }
 mockall = "0.13.1"
 tempfile = "3.19.1"
+static_assertions = "1.1.0"
 
 [[test]]
 name = "tests"

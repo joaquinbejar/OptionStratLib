@@ -242,12 +242,17 @@ pub mod probabilities;
 /// Protective Put strategy implementation
 pub mod protective_put;
 
-/// Straddle strategy implementation
-pub mod straddle;
+/// Long Straddle strategy implementation
+pub mod long_straddle;
 
 /// Strangle strategy implementation
-pub mod strangle;
+pub mod long_strangle;
 
+/// Short Strangle strategy implementation
+pub mod short_strangle;
+
+/// Short Straddle strategy implementation
+pub mod short_straddle;
 /// Utility functions for options calculations and analysis
 pub mod utils;
 
@@ -265,7 +270,9 @@ pub use custom::CustomStrategy;
 pub use delta_neutral::{DELTA_THRESHOLD, DeltaAdjustment, DeltaInfo, DeltaNeutrality};
 pub use iron_butterfly::IronButterfly;
 pub use iron_condor::IronCondor;
+pub use long_straddle::LongStraddle;
+pub use long_strangle::LongStrangle;
 pub use poor_mans_covered_call::PoorMansCoveredCall;
-pub use straddle::{LongStraddle, ShortStraddle};
-pub use strangle::{LongStrangle, ShortStrangle};
+pub use short_straddle::ShortStraddle;
+pub use short_strangle::ShortStrangle;
 pub use utils::FindOptimalSide;

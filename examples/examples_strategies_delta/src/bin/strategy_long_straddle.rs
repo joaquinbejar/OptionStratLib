@@ -4,7 +4,7 @@ use optionstratlib::pos;
 use optionstratlib::strategies::LongStrangle;
 use optionstratlib::strategies::Strategies;
 use optionstratlib::strategies::delta_neutral::DeltaNeutrality;
-use optionstratlib::strategies::straddle::LongStraddle;
+use optionstratlib::strategies::long_straddle::LongStraddle;
 use optionstratlib::utils::setup_logger;
 use optionstratlib::visualization::utils::Graph;
 use rust_decimal::Decimal;

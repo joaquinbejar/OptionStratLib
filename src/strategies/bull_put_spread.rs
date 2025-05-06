@@ -45,6 +45,7 @@ use chrono::Utc;
 use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{RED, ShapeStyle};
 use rust_decimal::Decimal;
+use serde::{Deserialize, Serialize};
 use std::error::Error;
 use tracing::debug;
 
@@ -68,7 +69,7 @@ const BULL_PUT_SPREAD_DESCRIPTION: &str = "A bull put spread is created by buyin
 /// - Generates upfront income from the net premium received
 ///
 /// # Attributes
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct BullPutSpread {
     /// The name of the strategy, typically "Bull Put Spread"
     pub name: String,

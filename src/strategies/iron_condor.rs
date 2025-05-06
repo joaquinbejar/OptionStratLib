@@ -38,6 +38,7 @@ use num_traits::{FromPrimitive, ToPrimitive};
 use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{RED, ShapeStyle};
 use rust_decimal::Decimal;
+use serde::{Deserialize, Serialize};
 use std::error::Error;
 use tracing::{error, info};
 
@@ -93,7 +94,7 @@ const IRON_CONDOR_DESCRIPTION: &str = "An Iron Condor is a neutral options strat
 /// - Selling an out-of-the-money call (short call)
 /// - Buying a further out-of-the-money call (long call)
 ///
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct IronCondor {
     /// Name identifier for this specific strategy instance
     pub name: String,

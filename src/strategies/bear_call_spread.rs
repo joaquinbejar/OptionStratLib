@@ -58,6 +58,7 @@ use chrono::Utc;
 use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{RED, ShapeStyle};
 use rust_decimal::Decimal;
+use serde::{Deserialize, Serialize};
 use std::error::Error;
 use tracing::debug;
 
@@ -78,7 +79,7 @@ const BEAR_CALL_SPREAD_DESCRIPTION: &str = "A bear call spread is created by sel
 /// while the maximum loss occurs when the underlying price is at or above the higher strike price.
 ///
 /// # Attributes
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct BearCallSpread {
     /// Name identifier for the strategy instance.
     pub name: String,

@@ -28,6 +28,7 @@ use num_traits::{FromPrimitive, ToPrimitive};
 use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{RED, ShapeStyle};
 use rust_decimal::Decimal;
+use serde::{Deserialize, Serialize};
 use std::error::Error;
 use tracing::{debug, error};
 
@@ -40,7 +41,7 @@ use tracing::{debug, error};
 /// This structure supports both analytical calculations and visualization of custom strategies,
 /// enabling traders to evaluate potential outcomes across different price points of the underlying asset.
 ///
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct CustomStrategy {
     /// The name of the custom strategy.
     pub name: String,

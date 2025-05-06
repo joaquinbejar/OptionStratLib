@@ -53,6 +53,7 @@ use num_traits::FromPrimitive;
 use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{RED, ShapeStyle};
 use rust_decimal::Decimal;
+use serde::{Deserialize, Serialize};
 use std::error::Error;
 use tracing::debug;
 
@@ -100,7 +101,7 @@ const PMCC_DESCRIPTION: &str = "A Poor Man's Covered Call (PMCC) is an options s
 /// - The strategy often involves rolling the short call forward to continue generating income
 /// - The long call should have sufficient time value to avoid assignment complications
 /// - Ideally implemented when the underlying asset has a strong positive outlook over the long term
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PoorMansCoveredCall {
     /// Name identifier for this specific strategy instance
     pub name: String,

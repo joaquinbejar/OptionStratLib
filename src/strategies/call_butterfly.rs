@@ -1,8 +1,3 @@
-/******************************************************************************
-   Author: Joaquín Béjar García
-   Email: jb@taunais.com
-   Date: 25/9/24
-******************************************************************************/
 use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, Strategies, StrategyType, Validable,
 };
@@ -32,6 +27,7 @@ use num_traits::ToPrimitive;
 use plotters::prelude::{RED, ShapeStyle};
 use plotters::style::full_palette::ORANGE;
 use rust_decimal::Decimal;
+use serde::{Deserialize, Serialize};
 use std::error::Error;
 use tracing::{error, info};
 
@@ -53,7 +49,7 @@ const CALL_BUTTERFLY_DESCRIPTION: &str = "A Ratio Call Spread involves buying on
 /// # Attributes
 ///
 /// The structure stores both strategy metadata and the specific positions that make up the butterfly.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct CallButterfly {
     /// The name of the strategy, typically used for identification purposes.
     pub name: String,

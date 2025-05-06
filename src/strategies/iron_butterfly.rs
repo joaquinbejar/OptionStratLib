@@ -40,6 +40,7 @@ use num_traits::{FromPrimitive, ToPrimitive};
 use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{RED, ShapeStyle};
 use rust_decimal::Decimal;
+use serde::{Deserialize, Serialize};
 use std::error::Error;
 use tracing::{error, info};
 
@@ -91,7 +92,7 @@ const IRON_BUTTERFLY_DESCRIPTION: &str = "An Iron Butterfly is a neutral options
 /// - Implied volatility is high (making the sold options more expensive)
 /// - The trader wants defined risk/reward parameters compared to a short straddle
 ///
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct IronButterfly {
     /// Name identifier for this specific strategy instance
     pub name: String,

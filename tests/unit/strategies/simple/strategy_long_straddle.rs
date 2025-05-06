@@ -5,7 +5,7 @@ use optionstratlib::Positive;
 use optionstratlib::constants::ZERO;
 use optionstratlib::strategies::Strategies;
 use optionstratlib::strategies::base::BreakEvenable;
-use optionstratlib::strategies::straddle::LongStraddle;
+use optionstratlib::strategies::long_straddle::LongStraddle;
 use optionstratlib::utils::setup_logger;
 use optionstratlib::visualization::utils::Graph;
 use optionstratlib::{assert_pos_relative_eq, pos};

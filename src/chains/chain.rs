@@ -2065,8 +2065,12 @@ impl OptionChain {
         // If no options match our criteria, return a specific error
         if filtered_options.is_empty() {
             let message = match option_style {
-                OptionStyle::Call => format!("No call option with delta ≤ {} was found", target_delta),
-                OptionStyle::Put => format!("No put option with delta ≥ {} was found", target_delta),
+                OptionStyle::Call => {
+                    format!("No call option with delta ≤ {} was found", target_delta)
+                }
+                OptionStyle::Put => {
+                    format!("No put option with delta ≥ {} was found", target_delta)
+                }
             };
 
             return Err(ChainError::OptionDataError(
@@ -2087,14 +2091,20 @@ impl OptionChain {
                     .unwrap_or(std::cmp::Ordering::Equal)
             })
             .map(|(option_data, delta)| {
-                debug!("Selected option with strike {} and delta {}", option_data.strike_price, delta);
+                debug!(
+                    "Selected option with strike {} and delta {}",
+                    option_data.strike_price, delta
+                );
 
                 // Create position from the selected option
                 let params = match self.get_params(option_data.strike_price) {
                     Ok(p) => p,
                     Err(e) => {
                         // Log the error but convert to a more specific error
-                        error!("Failed to get params for strike {}: {}", option_data.strike_price, e);
+                        error!(
+                            "Failed to get params for strike {}: {}",
+                            option_data.strike_price, e
+                        );
                         return Err(ChainError::OptionDataError(
                             OptionDataErrorKind::InvalidDelta {
                                 delta: Some(delta.to_f64().unwrap()),
@@ -2108,12 +2118,10 @@ impl OptionChain {
                     .get_position(&params, side, option_style, None, None, None)
                     .map_err(|e| {
                         error!("Failed to create position: {}", e);
-                        ChainError::OptionDataError(
-                            OptionDataErrorKind::InvalidDelta {
-                                delta: Some(delta.to_f64().unwrap()),
-                                reason: format!("Failed to create position: {}", e),
-                            },
-                        )
+                        ChainError::OptionDataError(OptionDataErrorKind::InvalidDelta {
+                            delta: Some(delta.to_f64().unwrap()),
+                            reason: format!("Failed to create position: {}", e),
+                        })
                     })
             })
             .unwrap_or_else(|| {
@@ -2122,7 +2130,8 @@ impl OptionChain {
                 Err(ChainError::OptionDataError(
                     OptionDataErrorKind::InvalidDelta {
                         delta: Some(target_delta.to_f64().unwrap()),
-                        reason: "Unexpected error when selecting option with closest delta".to_string(),
+                        reason: "Unexpected error when selecting option with closest delta"
+                            .to_string(),
                     },
                 ))
             })

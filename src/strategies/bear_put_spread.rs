@@ -40,6 +40,7 @@ use chrono::Utc;
 use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{RED, ShapeStyle};
 use rust_decimal::Decimal;
+use serde::{Deserialize, Serialize};
 use std::error::Error;
 use tracing::{debug, info};
 
@@ -61,7 +62,7 @@ const BEAR_PUT_SPREAD_DESCRIPTION: &str = "A bear put spread is created by buyin
 /// buying a single put outright due to premium received from the short put.
 ///
 /// # Attributes
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct BearPutSpread {
     /// The name identifier for this specific strategy instance.
     pub name: String,
