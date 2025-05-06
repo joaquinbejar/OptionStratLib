@@ -2086,6 +2086,104 @@ impl OptionChain {
                 },
             ))
     }
+    
+    /// Retrieves a collection of strike prices from the chain of options.
+    ///
+    /// This method iterates through the options in the chain, extracts the `strike_price`
+    /// of each option, and returns them as a vector of `Positive` values.
+    ///
+    /// # Returns
+    /// This function returns a `Result`:
+    /// - On success, it returns an `Ok` variant containing a `Vec<Positive>`, where each
+    ///   element is the strike price of a corresponding option in the chain.
+    /// - If an error occurs, it returns an `Err` variant containing a `ChainError`.
+    ///
+    /// # Errors
+    /// This function will return an error if there is any issue in processing the options chain 
+    /// that prevents successful extraction of strike prices.
+    ///
+    /// # Note
+    /// - The `Positive` type for `strike_price` ensures that only valid positive values are included.
+    /// - An empty vector will be returned if there are no options in the chain.
+    ///
+    /// # Dependencies
+    /// The method depends on `self.iter()` to provide access to the underlying collection of options. 
+    /// Each option is expected to have a `strike_price` field.
+    pub fn get_strikes(&self) ->  Result<Vec<Positive>, ChainError> {
+        Ok(self.options.iter()
+            .map(|option| option.strike_price)
+            .collect())
+    }
+    
+    /// Retrieves an `OptionData` instance from an option chain that has a strike price
+    /// closest to the given price.
+    ///
+    /// # Arguments
+    ///
+    /// * `price` - A reference to a `Positive`, which represents the price to compare
+    /// against the strike prices in the option chain.
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(&OptionData)` - A reference to the `OptionData` instance with the strike price
+    ///   closest to the specified price.
+    /// * `Err(ChainError)` - An error indicating the failure to retrieve the option data,
+    ///   which could occur due to:
+    ///   - The option chain being empty.
+    ///   - No matching `OptionData` found for the given price.
+    ///
+    /// # Errors
+    ///
+    /// * `ChainError` - Returned if the option chain is empty or no suitable option data
+    ///   can be found that matches the given price.
+    ///
+    /// # Behavior
+    ///
+    /// * If the option chain is empty (`self.options.is_empty()`), this function will
+    ///   immediately return an error with a message indicating that the option data cannot be
+    ///   found for an empty chain.
+    /// * The function iterates through the available `OptionData` instances in the chain
+    ///   and identifies the one whose `strike_price` is closest to the specified `price`.
+    ///   - The comparison is done based on the absolute difference between the `strike_price`
+    ///     and `price`, with the smallest difference being considered the best match.
+    /// * If a matching option is found, it is returned as a reference inside an `Ok`.
+    /// * If no matching option is found, an error will be returned with a descriptive message.
+    ///
+    /// # Notes
+    ///
+    /// * The `strike_price` and `price` values are compared as decimal values using the
+    ///   `to_dec` method.
+    /// * If two or more `OptionData` instances have the same distance to the given `price`,
+    ///   the implementation will use the first instance it encounters based on the iteration
+    ///   order.
+    pub fn get_optiondata_with_strike(&self, price: &Positive) -> Result<&OptionData, ChainError> {
+        // Check for empty option chain
+        if self.options.is_empty() {
+            return Err(format!(
+                "Cannot find option data for empty option chain: {}",
+                self.symbol
+            )
+                .into());
+        }
+
+        // Find the option with strike price closest to the price parameter
+        let option_data = self.options.iter().min_by(|a, b| {
+            let a_distance = (a.strike_price.to_dec() - price.to_dec()).abs();
+            let b_distance = (b.strike_price.to_dec() - price.to_dec()).abs();
+            a_distance
+                .partial_cmp(&b_distance)
+                .unwrap_or(Ordering::Equal)
+        });
+
+        match option_data {
+            Some(opt) => Ok(opt),
+            None => Err(format!(
+                "Failed to find option data for price {} in chain: {}",
+                price, self.symbol
+            )
+                .into()),
+        }
+    }
 }
 
 impl Default for OptionChain {
@@ -8714,5 +8812,207 @@ mod tests_get_position_with_delta {
                 style
             );
         }
+    }
+}
+
+#[cfg(test)]
+mod tests_get_strikes_and_optiondata {
+    use super::*;
+    use crate::{pos, spos};
+    use crate::utils::logger::setup_logger;
+    use rust_decimal_macros::dec;
+
+    // Helper function to create a test chain with specific strikes
+    fn create_test_chain() -> OptionChain {
+        let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
+
+        // Add options with different strikes
+        for strike in [90.0, 95.0, 100.0, 105.0, 110.0].iter() {
+            chain.add_option(
+                pos!(*strike),
+                spos!(1.0),
+                spos!(1.1),
+                spos!(1.0),
+                spos!(1.1),
+                spos!(0.2),
+                Some(dec!(0.5)),
+                Some(dec!(-0.5)),
+                Some(dec!(0.1)),
+                spos!(100.0),
+                Some(50),
+            );
+        }
+        chain
+    }
+
+    #[test]
+    fn test_get_strikes_normal_case() {
+        setup_logger();
+        let chain = create_test_chain();
+
+        let result = chain.get_strikes();
+        assert!(result.is_ok(), "Should successfully get strikes");
+
+        let strikes = result.unwrap();
+        assert_eq!(strikes.len(), 5, "Should return 5 strikes");
+
+        // Verify strikes are in the expected order
+        assert_eq!(strikes[0], pos!(90.0));
+        assert_eq!(strikes[1], pos!(95.0));
+        assert_eq!(strikes[2], pos!(100.0));
+        assert_eq!(strikes[3], pos!(105.0));
+        assert_eq!(strikes[4], pos!(110.0));
+    }
+
+    #[test]
+    fn test_get_strikes_empty_chain() {
+        let chain = OptionChain::new("EMPTY", pos!(100.0), "2024-01-01".to_string(), None, None);
+
+        let result = chain.get_strikes();
+        assert!(result.is_ok(), "Should handle empty chain");
+
+        let strikes = result.unwrap();
+        assert!(strikes.is_empty(), "Should return empty vector for empty chain");
+    }
+
+    #[test]
+    fn test_get_optiondata_with_strike_exact_match() {
+        let chain = create_test_chain();
+
+        // Test with exact strike match
+        let result = chain.get_optiondata_with_strike(&pos!(100.0));
+        assert!(result.is_ok(), "Should find exact strike");
+
+        let option_data = result.unwrap();
+        assert_eq!(option_data.strike_price, pos!(100.0), "Should return option with strike 100.0");
+    }
+
+    #[test]
+    fn test_get_optiondata_with_strike_closest_match() {
+        let chain = create_test_chain();
+
+        // Test with price between two strikes but closer to 105
+        let result = chain.get_optiondata_with_strike(&pos!(103.0));
+        assert!(result.is_ok(), "Should find closest strike");
+
+        let option_data = result.unwrap();
+        assert_eq!(option_data.strike_price, pos!(105.0), "Should return closest strike 105.0");
+
+        // Test with price between two strikes but closer to 100
+        let result = chain.get_optiondata_with_strike(&pos!(97.0));
+        assert!(result.is_ok(), "Should find closest strike");
+
+        let option_data = result.unwrap();
+        assert_eq!(option_data.strike_price, pos!(95.0), "Should return closest strike 95.0");
+
+        // Test with price below lowest strike
+        let result = chain.get_optiondata_with_strike(&pos!(85.0));
+        assert!(result.is_ok(), "Should find closest strike for low price");
+
+        let option_data = result.unwrap();
+        assert_eq!(option_data.strike_price, pos!(90.0), "Should return lowest strike 90.0");
+
+        // Test with price above highest strike
+        let result = chain.get_optiondata_with_strike(&pos!(115.0));
+        assert!(result.is_ok(), "Should find closest strike for high price");
+
+        let option_data = result.unwrap();
+        assert_eq!(option_data.strike_price, pos!(110.0), "Should return highest strike 110.0");
+
+        // Test with price exactly between two strikes (equidistant case)
+        let result = chain.get_optiondata_with_strike(&pos!(102.5));
+        assert!(result.is_ok(), "Should handle price exactly between strikes");
+
+        let option_data = result.unwrap();
+        assert_eq!(option_data.strike_price, pos!(100.0),
+                   "For equidistant strikes, should return the lower strike due to BTreeSet ordering");
+    }
+
+    #[test]
+    fn test_get_optiondata_with_strike_edge_cases() {
+        let chain = create_test_chain();
+
+        // Test with price exactly between two strikes
+        let result = chain.get_optiondata_with_strike(&pos!(97.5));
+        assert!(result.is_ok(), "Should handle price exactly between strikes");
+
+        let option_data = result.unwrap();
+        // Could be either 95.0 or 100.0 depending on implementation details
+        assert!(
+            option_data.strike_price == pos!(95.0) || option_data.strike_price == pos!(100.0),
+            "Should return one of the equidistant strikes"
+        );
+    }
+
+    #[test]
+    fn test_get_optiondata_with_strike_empty_chain() {
+        let chain = OptionChain::new("EMPTY", pos!(100.0), "2024-01-01".to_string(), None, None);
+
+        let result = chain.get_optiondata_with_strike(&pos!(100.0));
+        assert!(result.is_err(), "Should return error for empty chain");
+
+        let error = result.unwrap_err();
+        let error_msg = format!("{}", error);
+        assert!(
+            error_msg.contains("empty option chain"),
+            "Error should mention empty chain"
+        );
+        assert!(error_msg.contains("EMPTY"), "Error should include the symbol");
+    }
+
+    #[test]
+    fn test_get_optiondata_with_strike_single_option() {
+        let mut chain = OptionChain::new("SINGLE", pos!(100.0), "2024-01-01".to_string(), None, None);
+
+        // Add a single option
+        chain.add_option(
+            pos!(100.0),
+            spos!(1.0),
+            spos!(1.1),
+            spos!(1.0),
+            spos!(1.1),
+            spos!(0.2),
+            Some(dec!(0.5)),
+            Some(dec!(-0.5)),
+            Some(dec!(0.1)),
+            spos!(100.0),
+            Some(50),
+        );
+
+        // Test with any price - should always return the single option
+        let result = chain.get_optiondata_with_strike(&pos!(150.0));
+        assert!(result.is_ok(), "Should find option in single-option chain");
+
+        let option_data = result.unwrap();
+        assert_eq!(option_data.strike_price, pos!(100.0), "Should return the only available strike");
+    }
+
+    #[test]
+    fn test_get_strikes_order() {
+        let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
+
+        // Add options in non-sorted order
+        chain.add_option(
+            pos!(105.0),
+            None, None, None, None, None, None, None, None, None, None
+        );
+        chain.add_option(
+            pos!(95.0),
+            None, None, None, None, None, None, None, None, None, None
+        );
+        chain.add_option(
+            pos!(100.0),
+            None, None, None, None, None, None, None, None, None, None
+        );
+
+        let result = chain.get_strikes();
+        assert!(result.is_ok());
+
+        let strikes = result.unwrap();
+
+        // Verify they're in ascending order regardless of insertion order
+        assert_eq!(strikes[0], pos!(95.0));
+        assert_eq!(strikes[1], pos!(100.0));
+        assert_eq!(strikes[2], pos!(105.0));
     }
 }
