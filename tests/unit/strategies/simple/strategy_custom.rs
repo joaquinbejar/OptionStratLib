@@ -121,24 +121,24 @@ fn test_custom_strategy_integration() -> Result<(), Box<dyn Error>> {
 
     // Test strategy properties and calculations
     assert_relative_eq!(
-        strategy.net_premium_received().unwrap().to_f64(),
+        strategy.get_net_premium_received().unwrap().to_f64(),
         572.83,
         epsilon = 0.001
     );
-    assert_relative_eq!(strategy.fees().unwrap().to_f64(), 51.56, epsilon = 0.001);
+    assert_relative_eq!(strategy.get_fees().unwrap().to_f64(), 51.56, epsilon = 0.001);
 
     // Test range and break-even points
-    let price_range = strategy.best_range_to_show(pos!(1.0)).unwrap();
+    let price_range = strategy.get_best_range_to_show(pos!(1.0)).unwrap();
     assert!(!price_range.is_empty());
 
     // Test profit metrics
     assert!(
-        strategy.profit_area().unwrap().to_f64().unwrap() > 0.0
-            && strategy.profit_area().unwrap().to_f64().unwrap() <= 100.0,
+        strategy.get_profit_area().unwrap().to_f64().unwrap() > 0.0
+            && strategy.get_profit_area().unwrap().to_f64().unwrap() <= 100.0,
         "Profit area should be between 0 and 100%"
     );
     assert!(
-        strategy.profit_ratio().unwrap().to_f64().unwrap() > 0.0,
+        strategy.get_profit_ratio().unwrap().to_f64().unwrap() > 0.0,
         "Profit ratio should be positive"
     );
 

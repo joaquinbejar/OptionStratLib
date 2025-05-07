@@ -46,26 +46,26 @@ fn main() -> Result<(), Box<dyn Error>> {
         100,
         pos!(0.1),
     );
-    strategy.best_area(&option_chain, FindOptimalSide::All);
+    strategy.get_best_area(&option_chain, FindOptimalSide::All);
     debug!("Strategy:  {:#?}", strategy);
-    let range = strategy.range_of_profit().unwrap_or(Positive::ZERO);
-    info!("Title: {}", strategy.title());
+    let range = strategy.get_range_of_profit().unwrap_or(Positive::ZERO);
+    info!("Title: {}", strategy.get_title());
     info!("Break Even Points: {:?}", strategy.break_even_points);
     info!(
         "Net Premium Received: ${:.2}",
-        strategy.net_premium_received()?
+        strategy.get_net_premium_received()?
     );
-    info!("Max Profit: ${:.2}", strategy.max_profit_iter()?);
-    info!("Max Loss: ${:0.2}", strategy.max_loss_iter()?);
-    info!("Total Fees: ${:.2}", strategy.fees()?);
+    info!("Max Profit: ${:.2}", strategy.get_max_profit_mut()?);
+    info!("Max Loss: ${:0.2}", strategy.get_max_loss_mut()?);
+    info!("Total Fees: ${:.2}", strategy.get_fees()?);
     info!(
         "Range of Profit: ${:.2} {:.2}%",
         range,
         (range / 2.0) / underlying_price * 100.0
     );
-    info!("Profit Area: {:.2}%", strategy.profit_area()?);
+    info!("Profit Area: {:.2}%", strategy.get_profit_area()?);
 
-    if strategy.profit_ratio()? > Positive::ZERO.into() {
+    if strategy.get_profit_ratio()? > Positive::ZERO.into() {
         debug!("Strategy:  {:#?}", strategy);
         strategy.graph(
             GraphBackend::Bitmap {

@@ -144,14 +144,14 @@ fn main() -> Result<(), Box<dyn Error>> {
         pos!(0.01),
     );
 
-    info!("Title: {}", strategy.title());
+    info!("Title: {}", strategy.get_title());
     info!(
         "Net Premium Received: ${:.2}",
-        strategy.net_premium_received()?
+        strategy.get_net_premium_received()?
     );
-    info!("Max Profit: ${:.2}", strategy.max_profit_iter()?);
-    info!("Max Loss: ${:.2}", strategy.max_loss_iter()?);
-    info!("Total Fees: ${:.2}", strategy.fees()?);
+    info!("Max Profit: ${:.2}", strategy.get_max_profit_mut()?);
+    info!("Max Loss: ${:.2}", strategy.get_max_loss_mut()?);
+    info!("Total Fees: ${:.2}", strategy.get_fees()?);
 
     match strategy.break_even_points.len() {
         0 => info!("No break even points found"),
@@ -184,8 +184,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         ),
     }
 
-    info!("Profit Area: {:.2}%", strategy.profit_area()?);
-    info!("Profit Ratio: {:.2}%", strategy.profit_ratio()?);
+    info!("Profit Area: {:.2}%", strategy.get_profit_area()?);
+    info!("Profit Ratio: {:.2}%", strategy.get_profit_ratio()?);
 
     // Generate the profit/loss graph
     strategy.graph(

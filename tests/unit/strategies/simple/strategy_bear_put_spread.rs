@@ -39,25 +39,25 @@ fn test_bear_put_spread_integration() -> Result<(), Box<dyn Error>> {
 
     // Assertions to validate strategy properties and computations
     assert_eq!(
-        strategy.title(),
+        strategy.get_title(),
         "Bear Put Spread Strategy:\n\tUnderlying: SP500 @ $5850 Long Put European Option\n\tUnderlying: SP500 @ $5720 Short Put European Option"
     );
     assert_eq!(strategy.get_break_even_points().unwrap().len(), 1);
     assert_relative_eq!(
-        strategy.net_premium_received().unwrap().to_f64(),
+        strategy.get_net_premium_received().unwrap().to_f64(),
         0.0,
         epsilon = 0.001
     );
-    assert!(strategy.max_profit().is_ok());
-    assert!(strategy.max_loss().is_ok());
-    assert_pos_relative_eq!(strategy.max_loss()?, pos!(116.42), pos!(0.0001));
-    assert_pos_relative_eq!(strategy.total_cost()?, pos!(176.12), pos!(0.0001));
-    assert_eq!(strategy.fees().unwrap().to_f64(), 6.04);
-    assert!(strategy.profit_area().unwrap().to_f64().unwrap() > 0.0);
-    assert!(strategy.profit_ratio().unwrap().to_f64().unwrap() > 0.0);
+    assert!(strategy.get_max_profit().is_ok());
+    assert!(strategy.get_max_loss().is_ok());
+    assert_pos_relative_eq!(strategy.get_max_loss()?, pos!(116.42), pos!(0.0001));
+    assert_pos_relative_eq!(strategy.get_total_cost()?, pos!(176.12), pos!(0.0001));
+    assert_eq!(strategy.get_fees().unwrap().to_f64(), 6.04);
+    assert!(strategy.get_profit_area().unwrap().to_f64().unwrap() > 0.0);
+    assert!(strategy.get_profit_ratio().unwrap().to_f64().unwrap() > 0.0);
 
     // Validate price range calculations
-    let price_range = strategy.best_range_to_show(pos!(1.0)).unwrap();
+    let price_range = strategy.get_best_range_to_show(pos!(1.0)).unwrap();
     assert!(!price_range.is_empty());
     assert!(price_range[0] < strategy.get_break_even_points().unwrap()[0]);
     assert!(price_range[price_range.len() - 1] > strategy.get_break_even_points().unwrap()[0]);

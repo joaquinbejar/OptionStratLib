@@ -43,32 +43,32 @@ fn main() -> Result<(), Box<dyn Error>> {
         pos!(0.73),
     );
 
-    strategy.best_ratio(
+    strategy.get_best_ratio(
         &option_chain,
         FindOptimalSide::Range(pos!(5700.0), pos!(6000.0)),
     );
-    let range = strategy.range_of_profit().unwrap_or(Positive::ZERO);
-    info!("Title: {}", strategy.title());
+    let range = strategy.get_range_of_profit().unwrap_or(Positive::ZERO);
+    info!("Title: {}", strategy.get_title());
     info!("Break Even Points: {:?}", strategy.break_even_points);
     info!(
         "Net Premium Received: ${:.2}",
-        strategy.net_premium_received()?
+        strategy.get_net_premium_received()?
     );
     info!(
         "Max Profit: ${:.2}",
-        strategy.max_profit().unwrap_or(Positive::ZERO)
+        strategy.get_max_profit().unwrap_or(Positive::ZERO)
     );
     info!(
         "Max Loss: ${:0.2}",
-        strategy.max_loss().unwrap_or(Positive::ZERO)
+        strategy.get_max_loss().unwrap_or(Positive::ZERO)
     );
-    info!("Total Fees: ${:.2}", strategy.fees()?);
+    info!("Total Fees: ${:.2}", strategy.get_fees()?);
     info!(
         "Range of Profit: ${:.2} {:.2}%",
         range,
         (range / 2.0) / underlying_price * 100.0
     );
-    info!("Profit Ratio: {:.2}%", strategy.profit_ratio()?);
+    info!("Profit Ratio: {:.2}%", strategy.get_profit_ratio()?);
     debug!("Strategy:  {:#?}", strategy);
 
     strategy.graph(

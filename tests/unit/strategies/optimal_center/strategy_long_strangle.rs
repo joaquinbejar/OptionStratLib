@@ -38,7 +38,7 @@ fn test_long_strangle_integration() -> Result<(), Box<dyn Error>> {
 
     let option_chain =
         OptionChain::load_from_json("./examples/Chains/SP500-18-oct-2024-5781.88.json")?;
-    strategy.best_area(&option_chain, FindOptimalSide::Center);
+    strategy.get_best_area(&option_chain, FindOptimalSide::Center);
     let positions = strategy.get_positions()?;
     for position in positions {
         match position.option.option_style {

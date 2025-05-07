@@ -36,18 +36,18 @@ fn main() -> Result<(), Box<dyn Error>> {
         pos!(0.54),
     );
 
-    info!("Title: {}", strategy.title());
+    info!("Title: {}", strategy.get_title());
     info!("Break Even {:?}", strategy.get_break_even_points());
-    info!("Net Premium Received: {}", strategy.net_premium_received()?);
+    info!("Net Premium Received: {}", strategy.get_net_premium_received()?);
     info!(
         "Max Profit: {}",
-        strategy.max_profit().unwrap_or(Positive::ZERO)
+        strategy.get_max_profit().unwrap_or(Positive::ZERO)
     );
     info!(
         "Max Loss: {}",
-        strategy.max_loss().unwrap_or(Positive::ZERO)
+        strategy.get_max_loss().unwrap_or(Positive::ZERO)
     );
-    info!("Total Cost: {}", strategy.total_cost()?);
+    info!("Total Cost: {}", strategy.get_total_cost()?);
 
     // Generate the intrinsic value graph
     strategy.graph(
