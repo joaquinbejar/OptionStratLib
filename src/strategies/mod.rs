@@ -213,7 +213,7 @@ pub mod bull_call_spread;
 pub mod bull_put_spread;
 
 /// Butterfly Spread strategy implementation
-pub mod butterfly_spread;
+pub mod long_butterfly_spread;
 
 /// Call Butterfly strategy implementation  
 pub mod call_butterfly;
@@ -269,6 +269,7 @@ pub mod long_call;
 /// Long Put strategy implementation
 pub mod long_put;
 pub mod macros;
+pub mod short_butterfly_spread;
 /// Short Call strategy implementation
 pub mod short_call;
 /// Short Put strategy implementation
@@ -281,17 +282,18 @@ pub use build::model::StrategyRequest;
 pub use build::traits::StrategyConstructor;
 pub use bull_call_spread::BullCallSpread;
 pub use bull_put_spread::BullPutSpread;
-pub use butterfly_spread::{LongButterflySpread, ShortButterflySpread};
 pub use call_butterfly::CallButterfly;
 pub use custom::CustomStrategy;
 pub use delta_neutral::{DELTA_THRESHOLD, DeltaAdjustment, DeltaInfo, DeltaNeutrality};
 pub use iron_butterfly::IronButterfly;
 pub use iron_condor::IronCondor;
+pub use long_butterfly_spread::LongButterflySpread;
 pub use long_call::LongCall;
 pub use long_put::LongPut;
 pub use long_straddle::LongStraddle;
 pub use long_strangle::LongStrangle;
 pub use poor_mans_covered_call::PoorMansCoveredCall;
+pub use short_butterfly_spread::ShortButterflySpread;
 pub use short_call::ShortCall;
 pub use short_put::ShortPut;
 pub use short_straddle::ShortStraddle;

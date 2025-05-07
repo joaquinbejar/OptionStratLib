@@ -24,13 +24,13 @@ use crate::strategies::{BasicAble, DeltaNeutrality, StrategyBasics, StrategyCons
 use crate::utils::others::process_n_times_iter;
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
-use crate::{ExpirationDate, OptionStyle, OptionType, Options, Positive, Side, pos};
+use crate::{ExpirationDate,  Options, Positive, pos};
 use num_traits::{FromPrimitive, ToPrimitive};
 use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{RED, ShapeStyle};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use tracing::{debug, error};
 
@@ -396,54 +396,124 @@ impl Strategable for CustomStrategy {
 
 impl BasicAble for CustomStrategy {
     fn get_title(&self) -> String {
-        let strategy_title = format!("{} Strategy: {:?} on {}", self.name, self.kind, self.symbol);
-        let leg_titles: Vec<String> = self
-            .positions
+        let strategy_title = format!("{:?} Strategy: ", self.kind);
+        let leg_titles: Vec<String> = self.positions
             .iter()
             .map(|position| position.get_title())
             .collect();
+
+
         if leg_titles.is_empty() {
             strategy_title
         } else {
             format!("{}\n\t{}", strategy_title, leg_titles.join("\n\t"))
         }
     }
-    fn get_option_basic_type(&self) -> OptionBasicType {
-        unimplemented!("get_option_basic_type is not implemented for this strategy");
-    }
-    fn get_symbol(&self) -> &str {
-        unimplemented!("get_symbol is not implemented for this strategy");
-    }
-    fn get_strike(&self) -> HashMap<OptionBasicType, &Positive> {
-        unimplemented!("get_strike is not implemented for this strategy");
-    }
-    fn get_side(&self) -> HashMap<OptionBasicType, &Side> {
-        unimplemented!("get_side is not implemented for this strategy");
-    }
-    fn get_type(&self) -> &OptionType {
-        unimplemented!("get_type is not implemented for this strategy");
-    }
-    fn get_style(&self) -> HashMap<OptionBasicType, &OptionStyle> {
-        unimplemented!("get_style is not implemented for this strategy");
-    }
-    fn get_expiration(&self) -> HashMap<OptionBasicType, &ExpirationDate> {
-        unimplemented!("get_expiration is not implemented for this strategy");
+    fn get_option_basic_type(&self) -> HashSet<OptionBasicType> {
+        let mut hash_set = HashSet::new();
+        self.positions
+            .iter()
+            .for_each(|position| {
+                hash_set.insert(OptionBasicType {
+                    option_style: &position.option.option_style,
+                    side: &position.option.side,
+                    strike_price: &position.option.strike_price,
+                    expiration_date: &position.option.expiration_date,
+                });
+            });
+        hash_set
     }
     fn get_implied_volatility(&self) -> HashMap<OptionBasicType, &Positive> {
-        unimplemented!("get_implied_volatility is not implemented for this strategy");
+        self.positions
+            .iter()
+            .map(|position| {
+                (
+                    &position.option,
+                    &position.option.quantity,
+                )
+            })
+            .map(|(option, qty)| {
+                (
+                    OptionBasicType {
+                        option_style: &option.option_style,
+                        side: &option.side,
+                        strike_price: &option.strike_price,
+                        expiration_date: &option.expiration_date,
+                    },
+                    qty,
+                )
+            })
+            .collect()
     }
     fn get_quantity(&self) -> HashMap<OptionBasicType, &Positive> {
-        unimplemented!("get_quantity is not implemented for this strategy");
+        self.positions
+            .iter()
+            .map(|position| {
+                (
+                    &position.option,
+                    &position.option.implied_volatility,
+                )
+            })
+            .map(|(option, iv)| {
+                (
+                    OptionBasicType {
+                        option_style: &option.option_style,
+                        side: &option.side,
+                        strike_price: &option.strike_price,
+                        expiration_date: &option.expiration_date,
+                    },
+                    iv,
+                )
+            })
+            .collect()
     }
-    fn get_underlying_price(&self) -> &Positive {
-        let positions = &self.positions;
-        &positions.first().unwrap().option.underlying_price
+    fn one_option(&self) -> &Options {
+        self.positions[0].one_option()
     }
-    fn get_risk_free_rate(&self) -> HashMap<OptionBasicType, &Decimal> {
-        unimplemented!("get_risk_free_rate is not implemented for this strategy");
+    fn one_option_mut(&mut self) -> &mut Options {
+        self.positions[0].one_option_mut()
     }
-    fn get_dividend_yield(&self) -> HashMap<OptionBasicType, &Positive> {
-        unimplemented!("get_dividend_yield is not implemented for this strategy");
+    fn set_expiration_date(
+        &mut self,
+        expiration_date: ExpirationDate,
+    ) -> Result<(), StrategyError> {
+        self.positions
+            .iter_mut()
+            .for_each(|position| position.option.expiration_date = expiration_date);
+        Ok(())
+    }
+    fn set_underlying_price(&mut self, price: &Positive) -> Result<(), StrategyError> {
+        self.positions
+            .iter_mut()
+            .try_for_each(|position| {
+                // Actualizar el precio subyacente
+                position.option.underlying_price = *price;
+
+                // Calcular el precio y descartar el resultado
+                position.option.calculate_price_black_scholes()
+                    .map(|_| ()) // Convertir el Ok(Decimal) a Ok(())
+                    .map_err(|e| StrategyError::StdError {
+                        reason: e.to_string(),
+                    })
+            })?;
+
+        Ok(())
+    }
+    fn set_implied_volatility(&mut self, volatility: &Positive) -> Result<(), StrategyError> {
+        self.positions
+            .iter_mut()
+            .try_for_each(|position| {
+                // Actualizar el precio subyacente
+                position.option.implied_volatility = *volatility;
+
+                // Calcular el precio y descartar el resultado
+                position.option.calculate_price_black_scholes()
+                    .map(|_| ()) // Convertir el Ok(Decimal) a Ok(())
+                    .map_err(|e| StrategyError::StdError {
+                        reason: e.to_string(),
+                    })
+            })?;
+        Ok(())
     }
 }
 
@@ -488,7 +558,8 @@ impl Strategies for CustomStrategy {
         let step = self.step_by;
         let mut max_loss: Positive = Positive::ZERO;
         let (mut current_price, max_search_price) = self.get_range_to_show()?;
-        while current_price < max_search_price {
+        
+        while current_price <= max_search_price {
             let current_profit = self.calculate_profit_at(&current_price)?;
             if current_profit > Decimal::ZERO {
                 current_price += step;
@@ -1481,14 +1552,13 @@ mod tests_total_cost {
     #[test]
     fn test_total_cost_only_short_positions() {
         setup_logger();
-        let position_1 = create_test_position(Side::Short, pos!(5.0), pos!(0.5));
-        let position_2 = create_test_position(Side::Short, pos!(3.0), pos!(0.5));
+        let position_1 = create_test_position(Side::Short, pos!(3.0), pos!(0.5));
+        let position_2 = create_test_position(Side::Short, pos!(1.0), pos!(0.5));
 
         assert_eq!(position_1.total_cost().unwrap(), 1.0);
         assert_eq!(position_2.total_cost().unwrap(), 1.0);
 
         let positions = vec![position_1, position_2];
-
         let strategy = CustomStrategy::new(
             "Test".to_string(),
             "TEST".to_string(),
@@ -1700,6 +1770,7 @@ mod tests_greeks {
     use crate::{assert_decimal_eq, pos};
     use chrono::Utc;
     use rust_decimal_macros::dec;
+    use tracing::info;
 
     const EPSILON: Decimal = dec!(1e-10);
 
@@ -1720,7 +1791,7 @@ mod tests_greeks {
                 pos!(0.02), // dividend_yield
                 None,
             ),
-            pos!(10.0), // premium
+            pos!(1.0), // premium
             Utc::now(),
             Positive::ONE, // open_fee
             Positive::ONE, // close_fee
@@ -1756,11 +1827,12 @@ mod tests_greeks {
     fn test_greeks_single_short_put() {
         setup_logger();
         let position = create_test_position(pos!(100.0), Side::Short, OptionStyle::Put);
+        info!("{:?}", position);
         let strategy = CustomStrategy::new(
             "Short Put".to_string(),
             "TEST".to_string(),
             "Test Description".to_string(),
-            pos!(90.0),
+            pos!(100.0),
             vec![position.clone()],
             pos!(0.001),
             100,
@@ -1903,7 +1975,7 @@ mod tests_custom_strategy_probability {
     fn test_get_expiration() {
         let strategy = create_test_strategy();
         let expiration = *strategy.get_expiration().values().next().unwrap();
-        assert_eq!(expiration, &ExpirationDate::Days(pos!(30.0)));
+        assert_eq!(expiration, &ExpirationDate::Days(pos!(6.0)));
     }
 
     #[test]

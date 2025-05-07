@@ -625,12 +625,12 @@ pub trait Strategies: Validable + Positionable + BreakEvenable + BasicAble {
         let mut all_points = self.get_break_even_points()?.clone();
         let (first_strike, last_strike) = self.get_max_min_strikes()?;
         let underlying_price = self.get_underlying_price();
-
+    
         // Calculate the largest difference from the underlying price to furthest strike
         let max_diff = (last_strike.value() - underlying_price.value())
             .abs()
             .max((first_strike.value() - underlying_price.value()).abs());
-
+    
         // Expand range by max_diff
         all_points.push(
             (*underlying_price - max_diff)
@@ -638,10 +638,10 @@ pub trait Strategies: Validable + Positionable + BreakEvenable + BasicAble {
                 .min(first_strike),
         );
         all_points.push((*underlying_price + max_diff).max(last_strike));
-
+    
         // Sort to find min and max
         all_points.sort_by(|a, b| a.partial_cmp(b).unwrap());
-
+    
         let start_price = *all_points.first().unwrap() * STRIKE_PRICE_LOWER_BOUND_MULTIPLIER;
         let end_price = *all_points.last().unwrap() * STRIKE_PRICE_UPPER_BOUND_MULTIPLIER;
         Ok((start_price, end_price))
