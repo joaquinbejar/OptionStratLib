@@ -39,7 +39,7 @@ use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{RED, ShapeStyle};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use tracing::{error, info};
 
@@ -602,23 +602,12 @@ impl Strategable for IronCondor {
 
 impl BasicAble for IronCondor {
     fn get_title(&self) -> String {
-        let strategy_title = format!(
-            "{:?} Strategy on {} Size {}:",
-            self.kind, self.short_put.option.underlying_symbol, self.short_put.option.quantity
-        );
+        let strategy_title = format!("{:?} Strategy: ", self.kind);
         let leg_titles: Vec<String> = [
-            format!("Long Put: ${}", self.long_put.option.strike_price),
-            format!("Short Put: ${}", self.short_put.option.strike_price),
-            format!("Short Call: ${}", self.short_call.option.strike_price),
-            format!("Long Call: ${}", self.long_call.option.strike_price),
-            format!(
-                "Expire: {}",
-                self.short_put
-                    .option
-                    .expiration_date
-                    .get_date_string()
-                    .unwrap()
-            ),
+            self.short_call.get_title(),
+            self.short_put.get_title(),
+            self.long_call.get_title(),
+            self.long_put.get_title(),
         ]
         .iter()
         .map(|leg| leg.to_string())
@@ -630,41 +619,153 @@ impl BasicAble for IronCondor {
             format!("{}\n\t{}", strategy_title, leg_titles.join("\n\t"))
         }
     }
-    fn get_option_basic_type(&self) -> OptionBasicType {
-        unimplemented!("get_option_basic_type is not implemented for this strategy");
-    }
-    fn get_symbol(&self) -> &str {
-        unimplemented!("get_symbol is not implemented for this strategy");
-    }
-    fn get_strike(&self) -> HashMap<OptionBasicType, &Positive> {
-        unimplemented!("get_strike is not implemented for this strategy");
-    }
-    fn get_side(&self) -> HashMap<OptionBasicType, &Side> {
-        unimplemented!("get_side is not implemented for this strategy");
-    }
-    fn get_type(&self) -> &OptionType {
-        unimplemented!("get_type is not implemented for this strategy");
-    }
-    fn get_style(&self) -> HashMap<OptionBasicType, &OptionStyle> {
-        unimplemented!("get_style is not implemented for this strategy");
-    }
-    fn get_expiration(&self) -> HashMap<OptionBasicType, &ExpirationDate> {
-        unimplemented!("get_expiration is not implemented for this strategy");
+    fn get_option_basic_type(&self) -> HashSet<OptionBasicType> {
+        let mut hash_set = HashSet::new();
+        let short_call = &self.short_call.option;
+        let short_put = &self.short_put.option;
+        let long_call = &self.long_call.option;
+        let long_put = &self.long_put.option;
+        hash_set.insert(OptionBasicType {
+            option_style: &short_call.option_style,
+            side: &short_call.side,
+            strike_price: &short_call.strike_price,
+            expiration_date: &short_call.expiration_date,
+        });
+        hash_set.insert(OptionBasicType {
+            option_style: &short_put.option_style,
+            side: &short_put.side,
+            strike_price: &short_put.strike_price,
+            expiration_date: &short_put.expiration_date,
+        });
+        hash_set.insert(OptionBasicType {
+            option_style: &long_call.option_style,
+            side: &long_call.side,
+            strike_price: &long_call.strike_price,
+            expiration_date: &long_call.expiration_date,
+        });
+        hash_set.insert(OptionBasicType {
+            option_style: &long_put.option_style,
+            side: &long_put.side,
+            strike_price: &long_put.strike_price,
+            expiration_date: &long_put.expiration_date,
+        });
+
+        hash_set
     }
     fn get_implied_volatility(&self) -> HashMap<OptionBasicType, &Positive> {
-        unimplemented!("get_implied_volatility is not implemented for this strategy");
+        let options = [
+            (
+                &self.short_call.option,
+                &self.short_call.option.implied_volatility,
+            ),
+            (
+                &self.short_put.option,
+                &self.short_put.option.implied_volatility,
+            ),
+            (
+                &self.long_call.option,
+                &self.long_call.option.implied_volatility,
+            ),
+            (
+                &self.long_put.option,
+                &self.long_put.option.implied_volatility,
+            ),
+        ];
+
+        options
+            .into_iter()
+            .map(|(option, iv)| {
+                (
+                    OptionBasicType {
+                        option_style: &option.option_style,
+                        side: &option.side,
+                        strike_price: &option.strike_price,
+                        expiration_date: &option.expiration_date,
+                    },
+                    iv,
+                )
+            })
+            .collect()
     }
     fn get_quantity(&self) -> HashMap<OptionBasicType, &Positive> {
-        unimplemented!("get_quantity is not implemented for this strategy");
+        let options = [
+            (&self.short_call.option, &self.short_call.option.quantity),
+            (&self.short_put.option, &self.short_put.option.quantity),
+            (&self.long_call.option, &self.long_call.option.quantity),
+            (&self.long_put.option, &self.long_put.option.quantity),
+        ];
+
+        options
+            .into_iter()
+            .map(|(option, quantity)| {
+                (
+                    OptionBasicType {
+                        option_style: &option.option_style,
+                        side: &option.side,
+                        strike_price: &option.strike_price,
+                        expiration_date: &option.expiration_date,
+                    },
+                    quantity,
+                )
+            })
+            .collect()
     }
-    fn get_underlying_price(&self) -> &Positive {
-        &self.long_put.option.underlying_price
+    fn one_option(&self) -> &Options {
+        self.short_call.one_option()
     }
-    fn get_risk_free_rate(&self) -> HashMap<OptionBasicType, &Decimal> {
-        unimplemented!("get_risk_free_rate is not implemented for this strategy");
+    fn one_option_mut(&mut self) -> &mut Options {
+        self.short_call.one_option_mut()
     }
-    fn get_dividend_yield(&self) -> HashMap<OptionBasicType, &Positive> {
-        unimplemented!("get_dividend_yield is not implemented for this strategy");
+    fn set_expiration_date(
+        &mut self,
+        expiration_date: ExpirationDate,
+    ) -> Result<(), StrategyError> {
+        self.short_call.option.expiration_date = expiration_date;
+        self.short_put.option.expiration_date = expiration_date;
+        self.long_call.option.expiration_date = expiration_date;
+        self.long_put.option.expiration_date = expiration_date;
+        Ok(())
+    }
+    fn set_underlying_price(&mut self, price: &Positive) -> Result<(), StrategyError> {
+        self.short_call.option.underlying_price = *price;
+        self.short_call.premium = Positive::from(
+            self.short_call
+                .option
+                .calculate_price_black_scholes()?
+                .abs(),
+        );
+
+        self.short_put.option.underlying_price = *price;
+        self.short_put.premium =
+            Positive::from(self.short_put.option.calculate_price_black_scholes()?.abs());
+
+        self.long_call.option.underlying_price = *price;
+        self.long_call.premium =
+            Positive::from(self.long_call.option.calculate_price_black_scholes()?.abs());
+        self.long_put.option.underlying_price = *price;
+        self.long_put.premium =
+            Positive::from(self.long_put.option.calculate_price_black_scholes()?.abs());
+        Ok(())
+    }
+    fn set_implied_volatility(&mut self, volatility: &Positive) -> Result<(), StrategyError> {
+        self.short_call.option.implied_volatility = *volatility;
+        self.short_put.option.implied_volatility = *volatility;
+        self.long_call.option.implied_volatility = *volatility;
+        self.long_put.option.implied_volatility = *volatility;
+
+        self.short_call.premium = Positive(
+            self.short_call
+                .option
+                .calculate_price_black_scholes()?
+                .abs(),
+        );
+        self.short_put.premium =
+            Positive(self.short_put.option.calculate_price_black_scholes()?.abs());
+        self.long_call.premium =
+            Positive(self.long_call.option.calculate_price_black_scholes()?.abs());
+        self.long_put.premium =
+            Positive(self.long_put.option.calculate_price_black_scholes()?.abs());
+        Ok(())
     }
 }
 
@@ -1829,7 +1930,6 @@ mod tests_iron_condor_strategies {
     fn test_best_range_to_show() {
         let condor = create_test_condor();
         let range = condor.get_best_range_to_show(pos!(1.0)).unwrap();
-
         assert!(!range.is_empty());
         assert!(range[0] < condor.long_put.option.strike_price);
         assert!(range[range.len() - 1] > condor.long_call.option.strike_price);
@@ -2369,14 +2469,10 @@ mod tests_iron_condor_graph {
 
         assert!(title.contains("IronCondor Strategy"));
         assert!(title.contains("TEST")); // Symbol
-        assert!(title.contains("Size 2")); // Quantity
-
-        assert!(title.contains("Long Put: $90"));
-        assert!(title.contains("Short Put: $95"));
-        assert!(title.contains("Short Call: $105"));
-        assert!(title.contains("Long Call: $110"));
-
-        assert!(title.contains("Expire:"));
+        assert!(title.contains("$90 Long Put"));
+        assert!(title.contains("$95 Short Put"));
+        assert!(title.contains("$105 Short Call"));
+        assert!(title.contains("$110 Long Call"));
     }
 
     #[test]
