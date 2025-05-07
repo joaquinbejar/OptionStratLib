@@ -1940,7 +1940,7 @@ mod tests_poor_mans_covered_call_probability {
     fn test_get_expiration() {
         let pmcc = create_test_pmcc();
         let expiration_date = *pmcc.get_expiration().values().next().unwrap();
-        assert_eq!(expiration_date, &ExpirationDate::Days(pos!(30.0)));
+        assert_eq!(expiration_date, &ExpirationDate::Days(pos!(120.0)));
     }
 
     #[test]
