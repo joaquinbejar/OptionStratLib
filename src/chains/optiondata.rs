@@ -919,12 +919,12 @@ impl OptionData {
     ///   * For `Range`: Strike price must fall within the specified range (inclusive)
     pub fn is_valid_optimal_side(
         &self,
-        underlying_price: Positive,
-        side: &FindOptimalSide, // Note: now mutable
+        underlying_price: &Positive,
+        side: &FindOptimalSide,
     ) -> bool {
         match side {
-            FindOptimalSide::Upper => self.strike_price >= underlying_price,
-            FindOptimalSide::Lower => self.strike_price <= underlying_price,
+            FindOptimalSide::Upper => &self.strike_price >= underlying_price,
+            FindOptimalSide::Lower => &self.strike_price <= underlying_price,
             FindOptimalSide::All => true,
             FindOptimalSide::Range(start, end) => {
                 self.strike_price >= *start && self.strike_price <= *end
@@ -2362,7 +2362,7 @@ mod tests_is_valid_optimal_side_deltable {
 
         // Deltable should always return true
         let result =
-            option_data.is_valid_optimal_side(pos!(100.0), &FindOptimalSide::Deltable(pos!(0.5)));
+            option_data.is_valid_optimal_side(&pos!(100.0), &FindOptimalSide::Deltable(pos!(0.5)));
 
         assert!(result);
     }
@@ -2386,7 +2386,7 @@ mod tests_is_valid_optimal_side_deltable {
 
         // Testing for panic
         let result = std::panic::catch_unwind(|| {
-            option_data.is_valid_optimal_side(pos!(100.0), &FindOptimalSide::Center);
+            option_data.is_valid_optimal_side(&pos!(100.0), &FindOptimalSide::Center);
         });
 
         assert!(result.is_err());
@@ -2411,7 +2411,7 @@ mod tests_is_valid_optimal_side_deltable {
 
         // DeltaRange with min=0.2, max=0.4, which includes our delta_call=0.3
         let result = option_data.is_valid_optimal_side(
-            pos!(100.0),
+            &pos!(100.0),
             &FindOptimalSide::DeltaRange(dec!(0.2), dec!(0.4)),
         );
 
@@ -2437,7 +2437,7 @@ mod tests_is_valid_optimal_side_deltable {
 
         // DeltaRange with min=0.2, max=0.4, which includes our delta_put=0.3
         let result = option_data.is_valid_optimal_side(
-            pos!(100.0),
+            &pos!(100.0),
             &FindOptimalSide::DeltaRange(dec!(0.2), dec!(0.4)),
         );
 
@@ -2463,7 +2463,7 @@ mod tests_is_valid_optimal_side_deltable {
 
         // DeltaRange with min=0.2, max=0.4, which excludes both delta values
         let result = option_data.is_valid_optimal_side(
-            pos!(100.0),
+            &pos!(100.0),
             &FindOptimalSide::DeltaRange(dec!(0.2), dec!(0.4)),
         );
 
@@ -2489,7 +2489,7 @@ mod tests_is_valid_optimal_side_deltable {
 
         // DeltaRange with min=0.2, max=0.4, but no deltas to check
         let result = option_data.is_valid_optimal_side(
-            pos!(100.0),
+            &pos!(100.0),
             &FindOptimalSide::DeltaRange(dec!(0.2), dec!(0.4)),
         );
 

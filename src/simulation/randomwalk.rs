@@ -17,6 +17,7 @@ use rust_decimal::Decimal;
 use std::error::Error;
 use std::fmt::Display;
 use std::ops::{AddAssign, Index, IndexMut};
+use crate::strategies::base::BasicAble;
 
 /// A struct that represents a two-dimensional random walk simulation.
 ///
@@ -281,8 +282,14 @@ where
     X: AddAssign + Copy + Display + Into<Positive>,
     Y: Into<Positive> + Display + Clone,
 {
-    fn calculate_profit_at(&self, _price: Positive) -> Result<Decimal, Box<dyn Error>> {
+    fn calculate_profit_at(&self, _price: &Positive) -> Result<Decimal, Box<dyn Error>> {
         Err("Profit calculation not implemented for RandomWalk".into())
+    }
+}
+
+impl<X, Y> BasicAble for RandomWalk<X, Y> where X: AddAssign + Copy + Display + Into<Positive>, Y: Clone + Display + Into<Positive>, {
+    fn get_title(&self) -> String {
+        self.title.clone()
     }
 }
 
@@ -323,7 +330,7 @@ where
         // Here's the key change: We manually build the chart with inverted X-axis
         let mut chart = build_chart_inverted!(
             &root,
-            self.title(),
+            self.get_title(),
             title_size,
             min_x_value.to_f64(),
             max_x_value.to_f64(),
@@ -364,10 +371,6 @@ where
         // Present the final chart
         root.present()?;
         Ok(())
-    }
-
-    fn title(&self) -> String {
-        self.title.clone()
     }
 
     fn get_x_values(&self) -> Vec<Positive> {
@@ -751,7 +754,7 @@ mod tests_random_walk {
         let walk = RandomWalk::new("Graph Test".to_string(), &params, generate_test_steps);
 
         // Test Graph implementation methods
-        assert_eq!(walk.title(), "Graph Test");
+        assert_eq!(walk.get_title(), "Graph Test");
 
         let x_values = walk.get_x_values();
         assert_eq!(x_values.len(), 5);
@@ -866,7 +869,7 @@ mod tests_random_walk {
 
         let random_walk =
             RandomWalk::new("Random Walk".to_string(), &walk_params, generator_positive);
-        assert!(random_walk.calculate_profit_at(pos!(100.0)).is_err());
+        assert!(random_walk.calculate_profit_at(&pos!(100.0)).is_err());
 
         let steps = random_walk.get_steps();
         let y = steps.first().unwrap().y.clone();

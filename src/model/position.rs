@@ -15,7 +15,7 @@ use crate::pnl::{PnLCalculator, Transaction, TransactionAble};
 use crate::pricing::payoff::Profit;
 use crate::visualization::model::ChartVerticalLine;
 use crate::visualization::utils::Graph;
-use crate::{ExpirationDate, Options};
+use crate::{ExpirationDate, OptionType, Options};
 use crate::{Positive, pos};
 use chrono::{DateTime, Utc};
 use num_traits::ToPrimitive;
@@ -24,6 +24,7 @@ use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::error::Error;
 use tracing::{debug, trace};
+use crate::strategies::base::BasicAble;
 
 /// The `Position` struct represents a financial position in an options market.
 ///
@@ -695,11 +696,11 @@ impl TradeAble for Position {
     }
 
     fn trade_ref(&self) -> &Trade {
-        unimplemented!()
+        unimplemented!("trade_ref() is not implemented for Position");
     }
 
     fn trade_mut(&mut self) -> &mut Trade {
-        unimplemented!()
+        unimplemented!("trade_mut() is not implemented for Position");
     }
 }
 
@@ -860,9 +861,22 @@ impl Profit for Position {
     ///
     /// * `Result<Decimal, Box<dyn Error>>` - The calculated profit as a Decimal if successful,
     ///   or an error if the calculation fails.
-    fn calculate_profit_at(&self, price: Positive) -> Result<Decimal, Box<dyn Error>> {
-        self.pnl_at_expiration(&Some(&price))
+    fn calculate_profit_at(&self, price: &Positive) -> Result<Decimal, Box<dyn Error>> {
+        self.pnl_at_expiration(&Some(price))
     }
+}
+
+impl BasicAble for Position {
+    
+    /// Generates a title for the graph based on the option's characteristics.
+    ///
+    /// # Returns
+    /// A `String` containing the formatted title that describes the position.
+    fn get_title(&self) -> String {
+        self.option.get_title()
+    }
+
+
 }
 
 /// Implementation of the `Graph` trait for the `Position` struct, enabling graphical representation
@@ -875,14 +889,6 @@ impl Profit for Position {
 /// The visualization capabilities allow traders to analyze the potential outcomes of their options positions
 /// at expiration across various price scenarios.
 impl Graph for Position {
-    /// Generates a title for the graph based on the option's characteristics.
-    ///
-    /// # Returns
-    /// A `String` containing the formatted title that describes the position.
-    fn title(&self) -> String {
-        self.option.title()
-    }
-
     /// Generates a vector of evenly spaced x-values for option pricing/plotting.
     ///
     /// This method creates a range of x-values (potential stock prices) centered around
@@ -2155,7 +2161,7 @@ mod tests_graph {
 
     fn test_title() {
         let position = Position::default();
-        assert_eq!(position.title(), position.option.title());
+        assert_eq!(position.get_title(), position.option.get_title());
     }
 
     #[test]
