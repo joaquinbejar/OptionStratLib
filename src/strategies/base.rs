@@ -23,7 +23,7 @@ use crate::visualization::utils::Graph;
 use crate::{ExpirationDate, OptionStyle, OptionType, Options, Positive, Side};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::str::FromStr;
 use std::{f64, fmt};
 use tracing::error;
@@ -349,29 +349,41 @@ pub trait BasicAble {
     fn get_title(&self) -> String {
         unimplemented!("get_title is not implemented for this strategy");
     }
-    fn get_option_basic_type(&self) -> OptionBasicType {
+    fn get_option_basic_type(&self) -> HashSet<OptionBasicType> {
         unimplemented!("get_option_basic_type is not implemented for this strategy");
     }
     fn get_symbol(&self) -> &str {
-        unimplemented!("get_symbol is not implemented for this strategy");
+        self.one_option().get_symbol()
     }
     fn get_strike(&self) -> HashMap<OptionBasicType, &Positive> {
-        unimplemented!("get_strike is not implemented for this strategy");
+        self.one_option().get_strike()
     }
     fn get_strikes(&self) -> Vec<&Positive> {
-        self.get_strike().values().copied().collect()
+        self.get_option_basic_type()
+            .iter()
+            .map(|option_type| option_type.strike_price)
+            .collect()
     }
     fn get_side(&self) -> HashMap<OptionBasicType, &Side> {
-        unimplemented!("get_side is not implemented for this strategy");
+        self.get_option_basic_type()
+            .iter()
+            .map(|option_type| (*option_type, option_type.side))
+            .collect()
     }
     fn get_type(&self) -> &OptionType {
-        unimplemented!("get_type is not implemented for this strategy");
+        self.one_option().get_type()
     }
     fn get_style(&self) -> HashMap<OptionBasicType, &OptionStyle> {
-        unimplemented!("get_style is not implemented for this strategy");
+        self.get_option_basic_type()
+            .iter()
+            .map(|option_type| (*option_type, option_type.option_style))
+            .collect()
     }
     fn get_expiration(&self) -> HashMap<OptionBasicType, &ExpirationDate> {
-        unimplemented!("get_expiration is not implemented for this strategy");
+        self.get_option_basic_type()
+            .iter()
+            .map(|option_type| (*option_type, option_type.expiration_date))
+            .collect()
     }
     fn get_implied_volatility(&self) -> HashMap<OptionBasicType, &Positive> {
         unimplemented!("get_implied_volatility is not implemented for this strategy");
@@ -380,13 +392,13 @@ pub trait BasicAble {
         unimplemented!("get_quantity is not implemented for this strategy");
     }
     fn get_underlying_price(&self) -> &Positive {
-        unimplemented!("get_underlying_price is not implemented for this strategy");
+        self.one_option().get_underlying_price()
     }
     fn get_risk_free_rate(&self) -> HashMap<OptionBasicType, &Decimal> {
-        unimplemented!("get_risk_free_rate is not implemented for this strategy");
+        self.one_option().get_risk_free_rate()
     }
     fn get_dividend_yield(&self) -> HashMap<OptionBasicType, &Positive> {
-        unimplemented!("get_dividend_yield is not implemented for this strategy");
+        self.one_option().get_dividend_yield()
     }
     fn one_option(&self) -> &Options {
         unimplemented!("one_option is not implemented for this strategy");

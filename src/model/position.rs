@@ -5,7 +5,7 @@
 ******************************************************************************/
 use crate::chains::OptionData;
 use crate::error::position::PositionValidationErrorKind;
-use crate::error::{GreeksError, PositionError, TransactionError};
+use crate::error::{GreeksError, PositionError, StrategyError, TransactionError};
 use crate::greeks::Greeks;
 use crate::model::trade::TradeStatusAble;
 use crate::model::types::{Action, OptionBasicType, OptionStyle, Side};
@@ -23,7 +23,7 @@ use num_traits::ToPrimitive;
 use plotters::prelude::{BLACK, ShapeStyle};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use tracing::{debug, trace};
 
@@ -871,38 +871,76 @@ impl BasicAble for Position {
     fn get_title(&self) -> String {
         self.option.get_title()
     }
+    fn get_option_basic_type(&self) -> HashSet<OptionBasicType> {
+        self.option.get_option_basic_type()
+    }
+    fn get_symbol(&self) -> &str {
+        self.option.get_symbol()
+    }
+    fn get_strike(&self) -> HashMap<OptionBasicType, &Positive> {
+        self.option.get_strike()
+    }
+    fn get_strikes(&self) -> Vec<&Positive> {
+        self.option.get_strikes()
+    }
     fn get_side(&self) -> HashMap<OptionBasicType, &Side> {
-        todo!("get_side is not implemented for this strategy");
+        self.option.get_side()
     }
     fn get_type(&self) -> &OptionType {
-        todo!("get_type is not implemented for this strategy");
+        self.option.get_type()
     }
     fn get_style(&self) -> HashMap<OptionBasicType, &OptionStyle> {
-        todo!("get_style is not implemented for this strategy");
+        self.option.get_style()
     }
     fn get_expiration(&self) -> HashMap<OptionBasicType, &ExpirationDate> {
-        todo!("get_expiration is not implemented for this strategy");
+        self.option.get_expiration()
     }
     fn get_implied_volatility(&self) -> HashMap<OptionBasicType, &Positive> {
-        todo!("get_implied_volatility is not implemented for this strategy");
+        self.option.get_implied_volatility()
     }
     fn get_quantity(&self) -> HashMap<OptionBasicType, &Positive> {
-        todo!("get_quantity is not implemented for this strategy");
+        self.option.get_quantity()
     }
     fn get_underlying_price(&self) -> &Positive {
-        todo!("get_underlying_price is not implemented for this strategy");
+        self.option.get_underlying_price()
     }
     fn get_risk_free_rate(&self) -> HashMap<OptionBasicType, &Decimal> {
-        todo!("get_risk_free_rate is not implemented for this strategy");
+        self.option.get_risk_free_rate()
     }
     fn get_dividend_yield(&self) -> HashMap<OptionBasicType, &Positive> {
-        todo!("get_dividend_yield is not implemented for this strategy");
+        self.option.get_dividend_yield()
     }
     fn one_option(&self) -> &Options {
         &self.option
     }
     fn one_option_mut(&mut self) -> &mut Options {
         &mut self.option
+    }
+
+    fn set_expiration_date(
+        &mut self,
+        expiration_date: ExpirationDate,
+    ) -> Result<(), StrategyError> {
+        self.option.set_expiration_date(expiration_date)
+    }
+    fn set_underlying_price(&mut self, _price: &Positive) -> Result<(), StrategyError> {
+        self.option.set_underlying_price(_price)
+    }
+    /// Updates the volatility for the strategy.
+    ///
+    /// # Parameters
+    /// - `_volatility`: A reference to a `Positive` value representing the new volatility to set.
+    ///
+    /// # Returns
+    /// - `Ok(())`: If the update operation succeeds (currently unimplemented).
+    /// - `Err(StrategyError)`: If there is an error during the update process (place-holder as functionality is not implemented).
+    ///
+    /// # Notes
+    /// This method is currently unimplemented, and calling it will result in the `unimplemented!` macro being triggered, which causes a panic.
+    /// This function is a stub and should be implemented to handle setting the volatility specific to the strategy.
+    ///
+    fn set_implied_volatility(&mut self, _volatility: &Positive) -> Result<(), StrategyError> {
+        self.option.set_implied_volatility(_volatility)
     }
 }
 
