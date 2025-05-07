@@ -28,7 +28,7 @@ use plotters::prelude::{RED, ShapeStyle};
 use plotters::style::full_palette::ORANGE;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use tracing::{error, info};
 
@@ -501,51 +501,163 @@ impl Strategable for CallButterfly {
 
 impl BasicAble for CallButterfly {
     fn get_title(&self) -> String {
-        let strategy_title = format!("Call Butterfly Strategy: {:?}", self.kind);
-        let long_call_itm_title = self.long_call.get_title();
-        let long_call_otm_title = self.short_call_low.get_title();
-        let short_call_title = self.short_call_high.get_title();
+        let strategy_title = format!("{:?} Strategy: ", self.kind);
+        let leg_titles: Vec<String> = [
+            self.short_call_low.get_title(),
+            self.long_call.get_title(),
+            self.short_call_high.get_title(),
+        ]
+        .iter()
+        .map(|leg| leg.to_string())
+        .collect();
 
-        format!(
-            "{}\n\t{}\n\t{}\n\t{}",
-            strategy_title, long_call_itm_title, long_call_otm_title, short_call_title
-        )
+        if leg_titles.is_empty() {
+            strategy_title
+        } else {
+            format!("{}\n\t{}", strategy_title, leg_titles.join("\n\t"))
+        }
     }
-    fn get_option_basic_type(&self) -> OptionBasicType {
-        unimplemented!("get_option_basic_type is not implemented for this strategy");
-    }
-    fn get_symbol(&self) -> &str {
-        unimplemented!("get_symbol is not implemented for this strategy");
-    }
-    fn get_strike(&self) -> HashMap<OptionBasicType, &Positive> {
-        unimplemented!("get_strike is not implemented for this strategy");
-    }
-    fn get_side(&self) -> HashMap<OptionBasicType, &Side> {
-        unimplemented!("get_side is not implemented for this strategy");
-    }
-    fn get_type(&self) -> &OptionType {
-        unimplemented!("get_type is not implemented for this strategy");
-    }
-    fn get_style(&self) -> HashMap<OptionBasicType, &OptionStyle> {
-        unimplemented!("get_style is not implemented for this strategy");
-    }
-    fn get_expiration(&self) -> HashMap<OptionBasicType, &ExpirationDate> {
-        unimplemented!("get_expiration is not implemented for this strategy");
+    fn get_option_basic_type(&self) -> HashSet<OptionBasicType> {
+        let mut hash_set = HashSet::new();
+        let short_call_low = &self.short_call_low.option;
+        let long_call = &self.long_call.option;
+        let short_call_high = &self.short_call_high.option;
+
+        hash_set.insert(OptionBasicType {
+            option_style: &short_call_low.option_style,
+            side: &short_call_low.side,
+            strike_price: &short_call_low.strike_price,
+            expiration_date: &short_call_low.expiration_date,
+        });
+        hash_set.insert(OptionBasicType {
+            option_style: &long_call.option_style,
+            side: &long_call.side,
+            strike_price: &long_call.strike_price,
+            expiration_date: &long_call.expiration_date,
+        });
+        hash_set.insert(OptionBasicType {
+            option_style: &short_call_high.option_style,
+            side: &short_call_high.side,
+            strike_price: &short_call_high.strike_price,
+            expiration_date: &short_call_high.expiration_date,
+        });
+
+        hash_set
     }
     fn get_implied_volatility(&self) -> HashMap<OptionBasicType, &Positive> {
-        unimplemented!("get_implied_volatility is not implemented for this strategy");
+        let options = [
+            (
+                &self.short_call_low.option,
+                &self.short_call_low.option.implied_volatility,
+            ),
+            (
+                &self.long_call.option,
+                &self.long_call.option.implied_volatility,
+            ),
+            (
+                &self.short_call_high.option,
+                &self.short_call_high.option.implied_volatility,
+            ),
+        ];
+
+        options
+            .into_iter()
+            .map(|(option, iv)| {
+                (
+                    OptionBasicType {
+                        option_style: &option.option_style,
+                        side: &option.side,
+                        strike_price: &option.strike_price,
+                        expiration_date: &option.expiration_date,
+                    },
+                    iv,
+                )
+            })
+            .collect()
     }
     fn get_quantity(&self) -> HashMap<OptionBasicType, &Positive> {
-        unimplemented!("get_quantity is not implemented for this strategy");
+        let options = [
+            (
+                &self.short_call_low.option,
+                &self.short_call_low.option.quantity,
+            ),
+            (&self.long_call.option, &self.long_call.option.quantity),
+            (
+                &self.short_call_high.option,
+                &self.short_call_high.option.quantity,
+            ),
+        ];
+
+        options
+            .into_iter()
+            .map(|(option, quantity)| {
+                (
+                    OptionBasicType {
+                        option_style: &option.option_style,
+                        side: &option.side,
+                        strike_price: &option.strike_price,
+                        expiration_date: &option.expiration_date,
+                    },
+                    quantity,
+                )
+            })
+            .collect()
     }
-    fn get_underlying_price(&self) -> &Positive {
-        &self.long_call.option.underlying_price
+    fn one_option(&self) -> &Options {
+        self.long_call.one_option()
     }
-    fn get_risk_free_rate(&self) -> HashMap<OptionBasicType, &Decimal> {
-        unimplemented!("get_risk_free_rate is not implemented for this strategy");
+    fn one_option_mut(&mut self) -> &mut Options {
+        self.long_call.one_option_mut()
     }
-    fn get_dividend_yield(&self) -> HashMap<OptionBasicType, &Positive> {
-        unimplemented!("get_dividend_yield is not implemented for this strategy");
+    fn set_expiration_date(
+        &mut self,
+        expiration_date: ExpirationDate,
+    ) -> Result<(), StrategyError> {
+        self.short_call_low.option.expiration_date = expiration_date;
+        self.long_call.option.expiration_date = expiration_date;
+        self.short_call_high.option.expiration_date = expiration_date;
+        Ok(())
+    }
+    fn set_underlying_price(&mut self, price: &Positive) -> Result<(), StrategyError> {
+        self.short_call_low.option.underlying_price = *price;
+        self.short_call_low.premium = Positive::from(
+            self.short_call_low
+                .option
+                .calculate_price_black_scholes()?
+                .abs(),
+        );
+        self.long_call.option.underlying_price = *price;
+        self.long_call.premium =
+            Positive::from(self.long_call.option.calculate_price_black_scholes()?.abs());
+        self.short_call_high.option.underlying_price = *price;
+        self.short_call_high.premium = Positive::from(
+            self.short_call_high
+                .option
+                .calculate_price_black_scholes()?
+                .abs(),
+        );
+        Ok(())
+    }
+    fn set_implied_volatility(&mut self, volatility: &Positive) -> Result<(), StrategyError> {
+        self.short_call_low.option.implied_volatility = *volatility;
+        self.long_call.option.implied_volatility = *volatility;
+        self.short_call_high.option.implied_volatility = *volatility;
+
+        self.short_call_low.premium = Positive(
+            self.short_call_low
+                .option
+                .calculate_price_black_scholes()?
+                .abs(),
+        );
+        self.long_call.premium =
+            Positive(self.long_call.option.calculate_price_black_scholes()?.abs());
+        self.short_call_high.premium = Positive(
+            self.short_call_high
+                .option
+                .calculate_price_black_scholes()?
+                .abs(),
+        );
+        Ok(())
     }
 }
 
@@ -1098,8 +1210,10 @@ mod tests_call_butterfly {
         }
 
         let title = strategy.get_title();
-        assert!(title.contains("Ratio Call Spread Strategy"));
-        assert!(title.contains("Call"));
+        assert!(title.contains("CallButterfly Strategy"));
+        assert!(title.contains("AAPL @ $160 Short Call European Option"));
+        assert!(title.contains("AAPL @ $155 Long Call European Option"));
+        assert!(title.contains("AAPL @ $157 Short Call European Option"));
     }
 }
 
@@ -1788,7 +1902,7 @@ mod tests_call_butterfly_probability {
     fn test_get_expiration() {
         let butterfly = create_test_butterfly();
         let expiration = *butterfly.get_expiration().values().next().unwrap();
-        assert_eq!(expiration, &ExpirationDate::Days(pos!(30.0)));
+        assert_eq!(expiration, &ExpirationDate::Days(pos!(2.0)));
     }
 
     #[test]
