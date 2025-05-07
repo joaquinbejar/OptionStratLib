@@ -4,7 +4,7 @@ use optionstratlib::chains::chain::OptionChain;
 use optionstratlib::pos;
 use optionstratlib::strategies::BasicAble;
 use optionstratlib::strategies::base::{Optimizable, Strategies};
-use optionstratlib::strategies::butterfly_spread::LongButterflySpread;
+use optionstratlib::strategies::long_butterfly_spread::LongButterflySpread;
 use optionstratlib::strategies::utils::FindOptimalSide;
 use optionstratlib::utils::setup_logger;
 use optionstratlib::visualization::utils::{Graph, GraphBackend};

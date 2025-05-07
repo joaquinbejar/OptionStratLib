@@ -1,7 +1,7 @@
 use optionstratlib::ExpirationDate;
 use optionstratlib::Positive;
 use optionstratlib::pos;
-use optionstratlib::strategies::butterfly_spread::LongButterflySpread;
+use optionstratlib::strategies::long_butterfly_spread::LongButterflySpread;
 use optionstratlib::strategies::delta_neutral::DeltaNeutrality;
 use optionstratlib::strategies::{BasicAble, Strategies};
 use optionstratlib::utils::setup_logger;

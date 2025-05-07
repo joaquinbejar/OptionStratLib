@@ -4,7 +4,7 @@ use optionstratlib::ExpirationDate;
 use optionstratlib::Positive;
 use optionstratlib::strategies::Strategies;
 use optionstratlib::strategies::base::BreakEvenable;
-use optionstratlib::strategies::butterfly_spread::LongButterflySpread;
+use optionstratlib::strategies::long_butterfly_spread::LongButterflySpread;
 use optionstratlib::utils::setup_logger;
 use optionstratlib::{assert_pos_relative_eq, pos};
 use rust_decimal_macros::dec;

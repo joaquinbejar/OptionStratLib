@@ -585,12 +585,8 @@ impl BasicAble for LongStrangle {
     }
     fn set_underlying_price(&mut self, price: &Positive) -> Result<(), StrategyError> {
         self.long_call.option.underlying_price = *price;
-        self.long_call.premium = Positive::from(
-            self.long_call
-                .option
-                .calculate_price_black_scholes()?
-                .abs(),
-        );
+        self.long_call.premium =
+            Positive::from(self.long_call.option.calculate_price_black_scholes()?.abs());
         self.long_put.option.underlying_price = *price;
         self.long_put.premium =
             Positive::from(self.long_put.option.calculate_price_black_scholes()?.abs());
@@ -599,12 +595,8 @@ impl BasicAble for LongStrangle {
     fn set_implied_volatility(&mut self, volatility: &Positive) -> Result<(), StrategyError> {
         self.long_call.option.implied_volatility = *volatility;
         self.long_put.option.implied_volatility = *volatility;
-        self.long_call.premium = Positive(
-            self.long_call
-                .option
-                .calculate_price_black_scholes()?
-                .abs(),
-        );
+        self.long_call.premium =
+            Positive(self.long_call.option.calculate_price_black_scholes()?.abs());
         self.long_put.premium =
             Positive(self.long_put.option.calculate_price_black_scholes()?.abs());
         Ok(())
@@ -1532,6 +1524,7 @@ mod tests_long_strangle_probability {
 
         assert!(result.is_ok());
         let ranges = result.unwrap();
+
         assert_eq!(ranges.len(), 2); // Long strangle has two profit ranges
 
         // Verify ranges have correct bounds

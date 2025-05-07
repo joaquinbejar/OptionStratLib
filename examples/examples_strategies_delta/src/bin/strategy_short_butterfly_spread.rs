@@ -1,9 +1,8 @@
 use optionstratlib::ExpirationDate;
 use optionstratlib::Positive;
 use optionstratlib::pos;
-use optionstratlib::strategies::butterfly_spread::ShortButterflySpread;
 use optionstratlib::strategies::delta_neutral::DeltaNeutrality;
-use optionstratlib::strategies::{BasicAble, Strategies};
+use optionstratlib::strategies::{BasicAble, ShortButterflySpread, Strategies};
 use optionstratlib::utils::setup_logger;
 use rust_decimal_macros::dec;
 use std::error::Error;

@@ -1,8 +1,7 @@
 use optionstratlib::ExpirationDate;
 use optionstratlib::Positive;
 use optionstratlib::pos;
-use optionstratlib::strategies::butterfly_spread::ShortButterflySpread;
-use optionstratlib::strategies::{BasicAble, Strategies};
+use optionstratlib::strategies::{BasicAble, ShortButterflySpread, Strategies};
 use optionstratlib::utils::setup_logger;
 use optionstratlib::visualization::utils::Graph;
 use optionstratlib::visualization::utils::GraphBackend;
