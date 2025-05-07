@@ -13,14 +13,14 @@ use crate::error::strategies::{BreakEvenErrorKind, StrategyError};
 use crate::greeks::Greeks;
 use crate::model::Trade;
 use crate::model::position::Position;
-use crate::model::types::Action;
+use crate::model::types::{Action, OptionBasicType};
 use crate::pnl::utils::PnLCalculator;
 use crate::pricing::Profit;
 use crate::strategies::probabilities::ProbabilityAnalysis;
 use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria, calculate_price_range};
 use crate::strategies::{DeltaNeutrality, StrategyConstructor};
 use crate::visualization::utils::Graph;
-use crate::{ExpirationDate, OptionStyle, Positive, Side};
+use crate::{ExpirationDate, OptionStyle, OptionType, Positive, Side};
 use itertools::Itertools;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -344,57 +344,78 @@ impl Strategy {
     }
 }
 
+pub trait BasicAble {
+    /// Returns the title of the graph.
+    fn get_title(&self) -> String {
+        unimplemented!("get_title is not implemented for this strategy");
+    }
+
+    fn get_option_basic_type(&self) -> OptionBasicType {
+        unimplemented!("get_option_basic_type is not implemented for this strategy");
+    }
+    fn get_symbol(&self) -> &str {
+        unimplemented!("get_symbol is not implemented for this strategy");
+    }
+    fn get_strike(&self) -> HashMap<OptionBasicType, &Positive> {
+        unimplemented!("get_strike is not implemented for this strategy");
+    }
+    fn get_side(&self) -> HashMap<OptionBasicType, &Side> {
+        unimplemented!("get_side is not implemented for this strategy");
+    }
+    fn get_type(&self) -> &OptionType {
+        unimplemented!("get_type is not implemented for this strategy");
+    }
+    fn get_style(&self) -> HashMap<OptionBasicType, &OptionStyle> {
+        unimplemented!("get_style is not implemented for this strategy");
+    }
+    fn get_expiration(&self) -> HashMap<OptionBasicType, &ExpirationDate> {
+        unimplemented!("get_expiration is not implemented for this strategy");
+    }
+    fn get_implied_volatility(&self) -> HashMap<OptionBasicType, &Positive> {
+        unimplemented!("get_implied_volatility is not implemented for this strategy");
+    }
+    fn get_quantity(&self) -> HashMap<OptionBasicType, &Positive> {
+        unimplemented!("get_quantity is not implemented for this strategy");
+    }
+    fn get_underlying_price(&self) -> &Positive {
+        unimplemented!("get_underlying_price is not implemented for this strategy");
+    }
+    fn get_risk_free_rate(&self) -> HashMap<OptionBasicType, &Decimal> {
+        unimplemented!("get_risk_free_rate is not implemented for this strategy");
+    }
+    fn get_dividend_yield(&self) -> HashMap<OptionBasicType, &Positive> {
+        unimplemented!("get_dividend_yield is not implemented for this strategy");
+    }
+}
+
 /// Defines a set of strategies for options trading.  Provides methods for calculating key metrics
 /// such as profit/loss, cost, break-even points, and price ranges.  Implementations of this trait
 /// must also implement the `Validable`, `Positionable`, and `BreakEvenable` traits.
-pub trait Strategies: Validable + Positionable + BreakEvenable {
-    /// Retrieves the underlying asset price. The default implementation panics with a message
-    /// indicating that the underlying price is not applicable for the strategy.
+pub trait Strategies: Validable + Positionable + BreakEvenable + BasicAble {
+    /// Retrieves the current volume of the strategy as sum of quantities in their positions
     ///
-    /// # Panics
-    /// Panics if the underlying price is not applicable for this strategy.
-    fn get_underlying_price(&self) -> Positive {
-        panic!("Get Underlying price is not applicable for this strategy");
-    }
-
-    /// Sets the underlying price for a strategy.
-    ///
-    /// # Arguments
-    ///
-    /// * `price` - A reference to a `Positive` value representing the new price to set
+    /// This function returns the volume as a `Positive` value, ensuring that the result
+    /// is always greater than zero. If the method fails to retrieve the volume, an error
+    /// of type `StrategyError` is returned.
     ///
     /// # Returns
     ///
-    /// A `Result` that will always panic with an informative message
+    /// - `Ok(Positive)` - The current volume as a positive numeric value.
+    /// - `Err(StrategyError)` - An error indicating why the volume could not be retrieved.
     ///
     /// # Errors
     ///
-    /// This function always panics as it's not applicable for the current strategy type.
-    /// It's implemented this way to fulfill a trait requirement but intentionally prevents
-    /// usage for strategies where underlying price setting doesn't make sense.
+    /// This function may return a `StrategyError` in cases such as:
+    /// - Internal issues within the strategy's calculation or storage.
+    /// - Other implementation-specific failures.
     ///
-    /// # Panics
-    ///
-    /// Always panics with the message "Set Underlying price is not applicable for this strategy"
-    fn set_underlying_price(&mut self, _price: &Positive) -> Result<(), StrategyError> {
-        panic!("Set Underlying price is not applicable for this strategy");
-    }
-
-    /// Returns the volume for this strategy.
-    ///
-    /// # Returns
-    ///
-    /// A `Result` containing a `Positive` value representing the volume, or a `StrategyError` if the operation is not applicable.
-    ///
-    /// # Errors
-    ///
-    /// Returns a `StrategyError` of type `OperationError` if volume is not applicable for this strategy.
-    ///
-    /// # Panics
-    ///
-    /// This function will panic with the message "volume is not applicable for this strategy".
-    fn volume(&mut self) -> Result<Positive, StrategyError> {
-        panic!("volumee is not applicable for this strategy");
+    fn get_volume(&mut self) -> Result<Positive, StrategyError> {
+        let quantities = self.get_quantity();
+        let mut volume = Positive::ZERO;
+        for (_, quantity) in quantities {
+            volume += *quantity;
+        }
+        Ok(volume)
     }
 
     /// Calculates the maximum possible profit for the strategy.
@@ -403,7 +424,7 @@ pub trait Strategies: Validable + Positionable + BreakEvenable {
     /// # Returns
     /// * `Ok(Positive)` - The maximum possible profit.
     /// * `Err(StrategyError)` - If the operation is not supported for this strategy.
-    fn max_profit(&self) -> Result<Positive, StrategyError> {
+    fn get_max_profit(&self) -> Result<Positive, StrategyError> {
         Err(StrategyError::operation_not_supported(
             "max_profit",
             std::any::type_name::<Self>(),
@@ -416,8 +437,8 @@ pub trait Strategies: Validable + Positionable + BreakEvenable {
     /// # Returns
     /// * `Ok(Positive)` - The maximum possible profit.
     /// * `Err(StrategyError)` - If the operation is not supported for this strategy.
-    fn max_profit_iter(&mut self) -> Result<Positive, StrategyError> {
-        self.max_profit()
+    fn get_max_profit_mut(&mut self) -> Result<Positive, StrategyError> {
+        self.get_max_profit()
     }
 
     /// Calculates the maximum possible loss for the strategy.
@@ -426,7 +447,7 @@ pub trait Strategies: Validable + Positionable + BreakEvenable {
     /// # Returns
     /// * `Ok(Positive)` - The maximum possible loss.
     /// * `Err(StrategyError)` - If the operation is not supported for this strategy.
-    fn max_loss(&self) -> Result<Positive, StrategyError> {
+    fn get_max_loss(&self) -> Result<Positive, StrategyError> {
         Err(StrategyError::operation_not_supported(
             "max_loss",
             std::any::type_name::<Self>(),
@@ -439,8 +460,8 @@ pub trait Strategies: Validable + Positionable + BreakEvenable {
     /// # Returns
     /// * `Ok(Positive)` - The maximum possible loss.
     /// * `Err(StrategyError)` - If the operation is not supported for this strategy.
-    fn max_loss_iter(&mut self) -> Result<Positive, StrategyError> {
-        self.max_loss()
+    fn get_max_loss_mut(&mut self) -> Result<Positive, StrategyError> {
+        self.get_max_loss()
     }
 
     /// Calculates the total cost of the strategy, which is the sum of the absolute cost of all positions.
@@ -448,7 +469,7 @@ pub trait Strategies: Validable + Positionable + BreakEvenable {
     /// # Returns
     /// * `Ok(Positive)` - The total cost of the strategy.
     /// * `Err(PositionError)` - If there is an error retrieving the positions.
-    fn total_cost(&self) -> Result<Positive, PositionError> {
+    fn get_total_cost(&self) -> Result<Positive, PositionError> {
         let positions = self.get_positions()?;
         let costs = positions
             .iter()
@@ -463,7 +484,7 @@ pub trait Strategies: Validable + Positionable + BreakEvenable {
     /// # Returns
     /// * `Ok(Decimal)` - The net cost of the strategy.
     /// * `Err(PositionError)` - If there is an error retrieving the positions.
-    fn net_cost(&self) -> Result<Decimal, PositionError> {
+    fn get_net_cost(&self) -> Result<Decimal, PositionError> {
         let positions = self.get_positions()?;
         let costs = positions
             .iter()
@@ -478,7 +499,7 @@ pub trait Strategies: Validable + Positionable + BreakEvenable {
     /// # Returns
     /// * `Ok(Positive)` - The net premium received.
     /// * `Err(StrategyError)` - If there is an error retrieving the positions.
-    fn net_premium_received(&self) -> Result<Positive, StrategyError> {
+    fn get_net_premium_received(&self) -> Result<Positive, StrategyError> {
         let positions = self.get_positions()?;
         let costs = positions
             .iter()
@@ -501,7 +522,7 @@ pub trait Strategies: Validable + Positionable + BreakEvenable {
     /// # Returns
     /// * `Ok(Positive)` - The total fees.
     /// * `Err(StrategyError)` - If there is an error retrieving positions or calculating fees.
-    fn fees(&self) -> Result<Positive, StrategyError> {
+    fn get_fees(&self) -> Result<Positive, StrategyError> {
         let mut fee = Positive::ZERO;
         let positions = match self.get_positions() {
             Ok(positions) => positions,
@@ -526,7 +547,7 @@ pub trait Strategies: Validable + Positionable + BreakEvenable {
     /// # Returns
     /// * `Ok(Decimal)` - The profit area.
     /// * `Err(StrategyError)` - If the operation is not supported.
-    fn profit_area(&self) -> Result<Decimal, StrategyError> {
+    fn get_profit_area(&self) -> Result<Decimal, StrategyError> {
         Err(StrategyError::operation_not_supported(
             "profit_area",
             std::any::type_name::<Self>(),
@@ -539,7 +560,7 @@ pub trait Strategies: Validable + Positionable + BreakEvenable {
     /// # Returns
     /// * `Ok(Decimal)` - The profit ratio.
     /// * `Err(StrategyError)` - If the operation is not supported.
-    fn profit_ratio(&self) -> Result<Decimal, StrategyError> {
+    fn get_profit_ratio(&self) -> Result<Decimal, StrategyError> {
         Err(StrategyError::operation_not_supported(
             "profit_ratio",
             std::any::type_name::<Self>(),
@@ -554,9 +575,9 @@ pub trait Strategies: Validable + Positionable + BreakEvenable {
     /// # Returns
     /// * `Ok((Positive, Positive))` - A tuple containing the start and end prices of the range.
     /// * `Err(StrategyError)` - If there is an error retrieving necessary data for the calculation.
-    fn range_to_show(&self) -> Result<(Positive, Positive), StrategyError> {
+    fn get_range_to_show(&self) -> Result<(Positive, Positive), StrategyError> {
         let mut all_points = self.get_break_even_points()?.clone();
-        let (first_strike, last_strike) = self.max_min_strikes()?;
+        let (first_strike, last_strike) = self.get_max_min_strikes()?;
         let underlying_price = self.get_underlying_price();
 
         // Calculate the largest difference from the underlying price to furthest strike
@@ -566,11 +587,11 @@ pub trait Strategies: Validable + Positionable + BreakEvenable {
 
         // Expand range by max_diff
         all_points.push(
-            (underlying_price - max_diff)
+            (*underlying_price - max_diff)
                 .max(Positive::ZERO)
                 .min(first_strike),
         );
-        all_points.push((underlying_price + max_diff).max(last_strike));
+        all_points.push((*underlying_price + max_diff).max(last_strike));
 
         // Sort to find min and max
         all_points.sort_by(|a, b| a.partial_cmp(b).unwrap());
@@ -585,8 +606,8 @@ pub trait Strategies: Validable + Positionable + BreakEvenable {
     /// # Returns
     /// * `Ok(Vec<Positive>)` - A vector of prices.
     /// * `Err(StrategyError)` - If there is an error calculating the display range.
-    fn best_range_to_show(&self, step: Positive) -> Result<Vec<Positive>, StrategyError> {
-        let (start_price, end_price) = self.range_to_show()?;
+    fn get_best_range_to_show(&self, step: Positive) -> Result<Vec<Positive>, StrategyError> {
+        let (start_price, end_price) = self.get_range_to_show()?;
         Ok(calculate_price_range(start_price, end_price, step))
     }
 
@@ -595,7 +616,7 @@ pub trait Strategies: Validable + Positionable + BreakEvenable {
     /// # Returns
     /// * `Ok(Vec<Positive>)` - A vector of strike prices.
     /// * `Err(StrategyError)` - If there are no positions or an error occurs retrieving them.
-    fn strikes(&self) -> Result<Vec<Positive>, StrategyError> {
+    fn get_strikes(&self) -> Result<Vec<Positive>, StrategyError> {
         let positions = match self.get_positions() {
             Ok(positions) => positions,
             Err(_) => {
@@ -623,8 +644,8 @@ pub trait Strategies: Validable + Positionable + BreakEvenable {
     /// # Returns
     /// * `Ok((Positive, Positive))` - A tuple containing the minimum and maximum strike prices.
     /// * `Err(StrategyError)` - If no strikes are found or if an error occurs retrieving positions.
-    fn max_min_strikes(&self) -> Result<(Positive, Positive), StrategyError> {
-        let strikes = self.strikes()?;
+    fn get_max_min_strikes(&self) -> Result<(Positive, Positive), StrategyError> {
+        let strikes = self.get_strikes()?;
         if strikes.is_empty() {
             return Err(StrategyError::OperationError(
                 OperationErrorKind::InvalidParameters {
@@ -640,14 +661,14 @@ pub trait Strategies: Validable + Positionable + BreakEvenable {
         let mut max = strikes.iter().cloned().fold(Positive::ZERO, Positive::max);
         // If underlying_price is not Positive::ZERO, adjust min and max values
         let underlying_price = self.get_underlying_price();
-        if underlying_price != Positive::ZERO {
+        if underlying_price != &Positive::ZERO {
             // If min is greater than underlying_price, use underlying_price as min
-            if min > underlying_price {
-                min = underlying_price;
+            if min > *underlying_price {
+                min = *underlying_price;
             }
             // If underlying_price is greater than max, use underlying_price as max
-            if underlying_price > max {
-                max = underlying_price;
+            if *underlying_price > max {
+                max = *underlying_price;
             }
         }
         Ok((min, max))
@@ -659,7 +680,7 @@ pub trait Strategies: Validable + Positionable + BreakEvenable {
     /// * `Ok(Positive)` - The difference between the highest and lowest break-even points.  Returns
     ///   `Positive::INFINITY` if there is only one break-even point.
     /// * `Err(StrategyError)` - if there are no break-even points.
-    fn range_of_profit(&self) -> Result<Positive, StrategyError> {
+    fn get_range_of_profit(&self) -> Result<Positive, StrategyError> {
         let mut break_even_points = self.get_break_even_points()?.clone();
         match break_even_points.len() {
             0 => Err(StrategyError::BreakEvenError(
@@ -680,8 +701,31 @@ pub trait Strategies: Validable + Positionable + BreakEvenable {
     /// # Returns
     /// * `Result<Vec<ExpirationDate>, StrategyError>` - A vector of expiration dates, or an error
     ///   if not implemented for the specific strategy.
-    fn expiration_dates(&self) -> Result<Vec<ExpirationDate>, StrategyError> {
+    fn get_expiration_dates(&self) -> Result<Vec<ExpirationDate>, StrategyError> {
         unimplemented!("Expiration dates is not implemented for this strategy")
+    }
+
+    /// Sets the underlying price for a strategy.
+    ///
+    /// # Arguments
+    ///
+    /// * `price` - A reference to a `Positive` value representing the new price to set
+    ///
+    /// # Returns
+    ///
+    /// A `Result` that will always panic with an informative message
+    ///
+    /// # Errors
+    ///
+    /// This function always panics as it's not applicable for the current strategy type.
+    /// It's implemented this way to fulfill a trait requirement but intentionally prevents
+    /// usage for strategies where underlying price setting doesn't make sense.
+    ///
+    /// # Panics
+    ///
+    /// Always panics with the message "Set Underlying price is not applicable for this strategy"
+    fn set_underlying_price(&mut self, _price: &Positive) -> Result<(), StrategyError> {
+        panic!("Set Underlying price is not applicable for this strategy");
     }
 
     /// Sets the expiration date for the strategy.
@@ -893,7 +937,7 @@ pub trait Optimizable: Validable + Strategies {
     /// # Arguments
     /// * `option_chain` - A reference to the `OptionChain` containing option data.
     /// * `side` - A `FindOptimalSide` value specifying the filtering strategy.
-    fn best_ratio(&mut self, option_chain: &OptionChain, side: FindOptimalSide) {
+    fn get_best_ratio(&mut self, option_chain: &OptionChain, side: FindOptimalSide) {
         self.find_optimal(option_chain, side, OptimizationCriteria::Ratio);
     }
 
@@ -902,7 +946,7 @@ pub trait Optimizable: Validable + Strategies {
     /// # Arguments
     /// * `option_chain` - A reference to the `OptionChain` containing option data.
     /// * `side` - A `FindOptimalSide` value specifying the filtering strategy.
-    fn best_area(&mut self, option_chain: &OptionChain, side: FindOptimalSide) {
+    fn get_best_area(&mut self, option_chain: &OptionChain, side: FindOptimalSide) {
         self.find_optimal(option_chain, side, OptimizationCriteria::Area);
     }
 
@@ -959,24 +1003,15 @@ pub trait Optimizable: Validable + Strategies {
         panic!("Find optimal is not applicable for this strategy");
     }
 
-    /// Checks if a short option is valid. The default implementation defers to `is_valid_long_option`.
-    ///
-    /// # Arguments
-    /// * `option` - A reference to the `OptionData` to validate.
-    /// * `side` - A reference to the `FindOptimalSide` specifying the filtering strategy.
-    fn is_valid_short_option(&self, option: &OptionData, side: &FindOptimalSide) -> bool {
-        self.is_valid_long_option(option, side)
-    }
-
     /// Checks if a long option is valid based on the given criteria.
     ///
     /// # Arguments
     /// * `option` - A reference to the `OptionData` to validate.
     /// * `side` - A reference to the `FindOptimalSide` specifying the filtering strategy.
-    fn is_valid_long_option(&self, option: &OptionData, side: &FindOptimalSide) -> bool {
+    fn is_valid_optimal_option(&self, option: &OptionData, side: &FindOptimalSide) -> bool {
         match side {
-            FindOptimalSide::Upper => option.strike_price >= self.get_underlying_price(),
-            FindOptimalSide::Lower => option.strike_price <= self.get_underlying_price(),
+            FindOptimalSide::Upper => option.strike_price >= *self.get_underlying_price(),
+            FindOptimalSide::Lower => option.strike_price <= *self.get_underlying_price(),
             FindOptimalSide::All => true,
             FindOptimalSide::Range(start, end) => {
                 option.strike_price >= *start && option.strike_price <= *end
@@ -1000,7 +1035,7 @@ pub trait Optimizable: Validable + Strategies {
     ///
     /// # Arguments
     /// * `legs` - A reference to the `StrategyLegs` containing the option data.
-    fn are_valid_prices(&self, legs: &StrategyLegs) -> bool {
+    fn are_valid_legs(&self, legs: &StrategyLegs) -> bool {
         // by default, we assume Options are one long call and one short call
         let (long, short) = match legs {
             StrategyLegs::TwoLegs { first, second } => (first, second),
@@ -1017,7 +1052,7 @@ pub trait Optimizable: Validable + Strategies {
     /// * `_chain` - A reference to the `OptionChain` providing option data.
     /// * `_legs` - A reference to the `StrategyLegs` defining the strategy's components.
     fn create_strategy(&self, _chain: &OptionChain, _legs: &StrategyLegs) -> Self::Strategy {
-        panic!("Create strategy is not applicable for this strategy");
+        unimplemented!("Create strategy is not applicable for this strategy");
     }
 }
 
@@ -1175,38 +1210,43 @@ mod tests_strategies {
         }
     }
 
+    impl BasicAble for MockStrategy {}
+
     impl Strategies for MockStrategy {
-        fn max_profit(&self) -> Result<Positive, StrategyError> {
+        fn get_volume(&mut self) -> Result<Positive, StrategyError> {
+            unreachable!()
+        }
+
+        fn get_max_profit(&self) -> Result<Positive, StrategyError> {
             Ok(Positive::THOUSAND)
         }
 
-        fn max_loss(&self) -> Result<Positive, StrategyError> {
+        fn get_max_loss(&self) -> Result<Positive, StrategyError> {
             Ok(pos!(500.0))
         }
 
-        fn total_cost(&self) -> Result<Positive, PositionError> {
+        fn get_total_cost(&self) -> Result<Positive, PositionError> {
             Ok(pos!(200.0))
         }
 
-        fn net_premium_received(&self) -> Result<Positive, StrategyError> {
+        fn get_net_premium_received(&self) -> Result<Positive, StrategyError> {
             Ok(pos!(300.0))
         }
 
-        fn fees(&self) -> Result<Positive, StrategyError> {
+        fn get_fees(&self) -> Result<Positive, StrategyError> {
             Ok(pos!(50.0))
         }
 
-        fn profit_area(&self) -> Result<Decimal, StrategyError> {
+        fn get_profit_area(&self) -> Result<Decimal, StrategyError> {
             Ok(dec!(5000.0))
         }
 
-        fn profit_ratio(&self) -> Result<Decimal, StrategyError> {
+        fn get_profit_ratio(&self) -> Result<Decimal, StrategyError> {
             Ok(dec!(2.0))
         }
     }
 
     #[test]
-
     fn test_strategies_trait() {
         let mut mock_strategy = MockStrategy {
             legs: Vec::new(),
@@ -1231,17 +1271,25 @@ mod tests_strategies {
             mock_strategy.get_break_even_points().unwrap(),
             &vec![Positive::HUNDRED]
         );
-        assert_eq!(mock_strategy.max_profit().unwrap_or(Positive::ZERO), 1000.0);
-        assert_eq!(mock_strategy.max_loss().unwrap_or(Positive::ZERO), 500.0);
-        assert_eq!(mock_strategy.total_cost().unwrap().to_f64(), 200.0);
-        assert_eq!(mock_strategy.net_premium_received().unwrap(), dec!(300.0));
-        assert_eq!(mock_strategy.fees().unwrap(), dec!(50.0));
-        assert_eq!(mock_strategy.profit_area().unwrap(), dec!(5000.0));
-        assert_eq!(mock_strategy.profit_ratio().unwrap(), dec!(2.0));
+        assert_eq!(
+            mock_strategy.get_max_profit().unwrap_or(Positive::ZERO),
+            1000.0
+        );
+        assert_eq!(
+            mock_strategy.get_max_loss().unwrap_or(Positive::ZERO),
+            500.0
+        );
+        assert_eq!(mock_strategy.get_total_cost().unwrap().to_f64(), 200.0);
+        assert_eq!(
+            mock_strategy.get_net_premium_received().unwrap(),
+            dec!(300.0)
+        );
+        assert_eq!(mock_strategy.get_fees().unwrap(), dec!(50.0));
+        assert_eq!(mock_strategy.get_profit_area().unwrap(), dec!(5000.0));
+        assert_eq!(mock_strategy.get_profit_ratio().unwrap(), dec!(2.0));
     }
 
     #[test]
-
     fn test_strategies_default_methods() {
         struct DefaultStrategy;
         impl Validable for DefaultStrategy {
@@ -1251,32 +1299,41 @@ mod tests_strategies {
         }
         impl Positionable for DefaultStrategy {}
         impl BreakEvenable for DefaultStrategy {}
-        impl Strategies for DefaultStrategy {}
+        impl BasicAble for DefaultStrategy {}
+        impl Strategies for DefaultStrategy {
+            fn get_volume(&mut self) -> Result<Positive, StrategyError> {
+                unreachable!()
+            }
+        }
 
         let strategy = DefaultStrategy;
 
         assert_eq!(
-            strategy.max_profit().unwrap_or(Positive::ZERO),
+            strategy.get_max_profit().unwrap_or(Positive::ZERO),
             Positive::ZERO
         );
         assert_eq!(
-            strategy.max_loss().unwrap_or(Positive::ZERO),
+            strategy.get_max_loss().unwrap_or(Positive::ZERO),
             Positive::ZERO
         );
-        assert!(strategy.total_cost().is_err());
-        assert!(strategy.profit_area().is_err());
-        assert!(strategy.profit_ratio().is_err());
+        assert!(strategy.get_total_cost().is_err());
+        assert!(strategy.get_profit_area().is_err());
+        assert!(strategy.get_profit_ratio().is_err());
         assert!(strategy.validate());
     }
 
     #[test]
-
     fn test_strategies_add_leg_panic() {
         struct PanicStrategy;
         impl Validable for PanicStrategy {}
         impl Positionable for PanicStrategy {}
         impl BreakEvenable for PanicStrategy {}
-        impl Strategies for PanicStrategy {}
+        impl BasicAble for PanicStrategy {}
+        impl Strategies for PanicStrategy {
+            fn get_volume(&mut self) -> Result<Positive, StrategyError> {
+                unreachable!()
+            }
+        }
 
         let mut strategy = PanicStrategy;
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
@@ -1301,14 +1358,12 @@ mod tests_strategies_extended {
     use crate::pos;
 
     #[test]
-
     fn test_strategy_enum() {
         assert_ne!(StrategyType::BullCallSpread, StrategyType::BearCallSpread);
         assert_eq!(StrategyType::Custom, StrategyType::Custom);
     }
 
     #[test]
-
     fn test_strategy_new_with_legs() {
         let mut strategy = Strategy::new(
             "Test Strategy".to_string(),
@@ -1330,55 +1385,63 @@ mod tests_strategies_extended {
     }
 
     #[test]
-
     fn test_strategies_get_legs_panic() {
         struct PanicStrategy;
         impl Validable for PanicStrategy {}
         impl Positionable for PanicStrategy {}
         impl BreakEvenable for PanicStrategy {}
-        impl Strategies for PanicStrategy {}
+        impl BasicAble for PanicStrategy {}
+        impl Strategies for PanicStrategy {
+            fn get_volume(&mut self) -> Result<Positive, StrategyError> {
+                unreachable!()
+            }
+        }
 
         let strategy = PanicStrategy;
         assert!(strategy.get_positions().is_err());
     }
 
     #[test]
-
     fn test_strategies_break_even_panic() {
         struct PanicStrategy;
         impl Validable for PanicStrategy {}
         impl Positionable for PanicStrategy {}
         impl BreakEvenable for PanicStrategy {}
-        impl Strategies for PanicStrategy {}
+        impl BasicAble for PanicStrategy {}
+        impl Strategies for PanicStrategy {
+            fn get_volume(&mut self) -> Result<Positive, StrategyError> {
+                unreachable!()
+            }
+        }
 
         let strategy = PanicStrategy;
         assert!(strategy.get_break_even_points().is_err());
     }
 
     #[test]
-
     fn test_strategies_net_premium_received_panic() {
         struct PanicStrategy;
         impl Validable for PanicStrategy {}
         impl Positionable for PanicStrategy {}
         impl BreakEvenable for PanicStrategy {}
+        impl BasicAble for PanicStrategy {}
         impl Strategies for PanicStrategy {}
 
         let strategy = PanicStrategy;
-        assert!(strategy.net_premium_received().is_err());
+        assert!(strategy.get_net_premium_received().is_err());
     }
 
     #[test]
-
     fn test_strategies_fees_panic() {
         struct PanicStrategy;
         impl Validable for PanicStrategy {}
         impl Positionable for PanicStrategy {}
         impl BreakEvenable for PanicStrategy {}
+        impl BasicAble for PanicStrategy {}
         impl Strategies for PanicStrategy {}
 
         let strategy = PanicStrategy;
-        assert!(strategy.fees().is_err());
+        assert!(strategy.get_fees().is_err());
     }
 
     #[test]
@@ -1388,14 +1451,15 @@ mod tests_strategies_extended {
         impl Validable for TestStrategy {}
         impl Positionable for TestStrategy {}
         impl BreakEvenable for TestStrategy {}
+        impl BasicAble for TestStrategy {}
         impl Strategies for TestStrategy {
-            fn max_profit(&self) -> Result<Positive, StrategyError> {
+            fn get_max_profit(&self) -> Result<Positive, StrategyError> {
                 Ok(pos!(100.0))
             }
         }
 
         let mut strategy = TestStrategy;
-        assert_eq!(strategy.max_profit_iter().unwrap().to_f64(), 100.0);
+        assert_eq!(strategy.get_max_profit_mut().unwrap().to_f64(), 100.0);
     }
 
     #[test]
@@ -1405,14 +1469,15 @@ mod tests_strategies_extended {
         impl Validable for TestStrategy {}
         impl Positionable for TestStrategy {}
         impl BreakEvenable for TestStrategy {}
+        impl BasicAble for TestStrategy {}
         impl Strategies for TestStrategy {
-            fn max_loss(&self) -> Result<Positive, StrategyError> {
+            fn get_max_loss(&self) -> Result<Positive, StrategyError> {
                 Ok(pos!(50.0))
             }
         }
 
         let mut strategy = TestStrategy;
-        assert_eq!(strategy.max_loss_iter().unwrap().to_f64(), 50.0);
+        assert_eq!(strategy.get_max_loss_mut().unwrap().to_f64(), 50.0);
     }
 
     #[test]
@@ -1426,11 +1491,12 @@ mod tests_strategies_extended {
             }
         }
         impl BreakEvenable for EmptyStrategy {}
+        impl BasicAble for EmptyStrategy {}
         impl Strategies for EmptyStrategy {}
 
         let strategy = EmptyStrategy;
-        assert_eq!(strategy.strikes().unwrap(), Vec::<Positive>::new());
-        assert!(strategy.max_min_strikes().is_err());
+        assert_eq!(strategy.get_strikes().unwrap(), Vec::<Positive>::new());
+        assert!(strategy.get_max_min_strikes().is_err());
     }
 }
 
@@ -1587,21 +1653,23 @@ mod tests_max_min_strikes {
         }
     }
 
-    impl Strategies for TestStrategy {
-        fn get_underlying_price(&self) -> Positive {
-            self.underlying_price
+    impl BasicAble for TestStrategy {
+        fn get_underlying_price(&self) -> &Positive {
+            &self.underlying_price
         }
+    }
 
-        fn max_profit(&self) -> Result<Positive, StrategyError> {
+    impl Strategies for TestStrategy {
+        fn get_max_profit(&self) -> Result<Positive, StrategyError> {
             Ok(Positive::ZERO)
         }
-        fn max_loss(&self) -> Result<Positive, StrategyError> {
+        fn get_max_loss(&self) -> Result<Positive, StrategyError> {
             Ok(Positive::ZERO)
         }
-        fn total_cost(&self) -> Result<Positive, PositionError> {
+        fn get_total_cost(&self) -> Result<Positive, PositionError> {
             Ok(Positive::ZERO)
         }
-        fn net_premium_received(&self) -> Result<Positive, StrategyError> {
+        fn get_net_premium_received(&self) -> Result<Positive, StrategyError> {
             let positions = self.get_positions()?;
             let costs = positions
                 .iter()
@@ -1625,19 +1693,19 @@ mod tests_max_min_strikes {
                 )),
             }
         }
-        fn fees(&self) -> Result<Positive, StrategyError> {
+        fn get_fees(&self) -> Result<Positive, StrategyError> {
             Ok(Positive::ZERO)
         }
-        fn profit_area(&self) -> Result<Decimal, StrategyError> {
+        fn get_profit_area(&self) -> Result<Decimal, StrategyError> {
             Ok(Decimal::ZERO)
         }
-        fn profit_ratio(&self) -> Result<Decimal, StrategyError> {
+        fn get_profit_ratio(&self) -> Result<Decimal, StrategyError> {
             Ok(Decimal::ZERO)
         }
-        fn best_range_to_show(&self, _step: Positive) -> Result<Vec<Positive>, StrategyError> {
+        fn get_best_range_to_show(&self, _step: Positive) -> Result<Vec<Positive>, StrategyError> {
             Ok(vec![])
         }
-        fn strikes(&self) -> Result<Vec<Positive>, StrategyError> {
+        fn get_strikes(&self) -> Result<Vec<Positive>, StrategyError> {
             Ok(self.strikes.clone())
         }
     }
@@ -1646,7 +1714,7 @@ mod tests_max_min_strikes {
 
     fn test_empty_strikes() {
         let strategy = TestStrategy::new(vec![], Positive::ZERO, vec![]);
-        assert!(strategy.max_min_strikes().is_err());
+        assert!(strategy.get_max_min_strikes().is_err());
     }
 
     #[test]
@@ -1654,7 +1722,7 @@ mod tests_max_min_strikes {
     fn test_single_strike() {
         let strike = pos!(100.0);
         let strategy = TestStrategy::new(vec![strike], Positive::ZERO, vec![]);
-        assert_eq!(strategy.max_min_strikes().unwrap(), (strike, strike));
+        assert_eq!(strategy.get_max_min_strikes().unwrap(), (strike, strike));
     }
 
     #[test]
@@ -1663,7 +1731,7 @@ mod tests_max_min_strikes {
         let strikes = vec![pos!(90.0), pos!(100.0), pos!(110.0)];
         let strategy = TestStrategy::new(strikes.clone(), Positive::ZERO, vec![]);
         assert_eq!(
-            strategy.max_min_strikes().unwrap(),
+            strategy.get_max_min_strikes().unwrap(),
             (*strikes.first().unwrap(), *strikes.last().unwrap())
         );
     }
@@ -1675,7 +1743,7 @@ mod tests_max_min_strikes {
         let underlying = pos!(100.0);
         let strategy = TestStrategy::new(strikes, underlying, vec![]);
         assert_eq!(
-            strategy.max_min_strikes().unwrap(),
+            strategy.get_max_min_strikes().unwrap(),
             (pos!(90.0), pos!(110.0))
         );
     }
@@ -1687,7 +1755,7 @@ mod tests_max_min_strikes {
         let underlying = pos!(90.0);
         let strategy = TestStrategy::new(strikes, underlying, vec![]);
         assert_eq!(
-            strategy.max_min_strikes().unwrap(),
+            strategy.get_max_min_strikes().unwrap(),
             (pos!(90.0), pos!(110.0))
         );
     }
@@ -1699,7 +1767,7 @@ mod tests_max_min_strikes {
         let underlying = pos!(110.0);
         let strategy = TestStrategy::new(strikes, underlying, vec![]);
         assert_eq!(
-            strategy.max_min_strikes().unwrap(),
+            strategy.get_max_min_strikes().unwrap(),
             (pos!(90.0), pos!(110.0))
         );
     }
@@ -1710,7 +1778,7 @@ mod tests_max_min_strikes {
         let strikes = vec![pos!(100.0), pos!(100.0), pos!(110.0)];
         let strategy = TestStrategy::new(strikes, Positive::ZERO, vec![]);
         assert_eq!(
-            strategy.max_min_strikes().unwrap(),
+            strategy.get_max_min_strikes().unwrap(),
             (pos!(100.0), pos!(110.0))
         );
     }
@@ -1722,7 +1790,7 @@ mod tests_max_min_strikes {
         let underlying = pos!(100.0);
         let strategy = TestStrategy::new(strikes, underlying, vec![]);
         assert_eq!(
-            strategy.max_min_strikes().unwrap(),
+            strategy.get_max_min_strikes().unwrap(),
             (pos!(100.0), pos!(110.0))
         );
     }
@@ -1734,7 +1802,7 @@ mod tests_max_min_strikes {
         let underlying = pos!(100.0);
         let strategy = TestStrategy::new(strikes, underlying, vec![]);
         assert_eq!(
-            strategy.max_min_strikes().unwrap(),
+            strategy.get_max_min_strikes().unwrap(),
             (pos!(90.0), pos!(100.0))
         );
     }
@@ -1745,7 +1813,7 @@ mod tests_max_min_strikes {
         let strikes = vec![pos!(110.0), pos!(90.0), pos!(100.0)];
         let strategy = TestStrategy::new(strikes, Positive::ZERO, vec![]);
         assert_eq!(
-            strategy.max_min_strikes().unwrap(),
+            strategy.get_max_min_strikes().unwrap(),
             (pos!(90.0), pos!(110.0))
         );
     }
@@ -1786,12 +1854,14 @@ mod tests_best_range_to_show {
         }
     }
 
-    impl Strategies for TestStrategy {
-        fn get_underlying_price(&self) -> Positive {
-            self.underlying_price
+    impl BasicAble for TestStrategy {
+        fn get_underlying_price(&self) -> &Positive {
+            &self.underlying_price
         }
+    }
 
-        fn strikes(&self) -> Result<Vec<Positive>, StrategyError> {
+    impl Strategies for TestStrategy {
+        fn get_strikes(&self) -> Result<Vec<Positive>, StrategyError> {
             Ok(self.strikes.clone())
         }
     }
@@ -1804,7 +1874,7 @@ mod tests_best_range_to_show {
             vec![pos!(90.0), pos!(110.0)],
             vec![pos!(95.0), pos!(105.0)],
         );
-        let range = strategy.best_range_to_show(pos!(5.0)).unwrap();
+        let range = strategy.get_best_range_to_show(pos!(5.0)).unwrap();
         assert!(!range.is_empty());
         assert_eq!(range[1] - range[0], pos!(5.0));
     }
@@ -1817,7 +1887,7 @@ mod tests_best_range_to_show {
             vec![pos!(95.0), pos!(105.0)],
             vec![pos!(97.0), pos!(103.0)],
         );
-        let range = strategy.best_range_to_show(pos!(1.0)).unwrap();
+        let range = strategy.get_best_range_to_show(pos!(1.0)).unwrap();
         assert!(!range.is_empty());
         assert_eq!(range[1] - range[0], pos!(1.0));
     }
@@ -1830,7 +1900,7 @@ mod tests_best_range_to_show {
             vec![pos!(90.0), pos!(110.0)],
             vec![pos!(95.0), pos!(105.0)],
         );
-        let range = strategy.best_range_to_show(pos!(5.0)).unwrap();
+        let range = strategy.get_best_range_to_show(pos!(5.0)).unwrap();
         assert!(range.first().unwrap() < &pos!(90.0));
         assert!(range.last().unwrap() > &pos!(110.0));
     }
@@ -1844,7 +1914,7 @@ mod tests_best_range_to_show {
             vec![pos!(95.0), pos!(105.0)],
         );
         let step = pos!(5.0);
-        let range = strategy.best_range_to_show(step).unwrap();
+        let range = strategy.get_best_range_to_show(step).unwrap();
 
         for i in 1..range.len() {
             assert_eq!(range[i] - range[i - 1], step);
@@ -1860,7 +1930,7 @@ mod tests_best_range_to_show {
             vec![pos!(90.0), pos!(110.0)],
             vec![pos!(95.0), pos!(105.0)],
         );
-        let range = strategy.best_range_to_show(pos!(5.0)).unwrap();
+        let range = strategy.get_best_range_to_show(pos!(5.0)).unwrap();
 
         assert!(range.iter().any(|&price| price <= underlying_price));
         assert!(range.iter().any(|&price| price >= underlying_price));
@@ -1874,7 +1944,7 @@ mod tests_best_range_to_show {
             vec![pos!(50.0), pos!(150.0)],
             vec![pos!(75.0), pos!(125.0)],
         );
-        let range = strategy.best_range_to_show(pos!(10.0)).unwrap();
+        let range = strategy.get_best_range_to_show(pos!(10.0)).unwrap();
 
         assert!(range.first().unwrap() <= &pos!(50.0));
         assert!(range.last().unwrap() >= &pos!(150.0));
@@ -1916,12 +1986,14 @@ mod tests_range_to_show {
         }
     }
 
-    impl Strategies for TestStrategy {
-        fn get_underlying_price(&self) -> Positive {
-            self.underlying_price
+    impl BasicAble for TestStrategy {
+        fn get_underlying_price(&self) -> &Positive {
+            &self.underlying_price
         }
+    }
 
-        fn strikes(&self) -> Result<Vec<Positive>, StrategyError> {
+    impl Strategies for TestStrategy {
+        fn get_strikes(&self) -> Result<Vec<Positive>, StrategyError> {
             Ok(self.strikes.clone())
         }
     }
@@ -1934,7 +2006,7 @@ mod tests_range_to_show {
             vec![pos!(90.0), pos!(110.0)],
             vec![pos!(95.0), pos!(105.0)],
         );
-        let (start, end) = strategy.range_to_show().unwrap();
+        let (start, end) = strategy.get_range_to_show().unwrap();
         assert!(start < pos!(90.0));
         assert!(end > pos!(110.0));
     }
@@ -1947,7 +2019,7 @@ mod tests_range_to_show {
             vec![pos!(90.0), pos!(110.0)],
             vec![pos!(80.0), pos!(120.0)],
         );
-        let (start, end) = strategy.range_to_show().unwrap();
+        let (start, end) = strategy.get_range_to_show().unwrap();
         assert!(start < pos!(80.0));
         assert!(end > pos!(120.0));
     }
@@ -1960,7 +2032,7 @@ mod tests_range_to_show {
             vec![pos!(90.0), pos!(110.0)],
             vec![pos!(95.0), pos!(105.0)],
         );
-        let (_start, end) = strategy.range_to_show().unwrap();
+        let (_start, end) = strategy.get_range_to_show().unwrap();
         assert!(end > pos!(150.0));
     }
 }
@@ -1990,41 +2062,43 @@ mod tests_range_of_profit {
         }
     }
 
+    impl BasicAble for TestStrategy {}
+
     impl Strategies for TestStrategy {}
 
     #[test]
 
     fn test_no_break_even_points() {
         let strategy = TestStrategy::new(vec![]);
-        assert!(strategy.range_of_profit().is_err());
+        assert!(strategy.get_range_of_profit().is_err());
     }
 
     #[test]
 
     fn test_single_break_even_point() {
         let strategy = TestStrategy::new(vec![pos!(100.0)]);
-        assert_eq!(strategy.range_of_profit().unwrap(), Positive::INFINITY);
+        assert_eq!(strategy.get_range_of_profit().unwrap(), Positive::INFINITY);
     }
 
     #[test]
 
     fn test_two_break_even_points() {
         let strategy = TestStrategy::new(vec![pos!(90.0), pos!(110.0)]);
-        assert_eq!(strategy.range_of_profit().unwrap(), pos!(20.0));
+        assert_eq!(strategy.get_range_of_profit().unwrap(), pos!(20.0));
     }
 
     #[test]
 
     fn test_multiple_break_even_points() {
         let strategy = TestStrategy::new(vec![pos!(80.0), pos!(100.0), pos!(120.0)]);
-        assert_eq!(strategy.range_of_profit().unwrap(), pos!(40.0));
+        assert_eq!(strategy.get_range_of_profit().unwrap(), pos!(40.0));
     }
 
     #[test]
 
     fn test_unordered_break_even_points() {
         let strategy = TestStrategy::new(vec![pos!(120.0), pos!(80.0), pos!(100.0)]);
-        assert_eq!(strategy.range_of_profit().unwrap(), pos!(40.0));
+        assert_eq!(strategy.get_range_of_profit().unwrap(), pos!(40.0));
     }
 }
 
@@ -2038,6 +2112,7 @@ mod tests_strategy_methods {
         impl Validable for TestStrategy {}
         impl Positionable for TestStrategy {}
         impl BreakEvenable for TestStrategy {}
+        impl BasicAble for TestStrategy {}
         impl Strategies for TestStrategy {}
         let strategy = TestStrategy;
         let result = std::panic::catch_unwind(|| strategy.get_underlying_price());
@@ -2097,6 +2172,8 @@ mod tests_optimizable {
 
     impl BreakEvenable for TestOptimizableStrategy {}
 
+    impl BasicAble for TestOptimizableStrategy {}
+
     impl Strategies for TestOptimizableStrategy {}
 
     impl Optimizable for TestOptimizableStrategy {
@@ -2120,8 +2197,8 @@ mod tests_optimizable {
             spos!(1000.0), // volume
             Some(100),     // open_interest
         );
-        assert!(strategy.is_valid_long_option(&option_data, &FindOptimalSide::All));
-        assert!(strategy.is_valid_long_option(
+        assert!(strategy.is_valid_optimal_option(&option_data, &FindOptimalSide::All));
+        assert!(strategy.is_valid_optimal_option(
             &option_data,
             &FindOptimalSide::Range(pos!(90.0), pos!(110.0))
         ));
@@ -2144,7 +2221,7 @@ mod tests_optimizable {
             spos!(1000.0), // volume
             Some(100),     // open_interest
         );
-        assert!(strategy.is_valid_long_option(&option_data, &FindOptimalSide::Upper));
+        assert!(strategy.is_valid_optimal_option(&option_data, &FindOptimalSide::Upper));
     }
 
     #[test]
@@ -2164,11 +2241,10 @@ mod tests_optimizable {
             spos!(1000.0), // volume
             Some(100),     // open_interest
         );
-        assert!(strategy.is_valid_long_option(&option_data, &FindOptimalSide::Lower));
+        assert!(strategy.is_valid_optimal_option(&option_data, &FindOptimalSide::Lower));
     }
 
     #[test]
-
     fn test_is_valid_short_option() {
         let strategy = TestOptimizableStrategy;
         let option_data = OptionData::new(
@@ -2184,8 +2260,8 @@ mod tests_optimizable {
             spos!(1000.0), // volume
             Some(100),     // open_interest
         );
-        assert!(strategy.is_valid_short_option(&option_data, &FindOptimalSide::All));
-        assert!(strategy.is_valid_short_option(
+        assert!(strategy.is_valid_optimal_option(&option_data, &FindOptimalSide::All));
+        assert!(strategy.is_valid_optimal_option(
             &option_data,
             &FindOptimalSide::Range(pos!(90.0), pos!(110.0))
         ));
@@ -2208,7 +2284,7 @@ mod tests_optimizable {
             spos!(1000.0), // volume
             Some(100),     // open_interest
         );
-        assert!(strategy.is_valid_short_option(&option_data, &FindOptimalSide::Upper));
+        assert!(strategy.is_valid_optimal_option(&option_data, &FindOptimalSide::Upper));
     }
 
     #[test]
@@ -2228,7 +2304,7 @@ mod tests_optimizable {
             spos!(1000.0), // volume
             Some(100),     // open_interest
         );
-        assert!(strategy.is_valid_short_option(&option_data, &FindOptimalSide::Lower));
+        assert!(strategy.is_valid_optimal_option(&option_data, &FindOptimalSide::Lower));
     }
 }
 
@@ -2268,6 +2344,8 @@ mod tests_strategy_net_operations {
 
     impl BreakEvenable for TestStrategy {}
 
+    impl BasicAble for TestStrategy {}
+
     impl Strategies for TestStrategy {}
 
     #[test]
@@ -2295,7 +2373,7 @@ mod tests_strategy_net_operations {
         strategy.add_position(&position_long).unwrap();
         strategy.add_position(&position_short).unwrap();
 
-        let result = strategy.net_cost().unwrap();
+        let result = strategy.get_net_cost().unwrap();
         assert!(result > Decimal::ZERO);
     }
 
@@ -2320,7 +2398,7 @@ mod tests_strategy_net_operations {
         strategy.add_position(&position_long).unwrap();
         strategy.add_position(&position_short).unwrap();
 
-        let result = strategy.net_premium_received().unwrap();
+        let result = strategy.get_net_premium_received().unwrap();
         assert!(result == Positive::ZERO);
     }
 
@@ -2334,7 +2412,7 @@ mod tests_strategy_net_operations {
 
         strategy.add_position(&position).unwrap();
 
-        let result = strategy.fees().unwrap();
+        let result = strategy.get_fees().unwrap();
         assert!(result > Positive::ZERO);
     }
 }
