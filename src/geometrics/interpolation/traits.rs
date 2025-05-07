@@ -245,14 +245,14 @@ mod tests_interpolate {
             Self: Sized,
             T: Into<Point2D> + Clone,
         {
-            unimplemented!()
+            unreachable!()
         }
 
         fn construct<T>(_method: T) -> Result<Self, Self::Error>
         where
             Self: Sized,
         {
-            unimplemented!()
+            unreachable!()
         }
     }
 

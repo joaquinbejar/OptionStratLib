@@ -327,7 +327,7 @@ mod tests_statistical_curve {
 
     impl Len for TestCurveGenerator {
         fn len(&self) -> usize {
-            unimplemented!()
+            unreachable!()
         }
     }
 
@@ -372,7 +372,7 @@ mod tests_statistical_curve {
         }
 
         fn compute_risk_metrics(&self) -> Result<RiskMetrics, MetricsError> {
-            unimplemented!()
+            unreachable!()
         }
     }
 
