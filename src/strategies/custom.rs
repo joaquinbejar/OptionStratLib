@@ -24,7 +24,7 @@ use crate::strategies::{BasicAble, DeltaNeutrality, StrategyBasics, StrategyCons
 use crate::utils::others::process_n_times_iter;
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
-use crate::{ExpirationDate,  Options, Positive, pos};
+use crate::{ExpirationDate, Options, Positive, pos};
 use num_traits::{FromPrimitive, ToPrimitive};
 use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{RED, ShapeStyle};
@@ -397,11 +397,11 @@ impl Strategable for CustomStrategy {
 impl BasicAble for CustomStrategy {
     fn get_title(&self) -> String {
         let strategy_title = format!("{:?} Strategy: ", self.kind);
-        let leg_titles: Vec<String> = self.positions
+        let leg_titles: Vec<String> = self
+            .positions
             .iter()
             .map(|position| position.get_title())
             .collect();
-
 
         if leg_titles.is_empty() {
             strategy_title
@@ -411,27 +411,20 @@ impl BasicAble for CustomStrategy {
     }
     fn get_option_basic_type(&self) -> HashSet<OptionBasicType> {
         let mut hash_set = HashSet::new();
-        self.positions
-            .iter()
-            .for_each(|position| {
-                hash_set.insert(OptionBasicType {
-                    option_style: &position.option.option_style,
-                    side: &position.option.side,
-                    strike_price: &position.option.strike_price,
-                    expiration_date: &position.option.expiration_date,
-                });
+        self.positions.iter().for_each(|position| {
+            hash_set.insert(OptionBasicType {
+                option_style: &position.option.option_style,
+                side: &position.option.side,
+                strike_price: &position.option.strike_price,
+                expiration_date: &position.option.expiration_date,
             });
+        });
         hash_set
     }
     fn get_implied_volatility(&self) -> HashMap<OptionBasicType, &Positive> {
         self.positions
             .iter()
-            .map(|position| {
-                (
-                    &position.option,
-                    &position.option.quantity,
-                )
-            })
+            .map(|position| (&position.option, &position.option.quantity))
             .map(|(option, qty)| {
                 (
                     OptionBasicType {
@@ -448,12 +441,7 @@ impl BasicAble for CustomStrategy {
     fn get_quantity(&self) -> HashMap<OptionBasicType, &Positive> {
         self.positions
             .iter()
-            .map(|position| {
-                (
-                    &position.option,
-                    &position.option.implied_volatility,
-                )
-            })
+            .map(|position| (&position.option, &position.option.implied_volatility))
             .map(|(option, iv)| {
                 (
                     OptionBasicType {
@@ -483,36 +471,36 @@ impl BasicAble for CustomStrategy {
         Ok(())
     }
     fn set_underlying_price(&mut self, price: &Positive) -> Result<(), StrategyError> {
-        self.positions
-            .iter_mut()
-            .try_for_each(|position| {
-                // Actualizar el precio subyacente
-                position.option.underlying_price = *price;
+        self.positions.iter_mut().try_for_each(|position| {
+            // Actualizar el precio subyacente
+            position.option.underlying_price = *price;
 
-                // Calcular el precio y descartar el resultado
-                position.option.calculate_price_black_scholes()
-                    .map(|_| ()) // Convertir el Ok(Decimal) a Ok(())
-                    .map_err(|e| StrategyError::StdError {
-                        reason: e.to_string(),
-                    })
-            })?;
+            // Calcular el precio y descartar el resultado
+            position
+                .option
+                .calculate_price_black_scholes()
+                .map(|_| ()) // Convertir el Ok(Decimal) a Ok(())
+                .map_err(|e| StrategyError::StdError {
+                    reason: e.to_string(),
+                })
+        })?;
 
         Ok(())
     }
     fn set_implied_volatility(&mut self, volatility: &Positive) -> Result<(), StrategyError> {
-        self.positions
-            .iter_mut()
-            .try_for_each(|position| {
-                // Actualizar el precio subyacente
-                position.option.implied_volatility = *volatility;
+        self.positions.iter_mut().try_for_each(|position| {
+            // Actualizar el precio subyacente
+            position.option.implied_volatility = *volatility;
 
-                // Calcular el precio y descartar el resultado
-                position.option.calculate_price_black_scholes()
-                    .map(|_| ()) // Convertir el Ok(Decimal) a Ok(())
-                    .map_err(|e| StrategyError::StdError {
-                        reason: e.to_string(),
-                    })
-            })?;
+            // Calcular el precio y descartar el resultado
+            position
+                .option
+                .calculate_price_black_scholes()
+                .map(|_| ()) // Convertir el Ok(Decimal) a Ok(())
+                .map_err(|e| StrategyError::StdError {
+                    reason: e.to_string(),
+                })
+        })?;
         Ok(())
     }
 }
@@ -558,7 +546,7 @@ impl Strategies for CustomStrategy {
         let step = self.step_by;
         let mut max_loss: Positive = Positive::ZERO;
         let (mut current_price, max_search_price) = self.get_range_to_show()?;
-        
+
         while current_price <= max_search_price {
             let current_profit = self.calculate_profit_at(&current_price)?;
             if current_profit > Decimal::ZERO {

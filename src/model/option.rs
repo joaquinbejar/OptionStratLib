@@ -755,14 +755,14 @@ impl BasicAble for Options {
         self.underlying_symbol.as_str()
     }
     fn get_strike(&self) -> HashMap<OptionBasicType, &Positive> {
-        let option_basic_type = match self.get_option_basic_type().iter().next().copied(){
+        let option_basic_type = match self.get_option_basic_type().iter().next().copied() {
             Some(option_basic_type) => option_basic_type,
             None => return HashMap::new(),
         };
         HashMap::from([(option_basic_type, &self.strike_price)])
     }
     fn get_side(&self) -> HashMap<OptionBasicType, &Side> {
-        let option_basic_type = match self.get_option_basic_type().iter().next().copied(){
+        let option_basic_type = match self.get_option_basic_type().iter().next().copied() {
             Some(option_basic_type) => option_basic_type,
             None => return HashMap::new(),
         };
@@ -772,28 +772,28 @@ impl BasicAble for Options {
         &self.option_type
     }
     fn get_style(&self) -> HashMap<OptionBasicType, &OptionStyle> {
-        let option_basic_type = match self.get_option_basic_type().iter().next().copied(){
+        let option_basic_type = match self.get_option_basic_type().iter().next().copied() {
             Some(option_basic_type) => option_basic_type,
             None => return HashMap::new(),
         };
         HashMap::from([(option_basic_type, &self.option_style)])
     }
     fn get_expiration(&self) -> HashMap<OptionBasicType, &ExpirationDate> {
-        let option_basic_type = match self.get_option_basic_type().iter().next().copied(){
+        let option_basic_type = match self.get_option_basic_type().iter().next().copied() {
             Some(option_basic_type) => option_basic_type,
             None => return HashMap::new(),
         };
         HashMap::from([(option_basic_type, &self.expiration_date)])
     }
     fn get_implied_volatility(&self) -> HashMap<OptionBasicType, &Positive> {
-        let option_basic_type = match self.get_option_basic_type().iter().next().copied(){
+        let option_basic_type = match self.get_option_basic_type().iter().next().copied() {
             Some(option_basic_type) => option_basic_type,
             None => return HashMap::new(),
         };
         HashMap::from([(option_basic_type, &self.implied_volatility)])
     }
     fn get_quantity(&self) -> HashMap<OptionBasicType, &Positive> {
-        let option_basic_type = match self.get_option_basic_type().iter().next().copied(){
+        let option_basic_type = match self.get_option_basic_type().iter().next().copied() {
             Some(option_basic_type) => option_basic_type,
             None => return HashMap::new(),
         };
@@ -803,14 +803,14 @@ impl BasicAble for Options {
         &self.underlying_price
     }
     fn get_risk_free_rate(&self) -> HashMap<OptionBasicType, &Decimal> {
-        let option_basic_type = match self.get_option_basic_type().iter().next().copied(){
+        let option_basic_type = match self.get_option_basic_type().iter().next().copied() {
             Some(option_basic_type) => option_basic_type,
             None => return HashMap::new(),
         };
         HashMap::from([(option_basic_type, &self.risk_free_rate)])
     }
     fn get_dividend_yield(&self) -> HashMap<OptionBasicType, &Positive> {
-        let option_basic_type = match self.get_option_basic_type().iter().next().copied(){
+        let option_basic_type = match self.get_option_basic_type().iter().next().copied() {
             Some(option_basic_type) => option_basic_type,
             None => return HashMap::new(),
         };

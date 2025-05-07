@@ -549,12 +549,8 @@ impl BasicAble for BullPutSpread {
     }
     fn set_underlying_price(&mut self, price: &Positive) -> Result<(), StrategyError> {
         self.long_put.option.underlying_price = *price;
-        self.long_put.premium = Positive::from(
-            self.long_put
-                .option
-                .calculate_price_black_scholes()?
-                .abs(),
-        );
+        self.long_put.premium =
+            Positive::from(self.long_put.option.calculate_price_black_scholes()?.abs());
         self.short_put.option.underlying_price = *price;
         self.short_put.premium =
             Positive::from(self.short_put.option.calculate_price_black_scholes()?.abs());
@@ -563,12 +559,8 @@ impl BasicAble for BullPutSpread {
     fn set_implied_volatility(&mut self, volatility: &Positive) -> Result<(), StrategyError> {
         self.long_put.option.implied_volatility = *volatility;
         self.short_put.option.implied_volatility = *volatility;
-        self.long_put.premium = Positive(
-            self.long_put
-                .option
-                .calculate_price_black_scholes()?
-                .abs(),
-        );
+        self.long_put.premium =
+            Positive(self.long_put.option.calculate_price_black_scholes()?.abs());
         self.short_put.premium =
             Positive(self.short_put.option.calculate_price_black_scholes()?.abs());
         Ok(())

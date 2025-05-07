@@ -2879,7 +2879,6 @@ mod tests_butterfly_strategies {
             pos!(0.05),
             pos!(0.05),
         );
-        let base_butterfly = create_test_short();
         assert_eq!(
             short_butterfly.get_max_profit().unwrap().to_f64(),
             pos!(18.106)

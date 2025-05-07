@@ -38,7 +38,7 @@ fn test_bull_put_spread_integration() -> Result<(), Box<dyn Error>> {
     // Assertions to validate strategy properties and computations
     assert_eq!(
         strategy.get_title(),
-        "Bull Put Spread Strategy:\n\tUnderlying: SP500 @ $5750 Long Put European Option\n\tUnderlying: SP500 @ $5920 Short Put European Option"
+        "BullPutSpread Strategy: \n\tUnderlying: SP500 @ $5750 Long Put European Option\n\tUnderlying: SP500 @ $5920 Short Put European Option"
     );
     assert_eq!(strategy.get_break_even_points().unwrap().len(), 1);
     assert_relative_eq!(

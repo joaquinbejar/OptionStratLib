@@ -566,12 +566,8 @@ impl BasicAble for LongStraddle {
     }
     fn set_underlying_price(&mut self, price: &Positive) -> Result<(), StrategyError> {
         self.long_call.option.underlying_price = *price;
-        self.long_call.premium = Positive::from(
-            self.long_call
-                .option
-                .calculate_price_black_scholes()?
-                .abs(),
-        );
+        self.long_call.premium =
+            Positive::from(self.long_call.option.calculate_price_black_scholes()?.abs());
         self.long_put.option.underlying_price = *price;
         self.long_put.premium =
             Positive::from(self.long_put.option.calculate_price_black_scholes()?.abs());
@@ -580,12 +576,8 @@ impl BasicAble for LongStraddle {
     fn set_implied_volatility(&mut self, volatility: &Positive) -> Result<(), StrategyError> {
         self.long_call.option.implied_volatility = *volatility;
         self.long_put.option.implied_volatility = *volatility;
-        self.long_call.premium = Positive(
-            self.long_call
-                .option
-                .calculate_price_black_scholes()?
-                .abs(),
-        );
+        self.long_call.premium =
+            Positive(self.long_call.option.calculate_price_black_scholes()?.abs());
         self.long_put.premium =
             Positive(self.long_put.option.calculate_price_black_scholes()?.abs());
         Ok(())
