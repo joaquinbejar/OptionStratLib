@@ -1,4 +1,4 @@
-use crate::Positive;
+use crate::{ExpirationDate, Positive};
 use crate::constants::ZERO;
 use crate::pricing::payoff::{Payoff, PayoffInfo, standard_payoff};
 use chrono::{DateTime, Utc};
@@ -40,9 +40,10 @@ mod datetime_format {
 /// `Action` is used to indicate whether a security is being acquired or disposed of,
 /// and is commonly paired with other transaction details such as price, quantity,
 /// and timing information.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
 pub enum Action {
     /// Represents a purchase transaction, where assets are acquired.
+    #[default]
     Buy,
     /// Represents a selling transaction, where assets are disposed of.
     Sell,
@@ -59,10 +60,11 @@ pub enum Action {
 ///
 /// `Side` is a fundamental concept in trading that determines how profits and losses
 /// are calculated and affects risk management considerations.
-#[derive(Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
 pub enum Side {
     /// Represents a position that profits when the underlying asset's price increases.
     /// Long positions involve buying an asset with the expectation of selling at a higher price.
+    #[default]
     Long,
     /// Represents a position that profits when the underlying asset's price decreases.
     /// Short positions involve selling an asset (often borrowed) with the expectation
@@ -78,11 +80,12 @@ pub enum Side {
 ///
 /// `OptionStyle` is a critical attribute for options contracts as it directly
 /// affects valuation, pricing models, and exercise strategies.
-#[derive(Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
 pub enum OptionStyle {
     /// Represents a call option, which gives the holder the right (but not obligation)
     /// to buy the underlying asset at the strike price before or at expiration.
     /// Call options typically increase in value when the underlying asset price rises.
+    #[default]
     Call,
     /// Represents a put option, which gives the holder the right (but not obligation)
     /// to sell the underlying asset at the strike price before or at expiration.
@@ -92,11 +95,12 @@ pub enum OptionStyle {
 
 /// Represents the type of option in a financial context.
 /// Options can be categorized into various types based on their characteristics and the conditions under which they can be exercised.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub enum OptionType {
     /// A European option can only be exercised at the expiry date.
     /// This type of option does not allow the holder to exercise the option before the specified expiration date.
     /// European options are simpler to price and analyze because their payoff is only determined at a single point in time.
+    #[default]
     European,
 
     /// An American option can be exercised at any time before and including the expiry date.
@@ -209,6 +213,15 @@ pub enum OptionType {
         /// The exponent to which the underlying asset price is raised.
         exponent: f64,
     },
+}
+
+
+#[derive(Clone, Copy, PartialEq, Serialize, Debug, Hash,Eq)]
+pub struct OptionBasicType<'a> {
+    pub option_style: &'a OptionStyle,
+    pub side: &'a Side,
+    pub strike_price: &'a Positive,
+    pub expiration_date: &'a ExpirationDate,
 }
 
 /// Describes how the average price is calculated for Asian options.

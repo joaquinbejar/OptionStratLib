@@ -62,14 +62,14 @@ pub struct PriceTrend {
 /// - `trend.confidence` is not between 0 and 1.
 ///
 pub fn calculate_single_point_probability(
-    current_price: Positive,
-    target_price: Positive,
+    current_price: &Positive,
+    target_price: &Positive,
     volatility_adj: Option<VolatilityAdjustment>,
     trend: Option<PriceTrend>,
-    expiration_date: ExpirationDate,
+    expiration_date: &ExpirationDate,
     risk_free_rate: Option<Decimal>,
 ) -> Result<(Positive, Positive), ProbabilityError> {
-    if target_price == Positive::ZERO {
+    if *target_price == Positive::ZERO {
         return Ok((Positive::ZERO, Positive::ONE));
     }
     let time_to_expiry = expiration_date.get_years()?;
@@ -115,7 +115,7 @@ pub fn calculate_single_point_probability(
     };
 
     // Calculate parameters for the log-normal distribution
-    let log_ratio = (target_price / current_price).ln();
+    let log_ratio = (*target_price / *current_price).ln();
     let std_dev = volatility * time_to_expiry.sqrt();
 
     // Calculate z-score considering drift
@@ -155,14 +155,13 @@ pub fn calculate_single_point_probability(
 /// * Time to expiry is not positive
 /// * Volatility parameters are invalid
 /// * Trend confidence is not between 0 and 1
-#[allow(dead_code)]
 pub fn calculate_price_probability(
-    current_price: Positive,
-    lower_bound: Positive,
-    upper_bound: Positive,
+    current_price: &Positive,
+    lower_bound: &Positive,
+    upper_bound: &Positive,
     volatility_adj: Option<VolatilityAdjustment>,
     trend: Option<PriceTrend>,
-    expiration_date: ExpirationDate,
+    expiration_date: &ExpirationDate,
     risk_free_rate: Option<Decimal>,
 ) -> Result<(Positive, Positive, Positive), ProbabilityError> {
     if lower_bound > upper_bound {
@@ -230,13 +229,12 @@ pub fn calculate_price_probability(
 /// * Time to expiry is not positive
 /// * Volatility parameters are invalid
 /// * Trend confidence is not between 0 and 1
-#[allow(dead_code)]
 pub fn calculate_bounds_probability(
-    current_price: Positive,
-    bounds: Vec<Positive>,
+    current_price: &Positive,
+    bounds: &Vec<Positive>,
     volatility_adj: Option<VolatilityAdjustment>,
     trend: Option<PriceTrend>,
-    expiration_date: ExpirationDate,
+    expiration_date: &ExpirationDate,
     risk_free_rate: Option<Decimal>,
 ) -> Result<Vec<Positive>, ProbabilityError> {
     // Check if bounds vector is empty
@@ -263,10 +261,10 @@ pub fn calculate_bounds_probability(
 
     // Calculate probabilities for each bound
     let mut bound_probs = Vec::with_capacity(bounds.len());
-    for bound in &bounds {
+    for bound in bounds {
         let (prob_below, _) = calculate_single_point_probability(
             current_price,
-            *bound,
+            bound,
             volatility_adj.clone(),
             trend.clone(),
             expiration_date,
@@ -303,11 +301,11 @@ mod tests_calculate_bounds_probability {
     fn test_bounds_probability_basic() {
         let bounds = vec![pos!(95.0), pos!(100.0), pos!(105.0)];
         let result = calculate_bounds_probability(
-            pos!(100.0),
-            bounds,
+            &pos!(100.0),
+            &bounds,
             None,
             None,
-            ExpirationDate::Days(DAYS_IN_A_YEAR),
+            &ExpirationDate::Days(DAYS_IN_A_YEAR),
             None,
         );
 
@@ -330,11 +328,11 @@ mod tests_calculate_bounds_probability {
     fn test_bounds_probability_empty_bounds() {
         let bounds = vec![];
         let result = calculate_bounds_probability(
-            pos!(100.0),
-            bounds,
+            &pos!(100.0),
+            &bounds,
             None,
             None,
-            ExpirationDate::Days(DAYS_IN_A_YEAR),
+            &ExpirationDate::Days(DAYS_IN_A_YEAR),
             None,
         );
 
@@ -355,11 +353,11 @@ mod tests_calculate_bounds_probability {
     fn test_bounds_probability_unordered_bounds() {
         let bounds = vec![pos!(100.0), pos!(95.0), pos!(105.0)];
         let result = calculate_bounds_probability(
-            pos!(100.0),
-            bounds,
+            &pos!(100.0),
+            &bounds,
             None,
             None,
-            ExpirationDate::Days(DAYS_IN_A_YEAR),
+            &ExpirationDate::Days(DAYS_IN_A_YEAR),
             None,
         );
 
@@ -379,11 +377,11 @@ mod tests_calculate_bounds_probability {
     fn test_bounds_probability_single_bound() {
         let bounds = vec![pos!(100.0)];
         let result = calculate_bounds_probability(
-            pos!(100.0),
-            bounds,
+            &pos!(100.0),
+            &bounds,
             None,
             None,
-            ExpirationDate::Days(DAYS_IN_A_YEAR),
+            &ExpirationDate::Days(DAYS_IN_A_YEAR),
             None,
         );
 
@@ -403,11 +401,11 @@ mod tests_calculate_bounds_probability {
         });
 
         let result = calculate_bounds_probability(
-            pos!(100.0),
-            bounds,
+            &pos!(100.0),
+            &bounds,
             vol_adj,
             None,
-            ExpirationDate::Days(DAYS_IN_A_YEAR),
+            &ExpirationDate::Days(DAYS_IN_A_YEAR),
             None,
         );
 
@@ -452,11 +450,11 @@ mod tests_single_point_probability {
         let current_price = pos!(100.0);
         let target_price = pos!(105.0);
         let result = calculate_single_point_probability(
-            current_price,
-            target_price,
+            &current_price,
+            &target_price,
             None,
             None,
-            ExpirationDate::Days(DAYS_IN_A_YEAR),
+            &ExpirationDate::Days(DAYS_IN_A_YEAR),
             None,
         );
 
@@ -474,11 +472,11 @@ mod tests_single_point_probability {
         let expiration_date = Utc::now() + Duration::days(365);
 
         let result = calculate_single_point_probability(
-            current_price,
-            target_price,
+            &current_price,
+            &target_price,
             None,
             None,
-            ExpirationDate::DateTime(expiration_date),
+            &ExpirationDate::DateTime(expiration_date),
             None,
         );
 
@@ -496,11 +494,11 @@ mod tests_single_point_probability {
         let vol_adj = Some(default_volatility_adj());
 
         let result = calculate_single_point_probability(
-            current_price,
-            target_price,
+            &current_price,
+            &target_price,
             vol_adj,
             None,
-            ExpirationDate::Days(DAYS_IN_A_YEAR),
+            &ExpirationDate::Days(DAYS_IN_A_YEAR),
             None,
         );
 
@@ -518,11 +516,11 @@ mod tests_single_point_probability {
         let trend = Some(default_trend());
 
         let result = calculate_single_point_probability(
-            current_price,
-            target_price,
+            &current_price,
+            &target_price,
             None,
             trend,
-            ExpirationDate::Days(DAYS_IN_A_YEAR),
+            &ExpirationDate::Days(DAYS_IN_A_YEAR),
             None,
         );
 
@@ -539,11 +537,11 @@ mod tests_single_point_probability {
         let target_price = pos!(105.0);
 
         let result = calculate_single_point_probability(
-            current_price,
-            target_price,
+            &current_price,
+            &target_price,
             None,
             None,
-            ExpirationDate::Days(DAYS_IN_A_YEAR),
+            &ExpirationDate::Days(DAYS_IN_A_YEAR),
             Some(dec!(0.05)),
         );
 
@@ -562,11 +560,11 @@ mod tests_single_point_probability {
         let trend = Some(default_trend());
 
         let result = calculate_single_point_probability(
-            current_price,
-            target_price,
+            &current_price,
+            &target_price,
             vol_adj,
             trend,
-            ExpirationDate::Days(DAYS_IN_A_YEAR),
+            &ExpirationDate::Days(DAYS_IN_A_YEAR),
             Some(dec!(0.05)),
         );
 
@@ -582,8 +580,8 @@ mod tests_single_point_probability {
         let price = pos!(100.0);
 
         let result = calculate_single_point_probability(
-            price,
-            price,
+            &price,
+            &price,
             Some({
                 VolatilityAdjustment {
                     base_volatility: pos!(0.8),
@@ -596,7 +594,7 @@ mod tests_single_point_probability {
                     confidence: 1.0,
                 }
             }),
-            ExpirationDate::Days(DAYS_IN_A_YEAR),
+            &ExpirationDate::Days(DAYS_IN_A_YEAR),
             None,
         );
 
@@ -611,11 +609,11 @@ mod tests_single_point_probability {
 
     fn test_zero_days_to_expiry() {
         let result = calculate_single_point_probability(
-            pos!(100.0),
-            pos!(105.0),
+            &pos!(100.0),
+            &pos!(105.0),
             None,
             None,
-            ExpirationDate::Days(Positive::ZERO),
+            &ExpirationDate::Days(Positive::ZERO),
             None,
         );
 
@@ -637,11 +635,11 @@ mod tests_single_point_probability {
         let past_date = Utc::now() - Duration::days(1);
 
         let result = calculate_single_point_probability(
-            pos!(100.0),
-            pos!(105.0),
+            &pos!(100.0),
+            &pos!(105.0),
             None,
             None,
-            ExpirationDate::DateTime(past_date),
+            &ExpirationDate::DateTime(past_date),
             None,
         );
 
@@ -657,11 +655,11 @@ mod tests_single_point_probability {
         });
 
         let result = calculate_single_point_probability(
-            pos!(100.0),
-            pos!(105.0),
+            &pos!(100.0),
+            &pos!(105.0),
             vol_adj,
             None,
-            ExpirationDate::Days(DAYS_IN_A_YEAR),
+            &ExpirationDate::Days(DAYS_IN_A_YEAR),
             None,
         );
 
@@ -686,11 +684,11 @@ mod tests_single_point_probability {
         });
 
         let result = calculate_single_point_probability(
-            pos!(100.0),
-            pos!(105.0),
+            &pos!(100.0),
+            &pos!(105.0),
             None,
             trend,
-            ExpirationDate::Days(DAYS_IN_A_YEAR),
+            &ExpirationDate::Days(DAYS_IN_A_YEAR),
             None,
         );
 
@@ -711,11 +709,11 @@ mod tests_single_point_probability {
     fn test_extreme_target_prices() {
         // Test with very high target price
         let result_high = calculate_single_point_probability(
-            pos!(100.0),
-            pos!(1000000.0),
+            &pos!(100.0),
+            &pos!(1000000.0),
             None,
             None,
-            ExpirationDate::Days(DAYS_IN_A_YEAR),
+            &ExpirationDate::Days(DAYS_IN_A_YEAR),
             None,
         );
 
@@ -725,11 +723,11 @@ mod tests_single_point_probability {
 
         // Test with very low target price
         let result_low = calculate_single_point_probability(
-            pos!(100.0),
-            pos!(0.1),
+            &pos!(100.0),
+            &pos!(0.1),
             None,
             None,
-            ExpirationDate::Days(DAYS_IN_A_YEAR),
+            &ExpirationDate::Days(DAYS_IN_A_YEAR),
             None,
         );
 
@@ -749,11 +747,11 @@ mod tests_single_point_probability {
         });
 
         let result = calculate_single_point_probability(
-            pos!(100.0),
-            pos!(105.0),
+            &pos!(100.0),
+            &pos!(105.0),
             vol_adj,
             None,
-            ExpirationDate::Days(DAYS_IN_A_YEAR),
+            &ExpirationDate::Days(DAYS_IN_A_YEAR),
             None,
         );
 
@@ -772,11 +770,11 @@ mod tests_single_point_probability {
         });
 
         let result = calculate_single_point_probability(
-            pos!(100.0),
-            pos!(105.0),
+            &pos!(100.0),
+            &pos!(105.0),
             None,
             trend,
-            ExpirationDate::Days(DAYS_IN_A_YEAR),
+            &ExpirationDate::Days(DAYS_IN_A_YEAR),
             None,
         );
 
@@ -797,12 +795,12 @@ mod tests_calculate_price_probability {
 
     fn test_price_probability_basic() {
         let result = calculate_price_probability(
-            pos!(100.0),
-            pos!(95.0),
-            pos!(105.0),
+            &pos!(100.0),
+            &pos!(95.0),
+            &pos!(105.0),
             None,
             None,
-            ExpirationDate::Days(DAYS_IN_A_YEAR),
+            &ExpirationDate::Days(DAYS_IN_A_YEAR),
             None,
         );
 
@@ -822,12 +820,12 @@ mod tests_calculate_price_probability {
 
     fn test_price_probability_invalid_bounds() {
         let result = calculate_price_probability(
-            pos!(100.0),
-            pos!(105.0), // Lower bound higher than upper bound
-            pos!(95.0),
+            &pos!(100.0),
+            &pos!(105.0), // Lower bound higher than upper bound
+            &pos!(95.0),
             None,
             None,
-            ExpirationDate::Days(DAYS_IN_A_YEAR),
+            &ExpirationDate::Days(DAYS_IN_A_YEAR),
             None,
         );
 
@@ -851,12 +849,12 @@ mod tests_calculate_price_probability {
         });
 
         let result = calculate_price_probability(
-            pos!(100.0),
-            pos!(90.0),
-            pos!(110.0),
+            &pos!(100.0),
+            &pos!(90.0),
+            &pos!(110.0),
             vol_adj,
             None,
-            ExpirationDate::Days(DAYS_IN_A_YEAR),
+            &ExpirationDate::Days(DAYS_IN_A_YEAR),
             None,
         );
 
