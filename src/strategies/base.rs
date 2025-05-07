@@ -664,7 +664,7 @@ pub trait Strategies: Validable + Positionable + BreakEvenable + BasicAble {
     /// * `Ok((Positive, Positive))` - A tuple containing the minimum and maximum strike prices.
     /// * `Err(StrategyError)` - If no strikes are found or if an error occurs retrieving positions.
     fn get_max_min_strikes(&self) -> Result<(Positive, Positive), StrategyError> {
-        let strikes: Vec<&Positive> = self.get_strike().values().copied().collect();
+        let strikes: Vec<&Positive> = self.get_strikes();
         if strikes.is_empty() {
             return Err(StrategyError::OperationError(
                 OperationErrorKind::InvalidParameters {
