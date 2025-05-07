@@ -43,7 +43,7 @@ use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{RED, ShapeStyle};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use tracing::{debug, info};
 
@@ -502,41 +502,112 @@ impl BasicAble for LongStrangle {
             format!("{}\n\t{}", strategy_title, leg_titles.join("\n\t"))
         }
     }
-    fn get_option_basic_type(&self) -> OptionBasicType {
-        unimplemented!("get_option_basic_type is not implemented for this strategy");
-    }
-    fn get_symbol(&self) -> &str {
-        unimplemented!("get_symbol is not implemented for this strategy");
-    }
-    fn get_strike(&self) -> HashMap<OptionBasicType, &Positive> {
-        unimplemented!("get_strike is not implemented for this strategy");
-    }
-    fn get_side(&self) -> HashMap<OptionBasicType, &Side> {
-        unimplemented!("get_side is not implemented for this strategy");
-    }
-    fn get_type(&self) -> &OptionType {
-        unimplemented!("get_type is not implemented for this strategy");
-    }
-    fn get_style(&self) -> HashMap<OptionBasicType, &OptionStyle> {
-        unimplemented!("get_style is not implemented for this strategy");
-    }
-    fn get_expiration(&self) -> HashMap<OptionBasicType, &ExpirationDate> {
-        unimplemented!("get_expiration is not implemented for this strategy");
+    fn get_option_basic_type(&self) -> HashSet<OptionBasicType> {
+        let mut hash_set = HashSet::new();
+        let long_call = &self.long_call.option;
+        let long_put = &self.long_put.option;
+        hash_set.insert(OptionBasicType {
+            option_style: &long_call.option_style,
+            side: &long_call.side,
+            strike_price: &long_call.strike_price,
+            expiration_date: &long_call.expiration_date,
+        });
+        hash_set.insert(OptionBasicType {
+            option_style: &long_put.option_style,
+            side: &long_put.side,
+            strike_price: &long_put.strike_price,
+            expiration_date: &long_put.expiration_date,
+        });
+
+        hash_set
     }
     fn get_implied_volatility(&self) -> HashMap<OptionBasicType, &Positive> {
-        unimplemented!("get_implied_volatility is not implemented for this strategy");
+        let options = [
+            (
+                &self.long_call.option,
+                &self.long_call.option.implied_volatility,
+            ),
+            (
+                &self.long_put.option,
+                &self.long_put.option.implied_volatility,
+            ),
+        ];
+
+        options
+            .into_iter()
+            .map(|(option, iv)| {
+                (
+                    OptionBasicType {
+                        option_style: &option.option_style,
+                        side: &option.side,
+                        strike_price: &option.strike_price,
+                        expiration_date: &option.expiration_date,
+                    },
+                    iv,
+                )
+            })
+            .collect()
     }
     fn get_quantity(&self) -> HashMap<OptionBasicType, &Positive> {
-        unimplemented!("get_quantity is not implemented for this strategy");
+        let options = [
+            (&self.long_call.option, &self.long_call.option.quantity),
+            (&self.long_put.option, &self.long_put.option.quantity),
+        ];
+
+        options
+            .into_iter()
+            .map(|(option, quantity)| {
+                (
+                    OptionBasicType {
+                        option_style: &option.option_style,
+                        side: &option.side,
+                        strike_price: &option.strike_price,
+                        expiration_date: &option.expiration_date,
+                    },
+                    quantity,
+                )
+            })
+            .collect()
     }
-    fn get_underlying_price(&self) -> &Positive {
-        &self.long_call.option.underlying_price
+    fn one_option(&self) -> &Options {
+        self.long_call.one_option()
     }
-    fn get_risk_free_rate(&self) -> HashMap<OptionBasicType, &Decimal> {
-        unimplemented!("get_risk_free_rate is not implemented for this strategy");
+    fn one_option_mut(&mut self) -> &mut Options {
+        self.long_call.one_option_mut()
     }
-    fn get_dividend_yield(&self) -> HashMap<OptionBasicType, &Positive> {
-        unimplemented!("get_dividend_yield is not implemented for this strategy");
+    fn set_expiration_date(
+        &mut self,
+        expiration_date: ExpirationDate,
+    ) -> Result<(), StrategyError> {
+        self.long_call.option.expiration_date = expiration_date;
+        self.long_put.option.expiration_date = expiration_date;
+        Ok(())
+    }
+    fn set_underlying_price(&mut self, price: &Positive) -> Result<(), StrategyError> {
+        self.long_call.option.underlying_price = *price;
+        self.long_call.premium = Positive::from(
+            self.long_call
+                .option
+                .calculate_price_black_scholes()?
+                .abs(),
+        );
+        self.long_put.option.underlying_price = *price;
+        self.long_put.premium =
+            Positive::from(self.long_put.option.calculate_price_black_scholes()?.abs());
+        Ok(())
+    }
+    fn set_implied_volatility(&mut self, volatility: &Positive) -> Result<(), StrategyError> {
+        self.long_call.option.implied_volatility = *volatility;
+        self.long_put.option.implied_volatility = *volatility;
+        self.long_call.premium = Positive(
+            self.long_call
+                .option
+                .calculate_price_black_scholes()?
+                .abs(),
+        );
+        self.long_put.premium =
+            Positive(self.long_put.option.calculate_price_black_scholes()?.abs());
+        Ok(())
     }
 }
 
@@ -1578,12 +1649,12 @@ mod tests_long_strangle_delta {
             dec!(0.05),     // risk_free_rate
             Positive::ZERO, // dividend_yield
             pos!(1.0),      // quantity
-            pos!(84.2),     // premium_short_call
-            pos!(353.2),    // premium_short_put
-            pos!(7.01),     // open_fee_short_call
-            pos!(7.01),     // close_fee_short_call
-            pos!(7.01),     // open_fee_short_put
-            pos!(7.01),     // close_fee_short_put
+            pos!(84.2),     // premium_long_call
+            pos!(353.2),    // premium_long_put
+            pos!(7.01),     // open_fee_long_call
+            pos!(7.01),     // close_fee_long_call
+            pos!(7.01),     // open_fee_long_put
+            pos!(7.01),     // close_fee_long_put
         )
     }
 
@@ -1708,12 +1779,12 @@ mod tests_long_strangle_delta_size {
             dec!(0.05),     // risk_free_rate
             Positive::ZERO, // dividend_yield
             pos!(2.0),      // quantity
-            pos!(84.2),     // premium_short_call
-            pos!(353.2),    // premium_short_put
-            pos!(7.01),     // open_fee_short_call
-            pos!(7.01),     // close_fee_short_call
-            pos!(7.01),     // open_fee_short_put
-            pos!(7.01),     // close_fee_short_put
+            pos!(84.2),     // premium_long_call
+            pos!(353.2),    // premium_long_put
+            pos!(7.01),     // open_fee_long_call
+            pos!(7.01),     // close_fee_long_call
+            pos!(7.01),     // open_fee_long_put
+            pos!(7.01),     // close_fee_long_put
         )
     }
 
@@ -2085,12 +2156,12 @@ mod tests_adjust_option_position_long {
             dec!(0.05),     // risk_free_rate
             Positive::ZERO, // dividend_yield
             pos!(1.0),      // quantity
-            pos!(2.0),      // premium_short_call
-            pos!(2.0),      // premium_short_put
-            pos!(0.1),      // open_fee_short_call
-            pos!(0.1),      // close_fee_short_call
-            pos!(0.1),      // open_fee_short_put
-            pos!(0.1),      // close_fee_short_put
+            pos!(2.0),      // premium_long_call
+            pos!(2.0),      // premium_long_put
+            pos!(0.1),      // open_fee_long_call
+            pos!(0.1),      // close_fee_long_call
+            pos!(0.1),      // open_fee_long_put
+            pos!(0.1),      // close_fee_long_put
         )
     }
 
