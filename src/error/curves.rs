@@ -363,7 +363,6 @@ mod tests {
     use std::error::Error;
 
     #[test]
-
     fn test_curves_error_display() {
         let error = CurveError::Point2DError {
             reason: "Invalid coordinates",
@@ -383,7 +382,6 @@ mod tests {
     }
 
     #[test]
-
     fn test_operation_not_supported() {
         let error = CurveError::operation_not_supported("test_op", "TestStrat");
         match error {
@@ -399,7 +397,6 @@ mod tests {
     }
 
     #[test]
-
     fn test_invalid_parameters() {
         let error = CurveError::invalid_parameters("test_op", "invalid input");
         match error {
@@ -415,7 +412,6 @@ mod tests {
     }
 
     #[test]
-
     fn test_error_trait_implementation() {
         let error = CurveError::Point2DError {
             reason: "test error",
@@ -425,7 +421,6 @@ mod tests {
     }
 
     #[test]
-
     fn test_from_box_dyn_error() {
         let boxed_error: Box<dyn Error> =
             Box::new(std::io::Error::new(std::io::ErrorKind::Other, "io error"));
@@ -437,7 +432,6 @@ mod tests {
     }
 
     #[test]
-
     fn test_from_position_error() {
         let position_error = PositionError::unsupported_operation("TestStruct", "test_op");
         let curves_error = CurveError::from(position_error);
@@ -455,7 +449,6 @@ mod tests {
     }
 
     #[test]
-
     fn test_debug_implementation() {
         let error = CurveError::Point2DError {
             reason: "test debug",

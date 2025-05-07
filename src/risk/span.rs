@@ -276,7 +276,6 @@ mod tests_span {
     use tracing::info;
 
     #[test]
-
     fn test_span_margin() {
         setup_logger();
         let option = create_sample_option(

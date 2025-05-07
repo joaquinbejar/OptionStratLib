@@ -2,6 +2,7 @@ use crate::pricing::Profit;
 use crate::simulation::WalkParams;
 use crate::simulation::randomwalk::RandomWalk;
 use crate::simulation::steps::Step;
+use crate::strategies::base::BasicAble;
 use crate::utils::Len;
 use crate::visualization::utils::{
     Graph, GraphBackend, calculate_axis_range, draw_points_on_chart, draw_vertical_lines_on_chart,
@@ -17,7 +18,6 @@ use rust_decimal::Decimal;
 use std::error::Error;
 use std::fmt::Display;
 use std::ops::{AddAssign, Index, IndexMut};
-use crate::strategies::base::BasicAble;
 
 /// Represents a generic simulator for managing and simulating random walks.
 ///
@@ -284,8 +284,11 @@ where
     }
 }
 
-impl<X, Y> BasicAble for Simulator<X, Y> 
-where X: AddAssign + Copy + Display + Into<Positive>, Y: Clone + Display + Into<Positive>, {
+impl<X, Y> BasicAble for Simulator<X, Y>
+where
+    X: AddAssign + Copy + Display + Into<Positive>,
+    Y: Clone + Display + Into<Positive>,
+{
     fn get_title(&self) -> String {
         self.title.clone()
     }
@@ -382,7 +385,7 @@ where
         root.present()?;
         Ok(())
     }
-    
+
     fn get_x_values(&self) -> Vec<Positive> {
         self.random_walks
             .iter()

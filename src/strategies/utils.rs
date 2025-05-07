@@ -149,7 +149,6 @@ mod tests_strategies_utils {
     use approx::assert_relative_eq;
 
     #[test]
-
     fn test_find_optimal_side_variants() {
         let upper = FindOptimalSide::Upper;
         let lower = FindOptimalSide::Lower;
@@ -163,7 +162,6 @@ mod tests_strategies_utils {
     }
 
     #[test]
-
     fn test_optimization_criteria_variants() {
         let ratio = OptimizationCriteria::Ratio;
         let area = OptimizationCriteria::Area;
@@ -173,7 +171,6 @@ mod tests_strategies_utils {
     }
 
     #[test]
-
     fn test_calculate_price_range_basic() {
         let start = pos!(100.0);
         let end = pos!(110.0);
@@ -192,7 +189,6 @@ mod tests_strategies_utils {
     }
 
     #[test]
-
     fn test_calculate_price_range_single_step() {
         let start = pos!(100.0);
         let end = pos!(100.0);
@@ -205,7 +201,6 @@ mod tests_strategies_utils {
     }
 
     #[test]
-
     fn test_calculate_price_range_large_step() {
         let start = pos!(100.0);
         let end = pos!(110.0);
@@ -218,7 +213,6 @@ mod tests_strategies_utils {
     }
 
     #[test]
-
     fn test_calculate_price_range_fractional_step() {
         let start = pos!(1.0);
         let end = pos!(2.0);
@@ -234,7 +228,6 @@ mod tests_strategies_utils {
     }
 
     #[test]
-
     fn test_calculate_price_range_empty() {
         let start = pos!(100.0);
         let end = pos!(90.0);

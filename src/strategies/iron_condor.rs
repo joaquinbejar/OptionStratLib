@@ -22,14 +22,14 @@ use crate::error::{GreeksError, OperationErrorKind, ProbabilityError};
 use crate::greeks::Greeks;
 use crate::model::ProfitLossRange;
 use crate::model::position::Position;
-use crate::model::types::{OptionStyle, OptionType, Side};
+use crate::model::types::{OptionBasicType, OptionStyle, OptionType, Side};
 use crate::model::utils::mean_and_std;
 use crate::pnl::utils::{PnL, PnLCalculator};
 use crate::pricing::payoff::Profit;
 use crate::strategies::delta_neutral::DeltaNeutrality;
 use crate::strategies::probabilities::{ProbabilityAnalysis, VolatilityAdjustment};
 use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
-use crate::strategies::{StrategyBasics, StrategyConstructor};
+use crate::strategies::{BasicAble, StrategyBasics, StrategyConstructor};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
 use crate::{ExpirationDate, Options, Positive};
@@ -39,6 +39,7 @@ use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{RED, ShapeStyle};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::error::Error;
 use tracing::{error, info};
 
@@ -436,7 +437,7 @@ impl BreakEvenable for IronCondor {
     fn update_break_even_points(&mut self) -> Result<(), StrategyError> {
         self.break_even_points = Vec::new();
 
-        let net_credit = self.net_premium_received()? / self.short_call.option.quantity;
+        let net_credit = self.get_net_premium_received()? / self.short_call.option.quantity;
 
         self.break_even_points
             .push((self.short_call.option.strike_price + net_credit).round_to(2));
@@ -599,14 +600,78 @@ impl Strategable for IronCondor {
     }
 }
 
-impl Strategies for IronCondor {
-    fn get_underlying_price(&self) -> Positive {
-        self.long_put.option.underlying_price
-    }
+impl BasicAble for IronCondor {
+    fn get_title(&self) -> String {
+        let strategy_title = format!(
+            "{:?} Strategy on {} Size {}:",
+            self.kind, self.short_put.option.underlying_symbol, self.short_put.option.quantity
+        );
+        let leg_titles: Vec<String> = [
+            format!("Long Put: ${}", self.long_put.option.strike_price),
+            format!("Short Put: ${}", self.short_put.option.strike_price),
+            format!("Short Call: ${}", self.short_call.option.strike_price),
+            format!("Long Call: ${}", self.long_call.option.strike_price),
+            format!(
+                "Expire: {}",
+                self.short_put
+                    .option
+                    .expiration_date
+                    .get_date_string()
+                    .unwrap()
+            ),
+        ]
+        .iter()
+        .map(|leg| leg.to_string())
+        .collect();
 
-    fn max_profit(&self) -> Result<Positive, StrategyError> {
-        let left_profit = self.calculate_profit_at(self.short_call.option.strike_price)?;
-        let right_profit = self.calculate_profit_at(self.short_put.option.strike_price)?;
+        if leg_titles.is_empty() {
+            strategy_title
+        } else {
+            format!("{}\n\t{}", strategy_title, leg_titles.join("\n\t"))
+        }
+    }
+    fn get_option_basic_type(&self) -> OptionBasicType {
+        unimplemented!("get_option_basic_type is not implemented for this strategy");
+    }
+    fn get_symbol(&self) -> &str {
+        unimplemented!("get_symbol is not implemented for this strategy");
+    }
+    fn get_strike(&self) -> HashMap<OptionBasicType, &Positive> {
+        unimplemented!("get_strike is not implemented for this strategy");
+    }
+    fn get_side(&self) -> HashMap<OptionBasicType, &Side> {
+        unimplemented!("get_side is not implemented for this strategy");
+    }
+    fn get_type(&self) -> &OptionType {
+        unimplemented!("get_type is not implemented for this strategy");
+    }
+    fn get_style(&self) -> HashMap<OptionBasicType, &OptionStyle> {
+        unimplemented!("get_style is not implemented for this strategy");
+    }
+    fn get_expiration(&self) -> HashMap<OptionBasicType, &ExpirationDate> {
+        unimplemented!("get_expiration is not implemented for this strategy");
+    }
+    fn get_implied_volatility(&self) -> HashMap<OptionBasicType, &Positive> {
+        unimplemented!("get_implied_volatility is not implemented for this strategy");
+    }
+    fn get_quantity(&self) -> HashMap<OptionBasicType, &Positive> {
+        unimplemented!("get_quantity is not implemented for this strategy");
+    }
+    fn get_underlying_price(&self) -> &Positive {
+        &self.long_put.option.underlying_price
+    }
+    fn get_risk_free_rate(&self) -> HashMap<OptionBasicType, &Decimal> {
+        unimplemented!("get_risk_free_rate is not implemented for this strategy");
+    }
+    fn get_dividend_yield(&self) -> HashMap<OptionBasicType, &Positive> {
+        unimplemented!("get_dividend_yield is not implemented for this strategy");
+    }
+}
+
+impl Strategies for IronCondor {
+    fn get_max_profit(&self) -> Result<Positive, StrategyError> {
+        let left_profit = self.calculate_profit_at(&self.short_call.option.strike_price)?;
+        let right_profit = self.calculate_profit_at(&self.short_put.option.strike_price)?;
         if left_profit < Decimal::ZERO || right_profit < Decimal::ZERO {
             return Err(StrategyError::ProfitLossError(
                 ProfitLossErrorKind::MaxProfitError {
@@ -616,13 +681,13 @@ impl Strategies for IronCondor {
         }
 
         Ok(self
-            .calculate_profit_at(self.short_call.option.strike_price)?
+            .calculate_profit_at(&self.short_call.option.strike_price)?
             .into())
     }
 
-    fn max_loss(&self) -> Result<Positive, StrategyError> {
-        let left_loss = self.calculate_profit_at(self.long_put.option.strike_price)?;
-        let right_loss = self.calculate_profit_at(self.long_call.option.strike_price)?;
+    fn get_max_loss(&self) -> Result<Positive, StrategyError> {
+        let left_loss = self.calculate_profit_at(&self.long_put.option.strike_price)?;
+        let right_loss = self.calculate_profit_at(&self.long_call.option.strike_price)?;
         if left_loss > Decimal::ZERO || right_loss > Decimal::ZERO {
             return Err(StrategyError::ProfitLossError(
                 ProfitLossErrorKind::MaxLossError {
@@ -634,12 +699,12 @@ impl Strategies for IronCondor {
         Ok(result.into())
     }
 
-    fn profit_area(&self) -> Result<Decimal, StrategyError> {
+    fn get_profit_area(&self) -> Result<Decimal, StrategyError> {
         let inner_width =
             (self.short_call.option.strike_price - self.short_put.option.strike_price).to_f64();
         let outer_width =
             (self.long_call.option.strike_price - self.long_put.option.strike_price).to_f64();
-        let height = self.max_profit().unwrap_or(Positive::ZERO);
+        let height = self.get_max_profit().unwrap_or(Positive::ZERO);
 
         let inner_area = inner_width * height;
         let outer_triangles = (outer_width - inner_width) * height / 2.0;
@@ -649,9 +714,9 @@ impl Strategies for IronCondor {
         Ok(Decimal::from_f64(result).unwrap())
     }
 
-    fn profit_ratio(&self) -> Result<Decimal, StrategyError> {
-        let max_profit = self.max_profit().unwrap_or(Positive::ZERO);
-        let max_loss = self.max_loss().unwrap_or(Positive::ZERO);
+    fn get_profit_ratio(&self) -> Result<Decimal, StrategyError> {
+        let max_profit = self.get_max_profit().unwrap_or(Positive::ZERO);
+        let max_loss = self.get_max_loss().unwrap_or(Positive::ZERO);
         match (max_profit, max_loss) {
             (value, _) if value == Positive::ZERO => Ok(Decimal::ZERO),
             (_, value) if value == Positive::ZERO => Ok(Decimal::MAX),
@@ -705,7 +770,9 @@ impl Optimizable for IronCondor {
                     fourth: long_call,
                 };
                 let strategy = strategy.create_strategy(option_chain, &legs);
-                strategy.validate() && strategy.max_profit().is_ok() && strategy.max_loss().is_ok()
+                strategy.validate()
+                    && strategy.get_max_profit().is_ok()
+                    && strategy.get_max_loss().is_ok()
             })
             // Map to OptionDataGroup
             .map(move |(long_put, short_put, short_call, long_call)| {
@@ -741,8 +808,8 @@ impl Optimizable for IronCondor {
             let strategy = self.create_strategy(option_chain, &legs);
             // Calculate the current value based on the optimization criteria
             let current_value = match criteria {
-                OptimizationCriteria::Ratio => strategy.profit_ratio().unwrap(),
-                OptimizationCriteria::Area => strategy.profit_area().unwrap(),
+                OptimizationCriteria::Ratio => strategy.get_profit_ratio().unwrap(),
+                OptimizationCriteria::Area => strategy.get_profit_area().unwrap(),
             };
 
             if current_value > best_value {
@@ -781,8 +848,8 @@ impl Optimizable for IronCondor {
                     short_put.put_bid.unwrap(),
                     long_call.call_ask.unwrap(),
                     long_put.put_ask.unwrap(),
-                    self.fees().unwrap() / 8.0,
-                    self.fees().unwrap() / 8.0,
+                    self.get_fees().unwrap() / 8.0,
+                    self.get_fees().unwrap() / 8.0,
                 )
             }
             _ => panic!("Invalid number of legs for Iron Condor strategy"),
@@ -791,8 +858,8 @@ impl Optimizable for IronCondor {
 }
 
 impl Profit for IronCondor {
-    fn calculate_profit_at(&self, price: Positive) -> Result<Decimal, Box<dyn Error>> {
-        let price = Some(&price);
+    fn calculate_profit_at(&self, price: &Positive) -> Result<Decimal, Box<dyn Error>> {
+        let price = Some(price);
         Ok(self.short_call.pnl_at_expiration(&price)?
             + self.short_put.pnl_at_expiration(&price)?
             + self.long_call.pnl_at_expiration(&price)?
@@ -801,41 +868,10 @@ impl Profit for IronCondor {
 }
 
 impl Graph for IronCondor {
-    fn title(&self) -> String {
-        let strategy_title = format!(
-            "{:?} Strategy on {} Size {}:",
-            self.kind, self.short_put.option.underlying_symbol, self.short_put.option.quantity
-        );
-        let leg_titles: Vec<String> = [
-            format!("Long Put: ${}", self.long_put.option.strike_price),
-            format!("Short Put: ${}", self.short_put.option.strike_price),
-            format!("Short Call: ${}", self.short_call.option.strike_price),
-            format!("Long Call: ${}", self.long_call.option.strike_price),
-            format!(
-                "Expire: {}",
-                self.short_put
-                    .option
-                    .expiration_date
-                    .get_date_string()
-                    .unwrap()
-            ),
-        ]
-        .iter()
-        .map(|leg| leg.to_string())
-        .collect();
-
-        if leg_titles.is_empty() {
-            strategy_title
-        } else {
-            format!("{}\n\t{}", strategy_title, leg_titles.join("\n\t"))
-        }
-    }
-
     fn get_x_values(&self) -> Vec<Positive> {
-        self.best_range_to_show(Positive::from(1.0))
+        self.get_best_range_to_show(Positive::from(1.0))
             .unwrap_or_else(|_| vec![self.short_call.option.strike_price])
     }
-
     fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<f64, f64>> {
         let vertical_lines = vec![ChartVerticalLine {
             x_coordinate: self.short_call.option.underlying_price.to_f64(),
@@ -850,10 +886,9 @@ impl Graph for IronCondor {
 
         vertical_lines
     }
-
     fn get_points(&self) -> Vec<ChartPoint<(f64, f64)>> {
         let mut points: Vec<ChartPoint<(f64, f64)>> = Vec::new();
-        let max_profit = self.max_profit().unwrap_or(Positive::ZERO);
+        let max_profit = self.get_max_profit().unwrap_or(Positive::ZERO);
         let short_call_strike_price = &self.short_call.option.strike_price;
         let short_put_strike_price = &self.short_put.option.strike_price;
         let long_call_strike_price = &self.long_call.option.strike_price;
@@ -918,7 +953,7 @@ impl Graph for IronCondor {
         });
 
         let loss = self
-            .calculate_profit_at(*long_call_strike_price)
+            .calculate_profit_at(long_call_strike_price)
             .unwrap()
             .to_f64()
             .unwrap();
@@ -937,7 +972,7 @@ impl Graph for IronCondor {
         });
 
         let loss = self
-            .calculate_profit_at(*long_put_strike_price)
+            .calculate_profit_at(long_put_strike_price)
             .unwrap()
             .to_f64()
             .unwrap();
@@ -953,23 +988,18 @@ impl Graph for IronCondor {
             font_size: 18,
         });
 
-        points.push(self.get_point_at_price(*current_price));
+        points.push(self.get_point_at_price(current_price));
 
         points
     }
 }
 
 impl ProbabilityAnalysis for IronCondor {
-    fn get_expiration(&self) -> Result<ExpirationDate, ProbabilityError> {
-        Ok(self.long_call.option.expiration_date)
-    }
-
-    fn get_risk_free_rate(&self) -> Option<Decimal> {
-        Some(self.long_call.option.risk_free_rate)
-    }
-
     fn get_profit_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
         let break_even_points = self.get_break_even_points()?;
+        let option = &self.short_call.option;
+        let expiration_date = &option.expiration_date;
+        let risk_free_rate = option.risk_free_rate;
 
         let (mean_volatility, std_dev) = mean_and_std(vec![
             self.short_call.option.implied_volatility,
@@ -991,8 +1021,8 @@ impl ProbabilityAnalysis for IronCondor {
                 std_dev_adjustment: std_dev,
             }),
             None,
-            self.get_expiration()?,
-            self.get_risk_free_rate(),
+            expiration_date,
+            Some(risk_free_rate),
         )?;
 
         Ok(vec![profit_range])
@@ -1000,6 +1030,9 @@ impl ProbabilityAnalysis for IronCondor {
 
     fn get_loss_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
         let break_even_points = self.get_break_even_points()?;
+        let option = &self.short_call.option;
+        let expiration_date = &option.expiration_date;
+        let risk_free_rate = option.risk_free_rate;
 
         let (mean_volatility, std_dev) = mean_and_std(vec![
             self.short_call.option.implied_volatility,
@@ -1021,8 +1054,8 @@ impl ProbabilityAnalysis for IronCondor {
                 std_dev_adjustment: std_dev,
             }),
             None,
-            self.get_expiration()?,
-            self.get_risk_free_rate(),
+            expiration_date,
+            Some(risk_free_rate),
         )?;
 
         loss_range_upper.calculate_probability(
@@ -1032,8 +1065,8 @@ impl ProbabilityAnalysis for IronCondor {
                 std_dev_adjustment: std_dev,
             }),
             None,
-            self.get_expiration()?,
-            self.get_risk_free_rate(),
+            expiration_date,
+            Some(risk_free_rate),
         )?;
 
         Ok(vec![loss_range_lower, loss_range_upper])
@@ -1101,7 +1134,6 @@ mod tests_iron_condor {
     use rust_decimal_macros::dec;
 
     #[test]
-
     fn test_iron_condor_creation() {
         let date = Utc.with_ymd_and_hms(2024, 12, 1, 0, 0, 0).unwrap();
         let iron_condor = IronCondor::new(
@@ -1135,7 +1167,6 @@ mod tests_iron_condor {
     }
 
     #[test]
-
     fn test_max_loss() {
         let date = Utc.with_ymd_and_hms(2024, 12, 1, 0, 0, 0).unwrap();
         let iron_condor = IronCondor::new(
@@ -1158,11 +1189,10 @@ mod tests_iron_condor {
             pos!(5.0),
         );
 
-        assert_eq!(iron_condor.max_loss().unwrap_or(Positive::ZERO), 51.3);
+        assert_eq!(iron_condor.get_max_loss().unwrap_or(Positive::ZERO), 51.3);
     }
 
     #[test]
-
     fn test_max_profit() {
         let date = Utc.with_ymd_and_hms(2024, 12, 1, 0, 0, 0).unwrap();
         let iron_condor = IronCondor::new(
@@ -1185,15 +1215,14 @@ mod tests_iron_condor {
             pos!(0.07),
         );
 
-        let expected_profit = iron_condor.net_premium_received().unwrap().to_f64();
+        let expected_profit = iron_condor.get_net_premium_received().unwrap().to_f64();
         assert_eq!(
-            iron_condor.max_profit().unwrap_or(Positive::ZERO),
+            iron_condor.get_max_profit().unwrap_or(Positive::ZERO),
             expected_profit
         );
     }
 
     #[test]
-
     fn test_get_break_even_points() {
         let date = Utc.with_ymd_and_hms(2024, 12, 1, 0, 0, 0).unwrap();
         let iron_condor = IronCondor::new(
@@ -1223,7 +1252,6 @@ mod tests_iron_condor {
     }
 
     #[test]
-
     fn test_fees() {
         let date = Utc.with_ymd_and_hms(2024, 12, 1, 0, 0, 0).unwrap();
         let iron_condor = IronCondor::new(
@@ -1254,11 +1282,10 @@ mod tests_iron_condor {
             + iron_condor.long_call.close_fee
             + iron_condor.long_put.open_fee
             + iron_condor.long_put.close_fee;
-        assert_eq!(iron_condor.fees().unwrap().to_f64(), expected_fees);
+        assert_eq!(iron_condor.get_fees().unwrap().to_f64(), expected_fees);
     }
 
     #[test]
-
     fn test_calculate_profit_at() {
         let date = Utc.with_ymd_and_hms(2024, 12, 1, 0, 0, 0).unwrap();
         let iron_condor = IronCondor::new(
@@ -1299,7 +1326,7 @@ mod tests_iron_condor {
                 .pnl_at_expiration(&Some(&price))
                 .unwrap();
         assert_eq!(
-            iron_condor.calculate_profit_at(price).unwrap(),
+            iron_condor.calculate_profit_at(&price).unwrap(),
             expected_profit
         );
     }
@@ -1363,14 +1390,12 @@ mod tests_iron_condor_validable {
     }
 
     #[test]
-
     fn test_validate_valid_condor() {
         let condor = create_valid_condor();
         assert!(condor.validate());
     }
 
     #[test]
-
     fn test_validate_invalid_short_call() {
         let mut condor = create_valid_condor();
         // Make short call invalid by setting quantity to zero
@@ -1380,7 +1405,6 @@ mod tests_iron_condor_validable {
     }
 
     #[test]
-
     fn test_validate_invalid_short_put() {
         let mut condor = create_valid_condor();
         // Make short put invalid by setting quantity to zero
@@ -1390,7 +1414,6 @@ mod tests_iron_condor_validable {
     }
 
     #[test]
-
     fn test_validate_invalid_long_call() {
         let mut condor = create_valid_condor();
         // Make long call invalid by setting quantity to zero
@@ -1400,7 +1423,6 @@ mod tests_iron_condor_validable {
     }
 
     #[test]
-
     fn test_validate_invalid_long_put() {
         let mut condor = create_valid_condor();
         // Make long put invalid by setting quantity to zero
@@ -1410,7 +1432,6 @@ mod tests_iron_condor_validable {
     }
 
     #[test]
-
     fn test_validate_all_invalid() {
         let mut condor = create_valid_condor();
         // Make all positions invalid
@@ -1457,7 +1478,6 @@ mod tests_iron_condor_strategies {
     }
 
     #[test]
-
     fn test_add_leg() {
         let mut condor = create_test_condor();
 
@@ -1515,7 +1535,6 @@ mod tests_iron_condor_strategies {
     }
 
     #[test]
-
     fn test_get_legs() {
         let condor = create_test_condor();
         let legs = condor.get_positions().expect("Invalid legs");
@@ -1532,7 +1551,6 @@ mod tests_iron_condor_strategies {
     }
 
     #[test]
-
     fn test_get_break_even_points() {
         let condor = IronCondor::new(
             "GOLD".to_string(),
@@ -1561,7 +1579,6 @@ mod tests_iron_condor_strategies {
     }
 
     #[test]
-
     fn test_max_profit() {
         let condor = IronCondor::new(
             "TEST".to_string(),
@@ -1582,12 +1599,11 @@ mod tests_iron_condor_strategies {
             Positive::ZERO, // open_fee
             Positive::ZERO, // closing fee
         );
-        let max_profit = condor.max_profit().unwrap();
+        let max_profit = condor.get_max_profit().unwrap();
         assert_eq!(max_profit, pos!(ZERO));
     }
 
     #[test]
-
     fn test_max_profit_bis() {
         let condor = IronCondor::new(
             "TEST".to_string(),
@@ -1608,12 +1624,11 @@ mod tests_iron_condor_strategies {
             pos!(0.09),     // open_fee
             pos!(0.09),     // closing fee
         );
-        let max_profit = condor.max_profit().unwrap();
+        let max_profit = condor.get_max_profit().unwrap();
         assert_eq!(max_profit, pos!(19.28));
     }
 
     #[test]
-
     fn test_max_loss() {
         let condor = IronCondor::new(
             "TEST".to_string(),
@@ -1634,12 +1649,11 @@ mod tests_iron_condor_strategies {
             pos!(0.1),      // open_fee
             pos!(0.1),      // closing fee
         );
-        let max_loss = condor.max_loss().unwrap();
+        let max_loss = condor.get_max_loss().unwrap();
         assert_eq!(max_loss, pos!(7.9999999999999964));
     }
 
     #[test]
-
     fn test_max_loss_with_uneven_wings() {
         let condor = IronCondor::new(
             "TEST".to_string(),
@@ -1661,27 +1675,24 @@ mod tests_iron_condor_strategies {
             pos!(0.5),
         );
 
-        let max_loss = condor.max_loss().unwrap();
+        let max_loss = condor.get_max_loss().unwrap();
         assert_eq!(max_loss, pos!(12.0));
     }
 
     #[test]
-
     fn test_total_cost() {
         let condor = create_test_condor();
         // Total cost = 2.0 + 2.0 + 1.0 + 1.0 = 6.0
-        assert_eq!(condor.total_cost().unwrap(), pos!(6.0));
+        assert_eq!(condor.get_total_cost().unwrap(), pos!(6.0));
     }
 
     #[test]
-
     fn test_net_premium_received() {
         let condor = create_test_condor();
-        assert_eq!(condor.net_premium_received().unwrap().to_f64(), 0.0);
+        assert_eq!(condor.get_net_premium_received().unwrap().to_f64(), 0.0);
     }
 
     #[test]
-
     fn test_net_premium_received_bis_i() {
         let condor = IronCondor::new(
             "TEST".to_string(),
@@ -1702,11 +1713,10 @@ mod tests_iron_condor_strategies {
             Positive::ZERO, // open_fee
             Positive::ZERO, // closing fee
         );
-        assert_eq!(condor.net_premium_received().unwrap().to_f64(), ZERO);
+        assert_eq!(condor.get_net_premium_received().unwrap().to_f64(), ZERO);
     }
 
     #[test]
-
     fn test_net_premium_received_bis_ii() {
         let condor = IronCondor::new(
             "TEST".to_string(),
@@ -1727,11 +1737,10 @@ mod tests_iron_condor_strategies {
             Positive::ONE,  // open_fee
             Positive::ONE,  // closing fee
         );
-        assert_eq!(condor.net_premium_received().unwrap().to_f64(), 0.0);
+        assert_eq!(condor.get_net_premium_received().unwrap().to_f64(), 0.0);
     }
 
     #[test]
-
     fn test_net_premium_received_bis_iii() {
         let condor = IronCondor::new(
             "TEST".to_string(),
@@ -1752,11 +1761,10 @@ mod tests_iron_condor_strategies {
             Positive::ONE,  // open_fee
             Positive::ONE,  // closing fee
         );
-        assert_eq!(condor.net_premium_received().unwrap().to_f64(), 0.0);
+        assert_eq!(condor.get_net_premium_received().unwrap().to_f64(), 0.0);
     }
 
     #[test]
-
     fn test_net_premium_received_bis_iv() {
         let condor = IronCondor::new(
             "TEST".to_string(),
@@ -1777,11 +1785,10 @@ mod tests_iron_condor_strategies {
             Positive::ONE,  // open_fee
             Positive::ONE,  // closing fee
         );
-        assert_eq!(condor.net_premium_received().unwrap().to_f64(), 2.0);
+        assert_eq!(condor.get_net_premium_received().unwrap().to_f64(), 2.0);
     }
 
     #[test]
-
     fn test_net_premium_received_bis_v() {
         let condor = IronCondor::new(
             "TEST".to_string(),
@@ -1802,29 +1809,26 @@ mod tests_iron_condor_strategies {
             Positive::ONE,  // open_fee
             Positive::ONE,  // closing fee
         );
-        assert_eq!(condor.net_premium_received().unwrap().to_f64(), 0.0);
+        assert_eq!(condor.get_net_premium_received().unwrap().to_f64(), 0.0);
     }
 
     #[test]
-
     fn test_fees() {
         let condor = create_test_condor();
         // Total fees = (0.5 + 0.5) * 4 = 4.0
-        assert_eq!(condor.fees().unwrap().to_f64(), 4.0);
+        assert_eq!(condor.get_fees().unwrap().to_f64(), 4.0);
     }
 
     #[test]
-
     fn test_profit_area() {
         let condor = create_test_condor();
-        assert_eq!(condor.profit_area().unwrap().to_f64().unwrap(), 0.0);
+        assert_eq!(condor.get_profit_area().unwrap().to_f64().unwrap(), 0.0);
     }
 
     #[test]
-
     fn test_best_range_to_show() {
         let condor = create_test_condor();
-        let range = condor.best_range_to_show(pos!(1.0)).unwrap();
+        let range = condor.get_best_range_to_show(pos!(1.0)).unwrap();
 
         assert!(!range.is_empty());
         assert!(range[0] < condor.long_put.option.strike_price);
@@ -1832,7 +1836,6 @@ mod tests_iron_condor_strategies {
     }
 
     #[test]
-
     fn test_with_multiple_contracts() {
         let condor = IronCondor::new(
             "TEST".to_string(),
@@ -1854,12 +1857,11 @@ mod tests_iron_condor_strategies {
             pos!(0.5),
         );
 
-        assert!(condor.max_profit().is_err());
-        assert_eq!(condor.max_loss().unwrap(), pos!(14.0));
+        assert!(condor.get_max_profit().is_err());
+        assert_eq!(condor.get_max_loss().unwrap(), pos!(14.0));
     }
 
     #[test]
-
     fn test_with_no_premium() {
         let mut condor = create_test_condor();
         condor.short_call.premium = Positive::ONE;
@@ -1867,8 +1869,8 @@ mod tests_iron_condor_strategies {
         condor.long_call.premium = Positive::ONE;
         condor.long_put.premium = Positive::ONE;
 
-        assert_eq!(condor.net_premium_received().unwrap().to_f64(), 0.0);
-        assert!(condor.max_profit().is_err());
+        assert_eq!(condor.get_net_premium_received().unwrap().to_f64(), 0.0);
+        assert!(condor.get_max_profit().is_err());
     }
 }
 
@@ -1926,7 +1928,6 @@ mod tests_iron_condor_optimizable {
     }
 
     #[test]
-
     fn test_find_optimal_lower_side() {
         let mut condor = create_test_condor();
         let chain = create_test_chain();
@@ -1939,7 +1940,6 @@ mod tests_iron_condor_optimizable {
     }
 
     #[test]
-
     fn test_find_optimal_upper_side() {
         let mut condor = create_test_condor();
         let chain = create_test_chain();
@@ -1952,7 +1952,6 @@ mod tests_iron_condor_optimizable {
     }
 
     #[test]
-
     fn test_find_optimal_range() {
         let mut condor = create_test_condor();
         let chain = create_test_chain();
@@ -1969,20 +1968,18 @@ mod tests_iron_condor_optimizable {
     }
 
     #[test]
-
     fn test_find_optimal_by_area() {
         let mut condor = create_test_condor();
         let chain = create_test_chain();
 
-        let initial_area = condor.profit_area().unwrap();
+        let initial_area = condor.get_profit_area().unwrap();
         condor.find_optimal(&chain, FindOptimalSide::All, OptimizationCriteria::Area);
 
         assert!(condor.validate());
-        assert!(condor.profit_area().unwrap() >= initial_area);
+        assert!(condor.get_profit_area().unwrap() >= initial_area);
     }
 
     #[test]
-
     fn test_is_valid_long_option() {
         let condor = create_test_condor();
         let option = OptionData::new(
@@ -2000,16 +1997,16 @@ mod tests_iron_condor_optimizable {
         );
 
         // Test with different sides
-        assert!(condor.is_valid_long_option(&option, &FindOptimalSide::All));
-        assert!(condor.is_valid_long_option(&option, &FindOptimalSide::Lower));
-        assert!(!condor.is_valid_long_option(&option, &FindOptimalSide::Upper));
+        assert!(condor.is_valid_optimal_option(&option, &FindOptimalSide::All));
+        assert!(condor.is_valid_optimal_option(&option, &FindOptimalSide::Lower));
+        assert!(!condor.is_valid_optimal_option(&option, &FindOptimalSide::Upper));
         assert!(
-            condor.is_valid_long_option(&option, &FindOptimalSide::Range(pos!(85.0), pos!(95.0)))
+            condor
+                .is_valid_optimal_option(&option, &FindOptimalSide::Range(pos!(85.0), pos!(95.0)))
         );
     }
 
     #[test]
-
     fn test_is_valid_short_option() {
         let condor = create_test_condor();
         let option = OptionData::new(
@@ -2027,17 +2024,18 @@ mod tests_iron_condor_optimizable {
         );
 
         // Test with different sides
-        assert!(condor.is_valid_short_option(&option, &FindOptimalSide::All));
-        assert!(!condor.is_valid_short_option(&option, &FindOptimalSide::Lower));
-        assert!(condor.is_valid_short_option(&option, &FindOptimalSide::Upper));
+        assert!(condor.is_valid_optimal_option(&option, &FindOptimalSide::All));
+        assert!(!condor.is_valid_optimal_option(&option, &FindOptimalSide::Lower));
+        assert!(condor.is_valid_optimal_option(&option, &FindOptimalSide::Upper));
         assert!(
-            condor
-                .is_valid_short_option(&option, &FindOptimalSide::Range(pos!(100.0), pos!(110.0)))
+            condor.is_valid_optimal_option(
+                &option,
+                &FindOptimalSide::Range(pos!(100.0), pos!(110.0))
+            )
         );
     }
 
     #[test]
-
     fn test_create_strategy() {
         let condor = create_test_condor();
         let chain = create_test_chain();
@@ -2104,11 +2102,10 @@ mod tests_iron_condor_profit {
     }
 
     #[test]
-
     fn test_profit_at_max_profit_price() {
         let condor = create_test_condor();
         let profit = condor
-            .calculate_profit_at(pos!(100.0))
+            .calculate_profit_at(&pos!(100.0))
             .unwrap()
             .to_f64()
             .unwrap();
@@ -2117,11 +2114,10 @@ mod tests_iron_condor_profit {
     }
 
     #[test]
-
     fn test_profit_below_long_put() {
         let condor = create_test_condor();
         let profit = condor
-            .calculate_profit_at(pos!(85.0))
+            .calculate_profit_at(&pos!(85.0))
             .unwrap()
             .to_f64()
             .unwrap();
@@ -2130,11 +2126,10 @@ mod tests_iron_condor_profit {
     }
 
     #[test]
-
     fn test_profit_at_long_put() {
         let condor = create_test_condor();
         let profit = condor
-            .calculate_profit_at(pos!(90.0))
+            .calculate_profit_at(&pos!(90.0))
             .unwrap()
             .to_f64()
             .unwrap();
@@ -2143,11 +2138,10 @@ mod tests_iron_condor_profit {
     }
 
     #[test]
-
     fn test_profit_between_puts() {
         let condor = create_test_condor();
         let profit = condor
-            .calculate_profit_at(pos!(92.5))
+            .calculate_profit_at(&pos!(92.5))
             .unwrap()
             .to_f64()
             .unwrap();
@@ -2155,11 +2149,10 @@ mod tests_iron_condor_profit {
     }
 
     #[test]
-
     fn test_profit_at_short_put() {
         let condor = create_test_condor();
         let profit = condor
-            .calculate_profit_at(pos!(95.0))
+            .calculate_profit_at(&pos!(95.0))
             .unwrap()
             .to_f64()
             .unwrap();
@@ -2167,11 +2160,10 @@ mod tests_iron_condor_profit {
     }
 
     #[test]
-
     fn test_profit_in_profit_zone() {
         let condor = create_test_condor();
         let profit = condor
-            .calculate_profit_at(pos!(100.0))
+            .calculate_profit_at(&pos!(100.0))
             .unwrap()
             .to_f64()
             .unwrap();
@@ -2179,11 +2171,10 @@ mod tests_iron_condor_profit {
     }
 
     #[test]
-
     fn test_profit_at_short_call() {
         let condor = create_test_condor();
         let profit = condor
-            .calculate_profit_at(pos!(105.0))
+            .calculate_profit_at(&pos!(105.0))
             .unwrap()
             .to_f64()
             .unwrap();
@@ -2191,11 +2182,10 @@ mod tests_iron_condor_profit {
     }
 
     #[test]
-
     fn test_profit_between_calls() {
         let condor = create_test_condor();
         let profit = condor
-            .calculate_profit_at(pos!(107.5))
+            .calculate_profit_at(&pos!(107.5))
             .unwrap()
             .to_f64()
             .unwrap();
@@ -2203,11 +2193,10 @@ mod tests_iron_condor_profit {
     }
 
     #[test]
-
     fn test_profit_at_long_call() {
         let condor = create_test_condor();
         let profit = condor
-            .calculate_profit_at(pos!(110.0))
+            .calculate_profit_at(&pos!(110.0))
             .unwrap()
             .to_f64()
             .unwrap();
@@ -2216,11 +2205,10 @@ mod tests_iron_condor_profit {
     }
 
     #[test]
-
     fn test_profit_above_long_call() {
         let condor = create_test_condor();
         let profit = condor
-            .calculate_profit_at(pos!(115.0))
+            .calculate_profit_at(&pos!(115.0))
             .unwrap()
             .to_f64()
             .unwrap();
@@ -2228,7 +2216,6 @@ mod tests_iron_condor_profit {
     }
 
     #[test]
-
     fn test_profit_with_fees() {
         let condor = IronCondor::new(
             "TEST".to_string(),
@@ -2251,7 +2238,7 @@ mod tests_iron_condor_profit {
         );
 
         let profit = condor
-            .calculate_profit_at(pos!(100.0))
+            .calculate_profit_at(&pos!(100.0))
             .unwrap()
             .to_f64()
             .unwrap();
@@ -2261,7 +2248,6 @@ mod tests_iron_condor_profit {
     }
 
     #[test]
-
     fn test_profit_with_fees_qty() {
         let condor = IronCondor::new(
             "TEST".to_string(),
@@ -2284,7 +2270,7 @@ mod tests_iron_condor_profit {
         );
 
         let profit = condor
-            .calculate_profit_at(pos!(100.0))
+            .calculate_profit_at(&pos!(100.0))
             .unwrap()
             .to_f64()
             .unwrap();
@@ -2293,7 +2279,6 @@ mod tests_iron_condor_profit {
     }
 
     #[test]
-
     fn test_profit_with_multiple_contracts() {
         let condor = IronCondor::new(
             "TEST".to_string(),
@@ -2316,7 +2301,7 @@ mod tests_iron_condor_profit {
         );
 
         let profit = condor
-            .calculate_profit_at(pos!(100.0))
+            .calculate_profit_at(&pos!(100.0))
             .unwrap()
             .to_f64()
             .unwrap();
@@ -2325,7 +2310,6 @@ mod tests_iron_condor_profit {
     }
 
     #[test]
-
     fn test_profit_at_break_even_points() {
         let condor = create_test_condor();
 
@@ -2333,13 +2317,13 @@ mod tests_iron_condor_profit {
         let upper_break_even = pos!(107.0); // 105 + 2
 
         let lower_profit = condor
-            .calculate_profit_at(lower_break_even)
+            .calculate_profit_at(&lower_break_even)
             .unwrap()
             .to_f64()
             .unwrap();
 
         let upper_profit = condor
-            .calculate_profit_at(upper_break_even)
+            .calculate_profit_at(&upper_break_even)
             .unwrap()
             .to_f64()
             .unwrap();
@@ -2379,10 +2363,9 @@ mod tests_iron_condor_graph {
     }
 
     #[test]
-
     fn test_title_format() {
         let condor = create_test_condor();
-        let title = condor.title();
+        let title = condor.get_title();
 
         assert!(title.contains("IronCondor Strategy"));
         assert!(title.contains("TEST")); // Symbol
@@ -2397,7 +2380,6 @@ mod tests_iron_condor_graph {
     }
 
     #[test]
-
     fn test_get_vertical_lines() {
         let condor = create_test_condor();
         let lines = condor.get_vertical_lines();
@@ -2415,7 +2397,6 @@ mod tests_iron_condor_graph {
     }
 
     #[test]
-
     fn test_get_points() {
         let condor = create_test_condor();
         let points = condor.get_points();
@@ -2445,7 +2426,6 @@ mod tests_iron_condor_graph {
     }
 
     #[test]
-
     fn test_point_colors() {
         let condor = create_test_condor();
         let points = condor.get_points();
@@ -2470,7 +2450,6 @@ mod tests_iron_condor_graph {
     }
 
     #[test]
-
     fn test_point_styles() {
         let condor = create_test_condor();
         let points = condor.get_points();
@@ -2483,7 +2462,6 @@ mod tests_iron_condor_graph {
     }
 
     #[test]
-
     fn test_zero_profit_points() {
         let mut condor = create_test_condor();
         condor.short_call.premium = Positive::ONE;
@@ -2499,7 +2477,6 @@ mod tests_iron_condor_graph {
     }
 
     #[test]
-
     fn test_points_with_different_quantities() {
         let condor = create_test_condor();
         let points = condor.get_points();
@@ -2512,7 +2489,6 @@ mod tests_iron_condor_graph {
     }
 
     #[test]
-
     fn test_current_price_point() {
         let condor = create_test_condor();
         let points = condor.get_points();
@@ -2524,7 +2500,7 @@ mod tests_iron_condor_graph {
         );
 
         let expected_profit = condor
-            .calculate_profit_at(condor.long_call.option.underlying_price)
+            .calculate_profit_at(&condor.long_call.option.underlying_price)
             .unwrap()
             .to_f64()
             .unwrap();
@@ -2562,7 +2538,6 @@ mod tests_iron_condor_delta {
     }
 
     #[test]
-
     fn create_test_reducing_adjustments() {
         let strategy = get_strategy(pos!(2800.0));
         let size = dec!(-0.2124);
@@ -2620,7 +2595,6 @@ mod tests_iron_condor_delta {
     }
 
     #[test]
-
     fn create_test_increasing_adjustments() {
         let strategy = get_strategy(pos!(2500.0));
         let size = dec!(0.18282752);
@@ -2678,7 +2652,6 @@ mod tests_iron_condor_delta {
     }
 
     #[test]
-
     fn create_test_no_adjustments() {
         let strategy = get_strategy(pos!(2100.0));
 
@@ -2726,7 +2699,6 @@ mod tests_iron_condor_delta_size {
     }
 
     #[test]
-
     fn create_test_reducing_adjustments() {
         let strategy = get_strategy(pos!(2800.9));
         let size = dec!(-0.42443);
@@ -2783,7 +2755,6 @@ mod tests_iron_condor_delta_size {
     }
 
     #[test]
-
     fn create_test_increasing_adjustments() {
         let strategy = get_strategy(pos!(2500.9));
         let size = dec!(0.3656);
@@ -2841,7 +2812,6 @@ mod tests_iron_condor_delta_size {
     }
 
     #[test]
-
     fn create_test_no_adjustments() {
         let strategy = get_strategy(pos!(2100.0));
 
@@ -2861,7 +2831,6 @@ mod tests_iron_condor_probability {
     use super::*;
     use crate::strategies::probabilities::utils::PriceTrend;
     use crate::{assert_pos_relative_eq, pos};
-    use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
     /// Creates a test Iron Condor with standard parameters
@@ -2888,26 +2857,20 @@ mod tests_iron_condor_probability {
     }
 
     #[test]
-
     fn test_get_expiration() {
         let condor = create_test_condor();
-        let result = condor.get_expiration();
-        assert!(result.is_ok());
-        match result.unwrap() {
-            ExpirationDate::Days(days) => assert_eq!(days, 30.0),
-            _ => panic!("Expected ExpirationDate::Days"),
-        }
+        let expiration_date = *condor.get_expiration().values().next().unwrap();
+        assert_eq!(expiration_date, &ExpirationDate::Days(pos!(30.0)));
     }
 
     #[test]
-
     fn test_get_risk_free_rate() {
         let condor = create_test_condor();
-        assert_eq!(condor.get_risk_free_rate().unwrap().to_f64().unwrap(), 0.05);
+        let risk_free_rate = **condor.get_risk_free_rate().values().next().unwrap();
+        assert_eq!(risk_free_rate, dec!(0.05));
     }
 
     #[test]
-
     fn test_get_profit_ranges() {
         let condor = create_test_condor();
         let result = condor.get_profit_ranges();
@@ -2930,7 +2893,6 @@ mod tests_iron_condor_probability {
     }
 
     #[test]
-
     fn test_get_loss_ranges() {
         let condor = create_test_condor();
         let result = condor.get_loss_ranges();
@@ -2954,7 +2916,6 @@ mod tests_iron_condor_probability {
     }
 
     #[test]
-
     fn test_probability_sum_to_one() {
         let condor = create_test_condor();
 
@@ -2969,7 +2930,6 @@ mod tests_iron_condor_probability {
     }
 
     #[test]
-
     fn test_strike_prices_validity() {
         let condor = create_test_condor();
         // Verify strike price ordering
@@ -2979,7 +2939,6 @@ mod tests_iron_condor_probability {
     }
 
     #[test]
-
     fn test_break_even_points_validity() {
         let condor = create_test_condor();
         let break_even_points = condor.get_break_even_points().unwrap();
@@ -2993,7 +2952,6 @@ mod tests_iron_condor_probability {
     }
 
     #[test]
-
     fn test_with_volatility_adjustment() {
         let condor = create_test_condor();
         let vol_adj = Some(VolatilityAdjustment {
@@ -3009,7 +2967,6 @@ mod tests_iron_condor_probability {
     }
 
     #[test]
-
     fn test_with_price_trend() {
         let condor = create_test_condor();
         let trend = Some(PriceTrend {
@@ -3025,7 +2982,6 @@ mod tests_iron_condor_probability {
     }
 
     #[test]
-
     fn test_analyze_probabilities() {
         let condor = create_test_condor();
         let analysis = condor.analyze_probabilities(None, None).unwrap();
@@ -3037,7 +2993,6 @@ mod tests_iron_condor_probability {
     }
 
     #[test]
-
     fn test_high_volatility_scenario() {
         let mut condor = create_test_condor();
         let high_vol = pos!(0.5);
@@ -3052,7 +3007,6 @@ mod tests_iron_condor_probability {
     }
 
     #[test]
-
     fn test_extreme_probabilities() {
         let condor = create_test_condor();
         let result = condor.calculate_extreme_probabilities(None, None);

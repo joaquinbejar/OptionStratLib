@@ -148,7 +148,6 @@ mod tests_setup_logger {
     use tracing_subscriber::FmtSubscriber;
 
     #[test]
-
     fn test_logger_initialization_info() {
         unsafe {
             env::set_var("LOGLEVEL", "INFO");
@@ -162,7 +161,6 @@ mod tests_setup_logger {
     }
 
     #[test]
-
     fn test_logger_initialization_debug() {
         unsafe {
             env::set_var("LOGLEVEL", "DEBUG");
@@ -176,7 +174,6 @@ mod tests_setup_logger {
     }
 
     #[test]
-
     fn test_logger_initialization_default() {
         unsafe {
             env::remove_var("LOGLEVEL");
@@ -190,7 +187,6 @@ mod tests_setup_logger {
     }
 
     #[test]
-
     fn test_logger_called_once() {
         unsafe {
             env::set_var("LOGLEVEL", "INFO");
@@ -243,7 +239,6 @@ mod tests_setup_logger_bis {
     }
 
     #[test]
-
     fn test_default_log_level() {
         let _lock = TEST_MUTEX.lock().unwrap();
         unsafe {
@@ -262,7 +257,6 @@ mod tests_setup_logger_bis {
     }
 
     #[test]
-
     fn test_debug_log_level() {
         let _lock = TEST_MUTEX.lock().unwrap();
         unsafe {
@@ -284,7 +278,6 @@ mod tests_setup_logger_bis {
     }
 
     #[test]
-
     fn test_error_log_level() {
         let _lock = TEST_MUTEX.lock().unwrap();
         unsafe {
@@ -306,7 +299,6 @@ mod tests_setup_logger_bis {
     }
 
     #[test]
-
     fn test_warn_log_level() {
         let _lock = TEST_MUTEX.lock().unwrap();
         unsafe {
@@ -327,7 +319,6 @@ mod tests_setup_logger_bis {
     }
 
     #[test]
-
     fn test_trace_log_level() {
         let _lock = TEST_MUTEX.lock().unwrap();
         unsafe {
@@ -350,7 +341,6 @@ mod tests_setup_logger_bis {
     }
 
     #[test]
-
     fn test_invalid_log_level() {
         let _lock = TEST_MUTEX.lock().unwrap();
         unsafe {

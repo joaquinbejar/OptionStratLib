@@ -2817,7 +2817,6 @@ mod tests_chain_base {
     }
 
     #[test]
-
     fn test_set_from_title_v() {
         let mut chain = OptionChain::new("", Positive::ZERO, "".to_string(), None, None);
         let _ = chain.set_from_title("path/SP500-18-oct-2024-5781.json");
@@ -3653,7 +3652,6 @@ mod tests_filter_option_data {
     }
 
     #[test]
-
     fn test_filter_upper() {
         let chain = create_test_chain();
         let filtered = chain.filter_option_data(FindOptimalSide::Upper);
@@ -3666,7 +3664,6 @@ mod tests_filter_option_data {
     }
 
     #[test]
-
     fn test_filter_lower() {
         let chain = create_test_chain();
         let filtered = chain.filter_option_data(FindOptimalSide::Lower);
@@ -3679,7 +3676,6 @@ mod tests_filter_option_data {
     }
 
     #[test]
-
     fn test_filter_all() {
         let chain = create_test_chain();
         let filtered = chain.filter_option_data(FindOptimalSide::All);
@@ -3687,7 +3683,6 @@ mod tests_filter_option_data {
     }
 
     #[test]
-
     fn test_filter_range() {
         let chain = create_test_chain();
         let filtered = chain.filter_option_data(FindOptimalSide::Range(pos!(95.0), pos!(105.0)));
@@ -3706,14 +3701,12 @@ mod tests_strike_price_range_vec {
     use crate::{pos, spos};
 
     #[test]
-
     fn test_empty_chain() {
         let chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
         assert_eq!(chain.strike_price_range_vec(5.0), None);
     }
 
     #[test]
-
     fn test_single_option() {
         let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
         chain.add_option(
@@ -3735,7 +3728,6 @@ mod tests_strike_price_range_vec {
     }
 
     #[test]
-
     fn test_multiple_options() {
         let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
         for strike in [90.0, 95.0, 100.0].iter() {
@@ -3758,7 +3750,6 @@ mod tests_strike_price_range_vec {
     }
 
     #[test]
-
     fn test_step_size() {
         let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
         for strike in [90.0, 100.0].iter() {
@@ -3808,7 +3799,6 @@ mod tests_option_data_get_option {
     }
 
     #[test]
-
     fn test_get_option_success() {
         let option_data = create_test_option_data();
         let price_params = OptionDataPriceParams::new(
@@ -3834,7 +3824,6 @@ mod tests_option_data_get_option {
     }
 
     #[test]
-
     fn test_get_option_using_data_iv() {
         let option_data = create_test_option_data();
         let price_params = OptionDataPriceParams::new(
@@ -3854,7 +3843,6 @@ mod tests_option_data_get_option {
     }
 
     #[test]
-
     fn test_get_option_missing_iv() {
         let mut option_data = create_test_option_data();
         option_data.implied_volatility = None;
@@ -3912,7 +3900,6 @@ mod tests_option_data_get_options_in_strike {
     }
 
     #[test]
-
     fn test_get_options_in_strike_success() {
         let option_data = create_test_option_data();
         let price_params = OptionDataPriceParams::new(
@@ -3952,7 +3939,6 @@ mod tests_option_data_get_options_in_strike {
     }
 
     #[test]
-
     fn test_get_options_in_strike_using_data_iv() {
         let option_data = create_test_option_data();
         let price_params = OptionDataPriceParams::new(
@@ -3976,7 +3962,6 @@ mod tests_option_data_get_options_in_strike {
     }
 
     #[test]
-
     fn test_get_options_in_strike_missing_iv() {
         let mut option_data = create_test_option_data();
         option_data.implied_volatility = None;
@@ -4007,7 +3992,6 @@ mod tests_option_data_get_options_in_strike {
     }
 
     #[test]
-
     fn test_get_options_in_strike_all_properties() {
         let option_data = create_test_option_data();
         let price_params = OptionDataPriceParams::new(
@@ -4043,7 +4027,6 @@ mod tests_option_data_get_options_in_strike {
     }
 
     #[test]
-
     fn test_get_options_in_strike_deltas() {
         let option_data = create_test_option_data();
         let price_params = OptionDataPriceParams::new(
@@ -4116,7 +4099,6 @@ mod tests_filter_options_in_strike {
     }
 
     #[test]
-
     fn test_filter_upper_strikes() {
         let chain = create_test_chain();
         let price_params = OptionDataPriceParams::new(
@@ -4145,7 +4127,6 @@ mod tests_filter_options_in_strike {
     }
 
     #[test]
-
     fn test_filter_lower_strikes() {
         let chain = create_test_chain();
         let price_params = OptionDataPriceParams::new(
@@ -4169,7 +4150,6 @@ mod tests_filter_options_in_strike {
     }
 
     #[test]
-
     fn test_filter_all_strikes() {
         let chain = create_test_chain();
         let price_params = OptionDataPriceParams::new(
@@ -4189,7 +4169,6 @@ mod tests_filter_options_in_strike {
     }
 
     #[test]
-
     fn test_filter_range_strikes() {
         let chain = create_test_chain();
         let price_params = OptionDataPriceParams::new(
@@ -4217,7 +4196,6 @@ mod tests_filter_options_in_strike {
     }
 
     #[test]
-
     fn test_filter_empty_chain() {
         let chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
         let price_params = OptionDataPriceParams::new(
@@ -4237,7 +4215,6 @@ mod tests_filter_options_in_strike {
     }
 
     #[test]
-
     fn test_filter_invalid_range() {
         let chain = create_test_chain();
         let price_params = OptionDataPriceParams::new(
@@ -4260,7 +4237,6 @@ mod tests_filter_options_in_strike {
     }
 
     #[test]
-
     fn test_filter_all_strikes_deltas() {
         let chain = create_test_chain();
         let price_params = OptionDataPriceParams::new(
@@ -4350,7 +4326,6 @@ mod tests_chain_iterators {
     }
 
     #[test]
-
     fn test_get_double_iter_empty() {
         let chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
         let pairs: Vec<_> = chain.get_double_iter().collect();
@@ -4358,7 +4333,6 @@ mod tests_chain_iterators {
     }
 
     #[test]
-
     fn test_get_double_iter_single() {
         let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
         chain.add_option(
@@ -4380,7 +4354,6 @@ mod tests_chain_iterators {
     }
 
     #[test]
-
     fn test_get_double_iter_multiple() {
         let chain = create_test_chain();
         let pairs: Vec<_> = chain.get_double_iter().collect();
@@ -4400,7 +4373,6 @@ mod tests_chain_iterators {
     }
 
     #[test]
-
     fn test_get_double_inclusive_iter_empty() {
         let chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
         let pairs: Vec<_> = chain.get_double_inclusive_iter().collect();
@@ -4408,7 +4380,6 @@ mod tests_chain_iterators {
     }
 
     #[test]
-
     fn test_get_double_inclusive_iter_single() {
         let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
         chain.add_option(
@@ -4431,7 +4402,6 @@ mod tests_chain_iterators {
     }
 
     #[test]
-
     fn test_get_double_inclusive_iter_multiple() {
         let chain = create_test_chain();
         let pairs: Vec<_> = chain.get_double_inclusive_iter().collect();
@@ -4531,7 +4501,6 @@ mod tests_chain_iterators_bis {
 
     // Tests for Triple Iterator
     #[test]
-
     fn test_get_triple_iter_empty() {
         let chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
         let triples: Vec<_> = chain.get_triple_iter().collect();
@@ -4539,7 +4508,6 @@ mod tests_chain_iterators_bis {
     }
 
     #[test]
-
     fn test_get_triple_iter_two_elements() {
         let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
         // Add two options
@@ -4575,7 +4543,6 @@ mod tests_chain_iterators_bis {
     }
 
     #[test]
-
     fn test_get_triple_iter_multiple() {
         let chain = create_test_chain();
         let triples: Vec<_> = chain.get_triple_iter().collect();
@@ -4596,7 +4563,6 @@ mod tests_chain_iterators_bis {
 
     // Tests for Triple Inclusive Iterator
     #[test]
-
     fn test_get_triple_inclusive_iter_empty() {
         let chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
         let triples: Vec<_> = chain.get_triple_inclusive_iter().collect();
@@ -4604,7 +4570,6 @@ mod tests_chain_iterators_bis {
     }
 
     #[test]
-
     fn test_get_triple_inclusive_iter_single() {
         let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
         chain.add_option(
@@ -4628,7 +4593,6 @@ mod tests_chain_iterators_bis {
     }
 
     #[test]
-
     fn test_get_triple_inclusive_iter_multiple() {
         let chain = create_test_chain();
         let triples: Vec<_> = chain.get_triple_inclusive_iter().collect();
@@ -4644,7 +4608,6 @@ mod tests_chain_iterators_bis {
 
     // Tests for Quad Iterator
     #[test]
-
     fn test_get_quad_iter_empty() {
         let chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
         let quads: Vec<_> = chain.get_quad_iter().collect();
@@ -4652,7 +4615,6 @@ mod tests_chain_iterators_bis {
     }
 
     #[test]
-
     fn test_get_quad_iter_three_elements() {
         let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
         // Add three options
@@ -4701,7 +4663,6 @@ mod tests_chain_iterators_bis {
     }
 
     #[test]
-
     fn test_get_quad_iter_multiple() {
         let chain = create_test_chain();
         let quads: Vec<_> = chain.get_quad_iter().collect();
@@ -4718,7 +4679,6 @@ mod tests_chain_iterators_bis {
 
     // Tests for Quad Inclusive Iterator
     #[test]
-
     fn test_get_quad_inclusive_iter_empty() {
         let chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
         let quads: Vec<_> = chain.get_quad_inclusive_iter().collect();
@@ -4726,7 +4686,6 @@ mod tests_chain_iterators_bis {
     }
 
     #[test]
-
     fn test_get_quad_inclusive_iter_single() {
         let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
         chain.add_option(
@@ -4751,7 +4710,6 @@ mod tests_chain_iterators_bis {
     }
 
     #[test]
-
     fn test_get_quad_inclusive_iter_multiple() {
         let chain = create_test_chain();
         let quads: Vec<_> = chain.get_quad_inclusive_iter().collect();
@@ -4778,7 +4736,6 @@ mod tests_is_valid_optimal_side {
     use super::*;
 
     #[test]
-
     fn test_upper_side_valid() {
         let option_data = OptionData::new(
             pos!(110.0), // strike price higher than underlying
@@ -4795,11 +4752,10 @@ mod tests_is_valid_optimal_side {
         );
         let underlying_price = pos!(100.0);
 
-        assert!(option_data.is_valid_optimal_side(underlying_price, &FindOptimalSide::Upper));
+        assert!(option_data.is_valid_optimal_side(&underlying_price, &FindOptimalSide::Upper));
     }
 
     #[test]
-
     fn test_upper_side_invalid() {
         let option_data = OptionData::new(
             pos!(90.0), // strike price lower than underlying
@@ -4816,11 +4772,10 @@ mod tests_is_valid_optimal_side {
         );
         let underlying_price = pos!(100.0);
 
-        assert!(!option_data.is_valid_optimal_side(underlying_price, &FindOptimalSide::Upper));
+        assert!(!option_data.is_valid_optimal_side(&underlying_price, &FindOptimalSide::Upper));
     }
 
     #[test]
-
     fn test_lower_side_valid() {
         let option_data = OptionData::new(
             pos!(90.0), // strike price lower than underlying
@@ -4837,11 +4792,10 @@ mod tests_is_valid_optimal_side {
         );
         let underlying_price = pos!(100.0);
 
-        assert!(option_data.is_valid_optimal_side(underlying_price, &FindOptimalSide::Lower));
+        assert!(option_data.is_valid_optimal_side(&underlying_price, &FindOptimalSide::Lower));
     }
 
     #[test]
-
     fn test_lower_side_invalid() {
         let option_data = OptionData::new(
             pos!(110.0), // strike price higher than underlying
@@ -4858,11 +4812,10 @@ mod tests_is_valid_optimal_side {
         );
         let underlying_price = pos!(100.0);
 
-        assert!(!option_data.is_valid_optimal_side(underlying_price, &FindOptimalSide::Lower));
+        assert!(!option_data.is_valid_optimal_side(&underlying_price, &FindOptimalSide::Lower));
     }
 
     #[test]
-
     fn test_all_side() {
         let option_data = OptionData::new(
             pos!(100.0),
@@ -4879,11 +4832,10 @@ mod tests_is_valid_optimal_side {
         );
         let underlying_price = pos!(100.0);
 
-        assert!(option_data.is_valid_optimal_side(underlying_price, &FindOptimalSide::All));
+        assert!(option_data.is_valid_optimal_side(&underlying_price, &FindOptimalSide::All));
     }
 
     #[test]
-
     fn test_range_side_valid() {
         let option_data = OptionData::new(
             pos!(100.0), // strike price within range
@@ -4901,16 +4853,13 @@ mod tests_is_valid_optimal_side {
         let range_start = pos!(90.0);
         let range_end = pos!(110.0);
 
-        assert!(
-            option_data.is_valid_optimal_side(
-                pos!(100.0),
-                &FindOptimalSide::Range(range_start, range_end)
-            )
-        );
+        assert!(option_data.is_valid_optimal_side(
+            &pos!(100.0),
+            &FindOptimalSide::Range(range_start, range_end)
+        ));
     }
 
     #[test]
-
     fn test_range_side_invalid_below() {
         let option_data = OptionData::new(
             pos!(80.0), // strike price below range
@@ -4928,16 +4877,13 @@ mod tests_is_valid_optimal_side {
         let range_start = pos!(90.0);
         let range_end = pos!(110.0);
 
-        assert!(
-            !option_data.is_valid_optimal_side(
-                pos!(100.0),
-                &FindOptimalSide::Range(range_start, range_end)
-            )
-        );
+        assert!(!option_data.is_valid_optimal_side(
+            &pos!(100.0),
+            &FindOptimalSide::Range(range_start, range_end)
+        ));
     }
 
     #[test]
-
     fn test_range_side_invalid_above() {
         let option_data = OptionData::new(
             pos!(120.0), // strike price above range
@@ -4955,16 +4901,13 @@ mod tests_is_valid_optimal_side {
         let range_start = pos!(90.0);
         let range_end = pos!(110.0);
 
-        assert!(
-            !option_data.is_valid_optimal_side(
-                pos!(100.0),
-                &FindOptimalSide::Range(range_start, range_end)
-            )
-        );
+        assert!(!option_data.is_valid_optimal_side(
+            &pos!(100.0),
+            &FindOptimalSide::Range(range_start, range_end)
+        ));
     }
 
     #[test]
-
     fn test_range_side_at_boundaries() {
         let option_data_lower = OptionData::new(
             pos!(90.0), // strike price at lower boundary
@@ -4995,18 +4938,14 @@ mod tests_is_valid_optimal_side {
         let range_start = pos!(90.0);
         let range_end = pos!(110.0);
 
-        assert!(
-            option_data_lower.is_valid_optimal_side(
-                pos!(100.0),
-                &FindOptimalSide::Range(range_start, range_end)
-            )
-        );
-        assert!(
-            option_data_upper.is_valid_optimal_side(
-                pos!(100.0),
-                &FindOptimalSide::Range(range_start, range_end)
-            )
-        );
+        assert!(option_data_lower.is_valid_optimal_side(
+            &pos!(100.0),
+            &FindOptimalSide::Range(range_start, range_end)
+        ));
+        assert!(option_data_upper.is_valid_optimal_side(
+            &pos!(100.0),
+            &FindOptimalSide::Range(range_start, range_end)
+        ));
     }
 }
 
@@ -5052,7 +4991,6 @@ mod rnd_analysis_tests {
         use super::*;
 
         #[test]
-
         fn test_basic_rnd_calculation() {
             let chain = create_standard_chain();
             let params = RNDParameters {
@@ -5078,7 +5016,6 @@ mod rnd_analysis_tests {
         }
 
         #[test]
-
         fn test_tolerance_adjustment() {
             let chain = create_standard_chain();
             let params = RNDParameters {
@@ -5092,7 +5029,6 @@ mod rnd_analysis_tests {
         }
 
         #[test]
-
         fn test_default() {
             let chain = OptionChain::new("TEST", pos!(100.0), "2025-02-01".to_string(), None, None);
             let params = RNDParameters::default();
@@ -5106,7 +5042,6 @@ mod rnd_analysis_tests {
         }
 
         #[test]
-
         fn test_zero_tolerance() {
             let chain = create_standard_chain();
             let params = RNDParameters {
@@ -5123,7 +5058,6 @@ mod rnd_analysis_tests {
         }
 
         #[test]
-
         fn test_expired_option() {
             let mut chain = create_standard_chain();
             chain.expiration_date = "2023-01-01".to_string(); // Past date
@@ -5143,7 +5077,6 @@ mod rnd_analysis_tests {
         use super::*;
 
         #[test]
-
         fn test_basic_skew_calculation() {
             let chain = create_standard_chain();
             let result = chain.calculate_skew();
@@ -5161,7 +5094,6 @@ mod rnd_analysis_tests {
         }
 
         #[test]
-
         fn test_flat_volatility_surface() {
             let chain = create_standard_chain(); // All vols are 0.17
             let result = chain.calculate_skew().unwrap();
@@ -5173,7 +5105,6 @@ mod rnd_analysis_tests {
         }
 
         #[test]
-
         fn test_empty_chain_skew() {
             let chain = OptionChain::new("TEST", pos!(100.0), "2025-02-01".to_string(), None, None);
 
@@ -5186,7 +5117,6 @@ mod rnd_analysis_tests {
         }
 
         #[test]
-
         fn test_missing_implied_volatility() {
             let mut chain = create_standard_chain();
 
@@ -5210,7 +5140,6 @@ mod rnd_analysis_tests {
         }
 
         #[test]
-
         fn test_relative_strike_calculation() {
             let chain = create_standard_chain();
             let result = chain.calculate_skew().unwrap();
@@ -5227,7 +5156,6 @@ mod rnd_analysis_tests {
         use super::*;
 
         #[test]
-
         fn test_invalid_date_format() {
             let mut chain = create_standard_chain();
             chain.expiration_date = "invalid_date".to_string();
@@ -5243,7 +5171,6 @@ mod rnd_analysis_tests {
         }
 
         #[test]
-
         fn test_negative_risk_free_rate() {
             let chain = create_standard_chain();
             let params = RNDParameters {
@@ -5257,7 +5184,6 @@ mod rnd_analysis_tests {
         }
 
         #[test]
-
         fn test_verify_rnd_properties() {
             let chain = create_standard_chain();
             let params = RNDParameters {
@@ -5286,7 +5212,6 @@ mod rnd_analysis_tests {
         }
 
         #[test]
-
         fn test_strike_interval_detection() {
             let mut chain = create_standard_chain();
 
@@ -5320,7 +5245,6 @@ mod rnd_analysis_tests {
         use super::*;
 
         #[test]
-
         fn test_skew_with_smile() {
             let mut chain =
                 OptionChain::new("TEST", pos!(100.0), "2025-02-01".to_string(), None, None);
@@ -5362,7 +5286,6 @@ mod rnd_analysis_tests {
         }
 
         #[test]
-
         fn test_skew_monotonic() {
             let mut chain =
                 OptionChain::new("TEST", pos!(100.0), "2025-02-01".to_string(), None, None);
@@ -5399,7 +5322,6 @@ mod rnd_analysis_tests {
         }
 
         #[test]
-
         fn test_strike_range_coverage() {
             let chain = create_standard_chain();
             let result = chain.calculate_skew().unwrap();
@@ -6993,7 +6915,6 @@ mod tests_vega_calculations {
     }
 
     #[test]
-
     fn test_vega_exposure_basic() {
         setup_logger();
         let mut chain = create_test_chain_with_vega();
@@ -7008,7 +6929,6 @@ mod tests_vega_calculations {
     }
 
     #[test]
-
     fn test_vega_exposure_empty_chain() {
         let chain = OptionChain::new("TEST", pos!(100.0), "2024-12-31".to_string(), None, None);
 
@@ -7018,7 +6938,6 @@ mod tests_vega_calculations {
     }
 
     #[test]
-
     fn test_vega_exposure_uninitialized_greeks() {
         let mut chain = create_test_chain_with_vega();
         chain.update_greeks();
@@ -7030,7 +6949,6 @@ mod tests_vega_calculations {
     }
 
     #[test]
-
     fn test_vega_exposure_updates() {
         setup_logger();
         let mut chain = create_test_chain_with_vega();
@@ -7046,7 +6964,6 @@ mod tests_vega_calculations {
     }
 
     #[test]
-
     fn test_vega_curve() {
         let mut chain = create_test_chain_with_vega();
         chain.update_greeks();
@@ -7069,7 +6986,6 @@ mod tests_vega_calculations {
     }
 
     #[test]
-
     fn test_vega_curve_empty_chain() {
         let chain = OptionChain::new("TEST", pos!(100.0), "2024-12-31".to_string(), None, None);
 
@@ -7081,7 +6997,6 @@ mod tests_vega_calculations {
     }
 
     #[test]
-
     fn test_vega_curve_shape() {
         setup_logger();
         let mut chain = create_test_chain_with_vega();

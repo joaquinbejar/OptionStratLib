@@ -22,6 +22,7 @@ use crate::error::probability::ProbabilityError;
 use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
 use crate::error::{GreeksError, OperationErrorKind};
 use crate::greeks::Greeks;
+use crate::model::types::OptionBasicType;
 use crate::model::utils::mean_and_std;
 use crate::model::{Position, ProfitLossRange};
 use crate::pnl::utils::{PnL, PnLCalculator};
@@ -31,7 +32,7 @@ use crate::strategies::base::{
 };
 use crate::strategies::probabilities::{ProbabilityAnalysis, VolatilityAdjustment};
 use crate::strategies::utils::OptimizationCriteria;
-use crate::strategies::{DeltaNeutrality, FindOptimalSide, Strategies};
+use crate::strategies::{BasicAble, DeltaNeutrality, FindOptimalSide, Strategies};
 use crate::strategies::{StrategyBasics, StrategyConstructor};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
@@ -41,6 +42,7 @@ use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{RED, ShapeStyle};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::error::Error;
 use tracing::{debug, info};
 
@@ -312,7 +314,8 @@ impl BreakEvenable for BearPutSpread {
         self.break_even_points = Vec::new();
 
         self.break_even_points.push(
-            (self.long_put.option.strike_price - self.net_cost()? / self.long_put.option.quantity)
+            (self.long_put.option.strike_price
+                - self.get_net_cost()? / self.long_put.option.quantity)
                 .round_to(2),
         );
 
@@ -436,13 +439,56 @@ impl Strategable for BearPutSpread {
     }
 }
 
-impl Strategies for BearPutSpread {
-    fn get_underlying_price(&self) -> Positive {
-        self.long_put.option.underlying_price
+impl BasicAble for BearPutSpread {
+    fn get_title(&self) -> String {
+        format!(
+            "{} Strategy:\n\t{}\n\t{}",
+            self.name,
+            self.long_put.get_title(),
+            self.short_put.get_title()
+        )
     }
+    fn get_option_basic_type(&self) -> OptionBasicType {
+        unimplemented!("get_option_basic_type is not implemented for this strategy");
+    }
+    fn get_symbol(&self) -> &str {
+        unimplemented!("get_symbol is not implemented for this strategy");
+    }
+    fn get_strike(&self) -> HashMap<OptionBasicType, &Positive> {
+        unimplemented!("get_strike is not implemented for this strategy");
+    }
+    fn get_side(&self) -> HashMap<OptionBasicType, &Side> {
+        unimplemented!("get_side is not implemented for this strategy");
+    }
+    fn get_type(&self) -> &OptionType {
+        unimplemented!("get_type is not implemented for this strategy");
+    }
+    fn get_style(&self) -> HashMap<OptionBasicType, &OptionStyle> {
+        unimplemented!("get_style is not implemented for this strategy");
+    }
+    fn get_expiration(&self) -> HashMap<OptionBasicType, &ExpirationDate> {
+        unimplemented!("get_expiration is not implemented for this strategy");
+    }
+    fn get_implied_volatility(&self) -> HashMap<OptionBasicType, &Positive> {
+        unimplemented!("get_implied_volatility is not implemented for this strategy");
+    }
+    fn get_quantity(&self) -> HashMap<OptionBasicType, &Positive> {
+        unimplemented!("get_quantity is not implemented for this strategy");
+    }
+    fn get_underlying_price(&self) -> &Positive {
+        &self.short_put.option.underlying_price
+    }
+    fn get_risk_free_rate(&self) -> HashMap<OptionBasicType, &Decimal> {
+        unimplemented!("get_risk_free_rate is not implemented for this strategy");
+    }
+    fn get_dividend_yield(&self) -> HashMap<OptionBasicType, &Positive> {
+        unimplemented!("get_dividend_yield is not implemented for this strategy");
+    }
+}
 
-    fn max_profit(&self) -> Result<Positive, StrategyError> {
-        let profit = self.calculate_profit_at(self.short_put.option.strike_price)?;
+impl Strategies for BearPutSpread {
+    fn get_max_profit(&self) -> Result<Positive, StrategyError> {
+        let profit = self.calculate_profit_at(&self.short_put.option.strike_price)?;
         if profit >= Decimal::ZERO {
             Ok(profit.into())
         } else {
@@ -453,9 +499,8 @@ impl Strategies for BearPutSpread {
             ))
         }
     }
-
-    fn max_loss(&self) -> Result<Positive, StrategyError> {
-        let loss = self.calculate_profit_at(self.long_put.option.strike_price)?;
+    fn get_max_loss(&self) -> Result<Positive, StrategyError> {
+        let loss = self.calculate_profit_at(&self.long_put.option.strike_price)?;
         if loss <= Decimal::ZERO {
             Ok(loss.abs().into())
         } else {
@@ -466,16 +511,14 @@ impl Strategies for BearPutSpread {
             ))
         }
     }
-
-    fn profit_area(&self) -> Result<Decimal, StrategyError> {
-        let high = self.max_profit().unwrap_or(Positive::ZERO);
+    fn get_profit_area(&self) -> Result<Decimal, StrategyError> {
+        let high = self.get_max_profit().unwrap_or(Positive::ZERO);
         let base = self.break_even_points[0] - self.short_put.option.strike_price;
         Ok((high * base / 200.0).into())
     }
-
-    fn profit_ratio(&self) -> Result<Decimal, StrategyError> {
-        let max_profit = self.max_profit().unwrap_or(Positive::ZERO);
-        let max_loss = self.max_loss().unwrap_or(Positive::ZERO);
+    fn get_profit_ratio(&self) -> Result<Decimal, StrategyError> {
+        let max_profit = self.get_max_profit().unwrap_or(Positive::ZERO);
+        let max_loss = self.get_max_loss().unwrap_or(Positive::ZERO);
         match (max_profit, max_loss) {
             (value, _) if value == Positive::ZERO => Ok(Decimal::ZERO),
             (_, value) if value == Positive::ZERO => Ok(Decimal::MAX),
@@ -539,7 +582,9 @@ impl Optimizable for BearPutSpread {
                     second: long,
                 };
                 let strategy = strategy.create_strategy(option_chain, &legs);
-                strategy.validate() && strategy.max_profit().is_ok() && strategy.max_loss().is_ok()
+                strategy.validate()
+                    && strategy.get_max_profit().is_ok()
+                    && strategy.get_max_loss().is_ok()
             })
             // Map to OptionDataGroup
             .map(move |(short, long)| OptionDataGroup::Two(short, long))
@@ -569,8 +614,8 @@ impl Optimizable for BearPutSpread {
             let strategy = self.create_strategy(option_chain, &legs);
             // Calculate the current value based on the optimization criteria
             let current_value = match criteria {
-                OptimizationCriteria::Ratio => strategy.profit_ratio().unwrap(),
-                OptimizationCriteria::Area => strategy.profit_area().unwrap(),
+                OptimizationCriteria::Ratio => strategy.get_profit_ratio().unwrap(),
+                OptimizationCriteria::Area => strategy.get_profit_area().unwrap(),
             };
 
             if current_value > best_value {
@@ -610,27 +655,17 @@ impl Optimizable for BearPutSpread {
 }
 
 impl Profit for BearPutSpread {
-    fn calculate_profit_at(&self, price: Positive) -> Result<Decimal, Box<dyn Error>> {
-        let price = Some(&price);
+    fn calculate_profit_at(&self, price: &Positive) -> Result<Decimal, Box<dyn Error>> {
+        let price = Some(price);
         Ok(self.long_put.pnl_at_expiration(&price)? + self.short_put.pnl_at_expiration(&price)?)
     }
 }
 
 impl Graph for BearPutSpread {
-    fn title(&self) -> String {
-        format!(
-            "{} Strategy:\n\t{}\n\t{}",
-            self.name,
-            self.long_put.title(),
-            self.short_put.title()
-        )
-    }
-
     fn get_x_values(&self) -> Vec<Positive> {
-        self.best_range_to_show(Positive::from(1.0))
+        self.get_best_range_to_show(Positive::from(1.0))
             .unwrap_or_else(|_| vec![self.short_put.option.strike_price])
     }
-
     fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<f64, f64>> {
         let underlying_price = self.long_put.option.underlying_price.to_f64();
         vec![ChartVerticalLine {
@@ -644,7 +679,6 @@ impl Graph for BearPutSpread {
             font_size: 18,
         }]
     }
-
     fn get_points(&self) -> Vec<ChartPoint<(f64, f64)>> {
         let mut points = Vec::new();
 
@@ -663,11 +697,11 @@ impl Graph for BearPutSpread {
         points.push(ChartPoint {
             coordinates: (
                 self.short_put.option.strike_price.to_f64(),
-                self.max_profit().unwrap_or(Positive::ZERO).to_f64(),
+                self.get_max_profit().unwrap_or(Positive::ZERO).to_f64(),
             ),
             label: format!(
                 "Max Profit {:.2}",
-                self.max_profit().unwrap_or(Positive::ZERO)
+                self.get_max_profit().unwrap_or(Positive::ZERO)
             ),
             label_offset: LabelOffsetType::Relative(10.0, 5.0),
             point_color: DARK_GREEN,
@@ -680,9 +714,12 @@ impl Graph for BearPutSpread {
         points.push(ChartPoint {
             coordinates: (
                 self.long_put.option.strike_price.to_f64(),
-                -self.max_loss().unwrap_or(Positive::ZERO).to_f64(),
+                -self.get_max_loss().unwrap_or(Positive::ZERO).to_f64(),
             ),
-            label: format!("Max Loss -{:.2}", self.max_loss().unwrap_or(Positive::ZERO)),
+            label: format!(
+                "Max Loss -{:.2}",
+                self.get_max_loss().unwrap_or(Positive::ZERO)
+            ),
             label_offset: LabelOffsetType::Relative(-60.0, -5.0),
             point_color: RED,
             label_color: RED,
@@ -691,23 +728,18 @@ impl Graph for BearPutSpread {
         });
 
         // Current Price Point
-        points.push(self.get_point_at_price(self.long_put.option.underlying_price));
+        points.push(self.get_point_at_price(&self.long_put.option.underlying_price));
 
         points
     }
 }
 
 impl ProbabilityAnalysis for BearPutSpread {
-    fn get_expiration(&self) -> Result<ExpirationDate, ProbabilityError> {
-        Ok(self.long_put.option.expiration_date)
-    }
-
-    fn get_risk_free_rate(&self) -> Option<Decimal> {
-        Some(self.long_put.option.risk_free_rate)
-    }
-
     fn get_profit_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
         let break_even_point = self.get_break_even_points()?[0];
+        let option = &self.short_put.option;
+        let expiration_date = &option.expiration_date;
+        let risk_free_rate = option.risk_free_rate;
 
         let (mean_volatility, std_dev) = mean_and_std(vec![
             self.long_put.option.implied_volatility,
@@ -717,7 +749,7 @@ impl ProbabilityAnalysis for BearPutSpread {
         let mut profit_range = ProfitLossRange::new(
             Some(self.short_put.option.strike_price), // Price below short strike is max profit
             Some(break_even_point),                   // Upper bound is break even point
-            pos!(self.max_profit()?.to_f64()),
+            pos!(self.get_max_profit()?.to_f64()),
         )?;
 
         profit_range.calculate_probability(
@@ -727,15 +759,17 @@ impl ProbabilityAnalysis for BearPutSpread {
                 std_dev_adjustment: std_dev,
             }),
             None,
-            self.get_expiration()?,
-            self.get_risk_free_rate(),
+            expiration_date,
+            Some(risk_free_rate),
         )?;
 
         Ok(vec![profit_range])
     }
-
     fn get_loss_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
         let break_even_point = self.get_break_even_points()?[0];
+        let option = &self.short_put.option;
+        let expiration_date = &option.expiration_date;
+        let risk_free_rate = option.risk_free_rate;
 
         let (mean_volatility, std_dev) = mean_and_std(vec![
             self.long_put.option.implied_volatility,
@@ -745,7 +779,7 @@ impl ProbabilityAnalysis for BearPutSpread {
         let mut loss_range = ProfitLossRange::new(
             Some(break_even_point), // Lower bound is break even point
             None,                   // No upper bound (theoretically)
-            pos!(self.max_loss()?.to_f64()),
+            pos!(self.get_max_loss()?.to_f64()),
         )?;
 
         loss_range.calculate_probability(
@@ -755,8 +789,8 @@ impl ProbabilityAnalysis for BearPutSpread {
                 std_dev_adjustment: std_dev,
             }),
             None,
-            self.get_expiration()?,
-            self.get_risk_free_rate(),
+            expiration_date,
+            Some(risk_free_rate),
         )?;
 
         Ok(vec![loss_range])
@@ -828,20 +862,18 @@ mod tests_bear_put_spread_strategy {
     }
 
     #[test]
-
     fn test_new_bear_put_spread() {
         let spread = create_test_spread();
 
         assert_eq!(spread.name, "Bear Put Spread");
         assert_eq!(spread.kind, StrategyType::BearPutSpread);
         assert!(!spread.description.is_empty());
-        assert_eq!(spread.get_underlying_price(), pos!(100.0));
+        assert_eq!(spread.get_underlying_price(), &pos!(100.0));
         assert_eq!(spread.long_put.option.strike_price, pos!(105.0));
         assert_eq!(spread.short_put.option.strike_price, pos!(95.0));
     }
 
     #[test]
-
     fn test_add_leg() {
         let mut spread = create_test_spread();
         let new_long_put = Position::new(
@@ -872,7 +904,6 @@ mod tests_bear_put_spread_strategy {
     }
 
     #[test]
-
     fn test_get_legs() {
         let spread = create_test_spread();
         let legs = spread.get_positions().expect("Error getting legs");
@@ -883,41 +914,36 @@ mod tests_bear_put_spread_strategy {
     }
 
     #[test]
-
     fn test_max_profit() {
         let spread = create_test_spread();
-        let max_profit = spread.max_profit().unwrap();
+        let max_profit = spread.get_max_profit().unwrap();
         // Width (105 - 95 = 10) - Net Premium (4 - 2 = 2)
         assert_eq!(max_profit, pos!(8.0));
     }
 
     #[test]
-
     fn test_max_loss() {
         let spread = create_test_spread();
-        let max_loss = spread.max_loss().unwrap();
+        let max_loss = spread.get_max_loss().unwrap();
         // Net Premium Paid (4 - 2 = 2)
         assert_eq!(max_loss, pos!(2.0));
     }
 
     #[test]
-
     fn test_total_cost() {
         let spread = create_test_spread();
         // Long Premium - Short Premium (4 - 2 = 2)
-        assert_eq!(spread.total_cost().unwrap(), dec!(4.0));
+        assert_eq!(spread.get_total_cost().unwrap(), dec!(4.0));
     }
 
     #[test]
-
     fn test_net_premium_received() {
         let spread = create_test_spread();
         // Net Premium Received is actually Net Premium Paid in this case
-        assert_eq!(spread.net_premium_received().unwrap().to_f64(), 0.0);
+        assert_eq!(spread.get_net_premium_received().unwrap().to_f64(), 0.0);
     }
 
     #[test]
-
     fn test_fees() {
         let spread = BearPutSpread::new(
             "TEST".to_string(),
@@ -937,11 +963,10 @@ mod tests_bear_put_spread_strategy {
             pos!(0.5), // close_fee_short_put
         );
 
-        assert_eq!(spread.fees().unwrap().to_f64(), 2.0); // Total fees = 0.5 * 4
+        assert_eq!(spread.get_fees().unwrap().to_f64(), 2.0); // Total fees = 0.5 * 4
     }
 
     #[test]
-
     fn test_break_even_points() {
         let spread = create_test_spread();
         let break_even_points = spread.get_break_even_points().unwrap();
@@ -952,25 +977,22 @@ mod tests_bear_put_spread_strategy {
     }
 
     #[test]
-
     fn test_profit_area() {
         let spread = create_test_spread();
-        let area = spread.profit_area().unwrap().to_f64().unwrap();
+        let area = spread.get_profit_area().unwrap().to_f64().unwrap();
         assert!(area > 0.0);
     }
 
     #[test]
-
     fn test_profit_ratio() {
         let spread = create_test_spread();
-        let ratio = spread.profit_ratio().unwrap().to_f64().unwrap();
+        let ratio = spread.get_profit_ratio().unwrap().to_f64().unwrap();
         // Ratio = (max_profit / max_loss) * 100
         // = (8.0 / 2.0) * 100 = 400.0
         assert_eq!(ratio, 400.0);
     }
 
     #[test]
-
     fn test_default_strikes() {
         let spread = BearPutSpread::new(
             "TEST".to_string(),
@@ -995,7 +1017,6 @@ mod tests_bear_put_spread_strategy {
     }
 
     #[test]
-
     fn test_with_different_quantities() {
         let spread = BearPutSpread::new(
             "TEST".to_string(),
@@ -1015,8 +1036,8 @@ mod tests_bear_put_spread_strategy {
             Positive::ZERO,
         );
 
-        let max_profit = spread.max_profit().unwrap();
-        let max_loss = spread.max_loss().unwrap();
+        let max_profit = spread.get_max_profit().unwrap();
+        let max_loss = spread.get_max_loss().unwrap();
 
         // Max Profit = (Width * Quantity) - Net Premium
         assert_eq!(max_profit, pos!(16.0)); // (10 * 2) - (4 - 2)
@@ -1060,7 +1081,6 @@ mod tests_bear_put_spread_validation {
     }
 
     #[test]
-
     fn test_invalid_long_put() {
         let mut invalid_long =
             create_valid_position(Side::Long, pos!(105.0), ExpirationDate::Days(pos!(30.0)));
@@ -1083,7 +1103,6 @@ mod tests_bear_put_spread_validation {
     }
 
     #[test]
-
     fn test_invalid_short_put() {
         let mut invalid_short =
             create_valid_position(Side::Short, pos!(95.0), ExpirationDate::Days(pos!(30.0)));
@@ -1106,7 +1125,6 @@ mod tests_bear_put_spread_validation {
     }
 
     #[test]
-
     fn test_invalid_strike_prices() {
         let spread = BearPutSpread {
             name: "Test Bear Put Spread".to_string(),
@@ -1129,7 +1147,6 @@ mod tests_bear_put_spread_validation {
     }
 
     #[test]
-
     fn test_equal_strike_prices() {
         let spread = BearPutSpread {
             name: "Test Bear Put Spread".to_string(),
@@ -1152,7 +1169,6 @@ mod tests_bear_put_spread_validation {
     }
 
     #[test]
-
     fn test_valid_strike_prices() {
         let spread = BearPutSpread {
             name: "Test Bear Put Spread".to_string(),
@@ -1175,7 +1191,6 @@ mod tests_bear_put_spread_validation {
     }
 
     #[test]
-
     fn test_different_expiration_dates() {
         let spread = BearPutSpread {
             name: "Test Bear Put Spread".to_string(),
@@ -1333,7 +1348,6 @@ mod tests_bear_put_spread_optimization {
     }
 
     #[test]
-
     fn test_find_optimal_ratio() {
         let mut spread = create_base_spread();
         let chain = create_test_chain();
@@ -1341,7 +1355,7 @@ mod tests_bear_put_spread_optimization {
         spread.find_optimal(&chain, FindOptimalSide::All, OptimizationCriteria::Ratio);
         assert!(spread.validate(), "Optimized spread should be valid");
         assert!(
-            spread.profit_ratio().unwrap().to_f64().unwrap() > 0.0,
+            spread.get_profit_ratio().unwrap().to_f64().unwrap() > 0.0,
             "Profit ratio should be positive"
         );
 
@@ -1350,7 +1364,6 @@ mod tests_bear_put_spread_optimization {
     }
 
     #[test]
-
     fn test_find_optimal_area() {
         let mut spread = create_base_spread();
         let chain = create_test_chain();
@@ -1359,7 +1372,7 @@ mod tests_bear_put_spread_optimization {
 
         assert!(spread.validate(), "Optimized spread should be valid");
         assert!(
-            spread.profit_area().unwrap().to_f64().unwrap() > 0.0,
+            spread.get_profit_area().unwrap().to_f64().unwrap() > 0.0,
             "Profit area should be positive"
         );
 
@@ -1368,7 +1381,6 @@ mod tests_bear_put_spread_optimization {
     }
 
     #[test]
-
     fn test_find_optimal_upper_side() {
         let mut spread = create_base_spread();
         let chain = create_test_chain();
@@ -1381,7 +1393,6 @@ mod tests_bear_put_spread_optimization {
     }
 
     #[test]
-
     fn test_find_optimal_range() {
         let mut spread = create_base_spread();
         let chain = create_test_chain();
@@ -1398,7 +1409,6 @@ mod tests_bear_put_spread_optimization {
     }
 
     #[test]
-
     fn test_create_strategy() {
         let spread = create_base_spread();
         let chain = create_test_chain();
@@ -1431,7 +1441,6 @@ mod tests_bear_put_spread_optimization {
     }
 
     #[test]
-
     fn test_optimization_with_invalid_options() {
         let mut spread = create_base_spread();
         let mut chain = create_test_chain();
@@ -1455,11 +1464,10 @@ mod tests_bear_put_spread_optimization {
 
         // Should still find a valid optimization ignoring invalid options
         assert!(spread.validate());
-        assert!(spread.max_profit().is_ok());
+        assert!(spread.get_max_profit().is_ok());
     }
 
     #[test]
-
     fn test_optimization_with_different_quantities() {
         let mut spread = BearPutSpread::new(
             "TEST".to_string(),
@@ -1568,7 +1576,6 @@ mod tests_bear_put_spread_optimizable {
     }
 
     #[test]
-
     fn test_filter_valid_combinations() {
         setup_logger();
         let spread = create_test_bear_put_spread();
@@ -1626,7 +1633,6 @@ mod tests_bear_put_spread_optimizable {
     }
 
     #[test]
-
     fn test_filter_invalid_prices() {
         let mut chain = create_mock_option_chain();
         // Add an option with invalid put prices
@@ -1662,7 +1668,6 @@ mod tests_bear_put_spread_optimizable {
     }
 
     #[test]
-
     fn test_filter_with_different_optimal_sides() {
         let spread = create_test_bear_put_spread();
         let chain = create_mock_option_chain();
@@ -1688,7 +1693,6 @@ mod tests_bear_put_spread_optimizable {
     }
 
     #[test]
-
     fn test_filter_empty_chain() {
         let spread = create_test_bear_put_spread();
         let empty_chain =
@@ -1702,7 +1706,6 @@ mod tests_bear_put_spread_optimizable {
     }
 
     #[test]
-
     fn test_filter_strategy_constraints() {
         let spread = create_test_bear_put_spread();
         let mut chain = create_mock_option_chain();
@@ -1767,66 +1770,77 @@ mod tests_bear_put_spread_profit {
     }
 
     #[test]
-
     fn test_profit_at_max_profit() {
         let spread = create_test_spread();
         let price = pos!(90.0);
 
         // Max Profit = Width (105 - 95 = 10) - Net Premium (4 - 2 = 2) = 8
         assert_eq!(
-            spread.calculate_profit_at(price).unwrap().to_f64().unwrap(),
+            spread
+                .calculate_profit_at(&price)
+                .unwrap()
+                .to_f64()
+                .unwrap(),
             8.0
         );
     }
 
     #[test]
-
     fn test_profit_at_max_loss() {
         let spread = create_test_spread();
         let price = pos!(110.0);
 
         // Max Loss = Net Premium = 4 - 2 = 2
         assert_eq!(
-            spread.calculate_profit_at(price).unwrap().to_f64().unwrap(),
+            spread
+                .calculate_profit_at(&price)
+                .unwrap()
+                .to_f64()
+                .unwrap(),
             -2.0
         );
     }
 
     #[test]
-
     fn test_profit_at_short_strike() {
         let spread = create_test_spread();
         let price = pos!(95.0);
 
         // Profit at short strike = Max Profit = 8
         assert_eq!(
-            spread.calculate_profit_at(price).unwrap().to_f64().unwrap(),
+            spread
+                .calculate_profit_at(&price)
+                .unwrap()
+                .to_f64()
+                .unwrap(),
             8.0
         );
     }
 
     #[test]
-
     fn test_profit_at_long_strike() {
         let spread = create_test_spread();
         let price = pos!(105.0);
 
         // Loss at long strike = Max Loss = -2
         assert_eq!(
-            spread.calculate_profit_at(price).unwrap().to_f64().unwrap(),
+            spread
+                .calculate_profit_at(&price)
+                .unwrap()
+                .to_f64()
+                .unwrap(),
             -2.0
         );
     }
 
     #[test]
-
     fn test_profit_at_get_break_even_points() {
         let spread = create_test_spread();
         let price = pos!(103.0); // Break even = long strike - net premium = 105 - 2
 
         assert!(
             spread
-                .calculate_profit_at(price)
+                .calculate_profit_at(&price)
                 .unwrap()
                 .to_f64()
                 .unwrap()
@@ -1836,19 +1850,21 @@ mod tests_bear_put_spread_profit {
     }
 
     #[test]
-
     fn test_profit_between_strikes() {
         let spread = create_test_spread();
         let price = pos!(100.0);
 
-        let profit = spread.calculate_profit_at(price).unwrap().to_f64().unwrap();
+        let profit = spread
+            .calculate_profit_at(&price)
+            .unwrap()
+            .to_f64()
+            .unwrap();
 
         assert!(profit > -2.0);
         assert!(profit < 8.0);
     }
 
     #[test]
-
     fn test_profit_with_different_quantities() {
         let spread = BearPutSpread::new(
             "TEST".to_string(),
@@ -1874,19 +1890,18 @@ mod tests_bear_put_spread_profit {
         // Con quantity = 2:
         // Max Profit = 2 * (Width - Net Premium) = 2 * (10 - 2) = 16
         assert_eq!(
-            spread.calculate_profit_at(max_profit_price).unwrap(),
+            spread.calculate_profit_at(&max_profit_price).unwrap(),
             dec!(16.0)
         );
 
         // Max Loss = 2 * Net Premium = 2 * 2 = 4
         assert_eq!(
-            spread.calculate_profit_at(max_loss_price).unwrap(),
+            spread.calculate_profit_at(&max_loss_price).unwrap(),
             dec!(-4.0)
         );
     }
 
     #[test]
-
     fn test_profit_with_fees() {
         let spread = BearPutSpread::new(
             "TEST".to_string(),
@@ -1911,28 +1926,26 @@ mod tests_bear_put_spread_profit {
         // Max Profit = Width (105 - 95 = 10) - Net Premium (4 - 2 = 2) - Total Fees (0.5 * 4)
         // = 10 - 2 - 2 = 6
         assert_eq!(
-            spread.calculate_profit_at(max_profit_price).unwrap(),
+            spread.calculate_profit_at(&max_profit_price).unwrap(),
             dec!(6.0)
         );
     }
 
     #[test]
-
     fn test_profit_far_below_strikes() {
         let spread = create_test_spread();
         let price = pos!(80.0);
 
         // El profit debería ser igual al max profit
-        assert_eq!(spread.calculate_profit_at(price).unwrap(), dec!(8.0));
+        assert_eq!(spread.calculate_profit_at(&price).unwrap(), dec!(8.0));
     }
 
     #[test]
-
     fn test_profit_far_above_strikes() {
         let spread = create_test_spread();
         let price = pos!(120.0);
 
-        assert_eq!(spread.calculate_profit_at(price).unwrap(), dec!(-2.0));
+        assert_eq!(spread.calculate_profit_at(&price).unwrap(), dec!(-2.0));
     }
 }
 
@@ -1963,26 +1976,22 @@ mod tests_bear_put_spread_probability {
     }
 
     #[test]
-
     fn test_get_expiration() {
         let spread = create_test_spread();
-        let result = spread.get_expiration();
-        assert!(result.is_ok());
-        match result.unwrap() {
-            ExpirationDate::Days(days) => assert_eq!(days, 30.0),
-            _ => panic!("Expected ExpirationDate::Days"),
-        }
+        let expiration_date = *spread.get_expiration().values().next().unwrap();
+        assert_eq!(expiration_date, &ExpirationDate::Days(pos!(30.0)));
     }
 
     #[test]
-
     fn test_get_risk_free_rate() {
         let spread = create_test_spread();
-        assert_eq!(spread.get_risk_free_rate(), Some(dec!(0.05)));
+        assert_eq!(
+            **spread.get_risk_free_rate().values().next().unwrap(),
+            dec!(0.05)
+        );
     }
 
     #[test]
-
     fn test_get_profit_ranges() {
         let spread = create_test_spread();
         let result = spread.get_profit_ranges();
@@ -1999,7 +2008,6 @@ mod tests_bear_put_spread_probability {
     }
 
     #[test]
-
     fn test_get_loss_ranges() {
         let spread = create_test_spread();
         let result = spread.get_loss_ranges();
@@ -2015,7 +2023,6 @@ mod tests_bear_put_spread_probability {
     }
 
     #[test]
-
     fn test_probability_of_profit() {
         let spread = create_test_spread();
         let result = spread.probability_of_profit(None, None);
@@ -2027,7 +2034,6 @@ mod tests_bear_put_spread_probability {
     }
 
     #[test]
-
     fn test_probability_with_volatility_adjustment() {
         let spread = create_test_spread();
         let vol_adj = Some(VolatilityAdjustment {
@@ -2044,7 +2050,6 @@ mod tests_bear_put_spread_probability {
     }
 
     #[test]
-
     fn test_probability_with_trend() {
         let spread = create_test_spread();
         let trend = Some(PriceTrend {
@@ -2061,7 +2066,6 @@ mod tests_bear_put_spread_probability {
     }
 
     #[test]
-
     fn test_analyze_probabilities() {
         let spread = create_test_spread();
         let result = spread.analyze_probabilities(None, None);
@@ -2077,7 +2081,6 @@ mod tests_bear_put_spread_probability {
     }
 
     #[test]
-
     fn test_calculate_extreme_probabilities() {
         let spread = create_test_spread();
         let result = spread.calculate_extreme_probabilities(None, None);
@@ -2119,10 +2122,9 @@ mod tests_bear_put_spread_graph {
     }
 
     #[test]
-
     fn test_title_format() {
         let spread = create_test_spread();
-        let title = spread.title();
+        let title = spread.get_title();
 
         assert!(title.contains("Bear Put Spread Strategy"));
         assert!(title.contains("Long"));
@@ -2133,7 +2135,6 @@ mod tests_bear_put_spread_graph {
     }
 
     #[test]
-
     fn test_get_vertical_lines() {
         let spread = create_test_spread();
         let lines = spread.get_vertical_lines();
@@ -2152,7 +2153,6 @@ mod tests_bear_put_spread_graph {
     }
 
     #[test]
-
     fn test_get_points() {
         let spread = create_test_spread();
         let points = spread.get_points();
@@ -2184,7 +2184,6 @@ mod tests_bear_put_spread_graph {
     }
 
     #[test]
-
     fn test_points_coordinates() {
         let spread = create_test_spread();
         let points = spread.get_points();
@@ -2203,7 +2202,7 @@ mod tests_bear_put_spread_graph {
         // Current price point
         assert_eq!(points[3].coordinates.0, 100.0);
         let current_profit = spread
-            .calculate_profit_at(pos!(100.0))
+            .calculate_profit_at(&pos!(100.0))
             .unwrap()
             .to_f64()
             .unwrap();
@@ -2211,7 +2210,6 @@ mod tests_bear_put_spread_graph {
     }
 
     #[test]
-
     fn test_point_labels() {
         let spread = create_test_spread();
         let points = spread.get_points();
@@ -2224,7 +2222,6 @@ mod tests_bear_put_spread_graph {
     }
 
     #[test]
-
     fn test_points_style() {
         let spread = create_test_spread();
         let points = spread.get_points();
@@ -2238,7 +2235,6 @@ mod tests_bear_put_spread_graph {
     }
 
     #[test]
-
     fn test_graph_with_different_quantities() {
         let spread = BearPutSpread::new(
             "TEST".to_string(),
@@ -2299,7 +2295,6 @@ mod tests_delta {
     }
 
     #[test]
-
     fn create_test_reducing_adjustments() {
         let strategy = get_strategy(pos!(5800.0), pos!(5820.0));
         let size = dec!(0.102723);
@@ -2340,7 +2335,6 @@ mod tests_delta {
     }
 
     #[test]
-
     fn create_test_increasing_adjustments() {
         let strategy = get_strategy(pos!(5840.0), pos!(5820.0));
         let size = dec!(-0.0999046);
@@ -2382,7 +2376,6 @@ mod tests_delta {
     }
 
     #[test]
-
     fn create_test_no_adjustments() {
         let strategy = get_strategy(pos!(5820.0), pos!(5820.0));
 
@@ -2429,7 +2422,6 @@ mod tests_delta_size {
     }
 
     #[test]
-
     fn create_test_reducing_adjustments() {
         let strike = pos!(5800.0);
         let strategy = get_strategy(strike, pos!(5820.0));
@@ -2472,7 +2464,6 @@ mod tests_delta_size {
     }
 
     #[test]
-
     fn create_test_increasing_adjustments() {
         let strike = pos!(5820.0);
         let strategy = get_strategy(pos!(5840.0), strike);
@@ -2515,7 +2506,6 @@ mod tests_delta_size {
     }
 
     #[test]
-
     fn create_test_no_adjustments() {
         let strategy = get_strategy(pos!(5820.0), pos!(5820.0));
 

@@ -11,7 +11,6 @@ use {
 };
 // long 276.06, short 269.62 short 58.5
 #[test]
-
 fn test_call_butterfly_integration() -> Result<(), Box<dyn Error>> {
     setup_logger();
 

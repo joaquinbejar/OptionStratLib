@@ -1,16 +1,14 @@
 use num_traits::ToPrimitive;
 use optionstratlib::ExpirationDate;
-use optionstratlib::strategies::Strategies;
 use optionstratlib::strategies::base::BreakEvenable;
 use optionstratlib::strategies::bear_call_spread::BearCallSpread;
+use optionstratlib::strategies::{BasicAble, Strategies};
 use optionstratlib::utils::setup_logger;
-use optionstratlib::visualization::utils::Graph;
 use optionstratlib::{Positive, pos};
 use rust_decimal_macros::dec;
 use std::error::Error;
 
 #[test]
-
 fn test_bear_call_spread_integration() -> Result<(), Box<dyn Error>> {
     setup_logger();
     // Define inputs for the BearCallSpread strategy
@@ -40,7 +38,10 @@ fn test_bear_call_spread_integration() -> Result<(), Box<dyn Error>> {
         "Bear Call Spread Strategy:\n\tUnderlying: SP500 @ $5750 Short Call European Option\n\tUnderlying: SP500 @ $5820 Long Call European Option"
     );
     assert_eq!(strategy.get_break_even_points().unwrap().len(), 1);
-    assert_eq!(strategy.get_net_premium_received().unwrap().to_f64(), 104.34);
+    assert_eq!(
+        strategy.get_net_premium_received().unwrap().to_f64(),
+        104.34
+    );
     assert!(strategy.get_max_profit().is_ok());
     assert!(strategy.get_max_loss().is_ok());
     assert_eq!(strategy.get_max_profit()?, pos!(104.34));

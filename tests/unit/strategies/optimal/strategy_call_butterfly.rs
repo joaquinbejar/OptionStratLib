@@ -11,7 +11,6 @@ use {
 };
 
 #[test]
-
 fn test_call_butterfly_integration() -> Result<(), Box<dyn Error>> {
     setup_logger();
 

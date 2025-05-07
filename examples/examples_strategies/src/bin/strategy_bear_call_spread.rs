@@ -4,8 +4,8 @@
    Date: 25/9/24
 ******************************************************************************/
 use optionstratlib::Positive;
-use optionstratlib::strategies::Strategies;
 use optionstratlib::strategies::bear_call_spread::BearCallSpread;
+use optionstratlib::strategies::{BasicAble, Strategies};
 use optionstratlib::utils::setup_logger;
 use optionstratlib::visualization::utils::Graph;
 use optionstratlib::visualization::utils::GraphBackend;

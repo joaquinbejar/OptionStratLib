@@ -396,7 +396,6 @@ pub mod tests {
     use std::str::FromStr;
 
     #[test]
-
     fn test_f64_to_decimal_valid() {
         let value = 42.42;
         let result = f64_to_decimal(value);
@@ -405,7 +404,6 @@ pub mod tests {
     }
 
     #[test]
-
     fn test_f64_to_decimal_zero() {
         let value = 0.0;
         let result = f64_to_decimal(value);
@@ -414,7 +412,6 @@ pub mod tests {
     }
 
     #[test]
-
     fn test_decimal_to_f64_valid() {
         let decimal = Decimal::from_str("42.42").unwrap();
         let result = decimal_to_f64(decimal);
@@ -423,7 +420,6 @@ pub mod tests {
     }
 
     #[test]
-
     fn test_decimal_to_f64_zero() {
         let decimal = Decimal::from_str("0").unwrap();
         let result = decimal_to_f64(decimal);

@@ -9,7 +9,6 @@ use rust_decimal_macros::dec;
 use std::error::Error;
 
 #[test]
-
 fn test_short_butterfly_spread_integration() -> Result<(), Box<dyn Error>> {
     setup_logger();
 

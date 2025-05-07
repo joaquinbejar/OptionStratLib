@@ -7,6 +7,7 @@ use crate::constants::{DARK_GREEN, DARK_RED};
 use crate::pricing::Profit;
 use crate::simulation::WalkParams;
 use crate::simulation::steps::Step;
+use crate::strategies::base::BasicAble;
 use crate::utils::Len;
 use crate::visualization::utils::{
     Graph, GraphBackend, calculate_axis_range, draw_points_on_chart, draw_vertical_lines_on_chart,
@@ -17,7 +18,6 @@ use rust_decimal::Decimal;
 use std::error::Error;
 use std::fmt::Display;
 use std::ops::{AddAssign, Index, IndexMut};
-use crate::strategies::base::BasicAble;
 
 /// A struct that represents a two-dimensional random walk simulation.
 ///
@@ -287,7 +287,11 @@ where
     }
 }
 
-impl<X, Y> BasicAble for RandomWalk<X, Y> where X: AddAssign + Copy + Display + Into<Positive>, Y: Clone + Display + Into<Positive>, {
+impl<X, Y> BasicAble for RandomWalk<X, Y>
+where
+    X: AddAssign + Copy + Display + Into<Positive>,
+    Y: Clone + Display + Into<Positive>,
+{
     fn get_title(&self) -> String {
         self.title.clone()
     }

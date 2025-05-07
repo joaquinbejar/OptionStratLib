@@ -2,6 +2,7 @@ use optionstratlib::ExpirationDate;
 use optionstratlib::chains::chain::OptionChain;
 use optionstratlib::chains::utils::RandomPositionsParams;
 use optionstratlib::model::position::Position;
+use optionstratlib::strategies::BasicAble;
 use optionstratlib::strategies::base::{Optimizable, Strategies};
 use optionstratlib::strategies::custom::CustomStrategy;
 use optionstratlib::strategies::utils::FindOptimalSide;

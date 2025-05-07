@@ -140,7 +140,7 @@ impl ProfitLossRange {
             &self.lower_bound.unwrap_or(Positive::ZERO),
             volatility_adj.clone(),
             trend.clone(),
-            &expiration_date,
+            expiration_date,
             risk_free_rate,
         )?;
 
@@ -150,7 +150,7 @@ impl ProfitLossRange {
             &self.upper_bound.unwrap_or(Positive::INFINITY),
             volatility_adj,
             trend,
-            &expiration_date,
+            expiration_date,
             risk_free_rate,
         )?;
 
@@ -188,21 +188,18 @@ mod tests_profit_range {
     use crate::pos;
 
     #[test]
-
     fn test_profit_range_creation() {
         let range = ProfitLossRange::new(Some(pos!(100.0)), Some(pos!(110.0)), pos!(0.5));
         assert!(range.is_ok());
     }
 
     #[test]
-
     fn test_invalid_bounds() {
         let range = ProfitLossRange::new(Some(pos!(110.0)), Some(pos!(100.0)), pos!(0.5));
         assert!(range.is_err());
     }
 
     #[test]
-
     fn test_infinite_bounds() {
         let range = ProfitLossRange::new(None, Some(pos!(100.0)), pos!(0.5));
         assert!(range.is_ok());
@@ -212,7 +209,6 @@ mod tests_profit_range {
     }
 
     #[test]
-
     fn test_contains() {
         let range = ProfitLossRange::new(Some(pos!(100.0)), Some(pos!(110.0)), pos!(0.5)).unwrap();
 
@@ -224,7 +220,6 @@ mod tests_profit_range {
     }
 
     #[test]
-
     fn test_contains_infinite_bounds() {
         let lower_infinite = ProfitLossRange::new(None, Some(pos!(100.0)), pos!(0.5)).unwrap();
         assert!(lower_infinite.contains(pos!(50.0)));
@@ -397,8 +392,13 @@ mod tests_calculate_probability {
         ];
 
         for expiration in expirations {
-            let result =
-                range.calculate_probability(&pos!(100.0), None, None, &expiration, Some(dec!(0.05)));
+            let result = range.calculate_probability(
+                &pos!(100.0),
+                None,
+                None,
+                &expiration,
+                Some(dec!(0.05)),
+            );
 
             assert!(result.is_ok());
             assert!(range.probability > Positive::ZERO);

@@ -8,6 +8,7 @@ use crate::error::{
     GreeksError, OperationErrorKind, PositionError, ProbabilityError, StrategyError,
 };
 use crate::greeks::Greeks;
+use crate::model::types::OptionBasicType;
 use crate::model::utils::mean_and_std;
 use crate::model::{Position, ProfitLossRange};
 use crate::pnl::utils::{PnL, PnLCalculator};
@@ -16,7 +17,8 @@ use crate::strategies::base::{BreakEvenable, Optimizable, Positionable, Strategy
 use crate::strategies::probabilities::{ProbabilityAnalysis, VolatilityAdjustment};
 use crate::strategies::utils::OptimizationCriteria;
 use crate::strategies::{
-    DeltaNeutrality, FindOptimalSide, Strategable, Strategies, StrategyBasics, StrategyConstructor,
+    BasicAble, DeltaNeutrality, FindOptimalSide, Strategable, Strategies, StrategyBasics,
+    StrategyConstructor,
 };
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
@@ -27,6 +29,7 @@ use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{RED, ShapeStyle};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::error::Error;
 use tracing::{debug, info};
 
@@ -335,10 +338,10 @@ impl BreakEvenable for LongButterflySpread {
     fn update_break_even_points(&mut self) -> Result<(), StrategyError> {
         self.break_even_points = Vec::new();
 
-        let left_net_value = self.calculate_profit_at(self.long_call_low.option.strike_price)?
+        let left_net_value = self.calculate_profit_at(&self.long_call_low.option.strike_price)?
             / self.long_call_low.option.quantity;
 
-        let right_net_value = self.calculate_profit_at(self.long_call_high.option.strike_price)?
+        let right_net_value = self.calculate_profit_at(&self.long_call_high.option.strike_price)?
             / self.long_call_high.option.quantity;
 
         if left_net_value <= Decimal::ZERO {
@@ -531,13 +534,81 @@ impl Strategable for LongButterflySpread {
     }
 }
 
-impl Strategies for LongButterflySpread {
-    fn get_underlying_price(&self) -> Positive {
-        self.long_call_low.option.underlying_price
-    }
+impl BasicAble for LongButterflySpread {
+    fn get_title(&self) -> String {
+        let strategy_title = format!(
+            "{:?} Strategy on {} Size {}:",
+            self.kind,
+            self.long_call_low.option.underlying_symbol,
+            self.long_call_low.option.quantity
+        );
 
-    fn max_profit(&self) -> Result<Positive, StrategyError> {
-        let profit = self.calculate_profit_at(self.short_call.option.strike_price)?;
+        let leg_titles = [
+            format!(
+                "Long Call Low Strike: ${}",
+                self.long_call_low.option.strike_price
+            ),
+            format!(
+                "Short Calls Middle Strike: ${}",
+                self.short_call.option.strike_price
+            ),
+            format!(
+                "Long Call High Strike: ${}",
+                self.long_call_high.option.strike_price
+            ),
+            format!(
+                "Expire: {}",
+                self.long_call_low
+                    .option
+                    .expiration_date
+                    .get_date_string()
+                    .unwrap()
+            ),
+        ];
+
+        format!("{}\n\t{}", strategy_title, leg_titles.join("\n\t"))
+    }
+    fn get_option_basic_type(&self) -> OptionBasicType {
+        unimplemented!("get_option_basic_type is not implemented for this strategy");
+    }
+    fn get_symbol(&self) -> &str {
+        unimplemented!("get_symbol is not implemented for this strategy");
+    }
+    fn get_strike(&self) -> HashMap<OptionBasicType, &Positive> {
+        unimplemented!("get_strike is not implemented for this strategy");
+    }
+    fn get_side(&self) -> HashMap<OptionBasicType, &Side> {
+        unimplemented!("get_side is not implemented for this strategy");
+    }
+    fn get_type(&self) -> &OptionType {
+        unimplemented!("get_type is not implemented for this strategy");
+    }
+    fn get_style(&self) -> HashMap<OptionBasicType, &OptionStyle> {
+        unimplemented!("get_style is not implemented for this strategy");
+    }
+    fn get_expiration(&self) -> HashMap<OptionBasicType, &ExpirationDate> {
+        unimplemented!("get_expiration is not implemented for this strategy");
+    }
+    fn get_implied_volatility(&self) -> HashMap<OptionBasicType, &Positive> {
+        unimplemented!("get_implied_volatility is not implemented for this strategy");
+    }
+    fn get_quantity(&self) -> HashMap<OptionBasicType, &Positive> {
+        unimplemented!("get_quantity is not implemented for this strategy");
+    }
+    fn get_underlying_price(&self) -> &Positive {
+        &self.short_call.option.underlying_price
+    }
+    fn get_risk_free_rate(&self) -> HashMap<OptionBasicType, &Decimal> {
+        unimplemented!("get_risk_free_rate is not implemented for this strategy");
+    }
+    fn get_dividend_yield(&self) -> HashMap<OptionBasicType, &Positive> {
+        unimplemented!("get_dividend_yield is not implemented for this strategy");
+    }
+}
+
+impl Strategies for LongButterflySpread {
+    fn get_max_profit(&self) -> Result<Positive, StrategyError> {
+        let profit = self.calculate_profit_at(&self.short_call.option.strike_price)?;
         if profit > Decimal::ZERO {
             Ok(profit.into())
         } else {
@@ -548,10 +619,9 @@ impl Strategies for LongButterflySpread {
             ))
         }
     }
-
-    fn max_loss(&self) -> Result<Positive, StrategyError> {
-        let left_loss = self.calculate_profit_at(self.long_call_low.option.strike_price)?;
-        let right_loss = self.calculate_profit_at(self.long_call_high.option.strike_price)?;
+    fn get_max_loss(&self) -> Result<Positive, StrategyError> {
+        let left_loss = self.calculate_profit_at(&self.long_call_low.option.strike_price)?;
+        let right_loss = self.calculate_profit_at(&self.long_call_high.option.strike_price)?;
         let max_loss = left_loss.min(right_loss);
         if max_loss > Decimal::ZERO {
             Err(StrategyError::ProfitLossError(
@@ -563,9 +633,8 @@ impl Strategies for LongButterflySpread {
             Ok(max_loss.abs().into())
         }
     }
-
-    fn profit_area(&self) -> Result<Decimal, StrategyError> {
-        let high = self.max_profit().unwrap_or(Positive::ZERO);
+    fn get_profit_area(&self) -> Result<Decimal, StrategyError> {
+        let high = self.get_max_profit().unwrap_or(Positive::ZERO);
         let break_even_points = self.get_break_even_points()?;
 
         let base = if break_even_points.len() == 2 {
@@ -574,19 +643,18 @@ impl Strategies for LongButterflySpread {
             let break_even_point = break_even_points[0];
 
             if break_even_point < self.short_call.option.strike_price {
-                self.calculate_profit_at(self.long_call_high.option.strike_price)?
+                self.calculate_profit_at(&self.long_call_high.option.strike_price)?
                     .into()
             } else {
-                self.calculate_profit_at(self.long_call_low.option.strike_price)?
+                self.calculate_profit_at(&self.long_call_low.option.strike_price)?
                     .into()
             }
         };
         Ok((high * base / 200.0).into())
     }
-
-    fn profit_ratio(&self) -> Result<Decimal, StrategyError> {
-        let max_profit = self.max_profit().unwrap_or(Positive::ZERO);
-        let max_loss = self.max_loss().unwrap_or(Positive::ZERO);
+    fn get_profit_ratio(&self) -> Result<Decimal, StrategyError> {
+        let max_profit = self.get_max_profit().unwrap_or(Positive::ZERO);
+        let max_loss = self.get_max_loss().unwrap_or(Positive::ZERO);
         match (max_profit, max_loss) {
             (value, _) if value == Positive::ZERO => Ok(Decimal::ZERO),
             (_, value) if value == Positive::ZERO => Ok(Decimal::MAX),
@@ -645,7 +713,9 @@ impl Optimizable for LongButterflySpread {
                     third: long_high,
                 };
                 let strategy = strategy.create_strategy(option_chain, &legs);
-                strategy.validate() && strategy.max_profit().is_ok() && strategy.max_loss().is_ok()
+                strategy.validate()
+                    && strategy.get_max_profit().is_ok()
+                    && strategy.get_max_loss().is_ok()
             })
             // Map to OptionDataGroup
             .map(move |(long_low, short, long_high)| {
@@ -678,8 +748,8 @@ impl Optimizable for LongButterflySpread {
             let strategy = self.create_strategy(option_chain, &legs);
             // Calculate the current value based on the optimization criteria
             let current_value = match criteria {
-                OptimizationCriteria::Ratio => strategy.profit_ratio().unwrap(),
-                OptimizationCriteria::Area => strategy.profit_area().unwrap(),
+                OptimizationCriteria::Ratio => strategy.get_profit_ratio().unwrap(),
+                OptimizationCriteria::Area => strategy.get_profit_area().unwrap(),
             };
 
             if current_value > best_value {
@@ -729,8 +799,8 @@ impl Optimizable for LongButterflySpread {
 }
 
 impl Profit for LongButterflySpread {
-    fn calculate_profit_at(&self, price: Positive) -> Result<Decimal, Box<dyn Error>> {
-        let price = Some(&price);
+    fn calculate_profit_at(&self, price: &Positive) -> Result<Decimal, Box<dyn Error>> {
+        let price = Some(price);
         Ok(self.long_call_low.pnl_at_expiration(&price)?
             + self.short_call.pnl_at_expiration(&price)?
             + self.long_call_high.pnl_at_expiration(&price)?)
@@ -738,45 +808,10 @@ impl Profit for LongButterflySpread {
 }
 
 impl Graph for LongButterflySpread {
-    fn title(&self) -> String {
-        let strategy_title = format!(
-            "{:?} Strategy on {} Size {}:",
-            self.kind,
-            self.long_call_low.option.underlying_symbol,
-            self.long_call_low.option.quantity
-        );
-
-        let leg_titles = [
-            format!(
-                "Long Call Low Strike: ${}",
-                self.long_call_low.option.strike_price
-            ),
-            format!(
-                "Short Calls Middle Strike: ${}",
-                self.short_call.option.strike_price
-            ),
-            format!(
-                "Long Call High Strike: ${}",
-                self.long_call_high.option.strike_price
-            ),
-            format!(
-                "Expire: {}",
-                self.long_call_low
-                    .option
-                    .expiration_date
-                    .get_date_string()
-                    .unwrap()
-            ),
-        ];
-
-        format!("{}\n\t{}", strategy_title, leg_titles.join("\n\t"))
-    }
-
     fn get_x_values(&self) -> Vec<Positive> {
-        self.best_range_to_show(Positive::from(1.0))
+        self.get_best_range_to_show(Positive::from(1.0))
             .unwrap_or_else(|_| vec![self.short_call.option.strike_price])
     }
-
     fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<f64, f64>> {
         vec![ChartVerticalLine {
             x_coordinate: self.long_call_low.option.underlying_price.to_f64(),
@@ -792,18 +827,17 @@ impl Graph for LongButterflySpread {
             font_size: 18,
         }]
     }
-
     fn get_points(&self) -> Vec<ChartPoint<(f64, f64)>> {
         let mut points = Vec::new();
-        let max_profit = self.max_profit().unwrap_or(Positive::ZERO);
+        let max_profit = self.get_max_profit().unwrap_or(Positive::ZERO);
 
         let left_loss = self
-            .calculate_profit_at(self.long_call_low.option.strike_price)
+            .calculate_profit_at(&self.long_call_low.option.strike_price)
             .unwrap()
             .to_f64()
             .unwrap();
         let right_loss = self
-            .calculate_profit_at(self.long_call_high.option.strike_price)
+            .calculate_profit_at(&self.long_call_high.option.strike_price)
             .unwrap()
             .to_f64()
             .unwrap();
@@ -869,23 +903,18 @@ impl Graph for LongButterflySpread {
         });
 
         // Current price point
-        points.push(self.get_point_at_price(self.long_call_low.option.underlying_price));
+        points.push(self.get_point_at_price(&self.long_call_low.option.underlying_price));
 
         points
     }
 }
 
 impl ProbabilityAnalysis for LongButterflySpread {
-    fn get_expiration(&self) -> Result<ExpirationDate, ProbabilityError> {
-        Ok(self.long_call_low.option.expiration_date)
-    }
-
-    fn get_risk_free_rate(&self) -> Option<Decimal> {
-        Some(self.long_call_low.option.risk_free_rate)
-    }
-
     fn get_profit_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
         let break_even_points = self.get_break_even_points()?;
+        let option = &self.short_call.option;
+        let expiration_date = &option.expiration_date;
+        let risk_free_rate = option.risk_free_rate;
 
         let (mean_volatility, std_dev) = mean_and_std(vec![
             self.long_call_low.option.implied_volatility,
@@ -896,7 +925,7 @@ impl ProbabilityAnalysis for LongButterflySpread {
         let mut profit_range = ProfitLossRange::new(
             Some(break_even_points[0]),
             Some(break_even_points[1]),
-            pos!(self.max_profit()?.to_f64()),
+            pos!(self.get_max_profit()?.to_f64()),
         )?;
 
         profit_range.calculate_probability(
@@ -906,8 +935,8 @@ impl ProbabilityAnalysis for LongButterflySpread {
                 std_dev_adjustment: std_dev,
             }),
             None,
-            self.get_expiration()?,
-            self.get_risk_free_rate(),
+            expiration_date,
+            Some(risk_free_rate),
         )?;
 
         Ok(vec![profit_range])
@@ -916,6 +945,9 @@ impl ProbabilityAnalysis for LongButterflySpread {
     fn get_loss_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
         let mut ranges = Vec::new();
         let break_even_points = self.get_break_even_points()?;
+        let option = &self.short_call.option;
+        let expiration_date = &option.expiration_date;
+        let risk_free_rate = option.risk_free_rate;
 
         let (mean_volatility, std_dev) = mean_and_std(vec![
             self.long_call_low.option.implied_volatility,
@@ -931,15 +963,15 @@ impl ProbabilityAnalysis for LongButterflySpread {
         let mut lower_loss_range = ProfitLossRange::new(
             Some(self.long_call_low.option.strike_price),
             Some(break_even_points[0]),
-            pos!(self.max_loss()?.to_f64()),
+            pos!(self.get_max_loss()?.to_f64()),
         )?;
 
         lower_loss_range.calculate_probability(
             self.get_underlying_price(),
             volatility_adjustment.clone(),
             None,
-            self.get_expiration()?,
-            self.get_risk_free_rate(),
+            expiration_date,
+            Some(risk_free_rate),
         )?;
 
         ranges.push(lower_loss_range);
@@ -947,15 +979,15 @@ impl ProbabilityAnalysis for LongButterflySpread {
         let mut upper_loss_range = ProfitLossRange::new(
             Some(break_even_points[1]),
             Some(self.long_call_high.option.strike_price),
-            pos!(self.max_loss()?.to_f64()),
+            pos!(self.get_max_loss()?.to_f64()),
         )?;
 
         upper_loss_range.calculate_probability(
             self.get_underlying_price(),
             volatility_adjustment,
             None,
-            self.get_expiration()?,
-            self.get_risk_free_rate(),
+            expiration_date,
+            Some(risk_free_rate),
         )?;
 
         ranges.push(upper_loss_range);
@@ -1311,10 +1343,11 @@ impl BreakEvenable for ShortButterflySpread {
     fn update_break_even_points(&mut self) -> Result<(), StrategyError> {
         self.break_even_points = Vec::new();
 
-        let left_net_value = self.calculate_profit_at(self.short_call_low.option.strike_price)?
+        let left_net_value = self.calculate_profit_at(&self.short_call_low.option.strike_price)?
             / self.short_call_low.option.quantity;
 
-        let right_net_value = self.calculate_profit_at(self.short_call_high.option.strike_price)?
+        let right_net_value = self
+            .calculate_profit_at(&self.short_call_high.option.strike_price)?
             / self.short_call_high.option.quantity;
 
         if left_net_value >= Decimal::ZERO {
@@ -1507,14 +1540,75 @@ impl Strategable for ShortButterflySpread {
     }
 }
 
-impl Strategies for ShortButterflySpread {
-    fn get_underlying_price(&self) -> Positive {
-        self.short_call_low.option.underlying_price
-    }
+impl BasicAble for ShortButterflySpread {
+    fn get_title(&self) -> String {
+        let strategy_title = format!(
+            "{:?} Strategy on {} Size {}:",
+            self.kind,
+            self.short_call_low.option.underlying_symbol,
+            self.short_call_low.option.quantity
+        );
 
-    fn max_profit(&self) -> Result<Positive, StrategyError> {
-        let left_profit = self.calculate_profit_at(self.short_call_low.option.strike_price)?;
-        let right_profit = self.calculate_profit_at(self.short_call_high.option.strike_price)?;
+        let leg_titles = [
+            format!(
+                "Short Call Low Strike: ${}",
+                self.short_call_low.option.strike_price
+            ),
+            format!(
+                "Long Calls Middle Strike: ${}",
+                self.long_call.option.strike_price
+            ),
+            format!(
+                "Short Call High Strike: ${}",
+                self.short_call_high.option.strike_price
+            ),
+            format!("Expire: {}", self.short_call_low.option.expiration_date),
+        ];
+
+        format!("{}\n\t{}", strategy_title, leg_titles.join("\n\t"))
+    }
+    fn get_option_basic_type(&self) -> OptionBasicType {
+        unimplemented!("get_option_basic_type is not implemented for this strategy");
+    }
+    fn get_symbol(&self) -> &str {
+        unimplemented!("get_symbol is not implemented for this strategy");
+    }
+    fn get_strike(&self) -> HashMap<OptionBasicType, &Positive> {
+        unimplemented!("get_strike is not implemented for this strategy");
+    }
+    fn get_side(&self) -> HashMap<OptionBasicType, &Side> {
+        unimplemented!("get_side is not implemented for this strategy");
+    }
+    fn get_type(&self) -> &OptionType {
+        unimplemented!("get_type is not implemented for this strategy");
+    }
+    fn get_style(&self) -> HashMap<OptionBasicType, &OptionStyle> {
+        unimplemented!("get_style is not implemented for this strategy");
+    }
+    fn get_expiration(&self) -> HashMap<OptionBasicType, &ExpirationDate> {
+        unimplemented!("get_expiration is not implemented for this strategy");
+    }
+    fn get_implied_volatility(&self) -> HashMap<OptionBasicType, &Positive> {
+        unimplemented!("get_implied_volatility is not implemented for this strategy");
+    }
+    fn get_quantity(&self) -> HashMap<OptionBasicType, &Positive> {
+        unimplemented!("get_quantity is not implemented for this strategy");
+    }
+    fn get_underlying_price(&self) -> &Positive {
+        &self.long_call.option.underlying_price
+    }
+    fn get_risk_free_rate(&self) -> HashMap<OptionBasicType, &Decimal> {
+        unimplemented!("get_risk_free_rate is not implemented for this strategy");
+    }
+    fn get_dividend_yield(&self) -> HashMap<OptionBasicType, &Positive> {
+        unimplemented!("get_dividend_yield is not implemented for this strategy");
+    }
+}
+
+impl Strategies for ShortButterflySpread {
+    fn get_max_profit(&self) -> Result<Positive, StrategyError> {
+        let left_profit = self.calculate_profit_at(&self.short_call_low.option.strike_price)?;
+        let right_profit = self.calculate_profit_at(&self.short_call_high.option.strike_price)?;
         let max_profit = left_profit.max(right_profit);
         if max_profit > Decimal::ZERO {
             Ok(max_profit.into())
@@ -1526,9 +1620,8 @@ impl Strategies for ShortButterflySpread {
             ))
         }
     }
-
-    fn max_loss(&self) -> Result<Positive, StrategyError> {
-        let loss = self.calculate_profit_at(self.long_call.option.strike_price)?;
+    fn get_max_loss(&self) -> Result<Positive, StrategyError> {
+        let loss = self.calculate_profit_at(&self.long_call.option.strike_price)?;
         if loss > Decimal::ZERO {
             Err(StrategyError::ProfitLossError(
                 ProfitLossErrorKind::MaxLossError {
@@ -1539,11 +1632,10 @@ impl Strategies for ShortButterflySpread {
             Ok(loss.abs().into())
         }
     }
-
-    fn profit_area(&self) -> Result<Decimal, StrategyError> {
+    fn get_profit_area(&self) -> Result<Decimal, StrategyError> {
         let break_even_points = self.get_break_even_points()?;
-        let left_profit = self.calculate_profit_at(self.short_call_low.option.strike_price)?;
-        let right_profit = self.calculate_profit_at(self.short_call_high.option.strike_price)?;
+        let left_profit = self.calculate_profit_at(&self.short_call_low.option.strike_price)?;
+        let right_profit = self.calculate_profit_at(&self.short_call_high.option.strike_price)?;
 
         let result = if break_even_points.len() == 2 {
             left_profit + right_profit
@@ -1552,10 +1644,9 @@ impl Strategies for ShortButterflySpread {
         };
         Ok(result)
     }
-
-    fn profit_ratio(&self) -> Result<Decimal, StrategyError> {
-        let max_profit = self.max_profit().unwrap_or(Positive::ZERO);
-        let max_loss = self.max_loss().unwrap_or(Positive::ZERO);
+    fn get_profit_ratio(&self) -> Result<Decimal, StrategyError> {
+        let max_profit = self.get_max_profit().unwrap_or(Positive::ZERO);
+        let max_loss = self.get_max_loss().unwrap_or(Positive::ZERO);
         match (max_profit, max_loss) {
             (value, _) if value == Positive::ZERO => Ok(Decimal::ZERO),
             (_, value) if value == Positive::ZERO => Ok(Decimal::MAX),
@@ -1614,7 +1705,9 @@ impl Optimizable for ShortButterflySpread {
                     third: short_high,
                 };
                 let strategy = strategy.create_strategy(option_chain, &legs);
-                strategy.validate() && strategy.max_profit().is_ok() && strategy.max_loss().is_ok()
+                strategy.validate()
+                    && strategy.get_max_profit().is_ok()
+                    && strategy.get_max_loss().is_ok()
             })
             // Map to OptionDataGroup
             .map(move |(short_low, long, short_high)| {
@@ -1647,8 +1740,8 @@ impl Optimizable for ShortButterflySpread {
             let strategy = self.create_strategy(option_chain, &legs);
             // Calculate the current value based on the optimization criteria
             let current_value = match criteria {
-                OptimizationCriteria::Ratio => strategy.profit_ratio().unwrap(),
-                OptimizationCriteria::Area => strategy.profit_area().unwrap(),
+                OptimizationCriteria::Ratio => strategy.get_profit_ratio().unwrap(),
+                OptimizationCriteria::Area => strategy.get_profit_area().unwrap(),
             };
 
             if current_value > best_value {
@@ -1698,8 +1791,8 @@ impl Optimizable for ShortButterflySpread {
 }
 
 impl Profit for ShortButterflySpread {
-    fn calculate_profit_at(&self, price: Positive) -> Result<Decimal, Box<dyn Error>> {
-        let price = Some(&price);
+    fn calculate_profit_at(&self, price: &Positive) -> Result<Decimal, Box<dyn Error>> {
+        let price = Some(price);
         Ok(self.short_call_low.pnl_at_expiration(&price)?
             + self.long_call.pnl_at_expiration(&price)?
             + self.short_call_high.pnl_at_expiration(&price)?)
@@ -1707,35 +1800,8 @@ impl Profit for ShortButterflySpread {
 }
 
 impl Graph for ShortButterflySpread {
-    fn title(&self) -> String {
-        let strategy_title = format!(
-            "{:?} Strategy on {} Size {}:",
-            self.kind,
-            self.short_call_low.option.underlying_symbol,
-            self.short_call_low.option.quantity
-        );
-
-        let leg_titles = [
-            format!(
-                "Short Call Low Strike: ${}",
-                self.short_call_low.option.strike_price
-            ),
-            format!(
-                "Long Calls Middle Strike: ${}",
-                self.long_call.option.strike_price
-            ),
-            format!(
-                "Short Call High Strike: ${}",
-                self.short_call_high.option.strike_price
-            ),
-            format!("Expire: {}", self.short_call_low.option.expiration_date),
-        ];
-
-        format!("{}\n\t{}", strategy_title, leg_titles.join("\n\t"))
-    }
-
     fn get_x_values(&self) -> Vec<Positive> {
-        self.best_range_to_show(Positive::from(1.0))
+        self.get_best_range_to_show(Positive::from(1.0))
             .unwrap_or_else(|_| vec![self.long_call.option.strike_price])
     }
 
@@ -1757,15 +1823,15 @@ impl Graph for ShortButterflySpread {
 
     fn get_points(&self) -> Vec<ChartPoint<(f64, f64)>> {
         let mut points = Vec::new();
-        let max_loss = self.max_loss().unwrap_or(Positive::ZERO);
+        let max_loss = self.get_max_loss().unwrap_or(Positive::ZERO);
 
         let left_profit = self
-            .calculate_profit_at(self.short_call_low.option.strike_price)
+            .calculate_profit_at(&self.short_call_low.option.strike_price)
             .unwrap()
             .to_f64()
             .unwrap();
         let right_profit = self
-            .calculate_profit_at(self.short_call_high.option.strike_price)
+            .calculate_profit_at(&self.short_call_high.option.strike_price)
             .unwrap()
             .to_f64()
             .unwrap();
@@ -1836,24 +1902,19 @@ impl Graph for ShortButterflySpread {
         });
 
         // Current price point
-        points.push(self.get_point_at_price(self.short_call_low.option.underlying_price));
+        points.push(self.get_point_at_price(&self.short_call_low.option.underlying_price));
 
         points
     }
 }
 
 impl ProbabilityAnalysis for ShortButterflySpread {
-    fn get_expiration(&self) -> Result<ExpirationDate, ProbabilityError> {
-        Ok(self.short_call_low.option.expiration_date)
-    }
-
-    fn get_risk_free_rate(&self) -> Option<Decimal> {
-        Some(self.short_call_low.option.risk_free_rate)
-    }
-
     fn get_profit_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
         let mut ranges = Vec::new();
         let break_even_points = self.get_break_even_points()?;
+        let option = &self.long_call.option;
+        let expiration_date = &option.expiration_date;
+        let risk_free_rate = option.risk_free_rate;
 
         let (mean_volatility, std_dev) = mean_and_std(vec![
             self.short_call_low.option.implied_volatility,
@@ -1869,15 +1930,15 @@ impl ProbabilityAnalysis for ShortButterflySpread {
         let mut lower_profit_range = ProfitLossRange::new(
             Some(self.short_call_low.option.strike_price),
             Some(break_even_points[0]),
-            pos!(self.max_profit()?.to_f64()),
+            pos!(self.get_max_profit()?.to_f64()),
         )?;
 
         lower_profit_range.calculate_probability(
             self.get_underlying_price(),
             volatility_adjustment.clone(),
             None,
-            self.get_expiration()?,
-            self.get_risk_free_rate(),
+            expiration_date,
+            Some(risk_free_rate),
         )?;
 
         ranges.push(lower_profit_range);
@@ -1885,15 +1946,15 @@ impl ProbabilityAnalysis for ShortButterflySpread {
         let mut upper_profit_range = ProfitLossRange::new(
             Some(break_even_points[1]),
             Some(self.short_call_high.option.strike_price),
-            pos!(self.max_profit()?.to_f64()),
+            pos!(self.get_max_profit()?.to_f64()),
         )?;
 
         upper_profit_range.calculate_probability(
             self.get_underlying_price(),
             volatility_adjustment,
             None,
-            self.get_expiration()?,
-            self.get_risk_free_rate(),
+            expiration_date,
+            Some(risk_free_rate),
         )?;
 
         ranges.push(upper_profit_range);
@@ -1903,6 +1964,9 @@ impl ProbabilityAnalysis for ShortButterflySpread {
 
     fn get_loss_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
         let break_even_points = self.get_break_even_points()?;
+        let option = &self.long_call.option;
+        let expiration_date = &option.expiration_date;
+        let risk_free_rate = option.risk_free_rate;
 
         let (mean_volatility, std_dev) = mean_and_std(vec![
             self.short_call_low.option.implied_volatility,
@@ -1913,7 +1977,7 @@ impl ProbabilityAnalysis for ShortButterflySpread {
         let mut loss_range = ProfitLossRange::new(
             Some(break_even_points[0]),
             Some(break_even_points[1]),
-            pos!(self.max_loss()?.to_f64()),
+            pos!(self.get_max_loss()?.to_f64()),
         )?;
 
         loss_range.calculate_probability(
@@ -1923,8 +1987,8 @@ impl ProbabilityAnalysis for ShortButterflySpread {
                 std_dev_adjustment: std_dev,
             }),
             None,
-            self.get_expiration()?,
-            self.get_risk_free_rate(),
+            expiration_date,
+            Some(risk_free_rate),
         )?;
 
         Ok(vec![loss_range])
@@ -2013,7 +2077,6 @@ mod tests_long_butterfly_spread {
     }
 
     #[test]
-
     fn test_new_butterfly_basic_properties() {
         let butterfly = create_test_butterfly();
 
@@ -2024,7 +2087,6 @@ mod tests_long_butterfly_spread {
     }
 
     #[test]
-
     fn test_butterfly_strikes() {
         let butterfly = create_test_butterfly();
 
@@ -2034,7 +2096,6 @@ mod tests_long_butterfly_spread {
     }
 
     #[test]
-
     fn test_butterfly_quantities() {
         let butterfly = create_test_butterfly();
 
@@ -2044,7 +2105,6 @@ mod tests_long_butterfly_spread {
     }
 
     #[test]
-
     fn test_butterfly_sides() {
         let butterfly = create_test_butterfly();
 
@@ -2054,7 +2114,6 @@ mod tests_long_butterfly_spread {
     }
 
     #[test]
-
     fn test_butterfly_option_styles() {
         let butterfly = create_test_butterfly();
 
@@ -2070,7 +2129,6 @@ mod tests_long_butterfly_spread {
     }
 
     #[test]
-
     fn test_butterfly_expiration_consistency() {
         let butterfly = create_test_butterfly();
         let expiration = ExpirationDate::Days(pos!(30.0));
@@ -2090,7 +2148,6 @@ mod tests_long_butterfly_spread {
     }
 
     #[test]
-
     fn test_butterfly_fees_distribution() {
         let butterfly = LongButterflySpread::new(
             "TEST".to_string(),
@@ -2120,7 +2177,6 @@ mod tests_long_butterfly_spread {
     }
 
     #[test]
-
     fn test_butterfly_break_even_points() {
         let butterfly = create_test_butterfly();
         let break_even_points = butterfly.break_even_points;
@@ -2133,7 +2189,6 @@ mod tests_long_butterfly_spread {
     }
 
     #[test]
-
     fn test_butterfly_with_different_quantities() {
         let butterfly = LongButterflySpread::new(
             "TEST".to_string(),
@@ -2163,7 +2218,6 @@ mod tests_long_butterfly_spread {
     }
 
     #[test]
-
     fn test_butterfly_with_symmetric_strikes() {
         let butterfly = create_test_butterfly();
 
@@ -2176,7 +2230,6 @@ mod tests_long_butterfly_spread {
     }
 
     #[test]
-
     fn test_butterfly_with_equal_implied_volatility() {
         let butterfly = create_test_butterfly();
 
@@ -2191,7 +2244,6 @@ mod tests_long_butterfly_spread {
     }
 
     #[test]
-
     fn test_butterfly_with_invalid_premiums() {
         let check_profit = LongButterflySpread::new(
             "TEST".to_string(),
@@ -2214,7 +2266,7 @@ mod tests_long_butterfly_spread {
             pos!(1.05),  // open_fee_long_call_high
             pos!(0.05),  // close_fee_long_call_high
         );
-        assert!(check_profit.max_profit().is_err());
+        assert!(check_profit.get_max_profit().is_err());
     }
 }
 
@@ -2250,7 +2302,6 @@ mod tests_short_butterfly_spread {
     }
 
     #[test]
-
     fn test_new_butterfly_basic_properties() {
         let butterfly = create_test_butterfly();
 
@@ -2261,7 +2312,6 @@ mod tests_short_butterfly_spread {
     }
 
     #[test]
-
     fn test_butterfly_strikes() {
         let butterfly = create_test_butterfly();
 
@@ -2271,7 +2321,6 @@ mod tests_short_butterfly_spread {
     }
 
     #[test]
-
     fn test_butterfly_quantities() {
         let butterfly = create_test_butterfly();
 
@@ -2281,7 +2330,6 @@ mod tests_short_butterfly_spread {
     }
 
     #[test]
-
     fn test_butterfly_sides() {
         let butterfly = create_test_butterfly();
 
@@ -2291,7 +2339,6 @@ mod tests_short_butterfly_spread {
     }
 
     #[test]
-
     fn test_butterfly_option_styles() {
         let butterfly = create_test_butterfly();
 
@@ -2307,7 +2354,6 @@ mod tests_short_butterfly_spread {
     }
 
     #[test]
-
     fn test_butterfly_expiration_consistency() {
         let butterfly = create_test_butterfly();
         let expiration = ExpirationDate::Days(pos!(30.0));
@@ -2327,7 +2373,6 @@ mod tests_short_butterfly_spread {
     }
 
     #[test]
-
     fn test_butterfly_fees_distribution() {
         let butterfly = ShortButterflySpread::new(
             "TEST".to_string(),
@@ -2357,7 +2402,6 @@ mod tests_short_butterfly_spread {
     }
 
     #[test]
-
     fn test_butterfly_break_even_points() {
         let butterfly = create_test_butterfly();
         let break_even_points = butterfly.break_even_points;
@@ -2370,7 +2414,6 @@ mod tests_short_butterfly_spread {
     }
 
     #[test]
-
     fn test_butterfly_with_different_quantities() {
         let butterfly = ShortButterflySpread::new(
             "TEST".to_string(),
@@ -2400,7 +2443,6 @@ mod tests_short_butterfly_spread {
     }
 
     #[test]
-
     fn test_butterfly_with_symmetric_strikes() {
         let butterfly = create_test_butterfly();
 
@@ -2413,7 +2455,6 @@ mod tests_short_butterfly_spread {
     }
 
     #[test]
-
     fn test_butterfly_with_equal_implied_volatility() {
         let butterfly = create_test_butterfly();
 
@@ -2428,7 +2469,6 @@ mod tests_short_butterfly_spread {
     }
 
     #[test]
-
     fn test_butterfly_underlying_price_consistency() {
         let butterfly = create_test_butterfly();
         let underlying_price = pos!(100.0);
@@ -2448,7 +2488,6 @@ mod tests_short_butterfly_spread {
     }
 
     #[test]
-
     fn test_butterfly_with_invalid_premiums() {
         let max_loss = ShortButterflySpread::new(
             "TEST".to_string(),
@@ -2471,11 +2510,10 @@ mod tests_short_butterfly_spread {
             pos!(0.05), // open_fee_long_call_high
             pos!(0.05), // close_fee_long_call_high
         );
-        assert!(max_loss.max_loss().is_err());
+        assert!(max_loss.get_max_loss().is_err());
     }
 
     #[test]
-
     fn test_butterfly_risk_free_rate_consistency() {
         let butterfly = create_test_butterfly();
         let risk_free_rate = dec!(0.05);
@@ -2521,7 +2559,6 @@ mod tests_long_butterfly_validation {
     }
 
     #[test]
-
     fn test_valid_long_butterfly() {
         let butterfly = LongButterflySpread::new(
             "TEST".to_string(),
@@ -2548,7 +2585,6 @@ mod tests_long_butterfly_validation {
     }
 
     #[test]
-
     fn test_invalid_long_call_low() {
         let mut butterfly = LongButterflySpread::new(
             "TEST".to_string(),
@@ -2576,7 +2612,6 @@ mod tests_long_butterfly_validation {
     }
 
     #[test]
-
     fn test_invalid_strike_order_low() {
         let butterfly = LongButterflySpread::new(
             "TEST".to_string(),
@@ -2603,7 +2638,6 @@ mod tests_long_butterfly_validation {
     }
 
     #[test]
-
     fn test_invalid_quantities() {
         let mut butterfly = LongButterflySpread::new(
             "TEST".to_string(),
@@ -2631,7 +2665,6 @@ mod tests_long_butterfly_validation {
     }
 
     #[test]
-
     fn test_unequal_wing_quantities() {
         let mut butterfly = LongButterflySpread::new(
             "TEST".to_string(),
@@ -2688,7 +2721,6 @@ mod tests_short_butterfly_validation {
     }
 
     #[test]
-
     fn test_valid_short_butterfly() {
         let butterfly = ShortButterflySpread::new(
             "TEST".to_string(),
@@ -2715,7 +2747,6 @@ mod tests_short_butterfly_validation {
     }
 
     #[test]
-
     fn test_invalid_short_call_low() {
         let mut butterfly = ShortButterflySpread::new(
             "TEST".to_string(),
@@ -2743,7 +2774,6 @@ mod tests_short_butterfly_validation {
     }
 
     #[test]
-
     fn test_invalid_strike_order_high() {
         let butterfly = ShortButterflySpread::new(
             "TEST".to_string(),
@@ -2770,7 +2800,6 @@ mod tests_short_butterfly_validation {
     }
 
     #[test]
-
     fn test_invalid_middle_quantities() {
         let mut butterfly = ShortButterflySpread::new(
             "TEST".to_string(),
@@ -2798,7 +2827,6 @@ mod tests_short_butterfly_validation {
     }
 
     #[test]
-
     fn test_unequal_wing_quantities_short() {
         let mut butterfly = ShortButterflySpread::new(
             "TEST".to_string(),
@@ -2883,17 +2911,14 @@ mod tests_butterfly_strategies {
     }
 
     #[test]
-
     fn test_underlying_price() {
         let long_butterfly = create_test_long();
         let short_butterfly = create_test_short();
-
-        assert_eq!(long_butterfly.get_underlying_price(), pos!(100.0));
-        assert_eq!(short_butterfly.get_underlying_price(), pos!(100.0));
+        assert_eq!(long_butterfly.get_underlying_price(), &pos!(100.0));
+        assert_eq!(short_butterfly.get_underlying_price(), &pos!(100.0));
     }
 
     #[test]
-
     fn test_add_leg_long_butterfly() {
         let mut butterfly = create_test_long();
         let new_long = Position::new(
@@ -2924,7 +2949,6 @@ mod tests_butterfly_strategies {
     }
 
     #[test]
-
     fn test_add_leg_short_butterfly() {
         let mut butterfly = create_test_short();
         let new_short = Position::new(
@@ -2955,7 +2979,6 @@ mod tests_butterfly_strategies {
     }
 
     #[test]
-
     fn test_get_legs() {
         let long_butterfly = create_test_long();
         let short_butterfly = create_test_short();
@@ -2965,48 +2988,43 @@ mod tests_butterfly_strategies {
     }
 
     #[test]
-
     fn test_max_profit_long_butterfly() {
         let butterfly = create_test_long();
-        let max_profit = butterfly.max_profit().unwrap().to_dec();
+        let max_profit = butterfly.get_max_profit().unwrap().to_dec();
         // Max profit at middle strike
-        let expected_profit = butterfly.calculate_profit_at(pos!(100.0)).unwrap();
+        let expected_profit = butterfly.calculate_profit_at(&pos!(100.0)).unwrap();
         assert_eq!(max_profit, expected_profit);
     }
 
     #[test]
-
     fn test_max_loss_long_butterfly() {
         let butterfly = create_test_long();
-        let max_loss = butterfly.max_loss().unwrap().to_dec();
+        let max_loss = butterfly.get_max_loss().unwrap().to_dec();
         // Max loss at wings
-        let left_loss = butterfly.calculate_profit_at(pos!(90.0)).unwrap();
-        let right_loss = butterfly.calculate_profit_at(pos!(110.0)).unwrap();
+        let left_loss = butterfly.calculate_profit_at(&pos!(90.0)).unwrap();
+        let right_loss = butterfly.calculate_profit_at(&pos!(110.0)).unwrap();
         assert_eq!(max_loss, left_loss.min(right_loss).abs());
     }
 
     #[test]
-
     fn test_max_loss_short_butterfly() {
         let butterfly = create_test_short();
-        let max_loss = butterfly.max_loss().unwrap();
+        let max_loss = butterfly.get_max_loss().unwrap();
         // Max loss at middle strike
         let expected_loss = 9.4;
         assert_eq!(max_loss.to_f64(), expected_loss);
     }
 
     #[test]
-
     fn test_total_cost() {
         let long_butterfly = create_test_long();
         let short_butterfly = create_test_short();
 
-        assert!(long_butterfly.total_cost().unwrap() > Positive::ZERO);
-        assert!(short_butterfly.total_cost().unwrap() > Positive::ZERO);
+        assert!(long_butterfly.get_total_cost().unwrap() > Positive::ZERO);
+        assert!(short_butterfly.get_total_cost().unwrap() > Positive::ZERO);
     }
 
     #[test]
-
     fn test_fees() {
         let butterfly = LongButterflySpread::new(
             "TEST".to_string(),
@@ -3029,11 +3047,10 @@ mod tests_butterfly_strategies {
             Positive::ONE, // open_fee_long_call_high
             Positive::ONE, // close_fee_long_call_high
         );
-        assert_eq!(butterfly.fees().unwrap().to_f64(), 8.0);
+        assert_eq!(butterfly.get_fees().unwrap().to_f64(), 8.0);
     }
 
     #[test]
-
     fn test_fees_bis() {
         let butterfly = LongButterflySpread::new(
             "TEST".to_string(),
@@ -3057,37 +3074,40 @@ mod tests_butterfly_strategies {
             Positive::ONE, // close_fee_long_call_high
         );
 
-        assert_eq!(butterfly.fees().unwrap(), pos!(16.0));
+        assert_eq!(butterfly.get_fees().unwrap(), pos!(16.0));
     }
 
     #[test]
-
     fn test_profit_area_long_butterfly() {
         let butterfly = create_test_long();
-        let area = butterfly.profit_area().unwrap().to_f64().unwrap();
+        let area = butterfly.get_profit_area().unwrap().to_f64().unwrap();
         assert!(area > ZERO);
     }
 
     #[test]
-
     fn test_profit_area_short_butterfly() {
         let butterfly = create_test_short();
-        let area = butterfly.profit_area().unwrap().to_f64().unwrap();
+        let area = butterfly.get_profit_area().unwrap().to_f64().unwrap();
         assert!(area >= ZERO);
     }
 
     #[test]
-
     fn test_profit_ratio() {
         let long_butterfly = create_test_long();
         let short_butterfly = create_test_short();
 
-        assert!(long_butterfly.profit_ratio().unwrap().to_f64().unwrap() > ZERO);
-        assert!(short_butterfly.profit_ratio().unwrap().to_f64().unwrap() >= ZERO);
+        assert!(long_butterfly.get_profit_ratio().unwrap().to_f64().unwrap() > ZERO);
+        assert!(
+            short_butterfly
+                .get_profit_ratio()
+                .unwrap()
+                .to_f64()
+                .unwrap()
+                >= ZERO
+        );
     }
 
     #[test]
-
     fn test_break_even_points() {
         let long_butterfly = create_test_long();
         let short_butterfly = create_test_short();
@@ -3097,7 +3117,6 @@ mod tests_butterfly_strategies {
     }
 
     #[test]
-
     fn test_profits_with_quantities() {
         let long_butterfly = LongButterflySpread::new(
             "TEST".to_string(),
@@ -3123,8 +3142,8 @@ mod tests_butterfly_strategies {
 
         let base_butterfly = create_test_long();
         assert_eq!(
-            long_butterfly.max_profit().unwrap().to_f64(),
-            base_butterfly.max_profit().unwrap().to_f64() * 2.0
+            long_butterfly.get_max_profit().unwrap().to_f64(),
+            base_butterfly.get_max_profit().unwrap().to_f64() * 2.0
         );
     }
 }
@@ -3207,20 +3226,18 @@ mod tests_butterfly_optimizable {
     }
 
     #[test]
-
     fn test_find_optimal_area() {
         let mut butterfly = create_test_long();
         let chain = create_test_option_chain();
-        let initial_area = butterfly.profit_area().unwrap();
+        let initial_area = butterfly.get_profit_area().unwrap();
 
         butterfly.find_optimal(&chain, FindOptimalSide::All, OptimizationCriteria::Area);
 
         assert!(butterfly.validate());
-        assert!(butterfly.profit_area().unwrap() >= initial_area);
+        assert!(butterfly.get_profit_area().unwrap() >= initial_area);
     }
 
     #[test]
-
     fn test_valid_strike_order() {
         let mut butterfly = create_test_long();
         let chain = create_test_option_chain();
@@ -3236,33 +3253,30 @@ mod tests_butterfly_optimizable {
     }
 
     #[test]
-
     fn test_find_optimal_ratio_short() {
         let mut butterfly = create_test_short();
         let chain = create_test_option_chain();
-        let initial_ratio = butterfly.profit_ratio().unwrap();
+        let initial_ratio = butterfly.get_profit_ratio().unwrap();
 
         butterfly.find_optimal(&chain, FindOptimalSide::All, OptimizationCriteria::Ratio);
 
         assert!(butterfly.validate());
-        assert!(butterfly.profit_ratio().unwrap() >= initial_ratio);
+        assert!(butterfly.get_profit_ratio().unwrap() >= initial_ratio);
     }
 
     #[test]
-
     fn test_find_optimal_area_long() {
         let mut butterfly = create_test_long();
         let chain = create_test_option_chain();
-        let initial_area = butterfly.profit_area().unwrap();
+        let initial_area = butterfly.get_profit_area().unwrap();
 
         butterfly.find_optimal(&chain, FindOptimalSide::All, OptimizationCriteria::Area);
 
         assert!(butterfly.validate());
-        assert!(butterfly.profit_area().unwrap() >= initial_area);
+        assert!(butterfly.get_profit_area().unwrap() >= initial_area);
     }
 
     #[test]
-
     fn test_valid_strike_order_short() {
         let mut butterfly = create_test_short();
         let chain = create_test_option_chain();
@@ -3278,7 +3292,6 @@ mod tests_butterfly_optimizable {
     }
 
     #[test]
-
     fn test_find_optimal_with_range() {
         let mut long_butterfly = create_test_long();
         let mut short_butterfly = create_test_short();
@@ -3337,21 +3350,19 @@ mod tests_long_butterfly_profit {
     }
 
     #[test]
-
     fn test_profit_at_middle_strike() {
         let butterfly = create_test();
-        let profit = butterfly.calculate_profit_at(pos!(100.0)).unwrap();
+        let profit = butterfly.calculate_profit_at(&pos!(100.0)).unwrap();
         assert!(profit > Decimal::ZERO);
         let expected = Positive::new_decimal(Decimal::from_str("9.6").unwrap()).unwrap();
         assert_eq!(profit, expected);
     }
 
     #[test]
-
     fn test_profit_below_lowest_strike() {
         let butterfly = create_test();
         let profit = butterfly
-            .calculate_profit_at(pos!(85.0))
+            .calculate_profit_at(&pos!(85.0))
             .unwrap()
             .to_f64()
             .unwrap();
@@ -3361,27 +3372,25 @@ mod tests_long_butterfly_profit {
     }
 
     #[test]
-
     fn test_profit_above_highest_strike() {
         let butterfly = create_test();
-        let profit = butterfly.calculate_profit_at(pos!(115.0)).unwrap();
+        let profit = butterfly.calculate_profit_at(&pos!(115.0)).unwrap();
         assert!(profit < Decimal::ZERO);
         assert_relative_eq!(
             profit.to_f64().unwrap(),
-            -butterfly.max_loss().unwrap().to_f64(),
+            -butterfly.get_max_loss().unwrap().to_f64(),
             epsilon = 0.0001
         );
     }
 
     #[test]
-
     fn test_profit_at_break_even_points() {
         let butterfly = create_test();
         let break_even_points = butterfly.get_break_even_points().unwrap();
 
         for &point in break_even_points {
             let profit = butterfly
-                .calculate_profit_at(point)
+                .calculate_profit_at(&point)
                 .unwrap()
                 .to_f64()
                 .unwrap();
@@ -3390,7 +3399,6 @@ mod tests_long_butterfly_profit {
     }
 
     #[test]
-
     fn test_profit_with_different_quantities() {
         let butterfly = LongButterflySpread::new(
             "TEST".to_string(),
@@ -3415,7 +3423,7 @@ mod tests_long_butterfly_profit {
         );
 
         let scaled_profit = butterfly
-            .calculate_profit_at(pos!(100.0))
+            .calculate_profit_at(&pos!(100.0))
             .unwrap()
             .to_f64()
             .unwrap();
@@ -3458,10 +3466,9 @@ mod tests_short_butterfly_profit {
     }
 
     #[test]
-
     fn test_profit_at_middle_strike() {
         let butterfly = create_test();
-        let profit = butterfly.calculate_profit_at(pos!(100.0)).unwrap();
+        let profit = butterfly.calculate_profit_at(&pos!(100.0)).unwrap();
         assert!(profit < Decimal::ZERO);
         let expected = Positive::new_decimal(Decimal::from_str("10.4").unwrap()).unwrap();
 
@@ -3469,14 +3476,13 @@ mod tests_short_butterfly_profit {
     }
 
     #[test]
-
     fn test_profit_at_break_even_points() {
         let butterfly = create_test();
         let break_even_points = butterfly.get_break_even_points().unwrap();
 
         for &point in break_even_points {
             let profit = butterfly
-                .calculate_profit_at(point)
+                .calculate_profit_at(&point)
                 .unwrap()
                 .to_f64()
                 .unwrap();
@@ -3485,7 +3491,6 @@ mod tests_short_butterfly_profit {
     }
 
     #[test]
-
     fn test_profit_with_different_quantities() {
         let butterfly = ShortButterflySpread::new(
             "TEST".to_string(),
@@ -3509,7 +3514,7 @@ mod tests_short_butterfly_profit {
             pos!(0.05), // close_fee_long_call_high
         );
         let scaled_profit = butterfly
-            .calculate_profit_at(pos!(85.0))
+            .calculate_profit_at(&pos!(85.0))
             .unwrap()
             .to_f64()
             .unwrap();
@@ -3517,16 +3522,15 @@ mod tests_short_butterfly_profit {
     }
 
     #[test]
-
     fn test_profit_symmetry() {
         let butterfly = create_test();
         let low_extreme_profit = butterfly
-            .calculate_profit_at(pos!(85.0))
+            .calculate_profit_at(&pos!(85.0))
             .unwrap()
             .to_f64()
             .unwrap();
         let high_extreme_profit = butterfly
-            .calculate_profit_at(pos!(115.0))
+            .calculate_profit_at(&pos!(115.0))
             .unwrap()
             .to_f64()
             .unwrap();
@@ -3535,7 +3539,6 @@ mod tests_short_butterfly_profit {
     }
 
     #[test]
-
     fn test_profit_with_fees() {
         let butterfly = ShortButterflySpread::new(
             "TEST".to_string(),
@@ -3561,12 +3564,12 @@ mod tests_short_butterfly_profit {
 
         let base_butterfly = create_test();
         let profit_without_fees = butterfly
-            .calculate_profit_at(pos!(85.0))
+            .calculate_profit_at(&pos!(85.0))
             .unwrap()
             .to_f64()
             .unwrap();
         let profit_with_fees = base_butterfly
-            .calculate_profit_at(pos!(85.0))
+            .calculate_profit_at(&pos!(85.0))
             .unwrap()
             .to_f64()
             .unwrap();
@@ -3606,10 +3609,9 @@ mod tests_long_butterfly_graph {
     }
 
     #[test]
-
     fn test_title_format() {
         let butterfly = create_test_butterfly();
-        let title = butterfly.title();
+        let title = butterfly.get_title();
 
         assert!(title.contains("LongButterflySpread Strategy"));
         assert!(title.contains("TEST"));
@@ -3621,7 +3623,6 @@ mod tests_long_butterfly_graph {
     }
 
     #[test]
-
     fn test_vertical_lines() {
         let butterfly = create_test_butterfly();
         let lines = butterfly.get_vertical_lines();
@@ -3635,7 +3636,6 @@ mod tests_long_butterfly_graph {
     }
 
     #[test]
-
     fn test_get_points() {
         let butterfly = create_test_butterfly();
         let points = butterfly.get_points();
@@ -3668,7 +3668,6 @@ mod tests_long_butterfly_graph {
     }
 
     #[test]
-
     fn test_point_colors() {
         let butterfly = create_test_butterfly();
         let points = butterfly.get_points();
@@ -3727,10 +3726,9 @@ mod tests_short_butterfly_graph {
     }
 
     #[test]
-
     fn test_title_format() {
         let butterfly = create_test_butterfly();
-        let title = butterfly.title();
+        let title = butterfly.get_title();
 
         assert!(title.contains("ShortButterflySpread Strategy"));
         assert!(title.contains("Size 1"));
@@ -3741,7 +3739,6 @@ mod tests_short_butterfly_graph {
     }
 
     #[test]
-
     fn test_vertical_lines() {
         let butterfly = create_test_butterfly();
         let lines = butterfly.get_vertical_lines();
@@ -3755,7 +3752,6 @@ mod tests_short_butterfly_graph {
     }
 
     #[test]
-
     fn test_get_points() {
         let butterfly = create_test_butterfly();
         let points = butterfly.get_points();
@@ -3789,7 +3785,6 @@ mod tests_short_butterfly_graph {
     }
 
     #[test]
-
     fn test_point_symmetry() {
         let butterfly = create_test_butterfly();
         let points = butterfly.get_points();
@@ -3863,25 +3858,22 @@ mod tests_butterfly_probability {
         use super::*;
 
         #[test]
-
         fn test_get_expiration() {
             let butterfly = create_test_long();
-            let expiration = butterfly.get_expiration().unwrap();
-            match expiration {
-                ExpirationDate::Days(days) => assert_eq!(days, 30.0),
-                _ => panic!("Expected ExpirationDate::Days"),
-            }
+            let expiration_date = *butterfly.get_expiration().values().next().unwrap();
+            assert_eq!(expiration_date, &ExpirationDate::Days(pos!(30.0)));
         }
 
         #[test]
-
         fn test_get_risk_free_rate() {
             let butterfly = create_test_long();
-            assert_eq!(butterfly.get_risk_free_rate(), Some(dec!(0.05)));
+            assert_eq!(
+                **butterfly.get_risk_free_rate().values().next().unwrap(),
+                dec!(0.05)
+            );
         }
 
         #[test]
-
         fn test_get_profit_ranges() {
             let butterfly = create_test_long();
             let ranges = butterfly.get_profit_ranges().unwrap();
@@ -3896,7 +3888,6 @@ mod tests_butterfly_probability {
         }
 
         #[test]
-
         fn test_get_loss_ranges() {
             let butterfly = create_test_long();
             let ranges = butterfly.get_loss_ranges().unwrap();
@@ -3931,25 +3922,22 @@ mod tests_butterfly_probability {
         use super::*;
 
         #[test]
-
         fn test_get_expiration() {
             let butterfly = create_test_short();
-            let expiration = butterfly.get_expiration().unwrap();
-            match expiration {
-                ExpirationDate::Days(days) => assert_eq!(days, 30.0),
-                _ => panic!("Expected ExpirationDate::Days"),
-            }
+            let expiration_date = *butterfly.get_expiration().values().next().unwrap();
+            assert_eq!(expiration_date, &ExpirationDate::Days(pos!(30.0)));
         }
 
         #[test]
-
         fn test_get_risk_free_rate() {
             let butterfly = create_test_short();
-            assert_eq!(butterfly.get_risk_free_rate(), Some(dec!(0.05)));
+            assert_eq!(
+                **butterfly.get_risk_free_rate().values().next().unwrap(),
+                dec!(0.05)
+            );
         }
 
         #[test]
-
         fn test_get_profit_ranges() {
             let butterfly = create_test_short();
             let ranges = butterfly.get_profit_ranges().unwrap();
@@ -3980,7 +3968,6 @@ mod tests_butterfly_probability {
         }
 
         #[test]
-
         fn test_get_loss_ranges() {
             let butterfly = create_test_short();
             let ranges = butterfly.get_loss_ranges().unwrap();
@@ -3996,7 +3983,6 @@ mod tests_butterfly_probability {
     }
 
     #[test]
-
     fn test_volatility_calculations() {
         let long_butterfly = create_test_long();
         let short_butterfly = create_test_short();
@@ -4011,7 +3997,6 @@ mod tests_butterfly_probability {
     }
 
     #[test]
-
     fn test_probability_sum() {
         let long_butterfly = create_test_long();
         let short_butterfly = create_test_short();
@@ -4078,7 +4063,6 @@ mod tests_long_butterfly_delta {
     }
 
     #[test]
-
     fn create_test_reducing_adjustments() {
         let strategy = get_strategy(pos!(5881.88));
         let size = dec!(-0.5970615569);
@@ -4137,7 +4121,6 @@ mod tests_long_butterfly_delta {
     }
 
     #[test]
-
     fn create_test_increasing_adjustments() {
         let strategy = get_strategy(pos!(5710.81));
         let size = dec!(0.3518);
@@ -4178,7 +4161,6 @@ mod tests_long_butterfly_delta {
     }
 
     #[test]
-
     fn create_test_no_adjustments() {
         let strategy = get_strategy(pos!(5420.0));
 
@@ -4230,7 +4212,6 @@ mod tests_long_butterfly_delta_size {
     }
 
     #[test]
-
     fn create_test_reducing_adjustments() {
         let strategy = get_strategy(pos!(5881.85));
         let size = dec!(-1.7905);
@@ -4289,7 +4270,6 @@ mod tests_long_butterfly_delta_size {
     }
 
     #[test]
-
     fn create_test_increasing_adjustments() {
         let strategy = get_strategy(pos!(5710.88));
         let size = dec!(1.0558);
@@ -4331,7 +4311,6 @@ mod tests_long_butterfly_delta_size {
     }
 
     #[test]
-
     fn create_test_no_adjustments() {
         let strategy = get_strategy(pos!(5410.0));
 
@@ -4383,7 +4362,6 @@ mod tests_short_butterfly_delta {
     }
 
     #[test]
-
     fn create_test_reducing_adjustments() {
         let strategy = get_strategy(pos!(5781.88));
         let size = dec!(-0.0259);
@@ -4425,7 +4403,6 @@ mod tests_short_butterfly_delta {
     }
 
     #[test]
-
     fn create_test_increasing_adjustments() {
         let strategy = get_strategy(pos!(5881.88));
         let size = dec!(0.16077612);
@@ -4482,7 +4459,6 @@ mod tests_short_butterfly_delta {
     }
 
     #[test]
-
     fn create_test_no_adjustments() {
         let strategy = get_strategy(pos!(5788.55));
 
@@ -4533,7 +4509,6 @@ mod tests_short_butterfly_delta_size {
     }
 
     #[test]
-
     fn create_test_reducing_adjustments() {
         let strategy = get_strategy(pos!(5781.88));
         let size = dec!(-0.0593);
@@ -4574,7 +4549,6 @@ mod tests_short_butterfly_delta_size {
     }
 
     #[test]
-
     fn create_test_increasing_adjustments() {
         let strategy = get_strategy(pos!(5881.88));
         let size = dec!(0.4787);
@@ -4631,7 +4605,6 @@ mod tests_short_butterfly_delta_size {
     }
 
     #[test]
-
     fn create_test_no_adjustments() {
         let strategy = get_strategy(pos!(5786.99));
 

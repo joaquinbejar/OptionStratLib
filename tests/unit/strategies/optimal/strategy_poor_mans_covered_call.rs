@@ -11,7 +11,6 @@ use {
 };
 
 #[test]
-
 fn test_poor_mans_covered_call_integration() -> Result<(), Box<dyn Error>> {
     setup_logger();
 

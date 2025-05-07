@@ -327,72 +327,61 @@ mod tests_timeframe {
     use crate::{assert_pos_relative_eq, pos};
 
     #[test]
-
     fn test_microsecond_periods() {
         let expected = TRADING_DAYS * TRADING_HOURS * SECONDS_PER_HOUR * MICROSECONDS_PER_SECOND;
         assert_eq!(TimeFrame::Microsecond.periods_per_year(), expected);
     }
 
     #[test]
-
     fn test_millisecond_periods() {
         let expected = TRADING_DAYS * TRADING_HOURS * SECONDS_PER_HOUR * MILLISECONDS_PER_SECOND;
         assert_eq!(TimeFrame::Millisecond.periods_per_year(), expected);
     }
 
     #[test]
-
     fn test_second_periods() {
         let expected = TRADING_DAYS * TRADING_HOURS * SECONDS_PER_HOUR;
         assert_eq!(TimeFrame::Second.periods_per_year(), expected);
     }
 
     #[test]
-
     fn test_minute_periods() {
         let expected = TRADING_DAYS * TRADING_HOURS * MINUTES_PER_HOUR;
         assert_eq!(TimeFrame::Minute.periods_per_year(), expected);
     }
 
     #[test]
-
     fn test_hour_periods() {
         let expected = TRADING_DAYS * TRADING_HOURS;
         assert_eq!(TimeFrame::Hour.periods_per_year(), expected);
     }
 
     #[test]
-
     fn test_day_periods() {
         assert_eq!(TimeFrame::Day.periods_per_year(), TRADING_DAYS);
     }
 
     #[test]
-
     fn test_week_periods() {
         assert_eq!(TimeFrame::Week.periods_per_year(), 52.0);
     }
 
     #[test]
-
     fn test_month_periods() {
         assert_eq!(TimeFrame::Month.periods_per_year(), 12.0);
     }
 
     #[test]
-
     fn test_quarter_periods() {
         assert_eq!(TimeFrame::Quarter.periods_per_year(), 4.0);
     }
 
     #[test]
-
     fn test_year_periods() {
         assert_eq!(TimeFrame::Year.periods_per_year(), 1.0);
     }
 
     #[test]
-
     fn test_custom_periods() {
         let custom_periods = pos!(123.45);
         assert_eq!(
@@ -402,7 +391,6 @@ mod tests_timeframe {
     }
 
     #[test]
-
     fn test_relative_period_relationships() {
         // Test that higher timeframes have fewer periods
         assert!(
@@ -419,7 +407,6 @@ mod tests_timeframe {
     }
 
     #[test]
-
     fn test_specific_conversion_ratios() {
         // Test specific conversion ratios between timeframes
         assert_pos_relative_eq!(
@@ -442,7 +429,6 @@ mod tests_timeframe {
     }
 
     #[test]
-
     fn test_trading_days_relationship() {
         // Verify relationships with trading days
         assert_pos_relative_eq!(TimeFrame::Day.periods_per_year(), TRADING_DAYS, pos!(1e-10));
@@ -455,7 +441,6 @@ mod tests_timeframe {
     }
 
     #[test]
-
     fn test_custom_edge_cases() {
         // Test edge cases for custom periods
         assert_eq!(TimeFrame::Custom(Positive::ZERO).periods_per_year(), 0.0);
@@ -466,14 +451,12 @@ mod tests_timeframe {
     }
 
     #[test]
-
     fn test_timeframe_debug() {
         assert_eq!(format!("{:?}", TimeFrame::Day), "Day");
         assert_eq!(format!("{:?}", TimeFrame::Custom(pos!(1.5))), "Custom(1.5)");
     }
 
     #[test]
-
     fn test_timeframe_clone() {
         let tf = TimeFrame::Day;
         let cloned = tf;
@@ -481,7 +464,6 @@ mod tests_timeframe {
     }
 
     #[test]
-
     fn test_timeframe_copy() {
         let tf = TimeFrame::Day;
         let copied = tf;

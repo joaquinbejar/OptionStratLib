@@ -11,7 +11,6 @@ use {
 };
 
 #[test]
-
 fn test_long_straddle_integration() -> Result<(), Box<dyn Error>> {
     setup_logger();
 

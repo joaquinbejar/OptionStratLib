@@ -351,8 +351,7 @@ impl BreakEvenable for ShortStrangle {
         );
 
         self.break_even_points.push(
-            (self.short_call.option.strike_price
-                + (total_premium / self.short_call.option.quantity))
+            (self.one_option().strike_price + (total_premium / self.one_option().quantity))
                 .round_to(2),
         );
 
@@ -405,7 +404,7 @@ impl Positionable for ShortStrangle {
                 "Position side is Long, it is not valid for ShortStrangle".to_string(),
             )),
             (Side::Short, OptionStyle::Call, strike)
-                if *strike == self.short_call.option.strike_price =>
+                if *strike == self.one_option().strike_price =>
             {
                 Ok(vec![&mut self.short_call])
             }
@@ -444,7 +443,7 @@ impl Positionable for ShortStrangle {
             ));
         }
 
-        if position.option.strike_price != self.short_call.option.strike_price
+        if position.option.strike_price != self.one_option().strike_price
             && position.option.strike_price != self.short_put.option.strike_price
         {
             return Err(PositionError::invalid_position_type(
@@ -462,9 +461,9 @@ impl Positionable for ShortStrangle {
         }
 
         // Update values passed in new position
-        self.update_volatility(&position.option.implied_volatility)?;
-        self.update_expiration_date(position.option.expiration_date)?;
-        self.update_underlying_price(&position.option.underlying_price)?;
+        self.set_implied_volatility(&position.option.implied_volatility)?;
+        self.set_expiration_date(position.option.expiration_date)?;
+        self.set_underlying_price(&position.option.underlying_price)?;
         self.update_break_even_points()?;
         Ok(())
     }
@@ -493,9 +492,9 @@ impl Positionable for ShortStrangle {
         }
 
         // Update values passed in new position
-        self.update_volatility(&position.option.implied_volatility)?;
-        self.update_expiration_date(position.option.expiration_date)?;
-        self.update_underlying_price(&position.option.underlying_price)?;
+        self.set_implied_volatility(&position.option.implied_volatility)?;
+        self.set_expiration_date(position.option.expiration_date)?;
+        self.set_underlying_price(&position.option.underlying_price)?;
         self.update_break_even_points()?;
 
         Ok(())
@@ -529,7 +528,6 @@ impl BasicAble for ShortStrangle {
     fn get_option_basic_type(&self) -> OptionBasicType {
         unimplemented!("get_option_basic_type is not implemented for this strategy");
     }
-
     fn get_symbol(&self) -> &str {
         unimplemented!("get_symbol is not implemented for this strategy");
     }
@@ -555,21 +553,61 @@ impl BasicAble for ShortStrangle {
         unimplemented!("get_quantity is not implemented for this strategy");
     }
     fn get_underlying_price(&self) -> &Positive {
-        &self.short_call.option.underlying_price
+        &self.one_option().underlying_price
     }
-
     fn get_risk_free_rate(&self) -> HashMap<OptionBasicType, &Decimal> {
         unimplemented!("get_risk_free_rate is not implemented for this strategy");
     }
     fn get_dividend_yield(&self) -> HashMap<OptionBasicType, &Positive> {
         unimplemented!("get_dividend_yield is not implemented for this strategy");
     }
-    
+    fn one_option(&self) -> &Options {
+        self.short_call.one_option()
+    }
+    fn one_option_mut(&mut self) -> &mut Options {
+        self.short_call.one_option_mut()
+    }
+
+    fn set_underlying_price(&mut self, price: &Positive) -> Result<(), StrategyError> {
+        self.short_call.option.underlying_price = *price;
+        self.short_call.premium = Positive::from(
+            self.short_call
+                .option
+                .calculate_price_black_scholes()?
+                .abs(),
+        );
+        self.short_put.option.underlying_price = *price;
+        self.short_put.premium =
+            Positive::from(self.short_put.option.calculate_price_black_scholes()?.abs());
+        Ok(())
+    }
+    fn set_expiration_date(
+        &mut self,
+        expiration_date: ExpirationDate,
+    ) -> Result<(), StrategyError> {
+        self.short_call.option.expiration_date = expiration_date;
+        self.short_put.option.expiration_date = expiration_date;
+        Ok(())
+    }
+
+    fn set_implied_volatility(&mut self, volatility: &Positive) -> Result<(), StrategyError> {
+        self.short_call.option.implied_volatility = *volatility;
+        self.short_put.option.implied_volatility = *volatility;
+        self.short_call.premium = Positive(
+            self.short_call
+                .option
+                .calculate_price_black_scholes()?
+                .abs(),
+        );
+        self.short_put.premium =
+            Positive(self.short_put.option.calculate_price_black_scholes()?.abs());
+        Ok(())
+    }
 }
 
 impl Strategies for ShortStrangle {
     fn get_volume(&mut self) -> Result<Positive, StrategyError> {
-        let volume = self.short_call.option.quantity + self.short_put.option.quantity;
+        let volume = self.one_option().quantity + self.short_put.option.quantity;
         Ok(volume)
     }
 
@@ -595,13 +633,12 @@ impl Strategies for ShortStrangle {
         if max_profit == Positive::ZERO {
             return Ok(Decimal::ZERO);
         }
-        let strike_diff = self.short_call.option.strike_price - self.short_put.option.strike_price;
+        let strike_diff = self.one_option().strike_price - self.short_put.option.strike_price;
         let inner_square = strike_diff * max_profit;
         let break_even_diff = self.break_even_points[1] - self.break_even_points[0];
         let outer_square = break_even_diff * max_profit;
         let triangles = (outer_square - inner_square) / 2.0;
-        let result =
-            ((inner_square + triangles) / self.short_call.option.underlying_price).to_f64();
+        let result = ((inner_square + triangles) / self.one_option().underlying_price).to_f64();
         Ok(Decimal::from_f64(result).unwrap())
     }
 
@@ -622,101 +659,23 @@ impl Strategies for ShortStrangle {
         Ok(calculate_price_range(start_price, end_price, step))
     }
 
-    fn get_expiration_dates(&self) -> Result<Vec<ExpirationDate>, StrategyError> {
-        let options = [
-            self.short_call.option.expiration_date,
-            self.short_put.option.expiration_date,
-        ];
-        Ok(options.to_vec())
-    }
-
-    fn set_underlying_price(&mut self, price: &Positive) -> Result<(), StrategyError> {
-        self.short_call.option.underlying_price = *price;
-        self.short_call.premium = Positive::from(
-            self.short_call
-                .option
-                .calculate_price_black_scholes()?
-                .abs(),
-        );
-        self.short_put.option.underlying_price = *price;
-        self.short_put.premium =
-            Positive::from(self.short_put.option.calculate_price_black_scholes()?.abs());
-        Ok(())
-    }
-
-    fn set_expiration_date(
-        &mut self,
-        expiration_date: ExpirationDate,
-    ) -> Result<(), StrategyError> {
-        self.short_call.option.expiration_date = expiration_date;
-        self.short_put.option.expiration_date = expiration_date;
-        Ok(())
-    }
-
-    fn update_underlying_price(&mut self, price: &Positive) -> Result<(), StrategyError> {
-        self.short_call.option.underlying_price = *price;
-        self.short_put.option.underlying_price = *price;
-        self.short_call.premium = Positive(
-            self.short_call
-                .option
-                .calculate_price_black_scholes()?
-                .abs(),
-        );
-        self.short_put.premium =
-            Positive(self.short_put.option.calculate_price_black_scholes()?.abs());
-        Ok(())
-    }
-
-    fn update_volatility(&mut self, volatility: &Positive) -> Result<(), StrategyError> {
-        self.short_call.option.implied_volatility = *volatility;
-        self.short_put.option.implied_volatility = *volatility;
-        self.short_call.premium = Positive(
-            self.short_call
-                .option
-                .calculate_price_black_scholes()?
-                .abs(),
-        );
-        self.short_put.premium =
-            Positive(self.short_put.option.calculate_price_black_scholes()?.abs());
-        Ok(())
-    }
-
-    fn update_expiration_date(
-        &mut self,
-        expiration_date: ExpirationDate,
-    ) -> Result<(), StrategyError> {
-        self.short_call.option.expiration_date = expiration_date;
-        self.short_put.option.expiration_date = expiration_date;
-        self.short_call.premium = Positive(
-            self.short_call
-                .option
-                .calculate_price_black_scholes()?
-                .abs(),
-        );
-        self.short_put.premium =
-            Positive(self.short_put.option.calculate_price_black_scholes()?.abs());
-        Ok(())
-    }
-
     fn roll_in(&mut self, position: &Position) -> Result<HashMap<Action, Trade>, StrategyError> {
         match (&position.option.option_style, &position.option.side) {
             (OptionStyle::Call, Side::Short) => {
-                if self.short_call.option.strike_price <= position.option.strike_price {
+                if self.one_option().strike_price <= position.option.strike_price {
                     return Err(StrategyError::operation_not_supported(
                         "Trying a Roll-out in a Roll-in operation",
                         &self.name,
                     ));
                 } else {
-                    if self.short_call.option.underlying_price != position.option.underlying_price {
-                        self.update_underlying_price(&position.option.underlying_price)?;
+                    if self.one_option().underlying_price != position.option.underlying_price {
+                        self.set_underlying_price(&position.option.underlying_price)?;
                     }
-                    if self.short_call.option.implied_volatility
-                        != position.option.implied_volatility
-                    {
-                        self.update_volatility(&position.option.implied_volatility)?;
+                    if self.one_option().implied_volatility != position.option.implied_volatility {
+                        self.set_implied_volatility(&position.option.implied_volatility)?;
                     }
-                    if self.short_call.option.expiration_date != position.option.expiration_date {
-                        self.update_expiration_date(position.option.expiration_date)?;
+                    if self.one_option().expiration_date != position.option.expiration_date {
+                        self.set_expiration_date(position.option.expiration_date)?;
                     }
                 }
                 let mut result: HashMap<Action, Trade> = HashMap::new();
@@ -736,15 +695,15 @@ impl Strategies for ShortStrangle {
                     ));
                 } else {
                     if self.short_put.option.underlying_price != position.option.underlying_price {
-                        self.update_underlying_price(&position.option.underlying_price)?;
+                        self.set_underlying_price(&position.option.underlying_price)?;
                     }
                     if self.short_put.option.implied_volatility
                         != position.option.implied_volatility
                     {
-                        self.update_volatility(&position.option.implied_volatility)?;
+                        self.set_implied_volatility(&position.option.implied_volatility)?;
                     }
                     if self.short_put.option.expiration_date != position.option.expiration_date {
-                        self.update_expiration_date(position.option.expiration_date)?;
+                        self.set_expiration_date(position.option.expiration_date)?;
                     }
                 }
                 let mut result: HashMap<Action, Trade> = HashMap::new();
@@ -765,22 +724,20 @@ impl Strategies for ShortStrangle {
     fn roll_out(&mut self, position: &Position) -> Result<HashMap<Action, Trade>, StrategyError> {
         match (&position.option.option_style, &position.option.side) {
             (OptionStyle::Call, Side::Short) => {
-                if self.short_call.option.strike_price >= position.option.strike_price {
+                if self.one_option().strike_price >= position.option.strike_price {
                     return Err(StrategyError::operation_not_supported(
                         "Trying a Roll-in in a Roll-out operation",
                         &self.name,
                     ));
                 } else {
-                    if self.short_call.option.underlying_price != position.option.underlying_price {
-                        self.update_underlying_price(&position.option.underlying_price)?;
+                    if self.one_option().underlying_price != position.option.underlying_price {
+                        self.set_underlying_price(&position.option.underlying_price)?;
                     }
-                    if self.short_call.option.implied_volatility
-                        != position.option.implied_volatility
-                    {
-                        self.update_volatility(&position.option.implied_volatility)?;
+                    if self.one_option().implied_volatility != position.option.implied_volatility {
+                        self.set_implied_volatility(&position.option.implied_volatility)?;
                     }
-                    if self.short_call.option.expiration_date != position.option.expiration_date {
-                        self.update_expiration_date(position.option.expiration_date)?;
+                    if self.one_option().expiration_date != position.option.expiration_date {
+                        self.set_expiration_date(position.option.expiration_date)?;
                     }
                 }
                 let mut result: HashMap<Action, Trade> = HashMap::new();
@@ -799,15 +756,15 @@ impl Strategies for ShortStrangle {
                     ));
                 } else {
                     if self.short_put.option.underlying_price != position.option.underlying_price {
-                        self.update_underlying_price(&position.option.underlying_price)?;
+                        self.set_underlying_price(&position.option.underlying_price)?;
                     }
                     if self.short_put.option.implied_volatility
                         != position.option.implied_volatility
                     {
-                        self.update_volatility(&position.option.implied_volatility)?;
+                        self.set_implied_volatility(&position.option.implied_volatility)?;
                     }
                     if self.short_put.option.expiration_date != position.option.expiration_date {
-                        self.update_expiration_date(position.option.expiration_date)?;
+                        self.set_expiration_date(position.option.expiration_date)?;
                     }
                 }
                 let mut result: HashMap<Action, Trade> = HashMap::new();
@@ -830,7 +787,7 @@ impl Validable for ShortStrangle {
     fn validate(&self) -> bool {
         self.short_call.validate()
             && self.short_put.validate()
-            && self.short_call.option.strike_price > self.short_put.option.strike_price
+            && self.one_option().strike_price > self.short_put.option.strike_price
     }
 }
 
@@ -953,11 +910,11 @@ impl Optimizable for ShortStrangle {
             chain.underlying_price,
             call.strike_price,
             put.strike_price,
-            self.short_call.option.expiration_date,
+            self.one_option().expiration_date,
             implied_volatility,
-            self.short_call.option.risk_free_rate,
-            self.short_call.option.dividend_yield,
-            self.short_call.option.quantity,
+            self.one_option().risk_free_rate,
+            self.one_option().dividend_yield,
+            self.one_option().quantity,
             call.call_bid.unwrap(),
             put.put_bid.unwrap(),
             self.short_call.open_fee,
@@ -974,34 +931,27 @@ impl Profit for ShortStrangle {
         trace!(
             "Price: {:?} Strike: {} Call: {:.2} Strike: {} Put: {:.2} Profit: {:.2}",
             price,
-            self.short_call.option.strike_price,
+            self.one_option().strike_price,
             self.short_call.pnl_at_expiration(price)?,
             self.short_put.option.strike_price,
             self.short_put.pnl_at_expiration(price)?,
-            self.short_call.pnl_at_expiration(price)?
-                + self.short_put.pnl_at_expiration(price)?
+            self.short_call.pnl_at_expiration(price)? + self.short_put.pnl_at_expiration(price)?
         );
-        Ok(
-            self.short_call.pnl_at_expiration(price)?
-                + self.short_put.pnl_at_expiration(price)?,
-        )
+        Ok(self.short_call.pnl_at_expiration(price)? + self.short_put.pnl_at_expiration(price)?)
     }
 }
 
 impl Graph for ShortStrangle {
     fn get_x_values(&self) -> Vec<Positive> {
         self.get_best_range_to_show(Positive::from(1.0))
-            .unwrap_or_else(|_| vec![self.short_call.option.strike_price])
+            .unwrap_or_else(|_| vec![self.one_option().strike_price])
     }
 
     fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<f64, f64>> {
         let vertical_lines = vec![ChartVerticalLine {
-            x_coordinate: self.short_call.option.underlying_price.to_f64(),
+            x_coordinate: self.one_option().underlying_price.to_f64(),
             y_range: (f64::NEG_INFINITY, f64::INFINITY),
-            label: format!(
-                "Current Price: {:.2}",
-                self.short_call.option.underlying_price
-            ),
+            label: format!("Current Price: {:.2}", self.one_option().underlying_price),
             label_offset: (4.0, -1.0),
             line_color: ORANGE,
             label_color: ORANGE,
@@ -1040,13 +990,11 @@ impl Graph for ShortStrangle {
         });
 
         points.push(ChartPoint {
-            coordinates: (
-                self.short_call.option.strike_price.to_f64(),
-                max_profit.to_f64(),
-            ),
+            coordinates: (self.one_option().strike_price.to_f64(), max_profit.to_f64()),
             label: format!(
                 "Max Profit ${:.2} at {:.0}",
-                max_profit, self.short_call.option.strike_price
+                max_profit,
+                self.one_option().strike_price
             ),
             label_offset: LabelOffsetType::Relative(coordinates.0, -coordinates.1),
             point_color: DARK_GREEN,
@@ -1097,8 +1045,8 @@ impl Graph for ShortStrangle {
 
 impl ProbabilityAnalysis for ShortStrangle {
     fn get_profit_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
-        let option = &self.short_call.option;
         let break_even_points = &self.get_break_even_points()?;
+        let option = &self.one_option();
         let expiration_date = &option.expiration_date;
         let risk_free_rate = option.risk_free_rate;
 
@@ -1128,7 +1076,7 @@ impl ProbabilityAnalysis for ShortStrangle {
     }
 
     fn get_loss_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
-        let option = &self.short_call.option;
+        let option = &self.one_option();
         let break_even_points = self.get_break_even_points()?;
         let expiration_date = &option.expiration_date;
         let risk_free_rate = option.risk_free_rate;
@@ -1172,7 +1120,7 @@ impl ProbabilityAnalysis for ShortStrangle {
 
 impl Greeks for ShortStrangle {
     fn get_options(&self) -> Result<Vec<&Options>, GreeksError> {
-        Ok(vec![&self.short_call.option, &self.short_put.option])
+        Ok(vec![&self.one_option(), &self.short_put.option])
     }
 }
 
@@ -1547,7 +1495,6 @@ is expected and the underlying asset's price is anticipated to remain stable."
     }
 
     #[test]
-
     fn test_get_points() {
         let strategy = setup();
         let points = strategy.get_points();
@@ -1755,7 +1702,6 @@ mod tests_short_strangle_probability_bis {
     }
 
     #[test]
-
     fn test_get_profit_ranges() {
         let strangle = create_test();
         let result = strangle.get_profit_ranges();
@@ -1770,7 +1716,6 @@ mod tests_short_strangle_probability_bis {
     }
 
     #[test]
-
     fn test_get_loss_ranges() {
         let strangle = create_test();
         let result = strangle.get_loss_ranges();
@@ -1785,7 +1730,6 @@ mod tests_short_strangle_probability_bis {
     }
 
     #[test]
-
     fn test_probability_of_profit() {
         let strangle = create_test();
         let result = strangle.probability_of_profit(None, None);
@@ -1797,7 +1741,6 @@ mod tests_short_strangle_probability_bis {
     }
 
     #[test]
-
     fn test_probability_with_volatility_adjustment() {
         let strangle = create_test();
         let vol_adj = Some(VolatilityAdjustment {
@@ -1813,7 +1756,6 @@ mod tests_short_strangle_probability_bis {
     }
 
     #[test]
-
     fn test_probability_with_trend() {
         let strangle = create_test();
         let trend = Some(PriceTrend {
@@ -1829,7 +1771,6 @@ mod tests_short_strangle_probability_bis {
     }
 
     #[test]
-
     fn test_analyze_probabilities() {
         let strangle = create_test();
         let result = strangle.analyze_probabilities(None, None);
@@ -1846,7 +1787,6 @@ mod tests_short_strangle_probability_bis {
     }
 
     #[test]
-
     fn test_calculate_extreme_probabilities() {
         let strangle = create_test();
         let result = strangle.calculate_extreme_probabilities(None, None);
@@ -2050,7 +1990,6 @@ mod tests_short_strangle_delta_size {
     }
 
     #[test]
-
     fn create_test_apply_adjustments() {
         let strategy = get_strategy(pos!(7450.0), pos!(7250.0));
         let binding = strategy.delta_adjustments().unwrap();
@@ -2179,7 +2118,6 @@ mod tests_short_strangle_delta_size {
     }
 
     #[test]
-
     fn create_test_apply_delta_adjustments() {
         let mut strategy = get_strategy(pos!(7450.0), pos!(7250.0));
         let result = strategy.apply_delta_adjustments(Some(Action::Buy));
@@ -2198,7 +2136,6 @@ mod tests_short_strangle_delta_size {
     }
 
     #[test]
-
     fn create_test_reducing_adjustments() {
         let strike = pos!(7450.0);
         let mut strategy = get_strategy(strike, pos!(7250.0));
@@ -2253,7 +2190,6 @@ mod tests_short_strangle_delta_size {
     }
 
     #[test]
-
     fn create_test_increasing_adjustments() {
         let strategy = get_strategy(pos!(7150.0), pos!(7050.0));
         let size = dec!(-0.24434);
@@ -2293,7 +2229,6 @@ mod tests_short_strangle_delta_size {
     }
 
     #[test]
-
     fn create_test_no_adjustments() {
         let strategy = get_strategy(pos!(7450.7), pos!(7045.0));
 
@@ -3088,7 +3023,7 @@ mod test_adjustments_pnl {
     use crate::greeks::Greeks;
     use crate::pnl::PnLCalculator;
     use crate::strategies::{
-        DELTA_THRESHOLD, DeltaAdjustment, DeltaNeutrality, ShortStrangle, Strategies,
+        BasicAble, DELTA_THRESHOLD, DeltaAdjustment, DeltaNeutrality, ShortStrangle,
     };
     use crate::utils::setup_logger;
     use crate::{

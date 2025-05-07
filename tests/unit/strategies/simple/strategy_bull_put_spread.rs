@@ -2,17 +2,15 @@ use approx::assert_relative_eq;
 use num_traits::ToPrimitive;
 use optionstratlib::ExpirationDate;
 use optionstratlib::Positive;
-use optionstratlib::strategies::Strategies;
 use optionstratlib::strategies::base::BreakEvenable;
 use optionstratlib::strategies::bull_put_spread::BullPutSpread;
+use optionstratlib::strategies::{BasicAble, Strategies};
 use optionstratlib::utils::setup_logger;
-use optionstratlib::visualization::utils::Graph;
 use optionstratlib::{assert_pos_relative_eq, pos};
 use rust_decimal_macros::dec;
 use std::error::Error;
 
 #[test]
-
 fn test_bull_put_spread_integration() -> Result<(), Box<dyn Error>> {
     setup_logger();
 

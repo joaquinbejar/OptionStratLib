@@ -23,7 +23,7 @@ use crate::error::{GreeksError, OperationErrorKind};
 use crate::greeks::Greeks;
 use crate::model::ProfitLossRange;
 use crate::model::position::Position;
-use crate::model::types::{OptionStyle, OptionType, Side};
+use crate::model::types::{OptionBasicType, OptionStyle, OptionType, Side};
 use crate::model::utils::mean_and_std;
 use crate::pnl::utils::{PnL, PnLCalculator};
 use crate::pricing::payoff::Profit;
@@ -31,7 +31,7 @@ use crate::strategies::delta_neutral::DeltaNeutrality;
 use crate::strategies::probabilities::core::ProbabilityAnalysis;
 use crate::strategies::probabilities::utils::VolatilityAdjustment;
 use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
-use crate::strategies::{StrategyBasics, StrategyConstructor};
+use crate::strategies::{BasicAble, StrategyBasics, StrategyConstructor};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
 use crate::{ExpirationDate, Options, Positive};
@@ -41,6 +41,7 @@ use plotters::prelude::ShapeStyle;
 use plotters::prelude::full_palette::ORANGE;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::error::Error;
 use tracing::{info, trace};
 
@@ -353,7 +354,7 @@ impl BreakEvenable for ShortStraddle {
     fn update_break_even_points(&mut self) -> Result<(), StrategyError> {
         self.break_even_points = Vec::new();
 
-        let total_premium = self.net_premium_received()?;
+        let total_premium = self.get_net_premium_received()?;
 
         self.break_even_points.push(
             (self.short_put.option.strike_price
@@ -483,13 +484,61 @@ impl Strategable for ShortStraddle {
     }
 }
 
-impl Strategies for ShortStraddle {
-    fn get_underlying_price(&self) -> Positive {
-        self.short_call.option.underlying_price
-    }
+impl BasicAble for ShortStraddle {
+    fn get_title(&self) -> String {
+        let strategy_title = format!("{:?} Strategy: ", self.kind);
+        let leg_titles: Vec<String> = [self.short_call.get_title(), self.short_put.get_title()]
+            .iter()
+            .map(|leg| leg.to_string())
+            .collect();
 
-    fn max_profit(&self) -> Result<Positive, StrategyError> {
-        let max_profit = self.net_premium_received()?.to_f64();
+        if leg_titles.is_empty() {
+            strategy_title
+        } else {
+            format!("{}\n\t{}", strategy_title, leg_titles.join("\n\t"))
+        }
+    }
+    fn get_option_basic_type(&self) -> OptionBasicType {
+        unimplemented!("get_option_basic_type is not implemented for this strategy");
+    }
+    fn get_symbol(&self) -> &str {
+        unimplemented!("get_symbol is not implemented for this strategy");
+    }
+    fn get_strike(&self) -> HashMap<OptionBasicType, &Positive> {
+        unimplemented!("get_strike is not implemented for this strategy");
+    }
+    fn get_side(&self) -> HashMap<OptionBasicType, &Side> {
+        unimplemented!("get_side is not implemented for this strategy");
+    }
+    fn get_type(&self) -> &OptionType {
+        unimplemented!("get_type is not implemented for this strategy");
+    }
+    fn get_style(&self) -> HashMap<OptionBasicType, &OptionStyle> {
+        unimplemented!("get_style is not implemented for this strategy");
+    }
+    fn get_expiration(&self) -> HashMap<OptionBasicType, &ExpirationDate> {
+        unimplemented!("get_expiration is not implemented for this strategy");
+    }
+    fn get_implied_volatility(&self) -> HashMap<OptionBasicType, &Positive> {
+        unimplemented!("get_implied_volatility is not implemented for this strategy");
+    }
+    fn get_quantity(&self) -> HashMap<OptionBasicType, &Positive> {
+        unimplemented!("get_quantity is not implemented for this strategy");
+    }
+    fn get_underlying_price(&self) -> &Positive {
+        &self.short_call.option.underlying_price
+    }
+    fn get_risk_free_rate(&self) -> HashMap<OptionBasicType, &Decimal> {
+        unimplemented!("get_risk_free_rate is not implemented for this strategy");
+    }
+    fn get_dividend_yield(&self) -> HashMap<OptionBasicType, &Positive> {
+        unimplemented!("get_dividend_yield is not implemented for this strategy");
+    }
+}
+
+impl Strategies for ShortStraddle {
+    fn get_max_profit(&self) -> Result<Positive, StrategyError> {
+        let max_profit = self.get_net_premium_received()?.to_f64();
         if max_profit < ZERO {
             Err(StrategyError::ProfitLossError(
                 ProfitLossErrorKind::MaxProfitError {
@@ -500,21 +549,19 @@ impl Strategies for ShortStraddle {
             Ok(max_profit.into())
         }
     }
-
-    fn max_loss(&self) -> Result<Positive, StrategyError> {
+    fn get_max_loss(&self) -> Result<Positive, StrategyError> {
         Ok(Positive::INFINITY)
     }
-
-    fn profit_area(&self) -> Result<Decimal, StrategyError> {
+    fn get_profit_area(&self) -> Result<Decimal, StrategyError> {
         let strike_diff = self.break_even_points[1] - self.break_even_points[0];
         let cat = (strike_diff / 2.0_f64.sqrt()).to_f64();
         let result = (cat.powf(2.0)) / (2.0 * 10.0_f64.powf(cat.log10().ceil()));
         Ok(Decimal::from_f64(result).unwrap())
     }
-
-    fn profit_ratio(&self) -> Result<Decimal, StrategyError> {
+    fn get_profit_ratio(&self) -> Result<Decimal, StrategyError> {
         let break_even_diff = self.break_even_points[1] - self.break_even_points[0];
-        let result = self.max_profit().unwrap_or(Positive::ZERO).to_f64() / break_even_diff * 100.0;
+        let result =
+            self.get_max_profit().unwrap_or(Positive::ZERO).to_f64() / break_even_diff * 100.0;
         Ok(Decimal::from_f64(result).unwrap())
     }
 }
@@ -565,7 +612,9 @@ impl Optimizable for ShortStraddle {
                     second: both,
                 };
                 let strategy = strategy.create_strategy(option_chain, &legs);
-                strategy.validate() && strategy.max_profit().is_ok() && strategy.max_loss().is_ok()
+                strategy.validate()
+                    && strategy.get_max_profit().is_ok()
+                    && strategy.get_max_loss().is_ok()
             })
             // Map to OptionDataGroup
             .map(OptionDataGroup::One)
@@ -595,8 +644,8 @@ impl Optimizable for ShortStraddle {
             let strategy = self.create_strategy(option_chain, &legs);
             // Calculate the current value based on the optimization criteria
             let current_value = match criteria {
-                OptimizationCriteria::Ratio => strategy.profit_ratio().unwrap(),
-                OptimizationCriteria::Area => strategy.profit_area().unwrap(),
+                OptimizationCriteria::Ratio => strategy.get_profit_ratio().unwrap(),
+                OptimizationCriteria::Area => strategy.get_profit_area().unwrap(),
             };
 
             if current_value > best_value {
@@ -644,8 +693,8 @@ impl Optimizable for ShortStraddle {
 }
 
 impl Profit for ShortStraddle {
-    fn calculate_profit_at(&self, price: Positive) -> Result<Decimal, Box<dyn Error>> {
-        let price = Some(&price);
+    fn calculate_profit_at(&self, price: &Positive) -> Result<Decimal, Box<dyn Error>> {
+        let price = Some(price);
         trace!(
             "Price: {:?} Strike: {} Call: {:.2} Strike: {} Put: {:.2} Profit: {:.2}",
             price,
@@ -664,25 +713,10 @@ impl Profit for ShortStraddle {
 }
 
 impl Graph for ShortStraddle {
-    fn title(&self) -> String {
-        let strategy_title = format!("{:?} Strategy: ", self.kind);
-        let leg_titles: Vec<String> = [self.short_call.title(), self.short_put.title()]
-            .iter()
-            .map(|leg| leg.to_string())
-            .collect();
-
-        if leg_titles.is_empty() {
-            strategy_title
-        } else {
-            format!("{}\n\t{}", strategy_title, leg_titles.join("\n\t"))
-        }
-    }
-
     fn get_x_values(&self) -> Vec<Positive> {
-        self.best_range_to_show(Positive::from(1.0))
+        self.get_best_range_to_show(Positive::from(1.0))
             .unwrap_or_else(|_| vec![self.short_call.option.strike_price])
     }
-
     fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<f64, f64>> {
         let max_value = f64::INFINITY;
         let min_value = f64::NEG_INFINITY;
@@ -703,10 +737,9 @@ impl Graph for ShortStraddle {
 
         vertical_lines
     }
-
     fn get_points(&self) -> Vec<ChartPoint<(f64, f64)>> {
         let mut points: Vec<ChartPoint<(f64, f64)>> = Vec::new();
-        let max_profit = self.max_profit().unwrap_or(Positive::ZERO);
+        let max_profit = self.get_max_profit().unwrap_or(Positive::ZERO);
 
         points.push(ChartPoint {
             coordinates: (self.break_even_points[0].to_f64(), 0.0),
@@ -747,25 +780,18 @@ impl Graph for ShortStraddle {
             point_size: 5,
             font_size: 18,
         });
-        points.push(self.get_point_at_price(self.short_put.option.underlying_price));
+        points.push(self.get_point_at_price(&self.short_put.option.underlying_price));
 
         points
     }
 }
 
 impl ProbabilityAnalysis for ShortStraddle {
-    fn get_expiration(&self) -> Result<ExpirationDate, ProbabilityError> {
-        let option = &self.short_call.option;
-        Ok(option.expiration_date)
-    }
-
-    fn get_risk_free_rate(&self) -> Option<Decimal> {
-        Some(self.short_call.option.risk_free_rate)
-    }
-
     fn get_profit_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
-        let option = &self.short_call.option;
         let break_even_points = &self.get_break_even_points()?;
+        let option = &self.short_call.option;
+        let expiration_date = &option.expiration_date;
+        let risk_free_rate = option.risk_free_rate;
 
         let (mean_volatility, std_dev) = mean_and_std(vec![
             option.implied_volatility,
@@ -785,16 +811,18 @@ impl ProbabilityAnalysis for ShortStraddle {
                 std_dev_adjustment: std_dev,
             }),
             None,
-            self.get_expiration()?,
-            self.get_risk_free_rate(),
+            expiration_date,
+            Some(risk_free_rate),
         )?;
 
         Ok(vec![profit_range])
     }
 
     fn get_loss_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
-        let option = &self.short_call.option;
         let break_even_points = &self.get_break_even_points()?;
+        let option = &self.short_call.option;
+        let expiration_date = &option.expiration_date;
+        let risk_free_rate = option.risk_free_rate;
 
         let (mean_volatility, std_dev) = mean_and_std(vec![
             option.implied_volatility,
@@ -811,8 +839,8 @@ impl ProbabilityAnalysis for ShortStraddle {
                 std_dev_adjustment: std_dev,
             }),
             None,
-            self.get_expiration()?,
-            self.get_risk_free_rate(),
+            expiration_date,
+            Some(risk_free_rate),
         )?;
 
         let mut upper_loss_range =
@@ -825,8 +853,8 @@ impl ProbabilityAnalysis for ShortStraddle {
                 std_dev_adjustment: std_dev,
             }),
             None,
-            self.get_expiration()?,
-            self.get_risk_free_rate(),
+            expiration_date,
+            Some(risk_free_rate),
         )?;
 
         Ok(vec![lower_loss_range, upper_loss_range])
@@ -897,7 +925,6 @@ mod tests_short_straddle {
     }
 
     #[test]
-
     fn test_atm_strike_initialization() {
         let underlying_price = pos!(150.0);
         let strategy = ShortStraddle::new(
@@ -924,7 +951,6 @@ mod tests_short_straddle {
     }
 
     #[test]
-
     fn test_new() {
         let strategy = setup();
         assert_eq!(strategy.name, "Short Straddle");
@@ -939,7 +965,6 @@ mod tests_short_straddle {
     }
 
     #[test]
-
     fn test_strikes_are_equal() {
         let strategy = setup();
         assert_eq!(
@@ -949,7 +974,6 @@ mod tests_short_straddle {
     }
 
     #[test]
-
     fn test_validate() {
         let strategy = setup();
         assert!(
@@ -981,20 +1005,18 @@ mod tests_short_straddle {
     }
 
     #[test]
-
     fn test_get_break_even_points() {
         let strategy = setup();
         assert_eq!(strategy.get_break_even_points().unwrap()[0], 146.9);
     }
 
     #[test]
-
     fn test_calculate_profit_at() {
         let strategy = setup();
         let price = 150.0;
         assert_eq!(
             strategy
-                .calculate_profit_at(pos!(price))
+                .calculate_profit_at(&pos!(price))
                 .unwrap()
                 .to_f64()
                 .unwrap(),
@@ -1003,60 +1025,53 @@ mod tests_short_straddle {
     }
 
     #[test]
-
     fn test_max_profit() {
         let strategy = setup();
         assert_eq!(
-            strategy.max_profit().unwrap_or(Positive::ZERO),
-            strategy.net_premium_received().unwrap().to_f64()
+            strategy.get_max_profit().unwrap_or(Positive::ZERO),
+            strategy.get_net_premium_received().unwrap().to_f64()
         );
     }
 
     #[test]
-
     fn test_max_loss() {
         let strategy = setup();
         assert_eq!(
-            strategy.max_loss().unwrap_or(Positive::ZERO),
+            strategy.get_max_loss().unwrap_or(Positive::ZERO),
             Positive::INFINITY
         );
     }
 
     #[test]
-
     fn test_total_cost() {
         let strategy = setup();
-        assert_eq!(strategy.total_cost().unwrap(), 40.0);
+        assert_eq!(strategy.get_total_cost().unwrap(), 40.0);
     }
 
     #[test]
-
     fn test_net_premium_received() {
         let strategy = setup();
         assert_eq!(
-            strategy.net_premium_received().unwrap().to_f64(),
+            strategy.get_net_premium_received().unwrap().to_f64(),
             strategy.short_call.net_premium_received().unwrap()
                 + strategy.short_put.net_premium_received().unwrap()
         );
     }
 
     #[test]
-
     fn test_fees() {
         let strategy = setup();
         let expected_fees = 40.0;
-        assert_eq!(strategy.fees().unwrap().to_f64(), expected_fees);
+        assert_eq!(strategy.get_fees().unwrap().to_f64(), expected_fees);
     }
 
     #[test]
-
     fn test_area() {
         let strategy = setup();
-        assert_eq!(strategy.profit_area().unwrap().to_f64().unwrap(), 0.961);
+        assert_eq!(strategy.get_profit_area().unwrap().to_f64().unwrap(), 0.961);
     }
 
     #[test]
-
     fn test_graph_methods() {
         let strategy = setup();
 
@@ -1070,21 +1085,20 @@ mod tests_short_straddle {
             assert_eq!(
                 values[i],
                 strategy
-                    .calculate_profit_at(price)
+                    .calculate_profit_at(&price)
                     .unwrap()
                     .to_f64()
                     .unwrap()
             );
         }
 
-        let title = strategy.title();
+        let title = strategy.get_title();
         assert!(title.contains("ShortStraddle Strategy"));
         assert!(title.contains("Call"));
         assert!(title.contains("Put"));
     }
 
     #[test]
-
     fn test_add_leg() {
         let mut strategy = setup();
         let original_call = strategy.short_call.clone();
@@ -1104,53 +1118,48 @@ mod tests_short_straddle {
     }
 
     #[test]
-
     fn test_profit_ratio() {
         let strategy = setup();
         let break_even_diff = strategy.break_even_points[1] - strategy.break_even_points[0];
         let expected_ratio =
-            strategy.max_profit().unwrap_or(Positive::ZERO) / break_even_diff * 100.0;
+            strategy.get_max_profit().unwrap_or(Positive::ZERO) / break_even_diff * 100.0;
         assert_eq!(
-            strategy.profit_ratio().unwrap().to_f64().unwrap(),
+            strategy.get_profit_ratio().unwrap().to_f64().unwrap(),
             expected_ratio.to_f64()
         );
     }
 
     #[test]
-
     fn test_best_ratio() {
         let mut strategy = setup();
         let option_chain = create_test_option_chain();
 
         info!("{}", option_chain);
-        strategy.best_ratio(&option_chain, FindOptimalSide::All);
+        strategy.get_best_ratio(&option_chain, FindOptimalSide::All);
         assert!(strategy.validate());
     }
 
     #[test]
-
     fn test_best_area() {
         let mut strategy = setup();
         let option_chain = create_test_option_chain();
 
-        strategy.best_area(&option_chain, FindOptimalSide::All);
+        strategy.get_best_area(&option_chain, FindOptimalSide::All);
         assert!(strategy.validate());
     }
 
     #[test]
-
     fn test_best_range_to_show() {
         let strategy = setup();
         let step = pos!(1.0);
 
-        let range = strategy.best_range_to_show(step).unwrap();
+        let range = strategy.get_best_range_to_show(step).unwrap();
         assert!(!range.is_empty());
         assert!(range[0] <= strategy.break_even_points[0]);
         assert!(*range.last().unwrap() >= strategy.break_even_points[1]);
     }
 
     #[test]
-
     fn test_is_valid_short_option() {
         let strategy = setup();
         let option_chain = create_test_option_chain();
@@ -1159,17 +1168,17 @@ mod tests_short_straddle {
         let max_strike = option_chain.options.last().unwrap().strike_price;
 
         // Test FindOptimalSide::Lower
-        assert!(strategy.is_valid_short_option(option_data, &FindOptimalSide::Lower));
+        assert!(strategy.is_valid_optimal_option(option_data, &FindOptimalSide::Lower));
 
         // Test FindOptimalSide::Upper
-        assert!(!strategy.is_valid_short_option(option_data, &FindOptimalSide::Upper));
+        assert!(!strategy.is_valid_optimal_option(option_data, &FindOptimalSide::Upper));
 
         // Test FindOptimalSide::All
-        assert!(strategy.is_valid_short_option(option_data, &FindOptimalSide::All));
+        assert!(strategy.is_valid_optimal_option(option_data, &FindOptimalSide::All));
 
         // Test FindOptimalSide::Range
         assert!(
-            strategy.is_valid_short_option(
+            strategy.is_valid_optimal_option(
                 option_data,
                 &FindOptimalSide::Range(min_strike, max_strike)
             )
@@ -1177,7 +1186,6 @@ mod tests_short_straddle {
     }
 
     #[test]
-
     fn test_create_strategy() {
         let strategy = setup();
         let chain = create_test_option_chain();
@@ -1202,7 +1210,6 @@ mod tests_short_straddle {
     }
 
     #[test]
-
     fn test_get_points() {
         let strategy = setup();
         let points = strategy.get_points();
@@ -1268,7 +1275,6 @@ mod tests_short_straddle_probability {
     }
 
     #[test]
-
     fn test_probability_of_profit_basic() {
         let straddle = create_test_short_straddle();
         let result = straddle.probability_of_profit(None, None);
@@ -1280,7 +1286,6 @@ mod tests_short_straddle_probability {
     }
 
     #[test]
-
     fn test_probability_of_profit_with_volatility_adjustment() {
         let straddle = create_test_short_straddle();
         let vol_adj = VolatilityAdjustment {
@@ -1300,7 +1305,6 @@ mod tests_short_straddle_probability {
     }
 
     #[test]
-
     fn test_probability_of_profit_with_trend() {
         let straddle = create_test_short_straddle();
         let trend = PriceTrend {
@@ -1320,7 +1324,6 @@ mod tests_short_straddle_probability {
     }
 
     #[test]
-
     fn test_probability_of_profit_with_downward_trend() {
         let straddle = create_test_short_straddle();
         let trend = PriceTrend {
@@ -1340,33 +1343,25 @@ mod tests_short_straddle_probability {
     }
 
     #[test]
-
     fn test_get_reference_price() {
         let straddle = create_test_short_straddle();
         let result = straddle.get_underlying_price();
 
         assert_eq!(
             result,
-            pos!(100.0),
+            &pos!(100.0),
             "Reference price should match underlying price"
         );
     }
 
     #[test]
-
     fn test_get_expiration() {
         let straddle = create_test_short_straddle();
-        let result = straddle.get_expiration();
-
-        assert!(result.is_ok(), "Expiration retrieval should succeed");
-        match result.unwrap() {
-            ExpirationDate::Days(days) => assert_eq!(days, 30.0),
-            _ => panic!("Expected ExpirationDate::Days"),
-        }
+        let expiration_date = *straddle.get_expiration().values().next().unwrap();
+        assert_eq!(expiration_date, &ExpirationDate::Days(pos!(30.0)));
     }
 
     #[test]
-
     fn test_get_profit_ranges() {
         let straddle = create_test_short_straddle();
         let result = straddle.get_profit_ranges();
@@ -1413,26 +1408,15 @@ mod tests_short_straddle_probability_bis {
     }
 
     #[test]
-
-    fn test_get_expiration() {
-        let straddle = create_test_short_straddle();
-        let result = straddle.get_expiration();
-        assert!(result.is_ok());
-        match result.unwrap() {
-            ExpirationDate::Days(days) => assert_eq!(days, 30.0),
-            _ => panic!("Expected ExpirationDate::Days"),
-        }
-    }
-
-    #[test]
-
     fn test_get_risk_free_rate() {
         let straddle = create_test_short_straddle();
-        assert_eq!(straddle.get_risk_free_rate(), Some(dec!(0.05)));
+        assert_eq!(
+            **straddle.get_risk_free_rate().values().next().unwrap(),
+            dec!(0.05)
+        );
     }
 
     #[test]
-
     fn test_get_profit_ranges() {
         let straddle = create_test_short_straddle();
         let result = straddle.get_profit_ranges();
@@ -1447,7 +1431,6 @@ mod tests_short_straddle_probability_bis {
     }
 
     #[test]
-
     fn test_get_loss_ranges() {
         let straddle = create_test_short_straddle();
         let result = straddle.get_loss_ranges();
@@ -1462,7 +1445,6 @@ mod tests_short_straddle_probability_bis {
     }
 
     #[test]
-
     fn test_probability_of_profit() {
         let straddle = create_test_short_straddle();
         let result = straddle.probability_of_profit(None, None);
@@ -1474,7 +1456,6 @@ mod tests_short_straddle_probability_bis {
     }
 
     #[test]
-
     fn test_probability_with_volatility_adjustment() {
         let straddle = create_test_short_straddle();
         let vol_adj = Some(VolatilityAdjustment {
@@ -1490,7 +1471,6 @@ mod tests_short_straddle_probability_bis {
     }
 
     #[test]
-
     fn test_probability_with_trend() {
         let straddle = create_test_short_straddle();
         let trend = Some(PriceTrend {
@@ -1506,7 +1486,6 @@ mod tests_short_straddle_probability_bis {
     }
 
     #[test]
-
     fn test_analyze_probabilities() {
         let straddle = create_test_short_straddle();
         let result = straddle.analyze_probabilities(None, None);
@@ -1521,7 +1500,6 @@ mod tests_short_straddle_probability_bis {
     }
 
     #[test]
-
     fn test_calculate_extreme_probabilities() {
         let straddle = create_test_short_straddle();
         let result = straddle.calculate_extreme_probabilities(None, None);
@@ -1565,7 +1543,6 @@ mod tests_short_straddle_delta {
     }
 
     #[test]
-
     fn create_test_short_straddle_reducing_adjustments() {
         let strategy = get_strategy(pos!(7460.0));
         let size = dec!(0.1759865);
@@ -1605,7 +1582,6 @@ mod tests_short_straddle_delta {
     }
 
     #[test]
-
     fn create_test_short_straddle_increasing_adjustments() {
         let strategy = get_strategy(pos!(7050.0));
         let size = dec!(-0.164378449);
@@ -1645,7 +1621,6 @@ mod tests_short_straddle_delta {
     }
 
     #[test]
-
     fn create_test_short_straddle_no_adjustments() {
         let strategy = get_strategy(pos!(7245.0));
 
@@ -1693,7 +1668,6 @@ mod tests_short_straddle_delta_size {
     }
 
     #[test]
-
     fn create_test_short_straddle_reducing_adjustments() {
         let strategy = get_strategy(pos!(7460.0));
         let size = dec!(0.3519);
@@ -1736,7 +1710,6 @@ mod tests_short_straddle_delta_size {
     }
 
     #[test]
-
     fn create_test_short_straddle_increasing_adjustments() {
         let strategy = get_strategy(pos!(7050.0));
         let size = dec!(-0.3287);
@@ -1778,7 +1751,6 @@ mod tests_short_straddle_delta_size {
     }
 
     #[test]
-
     fn create_test_short_straddle_no_adjustments() {
         let strategy = get_strategy(pos!(7245.0));
 

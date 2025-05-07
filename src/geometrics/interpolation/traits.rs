@@ -263,7 +263,6 @@ mod tests_interpolate {
     }
 
     #[test]
-
     fn test_interpolate_empty_points() {
         let interpolator = create_mock_interpolator(BTreeSet::new());
 
@@ -281,7 +280,6 @@ mod tests_interpolate {
     }
 
     #[test]
-
     fn test_interpolate_insufficient_points() {
         // Test with only one point
         let interpolator =
@@ -314,7 +312,6 @@ mod tests_interpolate {
     }
 
     #[test]
-
     fn test_get_points() {
         let points = BTreeSet::from_iter(vec![
             Point2D::new(dec!(0), dec!(0)),
@@ -329,7 +326,6 @@ mod tests_interpolate {
     }
 
     #[test]
-
     fn test_interpolate_routing() {
         let points = BTreeSet::from_iter(vec![
             Point2D::new(dec!(0), dec!(0)), // Point 1
@@ -362,7 +358,6 @@ mod tests_interpolate {
     }
 
     #[test]
-
     fn test_find_bracket_points_success() {
         let points = BTreeSet::from_iter(vec![
             Point2D::new(dec!(0), dec!(0)),
@@ -383,7 +378,6 @@ mod tests_interpolate {
     }
 
     #[test]
-
     fn test_find_bracket_points_insufficient_points() {
         let points = BTreeSet::from_iter(vec![Point2D::new(dec!(0), dec!(0))]);
         let interpolator = create_mock_interpolator(points);
@@ -392,7 +386,6 @@ mod tests_interpolate {
     }
 
     #[test]
-
     fn test_find_bracket_points_out_of_range() {
         let points = BTreeSet::from_iter(vec![
             Point2D::new(dec!(0), dec!(0)),
@@ -408,7 +401,6 @@ mod tests_interpolate {
     }
 
     #[test]
-
     fn test_find_bracket_points_edge_cases() {
         let points = BTreeSet::from_iter(vec![
             Point2D::new(dec!(0), dec!(0)),
@@ -429,7 +421,6 @@ mod tests_interpolate {
     }
 
     #[test]
-
     fn test_interpolate_with_empty_points() {
         let interpolator = create_mock_interpolator(BTreeSet::from_iter(vec![]));
         let result = interpolator.interpolate(dec!(0.5), InterpolationType::Linear);
@@ -437,7 +428,6 @@ mod tests_interpolate {
     }
 
     #[test]
-
     fn test_interpolate_routing_minimum_points() {
         // Test each interpolation type with its minimum required points
 

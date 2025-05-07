@@ -10,7 +10,6 @@ use {
     std::error::Error,
 };
 #[test]
-
 fn test_short_butterfly_spread_integration() -> Result<(), Box<dyn Error>> {
     setup_logger();
 

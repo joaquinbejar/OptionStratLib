@@ -1653,7 +1653,6 @@ mod tests_curves {
     use rust_decimal_macros::dec;
 
     #[test]
-
     fn test_new_with_decimal() {
         let x = dec!(1.5);
         let y = dec!(2.5);
@@ -1663,7 +1662,6 @@ mod tests_curves {
     }
 
     #[test]
-
     fn test_new_with_positive() {
         let x = pos!(1.5_f64);
         let y = pos!(2.5_f64);
@@ -1673,7 +1671,6 @@ mod tests_curves {
     }
 
     #[test]
-
     fn test_to_tuple_with_decimal() {
         let point = Point2D::new(dec!(1.5), dec!(2.5));
         let tuple: (Decimal, Decimal) = point.to_tuple().unwrap();
@@ -1681,7 +1678,6 @@ mod tests_curves {
     }
 
     #[test]
-
     fn test_to_tuple_with_positive() {
         let point = Point2D::new(dec!(1.5), dec!(2.5));
         let tuple: (Positive, Positive) = point.to_tuple().unwrap();
@@ -1689,7 +1685,6 @@ mod tests_curves {
     }
 
     #[test]
-
     fn test_from_tuple_with_decimal() {
         let x = dec!(1.5);
         let y = dec!(2.5);
@@ -1698,7 +1693,6 @@ mod tests_curves {
     }
 
     #[test]
-
     fn test_from_tuple_with_positive() {
         let x = pos!(1.5_f64);
         let y = pos!(2.5_f64);
@@ -1707,7 +1701,6 @@ mod tests_curves {
     }
 
     #[test]
-
     fn test_new_with_mixed_types() {
         let x = dec!(1.5);
         let y = pos!(2.5_f64);
@@ -1717,7 +1710,6 @@ mod tests_curves {
     }
 
     #[test]
-
     fn test_create_constant_curve() {
         let curve = create_constant_curve(dec!(1.0), dec!(2.0), dec!(5.0));
         assert_eq!(curve.get_points().len(), 11);
@@ -1727,7 +1719,6 @@ mod tests_curves {
     }
 
     #[test]
-
     fn test_create_linear_curve() {
         let curve = create_linear_curve(dec!(1.0), dec!(2.0), dec!(2.0));
         assert_eq!(curve.get_points().len(), 11);
@@ -1746,7 +1737,6 @@ mod tests_linear_interpolate {
     use rust_decimal_macros::dec;
 
     #[test]
-
     fn test_linear_interpolation_exact_points() {
         let curve = Curve::new(BTreeSet::from_iter(vec![
             Point2D::new(Decimal::ZERO, Decimal::ZERO),
@@ -1768,7 +1758,6 @@ mod tests_linear_interpolate {
     }
 
     #[test]
-
     fn test_linear_interpolation_midpoint() {
         let curve = Curve::new(BTreeSet::from_iter(vec![
             Point2D::new(Decimal::ZERO, Decimal::ZERO),
@@ -1784,7 +1773,6 @@ mod tests_linear_interpolate {
     }
 
     #[test]
-
     fn test_linear_interpolation_quarter_points() {
         let curve = Curve::new(BTreeSet::from_iter(vec![
             Point2D::new(Decimal::ZERO, Decimal::ZERO),
@@ -1807,7 +1795,6 @@ mod tests_linear_interpolate {
     }
 
     #[test]
-
     fn test_linear_interpolation_out_of_range() {
         let curve = Curve::new(BTreeSet::from_iter(vec![
             Point2D::new(dec!(0.0), dec!(0.0)),
@@ -1827,7 +1814,6 @@ mod tests_linear_interpolate {
     }
 
     #[test]
-
     fn test_linear_interpolation_insufficient_points() {
         let curve = Curve::new(BTreeSet::from_iter(vec![Point2D::new(
             dec!(0.0),
@@ -1842,7 +1828,6 @@ mod tests_linear_interpolate {
     }
 
     #[test]
-
     fn test_linear_interpolation_non_monotonic() {
         let curve = Curve::new(BTreeSet::from_iter(vec![
             Point2D::new(dec!(0.0), dec!(0.0)),
@@ -1865,7 +1850,6 @@ mod tests_bilinear_interpolate {
     use rust_decimal_macros::dec;
 
     #[test]
-
     fn test_bilinear_interpolation() {
         let curve = Curve::new(BTreeSet::from_iter(vec![
             Point2D::new(Decimal::ZERO, Decimal::ZERO),
@@ -1890,7 +1874,6 @@ mod tests_bilinear_interpolate {
     }
 
     #[test]
-
     fn test_bilinear_interpolation_out_of_range() {
         let curve = Curve::new(BTreeSet::from_iter(vec![
             Point2D::new(dec!(0.0), dec!(0.0)),
@@ -1912,7 +1895,6 @@ mod tests_bilinear_interpolate {
     }
 
     #[test]
-
     fn test_bilinear_interpolation_insufficient_points() {
         let curve = Curve::new(BTreeSet::from_iter(vec![
             Point2D::new(dec!(0.0), dec!(0.0)),
@@ -1928,7 +1910,6 @@ mod tests_bilinear_interpolate {
     }
 
     #[test]
-
     fn test_bilinear_interpolation_quarter_points() {
         let curve = Curve::new(BTreeSet::from_iter(vec![
             Point2D::new(Decimal::ZERO, Decimal::ZERO), // p11 (0,0)
@@ -1959,7 +1940,6 @@ mod tests_bilinear_interpolate {
     }
 
     #[test]
-
     fn test_bilinear_interpolation_boundaries() {
         let curve = Curve::new(BTreeSet::from_iter(vec![
             Point2D::new(dec!(0.0), dec!(0.0)),
@@ -1981,7 +1961,6 @@ mod tests_bilinear_interpolate {
     }
 
     #[test]
-
     fn test_out_of_range() {
         let curve = Curve::new(BTreeSet::from_iter(vec![
             Point2D::new(Decimal::ZERO, Decimal::ZERO),
@@ -2011,7 +1990,6 @@ mod tests_cubic_interpolate {
     use tracing::info;
 
     #[test]
-
     fn test_cubic_interpolation_exact_points() {
         let curve = Curve::new(BTreeSet::from_iter(vec![
             Point2D::new(dec!(0.0), dec!(0.0)),
@@ -2029,7 +2007,6 @@ mod tests_cubic_interpolate {
     }
 
     #[test]
-
     fn test_cubic_interpolation_midpoints() {
         let curve = Curve::new(BTreeSet::from_iter(vec![
             Point2D::new(dec!(0.0), dec!(0.0)),
@@ -2048,7 +2025,6 @@ mod tests_cubic_interpolate {
     }
 
     #[test]
-
     fn test_cubic_interpolation_insufficient_points() {
         let curve = Curve::new(BTreeSet::from_iter(vec![
             Point2D::new(dec!(0.0), dec!(0.0)),
@@ -2064,7 +2040,6 @@ mod tests_cubic_interpolate {
     }
 
     #[test]
-
     fn test_cubic_interpolation_out_of_range() {
         let curve = Curve::new(BTreeSet::from_iter(vec![
             Point2D::new(dec!(0.0), dec!(0.0)),
@@ -2086,7 +2061,6 @@ mod tests_cubic_interpolate {
     }
 
     #[test]
-
     fn test_cubic_interpolation_monotonicity() {
         let curve = Curve::new(BTreeSet::from_iter(vec![
             Point2D::new(dec!(0.0), dec!(0.0)),
@@ -2118,7 +2092,6 @@ mod tests_spline_interpolate {
     use rust_decimal_macros::dec;
 
     #[test]
-
     fn test_spline_interpolation_exact_points() {
         let curve = Curve::new(BTreeSet::from_iter(vec![
             Point2D::new(dec!(0.0), dec!(0.0)),
@@ -2135,7 +2108,6 @@ mod tests_spline_interpolate {
     }
 
     #[test]
-
     fn test_spline_interpolation_midpoints() {
         let curve = Curve::new(BTreeSet::from_iter(vec![
             Point2D::new(dec!(0.0), dec!(0.0)),
@@ -2153,7 +2125,6 @@ mod tests_spline_interpolate {
     }
 
     #[test]
-
     fn test_spline_interpolation_insufficient_points() {
         let curve = Curve::new(BTreeSet::from_iter(vec![
             Point2D::new(dec!(0.0), dec!(0.0)),
@@ -2168,7 +2139,6 @@ mod tests_spline_interpolate {
     }
 
     #[test]
-
     fn test_spline_interpolation_out_of_range() {
         let curve = Curve::new(BTreeSet::from_iter(vec![
             Point2D::new(dec!(0.0), dec!(0.0)),
@@ -2189,7 +2159,6 @@ mod tests_spline_interpolate {
     }
 
     #[test]
-
     fn test_spline_interpolation_smoothness() {
         let curve = Curve::new(BTreeSet::from_iter(vec![
             Point2D::new(dec!(0.0), dec!(0.0)),
@@ -2241,7 +2210,6 @@ mod tests_curve_arithmetic {
     use crate::geometrics::InterpolationType;
 
     #[test]
-
     fn test_merge_curves_add() {
         let curve1 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(1.0));
         let curve2 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(2.0));
@@ -2266,7 +2234,6 @@ mod tests_curve_arithmetic {
     }
 
     #[test]
-
     fn test_merge_curves_subtract() {
         let curve1 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(3.0));
         let curve2 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(1.0));
@@ -2289,7 +2256,6 @@ mod tests_curve_arithmetic {
     }
 
     #[test]
-
     fn test_merge_curves_multiply() {
         let curve1 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(2.0));
         let curve2 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(3.0));
@@ -2314,7 +2280,6 @@ mod tests_curve_arithmetic {
     }
 
     #[test]
-
     fn test_merge_curves_divide() {
         let curve1 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(6.0));
         let curve2 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(2.0));
@@ -2344,7 +2309,6 @@ mod tests_curve_arithmetic {
     }
 
     #[test]
-
     fn test_merge_curves_max() {
         let curve1 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(2.0));
         let curve2 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(3.0));
@@ -2370,7 +2334,6 @@ mod tests_curve_arithmetic {
     }
 
     #[test]
-
     fn test_merge_curves_min() {
         let curve1 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(2.0));
         let curve2 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(3.0));
@@ -2396,7 +2359,6 @@ mod tests_curve_arithmetic {
     }
 
     #[test]
-
     fn test_merge_with_single_operation() {
         let curve1 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(2.0));
         let curve2 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(3.0));
@@ -2416,7 +2378,6 @@ mod tests_curve_arithmetic {
     }
 
     #[test]
-
     fn test_merge_curves_error_handling() {
         // Test with empty slice
         let result = Curve::merge(&[], MergeOperation::Add);
@@ -2432,7 +2393,6 @@ mod tests_curve_arithmetic {
     }
 
     #[test]
-
     fn test_merge_multiple_curves() {
         let curve1 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(1.0));
         let curve2 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(2.0));

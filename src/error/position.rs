@@ -550,7 +550,6 @@ mod tests {
     impl Positionable for DummyStrategy {}
 
     #[test]
-
     fn test_unsupported_operation() {
         let strategy = DummyStrategy;
         let result = strategy.get_positions();
@@ -563,7 +562,6 @@ mod tests {
     }
 
     #[test]
-
     fn test_error_messages() {
         let error = PositionError::unsupported_operation("TestStrategy", "add_position");
         assert!(error.to_string().contains("TestStrategy"));
@@ -571,7 +569,6 @@ mod tests {
     }
 
     #[test]
-
     fn test_invalid_position_size() {
         let error = PositionError::invalid_position_size(-1.0, "Size cannot be negative");
         assert!(matches!(
@@ -586,7 +583,6 @@ mod tests_extended {
     use super::*;
 
     #[test]
-
     fn test_validation_error_display() {
         let error = PositionValidationErrorKind::InvalidSize {
             size: -1.0,
@@ -605,7 +601,6 @@ mod tests_extended {
     }
 
     #[test]
-
     fn test_limit_error_display() {
         let error = PositionLimitErrorKind::MaxPositionsReached {
             current: 5,
@@ -623,7 +618,6 @@ mod tests_extended {
     }
 
     #[test]
-
     fn test_error_conversions() {
         // Test de str a PositionError
         let str_error: PositionError = "test error".into();
@@ -652,7 +646,6 @@ mod tests_extended {
     }
 
     #[test]
-
     fn test_position_error_helper_methods() {
         let error = PositionError::invalid_position_size(-1.0, "Must be positive");
         assert!(matches!(
@@ -671,7 +664,6 @@ mod tests_extended {
     }
 
     #[test]
-
     fn test_strategy_error_helper_methods() {
         let error = PositionError::strategy_full("Iron Condor", 4);
         assert!(matches!(
@@ -687,7 +679,6 @@ mod tests_extended {
     }
 
     #[test]
-
     fn test_position_error_validation_error() {
         let error = PositionError::ValidationError(PositionValidationErrorKind::InvalidSize {
             size: -1.0,
@@ -700,7 +691,6 @@ mod tests_extended {
     }
 
     #[test]
-
     fn test_position_error_limit_error() {
         let error = PositionError::LimitError(PositionLimitErrorKind::MaxPositionsReached {
             current: 10,

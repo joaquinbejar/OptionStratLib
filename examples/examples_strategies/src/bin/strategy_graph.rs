@@ -6,9 +6,9 @@
 use optionstratlib::ExpirationDate;
 use optionstratlib::Positive;
 use optionstratlib::pos;
-use optionstratlib::strategies::Strategies;
 use optionstratlib::strategies::base::BreakEvenable;
 use optionstratlib::strategies::bull_call_spread::BullCallSpread;
+use optionstratlib::strategies::{BasicAble, Strategies};
 use optionstratlib::utils::setup_logger;
 use optionstratlib::visualization::utils::Graph;
 use optionstratlib::visualization::utils::GraphBackend;
@@ -38,7 +38,10 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     info!("Title: {}", strategy.get_title());
     info!("Break Even {:?}", strategy.get_break_even_points());
-    info!("Net Premium Received: {}", strategy.get_net_premium_received()?);
+    info!(
+        "Net Premium Received: {}",
+        strategy.get_net_premium_received()?
+    );
     info!(
         "Max Profit: {}",
         strategy.get_max_profit().unwrap_or(Positive::ZERO)

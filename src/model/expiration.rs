@@ -592,7 +592,6 @@ mod tests_expiration_date {
         use chrono::TimeZone;
 
         #[test]
-
         fn test_get_date_string_days() {
             let today = Utc::now();
             let expiration = ExpirationDate::Days(pos!(30.0));
@@ -602,7 +601,6 @@ mod tests_expiration_date {
         }
 
         #[test]
-
         fn test_get_date_string_datetime() {
             let specific_date = Utc.with_ymd_and_hms(2024, 12, 31, 0, 0, 0).unwrap();
             let expiration = ExpirationDate::DateTime(specific_date);
@@ -619,7 +617,6 @@ mod test_expiration_date {
     use chrono::{Local, Timelike, Utc};
 
     #[test]
-
     fn test_from_string_valid_days() {
         let result = ExpirationDate::from_string("30.0");
         assert!(result.is_ok());
@@ -630,49 +627,42 @@ mod test_expiration_date {
     }
 
     #[test]
-
     fn test_from_string_valid_datetime() {
         let result = ExpirationDate::from_string("2024-12-31T00:00:00Z");
         assert!(result.is_ok());
     }
 
     #[test]
-
     fn test_from_string_format_one() {
         let result = ExpirationDate::from_string("30 jan 2025");
         assert!(result.is_ok());
     }
 
     #[test]
-
     fn test_from_string_format_two() {
         let result = ExpirationDate::from_string("30-jan-2025");
         assert!(result.is_ok());
     }
 
     #[test]
-
     fn test_from_string_format_three() {
         let result = ExpirationDate::from_string("20250101");
         assert!(result.is_ok());
     }
 
     #[test]
-
     fn four() {
         let result = ExpirationDate::from_string("30-01-2025");
         assert!(result.is_ok());
     }
 
     #[test]
-
     fn test_from_string_invalid_format() {
         let result = ExpirationDate::from_string("invalid date");
         assert!(result.is_err());
     }
 
     #[test]
-
     fn test_from_string_format_today() {
         let today = get_today_formatted();
         let result = ExpirationDate::from_string(&today);
@@ -722,7 +712,6 @@ mod test_expiration_date {
     }
 
     #[test]
-
     fn test_from_expiration_date_zero() {
         let zero_expiration_date = ExpirationDate::Days(pos!(0.0));
 
@@ -748,7 +737,6 @@ mod test_expiration_date {
     }
 
     #[test]
-
     fn test_from_expiration_date_almost_zero() {
         let zero_expiration_date = ExpirationDate::Days(pos!(0.5));
         let today = Local::now().date_naive();

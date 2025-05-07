@@ -274,7 +274,7 @@ pub mod short_call;
 /// Short Put strategy implementation
 pub mod short_put;
 
-pub use base::{BasicAble, Strategable, Strategies, StrategyBasics};
+pub use base::{BasicAble, Strategable, Strategies, StrategyBasics, Validable};
 pub use bear_call_spread::BearCallSpread;
 pub use bear_put_spread::BearPutSpread;
 pub use build::model::StrategyRequest;

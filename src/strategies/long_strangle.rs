@@ -24,7 +24,7 @@ use crate::error::{GreeksError, OperationErrorKind};
 use crate::greeks::Greeks;
 use crate::model::ProfitLossRange;
 use crate::model::position::Position;
-use crate::model::types::{OptionStyle, OptionType, Side};
+use crate::model::types::{OptionBasicType, OptionStyle, OptionType, Side};
 use crate::model::utils::mean_and_std;
 use crate::pnl::PnLCalculator;
 use crate::pnl::utils::PnL;
@@ -33,7 +33,7 @@ use crate::strategies::delta_neutral::DeltaNeutrality;
 use crate::strategies::probabilities::core::ProbabilityAnalysis;
 use crate::strategies::probabilities::utils::VolatilityAdjustment;
 use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria, calculate_price_range};
-use crate::strategies::{DeltaAdjustment, StrategyConstructor};
+use crate::strategies::{BasicAble, DeltaAdjustment, StrategyConstructor};
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
 use crate::{ExpirationDate, Options, Positive};
@@ -43,6 +43,7 @@ use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{RED, ShapeStyle};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::error::Error;
 use tracing::{debug, info};
 
@@ -356,7 +357,7 @@ impl BreakEvenable for LongStrangle {
     fn update_break_even_points(&mut self) -> Result<(), StrategyError> {
         self.break_even_points = Vec::new();
 
-        let total_premium = self.net_cost()?;
+        let total_premium = self.get_net_cost()?;
 
         self.break_even_points.push(
             (self.long_put.option.strike_price - (total_premium / self.long_put.option.quantity))
@@ -487,38 +488,71 @@ impl Strategable for LongStrangle {
     }
 }
 
+impl BasicAble for LongStrangle {
+    fn get_title(&self) -> String {
+        let strategy_title = format!("{:?} Strategy: ", self.kind);
+        let leg_titles: Vec<String> = [self.long_call.get_title(), self.long_put.get_title()]
+            .iter()
+            .map(|leg| leg.to_string())
+            .collect();
+
+        if leg_titles.is_empty() {
+            strategy_title
+        } else {
+            format!("{}\n\t{}", strategy_title, leg_titles.join("\n\t"))
+        }
+    }
+    fn get_option_basic_type(&self) -> OptionBasicType {
+        unimplemented!("get_option_basic_type is not implemented for this strategy");
+    }
+    fn get_symbol(&self) -> &str {
+        unimplemented!("get_symbol is not implemented for this strategy");
+    }
+    fn get_strike(&self) -> HashMap<OptionBasicType, &Positive> {
+        unimplemented!("get_strike is not implemented for this strategy");
+    }
+    fn get_side(&self) -> HashMap<OptionBasicType, &Side> {
+        unimplemented!("get_side is not implemented for this strategy");
+    }
+    fn get_type(&self) -> &OptionType {
+        unimplemented!("get_type is not implemented for this strategy");
+    }
+    fn get_style(&self) -> HashMap<OptionBasicType, &OptionStyle> {
+        unimplemented!("get_style is not implemented for this strategy");
+    }
+    fn get_expiration(&self) -> HashMap<OptionBasicType, &ExpirationDate> {
+        unimplemented!("get_expiration is not implemented for this strategy");
+    }
+    fn get_implied_volatility(&self) -> HashMap<OptionBasicType, &Positive> {
+        unimplemented!("get_implied_volatility is not implemented for this strategy");
+    }
+    fn get_quantity(&self) -> HashMap<OptionBasicType, &Positive> {
+        unimplemented!("get_quantity is not implemented for this strategy");
+    }
+    fn get_underlying_price(&self) -> &Positive {
+        &self.long_call.option.underlying_price
+    }
+    fn get_risk_free_rate(&self) -> HashMap<OptionBasicType, &Decimal> {
+        unimplemented!("get_risk_free_rate is not implemented for this strategy");
+    }
+    fn get_dividend_yield(&self) -> HashMap<OptionBasicType, &Positive> {
+        unimplemented!("get_dividend_yield is not implemented for this strategy");
+    }
+}
+
 impl Strategies for LongStrangle {
-    fn get_underlying_price(&self) -> Positive {
-        self.long_call.option.underlying_price
-    }
-
-    fn set_underlying_price(&mut self, price: &Positive) -> Result<(), StrategyError> {
-        self.long_call.option.underlying_price = *price;
-        self.long_call.premium =
-            Positive::from(self.long_call.option.calculate_price_black_scholes()?.abs());
-
-        self.long_put.option.underlying_price = *price;
-        self.long_put.premium =
-            Positive::from(self.long_put.option.calculate_price_black_scholes()?.abs());
-
-        Ok(())
-    }
-
-    fn volume(&mut self) -> Result<Positive, StrategyError> {
+    fn get_volume(&mut self) -> Result<Positive, StrategyError> {
         let volume = self.long_call.option.quantity + self.long_put.option.quantity;
         Ok(volume)
     }
-
-    fn max_profit(&self) -> Result<Positive, StrategyError> {
+    fn get_max_profit(&self) -> Result<Positive, StrategyError> {
         Ok(Positive::INFINITY) // Theoretically unlimited
     }
-
-    fn max_loss(&self) -> Result<Positive, StrategyError> {
-        Ok(self.total_cost()?)
+    fn get_max_loss(&self) -> Result<Positive, StrategyError> {
+        Ok(self.get_total_cost()?)
     }
-
-    fn profit_area(&self) -> Result<Decimal, StrategyError> {
-        let max_loss = self.max_loss().unwrap_or(Positive::ZERO);
+    fn get_profit_area(&self) -> Result<Decimal, StrategyError> {
+        let max_loss = self.get_max_loss().unwrap_or(Positive::ZERO);
         if max_loss == Positive::ZERO {
             return Ok(Decimal::MAX);
         }
@@ -532,9 +566,8 @@ impl Strategies for LongStrangle {
         let result = 1.0 / loss_area; // Invert the value to get the profit area: the lower, the better
         Ok(Decimal::from_f64(result).unwrap())
     }
-
-    fn profit_ratio(&self) -> Result<Decimal, StrategyError> {
-        let max_loss = self.max_loss().unwrap_or(Positive::ZERO);
+    fn get_profit_ratio(&self) -> Result<Decimal, StrategyError> {
+        let max_loss = self.get_max_loss().unwrap_or(Positive::ZERO);
         if max_loss == Positive::ZERO {
             return Ok(Decimal::MAX);
         }
@@ -543,8 +576,7 @@ impl Strategies for LongStrangle {
         let result = 1.0 / ratio; // Invert the value to get the profit ratio: the lower, the better
         Ok(Decimal::from_f64(result).unwrap())
     }
-
-    fn best_range_to_show(&self, step: Positive) -> Result<Vec<Positive>, StrategyError> {
+    fn get_best_range_to_show(&self, step: Positive) -> Result<Vec<Positive>, StrategyError> {
         let (first_option, last_option) = (self.break_even_points[0], self.break_even_points[1]);
         debug!("First: {} Last: {}", first_option, last_option);
         assert!(first_option < last_option);
@@ -614,7 +646,9 @@ impl Optimizable for LongStrangle {
                 };
 
                 let strategy = strategy.create_strategy(option_chain, &legs);
-                strategy.validate() && strategy.max_profit().is_ok() && strategy.max_loss().is_ok()
+                strategy.validate()
+                    && strategy.get_max_profit().is_ok()
+                    && strategy.get_max_loss().is_ok()
             })
             // Map to OptionDataGroup
             .map(move |(long_put, long_call)| OptionDataGroup::Two(long_put, long_call))
@@ -644,8 +678,8 @@ impl Optimizable for LongStrangle {
             let strategy = self.create_strategy(option_chain, &legs);
             // Calculate the current value based on the optimization criteria
             let current_value = match criteria {
-                OptimizationCriteria::Ratio => strategy.profit_ratio().unwrap(),
-                OptimizationCriteria::Area => strategy.profit_area().unwrap(),
+                OptimizationCriteria::Ratio => strategy.get_profit_ratio().unwrap(),
+                OptimizationCriteria::Area => strategy.get_profit_area().unwrap(),
             };
 
             if current_value > best_value {
@@ -657,7 +691,7 @@ impl Optimizable for LongStrangle {
         }
     }
 
-    fn are_valid_prices(&self, legs: &StrategyLegs) -> bool {
+    fn are_valid_legs(&self, legs: &StrategyLegs) -> bool {
         let (long_put, long_call) = match legs {
             StrategyLegs::TwoLegs { first, second } => (first, second),
             _ => panic!("Invalid number of legs for this strategy"),
@@ -694,32 +728,17 @@ impl Optimizable for LongStrangle {
 }
 
 impl Profit for LongStrangle {
-    fn calculate_profit_at(&self, price: Positive) -> Result<Decimal, Box<dyn Error>> {
-        let price = Some(&price);
+    fn calculate_profit_at(&self, price: &Positive) -> Result<Decimal, Box<dyn Error>> {
+        let price = Some(price);
         Ok(self.long_call.pnl_at_expiration(&price)? + self.long_put.pnl_at_expiration(&price)?)
     }
 }
 
 impl Graph for LongStrangle {
-    fn title(&self) -> String {
-        let strategy_title = format!("{:?} Strategy: ", self.kind);
-        let leg_titles: Vec<String> = [self.long_call.title(), self.long_put.title()]
-            .iter()
-            .map(|leg| leg.to_string())
-            .collect();
-
-        if leg_titles.is_empty() {
-            strategy_title
-        } else {
-            format!("{}\n\t{}", strategy_title, leg_titles.join("\n\t"))
-        }
-    }
-
     fn get_x_values(&self) -> Vec<Positive> {
-        self.best_range_to_show(Positive::from(1.0))
+        self.get_best_range_to_show(Positive::from(1.0))
             .unwrap_or_else(|_| vec![self.long_call.option.strike_price])
     }
-
     fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<f64, f64>> {
         let max_value = f64::INFINITY;
         let min_value = f64::NEG_INFINITY;
@@ -740,10 +759,9 @@ impl Graph for LongStrangle {
 
         vertical_lines
     }
-
     fn get_points(&self) -> Vec<ChartPoint<(f64, f64)>> {
         let mut points: Vec<ChartPoint<(f64, f64)>> = Vec::new();
-        let max_loss = self.max_loss().unwrap_or(Positive::ZERO);
+        let max_loss = self.get_max_loss().unwrap_or(Positive::ZERO);
         let coordinates: (f64, f64) = (-3.0, 150.0);
         let font_size = 24;
 
@@ -802,14 +820,14 @@ impl Graph for LongStrangle {
         points.push(ChartPoint {
             coordinates: (
                 self.long_put.option.underlying_price.to_f64(),
-                self.calculate_profit_at(self.long_put.option.underlying_price)
+                self.calculate_profit_at(&self.long_put.option.underlying_price)
                     .unwrap()
                     .to_f64()
                     .unwrap(),
             ),
             label: format!(
                 "${:.2}",
-                self.calculate_profit_at(self.long_put.option.underlying_price)
+                self.calculate_profit_at(&self.long_put.option.underlying_price)
                     .unwrap(),
             ),
             label_offset: LabelOffsetType::Relative(-coordinates.0, coordinates.1),
@@ -824,18 +842,11 @@ impl Graph for LongStrangle {
 }
 
 impl ProbabilityAnalysis for LongStrangle {
-    fn get_expiration(&self) -> Result<ExpirationDate, ProbabilityError> {
-        let option = &self.long_call.option;
-        Ok(option.expiration_date)
-    }
-
-    fn get_risk_free_rate(&self) -> Option<Decimal> {
-        Some(self.long_call.option.risk_free_rate)
-    }
-
     fn get_profit_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
-        let option = &self.long_call.option;
         let break_even_points = &self.get_break_even_points()?;
+        let option = &self.long_call.option;
+        let expiration_date = &option.expiration_date;
+        let risk_free_rate = option.risk_free_rate;
 
         let (mean_volatility, std_dev) = mean_and_std(vec![
             option.implied_volatility,
@@ -852,8 +863,8 @@ impl ProbabilityAnalysis for LongStrangle {
                 std_dev_adjustment: std_dev,
             }),
             None,
-            self.get_expiration()?,
-            self.get_risk_free_rate(),
+            expiration_date,
+            Some(risk_free_rate),
         )?;
 
         let mut upper_profit_range =
@@ -866,16 +877,18 @@ impl ProbabilityAnalysis for LongStrangle {
                 std_dev_adjustment: std_dev,
             }),
             None,
-            self.get_expiration()?,
-            self.get_risk_free_rate(),
+            expiration_date,
+            Some(risk_free_rate),
         )?;
 
         Ok(vec![lower_profit_range, upper_profit_range])
     }
 
     fn get_loss_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
-        let option = &self.long_call.option;
         let break_even_points = &self.get_break_even_points()?;
+        let option = &self.long_call.option;
+        let expiration_date = &option.expiration_date;
+        let risk_free_rate = option.risk_free_rate;
 
         let (mean_volatility, std_dev) = mean_and_std(vec![
             option.implied_volatility,
@@ -895,8 +908,8 @@ impl ProbabilityAnalysis for LongStrangle {
                 std_dev_adjustment: std_dev,
             }),
             None,
-            self.get_expiration()?,
-            self.get_risk_free_rate(),
+            expiration_date,
+            Some(risk_free_rate),
         )?;
 
         Ok(vec![loss_range])
@@ -1029,7 +1042,6 @@ mod tests_long_strangle {
     use rust_decimal_macros::dec;
 
     #[test]
-
     fn test_long_strangle_new() {
         let underlying_symbol = "AAPL".to_string();
         let underlying_price = pos!(150.0);
@@ -1074,25 +1086,22 @@ mod tests_long_strangle {
     }
 
     #[test]
-
     fn test_get_break_even_points() {
         let long_strangle = setup_long_strangle();
         assert_eq!(long_strangle.get_break_even_points().unwrap()[0], 128.0);
     }
 
     #[test]
-
     fn test_total_cost() {
         let long_strangle = setup_long_strangle();
         assert_eq!(
-            long_strangle.total_cost().unwrap(),
+            long_strangle.get_total_cost().unwrap(),
             long_strangle.long_call.net_cost().unwrap()
                 + long_strangle.long_put.net_cost().unwrap()
         );
     }
 
     #[test]
-
     fn test_calculate_profit_at() {
         let long_strangle = setup_long_strangle();
         let price = pos!(150.0);
@@ -1105,7 +1114,7 @@ mod tests_long_strangle {
                 .pnl_at_expiration(&Some(&price))
                 .unwrap();
         assert_eq!(
-            long_strangle.calculate_profit_at(price).unwrap(),
+            long_strangle.calculate_profit_at(&price).unwrap(),
             expected_profit
         );
     }
@@ -1152,7 +1161,6 @@ mod tests_long_strangle {
     }
 
     #[test]
-
     fn test_new() {
         let strategy = setup_long_strangle();
         assert_eq!(strategy.name, "Long Strangle");
@@ -1161,7 +1169,6 @@ mod tests_long_strangle {
     }
 
     #[test]
-
     fn test_validate() {
         let strategy = setup_long_strangle();
         let wrong_strategy = wrong_setup_long_strangle();
@@ -1170,61 +1177,54 @@ mod tests_long_strangle {
     }
 
     #[test]
-
     fn test_max_profit() {
         let strategy = setup_long_strangle();
         assert_eq!(
-            strategy.max_profit().unwrap_or(Positive::ZERO),
+            strategy.get_max_profit().unwrap_or(Positive::ZERO),
             Positive::INFINITY
         );
     }
 
     #[test]
-
     fn test_max_loss() {
         let strategy = setup_long_strangle();
         assert_eq!(
-            strategy.max_loss().unwrap_or(Positive::ZERO),
-            strategy.total_cost().unwrap()
+            strategy.get_max_loss().unwrap_or(Positive::ZERO),
+            strategy.get_total_cost().unwrap()
         );
     }
 
     #[test]
-
     fn test_fees() {
         let strategy = setup_long_strangle();
         let expected_fees = 20.0; // 0.5 * 4 fees * 10 qty
-        assert_eq!(strategy.fees().unwrap().to_f64(), expected_fees);
+        assert_eq!(strategy.get_fees().unwrap().to_f64(), expected_fees);
     }
 
     #[test]
-
     fn test_net_premium_received() {
         let strategy = setup_long_strangle();
-        assert_eq!(strategy.net_premium_received().unwrap().to_f64(), 0.0);
+        assert_eq!(strategy.get_net_premium_received().unwrap().to_f64(), 0.0);
     }
 
     #[test]
-
     fn test_profit_area() {
         let strategy = setup_long_strangle();
-        let area = strategy.profit_area().unwrap();
+        let area = strategy.get_profit_area().unwrap();
         assert!(area > Decimal::ZERO);
     }
 
     #[test]
-
     fn test_profit_ratio() {
         let strategy = setup_long_strangle();
         let expected_ratio = 0.003666666666666666;
         assert_eq!(
-            strategy.profit_ratio().unwrap().to_f64().unwrap(),
+            strategy.get_profit_ratio().unwrap().to_f64().unwrap(),
             expected_ratio
         );
     }
 
     #[test]
-
     fn test_add_leg() {
         let mut strategy = setup_long_strangle();
         let original_call = strategy.long_call.clone();
@@ -1242,7 +1242,6 @@ mod tests_long_strangle {
     }
 
     #[test]
-
     fn test_graph_methods() {
         let strategy = setup_long_strangle();
 
@@ -1258,7 +1257,7 @@ mod tests_long_strangle {
             assert_eq!(
                 values[i],
                 strategy
-                    .calculate_profit_at(price)
+                    .calculate_profit_at(&price)
                     .unwrap()
                     .to_f64()
                     .unwrap()
@@ -1266,46 +1265,42 @@ mod tests_long_strangle {
         }
 
         // Test title
-        let title = strategy.title();
+        let title = strategy.get_title();
         assert!(title.contains("LongStrangle Strategy"));
         assert!(title.contains("Call"));
         assert!(title.contains("Put"));
     }
 
     #[test]
-
     fn test_best_ratio() {
         let mut strategy = setup_long_strangle();
         let option_chain = create_test_option_chain();
 
-        strategy.best_ratio(&option_chain, FindOptimalSide::Upper);
+        strategy.get_best_ratio(&option_chain, FindOptimalSide::Upper);
         assert!(strategy.validate());
     }
 
     #[test]
-
     fn test_best_area() {
         let mut strategy = setup_long_strangle();
         let option_chain = create_test_option_chain();
 
-        strategy.best_area(&option_chain, FindOptimalSide::Upper);
+        strategy.get_best_area(&option_chain, FindOptimalSide::Upper);
         assert!(strategy.validate());
     }
 
     #[test]
-
     fn test_best_range_to_show() {
         let strategy = setup_long_strangle();
         let step = pos!(1.0);
 
-        let range = strategy.best_range_to_show(step).unwrap();
+        let range = strategy.get_best_range_to_show(step).unwrap();
         assert!(!range.is_empty());
         assert!(range[0] <= strategy.break_even_points[0]);
         assert!(*range.last().unwrap() >= strategy.break_even_points[1]);
     }
 
     #[test]
-
     fn test_is_valid_long_option() {
         let strategy = setup_long_strangle();
         let option_chain = create_test_option_chain();
@@ -1313,17 +1308,18 @@ mod tests_long_strangle {
         let min_strike = option_chain.options.first().unwrap().strike_price;
         let max_strike = option_chain.options.last().unwrap().strike_price;
 
-        assert!(strategy.is_valid_long_option(option_data, &FindOptimalSide::Upper));
-        assert!(!strategy.is_valid_long_option(option_data, &FindOptimalSide::Lower));
-        assert!(strategy.is_valid_long_option(option_data, &FindOptimalSide::All));
+        assert!(strategy.is_valid_optimal_option(option_data, &FindOptimalSide::Upper));
+        assert!(!strategy.is_valid_optimal_option(option_data, &FindOptimalSide::Lower));
+        assert!(strategy.is_valid_optimal_option(option_data, &FindOptimalSide::All));
         assert!(
-            strategy
-                .is_valid_long_option(option_data, &FindOptimalSide::Range(min_strike, max_strike))
+            strategy.is_valid_optimal_option(
+                option_data,
+                &FindOptimalSide::Range(min_strike, max_strike)
+            )
         );
     }
 
     #[test]
-
     fn test_are_valid_prices() {
         let strategy = setup_long_strangle();
         let option_chain = create_test_option_chain();
@@ -1335,17 +1331,16 @@ mod tests_long_strangle {
             second: call_option,
         };
 
-        assert!(strategy.are_valid_prices(&legs));
+        assert!(strategy.are_valid_legs(&legs));
 
         let legs = StrategyLegs::TwoLegs {
             first: option_chain.options.first().unwrap(),
             second: put_option,
         };
-        assert!(!strategy.are_valid_prices(&legs));
+        assert!(!strategy.are_valid_legs(&legs));
     }
 
     #[test]
-
     fn test_create_strategy() {
         let strategy = setup_long_strangle();
         let chain = create_test_option_chain();
@@ -1379,7 +1374,6 @@ mod tests_long_strangle {
     }
 
     #[test]
-
     fn test_get_points() {
         let strategy = setup_long_strangle();
         let points = strategy.get_points();
@@ -1445,26 +1439,22 @@ mod tests_long_strangle_probability {
     }
 
     #[test]
-
     fn test_get_expiration() {
         let strangle = create_test_long_strangle();
-        let result = strangle.get_expiration();
-        assert!(result.is_ok());
-        match result.unwrap() {
-            ExpirationDate::Days(days) => assert_eq!(days, 30.0),
-            _ => panic!("Expected ExpirationDate::Days"),
-        }
+        let expiration_date = *strangle.get_expiration().values().next().unwrap();
+        assert_eq!(expiration_date, &ExpirationDate::Days(pos!(30.0)));
     }
 
     #[test]
-
     fn test_get_risk_free_rate() {
         let strangle = create_test_long_strangle();
-        assert_eq!(strangle.get_risk_free_rate(), Some(dec!(0.05)));
+        assert_eq!(
+            **strangle.get_risk_free_rate().values().next().unwrap(),
+            dec!(0.05)
+        );
     }
 
     #[test]
-
     fn test_get_profit_ranges() {
         let strangle = create_test_long_strangle();
         let result = strangle.get_profit_ranges();
@@ -1479,7 +1469,6 @@ mod tests_long_strangle_probability {
     }
 
     #[test]
-
     fn test_get_loss_ranges() {
         let strangle = create_test_long_strangle();
         let result = strangle.get_loss_ranges();
@@ -1492,7 +1481,6 @@ mod tests_long_strangle_probability {
     }
 
     #[test]
-
     fn test_probability_of_profit() {
         let strangle = create_test_long_strangle();
         let result = strangle.probability_of_profit(None, None);
@@ -1504,7 +1492,6 @@ mod tests_long_strangle_probability {
     }
 
     #[test]
-
     fn test_probability_with_volatility_adjustment() {
         let strangle = create_test_long_strangle();
         let vol_adj = Some(VolatilityAdjustment {
@@ -1520,7 +1507,6 @@ mod tests_long_strangle_probability {
     }
 
     #[test]
-
     fn test_probability_with_trend() {
         let strangle = create_test_long_strangle();
         let trend = Some(PriceTrend {
@@ -1536,7 +1522,6 @@ mod tests_long_strangle_probability {
     }
 
     #[test]
-
     fn test_expected_value_calculation() {
         let strangle = create_test_long_strangle();
         let result = strangle.expected_value(None, None);
@@ -1558,7 +1543,6 @@ mod tests_long_strangle_probability {
     }
 
     #[test]
-
     fn test_calculate_extreme_probabilities() {
         let strangle = create_test_long_strangle();
         let result = strangle.calculate_extreme_probabilities(None, None);
@@ -1604,7 +1588,6 @@ mod tests_long_strangle_delta {
     }
 
     #[test]
-
     fn create_test_reducing_adjustments() {
         let strike = pos!(7450.0);
         let strategy = get_strategy(strike, pos!(7250.0));
@@ -1648,7 +1631,6 @@ mod tests_long_strangle_delta {
     }
 
     #[test]
-
     fn create_test_increasing_adjustments() {
         let strike = pos!(7050.0);
         let strategy = get_strategy(pos!(7150.0), strike);
@@ -1689,7 +1671,6 @@ mod tests_long_strangle_delta {
     }
 
     #[test]
-
     fn create_test_no_adjustments() {
         let strategy = get_strategy(pos!(7445.5), pos!(7050.0));
 
@@ -1737,7 +1718,6 @@ mod tests_long_strangle_delta_size {
     }
 
     #[test]
-
     fn create_test_apply_adjustments() {
         let strategy = get_strategy(pos!(7450.0), pos!(7250.0));
         let binding = strategy.delta_adjustments().unwrap();
@@ -1866,7 +1846,6 @@ mod tests_long_strangle_delta_size {
     }
 
     #[test]
-
     fn create_test_apply_delta_adjustments() {
         let mut strategy = get_strategy(pos!(7450.0), pos!(7250.0));
         let result = strategy.apply_delta_adjustments(Some(Action::Buy));
@@ -1885,7 +1864,6 @@ mod tests_long_strangle_delta_size {
     }
 
     #[test]
-
     fn create_test_reducing_adjustments() {
         let strike = pos!(7450.0);
         let strategy = get_strategy(strike, pos!(7250.0));
@@ -1927,7 +1905,6 @@ mod tests_long_strangle_delta_size {
     }
 
     #[test]
-
     fn create_test_increasing_adjustments() {
         let strategy = get_strategy(pos!(7150.0), pos!(7050.0));
         let size = dec!(0.244340);
@@ -1969,7 +1946,6 @@ mod tests_long_strangle_delta_size {
     }
 
     #[test]
-
     fn create_test_no_adjustments() {
         let strategy = get_strategy(pos!(7445.5), pos!(7050.0));
 

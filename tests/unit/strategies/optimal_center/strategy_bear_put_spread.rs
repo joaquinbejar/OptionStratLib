@@ -11,7 +11,6 @@ use {
 };
 
 #[test]
-
 fn test_bear_put_spread_integration() -> Result<(), Box<dyn Error>> {
     setup_logger();
 

@@ -9,7 +9,6 @@ use rust_decimal_macros::dec;
 use std::error::Error;
 
 #[test]
-
 fn test_long_strangle_integration() -> Result<(), Box<dyn Error>> {
     setup_logger();
 

@@ -11,7 +11,6 @@ use {
 };
 
 #[test]
-
 fn test_bull_call_spread_integration() -> Result<(), Box<dyn Error>> {
     setup_logger();
 

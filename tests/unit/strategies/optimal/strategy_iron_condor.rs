@@ -11,7 +11,6 @@ use {
 };
 
 #[test]
-
 fn test_iron_condor_integration() -> Result<(), Box<dyn Error>> {
     setup_logger();
 

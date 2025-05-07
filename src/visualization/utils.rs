@@ -1,6 +1,7 @@
 use crate::Positive;
 use crate::constants::{DARK_GREEN, DARK_RED};
 use crate::pricing::payoff::Profit;
+use crate::strategies::base::BasicAble;
 use crate::visualization::model::{ChartPoint, ChartVerticalLine};
 use num_traits::ToPrimitive;
 use plotters::backend::BitMapBackend;
@@ -13,7 +14,6 @@ use plotters::prelude::{
 use rand::{Rng, rng};
 use std::error::Error;
 use std::ops::Add;
-use crate::strategies::base::BasicAble;
 
 /// Applies a color gradient effect by interpolating between a base color and a derived color.
 ///
@@ -641,7 +641,6 @@ mod tests_calculate_axis_range {
     use crate::pos;
 
     #[test]
-
     fn test_calculate_axis_range() {
         let x_data = vec![pos!(1.0), pos!(2.0), pos!(3.0), pos!(4.0), pos!(5.0)];
         let y_data = vec![-10.0, -5.0, 0.0, 5.0, 10.0];
@@ -655,7 +654,6 @@ mod tests_calculate_axis_range {
     }
 
     #[test]
-
     fn test_calculate_axis_range_single_value() {
         let x_data = vec![pos!(1.0)];
         let y_data = vec![0.0];
@@ -669,7 +667,6 @@ mod tests_calculate_axis_range {
     }
 
     #[test]
-
     fn test_calculate_axis_range_zero_values() {
         let x_data = vec![Positive::ZERO, Positive::ZERO, Positive::ZERO];
         let y_data = vec![0.0, 0.0, 0.0];
@@ -683,7 +680,6 @@ mod tests_calculate_axis_range {
     }
 
     #[test]
-
     fn test_calculate_axis_range_large_values() {
         let x_data = vec![pos!(1e6), pos!(2e6), pos!(3e6)];
         let y_data = vec![1e9, 2e9, 3e9];
@@ -722,7 +718,6 @@ mod tests {
     }
 
     impl Graph for MockGraph {
-        
         fn get_x_values(&self) -> Vec<Positive> {
             vec![Positive::ZERO, pos!(50.0), pos!(100.0)]
         }
@@ -754,7 +749,6 @@ mod tests {
     }
 
     #[test]
-
     fn test_graph_trait() -> Result<(), Box<dyn Error>> {
         let mock_graph = MockGraph;
         mock_graph.graph(
@@ -776,7 +770,6 @@ mod tests {
     }
 
     #[test]
-
     fn test_default_get_vertical_lines() {
         struct DefaultGraph;
         impl Profit for DefaultGraph {
@@ -799,7 +792,6 @@ mod tests {
     }
 
     #[test]
-
     fn test_default_get_points() {
         struct DefaultGraph;
         impl Profit for DefaultGraph {
@@ -822,19 +814,16 @@ mod tests {
     }
 
     #[test]
-
     fn test_draw_points_on_chart() -> Result<(), Box<dyn Error>> {
         Ok(())
     }
 
     #[test]
-
     fn test_draw_vertical_lines_on_chart() -> Result<(), Box<dyn Error>> {
         Ok(())
     }
 
     #[test]
-
     fn test_calculate_axis_range_empty() {
         let x_data: Vec<Positive> = vec![];
         let y_data: Vec<f64> = vec![];
@@ -965,7 +954,7 @@ mod tests_extended {
                 "Multi Line Graph".to_string()
             }
         }
-        
+
         impl Graph for MultiLineGraph {
             fn get_x_values(&self) -> Vec<Positive> {
                 vec![pos!(0.0), pos!(50.0), pos!(100.0)]

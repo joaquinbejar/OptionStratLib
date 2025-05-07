@@ -10,6 +10,7 @@ use crate::error::position::PositionError;
 use crate::error::strategies::StrategyError;
 use crate::error::{GreeksError, OperationErrorKind, ProbabilityError};
 use crate::greeks::Greeks;
+use crate::model::types::OptionBasicType;
 use crate::model::utils::mean_and_std;
 use crate::model::{Position, ProfitLossRange};
 use crate::pnl::utils::{PnL, PnLCalculator};
@@ -19,16 +20,17 @@ use crate::strategies::base::{
 };
 use crate::strategies::probabilities::{ProbabilityAnalysis, VolatilityAdjustment};
 use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
-use crate::strategies::{DeltaNeutrality, StrategyBasics, StrategyConstructor};
+use crate::strategies::{BasicAble, DeltaNeutrality, StrategyBasics, StrategyConstructor};
 use crate::utils::others::process_n_times_iter;
 use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
 use crate::visualization::utils::Graph;
-use crate::{ExpirationDate, Options, Positive, pos};
+use crate::{ExpirationDate, OptionStyle, OptionType, Options, Positive, Side, pos};
 use num_traits::{FromPrimitive, ToPrimitive};
 use plotters::prelude::full_palette::ORANGE;
 use plotters::prelude::{RED, ShapeStyle};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::error::Error;
 use tracing::{debug, error};
 
@@ -130,7 +132,7 @@ impl CustomStrategy {
             max_profit_point: None,
             max_loss_point: None,
         };
-        let _ = strategy.max_loss_iter();
+        let _ = strategy.get_max_loss_mut();
         if !strategy.validate() {
             panic!("Invalid strategy");
         }
@@ -138,7 +140,7 @@ impl CustomStrategy {
             .update_break_even_points()
             .expect("Unable to update break even points");
 
-        let _ = strategy.max_profit_iter();
+        let _ = strategy.get_max_profit_mut();
         strategy
     }
 
@@ -147,8 +149,8 @@ impl CustomStrategy {
         if !self.validate() {
             panic!("Invalid strategy");
         }
-        let _ = self.max_loss_iter();
-        let _ = self.max_profit_iter();
+        let _ = self.get_max_loss_mut();
+        let _ = self.get_max_profit_mut();
         self.calculate_break_even_points();
     }
 
@@ -158,7 +160,7 @@ impl CustomStrategy {
         self.break_even_points = Vec::new();
 
         // Get the visible range for our search
-        let (min_price, max_price) = self.range_to_show().unwrap();
+        let (min_price, max_price) = self.get_range_to_show().unwrap();
 
         // Create a finer grid for initial sampling
         let num_samples = 1000; // Increased for better precision
@@ -170,7 +172,7 @@ impl CustomStrategy {
 
         while current_price <= max_price {
             let profit = self
-                .calculate_profit_at(current_price)
+                .calculate_profit_at(&current_price)
                 .unwrap()
                 .to_f64()
                 .unwrap();
@@ -219,7 +221,7 @@ impl CustomStrategy {
         let mut iterations = 0;
 
         while iterations < self.max_iterations {
-            let f_x = self.calculate_profit_at(x).unwrap().to_f64().unwrap();
+            let f_x = self.calculate_profit_at(&x).unwrap().to_f64().unwrap();
 
             // Check if we're close enough to zero
             if f_x.abs() < self.epsilon {
@@ -228,7 +230,13 @@ impl CustomStrategy {
 
             // Calculate derivative numerically with smaller step
             let h = self.epsilon.sqrt();
-            let derivative = (self.calculate_profit_at(x + h).unwrap().to_f64().unwrap() - f_x) / h;
+            let derivative = (self
+                .calculate_profit_at(&(x + h))
+                .unwrap()
+                .to_f64()
+                .unwrap()
+                - f_x)
+                / h;
 
             // Avoid division by very small numbers
             if derivative.abs() < self.epsilon {
@@ -275,7 +283,7 @@ impl CustomStrategy {
         if break_even_points.len() == 1 {
             let break_even = break_even_points[0];
             let test_point = break_even - pos!(0.01);
-            let is_profit_below = self.calculate_profit_at(test_point)? > Decimal::ZERO;
+            let is_profit_below = self.calculate_profit_at(&test_point)? > Decimal::ZERO;
 
             if is_profit_below {
                 profit_zones.push(ProfitLossRange::new(
@@ -302,7 +310,7 @@ impl CustomStrategy {
             }
         } else {
             let test_point = break_even_points[0] - pos!(0.01);
-            let is_first_zone_profit = self.calculate_profit_at(test_point)? > Decimal::ZERO;
+            let is_first_zone_profit = self.calculate_profit_at(&test_point)? > Decimal::ZERO;
 
             let ranges = (0..=break_even_points.len())
                 .map(|i| match i {
@@ -360,13 +368,13 @@ impl BreakEvenable for CustomStrategy {
 impl Positionable for CustomStrategy {
     fn add_position(&mut self, position: &Position) -> Result<(), PositionError> {
         self.positions.push(position.clone());
-        let _ = self.max_loss_iter();
+        let _ = self.get_max_loss_mut();
         if !self.validate() {
             return Err(PositionError::invalid_position(
                 "Strategy is not valid after adding new position",
             ));
         }
-        let _ = self.max_profit_iter();
+        let _ = self.get_max_profit_mut();
         self.calculate_break_even_points();
         Ok(())
     }
@@ -386,12 +394,61 @@ impl Strategable for CustomStrategy {
     }
 }
 
-impl Strategies for CustomStrategy {
-    fn get_underlying_price(&self) -> Positive {
-        self.underlying_price
+impl BasicAble for CustomStrategy {
+    fn get_title(&self) -> String {
+        let strategy_title = format!("{} Strategy: {:?} on {}", self.name, self.kind, self.symbol);
+        let leg_titles: Vec<String> = self
+            .positions
+            .iter()
+            .map(|position| position.get_title())
+            .collect();
+        if leg_titles.is_empty() {
+            strategy_title
+        } else {
+            format!("{}\n\t{}", strategy_title, leg_titles.join("\n\t"))
+        }
     }
+    fn get_option_basic_type(&self) -> OptionBasicType {
+        unimplemented!("get_option_basic_type is not implemented for this strategy");
+    }
+    fn get_symbol(&self) -> &str {
+        unimplemented!("get_symbol is not implemented for this strategy");
+    }
+    fn get_strike(&self) -> HashMap<OptionBasicType, &Positive> {
+        unimplemented!("get_strike is not implemented for this strategy");
+    }
+    fn get_side(&self) -> HashMap<OptionBasicType, &Side> {
+        unimplemented!("get_side is not implemented for this strategy");
+    }
+    fn get_type(&self) -> &OptionType {
+        unimplemented!("get_type is not implemented for this strategy");
+    }
+    fn get_style(&self) -> HashMap<OptionBasicType, &OptionStyle> {
+        unimplemented!("get_style is not implemented for this strategy");
+    }
+    fn get_expiration(&self) -> HashMap<OptionBasicType, &ExpirationDate> {
+        unimplemented!("get_expiration is not implemented for this strategy");
+    }
+    fn get_implied_volatility(&self) -> HashMap<OptionBasicType, &Positive> {
+        unimplemented!("get_implied_volatility is not implemented for this strategy");
+    }
+    fn get_quantity(&self) -> HashMap<OptionBasicType, &Positive> {
+        unimplemented!("get_quantity is not implemented for this strategy");
+    }
+    fn get_underlying_price(&self) -> &Positive {
+        let positions = &self.positions;
+        &positions.first().unwrap().option.underlying_price
+    }
+    fn get_risk_free_rate(&self) -> HashMap<OptionBasicType, &Decimal> {
+        unimplemented!("get_risk_free_rate is not implemented for this strategy");
+    }
+    fn get_dividend_yield(&self) -> HashMap<OptionBasicType, &Positive> {
+        unimplemented!("get_dividend_yield is not implemented for this strategy");
+    }
+}
 
-    fn max_profit_iter(&mut self) -> Result<Positive, StrategyError> {
+impl Strategies for CustomStrategy {
+    fn get_max_profit_mut(&mut self) -> Result<Positive, StrategyError> {
         if self.positions.is_empty() {
             return Err(StrategyError::OperationError(
                 OperationErrorKind::InvalidParameters {
@@ -402,10 +459,10 @@ impl Strategies for CustomStrategy {
         }
         let step = self.step_by;
         let mut max_profit: Positive = Positive::ZERO;
-        let (mut current_price, max_search_price) = self.range_to_show()?;
+        let (mut current_price, max_search_price) = self.get_range_to_show()?;
 
         while current_price < max_search_price {
-            let current_profit = self.calculate_profit_at(current_price)?;
+            let current_profit = self.calculate_profit_at(&current_price)?;
             if current_profit < Decimal::ZERO {
                 current_price += step;
                 continue;
@@ -419,7 +476,7 @@ impl Strategies for CustomStrategy {
         Ok(max_profit)
     }
 
-    fn max_loss_iter(&mut self) -> Result<Positive, StrategyError> {
+    fn get_max_loss_mut(&mut self) -> Result<Positive, StrategyError> {
         if self.positions.is_empty() {
             return Err(StrategyError::OperationError(
                 OperationErrorKind::InvalidParameters {
@@ -430,9 +487,9 @@ impl Strategies for CustomStrategy {
         }
         let step = self.step_by;
         let mut max_loss: Positive = Positive::ZERO;
-        let (mut current_price, max_search_price) = self.range_to_show()?;
+        let (mut current_price, max_search_price) = self.get_range_to_show()?;
         while current_price < max_search_price {
-            let current_profit = self.calculate_profit_at(current_price)?;
+            let current_profit = self.calculate_profit_at(&current_price)?;
             if current_profit > Decimal::ZERO {
                 current_price += step;
                 continue;
@@ -447,7 +504,7 @@ impl Strategies for CustomStrategy {
         Ok(max_loss)
     }
 
-    fn profit_area(&self) -> Result<Decimal, StrategyError> {
+    fn get_profit_area(&self) -> Result<Decimal, StrategyError> {
         if self.positions.is_empty() {
             return Err(StrategyError::OperationError(
                 OperationErrorKind::InvalidParameters {
@@ -458,9 +515,9 @@ impl Strategies for CustomStrategy {
         }
 
         let mut total_profit: Decimal = Decimal::ZERO;
-        let (mut current_price, max_search_price) = self.range_to_show()?;
+        let (mut current_price, max_search_price) = self.get_range_to_show()?;
         while current_price < max_search_price {
-            let current_profit = self.calculate_profit_at(current_price)?;
+            let current_profit = self.calculate_profit_at(&current_price)?;
             if current_profit > Decimal::ZERO {
                 total_profit += current_profit;
             }
@@ -470,7 +527,7 @@ impl Strategies for CustomStrategy {
         Ok(restult)
     }
 
-    fn profit_ratio(&self) -> Result<Decimal, StrategyError> {
+    fn get_profit_ratio(&self) -> Result<Decimal, StrategyError> {
         match (self.max_profit_point, self.max_loss_point) {
             (None, _) => Err(StrategyError::OperationError(
                 OperationErrorKind::InvalidParameters {
@@ -552,8 +609,8 @@ impl Optimizable for CustomStrategy {
             // Evaluate the current combination
             self.update_positions(current_positions.clone());
             let current_value = match criteria {
-                OptimizationCriteria::Ratio => self.profit_ratio().unwrap(),
-                OptimizationCriteria::Area => self.profit_area().unwrap(),
+                OptimizationCriteria::Ratio => self.get_profit_ratio().unwrap(),
+                OptimizationCriteria::Area => self.get_profit_area().unwrap(),
             };
 
             if current_value > best_value {
@@ -576,8 +633,8 @@ impl Optimizable for CustomStrategy {
 }
 
 impl Profit for CustomStrategy {
-    fn calculate_profit_at(&self, price: Positive) -> Result<Decimal, Box<dyn Error>> {
-        let price = Some(&price);
+    fn calculate_profit_at(&self, price: &Positive) -> Result<Decimal, Box<dyn Error>> {
+        let price = Some(price);
         self.positions
             .iter()
             .map(|position| position.pnl_at_expiration(&price))
@@ -586,22 +643,8 @@ impl Profit for CustomStrategy {
 }
 
 impl Graph for CustomStrategy {
-    fn title(&self) -> String {
-        let strategy_title = format!("{} Strategy: {:?} on {}", self.name, self.kind, self.symbol);
-        let leg_titles: Vec<String> = self
-            .positions
-            .iter()
-            .map(|position| position.title())
-            .collect();
-        if leg_titles.is_empty() {
-            strategy_title
-        } else {
-            format!("{}\n\t{}", strategy_title, leg_titles.join("\n\t"))
-        }
-    }
-
     fn get_x_values(&self) -> Vec<Positive> {
-        self.best_range_to_show(Positive::from(1.0)).unwrap()
+        self.get_best_range_to_show(Positive::from(1.0)).unwrap()
     }
 
     fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<f64, f64>> {
@@ -634,7 +677,7 @@ impl Graph for CustomStrategy {
             });
         }
 
-        points.push(self.get_point_at_price(self.underlying_price));
+        points.push(self.get_point_at_price(&self.underlying_price));
 
         points.push(ChartPoint {
             coordinates: (
@@ -667,23 +710,11 @@ impl Graph for CustomStrategy {
 }
 
 impl ProbabilityAnalysis for CustomStrategy {
-    fn get_expiration(&self) -> Result<ExpirationDate, ProbabilityError> {
-        match self.positions.first() {
-            Some(position) => Ok(position.option.expiration_date),
-            None => Err(ProbabilityError::NoPositions(
-                "get_expiration: No positions found ".to_string(),
-            )),
-        }
-    }
-
-    fn get_risk_free_rate(&self) -> Option<Decimal> {
-        self.positions
-            .first()
-            .map(|position| position.option.risk_free_rate)
-    }
-
     fn get_profit_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
         let break_even_points = self.get_break_even_points()?;
+        let option = *self.get_options()?.first().unwrap();
+        let expiration_date = &option.expiration_date;
+        let risk_free_rate = option.risk_free_rate;
 
         let implied_volatilities = self
             .positions
@@ -703,8 +734,8 @@ impl ProbabilityAnalysis for CustomStrategy {
                         std_dev_adjustment: std_dev,
                     }),
                     None,
-                    self.get_expiration().unwrap(),
-                    self.get_risk_free_rate(),
+                    expiration_date,
+                    Some(risk_free_rate),
                 )
                 .unwrap();
         });
@@ -714,6 +745,9 @@ impl ProbabilityAnalysis for CustomStrategy {
 
     fn get_loss_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
         let break_even_points = self.get_break_even_points()?;
+        let option = *self.get_options()?.first().unwrap();
+        let expiration_date = &option.expiration_date;
+        let risk_free_rate = option.risk_free_rate;
 
         let implied_volatilities = self
             .positions
@@ -733,8 +767,8 @@ impl ProbabilityAnalysis for CustomStrategy {
                         std_dev_adjustment: std_dev,
                     }),
                     None,
-                    self.get_expiration().unwrap(),
-                    self.get_risk_free_rate(),
+                    expiration_date,
+                    Some(risk_free_rate),
                 )
                 .unwrap();
         });
@@ -941,7 +975,6 @@ mod tests_custom_strategy {
     use rust_decimal_macros::dec;
 
     #[test]
-
     fn test_new_custom_strategy() {
         let strategy = create_test_strategy();
         assert_eq!(strategy.name, "Custom Strategy");
@@ -954,7 +987,6 @@ mod tests_custom_strategy {
     }
 
     #[test]
-
     fn test_calculate_break_even_points_single_call() {
         setup_logger();
         let strategy = create_test_strategy();
@@ -967,7 +999,6 @@ mod tests_custom_strategy {
     }
 
     #[test]
-
     fn test_calculate_break_even_points_single_put() {
         let mut strategy = create_test_strategy();
         let underlying_price = pos!(5780.0);
@@ -1015,7 +1046,6 @@ mod tests_custom_strategy {
     }
 
     #[test]
-
     fn test_calculate_break_even_points_straddle() {
         setup_logger();
 
@@ -1097,7 +1127,6 @@ mod tests_custom_strategy {
     }
 
     #[test]
-
     fn test_calculate_break_even_points_no_get_break_even_points() {
         let mut strategy = create_test_strategy();
         let option = create_sample_option(
@@ -1138,7 +1167,6 @@ mod tests_custom_strategy {
     }
 
     #[test]
-
     fn test_add_position_invalid_strategy() {
         let mut strategy = create_test_strategy();
         let invalid_position = Position::new(
@@ -1161,21 +1189,19 @@ mod tests_custom_strategy {
     }
 
     #[test]
-
     fn test_profit_ratio_missing_points() {
         let mut strategy = create_test_strategy();
         strategy.max_profit_point = None;
-        let result = strategy.profit_ratio();
+        let result = strategy.get_profit_ratio();
         assert!(result.is_err());
 
         strategy.max_profit_point = Some((pos!(100.0), 50.0));
         strategy.max_loss_point = None;
-        let result = strategy.profit_ratio();
+        let result = strategy.get_profit_ratio();
         assert!(result.is_err());
     }
 
     #[test]
-
     fn test_calculate_break_even_points_edge_cases() {
         let strategy = create_test_strategy();
 
@@ -1187,7 +1213,6 @@ mod tests_custom_strategy {
     }
 
     #[test]
-
     fn test_add_duplicate_break_even_point() {
         let mut strategy = create_test_strategy();
         let point = pos!(100.0);
@@ -1200,12 +1225,11 @@ mod tests_custom_strategy {
     }
 
     #[test]
-
     fn test_graph_implementation() {
         let strategy = create_test_strategy();
 
         // Test title
-        let title = strategy.title();
+        let title = strategy.get_title();
         assert!(title.contains(&strategy.name));
         assert!(title.contains(&strategy.symbol));
 
@@ -1232,15 +1256,13 @@ mod tests_max_profit {
     use rust_decimal_macros::dec;
 
     #[test]
-
     fn test_max_profit_single_long_call() {
         let mut strategy = create_test_strategy();
-        let max_profit = strategy.max_profit_iter().unwrap();
+        let max_profit = strategy.get_max_profit_mut().unwrap();
         assert!(max_profit > Positive::ZERO);
     }
 
     #[test]
-
     fn test_max_profit_multi_leg_strategy() {
         setup_logger();
 
@@ -1307,7 +1329,7 @@ mod tests_max_profit {
         );
         strategy.add_position(&position).expect("Invalid position");
 
-        let max_profit = strategy.max_profit_iter().unwrap();
+        let max_profit = strategy.get_max_profit_mut().unwrap();
         assert!(max_profit > Positive::ZERO);
     }
 }
@@ -1324,15 +1346,13 @@ mod tests_max_loss {
     use rust_decimal_macros::dec;
 
     #[test]
-
     fn test_max_loss_single_long_call() {
         let mut strategy = create_test_strategy();
-        let max_loss = strategy.max_loss_iter().unwrap();
+        let max_loss = strategy.get_max_loss_mut().unwrap();
         assert!(max_loss > Positive::ZERO);
     }
 
     #[test]
-
     fn test_max_loss_multi_leg_strategy() {
         setup_logger();
 
@@ -1399,7 +1419,7 @@ mod tests_max_loss {
         );
         strategy.add_position(&position).expect("Invalid position");
 
-        let max_loss = strategy.max_loss_iter().unwrap();
+        let max_loss = strategy.get_max_loss_mut().unwrap();
         assert!(max_loss > Positive::ZERO);
     }
 }
@@ -1438,7 +1458,6 @@ mod tests_total_cost {
     }
 
     #[test]
-
     fn test_total_cost_only_long_positions() {
         let positions = vec![
             create_test_position(Side::Long, pos!(5.0), pos!(0.5)), // net cost = 6.0 (premium + fees)
@@ -1456,11 +1475,10 @@ mod tests_total_cost {
             pos!(1.0),
         );
 
-        assert_eq!(strategy.total_cost().unwrap(), 10.0); // 6.0 + 4.0
+        assert_eq!(strategy.get_total_cost().unwrap(), 10.0); // 6.0 + 4.0
     }
 
     #[test]
-
     fn test_total_cost_only_short_positions() {
         setup_logger();
         let position_1 = create_test_position(Side::Short, pos!(5.0), pos!(0.5));
@@ -1482,11 +1500,10 @@ mod tests_total_cost {
             pos!(1.0),
         );
 
-        assert_eq!(strategy.total_cost().unwrap(), 2.0);
+        assert_eq!(strategy.get_total_cost().unwrap(), 2.0);
     }
 
     #[test]
-
     fn test_total_cost_mixed_positions() {
         let positions = vec![
             create_test_position(Side::Long, pos!(5.0), pos!(0.5)), // net cost = 6.0
@@ -1506,11 +1523,10 @@ mod tests_total_cost {
             pos!(1.0),
         );
 
-        assert_eq!(strategy.total_cost().unwrap(), 13.5); // 6.0 + 1.0 + 5.0 + 1.5
+        assert_eq!(strategy.get_total_cost().unwrap(), 13.5); // 6.0 + 1.0 + 5.0 + 1.5
     }
 
     #[test]
-
     fn test_total_cost_with_different_premiums_and_fees() {
         let positions = vec![
             create_test_position(Side::Long, pos!(10.0), pos!(1.0)),
@@ -1529,7 +1545,7 @@ mod tests_total_cost {
             100,
             pos!(1.0),
         );
-        assert_eq!(strategy.total_cost().unwrap(), 22.0); // 12.0 + 1.0 + 8.5 + 0.5
+        assert_eq!(strategy.get_total_cost().unwrap(), 22.0); // 12.0 + 1.0 + 8.5 + 0.5
     }
 }
 
@@ -1584,11 +1600,10 @@ mod tests_best_range_to_show {
     }
 
     #[test]
-
     fn test_best_range_single_strike() {
         let strategy = create_test_strategy_with_strikes(vec![pos!(5800.0)]);
         let step = pos!(10.0);
-        let range = strategy.best_range_to_show(step).unwrap();
+        let range = strategy.get_best_range_to_show(step).unwrap();
 
         assert_eq!(range.first().unwrap().to_f64(), 5644.8);
         assert_eq!(range.last().unwrap().to_f64(), 5974.8);
@@ -1600,12 +1615,11 @@ mod tests_best_range_to_show {
     }
 
     #[test]
-
     fn test_best_range_multiple_strikes() {
         let strategy =
             create_test_strategy_with_strikes(vec![pos!(5700.0), pos!(5800.0), pos!(5900.0)]);
         let step = pos!(50.0);
-        let range = strategy.best_range_to_show(step).unwrap();
+        let range = strategy.get_best_range_to_show(step).unwrap();
 
         assert_eq!(range.first().unwrap().to_f64(), 5546.8);
         assert_eq!(range.last().unwrap().to_f64(), 6046.8);
@@ -1617,11 +1631,10 @@ mod tests_best_range_to_show {
     }
 
     #[test]
-
     fn test_best_range_with_small_step() {
         let strategy = create_test_strategy_with_strikes(vec![pos!(5800.0), pos!(5850.0)]);
         let step = pos!(5.0);
-        let range = strategy.best_range_to_show(step).unwrap();
+        let range = strategy.get_best_range_to_show(step).unwrap();
 
         // Verify granular steps
         for i in 0..range.len() - 1 {
@@ -1630,10 +1643,9 @@ mod tests_best_range_to_show {
     }
 
     #[test]
-
     fn test_best_range_with_underlying() {
         let strategy = create_test_strategy_with_strikes(vec![pos!(5700.0), pos!(5900.0)]);
-        let range = strategy.best_range_to_show(pos!(10.0)).unwrap();
+        let range = strategy.get_best_range_to_show(pos!(10.0)).unwrap();
 
         // Verify range includes underlying price (5780.0)
         assert!(range.iter().any(|&price| price <= pos!(5780.0)));
@@ -1641,11 +1653,10 @@ mod tests_best_range_to_show {
     }
 
     #[test]
-
     fn test_best_range_with_large_step() {
         let strategy = create_test_strategy_with_strikes(vec![pos!(5600.0), pos!(6000.0)]);
         let step = pos!(100.0);
-        let range = strategy.best_range_to_show(step).unwrap();
+        let range = strategy.get_best_range_to_show(step).unwrap();
 
         // Verify minimum points
         assert!(range.len() >= 3);
@@ -1657,12 +1668,11 @@ mod tests_best_range_to_show {
     }
 
     #[test]
-
     fn test_best_range_strike_bounds() {
         let min_strike = pos!(5600.0);
         let max_strike = pos!(6000.0);
         let strategy = create_test_strategy_with_strikes(vec![min_strike, max_strike]);
-        let range = strategy.best_range_to_show(pos!(50.0)).unwrap();
+        let range = strategy.get_best_range_to_show(pos!(50.0)).unwrap();
 
         let expected_min = (min_strike * STRIKE_PRICE_LOWER_BOUND_MULTIPLIER).to_f64();
 
@@ -1671,11 +1681,10 @@ mod tests_best_range_to_show {
     }
 
     #[test]
-
     fn test_best_range_unordered_strikes() {
         let strategy =
             create_test_strategy_with_strikes(vec![pos!(5600.0), pos!(5700.0), pos!(5100.0)]);
-        let range = strategy.best_range_to_show(pos!(50.0)).unwrap();
+        let range = strategy.get_best_range_to_show(pos!(50.0)).unwrap();
 
         assert_eq!(range.first().unwrap().to_f64(), 4998.0);
         assert_eq!(range.last().unwrap().to_f64(), 6598.0);
@@ -1719,7 +1728,6 @@ mod tests_greeks {
     }
 
     #[test]
-
     fn test_greeks_single_long_call() {
         let position = create_test_position(pos!(100.0), Side::Long, OptionStyle::Call);
         let strategy = CustomStrategy::new(
@@ -1745,7 +1753,6 @@ mod tests_greeks {
     }
 
     #[test]
-
     fn test_greeks_single_short_put() {
         setup_logger();
         let position = create_test_position(pos!(100.0), Side::Short, OptionStyle::Put);
@@ -1772,7 +1779,6 @@ mod tests_greeks {
     }
 
     #[test]
-
     fn test_greeks_multiple_positions() {
         let long_call = create_test_position(pos!(100.0), Side::Long, OptionStyle::Call);
         let short_put = create_test_position(pos!(95.0), Side::Short, OptionStyle::Put);
@@ -1827,7 +1833,6 @@ mod tests_greeks {
     }
 
     #[test]
-
     fn test_greeks_straddle() {
         let long_call = create_test_position(pos!(100.0), Side::Long, OptionStyle::Call);
         let long_put = create_test_position(pos!(100.0), Side::Long, OptionStyle::Put);
@@ -1872,10 +1877,9 @@ mod tests_custom_strategy_probability {
     use super::*;
     use crate::strategies::probabilities::utils::PriceTrend;
     use crate::{assert_pos_relative_eq, pos};
-    use num_traits::ToPrimitive;
+    use rust_decimal_macros::dec;
 
     #[test]
-
     fn test_get_profit_loss_zones() {
         let strategy = create_test_strategy();
         let (profit_zones, loss_zones) = strategy
@@ -1896,16 +1900,10 @@ mod tests_custom_strategy_probability {
     }
 
     #[test]
-
     fn test_get_expiration() {
         let strategy = create_test_strategy();
-        let result = strategy.get_expiration();
-
-        assert!(result.is_ok());
-        match result.unwrap() {
-            ExpirationDate::Days(days) => assert_eq!(days, 6.0),
-            _ => panic!("Expected ExpirationDate::Days"),
-        }
+        let expiration = *strategy.get_expiration().values().next().unwrap();
+        assert_eq!(expiration, &ExpirationDate::Days(pos!(30.0)));
     }
 
     #[test]
@@ -1924,13 +1922,10 @@ mod tests_custom_strategy_probability {
     }
 
     #[test]
-
     fn test_get_risk_free_rate() {
         let strategy = create_test_strategy();
-        let rate = strategy.get_risk_free_rate();
-
-        assert!(rate.is_some());
-        assert_eq!(rate.unwrap().to_f64().unwrap(), 0.05);
+        let risk_free_rate = **strategy.get_risk_free_rate().values().next().unwrap();
+        assert_eq!(risk_free_rate, dec!(0.05));
     }
 
     #[test]
@@ -1949,7 +1944,6 @@ mod tests_custom_strategy_probability {
     }
 
     #[test]
-
     fn test_get_profit_ranges() {
         let strategy = create_test_strategy();
         let result = strategy.get_profit_ranges();
@@ -1966,7 +1960,6 @@ mod tests_custom_strategy_probability {
     }
 
     #[test]
-
     fn test_get_loss_ranges() {
         let strategy = create_test_strategy();
         let result = strategy.get_loss_ranges();
@@ -1983,7 +1976,6 @@ mod tests_custom_strategy_probability {
     }
 
     #[test]
-
     fn test_profit_loss_ranges_consistency() {
         let strategy = create_test_strategy();
         let profit_ranges = strategy.get_profit_ranges().unwrap();
@@ -1996,7 +1988,6 @@ mod tests_custom_strategy_probability {
     }
 
     #[test]
-
     fn test_ranges_ordering() {
         let strategy = create_test_strategy();
         let profit_ranges = strategy.get_profit_ranges().unwrap();
@@ -2013,7 +2004,6 @@ mod tests_custom_strategy_probability {
     }
 
     #[test]
-
     fn test_volatility_calculation() {
         let strategy = create_test_strategy();
         let implied_volatilities: Vec<Positive> = strategy
@@ -2027,7 +2017,6 @@ mod tests_custom_strategy_probability {
     }
 
     #[test]
-
     fn test_probability_calculation_with_trend() {
         let strategy = create_test_strategy();
         let trend = Some(PriceTrend {
