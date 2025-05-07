@@ -67,8 +67,8 @@
 //!     pos!(0.73),   // close_fee_short
 //! );
 //!
-//! let profit = spread.max_profit().unwrap_or(Positive::ZERO);
-//! let loss = spread.max_loss().unwrap_or(Positive::ZERO);
+//! let profit = spread.get_max_profit().unwrap_or(Positive::ZERO);
+//! let loss = spread.get_max_loss().unwrap_or(Positive::ZERO);
 //! info!("Max Profit: {}, Max Loss: {}", profit, loss);
 //! ```
 //!
@@ -179,8 +179,8 @@
 //!     pos!(5.0),   // close_fee
 //! );
 //!
-//! let max_profit = condor.max_profit().unwrap_or(Positive::ZERO);
-//! let max_loss = condor.max_loss().unwrap_or(Positive::ZERO);
+//! let max_profit = condor.get_max_profit().unwrap_or(Positive::ZERO);
+//! let max_loss = condor.get_max_loss().unwrap_or(Positive::ZERO);
 //! info!("Max Profit: {}, Max Loss: {}", max_profit, max_loss);
 //! ```
 //!

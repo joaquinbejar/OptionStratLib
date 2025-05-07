@@ -332,7 +332,7 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
         if options.is_empty() {
             return Err(GreeksError::StdError("No options found".to_string()));
         }
-        let underlying_price = self.get_underlying_price();
+        let underlying_price = *self.get_underlying_price();
         let individual_deltas: Vec<DeltaPositionInfo> = options
             .iter()
             .map(|option| DeltaPositionInfo {
@@ -392,7 +392,7 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
     /// offered by the exchange.
     ///
     fn get_atm_strike(&self) -> Result<Positive, StrategyError> {
-        Ok(self.get_underlying_price())
+        Ok(*self.get_underlying_price())
     }
 
     /// Calculates required position adjustments to maintain delta neutrality
@@ -664,47 +664,6 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
         }
     }
 
-    /// # Adjust Underlying Position
-    ///
-    /// Adjusts the quantity of the underlying asset held in a position based on the specified side (Long/Short)
-    /// and quantity.
-    ///
-    /// This method allows modifying the underlying asset position to achieve specific strategy goals, such as:
-    /// - Adjusting delta exposure for hedging purposes
-    /// - Implementing delta-neutral adjustments
-    /// - Rebalancing positions after market movements
-    /// - Executing rolling strategies
-    ///
-    /// ## Parameters
-    /// * `_quantity`: The amount of the underlying asset to adjust, represented as a `Positive` value
-    /// * `_side`: The direction of the adjustment - `Side::Long` to increase the position, `Side::Short` to decrease it
-    ///
-    /// ## Returns
-    /// * `Result<(), Box<dyn Error>>`: Returns Ok(()) on successful adjustment, or an Error if the adjustment fails
-    ///
-    /// ## Details
-    /// When adjusting the underlying position, the method will take into account current market conditions,
-    /// available capital, and potentially transaction costs to determine the optimal execution strategy.
-    ///
-    /// ## Example Use Cases
-    /// - Delta hedging an options position
-    /// - Rebalancing after a significant price move in the underlying
-    /// - Implementing a dynamic hedging strategy
-    /// - Gradually liquidating or building a position
-    ///
-    /// ## Note
-    /// Adjustments to the underlying position directly affect the overall strategy's risk profile,
-    /// particularly its delta exposure and potential profit/loss characteristics.
-    fn adjust_underlying_position(
-        &mut self,
-        _quantity: Positive,
-        _side: Side,
-    ) -> Result<(), Box<dyn Error>> {
-        // Implementation for adjusting underlying position
-        // This would typically modify the quantity of the underlying asset
-        unimplemented!("Implement underlying position adjustment")
-    }
-
     /// # Adjust Option Position
     ///
     /// Modifies the quantity of an existing option position in a trading strategy.
@@ -761,11 +720,6 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
     ///
     /// # Returns
     /// A `Trade` object derived from the delta adjustment logic.
-    ///
-    /// # Notes
-    /// - This function is currently unimplemented. Ensure to provide implementation logic
-    ///   that determines the `Trade` based on the `Action` delta adjustment.
-    /// - Replace the `unimplemented!()` macro with the actual implementation when ready.
     ///
     fn trade_from_delta_adjustment(
         &mut self,

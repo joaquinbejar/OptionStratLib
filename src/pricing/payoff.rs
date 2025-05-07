@@ -204,7 +204,7 @@ pub trait Profit {
     ///
     /// * `Result<Decimal, Box<dyn Error>>` - The calculated profit as a Decimal value,
     ///   or an error if the calculation fails
-    fn calculate_profit_at(&self, price: Positive) -> Result<Decimal, Box<dyn Error>>;
+    fn calculate_profit_at(&self, price: &Positive) -> Result<Decimal, Box<dyn Error>>;
 
     /// Creates a chart point representation of the profit at the given price.
     ///
@@ -219,7 +219,7 @@ pub trait Profit {
     ///
     /// * `ChartPoint<(f64, f64)>` - A formatted chart point with coordinates (price, profit),
     ///   styling, and a formatted profit label
-    fn get_point_at_price(&self, price: Positive) -> ChartPoint<(f64, f64)> {
+    fn get_point_at_price(&self, price: &Positive) -> ChartPoint<(f64, f64)> {
         let value_at_current_price = self.calculate_profit_at(price).unwrap().to_f64().unwrap();
         let color = if value_at_current_price >= ZERO {
             DARK_GREEN

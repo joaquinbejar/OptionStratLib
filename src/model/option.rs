@@ -2,12 +2,13 @@ use crate::chains::OptionData;
 use crate::constants::{IV_TOLERANCE, MAX_ITERATIONS_IV, STDDEV_MULTIPLAYER_GRAPH, ZERO};
 use crate::error::{GreeksError, OptionsError, OptionsResult, VolatilityError};
 use crate::greeks::Greeks;
-use crate::model::types::{OptionStyle, OptionType, Side};
+use crate::model::types::{OptionBasicType, OptionStyle, OptionType, Side};
 use crate::pnl::utils::{PnL, PnLCalculator};
 use crate::pricing::{
     BinomialPricingParams, Payoff, PayoffInfo, Profit, black_scholes, generate_binomial_tree,
     price_binomial, telegraph,
 };
+use crate::strategies::base::BasicAble;
 use crate::visualization::model::ChartVerticalLine;
 use crate::visualization::utils::Graph;
 use crate::{ExpirationDate, Positive, pos};
@@ -16,6 +17,7 @@ use plotters::prelude::{BLACK, ShapeStyle};
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::error::Error;
 use tracing::{error, trace};
 
@@ -103,6 +105,7 @@ pub struct Options {
     /// This field is None for standard (vanilla) options.
     pub exotic_params: Option<ExoticParams>,
 }
+
 impl Options {
     /// Creates a new options contract with the specified parameters.
     ///
@@ -391,9 +394,9 @@ impl Options {
     /// * `OptionsResult<Decimal>` - The calculated payoff value as a `Decimal`, wrapped in a `Result` type.
     ///   Returns an `Err` if the payoff calculation encounters an error.
     ///
-    pub fn payoff_at_price(&self, price: Positive) -> OptionsResult<Decimal> {
+    pub fn payoff_at_price(&self, price: &Positive) -> OptionsResult<Decimal> {
         let payoff_info = PayoffInfo {
-            spot: price,
+            spot: *price,
             strike: self.strike_price,
             style: self.option_style,
             side: self.side,
@@ -703,7 +706,7 @@ impl PnLCalculator for Options {
         &self,
         underlying_price: &Positive,
     ) -> Result<PnL, Box<dyn Error>> {
-        let realized = Some(self.payoff_at_price(*underlying_price)?);
+        let realized = Some(self.payoff_at_price(underlying_price)?);
         let initial_price = self.calculate_price_black_scholes()?;
 
         let (initial_costs, initial_income) = match self.side {
@@ -722,13 +725,13 @@ impl PnLCalculator for Options {
 }
 
 impl Profit for Options {
-    fn calculate_profit_at(&self, price: Positive) -> Result<Decimal, Box<dyn Error>> {
+    fn calculate_profit_at(&self, price: &Positive) -> Result<Decimal, Box<dyn Error>> {
         Ok(self.payoff_at_price(price)?)
     }
 }
 
-impl Graph for Options {
-    fn title(&self) -> String {
+impl BasicAble for Options {
+    fn get_title(&self) -> String {
         format!(
             "Underlying: {} @ ${:.0} {} {} {}",
             self.underlying_symbol,
@@ -738,7 +741,50 @@ impl Graph for Options {
             self.option_type
         )
     }
+    fn get_option_basic_type(&self) -> OptionBasicType {
+        OptionBasicType {
+            option_style: &self.option_style,
+            side: &self.side,
+            strike_price: &self.strike_price,
+            expiration_date: &self.expiration_date,
+        }
+    }
+    fn get_symbol(&self) -> &str {
+        self.underlying_symbol.as_str()
+    }
+    fn get_strike(&self) -> HashMap<OptionBasicType, &Positive> {
+        HashMap::from([(self.get_option_basic_type(), &self.strike_price)])
+    }
+    fn get_side(&self) -> HashMap<OptionBasicType, &Side> {
+        HashMap::from([(self.get_option_basic_type(), &self.side)])
+    }
+    fn get_type(&self) -> &OptionType {
+        &self.option_type
+    }
+    fn get_style(&self) -> HashMap<OptionBasicType, &OptionStyle> {
+        HashMap::from([(self.get_option_basic_type(), &self.option_style)])
+    }
+    fn get_expiration(&self) -> HashMap<OptionBasicType, &ExpirationDate> {
+        HashMap::from([(self.get_option_basic_type(), &self.expiration_date)])
+    }
+    fn get_implied_volatility(&self) -> HashMap<OptionBasicType, &Positive> {
+        HashMap::from([(self.get_option_basic_type(), &self.implied_volatility)])
+    }
+    fn get_quantity(&self) -> HashMap<OptionBasicType, &Positive> {
+        HashMap::from([(self.get_option_basic_type(), &self.quantity)])
+    }
+    fn get_underlying_price(&self) -> &Positive {
+        &self.underlying_price
+    }
+    fn get_risk_free_rate(&self) -> HashMap<OptionBasicType, &Decimal> {
+        HashMap::from([(self.get_option_basic_type(), &self.risk_free_rate)])
+    }
+    fn get_dividend_yield(&self) -> HashMap<OptionBasicType, &Positive> {
+        HashMap::from([(self.get_option_basic_type(), &self.dividend_yield)])
+    }
+}
 
+impl Graph for Options {
     /// Generates a vector of evenly spaced x-values for option pricing/plotting.
     ///
     /// This method creates a range of x-values (potential stock prices) centered around
@@ -1181,11 +1227,11 @@ mod tests_options_payoff_at_price {
 
     fn test_payoff_european_call_long() {
         let call_option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        let call_payoff = call_option.payoff_at_price(pos!(105.0)).unwrap();
+        let call_payoff = call_option.payoff_at_price(&pos!(105.0)).unwrap();
         assert_eq!(call_payoff, dec!(5.0)); // max(105 - 100, 0) = 5
 
         let call_option_otm = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        let call_payoff_otm = call_option_otm.payoff_at_price(pos!(95.0)).unwrap();
+        let call_payoff_otm = call_option_otm.payoff_at_price(&pos!(95.0)).unwrap();
         assert_eq!(call_payoff_otm, Decimal::ZERO); // max(95 - 100, 0) = 0
     }
 
@@ -1193,11 +1239,11 @@ mod tests_options_payoff_at_price {
 
     fn test_payoff_european_call_short() {
         let call_option = create_sample_option_simplest(OptionStyle::Call, Side::Short);
-        let call_payoff = call_option.payoff_at_price(pos!(105.0)).unwrap();
+        let call_payoff = call_option.payoff_at_price(&pos!(105.0)).unwrap();
         assert_eq!(call_payoff, dec!(-5.0)); // -max(105 - 100, 0) = -5
 
         let call_option_otm = create_sample_option_simplest(OptionStyle::Call, Side::Short);
-        let call_payoff_otm = call_option_otm.payoff_at_price(pos!(95.0)).unwrap();
+        let call_payoff_otm = call_option_otm.payoff_at_price(&pos!(95.0)).unwrap();
         assert_eq!(call_payoff_otm, Decimal::ZERO); // -max(95 - 100, 0) = 0
     }
 
@@ -1205,11 +1251,11 @@ mod tests_options_payoff_at_price {
 
     fn test_payoff_european_put_long() {
         let put_option = create_sample_option_simplest(OptionStyle::Put, Side::Long);
-        let put_payoff = put_option.payoff_at_price(pos!(95.0)).unwrap();
+        let put_payoff = put_option.payoff_at_price(&pos!(95.0)).unwrap();
         assert_eq!(put_payoff, dec!(5.0)); // max(100 - 95, 0) = 5
 
         let put_option_otm = create_sample_option_simplest(OptionStyle::Put, Side::Long);
-        let put_payoff_otm = put_option_otm.payoff_at_price(pos!(105.0)).unwrap();
+        let put_payoff_otm = put_option_otm.payoff_at_price(&pos!(105.0)).unwrap();
         assert_eq!(put_payoff_otm, Decimal::ZERO); // max(100 - 105, 0) = 0
     }
 
@@ -1217,11 +1263,11 @@ mod tests_options_payoff_at_price {
 
     fn test_payoff_european_put_short() {
         let put_option = create_sample_option_simplest(OptionStyle::Put, Side::Short);
-        let put_payoff = put_option.payoff_at_price(pos!(95.0)).unwrap();
+        let put_payoff = put_option.payoff_at_price(&pos!(95.0)).unwrap();
         assert_eq!(put_payoff, dec!(-5.0)); // -max(100 - 95, 0) = -5
 
         let put_option_otm = create_sample_option_simplest(OptionStyle::Put, Side::Short);
-        let put_payoff_otm = put_option_otm.payoff_at_price(pos!(105.0)).unwrap();
+        let put_payoff_otm = put_option_otm.payoff_at_price(&pos!(105.0)).unwrap();
         assert_eq!(put_payoff_otm, Decimal::ZERO); // -max(100 - 105, 0) = 0
     }
 }
@@ -1702,7 +1748,7 @@ mod tests_graph {
     fn test_title() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         let expected_title = "Underlying: AAPL @ $100 Long Call European Option".to_string();
-        assert_eq!(option.title(), expected_title);
+        assert_eq!(option.get_title(), expected_title);
     }
 
     #[test]
@@ -1732,7 +1778,7 @@ mod tests_graph {
     fn test_title_put_option() {
         let option = create_sample_option_simplest(OptionStyle::Put, Side::Long);
         let expected_title = "Underlying: AAPL @ $100 Long Put European Option".to_string();
-        assert_eq!(option.title(), expected_title);
+        assert_eq!(option.get_title(), expected_title);
     }
 
     #[test]
