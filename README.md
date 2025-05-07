@@ -15,7 +15,7 @@
 
 
 
- # OptionStratLib v0.4.7: Financial Options Library
+ # OptionStratLib v0.5.0: Financial Options Library
 
  ## Table of Contents
  1. [Introduction](#introduction)
@@ -550,6 +550,7 @@ use optionstratlib::visualization::utils::Graph;
 use optionstratlib::visualization::utils::GraphBackend;
 use std::error::Error;
 use tracing::info;
+use optionstratlib::strategies::BasicAble;
 
 fn create_sample_option() -> Options {
     use rust_decimal_macros::dec;
@@ -571,7 +572,7 @@ use optionstratlib::{pos, ExpirationDate};Options::new(
 fn main() -> Result<(), Box<dyn Error>> {
     setup_logger();
     let option = create_sample_option();
-    info!("Title: {}", option.title());
+    info!("Title: {}", option.get_title());
     info!("Greeks: {:?}", option.greeks());
 
     // Define a range of prices for the graph
@@ -603,13 +604,12 @@ use optionstratlib::visualization::utils::Graph;
 use optionstratlib::visualization::utils::GraphBackend;
 use std::error::Error;
 use tracing::info;
+use crate::optionstratlib::strategies::BasicAble;
 
 fn main() -> Result<(), Box<dyn Error>> {
     use rust_decimal_macros::dec;
-setup_logger();
-
+    setup_logger();
     let underlying_price = pos!(5781.88);
-
     let strategy = BullCallSpread::new(
         "SP500".to_string(),
         underlying_price,   // underlying_price
@@ -628,19 +628,19 @@ setup_logger();
         pos!(0.73),   // close_fee_short
     );
 
-    let price_range = strategy.best_range_to_show(pos!(1.0)).unwrap();
+    let price_range = strategy.get_best_range_to_show(pos!(1.0)).unwrap();
 
-    info!("Title: {}", strategy.title());
+    info!("Title: {}", strategy.get_title());
     info!("Break Even Points: {:?}", strategy.break_even_points);
     info!(
         "Net Premium Received: ${:.2}",
-        strategy.net_premium_received()?
+        strategy.get_net_premium_received()?
     );
-    info!("Max Profit: ${:.2}", strategy.max_profit().unwrap_or(Positive::ZERO));
-    info!("Max Loss: ${:0.2}", strategy.max_loss().unwrap_or(Positive::ZERO));
-    info!("Total Fees: ${:.2}", strategy.fees()?);
-    info!("Profit Area: {:.2}%", strategy.profit_area()?);
-    info!("Profit Ratio: {:.2}%", strategy.profit_ratio()?);
+    info!("Max Profit: ${:.2}", strategy.get_max_profit().unwrap_or(Positive::ZERO));
+    info!("Max Loss: ${:0.2}", strategy.get_max_loss().unwrap_or(Positive::ZERO));
+    info!("Total Fees: ${:.2}", strategy.get_fees()?);
+    info!("Profit Area: {:.2}%", strategy.get_profit_area()?);
+    info!("Profit Ratio: {:.2}%", strategy.get_profit_ratio()?);
 
     // Generate the profit/loss graph
     strategy.graph(

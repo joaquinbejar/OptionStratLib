@@ -11,6 +11,22 @@ pub(super) const LONG_PUT_DESCRIPTION: &str = "A Long Put is an options strategy
     This strategy requires an initial investment (the premium paid) and provides downside protection or profit potential if the underlying asset's price decreases. \
     The breakeven point is the strike price minus the premium paid. Long puts are commonly used as insurance against price declines or to express a bearish outlook.";
 
+/// Represents a Long Put options trading strategy.
+///
+/// A Long Put strategy is used when a trader expects the price of the underlying asset
+/// to decrease significantly. It involves purchasing a put option with the anticipation
+/// of profiting as the underlying asset's price falls below the strike price of the option.
+///
+/// # Fields
+///
+/// * `name` - A unique name identifier for this specific instance of the Long Put strategy.
+/// * `kind` - The type of strategy, identified specifically as `StrategyType::LongPut`.
+/// * `description` - A detailed description of this particular instance of the Long Put strategy,
+///   providing additional context or information.
+/// * `break_even_points` - A vector of price points (`Positive`) where the strategy neither gains
+///   nor loses money based on the underlying asset's movement.
+/// * `long_put` - Represents the specific long put position within the strategy, detailing
+///   the option contract being used.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct LongPut {
     /// Name identifier for this specific strategy instance
@@ -54,7 +70,7 @@ impl LongPut {
     /// This function will panic if:
     /// * The `add_position` method fails, which could happen due to invalid configurations of the long put position.
     ///
-    #[allow(clippy::too_many_arguments)]
+    #[allow(clippy::too_many_arguments, dead_code)]
     fn new(
         underlying_symbol: String,
         long_put_strike: Positive,

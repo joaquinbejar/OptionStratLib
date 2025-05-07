@@ -344,75 +344,394 @@ impl Strategy {
     }
 }
 
+/// A trait that defines basic operations and attributes for managing options-related strategies.
+///
+/// This trait provides methods to retrieve various properties and mappings
+/// associated with options, such as title, symbol, strike prices, sides, styles,
+/// expiration dates, and implied volatility.
+///
+/// # Note
+/// Several methods in this trait are unimplemented and will panic if invoked
+/// without being explicitly implemented for the specific strategy.
+///
+/// # Methods
+/// - `get_title`: Returns the title of the strategy.
+/// - `get_option_basic_type`: Retrieves a set of basic option types.
+/// - `get_symbol`: Returns the symbol associated with the option.
+/// - `get_strike`: Maps option basic types to their positive strike values.
+/// - `get_strikes`: Returns a vector of strike prices.
+/// - `get_side`: Maps option basic types to their respective sides.
+/// - `get_type`: Retrieves the type of the option.
+/// - `get_style`: Maps option basic types to their corresponding styles.
+/// - `get_expiration`: Maps option basic types to their expiration dates.
+/// - `get_implied_volatility`: Retrieves implied volatility (currently unimplemented).
+///
+/// # Panics
+/// All methods with `unimplemented!` will panic when called unless properly implemented.
+/// Refer to the documentation for individual methods for more details.
+///
 pub trait BasicAble {
-    /// Returns the title of the graph.
+    /// Retrieves the title associated with the current instance of the strategy.
+    ///
+    /// # Returns
+    /// A `String` representing the title.  
+    ///
+    /// # Panics
+    /// This method is not yet implemented and will panic with the message
+    /// `"get_title is not implemented for this strategy"`. Ensure this method
+    /// is properly implemented before using it.
+    ///
     fn get_title(&self) -> String {
         unimplemented!("get_title is not implemented for this strategy");
     }
+    /// Retrieves a `HashSet` of `OptionBasicType` values associated with the current strategy.
+    ///
+    /// # Returns
+    /// A `HashSet` containing the `OptionBasicType` elements relevant to the strategy.
+    /// However, this method is currently not implemented and will panic with the message
+    /// `"get_option_basic_type is not implemented for this strategy"`.
+    ///
+    /// # Panics
+    /// This function will panic with the message:
+    /// `"get_option_basic_type is not implemented for this strategy"` if called.
+    ///
     fn get_option_basic_type(&self) -> HashSet<OptionBasicType> {
         unimplemented!("get_option_basic_type is not implemented for this strategy");
     }
+    /// Retrieves the symbol associated with the current instance by delegating the call to the `get_symbol`
+    /// method of the `one_option` object.
+    ///
+    /// # Returns
+    /// A string slice (`&str`) that represents the symbol.
+    ///
+    /// # Notes
+    /// - Assumes that `one_option()` is a method that returns an object or reference which implements
+    ///   a `get_symbol()` method.
+    /// - The returned `&str` is borrowed from the referenced object, and its lifetime is tied to the `self` instance.
     fn get_symbol(&self) -> &str {
         self.one_option().get_symbol()
     }
+    /// Retrieves a mapping of option basic types to their associated positive strike values.
+    ///
+    /// This method delegates the call to the `get_strike` method of the `one_option` object,
+    /// returning a `HashMap` where each key is an `OptionBasicType` and each value is a reference
+    /// to a `Positive` strike value.
+    ///
+    /// # Returns
+    /// A `HashMap` where:
+    /// - `OptionBasicType` represents the type of the option,
+    /// - `&Positive` is a reference to the positive strike value associated with the option.
+    ///
+    /// # Notes
+    /// - Ensure that the `one_option` method returns a valid object that implements a `get_strike` method.
+    /// - The values in the returned map are references, so their lifetime is tied to the ownership of `self`.
+    ///
     fn get_strike(&self) -> HashMap<OptionBasicType, &Positive> {
         self.one_option().get_strike()
     }
+    /// Retrieves a vector of strike prices from the option types.
+    ///
+    /// This function accesses the `OptionBasicType` objects associated with the instance,
+    /// extracts their `strike_price` fields, and collects those values into a `Vec<&Positive>`.
+    ///
+    /// # Returns
+    ///
+    /// A vector containing references to the strike prices (`&Positive`) of the associated option types.
+    ///
+    /// # Notes
+    ///
+    /// - The method assumes that `self.get_option_basic_type()` returns a collection of
+    ///   objects that have a `strike_price` field.
+    /// - The `strike_price` type is `&Positive`, which implies it references a type with
+    ///   positive constraints.
     fn get_strikes(&self) -> Vec<&Positive> {
         self.get_option_basic_type()
             .iter()
             .map(|option_type| option_type.strike_price)
             .collect()
     }
+    /// Retrieves a `HashMap` that maps each `OptionBasicType` to its corresponding `Side`.
+    ///
+    /// This method generates a mapping by iterating over the result of `get_option_basic_type`
+    /// and pairing each `OptionBasicType` with its associated `Side`.
+    ///
+    /// # Returns
+    ///
+    /// A `HashMap` where:
+    /// - The keys are `OptionBasicType` values.
+    /// - The values are `Side` references corresponding to each `OptionBasicType`.
+    ///
+    /// # Panics
+    ///
+    /// This function assumes that `option_type.side` is valid for all elements
+    /// in the iterator returned by `get_option_basic_type`. If this assumption is violated,
+    /// the behavior is undefined.
+    ///
+    /// # Notes
+    ///
+    /// Ensure that `get_option_basic_type` is properly implemented and returns
+    /// an iterable collection of `OptionBasicType` elements that have valid `Side` associations.
     fn get_side(&self) -> HashMap<OptionBasicType, &Side> {
         self.get_option_basic_type()
             .iter()
             .map(|option_type| (*option_type, option_type.side))
             .collect()
     }
+    /// Retrieves the type of the option.
+    ///
+    /// This method provides access to the `OptionType` of the associated option
+    /// by calling the `get_type` method on the result of `self.one_option()`.
+    ///
+    /// # Returns
+    /// A reference to the `OptionType` of the associated option.
+    ///
+    /// # Notes
+    /// - Ensure `self.one_option()` returns a valid object with a callable `get_type`
+    ///   method to avoid runtime errors.
     fn get_type(&self) -> &OptionType {
         self.one_option().get_type()
     }
+    /// Retrieves a mapping of `OptionBasicType` to their corresponding `OptionStyle`.
+    ///
+    /// This function generates a `HashMap` where each `OptionBasicType` returned by
+    /// the `get_option_basic_type` method is associated with its respective `OptionStyle`.
+    ///
+    /// # Returns
+    /// A `HashMap` where:
+    /// - The keys are `OptionBasicType` values (basic option types).
+    /// - The values are references to the associated `OptionStyle` for each option type.
+    ///
+    /// # Note
+    /// Ensure that `get_option_basic_type` returns a valid iterator of `OptionBasicType`
+    /// items before calling this function, as the result depends on its output.
+    ///
+    /// # Panics
+    /// This function will panic if the `OptionStyle` reference is invalid or not properly
+    /// initialized for any `OptionBasicType`.
     fn get_style(&self) -> HashMap<OptionBasicType, &OptionStyle> {
         self.get_option_basic_type()
             .iter()
             .map(|option_type| (*option_type, option_type.option_style))
             .collect()
     }
+    /// Retrieves a map of option basic types to their corresponding expiration dates.
+    ///
+    /// This method iterates over the collection of option basic types and creates a `HashMap`
+    /// where each key is an `OptionBasicType` and the value is a reference to its associated
+    /// `ExpirationDate`.
+    ///
+    /// # Returns
+    /// A `HashMap` where:
+    /// - The key is of type `OptionBasicType`.
+    /// - The value is a reference to the `ExpirationDate` associated with the option basic type.
+    ///
+    /// # Panics
+    /// This method may panic if `expiration_date` is unexpectedly `None` within the option type,
+    /// depending on your implementation of `get_option_basic_type`.
+    ///
+    /// # Notes
+    /// - Ensure `self.get_option_basic_type()` returns a valid iterable of `OptionBasicType` instances.
+    /// - The lifetime of the returned `ExpirationDate` references is tied to the lifetime of `self`.
     fn get_expiration(&self) -> HashMap<OptionBasicType, &ExpirationDate> {
         self.get_option_basic_type()
             .iter()
             .map(|option_type| (*option_type, option_type.expiration_date))
             .collect()
     }
+    /// Retrieves the implied volatility for the current strategy.
+    ///
+    /// # Returns
+    ///
+    /// A `HashMap` where the key is of type `OptionBasicType` and
+    /// the value is a reference to a `Positive` value. Each key-value
+    /// pair corresponds to the implied volatility associated with a
+    /// specific option type.
+    ///
+    /// # Notes
+    ///
+    /// This method is not yet implemented for the specific strategy
+    /// and will panic when invoked.
+    ///
+    /// # Panics
+    ///
+    /// This function will unconditionally panic with the message
+    /// `"get_implied_volatility is not implemented for this strategy"`.
     fn get_implied_volatility(&self) -> HashMap<OptionBasicType, &Positive> {
         unimplemented!("get_implied_volatility is not implemented for this strategy");
     }
+    /// Retrieves the quantity information associated with the strategy.
+    ///
+    /// # Returns
+    /// A `HashMap` that holds pairs of `OptionBasicType` (the key) and a reference
+    /// to a `Positive` value (the value). This map represents the mapping of
+    /// option basic types to their respective quantities.
+    ///
+    /// # Notes
+    /// This method is not implemented in the current strategy and will
+    /// panic when called.
+    ///
+    /// # Panics
+    /// This function will panic with the message `"get_quantity is not implemented for this strategy"`.
+    ///
+    /// # Example
+    /// The function currently serves as a placeholder and should be implemented
+    /// in a specific strategy that defines its behavior.
     fn get_quantity(&self) -> HashMap<OptionBasicType, &Positive> {
         unimplemented!("get_quantity is not implemented for this strategy");
     }
+    /// Retrieves the underlying price of the financial instrument (e.g., option).
+    ///
+    /// This method fetches the underlying price from the associated `one_option`
+    /// instance, ensuring that the value is positive.
+    ///
+    /// # Returns
+    ///
+    /// A reference to a `Positive` value representing the underlying price.
+    ///
+    /// # Notes
+    ///
+    /// This method assumes that the underlying price is always available and valid.
     fn get_underlying_price(&self) -> &Positive {
         self.one_option().get_underlying_price()
     }
+    /// Retrieves the risk-free interest rate associated with a given set of options.
+    ///
+    /// This function retrieves the risk-free rate from a single option
+    /// and returns it as a `HashMap`, where the keys correspond to the `OptionBasicType`
+    /// and the values are references to the respective `Decimal` values.
+    ///
+    /// # Returns
+    ///
+    /// A `HashMap` where:
+    /// - The key is of type `OptionBasicType`, representing the unique identifier or type of option.
+    /// - The value is a reference (`&Decimal`) to the corresponding risk-free rate.
+    ///
+    /// # Notes
+    ///
+    /// - The method relies on the `one_option()` function to retrieve the required data.
+    /// - Ensure that the `one_option()` method is implemented correctly to fetch the necessary risk-free rates.
+    ///
+    /// # Errors
+    ///
+    /// This function assumes that `one_option` and its underlying functionality
+    /// are error-free. Errors, if any, must be handled within `one_option`.
     fn get_risk_free_rate(&self) -> HashMap<OptionBasicType, &Decimal> {
         self.one_option().get_risk_free_rate()
     }
+    /// Retrieves the dividend yield of a financial option.
+    ///
+    /// This method calls the `get_dividend_yield` function of the associated `one_option()`
+    /// method and returns a `HashMap` containing the dividend yield information. The keys
+    /// of the map are of type `OptionBasicType`, and the values are references to instances
+    /// of `Positive`.
+    ///
+    /// # Returns
+    /// * `HashMap<OptionBasicType, &Positive>`: A mapping of option basic types to their
+    ///   respective positive dividend yield values.
+    ///
+    /// # Note
+    /// Ensure that the associated `one_option()` method is correctly implemented
+    /// and provides the desired dividend yield information.
     fn get_dividend_yield(&self) -> HashMap<OptionBasicType, &Positive> {
         self.one_option().get_dividend_yield()
     }
+    /// This method, `one_option`, is designed to retrieve a reference to an `Options` object.
+    /// However, in this implementation, the function is not currently functional, as it
+    /// explicitly triggers an unimplemented error when called.
+    ///
+    /// # Returns
+    /// * `&Options` - A reference to an `Options` object. However, this is not currently
+    ///   available due to the method being unimplemented.
+    ///
+    /// # Panics
+    /// This method will unconditionally panic with the message
+    /// "one_option is not implemented for this strategy" whenever it is invoked.
+    ///
+    /// # Note
+    /// This is a placeholder implementation and should be overridden or implemented in
+    /// a concrete type where this function is required.
     fn one_option(&self) -> &Options {
         unimplemented!("one_option is not implemented for this strategy");
     }
+    /// Provides a mutable reference to an `Options` instance.
+    ///
+    /// This function is intended to allow mutation of a single
+    /// `Options` instance managed within the strategy. It is
+    /// a stub and not currently implemented. When called,
+    /// it will panic with the message "one_option_mut is not implemented
+    /// for this strategy".
+    ///
+    /// # Errors
+    ///
+    /// Panics if this function is called since it is unimplemented.
+    ///
+    /// # Returns
+    ///
+    /// A mutable reference to an `Options` instance (in a fully
+    /// implemented version of this function).
+    ///
     fn one_option_mut(&mut self) -> &mut Options {
         unimplemented!("one_option_mut is not implemented for this strategy");
     }
 
+    /// Sets the expiration date for the strategy.
+    ///
+    /// This method is intended to allow the user to define an expiration date
+    /// for a given strategy. However, it is currently unimplemented for this
+    /// specific strategy and will result in a panic with a message indicating
+    /// that it is not supported.
+    ///
+    /// # Parameters
+    ///
+    /// - `_expiration_date`: The expiration date to set for the strategy,
+    ///   represented as an `ExpirationDate` object. This parameter is accepted
+    ///   but not utilized, as the method is not implemented.
+    ///
+    /// # Returns
+    ///
+    /// This function returns a `Result`:
+    /// - `Ok(())` if the operation is successful (not applicable here as the
+    ///   function is unimplemented).
+    /// - `Err(StrategyError)` if an error occurs (though, in this case, the
+    ///   method only panics as it is unimplemented).
+    ///
+    /// # Errors
+    ///
+    /// Always returns a panic with the message:
+    /// `"set_expiration_date is not implemented for this strategy"`. No actual
+    /// `StrategyError` is produced by this method, as it is incomplete.
+    ///
+    /// # Panics
+    ///
+    /// This function always panics when called with the message:
+    /// `"set_expiration_date is not implemented for this strategy"`.
+    ///
+    /// Note: Avoid using this method until it is fully implemented for this
+    /// specific strategy.
     fn set_expiration_date(
         &mut self,
         _expiration_date: ExpirationDate,
     ) -> Result<(), StrategyError> {
         unimplemented!("set_expiration_date is not implemented for this strategy");
     }
+    /// Sets the underlying price for this strategy.
+    ///
+    /// # Parameters
+    /// - `_price`: A reference to a `Positive` value representing the new underlying price
+    ///   to be set.
+    ///
+    /// # Returns
+    /// - `Ok(())` if the operation is successful.
+    /// - `Err(StrategyError)` if an error occurs during the operation.
+    ///
+    /// # Note
+    /// This function is currently not implemented for this strategy. Calling
+    /// this function will result in a runtime panic with the message
+    /// "set_underlying_price is not implemented for this strategy".
+    ///
+    /// # Panics
+    /// Always panics with the message `"set_underlying_price is not implemented for this strategy"`.
+    ///
     fn set_underlying_price(&mut self, _price: &Positive) -> Result<(), StrategyError> {
         unimplemented!("set_underlying_price is not implemented for this strategy");
     }

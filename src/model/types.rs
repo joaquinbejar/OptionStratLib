@@ -215,11 +215,53 @@ pub enum OptionType {
     },
 }
 
+/// A structure representing the basic properties of an option in financial terms.
+/// This structure is designed to be lightweight and provides essential details
+/// about an options contract.
+///
+/// # Generic Parameters
+/// - `'a`: A lifetime parameter that ensures the references within the structure
+///   are valid for the same lifetime.
+///
+/// # Fields
+///
+/// # Derives
+/// - `Clone`: Enables creating a copy of the structure.
+/// - `Copy`: Allows the structure to be copied instead of moved.
+/// - `PartialEq`: Enables comparison for equality between two instances of the structure.
+/// - `Serialize`: Provides functionality for serializing the structure into a format like JSON or others.
+/// - `Debug`: Enables formatting the structure for debugging purposes.
+/// - `Hash`: Makes the type hashable, allowing it to be stored in hash-based collections, such as `HashMap`.
+/// - `Eq`: Indicates that the type guarantees the equality operator `==` is reflexive, symmetric, and transitive.
+///
+/// # Usage
+/// This struct is ideal for applications dealing with option contracts where
+/// the essential characteristics of an option need to be stored and managed efficiently.
+///
+/// # Example
+/// ```rust
+/// use optionstratlib::model::types::OptionBasicType;
+/// use optionstratlib::{pos, ExpirationDate, OptionStyle, Positive, Side};
+/// let european_call_option = OptionBasicType {
+///     option_style: &OptionStyle::Call,
+///     side: &Side::Long,
+///     strike_price: &Positive::new(100.0).unwrap(),
+///     expiration_date: &ExpirationDate::Days(pos!(30.0)),
+/// };
+/// ```
 #[derive(Clone, Copy, PartialEq, Serialize, Debug, Hash, Eq)]
 pub struct OptionBasicType<'a> {
+    /// - `option_style`: A reference to the style of the option (e.g., European
+    ///   or American) represented by the `OptionStyle` type.
     pub option_style: &'a OptionStyle,
+    /// - `side`: A reference to the side of the option (e.g., Call or Put)
+    ///   as defined by the `Side` type.
     pub side: &'a Side,
+    /// - `strike_price`: A reference to the strike price of the option, which is
+    ///   guaranteed to be positive, represented by the `Positive` type.
     pub strike_price: &'a Positive,
+    /// - `expiration_date`: A reference to the expiration date of the option,
+    ///   represented by the `ExpirationDate` type.
     pub expiration_date: &'a ExpirationDate,
 }
 

@@ -11,6 +11,24 @@ pub(super) const SHORT_PUT_DESCRIPTION: &str = "A Short Put (or Naked Put) is an
     This strategy provides immediate income from the premium collected but includes substantial risk if the stock price falls below the strike price. \
     The breakeven point is the strike price minus the premium received. Short puts are typiputy employed when the trader has a bullish or neutral market outlook.";
 
+/// Represents a Short Put options trading strategy.
+///
+/// A short put is a neutral to bullish strategy involving the sale of a put option.
+/// This strategy generates a credit upfront, with the potential obligation to buy the underlying asset
+/// at the strike price if the price falls below it. Below are the details stored in this struct:
+///
+/// Fields:
+/// - `name`: The name identifier for this specific strategy instance. This is used to uniquely recognize
+///   and distinguish this instance.
+/// - `kind`: A field that identifies this as a ShortPut strategy type. It is of type `StrategyType`,
+///   which categorizes different trading strategies.
+/// - `description`: A detailed description of this strategy instance. This field allows for additional
+///   explanation or metadata about why this strategy is being used or how it functions.
+/// - `break_even_points`: A vector of price points (of type `Positive`) where the strategy neither makes
+///   nor loses money. These are the threshold price levels that determine profitability.
+/// - `short_put`: The short put position associated with this strategy. It is declared private (via
+///   `pub(super)`) to restrict its accessibility from other modules, ensuring controlled and encapsulated
+///   use.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ShortPut {
     /// Name identifier for this specific strategy instance
@@ -57,7 +75,7 @@ impl ShortPut {
     /// This function will panic if adding the short put position to the strategy fails,
     /// which may happen if the position is deemed invalid.
     ///
-    #[allow(clippy::too_many_arguments)]
+    #[allow(clippy::too_many_arguments, dead_code)]
     fn new(
         underlying_symbol: String,
         short_put_strike: Positive,

@@ -11,6 +11,22 @@ pub(super) const SHORT_CALL_DESCRIPTION: &str = "A Short Call (or Naked Call) is
     This strategy generates immediate income through the premium received but carries unlimited risk if the stock price rises significantly. \
     The breakeven point is the strike price plus the premium received. Short calls are generally used when the trader has a bearish or neutral outlook on the underlying asset.";
 
+/// Represents the details and structure of a Short Call options trading strategy.
+///
+/// A Short Call strategy involves selling a call option, which gives the buyer
+/// the right to purchase the underlying asset at a specific strike price before
+/// the expiration date. This strategy is generally employed when the trader
+/// expects minimal movement or a decrease in the price of the underlying asset.
+///
+/// # Fields
+///
+/// * `name` - A unique name or identifier for this specific instance of the strategy.
+/// * `kind` - Specifies that this instance is of the `ShortCall` strategy type.
+/// * `description` - A detailed explanation providing more information about the strategy instance.
+/// * `break_even_points` - A vector containing the price points where the strategy does not yield
+///   any profit or loss. These points are represented as positive values.
+/// * `short_call` - Represents the short call position in the strategy, which involves selling
+///   a call option to generate premium income.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ShortCall {
     /// Name identifier for this specific strategy instance
@@ -57,7 +73,7 @@ impl ShortCall {
     /// This function will panic if the short call option created using the specified parameters
     /// fails to meet validity requirements during the `add_position` operation.
     ///
-    #[allow(clippy::too_many_arguments)]
+    #[allow(clippy::too_many_arguments, dead_code)]
     fn new(
         underlying_symbol: String,
         short_call_strike: Positive,

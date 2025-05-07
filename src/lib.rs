@@ -590,13 +590,12 @@
 //! use optionstratlib::visualization::utils::GraphBackend;
 //! use std::error::Error;
 //! use tracing::info;
+//! use crate::optionstratlib::strategies::BasicAble;
 //!
 //! fn main() -> Result<(), Box<dyn Error>> {
 //!     use rust_decimal_macros::dec;
-//! setup_logger();
-//!
+//!     setup_logger();
 //!     let underlying_price = pos!(5781.88);
-//!
 //!     let strategy = BullCallSpread::new(
 //!         "SP500".to_string(),
 //!         underlying_price,   // underlying_price

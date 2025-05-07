@@ -11,6 +11,25 @@ pub(super) const LONG_CALL_DESCRIPTION: &str = "A Long Call is an options strate
     This strategy involves an upfront cost (the premium paid) and offers unlimited profit potential if the underlying asset's price increases significantly. \
     The breakeven point is the strike price plus the premium paid. Long calls are typically used to gain leveraged exposure to potential price increases with defined risk.";
 
+/// Represents a Long Call strategy in options trading.
+///
+/// A Long Call is an options strategy where an investor purchases call options
+/// with the expectation that the underlying asset's price will rise above the
+/// strike price before expiration, allowing them to profit.
+///
+/// # Fields
+/// * `name` - A unique identifier for this specific instance of the Long Call strategy.
+/// * `kind` - The type of strategy, identified as a `LongCall` within the `StrategyType` enumeration.
+/// * `description` - A detailed explanation or notes about this particular Long Call instance.
+/// * `break_even_points` - A collection of price levels (as a vector of positive values) where the strategy reaches
+///   its break-even — meaning no profit or loss occurs at these points.
+/// * `long_call` - The position details representing the long call option, specifying the strike price,
+///   premium, and quantity involved. This field is private within the module (`pub(super)` access level).
+///
+/// # Notes
+/// This structure leverages the `Clone`, `Debug`, `Serialize`, and `Deserialize` traits for ease of duplication,
+/// debugging, and storage/transfer as structured data.
+///
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct LongCall {
     /// Name identifier for this specific strategy instance
@@ -56,7 +75,7 @@ impl LongCall {
     /// - The function relies on creating a default `LongCall` instance and then populating it with positions.
     /// - Uses the `Options` and `Position` structures to model and manage the long call position.
     /// - Assumes the current time (_via `Utc::now()`) when opening the long call position for tracking purposes.
-    #[allow(clippy::too_many_arguments)]
+    #[allow(clippy::too_many_arguments, dead_code)]
     fn new(
         underlying_symbol: String,
         long_call_strike: Positive,
