@@ -13,6 +13,7 @@ use plotters::prelude::{
 use rand::{Rng, rng};
 use std::error::Error;
 use std::ops::Add;
+use crate::strategies::base::BasicAble;
 
 /// Applies a color gradient effect by interpolating between a base color and a derived color.
 ///
@@ -228,7 +229,7 @@ macro_rules! draw_line_segments {
 
 /// Trait for creating graphs of profit calculations.
 /// This trait extends the `Profit` trait, adding the functionality to visualize profit calculations.
-pub trait Graph: Profit {
+pub trait Graph: Profit + BasicAble {
     /// Generates a graph of profit calculations.
     ///
     /// # Arguments
@@ -271,7 +272,7 @@ pub trait Graph: Profit {
 
         let mut chart = build_chart!(
             &root,
-            self.title(),
+            self.get_title(),
             title_size,
             min_x_value.to_f64(),
             max_x_value.to_f64(),
@@ -287,9 +288,6 @@ pub trait Graph: Profit {
         root.present()?;
         Ok(())
     }
-
-    /// Returns the title of the graph.
-    fn title(&self) -> String;
 
     /// Returns a collection of positive X values for visualization.
     ///
@@ -320,7 +318,7 @@ pub trait Graph: Profit {
 
         data.iter()
             .filter_map(|&price| {
-                self.calculate_profit_at(price)
+                self.calculate_profit_at(&price)
                     .ok() // Result in Option
                     .and_then(|d| d.to_f64())
             })
@@ -712,16 +710,19 @@ mod tests {
     struct MockGraph;
 
     impl Profit for MockGraph {
-        fn calculate_profit_at(&self, price: Positive) -> Result<Decimal, Box<dyn Error>> {
-            Ok((price * 2.0).to_dec())
+        fn calculate_profit_at(&self, price: &Positive) -> Result<Decimal, Box<dyn Error>> {
+            Ok((*price * 2.0).to_dec())
+        }
+    }
+
+    impl BasicAble for MockGraph {
+        fn get_title(&self) -> String {
+            "Mock Graph".to_string()
         }
     }
 
     impl Graph for MockGraph {
-        fn title(&self) -> String {
-            "Mock Graph".to_string()
-        }
-
+        
         fn get_x_values(&self) -> Vec<Positive> {
             vec![Positive::ZERO, pos!(50.0), pos!(100.0)]
         }
@@ -779,15 +780,16 @@ mod tests {
     fn test_default_get_vertical_lines() {
         struct DefaultGraph;
         impl Profit for DefaultGraph {
-            fn calculate_profit_at(&self, _: Positive) -> Result<Decimal, Box<dyn Error>> {
+            fn calculate_profit_at(&self, _: &Positive) -> Result<Decimal, Box<dyn Error>> {
                 Ok(Decimal::ZERO)
             }
         }
-        impl Graph for DefaultGraph {
-            fn title(&self) -> String {
+        impl BasicAble for DefaultGraph {
+            fn get_title(&self) -> String {
                 "Default".to_string()
             }
-
+        }
+        impl Graph for DefaultGraph {
             fn get_x_values(&self) -> Vec<Positive> {
                 unimplemented!()
             }
@@ -801,15 +803,16 @@ mod tests {
     fn test_default_get_points() {
         struct DefaultGraph;
         impl Profit for DefaultGraph {
-            fn calculate_profit_at(&self, _: Positive) -> Result<Decimal, Box<dyn Error>> {
+            fn calculate_profit_at(&self, _: &Positive) -> Result<Decimal, Box<dyn Error>> {
                 Ok(Decimal::ZERO)
             }
         }
-        impl Graph for DefaultGraph {
-            fn title(&self) -> String {
+        impl BasicAble for DefaultGraph {
+            fn get_title(&self) -> String {
                 "Default".to_string()
             }
-
+        }
+        impl Graph for DefaultGraph {
             fn get_x_values(&self) -> Vec<Positive> {
                 unimplemented!()
             }
@@ -858,16 +861,18 @@ mod tests_extended {
     struct MockGraph;
 
     impl Profit for MockGraph {
-        fn calculate_profit_at(&self, price: Positive) -> Result<Decimal, Box<dyn Error>> {
-            Ok((price * 2.0).to_dec())
+        fn calculate_profit_at(&self, price: &Positive) -> Result<Decimal, Box<dyn Error>> {
+            Ok((*price * 2.0).to_dec())
+        }
+    }
+
+    impl BasicAble for MockGraph {
+        fn get_title(&self) -> String {
+            "Mock Graph".to_string()
         }
     }
 
     impl Graph for MockGraph {
-        fn title(&self) -> String {
-            "Mock Graph".to_string()
-        }
-
         fn get_x_values(&self) -> Vec<Positive> {
             vec![pos!(50.0)]
         }
@@ -917,16 +922,17 @@ mod tests_extended {
         struct EmptyGraph;
 
         impl Profit for EmptyGraph {
-            fn calculate_profit_at(&self, price: Positive) -> Result<Decimal, Box<dyn Error>> {
+            fn calculate_profit_at(&self, price: &Positive) -> Result<Decimal, Box<dyn Error>> {
                 Ok(price.to_dec())
             }
         }
 
-        impl Graph for EmptyGraph {
-            fn title(&self) -> String {
+        impl BasicAble for EmptyGraph {
+            fn get_title(&self) -> String {
                 "Multi Line Graph".to_string()
             }
-
+        }
+        impl Graph for EmptyGraph {
             fn get_x_values(&self) -> Vec<Positive> {
                 vec![]
             }
@@ -949,16 +955,18 @@ mod tests_extended {
         struct MultiLineGraph;
 
         impl Profit for MultiLineGraph {
-            fn calculate_profit_at(&self, price: Positive) -> Result<Decimal, Box<dyn Error>> {
+            fn calculate_profit_at(&self, price: &Positive) -> Result<Decimal, Box<dyn Error>> {
                 Ok(price.to_dec())
             }
         }
 
-        impl Graph for MultiLineGraph {
-            fn title(&self) -> String {
+        impl BasicAble for MultiLineGraph {
+            fn get_title(&self) -> String {
                 "Multi Line Graph".to_string()
             }
-
+        }
+        
+        impl Graph for MultiLineGraph {
             fn get_x_values(&self) -> Vec<Positive> {
                 vec![pos!(0.0), pos!(50.0), pos!(100.0)]
             }
@@ -1008,16 +1016,17 @@ mod tests_extended {
         struct MultiPointGraph;
 
         impl Profit for MultiPointGraph {
-            fn calculate_profit_at(&self, price: Positive) -> Result<Decimal, Box<dyn Error>> {
+            fn calculate_profit_at(&self, price: &Positive) -> Result<Decimal, Box<dyn Error>> {
                 Ok(price.to_dec())
             }
         }
 
-        impl Graph for MultiPointGraph {
-            fn title(&self) -> String {
+        impl BasicAble for MultiPointGraph {
+            fn get_title(&self) -> String {
                 "Multi Point Graph".to_string()
             }
-
+        }
+        impl Graph for MultiPointGraph {
             fn get_x_values(&self) -> Vec<Positive> {
                 vec![pos!(0.0), pos!(50.0), pos!(100.0)]
             }
@@ -1063,16 +1072,17 @@ mod tests_extended {
         struct ErrorGraph;
 
         impl Profit for ErrorGraph {
-            fn calculate_profit_at(&self, _: Positive) -> Result<Decimal, Box<dyn Error>> {
+            fn calculate_profit_at(&self, _: &Positive) -> Result<Decimal, Box<dyn Error>> {
                 Err("Test error".into())
             }
         }
 
-        impl Graph for ErrorGraph {
-            fn title(&self) -> String {
+        impl BasicAble for ErrorGraph {
+            fn get_title(&self) -> String {
                 "Error Graph".to_string()
             }
-
+        }
+        impl Graph for ErrorGraph {
             fn get_x_values(&self) -> Vec<Positive> {
                 vec![pos!(1.0), pos!(2.0), pos!(3.0)]
             }
@@ -1086,8 +1096,8 @@ mod tests_extended {
         struct MixedErrorGraph;
 
         impl Profit for MixedErrorGraph {
-            fn calculate_profit_at(&self, price: Positive) -> Result<Decimal, Box<dyn Error>> {
-                if price > pos!(1.5) {
+            fn calculate_profit_at(&self, price: &Positive) -> Result<Decimal, Box<dyn Error>> {
+                if price > &pos!(1.5) {
                     Err("Test error".into())
                 } else {
                     Ok(price.to_dec())
@@ -1095,11 +1105,12 @@ mod tests_extended {
             }
         }
 
-        impl Graph for MixedErrorGraph {
-            fn title(&self) -> String {
+        impl BasicAble for MixedErrorGraph {
+            fn get_title(&self) -> String {
                 "Mixed Error Graph".to_string()
             }
-
+        }
+        impl Graph for MixedErrorGraph {
             fn get_x_values(&self) -> Vec<Positive> {
                 vec![pos!(1.0), pos!(2.0), pos!(3.0)]
             }

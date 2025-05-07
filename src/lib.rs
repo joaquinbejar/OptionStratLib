@@ -1,7 +1,7 @@
 #![allow(unknown_lints)]
 #![allow(clippy::literal_string_with_formatting_args)]
 
-//!  # OptionStratLib v0.4.7: Financial Options Library
+//!  # OptionStratLib v0.5.0: Financial Options Library
 //!  
 //!  ## Table of Contents
 //!  1. [Introduction](#introduction)
@@ -536,6 +536,7 @@
 //! use optionstratlib::visualization::utils::GraphBackend;
 //! use std::error::Error;
 //! use tracing::info;
+//! use optionstratlib::strategies::BasicAble;
 //!
 //! fn create_sample_option() -> Options {
 //!     use rust_decimal_macros::dec;

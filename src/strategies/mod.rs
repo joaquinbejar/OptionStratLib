@@ -120,7 +120,7 @@
 //! use optionstratlib::model::position::Position;
 //! use optionstratlib::Positive;
 //! use optionstratlib::strategies::base::{BreakEvenable, Positionable, Strategies, Validable};
-//! use optionstratlib::strategies::Strategable;
+//! use optionstratlib::strategies::{BasicAble, Strategable};
 //!
 //! struct MyStrategy {
 //!     legs: Vec<Position>,
@@ -145,6 +145,9 @@
 //! }
 //!
 //! impl BreakEvenable for MyStrategy {}
+//!
+//!
+//! impl BasicAble for MyStrategy {}
 //!
 //! impl Strategies for MyStrategy {}
 //! ```
@@ -271,8 +274,7 @@ pub mod short_call;
 /// Short Put strategy implementation
 pub mod short_put;
 
-pub use base::Strategies;
-pub use base::{Strategable, StrategyBasics};
+pub use base::{BasicAble, Strategable, Strategies, StrategyBasics};
 pub use bear_call_spread::BearCallSpread;
 pub use bear_put_spread::BearPutSpread;
 pub use build::model::StrategyRequest;

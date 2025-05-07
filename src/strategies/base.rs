@@ -349,7 +349,6 @@ pub trait BasicAble {
     fn get_title(&self) -> String {
         unimplemented!("get_title is not implemented for this strategy");
     }
-
     fn get_option_basic_type(&self) -> OptionBasicType {
         unimplemented!("get_option_basic_type is not implemented for this strategy");
     }

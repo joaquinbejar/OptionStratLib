@@ -17,6 +17,7 @@ use rust_decimal::Decimal;
 use std::error::Error;
 use std::fmt::Display;
 use std::ops::{AddAssign, Index, IndexMut};
+use crate::strategies::base::BasicAble;
 
 /// Represents a generic simulator for managing and simulating random walks.
 ///
@@ -278,8 +279,15 @@ where
     X: AddAssign + Copy + Display + Into<Positive>,
     Y: Clone + Display + Into<Positive>,
 {
-    fn calculate_profit_at(&self, _price: Positive) -> Result<Decimal, Box<dyn Error>> {
+    fn calculate_profit_at(&self, _price: &Positive) -> Result<Decimal, Box<dyn Error>> {
         Err("Profit calculation not implemented for Simulator".into())
+    }
+}
+
+impl<X, Y> BasicAble for Simulator<X, Y> 
+where X: AddAssign + Copy + Display + Into<Positive>, Y: Clone + Display + Into<Positive>, {
+    fn get_title(&self) -> String {
+        self.title.clone()
     }
 }
 
@@ -322,7 +330,7 @@ where
 
         let mut chart = build_chart_inverted!(
             &root,
-            self.title(),
+            self.get_title(),
             title_size,
             min_x_value.to_f64(),
             max_x_value.to_f64(),
@@ -374,11 +382,7 @@ where
         root.present()?;
         Ok(())
     }
-
-    fn title(&self) -> String {
-        self.title.clone()
-    }
-
+    
     fn get_x_values(&self) -> Vec<Positive> {
         self.random_walks
             .iter()
@@ -720,7 +724,7 @@ mod tests {
         let mut iter = simulator.into_iter();
         assert!(iter.any(|step| step.get_y_values().len() == n_steps));
         assert!(iter.any(|step| step.get_x_values().len() == n_steps));
-        assert!(simulator.calculate_profit_at(pos!(100.0)).is_err());
+        assert!(simulator.calculate_profit_at(&pos!(100.0)).is_err());
 
         let step = simulator.get_step_mut(0);
         assert!(step.first().is_some());
