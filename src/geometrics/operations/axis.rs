@@ -211,7 +211,7 @@ mod tests_merge_indexes {
         }
 
         fn get_point(&self, _x: &Decimal) -> Option<&Point2D> {
-            unimplemented!("Not implemented for testing")
+            unreachable!()
         }
     }
 
