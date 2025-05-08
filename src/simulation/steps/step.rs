@@ -832,6 +832,22 @@ mod tests_step {
         let result = step_x.next();
         assert!(result.is_err());
     }
+
+    #[test]
+    fn next_ok_increments_indices_and_builds_self() {
+        let x_value = pos!(5.0);
+        let time_unit = TimeFrame::Day;
+        let datetime = ExpirationDate::Days(pos!(2.0)); 
+        let y_value = pos!(50.0);
+        let step = Step::new(x_value, time_unit, datetime, y_value);
+
+        let new_y = pos!(55.0);
+        let next = step.next(new_y).unwrap(); 
+
+        assert_eq!(next.get_value(), &new_y);
+        assert_eq!(*next.x.index(), 1); 
+        assert_eq!(*next.y.index(), step.y.index() + 1);
+    }
 }
 
 #[cfg(test)]
