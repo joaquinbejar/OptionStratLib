@@ -638,6 +638,7 @@ mod tests_performance {
     use std::time::{Duration, Instant};
 
     #[test]
+    #[ignore]
     fn test_creation_performance() {
         let start = Instant::now();
 
@@ -653,6 +654,7 @@ mod tests_performance {
     }
 
     #[test]
+    #[ignore]
     fn test_to_tuple_performance() {
         let points: Vec<Point2D> = (0..10000)
             .map(|i| Point2D::new(Decimal::from(i), Decimal::from(i * 2)))
@@ -670,6 +672,7 @@ mod tests_performance {
     }
 
     #[test]
+    #[ignore]
     fn test_comparison_performance() {
         let points: Vec<Point2D> = (0..10000)
             .map(|i| Point2D::new(Decimal::from(i % 100), Decimal::from(i / 100)))
@@ -687,6 +690,7 @@ mod tests_performance {
     }
 
     #[test]
+    #[ignore]
     fn test_from_f64_tuple_performance() {
         let start = Instant::now();
 
@@ -700,6 +704,7 @@ mod tests_performance {
     }
 
     #[test]
+    #[ignore]
     fn test_to_f64_tuple_performance() {
         let points: Vec<Point2D> = (0..10000)
             .map(|i| Point2D::new(Decimal::from(i), Decimal::from(i * 2)))

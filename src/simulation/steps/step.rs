@@ -815,6 +815,23 @@ mod tests_step {
         assert_eq!(*next_step.x.datetime(), ExpirationDate::Days(pos!(25.0)));
         assert_eq!(*next_step.y.value(), pos!(55.0));
     }
+
+    #[test]
+    fn test_with_zero_days() {
+        // Test using Positive as both X and Y types
+        let x_value = pos!(5.0);
+        let time_unit = TimeFrame::Day;
+        let datetime = ExpirationDate::Days(pos!(0.0));
+        let y_value = pos!(50.0);
+        let step = Step::new(x_value, time_unit, datetime, y_value);
+        let result = step.next(pos!(55.0));
+        assert!(result.is_err());
+        let step_x = step.get_x_step();
+        assert_eq!(*step_x.index(), 0);
+        assert_eq!(*step_x.step_size_in_time(), pos!(5.0));
+        let result = step_x.next();
+        assert!(result.is_err());
+    }
 }
 
 #[cfg(test)]

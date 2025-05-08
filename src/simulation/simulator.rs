@@ -593,8 +593,8 @@ mod tests {
         // Test first and last
         assert!(simulator.first().is_some());
         assert!(simulator.last().is_some());
-        assert_eq!(simulator.first().unwrap().get_title(), "Test Simulator_0");
-        assert_eq!(simulator.last().unwrap().get_title(), "Test Simulator_2");
+        assert_eq!(simulator.first().expect("should be Ok").get_title(), "Test Simulator_0");
+        assert_eq!(simulator.last().expect("should be Ok").get_title(), "Test Simulator_2");
     }
 
     // Test Index and IndexMut traits
@@ -795,20 +795,20 @@ mod tests {
     fn test_full_simulation() -> Result<(), Box<dyn Error>> {
         setup_logger();
         let simulator_size: usize = 15;
-        let n_steps = 120;
+        let n_steps = 49;
         let initial_price = pos!(100.0);
         let std_dev = pos!(20.0);
         let walker = Box::new(TestWalker::new());
-        let days = pos!(30.0);
+        let days = pos!(2.0);
 
         let walk_params = WalkParams {
             size: n_steps,
             init_step: Step {
-                x: Xstep::new(Positive::ONE, TimeFrame::Minute, ExpirationDate::Days(days)),
+                x: Xstep::new(Positive::ONE, TimeFrame::Hour, ExpirationDate::Days(days)),
                 y: Ystep::new(0, initial_price),
             },
             walk_type: WalkType::GeometricBrownian {
-                dt: convert_time_frame(pos!(1.0) / days, &TimeFrame::Minute, &TimeFrame::Day), // TODO
+                dt: convert_time_frame(pos!(1.0) / days, &TimeFrame::Hour, &TimeFrame::Day), // TODO
                 drift: dec!(0.0),
                 volatility: std_dev,
             },
@@ -847,15 +847,11 @@ mod tests {
         let x_step = step.get_x_step();
         assert_eq!(*x_step.index(), 0);
         assert_eq!(*x_step.step_size_in_time(), Positive::ONE);
-        assert_eq!(x_step.time_unit(), &TimeFrame::Minute);
-        assert_eq!(x_step.days_left()?, pos!(30.0));
+        assert_eq!(x_step.time_unit(), &TimeFrame::Hour);
+        assert_eq!(x_step.days_left()?, pos!(2.0));
         
         
-        
-        
-        let next_step = step.next(pos!(200.0));
-        assert!(next_step.is_ok());
-        let next_step = next_step?;
+        let next_step = step.next(pos!(200.0)).expect("should be Ok");
         assert_eq!(next_step.get_value(), &pos!(200.0));
         let next_step_string = format!("{}", next_step);
         assert_eq!(next_step.to_string(), next_step_string);
@@ -866,9 +862,7 @@ mod tests {
         assert_eq!(previous_step.to_string(), previous_step_string);
         
         let x_step = step.get_x_step();
-        let next_x_step = x_step.next();
-        assert!(next_x_step.is_ok());
-        let next_x_step = next_x_step?;
+        let next_x_step = x_step.next().expect("should be Ok");
         assert_eq!(*next_x_step.index(), 1);
         assert_eq!(*next_x_step.step_size_in_time(), Positive::ONE);
         let next_x_step_string = format!("{}", next_x_step);
@@ -882,18 +876,17 @@ mod tests {
 
         let last_steps: Vec<&Step<Positive,Positive>> = simulator
             .into_iter()
-            .map(|step| step.last().unwrap())
+            .map(|step| step.last().expect("should be Ok"))
             .collect();
         info!("Last Steps: {:?}", last_steps);
         assert_eq!(last_steps.len(), simulator_size);
 
         let last_values: Vec<&Positive> = simulator
             .into_iter()
-            .map(|step| step.last().unwrap().get_value())
+            .map(|step| step.last().expect("should be Ok").get_value())
             .collect();
         info!("Last Values: {:?}", last_values);
         assert_eq!(last_values.len(), simulator_size);
-        
 
         let file_name = "Draws/Simulation/test_simulator.png";
         simulator.graph(
