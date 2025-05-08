@@ -7,9 +7,8 @@ use optionstratlib::utils::time::{TimeFrame, convert_time_frame};
 use optionstratlib::visualization::utils::{Graph, GraphBackend};
 use optionstratlib::{ExpirationDate, Positive, pos};
 use rust_decimal_macros::dec;
-use tracing::debug;
+use tracing::{debug, info};
 
-#[warn(dead_code)]
 struct Walker {}
 
 impl Walker {
@@ -41,7 +40,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             drift: dec!(0.0),
             volatility: std_dev,
         },
-        walker: walker,
+        walker,
     };
 
     let simulator = Simulator::new(
@@ -51,6 +50,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         generator_positive,
     );
     debug!("Simulator: {}", simulator);
+    
+    let last_steps: Vec<&Step<Positive,Positive>> = simulator
+        .into_iter()
+        .map(|step| step.last().unwrap())
+        .collect();
+    info!("Last Steps: {:?}", last_steps);
+    
+    let last_values: Vec<&Positive> = simulator
+        .into_iter()
+        .map(|step| step.last().unwrap().get_value())
+        .collect();
+    info!("Last Values: {:?}", last_values);
 
     simulator.graph(
         GraphBackend::Bitmap {

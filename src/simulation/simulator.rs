@@ -125,9 +125,9 @@ where
     /// The returned vector contains borrowed references to the `RandomWalk`
     /// elements within the struct, and the lifetime of these references
     /// is tied to the lifetime of the parent object.
-    pub fn get_steps(&self) -> Vec<&RandomWalk<X, Y>> {
+    pub fn get_random_walks(&self) -> Vec<&RandomWalk<X, Y>> {
         self.random_walks.iter().collect::<Vec<&RandomWalk<X, Y>>>()
-    }
+    } 
 
     /// Retrieves a reference to the `RandomWalk` at the specified index.
     ///
@@ -143,7 +143,7 @@ where
     ///
     /// Panics if the `index` is out of bounds for the `random_walks` collection.
     ///
-    pub fn get_step(&self, index: usize) -> &RandomWalk<X, Y> {
+    pub fn get_random_walk(&self, index: usize) -> &RandomWalk<X, Y> {
         &self.random_walks[index]
     }
 
@@ -161,7 +161,7 @@ where
     ///
     /// This function panics if the provided `index` is out of bounds, i.e., if `index >= self.random_walks.len()`.
     ///
-    pub fn get_step_mut(&mut self, index: usize) -> &mut RandomWalk<X, Y> {
+    pub fn get_random_walk_mut(&mut self, index: usize) -> &mut RandomWalk<X, Y> {
         &mut self.random_walks[index]
     }
 
@@ -185,6 +185,39 @@ where
     /// The `last` method does not consume the collection; it returns a read-only reference to the last element.
     pub fn last(&self) -> Option<&RandomWalk<X, Y>> {
         self.random_walks.last()
+    }
+    
+    /// Retrieves a nested vector of references to `Step<X, Y>` objects.
+    ///
+    /// This function iterates over the elements of the current container (`self`)
+    /// assuming it implements `IntoIterator`, and for each element, 
+    /// calls its `get_steps` method. The results are then collected into a 
+    /// two-dimensional `Vec` structure. 
+    ///
+    /// # Returns
+    /// A `Vec` where each inner vector contains references to `Step<X, Y>` objects.
+    ///
+    /// # Type Parameters
+    /// - `X`: The type of the first generic parameter in `Step`.
+    /// - `Y`: The type of the second generic parameter in `Step`.
+    ///
+    pub fn get_steps(&self) -> Vec<Vec<&Step<X, Y>>> {
+        self.into_iter()
+            .map(|step| step.get_steps())
+            .collect()
+    }
+    
+
+    pub fn last_steps(&self) -> Vec<&Step<X, Y>> {
+        self.into_iter()
+            .map(|step| step.last().unwrap())
+            .collect()
+    }
+
+    pub fn last_values(&self) -> Vec<&Step<X, Y>> {
+        self.into_iter()
+            .map(|step| step.last().unwrap())
+            .collect()
     }
 }
 
@@ -416,18 +449,26 @@ where
 
 #[cfg(test)]
 mod tests {
+    use std::fs;
     use super::*;
     use crate::chains::generator_positive;
     use crate::simulation::{
         WalkParams, WalkType, WalkTypeAble,
         steps::{Step, Xstep, Ystep},
     };
-    use crate::utils::{TimeFrame, time::convert_time_frame};
+    use crate::utils::{TimeFrame, time::convert_time_frame, setup_logger};
     use crate::{ExpirationDate, Positive, pos};
     use rust_decimal_macros::dec;
+    use tracing::{debug, info};
 
     // Helper structs and functions for testing
     struct TestWalker;
+
+    impl TestWalker {
+        fn new() -> Self {
+            TestWalker {}
+        }
+    }
     impl WalkTypeAble<Positive, Positive> for TestWalker {}
 
     fn test_generator(params: &WalkParams<Positive, Positive>) -> Vec<Step<Positive, Positive>> {
@@ -542,11 +583,11 @@ mod tests {
         );
 
         // Test get_steps
-        let steps = simulator.get_steps();
+        let steps = simulator.get_random_walks();
         assert_eq!(steps.len(), 3);
 
         // Test get_step
-        let step = simulator.get_step(1);
+        let step = simulator.get_random_walk(1);
         assert_eq!(step.get_title(), "Test Simulator_1");
 
         // Test first and last
@@ -729,7 +770,7 @@ mod tests {
         assert!(iter.any(|step| step.get_x_values().len() == n_steps));
         assert!(simulator.calculate_profit_at(&pos!(100.0)).is_err());
 
-        let step = simulator.get_step_mut(0);
+        let step = simulator.get_random_walk_mut(0);
         assert!(step.first().is_some());
 
         let file_path = "Draws/Simulation/simulator_test.png";
@@ -746,6 +787,124 @@ mod tests {
         );
 
         assert!(std::fs::remove_file(file_path).is_ok());
+
+        Ok(())
+    }
+    
+    #[test]
+    fn test_full_simulation() -> Result<(), Box<dyn Error>> {
+        setup_logger();
+        let simulator_size: usize = 15;
+        let n_steps = 120;
+        let initial_price = pos!(100.0);
+        let std_dev = pos!(20.0);
+        let walker = Box::new(TestWalker::new());
+        let days = pos!(30.0);
+
+        let walk_params = WalkParams {
+            size: n_steps,
+            init_step: Step {
+                x: Xstep::new(Positive::ONE, TimeFrame::Minute, ExpirationDate::Days(days)),
+                y: Ystep::new(0, initial_price),
+            },
+            walk_type: WalkType::GeometricBrownian {
+                dt: convert_time_frame(pos!(1.0) / days, &TimeFrame::Minute, &TimeFrame::Day), // TODO
+                drift: dec!(0.0),
+                volatility: std_dev,
+            },
+            walker,
+        };
+        
+        assert_eq!(walk_params.size, n_steps);
+        assert_eq!(walk_params.init_step.get_value(), &pos!(100.0));
+        assert_eq!(walk_params.y(), &pos!(100.0));
+
+        let simulator = Simulator::new(
+            "Simulator".to_string(),
+            simulator_size,
+            &walk_params,
+            generator_positive,
+        );
+        debug!("Simulator: {}", simulator);
+        // println!("{}", simulator);
+        assert_eq!(simulator.get_title(), "Simulator");
+        assert_eq!(simulator.len(), simulator_size);
+        
+        
+        let random_walk = simulator[0].clone();
+        assert_eq!(random_walk.get_title(), "Simulator_0");
+        assert_eq!(random_walk.len(), n_steps);
+        
+        let step = random_walk[0].clone();
+        assert_eq!(*step.get_index(), Positive::ONE);
+        let step_string = format!("{}", step);
+        assert_eq!(step.to_string(), step_string);
+        
+        let y_step = step.get_y_step();
+        assert_eq!(*y_step.index(), 0);
+        assert_eq!(*y_step.value(), pos!(100.0));
+
+        let x_step = step.get_x_step();
+        assert_eq!(*x_step.index(), 0);
+        assert_eq!(*x_step.step_size_in_time(), Positive::ONE);
+        assert_eq!(x_step.time_unit(), &TimeFrame::Minute);
+        assert_eq!(x_step.days_left()?, pos!(30.0));
+        
+        
+        
+        
+        let next_step = step.next(pos!(200.0));
+        assert!(next_step.is_ok());
+        let next_step = next_step?;
+        assert_eq!(next_step.get_value(), &pos!(200.0));
+        let next_step_string = format!("{}", next_step);
+        assert_eq!(next_step.to_string(), next_step_string);
+        
+        let previous_step = step.previous(pos!(50.0))?;
+        assert_eq!(previous_step.get_value(), &pos!(50.0));
+        let previous_step_string = format!("{}", previous_step);
+        assert_eq!(previous_step.to_string(), previous_step_string);
+        
+        let x_step = step.get_x_step();
+        let next_x_step = x_step.next();
+        assert!(next_x_step.is_ok());
+        let next_x_step = next_x_step?;
+        assert_eq!(*next_x_step.index(), 1);
+        assert_eq!(*next_x_step.step_size_in_time(), Positive::ONE);
+        let next_x_step_string = format!("{}", next_x_step);
+        assert_eq!(next_x_step.to_string(), next_x_step_string);
+        
+        let y_step = step.get_y_step();
+        assert_eq!(*y_step.index(), 0);
+        assert_eq!(*y_step.value(), pos!(100.0));
+        assert_eq!(y_step.positive(), pos!(100.0));
+        
+
+        let last_steps: Vec<&Step<Positive,Positive>> = simulator
+            .into_iter()
+            .map(|step| step.last().unwrap())
+            .collect();
+        info!("Last Steps: {:?}", last_steps);
+        assert_eq!(last_steps.len(), simulator_size);
+
+        let last_values: Vec<&Positive> = simulator
+            .into_iter()
+            .map(|step| step.last().unwrap().get_value())
+            .collect();
+        info!("Last Values: {:?}", last_values);
+        assert_eq!(last_values.len(), simulator_size);
+        
+
+        let file_name = "Draws/Simulation/test_simulator.png";
+        simulator.graph(
+            GraphBackend::Bitmap {
+                file_path: file_name,
+                size: (1200, 800),
+            },
+            20,
+        )?;
+        let remove_result = fs::remove_file(file_name);
+        assert!(remove_result.is_ok());
 
         Ok(())
     }

@@ -193,6 +193,58 @@ where
     pub fn get_graph_y_value(&self) -> Positive {
         self.y.positive()
     }
+    
+    /// Returns a reference to the `Ystep<Y>` instance associated with the current object.
+    ///
+    /// # Returns
+    ///
+    /// A reference to the `Ystep<Y>` contained within the struct.
+    ///
+    /// # Notes
+    ///
+    /// This method provides a non-mutable reference to the `Ystep<Y>`. If you need 
+    /// to modify the `Ystep<Y>`, consider using a different method or accessing it mutably.
+    pub fn get_y_step(&self) -> &Ystep<Y> {
+        &self.y
+    }
+    
+    ///
+    /// Returns a reference to the `Xstep<X>` held within the struct.
+    ///
+    /// # Return
+    ///
+    /// A reference of type `&Xstep<X>` representing the internal `x` field.
+    pub fn get_x_step(&self) -> &Xstep<X> {
+        &self.x
+    }
+    
+    /// Returns a reference to the value of type `Y` held by the `self` instance.
+    ///
+    /// This method retrieves the value stored in the `y` field of the struct,
+    /// by calling the `value()` method on `y`, and returns a reference to it.
+    ///
+    /// # Returns
+    /// A reference to the value of type `Y`.
+    ///
+    pub fn get_value(&self) -> &Y {
+        self.y.value()
+    }
+    
+    /// Retrieves the index value associated with the instance.
+    ///
+    /// # Returns
+    ///
+    /// A reference to an object of type `X`, obtained by calling the
+    /// `step_size_in_time` method on the field `x` of the instance.
+    ///
+    /// Note: The behavior of this method depends on the implementation of the
+    /// `step_size_in_time` method for the type of `x`.
+    pub fn get_index(&self) -> &X {
+        self.x.step_size_in_time()
+    }
+    
+    
+    
 }
 
 impl<X, Y> Display for Step<X, Y>

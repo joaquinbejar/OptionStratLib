@@ -35,6 +35,7 @@ use std::ops::{AddAssign, Index, IndexMut};
 ///   which must implement `AddAssign`, be convertible to `Positive`, be `Copy`, and implement
 ///   the `Walktypable` trait for additional functionality.
 ///
+#[derive(Debug, Clone, Default)]
 pub struct RandomWalk<X, Y>
 where
     X: Copy + Into<Positive> + AddAssign + Display,

@@ -13,7 +13,7 @@ use crate::{Positive, pos};
 use core::option::Option;
 use rust_decimal::Decimal;
 use std::error::Error;
-use tracing::{debug, info};
+use tracing::debug;
 
 /// Creates a new `OptionChain` from a previous `Ystep` and a new price.
 ///
@@ -172,7 +172,7 @@ pub fn generator_optionchain(
 pub fn generator_positive(
     walk_params: &WalkParams<Positive, Positive>,
 ) -> Vec<Step<Positive, Positive>> {
-    info!("{}", walk_params);
+    debug!("{}", walk_params);
     let mut y_steps = walk_params.walker.geometric_brownian(walk_params).unwrap();
     let _ = y_steps.remove(0);
     let mut steps: Vec<Step<Positive, Positive>> = vec![walk_params.init_step.clone()];
