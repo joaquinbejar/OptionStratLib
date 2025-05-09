@@ -30,7 +30,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         .title("d1 Curve")
         .x_label("strike")
         .y_label("d1")
-        .line_width(1)
+        .show_legend(false)
         .save("./Draws/Curves/d1_curve.png")?;
 
     Ok(())

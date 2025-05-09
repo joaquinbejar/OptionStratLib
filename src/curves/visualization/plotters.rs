@@ -47,9 +47,9 @@
 
 use crate::curves::Curve;
 use crate::error::CurveError;
-use crate::geometrics::{PlotBuilder, PlotBuilderExt, PlotOptions, Plottable};
+use crate::geometrics::{PlotBuilder, Plottable};
 use std::path::Path;
-use crate::visualization::Graph;
+use crate::visualization::{Graph, GraphConfig};
 
 /// Plottable implementation for single Curve
 impl Plottable for Curve {
@@ -61,7 +61,7 @@ impl Plottable for Curve {
     {
         PlotBuilder {
             data: self.clone(),
-            options: PlotOptions::default(),
+            options: self.graph_config(),
         }
     }
 }
@@ -141,99 +141,11 @@ impl Plottable for Vec<Curve> {
     {
         PlotBuilder {
             data: self.clone(),
-            options: PlotOptions::default(),
+            options: self.graph_config(),
         }
     }
 }
 
-/// Plotting implementation for single Curve
-impl PlotBuilderExt<Curve> for PlotBuilder<Curve> {
-    fn save(self, path: impl AsRef<Path>) -> Result<(), CurveError> {
-        let path = path.as_ref();
-        self.data.write_png(path, self.options.width, self.options.height)
-            .map_err(|e| CurveError::StdError { reason: e.to_string() })
-    }
-}
-
-/// Implementation of the `PlotBuilderExt` trait for `PlotBuilder<Vec<Curve>>`.
-///
-/// This implementation allows saving a plot to a file by utilizing the `plotters` library.
-/// The `save` method takes a file path as input and generates a plot based on the data and
-/// configuration options provided in the `PlotBuilder`.
-///
-/// # Functionality
-/// - **Curve Points Preparation**: It iterates over the curve data (`data`) and transforms
-///   the points into a collection of `(f64, f64)` tuples, which are compatible with the `plotters` library.
-/// - **Plot Range Calculation**: Determines the plot's x and y axis ranges by collecting
-///   minimum and maximum values across all the curve points.
-/// - **Plot Rendering**: The method sets up a plot with custom title, axis labels, line colors,
-///   line widths, and other visual properties defined in `PlotOptions`.
-/// - **Curve Drawing**: Each curve is drawn using the `LineSeries` feature from `plotters`.
-///   A unique color is assigned to each curve, repeated cyclically if the number of curves
-///   exceeds the number of available colors in the palette.
-/// - **Legend Display**: A legend is added to the plot using the series' labels.
-/// - **Error Handling**: The method handles unexpected errors during chart creation, curve
-///   rendering, or plot saving, by propagating them as `CurvesError` instances.
-///
-/// # Parameters
-/// - **`self`**: The `PlotBuilder` instance containing the curve data (`data`) and configuration
-///   options (`options`).
-/// - **`path`**: A path to the file where the plot will be saved. This path can be provided as
-///   any value that implements the `AsRef<Path>` trait.
-///
-/// # Return Value
-/// - Returns `Ok(())` on success, indicating that the plot was saved successfully.
-/// - Returns `Err(CurvesError)` on failure, encapsulating the failure reason as a string.
-///
-/// # Dependencies
-/// - Uses the `plotters` library for rendering the plot.
-/// - Leverages utility methods like `.fold()`, `.iter()`, and `.map()` to process curve data.
-/// - Relies on `self.options` for plot customization (e.g., width, height, colors, etc.).
-///
-/// # Error Handling
-/// Any errors encountered during the plot creation or file save process are encapsulated
-/// as `CurvesError` with a `StdError` variant and a descriptive error message.
-///
-/// # Algorithm
-/// 1. **Fetch Curve Points**: Convert the curves' `Point2D` instances to `(f64, f64)` tuples.
-///    Use `to_f64` conversion for high precision.
-/// 2. **Calculate Axis Ranges**: Find minimum (`x_min`, `y_min`) and maximum (`x_max`, `y_max`)
-///    values for x and y axes across all curve points.
-/// 3. **Set Up Plot**: Create the drawing area using `BitMapBackend` with the specified dimensions
-///    and background color in `options`.
-/// 4. **Configure Chart**: Use `ChartBuilder` to define margins, axis labels, and title.
-/// 5. **Draw Axes**: Configure and draw the x and y axes with proper labels and formatting.
-/// 6. **Draw Curves**: Iterate through the prepared curve points and draw each curve with a distinct color.
-/// 7. **Add Legend**: Add a legend area showing the labels for each curve.
-/// 8. **Save Plot**: Serialize and save the plot to the specified file path, returning any errors if encountered.
-///
-/// # Usage Considerations
-/// - The `self.options.line_colors` must contain enough colors to accommodate all curves.
-///   If fewer colors are specified, the colors will repeat cyclically.
-/// - The `background_color` and `line_width` options affect the overall appearance.
-/// - The success of the plot rendering depends on valid and well-formed curve data (`Vec<Curve>`).
-///
-/// # Examples of Dependencies
-/// - **Associated Traits**: Must be used with the `PlotBuilder` struct and a compatible `Vec<Curve>` data type.
-/// - **Color Palettes**: The `PlotOptions::default_colors` method provides a default color palette.
-///
-/// # Related Types
-/// - **`PlotBuilder`**: Used to encapsulate curve data and configuration options.
-/// - **`PlotOptions`**: Provides visual and layout customization for the plot.
-/// - **`CurvesError`**: Represents errors that can occur while saving the plot.
-///
-/// # Remarks
-/// - The method is tightly integrated with `plotters` and uses its core components
-///   (`BitMapBackend`, `ChartBuilder`, `LineSeries`, etc.) for chart creation.
-/// - The precision of `Point2D::x` and `Point2D::y` values is preserved by converting them from
-///   `Decimal` to `f64` when plotting.
-impl PlotBuilderExt<Vec<Curve>> for PlotBuilder<Vec<Curve>> {
-    fn save(self, path: impl AsRef<Path>) -> Result<(), CurveError> {
-        let path = path.as_ref();
-        self.data.write_png(path, self.options.width, self.options.height)
-            .map_err(|e| CurveError::StdError { reason: e.to_string() })
-    }
-}
 
 #[cfg(test)]
 mod tests {
@@ -370,7 +282,6 @@ mod tests {
         vec![curve1, curve2]
             .plot()
             .title("Thick Line Curves")
-            .line_width(4) // Thicker lines
             .dimensions(800, 600)
             .save("thick_line_curves_test.png")
             .expect("Thick line curves plot failed");
@@ -388,7 +299,6 @@ mod tests {
             .title("Chained Curves")
             .x_label("Custom X")
             .y_label("Custom Y")
-            .line_width(3)
             .dimensions(1200, 800)
             .save("chained_curves_test.png")
             .expect("Chained curves plot failed");
@@ -438,32 +348,7 @@ mod tests {
 #[cfg(test)]
 mod tests_extended {
     use super::*;
-
-    #[derive(Debug, Clone)]
-    struct Plot {
-        options: PlotOptions,
-    }
-
-    impl Plottable for Plot {
-        type Error = CurveError;
-
-        fn plot(&self) -> PlotBuilder<Self>
-        where
-            Self: Sized,
-        {
-            PlotBuilder {
-                data: self.clone(),
-                options: PlotOptions::default(),
-            }
-        }
-    }
-
-    impl PlotBuilderExt<Plot> for PlotBuilder<Plot> {
-        fn save(self, _path: impl AsRef<Path>) -> Result<(), CurveError> {
-            Ok(())
-        }
-    }
-
+    
     struct MockChart {
         pub x_desc: String,
         pub y_desc: String,
@@ -499,31 +384,7 @@ mod tests_extended {
             self
         }
     }
-
-    #[test]
-    fn test_curve_name() {
-        let options = PlotOptions {
-            curve_name: None,
-            ..Default::default()
-        };
-        let plot = Plot { options }.plot();
-        let result = plot.curve_name(vec!["Test Curve".to_string()]);
-        assert_eq!(
-            result.options.curve_name,
-            Some(vec!["Test Curve".to_string()])
-        );
-    }
-
-    #[test]
-    fn test_save_standard() {
-        let plot = Plot {
-            options: PlotOptions::default(),
-        }
-        .plot();
-        let result = plot.save("test_path.png");
-        assert!(result.is_ok());
-    }
-
+    
     #[test]
     fn test_map_err_to_std_error() {
         let result: Result<(), CurveError> =
@@ -571,17 +432,5 @@ mod tests_extended {
         }
     }
 
-    #[test]
-    fn test_curve_label() {
-        let options = PlotOptions {
-            curve_name: Some(vec!["Test Curve".to_string()]),
-            ..Default::default()
-        };
-        let plot = Plot { options };
-        let label = match &plot.options.curve_name {
-            Some(names) => names.first().map(|s| s.as_str()).unwrap_or("Default"),
-            None => "Default",
-        };
-        assert_eq!(label, "Test Curve");
-    }
+
 }

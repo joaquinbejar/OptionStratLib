@@ -22,7 +22,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
 use std::fmt::{Display, Formatter};
 use std::ops::Index;
-use crate::visualization::{Graph, GraphData, Series2D, TraceMode};
+use crate::visualization::{Graph, GraphData};
 
 /// Represents a mathematical curve as a collection of 2D points.
 ///
@@ -134,15 +134,16 @@ impl Len for Curve {
 
 impl Graph for Curve {
     fn graph_data(&self) -> GraphData {
-        self.into()
+        self.clone().into()
     }
 }
 
 impl Graph for Vec<Curve> {
     fn graph_data(&self) -> GraphData {
-        self.into()
+        self.clone().into()
     }
 }
+
 
 impl GeometricObject<Point2D, Decimal> for Curve {
     type Error = CurveError;
@@ -204,7 +205,6 @@ impl GeometricObject<Point2D, Decimal> for Curve {
         }
     }
 }
-
 
 /// Allows indexed access to the points in a `Curve` using `usize` indices.
 ///

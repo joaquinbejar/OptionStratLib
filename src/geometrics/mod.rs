@@ -28,4 +28,4 @@ pub use operations::{
     Arithmetic, AxisOperations, GeometricTransformations, MergeAxisInterpolate, MergeOperation,
 };
 pub use utils::GeometricObject;
-pub use visualization::{PlotBuilder, PlotBuilderExt, PlotOptions, Plottable};
+pub use visualization::{PlotBuilder, Plottable};

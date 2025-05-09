@@ -42,9 +42,9 @@
 //! ```
 //!
 use crate::error::SurfaceError;
-use crate::geometrics::{PlotBuilder, PlotBuilderExt, PlotOptions, Plottable};
+use crate::geometrics::{PlotBuilder, Plottable};
 use crate::surfaces::Surface;
-use crate::visualization::Graph;
+use crate::visualization::{Graph};
 use std::path::Path;
 
 /// Plottable implementation for single Surface
@@ -57,104 +57,12 @@ impl Plottable for Surface {
     {
         PlotBuilder {
             data: self.clone(),
-            options: PlotOptions::default(),
+            options: self.graph_config(),
         }
     }
 }
 
-/// Implementation of the `Plottable` trait for `Vec<Surface>`.
-///
-/// This implementation enables a vector of `Surface` instances to be plotted
-/// using the `plot` method. The method creates a `PlotBuilder` instance, which
-/// allows for flexible and configurable visualization of the curves.
-///
-/// # Overview
-/// By implementing the `Plottable` trait, a vector of `Surface` objects gains the
-/// ability to leverage plot-building functionality. The `plot` method clones the
-/// data (to ensure immutability of the original input) and pairs it with
-/// default plotting options (`PlotOptions`) for further configuration and
-/// rendering.
-///
-/// The `PlotBuilder` struct, which is returned by this implementation, acts as a
-/// pipeline for customizing and generating the final plot. Once the plot is fully
-/// configured in terms of styling and layout, it can be saved to a file, rendered
-/// in memory, or manipulated further depending on the builder's available methods.
-///
-/// # Method Details
-/// - **`plot`**:
-///   - Creates a `PlotBuilder` instance containing the data from the `Vec<Surface>`
-///     and populates it with default plot options.
-///   - Returns a configurable tool for building curve visualizations.
-///
-/// # Considerations
-/// - This implementation assumes that it is appropriate to clone the data from
-///   the vector of `Surface` instances. If the cloning behavior is expensive or not
-///   necessary, further optimization may be required.
-/// - `PlotOptions` default values provide a reasonable starting point, but
-///   most real-world applications will override some of these values for more
-///   customization.
-///
-/// # Example Behavior
-/// A vector of `Surface` objects can be passed to the `plot` method to generate
-/// a plot tailored to the desired styling and configuration. Methods available
-/// on `PlotBuilder` can then be chained to adjust plot dimensions,
-/// colors, titles, labels, and more.
-///
-/// # Returns
-/// - A `PlotBuilder` instance configured with the cloned curve data (`self.clone()`)
-///   and fully initialized with default `PlotOptions`.
-///
-/// # Default Settings
-/// - The default `PlotOptions`, as used in this implementation, include:
-///   - White background
-///   - Line width of 2 pixels
-///   - Default dimensions (800x600 pixels)
-///   - No title or axis labels
-///   - No default line colors
-///
-/// # Errors
-/// - While creating a `PlotBuilder` instance does not directly raise errors, subsequent
-///   operations (e.g., saving a plot or generating a view) may encounter runtime issues
-///   related to file I/O, data validity, or plot rendering.
-///
-/// # See Also
-/// - [`Plottable`]: The trait allowing
-///   generalized plotting functionality.
-/// - [`PlotBuilder`]: The plot generation
-///   and configuration builder.
-///
-/// # Modules
-/// Code related to this implementation exists within the
-/// `crate::curves::visualization::plotters` module, and it works in conjunction with the
-/// `Surface` struct, `PlotBuilder`, and `PlotOptions`. These modules provide the functionality
-/// required to create, configure, and render curve plots.
-impl Plottable for Vec<Surface> {
-    type Error = SurfaceError;
 
-    fn plot(&self) -> PlotBuilder<Self>
-    where
-        Self: Sized,
-    {
-        PlotBuilder {
-            data: self.clone(),
-            options: PlotOptions::default(),
-        }
-    }
-}
-
-/// Plotting implementation for single Surface
-impl PlotBuilderExt<Surface> for PlotBuilder<Surface> {
-    fn save(self, path: impl AsRef<Path>) -> Result<(), SurfaceError> {
-        {
-            let path = path.as_ref();
-            self.data
-                .write_png(path, self.options.width, self.options.height)
-                .map_err(|e| SurfaceError::StdError {
-                    reason: e.to_string(),
-                })
-        }
-    }
-}
 
 #[cfg(test)]
 mod tests {
@@ -277,32 +185,7 @@ mod tests {
 #[cfg(test)]
 mod tests_extended {
     use super::*;
-
-    #[derive(Debug, Clone)]
-    struct Plot {
-        options: PlotOptions,
-    }
-
-    impl Plottable for Plot {
-        type Error = SurfaceError;
-
-        fn plot(&self) -> PlotBuilder<Self>
-        where
-            Self: Sized,
-        {
-            PlotBuilder {
-                data: self.clone(),
-                options: PlotOptions::default(),
-            }
-        }
-    }
-
-    impl PlotBuilderExt<Plot> for PlotBuilder<Plot> {
-        fn save(self, _path: impl AsRef<Path>) -> Result<(), SurfaceError> {
-            Ok(())
-        }
-    }
-
+    
     struct MockChart {
         pub x_desc: String,
         pub y_desc: String,
@@ -338,31 +221,7 @@ mod tests_extended {
             self
         }
     }
-
-    #[test]
-    fn test_curve_name() {
-        let options = PlotOptions {
-            curve_name: None,
-            ..Default::default()
-        };
-        let plot = Plot { options }.plot();
-        let result = plot.curve_name(vec!["Test Surface".to_string()]);
-        assert_eq!(
-            result.options.curve_name,
-            Some(vec!["Test Surface".to_string()])
-        );
-    }
-
-    #[test]
-    fn test_save_standard() {
-        let plot = Plot {
-            options: PlotOptions::default(),
-        }
-        .plot();
-        let result = plot.save("test_path.png");
-        assert!(result.is_ok());
-    }
-
+    
     #[test]
     fn test_map_err_to_std_error() {
         let result: Result<(), SurfaceError> =
@@ -409,18 +268,5 @@ mod tests_extended {
             _ => panic!("Unexpected error type"),
         }
     }
-
-    #[test]
-    fn test_curve_label() {
-        let options = PlotOptions {
-            curve_name: Some(vec!["Test Surface".to_string()]),
-            ..Default::default()
-        };
-        let plot = Plot { options };
-        let label = match &plot.options.curve_name {
-            Some(names) => names.first().map(|s| s.as_str()).unwrap_or("Default"),
-            None => "Default",
-        };
-        assert_eq!(label, "Test Surface");
-    }
+    
 }

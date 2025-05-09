@@ -5,4 +5,4 @@
 ******************************************************************************/
 mod plotters;
 
-pub use plotters::{PlotBuilder, PlotBuilderExt, PlotOptions, Plottable};
+pub use plotters::{PlotBuilder, Plottable};

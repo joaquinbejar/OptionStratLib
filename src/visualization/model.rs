@@ -12,14 +12,14 @@
 //!
 //! Domain objects only describe *what* to plot; *how* lives here.
 
-use crate::visualization::interface::{GraphDataType, GraphType};
+use crate::curves::Curve;
+use crate::surfaces::Surface;
+use crate::visualization::interface::GraphType;
 use crate::visualization::styles::{PlotType, TraceMode};
+use crate::visualization::{ColorScheme, get_color_from_scheme};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
-use crate::curves::Curve;
-use crate::surfaces::Surface;
-use crate::visualization::{get_color_from_scheme, ColorScheme};
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Series2D {
@@ -74,37 +74,29 @@ impl From<Curve> for GraphData {
     }
 }
 
-impl From<&Curve> for GraphData {
-    fn from(curve: &Curve) -> Self {
-        curve.into()
-    }
-}
-
 impl From<Vec<Curve>> for GraphData {
     fn from(curves: Vec<Curve>) -> Self {
         let color_scheme = ColorScheme::Viridis;
 
-        let series: Vec<Series2D> = curves.into_iter().enumerate().map(|(idx, c)| {
-            let color = get_color_from_scheme(&color_scheme, idx)
-                .unwrap_or_else(|| "#1f77b4".to_string()); 
+        let series: Vec<Series2D> = curves
+            .into_iter()
+            .enumerate()
+            .map(|(idx, c)| {
+                let color = get_color_from_scheme(&color_scheme, idx)
+                    .unwrap_or_else(|| "#1f77b4".to_string());
 
-            Series2D {
-                x: c.points.iter().map(|p| p.x).collect(),
-                y: c.points.iter().map(|p| p.y).collect(),
-                name: format!("Curve {}", idx + 1), 
-                mode: TraceMode::Lines,
-                line_color: Some(color),
-                line_width: Some(2.0),
-            }
-        }).collect();
+                Series2D {
+                    x: c.points.iter().map(|p| p.x).collect(),
+                    y: c.points.iter().map(|p| p.y).collect(),
+                    name: format!("Curve {}", idx + 1),
+                    mode: TraceMode::Lines,
+                    line_color: Some(color),
+                    line_width: Some(2.0),
+                }
+            })
+            .collect();
 
         GraphData::MultiSeries(series)
-    }
-}
-
-impl From<&Vec<Curve>> for GraphData {
-    fn from(curves: &Vec<Curve>) -> Self {
-        curves.into()
     }
 }
 
@@ -116,12 +108,6 @@ impl From<Surface> for GraphData {
             z: surface.points.iter().map(|p| p.z).collect(),
             name: "Surface".to_string(),
         })
-    }
-}
-
-impl From<&Surface> for GraphData {
-    fn from(surface: &Surface) -> Self {
-        surface.into()
     }
 }
 

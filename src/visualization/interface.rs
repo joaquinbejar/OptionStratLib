@@ -110,7 +110,3 @@ pub trait GraphType {
     fn plot_type() -> PlotType;
 }
 
-
-pub trait GraphDataType {
-    fn graph_data_type(&self) -> GraphData;
-}

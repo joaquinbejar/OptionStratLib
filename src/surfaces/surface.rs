@@ -43,7 +43,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
 use std::ops::Index;
 use std::sync::Arc;
-use crate::visualization::{Graph, GraphData, Series2D, Surface3D, TraceMode};
+use crate::visualization::{Graph, GraphData, Surface3D};
 
 /// Represents a mathematical surface in 3D space.
 ///
@@ -310,6 +310,7 @@ impl Graph for Surface {
         })
     }
 }
+
 
 /// Implementation of the `GeometricObject` trait for the `Surface` struct.
 ///
