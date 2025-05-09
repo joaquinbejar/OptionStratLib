@@ -381,7 +381,7 @@ impl Positive {
         Positive(self.0.pow(n.to_dec()))
     }
 
-    /// Raises the current `Positive` value to the power of `n` using unsigned integer exponentiation. 
+    /// Raises the current `Positive` value to the power of `n` using unsigned integer exponentiation.
     ///
     /// # Parameters
     /// - `n`: An unsigned 64-bit integer (`u64`) representing the power to which the value will be raised.
@@ -419,9 +419,9 @@ impl Positive {
 
     /// Rounds the current value to a "nice" number, based on its magnitude.
     ///
-    /// This method computes the logarithmic magnitude of the current value and 
+    /// This method computes the logarithmic magnitude of the current value and
     /// determines a simplified number within a range of predefined "nice" numbers,
-    /// such as 1, 2, 5, or 10, scaled by a power of ten. This is often useful 
+    /// such as 1, 2, 5, or 10, scaled by a power of ten. This is often useful
     /// for simplifying numerical values for display or plotting.
     ///
     /// # Procedure
@@ -440,7 +440,7 @@ impl Positive {
     /// according to the magnitude of the input value.
     ///
     /// # Panics
-    /// This function does not explicitly handle negative numbers or zero, as it is 
+    /// This function does not explicitly handle negative numbers or zero, as it is
     /// assumed that `self` is a positive numeric value. Ensure `self` is valid and non-zero
     /// prior to calling this method.
     ///

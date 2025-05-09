@@ -2,7 +2,6 @@ use crate::error::{CurveError, SurfaceError};
 use std::error::Error;
 use std::fmt;
 
-
 /// Represents errors that can occur during graph generation and rendering operations.
 ///
 /// This error type encapsulates failures that may happen when creating, rendering,

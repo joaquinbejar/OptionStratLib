@@ -64,7 +64,7 @@ impl Default for Series2D {
 /// A type alias representing a collection of 2D series.
 ///
 /// `MultiSeries2D` is a type alias for a `Vec<Series2D>`, where each `Series2D`
-/// represents a single two-dimensional data series. This alias is used to 
+/// represents a single two-dimensional data series. This alias is used to
 /// simplify the representation of multiple 2D series in a single collection.
 ///
 pub type MultiSeries2D = Vec<Series2D>;
@@ -88,10 +88,9 @@ pub struct Surface3D {
     pub name: String,
 }
 
-
 /// Represents different types of graph data for visualization.
 ///
-/// This enum encapsulates various data structures that can be used for 
+/// This enum encapsulates various data structures that can be used for
 /// rendering different types of charts and plots.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum GraphData {

@@ -216,15 +216,15 @@ where
 
     /// Retrieves the last value of each item in the iterator.
     ///
-    /// This function processes the current instance of the object (likely some iterable structure) 
-    /// and extracts the last element from each `Step<X, Y>` item in it. 
+    /// This function processes the current instance of the object (likely some iterable structure)
+    /// and extracts the last element from each `Step<X, Y>` item in it.
     /// The result is a `Vec` containing references to the last value of each `Step`.
     ///
     /// # Returns
     /// A `Vec` of references to the last element of each `Step<X, Y>` in the iterator.
     ///
     /// # Panics
-    /// This method panics if any `Step<X, Y>` within the iterator is empty, 
+    /// This method panics if any `Step<X, Y>` within the iterator is empty,
     /// as it uses `unwrap()` on the result of `step.last()`.
     ///
     pub fn last_values(&self) -> Vec<&Step<X, Y>> {

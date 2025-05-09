@@ -43,7 +43,6 @@ pub enum ColorScheme {
     HighContrast,
 }
 
-
 /// Defines the visual appearance of traces in plots.
 ///
 /// This enum specifies how data points should be displayed in a visualization,
@@ -58,7 +57,6 @@ pub enum TraceMode {
     /// Display both lines connecting points and individual markers.
     LinesMarkers,
 }
-
 
 /// Represents different types of plots that can be generated.
 ///

@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 /// Represents the configuration parameters for a graph or chart visualization.
 ///
-/// This struct encapsulates all the settings needed to define how a graph should be 
+/// This struct encapsulates all the settings needed to define how a graph should be
 /// displayed, including its dimensions, labels, styling options, and legend configuration.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct GraphConfig {

@@ -221,8 +221,8 @@ pub mod delta_neutral;
 /// Display implementation for strategies
 pub mod display;
 
-/// The `graph` module provides functionality for creating, managing, and 
-/// manipulating graph data structures. Common use cases include representing 
+/// The `graph` module provides functionality for creating, managing, and
+/// manipulating graph data structures. Common use cases include representing
 /// networks, dependency graphs, and other graph-based relationships.
 ///
 /// # Features
@@ -231,13 +231,13 @@ pub mod display;
 /// - Provides utilities for adding and removing nodes and edges.
 ///
 /// # Usage
-/// To utilize this module, include it in your project and access its functions 
+/// To utilize this module, include it in your project and access its functions
 /// to build and interact with graph structures:
 ///
-/// Note: Implementations within the `graph` module may depend on specific 
+/// Note: Implementations within the `graph` module may depend on specific
 /// traits or types relevant to the graph operations.
 ///
-/// For details on available graph types, functionalities, and examples, refer 
+/// For details on available graph types, functionalities, and examples, refer
 /// to the corresponding methods and structs within the module.
 pub mod graph;
 /// Iron Butterfly strategy implementation

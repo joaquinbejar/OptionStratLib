@@ -165,7 +165,7 @@ impl<T: Plottable + Graph> PlotBuilder<T> {
     /// with the provided entry if none exists.
     ///
     /// This method allows chaining, modifying the `legend` configuration within the `options`
-    /// of the current object. If a `legend` already exists, the provided legend entry will 
+    /// of the current object. If a `legend` already exists, the provided legend entry will
     /// be appended to it. If no `legend` exists, a new legend will be created containing the
     /// provided entry.
     ///
@@ -208,12 +208,12 @@ impl<T: Plottable + Graph> PlotBuilder<T> {
 
     /// Sets the color scheme for the current instance.
     ///
-    /// This method allows you to specify a `ColorScheme` to customize the appearance or theme 
-    /// of the associated object. The method updates the `color_scheme` field in the `options` 
+    /// This method allows you to specify a `ColorScheme` to customize the appearance or theme
+    /// of the associated object. The method updates the `color_scheme` field in the `options`
     /// struct with the provided value and returns an updated instance of `self`.
     ///
     /// # Parameters
-    /// - `color_scheme`: The desired `ColorScheme` to be applied. This defines the visual style 
+    /// - `color_scheme`: The desired `ColorScheme` to be applied. This defines the visual style
     ///   or theme to be used by the object.
     ///
     /// # Returns

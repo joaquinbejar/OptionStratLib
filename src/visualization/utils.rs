@@ -36,21 +36,20 @@ pub fn pick_color(cfg: &GraphConfig, idx: usize) -> Option<String> {
     get_color_from_scheme(&cfg.color_scheme, idx)
 }
 
-
 /// Creates a 3D surface representation wrapped in a `Box`, based on the input `Surface3D` structure.
 ///
 /// This function converts the input `Surface3D` data into a `Surface` object, which includes the x, y, and z
-/// coordinate mappings. If any of the x, y, or z coordinate vectors in the input are empty, it creates a 
+/// coordinate mappings. If any of the x, y, or z coordinate vectors in the input are empty, it creates a
 /// default 2x2 surface with all z values initialized to zero and x/y spanning the range `[0, 1]`.
 ///
 /// # Parameters
-/// - `surf`: A reference to a `Surface3D` object, which contains x, y, and z coordinate vectors 
+/// - `surf`: A reference to a `Surface3D` object, which contains x, y, and z coordinate vectors
 ///   and an optional name for the surface.
 ///
 /// # Returns
 /// - A `Box` containing a `Surface<Decimal, Decimal, Decimal>` object, where:
 ///   - `x` and `y` axes are unique and sorted.
-///   - `z` values are represented in a 2D matrix where rows correspond to `y` values and columns 
+///   - `z` values are represented in a 2D matrix where rows correspond to `y` values and columns
 ///     correspond to `x` values.
 ///
 /// # Logic Details

@@ -12,19 +12,19 @@ use tracing::debug;
 /// A trait that defines the functionality for creating, configuring, and rendering
 /// graphical representations of data, along with support for various output formats.
 ///
-/// The `Graph` trait abstracts away details involved in preparing graph data, applying 
-/// configurations, and rendering graphs in different formats such as PNG, SVG, HTML, or 
+/// The `Graph` trait abstracts away details involved in preparing graph data, applying
+/// configurations, and rendering graphs in different formats such as PNG, SVG, HTML, or
 /// directly displaying them in a browser.
 ///
 /// ## Required Methods
 /// - `graph_data`: Returns the raw data structure (`GraphData`) required for plotting.
 ///
 /// ## Optional Methods
-/// - `graph_config`: Provides configuration overrides for the graph, including dimensions, 
+/// - `graph_config`: Provides configuration overrides for the graph, including dimensions,
 ///   labels, legends, and other visual properties. Defaults to `GraphConfig::default()`.
 ///
 /// ## Core Rendering Methods
-/// - `to_plot`: Converts the instance into a `plotly::Plot` object based on its data and 
+/// - `to_plot`: Converts the instance into a `plotly::Plot` object based on its data and
 ///   configuration.
 ///
 /// ## Export and Viewing Methods
@@ -35,7 +35,7 @@ use tracing::debug;
 /// - `render`: A unified interface for rendering graphs in various formats.
 ///
 /// ## Advanced Features
-/// - `to_interactive_html`: Creates an interactive HTML file with hover information 
+/// - `to_interactive_html`: Creates an interactive HTML file with hover information
 ///   and annotations.
 pub trait Graph {
     /// Return the raw data ready for plotting.
@@ -113,14 +113,14 @@ pub trait Graph {
     ///
     /// # Arguments
     ///
-    /// * `path` - A reference to a `std::path::Path` that specifies the destination 
+    /// * `path` - A reference to a `std::path::Path` that specifies the destination
     ///   file path where the PNG image will be written to.
     ///
     /// # Returns
     ///
     /// Returns a `Result`:
     /// * `Ok(())` - If the PNG image is successfully generated and written to the specified file.
-    /// * `Err(GraphError)` - If there is an error during the process of preparing the file path 
+    /// * `Err(GraphError)` - If there is an error during the process of preparing the file path
     ///   or writing the image.
     ///
     /// # Behavior
@@ -146,8 +146,8 @@ pub trait Graph {
     ///
     /// # Safety
     ///
-    /// This function uses `unsafe` code to modify environment variables (`LC_ALL` and `LANG`). 
-    /// Modifying global state like environment variables in a multithreaded context can lead to undefined behavior. 
+    /// This function uses `unsafe` code to modify environment variables (`LC_ALL` and `LANG`).
+    /// Modifying global state like environment variables in a multithreaded context can lead to undefined behavior.
     /// Ensure this function is used in a controlled environment where such changes are safe.
     ///
     fn write_png(&self, path: &std::path::Path) -> Result<(), GraphError> {
@@ -169,7 +169,7 @@ pub trait Graph {
         );
         Ok(())
     }
-    
+
     /// Writes the graph data to an HTML file at the specified path.
     ///
     /// This method generates a plot representation of the graph and saves it
@@ -211,7 +211,7 @@ pub trait Graph {
     ///
     /// # Returns
     ///
-    /// * `Result<(), GraphError>` - Returns `Ok(())` if the SVG is successfully 
+    /// * `Result<(), GraphError>` - Returns `Ok(())` if the SVG is successfully
     ///   written to the specified path. Otherwise, returns a `GraphError` if an
     ///   issue occurs during the file preparation or writing process.
     ///
@@ -271,7 +271,7 @@ pub trait Graph {
 /// trait should define the specific plot type that suits their data or visualization needs.
 ///
 /// # Usage
-/// Implement this trait for any data structure or context that requires a 
+/// Implement this trait for any data structure or context that requires a
 /// well-defined graph type for displaying data.
 ///
 pub trait GraphType {
@@ -280,7 +280,7 @@ pub trait GraphType {
     /// # Description
     /// The `plot_type` function determines and returns the type of plot that should
     /// be used. This information can be useful when configuring or rendering visual
-    /// data representations. The returned `PlotType` is typically an enum or specific 
+    /// data representations. The returned `PlotType` is typically an enum or specific
     /// type representing various available plot types (e.g., line plot, bar chart, scatter plot, etc.).
     ///
     /// # Returns
