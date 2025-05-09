@@ -4,7 +4,7 @@
    Date: 21/1/25
 ******************************************************************************/
 use std::path::Path;
-use crate::visualization::ColorScheme;
+use crate::visualization::{ColorScheme, Graph, GraphConfig, GraphData, GraphDataType, LineStyle};
 
 /// Plot configuration options for data visualization.
 ///
@@ -300,6 +300,26 @@ impl<T: Plottable> PlotBuilder<T> {
         Self: PlotBuilderExt<T>,
     {
         PlotBuilderExt::save(self, path)
+    }
+}
+
+impl<T: Plottable + GraphDataType + Clone > Graph for PlotBuilder<T> {
+    fn graph_data(&self) -> GraphData {
+        self.data.graph_data_type()
+    }
+
+    fn graph_config(&self) -> GraphConfig {
+        GraphConfig {
+            title: self.options.title.clone().unwrap(),
+            width: 1600,
+            height: 900,
+            x_label: Some(self.options.x_label.clone().unwrap()),
+            y_label: Some(self.options.y_label.clone().unwrap()),
+            z_label: None,
+            line_style: LineStyle::Solid,
+            color_scheme: ColorScheme::Default,
+            show_legend: true,
+        }
     }
 }
 

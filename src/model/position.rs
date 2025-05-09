@@ -22,7 +22,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use tracing::{debug, trace};
-use crate::visualization::{Graph, GraphData};
+use crate::visualization::{ColorScheme, Graph, GraphConfig, GraphData, LineStyle};
 
 /// The `Position` struct represents a financial position in an options market.
 ///
@@ -952,7 +952,11 @@ impl BasicAble for Position {
 /// at expiration across various price scenarios.
 impl Graph for Position {
     fn graph_data(&self) -> GraphData {
-        todo!()
+        self.option.graph_data()
+    }
+
+    fn graph_config(&self) -> GraphConfig {
+        self.option.graph_config()
     }
 }
 

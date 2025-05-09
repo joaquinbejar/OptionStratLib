@@ -9,8 +9,10 @@ use crate::constants::EPSILON;
 use crate::model::utils::ToRound;
 use crate::series::OptionSeries;
 use approx::{AbsDiffEq, RelativeEq};
-use num_traits::{FromPrimitive, ToPrimitive};
+use num_traits::real::Real;
+use num_traits::{FromPrimitive, Pow, ToPrimitive};
 use rust_decimal::{Decimal, MathematicalOps};
+use rust_decimal_macros::dec;
 use serde::de::Visitor;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::cmp::{Ordering, PartialEq};
@@ -286,6 +288,10 @@ impl Positive {
         self.0.to_i64().unwrap()
     }
 
+    pub fn to_u64(&self) -> u64 {
+        self.0.to_u64().unwrap()
+    }
+
     /// Converts the value to a usize signed integer.
     ///
     /// # Returns
@@ -347,6 +353,14 @@ impl Positive {
         Positive(self.0.powi(n))
     }
 
+    pub fn pow(&self, n: Positive) -> Positive {
+        Positive(self.0.pow(n.to_dec()))
+    }
+
+    pub fn powu(&self, n: u64) -> Positive {
+        Positive(self.0.powu(n))
+    }
+
     /// Raises this value to a decimal power.
     ///
     /// This is a crate-internal method not exposed to public API users.
@@ -358,7 +372,7 @@ impl Positive {
     /// # Returns
     ///
     /// A new `Positive` value representing `self` raised to the power `p0`.
-    pub(crate) fn powd(&self, p0: Decimal) -> Positive {
+    pub fn powd(&self, p0: Decimal) -> Positive {
         Positive(self.0.powd(p0))
     }
 
@@ -369,6 +383,22 @@ impl Positive {
     /// A new `Positive` value rounded to the nearest integer.
     pub fn round(&self) -> Positive {
         Positive(self.0.round())
+    }
+
+    pub fn round_to_nice_number(&self) -> Positive {
+        let magnitude = self.log10().floor();
+        let ten_pow = Positive::TEN.pow(magnitude);
+        let normalized = self / &ten_pow;
+        let nice_number = if normalized < dec!(1.5) {
+            Positive::ONE
+        } else if normalized < pos!(3.0) {
+            Positive::TWO
+        } else if normalized < pos!(7.0) {
+            pos!(5.0)
+        } else {
+            Positive::TEN
+        };
+        nice_number * pos!(10.0).powu(magnitude.to_u64())
     }
 
     /// Calculates the square root of the value.
@@ -488,6 +518,10 @@ impl Positive {
         let ceiling_value = value.ceil();
         // Convert back to Positive
         Positive::from(ceiling_value)
+    }
+
+    pub fn log10(&self) -> Positive {
+        Positive(self.0.log10())
     }
 }
 
@@ -875,6 +909,14 @@ impl Div for Positive {
     type Output = Positive;
 
     fn div(self, other: Positive) -> Self::Output {
+        Positive(self.0 / other.0)
+    }
+}
+
+impl Div for &Positive {
+    type Output = Positive;
+
+    fn div(self, other: &Positive) -> Self::Output {
         Positive(self.0 / other.0)
     }
 }

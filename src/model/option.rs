@@ -17,7 +17,9 @@ use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use tracing::{error, trace};
-use crate::visualization::{Graph, GraphData};
+use crate::curves::Curve;
+use crate::model::utils::calculate_optimal_price_range;
+use crate::visualization::{ColorScheme, Graph, GraphConfig, GraphData, LineStyle, MultiSeries2D, Series2D, TraceMode};
 
 /// Result type for binomial tree pricing models, containing:
 /// - The option price
@@ -636,6 +638,8 @@ impl Options {
             last_volatility: (high + low) / Positive::TWO,
         })
     }
+    
+    
 }
 
 impl Default for Options {
@@ -824,7 +828,65 @@ impl BasicAble for Options {
 
 impl Graph for Options {
     fn graph_data(&self) -> GraphData {
-        todo!()
+        let range = calculate_optimal_price_range(
+            self.underlying_price,
+            self.strike_price,
+            self.implied_volatility,
+            self.expiration_date,
+        ).expect("Failed to calculate optimal price range in graph_data");
+        
+        let mut positive_series = Series2D {
+            x: vec![],
+            y: vec![],
+            name: "Positive Payoff".to_string(),
+            mode: TraceMode::Lines,
+            line_color: Some("#2ca02c".to_string()),
+            line_width: Some(2.0),
+        };
+        let mut negative_series = Series2D {
+            x: vec![],
+            y: vec![],
+            name: "Negative Payoff".to_string(),
+            mode: TraceMode::Lines,
+            line_color: Some("#FF0000".to_string()),
+            line_width: Some(2.0),
+        };
+        
+        for i in range.0.to_u64()..range.1.to_u64() {
+            let profit = self.payoff_at_price(&Positive::new(i as f64).unwrap()).unwrap();
+            match profit {
+                p if p == Decimal::ZERO => {
+                    positive_series.x.push(Decimal::from_u64(i).unwrap());
+                    positive_series.y.push(profit);
+                    negative_series.x.push(Decimal::from_u64(i).unwrap());
+                    negative_series.y.push(profit);
+                }
+                p if p > Decimal::ZERO => {
+                    positive_series.x.push(Decimal::from_u64(i).unwrap());
+                    positive_series.y.push(profit);
+                }
+                _ => {
+                    negative_series.x.push(Decimal::from_u64(i).unwrap());
+                    negative_series.y.push(profit);
+                }
+            }
+        }
+        let multi_series_2d = vec![positive_series, negative_series];
+        GraphData::MultiSeries(multi_series_2d )
+    }
+
+    fn graph_config(&self) -> GraphConfig {
+        GraphConfig {
+            title: self.get_title(),
+            width: 1600,
+            height: 900,
+            x_label: Some("Underlying Price".to_string()),
+            y_label: Some("Profit/Loss".to_string()),
+            z_label: None,
+            line_style: LineStyle::Solid,
+            color_scheme: ColorScheme::Default,
+            show_legend: false,
+        }
     }
 }
 

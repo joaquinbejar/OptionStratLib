@@ -11,6 +11,7 @@ pub struct GraphConfig {
     pub z_label: Option<String>,
     pub line_style: LineStyle,
     pub color_scheme: ColorScheme,
+    pub show_legend: bool,
 }
 
 impl Default for GraphConfig {
@@ -24,6 +25,7 @@ impl Default for GraphConfig {
             z_label: None,
             line_style: LineStyle::Solid,
             color_scheme: ColorScheme::Default,
+            show_legend: true,
         }
     }
 }

@@ -44,6 +44,7 @@
 use crate::error::SurfaceError;
 use crate::geometrics::{PlotBuilder, PlotBuilderExt, PlotOptions, Plottable};
 use crate::surfaces::Surface;
+use crate::visualization::Graph;
 use std::path::Path;
 
 /// Plottable implementation for single Surface
@@ -144,7 +145,14 @@ impl Plottable for Vec<Surface> {
 /// Plotting implementation for single Surface
 impl PlotBuilderExt<Surface> for PlotBuilder<Surface> {
     fn save(self, path: impl AsRef<Path>) -> Result<(), SurfaceError> {
-        todo!()
+        {
+            let path = path.as_ref();
+            self.data
+                .write_png(path, self.options.width, self.options.height)
+                .map_err(|e| SurfaceError::StdError {
+                    reason: e.to_string(),
+                })
+        }
     }
 }
 

@@ -36,8 +36,20 @@ pub fn pick_color(cfg: &GraphConfig, idx: usize) -> Option<String> {
 }
 
 /// Creates a Surface from a Surface3D
-pub fn make_surface(surf: &Surface3D) -> Box<Surface<Decimal,Decimal,Decimal>> {
-    Surface::new(surf.z.clone())
+pub fn make_surface(surf: &Surface3D) -> Box<Surface<Decimal, Decimal, Decimal>> {
+    let n_x = surf.x.len();
+    let n_y = surf.y.len();
+    assert!(surf.z.len() >= n_x * n_y, "not enough z values");
+
+    let mut z_matrix = Vec::with_capacity(n_y);
+    for i in 0..n_y {
+        let start = i * n_x;
+        let end = start + n_x;
+        let row = surf.z[start..end].to_vec();
+        z_matrix.push(row);
+    }
+    
+    Surface::new(z_matrix)
         .x(surf.x.clone())
         .y(surf.y.clone())
         .name(&surf.name)

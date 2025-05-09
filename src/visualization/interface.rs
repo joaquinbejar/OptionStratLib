@@ -1,10 +1,13 @@
 use plotly::{common, Layout, Plot};
 use plotly::layout::Axis;
+use tracing::{debug, trace};
 use crate::error::GraphError;
 use crate::visualization::config::GraphConfig;
 use crate::visualization::model::{GraphData, OutputType};
 use crate::visualization::styles::PlotType;
 use crate::visualization::utils::{make_scatter, make_surface, pick_color};
+use plotly::ImageFormat;
+use crate::utils::file::prepare_file_path;
 
 pub trait Graph {
     /// Return the raw data ready for plotting.
@@ -41,7 +44,8 @@ pub trait Graph {
         let mut layout = Layout::new()
             .width(cfg.width as usize)
             .height(cfg.height as usize)
-            .title(common::Title::from(&cfg.title));
+            .title(common::Title::from(&cfg.title))
+            .show_legend(cfg.show_legend);
 
         if let Some(label) = cfg.x_label {
             layout = layout.x_axis(Axis::new().title(common::Title::from(&label)));
@@ -58,19 +62,22 @@ pub trait Graph {
     }
 
     /// Helper to write PNG file with error handling
+    /// #[cfg(feature = "kaleido")]
     fn write_png(
         &self,
         path: &std::path::Path,
         width: u32,
         height: u32,
     ) -> Result<(), GraphError> {
-        use plotly::ImageFormat;
+        prepare_file_path(path)?;
+        debug!("Writing PNG to: {}", path.display());
         self.to_plot().write_image(path, ImageFormat::PNG, width as usize, height as usize, 1.0);
         Ok(())
     }
 
     /// Helper to write HTML file with error handling
     fn write_html(&self, path: &std::path::Path) -> Result<(), GraphError> {
+        prepare_file_path(path)?;
         self.to_plot().write_html(path);
         Ok(())
     }
@@ -101,4 +108,9 @@ pub trait Graph {
 
 pub trait GraphType {
     fn plot_type() -> PlotType;
+}
+
+
+pub trait GraphDataType {
+    fn graph_data_type(&self) -> GraphData;
 }

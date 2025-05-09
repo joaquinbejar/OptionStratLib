@@ -39,6 +39,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let path: &std::path::Path = "Draws/Options/intrinsic_value_chart.png".as_ref();
     option.write_png(path, 1200, 800)?;
-
+    let path_html: &std::path::Path = "Draws/Options/intrinsic_value_chart.html".as_ref();
+    option.write_html(path_html)?;
     Ok(())
 }

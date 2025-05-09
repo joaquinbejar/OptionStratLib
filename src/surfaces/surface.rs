@@ -43,6 +43,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
 use std::ops::Index;
 use std::sync::Arc;
+use crate::visualization::{Graph, GraphData, Series2D, Surface3D, TraceMode};
 
 /// Represents a mathematical surface in 3D space.
 ///
@@ -296,6 +297,17 @@ impl Default for Surface {
             x_range: (Decimal::ZERO, Decimal::ZERO),
             y_range: (Decimal::ZERO, Decimal::ZERO),
         }
+    }
+}
+
+impl Graph for Surface {
+    fn graph_data(&self) -> GraphData {
+        GraphData::Surface(Surface3D {
+            x: self.points.iter().map(|p| p.x).collect(),
+            y: self.points.iter().map(|p| p.y).collect(),
+            z: self.points.iter().map(|p| p.z).collect(),
+            name: "Surface".to_string(),
+        })
     }
 }
 

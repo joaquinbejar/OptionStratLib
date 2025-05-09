@@ -49,6 +49,7 @@ use crate::curves::Curve;
 use crate::error::CurveError;
 use crate::geometrics::{PlotBuilder, PlotBuilderExt, PlotOptions, Plottable};
 use std::path::Path;
+use crate::visualization::Graph;
 
 /// Plottable implementation for single Curve
 impl Plottable for Curve {
@@ -148,7 +149,9 @@ impl Plottable for Vec<Curve> {
 /// Plotting implementation for single Curve
 impl PlotBuilderExt<Curve> for PlotBuilder<Curve> {
     fn save(self, path: impl AsRef<Path>) -> Result<(), CurveError> {
-        todo!()
+        let path = path.as_ref();
+        self.data.write_png(path, self.options.width, self.options.height)
+            .map_err(|e| CurveError::StdError { reason: e.to_string() })
     }
 }
 
@@ -226,7 +229,9 @@ impl PlotBuilderExt<Curve> for PlotBuilder<Curve> {
 ///   `Decimal` to `f64` when plotting.
 impl PlotBuilderExt<Vec<Curve>> for PlotBuilder<Vec<Curve>> {
     fn save(self, path: impl AsRef<Path>) -> Result<(), CurveError> {
-        todo!()
+        let path = path.as_ref();
+        self.data.write_png(path, self.options.width, self.options.height)
+            .map_err(|e| CurveError::StdError { reason: e.to_string() })
     }
 }
 
