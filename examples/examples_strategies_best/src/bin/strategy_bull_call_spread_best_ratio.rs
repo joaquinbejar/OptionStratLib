@@ -7,10 +7,11 @@ use optionstratlib::strategies::base::{Optimizable, Strategies};
 use optionstratlib::strategies::bull_call_spread::BullCallSpread;
 use optionstratlib::strategies::utils::FindOptimalSide;
 use optionstratlib::utils::setup_logger;
-use optionstratlib::visualization::utils::{Graph, GraphBackend};
+
 use rust_decimal::Decimal;
 use std::error::Error;
 use tracing::{debug, info};
+use optionstratlib::visualization::Graph;
 
 fn main() -> Result<(), Box<dyn Error>> {
     setup_logger();
@@ -64,13 +65,8 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     if strategy.get_profit_ratio()? > Positive::ZERO.into() {
         debug!("Strategy:  {:#?}", strategy);
-        strategy.graph(
-            GraphBackend::Bitmap {
-                file_path: "Draws/Strategy/bull_call_spread_profit_loss_chart_best_ratio.png",
-                size: (1400, 933),
-            },
-            20,
-        )?;
+        let path: &std::path::Path = "Draws/Strategy/bull_call_spread_profit_loss_chart_best_ratio.png".as_ref();
+        strategy.write_png(path, 1200, 800)?;
     }
 
     Ok(())

@@ -4,10 +4,10 @@ use optionstratlib::simulation::steps::{Step, Xstep, Ystep};
 use optionstratlib::simulation::{WalkParams, WalkType, WalkTypeAble};
 use optionstratlib::utils::setup_logger;
 use optionstratlib::utils::time::{TimeFrame, convert_time_frame};
-use optionstratlib::visualization::utils::{Graph, GraphBackend};
 use optionstratlib::{ExpirationDate, Positive, pos};
 use rust_decimal_macros::dec;
 use tracing::{debug, info};
+use optionstratlib::visualization::Graph;
 
 struct Walker {}
 
@@ -62,14 +62,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .map(|step| step.last().unwrap().get_value())
         .collect();
     info!("Last Values: {:?}", last_values);
-
-    simulator.graph(
-        GraphBackend::Bitmap {
-            file_path: "Draws/Simulation/simulator.png",
-            size: (1200, 800),
-        },
-        20,
-    )?;
-
+    let path: &std::path::Path = "Draws/Simulation/simulator.png".as_ref();
+    simulator.write_png(path, 1200, 800)?;
     Ok(())
 }

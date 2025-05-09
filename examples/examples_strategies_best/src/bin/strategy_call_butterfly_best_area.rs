@@ -12,10 +12,11 @@ use optionstratlib::strategies::base::{Optimizable, Strategies};
 use optionstratlib::strategies::call_butterfly::CallButterfly;
 use optionstratlib::strategies::utils::FindOptimalSide;
 use optionstratlib::utils::setup_logger;
-use optionstratlib::visualization::utils::{Graph, GraphBackend};
+
 use rust_decimal_macros::dec;
 use std::error::Error;
 use tracing::{debug, info};
+use optionstratlib::visualization::Graph;
 
 fn main() -> Result<(), Box<dyn Error>> {
     setup_logger();
@@ -68,14 +69,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     );
     info!("Profit Area: {:.2}%", strategy.get_profit_area()?);
     debug!("Strategy:  {:#?}", strategy);
+    let path: &std::path::Path = "Draws/Strategy/call_butterfly_profit_loss_chart_best_area.png".as_ref();
+    strategy.write_png(path, 1200, 800)?;
 
-    strategy.graph(
-        GraphBackend::Bitmap {
-            file_path: "Draws/Strategy/call_butterfly_profit_loss_chart_best_area.png",
-            size: (1400, 933),
-        },
-        20,
-    )?;
 
     Ok(())
 }

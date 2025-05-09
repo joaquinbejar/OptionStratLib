@@ -1,11 +1,18 @@
-use crate::error::PositionError;
-use crate::error::position::PositionValidationErrorKind;
-use crate::model::Position;
-use crate::strategies::base::{Positionable, StrategyType};
-use crate::{ExpirationDate, OptionStyle, OptionType, Options, Positive, Side};
+use super::base::{
+    Positionable, Strategable, StrategyType, Validable,
+};
+use crate::{
+    ExpirationDate, Options, Positive,
+    error::position::{PositionError, PositionValidationErrorKind},
+    model::{
+        position::Position,
+        types::{OptionStyle, OptionType, Side},
+    },
+};
 use chrono::Utc;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
+use std::error::Error;
 
 pub(super) const LONG_CALL_DESCRIPTION: &str = "A Long Call is an options strategy where the trader buys a call option, acquiring the right (but not the obligation) to purchase the underlying asset at the strike price until expiration. \
     This strategy involves an upfront cost (the premium paid) and offers unlimited profit potential if the underlying asset's price increases significantly. \

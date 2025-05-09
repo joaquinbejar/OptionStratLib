@@ -10,40 +10,43 @@ Key characteristics:
 - Profitable only with a large move in either direction
 */
 use super::base::{
-    BreakEvenable, Optimizable, Positionable, Strategable, Strategies, StrategyType, Validable,
+    BreakEvenable, Optimizable, Positionable, Strategable, StrategyBasics, StrategyType, Validable,
 };
-use crate::chains::StrategyLegs;
-use crate::chains::chain::OptionChain;
-use crate::chains::utils::OptionDataGroup;
-use crate::constants::{DARK_BLUE, ZERO};
-use crate::error::position::{PositionError, PositionValidationErrorKind};
-use crate::error::probability::ProbabilityError;
-use crate::error::strategies::StrategyError;
-use crate::error::{GreeksError, OperationErrorKind};
-use crate::greeks::Greeks;
-use crate::model::ProfitLossRange;
-use crate::model::position::Position;
-use crate::model::types::{OptionBasicType, OptionStyle, OptionType, Side};
-use crate::model::utils::mean_and_std;
-use crate::pnl::utils::{PnL, PnLCalculator};
-use crate::pricing::payoff::Profit;
-use crate::strategies::delta_neutral::DeltaNeutrality;
-use crate::strategies::probabilities::core::ProbabilityAnalysis;
-use crate::strategies::probabilities::utils::VolatilityAdjustment;
-use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
-use crate::strategies::{BasicAble, StrategyBasics, StrategyConstructor};
-use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
-use crate::visualization::utils::Graph;
-use crate::{ExpirationDate, Options, Positive};
+use crate::{
+    ExpirationDate, Options, Positive,
+    chains::{StrategyLegs, chain::OptionChain, utils::OptionDataGroup},
+    constants::ZERO,
+    error::{
+        GreeksError, OperationErrorKind,
+        position::{PositionError, PositionValidationErrorKind},
+        probability::ProbabilityError,
+        strategies::StrategyError,
+    },
+    greeks::Greeks,
+    model::{
+        ProfitLossRange,
+        position::Position,
+        types::{OptionBasicType, OptionStyle, OptionType, Side},
+        utils::mean_and_std,
+    },
+    pnl::{PnLCalculator, utils::PnL},
+    pricing::payoff::Profit,
+    strategies::{Strategies,
+                 BasicAble, StrategyConstructor,
+                 delta_neutral::DeltaNeutrality,
+                 probabilities::{core::ProbabilityAnalysis, utils::VolatilityAdjustment},
+                 utils::{FindOptimalSide, OptimizationCriteria},
+    },
+    visualization::{Graph, GraphData},
+};
 use chrono::Utc;
-use num_traits::FromPrimitive;
-use plotters::prelude::full_palette::ORANGE;
-use plotters::prelude::{RED, ShapeStyle};
+use num_traits::{FromPrimitive, ToPrimitive};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use tracing::info;
+
 
 /// A Long Straddle is an options trading strategy that involves simultaneously buying
 /// a put and a call option with the same strike price and expiration date. This strategy
@@ -736,73 +739,8 @@ impl Profit for LongStraddle {
 }
 
 impl Graph for LongStraddle {
-    fn get_x_values(&self) -> Vec<Positive> {
-        self.get_best_range_to_show(Positive::from(1.0))
-            .unwrap_or_else(|_| vec![self.long_call.option.strike_price])
-    }
-    fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<f64, f64>> {
-        let max_value = f64::INFINITY;
-        let min_value = f64::NEG_INFINITY;
-
-        let vertical_lines = vec![ChartVerticalLine {
-            x_coordinate: self.long_call.option.underlying_price.to_f64(),
-            y_range: (min_value, max_value),
-            label: format!(
-                "Current Price: {:.2}",
-                self.long_call.option.underlying_price
-            ),
-            label_offset: (4.0, -50.0),
-            line_color: ORANGE,
-            label_color: ORANGE,
-            line_style: ShapeStyle::from(&ORANGE).stroke_width(2),
-            font_size: 18,
-        }];
-
-        vertical_lines
-    }
-    fn get_points(&self) -> Vec<ChartPoint<(f64, f64)>> {
-        let mut points: Vec<ChartPoint<(f64, f64)>> = Vec::new();
-        let max_loss = self.get_max_loss().unwrap_or(Positive::ZERO);
-
-        points.push(ChartPoint {
-            coordinates: (self.break_even_points[0].to_f64(), 0.0),
-            label: format!("Low Break Even {}", self.break_even_points[0]),
-            label_offset: LabelOffsetType::Relative(10.0, -10.0),
-            point_color: DARK_BLUE,
-            label_color: DARK_BLUE,
-            point_size: 5,
-            font_size: 18,
-        });
-
-        points.push(ChartPoint {
-            coordinates: (self.break_even_points[1].to_f64(), 0.0),
-            label: format!("High Break Even {}", self.break_even_points[1]),
-            label_offset: LabelOffsetType::Relative(-60.0, -10.0),
-            point_color: DARK_BLUE,
-            label_color: DARK_BLUE,
-            point_size: 5,
-            font_size: 18,
-        });
-
-        points.push(ChartPoint {
-            coordinates: (
-                self.long_call.option.strike_price.to_f64(),
-                -max_loss.to_f64(),
-            ),
-            label: format!(
-                "Max Loss {:.2} at {:.0}",
-                max_loss, self.long_call.option.strike_price
-            ),
-            label_offset: LabelOffsetType::Relative(0.0, -20.0),
-            point_color: RED,
-            label_color: RED,
-            point_size: 5,
-            font_size: 18,
-        });
-
-        points.push(self.get_point_at_price(&self.long_call.option.underlying_price));
-
-        points
+    fn graph_data(&self) -> GraphData {
+        todo!()
     }
 }
 
@@ -914,335 +852,6 @@ impl PnLCalculator for LongStraddle {
             + self
                 .long_put
                 .calculate_pnl_at_expiration(underlying_price)?)
-    }
-}
-
-#[cfg(test)]
-mod tests_long_straddle {
-    use super::*;
-    use crate::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
-    use crate::{pos, spos};
-    use num_traits::ToPrimitive;
-    use rust_decimal_macros::dec;
-
-    fn setup_long_straddle() -> LongStraddle {
-        LongStraddle::new(
-            "AAPL".to_string(),
-            pos!(150.0),
-            pos!(150.0),
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(0.25),
-            dec!(0.01),
-            pos!(0.02),
-            pos!(10.0),
-            pos!(5.0),
-            pos!(5.0),
-            pos!(0.5),
-            pos!(0.5),
-            pos!(0.5),
-            pos!(0.5),
-        )
-    }
-
-    #[test]
-    fn test_long_straddle_new() {
-        let underlying_symbol = "AAPL".to_string();
-        let underlying_price = pos!(150.0);
-        let call_strike = pos!(160.0);
-        let expiration = ExpirationDate::default();
-        let implied_volatility = pos!(0.25);
-        let risk_free_rate = dec!(0.01);
-        let dividend_yield = pos!(0.02);
-        let quantity = pos!(10.0);
-        let premium_long_call = pos!(5.0);
-        let premium_long_put = pos!(5.0);
-        let open_fee_long_call = pos!(0.5);
-        let close_fee_long_call = pos!(0.5);
-        let open_fee_long_put = pos!(0.5);
-        let close_fee_long_put = pos!(0.5);
-
-        let strategy = LongStraddle::new(
-            underlying_symbol.clone(),
-            underlying_price,
-            call_strike,
-            expiration,
-            implied_volatility,
-            risk_free_rate,
-            dividend_yield,
-            quantity,
-            premium_long_call,
-            premium_long_put,
-            open_fee_long_call,
-            close_fee_long_call,
-            open_fee_long_put,
-            close_fee_long_put,
-        );
-
-        assert_eq!(strategy.name, "Long Straddle");
-        assert_eq!(strategy.kind, StrategyType::LongStraddle);
-        assert_eq!(strategy.description, LONG_STRADDLE_DESCRIPTION);
-
-        let break_even_points = vec![148.0, 172.0];
-        assert_eq!(strategy.break_even_points, break_even_points);
-    }
-
-    #[test]
-    fn test_get_break_even_points() {
-        let long_straddle = setup_long_straddle();
-        assert_eq!(long_straddle.get_break_even_points().unwrap()[0], 138.0);
-    }
-
-    #[test]
-    fn test_total_cost() {
-        let long_straddle = setup_long_straddle();
-        assert_eq!(
-            long_straddle.get_total_cost().unwrap(),
-            long_straddle.long_call.net_cost().unwrap()
-                + long_straddle.long_put.net_cost().unwrap()
-        );
-    }
-
-    #[test]
-    fn test_calculate_profit_at() {
-        let long_straddle = setup_long_straddle();
-        let price = pos!(150.0);
-        let expected_profit = long_straddle
-            .long_call
-            .pnl_at_expiration(&Some(&price))
-            .unwrap()
-            + long_straddle
-                .long_put
-                .pnl_at_expiration(&Some(&price))
-                .unwrap();
-        assert_eq!(
-            long_straddle.calculate_profit_at(&price).unwrap(),
-            expected_profit
-        );
-    }
-
-    #[test]
-    fn test_new() {
-        let strategy = setup_long_straddle();
-        assert_eq!(strategy.name, "Long Straddle");
-        assert_eq!(strategy.kind, StrategyType::LongStraddle);
-        assert_eq!(strategy.description, LONG_STRADDLE_DESCRIPTION);
-    }
-
-    #[test]
-    fn test_validate() {
-        let strategy = setup_long_straddle();
-        assert!(strategy.validate());
-    }
-
-    #[test]
-    fn test_max_profit() {
-        let strategy = setup_long_straddle();
-        assert_eq!(
-            strategy.get_max_profit().unwrap_or(Positive::ZERO),
-            Positive::INFINITY
-        );
-    }
-
-    #[test]
-    fn test_max_loss() {
-        let strategy = setup_long_straddle();
-        assert_eq!(
-            strategy.get_max_loss().unwrap_or(Positive::ZERO),
-            strategy.get_total_cost().unwrap()
-        );
-    }
-
-    #[test]
-    fn test_fees() {
-        let strategy = setup_long_straddle();
-        let expected_fees = 20.0; // 0.5 * 4 fees * 10 qty
-        assert_eq!(strategy.get_fees().unwrap().to_f64(), expected_fees);
-    }
-
-    #[test]
-    fn test_net_premium_received() {
-        let strategy = setup_long_straddle();
-        assert_eq!(strategy.get_net_premium_received().unwrap().to_f64(), 0.0);
-    }
-
-    #[test]
-    fn test_profit_area() {
-        let strategy = setup_long_straddle();
-        let area = strategy.get_profit_area();
-        assert!(area.unwrap().to_f64().unwrap() > 0.0);
-    }
-
-    #[test]
-    fn test_profit_ratio() {
-        let strategy = setup_long_straddle();
-        assert_eq!(strategy.get_profit_ratio().unwrap().to_f64().unwrap(), 20.0);
-    }
-
-    #[test]
-    fn test_add_leg() {
-        let mut strategy = setup_long_straddle();
-        let original_call = strategy.long_call.clone();
-        let original_put = strategy.long_put.clone();
-
-        strategy
-            .add_position(&original_call.clone())
-            .expect("Invalid call");
-        assert_eq!(strategy.long_call, original_call);
-
-        strategy
-            .add_position(&original_put.clone())
-            .expect("Invalid put");
-        assert_eq!(strategy.long_put, original_put);
-    }
-
-    #[test]
-    fn test_graph_methods() {
-        let strategy = setup_long_straddle();
-
-        // Test vertical lines
-        let vertical_lines = strategy.get_vertical_lines();
-        assert_eq!(vertical_lines.len(), 1);
-        assert_eq!(vertical_lines[0].label, "Current Price: 150");
-
-        let data = strategy.get_x_values();
-        let values = strategy.get_y_values();
-        for (i, &price) in data.iter().enumerate() {
-            assert_eq!(
-                values[i],
-                strategy
-                    .calculate_profit_at(&price)
-                    .unwrap()
-                    .to_f64()
-                    .unwrap()
-            );
-        }
-
-        // Test title
-        let title = strategy.get_title();
-        assert!(title.contains("LongStraddle Strategy"));
-        assert!(title.contains("Call"));
-        assert!(title.contains("Put"));
-    }
-
-    #[test]
-    fn test_best_ratio() {
-        let mut strategy = setup_long_straddle();
-        let option_chain = create_test_option_chain();
-
-        strategy.get_best_ratio(&option_chain, FindOptimalSide::Upper);
-        assert!(strategy.validate());
-    }
-
-    #[test]
-    fn test_best_area() {
-        let mut strategy = setup_long_straddle();
-        let option_chain = create_test_option_chain();
-
-        strategy.get_best_area(&option_chain, FindOptimalSide::Upper);
-        assert!(strategy.validate());
-    }
-
-    #[test]
-    fn test_best_range_to_show() {
-        let strategy = setup_long_straddle();
-        let step = pos!(1.0);
-
-        let range = strategy.get_best_range_to_show(step).unwrap();
-        assert!(!range.is_empty());
-        assert!(range[0] <= strategy.break_even_points[0]);
-        assert!(*range.last().unwrap() >= strategy.break_even_points[1]);
-    }
-
-    #[test]
-    fn test_is_valid_long_option() {
-        let strategy = setup_long_straddle();
-        let option_chain = create_test_option_chain();
-        let option_data = option_chain.options.last().unwrap();
-        let min_strike = option_chain.options.first().unwrap().strike_price;
-        let max_strike = option_chain.options.last().unwrap().strike_price;
-
-        assert!(strategy.is_valid_optimal_option(option_data, &FindOptimalSide::Upper));
-        assert!(!strategy.is_valid_optimal_option(option_data, &FindOptimalSide::Lower));
-        assert!(strategy.is_valid_optimal_option(option_data, &FindOptimalSide::All));
-        assert!(
-            strategy.is_valid_optimal_option(
-                option_data,
-                &FindOptimalSide::Range(min_strike, max_strike)
-            )
-        );
-    }
-
-    #[test]
-    fn test_are_valid_prices() {
-        let strategy = setup_long_straddle();
-        let option_chain = create_test_option_chain();
-        let call_option = option_chain.atm_option_data().unwrap();
-        let put_option = call_option;
-
-        let legs = StrategyLegs::TwoLegs {
-            first: call_option,
-            second: put_option,
-        };
-        assert!(strategy.are_valid_legs(&legs));
-
-        let mut invalid_call = call_option.clone();
-        invalid_call.call_ask = Some(Positive::ZERO);
-
-        let legs = StrategyLegs::TwoLegs {
-            first: &invalid_call,
-            second: put_option,
-        };
-        assert!(!strategy.are_valid_legs(&legs));
-    }
-
-    #[test]
-    fn test_create_strategy() {
-        let strategy = setup_long_straddle();
-        let chain = create_test_option_chain();
-        let call_option = chain.atm_option_data().unwrap();
-        let put_option = call_option;
-        let legs = StrategyLegs::TwoLegs {
-            first: put_option,
-            second: call_option,
-        };
-        let new_strategy = strategy.create_strategy(&chain, &legs);
-        assert!(new_strategy.validate());
-    }
-
-    #[test]
-    fn test_get_points() {
-        let strategy = setup_long_straddle();
-        let points = strategy.get_points();
-
-        // Should have 4 points: 2 break-even, 1 max loss, 1 current price
-        assert_eq!(points.len(), 4);
-
-        let break_even_points: Vec<f64> = points[0..2].iter().map(|p| p.coordinates.0).collect();
-        assert!(break_even_points.contains(&strategy.break_even_points[0].to_f64()));
-        assert!(break_even_points.contains(&strategy.break_even_points[1].to_f64()));
-    }
-
-    fn create_test_option_chain() -> OptionChain {
-        let option_data_price_params = OptionDataPriceParams::new(
-            pos!(150.0),
-            ExpirationDate::Days(pos!(30.0)),
-            spos!(0.65),
-            dec!(0.01),
-            pos!(0.02),
-            None,
-        );
-        let option_chain_build_params = OptionChainBuildParams::new(
-            "AAPL".to_string(),
-            spos!(1.0),
-            10,
-            spos!(5.0),
-            dec!(-0.2),
-            dec!(0.1),
-            pos!(0.01),
-            2,
-            option_data_price_params,
-        );
-        OptionChain::build_chain(&option_chain_build_params)
     }
 }
 

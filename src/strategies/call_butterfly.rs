@@ -1,36 +1,29 @@
 use super::base::{
-    BreakEvenable, Optimizable, Positionable, Strategable, Strategies, StrategyType, Validable,
+    BreakEvenable, Optimizable, Positionable, Strategable, StrategyBasics, StrategyType, Validable,
 };
-use crate::chains::StrategyLegs;
-use crate::chains::chain::OptionChain;
-use crate::chains::utils::OptionDataGroup;
-use crate::constants::{DARK_BLUE, DARK_GREEN};
-use crate::error::position::{PositionError, PositionValidationErrorKind};
-use crate::error::strategies::{BreakEvenErrorKind, ProfitLossErrorKind, StrategyError};
-use crate::error::{GreeksError, OperationErrorKind, ProbabilityError};
-use crate::greeks::Greeks;
-use crate::model::types::{OptionBasicType, OptionStyle, OptionType, Side};
-use crate::model::utils::mean_and_std;
-use crate::model::{Position, ProfitLossRange};
-use crate::pnl::utils::{PnL, PnLCalculator};
-use crate::pricing::payoff::Profit;
-use crate::strategies::delta_neutral::DeltaNeutrality;
-use crate::strategies::probabilities::{ProbabilityAnalysis, VolatilityAdjustment};
-use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
-use crate::strategies::{BasicAble, StrategyBasics, StrategyConstructor};
-use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
-use crate::visualization::utils::Graph;
-use crate::{ExpirationDate, Options};
-use crate::{Positive, spos};
+use crate::{ExpirationDate, Options, Positive, chains::{StrategyLegs, chain::OptionChain, utils::OptionDataGroup}, error::{
+    GreeksError, OperationErrorKind,
+    position::{PositionError, PositionValidationErrorKind},
+    probability::ProbabilityError,
+    strategies::{ProfitLossErrorKind, StrategyError},
+}, greeks::Greeks, model::{
+    ProfitLossRange,
+    position::Position,
+    types::{OptionBasicType, OptionStyle, OptionType, Side},
+    utils::mean_and_std,
+}, pnl::{PnLCalculator, utils::PnL}, pricing::payoff::Profit, strategies::{Strategies,
+                                                                           BasicAble, StrategyConstructor,
+                                                                           delta_neutral::DeltaNeutrality,
+                                                                           probabilities::{core::ProbabilityAnalysis, utils::VolatilityAdjustment},
+                                                                           utils::{FindOptimalSide, OptimizationCriteria},
+}, visualization::{Graph, GraphData}, spos};
 use chrono::Utc;
-use num_traits::ToPrimitive;
-use plotters::prelude::{RED, ShapeStyle};
-use plotters::style::full_palette::ORANGE;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use tracing::{error, info};
+use crate::error::strategies::BreakEvenErrorKind;
 
 const CALL_BUTTERFLY_DESCRIPTION: &str = "A Ratio Call Spread involves buying one call option and selling multiple call options \
     at a higher strike price. This strategy is used when a moderate rise in the underlying \
@@ -872,110 +865,8 @@ impl Profit for CallButterfly {
 }
 
 impl Graph for CallButterfly {
-    fn get_x_values(&self) -> Vec<Positive> {
-        self.get_best_range_to_show(Positive::from(1.0))
-            .unwrap_or_else(|_| vec![self.long_call.option.strike_price])
-    }
-
-    fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<f64, f64>> {
-        let vertical_lines = vec![ChartVerticalLine {
-            x_coordinate: self.long_call.option.underlying_price.to_f64(),
-            y_range: (f64::NEG_INFINITY, f64::INFINITY),
-            label: format!(
-                "Current Price: {:.2}",
-                self.long_call.option.underlying_price
-            ),
-            label_offset: (-24.0, -1.0),
-            line_color: ORANGE,
-            label_color: ORANGE,
-            line_style: ShapeStyle::from(&ORANGE).stroke_width(2),
-            font_size: 18,
-        }];
-
-        vertical_lines
-    }
-
-    fn get_points(&self) -> Vec<ChartPoint<(f64, f64)>> {
-        let mut points: Vec<ChartPoint<(f64, f64)>> = Vec::new();
-
-        points.push(ChartPoint {
-            coordinates: (self.break_even_points[0].to_f64(), 0.0),
-            label: format!("Low Break Even\n\n{}", self.break_even_points[0]),
-            label_offset: LabelOffsetType::Relative(-55.0, 5.0),
-            point_color: DARK_BLUE,
-            label_color: DARK_BLUE,
-            point_size: 5,
-            font_size: 18,
-        });
-
-        points.push(ChartPoint {
-            coordinates: (self.break_even_points[1].to_f64(), 0.0),
-            label: format!("High Break Even\n\n{}", self.break_even_points[0]),
-            label_offset: LabelOffsetType::Relative(3.0, 5.0),
-            point_color: DARK_BLUE,
-            label_color: DARK_BLUE,
-            point_size: 5,
-            font_size: 18,
-        });
-
-        points.push(ChartPoint {
-            coordinates: (
-                self.long_call.option.strike_price.to_f64(),
-                self.calculate_profit_at(&self.long_call.option.strike_price)
-                    .unwrap()
-                    .to_f64()
-                    .unwrap(),
-            ),
-            label: format!(
-                "Left Loss\n\n{:.2}",
-                self.calculate_profit_at(&self.long_call.option.strike_price)
-                    .unwrap()
-            ),
-            label_offset: LabelOffsetType::Relative(3.0, 3.0),
-            point_color: RED,
-            label_color: RED,
-            point_size: 5,
-            font_size: 18,
-        });
-
-        let lower_loss = self
-            .calculate_profit_at(&self.short_call_low.option.strike_price)
-            .unwrap()
-            .to_f64()
-            .unwrap();
-        let upper_loss = self
-            .calculate_profit_at(&self.short_call_high.option.strike_price)
-            .unwrap()
-            .to_f64()
-            .unwrap();
-
-        points.push(ChartPoint {
-            coordinates: (self.short_call_low.option.strike_price.to_f64(), lower_loss),
-            label: format!("Left High {:.2}", lower_loss),
-            label_offset: LabelOffsetType::Relative(3.0, -3.0),
-            point_color: DARK_GREEN,
-            label_color: DARK_GREEN,
-            point_size: 5,
-            font_size: 18,
-        });
-
-        points.push(ChartPoint {
-            coordinates: (
-                self.short_call_high.option.strike_price.to_f64(),
-                upper_loss,
-            ),
-            label: format!("Right High {:.2}", upper_loss),
-            label_offset: LabelOffsetType::Relative(3.0, 3.0),
-            point_color: DARK_GREEN,
-            label_color: DARK_GREEN,
-            point_size: 5,
-            font_size: 18,
-        });
-
-        let underlying_price = self.get_underlying_price();
-        points.push(self.get_point_at_price(underlying_price));
-
-        points
+    fn graph_data(&self) -> GraphData {
+        todo!()
     }
 }
 
@@ -1188,33 +1079,7 @@ mod tests_call_butterfly {
         );
     }
 
-    #[test]
-    fn test_graph_methods() {
-        let strategy = setup();
 
-        let vertical_lines = strategy.get_vertical_lines();
-        assert_eq!(vertical_lines.len(), 1);
-        assert_eq!(vertical_lines[0].label, "Current Price: 150");
-
-        let data = strategy.get_x_values();
-        let values = strategy.get_y_values();
-        for (i, &price) in data.iter().enumerate() {
-            assert_eq!(
-                values[i],
-                strategy
-                    .calculate_profit_at(&price)
-                    .unwrap()
-                    .to_f64()
-                    .unwrap()
-            );
-        }
-
-        let title = strategy.get_title();
-        assert!(title.contains("CallButterfly Strategy"));
-        assert!(title.contains("AAPL @ $160 Short Call European Option"));
-        assert!(title.contains("AAPL @ $155 Long Call European Option"));
-        assert!(title.contains("AAPL @ $157 Short Call European Option"));
-    }
 }
 
 #[cfg(test)]
@@ -1261,141 +1126,6 @@ mod tests_call_butterfly_validation {
     }
 }
 
-#[cfg(test)]
-mod tests_call_butterfly_graph {
-    use super::*;
-    use crate::model::ExpirationDate;
-    use crate::pos;
-    use approx::assert_relative_eq;
-    use rust_decimal_macros::dec;
-
-    fn setup_test_strategy() -> CallButterfly {
-        CallButterfly::new(
-            "AAPL".to_string(),
-            pos!(150.0),
-            pos!(145.0),
-            pos!(155.0),
-            pos!(150.0),
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(0.2),
-            dec!(0.01),
-            pos!(0.02),
-            pos!(1.0),
-            pos!(7.0),
-            pos!(5.0),
-            pos!(3.0),
-            pos!(4.0),
-            pos!(0.1),
-            pos!(0.1),
-            pos!(0.1),
-            pos!(0.1),
-            pos!(0.1),
-        )
-    }
-
-    #[test]
-    fn test_vertical_lines() {
-        let butterfly = setup_test_strategy();
-        let lines = butterfly.get_vertical_lines();
-
-        assert_eq!(lines.len(), 1, "Should have exactly one vertical line");
-
-        let line = &lines[0];
-        assert_relative_eq!(line.x_coordinate, 150.0, epsilon = 0.001);
-        assert_eq!(line.y_range, (f64::NEG_INFINITY, f64::INFINITY));
-        assert!(line.label.contains("Current Price: 150"));
-        assert_eq!(line.font_size, 18);
-    }
-
-    #[test]
-    fn test_points_count_and_labels() {
-        let butterfly = setup_test_strategy();
-        let points = butterfly.get_points();
-
-        // Should have 6 points: 2 break-even, 1 left loss, 2 max profit points, and current price
-        assert_eq!(points.len(), 6, "Should have exactly 6 points");
-
-        let labels: Vec<&str> = points.iter().map(|p| p.label.as_str()).collect();
-
-        // Verify all required labels are present
-        assert!(labels.iter().any(|&l| l.contains("Low Break Even")));
-        assert!(labels.iter().any(|&l| l.contains("High Break Even")));
-        assert!(labels.iter().any(|&l| l.contains("Left Loss")));
-        assert!(labels.iter().any(|&l| l.contains("Left High")));
-        assert!(labels.iter().any(|&l| l.contains("Right High")));
-    }
-
-    #[test]
-    fn test_points_coordinates() {
-        let butterfly = setup_test_strategy();
-        let points = butterfly.get_points();
-
-        // Check for points at strike prices
-        let strike_coordinates: Vec<f64> = points.iter().map(|p| p.coordinates.0).collect();
-
-        assert!(
-            strike_coordinates
-                .iter()
-                .any(|&x| (x - 145.0).abs() < 0.001),
-            "Missing point near 145.0 strike"
-        );
-        assert!(
-            strike_coordinates
-                .iter()
-                .any(|&x| (x - 150.0).abs() < 0.001),
-            "Missing point near 150.0 strike"
-        );
-        assert!(
-            strike_coordinates
-                .iter()
-                .any(|&x| (x - 155.0).abs() < 0.001),
-            "Missing point near 155.0 strike"
-        );
-    }
-
-    #[test]
-    fn test_point_styling() {
-        let butterfly = setup_test_strategy();
-        let points = butterfly.get_points();
-
-        for point in points {
-            assert_eq!(point.point_size, 5, "Point size should be 5");
-            assert_eq!(point.font_size, 18, "Font size should be 18");
-
-            // Verify label offset is set
-            match point.label_offset {
-                LabelOffsetType::Relative(x, y) => {
-                    assert!(x != 0.0, "X offset should not be 0");
-                    assert!(y != 0.0, "Y offset should not be 0");
-                }
-                _ => panic!("Expected Relative label offset"),
-            }
-        }
-    }
-
-    #[test]
-    fn test_break_even_points() {
-        let butterfly = setup_test_strategy();
-        let points = butterfly.get_points();
-
-        // Find break-even points
-        let break_even_points: Vec<&ChartPoint<(f64, f64)>> = points
-            .iter()
-            .filter(|p| p.label.contains("Break Even"))
-            .collect();
-
-        assert_eq!(
-            break_even_points.len(),
-            2,
-            "Should have exactly 2 break-even points"
-        );
-
-        // Verify break-even points have y-coordinate = 0
-        for point in break_even_points {
-            assert_relative_eq!(point.coordinates.1, 0.0, epsilon = 0.001);
-        }
-    }
-}
 
 #[cfg(test)]
 mod tests_call_butterfly_delta {

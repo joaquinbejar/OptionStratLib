@@ -41,14 +41,9 @@
 //!  fs::remove_file("surface_plot.png").unwrap_or_else(|_| panic!("Failed to remove surface_plot.png"));
 //! ```
 //!
-
 use crate::error::SurfaceError;
 use crate::geometrics::{PlotBuilder, PlotBuilderExt, PlotOptions, Plottable};
 use crate::surfaces::Surface;
-
-use crate::visualization::utils::apply_shade;
-
-use plotters::prelude::*;
 use std::path::Path;
 
 /// Plottable implementation for single Surface
@@ -149,128 +144,7 @@ impl Plottable for Vec<Surface> {
 /// Plotting implementation for single Surface
 impl PlotBuilderExt<Surface> for PlotBuilder<Surface> {
     fn save(self, path: impl AsRef<Path>) -> Result<(), SurfaceError> {
-        // Convert points to f64
-        let points: Vec<(f64, f64, f64)> = self.data.get_f64_points();
-        if points.is_empty() {
-            return Err(SurfaceError::ConstructionError(
-                "No points to plot".to_string(),
-            ));
-        }
-
-        let label30: u32 = (self.options.labels_size.unwrap_or(1.0) * 30.0) as u32;
-        let label20: u32 = (self.options.labels_size.unwrap_or(1.0) * 20.0) as u32;
-        let label10: u32 = (self.options.labels_size.unwrap_or(1.0) * 10.0) as u32;
-
-        // Determine plot range
-        let x_min = points.iter().map(|p| p.0).fold(f64::INFINITY, f64::min);
-        let x_max = points.iter().map(|p| p.0).fold(f64::NEG_INFINITY, f64::max);
-        let y_min = points.iter().map(|p| p.1).fold(f64::INFINITY, f64::min);
-        let y_max = points.iter().map(|p| p.1).fold(f64::NEG_INFINITY, f64::max);
-        let z_min = points.iter().map(|p| p.2).fold(f64::INFINITY, f64::min);
-        let z_max = points.iter().map(|p| p.2).fold(f64::NEG_INFINITY, f64::max);
-
-        // Create drawing area
-        let root = BitMapBackend::new(path.as_ref(), (self.options.width, self.options.height))
-            .into_drawing_area();
-
-        root.fill(&self.options.background_color)
-            .map_err(|e| SurfaceError::StdError {
-                reason: e.to_string(),
-            })?;
-
-        let mut chart = ChartBuilder::on(&root)
-            .caption(
-                self.options.title.unwrap_or_default(),
-                ("Arial", label30).into_font(),
-            )
-            .margin(5)
-            .x_label_area_size(label30)
-            .y_label_area_size(label30)
-            .build_cartesian_3d(x_min..x_max, y_min..y_max, z_min..z_max)
-            .map_err(|e| SurfaceError::StdError {
-                reason: e.to_string(),
-            })?;
-
-        chart.with_projection(|mut pb| {
-            pb.pitch = 0.3;
-            pb.yaw = 0.5;
-            pb.scale = 0.8;
-            pb.into_matrix()
-        });
-
-        // Configure axes
-        chart
-            .configure_axes()
-            .label_style(("Arial", label10))
-            .draw()
-            .map_err(|e| SurfaceError::StdError {
-                reason: e.to_string(),
-            })?;
-
-        let point_size = self.options.point_size.unwrap_or(1);
-
-        chart
-            .draw_series(points.iter().map(|(x, y, z)| {
-                // Clonar self.options.line_colors para evitar moverlo
-                let line_colors = self.options.line_colors.clone();
-
-                // Draw the surface as points with shading
-                let base_color = apply_shade(
-                    line_colors
-                        .unwrap_or_else(|| vec![PlotOptions::default_colors()[0]])
-                        .first()
-                        .cloned()
-                        .unwrap_or(RGBColor(0, 0, 255)),
-                    *z / z_max,
-                );
-
-                Circle::new((*x, *y, *z), point_size, base_color.filled())
-            }))
-            .map_err(|e| SurfaceError::StdError {
-                reason: e.to_string(),
-            })?;
-
-        root.draw(&Text::new(
-            self.options.x_label.as_deref().unwrap_or("X"),
-            (
-                self.options.width as i32 / 4,
-                self.options.height as i32 * 15 / 16,
-            ),
-            ("Arial", label20).into_font(),
-        ))
-        .map_err(|e| SurfaceError::StdError {
-            reason: e.to_string(),
-        })?;
-
-        root.draw(&Text::new(
-            self.options.z_label.as_deref().unwrap_or("Z"),
-            (
-                self.options.width as i32 / 10,
-                self.options.height as i32 / 2,
-            ),
-            ("Arial", label20).into_font(),
-        ))
-        .map_err(|e| SurfaceError::StdError {
-            reason: e.to_string(),
-        })?;
-
-        root.draw(&Text::new(
-            self.options.y_label.as_deref().unwrap_or("Y"),
-            (
-                self.options.width as i32 * 3 / 4,
-                self.options.height as i32 * 14 / 16,
-            ),
-            ("Arial", label20).into_font().color(&BLACK),
-        ))
-        .map_err(|e| SurfaceError::StdError {
-            reason: e.to_string(),
-        })?;
-
-        root.present().map_err(|e| SurfaceError::StdError {
-            reason: e.to_string(),
-        })?;
-
-        Ok(())
+        todo!()
     }
 }
 
@@ -279,7 +153,6 @@ mod tests {
     use super::*;
     use crate::geometrics::GeometricObject;
     use crate::surfaces::Point3D;
-    use plotters::prelude::RGBColor;
     use rust_decimal_macros::dec;
     use std::fs;
 
@@ -351,21 +224,6 @@ mod tests {
             .save("single_curve_test.png")
             .expect("Single curve plot failed");
         cleanup_image("single_curve_test.png");
-    }
-
-    #[test]
-    fn test_plot_options_defaults() {
-        let curve = create_test_curves().0;
-        let plot_builder = curve.plot();
-
-        // Check default options
-        assert_eq!(plot_builder.options.width, 800);
-        assert_eq!(plot_builder.options.height, 600);
-        assert_eq!(plot_builder.options.line_width, 2);
-        assert_eq!(
-            plot_builder.options.background_color,
-            RGBColor(255, 255, 255)
-        );
     }
 
     #[test]

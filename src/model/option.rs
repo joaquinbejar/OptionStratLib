@@ -1,5 +1,5 @@
 use crate::chains::OptionData;
-use crate::constants::{IV_TOLERANCE, MAX_ITERATIONS_IV, STDDEV_MULTIPLAYER_GRAPH, ZERO};
+use crate::constants::{IV_TOLERANCE, MAX_ITERATIONS_IV, ZERO};
 use crate::error::{GreeksError, OptionsError, OptionsResult, VolatilityError};
 use crate::greeks::Greeks;
 use crate::model::types::{OptionBasicType, OptionStyle, OptionType, Side};
@@ -9,17 +9,15 @@ use crate::pricing::{
     price_binomial, telegraph,
 };
 use crate::strategies::base::BasicAble;
-use crate::visualization::model::ChartVerticalLine;
-use crate::visualization::utils::Graph;
 use crate::{ExpirationDate, Positive, pos};
 use num_traits::{FromPrimitive, ToPrimitive};
-use plotters::prelude::{BLACK, ShapeStyle};
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use tracing::{error, trace};
+use crate::visualization::{Graph, GraphData};
 
 /// Result type for binomial tree pricing models, containing:
 /// - The option price
@@ -825,55 +823,8 @@ impl BasicAble for Options {
 }
 
 impl Graph for Options {
-    /// Generates a vector of evenly spaced x-values for option pricing/plotting.
-    ///
-    /// This method creates a range of x-values (potential stock prices) centered around
-    /// the strike price and spanning 5 standard deviations in each direction.
-    /// The standard deviation is calculated as the product of strike price and implied volatility.
-    ///
-    /// # Returns
-    ///
-    /// A vector of `Positive` values representing potential stock prices, with 1000 total points
-    /// (999 steps plus endpoints) evenly distributed across the range.
-    ///
-    /// # Implementation Details
-    ///
-    /// * The range extends 5 standard deviations above and below the strike price
-    /// * Uses 1000 total points (steps + 1) for smooth visualization
-    /// * All returned values are guaranteed positive through the use of the `pos!` macro
-    ///
-    fn get_x_values(&self) -> Vec<Positive> {
-        let steps = 999;
-        let stddev = self.strike_price * self.implied_volatility;
-        let min = self.strike_price - STDDEV_MULTIPLAYER_GRAPH * stddev;
-        let max = self.strike_price + STDDEV_MULTIPLAYER_GRAPH * stddev;
-        let step_size = (max - min) / steps as f64;
-
-        (0..=steps)
-            .map(|i| min + pos!(i as f64) * step_size)
-            .collect()
-    }
-
-    fn get_y_values(&self) -> Vec<f64> {
-        let data = self.get_x_values();
-        data.iter()
-            .map(|&price| self.intrinsic_value(price).unwrap().to_f64().unwrap())
-            .collect()
-    }
-
-    fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<f64, f64>> {
-        let vertical_lines = vec![ChartVerticalLine {
-            x_coordinate: self.strike_price.to_f64(),
-            y_range: (-50000.0, 50000.0),
-            label: "Strike".to_string(),
-            label_offset: (5.0, 5.0),
-            line_color: BLACK,
-            label_color: BLACK,
-            line_style: ShapeStyle::from(&BLACK).stroke_width(1),
-            font_size: 18,
-        }];
-
-        vertical_lines
+    fn graph_data(&self) -> GraphData {
+        todo!()
     }
 }
 
@@ -1714,69 +1665,6 @@ mod tests_greek_trait {
         );
         assert_decimal_eq!(call_greeks.gamma, put_greeks.gamma, EPSILON);
         assert_decimal_eq!(call_greeks.vega, put_greeks.vega, EPSILON);
-    }
-}
-
-#[cfg(test)]
-mod tests_graph {
-    use super::*;
-    use crate::model::utils::create_sample_option_simplest;
-    use crate::visualization::utils::Graph;
-    use approx::assert_relative_eq;
-
-    #[test]
-    fn test_title() {
-        let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        let expected_title = "Underlying: AAPL @ $100 Long Call European Option".to_string();
-        assert_eq!(option.get_title(), expected_title);
-    }
-
-    #[test]
-    fn test_get_values() {
-        let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        let values = option.get_y_values();
-        assert_eq!(values.len(), 1000);
-        assert_relative_eq!(values[0], 0.0, epsilon = 1e-6);
-        assert_relative_eq!(values[1], 0.0, epsilon = 1e-6);
-        assert_relative_eq!(values[values.len() - 1], 80.0, epsilon = 1e-6);
-    }
-
-    #[test]
-    fn test_get_vertical_lines() {
-        let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        let vertical_lines = option.get_vertical_lines();
-
-        assert_eq!(vertical_lines.len(), 1);
-        assert_eq!(vertical_lines[0].label, "Strike");
-        assert_relative_eq!(vertical_lines[0].x_coordinate, 100.0, epsilon = 1e-6);
-    }
-
-    #[test]
-    fn test_title_put_option() {
-        let option = create_sample_option_simplest(OptionStyle::Put, Side::Long);
-        let expected_title = "Underlying: AAPL @ $100 Long Put European Option".to_string();
-        assert_eq!(option.get_title(), expected_title);
-    }
-
-    #[test]
-    fn test_get_values_put_option() {
-        let option = create_sample_option_simplest(OptionStyle::Put, Side::Long);
-        let values = option.get_y_values();
-
-        assert_eq!(values.len(), 1000);
-        assert_relative_eq!(values[0], 80.0, epsilon = 1e-6);
-        assert_relative_eq!(values[values.len() - 1], 0.0, epsilon = 1e-6);
-    }
-
-    #[test]
-    fn test_get_values_short_option() {
-        let option = create_sample_option_simplest(OptionStyle::Call, Side::Short);
-        let values = option.get_y_values();
-
-        assert_eq!(values.len(), 1000);
-        assert_relative_eq!(values[0], 0.0, epsilon = 1e-6);
-        assert_relative_eq!(values[1], 0.0, epsilon = 1e-6);
-        assert_relative_eq!(values[values.len() - 1], -80.0, epsilon = 1e-6);
     }
 }
 

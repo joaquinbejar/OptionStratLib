@@ -3,31 +3,40 @@
    Email: jb@taunais.com
    Date: 2/10/24
 ******************************************************************************/
-use crate::chains::OptionData;
-use crate::chains::chain::OptionChain;
-use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
-use crate::error::position::PositionError;
-use crate::error::strategies::StrategyError;
-use crate::error::{GreeksError, OperationErrorKind, ProbabilityError};
-use crate::greeks::Greeks;
-use crate::model::types::OptionBasicType;
-use crate::model::utils::mean_and_std;
-use crate::model::{Position, ProfitLossRange};
-use crate::pnl::utils::{PnL, PnLCalculator};
-use crate::pricing::payoff::Profit;
-use crate::strategies::base::{
-    BreakEvenable, Optimizable, Positionable, Strategable, Strategies, StrategyType, Validable,
+use super::base::{
+    BreakEvenable, Optimizable, Positionable, Strategable, StrategyBasics, StrategyType, Validable,
 };
-use crate::strategies::probabilities::{ProbabilityAnalysis, VolatilityAdjustment};
-use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
-use crate::strategies::{BasicAble, DeltaNeutrality, StrategyBasics, StrategyConstructor};
-use crate::utils::others::process_n_times_iter;
-use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
-use crate::visualization::utils::Graph;
-use crate::{ExpirationDate, Options, Positive, pos};
+use crate::chains::OptionData;
+use crate::utils::process_n_times_iter;
+use crate::{
+    ExpirationDate, Options, Positive,
+    chains::chain::OptionChain,
+    constants::ZERO,
+    error::{
+        GreeksError, OperationErrorKind,
+        position::PositionError,
+        probability::ProbabilityError,
+        strategies::StrategyError,
+    },
+    greeks::Greeks,
+    model::{
+        ProfitLossRange,
+        position::Position,
+        types::OptionBasicType,
+        utils::mean_and_std,
+    },
+    pnl::{PnLCalculator, utils::PnL},
+    pos,
+    pricing::payoff::Profit,
+    strategies::{
+        BasicAble, Strategies, StrategyConstructor,
+        delta_neutral::DeltaNeutrality,
+        probabilities::{core::ProbabilityAnalysis, utils::VolatilityAdjustment},
+        utils::{FindOptimalSide, OptimizationCriteria},
+    },
+    visualization::{Graph, GraphData},
+};
 use num_traits::{FromPrimitive, ToPrimitive};
-use plotters::prelude::full_palette::ORANGE;
-use plotters::prelude::{RED, ShapeStyle};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -702,69 +711,8 @@ impl Profit for CustomStrategy {
 }
 
 impl Graph for CustomStrategy {
-    fn get_x_values(&self) -> Vec<Positive> {
-        self.get_best_range_to_show(Positive::from(1.0)).unwrap()
-    }
-
-    fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<f64, f64>> {
-        let vertical_lines = vec![ChartVerticalLine {
-            x_coordinate: self.underlying_price.to_f64(),
-            y_range: (-1e8, 1e8),
-            label: format!("Current Price: {:.2}", self.underlying_price),
-            label_offset: (4.0, -1.0),
-            line_color: ORANGE,
-            label_color: ORANGE,
-            line_style: ShapeStyle::from(&ORANGE).stroke_width(2),
-            font_size: 18,
-        }];
-
-        vertical_lines
-    }
-
-    fn get_points(&self) -> Vec<ChartPoint<(f64, f64)>> {
-        let mut points: Vec<ChartPoint<(f64, f64)>> = Vec::new();
-
-        for point in self.break_even_points.iter() {
-            points.push(ChartPoint {
-                coordinates: (point.to_f64(), 0.0),
-                label: format!("Break Even {:.2}", point),
-                label_offset: LabelOffsetType::Relative(-26.0, 2.0),
-                point_color: DARK_BLUE,
-                label_color: DARK_BLUE,
-                point_size: 5,
-                font_size: 18,
-            });
-        }
-
-        points.push(self.get_point_at_price(&self.underlying_price));
-
-        points.push(ChartPoint {
-            coordinates: (
-                self.max_profit_point.unwrap().0.to_f64(),
-                self.max_profit_point.unwrap().1,
-            ),
-            label: format!("Max Profit {:.2}", self.max_profit_point.unwrap().1),
-            label_offset: LabelOffsetType::Relative(2.0, 1.0),
-            point_color: DARK_GREEN,
-            label_color: DARK_GREEN,
-            point_size: 5,
-            font_size: 18,
-        });
-
-        points.push(ChartPoint {
-            coordinates: (
-                self.max_loss_point.unwrap().0.to_f64(),
-                self.max_loss_point.unwrap().1,
-            ),
-            label: format!("Max Loss {:.2}", self.max_loss_point.unwrap().1),
-            label_offset: LabelOffsetType::Relative(-30.0, 2.0),
-            point_color: RED,
-            label_color: RED,
-            point_size: 5,
-            font_size: 18,
-        });
-
-        points
+    fn graph_data(&self) -> GraphData {
+        todo!()
     }
 }
 
@@ -1281,25 +1229,6 @@ mod tests_custom_strategy {
 
         strategy.add_unique_break_even(point);
         assert_eq!(strategy.break_even_points.len(), initial_len);
-    }
-
-    #[test]
-    fn test_graph_implementation() {
-        let strategy = create_test_strategy();
-
-        // Test title
-        let title = strategy.get_title();
-        assert!(title.contains(&strategy.name));
-        assert!(title.contains(&strategy.symbol));
-
-        // Test vertical lines
-        let lines = strategy.get_vertical_lines();
-        assert_eq!(lines.len(), 1);
-        assert_eq!(lines[0].x_coordinate, strategy.underlying_price.to_f64());
-
-        // Test points
-        let points = strategy.get_points();
-        assert!(!points.is_empty());
     }
 }
 

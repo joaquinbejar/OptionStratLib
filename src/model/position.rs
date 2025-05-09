@@ -14,18 +14,15 @@ use crate::pnl::utils::PnL;
 use crate::pnl::{PnLCalculator, Transaction, TransactionAble};
 use crate::pricing::payoff::Profit;
 use crate::strategies::base::BasicAble;
-use crate::visualization::model::ChartVerticalLine;
-use crate::visualization::utils::Graph;
 use crate::{ExpirationDate, OptionType, Options};
 use crate::{Positive, pos};
 use chrono::{DateTime, Utc};
-use num_traits::ToPrimitive;
-use plotters::prelude::{BLACK, ShapeStyle};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use tracing::{debug, trace};
+use crate::visualization::{Graph, GraphData};
 
 /// The `Position` struct represents a financial position in an options market.
 ///
@@ -954,75 +951,11 @@ impl BasicAble for Position {
 /// The visualization capabilities allow traders to analyze the potential outcomes of their options positions
 /// at expiration across various price scenarios.
 impl Graph for Position {
-    /// Generates a vector of evenly spaced x-values for option pricing/plotting.
-    ///
-    /// This method creates a range of x-values (potential stock prices) centered around
-    /// the strike price and spanning 5 standard deviations in each direction.
-    /// The standard deviation is calculated as the product of strike price and implied volatility.
-    ///
-    /// # Returns
-    ///
-    /// A vector of `Positive` values representing potential stock prices, with 1000 total points
-    /// (999 steps plus endpoints) evenly distributed across the range.
-    ///
-    /// # Implementation Details
-    ///
-    /// * The range extends 5 standard deviations above and below the strike price
-    /// * Uses 1000 total points (steps + 1) for smooth visualization
-    /// * All returned values are guaranteed positive through the use of the `pos!` macro
-    ///
-    fn get_x_values(&self) -> Vec<Positive> {
-        self.option.get_x_values()
-    }
-
-    /// Calculates position profit/loss values at expiration for a range of underlying prices.
-    ///
-    /// This method transforms a slice of potential underlying prices into their corresponding
-    /// profit/loss values at expiration for this position.
-    ///
-    /// # Parameters
-    /// * `data` - A slice of `Positive` values representing potential prices of the underlying asset
-    ///
-    /// # Returns
-    /// A `Vec<f64>` containing the calculated profit/loss values for each input price
-    fn get_y_values(&self) -> Vec<f64> {
-        let data = self.get_x_values();
-        data.iter()
-            .map(|&price| {
-                self.pnl_at_expiration(&Some(&price))
-                    .unwrap()
-                    .to_f64()
-                    .unwrap()
-            })
-            .collect()
-    }
-
-    /// Generates vertical lines for the graph to highlight significant price levels.
-    ///
-    /// This method creates vertical line indicators for important price points in the position analysis,
-    /// specifically the break-even price level where the position transitions between profit and loss.
-    ///
-    /// # Returns
-    /// A `Vec<ChartVerticalLine<f64, f64>>` containing vertical line definitions to be displayed on the chart
-    fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<f64, f64>> {
-        match self.break_even() {
-            Some(break_even) => {
-                let vertical_lines = vec![ChartVerticalLine {
-                    x_coordinate: break_even.into(),
-                    y_range: (-50000.0, 50000.0),
-                    label: "Break Even".to_string(),
-                    label_offset: (5.0, 5.0),
-                    line_color: BLACK,
-                    label_color: BLACK,
-                    line_style: ShapeStyle::from(&BLACK).stroke_width(1),
-                    font_size: 18,
-                }];
-                vertical_lines
-            }
-            None => vec![],
-        }
+    fn graph_data(&self) -> GraphData {
+        todo!()
     }
 }
+
 
 #[cfg(test)]
 mod tests_position {
@@ -1031,6 +964,7 @@ mod tests_position {
     use crate::model::types::{OptionStyle, OptionType, Side};
     use crate::pos;
     use chrono::Duration;
+    use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
     fn setup_option(
@@ -2150,32 +2084,6 @@ mod tests_pnl_calculator {
         assert_eq!(pnl.realized.unwrap(), dec!(-7.0)); // -10.0 + 5.0 (premium) - 2.0 (fees)
         assert_eq!(position.total_cost().unwrap(), 2.0);
         assert_eq!(position.premium_received().unwrap(), 5.0);
-    }
-}
-
-#[cfg(test)]
-mod tests_graph {
-    use super::*;
-
-    #[test]
-    fn test_title() {
-        let position = Position::default();
-        assert_eq!(position.get_title(), position.option.get_title());
-    }
-
-    #[test]
-    fn test_get_values() {
-        let position = Position::default();
-        let values = position.get_y_values();
-        assert_eq!(values.len(), 1000);
-        assert!(!values.iter().any(|&x| x.is_nan()));
-    }
-
-    #[test]
-    fn test_get_vertical_lines() {
-        let position = Position::default();
-        let lines = position.get_vertical_lines();
-        assert_eq!(lines.len(), 0);
     }
 }
 

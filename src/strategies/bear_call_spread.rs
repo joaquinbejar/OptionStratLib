@@ -15,48 +15,36 @@ Key characteristics:
 - Also known as a vertical call credit spread
 */
 
-/*
-Bear Call Spread Strategy
-
-A bear call spread, also known as a vertical call credit spread, is created by selling a call option with a lower strike price
-and simultaneously buying a call option with a higher strike price, both with the same expiration date.
-
-Key characteristics:
-- Limited profit potential (net credit received)
-- Limited risk (difference between strikes minus net credit)
-- Bearish strategy that profits from price decline
-- Both options have same expiration date
-*/
 use super::base::{
-    BreakEvenable, Optimizable, Positionable, Strategable, Strategies, StrategyType, Validable,
+    BreakEvenable, Optimizable, Positionable, Strategable, StrategyBasics, StrategyType, Validable,
 };
-use crate::Positive;
-use crate::chains::StrategyLegs;
-use crate::chains::chain::OptionChain;
-use crate::chains::utils::OptionDataGroup;
-use crate::constants::{DARK_BLUE, DARK_GREEN};
-use crate::error::position::{PositionError, PositionValidationErrorKind};
-use crate::error::probability::ProbabilityError;
-use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
-use crate::error::{GreeksError, OperationErrorKind};
-use crate::greeks::Greeks;
-use crate::model::ProfitLossRange;
-use crate::model::position::Position;
-use crate::model::types::{OptionBasicType, OptionStyle, OptionType, Side};
-use crate::model::utils::mean_and_std;
-use crate::pnl::utils::{PnL, PnLCalculator};
-use crate::pricing::payoff::Profit;
-use crate::strategies::delta_neutral::DeltaNeutrality;
-use crate::strategies::probabilities::core::ProbabilityAnalysis;
-use crate::strategies::probabilities::utils::VolatilityAdjustment;
-use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
-use crate::strategies::{BasicAble, StrategyBasics, StrategyConstructor};
-use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
-use crate::visualization::utils::Graph;
-use crate::{ExpirationDate, Options};
+use crate::{
+    ExpirationDate, Options, Positive,
+    chains::{StrategyLegs, chain::OptionChain, utils::OptionDataGroup},
+    error::{
+        GreeksError, OperationErrorKind,
+        position::{PositionError, PositionValidationErrorKind},
+        probability::ProbabilityError,
+        strategies::{ProfitLossErrorKind, StrategyError},
+    },
+    greeks::Greeks,
+    model::{
+        ProfitLossRange,
+        position::Position,
+        types::{OptionBasicType, OptionStyle, OptionType, Side},
+        utils::mean_and_std,
+    },
+    pnl::{PnLCalculator, utils::PnL},
+    pricing::payoff::Profit,
+    strategies::{Strategies,
+                 BasicAble, StrategyConstructor,
+                 delta_neutral::DeltaNeutrality,
+                 probabilities::{core::ProbabilityAnalysis, utils::VolatilityAdjustment},
+                 utils::{FindOptimalSide, OptimizationCriteria},
+    },
+    visualization::{Graph, GraphData},
+};
 use chrono::Utc;
-use plotters::prelude::full_palette::ORANGE;
-use plotters::prelude::{RED, ShapeStyle};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -758,73 +746,8 @@ impl Profit for BearCallSpread {
 }
 
 impl Graph for BearCallSpread {
-    fn get_x_values(&self) -> Vec<Positive> {
-        self.get_best_range_to_show(Positive::from(1.0))
-            .unwrap_or_else(|_| vec![self.short_call.option.strike_price])
-    }
-
-    fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<f64, f64>> {
-        let underlying_price = self.short_call.option.underlying_price.to_f64();
-        vec![ChartVerticalLine {
-            x_coordinate: underlying_price,
-            y_range: (f64::NEG_INFINITY, f64::INFINITY),
-            label: format!("Current Price: {:.2}", underlying_price),
-            label_offset: (4.0, 0.0),
-            line_color: ORANGE,
-            label_color: ORANGE,
-            line_style: ShapeStyle::from(&ORANGE).stroke_width(2),
-            font_size: 18,
-        }]
-    }
-
-    fn get_points(&self) -> Vec<ChartPoint<(f64, f64)>> {
-        let mut points = Vec::new();
-
-        points.push(ChartPoint {
-            coordinates: (self.break_even_points[0].to_f64(), 0.0),
-            label: format!("Break Even {:.2}", self.break_even_points[0]),
-            label_offset: LabelOffsetType::Relative(10.0, -10.0),
-            point_color: DARK_BLUE,
-            label_color: DARK_BLUE,
-            point_size: 5,
-            font_size: 18,
-        });
-
-        points.push(ChartPoint {
-            coordinates: (
-                self.short_call.option.strike_price.into(),
-                self.get_max_profit().unwrap_or(Positive::ZERO).into(),
-            ),
-            label: format!(
-                "Max Profit {:.2}",
-                self.get_max_profit().unwrap_or(Positive::ZERO)
-            ),
-            label_offset: LabelOffsetType::Relative(-60.0, 10.0),
-            point_color: DARK_GREEN,
-            label_color: DARK_GREEN,
-            point_size: 5,
-            font_size: 18,
-        });
-
-        points.push(ChartPoint {
-            coordinates: (
-                self.long_call.option.strike_price.to_f64(),
-                -self.get_max_loss().unwrap_or(Positive::ZERO).to_f64(),
-            ),
-            label: format!(
-                "Max Loss -{:.2}",
-                self.get_max_loss().unwrap_or(Positive::ZERO)
-            ),
-            label_offset: LabelOffsetType::Relative(10.0, -10.0),
-            point_color: RED,
-            label_color: RED,
-            point_size: 5,
-            font_size: 18,
-        });
-
-        points.push(self.get_point_at_price(&self.short_call.option.underlying_price));
-
-        points
+    fn graph_data(&self) -> GraphData {
+        todo!()
     }
 }
 
@@ -2018,7 +1941,7 @@ mod tests_bear_call_spread_optimizable {
 mod tests_bear_call_spread_graph {
     use super::*;
     use crate::pos;
-    use num_traits::ToPrimitive;
+    
     use rust_decimal_macros::dec;
 
     fn create_test_spread() -> BearCallSpread {
@@ -2049,72 +1972,7 @@ mod tests_bear_call_spread_graph {
         assert!(title.contains("$105 Short Call"));
         assert!(title.contains("$110 Long Call"));
     }
-
-    #[test]
-    fn test_vertical_lines() {
-        let spread = create_test_spread();
-        let lines = spread.get_vertical_lines();
-
-        assert_eq!(lines.len(), 1); // Current price, short strike, long strike
-        assert_eq!(lines[0].x_coordinate, 100.0);
-        assert!(lines[0].label.contains("Current Price"));
-    }
-
-    #[test]
-    fn test_get_points() {
-        let spread = create_test_spread();
-        let points = spread.get_points();
-
-        assert_eq!(points.len(), 4); // Break-even, max profit, max loss, current price, profit zone
-
-        assert_eq!(points[0].coordinates.1, 0.0);
-        assert!(points[0].label.contains("Break Even"));
-
-        assert_eq!(points[1].coordinates.0, 105.0); // short strike
-        assert!(points[1].label.contains("Max Profit"));
-
-        assert_eq!(points[2].coordinates.0, 110.0); // long strike
-        assert!(points[2].label.contains("Max Loss"));
-    }
-
-    #[test]
-    fn test_get_values() {
-        let spread = create_test_spread();
-        let values = spread.get_y_values();
-        assert_eq!(values.len(), 26);
-        assert_eq!(
-            values[0],
-            spread
-                .calculate_profit_at(&pos!(95.0))
-                .unwrap()
-                .to_f64()
-                .unwrap()
-        );
-        assert_eq!(
-            values[1],
-            spread
-                .calculate_profit_at(&pos!(100.0))
-                .unwrap()
-                .to_f64()
-                .unwrap()
-        );
-        assert_eq!(
-            values[2],
-            spread
-                .calculate_profit_at(&pos!(105.0))
-                .unwrap()
-                .to_f64()
-                .unwrap()
-        );
-        assert_eq!(
-            values[0],
-            spread.get_max_profit().unwrap_or(Positive::ZERO).to_f64()
-        );
-        assert_eq!(
-            values[values.len() - 1],
-            -spread.get_max_loss().unwrap_or(Positive::ZERO).to_f64()
-        );
-    }
+    
 }
 
 #[cfg(test)]

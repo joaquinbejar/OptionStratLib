@@ -6,10 +6,10 @@ use optionstratlib::simulation::steps::{Step, Xstep, Ystep};
 use optionstratlib::simulation::{WalkParams, WalkType, WalkTypeAble};
 use optionstratlib::utils::setup_logger;
 use optionstratlib::utils::time::{TimeFrame, convert_time_frame};
-use optionstratlib::visualization::utils::{Graph, GraphBackend};
 use optionstratlib::{ExpirationDate, Positive, pos};
 use rust_decimal_macros::dec;
 use tracing::{debug, info};
+use optionstratlib::visualization::Graph;
 
 #[warn(dead_code)]
 struct Walker {}
@@ -96,14 +96,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         generator_optionseries,
     );
     debug!("Random Walk: {}", random_walk);
-
-    random_walk.graph(
-        GraphBackend::Bitmap {
-            file_path: "Draws/Simulation/random_walk_build_series.png",
-            size: (1200, 800),
-        },
-        20,
-    )?;
+    let path: &std::path::Path = "Draws/Simulation/random_walk_build_series.png".as_ref();
+    random_walk.write_png(path, 1200, 800)?;
     let last = random_walk.last().unwrap().y.value();
     info!("Last Series: {}", last);
 

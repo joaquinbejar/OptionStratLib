@@ -189,6 +189,7 @@ mod transaction;
 /// * Volatility model parameter validation
 /// * Market data consistency checks
 mod volatility;
+mod graph;
 
 pub use chains::ChainError;
 pub use common::OperationErrorKind;
@@ -204,3 +205,4 @@ pub use strategies::StrategyError;
 pub use surfaces::SurfaceError;
 pub use transaction::TransactionError;
 pub use volatility::VolatilityError;
+pub use graph::GraphError;

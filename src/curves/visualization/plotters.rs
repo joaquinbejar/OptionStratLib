@@ -48,10 +48,6 @@
 use crate::curves::Curve;
 use crate::error::CurveError;
 use crate::geometrics::{PlotBuilder, PlotBuilderExt, PlotOptions, Plottable};
-
-use num_traits::ToPrimitive;
-
-use plotters::prelude::*;
 use std::path::Path;
 
 /// Plottable implementation for single Curve
@@ -152,83 +148,7 @@ impl Plottable for Vec<Curve> {
 /// Plotting implementation for single Curve
 impl PlotBuilderExt<Curve> for PlotBuilder<Curve> {
     fn save(self, path: impl AsRef<Path>) -> Result<(), CurveError> {
-        // Convert points to f64
-        let points: Vec<(f64, f64)> = self
-            .data
-            .points
-            .iter()
-            .map(|p| (p.x.to_f64().unwrap_or(0.0), p.y.to_f64().unwrap_or(0.0)))
-            .collect();
-
-        if points.is_empty() {
-            return Err(CurveError::ConstructionError(
-                "No points to plot".to_string(),
-            ));
-        }
-
-        // Determine plot range
-        let x_min = points.iter().map(|p| p.0).fold(f64::INFINITY, f64::min);
-        let x_max = points.iter().map(|p| p.0).fold(f64::NEG_INFINITY, f64::max);
-        let y_min = points.iter().map(|p| p.1).fold(f64::INFINITY, f64::min);
-        let y_max = points.iter().map(|p| p.1).fold(f64::NEG_INFINITY, f64::max);
-
-        // Create drawing area
-        let root = BitMapBackend::new(path.as_ref(), (self.options.width, self.options.height))
-            .into_drawing_area();
-
-        root.fill(&self.options.background_color)
-            .map_err(|e| CurveError::StdError {
-                reason: e.to_string(),
-            })?;
-
-        let mut chart = ChartBuilder::on(&root)
-            .caption(
-                self.options.title.unwrap_or_default(),
-                ("Arial", 30).into_font(),
-            )
-            .margin(5)
-            .x_label_area_size(30)
-            .y_label_area_size(30)
-            .build_cartesian_2d(x_min..x_max, y_min..y_max)
-            .map_err(|e| CurveError::StdError {
-                reason: e.to_string(),
-            })?;
-
-        // Configure axes
-        chart
-            .configure_mesh()
-            .x_label_formatter(&|v| format!("{:.2}", v))
-            .y_label_formatter(&|v| format!("{:.2}", v))
-            .x_desc(self.options.x_label.as_deref().unwrap_or("X"))
-            .y_desc(self.options.y_label.as_deref().unwrap_or("Y"))
-            .draw()
-            .map_err(|e| CurveError::StdError {
-                reason: e.to_string(),
-            })?;
-
-        // Draw the curve
-        let color = self
-            .options
-            .line_colors
-            .unwrap_or_else(|| vec![PlotOptions::default_colors()[0]])
-            .first()
-            .cloned()
-            .unwrap_or(RGBColor(0, 0, 255));
-
-        chart
-            .draw_series(LineSeries::new(
-                points,
-                color.stroke_width(self.options.line_width),
-            ))
-            .map_err(|e| CurveError::StdError {
-                reason: e.to_string(),
-            })?;
-
-        root.present().map_err(|e| CurveError::StdError {
-            reason: e.to_string(),
-        })?;
-
-        Ok(())
+        todo!()
     }
 }
 
@@ -306,114 +226,7 @@ impl PlotBuilderExt<Curve> for PlotBuilder<Curve> {
 ///   `Decimal` to `f64` when plotting.
 impl PlotBuilderExt<Vec<Curve>> for PlotBuilder<Vec<Curve>> {
     fn save(self, path: impl AsRef<Path>) -> Result<(), CurveError> {
-        // Prepare all curve points
-        let all_curve_points: Vec<Vec<(f64, f64)>> = self
-            .data
-            .iter()
-            .map(|curve| {
-                curve
-                    .points
-                    .iter()
-                    .map(|p| (p.x.to_f64().unwrap_or(0.0), p.y.to_f64().unwrap_or(0.0)))
-                    .collect()
-            })
-            .collect();
-
-        // Determine overall plot range
-        let x_min = all_curve_points
-            .iter()
-            .flat_map(|points| points.iter().map(|p| p.0))
-            .fold(f64::INFINITY, f64::min);
-        let x_max = all_curve_points
-            .iter()
-            .flat_map(|points| points.iter().map(|p| p.0))
-            .fold(f64::NEG_INFINITY, f64::max);
-        let y_min = all_curve_points
-            .iter()
-            .flat_map(|points| points.iter().map(|p| p.1))
-            .fold(f64::INFINITY, f64::min);
-        let y_max = all_curve_points
-            .iter()
-            .flat_map(|points| points.iter().map(|p| p.1))
-            .fold(f64::NEG_INFINITY, f64::max);
-
-        // Create drawing area
-        let root = BitMapBackend::new(path.as_ref(), (self.options.width, self.options.height))
-            .into_drawing_area();
-
-        root.fill(&self.options.background_color)
-            .map_err(|e| CurveError::StdError {
-                reason: e.to_string(),
-            })?;
-
-        let mut chart = ChartBuilder::on(&root)
-            .caption(
-                self.options.title.unwrap_or_default(),
-                ("Arial", 30).into_font(),
-            )
-            .margin(5)
-            .x_label_area_size(30)
-            .y_label_area_size(30)
-            .build_cartesian_2d(x_min..x_max, y_min..y_max)
-            .map_err(|e| CurveError::StdError {
-                reason: e.to_string(),
-            })?;
-
-        // Configure axes
-        chart
-            .configure_mesh()
-            .x_label_formatter(&|v| format!("{:.2}", v))
-            .y_label_formatter(&|v| format!("{:.2}", v))
-            .x_desc(self.options.x_label.as_deref().unwrap_or("X"))
-            .y_desc(self.options.y_label.as_deref().unwrap_or("Y"))
-            .draw()
-            .map_err(|e| CurveError::StdError {
-                reason: e.to_string(),
-            })?;
-
-        // Determine colors
-        let colors: &Vec<RGBColor> = &self
-            .options
-            .line_colors
-            .unwrap_or_else(PlotOptions::default_colors);
-
-        // Draw curves
-        for (i, points) in all_curve_points.into_iter().enumerate() {
-            let default_name = &format!("Curve {}", i + 1);
-            let label = match &self.options.curve_name {
-                Some(names) => names.get(i).map(|s| s.as_str()).unwrap_or(default_name),
-                None => default_name,
-            };
-
-            // Clone colors for this iteration
-            let legend_color = colors[i % colors.len()];
-
-            chart
-                .draw_series(LineSeries::new(
-                    points,
-                    colors[i % colors.len()].stroke_width(self.options.line_width),
-                ))
-                .map_err(|e| CurveError::StdError {
-                    reason: e.to_string(),
-                })?
-                .label(label)
-                .legend(move |c| Circle::new(c, 3, legend_color.filled()));
-        }
-
-        // Add legend
-        chart
-            .configure_series_labels()
-            .border_style(BLACK)
-            .draw()
-            .map_err(|e| CurveError::StdError {
-                reason: e.to_string(),
-            })?;
-
-        root.present().map_err(|e| CurveError::StdError {
-            reason: e.to_string(),
-        })?;
-
-        Ok(())
+        todo!()
     }
 }
 
@@ -422,7 +235,6 @@ mod tests {
     use super::*;
     use crate::curves::Point2D;
     use crate::geometrics::GeometricObject;
-    use plotters::prelude::RGBColor;
     use rust_decimal_macros::dec;
     use std::fs;
 
@@ -543,24 +355,7 @@ mod tests {
 
         cleanup_image("multiple_curves_test.png");
     }
-
-    #[test]
-    fn test_plot_with_custom_colors() {
-        let (curve1, curve2, _) = create_test_curves();
-
-        // Custom color plot
-        vec![curve1, curve2]
-            .plot()
-            .title("Colored Curves")
-            .line_colors(vec![
-                RGBColor(255, 0, 0), // Red
-                RGBColor(0, 0, 255), // Blue
-            ])
-            .dimensions(800, 600)
-            .save("colored_curves_test.png")
-            .expect("Colored curves plot failed");
-        cleanup_image("colored_curves_test.png");
-    }
+    
 
     #[test]
     fn test_plot_with_custom_line_width() {
@@ -576,21 +371,7 @@ mod tests {
             .expect("Thick line curves plot failed");
         cleanup_image("thick_line_curves_test.png");
     }
-
-    #[test]
-    fn test_plot_options_defaults() {
-        let curve = create_test_curves().0;
-        let plot_builder = curve.plot();
-
-        // Check default options
-        assert_eq!(plot_builder.options.width, 800);
-        assert_eq!(plot_builder.options.height, 600);
-        assert_eq!(plot_builder.options.line_width, 2);
-        assert_eq!(
-            plot_builder.options.background_color,
-            RGBColor(255, 255, 255)
-        );
-    }
+    
 
     #[test]
     fn test_plot_builder_chaining() {

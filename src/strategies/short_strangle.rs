@@ -10,42 +10,44 @@ Key characteristics:
 - Requires a larger price move to become profitable
 */
 use super::base::{
-    BasicAble, BreakEvenable, Optimizable, Positionable, Strategable, Strategies, StrategyBasics,
-    StrategyType, Validable,
+    BreakEvenable, Optimizable, Positionable, Strategable, StrategyBasics, StrategyType, Validable,
 };
-use crate::chains::StrategyLegs;
-use crate::chains::chain::OptionChain;
-use crate::chains::utils::OptionDataGroup;
-use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
-use crate::error::position::{PositionError, PositionValidationErrorKind};
-use crate::error::probability::ProbabilityError;
-use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
-use crate::error::{GreeksError, OperationErrorKind};
-use crate::greeks::Greeks;
-use crate::model::position::Position;
-use crate::model::types::{Action, OptionBasicType, OptionStyle, OptionType, Side};
-use crate::model::utils::mean_and_std;
-use crate::model::{ProfitLossRange, Trade, TradeStatusAble};
-use crate::pnl::PnLCalculator;
-use crate::pnl::utils::PnL;
-use crate::pricing::payoff::Profit;
-use crate::strategies::delta_neutral::DeltaNeutrality;
-use crate::strategies::probabilities::core::ProbabilityAnalysis;
-use crate::strategies::probabilities::utils::VolatilityAdjustment;
-use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria, calculate_price_range};
-use crate::strategies::{DeltaAdjustment, StrategyConstructor};
-use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
-use crate::visualization::utils::Graph;
-use crate::{ExpirationDate, Options, Positive, test_strategy_traits};
+use crate::{
+    ExpirationDate, Options, Positive,
+    chains::{StrategyLegs, chain::OptionChain, utils::OptionDataGroup},
+    constants::ZERO,
+    error::{
+        GreeksError, OperationErrorKind,
+        position::{PositionError, PositionValidationErrorKind},
+        probability::ProbabilityError,
+        strategies::{ProfitLossErrorKind, StrategyError},
+    },
+    greeks::Greeks,
+    model::{
+        ProfitLossRange, Trade, TradeStatusAble,
+        position::Position,
+        types::{OptionBasicType, OptionStyle, OptionType, Side, Action},
+        utils::mean_and_std,
+    },
+    pnl::{PnLCalculator, utils::PnL},
+    pricing::payoff::Profit,
+    strategies::{Strategies,
+                 BasicAble, DeltaAdjustment, StrategyConstructor,
+                 delta_neutral::DeltaNeutrality,
+                 probabilities::{core::ProbabilityAnalysis, utils::VolatilityAdjustment},
+                 utils::{FindOptimalSide, OptimizationCriteria, calculate_price_range},
+    },
+    test_strategy_traits,
+    visualization::{Graph, GraphData},
+};
 use chrono::Utc;
 use num_traits::{FromPrimitive, ToPrimitive};
-use plotters::prelude::ShapeStyle;
-use plotters::prelude::full_palette::ORANGE;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use tracing::{debug, error, trace};
+
 
 pub(super) const SHORT_STRANGLE_DESCRIPTION: &str = "A short strangle involves selling an out-of-the-money call and an \
 out-of-the-money put with the same expiration date. This strategy is used when low volatility \
@@ -347,7 +349,7 @@ impl BreakEvenable for ShortStrangle {
         self.break_even_points.push(
             (self.short_put.option.strike_price
                 - (total_premium / self.short_put.option.quantity).to_dec())
-            .round_to(2),
+                .round_to(2),
         );
 
         self.break_even_points.push(
@@ -404,15 +406,15 @@ impl Positionable for ShortStrangle {
                 "Position side is Long, it is not valid for ShortStrangle".to_string(),
             )),
             (Side::Short, OptionStyle::Call, strike)
-                if *strike == self.one_option().strike_price =>
-            {
-                Ok(vec![&mut self.short_call])
-            }
+            if *strike == self.one_option().strike_price =>
+                {
+                    Ok(vec![&mut self.short_call])
+                }
             (Side::Short, OptionStyle::Put, strike)
-                if *strike == self.short_put.option.strike_price =>
-            {
-                Ok(vec![&mut self.short_put])
-            }
+            if *strike == self.short_put.option.strike_price =>
+                {
+                    Ok(vec![&mut self.short_put])
+                }
             _ => Err(PositionError::invalid_position_type(
                 *side,
                 "Strike not found in positions".to_string(),
@@ -827,7 +829,7 @@ impl Optimizable for ShortStrangle {
         &'a self,
         option_chain: &'a OptionChain,
         side: FindOptimalSide,
-    ) -> impl Iterator<Item = OptionDataGroup<'a>> {
+    ) -> impl Iterator<Item=OptionDataGroup<'a>> {
         let underlying_price = self.get_underlying_price();
         let strategy = self.clone();
         option_chain
@@ -845,7 +847,7 @@ impl Optimizable for ShortStrangle {
                 FindOptimalSide::Center => {
                     short_put.is_valid_optimal_side(underlying_price, &FindOptimalSide::Lower)
                         && short_call
-                            .is_valid_optimal_side(underlying_price, &FindOptimalSide::Upper)
+                        .is_valid_optimal_side(underlying_price, &FindOptimalSide::Upper)
                 }
                 _ => {
                     short_put.is_valid_optimal_side(underlying_price, &side)
@@ -971,104 +973,8 @@ impl Profit for ShortStrangle {
 }
 
 impl Graph for ShortStrangle {
-    fn get_x_values(&self) -> Vec<Positive> {
-        self.get_best_range_to_show(Positive::from(1.0))
-            .unwrap_or_else(|_| vec![self.one_option().strike_price])
-    }
-
-    fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<f64, f64>> {
-        let vertical_lines = vec![ChartVerticalLine {
-            x_coordinate: self.one_option().underlying_price.to_f64(),
-            y_range: (f64::NEG_INFINITY, f64::INFINITY),
-            label: format!("Current Price: {:.2}", self.one_option().underlying_price),
-            label_offset: (4.0, -1.0),
-            line_color: ORANGE,
-            label_color: ORANGE,
-            line_style: ShapeStyle::from(&ORANGE).stroke_width(2),
-            font_size: 18,
-        }];
-
-        vertical_lines
-    }
-
-    fn get_points(&self) -> Vec<ChartPoint<(f64, f64)>> {
-        let mut points: Vec<ChartPoint<(f64, f64)>> = Vec::new();
-        let max_profit = self.get_max_profit().unwrap_or(Positive::ZERO);
-
-        let coordinates: (f64, f64) = (-3.0, 30.0);
-        let font_size = 24;
-
-        points.push(ChartPoint {
-            coordinates: (self.break_even_points[0].to_f64(), 0.0),
-            label: format!("Low Break Even\n\n{}", self.break_even_points[0]),
-            label_offset: LabelOffsetType::Relative(coordinates.0, -coordinates.1),
-            point_color: DARK_BLUE,
-            label_color: DARK_BLUE,
-            point_size: 5,
-            font_size,
-        });
-
-        points.push(ChartPoint {
-            coordinates: (self.break_even_points[1].to_f64(), 0.0),
-            label: format!("High Break Even\n\n{}", self.break_even_points[1]),
-            label_offset: LabelOffsetType::Relative(coordinates.0, coordinates.1),
-            point_color: DARK_BLUE,
-            label_color: DARK_BLUE,
-            point_size: 5,
-            font_size,
-        });
-
-        points.push(ChartPoint {
-            coordinates: (self.one_option().strike_price.to_f64(), max_profit.to_f64()),
-            label: format!(
-                "Max Profit ${:.2} at {:.0}",
-                max_profit,
-                self.one_option().strike_price
-            ),
-            label_offset: LabelOffsetType::Relative(coordinates.0, -coordinates.1),
-            point_color: DARK_GREEN,
-            label_color: DARK_GREEN,
-            point_size: 5,
-            font_size,
-        });
-
-        points.push(ChartPoint {
-            coordinates: (
-                self.short_put.option.strike_price.to_f64(),
-                max_profit.to_f64(),
-            ),
-            label: format!(
-                "Max Profit ${:.2} at {:.0}",
-                max_profit, self.short_put.option.strike_price
-            ),
-            label_offset: LabelOffsetType::Relative(coordinates.0, coordinates.1),
-            point_color: DARK_GREEN,
-            label_color: DARK_GREEN,
-            point_size: 5,
-            font_size,
-        });
-
-        points.push(ChartPoint {
-            coordinates: (
-                self.short_put.option.underlying_price.to_f64(),
-                self.calculate_profit_at(&self.short_put.option.underlying_price)
-                    .unwrap()
-                    .to_f64()
-                    .unwrap(),
-            ),
-            label: format!(
-                "${:.2}",
-                self.calculate_profit_at(&self.short_put.option.underlying_price)
-                    .unwrap(),
-            ),
-            label_offset: LabelOffsetType::Relative(-coordinates.0, coordinates.1),
-            point_color: DARK_GREEN,
-            label_color: DARK_GREEN,
-            point_size: 5,
-            font_size,
-        });
-
-        points
+    fn graph_data(&self) -> GraphData {
+        todo!()
     }
 }
 
@@ -1166,8 +1072,8 @@ impl PnLCalculator for ShortStrangle {
             .short_call
             .calculate_pnl(market_price, expiration_date, implied_volatility)?
             + self
-                .short_put
-                .calculate_pnl(market_price, expiration_date, implied_volatility)?)
+            .short_put
+            .calculate_pnl(market_price, expiration_date, implied_volatility)?)
     }
 
     fn calculate_pnl_at_expiration(
@@ -1178,8 +1084,8 @@ impl PnLCalculator for ShortStrangle {
             .short_call
             .calculate_pnl_at_expiration(underlying_price)?
             + self
-                .short_put
-                .calculate_pnl_at_expiration(underlying_price)?)
+            .short_put
+            .calculate_pnl_at_expiration(underlying_price)?)
     }
 
     fn adjustments_pnl(&self, adjustment: &DeltaAdjustment) -> Result<PnL, Box<dyn Error>> {
@@ -1391,33 +1297,6 @@ is expected and the underlying asset's price is anticipated to remain stable."
     }
 
     #[test]
-    fn test_graph_methods() {
-        let strategy = setup();
-
-        let vertical_lines = strategy.get_vertical_lines();
-        assert_eq!(vertical_lines.len(), 1);
-        assert_eq!(vertical_lines[0].label, "Current Price: 150");
-
-        let data = strategy.get_x_values();
-        let values = strategy.get_y_values();
-        for (i, price) in data.iter().enumerate() {
-            assert_eq!(
-                values[i],
-                strategy
-                    .calculate_profit_at(price)
-                    .unwrap()
-                    .to_f64()
-                    .unwrap()
-            );
-        }
-
-        let title = strategy.get_title();
-        assert!(title.contains("ShortStrangle Strategy"));
-        assert!(title.contains("Call"));
-        assert!(title.contains("Put"));
-    }
-
-    #[test]
     fn test_add_leg() {
         let mut strategy = setup();
         let original_call = strategy.short_call.clone();
@@ -1522,19 +1401,6 @@ is expected and the underlying asset's price is anticipated to remain stable."
         let new_strategy = strategy.create_strategy(&chain, &legs);
         assert!(new_strategy.validate());
     }
-
-    #[test]
-    fn test_get_points() {
-        let strategy = setup();
-        let points = strategy.get_points();
-
-        assert_eq!(points.len(), 5);
-
-        let break_even_points: Vec<f64> = points[0..2].iter().map(|p| p.coordinates.0).collect();
-        assert!(break_even_points.contains(&strategy.break_even_points[0].to_f64()));
-        assert!(break_even_points.contains(&strategy.break_even_points[1].to_f64()));
-    }
-
     fn create_test_option_chain() -> OptionChain {
         let option_data_price_params = OptionDataPriceParams::new(
             pos!(150.0),
@@ -2355,11 +2221,11 @@ mod tests_adjust_option_position_short {
         assert!(result.is_err());
         match result.unwrap_err().downcast_ref::<PositionError>() {
             Some(PositionError::ValidationError(
-                PositionValidationErrorKind::IncompatibleSide {
-                    position_side: _,
-                    reason,
-                },
-            )) => {
+                     PositionValidationErrorKind::IncompatibleSide {
+                         position_side: _,
+                         reason,
+                     },
+                 )) => {
                 assert_eq!(
                     reason,
                     "Position side is Long, it is not valid for ShortStrangle"
@@ -3219,11 +3085,11 @@ mod tests_strangle_position_management {
         assert!(invalid_position.is_err());
         match invalid_position {
             Err(PositionError::ValidationError(
-                PositionValidationErrorKind::IncompatibleSide {
-                    position_side: _,
-                    reason,
-                },
-            )) => {
+                    PositionValidationErrorKind::IncompatibleSide {
+                        position_side: _,
+                        reason,
+                    },
+                )) => {
                 assert_eq!(reason, "Strike not found in positions");
             }
             _ => {

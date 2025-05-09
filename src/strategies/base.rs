@@ -1,32 +1,35 @@
-/******************************************************************************
-   Author: Joaquín Béjar García
-   Email: jb@taunais.com
-   Date: 21/8/24
-******************************************************************************/
-use crate::chains::chain::OptionChain;
-use crate::chains::utils::OptionDataGroup;
-use crate::chains::{OptionData, StrategyLegs};
-use crate::constants::{STRIKE_PRICE_LOWER_BOUND_MULTIPLIER, STRIKE_PRICE_UPPER_BOUND_MULTIPLIER};
-use crate::error::OperationErrorKind;
-use crate::error::position::PositionError;
-use crate::error::strategies::{BreakEvenErrorKind, StrategyError};
-use crate::greeks::Greeks;
-use crate::model::Trade;
-use crate::model::position::Position;
-use crate::model::types::{Action, OptionBasicType};
-use crate::pnl::utils::PnLCalculator;
-use crate::pricing::Profit;
-use crate::strategies::probabilities::ProbabilityAnalysis;
-use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria, calculate_price_range};
-use crate::strategies::{DeltaNeutrality, StrategyConstructor};
-use crate::visualization::utils::Graph;
-use crate::{ExpirationDate, OptionStyle, OptionType, Options, Positive, Side};
+use crate::{
+    ExpirationDate, Options, Positive,
+    chains::{StrategyLegs, chain::OptionChain, utils::OptionDataGroup},
+    error::{
+        OperationErrorKind,
+        position::PositionError,
+        strategies::StrategyError,
+    },
+    greeks::Greeks,
+    model::{
+        Trade,
+        position::Position,
+        types::{OptionBasicType, OptionStyle, OptionType, Side, Action},
+    },
+    pnl::PnLCalculator,
+    pricing::payoff::Profit,
+    strategies::{StrategyConstructor,
+                 delta_neutral::DeltaNeutrality,
+                 probabilities::core::ProbabilityAnalysis,
+                 utils::{FindOptimalSide, OptimizationCriteria, calculate_price_range},
+    },
+    visualization::Graph,
+};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
+use std::fmt;
 use std::str::FromStr;
-use std::{f64, fmt};
 use tracing::error;
+use crate::chains::OptionData;
+use crate::constants::{STRIKE_PRICE_LOWER_BOUND_MULTIPLIER, STRIKE_PRICE_UPPER_BOUND_MULTIPLIER};
+use crate::error::strategies::BreakEvenErrorKind;
 
 /// Represents basic information about a trading strategy.
 ///
@@ -2120,6 +2123,7 @@ mod tests_optimizable {
     use super::*;
     use crate::{pos, spos};
     use rust_decimal_macros::dec;
+    use crate::chains::OptionData;
 
     struct TestOptimizableStrategy;
 

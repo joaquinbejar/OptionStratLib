@@ -10,8 +10,7 @@ use optionstratlib::strategies::base::BreakEvenable;
 use optionstratlib::strategies::bull_call_spread::BullCallSpread;
 use optionstratlib::strategies::{BasicAble, Strategies};
 use optionstratlib::utils::setup_logger;
-use optionstratlib::visualization::utils::Graph;
-use optionstratlib::visualization::utils::GraphBackend;
+use optionstratlib::visualization::Graph;
 use rust_decimal_macros::dec;
 use std::error::Error;
 use tracing::info;
@@ -52,13 +51,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     );
     info!("Total Cost: {}", strategy.get_total_cost()?);
 
-    // Generate the intrinsic value graph
-    strategy.graph(
-        GraphBackend::Bitmap {
-            file_path: "Draws/Strategy/bull_call_spread_value_chart.png",
-            size: (1400, 933),
-        },
-        20,
-    )?;
+    let path: &std::path::Path = "Draws/Strategy/bull_call_spread_value_chart.png".as_ref();
+    strategy.write_png(path, 1200, 800)?;
+
     Ok(())
 }

@@ -3,8 +3,8 @@
    Email: jb@taunais.com
    Date: 21/1/25
 ******************************************************************************/
-use plotters::prelude::RGBColor;
 use std::path::Path;
+use crate::visualization::ColorScheme;
 
 /// Plot configuration options for data visualization.
 ///
@@ -26,11 +26,11 @@ pub struct PlotOptions {
     pub z_label: Option<String>,
     /// Optional collection of RGB colors to use for individual data series lines
     /// Each color in the vector corresponds to a different curve in the plot
-    pub line_colors: Option<Vec<RGBColor>>,
+    pub line_colors: Option<Vec<ColorScheme>>,
     /// Width of plotted lines in pixels
     pub line_width: u32,
     /// Background color of the entire plot area as an RGB value
-    pub background_color: RGBColor,
+    pub background_color: ColorScheme,
     /// Width of the plot in pixels
     pub width: u32,
     /// Height of the plot in pixels
@@ -46,14 +46,8 @@ pub struct PlotOptions {
 #[allow(dead_code)]
 impl PlotOptions {
     /// Default color palette for multiple curves
-    pub(crate) fn default_colors() -> Vec<RGBColor> {
-        vec![
-            RGBColor(0, 0, 255),   // Blue
-            RGBColor(255, 0, 0),   // Red
-            RGBColor(0, 255, 0),   // Green
-            RGBColor(255, 165, 0), // Orange
-            RGBColor(128, 0, 128), // Purple
-        ]
+    pub(crate) fn default_colors() -> Vec<ColorScheme> {
+        todo!()
     }
 }
 
@@ -66,7 +60,7 @@ impl Default for PlotOptions {
             z_label: None,
             line_colors: None,
             line_width: 2,
-            background_color: RGBColor(255, 255, 255),
+            background_color: ColorScheme::White,
             width: 800,
             height: 600,
             curve_name: None,
@@ -248,7 +242,7 @@ impl<T: Plottable> PlotBuilder<T> {
     /// # Returns
     /// The `PlotBuilder` instance with the updated line colors
     ///
-    pub fn line_colors(mut self, colors: Vec<RGBColor>) -> Self {
+    pub fn line_colors(mut self, colors: Vec<ColorScheme>) -> Self {
         self.options.line_colors = Some(colors);
         self
     }

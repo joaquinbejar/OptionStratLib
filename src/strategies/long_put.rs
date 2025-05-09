@@ -1,8 +1,14 @@
-use crate::error::PositionError;
-use crate::error::position::PositionValidationErrorKind;
-use crate::model::Position;
-use crate::strategies::base::{Positionable, StrategyType};
-use crate::{ExpirationDate, OptionStyle, OptionType, Options, Positive, Side};
+use super::base::{
+    Positionable, StrategyType,
+};
+use crate::{
+    ExpirationDate, Options, Positive,
+    error::position::{PositionError, PositionValidationErrorKind},
+    model::{
+        position::Position,
+        types::{OptionStyle, OptionType, Side},
+    },
+};
 use chrono::Utc;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};

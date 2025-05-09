@@ -15,35 +15,26 @@ Key characteristics:
 - Also known as a vertical put credit spread
 */
 use super::base::{
-    BreakEvenable, Optimizable, Positionable, Strategable, Strategies, StrategyType, Validable,
+    BreakEvenable, Optimizable, Positionable, Strategable, StrategyBasics, StrategyType, Validable,
 };
-use crate::chains::StrategyLegs;
-use crate::chains::chain::OptionChain;
-use crate::chains::utils::OptionDataGroup;
-use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
-use crate::error::position::{PositionError, PositionValidationErrorKind};
-use crate::error::probability::ProbabilityError;
-use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
-use crate::error::{GreeksError, OperationErrorKind};
-use crate::greeks::Greeks;
-use crate::model::ProfitLossRange;
-use crate::model::position::Position;
-use crate::model::types::{OptionBasicType, OptionStyle, OptionType, Side};
-use crate::model::utils::mean_and_std;
-use crate::pnl::utils::{PnL, PnLCalculator};
-use crate::pricing::payoff::Profit;
-use crate::strategies::delta_neutral::DeltaNeutrality;
-use crate::strategies::probabilities::core::ProbabilityAnalysis;
-use crate::strategies::probabilities::utils::VolatilityAdjustment;
-use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
-use crate::strategies::{BasicAble, StrategyBasics, StrategyConstructor};
-use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
-use crate::visualization::utils::Graph;
-use crate::{ExpirationDate, Options};
-use crate::{Positive, pos};
+use crate::{ExpirationDate, Options, Positive, chains::{StrategyLegs, chain::OptionChain, utils::OptionDataGroup}, constants::ZERO, error::{
+    GreeksError, OperationErrorKind,
+    position::{PositionError, PositionValidationErrorKind},
+    probability::ProbabilityError,
+    strategies::{ProfitLossErrorKind, StrategyError},
+}, greeks::Greeks, model::{
+    ProfitLossRange,
+    position::Position,
+    types::{OptionBasicType, OptionStyle, OptionType, Side},
+    utils::mean_and_std,
+}, pnl::{PnLCalculator, utils::PnL}, pricing::payoff::Profit, strategies::{Strategies,
+                                                                           BasicAble, StrategyConstructor,
+                                                                           delta_neutral::DeltaNeutrality,
+                                                                           probabilities::{core::ProbabilityAnalysis, utils::VolatilityAdjustment},
+                                                                           utils::{FindOptimalSide, OptimizationCriteria},
+}, visualization::{Graph, GraphData}, pos};
 use chrono::Utc;
-use plotters::prelude::full_palette::ORANGE;
-use plotters::prelude::{RED, ShapeStyle};
+use num_traits::ToPrimitive;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -843,77 +834,8 @@ impl Profit for BullPutSpread {
 }
 
 impl Graph for BullPutSpread {
-    fn get_x_values(&self) -> Vec<Positive> {
-        self.get_best_range_to_show(Positive::from(1.0))
-            .unwrap_or_else(|_| vec![self.long_put.option.strike_price])
-    }
-
-    fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<f64, f64>> {
-        let underlying_price = self.short_put.option.underlying_price.to_f64();
-        vec![ChartVerticalLine {
-            x_coordinate: underlying_price,
-            y_range: (f64::NEG_INFINITY, f64::INFINITY),
-            label: format!("Current Price: {:.2}", underlying_price),
-            label_offset: (4.0, 0.0),
-            line_color: ORANGE,
-            label_color: ORANGE,
-            line_style: ShapeStyle::from(&ORANGE).stroke_width(2),
-            font_size: 18,
-        }]
-    }
-
-    fn get_points(&self) -> Vec<ChartPoint<(f64, f64)>> {
-        let mut points = Vec::new();
-
-        // Break Even Point
-        points.push(ChartPoint {
-            coordinates: (self.break_even_points[0].to_f64(), 0.0),
-            label: format!("Break Even {:.2}", self.break_even_points[0]),
-            label_offset: LabelOffsetType::Relative(10.0, -10.0),
-            point_color: DARK_BLUE,
-            label_color: DARK_BLUE,
-            point_size: 5,
-            font_size: 18,
-        });
-
-        // Maximum Profit Point (at higher strike price)
-        points.push(ChartPoint {
-            coordinates: (
-                self.short_put.option.strike_price.to_f64(),
-                self.get_max_profit().unwrap_or(Positive::ZERO).to_f64(),
-            ),
-            label: format!(
-                "Max Profit {:.2}",
-                self.get_max_profit().unwrap_or(Positive::ZERO)
-            ),
-            label_offset: LabelOffsetType::Relative(10.0, 10.0),
-            point_color: DARK_GREEN,
-            label_color: DARK_GREEN,
-            point_size: 5,
-            font_size: 18,
-        });
-
-        // Maximum Loss Point (at lower strike price)
-        points.push(ChartPoint {
-            coordinates: (
-                self.long_put.option.strike_price.to_f64(),
-                -self.get_max_loss().unwrap_or(Positive::ZERO).to_f64(),
-            ),
-            label: format!(
-                "Max Loss -{:.2}",
-                self.get_max_loss().unwrap_or(Positive::ZERO)
-            ),
-            label_offset: LabelOffsetType::Relative(-120.0, -10.0),
-            point_color: RED,
-            label_color: RED,
-            point_size: 5,
-            font_size: 18,
-        });
-
-        // Current Price Point
-        points.push(self.get_point_at_price(&self.short_put.option.underlying_price));
-
-        points
+    fn graph_data(&self) -> GraphData {
+        todo!()
     }
 }
 
@@ -1811,10 +1733,10 @@ mod tests_bull_put_spread_profit {
 #[cfg(test)]
 mod tests_bull_put_spread_graph {
     use super::*;
-    use crate::model::ExpirationDate;
-    use crate::pos;
-    use num_traits::ToPrimitive;
-    use rust_decimal_macros::dec;
+    
+    
+    
+    
 
     #[test]
     fn test_title_format() {
@@ -1823,146 +1745,6 @@ mod tests_bull_put_spread_graph {
         assert!(title.contains("BullPutSpread Strategy"));
         assert!(title.contains("SP500 @ $5750 Long Put European Option"));
         assert!(title.contains("SP500 @ $5920 Short Put European Option"));
-    }
-
-    #[test]
-    fn test_get_vertical_lines() {
-        let spread = bull_put_spread_test();
-        let lines = spread.get_vertical_lines();
-
-        assert_eq!(lines.len(), 1);
-
-        let line = &lines[0];
-        assert_eq!(line.x_coordinate, 5781.88);
-        assert_eq!(line.y_range, (f64::NEG_INFINITY, f64::INFINITY));
-        assert!(line.label.contains("Current Price"));
-        assert!(line.label.contains("5781.88"));
-        assert_eq!(line.label_offset, (4.0, 0.0));
-        assert_eq!(line.line_color, ORANGE);
-        assert_eq!(line.label_color, ORANGE);
-        assert_eq!(line.font_size, 18);
-    }
-
-    #[test]
-    fn test_get_points() {
-        let spread = bull_put_spread_test();
-        let points = spread.get_points();
-
-        assert_eq!(points.len(), 4); // Break even, max profit, max loss, current price
-
-        let break_even = &points[0];
-        assert_eq!(break_even.coordinates.1, 0.0);
-        assert!(break_even.label.contains("Break Even"));
-        assert_eq!(break_even.point_color, DARK_BLUE);
-        assert_eq!(break_even.label_color, DARK_BLUE);
-        assert_eq!(break_even.point_size, 5);
-        assert_eq!(break_even.font_size, 18);
-
-        let max_profit = &points[1];
-        assert_eq!(max_profit.coordinates.0, 5920.0); // short strike
-        assert_eq!(max_profit.coordinates.1, 215.37);
-        assert!(max_profit.label.contains("Max Profit"));
-        assert_eq!(max_profit.point_color, DARK_GREEN);
-        assert_eq!(max_profit.label_color, DARK_GREEN);
-
-        let max_loss = &points[2];
-        assert_eq!(max_loss.coordinates.0, 5750.0); // long strike
-        assert_eq!(max_loss.coordinates.1, -294.63);
-        assert!(max_loss.label.contains("Max Loss"));
-        assert_eq!(max_loss.point_color, RED);
-        assert_eq!(max_loss.label_color, RED);
-    }
-
-    #[test]
-    fn test_points_coordinates() {
-        let spread = bull_put_spread_test();
-        let points = spread.get_points();
-
-        assert_eq!(points[0].coordinates.0, 5848.21);
-        assert_eq!(points[0].coordinates.1, 0.0);
-
-        // Maximum profit point: en short strike
-        assert_eq!(points[1].coordinates.0, 5920.0);
-        assert_eq!(points[1].coordinates.1, 215.37);
-
-        // Maximum loss point: en long strike
-        assert_eq!(points[2].coordinates.0, 5750.0);
-        assert_eq!(points[2].coordinates.1, -294.63);
-
-        // Current price point
-        assert_eq!(points[3].coordinates.0, 5781.88);
-        let current_profit = spread
-            .calculate_profit_at(&pos!(5781.88))
-            .unwrap()
-            .to_f64()
-            .unwrap();
-        assert_eq!(points[3].coordinates.1, current_profit);
-    }
-
-    #[test]
-    fn test_point_labels() {
-        let spread = bull_put_spread_test();
-        let points = spread.get_points();
-
-        assert_eq!(points.len(), 4);
-        assert!(points[0].label.contains("5848.21")); // Break-even
-        assert!(points[1].label.contains("215.37")); // Max profit
-        assert!(points[2].label.contains("-294.63")); // Max loss
-        assert!(points[3].label.contains("-198.99")); // Current price
-    }
-
-    #[test]
-    fn test_points_style() {
-        let spread = bull_put_spread_test();
-        let points = spread.get_points();
-
-        for point in points.iter() {
-            assert_eq!(point.point_size, 5);
-            assert_eq!(point.font_size, 18);
-            assert!(matches!(point.point_color, DARK_BLUE | DARK_GREEN | RED));
-            assert_eq!(point.point_color, point.label_color);
-        }
-    }
-
-    #[test]
-    fn test_graph_with_zero_profits() {
-        let mut spread = bull_put_spread_test();
-        spread.short_put.premium = pos!(2.0);
-        spread.long_put.premium = pos!(2.0);
-
-        let points = spread.get_points();
-        let max_profit_point = &points[1];
-
-        assert_eq!(max_profit_point.coordinates.1, 0.0);
-        assert!(max_profit_point.label.contains("0"));
-    }
-
-    #[test]
-    fn test_graph_with_different_quantities() {
-        let spread = BullPutSpread::new(
-            "TEST".to_string(),
-            pos!(100.0),
-            pos!(90.0),
-            pos!(95.0),
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(0.2),
-            dec!(0.05),
-            Positive::ZERO,
-            pos!(2.0), // quantity = 2
-            pos!(2.0),
-            pos!(4.0),
-            Positive::ZERO,
-            Positive::ZERO,
-            Positive::ZERO,
-            Positive::ZERO,
-        );
-
-        let points = spread.get_points();
-        let max_profit_point = &points[1];
-        let max_loss_point = &points[2];
-
-        assert_eq!(max_profit_point.coordinates.1, 4.0); // 2 * 2.0
-        assert_eq!(max_loss_point.coordinates.1, -6.0); // 2 * -3.0
     }
 }
 

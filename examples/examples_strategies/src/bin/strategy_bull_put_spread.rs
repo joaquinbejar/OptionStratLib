@@ -9,8 +9,7 @@ use optionstratlib::pos;
 use optionstratlib::strategies::bull_put_spread::BullPutSpread;
 use optionstratlib::strategies::{BasicAble, Strategies};
 use optionstratlib::utils::setup_logger;
-use optionstratlib::visualization::utils::Graph;
-use optionstratlib::visualization::utils::GraphBackend;
+use optionstratlib::visualization::Graph;
 use rust_decimal_macros::dec;
 use std::error::Error;
 use tracing::info;
@@ -56,14 +55,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     info!("Profit Area: {:.2}%", strategy.get_profit_area()?);
     info!("Profit Ratio: {:.2}%", strategy.get_profit_ratio()?);
 
-    // Generate the profit/loss graph
-    strategy.graph(
-        GraphBackend::Bitmap {
-            file_path: "Draws/Strategy/bull_put_spread_profit_loss_chart.png",
-            size: (1400, 933),
-        },
-        20,
-    )?;
+    let path: &std::path::Path = "Draws/Strategy/bull_put_spread_profit_loss_chart.png".as_ref();
+    strategy.write_png(path, 1200, 800)?;
 
     Ok(())
 }

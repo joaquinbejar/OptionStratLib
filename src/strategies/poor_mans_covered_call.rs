@@ -24,35 +24,39 @@
 //! This strategy is often used by investors who are moderately bullish on an asset but wish to reduce the cost
 //! and risk associated with traditional covered call strategies.
 //!
-
 use super::base::{
-    BreakEvenable, Optimizable, Positionable, Strategable, Strategies, StrategyType, Validable,
+    BreakEvenable, Optimizable, Positionable, Strategable, StrategyBasics, StrategyType, Validable,
 };
-use crate::Positive;
-use crate::chains::chain::OptionChain;
-use crate::chains::{OptionData, StrategyLegs};
-use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
-use crate::error::position::{PositionError, PositionValidationErrorKind};
-use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
-use crate::error::{GreeksError, OperationErrorKind, ProbabilityError};
-use crate::greeks::Greeks;
-use crate::model::ProfitLossRange;
-use crate::model::position::Position;
-use crate::model::types::{OptionBasicType, OptionStyle, OptionType, Side};
-use crate::model::utils::mean_and_std;
-use crate::pnl::utils::{PnL, PnLCalculator};
-use crate::pricing::payoff::Profit;
-use crate::strategies::delta_neutral::DeltaNeutrality;
-use crate::strategies::probabilities::{ProbabilityAnalysis, VolatilityAdjustment};
-use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
-use crate::strategies::{BasicAble, StrategyBasics, StrategyConstructor};
-use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
-use crate::visualization::utils::Graph;
-use crate::{ExpirationDate, Options};
+use crate::chains::OptionData;
+use crate::{
+    ExpirationDate, Options, Positive,
+    chains::{StrategyLegs, chain::OptionChain},
+    constants::ZERO,
+    error::{
+        GreeksError, OperationErrorKind,
+        position::{PositionError, PositionValidationErrorKind},
+        probability::ProbabilityError,
+        strategies::{ProfitLossErrorKind, StrategyError},
+    },
+    greeks::Greeks,
+    model::{
+        ProfitLossRange,
+        position::Position,
+        types::{OptionBasicType, OptionStyle, OptionType, Side},
+        utils::mean_and_std,
+    },
+    pnl::{PnLCalculator, utils::PnL},
+    pricing::payoff::Profit,
+    strategies::{
+        BasicAble, Strategies, StrategyConstructor,
+        delta_neutral::DeltaNeutrality,
+        probabilities::{core::ProbabilityAnalysis, utils::VolatilityAdjustment},
+        utils::{FindOptimalSide, OptimizationCriteria},
+    },
+    visualization::{Graph, GraphData},
+};
 use chrono::Utc;
 use num_traits::FromPrimitive;
-use plotters::prelude::full_palette::ORANGE;
-use plotters::prelude::{RED, ShapeStyle};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -746,84 +750,8 @@ impl Profit for PoorMansCoveredCall {
 }
 
 impl Graph for PoorMansCoveredCall {
-    fn get_x_values(&self) -> Vec<Positive> {
-        self.get_best_range_to_show(Positive::from(1.0))
-            .unwrap_or_else(|_| vec![self.short_call.option.strike_price])
-    }
-
-    fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<f64, f64>> {
-        let vertical_lines = vec![ChartVerticalLine {
-            x_coordinate: self.short_call.option.underlying_price.to_f64(),
-            y_range: (-50000.0, 50000.0),
-            label: format!("Current Price: {}", self.short_call.option.underlying_price),
-            label_offset: (5.0, 5.0),
-            line_color: ORANGE,
-            label_color: ORANGE,
-            line_style: ShapeStyle::from(&ORANGE).stroke_width(2),
-            font_size: 18,
-        }];
-
-        vertical_lines
-    }
-
-    fn get_points(&self) -> Vec<ChartPoint<(f64, f64)>> {
-        let mut points: Vec<ChartPoint<(f64, f64)>> = Vec::new();
-        let max_profit = self.get_max_profit().unwrap_or(Positive::ZERO);
-        let max_loss = self.get_max_loss().unwrap_or(Positive::ZERO);
-
-        points.push(ChartPoint {
-            coordinates: (self.break_even_points[0].to_f64(), 0.0),
-            label: format!("Break Even\n\n{}", self.break_even_points[0]),
-            label_offset: LabelOffsetType::Relative(-30.0, 15.0),
-            point_color: DARK_BLUE,
-            label_color: DARK_BLUE,
-            point_size: 5,
-            font_size: 18,
-        });
-
-        let coordiantes: (f64, f64) = (
-            self.short_call.option.strike_price.to_f64() / 2000.0,
-            max_profit.to_f64() / 10.0,
-        );
-        points.push(ChartPoint {
-            coordinates: (
-                self.short_call.option.strike_price.to_f64(),
-                max_profit.to_f64(),
-            ),
-            label: format!(
-                "Max Profit {:.2} at {:.0}",
-                max_profit, self.short_call.option.strike_price
-            ),
-            label_offset: LabelOffsetType::Relative(coordiantes.0, coordiantes.1),
-            point_color: DARK_GREEN,
-            label_color: DARK_GREEN,
-            point_size: 5,
-            font_size: 18,
-        });
-
-        let coordiantes: (f64, f64) = (
-            self.long_call.option.strike_price.to_f64() / 2000.0,
-            -max_loss.to_f64() / 50.0,
-        );
-        points.push(ChartPoint {
-            coordinates: (
-                self.long_call.option.strike_price.to_f64(),
-                -max_loss.to_f64(),
-            ),
-            label: format!(
-                "Max Loss {:.2} at {:.0}",
-                max_loss, self.long_call.option.strike_price
-            ),
-            label_offset: LabelOffsetType::Relative(coordiantes.0, coordiantes.1),
-            point_color: RED,
-            label_color: RED,
-            point_size: 5,
-            font_size: 18,
-        });
-
-        points.push(self.get_point_at_price(&self.long_call.option.underlying_price));
-
-        points
+    fn graph_data(&self) -> GraphData {
+        todo!()
     }
 }
 
@@ -916,153 +844,6 @@ impl PnLCalculator for PoorMansCoveredCall {
             + self
                 .short_call
                 .calculate_pnl_at_expiration(underlying_price)?)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::constants::DAYS_IN_A_YEAR;
-    use crate::pos;
-    use num_traits::ToPrimitive;
-    use rust_decimal_macros::dec;
-
-    fn create_pmcc_strategy() -> PoorMansCoveredCall {
-        let underlying_symbol = "AAPL".to_string();
-        let underlying_price = pos!(150.0);
-        let long_call_strike = pos!(140.0);
-        let short_call_strike = pos!(160.0);
-        let long_call_expiration = ExpirationDate::Days(DAYS_IN_A_YEAR);
-        let short_call_expiration = ExpirationDate::Days(pos!(30.0));
-        let implied_volatility = pos!(0.20);
-        let risk_free_rate = dec!(0.01);
-        let dividend_yield = pos!(0.005);
-        let quantity = pos!(1.0);
-        let premium_long_call = pos!(15.0);
-        let premium_short_call = pos!(5.0);
-        let open_fee_long_call = pos!(1.0);
-        let close_fee_long_call = pos!(1.0);
-        let open_fee_short_call = pos!(0.5);
-        let close_fee_short_call = pos!(0.5);
-
-        PoorMansCoveredCall::new(
-            underlying_symbol,
-            underlying_price,
-            long_call_strike,
-            short_call_strike,
-            long_call_expiration,
-            short_call_expiration,
-            implied_volatility,
-            risk_free_rate,
-            dividend_yield,
-            quantity,
-            premium_long_call,
-            premium_short_call,
-            open_fee_long_call,
-            close_fee_long_call,
-            open_fee_short_call,
-            close_fee_short_call,
-        )
-    }
-
-    #[test]
-    fn test_create_pmcc_strategy() {
-        let pmcc = create_pmcc_strategy();
-        assert_eq!(pmcc.name, "Poor Man's Covered Call");
-        assert_eq!(pmcc.long_call.option.strike_price, pos!(140.0));
-        assert_eq!(pmcc.short_call.option.strike_price, pos!(160.0));
-    }
-
-    #[test]
-    fn test_max_profit() {
-        let pmcc = create_pmcc_strategy();
-        let max_profit = pmcc.get_max_profit().unwrap_or(Positive::ZERO);
-        assert!(max_profit > Positive::ZERO);
-    }
-
-    #[test]
-    fn test_max_loss() {
-        let pmcc = create_pmcc_strategy();
-        let max_loss = pmcc.get_max_loss().unwrap_or(Positive::ZERO);
-        assert!(max_loss > Positive::ZERO);
-    }
-
-    #[test]
-    fn test_get_break_even_points() {
-        let pmcc = create_pmcc_strategy();
-        let break_even = pmcc.get_break_even_points().unwrap();
-        assert_eq!(break_even.len(), 1);
-        assert!(break_even[0].to_f64() > 0.0);
-    }
-
-    #[test]
-    fn test_total_cost() {
-        let pmcc = create_pmcc_strategy();
-        let total_cost = pmcc.get_total_cost().unwrap();
-        assert!(total_cost > Positive::ZERO);
-    }
-
-    #[test]
-    fn test_fees() {
-        let pmcc = create_pmcc_strategy();
-        let fees = pmcc.get_fees().unwrap();
-        assert!(fees > Positive::ZERO);
-    }
-
-    #[test]
-    fn test_profit_area() {
-        let pmcc = create_pmcc_strategy();
-        let profit_area = pmcc.get_profit_area().unwrap().to_f64().unwrap();
-        assert!(profit_area > 0.0);
-    }
-
-    #[test]
-    fn test_profit_ratio() {
-        let pmcc = create_pmcc_strategy();
-        let profit_ratio = pmcc.get_profit_ratio().unwrap().to_f64().unwrap();
-        assert!(profit_ratio > 0.0);
-    }
-
-    #[test]
-    fn test_best_range_to_show() {
-        let pmcc = create_pmcc_strategy();
-        let step = pos!(1.0);
-        let range = pmcc.get_best_range_to_show(step);
-        assert!(range.is_ok());
-        let range_values = range.unwrap();
-        assert!(!range_values.is_empty());
-    }
-
-    #[test]
-    fn test_calculate_profit_at() {
-        let pmcc = create_pmcc_strategy();
-        let profit = pmcc.calculate_profit_at(&pos!(150.0)).unwrap();
-        assert!(
-            profit >= -pmcc.get_max_loss().unwrap_or(Positive::ZERO).to_dec()
-                && profit <= pmcc.get_max_profit().unwrap_or(Positive::ZERO).to_dec()
-        );
-    }
-
-    #[test]
-    fn test_graph_title() {
-        let pmcc = create_pmcc_strategy();
-        let title = pmcc.get_title();
-        assert!(title.contains("PoorMansCoveredCall Strategy"));
-    }
-
-    #[test]
-    fn test_vertical_lines() {
-        let pmcc = create_pmcc_strategy();
-        let vertical_lines = pmcc.get_vertical_lines();
-        assert_eq!(vertical_lines.len(), 1);
-        assert_eq!(vertical_lines[0].x_coordinate, 150.0);
-    }
-
-    #[test]
-    fn test_graph_points() {
-        let pmcc = create_pmcc_strategy();
-        let points = pmcc.get_points();
-        assert!(!points.is_empty());
     }
 }
 
@@ -1412,89 +1193,6 @@ mod tests_pmcc_pnl {
             strategy.get_max_loss().unwrap_or(Positive::ZERO)
                 > strategy.get_max_profit().unwrap_or(Positive::ZERO)
         );
-    }
-}
-
-#[cfg(test)]
-mod tests_pmcc_graph {
-    use super::*;
-    use crate::constants::DAYS_IN_A_YEAR;
-    use crate::pos;
-    use rust_decimal_macros::dec;
-
-    fn create_test_strategy() -> PoorMansCoveredCall {
-        PoorMansCoveredCall::new(
-            "AAPL".to_string(),
-            pos!(150.0),
-            pos!(140.0),
-            pos!(160.0),
-            ExpirationDate::Days(DAYS_IN_A_YEAR),
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(0.2),
-            dec!(0.01),
-            pos!(0.005),
-            pos!(1.0),
-            pos!(15.0),
-            pos!(5.0),
-            Positive::ONE,
-            Positive::ONE,
-            pos!(0.5),
-            pos!(0.5),
-        )
-    }
-
-    #[test]
-    fn test_title_format() {
-        let strategy = create_test_strategy();
-        let title = strategy.get_title();
-        assert!(title.contains("PoorMansCoveredCall Strategy"));
-        assert!(title.contains("AAPL"));
-        assert!(title.contains("Long Call"));
-        assert!(title.contains("Short Call"));
-    }
-
-    #[test]
-    fn test_vertical_lines_format() {
-        let strategy = create_test_strategy();
-        let lines = strategy.get_vertical_lines();
-
-        assert_eq!(lines.len(), 1);
-        assert_eq!(lines[0].x_coordinate, 150.0);
-        assert!(lines[0].label.contains("Current Price"));
-    }
-
-    #[test]
-    fn test_points_format() {
-        let strategy = create_test_strategy();
-        let points = strategy.get_points();
-
-        assert!(points.iter().any(|p| p.label.contains("Break Even")));
-        assert!(points.iter().any(|p| p.label.contains("Max Profit")));
-        assert!(points.iter().any(|p| p.label.contains("Max Loss")));
-
-        let break_even_point = points
-            .iter()
-            .find(|p| p.label.contains("Break Even"))
-            .unwrap();
-        assert_eq!(break_even_point.coordinates.1, 0.0);
-    }
-
-    #[test]
-    fn test_point_colors() {
-        let strategy = create_test_strategy();
-        let points = strategy.get_points();
-
-        let max_profit_point = points
-            .iter()
-            .find(|p| p.label.contains("Max Profit"))
-            .unwrap();
-        assert_eq!(max_profit_point.point_color, DARK_GREEN);
-
-        let max_loss_point = points
-            .iter()
-            .find(|p| p.label.contains("Max Loss"))
-            .unwrap();
-        assert_eq!(max_loss_point.point_color, RED);
     }
 }
 

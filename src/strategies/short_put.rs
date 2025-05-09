@@ -1,11 +1,18 @@
-use crate::error::PositionError;
-use crate::error::position::PositionValidationErrorKind;
-use crate::model::Position;
-use crate::strategies::base::{Positionable, StrategyType};
-use crate::{ExpirationDate, OptionStyle, OptionType, Options, Positive, Side};
+use super::base::{
+    Positionable, Strategable, StrategyType, Validable,
+};
+use crate::{
+    ExpirationDate, Options, Positive,
+    error::position::{PositionError, PositionValidationErrorKind},
+    model::{
+        position::Position,
+        types::{OptionStyle, OptionType, Side},
+    },
+};
 use chrono::Utc;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
+use std::error::Error;
 
 pub(super) const SHORT_PUT_DESCRIPTION: &str = "A Short Put (or Naked Put) is an options strategy where the trader sells a put option without holding a short position in the underlying stock. \
     This strategy provides immediate income from the premium collected but includes substantial risk if the stock price falls below the strike price. \

@@ -10,35 +10,37 @@ Key characteristics:
 - Profitable only with a large move in either direction
 */
 use super::base::{
-    BreakEvenable, Optimizable, Positionable, Strategable, Strategies, StrategyType, Validable,
+    BreakEvenable, Optimizable, Positionable, Strategable, StrategyBasics, StrategyType, Validable,
 };
-use crate::chains::StrategyLegs;
-use crate::chains::chain::OptionChain;
-use crate::chains::utils::OptionDataGroup;
-use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
-use crate::error::position::{PositionError, PositionValidationErrorKind};
-use crate::error::probability::ProbabilityError;
-use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
-use crate::error::{GreeksError, OperationErrorKind};
-use crate::greeks::Greeks;
-use crate::model::ProfitLossRange;
-use crate::model::position::Position;
-use crate::model::types::{OptionBasicType, OptionStyle, OptionType, Side};
-use crate::model::utils::mean_and_std;
-use crate::pnl::utils::{PnL, PnLCalculator};
-use crate::pricing::payoff::Profit;
-use crate::strategies::delta_neutral::DeltaNeutrality;
-use crate::strategies::probabilities::core::ProbabilityAnalysis;
-use crate::strategies::probabilities::utils::VolatilityAdjustment;
-use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
-use crate::strategies::{BasicAble, StrategyBasics, StrategyConstructor};
-use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
-use crate::visualization::utils::Graph;
-use crate::{ExpirationDate, Options, Positive};
+use crate::{
+    ExpirationDate, Options, Positive,
+    chains::{StrategyLegs, chain::OptionChain, utils::OptionDataGroup},
+    constants::ZERO,
+    error::{
+        GreeksError, OperationErrorKind,
+        position::{PositionError, PositionValidationErrorKind},
+        probability::ProbabilityError,
+        strategies::{ProfitLossErrorKind, StrategyError},
+    },
+    greeks::Greeks,
+    model::{
+        ProfitLossRange,
+        position::Position,
+        types::{OptionBasicType, OptionStyle, OptionType, Side},
+        utils::mean_and_std,
+    },
+    pnl::{PnLCalculator, utils::PnL},
+    pricing::payoff::Profit,
+    strategies::{Strategies,
+                 BasicAble, StrategyConstructor,
+                 delta_neutral::DeltaNeutrality,
+                 probabilities::{core::ProbabilityAnalysis, utils::VolatilityAdjustment},
+                 utils::{FindOptimalSide, OptimizationCriteria},
+    },
+    visualization::{Graph, GraphData},
+};
 use chrono::Utc;
-use num_traits::FromPrimitive;
-use plotters::prelude::ShapeStyle;
-use plotters::prelude::full_palette::ORANGE;
+use num_traits::{FromPrimitive, ToPrimitive};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -784,76 +786,8 @@ impl Profit for ShortStraddle {
 }
 
 impl Graph for ShortStraddle {
-    fn get_x_values(&self) -> Vec<Positive> {
-        self.get_best_range_to_show(Positive::from(1.0))
-            .unwrap_or_else(|_| vec![self.short_call.option.strike_price])
-    }
-    fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<f64, f64>> {
-        let max_value = f64::INFINITY;
-        let min_value = f64::NEG_INFINITY;
-
-        let vertical_lines = vec![ChartVerticalLine {
-            x_coordinate: self.short_call.option.underlying_price.to_f64(),
-            y_range: (min_value, max_value),
-            label: format!(
-                "Current Price: {:.2}",
-                self.short_call.option.underlying_price
-            ),
-            label_offset: (4.0, -1.0),
-            line_color: ORANGE,
-            label_color: ORANGE,
-            line_style: ShapeStyle::from(&ORANGE).stroke_width(2),
-            font_size: 18,
-        }];
-
-        vertical_lines
-    }
-    fn get_points(&self) -> Vec<ChartPoint<(f64, f64)>> {
-        let mut points: Vec<ChartPoint<(f64, f64)>> = Vec::new();
-        let max_profit = self.get_max_profit().unwrap_or(Positive::ZERO);
-
-        points.push(ChartPoint {
-            coordinates: (self.break_even_points[0].to_f64(), 0.0),
-            label: format!("Low Break Even\n\n{}", self.break_even_points[0]),
-            label_offset: LabelOffsetType::Relative(0.0, -10.0),
-            point_color: DARK_BLUE,
-            label_color: DARK_BLUE,
-            point_size: 5,
-            font_size: 18,
-        });
-
-        points.push(ChartPoint {
-            coordinates: (self.break_even_points[1].to_f64(), 0.0),
-            label: format!("High Break Even\n\n{}", self.break_even_points[1]),
-            label_offset: LabelOffsetType::Relative(-230.0, -10.0),
-            point_color: DARK_BLUE,
-            label_color: DARK_BLUE,
-            point_size: 5,
-            font_size: 18,
-        });
-
-        let coordinates: (f64, f64) = (
-            -self.short_put.option.strike_price.to_f64() / 30.0,
-            max_profit.to_f64() / 15.0,
-        );
-        points.push(ChartPoint {
-            coordinates: (
-                self.short_put.option.strike_price.to_f64(),
-                max_profit.to_f64(),
-            ),
-            label: format!(
-                "Max Profit {:.2} at {:.0}",
-                max_profit, self.short_put.option.strike_price
-            ),
-            label_offset: LabelOffsetType::Relative(coordinates.0, coordinates.1),
-            point_color: DARK_GREEN,
-            label_color: DARK_GREEN,
-            point_size: 5,
-            font_size: 18,
-        });
-        points.push(self.get_point_at_price(&self.short_put.option.underlying_price));
-
-        points
+    fn graph_data(&self) -> GraphData {
+        todo!()
     }
 }
 
@@ -1141,33 +1075,7 @@ mod tests_short_straddle {
         let strategy = setup();
         assert_eq!(strategy.get_profit_area().unwrap().to_f64().unwrap(), 0.961);
     }
-
-    #[test]
-    fn test_graph_methods() {
-        let strategy = setup();
-
-        let vertical_lines = strategy.get_vertical_lines();
-        assert_eq!(vertical_lines.len(), 1);
-        assert_eq!(vertical_lines[0].label, "Current Price: 150");
-
-        let data = strategy.get_x_values();
-        let values = strategy.get_y_values();
-        for (i, &price) in data.iter().enumerate() {
-            assert_eq!(
-                values[i],
-                strategy
-                    .calculate_profit_at(&price)
-                    .unwrap()
-                    .to_f64()
-                    .unwrap()
-            );
-        }
-
-        let title = strategy.get_title();
-        assert!(title.contains("ShortStraddle Strategy"));
-        assert!(title.contains("Call"));
-        assert!(title.contains("Put"));
-    }
+    
 
     #[test]
     fn test_add_leg() {
@@ -1279,18 +1187,7 @@ mod tests_short_straddle {
         let new_strategy = strategy.create_strategy(&chain, &legs);
         assert!(new_strategy.validate());
     }
-
-    #[test]
-    fn test_get_points() {
-        let strategy = setup();
-        let points = strategy.get_points();
-
-        assert_eq!(points.len(), 4);
-
-        let break_even_points: Vec<f64> = points[0..2].iter().map(|p| p.coordinates.0).collect();
-        assert!(break_even_points.contains(&strategy.break_even_points[0].to_f64()));
-        assert!(break_even_points.contains(&strategy.break_even_points[1].to_f64()));
-    }
+    
 
     fn create_test_option_chain() -> OptionChain {
         let option_data_price_params = OptionDataPriceParams::new(

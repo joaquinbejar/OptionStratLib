@@ -10,33 +10,36 @@ Key characteristics:
 - Profit is highest when the underlying asset price remains between the two sold options at expiration
 */
 use super::base::{
-    BreakEvenable, Optimizable, Positionable, Strategable, Strategies, StrategyType, Validable,
+    BreakEvenable, Optimizable, Positionable, Strategable, StrategyBasics, StrategyType, Validable,
 };
-use crate::chains::StrategyLegs;
-use crate::chains::chain::OptionChain;
-use crate::chains::utils::OptionDataGroup;
-use crate::constants::{DARK_BLUE, DARK_GREEN};
-use crate::error::position::{PositionError, PositionValidationErrorKind};
-use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
-use crate::error::{GreeksError, OperationErrorKind, ProbabilityError};
-use crate::greeks::Greeks;
-use crate::model::ProfitLossRange;
-use crate::model::position::Position;
-use crate::model::types::{OptionBasicType, OptionStyle, OptionType, Side};
-use crate::model::utils::mean_and_std;
-use crate::pnl::utils::{PnL, PnLCalculator};
-use crate::pricing::payoff::Profit;
-use crate::strategies::delta_neutral::DeltaNeutrality;
-use crate::strategies::probabilities::{ProbabilityAnalysis, VolatilityAdjustment};
-use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
-use crate::strategies::{BasicAble, StrategyBasics, StrategyConstructor};
-use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
-use crate::visualization::utils::Graph;
-use crate::{ExpirationDate, Options, Positive};
+use crate::{
+    ExpirationDate, Options, Positive,
+    chains::{StrategyLegs, chain::OptionChain, utils::OptionDataGroup},
+    error::{
+        GreeksError, OperationErrorKind,
+        position::{PositionError, PositionValidationErrorKind},
+        probability::ProbabilityError,
+        strategies::{ProfitLossErrorKind, StrategyError},
+    },
+    greeks::Greeks,
+    model::{
+        ProfitLossRange,
+        position::Position,
+        types::{OptionBasicType, OptionStyle, OptionType, Side},
+        utils::mean_and_std,
+    },
+    pnl::{PnLCalculator, utils::PnL},
+    pricing::payoff::Profit,
+    strategies::{Strategies,
+                 BasicAble, StrategyConstructor,
+                 delta_neutral::DeltaNeutrality,
+                 probabilities::{core::ProbabilityAnalysis, utils::VolatilityAdjustment},
+                 utils::{FindOptimalSide, OptimizationCriteria},
+    },
+    visualization::{Graph, GraphData},
+};
 use chrono::Utc;
-use num_traits::{FromPrimitive, ToPrimitive};
-use plotters::prelude::full_palette::ORANGE;
-use plotters::prelude::{RED, ShapeStyle};
+use num_traits::{FromPrimitive};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -969,129 +972,8 @@ impl Profit for IronCondor {
 }
 
 impl Graph for IronCondor {
-    fn get_x_values(&self) -> Vec<Positive> {
-        self.get_best_range_to_show(Positive::from(1.0))
-            .unwrap_or_else(|_| vec![self.short_call.option.strike_price])
-    }
-    fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<f64, f64>> {
-        let vertical_lines = vec![ChartVerticalLine {
-            x_coordinate: self.short_call.option.underlying_price.to_f64(),
-            y_range: (-50000.0, 50000.0),
-            label: format!("Current Price: {}", self.short_call.option.underlying_price),
-            label_offset: (5.0, 5.0),
-            line_color: ORANGE,
-            label_color: ORANGE,
-            line_style: ShapeStyle::from(&ORANGE).stroke_width(2),
-            font_size: 18,
-        }];
-
-        vertical_lines
-    }
-    fn get_points(&self) -> Vec<ChartPoint<(f64, f64)>> {
-        let mut points: Vec<ChartPoint<(f64, f64)>> = Vec::new();
-        let max_profit = self.get_max_profit().unwrap_or(Positive::ZERO);
-        let short_call_strike_price = &self.short_call.option.strike_price;
-        let short_put_strike_price = &self.short_put.option.strike_price;
-        let long_call_strike_price = &self.long_call.option.strike_price;
-        let long_put_strike_price = &self.long_put.option.strike_price;
-        let current_price = &self.short_call.option.underlying_price;
-
-        points.push(ChartPoint {
-            coordinates: (self.break_even_points[0].to_f64(), 0.0),
-            label: format!("Left Break Even\n\n{}", self.break_even_points[0]),
-            label_offset: LabelOffsetType::Relative(5.0, 5.0),
-            point_color: DARK_BLUE,
-            label_color: DARK_BLUE,
-            point_size: 5,
-            font_size: 18,
-        });
-
-        points.push(ChartPoint {
-            coordinates: (self.break_even_points[1].to_f64(), 0.0),
-            label: format!("Right Break Even\n\n{}", self.break_even_points[1]),
-            label_offset: LabelOffsetType::Relative(5.0, 5.0),
-            point_color: DARK_BLUE,
-            label_color: DARK_BLUE,
-            point_size: 5,
-            font_size: 18,
-        });
-
-        let coordiantes: (f64, f64) = (
-            short_call_strike_price.to_f64() / 2000.0,
-            max_profit.to_f64() / 5.0,
-        );
-        points.push(ChartPoint {
-            coordinates: (short_call_strike_price.to_f64(), max_profit.to_f64()),
-            label: format!(
-                "High Max Profit {:.2} at {:.0}",
-                max_profit, short_call_strike_price
-            ),
-            label_offset: LabelOffsetType::Relative(coordiantes.0, coordiantes.1),
-            point_color: DARK_GREEN,
-            label_color: DARK_GREEN,
-            point_size: 5,
-            font_size: 18,
-        });
-
-        let coordinates: (f64, f64) = (
-            -short_put_strike_price.to_f64() / 35.0,
-            max_profit.to_f64() / 5.0,
-        );
-        points.push(ChartPoint {
-            coordinates: (
-                self.short_put.option.strike_price.to_f64(),
-                max_profit.to_f64(),
-            ),
-            label: format!(
-                "Low Max Profit {:.2} at {:.0}",
-                max_profit, self.short_put.option.strike_price
-            ),
-            label_offset: LabelOffsetType::Relative(coordinates.0, coordinates.1),
-            point_color: DARK_GREEN,
-            label_color: DARK_GREEN,
-            point_size: 5,
-            font_size: 18,
-        });
-
-        let loss = self
-            .calculate_profit_at(long_call_strike_price)
-            .unwrap()
-            .to_f64()
-            .unwrap();
-        let coordinates: (f64, f64) = (-short_put_strike_price.to_f64() / 35.0, loss / 50.0);
-        points.push(ChartPoint {
-            coordinates: (self.long_call.option.strike_price.to_f64(), loss),
-            label: format!(
-                "Right Max Loss {:.2} at {:.0}",
-                loss, self.long_call.option.strike_price
-            ),
-            label_offset: LabelOffsetType::Relative(coordinates.0, coordinates.1),
-            point_color: RED,
-            label_color: RED,
-            point_size: 5,
-            font_size: 18,
-        });
-
-        let loss = self
-            .calculate_profit_at(long_put_strike_price)
-            .unwrap()
-            .to_f64()
-            .unwrap();
-
-        let coordinates: (f64, f64) = (long_put_strike_price.to_f64() / 2000.0, loss / 50.0);
-        points.push(ChartPoint {
-            coordinates: (long_put_strike_price.to_f64(), loss),
-            label: format!("Left Max Loss {:.2} at {:.0}", loss, long_put_strike_price),
-            label_offset: LabelOffsetType::Relative(coordinates.0, coordinates.1),
-            point_color: RED,
-            label_color: RED,
-            point_size: 5,
-            font_size: 18,
-        });
-
-        points.push(self.get_point_at_price(current_price));
-
-        points
+    fn graph_data(&self) -> GraphData {
+        todo!()
     }
 }
 
@@ -1550,6 +1432,7 @@ mod tests_iron_condor_validable {
 
 #[cfg(test)]
 mod tests_iron_condor_strategies {
+    use num_traits::ToPrimitive;
     use super::*;
     use crate::constants::ZERO;
     use crate::model::ExpirationDate;
@@ -2174,6 +2057,7 @@ mod tests_iron_condor_optimizable {
 
 #[cfg(test)]
 mod tests_iron_condor_profit {
+    use num_traits::ToPrimitive;
     use super::*;
     use crate::model::ExpirationDate;
     use crate::pos;
@@ -2430,177 +2314,6 @@ mod tests_iron_condor_profit {
 
         assert!(lower_profit.abs() < 0.001);
         assert!(upper_profit.abs() < 0.001);
-    }
-}
-
-#[cfg(test)]
-mod tests_iron_condor_graph {
-    use super::*;
-    use crate::model::ExpirationDate;
-    use crate::pos;
-    use rust_decimal_macros::dec;
-
-    fn create_test_condor() -> IronCondor {
-        IronCondor::new(
-            "TEST".to_string(),
-            pos!(100.0), // underlying_price
-            pos!(105.0), // short_call_strike
-            pos!(95.0),  // short_put_strike
-            pos!(110.0), // long_call_strike
-            pos!(90.0),  // long_put_strike
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(0.2),      // implied_volatility
-            dec!(0.05),     // risk_free_rate
-            Positive::ZERO, // dividend_yield
-            pos!(2.0),      // quantity
-            Positive::TWO,  // premium_short_call
-            Positive::TWO,  // premium_short_put
-            Positive::ONE,  // premium_long_call
-            Positive::ONE,  // premium_long_put
-            Positive::ZERO, // open_fee
-            Positive::ZERO, // closing fee
-        )
-    }
-
-    #[test]
-    fn test_title_format() {
-        let condor = create_test_condor();
-        let title = condor.get_title();
-
-        assert!(title.contains("IronCondor Strategy"));
-        assert!(title.contains("TEST")); // Symbol
-        assert!(title.contains("$90 Long Put"));
-        assert!(title.contains("$95 Short Put"));
-        assert!(title.contains("$105 Short Call"));
-        assert!(title.contains("$110 Long Call"));
-    }
-
-    #[test]
-    fn test_get_vertical_lines() {
-        let condor = create_test_condor();
-        let lines = condor.get_vertical_lines();
-
-        assert_eq!(lines.len(), 1);
-        let line = &lines[0];
-
-        assert_eq!(line.x_coordinate, 100.0);
-        assert_eq!(line.y_range, (-50000.0, 50000.0));
-        assert!(line.label.contains("Current Price: 100"));
-        assert_eq!(line.label_offset, (5.0, 5.0));
-        assert_eq!(line.line_color, ORANGE);
-        assert_eq!(line.label_color, ORANGE);
-        assert_eq!(line.font_size, 18);
-    }
-
-    #[test]
-    fn test_get_points() {
-        let condor = create_test_condor();
-        let points = condor.get_points();
-
-        assert_eq!(points.len(), 7);
-
-        let lower_break_even = &points[0];
-        let upper_break_even = &points[1];
-        assert_eq!(lower_break_even.coordinates.1, 0.0);
-        assert_eq!(upper_break_even.coordinates.1, 0.0);
-        assert!(lower_break_even.label.contains("Left Break Even"));
-        assert!(upper_break_even.label.contains("Right Break Even"));
-
-        let lower_max_profit = &points[2];
-        let upper_max_profit = &points[3];
-        assert_eq!(lower_max_profit.coordinates.0, 105.0);
-        assert_eq!(upper_max_profit.coordinates.0, 95.0);
-        assert!(lower_max_profit.label.contains("High Max Profit"));
-        assert!(upper_max_profit.label.contains("Low Max Profit"));
-
-        let right_max_loss = &points[4];
-        let left_max_loss = &points[5];
-        assert_eq!(right_max_loss.coordinates.0, 110.0);
-        assert_eq!(left_max_loss.coordinates.0, 90.0);
-        assert!(right_max_loss.label.contains("Right Max Loss"));
-        assert!(left_max_loss.label.contains("Left Max Loss"));
-    }
-
-    #[test]
-    fn test_point_colors() {
-        let condor = create_test_condor();
-        let points = condor.get_points();
-
-        for point in &points {
-            match point.label.as_str() {
-                label if label.contains("Break Even") => {
-                    assert_eq!(point.point_color, DARK_BLUE);
-                    assert_eq!(point.label_color, DARK_BLUE);
-                }
-                label if label.contains("Max Profit") => {
-                    assert_eq!(point.point_color, DARK_GREEN);
-                    assert_eq!(point.label_color, DARK_GREEN);
-                }
-                label if label.contains("Max Loss") => {
-                    assert_eq!(point.point_color, RED);
-                    assert_eq!(point.label_color, RED);
-                }
-                _ => {}
-            }
-        }
-    }
-
-    #[test]
-    fn test_point_styles() {
-        let condor = create_test_condor();
-        let points = condor.get_points();
-
-        for point in points {
-            assert_eq!(point.point_size, 5);
-            assert_eq!(point.font_size, 18);
-            assert_eq!(point.label_color, point.point_color);
-        }
-    }
-
-    #[test]
-    fn test_zero_profit_points() {
-        let mut condor = create_test_condor();
-        condor.short_call.premium = Positive::ONE;
-        condor.short_put.premium = Positive::ONE;
-        condor.long_call.premium = Positive::ONE;
-        condor.long_put.premium = Positive::ONE;
-
-        let points = condor.get_points();
-        let max_profit_point = &points[2];
-
-        assert_eq!(max_profit_point.coordinates.1, 0.0);
-        assert!(max_profit_point.label.contains("0"));
-    }
-
-    #[test]
-    fn test_points_with_different_quantities() {
-        let condor = create_test_condor();
-        let points = condor.get_points();
-
-        let max_profit_point = &points[2];
-        let max_loss_point = &points[4];
-
-        assert_eq!(max_profit_point.coordinates.1, 4.0); // 2 * 2.0
-        assert_eq!(max_loss_point.coordinates.1, -6.0); // 2 * -3.0
-    }
-
-    #[test]
-    fn test_current_price_point() {
-        let condor = create_test_condor();
-        let points = condor.get_points();
-        let current_price_point = points.last().unwrap();
-
-        assert_eq!(
-            current_price_point.coordinates.0,
-            condor.long_call.option.underlying_price.to_f64()
-        );
-
-        let expected_profit = condor
-            .calculate_profit_at(&condor.long_call.option.underlying_price)
-            .unwrap()
-            .to_f64()
-            .unwrap();
-        assert_eq!(current_price_point.coordinates.1, expected_profit);
     }
 }
 

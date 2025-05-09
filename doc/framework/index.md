@@ -625,9 +625,7 @@ analysis:
  use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
  use optionstratlib::pos;
  use optionstratlib::utils::setup_logger;
- use optionstratlib::visualization::utils::Graph;
- use optionstratlib::visualization::utils::GraphBackend;
- use std::error::Error;
+   use std::error::Error;
  use tracing::info;
 
  fn create_sample_option() -> Options {
@@ -680,9 +678,7 @@ analysis:
  use optionstratlib::strategies::Strategies;
  use optionstratlib::strategies::bull_call_spread::BullCallSpread;
  use optionstratlib::utils::setup_logger;
- use optionstratlib::visualization::utils::Graph;
- use optionstratlib::visualization::utils::GraphBackend;
- use std::error::Error;
+   use std::error::Error;
  use tracing::info;
 
  fn main() -> Result<(), Box<dyn Error>> {

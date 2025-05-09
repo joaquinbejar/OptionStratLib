@@ -11,10 +11,11 @@ use optionstratlib::strategies::{
 };
 use optionstratlib::utils::setup_logger;
 use optionstratlib::utils::time::get_tomorrow_formatted;
-use optionstratlib::visualization::utils::{Graph, GraphBackend};
+
 use optionstratlib::{ExpirationDate, Positive, pos};
 use rust_decimal::Decimal;
 use tracing::{debug, info};
+use optionstratlib::visualization::Graph;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     setup_logger();
@@ -78,13 +79,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     if strategy.get_profit_ratio()? > Positive::ZERO.into() {
         debug!("Strategy:  {:#?}", strategy);
-        strategy.graph(
-            GraphBackend::Bitmap {
-                file_path: "Draws/Chains/short_strangle_chain_raw_delta.png",
-                size: (1400, 933),
-            },
-            20,
-        )?;
+        let path: &std::path::Path = "Draws/Chains/short_strangle_chain_raw_delta.png".as_ref();
+        strategy.write_png(path, 1200, 800)?;
     }
     info!("Greeks:  {:#?}", strategy.greeks());
 

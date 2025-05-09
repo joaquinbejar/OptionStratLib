@@ -1,19 +1,11 @@
+use crate::Positive;
 use crate::pricing::Profit;
 use crate::simulation::WalkParams;
 use crate::simulation::randomwalk::RandomWalk;
 use crate::simulation::steps::Step;
 use crate::strategies::base::BasicAble;
 use crate::utils::Len;
-use crate::visualization::utils::{
-    Graph, GraphBackend, calculate_axis_range, draw_points_on_chart, draw_vertical_lines_on_chart,
-    random_color,
-};
-use crate::{Positive, build_chart_inverted};
-use plotters::element::PathElement;
-use plotters::prelude::{
-    BLACK, BitMapBackend, IntoDrawingArea, LineSeries, RGBColor, SeriesLabelPosition, WHITE,
-};
-use plotters::style::Color;
+use crate::visualization::{Graph, GraphData};
 use rust_decimal::Decimal;
 use std::error::Error;
 use std::fmt::Display;
@@ -127,7 +119,7 @@ where
     /// is tied to the lifetime of the parent object.
     pub fn get_random_walks(&self) -> Vec<&RandomWalk<X, Y>> {
         self.random_walks.iter().collect::<Vec<&RandomWalk<X, Y>>>()
-    } 
+    }
 
     /// Retrieves a reference to the `RandomWalk` at the specified index.
     ///
@@ -186,13 +178,13 @@ where
     pub fn last(&self) -> Option<&RandomWalk<X, Y>> {
         self.random_walks.last()
     }
-    
+
     /// Retrieves a nested vector of references to `Step<X, Y>` objects.
     ///
     /// This function iterates over the elements of the current container (`self`)
-    /// assuming it implements `IntoIterator`, and for each element, 
-    /// calls its `get_steps` method. The results are then collected into a 
-    /// two-dimensional `Vec` structure. 
+    /// assuming it implements `IntoIterator`, and for each element,
+    /// calls its `get_steps` method. The results are then collected into a
+    /// two-dimensional `Vec` structure.
     ///
     /// # Returns
     /// A `Vec` where each inner vector contains references to `Step<X, Y>` objects.
@@ -202,22 +194,15 @@ where
     /// - `Y`: The type of the second generic parameter in `Step`.
     ///
     pub fn get_steps(&self) -> Vec<Vec<&Step<X, Y>>> {
-        self.into_iter()
-            .map(|step| step.get_steps())
-            .collect()
+        self.into_iter().map(|step| step.get_steps()).collect()
     }
-    
 
     pub fn last_steps(&self) -> Vec<&Step<X, Y>> {
-        self.into_iter()
-            .map(|step| step.last().unwrap())
-            .collect()
+        self.into_iter().map(|step| step.last().unwrap()).collect()
     }
 
     pub fn last_values(&self) -> Vec<&Step<X, Y>> {
-        self.into_iter()
-            .map(|step| step.last().unwrap())
-            .collect()
+        self.into_iter().map(|step| step.last().unwrap()).collect()
     }
 }
 
@@ -332,105 +317,8 @@ where
     X: Copy + Into<Positive> + AddAssign + Display,
     Y: Into<Positive> + Display + Clone,
 {
-    fn graph(&self, backend: GraphBackend, title_size: u32) -> Result<(), Box<dyn Error>> {
-        let all_x_values: Vec<Positive> = self
-            .random_walks
-            .iter()
-            .flat_map(|walk| walk.get_x_values())
-            .collect();
-
-        if all_x_values.is_empty() {
-            return Err("No valid X values to plot".into());
-        }
-
-        let all_y_values: Vec<f64> = self
-            .random_walks
-            .iter()
-            .flat_map(|walk| walk.get_y_values())
-            .collect();
-
-        if all_y_values.is_empty() {
-            return Err("No valid Y values to plot".into());
-        }
-
-        let (max_x_value, min_x_value, max_y_value, min_y_value) =
-            calculate_axis_range(&all_x_values, &all_y_values, Some(1.005));
-
-        let root = match backend {
-            GraphBackend::Bitmap { file_path, size } => {
-                let root = BitMapBackend::new(file_path, size).into_drawing_area();
-                root.fill(&WHITE)?;
-                root
-            }
-        };
-
-        let mut chart = build_chart_inverted!(
-            &root,
-            self.get_title(),
-            title_size,
-            min_x_value.to_f64(),
-            max_x_value.to_f64(),
-            min_y_value,
-            max_y_value
-        );
-
-        chart
-            .configure_mesh()
-            .x_labels(20)
-            .y_labels(20)
-            .x_label_formatter(&|x| format!("{:.2}", x))
-            .y_label_formatter(&|y| format!("{:.2}", y))
-            .draw()?;
-
-        let colors: Vec<RGBColor> = (0..self.random_walks.len())
-            .map(|_| random_color())
-            .collect();
-
-        for (i, walk) in self.random_walks.iter().enumerate() {
-            let x_values: Vec<f64> = walk.get_x_values().iter().map(|x| x.to_f64()).collect();
-
-            let y_values = walk.get_y_values();
-
-            if !x_values.is_empty() && !y_values.is_empty() && x_values.len() == y_values.len() {
-                let color_index = i % colors.len();
-                let line_color = colors[color_index];
-
-                chart
-                    .draw_series(LineSeries::new(
-                        x_values.iter().zip(y_values.iter()).map(|(&x, &y)| (x, y)),
-                        line_color,
-                    ))?
-                    .label(format!("Walk {}", i))
-                    .legend(move |(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], line_color));
-            }
-        }
-
-        chart
-            .configure_series_labels()
-            .background_style(WHITE.mix(0.8))
-            .border_style(BLACK)
-            .position(SeriesLabelPosition::UpperLeft) // Posición en la parte superior izquierda
-            .draw()?;
-
-        draw_points_on_chart(&mut chart, &self.get_points())?;
-        draw_vertical_lines_on_chart(&mut chart, &self.get_vertical_lines())?;
-
-        root.present()?;
-        Ok(())
-    }
-
-    fn get_x_values(&self) -> Vec<Positive> {
-        self.random_walks
-            .iter()
-            .flat_map(|step| step.get_x_values())
-            .collect()
-    }
-
-    fn get_y_values(&self) -> Vec<f64> {
-        self.random_walks
-            .iter()
-            .flat_map(|step| step.get_y_values())
-            .collect()
+    fn graph_data(&self) -> GraphData {
+        todo!()
     }
 }
 
@@ -449,16 +337,16 @@ where
 
 #[cfg(test)]
 mod tests {
-    use std::fs;
     use super::*;
     use crate::chains::generator_positive;
     use crate::simulation::{
         WalkParams, WalkType, WalkTypeAble,
         steps::{Step, Xstep, Ystep},
     };
-    use crate::utils::{TimeFrame, time::convert_time_frame, setup_logger};
+    use crate::utils::{TimeFrame, setup_logger, time::convert_time_frame};
     use crate::{ExpirationDate, Positive, pos};
     use rust_decimal_macros::dec;
+    
     use tracing::{debug, info};
 
     // Helper structs and functions for testing
@@ -593,8 +481,14 @@ mod tests {
         // Test first and last
         assert!(simulator.first().is_some());
         assert!(simulator.last().is_some());
-        assert_eq!(simulator.first().expect("should be Ok").get_title(), "Test Simulator_0");
-        assert_eq!(simulator.last().expect("should be Ok").get_title(), "Test Simulator_2");
+        assert_eq!(
+            simulator.first().expect("should be Ok").get_title(),
+            "Test Simulator_0"
+        );
+        assert_eq!(
+            simulator.last().expect("should be Ok").get_title(),
+            "Test Simulator_2"
+        );
     }
 
     // Test Index and IndexMut traits
@@ -720,78 +614,6 @@ mod tests {
     }
 
     #[test]
-    fn test_simulator_graph() -> Result<(), Box<dyn Error>> {
-        struct Walker {}
-
-        impl Walker {
-            fn new() -> Self {
-                Walker {}
-            }
-        }
-
-        impl WalkTypeAble<Positive, Positive> for Walker {}
-
-        let simulator_size: usize = 5;
-        let n_steps = 10;
-        let initial_price = pos!(100.0);
-        let std_dev = pos!(20.0);
-        let walker = Box::new(Walker::new());
-        let days = pos!(30.0);
-
-        let walk_params = WalkParams {
-            size: n_steps,
-            init_step: Step {
-                x: Xstep::new(Positive::ONE, TimeFrame::Minute, ExpirationDate::Days(days)),
-                y: Ystep::new(0, initial_price),
-            },
-            walk_type: WalkType::GeometricBrownian {
-                dt: convert_time_frame(pos!(1.0) / days, &TimeFrame::Minute, &TimeFrame::Day),
-                drift: dec!(0.0),
-                volatility: std_dev,
-            },
-            walker,
-        };
-
-        let mut simulator = Simulator::new(
-            "Simulator".to_string(),
-            simulator_size,
-            &walk_params,
-            generator_positive,
-        );
-
-        let y_values = simulator.get_y_values();
-        let x_values = simulator.get_x_values();
-
-        assert_eq!(y_values.len(), simulator_size * n_steps);
-        assert_eq!(x_values.len(), simulator_size * n_steps);
-
-        let mut iter = simulator.into_iter();
-        assert!(iter.any(|step| step.get_y_values().len() == n_steps));
-        assert!(iter.any(|step| step.get_x_values().len() == n_steps));
-        assert!(simulator.calculate_profit_at(&pos!(100.0)).is_err());
-
-        let step = simulator.get_random_walk_mut(0);
-        assert!(step.first().is_some());
-
-        let file_path = "Draws/Simulation/simulator_test.png";
-        assert!(
-            simulator
-                .graph(
-                    GraphBackend::Bitmap {
-                        file_path,
-                        size: (1200, 800),
-                    },
-                    20,
-                )
-                .is_ok()
-        );
-
-        assert!(std::fs::remove_file(file_path).is_ok());
-
-        Ok(())
-    }
-    
-    #[test]
     fn test_full_simulation() -> Result<(), Box<dyn Error>> {
         setup_logger();
         let simulator_size: usize = 15;
@@ -814,7 +636,7 @@ mod tests {
             },
             walker,
         };
-        
+
         assert_eq!(walk_params.size, n_steps);
         assert_eq!(walk_params.init_step.get_value(), &pos!(100.0));
         assert_eq!(walk_params.y(), &pos!(100.0));
@@ -829,17 +651,16 @@ mod tests {
         // println!("{}", simulator);
         assert_eq!(simulator.get_title(), "Simulator");
         assert_eq!(simulator.len(), simulator_size);
-        
-        
+
         let random_walk = simulator[0].clone();
         assert_eq!(random_walk.get_title(), "Simulator_0");
         assert_eq!(random_walk.len(), n_steps);
-        
+
         let step = random_walk[0].clone();
         assert_eq!(*step.get_index(), Positive::ONE);
         let step_string = format!("{}", step);
         assert_eq!(step.to_string(), step_string);
-        
+
         let y_step = step.get_y_step();
         assert_eq!(*y_step.index(), 0);
         assert_eq!(*y_step.value(), pos!(100.0));
@@ -849,32 +670,30 @@ mod tests {
         assert_eq!(*x_step.step_size_in_time(), Positive::ONE);
         assert_eq!(x_step.time_unit(), &TimeFrame::Hour);
         assert_eq!(x_step.days_left()?, pos!(2.0));
-        
-        
+
         let next_step = step.next(pos!(200.0)).expect("should be Ok");
         assert_eq!(next_step.get_value(), &pos!(200.0));
         let next_step_string = format!("{}", next_step);
         assert_eq!(next_step.to_string(), next_step_string);
-        
+
         let previous_step = step.previous(pos!(50.0))?;
         assert_eq!(previous_step.get_value(), &pos!(50.0));
         let previous_step_string = format!("{}", previous_step);
         assert_eq!(previous_step.to_string(), previous_step_string);
-        
+
         let x_step = step.get_x_step();
         let next_x_step = x_step.next().expect("should be Ok");
         assert_eq!(*next_x_step.index(), 1);
         assert_eq!(*next_x_step.step_size_in_time(), Positive::ONE);
         let next_x_step_string = format!("{}", next_x_step);
         assert_eq!(next_x_step.to_string(), next_x_step_string);
-        
+
         let y_step = step.get_y_step();
         assert_eq!(*y_step.index(), 0);
         assert_eq!(*y_step.value(), pos!(100.0));
         assert_eq!(y_step.positive(), pos!(100.0));
-        
 
-        let last_steps: Vec<&Step<Positive,Positive>> = simulator
+        let last_steps: Vec<&Step<Positive, Positive>> = simulator
             .into_iter()
             .map(|step| step.last().expect("should be Ok"))
             .collect();
@@ -889,16 +708,6 @@ mod tests {
         assert_eq!(last_values.len(), simulator_size);
 
         let file_name = "Draws/Simulation/test_simulator.png";
-        simulator.graph(
-            GraphBackend::Bitmap {
-                file_path: file_name,
-                size: (1200, 800),
-            },
-            20,
-        )?;
-        let remove_result = fs::remove_file(file_name);
-        assert!(remove_result.is_ok());
-
-        Ok(())
+        todo!("graph test");
     }
 }

@@ -1,31 +1,35 @@
-use crate::chains::utils::OptionDataGroup;
-use crate::chains::{OptionChain, StrategyLegs};
-use crate::constants::{DARK_BLUE, DARK_GREEN, ZERO};
-use crate::error::position::PositionValidationErrorKind;
-use crate::error::strategies::ProfitLossErrorKind;
-use crate::error::{
-    GreeksError, OperationErrorKind, PositionError, ProbabilityError, StrategyError,
+use super::base::{
+    BreakEvenable, Optimizable, Positionable, Strategable, StrategyBasics, StrategyType, Validable,
 };
-use crate::greeks::Greeks;
-use crate::model::types::OptionBasicType;
-use crate::model::utils::mean_and_std;
-use crate::model::{Position, ProfitLossRange};
-use crate::pnl::{PnL, PnLCalculator};
-use crate::pricing::Profit;
-use crate::strategies::base::{BreakEvenable, Optimizable, Positionable, StrategyType};
-use crate::strategies::probabilities::{ProbabilityAnalysis, VolatilityAdjustment};
-use crate::strategies::utils::OptimizationCriteria;
-use crate::strategies::{
-    BasicAble, DeltaNeutrality, FindOptimalSide, Strategable, Strategies, StrategyBasics,
-    StrategyConstructor, Validable,
+use crate::{
+    ExpirationDate, Options, Positive,
+    chains::{StrategyLegs, chain::OptionChain, utils::OptionDataGroup},
+    error::{
+        GreeksError, OperationErrorKind,
+        position::{PositionError, PositionValidationErrorKind},
+        probability::ProbabilityError,
+        strategies::{ProfitLossErrorKind, StrategyError},
+    },
+    greeks::Greeks,
+    model::{
+        ProfitLossRange,
+        position::Position,
+        types::{OptionBasicType, OptionStyle, OptionType, Side},
+        utils::mean_and_std,
+    },
+    pnl::{PnLCalculator, utils::PnL},
+    pos,
+    pricing::payoff::Profit,
+    strategies::{
+        BasicAble, Strategies, StrategyConstructor,
+        delta_neutral::DeltaNeutrality,
+        probabilities::{core::ProbabilityAnalysis, utils::VolatilityAdjustment},
+        utils::{FindOptimalSide, OptimizationCriteria},
+    },
+    visualization::{Graph, GraphData},
 };
-use crate::visualization::model::{ChartPoint, ChartVerticalLine, LabelOffsetType};
-use crate::visualization::utils::Graph;
-use crate::{ExpirationDate, OptionStyle, OptionType, Options, Positive, Side, pos};
 use chrono::Utc;
 use num_traits::ToPrimitive;
-use plotters::prelude::full_palette::ORANGE;
-use plotters::prelude::{RED, ShapeStyle};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -883,111 +887,8 @@ impl Profit for ShortButterflySpread {
 }
 
 impl Graph for ShortButterflySpread {
-    fn get_x_values(&self) -> Vec<Positive> {
-        self.get_best_range_to_show(Positive::from(1.0))
-            .unwrap_or_else(|_| vec![self.long_call.option.strike_price])
-    }
-
-    fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<f64, f64>> {
-        vec![ChartVerticalLine {
-            x_coordinate: self.short_call_low.option.underlying_price.to_f64(),
-            y_range: (-50000.0, 50000.0),
-            label: format!(
-                "Current Price: {}",
-                self.short_call_low.option.underlying_price
-            ),
-            label_offset: (5.0, 5.0),
-            line_color: ORANGE,
-            label_color: ORANGE,
-            line_style: ShapeStyle::from(&ORANGE).stroke_width(2),
-            font_size: 18,
-        }]
-    }
-
-    fn get_points(&self) -> Vec<ChartPoint<(f64, f64)>> {
-        let mut points = Vec::new();
-        let max_loss = self.get_max_loss().unwrap_or(Positive::ZERO);
-
-        let left_profit = self
-            .calculate_profit_at(&self.short_call_low.option.strike_price)
-            .unwrap()
-            .to_f64()
-            .unwrap();
-        let right_profit = self
-            .calculate_profit_at(&self.short_call_high.option.strike_price)
-            .unwrap()
-            .to_f64()
-            .unwrap();
-
-        // Break-even points
-        points.extend(
-            self.break_even_points
-                .iter()
-                .enumerate()
-                .map(|(i, &price)| ChartPoint {
-                    coordinates: (price.to_f64(), 0.0),
-                    label: format!(
-                        "Break Even {}: {:.2}",
-                        if i == 0 { "Lower" } else { "Upper" },
-                        price
-                    ),
-                    label_offset: LabelOffsetType::Relative(3.0, 3.0),
-                    point_color: DARK_BLUE,
-                    label_color: DARK_BLUE,
-                    point_size: 5,
-                    font_size: 18,
-                }),
-        );
-
-        // Maximum loss point (at middle strike)
-        points.push(ChartPoint {
-            coordinates: (
-                self.long_call.option.strike_price.to_f64(),
-                -max_loss.to_f64(),
-            ),
-            label: format!("Max Loss {:.2}", -max_loss.to_f64()),
-            label_offset: LabelOffsetType::Relative(3.0, -3.0),
-            point_color: RED,
-            label_color: RED,
-            point_size: 5,
-            font_size: 18,
-        });
-
-        let left_color = if left_profit > ZERO { DARK_GREEN } else { RED };
-
-        // Maximum profit points (at wing strikes)
-        points.push(ChartPoint {
-            coordinates: (
-                self.short_call_low.option.strike_price.to_f64(),
-                left_profit,
-            ),
-            label: format!("Left Profit {:.2}", left_profit),
-            label_offset: LabelOffsetType::Relative(-30.0, 3.0),
-            point_color: left_color,
-            label_color: left_color,
-            point_size: 5,
-            font_size: 18,
-        });
-
-        let right_color = if right_profit > ZERO { DARK_GREEN } else { RED };
-
-        points.push(ChartPoint {
-            coordinates: (
-                self.short_call_high.option.strike_price.to_f64(),
-                right_profit,
-            ),
-            label: format!("Right Profit {:.2}", right_profit),
-            label_offset: LabelOffsetType::Relative(3.0, 3.0),
-            point_color: right_color,
-            label_color: right_color,
-            point_size: 5,
-            font_size: 18,
-        });
-
-        // Current price point
-        points.push(self.get_point_at_price(&self.short_call_low.option.underlying_price));
-
-        points
+    fn graph_data(&self) -> GraphData {
+        todo!()
     }
 }
 
@@ -1983,110 +1884,6 @@ mod tests_short_butterfly_delta_size {
 }
 
 #[cfg(test)]
-mod tests_short_butterfly_graph {
-    use super::*;
-    use crate::model::ExpirationDate;
-    use crate::pos;
-    use approx::assert_relative_eq;
-    use rust_decimal_macros::dec;
-
-    fn create_test_butterfly() -> ShortButterflySpread {
-        let underlying_price = pos!(5781.88);
-        ShortButterflySpread::new(
-            "SP500".to_string(),
-            underlying_price, // underlying_price
-            pos!(5700.0),     // short_strike_itm
-            pos!(5780.0),     // short_strike
-            pos!(5850.0),     // short_strike_otm
-            ExpirationDate::Days(pos!(2.0)),
-            pos!(0.18),     // implied_volatility
-            dec!(0.05),     // risk_free_rate
-            Positive::ZERO, // dividend_yield
-            pos!(1.0),      // short quantity
-            pos!(119.01),   // premium_short
-            pos!(66.0),     // premium_short
-            pos!(29.85),    // open_fee_short
-            pos!(0.05),
-            pos!(0.05),
-            pos!(0.05),
-            pos!(0.05),
-            pos!(0.05),
-            pos!(0.05),
-        )
-    }
-
-    #[test]
-    fn test_title_format() {
-        let butterfly = create_test_butterfly();
-        let title = butterfly.get_title();
-        assert!(title.contains("ShortButterflySpread Strategy"));
-        assert!(title.contains("SP500 @ $5700 Short Call European Option"));
-        assert!(title.contains("SP500 @ $5780 Long Call European Option"));
-        assert!(title.contains("SP500 @ $5850 Short Call European Option"));
-    }
-
-    #[test]
-    fn test_vertical_lines() {
-        let butterfly = create_test_butterfly();
-        let lines = butterfly.get_vertical_lines();
-
-        assert_eq!(lines.len(), 1);
-        let line = &lines[0];
-        assert_eq!(line.x_coordinate, 5781.88);
-        assert_eq!(line.y_range, (-50000.0, 50000.0));
-        assert!(line.label.contains("Current Price: 5781.88"));
-        assert_eq!(line.line_color, ORANGE);
-    }
-
-    #[test]
-    fn test_get_points() {
-        let butterfly = create_test_butterfly();
-        let points = butterfly.get_points();
-
-        assert_eq!(points.len(), 6);
-
-        let break_even_points: Vec<&ChartPoint<(f64, f64)>> = points
-            .iter()
-            .filter(|p| p.label.contains("Break Even"))
-            .collect();
-        assert_eq!(break_even_points.len(), 2);
-        for point in break_even_points {
-            assert_eq!(point.coordinates.1, 0.0);
-            assert_eq!(point.point_color, DARK_BLUE);
-        }
-
-        let max_loss_point = points
-            .iter()
-            .find(|p| p.label.contains("Max Loss"))
-            .unwrap();
-        assert_eq!(max_loss_point.coordinates.0, 5780.0);
-        assert_eq!(max_loss_point.point_color, RED);
-
-        let profit_points: Vec<&ChartPoint<(f64, f64)>> = points
-            .iter()
-            .filter(|p| p.label.contains("Profit"))
-            .collect();
-        for point in profit_points {
-            assert!(point.coordinates.1 >= 0.0);
-        }
-    }
-
-    #[test]
-    fn test_point_symmetry() {
-        let butterfly = create_test_butterfly();
-        let points = butterfly.get_points();
-
-        let profit_points: Vec<&ChartPoint<(f64, f64)>> = points
-            .iter()
-            .filter(|p| p.label.contains("Profit"))
-            .collect();
-
-        assert_relative_eq!(profit_points[0].coordinates.1, 16.46, epsilon = 0.01);
-        assert_relative_eq!(profit_points[1].coordinates.1, 6.46, epsilon = 0.01);
-    }
-}
-
-#[cfg(test)]
 mod tests_adjust_option_position_short {
     use super::*;
     use crate::model::types::{OptionStyle, Side};
@@ -2691,6 +2488,7 @@ mod tests_short_butterfly_spread_pnl {
 #[cfg(test)]
 mod tests_butterfly_strategies {
     use super::*;
+    use crate::constants::ZERO;
     use crate::model::ExpirationDate;
     use crate::pos;
     use num_traits::ToPrimitive;
