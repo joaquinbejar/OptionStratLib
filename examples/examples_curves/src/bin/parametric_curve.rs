@@ -24,7 +24,6 @@ fn main() -> Result<(), Box<dyn Error>> {
         .title("Parametric Curve")
         .x_label("X")
         .y_label("Sin")
-        .line_width(1)
         .save("./Draws/Curves/parametric_curve.png")?;
 
     Ok(())

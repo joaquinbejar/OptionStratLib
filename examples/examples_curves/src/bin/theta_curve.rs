@@ -47,7 +47,6 @@ fn main() -> Result<(), Box<dyn Error>> {
         .title("Theta Curve")
         .x_label("Asset value")
         .y_label("theta")
-        .line_width(1)
         .save("./Draws/Curves/theta_curve.png")?;
 
     Ok(())

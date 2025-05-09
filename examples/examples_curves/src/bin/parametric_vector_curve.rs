@@ -31,8 +31,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         .title("Parametric Curve")
         .x_label("X")
         .y_label("Sin")
-        .line_width(1)
-        .curve_name(["Sin".to_string(), "Cos".to_string()].to_vec())
+        .legend(["Sin".to_string(), "Cos".to_string()].to_vec())
         .save("./Draws/Curves/vector_curve.png")?;
 
     Ok(())

@@ -72,11 +72,10 @@ fn main() -> Result<(), Box<dyn Error>> {
         .title("Rho Curve")
         .x_label("Strike")
         .y_label("rho for different Volatilities")
-        .line_width(1)
-        .curve_name(vec![
-            "Volatility 20%".to_string(),
-            "Volatility 10%".to_string(),
-            "Volatility 5%".to_string(),
+        .legend(vec![
+            "Volatility 20%",
+            "Volatility 10%",
+            "Volatility 5%",
         ])
         .save("./Draws/Curves/rho_volatility_vector_curve.png")?;
 

@@ -6,7 +6,7 @@
 
 use crate::error::common::OperationErrorKind;
 use crate::error::metrics::MetricsError;
-use crate::error::{GreeksError, InterpolationError, OptionsError, PositionError};
+use crate::error::{GraphError, GreeksError, InterpolationError, OptionsError, PositionError};
 use std::error::Error;
 use std::fmt;
 
@@ -351,6 +351,14 @@ impl From<MetricsError> for CurveError {
 /// the `CurvesError` enum encompassing multiple errors related to curve operations.
 impl From<Box<dyn Error>> for CurveError {
     fn from(err: Box<dyn Error>) -> Self {
+        CurveError::StdError {
+            reason: err.to_string(),
+        }
+    }
+}
+
+impl From<GraphError> for CurveError {
+    fn from(err: GraphError) -> Self {
         CurveError::StdError {
             reason: err.to_string(),
         }

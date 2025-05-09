@@ -76,7 +76,7 @@ impl From<Curve> for GraphData {
 
 impl From<Vec<Curve>> for GraphData {
     fn from(curves: Vec<Curve>) -> Self {
-        let color_scheme = ColorScheme::Viridis;
+        let color_scheme = ColorScheme::Plasma;
 
         let series: Vec<Series2D> = curves
             .into_iter()
@@ -115,6 +115,7 @@ impl From<Surface> for GraphData {
 pub enum OutputType<'a> {
     Png(&'a PathBuf),
     Html(&'a PathBuf),
+    Svg(&'a PathBuf),
     Browser,
 }
 

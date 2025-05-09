@@ -22,7 +22,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use tracing::{debug, trace};
-use crate::visualization::{ColorScheme, Graph, GraphConfig, GraphData, LineStyle};
+use crate::visualization::{ Graph, GraphConfig, GraphData};
 
 /// The `Position` struct represents a financial position in an options market.
 ///

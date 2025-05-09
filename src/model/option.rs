@@ -3,23 +3,24 @@ use crate::constants::{IV_TOLERANCE, MAX_ITERATIONS_IV, ZERO};
 use crate::error::{GreeksError, OptionsError, OptionsResult, VolatilityError};
 use crate::greeks::Greeks;
 use crate::model::types::{OptionBasicType, OptionStyle, OptionType, Side};
+use crate::model::utils::calculate_optimal_price_range;
 use crate::pnl::utils::{PnL, PnLCalculator};
 use crate::pricing::{
     BinomialPricingParams, Payoff, PayoffInfo, Profit, black_scholes, generate_binomial_tree,
     price_binomial, telegraph,
 };
 use crate::strategies::base::BasicAble;
+use crate::visualization::{
+    ColorScheme, Graph, GraphConfig, GraphData, LineStyle, Series2D, TraceMode,
+};
 use crate::{ExpirationDate, Positive, pos};
-use num_traits::{FromPrimitive, ToPrimitive};
+use num_traits::FromPrimitive;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use tracing::{error, trace};
-use crate::curves::Curve;
-use crate::model::utils::calculate_optimal_price_range;
-use crate::visualization::{ColorScheme, Graph, GraphConfig, GraphData, LineStyle, MultiSeries2D, Series2D, TraceMode};
 
 /// Result type for binomial tree pricing models, containing:
 /// - The option price
@@ -638,8 +639,6 @@ impl Options {
             last_volatility: (high + low) / Positive::TWO,
         })
     }
-    
-    
 }
 
 impl Default for Options {
@@ -833,8 +832,9 @@ impl Graph for Options {
             self.strike_price,
             self.implied_volatility,
             self.expiration_date,
-        ).expect("Failed to calculate optimal price range in graph_data");
-        
+        )
+        .expect("Failed to calculate optimal price range in graph_data");
+
         let mut positive_series = Series2D {
             x: vec![],
             y: vec![],
@@ -851,9 +851,11 @@ impl Graph for Options {
             line_color: Some("#FF0000".to_string()),
             line_width: Some(2.0),
         };
-        
+
         for i in range.0.to_u64()..range.1.to_u64() {
-            let profit = self.payoff_at_price(&Positive::new(i as f64).unwrap()).unwrap();
+            let profit = self
+                .payoff_at_price(&Positive::new(i as f64).unwrap())
+                .unwrap();
             match profit {
                 p if p == Decimal::ZERO => {
                     positive_series.x.push(Decimal::from_u64(i).unwrap());
@@ -872,12 +874,14 @@ impl Graph for Options {
             }
         }
         let multi_series_2d = vec![positive_series, negative_series];
-        GraphData::MultiSeries(multi_series_2d )
+        GraphData::MultiSeries(multi_series_2d)
     }
 
     fn graph_config(&self) -> GraphConfig {
+        let title = self.get_title();
+        let legend = Some(vec![title.clone()]);
         GraphConfig {
-            title: self.get_title(),
+            title,
             width: 1600,
             height: 900,
             x_label: Some("Underlying Price".to_string()),
@@ -885,6 +889,7 @@ impl Graph for Options {
             z_label: None,
             line_style: LineStyle::Solid,
             color_scheme: ColorScheme::Default,
+            legend,
             show_legend: false,
         }
     }

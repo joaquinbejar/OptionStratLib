@@ -9,8 +9,6 @@ use crate::model::Position;
 use crate::model::types::{OptionStyle, OptionType, Side};
 use crate::{ExpirationDate, Options, Positive, pos};
 use chrono::{NaiveDateTime, TimeZone, Utc};
-use num_traits::real::Real;
-use num_traits::ToPrimitive;
 use rust_decimal::{Decimal, MathematicalOps};
 use rust_decimal_macros::dec;
 

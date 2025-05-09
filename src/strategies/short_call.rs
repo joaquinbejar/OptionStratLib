@@ -1,5 +1,5 @@
 use super::base::{
-    Positionable, Strategable, StrategyType, Validable,
+    Positionable, StrategyType,
 };
 use crate::{
     ExpirationDate, Options, Positive,
@@ -12,7 +12,6 @@ use crate::{
 use chrono::Utc;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
-use std::error::Error;
 
 pub(super) const SHORT_CALL_DESCRIPTION: &str = "A Short Call (or Naked Call) is an options strategy where the trader sells a call option without owning the underlying stock. \
     This strategy generates immediate income through the premium received but carries unlimited risk if the stock price rises significantly. \

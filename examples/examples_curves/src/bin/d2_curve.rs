@@ -30,8 +30,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         .plot()
         .title("d2 Curve")
         .x_label("strike")
-        .y_label("d1")
-        .line_width(1)
+        .y_label("d2")
         .save("./Draws/Curves/d2_curve.png")?;
 
     Ok(())

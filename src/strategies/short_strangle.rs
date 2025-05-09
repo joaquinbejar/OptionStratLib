@@ -26,28 +26,27 @@ use crate::{
     model::{
         ProfitLossRange, Trade, TradeStatusAble,
         position::Position,
-        types::{OptionBasicType, OptionStyle, OptionType, Side, Action},
+        types::{Action, OptionBasicType, OptionStyle, OptionType, Side},
         utils::mean_and_std,
     },
     pnl::{PnLCalculator, utils::PnL},
     pricing::payoff::Profit,
-    strategies::{Strategies,
-                 BasicAble, DeltaAdjustment, StrategyConstructor,
-                 delta_neutral::DeltaNeutrality,
-                 probabilities::{core::ProbabilityAnalysis, utils::VolatilityAdjustment},
-                 utils::{FindOptimalSide, OptimizationCriteria, calculate_price_range},
+    strategies::{
+        BasicAble, DeltaAdjustment, Strategies, StrategyConstructor,
+        delta_neutral::DeltaNeutrality,
+        probabilities::{core::ProbabilityAnalysis, utils::VolatilityAdjustment},
+        utils::{FindOptimalSide, OptimizationCriteria, calculate_price_range},
     },
     test_strategy_traits,
     visualization::{Graph, GraphData},
 };
 use chrono::Utc;
-use num_traits::{FromPrimitive, ToPrimitive};
+use num_traits::FromPrimitive;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use tracing::{debug, error, trace};
-
 
 pub(super) const SHORT_STRANGLE_DESCRIPTION: &str = "A short strangle involves selling an out-of-the-money call and an \
 out-of-the-money put with the same expiration date. This strategy is used when low volatility \
@@ -349,7 +348,7 @@ impl BreakEvenable for ShortStrangle {
         self.break_even_points.push(
             (self.short_put.option.strike_price
                 - (total_premium / self.short_put.option.quantity).to_dec())
-                .round_to(2),
+            .round_to(2),
         );
 
         self.break_even_points.push(
@@ -406,15 +405,15 @@ impl Positionable for ShortStrangle {
                 "Position side is Long, it is not valid for ShortStrangle".to_string(),
             )),
             (Side::Short, OptionStyle::Call, strike)
-            if *strike == self.one_option().strike_price =>
-                {
-                    Ok(vec![&mut self.short_call])
-                }
+                if *strike == self.one_option().strike_price =>
+            {
+                Ok(vec![&mut self.short_call])
+            }
             (Side::Short, OptionStyle::Put, strike)
-            if *strike == self.short_put.option.strike_price =>
-                {
-                    Ok(vec![&mut self.short_put])
-                }
+                if *strike == self.short_put.option.strike_price =>
+            {
+                Ok(vec![&mut self.short_put])
+            }
             _ => Err(PositionError::invalid_position_type(
                 *side,
                 "Strike not found in positions".to_string(),
@@ -829,7 +828,7 @@ impl Optimizable for ShortStrangle {
         &'a self,
         option_chain: &'a OptionChain,
         side: FindOptimalSide,
-    ) -> impl Iterator<Item=OptionDataGroup<'a>> {
+    ) -> impl Iterator<Item = OptionDataGroup<'a>> {
         let underlying_price = self.get_underlying_price();
         let strategy = self.clone();
         option_chain
@@ -847,7 +846,7 @@ impl Optimizable for ShortStrangle {
                 FindOptimalSide::Center => {
                     short_put.is_valid_optimal_side(underlying_price, &FindOptimalSide::Lower)
                         && short_call
-                        .is_valid_optimal_side(underlying_price, &FindOptimalSide::Upper)
+                            .is_valid_optimal_side(underlying_price, &FindOptimalSide::Upper)
                 }
                 _ => {
                     short_put.is_valid_optimal_side(underlying_price, &side)
@@ -1072,8 +1071,8 @@ impl PnLCalculator for ShortStrangle {
             .short_call
             .calculate_pnl(market_price, expiration_date, implied_volatility)?
             + self
-            .short_put
-            .calculate_pnl(market_price, expiration_date, implied_volatility)?)
+                .short_put
+                .calculate_pnl(market_price, expiration_date, implied_volatility)?)
     }
 
     fn calculate_pnl_at_expiration(
@@ -1084,8 +1083,8 @@ impl PnLCalculator for ShortStrangle {
             .short_call
             .calculate_pnl_at_expiration(underlying_price)?
             + self
-            .short_put
-            .calculate_pnl_at_expiration(underlying_price)?)
+                .short_put
+                .calculate_pnl_at_expiration(underlying_price)?)
     }
 
     fn adjustments_pnl(&self, adjustment: &DeltaAdjustment) -> Result<PnL, Box<dyn Error>> {
@@ -2221,11 +2220,11 @@ mod tests_adjust_option_position_short {
         assert!(result.is_err());
         match result.unwrap_err().downcast_ref::<PositionError>() {
             Some(PositionError::ValidationError(
-                     PositionValidationErrorKind::IncompatibleSide {
-                         position_side: _,
-                         reason,
-                     },
-                 )) => {
+                PositionValidationErrorKind::IncompatibleSide {
+                    position_side: _,
+                    reason,
+                },
+            )) => {
                 assert_eq!(
                     reason,
                     "Position side is Long, it is not valid for ShortStrangle"
@@ -3085,11 +3084,11 @@ mod tests_strangle_position_management {
         assert!(invalid_position.is_err());
         match invalid_position {
             Err(PositionError::ValidationError(
-                    PositionValidationErrorKind::IncompatibleSide {
-                        position_side: _,
-                        reason,
-                    },
-                )) => {
+                PositionValidationErrorKind::IncompatibleSide {
+                    position_side: _,
+                    reason,
+                },
+            )) => {
                 assert_eq!(reason, "Strike not found in positions");
             }
             _ => {

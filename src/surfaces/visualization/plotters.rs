@@ -45,7 +45,6 @@ use crate::error::SurfaceError;
 use crate::geometrics::{PlotBuilder, Plottable};
 use crate::surfaces::Surface;
 use crate::visualization::{Graph};
-use std::path::Path;
 
 /// Plottable implementation for single Surface
 impl Plottable for Surface {
@@ -71,6 +70,7 @@ mod tests {
     use crate::surfaces::Point3D;
     use rust_decimal_macros::dec;
     use std::fs;
+    use std::path::Path;
 
     fn cleanup_image(filename: &str) {
         if Path::new(filename).exists() {

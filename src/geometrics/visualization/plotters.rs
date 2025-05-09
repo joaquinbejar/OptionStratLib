@@ -3,10 +3,8 @@
    Email: jb@taunais.com
    Date: 21/1/25
 ******************************************************************************/
-use crate::error::{GraphError, SurfaceError};
-use crate::visualization::{
-    ColorScheme, Graph, GraphConfig, GraphData, LineStyle,
-};
+use crate::error::GraphError;
+use crate::visualization::{ColorScheme, Graph, GraphConfig, GraphData, LineStyle};
 use std::path::Path;
 
 /// Trait for defining objects that can be visualized as plots.
@@ -73,6 +71,9 @@ impl<T: Plottable + Graph> PlotBuilder<T> {
     ///
     pub fn title(mut self, title: impl Into<String>) -> Self {
         self.options.title = title.into();
+        if self.options.legend.is_none() {
+            self.options.legend = Some(vec![self.options.title.clone()]);
+        }
         self
     }
 
@@ -138,6 +139,21 @@ impl<T: Plottable + Graph> PlotBuilder<T> {
         self
     }
 
+    pub fn legend(mut self, legend: Vec<impl Into<String>>) -> Self {
+        let legend: Vec<String> = legend.into_iter().map(|l| l.into()).collect();
+        self.options.legend = Some(legend);
+        self
+    }
+
+    pub fn add_legend(mut self, legend: impl Into<String>) -> Self {
+        if let Some(ref mut legends) = self.options.legend {
+            legends.push(legend.into());
+        } else {
+            self.options.legend = Some(vec![legend.into()]);
+        }
+        self
+    }
+
     /// Sets the overall dimensions of the plot.
     ///
     /// This method configures the width and height of the generated plot image.
@@ -182,8 +198,9 @@ impl<T: Plottable + Graph> PlotBuilder<T> {
     ///
     pub fn save(self, path: impl AsRef<Path>) -> Result<(), GraphError> {
         let path = path.as_ref();
-        self.write_png(path, self.options.width, self.options.height)
-            .map_err(|e| GraphError::Render(format!("Failed to save plot to {}", path.display())))
+        self.write_png(path).map_err(|e| {
+            GraphError::Render(format!("Failed to save plot to {} {}", path.display(), e))
+        })
     }
 }
 
@@ -200,8 +217,9 @@ impl<T: Plottable + Graph> Graph for PlotBuilder<T> {
             x_label: self.options.x_label.clone(),
             y_label: self.options.y_label.clone(),
             z_label: self.options.z_label.clone(),
-            line_style: LineStyle::Solid,
-            color_scheme: ColorScheme::Default,
+            line_style: self.options.line_style,
+            color_scheme: self.options.color_scheme.clone(),
+            legend: self.options.legend.clone(),
             show_legend: self.options.show_legend,
         }
     }

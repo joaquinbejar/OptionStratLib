@@ -16,6 +16,7 @@ pub enum ColorScheme {
     Plasma,
     Custom(Vec<String>),
     White,
+    HighContrast
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]

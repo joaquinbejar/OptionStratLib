@@ -43,9 +43,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         .title("d1 & d2 Curve")
         .x_label("strike")
         .y_label("d1 & d2")
-        .line_width(1)
-        .curve_name(["d1".to_string(), "d2".to_string()].to_vec())
+        .legend(vec!["d1", "d2"])
         .save("./Draws/Curves/d1_d2_curve.png")?;
-
     Ok(())
 }

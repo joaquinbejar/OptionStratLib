@@ -8,6 +8,7 @@ use optionstratlib::surfaces::{Point3D, Surface};
 use optionstratlib::utils::setup_logger;
 use optionstratlib::{Positive, pos};
 use rust_decimal_macros::dec;
+use optionstratlib::visualization::Graph;
 
 fn main() -> Result<(), SurfaceError> {
     setup_logger();
@@ -45,10 +46,11 @@ fn main() -> Result<(), SurfaceError> {
         .x_label("Underlying Price")
         .y_label("Strike Price")
         .z_label("d1")
-        .point_size(1)
-        .label_size(1.8)
-        .dimensions(1600, 1200)
-        .save("./Draws/Surfaces/d1_surface.png")?;
+        .dimensions(1600, 900);
+        // .save("Draws/Surfaces/d1_surface.png")?;
 
+    // delta_surface.write_html("Draws/Surfaces/d1_surface.html".as_ref())?;
+    delta_surface.write_png("Draws/Surfaces/d1_surface.png".as_ref())?;
+    // delta_surface.write_svg("Draws/Surfaces/d1_surface.svg".as_ref())?;
     Ok(())
 }

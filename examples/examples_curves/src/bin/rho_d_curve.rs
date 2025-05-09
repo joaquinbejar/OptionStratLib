@@ -47,7 +47,6 @@ fn main() -> Result<(), Box<dyn Error>> {
         .title("Rho_d Curve")
         .x_label("Asset value")
         .y_label("rho_d")
-        .line_width(1)
         .save("./Draws/Curves/rho_d_curve.png")?;
 
     Ok(())

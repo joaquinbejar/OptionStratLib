@@ -285,4 +285,4 @@ pub use model::{Series2D, Surface3D, GraphData, OutputType, MultiSeries2D};
 pub use interface::{Graph, GraphType};
 pub use config::GraphConfig;
 pub use styles::{LineStyle, ColorScheme, TraceMode, PlotType};
-pub use utils::{pick_color, get_color_from_scheme, to_plotly_mode};
+pub use utils::{pick_color, get_color_from_scheme, to_plotly_mode, make_surface, make_scatter};

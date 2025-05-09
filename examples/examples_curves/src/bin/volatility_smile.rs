@@ -15,7 +15,6 @@ fn main() -> Result<(), Box<dyn Error>> {
         .title("Volatility Smile")
         .x_label("Strike Price")
         .y_label("Implied Volatility")
-        .line_width(1)
         .save("./Draws/Curves/volatility_smile.png")?;
 
     Ok(())

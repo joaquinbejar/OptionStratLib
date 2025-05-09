@@ -34,7 +34,6 @@ use crate::{ExpirationDate, Options, Positive, chains::{StrategyLegs, chain::Opt
                                                                            utils::{FindOptimalSide, OptimizationCriteria},
 }, visualization::{Graph, GraphData}, pos};
 use chrono::Utc;
-use num_traits::ToPrimitive;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};

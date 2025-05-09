@@ -48,7 +48,6 @@ fn main() -> Result<(), Box<dyn Error>> {
         .title("Gamma Curve")
         .x_label("Asset value")
         .y_label("gamma")
-        .line_width(1)
         .save("./Draws/Curves/gamma_curve.png")?;
 
     Ok(())

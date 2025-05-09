@@ -71,8 +71,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         .title("Theta Curve")
         .x_label("Strike")
         .y_label("theta for different Volatilities")
-        .line_width(1)
-        .curve_name(vec![
+        .legend(vec![
             "Volatility 20%".to_string(),
             "Volatility 10%".to_string(),
             "Volatility 5%".to_string(),

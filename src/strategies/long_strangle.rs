@@ -30,22 +30,21 @@ use crate::{
     },
     pnl::{PnLCalculator, utils::PnL},
     pricing::payoff::Profit,
-    strategies::{Strategies,
-                 BasicAble, DeltaAdjustment, StrategyConstructor,
-                 delta_neutral::DeltaNeutrality,
-                 probabilities::{core::ProbabilityAnalysis, utils::VolatilityAdjustment},
-                 utils::{FindOptimalSide, OptimizationCriteria, calculate_price_range},
+    strategies::{
+        BasicAble, DeltaAdjustment, Strategies, StrategyConstructor,
+        delta_neutral::DeltaNeutrality,
+        probabilities::{core::ProbabilityAnalysis, utils::VolatilityAdjustment},
+        utils::{FindOptimalSide, OptimizationCriteria, calculate_price_range},
     },
     visualization::{Graph, GraphData},
 };
 use chrono::Utc;
-use num_traits::{FromPrimitive, ToPrimitive};
+use num_traits::FromPrimitive;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use tracing::{debug, info};
-
 
 pub(super) const LONG_STRANGLE_DESCRIPTION: &str = "A long strangle involves buying an out-of-the-money call and an \
 out-of-the-money put with the same expiration date. This strategy is used when high volatility \

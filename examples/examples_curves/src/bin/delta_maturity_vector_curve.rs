@@ -101,13 +101,12 @@ fn main() -> Result<(), Box<dyn Error>> {
         .title("Deltas Curve")
         .x_label("Asset value")
         .y_label("Deltas for different maturities")
-        .line_width(1)
-        .curve_name(vec![
-            "1 month".to_string(),
-            "3 months".to_string(),
-            "6 months".to_string(),
-            "9 months".to_string(),
-            "12 months".to_string(),
+        .legend(vec![
+            "1 month",
+            "3 months",
+            "6 months",
+            "9 months",
+            "12 months",
         ])
         .save("./Draws/Curves/delta_maturity_vector_curve.png")?;
 

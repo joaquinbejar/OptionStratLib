@@ -26,7 +26,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .title("Volatility Curve")
         .x_label("strike")
         .y_label("Volatility")
-        .line_width(1)
         .save("Draws/Curves/option_chain_curve.png")?;
 
     info!("Curve saved");
@@ -44,7 +43,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .x_label("strike")
         .y_label("Volatility")
         .z_label("Delta")
-        .line_width(1)
         .save("Draws/Surfaces/option_chain_surface.png")?;
 
     info!("Surface saved");

@@ -1,5 +1,6 @@
 use std::error::Error;
 use std::fmt;
+use crate::error::{CurveError, SurfaceError};
 
 #[derive(Debug)]
 pub enum GraphError {
@@ -40,3 +41,14 @@ impl From<Box<dyn Error>> for GraphError {
     }
 }
 
+impl From<CurveError> for GraphError {
+    fn from(err: CurveError) -> Self {
+        GraphError::Render(err.to_string())
+    }
+}
+
+impl From<SurfaceError> for GraphError {
+    fn from(err: SurfaceError) -> Self {
+        GraphError::Render(err.to_string())
+    }
+}

@@ -32,16 +32,16 @@ use crate::{
     },
     pnl::{PnLCalculator, utils::PnL},
     pricing::payoff::Profit,
-    strategies::{Strategies,
-                 BasicAble, StrategyConstructor,
-                 delta_neutral::DeltaNeutrality,
-                 probabilities::{core::ProbabilityAnalysis, utils::VolatilityAdjustment},
-                 utils::{FindOptimalSide, OptimizationCriteria},
+    strategies::{
+        BasicAble, Strategies, StrategyConstructor,
+        delta_neutral::DeltaNeutrality,
+        probabilities::{core::ProbabilityAnalysis, utils::VolatilityAdjustment},
+        utils::{FindOptimalSide, OptimizationCriteria},
     },
     visualization::{Graph, GraphData},
 };
 use chrono::Utc;
-use num_traits::{FromPrimitive, ToPrimitive};
+use num_traits::FromPrimitive;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};

@@ -47,7 +47,6 @@ fn main() -> Result<(), Box<dyn Error>> {
         .title("Vega Curve")
         .x_label("Asset value")
         .y_label("vega")
-        .line_width(1)
         .save("./Draws/Curves/vega_curve.png")?;
 
     Ok(())

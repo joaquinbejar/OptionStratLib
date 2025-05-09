@@ -1,13 +1,13 @@
-use plotly::{common, Layout, Plot};
-use plotly::layout::Axis;
-use tracing::{debug, trace};
 use crate::error::GraphError;
+use crate::utils::file::prepare_file_path;
 use crate::visualization::config::GraphConfig;
 use crate::visualization::model::{GraphData, OutputType};
 use crate::visualization::styles::PlotType;
 use crate::visualization::utils::{make_scatter, make_surface, pick_color};
 use plotly::ImageFormat;
-use crate::utils::file::prepare_file_path;
+use plotly::layout::Axis;
+use plotly::{Layout, Plot, common};
+use tracing::debug;
 
 pub trait Graph {
     /// Return the raw data ready for plotting.
@@ -25,19 +25,39 @@ pub trait Graph {
 
         match self.graph_data() {
             GraphData::Series(s) => {
-                plot.add_trace(make_scatter(&s));
+                let mut series = s.clone();
+                if let Some(legend) = &cfg.legend {
+                    if let Some(label) = legend.first() {
+                        series.name = label.clone();
+                    }
+                }
+                plot.add_trace(make_scatter(&series));
             }
             GraphData::MultiSeries(list) => {
                 for (idx, s) in list.into_iter().enumerate() {
                     let mut series = s;
+
                     if series.line_color.is_none() {
                         series.line_color = pick_color(&cfg, idx);
                     }
+
+                    if let Some(legend) = &cfg.legend {
+                        if idx < legend.len() {
+                            series.name = legend[idx].clone();
+                        }
+                    }
+
                     plot.add_trace(make_scatter(&series));
                 }
             }
             GraphData::Surface(surf) => {
-                plot.add_trace(make_surface(&surf));
+                let mut surface = surf.clone();
+                if let Some(legend) = &cfg.legend {
+                    if let Some(label) = legend.first() {
+                        surface.name = label.clone();
+                    }
+                }
+                plot.add_trace(make_surface(&surface));
             }
         }
 
@@ -63,15 +83,23 @@ pub trait Graph {
 
     /// Helper to write PNG file with error handling
     /// #[cfg(feature = "kaleido")]
-    fn write_png(
-        &self,
-        path: &std::path::Path,
-        width: u32,
-        height: u32,
-    ) -> Result<(), GraphError> {
+    fn write_png(&self, path: &std::path::Path) -> Result<(), GraphError> {
+        unsafe {
+            std::env::set_var("LC_ALL", "en_US.UTF-8");
+            std::env::set_var("LANG", "en_US.UTF-8");
+        }
+
         prepare_file_path(path)?;
         debug!("Writing PNG to: {}", path.display());
-        self.to_plot().write_image(path, ImageFormat::PNG, width as usize, height as usize, 1.0);
+        let cfg = self.graph_config();
+
+        self.to_plot().write_image(
+            path,
+            ImageFormat::PNG,
+            cfg.width as usize,
+            cfg.height as usize,
+            1.0,
+        );
         Ok(())
     }
 
@@ -82,6 +110,19 @@ pub trait Graph {
         Ok(())
     }
 
+    fn write_svg(&self, path: &std::path::Path) -> Result<(), GraphError> {
+        prepare_file_path(path)?;
+        let cfg = self.graph_config();
+        self.to_plot().write_image(
+            path,
+            ImageFormat::SVG,
+            cfg.width as usize,
+            cfg.height as usize,
+            1.0,
+        );
+        Ok(())
+    }
+
     /// Show the plot in browser
     fn show(&self) {
         self.to_plot().show();
@@ -89,9 +130,9 @@ pub trait Graph {
 
     /// One‑stop rendering with error propagation.
     fn render(&self, output: OutputType) -> Result<(), GraphError> {
-        let cfg = self.graph_config();
         match output {
-            OutputType::Png(path) => self.write_png(path, cfg.width, cfg.height)?,
+            OutputType::Png(path) => self.write_png(path)?,
+            OutputType::Svg(path) => self.write_svg(path)?,
             OutputType::Html(path) => self.write_html(path)?,
             OutputType::Browser => self.show(),
         }
@@ -105,8 +146,6 @@ pub trait Graph {
     }
 }
 
-
 pub trait GraphType {
     fn plot_type() -> PlotType;
 }
-

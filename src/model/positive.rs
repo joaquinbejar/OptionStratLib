@@ -9,7 +9,6 @@ use crate::constants::EPSILON;
 use crate::model::utils::ToRound;
 use crate::series::OptionSeries;
 use approx::{AbsDiffEq, RelativeEq};
-use num_traits::real::Real;
 use num_traits::{FromPrimitive, Pow, ToPrimitive};
 use rust_decimal::{Decimal, MathematicalOps};
 use rust_decimal_macros::dec;

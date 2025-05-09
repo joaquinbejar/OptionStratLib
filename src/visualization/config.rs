@@ -11,13 +11,16 @@ pub struct GraphConfig {
     pub z_label: Option<String>,
     pub line_style: LineStyle,
     pub color_scheme: ColorScheme,
+    pub legend: Option<Vec<String>>,
     pub show_legend: bool,
 }
 
 impl Default for GraphConfig {
     fn default() -> Self {
+        let title = "Graph".to_string();
+        let legend = None;
         Self {
-            title: "Chart".into(),
+            title,
             width: 1280,
             height: 720,
             x_label: None,
@@ -25,6 +28,7 @@ impl Default for GraphConfig {
             z_label: None,
             line_style: LineStyle::Solid,
             color_scheme: ColorScheme::Default,
+            legend,
             show_legend: true,
         }
     }

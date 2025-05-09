@@ -48,8 +48,7 @@
 use crate::curves::Curve;
 use crate::error::CurveError;
 use crate::geometrics::{PlotBuilder, Plottable};
-use std::path::Path;
-use crate::visualization::{Graph, GraphConfig};
+use crate::visualization::Graph;
 
 /// Plottable implementation for single Curve
 impl Plottable for Curve {
@@ -146,7 +145,6 @@ impl Plottable for Vec<Curve> {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -154,6 +152,7 @@ mod tests {
     use crate::geometrics::GeometricObject;
     use rust_decimal_macros::dec;
     use std::fs;
+    use std::path::Path;
 
     fn cleanup_image(filename: &str) {
         if Path::new(filename).exists() {
@@ -272,7 +271,6 @@ mod tests {
 
         cleanup_image("multiple_curves_test.png");
     }
-    
 
     #[test]
     fn test_plot_with_custom_line_width() {
@@ -287,7 +285,6 @@ mod tests {
             .expect("Thick line curves plot failed");
         cleanup_image("thick_line_curves_test.png");
     }
-    
 
     #[test]
     fn test_plot_builder_chaining() {
@@ -348,7 +345,7 @@ mod tests {
 #[cfg(test)]
 mod tests_extended {
     use super::*;
-    
+
     struct MockChart {
         pub x_desc: String,
         pub y_desc: String,
@@ -384,7 +381,7 @@ mod tests_extended {
             self
         }
     }
-    
+
     #[test]
     fn test_map_err_to_std_error() {
         let result: Result<(), CurveError> =
@@ -431,6 +428,4 @@ mod tests_extended {
             _ => panic!("Unexpected error type"),
         }
     }
-
-
 }
