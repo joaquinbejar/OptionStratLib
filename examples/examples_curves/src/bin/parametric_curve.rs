@@ -4,8 +4,8 @@ use optionstratlib::geometrics::{
 };
 use optionstratlib::utils::setup_logger;
 use rust_decimal::{Decimal, MathematicalOps};
-use rust_decimal_macros::dec;
 use std::error::Error;
+
 fn main() -> Result<(), Box<dyn Error>> {
     setup_logger();
     let params = ConstructionParams::D2 {

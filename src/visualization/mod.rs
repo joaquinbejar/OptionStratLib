@@ -61,12 +61,14 @@
 //! ## Example: Simple Line Chart
 //!
 //! ```rust
+//! use rust_decimal::Decimal;
+//! use rust_decimal_macros::dec;
 //! use optionstratlib::visualization::{Graph, GraphData, Series2D, GraphConfig, OutputType};
 //! use optionstratlib::visualization::{LineStyle, ColorScheme, TraceMode};
 //!
 //! struct MyData {
-//!     x: Vec<f64>,
-//!     y: Vec<f64>,
+//!     x: Vec<Decimal>,
+//!     y: Vec<Decimal>,
 //! }
 //!
 //! impl Graph for MyData {
@@ -91,14 +93,16 @@
 //!             z_label: None,
 //!             line_style: LineStyle::Solid,
 //!             color_scheme: ColorScheme::Viridis,
+//!             legend: None,
+//!             show_legend: false,
 //!         }
 //!     }
 //! }
 //!
 //! // Using the chart
 //! let data = MyData {
-//!     x: vec![1.0, 2.0, 3.0, 4.0, 5.0],
-//!     y: vec![2.0, 3.0, 5.0, 7.0, 11.0],
+//!     x: vec![dec!(1.0), dec!(2.0), dec!(3.0), dec!(4.0), dec!(5.0)],
+//!     y: vec![dec!(2.0), dec!(3.0), dec!(5.0), dec!(7.0), dec!(11.0)],
 //! };
 //!
 //! // Display in browser
@@ -115,12 +119,13 @@
 //!
 //! ```rust
 //!
+//! use rust_decimal::Decimal;
 //! use optionstratlib::visualization::{ColorScheme, Graph, GraphConfig, GraphData, LineStyle, Surface3D};
 //!
 //! struct SurfaceData {
-//!     x: Vec<f64>,
-//!     y: Vec<f64>,
-//!     z: Vec<Vec<f64>>,
+//!     x: Vec<Decimal>,
+//!     y: Vec<Decimal>,
+//!     z: Vec<Decimal>,
 //! }
 //!
 //! impl Graph for SurfaceData {
@@ -143,7 +148,9 @@
 //!             z_label: Some("Z".to_string()),
 //!             line_style: LineStyle::Solid,
 //!             color_scheme: ColorScheme::Plasma,
-//!         }
+//!             legend: None,
+//!             show_legend: false,
+//!          }
 //!     }
 //! }
 //! ```
@@ -188,10 +195,11 @@
 //! For charts with multiple series, use the `GraphData::MultiSeries` type:
 //!
 //! ```rust
+//! use rust_decimal_macros::dec;
 //! use optionstratlib::visualization::{GraphData, Series2D, TraceMode};
 //! let series1 = Series2D {
-//!     x: vec![1.0, 2.0, 3.0],
-//!     y: vec![4.0, 5.0, 6.0],
+//!     x: vec![dec!(1.0), dec!(2.0), dec!(3.0)],
+//!     y: vec![dec!(4.0), dec!(5.0), dec!(6.0)],
 //!     name: "Series 1".to_string(),
 //!     mode: TraceMode::Lines,
 //!     line_color: Some("#1f77b4".to_string()),
@@ -199,8 +207,8 @@
 //! };
 //!
 //! let series2 = Series2D {
-//!     x: vec![1.0, 2.0, 3.0],
-//!     y: vec![7.0, 8.0, 9.0],
+//!     x: vec![dec!(1.0), dec!(2.0), dec!(3.0)],
+//!     y: vec![dec!(7.0), dec!(8.0), dec!(9.0)],
 //!     name: "Series 2".to_string(),
 //!     mode: TraceMode::Markers,
 //!     line_color: Some("#ff7f0e".to_string()),
@@ -219,7 +227,7 @@
 //! use optionstratlib::error::GraphError;
 //! use std::path::PathBuf;
 //! use tracing::info;
-//!
+//! use rust_decimal_macros::dec;
 //! struct SimpleChart {
 //!     series: Series2D
 //! }
@@ -243,8 +251,8 @@
 //!
 //! fn main() -> Result<(), GraphError> {
 //!     let series = Series2D {
-//!         x: vec![1.0, 2.0, 3.0],
-//!         y: vec![4.0, 5.0, 6.0],
+//!         x: vec![dec!(1.0), dec!(2.0), dec!(3.0)],
+//!         y: vec![dec!(4.0), dec!(5.0), dec!(6.0)],
 //!         name: "Series 1".to_string(),
 //!         mode: TraceMode::Lines,
 //!         line_color: Some("#1f77b4".to_string()),
@@ -252,7 +260,7 @@
 //!     };
 //!     
 //!     let chart = SimpleChart { series };
-//!     chart.to_interactive_html("interactive_chart.html")?;
+//!     chart.to_interactive_html("interactive_chart.html".as_ref())?;
 //!     info!("Interactive HTML chart created successfully!");
 //!     Ok(())
 //! }
