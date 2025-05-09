@@ -287,6 +287,18 @@ impl Positive {
         self.0.to_i64().unwrap()
     }
 
+    /// Converts the inner value of the struct to a `u64`.
+    ///
+    /// This method assumes the inner value can be safely converted to a `u64`
+    /// and uses `unwrap()` to extract the value. If the conversion fails,
+    /// this will cause a panic at runtime.
+    ///
+    /// # Returns
+    /// A `u64` representation of the inner value.
+    ///
+    /// # Panics
+    /// This method will panic if the inner value cannot be converted to a `u64`.
+    ///
     pub fn to_u64(&self) -> u64 {
         self.0.to_u64().unwrap()
     }
@@ -352,10 +364,31 @@ impl Positive {
         Positive(self.0.powi(n))
     }
 
+    /// Computes the result of raising the current `Positive` value to the power of the given `Positive` exponent.
+    ///
+    /// # Parameters
+    ///
+    /// - `n`: A `Positive` value representing the exponent to which the current value will be raised.
+    ///
+    /// # Returns
+    ///
+    /// A `Positive` value representing the result of the power computation.
+    ///
+    /// # Panics
+    ///
+    /// This function does not panic as all inputs are guaranteed to be positive by the `Positive` type.
     pub fn pow(&self, n: Positive) -> Positive {
         Positive(self.0.pow(n.to_dec()))
     }
 
+    /// Raises the current `Positive` value to the power of `n` using unsigned integer exponentiation. 
+    ///
+    /// # Parameters
+    /// - `n`: An unsigned 64-bit integer (`u64`) representing the power to which the value will be raised.
+    ///
+    /// # Returns
+    /// Returns a new `Positive` instance containing the result of `self` raised to the power of `n`.
+    ///
     pub fn powu(&self, n: u64) -> Positive {
         Positive(self.0.powu(n))
     }
@@ -384,6 +417,44 @@ impl Positive {
         Positive(self.0.round())
     }
 
+    /// Rounds the current value to a "nice" number, based on its magnitude.
+    ///
+    /// This method computes the logarithmic magnitude of the current value and 
+    /// determines a simplified number within a range of predefined "nice" numbers,
+    /// such as 1, 2, 5, or 10, scaled by a power of ten. This is often useful 
+    /// for simplifying numerical values for display or plotting.
+    ///
+    /// # Procedure
+    /// 1. Compute the magnitude of the current value by taking the base-10 logarithm and flooring it.
+    /// 2. Calculate the power of ten corresponding to the magnitude.
+    /// 3. Normalize the current value by dividing it by the calculated power of ten.
+    /// 4. Determine the closest "nice" number:
+    ///    - Values less than 1.5 round to 1.
+    ///    - Values less than 3 round to 2.
+    ///    - Values less than 7 round to 5.
+    ///    - All other values round to 10.
+    /// 5. Scale the "nice" number back up by the appropriate power of ten.
+    ///
+    /// # Returns
+    /// A `Positive` value representing the rounded "nice" number, scaled appropriately
+    /// according to the magnitude of the input value.
+    ///
+    /// # Panics
+    /// This function does not explicitly handle negative numbers or zero, as it is 
+    /// assumed that `self` is a positive numeric value. Ensure `self` is valid and non-zero
+    /// prior to calling this method.
+    ///
+    /// # Examples
+    /// ```
+    /// use optionstratlib::Positive;
+    /// let value = Positive::new(123.0).unwrap();
+    /// let rounded = value.round_to_nice_number();
+    /// assert_eq!(rounded, Positive::new(100.0).unwrap());
+    ///
+    /// let value = Positive::new(6.7).unwrap();
+    /// let rounded = value.round_to_nice_number();
+    /// assert_eq!(rounded, Positive::new(10.0).unwrap());
+    /// ```
     pub fn round_to_nice_number(&self) -> Positive {
         let magnitude = self.log10().floor();
         let ten_pow = Positive::TEN.pow(magnitude);
@@ -519,6 +590,16 @@ impl Positive {
         Positive::from(ceiling_value)
     }
 
+    /// Computes the base-10 logarithm of the value contained in the `Positive` instance.
+    ///
+    /// # Returns
+    ///
+    /// A new `Positive` instance containing the result of the base-10 logarithm of the original value.
+    ///
+    /// # Note
+    ///
+    /// It is assumed that the value contained in the `Positive` instance is always greater than 0,
+    /// as logarithms of non-positive numbers are undefined.
     pub fn log10(&self) -> Positive {
         Positive(self.0.log10())
     }

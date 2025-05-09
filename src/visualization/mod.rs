@@ -61,6 +61,8 @@
 //! ## Example: Simple Line Chart
 //!
 //! ```rust
+//! use std::fs;
+//! use std::path::{Path, PathBuf};
 //! use rust_decimal::Decimal;
 //! use rust_decimal_macros::dec;
 //! use optionstratlib::visualization::{Graph, GraphData, Series2D, GraphConfig, OutputType};
@@ -109,10 +111,21 @@
 //! data.show();
 //!
 //! // Save as HTML
-//! data.render(OutputType::Html("my_chart.html".into()))?;
+//!
+//! let filename: PathBuf = PathBuf::from("my_chart.html");
+//! data.render(OutputType::Html(&filename)).unwrap();
+//! if Path::new(&filename.clone()).exists() {
+//!         fs::remove_file(filename.clone())
+//!             .unwrap_or_else(|_| panic!("Failed to remove {}", filename.to_str().unwrap()));
+//! }
 //!
 //! // Save as PNG
-//! data.render(OutputType::Png("my_chart.png".into()))?;
+//! let filename: PathBuf = PathBuf::from("my_chart.png");
+//! data.render(OutputType::Png(&filename)).unwrap();
+//! if Path::new(&filename.clone()).exists() {
+//!         fs::remove_file(filename.clone())
+//!             .unwrap_or_else(|_| panic!("Failed to remove {}", filename.to_str().unwrap()));
+//! }
 //! ```
 //!
 //! ## Example: 3D Surface
@@ -250,7 +263,9 @@
 //! }
 //!
 //! fn main() -> Result<(), GraphError> {
-//!     let series = Series2D {
+//!     use std::fs;
+//! use std::path::Path;
+//! let series = Series2D {
 //!         x: vec![dec!(1.0), dec!(2.0), dec!(3.0)],
 //!         y: vec![dec!(4.0), dec!(5.0), dec!(6.0)],
 //!         name: "Series 1".to_string(),
@@ -260,8 +275,13 @@
 //!     };
 //!     
 //!     let chart = SimpleChart { series };
-//!     chart.to_interactive_html("interactive_chart.html".as_ref())?;
+//!     let filename: PathBuf = PathBuf::from("interactive_chart.html");
+//!     chart.to_interactive_html(&filename)?;
 //!     info!("Interactive HTML chart created successfully!");
+//!     if Path::new(&filename.clone()).exists() {
+//!             fs::remove_file(filename.clone())
+//!                 .unwrap_or_else(|_| panic!("Failed to remove {}", filename.to_str().unwrap()));
+//!         }
 //!     Ok(())
 //! }
 //! ```

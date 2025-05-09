@@ -197,10 +197,36 @@ where
         self.into_iter().map(|step| step.get_steps()).collect()
     }
 
+    /// Returns a `Vec` containing the last `Step` of each item in the iterator.
+    ///
+    /// This method assumes that each item in the iterator is an iterable itself.
+    /// It retrieves the last element of each iterable and collects them into a new `Vec`.
+    ///
+    /// # Panics
+    /// This method will panic if:
+    /// - Any of the iterables in the iterator are empty.
+    /// - The `last()` call on any of the items returns `None`.
+    ///
+    /// # Returns
+    /// A vector of references to the last `Step<X, Y>` elements of each item in the iterator.
+    ///
     pub fn last_steps(&self) -> Vec<&Step<X, Y>> {
         self.into_iter().map(|step| step.last().unwrap()).collect()
     }
 
+    /// Retrieves the last value of each item in the iterator.
+    ///
+    /// This function processes the current instance of the object (likely some iterable structure) 
+    /// and extracts the last element from each `Step<X, Y>` item in it. 
+    /// The result is a `Vec` containing references to the last value of each `Step`.
+    ///
+    /// # Returns
+    /// A `Vec` of references to the last element of each `Step<X, Y>` in the iterator.
+    ///
+    /// # Panics
+    /// This method panics if any `Step<X, Y>` within the iterator is empty, 
+    /// as it uses `unwrap()` on the result of `step.last()`.
+    ///
     pub fn last_values(&self) -> Vec<&Step<X, Y>> {
         self.into_iter().map(|step| step.last().unwrap()).collect()
     }
@@ -382,6 +408,8 @@ mod tests {
     use crate::utils::{TimeFrame, setup_logger, time::convert_time_frame};
     use crate::{ExpirationDate, Positive, pos};
     use rust_decimal_macros::dec;
+    use std::fs;
+    use std::path::Path;
 
     use tracing::{debug, info};
 
@@ -742,8 +770,12 @@ mod tests {
         info!("Last Values: {:?}", last_values);
         assert_eq!(last_values.len(), simulator_size);
 
-        let file_name = "Draws/Simulation/test_simulator.png".as_ref();
-        simulator.write_png(file_name)?;
+        let file_name = "Draws/Simulation/test_simulator.html".as_ref();
+        simulator.write_html(file_name)?;
+        if Path::new(file_name).exists() {
+            fs::remove_file(file_name)
+                .unwrap_or_else(|_| panic!("Failed to remove {}", file_name.to_str().unwrap()));
+        }
         Ok(())
     }
 }

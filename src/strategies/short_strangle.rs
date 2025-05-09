@@ -38,7 +38,6 @@ use crate::{
         utils::{FindOptimalSide, OptimizationCriteria, calculate_price_range},
     },
     test_strategy_traits,
-    visualization::{Graph, GraphData},
 };
 use chrono::Utc;
 use num_traits::FromPrimitive;
@@ -968,12 +967,6 @@ impl Profit for ShortStrangle {
             self.short_call.pnl_at_expiration(price)? + self.short_put.pnl_at_expiration(price)?
         );
         Ok(self.short_call.pnl_at_expiration(price)? + self.short_put.pnl_at_expiration(price)?)
-    }
-}
-
-impl Graph for ShortStrangle {
-    fn graph_data(&self) -> GraphData {
-        todo!()
     }
 }
 

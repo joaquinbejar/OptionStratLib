@@ -139,12 +139,47 @@ impl<T: Plottable + Graph> PlotBuilder<T> {
         self
     }
 
+    /// Sets the legend for the current instance.
+    ///
+    /// This method accepts a vector of items that can be converted into strings and sets the `legend`
+    /// field of the current instance's options. It returns the modified instance for further chaining.
+    ///
+    /// # Arguments
+    ///
+    /// * `legend` - A `Vec` containing items that implement the `Into<String>` trait. Each element
+    ///   will be converted into a `String` and assigned to the legend.
+    ///
+    /// # Returns
+    ///
+    /// Returns the modified instance with the legend updated.
+    ///
+    /// In this example, the legend is updated to include "Item 1", "Item 2", and "Item 3".
+    ///
     pub fn legend(mut self, legend: Vec<impl Into<String>>) -> Self {
         let legend: Vec<String> = legend.into_iter().map(|l| l.into()).collect();
         self.options.legend = Some(legend);
         self
     }
 
+    /// Adds a legend entry to the existing legend configuration or initializes a new legend
+    /// with the provided entry if none exists.
+    ///
+    /// This method allows chaining, modifying the `legend` configuration within the `options`
+    /// of the current object. If a `legend` already exists, the provided legend entry will 
+    /// be appended to it. If no `legend` exists, a new legend will be created containing the
+    /// provided entry.
+    ///
+    /// # Arguments
+    ///
+    /// * `legend` - An item implementing `Into<String>` that represents the legend entry
+    ///   to add.
+    ///
+    /// # Returns
+    ///
+    /// Returns `Self` (the modified object) to allow method chaining.
+    ///
+    /// In this example, two legend entries, `"Legend 1"` and `"Legend 2"`, are added to the chart's
+    /// legend configuration.
     pub fn add_legend(mut self, legend: impl Into<String>) -> Self {
         if let Some(ref mut legends) = self.options.legend {
             legends.push(legend.into());
@@ -171,11 +206,35 @@ impl<T: Plottable + Graph> PlotBuilder<T> {
         self
     }
 
+    /// Sets the color scheme for the current instance.
+    ///
+    /// This method allows you to specify a `ColorScheme` to customize the appearance or theme 
+    /// of the associated object. The method updates the `color_scheme` field in the `options` 
+    /// struct with the provided value and returns an updated instance of `self`.
+    ///
+    /// # Parameters
+    /// - `color_scheme`: The desired `ColorScheme` to be applied. This defines the visual style 
+    ///   or theme to be used by the object.
+    ///
+    /// # Returns
+    /// An updated instance of `Self` with the new color scheme applied.
+    ///
     pub fn color_scheme(mut self, color_scheme: ColorScheme) -> Self {
         self.options.color_scheme = color_scheme;
         self
     }
 
+    /// Sets the visibility of the legend in the chart or visualization.
+    ///
+    /// # Parameters
+    /// - `show_legend`: A boolean specifying whether the legend should be displayed.
+    ///   - `true`: The legend will be displayed.
+    ///   - `false`: The legend will be hidden.
+    ///
+    /// # Returns
+    /// - Returns an updated instance of `Self` with the `show_legend` option set
+    ///   according to the provided parameter.
+    ///
     pub fn show_legend(mut self, show_legend: bool) -> Self {
         self.options.show_legend = show_legend;
         self

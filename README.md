@@ -549,10 +549,12 @@ use optionstratlib::utils::setup_logger;
 use std::error::Error;
 use tracing::info;
 use optionstratlib::strategies::BasicAble;
+use rust_decimal_macros::dec;
+use optionstratlib::visualization::Graph;
 
 fn create_sample_option() -> Options {
-    use rust_decimal_macros::dec;
-use optionstratlib::{pos, ExpirationDate};Options::new(
+
+Options::new(
         OptionType::European,
         Side::Long,
         "AAPL".to_string(),
@@ -579,13 +581,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         .collect();
 
     // Generate the intrinsic value graph
-    option.graph(
-        GraphBackend::Bitmap {
-            file_path: "Draws/Options/intrinsic_value_chart.png",
-            size: (1400, 933),
-        },
-        25,
-    )?;
+    let file_path = "Draws/Options/intrinsic_value_chart.png".as_ref();
+    option.write_png(file_path)?;
 
     Ok(())
 }
@@ -601,9 +598,10 @@ use optionstratlib::utils::setup_logger;
 use std::error::Error;
 use tracing::info;
 use crate::optionstratlib::strategies::BasicAble;
+use optionstratlib::visualization::Graph;
+use rust_decimal_macros::dec;
 
 fn main() -> Result<(), Box<dyn Error>> {
-    use rust_decimal_macros::dec;
     setup_logger();
     let underlying_price = pos!(5781.88);
     let strategy = BullCallSpread::new(
@@ -638,14 +636,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     info!("Profit Area: {:.2}%", strategy.get_profit_area()?);
     info!("Profit Ratio: {:.2}%", strategy.get_profit_ratio()?);
 
-    // Generate the profit/loss graph
-    strategy.graph(
-        GraphBackend::Bitmap {
-            file_path: "Draws/Strategy/bull_call_spread_profit_loss_chart.png",
-            size: (1400, 933),
-        },
-        20,
-    )?;
+    let file_path = "Draws/Strategy/bull_call_spread_profit_loss_chart.html".as_ref();
+    strategy.write_html(file_path)?;
 
     Ok(())
 }

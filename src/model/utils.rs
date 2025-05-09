@@ -375,6 +375,44 @@ pub trait ToRound {
     fn round_to(&self, decimal_places: u32) -> Decimal;
 }
 
+/// Calculates the optimal price range for an option based on its underlying price, 
+/// strike price, implied volatility, and expiration date.
+///
+/// # Parameters
+/// - `underlying_price`: The price of the underlying asset, represented as a `Positive`.
+/// - `strike_price`: The strike price of the option, represented as a `Positive`.
+/// - `implied_volatility`: The market's implied volatility for the option, represented as a `Positive`.
+/// - `expiration_date`: The expiration date of the option, passed as an `ExpirationDate`.
+///
+/// # Returns
+/// A `Result` containing a tuple of two `Positive` values:
+/// - The `min_price` represents the lower bound of the price range.
+/// - The `max_price` represents the upper bound of the price range.
+///
+/// On success, the returned tuple includes both values rounded to a "nice" step value 
+/// for better usability. On failure, an error boxed in `Box<dyn Error>` is returned.
+///
+/// # Calculations
+/// 1. Determines the number of years to expiration by calculating days to expiry 
+///    and converting it into a fractional year.
+/// 2. Determines the `volatility_factor` which adjusts for time-decay and a 
+///    confidence interval (set to 4.0 in this implementation).
+/// 3. Calculates the lower and upper bounds of the price range based on the 
+///    `underlying_price` and the `volatility_factor`.
+/// 4. Computes an adjusted range (`min_price` and `max_price`) by scaling 
+///    the `strike_price` by 70% and 130%, ensuring bounds are within realistic margins.
+/// 5. Divides the adjusted range into increments (`step`) for easier rounding before 
+///    smoothing both bounds to user-friendly values.
+///
+/// # Errors
+/// The function will return an error if:
+/// - The extraction of `days_to_expiry` from the `expiration_date` fails.
+/// - `years_to_expiry.sqrt()` returns a `None` (e.g. if `years_to_expiry` is negative, which it shouldn't be).
+///
+/// # Note
+/// The constants such as the confidence interval (`4.0`) and scaling factors 
+/// for the `strike_price` (`0.7` and `1.3`) might be subject to change based 
+/// on different financial models or strategies.
 pub fn calculate_optimal_price_range(
     underlying_price: Positive,
     strike_price: Positive,

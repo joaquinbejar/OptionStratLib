@@ -622,8 +622,8 @@
 //!     info!("Profit Area: {:.2}%", strategy.get_profit_area()?);
 //!     info!("Profit Ratio: {:.2}%", strategy.get_profit_ratio()?);
 //!
-//!     let file_path = "Draws/Strategy/bull_call_spread_profit_loss_chart.png".as_ref();
-//!     strategy.write_png(file_path)?;
+//!     let file_path = "Draws/Strategy/bull_call_spread_profit_loss_chart.html".as_ref();
+//!     strategy.write_html(file_path)?;
 //!
 //!     Ok(())
 //! }

@@ -26,7 +26,6 @@ use crate::{
         probabilities::{core::ProbabilityAnalysis, utils::VolatilityAdjustment},
         utils::{FindOptimalSide, OptimizationCriteria},
     },
-    visualization::{Graph, GraphData},
 };
 use chrono::Utc;
 use rust_decimal::Decimal;
@@ -904,12 +903,6 @@ impl Profit for LongButterflySpread {
         Ok(self.long_call_low.pnl_at_expiration(&price)?
             + self.short_call.pnl_at_expiration(&price)?
             + self.long_call_high.pnl_at_expiration(&price)?)
-    }
-}
-
-impl Graph for LongButterflySpread {
-    fn graph_data(&self) -> GraphData {
-        todo!()
     }
 }
 

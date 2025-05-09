@@ -27,7 +27,6 @@ use crate::{
         probabilities::{core::ProbabilityAnalysis, utils::VolatilityAdjustment},
         utils::{FindOptimalSide, OptimizationCriteria},
     },
-    visualization::{Graph, GraphData},
 };
 use num_traits::{FromPrimitive, ToPrimitive};
 use rust_decimal::Decimal;
@@ -700,12 +699,6 @@ impl Profit for CustomStrategy {
             .iter()
             .map(|position| position.pnl_at_expiration(&price))
             .sum()
-    }
-}
-
-impl Graph for CustomStrategy {
-    fn graph_data(&self) -> GraphData {
-        todo!()
     }
 }
 

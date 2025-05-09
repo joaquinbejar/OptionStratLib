@@ -27,7 +27,6 @@ use crate::{
         probabilities::{core::ProbabilityAnalysis, utils::VolatilityAdjustment},
         utils::{FindOptimalSide, OptimizationCriteria},
     },
-    visualization::{Graph, GraphData},
 };
 use chrono::Utc;
 use rust_decimal::Decimal;
@@ -872,12 +871,6 @@ impl Profit for CallButterfly {
         let long_call_otm_profit = self.short_call_low.pnl_at_expiration(&price)?;
         let short_call_profit = self.short_call_high.pnl_at_expiration(&price)?;
         Ok(long_call_itm_profit + long_call_otm_profit + short_call_profit)
-    }
-}
-
-impl Graph for CallButterfly {
-    fn graph_data(&self) -> GraphData {
-        todo!()
     }
 }
 

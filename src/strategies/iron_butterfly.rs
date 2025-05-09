@@ -38,7 +38,6 @@ use crate::{
         probabilities::{core::ProbabilityAnalysis, utils::VolatilityAdjustment},
         utils::{FindOptimalSide, OptimizationCriteria},
     },
-    visualization::{Graph, GraphData},
 };
 use chrono::Utc;
 use num_traits::FromPrimitive;
@@ -948,12 +947,6 @@ impl Profit for IronButterfly {
             + self.short_put.pnl_at_expiration(&price)?
             + self.long_call.pnl_at_expiration(&price)?
             + self.long_put.pnl_at_expiration(&price)?)
-    }
-}
-
-impl Graph for IronButterfly {
-    fn graph_data(&self) -> GraphData {
-        todo!()
     }
 }
 

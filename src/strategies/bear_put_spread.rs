@@ -41,7 +41,6 @@ use crate::{
         probabilities::{core::ProbabilityAnalysis, utils::VolatilityAdjustment},
         utils::{FindOptimalSide, OptimizationCriteria},
     },
-    visualization::{Graph, GraphData},
 };
 use chrono::Utc;
 use rust_decimal::Decimal;
@@ -730,12 +729,6 @@ impl Profit for BearPutSpread {
     fn calculate_profit_at(&self, price: &Positive) -> Result<Decimal, Box<dyn Error>> {
         let price = Some(price);
         Ok(self.long_put.pnl_at_expiration(&price)? + self.short_put.pnl_at_expiration(&price)?)
-    }
-}
-
-impl Graph for BearPutSpread {
-    fn graph_data(&self) -> GraphData {
-        todo!()
     }
 }
 

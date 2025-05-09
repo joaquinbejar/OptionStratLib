@@ -1,4 +1,9 @@
-use super::base::{Positionable, StrategyType};
+use super::base::{BreakEvenable, Positionable, StrategyType};
+use crate::error::StrategyError;
+use crate::error::strategies::ProfitLossErrorKind;
+use crate::model::types::OptionBasicType;
+use crate::pricing::Profit;
+use crate::strategies::{BasicAble, Strategies, Validable};
 use crate::{
     ExpirationDate, Options, Positive,
     error::position::{PositionError, PositionValidationErrorKind},
@@ -10,6 +15,9 @@ use crate::{
 use chrono::Utc;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
+use std::collections::{HashMap, HashSet};
+use std::error::Error;
+use tracing::debug;
 
 pub(super) const SHORT_CALL_DESCRIPTION: &str = "A Short Call (or Naked Call) is an options strategy where the trader sells a call option without owning the underlying stock. \
     This strategy generates immediate income through the premium received but carries unlimited risk if the stock price rises significantly. \
@@ -119,6 +127,183 @@ impl ShortCall {
             .expect("Invalid short call option");
 
         strategy
+    }
+}
+
+impl BasicAble for ShortCall {
+    fn get_title(&self) -> String {
+        let strategy_title = format!("{:?} Strategy: ", self.kind);
+        let leg_titles: Vec<String> = [self.short_call.get_title()]
+            .iter()
+            .map(|leg| leg.to_string())
+            .collect();
+
+        if leg_titles.is_empty() {
+            strategy_title
+        } else {
+            format!("{}\n\t{}", strategy_title, leg_titles.join("\n\t"))
+        }
+    }
+    fn get_option_basic_type(&self) -> HashSet<OptionBasicType> {
+        let mut hash_set = HashSet::new();
+        let short_call = &self.short_call.option;
+
+        hash_set.insert(OptionBasicType {
+            option_style: &short_call.option_style,
+            side: &short_call.side,
+            strike_price: &short_call.strike_price,
+            expiration_date: &short_call.expiration_date,
+        });
+
+        hash_set
+    }
+    fn get_implied_volatility(&self) -> HashMap<OptionBasicType, &Positive> {
+        let options = [(
+            &self.short_call.option,
+            &self.short_call.option.implied_volatility,
+        )];
+
+        options
+            .into_iter()
+            .map(|(option, iv)| {
+                (
+                    OptionBasicType {
+                        option_style: &option.option_style,
+                        side: &option.side,
+                        strike_price: &option.strike_price,
+                        expiration_date: &option.expiration_date,
+                    },
+                    iv,
+                )
+            })
+            .collect()
+    }
+    fn get_quantity(&self) -> HashMap<OptionBasicType, &Positive> {
+        let options = [(&self.short_call.option, &self.short_call.option.quantity)];
+
+        options
+            .into_iter()
+            .map(|(option, quantity)| {
+                (
+                    OptionBasicType {
+                        option_style: &option.option_style,
+                        side: &option.side,
+                        strike_price: &option.strike_price,
+                        expiration_date: &option.expiration_date,
+                    },
+                    quantity,
+                )
+            })
+            .collect()
+    }
+    fn one_option(&self) -> &Options {
+        self.short_call.one_option()
+    }
+    fn one_option_mut(&mut self) -> &mut Options {
+        self.short_call.one_option_mut()
+    }
+    fn set_expiration_date(
+        &mut self,
+        expiration_date: ExpirationDate,
+    ) -> Result<(), StrategyError> {
+        self.short_call.option.expiration_date = expiration_date;
+        Ok(())
+    }
+    fn set_underlying_price(&mut self, price: &Positive) -> Result<(), StrategyError> {
+        self.short_call.option.underlying_price = *price;
+        self.short_call.premium = Positive::from(
+            self.short_call
+                .option
+                .calculate_price_black_scholes()?
+                .abs(),
+        );
+        Ok(())
+    }
+    fn set_implied_volatility(&mut self, volatility: &Positive) -> Result<(), StrategyError> {
+        self.short_call.option.implied_volatility = *volatility;
+        self.short_call.premium = Positive(
+            self.short_call
+                .option
+                .calculate_price_black_scholes()?
+                .abs(),
+        );
+        Ok(())
+    }
+}
+
+impl Validable for ShortCall {
+    fn validate(&self) -> bool {
+        if !self.short_call.validate() {
+            debug!("Long call is invalid");
+            return false;
+        }
+        true
+    }
+}
+
+impl BreakEvenable for ShortCall {
+    fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
+        Ok(&self.break_even_points)
+    }
+
+    fn update_break_even_points(&mut self) -> Result<(), StrategyError> {
+        self.break_even_points = Vec::new();
+
+        self.break_even_points.push(
+            (self.short_call.option.strike_price
+                + self.get_net_cost()? / self.short_call.option.quantity)
+                .round_to(2),
+        );
+
+        Ok(())
+    }
+}
+
+impl Strategies for ShortCall {
+    fn get_max_profit(&self) -> Result<Positive, StrategyError> {
+        let profit = self.calculate_profit_at(&self.short_call.option.strike_price)?;
+        if profit >= Decimal::ZERO {
+            Ok(profit.into())
+        } else {
+            Err(StrategyError::ProfitLossError(
+                ProfitLossErrorKind::MaxProfitError {
+                    reason: "Net premium received is negative".to_string(),
+                },
+            ))
+        }
+    }
+    fn get_max_loss(&self) -> Result<Positive, StrategyError> {
+        let loss = self.calculate_profit_at(&self.short_call.option.strike_price)?;
+        if loss <= Decimal::ZERO {
+            Ok(loss.abs().into())
+        } else {
+            Err(StrategyError::ProfitLossError(
+                ProfitLossErrorKind::MaxLossError {
+                    reason: "Max loss is negative".to_string(),
+                },
+            ))
+        }
+    }
+    fn get_profit_area(&self) -> Result<Decimal, StrategyError> {
+        let high = self.get_max_profit().unwrap_or(Positive::ZERO);
+        let base = self.short_call.option.strike_price - self.break_even_points[0];
+        Ok((high * base / 200.0).into())
+    }
+    fn get_profit_ratio(&self) -> Result<Decimal, StrategyError> {
+        let max_profit = self.get_max_profit().unwrap_or(Positive::ZERO);
+        let max_loss = self.get_max_loss().unwrap_or(Positive::ZERO);
+        match (max_profit, max_loss) {
+            (value, _) if value == Positive::ZERO => Ok(Decimal::ZERO),
+            (_, value) if value == Positive::ZERO => Ok(Decimal::MAX),
+            _ => Ok((max_profit / max_loss * 100.0).into()),
+        }
+    }
+}
+
+impl Profit for ShortCall {
+    fn calculate_profit_at(&self, price: &Positive) -> Result<Decimal, Box<dyn Error>> {
+        let price = Some(price);
+        self.short_call.pnl_at_expiration(&price)
     }
 }
 

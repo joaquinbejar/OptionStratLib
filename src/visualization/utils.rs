@@ -36,7 +36,36 @@ pub fn pick_color(cfg: &GraphConfig, idx: usize) -> Option<String> {
     get_color_from_scheme(&cfg.color_scheme, idx)
 }
 
-/// Creates a Surface from a Surface3D
+
+/// Creates a 3D surface representation wrapped in a `Box`, based on the input `Surface3D` structure.
+///
+/// This function converts the input `Surface3D` data into a `Surface` object, which includes the x, y, and z
+/// coordinate mappings. If any of the x, y, or z coordinate vectors in the input are empty, it creates a 
+/// default 2x2 surface with all z values initialized to zero and x/y spanning the range `[0, 1]`.
+///
+/// # Parameters
+/// - `surf`: A reference to a `Surface3D` object, which contains x, y, and z coordinate vectors 
+///   and an optional name for the surface.
+///
+/// # Returns
+/// - A `Box` containing a `Surface<Decimal, Decimal, Decimal>` object, where:
+///   - `x` and `y` axes are unique and sorted.
+///   - `z` values are represented in a 2D matrix where rows correspond to `y` values and columns 
+///     correspond to `x` values.
+///
+/// # Logic Details
+/// 1. **Edge Case Handling**: If any of `surf.x`, `surf.y`, or `surf.z` is empty, create a default 2x2 surface:
+///    - All z values are initialized to `Decimal::ZERO`.
+///    - x and y coordinates are `[0, 1]`.
+///    - The surface name remains as provided in the `surf.name`.
+///
+/// 2. **Unique and Sorted Axes**:
+///    - Extract unique and sorted x and y coordinates using a `BTreeSet`.
+///    - These unique x and y coordinates are then stored in vectors (`x_unique` and `y_unique`).
+///
+/// 3. **Mapping Coordinates**:
+///    - Create mappings (`x_to_col` and `y_to_row`) to translate x and y coordinates into column and row
+///      indices of the `z_matrix`. Each coordinate is mapped to its respective index in the
 pub fn make_surface(surf: &Surface3D) -> Box<Surface<Decimal, Decimal, Decimal>> {
     if surf.x.is_empty() || surf.y.is_empty() || surf.z.is_empty() {
         let z_matrix = vec![
@@ -100,7 +129,6 @@ pub fn to_plotly_mode(mode: &TraceMode) -> Mode {
     }
 }
 
-/// Get color from a color scheme based on index
 /// Get color from a color scheme based on index
 pub fn get_color_from_scheme(scheme: &ColorScheme, idx: usize) -> Option<String> {
     match scheme {

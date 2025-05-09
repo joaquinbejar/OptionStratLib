@@ -174,18 +174,32 @@
 //! - Utility functions handle edge cases and error conditions
 
 pub(crate) mod error;
+/// This module contains the logger setup and configuration.  It provides functionality for
+/// initializing the logger, setting log levels, and formatting log messages.  It uses the `tracing`
+/// crate for structured logging and supports various log levels.
 pub mod logger;
 
 /// This module contains other miscellaneous modules and functions.  It acts as a container for
 /// functionality that doesn't fit neatly into the main project structure.  More specific
 /// documentation can be found within each sub-module.
 pub mod others;
+/// This module contains testing utilities and macros.  It provides functionality for
+/// asserting relative equality, generating random elements, and processing combinations.
 pub(crate) mod tests;
 
+/// This module contains the CSV reader and writer for OHLCV data.  It provides functionality for
+/// reading and writing OHLCV data in CSV format, as well as handling errors related to CSV
+/// parsing.
 mod csv;
+/// This module contains the file reader and writer for OHLCV data.  It provides functionality for
+/// reading and writing OHLCV data in various file formats, including CSV and JSON.
 pub mod file;
 /// Module for time-related utilities.
 pub mod time;
+
+/// This module contains traits and type definitions used throughout the library.  It provides
+/// functionality for defining and implementing common traits, as well as type aliases for
+/// convenience.
 mod traits;
 
 pub use csv::{OhlcvCandle, OhlcvError, read_ohlcv_from_zip};

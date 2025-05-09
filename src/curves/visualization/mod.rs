@@ -44,7 +44,6 @@
 //! curves.plot()
 //!     .title("Curve Comparison")
 //!     .dimensions(1000, 600)
-//!     .line_width(3)
 //!     .save(filename).expect("panic message");
 //!
 //! if Path::new(filename).exists() {

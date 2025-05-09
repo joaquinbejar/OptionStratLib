@@ -53,7 +53,6 @@ use crate::{
         probabilities::{core::ProbabilityAnalysis, utils::VolatilityAdjustment},
         utils::{FindOptimalSide, OptimizationCriteria},
     },
-    visualization::{Graph, GraphData},
 };
 use chrono::Utc;
 use num_traits::FromPrimitive;
@@ -746,12 +745,6 @@ impl Profit for PoorMansCoveredCall {
             self.long_call.pnl_at_expiration(&price)?
                 + self.short_call.pnl_at_expiration(&price)?,
         )
-    }
-}
-
-impl Graph for PoorMansCoveredCall {
-    fn graph_data(&self) -> GraphData {
-        todo!()
     }
 }
 
