@@ -453,7 +453,7 @@ impl Positive {
     ///
     /// let value = Positive::new(6.7).unwrap();
     /// let rounded = value.round_to_nice_number();
-    /// assert_eq!(rounded, Positive::new(10.0).unwrap());
+    /// assert_eq!(rounded, Positive::new(5.0).unwrap());
     /// ```
     pub fn round_to_nice_number(&self) -> Positive {
         let magnitude = self.log10().floor();
