@@ -11,23 +11,20 @@ use crate::visualization::{
 };
 use rust_decimal::Decimal;
 
-
 /// Macro `impl_graph_for_payoff_strategy` generates implementations of the `Graph` trait
 /// for one or more given types. This is specifically designed for types that represent
 /// payoff strategies, enabling them to produce graph data and configurations for financial
 /// visualizations, such as profit/loss graphs based on an underlying price range.
-/// 
+///
 /// # Usage
-/// 
+///
 /// Use the macro to implement the `Graph` trait for multiple types. For example:
-/// 
-
 /// This will generate implementations of the `Graph` trait for `TypeA` and `TypeB`.
-/// 
+///
 /// # Generated Trait Implementation
-/// 
+///
 /// ## `graph_data`
-/// 
+///
 /// - Generates `GraphData` for the associated type by calculating the profit/loss data for
 ///   a price range obtained from the `get_best_range_to_show` method.
 /// - The result is displayed as two series:
@@ -38,9 +35,9 @@ use rust_decimal::Decimal;
 ///   - Prices where profit is positive are included in the positive series only.
 ///   - Prices where profit is negative are included in the negative series only.
 /// - If `get_best_range_to_show` fails, a default empty `GraphData::Series` is returned.
-/// 
+///
 /// ## `graph_config`
-/// 
+///
 /// - Produces a `GraphConfig` structure for styling and configuring the graph:
 ///   - Title: Based on the strategy's title via `get_title` method.
 ///   - Width and height: Predefined dimensions (1600x900).
@@ -49,21 +46,21 @@ use rust_decimal::Decimal;
 ///     - `line_style`: Set to `LineStyle::Solid`.
 ///     - `color_scheme`: Set to default.
 ///     - `legend`: Title is added to the legend, but `show_legend` is disabled by default.
-/// 
+///
 /// # Parameters
-/// 
+///
 /// - `$t`: One or more types for which the `Graph` trait should be implemented.
-/// 
-/// 
+///
+///
 /// This allows the `MyStrategy` type to generate graph data and configurations for visual representation
 /// of its payoff strategy.
-/// 
+///
 /// # Notes
-/// 
+///
 /// - The macro assumes that the types implemented provide specific methods (`get_best_range_to_show`,
 ///   `calculate_profit_at`, and `get_title`) necessary for the `Graph` trait.
 /// - Predefined values like colors, line widths, and dimensions can be adjusted within the macro if needed.
-/// 
+///
 #[macro_export]
 macro_rules! impl_graph_for_payoff_strategy {
     ($($t:ty),*) => {

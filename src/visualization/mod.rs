@@ -109,16 +109,6 @@
 //!
 //! // Display in browser
 //! data.show();
-//!
-//! // Save as HTML
-//!
-//! let filename: PathBuf = PathBuf::from("my_chart.html");
-//! data.render(OutputType::Html(&filename)).unwrap();
-//! if Path::new(&filename.clone()).exists() {
-//!         fs::remove_file(filename.clone())
-//!             .unwrap_or_else(|_| panic!("Failed to remove {}", filename.to_str().unwrap()));
-//! }
-//!
 //! // Save as PNG
 //! let filename: PathBuf = PathBuf::from("my_chart.png");
 //! data.render(OutputType::Png(&filename)).unwrap();
