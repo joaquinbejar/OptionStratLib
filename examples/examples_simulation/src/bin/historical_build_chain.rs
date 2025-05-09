@@ -7,12 +7,12 @@ use optionstratlib::simulation::{WalkParams, WalkType, WalkTypeAble};
 use optionstratlib::utils::others::calculate_log_returns;
 use optionstratlib::utils::time::{TimeFrame, get_x_days_formatted};
 use optionstratlib::utils::{read_ohlcv_from_zip, setup_logger};
+use optionstratlib::visualization::Graph;
 use optionstratlib::volatility::{adjust_volatility, constant_volatility};
 use optionstratlib::{ExpirationDate, Positive, pos, spos};
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use tracing::{debug, info};
-use optionstratlib::visualization::Graph;
 
 #[warn(dead_code)]
 struct Walker {}
@@ -103,8 +103,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
     debug!("Random Walk: {}", random_walk);
     let path: &std::path::Path = "Draws/Simulation/historical_build_chain.png".as_ref();
-    random_walk.write_png(path, 1200, 800)?;
-    
+    random_walk.write_png(path)?;
+
     info!("First Chain: {}", random_walk.first().unwrap().y.value());
     info!("Last Chain: {}", random_walk.last().unwrap().y.value());
 

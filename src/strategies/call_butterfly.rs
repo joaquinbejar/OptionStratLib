@@ -1,29 +1,40 @@
 use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, StrategyBasics, StrategyType, Validable,
 };
-use crate::{ExpirationDate, Options, Positive, chains::{StrategyLegs, chain::OptionChain, utils::OptionDataGroup}, error::{
-    GreeksError, OperationErrorKind,
-    position::{PositionError, PositionValidationErrorKind},
-    probability::ProbabilityError,
-    strategies::{ProfitLossErrorKind, StrategyError},
-}, greeks::Greeks, model::{
-    ProfitLossRange,
-    position::Position,
-    types::{OptionBasicType, OptionStyle, OptionType, Side},
-    utils::mean_and_std,
-}, pnl::{PnLCalculator, utils::PnL}, pricing::payoff::Profit, strategies::{Strategies,
-                                                                           BasicAble, StrategyConstructor,
-                                                                           delta_neutral::DeltaNeutrality,
-                                                                           probabilities::{core::ProbabilityAnalysis, utils::VolatilityAdjustment},
-                                                                           utils::{FindOptimalSide, OptimizationCriteria},
-}, visualization::{Graph, GraphData}, spos};
+use crate::error::strategies::BreakEvenErrorKind;
+use crate::{
+    ExpirationDate, Options, Positive,
+    chains::{StrategyLegs, chain::OptionChain, utils::OptionDataGroup},
+    error::{
+        GreeksError, OperationErrorKind,
+        position::{PositionError, PositionValidationErrorKind},
+        probability::ProbabilityError,
+        strategies::{ProfitLossErrorKind, StrategyError},
+    },
+    greeks::Greeks,
+    model::{
+        ProfitLossRange,
+        position::Position,
+        types::{OptionBasicType, OptionStyle, OptionType, Side},
+        utils::mean_and_std,
+    },
+    pnl::{PnLCalculator, utils::PnL},
+    pricing::payoff::Profit,
+    spos,
+    strategies::{
+        BasicAble, Strategies, StrategyConstructor,
+        delta_neutral::DeltaNeutrality,
+        probabilities::{core::ProbabilityAnalysis, utils::VolatilityAdjustment},
+        utils::{FindOptimalSide, OptimizationCriteria},
+    },
+    visualization::{Graph, GraphData},
+};
 use chrono::Utc;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use tracing::{error, info};
-use crate::error::strategies::BreakEvenErrorKind;
 
 const CALL_BUTTERFLY_DESCRIPTION: &str = "A Ratio Call Spread involves buying one call option and selling multiple call options \
     at a higher strike price. This strategy is used when a moderate rise in the underlying \
@@ -1078,8 +1089,6 @@ mod tests_call_butterfly {
             epsilon = f64::EPSILON
         );
     }
-
-
 }
 
 #[cfg(test)]
@@ -1125,7 +1134,6 @@ mod tests_call_butterfly_validation {
         assert!(strategy.validate());
     }
 }
-
 
 #[cfg(test)]
 mod tests_call_butterfly_delta {

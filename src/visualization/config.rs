@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use crate::visualization::styles::{ColorScheme, LineStyle};
+use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct GraphConfig {

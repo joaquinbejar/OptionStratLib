@@ -3,14 +3,14 @@
    Email: jb@taunais.com
    Date: 21/8/24
 ******************************************************************************/
-use std::error::Error;
-use std::ops::Mul;
 use crate::model::Position;
 use crate::model::types::{OptionStyle, OptionType, Side};
 use crate::{ExpirationDate, Options, Positive, pos};
 use chrono::{NaiveDateTime, TimeZone, Utc};
 use rust_decimal::{Decimal, MathematicalOps};
 use rust_decimal_macros::dec;
+use std::error::Error;
+use std::ops::Mul;
 
 /// Converts a vector of `Positive` values to a vector of `f64` values.
 ///
@@ -375,20 +375,18 @@ pub trait ToRound {
     fn round_to(&self, decimal_places: u32) -> Decimal;
 }
 
-
-
 pub fn calculate_optimal_price_range(
     underlying_price: Positive,
     strike_price: Positive,
-    implied_volatility: Positive,  
+    implied_volatility: Positive,
     expiration_date: ExpirationDate,
-) -> Result<(Positive, Positive), Box<dyn Error>> { 
-
-    let days_to_expiry = expiration_date.get_days()?; 
+) -> Result<(Positive, Positive), Box<dyn Error>> {
+    let days_to_expiry = expiration_date.get_days()?;
     let years_to_expiry = Decimal::from(days_to_expiry) / dec!(365.0);
-    
+
     let confidence_interval = dec!(4.0);
-    let volatility_factor = implied_volatility * years_to_expiry.sqrt().unwrap() * confidence_interval;
+    let volatility_factor =
+        implied_volatility * years_to_expiry.sqrt().unwrap() * confidence_interval;
 
     let lower_bound = underlying_price * (dec!(1.0) - volatility_factor);
     let upper_bound = underlying_price * (dec!(1.0) + volatility_factor);
@@ -396,7 +394,7 @@ pub fn calculate_optimal_price_range(
     let min_price = lower_bound.min(strike_price.mul(dec!(0.7)));
     let max_price = upper_bound.max(strike_price.mul(dec!(1.3)));
 
-    let step = (max_price - min_price) / dec!(20.0); 
+    let step = (max_price - min_price) / dec!(20.0);
     let rounded_step = step.round_to_nice_number();
 
     let min_price_rounded = (min_price / rounded_step).floor() * rounded_step;
@@ -405,10 +403,12 @@ pub fn calculate_optimal_price_range(
     Ok((min_price_rounded, max_price_rounded))
 }
 
-
-
 /// Genera un vector de precios para la gráfica de payoff
-pub fn generate_price_points(min_price: Decimal, max_price: Decimal, num_points: usize) -> Vec<Decimal> {
+pub fn generate_price_points(
+    min_price: Decimal,
+    max_price: Decimal,
+    num_points: usize,
+) -> Vec<Decimal> {
     let step = (max_price - min_price) / Decimal::from(num_points - 1);
     let mut prices = Vec::with_capacity(num_points);
 

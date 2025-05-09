@@ -6,9 +6,9 @@ use optionstratlib::geometrics::{
 use optionstratlib::greeks::d1;
 use optionstratlib::surfaces::{Point3D, Surface};
 use optionstratlib::utils::setup_logger;
+use optionstratlib::visualization::Graph;
 use optionstratlib::{Positive, pos};
 use rust_decimal_macros::dec;
-use optionstratlib::visualization::Graph;
 
 fn main() -> Result<(), SurfaceError> {
     setup_logger();
@@ -47,7 +47,7 @@ fn main() -> Result<(), SurfaceError> {
         .y_label("Strike Price")
         .z_label("d1")
         .dimensions(1600, 900);
-        // .save("Draws/Surfaces/d1_surface.png")?;
+    // .save("Draws/Surfaces/d1_surface.png")?;
 
     // delta_surface.write_html("Draws/Surfaces/d1_surface.html".as_ref())?;
     delta_surface.write_png("Draws/Surfaces/d1_surface.png".as_ref())?;

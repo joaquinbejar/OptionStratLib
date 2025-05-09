@@ -11,10 +11,10 @@ use optionstratlib::pos;
 use optionstratlib::strategies::long_butterfly_spread::LongButterflySpread;
 use optionstratlib::strategies::{BasicAble, Strategies};
 use optionstratlib::utils::setup_logger;
+use optionstratlib::visualization::Graph;
 use rust_decimal_macros::dec;
 use std::error::Error;
 use tracing::info;
-use optionstratlib::visualization::Graph;
 
 fn main() -> Result<(), Box<dyn Error>> {
     setup_logger();
@@ -61,9 +61,10 @@ fn main() -> Result<(), Box<dyn Error>> {
     info!("Profit Area: {:.2}%", strategy.get_profit_area()?);
     info!("Profit Ratio: {:.2}%", strategy.get_profit_ratio()?);
 
-    let path: &std::path::Path = "Draws/Strategy/long_butterfly_spread_profit_loss_chart.png".as_ref();
-    strategy.write_png(path, 1200, 800)?;
-    
+    let path: &std::path::Path =
+        "Draws/Strategy/long_butterfly_spread_profit_loss_chart.png".as_ref();
+    strategy.write_png(path)?;
+
     info!("Greeks:  {:#?}", strategy.greeks());
 
     Ok(())

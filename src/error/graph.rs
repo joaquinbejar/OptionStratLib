@@ -1,6 +1,6 @@
+use crate::error::{CurveError, SurfaceError};
 use std::error::Error;
 use std::fmt;
-use crate::error::{CurveError, SurfaceError};
 
 #[derive(Debug)]
 pub enum GraphError {

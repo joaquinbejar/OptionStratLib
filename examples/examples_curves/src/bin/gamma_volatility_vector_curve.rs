@@ -71,11 +71,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         .title("Gamma Curve")
         .x_label("Strike")
         .y_label("Gamma for different Volatilities")
-        .legend(vec![
-            "Volatility 20%",
-            "Volatility 10%",
-            "Volatility 5%",
-        ])
+        .legend(vec!["Volatility 20%", "Volatility 10%", "Volatility 5%"])
         .save("./Draws/Curves/gamma_volatility_vector_curve.png")?;
 
     Ok(())

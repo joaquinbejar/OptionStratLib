@@ -53,7 +53,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
     debug!("Random Walk: {}", random_walk);
     let path: &std::path::Path = "Draws/Simulation/random_walk_chain.png".as_ref();
-    random_walk.write_png(path, 1200, 800)?;
+    random_walk.write_png(path)?;
     info!("Last Chain: {}", random_walk.last().unwrap().y.value());
 
     Ok(())

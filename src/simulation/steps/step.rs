@@ -193,7 +193,7 @@ where
     pub fn get_graph_y_value(&self) -> Positive {
         self.y.positive()
     }
-    
+
     /// Returns a reference to the `Ystep<Y>` instance associated with the current object.
     ///
     /// # Returns
@@ -202,12 +202,12 @@ where
     ///
     /// # Notes
     ///
-    /// This method provides a non-mutable reference to the `Ystep<Y>`. If you need 
+    /// This method provides a non-mutable reference to the `Ystep<Y>`. If you need
     /// to modify the `Ystep<Y>`, consider using a different method or accessing it mutably.
     pub fn get_y_step(&self) -> &Ystep<Y> {
         &self.y
     }
-    
+
     ///
     /// Returns a reference to the `Xstep<X>` held within the struct.
     ///
@@ -217,7 +217,7 @@ where
     pub fn get_x_step(&self) -> &Xstep<X> {
         &self.x
     }
-    
+
     /// Returns a reference to the value of type `Y` held by the `self` instance.
     ///
     /// This method retrieves the value stored in the `y` field of the struct,
@@ -229,7 +229,7 @@ where
     pub fn get_value(&self) -> &Y {
         self.y.value()
     }
-    
+
     /// Retrieves the index value associated with the instance.
     ///
     /// # Returns
@@ -242,9 +242,6 @@ where
     pub fn get_index(&self) -> &X {
         self.x.step_size_in_time()
     }
-    
-    
-    
 }
 
 impl<X, Y> Display for Step<X, Y>
@@ -837,15 +834,15 @@ mod tests_step {
     fn next_ok_increments_indices_and_builds_self() {
         let x_value = pos!(5.0);
         let time_unit = TimeFrame::Day;
-        let datetime = ExpirationDate::Days(pos!(2.0)); 
+        let datetime = ExpirationDate::Days(pos!(2.0));
         let y_value = pos!(50.0);
         let step = Step::new(x_value, time_unit, datetime, y_value);
 
         let new_y = pos!(55.0);
-        let next = step.next(new_y).unwrap(); 
+        let next = step.next(new_y).unwrap();
 
         assert_eq!(next.get_value(), &new_y);
-        assert_eq!(*next.x.index(), 1); 
+        assert_eq!(*next.x.index(), 1);
         assert_eq!(*next.y.index(), step.y.index() + 1);
     }
 }

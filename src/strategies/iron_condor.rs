@@ -30,16 +30,16 @@ use crate::{
     },
     pnl::{PnLCalculator, utils::PnL},
     pricing::payoff::Profit,
-    strategies::{Strategies,
-                 BasicAble, StrategyConstructor,
-                 delta_neutral::DeltaNeutrality,
-                 probabilities::{core::ProbabilityAnalysis, utils::VolatilityAdjustment},
-                 utils::{FindOptimalSide, OptimizationCriteria},
+    strategies::{
+        BasicAble, Strategies, StrategyConstructor,
+        delta_neutral::DeltaNeutrality,
+        probabilities::{core::ProbabilityAnalysis, utils::VolatilityAdjustment},
+        utils::{FindOptimalSide, OptimizationCriteria},
     },
     visualization::{Graph, GraphData},
 };
 use chrono::Utc;
-use num_traits::{FromPrimitive};
+use num_traits::FromPrimitive;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -1432,11 +1432,11 @@ mod tests_iron_condor_validable {
 
 #[cfg(test)]
 mod tests_iron_condor_strategies {
-    use num_traits::ToPrimitive;
     use super::*;
     use crate::constants::ZERO;
     use crate::model::ExpirationDate;
     use crate::pos;
+    use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
     fn create_test_condor() -> IronCondor {
@@ -2057,10 +2057,10 @@ mod tests_iron_condor_optimizable {
 
 #[cfg(test)]
 mod tests_iron_condor_profit {
-    use num_traits::ToPrimitive;
     use super::*;
     use crate::model::ExpirationDate;
     use crate::pos;
+    use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
     fn create_test_condor() -> IronCondor {

@@ -17,22 +17,34 @@ Key characteristics:
 use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, StrategyBasics, StrategyType, Validable,
 };
-use crate::{ExpirationDate, Options, Positive, chains::{StrategyLegs, chain::OptionChain, utils::OptionDataGroup}, constants::ZERO, error::{
-    GreeksError, OperationErrorKind,
-    position::{PositionError, PositionValidationErrorKind},
-    probability::ProbabilityError,
-    strategies::{ProfitLossErrorKind, StrategyError},
-}, greeks::Greeks, model::{
-    ProfitLossRange,
-    position::Position,
-    types::{OptionBasicType, OptionStyle, OptionType, Side},
-    utils::mean_and_std,
-}, pnl::{PnLCalculator, utils::PnL}, pricing::payoff::Profit, strategies::{Strategies,
-                                                                           BasicAble, StrategyConstructor,
-                                                                           delta_neutral::DeltaNeutrality,
-                                                                           probabilities::{core::ProbabilityAnalysis, utils::VolatilityAdjustment},
-                                                                           utils::{FindOptimalSide, OptimizationCriteria},
-}, visualization::{Graph, GraphData}, pos};
+use crate::{
+    ExpirationDate, Options, Positive,
+    chains::{StrategyLegs, chain::OptionChain, utils::OptionDataGroup},
+    constants::ZERO,
+    error::{
+        GreeksError, OperationErrorKind,
+        position::{PositionError, PositionValidationErrorKind},
+        probability::ProbabilityError,
+        strategies::{ProfitLossErrorKind, StrategyError},
+    },
+    greeks::Greeks,
+    model::{
+        ProfitLossRange,
+        position::Position,
+        types::{OptionBasicType, OptionStyle, OptionType, Side},
+        utils::mean_and_std,
+    },
+    pnl::{PnLCalculator, utils::PnL},
+    pos,
+    pricing::payoff::Profit,
+    strategies::{
+        BasicAble, Strategies, StrategyConstructor,
+        delta_neutral::DeltaNeutrality,
+        probabilities::{core::ProbabilityAnalysis, utils::VolatilityAdjustment},
+        utils::{FindOptimalSide, OptimizationCriteria},
+    },
+    visualization::{Graph, GraphData},
+};
 use chrono::Utc;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -1732,10 +1744,6 @@ mod tests_bull_put_spread_profit {
 #[cfg(test)]
 mod tests_bull_put_spread_graph {
     use super::*;
-    
-    
-    
-    
 
     #[test]
     fn test_title_format() {

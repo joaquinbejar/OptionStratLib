@@ -91,4 +91,3 @@ pub(crate) const MAX_ITERATIONS_IV: u32 = 1000;
 /// Convergence tolerance for implied volatility calculations.
 /// Determines when the implied volatility solver has reached sufficient precision.
 pub(crate) const IV_TOLERANCE: Decimal = dec!(1e-5);
-

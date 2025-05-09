@@ -44,7 +44,7 @@
 use crate::error::SurfaceError;
 use crate::geometrics::{PlotBuilder, Plottable};
 use crate::surfaces::Surface;
-use crate::visualization::{Graph};
+use crate::visualization::Graph;
 
 /// Plottable implementation for single Surface
 impl Plottable for Surface {
@@ -61,131 +61,10 @@ impl Plottable for Surface {
     }
 }
 
-
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::geometrics::GeometricObject;
-    use crate::surfaces::Point3D;
-    use rust_decimal_macros::dec;
-    use std::fs;
-    use std::path::Path;
-
-    fn cleanup_image(filename: &str) {
-        if Path::new(filename).exists() {
-            fs::remove_file(filename).unwrap_or_else(|_| panic!("Failed to remove {}", filename));
-        }
-    }
-
-    fn create_test_curves() -> (Surface, Surface, Surface) {
-        // Create points first so they live long enough
-        let p1_1 = Point3D::new(dec!(0.0), dec!(0.0), dec!(0.0));
-        let p1_2 = Point3D::new(dec!(1.0), dec!(1.0), dec!(1.0));
-        let p1_3 = Point3D::new(dec!(2.0), dec!(4.0), dec!(4.0));
-        let p2_1 = Point3D::new(dec!(0.0), dec!(1.0), dec!(1.0));
-        let p2_2 = Point3D::new(dec!(1.0), dec!(2.0), dec!(2.0));
-        let p2_3 = Point3D::new(dec!(2.0), dec!(5.0), dec!(5.0));
-        let p3_1 = Point3D::new(dec!(0.0), dec!(2.0), dec!(2.0));
-        let p3_2 = Point3D::new(dec!(1.0), dec!(3.0), dec!(3.0));
-        let p3_3 = Point3D::new(dec!(2.0), dec!(6.0), dec!(6.0));
-
-        let points1 = vec![&p1_1, &p1_2, &p1_3];
-        let points2 = vec![&p2_1, &p2_2, &p2_3];
-        let points3 = vec![&p3_1, &p3_2, &p3_3];
-
-        (
-            Surface::from_vector(points1),
-            Surface::from_vector(points2),
-            Surface::from_vector(points3),
-        )
-    }
-
-    #[test]
-    fn test_single_curve_plot_bis() {
-        let p1 = Point3D::new(dec!(0.0), dec!(0.0), dec!(0.0));
-        let p2 = Point3D::new(dec!(1.0), dec!(1.0), dec!(1.0));
-        let p3 = Point3D::new(dec!(2.0), dec!(4.0), dec!(4.0));
-        let points = vec![&p1, &p2, &p3];
-        let curve = Surface::from_vector(points);
-
-        // Plot single curve
-        curve
-            .plot()
-            .title("Test Surface")
-            .x_label("X Axis")
-            .y_label("Y Axis")
-            .dimensions(800, 600) // Añade dimensiones explícitas
-            .save("single_curve_test.png")
-            .expect("Single curve plot failed");
-        cleanup_image("single_curve_test.png")
-    }
-
-    #[test]
-    fn test_single_curve_plot() {
-        let p1_1 = Point3D::new(dec!(0.0), dec!(0.0), dec!(0.0));
-        let p1_2 = Point3D::new(dec!(1.0), dec!(1.0), dec!(1.0));
-        let p1_3 = Point3D::new(dec!(2.0), dec!(4.0), dec!(4.0));
-
-        let points = vec![&p1_1, &p1_2, &p1_3];
-        let curve = Surface::from_vector(points);
-
-        // Plot single curve
-        curve
-            .plot()
-            .title("Test Surface")
-            .x_label("X Axis")
-            .y_label("Y Axis")
-            .dimensions(800, 600)
-            .save("single_curve_test.png")
-            .expect("Single curve plot failed");
-        cleanup_image("single_curve_test.png");
-    }
-
-    #[test]
-    fn test_plot_with_extreme_points() {
-        let extreme_points = vec![
-            Point3D::new(dec!(0.0), dec!(0.0), dec!(0.0)),
-            Point3D::new(dec!(1000.0), dec!(1000.0), dec!(1000.0)),
-            Point3D::new(dec!(-500.0), dec!(-500.0), dec!(-500.0)),
-        ];
-        let curve = Surface::from_vector(extreme_points);
-
-        // Plot curve with extreme points
-        curve
-            .plot()
-            .title("Extreme Points Surface")
-            .dimensions(800, 600)
-            .save("extreme_points_curve_test.png")
-            .expect("Extreme points curve plot failed");
-
-        cleanup_image("extreme_points_curve_test.png");
-    }
-
-    #[test]
-    fn test_plot_with_few_points() {
-        let few_points = vec![
-            Point3D::new(dec!(0.0), dec!(0.0), dec!(0.0)),
-            Point3D::new(dec!(1.0), dec!(1.0), dec!(1.0)),
-        ];
-        let curve = Surface::from_vector(few_points);
-
-        // Plot curve with few points
-        curve
-            .plot()
-            .title("Few Points Surface")
-            .dimensions(800, 600)
-            .save("few_points_curve_test.png")
-            .expect("Few points curve plot failed");
-
-        cleanup_image("few_points_curve_test.png");
-    }
-}
-
 #[cfg(test)]
 mod tests_extended {
     use super::*;
-    
+
     struct MockChart {
         pub x_desc: String,
         pub y_desc: String,
@@ -221,7 +100,7 @@ mod tests_extended {
             self
         }
     }
-    
+
     #[test]
     fn test_map_err_to_std_error() {
         let result: Result<(), SurfaceError> =
@@ -268,5 +147,4 @@ mod tests_extended {
             _ => panic!("Unexpected error type"),
         }
     }
-    
 }

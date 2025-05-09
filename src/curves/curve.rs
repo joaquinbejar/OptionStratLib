@@ -14,6 +14,7 @@ use crate::geometrics::{
     RangeMetrics, RiskMetrics, ShapeMetrics, SplineInterpolation, TrendMetrics,
 };
 use crate::utils::Len;
+use crate::visualization::{Graph, GraphData};
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use rayon::prelude::*;
 use rust_decimal::{Decimal, MathematicalOps};
@@ -22,7 +23,6 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
 use std::fmt::{Display, Formatter};
 use std::ops::Index;
-use crate::visualization::{Graph, GraphData};
 
 /// Represents a mathematical curve as a collection of 2D points.
 ///
@@ -143,7 +143,6 @@ impl Graph for Vec<Curve> {
         self.clone().into()
     }
 }
-
 
 impl GeometricObject<Point2D, Decimal> for Curve {
     type Error = CurveError;

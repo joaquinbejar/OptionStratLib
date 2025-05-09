@@ -14,6 +14,7 @@ use crate::pnl::utils::PnL;
 use crate::pnl::{PnLCalculator, Transaction, TransactionAble};
 use crate::pricing::payoff::Profit;
 use crate::strategies::base::BasicAble;
+use crate::visualization::{Graph, GraphConfig, GraphData};
 use crate::{ExpirationDate, OptionType, Options};
 use crate::{Positive, pos};
 use chrono::{DateTime, Utc};
@@ -22,7 +23,6 @@ use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use tracing::{debug, trace};
-use crate::visualization::{ Graph, GraphConfig, GraphData};
 
 /// The `Position` struct represents a financial position in an options market.
 ///
@@ -959,7 +959,6 @@ impl Graph for Position {
         self.option.graph_config()
     }
 }
-
 
 #[cfg(test)]
 mod tests_position {

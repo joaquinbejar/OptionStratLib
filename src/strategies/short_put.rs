@@ -1,6 +1,4 @@
-use super::base::{
-    Positionable, StrategyType,
-};
+use super::base::{Positionable, StrategyType};
 use crate::{
     ExpirationDate, Options, Positive,
     error::position::{PositionError, PositionValidationErrorKind},

@@ -32,27 +32,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .title("Volatility Curve")
         .x_label("strike")
         .y_label("Volatility")
-        .line_width(1)
         .save("Draws/Curves/option_chain_curve.png")?;
 
     info!("Curve saved");
 
-    // let surface = option_chain.surface(
-    //     &BasicAxisTypes::Delta,
-    //     &OptionStyle::Call,
-    //     None,
-    //     &Side::Long,
-    // )?;
-    //
-    // surface
-    //     .plot()
-    //     .title("Volatility Surface")
-    //     .x_label("strike")
-    //     .y_label("Volatility")
-    //     .z_label("Delta")
-    //     .line_width(1)
-    //     .save("Draws/Surfaces/option_chain_surface.png")?;
-    //
-    // info!("Surface saved");
     Ok(())
 }

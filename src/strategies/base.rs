@@ -1,23 +1,23 @@
+use crate::chains::OptionData;
+use crate::constants::{STRIKE_PRICE_LOWER_BOUND_MULTIPLIER, STRIKE_PRICE_UPPER_BOUND_MULTIPLIER};
+use crate::error::strategies::BreakEvenErrorKind;
 use crate::{
     ExpirationDate, Options, Positive,
     chains::{StrategyLegs, chain::OptionChain, utils::OptionDataGroup},
-    error::{
-        OperationErrorKind,
-        position::PositionError,
-        strategies::StrategyError,
-    },
+    error::{OperationErrorKind, position::PositionError, strategies::StrategyError},
     greeks::Greeks,
     model::{
         Trade,
         position::Position,
-        types::{OptionBasicType, OptionStyle, OptionType, Side, Action},
+        types::{Action, OptionBasicType, OptionStyle, OptionType, Side},
     },
     pnl::PnLCalculator,
     pricing::payoff::Profit,
-    strategies::{StrategyConstructor,
-                 delta_neutral::DeltaNeutrality,
-                 probabilities::core::ProbabilityAnalysis,
-                 utils::{FindOptimalSide, OptimizationCriteria, calculate_price_range},
+    strategies::{
+        StrategyConstructor,
+        delta_neutral::DeltaNeutrality,
+        probabilities::core::ProbabilityAnalysis,
+        utils::{FindOptimalSide, OptimizationCriteria, calculate_price_range},
     },
     visualization::Graph,
 };
@@ -27,9 +27,6 @@ use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::str::FromStr;
 use tracing::error;
-use crate::chains::OptionData;
-use crate::constants::{STRIKE_PRICE_LOWER_BOUND_MULTIPLIER, STRIKE_PRICE_UPPER_BOUND_MULTIPLIER};
-use crate::error::strategies::BreakEvenErrorKind;
 
 /// Represents basic information about a trading strategy.
 ///
@@ -2121,9 +2118,9 @@ mod tests_strategy_methods {
 #[cfg(test)]
 mod tests_optimizable {
     use super::*;
+    use crate::chains::OptionData;
     use crate::{pos, spos};
     use rust_decimal_macros::dec;
-    use crate::chains::OptionData;
 
     struct TestOptimizableStrategy;
 

@@ -33,6 +33,7 @@ use crate::surfaces::Point3D;
 use crate::surfaces::types::Axis;
 use crate::utils::Len;
 
+use crate::visualization::{Graph, GraphData, Surface3D};
 use num_traits::ToPrimitive;
 use rayon::iter::{
     IndexedParallelIterator, IntoParallelIterator, IntoParallelRefIterator, ParallelIterator,
@@ -43,7 +44,6 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
 use std::ops::Index;
 use std::sync::Arc;
-use crate::visualization::{Graph, GraphData, Surface3D};
 
 /// Represents a mathematical surface in 3D space.
 ///
@@ -310,7 +310,6 @@ impl Graph for Surface {
         })
     }
 }
-
 
 /// Implementation of the `GeometricObject` trait for the `Surface` struct.
 ///

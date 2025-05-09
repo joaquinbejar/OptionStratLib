@@ -1438,6 +1438,7 @@ mod tests_iron_butterfly_strategies {
     use super::*;
     use crate::model::ExpirationDate;
     use crate::pos;
+    use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
     fn create_test_butterfly() -> IronButterfly {
@@ -1852,6 +1853,7 @@ mod tests_iron_butterfly_profit {
     use super::*;
     use crate::model::ExpirationDate;
     use crate::pos;
+    use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
     fn create_test_butterfly() -> IronButterfly {

@@ -183,10 +183,10 @@ pub mod others;
 pub(crate) mod tests;
 
 mod csv;
+pub mod file;
 /// Module for time-related utilities.
 pub mod time;
 mod traits;
-pub mod file;
 
 pub use csv::{OhlcvCandle, OhlcvError, read_ohlcv_from_zip};
 pub use logger::{setup_logger, setup_logger_with_level};

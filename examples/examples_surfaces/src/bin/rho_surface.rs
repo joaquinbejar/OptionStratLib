@@ -57,8 +57,6 @@ fn main() -> Result<(), Box<dyn Error>> {
         .x_label("Asset value")
         .y_label("Volatility")
         .z_label("Rho")
-        .point_size(1)
-        .label_size(1.8)
         .dimensions(1600, 1200)
         .save("./Draws/Surfaces/rho_surface.png")?;
 

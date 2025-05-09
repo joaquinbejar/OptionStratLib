@@ -1,12 +1,11 @@
-use std::path::Path;
-use plotly::{Layout, Plot, ImageFormat};
+use optionstratlib::error::GraphError;
+use optionstratlib::visualization::{Surface3D, make_surface};
+use plotly::{ImageFormat, Layout, Plot};
 use rust_decimal::Decimal;
+use rust_decimal::prelude::FromPrimitive;
 use std::error::Error;
 use std::f64::consts::PI;
-use rust_decimal::prelude::FromPrimitive;
-use optionstratlib::error::GraphError;
-use optionstratlib::visualization::{make_surface, Surface3D};
-
+use std::path::Path;
 
 /// Simple test for Surface3D rendering
 fn test_simple_surface() -> Result<(), GraphError> {
@@ -69,13 +68,18 @@ fn test_simple_surface() -> Result<(), GraphError> {
 
     // Attempt to save as PNG (may fail)
     let png_path = Path::new("Draws/Surfaces/simple_surface.png");
-    println!("Attempting to save surface as PNG to: {}", png_path.display());
+    println!(
+        "Attempting to save surface as PNG to: {}",
+        png_path.display()
+    );
     plot.write_image(png_path, ImageFormat::PNG, 800, 600, 1.0);
-    
 
     // Try other formats
     let svg_path = Path::new("Draws/Surfaces/simple_surface.svg");
-    println!("Attempting to save surface as SVG to: {}", svg_path.display());
+    println!(
+        "Attempting to save surface as SVG to: {}",
+        svg_path.display()
+    );
     plot.write_image(svg_path, ImageFormat::SVG, 800, 600, 1.0);
 
     Ok(())

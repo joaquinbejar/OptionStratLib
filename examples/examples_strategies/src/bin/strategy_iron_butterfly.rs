@@ -61,7 +61,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     info!("Profit Area: {:.2}%", strategy.get_profit_area()?);
 
     let path: &std::path::Path = "Draws/Strategy/iron_butterfly_profit_loss_chart.png".as_ref();
-    strategy.write_png(path, 1200, 800)?;
+    strategy.write_png(path)?;
 
     Ok(())
 }

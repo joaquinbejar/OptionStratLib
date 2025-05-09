@@ -1450,6 +1450,7 @@ mod tests_short_butterfly_profit {
     use crate::model::ExpirationDate;
     use crate::pos;
     use approx::assert_relative_eq;
+    use num_traits::ToPrimitive;
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
     use std::str::FromStr;

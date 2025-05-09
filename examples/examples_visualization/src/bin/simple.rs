@@ -1,6 +1,6 @@
-use rust_decimal_macros::dec;
-use optionstratlib::visualization::{Graph, GraphData, Series2D, TraceMode};
 use optionstratlib::error::GraphError;
+use optionstratlib::visualization::{Graph, GraphData, Series2D, TraceMode};
+use rust_decimal_macros::dec;
 
 fn main() -> Result<(), GraphError> {
     // Creamos nuestra serie de datos

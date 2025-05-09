@@ -181,6 +181,7 @@ mod metrics;
 /// * Dimensional and data completeness errors
 mod surfaces;
 
+mod graph;
 mod transaction;
 /// ### Volatility Errors (`VolatilityError`)
 /// Handles:
@@ -189,12 +190,12 @@ mod transaction;
 /// * Volatility model parameter validation
 /// * Market data consistency checks
 mod volatility;
-mod graph;
 
 pub use chains::ChainError;
 pub use common::OperationErrorKind;
 pub use curves::CurveError;
 pub use decimal::{DecimalError, DecimalResult};
+pub use graph::GraphError;
 pub use greeks::GreeksError;
 pub use interpolation::InterpolationError;
 pub use metrics::MetricsError;
@@ -205,4 +206,3 @@ pub use strategies::StrategyError;
 pub use surfaces::SurfaceError;
 pub use transaction::TransactionError;
 pub use volatility::VolatilityError;
-pub use graph::GraphError;

@@ -3,7 +3,9 @@
    Email: jb@taunais.com
    Date: 20/1/25
 ******************************************************************************/
-use crate::error::{ GraphError, GreeksError, InterpolationError, OperationErrorKind, OptionsError, PositionError};
+use crate::error::{
+    GraphError, GreeksError, InterpolationError, OperationErrorKind, OptionsError, PositionError,
+};
 use std::error::Error;
 use std::fmt;
 
@@ -261,7 +263,6 @@ impl From<GraphError> for SurfaceError {
         }
     }
 }
-
 
 #[cfg(test)]
 mod tests {

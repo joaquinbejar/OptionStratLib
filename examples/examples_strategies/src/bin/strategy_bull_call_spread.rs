@@ -55,7 +55,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     info!("Profit Ratio: {:.2}%", strategy.get_profit_ratio()?);
 
     let path: &std::path::Path = "Draws/Strategy/bull_call_spread_profit_loss_chart.png".as_ref();
-    strategy.write_png(path, 1200, 800)?;
+    strategy.write_png(path)?;
 
     Ok(())
 }

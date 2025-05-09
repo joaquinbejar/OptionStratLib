@@ -7,10 +7,10 @@ use optionstratlib::strategies::utils::FindOptimalSide;
 use optionstratlib::strategies::{BasicAble, ShortButterflySpread};
 use optionstratlib::utils::setup_logger;
 
+use optionstratlib::visualization::Graph;
 use rust_decimal::Decimal;
 use std::error::Error;
 use tracing::{debug, info};
-use optionstratlib::visualization::Graph;
 
 fn main() -> Result<(), Box<dyn Error>> {
     setup_logger();
@@ -68,8 +68,9 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     if strategy.get_profit_ratio()? > Positive::ZERO.into() {
         debug!("Strategy:  {:#?}", strategy);
-        let path: &std::path::Path = "Draws/Strategy/short_butterfly_spread_profit_loss_chart_best_area.png".as_ref();
-        strategy.write_png(path, 1200, 800)?;
+        let path: &std::path::Path =
+            "Draws/Strategy/short_butterfly_spread_profit_loss_chart_best_area.png".as_ref();
+        strategy.write_png(path)?;
     }
 
     Ok(())

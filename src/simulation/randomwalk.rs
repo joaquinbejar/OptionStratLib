@@ -9,7 +9,7 @@ use crate::simulation::WalkParams;
 use crate::simulation::steps::Step;
 use crate::strategies::base::BasicAble;
 use crate::utils::Len;
-use crate::visualization::{Graph, GraphData};
+use crate::visualization::{ColorScheme, Graph, GraphConfig, GraphData, Series2D, TraceMode};
 use rust_decimal::Decimal;
 use std::error::Error;
 use std::fmt::Display;
@@ -300,7 +300,39 @@ where
     Y: Into<Positive> + Display + Clone,
 {
     fn graph_data(&self) -> GraphData {
-        todo!()
+        let steps = self.get_steps();
+        let y: Vec<Decimal> = steps
+            .iter()
+            .map(|step| step.get_graph_y_value().to_dec())
+            .collect();
+        let x: Vec<Decimal> = steps
+            .iter()
+            .map(|step| -step.get_graph_x_in_days_left().to_dec())
+            .collect();
+
+        GraphData::Series(Series2D {
+            x,
+            y,
+            name: self.get_title().to_string(),
+            mode: TraceMode::Lines,
+            line_color: Some("#1f77b4".to_string()),
+            line_width: Some(2.0),
+        })
+    }
+
+    fn graph_config(&self) -> GraphConfig {
+        GraphConfig {
+            title: self.get_title().to_string(),
+            x_label: Some("Date".to_string()),
+            y_label: Some("Price".to_string()),
+            z_label: None,
+            width: 1600,
+            height: 900,
+            show_legend: false,
+            color_scheme: ColorScheme::Default,
+            line_style: Default::default(),
+            legend: None,
+        }
     }
 }
 
@@ -309,17 +341,17 @@ mod tests_random_walk {
     use super::*;
     use crate::ExpirationDate;
     use crate::Positive;
-    
+
     use crate::pos;
     use crate::simulation::WalkParams;
     use crate::simulation::WalkType;
     use crate::simulation::WalkTypeAble;
     use crate::simulation::steps::Step;
     use crate::utils::TimeFrame;
-    
+
     use num_traits::ToPrimitive;
     use rust_decimal::Decimal;
-    
+
     use std::error::Error;
     use std::fmt::Display;
     use std::ops::AddAssign;

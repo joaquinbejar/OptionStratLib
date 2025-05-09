@@ -902,6 +902,7 @@ mod tests_options {
     use crate::pos;
     use approx::assert_relative_eq;
     use chrono::{Duration, Utc};
+    use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
     #[test]
@@ -1307,6 +1308,7 @@ mod tests_options_payoffs_with_quantity {
     use super::*;
     use crate::model::utils::create_sample_option;
     use crate::pos;
+    use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
     #[test]

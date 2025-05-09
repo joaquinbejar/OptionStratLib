@@ -13,10 +13,10 @@ use optionstratlib::strategies::{
 };
 use optionstratlib::utils::setup_logger;
 
+use optionstratlib::visualization::Graph;
 use optionstratlib::{Positive, pos};
 use rust_decimal::Decimal;
 use tracing::{debug, info};
-use optionstratlib::visualization::Graph;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     setup_logger();
@@ -77,7 +77,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         debug!("Strategy:  {:#?}", strategy);
         let file_path = "Draws/Chains/short_strangle_chain_raw_best_area.png";
         let path: &std::path::Path = file_path.as_ref();
-        strategy.write_png(path, 1400, 900)?;
+        strategy.write_png(path)?;
     }
     info!("Greeks:  {:#?}", strategy.greeks());
 

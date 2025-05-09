@@ -5,7 +5,7 @@ use crate::simulation::randomwalk::RandomWalk;
 use crate::simulation::steps::Step;
 use crate::strategies::base::BasicAble;
 use crate::utils::Len;
-use crate::visualization::{Graph, GraphData};
+use crate::visualization::{ColorScheme, Graph, GraphConfig, GraphData, Series2D, TraceMode};
 use rust_decimal::Decimal;
 use std::error::Error;
 use std::fmt::Display;
@@ -318,7 +318,43 @@ where
     Y: Into<Positive> + Display + Clone,
 {
     fn graph_data(&self) -> GraphData {
-        todo!()
+        let mut series: Vec<Series2D> = Vec::new();
+        let random_walks = self.get_steps();
+        for (i, steps) in random_walks.iter().enumerate() {
+            let y: Vec<Decimal> = steps
+                .iter()
+                .map(|step| step.get_graph_y_value().to_dec())
+                .collect();
+            let x: Vec<Decimal> = steps
+                .iter()
+                .map(|step| -step.get_graph_x_in_days_left().to_dec())
+                .collect();
+            let title = format!("Sim_{}", i);
+            series.push(Series2D {
+                x,
+                y,
+                name: title,
+                mode: TraceMode::Lines,
+                line_color: None,
+                line_width: Some(2.0),
+            });
+        }
+        GraphData::MultiSeries(series)
+    }
+
+    fn graph_config(&self) -> GraphConfig {
+        GraphConfig {
+            title: self.get_title().to_string(),
+            x_label: Some("Date".to_string()),
+            y_label: Some("Price".to_string()),
+            z_label: None,
+            width: 1600,
+            height: 900,
+            show_legend: true,
+            color_scheme: ColorScheme::HighContrast,
+            line_style: Default::default(),
+            legend: None,
+        }
     }
 }
 
@@ -346,7 +382,7 @@ mod tests {
     use crate::utils::{TimeFrame, setup_logger, time::convert_time_frame};
     use crate::{ExpirationDate, Positive, pos};
     use rust_decimal_macros::dec;
-    
+
     use tracing::{debug, info};
 
     // Helper structs and functions for testing
@@ -648,7 +684,6 @@ mod tests {
             generator_positive,
         );
         debug!("Simulator: {}", simulator);
-        // println!("{}", simulator);
         assert_eq!(simulator.get_title(), "Simulator");
         assert_eq!(simulator.len(), simulator_size);
 
@@ -707,7 +742,8 @@ mod tests {
         info!("Last Values: {:?}", last_values);
         assert_eq!(last_values.len(), simulator_size);
 
-        let file_name = "Draws/Simulation/test_simulator.png";
-        todo!("graph test");
+        let file_name = "Draws/Simulation/test_simulator.png".as_ref();
+        simulator.write_png(file_name)?;
+        Ok(())
     }
 }

@@ -4,10 +4,10 @@ use optionstratlib::simulation::steps::{Step, Xstep, Ystep};
 use optionstratlib::simulation::{WalkParams, WalkType, WalkTypeAble};
 use optionstratlib::utils::setup_logger;
 use optionstratlib::utils::time::{TimeFrame, convert_time_frame};
+use optionstratlib::visualization::Graph;
 use optionstratlib::{ExpirationDate, Positive, pos};
 use rust_decimal_macros::dec;
 use tracing::{debug, info};
-use optionstratlib::visualization::Graph;
 
 struct Walker {}
 
@@ -50,19 +50,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         generator_positive,
     );
     debug!("Simulator: {}", simulator);
-    
-    let last_steps: Vec<&Step<Positive,Positive>> = simulator
+
+    let last_steps: Vec<&Step<Positive, Positive>> = simulator
         .into_iter()
         .map(|step| step.last().unwrap())
         .collect();
     info!("Last Steps: {:?}", last_steps);
-    
+
     let last_values: Vec<&Positive> = simulator
         .into_iter()
         .map(|step| step.last().unwrap().get_value())
         .collect();
     info!("Last Values: {:?}", last_values);
     let path: &std::path::Path = "Draws/Simulation/simulator.png".as_ref();
-    simulator.write_png(path, 1200, 800)?;
+    simulator.write_png(path)?;
     Ok(())
 }

@@ -36,11 +36,11 @@ use crate::{
     },
     pnl::{PnLCalculator, utils::PnL},
     pricing::payoff::Profit,
-    strategies::{Strategies,
-                 BasicAble, StrategyConstructor,
-                 delta_neutral::DeltaNeutrality,
-                 probabilities::{core::ProbabilityAnalysis, utils::VolatilityAdjustment},
-                 utils::{FindOptimalSide, OptimizationCriteria},
+    strategies::{
+        BasicAble, Strategies, StrategyConstructor,
+        delta_neutral::DeltaNeutrality,
+        probabilities::{core::ProbabilityAnalysis, utils::VolatilityAdjustment},
+        utils::{FindOptimalSide, OptimizationCriteria},
     },
     visualization::{Graph, GraphData},
 };
@@ -1941,7 +1941,7 @@ mod tests_bear_call_spread_optimizable {
 mod tests_bear_call_spread_graph {
     use super::*;
     use crate::pos;
-    
+
     use rust_decimal_macros::dec;
 
     fn create_test_spread() -> BearCallSpread {
@@ -1972,7 +1972,6 @@ mod tests_bear_call_spread_graph {
         assert!(title.contains("$105 Short Call"));
         assert!(title.contains("$110 Long Call"));
     }
-    
 }
 
 #[cfg(test)]

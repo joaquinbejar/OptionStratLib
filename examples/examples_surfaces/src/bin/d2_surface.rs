@@ -45,8 +45,6 @@ fn main() -> Result<(), SurfaceError> {
         .x_label("Underlying Price")
         .y_label("Strike Price")
         .z_label("d1")
-        .point_size(1)
-        .label_size(1.8)
         .dimensions(1600, 1200)
         .save("./Draws/Surfaces/d2_surface.png")?;
 

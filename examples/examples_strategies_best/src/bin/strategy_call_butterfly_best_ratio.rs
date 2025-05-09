@@ -13,10 +13,10 @@ use optionstratlib::strategies::call_butterfly::CallButterfly;
 use optionstratlib::strategies::utils::FindOptimalSide;
 use optionstratlib::utils::setup_logger;
 
+use optionstratlib::visualization::Graph;
 use rust_decimal_macros::dec;
 use std::error::Error;
 use tracing::{debug, info};
-use optionstratlib::visualization::Graph;
 
 fn main() -> Result<(), Box<dyn Error>> {
     setup_logger();
@@ -72,8 +72,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     );
     info!("Profit Ratio: {:.2}%", strategy.get_profit_ratio()?);
     debug!("Strategy:  {:#?}", strategy);
-    let path: &std::path::Path = "Draws/Strategy/call_butterfly_profit_loss_chart_best_ratio.png".as_ref();
-    strategy.write_png(path, 1200, 800)?;
+    let path: &std::path::Path =
+        "Draws/Strategy/call_butterfly_profit_loss_chart_best_ratio.png".as_ref();
+    strategy.write_png(path)?;
 
     Ok(())
 }

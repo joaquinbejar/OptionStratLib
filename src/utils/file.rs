@@ -1,4 +1,4 @@
-use std::io::{Error as IoError};
+use std::io::Error as IoError;
 use std::path::Path;
 use tracing::{debug, trace};
 

@@ -40,11 +40,11 @@ use crate::{
     visualization::{Graph, GraphData},
 };
 use chrono::Utc;
+use num_traits::FromPrimitive;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
-use num_traits::FromPrimitive;
 use tracing::info;
 
 /// A Long Straddle is an options trading strategy that involves simultaneously buying
