@@ -298,6 +298,7 @@ mod interface;
 mod model;
 mod styles;
 mod utils;
+mod tests;
 
 pub use config::GraphConfig;
 pub use interface::{Graph, GraphType};

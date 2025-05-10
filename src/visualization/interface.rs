@@ -4,10 +4,10 @@ use crate::visualization::config::GraphConfig;
 use crate::visualization::model::{GraphData, OutputType};
 use crate::visualization::styles::PlotType;
 use crate::visualization::utils::{make_scatter, make_surface, pick_color};
-use plotly::ImageFormat;
 use plotly::layout::Axis;
 use plotly::{Layout, Plot, common};
-use tracing::debug;
+#[cfg(feature = "kaleido")]
+use {plotly::ImageFormat, tracing::debug};
 
 /// A trait that defines the functionality for creating, configuring, and rendering
 /// graphical representations of data, along with support for various output formats.
@@ -150,6 +150,7 @@ pub trait Graph {
     /// Modifying global state like environment variables in a multithreaded context can lead to undefined behavior.
     /// Ensure this function is used in a controlled environment where such changes are safe.
     ///
+    #[cfg(feature = "kaleido")]
     fn write_png(&self, path: &std::path::Path) -> Result<(), GraphError> {
         unsafe {
             std::env::set_var("LC_ALL", "en_US.UTF-8");
@@ -228,6 +229,7 @@ pub trait Graph {
     /// - The file path cannot be prepared (e.g., due to permissions issues or invalid path).
     /// - An error occurs during the conversion or writing process.
     ///
+    #[cfg(feature = "kaleido")]
     fn write_svg(&self, path: &std::path::Path) -> Result<(), GraphError> {
         prepare_file_path(path)?;
         let cfg = self.graph_config();
@@ -249,7 +251,9 @@ pub trait Graph {
     /// One‑stop rendering with error propagation.
     fn render(&self, output: OutputType) -> Result<(), GraphError> {
         match output {
+            #[cfg(feature = "kaleido")]
             OutputType::Png(path) => self.write_png(path)?,
+            #[cfg(feature = "kaleido")]
             OutputType::Svg(path) => self.write_svg(path)?,
             OutputType::Html(path) => self.write_html(path)?,
             OutputType::Browser => self.show(),

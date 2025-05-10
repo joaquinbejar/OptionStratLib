@@ -3,9 +3,9 @@
    Email: jb@taunais.com
    Date: 21/1/25
 ******************************************************************************/
-use crate::error::GraphError;
 use crate::visualization::{ColorScheme, Graph, GraphConfig, GraphData, LineStyle};
-use std::path::Path;
+#[cfg(feature = "kaleido")]
+use {crate::error::GraphError, std::path::Path};
 
 /// Trait for defining objects that can be visualized as plots.
 ///
@@ -255,6 +255,7 @@ impl<T: Plottable + Graph> PlotBuilder<T> {
     /// This method will return an error if the plot cannot be rendered or saved,
     /// with the specific error type determined by the `Plottable` implementation.
     ///
+    #[cfg(feature = "kaleido")]
     pub fn save(self, path: impl AsRef<Path>) -> Result<(), GraphError> {
         let path = path.as_ref();
         self.write_png(path).map_err(|e| {
