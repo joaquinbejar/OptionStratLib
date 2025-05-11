@@ -408,10 +408,9 @@ mod tests {
     use crate::utils::{TimeFrame, setup_logger, time::convert_time_frame};
     use crate::{ExpirationDate, Positive, pos};
     use rust_decimal_macros::dec;
-    use std::fs;
-    use std::path::Path;
-
     use tracing::{debug, info};
+    #[cfg(feature = "plotly")]
+    use {std::fs, std::path::Path};
 
     // Helper structs and functions for testing
     struct TestWalker;
@@ -770,11 +769,14 @@ mod tests {
         info!("Last Values: {:?}", last_values);
         assert_eq!(last_values.len(), simulator_size);
 
-        let file_name = "Draws/Simulation/test_simulator.html".as_ref();
-        simulator.write_html(file_name)?;
-        if Path::new(file_name).exists() {
-            fs::remove_file(file_name)
-                .unwrap_or_else(|_| panic!("Failed to remove {}", file_name.to_str().unwrap()));
+        #[cfg(feature = "plotly")]
+        {
+            let file_name = "Draws/Simulation/test_simulator.html".as_ref();
+            simulator.write_html(file_name)?;
+            if Path::new(file_name).exists() {
+                fs::remove_file(file_name)
+                    .unwrap_or_else(|_| panic!("Failed to remove {}", file_name.to_str().unwrap()));
+            }
         }
         Ok(())
     }

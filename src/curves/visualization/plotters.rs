@@ -147,13 +147,17 @@ impl Plottable for Vec<Curve> {
 
 #[cfg(test)]
 mod tests {
+    #[cfg(feature = "plotly")]
+    use {
+        std::path::Path,
+        std::fs,
+    };
     use super::*;
     use crate::curves::Point2D;
     use crate::geometrics::GeometricObject;
     use rust_decimal_macros::dec;
-    use std::fs;
-    use std::path::Path;
 
+    #[cfg(feature = "plotly")]
     fn cleanup_image(filename: &Path) {
         if Path::new(filename).exists() {
             fs::remove_file(filename)
@@ -194,8 +198,7 @@ mod tests {
         let points = vec![&p1, &p2, &p3];
         let curve = Curve::from_vector(points);
 
-        let file_path_html = "single_curve_test.html".as_ref();
-        // let file_path_png = "single_curve_test.png".as_ref();
+
         // Plot single curve
         curve
             .plot()
@@ -203,13 +206,20 @@ mod tests {
             .x_label("X Axis")
             .y_label("Y Axis")
             .dimensions(800, 600);
-        // TODO: kaleido issue
-        // .save(file_path_png)
-        // .expect("Single curve plot failed")
 
-        curve.write_html(file_path_html).unwrap();
-        cleanup_image(file_path_html);
-        // cleanup_image(file_path_png)
+        #[cfg(feature = "plotly")]
+        {
+            let file_path_html = "single_curve_test.html".as_ref();
+            // let file_path_png = "single_curve_test.png".as_ref();
+            // TODO: kaleido issue
+            // .save(file_path_png)
+            // .expect("Single curve plot failed")
+            
+            curve.write_html(file_path_html).unwrap();
+            cleanup_image(file_path_html);
+            // cleanup_image(file_path_png)
+        }
+
     }
 
     #[test]
@@ -235,16 +245,20 @@ mod tests {
             .x_label("X Axis")
             .y_label("Y Axis")
             .dimensions(800, 600);
-        // TODO: kaleido issue
-        // .save("multiple_curves_test.png")
-        // .expect("Multiple curves plot failed")
 
-        let file_path_html = "multiple_curves_test.html".as_ref();
-        vec![curve1, curve2].write_html(file_path_html).unwrap();
-        cleanup_image(file_path_html);
+        #[cfg(feature = "plotly")]
+        {
+            // TODO: kaleido issue
+            // .save("multiple_curves_test.png")
+            // .expect("Multiple curves plot failed")
 
-        // let file_path_png = "multiple_curves_test.png".as_ref();
-        // cleanup_image(file_path_png);
+            let file_path_html = "multiple_curves_test.html".as_ref();
+            vec![curve1, curve2].write_html(file_path_html).unwrap();
+            cleanup_image(file_path_html);
+
+            // let file_path_png = "multiple_curves_test.png".as_ref();
+            // cleanup_image(file_path_png);
+        }
     }
 
     #[test]
@@ -267,12 +281,15 @@ mod tests {
         // .save("single_curve_test.png")
         // .expect("Single curve plot failed")
 
-        let file_path_html = "single_curve_test.html".as_ref();
-        curve.write_html(file_path_html).unwrap();
-        cleanup_image(file_path_html);
+        #[cfg(feature = "plotly")]
+        {
+            let file_path_html = "single_curve_test.html".as_ref();
+            curve.write_html(file_path_html).unwrap();
+            cleanup_image(file_path_html);
 
-        // let file_path_png = "single_curve_test.png".as_ref();
-        // cleanup_image(file_path_png);
+            // let file_path_png = "single_curve_test.png".as_ref();
+            // cleanup_image(file_path_png);
+        }
     }
 
     #[test]
@@ -290,14 +307,17 @@ mod tests {
         // .save("multiple_curves_test.png")
         // .expect("Multiple curves plot failed")
 
-        let file_path_html = "multiple_curves_test.html".as_ref();
-        vec![curve1, curve2, curve3]
-            .write_html(file_path_html)
-            .unwrap();
-        cleanup_image(file_path_html);
+        #[cfg(feature = "plotly")]
+        {
+            let file_path_html = "multiple_curves_test.html".as_ref();
+            vec![curve1, curve2, curve3]
+                .write_html(file_path_html)
+                .unwrap();
+            cleanup_image(file_path_html);
 
-        // let file_path_png = "multiple_curves_test.png".as_ref();
-        // cleanup_image(file_path_png);
+            // let file_path_png = "multiple_curves_test.png".as_ref();
+            // cleanup_image(file_path_png);
+        }
     }
 
     #[test]
@@ -313,12 +333,15 @@ mod tests {
         // .save("thick_line_curves_test.png")
         // .expect("Thick line curves plot failed");
 
-        let file_path_html = "thick_line_curves_test.html".as_ref();
-        vec![curve1, curve2].write_html(file_path_html).unwrap();
-        cleanup_image(file_path_html);
+        #[cfg(feature = "plotly")]
+        {
+            let file_path_html = "thick_line_curves_test.html".as_ref();
+            vec![curve1, curve2].write_html(file_path_html).unwrap();
+            cleanup_image(file_path_html);
 
-        // let file_path_png = "thick_line_curves_test.png".as_ref();
-        // cleanup_image(file_path_png);
+            // let file_path_png = "thick_line_curves_test.png".as_ref();
+            // cleanup_image(file_path_png);
+        }
     }
 }
 

@@ -297,11 +297,28 @@ mod config;
 mod interface;
 mod model;
 mod styles;
-mod utils;
 mod tests;
+mod utils;
+
+#[cfg(not(feature = "plotly"))]
+mod default;
+#[cfg(feature = "plotly")]
+mod plotly;
+
+#[cfg(feature = "plotly")]
+mod test_plotly;
+
+#[cfg(feature = "plotly")]
+pub use {
+    plotly::Graph,
+    utils::{make_scatter, make_surface, pick_color, to_plotly_mode},
+};
+
+#[cfg(not(feature = "plotly"))]
+pub use default::Graph;
 
 pub use config::GraphConfig;
-pub use interface::{Graph, GraphType};
+pub use interface::GraphType;
 pub use model::{GraphData, MultiSeries2D, OutputType, Series2D, Surface3D};
 pub use styles::{ColorScheme, LineStyle, PlotType, TraceMode};
-pub use utils::{get_color_from_scheme, make_scatter, make_surface, pick_color, to_plotly_mode};
+pub use utils::get_color_from_scheme;

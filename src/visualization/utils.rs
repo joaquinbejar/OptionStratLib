@@ -1,11 +1,18 @@
-use crate::visualization::config::GraphConfig;
-use crate::visualization::model::{Series2D, Surface3D};
-use crate::visualization::styles::{ColorScheme, TraceMode};
-use plotly::common::{Line, Mode};
-use plotly::{Scatter, Surface};
-use rust_decimal::Decimal;
+use crate::visualization::styles::ColorScheme;
+
+#[cfg(feature = "plotly")]
+use {
+    crate::visualization::model::{Series2D, Surface3D},
+    crate::visualization::styles::TraceMode,
+    crate::visualization::GraphConfig,
+    plotly::common::{Line, Mode},
+    plotly::{Scatter, Surface},
+    rust_decimal::Decimal,
+};
+
 
 /// Creates a Scatter trace from a Series2D and configuration
+#[cfg(feature = "plotly")]
 pub fn make_scatter(series: &Series2D) -> Box<Scatter<Decimal, Decimal>> {
     let mode = match series.mode {
         TraceMode::Lines => Mode::Lines,
@@ -32,6 +39,7 @@ pub fn make_scatter(series: &Series2D) -> Box<Scatter<Decimal, Decimal>> {
 }
 
 /// Pick a color from config based on index
+#[cfg(feature = "plotly")]
 pub fn pick_color(cfg: &GraphConfig, idx: usize) -> Option<String> {
     get_color_from_scheme(&cfg.color_scheme, idx)
 }
@@ -65,6 +73,7 @@ pub fn pick_color(cfg: &GraphConfig, idx: usize) -> Option<String> {
 /// 3. **Mapping Coordinates**:
 ///    - Create mappings (`x_to_col` and `y_to_row`) to translate x and y coordinates into column and row
 ///      indices of the `z_matrix`. Each coordinate is mapped to its respective index in the
+#[cfg(feature = "plotly")]
 pub fn make_surface(surf: &Surface3D) -> Box<Surface<Decimal, Decimal, Decimal>> {
     if surf.x.is_empty() || surf.y.is_empty() || surf.z.is_empty() {
         let z_matrix = vec![
@@ -120,6 +129,7 @@ pub fn make_surface(surf: &Surface3D) -> Box<Surface<Decimal, Decimal, Decimal>>
 }
 
 /// Utility function to convert TraceMode to Mode
+#[cfg(feature = "plotly")]
 pub fn to_plotly_mode(mode: &TraceMode) -> Mode {
     match mode {
         TraceMode::Lines => Mode::Lines,
