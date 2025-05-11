@@ -67,7 +67,7 @@ mod tests_utils {
 #[cfg(test)]
 mod tests_interface {
 
-    use crate::visualization::{ColorScheme, Graph, GraphConfig, GraphData, LineStyle, Series2D, Surface3D, TraceMode};
+    use crate::visualization::{Graph, GraphConfig, GraphData, Series2D, Surface3D, TraceMode};
     use {
         crate::visualization::{make_scatter, make_surface, to_plotly_mode},
         plotly::{Scatter, Surface, Trace, common::Mode},
@@ -75,7 +75,12 @@ mod tests_interface {
     };
     use rust_decimal_macros::dec;
     #[cfg(feature = "kaleido")]
-    use {crate::visualization::OutputType, plotly::Plot, std::fs, std::path::PathBuf};
+    use {
+        crate::visualization::{OutputType, ColorScheme,LineStyle},
+        plotly::Plot, 
+        std::fs, 
+        std::path::PathBuf
+    };
 
     trait ScatterTestHelper {
         fn is_scatter(&self) -> bool;
@@ -98,11 +103,13 @@ mod tests_interface {
     }
 
 
+    #[cfg(feature = "kaleido")]
     struct TestGraph {
         data: GraphData,
         config: GraphConfig,
     }
-
+    
+    #[cfg(feature = "kaleido")]
     impl Graph for TestGraph {
         fn graph_data(&self) -> GraphData {
             self.data.clone()
@@ -113,6 +120,7 @@ mod tests_interface {
         }
     }
 
+    #[cfg(feature = "kaleido")]
     trait PlotTestHelper {
         fn has_traces(&self) -> bool;
     }
@@ -126,6 +134,7 @@ mod tests_interface {
         }
     }
 
+    #[cfg(feature = "kaleido")]
     fn create_test_graph_with_series() -> TestGraph {
         let series = Series2D {
             x: vec![dec!(1.0), dec!(2.0), dec!(3.0)],
@@ -155,6 +164,7 @@ mod tests_interface {
         }
     }
 
+    #[cfg(feature = "kaleido")]
     fn create_test_graph_with_multi_series() -> TestGraph {
         let series1 = Series2D {
             x: vec![dec!(1.0), dec!(2.0), dec!(3.0)],
@@ -196,6 +206,7 @@ mod tests_interface {
         }
     }
 
+    #[cfg(feature = "kaleido")]
     fn create_test_graph_with_surface() -> TestGraph {
         let surface = Surface3D {
             x: vec![dec!(0.0), dec!(1.0), dec!(0.0), dec!(1.0)],
@@ -310,10 +321,7 @@ mod tests_interface {
         // Verify result
         assert!(result.is_ok());
     }
-
-    // Note: Tests for write_png and write_svg are commented out
-    // because they require the kaleido feature
-
+    
     #[test]
     #[cfg(feature = "kaleido")]
     fn test_write_png() {
@@ -492,7 +500,6 @@ mod tests_interface {
         };
         let result = make_surface(&surface);
         assert!(result.is_surface());
-        println!("{:?}", result);
         let json = r#"{"type":"surface","x":["0","1"],"y":["0","1"],"z":[["0","0"],["0","0"]],"name":"Test Surface"}"#;
         assert_eq!(result.to_json(), json);
     }
