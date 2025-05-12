@@ -69,8 +69,11 @@ impl Plottable for Surface {
 
 #[cfg(test)]
 mod tests_extended {
+    use std::any::{Any, TypeId};
+    use std::collections::BTreeSet;
     use rust_decimal_macros::dec;
     use crate::error::CurveError;
+    use crate::surfaces::Point3D;
     use crate::visualization::{GraphConfig, GraphData, Series2D, TraceMode};
     use super::*;
 
@@ -198,6 +201,35 @@ mod tests_extended {
         assert_eq!(plot.options.z_label, None);
         assert_eq!(plot.data.x_desc, "X-axis");
         assert_eq!(plot.data.y_desc, "Y-axis");
+    }
+    #[test]
+    fn test_plot_surface() {
+        let points = BTreeSet::from_iter(vec![
+            Point3D::new(dec!(0.0), dec!(0.0), dec!(1.0)),
+            Point3D::new(dec!(0.5), dec!(0.0), dec!(1.0)),
+            Point3D::new(dec!(1.0), dec!(0.0), dec!(1.0)),
+            Point3D::new(dec!(0.0), dec!(0.5), dec!(1.0)),
+            Point3D::new(dec!(0.5), dec!(0.5), dec!(1.0)),
+            Point3D::new(dec!(1.0), dec!(0.5), dec!(1.0)),
+            Point3D::new(dec!(0.0), dec!(1.0), dec!(1.0)),
+            Point3D::new(dec!(0.5), dec!(1.0), dec!(1.0)),
+            Point3D::new(dec!(1.0), dec!(1.0), dec!(1.0)),
+        ]);
+        let surface = Surface::new(points);
+        let plot = surface.plot();
+        // Check if the plot is type PlotBuilder<Surface>
+        assert_eq!(plot.type_id(), TypeId::of::<PlotBuilder<Surface>>());
+        assert_eq!(plot.data.graph_data(), surface.graph_data());
+        assert_eq!(plot.options, surface.graph_config());
+        assert_eq!(plot.data.graph_config(), surface.graph_config());
+        assert_eq!(plot.options.width, 1280);
+        assert_eq!(plot.options.height, 720);
+        assert_eq!(plot.options.title, "Graph");
+        assert_eq!(plot.options.x_label, None);
+        assert_eq!(plot.options.y_label, None);
+        assert_eq!(plot.options.z_label, None);
+
+        
     }
 
     #[test]
