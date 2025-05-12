@@ -1677,9 +1677,8 @@ mod tests_surface_basic {
         assert_eq!(default.y_range, (Decimal::ZERO, Decimal::ZERO));
 
         let graph_data = surface.graph_data();
-        assert_eq!(
-            matches!(graph_data, GraphData::Surface(Surface3D { .. })),
-            true
+        assert!(
+            matches!(graph_data, GraphData::Surface(Surface3D { .. }))
         );
     }
 
