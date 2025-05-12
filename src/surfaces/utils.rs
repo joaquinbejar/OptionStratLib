@@ -183,6 +183,10 @@ mod tests {
         assert!(x_coords.contains(&dec!(10)));
         assert!(y_coords.contains(&dec!(0)));
         assert!(y_coords.contains(&dec!(10)));
+        
+        assert!(surface.points.iter().any(|p| p.x == dec!(0) && p.y == dec!(0) && p.z == dec!(5)));
+        assert!(surface.points.iter().any(|p| p.x == dec!(10) && p.y == dec!(10) && p.z == dec!(5)));
+        assert!(surface.points.iter().any(|p| p.x == dec!(0) && p.y == dec!(10) && p.z == dec!(5)));
     }
 
     #[test]
@@ -210,6 +214,10 @@ mod tests {
         assert!(x_coords.contains(&dec!(10)));
         assert!(y_coords.contains(&dec!(0)));
         assert!(y_coords.contains(&dec!(10)));
+        
+        assert!(surface.points.iter().any(|p| p.x == dec!(0) && p.y == dec!(0) && p.z == dec!(-5)));
+        assert!(surface.points.iter().any(|p| p.x == dec!(10) && p.y == dec!(10) && p.z == dec!(-5)));
+        assert!(surface.points.iter().any(|p| p.x == dec!(0) && p.y == dec!(10) && p.z == dec!(-5)));
     }
 
     #[test]
@@ -250,5 +258,9 @@ mod tests {
             .find(|p| p.x == dec!(-1) && p.y == dec!(-1))
             .unwrap();
         assert_eq!(opposite_corner.z, dec!(2));
+        
+        assert!(surface.points.iter().any(|p| p.x == dec!(0) && p.y == dec!(0) && p.z == dec!(0)));
+        assert!(surface.points.iter().any(|p| p.x == dec!(1) && p.y == dec!(1) && p.z == dec!(2)));
+        assert!(surface.points.iter().any(|p| p.x == dec!(-1) && p.y == dec!(-1) && p.z == dec!(2)));
     }
 }

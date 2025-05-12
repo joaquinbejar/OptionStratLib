@@ -1664,6 +1664,23 @@ mod tests_surface_basic {
                 .iter()
                 .any(|p| p == &Point2D::new(dec!(1.0), dec!(1.0)))
         );
+
+        let points = surface.get_f64_points();
+        assert_eq!(points.len(), 5);
+        assert_eq!(points[0].0, 0.0);
+        assert_eq!(points[0].1, 0.0);
+        assert_eq!(points[0].2, 0.0);
+
+        let default = Surface::default();
+        assert_eq!(default.points.len(), 0);
+        assert_eq!(default.x_range, (Decimal::ZERO, Decimal::ZERO));
+        assert_eq!(default.y_range, (Decimal::ZERO, Decimal::ZERO));
+
+        let graph_data = surface.graph_data();
+        assert_eq!(
+            matches!(graph_data, GraphData::Surface(Surface3D { .. })),
+            true
+        );
     }
 
     #[test]
