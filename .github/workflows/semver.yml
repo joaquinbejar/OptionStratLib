@@ -1,11 +1,13 @@
 name: SEMVER
 
 on:
-  workflow_dispatch:
-  pull_request:
-    branches: [ main ]
   push:
-    branches: [ main ]
+    branches:
+      - '**'
+  pull_request:
+    branches:
+      - main
+      - 'release/**'
 
 # Cancel any in-flight jobs for the same PR/branch so there's only one active
 # at a time
