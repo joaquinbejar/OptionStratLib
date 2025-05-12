@@ -242,6 +242,18 @@ where
     pub fn get_index(&self) -> &X {
         self.x.step_size_in_time()
     }
+
+    /// Retrieves the positive value associated with the current instance.
+    ///
+    /// # Returns
+    ///
+    /// * `Positive` - A positive value derived from `self.y`.
+    ///
+    /// This function internally calls the `positive` method on `self.y`
+    /// and returns the resulting value.
+    pub fn get_positive_value(&self) -> Positive {
+        self.y.positive()
+    }
 }
 
 impl<X, Y> Display for Step<X, Y>

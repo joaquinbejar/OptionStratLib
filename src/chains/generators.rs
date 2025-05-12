@@ -173,7 +173,20 @@ pub fn generator_positive(
     walk_params: &WalkParams<Positive, Positive>,
 ) -> Vec<Step<Positive, Positive>> {
     debug!("{}", walk_params);
-    let mut y_steps = walk_params.walker.geometric_brownian(walk_params).unwrap();
+    let mut y_steps = match &walk_params.walk_type {
+        WalkType::Brownian { .. } => walk_params.walker.brownian(walk_params).unwrap(),
+        WalkType::GeometricBrownian { .. } => {
+            walk_params.walker.geometric_brownian(walk_params).unwrap()
+        }
+        WalkType::LogReturns { .. } => walk_params.walker.log_returns(walk_params).unwrap(),
+        WalkType::MeanReverting { .. } => walk_params.walker.mean_reverting(walk_params).unwrap(),
+        WalkType::JumpDiffusion { .. } => walk_params.walker.jump_diffusion(walk_params).unwrap(),
+        WalkType::Garch { .. } => walk_params.walker.garch(walk_params).unwrap(),
+        WalkType::Heston { .. } => walk_params.walker.heston(walk_params).unwrap(),
+        WalkType::Custom { .. } => walk_params.walker.custom(walk_params).unwrap(),
+        WalkType::Historical { .. } => walk_params.walker.historical(walk_params).unwrap(),
+    };
+
     let _ = y_steps.remove(0);
     let mut steps: Vec<Step<Positive, Positive>> = vec![walk_params.init_step.clone()];
 
@@ -192,7 +205,6 @@ pub fn generator_positive(
         };
         steps.push(step)
     }
-
     assert!(steps.len() <= walk_params.size);
 
     steps
@@ -581,7 +593,6 @@ mod generators_coverage_tests {
                 volatility: pos!(0.2),
                 alpha: Default::default(),
                 beta: Default::default(),
-                omega: Default::default(),
             },
             walker,
         };

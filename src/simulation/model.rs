@@ -79,8 +79,6 @@ pub enum WalkType {
         alpha: Positive,
         /// GARCH beta parameter (persistence of volatility)
         beta: Positive,
-        /// Long-term variance (unconditional variance)
-        omega: Positive,
     },
 
     /// Heston model (stochastic volatility)
@@ -205,11 +203,10 @@ impl Display for WalkType {
                 volatility,
                 alpha,
                 beta,
-                omega,
             } => write!(
                 f,
-                "Garch {{ dt: {}, drift: {}, volatility: {}, alpha: {}, beta: {}, omega: {} }}",
-                dt, drift, volatility, alpha, beta, omega
+                "Garch {{ dt: {}, drift: {}, volatility: {}, alpha: {}, beta: {} }}",
+                dt, drift, volatility, alpha, beta
             ),
             WalkType::Heston {
                 dt,
@@ -388,7 +385,6 @@ mod tests_walk_type {
             volatility: pos!(0.2),
             alpha: pos!(0.1),
             beta: pos!(0.8),
-            omega: pos!(0.02),
         };
 
         if let WalkType::Garch {
@@ -397,7 +393,6 @@ mod tests_walk_type {
             volatility,
             alpha,
             beta,
-            omega,
         } = walk
         {
             assert_eq!(dt, pos!(0.01));
@@ -405,7 +400,6 @@ mod tests_walk_type {
             assert_eq!(volatility, pos!(0.2));
             assert_eq!(alpha, pos!(0.1));
             assert_eq!(beta, pos!(0.8));
-            assert_eq!(omega, pos!(0.02));
         } else {
             panic!("Expected Garch variant");
         }
@@ -569,7 +563,6 @@ mod tests_walk_type {
             volatility: pos!(0.2),
             alpha: pos!(0.1),
             beta: pos!(0.8),
-            omega: pos!(0.02),
         };
 
         let display = format!("{}", walk);
@@ -579,7 +572,6 @@ mod tests_walk_type {
         assert!(display.contains("volatility: 0.2"));
         assert!(display.contains("alpha: 0.1"));
         assert!(display.contains("beta: 0.8"));
-        assert!(display.contains("omega: 0.02"));
     }
 
     #[test]
@@ -860,7 +852,6 @@ mod tests_serialize {
             volatility: pos!(0.2),
             alpha: pos!(0.1),
             beta: pos!(0.8),
-            omega: pos!(0.000002),
         };
 
         let json = to_string(&walk_type).unwrap();
@@ -871,7 +862,6 @@ mod tests_serialize {
         assert!(json.contains("\"volatility\""));
         assert!(json.contains("\"alpha\""));
         assert!(json.contains("\"beta\""));
-        assert!(json.contains("\"omega\""));
 
         let deserialized: WalkType = from_str(&json).unwrap();
         assert_eq!(walk_type, deserialized);

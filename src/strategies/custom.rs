@@ -1971,8 +1971,9 @@ mod tests_custom_strategy_probability {
         let strategy = create_test_strategy();
         let profit_ranges = strategy.get_profit_ranges().unwrap();
         let loss_ranges = strategy.get_loss_ranges().unwrap();
-        for (j,ranges) in [profit_ranges, loss_ranges].iter().enumerate() {
-            if j % 10 == 0 { // limit the number of iterations
+        for (j, ranges) in [profit_ranges, loss_ranges].iter().enumerate() {
+            if j % 10 == 0 {
+                // limit the number of iterations
                 for i in 0..ranges.len().saturating_sub(1) {
                     if let (Some(upper), Some(lower)) =
                         (ranges[i].upper_bound, ranges[i + 1].lower_bound)

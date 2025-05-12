@@ -42,12 +42,12 @@ pub trait Graph {
 
 #[cfg(test)]
 mod tests {
-    use rust_decimal_macros::dec;
     use super::*;
-    use crate::visualization::{ColorScheme, Series2D};
+    use crate::visualization::LineStyle;
     use crate::visualization::config::GraphConfig;
     use crate::visualization::model::GraphData;
-    use crate::visualization::LineStyle;
+    use crate::visualization::{ColorScheme, Series2D};
+    use rust_decimal_macros::dec;
 
     // A simple struct that implements the Graph trait for testing
     struct TestGraph {
@@ -80,7 +80,7 @@ mod tests {
             }
         }
     }
-    
+
     fn default_series() -> GraphData {
         GraphData::Series(Series2D {
             x: vec![dec!(1.0), dec!(2.0)],

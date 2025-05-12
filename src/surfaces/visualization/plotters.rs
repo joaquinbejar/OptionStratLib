@@ -69,13 +69,13 @@ impl Plottable for Surface {
 
 #[cfg(test)]
 mod tests_extended {
-    use std::any::{Any, TypeId};
-    use std::collections::BTreeSet;
-    use rust_decimal_macros::dec;
+    use super::*;
     use crate::error::CurveError;
     use crate::surfaces::Point3D;
     use crate::visualization::{GraphConfig, GraphData, Series2D, TraceMode};
-    use super::*;
+    use rust_decimal_macros::dec;
+    use std::any::{Any, TypeId};
+    use std::collections::BTreeSet;
 
     #[derive(Clone)]
     struct MockChart {
@@ -113,7 +113,7 @@ mod tests_extended {
             self
         }
     }
-    
+
     impl Graph for MockChart {
         fn graph_data(&self) -> GraphData {
             GraphData::Series(Series2D {
@@ -130,13 +130,13 @@ mod tests_extended {
             GraphConfig::default()
         }
     }
-    
+
     impl Plottable for MockChart {
         type Error = CurveError;
 
         fn plot(&self) -> PlotBuilder<Self>
         where
-            Self: Sized + Graph
+            Self: Sized + Graph,
         {
             PlotBuilder {
                 data: self.clone(),
@@ -166,7 +166,7 @@ mod tests_extended {
 
     #[test]
     fn test_configure_chart_mesh() {
-        let mut chart = MockChart::new(); 
+        let mut chart = MockChart::new();
         chart
             .configure_mesh()
             .x_label_formatter(&|v| format!("{:.2}", v))
@@ -179,7 +179,7 @@ mod tests_extended {
 
     #[test]
     fn test_plot() {
-        let mut chart = MockChart::new(); 
+        let mut chart = MockChart::new();
         chart
             .configure_mesh()
             .x_label_formatter(&|v| format!("{:.2}", v))
@@ -188,7 +188,7 @@ mod tests_extended {
             .y_desc("Y-axis");
         assert_eq!(chart.x_desc, "X-axis");
         assert_eq!(chart.y_desc, "Y-axis");
-        
+
         let plot = chart.plot();
         assert_eq!(plot.data.graph_data(), chart.graph_data());
         assert_eq!(plot.options, chart.graph_config());
@@ -228,8 +228,6 @@ mod tests_extended {
         assert_eq!(plot.options.x_label, None);
         assert_eq!(plot.options.y_label, None);
         assert_eq!(plot.options.z_label, None);
-
-        
     }
 
     #[test]

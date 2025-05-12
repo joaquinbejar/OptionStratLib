@@ -274,8 +274,11 @@ mod tests_basic_surfaces {
         assert_eq!(vol, dec!(0.3));
         assert!(delta >= dec!(-1.0) && delta <= dec!(1.0));
 
-        let result =
-            surfaces.get_surface_volatility_versus(&BasicAxisTypes::Volatility, &option, custom_vol);
+        let result = surfaces.get_surface_volatility_versus(
+            &BasicAxisTypes::Volatility,
+            &option,
+            custom_vol,
+        );
         assert!(result.is_err());
         let err = result.unwrap_err();
         assert!(matches!(err, SurfaceError::OperationError(_)));
@@ -326,8 +329,7 @@ mod tests_basic_surfaces {
         let (strike, vol, gamma) = result.unwrap();
         assert_eq!(strike, dec!(100.0));
         assert_eq!(vol, dec!(0.15));
-        assert!(gamma >= dec!(0.0)); 
-
+        assert!(gamma >= dec!(0.0));
     }
 
     #[test]

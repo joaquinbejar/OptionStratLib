@@ -431,7 +431,6 @@ mod tests_generator_optionseries {
                 volatility,
                 alpha: pos!(0.1),
                 beta: pos!(0.8),
-                omega: pos!(0.000001),
             },
             WalkType::Heston {
                 dt: pos!(0.01),

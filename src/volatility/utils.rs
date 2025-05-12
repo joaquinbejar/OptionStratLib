@@ -416,14 +416,17 @@ pub fn generate_ou_process(
     dt: Positive,
     steps: usize,
 ) -> Vec<Positive> {
+    let sqrt_dt = dt.sqrt();
     let mut x = x0.to_dec();
     let mut result = Vec::with_capacity(steps);
     result.push(Positive(x));
 
     for _ in 1..steps {
-        let dw = decimal_normal_sample() * dt.sqrt();
-        x += theta * (mu - x) * dt + volatility * dw;
-        x = x.max(Decimal::ZERO);
+        let dw = decimal_normal_sample() * sqrt_dt; // Z√dt
+        let drift = theta * (mu - x) * dt; // θ(μ−x)dt
+        let diffusion = volatility * dw; // σ·Z√dt
+        x += drift + diffusion; // paso OU
+        x = x.max(Decimal::ZERO); // opcional: no negativos
         result.push(Positive(x));
     }
 

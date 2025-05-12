@@ -216,7 +216,9 @@ mod tests {
             #[cfg(feature = "kaleido")]
             {
                 let file_path_png = "single_curve_test.png".as_ref();
-                curve.write_png(file_path_png).expect("Single curve plot failed");
+                curve
+                    .write_png(file_path_png)
+                    .expect("Single curve plot failed");
                 cleanup_image(file_path_png);
             }
         }
@@ -237,7 +239,7 @@ mod tests {
 
         let curve1 = Curve::from_vector(points1);
         let curve2 = Curve::from_vector(points2);
-        
+
         let curve_vector = vec![curve1.clone(), curve2.clone()];
 
         // Plot multiple curves
@@ -257,7 +259,9 @@ mod tests {
             #[cfg(feature = "kaleido")]
             {
                 let file_path_png = "multiple_curves_test.png".as_ref();
-                curve_vector.write_png(file_path_png).expect("Single curve plot failed");
+                curve_vector
+                    .write_png(file_path_png)
+                    .expect("Single curve plot failed");
                 cleanup_image(file_path_png);
             }
         }
@@ -279,7 +283,7 @@ mod tests {
             .x_label("X Axis")
             .y_label("Y Axis")
             .dimensions(800, 600);
-        
+
         #[cfg(feature = "plotly")]
         {
             let file_path_html = "single_curve_test.html".as_ref();

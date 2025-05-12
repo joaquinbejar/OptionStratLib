@@ -5,6 +5,7 @@ use crate::greeks::Greeks;
 use crate::model::types::{OptionBasicType, OptionStyle, OptionType, Side};
 use crate::model::utils::calculate_optimal_price_range;
 use crate::pnl::utils::{PnL, PnLCalculator};
+use crate::pricing::monte_carlo::price_option_monte_carlo;
 use crate::pricing::{
     BinomialPricingParams, Payoff, PayoffInfo, Profit, black_scholes, generate_binomial_tree,
     price_binomial, telegraph,
@@ -331,6 +332,28 @@ impl Options {
     /// early exercise capabilities.
     pub fn calculate_price_black_scholes(&self) -> OptionsResult<Decimal> {
         Ok(black_scholes(self)?)
+    }
+
+    /// Calculates the price of an option using the Monte Carlo simulation method.
+    ///
+    /// # Arguments
+    ///
+    /// * `prices` - A slice of `Positive` values representing the prices used
+    ///   in the Monte Carlo simulation.
+    ///
+    /// # Returns
+    ///
+    /// * `OptionsResult<Positive>` - The calculated price of the option wrapped in
+    ///   an `OptionsResult`. This will return a valid `Positive` value if successful,
+    ///   or an error if the simulation fails.
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error in the `OptionsResult` if the internal
+    /// Monte Carlo price computation fails during the execution of `price_option_monte_carlo`.
+    ///
+    pub fn calculate_price_montecarlo(&self, prices: &[Positive]) -> OptionsResult<Positive> {
+        Ok(price_option_monte_carlo(self, prices)?)
     }
 
     /// Calculates option price using the Telegraph equation approach.

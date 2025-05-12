@@ -1,11 +1,12 @@
-use crate::Positive;
 use crate::pricing::Profit;
+use crate::pricing::monte_carlo::price_option_monte_carlo;
 use crate::simulation::WalkParams;
 use crate::simulation::randomwalk::RandomWalk;
 use crate::simulation::steps::Step;
 use crate::strategies::base::BasicAble;
 use crate::utils::Len;
 use crate::visualization::{ColorScheme, Graph, GraphConfig, GraphData, Series2D, TraceMode};
+use crate::{Options, Positive};
 use rust_decimal::Decimal;
 use std::error::Error;
 use std::fmt::Display;
@@ -210,7 +211,7 @@ where
     /// # Returns
     /// A vector of references to the last `Step<X, Y>` elements of each item in the iterator.
     ///
-    pub fn last_steps(&self) -> Vec<&Step<X, Y>> {
+    pub fn get_last_steps(&self) -> Vec<&Step<X, Y>> {
         self.into_iter().map(|step| step.last().unwrap()).collect()
     }
 
@@ -227,8 +228,62 @@ where
     /// This method panics if any `Step<X, Y>` within the iterator is empty,
     /// as it uses `unwrap()` on the result of `step.last()`.
     ///
-    pub fn last_values(&self) -> Vec<&Step<X, Y>> {
+    pub fn get_last_values(&self) -> Vec<&Step<X, Y>> {
         self.into_iter().map(|step| step.last().unwrap()).collect()
+    }
+
+    /// Retrieves the last set of positive values from the internal state.
+    ///
+    /// This method extracts the positive values from the most recent set of steps retrieved
+    /// by the `last_values` method and returns them as a vector of `Positive` items.
+    ///
+    /// # Returns
+    /// * `Vec<Positive>` - A vector containing the last positive values derived from the steps.
+    ///
+    /// # Notes
+    /// * The `last_values` method is called internally to obtain the most recent set of steps.
+    /// * The positive value for each step is retrieved via the `get_positive_value` method.
+    ///
+    /// # Panics
+    /// This function assumes that all steps in `last_values` have valid positive values accessible via
+    /// `get_positive_value`. Ensure `last_values` returns valid data to avoid runtime errors.
+    pub fn get_last_positive_values(&self) -> Vec<Positive> {
+        let last_values = self.get_last_values();
+        last_values
+            .iter()
+            .map(|step| step.get_positive_value())
+            .collect::<Vec<Positive>>()
+    }
+
+    /// Calculates the price of a financial option using Monte Carlo simulation.
+    ///
+    /// This method computes the price of the provided `option` based on a Monte Carlo
+    /// simulation approach. It retrieves the most recent positive values of the
+    /// underlying asset, which are then used in the simulation to estimate the option's price.
+    ///
+    /// # Arguments
+    /// * `option` - A reference to an `Options` object, representing the financial option
+    ///   to be priced.
+    ///
+    /// # Returns
+    /// * If successful, it returns a `Positive` value wrapped in `Ok`, which represents
+    ///   the computed price of the option.
+    /// * If an error occurs, it returns a `Box<dyn Error>` wrapped in `Err`, indicating
+    ///   the failure during the pricing process.
+    ///
+    /// # Errors
+    /// This function will return an error if:
+    /// * Retrieving the last positive values fails.
+    /// * The Monte Carlo pricing function (`price_option_monte_carlo`) encounters an issue
+    ///   during execution.
+    ///
+    /// # Note
+    /// The implementation assumes that the underlying asset's most recent positive values
+    /// are available and meaningful for Monte Carlo simulation. Ensure that the input data
+    /// and the `option` are valid before invoking this method.
+    pub fn get_mc_option_price(&self, option: &Options) -> Result<Positive, Box<dyn Error>> {
+        let last_values = self.get_last_positive_values();
+        price_option_monte_carlo(option, &last_values)
     }
 }
 

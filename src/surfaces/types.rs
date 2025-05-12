@@ -232,8 +232,8 @@ pub enum Axis {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{pos, Positive};
     use crate::surfaces::Surface;
+    use crate::{Positive, pos};
     use rust_decimal_macros::dec;
     use std::collections::BTreeSet;
 
@@ -243,14 +243,14 @@ mod tests {
         assert_eq!(point.x, dec!(1.0));
         assert_eq!(point.y, dec!(2.0));
         assert_eq!(point.z, dec!(3.0));
-        
+
         let display = format!("{}", point);
         assert_eq!(display, "(x: 1.0, y: 2.0, z: 3.0)");
-        
+
         let point2d = point.point2d();
         assert_eq!(point2d.x, dec!(1.0));
         assert_eq!(point2d.y, dec!(2.0));
-        
+
         let has_x = point.get_x();
         assert_eq!(has_x, dec!(1.0));
     }
@@ -264,7 +264,7 @@ mod tests {
 
         let display = format!("{}", point);
         assert_eq!(display, "(x: -1.0, y: -2.0, z: -3.0)");
-        
+
         let tuple = point.to_tuple::<Positive, Decimal, Decimal>();
         assert!(tuple.is_err());
         let tuple = point.to_tuple::<Decimal, Positive, Decimal>();
