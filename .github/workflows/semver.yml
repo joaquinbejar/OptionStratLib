@@ -28,7 +28,6 @@ jobs:
         uses: obi1kenobi/cargo-semver-checks-action@v2
         with:
           package: optionstratlib
-          feature-group: only-explicit-features
-          features: plotly kaleido
+          feature-group: all-features
           rust-toolchain: stable
           release-type: minor
