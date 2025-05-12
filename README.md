@@ -12,7 +12,7 @@
 [![Coverage](https://img.shields.io/codecov/c/github/joaquinbejar/OptionStratLib)](https://codecov.io/gh/joaquinbejar/OptionStratLib)
 [![Dependencies](https://img.shields.io/librariesio/github/joaquinbejar/OptionStratLib)](https://libraries.io/github/joaquinbejar/OptionStratLib)
 [![Documentation](https://img.shields.io/badge/docs-latest-blue.svg)](https://docs.rs/optionstratlib)
-
+[![Wiki](https://img.shields.io/badge/docs-latest-blue.svg)](https://deepwiki.com/joaquinbejar/OptionStratLib)
 
 
  # OptionStratLib v0.5.0: Financial Options Library
@@ -581,8 +581,11 @@ fn main() -> Result<(), Box<dyn Error>> {
         .collect();
 
     // Generate the intrinsic value graph
+    #[cfg(feature = "kaleido")]
+    {
     let file_path = "Draws/Options/intrinsic_value_chart.png".as_ref();
     option.write_png(file_path)?;
+    }
 
     Ok(())
 }
@@ -636,9 +639,11 @@ fn main() -> Result<(), Box<dyn Error>> {
     info!("Profit Area: {:.2}%", strategy.get_profit_area()?);
     info!("Profit Ratio: {:.2}%", strategy.get_profit_ratio()?);
 
+    #[cfg(feature = "kaleido")]
+    {
     let file_path = "Draws/Strategy/bull_call_spread_profit_loss_chart.html".as_ref();
     strategy.write_html(file_path)?;
-
+    }
     Ok(())
 }
 ```

@@ -42,8 +42,8 @@
 //!        fs::remove_file(&filename).unwrap_or_else(|_| panic!("Failed to remove {:?}", filename));
 //!     }
 //! }
-//! 
-//! 
+//!
+//!
 //! // Customized multiple curve plot
 //! let curves = vec![curve.clone(), curve.clone()];
 //! #[cfg(feature = "kaleido")]
