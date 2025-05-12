@@ -33,4 +33,3 @@ jobs:
           package: optionstratlib
           feature-group: all-features
           rust-toolchain: stable
-          release-type: minor
