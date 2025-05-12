@@ -322,6 +322,7 @@ mod tests_interface {
     }
 
     #[test]
+    #[cfg_attr(tarpaulin, ignore)]
     #[cfg(feature = "kaleido")]
     fn test_write_png() {
         let graph = create_test_graph_with_series();
