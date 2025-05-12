@@ -209,14 +209,16 @@ mod tests {
         #[cfg(feature = "plotly")]
         {
             let file_path_html = "single_curve_test.html".as_ref();
-            // let file_path_png = "single_curve_test.png".as_ref();
-            // TODO: kaleido issue
-            // .save(file_path_png)
-            // .expect("Single curve plot failed")
 
             curve.write_html(file_path_html).unwrap();
             cleanup_image(file_path_html);
-            // cleanup_image(file_path_png)
+
+            #[cfg(feature = "kaleido")]
+            {
+                let file_path_png = "single_curve_test.png".as_ref();
+                curve.write_png(file_path_png).expect("Single curve plot failed");
+                cleanup_image(file_path_png);
+            }
         }
     }
 
@@ -235,9 +237,11 @@ mod tests {
 
         let curve1 = Curve::from_vector(points1);
         let curve2 = Curve::from_vector(points2);
+        
+        let curve_vector = vec![curve1.clone(), curve2.clone()];
 
         // Plot multiple curves
-        vec![curve1.clone(), curve2.clone()]
+        curve_vector
             .plot()
             .title("Multiple Curves")
             .x_label("X Axis")
@@ -246,16 +250,16 @@ mod tests {
 
         #[cfg(feature = "plotly")]
         {
-            // TODO: kaleido issue
-            // .save("multiple_curves_test.png")
-            // .expect("Multiple curves plot failed")
-
             let file_path_html = "multiple_curves_test.html".as_ref();
-            vec![curve1, curve2].write_html(file_path_html).unwrap();
+            curve_vector.write_html(file_path_html).unwrap();
             cleanup_image(file_path_html);
 
-            // let file_path_png = "multiple_curves_test.png".as_ref();
-            // cleanup_image(file_path_png);
+            #[cfg(feature = "kaleido")]
+            {
+                let file_path_png = "multiple_curves_test.png".as_ref();
+                curve_vector.write_png(file_path_png).expect("Single curve plot failed");
+                cleanup_image(file_path_png);
+            }
         }
     }
 
@@ -275,70 +279,79 @@ mod tests {
             .x_label("X Axis")
             .y_label("Y Axis")
             .dimensions(800, 600);
-        // TODO: kaleido issue
-        // .save("single_curve_test.png")
-        // .expect("Single curve plot failed")
-
+        
         #[cfg(feature = "plotly")]
         {
             let file_path_html = "single_curve_test.html".as_ref();
             curve.write_html(file_path_html).unwrap();
             cleanup_image(file_path_html);
 
-            // let file_path_png = "single_curve_test.png".as_ref();
-            // cleanup_image(file_path_png);
+            #[cfg(feature = "kaleido")]
+            {
+                let file_path_png = "single_curve_test.png".as_ref();
+                curve
+                    .write_png(file_path_png)
+                    .expect("Single curve plot failed");
+                cleanup_image(file_path_png);
+            }
         }
     }
 
     #[test]
     fn test_multiple_curves_plot_bis() {
         let (curve1, curve2, curve3) = create_test_curves();
+        let curve_vector = vec![curve1.clone(), curve2.clone(), curve3.clone()];
 
         // Plot multiple curves
-        vec![curve1.clone(), curve2.clone(), curve3.clone()]
+        curve_vector
             .plot()
             .title("Multiple Curves")
             .x_label("X Axis")
             .y_label("Y Axis")
             .dimensions(1000, 700);
-        // TODO: kaleido issue
-        // .save("multiple_curves_test.png")
-        // .expect("Multiple curves plot failed")
 
         #[cfg(feature = "plotly")]
         {
             let file_path_html = "multiple_curves_test.html".as_ref();
-            vec![curve1, curve2, curve3]
-                .write_html(file_path_html)
-                .unwrap();
+            curve_vector.write_html(file_path_html).unwrap();
             cleanup_image(file_path_html);
 
-            // let file_path_png = "multiple_curves_test.png".as_ref();
-            // cleanup_image(file_path_png);
+            #[cfg(feature = "kaleido")]
+            {
+                let file_path_png = "multiple_curves_test.png".as_ref();
+                curve_vector
+                    .write_png(file_path_png)
+                    .expect("Multiple curves plot failed");
+                cleanup_image(file_path_png);
+            }
         }
     }
 
     #[test]
     fn test_plot_with_custom_line_width() {
         let (curve1, curve2, _) = create_test_curves();
+        let curve_vector = vec![curve1.clone(), curve2.clone()];
 
         // Custom line width
-        vec![curve1.clone(), curve2.clone()]
+        curve_vector
             .plot()
             .title("Thick Line Curves")
             .dimensions(800, 600);
-        // TODO: kaleido issue
-        // .save("thick_line_curves_test.png")
-        // .expect("Thick line curves plot failed");
 
         #[cfg(feature = "plotly")]
         {
             let file_path_html = "thick_line_curves_test.html".as_ref();
-            vec![curve1, curve2].write_html(file_path_html).unwrap();
+            curve_vector.write_html(file_path_html).unwrap();
             cleanup_image(file_path_html);
 
-            // let file_path_png = "thick_line_curves_test.png".as_ref();
-            // cleanup_image(file_path_png);
+            #[cfg(feature = "kaleido")]
+            {
+                let file_path_png = "thick_line_curves_test.png".as_ref();
+                curve_vector
+                    .write_png(file_path_png)
+                    .expect("Thick curves plot failed");
+                cleanup_image(file_path_png);
+            }
         }
     }
 }

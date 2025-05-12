@@ -69,8 +69,12 @@ impl Plottable for Surface {
 
 #[cfg(test)]
 mod tests_extended {
+    use rust_decimal_macros::dec;
+    use crate::error::CurveError;
+    use crate::visualization::{GraphConfig, GraphData, Series2D, TraceMode};
     use super::*;
 
+    #[derive(Clone)]
     struct MockChart {
         pub x_desc: String,
         pub y_desc: String,
@@ -106,6 +110,37 @@ mod tests_extended {
             self
         }
     }
+    
+    impl Graph for MockChart {
+        fn graph_data(&self) -> GraphData {
+            GraphData::Series(Series2D {
+                x: vec![dec!(1.0), dec!(2.0)],
+                y: vec![dec!(3.0), dec!(4.0)],
+                name: "Test Series".to_string(),
+                mode: TraceMode::Lines,
+                line_color: None,
+                line_width: None,
+            })
+        }
+
+        fn graph_config(&self) -> GraphConfig {
+            GraphConfig::default()
+        }
+    }
+    
+    impl Plottable for MockChart {
+        type Error = CurveError;
+
+        fn plot(&self) -> PlotBuilder<Self>
+        where
+            Self: Sized + Graph
+        {
+            PlotBuilder {
+                data: self.clone(),
+                options: self.graph_config(),
+            }
+        }
+    }
 
     #[test]
     fn test_map_err_to_std_error() {
@@ -128,7 +163,7 @@ mod tests_extended {
 
     #[test]
     fn test_configure_chart_mesh() {
-        let mut chart = MockChart::new(); // Simular un gráfico
+        let mut chart = MockChart::new(); 
         chart
             .configure_mesh()
             .x_label_formatter(&|v| format!("{:.2}", v))
@@ -137,6 +172,32 @@ mod tests_extended {
             .y_desc("Y-axis");
         assert_eq!(chart.x_desc, "X-axis");
         assert_eq!(chart.y_desc, "Y-axis");
+    }
+
+    #[test]
+    fn test_plot() {
+        let mut chart = MockChart::new(); 
+        chart
+            .configure_mesh()
+            .x_label_formatter(&|v| format!("{:.2}", v))
+            .y_label_formatter(&|v| format!("{:.2}", v))
+            .x_desc("X-axis")
+            .y_desc("Y-axis");
+        assert_eq!(chart.x_desc, "X-axis");
+        assert_eq!(chart.y_desc, "Y-axis");
+        
+        let plot = chart.plot();
+        assert_eq!(plot.data.graph_data(), chart.graph_data());
+        assert_eq!(plot.options, chart.graph_config());
+        assert_eq!(plot.data.graph_config(), chart.graph_config());
+        assert_eq!(plot.options.width, 1280);
+        assert_eq!(plot.options.height, 720);
+        assert_eq!(plot.options.title, "Graph");
+        assert_eq!(plot.options.x_label, None);
+        assert_eq!(plot.options.y_label, None);
+        assert_eq!(plot.options.z_label, None);
+        assert_eq!(plot.data.x_desc, "X-axis");
+        assert_eq!(plot.data.y_desc, "Y-axis");
     }
 
     #[test]
