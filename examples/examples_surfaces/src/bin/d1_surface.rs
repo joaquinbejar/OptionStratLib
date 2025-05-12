@@ -49,8 +49,8 @@ fn main() -> Result<(), SurfaceError> {
         .dimensions(1600, 900);
     // .save("Draws/Surfaces/d1_surface.png")?;
 
-    // delta_surface.write_html("Draws/Surfaces/d1_surface.html".as_ref())?;
+    delta_surface.write_html("Draws/Surfaces/d1_surface.html".as_ref())?;
     delta_surface.write_png("Draws/Surfaces/d1_surface.png".as_ref())?;
-    // delta_surface.write_svg("Draws/Surfaces/d1_surface.svg".as_ref())?;
+    delta_surface.write_svg("Draws/Surfaces/d1_surface.svg".as_ref())?;
     Ok(())
 }

@@ -147,15 +147,12 @@ impl Plottable for Vec<Curve> {
 
 #[cfg(test)]
 mod tests {
-    #[cfg(feature = "plotly")]
-    use {
-        std::path::Path,
-        std::fs,
-    };
     use super::*;
     use crate::curves::Point2D;
     use crate::geometrics::GeometricObject;
     use rust_decimal_macros::dec;
+    #[cfg(feature = "plotly")]
+    use {std::fs, std::path::Path};
 
     #[cfg(feature = "plotly")]
     fn cleanup_image(filename: &Path) {
@@ -198,7 +195,6 @@ mod tests {
         let points = vec![&p1, &p2, &p3];
         let curve = Curve::from_vector(points);
 
-
         // Plot single curve
         curve
             .plot()
@@ -214,12 +210,11 @@ mod tests {
             // TODO: kaleido issue
             // .save(file_path_png)
             // .expect("Single curve plot failed")
-            
+
             curve.write_html(file_path_html).unwrap();
             cleanup_image(file_path_html);
             // cleanup_image(file_path_png)
         }
-
     }
 
     #[test]

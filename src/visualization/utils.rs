@@ -2,14 +2,13 @@ use crate::visualization::styles::ColorScheme;
 
 #[cfg(feature = "plotly")]
 use {
+    crate::visualization::GraphConfig,
     crate::visualization::model::{Series2D, Surface3D},
     crate::visualization::styles::TraceMode,
-    crate::visualization::GraphConfig,
     plotly::common::{Line, Mode},
     plotly::{Scatter, Surface},
     rust_decimal::Decimal,
 };
-
 
 /// Creates a Scatter trace from a Series2D and configuration
 #[cfg(feature = "plotly")]

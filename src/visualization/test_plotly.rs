@@ -1,8 +1,8 @@
 #[cfg(test)]
 mod tests_utils {
-    use crate::visualization::{ColorScheme, get_color_from_scheme, GraphConfig};
     use crate::visualization::pick_color;
-    
+    use crate::visualization::{ColorScheme, GraphConfig, get_color_from_scheme};
+
     #[test]
     fn test_pick_color_delegates_to_color_scheme() {
         // Arrange
@@ -68,18 +68,18 @@ mod tests_utils {
 mod tests_interface {
 
     use crate::visualization::{Graph, GraphConfig, GraphData, Series2D, Surface3D, TraceMode};
-    use {
-        crate::visualization::{make_scatter, make_surface, to_plotly_mode},
-        plotly::{Scatter, Surface, Trace, common::Mode},
-        rust_decimal::Decimal
-    };
     use rust_decimal_macros::dec;
     #[cfg(feature = "kaleido")]
     use {
-        crate::visualization::{OutputType, ColorScheme,LineStyle},
-        plotly::Plot, 
-        std::fs, 
-        std::path::PathBuf
+        crate::visualization::{ColorScheme, LineStyle, OutputType},
+        plotly::Plot,
+        std::fs,
+        std::path::PathBuf,
+    };
+    use {
+        crate::visualization::{make_scatter, make_surface, to_plotly_mode},
+        plotly::{Scatter, Surface, Trace, common::Mode},
+        rust_decimal::Decimal,
     };
 
     trait ScatterTestHelper {
@@ -102,13 +102,12 @@ mod tests_interface {
         }
     }
 
-
     #[cfg(feature = "kaleido")]
     struct TestGraph {
         data: GraphData,
         config: GraphConfig,
     }
-    
+
     #[cfg(feature = "kaleido")]
     impl Graph for TestGraph {
         fn graph_data(&self) -> GraphData {
@@ -321,7 +320,7 @@ mod tests_interface {
         // Verify result
         assert!(result.is_ok());
     }
-    
+
     #[test]
     #[cfg(feature = "kaleido")]
     fn test_write_png() {

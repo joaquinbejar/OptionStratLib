@@ -38,6 +38,4 @@ pub trait Graph {
     fn graph_config(&self) -> GraphConfig {
         GraphConfig::default()
     }
-    
 }
-

@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests_utils {
     use crate::visualization::{ColorScheme, get_color_from_scheme};
-    
+
     #[test]
     fn test_get_color_from_scheme_default() {
         assert_eq!(get_color_from_scheme(&ColorScheme::Default, 0), None);
@@ -207,8 +207,8 @@ mod tests_model {
 
 #[cfg(test)]
 mod tests_interface {
-    use rust_decimal_macros::dec;
     use crate::visualization::{Graph, GraphConfig, GraphData, Series2D, TraceMode};
+    use rust_decimal_macros::dec;
 
     // Test to verify the default value of graph_config
     #[test]
@@ -250,5 +250,4 @@ mod tests_interface {
         assert_eq!(graph_config.line_style, default_config.line_style);
         assert_eq!(graph_config.show_legend, default_config.show_legend);
     }
-    
 }

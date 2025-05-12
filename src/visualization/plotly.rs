@@ -1,15 +1,11 @@
-use plotly::{common, Layout, Plot};
-use plotly::layout::Axis;
 use crate::error::GraphError;
 use crate::utils::file::prepare_file_path;
-use crate::visualization::{make_scatter, make_surface, pick_color, GraphConfig, GraphData};
+use crate::visualization::{GraphConfig, GraphData, make_scatter, make_surface, pick_color};
+use plotly::layout::Axis;
+use plotly::{Layout, Plot, common};
 
 #[cfg(feature = "kaleido")]
-use {
-    plotly::ImageFormat,
-    tracing::debug,
-    crate::visualization::OutputType,
-};
+use {crate::visualization::OutputType, plotly::ImageFormat, tracing::debug};
 
 pub trait Graph {
     /// Return the raw data ready for plotting.
