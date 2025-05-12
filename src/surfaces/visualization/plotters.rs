@@ -17,6 +17,7 @@
 //!
 //! ```
 //! # use std::fs;
+//! use std::path::PathBuf;
 //! use rust_decimal_macros::dec;
 //! use optionstratlib::geometrics::{GeometricObject, Plottable};
 //! use optionstratlib::surfaces::{Point3D, Surface};
@@ -28,17 +29,22 @@
 //! # let surface = Surface::from_vector(points);
 //!
 //! // Create a surface
-//! // let surface = /* Your surface creation logic here */;
-//!
-//! // Plot the surface and save to a file
-//! surface.plot()
-//!     .title("My Surface Plot")
-//!     .x_label("X Axis")
-//!     .y_label("Y Axis")
-//!     .z_label("Z Axis") // Example of z-axis label
-//!     .save("surface_plot.png")
-//!     .expect("Failed to save plot");
-//!  fs::remove_file("surface_plot.png").unwrap_or_else(|_| panic!("Failed to remove surface_plot.png"));
+//! #[cfg(feature = "kaleido")]
+//! {
+//!     let dst = PathBuf::from("surface_plot.png");
+//!     // Plot the surface and save to a file
+//!     surface.plot()
+//!         .title("My Surface Plot")
+//!         .x_label("X Axis")
+//!         .y_label("Y Axis")
+//!         .z_label("Z Axis") // Example of z-axis label
+//!         .save(dst.clone())
+//!         .expect("Failed to save plot");
+//!     if dst.exists() {
+//!         fs::remove_file(dst)
+//!            .unwrap_or_else(|_| panic!("Failed to remove surface_plot.png"));
+//!     }
+//! }
 //! ```
 //!
 use crate::error::SurfaceError;

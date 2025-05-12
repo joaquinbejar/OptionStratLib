@@ -567,8 +567,11 @@
 //!         .collect();
 //!
 //!     // Generate the intrinsic value graph
+//!     #[cfg(feature = "kaleido")]
+//!     {
 //!     let file_path = "Draws/Options/intrinsic_value_chart.png".as_ref();
 //!     option.write_png(file_path)?;
+//!     }
 //!
 //!     Ok(())
 //! }
@@ -622,9 +625,11 @@
 //!     info!("Profit Area: {:.2}%", strategy.get_profit_area()?);
 //!     info!("Profit Ratio: {:.2}%", strategy.get_profit_ratio()?);
 //!
+//!     #[cfg(feature = "kaleido")]
+//!     {
 //!     let file_path = "Draws/Strategy/bull_call_spread_profit_loss_chart.html".as_ref();
 //!     strategy.write_html(file_path)?;
-//!
+//!     }
 //!     Ok(())
 //! }
 //!```

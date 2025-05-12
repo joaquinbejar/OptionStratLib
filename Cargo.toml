@@ -39,8 +39,7 @@ kaleido = [
 [dependencies]
 chrono = { version = ">=0.4.40", features = ["serde"] }
 approx = "0.5.1"
-#plotly = { version = "0.12.1", default-features = false, optional = true }
-plotly = { path = "../../Externo/plotly.rs/plotly" , default-features = false, optional = true }
+plotly = { git = "https://github.com/joaquinbejar/plotly.rs", tag = "v1.0.0" , default-features = false, optional = true }
 statrs = "0.18.0"
 rand = { version = "0.9.1" }
 rand_distr = "0.5.1"
@@ -57,7 +56,7 @@ rust_decimal_macros = "1.37.1"
 zip = "2.6.1"
 lazy_static = "1.5.0"
 uuid = { version = "1.16.0", features = ["v4", "serde"] }
-base64 = "0.22.1"
+
 
 
 [dev-dependencies]

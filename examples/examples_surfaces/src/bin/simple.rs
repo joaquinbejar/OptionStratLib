@@ -1,6 +1,6 @@
 use optionstratlib::error::GraphError;
 use optionstratlib::visualization::{Surface3D, make_surface};
-use plotly::{ImageFormat, Layout, Plot};
+use plotly::{ImageFormat, Layout, Plot, common::Title};
 use rust_decimal::Decimal;
 use rust_decimal::prelude::FromPrimitive;
 use std::error::Error;
@@ -56,7 +56,7 @@ fn test_simple_surface() -> Result<(), GraphError> {
 
     // Configure layout
     let layout = Layout::new()
-        .title(plotly::common::Title::from("Test 3D Surface"))
+        .title(Title::from("Test 3D Surface"))
         .auto_size(true);
 
     plot.set_layout(layout);

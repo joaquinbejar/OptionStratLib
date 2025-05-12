@@ -12,7 +12,7 @@
 //! ```rust
 //! // Plot a single curve
 //! use std::fs;
-//! use std::path::Path;
+//! use std::path::{Path, PathBuf};
 //! use rust_decimal::Decimal;
 //! use optionstratlib::curves::{Curve, Point2D};
 //! use optionstratlib::geometrics::{GeometricObject, Plottable};
@@ -23,25 +23,28 @@
 //!             Point2D::new(Decimal::ZERO, Decimal::ONE),  // p21
 //!             Point2D::new(Decimal::ONE, Decimal::TWO),   // p22
 //!         ]);
-//! let filename = "single_curve.png";
-//! curve.plot()
-//!     .title("Single Curve")
-//!     .save(filename).expect("panic message");
-//! if Path::new(filename).exists() {
-//!    fs::remove_file(filename).unwrap_or_else(|_| panic!("Failed to remove {}", filename));
-//! }
-//! // Plot multiple curves
-//! let curve1 = curve.clone();
-//! let curve2 = curve.clone();
-//! let curve3 = curve.clone();
-//! let curves = vec![curve1, curve2, curve3];
-//! let filename = "multiple_curves.png";
-//! curves.plot()
-//!     .title("Curve Comparison")
-//!     .save(filename).expect("panic message");
-//!
-//! if Path::new(filename).exists() {
-//!    fs::remove_file(filename).unwrap_or_else(|_| panic!("Failed to remove {}", filename));
+//! #[cfg(feature = "kaleido")]
+//! {
+//!     let filename = PathBuf::from("single_curve.png");
+//!     curve.plot()
+//!         .title("Single Curve")
+//!         .save(filename.clone()).expect("panic message");
+//!     if filename.exists() {
+//!        fs::remove_file(&filename).unwrap_or_else(|_| panic!("Failed to remove {:?}", filename));
+//!     }
+//!     // Plot multiple curves
+//!     let curve1 = curve.clone();
+//!     let curve2 = curve.clone();
+//!     let curve3 = curve.clone();
+//!     let curves = vec![curve1, curve2, curve3];
+//!     let filename = "multiple_curves.png";
+//!     curves.plot()
+//!         .title("Curve Comparison")
+//!         .save(filename).expect("panic message");
+//!    
+//!     if Path::new(filename).exists() {
+//!        fs::remove_file(&filename).unwrap_or_else(|_| panic!("Failed to remove {:?}", filename));
+//!     }
 //! }
 //! ```
 

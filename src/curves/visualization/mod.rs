@@ -18,7 +18,7 @@
 //! ```rust
 //! // Plot a single curve
 //! use std::fs;
-//! use std::path::Path;
+//! use std::path::{Path, PathBuf};
 //! use rust_decimal::Decimal;
 //! use rust_decimal_macros::dec;
 //! use optionstratlib::curves::{Curve, Point2D};
@@ -31,23 +31,31 @@
 //! ]);
 //!
 //! // Simple plot with default settings
-//! let filename = "single_curve_doc.png";
-//! curve.plot()
-//!     .title("My Curve")
-//!     .save(filename).expect("panic message");
-//! if Path::new(filename).exists() {
-//!    fs::remove_file(filename).unwrap_or_else(|_| panic!("Failed to remove {}", filename));
+//! #[cfg(feature = "kaleido")]
+//! {
+//!     let filename = "single_curve_doc.png";
+//!     let filename = PathBuf::from("single_curve_doc.png");
+//!     curve.plot()
+//!         .title("My Curve")
+//!         .save(filename.clone()).expect("panic message");
+//!     if filename.exists() {
+//!        fs::remove_file(&filename).unwrap_or_else(|_| panic!("Failed to remove {:?}", filename));
+//!     }
 //! }
+//! 
+//! 
 //! // Customized multiple curve plot
 //! let curves = vec![curve.clone(), curve.clone()];
-//! let filename = "multiple_curves_doc.png";
-//! curves.plot()
-//!     .title("Curve Comparison")
-//!     .dimensions(1000, 600)
-//!     .save(filename).expect("panic message");
-//!
-//! if Path::new(filename).exists() {
-//!     fs::remove_file(filename).unwrap_or_else(|_| panic!("Failed to remove {}", filename));
+//! #[cfg(feature = "kaleido")]
+//! {
+//!     let filename = PathBuf::from("multiple_curves_doc.png");
+//!     curves.plot()
+//!         .title("Curve Comparison")
+//!         .dimensions(1000, 600)
+//!         .save(filename.clone()).expect("panic message");
+//!     if filename.exists() {
+//!         fs::remove_file(&filename).unwrap_or_else(|_| panic!("Failed to remove {:?}", filename));
+//!     }
 //! }
 //! ```
 //!

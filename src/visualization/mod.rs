@@ -100,21 +100,22 @@
 //!         }
 //!     }
 //! }
-//!
-//! // Using the chart
-//! let data = MyData {
-//!     x: vec![dec!(1.0), dec!(2.0), dec!(3.0), dec!(4.0), dec!(5.0)],
-//!     y: vec![dec!(2.0), dec!(3.0), dec!(5.0), dec!(7.0), dec!(11.0)],
-//! };
-//!
-//! // Display in browser
-//! data.show();
-//! // Save as PNG
-//! let filename: PathBuf = PathBuf::from("my_chart.png");
-//! data.render(OutputType::Png(&filename)).unwrap();
-//! if Path::new(&filename.clone()).exists() {
-//!         fs::remove_file(filename.clone())
-//!             .unwrap_or_else(|_| panic!("Failed to remove {}", filename.to_str().unwrap()));
+//! #[cfg(feature = "kaleido")]
+//! {
+//!     // Using the chart
+//!     let data = MyData {
+//!         x: vec![dec!(1.0), dec!(2.0), dec!(3.0), dec!(4.0), dec!(5.0)],
+//!         y: vec![dec!(2.0), dec!(3.0), dec!(5.0), dec!(7.0), dec!(11.0)],
+//!     };
+//!     // Display in browser
+//!     data.show();
+//!     // Save as PNG
+//!     let filename: PathBuf = PathBuf::from("my_chart.png");
+//!     data.render(OutputType::Png(&filename)).unwrap();
+//!     if Path::new(&filename.clone()).exists() {
+//!             fs::remove_file(filename.clone())
+//!                 .unwrap_or_else(|_| panic!("Failed to remove {}", filename.to_str().unwrap()));
+//!     }
 //! }
 //! ```
 //!
@@ -264,6 +265,8 @@
 //!         line_width: Some(2.0),
 //!     };
 //!     
+//!     #[cfg(feature = "kaleido")]
+//!     {
 //!     let chart = SimpleChart { series };
 //!     let filename: PathBuf = PathBuf::from("interactive_chart.html");
 //!     chart.to_interactive_html(&filename)?;
@@ -272,6 +275,7 @@
 //!             fs::remove_file(filename.clone())
 //!                 .unwrap_or_else(|_| panic!("Failed to remove {}", filename.to_str().unwrap()));
 //!         }
+//!     }
 //!     Ok(())
 //! }
 //! ```

@@ -7,5 +7,4 @@ edition = "2024"
 optionstratlib = { path = "../..",  features = ["plotly", "kaleido"]}
 rust_decimal = { version = "1.36.0", features = ["maths", "serde"] }
 rust_decimal_macros = "1.36.0"
-#plotly = { version = "0.12.1" , features = ["kaleido", "kaleido_download"] }
-plotly = { path = "../../../../Externo/plotly.rs/plotly" , default-features = false, optional = true }
+plotly = { git = "https://github.com/joaquinbejar/plotly.rs", tag = "v1.0.0" , default-features = false, optional = true }
