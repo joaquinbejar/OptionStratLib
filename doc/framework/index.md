@@ -646,7 +646,7 @@ analysis:
      )
  }
  fn main() -> Result<(), Box<dyn Error>> {
-     setup_logger();
+     
      let option = create_sample_option();
      info!("Title: {}", option.title());
      info!("Greeks: {:?}", option.greeks());
@@ -683,7 +683,7 @@ analysis:
 
  fn main() -> Result<(), Box<dyn Error>> {
      use rust_decimal_macros::dec;
- setup_logger();
+ 
 
      let underlying_price = pos!(5781.88);
 

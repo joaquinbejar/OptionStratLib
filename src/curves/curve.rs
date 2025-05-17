@@ -3506,12 +3506,7 @@ mod tests_curve_len_and_geometric {
     fn test_construct_method_error() {
         // Test ConstructionMethod errors (lines 168-175, 179, 181, 189)
         let result = Curve::construct(ConstructionMethod::Parametric {
-            f: Box::new(|_| {
-                Err(Box::new(std::io::Error::new(
-                    std::io::ErrorKind::Other,
-                    "Test error",
-                )))
-            }),
+            f: Box::new(|_| Err(Box::new(std::io::Error::other("Test error")))),
             params: ConstructionParams::D2 {
                 t_start: dec!(0.0),
                 t_end: dec!(1.0),

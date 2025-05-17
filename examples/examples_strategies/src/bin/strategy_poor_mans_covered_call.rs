@@ -10,8 +10,6 @@ use std::error::Error;
 use tracing::info;
 
 fn main() -> Result<(), Box<dyn Error>> {
-    setup_logger();
-
     let underlying_price = pos!(2703.3);
 
     let strategy = PoorMansCoveredCall::new(

@@ -142,17 +142,16 @@ pub fn setup_logger_with_level(log_level: &str) {
 
 #[cfg(test)]
 mod tests_setup_logger {
-    use super::setup_logger;
     use std::env;
     use tracing::subscriber::set_global_default;
     use tracing_subscriber::FmtSubscriber;
+    use crate::utils::setup_logger;
 
     #[test]
     fn test_logger_initialization_info() {
         unsafe {
             env::set_var("LOGLEVEL", "INFO");
         }
-        setup_logger();
 
         assert!(
             set_global_default(FmtSubscriber::builder().finish()).is_err(),
@@ -165,7 +164,6 @@ mod tests_setup_logger {
         unsafe {
             env::set_var("LOGLEVEL", "DEBUG");
         }
-        setup_logger();
 
         assert!(
             set_global_default(FmtSubscriber::builder().finish()).is_err(),
@@ -178,7 +176,6 @@ mod tests_setup_logger {
         unsafe {
             env::remove_var("LOGLEVEL");
         }
-        setup_logger();
 
         assert!(
             set_global_default(FmtSubscriber::builder().finish()).is_err(),
@@ -191,9 +188,10 @@ mod tests_setup_logger {
         unsafe {
             env::set_var("LOGLEVEL", "INFO");
         }
+        setup_logger();
 
-        setup_logger(); // First call should set up the logger
-        setup_logger(); // Second call should not re-initialize
+        // First call should set up the logger
+        // Second call should not re-initialize
 
         assert!(
             set_global_default(FmtSubscriber::builder().finish()).is_err(),
@@ -249,7 +247,6 @@ mod tests_setup_logger_bis {
         let subscriber = registry().with(layer);
 
         with_default(subscriber, || {
-            setup_logger();
             tracing::info!("Test log");
         });
 
@@ -267,7 +264,6 @@ mod tests_setup_logger_bis {
         let subscriber = registry().with(layer);
 
         with_default(subscriber, || {
-            setup_logger();
             tracing::debug!("Test log");
         });
 
@@ -288,7 +284,6 @@ mod tests_setup_logger_bis {
         let subscriber = registry().with(layer);
 
         with_default(subscriber, || {
-            setup_logger();
             tracing::error!("Test log");
         });
 
@@ -308,7 +303,6 @@ mod tests_setup_logger_bis {
         let subscriber = registry().with(layer);
 
         with_default(subscriber, || {
-            setup_logger();
             tracing::warn!("Test log");
         });
 
@@ -329,7 +323,6 @@ mod tests_setup_logger_bis {
         let subscriber = registry().with(layer);
 
         with_default(subscriber, || {
-            setup_logger();
             tracing::trace!("Test log");
         });
 
@@ -351,7 +344,6 @@ mod tests_setup_logger_bis {
         let subscriber = registry().with(layer);
 
         with_default(subscriber, || {
-            setup_logger();
             tracing::info!("Test log");
         });
 

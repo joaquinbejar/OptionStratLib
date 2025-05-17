@@ -4,7 +4,6 @@ use {
     optionstratlib::chains::chain::OptionChain,
     optionstratlib::strategies::base::Optimizable,
     optionstratlib::strategies::{FindOptimalSide, PoorMansCoveredCall, Strategies},
-    optionstratlib::utils::setup_logger,
     optionstratlib::{ExpirationDate, Positive, pos},
     rust_decimal_macros::dec,
     std::error::Error,
@@ -12,8 +11,6 @@ use {
 
 #[test]
 fn test_poor_mans_covered_call_integration() -> Result<(), Box<dyn Error>> {
-    setup_logger();
-
     let underlying_price = pos!(2703.3);
 
     let mut strategy = PoorMansCoveredCall::new(

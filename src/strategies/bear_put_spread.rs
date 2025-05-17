@@ -1501,7 +1501,7 @@ mod tests_bear_put_spread_optimizable {
     use crate::model::ExpirationDate;
     use crate::spos;
     use crate::strategies::utils::FindOptimalSide;
-    use crate::utils::setup_logger;
+
     use rust_decimal_macros::dec;
 
     fn create_mock_option_chain() -> OptionChain {
@@ -1575,7 +1575,6 @@ mod tests_bear_put_spread_optimizable {
 
     #[test]
     fn test_filter_valid_combinations() {
-        setup_logger();
         let spread = create_test_bear_put_spread();
         let chain = create_mock_option_chain();
 

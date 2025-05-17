@@ -4,6 +4,11 @@
    Date: 18/12/24
 ******************************************************************************/
 mod delta;
+mod graph_test;
+mod long_call_test;
+mod long_put_test;
 mod optimal;
 mod optimal_center;
+mod short_call_test;
+mod short_put_test;
 mod simple;

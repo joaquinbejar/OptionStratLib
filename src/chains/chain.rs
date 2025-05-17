@@ -2625,7 +2625,7 @@ impl BasicSurfaces for OptionChain {
 mod tests_chain_base {
     use super::*;
     use crate::model::ExpirationDate;
-    use crate::utils::logger::setup_logger;
+
     use crate::{pos, spos};
     use rust_decimal_macros::dec;
 
@@ -2649,7 +2649,6 @@ mod tests_chain_base {
 
     #[test]
     fn test_new_option_chain_build_chain() {
-        setup_logger();
         let params = OptionChainBuildParams::new(
             "SP500".to_string(),
             None,
@@ -2689,7 +2688,6 @@ mod tests_chain_base {
 
     #[test]
     fn test_new_option_chain_build_chain_long() {
-        setup_logger();
         let params = OptionChainBuildParams::new(
             "SP500".to_string(),
             None,
@@ -2886,7 +2884,6 @@ mod tests_chain_base {
 
     #[test]
     fn test_load_from_csv() {
-        setup_logger();
         let mut chain = OptionChain::new(
             "SP500",
             pos!(5781.89),
@@ -2960,7 +2957,7 @@ mod tests_option_data {
     use super::*;
     use crate::model::ExpirationDate;
     use crate::spos;
-    use crate::utils::logger::setup_logger;
+
     use crate::{assert_pos_relative_eq, pos};
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
@@ -2998,7 +2995,6 @@ mod tests_option_data {
 
     #[test]
     fn test_validate_valid_option() {
-        setup_logger();
         let option_data = create_valid_option_data();
         assert!(option_data.validate());
     }
@@ -3110,7 +3106,6 @@ mod tests_option_data {
 
     #[test]
     fn test_calculate_prices_missing_volatility() {
-        setup_logger();
         let mut option_data = OptionData::new(
             pos!(100.0),
             None,
@@ -3147,7 +3142,6 @@ mod tests_option_data {
 
     #[test]
     fn test_calculate_prices_override_volatility() {
-        setup_logger();
         let mut option_data = OptionData::new(
             pos!(100.0),
             None,
@@ -3225,7 +3219,7 @@ mod tests_get_random_positions {
     use super::*;
     use crate::error::chains::ChainBuildErrorKind;
     use crate::model::ExpirationDate;
-    use crate::utils::logger::setup_logger;
+
     use crate::{pos, spos};
     use rust_decimal_macros::dec;
 
@@ -3281,7 +3275,6 @@ mod tests_get_random_positions {
 
     #[test]
     fn test_zero_quantity() {
-        setup_logger();
         let chain = create_test_chain();
         let params = RandomPositionsParams::new(
             None,
@@ -3314,7 +3307,6 @@ mod tests_get_random_positions {
 
     #[test]
     fn test_long_puts_only() {
-        setup_logger();
         let chain = create_test_chain();
         let params = RandomPositionsParams::new(
             Some(2),
@@ -3346,7 +3338,6 @@ mod tests_get_random_positions {
 
     #[test]
     fn test_short_puts_only() {
-        setup_logger();
         let chain = create_test_chain();
         let params = RandomPositionsParams::new(
             None,
@@ -3378,7 +3369,6 @@ mod tests_get_random_positions {
 
     #[test]
     fn test_long_calls_only() {
-        setup_logger();
         let chain = create_test_chain();
         let params = RandomPositionsParams::new(
             None,
@@ -3410,7 +3400,6 @@ mod tests_get_random_positions {
 
     #[test]
     fn test_short_calls_only() {
-        setup_logger();
         let chain = create_test_chain();
         let params = RandomPositionsParams::new(
             None,
@@ -3442,7 +3431,6 @@ mod tests_get_random_positions {
 
     #[test]
     fn test_mixed_positions() {
-        setup_logger();
         let chain = create_test_chain();
         let params = RandomPositionsParams::new(
             Some(1),
@@ -3488,7 +3476,6 @@ mod tests_get_random_positions {
 
     #[test]
     fn test_empty_chain() {
-        setup_logger();
         let chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
         let params = RandomPositionsParams::new(
             Some(1),
@@ -5340,13 +5327,12 @@ mod rnd_analysis_tests {
 #[cfg(test)]
 mod tests_option_data_implied_volatility {
     use super::*;
-    use crate::utils::setup_logger_with_level;
+
     use crate::{assert_pos_relative_eq, spos};
     use rust_decimal_macros::dec;
 
     #[test]
     fn test_calculate_iv_from_call() {
-        setup_logger_with_level("debug");
         let mut option_data = OptionData::new(
             pos!(21395.0),        // strike
             spos!(280.0),         // call_bid
@@ -5383,7 +5369,6 @@ mod tests_option_data_implied_volatility {
 
     #[test]
     fn test_calculate_iv_from_put() {
-        setup_logger_with_level("debug");
         let mut option_data = OptionData::new(
             pos!(21700.0), // strike
             spos!(30.2),   // call_bid
@@ -5454,7 +5439,6 @@ mod tests_option_data_implied_volatility {
 
     #[test]
     fn test_calculate_iv_option_data_to_option() {
-        setup_logger_with_level("debug");
         let mut option_data = OptionData::new(
             pos!(21700.0), // strike
             spos!(30.2),   // call_bid
@@ -5721,7 +5705,7 @@ mod tests_chain_implied_volatility {
 mod tests_option_data_delta {
     use super::*;
     use crate::model::ExpirationDate;
-    use crate::utils::setup_logger_with_level;
+
     use crate::{pos, spos};
     use rust_decimal_macros::dec;
 
@@ -5815,7 +5799,6 @@ mod tests_option_data_delta {
 
     #[test]
     fn test_calculate_delta_no_volatility() {
-        setup_logger_with_level("debug");
         let mut price_params = create_standard_price_params();
         price_params.implied_volatility = None;
 
@@ -6690,7 +6673,7 @@ mod tests_option_chain_serde {
 #[cfg(test)]
 mod tests_gamma_calculations {
     use super::*;
-    use crate::utils::setup_logger;
+
     use crate::utils::time::get_tomorrow_formatted;
     use crate::{assert_decimal_eq, pos, spos};
     use rust_decimal_macros::dec;
@@ -6705,7 +6688,6 @@ mod tests_gamma_calculations {
 
     #[test]
     fn test_gamma_exposure_basic() {
-        setup_logger();
         let mut chain = create_test_chain_with_gamma();
         chain.update_greeks();
         let result = chain.gamma_exposure();
@@ -6785,7 +6767,7 @@ mod tests_gamma_calculations {
 #[cfg(test)]
 mod tests_delta_calculations {
     use super::*;
-    use crate::utils::setup_logger;
+
     use crate::{assert_decimal_eq, pos};
     use rust_decimal_macros::dec;
 
@@ -6796,7 +6778,6 @@ mod tests_delta_calculations {
 
     #[test]
     fn test_delta_exposure_basic() {
-        setup_logger();
         let mut chain = create_test_chain_with_delta();
         // Initialize the greeks first
         chain.update_greeks();
@@ -6830,7 +6811,6 @@ mod tests_delta_calculations {
 
     #[test]
     fn test_delta_exposure_updates() {
-        setup_logger();
         let mut chain = create_test_chain_with_delta();
 
         // Get initial delta exposure (should be 0 as greeks aren't initialized)
@@ -6878,7 +6858,6 @@ mod tests_delta_calculations {
 
     #[test]
     fn test_delta_curve_shape() {
-        setup_logger();
         let mut chain = create_test_chain_with_delta();
         chain.update_greeks();
         let curve = chain.delta_curve().unwrap();
@@ -6905,7 +6884,7 @@ mod tests_delta_calculations {
 #[cfg(test)]
 mod tests_vega_calculations {
     use super::*;
-    use crate::utils::setup_logger;
+
     use crate::{assert_decimal_eq, pos};
     use rust_decimal_macros::dec;
 
@@ -6916,7 +6895,6 @@ mod tests_vega_calculations {
 
     #[test]
     fn test_vega_exposure_basic() {
-        setup_logger();
         let mut chain = create_test_chain_with_vega();
         // Initialize the greeks first
         chain.update_greeks();
@@ -6950,7 +6928,6 @@ mod tests_vega_calculations {
 
     #[test]
     fn test_vega_exposure_updates() {
-        setup_logger();
         let mut chain = create_test_chain_with_vega();
 
         // Get initial vega exposure (should be 0 as greeks aren't initialized)
@@ -6998,7 +6975,6 @@ mod tests_vega_calculations {
 
     #[test]
     fn test_vega_curve_shape() {
-        setup_logger();
         let mut chain = create_test_chain_with_vega();
         chain.update_greeks();
         let curve = chain.vega_curve().unwrap();
@@ -7025,7 +7001,7 @@ mod tests_vega_calculations {
 #[cfg(test)]
 mod tests_theta_calculations {
     use super::*;
-    use crate::utils::setup_logger;
+
     use crate::{assert_decimal_eq, pos};
     use rust_decimal_macros::dec;
 
@@ -7036,7 +7012,6 @@ mod tests_theta_calculations {
 
     #[test]
     fn test_theta_exposure_basic() {
-        setup_logger();
         let mut chain = create_test_chain_with_theta();
         // Initialize the greeks first
         chain.update_greeks();
@@ -7070,7 +7045,6 @@ mod tests_theta_calculations {
 
     #[test]
     fn test_theta_exposure_updates() {
-        setup_logger();
         let mut chain = create_test_chain_with_theta();
 
         // Get initial theta exposure (should be 0 as greeks aren't initialized)
@@ -7118,7 +7092,6 @@ mod tests_theta_calculations {
 
     #[test]
     fn test_theta_curve_shape() {
-        setup_logger();
         let mut chain = create_test_chain_with_theta();
         chain.update_greeks();
         let curve = chain.theta_curve().unwrap();
@@ -7147,12 +7120,11 @@ mod tests_atm_strike {
     use super::*;
     use crate::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
     use crate::model::ExpirationDate;
-    use crate::utils::logger::setup_logger;
+
     use crate::{pos, spos};
     use rust_decimal_macros::dec;
 
     fn create_standard_chain() -> OptionChain {
-        setup_logger();
         let params = OptionChainBuildParams::new(
             "SP500".to_string(),
             None,
@@ -7334,12 +7306,11 @@ mod tests_atm_strike_bis {
     use super::*;
     use crate::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
     use crate::model::ExpirationDate;
-    use crate::utils::logger::setup_logger;
+
     use crate::{pos, spos};
     use rust_decimal_macros::dec;
 
     fn create_standard_chain() -> OptionChain {
-        setup_logger();
         let params = OptionChainBuildParams::new(
             "SP500".to_string(),
             None,
@@ -7648,12 +7619,11 @@ mod tests_option_chain_utils_bis {
     use crate::model::ExpirationDate;
     use crate::pos;
     use crate::spos;
-    use crate::utils::logger::setup_logger;
+
     use rust_decimal_macros::dec;
 
     // Helper function to create a standard option chain for testing
     fn create_standard_chain() -> OptionChain {
-        setup_logger();
         let params = OptionChainBuildParams::new(
             "SP500".to_string(),
             None,
@@ -7830,13 +7800,12 @@ mod tests_to_build_params_bis {
     use super::*;
     use crate::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
     use crate::model::ExpirationDate;
-    use crate::utils::logger::setup_logger;
+
     use crate::{pos, spos};
     use rust_decimal_macros::dec;
     use tracing::info;
 
     fn create_standard_chain() -> OptionChain {
-        setup_logger();
         let params = OptionChainBuildParams::new(
             "SP500".to_string(),
             None,
@@ -7883,7 +7852,7 @@ mod tests_to_build_params_bis {
 mod chain_coverage_tests {
     use super::*;
     use crate::spos;
-    use crate::utils::logger::setup_logger;
+
     use rust_decimal_macros::dec;
 
     // Helper function to create a test chain with specific characteristics
@@ -7912,7 +7881,6 @@ mod chain_coverage_tests {
 
     #[test]
     fn test_option_chain_display() {
-        setup_logger();
         let chain = create_test_chain();
 
         // Test the Display implementation - covers many lines
@@ -8123,7 +8091,7 @@ mod chain_coverage_tests {
 mod chain_coverage_tests_bis {
     use super::*;
     use crate::spos;
-    use crate::utils::logger::setup_logger;
+
     use rust_decimal_macros::dec;
 
     // Helper function to create a test chain with specific characteristics
@@ -8174,7 +8142,6 @@ mod chain_coverage_tests_bis {
     // Test for many display-related lines
     #[test]
     fn test_option_chain_display() {
-        setup_logger();
         let chain = create_test_chain();
 
         // Test the Display implementation - covers many lines
@@ -8385,7 +8352,7 @@ mod chain_coverage_tests_bis {
 mod tests_get_position_with_delta {
     use super::*;
     use crate::error::chains::OptionDataErrorKind;
-    use crate::utils::logger::setup_logger;
+
     use crate::{pos, spos};
     use rust_decimal_macros::dec;
     use tracing::info;
@@ -8484,7 +8451,6 @@ mod tests_get_position_with_delta {
 
     #[test]
     fn test_get_position_with_delta_long_call() {
-        setup_logger();
         let chain = create_test_chain_with_deltas();
         info!("{}", chain);
         // Request a long call with delta of 0.6 or lower
@@ -8505,7 +8471,6 @@ mod tests_get_position_with_delta {
 
     #[test]
     fn test_get_position_with_delta_short_put() {
-        setup_logger();
         let chain = create_test_chain_with_deltas();
 
         // Request a short put with delta of -0.4
@@ -8565,7 +8530,6 @@ mod tests_get_position_with_delta {
 
     #[test]
     fn test_get_position_with_delta_low_target() {
-        setup_logger();
         let chain = create_test_chain_with_deltas();
         info!("{}", chain);
         // Request a long call with very low delta of 0.05
@@ -8737,7 +8701,6 @@ mod tests_get_position_with_delta {
 
     #[test]
     fn test_get_position_with_delta_side_combinations() {
-        setup_logger();
         let chain = create_test_chain_with_deltas();
         info!("{}", chain);
         // Test all combinations of Side and OptionStyle
@@ -8785,7 +8748,7 @@ mod tests_get_position_with_delta {
 #[cfg(test)]
 mod tests_get_strikes_and_optiondata {
     use super::*;
-    use crate::utils::logger::setup_logger;
+
     use crate::{pos, spos};
     use rust_decimal_macros::dec;
 
@@ -8814,7 +8777,6 @@ mod tests_get_strikes_and_optiondata {
 
     #[test]
     fn test_get_strikes_normal_case() {
-        setup_logger();
         let chain = create_test_chain();
 
         let result = chain.get_strikes();

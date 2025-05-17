@@ -23,7 +23,6 @@ impl Walker {
 impl WalkTypeAble<Positive, OptionChain> for Walker {}
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    setup_logger();
     // let n_steps = 43_200; // 30 days in minutes
     let n_steps = 5; // 30 days in minutes
     let underlying_price = pos!(150.0);

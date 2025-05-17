@@ -962,7 +962,7 @@ mod tests_custom_strategy {
     use crate::model::types::{OptionStyle, Side};
     use crate::model::utils::create_sample_option;
     use crate::pos;
-    use crate::utils::logger::setup_logger;
+
     use approx::assert_relative_eq;
     use chrono::Utc;
     use rust_decimal_macros::dec;
@@ -981,7 +981,6 @@ mod tests_custom_strategy {
 
     #[test]
     fn test_calculate_break_even_points_single_call() {
-        setup_logger();
         let strategy = create_test_strategy();
         assert_eq!(strategy.break_even_points.len(), 2);
         assert_relative_eq!(
@@ -1040,8 +1039,6 @@ mod tests_custom_strategy {
 
     #[test]
     fn test_calculate_break_even_points_straddle() {
-        setup_logger();
-
         let mut strategy = create_test_strategy();
         let underlying_price = pos!(5780.0);
         let underlying_symbol = "SP500".to_string();
@@ -1225,7 +1222,7 @@ mod tests_max_profit {
     use crate::model::types::OptionType;
     use crate::model::types::{OptionStyle, Side};
     use crate::pos;
-    use crate::utils::logger::setup_logger;
+
     use chrono::Utc;
     use rust_decimal_macros::dec;
 
@@ -1240,8 +1237,6 @@ mod tests_max_profit {
     #[test]
     #[ignore]
     fn test_max_profit_multi_leg_strategy() {
-        setup_logger();
-
         let mut strategy = create_test_strategy();
         let underlying_price = pos!(5780.0);
         let underlying_symbol = "SP500".to_string();
@@ -1317,7 +1312,7 @@ mod tests_max_loss {
     use crate::model::types::OptionType;
     use crate::model::types::{OptionStyle, Side};
     use crate::pos;
-    use crate::utils::logger::setup_logger;
+
     use chrono::Utc;
     use rust_decimal_macros::dec;
 
@@ -1332,8 +1327,6 @@ mod tests_max_loss {
     #[test]
     #[ignore]
     fn test_max_loss_multi_leg_strategy() {
-        setup_logger();
-
         let mut strategy = create_test_strategy();
         let underlying_price = pos!(5780.0);
         let underlying_symbol = "SP500".to_string();
@@ -1408,7 +1401,7 @@ mod tests_total_cost {
     use crate::Options;
     use crate::model::types::{OptionStyle, OptionType, Side};
     use crate::pos;
-    use crate::utils::setup_logger;
+
     use chrono::Utc;
     use rust_decimal_macros::dec;
 
@@ -1458,7 +1451,6 @@ mod tests_total_cost {
 
     #[test]
     fn test_total_cost_only_short_positions() {
-        setup_logger();
         let position_1 = create_test_position(Side::Short, pos!(3.0), pos!(0.5));
         let position_2 = create_test_position(Side::Short, pos!(1.0), pos!(0.5));
 
@@ -1673,7 +1665,7 @@ mod tests_greeks {
     use super::*;
     use crate::Options;
     use crate::model::types::{OptionStyle, OptionType, Side};
-    use crate::utils::setup_logger;
+
     use crate::{assert_decimal_eq, pos};
     use chrono::Utc;
     use rust_decimal_macros::dec;
@@ -1732,7 +1724,6 @@ mod tests_greeks {
 
     #[test]
     fn test_greeks_single_short_put() {
-        setup_logger();
         let position = create_test_position(pos!(100.0), Side::Short, OptionStyle::Put);
         info!("{:?}", position);
         let strategy = CustomStrategy::new(

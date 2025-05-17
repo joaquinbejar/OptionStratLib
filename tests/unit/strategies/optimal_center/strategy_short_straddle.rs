@@ -4,7 +4,6 @@ use {
     optionstratlib::strategies::base::Optimizable,
     optionstratlib::strategies::base::Positionable,
     optionstratlib::strategies::{FindOptimalSide, ShortStraddle},
-    optionstratlib::utils::setup_logger,
     optionstratlib::{ExpirationDate, Positive, pos},
     rust_decimal_macros::dec,
     std::error::Error,
@@ -12,8 +11,6 @@ use {
 
 #[test]
 fn test_short_straddle_integration() -> Result<(), Box<dyn Error>> {
-    setup_logger();
-
     // Define inputs for the ShortStraddle strategy
     let underlying_price = pos!(7138.5);
 

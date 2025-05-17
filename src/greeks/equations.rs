@@ -1086,7 +1086,7 @@ pub mod tests_delta_equations {
     use crate::model::types::{OptionStyle, Side};
     use crate::model::utils::create_sample_option;
     use crate::strategies::DELTA_THRESHOLD;
-    use crate::utils::logger::setup_logger;
+
     use crate::{ExpirationDate, assert_decimal_eq, pos};
     use approx::assert_relative_eq;
     use num_traits::ToPrimitive;
@@ -1095,7 +1095,6 @@ pub mod tests_delta_equations {
 
     #[test]
     fn test_delta_no_volatility_itm() {
-        setup_logger();
         let option = create_sample_option(
             OptionStyle::Call,
             Side::Long,
@@ -1111,7 +1110,6 @@ pub mod tests_delta_equations {
 
     #[test]
     fn test_delta_no_volatility_otm() {
-        setup_logger();
         let option = create_sample_option(
             OptionStyle::Call,
             Side::Long,
@@ -1127,7 +1125,6 @@ pub mod tests_delta_equations {
 
     #[test]
     fn test_delta_no_volatility_itm_put() {
-        setup_logger();
         let option = create_sample_option(
             OptionStyle::Put,
             Side::Long,
@@ -1143,7 +1140,6 @@ pub mod tests_delta_equations {
 
     #[test]
     fn test_delta_no_volatility_otm_put() {
-        setup_logger();
         let option = create_sample_option(
             OptionStyle::Put,
             Side::Long,
@@ -1159,7 +1155,6 @@ pub mod tests_delta_equations {
 
     #[test]
     fn test_delta_no_volatility_itm_short() {
-        setup_logger();
         let option = create_sample_option(
             OptionStyle::Call,
             Side::Short,
@@ -1175,7 +1170,6 @@ pub mod tests_delta_equations {
 
     #[test]
     fn test_delta_no_volatility_otm_short() {
-        setup_logger();
         let option = create_sample_option(
             OptionStyle::Call,
             Side::Short,
@@ -1191,7 +1185,6 @@ pub mod tests_delta_equations {
 
     #[test]
     fn test_delta_no_volatility_itm_put_short() {
-        setup_logger();
         let option = create_sample_option(
             OptionStyle::Put,
             Side::Short,
@@ -1207,7 +1200,6 @@ pub mod tests_delta_equations {
 
     #[test]
     fn test_delta_no_volatility_otm_put_short() {
-        setup_logger();
         let option = create_sample_option(
             OptionStyle::Put,
             Side::Short,
@@ -1223,7 +1215,6 @@ pub mod tests_delta_equations {
 
     #[test]
     fn test_delta_deep_in_the_money_call() {
-        setup_logger();
         let option = create_sample_option(
             OptionStyle::Call,
             Side::Long,
@@ -1322,7 +1313,7 @@ pub mod tests_gamma_equations {
     use crate::constants::DAYS_IN_A_YEAR;
     use crate::model::types::{OptionStyle, Side};
     use crate::model::utils::create_sample_option;
-    use crate::utils::logger::setup_logger;
+
     use crate::{ExpirationDate, pos};
     use approx::assert_relative_eq;
     use num_traits::ToPrimitive;
@@ -1330,7 +1321,6 @@ pub mod tests_gamma_equations {
 
     #[test]
     fn test_gamma_deep_in_the_money_call() {
-        setup_logger();
         let option = create_sample_option(
             OptionStyle::Call,
             Side::Long,
@@ -1441,7 +1431,7 @@ pub mod tests_gamma_equations {
 mod tests_gamma_equations_values {
     use super::*;
     use crate::model::types::{OptionStyle, Side};
-    use crate::utils::logger::setup_logger;
+
     use crate::{ExpirationDate, OptionType, pos};
     use approx::assert_relative_eq;
     use num_traits::ToPrimitive;
@@ -1449,7 +1439,6 @@ mod tests_gamma_equations_values {
 
     #[test]
     fn test_50_vol_10() {
-        setup_logger();
         let option = Options::new(
             OptionType::European,
             Side::Long,
@@ -1471,7 +1460,6 @@ mod tests_gamma_equations_values {
 
     #[test]
     fn test_50_vol_5() {
-        setup_logger();
         let option = Options::new(
             OptionType::European,
             Side::Long,
@@ -1493,7 +1481,6 @@ mod tests_gamma_equations_values {
 
     #[test]
     fn test_50_vol_20() {
-        setup_logger();
         let option = Options::new(
             OptionType::European,
             Side::Long,

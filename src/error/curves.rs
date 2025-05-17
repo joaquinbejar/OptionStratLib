@@ -430,8 +430,7 @@ mod tests {
 
     #[test]
     fn test_from_box_dyn_error() {
-        let boxed_error: Box<dyn Error> =
-            Box::new(std::io::Error::new(std::io::ErrorKind::Other, "io error"));
+        let boxed_error: Box<dyn Error> = Box::new(std::io::Error::other("io error"));
         let curves_error = CurveError::from(boxed_error);
         match curves_error {
             CurveError::StdError { reason } => assert_eq!(reason, "io error"),

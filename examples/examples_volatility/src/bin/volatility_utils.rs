@@ -13,7 +13,6 @@ use rust_decimal_macros::dec;
 use tracing::info;
 
 fn main() {
-    setup_logger();
     let returns = vec![dec!(0.01), dec!(0.02), dec!(0.01), dec!(0.03), dec!(0.00)];
 
     let const_vol = constant_volatility(&returns).unwrap();

@@ -7,7 +7,6 @@ use {
     optionstratlib::strategies::CustomStrategy,
     optionstratlib::strategies::base::Optimizable,
     optionstratlib::strategies::{FindOptimalSide, Strategies},
-    optionstratlib::utils::setup_logger,
     optionstratlib::{ExpirationDate, Positive, pos},
     optionstratlib::{OptionStyle, OptionType, Options, Side},
     rust_decimal_macros::dec,
@@ -18,8 +17,6 @@ use {
 #[test]
 #[ignore]
 fn test_custom_strategy_integration() -> Result<(), Box<dyn Error>> {
-    setup_logger();
-
     // Define common parameters
     let underlying_price = pos!(2340.0);
     let underlying_symbol = "GAS".to_string();

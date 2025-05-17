@@ -27,7 +27,6 @@ fn get_option(underlying_asset: &Positive, maturity: &Positive) -> Options {
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    setup_logger();
     let t_start = dec!(35.0);
     let t_end = dec!(68.0);
     let steps = 100;

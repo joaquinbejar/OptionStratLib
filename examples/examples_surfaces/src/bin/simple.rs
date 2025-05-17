@@ -6,10 +6,11 @@ use rust_decimal::prelude::FromPrimitive;
 use std::error::Error;
 use std::f64::consts::PI;
 use std::path::Path;
+use tracing::info;
 
 /// Simple test for Surface3D rendering
 fn test_simple_surface() -> Result<(), GraphError> {
-    println!("Creating simple 3D surface for testing...");
+    info!("Creating simple 3D surface for testing...");
 
     // Create a simple surface (z = sin(x) * cos(y))
     let n_points = 20; // Grid resolution
@@ -63,12 +64,12 @@ fn test_simple_surface() -> Result<(), GraphError> {
 
     // Save as HTML (should work)
     let html_path = Path::new("Draws/Surfaces/simple_surface.html");
-    println!("Saving surface as HTML to: {}", html_path.display());
+    info!("Saving surface as HTML to: {}", html_path.display());
     plot.write_html(html_path);
 
     // Attempt to save as PNG (may fail)
     let png_path = Path::new("Draws/Surfaces/simple_surface.png");
-    println!(
+    info!(
         "Attempting to save surface as PNG to: {}",
         png_path.display()
     );
@@ -76,7 +77,7 @@ fn test_simple_surface() -> Result<(), GraphError> {
 
     // Try other formats
     let svg_path = Path::new("Draws/Surfaces/simple_surface.svg");
-    println!(
+    info!(
         "Attempting to save surface as SVG to: {}",
         svg_path.display()
     );

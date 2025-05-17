@@ -3,14 +3,12 @@ use optionstratlib::ExpirationDate;
 use optionstratlib::strategies::base::BreakEvenable;
 use optionstratlib::strategies::bear_call_spread::BearCallSpread;
 use optionstratlib::strategies::{BasicAble, Strategies};
-use optionstratlib::utils::setup_logger;
 use optionstratlib::{Positive, pos};
 use rust_decimal_macros::dec;
 use std::error::Error;
 
 #[test]
 fn test_bear_call_spread_integration() -> Result<(), Box<dyn Error>> {
-    setup_logger();
     // Define inputs for the BearCallSpread strategy
     let underlying_price = pos!(5781.88);
 

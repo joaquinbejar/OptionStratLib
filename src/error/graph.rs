@@ -44,10 +44,7 @@ impl From<std::io::Error> for GraphError {
 
 impl From<Box<dyn Error>> for GraphError {
     fn from(err: Box<dyn Error>) -> Self {
-        GraphError::Io(std::io::Error::new(
-            std::io::ErrorKind::Other,
-            err.to_string(),
-        ))
+        GraphError::Io(std::io::Error::other(err.to_string()))
     }
 }
 

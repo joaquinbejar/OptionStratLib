@@ -634,10 +634,7 @@ mod tests_extended {
         ));
 
         // Test de Box<dyn Error> a PositionError
-        let std_error: Box<dyn Error> = Box::new(std::io::Error::new(
-            std::io::ErrorKind::Other,
-            "dynamic error",
-        ));
+        let std_error: Box<dyn Error> = Box::new(std::io::Error::other("dynamic error"));
         let position_error = PositionError::from(std_error);
         assert!(matches!(
             position_error,

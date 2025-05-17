@@ -3,7 +3,6 @@ use {
     optionstratlib::strategies::base::Optimizable,
     optionstratlib::strategies::base::Positionable,
     optionstratlib::strategies::{FindOptimalSide, IronButterfly},
-    optionstratlib::utils::setup_logger,
     optionstratlib::{ExpirationDate, Positive, pos},
     optionstratlib::{OptionStyle, Side, assert_pos_relative_eq},
     rust_decimal_macros::dec,
@@ -12,8 +11,6 @@ use {
 
 #[test]
 fn test_iron_butterfly_integration() -> Result<(), Box<dyn Error>> {
-    setup_logger();
-
     // Define inputs for the IronButterfly strategy
     let underlying_price = pos!(5672.9);
 

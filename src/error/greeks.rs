@@ -750,10 +750,7 @@ mod tests_extended {
 
     #[test]
     fn test_boxed_error_conversion() {
-        let boxed_error: Box<dyn Error> = Box::new(std::io::Error::new(
-            std::io::ErrorKind::Other,
-            "Some IO error",
-        ));
+        let boxed_error: Box<dyn Error> = Box::new(std::io::Error::other("Some IO error"));
         let error: GreeksError = boxed_error.into();
         assert_eq!(format!("{}", error), "Standard error: Some IO error");
     }

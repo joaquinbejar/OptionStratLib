@@ -14,7 +14,6 @@ use optionstratlib::{OptionStyle, Side};
 use tracing::info;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    setup_logger();
     let mut option_chain_base =
         OptionChain::load_from_json("examples/Chains/SP500-18-oct-2024-5781.88.json")?;
     // option_chain_base.update_expiration_date(get_today_formatted());

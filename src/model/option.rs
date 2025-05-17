@@ -1129,14 +1129,13 @@ mod tests_valid_option {
 mod tests_time_value {
     use super::*;
     use crate::model::utils::create_sample_option_simplest_strike;
-    use crate::utils::logger::setup_logger;
+
     use crate::{assert_decimal_eq, pos};
     use rust_decimal_macros::dec;
     use tracing::debug;
 
     #[test]
     fn test_calculate_time_value_long_call() {
-        setup_logger();
         let option =
             create_sample_option_simplest_strike(Side::Long, OptionStyle::Call, pos!(105.0));
         let time_value = option.time_value().unwrap();
@@ -1155,7 +1154,6 @@ mod tests_time_value {
 
     #[test]
     fn test_calculate_time_value_long_put() {
-        setup_logger();
         let option = create_sample_option_simplest_strike(Side::Long, OptionStyle::Put, pos!(95.0));
         let time_value = option.time_value().unwrap();
         assert!(time_value > Decimal::ZERO);
@@ -1190,7 +1188,6 @@ mod tests_time_value {
 
     #[test]
     fn test_calculate_time_value_deep_in_the_money() {
-        setup_logger();
         let call = create_sample_option_simplest_strike(Side::Long, OptionStyle::Call, pos!(150.0));
         let put = create_sample_option_simplest_strike(Side::Long, OptionStyle::Put, pos!(50.0));
 
@@ -1216,12 +1213,11 @@ mod tests_options_payoffs {
     use super::*;
     use crate::model::utils::create_sample_option_simplest_strike;
     use crate::pos;
-    use crate::utils::logger::setup_logger;
+
     use rust_decimal_macros::dec;
 
     #[test]
     fn test_payoff_european_call_long() {
-        setup_logger();
         let call_option =
             create_sample_option_simplest_strike(Side::Long, OptionStyle::Call, pos!(95.0));
         let call_payoff = call_option.payoff().unwrap();
@@ -1235,7 +1231,6 @@ mod tests_options_payoffs {
 
     #[test]
     fn test_payoff_european_call_short() {
-        setup_logger();
         let call_option =
             create_sample_option_simplest_strike(Side::Short, OptionStyle::Call, pos!(95.0));
         let call_payoff = call_option.payoff().unwrap();

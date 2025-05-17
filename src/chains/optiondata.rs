@@ -1297,7 +1297,7 @@ impl fmt::Display for OptionData {
 #[cfg(test)]
 mod optiondata_coverage_tests {
     use super::*;
-    use crate::utils::logger::setup_logger;
+
     use crate::{ExpirationDate, spos};
     use rust_decimal_macros::dec;
 
@@ -1333,7 +1333,6 @@ mod optiondata_coverage_tests {
 
     #[test]
     fn test_calculate_prices_with_refresh() {
-        setup_logger();
         let mut option_data = create_test_option_data();
 
         let price_params = OptionDataPriceParams::new(
@@ -1386,7 +1385,6 @@ mod optiondata_coverage_tests {
 
     #[test]
     fn test_calculate_gamma_no_implied_volatility() {
-        setup_logger();
         let mut option_data = create_test_option_data();
 
         let price_params = OptionDataPriceParams::new(
@@ -1443,7 +1441,7 @@ mod optiondata_coverage_tests {
 mod tests_get_position {
     use super::*;
     use crate::model::ExpirationDate;
-    use crate::utils::logger::setup_logger;
+
     use crate::{assert_pos_relative_eq, pos, spos};
     use chrono::{Duration, Utc};
     use rust_decimal_macros::dec;
@@ -1479,7 +1477,6 @@ mod tests_get_position {
 
     #[test]
     fn test_get_position_long_call() {
-        setup_logger();
         let option_data = create_test_option_data();
         let price_params = create_test_price_params();
 
@@ -1742,7 +1739,6 @@ mod tests_get_position {
 
     #[test]
     fn test_get_position_uses_market_price_long_call() {
-        setup_logger();
         let option_data = create_test_option_data();
         let price_params = create_test_price_params();
 

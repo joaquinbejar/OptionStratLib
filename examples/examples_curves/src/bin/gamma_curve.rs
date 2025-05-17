@@ -26,7 +26,6 @@ fn get_option(strike: &Positive) -> Options {
     )
 }
 fn main() -> Result<(), Box<dyn Error>> {
-    setup_logger();
     let params = ConstructionParams::D2 {
         t_start: dec!(10.0),
         t_end: dec!(90),

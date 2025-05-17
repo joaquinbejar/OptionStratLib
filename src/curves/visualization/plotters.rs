@@ -403,10 +403,8 @@ mod tests_extended {
     #[test]
     fn test_map_err_to_std_error() {
         let result: Result<(), CurveError> =
-            Err(std::io::Error::new(std::io::ErrorKind::Other, "Test error")).map_err(|e| {
-                CurveError::StdError {
-                    reason: e.to_string(),
-                }
+            Err(std::io::Error::other("Test error")).map_err(|e| CurveError::StdError {
+                reason: e.to_string(),
             });
 
         assert!(result.is_err());

@@ -13,8 +13,6 @@ use std::error::Error;
 use tracing::info;
 
 fn main() -> Result<(), Box<dyn Error>> {
-    setup_logger();
-
     let underlying_price = pos!(2340.0);
     let underlying_symbol = "GAS".to_string();
     let expiration = ExpirationDate::Days(pos!(6.0));

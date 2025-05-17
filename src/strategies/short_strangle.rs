@@ -2912,7 +2912,6 @@ mod test_adjustments_pnl {
     use crate::strategies::{
         BasicAble, DELTA_THRESHOLD, DeltaAdjustment, DeltaNeutrality, ShortStrangle,
     };
-    use crate::utils::setup_logger;
     use crate::{
         ExpirationDate, OptionStyle, Positive, Side, assert_decimal_eq, assert_pos_relative_eq, pos,
     };
@@ -2943,7 +2942,6 @@ mod test_adjustments_pnl {
 
     #[test]
     fn create_test_reducing_adjustments() {
-        setup_logger();
         let mut strategy = get_strategy(pos!(7450.0), pos!(7250.0));
         info!("short_call: {}", strategy.short_call.premium);
         info!("short_put: {}", strategy.short_put.premium);

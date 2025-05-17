@@ -1,9 +1,9 @@
 use optionstratlib::error::GraphError;
 use optionstratlib::visualization::{Graph, GraphData, Series2D, TraceMode};
 use rust_decimal_macros::dec;
+use tracing::info;
 
 fn main() -> Result<(), GraphError> {
-    // Creamos nuestra serie de datos
     let series = Series2D {
         x: vec![dec!(1.0), dec!(2.0), dec!(3.0)],
         y: vec![dec!(4.0), dec!(5.0), dec!(6.0)],
@@ -25,8 +25,8 @@ fn main() -> Result<(), GraphError> {
         AnonymousChart(series)
     };
     let path: &std::path::Path = "Draws/Visualization/interactive_chart.html".as_ref();
-    chart.to_interactive_html(path)?;
+    chart.write_html(path)?;
 
-    println!("Interactive HTML chart created successfully!");
+    info!("Interactive HTML chart created successfully!");
     Ok(())
 }

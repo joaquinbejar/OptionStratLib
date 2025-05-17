@@ -4,7 +4,6 @@ use {
     optionstratlib::chains::chain::OptionChain,
     optionstratlib::strategies::base::Optimizable,
     optionstratlib::strategies::{FindOptimalSide, LongButterflySpread, Strategies},
-    optionstratlib::utils::setup_logger,
     optionstratlib::{ExpirationDate, Positive, pos},
     rust_decimal_macros::dec,
     std::error::Error,
@@ -12,8 +11,6 @@ use {
 
 #[test]
 fn test_long_butterfly_spread_integration() -> Result<(), Box<dyn Error>> {
-    setup_logger();
-
     // Define inputs for the LongButterflySpread strategy
     let underlying_price = pos!(5795.88);
 

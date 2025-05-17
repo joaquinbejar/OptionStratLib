@@ -270,14 +270,13 @@ mod tests_span {
     use crate::model::types::{OptionStyle, Side};
     use crate::model::utils::create_sample_option;
     use crate::pos;
-    use crate::utils::logger::setup_logger;
+
     use chrono::Utc;
     use rust_decimal_macros::dec;
     use tracing::info;
 
     #[test]
     fn test_span_margin() {
-        setup_logger();
         let option = create_sample_option(
             OptionStyle::Call,
             Side::Short,

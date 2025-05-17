@@ -59,8 +59,6 @@ fn implied_volatility(
 }
 
 fn main() {
-    setup_logger();
-
     let s = 2476.6;
     let k = 2530.0;
     let t = 0.0070;

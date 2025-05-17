@@ -556,7 +556,7 @@
 //!     )
 //! }
 //! fn main() -> Result<(), Box<dyn Error>> {
-//!     setup_logger();
+//!     
 //!     let option = create_sample_option();
 //!     info!("Title: {}", option.get_title());
 //!     info!("Greeks: {:?}", option.greeks());
@@ -591,7 +591,7 @@
 //! use rust_decimal_macros::dec;
 //!
 //! fn main() -> Result<(), Box<dyn Error>> {
-//!     setup_logger();
+//!     
 //!     let underlying_price = pos!(5781.88);
 //!     let strategy = BullCallSpread::new(
 //!         "SP500".to_string(),

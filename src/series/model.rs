@@ -197,10 +197,7 @@ impl OptionSeries {
         let chain_params = match chain_params {
             Some((_, option_chain)) => option_chain.to_build_params()?,
             None => {
-                return Err(Box::new(std::io::Error::new(
-                    std::io::ErrorKind::Other,
-                    "No chains found",
-                )));
+                return Err(Box::new(std::io::Error::other("No chains found")));
             }
         };
 
@@ -746,8 +743,6 @@ mod tests_option_series {
         #[test]
         fn test_serialization_deserialization() {
             // Set up the logger if not already done
-            crate::utils::logger::setup_logger();
-
             let original = create_test_series();
 
             // Serialize

@@ -5,15 +5,12 @@ use optionstratlib::Positive;
 use optionstratlib::strategies::base::BreakEvenable;
 use optionstratlib::strategies::bull_call_spread::BullCallSpread;
 use optionstratlib::strategies::{BasicAble, Strategies};
-use optionstratlib::utils::setup_logger;
 use optionstratlib::{assert_pos_relative_eq, pos};
 use rust_decimal_macros::dec;
 use std::error::Error;
 
 #[test]
 fn test_bull_call_spread_integration() -> Result<(), Box<dyn Error>> {
-    setup_logger();
-
     // Define inputs for the BullCallSpread strategy
     let underlying_price = pos!(5781.88);
 

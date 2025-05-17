@@ -750,7 +750,7 @@ mod tests_extended {
 
     #[test]
     fn test_box_dyn_error_conversion() {
-        let io_error = std::io::Error::new(std::io::ErrorKind::Other, "test error");
+        let io_error = std::io::Error::other("test error");
         let boxed_error: Box<dyn Error> = Box::new(io_error);
         let prob_error = ProbabilityError::from(boxed_error);
         assert!(matches!(prob_error, ProbabilityError::StdError(..)));

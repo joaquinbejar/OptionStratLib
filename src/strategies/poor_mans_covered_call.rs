@@ -1194,12 +1194,10 @@ mod tests_pmcc_best_area {
     use super::*;
     use crate::constants::DAYS_IN_A_YEAR;
     use crate::pos;
-    use crate::utils::logger::setup_logger;
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
     fn set_up() -> Result<(PoorMansCoveredCall, OptionChain), String> {
-        setup_logger();
         let option_chain =
             OptionChain::load_from_json("./examples/Chains/SP500-18-oct-2024-5781.88.json")
                 .unwrap();
@@ -1271,12 +1269,11 @@ mod tests_pmcc_best_ratio {
     use super::*;
     use crate::constants::DAYS_IN_A_YEAR;
     use crate::pos;
-    use crate::utils::logger::setup_logger;
+
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
     fn set_up() -> Result<(PoorMansCoveredCall, OptionChain), String> {
-        setup_logger();
         let option_chain =
             OptionChain::load_from_json("./examples/Chains/SP500-18-oct-2024-5781.88.json")
                 .unwrap();

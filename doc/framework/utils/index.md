@@ -38,10 +38,10 @@ Provides logging functionality with configurable log levels:
 use optionstratlib::utils::logger::{setup_logger, setup_logger_with_level};
 
 // Initialize logger with environment variable
-setup_logger();
+
 
 // Initialize logger with specific level
-setup_logger_with_level("DEBUG");
+
 ```
 :::
 
@@ -164,7 +164,7 @@ use optionstratlib::utils::logger::setup_logger_with_level;
 use tracing::{debug, info, warn};
 
 // Setup with specific level
-setup_logger_with_level("DEBUG");
+
 
 // Log messages
 debug!("Detailed information for debugging");

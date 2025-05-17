@@ -4,7 +4,6 @@ use {
     optionstratlib::chains::chain::OptionChain,
     optionstratlib::strategies::base::Optimizable,
     optionstratlib::strategies::{CallButterfly, FindOptimalSide, Strategies},
-    optionstratlib::utils::setup_logger,
     optionstratlib::{ExpirationDate, Positive, pos},
     rust_decimal_macros::dec,
     std::error::Error,
@@ -12,8 +11,6 @@ use {
 
 #[test]
 fn test_call_butterfly_integration() -> Result<(), Box<dyn Error>> {
-    setup_logger();
-
     // Define inputs for the CallButterfly strategy
     let underlying_price = pos!(5781.88);
 

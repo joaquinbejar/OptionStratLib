@@ -32,7 +32,6 @@ fn create_sample_option() -> Options {
     )
 }
 fn main() -> Result<(), Box<dyn Error>> {
-    setup_logger();
     let option = create_sample_option();
     info!("Title: {}", option.get_title());
     info!("Greeks: {:?}", option.greeks());

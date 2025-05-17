@@ -611,7 +611,7 @@ mod tests_extended {
 
     #[test]
     fn test_multiple_conversions() {
-        let io_error = std::io::Error::new(std::io::ErrorKind::Other, "test error");
+        let io_error = std::io::Error::other("test error");
         let boxed: Box<dyn Error> = Box::new(io_error);
         let error: OptionsError = boxed.into();
 

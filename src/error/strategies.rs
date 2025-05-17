@@ -557,10 +557,7 @@ mod tests_extended {
 
     #[test]
     fn test_strategy_error_from_boxed_error() {
-        let boxed_error: Box<dyn Error> = Box::new(std::io::Error::new(
-            std::io::ErrorKind::Other,
-            "Underlying failure",
-        ));
+        let boxed_error: Box<dyn Error> = Box::new(std::io::Error::other("Underlying failure"));
         let error: StrategyError = boxed_error.into();
         assert_eq!(format!("{}", error), "Error: Underlying failure");
     }

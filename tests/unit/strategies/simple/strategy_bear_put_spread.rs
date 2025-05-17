@@ -5,15 +5,12 @@ use optionstratlib::Positive;
 use optionstratlib::strategies::base::BreakEvenable;
 use optionstratlib::strategies::bear_put_spread::BearPutSpread;
 use optionstratlib::strategies::{BasicAble, Strategies};
-use optionstratlib::utils::setup_logger;
 use optionstratlib::{assert_pos_relative_eq, pos};
 use rust_decimal_macros::dec;
 use std::error::Error;
 
 #[test]
 fn test_bear_put_spread_integration() -> Result<(), Box<dyn Error>> {
-    setup_logger();
-
     // Define inputs for the BearPutSpread strategy
     let underlying_price = pos!(5781.88);
 

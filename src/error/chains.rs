@@ -796,10 +796,7 @@ mod tests_extended {
             ChainError::FileError(FileErrorKind::IOError(_))
         ));
 
-        let std_error: Box<dyn Error> = Box::new(std::io::Error::new(
-            std::io::ErrorKind::Other,
-            "dynamic error",
-        ));
+        let std_error: Box<dyn Error> = Box::new(std::io::Error::other("dynamic error"));
         let chain_error = ChainError::from(std_error);
         assert!(matches!(chain_error, ChainError::DynError { .. }));
     }

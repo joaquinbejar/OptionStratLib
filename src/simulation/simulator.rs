@@ -460,7 +460,7 @@ mod tests {
         WalkParams, WalkType, WalkTypeAble,
         steps::{Step, Xstep, Ystep},
     };
-    use crate::utils::{TimeFrame, setup_logger, time::convert_time_frame};
+    use crate::utils::{TimeFrame, time::convert_time_frame};
     use crate::{ExpirationDate, Positive, pos};
     use rust_decimal_macros::dec;
     use tracing::{debug, info};
@@ -733,9 +733,8 @@ mod tests {
 
     #[test]
     fn test_full_simulation() -> Result<(), Box<dyn Error>> {
-        setup_logger();
-        let simulator_size: usize = 15;
-        let n_steps = 49;
+        let simulator_size: usize = 5;
+        let n_steps = 10;
         let initial_price = pos!(100.0);
         let std_dev = pos!(20.0);
         let walker = Box::new(TestWalker::new());

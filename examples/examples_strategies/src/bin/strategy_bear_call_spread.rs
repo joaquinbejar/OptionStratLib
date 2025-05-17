@@ -14,8 +14,6 @@ use std::error::Error;
 use tracing::info;
 
 fn main() -> Result<(), Box<dyn Error>> {
-    setup_logger();
-
     let underlying_price = pos!(5781.88);
 
     let strategy = BearCallSpread::new(

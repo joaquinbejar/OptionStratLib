@@ -10,7 +10,6 @@ use std::error::Error;
 use tracing::info;
 
 fn main() -> Result<(), Box<dyn Error>> {
-    setup_logger();
     let underlying_price = pos!(2810.9);
 
     let strategy = IronButterfly::new(

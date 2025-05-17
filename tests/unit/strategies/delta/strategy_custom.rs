@@ -3,7 +3,6 @@ use optionstratlib::greeks::Greeks;
 use optionstratlib::model::position::Position;
 use optionstratlib::model::types::{OptionStyle, OptionType, Side};
 use optionstratlib::strategies::custom::CustomStrategy;
-use optionstratlib::utils::setup_logger;
 use optionstratlib::{ExpirationDate, Options, Positive};
 use optionstratlib::{assert_decimal_eq, pos};
 use rust_decimal_macros::dec;
@@ -12,8 +11,6 @@ use std::error::Error;
 #[test]
 #[ignore]
 fn test_custom_strategy_integration() -> Result<(), Box<dyn Error>> {
-    setup_logger();
-
     // Define common parameters
     let underlying_price = pos!(2340.0);
     let underlying_symbol = "GAS".to_string();
