@@ -388,26 +388,8 @@ mod tests_simulate_returns_bis {
     use super::*;
     use crate::model::decimal::DecimalStats;
     use crate::{assert_decimal_eq, pos};
-    use num_traits::ToPrimitive;
+
     use rust_decimal_macros::dec;
-    use tracing::debug;
-
-    fn mean(values: &[Decimal]) -> Decimal {
-        if values.is_empty() {
-            return Decimal::ZERO;
-        }
-        values.to_vec().mean()
-    }
-
-    fn std_dev(values: &[Decimal]) -> Decimal {
-        if values.is_empty() {
-            return Decimal::ZERO;
-        }
-        let mean = mean(values);
-        let variance = values.iter().map(|x| (x - mean).powi(2)).sum::<Decimal>()
-            / Decimal::from_f64(values.len() as f64).unwrap();
-        variance.sqrt().unwrap()
-    }
 
     #[test]
     fn test_simulate_returns_length() {
