@@ -119,7 +119,10 @@ check-cargo-readme:
 
 .PHONY: check-spanish
 check-spanish:
-	cd scripts && python3 spanish.py ../src && cd ..
+	@rg -n --pcre2 -e '^\s*(//|///|//!|#|/\*|\*).*?[áéíóúÁÉÍÓÚñÑ¿¡]' \
+    	    --glob '!target/*' \
+    	    --glob '!**/*.png' \
+    	    . || (echo "❌  Spanish comments found"; exit 1)
 
 .PHONY: zip
 zip:
