@@ -249,9 +249,13 @@ impl BreakEvenable for ShortCall {
     fn update_break_even_points(&mut self) -> Result<(), StrategyError> {
         self.break_even_points = Vec::new();
 
+        // For a short call, net_cost() from Position returns (fees - premium_received).
+        // Break-even = strike + (premium_received - fees) / quantity
+        // So, break-even = strike - (fees - premium_received) / quantity
+        // Which is strike - (net_cost_from_position / quantity)
         self.break_even_points.push(
             (self.short_call.option.strike_price
-                + self.get_net_cost()? / self.short_call.option.quantity)
+                - self.short_call.net_cost()? / self.short_call.option.quantity)
                 .round_to(2),
         );
 
@@ -273,16 +277,12 @@ impl Strategies for ShortCall {
         }
     }
     fn get_max_loss(&self) -> Result<Positive, StrategyError> {
-        let loss = self.calculate_profit_at(&self.short_call.option.strike_price)?;
-        if loss <= Decimal::ZERO {
-            Ok(loss.abs().into())
-        } else {
-            Err(StrategyError::ProfitLossError(
-                ProfitLossErrorKind::MaxLossError {
-                    reason: "Max loss is negative".to_string(),
-                },
-            ))
-        }
+        // Max loss for a short call is theoretically unlimited.
+        Err(StrategyError::ProfitLossError(
+            ProfitLossErrorKind::MaxLossError {
+                reason: "Maximum loss is unlimited for a short call.".to_string(),
+            },
+        ))
     }
     fn get_profit_area(&self) -> Result<Decimal, StrategyError> {
         let high = self.get_max_profit().unwrap_or(Positive::ZERO);

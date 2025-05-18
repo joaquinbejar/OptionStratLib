@@ -1933,7 +1933,7 @@ mod tests_bear_put_spread_profit {
         let spread = create_test_spread();
         let price = pos!(80.0);
 
-        // El profit debería ser igual al max profit
+        // Profit should be equal to max profit
         assert_eq!(spread.calculate_profit_at(&price).unwrap(), dec!(8.0));
     }
 

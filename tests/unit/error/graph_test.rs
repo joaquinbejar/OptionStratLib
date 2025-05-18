@@ -38,7 +38,7 @@ fn test_graph_error_from_io_error() {
 
     // Verify it's an Io variant
     match graph_error {
-        GraphError::Io(_) => assert!(true),
+        GraphError::Io(_) => { /* Successfully matched Io variant */ }
         _ => panic!("Expected GraphError::Io variant"),
     }
 }
@@ -46,15 +46,14 @@ fn test_graph_error_from_io_error() {
 #[test]
 fn test_graph_error_from_box_dyn_error() {
     // Create a boxed error
-    let boxed_error: Box<dyn Error> =
-        Box::new(io::Error::other("Generic error"));
+    let boxed_error: Box<dyn Error> = Box::new(io::Error::other("Generic error"));
 
     // Convert to GraphError using From trait
     let graph_error: GraphError = boxed_error.into();
 
     // Verify it's an Io variant
     match graph_error {
-        GraphError::Io(_) => assert!(true),
+        GraphError::Io(_) => { /* Successfully matched Io variant */ }
         _ => panic!("Expected GraphError::Io variant"),
     }
 }

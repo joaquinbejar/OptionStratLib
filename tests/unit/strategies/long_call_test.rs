@@ -87,7 +87,7 @@ fn test_long_call_get_option_basic_type() {
     let option_types = long_call.get_option_basic_type();
     assert_eq!(option_types.len(), 1);
 
-    // Verificar que contiene una opción de tipo Call
+    // Verify that it contains a Call option
     let mut found = false;
     for option_type in option_types.iter() {
         if option_type.option_style == &OptionStyle::Call {
@@ -258,7 +258,7 @@ fn test_long_call_calculate_profit_at() {
 fn test_long_call_add_position() {
     let mut long_call = create_test_long_call();
 
-    // Crear una nueva posición válida (long call)
+    // Create a new valid position (long call)
     let option = Options::new(
         OptionType::European,
         Side::Long,
@@ -285,7 +285,7 @@ fn test_long_call_add_position() {
     let result = long_call.add_position(&position);
     assert!(result.is_ok());
 
-    // Probar con una posición inválida (put en lugar de call)
+    // Test with an invalid position (put instead of call)
     let invalid_option = Options::new(
         OptionType::European,
         Side::Long,
@@ -330,21 +330,6 @@ fn test_long_call_get_positions() {
 fn test_long_call_get_profit_ratio() {
     let long_call = create_test_long_call();
 
-    // The profit/loss ratio can be positive, zero, or even undefined
-    // depending on how the calculation is implemented
-    match long_call.get_profit_ratio() {
-        Ok(_ratio) => {
-            // If a ratio is returned, we simply verify that it exists
-            // We don't need to verify anything else, as Decimal cannot be NaN
-        }
-        Err(e) => {
-            // If there is an error, we verify that it's because the ratio is undefined
-            // (for example, if the maximum loss is zero or the profit is infinite)
-            assert!(
-                e.to_string().contains("division")
-                    || e.to_string().contains("infinite")
-                    || e.to_string().contains("undefined")
-            );
-        }
-    }
+    let ratio = long_call.get_profit_ratio().unwrap();
+    assert_eq!(ratio, Decimal::ZERO);
 }

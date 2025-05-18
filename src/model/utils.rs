@@ -441,7 +441,7 @@ pub fn calculate_optimal_price_range(
     Ok((min_price_rounded, max_price_rounded))
 }
 
-/// Genera un vector de precios para la gráfica de payoff
+/// Generates a price vector for the payoff graph
 pub fn generate_price_points(
     min_price: Decimal,
     max_price: Decimal,

@@ -142,10 +142,10 @@ pub fn setup_logger_with_level(log_level: &str) {
 
 #[cfg(test)]
 mod tests_setup_logger {
+    use crate::utils::setup_logger;
     use std::env;
     use tracing::subscriber::set_global_default;
     use tracing_subscriber::FmtSubscriber;
-    use crate::utils::setup_logger;
 
     #[test]
     fn test_logger_initialization_info() {

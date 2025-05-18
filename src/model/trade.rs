@@ -654,7 +654,7 @@ mod tests {
 
     /* ---------- TradeStatusAble ---------- */
 
-    /// helper: assert that two trades son idénticos salvo el campo `status`
+    /// helper: assert that two trades are identical except for the `status` field
     fn assert_same_except_status(a: &Trade, b: &Trade) {
         let mut aa = a.clone();
         aa.status = b.status.clone();

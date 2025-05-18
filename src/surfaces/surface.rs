@@ -2037,7 +2037,7 @@ mod tests_surface_linear_interpolation {
     #[test]
     fn test_boundary_interpolation() {
         let surface = create_test_surface();
-        // Test interpolación en el borde
+        // Test interpolation on the edge
         let result = surface
             .linear_interpolate(Point2D::new(dec!(0.0), dec!(0.5)))
             .unwrap();
@@ -2055,7 +2055,7 @@ mod tests_surface_linear_interpolation {
         ]);
         let surface = Surface::new(points);
 
-        // La interpolación en cualquier punto debe mantener el gradiente
+        // Interpolation at any point should maintain the gradient
         let result = surface
             .linear_interpolate(Point2D::new(dec!(0.5), dec!(0.5)))
             .unwrap();
@@ -2068,7 +2068,7 @@ mod tests_surface_linear_interpolation {
         let result = surface
             .linear_interpolate(Point2D::new(dec!(0.333333), dec!(0.333333)))
             .unwrap();
-        // Verificar que el resultado tiene la precisión esperada
+        // Verify that the result has the expected precision
         assert!(result.z >= dec!(0.0) && result.z <= dec!(2.0));
     }
 }

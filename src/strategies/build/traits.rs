@@ -57,7 +57,7 @@ mod tests {
     use crate::strategies::Strategies;
     use crate::strategies::base::{BasicAble, BreakEvenable, Positionable, Validable};
 
-    /// Mock para una estrategia específica
+    /// Mock for a specific strategy
     #[derive(Debug, PartialEq)]
     struct TestStrategy;
 

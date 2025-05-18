@@ -529,7 +529,7 @@ mod tests {
             let mut points = BTreeSet::new();
 
             if !should_fail {
-                // Crear algunos puntos válidos
+                // Create some valid points
                 points.insert(Point2D::new(dec!(1.0), dec!(2.0)));
                 points.insert(Point2D::new(dec!(2.0), dec!(3.0)));
                 points.insert(Point2D::new(dec!(3.0), dec!(4.0)));
@@ -557,7 +557,7 @@ mod tests {
         }
     }
 
-    // Mock implementación para StatisticalCurve
+    // Mock implementation for StatisticalCurve
     struct MockStatisticalCurve {
         x_values: Vec<Decimal>,
     }
@@ -763,7 +763,7 @@ mod tests {
             moving_average: vec![],
         };
 
-        // Probar generación de curva válida
+        // Test valid curve generation
         let result = mock.generate_statistical_curve(
             &basic_metrics,
             &shape_metrics,
@@ -789,7 +789,7 @@ mod tests {
         points.insert(Point2D::new(dec!(3.0), dec!(4.0)));
         let curve = Curve::new(points);
 
-        // Métricas objetivo cercanas a las reales (dentro de la tolerancia)
+        // Target metrics close to actual (within tolerance)
         let target_metrics = BasicMetrics {
             mean: dec!(3.1),
             median: dec!(3.0),

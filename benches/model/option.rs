@@ -108,7 +108,7 @@ pub(crate) fn benchmark_valuations(c: &mut Criterion) {
 
 pub(crate) fn benchmark_binary_tree(c: &mut Criterion) {
     let mut group = c.benchmark_group("Binary Tree Operations");
-    // Configurar más tiempo para las muestras
+    // Configure more time for samples
     group
         .sample_size(50)
         .warm_up_time(std::time::Duration::from_secs(5))
