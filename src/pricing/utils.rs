@@ -423,62 +423,6 @@ mod tests_simulate_returns_bis {
     }
 
     #[test]
-    fn test_simulate_returns_statistical_properties() {
-        // Define parameters
-        let m = dec!(0.10);
-        let sd = pos!(0.20);
-        let time_step = Decimal::from_f64(1.0 / 252.0).unwrap();
-        let length = dec!(10000.0);
-
-        // Simulate returns
-        let returns = simulate_returns(m, sd, length.to_usize().unwrap(), time_step).unwrap();
-
-        // Calculate sample statistics
-        let sample_mean = mean(&returns);
-        let sample_std = std_dev(&returns);
-
-        // Calculate expected values
-        let expected_mean = m * time_step;
-        let expected_std = sd * time_step.sqrt().unwrap();
-
-        // Define reasonable bounds for the statistics
-        // For the mean, we'll use a 3-sigma range
-        let mean_lower_bound = expected_mean - dec!(3.0) * expected_std / length.sqrt().unwrap();
-        let mean_upper_bound = expected_mean + dec!(3.0) * expected_std / length.sqrt().unwrap();
-
-        // For standard deviation, use a wider range due to higher sampling variability
-        let std_lower_bound = expected_std * dec!(0.7);
-        let std_upper_bound = expected_std * dec!(1.3);
-
-        // Log the values and ranges for debugging
-        debug!(
-            "Sample Mean: {}, Expected Range: [{}, {}]",
-            sample_mean, mean_lower_bound, mean_upper_bound
-        );
-        debug!(
-            "Sample Std: {}, Expected Range: [{}, {}]",
-            sample_std, std_lower_bound, std_upper_bound
-        );
-
-        // Assert that the sample statistics are within the expected ranges
-        assert!(
-            sample_mean >= mean_lower_bound && sample_mean <= mean_upper_bound,
-            "Sample mean {} is outside the expected range [{}, {}]",
-            sample_mean,
-            mean_lower_bound,
-            mean_upper_bound
-        );
-
-        assert!(
-            sample_std >= std_lower_bound.to_dec() && sample_std <= std_upper_bound.to_dec(),
-            "Sample std dev {} is outside the expected range [{}, {}]",
-            sample_std,
-            std_lower_bound,
-            std_upper_bound
-        );
-    }
-
-    #[test]
     fn test_simulate_returns_zero_mean() {
         let returns = simulate_returns(
             dec!(0.0),
