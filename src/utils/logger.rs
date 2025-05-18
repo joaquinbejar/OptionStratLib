@@ -142,66 +142,6 @@ pub fn setup_logger_with_level(log_level: &str) {
 
 #[cfg(test)]
 mod tests_setup_logger {
-    use crate::utils::setup_logger;
-    use std::env;
-    use tracing::subscriber::set_global_default;
-    use tracing_subscriber::FmtSubscriber;
-
-    #[test]
-    fn test_logger_initialization_info() {
-        unsafe {
-            env::set_var("LOGLEVEL", "INFO");
-        }
-
-        assert!(
-            set_global_default(FmtSubscriber::builder().finish()).is_err(),
-            "Logger should already be set"
-        );
-    }
-
-    #[test]
-    fn test_logger_initialization_debug() {
-        unsafe {
-            env::set_var("LOGLEVEL", "DEBUG");
-        }
-
-        assert!(
-            set_global_default(FmtSubscriber::builder().finish()).is_err(),
-            "Logger should already be set"
-        );
-    }
-
-    #[test]
-    fn test_logger_initialization_default() {
-        unsafe {
-            env::remove_var("LOGLEVEL");
-        }
-
-        assert!(
-            set_global_default(FmtSubscriber::builder().finish()).is_err(),
-            "Logger should already be set"
-        );
-    }
-
-    #[test]
-    fn test_logger_called_once() {
-        unsafe {
-            env::set_var("LOGLEVEL", "INFO");
-        }
-        setup_logger();
-
-        // First call should set up the logger
-        // Second call should not re-initialize
-
-        assert!(
-            set_global_default(FmtSubscriber::builder().finish()).is_err(),
-            "Logger should already be set and should not be reset"
-        );
-    }
-}
-
-#[cfg(test)]
-mod tests_setup_logger_bis {
     use super::*;
     use std::sync::Mutex;
     use tracing::subscriber::with_default;

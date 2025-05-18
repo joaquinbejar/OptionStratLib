@@ -2,9 +2,9 @@ use crate::Positive;
 use crate::pricing::Profit;
 use crate::strategies::{
     BasicAble, BearCallSpread, BearPutSpread, BullCallSpread, BullPutSpread, CallButterfly,
-    CustomStrategy, IronButterfly, IronCondor, LongButterflySpread, LongCall, LongPut,
-    LongStraddle, LongStrangle, PoorMansCoveredCall, ShortButterflySpread, ShortCall, ShortPut,
-    ShortStraddle, ShortStrangle, Strategies,
+    IronButterfly, IronCondor, LongButterflySpread, LongCall, LongPut, LongStraddle, LongStrangle,
+    PoorMansCoveredCall, ShortButterflySpread, ShortCall, ShortPut, ShortStraddle, ShortStrangle,
+    Strategies,
 };
 use crate::visualization::{
     ColorScheme, Graph, GraphConfig, GraphData, LineStyle, Series2D, TraceMode,
@@ -155,6 +155,5 @@ impl_graph_for_payoff_strategy!(
     ShortCall,
     ShortPut,
     PoorMansCoveredCall,
-    CallButterfly,
-    CustomStrategy
+    CallButterfly
 );

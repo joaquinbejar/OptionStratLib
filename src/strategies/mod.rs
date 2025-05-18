@@ -212,8 +212,6 @@ pub mod call_butterfly;
 pub mod collar;
 /// Covered Call strategy implementation
 pub mod covered_call;
-/// Custom strategy implementation for user-defined strategies
-pub mod custom;
 /// Default implementation for strategies
 pub mod default;
 /// Delta-neutral strategy implementation and utilities
@@ -283,7 +281,6 @@ pub use build::traits::StrategyConstructor;
 pub use bull_call_spread::BullCallSpread;
 pub use bull_put_spread::BullPutSpread;
 pub use call_butterfly::CallButterfly;
-pub use custom::CustomStrategy;
 pub use delta_neutral::{DELTA_THRESHOLD, DeltaAdjustment, DeltaInfo, DeltaNeutrality};
 pub use iron_butterfly::IronButterfly;
 pub use iron_condor::IronCondor;

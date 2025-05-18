@@ -1,7 +1,8 @@
-use criterion::{Criterion, black_box, criterion_group, criterion_main};
+use criterion::{Criterion, criterion_group, criterion_main};
 use optionstratlib::Positive;
 use optionstratlib::pos;
 use rust_decimal_macros::dec;
+use std::hint::black_box;
 
 pub(crate) fn benchmark_creation(c: &mut Criterion) {
     let mut group = c.benchmark_group("Creation Operations");

@@ -160,6 +160,7 @@ impl Position {
     ///
     /// This method will panic if the required premium value is `None` in the provided `option_data`.
     ///
+    #[allow(dead_code)]
     pub(crate) fn update_from_option_data(&mut self, option_data: &OptionData) {
         self.date = Utc::now();
         self.option.update_from_option_data(option_data);

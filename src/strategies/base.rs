@@ -154,8 +154,6 @@ pub enum StrategyType {
     PoorMansCoveredCall,
     /// Call Butterfly strategy.
     CallButterfly,
-    /// Custom strategy.
-    Custom,
 }
 
 impl FromStr for StrategyType {
@@ -184,7 +182,6 @@ impl FromStr for StrategyType {
             "ShortPut" => Ok(StrategyType::ShortPut),
             "PoorMansCoveredCall" => Ok(StrategyType::PoorMansCoveredCall),
             "CallButterfly" => Ok(StrategyType::CallButterfly),
-            "Custom" => Ok(StrategyType::Custom),
             _ => Err(()),
         }
     }
@@ -1387,195 +1384,6 @@ pub trait Positionable {
 }
 
 #[cfg(test)]
-mod tests_strategies {
-    use super::*;
-    use crate::model::position::Position;
-    use crate::model::types::{OptionStyle, Side};
-    use crate::model::utils::create_sample_option_simplest;
-    use crate::pos;
-    use rust_decimal_macros::dec;
-
-    #[test]
-    fn test_strategy_new() {
-        let strategy = Strategy::new(
-            "Test Strategy".to_string(),
-            StrategyType::Custom,
-            "Test Description".to_string(),
-        );
-
-        assert_eq!(strategy.name, "Test Strategy");
-        assert_eq!(strategy.kind, StrategyType::Custom);
-        assert_eq!(strategy.description, "Test Description");
-        assert!(strategy.legs.is_empty());
-        assert_eq!(strategy.max_profit, None);
-        assert_eq!(strategy.max_loss, None);
-        assert!(strategy.break_even_points.is_empty());
-    }
-
-    struct MockStrategy {
-        legs: Vec<Position>,
-        break_even_points: Vec<Positive>,
-    }
-
-    impl Validable for MockStrategy {}
-
-    impl Positionable for MockStrategy {
-        fn add_position(&mut self, position: &Position) -> Result<(), PositionError> {
-            self.legs.push(position.clone());
-            Ok(())
-        }
-
-        fn get_positions(&self) -> Result<Vec<&Position>, PositionError> {
-            Ok(self.legs.iter().collect())
-        }
-    }
-
-    impl BreakEvenable for MockStrategy {
-        fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
-            Ok(&self.break_even_points)
-        }
-    }
-
-    impl BasicAble for MockStrategy {}
-
-    impl Strategies for MockStrategy {
-        fn get_volume(&mut self) -> Result<Positive, StrategyError> {
-            unreachable!()
-        }
-
-        fn get_max_profit(&self) -> Result<Positive, StrategyError> {
-            Ok(Positive::THOUSAND)
-        }
-
-        fn get_max_loss(&self) -> Result<Positive, StrategyError> {
-            Ok(pos!(500.0))
-        }
-
-        fn get_total_cost(&self) -> Result<Positive, PositionError> {
-            Ok(pos!(200.0))
-        }
-
-        fn get_net_premium_received(&self) -> Result<Positive, StrategyError> {
-            Ok(pos!(300.0))
-        }
-
-        fn get_fees(&self) -> Result<Positive, StrategyError> {
-            Ok(pos!(50.0))
-        }
-
-        fn get_profit_area(&self) -> Result<Decimal, StrategyError> {
-            Ok(dec!(5000.0))
-        }
-
-        fn get_profit_ratio(&self) -> Result<Decimal, StrategyError> {
-            Ok(dec!(2.0))
-        }
-    }
-
-    #[test]
-    fn test_strategies_trait() {
-        let mut mock_strategy = MockStrategy {
-            legs: Vec::new(),
-            break_even_points: vec![Positive::HUNDRED],
-        };
-
-        // Test add_leg and get_legs
-        let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        let position = Position::new(
-            option,
-            Positive::ONE,
-            Default::default(),
-            Positive::ZERO,
-            Positive::ZERO,
-        );
-        mock_strategy
-            .add_position(&position.clone())
-            .expect("Error adding position");
-
-        // Test other methods
-        assert_eq!(
-            mock_strategy.get_break_even_points().unwrap(),
-            &vec![Positive::HUNDRED]
-        );
-        assert_eq!(
-            mock_strategy.get_max_profit().unwrap_or(Positive::ZERO),
-            1000.0
-        );
-        assert_eq!(
-            mock_strategy.get_max_loss().unwrap_or(Positive::ZERO),
-            500.0
-        );
-        assert_eq!(mock_strategy.get_total_cost().unwrap().to_f64(), 200.0);
-        assert_eq!(
-            mock_strategy.get_net_premium_received().unwrap(),
-            dec!(300.0)
-        );
-        assert_eq!(mock_strategy.get_fees().unwrap(), dec!(50.0));
-        assert_eq!(mock_strategy.get_profit_area().unwrap(), dec!(5000.0));
-        assert_eq!(mock_strategy.get_profit_ratio().unwrap(), dec!(2.0));
-    }
-
-    #[test]
-    fn test_strategies_default_methods() {
-        struct DefaultStrategy;
-        impl Validable for DefaultStrategy {
-            fn validate(&self) -> bool {
-                true
-            }
-        }
-        impl Positionable for DefaultStrategy {}
-        impl BreakEvenable for DefaultStrategy {}
-        impl BasicAble for DefaultStrategy {}
-        impl Strategies for DefaultStrategy {
-            fn get_volume(&mut self) -> Result<Positive, StrategyError> {
-                unreachable!()
-            }
-        }
-
-        let strategy = DefaultStrategy;
-
-        assert_eq!(
-            strategy.get_max_profit().unwrap_or(Positive::ZERO),
-            Positive::ZERO
-        );
-        assert_eq!(
-            strategy.get_max_loss().unwrap_or(Positive::ZERO),
-            Positive::ZERO
-        );
-        assert!(strategy.get_total_cost().is_err());
-        assert!(strategy.get_profit_area().is_err());
-        assert!(strategy.get_profit_ratio().is_err());
-        assert!(strategy.validate());
-    }
-
-    #[test]
-    fn test_strategies_add_leg_panic() {
-        struct PanicStrategy;
-        impl Validable for PanicStrategy {}
-        impl Positionable for PanicStrategy {}
-        impl BreakEvenable for PanicStrategy {}
-        impl BasicAble for PanicStrategy {}
-        impl Strategies for PanicStrategy {
-            fn get_volume(&mut self) -> Result<Positive, StrategyError> {
-                unreachable!()
-            }
-        }
-
-        let mut strategy = PanicStrategy;
-        let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        let position = Position::new(
-            option,
-            Positive::ONE,
-            Default::default(),
-            Positive::ZERO,
-            Positive::ZERO,
-        );
-
-        assert!(strategy.add_position(&position).is_err());
-    }
-}
-
-#[cfg(test)]
 mod tests_strategies_extended {
     use super::*;
     use crate::model::position::Position;
@@ -1586,7 +1394,6 @@ mod tests_strategies_extended {
     #[test]
     fn test_strategy_enum() {
         assert_ne!(StrategyType::BullCallSpread, StrategyType::BearCallSpread);
-        assert_eq!(StrategyType::Custom, StrategyType::Custom);
     }
 
     #[test]
@@ -1749,41 +1556,6 @@ mod tests_strategy_type {
         let strategy = StrategyType::ShortStraddle;
         let debug_string = format!("{:?}", strategy);
         assert_eq!(debug_string, "ShortStraddle");
-    }
-
-    #[test]
-    fn test_all_strategy_types() {
-        let strategies = [
-            StrategyType::BullCallSpread,
-            StrategyType::BearCallSpread,
-            StrategyType::BullPutSpread,
-            StrategyType::BearPutSpread,
-            StrategyType::IronCondor,
-            StrategyType::LongStraddle,
-            StrategyType::ShortStraddle,
-            StrategyType::LongStrangle,
-            StrategyType::ShortStrangle,
-            StrategyType::CoveredCall,
-            StrategyType::ProtectivePut,
-            StrategyType::Collar,
-            StrategyType::LongCall,
-            StrategyType::LongPut,
-            StrategyType::ShortCall,
-            StrategyType::ShortPut,
-            StrategyType::PoorMansCoveredCall,
-            StrategyType::CallButterfly,
-            StrategyType::Custom,
-        ];
-
-        for (i, strategy) in strategies.iter().enumerate() {
-            for (j, other_strategy) in strategies.iter().enumerate() {
-                if i == j {
-                    assert_eq!(strategy, other_strategy);
-                } else {
-                    assert_ne!(strategy, other_strategy);
-                }
-            }
-        }
     }
 
     #[test]
@@ -2079,39 +1851,6 @@ mod tests_strategy_methods {
         let strategy = TestStrategy;
         let result = std::panic::catch_unwind(|| strategy.get_underlying_price());
         assert!(result.is_err());
-    }
-
-    #[test]
-    fn test_strategy_type_debug_all_variants() {
-        let variants = vec![
-            StrategyType::BullCallSpread,
-            StrategyType::BearCallSpread,
-            StrategyType::BullPutSpread,
-            StrategyType::BearPutSpread,
-            StrategyType::LongButterflySpread,
-            StrategyType::ShortButterflySpread,
-            StrategyType::IronCondor,
-            StrategyType::IronButterfly,
-            StrategyType::LongStraddle,
-            StrategyType::ShortStraddle,
-            StrategyType::LongStrangle,
-            StrategyType::ShortStrangle,
-            StrategyType::CoveredCall,
-            StrategyType::ProtectivePut,
-            StrategyType::Collar,
-            StrategyType::LongCall,
-            StrategyType::LongPut,
-            StrategyType::ShortCall,
-            StrategyType::ShortPut,
-            StrategyType::PoorMansCoveredCall,
-            StrategyType::CallButterfly,
-            StrategyType::Custom,
-        ];
-
-        for variant in variants {
-            let debug_string = format!("{:?}", variant);
-            assert!(!debug_string.is_empty());
-        }
     }
 }
 

@@ -586,6 +586,7 @@ impl OptionChain {
     /// # Returns
     ///
     /// A vector of references to `OptionData` objects that match the filter criteria.
+    #[allow(dead_code)]
     pub(crate) fn filter_option_data(&self, side: FindOptimalSide) -> Vec<&OptionData> {
         self.options
             .iter()

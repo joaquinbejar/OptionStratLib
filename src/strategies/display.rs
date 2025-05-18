@@ -37,8 +37,7 @@ impl_json_display!(
     ShortCall,
     ShortPut,
     PoorMansCoveredCall,
-    CallButterfly,
-    CustomStrategy
+    CallButterfly
 );
 
 #[cfg(test)]

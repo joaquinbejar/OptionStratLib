@@ -6,8 +6,8 @@ use crate::strategies::poor_mans_covered_call::PMCC_DESCRIPTION;
 use crate::strategies::short_call::SHORT_CALL_DESCRIPTION;
 use crate::strategies::short_put::SHORT_PUT_DESCRIPTION;
 use crate::strategies::{
-    BearCallSpread, BearPutSpread, BullCallSpread, BullPutSpread, CallButterfly, CustomStrategy,
-    IronButterfly, IronCondor, LongButterflySpread, LongCall, LongPut, LongStraddle, LongStrangle,
+    BearCallSpread, BearPutSpread, BullCallSpread, BullPutSpread, CallButterfly, IronButterfly,
+    IronCondor, LongButterflySpread, LongCall, LongPut, LongStraddle, LongStrangle,
     PoorMansCoveredCall, ShortButterflySpread, ShortCall, ShortPut, ShortStraddle, ShortStrangle,
 };
 
@@ -120,11 +120,6 @@ impl Default for CallButterfly {
             Default::default(),
             Default::default(),
         )
-    }
-}
-impl Default for CustomStrategy {
-    fn default() -> Self {
-        todo!()
     }
 }
 

@@ -180,6 +180,7 @@ impl Options {
     ///
     /// * `option_data` - A reference to an OptionData structure containing updated option parameters.
     ///
+    #[allow(dead_code)]
     pub(crate) fn update_from_option_data(&mut self, option_data: &OptionData) {
         self.strike_price = option_data.strike_price;
         self.implied_volatility = option_data.implied_volatility.unwrap_or(Positive::ZERO);

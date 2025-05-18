@@ -4,11 +4,12 @@
    Date: 7/1/25
 ******************************************************************************/
 
-use criterion::{Criterion, black_box, criterion_group, criterion_main};
+use criterion::{Criterion, criterion_group, criterion_main};
 use optionstratlib::greeks::Greeks;
 use optionstratlib::pnl::utils::PnLCalculator;
 use optionstratlib::{ExpirationDate, OptionStyle, OptionType, Options, Side, pos};
 use rust_decimal_macros::dec;
+use std::hint::black_box;
 
 fn create_test_option() -> Options {
     Options::new(
