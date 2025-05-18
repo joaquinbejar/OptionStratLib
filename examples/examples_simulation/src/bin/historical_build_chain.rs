@@ -7,7 +7,7 @@ use optionstratlib::simulation::{WalkParams, WalkType, WalkTypeAble};
 use optionstratlib::utils::others::calculate_log_returns;
 use optionstratlib::utils::time::{TimeFrame, get_x_days_formatted};
 use optionstratlib::utils::{read_ohlcv_from_zip, setup_logger};
-use optionstratlib::visualization::utils::{Graph, GraphBackend};
+use optionstratlib::visualization::Graph;
 use optionstratlib::volatility::{adjust_volatility, constant_volatility};
 use optionstratlib::{ExpirationDate, Positive, pos, spos};
 use rust_decimal::Decimal;
@@ -26,8 +26,6 @@ impl Walker {
 impl WalkTypeAble<Positive, OptionChain> for Walker {}
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    setup_logger();
-
     let ohlc = read_ohlcv_from_zip("examples/Data/cl-1m-sample.zip", None, None)?;
     let ohlc = ohlc.iter().take(1000).collect::<Vec<_>>(); // Take only 1000 minutes
     let prices: Vec<Positive> = ohlc.iter().map(|x| Positive::from(x.close)).collect();
@@ -102,14 +100,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         generator_optionchain,
     );
     debug!("Random Walk: {}", random_walk);
+    let path: &std::path::Path = "Draws/Simulation/historical_build_chain.png".as_ref();
+    random_walk.write_png(path)?;
 
-    random_walk.graph(
-        GraphBackend::Bitmap {
-            file_path: "Draws/Simulation/historical_build_chain.png",
-            size: (1200, 800),
-        },
-        20,
-    )?;
     info!("First Chain: {}", random_walk.first().unwrap().y.value());
     info!("Last Chain: {}", random_walk.last().unwrap().y.value());
 

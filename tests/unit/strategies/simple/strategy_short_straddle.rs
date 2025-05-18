@@ -2,18 +2,14 @@ use approx::assert_relative_eq;
 use num_traits::ToPrimitive;
 use optionstratlib::ExpirationDate;
 use optionstratlib::Positive;
-use optionstratlib::strategies::Strategies;
 use optionstratlib::strategies::base::BreakEvenable;
-use optionstratlib::strategies::straddle::ShortStraddle;
-use optionstratlib::utils::setup_logger;
+use optionstratlib::strategies::{ShortStraddle, Strategies};
 use optionstratlib::{assert_pos_relative_eq, pos};
 use rust_decimal_macros::dec;
 use std::error::Error;
 
 #[test]
 fn test_short_straddle_integration() -> Result<(), Box<dyn Error>> {
-    setup_logger();
-
     // Define inputs for the ShortStraddle strategy
     let underlying_price = pos!(7138.5);
 
@@ -37,17 +33,17 @@ fn test_short_straddle_integration() -> Result<(), Box<dyn Error>> {
     // Assertions to validate strategy properties and computations
     assert_eq!(strategy.get_break_even_points().unwrap().len(), 2);
     assert_relative_eq!(
-        strategy.net_premium_received().unwrap().to_f64(),
+        strategy.get_net_premium_received().unwrap().to_f64(),
         409.36,
         epsilon = 0.001
     );
-    assert!(strategy.max_profit().is_ok());
-    assert!(strategy.max_loss().is_ok());
-    assert_pos_relative_eq!(strategy.max_profit()?, pos!(409.36), pos!(0.0001));
-    assert_eq!(strategy.fees().unwrap().to_f64(), 28.04);
+    assert!(strategy.get_max_profit().is_ok());
+    assert!(strategy.get_max_loss().is_ok());
+    assert_pos_relative_eq!(strategy.get_max_profit()?, pos!(409.36), pos!(0.0001));
+    assert_eq!(strategy.get_fees().unwrap().to_f64(), 28.04);
 
     // Test range calculations
-    let price_range = strategy.best_range_to_show(pos!(1.0)).unwrap();
+    let price_range = strategy.get_best_range_to_show(pos!(1.0)).unwrap();
     assert!(!price_range.is_empty());
     let break_even_points = strategy.get_break_even_points().unwrap();
     let range = break_even_points[1] - break_even_points[0];
@@ -57,8 +53,8 @@ fn test_short_straddle_integration() -> Result<(), Box<dyn Error>> {
         epsilon = 0.001
     );
 
-    assert!(strategy.profit_area().unwrap().to_f64().unwrap() > 0.0);
-    assert!(strategy.profit_ratio().unwrap().to_f64().unwrap() > 0.0);
+    assert!(strategy.get_profit_area().unwrap().to_f64().unwrap() > 0.0);
+    assert!(strategy.get_profit_ratio().unwrap().to_f64().unwrap() > 0.0);
 
     // Validate price range in relation to break even points
     assert!(price_range[0] < break_even_points[0]);
@@ -72,8 +68,8 @@ fn test_short_straddle_integration() -> Result<(), Box<dyn Error>> {
 
     // Validate that max profit equals net premium received (characteristic of Short Straddle)
     assert_relative_eq!(
-        strategy.max_profit()?.to_f64(),
-        strategy.net_premium_received().unwrap().to_f64(),
+        strategy.get_max_profit()?.to_f64(),
+        strategy.get_net_premium_received().unwrap().to_f64(),
         epsilon = 0.001
     );
 

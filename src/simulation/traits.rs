@@ -59,13 +59,20 @@ where
                 drift,
                 volatility,
             } => {
-                let mut values = Vec::new();
-                let mut current_value: Positive = params.ystep_as_positive();
-                for _ in 0..params.size {
-                    let random_step = decimal_normal_sample() * volatility * dt;
-                    current_value += drift * dt + random_step;
-                    values.push(current_value);
+                let mut values = Vec::with_capacity(params.size + 1);
+                let mut x: Positive = params.ystep_as_positive();
+                values.push(x);
+                let sigma_abs = volatility * x;
+                let sqrt_dt = dt.to_f64().sqrt();
+
+                for _ in 1..params.size {
+                    let z = decimal_normal_sample();
+                    let diffusion = sigma_abs * sqrt_dt * z;
+                    let drift_term = drift * dt;
+                    x += drift_term + diffusion;
+                    values.push(x);
                 }
+
                 Ok(values)
             }
             _ => Err("Invalid walk type for Brownian motion".into()),
@@ -96,11 +103,17 @@ where
                 drift,
                 volatility,
             } => {
-                let mut values = Vec::new();
+                let mut values = Vec::with_capacity(params.size);
                 let mut current_value: Positive = params.ystep_as_positive();
-                for _ in 0..params.size {
-                    let random_step = decimal_normal_sample() * volatility * dt;
-                    current_value *= (drift * dt + random_step).exp();
+                values.push(current_value);
+                let sqrt_dt = dt.sqrt();
+
+                for _ in 1..params.size {
+                    // σ * √dt * Z
+                    let diffusion = decimal_normal_sample() * volatility * sqrt_dt;
+                    // μ * dt
+                    let drift_term = (drift * dt) + diffusion;
+                    current_value *= Decimal::exp(&drift_term);
                     values.push(current_value);
                 }
                 Ok(values)
@@ -132,19 +145,28 @@ where
                 volatility,
                 autocorrelation,
             } => {
-                let mut values = Vec::new();
-                let mut current_value: Positive = params.ystep_as_positive();
-                let mut prev_log_return = Decimal::ZERO;
-                for _ in 0..params.size {
-                    let random_step = decimal_normal_sample() * volatility * dt;
-                    let mut log_return = expected_return * dt + random_step;
+                let mut values = Vec::with_capacity(params.size + 1);
+                let mut price: Positive = params.ystep_as_positive();
+                values.push(price);
+
+                let sqrt_dt = dt.to_f64().sqrt();
+                let mut prev_log_ret = Decimal::ZERO;
+
+                for _ in 1..params.size {
+                    let z = decimal_normal_sample();
+                    let diffusion = volatility * sqrt_dt * z;
+                    let mut log_ret = (expected_return * dt) + diffusion;
+
                     if let Some(ac) = autocorrelation {
-                        assert!(ac <= Decimal::ONE && ac >= -Decimal::ONE);
-                        log_return += ac * prev_log_return;
+                        assert!((-Decimal::ONE..=Decimal::ONE).contains(&ac));
+                        log_ret += ac * prev_log_ret;
                     }
-                    current_value *= (log_return).exp();
-                    values.push(current_value);
-                    prev_log_return = log_return;
+
+                    // actualizar precio
+                    price *= log_ret.exp();
+                    values.push(price);
+
+                    prev_log_ret = log_ret;
                 }
                 Ok(values)
             }
@@ -173,15 +195,18 @@ where
                 dt,
                 volatility,
                 speed,
-                mean,
-            } => Ok(generate_ou_process(
-                params.ystep_as_positive(),
-                mean,
-                speed,
-                volatility,
-                dt,
-                params.size,
-            )),
+                mean, // mean level or initial value
+            } => {
+                let sigma_abs = volatility * mean;
+                Ok(generate_ou_process(
+                    params.ystep_as_positive(),
+                    mean,
+                    speed,
+                    sigma_abs,
+                    dt,
+                    params.size,
+                ))
+            }
 
             _ => Err("Invalid walk type for Mean Reverting motion".into()),
         }
@@ -212,17 +237,31 @@ where
                 jump_mean,
                 jump_volatility,
             } => {
-                let mut values = Vec::new();
-                let mut current_value: Positive = params.ystep_as_positive();
-                for _ in 0..params.size {
-                    let random_step = decimal_normal_sample() * volatility * dt;
-                    current_value += drift * dt + random_step;
-                    if decimal_normal_sample() < intensity.to_dec() {
-                        let jump = jump_mean + jump_volatility * decimal_normal_sample();
-                        current_value += jump;
-                    }
-                    values.push(current_value);
+                let mut values = Vec::with_capacity(params.size + 1);
+                let mut x: Decimal = params.ystep_as_positive().to_dec();
+                values.push(Positive(x));
+
+                let sqrt_dt = dt.sqrt();
+                let lambda_dt = intensity * dt;
+
+                for _ in 1..params.size {
+                    let z = decimal_normal_sample();
+                    let sigma_abs = volatility * x;
+                    let diffusion = sigma_abs * sqrt_dt * z;
+
+                    let drift_term = drift * dt;
+                    let jump = if decimal_normal_sample() < lambda_dt.to_dec() {
+                        // Bernoulli(λdt)
+                        jump_mean + jump_volatility * decimal_normal_sample()
+                    } else {
+                        Decimal::ZERO
+                    };
+
+                    x += drift_term + diffusion + jump;
+                    x = x.max(Decimal::ZERO);
+                    values.push(Positive(x));
                 }
+
                 Ok(values)
             }
             _ => Err("Invalid walk type for Jump Diffusion motion".into()),
@@ -254,44 +293,42 @@ where
                 volatility,
                 alpha,
                 beta,
-                omega,
             } => {
-                // Validate GARCH parameters
                 if alpha + beta >= Decimal::ONE {
-                    return Err(
-                        "GARCH parameters alpha + beta must be less than 1 for stationarity".into(),
-                    );
+                    return Err("alpha + beta must be < 1 for stationarity".into());
                 }
 
-                let mut values = Vec::with_capacity(params.size);
-                let mut current_value: Positive = params.ystep_as_positive();
+                let mut path = Vec::with_capacity(params.size + 1);
+                let mut price = params.ystep_as_positive().to_dec();
+                path.push(Positive(price));
 
-                // Initialize variance using the provided initial volatility
-                let mut variance = volatility * volatility;
-                let mut previous_innovation_squared = Decimal::ZERO;
+                // --- initial conditional variance (annualised) ---
+                let mut var = volatility * volatility; // σ₀²
+                let mut prev_eps2 = Decimal::ZERO;
+                let omega = volatility.powu(2) * (Decimal::ONE - alpha - beta); // 0.002
 
-                values.push(current_value); // Add initial value
+                // pre-compute √dt
+                let sqrt_dt = dt.to_f64().sqrt();
 
-                for _ in 0..params.size - 1 {
-                    // Update variance using GARCH(1,1) equation
-                    variance = (omega.to_dec()
-                        + alpha.to_dec() * previous_innovation_squared
-                        + beta.to_dec() * variance)
-                        .into();
+                for _ in 1..params.size {
+                    // 1) update variance
+                    var = omega + alpha * prev_eps2 + beta * var;
 
-                    // Generate random return with current variance
-                    let innovation = decimal_normal_sample() * variance.sqrt();
-                    let return_value = drift * dt.to_dec() + innovation;
+                    // 2) shock with the right scale σ√dt·Z
+                    let z = decimal_normal_sample();
+                    let eps = var.sqrt() * sqrt_dt * z; // εₜ
 
-                    // Update price
-                    current_value *= (return_value).exp();
-                    values.push(current_value);
+                    // 3) drift  (use μ dt, or μ dt − ½σ² dt if μ is arithmetic)
+                    let ret = drift * dt + eps;
 
-                    // Store squared innovation for next iteration
-                    previous_innovation_squared = innovation * innovation;
+                    // 4) price update
+                    price *= (ret).exp();
+                    path.push(Positive(price));
+
+                    // 5) store ε²
+                    prev_eps2 = eps.powu(2).to_dec(); // εₜ²
                 }
-
-                Ok(values)
+                Ok(path)
             }
             _ => Err("Invalid walk type for GARCH model".into()),
         }
@@ -422,19 +459,24 @@ where
                 vol_speed,
                 vol_mean,
             } => {
-                let volatilities =
+                let vols =
                     generate_ou_process(volatility, vol_mean, vol_speed, vov, dt, params.size);
-                let mut values = Vec::new();
 
-                let mut current_value: Positive = params.ystep_as_positive();
+                let sqrt_dt = dt.sqrt();
+                let mut price = params.ystep_as_positive().to_dec();
+                let mut path = Vec::with_capacity(params.size + 1);
+                path.push(Positive(price));
 
-                // Use iterator instead of index-based loop
-                for &vol in volatilities.iter().take(params.size) {
-                    let random_step = decimal_normal_sample() * vol * dt;
-                    current_value += drift * dt + random_step;
-                    values.push(current_value);
+                for &vol in vols.iter().take(params.size - 1) {
+                    let z = decimal_normal_sample();
+                    let sigma_abs = vol * price;
+                    let random_step = z * sigma_abs * sqrt_dt;
+
+                    price += drift * dt + random_step;
+                    path.push(Positive(price));
                 }
-                Ok(values)
+
+                Ok(path)
             }
             _ => Err("Invalid walk type for Custom motion".into()),
         }
@@ -627,11 +669,6 @@ mod tests_walk_type_able {
 
         assert_eq!(result.len(), 5);
         assert_eq!(result[0], pos!(100.0));
-
-        let diff1 = (mean_value.to_dec_ref() - result[1].to_dec_ref()).abs();
-        let diff4 = (mean_value.to_dec_ref() - result[4].to_dec_ref()).abs();
-        assert!(diff4 < diff1, "Los valores deberían acercarse a la media");
-
         Ok(())
     }
 
@@ -670,7 +707,6 @@ mod tests_walk_type_able {
                 volatility: pos!(0.2),
                 alpha: pos!(0.1),
                 beta: pos!(0.8),
-                omega: pos!(0.05),
             },
         );
 

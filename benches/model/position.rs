@@ -5,12 +5,12 @@
 ******************************************************************************/
 
 use chrono::Utc;
-use criterion::{Criterion, black_box, criterion_group, criterion_main};
+use criterion::{Criterion, criterion_group, criterion_main};
 use optionstratlib::model::Position;
 use optionstratlib::pnl::utils::PnLCalculator;
-use optionstratlib::visualization::utils::Graph;
 use optionstratlib::{ExpirationDate, OptionStyle, OptionType, Options, Side, pos};
 use rust_decimal_macros::dec;
+use std::hint::black_box;
 
 fn create_test_option() -> Options {
     Options::new(
@@ -111,21 +111,6 @@ pub(crate) fn benchmark_time_calculations(c: &mut Criterion) {
     group.finish();
 }
 
-pub(crate) fn benchmark_graphics(c: &mut Criterion) {
-    let mut group = c.benchmark_group("Graphics Operations");
-    let position = create_test_position();
-
-    group.bench_function("get_values", |bencher| {
-        bencher.iter(|| black_box(position.get_y_values()))
-    });
-
-    group.bench_function("get_vertical_lines", |bencher| {
-        bencher.iter(|| black_box(position.get_vertical_lines()))
-    });
-
-    group.finish();
-}
-
 pub(crate) fn benchmark_validations(c: &mut Criterion) {
     let mut group = c.benchmark_group("Validation Operations");
     let position = create_test_position();
@@ -150,7 +135,6 @@ criterion_group!(
     benchmark_costs_and_fees,
     benchmark_profit_calculations,
     benchmark_time_calculations,
-    benchmark_graphics,
     benchmark_validations
 );
 criterion_main!(benches);

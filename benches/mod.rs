@@ -14,8 +14,8 @@ use model::option::{
 };
 
 use model::position::{
-    benchmark_costs_and_fees, benchmark_graphics, benchmark_profit_calculations,
-    benchmark_time_calculations, benchmark_validations,
+    benchmark_costs_and_fees, benchmark_profit_calculations, benchmark_time_calculations,
+    benchmark_validations,
 };
 
 criterion_group!(
@@ -33,7 +33,6 @@ criterion_group!(
     benchmark_costs_and_fees,
     benchmark_profit_calculations,
     benchmark_time_calculations,
-    benchmark_graphics,
     benchmark_validations
 );
 criterion_main!(benches);

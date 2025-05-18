@@ -4,16 +4,13 @@ use {
     optionstratlib::strategies::base::Optimizable,
     optionstratlib::strategies::base::Positionable,
     optionstratlib::strategies::{BearCallSpread, FindOptimalSide},
-    optionstratlib::utils::setup_logger,
     optionstratlib::{ExpirationDate, Positive, pos},
     rust_decimal_macros::dec,
     std::error::Error,
 };
 
 #[test]
-
 fn test_bear_call_spread_integration() -> Result<(), Box<dyn Error>> {
-    setup_logger();
     // Define inputs for the BearCallSpread strategy
     let underlying_price = pos!(5781.88);
     let mut strategy = BearCallSpread::new(
@@ -36,7 +33,7 @@ fn test_bear_call_spread_integration() -> Result<(), Box<dyn Error>> {
 
     let option_chain =
         OptionChain::load_from_json("./examples/Chains/SP500-18-oct-2024-5781.88.json")?;
-    strategy.best_area(&option_chain, FindOptimalSide::Center);
+    strategy.get_best_area(&option_chain, FindOptimalSide::Center);
     let positions = strategy.get_positions()?;
     for position in positions {
         match position.option.side {

@@ -2,20 +2,15 @@ use approx::assert_relative_eq;
 use num_traits::ToPrimitive;
 use optionstratlib::ExpirationDate;
 use optionstratlib::Positive;
-use optionstratlib::strategies::Strategies;
 use optionstratlib::strategies::base::BreakEvenable;
 use optionstratlib::strategies::bull_call_spread::BullCallSpread;
-use optionstratlib::utils::setup_logger;
-use optionstratlib::visualization::utils::Graph;
+use optionstratlib::strategies::{BasicAble, Strategies};
 use optionstratlib::{assert_pos_relative_eq, pos};
 use rust_decimal_macros::dec;
 use std::error::Error;
 
 #[test]
-
 fn test_bull_call_spread_integration() -> Result<(), Box<dyn Error>> {
-    setup_logger();
-
     // Define inputs for the BullCallSpread strategy
     let underlying_price = pos!(5781.88);
 
@@ -39,25 +34,25 @@ fn test_bull_call_spread_integration() -> Result<(), Box<dyn Error>> {
 
     // Assertions to validate strategy properties and computations
     assert_eq!(
-        strategy.title(),
-        "Bull Call Spread Strategy:\n\tUnderlying: SP500 @ $5750 Long Call European Option\n\tUnderlying: SP500 @ $5820 Short Call European Option"
+        strategy.get_title(),
+        "BullCallSpread Strategy: \n\tUnderlying: SP500 @ $5820 Short Call European Option\n\tUnderlying: SP500 @ $5750 Long Call European Option"
     );
     assert_eq!(strategy.get_break_even_points().unwrap().len(), 1);
     assert_relative_eq!(
-        strategy.net_premium_received().unwrap().to_f64(),
+        strategy.get_net_premium_received().unwrap().to_f64(),
         0.0,
         epsilon = 0.001
     );
-    assert!(strategy.max_profit().is_ok());
-    assert!(strategy.max_loss().is_ok());
-    assert_pos_relative_eq!(strategy.max_loss()?, pos!(116.42), pos!(0.0001));
-    assert_pos_relative_eq!(strategy.total_cost()?, pos!(176.12), pos!(0.0001));
-    assert_eq!(strategy.fees().unwrap().to_f64(), 6.04);
-    assert!(strategy.profit_area().unwrap().to_f64().unwrap() > 0.0);
-    assert!(strategy.profit_ratio().unwrap().to_f64().unwrap() > 0.0);
+    assert!(strategy.get_max_profit().is_ok());
+    assert!(strategy.get_max_loss().is_ok());
+    assert_pos_relative_eq!(strategy.get_max_loss()?, pos!(116.42), pos!(0.0001));
+    assert_pos_relative_eq!(strategy.get_total_cost()?, pos!(176.12), pos!(0.0001));
+    assert_eq!(strategy.get_fees().unwrap().to_f64(), 6.04);
+    assert!(strategy.get_profit_area().unwrap().to_f64().unwrap() > 0.0);
+    assert!(strategy.get_profit_ratio().unwrap().to_f64().unwrap() > 0.0);
 
     // Validate price range calculations
-    let price_range = strategy.best_range_to_show(pos!(1.0)).unwrap();
+    let price_range = strategy.get_best_range_to_show(pos!(1.0)).unwrap();
     assert!(!price_range.is_empty());
     assert!(price_range[0] < strategy.get_break_even_points().unwrap()[0]);
     assert!(price_range[price_range.len() - 1] > strategy.get_break_even_points().unwrap()[0]);

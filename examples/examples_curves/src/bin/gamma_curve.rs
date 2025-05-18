@@ -26,7 +26,6 @@ fn get_option(strike: &Positive) -> Options {
     )
 }
 fn main() -> Result<(), Box<dyn Error>> {
-    setup_logger();
     let params = ConstructionParams::D2 {
         t_start: dec!(10.0),
         t_end: dec!(90),
@@ -48,7 +47,6 @@ fn main() -> Result<(), Box<dyn Error>> {
         .title("Gamma Curve")
         .x_label("Asset value")
         .y_label("gamma")
-        .line_width(1)
         .save("./Draws/Curves/gamma_curve.png")?;
 
     Ok(())

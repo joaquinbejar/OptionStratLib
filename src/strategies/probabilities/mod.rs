@@ -165,12 +165,12 @@
 //! use optionstratlib::pos;
 //!
 //! let (prob_below, prob_in_range, prob_above) = calculate_price_probability(
-//!     pos!(100.0),   // current price
-//!     pos!(95.0),   // lower bound
-//!     pos!(105.0),   // upper bound
+//!     &pos!(100.0),   // current price
+//!     &pos!(95.0),   // lower bound
+//!     &pos!(105.0),   // upper bound
 //!     None,   // volatility adjustment
 //!     None,   // trend
-//!     ExpirationDate::Days(pos!(30.0)),
+//!     &ExpirationDate::Days(pos!(30.0)),
 //!     None                 // risk-free rate
 //! ).unwrap();
 //! info!("Probabilities: {}, {}, {}", prob_below, prob_in_range, prob_above);

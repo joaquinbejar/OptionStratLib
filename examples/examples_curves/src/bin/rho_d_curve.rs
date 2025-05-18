@@ -26,7 +26,6 @@ fn get_option(underlying_price: &Positive) -> Options {
     )
 }
 fn main() -> Result<(), Box<dyn Error>> {
-    setup_logger();
     let params = ConstructionParams::D2 {
         t_start: dec!(20.0),
         t_end: dec!(80),
@@ -47,7 +46,6 @@ fn main() -> Result<(), Box<dyn Error>> {
         .title("Rho_d Curve")
         .x_label("Asset value")
         .y_label("rho_d")
-        .line_width(1)
         .save("./Draws/Curves/rho_d_curve.png")?;
 
     Ok(())

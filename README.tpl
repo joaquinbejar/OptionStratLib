@@ -12,7 +12,7 @@
 [![Coverage](https://img.shields.io/codecov/c/github/joaquinbejar/OptionStratLib)](https://codecov.io/gh/joaquinbejar/OptionStratLib)
 [![Dependencies](https://img.shields.io/librariesio/github/joaquinbejar/OptionStratLib)](https://libraries.io/github/joaquinbejar/OptionStratLib)
 [![Documentation](https://img.shields.io/badge/docs-latest-blue.svg)](https://docs.rs/optionstratlib)
-
+[![Wiki](https://img.shields.io/badge/docs-latest-blue.svg)](https://deepwiki.com/joaquinbejar/OptionStratLib)
 
 
 {{readme}}

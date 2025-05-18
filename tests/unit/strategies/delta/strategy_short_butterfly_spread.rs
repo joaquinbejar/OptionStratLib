@@ -1,18 +1,13 @@
 use optionstratlib::greeks::Greeks;
 use optionstratlib::model::types::OptionStyle;
-use optionstratlib::strategies::butterfly_spread::ShortButterflySpread;
 use optionstratlib::strategies::delta_neutral::DeltaNeutrality;
-use optionstratlib::strategies::{DELTA_THRESHOLD, DeltaAdjustment};
-use optionstratlib::utils::setup_logger;
+use optionstratlib::strategies::{DELTA_THRESHOLD, DeltaAdjustment, ShortButterflySpread};
 use optionstratlib::{ExpirationDate, Positive, assert_decimal_eq, assert_pos_relative_eq, pos};
 use rust_decimal_macros::dec;
 use std::error::Error;
 
 #[test]
-
 fn test_short_butterfly_spread_integration() -> Result<(), Box<dyn Error>> {
-    setup_logger();
-
     // Define inputs for the ShortButterflySpread strategy
     let underlying_price = pos!(5781.88);
 

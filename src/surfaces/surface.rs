@@ -33,6 +33,7 @@ use crate::surfaces::Point3D;
 use crate::surfaces::types::Axis;
 use crate::utils::Len;
 
+use crate::visualization::{Graph, GraphData, Surface3D};
 use num_traits::ToPrimitive;
 use rayon::iter::{
     IndexedParallelIterator, IntoParallelIterator, IntoParallelRefIterator, ParallelIterator,
@@ -296,6 +297,17 @@ impl Default for Surface {
             x_range: (Decimal::ZERO, Decimal::ZERO),
             y_range: (Decimal::ZERO, Decimal::ZERO),
         }
+    }
+}
+
+impl Graph for Surface {
+    fn graph_data(&self) -> GraphData {
+        GraphData::Surface(Surface3D {
+            x: self.points.iter().map(|p| p.x).collect(),
+            y: self.points.iter().map(|p| p.y).collect(),
+            z: self.points.iter().map(|p| p.z).collect(),
+            name: "Surface".to_string(),
+        })
     }
 }
 
@@ -1652,6 +1664,20 @@ mod tests_surface_basic {
                 .iter()
                 .any(|p| p == &Point2D::new(dec!(1.0), dec!(1.0)))
         );
+
+        let points = surface.get_f64_points();
+        assert_eq!(points.len(), 5);
+        assert_eq!(points[0].0, 0.0);
+        assert_eq!(points[0].1, 0.0);
+        assert_eq!(points[0].2, 0.0);
+
+        let default = Surface::default();
+        assert_eq!(default.points.len(), 0);
+        assert_eq!(default.x_range, (Decimal::ZERO, Decimal::ZERO));
+        assert_eq!(default.y_range, (Decimal::ZERO, Decimal::ZERO));
+
+        let graph_data = surface.graph_data();
+        assert!(matches!(graph_data, GraphData::Surface(Surface3D { .. })));
     }
 
     #[test]
@@ -2011,7 +2037,7 @@ mod tests_surface_linear_interpolation {
     #[test]
     fn test_boundary_interpolation() {
         let surface = create_test_surface();
-        // Test interpolación en el borde
+        // Test interpolation on the edge
         let result = surface
             .linear_interpolate(Point2D::new(dec!(0.0), dec!(0.5)))
             .unwrap();
@@ -2029,7 +2055,7 @@ mod tests_surface_linear_interpolation {
         ]);
         let surface = Surface::new(points);
 
-        // La interpolación en cualquier punto debe mantener el gradiente
+        // Interpolation at any point should maintain the gradient
         let result = surface
             .linear_interpolate(Point2D::new(dec!(0.5), dec!(0.5)))
             .unwrap();
@@ -2042,7 +2068,7 @@ mod tests_surface_linear_interpolation {
         let result = surface
             .linear_interpolate(Point2D::new(dec!(0.333333), dec!(0.333333)))
             .unwrap();
-        // Verificar que el resultado tiene la precisión esperada
+        // Verify that the result has the expected precision
         assert!(result.z >= dec!(0.0) && result.z <= dec!(2.0));
     }
 }

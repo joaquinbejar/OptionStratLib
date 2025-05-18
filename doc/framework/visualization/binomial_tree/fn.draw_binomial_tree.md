@@ -49,7 +49,6 @@ fails.
 ::: example-wrap
 ``` {.rust .rust-example-rendered}
 use optionstratlib::visualization::binomial_tree::draw_binomial_tree;
-use optionstratlib::visualization::utils::GraphBackend;
 let asset_tree = vec![
     vec![100.0],
     vec![105.0, 95.0],

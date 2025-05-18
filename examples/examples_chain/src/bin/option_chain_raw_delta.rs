@@ -6,17 +6,18 @@
 use optionstratlib::chains::chain::OptionChain;
 use optionstratlib::greeks::Greeks;
 use optionstratlib::strategies::base::Optimizable;
-use optionstratlib::strategies::{DeltaNeutrality, FindOptimalSide, ShortStrangle, Strategies};
+use optionstratlib::strategies::{
+    BasicAble, DeltaNeutrality, FindOptimalSide, ShortStrangle, Strategies,
+};
 use optionstratlib::utils::setup_logger;
 use optionstratlib::utils::time::get_tomorrow_formatted;
-use optionstratlib::visualization::utils::{Graph, GraphBackend};
+
+use optionstratlib::visualization::Graph;
 use optionstratlib::{ExpirationDate, Positive, pos};
 use rust_decimal::Decimal;
 use tracing::{debug, info};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    setup_logger();
-
     let mut option_chain =
         OptionChain::load_from_json("examples/Chains/SP500-18-oct-2024-5781.88.json")?;
     info!("Chain loaded");
@@ -42,47 +43,42 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         pos!(1.7),      // close_fee_short_put
     );
 
-    strategy.best_area(
+    strategy.get_best_area(
         &option_chain,
         FindOptimalSide::Range(pos!(21600.0), pos!(21700.0)),
     );
     debug!("Strategy:  {:#?}", strategy);
-    let range = strategy.range_of_profit().unwrap_or(Positive::ZERO);
-    info!("Title: {}", strategy.title());
+    let range = strategy.get_range_of_profit().unwrap_or(Positive::ZERO);
+    info!("Title: {}", strategy.get_title());
     info!("Break Even Points: {:?}", strategy.break_even_points);
     info!(
         "Net Premium Received: ${:.2}",
-        strategy.net_premium_received()?
+        strategy.get_net_premium_received()?
     );
     info!(
         "Max Profit: ${:.2}",
-        strategy.max_profit().unwrap_or(Positive::ZERO)
+        strategy.get_max_profit().unwrap_or(Positive::ZERO)
     );
     info!(
         "Max Loss: ${:0.2}",
-        strategy.max_loss().unwrap_or(Positive::ZERO)
+        strategy.get_max_loss().unwrap_or(Positive::ZERO)
     );
-    info!("Total Fees: ${:.2}", strategy.fees()?);
+    info!("Total Fees: ${:.2}", strategy.get_fees()?);
     info!(
         "Range of Profit: ${:.2} {:.2}%",
         range,
         (range / 2.0) / option_chain.underlying_price * 100.0
     );
-    info!("Profit Area: {:.2}%", strategy.profit_area()?);
+    info!("Profit Area: {:.2}%", strategy.get_profit_area()?);
 
     info!("Delta:  {:#?}", strategy.delta_neutrality()?);
     info!("Delta Neutral:  {}", strategy.is_delta_neutral());
     info!("Delta Suggestions:  {:#?}", strategy.delta_adjustments()?);
 
-    if strategy.profit_ratio()? > Positive::ZERO.into() {
+    if strategy.get_profit_ratio()? > Positive::ZERO.into() {
         debug!("Strategy:  {:#?}", strategy);
-        strategy.graph(
-            GraphBackend::Bitmap {
-                file_path: "Draws/Chains/short_strangle_chain_raw_delta.png",
-                size: (1400, 933),
-            },
-            20,
-        )?;
+        let path: &std::path::Path = "Draws/Chains/short_strangle_chain_raw_delta.png".as_ref();
+        strategy.write_png(path)?;
     }
     info!("Greeks:  {:#?}", strategy.greeks());
 

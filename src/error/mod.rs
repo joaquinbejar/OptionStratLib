@@ -181,6 +181,7 @@ mod metrics;
 /// * Dimensional and data completeness errors
 mod surfaces;
 
+mod graph;
 mod transaction;
 /// ### Volatility Errors (`VolatilityError`)
 /// Handles:
@@ -194,6 +195,7 @@ pub use chains::ChainError;
 pub use common::OperationErrorKind;
 pub use curves::CurveError;
 pub use decimal::{DecimalError, DecimalResult};
+pub use graph::GraphError;
 pub use greeks::GreeksError;
 pub use interpolation::InterpolationError;
 pub use metrics::MetricsError;

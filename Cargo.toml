@@ -1,6 +1,6 @@
 [package]
 name = "optionstratlib"
-version = "0.4.6"
+version = "0.5.0"
 edition = "2024"
 authors = ["Joaquin Bejar <jb@taunais.com>"]
 description = "OptionStratLib is a comprehensive Rust library for options trading and strategy development across multiple asset classes."
@@ -10,8 +10,6 @@ repository = "https://github.com/joaquinbejar/OptionStratLib"
 homepage = "https://github.com/joaquinbejar/OptionStratLib"
 keywords = ["finance", "options", "trading"]
 categories = ["finance", "data-structures"]
-
-
 include = [
     "benches/**/*",
     "src/**/*",
@@ -27,12 +25,23 @@ include = [
     "Docker/**/*.yml",
 ]
 
+[features]
+default = []
+plotly = ["dep:plotly"]                       
+kaleido = [
+    "plotly",                  
+    "plotly/kaleido",
+    "plotly/kaleido_download",
+]
+
+
+
 [dependencies]
-chrono = { version = ">=0.4.40", features = ["serde"] }
+chrono = { version = ">=0.4.41", features = ["serde"] }
 approx = "0.5.1"
-plotters = { version = "0.3.7" }
+plotly = { git = "https://github.com/joaquinbejar/plotly.rs", tag = "v1.0.0" , default-features = false, optional = true }
 statrs = "0.18.0"
-rand = { version = "0.9.0" }
+rand = { version = "0.9.1" }
 rand_distr = "0.5.1"
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.19"}
@@ -44,14 +53,17 @@ rayon = { version = "1.10.0" }
 itertools = "0.14.0"
 rust_decimal = { version = "1.37.1", features = ["maths", "serde"] }
 rust_decimal_macros = "1.37.1"
-zip = "2.6.1"
+zip = "3.0.0"
 lazy_static = "1.5.0"
 uuid = { version = "1.16.0", features = ["v4", "serde"] }
 
+
+
 [dev-dependencies]
-criterion = { version = "0.5.1", default-features = false, features = ["html_reports"] }
+criterion = { version = "0.6.0", default-features = false, features = ["html_reports"] }
 mockall = "0.13.1"
-tempfile = "3.19.1"
+tempfile = "3.20.0"
+static_assertions = "1.1.0"
 
 [[test]]
 name = "tests"

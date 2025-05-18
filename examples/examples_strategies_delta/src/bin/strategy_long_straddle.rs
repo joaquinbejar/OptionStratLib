@@ -1,18 +1,15 @@
 use optionstratlib::ExpirationDate;
 use optionstratlib::Positive;
 use optionstratlib::pos;
-use optionstratlib::strategies::LongStrangle;
-use optionstratlib::strategies::Strategies;
 use optionstratlib::strategies::delta_neutral::DeltaNeutrality;
-use optionstratlib::strategies::straddle::LongStraddle;
+use optionstratlib::strategies::long_straddle::LongStraddle;
+use optionstratlib::strategies::{BasicAble, Strategies};
 use optionstratlib::utils::setup_logger;
-use optionstratlib::visualization::utils::Graph;
 use rust_decimal::Decimal;
 use std::error::Error;
 use tracing::info;
 
 fn main() -> Result<(), Box<dyn Error>> {
-    setup_logger();
     let underlying_price = pos!(7140.0);
     let strategy = LongStraddle::new(
         "CL".to_string(),
@@ -31,24 +28,24 @@ fn main() -> Result<(), Box<dyn Error>> {
         pos!(7.01),     // close_fee_short_put
     );
 
-    info!("Title: {}", strategy.title());
+    info!("Title: {}", strategy.get_title());
     info!("Break Even Points: {:?}", strategy.break_even_points);
     info!(
         "Net Premium Received: ${:.2}",
-        strategy.net_premium_received()?
+        strategy.get_net_premium_received()?
     );
     info!(
         "Max Profit: ${:.2}",
-        strategy.max_profit().unwrap_or(Positive::ZERO)
+        strategy.get_max_profit().unwrap_or(Positive::ZERO)
     );
     info!(
         "Max Loss: ${}",
-        strategy.max_loss().unwrap_or(Positive::ZERO)
+        strategy.get_max_loss().unwrap_or(Positive::ZERO)
     );
-    info!("Total Fees: ${:.2}", strategy.fees()?);
+    info!("Total Fees: ${:.2}", strategy.get_fees()?);
 
-    info!("Profit Area: {:.2}%", strategy.profit_area()?);
-    info!("Profit Ratio: {:.2}%", strategy.profit_ratio()?);
+    info!("Profit Area: {:.2}%", strategy.get_profit_area()?);
+    info!("Profit Ratio: {:.2}%", strategy.get_profit_ratio()?);
 
     info!("Delta:  {:#?}", strategy.delta_neutrality()?);
     info!("Delta Neutral:  {}", strategy.is_delta_neutral());

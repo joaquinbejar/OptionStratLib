@@ -1,19 +1,14 @@
 use optionstratlib::greeks::Greeks;
 use optionstratlib::model::types::OptionStyle;
-use optionstratlib::strategies::DELTA_THRESHOLD;
 use optionstratlib::strategies::DeltaAdjustment::BuyOptions;
 use optionstratlib::strategies::delta_neutral::DeltaNeutrality;
-use optionstratlib::strategies::straddle::ShortStraddle;
-use optionstratlib::utils::setup_logger;
+use optionstratlib::strategies::{DELTA_THRESHOLD, ShortStraddle};
 use optionstratlib::{ExpirationDate, Positive, assert_decimal_eq, assert_pos_relative_eq, pos};
 use rust_decimal_macros::dec;
 use std::error::Error;
 
 #[test]
-
 fn test_short_straddle_integration() -> Result<(), Box<dyn Error>> {
-    setup_logger();
-
     // Define inputs for the ShortStraddle strategy
     let underlying_price = pos!(7138.5);
 

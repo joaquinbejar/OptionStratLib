@@ -7,3 +7,9 @@
 mod strategies;
 
 mod chain;
+
+mod error;
+
+mod visualization;
+
+mod pnl;

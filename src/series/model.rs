@@ -197,10 +197,7 @@ impl OptionSeries {
         let chain_params = match chain_params {
             Some((_, option_chain)) => option_chain.to_build_params()?,
             None => {
-                return Err(Box::new(std::io::Error::new(
-                    std::io::ErrorKind::Other,
-                    "No chains found",
-                )));
+                return Err(Box::new(std::io::Error::other("No chains found")));
             }
         };
 
@@ -717,7 +714,7 @@ mod tests_option_series {
 
     mod tests_serialization {
         use super::*;
-        use chrono::{Local, NaiveTime};
+        use chrono::{NaiveTime, Utc};
         use serde_json;
 
         #[test]
@@ -746,8 +743,6 @@ mod tests_option_series {
         #[test]
         fn test_serialization_deserialization() {
             // Set up the logger if not already done
-            crate::utils::logger::setup_logger();
-
             let original = create_test_series();
 
             // Serialize
@@ -806,10 +801,15 @@ mod tests_option_series {
                 );
             }
 
+            // Parse the cutoff time (20:30)
             let cutoff = NaiveTime::parse_from_str("18:30", "%H:%M").unwrap();
-            let now = Local::now().time();
+
+            // Get the current time in UTC
+            let now = Utc::now().time();
+
             let original_dates = original.get_expiration_dates().unwrap();
             let mut deserialized_dates = deserialized.get_expiration_dates().unwrap();
+
             if now > cutoff {
                 deserialized_dates
                     .iter_mut()

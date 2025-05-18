@@ -20,7 +20,7 @@ use std::collections::HashMap;
 ///
 /// This struct aggregates various performance metrics, time-series data, trade details,
 /// risk analysis, and context related to a specific trading strategy simulation.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct BacktestResult {
     /// Core performance metrics applicable to most trading strategies.
     /// Includes returns, risk measures (like volatility), risk-adjusted returns (like Sharpe),
@@ -71,7 +71,7 @@ pub struct BacktestResult {
 }
 
 /// Results from running Monte Carlo simulation on the strategy
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct SimulationResult {
     /// Number of simulation runs
     pub simulation_count: usize,

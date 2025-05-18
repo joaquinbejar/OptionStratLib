@@ -27,7 +27,6 @@ fn get_option(strike: &Positive, volatility: &Positive) -> Options {
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    setup_logger();
     let params = ConstructionParams::D2 {
         t_start: dec!(25.0),
         t_end: dec!(78),
@@ -70,8 +69,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         .title("Rho_d Curve")
         .x_label("Strike")
         .y_label("rho_d for different Volatilities")
-        .line_width(1)
-        .curve_name(vec![
+        .legend(vec![
             "Volatility 20%".to_string(),
             "Volatility 10%".to_string(),
             "Volatility 5%".to_string(),

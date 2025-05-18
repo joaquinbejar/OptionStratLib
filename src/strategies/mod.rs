@@ -67,8 +67,8 @@
 //!     pos!(0.73),   // close_fee_short
 //! );
 //!
-//! let profit = spread.max_profit().unwrap_or(Positive::ZERO);
-//! let loss = spread.max_loss().unwrap_or(Positive::ZERO);
+//! let profit = spread.get_max_profit().unwrap_or(Positive::ZERO);
+//! let loss = spread.get_max_loss().unwrap_or(Positive::ZERO);
 //! info!("Max Profit: {}, Max Loss: {}", profit, loss);
 //! ```
 //!
@@ -120,7 +120,7 @@
 //! use optionstratlib::model::position::Position;
 //! use optionstratlib::Positive;
 //! use optionstratlib::strategies::base::{BreakEvenable, Positionable, Strategies, Validable};
-//! use optionstratlib::strategies::Strategable;
+//! use optionstratlib::strategies::{BasicAble, Strategable};
 //!
 //! struct MyStrategy {
 //!     legs: Vec<Position>,
@@ -145,6 +145,9 @@
 //! }
 //!
 //! impl BreakEvenable for MyStrategy {}
+//!
+//!
+//! impl BasicAble for MyStrategy {}
 //!
 //! impl Strategies for MyStrategy {}
 //! ```
@@ -179,8 +182,8 @@
 //!     pos!(5.0),   // close_fee
 //! );
 //!
-//! let max_profit = condor.max_profit().unwrap_or(Positive::ZERO);
-//! let max_loss = condor.max_loss().unwrap_or(Positive::ZERO);
+//! let max_profit = condor.get_max_profit().unwrap_or(Positive::ZERO);
+//! let max_loss = condor.get_max_loss().unwrap_or(Positive::ZERO);
 //! info!("Max Profit: {}, Max Loss: {}", max_profit, max_loss);
 //! ```
 //!
@@ -193,79 +196,103 @@
 /// This module provides implementations of various options trading strategies and utility functions
 /// for options trading analysis. Each submodule represents a specific strategy or utility.
 pub mod base;
-
 /// Bear Call Spread strategy implementation
 pub mod bear_call_spread;
-
 /// Bear Put Spread strategy implementation  
 pub mod bear_put_spread;
-
 /// Internal module for strategy building utilities
 mod build;
-
 /// Bull Call Spread strategy implementation
 pub mod bull_call_spread;
-
 /// Bull Put Spread strategy implementation
 pub mod bull_put_spread;
-
-/// Butterfly Spread strategy implementation
-pub mod butterfly_spread;
-
 /// Call Butterfly strategy implementation  
 pub mod call_butterfly;
-
 /// Collar strategy implementation
 pub mod collar;
-
 /// Covered Call strategy implementation
 pub mod covered_call;
-
-/// Custom strategy implementation for user-defined strategies
-pub mod custom;
-
+/// Default implementation for strategies
+pub mod default;
 /// Delta-neutral strategy implementation and utilities
 pub mod delta_neutral;
+/// Display implementation for strategies
+pub mod display;
 
+/// The `graph` module provides functionality for creating, managing, and
+/// manipulating graph data structures. Common use cases include representing
+/// networks, dependency graphs, and other graph-based relationships.
+///
+/// # Features
+/// - Supports various graph representations (e.g., directed, undirected).
+/// - Includes methods for traversing graphs (e.g., DFS, BFS).
+/// - Provides utilities for adding and removing nodes and edges.
+///
+/// # Usage
+/// To utilize this module, include it in your project and access its functions
+/// to build and interact with graph structures:
+///
+/// Note: Implementations within the `graph` module may depend on specific
+/// traits or types relevant to the graph operations.
+///
+/// For details on available graph types, functionalities, and examples, refer
+/// to the corresponding methods and structs within the module.
+pub mod graph;
 /// Iron Butterfly strategy implementation
 pub mod iron_butterfly;
-
 /// Iron Condor strategy implementation
 pub mod iron_condor;
-
+/// Butterfly Spread strategy implementation
+pub mod long_butterfly_spread;
+/// Long Call strategy implementation
+pub mod long_call;
+/// Long Put strategy implementation
+pub mod long_put;
+/// Long Straddle strategy implementation
+pub mod long_straddle;
+/// Strangle strategy implementation
+pub mod long_strangle;
+/// Macros for options strategies
+pub mod macros;
 /// Poor Man's Covered Call strategy implementation
 pub mod poor_mans_covered_call;
-
 /// Probability calculations for options strategies
 pub mod probabilities;
-
 /// Protective Put strategy implementation
 pub mod protective_put;
-
-/// Straddle strategy implementation
-pub mod straddle;
-
-/// Strangle strategy implementation
-pub mod strangle;
-
+/// Short Call strategy implementation
+pub mod short_butterfly_spread;
+/// Short Call strategy implementation
+pub mod short_call;
+/// Short Put strategy implementation
+pub mod short_put;
+/// Short Straddle strategy implementation
+pub mod short_straddle;
+/// Short Strangle strategy implementation
+pub mod short_strangle;
 /// Utility functions for options calculations and analysis
 pub mod utils;
 
-pub use base::Strategies;
-pub use base::{Strategable, StrategyBasics};
+pub use base::{BasicAble, Strategable, Strategies, StrategyBasics, Validable};
 pub use bear_call_spread::BearCallSpread;
 pub use bear_put_spread::BearPutSpread;
 pub use build::model::StrategyRequest;
 pub use build::traits::StrategyConstructor;
 pub use bull_call_spread::BullCallSpread;
 pub use bull_put_spread::BullPutSpread;
-pub use butterfly_spread::{LongButterflySpread, ShortButterflySpread};
 pub use call_butterfly::CallButterfly;
-pub use custom::CustomStrategy;
 pub use delta_neutral::{DELTA_THRESHOLD, DeltaAdjustment, DeltaInfo, DeltaNeutrality};
 pub use iron_butterfly::IronButterfly;
 pub use iron_condor::IronCondor;
+pub use long_butterfly_spread::LongButterflySpread;
+pub use long_call::LongCall;
+pub use long_put::LongPut;
+pub use long_straddle::LongStraddle;
+pub use long_strangle::LongStrangle;
 pub use poor_mans_covered_call::PoorMansCoveredCall;
-pub use straddle::{LongStraddle, ShortStraddle};
-pub use strangle::{LongStrangle, ShortStrangle};
+pub use short_butterfly_spread::ShortButterflySpread;
+pub use short_call::ShortCall;
+pub use short_put::ShortPut;
+pub use short_straddle::ShortStraddle;
+pub use short_strangle::ShortStrangle;
 pub use utils::FindOptimalSide;

@@ -3,78 +3,9 @@
    Email: jb@taunais.com
    Date: 21/1/25
 ******************************************************************************/
-use plotters::prelude::RGBColor;
-use std::path::Path;
-
-/// Plot configuration options for data visualization.
-///
-/// This structure provides comprehensive customization capabilities for plots,
-/// including titles, axis labels, colors, dimensions, and visual styling.
-/// It serves as the central configuration object for the plotting system.
-///
-/// Use with `PlotBuilder` to create customized visualizations that can be
-/// rendered and saved to files through the `Plottable` trait implementation.
-#[derive(Clone, Debug)]
-pub struct PlotOptions {
-    /// Optional plot title displayed at the top of the visualization
-    pub title: Option<String>,
-    /// Optional label for the X-axis
-    pub x_label: Option<String>,
-    /// Optional label for the Y-axis
-    pub y_label: Option<String>,
-    /// Optional label for the Z-axis (used in 3D plots)
-    pub z_label: Option<String>,
-    /// Optional collection of RGB colors to use for individual data series lines
-    /// Each color in the vector corresponds to a different curve in the plot
-    pub line_colors: Option<Vec<RGBColor>>,
-    /// Width of plotted lines in pixels
-    pub line_width: u32,
-    /// Background color of the entire plot area as an RGB value
-    pub background_color: RGBColor,
-    /// Width of the plot in pixels
-    pub width: u32,
-    /// Height of the plot in pixels
-    pub height: u32,
-    /// Optional names for each curve/data series to be displayed in the legend
-    pub curve_name: Option<Vec<String>>,
-    /// Optional size of points in scatter plots, measured in pixels
-    pub point_size: Option<u32>,
-    /// Optional font size for axis labels and other text elements
-    pub labels_size: Option<f64>,
-}
-
-#[allow(dead_code)]
-impl PlotOptions {
-    /// Default color palette for multiple curves
-    pub(crate) fn default_colors() -> Vec<RGBColor> {
-        vec![
-            RGBColor(0, 0, 255),   // Blue
-            RGBColor(255, 0, 0),   // Red
-            RGBColor(0, 255, 0),   // Green
-            RGBColor(255, 165, 0), // Orange
-            RGBColor(128, 0, 128), // Purple
-        ]
-    }
-}
-
-impl Default for PlotOptions {
-    fn default() -> Self {
-        PlotOptions {
-            title: None,
-            x_label: None,
-            y_label: None,
-            z_label: None,
-            line_colors: None,
-            line_width: 2,
-            background_color: RGBColor(255, 255, 255),
-            width: 800,
-            height: 600,
-            curve_name: None,
-            point_size: None,
-            labels_size: None,
-        }
-    }
-}
+use crate::visualization::{ColorScheme, Graph, GraphConfig, GraphData, LineStyle};
+#[cfg(feature = "kaleido")]
+use {crate::error::GraphError, std::path::Path};
 
 /// Trait for defining objects that can be visualized as plots.
 ///
@@ -98,8 +29,9 @@ pub trait Plottable {
     /// customizing plot appearance and behavior before rendering.
     fn plot(&self) -> PlotBuilder<Self>
     where
-        Self: Sized;
+        Self: Sized + Graph;
 }
+
 /// A builder for creating and configuring data visualizations.
 ///
 /// `PlotBuilder` provides a fluent interface for customizing plots with various
@@ -111,12 +43,11 @@ pub trait Plottable {
 /// the `Plottable` trait. After configuring the plot with the desired options,
 /// it can be rendered and saved using the methods from `PlotBuilderExt`.
 ///
-pub struct PlotBuilder<T: Plottable> {
+pub struct PlotBuilder<T: Plottable + Graph> {
     /// The data to be visualized in the plot.
     ///
     /// This field holds the instance of a type implementing the `Plottable` trait
     /// which contains the actual data points to be represented in the visualization.
-    #[allow(dead_code)]
     pub(crate) data: T,
 
     /// Configuration settings that control the appearance and behavior of the plot.
@@ -124,10 +55,10 @@ pub struct PlotBuilder<T: Plottable> {
     /// This includes visual styling like colors, dimensions, and line widths,
     /// as well as textual elements like titles and axis labels.
     /// See `PlotOptions` for the complete set of available configuration options.
-    pub(crate) options: PlotOptions,
+    pub(crate) options: GraphConfig,
 }
 
-impl<T: Plottable> PlotBuilder<T> {
+impl<T: Plottable + Graph> PlotBuilder<T> {
     /// Sets the title of the plot.
     ///
     /// This method configures the main title that appears at the top of the visualization.
@@ -139,7 +70,10 @@ impl<T: Plottable> PlotBuilder<T> {
     /// The `PlotBuilder` instance with the updated title setting
     ///
     pub fn title(mut self, title: impl Into<String>) -> Self {
-        self.options.title = Some(title.into());
+        self.options.title = title.into();
+        if self.options.legend.is_none() {
+            self.options.legend = Some(vec![self.options.title.clone()]);
+        }
         self
     }
 
@@ -189,54 +123,6 @@ impl<T: Plottable> PlotBuilder<T> {
         self
     }
 
-    /// Sets the size of data points in scatter plots.
-    ///
-    /// This method configures the diameter of individual data points
-    /// when rendering scatter plots.
-    ///
-    /// # Parameters
-    /// * `size` - The size of points in pixels
-    ///
-    /// # Returns
-    /// The `PlotBuilder` instance with the updated point size setting
-    ///
-    pub fn point_size(mut self, size: u32) -> Self {
-        self.options.point_size = Some(size);
-        self
-    }
-
-    /// Sets the font size for labels and text elements.
-    ///
-    /// This method configures the font size used for axis labels, titles,
-    /// and other textual elements in the visualization.
-    ///
-    /// # Parameters
-    /// * `size` - The font size as a floating point value
-    ///
-    /// # Returns
-    /// The `PlotBuilder` instance with the updated label size setting
-    ///
-    pub fn label_size(mut self, size: f64) -> Self {
-        self.options.labels_size = Some(size);
-        self
-    }
-
-    /// Sets custom names for each data series/curve in the plot.
-    ///
-    /// This method configures the names displayed in the legend to identify
-    /// different data series in the visualization.
-    ///
-    /// # Parameters
-    /// * `label` - A vector of strings, each representing the name of a curve
-    ///
-    /// # Returns
-    /// The `PlotBuilder` instance with the updated curve names
-    ///
-    pub fn curve_name(mut self, label: Vec<String>) -> Self {
-        self.options.curve_name = Some(label);
-        self
-    }
-
     /// Sets the colors for data series lines.
     ///
     /// This method configures the colors used to render each data series or curve
@@ -248,24 +134,58 @@ impl<T: Plottable> PlotBuilder<T> {
     /// # Returns
     /// The `PlotBuilder` instance with the updated line colors
     ///
-    pub fn line_colors(mut self, colors: Vec<RGBColor>) -> Self {
-        self.options.line_colors = Some(colors);
+    pub fn line_style(mut self, line_style: LineStyle) -> Self {
+        self.options.line_style = line_style;
         self
     }
 
-    /// Sets the width of plot lines.
+    /// Sets the legend for the current instance.
     ///
-    /// This method configures the thickness of lines used to render data series
-    /// in the visualization.
+    /// This method accepts a vector of items that can be converted into strings and sets the `legend`
+    /// field of the current instance's options. It returns the modified instance for further chaining.
     ///
-    /// # Parameters
-    /// * `width` - The width of lines in pixels
+    /// # Arguments
+    ///
+    /// * `legend` - A `Vec` containing items that implement the `Into<String>` trait. Each element
+    ///   will be converted into a `String` and assigned to the legend.
     ///
     /// # Returns
-    /// The `PlotBuilder` instance with the updated line width setting
     ///
-    pub fn line_width(mut self, width: u32) -> Self {
-        self.options.line_width = width;
+    /// Returns the modified instance with the legend updated.
+    ///
+    /// In this example, the legend is updated to include "Item 1", "Item 2", and "Item 3".
+    ///
+    pub fn legend(mut self, legend: Vec<impl Into<String>>) -> Self {
+        let legend: Vec<String> = legend.into_iter().map(|l| l.into()).collect();
+        self.options.legend = Some(legend);
+        self
+    }
+
+    /// Adds a legend entry to the existing legend configuration or initializes a new legend
+    /// with the provided entry if none exists.
+    ///
+    /// This method allows chaining, modifying the `legend` configuration within the `options`
+    /// of the current object. If a `legend` already exists, the provided legend entry will
+    /// be appended to it. If no `legend` exists, a new legend will be created containing the
+    /// provided entry.
+    ///
+    /// # Arguments
+    ///
+    /// * `legend` - An item implementing `Into<String>` that represents the legend entry
+    ///   to add.
+    ///
+    /// # Returns
+    ///
+    /// Returns `Self` (the modified object) to allow method chaining.
+    ///
+    /// In this example, two legend entries, `"Legend 1"` and `"Legend 2"`, are added to the chart's
+    /// legend configuration.
+    pub fn add_legend(mut self, legend: impl Into<String>) -> Self {
+        if let Some(ref mut legends) = self.options.legend {
+            legends.push(legend.into());
+        } else {
+            self.options.legend = Some(vec![legend.into()]);
+        }
         self
     }
 
@@ -286,6 +206,40 @@ impl<T: Plottable> PlotBuilder<T> {
         self
     }
 
+    /// Sets the color scheme for the current instance.
+    ///
+    /// This method allows you to specify a `ColorScheme` to customize the appearance or theme
+    /// of the associated object. The method updates the `color_scheme` field in the `options`
+    /// struct with the provided value and returns an updated instance of `self`.
+    ///
+    /// # Parameters
+    /// - `color_scheme`: The desired `ColorScheme` to be applied. This defines the visual style
+    ///   or theme to be used by the object.
+    ///
+    /// # Returns
+    /// An updated instance of `Self` with the new color scheme applied.
+    ///
+    pub fn color_scheme(mut self, color_scheme: ColorScheme) -> Self {
+        self.options.color_scheme = color_scheme;
+        self
+    }
+
+    /// Sets the visibility of the legend in the chart or visualization.
+    ///
+    /// # Parameters
+    /// - `show_legend`: A boolean specifying whether the legend should be displayed.
+    ///   - `true`: The legend will be displayed.
+    ///   - `false`: The legend will be hidden.
+    ///
+    /// # Returns
+    /// - Returns an updated instance of `Self` with the `show_legend` option set
+    ///   according to the provided parameter.
+    ///
+    pub fn show_legend(mut self, show_legend: bool) -> Self {
+        self.options.show_legend = show_legend;
+        self
+    }
+
     /// Saves the configured plot to a file.
     ///
     /// This method renders the plot with all configured options and writes
@@ -301,127 +255,32 @@ impl<T: Plottable> PlotBuilder<T> {
     /// This method will return an error if the plot cannot be rendered or saved,
     /// with the specific error type determined by the `Plottable` implementation.
     ///
-    pub fn save(self, path: impl AsRef<Path>) -> Result<(), T::Error>
-    where
-        Self: PlotBuilderExt<T>,
-    {
-        PlotBuilderExt::save(self, path)
+    #[cfg(feature = "kaleido")]
+    pub fn save(self, path: impl AsRef<Path>) -> Result<(), GraphError> {
+        let path = path.as_ref();
+        self.write_png(path).map_err(|e| {
+            GraphError::Render(format!("Failed to save plot to {} {}", path.display(), e))
+        })
     }
 }
 
-/// Extension methods for the plot building process.
-///
-/// This trait extends the `PlotBuilder` functionality to provide methods for
-/// outputting and saving plots. It serves as the final step in the plot creation
-/// pipeline after configuring visualization options.
-///
-/// `PlotBuilderExt` complements the builder pattern used in the plotting system by
-/// providing output capabilities that work with any type implementing the `Plottable` trait.
-/// This separation of concerns allows for a clean interface where plot configuration
-/// and rendering/output are logically separated.
-pub trait PlotBuilderExt<T: Plottable> {
-    /// Saves the configured plot to a file at the specified path.
-    ///
-    /// This method renders the plot with all configured options and writes the
-    /// resulting visualization to the given file path. The file format is determined
-    /// by the path's extension (e.g., .png, .svg).
-    ///
-    /// # Arguments
-    ///
-    /// * `path` - The file path where the plot should be saved. Can be any type
-    ///   that can be converted to a `Path`.
-    ///
-    /// # Returns
-    ///
-    /// * `Ok(())` if the plot was successfully saved
-    /// * `Err(T::Error)` if an error occurred during rendering or saving
-    ///
-    fn save(self, path: impl AsRef<Path>) -> Result<(), T::Error>;
-}
+impl<T: Plottable + Graph> Graph for PlotBuilder<T> {
+    fn graph_data(&self) -> GraphData {
+        self.data.graph_data()
+    }
 
-#[cfg(test)]
-mod tests_plot_builder {
-    use super::*;
-
-    /// A mock Plottable implementation for testing
-    struct MockPlottable;
-
-    impl Plottable for MockPlottable {
-        type Error = std::io::Error;
-
-        fn plot(&self) -> PlotBuilder<Self> {
-            PlotBuilder {
-                data: MockPlottable,
-                options: PlotOptions::default(),
-            }
+    fn graph_config(&self) -> GraphConfig {
+        GraphConfig {
+            title: self.options.title.clone(),
+            width: 1600,
+            height: 900,
+            x_label: self.options.x_label.clone(),
+            y_label: self.options.y_label.clone(),
+            z_label: self.options.z_label.clone(),
+            line_style: self.options.line_style,
+            color_scheme: self.options.color_scheme.clone(),
+            legend: self.options.legend.clone(),
+            show_legend: self.options.show_legend,
         }
-    }
-
-    /// Convenience function to create a test plot builder
-    fn create_test_builder() -> PlotBuilder<MockPlottable> {
-        MockPlottable.plot()
-    }
-
-    #[test]
-    fn test_z_label_method() {
-        // Test setting z_label with a string
-        let builder = create_test_builder().z_label("Z Axis");
-
-        assert_eq!(builder.options.z_label, Some("Z Axis".to_string()));
-    }
-
-    #[test]
-    fn test_z_label_method_with_different_types() {
-        // Test setting z_label with different string-like types
-        let builder1 = create_test_builder().z_label(String::from("Z Axis"));
-        let builder2 = create_test_builder().z_label("Z Axis");
-
-        assert_eq!(builder1.options.z_label, Some("Z Axis".to_string()));
-        assert_eq!(builder2.options.z_label, Some("Z Axis".to_string()));
-    }
-
-    #[test]
-    fn test_point_size_method() {
-        // Test setting point size
-        let builder = create_test_builder().point_size(10);
-
-        assert_eq!(builder.options.point_size, Some(10));
-    }
-
-    #[test]
-    fn test_point_size_method_multiple_calls() {
-        // Test that multiple calls override the previous value
-        let builder = create_test_builder().point_size(5).point_size(15);
-
-        assert_eq!(builder.options.point_size, Some(15));
-    }
-
-    #[test]
-    fn test_label_size_method() {
-        // Test setting label size
-        let builder = create_test_builder().label_size(12.5);
-
-        assert_eq!(builder.options.labels_size, Some(12.5));
-    }
-
-    #[test]
-    fn test_label_size_method_multiple_calls() {
-        // Test that multiple calls override the previous value
-        let builder = create_test_builder().label_size(10.0).label_size(20.5);
-
-        assert_eq!(builder.options.labels_size, Some(20.5));
-    }
-
-    #[test]
-    fn test_chaining_multiple_methods() {
-        // Test chaining multiple configuration methods
-        let builder = create_test_builder()
-            .z_label("Z Axis")
-            .point_size(10)
-            .label_size(12.5);
-
-        assert_eq!(builder.options.z_label, Some("Z Axis".to_string()));
-        assert_eq!(builder.options.point_size, Some(10));
-        assert_eq!(builder.options.labels_size, Some(12.5));
     }
 }

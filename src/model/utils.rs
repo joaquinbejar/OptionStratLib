@@ -7,8 +7,10 @@ use crate::model::Position;
 use crate::model::types::{OptionStyle, OptionType, Side};
 use crate::{ExpirationDate, Options, Positive, pos};
 use chrono::{NaiveDateTime, TimeZone, Utc};
-use rust_decimal::Decimal;
+use rust_decimal::{Decimal, MathematicalOps};
 use rust_decimal_macros::dec;
+use std::error::Error;
+use std::ops::Mul;
 
 /// Converts a vector of `Positive` values to a vector of `f64` values.
 ///
@@ -373,12 +375,94 @@ pub trait ToRound {
     fn round_to(&self, decimal_places: u32) -> Decimal;
 }
 
+/// Calculates the optimal price range for an option based on its underlying price,
+/// strike price, implied volatility, and expiration date.
+///
+/// # Parameters
+/// - `underlying_price`: The price of the underlying asset, represented as a `Positive`.
+/// - `strike_price`: The strike price of the option, represented as a `Positive`.
+/// - `implied_volatility`: The market's implied volatility for the option, represented as a `Positive`.
+/// - `expiration_date`: The expiration date of the option, passed as an `ExpirationDate`.
+///
+/// # Returns
+/// A `Result` containing a tuple of two `Positive` values:
+/// - The `min_price` represents the lower bound of the price range.
+/// - The `max_price` represents the upper bound of the price range.
+///
+/// On success, the returned tuple includes both values rounded to a "nice" step value
+/// for better usability. On failure, an error boxed in `Box<dyn Error>` is returned.
+///
+/// # Calculations
+/// 1. Determines the number of years to expiration by calculating days to expiry
+///    and converting it into a fractional year.
+/// 2. Determines the `volatility_factor` which adjusts for time-decay and a
+///    confidence interval (set to 4.0 in this implementation).
+/// 3. Calculates the lower and upper bounds of the price range based on the
+///    `underlying_price` and the `volatility_factor`.
+/// 4. Computes an adjusted range (`min_price` and `max_price`) by scaling
+///    the `strike_price` by 70% and 130%, ensuring bounds are within realistic margins.
+/// 5. Divides the adjusted range into increments (`step`) for easier rounding before
+///    smoothing both bounds to user-friendly values.
+///
+/// # Errors
+/// The function will return an error if:
+/// - The extraction of `days_to_expiry` from the `expiration_date` fails.
+/// - `years_to_expiry.sqrt()` returns a `None` (e.g. if `years_to_expiry` is negative, which it shouldn't be).
+///
+/// # Note
+/// The constants such as the confidence interval (`4.0`) and scaling factors
+/// for the `strike_price` (`0.7` and `1.3`) might be subject to change based
+/// on different financial models or strategies.
+pub fn calculate_optimal_price_range(
+    underlying_price: Positive,
+    strike_price: Positive,
+    implied_volatility: Positive,
+    expiration_date: ExpirationDate,
+) -> Result<(Positive, Positive), Box<dyn Error>> {
+    let days_to_expiry = expiration_date.get_days()?;
+    let years_to_expiry = Decimal::from(days_to_expiry) / dec!(365.0);
+
+    let confidence_interval = dec!(4.0);
+    let volatility_factor =
+        implied_volatility * years_to_expiry.sqrt().unwrap() * confidence_interval;
+
+    let lower_bound = underlying_price * (dec!(1.0) - volatility_factor);
+    let upper_bound = underlying_price * (dec!(1.0) + volatility_factor);
+
+    let min_price = lower_bound.min(strike_price.mul(dec!(0.7)));
+    let max_price = upper_bound.max(strike_price.mul(dec!(1.3)));
+
+    let step = (max_price - min_price) / dec!(20.0);
+    let rounded_step = step.round_to_nice_number();
+
+    let min_price_rounded = (min_price / rounded_step).floor() * rounded_step;
+    let max_price_rounded = (max_price / rounded_step).ceiling() * rounded_step;
+
+    Ok((min_price_rounded, max_price_rounded))
+}
+
+/// Generates a price vector for the payoff graph
+pub fn generate_price_points(
+    min_price: Decimal,
+    max_price: Decimal,
+    num_points: usize,
+) -> Vec<Decimal> {
+    let step = (max_price - min_price) / Decimal::from(num_points - 1);
+    let mut prices = Vec::with_capacity(num_points);
+
+    for i in 0..num_points {
+        let price = min_price + step * Decimal::from(i);
+        prices.push(price);
+    }
+
+    prices
+}
+
 #[cfg(test)]
 mod tests_positive_f64_to_f64 {
     use super::*;
 
     #[test]
-
     fn test_positive_f64_to_f64_non_empty() {
         let positive_vec = vec![
             Positive::new(10.0).unwrap(),
@@ -392,7 +476,6 @@ mod tests_positive_f64_to_f64 {
     }
 
     #[test]
-
     fn test_positive_f64_to_f64_single_element() {
         let positive_vec = vec![Positive::new(42.0).unwrap()];
 
@@ -415,7 +498,6 @@ mod tests_mean_and_std {
     use approx::assert_relative_eq;
 
     #[test]
-
     fn test_basic_mean_and_std() {
         let values = vec![
             pos!(2.0),
@@ -434,7 +516,6 @@ mod tests_mean_and_std {
     }
 
     #[test]
-
     fn test_identical_values() {
         let values = vec![pos!(5.0), pos!(5.0), pos!(5.0), pos!(5.0)];
         let (mean, std) = mean_and_std(values);
@@ -444,7 +525,6 @@ mod tests_mean_and_std {
     }
 
     #[test]
-
     fn test_single_value() {
         let values = vec![pos!(3.0)];
         let (mean, std) = mean_and_std(values);
@@ -454,7 +534,6 @@ mod tests_mean_and_std {
     }
 
     #[test]
-
     fn test_small_numbers() {
         let values = vec![pos!(0.1), pos!(0.2), pos!(0.3)];
         let (mean, std) = mean_and_std(values);
@@ -464,7 +543,6 @@ mod tests_mean_and_std {
     }
 
     #[test]
-
     fn test_large_numbers() {
         let values = vec![pos!(1000.0), pos!(2000.0), pos!(3000.0)];
         let (mean, std) = mean_and_std(values);
@@ -474,7 +552,6 @@ mod tests_mean_and_std {
     }
 
     #[test]
-
     fn test_mixed_range() {
         let values = vec![pos!(0.5), pos!(5.0), pos!(50.0), pos!(500.0)];
         let (mean, std) = mean_and_std(values);
@@ -491,7 +568,6 @@ mod tests_mean_and_std {
     }
 
     #[test]
-
     fn test_symmetric_distribution() {
         let values = vec![pos!(1.0), pos!(2.0), pos!(3.0), pos!(4.0), pos!(5.0)];
         let (mean, std) = mean_and_std(values);
@@ -501,7 +577,6 @@ mod tests_mean_and_std {
     }
 
     #[test]
-
     fn test_result_is_positive() {
         let values = vec![pos!(1.0), pos!(2.0), pos!(3.0)];
         let (mean, std) = mean_and_std(values);
@@ -511,7 +586,6 @@ mod tests_mean_and_std {
     }
 
     #[test]
-
     fn test_precision() {
         let values = vec![pos!(1.23456789), pos!(2.34567890), pos!(3.45678901)];
         let (mean, std) = mean_and_std(values);
@@ -521,7 +595,6 @@ mod tests_mean_and_std {
     }
 
     #[test]
-
     fn test_precision_bis() {
         let values = vec![pos!(0.123456789), pos!(0.134567890), pos!(0.145678901)];
         let (mean, std) = mean_and_std(values);

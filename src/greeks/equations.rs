@@ -1086,7 +1086,7 @@ pub mod tests_delta_equations {
     use crate::model::types::{OptionStyle, Side};
     use crate::model::utils::create_sample_option;
     use crate::strategies::DELTA_THRESHOLD;
-    use crate::utils::logger::setup_logger;
+
     use crate::{ExpirationDate, assert_decimal_eq, pos};
     use approx::assert_relative_eq;
     use num_traits::ToPrimitive;
@@ -1094,9 +1094,7 @@ pub mod tests_delta_equations {
     use tracing::info;
 
     #[test]
-
     fn test_delta_no_volatility_itm() {
-        setup_logger();
         let option = create_sample_option(
             OptionStyle::Call,
             Side::Long,
@@ -1111,9 +1109,7 @@ pub mod tests_delta_equations {
     }
 
     #[test]
-
     fn test_delta_no_volatility_otm() {
-        setup_logger();
         let option = create_sample_option(
             OptionStyle::Call,
             Side::Long,
@@ -1128,9 +1124,7 @@ pub mod tests_delta_equations {
     }
 
     #[test]
-
     fn test_delta_no_volatility_itm_put() {
-        setup_logger();
         let option = create_sample_option(
             OptionStyle::Put,
             Side::Long,
@@ -1145,9 +1139,7 @@ pub mod tests_delta_equations {
     }
 
     #[test]
-
     fn test_delta_no_volatility_otm_put() {
-        setup_logger();
         let option = create_sample_option(
             OptionStyle::Put,
             Side::Long,
@@ -1162,9 +1154,7 @@ pub mod tests_delta_equations {
     }
 
     #[test]
-
     fn test_delta_no_volatility_itm_short() {
-        setup_logger();
         let option = create_sample_option(
             OptionStyle::Call,
             Side::Short,
@@ -1179,9 +1169,7 @@ pub mod tests_delta_equations {
     }
 
     #[test]
-
     fn test_delta_no_volatility_otm_short() {
-        setup_logger();
         let option = create_sample_option(
             OptionStyle::Call,
             Side::Short,
@@ -1196,9 +1184,7 @@ pub mod tests_delta_equations {
     }
 
     #[test]
-
     fn test_delta_no_volatility_itm_put_short() {
-        setup_logger();
         let option = create_sample_option(
             OptionStyle::Put,
             Side::Short,
@@ -1213,9 +1199,7 @@ pub mod tests_delta_equations {
     }
 
     #[test]
-
     fn test_delta_no_volatility_otm_put_short() {
-        setup_logger();
         let option = create_sample_option(
             OptionStyle::Put,
             Side::Short,
@@ -1230,9 +1214,7 @@ pub mod tests_delta_equations {
     }
 
     #[test]
-
     fn test_delta_deep_in_the_money_call() {
-        setup_logger();
         let option = create_sample_option(
             OptionStyle::Call,
             Side::Long,
@@ -1247,7 +1229,6 @@ pub mod tests_delta_equations {
     }
 
     #[test]
-
     fn test_delta_deep_out_of_the_money_call() {
         let option = create_sample_option(
             OptionStyle::Call,
@@ -1263,7 +1244,6 @@ pub mod tests_delta_equations {
     }
 
     #[test]
-
     fn test_delta_at_the_money_put() {
         let option = create_sample_option(
             OptionStyle::Put,
@@ -1279,7 +1259,6 @@ pub mod tests_delta_equations {
     }
 
     #[test]
-
     fn test_delta_short_term_high_volatility() {
         let mut option = create_sample_option(
             OptionStyle::Call,
@@ -1296,7 +1275,6 @@ pub mod tests_delta_equations {
     }
 
     #[test]
-
     fn test_delta_long_term_low_volatility() {
         let mut option = create_sample_option(
             OptionStyle::Put,
@@ -1313,7 +1291,6 @@ pub mod tests_delta_equations {
     }
 
     #[test]
-
     fn test_delta_long_almost_zero_time_to_maturity() {
         let mut option = create_sample_option(
             OptionStyle::Call,
@@ -1336,16 +1313,14 @@ pub mod tests_gamma_equations {
     use crate::constants::DAYS_IN_A_YEAR;
     use crate::model::types::{OptionStyle, Side};
     use crate::model::utils::create_sample_option;
-    use crate::utils::logger::setup_logger;
+
     use crate::{ExpirationDate, pos};
     use approx::assert_relative_eq;
     use num_traits::ToPrimitive;
     use tracing::info;
 
     #[test]
-
     fn test_gamma_deep_in_the_money_call() {
-        setup_logger();
         let option = create_sample_option(
             OptionStyle::Call,
             Side::Long,
@@ -1360,7 +1335,6 @@ pub mod tests_gamma_equations {
     }
 
     #[test]
-
     fn test_gamma_deep_out_of_the_money_call() {
         let option = create_sample_option(
             OptionStyle::Call,
@@ -1376,7 +1350,6 @@ pub mod tests_gamma_equations {
     }
 
     #[test]
-
     fn test_gamma_at_the_money_put() {
         let option = create_sample_option(
             OptionStyle::Put,
@@ -1392,7 +1365,6 @@ pub mod tests_gamma_equations {
     }
 
     #[test]
-
     fn test_gamma_short_term_high_volatility() {
         let mut option = create_sample_option(
             OptionStyle::Call,
@@ -1409,7 +1381,6 @@ pub mod tests_gamma_equations {
     }
 
     #[test]
-
     fn test_gamma_long_term_low_volatility() {
         let mut option = create_sample_option(
             OptionStyle::Put,
@@ -1426,7 +1397,6 @@ pub mod tests_gamma_equations {
     }
 
     #[test]
-
     fn test_gamma_zero_volatility() {
         let option = create_sample_option(
             OptionStyle::Call,
@@ -1442,7 +1412,6 @@ pub mod tests_gamma_equations {
     }
 
     #[test]
-
     fn test_gamma_extreme_high_volatility() {
         let option = create_sample_option(
             OptionStyle::Put,
@@ -1462,7 +1431,7 @@ pub mod tests_gamma_equations {
 mod tests_gamma_equations_values {
     use super::*;
     use crate::model::types::{OptionStyle, Side};
-    use crate::utils::logger::setup_logger;
+
     use crate::{ExpirationDate, OptionType, pos};
     use approx::assert_relative_eq;
     use num_traits::ToPrimitive;
@@ -1470,7 +1439,6 @@ mod tests_gamma_equations_values {
 
     #[test]
     fn test_50_vol_10() {
-        setup_logger();
         let option = Options::new(
             OptionType::European,
             Side::Long,
@@ -1492,7 +1460,6 @@ mod tests_gamma_equations_values {
 
     #[test]
     fn test_50_vol_5() {
-        setup_logger();
         let option = Options::new(
             OptionType::European,
             Side::Long,
@@ -1514,7 +1481,6 @@ mod tests_gamma_equations_values {
 
     #[test]
     fn test_50_vol_20() {
-        setup_logger();
         let option = Options::new(
             OptionType::European,
             Side::Long,
@@ -1568,7 +1534,6 @@ pub mod tests_vega_equation {
     }
 
     #[test]
-
     fn test_vega_atm() {
         let option = create_test_option(
             pos!(100.0),
@@ -1588,7 +1553,6 @@ pub mod tests_vega_equation {
     }
 
     #[test]
-
     fn test_vega_otm() {
         let option = create_test_option(
             pos!(90.0),
@@ -1608,7 +1572,6 @@ pub mod tests_vega_equation {
     }
 
     #[test]
-
     fn test_vega_short_expiration() {
         let option = create_test_option(
             pos!(100.0),
@@ -1628,7 +1591,6 @@ pub mod tests_vega_equation {
     }
 
     #[test]
-
     fn test_vega_with_dividends() {
         let option = create_test_option(
             pos!(100.0),
@@ -1648,7 +1610,6 @@ pub mod tests_vega_equation {
     }
 
     #[test]
-
     fn test_vega_itm() {
         let option = create_test_option(
             pos!(110.0),
@@ -1696,7 +1657,6 @@ pub mod tests_rho_equations {
     }
 
     #[test]
-
     fn test_rho_call_option() {
         let option = create_test_option(OptionStyle::Call);
         let result = rho(&option).unwrap().to_f64().unwrap();
@@ -1704,7 +1664,6 @@ pub mod tests_rho_equations {
     }
 
     #[test]
-
     fn test_rho_put_option() {
         let option = create_test_option(OptionStyle::Put);
         let result = rho(&option).unwrap().to_f64().unwrap();
@@ -1712,7 +1671,6 @@ pub mod tests_rho_equations {
     }
 
     #[test]
-
     fn test_rho_zero_time_to_expiry() {
         let mut option = create_test_option(OptionStyle::Call);
         option.expiration_date = ExpirationDate::Days(Positive::ZERO);
@@ -1722,7 +1680,6 @@ pub mod tests_rho_equations {
     }
 
     #[test]
-
     fn test_rho_zero_risk_free_rate() {
         let mut option = create_test_option(OptionStyle::Call);
         option.risk_free_rate = dec!(0.0);
@@ -1731,7 +1688,6 @@ pub mod tests_rho_equations {
     }
 
     #[test]
-
     fn test_rho_deep_out_of_money_call() {
         let mut option = create_test_option(OptionStyle::Call);
         option.strike_price = pos!(1000.0);
@@ -1740,7 +1696,6 @@ pub mod tests_rho_equations {
     }
 
     #[test]
-
     fn test_rho_deep_out_of_money_put() {
         let mut option = create_test_option(OptionStyle::Put);
         option.strike_price = pos!(1.0);
@@ -1749,7 +1704,6 @@ pub mod tests_rho_equations {
     }
 
     #[test]
-
     fn test_rho_high_volatility() {
         let mut option = create_test_option(OptionStyle::Call);
         option.implied_volatility = Positive::ONE;
@@ -1769,7 +1723,6 @@ pub mod tests_theta_long_equations {
     use num_traits::ToPrimitive;
 
     #[test]
-
     fn test_theta_call_option() {
         // Create a sample call option
         let option = create_sample_option(
@@ -1792,7 +1745,6 @@ pub mod tests_theta_long_equations {
     }
 
     #[test]
-
     fn test_theta_put_option() {
         // Create a sample put option
         let option = create_sample_option(
@@ -1815,7 +1767,6 @@ pub mod tests_theta_long_equations {
     }
 
     #[test]
-
     fn test_theta_call_option_near_expiry() {
         // Create a sample call option near expiry
         let mut option = create_sample_option(
@@ -1839,7 +1790,6 @@ pub mod tests_theta_long_equations {
     }
 
     #[test]
-
     fn test_theta_put_option_far_from_expiry() {
         // Create a sample put option far from expiry
         let mut option = create_sample_option(
@@ -1874,7 +1824,6 @@ pub mod tests_theta_short_equations {
     use num_traits::ToPrimitive;
 
     #[test]
-
     fn test_theta_short_call_option() {
         // Create a sample short call option
         let option = create_sample_option(
@@ -1897,7 +1846,6 @@ pub mod tests_theta_short_equations {
     }
 
     #[test]
-
     fn test_theta_short_put_option() {
         // Create a sample short put option
         let option = create_sample_option(
@@ -1920,7 +1868,6 @@ pub mod tests_theta_short_equations {
     }
 
     #[test]
-
     fn test_theta_short_call_option_near_expiry() {
         // Create a sample short call option near expiry
         let mut option = create_sample_option(
@@ -1944,7 +1891,6 @@ pub mod tests_theta_short_equations {
     }
 
     #[test]
-
     fn test_theta_short_put_option_far_from_expiry() {
         // Create a sample short put option far from expiry
         let mut option = create_sample_option(

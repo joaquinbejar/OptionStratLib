@@ -4,7 +4,6 @@
    Date: 11/8/24
 ******************************************************************************/
 use crate::Positive;
-use plotters::style::RGBColor;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 
@@ -40,18 +39,6 @@ pub(crate) const MIN_VOLATILITY: Positive = Positive(dec!(1e-16));
 /// Maximum allowed volatility value as a Positive decimal (100%).
 /// Sets an upper bound for volatility inputs in financial models.
 pub(crate) const MAX_VOLATILITY: Positive = Positive::HUNDRED;
-
-/// RGB color definition for dark green visualization elements.
-/// Used for positive indicators or upward movements in charts.
-pub(crate) const DARK_GREEN: RGBColor = RGBColor(0, 150, 0);
-
-/// RGB color definition for dark red visualization elements.
-/// Used for negative indicators or downward movements in charts.
-pub(crate) const DARK_RED: RGBColor = RGBColor(220, 0, 0);
-
-/// RGB color definition for dark blue visualization elements.
-/// Used for neutral or reference indicators in charts.
-pub(crate) const DARK_BLUE: RGBColor = RGBColor(0, 0, 150);
 
 /// Multiplier defining the lower bound for strike price ranges (98% of reference price).
 /// Used to establish the minimum strike price in option chains or pricing models.
@@ -104,18 +91,3 @@ pub(crate) const MAX_ITERATIONS_IV: u32 = 1000;
 /// Convergence tolerance for implied volatility calculations.
 /// Determines when the implied volatility solver has reached sufficient precision.
 pub(crate) const IV_TOLERANCE: Decimal = dec!(1e-5);
-
-/// Standard deviation multiplier used for scaling graph boundaries.
-///
-/// This constant defines how many standard deviations from the mean should be
-/// displayed on statistical graphs or charts. A value of 4.0 means the graph
-/// will show data within 4 standard deviations from the mean in each direction,
-/// covering approximately 99.994% of normally distributed data.
-///
-/// # Usage
-///
-/// This constant is used when setting the boundaries or range of statistical plots,
-/// particularly when displaying probability distributions, confidence intervals,
-/// or data with normal/Gaussian characteristics.
-///
-pub(crate) const STDDEV_MULTIPLAYER_GRAPH: f64 = 4.0;

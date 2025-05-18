@@ -124,10 +124,12 @@ mod axis;
 
 /// Components for defining and working with expiration dates.
 mod expiration;
+mod trade;
 
 pub use axis::BasicAxisTypes;
 pub use expiration::ExpirationDate;
 pub use option::Options;
 pub use position::Position;
 pub use profit_range::ProfitLossRange;
+pub use trade::{Trade, TradeAble, TradeStatus, TradeStatusAble, save_trades};
 pub use types::{OptionStyle, OptionType, Side};

@@ -4,16 +4,13 @@ use {
     optionstratlib::chains::chain::OptionChain,
     optionstratlib::strategies::base::Optimizable,
     optionstratlib::strategies::{BearCallSpread, FindOptimalSide, Strategies},
-    optionstratlib::utils::setup_logger,
     optionstratlib::{ExpirationDate, Positive, pos},
     rust_decimal_macros::dec,
     std::error::Error,
 };
 
 #[test]
-
 fn test_bear_call_spread_integration() -> Result<(), Box<dyn Error>> {
-    setup_logger();
     // Define inputs for the BearCallSpread strategy
     let underlying_price = pos!(5781.88);
     let mut strategy = BearCallSpread::new(
@@ -36,15 +33,15 @@ fn test_bear_call_spread_integration() -> Result<(), Box<dyn Error>> {
 
     let option_chain =
         OptionChain::load_from_json("./examples/Chains/SP500-18-oct-2024-5781.88.json")?;
-    strategy.best_area(&option_chain, FindOptimalSide::All);
+    strategy.get_best_area(&option_chain, FindOptimalSide::All);
     assert_relative_eq!(
-        strategy.profit_area().unwrap().to_f64().unwrap(),
+        strategy.get_profit_area().unwrap().to_f64().unwrap(),
         730.2965,
         epsilon = 0.001
     );
-    strategy.best_ratio(&option_chain, FindOptimalSide::Upper);
+    strategy.get_best_ratio(&option_chain, FindOptimalSide::Upper);
     assert_relative_eq!(
-        strategy.profit_ratio().unwrap().to_f64().unwrap(),
+        strategy.get_profit_ratio().unwrap().to_f64().unwrap(),
         65.8833,
         epsilon = 0.001
     );

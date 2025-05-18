@@ -4,7 +4,7 @@
    Date: 20/1/25
 ******************************************************************************/
 use crate::error::{
-    GreeksError, InterpolationError, OperationErrorKind, OptionsError, PositionError,
+    GraphError, GreeksError, InterpolationError, OperationErrorKind, OptionsError, PositionError,
 };
 use std::error::Error;
 use std::fmt;
@@ -250,6 +250,14 @@ impl From<GreeksError> for SurfaceError {
 /// the `SurfaceError` enum encompassing multiple errors related to curve operations.
 impl From<Box<dyn Error>> for SurfaceError {
     fn from(err: Box<dyn Error>) -> Self {
+        SurfaceError::StdError {
+            reason: err.to_string(),
+        }
+    }
+}
+
+impl From<GraphError> for SurfaceError {
+    fn from(err: GraphError) -> Self {
         SurfaceError::StdError {
             reason: err.to_string(),
         }

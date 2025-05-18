@@ -666,7 +666,6 @@ mod tests {
     use super::*;
 
     #[test]
-
     fn test_option_data_errors() {
         let error = ChainError::invalid_strike(-10.0, "Strike cannot be negative");
         assert!(matches!(
@@ -682,14 +681,12 @@ mod tests {
     }
 
     #[test]
-
     fn test_error_messages() {
         let error = ChainError::invalid_strike(0.0, "Strike must be positive");
         assert!(error.to_string().contains("Strike must be positive"));
     }
 
     #[test]
-
     fn test_chain_build_errors() {
         let error = ChainError::ChainBuildError(ChainBuildErrorKind::InvalidParameters {
             parameter: "chain_size".to_string(),
@@ -700,7 +697,6 @@ mod tests {
     }
 
     #[test]
-
     fn test_strategy_errors() {
         let error = ChainError::invalid_legs(4, 3, "Iron Condor requires exactly 4 legs");
         assert!(error.to_string().contains("4"));
@@ -709,7 +705,6 @@ mod tests {
     }
 
     #[test]
-
     fn test_file_errors() {
         let io_error = io::Error::new(io::ErrorKind::NotFound, "file not found");
         let error = ChainError::from(io_error);
@@ -725,7 +720,6 @@ mod tests_extended {
     use super::*;
 
     #[test]
-
     fn test_chain_build_error_display() {
         let error = ChainBuildErrorKind::InvalidParameters {
             parameter: "size".to_string(),
@@ -743,7 +737,6 @@ mod tests_extended {
     }
 
     #[test]
-
     fn test_file_error_display() {
         let error = FileErrorKind::InvalidFormat {
             format: "CSV".to_string(),
@@ -762,7 +755,6 @@ mod tests_extended {
     }
 
     #[test]
-
     fn test_option_data_error_display() {
         let error = OptionDataErrorKind::InvalidDelta {
             delta: Some(1.5),
@@ -773,7 +765,6 @@ mod tests_extended {
     }
 
     #[test]
-
     fn test_strategy_error_equality() {
         let error1 = StrategyErrorKind::InvalidLegs {
             expected: 4,
@@ -789,7 +780,6 @@ mod tests_extended {
     }
 
     #[test]
-
     fn test_error_conversions() {
         // Test de String a ChainError
         let string_error: ChainError = "test error".to_string().into();
@@ -806,16 +796,12 @@ mod tests_extended {
             ChainError::FileError(FileErrorKind::IOError(_))
         ));
 
-        let std_error: Box<dyn Error> = Box::new(std::io::Error::new(
-            std::io::ErrorKind::Other,
-            "dynamic error",
-        ));
+        let std_error: Box<dyn Error> = Box::new(std::io::Error::other("dynamic error"));
         let chain_error = ChainError::from(std_error);
         assert!(matches!(chain_error, ChainError::DynError { .. }));
     }
 
     #[test]
-
     fn test_helper_methods() {
         let error = ChainError::invalid_strike(-10.0, "Strike must be positive");
         assert!(matches!(
@@ -831,7 +817,6 @@ mod tests_extended {
     }
 
     #[test]
-
     fn test_chain_error_file_error() {
         let error = ChainError::FileError(FileErrorKind::IOError(io::Error::new(
             io::ErrorKind::NotFound,
@@ -841,7 +826,6 @@ mod tests_extended {
     }
 
     #[test]
-
     fn test_chain_error_dyn_error() {
         let error = ChainError::DynError {
             message: "Dynamic error occurred".to_string(),
@@ -850,7 +834,6 @@ mod tests_extended {
     }
 
     #[test]
-
     fn test_option_data_error_invalid_volatility() {
         let error = OptionDataErrorKind::InvalidVolatility {
             volatility: Some(0.25),
@@ -863,7 +846,6 @@ mod tests_extended {
     }
 
     #[test]
-
     fn test_option_data_error_invalid_prices() {
         let error = OptionDataErrorKind::InvalidPrices {
             bid: Some(1.0),
@@ -877,7 +859,6 @@ mod tests_extended {
     }
 
     #[test]
-
     fn test_option_data_error_price_calculation_error() {
         let error = OptionDataErrorKind::PriceCalculationError("Division by zero".to_string());
         assert_eq!(
@@ -887,7 +868,6 @@ mod tests_extended {
     }
 
     #[test]
-
     fn test_chain_build_error_strike_generation_error() {
         let error = ChainBuildErrorKind::StrikeGenerationError {
             reference_price: 100.0,
@@ -901,7 +881,6 @@ mod tests_extended {
     }
 
     #[test]
-
     fn test_file_error_io_error() {
         let error = FileErrorKind::IOError(io::Error::new(
             io::ErrorKind::PermissionDenied,
@@ -911,7 +890,6 @@ mod tests_extended {
     }
 
     #[test]
-
     fn test_strategy_error_invalid_combination() {
         let error = StrategyErrorKind::InvalidCombination {
             strategy_type: "Straddle".to_string(),
@@ -924,7 +902,6 @@ mod tests_extended {
     }
 
     #[test]
-
     fn test_chain_error_invalid_prices_constructor() {
         let error = ChainError::invalid_prices(Some(1.0), Some(2.0), "Spread too wide");
         assert_eq!(

@@ -919,12 +919,12 @@ impl OptionData {
     ///   * For `Range`: Strike price must fall within the specified range (inclusive)
     pub fn is_valid_optimal_side(
         &self,
-        underlying_price: Positive,
-        side: &FindOptimalSide, // Note: now mutable
+        underlying_price: &Positive,
+        side: &FindOptimalSide,
     ) -> bool {
         match side {
-            FindOptimalSide::Upper => self.strike_price >= underlying_price,
-            FindOptimalSide::Lower => self.strike_price <= underlying_price,
+            FindOptimalSide::Upper => &self.strike_price >= underlying_price,
+            FindOptimalSide::Lower => &self.strike_price <= underlying_price,
             FindOptimalSide::All => true,
             FindOptimalSide::Range(start, end) => {
                 self.strike_price >= *start && self.strike_price <= *end
@@ -1297,7 +1297,7 @@ impl fmt::Display for OptionData {
 #[cfg(test)]
 mod optiondata_coverage_tests {
     use super::*;
-    use crate::utils::logger::setup_logger;
+
     use crate::{ExpirationDate, spos};
     use rust_decimal_macros::dec;
 
@@ -1333,7 +1333,6 @@ mod optiondata_coverage_tests {
 
     #[test]
     fn test_calculate_prices_with_refresh() {
-        setup_logger();
         let mut option_data = create_test_option_data();
 
         let price_params = OptionDataPriceParams::new(
@@ -1386,7 +1385,6 @@ mod optiondata_coverage_tests {
 
     #[test]
     fn test_calculate_gamma_no_implied_volatility() {
-        setup_logger();
         let mut option_data = create_test_option_data();
 
         let price_params = OptionDataPriceParams::new(
@@ -1443,7 +1441,7 @@ mod optiondata_coverage_tests {
 mod tests_get_position {
     use super::*;
     use crate::model::ExpirationDate;
-    use crate::utils::logger::setup_logger;
+
     use crate::{assert_pos_relative_eq, pos, spos};
     use chrono::{Duration, Utc};
     use rust_decimal_macros::dec;
@@ -1479,7 +1477,6 @@ mod tests_get_position {
 
     #[test]
     fn test_get_position_long_call() {
-        setup_logger();
         let option_data = create_test_option_data();
         let price_params = create_test_price_params();
 
@@ -1742,7 +1739,6 @@ mod tests_get_position {
 
     #[test]
     fn test_get_position_uses_market_price_long_call() {
-        setup_logger();
         let option_data = create_test_option_data();
         let price_params = create_test_price_params();
 
@@ -2362,7 +2358,7 @@ mod tests_is_valid_optimal_side_deltable {
 
         // Deltable should always return true
         let result =
-            option_data.is_valid_optimal_side(pos!(100.0), &FindOptimalSide::Deltable(pos!(0.5)));
+            option_data.is_valid_optimal_side(&pos!(100.0), &FindOptimalSide::Deltable(pos!(0.5)));
 
         assert!(result);
     }
@@ -2386,7 +2382,7 @@ mod tests_is_valid_optimal_side_deltable {
 
         // Testing for panic
         let result = std::panic::catch_unwind(|| {
-            option_data.is_valid_optimal_side(pos!(100.0), &FindOptimalSide::Center);
+            option_data.is_valid_optimal_side(&pos!(100.0), &FindOptimalSide::Center);
         });
 
         assert!(result.is_err());
@@ -2411,7 +2407,7 @@ mod tests_is_valid_optimal_side_deltable {
 
         // DeltaRange with min=0.2, max=0.4, which includes our delta_call=0.3
         let result = option_data.is_valid_optimal_side(
-            pos!(100.0),
+            &pos!(100.0),
             &FindOptimalSide::DeltaRange(dec!(0.2), dec!(0.4)),
         );
 
@@ -2437,7 +2433,7 @@ mod tests_is_valid_optimal_side_deltable {
 
         // DeltaRange with min=0.2, max=0.4, which includes our delta_put=0.3
         let result = option_data.is_valid_optimal_side(
-            pos!(100.0),
+            &pos!(100.0),
             &FindOptimalSide::DeltaRange(dec!(0.2), dec!(0.4)),
         );
 
@@ -2463,7 +2459,7 @@ mod tests_is_valid_optimal_side_deltable {
 
         // DeltaRange with min=0.2, max=0.4, which excludes both delta values
         let result = option_data.is_valid_optimal_side(
-            pos!(100.0),
+            &pos!(100.0),
             &FindOptimalSide::DeltaRange(dec!(0.2), dec!(0.4)),
         );
 
@@ -2489,7 +2485,7 @@ mod tests_is_valid_optimal_side_deltable {
 
         // DeltaRange with min=0.2, max=0.4, but no deltas to check
         let result = option_data.is_valid_optimal_side(
-            pos!(100.0),
+            &pos!(100.0),
             &FindOptimalSide::DeltaRange(dec!(0.2), dec!(0.4)),
         );
 

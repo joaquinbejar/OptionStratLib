@@ -26,7 +26,6 @@ fn get_option(strike: &Positive) -> Options {
     )
 }
 fn main() -> Result<(), Box<dyn Error>> {
-    setup_logger();
     let params = ConstructionParams::D2 {
         t_start: dec!(25.0),
         t_end: dec!(78.0),
@@ -47,7 +46,6 @@ fn main() -> Result<(), Box<dyn Error>> {
         .title("Vega Curve")
         .x_label("Asset value")
         .y_label("vega")
-        .line_width(1)
         .save("./Draws/Curves/vega_curve.png")?;
 
     Ok(())

@@ -4,12 +4,11 @@ use optionstratlib::simulation::steps::{Step, Xstep, Ystep};
 use optionstratlib::simulation::{WalkParams, WalkType, WalkTypeAble};
 use optionstratlib::utils::setup_logger;
 use optionstratlib::utils::time::{TimeFrame, convert_time_frame};
-use optionstratlib::visualization::utils::{Graph, GraphBackend};
+use optionstratlib::visualization::Graph;
 use optionstratlib::{ExpirationDate, Positive, pos};
 use rust_decimal_macros::dec;
-use tracing::debug;
+use tracing::{debug, info};
 
-#[warn(dead_code)]
 struct Walker {}
 
 impl Walker {
@@ -21,7 +20,6 @@ impl Walker {
 impl WalkTypeAble<Positive, Positive> for Walker {}
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    setup_logger();
     let simulator_size: usize = 15;
     // let n_steps = 43_200; // 30 days in minutes
     let n_steps = 1200;
@@ -41,7 +39,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             drift: dec!(0.0),
             volatility: std_dev,
         },
-        walker: walker,
+        walker,
     };
 
     let simulator = Simulator::new(
@@ -52,13 +50,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
     debug!("Simulator: {}", simulator);
 
-    simulator.graph(
-        GraphBackend::Bitmap {
-            file_path: "Draws/Simulation/simulator.png",
-            size: (1200, 800),
-        },
-        20,
-    )?;
+    let last_steps: Vec<&Step<Positive, Positive>> = simulator
+        .into_iter()
+        .map(|step| step.last().unwrap())
+        .collect();
+    info!("Last Steps: {:?}", last_steps);
 
+    let last_values: Vec<&Positive> = simulator
+        .into_iter()
+        .map(|step| step.last().unwrap().get_value())
+        .collect();
+    info!("Last Values: {:?}", last_values);
+    let path: &std::path::Path = "Draws/Simulation/simulator.png".as_ref();
+    simulator.write_png(path)?;
     Ok(())
 }

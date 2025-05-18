@@ -2,20 +2,15 @@ use approx::assert_relative_eq;
 use num_traits::ToPrimitive;
 use optionstratlib::ExpirationDate;
 use optionstratlib::constants::ZERO;
-use optionstratlib::strategies::Strategies;
 use optionstratlib::strategies::base::BreakEvenable;
 use optionstratlib::strategies::call_butterfly::CallButterfly;
-use optionstratlib::utils::setup_logger;
-use optionstratlib::visualization::utils::Graph;
+use optionstratlib::strategies::{BasicAble, Strategies};
 use optionstratlib::{Positive, assert_pos_relative_eq, pos};
 use rust_decimal_macros::dec;
 use std::error::Error;
 
 #[test]
-
 fn test_call_butterfly_integration() -> Result<(), Box<dyn Error>> {
-    setup_logger();
-
     // Define inputs for the CallButterfly strategy
     let underlying_price = pos!(5781.88);
 
@@ -43,26 +38,26 @@ fn test_call_butterfly_integration() -> Result<(), Box<dyn Error>> {
 
     // Assertions to validate strategy properties and computations
     assert_eq!(
-        strategy.title(),
-        "Ratio Call Spread Strategy: CallButterfly\n\tUnderlying: SP500 @ $5750 Long Call European Option\n\tUnderlying: SP500 @ $5800 Short Call European Option\n\tUnderlying: SP500 @ $5850 Short Call European Option"
+        strategy.get_title(),
+        "CallButterfly Strategy: \n\tUnderlying: SP500 @ $5800 Short Call European Option\n\tUnderlying: SP500 @ $5750 Long Call European Option\n\tUnderlying: SP500 @ $5850 Short Call European Option"
     );
     assert_eq!(strategy.get_break_even_points().unwrap().len(), 2);
     assert_relative_eq!(
-        strategy.net_premium_received().unwrap().to_f64(),
+        strategy.get_net_premium_received().unwrap().to_f64(),
         ZERO,
         epsilon = 0.001
     );
-    assert!(strategy.max_profit().is_ok());
-    assert!(strategy.max_loss().is_ok());
-    assert_pos_relative_eq!(strategy.max_profit()?, pos!(42.319), pos!(0.0001));
-    assert_eq!(strategy.max_loss()?, Positive::INFINITY);
-    assert_pos_relative_eq!(strategy.total_cost()?, pos!(89.57), pos!(0.0001));
-    assert_eq!(strategy.fees().unwrap().to_f64(), 4.53);
+    assert!(strategy.get_max_profit().is_ok());
+    assert!(strategy.get_max_loss().is_ok());
+    assert_pos_relative_eq!(strategy.get_max_profit()?, pos!(42.319), pos!(0.0001));
+    assert_eq!(strategy.get_max_loss()?, Positive::INFINITY);
+    assert_pos_relative_eq!(strategy.get_total_cost()?, pos!(89.57), pos!(0.0001));
+    assert_eq!(strategy.get_fees().unwrap().to_f64(), 4.53);
 
     // Test range calculations
-    let price_range = strategy.best_range_to_show(pos!(1.0)).unwrap();
+    let price_range = strategy.get_best_range_to_show(pos!(1.0)).unwrap();
     assert!(!price_range.is_empty());
-    let range = strategy.range_of_profit().unwrap();
+    let range = strategy.get_range_of_profit().unwrap();
     assert_relative_eq!(range.to_f64(), 134.639, epsilon = 0.001);
     assert_relative_eq!(
         (range.to_f64() / 2.0) / underlying_price * 100.0,
@@ -70,8 +65,8 @@ fn test_call_butterfly_integration() -> Result<(), Box<dyn Error>> {
         epsilon = 0.001
     );
 
-    assert!(strategy.profit_area().unwrap().to_f64().unwrap() > 0.0);
-    assert!(strategy.profit_ratio().unwrap().to_f64().unwrap() > 0.0);
+    assert!(strategy.get_profit_area().unwrap().to_f64().unwrap() > 0.0);
+    assert!(strategy.get_profit_ratio().unwrap().to_f64().unwrap() > 0.0);
 
     // Validate price range in relation to break even points
     let break_even_points = strategy.get_break_even_points().unwrap();

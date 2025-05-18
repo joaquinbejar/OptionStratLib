@@ -1,18 +1,14 @@
 use optionstratlib::ExpirationDate;
 use optionstratlib::Positive;
 use optionstratlib::pos;
-use optionstratlib::strategies::ShortStrangle;
-use optionstratlib::strategies::Strategies;
+use optionstratlib::strategies::{BasicAble, ShortStrangle, Strategies};
 use optionstratlib::utils::setup_logger;
-use optionstratlib::visualization::utils::Graph;
-use optionstratlib::visualization::utils::GraphBackend;
+use optionstratlib::visualization::Graph;
 use rust_decimal_macros::dec;
 use std::error::Error;
 use tracing::info;
 
 fn main() -> Result<(), Box<dyn Error>> {
-    setup_logger();
-
     let underlying_price = pos!(7250.6);
 
     let strategy = ShortStrangle::new(
@@ -33,37 +29,32 @@ fn main() -> Result<(), Box<dyn Error>> {
         pos!(7.01),     // close_fee_short_put
     );
 
-    let range = strategy.range_of_profit().unwrap_or(Positive::ZERO);
-    info!("Title: {}", strategy.title());
+    let range = strategy.get_range_of_profit().unwrap_or(Positive::ZERO);
+    info!("Title: {}", strategy.get_title());
     info!("Break Even Points: {:?}", strategy.break_even_points);
     info!(
         "Net Premium Received: ${:.2}",
-        strategy.net_premium_received()?
+        strategy.get_net_premium_received()?
     );
     info!(
         "Max Profit: ${:.2}",
-        strategy.max_profit().unwrap_or(Positive::ZERO)
+        strategy.get_max_profit().unwrap_or(Positive::ZERO)
     );
     info!(
         "Max Loss: ${}",
-        strategy.max_loss().unwrap_or(Positive::ZERO)
+        strategy.get_max_loss().unwrap_or(Positive::ZERO)
     );
-    info!("Total Fees: ${:.2}", strategy.fees()?);
+    info!("Total Fees: ${:.2}", strategy.get_fees()?);
     info!(
         "Range of Profit: ${:.2} {:.2}%",
         range,
         (range / 2.0) / underlying_price * 100.0
     );
-    info!("Profit Area: {:.2}%", strategy.profit_area()?);
+    info!("Profit Area: {:.2}%", strategy.get_profit_area()?);
 
-    // Generate the profit/loss graph
-    strategy.graph(
-        GraphBackend::Bitmap {
-            file_path: "Draws/Strategy/short_strangle_delta_profit_loss_chart.png",
-            size: (1400, 933),
-        },
-        20,
-    )?;
+    let path: &std::path::Path =
+        "Draws/Strategy/short_strangle_delta_profit_loss_chart.png".as_ref();
+    strategy.write_png(path)?;
 
     Ok(())
 }

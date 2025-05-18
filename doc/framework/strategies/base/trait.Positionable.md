@@ -114,8 +114,7 @@ Retrieves a specific position based on option style, side, and strike.
 
 - `Result<Vec<&mut Position>, PositionError>` - A `Result` containing a
   vector of mutable references to the matching `Position` objects, or a
-  `PositionError` if the operation is not supported. This function
-  currently uses `unimplemented!()`.
+  `PositionError` if the operation is not supported.
 :::
 
 ::: {#method.modify_position .section .method}
@@ -135,8 +134,7 @@ Modifies an existing position.
 ##### [§](#returns-3){.doc-anchor}Returns
 
 - `Result<(), PositionError>` - A `Result` indicating success or failure
-  of the modification, or a `PositionError` if the operation is not
-  supported. This function currently uses `unimplemented!()`.
+  of the modification, or a `PositionError`.
 :::
 :::::::::::
 

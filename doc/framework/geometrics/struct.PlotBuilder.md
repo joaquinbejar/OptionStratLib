@@ -200,7 +200,7 @@ The `PlotBuilder` instance with the updated curve names
 [Source](../../src/optionstratlib/geometrics/visualization/plotters.rs.html#251-254){.src
 .rightside}
 
-#### pub fn [line_colors](#method.line_colors){.fn}(self, colors: [Vec](https://doc.rust-lang.org/1.86.0/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<RGBColor\>) -\> Self {#pub-fn-line_colorsself-colors-vecrgbcolor---self .code-header}
+#### pub fn [line_colors](#method.line_colors){.fn}(self, colors: [Vec](https://doc.rust-lang.org/1.86.0/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<ColorScheme\>) -\> Self {#pub-fn-line_colorsself-colors-vecrgbcolor---self .code-header}
 :::
 
 ::: docblock

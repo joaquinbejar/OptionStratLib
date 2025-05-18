@@ -2,17 +2,13 @@ use optionstratlib::greeks::Greeks;
 use optionstratlib::strategies::delta_neutral::DeltaAdjustment::NoAdjustmentNeeded;
 use optionstratlib::strategies::delta_neutral::DeltaNeutrality;
 use optionstratlib::strategies::{DELTA_THRESHOLD, LongStrangle};
-use optionstratlib::utils::setup_logger;
 use optionstratlib::{ExpirationDate, Positive};
 use optionstratlib::{assert_decimal_eq, pos};
 use rust_decimal_macros::dec;
 use std::error::Error;
 
 #[test]
-
 fn test_long_strangle_integration() -> Result<(), Box<dyn Error>> {
-    setup_logger();
-
     // Define inputs for the LongStrangle strategy
     let underlying_price = pos!(7140.6);
 

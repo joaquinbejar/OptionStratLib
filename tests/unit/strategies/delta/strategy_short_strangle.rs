@@ -2,7 +2,6 @@ use optionstratlib::greeks::Greeks;
 use optionstratlib::strategies::delta_neutral::DeltaAdjustment::NoAdjustmentNeeded;
 use optionstratlib::strategies::delta_neutral::DeltaNeutrality;
 use optionstratlib::strategies::{DELTA_THRESHOLD, ShortStrangle};
-use optionstratlib::utils::setup_logger;
 use optionstratlib::{ExpirationDate, Positive};
 use optionstratlib::{assert_decimal_eq, pos};
 use rust_decimal::Decimal;
@@ -10,10 +9,7 @@ use rust_decimal_macros::dec;
 use std::error::Error;
 
 #[test]
-
 fn test_short_strangle_with_greeks_integration() -> Result<(), Box<dyn Error>> {
-    setup_logger();
-
     // Define inputs for the ShortStrangle strategy
     let underlying_price = pos!(7140.6);
 

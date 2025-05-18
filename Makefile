@@ -21,6 +21,8 @@ release:
 .PHONY: test
 test:
 	LOGLEVEL=WARN cargo test
+	LOGLEVEL=WARN cargo test --features plotly
+	LOGLEVEL=WARN cargo test --features kaleido plotly 
 
 # Format the code
 .PHONY: fmt
@@ -81,14 +83,14 @@ coverage:
 	export LOGLEVEL=WARN
 	cargo install cargo-tarpaulin
 	mkdir -p coverage
-	cargo tarpaulin --verbose --all-features --workspace --timeout 120 --out Xml
+	cargo tarpaulin --verbose --all-features --workspace --timeout 0 --out Xml
 
 .PHONY: coverage-html
 coverage-html:
 	export LOGLEVEL=WARN
 	cargo install cargo-tarpaulin
 	mkdir -p coverage
-	cargo tarpaulin --verbose --all-features --workspace --timeout 120 --out Html
+	cargo tarpaulin --color Always --engine llvm --tests --all-targets --all-features --workspace --timeout 0 --out Html
 
 .PHONY: open-coverage
 open-coverage:
@@ -117,7 +119,10 @@ check-cargo-readme:
 
 .PHONY: check-spanish
 check-spanish:
-	cd scripts && python3 spanish.py ../src && cd ..
+	@rg -n --pcre2 -e '^\s*(//|///|//!|#|/\*|\*).*?[áéíóúÁÉÍÓÚñÑ¿¡]' \
+    	    --glob '!target/*' \
+    	    --glob '!**/*.png' \
+    	    . || (echo "❌  Spanish comments found"; exit 1)
 
 .PHONY: zip
 zip:

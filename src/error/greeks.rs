@@ -513,7 +513,6 @@ mod tests {
     use super::*;
 
     #[test]
-
     fn test_invalid_volatility_error_creation() {
         let error = GreeksError::invalid_volatility(-0.5, "Volatility cannot be negative");
         match error {
@@ -526,7 +525,6 @@ mod tests {
     }
 
     #[test]
-
     fn test_delta_error_creation() {
         let error = GreeksError::delta_error("Failed to calculate delta");
         match error {
@@ -538,7 +536,6 @@ mod tests {
     }
 
     #[test]
-
     fn test_math_error_display() {
         let error = GreeksError::MathError(MathErrorKind::DivisionByZero);
         assert_eq!(error.to_string(), "Mathematical error: Division by zero");
@@ -554,7 +551,6 @@ mod tests {
     }
 
     #[test]
-
     fn test_input_error_display() {
         let error = GreeksError::InputError(InputErrorKind::InvalidPrice {
             value: -100.0,
@@ -576,7 +572,6 @@ mod tests {
     }
 
     #[test]
-
     fn test_calculation_error_display() {
         let error = GreeksError::CalculationError(CalculationErrorKind::GammaError {
             reason: "Invalid input parameters".to_string(),
@@ -596,7 +591,6 @@ mod tests {
     }
 
     #[test]
-
     fn test_convergence_failure_display() {
         let error = GreeksError::MathError(MathErrorKind::ConvergenceFailure {
             iterations: 1000,
@@ -609,7 +603,6 @@ mod tests {
     }
 
     #[test]
-
     fn test_result_type() {
         fn test_function() -> GreeksResult<f64> {
             Err(GreeksError::delta_error("Test error"))
@@ -626,7 +619,6 @@ mod tests {
     }
 
     #[test]
-
     fn test_error_trait_implementation() {
         let error = GreeksError::delta_error("Test error");
         let _error_trait_object: &dyn Error = &error;
@@ -634,7 +626,6 @@ mod tests {
     }
 
     #[test]
-
     fn test_debug_implementation() {
         let error = GreeksError::delta_error("Test error");
         let debug_string = format!("{:?}", error);
@@ -759,10 +750,7 @@ mod tests_extended {
 
     #[test]
     fn test_boxed_error_conversion() {
-        let boxed_error: Box<dyn Error> = Box::new(std::io::Error::new(
-            std::io::ErrorKind::Other,
-            "Some IO error",
-        ));
+        let boxed_error: Box<dyn Error> = Box::new(std::io::Error::other("Some IO error"));
         let error: GreeksError = boxed_error.into();
         assert_eq!(format!("{}", error), "Standard error: Some IO error");
     }

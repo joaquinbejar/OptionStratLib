@@ -43,6 +43,7 @@ use crate::error::{GreeksError, PositionError, StrategyError};
 use crate::greeks::Greeks;
 use crate::greeks::calculate_delta_neutral_sizes;
 use crate::model::types::{Action, OptionStyle};
+use crate::model::{Trade, TradeStatusAble};
 use crate::strategies::Strategies;
 use crate::strategies::base::Positionable;
 use crate::{Options, Positive, Side};
@@ -331,7 +332,7 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
         if options.is_empty() {
             return Err(GreeksError::StdError("No options found".to_string()));
         }
-        let underlying_price = self.get_underlying_price();
+        let underlying_price = *self.get_underlying_price();
         let individual_deltas: Vec<DeltaPositionInfo> = options
             .iter()
             .map(|option| DeltaPositionInfo {
@@ -391,7 +392,7 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
     /// offered by the exchange.
     ///
     fn get_atm_strike(&self) -> Result<Positive, StrategyError> {
-        Ok(self.get_underlying_price())
+        Ok(*self.get_underlying_price())
     }
 
     /// Calculates required position adjustments to maintain delta neutrality
@@ -663,47 +664,6 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
         }
     }
 
-    /// # Adjust Underlying Position
-    ///
-    /// Adjusts the quantity of the underlying asset held in a position based on the specified side (Long/Short)
-    /// and quantity.
-    ///
-    /// This method allows modifying the underlying asset position to achieve specific strategy goals, such as:
-    /// - Adjusting delta exposure for hedging purposes
-    /// - Implementing delta-neutral adjustments
-    /// - Rebalancing positions after market movements
-    /// - Executing rolling strategies
-    ///
-    /// ## Parameters
-    /// * `_quantity`: The amount of the underlying asset to adjust, represented as a `Positive` value
-    /// * `_side`: The direction of the adjustment - `Side::Long` to increase the position, `Side::Short` to decrease it
-    ///
-    /// ## Returns
-    /// * `Result<(), Box<dyn Error>>`: Returns Ok(()) on successful adjustment, or an Error if the adjustment fails
-    ///
-    /// ## Details
-    /// When adjusting the underlying position, the method will take into account current market conditions,
-    /// available capital, and potentially transaction costs to determine the optimal execution strategy.
-    ///
-    /// ## Example Use Cases
-    /// - Delta hedging an options position
-    /// - Rebalancing after a significant price move in the underlying
-    /// - Implementing a dynamic hedging strategy
-    /// - Gradually liquidating or building a position
-    ///
-    /// ## Note
-    /// Adjustments to the underlying position directly affect the overall strategy's risk profile,
-    /// particularly its delta exposure and potential profit/loss characteristics.
-    fn adjust_underlying_position(
-        &mut self,
-        _quantity: Positive,
-        _side: Side,
-    ) -> Result<(), Box<dyn Error>> {
-        // Implementation for adjusting underlying position
-        // This would typically modify the quantity of the underlying asset
-        unimplemented!("Implement underlying position adjustment")
-    }
-
     /// # Adjust Option Position
     ///
     /// Modifies the quantity of an existing option position in a trading strategy.
@@ -751,6 +711,99 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
             )));
         }
         Ok(())
+    }
+
+    /// Generates a `Trade` object based on the given delta adjustment action.
+    ///
+    /// # Parameters
+    /// - `_action`: An `Action` representing the delta adjustment based on which the trade will be formulated.
+    ///
+    /// # Returns
+    /// A `Trade` object derived from the delta adjustment logic.
+    ///
+    fn trade_from_delta_adjustment(
+        &mut self,
+        action: Action,
+    ) -> Result<Vec<Trade>, Box<dyn Error>> {
+        let adjustments = self.delta_adjustments()?;
+        let mut trades = Vec::new();
+
+        // Process a single BuyOptions or SellOptions adjustment
+        let mut process_single_adjustment =
+            |adj: &DeltaAdjustment| -> Result<Option<Trade>, Box<dyn Error>> {
+                match adj {
+                    DeltaAdjustment::BuyOptions {
+                        quantity,
+                        strike,
+                        option_style,
+                        side,
+                    } => {
+                        if quantity.is_zero() {
+                            return Ok(None);
+                        }
+                        let positions = self.get_position(option_style, side, strike)?;
+                        if let Some(position) = positions.first() {
+                            let mut position_clone = (*position).clone();
+                            position_clone.option.quantity = *quantity;
+                            Ok(Some(position_clone.open()))
+                        } else {
+                            Ok(None)
+                        }
+                    }
+                    DeltaAdjustment::SellOptions {
+                        quantity,
+                        strike,
+                        option_style,
+                        side,
+                    } => {
+                        if quantity.is_zero() {
+                            return Ok(None);
+                        }
+                        let positions = self.get_position(option_style, side, strike)?;
+                        if let Some(position) = positions.first() {
+                            let mut position_clone = (*position).clone();
+                            position_clone.option.quantity = *quantity;
+                            Ok(Some(position_clone.close()))
+                        } else {
+                            Ok(None)
+                        }
+                    }
+                    _ => Ok(None),
+                }
+            };
+
+        for adjustment in adjustments {
+            match (&action, adjustment) {
+                // For Buy action, only process BuyOptions adjustments
+                (Action::Buy, adj @ DeltaAdjustment::BuyOptions { .. }) => {
+                    if let Some(trade) = process_single_adjustment(&adj)? {
+                        trades.push(trade);
+                    }
+                }
+
+                // For Sell action, only process SellOptions adjustments
+                (Action::Sell, adj @ DeltaAdjustment::SellOptions { .. }) => {
+                    if let Some(trade) = process_single_adjustment(&adj)? {
+                        trades.push(trade);
+                    }
+                }
+
+                // For Other action, process both adjustments in SameSize
+                (Action::Other, DeltaAdjustment::SameSize(a, b)) => {
+                    if let Some(trade) = process_single_adjustment(&a)? {
+                        trades.push(trade);
+                    }
+                    if let Some(trade) = process_single_adjustment(&b)? {
+                        trades.push(trade);
+                    }
+                }
+
+                // Ignore other combinations
+                _ => {}
+            }
+        }
+
+        Ok(trades)
     }
 }
 

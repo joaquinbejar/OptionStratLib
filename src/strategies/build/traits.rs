@@ -55,9 +55,9 @@ mod tests {
     use crate::Options;
     use crate::error::{GreeksError, StrategyError};
     use crate::strategies::Strategies;
-    use crate::strategies::base::{BreakEvenable, Positionable, Validable};
+    use crate::strategies::base::{BasicAble, BreakEvenable, Positionable, Validable};
 
-    /// Mock para una estrategia específica
+    /// Mock for a specific strategy
     #[derive(Debug, PartialEq)]
     struct TestStrategy;
 
@@ -66,6 +66,8 @@ mod tests {
     impl Positionable for TestStrategy {}
 
     impl BreakEvenable for TestStrategy {}
+
+    impl BasicAble for TestStrategy {}
 
     impl Strategies for TestStrategy {}
 
@@ -94,6 +96,8 @@ mod tests {
     impl Positionable for ValidStrategy {}
 
     impl BreakEvenable for ValidStrategy {}
+
+    impl BasicAble for ValidStrategy {}
 
     impl Strategies for ValidStrategy {}
 

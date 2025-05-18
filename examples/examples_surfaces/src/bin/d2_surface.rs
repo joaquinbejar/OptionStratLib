@@ -10,8 +10,6 @@ use optionstratlib::{Positive, pos};
 use rust_decimal_macros::dec;
 
 fn main() -> Result<(), SurfaceError> {
-    setup_logger();
-
     // Define construction parameters for the surface
     let params = ConstructionParams::D3 {
         x_start: dec!(50.0), // Underlying price start
@@ -45,8 +43,6 @@ fn main() -> Result<(), SurfaceError> {
         .x_label("Underlying Price")
         .y_label("Strike Price")
         .z_label("d1")
-        .point_size(1)
-        .label_size(1.8)
         .dimensions(1600, 1200)
         .save("./Draws/Surfaces/d2_surface.png")?;
 

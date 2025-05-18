@@ -4,16 +4,12 @@ use optionstratlib::strategies::DELTA_THRESHOLD;
 use optionstratlib::strategies::DeltaAdjustment::BuyOptions;
 use optionstratlib::strategies::delta_neutral::DeltaNeutrality;
 use optionstratlib::strategies::poor_mans_covered_call::PoorMansCoveredCall;
-use optionstratlib::utils::setup_logger;
 use optionstratlib::{ExpirationDate, Positive, assert_decimal_eq, assert_pos_relative_eq, pos};
 use rust_decimal_macros::dec;
 use std::error::Error;
 
 #[test]
-
 fn test_poor_mans_covered_call_integration() -> Result<(), Box<dyn Error>> {
-    setup_logger();
-
     let underlying_price = pos!(2703.3);
 
     let strategy = PoorMansCoveredCall::new(

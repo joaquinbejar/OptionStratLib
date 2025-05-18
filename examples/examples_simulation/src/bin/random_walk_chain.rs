@@ -5,7 +5,7 @@ use optionstratlib::simulation::steps::{Step, Xstep, Ystep};
 use optionstratlib::simulation::{WalkParams, WalkType, WalkTypeAble};
 use optionstratlib::utils::setup_logger;
 use optionstratlib::utils::time::{TimeFrame, convert_time_frame, get_x_days_formatted};
-use optionstratlib::visualization::utils::{Graph, GraphBackend};
+use optionstratlib::visualization::Graph;
 use optionstratlib::{ExpirationDate, Positive, pos};
 use rust_decimal_macros::dec;
 use tracing::{debug, info};
@@ -22,7 +22,6 @@ impl Walker {
 impl WalkTypeAble<Positive, OptionChain> for Walker {}
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    setup_logger();
     let n_steps = 43_200; // 30 days in minutes
     let mut initial_chain =
         OptionChain::load_from_json("examples/Chains/SP500-18-oct-2024-5781.88.json")?;
@@ -52,14 +51,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         generator_optionchain,
     );
     debug!("Random Walk: {}", random_walk);
-
-    random_walk.graph(
-        GraphBackend::Bitmap {
-            file_path: "Draws/Simulation/random_walk_chain.png",
-            size: (1200, 800),
-        },
-        20,
-    )?;
+    let path: &std::path::Path = "Draws/Simulation/random_walk_chain.png".as_ref();
+    random_walk.write_png(path)?;
     info!("Last Chain: {}", random_walk.last().unwrap().y.value());
 
     Ok(())

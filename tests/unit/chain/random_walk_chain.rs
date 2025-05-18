@@ -8,7 +8,7 @@ use optionstratlib::simulation::randomwalk::RandomWalk;
 use optionstratlib::simulation::steps::{Step, Xstep, Ystep};
 use optionstratlib::simulation::{WalkParams, WalkType, WalkTypeAble};
 use optionstratlib::utils::time::{convert_time_frame, get_x_days_formatted};
-use optionstratlib::utils::{Len, TimeFrame, setup_logger};
+use optionstratlib::utils::{Len, TimeFrame};
 use optionstratlib::{ExpirationDate, Positive, pos};
 use rust_decimal_macros::dec;
 use std::error::Error;
@@ -74,7 +74,6 @@ fn generator(walk_params: &WalkParams<Positive, OptionChain>) -> Vec<Step<Positi
 }
 #[test]
 fn test_random_walk_chain() -> Result<(), Box<dyn Error>> {
-    setup_logger();
     let n_steps = 20;
 
     let mut initial_chain =

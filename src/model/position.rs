@@ -5,21 +5,22 @@
 ******************************************************************************/
 use crate::chains::OptionData;
 use crate::error::position::PositionValidationErrorKind;
-use crate::error::{GreeksError, PositionError, TransactionError};
+use crate::error::{GreeksError, PositionError, StrategyError, TransactionError};
 use crate::greeks::Greeks;
-use crate::model::types::{OptionStyle, Side};
+use crate::model::trade::TradeStatusAble;
+use crate::model::types::{Action, OptionBasicType, OptionStyle, Side};
+use crate::model::{Trade, TradeAble, TradeStatus};
 use crate::pnl::utils::PnL;
 use crate::pnl::{PnLCalculator, Transaction, TransactionAble};
 use crate::pricing::payoff::Profit;
-use crate::visualization::model::ChartVerticalLine;
-use crate::visualization::utils::Graph;
-use crate::{ExpirationDate, Options};
+use crate::strategies::base::BasicAble;
+use crate::visualization::{Graph, GraphConfig, GraphData};
+use crate::{ExpirationDate, OptionType, Options};
 use crate::{Positive, pos};
 use chrono::{DateTime, Utc};
-use num_traits::ToPrimitive;
-use plotters::prelude::{BLACK, ShapeStyle};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
+use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use tracing::{debug, trace};
 
@@ -159,6 +160,7 @@ impl Position {
     ///
     /// This method will panic if the required premium value is `None` in the provided `option_data`.
     ///
+    #[allow(dead_code)]
     pub(crate) fn update_from_option_data(&mut self, option_data: &OptionData) {
         self.date = Utc::now();
         self.option.update_from_option_data(option_data);
@@ -672,6 +674,81 @@ impl TransactionAble for Position {
     }
 }
 
+impl TradeAble for Position {
+    fn trade(&self) -> Trade {
+        Trade {
+            id: uuid::Uuid::new_v4(),
+            action: Action::Buy,
+            side: self.option.side,
+            option_style: self.option.option_style,
+            fee: self.open_fee + self.close_fee,
+            symbol: None,
+            strike: self.option.strike_price,
+            expiry: self.option.expiration_date.get_date().unwrap(),
+            timestamp: Utc::now().timestamp_nanos_opt().unwrap(),
+            quantity: self.option.quantity,
+            premium: self.premium,
+            underlying_price: self.option.underlying_price,
+            notes: None,
+            status: TradeStatus::Other("Not yet initialized".to_string()),
+        }
+    }
+
+    fn trade_ref(&self) -> &Trade {
+        todo!("trade_ref() is not implemented for Position");
+    }
+
+    fn trade_mut(&mut self) -> &mut Trade {
+        todo!("trade_mut() is not implemented for Position");
+    }
+}
+
+impl TradeStatusAble for Position {
+    fn open(&self) -> Trade {
+        let mut trade = self.trade();
+        trade.status = TradeStatus::Open;
+        trade
+    }
+
+    fn close(&self) -> Trade {
+        let mut trade = self.trade();
+        if trade.premium <= pos!(0.01) {
+            trade.premium = Positive::ZERO;
+        }
+        trade.status = TradeStatus::Closed;
+        trade.action = Action::Sell;
+        trade
+    }
+
+    fn expired(&self) -> Trade {
+        let mut trade = self.trade();
+        trade.status = TradeStatus::Expired;
+        trade.action = Action::Sell;
+        trade
+    }
+
+    fn exercised(&self) -> Trade {
+        let mut trade = self.trade();
+        trade.status = TradeStatus::Exercised;
+        trade.action = Action::Sell;
+        trade
+    }
+
+    fn assigned(&self) -> Trade {
+        let mut trade = self.trade();
+        trade.status = TradeStatus::Assigned;
+        trade.action = Action::Other;
+        trade
+    }
+
+    fn status_other(&self) -> Trade {
+        let mut trade = self.trade();
+        trade.status = TradeStatus::Other("Not yet initialized".to_string());
+        trade.action = Action::Other;
+        trade
+    }
+}
+
 /// # Position Profit and Loss (PnL) Calculator
 ///
 /// This trait implementation provides methods to calculate the profit and loss (PnL)
@@ -783,8 +860,85 @@ impl Profit for Position {
     ///
     /// * `Result<Decimal, Box<dyn Error>>` - The calculated profit as a Decimal if successful,
     ///   or an error if the calculation fails.
-    fn calculate_profit_at(&self, price: Positive) -> Result<Decimal, Box<dyn Error>> {
-        self.pnl_at_expiration(&Some(&price))
+    fn calculate_profit_at(&self, price: &Positive) -> Result<Decimal, Box<dyn Error>> {
+        self.pnl_at_expiration(&Some(price))
+    }
+}
+
+impl BasicAble for Position {
+    fn get_title(&self) -> String {
+        self.option.get_title()
+    }
+    fn get_option_basic_type(&self) -> HashSet<OptionBasicType> {
+        self.option.get_option_basic_type()
+    }
+    fn get_symbol(&self) -> &str {
+        self.option.get_symbol()
+    }
+    fn get_strike(&self) -> HashMap<OptionBasicType, &Positive> {
+        self.option.get_strike()
+    }
+    fn get_strikes(&self) -> Vec<&Positive> {
+        self.option.get_strikes()
+    }
+    fn get_side(&self) -> HashMap<OptionBasicType, &Side> {
+        self.option.get_side()
+    }
+    fn get_type(&self) -> &OptionType {
+        self.option.get_type()
+    }
+    fn get_style(&self) -> HashMap<OptionBasicType, &OptionStyle> {
+        self.option.get_style()
+    }
+    fn get_expiration(&self) -> HashMap<OptionBasicType, &ExpirationDate> {
+        self.option.get_expiration()
+    }
+    fn get_implied_volatility(&self) -> HashMap<OptionBasicType, &Positive> {
+        self.option.get_implied_volatility()
+    }
+    fn get_quantity(&self) -> HashMap<OptionBasicType, &Positive> {
+        self.option.get_quantity()
+    }
+    fn get_underlying_price(&self) -> &Positive {
+        self.option.get_underlying_price()
+    }
+    fn get_risk_free_rate(&self) -> HashMap<OptionBasicType, &Decimal> {
+        self.option.get_risk_free_rate()
+    }
+    fn get_dividend_yield(&self) -> HashMap<OptionBasicType, &Positive> {
+        self.option.get_dividend_yield()
+    }
+    fn one_option(&self) -> &Options {
+        &self.option
+    }
+    fn one_option_mut(&mut self) -> &mut Options {
+        &mut self.option
+    }
+
+    fn set_expiration_date(
+        &mut self,
+        expiration_date: ExpirationDate,
+    ) -> Result<(), StrategyError> {
+        self.option.set_expiration_date(expiration_date)
+    }
+    fn set_underlying_price(&mut self, _price: &Positive) -> Result<(), StrategyError> {
+        self.option.set_underlying_price(_price)
+    }
+    /// Updates the volatility for the strategy.
+    ///
+    /// # Parameters
+    /// - `_volatility`: A reference to a `Positive` value representing the new volatility to set.
+    ///
+    /// # Returns
+    /// - `Ok(())`: If the update operation succeeds (currently unimplemented).
+    /// - `Err(StrategyError)`: If there is an error during the update process (place-holder as functionality is not implemented).
+    ///
+    /// # Notes
+    /// This method is currently unimplemented, and calling it will result in the `unimplemented!` macro being triggered, which causes a panic.
+    /// This function is a stub and should be implemented to handle setting the volatility specific to the strategy.
+    ///
+    fn set_implied_volatility(&mut self, _volatility: &Positive) -> Result<(), StrategyError> {
+        self.option.set_implied_volatility(_volatility)
     }
 }
 
@@ -798,81 +952,12 @@ impl Profit for Position {
 /// The visualization capabilities allow traders to analyze the potential outcomes of their options positions
 /// at expiration across various price scenarios.
 impl Graph for Position {
-    /// Generates a title for the graph based on the option's characteristics.
-    ///
-    /// # Returns
-    /// A `String` containing the formatted title that describes the position.
-    fn title(&self) -> String {
-        self.option.title()
+    fn graph_data(&self) -> GraphData {
+        self.option.graph_data()
     }
 
-    /// Generates a vector of evenly spaced x-values for option pricing/plotting.
-    ///
-    /// This method creates a range of x-values (potential stock prices) centered around
-    /// the strike price and spanning 5 standard deviations in each direction.
-    /// The standard deviation is calculated as the product of strike price and implied volatility.
-    ///
-    /// # Returns
-    ///
-    /// A vector of `Positive` values representing potential stock prices, with 1000 total points
-    /// (999 steps plus endpoints) evenly distributed across the range.
-    ///
-    /// # Implementation Details
-    ///
-    /// * The range extends 5 standard deviations above and below the strike price
-    /// * Uses 1000 total points (steps + 1) for smooth visualization
-    /// * All returned values are guaranteed positive through the use of the `pos!` macro
-    ///
-    fn get_x_values(&self) -> Vec<Positive> {
-        self.option.get_x_values()
-    }
-
-    /// Calculates position profit/loss values at expiration for a range of underlying prices.
-    ///
-    /// This method transforms a slice of potential underlying prices into their corresponding
-    /// profit/loss values at expiration for this position.
-    ///
-    /// # Parameters
-    /// * `data` - A slice of `Positive` values representing potential prices of the underlying asset
-    ///
-    /// # Returns
-    /// A `Vec<f64>` containing the calculated profit/loss values for each input price
-    fn get_y_values(&self) -> Vec<f64> {
-        let data = self.get_x_values();
-        data.iter()
-            .map(|&price| {
-                self.pnl_at_expiration(&Some(&price))
-                    .unwrap()
-                    .to_f64()
-                    .unwrap()
-            })
-            .collect()
-    }
-
-    /// Generates vertical lines for the graph to highlight significant price levels.
-    ///
-    /// This method creates vertical line indicators for important price points in the position analysis,
-    /// specifically the break-even price level where the position transitions between profit and loss.
-    ///
-    /// # Returns
-    /// A `Vec<ChartVerticalLine<f64, f64>>` containing vertical line definitions to be displayed on the chart
-    fn get_vertical_lines(&self) -> Vec<ChartVerticalLine<f64, f64>> {
-        match self.break_even() {
-            Some(break_even) => {
-                let vertical_lines = vec![ChartVerticalLine {
-                    x_coordinate: break_even.into(),
-                    y_range: (-50000.0, 50000.0),
-                    label: "Break Even".to_string(),
-                    label_offset: (5.0, 5.0),
-                    line_color: BLACK,
-                    label_color: BLACK,
-                    line_style: ShapeStyle::from(&BLACK).stroke_width(1),
-                    font_size: 18,
-                }];
-                vertical_lines
-            }
-            None => vec![],
-        }
+    fn graph_config(&self) -> GraphConfig {
+        self.option.graph_config()
     }
 }
 
@@ -883,6 +968,7 @@ mod tests_position {
     use crate::model::types::{OptionStyle, OptionType, Side};
     use crate::pos;
     use chrono::Duration;
+    use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
     fn setup_option(
@@ -910,7 +996,6 @@ mod tests_position {
     }
 
     #[test]
-
     fn test_position_total_cost() {
         let option = setup_option(
             Side::Long,
@@ -929,7 +1014,6 @@ mod tests_position {
     }
 
     #[test]
-
     fn test_position_total_cost_size() {
         let option = setup_option(
             Side::Long,
@@ -948,7 +1032,6 @@ mod tests_position {
     }
 
     #[test]
-
     fn test_position_total_cost_short() {
         let option = setup_option(
             Side::Short,
@@ -967,7 +1050,6 @@ mod tests_position {
     }
 
     #[test]
-
     fn test_position_total_cost_short_size() {
         let option = setup_option(
             Side::Short,
@@ -986,7 +1068,6 @@ mod tests_position {
     }
 
     #[test]
-
     fn test_position_check_negative_premium() {
         let option = setup_option(
             Side::Long,
@@ -1005,7 +1086,6 @@ mod tests_position {
     }
 
     #[test]
-
     fn test_position_pnl_at_expiration_long_call_itm() {
         let option = setup_option(
             Side::Long,
@@ -1024,7 +1104,6 @@ mod tests_position {
     }
 
     #[test]
-
     fn test_position_pnl_at_expiration_long_call_itm_quantity() {
         let option = setup_option(
             Side::Long,
@@ -1043,7 +1122,6 @@ mod tests_position {
     }
 
     #[test]
-
     fn test_position_pnl_at_expiration_short_call_itm() {
         let option = setup_option(
             Side::Short,
@@ -1062,7 +1140,6 @@ mod tests_position {
     }
 
     #[test]
-
     fn test_position_pnl_at_expiration_short_call_itm_quantity() {
         let option = setup_option(
             Side::Short,
@@ -1081,7 +1158,6 @@ mod tests_position {
     }
 
     #[test]
-
     fn test_position_pnl_at_expiration_long_put_itm() {
         let option = setup_option(
             Side::Long,
@@ -1100,7 +1176,6 @@ mod tests_position {
     }
 
     #[test]
-
     fn test_position_pnl_at_expiration_long_put_itm_quantity() {
         let option = setup_option(
             Side::Long,
@@ -1119,7 +1194,6 @@ mod tests_position {
     }
 
     #[test]
-
     fn test_position_pnl_at_expiration_short_put_itm() {
         let option = setup_option(
             Side::Short,
@@ -1138,7 +1212,6 @@ mod tests_position {
     }
 
     #[test]
-
     fn test_position_pnl_at_expiration_short_put_itm_quantity() {
         let option = setup_option(
             Side::Short,
@@ -1157,7 +1230,6 @@ mod tests_position {
     }
 
     #[test]
-
     fn test_position_pnl_at_expiration_short_put_itm_winning() {
         let option = setup_option(
             Side::Short,
@@ -1176,7 +1248,6 @@ mod tests_position {
     }
 
     #[test]
-
     fn test_position_pnl_at_expiration_short_put_itm_quantity_winning() {
         let option = setup_option(
             Side::Short,
@@ -1195,7 +1266,6 @@ mod tests_position {
     }
 
     #[test]
-
     fn test_unrealized_pnl_long_call() {
         let option = setup_option(
             Side::Long,
@@ -1214,7 +1284,6 @@ mod tests_position {
     }
 
     #[test]
-
     fn test_unrealized_pnl_long_call_quantity() {
         let option = setup_option(
             Side::Long,
@@ -1237,7 +1306,6 @@ mod tests_position {
     }
 
     #[test]
-
     fn test_unrealized_pnl_short_call() {
         let option = setup_option(
             Side::Short,
@@ -1260,7 +1328,6 @@ mod tests_position {
     }
 
     #[test]
-
     fn test_unrealized_pnl_short_call_bis() {
         let option = setup_option(
             Side::Short,
@@ -1283,7 +1350,6 @@ mod tests_position {
     }
 
     #[test]
-
     fn test_days_held() {
         let option = setup_option(
             Side::Long,
@@ -1303,7 +1369,6 @@ mod tests_position {
     }
 
     #[test]
-
     fn test_days_to_expiration() {
         let option = setup_option(
             Side::Long,
@@ -1322,7 +1387,6 @@ mod tests_position {
     }
 
     #[test]
-
     fn test_is_long_position() {
         let option = setup_option(
             Side::Long,
@@ -1344,7 +1408,6 @@ mod tests_position {
     }
 
     #[test]
-
     fn test_is_short_position() {
         let option = setup_option(
             Side::Short,
@@ -1373,7 +1436,6 @@ mod tests_valid_position {
     use crate::pos;
 
     #[test]
-
     fn test_valid_position() {
         let position = create_sample_position(
             OptionStyle::Call,
@@ -1387,7 +1449,6 @@ mod tests_valid_position {
     }
 
     #[test]
-
     fn test_zero_premium() {
         let mut position = create_sample_position(
             OptionStyle::Call,
@@ -1402,7 +1463,6 @@ mod tests_valid_position {
     }
 
     #[test]
-
     fn test_invalid_option() {
         let mut position = create_sample_position(
             OptionStyle::Call,
@@ -1417,7 +1477,6 @@ mod tests_valid_position {
     }
 
     #[test]
-
     fn test_zero_fees() {
         let mut position = create_sample_position(
             OptionStyle::Call,
@@ -1465,7 +1524,6 @@ mod tests_position_break_even {
     }
 
     #[test]
-
     fn test_unrealized_pnl_long_call() {
         let option = setup_option(
             Side::Long,
@@ -1480,7 +1538,6 @@ mod tests_position_break_even {
     }
 
     #[test]
-
     fn test_unrealized_pnl_long_call_size() {
         let option = setup_option(
             Side::Long,
@@ -1495,7 +1552,6 @@ mod tests_position_break_even {
     }
 
     #[test]
-
     fn test_unrealized_pnl_short_call() {
         let option = setup_option(
             Side::Short,
@@ -1510,7 +1566,6 @@ mod tests_position_break_even {
     }
 
     #[test]
-
     fn test_unrealized_pnl_short_call_size() {
         let option = setup_option(
             Side::Short,
@@ -1525,7 +1580,6 @@ mod tests_position_break_even {
     }
 
     #[test]
-
     fn test_unrealized_pnl_long_put() {
         let option = setup_option(
             Side::Long,
@@ -1540,7 +1594,6 @@ mod tests_position_break_even {
     }
 
     #[test]
-
     fn test_unrealized_pnl_long_put_size() {
         let option = setup_option(
             Side::Long,
@@ -1555,7 +1608,6 @@ mod tests_position_break_even {
     }
 
     #[test]
-
     fn test_unrealized_pnl_short_put() {
         let option = setup_option(
             Side::Short,
@@ -1570,7 +1622,6 @@ mod tests_position_break_even {
     }
 
     #[test]
-
     fn test_unrealized_pnl_short_put_size() {
         let option = setup_option(
             Side::Short,
@@ -1618,7 +1669,6 @@ mod tests_position_max_loss_profit {
     }
 
     #[test]
-
     fn test_unrealized_pnl_long_call() {
         let option = setup_option(
             Side::Long,
@@ -1634,7 +1684,6 @@ mod tests_position_max_loss_profit {
     }
 
     #[test]
-
     fn test_unrealized_pnl_long_call_size() {
         let option = setup_option(
             Side::Long,
@@ -1650,7 +1699,6 @@ mod tests_position_max_loss_profit {
     }
 
     #[test]
-
     fn test_unrealized_pnl_short_call() {
         let option = setup_option(
             Side::Short,
@@ -1670,7 +1718,6 @@ mod tests_position_max_loss_profit {
     }
 
     #[test]
-
     fn test_unrealized_pnl_short_call_size() {
         let option = setup_option(
             Side::Short,
@@ -1690,7 +1737,6 @@ mod tests_position_max_loss_profit {
     }
 
     #[test]
-
     fn test_unrealized_pnl_long_put() {
         let option = setup_option(
             Side::Long,
@@ -1706,7 +1752,6 @@ mod tests_position_max_loss_profit {
     }
 
     #[test]
-
     fn test_unrealized_pnl_long_put_size() {
         let option = setup_option(
             Side::Long,
@@ -1722,7 +1767,6 @@ mod tests_position_max_loss_profit {
     }
 
     #[test]
-
     fn test_unrealized_pnl_short_put() {
         let option = setup_option(
             Side::Short,
@@ -1742,7 +1786,6 @@ mod tests_position_max_loss_profit {
     }
 
     #[test]
-
     fn test_unrealized_pnl_short_put_size() {
         let option = setup_option(
             Side::Short,
@@ -1785,7 +1828,6 @@ mod tests_update_from_option_data {
     }
 
     #[test]
-
     fn test_update_long_call() {
         let mut position = Position::default();
         position.option.side = Side::Long;
@@ -1800,7 +1842,6 @@ mod tests_update_from_option_data {
     }
 
     #[test]
-
     fn test_update_short_call() {
         let mut position = Position::default();
         position.option.side = Side::Short;
@@ -1813,7 +1854,6 @@ mod tests_update_from_option_data {
     }
 
     #[test]
-
     fn test_update_long_put() {
         let mut position = Position::default();
         position.option.side = Side::Long;
@@ -1826,7 +1866,6 @@ mod tests_update_from_option_data {
     }
 
     #[test]
-
     fn test_update_short_put() {
         let mut position = Position::default();
         position.option.side = Side::Short;
@@ -1855,35 +1894,30 @@ mod tests_premium {
     }
 
     #[test]
-
     fn test_premium_received_long() {
         let position = setup_basic_position(Side::Long);
         assert_eq!(position.premium_received().unwrap(), Positive::ZERO);
     }
 
     #[test]
-
     fn test_premium_received_short() {
         let position = setup_basic_position(Side::Short);
         assert_eq!(position.premium_received().unwrap(), 5.0);
     }
 
     #[test]
-
     fn test_net_premium_received_long() {
         let position = setup_basic_position(Side::Long);
         assert_eq!(position.net_premium_received().unwrap(), 0.0);
     }
 
     #[test]
-
     fn test_net_premium_received_short() {
         let position = setup_basic_position(Side::Short);
         assert_eq!(position.net_premium_received().unwrap(), 3.0); // 5.0 - 2.0 (fees)
     }
 
     #[test]
-
     fn test_premium_received_with_quantity() {
         let side = Side::Short;
         let option = Options {
@@ -1915,7 +1949,7 @@ mod tests_pnl_calculator {
             pos!(100.0),
             dec!(0.05),
             option_style,
-            pos!(0.01),
+            pos!(0.0),
             None,
         );
 
@@ -1923,7 +1957,6 @@ mod tests_pnl_calculator {
     }
 
     #[test]
-
     fn test_calculate_pnl_long_call_no_changes() {
         let position = setup_test_position(Side::Long, OptionStyle::Call);
         let pnl = position
@@ -1936,7 +1969,6 @@ mod tests_pnl_calculator {
     }
 
     #[test]
-
     fn test_calculate_pnl_long_call_price_up() {
         let position = setup_test_position(Side::Long, OptionStyle::Call);
         let pnl = position
@@ -1947,7 +1979,6 @@ mod tests_pnl_calculator {
     }
 
     #[test]
-
     fn test_calculate_pnl_long_call_vol_down() {
         let position = setup_test_position(Side::Long, OptionStyle::Call);
         let pnl = position
@@ -1958,7 +1989,6 @@ mod tests_pnl_calculator {
     }
 
     #[test]
-
     fn test_calculate_pnl_long_call_date_closer() {
         let position = setup_test_position(Side::Long, OptionStyle::Call);
         let pnl = position
@@ -1969,7 +1999,6 @@ mod tests_pnl_calculator {
     }
 
     #[test]
-
     fn test_calculate_pnl_short_call_no_changes() {
         let position = setup_test_position(Side::Short, OptionStyle::Call);
         let pnl = position
@@ -1982,7 +2011,6 @@ mod tests_pnl_calculator {
     }
 
     #[test]
-
     fn test_calculate_pnl_short_call_price_up() {
         let position = setup_test_position(Side::Short, OptionStyle::Call);
         let pnl = position
@@ -1993,7 +2021,6 @@ mod tests_pnl_calculator {
     }
 
     #[test]
-
     fn test_calculate_pnl_short_call_price_down() {
         let position = setup_test_position(Side::Short, OptionStyle::Call);
         let pnl = position
@@ -2004,7 +2031,6 @@ mod tests_pnl_calculator {
     }
 
     #[test]
-
     fn test_calculate_pnl_short_call_vol_down() {
         let position = setup_test_position(Side::Short, OptionStyle::Call);
         let pnl = position
@@ -2015,7 +2041,6 @@ mod tests_pnl_calculator {
     }
 
     #[test]
-
     fn test_calculate_pnl_short_call_vol_up() {
         let position = setup_test_position(Side::Short, OptionStyle::Call);
         let pnl = position
@@ -2026,7 +2051,6 @@ mod tests_pnl_calculator {
     }
 
     #[test]
-
     fn test_calculate_pnl_short_call_date_closer() {
         let position = setup_test_position(Side::Short, OptionStyle::Call);
         let pnl = position
@@ -2037,7 +2061,6 @@ mod tests_pnl_calculator {
     }
 
     #[test]
-
     fn test_calculate_pnl_short_call_date_further() {
         let position = setup_test_position(Side::Short, OptionStyle::Call);
         let pnl = position
@@ -2048,7 +2071,6 @@ mod tests_pnl_calculator {
     }
 
     #[test]
-
     fn test_calculate_pnl_at_expiration_long_call() {
         let position = setup_test_position(Side::Long, OptionStyle::Call);
         let pnl = position.calculate_pnl_at_expiration(&pos!(110.0)).unwrap();
@@ -2059,7 +2081,6 @@ mod tests_pnl_calculator {
     }
 
     #[test]
-
     fn test_calculate_pnl_at_expiration_short_put() {
         let position = setup_test_position(Side::Short, OptionStyle::Put);
         let pnl = position.calculate_pnl_at_expiration(&pos!(90.0)).unwrap();
@@ -2067,35 +2088,6 @@ mod tests_pnl_calculator {
         assert_eq!(pnl.realized.unwrap(), dec!(-7.0)); // -10.0 + 5.0 (premium) - 2.0 (fees)
         assert_eq!(position.total_cost().unwrap(), 2.0);
         assert_eq!(position.premium_received().unwrap(), 5.0);
-    }
-}
-
-#[cfg(test)]
-mod tests_graph {
-    use super::*;
-
-    #[test]
-
-    fn test_title() {
-        let position = Position::default();
-        assert_eq!(position.title(), position.option.title());
-    }
-
-    #[test]
-
-    fn test_get_values() {
-        let position = Position::default();
-        let values = position.get_y_values();
-        assert_eq!(values.len(), 1000);
-        assert!(!values.iter().any(|&x| x.is_nan()));
-    }
-
-    #[test]
-
-    fn test_get_vertical_lines() {
-        let position = Position::default();
-        let lines = position.get_vertical_lines();
-        assert_eq!(lines.len(), 0);
     }
 }
 

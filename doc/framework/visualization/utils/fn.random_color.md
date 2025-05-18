@@ -12,7 +12,7 @@
 ::::
 
 ``` {.rust .item-decl}
-pub fn random_color() -> RGBColor
+pub fn random_color() -> ColorScheme
 ```
 
 Expand description

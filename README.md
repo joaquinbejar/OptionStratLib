@@ -12,660 +12,743 @@
 [![Coverage](https://img.shields.io/codecov/c/github/joaquinbejar/OptionStratLib)](https://codecov.io/gh/joaquinbejar/OptionStratLib)
 [![Dependencies](https://img.shields.io/librariesio/github/joaquinbejar/OptionStratLib)](https://libraries.io/github/joaquinbejar/OptionStratLib)
 [![Documentation](https://img.shields.io/badge/docs-latest-blue.svg)](https://docs.rs/optionstratlib)
-
-
-
- # OptionStratLib v0.4.6: Financial Options Library
-
- ## Table of Contents
- 1. [Introduction](#introduction)
- 2. [Features](#features)
- 3. [Project Structure](#project-structure)
- 4. [Setup Instructions](#setup-instructions)
- 5. [Library Usage](#library-usage)
- 6. [Usage Examples](#usage-examples)
- 7. [Testing](#testing)
- 8. [Contribution and Contact](#contribution-and-contact)
-
- ## Introduction
-
- OptionStratLib is a comprehensive Rust library for options trading and strategy development across multiple asset classes. This versatile toolkit enables traders, quants, and developers to:
-
- ## Features
-
- 1. **Valuation Models**:
- - Black-Scholes model
- - Binomial model
- - Monte Carlo simulations
- - Telegraph process model
-
- 2. **Greeks Calculation**:
- - Delta, gamma, theta, vega, and rho
- - Custom Greeks implementation
- - Greeks visualization
-
- 3. **Option Types**:
- - European and American options
- - Calls and puts
- - Support for exotic options (Asian, Barrier, etc.)
-
- 4. **Volatility Models**:
- - Constant volatility
- - EWMA (Exponentially Weighted Moving Average)
- - GARCH implementation
- - Heston stochastic volatility
- - Volatility surface interpolation
-
- 5. **Option Chain Management**:
- - Chain construction and analysis
- - Strike price generation
- - Chain data import/export (CSV/JSON)
-
- 6. **Trading Strategies**:
- - Bull Call Spread
- - Bear Put Spread
- - Call Butterfly
- - Strategy optimization
- - Custom strategy development
-
- 7. **Risk Management**:
- - SPAN margin calculation
- - Position tracking
- - Break-even analysis
- - Profit/Loss calculations
-
- 8. **Simulation Tools**:
- - Random Walk simulation
- - Telegraph process
- - Monte Carlo methods
- - Custom simulation frameworks
-
- 9. **Visualization**:
- - Strategy payoff diagrams
- - Greeks visualization
- - Binomial trees
- - Risk profiles
- - Interactive charts
-
- 10. **Data Management**:
- - CSV/JSON import/export
- - Option chain data handling
- - Historical data analysis
- - Price series management
-
- 11. **Backtesting**: **TODO!**
- 12. **Performance Metrics**: **TODO!**
-
-
- ## Project Structure
-
- The project is organized into the following key modules:
-
- 1. **Core Options** (`options/`):
- - `option.rs`: Core option structures and methods
- - `position.rs`: Position management
- - `chain.rs`: Option chain handling
-
- 2. **Pricing Models** (`pricing/`):
- - `binomial_model.rs`: Binomial tree implementation
- - `black_scholes_model.rs`: Black-Scholes pricing
- - `monte_carlo.rs`: Monte Carlo simulations
- - `telegraph.rs`: Telegraph process model
-
- 3. **Greeks** (`greeks/`):
- - `equations.rs`: Greeks calculations
- - `utils.rs`: Greek utilities
-
- 4. **Volatility** (`volatility/`):
- - `constant.rs`: Constant volatility model
- - `ewma.rs`: EWMA implementation
- - `garch.rs`: GARCH model
- - `heston.rs`: Heston model
- - `surface.rs`: Volatility surface handling
-
- 5. **Strategies** (`strategies/`):
- - `base.rs`: Strategy base traits
- - `bear_put_spread.rs`:
- - `bull_call_spread.rs`:
- - `butterfly_spread.rs`:
- - `call_butterfly.rs`:
- - `collar.rs`:
- - `covered_call.rs`:
- - `custom.rs`: Custom strategy framework
- - `iron_condor.rs`:
- - `poor_mans_covered_call.rs`:
- - `protective_put.rs`:
- - `straddle.rs`:
- - `strangle.rs`:
- - `utils.rs`: Strategy utilities
-
- 6. **Risk Management** (`risk/`):
- - `span.rs`: SPAN margin calculation
- - `margin.rs`: Margin requirements
- - `position.rs`: Position risk metrics
-
- 7. **Simulation** (`simulation/`):
- - `random_walk.rs`
- - `telegraph.rs`
- - `monte_carlo.rs`
-
- 8. **Visualization** (`visualization/`):
- - `binomial_tree.rs`
- - `strategy.rs`
- - `utils.rs`
-
- 9. **Data Management** (`data/`):
- - `chain.rs`: Chain data structures
- - `import.rs`: Data import utilities
- - `export.rs`: Data export utilities
-
- ## Relationships
-
- ### Base Structure
- ```mermaid
- classDiagram
- class Options {
- +option_type: OptionType
- +side: Side
- +underlying_symbol: String
- +strike_price: Positive
- +expiration_date: ExpirationDate
- +implied_volatility: Positive
- +quantity: Positive
- +underlying_price: Positive
- +risk_free_rate: Decimal
- +option_style: OptionStyle
- +dividend_yield: Positive
- +exotic_params: Option~ExoticParams~
- +calculate_price_black_scholes()
- +calculate_price_binomial()
- +time_to_expiration()
- +is_long()
- +is_short()
- +validate()
- }
-
- class OptionType {
- <<enumeration>>
- European
- American
- Bermuda
- Asian
- Barrier
- Binary
- Lookback
- Compound
- Chooser
- Cliquet
- Rainbow
- Spread
- Quanto
- Exchange
- Power
- }
-
- class Side {
- <<enumeration>>
- Long
- Short
- }
-
- class OptionStyle {
- <<enumeration>>
- Call
- Put
- }
-
- class Position {
- +option: Options
- +premium: f64
- +date: DateTime
- +open_fee: f64
- +close_fee: f64
- +total_cost()
- +unrealized_pnl()
- +days_held()
- +days_to_expiration()
- +is_long()
- +is_short()
- +break_even()
- }
-
- class Strategies {
- <<interface>>
- +add_leg()
- +get_legs()
- +break_even()
- +max_profit()
- +max_loss()
- +total_cost()
- +net_premium_received()
- +fees()
- }
-
- class BullCallSpread {
- +long_call: Position
- +short_call: Position
- +break_even()
- +max_profit()
- +max_loss()
- }
-
- class CallButterfly {
- +long_call_itm: Position
- +short_call: Position
- +long_call_otm: Position
- +break_even()
- +max_profit()
- +max_loss()
- }
-
- class Greeks {
- <<interface>>
- +delta()
- +gamma()
- +theta()
- +vega()
- +rho()
- +rho_d()
- }
-
- class Profit {
- <<interface>>
- +calculate_profit_at()
- }
-
- class Graph {
- <<interface>>
- +graph()
- +title()
- +get_values()
- }
-
- class PnLCalculator {
- <<interface>>
- +calculate_pnl()
- +calculate_pnl_at_expiration()
- }
-
- Options --|> Greeks
- Options --|> Profit
- Options --|> Graph
- Position *-- Options
- Position --|> Greeks
- Position --|> Profit
- Position --|> Graph
- Position --|> PnLCalculator
- BullCallSpread --|> Strategies
- BullCallSpread --|> Profit
- BullCallSpread --|> Graph
- CallButterfly --|> Strategies
- CallButterfly --|> Profit
- CallButterfly --|> Graph
- Options o-- OptionType
- Options o-- Side
- Options o-- OptionStyle
- ```
-
- ### Strategy Structure
- ```mermaid
- classDiagram
- class Options {
- +option_type: OptionType
- +side: Side
- +strike_price: Positive
- +expiration_date: ExpirationDate
- +implied_volatility: f64
- +calculate_price_black_scholes()
- +calculate_price_binomial()
- +calculate_delta()
- +payoff()
- }
-
- class Position {
- +option: Options
- +premium: f64
- +date: DateTime
- +open_fee: f64
- +close_fee: f64
- +total_cost()
- +unrealized_pnl()
- +days_held()
- }
-
- class OptionChain {
- +symbol: String
- +underlying_price: Positive
- +options: BTreeSet<OptionData>
- +build_chain()
- +add_option()
- +save_to_csv()
- +load_from_csv()
- }
-
- class Strategy {
- <<Interface>>
- +add_leg()
- +get_legs()
- +break_even()
- +max_profit()
- +max_loss()
- +total_cost()
- }
-
- class BullCallSpread {
- +long_call: Position
- +short_call: Position
- +break_even_points: Vec<f64>
- +calculate_profit_at()
- }
-
- class CallButterfly {
- +long_call_itm: Position
- +long_call_otm: Position
- +short_call: Position
- +break_even_points: Vec<f64>
- }
-
- class Graph {
- <<Interface>>
- +title()
- +get_values()
- +get_vertical_lines()
- +get_points()
- }
-
- class Profit {
- <<Interface>>
- +calculate_profit_at()
- }
-
- class Greeks {
- <<Interface>>
- +delta()
- +gamma()
- +theta()
- +vega()
- }
-
- Position o-- Options
- Strategy <|.. BullCallSpread
- Strategy <|.. CallButterfly
- Graph <|.. Options
- Graph <|.. Position
- Graph <|.. Strategy
- Profit <|.. Options
- Profit <|.. Position
- Profit <|.. Strategy
- Greeks <|.. Options
- OptionChain o-- Options
- BullCallSpread o-- Position
- CallButterfly o-- Position
- ```
-
- ## Strategies Classifications
-
- ```mermaid
- ---
- config:
- layout: fixed
- ---
- flowchart TD
- start["Options Strategies"] --> bullish["Bullish"] & bearish["Bearish"] & neutral["Neutral"]
- bullish --> bull_high["High Volatility"] & bull_low["Low Volatility"]
- bull_high --> bull_high_lim["Limited Risk"] & bull_high_unlim["Unlimited Risk"]
- bull_low --> bull_low_lim["Limited Risk"] & bull_low_unlim["Unlimited Risk"]
- bull_high_lim --> bull_high_lim_opt["Options Only"] & bull_high_lim_stock["With Underlying"]
- bull_high_unlim --> bull_high_unlim_opt["Options Only"] & bull_high_unlim_stock["With Underlying"]
- bull_low_lim --> bull_low_lim_opt["Options Only"] & bull_low_lim_stock["With Underlying"]
- bull_low_unlim --> bull_low_unlim_opt["Options Only"] & bull_low_unlim_stock["With Underlying"]
- bull_high_lim_opt --> bull_call(("Bull Call Spread"))
- bull_high_lim_stock --> protective_put(("Protective Put"))
- bull_high_unlim_opt --> long_call(("Long Call"))
- bull_high_unlim_stock --> pmcc((Poor Man's Covered Call))
- style pmcc shape:circle
- bull_low_lim_opt --> bull_put(("Bull Put Spread"))
- bull_low_lim_stock --> collar(("Collar"))
- bull_low_unlim_opt --> naked_put(("Naked Put"))
- bull_low_unlim_stock --> covered_call(("Covered Call"))
- bearish --> bear_high["High Volatility"] & bear_low["Low Volatility"]
- bear_high --> bear_high_lim["Limited Risk"] & bear_high_unlim["Unlimited Risk"]
- bear_low --> bear_low_lim["Limited Risk"] & bear_low_unlim["Unlimited Risk"]
- bear_high_lim --> bear_high_lim_opt["Options Only"] & bear_high_lim_stock["With Underlying"]
- bear_high_unlim --> bear_high_unlim_opt["Options Only"] & bear_high_unlim_stock["With Underlying"]
- bear_low_lim --> bear_low_lim_opt["Options Only"] & bear_low_lim_stock["With Underlying"]
- bear_low_unlim --> bear_low_unlim_opt["Options Only"] & bear_low_unlim_stock["With Underlying"]
- bear_high_lim_opt --> bear_put(("Bear Put Spread"))
- bear_high_lim_stock --> synthetic_put(("Synthetic Put"))
- bear_high_unlim_opt --> long_put(("Long Put"))
- bear_high_unlim_stock --> covered_put(("Covered Put"))
- bear_low_lim_opt --> bear_call(("Bear Call Spread"))
- bear_low_lim_stock --> reverse_collar(("Reverse Collar"))
- bear_low_unlim_opt --> naked_call(("Naked Call"))
- bear_low_unlim_stock --> protective_call(("Protective Call"))
- neutral --> neut_high["High Volatility"] & neut_low["Low Volatility"]
- neut_high --> neut_high_lim["Limited Risk"] & neut_high_unlim["Unlimited Risk"]
- neut_low --> neut_low_lim["Limited Risk"] & neut_low_unlim["Unlimited Risk"]
- neut_high_lim --> neut_high_lim_opt["Options Only"] & neut_high_lim_stock["With Underlying"]
- neut_high_unlim --> neut_high_unlim_opt["Options Only"] & neut_high_unlim_stock["With Underlying"]
- neut_low_lim --> neut_low_lim_opt["Options Only"] & neut_low_lim_stock["With Underlying"]
- neut_low_unlim --> neut_low_unlim_opt["Options Only"] & neut_low_unlim_stock["With Underlying"]
- neut_high_lim_opt --> call_butterfly(("Call Butterfly")) & butterfly_spread(("Butterfly Spread")) & long_straddle(("Long Straddle")) & long_strangle(("Long Strangle"))
- neut_high_unlim_opt --> short_straddle(("Short Straddle")) & short_strangle(("Short Strangle"))
- neut_low_lim_opt --> iron_butterfly(("Iron Butterfly")) & iron_condor(("Iron Condor"))
- neut_low_unlim_opt --> calendar_spread(("Calendar Spread")) & box_spread(("Box Spread"))
- neut_high_lim_stock --> conversion(("Conversion"))
- neut_high_unlim_stock --> reversal(("Reversal"))
- neut_low_lim_stock --> married_combo(("Married Combo"))
- neut_low_unlim_stock --> ratio_spread(("Ratio Spread"))
- ```
-
- ## Setup Instructions
-
- 1. Clone the repository:
- ```shell
- git clone https://github.com/joaquinbejar/OptionStratLib.git
- cd OptionStratLib
- ```
-
- 2. Build the project:
- ```shell
- make build
- ```
-
- 3. Run tests:
- ```shell
- make test
- ```
-
- 4. Format the code:
- ```shell
- make fmt
- ```
-
- 5. Run linting:
- ```shell
- make lint
- ```
-
- 6. Clean the project:
- ```shell
- make clean
- ```
-
- 7. Run the project:
- ```shell
- make run
- ```
-
- 8. Fix issues:
- ```shell
- make fix
- ```
-
- 9. Run pre-push checks:
- ```shell
- make pre-push
- ```
-
- 10. Generate documentation:
- ```shell
- make doc
- ```
-
- 11. Publish the package:
- ```shell
- make publish
- ```
-
- 12. Generate coverage report:
- ```shell
- make coverage
- ```
-
-
-
- ## Library Usage
-
- To use the library in your project, add the following to your `Cargo.toml`:
-
- ```toml
- [dependencies]
- optionstratlib = { git = "https://github.com/joaquinbejar/OptionStratLib.git" }
- ```
-
- ## Usage Examples
-
- Here are some examples of how to use the library for option pricing and analysis:
+[![Wiki](https://img.shields.io/badge/docs-latest-blue.svg)](https://deepwiki.com/joaquinbejar/OptionStratLib)
+
+
+## OptionStratLib v0.5.0: Financial Options Library
+
+### Table of Contents
+1. [Introduction](#introduction)
+2. [Features](#features)
+3. [Project Structure](#project-structure)
+4. [Core Components](#core-components)
+5. [Strategies Classification](#strategies-classification)
+6. [Setup Instructions](#setup-instructions)
+7. [Library Usage](#library-usage)
+8. [Usage Examples](#usage-examples)
+9. [Testing](#testing)
+10. [Contribution and Contact](#contribution-and-contact)
+
+### Introduction
+
+OptionStratLib is a comprehensive Rust library for options trading and strategy development across multiple asset classes. This versatile toolkit enables traders, quants, and developers to model, analyze, and visualize options strategies with a robust, type-safe approach. The library focuses on precision with decimal-based calculations, extensive test coverage, and a modular architecture.
+
+### Features
+
+1. **Valuation Models**:
+- Black-Scholes model for European options pricing
+- Binomial tree model for American and European options
+- Monte Carlo simulations for complex pricing scenarios
+- Telegraph process model for advanced stochastic modeling
+
+2. **Greeks Calculation**:
+- Delta, gamma, theta, vega, and rho calculations
+- Custom Greeks implementation with adjustable parameters
+- Greeks visualization for risk analysis
+- Sensitivity analysis tools
+
+3. **Option Types**:
+- European and American options
+- Calls and puts with customizable parameters
+- Support for exotic options (Asian, Barrier, Binary, etc.)
+- Comprehensive validation and error handling
+
+4. **Volatility Models**:
+- Constant volatility implementation
+- EWMA (Exponentially Weighted Moving Average)
+- GARCH implementation for volatility forecasting
+- Heston stochastic volatility model
+- Volatility surface interpolation techniques
+
+5. **Option Chain Management**:
+- Chain construction and analysis tools
+- Strike price generation algorithms
+- Chain data import/export (CSV/JSON)
+- Filtering and selection tools
+
+6. **Trading Strategies**:
+- Bull Call/Put Spreads
+- Bear Call/Put Spreads
+- Butterfly Spreads (Long/Short)
+- Iron Condor/Butterfly
+- Straddles and Strangles
+- Covered Calls and Protective Puts
+- Strategy optimization framework
+- Custom strategy development tools
+
+7. **Risk Management**:
+- SPAN margin calculation
+- Position tracking and management
+- Break-even analysis
+- Profit/Loss calculations at various price points
+- Risk profiles and visualizations
+
+8. **Simulation Tools**:
+- Random Walk simulation
+- Telegraph process implementation
+- Monte Carlo methods for scenario analysis
+- Custom simulation frameworks for strategy testing
+- Parametrized simulations with adjustable inputs
+
+9. **Visualization**:
+- Strategy payoff diagrams
+- Greeks visualization
+- Binomial trees
+- Risk profiles
+- Interactive charts (powered by `plotly.rs`)
+- Robust generation of various plot types (scatter, surface) for different data representations
+- Comprehensive test coverage for visualization components, ensuring reliability
+
+10. **Data Management**:
+- CSV/JSON import/export functionality
+- Option chain data handling and processing
+- Historical data analysis tools
+- Price series management and manipulation
+- Efficient decimal-based storage
+
+11. **Geometry and Curve Tools**:
+- Curve interpolation techniques
+- Surface construction and analysis
+- 3D visualization of option surfaces
+- Custom geometric operations
+
+12. **Backtesting** (In Development):
+- Historical strategy performance evaluation
+- Parameter optimization
+- Performance metrics calculation
+
+13. **Performance Metrics** (In Development):
+- Sharpe ratio, Sortino ratio
+- Maximum drawdown analysis
+- Win/loss ratio calculations
+- Return distributions
+
+### Project Structure
+
+The project is organized into the following key modules:
+
+1. **Model** (`model/`):
+- `option.rs`: Core option structures and methods
+- `position.rs`: Position management
+- `expiration.rs`: Expiration date handling
+- `positive.rs`: Non-negative number type implementation
+- `types.rs`: Common enums and types
+
+2. **Pricing Models** (`pricing/`):
+- `binomial_model.rs`: Binomial tree implementation
+- `black_scholes_model.rs`: Black-Scholes pricing
+- `monte_carlo.rs`: Monte Carlo simulations
+- `telegraph.rs`: Telegraph process model
+- `payoff.rs`: Payoff function implementations
+
+3. **Greeks** (`greeks/`):
+- Base trait definition for Greeks calculations
+- Implementation for different option models
+- Sensitivity analysis tools
+
+4. **Volatility** (`volatility/`):
+- `constant.rs`: Constant volatility model
+- `ewma.rs`: EWMA implementation
+- `garch.rs`: GARCH model
+- `heston.rs`: Heston model
+- `surface.rs`: Volatility surface handling
+- `traits.rs`: Common interfaces for volatility models
+
+5. **Strategies** (`strategies/`):
+- `base.rs`: Strategy base traits and interfaces
+- Individual strategy implementations:
+- `bear_put_spread.rs`, `bull_call_spread.rs`, etc.
+- `build/`: Strategy construction tools
+- `custom.rs`: Custom strategy framework
+- `probabilities/`: Probability analysis for strategies
+
+6. **Risk Management** (`risk/`):
+- `span.rs`: SPAN margin calculation
+- `margin.rs`: Margin requirements computation
+- `position.rs`: Position risk metrics
+
+7. **Simulation** (`simulation/`):
+- `random_walk.rs`: Random walk implementations
+- `telegraph.rs`: Telegraph process modeling
+- `monte_carlo.rs`: Monte Carlo simulation tools
+- `steps/`: Step generation for simulations
+- `params.rs`: Simulation parameters
+
+8. **Visualization** (`visualization/`):
+- `plotly.rs`: Plotly integration for interactive charts
+- Graph trait implementations
+- Utility functions for visualization
+
+9. **Geometrics** (`geometrics/`):
+- `construction/`: Tools for building geometric structures
+- `interpolation/`: Interpolation techniques
+- `analysis/`: Analysis tools for curves and surfaces
+- `visualization/`: Visualization of geometric structures
+
+10. **Error Handling** (`error/`):
+- Comprehensive error types for each module
+- Error propagation and handling utilities
+
+### Core Components
+
+```mermaid
+classDiagram
+class Options {
++option_type: OptionType
++side: Side
++underlying_symbol: String
++strike_price: Positive
++expiration_date: ExpirationDate
++implied_volatility: Positive
++quantity: Positive
++underlying_price: Positive
++risk_free_rate: Decimal
++option_style: OptionStyle
++dividend_yield: Positive
++exotic_params: Option~ExoticParams~
++calculate_price_black_scholes()
++calculate_price_binomial()
++time_to_expiration()
++is_long()
++is_short()
++validate()
++to_plot()
++calculate_implied_volatility()
++delta()
++gamma()
++theta()
++vega()
++rho()
+}
+
+class Position {
++option: Options
++position_cost: Positive
++entry_date: DateTime<Utc>
++open_fee: Positive
++close_fee: Positive
++net_cost()
++net_premium_received()
++unrealized_pnl()
++pnl_at_expiration()
++validate()
+}
+
+class ExpirationDate {
++Days(Positive)
++Date(NaiveDate)
++get_years()
++get_date()
++get_date_string()
++from_string()
+}
+
+class Positive {
++value: Decimal
++ZERO: Positive
++ONE: Positive
++format_fixed_places()
++round_to_nice_number()
++is_positive()
+}
+
+class OptionStyle {
+<<enumeration>>
+Call
+Put
+}
+
+class OptionType {
+<<enumeration>>
+European
+American
+}
+
+class Side {
+<<enumeration>>
+Long
+Short
+}
+
+class Graph {
+<<interface>>
++graph_data()
++graph_config()
++to_plot()
++write_html()
++write_png()
++write_svg()
++write_jpeg()
+}
+
+class Greeks {
+<<interface>>
++delta()
++gamma()
++theta()
++vega()
++rho()
++calculate_all_greeks()
+}
+
+Options --|> Greeks : implements
+Options --|> Graph : implements
+Position o-- Options : contains
+Options *-- OptionStyle : has
+Options *-- OptionType : has
+Options *-- Side : has
+Options *-- ExpirationDate : has
+Options *-- Positive : uses
+```
+
+### Strategies and Methods
+
+```mermaid
+classDiagram
+class Strategy {
++name: String
++strategy_type: StrategyType
++description: String
++legs: Vec~Position~
++new()
++validate()
++add_leg()
+}
+
+class Strategies {
+<<interface>>
++get_volume()
++get_net_premium_received()
++get_max_profit()
++get_max_loss()
++get_profit_ratio()
++get_profit_area()
++get_break_even_points()
++get_fees()
++get_title()
++get_profit_loss_at_price()
++get_positions()
++get_options()
+}
+
+class BullCallSpread {
++underlying_symbol: String
++underlying_price: Positive
++long_call: Position
++short_call: Position
++new()
++validate()
+}
+
+class BearPutSpread {
++underlying_symbol: String
++underlying_price: Positive
++long_put: Position
++short_put: Position
++new()
++validate()
+}
+
+class LongCall {
++underlying_symbol: String
++underlying_price: Positive
++long_call: Position
++new()
++validate()
+}
+
+class LongPut {
++underlying_symbol: String
++underlying_price: Positive
++long_put: Position
++new()
++validate()
+}
+
+class ShortCall {
++underlying_symbol: String
++underlying_price: Positive
++short_call: Position
++new()
++validate()
+}
+
+class ShortPut {
++underlying_symbol: String
++underlying_price: Positive
++short_put: Position
++new()
++validate()
+}
+
+class IronCondor {
++underlying_symbol: String
++underlying_price: Positive
++long_put: Position
++short_put: Position
++short_call: Position
++long_call: Position
++new()
++validate()
+}
+
+class BasicAble {
+<<interface>>
++get_underlying_symbol()
++get_underlying_price()
++one_option()
+}
+
+class BreakEvenable {
+<<interface>>
++get_break_even_points()
++get_profit_loss_zones()
+}
+
+class Validable {
+<<interface>>
++validate()
+}
+
+class Optimizable {
+<<interface>>
++get_best_ratio()
++get_best_profit()
++get_best_loss()
++get_best_premium()
++find_optimal()
+}
+
+Strategy ..|> Strategies : implements
+BullCallSpread ..|> Strategies : implements
+BearPutSpread ..|> Strategies : implements
+LongCall ..|> Strategies : implements
+LongPut ..|> Strategies : implements
+ShortCall ..|> Strategies : implements
+ShortPut ..|> Strategies : implements
+IronCondor ..|> Strategies : implements
+
+Strategies ..> BasicAble : requires
+Strategies ..> BreakEvenable : requires
+Strategies ..> Validable : requires
+Optimizable ..> Validable : requires
+Optimizable ..> Strategies : requires
+```
+
+### Strategies Classification
+
+```mermaid
+classDiagram
+class StrategyType {
+<<enumeration>>
+Custom
+BullCallSpread
+BearPutSpread
+LongCall
+LongPut
+ShortCall
+ShortPut
+CallButterfly
+LongButterflySpread
+ShortButterflySpread
+IronButterfly
+IronCondor
+Straddle
+LongStraddle
+ShortStraddle
+Strangle
+LongStrangle
+ShortStrangle
+CoveredCall
+ProtectivePut
+PoorMansCoveredCall
+Collar
+}
+
+class DirectionalBias {
+<<enumeration>>
+Bullish
+Bearish
+Neutral
+}
+
+class VolatilityOutlook {
+<<enumeration>>
+High
+Low
+Neutral
+}
+
+class ComplexityLevel {
+<<enumeration>>
+Basic
+Intermediate
+Advanced
+}
+
+class RiskProfile {
+<<enumeration>>
+DefinedRisk
+UndefinedRisk
+LimitedProfit
+UnlimitedProfit
+}
+
+DirectionalBias <-- StrategyType : categorized by
+VolatilityOutlook <-- StrategyType : categorized by
+ComplexityLevel <-- StrategyType : categorized by
+RiskProfile <-- StrategyType : categorized by
+
+class BullishStrategies {
+BullCallSpread
+LongCall
+CoveredCall
+PoorMansCoveredCall
+}
+
+class BearishStrategies {
+BearPutSpread
+LongPut
+ShortCall
+}
+
+class NeutralStrategies {
+IronCondor
+IronButterfly
+ButterflySpread
+Straddle
+Strangle
+}
+
+class HighVolatilityStrategies {
+LongStraddle
+LongStrangle
+LongCall
+LongPut
+}
+
+class LowVolatilityStrategies {
+ShortStraddle
+ShortStrangle
+IronCondor
+ButterflySpread
+CoveredCall
+}
+
+DirectionalBias <.. BullishStrategies : implements
+DirectionalBias <.. BearishStrategies : implements
+DirectionalBias <.. NeutralStrategies : implements
+VolatilityOutlook <.. HighVolatilityStrategies : implements
+VolatilityOutlook <.. LowVolatilityStrategies : implements
+```
+
+### Setup Instructions
+
+#### Prerequisites
+
+- Rust 1.65 or higher
+- Cargo
+
+#### Installation
+
+Add OptionStratLib to your `Cargo.toml`:
+
+```toml
+[dependencies]
+optionstratlib = "0.5.0"
+```
+
+Or use cargo to add it to your project:
+
+```bash
+cargo add optionstratlib
+```
+
+#### Optional Features
+
+The library includes several optional features that can be enabled:
+
+```toml
+[dependencies]
+optionstratlib = { version = "0.5.0", features = ["plotly", "kaleido", "full"] }
+```
+
+- `plotly`: Enables visualization using plotly.rs
+- `kaleido`: Enables saving static images (requires plotly)
+- `full`: Enables all features
+
+#### Building from Source
+
+Clone the repository and build using Cargo:
+
+```bash
+git clone https://github.com/joaquinbejar/OptionStratLib.git
+cd OptionStratLib
+cargo build --release
+```
+
+Run tests:
+
+```bash
+cargo test --all-features
+```
+
+Generate documentation:
+
+```bash
+cargo doc --open
+```
+
+### Library Usage
+
+#### Basic Usage
 
 ```rust
+use optionstratlib::{Options, OptionStyle, OptionType, Side, ExpirationDate};
+use optionstratlib::pos;
+use rust_decimal_macros::dec;
 use optionstratlib::greeks::Greeks;
-use optionstratlib::Options;
-use optionstratlib::Positive;
-use optionstratlib::model::types::{OptionStyle, OptionType, Side};
-use optionstratlib::pos;
-use optionstratlib::ExpirationDate;
-use optionstratlib::utils::setup_logger;
-use optionstratlib::visualization::utils::Graph;
-use optionstratlib::visualization::utils::GraphBackend;
-use std::error::Error;
-use tracing::info;
 
-fn create_sample_option() -> Options {
-    use rust_decimal_macros::dec;
-use optionstratlib::{pos, ExpirationDate};Options::new(
-        OptionType::European,
-        Side::Long,
-        "AAPL".to_string(),
-        pos!(100.0),
-        ExpirationDate::Days(pos!(30.0)),
-        pos!(0.2),
-        pos!(1.0),
-        pos!(105.0),
-        dec!(0.05),
-        OptionStyle::Call,
-        Positive::ZERO,
-        None,
-    )
-}
-fn main() -> Result<(), Box<dyn Error>> {
-    setup_logger();
-    let option = create_sample_option();
-    info!("Title: {}", option.title());
-    info!("Greeks: {:?}", option.greeks());
+// Create a basic European call option
+let option = Options::new(
+OptionType::European,
+Side::Long,
+"AAPL".to_string(),
+pos!(100.0),            // strike_price
+ExpirationDate::Days(pos!(30.0)),
+pos!(0.2),              // implied_volatility
+pos!(1.0),              // quantity
+pos!(105.0),            // underlying_price
+dec!(0.05),             // risk_free_rate
+OptionStyle::Call,
+pos!(0.02),             // dividend_yield
+None,                   // exotic_params
+);
 
-    // Define a range of prices for the graph
-    let price_range: Vec<Positive> = (50..150)
-        .map(|x| pos!(x as f64))
-        .collect();
+// Calculate option price using Black-Scholes
+let price = option.calculate_price_black_scholes().unwrap();
+println!("Option price: {}", price);
 
-    // Generate the intrinsic value graph
-    option.graph(
-        GraphBackend::Bitmap {
-            file_path: "Draws/Options/intrinsic_value_chart.png",
-            size: (1400, 933),
-        },
-        25,
-    )?;
+// Calculate Greeks
+let delta = option.delta().unwrap();
+let gamma = option.gamma().unwrap();
+let theta = option.theta().unwrap();
+println!("Delta: {}, Gamma: {}, Theta: {}", delta, gamma, theta);
+```
 
-    Ok(())
-}
- ```
+#### Working with Strategies
 
 ```rust
-use optionstratlib::Positive;
-use optionstratlib::ExpirationDate;
-use optionstratlib::pos;
+use optionstratlib::{Positive, ExpirationDate, pos};
 use optionstratlib::strategies::Strategies;
 use optionstratlib::strategies::bull_call_spread::BullCallSpread;
-use optionstratlib::utils::setup_logger;
-use optionstratlib::visualization::utils::Graph;
-use optionstratlib::visualization::utils::GraphBackend;
+use optionstratlib::visualization::Graph;
+use rust_decimal_macros::dec;
 use std::error::Error;
-use tracing::info;
 
 fn main() -> Result<(), Box<dyn Error>> {
-    use rust_decimal_macros::dec;
-setup_logger();
-
+    use optionstratlib::strategies::base::BreakEvenable;
+    use optionstratlib::strategies::BasicAble;
     let underlying_price = pos!(5781.88);
 
-    let strategy = BullCallSpread::new(
-        "SP500".to_string(),
-        underlying_price,   // underlying_price
-        pos!(5750.0),   // long_strike_itm
-        pos!(5820.0),   // short_strike
-        ExpirationDate::Days(pos!(2.0)),
-        pos!(0.18),   // implied_volatility
-        dec!(0.05),   // risk_free_rate
-        Positive::ZERO,   // dividend_yield
-        pos!(2.0),   // long quantity
-        pos!(85.04),   // premium_long
-        pos!(29.85),   // premium_short
-        pos!(0.78),   // open_fee_long
-        pos!(0.78),   // open_fee_long
-        pos!(0.73),   // close_fee_long
-        pos!(0.73),   // close_fee_short
-    );
+    // Create a Bull Call Spread strategy
+    let strategy = BullCallSpread::new("SP500".to_string(), underlying_price, pos!(5750.0), pos!(5820.0), ExpirationDate::Days(pos!(2.0)), pos!(0.18), dec!(0.01), pos!(0.78), pos!(0.78), pos!(0.73), pos!(0.73), Default::default(), Default::default(), Default::default(), Default::default());
 
-    let price_range = strategy.best_range_to_show(pos!(1.0)).unwrap();
+    // Get information about the strategy
+    println!("Title: {}", strategy.get_title());
+    println!("Break Even Points: {:?}", strategy.get_break_even_points()?);
+    println!("Net Premium Received: ${:.2}", strategy.get_net_premium_received()?);
+    println!("Max Profit: ${:.2}", strategy.get_max_profit().unwrap_or(Positive::ZERO));
+    println!("Max Loss: ${:0.2}", strategy.get_max_loss().unwrap_or(Positive::ZERO));
+    println!("Total Fees: ${:.2}", strategy.get_fees()?);
+    println!("Profit Area: {:.2}%", strategy.get_profit_area()?);
+    println!("Profit Ratio: {:.2}%", strategy.get_profit_ratio()?);
 
-    info!("Title: {}", strategy.title());
-    info!("Break Even Points: {:?}", strategy.break_even_points);
-    info!(
-        "Net Premium Received: ${:.2}",
-        strategy.net_premium_received()?
-    );
-    info!("Max Profit: ${:.2}", strategy.max_profit().unwrap_or(Positive::ZERO));
-    info!("Max Loss: ${:0.2}", strategy.max_loss().unwrap_or(Positive::ZERO));
-    info!("Total Fees: ${:.2}", strategy.fees()?);
-    info!("Profit Area: {:.2}%", strategy.profit_area()?);
-    info!("Profit Ratio: {:.2}%", strategy.profit_ratio()?);
-
-    // Generate the profit/loss graph
-    strategy.graph(
-        GraphBackend::Bitmap {
-            file_path: "Draws/Strategy/bull_call_spread_profit_loss_chart.png",
-            size: (1400, 933),
-        },
-        20,
-    )?;
+    // Generate visualization and save to HTML file
+    #[cfg(feature = "kaleido")]
+    {
+        let file_path = "Draws/Strategy/bull_call_spread_profit_loss_chart.html".as_ref();
+        strategy.write_html(file_path)?;
+    }
 
     Ok(())
 }
 ```
 
- ## Testing
+#### Visualization Example
 
- To run unit tests:
- ```shell
- make test
- ```
+```rust
+use optionstratlib::visualization::{Graph, GraphData, Series2D, TraceMode, GraphConfig};
+use optionstratlib::error::GraphError;
+use std::path::PathBuf;
+use rust_decimal_macros::dec;
 
- To run tests with coverage:
- ```shell
- make coverage
- ```
+struct SimpleChart {
+    series: Series2D
+}
+
+impl Graph for SimpleChart {
+    fn graph_data(&self) -> GraphData {
+        GraphData::Series(self.series.clone())
+    }
+
+    fn graph_config(&self) -> GraphConfig {
+        use optionstratlib::visualization::{ColorScheme, LineStyle};
+GraphConfig {
+            title: "Interactive Chart Example".into(),
+            width: 800,
+            height: 600,
+            x_label: Some("X Axis".into()),
+            y_label: Some("Y Axis".into()),
+            z_label: None,
+            line_style: LineStyle::Solid,
+            color_scheme: ColorScheme::Viridis,
+            legend: Some(vec!["My Data".to_string()]),
+            show_legend: true,
+        }
+    }
+}
+
+fn main() -> Result<(), GraphError> {
+    let series = Series2D {
+        x: vec![dec!(1.0), dec!(2.0), dec!(3.0)],
+        y: vec![dec!(4.0), dec!(5.0), dec!(6.0)],
+        name: "Series 1".to_string(),
+        mode: TraceMode::Lines,
+        line_color: Some("#1f77b4".to_string()),
+        line_width: Some(2.0),
+    };
+
+    #[cfg(feature = "kaleido")]
+    {
+        let chart = SimpleChart { series };
+        let filename: PathBuf = PathBuf::from("interactive_chart.html");
+        chart.write_html(&filename)?;
+    }
+
+    Ok(())
+}
+```
+
+### Testing
+
+To run the test suite:
+
+```bash
+make test
+```
+
+For running tests with specific features:
+
+```bash
+cargo test --features "plotly kaleido"
+```
+
+To generate a test coverage report:
+
+```bash
+make coverage
+```
 
 
 

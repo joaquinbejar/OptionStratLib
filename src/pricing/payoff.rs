@@ -1,9 +1,6 @@
 use crate::Positive;
-use crate::constants::{DARK_GREEN, ZERO};
 use crate::model::types::{OptionStyle, Side};
-use crate::visualization::model::{ChartPoint, LabelOffsetType};
 use num_traits::ToPrimitive;
-use plotters::prelude::RED;
 use rust_decimal::Decimal;
 use std::error::Error;
 use tracing::trace;
@@ -204,7 +201,7 @@ pub trait Profit {
     ///
     /// * `Result<Decimal, Box<dyn Error>>` - The calculated profit as a Decimal value,
     ///   or an error if the calculation fails
-    fn calculate_profit_at(&self, price: Positive) -> Result<Decimal, Box<dyn Error>>;
+    fn calculate_profit_at(&self, price: &Positive) -> Result<Decimal, Box<dyn Error>>;
 
     /// Creates a chart point representation of the profit at the given price.
     ///
@@ -219,22 +216,8 @@ pub trait Profit {
     ///
     /// * `ChartPoint<(f64, f64)>` - A formatted chart point with coordinates (price, profit),
     ///   styling, and a formatted profit label
-    fn get_point_at_price(&self, price: Positive) -> ChartPoint<(f64, f64)> {
-        let value_at_current_price = self.calculate_profit_at(price).unwrap().to_f64().unwrap();
-        let color = if value_at_current_price >= ZERO {
-            DARK_GREEN
-        } else {
-            RED
-        };
-        ChartPoint {
-            coordinates: (price.into(), value_at_current_price),
-            label: format!("{:.2}", value_at_current_price),
-            label_offset: LabelOffsetType::Relative(4.0, 1.0),
-            point_color: color,
-            label_color: color,
-            point_size: 5,
-            font_size: 18,
-        }
+    fn get_point_at_price(&self, _price: &Positive) -> Result<(Decimal, Decimal), Box<dyn Error>> {
+        todo!()
     }
 }
 
@@ -245,7 +228,6 @@ mod tests_standard_payoff {
     use crate::pos;
 
     #[test]
-
     fn test_call_option_in_the_money() {
         let option_type = OptionType::European;
         let info = PayoffInfo {
@@ -261,7 +243,6 @@ mod tests_standard_payoff {
     }
 
     #[test]
-
     fn test_call_option_at_the_money() {
         let option_type = OptionType::European;
         let info = PayoffInfo {
@@ -277,7 +258,6 @@ mod tests_standard_payoff {
     }
 
     #[test]
-
     fn test_call_option_out_of_the_money() {
         let option_type = OptionType::European;
         let info = PayoffInfo {
@@ -293,7 +273,6 @@ mod tests_standard_payoff {
     }
 
     #[test]
-
     fn test_put_option_in_the_money() {
         let option_type = OptionType::European;
         let info = PayoffInfo {
@@ -309,7 +288,6 @@ mod tests_standard_payoff {
     }
 
     #[test]
-
     fn test_put_option_at_the_money() {
         let option_type = OptionType::European;
         let info = PayoffInfo {
@@ -325,7 +303,6 @@ mod tests_standard_payoff {
     }
 
     #[test]
-
     fn test_put_option_out_of_the_money() {
         let option_type = OptionType::European;
         let info = PayoffInfo {

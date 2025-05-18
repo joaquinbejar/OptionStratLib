@@ -6,18 +6,16 @@
 use optionstratlib::ExpirationDate;
 use optionstratlib::Positive;
 use optionstratlib::pos;
-use optionstratlib::strategies::Strategies;
 use optionstratlib::strategies::base::BreakEvenable;
 use optionstratlib::strategies::bull_call_spread::BullCallSpread;
+use optionstratlib::strategies::{BasicAble, Strategies};
 use optionstratlib::utils::setup_logger;
-use optionstratlib::visualization::utils::Graph;
-use optionstratlib::visualization::utils::GraphBackend;
+use optionstratlib::visualization::Graph;
 use rust_decimal_macros::dec;
 use std::error::Error;
 use tracing::info;
 
 fn main() -> Result<(), Box<dyn Error>> {
-    setup_logger();
     let strategy = BullCallSpread::new(
         "GOLD".to_string(),
         pos!(2505.8),
@@ -36,26 +34,24 @@ fn main() -> Result<(), Box<dyn Error>> {
         pos!(0.54),
     );
 
-    info!("Title: {}", strategy.title());
+    info!("Title: {}", strategy.get_title());
     info!("Break Even {:?}", strategy.get_break_even_points());
-    info!("Net Premium Received: {}", strategy.net_premium_received()?);
+    info!(
+        "Net Premium Received: {}",
+        strategy.get_net_premium_received()?
+    );
     info!(
         "Max Profit: {}",
-        strategy.max_profit().unwrap_or(Positive::ZERO)
+        strategy.get_max_profit().unwrap_or(Positive::ZERO)
     );
     info!(
         "Max Loss: {}",
-        strategy.max_loss().unwrap_or(Positive::ZERO)
+        strategy.get_max_loss().unwrap_or(Positive::ZERO)
     );
-    info!("Total Cost: {}", strategy.total_cost()?);
+    info!("Total Cost: {}", strategy.get_total_cost()?);
 
-    // Generate the intrinsic value graph
-    strategy.graph(
-        GraphBackend::Bitmap {
-            file_path: "Draws/Strategy/bull_call_spread_value_chart.png",
-            size: (1400, 933),
-        },
-        20,
-    )?;
+    let path: &std::path::Path = "Draws/Strategy/bull_call_spread_value_chart.png".as_ref();
+    strategy.write_png(path)?;
+
     Ok(())
 }

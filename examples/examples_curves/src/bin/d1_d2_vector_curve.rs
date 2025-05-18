@@ -9,7 +9,6 @@ use rust_decimal_macros::dec;
 use std::error::Error;
 
 fn main() -> Result<(), Box<dyn Error>> {
-    setup_logger();
     let params = &ConstructionParams::D2 {
         t_start: dec!(1.0),
         t_end: dec!(100),
@@ -43,9 +42,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         .title("d1 & d2 Curve")
         .x_label("strike")
         .y_label("d1 & d2")
-        .line_width(1)
-        .curve_name(["d1".to_string(), "d2".to_string()].to_vec())
+        .legend(vec!["d1", "d2"])
         .save("./Draws/Curves/d1_d2_curve.png")?;
-
     Ok(())
 }

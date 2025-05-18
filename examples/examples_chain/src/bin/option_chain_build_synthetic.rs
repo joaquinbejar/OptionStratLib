@@ -14,7 +14,6 @@ use optionstratlib::{OptionStyle, Side};
 use tracing::info;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    setup_logger();
     let mut option_chain_base =
         OptionChain::load_from_json("examples/Chains/SP500-18-oct-2024-5781.88.json")?;
     // option_chain_base.update_expiration_date(get_today_formatted());
@@ -32,27 +31,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .title("Volatility Curve")
         .x_label("strike")
         .y_label("Volatility")
-        .line_width(1)
         .save("Draws/Curves/option_chain_curve.png")?;
 
     info!("Curve saved");
 
-    // let surface = option_chain.surface(
-    //     &BasicAxisTypes::Delta,
-    //     &OptionStyle::Call,
-    //     None,
-    //     &Side::Long,
-    // )?;
-    //
-    // surface
-    //     .plot()
-    //     .title("Volatility Surface")
-    //     .x_label("strike")
-    //     .y_label("Volatility")
-    //     .z_label("Delta")
-    //     .line_width(1)
-    //     .save("Draws/Surfaces/option_chain_surface.png")?;
-    //
-    // info!("Surface saved");
     Ok(())
 }

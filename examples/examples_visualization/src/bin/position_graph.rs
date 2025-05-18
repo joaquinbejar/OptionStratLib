@@ -8,7 +8,7 @@ use optionstratlib::Positive;
 use optionstratlib::model::position::Position;
 use optionstratlib::model::types::{OptionStyle, OptionType, Side};
 use optionstratlib::pos;
-use optionstratlib::visualization::utils::{Graph, GraphBackend};
+use optionstratlib::visualization::Graph;
 use optionstratlib::{ExpirationDate, Options};
 use rust_decimal_macros::dec;
 use std::error::Error;
@@ -38,13 +38,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         Positive::ONE,
     );
 
-    position.graph(
-        GraphBackend::Bitmap {
-            file_path: "Draws/Position/pnl_at_expiration_chart.png",
-            size: (1400, 933),
-        },
-        20,
-    )?;
+    let path: &std::path::Path = "Draws/Position/pnl_at_expiration_chart.png".as_ref();
+    position.write_png(path)?;
 
     Ok(())
 }

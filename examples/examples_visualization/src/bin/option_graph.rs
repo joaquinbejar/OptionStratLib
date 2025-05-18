@@ -7,8 +7,9 @@ use optionstratlib::Positive;
 use optionstratlib::greeks::Greeks;
 use optionstratlib::model::types::{OptionStyle, OptionType, Side};
 use optionstratlib::pos;
+use optionstratlib::strategies::BasicAble;
 use optionstratlib::utils::setup_logger;
-use optionstratlib::visualization::utils::{Graph, GraphBackend};
+use optionstratlib::visualization::Graph;
 use optionstratlib::{ExpirationDate, Options};
 use rust_decimal_macros::dec;
 use std::error::Error;
@@ -31,19 +32,13 @@ fn create_sample_option() -> Options {
     )
 }
 fn main() -> Result<(), Box<dyn Error>> {
-    setup_logger();
     let option = create_sample_option();
-    info!("Title: {}", option.title());
+    info!("Title: {}", option.get_title());
     info!("Greeks: {:?}", option.greeks());
 
-    // Generate the intrinsic value graph
-    option.graph(
-        GraphBackend::Bitmap {
-            file_path: "Draws/Options/intrinsic_value_chart.png",
-            size: (1400, 933),
-        },
-        20,
-    )?;
-
+    let path: &std::path::Path = "Draws/Options/intrinsic_value_chart.png".as_ref();
+    option.write_png(path)?;
+    let path_html: &std::path::Path = "Draws/Options/intrinsic_value_chart.html".as_ref();
+    option.write_html(path_html)?;
     Ok(())
 }

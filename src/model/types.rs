@@ -1,6 +1,6 @@
-use crate::Positive;
 use crate::constants::ZERO;
 use crate::pricing::payoff::{Payoff, PayoffInfo, standard_payoff};
+use crate::{ExpirationDate, Positive};
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -40,12 +40,16 @@ mod datetime_format {
 /// `Action` is used to indicate whether a security is being acquired or disposed of,
 /// and is commonly paired with other transaction details such as price, quantity,
 /// and timing information.
-#[derive(Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
 pub enum Action {
     /// Represents a purchase transaction, where assets are acquired.
+    #[default]
     Buy,
     /// Represents a selling transaction, where assets are disposed of.
     Sell,
+
+    /// Action is not applicable to this type of transaction.
+    Other,
 }
 
 /// Defines the directional exposure of a financial position.
@@ -56,10 +60,11 @@ pub enum Action {
 ///
 /// `Side` is a fundamental concept in trading that determines how profits and losses
 /// are calculated and affects risk management considerations.
-#[derive(Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
 pub enum Side {
     /// Represents a position that profits when the underlying asset's price increases.
     /// Long positions involve buying an asset with the expectation of selling at a higher price.
+    #[default]
     Long,
     /// Represents a position that profits when the underlying asset's price decreases.
     /// Short positions involve selling an asset (often borrowed) with the expectation
@@ -67,7 +72,7 @@ pub enum Side {
     Short,
 }
 
-/// Specifies the style of an options contract.
+/// Specifies the style of an option contract.
 ///
 /// This enum defines the fundamental classification of options contracts based on
 /// their exercise characteristics. The style determines when and how an option
@@ -75,11 +80,12 @@ pub enum Side {
 ///
 /// `OptionStyle` is a critical attribute for options contracts as it directly
 /// affects valuation, pricing models, and exercise strategies.
-#[derive(Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
 pub enum OptionStyle {
     /// Represents a call option, which gives the holder the right (but not obligation)
     /// to buy the underlying asset at the strike price before or at expiration.
     /// Call options typically increase in value when the underlying asset price rises.
+    #[default]
     Call,
     /// Represents a put option, which gives the holder the right (but not obligation)
     /// to sell the underlying asset at the strike price before or at expiration.
@@ -89,11 +95,12 @@ pub enum OptionStyle {
 
 /// Represents the type of option in a financial context.
 /// Options can be categorized into various types based on their characteristics and the conditions under which they can be exercised.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub enum OptionType {
     /// A European option can only be exercised at the expiry date.
     /// This type of option does not allow the holder to exercise the option before the specified expiration date.
     /// European options are simpler to price and analyze because their payoff is only determined at a single point in time.
+    #[default]
     European,
 
     /// An American option can be exercised at any time before and including the expiry date.
@@ -206,6 +213,56 @@ pub enum OptionType {
         /// The exponent to which the underlying asset price is raised.
         exponent: f64,
     },
+}
+
+/// A structure representing the basic properties of an option in financial terms.
+/// This structure is designed to be lightweight and provides essential details
+/// about an options contract.
+///
+/// # Generic Parameters
+/// - `'a`: A lifetime parameter that ensures the references within the structure
+///   are valid for the same lifetime.
+///
+/// # Fields
+///
+/// # Derives
+/// - `Clone`: Enables creating a copy of the structure.
+/// - `Copy`: Allows the structure to be copied instead of moved.
+/// - `PartialEq`: Enables comparison for equality between two instances of the structure.
+/// - `Serialize`: Provides functionality for serializing the structure into a format like JSON or others.
+/// - `Debug`: Enables formatting the structure for debugging purposes.
+/// - `Hash`: Makes the type hashable, allowing it to be stored in hash-based collections, such as `HashMap`.
+/// - `Eq`: Indicates that the type guarantees the equality operator `==` is reflexive, symmetric, and transitive.
+///
+/// # Usage
+/// This struct is ideal for applications dealing with option contracts where
+/// the essential characteristics of an option need to be stored and managed efficiently.
+///
+/// # Example
+/// ```rust
+/// use optionstratlib::model::types::OptionBasicType;
+/// use optionstratlib::{pos, ExpirationDate, OptionStyle, Positive, Side};
+/// let european_call_option = OptionBasicType {
+///     option_style: &OptionStyle::Call,
+///     side: &Side::Long,
+///     strike_price: &Positive::new(100.0).unwrap(),
+///     expiration_date: &ExpirationDate::Days(pos!(30.0)),
+/// };
+/// ```
+#[derive(Clone, Copy, PartialEq, Serialize, Debug, Hash, Eq)]
+pub struct OptionBasicType<'a> {
+    /// - `option_style`: A reference to the style of the option (e.g., European
+    ///   or American) represented by the `OptionStyle` type.
+    pub option_style: &'a OptionStyle,
+    /// - `side`: A reference to the side of the option (e.g., Call or Put)
+    ///   as defined by the `Side` type.
+    pub side: &'a Side,
+    /// - `strike_price`: A reference to the strike price of the option, which is
+    ///   guaranteed to be positive, represented by the `Positive` type.
+    pub strike_price: &'a Positive,
+    /// - `expiration_date`: A reference to the expiration date of the option,
+    ///   represented by the `ExpirationDate` type.
+    pub expiration_date: &'a ExpirationDate,
 }
 
 /// Describes how the average price is calculated for Asian options.
@@ -378,7 +435,6 @@ mod tests_payoff {
     use crate::pos;
 
     #[test]
-
     fn test_european_call() {
         let option = OptionType::European;
         let info = PayoffInfo {
@@ -392,7 +448,6 @@ mod tests_payoff {
     }
 
     #[test]
-
     fn test_european_put() {
         let option = OptionType::European;
         let info = PayoffInfo {
@@ -406,7 +461,6 @@ mod tests_payoff {
     }
 
     #[test]
-
     fn test_asian_arithmetic_call() {
         let option = OptionType::Asian {
             averaging_type: AsianAveragingType::Arithmetic,
@@ -423,7 +477,6 @@ mod tests_payoff {
     }
 
     #[test]
-
     fn test_barrier_up_and_in_call() {
         let option = OptionType::Barrier {
             barrier_type: BarrierType::UpAndIn,
@@ -440,7 +493,6 @@ mod tests_payoff {
     }
 
     #[test]
-
     fn test_binary_cash_or_nothing_call() {
         let option = OptionType::Binary {
             binary_type: BinaryType::CashOrNothing,
@@ -456,7 +508,6 @@ mod tests_payoff {
     }
 
     #[test]
-
     fn test_lookback_fixed_strike_put() {
         let option = OptionType::Lookback {
             lookback_type: LookbackType::FixedStrike,
@@ -472,7 +523,6 @@ mod tests_payoff {
     }
 
     #[test]
-
     fn test_quanto_call() {
         let option = OptionType::Quanto { exchange_rate: 1.5 };
         let info = PayoffInfo {
@@ -486,7 +536,6 @@ mod tests_payoff {
     }
 
     #[test]
-
     fn test_power_call() {
         let option = OptionType::Power { exponent: 2.0 };
         let info = PayoffInfo {
@@ -506,7 +555,6 @@ mod tests_calculate_floating_strike_payoff {
     use crate::pos;
 
     #[test]
-
     fn test_call_option_with_spot_min() {
         let info = PayoffInfo {
             spot: pos!(100.0),
@@ -521,7 +569,6 @@ mod tests_calculate_floating_strike_payoff {
     }
 
     #[test]
-
     fn test_call_option_without_spot_min() {
         let info = PayoffInfo {
             spot: pos!(100.0),
@@ -536,7 +583,6 @@ mod tests_calculate_floating_strike_payoff {
     }
 
     #[test]
-
     fn test_put_option_with_spot_max() {
         let info = PayoffInfo {
             spot: pos!(100.0),
@@ -551,7 +597,6 @@ mod tests_calculate_floating_strike_payoff {
     }
 
     #[test]
-
     fn test_put_option_without_spot_max() {
         let info = PayoffInfo {
             spot: pos!(100.0),
@@ -566,7 +611,6 @@ mod tests_calculate_floating_strike_payoff {
     }
 
     #[test]
-
     fn test_call_option_spot_equals_min() {
         let info = PayoffInfo {
             spot: pos!(100.0),
@@ -581,7 +625,6 @@ mod tests_calculate_floating_strike_payoff {
     }
 
     #[test]
-
     fn test_put_option_spot_equals_max() {
         let info = PayoffInfo {
             spot: pos!(100.0),
@@ -602,7 +645,6 @@ mod tests_option_type {
     use crate::pos;
 
     #[test]
-
     fn test_asian_geometric_call() {
         let option = OptionType::Asian {
             averaging_type: AsianAveragingType::Geometric,
@@ -620,7 +662,6 @@ mod tests_option_type {
     }
 
     #[test]
-
     fn test_asian_geometric_call_positive_payoff() {
         let option = OptionType::Asian {
             averaging_type: AsianAveragingType::Geometric,
@@ -639,7 +680,6 @@ mod tests_option_type {
     }
 
     #[test]
-
     fn test_barrier_down_and_out_put() {
         let option = OptionType::Barrier {
             barrier_type: BarrierType::DownAndOut,
@@ -656,7 +696,6 @@ mod tests_option_type {
     }
 
     #[test]
-
     fn test_binary_asset_or_nothing_put() {
         let option = OptionType::Binary {
             binary_type: BinaryType::AssetOrNothing,
@@ -672,7 +711,6 @@ mod tests_option_type {
     }
 
     #[test]
-
     fn test_compound_option() {
         let inner_option = OptionType::European;
         let option = OptionType::Compound {
@@ -689,7 +727,6 @@ mod tests_option_type {
     }
 
     #[test]
-
     fn test_chooser_option() {
         let option = OptionType::Chooser { choice_date: 30.0 };
         let info = PayoffInfo {
@@ -703,7 +740,6 @@ mod tests_option_type {
     }
 
     #[test]
-
     fn test_power_put() {
         let option = OptionType::Power { exponent: 2.0 };
         let info = PayoffInfo {
@@ -723,7 +759,6 @@ mod tests_vec_collection {
     use crate::pos;
 
     #[test]
-
     fn test_collect_empty_iterator() {
         let empty_vec: Vec<Positive> = Vec::new();
         let collected: Vec<Positive> = empty_vec.into_iter().collect();
@@ -731,7 +766,6 @@ mod tests_vec_collection {
     }
 
     #[test]
-
     fn test_collect_single_value() {
         let values = vec![pos!(1.0)];
         let collected: Vec<Positive> = values.into_iter().collect();
@@ -740,7 +774,6 @@ mod tests_vec_collection {
     }
 
     #[test]
-
     fn test_collect_multiple_values() {
         let values = vec![pos!(1.0), pos!(2.0), pos!(3.0)];
         let collected: Vec<Positive> = values.into_iter().collect();
@@ -751,7 +784,6 @@ mod tests_vec_collection {
     }
 
     #[test]
-
     fn test_collect_from_filter() {
         let values = vec![pos!(1.0), pos!(2.0), pos!(3.0), pos!(4.0)];
         let collected: Vec<Positive> = values.into_iter().filter(|x| x.to_f64() > 2.0).collect();
@@ -761,7 +793,6 @@ mod tests_vec_collection {
     }
 
     #[test]
-
     fn test_collect_from_map() {
         let values = vec![pos!(1.0), pos!(2.0), pos!(3.0)];
         let collected: Vec<Positive> = values.into_iter().map(|x| pos!(x.to_f64() * 2.0)).collect();
@@ -772,7 +803,6 @@ mod tests_vec_collection {
     }
 
     #[test]
-
     fn test_collect_from_chain() {
         let values1 = vec![pos!(1.0), pos!(2.0)];
         let values2 = vec![pos!(3.0), pos!(4.0)];
@@ -793,7 +823,6 @@ mod test_asian_options {
     use crate::pricing::{Payoff, PayoffInfo};
 
     #[test]
-
     fn test_asian_arithmetic_put() {
         let option = OptionType::Asian {
             averaging_type: AsianAveragingType::Arithmetic,
@@ -810,7 +839,6 @@ mod test_asian_options {
     }
 
     #[test]
-
     fn test_asian_no_spot_prices() {
         let option = OptionType::Asian {
             averaging_type: AsianAveragingType::Arithmetic,
@@ -835,7 +863,6 @@ mod test_barrier_options {
     use crate::pricing::{Payoff, PayoffInfo};
 
     #[test]
-
     fn test_barrier_down_and_in_put() {
         let option = OptionType::Barrier {
             barrier_type: BarrierType::DownAndIn,
@@ -853,7 +880,6 @@ mod test_barrier_options {
     }
 
     #[test]
-
     fn test_barrier_up_and_out_call() {
         let option = OptionType::Barrier {
             barrier_type: BarrierType::UpAndOut,
@@ -878,7 +904,6 @@ mod test_cliquet_options {
     use crate::pricing::{Payoff, PayoffInfo};
 
     #[test]
-
     fn test_cliquet_option_with_resets() {
         let option = OptionType::Cliquet {
             reset_dates: vec![30.0, 60.0, 90.0],
@@ -902,7 +927,6 @@ mod test_rainbow_options {
     use crate::pricing::{Payoff, PayoffInfo};
 
     #[test]
-
     fn test_rainbow_option_multiple_assets() {
         let option = OptionType::Rainbow { num_assets: 3 };
         let info = PayoffInfo {
@@ -924,7 +948,6 @@ mod test_exchange_options {
     use crate::pricing::{Payoff, PayoffInfo};
 
     #[test]
-
     fn test_exchange_option_positive_diff() {
         let option = OptionType::Exchange { second_asset: 90.0 };
         let info = PayoffInfo {
@@ -939,7 +962,6 @@ mod test_exchange_options {
     }
 
     #[test]
-
     fn test_exchange_option_negative_diff() {
         let option = OptionType::Exchange {
             second_asset: 110.0,

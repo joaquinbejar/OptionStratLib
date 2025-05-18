@@ -17,9 +17,9 @@ pub struct PlotOptions {
     pub x_label: Option<String>,
     pub y_label: Option<String>,
     pub z_label: Option<String>,
-    pub line_colors: Option<Vec<RGBColor>>,
+    pub line_colors: Option<Vec<ColorScheme>>,
     pub line_width: u32,
-    pub background_color: RGBColor,
+    pub background_color: ColorScheme,
     pub width: u32,
     pub height: u32,
     pub curve_name: Option<Vec<String>>,
@@ -78,7 +78,7 @@ Optional label for the Z-axis (used in 3D plots)
 :::
 
 [[§](#structfield.line_colors){.anchor
-.field}`line_colors: `[`Option`](https://doc.rust-lang.org/1.86.0/core/option/enum.Option.html "enum core::option::Option"){.enum}`<`[`Vec`](https://doc.rust-lang.org/1.86.0/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}`<RGBColor>>`]{#structfield.line_colors
+.field}`line_colors: `[`Option`](https://doc.rust-lang.org/1.86.0/core/option/enum.Option.html "enum core::option::Option"){.enum}`<`[`Vec`](https://doc.rust-lang.org/1.86.0/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}`<ColorScheme>>`]{#structfield.line_colors
 .structfield .section-header}
 
 ::: docblock
@@ -96,7 +96,7 @@ Width of plotted lines in pixels
 :::
 
 [[§](#structfield.background_color){.anchor
-.field}`background_color: RGBColor`]{#structfield.background_color
+.field}`background_color: ColorScheme`]{#structfield.background_color
 .structfield .section-header}
 
 ::: docblock

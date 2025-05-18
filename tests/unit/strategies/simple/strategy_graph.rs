@@ -1,20 +1,15 @@
 use approx::assert_relative_eq;
 use optionstratlib::ExpirationDate;
 use optionstratlib::Positive;
-use optionstratlib::strategies::Strategies;
 use optionstratlib::strategies::base::BreakEvenable;
 use optionstratlib::strategies::bull_call_spread::BullCallSpread;
-use optionstratlib::utils::setup_logger;
-use optionstratlib::visualization::utils::Graph;
+use optionstratlib::strategies::{BasicAble, Strategies};
 use optionstratlib::{assert_pos_relative_eq, pos};
 use rust_decimal_macros::dec;
 use std::error::Error;
 
 #[test]
-
 fn test_bull_call_spread_basic_integration() -> Result<(), Box<dyn Error>> {
-    setup_logger();
-
     let strategy = BullCallSpread::new(
         "GOLD".to_string(),
         pos!(2505.8), // underlying_price
@@ -35,23 +30,23 @@ fn test_bull_call_spread_basic_integration() -> Result<(), Box<dyn Error>> {
 
     // Validate strategy properties
     assert_eq!(
-        strategy.title(),
-        "Bull Call Spread Strategy:\n\tUnderlying: GOLD @ $2460 Long Call European Option\n\tUnderlying: GOLD @ $2515 Short Call European Option"
+        strategy.get_title(),
+        "BullCallSpread Strategy: \n\tUnderlying: GOLD @ $2515 Short Call European Option\n\tUnderlying: GOLD @ $2460 Long Call European Option"
     );
     assert_eq!(strategy.get_break_even_points().unwrap().len(), 1);
 
     // Validate financial calculations
     assert_relative_eq!(
-        strategy.net_premium_received().unwrap().to_f64(),
+        strategy.get_net_premium_received().unwrap().to_f64(),
         0.0,
         epsilon = 0.001
     );
-    assert!(strategy.max_profit().is_ok());
-    assert!(strategy.max_loss().is_ok());
-    assert_pos_relative_eq!(strategy.max_profit()?, pos!(30.82), pos!(0.0001));
-    assert_pos_relative_eq!(strategy.max_loss()?, pos!(24.18), pos!(0.0001));
-    assert_pos_relative_eq!(strategy.total_cost()?, pos!(29.51), pos!(0.0001));
-    assert_eq!(strategy.fees().unwrap().to_f64(), 2.25);
+    assert!(strategy.get_max_profit().is_ok());
+    assert!(strategy.get_max_loss().is_ok());
+    assert_pos_relative_eq!(strategy.get_max_profit()?, pos!(30.82), pos!(0.0001));
+    assert_pos_relative_eq!(strategy.get_max_loss()?, pos!(24.18), pos!(0.0001));
+    assert_pos_relative_eq!(strategy.get_total_cost()?, pos!(29.51), pos!(0.0001));
+    assert_eq!(strategy.get_fees().unwrap().to_f64(), 2.25);
 
     // Test price range calculations
     let test_price_range: Vec<Positive> = (2400..2600)

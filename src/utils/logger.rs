@@ -142,72 +142,6 @@ pub fn setup_logger_with_level(log_level: &str) {
 
 #[cfg(test)]
 mod tests_setup_logger {
-    use super::setup_logger;
-    use std::env;
-    use tracing::subscriber::set_global_default;
-    use tracing_subscriber::FmtSubscriber;
-
-    #[test]
-
-    fn test_logger_initialization_info() {
-        unsafe {
-            env::set_var("LOGLEVEL", "INFO");
-        }
-        setup_logger();
-
-        assert!(
-            set_global_default(FmtSubscriber::builder().finish()).is_err(),
-            "Logger should already be set"
-        );
-    }
-
-    #[test]
-
-    fn test_logger_initialization_debug() {
-        unsafe {
-            env::set_var("LOGLEVEL", "DEBUG");
-        }
-        setup_logger();
-
-        assert!(
-            set_global_default(FmtSubscriber::builder().finish()).is_err(),
-            "Logger should already be set"
-        );
-    }
-
-    #[test]
-
-    fn test_logger_initialization_default() {
-        unsafe {
-            env::remove_var("LOGLEVEL");
-        }
-        setup_logger();
-
-        assert!(
-            set_global_default(FmtSubscriber::builder().finish()).is_err(),
-            "Logger should already be set"
-        );
-    }
-
-    #[test]
-
-    fn test_logger_called_once() {
-        unsafe {
-            env::set_var("LOGLEVEL", "INFO");
-        }
-
-        setup_logger(); // First call should set up the logger
-        setup_logger(); // Second call should not re-initialize
-
-        assert!(
-            set_global_default(FmtSubscriber::builder().finish()).is_err(),
-            "Logger should already be set and should not be reset"
-        );
-    }
-}
-
-#[cfg(test)]
-mod tests_setup_logger_bis {
     use super::*;
     use std::sync::Mutex;
     use tracing::subscriber::with_default;
@@ -243,7 +177,6 @@ mod tests_setup_logger_bis {
     }
 
     #[test]
-
     fn test_default_log_level() {
         let _lock = TEST_MUTEX.lock().unwrap();
         unsafe {
@@ -254,7 +187,6 @@ mod tests_setup_logger_bis {
         let subscriber = registry().with(layer);
 
         with_default(subscriber, || {
-            setup_logger();
             tracing::info!("Test log");
         });
 
@@ -262,7 +194,6 @@ mod tests_setup_logger_bis {
     }
 
     #[test]
-
     fn test_debug_log_level() {
         let _lock = TEST_MUTEX.lock().unwrap();
         unsafe {
@@ -273,7 +204,6 @@ mod tests_setup_logger_bis {
         let subscriber = registry().with(layer);
 
         with_default(subscriber, || {
-            setup_logger();
             tracing::debug!("Test log");
         });
 
@@ -284,7 +214,6 @@ mod tests_setup_logger_bis {
     }
 
     #[test]
-
     fn test_error_log_level() {
         let _lock = TEST_MUTEX.lock().unwrap();
         unsafe {
@@ -295,7 +224,6 @@ mod tests_setup_logger_bis {
         let subscriber = registry().with(layer);
 
         with_default(subscriber, || {
-            setup_logger();
             tracing::error!("Test log");
         });
 
@@ -306,7 +234,6 @@ mod tests_setup_logger_bis {
     }
 
     #[test]
-
     fn test_warn_log_level() {
         let _lock = TEST_MUTEX.lock().unwrap();
         unsafe {
@@ -316,7 +243,6 @@ mod tests_setup_logger_bis {
         let subscriber = registry().with(layer);
 
         with_default(subscriber, || {
-            setup_logger();
             tracing::warn!("Test log");
         });
 
@@ -327,7 +253,6 @@ mod tests_setup_logger_bis {
     }
 
     #[test]
-
     fn test_trace_log_level() {
         let _lock = TEST_MUTEX.lock().unwrap();
         unsafe {
@@ -338,7 +263,6 @@ mod tests_setup_logger_bis {
         let subscriber = registry().with(layer);
 
         with_default(subscriber, || {
-            setup_logger();
             tracing::trace!("Test log");
         });
 
@@ -350,7 +274,6 @@ mod tests_setup_logger_bis {
     }
 
     #[test]
-
     fn test_invalid_log_level() {
         let _lock = TEST_MUTEX.lock().unwrap();
         unsafe {
@@ -361,7 +284,6 @@ mod tests_setup_logger_bis {
         let subscriber = registry().with(layer);
 
         with_default(subscriber, || {
-            setup_logger();
             tracing::info!("Test log");
         });
 

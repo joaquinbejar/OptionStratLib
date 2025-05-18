@@ -12,7 +12,7 @@
 ::::
 
 ``` {.rust .item-decl}
-pub fn apply_shade(base_color: RGBColor, normalized_value: f64) -> RGBColor
+pub fn apply_shade(base_color: ColorScheme, normalized_value: f64) -> ColorScheme
 ```
 
 Expand description
@@ -37,7 +37,7 @@ between the base and end colors according to the normalized value.
 
 ## [§](#returns){.doc-anchor}Returns
 
-A new `RGBColor` instance representing the interpolated color.
+A new `ColorScheme` instance representing the interpolated color.
 :::
 ::::::
 :::::::

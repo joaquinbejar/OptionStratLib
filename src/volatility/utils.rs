@@ -416,14 +416,17 @@ pub fn generate_ou_process(
     dt: Positive,
     steps: usize,
 ) -> Vec<Positive> {
+    let sqrt_dt = dt.sqrt();
     let mut x = x0.to_dec();
     let mut result = Vec::with_capacity(steps);
     result.push(Positive(x));
 
     for _ in 1..steps {
-        let dw = decimal_normal_sample() * dt.sqrt();
-        x += theta * (mu - x) * dt + volatility * dw;
-        x = x.max(Decimal::ZERO);
+        let dw = decimal_normal_sample() * sqrt_dt; // Z√dt
+        let drift = theta * (mu - x) * dt; // θ(μ−x)dt
+        let diffusion = volatility * dw; // σ·Z√dt
+        x += drift + diffusion; // paso OU
+        x = x.max(Decimal::ZERO); // opcional: no negativos
         result.push(Positive(x));
     }
 
@@ -436,7 +439,6 @@ mod tests_annualize_volatility {
     use crate::assert_pos_relative_eq;
 
     #[test]
-
     fn test_annualize_daily_volatility() {
         let daily_vol = pos!(0.01); // 1% daily volatility
         let annual_vol = annualized_volatility(daily_vol, TimeFrame::Day).unwrap();
@@ -445,7 +447,6 @@ mod tests_annualize_volatility {
     }
 
     #[test]
-
     fn test_deannualize_annual_volatility() {
         let annual_vol = pos!(0.20); // 20% annual volatility
         let daily_vol = de_annualized_volatility(annual_vol, TimeFrame::Day).unwrap();
@@ -454,7 +455,6 @@ mod tests_annualize_volatility {
     }
 
     #[test]
-
     fn test_custom_timeframe() {
         let custom_periods = pos!(100.0);
         let vol = pos!(0.05);
@@ -464,7 +464,6 @@ mod tests_annualize_volatility {
     }
 
     #[test]
-
     fn test_conversion_roundtrip() {
         let original_vol = pos!(0.15);
         let annualized = annualized_volatility(original_vol, TimeFrame::Day).unwrap();
@@ -473,7 +472,6 @@ mod tests_annualize_volatility {
     }
 
     #[test]
-
     fn test_different_timeframes() {
         let daily_vol = pos!(0.01);
         let weekly_vol = annualized_volatility(daily_vol, TimeFrame::Day).unwrap();
@@ -488,7 +486,6 @@ mod tests_constant_volatility {
     use crate::assert_pos_relative_eq;
 
     #[test]
-
     fn test_constant_volatility_single_value() {
         let returns = [dec!(0.05)];
         let result = constant_volatility(&returns).unwrap();
@@ -496,7 +493,6 @@ mod tests_constant_volatility {
     }
 
     #[test]
-
     fn test_constant_volatility_identical_values() {
         let returns = [dec!(0.02), dec!(0.02), dec!(0.02), dec!(0.02)];
         let result = constant_volatility(&returns).unwrap();
@@ -504,7 +500,6 @@ mod tests_constant_volatility {
     }
 
     #[test]
-
     fn test_constant_volatility_varying_values() {
         let returns = [dec!(0.01), dec!(0.03), dec!(0.02), dec!(0.04)];
         let result = constant_volatility(&returns).unwrap();
@@ -518,7 +513,6 @@ mod tests_historical_volatility {
     use crate::assert_pos_relative_eq;
 
     #[test]
-
     fn test_historical_volatility_empty_returns() {
         let returns: [Decimal; 0] = [];
         let result = historical_volatility(&returns, 3).unwrap();
@@ -526,7 +520,6 @@ mod tests_historical_volatility {
     }
 
     #[test]
-
     fn test_historical_volatility_single_value() {
         let returns = [dec!(0.02)];
         let result = historical_volatility(&returns, 3).unwrap();
@@ -534,7 +527,6 @@ mod tests_historical_volatility {
     }
 
     #[test]
-
     fn test_historical_volatility_insufficient_data() {
         let returns = [dec!(0.01), dec!(0.02)];
         let result = historical_volatility(&returns, 3).unwrap();
@@ -542,7 +534,6 @@ mod tests_historical_volatility {
     }
 
     #[test]
-
     fn test_historical_volatility_exact_window() {
         let returns = [dec!(0.01), dec!(0.02), dec!(0.03)];
         let result = historical_volatility(&returns, 3).unwrap();
@@ -551,7 +542,6 @@ mod tests_historical_volatility {
     }
 
     #[test]
-
     fn test_historical_volatility_larger_window() {
         let returns = [dec!(0.01), dec!(0.02), dec!(0.03), dec!(0.04)];
         let result = historical_volatility(&returns, 3).unwrap();
@@ -567,7 +557,6 @@ mod tests_ewma_volatility {
     use crate::assert_pos_relative_eq;
 
     #[test]
-
     fn test_ewma_volatility_single_return() {
         let returns = [dec!(0.02)];
         let lambda = dec!(0.94);
@@ -577,7 +566,6 @@ mod tests_ewma_volatility {
     }
 
     #[test]
-
     fn test_ewma_volatility_constant_returns() {
         let returns = [dec!(0.02), dec!(0.02), dec!(0.02), dec!(0.02)];
         let lambda = dec!(0.94);
@@ -618,7 +606,6 @@ mod tests_ewma_volatility {
     }
 
     #[test]
-
     fn test_ewma_volatility_varying_returns() {
         let returns = [dec!(0.01), dec!(0.02), dec!(0.03), dec!(0.04)];
         let lambda = dec!(0.94);
@@ -636,7 +623,6 @@ mod tests_ewma_volatility {
     }
 
     #[test]
-
     fn test_ewma_volatility_low_lambda() {
         let returns = [dec!(0.01), dec!(0.02), dec!(0.03), dec!(0.04)];
         let lambda = dec!(0.5); // Low lambda means faster decay
@@ -649,7 +635,6 @@ mod tests_ewma_volatility {
     }
 
     #[test]
-
     fn test_ewma_volatility_high_lambda() {
         let returns = [dec!(0.01), dec!(0.02), dec!(0.03), dec!(0.04)];
         let lambda = dec!(0.99); // High lambda means slower decay

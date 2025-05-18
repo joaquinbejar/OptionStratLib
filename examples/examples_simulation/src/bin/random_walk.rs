@@ -4,7 +4,7 @@ use optionstratlib::simulation::steps::{Step, Xstep, Ystep};
 use optionstratlib::simulation::{WalkParams, WalkType, WalkTypeAble};
 use optionstratlib::utils::setup_logger;
 use optionstratlib::utils::time::{TimeFrame, convert_time_frame};
-use optionstratlib::visualization::utils::{Graph, GraphBackend};
+use optionstratlib::visualization::Graph;
 use optionstratlib::{ExpirationDate, Positive, pos};
 use rust_decimal_macros::dec;
 use tracing::debug;
@@ -21,7 +21,6 @@ impl Walker {
 impl WalkTypeAble<Positive, Positive> for Walker {}
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    setup_logger();
     let n_steps = 43_200; // 30 days in minutes
     let initial_price = pos!(100.0);
     let std_dev = pos!(20.0);
@@ -44,14 +43,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let random_walk = RandomWalk::new("Random Walk".to_string(), &walk_params, generator_positive);
     debug!("Random Walk: {}", random_walk);
-
-    random_walk.graph(
-        GraphBackend::Bitmap {
-            file_path: "Draws/Simulation/random_walk.png",
-            size: (1200, 800),
-        },
-        20,
-    )?;
+    let path: &std::path::Path = "Draws/Simulation/random_walk.png".as_ref();
+    random_walk.write_png(path)?;
 
     Ok(())
 }

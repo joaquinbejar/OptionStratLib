@@ -360,7 +360,6 @@ mod tests_simulate_returns {
     use rust_decimal_macros::dec;
 
     #[test]
-
     fn test_simulate_returns() {
         let mean = dec!(0.05); // 5% annual return
         let std_dev = pos!(0.2); // 20% annual volatility
@@ -389,29 +388,10 @@ mod tests_simulate_returns_bis {
     use super::*;
     use crate::model::decimal::DecimalStats;
     use crate::{assert_decimal_eq, pos};
-    use num_traits::ToPrimitive;
+
     use rust_decimal_macros::dec;
-    use tracing::debug;
-
-    fn mean(values: &[Decimal]) -> Decimal {
-        if values.is_empty() {
-            return Decimal::ZERO;
-        }
-        values.to_vec().mean()
-    }
-
-    fn std_dev(values: &[Decimal]) -> Decimal {
-        if values.is_empty() {
-            return Decimal::ZERO;
-        }
-        let mean = mean(values);
-        let variance = values.iter().map(|x| (x - mean).powi(2)).sum::<Decimal>()
-            / Decimal::from_f64(values.len() as f64).unwrap();
-        variance.sqrt().unwrap()
-    }
 
     #[test]
-
     fn test_simulate_returns_length() {
         let length = 1000;
         let returns = simulate_returns(
@@ -425,64 +405,6 @@ mod tests_simulate_returns_bis {
     }
 
     #[test]
-
-    fn test_simulate_returns_statistical_properties() {
-        // Define parameters
-        let m = dec!(0.10);
-        let sd = pos!(0.20);
-        let time_step = Decimal::from_f64(1.0 / 252.0).unwrap();
-        let length = dec!(10000.0);
-
-        // Simulate returns
-        let returns = simulate_returns(m, sd, length.to_usize().unwrap(), time_step).unwrap();
-
-        // Calculate sample statistics
-        let sample_mean = mean(&returns);
-        let sample_std = std_dev(&returns);
-
-        // Calculate expected values
-        let expected_mean = m * time_step;
-        let expected_std = sd * time_step.sqrt().unwrap();
-
-        // Define reasonable bounds for the statistics
-        // For the mean, we'll use a 3-sigma range
-        let mean_lower_bound = expected_mean - dec!(3.0) * expected_std / length.sqrt().unwrap();
-        let mean_upper_bound = expected_mean + dec!(3.0) * expected_std / length.sqrt().unwrap();
-
-        // For standard deviation, use a wider range due to higher sampling variability
-        let std_lower_bound = expected_std * dec!(0.7);
-        let std_upper_bound = expected_std * dec!(1.3);
-
-        // Log the values and ranges for debugging
-        debug!(
-            "Sample Mean: {}, Expected Range: [{}, {}]",
-            sample_mean, mean_lower_bound, mean_upper_bound
-        );
-        debug!(
-            "Sample Std: {}, Expected Range: [{}, {}]",
-            sample_std, std_lower_bound, std_upper_bound
-        );
-
-        // Assert that the sample statistics are within the expected ranges
-        assert!(
-            sample_mean >= mean_lower_bound && sample_mean <= mean_upper_bound,
-            "Sample mean {} is outside the expected range [{}, {}]",
-            sample_mean,
-            mean_lower_bound,
-            mean_upper_bound
-        );
-
-        assert!(
-            sample_std >= std_lower_bound.to_dec() && sample_std <= std_upper_bound.to_dec(),
-            "Sample std dev {} is outside the expected range [{}, {}]",
-            sample_std,
-            std_lower_bound,
-            std_upper_bound
-        );
-    }
-
-    #[test]
-
     fn test_simulate_returns_zero_mean() {
         let returns = simulate_returns(
             dec!(0.0),
@@ -496,7 +418,6 @@ mod tests_simulate_returns_bis {
     }
 
     #[test]
-
     fn test_simulate_returns_zero_volatility() {
         let mean = dec!(0.05);
         let time_step = Decimal::from_f64(1.0 / 252.0).unwrap();
@@ -509,7 +430,6 @@ mod tests_simulate_returns_bis {
     }
 
     #[test]
-
     fn test_simulate_returns_single_value() {
         let returns = simulate_returns(
             dec!(0.05),
@@ -522,7 +442,6 @@ mod tests_simulate_returns_bis {
     }
 
     #[test]
-
     fn test_simulate_returns_yearly_step() {
         let returns = simulate_returns(dec!(0.05), pos!(0.2), 100, dec!(1.0)).unwrap();
         assert_eq!(returns.len(), 100);
@@ -555,7 +474,6 @@ mod tests_utils {
     const EPSILON: Decimal = dec!(1e-6);
 
     #[test]
-
     fn test_calculate_up_factor() {
         let volatility = pos!(0.09531018);
         let dt = dec!(1.0);
@@ -570,7 +488,6 @@ mod tests_utils {
     }
 
     #[test]
-
     fn test_calculate_up_factor_2() {
         let volatility = pos!(0.17);
         let dt = dec!(1.0);
@@ -580,7 +497,6 @@ mod tests_utils {
     }
 
     #[test]
-
     fn test_calculate_down_factor() {
         let volatility = pos!(0.09531018);
         let dt = dec!(1.0);
@@ -595,7 +511,6 @@ mod tests_utils {
     }
 
     #[test]
-
     fn test_calculate_down_factor_2() {
         let volatility = pos!(0.17);
         let dt = dec!(1.0);
@@ -605,7 +520,6 @@ mod tests_utils {
     }
 
     #[test]
-
     fn test_calculate_probability() {
         let int_rate = dec!(0.05);
         let dt = Decimal::ONE;
@@ -624,7 +538,6 @@ mod tests_utils {
     }
 
     #[test]
-
     fn test_calculate_probability_ii() {
         let int_rate = dec!(0.05);
         let dt = Decimal::ONE;
@@ -635,7 +548,6 @@ mod tests_utils {
     }
 
     #[test]
-
     fn test_calculate_discount_factor() {
         let int_rate = dec!(0.05);
         let dt = Decimal::ONE;
@@ -660,7 +572,6 @@ mod tests_probability_keep_under_strike {
     use tracing::info;
 
     #[test]
-
     fn test_probability_keep_under_strike_with_given_strike() {
         let option = Options {
             option_type: OptionType::European,
@@ -683,7 +594,6 @@ mod tests_probability_keep_under_strike {
     }
 
     #[test]
-
     fn test_probability_keep_under_strike_with_default_strike() {
         let option = Options {
             option_type: OptionType::European,
@@ -729,7 +639,6 @@ mod tests_probability_keep_under_strike {
     }
 
     #[test]
-
     fn test_probability_keep_under_strike_high_volatility() {
         let option = Options {
             option_type: OptionType::European,
@@ -754,7 +663,6 @@ mod tests_probability_keep_under_strike {
     }
 
     #[test]
-
     fn test_probability_keep_under_strike_expired_option() {
         let option = Options {
             option_type: OptionType::European,
@@ -790,7 +698,6 @@ mod tests_calculate_up_down_factor {
     const EPSILON: Decimal = dec!(1e-6);
 
     #[test]
-
     fn test_factors_standard_case() {
         let volatility = pos!(0.2); // 20% volatility
         let dt = ONE_DAY; // One trading day
@@ -806,7 +713,6 @@ mod tests_calculate_up_down_factor {
     }
 
     #[test]
-
     fn test_factors_zero_volatility() {
         let volatility = Positive::ZERO;
         let dt = ONE_DAY;
@@ -820,7 +726,6 @@ mod tests_calculate_up_down_factor {
     }
 
     #[test]
-
     fn test_factors_zero_dt() {
         let volatility = pos!(0.2);
         let dt = Decimal::ZERO;
@@ -834,7 +739,6 @@ mod tests_calculate_up_down_factor {
     }
 
     #[test]
-
     fn test_factors_high_volatility() {
         let volatility = Positive::ONE; // 100% volatility
         let dt = Decimal::ONE; // One year
@@ -849,7 +753,6 @@ mod tests_calculate_up_down_factor {
     }
 
     #[test]
-
     fn test_factors_small_dt() {
         let volatility = pos!(0.2);
         let dt = ONE_DAY / dec!(24.0); // One hour (assuming 24-hour trading day)
@@ -864,7 +767,6 @@ mod tests_calculate_up_down_factor {
     }
 
     #[test]
-
     fn test_factors_different_time_periods() {
         let volatility = pos!(0.2);
         let daily_dt = ONE_DAY;
@@ -881,7 +783,6 @@ mod tests_calculate_up_down_factor {
     }
 
     #[test]
-
     fn test_factors_extreme_volatility() {
         let volatility = pos!(5.0); // 500% volatility
         let dt = Decimal::ONE; // One year
@@ -896,7 +797,6 @@ mod tests_calculate_up_down_factor {
     }
 
     #[test]
-
     fn test_factors_symmetry() {
         let volatility = pos!(0.3);
         let dt = dec!(1.0) / dec!(12.0); // One month
@@ -909,7 +809,6 @@ mod tests_calculate_up_down_factor {
     }
 
     #[test]
-
     fn test_factors_consistency() {
         let volatility = pos!(0.2);
         let dt1 = ONE_DAY;

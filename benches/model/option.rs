@@ -4,11 +4,12 @@
    Date: 7/1/25
 ******************************************************************************/
 
-use criterion::{Criterion, black_box, criterion_group, criterion_main};
+use criterion::{Criterion, criterion_group, criterion_main};
 use optionstratlib::greeks::Greeks;
 use optionstratlib::pnl::utils::PnLCalculator;
 use optionstratlib::{ExpirationDate, OptionStyle, OptionType, Options, Side, pos};
 use rust_decimal_macros::dec;
+use std::hint::black_box;
 
 fn create_test_option() -> Options {
     Options::new(
@@ -108,7 +109,7 @@ pub(crate) fn benchmark_valuations(c: &mut Criterion) {
 
 pub(crate) fn benchmark_binary_tree(c: &mut Criterion) {
     let mut group = c.benchmark_group("Binary Tree Operations");
-    // Configurar más tiempo para las muestras
+    // Configure more time for samples
     group
         .sample_size(50)
         .warm_up_time(std::time::Duration::from_secs(5))

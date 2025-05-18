@@ -30,8 +30,6 @@ fn get_option(point2d: &Point2D) -> Options {
     )
 }
 fn main() -> Result<(), Box<dyn Error>> {
-    setup_logger();
-
     let params = ConstructionParams::D3 {
         x_start: dec!(10.0), // Underlying price start
         x_end: dec!(90.0),   // Underlying price end
@@ -57,8 +55,6 @@ fn main() -> Result<(), Box<dyn Error>> {
         .x_label("Asset value")
         .y_label("Volatility")
         .z_label("Gamma")
-        .point_size(1)
-        .label_size(1.8)
         .dimensions(1600, 1200)
         .save("./Draws/Surfaces/gamma_surface.png")?;
 

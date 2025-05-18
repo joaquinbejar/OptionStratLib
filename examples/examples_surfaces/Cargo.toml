@@ -4,6 +4,8 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-optionstratlib = { path = "../.." }
+optionstratlib = { path = "../..",  features = ["plotly", "kaleido"]}
 rust_decimal = { version = "1.36.0", features = ["maths", "serde"] }
 rust_decimal_macros = "1.36.0"
+plotly = { git = "https://github.com/joaquinbejar/plotly.rs", tag = "v1.0.0" , features = ["kaleido", "kaleido_download"]}
+tracing = "0.1.41"

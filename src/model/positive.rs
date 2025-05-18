@@ -9,8 +9,9 @@ use crate::constants::EPSILON;
 use crate::model::utils::ToRound;
 use crate::series::OptionSeries;
 use approx::{AbsDiffEq, RelativeEq};
-use num_traits::{FromPrimitive, ToPrimitive};
+use num_traits::{FromPrimitive, Pow, ToPrimitive};
 use rust_decimal::{Decimal, MathematicalOps};
+use rust_decimal_macros::dec;
 use serde::de::Visitor;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::cmp::{Ordering, PartialEq};
@@ -286,6 +287,22 @@ impl Positive {
         self.0.to_i64().unwrap()
     }
 
+    /// Converts the inner value of the struct to a `u64`.
+    ///
+    /// This method assumes the inner value can be safely converted to a `u64`
+    /// and uses `unwrap()` to extract the value. If the conversion fails,
+    /// this will cause a panic at runtime.
+    ///
+    /// # Returns
+    /// A `u64` representation of the inner value.
+    ///
+    /// # Panics
+    /// This method will panic if the inner value cannot be converted to a `u64`.
+    ///
+    pub fn to_u64(&self) -> u64 {
+        self.0.to_u64().unwrap()
+    }
+
     /// Converts the value to a usize signed integer.
     ///
     /// # Returns
@@ -347,6 +364,35 @@ impl Positive {
         Positive(self.0.powi(n))
     }
 
+    /// Computes the result of raising the current `Positive` value to the power of the given `Positive` exponent.
+    ///
+    /// # Parameters
+    ///
+    /// - `n`: A `Positive` value representing the exponent to which the current value will be raised.
+    ///
+    /// # Returns
+    ///
+    /// A `Positive` value representing the result of the power computation.
+    ///
+    /// # Panics
+    ///
+    /// This function does not panic as all inputs are guaranteed to be positive by the `Positive` type.
+    pub fn pow(&self, n: Positive) -> Positive {
+        Positive(self.0.pow(n.to_dec()))
+    }
+
+    /// Raises the current `Positive` value to the power of `n` using unsigned integer exponentiation.
+    ///
+    /// # Parameters
+    /// - `n`: An unsigned 64-bit integer (`u64`) representing the power to which the value will be raised.
+    ///
+    /// # Returns
+    /// Returns a new `Positive` instance containing the result of `self` raised to the power of `n`.
+    ///
+    pub fn powu(&self, n: u64) -> Positive {
+        Positive(self.0.powu(n))
+    }
+
     /// Raises this value to a decimal power.
     ///
     /// This is a crate-internal method not exposed to public API users.
@@ -358,7 +404,7 @@ impl Positive {
     /// # Returns
     ///
     /// A new `Positive` value representing `self` raised to the power `p0`.
-    pub(crate) fn powd(&self, p0: Decimal) -> Positive {
+    pub fn powd(&self, p0: Decimal) -> Positive {
         Positive(self.0.powd(p0))
     }
 
@@ -369,6 +415,60 @@ impl Positive {
     /// A new `Positive` value rounded to the nearest integer.
     pub fn round(&self) -> Positive {
         Positive(self.0.round())
+    }
+
+    /// Rounds the current value to a "nice" number, based on its magnitude.
+    ///
+    /// This method computes the logarithmic magnitude of the current value and
+    /// determines a simplified number within a range of predefined "nice" numbers,
+    /// such as 1, 2, 5, or 10, scaled by a power of ten. This is often useful
+    /// for simplifying numerical values for display or plotting.
+    ///
+    /// # Procedure
+    /// 1. Compute the magnitude of the current value by taking the base-10 logarithm and flooring it.
+    /// 2. Calculate the power of ten corresponding to the magnitude.
+    /// 3. Normalize the current value by dividing it by the calculated power of ten.
+    /// 4. Determine the closest "nice" number:
+    ///    - Values less than 1.5 round to 1.
+    ///    - Values less than 3 round to 2.
+    ///    - Values less than 7 round to 5.
+    ///    - All other values round to 10.
+    /// 5. Scale the "nice" number back up by the appropriate power of ten.
+    ///
+    /// # Returns
+    /// A `Positive` value representing the rounded "nice" number, scaled appropriately
+    /// according to the magnitude of the input value.
+    ///
+    /// # Panics
+    /// This function does not explicitly handle negative numbers or zero, as it is
+    /// assumed that `self` is a positive numeric value. Ensure `self` is valid and non-zero
+    /// prior to calling this method.
+    ///
+    /// # Examples
+    /// ```
+    /// use optionstratlib::Positive;
+    /// let value = Positive::new(123.0).unwrap();
+    /// let rounded = value.round_to_nice_number();
+    /// assert_eq!(rounded, Positive::new(100.0).unwrap());
+    ///
+    /// let value = Positive::new(6.7).unwrap();
+    /// let rounded = value.round_to_nice_number();
+    /// assert_eq!(rounded, Positive::new(5.0).unwrap());
+    /// ```
+    pub fn round_to_nice_number(&self) -> Positive {
+        let magnitude = self.log10().floor();
+        let ten_pow = Positive::TEN.pow(magnitude);
+        let normalized = self / &ten_pow;
+        let nice_number = if normalized < dec!(1.5) {
+            Positive::ONE
+        } else if normalized < pos!(3.0) {
+            Positive::TWO
+        } else if normalized < pos!(7.0) {
+            pos!(5.0)
+        } else {
+            Positive::TEN
+        };
+        nice_number * pos!(10.0).powu(magnitude.to_u64())
     }
 
     /// Calculates the square root of the value.
@@ -488,6 +588,20 @@ impl Positive {
         let ceiling_value = value.ceil();
         // Convert back to Positive
         Positive::from(ceiling_value)
+    }
+
+    /// Computes the base-10 logarithm of the value contained in the `Positive` instance.
+    ///
+    /// # Returns
+    ///
+    /// A new `Positive` instance containing the result of the base-10 logarithm of the original value.
+    ///
+    /// # Note
+    ///
+    /// It is assumed that the value contained in the `Positive` instance is always greater than 0,
+    /// as logarithms of non-positive numbers are undefined.
+    pub fn log10(&self) -> Positive {
+        Positive(self.0.log10())
     }
 }
 
@@ -879,6 +993,14 @@ impl Div for Positive {
     }
 }
 
+impl Div for &Positive {
+    type Output = Positive;
+
+    fn div(self, other: &Positive) -> Self::Output {
+        Positive(self.0 / other.0)
+    }
+}
+
 impl Add<Decimal> for Positive {
     type Output = Positive;
 
@@ -1056,7 +1178,6 @@ mod tests_positive_decimal {
     use rust_decimal_macros::dec;
 
     #[test]
-
     fn test_positive_decimal_creation() {
         assert!(Positive::new_decimal(Decimal::ZERO).is_ok());
         assert!(Positive::new_decimal(Decimal::ONE).is_ok());
@@ -1064,14 +1185,12 @@ mod tests_positive_decimal {
     }
 
     #[test]
-
     fn test_positive_decimal_value() {
         let pos = Positive::new(5.0).unwrap();
         assert_eq!(pos, 5.0);
     }
 
     #[test]
-
     fn test_positive_decimal_from() {
         let pos = Positive::new(3.0).unwrap();
         let f: Decimal = pos.into();
@@ -1079,7 +1198,6 @@ mod tests_positive_decimal {
     }
 
     #[test]
-
     fn test_positive_decimal_eq() {
         let pos = Positive::new_decimal(Decimal::TWO).unwrap();
         assert_eq!(pos, dec!(2.0));
@@ -1087,21 +1205,18 @@ mod tests_positive_decimal {
     }
 
     #[test]
-
     fn test_positive_decimal_display() {
         let pos = Positive::new_decimal(dec!(4.5)).unwrap();
         assert_eq!(format!("{}", pos), "4.5");
     }
 
     #[test]
-
     fn test_positive_decimal_debug() {
         let pos = Positive::new_decimal(dec!(4.5)).unwrap();
         assert_eq!(format!("{:?}", pos), "4.5");
     }
 
     #[test]
-
     fn test_positive_decimal_display_decimal_fix() {
         let pos = Positive::new_decimal(dec!(4.578923789423789)).unwrap();
         assert_eq!(format!("{:.2}", pos), "4.57");
@@ -1110,7 +1225,6 @@ mod tests_positive_decimal {
     }
 
     #[test]
-
     fn test_positive_decimal_add() {
         let a = Positive::new_decimal(dec!(2.0)).unwrap();
         let b = Positive::new_decimal(dec!(3.0)).unwrap();
@@ -1118,7 +1232,6 @@ mod tests_positive_decimal {
     }
 
     #[test]
-
     fn test_positive_decimal_div() {
         let a = Positive::new_decimal(dec!(6.0)).unwrap();
         let b = Positive::new_decimal(dec!(2.0)).unwrap();
@@ -1126,14 +1239,12 @@ mod tests_positive_decimal {
     }
 
     #[test]
-
     fn test_positive_decimal_div_decimal() {
         let a = Positive::new_decimal(dec!(6.0)).unwrap();
         assert_eq!((a / 2.0), 3.0);
     }
 
     #[test]
-
     fn test_decimal_mul_positive_decimal() {
         let a = dec!(2.0);
         let b = Positive::new_decimal(dec!(3.0)).unwrap();
@@ -1141,7 +1252,6 @@ mod tests_positive_decimal {
     }
 
     #[test]
-
     fn test_positive_decimal_mul() {
         let a = Positive::new_decimal(dec!(2.0)).unwrap();
         let b = Positive::new_decimal(dec!(3.0)).unwrap();
@@ -1149,20 +1259,17 @@ mod tests_positive_decimal {
     }
 
     #[test]
-
     fn test_positive_decimal_mul_decimal() {
         let a = Positive::new_decimal(dec!(2.0)).unwrap();
         assert_eq!((a * 3.0), 6.0);
     }
 
     #[test]
-
     fn test_positive_decimal_default() {
         assert_eq!(Positive::default().value(), Decimal::ZERO);
     }
 
     #[test]
-
     fn test_decimal_div_positive_decimal() {
         let a = dec!(6.0);
         let b = Positive::new_decimal(dec!(2.0)).unwrap();
@@ -1170,7 +1277,6 @@ mod tests_positive_decimal {
     }
 
     #[test]
-
     fn test_constants() {
         assert_eq!(Positive::ZERO.value(), Decimal::ZERO);
         assert_eq!(Positive::ONE.value(), Decimal::ONE);
@@ -1183,7 +1289,6 @@ mod tests_positive_decimal_extended {
     use rust_decimal_macros::dec;
 
     #[test]
-
     fn test_positive_decimal_ordering() {
         let a = pos!(1.0);
         let b = pos!(2.0);
@@ -1196,7 +1301,6 @@ mod tests_positive_decimal_extended {
     }
 
     #[test]
-
     fn test_positive_decimal_add_assign() {
         let mut a = pos!(1.0);
         let b = pos!(2.0);
@@ -1205,7 +1309,6 @@ mod tests_positive_decimal_extended {
     }
 
     #[test]
-
     fn test_positive_decimal_mul_assign() {
         let mut a = Decimal::TWO;
         a *= dec!(3.0);
@@ -1213,7 +1316,6 @@ mod tests_positive_decimal_extended {
     }
 
     #[test]
-
     fn test_positive_decimal_from_string() {
         assert_eq!(Positive::from_str("1.5").unwrap().value(), dec!(1.5));
         assert!(Positive::from_str("-1.5").is_err());
@@ -1221,7 +1323,6 @@ mod tests_positive_decimal_extended {
     }
 
     #[test]
-
     fn test_positive_decimal_max_min() {
         let a = pos!(1.0);
         let b = pos!(2.0);
@@ -1230,7 +1331,6 @@ mod tests_positive_decimal_extended {
     }
 
     #[test]
-
     fn test_positive_decimal_floor() {
         let a = pos!(1.7);
         assert_eq!(a.floor().value(), dec!(1.0));
@@ -1249,7 +1349,6 @@ mod tests_positive_decimal_sum {
     use super::*;
 
     #[test]
-
     fn test_sum_owned_values() {
         let values = vec![pos!(1.0), pos!(2.0), pos!(3.0)];
         let sum: Positive = values.into_iter().sum();
@@ -1257,7 +1356,6 @@ mod tests_positive_decimal_sum {
     }
 
     #[test]
-
     fn test_sum_referenced_values() {
         let values = [pos!(1.0), pos!(2.0), pos!(3.0)];
         let sum: Positive = values.iter().sum();
@@ -1265,7 +1363,6 @@ mod tests_positive_decimal_sum {
     }
 
     #[test]
-
     fn test_sum_empty_iterator() {
         let values: Vec<Positive> = vec![];
         let sum: Positive = values.into_iter().sum();
@@ -1293,7 +1390,6 @@ mod tests_macros {
     use rust_decimal::Decimal;
 
     #[test]
-
     fn test_pos_positive_values() {
         assert_eq!(pos!(5.0).value(), Decimal::new(5, 0));
         assert_eq!(pos!(1.5).value(), Decimal::new(15, 1));
@@ -1301,13 +1397,11 @@ mod tests_macros {
     }
 
     #[test]
-
     fn test_pos_zero() {
         assert_eq!(Positive::ZERO, Positive::ZERO);
     }
 
     #[test]
-
     fn test_pos_small_decimals() {
         assert_eq!(pos!(0.0001).value(), Decimal::new(1, 4));
         assert_eq!(pos!(0.00001).value(), Decimal::new(1, 5));
@@ -1315,7 +1409,6 @@ mod tests_macros {
     }
 
     #[test]
-
     fn test_pos_large_decimals() {
         let val = 0.1234567890123456;
         let expected = Decimal::from_str("0.1234567890123456").unwrap();
@@ -1323,7 +1416,6 @@ mod tests_macros {
     }
 
     #[test]
-
     fn test_pos_precision_limits() {
         // Test the maximum precision of 16 decimal places
         let val = ((0.123_456_789_012_345_68_f64 * 1e16) as u64) as f64 / 1e16; // More than 16 decimal places
@@ -1339,7 +1431,6 @@ mod tests_macros {
     }
 
     #[test]
-
     fn test_pos_edge_cases() {
         // Test with very large numbers
         assert_eq!(
@@ -1355,14 +1446,12 @@ mod tests_macros {
     }
 
     #[test]
-
     fn test_pos_expressions() {
         assert_eq!(pos!(2.0 + 3.0).value(), Decimal::new(5, 0));
         assert_eq!(pos!(1.5 * 2.0).value(), Decimal::new(3, 0));
     }
 
     #[test]
-
     fn test_pos_conversions() {
         // Test integer to float conversion
         assert_eq!(pos!(5.0).value(), Decimal::new(5, 0));

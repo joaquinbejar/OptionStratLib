@@ -3,16 +3,13 @@
    Email: jb@taunais.com
    Date: 23/3/25
 ******************************************************************************/
-use crate::constants::{DARK_GREEN, DARK_RED};
+use crate::Positive;
 use crate::pricing::Profit;
 use crate::simulation::WalkParams;
 use crate::simulation::steps::Step;
+use crate::strategies::base::BasicAble;
 use crate::utils::Len;
-use crate::visualization::utils::{
-    Graph, GraphBackend, calculate_axis_range, draw_points_on_chart, draw_vertical_lines_on_chart,
-};
-use crate::{Positive, build_chart_inverted, create_drawing_area};
-use plotters::prelude::{BLACK, BitMapBackend, IntoDrawingArea, LineSeries, WHITE};
+use crate::visualization::{ColorScheme, Graph, GraphConfig, GraphData, Series2D, TraceMode};
 use rust_decimal::Decimal;
 use std::error::Error;
 use std::fmt::Display;
@@ -34,6 +31,7 @@ use std::ops::{AddAssign, Index, IndexMut};
 ///   which must implement `AddAssign`, be convertible to `Positive`, be `Copy`, and implement
 ///   the `Walktypable` trait for additional functionality.
 ///
+#[derive(Debug, Clone, Default)]
 pub struct RandomWalk<X, Y>
 where
     X: Copy + Into<Positive> + AddAssign + Display,
@@ -281,8 +279,18 @@ where
     X: AddAssign + Copy + Display + Into<Positive>,
     Y: Into<Positive> + Display + Clone,
 {
-    fn calculate_profit_at(&self, _price: Positive) -> Result<Decimal, Box<dyn Error>> {
+    fn calculate_profit_at(&self, _price: &Positive) -> Result<Decimal, Box<dyn Error>> {
         Err("Profit calculation not implemented for RandomWalk".into())
+    }
+}
+
+impl<X, Y> BasicAble for RandomWalk<X, Y>
+where
+    X: AddAssign + Copy + Display + Into<Positive>,
+    Y: Clone + Display + Into<Positive>,
+{
+    fn get_title(&self) -> String {
+        self.title.clone()
     }
 }
 
@@ -291,97 +299,40 @@ where
     X: Copy + Into<Positive> + AddAssign + Display,
     Y: Into<Positive> + Display + Clone,
 {
-    fn graph(&self, backend: GraphBackend, title_size: u32) -> Result<(), Box<dyn Error>> {
-        // Get X values from the random walk
-        let x_values = self.get_x_values();
-        let x_axis_data: &[Positive] = &x_values;
-
-        // Check if there are valid X values to plot
-        if x_axis_data.is_empty() {
-            return Err("No valid values to plot".into());
-        }
-
-        // Get Y values from the random walk
-        let y_axis_data: Vec<f64> = self.get_y_values();
-
-        // Check if there are valid Y values to plot
-        if y_axis_data.is_empty() {
-            return Err("No valid values to plot".into());
-        }
-
-        // Calculate the range for both axes
-        let (max_x_value, min_x_value, max_y_value, min_y_value) =
-            calculate_axis_range(x_axis_data, &y_axis_data, Some(1.005));
-
-        // Set up the drawing area based on the backend
-        let root = match backend {
-            GraphBackend::Bitmap { file_path, size } => {
-                create_drawing_area!(file_path, size.0, size.1)
-            }
-        };
-
-        // Here's the key change: We manually build the chart with inverted X-axis
-        let mut chart = build_chart_inverted!(
-            &root,
-            self.title(),
-            title_size,
-            min_x_value.to_f64(),
-            max_x_value.to_f64(),
-            min_y_value,
-            max_y_value
-        );
-
-        // Configure the chart same as the original
-        chart
-            .configure_mesh()
-            .disable_mesh() // Keep the original style (no grid)
-            .x_labels(20)
-            .y_labels(20)
-            .draw()?;
-
-        // Draw a horizontal line at y = 0
-        chart.draw_series(LineSeries::new(
-            vec![(max_x_value.to_f64(), 0.0), (min_x_value.to_f64(), 0.0)],
-            &BLACK,
-        ))?;
-
-        // Draw the line segments using the original style
-        let mut last_point: Option<(f64, f64)> = None;
-        for (&x, &y) in x_axis_data.iter().zip(y_axis_data.iter()) {
-            if let Some((last_x, last_y)) = last_point {
-                let color_to_use = if y > 0.0 { &DARK_GREEN } else { &DARK_RED };
-
-                let points: Vec<(f64, f64)> = vec![(last_x, last_y), (x.to_f64(), y)];
-                chart.draw_series(LineSeries::new(points, color_to_use))?;
-            }
-            last_point = Some((x.to_f64(), y));
-        }
-
-        // Draw any additional points and vertical lines
-        draw_points_on_chart(&mut chart, &self.get_points())?;
-        draw_vertical_lines_on_chart(&mut chart, &self.get_vertical_lines())?;
-
-        // Present the final chart
-        root.present()?;
-        Ok(())
-    }
-
-    fn title(&self) -> String {
-        self.title.clone()
-    }
-
-    fn get_x_values(&self) -> Vec<Positive> {
-        self.steps
+    fn graph_data(&self) -> GraphData {
+        let steps = self.get_steps();
+        let y: Vec<Decimal> = steps
             .iter()
-            .map(|step| step.get_graph_x_in_days_left())
-            .collect()
+            .map(|step| step.get_graph_y_value().to_dec())
+            .collect();
+        let x: Vec<Decimal> = steps
+            .iter()
+            .map(|step| -step.get_graph_x_in_days_left().to_dec())
+            .collect();
+
+        GraphData::Series(Series2D {
+            x,
+            y,
+            name: self.get_title().to_string(),
+            mode: TraceMode::Lines,
+            line_color: Some("#1f77b4".to_string()),
+            line_width: Some(2.0),
+        })
     }
 
-    fn get_y_values(&self) -> Vec<f64> {
-        self.steps
-            .iter()
-            .map(|step| step.get_graph_y_value().to_f64())
-            .collect()
+    fn graph_config(&self) -> GraphConfig {
+        GraphConfig {
+            title: self.get_title().to_string(),
+            x_label: Some("Date".to_string()),
+            y_label: Some("Price".to_string()),
+            z_label: None,
+            width: 1600,
+            height: 900,
+            show_legend: false,
+            color_scheme: ColorScheme::Default,
+            line_style: Default::default(),
+            legend: None,
+        }
     }
 }
 
@@ -390,17 +341,17 @@ mod tests_random_walk {
     use super::*;
     use crate::ExpirationDate;
     use crate::Positive;
-    use crate::chains::generator_positive;
+
     use crate::pos;
     use crate::simulation::WalkParams;
     use crate::simulation::WalkType;
     use crate::simulation::WalkTypeAble;
-    use crate::simulation::steps::{Step, Xstep, Ystep};
+    use crate::simulation::steps::Step;
     use crate::utils::TimeFrame;
-    use crate::utils::time::convert_time_frame;
+
     use num_traits::ToPrimitive;
     use rust_decimal::Decimal;
-    use rust_decimal_macros::dec;
+
     use std::error::Error;
     use std::fmt::Display;
     use std::ops::AddAssign;
@@ -751,13 +702,7 @@ mod tests_random_walk {
         let walk = RandomWalk::new("Graph Test".to_string(), &params, generate_test_steps);
 
         // Test Graph implementation methods
-        assert_eq!(walk.title(), "Graph Test");
-
-        let x_values = walk.get_x_values();
-        assert_eq!(x_values.len(), 5);
-
-        let y_values = walk.get_y_values();
-        assert_eq!(y_values.len(), 5);
+        assert_eq!(walk.get_title(), "Graph Test");
     }
 
     #[test]
@@ -830,76 +775,5 @@ mod tests_random_walk {
 
         assert_eq!(walk.len(), 3);
         assert_eq!(*walk[0].y.value(), TestY(100.0));
-    }
-
-    #[test]
-    fn test_graph() -> Result<(), Box<dyn Error>> {
-        struct Walker {}
-
-        impl Walker {
-            fn new() -> Self {
-                Walker {}
-            }
-        }
-
-        impl WalkTypeAble<Positive, Positive> for Walker {}
-
-        let n_steps = 43_200; // 30 days in minutes
-        let initial_price = pos!(100.0);
-        let std_dev = pos!(20.0);
-        let walker = Box::new(Walker::new());
-        let days = pos!(30.0);
-
-        let walk_params = WalkParams {
-            size: n_steps,
-            init_step: Step {
-                x: Xstep::new(Positive::ONE, TimeFrame::Minute, ExpirationDate::Days(days)),
-                y: Ystep::new(0, initial_price),
-            },
-            walk_type: WalkType::GeometricBrownian {
-                dt: convert_time_frame(pos!(1.0) / days, &TimeFrame::Minute, &TimeFrame::Day),
-                drift: dec!(0.0),
-                volatility: std_dev,
-            },
-            walker,
-        };
-
-        let random_walk =
-            RandomWalk::new("Random Walk".to_string(), &walk_params, generator_positive);
-        assert!(random_walk.calculate_profit_at(pos!(100.0)).is_err());
-
-        let steps = random_walk.get_steps();
-        let y = steps.first().unwrap().y.clone();
-        assert_eq!(y.value(), 100.0);
-        let result_next = steps.first().unwrap().next(pos!(100.0));
-        assert!(result_next.is_ok());
-        let next = result_next.unwrap();
-        assert!(
-            next.to_string()
-                .contains("Step { x: Xstep { index: 1, value: 1, time_unit: Minute, datetime:")
-        );
-
-        let previous_next = steps.first().unwrap().previous(pos!(100.0));
-        assert!(previous_next.is_ok());
-        let previous = previous_next.unwrap();
-        assert!(
-            previous
-                .to_string()
-                .contains("Step { x: Xstep { index: -1, value: 1, time_unit: Minute, datetime:")
-        );
-
-        assert_eq!(next.get_graph_x_value()?, Decimal::ONE);
-
-        let file_path = "Draws/Simulation/random_walk_test.png";
-        random_walk.graph(
-            GraphBackend::Bitmap {
-                file_path,
-                size: (1200, 800),
-            },
-            20,
-        )?;
-        assert!(std::fs::remove_file(file_path).is_ok());
-
-        Ok(())
     }
 }

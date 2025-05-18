@@ -8,10 +8,9 @@ use crate::error::StrategyError;
 use crate::model::Position;
 use crate::strategies::base::StrategyType;
 use crate::strategies::{
-    BearCallSpread, BearPutSpread, BullCallSpread, BullPutSpread, CallButterfly, CustomStrategy,
-    IronButterfly, IronCondor, LongButterflySpread, LongStraddle, LongStrangle,
-    PoorMansCoveredCall, ShortButterflySpread, ShortStraddle, ShortStrangle, Strategable,
-    StrategyConstructor,
+    BearCallSpread, BearPutSpread, BullCallSpread, BullPutSpread, CallButterfly, IronButterfly,
+    IronCondor, LongButterflySpread, LongStraddle, LongStrangle, PoorMansCoveredCall,
+    ShortButterflySpread, ShortStraddle, ShortStrangle, Strategable, StrategyConstructor,
 };
 use serde::{Deserialize, Serialize};
 
@@ -125,7 +124,6 @@ impl StrategyRequest {
             StrategyType::CallButterfly => {
                 Ok(Box::new(CallButterfly::get_strategy(&self.positions)?))
             }
-            StrategyType::Custom => Ok(Box::new(CustomStrategy::get_strategy(&self.positions)?)),
         }
     }
 }
@@ -594,48 +592,5 @@ mod tests {
         let strategy_request = StrategyRequest::new(StrategyType::ShortPut, vec![]);
         let result = strategy_request.get_strategy();
         assert!(result.is_err());
-    }
-
-    #[test]
-    #[ignore]
-    fn test_strategy_custom() {
-        let strategy_request = StrategyRequest::new(
-            StrategyType::Custom,
-            vec![
-                Position::new(
-                    create_sample_option_with_date(
-                        OptionStyle::Put,
-                        Side::Short,
-                        pos!(920.0),
-                        pos!(1.0),
-                        pos!(900.0),
-                        pos!(0.35),
-                        sample_date(),
-                    ),
-                    pos!(4.5),
-                    Utc::now(),
-                    pos!(1.0),
-                    pos!(1.2),
-                ),
-                Position::new(
-                    create_sample_option_with_date(
-                        OptionStyle::Put,
-                        Side::Long,
-                        pos!(920.0),
-                        pos!(1.0),
-                        pos!(910.0),
-                        pos!(0.35),
-                        sample_date(),
-                    ),
-                    pos!(3.5),
-                    Utc::now(),
-                    pos!(1.0),
-                    pos!(1.2),
-                ),
-            ],
-        );
-
-        let result = strategy_request.get_strategy();
-        assert!(result.is_ok());
     }
 }
