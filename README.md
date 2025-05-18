@@ -85,7 +85,9 @@
  - Greeks visualization
  - Binomial trees
  - Risk profiles
- - Interactive charts
+ - Interactive charts (powered by `plotly.rs`)
+ - Robust generation of various plot types (scatter, surface) for different data representations.
+ - Comprehensive test coverage for visualization components, ensuring reliability.
 
  10. **Data Management**:
  - CSV/JSON import/export
@@ -570,7 +572,7 @@ Options::new(
     )
 }
 fn main() -> Result<(), Box<dyn Error>> {
-    
+
     let option = create_sample_option();
     info!("Title: {}", option.get_title());
     info!("Greeks: {:?}", option.greeks());
@@ -605,7 +607,7 @@ use optionstratlib::visualization::Graph;
 use rust_decimal_macros::dec;
 
 fn main() -> Result<(), Box<dyn Error>> {
-    
+
     let underlying_price = pos!(5781.88);
     let strategy = BullCallSpread::new(
         "SP500".to_string(),
