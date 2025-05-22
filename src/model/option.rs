@@ -63,8 +63,7 @@ pub struct ExoticParams {
 /// scenarios.
 #[derive(Clone, PartialEq, Serialize, Deserialize)]
 pub struct Options {
-    /// Specifies whether this is a Call or Put option, determining the fundamental
-    /// right the option contract provides (buying or selling the underlying).
+    /// Specifies whether this is a European or American option
     pub option_type: OptionType,
 
     /// Indicates whether the position is Long (purchased) or Short (sold/written),
@@ -95,7 +94,7 @@ pub struct Options {
     /// typically based on treasury yields of similar duration.
     pub risk_free_rate: Decimal,
 
-    /// The option exercise style (European or American), determining when the
+    /// The option is a Call or Put option, determining the fundamental right
     /// option can be exercised.
     pub option_style: OptionStyle,
 

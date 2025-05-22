@@ -875,3 +875,11 @@ pub use model::ExpirationDate;
 pub use model::Options;
 pub use model::positive::Positive;
 pub use model::types::{OptionStyle, OptionType, Side};
+
+/// Library version
+pub const VERSION: &str = env!("CARGO_PKG_VERSION");
+
+/// Returns the library version
+pub fn version() -> &'static str {
+    VERSION
+}
