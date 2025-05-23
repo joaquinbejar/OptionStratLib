@@ -12,10 +12,10 @@
 [![Coverage](https://img.shields.io/codecov/c/github/joaquinbejar/OptionStratLib)](https://codecov.io/gh/joaquinbejar/OptionStratLib)
 [![Dependencies](https://img.shields.io/librariesio/github/joaquinbejar/OptionStratLib)](https://libraries.io/github/joaquinbejar/OptionStratLib)
 [![Documentation](https://img.shields.io/badge/docs-latest-blue.svg)](https://docs.rs/optionstratlib)
-[![Wiki](https://img.shields.io/badge/docs-latest-blue.svg)](https://deepwiki.com/joaquinbejar/OptionStratLib)
+[![Wiki](https://img.shields.io/badge/wiki-latest-blue.svg)](https://deepwiki.com/joaquinbejar/OptionStratLib)
 
 
-## OptionStratLib v0.5.0: Financial Options Library
+## OptionStratLib v0.5.1: Financial Options Library
 
 ### Table of Contents
 1. [Introduction](#introduction)
@@ -555,7 +555,7 @@ Add OptionStratLib to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-optionstratlib = "0.5.0"
+optionstratlib = "0.5.1"
 ```
 
 Or use cargo to add it to your project:
@@ -570,7 +570,7 @@ The library includes several optional features that can be enabled:
 
 ```toml
 [dependencies]
-optionstratlib = { version = "0.5.0", features = ["plotly", "kaleido", "full"] }
+optionstratlib = { version = "0.5.1", features = ["plotly", "kaleido", "full"] }
 ```
 
 - `plotly`: Enables visualization using plotly.rs

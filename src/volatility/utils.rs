@@ -6,16 +6,14 @@
 use crate::Options;
 use crate::constants::{MAX_VOLATILITY, MIN_VOLATILITY};
 use crate::error::VolatilityError;
-use crate::greeks::Greeks;
 use crate::model::decimal::decimal_normal_sample;
 use crate::utils::time::TimeFrame;
 use crate::{Positive, pos};
 use num_traits::{FromPrimitive, ToPrimitive};
 use rand::random;
-use rust_decimal::{Decimal, MathematicalOps};
-use rust_decimal_macros::dec;
-use std::error::Error;
 use rayon::prelude::*;
+use rust_decimal::{Decimal, MathematicalOps};
+use std::error::Error;
 
 /// Calculates the constant volatility from a series of returns.
 ///
@@ -124,15 +122,22 @@ pub fn implied_volatility(
                     let diff = (price - market_price.to_dec()).abs();
                     Some((iv, diff))
                 }
-                Err(_) => None
+                Err(_) => None,
             }
         })
-        .filter_map(|x| x)  // Remove errors
+        .filter_map(|x| x) // Remove errors
         .min_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal));
 
     match result {
-        Some((best_iv, _)) => Ok(best_iv),
-        None => Err("No valid volatility found".into())
+        Some((best_iv, _)) => {
+            let iv = best_iv.clamp(MIN_VOLATILITY, MAX_VOLATILITY);
+            if iv == Positive::from(1f64 / iterations as f64) {
+                Err("Implied volatility not found".into())
+            } else {
+                Ok(iv)
+            }
+        },
+        None => Err("No valid volatility found".into()),
     }
 }
 
@@ -466,6 +471,7 @@ mod tests_constant_volatility {
     use super::*;
     use crate::assert_pos_relative_eq;
     use crate::constants::ZERO;
+    use rust_decimal_macros::dec;
 
     #[test]
     fn test_constant_volatility_single_value() {
@@ -493,6 +499,7 @@ mod tests_constant_volatility {
 mod tests_historical_volatility {
     use super::*;
     use crate::assert_pos_relative_eq;
+    use rust_decimal_macros::dec;
 
     #[test]
     fn test_historical_volatility_empty_returns() {
@@ -537,6 +544,7 @@ mod tests_historical_volatility {
 mod tests_ewma_volatility {
     use super::*;
     use crate::assert_pos_relative_eq;
+    use rust_decimal_macros::dec;
 
     #[test]
     fn test_ewma_volatility_single_return() {
@@ -632,9 +640,11 @@ mod tests_ewma_volatility {
 #[cfg(test)]
 mod tests_implied_volatility {
     use super::*;
+    use crate::constants::{MAX_VOLATILITY, MIN_VOLATILITY};
+    use crate::greeks::Greeks;
     use crate::model::types::{OptionStyle, OptionType, Side};
-    use crate::{assert_decimal_eq, pos};
     use crate::{ExpirationDate, assert_pos_relative_eq};
+    use crate::{assert_decimal_eq, pos};
     use rust_decimal_macros::dec;
     use tracing::error;
 
@@ -654,7 +664,6 @@ mod tests_implied_volatility {
             None,                             // no exotic params
         )
     }
-    
 
     #[test]
     fn test_implied_volatility_max_iterations() {
@@ -692,7 +701,7 @@ mod tests_implied_volatility {
         let vega = option.vega().unwrap();
         let theta = option.theta().unwrap();
         let rho = option.rho().unwrap();
-        assert_decimal_eq!(delta, dec!(	0.502), dec!(0.002));
+        assert_decimal_eq!(delta, dec!(0.502), dec!(0.002));
         assert_decimal_eq!(gamma, dec!(0.431), dec!(0.002));
         assert_decimal_eq!(vega, dec!(0.015), dec!(0.002));
         assert_decimal_eq!(theta, dec!(-0.369), dec!(0.002));
@@ -710,14 +719,14 @@ mod tests_implied_volatility {
             Ok(iv_aprox) => {
                 // If it converges, it should be close to the original IV
                 assert_pos_relative_eq!(iv_aprox, iv, pos!(0.001)); // More lenient tolerance
-            },
+            }
             Err(_) => {
                 // If it doesn't converge, that's also acceptable for zero DTE options
                 // as they have extremely low vega and are numerically challenging
                 error!("Non-convergence is acceptable for zero DTE options");
             }
         }
-        
+
         option.implied_volatility = iv;
         option.option_style = OptionStyle::Put;
         let delta = option.delta().unwrap();
@@ -743,7 +752,7 @@ mod tests_implied_volatility {
             Ok(iv_aprox) => {
                 // If it converges, it should be close to the original IV
                 assert_pos_relative_eq!(iv_aprox, iv, pos!(0.001)); // More lenient tolerance
-            },
+            }
             Err(_) => {
                 // If it doesn't converge, that's also acceptable for zero DTE options
                 // as they have extremely low vega and are numerically challenging
@@ -780,20 +789,20 @@ mod tests_implied_volatility {
         assert_decimal_eq!(vega, dec!(0.866), dec!(0.002));
         assert_decimal_eq!(theta, dec!(-26.990), dec!(0.002));
         assert_decimal_eq!(rho, dec!(0.277), dec!(0.002));
-        
+
         let market_price = option.calculate_price_black_scholes().unwrap();
         assert_decimal_eq!(market_price, dec!(454.917), dec!(0.002));
-        
+
         // For very short-term options, use a more lenient tolerance
         option.implied_volatility = pos!(0.4); // Start with different IV
         let iv_result = implied_volatility(market_price.into(), &mut option, 10);
-        
+
         // For zero DTE options, expect either convergence or a reasonable approximation
         match iv_result {
             Ok(iv_aprox) => {
                 // If it converges, it should be close to the original IV
-                assert_pos_relative_eq!(iv_aprox, iv, pos!(0.001)); 
-            },
+                assert_pos_relative_eq!(iv_aprox, iv, pos!(0.001));
+            }
             Err(_) => {
                 // If it doesn't converge, that's also acceptable for zero DTE options
                 // as they have extremely low vega and are numerically challenging
@@ -808,25 +817,25 @@ mod tests_implied_volatility {
         let vega = option.vega().unwrap();
         let theta = option.theta().unwrap();
         let rho = option.rho().unwrap();
-        assert_decimal_eq!(delta, dec!(-0.053), dec!(0.001)); 
+        assert_decimal_eq!(delta, dec!(-0.053), dec!(0.001));
         assert_decimal_eq!(gamma, dec!(0.0), dec!(0.001));
-        assert_decimal_eq!(vega, dec!(0.866), dec!(0.001)); 
-        assert_decimal_eq!(theta, dec!(-29.874), dec!(0.001)); 
+        assert_decimal_eq!(vega, dec!(0.866), dec!(0.001));
+        assert_decimal_eq!(theta, dec!(-29.874), dec!(0.001));
         assert_decimal_eq!(rho, dec!(-0.016), dec!(0.001));
-        
+
         let market_price = option.calculate_price_black_scholes().unwrap();
         assert_decimal_eq!(market_price, dec!(6.537), dec!(0.002));
-        
+
         // For very short-term options, use a more lenient tolerance
         option.implied_volatility = pos!(0.4); // Start with different IV
         let iv_result = implied_volatility(market_price.into(), &mut option, 10);
-        
+
         // For zero DTE options, expect either convergence or a reasonable approximation
         match iv_result {
             Ok(iv_aprox) => {
                 // If it converges, it should be close to the original IV
-                assert_pos_relative_eq!(iv_aprox, iv, pos!(0.001)); 
-            },
+                assert_pos_relative_eq!(iv_aprox, iv, pos!(0.001));
+            }
             Err(_) => {
                 // If it doesn't converge, that's also acceptable for zero DTE options
                 // as they have extremely low vega and are numerically challenging
@@ -875,7 +884,7 @@ mod tests_implied_volatility {
             Ok(iv_aprox) => {
                 // If it converges, it should be close to the original IV
                 assert_pos_relative_eq!(iv_aprox, pos!(0.528), pos!(0.001));
-            },
+            }
             Err(_) => {
                 // If it doesn't converge, that's also acceptable for zero DTE options
                 // as they have extremely low vega and are numerically challenging
@@ -925,7 +934,7 @@ mod tests_implied_volatility {
             Ok(iv_aprox) => {
                 // If it converges, it should be close to the original IV
                 assert_pos_relative_eq!(iv_aprox, iv, pos!(0.001));
-            },
+            }
             Err(_) => {
                 // If it doesn't converge, that's also acceptable for zero DTE options
                 // as they have extremely low vega and are numerically challenging
