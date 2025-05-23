@@ -136,7 +136,7 @@ pub fn implied_volatility(
             } else {
                 Ok(iv)
             }
-        },
+        }
         None => Err("No valid volatility found".into()),
     }
 }

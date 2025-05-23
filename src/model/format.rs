@@ -3,13 +3,11 @@
    Email: jb@taunais.com
    Date: 20/8/24
 ******************************************************************************/
-use crate::ExpirationDate;
-use crate::model::option::{ExoticParams, Options};
-use crate::model::position::Position;
-use crate::model::types::{
-    AsianAveragingType, BarrierType, BinaryType, LookbackType, OptionStyle, OptionType, Side,
-};
+use crate::model::option::ExoticParams;
+use crate::model::types::{AsianAveragingType, BarrierType, BinaryType, LookbackType};
+use crate::model::{ExpirationDate, OptionType, Options, Position};
 use crate::strategies::base::Strategy;
+use crate::{OptionStyle, Side};
 use chrono::{Duration, Utc};
 use rust_decimal_macros::dec;
 use std::fmt;
@@ -90,9 +88,20 @@ impl fmt::Display for ExpirationDate {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             ExpirationDate::Days(days) => {
-                let duration = Duration::days((*days).to_i64());
-                let expiration = Utc::now() + duration;
-                write!(f, "{}", expiration.format("%Y-%m-%d %H:%M:%S UTC"))
+                // Use the stored reference datetime if available, otherwise use get_date_with_options
+                if let Some(ref_dt) = ExpirationDate::get_reference_datetime() {
+                    // Calculate the expiration date using the reference datetime
+                    let expiration_date = ref_dt + Duration::days((*days).to_i64());
+                    write!(f, "{}", expiration_date.format("%Y-%m-%d %H:%M:%S UTC"))
+                } else if let Ok(date) = self.get_date_with_options(false) {
+                    // Use the date from get_date_with_options with current time
+                    write!(f, "{}", date.format("%Y-%m-%d %H:%M:%S UTC"))
+                } else {
+                    // Fallback if get_date_with_options fails
+                    let duration = Duration::days((*days).to_i64());
+                    let expiration = Utc::now() + duration;
+                    write!(f, "{}", expiration.format("%Y-%m-%d %H:%M:%S UTC"))
+                }
             }
             ExpirationDate::DateTime(date_time) => {
                 write!(f, "{}", date_time.format("%Y-%m-%d %H:%M:%S UTC"))
@@ -224,6 +233,7 @@ impl fmt::Display for BinaryType {
         match self {
             BinaryType::CashOrNothing => write!(f, "Cash-Or-Nothing Binary Option"),
             BinaryType::AssetOrNothing => write!(f, "Asset-Or-Nothing Binary Option"),
+            BinaryType::Gap => write!(f, "Gap Binary Option"),
         }
     }
 }

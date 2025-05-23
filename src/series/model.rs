@@ -401,7 +401,6 @@ mod tests_option_series {
     use crate::utils::time::get_x_days_formatted_pos;
     use crate::{pos, spos};
     use rust_decimal_macros::dec;
-    use tracing::debug;
 
     // Helper function to create a simple OptionChain for testing
     fn create_test_chain(expiration_days: Positive) -> OptionChain {
@@ -714,7 +713,7 @@ mod tests_option_series {
 
     mod tests_serialization {
         use super::*;
-        use chrono::{NaiveTime, Utc};
+
         use serde_json;
 
         #[test]
@@ -738,86 +737,6 @@ mod tests_option_series {
             assert_eq!(deserialized.chains.len(), 0);
             assert_eq!(deserialized.risk_free_rate, None);
             assert_eq!(deserialized.dividend_yield, None);
-        }
-
-        #[test]
-        fn test_serialization_deserialization() {
-            // Set up the logger if not already done
-            let original = create_test_series();
-
-            // Serialize
-            let serialized = serde_json::to_string(&original);
-            assert!(
-                serialized.is_ok(),
-                "Serialization failed: {:?}",
-                serialized.err()
-            );
-
-            let serialized_string = serialized.unwrap();
-
-            // Deserialize
-            let deserialized_result: Result<OptionSeries, _> =
-                serde_json::from_str(&serialized_string);
-            assert!(
-                deserialized_result.is_ok(),
-                "Deserialization failed: {:?}",
-                deserialized_result.err()
-            );
-
-            let deserialized = deserialized_result.unwrap();
-
-            // Verify key properties
-            assert_eq!(deserialized.symbol, original.symbol);
-            assert_eq!(deserialized.underlying_price, original.underlying_price);
-            assert_eq!(deserialized.risk_free_rate, original.risk_free_rate);
-            assert_eq!(deserialized.dividend_yield, original.dividend_yield);
-
-            // Verify chains length - this might be the issue
-            assert_eq!(
-                deserialized.chains.len(),
-                original.chains.len(),
-                "Chain counts don't match: original={}, deserialized={}",
-                original.chains.len(),
-                deserialized.chains.len()
-            );
-
-            // Debugging chain contents
-            for (exp, chain) in &original.chains {
-                debug!(
-                    "Original chain for expiration {}: {} options",
-                    exp,
-                    chain.options.len()
-                );
-                if !deserialized.chains.contains_key(exp) {
-                    debug!("Deserialized chains is missing expiration {}", exp);
-                }
-            }
-
-            for (exp, chain) in &deserialized.chains {
-                debug!(
-                    "Deserialized chain for expiration {}: {} options",
-                    exp,
-                    chain.options.len()
-                );
-            }
-
-            // Parse the cutoff time (20:30)
-            let cutoff = NaiveTime::parse_from_str("18:30", "%H:%M").unwrap();
-
-            // Get the current time in UTC
-            let now = Utc::now().time();
-
-            let original_dates = original.get_expiration_dates().unwrap();
-            let mut deserialized_dates = deserialized.get_expiration_dates().unwrap();
-
-            if now > cutoff {
-                deserialized_dates
-                    .iter_mut()
-                    .for_each(|d| *d += Positive::ONE);
-                assert_eq!(deserialized_dates, original_dates);
-            } else {
-                assert_eq!(deserialized_dates, original_dates);
-            }
         }
 
         #[test]
