@@ -3,7 +3,7 @@
    Email: jb@taunais.com
    Date: 15/8/24
 ******************************************************************************/
-use crate::Options;
+use crate::{ExpirationDate, OptionStyle, OptionType, Options, Side};
 use crate::constants::{MAX_VOLATILITY, MIN_VOLATILITY};
 use crate::error::VolatilityError;
 use crate::model::decimal::decimal_normal_sample;
@@ -139,6 +139,62 @@ pub fn implied_volatility(
         }
         None => Err("No valid volatility found".into()),
     }
+}
+
+
+/// Calculates the implied volatility (IV) of an option given its parameters.
+///
+/// # Parameters
+///
+/// * `option_price` - A `Positive` value representing the current price of the option.
+/// * `strike` - A `Positive` value representing the strike price of the option.
+/// * `option_style` - An `OptionStyle` enum indicating the style of the option (e.g., European, American).
+/// * `underlying_price` - A `Positive` value representing the current price of the underlying asset.
+/// * `days` - A `Positive` value indicating the number of days to expiration for the option.
+/// * `symbol` - A `String` representing the symbol of the financial instrument for the option.
+///
+/// # Returns
+///
+/// * `Ok(Positive)` - The calculated implied volatility as a `Positive` value, if the computation is successful.
+/// * `Err(Box<dyn Error>)` - An error if the implied volatility cannot be calculated due to invalid inputs or other reasons.
+///
+/// # Errors
+///
+/// This function will return an error if:
+/// * The inputs do not meet the required constraints.
+/// * The implied volatility calculation fails to converge within the set iteration limit.
+///
+/// # Notes
+///
+/// This function internally creates an `Options` object with the given parameters,
+/// and calls the `implied_volatility` function with the option data. The iteration
+/// limit for the IV calculation is set to 10.
+///
+/// Ensure that all input parameters are valid and conform to the expected types
+/// and ranges for meaningful results.
+pub fn calculate_iv(
+    option_price: Positive,
+    strike: Positive,
+    option_style: OptionStyle,
+    underlying_price: Positive,
+    days: Positive,
+    symbol: String,
+) -> Result<Positive, Box<dyn Error>> {
+    let mut option = Options::new(
+        OptionType::European,
+        Side::Long,
+        symbol,
+        strike,
+        ExpirationDate::Days(days),
+        Positive::ZERO,
+        Positive::ONE,
+        underlying_price,
+        Decimal::ZERO,
+        option_style,
+        Positive::ZERO,
+        None,
+    );
+    implied_volatility(option_price, &mut option, 10)
 }
 
 /// Calculates GARCH(1,1) volatility (simplified).
@@ -676,6 +732,20 @@ mod tests_implied_volatility {
 
         let iv = result.unwrap();
         assert!(iv >= MIN_VOLATILITY && iv <= MAX_VOLATILITY);
+        
+        let result = calculate_iv(
+            market_price,
+            pos!(100.0),
+            OptionStyle::Call,
+            pos!(100.0),
+            pos!(30.0),
+            "TEST".to_string(),
+        );
+        assert!(result.is_ok());
+        
+        let iv = result.unwrap();
+        assert!(iv >= MIN_VOLATILITY && iv <= MAX_VOLATILITY);
+        assert_pos_relative_eq!(iv, pos!(0.437), pos!(1e-3));
     }
 
     #[test]
@@ -843,6 +913,7 @@ mod tests_implied_volatility {
             }
         }
     }
+    
     #[test]
     fn test_implied_volatility_zero_dte_real_put() {
         let iv = pos!(0.356831);
