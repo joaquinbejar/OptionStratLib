@@ -899,7 +899,7 @@ impl PnLCalculator for ShortStraddle {
 mod tests_short_straddle {
     use super::*;
     use crate::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
-    use crate::{pos, spos};
+    use crate::pos;
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
@@ -1185,14 +1185,14 @@ mod tests_short_straddle {
             Some(Box::new(pos!(100.0))),
             Some(ExpirationDate::Days(pos!(30.0))),
             Some(dec!(0.05)),
-            spos!(0.02),
+            Some(pos!(0.02)),
             Some(Box::new("AAPL".to_string())),
         );
         let option_chain_build_params = OptionChainBuildParams::new(
             "AAPL".to_string(),
-            spos!(1.0),
+            Some(pos!(1.0)),
             10,
-            spos!(10.0),
+            Some(pos!(10.0)),
             dec!(-0.2),
             dec!(0.1),
             pos!(0.01),

@@ -24,7 +24,6 @@ use crate::volatility::VolatilitySmile;
 use crate::{Positive, pos};
 use chrono::{NaiveDate, Utc};
 use num_traits::{FromPrimitive, ToPrimitive};
-use rand::TryRngCore;
 use rust_decimal::{Decimal, MathematicalOps};
 use rust_decimal_macros::dec;
 use serde::de::{MapAccess, Visitor};
@@ -604,6 +603,7 @@ impl OptionChain {
     /// # Returns
     ///
     /// A vector of references to `OptionData` objects that match the filter criteria.
+    #[allow(dead_code)]
     pub(crate) fn filter_option_data(&self, side: FindOptimalSide) -> Vec<&OptionData> {
         self.options
             .iter()
@@ -648,6 +648,7 @@ impl OptionChain {
     /// # Errors
     ///
     /// Returns a `ChainError` if any option data fails to be converted to `OptionsInStrike`.
+    #[allow(dead_code)]
     pub(crate) fn filter_options_in_strike(
         &self,
         side: FindOptimalSide,
@@ -2866,7 +2867,7 @@ mod tests_chain_base {
 #[cfg(test)]
 mod tests_option_data {
     use super::*;
-    use crate::model::ExpirationDate;
+    
     use crate::spos;
 
     use crate::{assert_pos_relative_eq, pos};

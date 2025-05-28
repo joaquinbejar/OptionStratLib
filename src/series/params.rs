@@ -60,7 +60,7 @@ impl OptionSeriesBuildParams {
     /// be considered by the caller.
     ///
     pub fn set_underlying_price(&mut self, price: &Positive) {
-        let price = Some(Box::new(price.clone()));
+        let price = Some(Box::new(*price));
         self.chain_params.set_underlying_price(price);
     }
 

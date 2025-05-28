@@ -1858,7 +1858,7 @@ mod tests_strategy_methods {
 mod tests_optimizable {
     use super::*;
     use crate::chains::OptionData;
-    use crate::{pos, spos};
+    use crate::pos;
     use rust_decimal_macros::dec;
 
     struct TestOptimizableStrategy;
@@ -1886,15 +1886,15 @@ mod tests_optimizable {
         let strategy = TestOptimizableStrategy;
         let option_data = OptionData::new(
             pos!(100.0),     // strike_price
-            spos!(5.0),      // call_bid
-            spos!(5.5),      // call_ask
-            spos!(4.0),      // put_bid
-            spos!(4.5),      // put_ask
+            Some(pos!(5.0)),      // call_bid
+            Some(pos!(5.5)),      // call_ask
+            Some(pos!(4.0)),      // put_bid
+            Some(pos!(4.5)),      // put_ask
             pos!(0.2),      // implied_volatility
             Some(dec!(0.5)), // delta
             Some(dec!(0.3)),
             Some(dec!(0.3)),
-            spos!(1000.0), // volume
+            Some(pos!(1000.0)), // volume
             Some(100),     // open_interest
             None, 
             None, 
@@ -1916,15 +1916,15 @@ mod tests_optimizable {
         let strategy = TestOptimizableStrategy;
         let option_data = OptionData::new(
             pos!(100.0),     // strike_price
-            spos!(5.0),      // call_bid
-            spos!(5.5),      // call_ask
-            spos!(4.0),      // put_bid
-            spos!(4.5),      // put_ask
+            Some(pos!(5.0)),      // call_bid
+            Some(pos!(5.5)),      // call_ask
+            Some(pos!(4.0)),      // put_bid
+            Some(pos!(4.5)),      // put_ask
             pos!(0.2),      // implied_volatility
             Some(dec!(0.5)), // delta
             Some(dec!(0.3)),
             Some(dec!(0.3)),
-            spos!(1000.0), // volume
+            Some(pos!(1000.0)), // volume
             Some(100),     // open_interest
             None,
             None,
@@ -1942,15 +1942,15 @@ mod tests_optimizable {
         let strategy = TestOptimizableStrategy;
         let option_data = OptionData::new(
             pos!(100.0),     // strike_price
-            spos!(5.0),      // call_bid
-            spos!(5.5),      // call_ask
-            spos!(4.0),      // put_bid
-            spos!(4.5),      // put_ask
+            Some(pos!(5.0)),      // call_bid
+            Some(pos!(5.5)),      // call_ask
+            Some(pos!(4.0)),      // put_bid
+            Some(pos!(4.5)),      // put_ask
             pos!(0.2),      // implied_volatility
             Some(dec!(0.5)), // delta
             Some(dec!(0.3)),
             Some(dec!(0.3)),
-            spos!(1000.0), // volume
+            Some(pos!(1000.0)), // volume
             Some(100),     // open_interest
             None,
             None,
@@ -1967,15 +1967,15 @@ mod tests_optimizable {
         let strategy = TestOptimizableStrategy;
         let option_data = OptionData::new(
             pos!(100.0),     // strike_price
-            spos!(5.0),      // call_bid
-            spos!(5.5),      // call_ask
-            spos!(4.0),      // put_bid
-            spos!(4.5),      // put_ask
+            Some(pos!(5.0)),      // call_bid
+            Some(pos!(5.5)),      // call_ask
+            Some(pos!(4.0)),      // put_bid
+            Some(pos!(4.5)),      // put_ask
             pos!(0.2),      // implied_volatility
             Some(dec!(0.5)), // delta
             Some(dec!(0.3)),
             Some(dec!(0.3)),
-            spos!(1000.0), // volume
+            Some(pos!(1000.0)), // volume
             Some(100),     // open_interest
             None,
             None,
@@ -1997,15 +1997,15 @@ mod tests_optimizable {
         let strategy = TestOptimizableStrategy;
         let option_data = OptionData::new(
             pos!(100.0),     // strike_price
-            spos!(5.0),      // call_bid
-            spos!(5.5),      // call_ask
-            spos!(4.0),      // put_bid
-            spos!(4.5),      // put_ask
+            Some(pos!(5.0)),      // call_bid
+            Some(pos!(5.5)),      // call_ask
+            Some(pos!(4.0)),      // put_bid
+            Some(pos!(4.5)),      // put_ask
             pos!(0.2),      // implied_volatility
             Some(dec!(0.5)), // delta
             Some(dec!(0.3)),
             Some(dec!(0.3)),
-            spos!(1000.0), // volume
+            Some(pos!(1000.0)), // volume
             Some(100),     // open_interest
             None,
             None,
@@ -2023,15 +2023,15 @@ mod tests_optimizable {
         let strategy = TestOptimizableStrategy;
         let option_data = OptionData::new(
             pos!(100.0),     // strike_price
-            spos!(5.0),      // call_bid
-            spos!(5.5),      // call_ask
-            spos!(4.0),      // put_bid
-            spos!(4.5),      // put_ask
+            Some(pos!(5.0)),      // call_bid
+            Some(pos!(5.5)),      // call_ask
+            Some(pos!(4.0)),      // put_bid
+            Some(pos!(4.5)),      // put_ask
             pos!(0.2),      // implied_volatility
             Some(dec!(0.5)), // delta
             Some(dec!(0.3)),
             Some(dec!(0.3)),
-            spos!(1000.0), // volume
+            Some(pos!(1000.0)), // volume
             Some(100),     // open_interest
             None,
             None,

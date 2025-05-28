@@ -845,7 +845,7 @@ impl Optimizable for ShortButterflySpread {
                 second: middle_strike,
                 third: high_strike,
             } => {
-                let implied_volatility = middle_strike.implied_volatility.unwrap();
+                let implied_volatility = middle_strike.implied_volatility;
                 assert!(implied_volatility <= Positive::ONE);
 
                 ShortButterflySpread::new(
@@ -2682,7 +2682,7 @@ mod tests_butterfly_optimizable {
     use super::*;
     use crate::model::ExpirationDate;
     use crate::pos;
-    use crate::spos;
+    
     use rust_decimal_macros::dec;
 
     fn create_test_option_chain() -> OptionChain {
@@ -2691,15 +2691,15 @@ mod tests_butterfly_optimizable {
         for strike in [85.0, 90.0, 95.0, 100.0, 105.0, 110.0, 115.0] {
             chain.add_option(
                 pos!(strike),
-                spos!(5.0),      // call_bid
-                spos!(5.2),      // call_ask
-                spos!(5.0),      // put_bid
-                spos!(5.2),      // put_ask
-                spos!(0.2),      // implied_volatility
+                Some(pos!(5.0)),      // call_bid
+                Some(pos!(5.2)),      // call_ask
+                Some(pos!(5.0)),      // put_bid
+                Some(pos!(5.2)),      // put_ask
+                pos!(0.2),      // implied_volatility
                 Some(dec!(0.5)), // delta
                 Some(dec!(0.2)),
                 Some(dec!(0.2)),
-                spos!(100.0), // volume
+                Some(pos!(100.0)), // volume
                 Some(50),     // open_interest
             );
         }

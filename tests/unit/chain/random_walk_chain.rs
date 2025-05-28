@@ -30,9 +30,9 @@ fn create_chain_from_step(
 ) -> Result<OptionChain, Box<dyn std::error::Error>> {
     let chain = previous_y_step.value();
     let mut chain_params = chain.to_build_params()?;
-    chain_params.set_underlying_price(new_price);
+    chain_params.set_underlying_price(Some(Box::new(*new_price)));
     if let Some(volatility) = volatility {
-        chain_params.set_implied_volatility(Some(volatility));
+        chain_params.set_implied_volatility(volatility);
     }
 
     let new_chain = OptionChain::build_chain(&chain_params);

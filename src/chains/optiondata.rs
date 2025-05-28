@@ -9,14 +9,14 @@ use crate::error::ChainError;
 use crate::greeks::{delta, gamma};
 use crate::model::Position;
 use crate::strategies::{BasicAble, FindOptimalSide};
-use crate::{ExpirationDate, OptionStyle, OptionType, Options, Positive, Side, pos};
+use crate::{ExpirationDate, OptionStyle, Options, Positive, Side, pos};
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::cmp::Ordering;
 use std::fmt;
-use tracing::{debug, error, trace};
+use tracing::{debug, error};
 
 /// Struct representing a row in an option chain with detailed pricing and analytics data.
 ///
@@ -446,6 +446,7 @@ impl OptionData {
     /// * An `Options` instance configured with the specified parameters
     /// * A `ChainError` if there was a problem creating the option
     ///
+    #[allow(dead_code)]
     fn get_option_for_iv(
         &self,
         side: Side,
@@ -453,7 +454,7 @@ impl OptionData {
         initial_iv: Positive,
     ) -> Result<Options, ChainError> {
         let mut option = self.get_option(side, option_style)?;
-        option.set_implied_volatility(&initial_iv);
+        let _ = option.set_implied_volatility(&initial_iv);
         Ok(option)
     }
 
@@ -929,7 +930,7 @@ impl fmt::Display for OptionData {
 mod optiondata_coverage_tests {
     use super::*;
 
-    use crate::{ExpirationDate, spos};
+    use crate::spos;
     use rust_decimal_macros::dec;
 
     // Helper function to create test option data
@@ -1595,7 +1596,7 @@ mod tests_check_convert_implied_volatility {
 mod tests_get_option_for_iv {
     use super::*;
     use crate::model::ExpirationDate;
-    use crate::{pos, spos};
+    use crate::{pos, spos, OptionType};
     use rust_decimal_macros::dec;
 
     // Helper function to create a standard OptionDataPriceParams for testing

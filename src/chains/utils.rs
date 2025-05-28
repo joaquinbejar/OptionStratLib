@@ -209,7 +209,7 @@ impl OptionChainBuildParams {
     ///   `Positive` type ensures that the price is always a non-negative value.
     ///
     pub fn set_underlying_price(&mut self, price: Option<Box<Positive>>) {
-        self.price_params.underlying_price = if let Some(p) = price { Some(p) } else { None };
+        self.price_params.underlying_price = price;
     }
     
     pub fn set_implied_volatility(&mut self, implied_vol: Positive) {
@@ -217,7 +217,7 @@ impl OptionChainBuildParams {
     }
     
     pub fn get_implied_volatility(&self) -> Positive {
-        self.implied_volatility.clone()
+        self.implied_volatility
     }
 }
 
@@ -260,6 +260,7 @@ impl Display for OptionChainBuildParams {
 /// This structure is typically used as input to option pricing functions to calculate
 /// theoretical values, Greeks (delta, gamma, etc.), and other option metrics.
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
+#[derive(Default)]
 pub struct OptionDataPriceParams {
     /// The current price of the underlying asset
     pub(crate) underlying_price: Option<Box<Positive>>,
@@ -352,17 +353,6 @@ impl OptionDataPriceParams {
     }
 }
 
-impl Default for OptionDataPriceParams {
-    fn default() -> Self {
-        Self {
-            underlying_price: None,
-            expiration_date: None,
-            risk_free_rate: None,
-            dividend_yield: None,
-            underlying_symbol: None,
-        }
-    }
-}
 
 impl Display for OptionDataPriceParams {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -620,6 +610,7 @@ pub(crate) fn rounder(reference_price: Positive, strike_interval: Positive) -> P
 }
 
 /// Rounds an interval to clean market-friendly values like 0.25, 0.5, 1, 2.5, 5, 10, etc.
+#[allow(dead_code)]
 fn round_to_clean_interval(interval: Positive, price: Positive) -> Positive {
     let v = interval.to_f64();
 
@@ -1229,9 +1220,9 @@ mod tests_option_data_price_params {
 
         let params = OptionDataPriceParams {
             underlying_price: underlying_price.clone(),
-            expiration_date: expiration_date.clone(),
-            risk_free_rate: risk_free_rate.clone(),
-            dividend_yield: dividend_yield.clone(),
+            expiration_date: expiration_date,
+            risk_free_rate: risk_free_rate,
+            dividend_yield: dividend_yield,
             underlying_symbol: underlying_symbol.clone(),
         };
 
@@ -1250,7 +1241,7 @@ mod tests_option_data_price_params {
         let expiration_date = Some(ExpirationDate::DateTime(future_date));
 
         let mut params = get_params();
-        params.expiration_date = expiration_date.clone();
+        params.expiration_date = expiration_date;
 
         assert_eq!(params.get_expiration_date(), expiration_date);
     }

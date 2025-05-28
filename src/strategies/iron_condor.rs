@@ -932,7 +932,7 @@ impl Optimizable for IronCondor {
                 third: short_call,
                 fourth: long_call,
             } => {
-                let implied_volatility = short_call.implied_volatility.unwrap();
+                let implied_volatility = short_call.implied_volatility;
                 assert!(implied_volatility <= Positive::ONE);
 
                 IronCondor::new(
@@ -1856,7 +1856,7 @@ mod tests_iron_condor_optimizable {
     use crate::chains::OptionData;
     use crate::model::ExpirationDate;
     use crate::pos;
-    use crate::spos;
+    
     use rust_decimal_macros::dec;
 
     fn create_test_condor() -> IronCondor {
@@ -1888,15 +1888,15 @@ mod tests_iron_condor_optimizable {
         for strike in [85.0, 90.0, 95.0, 100.0, 105.0, 110.0, 115.0] {
             chain.add_option(
                 pos!(strike),
-                spos!(5.0), // call_bid
-                spos!(5.2), // call_ask
-                spos!(5.0), // put_bid
-                spos!(5.2), // put_ask
-                spos!(0.2), // implied_volatility
+                Some(pos!(5.0)), // call_bid
+                Some(pos!(5.2)), // call_ask
+                Some(pos!(5.0)), // put_bid
+                Some(pos!(5.2)), // put_ask
+                pos!(0.2), // implied_volatility
                 None,       // delta
                 None,
                 None,
-                spos!(100.0), // volume
+                Some(pos!(100.0)), // volume
                 Some(50),     // open_interest
             );
         }
@@ -1960,16 +1960,22 @@ mod tests_iron_condor_optimizable {
         let condor = create_test_condor();
         let option = OptionData::new(
             pos!(90.0),
-            spos!(5.0),
-            spos!(5.2),
-            spos!(5.0),
-            spos!(5.2),
-            spos!(0.2),
+            Some(pos!(5.0)),
+            Some(pos!(5.2)),
+            Some(pos!(5.0)),
+            Some(pos!(5.2)),
+            pos!(0.2),
             None,
             None,
             None,
-            spos!(100.0),
+            Some(pos!(100.0)),
             Some(50),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
         );
 
         // Test with different sides
@@ -1987,16 +1993,22 @@ mod tests_iron_condor_optimizable {
         let condor = create_test_condor();
         let option = OptionData::new(
             pos!(105.0),
-            spos!(5.0),
-            spos!(5.2),
-            spos!(5.0),
-            spos!(5.2),
-            spos!(0.2),
+            Some(pos!(5.0)),
+            Some(pos!(5.2)),
+            Some(pos!(5.0)),
+            Some(pos!(5.2)),
+            pos!(0.2),
             None,
             None,
             None,
-            spos!(100.0),
+            Some(pos!(100.0)),
             Some(50),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
         );
 
         // Test with different sides

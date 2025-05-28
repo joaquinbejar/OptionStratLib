@@ -766,7 +766,7 @@ impl Optimizable for LongStrangle {
             StrategyLegs::TwoLegs { first, second } => (first, second),
             _ => panic!("Invalid number of legs for this strategy"),
         };
-        let implied_volatility = call.implied_volatility.unwrap();
+        let implied_volatility = call.implied_volatility;
         assert!(implied_volatility <= Positive::ONE);
         LongStrangle::new(
             chain.symbol.clone(),

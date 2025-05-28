@@ -1,3 +1,4 @@
+use crate::pos;
 use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, StrategyBasics, StrategyType, Validable,
 };
@@ -20,7 +21,6 @@ use crate::{
     },
     pnl::{PnLCalculator, utils::PnL},
     pricing::payoff::Profit,
-    spos,
     strategies::{
         BasicAble, Strategies, StrategyConstructor,
         delta_neutral::DeltaNeutrality,
@@ -698,8 +698,8 @@ impl Strategies for CallButterfly {
 
     fn get_profit_ratio(&self) -> Result<Decimal, StrategyError> {
         let max_loss = match self.get_max_loss().unwrap() {
-            value if value == Positive::ZERO => spos!(1.0),
-            value if value == Positive::INFINITY => spos!(1.0),
+            value if value == Positive::ZERO => Some(pos!(1.0)),
+            value if value == Positive::INFINITY => Some(pos!(1.0)),
             value => Some(value),
         };
 
@@ -838,7 +838,7 @@ impl Optimizable for CallButterfly {
         if !long_call.validate() || !short_call_low.validate() || !short_call_high.validate() {
             panic!("Invalid options");
         }
-        let implied_volatility = long_call.implied_volatility.unwrap();
+        let implied_volatility = long_call.implied_volatility;
         assert!(implied_volatility <= Positive::ONE);
         CallButterfly::new(
             option_chain.symbol.clone(),
@@ -1432,43 +1432,43 @@ mod tests_call_butterfly_optimizable {
         // Add options with different strikes
         chain.add_option(
             pos!(95.0),      // strike
-            spos!(6.0),      // call_bid
-            spos!(6.2),      // call_ask
-            spos!(1.0),      // put_bid
-            spos!(1.2),      // put_ask
-            spos!(0.2),      // iv
+            Some(pos!(6.0)),      // call_bid
+            Some(pos!(6.2)),      // call_ask
+            Some(pos!(1.0)),      // put_bid
+            Some(pos!(1.2)),      // put_ask
+            pos!(0.2),      // iv
             Some(dec!(0.4)), // delta
             Some(dec!(0.2)),
             Some(dec!(0.2)),
-            spos!(100.0), // volume
+            Some(pos!(100.0)), // volume
             Some(50),     // open interest
         );
 
         chain.add_option(
             pos!(100.0),
-            spos!(3.0),
-            spos!(3.2),
-            spos!(3.0),
-            spos!(3.2),
-            spos!(0.2),
+            Some(pos!(3.0)),
+            Some(pos!(3.2)),
+            Some(pos!(3.0)),
+            Some(pos!(3.2)),
+            pos!(0.2),
             Some(dec!(0.5)),
             Some(dec!(0.2)),
             Some(dec!(0.2)),
-            spos!(200.0),
+            Some(pos!(200.0)),
             Some(100),
         );
 
         chain.add_option(
             pos!(105.0),
-            spos!(1.0),
-            spos!(1.2),
-            spos!(6.0),
-            spos!(6.2),
-            spos!(0.2),
+            Some(pos!(1.0)),
+            Some(pos!(1.2)),
+            Some(pos!(6.0)),
+            Some(pos!(6.2)),
+            pos!(0.2),
             Some(dec!(0.6)),
             Some(dec!(0.2)),
             Some(dec!(0.2)),
-            spos!(100.0),
+            Some(pos!(100.0)),
             Some(50),
         );
 

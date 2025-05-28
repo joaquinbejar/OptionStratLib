@@ -142,7 +142,7 @@ pub fn generator_optionchain(
         };
         // convert y_step to OptionChain
         let y_step_chain: OptionChain =
-            create_chain_from_step(&previous_y_step, Some(Box::new(y_step.clone())), volatility).unwrap();
+            create_chain_from_step(&previous_y_step, Some(Box::new(*y_step)), volatility).unwrap();
         previous_y_step = previous_y_step.next(y_step_chain).clone();
         let step = Step {
             x: previous_x_step,
