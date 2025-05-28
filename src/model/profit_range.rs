@@ -185,32 +185,32 @@ impl ProfitLossRange {
 #[cfg(test)]
 mod tests_profit_range {
     use super::*;
-    use crate::pos;
+    use crate::{pos, spos};
 
     #[test]
     fn test_profit_range_creation() {
-        let range = ProfitLossRange::new(Some(pos!(100.0)), Some(pos!(110.0)), pos!(0.5));
+        let range = ProfitLossRange::new(spos!(100.0), spos!(110.0), pos!(0.5));
         assert!(range.is_ok());
     }
 
     #[test]
     fn test_invalid_bounds() {
-        let range = ProfitLossRange::new(Some(pos!(110.0)), Some(pos!(100.0)), pos!(0.5));
+        let range = ProfitLossRange::new(spos!(110.0), spos!(100.0), pos!(0.5));
         assert!(range.is_err());
     }
 
     #[test]
     fn test_infinite_bounds() {
-        let range = ProfitLossRange::new(None, Some(pos!(100.0)), pos!(0.5));
+        let range = ProfitLossRange::new(None, spos!(100.0), pos!(0.5));
         assert!(range.is_ok());
 
-        let range = ProfitLossRange::new(Some(pos!(100.0)), None, pos!(0.5));
+        let range = ProfitLossRange::new(spos!(100.0), None, pos!(0.5));
         assert!(range.is_ok());
     }
 
     #[test]
     fn test_contains() {
-        let range = ProfitLossRange::new(Some(pos!(100.0)), Some(pos!(110.0)), pos!(0.5)).unwrap();
+        let range = ProfitLossRange::new(spos!(100.0), spos!(110.0), pos!(0.5)).unwrap();
 
         assert!(!range.contains(pos!(99.0)));
         assert!(range.contains(pos!(100.0)));
@@ -221,11 +221,11 @@ mod tests_profit_range {
 
     #[test]
     fn test_contains_infinite_bounds() {
-        let lower_infinite = ProfitLossRange::new(None, Some(pos!(100.0)), pos!(0.5)).unwrap();
+        let lower_infinite = ProfitLossRange::new(None, spos!(100.0), pos!(0.5)).unwrap();
         assert!(lower_infinite.contains(pos!(50.0)));
         assert!(!lower_infinite.contains(pos!(101.0)));
 
-        let upper_infinite = ProfitLossRange::new(Some(pos!(100.0)), None, pos!(0.5)).unwrap();
+        let upper_infinite = ProfitLossRange::new(spos!(100.0), None, pos!(0.5)).unwrap();
         assert!(!upper_infinite.contains(pos!(99.0)));
         assert!(upper_infinite.contains(pos!(150.0)));
     }
@@ -235,11 +235,11 @@ mod tests_profit_range {
 mod tests_calculate_probability {
     use super::*;
     use crate::constants::DAYS_IN_A_YEAR;
-    use crate::pos;
+    use crate::{pos, spos};
     use rust_decimal_macros::dec;
 
     fn create_basic_range() -> ProfitLossRange {
-        ProfitLossRange::new(Some(pos!(90.0)), Some(pos!(110.0)), Positive::ZERO).unwrap()
+        ProfitLossRange::new(spos!(90.0), spos!(110.0), Positive::ZERO).unwrap()
     }
 
     #[test]
@@ -261,7 +261,7 @@ mod tests_calculate_probability {
     #[test]
     #[should_panic(expected = "Lower bound must be less than upper bound")]
     fn test_invalid_bounds() {
-        let _ = ProfitLossRange::new(Some(pos!(110.0)), Some(pos!(90.0)), Positive::ZERO).unwrap();
+        let _ = ProfitLossRange::new(spos!(110.0), spos!(90.0), Positive::ZERO).unwrap();
     }
 
     #[test]
@@ -326,7 +326,7 @@ mod tests_calculate_probability {
 
     #[test]
     fn test_infinite_lower_bound() {
-        let mut range = ProfitLossRange::new(None, Some(pos!(110.0)), Positive::ZERO).unwrap();
+        let mut range = ProfitLossRange::new(None, spos!(110.0), Positive::ZERO).unwrap();
 
         let result = range.calculate_probability(
             &pos!(100.0),
@@ -342,7 +342,7 @@ mod tests_calculate_probability {
 
     #[test]
     fn test_infinite_upper_bound() {
-        let mut range = ProfitLossRange::new(Some(pos!(90.0)), None, Positive::ZERO).unwrap();
+        let mut range = ProfitLossRange::new(spos!(90.0), None, Positive::ZERO).unwrap();
 
         let result = range.calculate_probability(
             &pos!(100.0),
