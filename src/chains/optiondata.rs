@@ -1680,7 +1680,6 @@ mod tests_get_option_for_iv {
             None,
         );
 
-        let params = create_test_price_params();
         let initial_iv = pos!(0.3);
 
         // Call the method with Put option style
@@ -1715,7 +1714,6 @@ mod tests_get_option_for_iv {
             None,
         );
 
-        let params = create_test_price_params();
         let initial_iv = pos!(0.2);
 
         // Call the method with Short side

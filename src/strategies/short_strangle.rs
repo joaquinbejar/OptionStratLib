@@ -933,7 +933,7 @@ impl Optimizable for ShortStrangle {
         if !put.valid_put() {
             panic!("Invalid Put options");
         }
-        let implied_volatility = call.implied_volatility.unwrap();
+        let implied_volatility = call.implied_volatility;
         assert!(implied_volatility <= Positive::ONE);
 
         ShortStrangle::new(
@@ -1397,12 +1397,11 @@ is expected and the underlying asset's price is anticipated to remain stable."
     }
     fn create_test_option_chain() -> OptionChain {
         let option_data_price_params = OptionDataPriceParams::new(
-            pos!(150.0),
-            ExpirationDate::Days(pos!(30.0)),
-            spos!(0.2),
-            dec!(0.01),
-            pos!(0.02),
-            None,
+            Some(Box::new(pos!(100.0))),
+            Some(ExpirationDate::Days(pos!(30.0))),
+            Some(dec!(0.05)),
+            spos!(0.02),
+            Some(Box::new("AAPL".to_string())),
         );
         let option_chain_build_params = OptionChainBuildParams::new(
             "AAPL".to_string(),
@@ -1414,6 +1413,7 @@ is expected and the underlying asset's price is anticipated to remain stable."
             pos!(0.01),
             2,
             option_data_price_params,
+            pos!(0.2),
         );
         OptionChain::build_chain(&option_chain_build_params)
     }
