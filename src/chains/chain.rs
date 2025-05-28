@@ -3605,7 +3605,6 @@ mod tests_strike_price_range_vec {
 mod tests_option_data_get_option {
     use super::*;
     use crate::error::chains::OptionDataErrorKind;
-    use crate::model::ExpirationDate;
     use crate::{pos, spos};
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
@@ -3661,15 +3660,6 @@ mod tests_option_data_get_option {
     #[test]
     fn test_get_option_missing_iv() {
         let option_data = create_test_option_data();
-
-        let price_params = OptionDataPriceParams::new(
-            Some(Box::new(pos!(100.0))),
-            Some(ExpirationDate::Days(pos!(30.0))),
-            Some(dec!(0.05)),
-            spos!(0.02),
-            Some(Box::new("AAPL".to_string())),
-        );
-
         let result = option_data.get_option(Side::Long, OptionStyle::Call);
         assert!(result.is_err());
 
@@ -3692,7 +3682,6 @@ mod tests_option_data_get_options_in_strike {
     use super::*;
     use crate::error::chains::OptionDataErrorKind;
     use crate::greeks::Greeks;
-    use crate::model::ExpirationDate;
     use crate::{assert_decimal_eq, pos, spos};
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
@@ -3722,14 +3711,6 @@ mod tests_option_data_get_options_in_strike {
     #[test]
     fn test_get_options_in_strike_success() {
         let option_data = create_test_option_data();
-        let price_params = OptionDataPriceParams::new(
-            Some(Box::new(pos!(100.0))),
-            Some(ExpirationDate::Days(pos!(30.0))),
-            Some(dec!(0.05)),
-            spos!(0.02),
-            Some(Box::new("AAPL".to_string())),
-        );
-
         let result = option_data.get_options_in_strike();
         assert!(result.is_ok());
 
@@ -3759,14 +3740,6 @@ mod tests_option_data_get_options_in_strike {
     #[test]
     fn test_get_options_in_strike_using_data_iv() {
         let option_data = create_test_option_data();
-        let price_params = OptionDataPriceParams::new(
-            Some(Box::new(pos!(100.0))),
-            Some(ExpirationDate::Days(pos!(30.0))),
-            Some(dec!(0.05)),
-            spos!(0.02),
-            Some(Box::new("AAPL".to_string())),
-        );
-
         let result = option_data.get_options_in_strike();
         assert!(result.is_ok());
 
@@ -3780,14 +3753,6 @@ mod tests_option_data_get_options_in_strike {
     #[test]
     fn test_get_options_in_strike_missing_iv() {
         let option_data = create_test_option_data();
-        let price_params = OptionDataPriceParams::new(
-            Some(Box::new(pos!(100.0))),
-            Some(ExpirationDate::Days(pos!(30.0))),
-            Some(dec!(0.05)),
-            spos!(0.02),
-            Some(Box::new("AAPL".to_string())),
-        );
-
         let result = option_data.get_options_in_strike();
         assert!(result.is_err());
         let error = result.unwrap_err();
@@ -3806,14 +3771,6 @@ mod tests_option_data_get_options_in_strike {
     #[test]
     fn test_get_options_in_strike_all_properties() {
         let option_data = create_test_option_data();
-        let price_params = OptionDataPriceParams::new(
-            Some(Box::new(pos!(100.0))),
-            Some(ExpirationDate::Days(pos!(30.0))),
-            Some(dec!(0.05)),
-            spos!(0.02),
-            Some(Box::new("AAPL".to_string())),
-        );
-
         let result = option_data.get_options_in_strike();
         assert!(result.is_ok());
 
@@ -3872,7 +3829,6 @@ mod tests_option_data_get_options_in_strike {
 #[cfg(test)]
 mod tests_filter_options_in_strike {
     use super::*;
-    use crate::model::ExpirationDate;
     use crate::{pos, spos};
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
@@ -3901,14 +3857,6 @@ mod tests_filter_options_in_strike {
     #[test]
     fn test_filter_upper_strikes() {
         let chain = create_test_chain();
-        let price_params = OptionDataPriceParams::new(
-            Some(Box::new(pos!(100.0))),
-            Some(ExpirationDate::Days(pos!(30.0))),
-            Some(dec!(0.05)),
-            spos!(0.02),
-            Some(Box::new("AAPL".to_string())),
-        );
-
         let result = chain.filter_options_in_strike(FindOptimalSide::Upper);
         assert!(result.is_ok());
 
@@ -3928,14 +3876,6 @@ mod tests_filter_options_in_strike {
     #[test]
     fn test_filter_lower_strikes() {
         let chain = create_test_chain();
-        let price_params = OptionDataPriceParams::new(
-            Some(Box::new(pos!(100.0))),
-            Some(ExpirationDate::Days(pos!(30.0))),
-            Some(dec!(0.05)),
-            spos!(0.02),
-            Some(Box::new("AAPL".to_string())),
-        );
-
         let result = chain.filter_options_in_strike(FindOptimalSide::Lower);
         assert!(result.is_ok());
 
@@ -3950,14 +3890,6 @@ mod tests_filter_options_in_strike {
     #[test]
     fn test_filter_all_strikes() {
         let chain = create_test_chain();
-        let price_params = OptionDataPriceParams::new(
-            Some(Box::new(pos!(100.0))),
-            Some(ExpirationDate::Days(pos!(30.0))),
-            Some(dec!(0.05)),
-            spos!(0.02),
-            Some(Box::new("AAPL".to_string())),
-        );
-
         let result = chain.filter_options_in_strike(FindOptimalSide::All);
         assert!(result.is_ok());
 
@@ -3968,14 +3900,6 @@ mod tests_filter_options_in_strike {
     #[test]
     fn test_filter_range_strikes() {
         let chain = create_test_chain();
-        let price_params = OptionDataPriceParams::new(
-            Some(Box::new(pos!(100.0))),
-            Some(ExpirationDate::Days(pos!(30.0))),
-            Some(dec!(0.05)),
-            spos!(0.02),
-            Some(Box::new("AAPL".to_string())),
-        );
-
         let result =
             chain.filter_options_in_strike(FindOptimalSide::Range(pos!(95.0), pos!(105.0)));
         assert!(result.is_ok());
@@ -4002,14 +3926,6 @@ mod tests_filter_options_in_strike {
     #[test]
     fn test_filter_invalid_range() {
         let chain = create_test_chain();
-        let price_params = OptionDataPriceParams::new(
-            Some(Box::new(pos!(100.0))),
-            Some(ExpirationDate::Days(pos!(30.0))),
-            Some(dec!(0.05)),
-            spos!(0.02),
-            Some(Box::new("AAPL".to_string())),
-        );
-
         let result =
             chain.filter_options_in_strike(FindOptimalSide::Range(pos!(200.0), pos!(300.0)));
         assert!(result.is_ok());
@@ -4021,14 +3937,6 @@ mod tests_filter_options_in_strike {
     #[test]
     fn test_filter_all_strikes_deltas() {
         let chain = create_test_chain();
-        let price_params = OptionDataPriceParams::new(
-            Some(Box::new(pos!(100.0))),
-            Some(ExpirationDate::Days(pos!(30.0))),
-            Some(dec!(0.05)),
-            spos!(0.02),
-            Some(Box::new("AAPL".to_string())),
-        );
-
         let result = chain.filter_options_in_strike(FindOptimalSide::All);
         assert!(result.is_ok());
 
@@ -5222,7 +5130,6 @@ mod tests_option_data_delta {
 
     #[test]
     fn test_calculate_delta_standard_call() {
-        let price_params = create_standard_price_params();
         let mut option_data = create_standard_option_data();
 
         option_data.calculate_delta();
