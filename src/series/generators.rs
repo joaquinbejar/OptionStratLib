@@ -39,7 +39,7 @@ fn create_series_from_step(
     let mut series_params = series.to_build_params()?;
     series_params.set_underlying_price(new_price);
     if let Some(volatility) = volatility {
-        series_params.set_implied_volatility(Some(volatility));
+        series_params.set_implied_volatility(volatility);
     }
     let new_chain = OptionSeries::build_series(&series_params);
     Ok(new_chain)
@@ -216,12 +216,11 @@ mod tests_generator_optionseries {
     fn create_test_option_series() -> OptionSeries {
         // Create basic chain parameters
         let price_params = OptionDataPriceParams::new(
-            pos!(100.0),
-            ExpirationDate::Days(pos!(30.0)),
-            Some(pos!(0.2)),
-            dec!(0.05),
-            pos!(0.02),
-            Some("TEST".to_string()),
+            Some(Box::new(pos!(100.0))),
+            Some(ExpirationDate::Days(pos!(30.0))),
+            Some(dec!(0.05)),
+            spos!(0.02),
+            Some(Box::new("TEST".to_string())),
         );
 
         let chain_params = OptionChainBuildParams::new(
@@ -234,6 +233,7 @@ mod tests_generator_optionseries {
             pos!(0.02),
             2,
             price_params,
+            pos!(0.2),
         );
 
         // Create series with different expirations
@@ -542,9 +542,8 @@ mod tests_generator_optionseries {
 
         // Verify the implied volatility was updated if we can access it
         if let Ok(params) = new_series.to_build_params() {
-            if let Some(iv) = params.chain_params.get_implied_volatility() {
-                assert_pos_relative_eq!(iv, volatility.unwrap(), pos!(0.01));
-            }
+            let iv = params.chain_params.get_implied_volatility();
+            assert_pos_relative_eq!(iv, volatility.unwrap(), pos!(0.01));
         }
     }
 

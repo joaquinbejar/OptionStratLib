@@ -60,6 +60,7 @@ impl OptionSeriesBuildParams {
     /// be considered by the caller.
     ///
     pub fn set_underlying_price(&mut self, price: &Positive) {
+        let price = Some(Box::new(price.clone()));
         self.chain_params.set_underlying_price(price);
     }
 
@@ -80,7 +81,7 @@ impl OptionSeriesBuildParams {
     /// - Use `Some(value)` to set a new positive implied volatility.
     /// - Pass `None` to clear the existing implied volatility.
     ///
-    pub fn set_implied_volatility(&mut self, volatility: Option<Positive>) {
+    pub fn set_implied_volatility(&mut self, volatility: Positive) {
         self.chain_params.set_implied_volatility(volatility);
     }
 }
@@ -115,12 +116,11 @@ mod tests {
         let expiration = ExpirationDate::from_string_to_days(&tomorrow).unwrap();
         let expiration_as_string = expiration.to_string();
         let price_params = OptionDataPriceParams::new(
-            pos!(100.0),
-            expiration,
-            spos!(0.2),
-            dec!(0.05),
-            pos!(0.02),
-            None,
+            Some(Box::new(pos!(100.0))),
+            Some(ExpirationDate::Days(pos!(30.0))),
+            Some(dec!(0.05)),
+            spos!(0.02),
+            Some(Box::new("AAPL".to_string())),
         );
         let chain_params = OptionChainBuildParams::new(
             "TEST".to_string(),
@@ -132,6 +132,7 @@ mod tests {
             pos!(0.02),
             2,
             price_params,
+            pos!(0.2)
         );
 
         let params = OptionSeriesBuildParams {

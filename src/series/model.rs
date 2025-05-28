@@ -149,20 +149,20 @@ impl OptionSeries {
         let mut chains: BTreeMap<ExpirationDate, OptionChain> = BTreeMap::new();
         for series in params.series.clone().into_iter() {
             let expiration_date: ExpirationDate = ExpirationDate::Days(series);
-            params.chain_params.price_params.expiration_date = expiration_date;
+            params.chain_params.price_params.expiration_date = Some(expiration_date);
             params.chain_params.strike_interval = None;
             let mut chain: OptionChain = OptionChain::build_chain(&params.chain_params);
-
             chain.update_expiration_date(expiration_date.get_date_string().unwrap());
             chains.insert(expiration_date, chain);
         }
-
+        let price_params = params.chain_params.price_params.clone();
+        let underlying_price = *price_params.underlying_price.unwrap();
         Self {
             symbol: params.chain_params.symbol.clone(),
-            underlying_price: params.chain_params.price_params.underlying_price,
+            underlying_price,
             chains,
-            risk_free_rate: Some(params.chain_params.price_params.risk_free_rate),
-            dividend_yield: Some(params.chain_params.price_params.dividend_yield),
+            risk_free_rate: price_params.risk_free_rate,
+            dividend_yield: price_params.dividend_yield,
         }
     }
 
@@ -420,7 +420,7 @@ mod tests_option_series {
             spos!(5.5),
             spos!(4.5),
             spos!(5.0),
-            spos!(0.2),
+            pos!(0.2),
             None,
             None,
             None,
@@ -576,12 +576,11 @@ mod tests_option_series {
         fn test_build_series_basic() {
             // Create price params
             let price_params = OptionDataPriceParams::new(
-                pos!(100.0),
-                ExpirationDate::Days(pos!(30.0)),
-                spos!(0.20),
-                dec!(0.05),
-                pos!(0.02),
-                Some("TEST".to_string()),
+                Some(Box::new(pos!(100.0))),
+                Some(ExpirationDate::Days(pos!(30.0))),
+                Some(dec!(0.05)),
+                spos!(0.02),
+                Some(Box::new("TEST".to_string())),
             );
 
             // Create chain build params
@@ -595,6 +594,7 @@ mod tests_option_series {
                 pos!(0.01),
                 2,
                 price_params,
+                pos!(0.2),
             );
 
             // Create series build params with multiple expiration dates

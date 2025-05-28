@@ -215,6 +215,10 @@ impl OptionChainBuildParams {
     pub fn set_implied_volatility(&mut self, implied_vol: Positive) {
         self.implied_volatility = implied_vol;
     }
+    
+    pub fn get_implied_volatility(&self) -> Positive {
+        self.implied_volatility.clone()
+    }
 }
 
 impl Display for OptionChainBuildParams {
