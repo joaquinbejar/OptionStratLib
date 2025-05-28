@@ -2,6 +2,7 @@ use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, StrategyBasics, StrategyType, Validable,
 };
 use crate::error::strategies::BreakEvenErrorKind;
+use crate::spos;
 use crate::{
     ExpirationDate, Options, Positive,
     chains::{StrategyLegs, chain::OptionChain, utils::OptionDataGroup},
@@ -27,7 +28,6 @@ use crate::{
         utils::{FindOptimalSide, OptimizationCriteria},
     },
 };
-use crate::spos;
 use chrono::Utc;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};

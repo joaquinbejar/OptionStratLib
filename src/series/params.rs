@@ -132,7 +132,7 @@ mod tests {
             pos!(0.02),
             2,
             price_params,
-            pos!(0.2)
+            pos!(0.2),
         );
 
         let params = OptionSeriesBuildParams {

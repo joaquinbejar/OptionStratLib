@@ -13,26 +13,27 @@ use optionstratlib::strategies::{
 };
 use optionstratlib::utils::setup_logger;
 
+use optionstratlib::model::types::Action;
 use optionstratlib::visualization::Graph;
 use optionstratlib::{Positive, pos};
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use tracing::{debug, info};
-use optionstratlib::model::types::Action;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     setup_logger();
-    let mut option_chain =
-        OptionChain::load_from_json("examples/Chains/Germany-40-2025-05-27-15:29:00-UTC-24209.json")?;
+    let mut option_chain = OptionChain::load_from_json(
+        "examples/Chains/Germany-40-2025-05-27-15:29:00-UTC-24209.json",
+    )?;
     info!("Chain loaded");
     option_chain.update_greeks();
     info!("{}", &option_chain);
-    
+
     let mut strategy = ShortStrangle::new(
         option_chain.get_title(),
         option_chain.underlying_price,
-        Positive::ZERO,   // call_strike
-        Positive::ZERO,   // put_strike
+        Positive::ZERO, // call_strike
+        Positive::ZERO, // put_strike
         ExpirationDate::Days(pos!(0.2)),
         Positive::ZERO, // implied_volatility
         Decimal::ZERO,  // risk_free_rate
@@ -63,12 +64,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!("Profit Area: {:.2}%", strategy.get_profit_area()?);
     info!("Delta:  {:#?}", strategy.delta_neutrality()?);
     if strategy.get_profit_ratio()? > Positive::ZERO.into() {
-        let path: &std::path::Path =
-            "Draws/Chains/short_strangle_ger40_area.html".as_ref();
+        let path: &std::path::Path = "Draws/Chains/short_strangle_ger40_area.html".as_ref();
         strategy.write_html(path)?;
     }
     info!("Greeks:  {:#?}", strategy.greeks());
-    
+
     if strategy.get_profit_ratio()? > Positive::ZERO.into() {
         debug!("Strategy:  {:#?}", strategy);
         let file_path = "Draws/Chains/short_strangle_ger40_area.png";

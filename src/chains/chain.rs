@@ -1101,6 +1101,7 @@ impl OptionChain {
     pub fn load_from_json(file_path: &str) -> Result<Self, Box<dyn Error>> {
         let file = File::open(file_path)?;
         let mut option_chain: OptionChain = serde_json::from_reader(file)?;
+        option_chain.set_optiondata_extra_params()?;
         option_chain.mutate_single_options(|option| {
             option.implied_volatility = if option.implied_volatility >= Positive::ONE {
                 option.implied_volatility / Positive::HUNDRED
@@ -2149,6 +2150,22 @@ impl OptionChain {
             .into()),
         }
     }
+
+    pub fn set_optiondata_extra_params(&mut self) -> Result<(), ChainError> {
+        let params = OptionDataPriceParams::new(
+            Some(Box::new(self.underlying_price)),
+            ExpirationDate::from_string(&self.expiration_date).ok(),
+            self.risk_free_rate,
+            self.dividend_yield,
+            Some(self.symbol.clone()),
+        );
+
+        self.mutate_single_options(|option| {
+            option.set_extra_params(params.clone());
+        });
+
+        Ok(())
+    }
 }
 
 impl Default for OptionChain {
@@ -2848,17 +2865,17 @@ mod tests_chain_base {
             spos!(100.0),
             Some(100),
         );
-        let result = chain.save_to_json(".");
+        let result = chain.save_to_json("tests/tmp/");
         assert!(result.is_ok());
 
-        let result = OptionChain::load_from_json("./SP500-18-oct-2024-5781.9.json");
+        let result = OptionChain::load_from_json("tests/tmp/SP500-18-oct-2024-5781.9.json");
         assert!(result.is_ok());
         let chain = result.unwrap();
         assert_eq!(chain.symbol, "SP500");
         assert_eq!(chain.expiration_date, "18-oct-2024");
         assert_eq!(chain.underlying_price, 5781.9);
 
-        let file_name = "./SP500-18-oct-2024-5781.9.json".to_string();
+        let file_name = "tests/tmp/SP500-18-oct-2024-5781.9.json".to_string();
         let remove_result = fs::remove_file(file_name);
         assert!(remove_result.is_ok());
     }
@@ -2926,7 +2943,10 @@ mod tests_option_data {
 
     #[test]
     fn test_validate_missing_both_sides() {
-        let mut option_data = OptionData { strike_price: pos!(100.0), ..Default::default() };
+        let mut option_data = OptionData {
+            strike_price: pos!(100.0),
+            ..Default::default()
+        };
         option_data.implied_volatility = pos!(0.2);
         assert!(!option_data.validate());
     }
@@ -2973,7 +2993,10 @@ mod tests_option_data {
 
     #[test]
     fn test_calculate_prices_success() {
-        let mut option_data = OptionData { strike_price: pos!(100.0), ..Default::default() };
+        let mut option_data = OptionData {
+            strike_price: pos!(100.0),
+            ..Default::default()
+        };
         option_data.implied_volatility = pos!(0.2);
         let result = option_data.calculate_prices(None);
 
@@ -2986,7 +3009,10 @@ mod tests_option_data {
 
     #[test]
     fn test_calculate_prices_missing_volatility() {
-        let mut option_data = OptionData { strike_price: pos!(100.0), ..Default::default() };
+        let mut option_data = OptionData {
+            strike_price: pos!(100.0),
+            ..Default::default()
+        };
         let _ = option_data.calculate_prices(None);
 
         info!("{}", option_data);
@@ -3001,7 +3027,10 @@ mod tests_option_data {
 
     #[test]
     fn test_calculate_prices_override_volatility() {
-        let mut option_data = OptionData { strike_price: pos!(100.0), ..Default::default() };
+        let mut option_data = OptionData {
+            strike_price: pos!(100.0),
+            ..Default::default()
+        };
         option_data.implied_volatility = pos!(0.2);
         let result = option_data.calculate_prices(None);
 
@@ -3021,7 +3050,10 @@ mod tests_option_data {
 
     #[test]
     fn test_calculate_prices_with_all_parameters() {
-        let mut option_data = OptionData { strike_price: pos!(100.0), ..Default::default() };
+        let mut option_data = OptionData {
+            strike_price: pos!(100.0),
+            ..Default::default()
+        };
         option_data.implied_volatility = pos!(0.2);
         let result = option_data.calculate_prices(None);
 

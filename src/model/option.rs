@@ -683,7 +683,8 @@ impl From<&OptionData> for Options {
             dividend_yield: option_data.dividend_yield.unwrap_or(Positive::ZERO),
             exotic_params: None,
         }
-    }}
+    }
+}
 
 impl Default for Options {
     fn default() -> Self {

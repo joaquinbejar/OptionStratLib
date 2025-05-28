@@ -3,11 +3,11 @@
    Email: jb@taunais.com
    Date: 15/8/24
 ******************************************************************************/
-use crate::{ExpirationDate, OptionStyle, OptionType, Options, Side};
 use crate::constants::{MAX_VOLATILITY, MIN_VOLATILITY};
 use crate::error::VolatilityError;
 use crate::model::decimal::decimal_normal_sample;
 use crate::utils::time::TimeFrame;
+use crate::{ExpirationDate, OptionStyle, OptionType, Options, Side};
 use crate::{Positive, pos};
 use num_traits::{FromPrimitive, ToPrimitive};
 use rand::random;
@@ -140,7 +140,6 @@ pub fn implied_volatility(
         None => Err("No valid volatility found".into()),
     }
 }
-
 
 /// Calculates the implied volatility (IV) of an option given its parameters.
 ///
@@ -732,7 +731,7 @@ mod tests_implied_volatility {
 
         let iv = result.unwrap();
         assert!(iv >= MIN_VOLATILITY && iv <= MAX_VOLATILITY);
-        
+
         let result = calculate_iv(
             market_price,
             pos!(100.0),
@@ -742,7 +741,7 @@ mod tests_implied_volatility {
             "TEST".to_string(),
         );
         assert!(result.is_ok());
-        
+
         let iv = result.unwrap();
         assert!(iv >= MIN_VOLATILITY && iv <= MAX_VOLATILITY);
         assert_pos_relative_eq!(iv, pos!(0.437), pos!(1e-3));
@@ -913,7 +912,7 @@ mod tests_implied_volatility {
             }
         }
     }
-    
+
     #[test]
     fn test_implied_volatility_zero_dte_real_put() {
         let iv = pos!(0.356831);

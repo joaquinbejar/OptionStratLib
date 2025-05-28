@@ -275,9 +275,9 @@ mod tests {
             pos!(1.0),            // 1 contract
             pos!(5.0),            // Premium paid: $5.00
             pos!(1.0),            // Fees: $1.00
-            spos!(100.0),    // Underlying price at open: $100.00
-            spos!(30.0),     // 30 days to expiration
-            spos!(0.2),      // IV: 20%
+            spos!(100.0),         // Underlying price at open: $100.00
+            spos!(30.0),          // 30 days to expiration
+            spos!(0.2),           // IV: 20%
         );
 
         // 2. Calculate initial PnL (should be negative as we paid premium + fees)
@@ -300,9 +300,9 @@ mod tests {
             pos!(1.0),            // 1 contract
             pos!(12.0),           // Closing premium: $12.00 (higher due to price increase)
             pos!(1.0),            // Closing fees: $1.00
-            spos!(110.0),    // Underlying price at close: $110.00
-            spos!(20.0),     // 20 days to expiration (10 days elapsed)
-            spos!(0.22),     // IV: 22%
+            spos!(110.0),         // Underlying price at close: $110.00
+            spos!(20.0),          // 20 days to expiration (10 days elapsed)
+            spos!(0.22),          // IV: 22%
         );
 
         // 4. Calculate closing PnL (should be positive as closing premium > initial premium + fees)
@@ -378,9 +378,9 @@ mod tests {
             pos!(1.0),         // 1 contract
             pos!(5.0),         // Premium received: $5.00
             pos!(1.0),         // Fees: $1.00
-            spos!(100.0), // Underlying price at open: $100.00
-            spos!(30.0),  // 30 days to expiration
-            spos!(0.2),   // IV: 20%
+            spos!(100.0),      // Underlying price at open: $100.00
+            spos!(30.0),       // 30 days to expiration
+            spos!(0.2),        // IV: 20%
         );
 
         // 2. Calculate initial PnL (should be positive as we receive premium - fees)
@@ -474,14 +474,14 @@ mod tests {
             TradeStatus::Open,
             Some(open_date),
             OptionType::European,
-            Side::Long,        // Long position
-            OptionStyle::Put,  // Put option
-            pos!(1.0),         // 1 contract
-            pos!(4.0),         // Premium paid: $4.00
-            pos!(1.0),         // Fees: $1.00
-            spos!(100.0), // Underlying price at open: $100.00
-            spos!(30.0),  // 30 days to expiration
-            spos!(0.2),   // IV: 20%
+            Side::Long,       // Long position
+            OptionStyle::Put, // Put option
+            pos!(1.0),        // 1 contract
+            pos!(4.0),        // Premium paid: $4.00
+            pos!(1.0),        // Fees: $1.00
+            spos!(100.0),     // Underlying price at open: $100.00
+            spos!(30.0),      // 30 days to expiration
+            spos!(0.2),       // IV: 20%
         );
 
         // 2. Calculate initial PnL (should be negative as we paid premium + fees)
@@ -575,14 +575,14 @@ mod tests {
             TradeStatus::Open,
             Some(open_date),
             OptionType::European,
-            Side::Short,       // Short position
-            OptionStyle::Put,  // Put option
-            pos!(1.0),         // 1 contract
-            pos!(4.0),         // Premium received: $4.00
-            pos!(1.0),         // Fees: $1.00
-            spos!(100.0), // Underlying price at open: $100.00
-            spos!(30.0),  // 30 days to expiration
-            spos!(0.2),   // IV: 20%
+            Side::Short,      // Short position
+            OptionStyle::Put, // Put option
+            pos!(1.0),        // 1 contract
+            pos!(4.0),        // Premium received: $4.00
+            pos!(1.0),        // Fees: $1.00
+            spos!(100.0),     // Underlying price at open: $100.00
+            spos!(30.0),      // 30 days to expiration
+            spos!(0.2),       // IV: 20%
         );
 
         // 2. Calculate initial PnL (should be positive as we receive premium - fees)
