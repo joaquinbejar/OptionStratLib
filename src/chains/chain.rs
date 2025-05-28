@@ -324,7 +324,7 @@ impl OptionChain {
     ///     Some(ExpirationDate::Days(pos!(30.0))),    // expiration date
     ///     Some(dec!(0.05)),                          // risk-free rate
     ///     spos!(0.0),                           // dividend yield
-    ///     Some(Box::new("SPY".to_string()))              // underlying symbol
+    ///     Some("SPY".to_string())              // underlying symbol
     /// );
     ///
     /// let build_params = OptionChainBuildParams::new(
@@ -559,7 +559,7 @@ impl OptionChain {
             Some(ExpirationDate::from_string(&self.expiration_date)?),
             self.risk_free_rate,
             self.dividend_yield,
-            Some(Box::new(self.symbol.clone())),
+            Some(self.symbol.clone()),
         );
 
         // Determine a reasonable number of decimal places based on the underlying price
@@ -745,7 +745,7 @@ impl OptionChain {
             Some(expiration_date),
             self.risk_free_rate,
             self.dividend_yield,
-            Some(Box::new(self.symbol.clone())),
+            Some(self.symbol.clone()),
         );
         option_data.set_extra_params(params);
 
@@ -2182,7 +2182,7 @@ impl OptionChainParams for OptionChain {
             ExpirationDate::from_string(&self.expiration_date).ok(),
             self.risk_free_rate,
             self.dividend_yield,
-            Some(Box::new(self.symbol.clone())),
+            Some(self.symbol.clone()),
         ))
     }
 }
@@ -2575,7 +2575,7 @@ mod tests_chain_base {
                 Some(ExpirationDate::Days(pos!(30.0))),
                 Some(dec!(0.05)),
                 spos!(0.02),
-                Some(Box::new("AAPL".to_string())),
+                Some("AAPL".to_string()),
             ),
             pos!(0.17),
         );
@@ -2614,7 +2614,7 @@ mod tests_chain_base {
                 Some(ExpirationDate::Days(pos!(30.0))),
                 Some(dec!(0.05)),
                 spos!(0.02),
-                Some(Box::new("AAPL".to_string())),
+                Some("AAPL".to_string()),
             ),
             pos!(0.3),
         );
@@ -2926,8 +2926,7 @@ mod tests_option_data {
 
     #[test]
     fn test_validate_missing_both_sides() {
-        let mut option_data = OptionData::default();
-        option_data.strike_price = pos!(100.0);
+        let mut option_data = OptionData { strike_price: pos!(100.0), ..Default::default() };
         option_data.implied_volatility = pos!(0.2);
         assert!(!option_data.validate());
     }
@@ -2974,8 +2973,7 @@ mod tests_option_data {
 
     #[test]
     fn test_calculate_prices_success() {
-        let mut option_data = OptionData::default();
-        option_data.strike_price = pos!(100.0);
+        let mut option_data = OptionData { strike_price: pos!(100.0), ..Default::default() };
         option_data.implied_volatility = pos!(0.2);
         let result = option_data.calculate_prices(None);
 
@@ -2988,8 +2986,7 @@ mod tests_option_data {
 
     #[test]
     fn test_calculate_prices_missing_volatility() {
-        let mut option_data = OptionData::default();
-        option_data.strike_price = pos!(100.0);
+        let mut option_data = OptionData { strike_price: pos!(100.0), ..Default::default() };
         let _ = option_data.calculate_prices(None);
 
         info!("{}", option_data);
@@ -3004,8 +3001,7 @@ mod tests_option_data {
 
     #[test]
     fn test_calculate_prices_override_volatility() {
-        let mut option_data = OptionData::default();
-        option_data.strike_price = pos!(100.0);
+        let mut option_data = OptionData { strike_price: pos!(100.0), ..Default::default() };
         option_data.implied_volatility = pos!(0.2);
         let result = option_data.calculate_prices(None);
 
@@ -3025,8 +3021,7 @@ mod tests_option_data {
 
     #[test]
     fn test_calculate_prices_with_all_parameters() {
-        let mut option_data = OptionData::default();
-        option_data.strike_price = pos!(100.0);
+        let mut option_data = OptionData { strike_price: pos!(100.0), ..Default::default() };
         option_data.implied_volatility = pos!(0.2);
         let result = option_data.calculate_prices(None);
 
@@ -5100,7 +5095,7 @@ mod tests_option_data_delta {
             Some(ExpirationDate::Days(pos!(30.0))),
             Some(dec!(0.05)),
             spos!(0.02),
-            Some(Box::new("AAPL".to_string())),
+            Some("AAPL".to_string()),
         )
     }
 
@@ -6525,7 +6520,7 @@ mod tests_atm_strike {
                 Some(ExpirationDate::Days(pos!(30.0))),
                 Some(dec!(0.05)),
                 spos!(0.02),
-                Some(Box::new("AAPL".to_string())),
+                Some("AAPL".to_string()),
             ),
             pos!(0.02),
         );
@@ -6723,7 +6718,7 @@ mod tests_atm_strike_bis {
                 Some(ExpirationDate::Days(pos!(30.0))),
                 Some(dec!(0.05)),
                 spos!(0.02),
-                Some(Box::new("AAPL".to_string())),
+                Some("AAPL".to_string()),
             ),
             pos!(0.02),
         );
@@ -7046,7 +7041,7 @@ mod tests_option_chain_utils_bis {
                 Some(ExpirationDate::Days(pos!(30.0))),
                 Some(dec!(0.05)),
                 spos!(0.02),
-                Some(Box::new("AAPL".to_string())),
+                Some("AAPL".to_string()),
             ),
             pos!(0.2),
         );
@@ -7226,7 +7221,7 @@ mod tests_to_build_params_bis {
                 Some(ExpirationDate::Days(pos!(30.0))),
                 Some(dec!(0.05)),
                 spos!(0.02),
-                Some(Box::new("AAPL".to_string())),
+                Some("AAPL".to_string()),
             ),
             pos!(0.2),
         );
@@ -7277,7 +7272,7 @@ mod chain_coverage_tests {
                 Some(ExpirationDate::Days(pos!(30.0))),
                 Some(dec!(0.05)),
                 spos!(0.02),
-                Some(Box::new("AAPL".to_string())),
+                Some("AAPL".to_string()),
             ),
             pos!(0.2),
         );
@@ -7506,7 +7501,7 @@ mod chain_coverage_tests_bis {
                 Some(ExpirationDate::Days(pos!(30.0))),
                 Some(dec!(0.05)),
                 spos!(0.02),
-                Some(Box::new("AAPL".to_string())),
+                Some("AAPL".to_string()),
             ),
             pos!(0.17),
         );

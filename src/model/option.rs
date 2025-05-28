@@ -665,10 +665,14 @@ impl Options {
 
 impl From<&OptionData> for Options {
     fn from(option_data: &OptionData) -> Self {
+        assert!(option_data.symbol.is_some());
+        assert!(option_data.expiration_date.is_some());
+        assert!(option_data.underlying_price.is_some());
+
         Options {
             option_type: OptionType::European,
             side: Side::Long,
-            underlying_symbol: *option_data.symbol.clone().unwrap(),
+            underlying_symbol: option_data.symbol.clone().unwrap(),
             strike_price: option_data.strike_price,
             expiration_date: option_data.expiration_date.unwrap(),
             implied_volatility: option_data.implied_volatility,

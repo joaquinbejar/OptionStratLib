@@ -220,7 +220,7 @@ mod tests_generator_optionseries {
             Some(ExpirationDate::Days(pos!(30.0))),
             Some(dec!(0.05)),
             spos!(0.02),
-            Some(Box::new("TEST".to_string())),
+            Some("TEST".to_string()),
         );
 
         let chain_params = OptionChainBuildParams::new(

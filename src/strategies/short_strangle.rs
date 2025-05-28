@@ -890,7 +890,7 @@ impl Optimizable for ShortStrangle {
                 OptionDataGroup::Two(first, second) => (first, second),
                 _ => panic!("Invalid OptionDataGroup"),
             };
-            
+
             let legs = StrategyLegs::TwoLegs {
                 first: short_put,
                 second: short_call,
@@ -1182,7 +1182,7 @@ impl PnLCalculator for ShortStrangle {
 mod tests_short_strangle {
     use super::*;
     use crate::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
-    use crate::pos;
+    use crate::{pos, spos};
     use approx::assert_relative_eq;
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
@@ -1400,14 +1400,14 @@ is expected and the underlying asset's price is anticipated to remain stable."
             Some(Box::new(pos!(100.0))),
             Some(ExpirationDate::Days(pos!(30.0))),
             Some(dec!(0.05)),
-            Some(pos!(0.02)),
-            Some(Box::new("AAPL".to_string())),
+            spos!(0.02),
+            Some("AAPL".to_string()),
         );
         let option_chain_build_params = OptionChainBuildParams::new(
             "AAPL".to_string(),
-            Some(pos!(1.0)),
+            spos!(1.0),
             10,
-            Some(pos!(10.0)),
+            spos!(10.0),
             dec!(-0.2),
             dec!(0.1),
             pos!(0.01),

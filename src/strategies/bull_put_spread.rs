@@ -1138,6 +1138,7 @@ mod tests_bull_put_spread_strategy {
 mod tests_bull_put_spread_validation {
     use super::*;
     use crate::model::ExpirationDate;
+    use crate::pos;
     use chrono::Utc;
     use rust_decimal_macros::dec;
 
@@ -1320,7 +1321,8 @@ mod tests_bull_put_spread_optimization {
     use super::*;
     use crate::chains::OptionData;
     use crate::model::ExpirationDate;
-    
+    use crate::{pos, spos};
+
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
@@ -1331,13 +1333,13 @@ mod tests_bull_put_spread_optimization {
             pos!(85.0),       // strike
             None,             // call_bid
             None,             // call_ask
-            Some(pos!(2.0)),       // put_bid
-            Some(pos!(2.2)),       // put_ask
-            pos!(0.2),       // implied_volatility
+            spos!(2.0),       // put_bid
+            spos!(2.2),       // put_ask
+            pos!(0.2),        // implied_volatility
             Some(dec!(-0.3)), // delta
             Some(dec!(0.2)),
             Some(dec!(0.2)),
-            Some(pos!(100.0)), // volume
+            spos!(100.0), // volume
             Some(50),     // open_interest
         );
 
@@ -1345,13 +1347,13 @@ mod tests_bull_put_spread_optimization {
             pos!(90.0),
             None,
             None,
-            Some(pos!(3.0)),
-            Some(pos!(3.2)),
+            spos!(3.0),
+            spos!(3.2),
             pos!(0.2),
             Some(dec!(-0.4)),
             Some(dec!(0.2)),
             Some(dec!(0.2)),
-            Some(pos!(150.0)),
+            spos!(150.0),
             Some(75),
         );
 
@@ -1359,13 +1361,13 @@ mod tests_bull_put_spread_optimization {
             pos!(95.0),
             None,
             None,
-            Some(pos!(4.0)),
-            Some(pos!(4.2)),
+            spos!(4.0),
+            spos!(4.2),
             pos!(0.2),
             Some(dec!(-0.5)),
             Some(dec!(0.2)),
             Some(dec!(0.2)),
-            Some(pos!(200.0)),
+            spos!(200.0),
             Some(100),
         );
 
@@ -1373,13 +1375,13 @@ mod tests_bull_put_spread_optimization {
             pos!(100.0),
             None,
             None,
-            Some(pos!(5.0)),
-            Some(pos!(5.2)),
+            spos!(5.0),
+            spos!(5.2),
             pos!(0.2),
             Some(dec!(-0.6)),
             Some(dec!(0.2)),
             Some(dec!(0.2)),
-            Some(pos!(250.0)),
+            spos!(250.0),
             Some(125),
         );
 
@@ -1387,13 +1389,13 @@ mod tests_bull_put_spread_optimization {
             pos!(105.0),
             None,
             None,
-            Some(pos!(6.0)),
-            Some(pos!(6.2)),
+            spos!(6.0),
+            spos!(6.2),
             pos!(0.2),
             Some(dec!(-0.7)),
             Some(dec!(0.2)),
             Some(dec!(0.2)),
-            Some(pos!(300.0)),
+            spos!(300.0),
             Some(150),
         );
 
@@ -1493,13 +1495,13 @@ mod tests_bull_put_spread_optimization {
             pos!(95.0),
             None,
             None,
-            Some(pos!(3.0)),
-            Some(pos!(3.2)),
+            spos!(3.0),
+            spos!(3.2),
             pos!(0.2),
             Some(dec!(-0.4)),
             Some(dec!(0.2)),
             Some(dec!(0.2)),
-            Some(pos!(100.0)),
+            spos!(100.0),
             Some(50),
             None,
             None,
@@ -1525,13 +1527,13 @@ mod tests_bull_put_spread_optimization {
             pos!(105.0),
             None,
             None,
-            Some(pos!(4.0)),
-            Some(pos!(4.2)),
+            spos!(4.0),
+            spos!(4.2),
             pos!(0.2),
             Some(dec!(-0.5)),
             Some(dec!(0.2)),
             Some(dec!(0.2)),
-            Some(pos!(100.0)),
+            spos!(100.0),
             Some(50),
             None,
             None,
@@ -1556,13 +1558,13 @@ mod tests_bull_put_spread_optimization {
             pos!(90.0),
             None,
             None,
-            Some(pos!(3.0)),
-            Some(pos!(3.2)),
+            spos!(3.0),
+            spos!(3.2),
             pos!(0.2),
             Some(dec!(-0.4)),
             Some(dec!(0.2)),
             Some(dec!(0.2)),
-            Some(pos!(100.0)),
+            spos!(100.0),
             Some(50),
             None,
             None,
@@ -1575,13 +1577,13 @@ mod tests_bull_put_spread_optimization {
             pos!(95.0),
             None,
             None,
-            Some(pos!(4.0)),
-            Some(pos!(4.2)),
+            spos!(4.0),
+            spos!(4.2),
             pos!(0.2),
             Some(dec!(-0.5)),
             Some(dec!(0.2)),
             Some(dec!(0.2)),
-            Some(pos!(100.0)),
+            spos!(100.0),
             Some(50),
             None,
             None,
@@ -1775,6 +1777,7 @@ mod tests_bull_put_spread_graph {
 #[cfg(test)]
 mod tests_bull_put_spread_probability {
     use super::*;
+    use crate::pos;
     use crate::strategies::probabilities::utils::PriceTrend;
     use rust_decimal_macros::dec;
 

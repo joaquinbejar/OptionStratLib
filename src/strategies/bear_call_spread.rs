@@ -18,22 +18,31 @@ Key characteristics:
 use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, StrategyBasics, StrategyType, Validable,
 };
-use crate::{ExpirationDate, Options, Positive, chains::{StrategyLegs, chain::OptionChain, utils::OptionDataGroup}, error::{
-    GreeksError, OperationErrorKind,
-    position::{PositionError, PositionValidationErrorKind},
-    probability::ProbabilityError,
-    strategies::{ProfitLossErrorKind, StrategyError},
-}, greeks::Greeks, model::{
-    ProfitLossRange,
-    position::Position,
-    types::{OptionBasicType, OptionStyle, OptionType, Side},
-    utils::mean_and_std,
-}, pnl::{PnLCalculator, utils::PnL}, pricing::payoff::Profit, strategies::{
-    BasicAble, Strategies, StrategyConstructor,
-    delta_neutral::DeltaNeutrality,
-    probabilities::{core::ProbabilityAnalysis, utils::VolatilityAdjustment},
-    utils::{FindOptimalSide, OptimizationCriteria},
-}};
+use crate::{
+    ExpirationDate, Options, Positive,
+    chains::{StrategyLegs, chain::OptionChain, utils::OptionDataGroup},
+    error::{
+        GreeksError, OperationErrorKind,
+        position::{PositionError, PositionValidationErrorKind},
+        probability::ProbabilityError,
+        strategies::{ProfitLossErrorKind, StrategyError},
+    },
+    greeks::Greeks,
+    model::{
+        ProfitLossRange,
+        position::Position,
+        types::{OptionBasicType, OptionStyle, OptionType, Side},
+        utils::mean_and_std,
+    },
+    pnl::{PnLCalculator, utils::PnL},
+    pricing::payoff::Profit,
+    strategies::{
+        BasicAble, Strategies, StrategyConstructor,
+        delta_neutral::DeltaNeutrality,
+        probabilities::{core::ProbabilityAnalysis, utils::VolatilityAdjustment},
+        utils::{FindOptimalSide, OptimizationCriteria},
+    },
+};
 use chrono::Utc;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -1659,7 +1668,7 @@ mod tests_bear_call_spread_optimizable {
     use super::*;
     use crate::model::ExpirationDate;
     use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
-    use crate::pos;
+    use crate::{pos, spos};
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
@@ -1670,43 +1679,43 @@ mod tests_bear_call_spread_optimizable {
         // Add options with different strikes and prices
         chain.add_option(
             pos!(95.0),      // strike
-            Some(pos!(6.0)),      // call_bid
-            Some(pos!(6.2)),      // call_ask
-            Some(pos!(1.0)),      // put_bid
-            Some(pos!(1.2)),      // put_ask
-            pos!(0.2),      // implied_vol
+            spos!(6.0),      // call_bid
+            spos!(6.2),      // call_ask
+            spos!(1.0),      // put_bid
+            spos!(1.2),      // put_ask
+            pos!(0.2),       // implied_vol
             Some(dec!(0.7)), // delta
             Some(dec!(0.3)),
             Some(dec!(0.3)),
-            Some(pos!(100.0)), // volume
+            spos!(100.0), // volume
             Some(50),     // open_interest
         );
 
         chain.add_option(
             pos!(100.0),
-            Some(pos!(3.0)),
-            Some(pos!(3.2)),
-            Some(pos!(3.0)),
-            Some(pos!(3.2)),
+            spos!(3.0),
+            spos!(3.2),
+            spos!(3.0),
+            spos!(3.2),
             pos!(0.2),
             Some(dec!(0.5)),
             Some(dec!(0.3)),
             Some(dec!(0.3)),
-            Some(pos!(200.0)),
+            spos!(200.0),
             Some(100),
         );
 
         chain.add_option(
             pos!(105.0),
-            Some(pos!(1.0)),
-            Some(pos!(1.2)),
-            Some(pos!(6.0)),
-            Some(pos!(6.2)),
+            spos!(1.0),
+            spos!(1.2),
+            spos!(6.0),
+            spos!(6.2),
             pos!(0.2),
             Some(dec!(0.3)),
             Some(dec!(0.3)),
             Some(dec!(0.3)),
-            Some(pos!(150.0)),
+            spos!(150.0),
             Some(75),
         );
 
@@ -1842,13 +1851,13 @@ mod tests_bear_call_spread_optimizable {
             pos!(110.0),
             None, // Invalid call_bid
             None, // Invalid call_ask
-            Some(pos!(1.0)),
-            Some(pos!(1.2)),
+            spos!(1.0),
+            spos!(1.2),
             pos!(0.2),
             Some(dec!(0.1)),
             Some(dec!(0.3)),
             Some(dec!(0.3)),
-            Some(pos!(50.0)),
+            spos!(50.0),
             Some(25),
         );
 

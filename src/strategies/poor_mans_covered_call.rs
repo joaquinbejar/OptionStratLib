@@ -959,7 +959,7 @@ mod tests_pmcc_optimization {
     use super::*;
     use crate::chains::OptionData;
     use crate::constants::DAYS_IN_A_YEAR;
-    use crate::pos;
+    use crate::{pos, spos};
     use rust_decimal_macros::dec;
 
     fn create_test_option_chain() -> OptionChain {
@@ -969,15 +969,15 @@ mod tests_pmcc_optimization {
         for strike in [140.0, 145.0, 150.0, 155.0, 160.0].iter() {
             chain.add_option(
                 pos!(*strike),
-                Some(pos!(5.0)),
-                Some(pos!(5.2)),
-                Some(pos!(4.8)),
-                Some(pos!(5.0)),
+                spos!(5.0),
+                spos!(5.2),
+                spos!(4.8),
+                spos!(5.0),
                 pos!(0.2),
                 Some(dec!(0.5)),
                 None,
                 None,
-                Some(pos!(100.0)),
+                spos!(100.0),
                 Some(50),
             );
         }
@@ -1010,10 +1010,10 @@ mod tests_pmcc_optimization {
         let strategy = create_base_strategy();
         let option = OptionData::new(
             pos!(160.0),
-            Some(pos!(5.0)),
-            Some(pos!(5.2)),
-            Some(pos!(4.8)),
-            Some(pos!(5.0)),
+            spos!(5.0),
+            spos!(5.2),
+            spos!(4.8),
+            spos!(5.0),
             pos!(0.2),
             None,
             None,
@@ -1035,10 +1035,10 @@ mod tests_pmcc_optimization {
         let strategy = create_base_strategy();
         let option = OptionData::new(
             pos!(140.0),
-            Some(pos!(5.0)),
-            Some(pos!(5.2)),
-            Some(pos!(4.8)),
-            Some(pos!(5.0)),
+            spos!(5.0),
+            spos!(5.2),
+            spos!(4.8),
+            spos!(5.0),
             pos!(0.2),
             None,
             None,
@@ -1078,10 +1078,10 @@ mod tests_pmcc_optimization {
         strategy.short_call.option.underlying_price = Positive::ZERO;
         let option = OptionData::new(
             pos!(160.0),
-            Some(pos!(5.0)),
-            Some(pos!(5.2)),
-            Some(pos!(4.8)),
-            Some(pos!(5.0)),
+            spos!(5.0),
+            spos!(5.2),
+            spos!(4.8),
+            spos!(5.0),
             pos!(0.2),
             None,
             None,
@@ -1105,10 +1105,10 @@ mod tests_pmcc_optimization {
         assert!(result.is_err());
         let option = OptionData::new(
             pos!(140.0),
-            Some(pos!(5.0)),
-            Some(pos!(5.2)),
-            Some(pos!(4.8)),
-            Some(pos!(5.0)),
+            spos!(5.0),
+            spos!(5.2),
+            spos!(4.8),
+            spos!(5.0),
             pos!(0.2),
             None,
             None,

@@ -274,7 +274,7 @@ pub struct OptionDataPriceParams {
     pub(crate) dividend_yield: Option<Positive>,
 
     /// Optional ticker symbol or identifier for the underlying asset
-    pub(crate) underlying_symbol: Option<Box<String>>,
+    pub(crate) underlying_symbol: Option<String>,
 }
 
 impl OptionDataPriceParams {
@@ -300,7 +300,7 @@ impl OptionDataPriceParams {
         expiration_date: Option<ExpirationDate>,
         risk_free_rate: Option<Decimal>,
         dividend_yield: Option<Positive>,
-        underlying_symbol: Option<Box<String>>,
+        underlying_symbol: Option<String>,
     ) -> Self {
         Self {
             underlying_price,
@@ -347,7 +347,7 @@ impl OptionDataPriceParams {
         self.dividend_yield
     }
 
-    pub fn get_symbol(&self) -> Option<Box<String>> {
+    pub fn get_symbol(&self) -> Option<String> {
         self.underlying_symbol.clone()
     }
 }
@@ -709,8 +709,6 @@ mod tests_strike_step {
     #[test]
     fn basic() {
         let step = strike_step(pos!(100.0), pos!(0.2), pos!(30.0), 11, None);
-        // Expect something around 2.0 or 2.5 depending on IV
-
         assert_eq!(step, 5.0);
     }
 
@@ -723,7 +721,7 @@ mod tests_strike_step {
 
     #[test]
     fn long_discrepancy() {
-        let symbol = Box::new("AAPL".to_string());
+        let symbol = "AAPL".to_string();
         let risk_free_rate = dec!(0.02);
         let dividend_yield = pos!(0.0);
         let volume = Some(Positive::ONE);
@@ -755,7 +753,7 @@ mod tests_strike_step {
             Some(symbol.clone()),
         );
         let build_params = OptionChainBuildParams::new(
-            *symbol,
+            symbol,
             volume,
             chain_size,
             Some(strike_interval),
@@ -1162,7 +1160,7 @@ mod tests_option_data_price_params {
             Some(ExpirationDate::Days(pos!(30.0))),
             Some(dec!(0.05)),
             spos!(0.02),
-            Some(Box::new("AAPL".to_string())),
+            Some("AAPL".to_string()),
         )
     }
 
@@ -1177,7 +1175,7 @@ mod tests_option_data_price_params {
         );
         assert_eq!(params.risk_free_rate.unwrap().to_f64().unwrap(), 0.05);
         assert_eq!(params.dividend_yield.unwrap().to_f64(), 0.02);
-        assert_eq!(*params.underlying_symbol.unwrap(), "AAPL");
+        assert_eq!(params.underlying_symbol.unwrap(), "AAPL");
     }
 
     #[test]
@@ -1214,13 +1212,13 @@ mod tests_option_data_price_params {
         let expiration_date = Some(ExpirationDate::Days(pos!(30.0)));
         let risk_free_rate = Some(dec!(0.05));
         let dividend_yield = spos!(0.02);
-        let underlying_symbol = Some(Box::new("AAPL".to_string()));
+        let underlying_symbol = Some("AAPL".to_string());
 
         let params = OptionDataPriceParams {
             underlying_price: underlying_price.clone(),
-            expiration_date: expiration_date,
-            risk_free_rate: risk_free_rate,
-            dividend_yield: dividend_yield,
+            expiration_date,
+            risk_free_rate,
+            dividend_yield,
             underlying_symbol: underlying_symbol.clone(),
         };
 
@@ -1274,7 +1272,7 @@ mod tests_option_chain_build_params {
             Some(ExpirationDate::Days(pos!(30.0))),
             Some(dec!(0.05)),
             spos!(0.02),
-            Some(Box::new("AAPL".to_string())),
+            Some("AAPL".to_string()),
         )
     }
 
@@ -1422,7 +1420,7 @@ mod tests_sample {
             Some(ExpirationDate::Days(pos!(30.0))),
             Some(dec!(0.05)),
             spos!(0.02),
-            Some(Box::new("AAPL".to_string())),
+            Some("AAPL".to_string()),
         );
 
         let params = OptionChainBuildParams::new(

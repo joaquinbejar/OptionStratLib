@@ -120,7 +120,7 @@ mod tests {
             Some(ExpirationDate::Days(pos!(30.0))),
             Some(dec!(0.05)),
             spos!(0.02),
-            Some(Box::new("AAPL".to_string())),
+            Some("AAPL".to_string()),
         );
         let chain_params = OptionChainBuildParams::new(
             "TEST".to_string(),

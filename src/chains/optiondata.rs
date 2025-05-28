@@ -116,9 +116,8 @@ pub struct OptionData {
     /// The open interest, representing the number of outstanding contracts.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(super) open_interest: Option<u64>,
-
     #[serde(skip)]
-    pub symbol: Option<Box<String>>,
+    pub symbol: Option<String>,
     #[serde(skip)]
     pub expiration_date: Option<ExpirationDate>,
     #[serde(skip)]
@@ -127,7 +126,6 @@ pub struct OptionData {
     pub risk_free_rate: Option<Decimal>,
     #[serde(skip)]
     pub dividend_yield: Option<Positive>,
-
     #[serde(skip)]
     pub extra_fields: Option<Value>,
 }
@@ -175,7 +173,7 @@ impl OptionData {
         gamma: Option<Decimal>,
         volume: Option<Positive>,
         open_interest: Option<u64>,
-        symbol: Option<Box<String>>,
+        symbol: Option<String>,
         expiration_date: Option<ExpirationDate>,
         underlying_price: Option<Box<Positive>>,
         risk_free_rate: Option<Decimal>,
@@ -597,8 +595,8 @@ impl OptionData {
         self.put_ask = self.put_middle;
         self.put_bid = self.put_middle;
 
-        if spread.is_some() {
-            self.apply_spread(spread.unwrap(), 2);
+        if let Some(s) = spread {
+            self.apply_spread(s, 2);
         }
         Ok(())
     }
@@ -1083,7 +1081,7 @@ mod tests_get_position {
             Some(ExpirationDate::Days(pos!(30.0))),
             Some(dec!(0.05)),
             spos!(0.02),
-            Some(Box::new("AAPL".to_string())),
+            Some("AAPL".to_string()),
         )
     }
 
@@ -1606,7 +1604,7 @@ mod tests_get_option_for_iv {
             Some(ExpirationDate::Days(pos!(30.0))),
             Some(dec!(0.05)),
             spos!(0.02),
-            Some(Box::new("AAPL".to_string())),
+            Some("AAPL".to_string()),
         )
     }
 

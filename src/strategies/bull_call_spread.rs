@@ -1255,7 +1255,8 @@ mod tests_bull_call_spread_optimization {
     use super::*;
     use crate::chains::OptionData;
     use crate::model::ExpirationDate;
-    
+
+    use crate::spos;
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
@@ -1264,71 +1265,71 @@ mod tests_bull_call_spread_optimization {
 
         chain.add_option(
             pos!(85.0),      // strike
-            Some(pos!(16.0)),     // call_bid
-            Some(pos!(16.2)),     // call_ask
+            spos!(16.0),     // call_bid
+            spos!(16.2),     // call_ask
             None,            // put_bid
             None,            // put_ask
-            pos!(0.2),      // implied_volatility
+            pos!(0.2),       // implied_volatility
             Some(dec!(0.8)), // delta
             Some(dec!(0.2)),
             Some(dec!(0.2)),
-            Some(pos!(100.0)), // volume
+            spos!(100.0), // volume
             Some(50),     // open_interest
         );
 
         chain.add_option(
             pos!(90.0),
-            Some(pos!(11.5)),
-            Some(pos!(11.7)),
+            spos!(11.5),
+            spos!(11.7),
             None,
             None,
             pos!(0.2),
             Some(dec!(0.7)),
             Some(dec!(0.2)),
             Some(dec!(0.2)),
-            Some(pos!(150.0)),
+            spos!(150.0),
             Some(75),
         );
 
         chain.add_option(
             pos!(95.0),
-            Some(pos!(7.0)),
-            Some(pos!(7.2)),
+            spos!(7.0),
+            spos!(7.2),
             None,
             None,
             pos!(0.2),
             Some(dec!(0.6)),
             Some(dec!(0.2)),
             Some(dec!(0.2)),
-            Some(pos!(200.0)),
+            spos!(200.0),
             Some(100),
         );
 
         chain.add_option(
             pos!(100.0),
-            Some(pos!(3.5)),
-            Some(pos!(3.7)),
+            spos!(3.5),
+            spos!(3.7),
             None,
             None,
             pos!(0.2),
             Some(dec!(0.5)),
             Some(dec!(0.2)),
             Some(dec!(0.2)),
-            Some(pos!(250.0)),
+            spos!(250.0),
             Some(125),
         );
 
         chain.add_option(
             pos!(105.0),
-            Some(pos!(1.0)),
-            Some(pos!(1.2)),
+            spos!(1.0),
+            spos!(1.2),
             None,
             None,
             pos!(0.2),
             Some(dec!(0.4)),
             Some(dec!(0.2)),
             Some(dec!(0.2)),
-            Some(pos!(300.0)),
+            spos!(300.0),
             Some(150),
         );
 
@@ -1427,15 +1428,15 @@ mod tests_bull_call_spread_optimization {
         let spread = create_base_spread();
         let option = OptionData::new(
             pos!(95.0),
-            Some(pos!(7.0)),
-            Some(pos!(7.2)),
+            spos!(7.0),
+            spos!(7.2),
             None,
             None,
             pos!(0.2),
             Some(dec!(0.6)),
             Some(dec!(0.2)),
             Some(dec!(0.2)),
-            Some(pos!(100.0)),
+            spos!(100.0),
             Some(50),
             None,
             None,
@@ -1459,15 +1460,15 @@ mod tests_bull_call_spread_optimization {
         let spread = create_base_spread();
         let option = OptionData::new(
             pos!(105.0),
-            Some(pos!(1.0)),
-            Some(pos!(1.2)),
+            spos!(1.0),
+            spos!(1.2),
             None,
             None,
             pos!(0.2),
             Some(dec!(0.4)),
             Some(dec!(0.2)),
             Some(dec!(0.2)),
-            Some(pos!(100.0)),
+            spos!(100.0),
             Some(50),
             None,
             None,
@@ -1491,15 +1492,15 @@ mod tests_bull_call_spread_optimization {
         let spread = create_base_spread();
         let long_option = OptionData::new(
             pos!(95.0),
-            Some(pos!(7.0)),
-            Some(pos!(7.2)),
+            spos!(7.0),
+            spos!(7.2),
             None,
             None,
             pos!(0.2),
             Some(dec!(0.6)),
             Some(dec!(0.2)),
             Some(dec!(0.2)),
-            Some(pos!(100.0)),
+            spos!(100.0),
             Some(50),
             None,
             None,
@@ -1510,15 +1511,15 @@ mod tests_bull_call_spread_optimization {
         );
         let short_option = OptionData::new(
             pos!(100.0),
-            Some(pos!(3.5)),
-            Some(pos!(3.7)),
+            spos!(3.5),
+            spos!(3.7),
             None,
             None,
             pos!(0.2),
             Some(dec!(0.5)),
             Some(dec!(0.2)),
             Some(dec!(0.2)),
-            Some(pos!(100.0)),
+            spos!(100.0),
             Some(50),
             None,
             None,
@@ -1540,7 +1541,7 @@ mod tests_bull_call_spread_optimization {
         let spread = create_base_spread();
         let long_option = OptionData::new(
             pos!(95.0),
-            Some(pos!(7.2)),
+            spos!(7.2),
             Some(Positive::ZERO),
             None,
             None,
@@ -1548,7 +1549,7 @@ mod tests_bull_call_spread_optimization {
             Some(dec!(0.6)),
             Some(dec!(0.2)),
             Some(dec!(0.2)),
-            Some(pos!(100.0)),
+            spos!(100.0),
             Some(50),
             None,
             None,
@@ -1560,14 +1561,14 @@ mod tests_bull_call_spread_optimization {
         let short_option = OptionData::new(
             pos!(100.0),
             Some(Positive::ZERO),
-            Some(pos!(3.5)),
+            spos!(3.5),
             None,
             None,
             pos!(0.2),
             Some(dec!(0.5)),
             Some(dec!(0.2)),
             Some(dec!(0.2)),
-            Some(pos!(100.0)),
+            spos!(100.0),
             Some(50),
             None,
             None,
