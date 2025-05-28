@@ -142,7 +142,7 @@ impl OptionSeries {
     ///
     /// # Notes
     /// - This method assumes that valid expiration dates and series data are provided. Ensure proper
-    ///   validation of `params` prior to calling this method.
+    ///   validation of `params` before calling this method.
     /// - The use of a `BTreeMap` ensures that the resulting chains are sorted based on the expiration dates.
     pub fn build_series(params: &OptionSeriesBuildParams) -> Self {
         let mut params = params.clone();
@@ -405,13 +405,7 @@ mod tests_option_series {
     // Helper function to create a simple OptionChain for testing
     fn create_test_chain(expiration_days: Positive) -> OptionChain {
         let date = get_x_days_formatted_pos(expiration_days);
-        let mut chain = OptionChain::new(
-            "TEST",
-            pos!(100.0),
-            date,
-            Some(dec!(0.05)),
-            Some(pos!(0.02)),
-        );
+        let mut chain = OptionChain::new("TEST", pos!(100.0), date, Some(dec!(0.05)), spos!(0.02));
 
         // Add a simple option to the chain
         chain.add_option(
@@ -450,7 +444,7 @@ mod tests_option_series {
         );
 
         series.risk_free_rate = Some(dec!(0.05));
-        series.dividend_yield = Some(pos!(0.02));
+        series.dividend_yield = spos!(0.02);
 
         series
     }
@@ -611,7 +605,7 @@ mod tests_option_series {
             assert_eq!(series.underlying_price, pos!(100.0));
             assert_eq!(series.chains.len(), 3);
             assert_eq!(series.risk_free_rate, Some(dec!(0.05)));
-            assert_eq!(series.dividend_yield, Some(pos!(0.02)));
+            assert_eq!(series.dividend_yield, spos!(0.02));
 
             // Verify chain expiration dates
             let expirations = series.get_expiration_dates().unwrap();
