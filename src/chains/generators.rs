@@ -214,6 +214,7 @@ pub fn generator_positive(
 mod tests {
     use super::*;
     use crate::ExpirationDate;
+    use crate::pos;
     use crate::simulation::randomwalk::RandomWalk;
     use crate::simulation::steps::Xstep;
     use crate::simulation::{WalkType, WalkTypeAble};
@@ -325,12 +326,12 @@ mod tests {
 #[cfg(test)]
 mod generators_coverage_tests {
     use super::*;
-    use crate::ExpirationDate;
     use crate::chains::generators::{generator_optionchain, generator_positive};
     use crate::simulation::steps::{Step, Xstep, Ystep};
     use crate::simulation::{WalkParams, WalkType, WalkTypeAble};
     use crate::utils::TimeFrame;
     use crate::utils::time::get_tomorrow_formatted;
+    use crate::{ExpirationDate, spos};
     use rust_decimal_macros::dec;
 
     struct TestWalker {}
@@ -351,7 +352,7 @@ mod generators_coverage_tests {
             pos!(100.0),
             get_tomorrow_formatted(),
             Some(dec!(0.05)),
-            Some(pos!(0.02)),
+            spos!(0.02),
         );
 
         let walker = Box::new(TestWalker::new());
@@ -419,7 +420,7 @@ mod generators_coverage_tests {
             pos!(100.0),
             get_tomorrow_formatted(),
             Some(dec!(0.05)),
-            Some(pos!(0.02)),
+            spos!(0.02),
         );
 
         let walker = Box::new(TestWalker::new());
@@ -456,7 +457,7 @@ mod generators_coverage_tests {
             pos!(100.0),
             get_tomorrow_formatted(),
             Some(dec!(0.05)),
-            Some(pos!(0.02)),
+            spos!(0.02),
         );
 
         let walker = Box::new(TestWalker::new());
@@ -494,7 +495,7 @@ mod generators_coverage_tests {
             pos!(100.0),
             get_tomorrow_formatted(),
             Some(dec!(0.05)),
-            Some(pos!(0.02)),
+            spos!(0.02),
         );
 
         let walker = Box::new(TestWalker::new());
@@ -532,7 +533,7 @@ mod generators_coverage_tests {
             pos!(100.0),
             get_tomorrow_formatted(),
             Some(dec!(0.05)),
-            Some(pos!(0.02)),
+            spos!(0.02),
         );
 
         let walker = Box::new(TestWalker::new());
@@ -572,7 +573,7 @@ mod generators_coverage_tests {
             pos!(100.0),
             get_tomorrow_formatted(),
             Some(dec!(0.05)),
-            Some(pos!(0.02)),
+            spos!(0.02),
         );
 
         let walker = Box::new(TestWalker::new());
@@ -611,7 +612,7 @@ mod generators_coverage_tests {
             pos!(100.0),
             get_tomorrow_formatted(),
             Some(dec!(0.05)),
-            Some(pos!(0.02)),
+            spos!(0.02),
         );
 
         let walker = Box::new(TestWalker::new());
@@ -652,7 +653,7 @@ mod generators_coverage_tests {
             pos!(100.0),
             get_tomorrow_formatted(),
             Some(dec!(0.05)),
-            Some(pos!(0.02)),
+            spos!(0.02),
         );
 
         let walker = Box::new(TestWalker::new());
@@ -692,7 +693,7 @@ mod generators_coverage_tests {
             pos!(100.0),
             get_tomorrow_formatted(),
             Some(dec!(0.05)),
-            Some(pos!(0.02)),
+            spos!(0.02),
         );
 
         let walker = Box::new(TestWalker::new());
