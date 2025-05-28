@@ -45,7 +45,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         Some(ExpirationDate::Days(days)),
         Some(risk_free_rate),
         Some(dividend_yield),
-        Some(Box::new(symbol.clone())),
+        Some(symbol.clone()),
     );
     let build_params = OptionChainBuildParams::new(
         symbol,
