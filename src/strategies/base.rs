@@ -1890,12 +1890,18 @@ mod tests_optimizable {
             spos!(5.5),      // call_ask
             spos!(4.0),      // put_bid
             spos!(4.5),      // put_ask
-            spos!(0.2),      // implied_volatility
+            pos!(0.2),      // implied_volatility
             Some(dec!(0.5)), // delta
             Some(dec!(0.3)),
             Some(dec!(0.3)),
             spos!(1000.0), // volume
             Some(100),     // open_interest
+            None, 
+            None, 
+            None,
+            None,
+            None,
+            None,
         );
         assert!(strategy.is_valid_optimal_option(&option_data, &FindOptimalSide::All));
         assert!(strategy.is_valid_optimal_option(
@@ -1914,12 +1920,18 @@ mod tests_optimizable {
             spos!(5.5),      // call_ask
             spos!(4.0),      // put_bid
             spos!(4.5),      // put_ask
-            spos!(0.2),      // implied_volatility
+            pos!(0.2),      // implied_volatility
             Some(dec!(0.5)), // delta
             Some(dec!(0.3)),
             Some(dec!(0.3)),
             spos!(1000.0), // volume
             Some(100),     // open_interest
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
         );
         assert!(strategy.is_valid_optimal_option(&option_data, &FindOptimalSide::Upper));
     }
@@ -1934,12 +1946,18 @@ mod tests_optimizable {
             spos!(5.5),      // call_ask
             spos!(4.0),      // put_bid
             spos!(4.5),      // put_ask
-            spos!(0.2),      // implied_volatility
+            pos!(0.2),      // implied_volatility
             Some(dec!(0.5)), // delta
             Some(dec!(0.3)),
             Some(dec!(0.3)),
             spos!(1000.0), // volume
             Some(100),     // open_interest
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
         );
         assert!(strategy.is_valid_optimal_option(&option_data, &FindOptimalSide::Lower));
     }
@@ -1953,12 +1971,18 @@ mod tests_optimizable {
             spos!(5.5),      // call_ask
             spos!(4.0),      // put_bid
             spos!(4.5),      // put_ask
-            spos!(0.2),      // implied_volatility
+            pos!(0.2),      // implied_volatility
             Some(dec!(0.5)), // delta
             Some(dec!(0.3)),
             Some(dec!(0.3)),
             spos!(1000.0), // volume
             Some(100),     // open_interest
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
         );
         assert!(strategy.is_valid_optimal_option(&option_data, &FindOptimalSide::All));
         assert!(strategy.is_valid_optimal_option(
@@ -1977,12 +2001,18 @@ mod tests_optimizable {
             spos!(5.5),      // call_ask
             spos!(4.0),      // put_bid
             spos!(4.5),      // put_ask
-            spos!(0.2),      // implied_volatility
+            pos!(0.2),      // implied_volatility
             Some(dec!(0.5)), // delta
             Some(dec!(0.3)),
             Some(dec!(0.3)),
             spos!(1000.0), // volume
             Some(100),     // open_interest
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
         );
         assert!(strategy.is_valid_optimal_option(&option_data, &FindOptimalSide::Upper));
     }
@@ -1997,12 +2027,18 @@ mod tests_optimizable {
             spos!(5.5),      // call_ask
             spos!(4.0),      // put_bid
             spos!(4.5),      // put_ask
-            spos!(0.2),      // implied_volatility
+            pos!(0.2),      // implied_volatility
             Some(dec!(0.5)), // delta
             Some(dec!(0.3)),
             Some(dec!(0.3)),
             spos!(1000.0), // volume
             Some(100),     // open_interest
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
         );
         assert!(strategy.is_valid_optimal_option(&option_data, &FindOptimalSide::Lower));
     }

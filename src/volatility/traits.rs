@@ -96,18 +96,18 @@ pub trait AtmIvProvider {
     /// * `Ok(Some(Positive))` - If the ATM implied volatility is successfully retrieved.
     /// * `Ok(None)` - If the ATM implied volatility is not available or not applicable.
     /// * `Err(Box<dyn Error>)` - If an error occurs during the retrieval process.
-    fn atm_iv(&self) -> Result<&Option<Positive>, Box<dyn Error>>;
+    fn atm_iv(&self) -> Result<&Positive, Box<dyn Error>>;
 }
 
 impl AtmIvProvider for Positive {
-    fn atm_iv(&self) -> Result<&Option<Positive>, Box<dyn Error>> {
-        Ok(&None)
+    fn atm_iv(&self) -> Result<&Positive, Box<dyn Error>> {
+        Ok(self)
     }
 }
 
 impl AtmIvProvider for OptionChain {
-    fn atm_iv(&self) -> Result<&Option<Positive>, Box<dyn Error>> {
-        match self.atm_implied_volatility() {
+    fn atm_iv(&self) -> Result<&Positive, Box<dyn Error>> {
+        match self.get_atm_implied_volatility() {
             Ok(iv) => Ok(iv),
             Err(e) => Err(Box::new(std::io::Error::new(
                 std::io::ErrorKind::NotFound,
@@ -136,11 +136,11 @@ mod tests_volatility_traits {
     }
 
     struct TestIvProvider {
-        iv: Option<Positive>,
+        iv: Positive,
     }
 
     impl AtmIvProvider for TestIvProvider {
-        fn atm_iv(&self) -> Result<&Option<Positive>, Box<dyn Error>> {
+        fn atm_iv(&self) -> Result<&Positive, Box<dyn Error>> {
             Ok(&self.iv)
         }
     }
@@ -223,27 +223,14 @@ mod tests_volatility_traits {
         let result = value.atm_iv();
 
         assert!(result.is_ok());
-        assert!(result.unwrap().is_none());
     }
 
     #[test]
     fn test_atm_iv_provider_some() {
-        let provider = TestIvProvider {
-            iv: Some(pos!(0.25)),
-        };
+        let provider = TestIvProvider { iv: pos!(0.25) };
 
         let result = provider.atm_iv();
         assert!(result.is_ok());
-        assert!(result.unwrap().is_some());
-    }
-
-    #[test]
-    fn test_atm_iv_provider_none() {
-        let provider = TestIvProvider { iv: None };
-
-        let result = provider.atm_iv();
-        assert!(result.is_ok());
-        assert!(result.unwrap().is_none());
     }
 
     #[test]
@@ -251,7 +238,7 @@ mod tests_volatility_traits {
         struct ErrorIvProvider;
 
         impl AtmIvProvider for ErrorIvProvider {
-            fn atm_iv(&self) -> Result<&Option<Positive>, Box<dyn Error>> {
+            fn atm_iv(&self) -> Result<&Positive, Box<dyn Error>> {
                 Err(Box::new(std::io::Error::new(
                     ErrorKind::NotFound,
                     "ATM IV not available: test error",
@@ -269,23 +256,11 @@ mod tests_volatility_traits {
         assert!(io_error.to_string().contains("ATM IV not available"));
     }
 
-    // Test the actual implementation for OptionChain
-    #[test]
-    fn test_atm_iv_provider_for_option_chain() {
-        // This test requires a more complex setup with OptionChain
-        // and would typically be an integration test.
-        // For unit testing, we primarily focus on the trait behavior
-        // using mocks as demonstrated above.
-
-        // If you have a simple way to create an OptionChain with known
-        // ATM IV values, you could add a test here.
-    }
-
     #[test]
     fn test_combined_traits_usage() {
         // Create an implementation that provides both traits
         struct CombinedProvider {
-            iv_value: Option<Positive>,
+            iv_value: Positive,
         }
 
         impl VolatilitySmile for CombinedProvider {
@@ -295,14 +270,14 @@ mod tests_volatility_traits {
         }
 
         impl AtmIvProvider for CombinedProvider {
-            fn atm_iv(&self) -> Result<&Option<Positive>, Box<dyn Error>> {
+            fn atm_iv(&self) -> Result<&Positive, Box<dyn Error>> {
                 Ok(&self.iv_value)
             }
         }
 
         // Test with Some value
         let provider_with_iv = CombinedProvider {
-            iv_value: Some(pos!(0.2)),
+            iv_value: pos!(0.2),
         };
 
         // As VolatilitySmile
@@ -312,14 +287,5 @@ mod tests_volatility_traits {
         // As AtmIvProvider
         let iv_result = provider_with_iv.atm_iv();
         assert!(iv_result.is_ok());
-        assert!(iv_result.unwrap().is_some());
-
-        // Test with None value
-        let provider_without_iv = CombinedProvider { iv_value: None };
-
-        // As AtmIvProvider
-        let iv_result = provider_without_iv.atm_iv();
-        assert!(iv_result.is_ok());
-        assert!(iv_result.unwrap().is_none());
     }
 }

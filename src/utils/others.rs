@@ -323,10 +323,16 @@ mod tests_get_random_element {
                 None,                   // call_ask
                 None,                   // put_bid
                 None,                   // put_ask
-                None,                   // implied_volatility
+                pos!(0.2), // implied_volatility
                 None,                   // delta
                 None,                   // volume
                 None,                   // open_interest
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
                 None,
                 None,
             );

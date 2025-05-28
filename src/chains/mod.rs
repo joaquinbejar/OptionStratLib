@@ -37,12 +37,11 @@
 //!             pos!(0.02),
 //!             2,
 //!             OptionDataPriceParams::new(
-//!                 pos!(100.0),
-//!                 ExpirationDate::Days(pos!(30.0)),
-//!                 spos!(0.17),
-//!                 dec!(0.0),
-//!                 pos!(0.05),
-//!                 Some("SP500".to_string()),
+//!                 Some(Box::new(pos!(100.0))),
+//!                 Some(ExpirationDate::Days(pos!(30.0))),
+//!                 Some(dec!(0.0)),
+//!                 spos!(0.05),
+//!                 Some(Box::new("SP500".to_string())),
 //!             ),
 //!         );
 //!
@@ -126,11 +125,10 @@
 //!     derivative_tolerance: pos!(0.001),
 //! };
 //! let chain = OptionDataPriceParams::new(
-//!     Positive::new(2000.0).unwrap(),
-//!     ExpirationDate::Days(pos!(10.0)),
-//!     Some(Positive::new(0.01).unwrap()),
-//!     dec!(0.01),
-//!     Positive::ZERO,
+//!     Some(Box::new(Positive::new(2000.0).unwrap())),
+//!     Some(ExpirationDate::Days(pos!(10.0))),
+//!     Some(dec!(0.01)),
+//!     Some(Positive::ZERO),
 //!     None,
 //! );
 //!
@@ -216,9 +214,6 @@ pub mod utils;
 /// * `options` - Private module with core option pricing models and option-specific functionality
 mod options;
 
-/// * `four` - Private module implementing the four calls and puts
-mod four;
-
 /// * `rnd` - Private module for random number generation and stochastic processes
 mod rnd;
 
@@ -227,7 +222,6 @@ mod optiondata;
 mod generators;
 
 pub use chain::OptionChain;
-pub use four::FourOptions;
 pub use generators::{generator_optionchain, generator_positive};
 pub use legs::StrategyLegs;
 pub use optiondata::OptionData;

@@ -34,14 +34,14 @@ use tracing::debug;
 ///
 fn create_chain_from_step(
     previous_y_step: &Ystep<OptionChain>,
-    new_price: &Positive,
+    new_price: Option<Box<Positive>>,
     volatility: Option<Positive>,
 ) -> Result<OptionChain, Box<dyn Error>> {
     let chain = previous_y_step.value();
     let mut chain_params = chain.to_build_params()?;
     chain_params.set_underlying_price(new_price);
     if let Some(volatility) = volatility {
-        chain_params.set_implied_volatility(Some(volatility));
+        chain_params.set_implied_volatility(volatility);
     }
 
     let new_chain = OptionChain::build_chain(&chain_params);
@@ -142,7 +142,7 @@ pub fn generator_optionchain(
         };
         // convert y_step to OptionChain
         let y_step_chain: OptionChain =
-            create_chain_from_step(&previous_y_step, y_step, volatility).unwrap();
+            create_chain_from_step(&previous_y_step, Some(Box::new(y_step.clone())), volatility).unwrap();
         previous_y_step = previous_y_step.next(y_step_chain).clone();
         let step = Step {
             x: previous_x_step,
@@ -236,7 +236,7 @@ mod tests {
             y: Ystep::new(0, initial_price),
         };
 
-        let result = create_chain_from_step(&step.y, &new_price, None);
+        let result = create_chain_from_step(&step.y, Some(Box::new(new_price)), None);
         assert!(result.is_ok());
 
         let new_chain = result.unwrap();

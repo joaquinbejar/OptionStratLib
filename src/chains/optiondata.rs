@@ -4,18 +4,18 @@
    Date: 27/3/25
 ******************************************************************************/
 use crate::chains::utils::{OptionDataPriceParams, default_empty_string, empty_string_round_to_2};
-use crate::chains::{DeltasInStrike, FourOptions, OptionsInStrike};
+use crate::chains::{DeltasInStrike, OptionsInStrike};
 use crate::error::ChainError;
 use crate::greeks::{delta, gamma};
 use crate::model::Position;
-use crate::strategies::FindOptimalSide;
-use crate::{OptionStyle, OptionType, Options, Positive, Side, pos};
+use crate::strategies::{BasicAble, FindOptimalSide};
+use crate::{ExpirationDate, OptionStyle, OptionType, Options, Positive, Side, pos};
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use std::cmp::Ordering;
 use std::fmt;
-use std::sync::Arc;
 use tracing::{debug, error, trace};
 
 /// Struct representing a row in an option chain with detailed pricing and analytics data.
@@ -95,9 +95,7 @@ pub struct OptionData {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub put_middle: Option<Positive>,
 
-    /// The implied volatility of the option, derived from option prices.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub(crate) implied_volatility: Option<Positive>,
+    pub(crate) implied_volatility: Positive,
 
     /// The delta of the call option, measuring price sensitivity to underlying changes.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -119,10 +117,19 @@ pub struct OptionData {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(super) open_interest: Option<u64>,
 
-    /// Optional reference to the actual option contracts represented by this data.
-    /// This field is not serialized.
     #[serde(skip)]
-    pub options: Option<Box<FourOptions>>,
+    pub symbol: Option<Box<String>>,
+    #[serde(skip)]
+    pub expiration_date: Option<ExpirationDate>,
+    #[serde(skip)]
+    pub underlying_price: Option<Box<Positive>>,
+    #[serde(skip)]
+    pub risk_free_rate: Option<Decimal>,
+    #[serde(skip)]
+    pub dividend_yield: Option<Positive>,
+
+    #[serde(skip)]
+    pub extra_fields: Option<Value>,
 }
 
 impl OptionData {
@@ -162,12 +169,18 @@ impl OptionData {
         call_ask: Option<Positive>,
         put_bid: Option<Positive>,
         put_ask: Option<Positive>,
-        implied_volatility: Option<Positive>,
+        implied_volatility: Positive,
         delta_call: Option<Decimal>,
         delta_put: Option<Decimal>,
         gamma: Option<Decimal>,
         volume: Option<Positive>,
         open_interest: Option<u64>,
+        symbol: Option<Box<String>>,
+        expiration_date: Option<ExpirationDate>,
+        underlying_price: Option<Box<Positive>>,
+        risk_free_rate: Option<Decimal>,
+        dividend_yield: Option<Positive>,
+        extra_fields: Option<Value>,
     ) -> Self {
         OptionData {
             strike_price,
@@ -183,7 +196,12 @@ impl OptionData {
             gamma,
             volume,
             open_interest,
-            options: None,
+            symbol,
+            expiration_date,
+            underlying_price,
+            risk_free_rate,
+            dividend_yield,
+            extra_fields,
         }
     }
 
@@ -202,8 +220,34 @@ impl OptionData {
     ///
     /// Ensure that the `Positive` type enforces constraints to prevent invalid values
     /// such as negative volatility.
-    pub fn volatility(&self) -> Option<Positive> {
+    pub fn get_volatility(&self) -> Positive {
         self.implied_volatility
+    }
+
+    pub fn set_volatility(&mut self, volatility: &Positive) {
+        self.implied_volatility = *volatility;
+    }
+
+    pub fn set_extra_params(&mut self, params: OptionDataPriceParams) {
+        if let Some(symbol) = params.underlying_symbol {
+            self.symbol = Some(symbol);
+        };
+
+        if let Some(expiration_date) = params.expiration_date {
+            self.expiration_date = Some(expiration_date);
+        };
+
+        if let Some(underlying_price) = params.underlying_price {
+            self.underlying_price = Some(underlying_price);
+        };
+
+        if let Some(risk_free_rate) = params.risk_free_rate {
+            self.risk_free_rate = Some(risk_free_rate);
+        };
+
+        if let Some(dividend_yield) = params.dividend_yield {
+            self.dividend_yield = Some(dividend_yield);
+        };
     }
 
     /// Validates the option data to ensure it meets the required criteria for calculations.
@@ -226,16 +270,8 @@ impl OptionData {
             error!("Error: Strike price cannot be zero");
             return false;
         }
-        if self.implied_volatility.is_none() {
-            error!("Error: Implied volatility cannot be None");
-            return false;
-        }
-        if !self.valid_call() {
-            error!("Error: Invalid call");
-            return false;
-        }
-        if !self.valid_put() {
-            error!("Error: Invalid put");
+        if !self.valid_call() && !self.valid_put() {
+            error!("Error: No valid prices for call or put options");
             return false;
         }
         true
@@ -269,10 +305,7 @@ impl OptionData {
     ///
     /// `true` if all required call option data is present, `false` otherwise.
     pub(crate) fn valid_call(&self) -> bool {
-        self.strike_price > Positive::ZERO
-            && self.implied_volatility.is_some()
-            && self.call_bid.is_some()
-            && self.call_ask.is_some()
+        self.strike_price > Positive::ZERO && self.call_bid.is_some() && self.call_ask.is_some()
     }
 
     /// Checks if this option data contains valid put option information.
@@ -286,10 +319,7 @@ impl OptionData {
     ///
     /// `true` if all required put option data is present, `false` otherwise.
     pub(crate) fn valid_put(&self) -> bool {
-        self.strike_price > Positive::ZERO
-            && self.implied_volatility.is_some()
-            && self.put_bid.is_some()
-            && self.put_ask.is_some()
+        self.strike_price > Positive::ZERO && self.put_bid.is_some() && self.put_ask.is_some()
     }
 
     /// Retrieves the price at which a call option can be purchased.
@@ -378,40 +408,13 @@ impl OptionData {
     /// itself contains a valid implied volatility value.
     pub(super) fn get_option(
         &self,
-        price_params: &OptionDataPriceParams,
         side: Side,
         option_style: OptionStyle,
     ) -> Result<Options, ChainError> {
-        let implied_volatility = match price_params.implied_volatility {
-            Some(iv) => iv,
-            None => match self.implied_volatility {
-                Some(iv) => {
-                    assert!(iv <= Positive::ONE, "Implied volatility must be <= 1");
-                    iv
-                }
-                None => {
-                    return Err(ChainError::invalid_volatility(
-                        None,
-                        "Implied volatility not found",
-                    ));
-                }
-            },
-        };
-
-        Ok(Options::new(
-            OptionType::European,
-            side,
-            "OptionData".to_string(),
-            self.strike_price,
-            price_params.expiration_date,
-            implied_volatility,
-            pos!(1.0),
-            price_params.underlying_price,
-            price_params.risk_free_rate,
-            option_style,
-            price_params.dividend_yield,
-            None,
-        ))
+        let mut option = Options::from(self);
+        option.side = side;
+        option.option_style = option_style;
+        Ok(option)
     }
 
     /// Creates an option contract for implied volatility calculation with specified parameters.
@@ -445,25 +448,13 @@ impl OptionData {
     ///
     fn get_option_for_iv(
         &self,
-        price_params: &OptionDataPriceParams,
         side: Side,
         option_style: OptionStyle,
         initial_iv: Positive,
     ) -> Result<Options, ChainError> {
-        Ok(Options::new(
-            OptionType::European,
-            side,
-            "OptionData".to_string(),
-            self.strike_price,
-            price_params.expiration_date,
-            initial_iv,
-            pos!(1.0),
-            price_params.underlying_price,
-            price_params.risk_free_rate,
-            option_style,
-            price_params.dividend_yield,
-            None,
-        ))
+        let mut option = self.get_option(side, option_style)?;
+        option.set_implied_volatility(&initial_iv);
+        Ok(option)
     }
 
     /// Retrieves a `Position` based on the provided parameters, calculating the option premium using the Black-Scholes model.
@@ -497,14 +488,13 @@ impl OptionData {
     /// * The Black-Scholes model fails to calculate a valid option premium.
     pub fn get_position(
         &self,
-        price_params: &OptionDataPriceParams,
         side: Side,
         option_style: OptionStyle,
         date: Option<DateTime<Utc>>,
         open_fee: Option<Positive>,
         close_fee: Option<Positive>,
     ) -> Result<Position, ChainError> {
-        let option = self.get_option(price_params, side, option_style)?;
+        let option = self.get_option(side, option_style)?;
         let premium = match (side, option_style) {
             (Side::Long, OptionStyle::Call) => self.get_call_buy_price(),
             (Side::Short, OptionStyle::Call) => self.get_call_sell_price(),
@@ -537,43 +527,8 @@ impl OptionData {
         Ok(Position::new(option, premium, date, open_fee, close_fee))
     }
 
-    /// Returns a collection of option positions (calls and puts, long and short) at the same strike price.
-    ///
-    /// This method creates a comprehensive set of option positions all sharing the same strike price
-    /// but varying in option style (Call/Put) and side (Long/Short). It's useful for analyzing
-    /// option strategies that require positions across different option types at the same strike.
-    ///
-    /// # Arguments
-    ///
-    /// * `price_params` - Parameters required for pricing the options, including underlying price,
-    ///   expiration date, risk-free rate, and other market factors.
-    ///
-    /// * `side` - The initial directional bias (Long or Short) used as a starting point for creating
-    ///   the option positions. This parameter affects the first option that gets created.
-    ///
-    /// * `option_style` - The initial option style (Call or Put) used as a starting point for creating
-    ///   the option positions. This parameter affects the first option that gets created.
-    ///
-    /// # Returns
-    ///
-    /// * `Result<OptionsInStrike, ChainError>` - If successful, returns an `OptionsInStrike` struct
-    ///   containing all four option positions (long call, short call, long put, short put).
-    ///   Returns a `ChainError` if option creation fails, such as when required volatility data
-    ///   is missing.
-    ///
-    /// # Errors
-    ///
-    /// This function will return `ChainError` if:
-    /// * The underlying `get_option` method fails, typically due to missing or invalid pricing data
-    /// * Implied volatility is not provided and cannot be derived from available data
-    ///
-    pub(super) fn get_options_in_strike(
-        &self,
-        price_params: &OptionDataPriceParams,
-        side: Side,
-        option_style: OptionStyle,
-    ) -> Result<OptionsInStrike, ChainError> {
-        let mut option: Options = self.get_option(price_params, side, option_style)?;
+    pub(super) fn get_options_in_strike(&self) -> Result<OptionsInStrike, ChainError> {
+        let mut option: Options = self.get_option(Side::Long, OptionStyle::Call)?;
         option.option_style = OptionStyle::Call;
         option.side = Side::Long;
         let long_call = option.clone();
@@ -627,53 +582,22 @@ impl OptionData {
     /// May return:
     /// * `ChainError` variants if there are issues creating the options contracts
     /// * Errors propagated from the Black-Scholes calculation functions
-    pub fn calculate_prices(
-        &mut self,
-        price_params: &OptionDataPriceParams,
-        refresh: bool,
-    ) -> Result<(), ChainError> {
-        if self.options.is_none() || refresh {
-            self.create_options(price_params)?;
-        }
-        let options = self.options.as_ref().unwrap();
-        trace!("Options: {:?}", options);
-        match options.long_call.calculate_price_black_scholes() {
-            Ok(call_ask) => {
-                trace!("Call Ask: {}", call_ask);
-                self.call_ask = Some(Positive(call_ask.abs()));
-            }
-            Err(_) => self.call_ask = None,
-        }
+    pub fn calculate_prices(&mut self, spread: Option<Positive>) -> Result<(), ChainError> {
+        let call_option = self.get_option(Side::Long, OptionStyle::Call)?;
+        let price = call_option.calculate_price_black_scholes()?;
+        self.call_middle = Some(price.into());
+        let put_option = self.get_option(Side::Long, OptionStyle::Put)?;
+        let prince = put_option.calculate_price_black_scholes()?;
+        self.put_middle = Some(price.into());
 
-        match options.short_call.calculate_price_black_scholes() {
-            Ok(call_bid) => {
-                trace!("Call Bid: {}", call_bid);
-                self.call_bid = Some(Positive(call_bid.abs()));
-            }
-            Err(_) => self.call_bid = None,
-        }
+        self.call_ask = self.call_middle;
+        self.call_bid = self.call_middle;
+        self.put_ask = self.put_middle;
+        self.put_bid = self.put_middle;
 
-        match options.long_put.calculate_price_black_scholes() {
-            Ok(put_ask) => {
-                trace!("Put Ask: {}", put_ask);
-                self.put_ask = Some(Positive(put_ask.abs()));
-            }
-            Err(_) => self.put_ask = None,
+        if spread.is_some() {
+            self.apply_spread(spread.unwrap(), 2);
         }
-
-        match options.short_put.calculate_price_black_scholes() {
-            Ok(put_bid) => {
-                trace!("Put Bid: {}", put_bid);
-                self.put_bid = Some(Positive(put_bid.abs()));
-            }
-            Err(_) => self.put_bid = None,
-        }
-
-        trace!(
-            "Prices: {:?} {:?} {:?} {:?}",
-            self.call_ask, self.call_bid, self.put_ask, self.put_bid
-        );
-        self.set_mid_prices();
         Ok(())
     }
 
@@ -699,92 +623,36 @@ impl OptionData {
     /// * Updates `call_ask`, `call_bid`, `put_ask`, and `put_bid` fields with adjusted values
     /// * Sets adjusted prices to `None` if they would become negative after applying the spread
     /// * Calls `set_mid_prices()` to recalculate the mid prices based on the new bid/ask values
-    pub fn apply_spread(&mut self, spread: Positive, decimal_places: i32) {
-        fn round_to_decimal(
-            number: Positive,
-            decimal_places: i32,
-            shift: Decimal,
-        ) -> Option<Positive> {
-            let multiplier = Positive::TEN.powi(decimal_places as i64);
-            Some(((number + shift) * multiplier).round() / multiplier)
-        }
-
+    pub fn apply_spread(&mut self, spread: Positive, decimal_places: u32) {
         let half_spread: Decimal = (spread / Positive::TWO).into();
 
-        if let Some(call_ask) = self.call_ask {
-            if call_ask < half_spread {
-                self.call_ask = None;
-            } else {
-                self.call_ask = round_to_decimal(call_ask, decimal_places, half_spread);
-            }
-        }
-        if let Some(call_bid) = self.call_bid {
-            if call_bid < half_spread {
-                self.call_bid = None;
-            } else {
-                self.call_bid = round_to_decimal(call_bid, decimal_places, -half_spread);
-            }
-        }
-        if let Some(put_ask) = self.put_ask {
-            if put_ask < half_spread {
-                self.put_ask = None;
-            } else {
-                self.put_ask = round_to_decimal(put_ask, decimal_places, half_spread);
-            }
-        }
-        if let Some(put_bid) = self.put_bid {
-            if put_bid < half_spread {
-                self.put_bid = None;
-            } else {
-                self.put_bid = round_to_decimal(put_bid, decimal_places, -half_spread);
-            }
-        }
+        if self.call_middle.is_some() {
+            self.call_ask =
+                Some((self.call_middle.unwrap() + half_spread).round_to(decimal_places));
+            self.call_bid =
+                Some((self.call_middle.unwrap() - half_spread).round_to(decimal_places));
+        } else {
+            assert!(self.call_ask.is_some() && self.call_bid.is_some());
+            self.call_middle = Some(
+                ((self.call_ask.unwrap() + self.call_bid.unwrap()) / Positive::TWO)
+                    .round_to(decimal_places),
+            );
+        };
 
-        self.set_mid_prices();
+        if self.put_middle.is_some() {
+            self.put_ask = Some((self.put_middle.unwrap() + half_spread).round_to(decimal_places));
+            self.put_bid = Some((self.put_middle.unwrap() - half_spread).round_to(decimal_places));
+        } else {
+            assert!(self.put_ask.is_some() && self.put_bid.is_some());
+            self.put_middle = Some(
+                ((self.put_ask.unwrap() + self.put_bid.unwrap()) / Positive::TWO)
+                    .round_to(decimal_places),
+            );
+        }
     }
 
-    /// Calculates the delta values for call and put options based on the provided price parameters.
-    ///
-    /// Delta is a key "Greek" that measures the rate of change of the option's price with respect to changes
-    /// in the underlying asset's price. This method computes and stores delta values for both call and put options.
-    ///
-    /// # Parameters
-    ///
-    /// * `price_params` - A reference to `OptionDataPriceParams` containing essential market data and
-    ///   contract specifications needed for the calculation.
-    ///
-    /// # Behavior
-    ///
-    /// The function follows these steps:
-    /// 1. Ensures implied volatility is available, calculating it if necessary
-    /// 2. Creates option objects if they don't exist but implied volatility is available
-    /// 3. Calculates and stores delta values for call options
-    /// 4. Calculates and stores delta values for put options
-    ///
-    /// If any step fails, appropriate error messages are logged and the corresponding delta
-    /// values will remain unset.
-    ///
-    /// # Side Effects
-    ///
-    /// * Updates the `delta_call` and `delta_put` fields of the struct with calculated values
-    /// * May update the `implied_volatility` field if it was previously `None`
-    /// * May create option objects if they didn't exist but were needed for calculations
-    /// * Logs errors if calculations fail
-    pub fn calculate_delta(&mut self, price_params: &OptionDataPriceParams) {
-        if self.implied_volatility.is_none() {
-            trace!("Implied volatility not found, calculating it");
-            if let Err(e) = self.calculate_implied_volatility(price_params) {
-                debug!("Failed to calculate implied volatility: {}", e);
-                return;
-            }
-        }
-
-        if self.options.is_none() && self.implied_volatility.is_some() {
-            let _ = self.create_options(price_params);
-        }
-
-        // Now proceed with delta calculation
-        let option: Options = match self.get_option(price_params, Side::Long, OptionStyle::Call) {
+    pub fn calculate_delta(&mut self) {
+        let option: Options = match self.get_option(Side::Long, OptionStyle::Call) {
             Ok(option) => option,
             Err(e) => {
                 debug!("Failed to get option for delta calculation: {}", e);
@@ -800,7 +668,7 @@ impl OptionData {
             }
         }
 
-        let option: Options = match self.get_option(price_params, Side::Long, OptionStyle::Put) {
+        let option: Options = match self.get_option(Side::Long, OptionStyle::Put) {
             Ok(option) => option,
             Err(e) => {
                 debug!("Failed to get option for delta calculation: {}", e);
@@ -817,44 +685,8 @@ impl OptionData {
         }
     }
 
-    /// Calculates the gamma value for an option and stores it in the object.
-    ///
-    /// Gamma measures the rate of change in delta with respect to changes in the underlying price.
-    /// It represents the second derivative of the option price with respect to the underlying price.
-    ///
-    /// This method first ensures that implied volatility is available (calculating it if needed),
-    /// then creates option structures if they don't already exist, and finally calculates
-    /// the gamma value.
-    ///
-    /// # Parameters
-    ///
-    /// * `price_params` - A reference to the pricing parameters required for option calculations,
-    ///   including underlying price, expiration date, risk-free rate and other inputs.
-    ///
-    /// # Behavior
-    ///
-    /// * If implied volatility isn't available, it attempts to calculate it first
-    /// * If option structures haven't been created yet, it creates them
-    /// * On successful calculation, stores the gamma value in `self.gamma`
-    /// * On failure, logs an error and sets `self.gamma` to `None`
-    ///
-    /// # Errors
-    ///
-    /// * Does not return errors but logs them through the tracing system
-    /// * Common failures include inability to calculate implied volatility or issues creating option objects
-    pub fn calculate_gamma(&mut self, price_params: &OptionDataPriceParams) {
-        if self.implied_volatility.is_none() {
-            trace!("Implied volatility not found, calculating it");
-            if let Err(e) = self.calculate_implied_volatility(price_params) {
-                debug!("Failed to calculate implied volatility: {}", e);
-                return;
-            }
-        }
-        if self.options.is_none() && self.implied_volatility.is_some() {
-            let _ = self.create_options(price_params);
-        }
-        // Now proceed with delta calculation
-        let option: Options = match self.get_option(price_params, Side::Long, OptionStyle::Call) {
+    pub fn calculate_gamma(&mut self) {
+        let option: Options = match self.get_option(Side::Long, OptionStyle::Call) {
             Ok(option) => option,
             Err(e) => {
                 debug!("Failed to get option for delta calculation: {}", e);
@@ -890,12 +722,8 @@ impl OptionData {
     ///
     /// * Returns a `ChainError` if there's an issue retrieving the options or calculating their deltas.
     /// * Possible errors include missing option data, calculation failures, or invalid parameters.
-    pub fn get_deltas(
-        &self,
-        price_params: &OptionDataPriceParams,
-    ) -> Result<DeltasInStrike, ChainError> {
-        let options_in_strike =
-            self.get_options_in_strike(price_params, Side::Long, OptionStyle::Call)?;
+    pub fn get_deltas(&self) -> Result<DeltasInStrike, ChainError> {
+        let options_in_strike = self.get_options_in_strike()?;
         Ok(options_in_strike.deltas()?)
     }
 
@@ -956,12 +784,14 @@ impl OptionData {
     ///
     /// Updates the `call_middle` and `put_middle` fields with the calculated mid-prices.
     pub fn set_mid_prices(&mut self) {
+        assert!(self.call_ask.is_some() && self.call_bid.is_some());
         self.call_middle = match (self.call_bid, self.call_ask) {
-            (Some(bid), Some(ask)) => Some((bid + ask) / pos!(2.0)),
+            (Some(bid), Some(ask)) => Some(((bid + ask) / pos!(2.0)).round_to(4)),
             _ => None,
         };
+        assert!(self.put_ask.is_some() && self.put_bid.is_some());
         self.put_middle = match (self.put_bid, self.put_ask) {
-            (Some(bid), Some(ask)) => Some((bid + ask) / pos!(2.0)),
+            (Some(bid), Some(ask)) => Some(((bid + ask) / pos!(2.0)).round_to(4)),
             _ => None,
         };
     }
@@ -981,115 +811,6 @@ impl OptionData {
         (self.call_middle, self.put_middle)
     }
 
-    /// Calculates the implied volatility for an option based on market prices.
-    ///
-    /// This function attempts to derive the implied volatility from either call or put option
-    /// mid-market prices. It first tries to use call options, and if that fails, it falls back
-    /// to put options. The calculation uses different initial volatility guesses based on whether
-    /// the option is in-the-money (ITM) or out-of-the-money (OTM).
-    ///
-    /// # Parameters
-    ///
-    /// * `&mut self` - Mutable reference to the option chain or strike object
-    /// * `price_params` - Reference to pricing parameters including underlying price and other market data
-    ///
-    /// # Returns
-    ///
-    /// * `Result<(), ChainError>` - Ok if implied volatility was successfully calculated,
-    ///   or an error describing why calculation failed
-    ///
-    /// # Process
-    ///
-    /// 1. Ensures middle prices are available, calculating them if necessary
-    /// 2. Attempts to calculate IV using call options first
-    /// 3. Falls back to put options if call calculation fails
-    /// 4. Updates the implied_volatility field if successful
-    /// 5. Creates option objects if needed once IV is established
-    ///
-    /// # Errors
-    ///
-    /// Returns a `ChainError::InvalidVolatility` if implied volatility cannot be calculated
-    /// from either call or put prices.
-    pub fn calculate_implied_volatility(
-        &mut self,
-        price_params: &OptionDataPriceParams,
-    ) -> Result<(), ChainError> {
-        trace!(
-            "call_middle {:?} put_middle {:?}",
-            self.call_middle, self.put_middle
-        );
-        if self.call_middle.is_none() || self.put_middle.is_none() {
-            debug!("Calculation middel prices for IV calculation:");
-            self.calculate_prices(price_params, false)?;
-            trace!(
-                "call_middle {:?} put_middle {:?}",
-                self.call_middle, self.put_middle
-            );
-        }
-
-        // Try to calculate IV for calls if we have mid price
-        if let Some(call_price) = self.call_middle {
-            // Initial IV guess based on moneyness
-            let initial_iv = if price_params.underlying_price > self.strike_price {
-                pos!(0.5) // ITM
-            } else {
-                pos!(0.3) // OTM
-            };
-
-            let option =
-                self.get_option_for_iv(price_params, Side::Long, OptionStyle::Call, initial_iv)?;
-
-            match option.calculate_implied_volatility(call_price.to_dec()) {
-                Ok(iv) => {
-                    debug!("Successfully calculated call IV: {}", iv);
-                    assert!(
-                        iv <= Positive::ONE,
-                        "Volatility should be <= 1 and is: {}",
-                        iv
-                    );
-                    self.implied_volatility = Some(iv);
-                    return Ok(());
-                }
-                Err(e) => {
-                    debug!("Failed to calculate call IV: {}", e);
-                }
-            }
-        }
-
-        // If call IV calculation failed or wasn't possible, try puts
-        if let Some(put_price) = self.put_middle {
-            // Initial IV guess based on moneyness
-            let initial_iv = if price_params.underlying_price < self.strike_price {
-                pos!(5.0) // ITM
-            } else {
-                pos!(3.0) // OTM
-            };
-
-            let option =
-                self.get_option_for_iv(price_params, Side::Long, OptionStyle::Put, initial_iv)?;
-
-            match option.calculate_implied_volatility(put_price.to_dec()) {
-                Ok(iv) => {
-                    debug!("Successfully calculated put IV: {}", iv);
-                    self.implied_volatility = Some(iv);
-                    return Ok(());
-                }
-                Err(e) => {
-                    debug!("Failed to calculate put IV: {}", e);
-                }
-            }
-        }
-
-        if self.options.is_none() && self.implied_volatility.is_some() {
-            self.create_options(price_params)?;
-        }
-
-        Err(ChainError::invalid_volatility(
-            None,
-            "Could not calculate implied volatility from either calls or puts",
-        ))
-    }
-
     /// Checks and corrects implied volatility if it's represented as a percentage greater than 1.0.
     ///
     /// This function checks if the `implied_volatility` field is present. If it is and its value
@@ -1097,103 +818,9 @@ impl OptionData {
     /// by 100.0 to convert it to a decimal value. This ensures that implied volatility is stored
     /// in the correct format, preventing potential misinterpretations and calculation errors.
     pub(super) fn check_and_convert_implied_volatility(&mut self) {
-        if let Some(iv) = self.implied_volatility {
-            if iv > pos!(1.0) {
-                self.implied_volatility = Some(iv / Positive::HUNDRED);
-            }
+        if self.implied_volatility > pos!(1.0) {
+            self.implied_volatility = self.implied_volatility / Positive::HUNDRED;
         }
-    }
-
-    /// Creates a complete set of four standard option contracts based on specified pricing parameters.
-    ///
-    /// This method constructs four option contracts (long call, short call, long put, short put)
-    /// with identical strike prices and expiration dates, all based on the same underlying asset.
-    /// The resulting options are stored within the `OptionData` instance for further analysis
-    /// or trading strategy evaluation.
-    ///
-    /// # Parameters
-    ///
-    /// * `price_params` - A reference to `OptionDataPriceParams` containing essential pricing inputs
-    ///   including underlying price, expiration date, risk-free rate, dividend yield, and optionally
-    ///   the underlying symbol and implied volatility.
-    ///
-    /// # Returns
-    ///
-    /// * `Result<(), ChainError>` - Returns `Ok(())` if option creation succeeds, or a `ChainError`
-    ///   if any issues occur during creation.
-    ///
-    pub fn create_options(
-        &mut self,
-        price_params: &OptionDataPriceParams,
-    ) -> Result<(), ChainError> {
-        let symbol = if let Some(underlying_symbol) = price_params.underlying_symbol.clone() {
-            underlying_symbol
-        } else {
-            "NA".to_string()
-        };
-        let long_call = Arc::new(Options::new(
-            OptionType::European,
-            Side::Long,
-            symbol.clone(),
-            self.strike_price,
-            price_params.expiration_date,
-            self.implied_volatility.unwrap_or(Positive::ZERO),
-            Positive::ONE,
-            price_params.underlying_price,
-            price_params.risk_free_rate,
-            OptionStyle::Call,
-            price_params.dividend_yield,
-            None,
-        ));
-        let short_call = Arc::new(Options::new(
-            OptionType::European,
-            Side::Short,
-            symbol.clone(),
-            self.strike_price,
-            price_params.expiration_date,
-            self.implied_volatility.unwrap_or(Positive::ZERO),
-            Positive::ONE,
-            price_params.underlying_price,
-            price_params.risk_free_rate,
-            OptionStyle::Call,
-            price_params.dividend_yield,
-            None,
-        ));
-        let long_put = Arc::new(Options::new(
-            OptionType::European,
-            Side::Long,
-            symbol.clone(),
-            self.strike_price,
-            price_params.expiration_date,
-            self.implied_volatility.unwrap_or(Positive::ZERO),
-            Positive::ONE,
-            price_params.underlying_price,
-            price_params.risk_free_rate,
-            OptionStyle::Put,
-            price_params.dividend_yield,
-            None,
-        ));
-        let short_put = Arc::new(Options::new(
-            OptionType::European,
-            Side::Short,
-            symbol.clone(),
-            self.strike_price,
-            price_params.expiration_date,
-            self.implied_volatility.unwrap_or(Positive::ZERO),
-            Positive::ONE,
-            price_params.underlying_price,
-            price_params.risk_free_rate,
-            OptionStyle::Put,
-            price_params.dividend_yield,
-            None,
-        ));
-        self.options = Some(Box::new(FourOptions {
-            long_call,
-            short_call,
-            long_put,
-            short_put,
-        }));
-        Ok(())
     }
 
     /// Returns a tuple containing the current delta values for both call and put options.
@@ -1240,13 +867,18 @@ impl Default for OptionData {
             put_ask: None,
             call_middle: None,
             put_middle: None,
-            implied_volatility: None,
+            implied_volatility: Positive::ZERO,
             delta_call: None,
             delta_put: None,
             gamma: None,
             volume: None,
             open_interest: None,
-            options: None,
+            symbol: None,
+            expiration_date: None,
+            underlying_price: None,
+            risk_free_rate: None,
+            dividend_yield: None,
+            extra_fields: None,
         }
     }
 }
@@ -1277,9 +909,7 @@ impl fmt::Display for OptionData {
             empty_string_round_to_2(self.put_bid),
             empty_string_round_to_2(self.put_ask),
             empty_string_round_to_2(self.put_middle),
-            self.implied_volatility
-                .unwrap_or(Positive::ZERO)
-                .format_fixed_places(3),
+            self.implied_volatility.format_fixed_places(3),
             " ".to_string(),
             self.delta_call.unwrap_or(Decimal::ZERO),
             " ".to_string(),
@@ -1309,12 +939,18 @@ mod optiondata_coverage_tests {
             spos!(10.0),
             spos!(8.5),
             spos!(9.0),
-            spos!(0.2),
+            pos!(0.2),
             Some(dec!(-0.3)),
             Some(dec!(0.7)),
             Some(dec!(0.5)),
             spos!(1000.0),
             Some(500),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
         )
     }
 
@@ -1334,18 +970,10 @@ mod optiondata_coverage_tests {
     #[test]
     fn test_calculate_prices_with_refresh() {
         let mut option_data = create_test_option_data();
-
-        let price_params = OptionDataPriceParams::new(
-            pos!(100.0),
-            ExpirationDate::Days(pos!(30.0)),
-            spos!(0.25), // Different IV to force recalculation
-            dec!(0.05),
-            pos!(0.02),
-            Some("TEST".to_string()),
-        );
+        option_data.set_volatility(&pos!(0.25));
 
         // Calculate prices with refresh flag set to true
-        let result = option_data.calculate_prices(&price_params, true);
+        let result = option_data.calculate_prices(None);
         assert!(result.is_ok());
 
         // Check that prices were updated
@@ -1386,27 +1014,13 @@ mod optiondata_coverage_tests {
     #[test]
     fn test_calculate_gamma_no_implied_volatility() {
         let mut option_data = create_test_option_data();
-
-        let price_params = OptionDataPriceParams::new(
-            pos!(100.0),
-            ExpirationDate::Days(pos!(30.0)),
-            spos!(0.2),
-            dec!(0.05),
-            pos!(0.02),
-            Some("TEST".to_string()),
-        );
+        option_data.set_volatility(&pos!(0.2));
 
         // Calculate gamma
-        option_data.calculate_gamma(&price_params);
+        option_data.calculate_gamma();
 
         // Check that gamma was set
         assert!(option_data.gamma.is_some());
-
-        // Test with missing implied volatility
-        let mut option_data_no_iv = create_test_option_data();
-        option_data_no_iv.implied_volatility = None;
-
-        option_data_no_iv.calculate_gamma(&price_params);
     }
 
     // Test for lines 1076-1077
@@ -1414,17 +1028,8 @@ mod optiondata_coverage_tests {
     fn test_get_deltas() {
         let option_data = create_test_option_data();
 
-        let price_params = OptionDataPriceParams::new(
-            pos!(100.0),
-            ExpirationDate::Days(pos!(30.0)),
-            spos!(0.2),
-            dec!(0.05),
-            pos!(0.02),
-            Some("TEST".to_string()),
-        );
-
         // Get deltas
-        let result = option_data.get_deltas(&price_params);
+        let result = option_data.get_deltas();
         assert!(result.is_ok());
 
         let deltas = result.unwrap();
@@ -1454,24 +1059,29 @@ mod tests_get_position {
             spos!(10.0),      // call_ask
             spos!(8.5),       // put_bid
             spos!(9.0),       // put_ask
-            spos!(0.2),       // implied_volatility
+            pos!(0.2),        // implied_volatility
             Some(dec!(-0.3)), // delta_call
             Some(dec!(0.7)),  // delta_put
             Some(dec!(0.5)),  // gamma
             spos!(1000.0),    // volume
             Some(500),        // open_interest
+            None,             // symbol
+            None,             // expiration_date
+            None,             // underlying_price
+            None,             // risk_free_rate
+            None,             // dividend_yield
+            None,             // extra_fields
         )
     }
 
     // Helper function to create standard price parameters
     fn create_test_price_params() -> OptionDataPriceParams {
         OptionDataPriceParams::new(
-            pos!(100.0),                      // underlying_price
-            ExpirationDate::Days(pos!(30.0)), // expiration_date
-            spos!(0.2),                       // implied_volatility
-            dec!(0.05),                       // risk_free_rate
-            pos!(0.02),                       // dividend_yield
-            Some("TEST".to_string()),         // underlying_symbol
+            Some(Box::new(pos!(100.0))),
+            Some(ExpirationDate::Days(pos!(30.0))),
+            Some(dec!(0.05)),
+            spos!(0.02),
+            Some(Box::new("AAPL".to_string())),
         )
     }
 
@@ -1482,7 +1092,6 @@ mod tests_get_position {
 
         // Test getting a long call position
         let result = option_data.get_position(
-            &price_params,
             Side::Long,
             OptionStyle::Call,
             None, // Default to current date
@@ -1515,7 +1124,6 @@ mod tests_get_position {
 
         // Test getting a short put position
         let result = option_data.get_position(
-            &price_params,
             Side::Short,
             OptionStyle::Put,
             None, // Default to current date
@@ -1546,14 +1154,8 @@ mod tests_get_position {
         let custom_date = Utc::now() - Duration::days(7);
 
         // Test with custom date
-        let result = option_data.get_position(
-            &price_params,
-            Side::Long,
-            OptionStyle::Call,
-            Some(custom_date),
-            None,
-            None,
-        );
+        let result =
+            option_data.get_position(Side::Long, OptionStyle::Call, Some(custom_date), None, None);
 
         assert!(result.is_ok());
         let position = result.unwrap();
@@ -1573,7 +1175,6 @@ mod tests_get_position {
 
         // Test with custom fees
         let result = option_data.get_position(
-            &price_params,
             Side::Long,
             OptionStyle::Put,
             None,
@@ -1592,20 +1193,9 @@ mod tests_get_position {
     #[test]
     fn test_get_position_missing_volatility() {
         let mut option_data = create_test_option_data();
-        option_data.implied_volatility = None;
-
-        let mut price_params = create_test_price_params();
-        price_params.implied_volatility = None;
 
         // Test with missing volatility
-        let result = option_data.get_position(
-            &price_params,
-            Side::Long,
-            OptionStyle::Call,
-            None,
-            None,
-            None,
-        );
+        let result = option_data.get_position(Side::Long, OptionStyle::Call, None, None, None);
 
         // Should fail due to missing volatility
         assert!(result.is_err());
@@ -1620,20 +1210,14 @@ mod tests_get_position {
 
     #[test]
     fn test_get_position_in_the_money_call() {
-        let option_data = create_test_option_data();
+        let mut option_data = create_test_option_data();
 
         // Create params with underlying price higher than strike (ITM call)
         let mut price_params = create_test_price_params();
-        price_params.underlying_price = pos!(120.0);
+        price_params.underlying_price = Some(Box::new(pos!(120.0)));
+        option_data.set_extra_params(price_params);
 
-        let result = option_data.get_position(
-            &price_params,
-            Side::Long,
-            OptionStyle::Call,
-            None,
-            None,
-            None,
-        );
+        let result = option_data.get_position(Side::Long, OptionStyle::Call, None, None, None);
 
         assert!(result.is_ok());
         let position = result.unwrap();
@@ -1646,36 +1230,8 @@ mod tests_get_position {
     }
 
     #[test]
-    fn test_get_position_deep_out_of_money_put() {
-        let option_data = create_test_option_data();
-
-        // Create params with underlying price much higher than strike (deep OTM put)
-        let mut price_params = create_test_price_params();
-        price_params.underlying_price = pos!(150.0);
-
-        let result = option_data.get_position(
-            &price_params,
-            Side::Long,
-            OptionStyle::Put,
-            None,
-            None,
-            None,
-        );
-
-        assert!(result.is_ok());
-        let position = result.unwrap();
-
-        // A deep OTM put should have low premium
-        assert!(
-            position.premium <= pos!(9.0),
-            "Deep OTM put premium should be low"
-        );
-    }
-
-    #[test]
     fn test_get_position_all_combinations() {
         let option_data = create_test_option_data();
-        let price_params = create_test_price_params();
 
         // Test all combinations of Side and OptionStyle
         let combinations = vec![
@@ -1686,7 +1242,7 @@ mod tests_get_position {
         ];
 
         for (side, style) in combinations {
-            let result = option_data.get_position(&price_params, side, style, None, None, None);
+            let result = option_data.get_position(side, style, None, None, None);
 
             assert!(
                 result.is_ok(),
@@ -1707,7 +1263,6 @@ mod tests_get_position {
     fn test_get_position_with_custom_all_params() {
         // This test checks that all custom parameters are correctly applied
         let option_data = create_test_option_data();
-        let price_params = create_test_price_params();
 
         // Create a custom date
         let custom_date = Utc::now() - Duration::days(14);
@@ -1718,7 +1273,6 @@ mod tests_get_position {
 
         // Test with all custom parameters
         let result = option_data.get_position(
-            &price_params,
             Side::Short,
             OptionStyle::Put,
             Some(custom_date),
@@ -1740,11 +1294,9 @@ mod tests_get_position {
     #[test]
     fn test_get_position_uses_market_price_long_call() {
         let option_data = create_test_option_data();
-        let price_params = create_test_price_params();
 
         // Test getting a long call position
         let result = option_data.get_position(
-            &price_params,
             Side::Long,
             OptionStyle::Call,
             None, // Default to current date
@@ -1767,11 +1319,9 @@ mod tests_get_position {
     #[test]
     fn test_get_position_uses_market_price_short_call() {
         let option_data = create_test_option_data();
-        let price_params = create_test_price_params();
 
         // Test getting a short call position
         let result = option_data.get_position(
-            &price_params,
             Side::Short,
             OptionStyle::Call,
             None, // Default to current date
@@ -1794,11 +1344,9 @@ mod tests_get_position {
     #[test]
     fn test_get_position_uses_market_price_long_put() {
         let option_data = create_test_option_data();
-        let price_params = create_test_price_params();
 
         // Test getting a long put position
         let result = option_data.get_position(
-            &price_params,
             Side::Long,
             OptionStyle::Put,
             None, // Default to current date
@@ -1821,11 +1369,9 @@ mod tests_get_position {
     #[test]
     fn test_get_position_uses_market_price_short_put() {
         let option_data = create_test_option_data();
-        let price_params = create_test_price_params();
 
         // Test getting a short put position
         let result = option_data.get_position(
-            &price_params,
             Side::Short,
             OptionStyle::Put,
             None, // Default to current date
@@ -1854,25 +1400,22 @@ mod tests_get_position {
             None,             // call_ask (missing)
             None,             // put_bid (missing)
             None,             // put_ask (missing)
-            spos!(0.2),       // implied_volatility
+            pos!(0.2),        // implied_volatility
             Some(dec!(-0.3)), // delta_call
             Some(dec!(0.7)),  // delta_put
             Some(dec!(0.5)),  // gamma
             spos!(1000.0),    // volume
             Some(500),        // open_interest
+            None,             // symbol
+            None,             // expiration_date
+            None,             // underlying_price
+            None,             // risk_free_rate
+            None,             // dividend_yield
+            None,             // extra_fields
         );
-
-        let price_params = create_test_price_params();
 
         // Test getting a long call position
-        let result = option_data.get_position(
-            &price_params,
-            Side::Long,
-            OptionStyle::Call,
-            None,
-            None,
-            None,
-        );
+        let result = option_data.get_position(Side::Long, OptionStyle::Call, None, None, None);
 
         assert!(
             result.is_ok(),
@@ -1889,7 +1432,7 @@ mod tests_get_position {
 
         // Let's verify it matches direct Black-Scholes calculation
         let option = option_data
-            .get_option(&price_params, Side::Long, OptionStyle::Call)
+            .get_option(Side::Long, OptionStyle::Call)
             .unwrap();
         let bs_price = option.calculate_price_black_scholes().unwrap().abs();
         let bs_price_positive = Positive::from(bs_price);
@@ -1900,20 +1443,13 @@ mod tests_get_position {
     #[test]
     fn test_get_position_with_custom_date_uses_market_price() {
         let option_data = create_test_option_data();
-        let price_params = create_test_price_params();
 
         // Create a custom date (one week ago)
         let custom_date = Utc::now() - Duration::days(7);
 
         // Test with custom date for long call
-        let result = option_data.get_position(
-            &price_params,
-            Side::Long,
-            OptionStyle::Call,
-            Some(custom_date),
-            None,
-            None,
-        );
+        let result =
+            option_data.get_position(Side::Long, OptionStyle::Call, Some(custom_date), None, None);
 
         assert!(result.is_ok());
         let position = result.unwrap();
@@ -1932,7 +1468,6 @@ mod tests_get_position {
     #[test]
     fn test_get_position_with_fees_uses_market_price() {
         let option_data = create_test_option_data();
-        let price_params = create_test_price_params();
 
         // Custom fees
         let open_fee = pos!(1.5);
@@ -1940,7 +1475,6 @@ mod tests_get_position {
 
         // Test with custom fees for short put
         let result = option_data.get_position(
-            &price_params,
             Side::Short,
             OptionStyle::Put,
             None,
@@ -1969,17 +1503,8 @@ mod tests_get_position {
         let mut option_data = create_test_option_data();
         option_data.call_ask = None; // Remove call ask price
 
-        let price_params = create_test_price_params();
-
         // Try to get a long call position which needs call_ask
-        let result = option_data.get_position(
-            &price_params,
-            Side::Long,
-            OptionStyle::Call,
-            None,
-            None,
-            None,
-        );
+        let result = option_data.get_position(Side::Long, OptionStyle::Call, None, None, None);
 
         // Should still succeed but fall back to Black-Scholes
         assert!(
@@ -1991,7 +1516,7 @@ mod tests_get_position {
 
         // Let's verify it matches direct Black-Scholes calculation
         let option = option_data
-            .get_option(&price_params, Side::Long, OptionStyle::Call)
+            .get_option(Side::Long, OptionStyle::Call)
             .unwrap();
         let bs_price = option.calculate_price_black_scholes().unwrap().abs();
         let bs_price_positive = Positive::from(bs_price);
@@ -2014,7 +1539,13 @@ mod tests_check_convert_implied_volatility {
             None,
             None,
             None,
-            Some(pos!(20.0)), // This is 2000% volatility, should be converted to 20%
+            pos!(20.0), // This is 2000% volatility, should be converted to 20%
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
             None,
             None,
             None,
@@ -2026,7 +1557,7 @@ mod tests_check_convert_implied_volatility {
         option_data.check_and_convert_implied_volatility();
 
         // Assert that the volatility is now converted to a proper decimal (e.g., 0.2 instead of 20.0)
-        assert_eq!(option_data.implied_volatility, Some(pos!(0.2)));
+        assert_eq!(option_data.implied_volatility, pos!(0.2));
     }
 
     #[test]
@@ -2038,7 +1569,13 @@ mod tests_check_convert_implied_volatility {
             None,
             None,
             None,
-            Some(pos!(0.15)), // This is 15% volatility, should remain as is
+            pos!(0.15), // This is 15% volatility, should remain as is
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
             None,
             None,
             None,
@@ -2055,30 +1592,6 @@ mod tests_check_convert_implied_volatility {
         // Assert that the volatility is unchanged
         assert_eq!(option_data.implied_volatility, original_iv);
     }
-
-    #[test]
-    fn test_check_and_convert_implied_volatility_none() {
-        // Test that None volatility remains None
-        let mut option_data = OptionData::new(
-            pos!(100.0),
-            None,
-            None,
-            None,
-            None,
-            None, // No implied volatility
-            None,
-            None,
-            None,
-            None,
-            None,
-        );
-
-        // Call the method being tested
-        option_data.check_and_convert_implied_volatility();
-
-        // Assert that the volatility is still None
-        assert_eq!(option_data.implied_volatility, None);
-    }
 }
 
 #[cfg(test)]
@@ -2091,25 +1604,29 @@ mod tests_get_option_for_iv {
     // Helper function to create a standard OptionDataPriceParams for testing
     fn create_test_price_params() -> OptionDataPriceParams {
         OptionDataPriceParams::new(
-            pos!(100.0),
-            ExpirationDate::Days(pos!(30.0)),
-            Some(pos!(0.2)),
-            dec!(0.05),
-            pos!(0.02),
-            None,
+            Some(Box::new(pos!(100.0))),
+            Some(ExpirationDate::Days(pos!(30.0))),
+            Some(dec!(0.05)),
+            spos!(0.02),
+            Some(Box::new("AAPL".to_string())),
         )
     }
 
     #[test]
     fn test_get_option_for_iv_success() {
-        // Line 473, 475, 480, 485, 490: Test get_option_for_iv method
-        let option_data = OptionData::new(
+        let mut option_data = OptionData::new(
             pos!(100.0),
             spos!(5.0),
             spos!(5.5),
             spos!(4.5),
             spos!(5.0),
-            Some(pos!(0.2)),
+            pos!(0.2),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
             None,
             None,
             None,
@@ -2118,11 +1635,11 @@ mod tests_get_option_for_iv {
         );
 
         let params = create_test_price_params();
+        option_data.set_extra_params(params.clone());
         let initial_iv = pos!(0.25); // Different from the option_data IV to confirm it's using this value
 
         // Call the method being tested
-        let result =
-            option_data.get_option_for_iv(&params, Side::Long, OptionStyle::Call, initial_iv);
+        let result = option_data.get_option_for_iv(Side::Long, OptionStyle::Call, initial_iv);
 
         // Assert success and check properties
         assert!(result.is_ok());
@@ -2131,13 +1648,13 @@ mod tests_get_option_for_iv {
         assert_eq!(option.option_type, OptionType::European);
         assert_eq!(option.side, Side::Long);
         assert_eq!(option.strike_price, pos!(100.0));
-        assert_eq!(option.expiration_date, params.expiration_date);
+        assert_eq!(option.expiration_date, params.expiration_date.unwrap());
         assert_eq!(option.implied_volatility, initial_iv.to_f64()); // Should use the provided initial_iv
         assert_eq!(option.quantity, pos!(1.0));
-        assert_eq!(option.underlying_price, params.underlying_price);
-        assert_eq!(option.risk_free_rate, params.risk_free_rate);
+        assert_eq!(option.underlying_price, *params.underlying_price.unwrap());
+        assert_eq!(option.risk_free_rate, params.risk_free_rate.unwrap());
         assert_eq!(option.option_style, OptionStyle::Call);
-        assert_eq!(option.dividend_yield, params.dividend_yield);
+        assert_eq!(option.dividend_yield, params.dividend_yield.unwrap());
     }
 
     #[test]
@@ -2149,7 +1666,13 @@ mod tests_get_option_for_iv {
             spos!(5.5),
             spos!(4.5),
             spos!(5.0),
-            Some(pos!(0.2)),
+            pos!(0.2),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
             None,
             None,
             None,
@@ -2161,8 +1684,7 @@ mod tests_get_option_for_iv {
         let initial_iv = pos!(0.3);
 
         // Call the method with Put option style
-        let result =
-            option_data.get_option_for_iv(&params, Side::Long, OptionStyle::Put, initial_iv);
+        let result = option_data.get_option_for_iv(Side::Long, OptionStyle::Put, initial_iv);
 
         // Assert success and check option style
         assert!(result.is_ok());
@@ -2179,7 +1701,13 @@ mod tests_get_option_for_iv {
             spos!(5.5),
             spos!(4.5),
             spos!(5.0),
-            Some(pos!(0.2)),
+            pos!(0.2),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
             None,
             None,
             None,
@@ -2191,8 +1719,7 @@ mod tests_get_option_for_iv {
         let initial_iv = pos!(0.2);
 
         // Call the method with Short side
-        let result =
-            option_data.get_option_for_iv(&params, Side::Short, OptionStyle::Call, initial_iv);
+        let result = option_data.get_option_for_iv(Side::Short, OptionStyle::Call, initial_iv);
 
         // Assert success and check side
         assert!(result.is_ok());
@@ -2215,7 +1742,13 @@ mod tests_some_price_is_none {
             spos!(5.5), // call_ask
             spos!(4.5), // put_bid
             spos!(5.0), // put_ask
-            Some(pos!(0.2)),
+            pos!(0.2),  // implied_volatility
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
             None,
             None,
             None,
@@ -2236,7 +1769,13 @@ mod tests_some_price_is_none {
             spos!(5.5), // call_ask
             spos!(4.5), // put_bid
             spos!(5.0), // put_ask
-            Some(pos!(0.2)),
+            pos!(0.2),  // implied_volatility
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
             None,
             None,
             None,
@@ -2257,7 +1796,13 @@ mod tests_some_price_is_none {
             None,       // call_ask is None
             spos!(4.5), // put_bid
             spos!(5.0), // put_ask
-            Some(pos!(0.2)),
+            pos!(0.2),  // implied_volatility
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
             None,
             None,
             None,
@@ -2278,7 +1823,13 @@ mod tests_some_price_is_none {
             spos!(5.5), // call_ask
             None,       // put_bid is None
             spos!(5.0), // put_ask
-            Some(pos!(0.2)),
+            pos!(0.2),  // implied_volatility
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
             None,
             None,
             None,
@@ -2299,7 +1850,13 @@ mod tests_some_price_is_none {
             spos!(5.5), // call_ask
             spos!(4.5), // put_bid
             None,       // put_ask is None
-            Some(pos!(0.2)),
+            pos!(0.2),  // implied_volatility
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
             None,
             None,
             None,
@@ -2316,11 +1873,17 @@ mod tests_some_price_is_none {
         // Test with all prices missing
         let option_data = OptionData::new(
             pos!(100.0),
-            None, // call_bid is None
-            None, // call_ask is None
-            None, // put_bid is None
-            None, // put_ask is None
-            Some(pos!(0.2)),
+            None,      // call_bid is None
+            None,      // call_ask is None
+            None,      // put_bid is None
+            None,      // put_ask is None
+            pos!(0.2), // implied_volatility
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
             None,
             None,
             None,
@@ -2348,9 +1911,15 @@ mod tests_is_valid_optimal_side_deltable {
             None,
             None,
             None,
-            Some(pos!(0.2)),
+            pos!(0.2),        // implied_volatility
             Some(dec!(0.3)),  // delta_call
             Some(dec!(-0.3)), // delta_put
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
             None,
             None,
             None,
@@ -2368,6 +1937,12 @@ mod tests_is_valid_optimal_side_deltable {
         // Lines 758-760: Test is_valid_optimal_side for Center (which should panic)
         let option_data = OptionData::new(
             pos!(100.0),
+            None,
+            None,
+            None,
+            None,
+            pos!(0.2), // implied_volatility
+            None,
             None,
             None,
             None,
@@ -2397,8 +1972,14 @@ mod tests_is_valid_optimal_side_deltable {
             None,
             None,
             None,
-            None,
+            pos!(0.2),       // implied_volatility
             Some(dec!(0.3)), // delta_call within range
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
             None,
             None,
             None,
@@ -2423,9 +2004,15 @@ mod tests_is_valid_optimal_side_deltable {
             None,
             None,
             None,
-            None,
+            pos!(0.2), // implied_volatility
             None,
             Some(dec!(0.3)), // delta_put within range
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
             None,
             None,
             None,
@@ -2449,9 +2036,15 @@ mod tests_is_valid_optimal_side_deltable {
             None,
             None,
             None,
-            None,
+            pos!(0.2),       // implied_volatility
             Some(dec!(0.1)), // delta_call outside range
             Some(dec!(0.5)), // delta_put outside range
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
             None,
             None,
             None,
@@ -2475,9 +2068,15 @@ mod tests_is_valid_optimal_side_deltable {
             None,
             None,
             None,
+            pos!(0.2), // implied_volatility
+            None,      // No delta_call
+            None,      // No delta_put
             None,
-            None, // No delta_call
-            None, // No delta_put
+            None,
+            None,
+            None,
+            None,
+            None,
             None,
             None,
             None,
@@ -2507,6 +2106,12 @@ mod tests_set_mid_prices {
             spos!(11.0), // call_ask
             None,
             None,
+            pos!(0.2), // implied_volatility
+            None,
+            None,
+            None,
+            None,
+            None,
             None,
             None,
             None,
@@ -2533,6 +2138,12 @@ mod tests_set_mid_prices {
             None,
             spos!(8.0),  // put_bid
             spos!(12.0), // put_ask
+            pos!(0.2),   // implied_volatility
+            None,
+            None,
+            None,
+            None,
+            None,
             None,
             None,
             None,
@@ -2559,6 +2170,12 @@ mod tests_set_mid_prices {
             spos!(11.0), // call_ask
             spos!(8.0),  // put_bid
             spos!(12.0), // put_ask
+            pos!(0.2),   // implied_volatility
+            None,
+            None,
+            None,
+            None,
+            None,
             None,
             None,
             None,
@@ -2584,6 +2201,12 @@ mod tests_set_mid_prices {
             spos!(11.0), // call_ask
             spos!(8.0),  // put_bid
             spos!(12.0), // put_ask
+            pos!(0.2),   // implied_volatility
+            None,
+            None,
+            None,
+            None,
+            None,
             None,
             None,
             None,
@@ -2610,6 +2233,12 @@ mod tests_set_mid_prices {
             None,        // call_ask is missing
             spos!(8.0),  // put_bid
             spos!(12.0), // put_ask
+            pos!(0.2),   // implied_volatility
+            None,
+            None,
+            None,
+            None,
+            None,
             None,
             None,
             None,
@@ -2642,6 +2271,12 @@ mod tests_get_mid_prices {
             spos!(11.0),
             spos!(8.0),
             spos!(12.0),
+            pos!(0.2), // implied_volatility
+            None,
+            None,
+            None,
+            None,
+            None,
             None,
             None,
             None,
@@ -2670,6 +2305,12 @@ mod tests_get_mid_prices {
             spos!(11.0),
             None, // missing put_bid
             spos!(12.0),
+            pos!(0.2), // implied_volatility
+            None,
+            None,
+            None,
+            None,
+            None,
             None,
             None,
             None,
@@ -2698,6 +2339,12 @@ mod tests_get_mid_prices {
             spos!(11.0),
             spos!(8.0),
             spos!(12.0),
+            pos!(0.2), // implied_volatility
+            None,
+            None,
+            None,
+            None,
+            None,
             None,
             None,
             None,
@@ -2722,6 +2369,12 @@ mod tests_get_mid_prices {
         // Test get_mid_prices when no mid prices are set
         let option_data = OptionData::new(
             pos!(100.0),
+            None,
+            None,
+            None,
+            None,
+            pos!(0.2), // implied_volatility
+            None,
             None,
             None,
             None,
@@ -2758,9 +2411,15 @@ mod tests_current_deltas {
             None,
             None,
             None,
-            None,
+            pos!(0.2),        // implied_volatility
             Some(dec!(0.5)),  // delta_call
             Some(dec!(-0.5)), // delta_put
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
             None,
             None,
             None,
@@ -2783,9 +2442,15 @@ mod tests_current_deltas {
             None,
             None,
             None,
-            None,
+            pos!(0.2),       // implied_volatility
             Some(dec!(0.5)), // delta_call
             None,            // No delta_put
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
             None,
             None,
             None,
@@ -2808,9 +2473,15 @@ mod tests_current_deltas {
             None,
             None,
             None,
-            None,
+            pos!(0.2),        // implied_volatility
             None,             // No delta_call
             Some(dec!(-0.5)), // delta_put
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
             None,
             None,
             None,
@@ -2833,9 +2504,15 @@ mod tests_current_deltas {
             None,
             None,
             None,
+            pos!(0.2), // implied_volatility
+            None,      // No delta_call
+            None,      // No delta_put
             None,
-            None, // No delta_call
-            None, // No delta_put
+            None,
+            None,
+            None,
+            None,
+            None,
             None,
             None,
             None,

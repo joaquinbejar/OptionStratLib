@@ -890,7 +890,7 @@ impl Optimizable for ShortStrangle {
                 OptionDataGroup::Two(first, second) => (first, second),
                 _ => panic!("Invalid OptionDataGroup"),
             };
-
+            
             let legs = StrategyLegs::TwoLegs {
                 first: short_put,
                 second: short_call,
@@ -925,10 +925,12 @@ impl Optimizable for ShortStrangle {
             StrategyLegs::TwoLegs { first, second } => (first, second),
             _ => panic!("Invalid number of legs for this strategy"),
         };
-        if !call.validate() {
+
+        if !call.valid_call() {
             panic!("Invalid Call options");
         }
-        if !put.validate() {
+
+        if !put.valid_put() {
             panic!("Invalid Put options");
         }
         let implied_volatility = call.implied_volatility.unwrap();

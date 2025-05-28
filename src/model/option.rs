@@ -179,10 +179,9 @@ impl Options {
     ///
     /// * `option_data` - A reference to an OptionData structure containing updated option parameters.
     ///
-    #[allow(dead_code)]
     pub(crate) fn update_from_option_data(&mut self, option_data: &OptionData) {
         self.strike_price = option_data.strike_price;
-        self.implied_volatility = option_data.implied_volatility.unwrap_or(Positive::ZERO);
+        self.implied_volatility = option_data.implied_volatility;
         trace!("Updated Option: {:#?}", self);
     }
 
@@ -663,6 +662,24 @@ impl Options {
         })
     }
 }
+
+impl From<&OptionData> for Options {
+    fn from(option_data: &OptionData) -> Self {
+        Options {
+            option_type: OptionType::European,
+            side: Side::Long,
+            underlying_symbol: *option_data.symbol.clone().unwrap(),
+            strike_price: option_data.strike_price,
+            expiration_date: option_data.expiration_date.unwrap(),
+            implied_volatility: option_data.implied_volatility,
+            quantity: Positive::ONE,
+            underlying_price: *option_data.underlying_price.clone().unwrap(),
+            risk_free_rate: option_data.risk_free_rate.unwrap_or(Decimal::ZERO),
+            option_style: OptionStyle::Call,
+            dividend_yield: option_data.dividend_yield.unwrap_or(Positive::ZERO),
+            exotic_params: None,
+        }
+    }}
 
 impl Default for Options {
     fn default() -> Self {

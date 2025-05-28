@@ -56,13 +56,13 @@
 //!             pos!(0.02),
 //!             2,
 //!             OptionDataPriceParams::new(
-//!                 pos!(100.0),
-//!                 ExpirationDate::Days(pos!(30.0)),
-//!                 spos!(0.17),
-//!                 Decimal::ZERO,
-//!                 pos!(0.05),
+//!                 Some(Box::new(pos!(100.0))),
+//!                 Some(ExpirationDate::Days(pos!(30.0))),
+//!                 Some(Decimal::ZERO),
+//!                 spos!(0.05),
 //!                 None,
 //!             ),
+//!             pos!(0.1),
 //!         );
 //!
 //! let option_chain = OptionChain::build_chain(&option_chain_params);
@@ -430,7 +430,7 @@ mod tests {
                 spos!(15.5),
                 spos!(5.0),
                 spos!(5.5),
-                spos!(0.2),
+                pos!(0.2),
                 Some(dec!(-0.3)),
                 Some(dec!(-0.3)),
                 Some(dec!(0.3)),
@@ -665,7 +665,7 @@ mod tests {
                 spos!(5.5),
                 spos!(15.0),
                 spos!(15.5),
-                None, // No implied volatility
+                pos!(0.2), // No implied volatility
                 Some(dec!(0.3)),
                 Some(dec!(0.3)),
                 Some(dec!(0.3)),
@@ -744,7 +744,7 @@ mod tests {
                 spos!(51.0),
                 spos!(0.1),
                 spos!(0.2),
-                spos!(0.8), // High volatility
+                pos!(0.8), // High volatility
                 Some(dec!(-0.99)),
                 Some(dec!(0.3)),
                 Some(dec!(0.3)),
@@ -758,7 +758,7 @@ mod tests {
                 spos!(0.2),
                 spos!(50.0),
                 spos!(51.0),
-                spos!(0.8), // High volatility
+                pos!(0.8), // High volatility
                 Some(dec!(0.99)),
                 Some(dec!(0.3)),
                 Some(dec!(0.3)),
@@ -860,7 +860,7 @@ mod additional_tests {
                     spos!(15.5),
                     spos!(5.0),
                     spos!(5.5),
-                    spos!(0.2),
+                    pos!(0.2),
                     Some(dec!(-0.3)),
                     Some(dec!(0.3)),
                     Some(dec!(0.3)),
@@ -883,7 +883,7 @@ mod additional_tests {
                     spos!(15.5),
                     spos!(5.0),
                     spos!(5.5),
-                    spos!(0.2),
+                    pos!(0.2),
                     Some(dec!(-0.3)),
                     Some(dec!(0.3)),
                     Some(dec!(0.3)),
@@ -906,7 +906,7 @@ mod additional_tests {
                     spos!(15.5),
                     spos!(5.0),
                     spos!(5.5),
-                    spos!(0.5), // Alta volatilidad
+                    pos!(0.5), // Alta volatilidad
                     Some(dec!(-0.3)),
                     Some(dec!(0.3)),
                     Some(dec!(0.3)),
@@ -990,7 +990,7 @@ mod additional_tests {
                 spos!(0.002),
                 spos!(0.001),
                 spos!(0.002),
-                spos!(0.1),
+                pos!(0.1),
                 Some(dec!(-0.3)),
                 Some(dec!(0.3)),
                 Some(dec!(0.3)),
@@ -1019,7 +1019,7 @@ mod additional_tests {
                 spos!(1001.0),
                 spos!(1000.0),
                 spos!(1001.0),
-                spos!(0.1),
+                pos!(0.1),
                 Some(dec!(-0.3)),
                 Some(dec!(0.3)),
                 Some(dec!(0.3)),
@@ -1435,13 +1435,13 @@ mod chain_test {
             pos!(0.02),
             2,
             OptionDataPriceParams::new(
-                pos!(100.0),
-                ExpirationDate::Days(pos!(30.0)),
-                spos!(0.17),
-                Decimal::ZERO,
-                pos!(0.05),
+                Some(Box::new(pos!(100.0))),
+                Some(ExpirationDate::Days(pos!(30.0))),
+                Some(Decimal::ZERO),
+                spos!(0.05),
                 None,
             ),
+            pos!(0.2),
         );
 
         OptionChain::build_chain(&option_chain_params)
@@ -1458,13 +1458,13 @@ mod chain_test {
             pos!(0.02),
             2,
             OptionDataPriceParams::new(
-                pos!(100.0),
-                ExpirationDate::Days(pos!(30.0)),
-                spos!(0.17),
-                Decimal::ZERO,
-                pos!(0.0),
+                Some(Box::new(pos!(100.0))),
+                Some(ExpirationDate::Days(pos!(30.0))),
+                Some(Decimal::ZERO),
+                spos!(0.0),
                 None,
             ),
+            pos!(0.2),
         );
 
         let chain = OptionChain::build_chain(&option_chain_params);
@@ -1504,13 +1504,13 @@ mod chain_test {
             pos!(0.02),
             2,
             OptionDataPriceParams::new(
-                pos!(100.0),
-                ExpirationDate::Days(pos!(30.0)),
-                spos!(0.17),
-                Decimal::ZERO,
-                pos!(0.05),
+                Some(Box::new(pos!(100.0))),
+                Some(ExpirationDate::Days(pos!(30.0))),
+                Some(Decimal::ZERO),
+                spos!(0.05),
                 None,
             ),
+            pos!(0.2),
         );
 
         let chain = OptionChain::build_chain(&option_chain_params);
@@ -1639,7 +1639,7 @@ mod rnd_coverage_tests {
                 spos!(10.5),
                 spos!(10.0),
                 spos!(10.5),
-                spos!(vols[i]),
+                pos!(vols[i]),
                 None,
                 None,
                 None,
