@@ -270,14 +270,14 @@ impl OptionChain {
     /// ```rust
     /// use rust_decimal_macros::dec;
     /// use optionstratlib::chains::chain::OptionChain;
-    /// use optionstratlib::pos;
+    /// use optionstratlib::{pos, spos};
     ///
     /// let chain = OptionChain::new(
     ///     "AAPL",
     ///     pos!(172.50),
     ///     "2023-12-15".to_string(),
     ///     Some(dec!(0.05)),  // 5% risk-free rate
-    ///     Some(pos!(0.0065)) // 0.65% dividend yield
+    ///     spos!(0.0065) // 0.65% dividend yield
     /// );
     /// ```
     pub fn new(
@@ -2867,7 +2867,7 @@ mod tests_chain_base {
 #[cfg(test)]
 mod tests_option_data {
     use super::*;
-    
+
     use crate::spos;
 
     use crate::{assert_pos_relative_eq, pos};
@@ -3326,8 +3326,7 @@ mod tests_get_random_positions {
 #[cfg(test)]
 mod tests_option_data_get_prices {
     use super::*;
-    use crate::pos;
-    use crate::spos;
+    use crate::{pos, spos};
     use rust_decimal_macros::dec;
 
     fn create_test_option_data() -> OptionData {
@@ -3407,8 +3406,7 @@ mod tests_option_data_get_prices {
 #[cfg(test)]
 mod tests_option_data_display {
     use super::*;
-    use crate::pos;
-    use crate::spos;
+    use crate::{pos, spos};
     use rust_decimal_macros::dec;
 
     #[test]
@@ -5587,7 +5585,7 @@ mod tests_option_chain_surfaces {
             pos!(100.0),
             "2024-12-31".to_string(),
             Some(dec!(0.05)),
-            Some(pos!(0.01)),
+            spos!(0.01),
         );
 
         let result = empty_chain.surface(
@@ -5610,23 +5608,24 @@ mod tests_option_chain_surfaces {
 #[cfg(test)]
 mod tests_serialization {
     use super::*;
+    use crate::spos;
     use rust_decimal_macros::dec;
 
     #[test]
     fn test_optiondata_serialization() {
         let option_data = OptionData {
             strike_price: pos!(100.0),
-            call_bid: Some(pos!(9.5)),
-            call_ask: Some(pos!(10.0)),
-            put_bid: Some(pos!(8.5)),
-            put_ask: Some(pos!(9.0)),
-            call_middle: Some(pos!(9.75)),
-            put_middle: Some(pos!(8.75)),
+            call_bid: spos!(9.5),
+            call_ask: spos!(10.0),
+            put_bid: spos!(8.5),
+            put_ask: spos!(9.0),
+            call_middle: spos!(9.75),
+            put_middle: spos!(8.75),
             implied_volatility: pos!(0.2),
             delta_call: Some(dec!(0.5)),
             delta_put: Some(dec!(-0.5)),
             gamma: Some(dec!(0.1)),
-            volume: Some(pos!(1000.0)),
+            volume: spos!(1000.0),
             open_interest: Some(500),
             symbol: None,
             expiration_date: None,
@@ -5649,21 +5648,21 @@ mod tests_serialization {
             pos!(100.0),
             "2024-01-01".to_string(),
             Some(dec!(0.05)),
-            Some(pos!(0.02)),
+            spos!(0.02),
         );
 
         // Add some test options
         chain.add_option(
             pos!(95.0),
-            Some(pos!(6.0)),
-            Some(pos!(6.5)),
-            Some(pos!(1.5)),
-            Some(pos!(2.0)),
+            spos!(6.0),
+            spos!(6.5),
+            spos!(1.5),
+            spos!(2.0),
             pos!(0.2),
             Some(dec!(0.7)),
             Some(dec!(-0.3)),
             Some(dec!(0.1)),
-            Some(pos!(1000.0)),
+            spos!(1000.0),
             Some(500),
         );
 
@@ -5711,6 +5710,7 @@ mod tests_serialization {
 #[cfg(test)]
 mod tests_option_data_serde {
     use super::*;
+    use crate::spos;
     use rust_decimal_macros::dec;
     use serde_json;
 
@@ -5718,17 +5718,17 @@ mod tests_option_data_serde {
     fn create_sample_option_data() -> OptionData {
         OptionData {
             strike_price: pos!(100.0),
-            call_bid: Some(pos!(9.5)),
-            call_ask: Some(pos!(10.0)),
-            put_bid: Some(pos!(8.5)),
-            put_ask: Some(pos!(9.0)),
-            call_middle: Some(pos!(9.75)),
-            put_middle: Some(pos!(8.75)),
+            call_bid: spos!(9.5),
+            call_ask: spos!(10.0),
+            put_bid: spos!(8.5),
+            put_ask: spos!(9.0),
+            call_middle: spos!(9.75),
+            put_middle: spos!(8.75),
             implied_volatility: pos!(0.2),
             delta_call: Some(dec!(0.5)),
             delta_put: Some(dec!(-0.5)),
             gamma: Some(dec!(0.1)),
-            volume: Some(pos!(1000.0)),
+            volume: spos!(1000.0),
             open_interest: Some(500),
             symbol: None,
             expiration_date: None,
@@ -5788,8 +5788,8 @@ mod tests_option_data_serde {
         // Test with large numbers to verify precision
         let option_data = OptionData {
             strike_price: pos!(999999.99),
-            call_bid: Some(pos!(99999.99)),
-            call_ask: Some(pos!(99999.99)),
+            call_bid: spos!(99999.99),
+            call_ask: spos!(99999.99),
             implied_volatility: pos!(1.0),
             ..Default::default()
         };
@@ -5806,7 +5806,7 @@ mod tests_option_data_serde {
         // Test with very small numbers to verify precision
         let option_data = OptionData {
             strike_price: pos!(0.0001),
-            call_bid: Some(pos!(0.0001)),
+            call_bid: spos!(0.0001),
             implied_volatility: pos!(0.0001),
             delta_call: Some(dec!(0.0001)),
             ..Default::default()
@@ -5872,6 +5872,7 @@ mod tests_option_data_serde {
 #[cfg(test)]
 mod tests_option_chain_serde {
     use super::*;
+    use crate::spos;
     use rust_decimal_macros::dec;
 
     fn create_sample_chain() -> OptionChain {
@@ -5880,21 +5881,21 @@ mod tests_option_chain_serde {
             pos!(100.0),
             "2024-01-01".to_string(),
             Some(dec!(0.05)),
-            Some(pos!(0.02)),
+            spos!(0.02),
         );
 
         // Add some test options
         chain.add_option(
             pos!(95.0),
-            Some(pos!(6.0)),
-            Some(pos!(6.5)),
-            Some(pos!(1.5)),
-            Some(pos!(2.0)),
+            spos!(6.0),
+            spos!(6.5),
+            spos!(1.5),
+            spos!(2.0),
             pos!(0.2),
             Some(dec!(0.7)),
             Some(dec!(-0.3)),
             Some(dec!(0.1)),
-            Some(pos!(1000.0)),
+            spos!(1000.0),
             Some(500),
         );
 
@@ -5931,29 +5932,29 @@ mod tests_option_chain_serde {
         // Add more options
         chain.add_option(
             pos!(100.0),
-            Some(pos!(5.0)),
-            Some(pos!(5.5)),
-            Some(pos!(5.0)),
-            Some(pos!(5.5)),
+            spos!(5.0),
+            spos!(5.5),
+            spos!(5.0),
+            spos!(5.5),
             pos!(0.2),
             Some(dec!(0.5)),
             Some(dec!(-0.5)),
             Some(dec!(0.1)),
-            Some(pos!(1000.0)),
+            spos!(1000.0),
             Some(500),
         );
 
         chain.add_option(
             pos!(105.0),
-            Some(pos!(4.0)),
-            Some(pos!(4.5)),
-            Some(pos!(8.0)),
-            Some(pos!(8.5)),
+            spos!(4.0),
+            spos!(4.5),
+            spos!(8.0),
+            spos!(8.5),
             pos!(0.2),
             Some(dec!(0.3)),
             Some(dec!(-0.7)),
             Some(dec!(0.1)),
-            Some(pos!(1000.0)),
+            spos!(1000.0),
             Some(500),
         );
 
@@ -6883,8 +6884,7 @@ mod tests_atm_strike_bis {
 #[cfg(test)]
 mod tests_option_chain_utils {
     use super::*;
-    use crate::pos;
-    use crate::spos;
+    use crate::{pos, spos};
     use rust_decimal_macros::dec;
 
     // Helper function to create a chain with custom strikes for specific tests
@@ -6894,7 +6894,7 @@ mod tests_option_chain_utils {
             pos!(100.0),
             "2024-01-01".to_string(),
             Some(dec!(0.05)),
-            Some(pos!(0.02)),
+            spos!(0.02),
         );
 
         // Add options with irregular strike intervals
@@ -7026,8 +7026,7 @@ mod tests_option_chain_utils_bis {
     use crate::chains::utils::OptionChainBuildParams;
     use crate::chains::utils::OptionDataPriceParams;
     use crate::model::ExpirationDate;
-    use crate::pos;
-    use crate::spos;
+    use crate::{pos, spos};
 
     use rust_decimal_macros::dec;
 
@@ -7062,7 +7061,7 @@ mod tests_option_chain_utils_bis {
             pos!(100.0),
             "2024-01-01".to_string(),
             Some(dec!(0.05)),
-            Some(pos!(0.02)),
+            spos!(0.02),
         );
 
         // Add options with irregular strike intervals
@@ -7308,7 +7307,7 @@ mod chain_coverage_tests {
             pos!(5781.88),
             "18 Oct 2024".to_string(), // With spaces
             Some(dec!(0.05)),
-            Some(pos!(0.02)),
+            spos!(0.02),
         );
 
         let title = chain.get_title();
@@ -7558,7 +7557,7 @@ mod chain_coverage_tests_bis {
             pos!(5781.88),
             "18 Oct 2024".to_string(), // With spaces
             Some(dec!(0.05)),
-            Some(pos!(0.02)),
+            spos!(0.02),
         );
 
         let title = chain.get_title();
@@ -7751,7 +7750,7 @@ mod tests_get_position_with_delta {
             pos!(100.0),
             "2024-12-31".to_string(),
             Some(dec!(0.05)),
-            Some(pos!(0.02)),
+            spos!(0.02),
         );
 
         // Add options with different deltas
@@ -7951,7 +7950,7 @@ mod tests_get_position_with_delta {
             pos!(100.0),
             "2024-12-31".to_string(),
             Some(dec!(0.05)),
-            Some(pos!(0.02)),
+            spos!(0.02),
         );
 
         // Request any position on an empty chain
@@ -7980,7 +7979,7 @@ mod tests_get_position_with_delta {
             pos!(100.0),
             "2024-12-31".to_string(),
             Some(dec!(0.05)),
-            Some(pos!(0.02)),
+            spos!(0.02),
         );
 
         // Add options without delta values
@@ -8038,7 +8037,7 @@ mod tests_get_position_with_delta {
             pos!(100.0),
             "2024-12-31".to_string(),
             Some(dec!(0.05)),
-            Some(pos!(0.02)),
+            spos!(0.02),
         );
 
         // Add multiple options with the same delta

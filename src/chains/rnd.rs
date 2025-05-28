@@ -1625,7 +1625,7 @@ mod rnd_coverage_tests {
             pos!(100.0),
             "2024-06-30".to_string(),
             Some(dec!(0.05)),
-            Some(pos!(0.0)),
+            spos!(0.0),
         );
 
         // Add options with volatility smile pattern

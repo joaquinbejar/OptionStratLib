@@ -9,7 +9,7 @@ use optionstratlib::simulation::steps::{Step, Xstep, Ystep};
 use optionstratlib::simulation::{WalkParams, WalkType, WalkTypeAble};
 use optionstratlib::utils::time::{convert_time_frame, get_x_days_formatted};
 use optionstratlib::utils::{Len, TimeFrame};
-use optionstratlib::{ExpirationDate, Positive, pos};
+use optionstratlib::{ExpirationDate, Positive, pos, spos};
 use rust_decimal_macros::dec;
 use std::error::Error;
 use tracing::info;
@@ -55,7 +55,7 @@ fn generator(walk_params: &WalkParams<Positive, OptionChain>) -> Vec<Step<Positi
         };
         // convert y_step to OptionChain
         let y_step_chain: OptionChain =
-            create_chain_from_step(&previous_y_step, y_step, Some(pos!(0.20))).unwrap();
+            create_chain_from_step(&previous_y_step, y_step, spos!(0.20)).unwrap();
         previous_y_step = previous_y_step.next(y_step_chain).clone();
         let step = Step {
             x: previous_x_step,
