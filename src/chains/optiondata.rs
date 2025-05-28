@@ -584,11 +584,12 @@ impl OptionData {
     /// * Errors propagated from the Black-Scholes calculation functions
     pub fn calculate_prices(&mut self, spread: Option<Positive>) -> Result<(), ChainError> {
         let call_option = self.get_option(Side::Long, OptionStyle::Call)?;
-        let price = call_option.calculate_price_black_scholes()?;
-        self.call_middle = Some(price.into());
+        let call_price = call_option.calculate_price_black_scholes()?;
+        self.call_middle = Some(call_price.into());
+        
         let put_option = self.get_option(Side::Long, OptionStyle::Put)?;
-        let prince = put_option.calculate_price_black_scholes()?;
-        self.put_middle = Some(price.into());
+        let put_price = put_option.calculate_price_black_scholes()?;
+        self.put_middle = Some(put_price.into());
 
         self.call_ask = self.call_middle;
         self.call_bid = self.call_middle;
@@ -1088,7 +1089,6 @@ mod tests_get_position {
     #[test]
     fn test_get_position_long_call() {
         let option_data = create_test_option_data();
-        let price_params = create_test_price_params();
 
         // Test getting a long call position
         let result = option_data.get_position(
@@ -1120,7 +1120,6 @@ mod tests_get_position {
     #[test]
     fn test_get_position_short_put() {
         let option_data = create_test_option_data();
-        let price_params = create_test_price_params();
 
         // Test getting a short put position
         let result = option_data.get_position(
@@ -1148,7 +1147,6 @@ mod tests_get_position {
     #[test]
     fn test_get_position_with_custom_date() {
         let option_data = create_test_option_data();
-        let price_params = create_test_price_params();
 
         // Create a custom date (one week ago)
         let custom_date = Utc::now() - Duration::days(7);
@@ -1167,7 +1165,6 @@ mod tests_get_position {
     #[test]
     fn test_get_position_with_fees() {
         let option_data = create_test_option_data();
-        let price_params = create_test_price_params();
 
         // Custom fees
         let open_fee = pos!(1.5);
@@ -1192,7 +1189,7 @@ mod tests_get_position {
 
     #[test]
     fn test_get_position_missing_volatility() {
-        let mut option_data = create_test_option_data();
+        let option_data = create_test_option_data();
 
         // Test with missing volatility
         let result = option_data.get_position(Side::Long, OptionStyle::Call, None, None, None);

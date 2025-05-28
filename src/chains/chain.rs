@@ -2976,14 +2976,6 @@ mod tests_option_data {
         let mut option_data = OptionData::default();
         option_data.strike_price = pos!(100.0);
         option_data.implied_volatility = pos!(0.2);
-        let price_params = OptionDataPriceParams::new(
-            Some(Box::new(pos!(100.0))),
-            Some(ExpirationDate::Days(pos!(30.0))),
-            Some(dec!(0.05)),
-            spos!(0.02),
-            Some(Box::new("AAPL".to_string())),
-        );
-
         let result = option_data.calculate_prices(None);
 
         assert!(result.is_ok());
@@ -2997,14 +2989,6 @@ mod tests_option_data {
     fn test_calculate_prices_missing_volatility() {
         let mut option_data = OptionData::default();
         option_data.strike_price = pos!(100.0);
-
-        let price_params = OptionDataPriceParams::new(
-            Some(Box::new(pos!(100.0))),
-            Some(ExpirationDate::Days(pos!(30.0))),
-            Some(dec!(0.05)),
-            spos!(0.02),
-            Some(Box::new("AAPL".to_string())),
-        );
         let _ = option_data.calculate_prices(None);
 
         info!("{}", option_data);
@@ -3022,14 +3006,6 @@ mod tests_option_data {
         let mut option_data = OptionData::default();
         option_data.strike_price = pos!(100.0);
         option_data.implied_volatility = pos!(0.2);
-
-        let price_params = OptionDataPriceParams::new(
-            Some(Box::new(pos!(100.0))),
-            Some(ExpirationDate::Days(pos!(30.0))),
-            Some(dec!(0.05)),
-            spos!(0.02),
-            Some(Box::new("AAPL".to_string())),
-        );
         let result = option_data.calculate_prices(None);
 
         assert!(result.is_ok());
@@ -3051,14 +3027,6 @@ mod tests_option_data {
         let mut option_data = OptionData::default();
         option_data.strike_price = pos!(100.0);
         option_data.implied_volatility = pos!(0.2);
-        let price_params = OptionDataPriceParams::new(
-            Some(Box::new(pos!(100.0))),
-            Some(ExpirationDate::Days(pos!(30.0))),
-            Some(dec!(0.05)),
-            spos!(0.02),
-            Some(Box::new("AAPL".to_string())),
-        );
-
         let result = option_data.calculate_prices(None);
 
         assert!(result.is_ok());
@@ -3667,14 +3635,6 @@ mod tests_option_data_get_option {
     #[test]
     fn test_get_option_success() {
         let option_data = create_test_option_data();
-        let price_params = OptionDataPriceParams::new(
-            Some(Box::new(pos!(100.0))),
-            Some(ExpirationDate::Days(pos!(30.0))),
-            Some(dec!(0.05)),
-            spos!(0.02),
-            Some(Box::new("AAPL".to_string())),
-        );
-
         let result = option_data.get_option(Side::Long, OptionStyle::Call);
         assert!(result.is_ok());
 
@@ -3691,14 +3651,6 @@ mod tests_option_data_get_option {
     #[test]
     fn test_get_option_using_data_iv() {
         let option_data = create_test_option_data();
-        let price_params = OptionDataPriceParams::new(
-            Some(Box::new(pos!(100.0))),
-            Some(ExpirationDate::Days(pos!(30.0))),
-            Some(dec!(0.05)),
-            spos!(0.02),
-            Some(Box::new("AAPL".to_string())),
-        );
-
         let result = option_data.get_option(Side::Long, OptionStyle::Call);
         assert!(result.is_ok());
 
@@ -3708,7 +3660,7 @@ mod tests_option_data_get_option {
 
     #[test]
     fn test_get_option_missing_iv() {
-        let mut option_data = create_test_option_data();
+        let option_data = create_test_option_data();
 
         let price_params = OptionDataPriceParams::new(
             Some(Box::new(pos!(100.0))),
@@ -3827,8 +3779,7 @@ mod tests_option_data_get_options_in_strike {
 
     #[test]
     fn test_get_options_in_strike_missing_iv() {
-        let mut option_data = create_test_option_data();
-
+        let option_data = create_test_option_data();
         let price_params = OptionDataPriceParams::new(
             Some(Box::new(pos!(100.0))),
             Some(ExpirationDate::Days(pos!(30.0))),
@@ -3888,14 +3839,6 @@ mod tests_option_data_get_options_in_strike {
     #[test]
     fn test_get_options_in_strike_deltas() {
         let option_data = create_test_option_data();
-        let price_params = OptionDataPriceParams::new(
-            Some(Box::new(pos!(100.0))),
-            Some(ExpirationDate::Days(pos!(30.0))),
-            Some(dec!(0.05)),
-            spos!(0.02),
-            Some(Box::new("AAPL".to_string())),
-        );
-
         let result = option_data.get_options_in_strike();
         assert!(result.is_ok());
 
@@ -4049,14 +3992,6 @@ mod tests_filter_options_in_strike {
     #[test]
     fn test_filter_empty_chain() {
         let chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
-        let price_params = OptionDataPriceParams::new(
-            Some(Box::new(pos!(100.0))),
-            Some(ExpirationDate::Days(pos!(30.0))),
-            Some(dec!(0.05)),
-            spos!(0.02),
-            Some(Box::new("AAPL".to_string())),
-        );
-
         let result = chain.filter_options_in_strike(FindOptimalSide::All);
         assert!(result.is_ok());
 
@@ -5301,8 +5236,6 @@ mod tests_option_data_delta {
 
     #[test]
     fn test_calculate_delta_near_the_money() {
-        let mut price_params = create_standard_price_params();
-
         let mut option_data = create_standard_option_data();
         option_data.calculate_delta();
 
@@ -5315,7 +5248,6 @@ mod tests_option_data_delta {
 
     #[test]
     fn test_calculate_delta_deep_itm() {
-        let mut price_params = create_standard_price_params();
         let mut option_data = create_standard_option_data();
         option_data.calculate_delta();
 
@@ -5328,7 +5260,6 @@ mod tests_option_data_delta {
 
     #[test]
     fn test_calculate_delta_deep_otm() {
-        let mut price_params = create_standard_price_params();
         let mut option_data = create_standard_option_data();
         option_data.calculate_delta();
 
@@ -5341,7 +5272,6 @@ mod tests_option_data_delta {
 
     #[test]
     fn test_calculate_delta_multiple_calls() {
-        let price_params = create_standard_price_params();
         let mut option_data = create_standard_option_data();
 
         // Call delta multiple times to ensure consistent behavior
