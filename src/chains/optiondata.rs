@@ -587,7 +587,7 @@ impl OptionData {
         let call_option = self.get_option(Side::Long, OptionStyle::Call)?;
         let call_price = call_option.calculate_price_black_scholes()?;
         self.call_middle = Some(call_price.into());
-        
+
         let put_option = self.get_option(Side::Long, OptionStyle::Put)?;
         let put_price = put_option.calculate_price_black_scholes()?;
         self.put_middle = Some(put_price.into());
@@ -1596,7 +1596,7 @@ mod tests_check_convert_implied_volatility {
 mod tests_get_option_for_iv {
     use super::*;
     use crate::model::ExpirationDate;
-    use crate::{pos, spos, OptionType};
+    use crate::{OptionType, pos, spos};
     use rust_decimal_macros::dec;
 
     // Helper function to create a standard OptionDataPriceParams for testing
@@ -2120,7 +2120,7 @@ mod tests_set_mid_prices {
         option_data.set_mid_prices();
 
         // Assert that call_middle is set to (9.0 + 11.0) / 2 = 10.0
-        assert_eq!(option_data.call_middle, Some(pos!(10.0)));
+        assert_eq!(option_data.call_middle, spos!(10.0));
         // put_middle should still be None
         assert_eq!(option_data.put_middle, None);
     }
@@ -2152,7 +2152,7 @@ mod tests_set_mid_prices {
         option_data.set_mid_prices();
 
         // Assert that put_middle is set to (8.0 + 12.0) / 2 = 10.0
-        assert_eq!(option_data.put_middle, Some(pos!(10.0)));
+        assert_eq!(option_data.put_middle, spos!(10.0));
         // call_middle should still be None
         assert_eq!(option_data.call_middle, None);
     }
@@ -2184,8 +2184,8 @@ mod tests_set_mid_prices {
         option_data.set_mid_prices();
 
         // Assert that both middle prices are correctly calculated
-        assert_eq!(option_data.call_middle, Some(pos!(10.0)));
-        assert_eq!(option_data.put_middle, Some(pos!(10.0)));
+        assert_eq!(option_data.call_middle, spos!(10.0));
+        assert_eq!(option_data.put_middle, spos!(10.0));
     }
 
     #[test]
@@ -2217,7 +2217,7 @@ mod tests_set_mid_prices {
         // Assert that call_middle is None due to missing bid
         assert_eq!(option_data.call_middle, None);
         // put_middle should still be calculated
-        assert_eq!(option_data.put_middle, Some(pos!(10.0)));
+        assert_eq!(option_data.put_middle, spos!(10.0));
     }
 
     #[test]
@@ -2249,7 +2249,7 @@ mod tests_set_mid_prices {
         // Assert that call_middle is None due to missing ask
         assert_eq!(option_data.call_middle, None);
         // put_middle should still be calculated
-        assert_eq!(option_data.put_middle, Some(pos!(10.0)));
+        assert_eq!(option_data.put_middle, spos!(10.0));
     }
 }
 
@@ -2288,8 +2288,8 @@ mod tests_get_mid_prices {
         let (call_mid, put_mid) = option_data.get_mid_prices();
 
         // Verify returned values
-        assert_eq!(call_mid, Some(pos!(10.0)));
-        assert_eq!(put_mid, Some(pos!(10.0)));
+        assert_eq!(call_mid, spos!(10.0));
+        assert_eq!(put_mid, spos!(10.0));
     }
 
     #[test]
@@ -2322,7 +2322,7 @@ mod tests_get_mid_prices {
         let (call_mid, put_mid) = option_data.get_mid_prices();
 
         // Verify returned values
-        assert_eq!(call_mid, Some(pos!(10.0)));
+        assert_eq!(call_mid, spos!(10.0));
         assert_eq!(put_mid, None);
     }
 
@@ -2357,7 +2357,7 @@ mod tests_get_mid_prices {
 
         // Verify returned values
         assert_eq!(call_mid, None);
-        assert_eq!(put_mid, Some(pos!(10.0)));
+        assert_eq!(put_mid, spos!(10.0));
     }
 
     #[test]

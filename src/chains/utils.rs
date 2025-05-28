@@ -211,11 +211,11 @@ impl OptionChainBuildParams {
     pub fn set_underlying_price(&mut self, price: Option<Box<Positive>>) {
         self.price_params.underlying_price = price;
     }
-    
+
     pub fn set_implied_volatility(&mut self, implied_vol: Positive) {
         self.implied_volatility = implied_vol;
     }
-    
+
     pub fn get_implied_volatility(&self) -> Positive {
         self.implied_volatility
     }
@@ -259,8 +259,7 @@ impl Display for OptionChainBuildParams {
 ///
 /// This structure is typically used as input to option pricing functions to calculate
 /// theoretical values, Greeks (delta, gamma, etc.), and other option metrics.
-#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
-#[derive(Default)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone, Default)]
 pub struct OptionDataPriceParams {
     /// The current price of the underlying asset
     pub(crate) underlying_price: Option<Box<Positive>>,
@@ -352,7 +351,6 @@ impl OptionDataPriceParams {
         self.underlying_symbol.clone()
     }
 }
-
 
 impl Display for OptionDataPriceParams {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -1449,7 +1447,7 @@ mod tests_sample {
     #[test]
     fn test_empty_string_round_to_2() {
         // Test with Some value
-        let value = Some(pos!(123.456));
+        let value = spos!(123.456);
         let result = empty_string_round_to_2(value);
         assert_eq!(result, "123.46");
 
