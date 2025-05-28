@@ -2,7 +2,7 @@ use chrono::Utc;
 use optionstratlib::error::TransactionError;
 use optionstratlib::pnl::{PnL, PnLCalculator, Transaction, TransactionAble};
 use optionstratlib::strategies::DeltaAdjustment;
-use optionstratlib::{ExpirationDate, Positive, pos};
+use optionstratlib::{ExpirationDate, Positive, pos, spos};
 use rust_decimal_macros::dec;
 use std::error::Error;
 
@@ -123,9 +123,9 @@ fn test_transaction_able_trait() {
         pos!(1.0),
         pos!(100.0),
         pos!(5.0),
-        Some(pos!(100.0)),
-        Some(pos!(30.0)),
-        Some(pos!(0.2)),
+        spos!(100.0),
+        spos!(30.0),
+        spos!(0.2),
     );
 
     let transaction2 = Transaction::new(
@@ -137,9 +137,9 @@ fn test_transaction_able_trait() {
         pos!(2.0),
         pos!(95.0),
         pos!(7.0),
-        Some(pos!(100.0)),
-        Some(pos!(30.0)),
-        Some(pos!(0.2)),
+        spos!(100.0),
+        spos!(30.0),
+        spos!(0.2),
     );
 
     // Test add_transaction
