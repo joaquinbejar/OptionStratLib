@@ -257,7 +257,7 @@ impl Transaction {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::pos;
+    use crate::{pos, spos};
     use chrono::Utc;
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
@@ -275,9 +275,9 @@ mod tests {
             pos!(1.0),            // 1 contract
             pos!(5.0),            // Premium paid: $5.00
             pos!(1.0),            // Fees: $1.00
-            Some(pos!(100.0)),    // Underlying price at open: $100.00
-            Some(pos!(30.0)),     // 30 days to expiration
-            Some(pos!(0.2)),      // IV: 20%
+            spos!(100.0),    // Underlying price at open: $100.00
+            spos!(30.0),     // 30 days to expiration
+            spos!(0.2),      // IV: 20%
         );
 
         // 2. Calculate initial PnL (should be negative as we paid premium + fees)
@@ -300,9 +300,9 @@ mod tests {
             pos!(1.0),            // 1 contract
             pos!(12.0),           // Closing premium: $12.00 (higher due to price increase)
             pos!(1.0),            // Closing fees: $1.00
-            Some(pos!(110.0)),    // Underlying price at close: $110.00
-            Some(pos!(20.0)),     // 20 days to expiration (10 days elapsed)
-            Some(pos!(0.22)),     // IV: 22%
+            spos!(110.0),    // Underlying price at close: $110.00
+            spos!(20.0),     // 20 days to expiration (10 days elapsed)
+            spos!(0.22),     // IV: 22%
         );
 
         // 4. Calculate closing PnL (should be positive as closing premium > initial premium + fees)
@@ -328,9 +328,9 @@ mod tests {
             pos!(1.0),
             pos!(5.0), // Premium paid: $5.00
             pos!(1.0), // Fees: $1.00
-            Some(pos!(100.0)),
-            Some(pos!(30.0)),
-            Some(pos!(0.2)),
+            spos!(100.0),
+            spos!(30.0),
+            spos!(0.2),
         );
 
         // Calculate initial PnL
@@ -351,9 +351,9 @@ mod tests {
             pos!(1.0),
             pos!(2.0), // Closing premium: $2.00 (lower due to price decrease)
             pos!(1.0), // Closing fees: $1.00
-            Some(pos!(95.0)),
-            Some(pos!(20.0)),
-            Some(pos!(0.18)),
+            spos!(95.0),
+            spos!(20.0),
+            spos!(0.18),
         );
 
         // Calculate closing PnL
@@ -378,9 +378,9 @@ mod tests {
             pos!(1.0),         // 1 contract
             pos!(5.0),         // Premium received: $5.00
             pos!(1.0),         // Fees: $1.00
-            Some(pos!(100.0)), // Underlying price at open: $100.00
-            Some(pos!(30.0)),  // 30 days to expiration
-            Some(pos!(0.2)),   // IV: 20%
+            spos!(100.0), // Underlying price at open: $100.00
+            spos!(30.0),  // 30 days to expiration
+            spos!(0.2),   // IV: 20%
         );
 
         // 2. Calculate initial PnL (should be positive as we receive premium - fees)
@@ -402,9 +402,9 @@ mod tests {
             pos!(1.0),
             pos!(2.0), // Closing premium: $2.00 (lower due to price decrease)
             pos!(1.0), // Closing fees: $1.00
-            Some(pos!(95.0)),
-            Some(pos!(20.0)),
-            Some(pos!(0.18)),
+            spos!(95.0),
+            spos!(20.0),
+            spos!(0.18),
         );
 
         // 5. Calculate closing PnL (should be negative as we're paying to close)
@@ -429,9 +429,9 @@ mod tests {
             pos!(1.0),
             pos!(5.0), // Premium received: $5.00
             pos!(1.0), // Fees: $1.00
-            Some(pos!(100.0)),
-            Some(pos!(30.0)),
-            Some(pos!(0.2)),
+            spos!(100.0),
+            spos!(30.0),
+            spos!(0.2),
         );
 
         // 2. Calculate initial PnL
@@ -452,9 +452,9 @@ mod tests {
             pos!(1.0),
             pos!(12.0), // Closing premium: $12.00 (higher due to price increase)
             pos!(1.0),  // Closing fees: $1.00
-            Some(pos!(110.0)),
-            Some(pos!(20.0)),
-            Some(pos!(0.22)),
+            spos!(110.0),
+            spos!(20.0),
+            spos!(0.22),
         );
 
         // 5. Calculate closing PnL
@@ -479,9 +479,9 @@ mod tests {
             pos!(1.0),         // 1 contract
             pos!(4.0),         // Premium paid: $4.00
             pos!(1.0),         // Fees: $1.00
-            Some(pos!(100.0)), // Underlying price at open: $100.00
-            Some(pos!(30.0)),  // 30 days to expiration
-            Some(pos!(0.2)),   // IV: 20%
+            spos!(100.0), // Underlying price at open: $100.00
+            spos!(30.0),  // 30 days to expiration
+            spos!(0.2),   // IV: 20%
         );
 
         // 2. Calculate initial PnL (should be negative as we paid premium + fees)
@@ -503,9 +503,9 @@ mod tests {
             pos!(1.0),
             pos!(10.0), // Closing premium: $10.00 (higher due to price decrease)
             pos!(1.0),  // Closing fees: $1.00
-            Some(pos!(90.0)),
-            Some(pos!(20.0)),
-            Some(pos!(0.25)),
+            spos!(90.0),
+            spos!(20.0),
+            spos!(0.25),
         );
 
         // 5. Calculate closing PnL
@@ -530,9 +530,9 @@ mod tests {
             pos!(1.0),
             pos!(4.0), // Premium paid: $4.00
             pos!(1.0), // Fees: $1.00
-            Some(pos!(100.0)),
-            Some(pos!(30.0)),
-            Some(pos!(0.2)),
+            spos!(100.0),
+            spos!(30.0),
+            spos!(0.2),
         );
 
         // 2. Calculate initial PnL
@@ -553,9 +553,9 @@ mod tests {
             pos!(1.0),
             pos!(2.0), // Closing premium: $2.00 (lower due to price increase)
             pos!(1.0), // Closing fees: $1.00
-            Some(pos!(105.0)),
-            Some(pos!(20.0)),
-            Some(pos!(0.18)),
+            spos!(105.0),
+            spos!(20.0),
+            spos!(0.18),
         );
 
         // 5. Calculate closing PnL
@@ -580,9 +580,9 @@ mod tests {
             pos!(1.0),         // 1 contract
             pos!(4.0),         // Premium received: $4.00
             pos!(1.0),         // Fees: $1.00
-            Some(pos!(100.0)), // Underlying price at open: $100.00
-            Some(pos!(30.0)),  // 30 days to expiration
-            Some(pos!(0.2)),   // IV: 20%
+            spos!(100.0), // Underlying price at open: $100.00
+            spos!(30.0),  // 30 days to expiration
+            spos!(0.2),   // IV: 20%
         );
 
         // 2. Calculate initial PnL (should be positive as we receive premium - fees)
@@ -604,9 +604,9 @@ mod tests {
             pos!(1.0),
             pos!(1.5), // Closing premium: $1.50 (lower due to price increase)
             pos!(1.0), // Closing fees: $1.00
-            Some(pos!(105.0)),
-            Some(pos!(20.0)),
-            Some(pos!(0.15)),
+            spos!(105.0),
+            spos!(20.0),
+            spos!(0.15),
         );
 
         // 5. Calculate closing PnL
@@ -631,9 +631,9 @@ mod tests {
             pos!(1.0),
             pos!(4.0), // Premium received: $4.00
             pos!(1.0), // Fees: $1.00
-            Some(pos!(100.0)),
-            Some(pos!(30.0)),
-            Some(pos!(0.2)),
+            spos!(100.0),
+            spos!(30.0),
+            spos!(0.2),
         );
 
         // 2. Calculate initial PnL
@@ -654,9 +654,9 @@ mod tests {
             pos!(1.0),
             pos!(10.0), // Closing premium: $10.00 (higher due to price decrease)
             pos!(1.0),  // Closing fees: $1.00
-            Some(pos!(90.0)),
-            Some(pos!(20.0)),
-            Some(pos!(0.25)),
+            spos!(90.0),
+            spos!(20.0),
+            spos!(0.25),
         );
 
         // 5. Calculate closing PnL
@@ -672,7 +672,7 @@ mod tests {
 #[cfg(test)]
 mod tests_transaction_getters {
     use super::*;
-    use crate::pos;
+    use crate::{pos, spos};
     use chrono::Utc;
 
     fn create_test_transaction() -> Transaction {
@@ -685,9 +685,9 @@ mod tests_transaction_getters {
             pos!(2.0),
             pos!(5.0),
             pos!(1.0),
-            Some(pos!(100.0)),
-            Some(pos!(30.0)),
-            Some(pos!(0.2)),
+            spos!(100.0),
+            spos!(30.0),
+            spos!(0.2),
         )
     }
 
@@ -736,26 +736,26 @@ mod tests_transaction_getters {
     #[test]
     fn test_underlying_price_getter() {
         let transaction = create_test_transaction();
-        assert_eq!(transaction.underlying_price(), Some(pos!(100.0)));
+        assert_eq!(transaction.underlying_price(), spos!(100.0));
     }
 
     #[test]
     fn test_days_to_expiration_getter() {
         let transaction = create_test_transaction();
-        assert_eq!(transaction.days_to_expiration(), Some(pos!(30.0)));
+        assert_eq!(transaction.days_to_expiration(), spos!(30.0));
     }
 
     #[test]
     fn test_implied_volatility_getter() {
         let transaction = create_test_transaction();
-        assert_eq!(transaction.implied_volatility(), Some(pos!(0.2)));
+        assert_eq!(transaction.implied_volatility(), spos!(0.2));
     }
 }
 
 #[cfg(test)]
 mod tests_transaction_updaters {
     use super::*;
-    use crate::pos;
+    use crate::{pos, spos};
     use chrono::Utc;
 
     fn create_test_transaction() -> Transaction {
@@ -768,9 +768,9 @@ mod tests_transaction_updaters {
             pos!(2.0),
             pos!(5.0),
             pos!(1.0),
-            Some(pos!(100.0)),
-            Some(pos!(30.0)),
-            Some(pos!(0.2)),
+            spos!(100.0),
+            spos!(30.0),
+            spos!(0.2),
         )
     }
 
@@ -778,28 +778,28 @@ mod tests_transaction_updaters {
     fn test_update_implied_volatility() {
         let mut transaction = create_test_transaction();
         transaction.update_implied_volatility(pos!(0.25));
-        assert_eq!(transaction.implied_volatility(), Some(pos!(0.25)));
+        assert_eq!(transaction.implied_volatility(), spos!(0.25));
     }
 
     #[test]
     fn test_update_underlying_price() {
         let mut transaction = create_test_transaction();
         transaction.update_underlying_price(pos!(110.0));
-        assert_eq!(transaction.underlying_price(), Some(pos!(110.0)));
+        assert_eq!(transaction.underlying_price(), spos!(110.0));
     }
 
     #[test]
     fn test_update_days_to_expiration() {
         let mut transaction = create_test_transaction();
         transaction.update_days_to_expiration(pos!(25.0));
-        assert_eq!(transaction.days_to_expiration(), Some(pos!(25.0)));
+        assert_eq!(transaction.days_to_expiration(), spos!(25.0));
     }
 }
 
 #[cfg(test)]
 mod tests_transaction_status_pnl {
     use super::*;
-    use crate::pos;
+    use crate::{pos, spos};
     use chrono::Utc;
     use rust_decimal_macros::dec;
 
@@ -814,9 +814,9 @@ mod tests_transaction_status_pnl {
             pos!(2.0),
             pos!(5.0),
             pos!(1.0),
-            Some(pos!(100.0)),
-            Some(pos!(30.0)),
-            Some(pos!(0.2)),
+            spos!(100.0),
+            spos!(30.0),
+            spos!(0.2),
         );
 
         let pnl = transaction.pnl().unwrap();
@@ -834,9 +834,9 @@ mod tests_transaction_status_pnl {
             pos!(2.0),
             pos!(5.0),
             pos!(1.0),
-            Some(pos!(100.0)),
-            Some(pos!(30.0)),
-            Some(pos!(0.2)),
+            spos!(100.0),
+            spos!(30.0),
+            spos!(0.2),
         );
 
         let pnl = transaction.pnl().unwrap();
@@ -854,9 +854,9 @@ mod tests_transaction_status_pnl {
             pos!(2.0),
             pos!(5.0),
             pos!(1.0),
-            Some(pos!(100.0)),
-            Some(pos!(30.0)),
-            Some(pos!(0.2)),
+            spos!(100.0),
+            spos!(30.0),
+            spos!(0.2),
         );
 
         let pnl = transaction.pnl().unwrap();
@@ -874,9 +874,9 @@ mod tests_transaction_status_pnl {
             pos!(2.0),
             pos!(5.0),
             pos!(1.0),
-            Some(pos!(100.0)),
-            Some(pos!(30.0)),
-            Some(pos!(0.2)),
+            spos!(100.0),
+            spos!(30.0),
+            spos!(0.2),
         );
 
         let pnl = transaction.pnl().unwrap();
@@ -894,9 +894,9 @@ mod tests_transaction_status_pnl {
             pos!(2.0),
             pos!(5.0),
             pos!(1.0),
-            Some(pos!(100.0)),
-            Some(pos!(0.0)),
-            Some(pos!(0.2)),
+            spos!(100.0),
+            spos!(0.0),
+            spos!(0.2),
         );
 
         let pnl = transaction.pnl().unwrap();
@@ -914,9 +914,9 @@ mod tests_transaction_status_pnl {
             pos!(2.0),
             pos!(5.0),
             pos!(1.0),
-            Some(pos!(110.0)),
-            Some(pos!(0.0)),
-            Some(pos!(0.2)),
+            spos!(110.0),
+            spos!(0.0),
+            spos!(0.2),
         );
 
         let pnl = transaction.pnl().unwrap();
@@ -934,9 +934,9 @@ mod tests_transaction_status_pnl {
             pos!(2.0),
             pos!(5.0),
             pos!(1.0),
-            Some(pos!(110.0)),
-            Some(pos!(0.0)),
-            Some(pos!(0.2)),
+            spos!(110.0),
+            spos!(0.0),
+            spos!(0.2),
         );
 
         let pnl = transaction.pnl().unwrap();
@@ -954,9 +954,9 @@ mod tests_transaction_status_pnl {
             pos!(2.0),
             pos!(5.0),
             pos!(1.0),
-            Some(pos!(100.0)),
-            Some(pos!(30.0)),
-            Some(pos!(0.2)),
+            spos!(100.0),
+            spos!(30.0),
+            spos!(0.2),
         );
 
         let result = transaction.pnl();
@@ -978,9 +978,9 @@ mod tests_transaction_status_pnl {
             pos!(2.0),
             pos!(5.0),
             pos!(1.0),
-            Some(pos!(100.0)),
-            Some(pos!(30.0)),
-            Some(pos!(0.2)),
+            spos!(100.0),
+            spos!(30.0),
+            spos!(0.2),
         );
 
         let result = transaction.pnl();
