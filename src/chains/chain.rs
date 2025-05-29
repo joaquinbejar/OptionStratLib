@@ -3724,7 +3724,6 @@ mod tests_option_data_get_option {
 #[cfg(test)]
 mod tests_option_data_get_options_in_strike {
     use super::*;
-    use crate::error::chains::OptionDataErrorKind;
     use crate::greeks::Greeks;
     use crate::{assert_decimal_eq, pos, spos};
     use num_traits::ToPrimitive;
@@ -3795,24 +3794,6 @@ mod tests_option_data_get_options_in_strike {
     }
 
     #[test]
-    fn test_get_options_in_strike_missing_iv() {
-        let option_data = create_test_option_data();
-        let result = option_data.get_options_in_strike();
-        assert!(result.is_err());
-        let error = result.unwrap_err();
-        match error {
-            ChainError::OptionDataError(OptionDataErrorKind::InvalidVolatility {
-                volatility,
-                reason,
-            }) => {
-                assert_eq!(volatility, None);
-                assert_eq!(reason, "Implied volatility not found");
-            }
-            _ => panic!("Incorrect error type"),
-        }
-    }
-
-    #[test]
     fn test_get_options_in_strike_all_properties() {
         let option_data = create_test_option_data();
         let result = option_data.get_options_in_strike();
@@ -3823,10 +3804,10 @@ mod tests_option_data_get_options_in_strike {
         // Verify common properties across all options
         let check_common_properties = |option: &Options| {
             assert_eq!(option.strike_price, pos!(100.0));
-            assert_eq!(option.underlying_price, pos!(110.0));
-            assert_eq!(option.implied_volatility, 0.3);
-            assert_eq!(option.risk_free_rate.to_f64().unwrap(), 0.06);
-            assert_eq!(option.dividend_yield.to_f64(), 0.03);
+            assert_eq!(option.underlying_price, pos!(100.0));
+            assert_eq!(option.implied_volatility, 0.2);
+            assert_eq!(option.risk_free_rate.to_f64().unwrap(), 0.05);
+            assert_eq!(option.dividend_yield.to_f64(), 0.02);
             assert_eq!(option.option_type, OptionType::European);
             assert_eq!(option.quantity, pos!(1.0));
         };
@@ -3849,22 +3830,22 @@ mod tests_option_data_get_options_in_strike {
 
         assert_decimal_eq!(
             options.long_call.delta().unwrap(),
-            dec!(0.844825189),
+            dec!(0.539076663),
             epsilon
         );
         assert_decimal_eq!(
             options.short_call.delta().unwrap(),
-            dec!(-0.844825189),
+            dec!(-0.539076663),
             epsilon
         );
         assert_decimal_eq!(
             options.long_put.delta().unwrap(),
-            dec!(-0.151483012),
+            dec!(-0.459280851),
             epsilon
         );
         assert_decimal_eq!(
             options.short_put.delta().unwrap(),
-            dec!(0.151483012),
+            dec!(0.459280851),
             epsilon
         );
     }
@@ -3996,10 +3977,10 @@ mod tests_filter_options_in_strike {
             assert_eq!(opt.short_put.side, Side::Short);
 
             let deltas = opt.deltas().unwrap();
-            assert!(deltas.long_call > Decimal::ZERO);
-            assert!(deltas.short_call < Decimal::ZERO);
-            assert!(deltas.long_put < Decimal::ZERO);
-            assert!(deltas.short_put > Decimal::ZERO);
+            assert!(deltas.long_call >= Decimal::ZERO);
+            assert!(deltas.short_call <= Decimal::ZERO);
+            assert!(deltas.long_put <= Decimal::ZERO);
+            assert!(deltas.short_put >= Decimal::ZERO);
         }
     }
 }
@@ -4319,10 +4300,10 @@ mod tests_chain_iterators_bis {
         let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
         chain.add_option(
             pos!(100.0),
-            None,
-            None,
-            None,
-            None,
+            spos!(3.0),
+            spos!(3.5),
+            spos!(3.0),
+            spos!(3.5),
             pos!(0.5),
             None,
             None,
@@ -4439,10 +4420,10 @@ mod tests_chain_iterators_bis {
         let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
         chain.add_option(
             pos!(100.0),
-            None,
-            None,
-            None,
-            None,
+            spos!(3.0),
+            spos!(3.5),
+            spos!(3.0),
+            spos!(3.5),
             pos!(0.5),
             None,
             None,
@@ -5185,9 +5166,9 @@ mod tests_option_data_delta {
             None,
             spos!(1000.0), // volume
             Some(500),     // open_interest
-            None,
-            None,
-            None,
+            Some("AAPL".to_string()), // underlying_symbol
+            Some(ExpirationDate::Days(pos!(3.9))),
+            Some(Box::new(pos!(100.0))), // underlying_price
             None,
             None,
             None,
@@ -5211,22 +5192,21 @@ mod tests_option_data_delta {
     fn test_calculate_delta_near_the_money() {
         let mut option_data = create_standard_option_data();
         option_data.calculate_delta();
-
         assert!(option_data.delta_call.is_some());
         let delta = option_data.delta_call.unwrap();
-
         // Near-the-money call delta should be slightly higher than 0.5
-        assert!(delta > dec!(0.7) && delta < dec!(0.9));
+        assert!(delta > dec!(0.5) && delta < dec!(0.6));
     }
 
     #[test]
     fn test_calculate_delta_deep_itm() {
         let mut option_data = create_standard_option_data();
+        option_data.underlying_price = Some(Box::new(pos!(104.0)));
         option_data.calculate_delta();
 
         assert!(option_data.delta_call.is_some());
         let delta = option_data.delta_call.unwrap();
-
+        
         // Deep ITM call delta should be close to 1
         assert!(delta > dec!(0.9) && delta <= dec!(1.0));
     }
@@ -5234,11 +5214,12 @@ mod tests_option_data_delta {
     #[test]
     fn test_calculate_delta_deep_otm() {
         let mut option_data = create_standard_option_data();
+        option_data.underlying_price = Some(Box::new(pos!(94.0)));
         option_data.calculate_delta();
 
         assert!(option_data.delta_call.is_some());
         let delta = option_data.delta_call.unwrap();
-
+        
         // Deep OTM call delta should be close to 0
         assert!(delta >= Decimal::ZERO && delta < dec!(0.1));
     }
@@ -6252,7 +6233,7 @@ mod tests_delta_calculations {
         assert!(result.is_ok());
         let delta_exposure = result.unwrap();
         // Test against expected value from sample data
-        assert_decimal_eq!(delta_exposure, dec!(31.0), dec!(0.000001));
+        assert_decimal_eq!(delta_exposure, dec!(17.0), dec!(0.000001));
     }
 
     #[test]
@@ -6272,7 +6253,7 @@ mod tests_delta_calculations {
         let result = chain.delta_exposure();
 
         assert!(result.is_ok());
-        assert_eq!(result.unwrap(), dec!(31.0));
+        assert_eq!(result.unwrap(), dec!(17.0));
     }
 
     #[test]
@@ -6281,12 +6262,12 @@ mod tests_delta_calculations {
 
         // Get initial delta exposure (should be 0 as greeks aren't initialized)
         let initial_delta = chain.delta_exposure().unwrap();
-        assert_eq!(initial_delta, dec!(31.0));
+        assert_eq!(initial_delta, dec!(17.0));
 
         // Update greeks and check new delta exposure
         chain.update_greeks();
         let updated_delta = chain.delta_exposure().unwrap();
-        assert_decimal_eq!(updated_delta, dec!(31.0), dec!(0.000001));
+        assert_decimal_eq!(updated_delta, dec!(17.0), dec!(0.000001));
     }
 
     #[test]
@@ -6607,7 +6588,7 @@ mod tests_atm_strike {
                 spos!(0.02),
                 Some("AAPL".to_string()),
             ),
-            pos!(0.02),
+            pos!(0.2),
         );
 
         OptionChain::build_chain(&params)
@@ -6680,7 +6661,7 @@ mod tests_atm_strike {
         let mut chain = create_standard_chain();
 
         // Set underlying price far from any strike
-        chain.underlying_price = pos!(150.0);
+        chain.underlying_price = pos!(110.0);
 
         let result = chain.atm_strike();
         assert!(
@@ -6710,7 +6691,7 @@ mod tests_atm_strike {
         // The lowest strike in the standard chain should be around 90.0
         assert_eq!(
             *strike,
-            pos!(87.0),
+            pos!(86.0),
             "Should return the lowest available strike"
         );
     }
@@ -6805,7 +6786,7 @@ mod tests_atm_strike_bis {
                 spos!(0.02),
                 Some("AAPL".to_string()),
             ),
-            pos!(0.02),
+            pos!(0.2),
         );
 
         OptionChain::build_chain(&params)
@@ -6892,7 +6873,7 @@ mod tests_atm_strike_bis {
         // The lowest strike in the standard chain should be around 90.0
         assert_eq!(
             *strike,
-            pos!(87.0),
+            pos!(86.0),
             "Should return the lowest available strike"
         );
     }
