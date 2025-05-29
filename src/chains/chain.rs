@@ -2278,7 +2278,6 @@ impl RNDAnalysis for OptionChain {
             debug!("Discount factor: {}", discount);
             debug!("Step size h: {}", h);
         }
-
         // Step 5: Calculate RND for each strike
         for opt in self.options.iter() {
             let k = opt.strike_price;
@@ -2289,13 +2288,12 @@ impl RNDAnalysis for OptionChain {
                 debug!("Processing strike {}", k);
                 debug!("Call price at k: {:?}", self.get_call_price(k));
                 debug!("Call price at k+h: {:?}", self.get_call_price(k + h));
-                debug!("Call price at k-h: {:?}", self.get_call_price(k - h));
+                debug!("Call price at k-h: {:?}", self.get_call_price(k.sub_or_zero(&h)));
             }
-
             if let (Some(call_price), Some(call_up), Some(call_down)) = (
                 self.get_call_price(k),
                 self.get_call_price(k + h),
-                self.get_call_price(k - h),
+                self.get_call_price(k.sub_or_zero(&h)),
             ) {
                 // Calculate second derivative
                 let second_derivative = (call_up + call_down - Decimal::TWO * call_price) / (h * h);
@@ -4940,7 +4938,7 @@ mod rnd_analysis_tests {
             // For ATM strike (100.0), relative strike should be 1.0
             let atm_strike = result
                 .iter()
-                .find(|(rel_strike, _)| (*rel_strike - dec!(1.0)) < pos!(0.0001));
+                .find(|(rel_strike, _)| (rel_strike.sub_or_zero(&Decimal::ONE)) < pos!(0.0001));
             assert!(atm_strike.is_some());
         }
     }

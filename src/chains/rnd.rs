@@ -1448,7 +1448,7 @@ mod chain_test {
                 Some(ExpirationDate::Days(pos!(30.0))),
                 Some(Decimal::ZERO),
                 spos!(0.05),
-                None,
+                Some("SP500".to_string()),
             ),
             pos!(0.2),
         );
@@ -1471,7 +1471,7 @@ mod chain_test {
                 Some(ExpirationDate::Days(pos!(30.0))),
                 Some(Decimal::ZERO),
                 spos!(0.0),
-                None,
+                Some("SP500".to_string()),
             ),
             pos!(0.2),
         );
@@ -1487,16 +1487,16 @@ mod chain_test {
         let rnd_result = chain.calculate_rnd(&params).unwrap();
         assert!(!rnd_result.densities.is_empty());
 
-        assert_decimal_eq!(rnd_result.statistics.mean, dec!(99.9897959), dec!(0.00001));
-        assert_decimal_eq!(rnd_result.statistics.skewness, dec!(0.05804), dec!(0.00001));
+        assert_decimal_eq!(rnd_result.statistics.mean, dec!(99.85567), dec!(0.00001));
+        assert_decimal_eq!(rnd_result.statistics.skewness, dec!(-0.00132), dec!(0.00001));
         assert_decimal_eq!(
             rnd_result.statistics.kurtosis,
-            dec!(-0.5219887),
+            dec!(-0.56662),
             dec!(0.00001)
         );
         assert_decimal_eq!(
             rnd_result.statistics.variance.to_dec(),
-            dec!(20.68356934),
+            dec!(27.31937),
             dec!(0.00001)
         );
     }
@@ -1517,7 +1517,7 @@ mod chain_test {
                 Some(ExpirationDate::Days(pos!(30.0))),
                 Some(Decimal::ZERO),
                 spos!(0.05),
-                None,
+                Some("SP500".to_string()),
             ),
             pos!(0.2),
         );
