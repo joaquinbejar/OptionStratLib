@@ -117,16 +117,22 @@ pub struct OptionData {
     /// The open interest, representing the number of outstanding contracts.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(super) open_interest: Option<u64>,
+    /// The symbol of the underlying asset.
     #[serde(skip)]
     pub symbol: Option<String>,
+    /// The expiration date of the option contract.
     #[serde(skip)]
     pub expiration_date: Option<ExpirationDate>,
+    /// The price of the underlying asset.
     #[serde(skip)]
     pub underlying_price: Option<Box<Positive>>,
+    /// The risk-free interest rate used for option pricing.
     #[serde(skip)]
     pub risk_free_rate: Option<Decimal>,
+    /// The dividend yield of the underlying asset.
     #[serde(skip)]
     pub dividend_yield: Option<Positive>,
+    /// Additional fields that may be included in the option data.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub extra_fields: Option<Value>,
 }
@@ -223,10 +229,21 @@ impl OptionData {
         self.implied_volatility
     }
 
+    /// Sets the implied volatility for this option contract.
+    ///
+    /// # Arguments
+    /// * `volatility` - A positive decimal value representing the implied volatility.
     pub fn set_volatility(&mut self, volatility: &Positive) {
         self.implied_volatility = *volatility;
     }
 
+    /// Sets additional pricing parameters for this option contract.
+    ///
+    /// This method updates the option data with the provided pricing parameters,
+    /// including underlying symbol, price, expiration date, risk-free rate, and dividend yield.
+    ///
+    /// # Arguments
+    /// * `params` - The pricing parameters to set.
     pub fn set_extra_params(&mut self, params: OptionDataPriceParams) {
         if let Some(symbol) = params.underlying_symbol {
             self.symbol = Some(symbol);
@@ -725,6 +742,11 @@ impl OptionData {
         }
     }
 
+    /// Calculates the delta of the option and stores it in the option data.
+    ///
+    /// Delta measures the rate of change of the option price with respect to changes in the
+    /// underlying asset's price. This method creates a Call option and uses it to calculate
+    /// the delta value.
     pub fn calculate_delta(&mut self) {
         let option: Options = match self.get_option(Side::Long, OptionStyle::Call) {
             Ok(option) => option,
@@ -759,6 +781,11 @@ impl OptionData {
         }
     }
 
+    /// Calculates the gamma of the option and stores it in the option data.
+    ///
+    /// Gamma measures the rate of change of delta with respect to changes in the
+    /// underlying asset's price. This method creates a Call option and uses it to calculate
+    /// the gamma value.
     pub fn calculate_gamma(&mut self) {
         let option: Options = match self.get_option(Side::Long, OptionStyle::Call) {
             Ok(option) => option,

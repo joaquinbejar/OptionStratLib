@@ -1,4 +1,9 @@
 #[macro_export]
+/// Implements the `Display` trait for the specified types, formatting the output as pretty-printed JSON.
+///
+/// This macro generates an implementation of `std::fmt::Display` that serializes the object to a
+/// pretty-printed JSON string. If serialization fails, it displays an error message.
+///
 macro_rules! impl_json_display_pretty {
     ($($t:ty),+) => {
         $(
@@ -15,6 +20,11 @@ macro_rules! impl_json_display_pretty {
 }
 
 #[macro_export]
+/// Implements the `Debug` trait for the specified types, formatting the output as pretty-printed JSON.
+///
+/// This macro generates an implementation of `std::fmt::Debug` that serializes the object to a
+/// pretty-printed JSON string. If serialization fails, it displays an error message.
+///
 macro_rules! impl_json_debug_pretty {
     ($($t:ty),+) => {
         $(
@@ -31,6 +41,11 @@ macro_rules! impl_json_debug_pretty {
 }
 
 #[macro_export]
+/// Implements the `Debug` trait for the specified types, formatting the output as compact JSON.
+///
+/// This macro generates an implementation of `std::fmt::Debug` that serializes the object to a
+/// compact JSON string. If serialization fails, it displays an error message.
+///
 macro_rules! impl_json_debug {
     ($($t:ty),+) => {
         $(
@@ -47,6 +62,11 @@ macro_rules! impl_json_debug {
 }
 
 #[macro_export]
+/// Implements the `Display` trait for the specified types, formatting the output as compact JSON.
+///
+/// This macro generates an implementation of `std::fmt::Display` that serializes the object to a
+/// compact JSON string. If serialization fails, it displays an error message.
+///
 macro_rules! impl_json_display {
     ($($t:ty),+) => {
         $(

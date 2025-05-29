@@ -1894,6 +1894,10 @@ impl OptionChain {
         self.expiration_date.clone()
     }
 
+    /// Returns the expiration date of the option chain as an `ExpirationDate` object.
+    ///
+    /// # Returns
+    /// * `Option<ExpirationDate>` - The expiration date if it can be parsed, or `None` if parsing fails.
     pub fn get_expiration(&self) -> Option<ExpirationDate> {
         ExpirationDate::from_string(&self.expiration_date).ok()
     }
@@ -2163,6 +2167,13 @@ impl OptionChain {
         }
     }
 
+    /// Sets additional parameters for all option data objects in the chain.
+    ///
+    /// This method propagates the chain-level parameters (underlying price, expiration date,
+    /// risk-free rate, dividend yield, and symbol) to all individual option contracts.
+    ///
+    /// # Returns
+    /// * `Result<(), ChainError>` - Ok if successful, or an error if the operation fails.
     pub fn set_optiondata_extra_params(&mut self) -> Result<(), ChainError> {
         let params = OptionDataPriceParams::new(
             Some(Box::new(self.underlying_price)),

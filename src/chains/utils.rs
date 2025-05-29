@@ -212,10 +212,18 @@ impl OptionChainBuildParams {
         self.price_params.underlying_price = price;
     }
 
+    /// Sets the implied volatility value for this option pricing parameter.
+    ///
+    /// # Arguments
+    /// * `implied_vol` - A positive decimal value representing the implied volatility.
     pub fn set_implied_volatility(&mut self, implied_vol: Positive) {
         self.implied_volatility = implied_vol;
     }
 
+    /// Returns the current implied volatility value.
+    ///
+    /// # Returns
+    /// * `Positive` - The current implied volatility as a positive decimal value.
     pub fn get_implied_volatility(&self) -> Positive {
         self.implied_volatility
     }
@@ -347,6 +355,10 @@ impl OptionDataPriceParams {
         self.dividend_yield
     }
 
+    /// Returns the symbol of the underlying asset.
+    ///
+    /// # Returns
+    /// * `Option<String>` - The underlying symbol if available, or `None` if not set.
     pub fn get_symbol(&self) -> Option<String> {
         self.underlying_symbol.clone()
     }

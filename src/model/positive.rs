@@ -604,6 +604,13 @@ impl Positive {
         Positive(self.0.log10())
     }
 
+    /// Subtracts a decimal value from this positive value, returning zero if the result would be negative.
+    ///
+    /// # Arguments
+    /// * `other` - The decimal value to subtract.
+    ///
+    /// # Returns
+    /// * `Positive` - The result of the subtraction, or zero if the result would be negative.
     pub fn sub_or_zero(&self, other: &Decimal) -> Positive {
         if &self.0 > other {
             Positive(self.0 - other)
@@ -612,6 +619,13 @@ impl Positive {
         }
     }
 
+    /// Subtracts a decimal value from this positive value, returning None if the result would be negative.
+    ///
+    /// # Arguments
+    /// * `other` - The decimal value to subtract.
+    ///
+    /// # Returns
+    /// * `Option<Positive>` - The result of the subtraction as a `Some(Positive)`, or `None` if the result would be negative.
     pub fn sub_or_none(&self, other: &Decimal) -> Option<Positive> {
         if &self.0 >= other {
             Some(Positive(self.0 - other))
