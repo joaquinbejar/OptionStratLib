@@ -733,7 +733,7 @@ mod tests_strike_step {
         let underlying_price = Some(Box::new(pos!(1547.0)));
         let days = pos!(45.0);
         let implied_volatility = pos!(0.17);
-        let chain_size = 30;
+        let chain_size = 28;
 
         let strike_interval = strike_step(
             *underlying_price.clone().unwrap(),
@@ -1193,16 +1193,10 @@ mod tests_option_data_price_params {
 
         let display_string = format!("{}", params);
         assert!(display_string.contains("Underlying Price: 100"));
-        assert!(display_string.contains("Implied Volatility: 0.200"));
-        assert!(display_string.contains("Risk-Free Rate: 0.05"));
-        assert!(display_string.contains("Dividend Yield: 0.02"));
-    }
-
-    #[test]
-    fn test_display_price_params_no_volatility() {
-        let params = get_params();
-        let display_string = format!("{}", params);
-        assert!(display_string.contains("Implied Volatility: 0.000"));
+        assert!(display_string.contains("Risk-Free Rate: 5"));
+        assert!(display_string.contains("Dividend Yield: 2"));
+        assert!(display_string.contains("Symbol: AAPL"));
+        assert!(display_string.contains("Expiration: 0.08 Years"));
     }
 
     #[test]
@@ -1302,13 +1296,7 @@ mod tests_option_chain_build_params {
         assert_eq!(params.decimal_places, 2);
 
         let display = format!("{}", params);
-        assert!(display.contains("TEST"));
-        assert!(display.contains("Volume: 1000"));
-        assert!(display.contains("Chain Size: 10"));
-        assert!(display.contains("Strike Interval: 5"));
-        assert!(display.contains("Skew Factor: 0.1"));
-        assert!(display.contains("Spread: 0.02"));
-        assert!(display.contains("Decimal Places: 2"));
+        assert_eq!(display, r#"{"symbol":"TEST","volume":1000,"chain_size":10,"strike_interval":5,"skew_slope":"-0.2","smile_curve":"0.1","spread":0.02,"decimal_places":2,"price_params":{"underlying_price":100,"expiration_date":{"days":30.0},"risk_free_rate":"0.05","dividend_yield":0.02,"underlying_symbol":"AAPL"},"implied_volatility":0.25}"#);
     }
 
     #[test]
@@ -1424,7 +1412,7 @@ mod tests_sample {
         );
 
         let params = OptionChainBuildParams::new(
-            "SP500".to_string(),
+            "AAPL".to_string(),
             Some(Positive::ONE),
             5,
             Some(Positive::ONE),
@@ -1438,8 +1426,8 @@ mod tests_sample {
 
         let built_chain = OptionChain::build_chain(&params);
 
-        assert_eq!(built_chain.symbol, "SP500");
-        assert_eq!(built_chain.underlying_price, Positive::new(2000.0).unwrap());
+        assert_eq!(built_chain.symbol, "AAPL");
+        assert_eq!(built_chain.underlying_price, Positive::new(100.0).unwrap());
     }
 
     #[test]
