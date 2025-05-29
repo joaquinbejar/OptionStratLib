@@ -16,6 +16,7 @@ use std::error::Error;
 use tracing::info;
 
 fn main() -> Result<(), Box<dyn Error>> {
+    setup_logger();
     let strategy = BullCallSpread::new(
         "GOLD".to_string(),
         pos!(2505.8),
