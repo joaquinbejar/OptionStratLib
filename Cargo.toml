@@ -20,9 +20,20 @@ include = [
     "tests/**/*.rs",
     "Makefile",
     "rust-toolchain.toml",
-    "Draws/**/*.png",
     "Docker/**/*.Dockerfile",
     "Docker/**/*.yml",
+]
+
+exclude = [
+    "/target",
+    "/.git",
+    "/.github",
+    "/.idea",
+    "/.vscode",
+    "Cargo.lock",
+    "/**/.DS_Store",
+    "Draws/**/*.png",
+    "Draws/**/*.html",
 ]
 
 [features]
