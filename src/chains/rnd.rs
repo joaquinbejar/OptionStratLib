@@ -60,7 +60,7 @@
 //!                 Some(ExpirationDate::Days(pos!(30.0))),
 //!                 Some(Decimal::ZERO),
 //!                 spos!(0.05),
-//!                 None,
+//!                 Some("SP500".to_string()),
 //!             ),
 //!             pos!(0.1),
 //!         );

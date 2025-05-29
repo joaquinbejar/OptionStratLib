@@ -41,8 +41,9 @@
 //!                 Some(ExpirationDate::Days(pos!(30.0))),
 //!                 Some(dec!(0.0)),
 //!                 spos!(0.05),
-//!                 Some(Box::new("SP500".to_string())),
+//!                 Some("SP500".to_string()),
 //!             ),
+//!             pos!(0.2),
 //!         );
 //!
 //! let built_chain = OptionChain::build_chain(&option_chain_params);
@@ -129,7 +130,7 @@
 //!     Some(ExpirationDate::Days(pos!(10.0))),
 //!     Some(dec!(0.01)),
 //!     Some(Positive::ZERO),
-//!     None,
+//!     Some("Symbol".to_string()),
 //! );
 //!
 //! let option_chain_params = OptionChainBuildParams::new(
@@ -142,6 +143,7 @@
 //!     Positive::new(0.02).unwrap(),
 //!     2,
 //!     chain,
+//!     pos!(0.2),
 //! );
 //!
 //! let option_chain = OptionChain::build_chain(&option_chain_params);
