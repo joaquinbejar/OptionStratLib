@@ -665,7 +665,11 @@ impl Options {
 
 impl From<&OptionData> for Options {
     fn from(option_data: &OptionData) -> Self {
-        assert!(option_data.symbol.is_some());
+        if option_data.symbol.is_none() {
+            error!("OptionData symbol is None");
+            panic!("OptionData must have a valid symbol");
+        }
+        assert!(option_data.symbol.is_some(), "OptionData symbol is None");
         assert!(option_data.expiration_date.is_some());
         assert!(option_data.underlying_price.is_some());
 

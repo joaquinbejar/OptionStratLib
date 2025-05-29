@@ -38,11 +38,11 @@ fn benchmark_basic_operations(
                 None,
                 None,
                 None,
-                None,
-                None,
-                None,
-                None,
-                None,
+                Some("TEST".to_string()),               // symbol
+                Some(ExpirationDate::Days(pos!(30.0))), // expiration_date
+                Some(Box::new(pos!(100.0))),            // underlying_price
+                Some(dec!(0.05)),                       // risk_free_rate
+                Some(pos!(0.02)),                       // dividend_yield
                 None,
             );
             black_box(option_data)
@@ -64,11 +64,11 @@ fn benchmark_basic_operations(
                 Some(dec!(0.5)),
                 Some(Positive::new(1000.0).unwrap()),
                 Some(100),
-                None,
-                None,
-                None,
-                None,
-                None,
+                Some("TEST".to_string()),               // symbol
+                Some(ExpirationDate::Days(pos!(30.0))), // expiration_date
+                Some(Box::new(pos!(100.0))),            // underlying_price
+                Some(dec!(0.05)),                       // risk_free_rate
+                Some(pos!(0.02)),                       // dividend_yield
                 None,
             );
             black_box(option_data)
@@ -127,11 +127,11 @@ fn create_test_option_data() -> OptionData {
         None,
         None,
         None,
-        None,
-        None,
-        None,
-        None,
-        None,
+        Some("TEST".to_string()),               // symbol
+        Some(ExpirationDate::Days(pos!(30.0))), // expiration_date
+        Some(Box::new(pos!(100.0))),            // underlying_price
+        Some(dec!(0.05)),                       // risk_free_rate
+        Some(pos!(0.02)),                       // dividend_yield
         None,
     )
 }
