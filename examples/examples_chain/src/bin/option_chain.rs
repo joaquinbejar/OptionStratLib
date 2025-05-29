@@ -30,6 +30,7 @@ fn main() {
         Some(dec!(0.5)),
         spos!(1.0),
         Some(300),
+        None,
     );
     chain.add_option(
         pos!(5525.0),
@@ -41,6 +42,7 @@ fn main() {
         Some(dec!(0.5)),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
+        None,
         None,
         None,
     );
@@ -56,6 +58,7 @@ fn main() {
         Some(dec!(0.5)),
         None,
         None,
+        None,
     );
     chain.add_option(
         pos!(5540.0),
@@ -67,6 +70,7 @@ fn main() {
         Some(dec!(0.5)),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
+        None,
         None,
         None,
     );
@@ -82,6 +86,7 @@ fn main() {
         Some(dec!(0.5)),
         None,
         None,
+        None,
     );
     chain.add_option(
         pos!(5560.0),
@@ -93,6 +98,7 @@ fn main() {
         Some(dec!(0.5)),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
+        None,
         None,
         None,
     );
@@ -108,6 +114,7 @@ fn main() {
         Some(dec!(0.5)),
         None,
         None,
+        None,
     );
     chain.add_option(
         pos!(5575.0),
@@ -119,6 +126,7 @@ fn main() {
         Some(dec!(0.5)),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
+        None,
         None,
         None,
     );
@@ -134,6 +142,7 @@ fn main() {
         Some(dec!(0.5)),
         None,
         None,
+        None,
     );
     chain.add_option(
         pos!(5590.0),
@@ -145,6 +154,7 @@ fn main() {
         Some(dec!(0.5)),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
+        None,
         None,
         None,
     );
@@ -160,6 +170,7 @@ fn main() {
         Some(dec!(0.5)),
         None,
         None,
+        None,
     );
     chain.add_option(
         pos!(5610.0),
@@ -171,6 +182,7 @@ fn main() {
         Some(dec!(0.5)),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
+        None,
         None,
         None,
     );
@@ -186,6 +198,7 @@ fn main() {
         Some(dec!(0.5)),
         None,
         None,
+        None,
     );
     chain.add_option(
         pos!(5625.0),
@@ -197,6 +210,7 @@ fn main() {
         Some(dec!(0.5)),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
+        None,
         None,
         None,
     );
@@ -212,6 +226,7 @@ fn main() {
         Some(dec!(0.5)),
         None,
         None,
+        None,
     );
     chain.add_option(
         pos!(5640.0),
@@ -223,6 +238,7 @@ fn main() {
         Some(dec!(0.5)),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
+        None,
         None,
         None,
     );
@@ -238,6 +254,7 @@ fn main() {
         Some(dec!(0.5)),
         None,
         None,
+        None,
     );
     chain.add_option(
         pos!(5660.0),
@@ -249,6 +266,7 @@ fn main() {
         Some(dec!(0.5)),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
+        None,
         None,
         None,
     );
@@ -264,6 +282,7 @@ fn main() {
         Some(dec!(0.5)),
         None,
         None,
+        None,
     );
     chain.add_option(
         pos!(5675.0),
@@ -275,6 +294,7 @@ fn main() {
         Some(dec!(0.5)),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
+        None,
         None,
         None,
     );
@@ -290,6 +310,7 @@ fn main() {
         Some(dec!(0.5)),
         None,
         None,
+        None,
     );
     chain.add_option(
         pos!(5690.0),
@@ -301,6 +322,7 @@ fn main() {
         Some(dec!(0.5)),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
+        None,
         None,
         None,
     );
@@ -316,6 +338,7 @@ fn main() {
         Some(dec!(0.5)),
         None,
         None,
+        None,
     );
     chain.add_option(
         pos!(5710.0),
@@ -327,6 +350,7 @@ fn main() {
         Some(dec!(0.5)),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
+        None,
         None,
         None,
     );
@@ -342,6 +366,7 @@ fn main() {
         Some(dec!(0.5)),
         None,
         None,
+        None,
     );
     chain.add_option(
         pos!(5730.0),
@@ -353,6 +378,7 @@ fn main() {
         Some(dec!(0.5)),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
+        None,
         None,
         None,
     );
@@ -368,6 +394,7 @@ fn main() {
         Some(dec!(0.5)),
         None,
         None,
+        None,
     );
     chain.add_option(
         pos!(5750.0),
@@ -379,6 +406,7 @@ fn main() {
         Some(dec!(0.5)),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
+        None,
         None,
         None,
     );
@@ -394,6 +422,7 @@ fn main() {
         Some(dec!(0.5)),
         None,
         None,
+        None,
     );
     chain.add_option(
         pos!(5770.0),
@@ -405,6 +434,7 @@ fn main() {
         Some(dec!(0.5)),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
+        None,
         None,
         None,
     );
@@ -420,6 +450,7 @@ fn main() {
         Some(dec!(0.5)),
         None,
         None,
+        None,
     );
     chain.add_option(
         pos!(5790.0),
@@ -431,6 +462,7 @@ fn main() {
         Some(dec!(0.5)),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
+        None,
         None,
         None,
     );
@@ -446,6 +478,7 @@ fn main() {
         Some(dec!(0.5)),
         None,
         None,
+        None,
     );
     chain.add_option(
         pos!(5810.0),
@@ -457,6 +490,7 @@ fn main() {
         Some(dec!(0.5)),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
+        None,
         None,
         None,
     );
@@ -472,6 +506,7 @@ fn main() {
         Some(dec!(0.5)),
         None,
         None,
+        None,
     );
     chain.add_option(
         pos!(5830.0),
@@ -483,6 +518,7 @@ fn main() {
         Some(dec!(0.5)),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
+        None,
         None,
         None,
     );
@@ -498,6 +534,7 @@ fn main() {
         Some(dec!(0.5)),
         None,
         None,
+        None,
     );
     chain.add_option(
         pos!(5850.0),
@@ -509,6 +546,7 @@ fn main() {
         Some(dec!(0.5)),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
+        None,
         None,
         None,
     );
@@ -524,6 +562,7 @@ fn main() {
         Some(dec!(0.5)),
         None,
         None,
+        None,
     );
     chain.add_option(
         pos!(5950.0),
@@ -535,6 +574,7 @@ fn main() {
         Some(dec!(0.5)),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
+        None,
         None,
         None,
     );
@@ -550,6 +590,7 @@ fn main() {
         Some(dec!(0.5)),
         None,
         None,
+        None,
     );
     chain.add_option(
         pos!(6050.0),
@@ -561,6 +602,7 @@ fn main() {
         Some(dec!(0.5)),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
+        None,
         None,
         None,
     );
@@ -576,6 +618,7 @@ fn main() {
         Some(dec!(0.5)),
         None,
         None,
+        None,
     );
     chain.add_option(
         pos!(6150.0),
@@ -589,6 +632,7 @@ fn main() {
         Some(dec!(0.5)),
         None,
         None,
+        None,
     );
     chain.add_option(
         pos!(6200.0),
@@ -600,6 +644,7 @@ fn main() {
         Some(dec!(0.5)),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
+        None,
         None,
         None,
     );

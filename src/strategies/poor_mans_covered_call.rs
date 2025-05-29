@@ -979,6 +979,7 @@ mod tests_pmcc_optimization {
                 None,
                 spos!(100.0),
                 Some(50),
+                None,
             );
         }
         chain

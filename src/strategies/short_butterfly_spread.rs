@@ -2701,6 +2701,7 @@ mod tests_butterfly_optimizable {
                 Some(dec!(0.2)),
                 spos!(100.0), // volume
                 Some(50),     // open_interest
+                None,
             );
         }
         chain

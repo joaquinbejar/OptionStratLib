@@ -420,6 +420,7 @@ mod tests_option_series {
             None,
             spos!(100.0),
             Some(50),
+            None,
         );
 
         chain

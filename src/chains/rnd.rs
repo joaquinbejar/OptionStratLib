@@ -436,6 +436,7 @@ mod tests {
                 Some(dec!(0.3)),
                 spos!(100.0),
                 Some(50),
+                None,
             );
         }
 
@@ -671,6 +672,7 @@ mod tests {
                 Some(dec!(0.3)),
                 spos!(100.0),
                 Some(50),
+                None,
             );
 
             let result = chain.calculate_skew();
@@ -750,6 +752,7 @@ mod tests {
                 Some(dec!(0.3)),
                 spos!(10.0),
                 Some(5),
+                None,
             );
 
             chain.add_option(
@@ -764,6 +767,7 @@ mod tests {
                 Some(dec!(0.3)),
                 spos!(10.0),
                 Some(5),
+                None,
             );
 
             let params = RNDParameters {
@@ -866,6 +870,7 @@ mod additional_tests {
                     Some(dec!(0.3)),
                     spos!(100.0),
                     Some(50),
+                    None,
                 );
             }
             chain
@@ -889,6 +894,7 @@ mod additional_tests {
                     Some(dec!(0.3)),
                     spos!(100.0),
                     Some(50),
+                    None,
                 );
             }
             chain
@@ -912,6 +918,7 @@ mod additional_tests {
                     Some(dec!(0.3)),
                     spos!(100.0),
                     Some(50),
+                    None,
                 );
             }
             chain
@@ -996,6 +1003,7 @@ mod additional_tests {
                 Some(dec!(0.3)),
                 spos!(100.0),
                 Some(50),
+                None,
             );
 
             let params = RNDParameters {
@@ -1025,6 +1033,7 @@ mod additional_tests {
                 Some(dec!(0.3)),
                 spos!(100.0),
                 Some(50),
+                None,
             );
 
             let params = RNDParameters {
@@ -1644,6 +1653,7 @@ mod rnd_coverage_tests {
                 None,
                 None,
                 spos!(1000.0),
+                None,
                 None,
             );
         }

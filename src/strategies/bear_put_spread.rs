@@ -1237,6 +1237,7 @@ mod tests_bear_put_spread_optimization {
             Some(dec!(0.2)),
             spos!(100.0), // volume
             Some(50),     // open_interest
+            None,
         );
 
         chain.add_option(
@@ -1251,6 +1252,7 @@ mod tests_bear_put_spread_optimization {
             Some(dec!(0.2)),
             spos!(150.0),
             Some(75),
+            None,
         );
 
         chain.add_option(
@@ -1265,6 +1267,7 @@ mod tests_bear_put_spread_optimization {
             Some(dec!(0.2)),
             spos!(200.0),
             Some(100),
+            None,
         );
 
         chain.add_option(
@@ -1279,6 +1282,7 @@ mod tests_bear_put_spread_optimization {
             Some(dec!(0.2)),
             spos!(250.0),
             Some(125),
+            None,
         );
 
         chain.add_option(
@@ -1293,6 +1297,7 @@ mod tests_bear_put_spread_optimization {
             Some(dec!(0.2)),
             spos!(200.0),
             Some(100),
+            None,
         );
 
         chain.add_option(
@@ -1307,6 +1312,7 @@ mod tests_bear_put_spread_optimization {
             Some(dec!(0.2)),
             spos!(150.0),
             Some(75),
+            None,
         );
 
         chain.add_option(
@@ -1321,6 +1327,7 @@ mod tests_bear_put_spread_optimization {
             Some(dec!(0.2)),
             spos!(100.0),
             Some(50),
+            None,
         );
 
         chain
@@ -1457,6 +1464,7 @@ mod tests_bear_put_spread_optimization {
             Some(dec!(0.2)),
             spos!(50.0),
             Some(25),
+            None,
         );
 
         spread.find_optimal(&chain, FindOptimalSide::All, OptimizationCriteria::Ratio);
@@ -1521,6 +1529,7 @@ mod tests_bear_put_spread_optimizable {
             Some(dec!(0.2)),
             spos!(100.0), // volume
             Some(50),     // open_interest
+            None,
         );
 
         // Strike ATM (100)
@@ -1536,6 +1545,7 @@ mod tests_bear_put_spread_optimizable {
             Some(dec!(0.2)),
             spos!(200.0),
             Some(100),
+            None,
         );
 
         chain.add_option(
@@ -1550,6 +1560,7 @@ mod tests_bear_put_spread_optimizable {
             Some(dec!(0.2)),
             spos!(150.0),
             Some(75),
+            None,
         );
 
         chain
@@ -1647,6 +1658,7 @@ mod tests_bear_put_spread_optimizable {
             Some(dec!(0.2)),
             spos!(50.0),
             Some(25),
+            None,
         );
 
         let spread = create_test_bear_put_spread();
@@ -1722,6 +1734,7 @@ mod tests_bear_put_spread_optimizable {
             Some(dec!(0.2)),
             spos!(50.0),
             Some(25),
+            None,
         );
 
         let combinations: Vec<_> = spread

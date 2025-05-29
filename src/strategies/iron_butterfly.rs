@@ -1694,6 +1694,7 @@ mod tests_iron_butterfly_optimizable {
                 None,
                 spos!(100.0), // volume
                 Some(50),     // open_interest
+                None,
             );
         }
         chain

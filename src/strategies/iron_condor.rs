@@ -1898,6 +1898,7 @@ mod tests_iron_condor_optimizable {
                 None,
                 spos!(100.0), // volume
                 Some(50),     // open_interest
+                None,
             );
         }
         chain

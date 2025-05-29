@@ -1689,6 +1689,7 @@ mod tests_bear_call_spread_optimizable {
             Some(dec!(0.3)),
             spos!(100.0), // volume
             Some(50),     // open_interest
+            None,
         );
 
         chain.add_option(
@@ -1703,6 +1704,7 @@ mod tests_bear_call_spread_optimizable {
             Some(dec!(0.3)),
             spos!(200.0),
             Some(100),
+            None,
         );
 
         chain.add_option(
@@ -1717,6 +1719,7 @@ mod tests_bear_call_spread_optimizable {
             Some(dec!(0.3)),
             spos!(150.0),
             Some(75),
+            None,
         );
 
         chain
@@ -1859,6 +1862,7 @@ mod tests_bear_call_spread_optimizable {
             Some(dec!(0.3)),
             spos!(50.0),
             Some(25),
+            None,
         );
 
         let strategy = create_test_strategy();
@@ -1891,6 +1895,7 @@ mod tests_bear_call_spread_optimizable {
             None,
             None,
             pos!(0.2),
+            None,
             None,
             None,
             None,

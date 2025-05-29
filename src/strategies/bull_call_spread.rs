@@ -1275,6 +1275,7 @@ mod tests_bull_call_spread_optimization {
             Some(dec!(0.2)),
             spos!(100.0), // volume
             Some(50),     // open_interest
+            None,
         );
 
         chain.add_option(
@@ -1289,6 +1290,7 @@ mod tests_bull_call_spread_optimization {
             Some(dec!(0.2)),
             spos!(150.0),
             Some(75),
+            None,
         );
 
         chain.add_option(
@@ -1303,6 +1305,7 @@ mod tests_bull_call_spread_optimization {
             Some(dec!(0.2)),
             spos!(200.0),
             Some(100),
+            None,
         );
 
         chain.add_option(
@@ -1317,6 +1320,7 @@ mod tests_bull_call_spread_optimization {
             Some(dec!(0.2)),
             spos!(250.0),
             Some(125),
+            None,
         );
 
         chain.add_option(
@@ -1331,6 +1335,7 @@ mod tests_bull_call_spread_optimization {
             Some(dec!(0.2)),
             spos!(300.0),
             Some(150),
+            None,
         );
 
         chain

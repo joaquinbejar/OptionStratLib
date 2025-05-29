@@ -126,7 +126,7 @@ pub struct OptionData {
     pub risk_free_rate: Option<Decimal>,
     #[serde(skip)]
     pub dividend_yield: Option<Positive>,
-    #[serde(skip)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub extra_fields: Option<Value>,
 }
 
@@ -583,21 +583,43 @@ impl OptionData {
     /// * Errors propagated from the Black-Scholes calculation functions
     pub fn calculate_prices(&mut self, spread: Option<Positive>) -> Result<(), ChainError> {
         let call_option = self.get_option(Side::Long, OptionStyle::Call)?;
-        let call_price = call_option.calculate_price_black_scholes()?;
-        self.call_middle = Some(call_price.into());
-
+        match (call_option.calculate_price_black_scholes(), spread.is_some()) {
+            (Ok(price), true) => if price.is_sign_positive()  {
+                self.call_middle = Some(price.into());
+                self.apply_spread(spread.unwrap(), 2);
+            },
+            (Ok(price), false) => {
+                self.call_middle = Some(price.into());
+                self.call_ask = self.call_middle;
+                self.call_bid = self.call_middle;
+            }
+            _ => {
+                debug!("calculate_prices: Failed to calculate call option price");
+                self.call_middle = None;
+                self.call_ask = None;
+                self.call_bid = None;
+            }
+        };
+        
         let put_option = self.get_option(Side::Long, OptionStyle::Put)?;
-        let put_price = put_option.calculate_price_black_scholes()?;
-        self.put_middle = Some(put_price.into());
-
-        self.call_ask = self.call_middle;
-        self.call_bid = self.call_middle;
-        self.put_ask = self.put_middle;
-        self.put_bid = self.put_middle;
-
-        if let Some(s) = spread {
-            self.apply_spread(s, 2);
-        }
+        match (put_option.calculate_price_black_scholes(), spread.is_some()) {
+            (Ok(price), true) => if price.is_sign_positive()  {
+                self.put_middle = Some(price.into());
+                self.apply_spread(spread.unwrap(), 2);
+            },
+            (Ok(price), false) => {
+                self.put_middle = Some(price.into());
+                self.put_ask = self.put_middle;
+                self.put_bid = self.put_middle;
+            }
+            _ => {
+                debug!("calculate_prices: Failed to calculate put option price");
+                self.put_middle = None;
+                self.put_ask = None;
+                self.put_bid = None;
+            }
+        };
+       
         Ok(())
     }
 
@@ -626,28 +648,30 @@ impl OptionData {
     pub fn apply_spread(&mut self, spread: Positive, decimal_places: u32) {
         let half_spread: Decimal = (spread / Positive::TWO).into();
 
-        if self.call_middle.is_some() {
+        if self.call_middle.is_some() && self.call_middle.unwrap() > spread {
             self.call_ask =
                 Some((self.call_middle.unwrap() + half_spread).round_to(decimal_places));
             self.call_bid =
                 Some((self.call_middle.unwrap() - half_spread).round_to(decimal_places));
         } else {
-            assert!(self.call_ask.is_some() && self.call_bid.is_some());
-            self.call_middle = Some(
-                ((self.call_ask.unwrap() + self.call_bid.unwrap()) / Positive::TWO)
-                    .round_to(decimal_places),
-            );
+            if self.call_ask.is_some() && self.call_bid.is_some() {
+                self.call_middle = Some(
+                    ((self.call_ask.unwrap() + self.call_bid.unwrap()) / Positive::TWO)
+                        .round_to(decimal_places),
+                );
+            }
         };
 
-        if self.put_middle.is_some() {
+        if self.put_middle.is_some() && self.put_middle.unwrap() > spread {
             self.put_ask = Some((self.put_middle.unwrap() + half_spread).round_to(decimal_places));
             self.put_bid = Some((self.put_middle.unwrap() - half_spread).round_to(decimal_places));
         } else {
-            assert!(self.put_ask.is_some() && self.put_bid.is_some());
-            self.put_middle = Some(
-                ((self.put_ask.unwrap() + self.put_bid.unwrap()) / Positive::TWO)
-                    .round_to(decimal_places),
-            );
+            if self.put_ask.is_some() && self.put_bid.is_some() {
+                self.put_middle = Some(
+                    ((self.put_ask.unwrap() + self.put_bid.unwrap()) / Positive::TWO)
+                        .round_to(decimal_places),
+                );
+            };
         }
     }
 
@@ -784,12 +808,10 @@ impl OptionData {
     ///
     /// Updates the `call_middle` and `put_middle` fields with the calculated mid-prices.
     pub fn set_mid_prices(&mut self) {
-        assert!(self.call_ask.is_some() && self.call_bid.is_some());
         self.call_middle = match (self.call_bid, self.call_ask) {
             (Some(bid), Some(ask)) => Some(((bid + ask) / pos!(2.0)).round_to(4)),
             _ => None,
         };
-        assert!(self.put_ask.is_some() && self.put_bid.is_some());
         self.put_middle = match (self.put_bid, self.put_ask) {
             (Some(bid), Some(ask)) => Some(((bid + ask) / pos!(2.0)).round_to(4)),
             _ => None,
