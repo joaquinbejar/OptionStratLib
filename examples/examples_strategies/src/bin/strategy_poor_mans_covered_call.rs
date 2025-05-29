@@ -31,9 +31,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         pos!(0.85),                        // open_fee_short_put
         pos!(0.85),                        // close_fee_short_put
     );
-
-    let price_range = strategy.get_best_range_to_show(pos!(1.0)).unwrap();
-
+    
     info!("Title: {}", strategy.get_title());
     info!("Break Even Points: {:?}", strategy.break_even_points);
     info!(

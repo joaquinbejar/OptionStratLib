@@ -3,7 +3,6 @@
    Email: jb@taunais.com
    Date: 16/8/24
 ******************************************************************************/
-use optionstratlib::utils::setup_logger;
 use optionstratlib::volatility::{
     constant_volatility, ewma_volatility, garch_volatility, historical_volatility,
     simulate_heston_volatility,
