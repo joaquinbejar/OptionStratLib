@@ -1,6 +1,6 @@
 use crate::chains::OptionData;
 use crate::constants::{IV_TOLERANCE, MAX_ITERATIONS_IV, ZERO};
-use crate::error::{GreeksError, OptionsError, OptionsResult, VolatilityError};
+use crate::error::{GreeksError, OptionsError, OptionsResult, StrategyError, VolatilityError};
 use crate::greeks::Greeks;
 use crate::model::types::{OptionBasicType, OptionStyle, OptionType, Side};
 use crate::model::utils::calculate_optimal_price_range;
@@ -867,6 +867,18 @@ impl BasicAble for Options {
     }
     fn one_option_mut(&mut self) -> &mut Options {
         self
+    }
+    fn set_implied_volatility(&mut self, volatility: &Positive) -> Result<(), StrategyError> {
+        self.implied_volatility = *volatility;
+        Ok(())
+    }
+    fn set_underlying_price(&mut self, price: &Positive) -> Result<(), StrategyError> {
+        self.underlying_price = *price;
+        Ok(())
+    }
+    fn set_expiration_date(&mut self, expiration_date: ExpirationDate) -> Result<(), StrategyError> {
+        self.expiration_date = expiration_date.clone();
+        Ok(())
     }
 }
 

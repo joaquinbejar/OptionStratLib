@@ -603,6 +603,22 @@ impl Positive {
     pub fn log10(&self) -> Positive {
         Positive(self.0.log10())
     }
+    
+    pub fn sub_or_zero(&self, other: &Decimal) -> Positive {
+        if &self.0 > other {
+            Positive(self.0 - other)
+        } else {
+            Positive(Decimal::ZERO)
+        }
+    }
+
+    pub fn sub_or_none(&self, other: &Decimal) -> Option<Positive> {
+        if &self.0 >= other {
+            Some(Positive(self.0 - other))
+        } else {
+            None
+        }
+    }
 }
 
 impl ToRound for Positive {
@@ -1021,7 +1037,7 @@ impl Sub<Decimal> for Positive {
     type Output = Positive;
 
     fn sub(self, rhs: Decimal) -> Positive {
-        Positive(self.0 - rhs)
+        Positive::new_decimal(self.0 - rhs).expect("Resulting value must be positive")
     }
 }
 
@@ -1029,7 +1045,7 @@ impl Sub<&Decimal> for Positive {
     type Output = Positive;
 
     fn sub(self, rhs: &Decimal) -> Self::Output {
-        (self.0 - rhs).into()
+        Positive::new_decimal(self.0 - rhs).expect("Resulting value must be positive")
     }
 }
 
