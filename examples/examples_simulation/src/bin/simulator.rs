@@ -20,6 +20,7 @@ impl Walker {
 impl WalkTypeAble<Positive, Positive> for Walker {}
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    setup_logger();
     let simulator_size: usize = 15;
     // let n_steps = 43_200; // 30 days in minutes
     let n_steps = 1200;

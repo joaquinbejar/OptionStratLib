@@ -26,6 +26,7 @@ impl Walker {
 impl WalkTypeAble<Positive, OptionChain> for Walker {}
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    setup_logger();
     let ohlc = read_ohlcv_from_zip("examples/Data/cl-1m-sample.zip", None, None)?;
     let ohlc = ohlc.iter().take(1000).collect::<Vec<_>>(); // Take only 1000 minutes
     let prices: Vec<Positive> = ohlc.iter().map(|x| Positive::from(x.close)).collect();

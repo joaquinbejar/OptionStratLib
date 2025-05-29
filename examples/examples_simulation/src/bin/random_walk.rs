@@ -21,6 +21,7 @@ impl Walker {
 impl WalkTypeAble<Positive, Positive> for Walker {}
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    setup_logger();
     let n_steps = 43_200; // 30 days in minutes
     let initial_price = pos!(100.0);
     let std_dev = pos!(20.0);
