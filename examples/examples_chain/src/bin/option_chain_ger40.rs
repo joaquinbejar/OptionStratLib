@@ -3,14 +3,11 @@
    Email: jb@taunais.com
    Date: 29/1/25
 ******************************************************************************/
-use chrono::DateTime;
 use optionstratlib::ExpirationDate;
 use optionstratlib::chains::chain::OptionChain;
 use optionstratlib::greeks::Greeks;
 use optionstratlib::strategies::base::Optimizable;
-use optionstratlib::strategies::{
-    BasicAble, DeltaNeutrality, FindOptimalSide, ShortStrangle, Strategies,
-};
+use optionstratlib::strategies::{DeltaNeutrality, FindOptimalSide, ShortStrangle, Strategies};
 use optionstratlib::utils::setup_logger;
 
 use optionstratlib::model::types::Action;
@@ -25,6 +22,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut option_chain = OptionChain::load_from_json(
         "examples/Chains/Germany-40-2025-05-27-15:29:00-UTC-24209.json",
     )?;
+
     info!("Chain loaded");
     option_chain.update_greeks();
     info!("{}", &option_chain);

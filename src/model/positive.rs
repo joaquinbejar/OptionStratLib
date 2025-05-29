@@ -603,7 +603,7 @@ impl Positive {
     pub fn log10(&self) -> Positive {
         Positive(self.0.log10())
     }
-    
+
     pub fn sub_or_zero(&self, other: &Decimal) -> Positive {
         if &self.0 > other {
             Positive(self.0 - other)

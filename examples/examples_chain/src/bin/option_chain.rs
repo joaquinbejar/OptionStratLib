@@ -10,6 +10,7 @@ use rust_decimal_macros::dec;
 use tracing::info;
 
 fn main() {
+    setup_logger();
     let mut chain = OptionChain::new(
         "SP500",
         pos!(5781.88),

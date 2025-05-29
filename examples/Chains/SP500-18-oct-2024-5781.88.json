@@ -29,9 +29,7 @@
       "implied_volatility": 16.205,
       "delta_call": "0.5",
       "delta_put": "0.5",
-      "gamma": "0.5",
-      "volume": null,
-      "open_interest": null
+      "gamma": "0.5"
     },
     {
       "strike_price": 5530,
@@ -44,9 +42,7 @@
       "implied_volatility": 16.1,
       "delta_call": "0.5",
       "delta_put": "0.5",
-      "gamma": "0.5",
-      "volume": null,
-      "open_interest": null
+      "gamma": "0.5"
     },
     {
       "strike_price": 5540,
@@ -59,9 +55,7 @@
       "implied_volatility": 15.89,
       "delta_call": "0.5",
       "delta_put": "0.5",
-      "gamma": "0.5",
-      "volume": null,
-      "open_interest": null
+      "gamma": "0.5"
     },
     {
       "strike_price": 5550,
@@ -74,9 +68,7 @@
       "implied_volatility": 15.68,
       "delta_call": "0.5",
       "delta_put": "0.5",
-      "gamma": "0.5",
-      "volume": null,
-      "open_interest": null
+      "gamma": "0.5"
     },
     {
       "strike_price": 5560,
@@ -89,9 +81,7 @@
       "implied_volatility": 15.47,
       "delta_call": "0.5",
       "delta_put": "0.5",
-      "gamma": "0.5",
-      "volume": null,
-      "open_interest": null
+      "gamma": "0.5"
     },
     {
       "strike_price": 5570,
@@ -104,9 +94,7 @@
       "implied_volatility": 15.26,
       "delta_call": "0.5",
       "delta_put": "0.5",
-      "gamma": "0.5",
-      "volume": null,
-      "open_interest": null
+      "gamma": "0.5"
     },
     {
       "strike_price": 5575,
@@ -119,9 +107,7 @@
       "implied_volatility": 15.155,
       "delta_call": "0.5",
       "delta_put": "0.5",
-      "gamma": "0.5",
-      "volume": null,
-      "open_interest": null
+      "gamma": "0.5"
     },
     {
       "strike_price": 5580,
@@ -134,9 +120,7 @@
       "implied_volatility": 15.05,
       "delta_call": "0.5",
       "delta_put": "0.5",
-      "gamma": "0.5",
-      "volume": null,
-      "open_interest": null
+      "gamma": "0.5"
     },
     {
       "strike_price": 5590,
@@ -149,9 +133,7 @@
       "implied_volatility": 14.84,
       "delta_call": "0.5",
       "delta_put": "0.5",
-      "gamma": "0.5",
-      "volume": null,
-      "open_interest": null
+      "gamma": "0.5"
     },
     {
       "strike_price": 5600,
@@ -164,9 +146,7 @@
       "implied_volatility": 14.63,
       "delta_call": "0.5",
       "delta_put": "0.5",
-      "gamma": "0.5",
-      "volume": null,
-      "open_interest": null
+      "gamma": "0.5"
     },
     {
       "strike_price": 5610,
@@ -179,9 +159,7 @@
       "implied_volatility": 14.42,
       "delta_call": "0.5",
       "delta_put": "0.5",
-      "gamma": "0.5",
-      "volume": null,
-      "open_interest": null
+      "gamma": "0.5"
     },
     {
       "strike_price": 5620,
@@ -194,9 +172,7 @@
       "implied_volatility": 14.21,
       "delta_call": "0.5",
       "delta_put": "0.5",
-      "gamma": "0.5",
-      "volume": null,
-      "open_interest": null
+      "gamma": "0.5"
     },
     {
       "strike_price": 5625,
@@ -209,9 +185,7 @@
       "implied_volatility": 14.105,
       "delta_call": "0.5",
       "delta_put": "0.5",
-      "gamma": "0.5",
-      "volume": null,
-      "open_interest": null
+      "gamma": "0.5"
     },
     {
       "strike_price": 5630,
@@ -224,9 +198,7 @@
       "implied_volatility": 14,
       "delta_call": "0.5",
       "delta_put": "0.5",
-      "gamma": "0.5",
-      "volume": null,
-      "open_interest": null
+      "gamma": "0.5"
     },
     {
       "strike_price": 5640,
@@ -239,9 +211,7 @@
       "implied_volatility": 13.82,
       "delta_call": "0.5",
       "delta_put": "0.5",
-      "gamma": "0.5",
-      "volume": null,
-      "open_interest": null
+      "gamma": "0.5"
     },
     {
       "strike_price": 5650,
@@ -254,9 +224,7 @@
       "implied_volatility": 13.64,
       "delta_call": "0.5",
       "delta_put": "0.5",
-      "gamma": "0.5",
-      "volume": null,
-      "open_interest": null
+      "gamma": "0.5"
     },
     {
       "strike_price": 5660,
@@ -269,9 +237,7 @@
       "implied_volatility": 13.46,
       "delta_call": "0.5",
       "delta_put": "0.5",
-      "gamma": "0.5",
-      "volume": null,
-      "open_interest": null
+      "gamma": "0.5"
     },
     {
       "strike_price": 5670,
@@ -284,9 +250,7 @@
       "implied_volatility": 13.28,
       "delta_call": "0.5",
       "delta_put": "0.5",
-      "gamma": "0.5",
-      "volume": null,
-      "open_interest": null
+      "gamma": "0.5"
     },
     {
       "strike_price": 5675,
@@ -299,9 +263,7 @@
       "implied_volatility": 13.19,
       "delta_call": "0.5",
       "delta_put": "0.5",
-      "gamma": "0.5",
-      "volume": null,
-      "open_interest": null
+      "gamma": "0.5"
     },
     {
       "strike_price": 5680,
@@ -314,9 +276,7 @@
       "implied_volatility": 13.1,
       "delta_call": "0.5",
       "delta_put": "0.5",
-      "gamma": "0.5",
-      "volume": null,
-      "open_interest": null
+      "gamma": "0.5"
     },
     {
       "strike_price": 5690,
@@ -329,9 +289,7 @@
       "implied_volatility": 12.92,
       "delta_call": "0.5",
       "delta_put": "0.5",
-      "gamma": "0.5",
-      "volume": null,
-      "open_interest": null
+      "gamma": "0.5"
     },
     {
       "strike_price": 5700,
@@ -344,9 +302,7 @@
       "implied_volatility": 12.74,
       "delta_call": "0.5",
       "delta_put": "0.5",
-      "gamma": "0.5",
-      "volume": null,
-      "open_interest": null
+      "gamma": "0.5"
     },
     {
       "strike_price": 5710,
@@ -359,9 +315,7 @@
       "implied_volatility": 12.56,
       "delta_call": "0.5",
       "delta_put": "0.5",
-      "gamma": "0.5",
-      "volume": null,
-      "open_interest": null
+      "gamma": "0.5"
     },
     {
       "strike_price": 5720,
@@ -374,9 +328,7 @@
       "implied_volatility": 12.38,
       "delta_call": "0.5",
       "delta_put": "0.5",
-      "gamma": "0.5",
-      "volume": null,
-      "open_interest": null
+      "gamma": "0.5"
     },
     {
       "strike_price": 5730,
@@ -389,9 +341,7 @@
       "implied_volatility": 12.2,
       "delta_call": "0.5",
       "delta_put": "0.5",
-      "gamma": "0.5",
-      "volume": null,
-      "open_interest": null
+      "gamma": "0.5"
     },
     {
       "strike_price": 5740,
@@ -404,9 +354,7 @@
       "implied_volatility": 12.02,
       "delta_call": "0.5",
       "delta_put": "0.5",
-      "gamma": "0.5",
-      "volume": null,
-      "open_interest": null
+      "gamma": "0.5"
     },
     {
       "strike_price": 5750,
@@ -419,9 +367,7 @@
       "implied_volatility": 11.84,
       "delta_call": "0.5",
       "delta_put": "0.5",
-      "gamma": "0.5",
-      "volume": null,
-      "open_interest": null
+      "gamma": "0.5"
     },
     {
       "strike_price": 5760,
@@ -434,9 +380,7 @@
       "implied_volatility": 11.66,
       "delta_call": "0.5",
       "delta_put": "0.5",
-      "gamma": "0.5",
-      "volume": null,
-      "open_interest": null
+      "gamma": "0.5"
     },
     {
       "strike_price": 5770,
@@ -449,9 +393,7 @@
       "implied_volatility": 11.48,
       "delta_call": "0.5",
       "delta_put": "0.5",
-      "gamma": "0.5",
-      "volume": null,
-      "open_interest": null
+      "gamma": "0.5"
     },
     {
       "strike_price": 5780,
@@ -464,9 +406,7 @@
       "implied_volatility": 11.3,
       "delta_call": "0.5",
       "delta_put": "0.5",
-      "gamma": "0.5",
-      "volume": null,
-      "open_interest": null
+      "gamma": "0.5"
     },
     {
       "strike_price": 5790,
@@ -479,9 +419,7 @@
       "implied_volatility": 11.15,
       "delta_call": "0.5",
       "delta_put": "0.5",
-      "gamma": "0.5",
-      "volume": null,
-      "open_interest": null
+      "gamma": "0.5"
     },
     {
       "strike_price": 5800,
@@ -494,9 +432,7 @@
       "implied_volatility": 11,
       "delta_call": "0.5",
       "delta_put": "0.5",
-      "gamma": "0.5",
-      "volume": null,
-      "open_interest": null
+      "gamma": "0.5"
     },
     {
       "strike_price": 5810,
@@ -509,9 +445,7 @@
       "implied_volatility": 10.85,
       "delta_call": "0.5",
       "delta_put": "0.5",
-      "gamma": "0.5",
-      "volume": null,
-      "open_interest": null
+      "gamma": "0.5"
     },
     {
       "strike_price": 5820,
@@ -524,9 +458,7 @@
       "implied_volatility": 10.7,
       "delta_call": "0.5",
       "delta_put": "0.5",
-      "gamma": "0.5",
-      "volume": null,
-      "open_interest": null
+      "gamma": "0.5"
     },
     {
       "strike_price": 5830,
@@ -539,9 +471,7 @@
       "implied_volatility": 10.55,
       "delta_call": "0.5",
       "delta_put": "0.5",
-      "gamma": "0.5",
-      "volume": null,
-      "open_interest": null
+      "gamma": "0.5"
     },
     {
       "strike_price": 5840,
@@ -554,9 +484,7 @@
       "implied_volatility": 10.4,
       "delta_call": "0.5",
       "delta_put": "0.5",
-      "gamma": "0.5",
-      "volume": null,
-      "open_interest": null
+      "gamma": "0.5"
     },
     {
       "strike_price": 5850,
@@ -569,9 +497,7 @@
       "implied_volatility": 10.25,
       "delta_call": "0.5",
       "delta_put": "0.5",
-      "gamma": "0.5",
-      "volume": null,
-      "open_interest": null
+      "gamma": "0.5"
     },
     {
       "strike_price": 5900,
@@ -584,9 +510,7 @@
       "implied_volatility": 10.058,
       "delta_call": "0.5",
       "delta_put": "0.5",
-      "gamma": "0.5",
-      "volume": null,
-      "open_interest": null
+      "gamma": "0.5"
     },
     {
       "strike_price": 5950,
@@ -599,9 +523,7 @@
       "implied_volatility": 9.928,
       "delta_call": "0.5",
       "delta_put": "0.5",
-      "gamma": "0.5",
-      "volume": null,
-      "open_interest": null
+      "gamma": "0.5"
     },
     {
       "strike_price": 6000,
@@ -614,9 +536,7 @@
       "implied_volatility": 9.798,
       "delta_call": "0.5",
       "delta_put": "0.5",
-      "gamma": "0.5",
-      "volume": null,
-      "open_interest": null
+      "gamma": "0.5"
     },
     {
       "strike_price": 6050,
@@ -629,9 +549,7 @@
       "implied_volatility": 9.668,
       "delta_call": "0.5",
       "delta_put": "0.5",
-      "gamma": "0.5",
-      "volume": null,
-      "open_interest": null
+      "gamma": "0.5"
     },
     {
       "strike_price": 6100,
@@ -644,9 +562,7 @@
       "implied_volatility": 9.538,
       "delta_call": "0.5",
       "delta_put": "0.5",
-      "gamma": "0.5",
-      "volume": null,
-      "open_interest": null
+      "gamma": "0.5"
     },
     {
       "strike_price": 6150,
@@ -659,9 +575,7 @@
       "implied_volatility": 9.46,
       "delta_call": "0.5",
       "delta_put": "0.5",
-      "gamma": "0.5",
-      "volume": null,
-      "open_interest": null
+      "gamma": "0.5"
     },
     {
       "strike_price": 6200,
@@ -674,11 +588,7 @@
       "implied_volatility": 9.46,
       "delta_call": "0.5",
       "delta_put": "0.5",
-      "gamma": "0.5",
-      "volume": null,
-      "open_interest": null
+      "gamma": "0.5"
     }
-  ],
-  "risk_free_rate": null,
-  "dividend_yield": null
+  ]
 }

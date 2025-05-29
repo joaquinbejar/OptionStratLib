@@ -1,7 +1,6 @@
 use super::*;
 use crate::impl_json_display_pretty;
 
-
 // Use the macro to implement Display for multiple types at once
 impl_json_display_pretty!(
     BullCallSpread,

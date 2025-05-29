@@ -1488,7 +1488,11 @@ mod chain_test {
         assert!(!rnd_result.densities.is_empty());
 
         assert_decimal_eq!(rnd_result.statistics.mean, dec!(99.85567), dec!(0.00001));
-        assert_decimal_eq!(rnd_result.statistics.skewness, dec!(-0.00132), dec!(0.00001));
+        assert_decimal_eq!(
+            rnd_result.statistics.skewness,
+            dec!(-0.00132),
+            dec!(0.00001)
+        );
         assert_decimal_eq!(
             rnd_result.statistics.kurtosis,
             dec!(-0.56662),

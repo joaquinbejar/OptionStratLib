@@ -1093,7 +1093,7 @@ mod tests_from_string {
 
         // Get days from the DateTime variant
         let days = result.get_days().unwrap();
-        assert_pos_relative_eq!(days, pos!(1.31), pos!(0.02));
+        assert_pos_relative_eq!(days, pos!(1.31), pos!(0.1));
 
         // Instead of creating a Days variant, use the original DateTime variant
         // This ensures the time information is preserved

@@ -876,7 +876,10 @@ impl BasicAble for Options {
         self.underlying_price = *price;
         Ok(())
     }
-    fn set_expiration_date(&mut self, expiration_date: ExpirationDate) -> Result<(), StrategyError> {
+    fn set_expiration_date(
+        &mut self,
+        expiration_date: ExpirationDate,
+    ) -> Result<(), StrategyError> {
         self.expiration_date = expiration_date;
         Ok(())
     }

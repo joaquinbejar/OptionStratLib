@@ -95,6 +95,7 @@ pub struct OptionData {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub put_middle: Option<Positive>,
 
+    #[serde(default)]
     pub(crate) implied_volatility: Positive,
 
     /// The delta of the call option, measuring price sensitivity to underlying changes.
@@ -583,11 +584,16 @@ impl OptionData {
     /// * Errors propagated from the Black-Scholes calculation functions
     pub fn calculate_prices(&mut self, spread: Option<Positive>) -> Result<(), ChainError> {
         let call_option = self.get_option(Side::Long, OptionStyle::Call)?;
-        match (call_option.calculate_price_black_scholes(), spread.is_some()) {
-            (Ok(price), true) => if price.is_sign_positive()  {
-                self.call_middle = Some(price.into());
-                self.apply_spread(spread.unwrap(), 2);
-            },
+        match (
+            call_option.calculate_price_black_scholes(),
+            spread.is_some(),
+        ) {
+            (Ok(price), true) => {
+                if price.is_sign_positive() {
+                    self.call_middle = Some(price.into());
+                    self.apply_spread(spread.unwrap(), 2);
+                }
+            }
             (Ok(price), false) => {
                 self.call_middle = Some(price.into());
                 self.call_ask = self.call_middle;
@@ -600,13 +606,15 @@ impl OptionData {
                 self.call_bid = None;
             }
         };
-        
+
         let put_option = self.get_option(Side::Long, OptionStyle::Put)?;
         match (put_option.calculate_price_black_scholes(), spread.is_some()) {
-            (Ok(price), true) => if price.is_sign_positive()  {
-                self.put_middle = Some(price.into());
-                self.apply_spread(spread.unwrap(), 2);
-            },
+            (Ok(price), true) => {
+                if price.is_sign_positive() {
+                    self.put_middle = Some(price.into());
+                    self.apply_spread(spread.unwrap(), 2);
+                }
+            }
             (Ok(price), false) => {
                 self.put_middle = Some(price.into());
                 self.put_ask = self.put_middle;
@@ -619,7 +627,7 @@ impl OptionData {
                 self.put_bid = None;
             }
         };
-       
+
         Ok(())
     }
 
@@ -647,19 +655,25 @@ impl OptionData {
     /// * Calls `set_mid_prices()` to recalculate the mid prices based on the new bid/ask values
     pub fn apply_spread(&mut self, spread: Positive, decimal_places: u32) {
         let half_spread: Decimal = (spread / Positive::TWO).into();
-        
+
         match (self.call_ask, self.call_bid, self.call_middle) {
             (_, _, Some(call_middle)) => {
                 if self.call_middle.unwrap() > spread {
                     self.call_ask = Some((call_middle + half_spread).round_to(decimal_places));
-                    self.call_bid = Some(call_middle.sub_or_zero(&half_spread).round_to(decimal_places));
+                    self.call_bid = Some(
+                        call_middle
+                            .sub_or_zero(&half_spread)
+                            .round_to(decimal_places),
+                    );
                 } else {
-                    trace!("apply_spread: Call middle price is not greater than spread, cannot apply spread");
+                    trace!(
+                        "apply_spread: Call middle price is not greater than spread, cannot apply spread"
+                    );
                     self.call_ask = None;
                     self.call_bid = None;
                     self.call_middle = None;
                 }
-            },
+            }
             (Some(call_ask), Some(call_bid), None) => {
                 trace!("apply_spread: Call middle price is None, cannot apply spread");
                 self.call_ask = Some((call_ask + half_spread).round_to(decimal_places));
@@ -680,14 +694,20 @@ impl OptionData {
             (_, _, Some(put_middle)) => {
                 if self.put_middle.unwrap() > spread {
                     self.put_ask = Some((put_middle + half_spread).round_to(decimal_places));
-                    self.put_bid = Some(put_middle.sub_or_zero(&half_spread).round_to(decimal_places));
+                    self.put_bid = Some(
+                        put_middle
+                            .sub_or_zero(&half_spread)
+                            .round_to(decimal_places),
+                    );
                 } else {
-                    trace!("apply_spread: Put middle price is not greater than spread, cannot apply spread");
+                    trace!(
+                        "apply_spread: Put middle price is not greater than spread, cannot apply spread"
+                    );
                     self.put_ask = None;
                     self.put_bid = None;
                     self.put_middle = None;
                 }
-            },
+            }
             (Some(put_ask), Some(put_bid), None) => {
                 trace!("apply_spread: Put middle price is None, cannot apply spread");
                 self.put_ask = Some((put_ask + half_spread).round_to(decimal_places));
@@ -997,11 +1017,11 @@ mod optiondata_coverage_tests {
             Some(dec!(0.5)),
             spos!(1000.0),
             Some(500),
-            Some("TEST".to_string()), // symbol
+            Some("TEST".to_string()),               // symbol
             Some(ExpirationDate::Days(pos!(30.0))), // expiration_date
-            Some(Box::new(pos!(100.0))), // underlying_price
-            Some(dec!(0.05)), // risk_free_rate
-            Some(pos!(0.02)), // dividend_yield
+            Some(Box::new(pos!(100.0))),            // underlying_price
+            Some(dec!(0.05)),                       // risk_free_rate
+            Some(pos!(0.02)),                       // dividend_yield
             None,
         )
     }
@@ -1128,22 +1148,22 @@ mod tests_get_position {
     // Helper function to create a standard test option data
     fn create_test_option_data() -> OptionData {
         OptionData::new(
-            pos!(100.0),      // strike_price
-            spos!(9.5),       // call_bid
-            spos!(10.0),      // call_ask
-            spos!(8.5),       // put_bid
-            spos!(9.0),       // put_ask
-            pos!(0.2),        // implied_volatility
-            Some(dec!(-0.3)), // delta_call
-            Some(dec!(0.7)),  // delta_put
-            Some(dec!(0.5)),  // gamma
-            spos!(1000.0),    // volume
-            Some(500),        // open_interest
-            Some("TEST".to_string()), // symbol
+            pos!(100.0),                            // strike_price
+            spos!(9.5),                             // call_bid
+            spos!(10.0),                            // call_ask
+            spos!(8.5),                             // put_bid
+            spos!(9.0),                             // put_ask
+            pos!(0.2),                              // implied_volatility
+            Some(dec!(-0.3)),                       // delta_call
+            Some(dec!(0.7)),                        // delta_put
+            Some(dec!(0.5)),                        // gamma
+            spos!(1000.0),                          // volume
+            Some(500),                              // open_interest
+            Some("TEST".to_string()),               // symbol
             Some(ExpirationDate::Days(pos!(30.0))), // expiration_date
-            Some(Box::new(pos!(100.0))), // underlying_price
-            Some(dec!(0.05)), // risk_free_rate
-            Some(pos!(0.02)), // dividend_yield
+            Some(Box::new(pos!(100.0))),            // underlying_price
+            Some(dec!(0.05)),                       // risk_free_rate
+            Some(pos!(0.02)),                       // dividend_yield
             None,
         )
     }
@@ -1259,7 +1279,6 @@ mod tests_get_position {
         assert_eq!(position.open_fee, open_fee);
         assert_eq!(position.close_fee, close_fee);
     }
-    
 
     #[test]
     fn test_get_position_in_the_money_call() {
@@ -1448,22 +1467,22 @@ mod tests_get_position {
     fn test_get_position_fallback_to_black_scholes() {
         // Test with option data that doesn't have market prices
         let option_data = OptionData::new(
-            pos!(100.0),      // strike_price
-            None,             // call_bid (missing)
-            None,             // call_ask (missing)
-            None,             // put_bid (missing)
-            None,             // put_ask (missing)
-            pos!(0.2),        // implied_volatility
-            Some(dec!(-0.3)), // delta_call
-            Some(dec!(0.7)),  // delta_put
-            Some(dec!(0.5)),  // gamma
-            spos!(1000.0),    // volume
-            Some(500),        // open_interest
-            Some("TEST".to_string()), // symbol
+            pos!(100.0),                            // strike_price
+            None,                                   // call_bid (missing)
+            None,                                   // call_ask (missing)
+            None,                                   // put_bid (missing)
+            None,                                   // put_ask (missing)
+            pos!(0.2),                              // implied_volatility
+            Some(dec!(-0.3)),                       // delta_call
+            Some(dec!(0.7)),                        // delta_put
+            Some(dec!(0.5)),                        // gamma
+            spos!(1000.0),                          // volume
+            Some(500),                              // open_interest
+            Some("TEST".to_string()),               // symbol
             Some(ExpirationDate::Days(pos!(30.0))), // expiration_date
-            Some(Box::new(pos!(100.0))), // underlying_price
-            Some(dec!(0.05)), // risk_free_rate
-            Some(pos!(0.02)), // dividend_yield
+            Some(Box::new(pos!(100.0))),            // underlying_price
+            Some(dec!(0.05)),                       // risk_free_rate
+            Some(pos!(0.02)),                       // dividend_yield
             None,
         );
 
@@ -1679,11 +1698,11 @@ mod tests_get_option_for_iv {
             None,
             None,
             None,
-            Some("TEST".to_string()), // symbol
+            Some("TEST".to_string()),               // symbol
             Some(ExpirationDate::Days(pos!(30.0))), // expiration_date
-            Some(Box::new(pos!(100.0))), // underlying_price
-            Some(dec!(0.05)), // risk_free_rate
-            Some(pos!(0.02)), // dividend_yield
+            Some(Box::new(pos!(100.0))),            // underlying_price
+            Some(dec!(0.05)),                       // risk_free_rate
+            Some(pos!(0.02)),                       // dividend_yield
             None,
         );
 
@@ -1725,11 +1744,11 @@ mod tests_get_option_for_iv {
             None,
             None,
             None,
-            Some("TEST".to_string()), // symbol
+            Some("TEST".to_string()),               // symbol
             Some(ExpirationDate::Days(pos!(30.0))), // expiration_date
-            Some(Box::new(pos!(100.0))), // underlying_price
-            Some(dec!(0.05)), // risk_free_rate
-            Some(pos!(0.02)), // dividend_yield
+            Some(Box::new(pos!(100.0))),            // underlying_price
+            Some(dec!(0.05)),                       // risk_free_rate
+            Some(pos!(0.02)),                       // dividend_yield
             None,
         );
 
@@ -1759,11 +1778,11 @@ mod tests_get_option_for_iv {
             None,
             None,
             None,
-            Some("TEST".to_string()), // symbol
+            Some("TEST".to_string()),               // symbol
             Some(ExpirationDate::Days(pos!(30.0))), // expiration_date
-            Some(Box::new(pos!(100.0))), // underlying_price
-            Some(dec!(0.05)), // risk_free_rate
-            Some(pos!(0.02)), // dividend_yield
+            Some(Box::new(pos!(100.0))),            // underlying_price
+            Some(dec!(0.05)),                       // risk_free_rate
+            Some(pos!(0.02)),                       // dividend_yield
             None,
         );
 

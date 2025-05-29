@@ -1,4 +1,3 @@
-
 #[macro_export]
 macro_rules! impl_json_display_pretty {
     ($($t:ty),+) => {

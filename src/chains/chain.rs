@@ -8,7 +8,6 @@ use crate::chains::utils::{
     adjust_volatility, default_empty_string, rounder, strike_step,
 };
 use crate::chains::{OptionData, OptionsInStrike, RNDAnalysis, RNDParameters, RNDResult};
-use serde_json::Value;
 use crate::curves::{BasicCurves, Curve, Point2D};
 use crate::error::chains::{ChainError, OptionDataErrorKind};
 use crate::error::{CurveError, SurfaceError};
@@ -29,6 +28,7 @@ use rust_decimal::{Decimal, MathematicalOps};
 use rust_decimal_macros::dec;
 use serde::de::{MapAccess, Visitor};
 use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
+use serde_json::Value;
 use std::cmp::Ordering;
 use std::collections::{BTreeMap, BTreeSet};
 use std::error::Error;
@@ -848,7 +848,6 @@ impl OptionChain {
             .into()),
         }
     }
-    
 
     /// Returns a formatted title string for the option chain.
     ///
@@ -1894,7 +1893,7 @@ impl OptionChain {
     pub fn get_expiration_date(&self) -> String {
         self.expiration_date.clone()
     }
-    
+
     pub fn get_expiration(&self) -> Option<ExpirationDate> {
         ExpirationDate::from_string(&self.expiration_date).ok()
     }
@@ -2288,7 +2287,10 @@ impl RNDAnalysis for OptionChain {
                 debug!("Processing strike {}", k);
                 debug!("Call price at k: {:?}", self.get_call_price(k));
                 debug!("Call price at k+h: {:?}", self.get_call_price(k + h));
-                debug!("Call price at k-h: {:?}", self.get_call_price(k.sub_or_zero(&h)));
+                debug!(
+                    "Call price at k-h: {:?}",
+                    self.get_call_price(k.sub_or_zero(&h))
+                );
             }
             if let (Some(call_price), Some(call_up), Some(call_down)) = (
                 self.get_call_price(k),
@@ -3671,22 +3673,22 @@ mod tests_option_data_get_option {
 
     fn create_test_option_data() -> OptionData {
         OptionData::new(
-            pos!(100.0),      // strike_price
-            spos!(9.5),       // call_bid
-            spos!(10.0),      // call_ask
-            spos!(8.5),       // put_bid
-            spos!(9.0),       // put_ask
-            pos!(0.25),        // implied_volatility
-            Some(dec!(-0.3)), // delta
-            Some(dec!(0.7)),  // delta
-            Some(dec!(0.3)),  // gamma
-            spos!(1000.0),    // volume
-            Some(500),        // open_interest
-            Some("TEST".to_string()), // symbol
+            pos!(100.0),                            // strike_price
+            spos!(9.5),                             // call_bid
+            spos!(10.0),                            // call_ask
+            spos!(8.5),                             // put_bid
+            spos!(9.0),                             // put_ask
+            pos!(0.25),                             // implied_volatility
+            Some(dec!(-0.3)),                       // delta
+            Some(dec!(0.7)),                        // delta
+            Some(dec!(0.3)),                        // gamma
+            spos!(1000.0),                          // volume
+            Some(500),                              // open_interest
+            Some("TEST".to_string()),               // symbol
             Some(ExpirationDate::Days(pos!(30.0))), // expiration_date
-            Some(Box::new(pos!(100.0))), // underlying_price
-            Some(dec!(0.05)), // risk_free_rate
-            Some(pos!(0.02)), // dividend_yield
+            Some(Box::new(pos!(100.0))),            // underlying_price
+            Some(dec!(0.05)),                       // risk_free_rate
+            Some(pos!(0.02)),                       // dividend_yield
             None,
         )
     }
@@ -3716,7 +3718,6 @@ mod tests_option_data_get_option {
         let option = result.unwrap();
         assert_eq!(option.implied_volatility, 0.25); // Uses IV from option_data
     }
-
 }
 
 #[cfg(test)]
@@ -3738,13 +3739,13 @@ mod tests_option_data_get_options_in_strike {
             Some(dec!(-0.3)), // delta
             Some(dec!(-0.3)),
             Some(dec!(0.3)),
-            spos!(1000.0), // volume
-            Some(500),     // open_interest
-            Some("TEST".to_string()), // symbol
+            spos!(1000.0),                          // volume
+            Some(500),                              // open_interest
+            Some("TEST".to_string()),               // symbol
             Some(ExpirationDate::Days(pos!(30.0))), // expiration_date
-            Some(Box::new(pos!(100.0))), // underlying_price
-            Some(dec!(0.05)), // risk_free_rate
-            Some(pos!(0.02)), // dividend_yield
+            Some(Box::new(pos!(100.0))),            // underlying_price
+            Some(dec!(0.05)),                       // risk_free_rate
+            Some(pos!(0.02)),                       // dividend_yield
             None,
         )
     }
@@ -5162,8 +5163,8 @@ mod tests_option_data_delta {
             None,        // delta
             None,
             None,
-            spos!(1000.0), // volume
-            Some(500),     // open_interest
+            spos!(1000.0),            // volume
+            Some(500),                // open_interest
             Some("AAPL".to_string()), // underlying_symbol
             Some(ExpirationDate::Days(pos!(3.9))),
             Some(Box::new(pos!(100.0))), // underlying_price
@@ -5204,7 +5205,7 @@ mod tests_option_data_delta {
 
         assert!(option_data.delta_call.is_some());
         let delta = option_data.delta_call.unwrap();
-        
+
         // Deep ITM call delta should be close to 1
         assert!(delta > dec!(0.9) && delta <= dec!(1.0));
     }
@@ -5217,7 +5218,7 @@ mod tests_option_data_delta {
 
         assert!(option_data.delta_call.is_some());
         let delta = option_data.delta_call.unwrap();
-        
+
         // Deep OTM call delta should be close to 0
         assert!(delta >= Decimal::ZERO && delta < dec!(0.1));
     }

@@ -309,9 +309,9 @@ mod default;
 #[cfg(feature = "plotly")]
 mod plotly;
 
+pub mod display;
 #[cfg(feature = "plotly")]
 mod test_plotly;
-pub mod display;
 
 #[cfg(feature = "plotly")]
 pub use {
