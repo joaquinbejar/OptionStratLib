@@ -877,7 +877,7 @@ impl BasicAble for Options {
         Ok(())
     }
     fn set_expiration_date(&mut self, expiration_date: ExpirationDate) -> Result<(), StrategyError> {
-        self.expiration_date = expiration_date.clone();
+        self.expiration_date = expiration_date;
         Ok(())
     }
 }

@@ -444,6 +444,7 @@ impl OptionData {
     /// * An `Options` instance configured with the specified parameters
     /// * A `ChainError` if there was a problem creating the option
     ///
+    #[allow(dead_code)]
     fn get_option_for_iv(
         &self,
         side: Side,
