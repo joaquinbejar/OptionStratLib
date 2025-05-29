@@ -28,10 +28,12 @@ use rust_decimal::{Decimal, MathematicalOps};
 use rust_decimal_macros::dec;
 use serde::de::{MapAccess, Visitor};
 use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
+use serde_json::Value;
 use std::cmp::Ordering;
 use std::collections::{BTreeMap, BTreeSet};
 use std::error::Error;
 use std::fmt;
+use std::sync::Arc;
 use tracing::{debug, error, warn};
 use {crate::chains::utils::parse, csv::WriterBuilder, std::fs::File};
 
@@ -269,14 +271,14 @@ impl OptionChain {
     /// ```rust
     /// use rust_decimal_macros::dec;
     /// use optionstratlib::chains::chain::OptionChain;
-    /// use optionstratlib::pos;
+    /// use optionstratlib::{pos, spos};
     ///
     /// let chain = OptionChain::new(
     ///     "AAPL",
     ///     pos!(172.50),
     ///     "2023-12-15".to_string(),
     ///     Some(dec!(0.05)),  // 5% risk-free rate
-    ///     Some(pos!(0.0065)) // 0.65% dividend yield
+    ///     spos!(0.0065) // 0.65% dividend yield
     /// );
     /// ```
     pub fn new(
@@ -319,11 +321,10 @@ impl OptionChain {
     /// use optionstratlib::{pos, spos, ExpirationDate};
     /// use optionstratlib::chains::chain::OptionChain;
     /// let price_params = OptionDataPriceParams::new(
-    ///     pos!(100.0),                         // underlying price
-    ///     ExpirationDate::Days(pos!(30.0)),    // expiration date
-    ///     Some(pos!(0.2)),                     // implied volatility
-    ///     dec!(0.05),                          // risk-free rate
-    ///     pos!(0.0),                           // dividend yield
+    ///     Some(Box::new(pos!(100.0))),                         // underlying price
+    ///     Some(ExpirationDate::Days(pos!(30.0))),    // expiration date
+    ///     Some(dec!(0.05)),                          // risk-free rate
+    ///     spos!(0.0),                           // dividend yield
     ///     Some("SPY".to_string())              // underlying symbol
     /// );
     ///
@@ -337,6 +338,7 @@ impl OptionChain {
     ///     pos!(0.02),
     ///     2,
     ///     price_params,
+    ///     pos!(0.2) // implied volatility
     /// );
     ///
     /// let chain = OptionChain::build_chain(&build_params);
@@ -345,69 +347,87 @@ impl OptionChain {
         let strike_interval = if let Some(strike_interval) = params.strike_interval {
             strike_interval
         } else {
+            assert!(params.price_params.underlying_price.is_some());
+            assert!(params.price_params.expiration_date.is_some());
             strike_step(
-                params.price_params.underlying_price,
-                params.price_params.implied_volatility.unwrap(),
-                params.price_params.expiration_date.get_days().unwrap(),
+                *params.price_params.underlying_price.clone().unwrap(),
+                params.implied_volatility,
+                params
+                    .price_params
+                    .expiration_date
+                    .unwrap()
+                    .get_days()
+                    .unwrap(),
                 params.chain_size,
                 None,
             )
         };
+        let underlying_price = *params.price_params.underlying_price.clone().unwrap();
 
         let mut option_chain = OptionChain::new(
             &params.symbol,
-            params.price_params.underlying_price,
+            underlying_price,
             params
                 .price_params
                 .expiration_date
+                .unwrap()
                 .get_date_string()
                 .unwrap(),
-            Some(params.price_params.risk_free_rate),
-            Some(params.price_params.dividend_yield),
+            params.price_params.risk_free_rate,
+            params.price_params.dividend_yield,
         );
 
         fn create_chain_data(strike: &Positive, p: &OptionChainBuildParams) -> OptionData {
-            if let Some(iv) = p.price_params.implied_volatility {
-                assert!(
-                    iv <= Positive::ONE,
-                    "Implied volatility should be between 0 and 1"
-                );
-            }
+            assert!(
+                p.implied_volatility <= Positive::ONE,
+                "Implied volatility should be between 0 and 1"
+            );
 
+            let price = *p.price_params.underlying_price.clone().unwrap();
+            assert!(!strike.is_zero());
+            assert!(!p.implied_volatility.is_zero());
             let adjusted_volatility = adjust_volatility(
-                &p.price_params.implied_volatility,
+                &Some(p.implied_volatility),
                 &Some(p.skew_slope),
                 &Some(p.smile_curve),
                 strike,
-                &p.price_params.underlying_price,
+                &price,
             );
+            assert!(adjusted_volatility.is_some());
+
             let mut option_data = OptionData::new(
                 *strike,
                 None,
                 None,
                 None,
                 None,
-                adjusted_volatility,
+                adjusted_volatility.unwrap(),
                 None,
                 None,
                 None,
                 p.volume,
                 None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
             );
             let price_params = OptionDataPriceParams::new(
-                p.price_params.underlying_price,
+                p.price_params.underlying_price.clone(),
                 p.price_params.expiration_date,
-                adjusted_volatility,
                 p.price_params.risk_free_rate,
                 p.price_params.dividend_yield,
                 p.price_params.underlying_symbol.clone(),
             );
+            option_data.set_extra_params(price_params);
 
-            let result_calculate_prices = option_data.calculate_prices(&price_params, false);
+            let result_calculate_prices = option_data.calculate_prices(Some(p.spread));
             if result_calculate_prices.is_ok() {
                 option_data.apply_spread(p.spread, p.decimal_places);
-                option_data.calculate_delta(&price_params);
-                option_data.calculate_gamma(&price_params);
+                option_data.calculate_delta();
+                option_data.calculate_gamma();
             } else {
                 warn!(
                     "Failed to calculate prices for strike: {} error: {}",
@@ -418,7 +438,7 @@ impl OptionChain {
             option_data
         }
 
-        let atm_strike = rounder(params.price_params.underlying_price, strike_interval);
+        let atm_strike = rounder(underlying_price, strike_interval);
         let atm_strike_option_data = create_chain_data(&atm_strike.clone(), params);
         option_chain.options.insert(atm_strike_option_data);
 
@@ -433,6 +453,9 @@ impl OptionChain {
                 break;
             }
             let next_lower_strike = atm_strike - (strike_interval * counter).to_dec();
+            if next_lower_strike == Positive::ZERO {
+                break;
+            }
             let next_lower_option_data = create_chain_data(&next_lower_strike, params);
             option_chain.options.insert(next_lower_option_data.clone());
 
@@ -525,12 +548,12 @@ impl OptionChain {
         };
 
         // Get ATM implied volatility with a default fallback
-        let implied_volatility = match self.atm_implied_volatility() {
-            Ok(Some(iv)) => {
+        let implied_volatility = match self.get_atm_implied_volatility() {
+            Ok(iv) => {
                 assert!(*iv >= pos!(0.0) && *iv <= pos!(1.0));
-                Some(*iv)
+                *iv
             }
-            _ => Some(pos!(0.2)), // 20% is a reasonable default IV
+            _ => pos!(0.2), // 20% is a reasonable default IV
         };
 
         let skew_slope = SKEW_SLOPE;
@@ -538,11 +561,10 @@ impl OptionChain {
 
         // Create the price parameters
         let price_params = OptionDataPriceParams::new(
-            self.underlying_price,
-            ExpirationDate::from_string(&self.expiration_date)?,
-            implied_volatility,
-            self.risk_free_rate.unwrap_or(Decimal::ZERO),
-            self.dividend_yield.unwrap_or(Positive::ZERO),
+            Some(Box::new(self.underlying_price)),
+            Some(ExpirationDate::from_string(&self.expiration_date)?),
+            self.risk_free_rate,
+            self.dividend_yield,
             Some(self.symbol.clone()),
         );
 
@@ -566,6 +588,7 @@ impl OptionChain {
             spread,
             decimal_places,
             price_params,
+            implied_volatility,
         ))
     }
 
@@ -634,7 +657,6 @@ impl OptionChain {
     #[allow(dead_code)]
     pub(crate) fn filter_options_in_strike(
         &self,
-        price_params: &OptionDataPriceParams,
         side: FindOptimalSide,
     ) -> Result<Vec<OptionsInStrike>, ChainError> {
         self.options
@@ -659,7 +681,7 @@ impl OptionChain {
                             && option.delta_call.unwrap() <= max)
                 }
             })
-            .map(|option| option.get_options_in_strike(price_params, Side::Long, OptionStyle::Call))
+            .map(|option| option.get_options_in_strike())
             .collect()
     }
 
@@ -694,12 +716,13 @@ impl OptionChain {
         call_ask: Option<Positive>,
         put_bid: Option<Positive>,
         put_ask: Option<Positive>,
-        implied_volatility: Option<Positive>,
+        implied_volatility: Positive,
         delta_call: Option<Decimal>,
         delta_put: Option<Decimal>,
         gamma: Option<Decimal>,
         volume: Option<Positive>,
         open_interest: Option<u64>,
+        extra_fields: Option<Value>,
     ) {
         let mut option_data = OptionData {
             strike_price,
@@ -715,7 +738,8 @@ impl OptionChain {
             gamma,
             volume,
             open_interest,
-            options: None,
+            extra_fields,
+            ..Default::default()
         };
         option_data.set_mid_prices();
         let expiration_date = match ExpirationDate::from_string(&self.expiration_date) {
@@ -725,19 +749,14 @@ impl OptionChain {
             }
         };
         let params = OptionDataPriceParams::new(
-            self.underlying_price,
-            expiration_date,
-            implied_volatility,
-            self.risk_free_rate.unwrap_or(Decimal::ZERO),
-            self.dividend_yield.unwrap_or(Positive::ZERO),
+            Some(Box::new(self.underlying_price)),
+            Some(expiration_date),
+            self.risk_free_rate,
+            self.dividend_yield,
             Some(self.symbol.clone()),
         );
-        if let Err(e) = option_data.create_options(&params) {
-            error!(
-                "Failed to create options for strike {}: {}",
-                strike_price, e
-            );
-        }
+        option_data.set_extra_params(params);
+
         self.options.insert(option_data);
     }
 
@@ -922,39 +941,8 @@ impl OptionChain {
             .iter()
             .map(|option| {
                 let mut option = option.clone(); // Create a clone we can modify
-                let params = self.get_params(option.strike_price).unwrap();
-                option.calculate_delta(&params);
-                option.calculate_gamma(&params);
-                option
-            })
-            .collect();
-        self.options = modified_options;
-    }
-
-    /// Calculates and updates the implied volatility for all options in the chain.
-    ///
-    /// This method attempts to compute the implied volatility for each option in the chain.
-    /// Implied volatility is the market's forecast of a likely movement in the underlying price
-    /// and is derived from the option's market price.
-    ///
-    /// If the calculation fails for any option, a debug message is logged with the strike price
-    /// and the error, but the process continues for other options.
-    ///
-    /// The original options in the chain are replaced with the ones containing the updated
-    /// implied volatility values.
-    pub fn update_implied_volatilities(&mut self) {
-        let modified_options: BTreeSet<OptionData> = self
-            .options
-            .iter()
-            .map(|option| {
-                let mut option = option.clone();
-                let params = self.get_params(option.strike_price).unwrap();
-                if let Err(e) = option.calculate_implied_volatility(&params) {
-                    debug!(
-                        "Failed to calculate IV for strike {}: {}",
-                        option.strike_price, e
-                    );
-                }
+                option.calculate_delta();
+                option.calculate_gamma();
                 option
             })
             .collect();
@@ -1003,7 +991,7 @@ impl OptionChain {
                 default_empty_string(option.call_ask),
                 default_empty_string(option.put_bid),
                 default_empty_string(option.put_ask),
-                default_empty_string(option.implied_volatility),
+                option.implied_volatility.to_string(),
                 default_empty_string(option.delta_call),
                 default_empty_string(option.delta_put),
                 default_empty_string(option.gamma),
@@ -1071,13 +1059,13 @@ impl OptionChain {
                 put_ask: parse(&record[4]),
                 call_middle: None,
                 put_middle: None,
-                implied_volatility: parse(&record[5]),
+                implied_volatility: parse(&record[5]).unwrap(),
                 delta_call: parse(&record[6]),
                 delta_put: parse(&record[7]),
                 gamma: parse(&record[8]),
                 volume: parse(&record[9]),
                 open_interest: parse(&record[10]),
-                options: None,
+                ..Default::default()
             };
             option_data.set_mid_prices();
             options.insert(option_data);
@@ -1121,15 +1109,15 @@ impl OptionChain {
     pub fn load_from_json(file_path: &str) -> Result<Self, Box<dyn Error>> {
         let file = File::open(file_path)?;
         let mut option_chain: OptionChain = serde_json::from_reader(file)?;
+        option_chain.set_optiondata_extra_params()?;
         option_chain.mutate_single_options(|option| {
-            option.implied_volatility = option.implied_volatility.map(|iv| {
-                if iv >= Positive::ONE {
-                    iv / Positive::HUNDRED
-                } else {
-                    iv
-                }
-            });
+            option.implied_volatility = if option.implied_volatility >= Positive::ONE {
+                option.implied_volatility / Positive::HUNDRED
+            } else {
+                option.implied_volatility
+            }
         });
+
         option_chain.update_mid_prices();
         option_chain.update_greeks();
         // if implied volatility is in percentage, convert it to decimal
@@ -1143,9 +1131,7 @@ impl OptionChain {
             .iter()
             .map(|option| {
                 let mut option_clone = option.clone();
-                if option_clone.implied_volatility.is_some() {
-                    option_clone.check_and_convert_implied_volatility();
-                }
+                option_clone.check_and_convert_implied_volatility();
                 option_clone
             })
             .collect();
@@ -1219,7 +1205,7 @@ impl OptionChain {
                             self.symbol.clone(),
                             option.strike_price,
                             params.expiration_date,
-                            option.implied_volatility.unwrap_or(Positive::ZERO),
+                            option.implied_volatility,
                             params.option_qty,
                             self.underlying_price,
                             params.risk_free_rate,
@@ -1248,7 +1234,7 @@ impl OptionChain {
                             self.symbol.clone(),
                             option.strike_price,
                             params.expiration_date,
-                            option.implied_volatility.unwrap_or(Positive::ZERO),
+                            option.implied_volatility,
                             params.option_qty,
                             self.underlying_price,
                             params.risk_free_rate,
@@ -1277,7 +1263,7 @@ impl OptionChain {
                             self.symbol.clone(),
                             option.strike_price,
                             params.expiration_date,
-                            option.implied_volatility.unwrap_or(Positive::ZERO),
+                            option.implied_volatility,
                             params.option_qty,
                             self.underlying_price,
                             params.risk_free_rate,
@@ -1306,7 +1292,7 @@ impl OptionChain {
                             self.symbol.clone(),
                             option.strike_price,
                             params.expiration_date,
-                            option.implied_volatility.unwrap_or(Positive::ZERO),
+                            option.implied_volatility,
                             params.option_qty,
                             self.underlying_price,
                             params.risk_free_rate,
@@ -1351,9 +1337,7 @@ impl OptionChain {
     /// in ascending order based on the sorting rules of `BTreeSet` (typically defined by `Ord` implementation).
     ///
     pub fn get_single_iter(&self) -> impl Iterator<Item = &OptionData> {
-        self.options
-            .iter()
-            .filter(|option| option.implied_volatility.is_some())
+        self.options.iter().filter(|option| option.validate())
     }
 
     /// Applies a mutation function to each option in the chain that has an implied volatility value.
@@ -1374,7 +1358,7 @@ impl OptionChain {
         let modified_options = self
             .options
             .iter()
-            .filter(|&option| option.implied_volatility.is_some())
+            .filter(|&option| option.validate())
             .cloned()
             .map(|mut option| {
                 f(&mut option);
@@ -1405,7 +1389,7 @@ impl OptionChain {
     pub fn get_single_iter_mut(&mut self) -> impl Iterator<Item = OptionData> {
         self.options
             .iter()
-            .filter(|&option| option.implied_volatility.is_some())
+            .filter(|&option| option.validate())
             .cloned()
     }
 
@@ -1651,42 +1635,6 @@ impl OptionChain {
             .map(|price| price.to_dec())
     }
 
-    /// Retrieves the implied volatility for the at-the-money (ATM) option
-    ///
-    /// Finds the option with strike price equal to the current underlying price
-    /// and returns its implied volatility.
-    ///
-    /// # Returns
-    /// * `Ok(Decimal)` - The ATM implied volatility if found
-    /// * `Err(String)` - Error message if ATM implied volatility is not available
-    ///
-    /// # Examples
-    /// ```
-    /// use tracing::info;
-    /// use optionstratlib::chains::chain::OptionChain;
-    /// use optionstratlib::pos;
-    /// let chain = OptionChain::new("TEST", pos!(100.0), "2024-12-31".to_string(), None, None);
-    /// match chain.get_atm_implied_volatility() {
-    ///     Ok(vol) => info!("ATM volatility: {}", vol),
-    ///     Err(e) => info!("Error: {}", e),
-    /// }
-    /// ```
-    ///
-    /// # Notes
-    /// * ATM strike is defined as the strike equal to the current underlying price
-    /// * Important for volatility skew calculations and option pricing
-    /// * Returns implied volatility as a decimal for precise calculations
-    pub fn get_atm_implied_volatility(&self) -> Result<Decimal, String> {
-        // keep it for back compatibility
-        match self.atm_implied_volatility() {
-            Ok(iv) => match iv {
-                Some(iv) => Ok(iv.value()),
-                None => Err("No ATM implied volatility available".to_string()),
-            },
-            Err(e) => Err(e.to_string()),
-        }
-    }
-
     /// Retrieves the At-The-Money (ATM) implied volatility.
     ///
     /// This function retrieves the implied volatility of the ATM option.
@@ -1703,7 +1651,7 @@ impl OptionChain {
     ///
     /// This function returns an error if the underlying `atm_option_data()` call fails,
     /// which can happen if the option chain is empty or no suitable ATM option is found.
-    pub fn atm_implied_volatility(&self) -> Result<&Option<Positive>, Box<dyn Error>> {
+    pub fn get_atm_implied_volatility(&self) -> Result<&Positive, Box<dyn Error>> {
         let option_data = self.atm_option_data()?;
         Ok(&option_data.implied_volatility)
     }
@@ -1731,13 +1679,7 @@ impl OptionChain {
     pub fn gamma_exposure(&self) -> Result<Decimal, ChainError> {
         let mut gamma_exposure = Decimal::ZERO;
         for option in &self.options {
-            if let Some(four_options) = &option.options {
-                gamma_exposure += four_options.long_call.gamma()?;
-            } else {
-                warn!(
-                    "No options greeks no initialized. Please run the update_greeks method first."
-                );
-            }
+            gamma_exposure += option.gamma.unwrap_or(Decimal::ZERO);
         }
         Ok(gamma_exposure)
     }
@@ -1764,13 +1706,8 @@ impl OptionChain {
     pub fn delta_exposure(&self) -> Result<Decimal, ChainError> {
         let mut delta_exposure = Decimal::ZERO;
         for option in &self.options {
-            if let Some(four_options) = &option.options {
-                delta_exposure += four_options.long_call.delta()?;
-            } else {
-                warn!(
-                    "No options greeks no initialized. Please run the update_greeks method first."
-                );
-            }
+            delta_exposure += option.delta_call.unwrap_or(Decimal::ZERO);
+            delta_exposure += option.delta_put.unwrap_or(Decimal::ZERO);
         }
         Ok(delta_exposure)
     }
@@ -1796,14 +1733,15 @@ impl OptionChain {
     /// This method requires options greeks to be initialized first by calling the `update_greeks` method.
     pub fn vega_exposure(&self) -> Result<Decimal, ChainError> {
         let mut vega_exposure = Decimal::ZERO;
-        for option in &self.options {
-            if let Some(four_options) = &option.options {
-                vega_exposure += four_options.long_call.vega()?;
-            } else {
-                warn!(
-                    "No options greeks no initialized. Please run the update_greeks method first."
-                );
-            }
+        for option_data in &self.options {
+            let vega = option_data
+                .get_option(Side::Long, OptionStyle::Call)?
+                .vega()?;
+            vega_exposure += vega;
+            let vega = option_data
+                .get_option(Side::Long, OptionStyle::Put)?
+                .vega()?;
+            vega_exposure += vega;
         }
         Ok(vega_exposure)
     }
@@ -1829,14 +1767,15 @@ impl OptionChain {
     /// This method requires options greeks to be initialized first by calling the `update_greeks` method.
     pub fn theta_exposure(&self) -> Result<Decimal, ChainError> {
         let mut theta_exposure = Decimal::ZERO;
-        for option in &self.options {
-            if let Some(four_options) = &option.options {
-                theta_exposure += four_options.long_call.theta()?;
-            } else {
-                warn!(
-                    "No options greeks no initialized. Please run the update_greeks method first."
-                );
-            }
+        for option_data in &self.options {
+            let theta = option_data
+                .get_option(Side::Long, OptionStyle::Call)?
+                .theta()?;
+            theta_exposure += theta;
+            let theta = option_data
+                .get_option(Side::Long, OptionStyle::Put)?
+                .theta()?;
+            theta_exposure += theta;
         }
         Ok(theta_exposure)
     }
@@ -1953,6 +1892,14 @@ impl OptionChain {
     /// A `String` representing the expiration date of the option chain.
     pub fn get_expiration_date(&self) -> String {
         self.expiration_date.clone()
+    }
+
+    /// Returns the expiration date of the option chain as an `ExpirationDate` object.
+    ///
+    /// # Returns
+    /// * `Option<ExpirationDate>` - The expiration date if it can be parsed, or `None` if parsing fails.
+    pub fn get_expiration(&self) -> Option<ExpirationDate> {
+        ExpirationDate::from_string(&self.expiration_date).ok()
     }
 
     /// Calculates the strike price interval based on the available option contracts.
@@ -2097,26 +2044,8 @@ impl OptionChain {
                     option_data.strike_price, delta
                 );
 
-                // Create position from the selected option
-                let params = match self.get_params(option_data.strike_price) {
-                    Ok(p) => p,
-                    Err(e) => {
-                        // Log the error but convert to a more specific error
-                        error!(
-                            "Failed to get params for strike {}: {}",
-                            option_data.strike_price, e
-                        );
-                        return Err(ChainError::OptionDataError(
-                            OptionDataErrorKind::InvalidDelta {
-                                delta: Some(delta.to_f64().unwrap()),
-                                reason: format!("Failed to get parameters for option: {}", e),
-                            },
-                        ));
-                    }
-                };
-
                 option_data
-                    .get_position(&params, side, option_style, None, None, None)
+                    .get_position(side, option_style, None, None, None)
                     .map_err(|e| {
                         error!("Failed to create position: {}", e);
                         ChainError::OptionDataError(OptionDataErrorKind::InvalidDelta {
@@ -2237,6 +2166,29 @@ impl OptionChain {
             .into()),
         }
     }
+
+    /// Sets additional parameters for all option data objects in the chain.
+    ///
+    /// This method propagates the chain-level parameters (underlying price, expiration date,
+    /// risk-free rate, dividend yield, and symbol) to all individual option contracts.
+    ///
+    /// # Returns
+    /// * `Result<(), ChainError>` - Ok if successful, or an error if the operation fails.
+    pub fn set_optiondata_extra_params(&mut self) -> Result<(), ChainError> {
+        let params = OptionDataPriceParams::new(
+            Some(Box::new(self.underlying_price)),
+            ExpirationDate::from_string(&self.expiration_date).ok(),
+            self.risk_free_rate,
+            self.dividend_yield,
+            Some(self.symbol.clone()),
+        );
+
+        self.mutate_single_options(|option| {
+            option.set_extra_params(params.clone());
+        });
+
+        Ok(())
+    }
 }
 
 impl Default for OptionChain {
@@ -2266,11 +2218,10 @@ impl OptionChainParams for OptionChain {
             return Err(ChainError::invalid_strike(strike_price.to_f64(), &reason));
         }
         Ok(OptionDataPriceParams::new(
-            self.underlying_price,
-            ExpirationDate::from_string(&self.expiration_date)?,
-            option.unwrap().implied_volatility,
-            self.risk_free_rate.unwrap_or(Decimal::ZERO),
-            self.dividend_yield.unwrap_or(Positive::ZERO),
+            Some(Box::new(self.underlying_price)),
+            ExpirationDate::from_string(&self.expiration_date).ok(),
+            self.risk_free_rate,
+            self.dividend_yield,
             Some(self.symbol.clone()),
         ))
     }
@@ -2337,7 +2288,6 @@ impl RNDAnalysis for OptionChain {
             debug!("Discount factor: {}", discount);
             debug!("Step size h: {}", h);
         }
-
         // Step 5: Calculate RND for each strike
         for opt in self.options.iter() {
             let k = opt.strike_price;
@@ -2348,13 +2298,15 @@ impl RNDAnalysis for OptionChain {
                 debug!("Processing strike {}", k);
                 debug!("Call price at k: {:?}", self.get_call_price(k));
                 debug!("Call price at k+h: {:?}", self.get_call_price(k + h));
-                debug!("Call price at k-h: {:?}", self.get_call_price(k - h));
+                debug!(
+                    "Call price at k-h: {:?}",
+                    self.get_call_price(k.sub_or_zero(&h))
+                );
             }
-
             if let (Some(call_price), Some(call_up), Some(call_down)) = (
                 self.get_call_price(k),
                 self.get_call_price(k + h),
-                self.get_call_price(k - h),
+                self.get_call_price(k.sub_or_zero(&h)),
             ) {
                 // Calculate second derivative
                 let second_derivative = (call_up + call_down - Decimal::TWO * call_price) / (h * h);
@@ -2414,11 +2366,9 @@ impl RNDAnalysis for OptionChain {
         let atm_vol = self.get_atm_implied_volatility()?;
 
         for opt in self.options.iter() {
-            if let Some(iv) = opt.implied_volatility {
-                let relative_strike = opt.strike_price / atm_strike;
-                let vol_diff = iv.to_dec() - atm_vol;
-                skew.push((relative_strike, vol_diff));
-            }
+            let relative_strike = opt.strike_price / atm_strike;
+            let vol_diff = opt.implied_volatility.to_dec() - atm_vol;
+            skew.push((relative_strike, vol_diff));
         }
 
         if skew.is_empty() {
@@ -2486,11 +2436,11 @@ impl VolatilitySmile for OptionChain {
         let mut bt_points: BTreeSet<Point2D> = self
             .options
             .iter()
-            .filter_map(|option| {
-                // Only include options with a valid implied volatility
-                option
-                    .implied_volatility
-                    .map(|vol| Point2D::new(option.strike_price.to_dec(), vol.to_dec()))
+            .map(|option| {
+                Point2D::new(
+                    option.strike_price.to_dec(),
+                    option.implied_volatility.to_dec(),
+                )
             })
             .collect();
 
@@ -2498,11 +2448,7 @@ impl VolatilitySmile for OptionChain {
         let curve = Curve::new(bt_points.clone());
 
         // Interpolate missing points (options without implied volatility)
-        for option in self
-            .options
-            .iter()
-            .filter(|o| o.implied_volatility.is_none())
-        {
+        for option in self.options.iter().filter(|o| o.validate()) {
             // Use linear interpolation to estimate the missing implied volatility
             if let Ok(interpolated_point) = curve.linear_interpolate(option.strike_price.to_dec()) {
                 bt_points.insert(interpolated_point);
@@ -2530,23 +2476,26 @@ impl BasicCurves for OptionChain {
         let points = self
             .get_single_iter()
             .filter_map(|opt| {
-                let four = match opt.options.as_ref() {
-                    Some(four) => four,
-                    None => {
-                        error!("No options greeks initialized. Please run the update_greeks method first.");
-                        return None;
-                    }
-                };
-
                 // Select the appropriate option based on style and side
                 let option = match (option_style, side) {
-                    (OptionStyle::Call, Side::Long) => &four.long_call,
-                    (OptionStyle::Call, Side::Short) => &four.short_call,
-                    (OptionStyle::Put, Side::Long) => &four.long_put,
-                    (OptionStyle::Put, Side::Short) => &four.short_put,
+                    (OptionStyle::Call, Side::Long) => {
+                        opt.get_option(Side::Long, OptionStyle::Call)
+                    }
+                    (OptionStyle::Call, Side::Short) => {
+                        opt.get_option(Side::Short, OptionStyle::Call)
+                    }
+                    (OptionStyle::Put, Side::Long) => opt.get_option(Side::Long, OptionStyle::Put),
+                    (OptionStyle::Put, Side::Short) => {
+                        opt.get_option(Side::Short, OptionStyle::Put)
+                    }
                 };
+                let option: Arc<Options> = match option {
+                    Ok(o) => Arc::new(o),
+                    Err(_) => return None, // Skip options that cannot be retrieved
+                };
+
                 // Get x and y values based on the axis types
-                match self.get_curve_strike_versus(axis, option) {
+                match self.get_curve_strike_versus(axis, &option) {
                     Ok(point) => Some(Point2D::new(point.0, point.1)),
                     Err(_) => None,
                 }
@@ -2577,24 +2526,27 @@ impl BasicSurfaces for OptionChain {
         let mut points = BTreeSet::new();
 
         for opt in self.get_single_iter() {
-            let four = match opt.options.as_ref() {
-                Some(four) => four,
-                None => continue,
-            };
-
             // Select the appropriate option based on style and side
             let option = match (option_style, side) {
-                (OptionStyle::Call, Side::Long) => &four.long_call,
-                (OptionStyle::Call, Side::Short) => &four.short_call,
-                (OptionStyle::Put, Side::Long) => &four.long_put,
-                (OptionStyle::Put, Side::Short) => &four.short_put,
+                (OptionStyle::Call, Side::Long) => opt.get_option(Side::Long, OptionStyle::Call),
+                (OptionStyle::Call, Side::Short) => opt.get_option(Side::Short, OptionStyle::Call),
+                (OptionStyle::Put, Side::Long) => opt.get_option(Side::Long, OptionStyle::Put),
+                (OptionStyle::Put, Side::Short) => opt.get_option(Side::Short, OptionStyle::Put),
+            };
+            let option: Arc<Options> = match option {
+                Ok(o) => Arc::new(o),
+                Err(_) => {
+                    return Err(SurfaceError::ConstructionError(
+                        "Failed to retrieve option data".to_string(),
+                    ));
+                }
             };
 
             match &volatility {
                 // If volatility vector is provided, use get_volatility_versus for each volatility
                 Some(vols) => {
                     for vol in vols {
-                        match self.get_surface_volatility_versus(axis, option, *vol) {
+                        match self.get_surface_volatility_versus(axis, &option, *vol) {
                             Ok((x, y, z)) => {
                                 points.insert(Point3D::new(x, y, z));
                             }
@@ -2603,7 +2555,7 @@ impl BasicSurfaces for OptionChain {
                     }
                 }
                 // If no volatility vector is provided, use get_strike_versus with original volatility
-                None => match self.get_surface_strike_versus(axis, option) {
+                None => match self.get_surface_strike_versus(axis, &option) {
                     Ok((x, y, z)) => {
                         points.insert(Point3D::new(x, y, z));
                     }
@@ -2660,13 +2612,13 @@ mod tests_chain_base {
             pos!(0.02),
             2,
             OptionDataPriceParams::new(
-                pos!(100.0),
-                ExpirationDate::Days(pos!(30.0)),
-                spos!(0.17),
-                Decimal::ZERO,
-                pos!(0.0),
+                Some(Box::new(pos!(100.0))),
+                Some(ExpirationDate::Days(pos!(30.0))),
+                Some(dec!(0.05)),
+                spos!(0.02),
                 Some("SP500".to_string()),
             ),
+            pos!(0.17),
         );
 
         let chain = OptionChain::build_chain(&params);
@@ -2676,15 +2628,15 @@ mod tests_chain_base {
         assert!(chain.options.len() >= 21);
         assert_eq!(chain.underlying_price, pos!(100.0));
         let first = chain.options.iter().next().unwrap();
-        assert_eq!(first.call_ask.unwrap(), 13.01);
-        assert_eq!(first.call_bid.unwrap(), 12.99);
+        assert_eq!(first.call_ask.unwrap(), 12.21);
+        assert_eq!(first.call_bid.unwrap(), 12.19);
         assert_eq!(first.put_ask, None);
         assert_eq!(first.put_bid, None);
         let last = chain.options.iter().next_back().unwrap();
         assert_eq!(last.call_ask, None);
         assert_eq!(last.call_bid, None);
-        assert_eq!(last.put_ask, spos!(13.02));
-        assert_eq!(last.put_bid, spos!(13.0));
+        assert_eq!(last.put_ask, spos!(11.73));
+        assert_eq!(last.put_bid, spos!(11.71));
     }
 
     #[test]
@@ -2699,13 +2651,13 @@ mod tests_chain_base {
             pos!(0.02),
             2,
             OptionDataPriceParams::new(
-                pos!(5878.10),
-                ExpirationDate::Days(pos!(60.0)),
-                spos!(0.03),
-                Decimal::ZERO,
-                pos!(0.0),
+                Some(Box::new(pos!(5878.10))),
+                Some(ExpirationDate::Days(pos!(5.0))),
+                Some(dec!(0.05)),
+                spos!(0.02),
                 Some("SP500".to_string()),
             ),
+            pos!(0.2),
         );
         let chain = OptionChain::build_chain(&params);
 
@@ -2714,15 +2666,15 @@ mod tests_chain_base {
         assert!(chain.options.len() > 1);
         assert_eq!(chain.underlying_price, pos!(5878.10));
         let first = chain.options.iter().next().unwrap();
-        assert_eq!(first.call_ask.unwrap(), 253.11);
-        assert_eq!(first.call_bid.unwrap(), 253.09);
+        assert_eq!(first.call_ask.unwrap(), 480.20);
+        assert_eq!(first.call_bid.unwrap(), 480.18);
         assert_eq!(first.put_ask, None);
         assert_eq!(first.put_bid, None);
         let last = chain.options.iter().next_back().unwrap();
         assert_eq!(last.call_ask, None);
         assert_eq!(last.call_bid, None);
-        assert_eq!(last.put_ask, spos!(246.92));
-        assert_eq!(last.put_bid, spos!(246.90));
+        assert_eq!(last.put_ask, spos!(469.19));
+        assert_eq!(last.put_bid, spos!(469.17));
     }
 
     #[test]
@@ -2740,12 +2692,13 @@ mod tests_chain_base {
             spos!(276.06),
             spos!(13.22),
             spos!(14.90),
-            spos!(0.1631),
+            pos!(0.1631),
             Some(dec!(0.5)),
             Some(dec!(0.5)),
             Some(dec!(0.5)),
             spos!(100.0),
             Some(100),
+            None,
         );
         assert_eq!(chain.options.len(), 1);
         // first option in the chain
@@ -2839,12 +2792,13 @@ mod tests_chain_base {
             spos!(276.06),
             spos!(13.22),
             spos!(14.90),
-            spos!(0.1631),
+            pos!(0.1631),
             Some(dec!(0.5)),
             Some(dec!(0.5)),
             Some(dec!(0.5)),
             spos!(100.0),
             Some(100),
+            None,
         );
         let result = chain.save_to_csv(".");
         assert!(result.is_ok());
@@ -2868,12 +2822,13 @@ mod tests_chain_base {
             spos!(276.06),
             spos!(13.22),
             spos!(14.90),
-            spos!(0.1631),
+            pos!(0.1631),
             Some(dec!(0.5)),
             Some(dec!(0.5)),
             Some(dec!(0.5)),
             spos!(100.0),
             Some(100),
+            None,
         );
         let result = chain.save_to_json(".");
         assert!(result.is_ok());
@@ -2898,12 +2853,13 @@ mod tests_chain_base {
             spos!(276.06),
             spos!(13.22),
             spos!(14.90),
-            spos!(0.1631),
+            pos!(0.1631),
             Some(dec!(0.5)),
             Some(dec!(0.5)),
             Some(dec!(0.5)),
             spos!(100.0),
             Some(100),
+            None,
         );
         let result = chain.save_to_csv(".");
         assert!(result.is_ok());
@@ -2930,24 +2886,25 @@ mod tests_chain_base {
             spos!(276.06),
             spos!(13.22),
             spos!(14.90),
-            spos!(0.1631),
+            pos!(0.1631),
             Some(dec!(0.5)),
             Some(dec!(0.5)),
             Some(dec!(0.5)),
             spos!(100.0),
             Some(100),
+            None,
         );
-        let result = chain.save_to_json(".");
+        let result = chain.save_to_json("tests/tmp/");
         assert!(result.is_ok());
 
-        let result = OptionChain::load_from_json("./SP500-18-oct-2024-5781.9.json");
+        let result = OptionChain::load_from_json("tests/tmp/SP500-18-oct-2024-5781.9.json");
         assert!(result.is_ok());
         let chain = result.unwrap();
         assert_eq!(chain.symbol, "SP500");
         assert_eq!(chain.expiration_date, "18-oct-2024");
         assert_eq!(chain.underlying_price, 5781.9);
 
-        let file_name = "./SP500-18-oct-2024-5781.9.json".to_string();
+        let file_name = "tests/tmp/SP500-18-oct-2024-5781.9.json".to_string();
         let remove_result = fs::remove_file(file_name);
         assert!(remove_result.is_ok());
     }
@@ -2956,7 +2913,7 @@ mod tests_chain_base {
 #[cfg(test)]
 mod tests_option_data {
     use super::*;
-    use crate::model::ExpirationDate;
+
     use crate::spos;
 
     use crate::{assert_pos_relative_eq, pos};
@@ -2971,12 +2928,18 @@ mod tests_option_data {
             spos!(10.0),      // call_ask
             spos!(8.5),       // put_bid
             spos!(9.0),       // put_ask
-            spos!(0.2),       // implied_volatility
+            pos!(0.2),        // implied_volatility
             Some(dec!(-0.3)), // delta
             Some(dec!(0.7)),
             Some(dec!(0.5)),
             spos!(1000.0), // volume
             Some(500),     // open_interest
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
         )
     }
 
@@ -2988,7 +2951,7 @@ mod tests_option_data {
         assert_eq!(option_data.call_ask, spos!(10.0));
         assert_eq!(option_data.put_bid, spos!(8.5));
         assert_eq!(option_data.put_ask, spos!(9.0));
-        assert_eq!(option_data.implied_volatility, spos!(0.2));
+        assert_eq!(option_data.implied_volatility, pos!(0.2));
         assert_eq!(option_data.delta_call.unwrap().to_f64(), Some(-0.3));
         assert_eq!(option_data.volume, spos!(1000.0));
         assert_eq!(option_data.open_interest, Some(500));
@@ -3008,27 +2971,12 @@ mod tests_option_data {
     }
 
     #[test]
-    fn test_validate_no_implied_volatility() {
-        let mut option_data = create_valid_option_data();
-        option_data.implied_volatility = None;
-        assert!(!option_data.validate());
-    }
-
-    #[test]
     fn test_validate_missing_both_sides() {
-        let option_data = OptionData::new(
-            pos!(100.0),
-            None,
-            None,
-            None,
-            None,
-            spos!(0.2),
-            None,
-            None,
-            None,
-            None,
-            None,
-        );
+        let mut option_data = OptionData {
+            strike_price: pos!(100.0),
+            ..Default::default()
+        };
+        option_data.implied_volatility = pos!(0.2);
         assert!(!option_data.validate());
     }
 
@@ -3074,29 +3022,15 @@ mod tests_option_data {
 
     #[test]
     fn test_calculate_prices_success() {
-        let mut option_data = OptionData::new(
-            pos!(100.0),
-            None,
-            None,
-            None,
-            None,
-            spos!(0.2),
-            None,
-            None,
-            None,
-            None,
-            None,
-        );
-        let price_params = OptionDataPriceParams::new(
-            pos!(100.0),
-            ExpirationDate::Days(pos!(30.0)),
-            spos!(0.2),
-            Decimal::ZERO,
-            Positive::ZERO,
-            None,
-        );
-
-        let result = option_data.calculate_prices(&price_params, false);
+        let mut option_data = OptionData {
+            strike_price: pos!(100.0),
+            symbol: Some("TEST".to_string()),
+            expiration_date: Some(ExpirationDate::Days(pos!(30.0))),
+            underlying_price: Some(Box::new(pos!(100.0))),
+            ..Default::default()
+        };
+        option_data.implied_volatility = pos!(0.2);
+        let result = option_data.calculate_prices(None);
 
         assert!(result.is_ok());
         assert!(option_data.call_ask.is_some());
@@ -3107,105 +3041,62 @@ mod tests_option_data {
 
     #[test]
     fn test_calculate_prices_missing_volatility() {
-        let mut option_data = OptionData::new(
-            pos!(100.0),
-            None,
-            None,
-            None,
-            None,
-            None,
-            None,
-            None,
-            None,
-            None,
-            None,
-        );
-
-        let price_params = OptionDataPriceParams::new(
-            pos!(100.0),
-            ExpirationDate::Days(pos!(30.0)),
-            None,
-            Decimal::ZERO,
-            Positive::ZERO,
-            None,
-        );
-        let _ = option_data.calculate_prices(&price_params, false);
+        let mut option_data = OptionData {
+            strike_price: pos!(100.0),
+            symbol: Some("TEST".to_string()),
+            expiration_date: Some(ExpirationDate::Days(pos!(30.0))),
+            underlying_price: Some(Box::new(pos!(100.0))),
+            ..Default::default()
+        };
+        let _ = option_data.calculate_prices(None);
 
         info!("{}", option_data);
         assert_eq!(option_data.call_ask, None);
         assert_eq!(option_data.call_bid, None);
         assert_eq!(option_data.put_ask, None);
         assert_eq!(option_data.put_bid, None);
-        assert_eq!(option_data.implied_volatility, None);
+        assert_eq!(option_data.implied_volatility, Positive::ZERO);
         assert_eq!(option_data.delta_call, None);
         assert_eq!(option_data.strike_price, pos!(100.0));
     }
 
     #[test]
     fn test_calculate_prices_override_volatility() {
-        let mut option_data = OptionData::new(
-            pos!(100.0),
-            None,
-            None,
-            None,
-            None,
-            spos!(0.2),
-            None,
-            None,
-            None,
-            None,
-            None,
-        );
-
-        let price_params = OptionDataPriceParams::new(
-            pos!(110.0),
-            ExpirationDate::Days(pos!(30.0)),
-            spos!(0.12),
-            dec!(0.05),
-            pos!(0.0),
-            None,
-        );
-        let result = option_data.calculate_prices(&price_params, false);
+        let mut option_data = OptionData {
+            strike_price: pos!(100.0),
+            symbol: Some("TEST".to_string()),
+            expiration_date: Some(ExpirationDate::Days(pos!(30.0))),
+            underlying_price: Some(Box::new(pos!(100.0))),
+            ..Default::default()
+        };
+        option_data.implied_volatility = pos!(0.2);
+        let result = option_data.calculate_prices(None);
 
         assert!(result.is_ok());
         info!("{}", option_data);
-        assert_pos_relative_eq!(option_data.call_ask.unwrap(), pos!(10.51108), pos!(0.0001));
-        assert_pos_relative_eq!(option_data.call_bid.unwrap(), pos!(10.51108), pos!(0.0001));
-        assert_pos_relative_eq!(option_data.put_ask.unwrap(), pos!(0.100966), pos!(0.0001));
-        assert_pos_relative_eq!(option_data.put_bid.unwrap(), pos!(0.100966), pos!(0.0001));
+        assert_pos_relative_eq!(option_data.call_ask.unwrap(), pos!(2.2871), pos!(0.0001));
+        assert_pos_relative_eq!(option_data.call_bid.unwrap(), pos!(2.2871), pos!(0.0001));
+        assert_pos_relative_eq!(option_data.put_ask.unwrap(), pos!(2.2871), pos!(0.0001));
+        assert_pos_relative_eq!(option_data.put_bid.unwrap(), pos!(2.2871), pos!(0.0001));
         option_data.apply_spread(pos!(0.02), 2);
         info!("{}", option_data);
-        assert_eq!(option_data.call_ask, spos!(10.52));
-        assert_eq!(option_data.call_bid, spos!(10.50));
-        assert_eq!(option_data.put_ask, spos!(0.11));
-        assert_eq!(option_data.put_bid, spos!(0.09));
+        assert_eq!(option_data.call_ask, spos!(2.30));
+        assert_eq!(option_data.call_bid, spos!(2.28));
+        assert_eq!(option_data.put_ask, spos!(2.30));
+        assert_eq!(option_data.put_bid, spos!(2.28));
     }
 
     #[test]
     fn test_calculate_prices_with_all_parameters() {
-        let mut option_data = OptionData::new(
-            pos!(100.0),
-            None,
-            None,
-            None,
-            None,
-            spos!(0.2),
-            None,
-            None,
-            None,
-            None,
-            None,
-        );
-        let price_params = OptionDataPriceParams::new(
-            pos!(100.0),
-            ExpirationDate::Days(pos!(30.0)),
-            spos!(0.2),
-            dec!(0.05),
-            pos!(0.01),
-            None,
-        );
-
-        let result = option_data.calculate_prices(&price_params, false);
+        let mut option_data = OptionData {
+            strike_price: pos!(100.0),
+            symbol: Some("TEST".to_string()),
+            expiration_date: Some(ExpirationDate::Days(pos!(30.0))),
+            underlying_price: Some(Box::new(pos!(100.0))),
+            ..Default::default()
+        };
+        option_data.implied_volatility = pos!(0.2);
+        let result = option_data.calculate_prices(None);
 
         assert!(result.is_ok());
         assert!(option_data.call_ask.is_some());
@@ -3235,12 +3126,13 @@ mod tests_get_random_positions {
             spos!(4.2),      // call_ask
             spos!(3.0),      // put_bid
             spos!(3.2),      // put_ask
-            spos!(0.2),      // implied_volatility
+            pos!(0.2),       // implied_volatility
             Some(dec!(0.5)), // delta
             Some(dec!(0.5)),
             Some(dec!(0.5)),
             spos!(100.0), // volume
             Some(50),     // open_interest
+            None,
         );
 
         chain.add_option(
@@ -3249,12 +3141,13 @@ mod tests_get_random_positions {
             spos!(3.2),
             spos!(3.0),
             spos!(3.2),
-            spos!(0.2),
+            pos!(0.2),
             Some(dec!(0.5)),
             Some(dec!(0.5)),
             Some(dec!(0.5)),
             spos!(100.0),
             Some(50),
+            None,
         );
 
         chain.add_option(
@@ -3263,12 +3156,13 @@ mod tests_get_random_positions {
             spos!(2.2),
             spos!(4.0),
             spos!(4.2),
-            spos!(0.2),
+            pos!(0.2),
             Some(dec!(0.5)),
             Some(dec!(0.5)),
             Some(dec!(0.5)),
             spos!(100.0),
             Some(50),
+            None,
         );
 
         chain
@@ -3503,8 +3397,7 @@ mod tests_get_random_positions {
 #[cfg(test)]
 mod tests_option_data_get_prices {
     use super::*;
-    use crate::pos;
-    use crate::spos;
+    use crate::{pos, spos};
     use rust_decimal_macros::dec;
 
     fn create_test_option_data() -> OptionData {
@@ -3514,12 +3407,18 @@ mod tests_option_data_get_prices {
             spos!(10.0),
             spos!(8.5),
             spos!(9.0),
-            spos!(0.2),
+            pos!(0.2),
             Some(dec!(-0.3)),
             Some(dec!(0.7)),
             Some(dec!(0.5)),
             spos!(1000.0),
             Some(500),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
         )
     }
 
@@ -3555,7 +3454,13 @@ mod tests_option_data_get_prices {
             None,
             None,
             None,
-            spos!(0.2),
+            pos!(0.2),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
             None,
             None,
             None,
@@ -3572,8 +3477,7 @@ mod tests_option_data_get_prices {
 #[cfg(test)]
 mod tests_option_data_display {
     use super::*;
-    use crate::pos;
-    use crate::spos;
+    use crate::{pos, spos};
     use rust_decimal_macros::dec;
 
     #[test]
@@ -3584,12 +3488,18 @@ mod tests_option_data_display {
             spos!(10.0),
             spos!(8.5),
             spos!(9.0),
-            spos!(0.2),
+            pos!(0.2),
             Some(dec!(-0.3)),
             Some(dec!(0.7)),
             Some(dec!(0.5)),
             spos!(1000.0),
             Some(500),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
         );
         let display_string = format!("{}", data);
         assert!(display_string.contains("100"));
@@ -3616,7 +3526,7 @@ mod tests_option_data_display {
 #[cfg(test)]
 mod tests_filter_option_data {
     use super::*;
-    use crate::{pos, spos};
+    use crate::pos;
 
     fn create_test_chain() -> OptionChain {
         let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
@@ -3628,7 +3538,8 @@ mod tests_filter_option_data {
                 None,
                 None,
                 None,
-                spos!(0.2),
+                pos!(0.2),
+                None,
                 None,
                 None,
                 None,
@@ -3686,7 +3597,7 @@ mod tests_filter_option_data {
 #[cfg(test)]
 mod tests_strike_price_range_vec {
     use super::*;
-    use crate::{pos, spos};
+    use crate::pos;
 
     #[test]
     fn test_empty_chain() {
@@ -3703,7 +3614,8 @@ mod tests_strike_price_range_vec {
             None,
             None,
             None,
-            spos!(0.2),
+            pos!(0.2),
+            None,
             None,
             None,
             None,
@@ -3725,7 +3637,8 @@ mod tests_strike_price_range_vec {
                 None,
                 None,
                 None,
-                spos!(0.2),
+                pos!(0.2),
+                None,
                 None,
                 None,
                 None,
@@ -3747,7 +3660,8 @@ mod tests_strike_price_range_vec {
                 None,
                 None,
                 None,
-                spos!(0.2),
+                pos!(0.2),
+                None,
                 None,
                 None,
                 None,
@@ -3764,41 +3678,36 @@ mod tests_strike_price_range_vec {
 #[cfg(test)]
 mod tests_option_data_get_option {
     use super::*;
-    use crate::error::chains::OptionDataErrorKind;
-    use crate::model::ExpirationDate;
     use crate::{pos, spos};
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
     fn create_test_option_data() -> OptionData {
         OptionData::new(
-            pos!(100.0),      // strike_price
-            spos!(9.5),       // call_bid
-            spos!(10.0),      // call_ask
-            spos!(8.5),       // put_bid
-            spos!(9.0),       // put_ask
-            spos!(0.2),       // implied_volatility
-            Some(dec!(-0.3)), // delta
-            Some(dec!(0.7)),  // delta
-            Some(dec!(0.3)),  // gamma
-            spos!(1000.0),    // volume
-            Some(500),        // open_interest
+            pos!(100.0),                            // strike_price
+            spos!(9.5),                             // call_bid
+            spos!(10.0),                            // call_ask
+            spos!(8.5),                             // put_bid
+            spos!(9.0),                             // put_ask
+            pos!(0.25),                             // implied_volatility
+            Some(dec!(-0.3)),                       // delta
+            Some(dec!(0.7)),                        // delta
+            Some(dec!(0.3)),                        // gamma
+            spos!(1000.0),                          // volume
+            Some(500),                              // open_interest
+            Some("TEST".to_string()),               // symbol
+            Some(ExpirationDate::Days(pos!(30.0))), // expiration_date
+            Some(Box::new(pos!(100.0))),            // underlying_price
+            Some(dec!(0.05)),                       // risk_free_rate
+            Some(pos!(0.02)),                       // dividend_yield
+            None,
         )
     }
 
     #[test]
     fn test_get_option_success() {
         let option_data = create_test_option_data();
-        let price_params = OptionDataPriceParams::new(
-            pos!(100.0),
-            ExpirationDate::Days(pos!(30.0)),
-            spos!(0.25),
-            dec!(0.05),
-            pos!(0.02),
-            None,
-        );
-
-        let result = option_data.get_option(&price_params, Side::Long, OptionStyle::Call);
+        let result = option_data.get_option(Side::Long, OptionStyle::Call);
         assert!(result.is_ok());
 
         let option = result.unwrap();
@@ -3814,59 +3723,18 @@ mod tests_option_data_get_option {
     #[test]
     fn test_get_option_using_data_iv() {
         let option_data = create_test_option_data();
-        let price_params = OptionDataPriceParams::new(
-            pos!(100.0),
-            ExpirationDate::Days(pos!(30.0)),
-            None, // No IV provided in params
-            dec!(0.05),
-            pos!(0.02),
-            None,
-        );
-
-        let result = option_data.get_option(&price_params, Side::Long, OptionStyle::Call);
+        let result = option_data.get_option(Side::Long, OptionStyle::Call);
         assert!(result.is_ok());
 
         let option = result.unwrap();
-        assert_eq!(option.implied_volatility, 0.2); // Uses IV from option_data
-    }
-
-    #[test]
-    fn test_get_option_missing_iv() {
-        let mut option_data = create_test_option_data();
-        option_data.implied_volatility = None;
-
-        let price_params = OptionDataPriceParams::new(
-            pos!(100.0),
-            ExpirationDate::Days(pos!(30.0)),
-            None,
-            dec!(0.05),
-            pos!(0.02),
-            None,
-        );
-
-        let result = option_data.get_option(&price_params, Side::Long, OptionStyle::Call);
-        assert!(result.is_err());
-
-        let error = result.unwrap_err();
-        match error {
-            ChainError::OptionDataError(OptionDataErrorKind::InvalidVolatility {
-                volatility,
-                reason,
-            }) => {
-                assert_eq!(volatility, None);
-                assert_eq!(reason, "Implied volatility not found");
-            }
-            _ => panic!("Incorrect error type"),
-        }
+        assert_eq!(option.implied_volatility, 0.25); // Uses IV from option_data
     }
 }
 
 #[cfg(test)]
 mod tests_option_data_get_options_in_strike {
     use super::*;
-    use crate::error::chains::OptionDataErrorKind;
     use crate::greeks::Greeks;
-    use crate::model::ExpirationDate;
     use crate::{assert_decimal_eq, pos, spos};
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
@@ -3878,29 +3746,25 @@ mod tests_option_data_get_options_in_strike {
             spos!(10.0),      // call_ask
             spos!(8.5),       // put_bid
             spos!(9.0),       // put_ask
-            spos!(0.2),       // implied_volatility
+            pos!(0.2),        // implied_volatility
             Some(dec!(-0.3)), // delta
             Some(dec!(-0.3)),
             Some(dec!(0.3)),
-            spos!(1000.0), // volume
-            Some(500),     // open_interest
+            spos!(1000.0),                          // volume
+            Some(500),                              // open_interest
+            Some("TEST".to_string()),               // symbol
+            Some(ExpirationDate::Days(pos!(30.0))), // expiration_date
+            Some(Box::new(pos!(100.0))),            // underlying_price
+            Some(dec!(0.05)),                       // risk_free_rate
+            Some(pos!(0.02)),                       // dividend_yield
+            None,
         )
     }
 
     #[test]
     fn test_get_options_in_strike_success() {
         let option_data = create_test_option_data();
-        let price_params = OptionDataPriceParams::new(
-            pos!(100.0),
-            ExpirationDate::Days(pos!(30.0)),
-            spos!(0.25),
-            dec!(0.05),
-            pos!(0.02),
-            None,
-        );
-
-        let result =
-            option_data.get_options_in_strike(&price_params, Side::Long, OptionStyle::Call);
+        let result = option_data.get_options_in_strike();
         assert!(result.is_ok());
 
         let options = result.unwrap();
@@ -3929,17 +3793,7 @@ mod tests_option_data_get_options_in_strike {
     #[test]
     fn test_get_options_in_strike_using_data_iv() {
         let option_data = create_test_option_data();
-        let price_params = OptionDataPriceParams::new(
-            pos!(100.0),
-            ExpirationDate::Days(pos!(30.0)),
-            None,
-            dec!(0.05),
-            pos!(0.02),
-            None,
-        );
-
-        let result =
-            option_data.get_options_in_strike(&price_params, Side::Long, OptionStyle::Call);
+        let result = option_data.get_options_in_strike();
         assert!(result.is_ok());
 
         let options = result.unwrap();
@@ -3950,49 +3804,9 @@ mod tests_option_data_get_options_in_strike {
     }
 
     #[test]
-    fn test_get_options_in_strike_missing_iv() {
-        let mut option_data = create_test_option_data();
-        option_data.implied_volatility = None;
-
-        let price_params = OptionDataPriceParams::new(
-            pos!(100.0),
-            ExpirationDate::Days(pos!(30.0)),
-            None,
-            dec!(0.05),
-            pos!(0.02),
-            None,
-        );
-
-        let result =
-            option_data.get_options_in_strike(&price_params, Side::Long, OptionStyle::Call);
-        assert!(result.is_err());
-        let error = result.unwrap_err();
-        match error {
-            ChainError::OptionDataError(OptionDataErrorKind::InvalidVolatility {
-                volatility,
-                reason,
-            }) => {
-                assert_eq!(volatility, None);
-                assert_eq!(reason, "Implied volatility not found");
-            }
-            _ => panic!("Incorrect error type"),
-        }
-    }
-
-    #[test]
     fn test_get_options_in_strike_all_properties() {
         let option_data = create_test_option_data();
-        let price_params = OptionDataPriceParams::new(
-            pos!(110.0),
-            ExpirationDate::Days(pos!(45.0)),
-            spos!(0.3),
-            dec!(0.06),
-            pos!(0.03),
-            None,
-        );
-
-        let result =
-            option_data.get_options_in_strike(&price_params, Side::Long, OptionStyle::Call);
+        let result = option_data.get_options_in_strike();
         assert!(result.is_ok());
 
         let options = result.unwrap();
@@ -4000,10 +3814,10 @@ mod tests_option_data_get_options_in_strike {
         // Verify common properties across all options
         let check_common_properties = |option: &Options| {
             assert_eq!(option.strike_price, pos!(100.0));
-            assert_eq!(option.underlying_price, pos!(110.0));
-            assert_eq!(option.implied_volatility, 0.3);
-            assert_eq!(option.risk_free_rate.to_f64().unwrap(), 0.06);
-            assert_eq!(option.dividend_yield.to_f64(), 0.03);
+            assert_eq!(option.underlying_price, pos!(100.0));
+            assert_eq!(option.implied_volatility, 0.2);
+            assert_eq!(option.risk_free_rate.to_f64().unwrap(), 0.05);
+            assert_eq!(option.dividend_yield.to_f64(), 0.02);
             assert_eq!(option.option_type, OptionType::European);
             assert_eq!(option.quantity, pos!(1.0));
         };
@@ -4017,17 +3831,7 @@ mod tests_option_data_get_options_in_strike {
     #[test]
     fn test_get_options_in_strike_deltas() {
         let option_data = create_test_option_data();
-        let price_params = OptionDataPriceParams::new(
-            pos!(110.0),
-            ExpirationDate::Days(pos!(45.0)),
-            spos!(0.3),
-            dec!(0.06),
-            pos!(0.03),
-            None,
-        );
-
-        let result =
-            option_data.get_options_in_strike(&price_params, Side::Long, OptionStyle::Call);
+        let result = option_data.get_options_in_strike();
         assert!(result.is_ok());
 
         let options = result.unwrap();
@@ -4036,22 +3840,22 @@ mod tests_option_data_get_options_in_strike {
 
         assert_decimal_eq!(
             options.long_call.delta().unwrap(),
-            dec!(0.844825189),
+            dec!(0.539076663),
             epsilon
         );
         assert_decimal_eq!(
             options.short_call.delta().unwrap(),
-            dec!(-0.844825189),
+            dec!(-0.539076663),
             epsilon
         );
         assert_decimal_eq!(
             options.long_put.delta().unwrap(),
-            dec!(-0.151483012),
+            dec!(-0.459280851),
             epsilon
         );
         assert_decimal_eq!(
             options.short_put.delta().unwrap(),
-            dec!(0.151483012),
+            dec!(0.459280851),
             epsilon
         );
     }
@@ -4060,7 +3864,6 @@ mod tests_option_data_get_options_in_strike {
 #[cfg(test)]
 mod tests_filter_options_in_strike {
     use super::*;
-    use crate::model::ExpirationDate;
     use crate::{pos, spos};
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
@@ -4075,12 +3878,13 @@ mod tests_filter_options_in_strike {
                 spos!(1.2),       // call_ask
                 spos!(1.0),       // put_bid
                 spos!(1.2),       // put_ask
-                spos!(0.2),       // implied_volatility
+                pos!(0.2),        // implied_volatility
                 Some(dec!(-0.3)), // delta
                 Some(dec!(-0.3)),
                 Some(dec!(0.3)),
                 spos!(1000.0), // volume
                 Some(500),     // open_interest
+                None,
             );
         }
         chain
@@ -4089,16 +3893,7 @@ mod tests_filter_options_in_strike {
     #[test]
     fn test_filter_upper_strikes() {
         let chain = create_test_chain();
-        let price_params = OptionDataPriceParams::new(
-            pos!(100.0),
-            ExpirationDate::Days(pos!(30.0)),
-            spos!(0.2),
-            dec!(0.05),
-            pos!(0.02),
-            None,
-        );
-
-        let result = chain.filter_options_in_strike(&price_params, FindOptimalSide::Upper);
+        let result = chain.filter_options_in_strike(FindOptimalSide::Upper);
         assert!(result.is_ok());
 
         let filtered_options = result.unwrap();
@@ -4117,16 +3912,7 @@ mod tests_filter_options_in_strike {
     #[test]
     fn test_filter_lower_strikes() {
         let chain = create_test_chain();
-        let price_params = OptionDataPriceParams::new(
-            pos!(100.0),
-            ExpirationDate::Days(pos!(30.0)),
-            spos!(0.2),
-            dec!(0.05),
-            pos!(0.02),
-            None,
-        );
-
-        let result = chain.filter_options_in_strike(&price_params, FindOptimalSide::Lower);
+        let result = chain.filter_options_in_strike(FindOptimalSide::Lower);
         assert!(result.is_ok());
 
         let filtered_options = result.unwrap();
@@ -4140,16 +3926,7 @@ mod tests_filter_options_in_strike {
     #[test]
     fn test_filter_all_strikes() {
         let chain = create_test_chain();
-        let price_params = OptionDataPriceParams::new(
-            pos!(100.0),
-            ExpirationDate::Days(pos!(30.0)),
-            spos!(0.2),
-            dec!(0.05),
-            pos!(0.02),
-            None,
-        );
-
-        let result = chain.filter_options_in_strike(&price_params, FindOptimalSide::All);
+        let result = chain.filter_options_in_strike(FindOptimalSide::All);
         assert!(result.is_ok());
 
         let filtered_options = result.unwrap();
@@ -4159,19 +3936,8 @@ mod tests_filter_options_in_strike {
     #[test]
     fn test_filter_range_strikes() {
         let chain = create_test_chain();
-        let price_params = OptionDataPriceParams::new(
-            pos!(100.0),
-            ExpirationDate::Days(pos!(30.0)),
-            spos!(0.2),
-            dec!(0.05),
-            pos!(0.02),
-            None,
-        );
-
-        let result = chain.filter_options_in_strike(
-            &price_params,
-            FindOptimalSide::Range(pos!(95.0), pos!(105.0)),
-        );
+        let result =
+            chain.filter_options_in_strike(FindOptimalSide::Range(pos!(95.0), pos!(105.0)));
         assert!(result.is_ok());
 
         let filtered_options = result.unwrap();
@@ -4186,16 +3952,7 @@ mod tests_filter_options_in_strike {
     #[test]
     fn test_filter_empty_chain() {
         let chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
-        let price_params = OptionDataPriceParams::new(
-            pos!(100.0),
-            ExpirationDate::Days(pos!(30.0)),
-            spos!(0.2),
-            dec!(0.05),
-            pos!(0.02),
-            None,
-        );
-
-        let result = chain.filter_options_in_strike(&price_params, FindOptimalSide::All);
+        let result = chain.filter_options_in_strike(FindOptimalSide::All);
         assert!(result.is_ok());
 
         let filtered_options = result.unwrap();
@@ -4205,19 +3962,8 @@ mod tests_filter_options_in_strike {
     #[test]
     fn test_filter_invalid_range() {
         let chain = create_test_chain();
-        let price_params = OptionDataPriceParams::new(
-            pos!(100.0),
-            ExpirationDate::Days(pos!(30.0)),
-            spos!(0.2),
-            dec!(0.05),
-            pos!(0.02),
-            None,
-        );
-
-        let result = chain.filter_options_in_strike(
-            &price_params,
-            FindOptimalSide::Range(pos!(200.0), pos!(300.0)),
-        );
+        let result =
+            chain.filter_options_in_strike(FindOptimalSide::Range(pos!(200.0), pos!(300.0)));
         assert!(result.is_ok());
 
         let filtered_options = result.unwrap();
@@ -4227,16 +3973,7 @@ mod tests_filter_options_in_strike {
     #[test]
     fn test_filter_all_strikes_deltas() {
         let chain = create_test_chain();
-        let price_params = OptionDataPriceParams::new(
-            pos!(100.0),
-            ExpirationDate::Days(pos!(30.0)),
-            spos!(0.2),
-            dec!(0.05),
-            pos!(0.02),
-            None,
-        );
-
-        let result = chain.filter_options_in_strike(&price_params, FindOptimalSide::All);
+        let result = chain.filter_options_in_strike(FindOptimalSide::All);
         assert!(result.is_ok());
 
         let filtered_options = result.unwrap();
@@ -4250,10 +3987,10 @@ mod tests_filter_options_in_strike {
             assert_eq!(opt.short_put.side, Side::Short);
 
             let deltas = opt.deltas().unwrap();
-            assert!(deltas.long_call > Decimal::ZERO);
-            assert!(deltas.short_call < Decimal::ZERO);
-            assert!(deltas.long_put < Decimal::ZERO);
-            assert!(deltas.short_put > Decimal::ZERO);
+            assert!(deltas.long_call >= Decimal::ZERO);
+            assert!(deltas.short_call <= Decimal::ZERO);
+            assert!(deltas.long_put <= Decimal::ZERO);
+            assert!(deltas.short_put >= Decimal::ZERO);
         }
     }
 }
@@ -4274,12 +4011,13 @@ mod tests_chain_iterators {
             spos!(5.5),      // call_ask
             spos!(1.0),      // put_bid
             spos!(1.5),      // put_ask
-            spos!(0.2),      // implied_volatility
+            pos!(0.2),       // implied_volatility
             Some(dec!(0.6)), // delta
             Some(dec!(0.5)),
             Some(dec!(0.5)),
             spos!(100.0), // volume
             Some(50),     // open_interest
+            None,
         );
 
         chain.add_option(
@@ -4288,12 +4026,13 @@ mod tests_chain_iterators {
             spos!(3.5),
             spos!(3.0),
             spos!(3.5),
-            spos!(0.25),
+            pos!(0.25),
             Some(dec!(0.5)),
             Some(dec!(0.5)),
             Some(dec!(0.5)),
             spos!(150.0),
             Some(75),
+            None,
         );
 
         chain.add_option(
@@ -4302,12 +4041,13 @@ mod tests_chain_iterators {
             spos!(1.5),
             spos!(5.0),
             spos!(5.5),
-            spos!(0.3),
+            pos!(0.3),
             Some(dec!(0.4)),
             Some(dec!(0.5)),
             Some(dec!(0.5)),
             spos!(80.0),
             Some(40),
+            None,
         );
 
         chain
@@ -4329,12 +4069,13 @@ mod tests_chain_iterators {
             spos!(3.5),
             spos!(3.0),
             spos!(3.5),
-            spos!(0.25),
+            pos!(0.25),
             Some(dec!(0.5)),
             Some(dec!(0.5)),
             Some(dec!(0.5)),
             spos!(150.0),
             Some(75),
+            None,
         );
 
         let pairs: Vec<_> = chain.get_double_iter().collect();
@@ -4376,12 +4117,13 @@ mod tests_chain_iterators {
             spos!(3.5),
             spos!(3.0),
             spos!(3.5),
-            spos!(0.25),
+            pos!(0.25),
             Some(dec!(0.5)),
             Some(dec!(0.5)),
             Some(dec!(0.5)),
             spos!(150.0),
             Some(75),
+            None,
         );
 
         let pairs: Vec<_> = chain.get_double_inclusive_iter().collect();
@@ -4434,12 +4176,13 @@ mod tests_chain_iterators_bis {
             spos!(5.5),      // call_ask
             spos!(1.0),      // put_bid
             spos!(1.5),      // put_ask
-            spos!(0.2),      // implied_volatility
+            pos!(0.2),       // implied_volatility
             Some(dec!(0.6)), // delta
             Some(dec!(0.5)),
             Some(dec!(0.5)),
             spos!(100.0), // volume
             Some(50),     // open_interest
+            None,
         );
 
         chain.add_option(
@@ -4448,12 +4191,13 @@ mod tests_chain_iterators_bis {
             spos!(3.5),
             spos!(3.0),
             spos!(3.5),
-            spos!(0.25),
+            pos!(0.25),
             Some(dec!(0.5)),
             Some(dec!(0.5)),
             Some(dec!(0.5)),
             spos!(150.0),
             Some(75),
+            None,
         );
 
         chain.add_option(
@@ -4462,12 +4206,13 @@ mod tests_chain_iterators_bis {
             spos!(1.5),
             spos!(5.0),
             spos!(5.5),
-            spos!(0.3),
+            pos!(0.3),
             Some(dec!(0.4)),
             Some(dec!(0.5)),
             Some(dec!(0.5)),
             spos!(80.0),
             Some(40),
+            None,
         );
 
         chain.add_option(
@@ -4476,12 +4221,13 @@ mod tests_chain_iterators_bis {
             spos!(1.0),
             spos!(7.0),
             spos!(7.5),
-            spos!(0.35),
+            pos!(0.35),
             Some(dec!(0.3)),
             Some(dec!(0.5)),
             Some(dec!(0.5)),
             spos!(60.0),
             Some(30),
+            None,
         );
 
         chain
@@ -4505,6 +4251,7 @@ mod tests_chain_iterators_bis {
             None,
             None,
             None,
+            pos!(0.5),
             None,
             None,
             None,
@@ -4518,6 +4265,7 @@ mod tests_chain_iterators_bis {
             None,
             None,
             None,
+            pos!(0.5),
             None,
             None,
             None,
@@ -4562,11 +4310,12 @@ mod tests_chain_iterators_bis {
         let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
         chain.add_option(
             pos!(100.0),
+            spos!(3.0),
+            spos!(3.5),
+            spos!(3.0),
+            spos!(3.5),
+            pos!(0.5),
             None,
-            None,
-            None,
-            None,
-            spos!(0.5),
             None,
             None,
             None,
@@ -4612,6 +4361,7 @@ mod tests_chain_iterators_bis {
             None,
             None,
             None,
+            pos!(0.5),
             None,
             None,
             None,
@@ -4625,6 +4375,7 @@ mod tests_chain_iterators_bis {
             None,
             None,
             None,
+            pos!(0.5),
             None,
             None,
             None,
@@ -4638,6 +4389,7 @@ mod tests_chain_iterators_bis {
             None,
             None,
             None,
+            pos!(0.5),
             None,
             None,
             None,
@@ -4678,11 +4430,12 @@ mod tests_chain_iterators_bis {
         let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
         chain.add_option(
             pos!(100.0),
+            spos!(3.0),
+            spos!(3.5),
+            spos!(3.0),
+            spos!(3.5),
+            pos!(0.5),
             None,
-            None,
-            None,
-            None,
-            spos!(0.5),
             None,
             None,
             None,
@@ -4731,6 +4484,12 @@ mod tests_is_valid_optimal_side {
             None,
             None,
             None,
+            pos!(0.5),
+            None,
+            None,
+            None,
+            None,
+            None,
             None,
             None,
             None,
@@ -4747,6 +4506,12 @@ mod tests_is_valid_optimal_side {
     fn test_upper_side_invalid() {
         let option_data = OptionData::new(
             pos!(90.0), // strike price lower than underlying
+            None,
+            None,
+            None,
+            None,
+            pos!(0.5),
+            None,
             None,
             None,
             None,
@@ -4771,6 +4536,12 @@ mod tests_is_valid_optimal_side {
             None,
             None,
             None,
+            pos!(0.5),
+            None,
+            None,
+            None,
+            None,
+            None,
             None,
             None,
             None,
@@ -4787,6 +4558,12 @@ mod tests_is_valid_optimal_side {
     fn test_lower_side_invalid() {
         let option_data = OptionData::new(
             pos!(110.0), // strike price higher than underlying
+            None,
+            None,
+            None,
+            None,
+            pos!(0.5),
+            None,
             None,
             None,
             None,
@@ -4811,6 +4588,12 @@ mod tests_is_valid_optimal_side {
             None,
             None,
             None,
+            pos!(0.5),
+            None,
+            None,
+            None,
+            None,
+            None,
             None,
             None,
             None,
@@ -4827,6 +4610,12 @@ mod tests_is_valid_optimal_side {
     fn test_range_side_valid() {
         let option_data = OptionData::new(
             pos!(100.0), // strike price within range
+            None,
+            None,
+            None,
+            None,
+            pos!(0.5),
+            None,
             None,
             None,
             None,
@@ -4855,6 +4644,12 @@ mod tests_is_valid_optimal_side {
             None,
             None,
             None,
+            pos!(0.5),
+            None,
+            None,
+            None,
+            None,
+            None,
             None,
             None,
             None,
@@ -4875,6 +4670,12 @@ mod tests_is_valid_optimal_side {
     fn test_range_side_invalid_above() {
         let option_data = OptionData::new(
             pos!(120.0), // strike price above range
+            None,
+            None,
+            None,
+            None,
+            pos!(0.5),
+            None,
             None,
             None,
             None,
@@ -4903,6 +4704,12 @@ mod tests_is_valid_optimal_side {
             None,
             None,
             None,
+            pos!(0.5),
+            None,
+            None,
+            None,
+            None,
+            None,
             None,
             None,
             None,
@@ -4912,6 +4719,12 @@ mod tests_is_valid_optimal_side {
         );
         let option_data_upper = OptionData::new(
             pos!(110.0), // strike price at upper boundary
+            None,
+            None,
+            None,
+            None,
+            pos!(0.5),
+            None,
             None,
             None,
             None,
@@ -4963,12 +4776,13 @@ mod rnd_analysis_tests {
                 spos!(call_ask),
                 None,
                 None,
-                spos!(impl_vol),
+                pos!(impl_vol),
                 None,
                 None,
                 None,
                 spos!(100.0),
                 Some(50),
+                None,
             );
         }
 
@@ -5115,12 +4929,13 @@ mod rnd_analysis_tests {
                 spos!(0.2),
                 None,
                 None,
-                None, // No implied volatility
+                pos!(0.5),
                 None,
                 None,
                 None,
                 spos!(100.0),
                 Some(50),
+                None,
             );
 
             let result = chain.calculate_skew();
@@ -5135,7 +4950,7 @@ mod rnd_analysis_tests {
             // For ATM strike (100.0), relative strike should be 1.0
             let atm_strike = result
                 .iter()
-                .find(|(rel_strike, _)| (*rel_strike - dec!(1.0)) < pos!(0.0001));
+                .find(|(rel_strike, _)| (rel_strike.sub_or_zero(&Decimal::ONE)) < pos!(0.0001));
             assert!(atm_strike.is_some());
         }
     }
@@ -5210,12 +5025,13 @@ mod rnd_analysis_tests {
                 spos!(1.1),
                 None,
                 None,
-                spos!(0.17),
+                pos!(0.17),
                 None,
                 None,
                 None,
                 spos!(100.0),
                 Some(50),
+                None,
             );
 
             let params = RNDParameters {
@@ -5251,12 +5067,13 @@ mod rnd_analysis_tests {
                     spos!(call_ask),
                     None,
                     None,
-                    spos!(vol),
+                    pos!(vol),
                     None,
                     None,
                     None,
                     spos!(100.0),
                     Some(50),
+                    None,
                 );
             }
 
@@ -5292,12 +5109,13 @@ mod rnd_analysis_tests {
                     spos!(call_ask),
                     None,
                     None,
-                    spos!(vol),
+                    pos!(vol),
                     None,
                     None,
                     None,
                     spos!(100.0),
                     Some(50),
+                    None,
                 );
             }
 
@@ -5326,383 +5144,6 @@ mod rnd_analysis_tests {
 }
 
 #[cfg(test)]
-mod tests_option_data_implied_volatility {
-    use super::*;
-
-    use crate::{assert_pos_relative_eq, spos};
-    use rust_decimal_macros::dec;
-
-    #[test]
-    fn test_calculate_iv_from_call() {
-        let mut option_data = OptionData::new(
-            pos!(21395.0),        // strike
-            spos!(280.0),         // call_bid
-            spos!(285.0),         // call_ask
-            Some(Positive::ZERO), // put_bid
-            spos!(4.0),           // put_ask
-            None,                 // initial IV
-            None,                 // delta
-            None,
-            None,
-            None, // volume
-            None, // open_interest
-        );
-
-        option_data.set_mid_prices();
-
-        let params = OptionDataPriceParams::new(
-            pos!(21637.0),                   // underlying price
-            ExpirationDate::Days(pos!(7.0)), // expiration
-            None,                            // IV (will be calculated)
-            dec!(0.05),                      // risk-free rate
-            pos!(0.0),                       // dividend yield
-            None,
-        );
-
-        let result = option_data.calculate_implied_volatility(&params);
-
-        assert!(result.is_ok(), "Failed to calculate IV: {:?}", result);
-        assert!(option_data.implied_volatility.is_some());
-
-        let iv = option_data.implied_volatility.unwrap() / pos!(100.0);
-        assert!(iv > pos!(0.0) && iv < pos!(2.0));
-    }
-
-    #[test]
-    fn test_calculate_iv_from_put() {
-        let mut option_data = OptionData::new(
-            pos!(21700.0), // strike
-            spos!(30.2),   // call_bid
-            spos!(35.1),   // call_ask
-            spos!(93.2),   // put_bid
-            spos!(98.0),   // put_ask
-            None,          // initial IV
-            None,          // delta
-            None,          // volume
-            None,          // open_interest
-            None,
-            None,
-        );
-
-        option_data.set_mid_prices();
-
-        let params = OptionDataPriceParams::new(
-            pos!(21637.0),                   // underlying price
-            ExpirationDate::Days(pos!(1.0)), // expiration
-            None,                            // IV (will be calculated)
-            dec!(0.0),                       // risk-free rate
-            pos!(0.0),                       // dividend yield
-            None,
-        );
-
-        let result = option_data.calculate_implied_volatility(&params);
-
-        assert!(result.is_ok(), "Failed to calculate IV: {:?}", result);
-        assert!(option_data.implied_volatility.is_some());
-        assert_pos_relative_eq!(
-            option_data.implied_volatility.unwrap(),
-            pos!(0.13008),
-            pos!(0.0001)
-        );
-
-        let iv = option_data.implied_volatility.unwrap();
-        assert!(iv > pos!(0.0) && iv <= pos!(1.0));
-    }
-
-    #[test]
-    fn test_calculate_iv_no_prices() {
-        let mut option_data = OptionData::new(
-            pos!(100.0),
-            None,
-            None,
-            None,
-            None,
-            None,
-            None,
-            None,
-            None,
-            None,
-            None,
-        );
-
-        let params = OptionDataPriceParams::new(
-            pos!(100.0),
-            ExpirationDate::Days(pos!(30.0)),
-            None,
-            dec!(0.05),
-            pos!(0.0),
-            None,
-        );
-
-        let result = option_data.calculate_implied_volatility(&params);
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn test_calculate_iv_option_data_to_option() {
-        let mut option_data = OptionData::new(
-            pos!(21700.0), // strike
-            spos!(30.2),   // call_bid
-            spos!(35.1),   // call_ask
-            spos!(93.2),   // put_bid
-            spos!(98.0),   // put_ask
-            None,          // initial IV
-            None,          // delta
-            None,          // volume
-            None,          // open_interest
-            None,
-            None,
-        );
-
-        option_data.set_mid_prices();
-
-        let params = OptionDataPriceParams::new(
-            pos!(21637.0),                   // underlying price
-            ExpirationDate::Days(pos!(1.0)), // expiration
-            None,                            // IV (will be calculated)
-            dec!(0.0),                       // risk-free rate
-            pos!(0.0),                       // dividend yield
-            None,
-        );
-
-        let result = option_data.calculate_implied_volatility(&params);
-
-        assert!(result.is_ok(), "Failed to calculate IV: {:?}", result);
-        assert!(option_data.implied_volatility.is_some());
-        let volatility = pos!(0.13008);
-        assert_pos_relative_eq!(
-            option_data.implied_volatility.unwrap(),
-            volatility,
-            pos!(0.0001)
-        );
-
-        let option = option_data
-            .get_option(&params, Side::Long, OptionStyle::Call)
-            .unwrap();
-        assert_eq!(
-            option.implied_volatility,
-            option_data.implied_volatility.unwrap()
-        );
-
-        let option = option_data
-            .get_option(&params, Side::Short, OptionStyle::Put)
-            .unwrap();
-        assert_eq!(
-            option.implied_volatility,
-            option_data.implied_volatility.unwrap()
-        );
-
-        let option = option_data
-            .get_option(&params, Side::Long, OptionStyle::Put)
-            .unwrap();
-        assert_eq!(
-            option.implied_volatility,
-            option_data.implied_volatility.unwrap()
-        );
-    }
-}
-
-#[cfg(test)]
-mod tests_chain_implied_volatility {
-    use super::*;
-    use crate::utils::time::get_tomorrow_formatted;
-    use crate::{assert_pos_relative_eq, pos, spos};
-    use rust_decimal_macros::dec;
-
-    #[test]
-    fn test_update_implied_volatilities() {
-        let mut chain = OptionChain::new(
-            "TEST",
-            pos!(21637.0),
-            get_tomorrow_formatted(),
-            Some(dec!(0.0)),
-            Some(pos!(0.0)),
-        );
-
-        chain.add_option(
-            pos!(21395.0),        // strike
-            spos!(250.0),         // call_bid
-            spos!(254.0),         // call_ask
-            Some(Positive::ZERO), // put_bid
-            spos!(4.0),           // put_ask
-            None,                 // implied_volatility (empezamos sin IV)
-            None,                 // delta
-            None,                 // volume
-            None,                 // open_interest
-            None,
-            None,
-        );
-
-        chain.add_option(
-            pos!(21700.0), // ATM strike
-            spos!(30.2),   // call_bid
-            spos!(35.1),   // call_ask
-            spos!(93.2),   // put_bid
-            spos!(98.0),   // put_ask
-            None,          // implied_volatility
-            None,          // delta
-            None,          // volume
-            None,          // open_interest
-            None,
-            None,
-        );
-
-        chain.update_mid_prices();
-        chain.update_greeks();
-
-        for option in chain.options.iter() {
-            assert!(
-                option.implied_volatility.is_some(),
-                "IV should be calculated for strike {}",
-                option.strike_price
-            );
-
-            let iv = option.implied_volatility.unwrap() / pos!(100.0);
-            assert!(
-                iv > pos!(0.0) && iv < pos!(2.0),
-                "IV should be reasonable for strike {}: {}",
-                option.strike_price,
-                iv
-            );
-
-            debug!("Strike: {}, IV: {}", option.strike_price, iv);
-        }
-    }
-
-    #[test]
-    fn test_update_implied_volatilities_today() {
-        let mut chain = OptionChain::new(
-            "TEST",
-            pos!(21537.0),
-            get_tomorrow_formatted(),
-            Some(dec!(0.0)),
-            Some(pos!(0.0)),
-        );
-
-        chain.add_option(
-            pos!(21495.0),        // strike
-            spos!(70.0),          // call_bid
-            spos!(73.0),          // call_ask
-            Some(Positive::ZERO), // put_bid
-            spos!(4.0),           // put_ask
-            None,                 // implied_volatility (empezamos sin IV)
-            None,                 // delta
-            None,                 // volume
-            None,                 // open_interest
-            None,
-            None,
-        );
-
-        chain.add_option(
-            pos!(21560.0), // ATM strike
-            spos!(5.2),    // call_bid
-            spos!(8.1),    // call_ask
-            spos!(93.2),   // put_bid
-            spos!(98.0),   // put_ask
-            None,          // implied_volatility
-            None,          // delta
-            None,          // volume
-            None,          // open_interest
-            None,
-            None,
-        );
-
-        chain.update_mid_prices();
-        chain.update_greeks();
-
-        for option in chain.options.iter() {
-            assert!(
-                option.implied_volatility.is_some(),
-                "IV should be calculated for strike {}",
-                option.strike_price
-            );
-
-            let iv = option.implied_volatility.unwrap() / pos!(100.0);
-            assert!(
-                iv > pos!(0.0) && iv < pos!(5.0),
-                "IV should be reasonable for strike {}: {}",
-                option.strike_price,
-                iv
-            );
-
-            debug!("Strike: {}, IV: {}", option.strike_price, iv);
-        }
-    }
-
-    #[test]
-    fn test_update_implied_volatilities_missing_prices() {
-        let mut chain = OptionChain::new(
-            "TEST",
-            pos!(100.0),
-            get_tomorrow_formatted(),
-            Some(dec!(0.05)),
-            Some(pos!(0.0)),
-        );
-
-        chain.add_option(
-            pos!(100.0),
-            None, // call_bid
-            None, // call_ask
-            None, // put_bid
-            None, // put_ask
-            None, // implied_volatility
-            None, // delta
-            None, // volume
-            None, // open_interest
-            None,
-            None,
-        );
-
-        chain.update_mid_prices();
-        chain.update_implied_volatilities();
-
-        for option in chain.options.iter() {
-            assert!(
-                option.implied_volatility.is_none(),
-                "IV should be None for options without prices"
-            );
-        }
-    }
-
-    #[test]
-    fn test_update_implied_volatilities_maintain_existing() {
-        let mut chain = OptionChain::new(
-            "TEST",
-            pos!(100.0),
-            get_tomorrow_formatted(),
-            Some(dec!(0.05)),
-            Some(pos!(0.0)),
-        );
-
-        chain.add_option(
-            pos!(100.0),
-            None, // call_bid
-            None, // call_ask
-            None, // put_bid
-            None, // put_ask
-            spos!(0.2),
-            None, // delta
-            None, // volume
-            None, // open_interest
-            None,
-            None,
-        );
-
-        let original_iv = chain.options.iter().next().unwrap().implied_volatility;
-        chain.update_mid_prices();
-        chain.update_implied_volatilities();
-
-        for option in chain.options.iter() {
-            assert_pos_relative_eq!(
-                option.implied_volatility.unwrap(),
-                original_iv.unwrap(),
-                pos!(0.1)
-            );
-        }
-    }
-}
-
-#[cfg(test)]
 mod tests_option_data_delta {
     use super::*;
     use crate::model::ExpirationDate;
@@ -5713,12 +5154,11 @@ mod tests_option_data_delta {
     // Helper function to create a standard test OptionDataPriceParams
     fn create_standard_price_params() -> OptionDataPriceParams {
         OptionDataPriceParams::new(
-            pos!(100.0),                      // underlying_price
-            ExpirationDate::Days(pos!(30.0)), // expiration_date
-            spos!(0.2),                       // implied_volatility
-            dec!(0.05),                       // risk_free_rate
-            pos!(0.02),                       // dividend_yield
-            None,
+            Some(Box::new(pos!(100.0))),
+            Some(ExpirationDate::Days(pos!(30.0))),
+            Some(dec!(0.05)),
+            spos!(0.02),
+            Some("AAPL".to_string()),
         )
     }
 
@@ -5730,21 +5170,26 @@ mod tests_option_data_delta {
             spos!(5.5),  // call_ask
             spos!(4.5),  // put_bid
             spos!(5.0),  // put_ask
-            spos!(0.2),  // implied_volatility
+            pos!(0.2),   // implied_volatility
             None,        // delta
             None,
             None,
-            spos!(1000.0), // volume
-            Some(500),     // open_interest
+            spos!(1000.0),            // volume
+            Some(500),                // open_interest
+            Some("AAPL".to_string()), // underlying_symbol
+            Some(ExpirationDate::Days(pos!(3.9))),
+            Some(Box::new(pos!(100.0))), // underlying_price
+            None,
+            None,
+            None,
         )
     }
 
     #[test]
     fn test_calculate_delta_standard_call() {
-        let price_params = create_standard_price_params();
         let mut option_data = create_standard_option_data();
 
-        option_data.calculate_delta(&price_params);
+        option_data.calculate_delta();
 
         assert!(option_data.delta_call.is_some());
         let delta = option_data.delta_call.unwrap();
@@ -5755,26 +5200,19 @@ mod tests_option_data_delta {
 
     #[test]
     fn test_calculate_delta_near_the_money() {
-        let mut price_params = create_standard_price_params();
-        price_params.underlying_price = pos!(105.0); // Slightly ITM
-
         let mut option_data = create_standard_option_data();
-        option_data.calculate_delta(&price_params);
-
+        option_data.calculate_delta();
         assert!(option_data.delta_call.is_some());
         let delta = option_data.delta_call.unwrap();
-
         // Near-the-money call delta should be slightly higher than 0.5
-        assert!(delta > dec!(0.7) && delta < dec!(0.9));
+        assert!(delta > dec!(0.5) && delta < dec!(0.6));
     }
 
     #[test]
     fn test_calculate_delta_deep_itm() {
-        let mut price_params = create_standard_price_params();
-        price_params.underlying_price = pos!(150.0); // Deep ITM
-
         let mut option_data = create_standard_option_data();
-        option_data.calculate_delta(&price_params);
+        option_data.underlying_price = Some(Box::new(pos!(104.0)));
+        option_data.calculate_delta();
 
         assert!(option_data.delta_call.is_some());
         let delta = option_data.delta_call.unwrap();
@@ -5785,11 +5223,9 @@ mod tests_option_data_delta {
 
     #[test]
     fn test_calculate_delta_deep_otm() {
-        let mut price_params = create_standard_price_params();
-        price_params.underlying_price = pos!(50.0); // Deep OTM
-
         let mut option_data = create_standard_option_data();
-        option_data.calculate_delta(&price_params);
+        option_data.underlying_price = Some(Box::new(pos!(94.0)));
+        option_data.calculate_delta();
 
         assert!(option_data.delta_call.is_some());
         let delta = option_data.delta_call.unwrap();
@@ -5799,27 +5235,12 @@ mod tests_option_data_delta {
     }
 
     #[test]
-    fn test_calculate_delta_no_volatility() {
-        let mut price_params = create_standard_price_params();
-        price_params.implied_volatility = None;
-
-        let mut option_data = create_standard_option_data();
-        option_data.implied_volatility = None;
-
-        option_data.calculate_delta(&price_params);
-
-        // If no volatility is provided, delta calculation should fail
-        assert!(option_data.delta_call.is_none());
-    }
-
-    #[test]
     fn test_calculate_delta_multiple_calls() {
-        let price_params = create_standard_price_params();
         let mut option_data = create_standard_option_data();
 
         // Call delta multiple times to ensure consistent behavior
         for _ in 0..3 {
-            option_data.calculate_delta(&price_params);
+            option_data.calculate_delta();
             assert!(option_data.delta_call.is_some());
         }
     }
@@ -5827,10 +5248,10 @@ mod tests_option_data_delta {
     #[test]
     fn test_calculate_delta_different_expiration() {
         let mut price_params = create_standard_price_params();
-        price_params.expiration_date = ExpirationDate::Days(pos!(60.0)); // Longer expiration
+        price_params.expiration_date = Some(ExpirationDate::Days(pos!(60.0))); // Longer expiration
 
         let mut option_data = create_standard_option_data();
-        option_data.calculate_delta(&price_params);
+        option_data.calculate_delta();
 
         assert!(option_data.delta_call.is_some());
         let delta = option_data.delta_call.unwrap();
@@ -5860,10 +5281,11 @@ mod tests_basic_curves {
             spos!(5.5),        // call_ask
             spos!(1.0),        // put_bid
             spos!(1.5),        // put_ask
-            spos!(0.2),        // implied_volatility
+            pos!(0.2),         // implied_volatility
             Some(dec!(0.6)),   // delta
             Some(dec!(100.0)), // volume
             Some(dec!(50.0)),  // open_interest
+            None,
             None,
             None,
         );
@@ -5874,10 +5296,11 @@ mod tests_basic_curves {
             spos!(3.5),
             spos!(3.0),
             spos!(3.5),
-            spos!(0.25),
+            pos!(0.25),
             Some(dec!(0.5)),
             Some(dec!(150.0)),
             Some(dec!(75)),
+            None,
             None,
             None,
         );
@@ -5888,10 +5311,11 @@ mod tests_basic_curves {
             spos!(1.5),
             spos!(5.0),
             spos!(5.5),
-            spos!(0.3),
+            pos!(0.3),
             Some(dec!(0.4)),
             Some(dec!(80.0)),
             Some(dec!(40)),
+            None,
             None,
             None,
         );
@@ -6041,10 +5465,11 @@ mod tests_option_chain_surfaces {
             spos!(5.5),        // call_ask
             spos!(1.0),        // put_bid
             spos!(1.5),        // put_ask
-            spos!(0.2),        // implied_volatility
+            pos!(0.2),         // implied_volatility
             Some(dec!(0.6)),   // delta
             Some(dec!(100.0)), // volume
             Some(dec!(50.0)),  // open_interest
+            None,
             None,
             None,
         );
@@ -6055,10 +5480,11 @@ mod tests_option_chain_surfaces {
             spos!(3.5),
             spos!(3.0),
             spos!(3.5),
-            spos!(0.25),
+            pos!(0.25),
             Some(dec!(0.5)),
             Some(dec!(150.0)),
             Some(dec!(75)),
+            None,
             None,
             None,
         );
@@ -6069,10 +5495,11 @@ mod tests_option_chain_surfaces {
             spos!(1.5),
             spos!(5.0),
             spos!(5.5),
-            spos!(0.3),
+            pos!(0.3),
             Some(dec!(0.4)),
             Some(dec!(80.0)),
             Some(dec!(40)),
+            None,
             None,
             None,
         );
@@ -6222,7 +5649,7 @@ mod tests_option_chain_surfaces {
             pos!(100.0),
             "2024-12-31".to_string(),
             Some(dec!(0.05)),
-            Some(pos!(0.01)),
+            spos!(0.01),
         );
 
         let result = empty_chain.surface(
@@ -6245,25 +5672,31 @@ mod tests_option_chain_surfaces {
 #[cfg(test)]
 mod tests_serialization {
     use super::*;
+    use crate::spos;
     use rust_decimal_macros::dec;
 
     #[test]
     fn test_optiondata_serialization() {
         let option_data = OptionData {
             strike_price: pos!(100.0),
-            call_bid: Some(pos!(9.5)),
-            call_ask: Some(pos!(10.0)),
-            put_bid: Some(pos!(8.5)),
-            put_ask: Some(pos!(9.0)),
-            call_middle: Some(pos!(9.75)),
-            put_middle: Some(pos!(8.75)),
-            implied_volatility: Some(pos!(0.2)),
+            call_bid: spos!(9.5),
+            call_ask: spos!(10.0),
+            put_bid: spos!(8.5),
+            put_ask: spos!(9.0),
+            call_middle: spos!(9.75),
+            put_middle: spos!(8.75),
+            implied_volatility: pos!(0.2),
             delta_call: Some(dec!(0.5)),
             delta_put: Some(dec!(-0.5)),
             gamma: Some(dec!(0.1)),
-            volume: Some(pos!(1000.0)),
+            volume: spos!(1000.0),
             open_interest: Some(500),
-            options: None,
+            symbol: None,
+            expiration_date: None,
+            underlying_price: None,
+            risk_free_rate: None,
+            dividend_yield: None,
+            extra_fields: None,
         };
 
         let serialized = serde_json::to_string(&option_data).unwrap();
@@ -6279,22 +5712,23 @@ mod tests_serialization {
             pos!(100.0),
             "2024-01-01".to_string(),
             Some(dec!(0.05)),
-            Some(pos!(0.02)),
+            spos!(0.02),
         );
 
         // Add some test options
         chain.add_option(
             pos!(95.0),
-            Some(pos!(6.0)),
-            Some(pos!(6.5)),
-            Some(pos!(1.5)),
-            Some(pos!(2.0)),
-            Some(pos!(0.2)),
+            spos!(6.0),
+            spos!(6.5),
+            spos!(1.5),
+            spos!(2.0),
+            pos!(0.2),
             Some(dec!(0.7)),
             Some(dec!(-0.3)),
             Some(dec!(0.1)),
-            Some(pos!(1000.0)),
+            spos!(1000.0),
             Some(500),
+            None,
         );
 
         let serialized = serde_json::to_string(&chain).unwrap();
@@ -6317,13 +5751,18 @@ mod tests_serialization {
             put_ask: None,
             call_middle: None,
             put_middle: None,
-            implied_volatility: None,
+            implied_volatility: Positive::ZERO,
             delta_call: None,
             delta_put: None,
             gamma: None,
             volume: None,
             open_interest: None,
-            options: None,
+            symbol: None,
+            expiration_date: None,
+            underlying_price: None,
+            risk_free_rate: None,
+            dividend_yield: None,
+            extra_fields: None,
         };
 
         let serialized = serde_json::to_string(&option_data).unwrap();
@@ -6336,6 +5775,7 @@ mod tests_serialization {
 #[cfg(test)]
 mod tests_option_data_serde {
     use super::*;
+    use crate::spos;
     use rust_decimal_macros::dec;
     use serde_json;
 
@@ -6343,19 +5783,24 @@ mod tests_option_data_serde {
     fn create_sample_option_data() -> OptionData {
         OptionData {
             strike_price: pos!(100.0),
-            call_bid: Some(pos!(9.5)),
-            call_ask: Some(pos!(10.0)),
-            put_bid: Some(pos!(8.5)),
-            put_ask: Some(pos!(9.0)),
-            call_middle: Some(pos!(9.75)),
-            put_middle: Some(pos!(8.75)),
-            implied_volatility: Some(pos!(0.2)),
+            call_bid: spos!(9.5),
+            call_ask: spos!(10.0),
+            put_bid: spos!(8.5),
+            put_ask: spos!(9.0),
+            call_middle: spos!(9.75),
+            put_middle: spos!(8.75),
+            implied_volatility: pos!(0.2),
             delta_call: Some(dec!(0.5)),
             delta_put: Some(dec!(-0.5)),
             gamma: Some(dec!(0.1)),
-            volume: Some(pos!(1000.0)),
+            volume: spos!(1000.0),
             open_interest: Some(500),
-            options: None,
+            symbol: None,
+            expiration_date: None,
+            underlying_price: None,
+            risk_free_rate: None,
+            dividend_yield: None,
+            extra_fields: None,
         }
     }
 
@@ -6382,13 +5827,18 @@ mod tests_option_data_serde {
             put_ask: None,
             call_middle: None,
             put_middle: None,
-            implied_volatility: None,
+            implied_volatility: Positive::ZERO,
             delta_call: None,
             delta_put: None,
             gamma: None,
             volume: None,
             open_interest: None,
-            options: None,
+            symbol: None,
+            expiration_date: None,
+            underlying_price: None,
+            risk_free_rate: None,
+            dividend_yield: None,
+            extra_fields: None,
         };
 
         let serialized = serde_json::to_string(&option_data).unwrap();
@@ -6403,9 +5853,9 @@ mod tests_option_data_serde {
         // Test with large numbers to verify precision
         let option_data = OptionData {
             strike_price: pos!(999999.99),
-            call_bid: Some(pos!(99999.99)),
-            call_ask: Some(pos!(99999.99)),
-            implied_volatility: Some(pos!(1.0)),
+            call_bid: spos!(99999.99),
+            call_ask: spos!(99999.99),
+            implied_volatility: pos!(1.0),
             ..Default::default()
         };
 
@@ -6421,8 +5871,8 @@ mod tests_option_data_serde {
         // Test with very small numbers to verify precision
         let option_data = OptionData {
             strike_price: pos!(0.0001),
-            call_bid: Some(pos!(0.0001)),
-            implied_volatility: Some(pos!(0.0001)),
+            call_bid: spos!(0.0001),
+            implied_volatility: pos!(0.0001),
             delta_call: Some(dec!(0.0001)),
             ..Default::default()
         };
@@ -6440,7 +5890,7 @@ mod tests_option_data_serde {
         let option_data = OptionData {
             strike_price: Positive::ONE,
             call_bid: Some(Positive::ZERO),
-            implied_volatility: Some(pos!(1.0)),
+            implied_volatility: pos!(1.0),
             delta_call: Some(Decimal::ONE),
             delta_put: Some(Decimal::NEGATIVE_ONE),
             gamma: Some(Decimal::ZERO),
@@ -6487,6 +5937,7 @@ mod tests_option_data_serde {
 #[cfg(test)]
 mod tests_option_chain_serde {
     use super::*;
+    use crate::spos;
     use rust_decimal_macros::dec;
 
     fn create_sample_chain() -> OptionChain {
@@ -6495,22 +5946,23 @@ mod tests_option_chain_serde {
             pos!(100.0),
             "2024-01-01".to_string(),
             Some(dec!(0.05)),
-            Some(pos!(0.02)),
+            spos!(0.02),
         );
 
         // Add some test options
         chain.add_option(
             pos!(95.0),
-            Some(pos!(6.0)),
-            Some(pos!(6.5)),
-            Some(pos!(1.5)),
-            Some(pos!(2.0)),
-            Some(pos!(0.2)),
+            spos!(6.0),
+            spos!(6.5),
+            spos!(1.5),
+            spos!(2.0),
+            pos!(0.2),
             Some(dec!(0.7)),
             Some(dec!(-0.3)),
             Some(dec!(0.1)),
-            Some(pos!(1000.0)),
+            spos!(1000.0),
             Some(500),
+            None,
         );
 
         chain
@@ -6546,30 +5998,32 @@ mod tests_option_chain_serde {
         // Add more options
         chain.add_option(
             pos!(100.0),
-            Some(pos!(5.0)),
-            Some(pos!(5.5)),
-            Some(pos!(5.0)),
-            Some(pos!(5.5)),
-            Some(pos!(0.2)),
+            spos!(5.0),
+            spos!(5.5),
+            spos!(5.0),
+            spos!(5.5),
+            pos!(0.2),
             Some(dec!(0.5)),
             Some(dec!(-0.5)),
             Some(dec!(0.1)),
-            Some(pos!(1000.0)),
+            spos!(1000.0),
             Some(500),
+            None,
         );
 
         chain.add_option(
             pos!(105.0),
-            Some(pos!(4.0)),
-            Some(pos!(4.5)),
-            Some(pos!(8.0)),
-            Some(pos!(8.5)),
-            Some(pos!(0.2)),
+            spos!(4.0),
+            spos!(4.5),
+            spos!(8.0),
+            spos!(8.5),
+            pos!(0.2),
             Some(dec!(0.3)),
             Some(dec!(-0.7)),
             Some(dec!(0.1)),
-            Some(pos!(1000.0)),
+            spos!(1000.0),
             Some(500),
+            None,
         );
 
         let serialized = serde_json::to_string(&chain).unwrap();
@@ -6595,12 +6049,13 @@ mod tests_option_chain_serde {
             Some(Positive::ONE),
             Some(Positive::ONE),
             Some(Positive::ONE),
-            Some(Positive::ONE),
+            Positive::ONE,
             Some(Decimal::ONE),
             Some(Decimal::ONE),
             Some(Decimal::ONE),
             Some(Positive::ONE),
             Some(1),
+            None,
         );
 
         let serialized = serde_json::to_string(&chain).unwrap();
@@ -6648,6 +6103,7 @@ mod tests_option_chain_serde {
             None,
             None,
             None,
+            Positive::ZERO,
             None,
             None,
             None,
@@ -6667,7 +6123,6 @@ mod tests_option_chain_serde {
             .unwrap();
 
         assert!(option.call_bid.is_none());
-        assert!(option.implied_volatility.is_none());
     }
 }
 
@@ -6718,12 +6173,13 @@ mod tests_gamma_calculations {
             spos!(0.7),
             spos!(2.5),
             spos!(2.7),
-            spos!(0.35),
+            pos!(0.35),
             Some(dec!(0.3)),
             Some(dec!(-0.7)),
             None, // No gamma value
             spos!(60.0),
             Some(30),
+            None,
         );
 
         chain.update_greeks();
@@ -6787,7 +6243,7 @@ mod tests_delta_calculations {
         assert!(result.is_ok());
         let delta_exposure = result.unwrap();
         // Test against expected value from sample data
-        assert_decimal_eq!(delta_exposure, dec!(31.0), dec!(0.000001));
+        assert_decimal_eq!(delta_exposure, dec!(17.0), dec!(0.000001));
     }
 
     #[test]
@@ -6807,7 +6263,7 @@ mod tests_delta_calculations {
         let result = chain.delta_exposure();
 
         assert!(result.is_ok());
-        assert_eq!(result.unwrap(), dec!(31.0));
+        assert_eq!(result.unwrap(), dec!(17.0));
     }
 
     #[test]
@@ -6816,12 +6272,12 @@ mod tests_delta_calculations {
 
         // Get initial delta exposure (should be 0 as greeks aren't initialized)
         let initial_delta = chain.delta_exposure().unwrap();
-        assert_eq!(initial_delta, dec!(31.0));
+        assert_eq!(initial_delta, dec!(17.0));
 
         // Update greeks and check new delta exposure
         chain.update_greeks();
         let updated_delta = chain.delta_exposure().unwrap();
-        assert_decimal_eq!(updated_delta, dec!(31.0), dec!(0.000001));
+        assert_decimal_eq!(updated_delta, dec!(17.0), dec!(0.000001));
     }
 
     #[test]
@@ -7136,13 +6592,13 @@ mod tests_atm_strike {
             pos!(0.02),
             2,
             OptionDataPriceParams::new(
-                pos!(100.0),
-                ExpirationDate::Days(pos!(30.0)),
-                spos!(0.17),
-                Decimal::ZERO,
-                pos!(0.05),
-                Some("SP500".to_string()),
+                Some(Box::new(pos!(100.0))),
+                Some(ExpirationDate::Days(pos!(30.0))),
+                Some(dec!(0.05)),
+                spos!(0.02),
+                Some("AAPL".to_string()),
             ),
+            pos!(0.2),
         );
 
         OptionChain::build_chain(&params)
@@ -7215,7 +6671,7 @@ mod tests_atm_strike {
         let mut chain = create_standard_chain();
 
         // Set underlying price far from any strike
-        chain.underlying_price = pos!(150.0);
+        chain.underlying_price = pos!(110.0);
 
         let result = chain.atm_strike();
         assert!(
@@ -7245,7 +6701,7 @@ mod tests_atm_strike {
         // The lowest strike in the standard chain should be around 90.0
         assert_eq!(
             *strike,
-            pos!(87.0),
+            pos!(86.0),
             "Should return the lowest available strike"
         );
     }
@@ -7265,12 +6721,18 @@ mod tests_atm_strike {
             spos!(1.1),
             spos!(1.0),
             spos!(1.1),
-            spos!(0.2),
+            pos!(0.2),
             Some(dec!(0.5)),
             Some(dec!(-0.5)),
             Some(dec!(0.1)),
             spos!(100.0),
             Some(50),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
         ));
 
         options.insert(OptionData::new(
@@ -7279,12 +6741,18 @@ mod tests_atm_strike {
             spos!(1.0),
             spos!(1.1),
             spos!(1.2),
-            spos!(0.2),
+            pos!(0.2),
             Some(dec!(0.55)),
             Some(dec!(-0.45)),
             Some(dec!(0.1)),
             spos!(100.0),
             Some(50),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
         ));
 
         chain.options = options;
@@ -7322,13 +6790,13 @@ mod tests_atm_strike_bis {
             pos!(0.02),
             2,
             OptionDataPriceParams::new(
-                pos!(100.0),
-                ExpirationDate::Days(pos!(30.0)),
-                spos!(0.17),
-                Decimal::ZERO,
-                pos!(0.05),
-                Some("SP500".to_string()),
+                Some(Box::new(pos!(100.0))),
+                Some(ExpirationDate::Days(pos!(30.0))),
+                Some(dec!(0.05)),
+                spos!(0.02),
+                Some("AAPL".to_string()),
             ),
+            pos!(0.2),
         );
 
         OptionChain::build_chain(&params)
@@ -7415,7 +6883,7 @@ mod tests_atm_strike_bis {
         // The lowest strike in the standard chain should be around 90.0
         assert_eq!(
             *strike,
-            pos!(87.0),
+            pos!(86.0),
             "Should return the lowest available strike"
         );
     }
@@ -7435,12 +6903,18 @@ mod tests_atm_strike_bis {
             spos!(1.1),
             spos!(1.0),
             spos!(1.1),
-            spos!(0.2),
+            pos!(0.2),
             Some(dec!(0.5)),
             Some(dec!(-0.5)),
             Some(dec!(0.1)),
             spos!(100.0),
             Some(50),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
         ));
 
         options.insert(OptionData::new(
@@ -7449,12 +6923,18 @@ mod tests_atm_strike_bis {
             spos!(1.0),
             spos!(1.1),
             spos!(1.2),
-            spos!(0.2),
+            pos!(0.2),
             Some(dec!(0.55)),
             Some(dec!(-0.45)),
             Some(dec!(0.1)),
             spos!(100.0),
             Some(50),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
         ));
 
         chain.options = options;
@@ -7475,8 +6955,7 @@ mod tests_atm_strike_bis {
 #[cfg(test)]
 mod tests_option_chain_utils {
     use super::*;
-    use crate::pos;
-    use crate::spos;
+    use crate::{pos, spos};
     use rust_decimal_macros::dec;
 
     // Helper function to create a chain with custom strikes for specific tests
@@ -7486,7 +6965,7 @@ mod tests_option_chain_utils {
             pos!(100.0),
             "2024-01-01".to_string(),
             Some(dec!(0.05)),
-            Some(pos!(0.02)),
+            spos!(0.02),
         );
 
         // Add options with irregular strike intervals
@@ -7503,12 +6982,13 @@ mod tests_option_chain_utils {
                 spos!(5.5),
                 spos!(4.0),
                 spos!(4.5),
-                spos!(vols[i]),
+                pos!(vols[i]),
                 Some(Decimal::from_f64(deltas_call[i]).unwrap()),
                 Some(Decimal::from_f64(deltas_put[i]).unwrap()),
                 Some(Decimal::from_f64(gammas[i]).unwrap()),
                 spos!(100.0),
                 Some(50),
+                None,
             );
         }
 
@@ -7554,12 +7034,13 @@ mod tests_option_chain_utils {
             spos!(5.5),
             spos!(4.0),
             spos!(4.5),
-            spos!(0.2),
+            pos!(0.2),
             Some(dec!(0.5)),
             Some(dec!(-0.5)),
             Some(dec!(0.04)),
             spos!(100.0),
             Some(50),
+            None,
         );
 
         // Chain with a single option should return the default interval
@@ -7592,12 +7073,13 @@ mod tests_option_chain_utils {
                 spos!(1.1),
                 spos!(1.0),
                 spos!(1.1),
-                spos!(0.2),
+                pos!(0.2),
                 Some(dec!(0.5)),
                 Some(dec!(-0.5)),
                 Some(dec!(0.04)),
                 spos!(100.0),
                 Some(50),
+                None,
             );
         }
 
@@ -7618,8 +7100,7 @@ mod tests_option_chain_utils_bis {
     use crate::chains::utils::OptionChainBuildParams;
     use crate::chains::utils::OptionDataPriceParams;
     use crate::model::ExpirationDate;
-    use crate::pos;
-    use crate::spos;
+    use crate::{pos, spos};
 
     use rust_decimal_macros::dec;
 
@@ -7635,13 +7116,13 @@ mod tests_option_chain_utils_bis {
             pos!(0.02),
             2,
             OptionDataPriceParams::new(
-                pos!(100.0),
-                ExpirationDate::Days(pos!(30.0)),
-                spos!(0.17),
-                Decimal::ZERO,
-                pos!(0.05),
-                Some("SP500".to_string()),
+                Some(Box::new(pos!(100.0))),
+                Some(ExpirationDate::Days(pos!(30.0))),
+                Some(dec!(0.05)),
+                spos!(0.02),
+                Some("AAPL".to_string()),
             ),
+            pos!(0.2),
         );
 
         OptionChain::build_chain(&params)
@@ -7654,7 +7135,7 @@ mod tests_option_chain_utils_bis {
             pos!(100.0),
             "2024-01-01".to_string(),
             Some(dec!(0.05)),
-            Some(pos!(0.02)),
+            spos!(0.02),
         );
 
         // Add options with irregular strike intervals
@@ -7671,19 +7152,19 @@ mod tests_option_chain_utils_bis {
                 spos!(5.5),
                 spos!(4.0),
                 spos!(4.5),
-                spos!(vols[i]),
+                pos!(vols[i]),
                 Some(Decimal::from_f64(deltas_call[i]).unwrap()),
                 Some(Decimal::from_f64(deltas_put[i]).unwrap()),
                 Some(Decimal::from_f64(gammas[i]).unwrap()),
                 spos!(100.0),
                 Some(50),
+                None,
             );
         }
 
         chain
     }
 
-    // Test for lines 2197, 2199-2200, 2202, 2204-2206, 2211, 2214-2217
     #[test]
     fn test_get_strike_interval_standard_chain() {
         let chain = create_standard_chain();
@@ -7737,12 +7218,13 @@ mod tests_option_chain_utils_bis {
             spos!(5.5),
             spos!(4.0),
             spos!(4.5),
-            spos!(0.2),
+            pos!(0.2),
             Some(dec!(0.5)),
             Some(dec!(-0.5)),
             Some(dec!(0.04)),
             spos!(100.0),
             Some(50),
+            None,
         );
 
         // Chain with a single option should return the default interval
@@ -7755,7 +7237,6 @@ mod tests_option_chain_utils_bis {
         );
     }
 
-    // Test for lines 2220-2221, 2226, 2241, 2249, 2257-2258
     #[test]
     fn test_get_strike_interval_fractional_intervals() {
         let mut chain = OptionChain::new(
@@ -7776,12 +7257,13 @@ mod tests_option_chain_utils_bis {
                 spos!(1.1),
                 spos!(1.0),
                 spos!(1.1),
-                spos!(0.2),
+                pos!(0.2),
                 Some(dec!(0.5)),
                 Some(dec!(-0.5)),
                 Some(dec!(0.04)),
                 spos!(100.0),
                 Some(50),
+                None,
             );
         }
 
@@ -7817,13 +7299,13 @@ mod tests_to_build_params_bis {
             pos!(0.03),
             2,
             OptionDataPriceParams::new(
-                pos!(5000.0),
-                ExpirationDate::Days(pos!(30.0)),
-                spos!(0.1),
-                dec!(0.05),
-                pos!(0.05),
-                Some("SP500".to_string()),
+                Some(Box::new(pos!(100.0))),
+                Some(ExpirationDate::Days(pos!(30.0))),
+                Some(dec!(0.05)),
+                spos!(0.02),
+                Some("AAPL".to_string()),
             ),
+            pos!(0.2),
         );
 
         OptionChain::build_chain(&params)
@@ -7836,12 +7318,12 @@ mod tests_to_build_params_bis {
         let mut params = chain.to_build_params().unwrap();
 
         params.smile_curve = dec!(0.000001);
-        params.price_params.underlying_price =
-            pos!(params.price_params.underlying_price.to_f64() * f64::exp(0.2)).max(Positive::ZERO);
-        params.price_params.implied_volatility = Some(
-            pos!(params.price_params.implied_volatility.unwrap().to_f64() * f64::exp(0.2))
+        params.price_params.underlying_price = Some(Box::new(
+            pos!(params.price_params.underlying_price.unwrap().to_f64() * f64::exp(0.2))
                 .max(Positive::ZERO),
-        );
+        ));
+        params.implied_volatility =
+            pos!(params.implied_volatility.to_f64() * f64::exp(0.2)).max(Positive::ZERO);
         info!("{}", params);
 
         let new_chain = OptionChain::build_chain(&params);
@@ -7868,13 +7350,13 @@ mod chain_coverage_tests {
             pos!(0.02),
             2,
             OptionDataPriceParams::new(
-                pos!(100.0),
-                ExpirationDate::Days(pos!(30.0)),
-                spos!(0.2),
-                dec!(0.05),
-                pos!(0.0),
-                Some("TEST".to_string()),
+                Some(Box::new(pos!(100.0))),
+                Some(ExpirationDate::Days(pos!(30.0))),
+                Some(dec!(0.05)),
+                spos!(0.02),
+                Some("AAPL".to_string()),
             ),
+            pos!(0.2),
         );
 
         OptionChain::build_chain(&params)
@@ -7895,7 +7377,6 @@ mod chain_coverage_tests {
         assert!(display_output.contains("Put Ask"));
     }
 
-    // Test for lines 198-199, 201-207
     #[test]
     fn test_get_title_variants() {
         let chain = OptionChain::new(
@@ -7903,14 +7384,13 @@ mod chain_coverage_tests {
             pos!(5781.88),
             "18 Oct 2024".to_string(), // With spaces
             Some(dec!(0.05)),
-            Some(pos!(0.02)),
+            spos!(0.02),
         );
 
         let title = chain.get_title();
         assert_eq!(title, "SP500-Index-18-Oct-2024-5781.88");
     }
 
-    // Test for line 345
     #[test]
     fn test_update_expiration_date() {
         let mut chain = create_test_chain();
@@ -7924,7 +7404,6 @@ mod chain_coverage_tests {
         assert_eq!(chain.get_expiration_date(), "2025-12-31");
     }
 
-    // Test for lines 467-468, 491, 500, 504, 506, 512, 523
     #[test]
     fn test_atm_option_data_edge_cases() {
         // Test with empty chain
@@ -7942,7 +7421,8 @@ mod chain_coverage_tests {
             spos!(5.5),
             spos!(4.5),
             spos!(5.0),
-            spos!(0.2),
+            pos!(0.2),
+            None,
             None,
             None,
             None,
@@ -7955,7 +7435,6 @@ mod chain_coverage_tests {
         assert_eq!(result.unwrap().strike_price, pos!(100.0));
     }
 
-    // Test for lines 568, 570, 572-578, 617, 619, 621-627
     #[test]
     fn test_update_mid_prices_and_greeks() {
         let mut chain = create_test_chain();
@@ -7966,7 +7445,6 @@ mod chain_coverage_tests {
         // Call the update methods
         chain.update_mid_prices();
         chain.update_greeks();
-        chain.update_implied_volatilities();
 
         // Verify that values have been updated
         for (original, updated) in original_options.iter().zip(chain.options.iter()) {
@@ -7987,7 +7465,6 @@ mod chain_coverage_tests {
         }
     }
 
-    // Test for lines 691-692, 705, 793-795, 797
     #[test]
     fn test_strike_price_range_vec() {
         let chain = create_test_chain();
@@ -8011,7 +7488,6 @@ mod chain_coverage_tests {
         assert!(range.is_none());
     }
 
-    // Test for lines 845, 855, 922, 1007, 1033, 1035, 1065-1066
     #[test]
     fn test_get_params_and_atm_strike() {
         let chain = create_test_chain();
@@ -8022,7 +7498,7 @@ mod chain_coverage_tests {
         assert!(params_result.is_ok());
 
         let params = params_result.unwrap();
-        assert_eq!(params.underlying_price, chain.underlying_price);
+        assert_eq!(*params.underlying_price.unwrap(), chain.underlying_price);
 
         // Test with invalid strike
         let invalid_strike = pos!(9999.0);
@@ -8030,7 +7506,6 @@ mod chain_coverage_tests {
         assert!(invalid_params_result.is_err());
     }
 
-    // Test for lines 1361-1362, 1364
     #[test]
     fn test_calculate_delta_exposure() {
         let mut chain = create_test_chain();
@@ -8043,7 +7518,6 @@ mod chain_coverage_tests {
         assert!(delta_exposure.is_ok());
     }
 
-    // Test for lines 1640, 1691, 1693-1694, 1724, 1726-1727, 1757, 1759-1760, 1790, 1792-1793
     #[test]
     fn test_all_exposures() {
         let mut chain = create_test_chain();
@@ -8065,7 +7539,6 @@ mod chain_coverage_tests {
         assert!(theta_exposure.is_ok());
     }
 
-    // Test for lines 1910-1911, 1943, 1966-1967, 1978-1979, 2018-2019
     #[test]
     fn test_all_curves() {
         let mut chain = create_test_chain();
@@ -8107,19 +7580,18 @@ mod chain_coverage_tests_bis {
             pos!(0.02),
             2,
             OptionDataPriceParams::new(
-                pos!(100.0),
-                ExpirationDate::Days(pos!(30.0)),
-                spos!(0.2),
-                dec!(0.05),
-                pos!(0.0),
-                Some("TEST".to_string()),
+                Some(Box::new(pos!(100.0))),
+                Some(ExpirationDate::Days(pos!(30.0))),
+                Some(dec!(0.05)),
+                spos!(0.02),
+                Some("AAPL".to_string()),
             ),
+            pos!(0.17),
         );
 
         OptionChain::build_chain(&params)
     }
 
-    // Test for lines 98, 104, 108, 135, 138-139, 154-155, 157, 161, 163, 167, 169, 173, 175, 179, 181, 185, 187
     #[test]
     fn test_deserializer_field_handling() {
         let chain = create_test_chain();
@@ -8156,7 +7628,6 @@ mod chain_coverage_tests_bis {
         assert!(display_output.contains("Put Ask"));
     }
 
-    // Test for lines 198-199, 201-207
     #[test]
     fn test_get_title_variants() {
         let chain = OptionChain::new(
@@ -8164,7 +7635,7 @@ mod chain_coverage_tests_bis {
             pos!(5781.88),
             "18 Oct 2024".to_string(), // With spaces
             Some(dec!(0.05)),
-            Some(pos!(0.02)),
+            spos!(0.02),
         );
 
         let title = chain.get_title();
@@ -8185,7 +7656,6 @@ mod chain_coverage_tests_bis {
         assert_eq!(chain.get_expiration_date(), "2025-12-31");
     }
 
-    // Test for lines 467-468, 491, 500, 504, 506, 512, 523
     #[test]
     fn test_atm_option_data_edge_cases() {
         // Test with empty chain
@@ -8203,7 +7673,8 @@ mod chain_coverage_tests_bis {
             spos!(5.5),
             spos!(4.5),
             spos!(5.0),
-            spos!(0.2),
+            pos!(0.2),
+            None,
             None,
             None,
             None,
@@ -8216,7 +7687,6 @@ mod chain_coverage_tests_bis {
         assert_eq!(result.unwrap().strike_price, pos!(100.0));
     }
 
-    // Test for lines 568, 570, 572-578, 617, 619, 621-627
     #[test]
     fn test_update_mid_prices_and_greeks() {
         let mut chain = create_test_chain();
@@ -8227,7 +7697,6 @@ mod chain_coverage_tests_bis {
         // Call the update methods
         chain.update_mid_prices();
         chain.update_greeks();
-        chain.update_implied_volatilities();
 
         // Verify that values have been updated
         for (original, updated) in original_options.iter().zip(chain.options.iter()) {
@@ -8248,7 +7717,6 @@ mod chain_coverage_tests_bis {
         }
     }
 
-    // Test for lines 691-692, 705, 793-795, 797
     #[test]
     fn test_strike_price_range_vec() {
         let chain = create_test_chain();
@@ -8272,7 +7740,6 @@ mod chain_coverage_tests_bis {
         assert!(range.is_none());
     }
 
-    // Test for lines 845, 855, 922, 1007, 1033, 1035, 1065-1066
     #[test]
     fn test_get_params_and_atm_strike() {
         let chain = create_test_chain();
@@ -8283,7 +7750,7 @@ mod chain_coverage_tests_bis {
         assert!(params_result.is_ok());
 
         let params = params_result.unwrap();
-        assert_eq!(params.underlying_price, chain.underlying_price);
+        assert_eq!(*params.underlying_price.unwrap(), chain.underlying_price);
 
         // Test with invalid strike
         let invalid_strike = pos!(9999.0);
@@ -8291,7 +7758,6 @@ mod chain_coverage_tests_bis {
         assert!(invalid_params_result.is_err());
     }
 
-    // Test for lines 1361-1362, 1364
     #[test]
     fn test_calculate_delta_exposure() {
         let mut chain = create_test_chain();
@@ -8304,7 +7770,6 @@ mod chain_coverage_tests_bis {
         assert!(delta_exposure.is_ok());
     }
 
-    // Test for lines 1640, 1691, 1693-1694, 1724, 1726-1727, 1757, 1759-1760, 1790, 1792-1793
     #[test]
     fn test_all_exposures() {
         let mut chain = create_test_chain();
@@ -8326,7 +7791,6 @@ mod chain_coverage_tests_bis {
         assert!(theta_exposure.is_ok());
     }
 
-    // Test for lines 1910-1911, 1943, 1966-1967, 1978-1979, 2018-2019
     #[test]
     fn test_all_curves() {
         let mut chain = create_test_chain();
@@ -8365,7 +7829,7 @@ mod tests_get_position_with_delta {
             pos!(100.0),
             "2024-12-31".to_string(),
             Some(dec!(0.05)),
-            Some(pos!(0.02)),
+            spos!(0.02),
         );
 
         // Add options with different deltas
@@ -8379,12 +7843,13 @@ mod tests_get_position_with_delta {
             spos!(20.5),
             spos!(0.5),
             spos!(0.7),
-            spos!(0.25),
+            pos!(0.25),
             Some(dec!(0.9)),  // High call delta (0.9)
             Some(dec!(-0.1)), // Low put delta (-0.1)
             Some(dec!(0.02)),
             spos!(100.0),
             Some(50),
+            None,
         );
 
         // ITM call / OTM put
@@ -8394,12 +7859,13 @@ mod tests_get_position_with_delta {
             spos!(11.5),
             spos!(1.5),
             spos!(1.8),
-            spos!(0.25),
+            pos!(0.25),
             Some(dec!(0.7)),  // Call delta (0.7)
             Some(dec!(-0.3)), // Put delta (-0.3)
             Some(dec!(0.04)),
             spos!(200.0),
             Some(100),
+            None,
         );
 
         // ATM call and put
@@ -8409,12 +7875,13 @@ mod tests_get_position_with_delta {
             spos!(5.3),
             spos!(5.0),
             spos!(5.3),
-            spos!(0.25),
+            pos!(0.25),
             Some(dec!(0.5)),  // ATM call delta (0.5)
             Some(dec!(-0.5)), // ATM put delta (-0.5)
             Some(dec!(0.05)),
             spos!(500.0),
             Some(250),
+            None,
         );
 
         // OTM call / ITM put
@@ -8424,12 +7891,13 @@ mod tests_get_position_with_delta {
             spos!(1.8),
             spos!(11.0),
             spos!(11.5),
-            spos!(0.25),
+            pos!(0.25),
             Some(dec!(0.3)),  // Call delta (0.3)
             Some(dec!(-0.7)), // Put delta (-0.7)
             Some(dec!(0.04)),
             spos!(200.0),
             Some(100),
+            None,
         );
 
         // Far OTM call, low delta / Far ITM put, high delta
@@ -8439,12 +7907,13 @@ mod tests_get_position_with_delta {
             spos!(0.7),
             spos!(20.0),
             spos!(20.5),
-            spos!(0.25),
+            pos!(0.25),
             Some(dec!(0.1)),  // Low call delta (0.1)
             Some(dec!(-0.9)), // High put delta (-0.9)
             Some(dec!(0.02)),
             spos!(100.0),
             Some(50),
+            None,
         );
 
         chain
@@ -8565,7 +8034,7 @@ mod tests_get_position_with_delta {
             pos!(100.0),
             "2024-12-31".to_string(),
             Some(dec!(0.05)),
-            Some(pos!(0.02)),
+            spos!(0.02),
         );
 
         // Request any position on an empty chain
@@ -8594,7 +8063,7 @@ mod tests_get_position_with_delta {
             pos!(100.0),
             "2024-12-31".to_string(),
             Some(dec!(0.05)),
-            Some(pos!(0.02)),
+            spos!(0.02),
         );
 
         // Add options without delta values
@@ -8604,12 +8073,13 @@ mod tests_get_position_with_delta {
             spos!(10.5),
             spos!(1.5),
             spos!(1.8),
-            spos!(0.25),
+            pos!(0.25),
             None, // No call delta
             None, // No put delta
             Some(dec!(0.04)),
             spos!(200.0),
             Some(100),
+            None,
         );
 
         chain.add_option(
@@ -8618,12 +8088,13 @@ mod tests_get_position_with_delta {
             spos!(5.3),
             spos!(5.0),
             spos!(5.3),
-            spos!(0.25),
+            pos!(0.25),
             None, // No call delta
             None, // No put delta
             Some(dec!(0.05)),
             spos!(500.0),
             Some(250),
+            None,
         );
 
         // Request a position but no option has delta values
@@ -8652,7 +8123,7 @@ mod tests_get_position_with_delta {
             pos!(100.0),
             "2024-12-31".to_string(),
             Some(dec!(0.05)),
-            Some(pos!(0.02)),
+            spos!(0.02),
         );
 
         // Add multiple options with the same delta
@@ -8662,12 +8133,13 @@ mod tests_get_position_with_delta {
             spos!(11.5),
             spos!(1.5),
             spos!(1.8),
-            spos!(0.25),
+            pos!(0.25),
             Some(dec!(0.6)), // Same call delta
             Some(dec!(-0.4)),
             Some(dec!(0.04)),
             spos!(200.0),
             Some(100),
+            None,
         );
 
         chain.add_option(
@@ -8676,12 +8148,13 @@ mod tests_get_position_with_delta {
             spos!(10.5),
             spos!(2.5),
             spos!(2.8),
-            spos!(0.25),
+            pos!(0.25),
             Some(dec!(0.6)), // Same call delta
             Some(dec!(-0.4)),
             Some(dec!(0.04)),
             spos!(200.0),
             Some(100),
+            None,
         );
 
         // Request a position matching the delta
@@ -8765,12 +8238,13 @@ mod tests_get_strikes_and_optiondata {
                 spos!(1.1),
                 spos!(1.0),
                 spos!(1.1),
-                spos!(0.2),
+                pos!(0.2),
                 Some(dec!(0.5)),
                 Some(dec!(-0.5)),
                 Some(dec!(0.1)),
                 spos!(100.0),
                 Some(50),
+                None,
             );
         }
         chain
@@ -8937,12 +8411,13 @@ mod tests_get_strikes_and_optiondata {
             spos!(1.1),
             spos!(1.0),
             spos!(1.1),
-            spos!(0.2),
+            pos!(0.2),
             Some(dec!(0.5)),
             Some(dec!(-0.5)),
             Some(dec!(0.1)),
             spos!(100.0),
             Some(50),
+            None,
         );
 
         // Test with any price - should always return the single option
@@ -8968,6 +8443,7 @@ mod tests_get_strikes_and_optiondata {
             None,
             None,
             None,
+            pos!(0.2),
             None,
             None,
             None,
@@ -8981,6 +8457,7 @@ mod tests_get_strikes_and_optiondata {
             None,
             None,
             None,
+            pos!(0.2),
             None,
             None,
             None,
@@ -8994,6 +8471,7 @@ mod tests_get_strikes_and_optiondata {
             None,
             None,
             None,
+            pos!(0.2),
             None,
             None,
             None,

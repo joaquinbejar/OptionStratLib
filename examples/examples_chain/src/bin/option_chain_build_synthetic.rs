@@ -7,13 +7,13 @@ use optionstratlib::chains::chain::OptionChain;
 use optionstratlib::curves::BasicCurves;
 use optionstratlib::geometrics::Plottable;
 use optionstratlib::model::BasicAxisTypes;
-use optionstratlib::surfaces::BasicSurfaces;
 use optionstratlib::utils::setup_logger;
-use optionstratlib::utils::time::{get_today_formatted, get_x_days_formatted};
+use optionstratlib::utils::time::get_x_days_formatted;
 use optionstratlib::{OptionStyle, Side};
 use tracing::info;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    setup_logger();
     let mut option_chain_base =
         OptionChain::load_from_json("examples/Chains/SP500-18-oct-2024-5781.88.json")?;
     // option_chain_base.update_expiration_date(get_today_formatted());

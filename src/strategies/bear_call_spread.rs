@@ -712,7 +712,7 @@ impl Optimizable for BearCallSpread {
             StrategyLegs::TwoLegs { first, second } => (first, second),
             _ => panic!("Invalid number of legs for this strategy"),
         };
-        let implied_volatility = short.implied_volatility.unwrap();
+        let implied_volatility = short.implied_volatility;
         assert!(implied_volatility <= Positive::ONE);
         BearCallSpread::new(
             chain.symbol.clone(),
@@ -1683,12 +1683,13 @@ mod tests_bear_call_spread_optimizable {
             spos!(6.2),      // call_ask
             spos!(1.0),      // put_bid
             spos!(1.2),      // put_ask
-            spos!(0.2),      // implied_vol
+            pos!(0.2),       // implied_vol
             Some(dec!(0.7)), // delta
             Some(dec!(0.3)),
             Some(dec!(0.3)),
             spos!(100.0), // volume
             Some(50),     // open_interest
+            None,
         );
 
         chain.add_option(
@@ -1697,12 +1698,13 @@ mod tests_bear_call_spread_optimizable {
             spos!(3.2),
             spos!(3.0),
             spos!(3.2),
-            spos!(0.2),
+            pos!(0.2),
             Some(dec!(0.5)),
             Some(dec!(0.3)),
             Some(dec!(0.3)),
             spos!(200.0),
             Some(100),
+            None,
         );
 
         chain.add_option(
@@ -1711,12 +1713,13 @@ mod tests_bear_call_spread_optimizable {
             spos!(1.2),
             spos!(6.0),
             spos!(6.2),
-            spos!(0.2),
+            pos!(0.2),
             Some(dec!(0.3)),
             Some(dec!(0.3)),
             Some(dec!(0.3)),
             spos!(150.0),
             Some(75),
+            None,
         );
 
         chain
@@ -1765,8 +1768,8 @@ mod tests_bear_call_spread_optimizable {
                     assert!(long.call_ask.is_some());
 
                     // Both options should have valid implied volatility
-                    assert!(short.implied_volatility.is_some());
-                    assert!(long.implied_volatility.is_some());
+                    assert!(short.implied_volatility > Positive::ZERO);
+                    assert!(long.implied_volatility > Positive::ZERO);
                 }
                 _ => panic!("Expected Two-leg combination"),
             }
@@ -1853,12 +1856,13 @@ mod tests_bear_call_spread_optimizable {
             None, // Invalid call_ask
             spos!(1.0),
             spos!(1.2),
-            spos!(0.2),
+            pos!(0.2),
             Some(dec!(0.1)),
             Some(dec!(0.3)),
             Some(dec!(0.3)),
             spos!(50.0),
             Some(25),
+            None,
         );
 
         let strategy = create_test_strategy();
@@ -1890,6 +1894,7 @@ mod tests_bear_call_spread_optimizable {
             None,
             None,
             None,
+            pos!(0.2),
             None,
             None,
             None,

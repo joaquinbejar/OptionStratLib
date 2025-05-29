@@ -914,7 +914,7 @@ impl Optimizable for IronButterfly {
                 third: _,
                 fourth: long_call,
             } => {
-                let implied_volatility = short_strike.implied_volatility.unwrap();
+                let implied_volatility = short_strike.implied_volatility;
                 assert!(implied_volatility <= Positive::ONE);
                 IronButterfly::new(
                     chain.symbol.clone(),
@@ -1652,8 +1652,8 @@ mod tests_iron_butterfly_optimizable {
     use super::*;
     use crate::chains::OptionData;
     use crate::model::ExpirationDate;
-    use crate::pos;
-    use crate::spos;
+    use crate::{pos, spos};
+
     use rust_decimal_macros::dec;
 
     fn create_test_butterfly() -> IronButterfly {
@@ -1688,12 +1688,13 @@ mod tests_iron_butterfly_optimizable {
                 spos!(5.2), // call_ask
                 spos!(5.0), // put_bid
                 spos!(5.2), // put_ask
-                spos!(0.2), // implied_volatility
+                pos!(0.2),  // implied_volatility
                 None,       // delta
                 None,
                 None,
                 spos!(100.0), // volume
                 Some(50),     // open_interest
+                None,
             );
         }
         chain
@@ -1765,12 +1766,18 @@ mod tests_iron_butterfly_optimizable {
             spos!(5.2),
             spos!(5.0),
             spos!(5.2),
-            spos!(0.2),
+            pos!(0.2),
             None,
             None,
             None,
             spos!(100.0),
             Some(50),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
         );
 
         // Test with different sides
@@ -1788,12 +1795,18 @@ mod tests_iron_butterfly_optimizable {
             spos!(5.2),
             spos!(5.0),
             spos!(5.2),
-            spos!(0.2),
+            pos!(0.2),
             None,
             None,
             None,
             spos!(100.0),
             Some(50),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
         );
 
         // Test with different sides - should prefer at-the-money options
@@ -2389,7 +2402,6 @@ mod tests_iron_butterfly_delta_size {
 
 #[cfg(test)]
 mod tests_iron_butterfly_probability {
-
     use super::*;
     use crate::strategies::probabilities::utils::PriceTrend;
     use crate::{assert_pos_relative_eq, pos};

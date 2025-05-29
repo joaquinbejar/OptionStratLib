@@ -2,6 +2,7 @@ use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, StrategyBasics, StrategyType, Validable,
 };
 use crate::error::strategies::BreakEvenErrorKind;
+use crate::spos;
 use crate::{
     ExpirationDate, Options, Positive,
     chains::{StrategyLegs, chain::OptionChain, utils::OptionDataGroup},
@@ -20,7 +21,6 @@ use crate::{
     },
     pnl::{PnLCalculator, utils::PnL},
     pricing::payoff::Profit,
-    spos,
     strategies::{
         BasicAble, Strategies, StrategyConstructor,
         delta_neutral::DeltaNeutrality,
@@ -838,7 +838,7 @@ impl Optimizable for CallButterfly {
         if !long_call.validate() || !short_call_low.validate() || !short_call_high.validate() {
             panic!("Invalid options");
         }
-        let implied_volatility = long_call.implied_volatility.unwrap();
+        let implied_volatility = long_call.implied_volatility;
         assert!(implied_volatility <= Positive::ONE);
         CallButterfly::new(
             option_chain.symbol.clone(),
@@ -1436,12 +1436,13 @@ mod tests_call_butterfly_optimizable {
             spos!(6.2),      // call_ask
             spos!(1.0),      // put_bid
             spos!(1.2),      // put_ask
-            spos!(0.2),      // iv
+            pos!(0.2),       // iv
             Some(dec!(0.4)), // delta
             Some(dec!(0.2)),
             Some(dec!(0.2)),
             spos!(100.0), // volume
             Some(50),     // open interest
+            None,
         );
 
         chain.add_option(
@@ -1450,12 +1451,13 @@ mod tests_call_butterfly_optimizable {
             spos!(3.2),
             spos!(3.0),
             spos!(3.2),
-            spos!(0.2),
+            pos!(0.2),
             Some(dec!(0.5)),
             Some(dec!(0.2)),
             Some(dec!(0.2)),
             spos!(200.0),
             Some(100),
+            None,
         );
 
         chain.add_option(
@@ -1464,12 +1466,13 @@ mod tests_call_butterfly_optimizable {
             spos!(1.2),
             spos!(6.0),
             spos!(6.2),
-            spos!(0.2),
+            pos!(0.2),
             Some(dec!(0.6)),
             Some(dec!(0.2)),
             Some(dec!(0.2)),
             spos!(100.0),
             Some(50),
+            None,
         );
 
         chain

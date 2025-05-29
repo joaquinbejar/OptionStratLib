@@ -56,13 +56,13 @@
 //!             pos!(0.02),
 //!             2,
 //!             OptionDataPriceParams::new(
-//!                 pos!(100.0),
-//!                 ExpirationDate::Days(pos!(30.0)),
-//!                 spos!(0.17),
-//!                 Decimal::ZERO,
-//!                 pos!(0.05),
-//!                 None,
+//!                 Some(Box::new(pos!(100.0))),
+//!                 Some(ExpirationDate::Days(pos!(30.0))),
+//!                 Some(Decimal::ZERO),
+//!                 spos!(0.05),
+//!                 Some("SP500".to_string()),
 //!             ),
+//!             pos!(0.1),
 //!         );
 //!
 //! let option_chain = OptionChain::build_chain(&option_chain_params);
@@ -430,12 +430,13 @@ mod tests {
                 spos!(15.5),
                 spos!(5.0),
                 spos!(5.5),
-                spos!(0.2),
+                pos!(0.2),
                 Some(dec!(-0.3)),
                 Some(dec!(-0.3)),
                 Some(dec!(0.3)),
                 spos!(100.0),
                 Some(50),
+                None,
             );
         }
 
@@ -665,12 +666,13 @@ mod tests {
                 spos!(5.5),
                 spos!(15.0),
                 spos!(15.5),
-                None, // No implied volatility
+                pos!(0.2), // No implied volatility
                 Some(dec!(0.3)),
                 Some(dec!(0.3)),
                 Some(dec!(0.3)),
                 spos!(100.0),
                 Some(50),
+                None,
             );
 
             let result = chain.calculate_skew();
@@ -744,12 +746,13 @@ mod tests {
                 spos!(51.0),
                 spos!(0.1),
                 spos!(0.2),
-                spos!(0.8), // High volatility
+                pos!(0.8), // High volatility
                 Some(dec!(-0.99)),
                 Some(dec!(0.3)),
                 Some(dec!(0.3)),
                 spos!(10.0),
                 Some(5),
+                None,
             );
 
             chain.add_option(
@@ -758,12 +761,13 @@ mod tests {
                 spos!(0.2),
                 spos!(50.0),
                 spos!(51.0),
-                spos!(0.8), // High volatility
+                pos!(0.8), // High volatility
                 Some(dec!(0.99)),
                 Some(dec!(0.3)),
                 Some(dec!(0.3)),
                 spos!(10.0),
                 Some(5),
+                None,
             );
 
             let params = RNDParameters {
@@ -860,12 +864,13 @@ mod additional_tests {
                     spos!(15.5),
                     spos!(5.0),
                     spos!(5.5),
-                    spos!(0.2),
+                    pos!(0.2),
                     Some(dec!(-0.3)),
                     Some(dec!(0.3)),
                     Some(dec!(0.3)),
                     spos!(100.0),
                     Some(50),
+                    None,
                 );
             }
             chain
@@ -883,12 +888,13 @@ mod additional_tests {
                     spos!(15.5),
                     spos!(5.0),
                     spos!(5.5),
-                    spos!(0.2),
+                    pos!(0.2),
                     Some(dec!(-0.3)),
                     Some(dec!(0.3)),
                     Some(dec!(0.3)),
                     spos!(100.0),
                     Some(50),
+                    None,
                 );
             }
             chain
@@ -906,12 +912,13 @@ mod additional_tests {
                     spos!(15.5),
                     spos!(5.0),
                     spos!(5.5),
-                    spos!(0.5), // Alta volatilidad
+                    pos!(0.5), // Alta volatilidad
                     Some(dec!(-0.3)),
                     Some(dec!(0.3)),
                     Some(dec!(0.3)),
                     spos!(100.0),
                     Some(50),
+                    None,
                 );
             }
             chain
@@ -990,12 +997,13 @@ mod additional_tests {
                 spos!(0.002),
                 spos!(0.001),
                 spos!(0.002),
-                spos!(0.1),
+                pos!(0.1),
                 Some(dec!(-0.3)),
                 Some(dec!(0.3)),
                 Some(dec!(0.3)),
                 spos!(100.0),
                 Some(50),
+                None,
             );
 
             let params = RNDParameters {
@@ -1019,12 +1027,13 @@ mod additional_tests {
                 spos!(1001.0),
                 spos!(1000.0),
                 spos!(1001.0),
-                spos!(0.1),
+                pos!(0.1),
                 Some(dec!(-0.3)),
                 Some(dec!(0.3)),
                 Some(dec!(0.3)),
                 spos!(100.0),
                 Some(50),
+                None,
             );
 
             let params = RNDParameters {
@@ -1435,13 +1444,13 @@ mod chain_test {
             pos!(0.02),
             2,
             OptionDataPriceParams::new(
-                pos!(100.0),
-                ExpirationDate::Days(pos!(30.0)),
-                spos!(0.17),
-                Decimal::ZERO,
-                pos!(0.05),
-                None,
+                Some(Box::new(pos!(100.0))),
+                Some(ExpirationDate::Days(pos!(30.0))),
+                Some(Decimal::ZERO),
+                spos!(0.05),
+                Some("SP500".to_string()),
             ),
+            pos!(0.2),
         );
 
         OptionChain::build_chain(&option_chain_params)
@@ -1458,13 +1467,13 @@ mod chain_test {
             pos!(0.02),
             2,
             OptionDataPriceParams::new(
-                pos!(100.0),
-                ExpirationDate::Days(pos!(30.0)),
-                spos!(0.17),
-                Decimal::ZERO,
-                pos!(0.0),
-                None,
+                Some(Box::new(pos!(100.0))),
+                Some(ExpirationDate::Days(pos!(30.0))),
+                Some(Decimal::ZERO),
+                spos!(0.0),
+                Some("SP500".to_string()),
             ),
+            pos!(0.2),
         );
 
         let chain = OptionChain::build_chain(&option_chain_params);
@@ -1478,16 +1487,20 @@ mod chain_test {
         let rnd_result = chain.calculate_rnd(&params).unwrap();
         assert!(!rnd_result.densities.is_empty());
 
-        assert_decimal_eq!(rnd_result.statistics.mean, dec!(99.9897959), dec!(0.00001));
-        assert_decimal_eq!(rnd_result.statistics.skewness, dec!(0.05804), dec!(0.00001));
+        assert_decimal_eq!(rnd_result.statistics.mean, dec!(99.85567), dec!(0.00001));
+        assert_decimal_eq!(
+            rnd_result.statistics.skewness,
+            dec!(-0.00132),
+            dec!(0.00001)
+        );
         assert_decimal_eq!(
             rnd_result.statistics.kurtosis,
-            dec!(-0.5219887),
+            dec!(-0.56662),
             dec!(0.00001)
         );
         assert_decimal_eq!(
             rnd_result.statistics.variance.to_dec(),
-            dec!(20.68356934),
+            dec!(27.31937),
             dec!(0.00001)
         );
     }
@@ -1504,13 +1517,13 @@ mod chain_test {
             pos!(0.02),
             2,
             OptionDataPriceParams::new(
-                pos!(100.0),
-                ExpirationDate::Days(pos!(30.0)),
-                spos!(0.17),
-                Decimal::ZERO,
-                pos!(0.05),
-                None,
+                Some(Box::new(pos!(100.0))),
+                Some(ExpirationDate::Days(pos!(30.0))),
+                Some(Decimal::ZERO),
+                spos!(0.05),
+                Some("SP500".to_string()),
             ),
+            pos!(0.2),
         );
 
         let chain = OptionChain::build_chain(&option_chain_params);
@@ -1625,7 +1638,7 @@ mod rnd_coverage_tests {
             pos!(100.0),
             "2024-06-30".to_string(),
             Some(dec!(0.05)),
-            Some(pos!(0.0)),
+            spos!(0.0),
         );
 
         // Add options with volatility smile pattern
@@ -1639,11 +1652,12 @@ mod rnd_coverage_tests {
                 spos!(10.5),
                 spos!(10.0),
                 spos!(10.5),
-                spos!(vols[i]),
+                pos!(vols[i]),
                 None,
                 None,
                 None,
                 spos!(1000.0),
+                None,
                 None,
             );
         }

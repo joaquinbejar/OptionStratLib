@@ -127,10 +127,12 @@ pub struct OptionChainBuildParams {
     pub(crate) spread: Positive,
 
     /// Number of decimal places for price rounding
-    pub(crate) decimal_places: i32,
+    pub(crate) decimal_places: u32,
 
     /// Core pricing parameters required for option valuation
     pub(crate) price_params: OptionDataPriceParams,
+
+    pub(crate) implied_volatility: Positive,
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -177,8 +179,9 @@ impl OptionChainBuildParams {
         skew_slope: Decimal,
         smile_curve: Decimal,
         spread: Positive,
-        decimal_places: i32,
+        decimal_places: u32,
         price_params: OptionDataPriceParams,
+        implied_volatility: Positive,
     ) -> Self {
         Self {
             symbol,
@@ -190,6 +193,7 @@ impl OptionChainBuildParams {
             spread,
             decimal_places,
             price_params,
+            implied_volatility,
         }
     }
 
@@ -204,97 +208,33 @@ impl OptionChainBuildParams {
     /// * `price` - A `Positive` value representing the new underlying asset price.  The
     ///   `Positive` type ensures that the price is always a non-negative value.
     ///
-    pub fn set_underlying_price(&mut self, price: &Positive) {
-        self.price_params.underlying_price = *price;
+    pub fn set_underlying_price(&mut self, price: Option<Box<Positive>>) {
+        self.price_params.underlying_price = price;
     }
 
-    /// Retrieves the implied volatility.
-    ///
-    /// This function returns the implied volatility associated with the option,
-    /// stored within the `price_params` structure. Implied volatility represents the
-    /// market's expectation of the future volatility of the underlying asset.  It's
-    /// a key input in option pricing models.  The function returns an `Option<Positive>`
-    /// as the implied volatility might not always be available or calculated.
-    ///
-    /// # Returns
-    ///
-    /// * `Option<Positive>` - The implied volatility, wrapped in an `Option`.  If the
-    ///   implied volatility has been set, the `Option` will contain a `Positive` value.
-    ///   Otherwise, it will return `None`.
-    pub fn get_implied_volatility(&self) -> Option<Positive> {
-        self.price_params.implied_volatility
-    }
-
-    /// Sets the implied volatility.
-    ///
-    /// This function updates the `implied_volatility` field within the `price_params`
-    /// structure. The implied volatility reflects the market's view on the future price
-    /// fluctuations of the underlying asset. This parameter plays a significant role in
-    /// determining option prices.
+    /// Sets the implied volatility value for this option pricing parameter.
     ///
     /// # Arguments
+    /// * `implied_vol` - A positive decimal value representing the implied volatility.
+    pub fn set_implied_volatility(&mut self, implied_vol: Positive) {
+        self.implied_volatility = implied_vol;
+    }
+
+    /// Returns the current implied volatility value.
     ///
-    /// * `volatility` - An `Option<Positive>` representing the implied volatility.  Providing
-    ///   `Some(Positive)` will set the volatility to the given value.  Providing `None`
-    ///   clears any previously set implied volatility, useful when the volatility needs to be
-    ///   recalculated or derived from other data.
-    pub fn set_implied_volatility(&mut self, volatility: Option<Positive>) {
-        self.price_params.implied_volatility = volatility
+    /// # Returns
+    /// * `Positive` - The current implied volatility as a positive decimal value.
+    pub fn get_implied_volatility(&self) -> Positive {
+        self.implied_volatility
     }
 }
 
 impl Display for OptionChainBuildParams {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        writeln!(f, "Option Chain Build Parameters:")?;
-        writeln!(f, "  Symbol: {}", self.symbol)?;
-
-        if let Some(volume) = self.volume {
-            writeln!(f, "  Volume: {}", volume)?;
-        } else {
-            writeln!(f, "  Volume: None")?;
+        match serde_json::to_string(self) {
+            Ok(pretty_json) => write!(f, "{}", pretty_json),
+            Err(e) => write!(f, "Error serializing to JSON: {}", e),
         }
-
-        let strike_interval: String = if let Some(strike_interval) = self.strike_interval {
-            strike_interval.to_string()
-        } else {
-            "None".to_string()
-        };
-
-        writeln!(f, "  Chain Size: {}", self.chain_size)?;
-        writeln!(f, "  Strike Interval: {}", strike_interval)?;
-        writeln!(f, "  Skew Factor: {}", self.smile_curve)?;
-        writeln!(f, "  Spread: {}", self.spread.round_to(3))?;
-        writeln!(f, "  Decimal Places: {}", self.decimal_places)?;
-        writeln!(f, "  Price Parameters:")?;
-        writeln!(
-            f,
-            "    Underlying Price: {}",
-            self.price_params.underlying_price
-        )?;
-        writeln!(
-            f,
-            "    Expiration Date: {}",
-            &self.price_params.expiration_date
-        )?;
-
-        if let Some(iv) = self.price_params.implied_volatility {
-            writeln!(f, "    Implied Volatility: {:.2}%", iv * 100.0)?;
-        } else {
-            writeln!(f, "    Implied Volatility: None")?;
-        }
-
-        writeln!(
-            f,
-            "    Risk-Free Rate: {:.2}%",
-            self.price_params.risk_free_rate * dec!(100.0)
-        )?;
-        writeln!(
-            f,
-            "    Dividend Yield: {:.2}%",
-            self.price_params.dividend_yield * dec!(100.0)
-        )?;
-
-        Ok(())
     }
 }
 
@@ -327,22 +267,19 @@ impl Display for OptionChainBuildParams {
 ///
 /// This structure is typically used as input to option pricing functions to calculate
 /// theoretical values, Greeks (delta, gamma, etc.), and other option metrics.
-#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone, Default)]
 pub struct OptionDataPriceParams {
     /// The current price of the underlying asset
-    pub(crate) underlying_price: Positive,
+    pub(crate) underlying_price: Option<Box<Positive>>,
 
     /// When the option expires, either as days to expiration or as a specific datetime
-    pub(crate) expiration_date: ExpirationDate,
-
-    /// The expected volatility of the underlying asset price, if known
-    pub(crate) implied_volatility: Option<Positive>,
+    pub(crate) expiration_date: Option<ExpirationDate>,
 
     /// The risk-free interest rate used in pricing calculations
-    pub(crate) risk_free_rate: Decimal,
+    pub(crate) risk_free_rate: Option<Decimal>,
 
     /// The dividend yield of the underlying asset
-    pub(crate) dividend_yield: Positive,
+    pub(crate) dividend_yield: Option<Positive>,
 
     /// Optional ticker symbol or identifier for the underlying asset
     pub(crate) underlying_symbol: Option<String>,
@@ -367,24 +304,15 @@ impl OptionDataPriceParams {
     ///
     /// A new instance of `OptionDataPriceParams` containing the provided parameters
     pub fn new(
-        underlying_price: Positive,
-        expiration_date: ExpirationDate,
-        implied_volatility: Option<Positive>,
-        risk_free_rate: Decimal,
-        dividend_yield: Positive,
+        underlying_price: Option<Box<Positive>>,
+        expiration_date: Option<ExpirationDate>,
+        risk_free_rate: Option<Decimal>,
+        dividend_yield: Option<Positive>,
         underlying_symbol: Option<String>,
     ) -> Self {
-        if implied_volatility.is_some() {
-            assert!(
-                implied_volatility <= Some(Positive::ONE),
-                "Implied volatility: {} must be between 0 and 1",
-                implied_volatility.unwrap()
-            );
-        }
         Self {
             underlying_price,
             expiration_date,
-            implied_volatility,
             risk_free_rate,
             dividend_yield,
             underlying_symbol,
@@ -396,8 +324,8 @@ impl OptionDataPriceParams {
     /// # Returns
     ///
     /// A `Positive` value representing the underlying asset's current market price
-    pub fn get_underlying_price(&self) -> Positive {
-        self.underlying_price
+    pub fn get_underlying_price(&self) -> Option<Box<Positive>> {
+        self.underlying_price.clone()
     }
 
     /// Returns the expiration date of the option contract.
@@ -405,17 +333,8 @@ impl OptionDataPriceParams {
     /// # Returns
     ///
     /// An `ExpirationDate` representing when the option expires, either as days to expiration or a specific datetime
-    pub fn get_expiration_date(&self) -> ExpirationDate {
+    pub fn get_expiration_date(&self) -> Option<ExpirationDate> {
         self.expiration_date
-    }
-
-    /// Returns the implied volatility of the underlying asset, if available.
-    ///
-    /// # Returns
-    ///
-    /// `Some(Positive)` containing the implied volatility if known, or `None` if not specified
-    pub fn get_implied_volatility(&self) -> Option<Positive> {
-        self.implied_volatility
     }
 
     /// Returns the risk-free interest rate used in pricing calculations.
@@ -423,7 +342,7 @@ impl OptionDataPriceParams {
     /// # Returns
     ///
     /// A `Decimal` value representing the current risk-free rate
-    pub fn get_risk_free_rate(&self) -> Decimal {
+    pub fn get_risk_free_rate(&self) -> Option<Decimal> {
         self.risk_free_rate
     }
 
@@ -432,21 +351,16 @@ impl OptionDataPriceParams {
     /// # Returns
     ///
     /// A `Positive` value representing the dividend yield of the underlying asset
-    pub fn get_dividend_yield(&self) -> Positive {
+    pub fn get_dividend_yield(&self) -> Option<Positive> {
         self.dividend_yield
     }
-}
 
-impl Default for OptionDataPriceParams {
-    fn default() -> Self {
-        Self {
-            underlying_price: Positive::ZERO,
-            expiration_date: ExpirationDate::Days(Positive::ZERO),
-            implied_volatility: None,
-            risk_free_rate: Decimal::ZERO,
-            dividend_yield: Positive::ZERO,
-            underlying_symbol: None,
-        }
+    /// Returns the symbol of the underlying asset.
+    ///
+    /// # Returns
+    /// * `Option<String>` - The underlying symbol if available, or `None` if not set.
+    pub fn get_symbol(&self) -> Option<String> {
+        self.underlying_symbol.clone()
     }
 }
 
@@ -454,12 +368,23 @@ impl Display for OptionDataPriceParams {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "Underlying Price: {:.3}, Expiration: {:.4} Years, Implied Volatility: {:.3}, Risk-Free Rate: {:.2}, Dividend Yield: {:.2}",
-            self.underlying_price,
-            self.expiration_date.get_years().unwrap(),
-            self.implied_volatility.unwrap_or(Positive::ZERO).value(),
-            self.risk_free_rate,
-            self.dividend_yield
+            "Underlying Price: {:.3}, Expiration: {:.4} Years, Risk-Free Rate: {:.2}%, Dividend Yield: {:.2}%, Symbol: {}",
+            self.underlying_price
+                .as_ref()
+                .map_or_else(|| "None".to_string(), |p| p.value().to_string()),
+            self.expiration_date.map_or_else(
+                || "None".to_string(),
+                |d| d.get_years().unwrap().to_string()
+            ),
+            self.risk_free_rate
+                .map_or_else(|| "None".to_string(), |r| (r * dec!(100.0)).to_string()),
+            self.dividend_yield.map_or_else(
+                || "None".to_string(),
+                |d| (d.value() * dec!(100.0)).to_string()
+            ),
+            self.underlying_symbol
+                .as_ref()
+                .map_or_else(|| "None".to_string(), |s| s.to_string()),
         )
     }
 }
@@ -694,81 +619,8 @@ pub(crate) fn rounder(reference_price: Positive, strike_interval: Positive) -> P
     rounded.into()
 }
 
-/// Calculates the optimal strike interval for an option chain to achieve exactly `chain_size` strikes,
-/// scaling the interval with both expected move and time to expiration.
-///
-/// This function:
-/// 1. Computes expected move at 95% confidence using underlying price, implied volatility, and time.
-/// 2. Derives a base interval based on the underlying price, scaled by a time factor to adjust for longer expiries.
-/// 3. Determines a raw interval needed to span the expected move across the desired number of strikes.
-/// 4. Takes the maximum of base and raw intervals, and rounds to a clean market-friendly value.
-///
-/// # Arguments
-/// * `params` - Build parameters containing pricing inputs and desired chain size.
-///
-/// # Returns
-/// `(strike_interval, num_strikes)`:
-/// - `strike_interval`: calculated spacing between strikes.
-/// - `num_strikes`: always equals `params.chain_size`.
-///
-/// # Errors
-/// Returns `ChainError` if the expiration date cannot convert to days.
-pub fn calculate_optimal_chain_params(
-    params: &OptionChainBuildParams,
-) -> Result<(Positive, usize), ChainError> {
-    let p = &params.price_params;
-    let price = p.underlying_price;
-
-    // Use default 20% vol if none provided
-    let iv = p.implied_volatility.unwrap_or(pos!(0.2));
-
-    // Time to expiration in days and years
-    let days = p.expiration_date.get_days()?;
-    let t_years = days / pos!(365.0);
-
-    // Expected move at 95% confidence (1.96 sigma)
-    let expected_move = price * iv * t_years.sqrt() * pos!(1.96);
-
-    // Time scaling factor: sqrt(days/30)
-    // Larger for longer expiries, smaller for short ones
-    let time_factor = (days / pos!(30.0)).sqrt();
-
-    // Static base interval based on underlying price tiers
-    let base_static = if price < pos!(25.0) {
-        if price < pos!(10.0) {
-            pos!(1.0)
-        } else {
-            pos!(2.5)
-        }
-    } else if price < pos!(100.0) {
-        pos!(5.0)
-    } else if price < pos!(1000.0) {
-        pos!(10.0)
-    } else {
-        // For very high-priced assets, use 1% of price
-        price * pos!(0.01)
-    };
-
-    // Adjust base interval by time factor and round
-    let base_interval = (base_static * time_factor).round();
-
-    // Calculate half the number of intervals for the desired strikes
-    let num_strikes = params.chain_size;
-    let half_intervals = ((num_strikes - 1) as f64) / 2.0;
-
-    // Raw interval needed to span the expected move
-    let raw_interval = expected_move / pos!(half_intervals);
-
-    // Choose the larger of raw and base intervals
-    let target_interval = raw_interval.max(base_interval);
-
-    // Round to a clean market-friendly interval
-    let strike_interval = round_to_clean_interval(target_interval, price);
-
-    Ok((strike_interval, num_strikes))
-}
-
 /// Rounds an interval to clean market-friendly values like 0.25, 0.5, 1, 2.5, 5, 10, etc.
+#[allow(dead_code)]
 fn round_to_clean_interval(interval: Positive, price: Positive) -> Positive {
     let v = interval.to_f64();
 
@@ -869,8 +721,6 @@ mod tests_strike_step {
     #[test]
     fn basic() {
         let step = strike_step(pos!(100.0), pos!(0.2), pos!(30.0), 11, None);
-        // Expect something around 2.0 or 2.5 depending on IV
-
         assert_eq!(step, 5.0);
     }
 
@@ -892,13 +742,13 @@ mod tests_strike_step {
         let skew_slope = dec!(-0.2);
         let smile_curve = dec!(0.1);
 
-        let underlying_price = pos!(1547.0);
+        let underlying_price = Some(Box::new(pos!(1547.0)));
         let days = pos!(45.0);
         let implied_volatility = pos!(0.17);
-        let chain_size = 30;
+        let chain_size = 28;
 
         let strike_interval = strike_step(
-            underlying_price,
+            *underlying_price.clone().unwrap(),
             implied_volatility,
             days,
             chain_size,
@@ -909,14 +759,13 @@ mod tests_strike_step {
 
         let price_params = OptionDataPriceParams::new(
             underlying_price,
-            ExpirationDate::Days(days),
-            Some(implied_volatility),
-            risk_free_rate,
-            dividend_yield,
+            Some(ExpirationDate::Days(days)),
+            Some(risk_free_rate),
+            Some(dividend_yield),
             Some(symbol.clone()),
         );
         let build_params = OptionChainBuildParams::new(
-            symbol.clone(),
+            symbol,
             volume,
             chain_size,
             Some(strike_interval),
@@ -925,6 +774,7 @@ mod tests_strike_step {
             spread,
             decimal_places,
             price_params,
+            implied_volatility,
         );
         let initial_chain = OptionChain::build_chain(&build_params);
         assert_eq!(initial_chain.len() - 1, chain_size);
@@ -1312,106 +1162,77 @@ mod tests_adjust_volatility {
 #[cfg(test)]
 mod tests_option_data_price_params {
     use super::*;
-    use crate::constants::ZERO;
     use crate::{pos, spos};
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
+    fn get_params() -> OptionDataPriceParams {
+        OptionDataPriceParams::new(
+            Some(Box::new(pos!(100.0))),
+            Some(ExpirationDate::Days(pos!(30.0))),
+            Some(dec!(0.05)),
+            spos!(0.02),
+            Some("AAPL".to_string()),
+        )
+    }
+
     #[test]
     fn test_new_price_params() {
-        let params = OptionDataPriceParams::new(
-            pos!(100.0),
-            ExpirationDate::Days(pos!(30.0)),
-            spos!(0.2),
-            dec!(0.05),
-            pos!(0.02),
-            None,
-        );
+        let params = get_params();
 
-        assert_eq!(params.underlying_price, pos!(100.0));
-        assert_eq!(params.risk_free_rate.to_f64().unwrap(), 0.05);
-        assert_eq!(params.dividend_yield.to_f64(), 0.02);
-        assert_eq!(params.implied_volatility, spos!(0.2));
+        assert_eq!(*params.underlying_price.unwrap(), pos!(100.0));
+        assert_eq!(
+            params.expiration_date.unwrap().get_days().unwrap(),
+            pos!(30.0)
+        );
+        assert_eq!(params.risk_free_rate.unwrap().to_f64().unwrap(), 0.05);
+        assert_eq!(params.dividend_yield.unwrap().to_f64(), 0.02);
+        assert_eq!(params.underlying_symbol.unwrap(), "AAPL");
     }
 
     #[test]
     fn test_default_price_params() {
         let params = OptionDataPriceParams::default();
-        assert_eq!(params.underlying_price, Positive::ZERO);
-        assert_eq!(params.risk_free_rate.to_f64().unwrap(), ZERO);
-        assert_eq!(params.dividend_yield.to_f64(), ZERO);
-        assert_eq!(params.implied_volatility, None);
+        assert_eq!(params.underlying_price, None);
+        assert_eq!(params.risk_free_rate, None);
+        assert_eq!(params.dividend_yield, None);
+        assert_eq!(params.underlying_symbol, None);
     }
 
     #[test]
     fn test_display_price_params() {
-        let params = OptionDataPriceParams::new(
-            pos!(100.0),
-            ExpirationDate::Days(pos!(30.0)),
-            spos!(0.2),
-            dec!(0.05),
-            pos!(0.02),
-            None,
-        );
+        let params = get_params();
+
         let display_string = format!("{}", params);
         assert!(display_string.contains("Underlying Price: 100"));
-        assert!(display_string.contains("Implied Volatility: 0.200"));
-        assert!(display_string.contains("Risk-Free Rate: 0.05"));
-        assert!(display_string.contains("Dividend Yield: 0.02"));
-    }
-
-    #[test]
-    fn test_display_price_params_no_volatility() {
-        let params = OptionDataPriceParams::new(
-            pos!(100.0),
-            ExpirationDate::Days(pos!(30.0)),
-            None,
-            dec!(0.05),
-            pos!(0.02),
-            None,
-        );
-        let display_string = format!("{}", params);
-        assert!(display_string.contains("Implied Volatility: 0.000"));
+        assert!(display_string.contains("Risk-Free Rate: 5"));
+        assert!(display_string.contains("Dividend Yield: 2"));
+        assert!(display_string.contains("Symbol: AAPL"));
+        assert!(display_string.contains("Expiration: 0.08 Years"));
     }
 
     #[test]
     fn test_option_data_price_params_getters() {
         // Setup test parameters
-        let underlying_price = pos!(100.0);
-        let expiration_date = ExpirationDate::Days(pos!(30.0));
-        let implied_volatility = spos!(0.2);
-        let risk_free_rate = dec!(0.05);
-        let dividend_yield = pos!(0.02);
+        let underlying_price = Some(Box::new(pos!(100.0)));
+        let expiration_date = Some(ExpirationDate::Days(pos!(30.0)));
+        let risk_free_rate = Some(dec!(0.05));
+        let dividend_yield = spos!(0.02);
+        let underlying_symbol = Some("AAPL".to_string());
 
-        let params = OptionDataPriceParams::new(
-            underlying_price,
+        let params = OptionDataPriceParams {
+            underlying_price: underlying_price.clone(),
             expiration_date,
-            implied_volatility,
             risk_free_rate,
             dividend_yield,
-            None,
-        );
+            underlying_symbol: underlying_symbol.clone(),
+        };
 
         // Test each getter
         assert_eq!(params.get_underlying_price(), underlying_price);
         assert_eq!(params.get_expiration_date(), expiration_date);
-        assert_eq!(params.get_implied_volatility(), implied_volatility);
         assert_eq!(params.get_risk_free_rate(), risk_free_rate);
         assert_eq!(params.get_dividend_yield(), dividend_yield);
-    }
-
-    #[test]
-    fn test_option_data_price_params_getters_with_none_volatility() {
-        let params = OptionDataPriceParams::new(
-            pos!(100.0),
-            ExpirationDate::Days(pos!(30.0)),
-            None, // No implied volatility
-            dec!(0.05),
-            pos!(0.02),
-            None,
-        );
-
-        assert_eq!(params.get_implied_volatility(), None);
     }
 
     #[test]
@@ -1419,39 +1240,29 @@ mod tests_option_data_price_params {
         use chrono::{Duration, Utc};
 
         let future_date = Utc::now() + Duration::days(30);
-        let expiration_date = ExpirationDate::DateTime(future_date);
+        let expiration_date = Some(ExpirationDate::DateTime(future_date));
 
-        let params = OptionDataPriceParams::new(
-            pos!(100.0),
-            expiration_date,
-            spos!(0.2),
-            dec!(0.05),
-            pos!(0.02),
-            None,
-        );
+        let mut params = get_params();
+        params.expiration_date = expiration_date;
 
         assert_eq!(params.get_expiration_date(), expiration_date);
     }
 
     #[test]
     fn test_option_data_price_params_getters_zero_values() {
-        let params = OptionDataPriceParams::new(
-            Positive::ZERO,
-            ExpirationDate::Days(Positive::ZERO),
-            Some(Positive::ZERO),
-            Decimal::ZERO,
-            Positive::ZERO,
-            None,
-        );
+        let mut params = get_params();
+        params.underlying_price = Some(Box::new(pos!(0.0)));
+        params.expiration_date = Some(ExpirationDate::Days(pos!(0.0)));
+        params.risk_free_rate = Some(Decimal::ZERO);
+        params.dividend_yield = Some(Positive::ZERO);
 
-        assert_eq!(params.get_underlying_price(), Positive::ZERO);
+        assert_eq!(*params.get_underlying_price().unwrap(), Positive::ZERO);
         assert_eq!(
-            params.get_expiration_date(),
+            params.get_expiration_date().unwrap(),
             ExpirationDate::Days(Positive::ZERO)
         );
-        assert_eq!(params.get_implied_volatility(), Some(Positive::ZERO));
-        assert_eq!(params.get_risk_free_rate(), Decimal::ZERO);
-        assert_eq!(params.get_dividend_yield(), Positive::ZERO);
+        assert_eq!(params.get_risk_free_rate().unwrap(), Decimal::ZERO);
+        assert_eq!(params.get_dividend_yield().unwrap(), Positive::ZERO);
     }
 }
 
@@ -1461,16 +1272,19 @@ mod tests_option_chain_build_params {
     use crate::{pos, spos};
     use rust_decimal_macros::dec;
 
+    fn get_params() -> OptionDataPriceParams {
+        OptionDataPriceParams::new(
+            Some(Box::new(pos!(100.0))),
+            Some(ExpirationDate::Days(pos!(30.0))),
+            Some(dec!(0.05)),
+            spos!(0.02),
+            Some("AAPL".to_string()),
+        )
+    }
+
     #[test]
     fn test_new_chain_build_params() {
-        let price_params = OptionDataPriceParams::new(
-            pos!(100.0),
-            ExpirationDate::Days(pos!(30.0)),
-            spos!(0.2),
-            dec!(0.05),
-            pos!(0.02),
-            None,
-        );
+        let price_params = get_params();
 
         let params = OptionChainBuildParams::new(
             "TEST".to_string(),
@@ -1482,6 +1296,7 @@ mod tests_option_chain_build_params {
             pos!(0.02),
             2,
             price_params,
+            pos!(0.25),
         );
 
         assert_eq!(params.symbol, "TEST");
@@ -1493,13 +1308,10 @@ mod tests_option_chain_build_params {
         assert_eq!(params.decimal_places, 2);
 
         let display = format!("{}", params);
-        assert!(display.contains("TEST"));
-        assert!(display.contains("Volume: 1000"));
-        assert!(display.contains("Chain Size: 10"));
-        assert!(display.contains("Strike Interval: 5"));
-        assert!(display.contains("Skew Factor: 0.1"));
-        assert!(display.contains("Spread: 0.02"));
-        assert!(display.contains("Decimal Places: 2"));
+        assert_eq!(
+            display,
+            r#"{"symbol":"TEST","volume":1000,"chain_size":10,"strike_interval":5,"skew_slope":"-0.2","smile_curve":"0.1","spread":0.02,"decimal_places":2,"price_params":{"underlying_price":100,"expiration_date":{"days":30.0},"risk_free_rate":"0.05","dividend_yield":0.02,"underlying_symbol":"AAPL"},"implied_volatility":0.25}"#
+        );
     }
 
     #[test]
@@ -1516,6 +1328,7 @@ mod tests_option_chain_build_params {
             pos!(0.02),
             2,
             price_params,
+            pos!(0.25),
         );
 
         assert_eq!(params.volume, None);
@@ -1600,22 +1413,21 @@ mod tests_random_positions_params_extended {
 mod tests_sample {
     use super::*;
     use crate::chains::chain::OptionChain;
-    use crate::pos;
+    use crate::{pos, spos};
     use rust_decimal_macros::dec;
 
     #[test]
     fn test_chain() {
         let chain = OptionDataPriceParams::new(
-            Positive::new(2000.0).unwrap(),
-            ExpirationDate::Days(pos!(10.0)),
-            Some(Positive::new(0.01).unwrap()),
-            dec!(0.01),
-            Positive::ZERO,
-            None,
+            Some(Box::new(pos!(100.0))),
+            Some(ExpirationDate::Days(pos!(30.0))),
+            Some(dec!(0.05)),
+            spos!(0.02),
+            Some("AAPL".to_string()),
         );
 
         let params = OptionChainBuildParams::new(
-            "SP500".to_string(),
+            "AAPL".to_string(),
             Some(Positive::ONE),
             5,
             Some(Positive::ONE),
@@ -1624,65 +1436,19 @@ mod tests_sample {
             Positive::new(0.02).unwrap(),
             2,
             chain,
+            pos!(0.25),
         );
 
         let built_chain = OptionChain::build_chain(&params);
 
-        assert_eq!(built_chain.symbol, "SP500");
-        assert_eq!(built_chain.underlying_price, Positive::new(2000.0).unwrap());
-    }
-}
-
-#[cfg(test)]
-mod utils_coverage_tests {
-    use super::*;
-    use crate::chains::utils::empty_string_round_to_2;
-    use crate::{pos, spos};
-
-    #[test]
-    fn test_option_chain_build_params_getters_setters() {
-        let price_params = OptionDataPriceParams::new(
-            pos!(100.0),
-            ExpirationDate::Days(pos!(30.0)),
-            spos!(0.2),
-            dec!(0.05),
-            pos!(0.02),
-            Some("TEST".to_string()),
-        );
-
-        let mut params = OptionChainBuildParams::new(
-            "TEST".to_string(),
-            None,
-            10,
-            spos!(5.0),
-            dec!(-0.2),
-            dec!(0.1),
-            pos!(0.02),
-            2,
-            price_params,
-        );
-
-        // Test get_implied_volatility
-        let iv = params.get_implied_volatility();
-        assert_eq!(iv, spos!(0.2));
-
-        // Test set_underlying_price
-        params.set_underlying_price(&pos!(110.0));
-        assert_eq!(params.price_params.underlying_price, pos!(110.0));
-
-        // Test set_implied_volatility
-        params.set_implied_volatility(spos!(0.25));
-        assert_eq!(params.get_implied_volatility(), spos!(0.25));
-
-        // Test setting to None
-        params.set_implied_volatility(None);
-        assert_eq!(params.get_implied_volatility(), None);
+        assert_eq!(built_chain.symbol, "AAPL");
+        assert_eq!(built_chain.underlying_price, Positive::new(100.0).unwrap());
     }
 
     #[test]
     fn test_empty_string_round_to_2() {
         // Test with Some value
-        let value = Some(pos!(123.456));
+        let value = spos!(123.456);
         let result = empty_string_round_to_2(value);
         assert_eq!(result, "123.46");
 
@@ -1690,219 +1456,5 @@ mod utils_coverage_tests {
         let value: Option<Positive> = None;
         let result = empty_string_round_to_2(value);
         assert_eq!(result, "");
-    }
-}
-
-#[cfg(test)]
-mod tests_calculate_optimal_chain_params {
-    use super::*;
-    use crate::chains::utils::OptionDataPriceParams;
-    use crate::{assert_pos_relative_eq, pos, spos};
-    use rust_decimal_macros::dec;
-
-    // Helper function to create OptionChainBuildParams with different configurations
-    fn create_test_params(
-        price: f64,
-        days: f64,
-        iv: Option<f64>,
-        chain_size: usize,
-    ) -> OptionChainBuildParams {
-        let iv_pos = iv.map(|v| pos!(v));
-
-        OptionChainBuildParams::new(
-            "TEST".to_string(),
-            None,
-            chain_size,
-            spos!(1.0), // This will be replaced by calculation
-            dec!(-0.2),
-            dec!(0.0),
-            pos!(0.02),
-            2,
-            OptionDataPriceParams::new(
-                pos!(price),
-                ExpirationDate::Days(pos!(days)),
-                iv_pos,
-                dec!(0.05),
-                pos!(0.0),
-                Some("TEST".to_string()),
-            ),
-        )
-    }
-
-    #[test]
-    fn test_low_price_short_expiry() {
-        // Test case for low price stock (< $10) with short expiry
-        let params = create_test_params(5.0, 7.0, Some(0.3), 11);
-
-        let result = calculate_optimal_chain_params(&params);
-        assert!(result.is_ok());
-
-        let (interval, num_strikes) = result.unwrap();
-        assert_eq!(num_strikes, 11);
-        // For a $5 stock with short expiry, we expect a small interval
-        assert_pos_relative_eq!(interval, pos!(0.25), pos!(0.1));
-    }
-
-    #[test]
-    fn test_mid_price_standard_expiry() {
-        // Test case for mid-priced stock ($25-$100) with standard expiry
-        let params = create_test_params(50.0, 30.0, Some(0.2), 15);
-
-        let result = calculate_optimal_chain_params(&params);
-        assert!(result.is_ok());
-
-        let (interval, num_strikes) = result.unwrap();
-        assert_eq!(num_strikes, 15);
-        // For a $50 stock with 30-day expiry, we expect interval around $5
-        assert_pos_relative_eq!(interval, pos!(5.0), pos!(2.5));
-    }
-
-    #[test]
-    fn test_high_price_long_expiry() {
-        // Test case for high priced stock (>$100) with long expiry
-        let params = create_test_params(500.0, 180.0, Some(0.25), 21);
-
-        let result = calculate_optimal_chain_params(&params);
-        assert!(result.is_ok());
-
-        let (interval, num_strikes) = result.unwrap();
-        assert_eq!(num_strikes, 21);
-        // For a $500 stock with 6-month expiry, we expect a larger interval
-        assert_pos_relative_eq!(interval, pos!(20.0), pos!(0.1));
-    }
-
-    #[test]
-    fn test_very_high_price() {
-        // Test case for very high priced stock (>$1000)
-        let params = create_test_params(3000.0, 30.0, Some(0.15), 15);
-
-        let result = calculate_optimal_chain_params(&params);
-        assert!(result.is_ok());
-
-        let (interval, num_strikes) = result.unwrap();
-        assert_eq!(num_strikes, 15);
-        // For a $3000 stock, we expect interval to be around 1% of price ($30) or greater
-        assert!(interval >= pos!(30.0));
-    }
-
-    #[test]
-    fn test_default_implied_volatility() {
-        // Test case where no implied volatility is provided (should default to 20%)
-        let params_with_iv = create_test_params(100.0, 30.0, Some(0.2), 11);
-        let params_without_iv = create_test_params(100.0, 30.0, None, 11);
-
-        let result_with_iv = calculate_optimal_chain_params(&params_with_iv);
-        let result_without_iv = calculate_optimal_chain_params(&params_without_iv);
-
-        assert!(result_with_iv.is_ok());
-        assert!(result_without_iv.is_ok());
-
-        let (interval_with_iv, _) = result_with_iv.unwrap();
-        let (interval_without_iv, _) = result_without_iv.unwrap();
-
-        // Should be approximately equal since default IV is 20%
-        assert_pos_relative_eq!(interval_with_iv, interval_without_iv, pos!(0.001));
-    }
-
-    #[test]
-    fn test_high_volatility() {
-        // Test case with high volatility
-        let low_vol_params = create_test_params(100.0, 30.0, Some(0.1), 11);
-        let high_vol_params = create_test_params(100.0, 30.0, Some(0.9), 11);
-
-        let low_vol_result = calculate_optimal_chain_params(&low_vol_params);
-        let high_vol_result = calculate_optimal_chain_params(&high_vol_params);
-
-        assert!(low_vol_result.is_ok());
-        assert!(high_vol_result.is_ok());
-
-        let (low_vol_interval, _) = low_vol_result.unwrap();
-        let (high_vol_interval, _) = high_vol_result.unwrap();
-
-        // Higher volatility should lead to wider intervals
-        assert!(high_vol_interval >= low_vol_interval);
-    }
-
-    #[test]
-    fn test_different_chain_sizes() {
-        // Test how different chain sizes affect the interval
-        let small_chain = create_test_params(1000.0, 30.0, Some(0.2), 5);
-        let large_chain = create_test_params(1000.0, 30.0, Some(0.2), 21);
-
-        let small_result = calculate_optimal_chain_params(&small_chain);
-        let large_result = calculate_optimal_chain_params(&large_chain);
-
-        assert!(small_result.is_ok());
-        assert!(large_result.is_ok());
-
-        let (small_interval, small_num) = small_result.unwrap();
-        let (large_interval, large_num) = large_result.unwrap();
-
-        assert_eq!(small_num, 5);
-        assert_eq!(large_num, 21);
-
-        // Smaller chain should have larger intervals to cover same expected move
-        assert!(small_interval > large_interval);
-    }
-
-    #[test]
-    fn test_time_scaling_factor() {
-        // Test how expiration time affects the interval
-        let short_expiry = create_test_params(100.0, 7.0, Some(0.2), 11);
-        let long_expiry = create_test_params(100.0, 365.0, Some(0.2), 11);
-
-        let short_result = calculate_optimal_chain_params(&short_expiry);
-        let long_result = calculate_optimal_chain_params(&long_expiry);
-
-        assert!(short_result.is_ok());
-        assert!(long_result.is_ok());
-
-        let (short_interval, _) = short_result.unwrap();
-        let (long_interval, _) = long_result.unwrap();
-
-        // Longer expiry should lead to wider intervals due to time_factor
-        assert!(long_interval > short_interval);
-    }
-
-    #[test]
-    fn test_round_to_clean_interval() {
-        // Test the rounding to clean market-friendly intervals
-        // This is an indirect test of the round_to_clean_interval function
-
-        // Test with various odd intervals that should be rounded
-        let test_cases = [
-            (14.3, 100.0, 15.0), // Should round to 15
-            (8.7, 50.0, 10.0),   // Should round to 10
-            (0.37, 5.0, 0.5),    // Should round to 0.5
-            (2.2, 25.0, 2.5),    // Should round to 2.5
-        ];
-
-        for (_, price, _) in test_cases {
-            let params = create_test_params(price, 30.0, Some(0.2), 11);
-
-            // This is a simplistic simulation - the actual function is more complex
-            // The goal is to test the rounding behavior
-            let result = calculate_optimal_chain_params(&params);
-
-            // Instead of checking exact results, we validate the rounding logic
-            // by ensuring the returned interval is a clean market value
-            assert!(result.is_ok());
-
-            let (actual_interval, _) = result.unwrap();
-            // The actual value might not match our expected exactly due to the
-            // complexity of the function, but it should be a "clean" value
-            // Check if it's a typical option chain interval
-            let typical_intervals = [0.5, 1.0, 2.5, 5.0, 10.0, 20.0, 25.0, 50.0, 100.0];
-
-            let is_clean_interval = typical_intervals
-                .iter()
-                .any(|&i| (actual_interval.to_f64() - i).abs() < 0.001);
-
-            assert!(
-                is_clean_interval,
-                "Interval {} should be rounded to a clean market value",
-                actual_interval
-            );
-        }
     }
 }

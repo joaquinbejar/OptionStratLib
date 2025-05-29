@@ -31,7 +31,6 @@ use std::error::Error;
 ///     - Calculate the payoff of the option for this simulation (for a call option, this is `max(st - strike_price, 0)`).
 ///     - Add the payoff to the `payoff_sum`.
 /// 4. Return the average payoff discounted to its present value.
-#[allow(dead_code)]
 pub fn monte_carlo_option_pricing(
     option: &Options,
     steps: usize,       // Number of time steps

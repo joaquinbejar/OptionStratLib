@@ -80,7 +80,7 @@ pub enum Side {
 ///
 /// `OptionStyle` is a critical attribute for options contracts as it directly
 /// affects valuation, pricing models, and exercise strategies.
-#[derive(Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default, Ord, PartialOrd)]
 pub enum OptionStyle {
     /// Represents a call option, which gives the holder the right (but not obligation)
     /// to buy the underlying asset at the strike price before or at expiration.
@@ -215,6 +215,45 @@ pub enum OptionType {
     },
 }
 
+impl Payoff for OptionType {
+    fn payoff(&self, info: &PayoffInfo) -> f64 {
+        match self {
+            OptionType::European | OptionType::American => standard_payoff(info),
+            OptionType::Bermuda { .. } => standard_payoff(info),
+            OptionType::Asian { averaging_type } => calculate_asian_payoff(averaging_type, info),
+            OptionType::Barrier {
+                barrier_type,
+                barrier_level,
+            } => calculate_barrier_payoff(barrier_type, barrier_level, info),
+            OptionType::Binary { binary_type } => calculate_binary_payoff(binary_type, info),
+            OptionType::Lookback { lookback_type } => match lookback_type {
+                LookbackType::FixedStrike => standard_payoff(info),
+                LookbackType::FloatingStrike => calculate_floating_strike_payoff(info),
+            },
+            OptionType::Compound { underlying_option } => underlying_option.payoff(info),
+            OptionType::Chooser { .. } => (info.spot - info.strike)
+                .max(Positive::ZERO)
+                .max(
+                    (info.strike.to_dec() - info.spot.to_dec())
+                        .max(Decimal::ZERO)
+                        .into(),
+                )
+                .to_f64(),
+            OptionType::Cliquet { .. } => standard_payoff(info),
+            OptionType::Rainbow { .. }
+            | OptionType::Spread { .. }
+            | OptionType::Exchange { .. } => standard_payoff(info),
+            OptionType::Quanto { exchange_rate } => standard_payoff(info) * exchange_rate,
+            OptionType::Power { exponent } => match info.style {
+                OptionStyle::Call => (info.spot.to_f64().powf(*exponent) - info.strike).max(ZERO),
+                OptionStyle::Put => (info.strike - info.spot.to_f64().powf(*exponent))
+                    .max(Positive::ZERO)
+                    .to_f64(),
+            },
+        }
+    }
+}
+
 /// A structure representing the basic properties of an option in financial terms.
 /// This structure is designed to be lightweight and provides essential details
 /// about an options contract.
@@ -266,43 +305,51 @@ pub struct OptionBasicType<'a> {
 }
 
 /// Describes how the average price is calculated for Asian options.
-#[allow(dead_code)]
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum AsianAveragingType {
-    /// Arithmetic averaging calculates the average of the prices in a straightforward manner.
-    /// This is the most common type of averaging for Asian options.
+    /// Arithmetic averaging sums all observed prices and divides by the number of observations.
     Arithmetic,
-    /// Geometric averaging calculates the average using the geometric mean.
-    /// This can be less sensitive to extreme values compared to arithmetic averaging.
+    /// Geometric averaging takes the nth root of the product of n observed prices.
     Geometric,
 }
 
 /// Describes the type of barrier for Barrier options.
-#[allow(dead_code)]
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum BarrierType {
-    /// The option becomes active only if the underlying asset price goes above a certain level.
+    /// The option becomes active if the underlying asset price goes above a certain level.
     UpAndIn,
     /// The option becomes inactive if the underlying asset price goes above a certain level.
     UpAndOut,
-    /// The option becomes active only if the underlying asset price goes below a certain level.
+    /// The option becomes active if the underlying asset price goes below a certain level.
     DownAndIn,
     /// The option becomes inactive if the underlying asset price goes below a certain level.
     DownAndOut,
 }
 
-/// Describes the type of binary option.
-#[allow(dead_code)]
+/// Represents different types of binary options, which are financial instruments that provide a fixed payout based on whether certain conditions are met.
+///
+/// # Variants
+///
+/// - `CashOrNothing`:
+///   The option pays a fixed cash amount if the underlying asset's value is above or below a predefined level.
+///
+/// - `AssetOrNothing`:
+///   The option pays the value of the underlying asset itself if the underlying asset's price is above or below a predefined level.
+///
+/// - `Gap`:
+///   Pays out based on how far the underlying asset price is above the strike price at expiration.
+///   The payout is proportional to the difference between the asset price and the strike price.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum BinaryType {
     /// The option pays a fixed amount of cash if the underlying asset is above or below a certain level.
     CashOrNothing,
     /// The option pays the value of the underlying asset if it is above or below a certain level.
     AssetOrNothing,
+    /// Pays out if the underlying asset price is above the strike price at expiration, with the payout proportional to how far above the strike it is.
+    Gap,
 }
 
 /// Describes the type of lookback option.
-#[allow(dead_code)]
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum LookbackType {
     /// The strike price is fixed at the beginning, and the payoff is based on the maximum or minimum price of the underlying asset during the option's life.
@@ -311,45 +358,34 @@ pub enum LookbackType {
     FloatingStrike,
 }
 
-impl Payoff for OptionType {
-    fn payoff(&self, info: &PayoffInfo) -> f64 {
-        match self {
-            OptionType::European | OptionType::American => standard_payoff(info),
-            OptionType::Bermuda { .. } => standard_payoff(info),
-            OptionType::Asian { averaging_type } => calculate_asian_payoff(averaging_type, info),
-            OptionType::Barrier {
-                barrier_type,
-                barrier_level,
-            } => calculate_barrier_payoff(barrier_type, barrier_level, info),
-            OptionType::Binary { binary_type } => calculate_binary_payoff(binary_type, info),
-            OptionType::Lookback { lookback_type } => match lookback_type {
-                LookbackType::FixedStrike => standard_payoff(info),
-                LookbackType::FloatingStrike => calculate_floating_strike_payoff(info),
-            },
-            OptionType::Compound { underlying_option } => underlying_option.payoff(info),
-            OptionType::Chooser { .. } => (info.spot - info.strike)
-                .max(Positive::ZERO)
-                .max(
-                    (info.strike.to_dec() - info.spot.to_dec())
-                        .max(Decimal::ZERO)
-                        .into(),
-                )
-                .to_f64(),
-            OptionType::Cliquet { .. } => standard_payoff(info),
-            OptionType::Rainbow { .. }
-            | OptionType::Spread { .. }
-            | OptionType::Exchange { .. } => standard_payoff(info),
-            OptionType::Quanto { exchange_rate } => standard_payoff(info) * exchange_rate,
-            OptionType::Power { exponent } => match info.style {
-                OptionStyle::Call => (info.spot.to_f64().powf(*exponent) - info.strike).max(ZERO),
-                OptionStyle::Put => (info.strike - info.spot.to_f64().powf(*exponent))
-                    .max(Positive::ZERO)
-                    .to_f64(),
-            },
-        }
-    }
-}
-
+/// Calculates the payoff of an Asian option based on the average spot prices.
+///
+/// # Parameters
+/// - `averaging_type`: Specifies the method of averaging the spot prices. It can either be:
+///   - `AsianAveragingType::Arithmetic`: Uses arithmetic mean for averaging.
+///   - `AsianAveragingType::Geometric`: Uses geometric mean for averaging.
+/// - `info`: A reference to a `PayoffInfo` object containing the details about the option such as
+///   the spot prices, strike price, and option style (Call or Put).
+///
+/// # Returns
+/// - The calculated payoff as a `f64`. If the spot prices are not present or their length is zero,
+///   it will return ZERO (assumed to be a constant defined elsewhere).
+///
+/// # Calculation
+/// - The function first calculates the average of the given spot prices based on the specified `averaging_type`.
+/// - For arithmetic averaging, the sum of the spot prices is computed, divided by the number of prices.
+/// - For geometric averaging, the product of the spot prices is computed and the nth root of the product
+///   is taken, where `n` is the number of prices.
+/// - If the averaging fails due to invalid input (e.g., missing or zero-length spot prices), the result is ZERO.
+///
+/// - Once the average is calculated, the payoff is computed based on the option style:
+///   - For a `Call` option: The payoff is the maximum of `(average - strike)` or ZERO.
+///   - For a `Put` option: The payoff is the maximum of `(strike - average)` or ZERO.
+///
+/// # Assumptions:
+/// - The `spot_prices` and their length (`spot_prices_len()`) are correctly passed via the `PayoffInfo` object.
+/// - Constants `ZERO` and behavior for `Positive::ZERO.into()` are defined elsewhere in the code base.
+///
 fn calculate_asian_payoff(averaging_type: &AsianAveragingType, info: &PayoffInfo) -> f64 {
     let average = match (&info.spot_prices, info.spot_prices_len()) {
         (Some(spot_prices), Some(len)) if len > 0 => match averaging_type {
@@ -367,6 +403,36 @@ fn calculate_asian_payoff(averaging_type: &AsianAveragingType, info: &PayoffInfo
     }
 }
 
+/// Calculates the payoff for a financial instrument with a barrier feature.
+///
+/// # Arguments
+///
+/// * `barrier_type` - Specifies the type of barrier condition. Can be one of the following:
+///     - `BarrierType::UpAndIn`: Payoff is only valid if the spot price has risen above or to the barrier level.
+///     - `BarrierType::DownAndIn`: Payoff is only valid if the spot price has fallen below or to the barrier level.
+///     - `BarrierType::UpAndOut`: Payoff is only valid if the spot price does not rise above the barrier level.
+///     - `BarrierType::DownAndOut`: Payoff is only valid if the spot price does not fall below the barrier level.
+/// * `barrier_level` - A reference to the barrier level price, which serves as the activation or deactivation threshold for the payoff.
+/// * `info` - Contains information required to calculate the payoff, including the spot price and additional data for standard payoff calculations.
+///
+/// # Returns
+///
+/// Returns the calculated payoff as a `f64`. If the barrier conditions are met, the payoff will either be the standard payoff or zero, based on the barrier type.
+///
+/// # Behavior
+///
+/// 1. Evaluates whether the current spot price satisfies the barrier condition based on the given `barrier_type` and `barrier_level`.
+/// 2. If the condition for an "In" type (`UpAndIn` or `DownAndIn`) barrier is met, the standard payoff is returned; otherwise, it returns `0.0`.
+/// 3. If the condition for an "Out" type (`UpAndOut` or `DownAndOut`) barrier is met, the payoff is `0.0`; otherwise, it returns the standard payoff.
+///
+/// # Assumptions
+///
+/// * It is assumed that the `standard_payoff` function is defined elsewhere and provides the base payoff calculation.
+/// * The `PayoffInfo` struct and the `BarrierType` enum are pre-defined and accessible in the same context.
+///
+/// # Errors
+///
+/// This function does not explicitly handle errors. Ensure that the inputs are valid for the `barrier_type`, `barrier_level`, and `info` parameters.
 fn calculate_barrier_payoff(
     barrier_type: &BarrierType,
     barrier_level: &f64,
@@ -395,6 +461,42 @@ fn calculate_barrier_payoff(
     }
 }
 
+/// Calculates the payout for a binary option based on its type and associated payoff details.
+///
+/// # Parameters
+///
+/// - `binary_type`: An enum (`BinaryType`) representing the type of binary option. Supported types are:
+///   - `CashOrNothing`: Pays a fixed amount (1.0) if the option expires in-the-money; otherwise, pays 0.0.
+///   - `AssetOrNothing`: Pays the current spot price of the asset if the option expires in-the-money; otherwise, pays 0.0.
+///   - `Gap`: Pays the absolute difference between the spot price and the strike price (if in-the-money); otherwise, pays 0.0.
+///
+/// - `info`: A reference to a `PayoffInfo` struct containing the following fields:
+///   - `spot`: The current price of the underlying asset.
+///   - `strike`: The strike price of the option.
+///   - `style`: An enum (`OptionStyle`) representing whether the option is a call (long) or put (short):
+///     - `Call`: In-the-money if `spot > strike`.
+///     - `Put`: In-the-money if `spot < strike`.
+///
+/// # Returns
+///
+/// - A `f64` value representing the calculated payoff of the binary option based on the provided conditions.
+///
+/// # Logic
+///
+/// 1. Determine whether the option is in-the-money based on its style (`Call` or `Put`) and the relationship
+///    between the `spot` price and the `strike` price.
+///
+/// 2. Calculate the payoff based on the type of binary option:
+///
+///    - **CashOrNothing**: Returns `1.0` if the option is in-the-money; otherwise, returns `0.0`.
+///    - **AssetOrNothing**: Returns the `spot` price (converted into `f64`) if the option is in-the-money; otherwise, returns `0.0`.
+///    - **Gap**: Returns the absolute difference between the `spot` and `strike` prices (converted into `f64`) if the option is in-the-money; otherwise, returns `0.0`.
+///
+/// # Notes
+///
+/// - The `to_f64` method is assumed to be implemented for the type of `spot` and `strike` to ensure compatibility with the calculations.
+/// - The definition and behavior of `BinaryType`, `PayoffInfo`, and `OptionStyle` are external to this function.
+///
 fn calculate_binary_payoff(binary_type: &BinaryType, info: &PayoffInfo) -> f64 {
     let is_in_the_money = match info.style {
         OptionStyle::Call => info.spot > info.strike,
@@ -415,9 +517,47 @@ fn calculate_binary_payoff(binary_type: &BinaryType, info: &PayoffInfo) -> f64 {
                 0.0
             }
         }
+        BinaryType::Gap => {
+            if is_in_the_money {
+                // For Gap options, the payoff is proportional to how far above/below the strike price
+                // the underlying asset is at expiration
+                (info.spot.to_f64() - info.strike.to_f64()).abs()
+            } else {
+                0.0
+            }
+        }
     }
 }
 
+/// Calculates the payoff for a floating strike option based on the provided option information.
+///
+/// # Parameters
+/// - `info`: A reference to a `PayoffInfo` struct that contains all necessary information for
+///   calculating the payoff. The struct includes details such as the option style (call or put),
+///   the spot value, and the minimum or maximum spot observed (as applicable).
+///
+/// # Returns
+/// - A `f64` representing the calculated payoff amount for the floating strike option.
+///
+/// # Logic
+/// 1. Determines the "extremum" based on the option style:
+///    - For a call option (`OptionStyle::Call`), the extremum is the minimum spot value (`info.spot_min`).
+///    - For a put option (`OptionStyle::Put`), the extremum is the maximum spot value (`info.spot_max`).
+/// 2. Calculates the payoff based on the difference between the spot price (`info.spot.to_f64()`)
+///    and the extremum:
+///    - For a call option, the payoff is `spot - extremum` (or `spot` if `extremum` is unavailable).
+///    - For a put option, the payoff is `extremum - spot` (or `-spot` if `extremum` is unavailable).
+///
+/// # Assumptions
+/// - `info.to_f64()` correctly converts the spot value to a floating-point number (`f64`).
+/// - `info.spot_min` and `info.spot_max` are `Option<f64>` values that might be `None`, in which case
+///   the fallback value (`ZERO`) is used in the payoff calculation.
+///
+/// # Notes
+/// - Ensure that the `info.spot.to_f64()` implementation and the extremum values (`spot_min`, `spot_max`)
+///   are compatible with your application's floating-point requirements.
+/// - The function handles missing extremum values gracefully using a default value of `ZERO`.
+///
 fn calculate_floating_strike_payoff(info: &PayoffInfo) -> f64 {
     let extremum = match info.style {
         OptionStyle::Call => info.spot_min,

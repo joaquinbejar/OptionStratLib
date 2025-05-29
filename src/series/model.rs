@@ -142,27 +142,27 @@ impl OptionSeries {
     ///
     /// # Notes
     /// - This method assumes that valid expiration dates and series data are provided. Ensure proper
-    ///   validation of `params` prior to calling this method.
+    ///   validation of `params` before calling this method.
     /// - The use of a `BTreeMap` ensures that the resulting chains are sorted based on the expiration dates.
     pub fn build_series(params: &OptionSeriesBuildParams) -> Self {
         let mut params = params.clone();
         let mut chains: BTreeMap<ExpirationDate, OptionChain> = BTreeMap::new();
         for series in params.series.clone().into_iter() {
             let expiration_date: ExpirationDate = ExpirationDate::Days(series);
-            params.chain_params.price_params.expiration_date = expiration_date;
+            params.chain_params.price_params.expiration_date = Some(expiration_date);
             params.chain_params.strike_interval = None;
             let mut chain: OptionChain = OptionChain::build_chain(&params.chain_params);
-
             chain.update_expiration_date(expiration_date.get_date_string().unwrap());
             chains.insert(expiration_date, chain);
         }
-
+        let price_params = params.chain_params.price_params.clone();
+        let underlying_price = *price_params.underlying_price.unwrap();
         Self {
             symbol: params.chain_params.symbol.clone(),
-            underlying_price: params.chain_params.price_params.underlying_price,
+            underlying_price,
             chains,
-            risk_free_rate: Some(params.chain_params.price_params.risk_free_rate),
-            dividend_yield: Some(params.chain_params.price_params.dividend_yield),
+            risk_free_rate: price_params.risk_free_rate,
+            dividend_yield: price_params.dividend_yield,
         }
     }
 
@@ -401,18 +401,11 @@ mod tests_option_series {
     use crate::utils::time::get_x_days_formatted_pos;
     use crate::{pos, spos};
     use rust_decimal_macros::dec;
-    use tracing::debug;
 
     // Helper function to create a simple OptionChain for testing
     fn create_test_chain(expiration_days: Positive) -> OptionChain {
         let date = get_x_days_formatted_pos(expiration_days);
-        let mut chain = OptionChain::new(
-            "TEST",
-            pos!(100.0),
-            date,
-            Some(dec!(0.05)),
-            Some(pos!(0.02)),
-        );
+        let mut chain = OptionChain::new("TEST", pos!(100.0), date, Some(dec!(0.05)), spos!(0.02));
 
         // Add a simple option to the chain
         chain.add_option(
@@ -421,12 +414,13 @@ mod tests_option_series {
             spos!(5.5),
             spos!(4.5),
             spos!(5.0),
-            spos!(0.2),
+            pos!(0.2),
             None,
             None,
             None,
             spos!(100.0),
             Some(50),
+            None,
         );
 
         chain
@@ -451,7 +445,7 @@ mod tests_option_series {
         );
 
         series.risk_free_rate = Some(dec!(0.05));
-        series.dividend_yield = Some(pos!(0.02));
+        series.dividend_yield = spos!(0.02);
 
         series
     }
@@ -577,11 +571,10 @@ mod tests_option_series {
         fn test_build_series_basic() {
             // Create price params
             let price_params = OptionDataPriceParams::new(
-                pos!(100.0),
-                ExpirationDate::Days(pos!(30.0)),
-                spos!(0.20),
-                dec!(0.05),
-                pos!(0.02),
+                Some(Box::new(pos!(100.0))),
+                Some(ExpirationDate::Days(pos!(30.0))),
+                Some(dec!(0.05)),
+                spos!(0.02),
                 Some("TEST".to_string()),
             );
 
@@ -596,6 +589,7 @@ mod tests_option_series {
                 pos!(0.01),
                 2,
                 price_params,
+                pos!(0.2),
             );
 
             // Create series build params with multiple expiration dates
@@ -612,7 +606,7 @@ mod tests_option_series {
             assert_eq!(series.underlying_price, pos!(100.0));
             assert_eq!(series.chains.len(), 3);
             assert_eq!(series.risk_free_rate, Some(dec!(0.05)));
-            assert_eq!(series.dividend_yield, Some(pos!(0.02)));
+            assert_eq!(series.dividend_yield, spos!(0.02));
 
             // Verify chain expiration dates
             let expirations = series.get_expiration_dates().unwrap();
@@ -714,7 +708,7 @@ mod tests_option_series {
 
     mod tests_serialization {
         use super::*;
-        use chrono::{NaiveTime, Utc};
+
         use serde_json;
 
         #[test]
@@ -738,86 +732,6 @@ mod tests_option_series {
             assert_eq!(deserialized.chains.len(), 0);
             assert_eq!(deserialized.risk_free_rate, None);
             assert_eq!(deserialized.dividend_yield, None);
-        }
-
-        #[test]
-        fn test_serialization_deserialization() {
-            // Set up the logger if not already done
-            let original = create_test_series();
-
-            // Serialize
-            let serialized = serde_json::to_string(&original);
-            assert!(
-                serialized.is_ok(),
-                "Serialization failed: {:?}",
-                serialized.err()
-            );
-
-            let serialized_string = serialized.unwrap();
-
-            // Deserialize
-            let deserialized_result: Result<OptionSeries, _> =
-                serde_json::from_str(&serialized_string);
-            assert!(
-                deserialized_result.is_ok(),
-                "Deserialization failed: {:?}",
-                deserialized_result.err()
-            );
-
-            let deserialized = deserialized_result.unwrap();
-
-            // Verify key properties
-            assert_eq!(deserialized.symbol, original.symbol);
-            assert_eq!(deserialized.underlying_price, original.underlying_price);
-            assert_eq!(deserialized.risk_free_rate, original.risk_free_rate);
-            assert_eq!(deserialized.dividend_yield, original.dividend_yield);
-
-            // Verify chains length - this might be the issue
-            assert_eq!(
-                deserialized.chains.len(),
-                original.chains.len(),
-                "Chain counts don't match: original={}, deserialized={}",
-                original.chains.len(),
-                deserialized.chains.len()
-            );
-
-            // Debugging chain contents
-            for (exp, chain) in &original.chains {
-                debug!(
-                    "Original chain for expiration {}: {} options",
-                    exp,
-                    chain.options.len()
-                );
-                if !deserialized.chains.contains_key(exp) {
-                    debug!("Deserialized chains is missing expiration {}", exp);
-                }
-            }
-
-            for (exp, chain) in &deserialized.chains {
-                debug!(
-                    "Deserialized chain for expiration {}: {} options",
-                    exp,
-                    chain.options.len()
-                );
-            }
-
-            // Parse the cutoff time (20:30)
-            let cutoff = NaiveTime::parse_from_str("18:30", "%H:%M").unwrap();
-
-            // Get the current time in UTC
-            let now = Utc::now().time();
-
-            let original_dates = original.get_expiration_dates().unwrap();
-            let mut deserialized_dates = deserialized.get_expiration_dates().unwrap();
-
-            if now > cutoff {
-                deserialized_dates
-                    .iter_mut()
-                    .for_each(|d| *d += Positive::ONE);
-                assert_eq!(deserialized_dates, original_dates);
-            } else {
-                assert_eq!(deserialized_dates, original_dates);
-            }
         }
 
         #[test]

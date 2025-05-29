@@ -169,9 +169,10 @@ mod traits;
 mod utils;
 
 pub use utils::{
-    adjust_volatility, annualized_volatility, constant_volatility, de_annualized_volatility,
-    ewma_volatility, garch_volatility, generate_ou_process, historical_volatility,
-    implied_volatility, simulate_heston_volatility, uncertain_volatility_bounds,
+    adjust_volatility, annualized_volatility, calculate_iv, constant_volatility,
+    de_annualized_volatility, ewma_volatility, garch_volatility, generate_ou_process,
+    historical_volatility, implied_volatility, simulate_heston_volatility,
+    uncertain_volatility_bounds,
 };
 
 pub use traits::{AtmIvProvider, VolatilitySmile};

@@ -717,7 +717,7 @@ impl Optimizable for BullCallSpread {
             StrategyLegs::TwoLegs { first, second } => (first, second),
             _ => panic!("Invalid number of legs for this strategy"),
         };
-        let implied_volatility = long.implied_volatility.unwrap();
+        let implied_volatility = long.implied_volatility;
         assert!(implied_volatility <= Positive::ONE);
         BullCallSpread::new(
             chain.symbol.clone(),
@@ -1255,6 +1255,7 @@ mod tests_bull_call_spread_optimization {
     use super::*;
     use crate::chains::OptionData;
     use crate::model::ExpirationDate;
+
     use crate::spos;
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
@@ -1268,12 +1269,13 @@ mod tests_bull_call_spread_optimization {
             spos!(16.2),     // call_ask
             None,            // put_bid
             None,            // put_ask
-            spos!(0.2),      // implied_volatility
+            pos!(0.2),       // implied_volatility
             Some(dec!(0.8)), // delta
             Some(dec!(0.2)),
             Some(dec!(0.2)),
             spos!(100.0), // volume
             Some(50),     // open_interest
+            None,
         );
 
         chain.add_option(
@@ -1282,12 +1284,13 @@ mod tests_bull_call_spread_optimization {
             spos!(11.7),
             None,
             None,
-            spos!(0.2),
+            pos!(0.2),
             Some(dec!(0.7)),
             Some(dec!(0.2)),
             Some(dec!(0.2)),
             spos!(150.0),
             Some(75),
+            None,
         );
 
         chain.add_option(
@@ -1296,12 +1299,13 @@ mod tests_bull_call_spread_optimization {
             spos!(7.2),
             None,
             None,
-            spos!(0.2),
+            pos!(0.2),
             Some(dec!(0.6)),
             Some(dec!(0.2)),
             Some(dec!(0.2)),
             spos!(200.0),
             Some(100),
+            None,
         );
 
         chain.add_option(
@@ -1310,12 +1314,13 @@ mod tests_bull_call_spread_optimization {
             spos!(3.7),
             None,
             None,
-            spos!(0.2),
+            pos!(0.2),
             Some(dec!(0.5)),
             Some(dec!(0.2)),
             Some(dec!(0.2)),
             spos!(250.0),
             Some(125),
+            None,
         );
 
         chain.add_option(
@@ -1324,12 +1329,13 @@ mod tests_bull_call_spread_optimization {
             spos!(1.2),
             None,
             None,
-            spos!(0.2),
+            pos!(0.2),
             Some(dec!(0.4)),
             Some(dec!(0.2)),
             Some(dec!(0.2)),
             spos!(300.0),
             Some(150),
+            None,
         );
 
         chain
@@ -1431,12 +1437,18 @@ mod tests_bull_call_spread_optimization {
             spos!(7.2),
             None,
             None,
-            spos!(0.2),
+            pos!(0.2),
             Some(dec!(0.6)),
             Some(dec!(0.2)),
             Some(dec!(0.2)),
             spos!(100.0),
             Some(50),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
         );
 
         assert!(spread.is_valid_optimal_option(&option, &FindOptimalSide::All));
@@ -1457,12 +1469,18 @@ mod tests_bull_call_spread_optimization {
             spos!(1.2),
             None,
             None,
-            spos!(0.2),
+            pos!(0.2),
             Some(dec!(0.4)),
             Some(dec!(0.2)),
             Some(dec!(0.2)),
             spos!(100.0),
             Some(50),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
         );
 
         assert!(spread.is_valid_optimal_option(&option, &FindOptimalSide::All));
@@ -1483,12 +1501,18 @@ mod tests_bull_call_spread_optimization {
             spos!(7.2),
             None,
             None,
-            spos!(0.2),
+            pos!(0.2),
             Some(dec!(0.6)),
             Some(dec!(0.2)),
             Some(dec!(0.2)),
             spos!(100.0),
             Some(50),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
         );
         let short_option = OptionData::new(
             pos!(100.0),
@@ -1496,12 +1520,18 @@ mod tests_bull_call_spread_optimization {
             spos!(3.7),
             None,
             None,
-            spos!(0.2),
+            pos!(0.2),
             Some(dec!(0.5)),
             Some(dec!(0.2)),
             Some(dec!(0.2)),
             spos!(100.0),
             Some(50),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
         );
 
         let legs = StrategyLegs::TwoLegs {
@@ -1520,12 +1550,18 @@ mod tests_bull_call_spread_optimization {
             Some(Positive::ZERO),
             None,
             None,
-            spos!(0.2),
+            pos!(0.2),
             Some(dec!(0.6)),
             Some(dec!(0.2)),
             Some(dec!(0.2)),
             spos!(100.0),
             Some(50),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
         );
         let short_option = OptionData::new(
             pos!(100.0),
@@ -1533,12 +1569,18 @@ mod tests_bull_call_spread_optimization {
             spos!(3.5),
             None,
             None,
-            spos!(0.2),
+            pos!(0.2),
             Some(dec!(0.5)),
             Some(dec!(0.2)),
             Some(dec!(0.2)),
             spos!(100.0),
             Some(50),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
         );
 
         let legs = StrategyLegs::TwoLegs {

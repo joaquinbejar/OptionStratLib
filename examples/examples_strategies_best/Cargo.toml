@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-optionstratlib = { path = "../.." }
+optionstratlib = { path = "../.." , features = ["plotly", "kaleido"]}
 tracing = "0.1.41"
 rust_decimal = { version = "1.36.0", features = ["maths", "serde"] }
 rust_decimal_macros = "1.36.0"

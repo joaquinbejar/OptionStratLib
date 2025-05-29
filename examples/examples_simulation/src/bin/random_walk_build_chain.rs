@@ -4,7 +4,6 @@ use optionstratlib::chains::{OptionChainBuildParams, generator_optionchain};
 use optionstratlib::simulation::randomwalk::RandomWalk;
 use optionstratlib::simulation::steps::{Step, Xstep, Ystep};
 use optionstratlib::simulation::{WalkParams, WalkType, WalkTypeAble};
-use optionstratlib::utils::setup_logger;
 use optionstratlib::utils::time::{TimeFrame, convert_time_frame, get_x_days_formatted};
 use optionstratlib::visualization::Graph;
 use optionstratlib::{ExpirationDate, Positive, pos};
@@ -28,7 +27,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let underlying_price = pos!(150.0);
     let days = pos!(30.0);
     let std_dev = pos!(20.0);
-    let implied_volatility = Some(std_dev / 100.0);
+    let implied_volatility = std_dev / 100.0;
     let risk_free_rate = dec!(0.02);
     let dividend_yield = pos!(0.01);
     let symbol = "AAPL".to_string();
@@ -41,11 +40,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let decimal_places = 2;
 
     let price_params = OptionDataPriceParams::new(
-        underlying_price,
-        ExpirationDate::Days(days),
-        implied_volatility,
-        risk_free_rate,
-        dividend_yield,
+        Some(Box::new(underlying_price)),
+        Some(ExpirationDate::Days(days)),
+        Some(risk_free_rate),
+        Some(dividend_yield),
         Some(symbol.clone()),
     );
     let build_params = OptionChainBuildParams::new(
@@ -58,6 +56,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         spread,
         decimal_places,
         price_params,
+        implied_volatility,
     );
     let mut initial_chain = OptionChain::build_chain(&build_params);
     initial_chain.update_expiration_date(get_x_days_formatted(2));
@@ -72,7 +71,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         walk_type: WalkType::GeometricBrownian {
             dt: convert_time_frame(pos!(1.0) / days, &TimeFrame::Minute, &TimeFrame::Day),
             drift: dec!(0.0),
-            volatility: implied_volatility.unwrap(),
+            volatility: implied_volatility,
         },
         walker: walker,
     };

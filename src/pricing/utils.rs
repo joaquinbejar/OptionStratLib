@@ -127,7 +127,7 @@ pub(crate) fn calculate_down_factor(
     Ok((dec!(-1.0) * dt.sqrt().unwrap() * volatility.to_dec()).exp())
 }
 
-/// Calculates the probability using given interest rate, time interval,
+/// Calculates the probability using a given interest rate, time interval,
 /// down factor, and up factor.
 ///
 /// # Arguments
@@ -567,7 +567,7 @@ mod tests_probability_keep_under_strike {
     use super::*;
     use crate::constants::DAYS_IN_A_YEAR;
     use crate::model::types::{OptionStyle, OptionType};
-    use crate::{ExpirationDate, Positive, assert_decimal_eq, pos};
+    use crate::{ExpirationDate, Positive, assert_decimal_eq, pos, spos};
     use rust_decimal_macros::dec;
     use tracing::info;
 
@@ -587,7 +587,7 @@ mod tests_probability_keep_under_strike {
             quantity: Positive::ONE,
             exotic_params: None,
         };
-        let strike = Some(pos!(100.0));
+        let strike = spos!(100.0);
         let probability = probability_keep_under_strike(option, strike).unwrap();
         info!("{:?} {}", strike, probability);
         assert_decimal_eq!(probability, dec!(0.5), dec!(0.001));

@@ -309,6 +309,8 @@ mod default;
 #[cfg(feature = "plotly")]
 mod plotly;
 
+/// Module containing display-related utilities and macros for formatting and visualization.
+pub mod display;
 #[cfg(feature = "plotly")]
 mod test_plotly;
 

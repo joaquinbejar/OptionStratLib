@@ -9,7 +9,7 @@
       "call_ask": 211.9,
       "put_bid": 3.2,
       "put_ask": 6.5,
-      "implied_volatility": null,
+      "implied_volatility": 0.2,
       "delta": null,
       "volume": null,
       "open_interest": null
@@ -20,7 +20,7 @@
       "call_ask": 206.8,
       "put_bid": 3.5,
       "put_ask": 6.8,
-      "implied_volatility": null,
+      "implied_volatility": 0.2,
       "delta": null,
       "volume": null,
       "open_interest": null
@@ -31,7 +31,7 @@
       "call_ask": 183.4,
       "put_bid": 5.5,
       "put_ask": 8.9,
-      "implied_volatility": null,
+      "implied_volatility": 0.2,
       "delta": null,
       "volume": null,
       "open_interest": null
@@ -42,7 +42,7 @@
       "call_ask": 176.9,
       "put_bid": 6.0,
       "put_ask": 9.4,
-      "implied_volatility": null,
+      "implied_volatility": 0.2,
       "delta": null,
       "volume": null,
       "open_interest": null
@@ -53,7 +53,7 @@
       "call_ask": 168.9,
       "put_bid": 7.0,
       "put_ask": 10.5,
-      "implied_volatility": null,
+      "implied_volatility": 0.2,
       "delta": null,
       "volume": null,
       "open_interest": null
@@ -64,7 +64,7 @@
       "call_ask": 165.4,
       "put_bid": 7.4,
       "put_ask": 10.9,
-      "implied_volatility": null,
+      "implied_volatility": 0.2,
       "delta": null,
       "volume": null,
       "open_interest": null
@@ -75,7 +75,7 @@
       "call_ask": 159.2,
       "put_bid": 8.1,
       "put_ask": 11.6,
-      "implied_volatility": null,
+      "implied_volatility": 0.2,
       "delta": null,
       "volume": null,
       "open_interest": null
@@ -86,7 +86,7 @@
       "call_ask": 150.6,
       "put_bid": 9.4,
       "put_ask": 13.0,
-      "implied_volatility": null,
+      "implied_volatility": 0.2,
       "delta": null,
       "volume": null,
       "open_interest": null
@@ -97,7 +97,7 @@
       "call_ask": 141.2,
       "put_bid": 10.8,
       "put_ask": 14.4,
-      "implied_volatility": null,
+      "implied_volatility": 0.2,
       "delta": null,
       "volume": null,
       "open_interest": null
@@ -108,7 +108,7 @@
       "call_ask": 134.5,
       "put_bid": 12.6,
       "put_ask": 16.2,
-      "implied_volatility": null,
+      "implied_volatility": 0.2,
       "delta": null,
       "volume": null,
       "open_interest": null
@@ -119,7 +119,7 @@
       "call_ask": 126.3,
       "put_bid": 14.0,
       "put_ask": 17.6,
-      "implied_volatility": null,
+      "implied_volatility": 0.2,
       "delta": null,
       "volume": null,
       "open_interest": null
@@ -130,7 +130,7 @@
       "call_ask": 122.3,
       "put_bid": 14.9,
       "put_ask": 18.6,
-      "implied_volatility": null,
+      "implied_volatility": 0.2,
       "delta": null,
       "volume": null,
       "open_interest": null
@@ -141,7 +141,7 @@
       "call_ask": 118.3,
       "put_bid": 15.9,
       "put_ask": 19.6,
-      "implied_volatility": null,
+      "implied_volatility": 0.2,
       "delta": null,
       "volume": null,
       "open_interest": null
@@ -152,7 +152,7 @@
       "call_ask": 110.5,
       "put_bid": 18.0,
       "put_ask": 21.7,
-      "implied_volatility": null,
+      "implied_volatility": 0.2,
       "delta": null,
       "volume": null,
       "open_interest": null
@@ -163,7 +163,7 @@
       "call_ask": 102.9,
       "put_bid": 20.3,
       "put_ask": 24.1,
-      "implied_volatility": null,
+      "implied_volatility": 0.2,
       "delta": null,
       "volume": null,
       "open_interest": null
@@ -174,7 +174,7 @@
       "call_ask": 99.2,
       "put_bid": 21.6,
       "put_ask": 25.4,
-      "implied_volatility": null,
+      "implied_volatility": 0.2,
       "delta": null,
       "volume": null,
       "open_interest": null
@@ -185,7 +185,7 @@
       "call_ask": 95.6,
       "put_bid": 22.9,
       "put_ask": 26.7,
-      "implied_volatility": null,
+      "implied_volatility": 0.2,
       "delta": null,
       "volume": null,
       "open_interest": null
@@ -196,7 +196,7 @@
       "call_ask": 91.3,
       "put_bid": 24.6,
       "put_ask": 28.4,
-      "implied_volatility": null,
+      "implied_volatility": 0.2,
       "delta": null,
       "volume": null,
       "open_interest": null
@@ -207,7 +207,7 @@
       "call_ask": 87.8,
       "put_bid": 26.0,
       "put_ask": 29.9,
-      "implied_volatility": null,
+      "implied_volatility": 0.2,
       "delta": null,
       "volume": null,
       "open_interest": null
@@ -218,7 +218,7 @@
       "call_ask": 84.3,
       "put_bid": 27.5,
       "put_ask": 31.4,
-      "implied_volatility": null,
+      "implied_volatility": 0.2,
       "delta": null,
       "volume": null,
       "open_interest": null
@@ -229,7 +229,7 @@
       "call_ask": 81.3,
       "put_bid": 29.1,
       "put_ask": 33.0,
-      "implied_volatility": null,
+      "implied_volatility": 0.2,
       "delta": null,
       "volume": null,
       "open_interest": null
@@ -240,7 +240,7 @@
       "call_ask": 77.9,
       "put_bid": 30.6,
       "put_ask": 34.5,
-      "implied_volatility": null,
+      "implied_volatility": 0.2,
       "delta": null,
       "volume": null,
       "open_interest": null
@@ -251,7 +251,7 @@
       "call_ask": 75.0,
       "put_bid": 32.1,
       "put_ask": 36.0,
-      "implied_volatility": null,
+      "implied_volatility": 0.2,
       "delta": null,
       "volume": null,
       "open_interest": null
@@ -262,7 +262,7 @@
       "call_ask": 71.8,
       "put_bid": 33.8,
       "put_ask": 37.8,
-      "implied_volatility": null,
+      "implied_volatility": 0.2,
       "delta": null,
       "volume": null,
       "open_interest": null
@@ -273,7 +273,7 @@
       "call_ask": 68.6,
       "put_bid": 35.9,
       "put_ask": 39.9,
-      "implied_volatility": null,
+      "implied_volatility": 0.2,
       "delta": null,
       "volume": null,
       "open_interest": null
@@ -284,7 +284,7 @@
       "call_ask": 65.6,
       "put_bid": 37.6,
       "put_ask": 41.6,
-      "implied_volatility": null,
+      "implied_volatility": 0.2,
       "delta": null,
       "volume": null,
       "open_interest": null
@@ -295,7 +295,7 @@
       "call_ask": 62.6,
       "put_bid": 39.6,
       "put_ask": 43.6,
-      "implied_volatility": null,
+      "implied_volatility": 0.2,
       "delta": null,
       "volume": null,
       "open_interest": null
@@ -306,7 +306,7 @@
       "call_ask": 59.7,
       "put_bid": 41.7,
       "put_ask": 45.7,
-      "implied_volatility": null,
+      "implied_volatility": 0.2,
       "delta": null,
       "volume": null,
       "open_interest": null
@@ -317,7 +317,7 @@
       "call_ask": 56.6,
       "put_bid": 43.8,
       "put_ask": 47.8,
-      "implied_volatility": null,
+      "implied_volatility": 0.2,
       "delta": null,
       "volume": null,
       "open_interest": null
@@ -328,7 +328,7 @@
       "call_ask": 53.5,
       "put_bid": 46.5,
       "put_ask": 50.5,
-      "implied_volatility": null,
+      "implied_volatility": 0.2,
       "delta": null,
       "volume": null,
       "open_interest": null
@@ -339,7 +339,7 @@
       "call_ask": 51.7,
       "put_bid": 48.4,
       "put_ask": 52.4,
-      "implied_volatility": null,
+      "implied_volatility": 0.2,
       "delta": null,
       "volume": null,
       "open_interest": null
@@ -350,7 +350,7 @@
       "call_ask": 49.4,
       "put_bid": 50.4,
       "put_ask": 54.4,
-      "implied_volatility": null,
+      "implied_volatility": 0.2,
       "delta": null,
       "volume": null,
       "open_interest": null
@@ -361,7 +361,7 @@
       "call_ask": 47.0,
       "put_bid": 53.0,
       "put_ask": 57.0,
-      "implied_volatility": null,
+      "implied_volatility": 0.2,
       "delta": null,
       "volume": null,
       "open_interest": null
@@ -372,7 +372,7 @@
       "call_ask": 44.2,
       "put_bid": 57.8,
       "put_ask": 61.8,
-      "implied_volatility": null,
+      "implied_volatility": 0.2,
       "delta": null,
       "volume": null,
       "open_interest": null
@@ -383,7 +383,7 @@
       "call_ask": 41.5,
       "put_bid": 59.5,
       "put_ask": 63.5,
-      "implied_volatility": null,
+      "implied_volatility": 0.2,
       "delta": null,
       "volume": null,
       "open_interest": null
@@ -394,7 +394,7 @@
       "call_ask": 38.9,
       "put_bid": 62.9,
       "put_ask": 66.8,
-      "implied_volatility": null,
+      "implied_volatility": 0.2,
       "delta": null,
       "volume": null,
       "open_interest": null
@@ -405,7 +405,7 @@
       "call_ask": 36.8,
       "put_bid": 65.9,
       "put_ask": 69.8,
-      "implied_volatility": null,
+      "implied_volatility": 0.2,
       "delta": null,
       "volume": null,
       "open_interest": null
@@ -416,7 +416,7 @@
       "call_ask": 35.4,
       "put_bid": 68.0,
       "put_ask": 71.9,
-      "implied_volatility": null,
+      "implied_volatility": 0.2,
       "delta": null,
       "volume": null,
       "open_interest": null
@@ -427,7 +427,7 @@
       "call_ask": 32.6,
       "put_bid": 72.0,
       "put_ask": 75.8,
-      "implied_volatility": null,
+      "implied_volatility": 0.2,
       "delta": null,
       "volume": null,
       "open_interest": null
@@ -438,7 +438,7 @@
       "call_ask": 30.9,
       "put_bid": 75.9,
       "put_ask": 79.7,
-      "implied_volatility": null,
+      "implied_volatility": 0.2,
       "delta": null,
       "volume": null,
       "open_interest": null
@@ -449,7 +449,7 @@
       "call_ask": 29.0,
       "put_bid": 79.2,
       "put_ask": 82.9,
-      "implied_volatility": null,
+      "implied_volatility": 0.2,
       "delta": null,
       "volume": null,
       "open_interest": null
@@ -460,7 +460,7 @@
       "call_ask": 25.7,
       "put_bid": 86.0,
       "put_ask": 89.6,
-      "implied_volatility": null,
+      "implied_volatility": 0.2,
       "delta": null,
       "volume": null,
       "open_interest": null
@@ -471,7 +471,7 @@
       "call_ask": 22.7,
       "put_bid": 92.7,
       "put_ask": 96.2,
-      "implied_volatility": null,
+      "implied_volatility": 0.2,
       "delta": null,
       "volume": null,
       "open_interest": null
@@ -482,7 +482,7 @@
       "call_ask": 20.0,
       "put_bid": 100.5,
       "put_ask": 103.8,
-      "implied_volatility": null,
+      "implied_volatility": 0.2,
       "delta": null,
       "volume": null,
       "open_interest": null
@@ -493,7 +493,7 @@
       "call_ask": 17.6,
       "put_bid": 108.1,
       "put_ask": 111.3,
-      "implied_volatility": null,
+      "implied_volatility": 0.2,
       "delta": null,
       "volume": null,
       "open_interest": null
@@ -504,7 +504,7 @@
       "call_ask": 16.4,
       "put_bid": 112.0,
       "put_ask": 115.2,
-      "implied_volatility": null,
+      "implied_volatility": 0.2,
       "delta": null,
       "volume": null,
       "open_interest": null
@@ -515,7 +515,7 @@
       "call_ask": 15.4,
       "put_bid": 116.0,
       "put_ask": 119.1,
-      "implied_volatility": null,
+      "implied_volatility": 0.2,
       "delta": null,
       "volume": null,
       "open_interest": null
@@ -526,7 +526,7 @@
       "call_ask": 13.2,
       "put_bid": 125.0,
       "put_ask": 127.9,
-      "implied_volatility": null,
+      "implied_volatility": 0.2,
       "delta": null,
       "volume": null,
       "open_interest": null
@@ -537,7 +537,7 @@
       "call_ask": 11.9,
       "put_bid": 129.8,
       "put_ask": 132.7,
-      "implied_volatility": null,
+      "implied_volatility": 0.2,
       "delta": null,
       "volume": null,
       "open_interest": null
@@ -548,7 +548,7 @@
       "call_ask": 8.4,
       "put_bid": 151.5,
       "put_ask": 154.0,
-      "implied_volatility": null,
+      "implied_volatility": 0.2,
       "delta": null,
       "volume": null,
       "open_interest": null
@@ -559,7 +559,7 @@
       "call_ask": 5.7,
       "put_bid": 176.0,
       "put_ask": 178.1,
-      "implied_volatility": null,
+      "implied_volatility": 0.2,
       "delta": null,
       "volume": null,
       "open_interest": null
@@ -570,7 +570,7 @@
       "call_ask": 4.1,
       "put_bid": 200.5,
       "put_ask": 202.4,
-      "implied_volatility": null,
+      "implied_volatility": 0.2,
       "delta": null,
       "volume": null,
       "open_interest": null
@@ -581,7 +581,7 @@
       "call_ask": 3.1,
       "put_bid": 226.4,
       "put_ask": 228.1,
-      "implied_volatility": null,
+      "implied_volatility": 0.2,
       "delta": null,
       "volume": null,
       "open_interest": null
@@ -592,7 +592,7 @@
       "call_ask": 3.1,
       "put_bid": 252.9,
       "put_ask": 254.5,
-      "implied_volatility": null,
+      "implied_volatility": 0.2,
       "delta": null,
       "volume": null,
       "open_interest": null
@@ -603,7 +603,7 @@
       "call_ask": 3.0,
       "put_bid": 271.7,
       "put_ask": 273.2,
-      "implied_volatility": null,
+      "implied_volatility": 0.2,
       "delta": null,
       "volume": null,
       "open_interest": null
@@ -614,7 +614,7 @@
       "call_ask": 3.0,
       "put_bid": 296.0,
       "put_ask": 297.4,
-      "implied_volatility": null,
+      "implied_volatility": 0.2,
       "delta": null,
       "volume": null,
       "open_interest": null
@@ -625,7 +625,7 @@
       "call_ask": 3.0,
       "put_bid": 321.4,
       "put_ask": 322.8,
-      "implied_volatility": null,
+      "implied_volatility": 0.2,
       "delta": null,
       "volume": null,
       "open_interest": null

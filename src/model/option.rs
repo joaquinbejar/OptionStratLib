@@ -1,6 +1,6 @@
 use crate::chains::OptionData;
 use crate::constants::{IV_TOLERANCE, MAX_ITERATIONS_IV, ZERO};
-use crate::error::{GreeksError, OptionsError, OptionsResult, VolatilityError};
+use crate::error::{GreeksError, OptionsError, OptionsResult, StrategyError, VolatilityError};
 use crate::greeks::Greeks;
 use crate::model::types::{OptionBasicType, OptionStyle, OptionType, Side};
 use crate::model::utils::calculate_optimal_price_range;
@@ -63,8 +63,7 @@ pub struct ExoticParams {
 /// scenarios.
 #[derive(Clone, PartialEq, Serialize, Deserialize)]
 pub struct Options {
-    /// Specifies whether this is a Call or Put option, determining the fundamental
-    /// right the option contract provides (buying or selling the underlying).
+    /// Specifies whether this is a European or American option
     pub option_type: OptionType,
 
     /// Indicates whether the position is Long (purchased) or Short (sold/written),
@@ -95,7 +94,7 @@ pub struct Options {
     /// typically based on treasury yields of similar duration.
     pub risk_free_rate: Decimal,
 
-    /// The option exercise style (European or American), determining when the
+    /// The option is a Call or Put option, determining the fundamental right
     /// option can be exercised.
     pub option_style: OptionStyle,
 
@@ -180,10 +179,9 @@ impl Options {
     ///
     /// * `option_data` - A reference to an OptionData structure containing updated option parameters.
     ///
-    #[allow(dead_code)]
     pub(crate) fn update_from_option_data(&mut self, option_data: &OptionData) {
         self.strike_price = option_data.strike_price;
-        self.implied_volatility = option_data.implied_volatility.unwrap_or(Positive::ZERO);
+        self.implied_volatility = option_data.implied_volatility;
         trace!("Updated Option: {:#?}", self);
     }
 
@@ -665,6 +663,33 @@ impl Options {
     }
 }
 
+impl From<&OptionData> for Options {
+    fn from(option_data: &OptionData) -> Self {
+        if option_data.symbol.is_none() {
+            error!("OptionData symbol is None");
+            panic!("OptionData must have a valid symbol");
+        }
+        assert!(option_data.symbol.is_some(), "OptionData symbol is None");
+        assert!(option_data.expiration_date.is_some());
+        assert!(option_data.underlying_price.is_some());
+
+        Options {
+            option_type: OptionType::European,
+            side: Side::Long,
+            underlying_symbol: option_data.symbol.clone().unwrap(),
+            strike_price: option_data.strike_price,
+            expiration_date: option_data.expiration_date.unwrap(),
+            implied_volatility: option_data.implied_volatility,
+            quantity: Positive::ONE,
+            underlying_price: *option_data.underlying_price.clone().unwrap(),
+            risk_free_rate: option_data.risk_free_rate.unwrap_or(Decimal::ZERO),
+            option_style: OptionStyle::Call,
+            dividend_yield: option_data.dividend_yield.unwrap_or(Positive::ZERO),
+            exotic_params: None,
+        }
+    }
+}
+
 impl Default for Options {
     fn default() -> Self {
         Options {
@@ -846,6 +871,21 @@ impl BasicAble for Options {
     }
     fn one_option_mut(&mut self) -> &mut Options {
         self
+    }
+    fn set_implied_volatility(&mut self, volatility: &Positive) -> Result<(), StrategyError> {
+        self.implied_volatility = *volatility;
+        Ok(())
+    }
+    fn set_underlying_price(&mut self, price: &Positive) -> Result<(), StrategyError> {
+        self.underlying_price = *price;
+        Ok(())
+    }
+    fn set_expiration_date(
+        &mut self,
+        expiration_date: ExpirationDate,
+    ) -> Result<(), StrategyError> {
+        self.expiration_date = expiration_date;
+        Ok(())
     }
 }
 

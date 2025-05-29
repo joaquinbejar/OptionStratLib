@@ -9,7 +9,7 @@ use optionstratlib::simulation::steps::{Step, Xstep, Ystep};
 use optionstratlib::simulation::{WalkParams, WalkType, WalkTypeAble};
 use optionstratlib::utils::time::{convert_time_frame, get_x_days_formatted};
 use optionstratlib::utils::{Len, TimeFrame};
-use optionstratlib::{ExpirationDate, Positive, pos};
+use optionstratlib::{ExpirationDate, Positive, pos, spos};
 use rust_decimal_macros::dec;
 use std::error::Error;
 use tracing::info;
@@ -30,9 +30,9 @@ fn create_chain_from_step(
 ) -> Result<OptionChain, Box<dyn std::error::Error>> {
     let chain = previous_y_step.value();
     let mut chain_params = chain.to_build_params()?;
-    chain_params.set_underlying_price(new_price);
+    chain_params.set_underlying_price(Some(Box::new(*new_price)));
     if let Some(volatility) = volatility {
-        chain_params.set_implied_volatility(Some(volatility));
+        chain_params.set_implied_volatility(volatility);
     }
 
     let new_chain = OptionChain::build_chain(&chain_params);
@@ -55,7 +55,7 @@ fn generator(walk_params: &WalkParams<Positive, OptionChain>) -> Vec<Step<Positi
         };
         // convert y_step to OptionChain
         let y_step_chain: OptionChain =
-            create_chain_from_step(&previous_y_step, y_step, Some(pos!(0.20))).unwrap();
+            create_chain_from_step(&previous_y_step, y_step, spos!(0.20)).unwrap();
         previous_y_step = previous_y_step.next(y_step_chain).clone();
         let step = Step {
             x: previous_x_step,

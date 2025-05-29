@@ -703,7 +703,7 @@ impl Optimizable for BearPutSpread {
             StrategyLegs::TwoLegs { first, second } => (first, second),
             _ => panic!("Invalid number of legs for this strategy"),
         };
-        let implied_volatility = long.implied_volatility.unwrap();
+        let implied_volatility = long.implied_volatility;
         assert!(implied_volatility <= Positive::ONE);
         BearPutSpread::new(
             chain.symbol.clone(),
@@ -1048,6 +1048,7 @@ mod tests_bear_put_spread_strategy {
 mod tests_bear_put_spread_validation {
     use super::*;
     use crate::model::ExpirationDate;
+    use crate::pos;
     use chrono::Utc;
     use rust_decimal_macros::dec;
 
@@ -1214,11 +1215,11 @@ mod tests_bear_put_spread_validation {
 #[cfg(test)]
 mod tests_bear_put_spread_optimization {
     use super::*;
+    use crate::{pos, spos};
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
     use crate::model::ExpirationDate;
-    use crate::spos;
 
     fn create_test_chain() -> OptionChain {
         let mut chain = OptionChain::new("TEST", pos!(90.0), "2024-12-31".to_string(), None, None);
@@ -1230,12 +1231,13 @@ mod tests_bear_put_spread_optimization {
             None,             // call_ask
             spos!(8.0),       // put_bid
             spos!(8.2),       // put_ask
-            spos!(0.2),       // implied_volatility
+            pos!(0.2),        // implied_volatility
             Some(dec!(-0.8)), // delta
             Some(dec!(0.2)),
             Some(dec!(0.2)),
             spos!(100.0), // volume
             Some(50),     // open_interest
+            None,
         );
 
         chain.add_option(
@@ -1244,12 +1246,13 @@ mod tests_bear_put_spread_optimization {
             None,
             spos!(6.0),
             spos!(6.2),
-            spos!(0.2),
+            pos!(0.2),
             Some(dec!(-0.7)),
             Some(dec!(0.2)),
             Some(dec!(0.2)),
             spos!(150.0),
             Some(75),
+            None,
         );
 
         chain.add_option(
@@ -1258,12 +1261,13 @@ mod tests_bear_put_spread_optimization {
             None,
             spos!(4.0),
             spos!(4.2),
-            spos!(0.2),
+            pos!(0.2),
             Some(dec!(-0.6)),
             Some(dec!(0.2)),
             Some(dec!(0.2)),
             spos!(200.0),
             Some(100),
+            None,
         );
 
         chain.add_option(
@@ -1272,12 +1276,13 @@ mod tests_bear_put_spread_optimization {
             None,
             spos!(2.5),
             spos!(2.7),
-            spos!(0.2),
+            pos!(0.2),
             Some(dec!(-0.5)),
             Some(dec!(0.2)),
             Some(dec!(0.2)),
             spos!(250.0),
             Some(125),
+            None,
         );
 
         chain.add_option(
@@ -1286,12 +1291,13 @@ mod tests_bear_put_spread_optimization {
             None,
             spos!(1.5),
             spos!(1.7),
-            spos!(0.2),
+            pos!(0.2),
             Some(dec!(-0.4)),
             Some(dec!(0.2)),
             Some(dec!(0.2)),
             spos!(200.0),
             Some(100),
+            None,
         );
 
         chain.add_option(
@@ -1300,12 +1306,13 @@ mod tests_bear_put_spread_optimization {
             None,
             spos!(0.8),
             spos!(1.0),
-            spos!(0.2),
+            pos!(0.2),
             Some(dec!(-0.3)),
             Some(dec!(0.2)),
             Some(dec!(0.2)),
             spos!(150.0),
             Some(75),
+            None,
         );
 
         chain.add_option(
@@ -1314,12 +1321,13 @@ mod tests_bear_put_spread_optimization {
             None,
             spos!(0.4),
             spos!(0.6),
-            spos!(0.2),
+            pos!(0.2),
             Some(dec!(-0.2)),
             Some(dec!(0.2)),
             Some(dec!(0.2)),
             spos!(100.0),
             Some(50),
+            None,
         );
 
         chain
@@ -1450,12 +1458,13 @@ mod tests_bear_put_spread_optimization {
             None,
             None, // Invalid: no put_bid
             None, // Invalid: no put_ask
-            spos!(0.2),
+            pos!(0.2),
             Some(dec!(-0.1)),
             Some(dec!(0.2)),
             Some(dec!(0.2)),
             spos!(50.0),
             Some(25),
+            None,
         );
 
         spread.find_optimal(&chain, FindOptimalSide::All, OptimizationCriteria::Ratio);
@@ -1499,7 +1508,8 @@ mod tests_bear_put_spread_optimization {
 mod tests_bear_put_spread_optimizable {
     use super::*;
     use crate::model::ExpirationDate;
-    use crate::spos;
+    use crate::{pos, spos};
+
     use crate::strategies::utils::FindOptimalSide;
 
     use rust_decimal_macros::dec;
@@ -1513,12 +1523,13 @@ mod tests_bear_put_spread_optimizable {
             spos!(0.7),       // call_ask
             spos!(2.0),       // put_bid -
             spos!(2.2),       // put_ask
-            spos!(0.2),       // implied_vol
+            pos!(0.2),        // implied_vol
             Some(dec!(-0.3)), // delta
             Some(dec!(0.2)),
             Some(dec!(0.2)),
             spos!(100.0), // volume
             Some(50),     // open_interest
+            None,
         );
 
         // Strike ATM (100)
@@ -1528,12 +1539,13 @@ mod tests_bear_put_spread_optimizable {
             spos!(3.0),
             spos!(4.8),
             spos!(5.0),
-            spos!(0.2),
+            pos!(0.2),
             Some(dec!(-0.5)),
             Some(dec!(0.2)),
             Some(dec!(0.2)),
             spos!(200.0),
             Some(100),
+            None,
         );
 
         chain.add_option(
@@ -1542,12 +1554,13 @@ mod tests_bear_put_spread_optimizable {
             spos!(6.0),
             spos!(8.8), // put_bid
             spos!(9.0), // put_ask
-            spos!(0.2),
+            pos!(0.2),
             Some(dec!(-0.7)),
             Some(dec!(0.2)),
             Some(dec!(0.2)),
             spos!(150.0),
             Some(75),
+            None,
         );
 
         chain
@@ -1616,8 +1629,8 @@ mod tests_bear_put_spread_optimizable {
                     );
 
                     // Both options should have valid implied volatility
-                    assert!(short.implied_volatility.is_some());
-                    assert!(long.implied_volatility.is_some());
+                    assert!(short.implied_volatility > Positive::ZERO);
+                    assert!(long.implied_volatility > Positive::ZERO);
 
                     info!(
                         "Valid combination - Short strike: {}, Long strike: {}",
@@ -1639,12 +1652,13 @@ mod tests_bear_put_spread_optimizable {
             spos!(1.2),
             None, // Invalid: no put_bid
             None, // Invalid: no put_ask
-            spos!(0.2),
+            pos!(0.2),
             Some(dec!(-0.4)),
             Some(dec!(0.2)),
             Some(dec!(0.2)),
             spos!(50.0),
             Some(25),
+            None,
         );
 
         let spread = create_test_bear_put_spread();
@@ -1714,12 +1728,13 @@ mod tests_bear_put_spread_optimizable {
             spos!(1.2),
             spos!(3.0),
             spos!(3.2),
-            spos!(0.2),
+            pos!(0.2),
             Some(dec!(-0.5)),
             Some(dec!(0.2)),
             Some(dec!(0.2)),
             spos!(50.0),
             Some(25),
+            None,
         );
 
         let combinations: Vec<_> = spread
@@ -1949,6 +1964,7 @@ mod tests_bear_put_spread_profit {
 #[cfg(test)]
 mod tests_bear_put_spread_probability {
     use super::*;
+    use crate::pos;
     use crate::strategies::probabilities::utils::PriceTrend;
     use rust_decimal_macros::dec;
 

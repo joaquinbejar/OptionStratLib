@@ -1,7 +1,7 @@
 use criterion::Criterion;
 use optionstratlib::chains::OptionData;
 use optionstratlib::chains::utils::OptionDataPriceParams;
-use optionstratlib::{ExpirationDate, Positive, pos};
+use optionstratlib::{ExpirationDate, Positive, pos, spos};
 use rust_decimal_macros::dec;
 use std::hint::black_box;
 
@@ -32,11 +32,17 @@ fn benchmark_basic_operations(
                 None,
                 None,
                 None,
-                Some(Positive::new(0.2).unwrap()),
+                Positive::new(0.2).unwrap(),
                 None,
                 None,
                 None,
                 None,
+                None,
+                Some("TEST".to_string()),               // symbol
+                Some(ExpirationDate::Days(pos!(30.0))), // expiration_date
+                Some(Box::new(pos!(100.0))),            // underlying_price
+                Some(dec!(0.05)),                       // risk_free_rate
+                Some(pos!(0.02)),                       // dividend_yield
                 None,
             );
             black_box(option_data)
@@ -52,12 +58,18 @@ fn benchmark_basic_operations(
                 Some(Positive::new(11.0).unwrap()),
                 Some(Positive::new(9.0).unwrap()),
                 Some(Positive::new(10.0).unwrap()),
-                Some(Positive::new(0.2).unwrap()),
+                Positive::new(0.2).unwrap(),
                 Some(dec!(0.5)),
                 Some(dec!(0.5)),
                 Some(dec!(0.5)),
                 Some(Positive::new(1000.0).unwrap()),
                 Some(100),
+                Some("TEST".to_string()),               // symbol
+                Some(ExpirationDate::Days(pos!(30.0))), // expiration_date
+                Some(Box::new(pos!(100.0))),            // underlying_price
+                Some(dec!(0.05)),                       // risk_free_rate
+                Some(pos!(0.02)),                       // dividend_yield
+                None,
             );
             black_box(option_data)
         })
@@ -75,20 +87,11 @@ fn benchmark_price_calculations(
     let option_data = create_test_option_data();
 
     // Standard price calculation
-    let standard_params = create_standard_price_params();
+    let _standard_params = create_standard_price_params();
     group.bench_function("calculate standard prices", |b| {
         b.iter(|| {
             let mut data = option_data.clone();
-            black_box(data.calculate_prices(&standard_params, false))
-        })
-    });
-
-    // High volatility price calculation
-    let high_vol_params = create_price_params_with_volatility(0.5);
-    group.bench_function("calculate high volatility prices", |b| {
-        b.iter(|| {
-            let mut data = option_data.clone();
-            black_box(data.calculate_prices(&high_vol_params, false))
+            black_box(data.calculate_prices(None))
         })
     });
 }
@@ -97,14 +100,14 @@ fn benchmark_complex_operations(
     group: &mut criterion::BenchmarkGroup<'_, criterion::measurement::WallTime>,
 ) {
     let option_data = create_test_option_data();
-    let params = create_standard_price_params();
+    let _params = create_standard_price_params();
 
     // Combined operations benchmark
     group.bench_function("complete option processing", |b| {
         b.iter(|| {
             let mut data = option_data.clone();
             black_box(data.validate());
-            let _ = black_box(data.calculate_prices(&params, false));
+            let _ = black_box(data.calculate_prices(None));
             black_box(data)
         })
     });
@@ -118,33 +121,27 @@ fn create_test_option_data() -> OptionData {
         Some(Positive::new(11.0).unwrap()),
         Some(Positive::new(9.0).unwrap()),
         Some(Positive::new(10.0).unwrap()),
-        Some(Positive::new(0.2).unwrap()),
+        Positive::new(0.2).unwrap(),
         Some(dec!(0.5)),
         None,
         None,
         None,
+        None,
+        Some("TEST".to_string()),               // symbol
+        Some(ExpirationDate::Days(pos!(30.0))), // expiration_date
+        Some(Box::new(pos!(100.0))),            // underlying_price
+        Some(dec!(0.05)),                       // risk_free_rate
+        Some(pos!(0.02)),                       // dividend_yield
         None,
     )
 }
 
 fn create_standard_price_params() -> OptionDataPriceParams {
     OptionDataPriceParams::new(
-        Positive::new(100.0).unwrap(),
-        ExpirationDate::Days(pos!(30.0)),
-        Some(Positive::new(0.2).unwrap()),
-        dec!(0.05),
-        pos!(0.01),
-        None,
-    )
-}
-
-fn create_price_params_with_volatility(volatility: f64) -> OptionDataPriceParams {
-    OptionDataPriceParams::new(
-        Positive::new(100.0).unwrap(),
-        ExpirationDate::Days(pos!(30.0)),
-        Some(Positive::new(volatility).unwrap()),
-        dec!(0.05),
-        pos!(0.01),
-        None,
+        Some(Box::new(pos!(100.0))),
+        Some(ExpirationDate::Days(pos!(30.0))),
+        Some(dec!(0.05)),
+        spos!(0.02),
+        Some("AAPL".to_string()),
     )
 }
