@@ -1,7 +1,6 @@
-use crate::Positive;
+use crate::{impl_json_debug_pretty, impl_json_display, Positive};
 use crate::chains::OptionChainBuildParams;
 use serde::{Deserialize, Serialize};
-use std::fmt;
 
 /// `OptionSeriesBuildParams` is a struct that represents the parameters required to
 /// generate multiple option chains (series) along with their respective expiration details.
@@ -16,7 +15,7 @@ use std::fmt;
 /// * `series` (`Vec<Positive>`) - A collection of positive values indicating the number
 ///   of option chains to build and their associated days to expiration. Each value in the vector
 ///   specifies a particular series to generate with its distinct expiration timeline.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct OptionSeriesBuildParams {
     /// Parameters for building option chains
     pub(crate) chain_params: OptionChainBuildParams,
@@ -86,44 +85,29 @@ impl OptionSeriesBuildParams {
     }
 }
 
-impl fmt::Display for OptionSeriesBuildParams {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let series = self
-            .series
-            .iter()
-            .map(|x| x.to_string())
-            .collect::<Vec<String>>()
-            .join(", ");
-        write!(
-            f,
-            "chain_params: {} , series: {}",
-            self.chain_params, series
-        )
-    }
-}
+impl_json_display!(OptionSeriesBuildParams);
+impl_json_debug_pretty!(OptionSeriesBuildParams);
+
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::chains::utils::OptionDataPriceParams;
-    use crate::utils::time::get_tomorrow_formatted;
     use crate::{ExpirationDate, pos, spos};
     use rust_decimal_macros::dec;
 
     #[test]
     fn test_display_empty_series() {
-        let tomorrow = get_tomorrow_formatted();
-        let expiration = ExpirationDate::from_string_to_days(&tomorrow).unwrap();
-        let expiration_as_string = expiration.to_string();
+        let expiration = ExpirationDate::Days(pos!(30.0));
         let price_params = OptionDataPriceParams::new(
             Some(Box::new(pos!(100.0))),
-            Some(ExpirationDate::Days(pos!(30.0))),
+            Some(expiration),
             Some(dec!(0.05)),
             spos!(0.02),
             Some("AAPL".to_string()),
         );
         let chain_params = OptionChainBuildParams::new(
-            "TEST".to_string(),
+            "AAPL".to_string(),
             spos!(1000.0),
             10,
             spos!(5.0),
@@ -139,13 +123,67 @@ mod tests {
             chain_params,
             series: vec![],
         };
-
+        let result = r#"{"chain_params":{"symbol":"AAPL","volume":1000,"chain_size":10,"strike_interval":5,"skew_slope":"-0.2","smile_curve":"0.1","spread":0.02,"decimal_places":2,"price_params":{"underlying_price":100,"expiration_date":{"days":30.0},"risk_free_rate":"0.05","dividend_yield":0.02,"underlying_symbol":"AAPL"},"implied_volatility":0.2},"series":[]}"#;
         assert_eq!(
             params.to_string(),
-            format!(
-                "chain_params: Option Chain Build Parameters:\n  Symbol: TEST\n  Volume: 1000\n  Chain Size: 10\n  Strike Interval: 5\n  Skew Factor: 0.1\n  Spread: 0.02\n  Decimal Places: 2\n  Price Parameters:\n    Underlying Price: 100\n    Expiration Date: {}\n    Implied Volatility: 20%\n    Risk-Free Rate: 5.00%\n    Dividend Yield: 2.00%\n , series: ",
-                expiration_as_string
-            )
+            result
+        );
+    }
+
+    #[test]
+    fn test_debug_empty_series() {
+        let expiration = ExpirationDate::Days(pos!(30.0));
+        let price_params = OptionDataPriceParams::new(
+            Some(Box::new(pos!(100.0))),
+            Some(expiration),
+            Some(dec!(0.05)),
+            spos!(0.02),
+            Some("AAPL".to_string()),
+        );
+        let chain_params = OptionChainBuildParams::new(
+            "AAPL".to_string(),
+            spos!(1000.0),
+            10,
+            spos!(5.0),
+            dec!(-0.2),
+            dec!(0.1),
+            pos!(0.02),
+            2,
+            price_params,
+            pos!(0.2),
+        );
+
+        let params = OptionSeriesBuildParams {
+            chain_params,
+            series: vec![],
+        };
+        let result = r#"{
+  "chain_params": {
+    "symbol": "AAPL",
+    "volume": 1000,
+    "chain_size": 10,
+    "strike_interval": 5,
+    "skew_slope": "-0.2",
+    "smile_curve": "0.1",
+    "spread": 0.02,
+    "decimal_places": 2,
+    "price_params": {
+      "underlying_price": 100,
+      "expiration_date": {
+        "days": 30.0
+      },
+      "risk_free_rate": "0.05",
+      "dividend_yield": 0.02,
+      "underlying_symbol": "AAPL"
+    },
+    "implied_volatility": 0.2
+  },
+  "series": []
+}"#;
+        let debug_result = format!("{:?}", params);
+        assert_eq!(
+            debug_result,
+            result
         );
     }
 }

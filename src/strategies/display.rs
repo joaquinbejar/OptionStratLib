@@ -1,25 +1,9 @@
 use super::*;
-use serde_json::to_string_pretty;
-use std::fmt;
+use crate::impl_json_display_pretty;
 
-/// Macro to implement Display for serializable types
-macro_rules! impl_json_display {
-    ($($t:ty),+) => {
-        $(
-            impl fmt::Display for $t {
-                fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-                    match to_string_pretty(self) {
-                        Ok(pretty_json) => write!(f, "{}", pretty_json),
-                        Err(e) => write!(f, "Error serializing to JSON: {}", e),
-                    }
-                }
-            }
-        )+
-    }
-}
 
 // Use the macro to implement Display for multiple types at once
-impl_json_display!(
+impl_json_display_pretty!(
     BullCallSpread,
     BearCallSpread,
     BullPutSpread,

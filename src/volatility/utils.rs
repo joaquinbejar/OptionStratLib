@@ -464,7 +464,7 @@ pub fn generate_ou_process(
 
     for _ in 1..steps {
         let dw = decimal_normal_sample() * sqrt_dt; // Z√dt
-        let drift = theta * (mu - x) * dt; // θ(μ−x)dt
+        let drift = theta * mu.sub_or_zero(&x) * dt; // θ(μ−x)dt
         let diffusion = volatility * dw; // σ·Z√dt
         x += drift + diffusion; // paso OU
         x = x.max(Decimal::ZERO); // opcional: no negativos
