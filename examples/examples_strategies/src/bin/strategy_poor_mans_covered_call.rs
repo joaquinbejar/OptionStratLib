@@ -31,7 +31,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         pos!(0.85),                        // open_fee_short_put
         pos!(0.85),                        // close_fee_short_put
     );
-    
+
     info!("Title: {}", strategy.get_title());
     info!("Break Even Points: {:?}", strategy.break_even_points);
     info!(
