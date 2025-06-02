@@ -613,13 +613,13 @@
 //!
 //! // Calculate option price using Black-Scholes
 //! let price = option.calculate_price_black_scholes().unwrap();
-//! println!("Option price: {}", price);
+//! info!("Option price: {}", price);
 //!
 //! // Calculate Greeks
 //! let delta = option.delta().unwrap();
 //! let gamma = option.gamma().unwrap();
 //! let theta = option.theta().unwrap();
-//! println!("Delta: {}, Gamma: {}, Theta: {}", delta, gamma, theta);
+//! info!("Delta: {}, Gamma: {}, Theta: {}", delta, gamma, theta);
 //! ```
 //!
 //! ### Working with Strategies
@@ -641,14 +641,14 @@
 //!     let strategy = BullCallSpread::new("SP500".to_string(), underlying_price, pos!(5750.0), pos!(5820.0), ExpirationDate::Days(pos!(2.0)), pos!(0.18), dec!(0.01), pos!(0.78), pos!(0.78), pos!(0.73), pos!(0.73), Default::default(), Default::default(), Default::default(), Default::default());
 //!
 //!     // Get information about the strategy
-//!     println!("Title: {}", strategy.get_title());
-//!     println!("Break Even Points: {:?}", strategy.get_break_even_points()?);
-//!     println!("Net Premium Received: ${:.2}", strategy.get_net_premium_received()?);
-//!     println!("Max Profit: ${:.2}", strategy.get_max_profit().unwrap_or(Positive::ZERO));
-//!     println!("Max Loss: ${:0.2}", strategy.get_max_loss().unwrap_or(Positive::ZERO));
-//!     println!("Total Fees: ${:.2}", strategy.get_fees()?);
-//!     println!("Profit Area: {:.2}%", strategy.get_profit_area()?);
-//!     println!("Profit Ratio: {:.2}%", strategy.get_profit_ratio()?);
+//!     info!("Title: {}", strategy.get_title());
+//!     info!("Break Even Points: {:?}", strategy.get_break_even_points()?);
+//!     info!("Net Premium Received: ${:.2}", strategy.get_net_premium_received()?);
+//!     info!("Max Profit: ${:.2}", strategy.get_max_profit().unwrap_or(Positive::ZERO));
+//!     info!("Max Loss: ${:0.2}", strategy.get_max_loss().unwrap_or(Positive::ZERO));
+//!     info!("Total Fees: ${:.2}", strategy.get_fees()?);
+//!     info!("Profit Area: {:.2}%", strategy.get_profit_area()?);
+//!     info!("Profit Ratio: {:.2}%", strategy.get_profit_ratio()?);
 //!
 //!     // Generate visualization and save to HTML file
 //!     #[cfg(feature = "kaleido")]
