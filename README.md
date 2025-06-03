@@ -607,6 +607,7 @@ cargo doc --open
 use optionstratlib::{Options, OptionStyle, OptionType, Side, ExpirationDate};
 use optionstratlib::pos;
 use rust_decimal_macros::dec;
+use tracing::info;
 use optionstratlib::greeks::Greeks;
 
 // Create a basic European call option
@@ -647,7 +648,8 @@ use rust_decimal_macros::dec;
 use std::error::Error;
 
 fn main() -> Result<(), Box<dyn Error>> {
-    use optionstratlib::strategies::base::BreakEvenable;
+    use tracing::info;
+use optionstratlib::strategies::base::BreakEvenable;
     use optionstratlib::strategies::BasicAble;
     let underlying_price = pos!(5781.88);
 
