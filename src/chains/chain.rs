@@ -2894,17 +2894,17 @@ mod tests_chain_base {
             Some(100),
             None,
         );
-        let result = chain.save_to_json("tests/tmp/");
+        let result = chain.save_to_json("tests/");
         assert!(result.is_ok());
 
-        let result = OptionChain::load_from_json("tests/tmp/SP500-18-oct-2024-5781.9.json");
+        let result = OptionChain::load_from_json("tests/SP500-18-oct-2024-5781.9.json");
         assert!(result.is_ok());
         let chain = result.unwrap();
         assert_eq!(chain.symbol, "SP500");
         assert_eq!(chain.expiration_date, "18-oct-2024");
         assert_eq!(chain.underlying_price, 5781.9);
 
-        let file_name = "tests/tmp/SP500-18-oct-2024-5781.9.json".to_string();
+        let file_name = "tests/SP500-18-oct-2024-5781.9.json".to_string();
         let remove_result = fs::remove_file(file_name);
         assert!(remove_result.is_ok());
     }
