@@ -2574,6 +2574,43 @@ impl BasicSurfaces for OptionChain {
     }
 }
 
+impl From<&Vec<OptionData>> for OptionChain {
+    fn from(options: &Vec<OptionData>) -> Self {
+        let first_option = match options.first() {
+            Some(opt) => opt,
+            None => {
+                return OptionChain::default();
+            }
+        };
+        let symbol = first_option.clone().symbol.unwrap_or("Unknown".to_string());
+        let underlying_price = *first_option
+            .clone()
+            .underlying_price
+            .unwrap_or(Box::new(Positive::ZERO));
+        let expiration_date = first_option
+            .clone()
+            .expiration_date
+            .unwrap_or(ExpirationDate::Days(Positive::ZERO))
+            .to_string();
+        let risk_free_rate = first_option.risk_free_rate;
+        let dividend_yield = first_option.dividend_yield;
+
+        let options: BTreeSet<OptionData> = options
+            .into_iter()
+            .cloned()
+            .collect();
+
+        OptionChain {
+            symbol,
+            underlying_price,
+            expiration_date,
+            risk_free_rate,
+            dividend_yield,
+            options,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests_chain_base {
     use super::*;
