@@ -96,13 +96,13 @@ pub struct OptionChain {
     expiration_date: String,
 
     /// A sorted collection of option contracts at different strike prices.
-    pub(crate) options: BTreeSet<OptionData>,
+    pub options: BTreeSet<OptionData>,
 
     /// The risk-free interest rate used for option pricing models.
-    pub(crate) risk_free_rate: Option<Decimal>,
+    pub risk_free_rate: Option<Decimal>,
 
     /// The annual dividend yield of the underlying asset.
-    pub(crate) dividend_yield: Option<Positive>,
+    pub dividend_yield: Option<Positive>,
 }
 
 impl Serialize for OptionChain {
@@ -2595,10 +2595,7 @@ impl From<&Vec<OptionData>> for OptionChain {
         let risk_free_rate = first_option.risk_free_rate;
         let dividend_yield = first_option.dividend_yield;
 
-        let options: BTreeSet<OptionData> = options
-            .into_iter()
-            .cloned()
-            .collect();
+        let options: BTreeSet<OptionData> = options.into_iter().cloned().collect();
 
         OptionChain {
             symbol,
