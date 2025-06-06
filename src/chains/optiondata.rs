@@ -95,6 +95,21 @@ pub struct OptionData {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub put_middle: Option<Positive>,
 
+    /// The `implied_volatility` field represents the implied volatility value, which is of type `Positive`.
+    /// This value is intended to store a positive number, as enforced by the `Positive` type.
+    ///
+    /// # Attributes
+    /// - `#[serde(default)]`: This attribute ensures that the field is given a default value during
+    ///   deserialization if the value is not provided. The default implementation for the `Positive` type
+    ///   is expected to supply an appropriate default positive value.
+    ///
+    /// # Type
+    /// - `Positive`: A type that ensures the value it holds is strictly positive.
+    ///
+    /// # Usage
+    /// This field is commonly utilized in contexts where implied volatility is required, such as
+    /// in financial modeling or derivative pricing calculations. Deserialization will automatically
+    /// manage its default value if it is absent from the data source.
     #[serde(default)]
     pub implied_volatility: Positive,
 

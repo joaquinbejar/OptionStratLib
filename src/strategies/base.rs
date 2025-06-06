@@ -1381,6 +1381,40 @@ pub trait Positionable {
     fn replace_position(&mut self, _position: &Position) -> Result<(), PositionError> {
         unimplemented!("Replace position is not implemented for this strategy")
     }
+
+    /// Checks if all short positions have a net premium received that meets or exceeds a specified minimum.
+    ///
+    /// # Parameters
+    /// - `min_premium`: A reference to a `Positive` value representing the minimum premium
+    ///   required for the short positions to be considered valid.
+    ///
+    /// # Returns
+    /// - `true` if all short positions in the portfolio have a net premium received that is greater
+    ///   than or equal to `min_premium`.
+    /// - `false` if any of the following conditions occur:
+    ///   - Unable to retrieve positions (e.g., `get_positions` fails).
+    ///   - At least one short position has a net premium less than `min_premium`.
+    ///   - At least one short position's net premium calculation fails with an error.
+    ///
+    /// # Implementation Details
+    /// - Retrieves positions using the `get_positions` method. If this operation fails, the function returns `false`.
+    /// - Filters positions to only include shorts (based on `is_short` method).
+    /// - For each short position, determines if the net premium received is available (`is_ok`)
+    ///   and satisfies the minimum threshold (`>= *min_premium`).
+    ///
+    fn valid_premium_for_shorts(&self, min_premium: &Positive) -> bool {
+        let positions = match self.get_positions() {
+            Ok(positions) => positions,
+            Err(_) => return false,
+        };
+        positions
+            .iter()
+            .filter(|position| position.is_short())
+            .all(|p| {
+                p.net_premium_received()
+                    .is_ok_and(|premium| premium >= *min_premium)
+            })
+    }
 }
 
 #[cfg(test)]

@@ -2082,3 +2082,42 @@ mod tests_long_strangle_pnl {
         assert!(pnl.unrealized.unwrap() > dec!(-12.0));
     }
 }
+
+#[cfg(test)]
+mod test_valid_premium_for_shorts {
+    use super::*;
+    use crate::model::utils::create_sample_position;
+    use crate::pos;
+
+    fn get_strategy() -> Result<LongStrangle, StrategyError> {
+        // Create long call position
+        let long_call = create_sample_position(
+            OptionStyle::Call,
+            Side::Long,
+            pos!(100.0), // Underlying price
+            pos!(1.0),   // Quantity
+            pos!(105.0), // Strike price
+            pos!(0.2),   // Implied volatility
+        );
+
+        // Create long put position
+        let long_put = create_sample_position(
+            OptionStyle::Put,
+            Side::Long,
+            pos!(100.0), // Same underlying price
+            pos!(1.0),   // Quantity
+            pos!(95.0),  // Strike price
+            pos!(0.2),   // Implied volatility
+        );
+
+        LongStrangle::get_strategy(&vec![long_call, long_put])
+    }
+
+    #[test]
+    fn create_test_strangle() {
+        let strategy = get_strategy().unwrap();
+        assert!(strategy.valid_premium_for_shorts(&pos!(10.0)));
+        assert!(strategy.valid_premium_for_shorts(&pos!(100.0)));
+        assert!(strategy.valid_premium_for_shorts(&pos!(400.0)));
+    }
+}
