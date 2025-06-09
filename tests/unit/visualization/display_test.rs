@@ -71,4 +71,35 @@ mod display_tests {
         let display_output = format!("{}", bad_struct);
         assert!(display_output.starts_with("Error serializing to JSON:"));
     }
+    
+    #[test]
+    fn test_json_debug_error_handling() {
+        // Create a struct that will fail to serialize
+        #[derive(Serialize, Deserialize)]
+        struct BadDebugStruct {
+            #[serde(skip_serializing)]
+            name: String,
+            #[serde(serialize_with = "serialize_debug_error")]
+            value: i32,
+        }
+
+        // A serialization function that always fails
+        fn serialize_debug_error<S>(_: &i32, _: S) -> Result<S::Ok, S::Error>
+        where
+            S: serde::Serializer,
+        {
+            Err(serde::ser::Error::custom("Test debug error"))
+        }
+
+        impl_json_debug_pretty!(BadDebugStruct);
+
+        let bad_struct = BadDebugStruct {
+            name: "test".to_string(),
+            value: 42,
+        };
+
+        // Test error handling in Debug implementation
+        let debug_output = format!("{:?}", bad_struct);
+        assert!(debug_output.starts_with("Error serializing to JSON:"));
+    }
 }

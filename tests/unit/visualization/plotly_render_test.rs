@@ -1,4 +1,4 @@
-#[cfg(feature = "kaleido")]
+#[cfg(all(feature = "kaleido", feature = "plotly"))]
 mod plotly_render_tests {
     use optionstratlib::error::GraphError;
     use optionstratlib::visualization::{Graph, GraphConfig, GraphData, OutputType, Series2D};
@@ -69,6 +69,89 @@ mod plotly_render_tests {
     #[cfg(test)]
     mod tests {
         use super::*;
+        
+        // Test with different configuration options
+        #[test]
+        fn test_to_plot_with_minimal_config() {
+            let series = create_sample_series();
+            
+            // Create a minimal configuration
+            let minimal_config = GraphConfig {
+                title: "Minimal Config".to_string(),
+                width: 400,
+                height: 300,
+                x_label: None,  // No x label
+                y_label: None,  // No y label
+                z_label: None,  // No z label
+                line_style: optionstratlib::visualization::LineStyle::Solid,
+                color_scheme: optionstratlib::visualization::ColorScheme::Viridis,
+                legend: None,   // No legend
+                show_legend: false,
+            };
+            
+            let graph = TestGraph::new(GraphData::Series(series), minimal_config);
+            let plot = graph.to_plot();
+            
+            // Basic assertions to ensure the plot was created correctly
+            assert_eq!(plot.data().len(), 1);
+            let layout = plot.layout();
+            assert!(layout.to_json().contains("\"width\":400"));
+            assert!(layout.to_json().contains("\"height\":300"));
+        }
+        
+        // Test with all axis labels specified
+        #[test]
+        fn test_to_plot_with_all_axis_labels() {
+            let series = create_sample_series();
+            
+            // Create a configuration with all axis labels
+            let config = GraphConfig {
+                title: "All Axis Labels".to_string(),
+                width: 600,
+                height: 400,
+                x_label: Some("X Axis Label".to_string()),
+                y_label: Some("Y Axis Label".to_string()),
+                z_label: Some("Z Axis Label".to_string()),
+                line_style: optionstratlib::visualization::LineStyle::Solid,
+                color_scheme: optionstratlib::visualization::ColorScheme::Viridis,
+                legend: Some(vec!["Series 1".to_string()]),
+                show_legend: true,
+            };
+            
+            let graph = TestGraph::new(GraphData::Series(series), config);
+            let plot = graph.to_plot();
+            
+            // Basic assertions to ensure the plot was created correctly with all axis labels
+            assert_eq!(plot.data().len(), 1);
+            let layout_json = plot.layout().to_json();
+            assert!(layout_json.contains("\"title\":{\"text\":\"X Axis Label\""));
+            assert!(layout_json.contains("\"title\":{\"text\":\"Y Axis Label\""));
+            assert!(layout_json.contains("\"title\":{\"text\":\"Z Axis Label\""));
+        }
+        
+        // Test error handling with invalid paths
+        #[test]
+        fn test_render_error_handling() {
+            // Create a graph
+            let series = create_sample_series();
+            let config = create_sample_config();
+            let graph = TestGraph::new(GraphData::Series(series), config);
+            
+            // Test with invalid paths for different output types
+            let invalid_path = std::path::PathBuf::from("/nonexistent/directory/file.png");
+            
+            // Test render with PNG to invalid path
+            let png_result = graph.render(OutputType::Png(&invalid_path));
+            assert!(png_result.is_err());
+            
+            // Test render with SVG to invalid path
+            let svg_result = graph.render(OutputType::Svg(&invalid_path));
+            assert!(svg_result.is_err());
+            
+            // Test render with HTML to invalid path
+            let html_result = graph.render(OutputType::Html(&invalid_path));
+            assert!(html_result.is_err());
+        }
 
         // Test the render method with PNG output
         #[test]
