@@ -163,7 +163,7 @@ fn test_short_put_set_underlying_price() {
     let new_price = Positive::new(110.0).unwrap();
     let result = short_put.set_underlying_price(&new_price);
     assert!(result.is_ok());
-    // No podemos acceder directamente a short_put.short_put ya que es privado
+    // We cannot directly access short_put.short_put as it is private
 }
 
 #[test]
@@ -172,7 +172,7 @@ fn test_short_put_set_implied_volatility() {
     let new_vol = Positive::new(0.4).unwrap();
     let result = short_put.set_implied_volatility(&new_vol);
     assert!(result.is_ok());
-    // No podemos acceder directamente a short_put.short_put ya que es privado
+    // We cannot directly access short_put.short_put as it is private
 }
 
 #[test]

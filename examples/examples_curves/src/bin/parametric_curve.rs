@@ -7,6 +7,7 @@ use rust_decimal::{Decimal, MathematicalOps};
 use std::error::Error;
 
 fn main() -> Result<(), Box<dyn Error>> {
+    setup_logger();
     let params = ConstructionParams::D2 {
         t_start: Decimal::ZERO,
         t_end: Decimal::TWO_PI,

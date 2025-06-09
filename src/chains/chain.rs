@@ -96,13 +96,13 @@ pub struct OptionChain {
     expiration_date: String,
 
     /// A sorted collection of option contracts at different strike prices.
-    pub(crate) options: BTreeSet<OptionData>,
+    pub options: BTreeSet<OptionData>,
 
     /// The risk-free interest rate used for option pricing models.
-    pub(crate) risk_free_rate: Option<Decimal>,
+    pub risk_free_rate: Option<Decimal>,
 
     /// The annual dividend yield of the underlying asset.
-    pub(crate) dividend_yield: Option<Positive>,
+    pub dividend_yield: Option<Positive>,
 }
 
 impl Serialize for OptionChain {
@@ -2574,6 +2574,40 @@ impl BasicSurfaces for OptionChain {
     }
 }
 
+impl From<&Vec<OptionData>> for OptionChain {
+    fn from(options: &Vec<OptionData>) -> Self {
+        let first_option = match options.first() {
+            Some(opt) => opt,
+            None => {
+                return OptionChain::default();
+            }
+        };
+        let symbol = first_option.clone().symbol.unwrap_or("Unknown".to_string());
+        let underlying_price = *first_option
+            .clone()
+            .underlying_price
+            .unwrap_or(Box::new(Positive::ZERO));
+        let expiration_date = first_option
+            .clone()
+            .expiration_date
+            .unwrap_or(ExpirationDate::Days(Positive::ZERO))
+            .to_string();
+        let risk_free_rate = first_option.risk_free_rate;
+        let dividend_yield = first_option.dividend_yield;
+
+        let options: BTreeSet<OptionData> = options.iter().cloned().collect();
+
+        OptionChain {
+            symbol,
+            underlying_price,
+            expiration_date,
+            risk_free_rate,
+            dividend_yield,
+            options,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests_chain_base {
     use super::*;
@@ -2894,17 +2928,17 @@ mod tests_chain_base {
             Some(100),
             None,
         );
-        let result = chain.save_to_json("tests/tmp/");
+        let result = chain.save_to_json("tests/");
         assert!(result.is_ok());
 
-        let result = OptionChain::load_from_json("tests/tmp/SP500-18-oct-2024-5781.9.json");
+        let result = OptionChain::load_from_json("tests/SP500-18-oct-2024-5781.9.json");
         assert!(result.is_ok());
         let chain = result.unwrap();
         assert_eq!(chain.symbol, "SP500");
         assert_eq!(chain.expiration_date, "18-oct-2024");
         assert_eq!(chain.underlying_price, 5781.9);
 
-        let file_name = "tests/tmp/SP500-18-oct-2024-5781.9.json".to_string();
+        let file_name = "tests/SP500-18-oct-2024-5781.9.json".to_string();
         let remove_result = fs::remove_file(file_name);
         assert!(remove_result.is_ok());
     }

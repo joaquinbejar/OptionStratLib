@@ -12,6 +12,7 @@ use optionstratlib::{ExpirationDate, OptionType, Positive, pos};
 use rust_decimal_macros::dec;
 
 fn main() -> Result<(), SurfaceError> {
+    setup_logger();
     // Define construction parameters for the surface
     let params = ConstructionParams::D3 {
         x_start: dec!(50.0), // Underlying price start

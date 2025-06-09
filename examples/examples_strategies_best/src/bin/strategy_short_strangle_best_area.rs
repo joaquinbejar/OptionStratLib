@@ -17,6 +17,7 @@ use std::error::Error;
 use tracing::{debug, info};
 
 fn main() -> Result<(), Box<dyn Error>> {
+    setup_logger();
     let mut option_chain =
         OptionChain::load_from_json("./examples/Chains/SP500-18-oct-2024-5781.88.json")?;
     option_chain.update_expiration_date(get_tomorrow_formatted());

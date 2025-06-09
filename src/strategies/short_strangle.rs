@@ -3022,6 +3022,44 @@ mod test_adjustments_pnl {
 }
 
 #[cfg(test)]
+mod test_valid_premium_for_shorts {
+    use crate::strategies::ShortStrangle;
+    use crate::{ExpirationDate, Positive, pos};
+
+    use crate::strategies::base::Positionable;
+    use rust_decimal_macros::dec;
+
+    fn get_strategy(call_strike: Positive, put_strike: Positive) -> ShortStrangle {
+        let underlying_price = pos!(7138.5);
+        ShortStrangle::new(
+            "CL".to_string(),
+            underlying_price, // underlying_price
+            call_strike,      // call_strike 7450 (delta -0.415981)
+            put_strike,       // put_strike 7050 (delta 0.417810)
+            ExpirationDate::Days(pos!(45.0)),
+            pos!(0.3745),   // implied_volatility
+            dec!(0.05),     // risk_free_rate
+            Positive::ZERO, // dividend_yield
+            pos!(1.0),      // quantity
+            pos!(84.2),     // premium_short_call
+            pos!(353.2),    // premium_short_put
+            pos!(7.01),     // open_fee_short_call
+            pos!(7.01),     // close_fee_short_call
+            pos!(7.01),     // open_fee_short_put
+            pos!(7.01),     // close_fee_short_put
+        )
+    }
+
+    #[test]
+    fn create_test_strangle() {
+        let strategy = get_strategy(pos!(7450.0), pos!(7250.0));
+        assert!(strategy.valid_premium_for_shorts(&pos!(10.0)));
+        assert!(!strategy.valid_premium_for_shorts(&pos!(100.0)));
+        assert!(!strategy.valid_premium_for_shorts(&pos!(400.0)));
+    }
+}
+
+#[cfg(test)]
 mod tests_strangle_position_management {
     use super::*;
     use crate::error::position::PositionValidationErrorKind;

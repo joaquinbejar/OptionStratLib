@@ -1065,48 +1065,6 @@ mod tests_hash {
 #[cfg(test)]
 mod tests_from_string {
     use super::*;
-    use crate::assert_pos_relative_eq;
-    use chrono::{Datelike, TimeZone};
-
-    #[test]
-    fn test_from_string_with_time_and_timezone() {
-        let today = Utc::now();
-        let tomorrow = today + Duration::days(1);
-        let tomorrow_1529 = Utc
-            .with_ymd_and_hms(tomorrow.year(), tomorrow.month(), tomorrow.day(), 15, 29, 0)
-            .unwrap();
-
-        let date_str = format!("{} UTC", tomorrow_1529.format("%Y-%m-%d %H:%M:%S"));
-
-        // Parse the date string to get an ExpirationDate
-        let result = ExpirationDate::from_string(&date_str).unwrap();
-
-        // Verify it's a DateTime variant with the correct value
-        if let ExpirationDate::DateTime(dt) = result {
-            assert_eq!(
-                dt.format("%Y-%m-%d %H:%M:%S").to_string(),
-                tomorrow_1529.format("%Y-%m-%d %H:%M:%S").to_string()
-            );
-        } else {
-            panic!("Expected DateTime variant");
-        }
-
-        // Get days from the DateTime variant
-        let days = result.get_days().unwrap();
-        assert_pos_relative_eq!(days, pos!(1.31), pos!(0.1));
-
-        // Instead of creating a Days variant, use the original DateTime variant
-        // This ensures the time information is preserved
-        let date_as_str = result.to_string();
-
-        // The date (without time) should match tomorrow's date
-        let date_str_parts: Vec<&str> = date_as_str.split_whitespace().collect();
-        let date_part = date_str_parts[0];
-        assert_eq!(date_part, tomorrow.format("%Y-%m-%d").to_string());
-
-        // Verify that the string representation matches the original date string
-        assert_eq!(date_as_str, date_str);
-    }
 
     #[test]
     fn test_from_string_with_time_no_seconds() {

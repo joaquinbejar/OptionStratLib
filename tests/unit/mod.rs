@@ -13,3 +13,7 @@ mod error;
 mod visualization;
 
 mod pnl;
+
+mod lib_test;
+
+mod utils;

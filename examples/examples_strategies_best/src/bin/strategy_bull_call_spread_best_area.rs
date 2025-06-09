@@ -7,13 +7,13 @@ use optionstratlib::strategies::base::{Optimizable, Strategies};
 use optionstratlib::strategies::bull_call_spread::BullCallSpread;
 use optionstratlib::strategies::utils::FindOptimalSide;
 use optionstratlib::utils::setup_logger;
-
 use optionstratlib::visualization::Graph;
 use rust_decimal::Decimal;
 use std::error::Error;
 use tracing::{debug, info};
 
 fn main() -> Result<(), Box<dyn Error>> {
+    setup_logger();
     let option_chain =
         OptionChain::load_from_json("./examples/Chains/SP500-18-oct-2024-5781.88.json")?;
     let underlying_price = option_chain.underlying_price;

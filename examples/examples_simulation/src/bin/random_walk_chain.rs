@@ -22,6 +22,7 @@ impl Walker {
 impl WalkTypeAble<Positive, OptionChain> for Walker {}
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    setup_logger();
     let n_steps = 43_200; // 30 days in minutes
     let mut initial_chain =
         OptionChain::load_from_json("examples/Chains/SP500-18-oct-2024-5781.88.json")?;

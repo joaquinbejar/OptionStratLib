@@ -97,7 +97,7 @@ fn test_long_call_get_option_basic_type() {
     }
     assert!(
         found,
-        "No se encontró un OptionBasicType con OptionStyle::Call"
+        "No OptionBasicType with OptionStyle::Call was found"
     );
 }
 
@@ -107,7 +107,7 @@ fn test_long_call_get_implied_volatility() {
     let implied_vol_map = long_call.get_implied_volatility();
     assert_eq!(implied_vol_map.len(), 1);
 
-    // Verificar que el mapa contiene una entrada para Call con el valor correcto
+    // Verify that the map contains an entry for Call with the correct value
     let mut found_value = None;
     for (key, value) in implied_vol_map.iter() {
         if key.option_style == &OptionStyle::Call {
@@ -117,7 +117,7 @@ fn test_long_call_get_implied_volatility() {
     }
     assert!(
         found_value.is_some(),
-        "No se encontró un OptionBasicType con OptionStyle::Call"
+        "No OptionBasicType with OptionStyle::Call was found"
     );
     assert_eq!(*found_value.unwrap(), &Positive::new(0.3).unwrap());
 }
@@ -128,7 +128,7 @@ fn test_long_call_get_quantity() {
     let quantity_map = long_call.get_quantity();
     assert_eq!(quantity_map.len(), 1);
 
-    // Verificar que el mapa contiene una entrada para Call con el valor correcto
+    // Verify that the map contains an entry for Call with the correct value
     let mut found_value = None;
     for (key, value) in quantity_map.iter() {
         if key.option_style == &OptionStyle::Call {
@@ -138,7 +138,7 @@ fn test_long_call_get_quantity() {
     }
     assert!(
         found_value.is_some(),
-        "No se encontró un OptionBasicType con OptionStyle::Call"
+        "No OptionBasicType with OptionStyle::Call was found"
     );
     assert_eq!(*found_value.unwrap(), &Positive::new(1.0).unwrap());
 }
@@ -166,7 +166,7 @@ fn test_long_call_set_underlying_price() {
     let new_price = Positive::new(110.0).unwrap();
     let result = long_call.set_underlying_price(&new_price);
     assert!(result.is_ok());
-    // No podemos acceder directamente a long_call.long_call ya que es privado
+    // We cannot directly access long_call.long_call as it is private
 }
 
 #[test]
@@ -175,7 +175,7 @@ fn test_long_call_set_implied_volatility() {
     let new_vol = Positive::new(0.4).unwrap();
     let result = long_call.set_implied_volatility(&new_vol);
     assert!(result.is_ok());
-    // No podemos acceder directamente a long_call.long_call ya que es privado
+    // We cannot directly access long_call.long_call as it is private
 }
 
 #[test]
@@ -296,7 +296,7 @@ fn test_long_call_add_position() {
         Positive::new(1.0).unwrap(),
         Positive::new(105.0).unwrap(),
         dec!(0.02),
-        OptionStyle::Put, // Esto lo hace inválido para una estrategia long call
+        OptionStyle::Put, // This makes it invalid for a long call strategy
         Positive::new(0.01).unwrap(),
         None,
     );

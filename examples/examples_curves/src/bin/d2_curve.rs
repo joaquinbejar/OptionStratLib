@@ -9,6 +9,7 @@ use rust_decimal_macros::dec;
 use std::error::Error;
 
 fn main() -> Result<(), Box<dyn Error>> {
+    setup_logger();
     let params = ConstructionParams::D2 {
         t_start: dec!(1.0),
         t_end: dec!(100),

@@ -8,7 +8,6 @@ use optionstratlib::greeks::Greeks;
 use optionstratlib::model::types::{OptionStyle, OptionType, Side};
 use optionstratlib::pos;
 use optionstratlib::strategies::BasicAble;
-use optionstratlib::utils::setup_logger;
 use optionstratlib::visualization::Graph;
 use optionstratlib::{ExpirationDate, Options};
 use rust_decimal_macros::dec;

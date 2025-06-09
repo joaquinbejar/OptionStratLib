@@ -10,6 +10,7 @@ use std::error::Error;
 use tracing::info;
 
 fn main() -> Result<(), Box<dyn Error>> {
+    setup_logger();
     let underlying_price = pos!(7008.5);
 
     let strategy = LongStraddle::new(
@@ -28,7 +29,6 @@ fn main() -> Result<(), Box<dyn Error>> {
         pos!(7.01),     // open_fee_short_put
         pos!(7.01),     // close_fee_short_put
     );
-    let price_range = strategy.get_best_range_to_show(pos!(1.0)).unwrap();
     let range = strategy.break_even_points[1] - strategy.break_even_points[0];
 
     info!("Title: {}", strategy.get_title());

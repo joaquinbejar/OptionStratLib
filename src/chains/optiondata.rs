@@ -69,23 +69,23 @@ use tracing::{debug, error, trace};
 pub struct OptionData {
     /// The strike price of the option, represented as a positive floating-point number.
     #[serde(rename = "strike_price")]
-    pub(crate) strike_price: Positive,
+    pub strike_price: Positive,
 
     /// The bid price for the call option. May be `None` if market data is unavailable.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub(crate) call_bid: Option<Positive>,
+    pub call_bid: Option<Positive>,
 
     /// The ask price for the call option. May be `None` if market data is unavailable.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub(crate) call_ask: Option<Positive>,
+    pub call_ask: Option<Positive>,
 
     /// The bid price for the put option. May be `None` if market data is unavailable.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub(crate) put_bid: Option<Positive>,
+    pub put_bid: Option<Positive>,
 
     /// The ask price for the put option. May be `None` if market data is unavailable.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub(crate) put_ask: Option<Positive>,
+    pub put_ask: Option<Positive>,
 
     /// The mid-price between call bid and ask. Calculated as (bid + ask) / 2.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -95,28 +95,43 @@ pub struct OptionData {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub put_middle: Option<Positive>,
 
+    /// The `implied_volatility` field represents the implied volatility value, which is of type `Positive`.
+    /// This value is intended to store a positive number, as enforced by the `Positive` type.
+    ///
+    /// # Attributes
+    /// - `#[serde(default)]`: This attribute ensures that the field is given a default value during
+    ///   deserialization if the value is not provided. The default implementation for the `Positive` type
+    ///   is expected to supply an appropriate default positive value.
+    ///
+    /// # Type
+    /// - `Positive`: A type that ensures the value it holds is strictly positive.
+    ///
+    /// # Usage
+    /// This field is commonly utilized in contexts where implied volatility is required, such as
+    /// in financial modeling or derivative pricing calculations. Deserialization will automatically
+    /// manage its default value if it is absent from the data source.
     #[serde(default)]
-    pub(crate) implied_volatility: Positive,
+    pub implied_volatility: Positive,
 
     /// The delta of the call option, measuring price sensitivity to underlying changes.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub(super) delta_call: Option<Decimal>,
+    pub delta_call: Option<Decimal>,
 
     /// The delta of the put option, measuring price sensitivity to underlying changes.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub(super) delta_put: Option<Decimal>,
+    pub delta_put: Option<Decimal>,
 
     /// The gamma of the option, measuring the rate of change in delta.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub(super) gamma: Option<Decimal>,
+    pub gamma: Option<Decimal>,
 
     /// The trading volume of the option, indicating market activity.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub(super) volume: Option<Positive>,
+    pub volume: Option<Positive>,
 
     /// The open interest, representing the number of outstanding contracts.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub(super) open_interest: Option<u64>,
+    pub open_interest: Option<u64>,
     /// The symbol of the underlying asset.
     #[serde(skip)]
     pub symbol: Option<String>,

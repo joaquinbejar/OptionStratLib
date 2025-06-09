@@ -4,7 +4,6 @@
    Date: 1/8/24
 ******************************************************************************/
 
-use optionstratlib::utils::setup_logger;
 use statrs::distribution::{ContinuousCDF, Normal};
 use std::f64::consts::PI;
 use tracing::info;
