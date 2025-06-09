@@ -67,52 +67,116 @@ macro_rules! impl_graph_for_payoff_strategy {
         $(
             impl Graph for $t {
                 fn graph_data(&self) -> GraphData {
+                    let underlying_price = self.get_underlying_price();
                     let range = match self.get_best_range_to_show(Positive::ONE){
                         Ok(range) => range,
                         Err(_) => return GraphData::Series(Series2D::default()),
                     };
-
-                    let mut positive_series = Series2D {
+                    
+                    // Create a single continuous series for the profit/loss chart
+                    let mut profit_series = Series2D {
                         x: vec![],
                         y: vec![],
-                        name: "Positive Payoff".to_string(),
+                        name: "Profit/Loss".to_string(),
                         mode: TraceMode::Lines,
                         line_color: Some("#2ca02c".to_string()),
                         line_width: Some(2.0),
                     };
-                    let mut negative_series = Series2D {
+                    
+                    // Add a zero line for reference
+                    let mut zero_line = Series2D {
                         x: vec![],
                         y: vec![],
-                        name: "Negative Payoff".to_string(),
+                        name: "Break Even".to_string(),
                         mode: TraceMode::Lines,
-                        line_color: Some("#FF0000".to_string()),
-                        line_width: Some(2.0),
+                        line_color: Some("#000000".to_string()),
+                        line_width: Some(1.0),
                     };
-
-
+                    
+                    // Get min and max prices for the zero line
+                    if !range.is_empty() {
+                        let min_price = range.first().unwrap().to_dec();
+                        let max_price = range.last().unwrap().to_dec();
+                        
+                        // Add zero line points
+                        zero_line.x.push(min_price);
+                        zero_line.y.push(Decimal::ZERO);
+                        zero_line.x.push(max_price);
+                        zero_line.y.push(Decimal::ZERO);
+                    }
+                    
+                    // Calculate profit at each price point and add to the series
                     for price in range {
                         let profit = self
                             .calculate_profit_at(&price)
                             .unwrap();
-                        match profit {
-                            p if p == Decimal::ZERO => {
-                                positive_series.x.push(price.to_dec());
-                                positive_series.y.push(profit);
-                                negative_series.x.push(price.to_dec());
-                                negative_series.y.push(profit);
-                            }
-                            p if p > Decimal::ZERO => {
-                                positive_series.x.push(price.to_dec());
-                                positive_series.y.push(profit);
-                            }
-                            _ => {
-                                negative_series.x.push(price.to_dec());
-                                negative_series.y.push(profit);
-                            }
-                        }
+                        
+                        profit_series.x.push(price.to_dec());
+                        profit_series.y.push(profit);
                     }
-                    let multi_series_2d = vec![positive_series, negative_series];
-                    GraphData::MultiSeries(multi_series_2d)
+                    
+                    // Crear series separadas para segmentos positivos y negativos, pero asegurando continuidad
+                    let mut segments = Vec::new();
+                    let mut current_segment = Vec::new();
+                    let mut current_sign: Option<i8> = None;
+                    
+                    // Procesar los puntos para crear segmentos continuos con el mismo signo
+                    for (i, price) in profit_series.x.iter().enumerate() {
+                        let profit = profit_series.y[i];
+                        let sign = if profit > Decimal::ZERO {
+                            1
+                        } else if profit < Decimal::ZERO {
+                            -1
+                        } else {
+                            0
+                        };
+                        
+                        // Si cambia el signo o es el primer punto
+                        if current_sign.is_none() || (sign != 0 && current_sign.unwrap() != sign) {
+                            // Si ya hay puntos en el segmento actual, guardarlo
+                            if !current_segment.is_empty() {
+                                segments.push((current_segment, current_sign.unwrap()));
+                                current_segment = Vec::new();
+                            }
+                            current_sign = Some(sign);
+                        }
+                        
+                        // Añadir el punto al segmento actual
+                        current_segment.push((*price, profit));
+                    }
+                    
+                    // Añadir el último segmento si no está vacío
+                    if !current_segment.is_empty() && current_sign.is_some() {
+                        segments.push((current_segment, current_sign.unwrap()));
+                    }
+                    
+                    // Crear series para cada segmento
+                    let mut series_list = Vec::new();
+                    for (i, (segment, sign)) in segments.iter().enumerate() {
+                        let color = if *sign > 0 {
+                            "#2ca02c".to_string() // Verde para valores positivos
+                        } else if *sign < 0 {
+                            "#FF0000".to_string() // Rojo para valores negativos
+                        } else {
+                            "#000000".to_string() // Negro para cero
+                        };
+                        
+                        let mut series = Series2D {
+                            x: segment.iter().map(|(x, _)| *x).collect(),
+                            y: segment.iter().map(|(_, y)| *y).collect(),
+                            name: format!("Segment {}", i + 1),
+                            mode: TraceMode::Lines,
+                            line_color: Some(color),
+                            line_width: Some(2.0),
+                        };
+                        
+                        series_list.push(series);
+                    }
+                    
+                    // Añadir la línea de cero
+                    series_list.push(zero_line);
+                    
+                    GraphData::MultiSeries(series_list)
                 }
 
                 fn graph_config(&self) -> GraphConfig {
