@@ -1,8 +1,8 @@
+// Test the Graph trait implementation
+// This module tests the Graph trait regardless of which feature is enabled
 #[cfg(test)]
-mod graph_default_tests {
-    // Import Graph directly from the default module
-    use optionstratlib::visualization::default::Graph;
-    use optionstratlib::visualization::{GraphConfig, GraphData};
+mod graph_tests {
+    use optionstratlib::visualization::{Graph, GraphConfig, GraphData};
     use rust_decimal_macros::dec;
     use optionstratlib::visualization::Series2D;
     use optionstratlib::visualization::TraceMode;
