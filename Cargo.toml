@@ -49,6 +49,7 @@ kaleido = [
 chrono = { version = "0.4", features = ["serde"] }
 approx = "0.5"
 plotly = { git = "https://github.com/joaquinbejar/plotly.rs", tag = "v1.0.0", default-features = false, optional = true }
+#plotly = { git = "https://github.com/plotly/plotly.rs.git", branch = "main", default-features = false, optional = true }
 #plotly = { version = "0.12.1", default-features = false, optional = true }
 statrs = "0.18"
 rand = { version = "0.9" }
