@@ -1,0 +1,10 @@
+[package]
+name = "three-d-charts"
+version = "0.1.0"
+authors = ["Michael Freeborn <michaelfreeborn1@gmail.com>"]
+edition = "2021"
+
+[dependencies]
+ndarray = "0.16"
+rand = "0.9"
+plotly = { path = "../../plotly" }
