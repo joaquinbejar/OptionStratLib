@@ -2,10 +2,10 @@
 // This module tests the Graph trait regardless of which feature is enabled
 #[cfg(test)]
 mod graph_tests {
-    use optionstratlib::visualization::{Graph, GraphConfig, GraphData};
-    use rust_decimal_macros::dec;
     use optionstratlib::visualization::Series2D;
     use optionstratlib::visualization::TraceMode;
+    use optionstratlib::visualization::{Graph, GraphConfig, GraphData};
+    use rust_decimal_macros::dec;
 
     // A minimal implementation of Graph that only implements graph_data()
     // This will force the default implementation of graph_config() to be used
@@ -23,7 +23,7 @@ mod graph_tests {
         fn graph_data(&self) -> GraphData {
             self.data.clone()
         }
-        
+
         // Deliberately NOT implementing graph_config() to test the default implementation
     }
 
@@ -39,10 +39,10 @@ mod graph_tests {
             line_width: None,
         };
         let data = GraphData::Series(series);
-        
+
         // Create a graph that uses the default implementation
         let graph = MinimalGraph::new(data);
-        
+
         // Test that the default implementation returns the default config
         let config = graph.graph_config();
         assert_eq!(config, GraphConfig::default());

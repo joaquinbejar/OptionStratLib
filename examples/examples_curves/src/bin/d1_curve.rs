@@ -7,6 +7,7 @@ use optionstratlib::utils::setup_logger;
 use optionstratlib::{Positive, pos};
 use rust_decimal_macros::dec;
 use std::error::Error;
+use tracing::info;
 
 fn main() -> Result<(), Box<dyn Error>> {
     setup_logger();
@@ -32,6 +33,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         .y_label("d1")
         .show_legend(false)
         .save("./Draws/Curves/d1_curve.png")?;
+    
+    info!("d1 curve saved successfully to ./Draws/Curves/d1_curve.png");
 
     Ok(())
 }

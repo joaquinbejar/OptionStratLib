@@ -10,7 +10,7 @@ use tracing::info;
 
 fn main() -> Result<(), Box<dyn Error>> {
     setup_logger();
-    let underlying_price = pos!(7138.5);
+    let underlying_price = pos!(7038.5);
 
     let strategy = ShortStraddle::new(
         "CL".to_string(),
@@ -55,6 +55,8 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let path: &std::path::Path = "Draws/Strategy/short_straddle_profit_loss_chart.png".as_ref();
     strategy.write_png(path)?;
+    let path: &std::path::Path = "Draws/Strategy/short_straddle_profit_loss_chart.html".as_ref();
+    strategy.write_html(path)?;
 
     Ok(())
 }

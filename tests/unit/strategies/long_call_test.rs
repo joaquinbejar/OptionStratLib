@@ -95,10 +95,7 @@ fn test_long_call_get_option_basic_type() {
             break;
         }
     }
-    assert!(
-        found,
-        "No OptionBasicType with OptionStyle::Call was found"
-    );
+    assert!(found, "No OptionBasicType with OptionStyle::Call was found");
 }
 
 #[test]

@@ -109,11 +109,16 @@ fn test_long_put_graph_data() -> Result<(), Box<dyn Error>> {
     // Verify that we got a MultiSeries with 2 series (positive and negative)
     match graph_data {
         GraphData::MultiSeries(series) => {
-            assert_eq!(series.len(), 2, "Should have positive and negative series");
+            assert_eq!(series.len(), 7, "Should have positive and negative series");
 
             // Check that the series have the correct names
-            assert_eq!(series[0].name, "Positive Payoff");
-            assert_eq!(series[1].name, "Negative Payoff");
+            assert_eq!(series[0].name, "Segment 1");
+            assert_eq!(series[1].name, "Segment 2");
+            assert_eq!(series[2].name, "Break Even");
+            assert_eq!(series[3].name, "Current Price");
+            assert_eq!(series[4].name, "Current P/L: -1.00");
+            assert_eq!(series[5].name, "-1.00");
+            assert_eq!(series[6].name, "BE: 95");
 
             // Verify that the series have data points
             assert!(
@@ -175,11 +180,16 @@ fn test_short_call_graph_data() -> Result<(), Box<dyn Error>> {
     // Verify that we got a MultiSeries with 2 series (positive and negative)
     match graph_data {
         GraphData::MultiSeries(series) => {
-            assert_eq!(series.len(), 2, "Should have positive and negative series");
+            assert_eq!(series.len(), 7, "Should have positive and negative series");
 
             // Check that the series have the correct names
-            assert_eq!(series[0].name, "Positive Payoff");
-            assert_eq!(series[1].name, "Negative Payoff");
+            assert_eq!(series[0].name, "Segment 1");
+            assert_eq!(series[1].name, "Segment 2");
+            assert_eq!(series[2].name, "Break Even");
+            assert_eq!(series[3].name, "Current Price");
+            assert_eq!(series[4].name, "Current P/L: 3.00");
+            assert_eq!(series[5].name, "3.00");
+            assert_eq!(series[6].name, "BE: 104");
 
             // Verify that the series have data points
             assert!(
