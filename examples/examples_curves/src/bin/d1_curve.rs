@@ -33,7 +33,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         .y_label("d1")
         .show_legend(false)
         .save("./Draws/Curves/d1_curve.png")?;
-    
+
     info!("d1 curve saved successfully to ./Draws/Curves/d1_curve.png");
 
     Ok(())
