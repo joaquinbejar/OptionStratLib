@@ -108,18 +108,18 @@ macro_rules! impl_graph_for_payoff_strategy {
                         y: vec![],
                         name: "Current Price".to_string(),
                         mode: TraceMode::Lines,
-                        line_color: Some("#0000FF".to_string()), // Color azul
+                        line_color: Some("#0000FF".to_string()), // Blue color
                         line_width: Some(1.0),
                     };
 
                     // Add a point at current price with its payoff value
                     // Color depends on payoff value: green (positive), blue (zero), red (negative)
                     let point_color = if pay_off_at_underlying_price > Decimal::ZERO {
-                        "#2ca02c".to_string() // Verde para valores positivos
+                        "#2ca02c".to_string() // Green for positive values
                     } else if pay_off_at_underlying_price < Decimal::ZERO {
-                        "#FF0000".to_string() // Rojo para valores negativos
+                        "#FF0000".to_string() // Red for negative values
                     } else {
-                        "#0000FF".to_string() // Azul para cero
+                        "#0000FF".to_string() // Blue for zero
                     };
 
                     // Format the payoff value with 2 decimals for the label
@@ -130,12 +130,12 @@ macro_rules! impl_graph_for_payoff_strategy {
                     let current_point = Series2D {
                         x: vec![underlying_price.to_dec()],
                         y: vec![pay_off_at_underlying_price],
-                        // La etiqueta aparecerá en la leyenda y al pasar el cursor sobre el punto
+                        // The label will appear in the legend and when hovering over the point
                         name: format!("Current P/L: {}", formatted_payoff),
-                        // Usar LinesMarkers para que se muestre el punto
+                        // Use LinesMarkers to display the point
                         mode: TraceMode::Markers,
                         line_color: Some(point_color.clone()),
-                        line_width: Some(10.0), // Punto más grande para mejor visibilidad
+                        line_width: Some(10.0), // Larger point for better visibility
                     };
 
                     // We'll set the y_offset after calculating min_profit and max_profit
@@ -250,12 +250,12 @@ macro_rules! impl_graph_for_payoff_strategy {
                         profit_series.y.push(profit);
                     }
 
-                    // Crear series separadas para segmentos positivos y negativos, pero asegurando continuidad
+                    // Create separate series for positive and negative segments, ensuring continuity
                     let mut segments = Vec::new();
                     let mut current_segment = Vec::new();
                     let mut current_sign: Option<i8> = None;
 
-                    // Procesar los puntos para crear segmentos continuos con el mismo signo
+                    // Process points to create continuous segments with the same sign
                     for (i, price) in profit_series.x.iter().enumerate() {
                         let profit = profit_series.y[i];
                         let sign = if profit > Decimal::ZERO {
@@ -266,9 +266,9 @@ macro_rules! impl_graph_for_payoff_strategy {
                             0
                         };
 
-                        // Si cambia el signo o es el primer punto
+                        // If the sign changes or it's the first point
                         if current_sign.is_none() || (sign != 0 && current_sign.unwrap() != sign) {
-                            // Si ya hay puntos en el segmento actual, guardarlo
+                            // If there are already points in the current segment, save it
                             if !current_segment.is_empty() {
                                 segments.push((current_segment, current_sign.unwrap()));
                                 current_segment = Vec::new();
@@ -280,20 +280,20 @@ macro_rules! impl_graph_for_payoff_strategy {
                         current_segment.push((*price, profit));
                     }
 
-                    // Añadir el último segmento si no está vacío
+                    // Add the last segment if it's not empty
                     if !current_segment.is_empty() && current_sign.is_some() {
                         segments.push((current_segment, current_sign.unwrap()));
                     }
 
-                    // Crear series para cada segmento
+                    // Create series for each segment
                     let mut series_list = Vec::new();
                     for (i, (segment, sign)) in segments.iter().enumerate() {
                         let color = if *sign > 0 {
-                            "#2ca02c".to_string() // Verde para valores positivos
+                            "#2ca02c".to_string() // Green for positive values
                         } else if *sign < 0 {
-                            "#FF0000".to_string() // Rojo para valores negativos
+                            "#FF0000".to_string() // Red for negative values
                         } else {
-                            "#000000".to_string() // Negro para cero
+                            "#000000".to_string() // Black for zero
                         };
 
                         let series = Series2D {
@@ -308,18 +308,18 @@ macro_rules! impl_graph_for_payoff_strategy {
                         series_list.push(series);
                     }
 
-                    // Eliminar las líneas verticales para cada precio, ya que no son necesarias
-                    // y estaban causando errores por usar variables no definidas
+                    // Remove vertical lines for each price, as they are not necessary
+                    // and were causing errors by using undefined variables
 
-                    // Añadir las líneas de referencia, el punto actual y la etiqueta
+                    // Add reference lines, current point and label
                     series_list.push(zero_line);
                     series_list.push(current_price_line);
                     series_list.push(current_point);
                     series_list.push(label_series);
 
-                    // Añadir las etiquetas de los puntos de equilibrio
+                    // Add break-even point labels
                     for be_label in break_even_labels {
-                        // Convertir cada Label2D a Series2D
+                        // Convert each Label2D to Series2D
                         let be_series = Series2D {
                             x: vec![be_label.point.x],
                             y: vec![be_label.point.y],

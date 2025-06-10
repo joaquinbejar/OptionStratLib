@@ -21,10 +21,16 @@ use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
+/// A 2D point representation for plotting in a 2D coordinate system.
+///
+/// This structure represents a point in a 2D space with additional styling properties
+/// for visualization purposes.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Point2D {
+    /// The x-coordinate of the point.
     pub x: Decimal,
 
+    /// The y-coordinate of the point.
     pub y: Decimal,
 
     /// Name of the data series, used for legends and identification.
@@ -33,17 +39,26 @@ pub struct Point2D {
     /// Visual mode of the trace (lines, markers, or both).
     pub mode: TraceMode,
 
+    /// Optional color for the point, specified as a hex string (e.g., "#FF0000").
     pub color: Option<String>,
 
+    /// Optional width/size of the point when rendered.
     pub width: Option<f64>,
 }
 
+/// A 3D point representation for plotting in a 3D coordinate system.
+///
+/// This structure represents a point in a 3D space with additional styling properties
+/// for visualization purposes.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Point3D {
+    /// The x-coordinate of the point.
     pub x: Decimal,
 
+    /// The y-coordinate of the point.
     pub y: Decimal,
 
+    /// The z-coordinate of the point.
     pub z: Decimal,
 
     /// Name of the data series, used for legends and identification.
@@ -52,22 +67,36 @@ pub struct Point3D {
     /// Visual mode of the trace (lines, markers, or both).
     pub mode: TraceMode,
 
+    /// Optional color for the point, specified as a hex string (e.g., "#FF0000").
     pub color: Option<String>,
 
+    /// Optional width/size of the point when rendered.
     pub width: Option<f64>,
 }
 
+/// A text label attached to a 2D point for displaying information on a 2D plot.
+///
+/// This structure combines a 2D point with a text label, allowing text to be
+/// positioned at specific coordinates on a 2D plot.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Label2D {
+    /// The 2D point where the label should be positioned.
     pub point: Point2D,
 
+    /// The text content of the label.
     pub label: String,
 }
 
+/// A text label attached to a 3D point for displaying information on a 3D plot.
+///
+/// This structure combines a 3D point with a text label, allowing text to be
+/// positioned at specific coordinates on a 3D plot.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Label3D {
+    /// The 3D point where the label should be positioned.
     pub point: Point3D,
 
+    /// The text content of the label.
     pub label: String,
 }
 
