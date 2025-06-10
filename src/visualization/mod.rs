@@ -325,6 +325,8 @@ pub use default::Graph;
 
 pub use config::GraphConfig;
 pub use interface::GraphType;
-pub use model::{GraphData, MultiSeries2D, OutputType, Series2D, Surface3D};
+pub use model::{
+    GraphData, Label2D, Label3D, MultiSeries2D, OutputType, Point2D, Point3D, Series2D, Surface3D,
+};
 pub use styles::{ColorScheme, LineStyle, PlotType, TraceMode};
 pub use utils::get_color_from_scheme;

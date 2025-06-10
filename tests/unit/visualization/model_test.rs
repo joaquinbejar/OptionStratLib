@@ -10,7 +10,7 @@ use std::path::PathBuf;
 #[test]
 fn test_series2d_default() {
     let default_series = Series2D::default();
-    
+
     assert!(default_series.x.is_empty());
     assert!(default_series.y.is_empty());
     assert_eq!(default_series.name, "Series");
@@ -36,12 +36,12 @@ fn test_graph_data_from_curve() {
     points.insert(Point2D::new(dec!(1.0), dec!(2.0)));
     points.insert(Point2D::new(dec!(2.0), dec!(4.0)));
     points.insert(Point2D::new(dec!(3.0), dec!(6.0)));
-    
+
     let curve = Curve::new(points);
-    
+
     // Convert to GraphData
     let graph_data = GraphData::from(curve.clone());
-    
+
     // Verify the conversion
     match graph_data {
         GraphData::Series(series) => {
@@ -63,22 +63,22 @@ fn test_graph_data_from_vec_curves() {
     points1.insert(Point2D::new(dec!(1.0), dec!(2.0)));
     points1.insert(Point2D::new(dec!(2.0), dec!(4.0)));
     let curve1 = Curve::new(points1);
-    
+
     let mut points2 = BTreeSet::new();
     points2.insert(Point2D::new(dec!(1.0), dec!(3.0)));
     points2.insert(Point2D::new(dec!(2.0), dec!(6.0)));
     let curve2 = Curve::new(points2);
-    
+
     let curves = vec![curve1, curve2];
-    
+
     // Convert to GraphData
     let graph_data = GraphData::from(curves);
-    
+
     // Verify the conversion
     match graph_data {
         GraphData::MultiSeries(series_vec) => {
             assert_eq!(series_vec.len(), 2);
-            
+
             // Check first series
             assert_eq!(series_vec[0].x, vec![dec!(1.0), dec!(2.0)]);
             assert_eq!(series_vec[0].y, vec![dec!(2.0), dec!(4.0)]);
@@ -86,7 +86,7 @@ fn test_graph_data_from_vec_curves() {
             assert_eq!(series_vec[0].mode, TraceMode::Lines);
             assert!(series_vec[0].line_color.is_some());
             assert_eq!(series_vec[0].line_width, Some(2.0));
-            
+
             // Check second series
             assert_eq!(series_vec[1].x, vec![dec!(1.0), dec!(2.0)]);
             assert_eq!(series_vec[1].y, vec![dec!(3.0), dec!(6.0)]);
@@ -106,12 +106,12 @@ fn test_graph_data_from_surface() {
     points.insert(Point3D::new(dec!(1.0), dec!(2.0), dec!(3.0)));
     points.insert(Point3D::new(dec!(4.0), dec!(5.0), dec!(6.0)));
     points.insert(Point3D::new(dec!(7.0), dec!(8.0), dec!(9.0)));
-    
+
     let surface = Surface::new(points);
-    
+
     // Convert to GraphData
     let graph_data = GraphData::from(surface);
-    
+
     // Verify the conversion
     match graph_data {
         GraphData::Surface(surface3d) => {
@@ -129,18 +129,18 @@ fn test_output_type_variants() {
     // Test the Browser variant
     let browser_output = OutputType::Browser;
     assert!(matches!(browser_output, OutputType::Browser));
-    
+
     // Test the Html variant
     let path = PathBuf::from("/tmp/test.html");
     let html_output = OutputType::Html(&path);
     assert!(matches!(html_output, OutputType::Html(_)));
-    
+
     // The following tests are conditionally compiled only when the kaleido feature is enabled
     #[cfg(feature = "kaleido")]
     {
         let png_output = OutputType::Png(&path);
         assert!(matches!(png_output, OutputType::Png(_)));
-        
+
         let svg_output = OutputType::Svg(&path);
         assert!(matches!(svg_output, OutputType::Svg(_)));
     }

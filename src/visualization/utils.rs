@@ -1,11 +1,10 @@
-use crate::visualization::styles::ColorScheme;
+use crate::visualization::ColorScheme;
 
 #[cfg(feature = "plotly")]
 use {
     crate::visualization::GraphConfig,
-    crate::visualization::model::{Series2D, Surface3D},
-    crate::visualization::styles::TraceMode,
-    plotly::common::{Line, Mode},
+    crate::visualization::{Label2D, Series2D, Surface3D, TraceMode},
+    plotly::common::{Font, Line, Mode},
     plotly::{Scatter, Surface},
     rust_decimal::Decimal,
 };
@@ -36,18 +35,18 @@ pub fn make_scatter(series: &Series2D) -> Box<Scatter<Decimal, Decimal>> {
     }
 
     trace = trace.line(line);
-    
+
     // Handle text labels mode
     if matches!(series.mode, TraceMode::TextLabels) {
         // Use the name as text for each point
         let text_vec = vec![series.name.clone(); series.x.len()];
-        
+
         // Set the text for each point
         trace = trace.text_array(text_vec);
-        
+
         // Configure the mode to show text
         trace = trace.mode(Mode::Text);
-        
+
         // Configure the text to be visible with appropriate color
         if let Some(ref color) = series.line_color {
             // Increase font size for better visibility
@@ -60,10 +59,10 @@ pub fn make_scatter(series: &Series2D) -> Box<Scatter<Decimal, Decimal>> {
         // Backward compatibility for old implementation
         // Use the name as text for each point
         let text_vec = vec![series.name.clone(); series.x.len()];
-        
+
         // Set the text for each point
         trace = trace.text_array(text_vec);
-        
+
         // Configure the text to be visible with appropriate color
         if let Some(ref color) = series.line_color {
             // Increase font size for better visibility
@@ -71,7 +70,7 @@ pub fn make_scatter(series: &Series2D) -> Box<Scatter<Decimal, Decimal>> {
                 .color(color.to_string())
                 .size(16);
             trace = trace.text_font(text_font);
-            
+
             // Make the marker visible with appropriate color
             let marker = plotly::common::Marker::new()
                 .size(10)
@@ -182,6 +181,31 @@ pub fn to_plotly_mode(mode: &TraceMode) -> Mode {
         TraceMode::LinesMarkers => Mode::LinesMarkers,
         TraceMode::TextLabels => Mode::Text,
     }
+}
+
+/// Creates a Scatter trace from a Label2D
+///
+/// This function takes a Label2D structure and creates a plotly Scatter trace
+/// with the text label positioned at the point's coordinates.
+#[cfg(feature = "plotly")]
+#[allow(dead_code)]
+pub fn make_label_scatter(label: &Label2D) -> Box<Scatter<Decimal, Decimal>> {
+    // Create the scatter with the point coordinates
+    let mut trace = Scatter::new(vec![label.point.x], vec![label.point.y])
+        .name(label.point.name.clone())
+        .mode(Mode::Text);
+
+    // Set the text for the label
+    trace = trace.text_array(vec![label.label.clone()]);
+
+    // Configure the text to be visible with appropriate color
+    if let Some(ref color) = label.point.color {
+        // Set font properties for better visibility
+        let text_font = Font::new().color(color.to_string()).size(16);
+        trace = trace.text_font(text_font);
+    }
+
+    trace
 }
 
 /// Get color from a color scheme based on index

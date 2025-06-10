@@ -45,6 +45,7 @@ mod display_tests {
     fn test_json_display_error_handling() {
         // Create a struct that will fail to serialize
         #[derive(Serialize, Deserialize)]
+        #[allow(dead_code)]
         struct BadStruct {
             #[serde(skip_serializing)]
             name: String,
@@ -71,11 +72,12 @@ mod display_tests {
         let display_output = format!("{}", bad_struct);
         assert!(display_output.starts_with("Error serializing to JSON:"));
     }
-    
+
     #[test]
     fn test_json_debug_error_handling() {
         // Create a struct that will fail to serialize
         #[derive(Serialize, Deserialize)]
+        #[allow(dead_code)]
         struct BadDebugStruct {
             #[serde(skip_serializing)]
             name: String,
