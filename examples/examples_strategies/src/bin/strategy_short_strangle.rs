@@ -58,6 +58,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     let path: &std::path::Path = "Draws/Strategy/short_strangle_profit_loss_chart.png".as_ref();
     strategy.write_png(path)?;
 
+    let path: &std::path::Path = "Draws/Strategy/short_strangle_profit_loss_chart.html".as_ref();
+    strategy.write_html(path)?;
+
     info!("Greeks:  {:#?}", strategy.greeks());
 
     Ok(())
