@@ -24,17 +24,6 @@ include = [
     "Docker/**/*.yml",
 ]
 
-exclude = [
-    "/target",
-    "/.git",
-    "/.github",
-    "/.idea",
-    "/.vscode",
-    "Cargo.lock",
-    "/**/.DS_Store",
-    "Draws/**/*.png",
-    "Draws/**/*.html",
-]
 
 [features]
 default = []
