@@ -1,3 +1,11 @@
-[workspace]
-resolver = "2"
-members = ["plotly", "plotly_derive", "plotly_kaleido"]
+[package]
+name = "plotly-meta"
+version = "0.12.1"
+description = "Meta package for plotly.rs"
+authors = ["Ioannis Giagkiozis <i.giagkiozis@gmail.com>"]
+license = "MIT"
+edition = "2021"
+publish = false
+
+[lib]
+path = "src/lib.rs"

@@ -171,18 +171,19 @@ pub trait Graph {
     #[cfg(feature = "plotly")]
     fn write_html(&self, path: &std::path::Path) -> Result<(), GraphError> {
         prepare_file_path(path)?;
-        
+
         // Create a plot with the graph data
         let plot = self.to_plot();
-        
+
         // Get the plot configuration
         let cfg = self.graph_config();
-        
+
         // Get the JSON representation of the plot
         let plot_json = plot.to_json();
-        
+
         // Create a complete HTML document with embedded Plotly.js
-        let html = format!("\
+        let html = format!(
+            "\
 <!DOCTYPE html>
 <html lang=\"en\">
 <head>
@@ -203,14 +204,13 @@ pub trait Graph {
     </script>
 </body>
 </html>",
-            cfg.title,
-            plot_json
+            cfg.title, plot_json
         );
-        
+
         // Write HTML content to file
         std::fs::write(path, html)
             .map_err(|e| GraphError::Render(format!("Failed to write HTML file: {}", e)))?;
-        
+
         Ok(())
     }
 
