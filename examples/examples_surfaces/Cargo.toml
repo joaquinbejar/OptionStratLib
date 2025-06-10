@@ -4,8 +4,8 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-optionstratlib = { path = "../..",  features = ["plotly", "kaleido"]}
-rust_decimal = { version = "1.36.0", features = ["maths", "serde"] }
-rust_decimal_macros = "1.36.0"
-tracing = "0.1.41"
-plotly = { path = "../../vendor/plotly.rs/plotly", default-features = false, features = ["kaleido"] }
+optionstratlib = { workspace = true , features = ["plotly", "kaleido"]}
+tracing = { workspace = true }
+rust_decimal_macros = { workspace = true }
+rust_decimal = { workspace = true }
+plotly = { workspace = true,features = ["kaleido"] }

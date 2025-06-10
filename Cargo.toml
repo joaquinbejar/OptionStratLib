@@ -106,3 +106,9 @@ members = [
 [workspace.dependencies]
 optionstratlib = { path = "." }
 tracing = "0.1.41"
+rust_decimal = { version = "1.37", features = ["maths", "serde"] }
+rust_decimal_macros = "1.37"
+plotly = { path = "./vendor/plotly.rs/plotly" }
+chrono = { version = "0.4", features = ["serde"] }
+rand = { version = "0.9" }
+statrs = "0.18"
