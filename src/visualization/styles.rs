@@ -56,6 +56,8 @@ pub enum TraceMode {
     Markers,
     /// Display both lines connecting points and individual markers.
     LinesMarkers,
+    /// Display text labels at points.
+    TextLabels,
 }
 
 /// Represents different types of plots that can be generated.

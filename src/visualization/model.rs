@@ -21,6 +21,62 @@ use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Point2D {
+
+    pub x: Decimal,
+    
+    pub y: Decimal,
+
+    /// Name of the data series, used for legends and identification.
+    pub name: String,
+
+    /// Visual mode of the trace (lines, markers, or both).
+    pub mode: TraceMode,
+    
+    pub color: Option<String>,
+    
+    pub width: Option<f64>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Point3D {
+
+    pub x: Decimal,
+
+    pub y: Decimal,
+    
+    pub z: Decimal,
+
+    /// Name of the data series, used for legends and identification.
+    pub name: String,
+
+    /// Visual mode of the trace (lines, markers, or both).
+    pub mode: TraceMode,
+
+    pub color: Option<String>,
+
+    pub width: Option<f64>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Label2D {
+
+    pub point: Point2D,
+
+    pub label: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Label3D {
+
+    pub point: Point3D,
+
+    pub label: String,
+}
+
+
 /// Represents a two-dimensional data series for plotting.
 ///
 /// This struct contains the X and Y coordinates of data points, along with

@@ -17,12 +17,15 @@ pub fn make_scatter(series: &Series2D) -> Box<Scatter<Decimal, Decimal>> {
         TraceMode::Lines => Mode::Lines,
         TraceMode::Markers => Mode::Markers,
         TraceMode::LinesMarkers => Mode::LinesMarkers,
+        TraceMode::TextLabels => Mode::Text,
     };
 
+    // Create the scatter with coordinates and name
     let mut trace = Scatter::new(series.x.clone(), series.y.clone())
         .name(series.name.clone())
         .mode(mode);
 
+    // Configure the line with color and width if specified
     let mut line = Line::new();
     if let Some(w) = series.line_width {
         line = line.width(w);
@@ -33,6 +36,49 @@ pub fn make_scatter(series: &Series2D) -> Box<Scatter<Decimal, Decimal>> {
     }
 
     trace = trace.line(line);
+    
+    // Handle text labels mode
+    if matches!(series.mode, TraceMode::TextLabels) {
+        // Use the name as text for each point
+        let text_vec = vec![series.name.clone(); series.x.len()];
+        
+        // Set the text for each point
+        trace = trace.text_array(text_vec);
+        
+        // Configure the mode to show text
+        trace = trace.mode(Mode::Text);
+        
+        // Configure the text to be visible with appropriate color
+        if let Some(ref color) = series.line_color {
+            // Increase font size for better visibility
+            let text_font = plotly::common::Font::new()
+                .color(color.to_string())
+                .size(16);
+            trace = trace.text_font(text_font);
+        }
+    } else if matches!(series.mode, TraceMode::Markers) && series.line_width == Some(0.0) {
+        // Backward compatibility for old implementation
+        // Use the name as text for each point
+        let text_vec = vec![series.name.clone(); series.x.len()];
+        
+        // Set the text for each point
+        trace = trace.text_array(text_vec);
+        
+        // Configure the text to be visible with appropriate color
+        if let Some(ref color) = series.line_color {
+            // Increase font size for better visibility
+            let text_font = plotly::common::Font::new()
+                .color(color.to_string())
+                .size(16);
+            trace = trace.text_font(text_font);
+            
+            // Make the marker visible with appropriate color
+            let marker = plotly::common::Marker::new()
+                .size(10)
+                .color(color.to_string());
+            trace = trace.marker(marker);
+        }
+    }
 
     trace
 }
@@ -134,6 +180,7 @@ pub fn to_plotly_mode(mode: &TraceMode) -> Mode {
         TraceMode::Lines => Mode::Lines,
         TraceMode::Markers => Mode::Markers,
         TraceMode::LinesMarkers => Mode::LinesMarkers,
+        TraceMode::TextLabels => Mode::Text,
     }
 }
 
