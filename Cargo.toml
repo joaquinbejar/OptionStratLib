@@ -1,6 +1,6 @@
 [package]
 name = "optionstratlib"
-version = "0.5.1"
+version = "0.5.2"
 edition = "2024"
 authors = ["Joaquin Bejar <jb@taunais.com>"]
 description = "OptionStratLib is a comprehensive Rust library for options trading and strategy development across multiple asset classes."
@@ -24,17 +24,6 @@ include = [
     "Docker/**/*.yml",
 ]
 
-exclude = [
-    "/target",
-    "/.git",
-    "/.github",
-    "/.idea",
-    "/.vscode",
-    "Cargo.lock",
-    "/**/.DS_Store",
-    "Draws/**/*.png",
-    "Draws/**/*.html",
-]
 
 [features]
 default = []
@@ -48,7 +37,7 @@ kaleido = [
 [dependencies]
 chrono = { version = "0.4", features = ["serde"] }
 approx = "0.5"
-plotly = { path = "./vendor/plotly.rs/plotly", default-features = false, optional = true }
+plotly = { path = "./vendor/plotly.rs/plotly", version = "0.12.1", default-features = false, optional = true }
 statrs = "0.18"
 rand = { version = "0.9" }
 rand_distr = "0.5"
@@ -108,7 +97,7 @@ optionstratlib = { path = "." }
 tracing = "0.1.41"
 rust_decimal = { version = "1.37", features = ["maths", "serde"] }
 rust_decimal_macros = "1.37"
-plotly = { path = "./vendor/plotly.rs/plotly" }
+plotly = { path = "./vendor/plotly.rs/plotly", version = "0.12.1" }
 chrono = { version = "0.4", features = ["serde"] }
 rand = { version = "0.9" }
 statrs = "0.18"
