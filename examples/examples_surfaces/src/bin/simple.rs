@@ -1,6 +1,6 @@
 use optionstratlib::error::GraphError;
 use optionstratlib::visualization::{Surface3D, make_surface};
-use plotly::{Layout, Plot, common::Title};
+use plotly::{ImageFormat, Layout, Plot, common::Title};
 use rust_decimal::Decimal;
 use rust_decimal::prelude::FromPrimitive;
 use std::error::Error;
@@ -72,10 +72,15 @@ fn test_simple_surface() -> Result<(), GraphError> {
     info!("Saving surface as HTML to: {}", html_path.display());
     plot.write_html(html_path);
 
+    // Save as PNG (should work)
+    let png_path = Path::new("Draws/Surfaces/simple_surface.png");
+    info!("Saving surface as PNG to: {}", png_path.display());
+    plot.write_image(png_path, ImageFormat::PNG, 1600, 900, 1.0);
+
     // Comentamos la generación de imágenes estáticas debido a problemas con Kaleido
     // en macOS con arquitectura ARM (Apple Silicon)
     info!("Skipping static image generation due to Kaleido issues on macOS ARM");
-    
+
     // Para generar imágenes estáticas, considera usar la versión web de plotly
     // o exportar manualmente desde el archivo HTML generado
 

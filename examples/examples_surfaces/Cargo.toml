@@ -8,5 +8,4 @@ optionstratlib = { path = "../..",  features = ["plotly", "kaleido"]}
 rust_decimal = { version = "1.36.0", features = ["maths", "serde"] }
 rust_decimal_macros = "1.36.0"
 tracing = "0.1.41"
-plotly = { git = "https://github.com/joaquinbejar/plotly.rs", tag = "v1.0.0", default-features = false, optional = true }
-#plotly = { path = "../..",  features = ["plotly", "kaleido"]}
+plotly = { path = "../../vendor/plotly.rs/plotly", default-features = false, features = ["kaleido"] }
