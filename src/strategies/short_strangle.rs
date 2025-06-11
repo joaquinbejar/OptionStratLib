@@ -150,7 +150,8 @@ impl ShortStrangle {
         mut call_strike: Positive,
         mut put_strike: Positive,
         expiration: ExpirationDate,
-        implied_volatility: Positive,
+        call_implied_volatility: Positive,
+        put_implied_volatility: Positive,
         risk_free_rate: Decimal,
         dividend_yield: Positive,
         quantity: Positive,
@@ -182,7 +183,7 @@ impl ShortStrangle {
             underlying_symbol.clone(),
             call_strike,
             expiration,
-            implied_volatility,
+            call_implied_volatility,
             quantity,
             underlying_price,
             risk_free_rate,
@@ -207,7 +208,7 @@ impl ShortStrangle {
             underlying_symbol,
             put_strike,
             expiration,
-            implied_volatility,
+            put_implied_volatility,
             quantity,
             underlying_price,
             risk_free_rate,
@@ -834,6 +835,20 @@ impl Optimizable for ShortStrangle {
             .get_double_iter()
             // Filter out invalid combinations based on FindOptimalSide
             .filter(move |(short_put, short_call)| match side {
+                FindOptimalSide::Deltable(delta) => {
+                    let (_, delta_put) = short_put.current_deltas();
+                    let (delta_call, _) = short_call.current_deltas();
+
+                    let is_valid = delta_put.unwrap() >= -delta.to_dec()
+                        && delta_call.unwrap() <= delta.to_dec();
+                    if !is_valid {
+                        trace!(
+                            "Not Valid Delta combination: PUT {:?} and CALL {:?}",
+                            delta_put, delta_call
+                        );
+                    }
+                    is_valid
+                }
                 FindOptimalSide::DeltaRange(min, max) => {
                     let (_, delta_put) = short_put.current_deltas();
                     let (delta_call, _) = short_call.current_deltas();
@@ -864,7 +879,7 @@ impl Optimizable for ShortStrangle {
                     first: short_put,
                     second: short_call,
                 };
-                debug!("Legs: {:?}", legs);
+                trace!("Legs: {:?}", legs);
                 let strategy = strategy.create_strategy(option_chain, &legs);
                 strategy.validate()
                     && strategy.get_max_profit().is_ok()
@@ -880,9 +895,22 @@ impl Optimizable for ShortStrangle {
         side: FindOptimalSide,
         criteria: OptimizationCriteria,
     ) {
+        // Ensure the strategy got the expiration date from the option chain
+        let expiration_date = option_chain.get_expiration();
+        if let Some(expiration) = expiration_date {
+            let _ = self.set_expiration_date(expiration);
+        }
+
         let mut best_value = Decimal::MIN;
         let strategy_clone = self.clone();
-        let options_iter = strategy_clone.filter_combinations(option_chain, side);
+        let mut options_iter = strategy_clone
+            .filter_combinations(option_chain, side)
+            .peekable();
+
+        // Panic if no options are found
+        if options_iter.peek().is_none() {
+            panic!("No valid option combinations found for the given criteria");
+        }
 
         for option_data_group in options_iter {
             // Unpack the OptionDataGroup into individual options
@@ -933,16 +961,26 @@ impl Optimizable for ShortStrangle {
         if !put.valid_put() {
             panic!("Invalid Put options");
         }
-        let implied_volatility = call.implied_volatility;
-        assert!(implied_volatility <= Positive::ONE);
+        let call_implied_volatility = call.implied_volatility;
+        assert!(call_implied_volatility <= Positive::ONE);
+
+        let put_implied_volatility = put.implied_volatility;
+        assert!(put_implied_volatility <= Positive::ONE);
+
+        let expiration = if let Some(expiration) = chain.get_expiration() {
+            expiration
+        } else {
+            self.one_option().expiration_date
+        };
 
         ShortStrangle::new(
             chain.symbol.clone(),
             chain.underlying_price,
             call.strike_price,
             put.strike_price,
-            self.one_option().expiration_date,
-            implied_volatility,
+            expiration,
+            call_implied_volatility,
+            put_implied_volatility,
             self.one_option().risk_free_rate,
             self.one_option().dividend_yield,
             self.one_option().quantity,
@@ -1194,7 +1232,8 @@ mod tests_short_strangle {
             pos!(155.0),
             pos!(145.0),
             ExpirationDate::Days(pos!(30.0)),
-            pos!(0.2),
+            pos!(0.19),
+            pos!(0.22),
             dec!(0.01),
             pos!(0.02),
             pos!(100.0),
@@ -1436,7 +1475,8 @@ mod tests_short_strangle_probability {
             pos!(110.0),                      // call_strike
             pos!(90.0),                       // put_strike
             ExpirationDate::Days(pos!(30.0)), // expiration
-            pos!(0.2),                        // implied_volatility
+            pos!(0.19),                       // call_implied_volatility
+            pos!(0.21),                       // put_implied_volatility
             dec!(0.05),                       // risk_free_rate
             Positive::ZERO,                   // dividend_yield
             pos!(1.0),                        // quantity
@@ -1570,7 +1610,8 @@ mod tests_short_strangle_probability_bis {
             pos!(110.0),                      // call_strike
             pos!(90.0),                       // put_strike
             ExpirationDate::Days(pos!(30.0)), // expiration
-            pos!(0.2),                        // implied_volatility
+            pos!(0.19),                       // call_implied_volatility
+            pos!(0.21),                       // put_implied_volatility
             dec!(0.05),                       // risk_free_rate
             Positive::ZERO,                   // dividend_yield
             pos!(1.0),                        // quantity
@@ -1706,7 +1747,8 @@ mod tests_short_strangle_delta {
             call_strike,      // call_strike 7450 (delta -0.415981)
             put_strike,       // put_strike 7050 (delta 0.417810)
             ExpirationDate::Days(pos!(45.0)),
-            pos!(0.3745),   // implied_volatility
+            pos!(0.19),     // call_implied_volatility
+            pos!(0.21),     // put_implied_volatility
             dec!(0.05),     // risk_free_rate
             Positive::ZERO, // dividend_yield
             pos!(1.0),      // quantity
@@ -1722,8 +1764,8 @@ mod tests_short_strangle_delta {
     #[test]
     fn create_test_reducing_adjustments() {
         let strategy = get_strategy(pos!(7450.0), pos!(7250.0));
-        let size = dec!(0.086108);
-        let delta = pos!(0.171500192678);
+        let size = dec!(0.2322829);
+        let delta = pos!(0.433568413);
         let k = pos!(7250.0);
         assert_decimal_eq!(
             strategy.delta_neutrality().unwrap().net_delta,
@@ -1761,9 +1803,9 @@ mod tests_short_strangle_delta {
     fn create_test_increasing_adjustments() {
         let strike = pos!(7050.0);
         let strategy = get_strategy(pos!(7150.0), strike);
-        let net_delta = dec!(-0.1221);
-        let call_qty = pos!(0.22624889861);
-        let put_qty = pos!(0.2924052685);
+        let net_delta = dec!(-0.1544);
+        let call_qty = pos!(0.285738132542);
+        let put_qty = pos!(0.40004674134);
 
         assert_decimal_eq!(
             strategy.delta_neutrality().unwrap().net_delta,
@@ -1834,7 +1876,7 @@ mod tests_short_strangle_delta {
 
     #[test]
     fn create_test_no_adjustments() {
-        let strategy = get_strategy(pos!(7445.5), pos!(7050.0));
+        let strategy = get_strategy(pos!(7339.2), pos!(7050.0));
 
         assert_decimal_eq!(
             strategy.delta_neutrality().unwrap().net_delta,
@@ -1865,7 +1907,8 @@ mod tests_short_strangle_delta_size {
             call_strike,      // call_strike 7450 (delta -0.415981)
             put_strike,       // put_strike 7050 (delta 0.417810)
             ExpirationDate::Days(pos!(45.0)),
-            pos!(0.3745),   // implied_volatility
+            pos!(0.19),     // call_implied_volatility
+            pos!(0.21),     // put_implied_volatility
             dec!(0.05),     // risk_free_rate
             Positive::ZERO, // dividend_yield
             pos!(2.0),      // quantity
@@ -1892,7 +1935,7 @@ mod tests_short_strangle_delta_size {
                 } => {
                     assert_pos_relative_eq!(
                         *quantity,
-                        pos!(0.41400176840722),
+                        pos!(1.53087654092),
                         Positive(DELTA_THRESHOLD)
                     );
                     assert_pos_relative_eq!(*strike, pos!(7450.0), Positive(DELTA_THRESHOLD));
@@ -1907,6 +1950,7 @@ mod tests_short_strangle_delta_size {
                         side,
                     );
                     assert!(result.is_ok());
+                    println!("{}", temp_strategy.delta_neutrality().unwrap());
                     assert!(temp_strategy.is_delta_neutral());
                 }
                 DeltaAdjustment::SellOptions {
@@ -2028,11 +2072,9 @@ mod tests_short_strangle_delta_size {
     fn create_test_reducing_adjustments() {
         let strike = pos!(7450.0);
         let mut strategy = get_strategy(strike, pos!(7250.0));
-        let size_call = dec!(0.1722170236);
-        let delta_call = pos!(0.4140017684072);
+        let size_call = dec!(0.4645659050010322);
+        let delta_call = pos!(1.530_876_540_922_745_6);
         let k_call = pos!(7450.0);
-
-        // let size_put = dec!(-0.1722170236744605883028172966);
         let delta_put = pos!(0.343_000_385_356_289_6);
         let k_put = pos!(7250.0);
 
@@ -2147,7 +2189,8 @@ mod tests_adjust_option_position_short {
             pos!(110.0), // call_strike
             pos!(90.0),  // put_strike
             ExpirationDate::Days(pos!(30.0)),
-            pos!(0.2),      // implied_volatility
+            pos!(0.19),     // call_implied_volatility
+            pos!(0.21),     // put_implied_volatility
             dec!(0.05),     // risk_free_rate
             Positive::ZERO, // dividend_yield
             pos!(1.0),      // quantity
@@ -2929,7 +2972,8 @@ mod test_adjustments_pnl {
             call_strike,      // call_strike 7450 (delta -0.415981)
             put_strike,       // put_strike 7050 (delta 0.417810)
             ExpirationDate::Days(pos!(45.0)),
-            pos!(0.3745),   // implied_volatility
+            pos!(0.19),     // call_implied_volatility
+            pos!(0.21),     // put_implied_volatility
             dec!(0.05),     // risk_free_rate
             Positive::ZERO, // dividend_yield
             pos!(1.0),      // quantity
@@ -2951,8 +2995,8 @@ mod test_adjustments_pnl {
             "{}",
             strategy.calculate_pnl_at_expiration(&pos!(7138.5)).unwrap()
         );
-        let size = dec!(0.086108);
-        let delta = pos!(0.171500192678);
+        let size = dec!(0.232282);
+        let delta = pos!(0.4335684137);
         let k = pos!(7250.0);
         assert_decimal_eq!(
             strategy.delta_neutrality().unwrap().net_delta,
@@ -2981,7 +3025,7 @@ mod test_adjustments_pnl {
         let pnl = strategy.adjustments_pnl(&binding[1]).unwrap();
         assert!(pnl.realized.is_none());
         assert!(pnl.unrealized.is_none());
-        assert_pos_relative_eq!(pnl.initial_costs, pos!(62.978300), pos!(1e-6));
+        assert_pos_relative_eq!(pnl.initial_costs, pos!(159.2149928), pos!(1e-6));
         assert_pos_relative_eq!(pnl.initial_income, Positive::ZERO, pos!(1e-6));
 
         let short_call = strategy.short_call.option.clone();
@@ -3006,7 +3050,7 @@ mod test_adjustments_pnl {
                 option_style,
                 side,
             } => {
-                assert_pos_relative_eq!(*quantity, pos!(0.2166976643), Positive(DELTA_THRESHOLD));
+                assert_pos_relative_eq!(*quantity, pos!(0.236188315978), Positive(DELTA_THRESHOLD));
                 assert_pos_relative_eq!(*strike, pos!(7250.0), Positive(DELTA_THRESHOLD));
                 assert_eq!(*option_style, OptionStyle::Put);
                 assert_eq!(*side, Side::Short);
@@ -3016,8 +3060,8 @@ mod test_adjustments_pnl {
         let pnl = strategy.adjustments_pnl(&binding[1]).unwrap();
         assert!(pnl.realized.is_none());
         assert!(pnl.unrealized.is_none());
-        assert_pos_relative_eq!(pnl.initial_costs, pos!(3.038101), pos!(1e-6));
-        assert_pos_relative_eq!(pnl.initial_income, pos!(67.949767), pos!(1e-6));
+        assert_pos_relative_eq!(pnl.initial_costs, pos!(3.311360), pos!(1e-6));
+        assert_pos_relative_eq!(pnl.initial_income, pos!(35.304050), pos!(1e-6));
     }
 }
 
@@ -3037,7 +3081,8 @@ mod test_valid_premium_for_shorts {
             call_strike,      // call_strike 7450 (delta -0.415981)
             put_strike,       // put_strike 7050 (delta 0.417810)
             ExpirationDate::Days(pos!(45.0)),
-            pos!(0.3745),   // implied_volatility
+            pos!(0.19),     // call_implied_volatility
+            pos!(0.21),     // put_implied_volatility
             dec!(0.05),     // risk_free_rate
             Positive::ZERO, // dividend_yield
             pos!(1.0),      // quantity
@@ -3074,7 +3119,8 @@ mod tests_strangle_position_management {
             pos!(110.0), // call_strike
             pos!(90.0),  // put_strike
             ExpirationDate::Days(pos!(30.0)),
-            pos!(0.2),      // implied_volatility
+            pos!(0.19),     // call_implied_volatility
+            pos!(0.21),     // put_implied_volatility
             dec!(0.05),     // risk_free_rate
             Positive::ZERO, // dividend_yield
             pos!(1.0),      // quantity

@@ -170,6 +170,6 @@ mod tests {
             config.legend,
             Some(vec!["Data A".to_string(), "Data B".to_string()])
         );
-        assert_eq!(config.show_legend, true);
+        assert!(config.show_legend);
     }
 }

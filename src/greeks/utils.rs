@@ -9,6 +9,7 @@ use crate::constants::PI;
 use crate::error::decimal::DecimalError;
 use crate::error::greeks::{GreeksError, InputErrorKind, MathErrorKind};
 use crate::model::decimal::f64_to_decimal;
+use crate::strategies::DELTA_THRESHOLD;
 use core::f64;
 use num_traits::{FromPrimitive, ToPrimitive};
 use rust_decimal::{Decimal, MathematicalOps};
@@ -476,7 +477,7 @@ pub fn calculate_delta_neutral_sizes(
 
     // Verify the solution
     let total_delta: Decimal = size1.to_dec() * delta1 + size2.to_dec() * delta2;
-    if total_delta.abs() > Decimal::new(1, 6) {
+    if total_delta.abs() > DELTA_THRESHOLD {
         // Allow small numerical errors
         return Err(Box::from("Could not achieve delta neutrality".to_string()));
     }

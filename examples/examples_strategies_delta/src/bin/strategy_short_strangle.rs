@@ -20,6 +20,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         pos!(7250.0),     // put_strike 7050 (delta 0.417810)
         ExpirationDate::Days(pos!(45.0)),
         pos!(0.3745),   // implied_volatility
+        pos!(0.3745),   // implied_volatility
         dec!(0.05),     // risk_free_rate
         Positive::ZERO, // dividend_yield
         pos!(1.0),      // quantity

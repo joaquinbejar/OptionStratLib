@@ -20,6 +20,7 @@ fn test_short_strangle_with_greeks_integration() -> Result<(), Box<dyn Error>> {
         pos!(7050.0),     // put_strike
         ExpirationDate::Days(pos!(45.0)),
         pos!(0.3745),   // implied_volatility
+        pos!(0.3745),   // implied_volatility
         dec!(0.05),     // risk_free_rate
         Positive::ZERO, // dividend_yield
         pos!(1.0),      // quantity
