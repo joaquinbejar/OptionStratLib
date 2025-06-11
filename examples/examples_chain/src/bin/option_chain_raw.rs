@@ -35,6 +35,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         Positive::ZERO,                // put_strike
         ExpirationDate::DateTime(DateTime::from(datetime)),
         Positive::ONE,  // implied_volatility
+        Positive::ONE,  // implied_volatility
         Decimal::ZERO,  // risk_free_rate
         Positive::ZERO, // dividend_yield
         pos!(1.0),      // quantity

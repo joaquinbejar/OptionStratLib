@@ -276,7 +276,7 @@ macro_rules! impl_graph_for_payoff_strategy {
                             current_sign = Some(sign);
                         }
 
-                        // Añadir el punto al segmento actual
+                        // Add the point to the current segment
                         current_segment.push((*price, profit));
                     }
 

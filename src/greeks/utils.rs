@@ -9,6 +9,7 @@ use crate::constants::PI;
 use crate::error::decimal::DecimalError;
 use crate::error::greeks::{GreeksError, InputErrorKind, MathErrorKind};
 use crate::model::decimal::f64_to_decimal;
+use crate::strategies::DELTA_THRESHOLD;
 use core::f64;
 use num_traits::{FromPrimitive, ToPrimitive};
 use rust_decimal::{Decimal, MathematicalOps};
@@ -451,6 +452,10 @@ pub fn calculate_delta_neutral_sizes(
     delta2: Decimal,
     total_size: Positive,
 ) -> Result<(Positive, Positive), Box<dyn Error>> {
+    // The equation we want to solve is:
+    // delta1 * size1 + delta2 * size2 = Decimal::ZERO
+    // size1 + size2 = total_size
+
     // Validate inputs
     if delta1 == delta2 {
         return Err(Box::from(
@@ -476,9 +481,16 @@ pub fn calculate_delta_neutral_sizes(
 
     // Verify the solution
     let total_delta: Decimal = size1.to_dec() * delta1 + size2.to_dec() * delta2;
-    if total_delta.abs() > Decimal::new(1, 6) {
+    if total_delta.abs() > DELTA_THRESHOLD {
         // Allow small numerical errors
         return Err(Box::from("Could not achieve delta neutrality".to_string()));
+    }
+    let toral_size_check = size1 + size2;
+    if (toral_size_check.to_dec() - total_size.to_dec()).abs() > DELTA_THRESHOLD {
+        return Err(Box::from(format!(
+            "Calculated sizes {} do not match the total desired size of {} ",
+            toral_size_check, total_size
+        )));
     }
 
     Ok((size1, size2))

@@ -26,6 +26,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         Positive::ZERO,   // put_strike
         ExpirationDate::Days(pos!(5.0)),
         Positive::ZERO, // implied_volatility
+        Positive::ZERO, // implied_volatility
         Decimal::ZERO,  // risk_free_rate
         Positive::ZERO, // dividend_yield
         pos!(1.0),      // quantity
