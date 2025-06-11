@@ -45,7 +45,7 @@ use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
-use tracing::{debug, error, trace};
+use tracing::{debug, error, trace, warn};
 
 pub(super) const SHORT_STRANGLE_DESCRIPTION: &str = "A short strangle involves selling an out-of-the-money call and an \
 out-of-the-money put with the same expiration date. This strategy is used when low volatility \
@@ -460,12 +460,9 @@ impl Positionable for ShortStrangle {
         if position.option.option_style == OptionStyle::Put {
             self.short_put = position.clone();
         }
-
-        // Update values passed in new position
-        self.set_implied_volatility(&position.option.implied_volatility)?;
-        self.set_expiration_date(position.option.expiration_date)?;
-        self.set_underlying_price(&position.option.underlying_price)?;
+        
         self.update_break_even_points()?;
+
         Ok(())
     }
 
@@ -621,6 +618,7 @@ impl BasicAble for ShortStrangle {
         Ok(())
     }
     fn set_implied_volatility(&mut self, volatility: &Positive) -> Result<(), StrategyError> {
+        warn!("This set the implied volatility for both options in the Short Strangle strategy");
         self.short_call.option.implied_volatility = *volatility;
         self.short_put.option.implied_volatility = *volatility;
         self.short_call.premium = Positive(
@@ -1087,7 +1085,7 @@ impl ProbabilityAnalysis for ShortStrangle {
 
 impl Greeks for ShortStrangle {
     fn get_options(&self) -> Result<Vec<&Options>, GreeksError> {
-        Ok(vec![&self.one_option(), &self.short_put.option])
+        Ok(vec![&self.short_call.option, &self.short_put.option])
     }
 }
 
@@ -1765,7 +1763,9 @@ mod tests_short_strangle_delta {
     fn create_test_reducing_adjustments() {
         let strategy = get_strategy(pos!(7450.0), pos!(7250.0));
         let size = dec!(0.2322829);
-        let delta = pos!(0.433568413);
+        // Calculate the expected adjustment quantity based on the new logic
+        // The quantity now represents the adjustment, not the total neutral position
+        let delta = pos!(0.433568413729547252034364479);
         let k = pos!(7250.0);
         assert_decimal_eq!(
             strategy.delta_neutrality().unwrap().net_delta,
@@ -1804,8 +1804,9 @@ mod tests_short_strangle_delta {
         let strike = pos!(7050.0);
         let strategy = get_strategy(pos!(7150.0), strike);
         let net_delta = dec!(-0.1544);
-        let call_qty = pos!(0.285738132542);
-        let put_qty = pos!(0.40004674134);
+        // Update expected quantities according to the new calculation logic
+        let call_qty = pos!(0.2857381325429983511052895292);
+        let put_qty = pos!(0.4000467413447627474641274797);
 
         assert_decimal_eq!(
             strategy.delta_neutrality().unwrap().net_delta,
@@ -1924,6 +1925,8 @@ mod tests_short_strangle_delta_size {
     #[test]
     fn create_test_apply_adjustments() {
         let strategy = get_strategy(pos!(7450.0), pos!(7250.0));
+        
+        let initial_delta_neutrality =  strategy.delta_neutrality().unwrap();
         let binding = strategy.delta_adjustments().unwrap();
         for suggestion in binding.iter() {
             match suggestion {
@@ -1935,7 +1938,7 @@ mod tests_short_strangle_delta_size {
                 } => {
                     assert_pos_relative_eq!(
                         *quantity,
-                        pos!(1.53087654092),
+                        pos!(1.530876),
                         Positive(DELTA_THRESHOLD)
                     );
                     assert_pos_relative_eq!(*strike, pos!(7450.0), Positive(DELTA_THRESHOLD));
@@ -1950,7 +1953,19 @@ mod tests_short_strangle_delta_size {
                         side,
                     );
                     assert!(result.is_ok());
-                    println!("{}", temp_strategy.delta_neutrality().unwrap());
+                    let final_delta_neutrality = temp_strategy.delta_neutrality().unwrap();
+                    assert_decimal_eq!(
+                        final_delta_neutrality.individual_deltas.last().unwrap().delta_per_contract,
+                        initial_delta_neutrality.individual_deltas.last().unwrap().delta_per_contract,
+                        dec!(0.0001)
+                    );
+                    assert_decimal_eq!(
+                        final_delta_neutrality.individual_deltas.first().unwrap().delta_per_contract,
+                        initial_delta_neutrality.individual_deltas.first().unwrap().delta_per_contract,
+                        dec!(0.0001)
+                    );
+                    
+                    
                     assert!(temp_strategy.is_delta_neutral());
                 }
                 DeltaAdjustment::SellOptions {
@@ -1961,7 +1976,7 @@ mod tests_short_strangle_delta_size {
                 } => {
                     assert_pos_relative_eq!(
                         *quantity,
-                        pos!(0.3430003853562),
+                        pos!(0.86713682745),
                         Positive(DELTA_THRESHOLD)
                     );
                     assert_pos_relative_eq!(*strike, pos!(7250.0), Positive(DELTA_THRESHOLD));
@@ -1988,7 +2003,7 @@ mod tests_short_strangle_delta_size {
                         } => {
                             assert_pos_relative_eq!(
                                 quantity,
-                                pos!(0.1875856830735),
+                                pos!(0.5535746566012),
                                 Positive(DELTA_THRESHOLD)
                             );
                             assert_pos_relative_eq!(
@@ -2011,7 +2026,7 @@ mod tests_short_strangle_delta_size {
                         } => {
                             assert_pos_relative_eq!(
                                 quantity,
-                                pos!(0.187585683073),
+                                pos!(0.553574656),
                                 Positive(DELTA_THRESHOLD)
                             );
                             assert_pos_relative_eq!(
@@ -2072,11 +2087,11 @@ mod tests_short_strangle_delta_size {
     fn create_test_reducing_adjustments() {
         let strike = pos!(7450.0);
         let mut strategy = get_strategy(strike, pos!(7250.0));
-        let size_call = dec!(0.4645659050010322);
-        let delta_call = pos!(1.530_876_540_922_745_6);
+        let size_call = dec!(0.4645659);
+        let delta_call = pos!(1.5308765);
         let k_call = pos!(7450.0);
-        let delta_put = pos!(0.343_000_385_356_289_6);
         let k_put = pos!(7250.0);
+        let delta_size = dec!(0.8671368);
 
         assert_decimal_eq!(
             strategy.delta_neutrality().unwrap().net_delta,
@@ -2111,7 +2126,7 @@ mod tests_short_strangle_delta_size {
         );
 
         let result = strategy.adjust_option_position(
-            -delta_put.to_dec(),
+            -delta_size,
             &k_put,
             &OptionStyle::Put,
             &Side::Short,
@@ -2123,8 +2138,9 @@ mod tests_short_strangle_delta_size {
     #[test]
     fn create_test_increasing_adjustments() {
         let strategy = get_strategy(pos!(7150.0), pos!(7050.0));
-        let size = dec!(-0.24434);
-        let delta = pos!(0.5848105371755788);
+        let size = dec!(-0.30886);
+        // Update expected quantity according to the new calculation logic
+        let delta = pos!(0.80009);
         let k = pos!(7050.0);
         assert_decimal_eq!(
             strategy.delta_neutrality().unwrap().net_delta,
@@ -2161,7 +2177,7 @@ mod tests_short_strangle_delta_size {
 
     #[test]
     fn create_test_no_adjustments() {
-        let strategy = get_strategy(pos!(7450.7), pos!(7045.0));
+        let strategy = get_strategy(pos!(7343.8), pos!(7045.0));
 
         assert_decimal_eq!(
             strategy.delta_neutrality().unwrap().net_delta,
@@ -3210,6 +3226,191 @@ mod tests_strangle_position_management {
             _ => panic!("Expected ValidationError"),
         }
     }
+}
+
+#[cfg(test)]
+mod tests_generate_delta_adjustments {
+    use rust_decimal_macros::dec;
+    use super::*;
+    use crate::{ExpirationDate, pos, assert_pos_relative_eq};
+    use crate::strategies::DELTA_THRESHOLD;
+
+    fn create_test_short_strangle() -> ShortStrangle {
+        ShortStrangle::new(
+            "TEST".to_string(),
+            pos!(100.0), // underlying_price
+            pos!(110.0), // call_strike
+            pos!(90.0),  // put_strike
+            ExpirationDate::Days(pos!(45.0)),
+            pos!(0.32),     // call_implied_volatility
+            pos!(0.35),     // put_implied_volatility
+            dec!(0.05),     // risk_free_rate
+            Positive::ZERO, // dividend_yield
+            pos!(1.0),      // quantity
+            pos!(2.0),      // premium_short_call
+            pos!(2.0),      // premium_short_put
+            pos!(0.1),      // open_fee_short_call
+            pos!(0.1),      // close_fee_short_call
+            pos!(0.1),      // open_fee_short_put
+            pos!(0.1),      // close_fee_short_put
+        )
+    }
+
+    #[test]
+    fn test_generate_delta_adjustments_positive_net_delta_positive_option_delta() {
+        
+        let mut strategy = create_test_short_strangle();
+        let mut position: Position = strategy.short_put.clone();
+        position.option.quantity = pos!(3.0);
+        
+        strategy.modify_position(&position).unwrap();
+        let delta_neutral = strategy.delta_neutrality().unwrap();
+        assert!(delta_neutral.net_delta.is_sign_positive());
+        let net_delta = delta_neutral.net_delta;
+        
+        let option = position.option;
+        let option_delta_per_contract = option.delta().unwrap() / option.quantity;
+        assert!(option_delta_per_contract.is_sign_positive());
+        
+        // Act
+        let adjustment = strategy
+            .generate_delta_adjustments(net_delta, option_delta_per_contract, &option)
+            .unwrap();
+        
+        assert_eq!(option.quantity, pos!(3.0));
+        assert_eq!(strategy.short_call.option.quantity, pos!(1.0));
+        
+        // Assert
+        match adjustment {
+            DeltaAdjustment::SellOptions {
+                quantity,
+                strike,
+                option_style,
+                side,
+            } => {
+                assert_pos_relative_eq!(quantity, pos!(1.6138759), Positive(DELTA_THRESHOLD)); 
+                assert_eq!(strike, option.strike_price);
+                assert_eq!(option_style, option.option_style);
+                assert_eq!(side, option.side);
+            }
+            _ => panic!("Expected SellOptions adjustment"),
+        }
+    }
+
+    #[test]
+    fn test_generate_delta_adjustments_positive_net_delta_negative_option_delta() {
+
+        let mut strategy = create_test_short_strangle();
+        let mut position: Position = strategy.short_put.clone();
+        position.option.quantity = pos!(3.0);
+
+        strategy.modify_position(&position).unwrap();
+        let delta_neutral = strategy.delta_neutrality().unwrap();
+        assert!(delta_neutral.net_delta.is_sign_positive());
+        let net_delta = delta_neutral.net_delta;
+        
+        let option = strategy.short_call.option.clone();
+        let option_delta_per_contract = option.delta().unwrap() / option.quantity;
+        assert!(option_delta_per_contract.is_sign_negative());
+
+        // Act
+        let adjustment = strategy
+            .generate_delta_adjustments(net_delta, option_delta_per_contract, &option)
+            .unwrap();
+
+        assert_eq!(option.quantity, pos!(1.0));
+        assert_eq!(strategy.short_put.option.quantity, pos!(3.0));
+
+        // Assert
+        match adjustment {
+            DeltaAdjustment::BuyOptions {
+                quantity,
+                strike,
+                option_style,
+                side,
+            } => {
+                assert_pos_relative_eq!(quantity, pos!(1.1643083), Positive(DELTA_THRESHOLD));
+                assert_eq!(strike, option.strike_price);
+                assert_eq!(option_style, option.option_style);
+                assert_eq!(side, option.side);
+            }
+            _ => panic!("Expected SellOptions adjustment"),
+        }
+    }
+
+    #[test]
+    fn test_generate_delta_adjustments_negative_net_delta_positive_option_delta() {
+
+        let strategy = create_test_short_strangle();
+        let delta_neutral = strategy.delta_neutrality().unwrap();
+        assert!(delta_neutral.net_delta.is_sign_negative());
+        let net_delta = delta_neutral.net_delta;
+
+        let option = strategy.short_put.option.clone();
+        let option_delta_per_contract = option.delta().unwrap() / option.quantity;
+        assert!(option_delta_per_contract.is_sign_positive());
+
+        // Act
+        let adjustment = strategy
+            .generate_delta_adjustments(net_delta, option_delta_per_contract, &option)
+            .unwrap();
+
+        assert_eq!(option.quantity, pos!(1.0));
+        assert_eq!(strategy.short_call.option.quantity, pos!(1.0));
+
+        // Assert
+        match adjustment {
+            DeltaAdjustment::BuyOptions {
+                quantity,
+                strike,
+                option_style,
+                side,
+            } => {
+                assert_pos_relative_eq!(quantity, pos!(0.3861240), Positive(DELTA_THRESHOLD));
+                assert_eq!(strike, option.strike_price);
+                assert_eq!(option_style, option.option_style);
+                assert_eq!(side, option.side);
+            }
+            _ => panic!("Expected SellOptions adjustment"),
+        }
+    }
+
+    #[test]
+    fn test_generate_delta_adjustments_negative_net_delta_negarive_option_delta() {
+        let strategy = create_test_short_strangle();
+        let delta_neutral = strategy.delta_neutrality().unwrap();
+        assert!(delta_neutral.net_delta.is_sign_negative());
+        let net_delta = delta_neutral.net_delta;
+
+        let option = strategy.short_call.option.clone();
+        let option_delta_per_contract = option.delta().unwrap() / option.quantity;
+        assert!(option_delta_per_contract.is_sign_negative());
+
+        // Act
+        let adjustment = strategy
+            .generate_delta_adjustments(net_delta, option_delta_per_contract, &option)
+            .unwrap();
+
+        assert_eq!(option.quantity, pos!(1.0));
+        assert_eq!(strategy.short_call.option.quantity, pos!(1.0));
+
+        // Assert
+        match adjustment {
+            DeltaAdjustment::SellOptions {
+                quantity,
+                strike,
+                option_style,
+                side,
+            } => {
+                assert_pos_relative_eq!(quantity, pos!(0.2785638), Positive(DELTA_THRESHOLD));
+                assert_eq!(strike, option.strike_price);
+                assert_eq!(option_style, option.option_style);
+                assert_eq!(side, option.side);
+            }
+            _ => panic!("Expected SellOptions adjustment"),
+        }
+    }
+    
 }
 
 test_strategy_traits!(ShortStrangle, test_short_strangle_implementations);
