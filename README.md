@@ -15,7 +15,7 @@
 [![Wiki](https://img.shields.io/badge/wiki-latest-blue.svg)](https://deepwiki.com/joaquinbejar/OptionStratLib)
 
 
-## OptionStratLib v0.5.2: Financial Options Library
+## OptionStratLib v0.5.3: Financial Options Library
 
 ### Table of Contents
 1. [Introduction](#introduction)

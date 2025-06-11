@@ -381,7 +381,7 @@ impl ExpirationDate {
 
         // Try parsing format "2025-05-23 12:03:18 UTC"
         if s.contains(" UTC") && s.contains(":") {
-            // Intentar varios formatos para el patrón con UTC
+            // Try various formats for the pattern with UTC
             for format in ["%Y-%m-%d %H:%M:%S %Z", "%Y-%m-%d %H:%M:%S UTC"] {
                 if let Ok(datetime) = DateTime::parse_from_str(s, format) {
                     let utc_dt = DateTime::from(datetime);
@@ -408,7 +408,7 @@ impl ExpirationDate {
 
         // Try parsing format "2025-05-23T15:29" (without seconds)
         if s.contains('T') && s.matches(':').count() == 1 {
-            // Añadir segundos y zona horaria si no están presentes
+            // Add seconds and time zone if not present
             let datetime_str = format!("{s}:00Z");
             if let Ok(datetime) = DateTime::parse_from_rfc3339(&datetime_str) {
                 let utc_dt = DateTime::from(datetime);

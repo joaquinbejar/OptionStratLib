@@ -60,12 +60,12 @@ fn test_iron_butterfly_integration() -> Result<(), Box<dyn Error>> {
         DELTA_THRESHOLD
     );
     assert!(!strategy.is_delta_neutral());
-    assert_eq!(strategy.delta_adjustments().unwrap().len(), 4);
+    assert_eq!(strategy.delta_adjustments().unwrap().len(), 3);
 
     let binding = strategy.delta_adjustments().unwrap();
     let delta = pos!(11.301514988575999);
     let k = pos!(2500.0);
-    match &binding[3] {
+    match &binding[2] {
         BuyOptions {
             quantity,
             strike,

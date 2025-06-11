@@ -77,11 +77,11 @@ fn test_simple_surface() -> Result<(), GraphError> {
     info!("Saving surface as PNG to: {}", png_path.display());
     plot.write_image(png_path, ImageFormat::PNG, 1600, 900, 1.0);
 
-    // Comentamos la generación de imágenes estáticas debido a problemas con Kaleido
+    // We comment out the generation of static images due to issues with Kaleido
     // en macOS con arquitectura ARM (Apple Silicon)
     info!("Skipping static image generation due to Kaleido issues on macOS ARM");
 
-    // Para generar imágenes estáticas, considera usar la versión web de plotly
+    // To generate static images, consider using the web version of plotly
     // o exportar manualmente desde el archivo HTML generado
 
     Ok(())

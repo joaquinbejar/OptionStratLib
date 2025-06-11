@@ -12,13 +12,13 @@ use {
 #[test]
 fn test_short_strangle_with_greeks_integration() -> Result<(), Box<dyn Error>> {
     // Define inputs for the ShortStrangle strategy
-    let underlying_price = pos!(7138.5);
+    let underlying_price = pos!(24209.5);
 
     let mut strategy = ShortStrangle::new(
         "CL".to_string(),
         underlying_price, // underlying_price
-        pos!(7450.0),     // call_strike
-        pos!(7050.0),     // put_strike
+        pos!(24100.0),    // call_strike
+        pos!(24300.0),    // put_strike
         ExpirationDate::Days(pos!(45.0)),
         pos!(0.3745),   // implied_volatility
         pos!(0.3745),   // implied_volatility
@@ -27,14 +27,15 @@ fn test_short_strangle_with_greeks_integration() -> Result<(), Box<dyn Error>> {
         pos!(1.0),      // quantity
         pos!(84.2),     // premium_short_call
         pos!(35.2),     // premium_short_put
-        pos!(7.01),     // open_fee_short_call
-        pos!(7.01),     // close_fee_short_call
-        pos!(7.01),     // open_fee_short_put
-        pos!(7.01),     // close_fee_short_put
+        pos!(0.1),      // open_fee_short_call
+        pos!(0.1),      // close_fee_short_call
+        pos!(0.1),      // open_fee_short_put
+        pos!(0.1),      // close_fee_short_put
     );
 
-    let option_chain =
-        OptionChain::load_from_json("./examples/Chains/SP500-18-oct-2024-5781.88.json")?;
+    let option_chain = OptionChain::load_from_json(
+        "./examples/Chains/Germany-40-2025-05-27-15:29:00-UTC-24209.json",
+    )?;
     strategy.get_best_area(&option_chain, FindOptimalSide::Center);
     let positions = strategy.get_positions()?;
     for position in positions {
