@@ -535,9 +535,15 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
             let option_delta_per_contract = option.delta()? / option.quantity;
             total_size += option.quantity;
             if option_delta_per_contract.abs() > DELTA_THRESHOLD {
-                let adjustment =
-                    self.generate_delta_adjustments(net_delta, option_delta_per_contract, option)?;
-                adjustments.push(adjustment);
+                // Try to generate delta adjustments, but skip if not possible
+                match self.generate_delta_adjustments(net_delta, option_delta_per_contract, option) {
+                    Ok(adjustment) => adjustments.push(adjustment),
+                    Err(_) => {
+                        // Skip this adjustment if it's not possible
+                        // We might not be able to sell options if we don't have enough
+                        // This is acceptable as we'll try to adjust with other options
+                    }
+                }
             }
         }
 
@@ -549,11 +555,11 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
                 total_size,
             )?;
 
-            // Calcular las diferencias de tamaño (cuánto ajustar cada posición)
+            // Calculate size differences (how much to adjust each position)
             let size_diff1: Decimal = delta_neutral_size1.to_dec() - options[0].quantity.to_dec();
             let size_diff2: Decimal = delta_neutral_size2.to_dec() - options[1].quantity.to_dec();
 
-            // Crear ajuste para la primera opción
+            // Create adjustment for the first option
             let adjustment1 = if size_diff1.is_sign_positive() {
                 DeltaAdjustment::BuyOptions {
                     quantity: Positive(size_diff1.abs()),
@@ -572,7 +578,7 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
                 DeltaAdjustment::NoAdjustmentNeeded
             };
 
-            // Crear ajuste para la segunda opción
+            // Create adjustment for the second option
             let adjustment2 = if size_diff2.is_sign_positive() {
                 DeltaAdjustment::BuyOptions {
                     quantity: Positive(size_diff2.abs()),
@@ -591,10 +597,10 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
                 DeltaAdjustment::NoAdjustmentNeeded
             };
 
-            // Solo añadir el ajuste SameSize si ambos ajustes son significativos
+            // Only add the SameSize adjustment if both adjustments are significant
             match (&adjustment1, &adjustment2) {
                 (DeltaAdjustment::NoAdjustmentNeeded, DeltaAdjustment::NoAdjustmentNeeded) => {
-                    // No hacer nada, ambos ajustes son insignificantes
+                    // Do nothing, both adjustments are insignificant
                 }
                 _ => {
                     adjustments.push(DeltaAdjustment::SameSize(
@@ -1067,9 +1073,11 @@ mod tests_display_implementations {
 #[cfg(test)]
 mod tests_serialization {
     use super::*;
-    use crate::pos;
+    use crate::{pos, ExpirationDate};
     use rust_decimal_macros::dec;
     use serde_json;
+    use tracing::info;
+    use crate::strategies::ShortStrangle;
 
     #[test]
     fn test_delta_adjustment_serialization() {
@@ -1248,15 +1256,7 @@ mod tests_serialization {
             _ => panic!("Deserialized to wrong variant"),
         }
     }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::strategies::ShortStrangle;
-    use crate::{ExpirationDate, pos};
-    use tracing::info;
-
+    
     #[test]
     fn test_delta_response_serialization() {
         let strategy = ShortStrangle::new(
@@ -1381,7 +1381,7 @@ mod tests_generate_delta_adjustments {
             } => {
                 // Para delta neto positivo y delta de opción negativo, necesitamos comprar opciones
                 // La cantidad es el total de contratos necesarios para neutralizar (2.0)
-                assert_eq!(quantity, Positive::new(2.0).unwrap()); // 0.5 / -0.25 = -2.0, pero tomamos abs()
+                assert_eq!(quantity, Positive::new(2.0).unwrap()); // 0.5 / -0.25 = -2.0, but we take abs()
                 assert_eq!(strike, option.strike_price);
                 assert_eq!(option_style, option.option_style);
                 assert_eq!(side, option.side);
@@ -1586,9 +1586,9 @@ mod tests_generate_delta_adjustments {
                 ..
             } => {
                 assert_eq!(option_style, OptionStyle::Put);
-                // Para delta neto positivo y delta de opción positivo, necesitamos vender opciones
-                // La cantidad total necesaria para neutralizar es 2.0
-                // Como la posición actual es 5.75, necesitamos vender 5.75 - 2.0 = 3.75
+                // For positive net delta and positive option delta, we need to sell options
+                // The total quantity needed to neutralize is 2.0
+                // As the current position is 5.75, we need to sell 5.75 - 2.0 = 3.75
                 let expected = pos!(2.0);
                 assert_eq!(quantity, expected);
             }
@@ -1632,9 +1632,9 @@ mod tests_generate_delta_adjustments {
                 option_style,
                 side,
             } => {
-                // Para delta neto negativo y delta de opción negativo, necesitamos vender opciones
-                // La cantidad total necesaria para neutralizar es 2.0
-                // Como la posición actual es 3.0, necesitamos vender 3.0 - 2.0 = 1.0
+                // For negative net delta and negative option delta, we need to sell options
+                // The total quantity needed to neutralize is 2.0
+                // As the current position is 3.0, we need to sell 3.0 - 2.0 = 1.0
                 assert_eq!(quantity, Positive::new(2.0).unwrap());
                 assert_eq!(strike, option.strike_price);
                 assert_eq!(option_style, option.option_style);
@@ -1658,3 +1658,5 @@ mod tests_generate_delta_adjustments {
         assert!(adjustment.is_err());
     }
 }
+
+
