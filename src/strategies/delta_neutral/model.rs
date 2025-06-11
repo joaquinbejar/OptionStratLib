@@ -47,7 +47,6 @@ use crate::model::{Trade, TradeStatusAble};
 use crate::strategies::Strategies;
 use crate::strategies::base::Positionable;
 use crate::{Options, Positive, Side};
-use num_traits::ToPrimitive;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
@@ -413,104 +412,93 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
 
         // Calculate how many contracts are needed to neutralize the net delta
         let total_contracts_needed = (net_delta / option_delta_per_contract).abs();
-
+        if total_contracts_needed == option.quantity.to_dec() {
+            return Ok(DeltaAdjustment::NoAdjustmentNeeded);
+        }
         // The adjustment quantity is the difference between what we need and what we already have
         // For selling: if we already have more than needed, we sell the excess
         // For buying: if we have less than needed, we buy the difference
         let adjustment = match (
             net_delta.is_sign_positive(),
             option_delta_per_contract.is_sign_positive(),
+            option.quantity.to_dec() > total_contracts_needed,
         ) {
             // If net_delta is positive and option_delta is positive, we need to sell options
             // This means we have too much positive delta and need to reduce it
-            (true, true) => {
-                let needed = option.quantity.to_dec() - total_contracts_needed;
-                if option.quantity.to_dec() > total_contracts_needed {
-                    // We already have more contracts than needed, sell the excess
-                    DeltaAdjustment::SellOptions {
-                        quantity: Positive::from(option.quantity.to_dec() - total_contracts_needed),
-                        strike: option.strike_price,
-                        option_style: option.option_style,
-                        side: option.side,
-                    }
-                } else {
-                    // We have fewer contracts than needed, but since we need to sell,
-                    // we can't sell what we don't have, so no adjustment is possible
-                    DeltaAdjustment::BuyOptions {
-                        quantity: Positive::from(needed.abs()),
-                        strike: option.strike_price,
-                        option_style: option.option_style,
-                        side: option.side,
-                    }
+            (true, true, true) => {
+                // We already have more contracts than needed, sell the excess
+                DeltaAdjustment::SellOptions {
+                    quantity: Positive::from(total_contracts_needed),
+                    strike: option.strike_price,
+                    option_style: option.option_style,
+                    side: option.side,
                 }
+            }
+            // We have fewer contracts than needed, but since we need to sell,
+            // we can't sell what we don't have, so no adjustment is possible
+            (true, true, false) => {
+                return Err(GreeksError::StdError(
+                    "we can't sell what we don't have, so no adjustment is possible".to_string()
+                ))
             }
             // If net_delta is positive and option_delta is negative, we need to buy options
             // This means we have too much positive delta and need to add negative delta
-            (true, false) => {
+            (true, false, true) => {
                 // Calculate how many additional contracts we need to buy
                 // discounting those we already have
-                let needed = total_contracts_needed - option.quantity.to_dec();
-                if needed.is_sign_positive() {
-                    DeltaAdjustment::BuyOptions {
-                        quantity: Positive::from(total_contracts_needed - option.quantity.to_dec()),
-                        strike: option.strike_price,
-                        option_style: option.option_style,
-                        side: option.side,
-                    }
-                } else {
-                    DeltaAdjustment::SellOptions {
-                        quantity: Positive::from(needed.abs()),
-                        strike: option.strike_price,
-                        option_style: option.option_style,
-                        side: option.side,
-                    }
+                DeltaAdjustment::BuyOptions {
+                    quantity: Positive::from(total_contracts_needed.abs()),
+                    strike: option.strike_price,
+                    option_style: option.option_style,
+                    side: option.side,
+                }
+            }
+            (true, false, false) => {
+                DeltaAdjustment::BuyOptions {
+                    quantity: Positive::from(total_contracts_needed.abs()),
+                    strike: option.strike_price,
+                    option_style: option.option_style,
+                    side: option.side,
                 }
             }
             // If net_delta is negative and option_delta is positive, we need to buy options
             // This means we have too much negative delta and need to add positive delta
-            (false, true) => {
+            (false, true, true) => {
                 // Calculate how many additional contracts we need to buy
                 // discounting those we already have
-                let needed = total_contracts_needed - option.quantity.to_dec();
-                if needed.is_sign_positive() {
-                    DeltaAdjustment::BuyOptions {
-                        quantity: Positive::from(needed),
-                        strike: option.strike_price,
-                        option_style: option.option_style,
-                        side: option.side,
-                    }
-                } else {
-                    // We already have enough contracts or more than needed
-                    DeltaAdjustment::SellOptions {
-                        quantity: Positive::from(needed.abs()),
-                        strike: option.strike_price,
-                        option_style: option.option_style,
-                        side: option.side,
-                    }
+                DeltaAdjustment::BuyOptions {
+                    quantity: Positive::from(total_contracts_needed.abs()),
+                    strike: option.strike_price,
+                    option_style: option.option_style,
+                    side: option.side,
+                }
+            }
+            // We don't have enough contracts 
+            (false, true, false) => {
+                DeltaAdjustment::BuyOptions {
+                    quantity: Positive::from(total_contracts_needed.abs()),
+                    strike: option.strike_price,
+                    option_style: option.option_style,
+                    side: option.side,
                 }
             }
             // If net_delta is negative and option_delta is negative, we need to sell options
             // This means we have too much negative delta and need to reduce it
-            (false, false) => {
-                let needed = option.quantity.to_dec() - total_contracts_needed;
-                if option.quantity.to_dec() > total_contracts_needed {
-                    // We already have more contracts than needed, sell the excess
-                    DeltaAdjustment::SellOptions {
-                        quantity: Positive::from(needed),
-                        strike: option.strike_price,
-                        option_style: option.option_style,
-                        side: option.side,
-                    }
-                } else {
-                    // We have fewer contracts than needed, but since we need to sell,
-                    // we can't sell what we don't have, so no adjustment is possible
-                    DeltaAdjustment::BuyOptions {
-                        quantity: Positive::from(needed),
-                        strike: option.strike_price,
-                        option_style: option.option_style,
-                        side: option.side,
-                    }
+            (false, false, true) => {
+                // We already have more contracts than needed, sell the excess
+                DeltaAdjustment::SellOptions {
+                    quantity: Positive::from(total_contracts_needed.abs()),
+                    strike: option.strike_price,
+                    option_style: option.option_style,
+                    side: option.side,
                 }
+            }
+            // We have fewer contracts than needed, but since we need to sell,
+            // we can't sell what we don't have, so no adjustment is possible
+            (false, false, false) => {
+                return Err(GreeksError::StdError(
+                    "we can't sell what we don't have, so no adjustment is possible".to_string()
+                ))
             }
         };
 
@@ -1308,7 +1296,6 @@ mod tests_generate_delta_adjustments {
     use crate::strategies::base::BreakEvenable;
     use crate::strategies::{BasicAble, Validable};
     use crate::{ExpirationDate, pos};
-    use num_traits::FromPrimitive;
 
     struct MockDeltaNeutral;
     impl Greeks for MockDeltaNeutral {
@@ -1349,13 +1336,6 @@ mod tests_generate_delta_adjustments {
         let option_delta_per_contract = dec!(0.25); // Positive option delta
         let option = create_test_option(OptionStyle::Call, Side::Long, pos!(2.7));
 
-        let option_total_delta = option_delta_per_contract * option.quantity.to_dec();
-        let other_option_delta = net_delta - option_total_delta;
-        assert_eq!(
-            other_option_delta,
-            dec!(0.5) - Decimal::from_f64(0.25 * 2.7).unwrap()
-        );
-
         // Act
         let adjustment = delta_neutral
             .generate_delta_adjustments(net_delta, option_delta_per_contract, &option)
@@ -1369,7 +1349,7 @@ mod tests_generate_delta_adjustments {
                 option_style,
                 side,
             } => {
-                assert_eq!(quantity, Positive::new(0.7).unwrap()); // 0.5 / 0.25 = 2.0 diff to 2.7 = 0.7 to sell
+                assert_eq!(quantity, Positive::new(2.0).unwrap()); // 0.5 / 0.25 = 2.0 diff to 2.7 = 0.7 to sell
                 assert_eq!(strike, option.strike_price);
                 assert_eq!(option_style, option.option_style);
                 assert_eq!(side, option.side);
@@ -1385,11 +1365,6 @@ mod tests_generate_delta_adjustments {
         let net_delta = dec!(0.5); // Positive net delta
         let option_delta_per_contract = dec!(-0.25); // Negative option delta
         let option = create_test_option(OptionStyle::Put, Side::Long, pos!(3.7));
-
-        let option_total_delta = option_delta_per_contract * option.quantity.to_dec();
-        println!("option_total_delta: {}", option_total_delta);
-        let other_option_delta = net_delta - option_total_delta;
-        println!("other_option_delta: {}", other_option_delta);
 
         // Act
         let adjustment = delta_neutral
@@ -1407,6 +1382,38 @@ mod tests_generate_delta_adjustments {
                 // Para delta neto positivo y delta de opción negativo, necesitamos comprar opciones
                 // La cantidad es el total de contratos necesarios para neutralizar (2.0)
                 assert_eq!(quantity, Positive::new(2.0).unwrap()); // 0.5 / -0.25 = -2.0, pero tomamos abs()
+                assert_eq!(strike, option.strike_price);
+                assert_eq!(option_style, option.option_style);
+                assert_eq!(side, option.side);
+            }
+            _ => panic!("Expected BuyOptions adjustment"),
+        }
+    }
+
+    #[test]
+    fn test_generate_delta_adjustments_positive_net_delta_negative_option_delta_bis() {
+        // Arrange
+        let delta_neutral = MockDeltaNeutral;
+        let net_delta = dec!(0.5); // Positive net delta
+        let option_delta_per_contract = dec!(-0.25); // Negative option delta
+        let option = create_test_option(OptionStyle::Put, Side::Long, pos!(1.7));
+
+        // Act
+        let adjustment = delta_neutral
+            .generate_delta_adjustments(net_delta, option_delta_per_contract, &option)
+            .unwrap();
+
+        // Assert
+        match adjustment {
+            DeltaAdjustment::BuyOptions {
+                quantity,
+                strike,
+                option_style,
+                side,
+            } => {
+                // Para delta neto positivo y delta de opción negativo, necesitamos comprar opciones
+                // La cantidad es el total de contratos necesarios para neutralizar (2.0)
+                assert_eq!(quantity, Positive::new(2.0).unwrap()); 
                 assert_eq!(strike, option.strike_price);
                 assert_eq!(option_style, option.option_style);
                 assert_eq!(side, option.side);
@@ -1448,12 +1455,12 @@ mod tests_generate_delta_adjustments {
     }
 
     #[test]
-    fn test_generate_delta_adjustments_negative_net_delta_negative_option_delta() {
+    fn test_generate_delta_adjustments_negative_net_delta_positive_option_delta_bis() {
         // Arrange
         let delta_neutral = MockDeltaNeutral;
         let net_delta = dec!(-0.5); // Negative net delta
-        let option_delta_per_contract = dec!(-0.25); // Negative option delta
-        let option = create_test_option(OptionStyle::Put, Side::Long, pos!(1.5));
+        let option_delta_per_contract = dec!(0.25); // Positive option delta
+        let option = create_test_option(OptionStyle::Call, Side::Long, pos!(1.7));
 
         // Act
         let adjustment = delta_neutral
@@ -1462,17 +1469,59 @@ mod tests_generate_delta_adjustments {
 
         // Assert
         match adjustment {
+            DeltaAdjustment::BuyOptions {
+                quantity,
+                strike,
+                option_style,
+                side,
+            } => {
+                // Para delta neto negativo y delta de opción positivo, necesitamos comprar opciones
+                // La cantidad es el total de contratos necesarios para neutralizar (2.0)
+                assert_eq!(quantity, Positive::new(2.0).unwrap()); // -0.5 / 0.25 = -2.0, pero tomamos abs()
+                assert_eq!(strike, option.strike_price);
+                assert_eq!(option_style, option.option_style);
+                assert_eq!(side, option.side);
+            }
+            _ => panic!("Expected BuyOptions adjustment"),
+        }
+    }
+
+    #[test]
+    fn test_generate_delta_adjustments_negative_net_delta_negative_option_delta_error() {
+        // Arrange
+        let delta_neutral = MockDeltaNeutral;
+        let net_delta = dec!(-0.5); // Negative net delta
+        let option_delta_per_contract = dec!(-0.25); // Negative option delta
+        let option = create_test_option(OptionStyle::Put, Side::Long, pos!(1.5));
+
+        // Act
+        let adjustment = delta_neutral
+            .generate_delta_adjustments(net_delta, option_delta_per_contract, &option);
+        
+        assert!(adjustment.is_err());
+    }
+
+    #[test]
+    fn test_generate_delta_adjustments_negative_net_delta_negative_option_delta() {
+        // Arrange
+        let delta_neutral = MockDeltaNeutral;
+        let net_delta = dec!(-0.5); // Negative net delta
+        let option_delta_per_contract = dec!(-0.25); // Negative option delta
+        let option = create_test_option(OptionStyle::Put, Side::Long, pos!(10.5));
+
+        // Act
+        let adjustment = delta_neutral
+            .generate_delta_adjustments(net_delta, option_delta_per_contract, &option).unwrap();
+        
+        // Assert
+        match adjustment {
             DeltaAdjustment::SellOptions {
                 quantity,
                 strike,
                 option_style,
                 side,
             } => {
-                // Para delta neto negativo y delta de opción negativo, necesitamos vender opciones
-                // La cantidad total necesaria para neutralizar es 2.0
-                // Como la posición actual es 1.5, no podemos vender más de lo que tenemos
-                // Por lo tanto, esperamos Positive::ZERO
-                assert_eq!(quantity, Positive::ZERO);
+                assert_eq!(quantity, pos!(2.0));
                 assert_eq!(strike, option.strike_price);
                 assert_eq!(option_style, option.option_style);
                 assert_eq!(side, option.side);
@@ -1540,7 +1589,7 @@ mod tests_generate_delta_adjustments {
                 // Para delta neto positivo y delta de opción positivo, necesitamos vender opciones
                 // La cantidad total necesaria para neutralizar es 2.0
                 // Como la posición actual es 5.75, necesitamos vender 5.75 - 2.0 = 3.75
-                let expected = Positive::from(put_option.quantity.to_dec() - dec!(2.0));
+                let expected = pos!(2.0);
                 assert_eq!(quantity, expected);
             }
             _ => panic!("Expected SellOptions adjustment"),
@@ -1556,20 +1605,9 @@ mod tests_generate_delta_adjustments {
         let short_option = create_test_option(OptionStyle::Call, Side::Short, pos!(1.0));
 
         let adjustment = delta_neutral
-            .generate_delta_adjustments(net_delta, option_delta_per_contract, &short_option)
-            .unwrap();
-
-        match adjustment {
-            DeltaAdjustment::SellOptions { side, quantity, .. } => {
-                assert_eq!(side, Side::Short);
-                // Para delta neto positivo y delta de opción positivo, necesitamos vender opciones
-                // La cantidad total necesaria para neutralizar es 2.0
-                // Como la posición actual es 1.0, y necesitamos 2.0 para neutralizar,
-                // no podemos vender más de lo que tenemos, así que esperamos Positive::ZERO
-                assert_eq!(quantity, Positive::ZERO);
-            }
-            _ => panic!("Expected SellOptions adjustment"),
-        }
+            .generate_delta_adjustments(net_delta, option_delta_per_contract, &short_option);
+        
+        assert!(adjustment.is_err());
     }
 
     // Agregar un test adicional para el caso de venta con posición mayor a la necesaria
@@ -1597,7 +1635,7 @@ mod tests_generate_delta_adjustments {
                 // Para delta neto negativo y delta de opción negativo, necesitamos vender opciones
                 // La cantidad total necesaria para neutralizar es 2.0
                 // Como la posición actual es 3.0, necesitamos vender 3.0 - 2.0 = 1.0
-                assert_eq!(quantity, Positive::new(1.0).unwrap());
+                assert_eq!(quantity, Positive::new(2.0).unwrap());
                 assert_eq!(strike, option.strike_price);
                 assert_eq!(option_style, option.option_style);
                 assert_eq!(side, option.side);
@@ -1615,14 +1653,8 @@ mod tests_generate_delta_adjustments {
         let option = create_test_option(OptionStyle::Call, Side::Long, pos!(1.7));
 
         let adjustment = delta_neutral
-            .generate_delta_adjustments(net_delta, option_delta_per_contract, &option)
-            .unwrap();
+            .generate_delta_adjustments(net_delta, option_delta_per_contract, &option);
 
-        match adjustment {
-            DeltaAdjustment::SellOptions { quantity, .. } => {
-                assert_eq!(quantity, Positive::new(100000.0).unwrap()); // 1000.0 / 0.01 = 100000.0
-            }
-            _ => panic!("Expected SellOptions adjustment"),
-        }
+        assert!(adjustment.is_err());
     }
 }
