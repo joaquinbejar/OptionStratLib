@@ -52,7 +52,7 @@ use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
 use std::error::Error;
 use std::fmt;
-use tracing::debug;
+use tracing::{debug, warn};
 
 /// # Delta Neutrality Threshold
 ///
@@ -234,6 +234,7 @@ pub struct DeltaPositionInfo {
     /// The delta value of the position, representing the sensitivity of the position's price
     /// to changes in the underlying asset price.
     pub delta: Decimal,
+    pub delta_per_contract: Decimal,
     /// The quantity of the options in the position.
     pub quantity: Positive,
     /// The strike price of the option, represented as a positive value.
@@ -247,7 +248,8 @@ pub struct DeltaPositionInfo {
 impl fmt::Display for DeltaPositionInfo {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "Delta: {:.4}", self.delta)?;
-        writeln!(f, "  Quantity: {}", self.quantity)?;
+        writeln!(f, "  Delta per Contract: {:.4}", self.delta_per_contract)?;
+        writeln!(f, "  Quantity: {:.4}", self.quantity)?;
         writeln!(f, "  Strike: {}", self.strike)?;
         writeln!(f, "  Option Style: {:?}", self.option_style)?;
         writeln!(f, "  Side: {:?}", self.side)?;
@@ -337,6 +339,7 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
             .iter()
             .map(|option| DeltaPositionInfo {
                 delta: option.delta().unwrap(),
+                delta_per_contract: option.delta().unwrap() / option.quantity,
                 quantity: option.quantity,
                 strike: option.strike_price,
                 option_style: option.option_style,
@@ -532,13 +535,14 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
         let mut total_size: Positive = Positive::ZERO;
         // Calculate adjustments for each option
         for option in &options {
-            let option_delta_per_contract = option.delta()? / option.quantity;
+            let option_delta_per_contract = option.delta()? / option.quantity.to_dec();
             total_size += option.quantity;
-            if option_delta_per_contract.abs() > DELTA_THRESHOLD {
+            if option_delta_per_contract.abs() > DELTA_THRESHOLD  / dec!(10.0) {
                 // Try to generate delta adjustments, but skip if not possible
                 match self.generate_delta_adjustments(net_delta, option_delta_per_contract, option) {
                     Ok(adjustment) => adjustments.push(adjustment),
                     Err(_) => {
+                        warn!("We might not be able to sell options if we don't have enough");
                         // Skip this adjustment if it's not possible
                         // We might not be able to sell options if we don't have enough
                         // This is acceptable as we'll try to adjust with other options
@@ -1012,6 +1016,7 @@ mod tests_display_implementations {
     fn test_delta_position_info_display() {
         let position_info = DeltaPositionInfo {
             delta: dec!(0.5),
+            delta_per_contract: dec!(0.25),
             quantity: pos!(2.0),
             strike: pos!(100.0),
             option_style: OptionStyle::Call,
@@ -1036,6 +1041,7 @@ mod tests_display_implementations {
             individual_deltas: vec![
                 DeltaPositionInfo {
                     delta: dec!(0.5),
+                    delta_per_contract: dec!(0.25),
                     quantity: pos!(1.0),
                     strike: pos!(100.0),
                     option_style: OptionStyle::Call,
@@ -1043,6 +1049,7 @@ mod tests_display_implementations {
                 },
                 DeltaPositionInfo {
                     delta: dec!(-0.75),
+                    delta_per_contract: dec!(-0.375),
                     quantity: pos!(2.0),
                     strike: pos!(95.0),
                     option_style: OptionStyle::Put,
@@ -1145,6 +1152,7 @@ mod tests_serialization {
     fn test_delta_position_info_serialization() {
         let position_info = DeltaPositionInfo {
             delta: dec!(0.5),
+            delta_per_contract: dec!(0.25),
             quantity: pos!(2.0),
             strike: pos!(100.0),
             option_style: OptionStyle::Call,
@@ -1171,6 +1179,7 @@ mod tests_serialization {
             individual_deltas: vec![
                 DeltaPositionInfo {
                     delta: dec!(0.5),
+                    delta_per_contract: dec!(0.25),
                     quantity: pos!(1.0),
                     strike: pos!(100.0),
                     option_style: OptionStyle::Call,
@@ -1178,6 +1187,7 @@ mod tests_serialization {
                 },
                 DeltaPositionInfo {
                     delta: dec!(-0.75),
+                    delta_per_contract: dec!(-0.375),
                     quantity: pos!(2.0),
                     strike: pos!(95.0),
                     option_style: OptionStyle::Put,
@@ -1586,9 +1596,6 @@ mod tests_generate_delta_adjustments {
                 ..
             } => {
                 assert_eq!(option_style, OptionStyle::Put);
-                // For positive net delta and positive option delta, we need to sell options
-                // The total quantity needed to neutralize is 2.0
-                // As the current position is 5.75, we need to sell 5.75 - 2.0 = 3.75
                 let expected = pos!(2.0);
                 assert_eq!(quantity, expected);
             }
