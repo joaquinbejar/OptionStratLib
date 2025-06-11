@@ -155,13 +155,13 @@ mod tests {
     use crate::geometrics::GeometricObject;
     use rust_decimal_macros::dec;
     #[cfg(feature = "plotly")]
-    use {std::fs, std::path::Path};
+    use {std::fs, std::path::Path, tracing::error};
 
     #[cfg(feature = "plotly")]
     fn cleanup_image(filename: &Path) {
         if Path::new(filename).exists() {
             fs::remove_file(filename)
-                .unwrap_or_else(|_| panic!("Failed to remove {}", filename.to_str().unwrap()));
+                .unwrap_or_else(|_| error!("Failed to remove {}", filename.to_str().unwrap()));
         }
     }
 
