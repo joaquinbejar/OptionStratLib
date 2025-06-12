@@ -456,6 +456,12 @@ pub fn calculate_delta_neutral_sizes(
     // delta1 * size1 + delta2 * size2 = Decimal::ZERO
     // size1 + size2 = total_size
 
+    if delta1.is_zero() || delta2.is_zero() {
+        return Err(Box::from(
+            "Deltas cannot be zero for delta neutrality".to_string(),
+        ));
+    }
+
     // Validate inputs
     if delta1 == delta2 {
         return Err(Box::from(
