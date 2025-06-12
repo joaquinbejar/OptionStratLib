@@ -909,13 +909,10 @@ impl Optimizable for ShortStrangle {
             .filter_combinations(option_chain, side)
             .peekable();
 
-
-
         // Panic if no options are found
         if options_iter.peek().is_none() {
             panic!("No valid option combinations found for the given criteria");
         }
-        
 
         for option_data_group in options_iter {
             // Unpack the OptionDataGroup into individual options
