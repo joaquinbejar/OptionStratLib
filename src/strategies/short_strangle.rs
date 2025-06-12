@@ -854,8 +854,9 @@ impl Optimizable for ShortStrangle {
                 FindOptimalSide::DeltaRange(min, max) => {
                     let (_, delta_put) = short_put.current_deltas();
                     let (delta_call, _) = short_call.current_deltas();
-                    delta_put.unwrap() > min
-                        && delta_put.unwrap() < max
+                    let delta_put_positive = delta_put.unwrap().abs();
+                    delta_put_positive > min
+                        && delta_put_positive < max
                         && delta_call.unwrap() > min
                         && delta_call.unwrap() < max
                 }
@@ -872,8 +873,8 @@ impl Optimizable for ShortStrangle {
             .filter(move |(short_put, short_call)| short_put.strike_price < short_call.strike_price)
             // Filter out options with invalid bid/ask prices
             .filter(|(short_put, short_call)| {
-                short_put.put_ask.unwrap_or(Positive::ZERO) > Positive::ZERO
-                    && short_call.call_ask.unwrap_or(Positive::ZERO) > Positive::ZERO
+                short_put.put_bid.unwrap_or(Positive::ZERO) > Positive::ZERO
+                    && short_call.call_bid.unwrap_or(Positive::ZERO) > Positive::ZERO
             })
             // Filter out options that don't meet strategy constraints
             .filter(move |(short_put, short_call)| {
