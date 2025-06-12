@@ -455,15 +455,21 @@ pub fn calculate_delta_neutral_sizes(
     // The equation we want to solve is:
     // delta1 * size1 + delta2 * size2 = Decimal::ZERO
     // size1 + size2 = total_size
+    
+    if delta1.is_zero() || delta2.is_zero() {
+        return Err(Box::from(
+            "Deltas cannot be zero for delta neutrality".to_string(),
+        ));
+    }
 
     // Validate inputs
-    if delta1 == delta2 {
+    if delta1 == delta2  {
         return Err(Box::from(
             "Deltas cannot be equal for delta neutrality".to_string(),
         ));
     }
 
-    if delta1.is_sign_positive() == delta2.is_sign_positive() {
+    if delta1.is_sign_positive() == delta2.is_sign_positive()  {
         return Err(Box::from(
             "Deltas must have opposite signs for delta neutrality".to_string(),
         ));

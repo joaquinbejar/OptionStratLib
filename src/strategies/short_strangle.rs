@@ -838,7 +838,11 @@ impl Optimizable for ShortStrangle {
                     let (delta_call, _) = short_call.current_deltas();
 
                     let is_valid = delta_put.unwrap() >= -delta.to_dec()
-                        && delta_call.unwrap() <= delta.to_dec();
+                        && delta_call.unwrap() <= delta.to_dec()
+                        && delta_put.unwrap().is_sign_negative()
+                        && delta_call.unwrap().is_sign_positive()
+                        && !delta_call.unwrap().is_zero()
+                        && !delta_put.unwrap().is_zero();
                     if !is_valid {
                         trace!(
                             "Not Valid Delta combination: PUT {:?} and CALL {:?}",
@@ -905,10 +909,13 @@ impl Optimizable for ShortStrangle {
             .filter_combinations(option_chain, side)
             .peekable();
 
+
+
         // Panic if no options are found
         if options_iter.peek().is_none() {
             panic!("No valid option combinations found for the given criteria");
         }
+        
 
         for option_data_group in options_iter {
             // Unpack the OptionDataGroup into individual options
