@@ -1879,6 +1879,23 @@ impl OptionChain {
     /// ```
     pub fn update_expiration_date(&mut self, expiration: String) {
         self.expiration_date = expiration;
+        // update expiration date for all options
+        let expiration = self.get_expiration();
+        if expiration.is_none() {
+            warn!("Expiration date is not valid, skipping update.");
+            return;
+        }
+
+        // Create a new set of options with updated expiration dates
+        let mut updated_options = BTreeSet::new();
+        for mut option in self.options.iter().cloned() {
+            option.expiration_date = expiration;
+            updated_options.insert(option);
+        }
+
+        // Replace the old options with the updated ones
+        self.options = updated_options;
+
         self.update_greeks();
     }
 
