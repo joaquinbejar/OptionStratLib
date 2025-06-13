@@ -770,7 +770,6 @@ impl OptionData {
                 return;
             }
         };
-
         match delta(&option) {
             Ok(d) => self.delta_call = Some(d),
             Err(e) => {
