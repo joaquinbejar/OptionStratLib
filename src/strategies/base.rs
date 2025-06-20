@@ -1347,6 +1347,64 @@ pub trait Positionable {
         unimplemented!("Modify position is not implemented for this strategy")
     }
 
+    /// Retrieves a unique position based on the given option style and side.
+    ///
+    /// # Parameters
+    /// - `_option_style`: A reference to an `OptionStyle` which defines the style of the options (e.g., American, European).
+    /// - `_side`: A reference to a `Side` which specifies whether the position is on the buy or sell side.
+    ///
+    /// # Returns
+    /// A mutable reference to the `Position` if found. If the position could not be determined or does not exist,
+    /// returns a `PositionError`.
+    ///
+    /// # Errors
+    /// This function always returns an error as it is not implemented for this strategy but provides a placeholder
+    /// for functionality to be added later.
+    ///
+    fn get_position_unique(
+        &mut self,
+        _option_style: &OptionStyle,
+        _side: &Side,
+    ) -> Result<&mut Position, PositionError> {
+        unimplemented!("Get unique position is not implemented for this strategy")
+    }
+
+    /// Retrieves a unique option based on the given style and side.
+    ///
+    /// This function is intended to retrieve a unique financial option of a specific
+    /// style (`_option_style`) and side (`_side`). However, the functionality has
+    /// not been implemented for the current strategy, and calling this function
+    /// will result in a runtime panic.
+    ///
+    /// # Parameters
+    /// - `_option_style`: A reference to an `OptionStyle` that specifies the style
+    ///   of the option to retrieve (e.g., American, European).
+    /// - `_side`: A reference to a `Side` that indicates the side of the option, such
+    ///   as a call or put.
+    ///
+    /// # Returns
+    /// - `Result<&mut Options, PositionError>`:
+    ///     - On success, a mutable reference to an `Options` object would be returned.
+    ///       However, the current implementation always results in an unimplemented
+    ///       error.
+    ///
+    /// # Errors
+    /// - Always returns a `PositionError` due to the `unimplemented!` macro indicating
+    ///   that this functionality is not yet supported for the strategy.
+    ///
+    /// # Notes
+    /// This function should be implemented to support strategies that require
+    /// retrieving unique options. Until implemented, usage of this function
+    /// is not recommended.
+    ///
+    fn get_option_unique(
+        &mut self,
+        _option_style: &OptionStyle,
+        _side: &Side,
+    ) -> Result<&mut Options, PositionError> {
+        unimplemented!("Get unique option is not implemented for this strategy")
+    }
+
     /// Modifies an existing position.
     ///
     /// # Arguments
