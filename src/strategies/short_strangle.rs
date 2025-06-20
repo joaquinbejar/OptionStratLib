@@ -99,9 +99,9 @@ pub struct ShortStrangle {
     /// Price points at which the strategy neither makes nor loses money
     pub break_even_points: Vec<Positive>,
     /// The short call leg of the strategy (typically out-of-the-money)
-    pub(super) short_call: Position,
+    pub short_call: Position,
     /// The short put leg of the strategy (typically out-of-the-money)
-    pub(super) short_put: Position,
+    pub short_put: Position,
 }
 
 impl ShortStrangle {
@@ -421,6 +421,36 @@ impl Positionable for ShortStrangle {
         }
     }
 
+    fn get_position_unique(
+        &mut self,
+        option_style: &OptionStyle,
+        side: &Side,
+    ) -> Result<&mut Position, PositionError> {
+        match (side, option_style) {
+            (Side::Long, _) => Err(PositionError::invalid_position_type(
+                *side,
+                "Position side is Long, it is not valid for ShortStrangle".to_string(),
+            )),
+            (Side::Short, OptionStyle::Call) => Ok(&mut self.short_call),
+            (Side::Short, OptionStyle::Put) => Ok(&mut self.short_put),
+        }
+    }
+
+    fn get_option_unique(
+        &mut self,
+        option_style: &OptionStyle,
+        side: &Side,
+    ) -> Result<&mut Options, PositionError> {
+        match (side, option_style) {
+            (Side::Long, _) => Err(PositionError::invalid_position_type(
+                *side,
+                "Option side is Long, it is not valid for ShortStrangle".to_string(),
+            )),
+            (Side::Short, OptionStyle::Call) => Ok(&mut self.short_call.option),
+            (Side::Short, OptionStyle::Put) => Ok(&mut self.short_put.option),
+        }
+    }
+
     /// Modifies an existing position in the strategy.
     ///
     /// # Arguments
@@ -635,7 +665,7 @@ impl BasicAble for ShortStrangle {
 
 impl Strategies for ShortStrangle {
     fn get_volume(&mut self) -> Result<Positive, StrategyError> {
-        let volume = self.one_option().quantity + self.short_put.option.quantity;
+        let volume = self.short_call.option.quantity + self.short_put.option.quantity;
         Ok(volume)
     }
 
