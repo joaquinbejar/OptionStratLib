@@ -472,6 +472,8 @@ pub struct RandomPositionsParams {
     pub close_put_fee: Positive,
     /// Fee for closing call positions
     pub close_call_fee: Positive,
+    pub epic: Option<String>,
+    pub extra_fields: Option<serde_json::Value>,
 }
 
 impl RandomPositionsParams {
@@ -519,6 +521,8 @@ impl RandomPositionsParams {
         open_call_fee: Positive,
         close_put_fee: Positive,
         close_call_fee: Positive,
+        epic: Option<String>,
+        extra_fields: Option<serde_json::Value>,
     ) -> Self {
         Self {
             qty_puts_long,
@@ -533,6 +537,8 @@ impl RandomPositionsParams {
             open_call_fee,
             close_put_fee,
             close_call_fee,
+            epic,
+            extra_fields,
         }
     }
     /// Returns the total number of positions to generate.
@@ -995,6 +1001,8 @@ mod tests_random_positions_params {
             Positive::ONE,
             Positive::ONE,
             Positive::ONE,
+            Some("Epic".to_string()),
+            None,
         )
     }
 
@@ -1032,6 +1040,8 @@ mod tests_random_positions_params {
             Positive::ONE,
             Positive::ONE,
             Positive::ONE,
+            Some("Epic".to_string()),
+            None,
         );
         assert_eq!(params.total_positions(), 5);
 
@@ -1048,6 +1058,8 @@ mod tests_random_positions_params {
             Positive::ONE,
             Positive::ONE,
             Positive::ONE,
+            Some("Epic".to_string()),
+            None,
         );
         assert_eq!(params.total_positions(), 0);
     }
@@ -1356,6 +1368,8 @@ mod tests_random_positions_params_extended {
             Positive::ONE,
             Positive::ONE,
             Positive::ONE,
+            Some("Epic".to_string()),
+            None,
         );
 
         assert_eq!(params.qty_puts_long, Some(2));
@@ -1380,6 +1394,8 @@ mod tests_random_positions_params_extended {
             Positive::ONE,
             Positive::ONE,
             Positive::ONE,
+            Some("Epic".to_string()),
+            None,
         );
 
         assert_eq!(params.total_positions(), 0);
@@ -1400,6 +1416,8 @@ mod tests_random_positions_params_extended {
             Positive::ONE,
             Positive::ONE,
             Positive::ONE,
+            Some("Epic".to_string()),
+            None,
         );
 
         match params.expiration_date {
