@@ -413,6 +413,7 @@ impl OptionChain {
                 None,
                 None,
                 None,
+                None,
             );
             let price_params = OptionDataPriceParams::new(
                 p.price_params.underlying_price.clone(),
@@ -1217,6 +1218,8 @@ impl OptionChain {
                         Utc::now(),
                         params.open_put_fee,
                         params.close_put_fee,
+                        params.epic.clone(),
+                        params.extra_fields.clone(),
                     );
                     positions.push(position);
                 }
@@ -1246,6 +1249,8 @@ impl OptionChain {
                         Utc::now(),
                         params.open_put_fee,
                         params.close_put_fee,
+                        params.epic.clone(),
+                        params.extra_fields.clone(),
                     );
                     positions.push(position);
                 }
@@ -1275,6 +1280,8 @@ impl OptionChain {
                         Utc::now(),
                         params.open_call_fee,
                         params.close_call_fee,
+                        params.epic.clone(),
+                        params.extra_fields.clone(),
                     );
                     positions.push(position);
                 }
@@ -1304,6 +1311,8 @@ impl OptionChain {
                         Utc::now(),
                         params.open_call_fee,
                         params.close_call_fee,
+                        params.epic.clone(),
+                        params.extra_fields.clone(),
                     );
                     positions.push(position);
                 }
@@ -2991,6 +3000,7 @@ mod tests_option_data {
             None,
             None,
             None,
+            None,
         )
     }
 
@@ -3235,6 +3245,8 @@ mod tests_get_random_positions {
             Positive::ONE,
             Positive::ONE,
             Positive::ONE,
+            None,
+            None,
         );
         let result = chain.get_random_positions(params);
         assert!(result.is_err());
@@ -3267,6 +3279,8 @@ mod tests_get_random_positions {
             Positive::ONE,
             Positive::ONE,
             Positive::ONE,
+            None,
+            None,
         );
         let result = chain.get_random_positions(params);
 
@@ -3298,6 +3312,8 @@ mod tests_get_random_positions {
             Positive::ONE,
             Positive::ONE,
             Positive::ONE,
+            None,
+            None,
         );
         let result = chain.get_random_positions(params);
 
@@ -3329,6 +3345,8 @@ mod tests_get_random_positions {
             Positive::ONE,
             Positive::ONE,
             Positive::ONE,
+            None,
+            None,
         );
         let result = chain.get_random_positions(params);
 
@@ -3360,6 +3378,8 @@ mod tests_get_random_positions {
             Positive::ONE,
             Positive::ONE,
             Positive::ONE,
+            None,
+            None,
         );
         let result = chain.get_random_positions(params);
 
@@ -3391,6 +3411,8 @@ mod tests_get_random_positions {
             Positive::ONE,
             Positive::ONE,
             Positive::ONE,
+            None,
+            None,
         );
         let result = chain.get_random_positions(params);
 
@@ -3436,6 +3458,8 @@ mod tests_get_random_positions {
             Positive::ONE,
             Positive::ONE,
             Positive::ONE,
+            None,
+            None,
         );
         let result = chain.get_random_positions(params);
 
@@ -3464,6 +3488,7 @@ mod tests_option_data_get_prices {
             Some(dec!(0.5)),
             spos!(1000.0),
             Some(500),
+            None,
             None,
             None,
             None,
@@ -3517,6 +3542,7 @@ mod tests_option_data_get_prices {
             None,
             None,
             None,
+            None,
         );
         assert_eq!(data.get_call_buy_price(), None);
         assert_eq!(data.get_call_sell_price(), None);
@@ -3545,6 +3571,7 @@ mod tests_option_data_display {
             Some(dec!(0.5)),
             spos!(1000.0),
             Some(500),
+            None,
             None,
             None,
             None,
@@ -3752,6 +3779,7 @@ mod tests_option_data_get_option {
             Some(dec!(0.05)),                       // risk_free_rate
             Some(pos!(0.02)),                       // dividend_yield
             None,
+            None,
         )
     }
 
@@ -3808,6 +3836,7 @@ mod tests_option_data_get_options_in_strike {
             Some(Box::new(pos!(100.0))),            // underlying_price
             Some(dec!(0.05)),                       // risk_free_rate
             Some(pos!(0.02)),                       // dividend_yield
+            None,
             None,
         )
     }
@@ -4547,6 +4576,7 @@ mod tests_is_valid_optimal_side {
             None,
             None,
             None,
+            None,
         );
         let underlying_price = pos!(100.0);
 
@@ -4562,6 +4592,7 @@ mod tests_is_valid_optimal_side {
             None,
             None,
             pos!(0.5),
+            None,
             None,
             None,
             None,
@@ -4599,6 +4630,7 @@ mod tests_is_valid_optimal_side {
             None,
             None,
             None,
+            None,
         );
         let underlying_price = pos!(100.0);
 
@@ -4614,6 +4646,7 @@ mod tests_is_valid_optimal_side {
             None,
             None,
             pos!(0.5),
+            None,
             None,
             None,
             None,
@@ -4651,6 +4684,7 @@ mod tests_is_valid_optimal_side {
             None,
             None,
             None,
+            None,
         );
         let underlying_price = pos!(100.0);
 
@@ -4666,6 +4700,7 @@ mod tests_is_valid_optimal_side {
             None,
             None,
             pos!(0.5),
+            None,
             None,
             None,
             None,
@@ -4707,6 +4742,7 @@ mod tests_is_valid_optimal_side {
             None,
             None,
             None,
+            None,
         );
         let range_start = pos!(90.0);
         let range_end = pos!(110.0);
@@ -4726,6 +4762,7 @@ mod tests_is_valid_optimal_side {
             None,
             None,
             pos!(0.5),
+            None,
             None,
             None,
             None,
@@ -4767,6 +4804,7 @@ mod tests_is_valid_optimal_side {
             None,
             None,
             None,
+            None,
         );
         let option_data_upper = OptionData::new(
             pos!(110.0), // strike price at upper boundary
@@ -4775,6 +4813,7 @@ mod tests_is_valid_optimal_side {
             None,
             None,
             pos!(0.5),
+            None,
             None,
             None,
             None,
@@ -5230,6 +5269,7 @@ mod tests_option_data_delta {
             Some("AAPL".to_string()), // underlying_symbol
             Some(ExpirationDate::Days(pos!(3.9))),
             Some(Box::new(pos!(100.0))), // underlying_price
+            None,
             None,
             None,
             None,
@@ -5747,6 +5787,7 @@ mod tests_serialization {
             underlying_price: None,
             risk_free_rate: None,
             dividend_yield: None,
+            epic: None,
             extra_fields: None,
         };
 
@@ -5813,6 +5854,7 @@ mod tests_serialization {
             underlying_price: None,
             risk_free_rate: None,
             dividend_yield: None,
+            epic: None,
             extra_fields: None,
         };
 
@@ -5851,6 +5893,7 @@ mod tests_option_data_serde {
             underlying_price: None,
             risk_free_rate: None,
             dividend_yield: None,
+            epic: None,
             extra_fields: None,
         }
     }
@@ -5889,6 +5932,7 @@ mod tests_option_data_serde {
             underlying_price: None,
             risk_free_rate: None,
             dividend_yield: None,
+            epic: None,
             extra_fields: None,
         };
 
@@ -6784,6 +6828,7 @@ mod tests_atm_strike {
             None,
             None,
             None,
+            None,
         ));
 
         options.insert(OptionData::new(
@@ -6798,6 +6843,7 @@ mod tests_atm_strike {
             Some(dec!(0.1)),
             spos!(100.0),
             Some(50),
+            None,
             None,
             None,
             None,
@@ -6966,6 +7012,7 @@ mod tests_atm_strike_bis {
             None,
             None,
             None,
+            None,
         ));
 
         options.insert(OptionData::new(
@@ -6980,6 +7027,7 @@ mod tests_atm_strike_bis {
             Some(dec!(0.1)),
             spos!(100.0),
             Some(50),
+            None,
             None,
             None,
             None,

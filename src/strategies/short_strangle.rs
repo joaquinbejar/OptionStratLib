@@ -197,6 +197,8 @@ impl ShortStrangle {
             Utc::now(),
             open_fee_short_call,
             close_fee_short_call,
+            None,
+            None,
         );
         strategy
             .add_position(&short_call.clone())
@@ -222,6 +224,8 @@ impl ShortStrangle {
             Utc::now(),
             open_fee_short_put,
             close_fee_short_put,
+            None,
+            None,
         );
         strategy
             .add_position(&short_put.clone())
@@ -235,9 +239,9 @@ impl ShortStrangle {
 }
 
 impl StrategyConstructor for ShortStrangle {
-    fn get_strategy(vec_options: &[Position]) -> Result<Self, StrategyError> {
+    fn get_strategy(vec_positions: &[Position]) -> Result<Self, StrategyError> {
         // Need exactly 2 options for a short strangle
-        if vec_options.len() != 2 {
+        if vec_positions.len() != 2 {
             return Err(StrategyError::OperationError(
                 OperationErrorKind::InvalidParameters {
                     operation: "Short Strangle get_strategy".to_string(),
@@ -247,20 +251,20 @@ impl StrategyConstructor for ShortStrangle {
         }
 
         // Sort options by option style to identify call and put
-        let mut sorted_options = vec_options.to_vec();
-        sorted_options.sort_by(|a, b| {
+        let mut sorted_positions = vec_positions.to_vec();
+        sorted_positions.sort_by(|a, b| {
             a.option
                 .strike_price
                 .partial_cmp(&b.option.strike_price)
                 .unwrap()
         });
 
-        let put_option = &sorted_options[0]; // Put will be first
-        let call_option = &sorted_options[1]; // Call will be second
+        let put_position = &sorted_positions[0]; // Put will be first
+        let call_position = &sorted_positions[1]; // Call will be second
 
         // Validate one option is call and other is put
-        if call_option.option.option_style != OptionStyle::Call
-            || put_option.option.option_style != OptionStyle::Put
+        if call_position.option.option_style != OptionStyle::Call
+            || put_position.option.option_style != OptionStyle::Put
         {
             return Err(StrategyError::OperationError(
                 OperationErrorKind::InvalidParameters {
@@ -271,7 +275,7 @@ impl StrategyConstructor for ShortStrangle {
         }
 
         // Validate both options are Short
-        if call_option.option.side != Side::Short || put_option.option.side != Side::Short {
+        if call_position.option.side != Side::Short || put_position.option.side != Side::Short {
             return Err(StrategyError::OperationError(
                 OperationErrorKind::InvalidParameters {
                     operation: "Short Strangle get_strategy".to_string(),
@@ -281,7 +285,7 @@ impl StrategyConstructor for ShortStrangle {
         }
 
         // Validate call strike is higher than put strike
-        if call_option.option.strike_price <= put_option.option.strike_price {
+        if call_position.option.strike_price <= put_position.option.strike_price {
             return Err(StrategyError::OperationError(
                 OperationErrorKind::InvalidParameters {
                     operation: "Short Strangle get_strategy".to_string(),
@@ -291,7 +295,7 @@ impl StrategyConstructor for ShortStrangle {
         }
 
         // Validate expiration dates match
-        if call_option.option.expiration_date != put_option.option.expiration_date {
+        if call_position.option.expiration_date != put_position.option.expiration_date {
             return Err(StrategyError::OperationError(
                 OperationErrorKind::InvalidParameters {
                     operation: "Short Strangle get_strategy".to_string(),
@@ -302,19 +306,23 @@ impl StrategyConstructor for ShortStrangle {
 
         // Create positions
         let short_call = Position::new(
-            call_option.option.clone(),
-            call_option.premium,
+            call_position.option.clone(),
+            call_position.premium,
             Utc::now(),
-            call_option.open_fee,
-            call_option.close_fee,
+            call_position.open_fee,
+            call_position.close_fee,
+            call_position.epic.clone(),
+            call_position.extra_fields.clone(),
         );
 
         let short_put = Position::new(
-            put_option.option.clone(),
-            put_option.premium,
+            put_position.option.clone(),
+            put_position.premium,
             Utc::now(),
-            put_option.open_fee,
-            put_option.close_fee,
+            put_position.open_fee,
+            put_position.close_fee,
+            put_position.epic.clone(),
+            put_position.extra_fields.clone(),
         );
 
         // Create strategy

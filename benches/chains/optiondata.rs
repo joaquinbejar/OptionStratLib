@@ -44,6 +44,7 @@ fn benchmark_basic_operations(
                 Some(dec!(0.05)),                       // risk_free_rate
                 Some(pos!(0.02)),                       // dividend_yield
                 None,
+                None,
             );
             black_box(option_data)
         })
@@ -69,6 +70,7 @@ fn benchmark_basic_operations(
                 Some(Box::new(pos!(100.0))),            // underlying_price
                 Some(dec!(0.05)),                       // risk_free_rate
                 Some(pos!(0.02)),                       // dividend_yield
+                None,
                 None,
             );
             black_box(option_data)
@@ -132,6 +134,7 @@ fn create_test_option_data() -> OptionData {
         Some(Box::new(pos!(100.0))),            // underlying_price
         Some(dec!(0.05)),                       // risk_free_rate
         Some(pos!(0.02)),                       // dividend_yield
+        None,
         None,
     )
 }

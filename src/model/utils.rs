@@ -157,6 +157,8 @@ pub fn create_sample_position(
         date: Utc::now(),
         open_fee: pos!(0.5),
         close_fee: pos!(0.5),
+        epic: Some("Epic123".to_string()),
+        extra_fields: None,
     }
 }
 

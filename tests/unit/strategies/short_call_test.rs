@@ -45,6 +45,8 @@ fn create_test_short_call() -> ShortCall {
         Utc::now(),
         Positive::new(0.65).unwrap(), // open_fee
         Positive::new(0.65).unwrap(), // close_fee
+        None,
+        None,
     );
 
     short_call.add_position(&position).unwrap();
@@ -222,6 +224,8 @@ fn test_short_call_add_position() {
         Utc::now(),
         Positive::new(0.1).unwrap(),
         Positive::new(0.1).unwrap(),
+        None,
+        None,
     );
     assert!(short_call.add_position(&valid_position).is_ok());
 
@@ -246,6 +250,8 @@ fn test_short_call_add_position() {
         Utc::now(),
         Positive::new(0.1).unwrap(),
         Positive::new(0.1).unwrap(),
+        None,
+        None,
     );
     assert!(short_call.add_position(&invalid_position_put).is_err());
 
@@ -270,6 +276,8 @@ fn test_short_call_add_position() {
         Utc::now(),
         Positive::new(0.1).unwrap(),
         Positive::new(0.1).unwrap(),
+        None,
+        None,
     );
     assert!(short_call.add_position(&invalid_position_long).is_err());
 }

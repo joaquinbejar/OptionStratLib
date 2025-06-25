@@ -179,6 +179,8 @@ impl BearCallSpread {
             Utc::now(),
             open_fee_short_call,
             close_fee_short_call,
+            None,
+            None,
         );
         strategy
             .add_position(&short_call.clone())
@@ -204,6 +206,8 @@ impl BearCallSpread {
             Utc::now(),
             open_fee_long_call,
             close_fee_long_call,
+            None,
+            None,
         );
         strategy
             .add_position(&long_call.clone())
@@ -219,9 +223,9 @@ impl BearCallSpread {
 }
 
 impl StrategyConstructor for BearCallSpread {
-    fn get_strategy(vec_options: &[Position]) -> Result<Self, StrategyError> {
+    fn get_strategy(vec_positions: &[Position]) -> Result<Self, StrategyError> {
         // Need exactly 2 options for a bear call spread
-        if vec_options.len() != 2 {
+        if vec_positions.len() != 2 {
             return Err(StrategyError::OperationError(
                 OperationErrorKind::InvalidParameters {
                     operation: "Bear Call Spread get_strategy".to_string(),
@@ -231,20 +235,20 @@ impl StrategyConstructor for BearCallSpread {
         }
 
         // Sort options by strike price to identify short and long positions
-        let mut sorted_options = vec_options.to_vec();
-        sorted_options.sort_by(|a, b| {
+        let mut sorted_positions = vec_positions.to_vec();
+        sorted_positions.sort_by(|a, b| {
             a.option
                 .strike_price
                 .partial_cmp(&b.option.strike_price)
                 .unwrap()
         });
 
-        let lower_strike_option = &sorted_options[0];
-        let higher_strike_option = &sorted_options[1];
+        let lower_strike_position = &sorted_positions[0];
+        let higher_strike_position = &sorted_positions[1];
 
         // Validate options are calls
-        if lower_strike_option.option.option_style != OptionStyle::Call
-            || higher_strike_option.option.option_style != OptionStyle::Call
+        if lower_strike_position.option.option_style != OptionStyle::Call
+            || higher_strike_position.option.option_style != OptionStyle::Call
         {
             return Err(StrategyError::OperationError(
                 OperationErrorKind::InvalidParameters {
@@ -255,8 +259,8 @@ impl StrategyConstructor for BearCallSpread {
         }
 
         // Validate option sides
-        if lower_strike_option.option.side != Side::Short
-            || higher_strike_option.option.side != Side::Long
+        if lower_strike_position.option.side != Side::Short
+            || higher_strike_position.option.side != Side::Long
         {
             return Err(StrategyError::OperationError(OperationErrorKind::InvalidParameters {
                 operation: "Bear Call Spread get_strategy".to_string(),
@@ -265,7 +269,8 @@ impl StrategyConstructor for BearCallSpread {
         }
 
         // Validate expiration dates match
-        if lower_strike_option.option.expiration_date != higher_strike_option.option.expiration_date
+        if lower_strike_position.option.expiration_date
+            != higher_strike_position.option.expiration_date
         {
             return Err(StrategyError::OperationError(
                 OperationErrorKind::InvalidParameters {
@@ -277,19 +282,23 @@ impl StrategyConstructor for BearCallSpread {
 
         // Create positions
         let short_call = Position::new(
-            lower_strike_option.option.clone(),
-            lower_strike_option.premium,
+            lower_strike_position.option.clone(),
+            lower_strike_position.premium,
             Utc::now(),
-            lower_strike_option.open_fee,
-            lower_strike_option.close_fee,
+            lower_strike_position.open_fee,
+            lower_strike_position.close_fee,
+            None,
+            None,
         );
 
         let long_call = Position::new(
-            higher_strike_option.option.clone(),
-            higher_strike_option.premium,
+            higher_strike_position.option.clone(),
+            higher_strike_position.premium,
             Utc::now(),
-            higher_strike_option.open_fee,
-            higher_strike_option.close_fee,
+            higher_strike_position.open_fee,
+            higher_strike_position.close_fee,
+            None,
+            None,
         );
 
         // Create strategy
@@ -1108,6 +1117,8 @@ mod tests_bear_call_spread_positionable {
             Utc::now(),     // timestamp
             Positive::ZERO, // open_fee
             Positive::ZERO, // close_fee
+            None,
+            None,
         )
     }
 

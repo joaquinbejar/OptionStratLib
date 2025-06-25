@@ -187,6 +187,8 @@ impl BullPutSpread {
             Utc::now(),
             open_fee_long_put,
             close_fee_long_put,
+            None,
+            None,
         );
         strategy
             .add_position(&long_put.clone())
@@ -212,6 +214,8 @@ impl BullPutSpread {
             Utc::now(),
             open_fee_short_put,
             close_fee_short_put,
+            None,
+            None,
         );
         strategy
             .add_position(&short_put.clone())
@@ -228,9 +232,9 @@ impl BullPutSpread {
 }
 
 impl StrategyConstructor for BullPutSpread {
-    fn get_strategy(vec_options: &[Position]) -> Result<Self, StrategyError> {
+    fn get_strategy(vec_positions: &[Position]) -> Result<Self, StrategyError> {
         // Need exactly 2 options for a bull put spread
-        if vec_options.len() != 2 {
+        if vec_positions.len() != 2 {
             return Err(StrategyError::OperationError(
                 OperationErrorKind::InvalidParameters {
                     operation: "Bull Put Spread get_strategy".to_string(),
@@ -240,16 +244,16 @@ impl StrategyConstructor for BullPutSpread {
         }
 
         // Sort options by strike price to identify short and long positions
-        let mut sorted_options = vec_options.to_vec();
-        sorted_options.sort_by(|a, b| {
+        let mut sorted_positions = vec_positions.to_vec();
+        sorted_positions.sort_by(|a, b| {
             a.option
                 .strike_price
                 .partial_cmp(&b.option.strike_price)
                 .unwrap()
         });
 
-        let lower_strike_option = &sorted_options[0];
-        let higher_strike_option = &sorted_options[1];
+        let lower_strike_option = &sorted_positions[0];
+        let higher_strike_option = &sorted_positions[1];
 
         // Validate options are puts
         if lower_strike_option.option.option_style != OptionStyle::Put
@@ -291,6 +295,8 @@ impl StrategyConstructor for BullPutSpread {
             Utc::now(),
             lower_strike_option.open_fee,
             lower_strike_option.close_fee,
+            lower_strike_option.epic.clone(),
+            lower_strike_option.extra_fields.clone(),
         );
 
         let long_put = Position::new(
@@ -299,6 +305,8 @@ impl StrategyConstructor for BullPutSpread {
             Utc::now(),
             higher_strike_option.open_fee,
             higher_strike_option.close_fee,
+            higher_strike_option.epic.clone(),
+            higher_strike_option.extra_fields.clone(),
         );
 
         // Create strategy
@@ -1009,6 +1017,8 @@ mod tests_bull_put_spread_strategy {
             Utc::now(),
             Positive::ZERO,
             Positive::ZERO,
+            None,
+            None,
         );
 
         spread
@@ -1166,6 +1176,8 @@ mod tests_bull_put_spread_validation {
             Utc::now(),
             Positive::ZERO,
             Positive::ZERO,
+            None,
+            None,
         )
     }
 
@@ -1514,6 +1526,7 @@ mod tests_bull_put_spread_optimization {
             None,
             None,
             None,
+            None,
         );
 
         assert!(spread.is_valid_optimal_option(&option, &FindOptimalSide::All));
@@ -1540,6 +1553,7 @@ mod tests_bull_put_spread_optimization {
             Some(dec!(0.2)),
             spos!(100.0),
             Some(50),
+            None,
             None,
             None,
             None,
@@ -1577,6 +1591,7 @@ mod tests_bull_put_spread_optimization {
             None,
             None,
             None,
+            None,
         );
         let short_option = OptionData::new(
             pos!(95.0),
@@ -1590,6 +1605,7 @@ mod tests_bull_put_spread_optimization {
             Some(dec!(0.2)),
             spos!(100.0),
             Some(50),
+            None,
             None,
             None,
             None,

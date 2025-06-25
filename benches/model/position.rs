@@ -36,6 +36,8 @@ fn create_test_position() -> Position {
         Utc::now(), // date
         pos!(0.5),  // open_fee
         pos!(0.5),  // close_fee
+        None,
+        None,
     )
 }
 

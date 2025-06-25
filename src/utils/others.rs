@@ -335,6 +335,7 @@ mod tests_get_random_element {
                 None,
                 None,
                 None,
+                None,
             );
             set.insert(option_data);
         }

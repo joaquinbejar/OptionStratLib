@@ -838,6 +838,8 @@ mod tests_position_type_display_debug {
             date: naive_date,
             open_fee: pos!(0.50),
             close_fee: pos!(0.45),
+            epic: Some("Epic123".to_string()),
+            extra_fields: None,
         };
 
         let expected_display = "Position Details:\n\
@@ -867,6 +869,8 @@ mod tests_position_type_display_debug {
             date: naive_date,
             open_fee: pos!(0.50),
             close_fee: pos!(0.45),
+            epic: Some("Epic123".to_string()),
+            extra_fields: None,
         };
 
         let expected_debug = "Position { \
@@ -901,9 +905,17 @@ mod tests_strategy_type_display_debug {
     use crate::pos;
     use crate::strategies::base::StrategyType;
     use chrono::{NaiveDate, TimeZone};
+    use serde::Serialize;
 
     #[test]
     fn test_strategy_display() {
+        #[derive(Serialize)]
+        struct ExtraFields {
+            custom_field: String,
+        }
+        let extra_fields = ExtraFields {
+            custom_field: "Custom Value".to_string(),
+        };
         let naive_date = NaiveDate::from_ymd_opt(2024, 8, 8)
             .expect("Invalid date")
             .and_hms_opt(0, 0, 0)
@@ -927,6 +939,8 @@ mod tests_strategy_type_display_debug {
                     Utc.from_utc_datetime(&naive_date),
                     pos!(0.50),
                     pos!(0.45),
+                    Some("Epic123".to_string()),
+                    None,
                 ),
                 Position::new(
                     create_sample_option_with_date(
@@ -942,6 +956,8 @@ mod tests_strategy_type_display_debug {
                     Utc.from_utc_datetime(&naive_date),
                     pos!(0.50),
                     pos!(0.45),
+                    Some("Epic123".to_string()),
+                    Some(serde_json::to_value(&extra_fields).unwrap()),
                 ),
             ],
             max_profit: Some(10.0),
@@ -956,6 +972,13 @@ mod tests_strategy_type_display_debug {
 
     #[test]
     fn test_strategy_debug() {
+        #[derive(Serialize)]
+        struct ExtraFields {
+            custom_field: String,
+        }
+        let extra_fields = ExtraFields {
+            custom_field: "Custom Value".to_string(),
+        };
         let naive_date = NaiveDate::from_ymd_opt(2024, 8, 8)
             .expect("Invalid date")
             .and_hms_opt(0, 0, 0)
@@ -980,6 +1003,8 @@ mod tests_strategy_type_display_debug {
                     Utc.from_utc_datetime(&naive_date),
                     pos!(0.50),
                     pos!(0.45),
+                    Some("Epic123".to_string()),
+                    None,
                 ),
                 Position::new(
                     create_sample_option_with_date(
@@ -995,6 +1020,8 @@ mod tests_strategy_type_display_debug {
                     Utc.from_utc_datetime(&naive_date),
                     pos!(0.50),
                     pos!(0.45),
+                    Some("Epic123".to_string()),
+                    Some(serde_json::to_value(&extra_fields).unwrap()),
                 ),
             ],
             max_profit: Some(8.0),

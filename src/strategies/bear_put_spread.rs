@@ -177,6 +177,8 @@ impl BearPutSpread {
             Utc::now(),
             open_fee_long_put,
             close_fee_long_put,
+            None,
+            None,
         );
         strategy
             .add_position(&long_put.clone())
@@ -202,6 +204,8 @@ impl BearPutSpread {
             Utc::now(),
             open_fee_short_put,
             close_fee_short_put,
+            None,
+            None,
         );
         strategy
             .add_position(&short_put.clone())
@@ -217,9 +221,9 @@ impl BearPutSpread {
 }
 
 impl StrategyConstructor for BearPutSpread {
-    fn get_strategy(vec_options: &[Position]) -> Result<Self, StrategyError> {
+    fn get_strategy(vec_positions: &[Position]) -> Result<Self, StrategyError> {
         // Need exactly 2 options for a bear put spread
-        if vec_options.len() != 2 {
+        if vec_positions.len() != 2 {
             return Err(StrategyError::OperationError(
                 OperationErrorKind::InvalidParameters {
                     operation: "Bear Put Spread get_strategy".to_string(),
@@ -229,20 +233,20 @@ impl StrategyConstructor for BearPutSpread {
         }
 
         // Sort options by strike price to identify short and long positions
-        let mut sorted_options = vec_options.to_vec();
-        sorted_options.sort_by(|a, b| {
+        let mut sorted_positions = vec_positions.to_vec();
+        sorted_positions.sort_by(|a, b| {
             a.option
                 .strike_price
                 .partial_cmp(&b.option.strike_price)
                 .unwrap()
         });
 
-        let lower_strike_option = &sorted_options[0];
-        let higher_strike_option = &sorted_options[1];
+        let lower_strike_position = &sorted_positions[0];
+        let higher_strike_position = &sorted_positions[1];
 
         // Validate options are puts
-        if lower_strike_option.option.option_style != OptionStyle::Put
-            || higher_strike_option.option.option_style != OptionStyle::Put
+        if lower_strike_position.option.option_style != OptionStyle::Put
+            || higher_strike_position.option.option_style != OptionStyle::Put
         {
             return Err(StrategyError::OperationError(
                 OperationErrorKind::InvalidParameters {
@@ -253,8 +257,8 @@ impl StrategyConstructor for BearPutSpread {
         }
 
         // Validate option sides
-        if lower_strike_option.option.side != Side::Long
-            || higher_strike_option.option.side != Side::Short
+        if lower_strike_position.option.side != Side::Long
+            || higher_strike_position.option.side != Side::Short
         {
             return Err(StrategyError::OperationError(OperationErrorKind::InvalidParameters {
                 operation: "Bear Put Spread get_strategy".to_string(),
@@ -263,7 +267,8 @@ impl StrategyConstructor for BearPutSpread {
         }
 
         // Validate expiration dates match
-        if lower_strike_option.option.expiration_date != higher_strike_option.option.expiration_date
+        if lower_strike_position.option.expiration_date
+            != higher_strike_position.option.expiration_date
         {
             return Err(StrategyError::OperationError(
                 OperationErrorKind::InvalidParameters {
@@ -275,19 +280,23 @@ impl StrategyConstructor for BearPutSpread {
 
         // Create positions
         let long_put = Position::new(
-            lower_strike_option.option.clone(),
-            lower_strike_option.premium,
+            lower_strike_position.option.clone(),
+            lower_strike_position.premium,
             Utc::now(),
-            lower_strike_option.open_fee,
-            lower_strike_option.close_fee,
+            lower_strike_position.open_fee,
+            lower_strike_position.close_fee,
+            None,
+            None,
         );
 
         let short_put = Position::new(
-            higher_strike_option.option.clone(),
-            higher_strike_option.premium,
+            higher_strike_position.option.clone(),
+            higher_strike_position.premium,
             Utc::now(),
-            higher_strike_option.open_fee,
-            higher_strike_option.close_fee,
+            higher_strike_position.open_fee,
+            higher_strike_position.close_fee,
+            None,
+            None,
         );
 
         // Create strategy
@@ -893,6 +902,8 @@ mod tests_bear_put_spread_strategy {
             Utc::now(),
             Positive::ZERO,
             Positive::ZERO,
+            None,
+            None,
         );
 
         spread
@@ -1076,6 +1087,8 @@ mod tests_bear_put_spread_validation {
             Utc::now(),
             Positive::ZERO,
             Positive::ZERO,
+            None,
+            None,
         )
     }
 

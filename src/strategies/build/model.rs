@@ -159,6 +159,8 @@ mod tests_serialization {
                     Utc::now(),
                     pos!(1.0),
                     pos!(1.2),
+                    None,
+                    None,
                 ),
                 Position::new(
                     create_sample_option_with_date(
@@ -174,6 +176,8 @@ mod tests_serialization {
                     Utc::now(),
                     pos!(1.0),
                     pos!(1.2),
+                    None,
+                    None,
                 ),
             ],
         };
@@ -319,6 +323,8 @@ mod tests {
                     Utc::now(),
                     pos!(1.0),
                     pos!(1.2),
+                    None,
+                    None,
                 ),
                 Position::new(
                     create_sample_option_with_date(
@@ -334,6 +340,8 @@ mod tests {
                     Utc::now(),
                     pos!(1.0),
                     pos!(1.2),
+                    None,
+                    None,
                 ),
             ],
         );
@@ -368,6 +376,8 @@ mod tests {
                     Utc::now(),
                     pos!(1.0),
                     pos!(1.2),
+                    None,
+                    None,
                 ),
                 Position::new(
                     create_sample_option_with_date(
@@ -383,6 +393,8 @@ mod tests {
                     Utc::now(),
                     pos!(1.0),
                     pos!(1.2),
+                    None,
+                    None,
                 ),
             ],
         );
@@ -417,6 +429,8 @@ mod tests {
                     Utc::now(),
                     pos!(1.0),
                     pos!(1.2),
+                    None,
+                    None,
                 ),
                 Position::new(
                     create_sample_option_with_date(
@@ -432,6 +446,8 @@ mod tests {
                     Utc::now(),
                     pos!(1.0),
                     pos!(1.2),
+                    None,
+                    None,
                 ),
             ],
         );
@@ -466,6 +482,8 @@ mod tests {
                     Utc::now(),
                     pos!(1.0),
                     pos!(1.2),
+                    None,
+                    None,
                 ),
                 Position::new(
                     create_sample_option_with_date(
@@ -481,6 +499,8 @@ mod tests {
                     Utc::now(),
                     pos!(1.0),
                     pos!(1.2),
+                    None,
+                    None,
                 ),
             ],
         );
@@ -515,6 +535,8 @@ mod tests {
                     Utc::now(),
                     pos!(1.0),
                     pos!(1.2),
+                    None,
+                    None,
                 ),
                 Position::new(
                     create_sample_option_with_date(
@@ -530,6 +552,8 @@ mod tests {
                     Utc::now(),
                     pos!(1.0),
                     pos!(1.2),
+                    None,
+                    None,
                 ),
             ],
         );

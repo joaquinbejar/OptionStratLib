@@ -147,6 +147,9 @@ pub struct OptionData {
     /// The dividend yield of the underlying asset.
     #[serde(skip)]
     pub dividend_yield: Option<Positive>,
+    /// The epic identifier for the option contract, used for trading platforms.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub epic: Option<String>,
     /// Additional fields that may be included in the option data.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub extra_fields: Option<Value>,
@@ -200,6 +203,7 @@ impl OptionData {
         underlying_price: Option<Box<Positive>>,
         risk_free_rate: Option<Decimal>,
         dividend_yield: Option<Positive>,
+        epic: Option<String>,
         extra_fields: Option<Value>,
     ) -> Self {
         OptionData {
@@ -221,6 +225,7 @@ impl OptionData {
             underlying_price,
             risk_free_rate,
             dividend_yield,
+            epic,
             extra_fields,
         }
     }
@@ -556,7 +561,15 @@ impl OptionData {
             Positive::ZERO
         };
 
-        Ok(Position::new(option, premium, date, open_fee, close_fee))
+        Ok(Position::new(
+            option,
+            premium,
+            date,
+            open_fee,
+            close_fee,
+            self.epic.clone(),
+            self.extra_fields.clone(),
+        ))
     }
 
     pub(super) fn get_options_in_strike(&self) -> Result<OptionsInStrike, ChainError> {
@@ -991,6 +1004,7 @@ impl Default for OptionData {
             underlying_price: None,
             risk_free_rate: None,
             dividend_yield: None,
+            epic: None,
             extra_fields: None,
         }
     }
@@ -1063,6 +1077,7 @@ mod optiondata_coverage_tests {
             Some(Box::new(pos!(100.0))),            // underlying_price
             Some(dec!(0.05)),                       // risk_free_rate
             Some(pos!(0.02)),                       // dividend_yield
+            None,
             None,
         )
     }
@@ -1205,6 +1220,7 @@ mod tests_get_position {
             Some(Box::new(pos!(100.0))),            // underlying_price
             Some(dec!(0.05)),                       // risk_free_rate
             Some(pos!(0.02)),                       // dividend_yield
+            None,
             None,
         )
     }
@@ -1525,6 +1541,7 @@ mod tests_get_position {
             Some(dec!(0.05)),                       // risk_free_rate
             Some(pos!(0.02)),                       // dividend_yield
             None,
+            None,
         );
 
         // Test getting a long call position
@@ -1664,6 +1681,7 @@ mod tests_check_convert_implied_volatility {
             None,
             None,
             None,
+            None,
         );
 
         // Call the method being tested
@@ -1683,6 +1701,7 @@ mod tests_check_convert_implied_volatility {
             None,
             None,
             pos!(0.15), // This is 15% volatility, should remain as is
+            None,
             None,
             None,
             None,
@@ -1745,6 +1764,7 @@ mod tests_get_option_for_iv {
             Some(dec!(0.05)),                       // risk_free_rate
             Some(pos!(0.02)),                       // dividend_yield
             None,
+            None,
         );
 
         let params = create_test_price_params();
@@ -1791,6 +1811,7 @@ mod tests_get_option_for_iv {
             Some(dec!(0.05)),                       // risk_free_rate
             Some(pos!(0.02)),                       // dividend_yield
             None,
+            None,
         );
 
         let initial_iv = pos!(0.3);
@@ -1824,6 +1845,7 @@ mod tests_get_option_for_iv {
             Some(Box::new(pos!(100.0))),            // underlying_price
             Some(dec!(0.05)),                       // risk_free_rate
             Some(pos!(0.02)),                       // dividend_yield
+            None,
             None,
         );
 
@@ -1865,6 +1887,7 @@ mod tests_some_price_is_none {
             None,
             None,
             None,
+            None,
         );
 
         // All prices are present, should return false
@@ -1881,6 +1904,7 @@ mod tests_some_price_is_none {
             spos!(4.5), // put_bid
             spos!(5.0), // put_ask
             pos!(0.2),  // implied_volatility
+            None,
             None,
             None,
             None,
@@ -1919,6 +1943,7 @@ mod tests_some_price_is_none {
             None,
             None,
             None,
+            None,
         );
 
         // One price is missing, should return true
@@ -1935,6 +1960,7 @@ mod tests_some_price_is_none {
             None,       // put_bid is None
             spos!(5.0), // put_ask
             pos!(0.2),  // implied_volatility
+            None,
             None,
             None,
             None,
@@ -1973,6 +1999,7 @@ mod tests_some_price_is_none {
             None,
             None,
             None,
+            None,
         );
 
         // One price is missing, should return true
@@ -1989,6 +2016,7 @@ mod tests_some_price_is_none {
             None,      // put_bid is None
             None,      // put_ask is None
             pos!(0.2), // implied_volatility
+            None,
             None,
             None,
             None,
@@ -2034,6 +2062,7 @@ mod tests_is_valid_optimal_side_deltable {
             None,
             None,
             None,
+            None,
         );
 
         // Deltable should always return true
@@ -2053,6 +2082,7 @@ mod tests_is_valid_optimal_side_deltable {
             None,
             None,
             pos!(0.2), // implied_volatility
+            None,
             None,
             None,
             None,
@@ -2095,6 +2125,7 @@ mod tests_is_valid_optimal_side_deltable {
             None,
             None,
             None,
+            None,
         );
 
         // DeltaRange with min=0.2, max=0.4, which includes our delta_call=0.3
@@ -2118,6 +2149,7 @@ mod tests_is_valid_optimal_side_deltable {
             pos!(0.2), // implied_volatility
             None,
             Some(dec!(0.3)), // delta_put within range
+            None,
             None,
             None,
             None,
@@ -2159,6 +2191,7 @@ mod tests_is_valid_optimal_side_deltable {
             None,
             None,
             None,
+            None,
         );
 
         // DeltaRange with min=0.2, max=0.4, which excludes both delta values
@@ -2182,6 +2215,7 @@ mod tests_is_valid_optimal_side_deltable {
             pos!(0.2), // implied_volatility
             None,      // No delta_call
             None,      // No delta_put
+            None,
             None,
             None,
             None,
@@ -2229,6 +2263,7 @@ mod tests_set_mid_prices {
             None,
             None,
             None,
+            None,
         );
 
         // Call the method being tested
@@ -2250,6 +2285,7 @@ mod tests_set_mid_prices {
             spos!(8.0),  // put_bid
             spos!(12.0), // put_ask
             pos!(0.2),   // implied_volatility
+            None,
             None,
             None,
             None,
@@ -2293,6 +2329,7 @@ mod tests_set_mid_prices {
             None,
             None,
             None,
+            None,
         );
 
         // Call the method being tested
@@ -2313,6 +2350,7 @@ mod tests_set_mid_prices {
             spos!(8.0),  // put_bid
             spos!(12.0), // put_ask
             pos!(0.2),   // implied_volatility
+            None,
             None,
             None,
             None,
@@ -2345,6 +2383,7 @@ mod tests_set_mid_prices {
             spos!(8.0),  // put_bid
             spos!(12.0), // put_ask
             pos!(0.2),   // implied_volatility
+            None,
             None,
             None,
             None,
@@ -2394,6 +2433,7 @@ mod tests_get_mid_prices {
             None,
             None,
             None,
+            None,
         );
 
         // First set the mid prices
@@ -2417,6 +2457,7 @@ mod tests_get_mid_prices {
             None, // missing put_bid
             spos!(12.0),
             pos!(0.2), // implied_volatility
+            None,
             None,
             None,
             None,
@@ -2462,6 +2503,7 @@ mod tests_get_mid_prices {
             None,
             None,
             None,
+            None,
         );
 
         // First set the mid prices
@@ -2485,6 +2527,7 @@ mod tests_get_mid_prices {
             None,
             None,
             pos!(0.2), // implied_volatility
+            None,
             None,
             None,
             None,
@@ -2534,6 +2577,7 @@ mod tests_current_deltas {
             None,
             None,
             None,
+            None,
         );
 
         // Get current deltas
@@ -2556,6 +2600,7 @@ mod tests_current_deltas {
             pos!(0.2),       // implied_volatility
             Some(dec!(0.5)), // delta_call
             None,            // No delta_put
+            None,
             None,
             None,
             None,
@@ -2596,6 +2641,7 @@ mod tests_current_deltas {
             None,
             None,
             None,
+            None,
         );
 
         // Get current deltas
@@ -2618,6 +2664,7 @@ mod tests_current_deltas {
             pos!(0.2), // implied_volatility
             None,      // No delta_call
             None,      // No delta_put
+            None,
             None,
             None,
             None,
