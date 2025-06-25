@@ -76,6 +76,8 @@
 //!     date: Utc::now(),
 //!     open_fee: pos!(0.5),
 //!     close_fee: pos!(0.5),
+//!     epic: None,
+//!     extra_fields: None,
 //! };
 //!
 //! // Create SPAN calculator
@@ -124,6 +126,8 @@
 //!         date: Utc::now(),
 //!         open_fee: pos!(0.5),
 //!         close_fee: pos!(0.5),
+//!         epic: None,
+//!         extra_fields: None,
 //!     },
 //!     Position {
 //!         option,
@@ -131,6 +135,8 @@
 //!         date: Utc::now(),
 //!         open_fee: pos!(0.5),
 //!         close_fee: pos!(0.5),
+//!         epic: None,
+//!         extra_fields: None,
 //!     },
 //! ];
 //!

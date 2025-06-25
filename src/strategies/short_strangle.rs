@@ -197,7 +197,8 @@ impl ShortStrangle {
             Utc::now(),
             open_fee_short_call,
             close_fee_short_call,
-            None, None
+            None,
+            None,
         );
         strategy
             .add_position(&short_call.clone())
@@ -223,7 +224,8 @@ impl ShortStrangle {
             Utc::now(),
             open_fee_short_put,
             close_fee_short_put,
-            None, None
+            None,
+            None,
         );
         strategy
             .add_position(&short_put.clone())

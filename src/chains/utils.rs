@@ -472,7 +472,9 @@ pub struct RandomPositionsParams {
     pub close_put_fee: Positive,
     /// Fee for closing call positions
     pub close_call_fee: Positive,
+    /// Identifier for the position in an external system or platform
     pub epic: Option<String>,
+    /// Additional custom data fields for the position stored as JSON
     pub extra_fields: Option<serde_json::Value>,
 }
 
