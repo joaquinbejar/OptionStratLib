@@ -292,6 +292,8 @@ mod tests_span {
             date: Utc::now(),
             open_fee: pos!(0.5),
             close_fee: pos!(0.5),
+            epic: Some("Epic123".to_string()),
+            extra_fields: None,
         };
 
         let span = SPANMargin::new(
