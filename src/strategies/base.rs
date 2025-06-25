@@ -1502,6 +1502,8 @@ mod tests_strategies_extended {
             Default::default(),
             Positive::ZERO,
             Positive::ZERO,
+            None,
+            None,
         );
 
         strategy.legs.push(position);
@@ -1994,6 +1996,7 @@ mod tests_optimizable {
             None,
             None,
             None,
+            None,
         );
         assert!(strategy.is_valid_optimal_option(&option_data, &FindOptimalSide::All));
         assert!(strategy.is_valid_optimal_option(
@@ -2018,6 +2021,7 @@ mod tests_optimizable {
             Some(dec!(0.3)),
             spos!(1000.0), // volume
             Some(100),     // open_interest
+            None,
             None,
             None,
             None,
@@ -2050,6 +2054,7 @@ mod tests_optimizable {
             None,
             None,
             None,
+            None,
         );
         assert!(strategy.is_valid_optimal_option(&option_data, &FindOptimalSide::Lower));
     }
@@ -2069,6 +2074,7 @@ mod tests_optimizable {
             Some(dec!(0.3)),
             spos!(1000.0), // volume
             Some(100),     // open_interest
+            None,
             None,
             None,
             None,
@@ -2105,6 +2111,7 @@ mod tests_optimizable {
             None,
             None,
             None,
+            None,
         );
         assert!(strategy.is_valid_optimal_option(&option_data, &FindOptimalSide::Upper));
     }
@@ -2125,6 +2132,7 @@ mod tests_optimizable {
             Some(dec!(0.3)),
             spos!(1000.0), // volume
             Some(100),     // open_interest
+            None,
             None,
             None,
             None,
@@ -2188,6 +2196,8 @@ mod tests_strategy_net_operations {
             Utc.with_ymd_and_hms(2024, 1, 1, 0, 0, 0).unwrap(),
             pos!(1.0),
             pos!(0.5),
+            None,
+            None,
         );
         let position_short = Position::new(
             option_short,
@@ -2195,6 +2205,8 @@ mod tests_strategy_net_operations {
             Utc.with_ymd_and_hms(2024, 1, 1, 0, 0, 0).unwrap(),
             pos!(1.0),
             pos!(0.5),
+            None,
+            None,
         );
 
         strategy.add_position(&position_long).unwrap();
@@ -2211,21 +2223,30 @@ mod tests_strategy_net_operations {
         let option_short = create_sample_option_simplest(OptionStyle::Call, Side::Short);
 
         let fixed_date = Utc.with_ymd_and_hms(2024, 1, 1, 0, 0, 0).unwrap();
-        let position_long =
-            Position::new(option_long, Positive::ONE, fixed_date, pos!(1.0), pos!(0.5));
+        let position_long = Position::new(
+            option_long,
+            Positive::ONE,
+            fixed_date,
+            pos!(1.0),
+            pos!(0.5),
+            None,
+            None,
+        );
         let position_short = Position::new(
             option_short,
             Positive::ONE,
             fixed_date,
             pos!(1.0),
             pos!(0.5),
+            None,
+            None,
         );
 
         strategy.add_position(&position_long).unwrap();
         strategy.add_position(&position_short).unwrap();
 
         let result = strategy.get_net_premium_received().unwrap();
-        assert!(result == Positive::ZERO);
+        assert_eq!(result, Positive::ZERO);
     }
 
     #[test]
@@ -2233,7 +2254,15 @@ mod tests_strategy_net_operations {
         let mut strategy = TestStrategy::new();
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         let fixed_date = Utc.with_ymd_and_hms(2024, 1, 1, 0, 0, 0).unwrap();
-        let position = Position::new(option, Positive::ONE, fixed_date, pos!(1.0), pos!(0.5));
+        let position = Position::new(
+            option,
+            Positive::ONE,
+            fixed_date,
+            pos!(1.0),
+            pos!(0.5),
+            None,
+            None,
+        );
 
         strategy.add_position(&position).unwrap();
 

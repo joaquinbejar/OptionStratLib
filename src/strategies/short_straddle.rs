@@ -209,6 +209,8 @@ impl ShortStraddle {
             Utc::now(),
             open_fee_short_call,
             close_fee_short_call,
+            None,
+            None,
         );
         strategy
             .add_position(&short_call.clone())
@@ -234,6 +236,8 @@ impl ShortStraddle {
             Utc::now(),
             open_fee_short_put,
             close_fee_short_put,
+            None,
+            None,
         );
         strategy
             .add_position(&short_put.clone())
@@ -247,9 +251,9 @@ impl ShortStraddle {
 }
 
 impl StrategyConstructor for ShortStraddle {
-    fn get_strategy(vec_options: &[Position]) -> Result<Self, StrategyError> {
+    fn get_strategy(vec_positions: &[Position]) -> Result<Self, StrategyError> {
         // Need exactly 2 options for a short straddle
-        if vec_options.len() != 2 {
+        if vec_positions.len() != 2 {
             return Err(StrategyError::OperationError(
                 OperationErrorKind::InvalidParameters {
                     operation: "Short Straddle get_strategy".to_string(),
@@ -262,10 +266,10 @@ impl StrategyConstructor for ShortStraddle {
         let mut call_position = None;
         let mut put_position = None;
 
-        for option in vec_options {
-            match option.option.option_style {
-                OptionStyle::Call => call_position = Some(option),
-                OptionStyle::Put => put_position = Some(option),
+        for position in vec_positions {
+            match position.option.option_style {
+                OptionStyle::Call => call_position = Some(position),
+                OptionStyle::Put => put_position = Some(position),
             }
         }
 
@@ -319,6 +323,8 @@ impl StrategyConstructor for ShortStraddle {
             Utc::now(),
             call_position.open_fee,
             call_position.close_fee,
+            call_position.epic.clone(),
+            call_position.extra_fields.clone(),
         );
 
         let short_put = Position::new(
@@ -327,6 +333,8 @@ impl StrategyConstructor for ShortStraddle {
             Utc::now(),
             put_position.open_fee,
             put_position.close_fee,
+            put_position.epic.clone(),
+            put_position.extra_fields.clone(),
         );
 
         // Create strategy

@@ -41,7 +41,7 @@ pub trait StrategyConstructor: Strategies + Greeks {
     /// * `Ok(Self)` - The successfully constructed strategy
     /// * `Err(StrategyError)` - If the positions don't match the expected
     ///   pattern for this strategy type
-    fn get_strategy(_vec_options: &[Position]) -> Result<Self, StrategyError>
+    fn get_strategy(_vec_positions: &[Position]) -> Result<Self, StrategyError>
     where
         Self: Sized,
     {

@@ -162,6 +162,8 @@ impl LongButterflySpread {
             Utc::now(),
             open_fee_short_call,
             close_fee_short_call,
+            None,
+            None,
         );
 
         // Create long call at lower strike
@@ -185,6 +187,8 @@ impl LongButterflySpread {
             Utc::now(),
             open_fee_long_call_low,
             close_fee_long_call_low,
+            None,
+            None,
         );
 
         // Create long call at higher strike
@@ -208,6 +212,8 @@ impl LongButterflySpread {
             Utc::now(),
             open_fee_long_call_high,
             close_fee_long_call_high,
+            None,
+            None,
         );
 
         strategy.validate();
@@ -221,9 +227,9 @@ impl LongButterflySpread {
 }
 
 impl StrategyConstructor for LongButterflySpread {
-    fn get_strategy(vec_options: &[Position]) -> Result<Self, StrategyError> {
+    fn get_strategy(vec_positions: &[Position]) -> Result<Self, StrategyError> {
         // Long Butterfly Spread requires exactly 3 options
-        if vec_options.len() != 3 {
+        if vec_positions.len() != 3 {
             return Err(StrategyError::OperationError(
                 OperationErrorKind::InvalidParameters {
                     operation: "Long Butterfly Spread get_strategy".to_string(),
@@ -233,22 +239,22 @@ impl StrategyConstructor for LongButterflySpread {
         }
 
         // Sort options by strike price
-        let mut sorted_options = vec_options.to_vec();
-        sorted_options.sort_by(|a, b| {
+        let mut sorted_positions = vec_positions.to_vec();
+        sorted_positions.sort_by(|a, b| {
             a.option
                 .strike_price
                 .partial_cmp(&b.option.strike_price)
                 .unwrap()
         });
 
-        let lower_strike_option = &sorted_options[0];
-        let middle_strike_option = &sorted_options[1];
-        let higher_strike_option = &sorted_options[2];
+        let lower_strike_position = &sorted_positions[0];
+        let middle_strike_position = &sorted_positions[1];
+        let higher_strike_position = &sorted_positions[2];
 
         // Validate options are calls
-        if lower_strike_option.option.option_style != OptionStyle::Call
-            || middle_strike_option.option.option_style != OptionStyle::Call
-            || higher_strike_option.option.option_style != OptionStyle::Call
+        if lower_strike_position.option.option_style != OptionStyle::Call
+            || middle_strike_position.option.option_style != OptionStyle::Call
+            || higher_strike_position.option.option_style != OptionStyle::Call
         {
             return Err(StrategyError::OperationError(
                 OperationErrorKind::InvalidParameters {
@@ -259,9 +265,9 @@ impl StrategyConstructor for LongButterflySpread {
         }
 
         // Validate option configuration for Long Butterfly
-        if lower_strike_option.option.side != Side::Long
-            || middle_strike_option.option.side != Side::Short
-            || higher_strike_option.option.side != Side::Long
+        if lower_strike_position.option.side != Side::Long
+            || middle_strike_position.option.side != Side::Short
+            || higher_strike_position.option.side != Side::Long
         {
             return Err(StrategyError::OperationError(
                 OperationErrorKind::InvalidParameters {
@@ -272,9 +278,9 @@ impl StrategyConstructor for LongButterflySpread {
         }
 
         // Validate strike symmetry
-        let lower_strike = lower_strike_option.option.strike_price;
-        let middle_strike = middle_strike_option.option.strike_price;
-        let higher_strike = higher_strike_option.option.strike_price;
+        let lower_strike = lower_strike_position.option.strike_price;
+        let middle_strike = middle_strike_position.option.strike_price;
+        let higher_strike = higher_strike_position.option.strike_price;
 
         if middle_strike - lower_strike != higher_strike - middle_strike {
             return Err(StrategyError::OperationError(
@@ -286,9 +292,9 @@ impl StrategyConstructor for LongButterflySpread {
         }
 
         // Validate expiration dates match
-        if vec_options
+        if vec_positions
             .iter()
-            .any(|opt| opt.option.expiration_date != lower_strike_option.option.expiration_date)
+            .any(|opt| opt.option.expiration_date != lower_strike_position.option.expiration_date)
         {
             return Err(StrategyError::OperationError(
                 OperationErrorKind::InvalidParameters {
@@ -305,25 +311,31 @@ impl StrategyConstructor for LongButterflySpread {
             description: LONG_BUTTERFLY_DESCRIPTION.to_string(),
             break_even_points: Vec::new(),
             short_call: Position::new(
-                middle_strike_option.option.clone(),
-                middle_strike_option.premium,
+                middle_strike_position.option.clone(),
+                middle_strike_position.premium,
                 Utc::now(),
-                middle_strike_option.open_fee,
-                middle_strike_option.close_fee,
+                middle_strike_position.open_fee,
+                middle_strike_position.close_fee,
+                middle_strike_position.epic.clone(),
+                middle_strike_position.extra_fields.clone(),
             ),
             long_call_low: Position::new(
-                lower_strike_option.option.clone(),
-                lower_strike_option.premium,
+                lower_strike_position.option.clone(),
+                lower_strike_position.premium,
                 Utc::now(),
-                lower_strike_option.open_fee,
-                lower_strike_option.close_fee,
+                lower_strike_position.open_fee,
+                lower_strike_position.close_fee,
+                lower_strike_position.epic.clone(),
+                lower_strike_position.extra_fields.clone(),
             ),
             long_call_high: Position::new(
-                higher_strike_option.option.clone(),
-                higher_strike_option.premium,
+                higher_strike_position.option.clone(),
+                higher_strike_position.premium,
                 Utc::now(),
-                higher_strike_option.open_fee,
-                higher_strike_option.close_fee,
+                higher_strike_position.open_fee,
+                higher_strike_position.close_fee,
+                higher_strike_position.epic.clone(),
+                higher_strike_position.extra_fields.clone(),
             ),
         };
 
@@ -1293,6 +1305,8 @@ mod tests_long_butterfly_validation {
             Utc::now(),
             Positive::ZERO,
             Positive::ZERO,
+            None,
+            None,
         )
     }
 
@@ -2650,6 +2664,8 @@ mod tests_butterfly_strategies {
             Utc::now(),
             Positive::ZERO,
             Positive::ZERO,
+            None,
+            None,
         );
 
         butterfly

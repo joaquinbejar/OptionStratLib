@@ -72,6 +72,8 @@ mod tests_serialization {
             Utc::now(), // date
             pos!(0.5),  // open_fee
             pos!(0.5),  // close_fee
+            None,
+            None,
         );
 
         let short_put = Position::new(
@@ -80,6 +82,8 @@ mod tests_serialization {
             Utc::now(), // date
             pos!(0.5),  // open_fee
             pos!(0.5),  // close_fee
+            None,
+            None,
         );
 
         // Create a ShortStrangle with the positions

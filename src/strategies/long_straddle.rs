@@ -196,6 +196,8 @@ impl LongStraddle {
             Utc::now(),
             open_fee_long_call,
             close_fee_long_call,
+            None,
+            None,
         );
         strategy
             .add_position(&long_call.clone())
@@ -221,6 +223,8 @@ impl LongStraddle {
             Utc::now(),
             open_fee_long_put,
             close_fee_long_put,
+            None,
+            None,
         );
         strategy
             .add_position(&long_put.clone())
@@ -234,9 +238,9 @@ impl LongStraddle {
 }
 
 impl StrategyConstructor for LongStraddle {
-    fn get_strategy(vec_options: &[Position]) -> Result<Self, StrategyError> {
+    fn get_strategy(vec_positions: &[Position]) -> Result<Self, StrategyError> {
         // Need exactly 2 options for a long straddle
-        if vec_options.len() != 2 {
+        if vec_positions.len() != 2 {
             return Err(StrategyError::OperationError(
                 OperationErrorKind::InvalidParameters {
                     operation: "Long Straddle get_strategy".to_string(),
@@ -249,10 +253,10 @@ impl StrategyConstructor for LongStraddle {
         let mut call_position = None;
         let mut put_position = None;
 
-        for option in vec_options {
-            match option.option.option_style {
-                OptionStyle::Call => call_position = Some(option),
-                OptionStyle::Put => put_position = Some(option),
+        for position in vec_positions {
+            match position.option.option_style {
+                OptionStyle::Call => call_position = Some(position),
+                OptionStyle::Put => put_position = Some(position),
             }
         }
 
@@ -306,6 +310,8 @@ impl StrategyConstructor for LongStraddle {
             Utc::now(),
             call_position.open_fee,
             call_position.close_fee,
+            call_position.epic.clone(),
+            call_position.extra_fields.clone(),
         );
 
         let long_put = Position::new(
@@ -314,6 +320,8 @@ impl StrategyConstructor for LongStraddle {
             Utc::now(),
             put_position.open_fee,
             put_position.close_fee,
+            put_position.epic.clone(),
+            put_position.extra_fields.clone(),
         );
 
         // Create strategy

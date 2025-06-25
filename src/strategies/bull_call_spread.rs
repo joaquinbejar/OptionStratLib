@@ -182,6 +182,8 @@ impl BullCallSpread {
             Utc::now(),
             open_fee_long_call,
             close_fee_long_call,
+            None,
+            None,
         );
         strategy
             .add_position(&long_call.clone())
@@ -207,6 +209,8 @@ impl BullCallSpread {
             Utc::now(),
             open_fee_short_call,
             close_fee_short_call,
+            None,
+            None,
         );
         strategy
             .add_position(&short_call.clone())
@@ -222,9 +226,9 @@ impl BullCallSpread {
 }
 
 impl StrategyConstructor for BullCallSpread {
-    fn get_strategy(vec_options: &[Position]) -> Result<Self, StrategyError> {
+    fn get_strategy(vec_positions: &[Position]) -> Result<Self, StrategyError> {
         // Need exactly 2 options for a bull call spread
-        if vec_options.len() != 2 {
+        if vec_positions.len() != 2 {
             return Err(StrategyError::OperationError(
                 OperationErrorKind::InvalidParameters {
                     operation: "Bull Call Spread get_strategy".to_string(),
@@ -234,16 +238,16 @@ impl StrategyConstructor for BullCallSpread {
         }
 
         // Sort options by strike price to identify long and short positions
-        let mut sorted_options = vec_options.to_vec();
-        sorted_options.sort_by(|a, b| {
+        let mut sorted_positions = vec_positions.to_vec();
+        sorted_positions.sort_by(|a, b| {
             a.option
                 .strike_price
                 .partial_cmp(&b.option.strike_price)
                 .unwrap()
         });
 
-        let lower_strike_option = &sorted_options[0];
-        let higher_strike_option = &sorted_options[1];
+        let lower_strike_option = &sorted_positions[0];
+        let higher_strike_option = &sorted_positions[1];
 
         // Validate options are calls
         if lower_strike_option.option.option_style != OptionStyle::Call
@@ -285,6 +289,8 @@ impl StrategyConstructor for BullCallSpread {
             Utc::now(),
             lower_strike_option.open_fee,
             lower_strike_option.close_fee,
+            lower_strike_option.epic.clone(),
+            lower_strike_option.extra_fields.clone(),
         );
 
         let short_call = Position::new(
@@ -293,6 +299,8 @@ impl StrategyConstructor for BullCallSpread {
             Utc::now(),
             higher_strike_option.open_fee,
             higher_strike_option.close_fee,
+            higher_strike_option.epic.clone(),
+            higher_strike_option.extra_fields.clone(),
         );
 
         // Create strategy
@@ -914,6 +922,8 @@ mod tests_bull_call_spread_strategy {
             Utc::now(),
             Positive::ZERO,
             Positive::ZERO,
+            None,
+            None,
         );
 
         spread
@@ -1079,6 +1089,8 @@ mod tests_bull_call_spread_validation {
             Utc::now(),
             Positive::ZERO,
             Positive::ZERO,
+            None,
+            None,
         )
     }
 
@@ -1449,6 +1461,7 @@ mod tests_bull_call_spread_optimization {
             None,
             None,
             None,
+            None,
         );
 
         assert!(spread.is_valid_optimal_option(&option, &FindOptimalSide::All));
@@ -1475,6 +1488,7 @@ mod tests_bull_call_spread_optimization {
             Some(dec!(0.2)),
             spos!(100.0),
             Some(50),
+            None,
             None,
             None,
             None,
@@ -1513,6 +1527,7 @@ mod tests_bull_call_spread_optimization {
             None,
             None,
             None,
+            None,
         );
         let short_option = OptionData::new(
             pos!(100.0),
@@ -1526,6 +1541,7 @@ mod tests_bull_call_spread_optimization {
             Some(dec!(0.2)),
             spos!(100.0),
             Some(50),
+            None,
             None,
             None,
             None,
@@ -1562,6 +1578,7 @@ mod tests_bull_call_spread_optimization {
             None,
             None,
             None,
+            None,
         );
         let short_option = OptionData::new(
             pos!(100.0),
@@ -1575,6 +1592,7 @@ mod tests_bull_call_spread_optimization {
             Some(dec!(0.2)),
             spos!(100.0),
             Some(50),
+            None,
             None,
             None,
             None,

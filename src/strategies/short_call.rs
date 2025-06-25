@@ -121,6 +121,8 @@ impl ShortCall {
             Utc::now(),
             open_fee_short_call,
             close_fee_short_call,
+            None,
+            None,
         );
         strategy
             .add_position(&short_call.clone())

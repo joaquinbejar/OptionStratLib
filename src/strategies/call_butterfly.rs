@@ -174,6 +174,8 @@ impl CallButterfly {
             Utc::now(),
             open_fee_long,
             close_fee_long,
+            None,
+            None,
         );
         strategy
             .add_position(&long_call.clone())
@@ -200,6 +202,8 @@ impl CallButterfly {
             Utc::now(),
             open_fee_short_low,
             close_fee_short_low,
+            None,
+            None,
         );
         strategy
             .add_position(&short_call_low.clone())
@@ -226,6 +230,8 @@ impl CallButterfly {
             Utc::now(),
             open_fee_short_high,
             close_fee_short_high,
+            None,
+            None,
         );
         strategy
             .add_position(&short_call_high.clone())
@@ -240,9 +246,9 @@ impl CallButterfly {
 }
 
 impl StrategyConstructor for CallButterfly {
-    fn get_strategy(vec_options: &[Position]) -> Result<Self, StrategyError> {
+    fn get_strategy(vec_positions: &[Position]) -> Result<Self, StrategyError> {
         // Need exactly 3 options for a call butterfly
-        if vec_options.len() != 3 {
+        if vec_positions.len() != 3 {
             return Err(StrategyError::OperationError(
                 OperationErrorKind::InvalidParameters {
                     operation: "Call Butterfly get_strategy".to_string(),
@@ -252,22 +258,22 @@ impl StrategyConstructor for CallButterfly {
         }
 
         // Sort options by strike price
-        let mut sorted_options = vec_options.to_vec();
-        sorted_options.sort_by(|a, b| {
+        let mut sorted_positions = vec_positions.to_vec();
+        sorted_positions.sort_by(|a, b| {
             a.option
                 .strike_price
                 .partial_cmp(&b.option.strike_price)
                 .unwrap()
         });
 
-        let low_short_call = &sorted_options[0];
-        let long_call = &sorted_options[1];
-        let high_short_call = &sorted_options[2];
+        let low_short_call_position = &sorted_positions[0];
+        let long_call_position = &sorted_positions[1];
+        let high_short_call_position = &sorted_positions[2];
 
         // Validate options are calls
-        if low_short_call.option.option_style != OptionStyle::Call
-            || long_call.option.option_style != OptionStyle::Call
-            || high_short_call.option.option_style != OptionStyle::Call
+        if low_short_call_position.option.option_style != OptionStyle::Call
+            || long_call_position.option.option_style != OptionStyle::Call
+            || high_short_call_position.option.option_style != OptionStyle::Call
         {
             return Err(StrategyError::OperationError(
                 OperationErrorKind::InvalidParameters {
@@ -278,9 +284,9 @@ impl StrategyConstructor for CallButterfly {
         }
 
         // Validate option sides
-        if low_short_call.option.side != Side::Short
-            || long_call.option.side != Side::Long
-            || high_short_call.option.side != Side::Short
+        if low_short_call_position.option.side != Side::Short
+            || long_call_position.option.side != Side::Long
+            || high_short_call_position.option.side != Side::Short
         {
             return Err(StrategyError::OperationError(
                 OperationErrorKind::InvalidParameters {
@@ -291,8 +297,10 @@ impl StrategyConstructor for CallButterfly {
         }
 
         // Validate expiration dates match
-        if low_short_call.option.expiration_date != long_call.option.expiration_date
-            || long_call.option.expiration_date != high_short_call.option.expiration_date
+        if low_short_call_position.option.expiration_date
+            != long_call_position.option.expiration_date
+            || long_call_position.option.expiration_date
+                != high_short_call_position.option.expiration_date
         {
             return Err(StrategyError::OperationError(
                 OperationErrorKind::InvalidParameters {
@@ -304,27 +312,33 @@ impl StrategyConstructor for CallButterfly {
 
         // Create positions
         let short_call_low = Position::new(
-            low_short_call.option.clone(),
-            low_short_call.premium,
+            low_short_call_position.option.clone(),
+            low_short_call_position.premium,
             Utc::now(),
-            low_short_call.open_fee,
-            low_short_call.close_fee,
+            low_short_call_position.open_fee,
+            low_short_call_position.close_fee,
+            low_short_call_position.epic.clone(),
+            low_short_call_position.extra_fields.clone(),
         );
 
         let long_call = Position::new(
-            long_call.option.clone(),
-            long_call.premium,
+            long_call_position.option.clone(),
+            long_call_position.premium,
             Utc::now(),
-            long_call.open_fee,
-            long_call.close_fee,
+            long_call_position.open_fee,
+            long_call_position.close_fee,
+            long_call_position.epic.clone(),
+            long_call_position.extra_fields.clone(),
         );
 
         let short_call_high = Position::new(
-            high_short_call.option.clone(),
-            high_short_call.premium,
+            high_short_call_position.option.clone(),
+            high_short_call_position.premium,
             Utc::now(),
-            high_short_call.open_fee,
-            high_short_call.close_fee,
+            high_short_call_position.open_fee,
+            high_short_call_position.close_fee,
+            high_short_call_position.epic.clone(),
+            high_short_call_position.extra_fields.clone(),
         );
 
         // Create strategy

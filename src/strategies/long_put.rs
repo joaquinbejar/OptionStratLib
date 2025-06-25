@@ -118,6 +118,8 @@ impl LongPut {
             Utc::now(),
             open_fee_long_put,
             close_fee_long_put,
+            None,
+            None,
         );
         strategy
             .add_position(&long_put.clone())

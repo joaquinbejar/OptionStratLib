@@ -213,6 +213,8 @@ impl PoorMansCoveredCall {
             Utc::now(),
             open_fee_long_call,
             close_fee_long_call,
+            None,
+            None,
         );
         strategy
             .add_position(&long_call.clone())
@@ -239,6 +241,8 @@ impl PoorMansCoveredCall {
             Utc::now(),
             open_fee_short_call,
             close_fee_short_call,
+            None,
+            None,
         );
         strategy
             .add_position(&short_call.clone())
@@ -252,9 +256,9 @@ impl PoorMansCoveredCall {
 }
 
 impl StrategyConstructor for PoorMansCoveredCall {
-    fn get_strategy(vec_options: &[Position]) -> Result<Self, StrategyError> {
+    fn get_strategy(vec_positions: &[Position]) -> Result<Self, StrategyError> {
         // Need exactly 2 options for a poor man's covered call
-        if vec_options.len() != 2 {
+        if vec_positions.len() != 2 {
             return Err(StrategyError::OperationError(
                 OperationErrorKind::InvalidParameters {
                     operation: "Poor Man's Covered Call get_strategy".to_string(),
@@ -264,20 +268,20 @@ impl StrategyConstructor for PoorMansCoveredCall {
         }
 
         // Sort options by strike price to identify long and short positions
-        let mut sorted_options = vec_options.to_vec();
-        sorted_options.sort_by(|a, b| {
+        let mut sorted_positions = vec_positions.to_vec();
+        sorted_positions.sort_by(|a, b| {
             a.option
                 .strike_price
                 .partial_cmp(&b.option.strike_price)
                 .unwrap()
         });
 
-        let lower_strike_option = &sorted_options[0];
-        let higher_strike_option = &sorted_options[1];
+        let lower_strike_position = &sorted_positions[0];
+        let higher_strike_position = &sorted_positions[1];
 
         // Validate options are calls
-        if lower_strike_option.option.option_style != OptionStyle::Call
-            || higher_strike_option.option.option_style != OptionStyle::Call
+        if lower_strike_position.option.option_style != OptionStyle::Call
+            || higher_strike_position.option.option_style != OptionStyle::Call
         {
             return Err(StrategyError::OperationError(
                 OperationErrorKind::InvalidParameters {
@@ -288,8 +292,8 @@ impl StrategyConstructor for PoorMansCoveredCall {
         }
 
         // Validate option sides
-        if lower_strike_option.option.side != Side::Long
-            || higher_strike_option.option.side != Side::Short
+        if lower_strike_position.option.side != Side::Long
+            || higher_strike_position.option.side != Side::Short
         {
             return Err(StrategyError::OperationError(OperationErrorKind::InvalidParameters {
                 operation: "Poor Man's Covered Call get_strategy".to_string(),
@@ -299,19 +303,23 @@ impl StrategyConstructor for PoorMansCoveredCall {
 
         // Create positions
         let long_call = Position::new(
-            lower_strike_option.option.clone(),
-            lower_strike_option.premium,
+            lower_strike_position.option.clone(),
+            lower_strike_position.premium,
             Utc::now(),
-            lower_strike_option.open_fee,
-            lower_strike_option.close_fee,
+            lower_strike_position.open_fee,
+            lower_strike_position.close_fee,
+            lower_strike_position.epic.clone(),
+            lower_strike_position.extra_fields.clone(),
         );
 
         let short_call = Position::new(
-            higher_strike_option.option.clone(),
-            higher_strike_option.premium,
+            higher_strike_position.option.clone(),
+            higher_strike_position.premium,
             Utc::now(),
-            higher_strike_option.open_fee,
-            higher_strike_option.close_fee,
+            higher_strike_position.open_fee,
+            higher_strike_position.close_fee,
+            higher_strike_position.epic.clone(),
+            higher_strike_position.extra_fields.clone(),
         );
 
         // Create strategy
@@ -892,7 +900,15 @@ mod tests_pmcc_validation {
             pos!(0.005),
             None,
         );
-        let position = Position::new(option, pos!(15.0), Utc::now(), Positive::ONE, Positive::ONE);
+        let position = Position::new(
+            option,
+            pos!(15.0),
+            Utc::now(),
+            Positive::ONE,
+            Positive::ONE,
+            None,
+            None,
+        );
         strategy
             .add_position(&position.clone())
             .expect("Invalid long call option");
@@ -916,7 +932,15 @@ mod tests_pmcc_validation {
             pos!(0.005),
             None,
         );
-        let position = Position::new(option, pos!(5.0), Utc::now(), pos!(0.5), pos!(0.5));
+        let position = Position::new(
+            option,
+            pos!(5.0),
+            Utc::now(),
+            pos!(0.5),
+            pos!(0.5),
+            None,
+            None,
+        );
         strategy
             .add_position(&position.clone())
             .expect("Invalid short call option");
@@ -940,7 +964,15 @@ mod tests_pmcc_validation {
             pos!(0.005),
             None,
         );
-        let position = Position::new(option, pos!(15.0), Utc::now(), Positive::ONE, Positive::ONE);
+        let position = Position::new(
+            option,
+            pos!(15.0),
+            Utc::now(),
+            Positive::ONE,
+            Positive::ONE,
+            None,
+            None,
+        );
         let err = strategy.add_position(&position).unwrap_err();
         assert!(matches!(
             err,
@@ -1027,6 +1059,7 @@ mod tests_pmcc_optimization {
             None,
             None,
             None,
+            None,
         );
         assert!(strategy.is_valid_optimal_option(&option, &FindOptimalSide::Upper));
     }
@@ -1041,6 +1074,7 @@ mod tests_pmcc_optimization {
             spos!(4.8),
             spos!(5.0),
             pos!(0.2),
+            None,
             None,
             None,
             None,
@@ -1095,6 +1129,7 @@ mod tests_pmcc_optimization {
             None,
             None,
             None,
+            None,
         );
         assert!(!strategy.is_valid_optimal_option(&option, &FindOptimalSide::Upper));
     }
@@ -1111,6 +1146,7 @@ mod tests_pmcc_optimization {
             spos!(4.8),
             spos!(5.0),
             pos!(0.2),
+            None,
             None,
             None,
             None,

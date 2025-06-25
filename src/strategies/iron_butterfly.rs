@@ -214,6 +214,8 @@ impl IronButterfly {
             Utc::now(),
             open_fee,
             close_fee,
+            None,
+            None,
         );
         strategy
             .add_position(&short_call.clone())
@@ -240,6 +242,8 @@ impl IronButterfly {
             Utc::now(),
             open_fee,
             close_fee,
+            None,
+            None,
         );
         strategy
             .add_position(&short_put.clone())
@@ -266,6 +270,8 @@ impl IronButterfly {
             Utc::now(),
             open_fee,
             close_fee,
+            None,
+            None,
         );
         strategy
             .add_position(&long_call.clone())
@@ -292,6 +298,8 @@ impl IronButterfly {
             Utc::now(),
             open_fee,
             close_fee,
+            None,
+            None,
         );
         strategy
             .add_position(&long_put.clone())
@@ -305,9 +313,9 @@ impl IronButterfly {
 }
 
 impl StrategyConstructor for IronButterfly {
-    fn get_strategy(vec_options: &[Position]) -> Result<Self, StrategyError> {
+    fn get_strategy(vec_positions: &[Position]) -> Result<Self, StrategyError> {
         // Need exactly 4 options for an Iron Butterfly
-        if vec_options.len() != 4 {
+        if vec_positions.len() != 4 {
             return Err(StrategyError::OperationError(
                 OperationErrorKind::InvalidParameters {
                     operation: "Iron Butterfly get_strategy".to_string(),
@@ -317,8 +325,8 @@ impl StrategyConstructor for IronButterfly {
         }
 
         // Sort options by strike price to identify positions
-        let mut sorted_options = vec_options.to_vec();
-        sorted_options.sort_by(|a, b| {
+        let mut sorted_positions = vec_positions.to_vec();
+        sorted_positions.sort_by(|a, b| {
             a.option
                 .strike_price
                 .partial_cmp(&b.option.strike_price)
@@ -327,7 +335,7 @@ impl StrategyConstructor for IronButterfly {
 
         // Validate the positions and their structure
         // In Iron Butterfly, all strikes must be equidistant
-        let strike_prices: Vec<Positive> = sorted_options
+        let strike_prices: Vec<Positive> = sorted_positions
             .iter()
             .map(|opt| opt.option.strike_price)
             .collect();
@@ -342,8 +350,8 @@ impl StrategyConstructor for IronButterfly {
         }
 
         // Validate expiration dates match
-        let exp_date = sorted_options[0].option.expiration_date;
-        if !sorted_options
+        let exp_date = sorted_positions[0].option.expiration_date;
+        if !sorted_positions
             .iter()
             .all(|opt| opt.option.expiration_date == exp_date)
         {
@@ -356,7 +364,7 @@ impl StrategyConstructor for IronButterfly {
         }
 
         // Find and validate the positions
-        let long_put = sorted_options
+        let long_put = sorted_positions
             .iter()
             .find(|opt| {
                 opt.option.option_style == OptionStyle::Put && opt.option.side == Side::Long
@@ -368,7 +376,7 @@ impl StrategyConstructor for IronButterfly {
                 },
             ))?;
 
-        let short_put = sorted_options
+        let short_put = sorted_positions
             .iter()
             .find(|opt| {
                 opt.option.option_style == OptionStyle::Put && opt.option.side == Side::Short
@@ -380,7 +388,7 @@ impl StrategyConstructor for IronButterfly {
                 },
             ))?;
 
-        let short_call = sorted_options
+        let short_call = sorted_positions
             .iter()
             .find(|opt| {
                 opt.option.option_style == OptionStyle::Call && opt.option.side == Side::Short
@@ -392,7 +400,7 @@ impl StrategyConstructor for IronButterfly {
                 },
             ))?;
 
-        let long_call = sorted_options
+        let long_call = sorted_positions
             .iter()
             .find(|opt| {
                 opt.option.option_style == OptionStyle::Call && opt.option.side == Side::Long
@@ -1322,6 +1330,8 @@ mod tests_iron_butterfly_validable {
             Utc::now(),
             Positive::ZERO,
             Positive::ZERO,
+            None,
+            None,
         )
     }
 
@@ -1479,6 +1489,8 @@ mod tests_iron_butterfly_strategies {
             Utc::now(),
             pos!(0.5),
             pos!(0.5),
+            None,
+            None,
         );
         butterfly
             .add_position(&new_short_call.clone())
@@ -1508,6 +1520,8 @@ mod tests_iron_butterfly_strategies {
             Utc::now(),
             pos!(0.5),
             pos!(0.5),
+            None,
+            None,
         );
         butterfly
             .add_position(&new_long_put.clone())
@@ -1778,6 +1792,7 @@ mod tests_iron_butterfly_optimizable {
             None,
             None,
             None,
+            None,
         );
 
         // Test with different sides
@@ -1801,6 +1816,7 @@ mod tests_iron_butterfly_optimizable {
             None,
             spos!(100.0),
             Some(50),
+            None,
             None,
             None,
             None,

@@ -220,6 +220,8 @@ impl IronCondor {
             Utc::now(),
             open_fee,
             close_fee,
+            None,
+            None,
         );
         strategy
             .add_position(&short_call.clone())
@@ -246,6 +248,8 @@ impl IronCondor {
             Utc::now(),
             open_fee,
             close_fee,
+            None,
+            None,
         );
         strategy
             .add_position(&short_put.clone())
@@ -272,6 +276,8 @@ impl IronCondor {
             Utc::now(),
             open_fee,
             close_fee,
+            None,
+            None,
         );
         strategy
             .add_position(&long_call.clone())
@@ -298,6 +304,8 @@ impl IronCondor {
             Utc::now(),
             open_fee,
             close_fee,
+            None,
+            None,
         );
         strategy
             .add_position(&long_put.clone())
@@ -311,9 +319,9 @@ impl IronCondor {
 }
 
 impl StrategyConstructor for IronCondor {
-    fn get_strategy(vec_options: &[Position]) -> Result<Self, StrategyError> {
+    fn get_strategy(vec_positions: &[Position]) -> Result<Self, StrategyError> {
         // Need exactly 4 options for an Iron Condor
-        if vec_options.len() != 4 {
+        if vec_positions.len() != 4 {
             return Err(StrategyError::OperationError(
                 OperationErrorKind::InvalidParameters {
                     operation: "Iron Condor get_strategy".to_string(),
@@ -323,7 +331,7 @@ impl StrategyConstructor for IronCondor {
         }
 
         // Sort options by strike price to identify each position
-        let mut sorted_options = vec_options.to_vec();
+        let mut sorted_options = vec_positions.to_vec();
         sorted_options.sort_by(|a, b| {
             a.option
                 .strike_price
@@ -385,6 +393,8 @@ impl StrategyConstructor for IronCondor {
             Utc::now(),
             lowest_strike.open_fee,
             lowest_strike.close_fee,
+            lowest_strike.epic.clone(),
+            lowest_strike.extra_fields.clone(),
         );
 
         let short_put = Position::new(
@@ -393,6 +403,8 @@ impl StrategyConstructor for IronCondor {
             Utc::now(),
             lower_middle_strike.open_fee,
             lower_middle_strike.close_fee,
+            lower_middle_strike.epic.clone(),
+            lower_middle_strike.extra_fields.clone(),
         );
 
         let short_call = Position::new(
@@ -401,6 +413,8 @@ impl StrategyConstructor for IronCondor {
             Utc::now(),
             upper_middle_strike.open_fee,
             upper_middle_strike.close_fee,
+            upper_middle_strike.epic.clone(),
+            upper_middle_strike.extra_fields.clone(),
         );
 
         let long_call = Position::new(
@@ -409,6 +423,8 @@ impl StrategyConstructor for IronCondor {
             Utc::now(),
             highest_strike.open_fee,
             highest_strike.close_fee,
+            highest_strike.epic.clone(),
+            highest_strike.extra_fields.clone(),
         );
 
         // Create strategy
@@ -1340,6 +1356,8 @@ mod tests_iron_condor_validable {
             Utc::now(),
             Positive::ZERO,
             Positive::ZERO,
+            None,
+            None,
         )
     }
 
@@ -1478,6 +1496,8 @@ mod tests_iron_condor_strategies {
             Utc::now(),
             pos!(0.5),
             pos!(0.5),
+            None,
+            None,
         );
         condor
             .add_position(&new_short_call.clone())
@@ -1504,6 +1524,8 @@ mod tests_iron_condor_strategies {
             Utc::now(),
             pos!(0.5),
             pos!(0.5),
+            None,
+            None,
         );
         condor
             .add_position(&new_long_put.clone())
@@ -1977,6 +1999,7 @@ mod tests_iron_condor_optimizable {
             None,
             None,
             None,
+            None,
         );
 
         // Test with different sides
@@ -2004,6 +2027,7 @@ mod tests_iron_condor_optimizable {
             None,
             spos!(100.0),
             Some(50),
+            None,
             None,
             None,
             None,

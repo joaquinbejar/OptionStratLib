@@ -123,6 +123,8 @@ impl LongCall {
             Utc::now(),
             open_fee_long_call,
             close_fee_long_call,
+            None,
+            None,
         );
         strategy
             .add_position(&long_call.clone())
