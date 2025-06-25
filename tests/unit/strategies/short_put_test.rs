@@ -47,6 +47,8 @@ fn create_test_short_put() -> ShortPut {
         Utc::now(),
         Positive::new(0.5).unwrap(),
         Positive::new(0.5).unwrap(),
+        None,
+        None,
     );
 
     // Add the position to the strategy
@@ -296,6 +298,8 @@ fn test_short_put_add_position() {
         Utc::now(),
         Positive::new(4.0).unwrap(),
         Positive::new(0.5).unwrap(),
+        None,
+        None,
     );
 
     let result = short_put.add_position(&valid_position);
@@ -323,6 +327,8 @@ fn test_short_put_add_position() {
         Utc::now(),
         Positive::new(4.0).unwrap(),
         Positive::new(0.5).unwrap(),
+        None,
+        None,
     );
 
     let result = short_put.add_position(&invalid_position);

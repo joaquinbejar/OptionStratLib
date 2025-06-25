@@ -36,6 +36,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         Utc::now(),
         Positive::ONE,
         Positive::ONE,
+        None,
+        None,
     );
 
     let path: &std::path::Path = "Draws/Position/pnl_at_expiration_chart.png".as_ref();

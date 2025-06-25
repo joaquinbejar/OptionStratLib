@@ -47,6 +47,8 @@ fn create_test_long_call() -> LongCall {
         Utc::now(),
         Positive::new(0.5).unwrap(),
         Positive::new(0.5).unwrap(),
+        None,
+        None,
     );
 
     // Add the position to the strategy
@@ -277,6 +279,8 @@ fn test_long_call_add_position() {
         Utc::now(),
         Positive::new(4.0).unwrap(),
         Positive::new(0.5).unwrap(),
+        None,
+        None,
     );
 
     let result = long_call.add_position(&position);
@@ -304,6 +308,8 @@ fn test_long_call_add_position() {
         Utc::now(),
         Positive::new(4.0).unwrap(),
         Positive::new(0.5).unwrap(),
+        None,
+        None,
     );
 
     let result = long_call.add_position(&invalid_position);

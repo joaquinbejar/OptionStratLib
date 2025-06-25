@@ -19,7 +19,6 @@ use crate::{ExpirationDate, OptionType, Options};
 use crate::{Positive, pos};
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
-use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::error::Error;

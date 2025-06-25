@@ -45,6 +45,8 @@ fn create_test_long_put() -> LongPut {
         Utc::now(), // Entry date
         pos!(0.5),  // Open fee
         pos!(0.5),  // Close fee
+        None,
+        None,
     );
 
     // Add the position to the strategy
@@ -88,6 +90,8 @@ fn create_test_short_call() -> ShortCall {
         Utc::now(), // Entry date
         pos!(0.5),  // Open fee
         pos!(0.5),  // Close fee
+        None,
+        None,
     );
 
     // Add the position to the strategy
