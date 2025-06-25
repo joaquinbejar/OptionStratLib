@@ -19,6 +19,7 @@ use crate::{ExpirationDate, OptionType, Options};
 use crate::{Positive, pos};
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
+use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
@@ -47,6 +48,8 @@ use tracing::{debug, trace};
 ///     Utc::now(),           // position open date
 ///     pos!(0.65),           // opening fee per contract
 ///     pos!(0.65),           // closing fee per contract
+///     None,
+///     None,
 /// );
 ///
 /// let total_cost = position.total_cost().unwrap();
@@ -73,6 +76,10 @@ pub struct Position {
     /// The fee that will be paid to close the position per contract. This is used
     /// in profit/loss calculations to account for all transaction costs.
     pub close_fee: Positive,
+
+    pub epic: Option<String>,
+
+    pub extra_fields: Option<serde_json::Value>,
 }
 
 impl Position {
@@ -117,6 +124,8 @@ impl Position {
     ///     Utc::now(),           // position open date
     ///     pos!(0.65),           // opening fee per contract
     ///     pos!(0.65),           // closing fee per contract
+    ///    None,                  // epic (optional)
+    ///   None,                  // extra fields (optional)
     /// );
     /// ```
     pub fn new(
@@ -125,6 +134,8 @@ impl Position {
         date: DateTime<Utc>,
         open_fee: Positive,
         close_fee: Positive,
+        epic: Option<String>,
+        extra_fields: Option<serde_json::Value>,
     ) -> Self {
         Position {
             option,
@@ -132,6 +143,8 @@ impl Position {
             date,
             open_fee,
             close_fee,
+            epic,
+            extra_fields,
         }
     }
 
@@ -234,6 +247,8 @@ impl Position {
     ///     Utc::now(),  // position open date
     ///     pos!(0.65),  // opening fee
     ///     pos!(0.65),  // closing fee
+    ///    None,        // epic (optional)
+    ///   None,        // extra fields (optional)
     /// );
     ///
     /// // Calculate premium received
@@ -318,6 +333,8 @@ impl Position {
     ///     Utc::now(),  // position open date
     ///     pos!(0.65),  // opening fee
     ///     pos!(0.65),  // closing fee
+    ///    None,        // epic (optional)
+    ///   None,        // extra fields (optional)
     /// );
     /// let current_price = pos!(105.0);
     ///
@@ -372,6 +389,8 @@ impl Position {
     ///     Utc::now(),  // position open date
     ///     pos!(0.65),  // opening fee
     ///     pos!(0.65),  // closing fee
+    ///    None,        // epic (optional)
+    ///   None,        // extra fields (optional)
     /// );
     /// let unrealized_pnl = position.unrealized_pnl(current_price).unwrap();
     /// info!("Current unrealized PnL: {}", unrealized_pnl);
@@ -613,7 +632,9 @@ impl Position {
     ///     pos!(5.25),
     ///     Utc::now(),
     ///     pos!(0.65),
-    ///     pos!(0.65)
+    ///     pos!(0.65),
+    ///     None, // epic (optional)
+    ///    None, // extra fields (optional)
     /// );
     ///
     /// assert!(position.validate());
@@ -639,6 +660,8 @@ impl Default for Position {
             date: Utc::now(),
             open_fee: Positive::ZERO,
             close_fee: Positive::ZERO,
+            epic: None,
+            extra_fields: None,
         }
     }
 }
@@ -1005,7 +1028,15 @@ mod tests_position {
             pos!(1.0),
             pos!(30.0),
         );
-        let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
+        let position = Position::new(
+            option,
+            pos!(5.0),
+            Utc::now(),
+            Positive::ONE,
+            Positive::ONE,
+            None,
+            None,
+        );
         assert_eq!(
             position.total_cost().unwrap(),
             7.0,
@@ -1023,7 +1054,15 @@ mod tests_position {
             pos!(10.0),
             pos!(30.0),
         );
-        let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
+        let position = Position::new(
+            option,
+            pos!(5.0),
+            Utc::now(),
+            Positive::ONE,
+            Positive::ONE,
+            None,
+            None,
+        );
         assert_eq!(
             position.total_cost().unwrap(),
             70.0,
@@ -1041,7 +1080,15 @@ mod tests_position {
             pos!(1.0),
             pos!(30.0),
         );
-        let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
+        let position = Position::new(
+            option,
+            pos!(5.0),
+            Utc::now(),
+            Positive::ONE,
+            Positive::ONE,
+            None,
+            None,
+        );
         assert_eq!(
             position.total_cost().unwrap(),
             2.0,
@@ -1059,7 +1106,15 @@ mod tests_position {
             pos!(10.0),
             pos!(30.0),
         );
-        let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
+        let position = Position::new(
+            option,
+            pos!(5.0),
+            Utc::now(),
+            Positive::ONE,
+            Positive::ONE,
+            None,
+            None,
+        );
         assert_eq!(
             position.total_cost().unwrap(),
             20.0,
@@ -1077,7 +1132,15 @@ mod tests_position {
             pos!(1.0),
             Positive::ZERO,
         );
-        let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
+        let position = Position::new(
+            option,
+            pos!(5.0),
+            Utc::now(),
+            Positive::ONE,
+            Positive::ONE,
+            None,
+            None,
+        );
         assert_eq!(
             position.pnl_at_expiration(&None).unwrap(),
             dec!(3.0),
@@ -1095,7 +1158,15 @@ mod tests_position {
             pos!(1.0),
             Positive::ZERO,
         );
-        let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
+        let position = Position::new(
+            option,
+            pos!(5.0),
+            Utc::now(),
+            Positive::ONE,
+            Positive::ONE,
+            None,
+            None,
+        );
         assert_eq!(
             position.pnl_at_expiration(&None).unwrap(),
             dec!(3.0),
@@ -1113,7 +1184,15 @@ mod tests_position {
             pos!(10.0),
             Positive::ZERO,
         );
-        let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
+        let position = Position::new(
+            option,
+            pos!(5.0),
+            Utc::now(),
+            Positive::ONE,
+            Positive::ONE,
+            None,
+            None,
+        );
         assert_eq!(
             position.pnl_at_expiration(&None).unwrap(),
             dec!(30.0),
@@ -1131,7 +1210,15 @@ mod tests_position {
             pos!(1.0),
             Positive::ZERO,
         );
-        let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
+        let position = Position::new(
+            option,
+            pos!(5.0),
+            Utc::now(),
+            Positive::ONE,
+            Positive::ONE,
+            None,
+            None,
+        );
         assert_eq!(
             position.pnl_at_expiration(&None).unwrap().to_f64().unwrap(),
             -7.0,
@@ -1149,7 +1236,15 @@ mod tests_position {
             pos!(10.0),
             Positive::ZERO,
         );
-        let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
+        let position = Position::new(
+            option,
+            pos!(5.0),
+            Utc::now(),
+            Positive::ONE,
+            Positive::ONE,
+            None,
+            None,
+        );
         assert_eq!(
             position.pnl_at_expiration(&None).unwrap().to_f64().unwrap(),
             -70.0,
@@ -1167,7 +1262,15 @@ mod tests_position {
             pos!(1.0),
             Positive::ZERO,
         );
-        let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
+        let position = Position::new(
+            option,
+            pos!(5.0),
+            Utc::now(),
+            Positive::ONE,
+            Positive::ONE,
+            None,
+            None,
+        );
         assert_eq!(
             position.pnl_at_expiration(&None).unwrap().to_f64().unwrap(),
             3.0,
@@ -1185,7 +1288,15 @@ mod tests_position {
             pos!(10.0),
             Positive::ZERO,
         );
-        let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
+        let position = Position::new(
+            option,
+            pos!(5.0),
+            Utc::now(),
+            Positive::ONE,
+            Positive::ONE,
+            None,
+            None,
+        );
         assert_eq!(
             position.pnl_at_expiration(&None).unwrap().to_f64().unwrap(),
             30.0,
@@ -1203,7 +1314,15 @@ mod tests_position {
             pos!(1.0),
             Positive::ZERO,
         );
-        let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
+        let position = Position::new(
+            option,
+            pos!(5.0),
+            Utc::now(),
+            Positive::ONE,
+            Positive::ONE,
+            None,
+            None,
+        );
         assert_eq!(
             position.pnl_at_expiration(&None).unwrap().to_f64().unwrap(),
             -7.0,
@@ -1221,7 +1340,15 @@ mod tests_position {
             pos!(10.0),
             Positive::ZERO,
         );
-        let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
+        let position = Position::new(
+            option,
+            pos!(5.0),
+            Utc::now(),
+            Positive::ONE,
+            Positive::ONE,
+            None,
+            None,
+        );
         assert_eq!(
             position.pnl_at_expiration(&None).unwrap().to_f64().unwrap(),
             -70.0,
@@ -1239,7 +1366,15 @@ mod tests_position {
             pos!(1.0),
             Positive::ZERO,
         );
-        let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
+        let position = Position::new(
+            option,
+            pos!(5.0),
+            Utc::now(),
+            Positive::ONE,
+            Positive::ONE,
+            None,
+            None,
+        );
         assert_eq!(
             position.pnl_at_expiration(&None).unwrap().to_f64().unwrap(),
             3.0,
@@ -1257,7 +1392,15 @@ mod tests_position {
             pos!(10.0),
             Positive::ZERO,
         );
-        let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
+        let position = Position::new(
+            option,
+            pos!(5.0),
+            Utc::now(),
+            Positive::ONE,
+            Positive::ONE,
+            None,
+            None,
+        );
         assert_eq!(
             position.pnl_at_expiration(&None).unwrap().to_f64().unwrap(),
             30.0,
@@ -1275,7 +1418,15 @@ mod tests_position {
             pos!(1.0),
             pos!(30.0),
         );
-        let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
+        let position = Position::new(
+            option,
+            pos!(5.0),
+            Utc::now(),
+            Positive::ONE,
+            Positive::ONE,
+            None,
+            None,
+        );
         assert_eq!(
             position.pnl_at_expiration(&Some(&pos!(107.0))).unwrap(),
             Positive::ZERO,
@@ -1293,7 +1444,15 @@ mod tests_position {
             pos!(10.0),
             pos!(30.0),
         );
-        let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
+        let position = Position::new(
+            option,
+            pos!(5.0),
+            Utc::now(),
+            Positive::ONE,
+            Positive::ONE,
+            None,
+            None,
+        );
         assert_eq!(
             position
                 .pnl_at_expiration(&Some(&pos!(107.0)))
@@ -1315,7 +1474,15 @@ mod tests_position {
             pos!(10.0),
             pos!(30.0),
         );
-        let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
+        let position = Position::new(
+            option,
+            pos!(5.0),
+            Utc::now(),
+            Positive::ONE,
+            Positive::ONE,
+            None,
+            None,
+        );
         assert_eq!(
             position
                 .unrealized_pnl(pos!(3.0))
@@ -1337,7 +1504,15 @@ mod tests_position {
             pos!(1.0),
             pos!(30.0),
         );
-        let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
+        let position = Position::new(
+            option,
+            pos!(5.0),
+            Utc::now(),
+            Positive::ONE,
+            Positive::ONE,
+            None,
+            None,
+        );
         assert_eq!(
             position
                 .unrealized_pnl(pos!(10.0))
@@ -1360,7 +1535,15 @@ mod tests_position {
             pos!(30.0),
         );
         let date = Utc::now() - Duration::days(10);
-        let position = Position::new(option, pos!(5.0), date, Positive::ONE, Positive::ONE);
+        let position = Position::new(
+            option,
+            pos!(5.0),
+            date,
+            Positive::ONE,
+            Positive::ONE,
+            None,
+            None,
+        );
         assert_eq!(
             position.days_held().unwrap().to_f64(),
             10.0,
@@ -1378,7 +1561,15 @@ mod tests_position {
             pos!(10.0),
             pos!(30.0),
         );
-        let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
+        let position = Position::new(
+            option,
+            pos!(5.0),
+            Utc::now(),
+            Positive::ONE,
+            Positive::ONE,
+            None,
+            None,
+        );
         assert_eq!(
             position.days_to_expiration().unwrap().to_f64(),
             30.0,
@@ -1396,7 +1587,15 @@ mod tests_position {
             pos!(10.0),
             pos!(30.0),
         );
-        let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
+        let position = Position::new(
+            option,
+            pos!(5.0),
+            Utc::now(),
+            Positive::ONE,
+            Positive::ONE,
+            None,
+            None,
+        );
         assert!(
             position.is_long(),
             "is_long should return true for long positions."
@@ -1417,7 +1616,15 @@ mod tests_position {
             pos!(10.0),
             pos!(30.0),
         );
-        let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
+        let position = Position::new(
+            option,
+            pos!(5.0),
+            Utc::now(),
+            Positive::ONE,
+            Positive::ONE,
+            None,
+            None,
+        );
         assert!(
             position.is_short(),
             "is_short should return true for short positions."
@@ -1533,7 +1740,15 @@ mod tests_position_break_even {
             pos!(1.0),
             pos!(30.0),
         );
-        let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
+        let position = Position::new(
+            option,
+            pos!(5.0),
+            Utc::now(),
+            Positive::ONE,
+            Positive::ONE,
+            None,
+            None,
+        );
         assert_eq!(position.break_even().unwrap(), 107.0);
     }
 
@@ -1547,7 +1762,15 @@ mod tests_position_break_even {
             pos!(10.0),
             pos!(30.0),
         );
-        let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
+        let position = Position::new(
+            option,
+            pos!(5.0),
+            Utc::now(),
+            Positive::ONE,
+            Positive::ONE,
+            None,
+            None,
+        );
         assert_eq!(position.break_even().unwrap(), 107.0);
     }
 
@@ -1561,7 +1784,15 @@ mod tests_position_break_even {
             pos!(1.0),
             pos!(30.0),
         );
-        let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
+        let position = Position::new(
+            option,
+            pos!(5.0),
+            Utc::now(),
+            Positive::ONE,
+            Positive::ONE,
+            None,
+            None,
+        );
         assert_eq!(position.break_even().unwrap(), 103.0);
     }
 
@@ -1575,7 +1806,15 @@ mod tests_position_break_even {
             pos!(10.0),
             pos!(30.0),
         );
-        let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
+        let position = Position::new(
+            option,
+            pos!(5.0),
+            Utc::now(),
+            Positive::ONE,
+            Positive::ONE,
+            None,
+            None,
+        );
         assert_eq!(position.break_even().unwrap(), 103.0);
     }
 
@@ -1589,7 +1828,15 @@ mod tests_position_break_even {
             pos!(1.0),
             pos!(30.0),
         );
-        let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
+        let position = Position::new(
+            option,
+            pos!(5.0),
+            Utc::now(),
+            Positive::ONE,
+            Positive::ONE,
+            None,
+            None,
+        );
         assert_eq!(position.break_even().unwrap(), 93.0);
     }
 
@@ -1603,7 +1850,15 @@ mod tests_position_break_even {
             pos!(10.0),
             pos!(30.0),
         );
-        let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
+        let position = Position::new(
+            option,
+            pos!(5.0),
+            Utc::now(),
+            Positive::ONE,
+            Positive::ONE,
+            None,
+            None,
+        );
         assert_eq!(position.break_even().unwrap(), 93.0);
     }
 
@@ -1617,7 +1872,15 @@ mod tests_position_break_even {
             pos!(1.0),
             pos!(30.0),
         );
-        let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
+        let position = Position::new(
+            option,
+            pos!(5.0),
+            Utc::now(),
+            Positive::ONE,
+            Positive::ONE,
+            None,
+            None,
+        );
         assert_eq!(position.break_even().unwrap(), 97.0);
     }
 
@@ -1631,7 +1894,15 @@ mod tests_position_break_even {
             pos!(10.0),
             pos!(30.0),
         );
-        let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
+        let position = Position::new(
+            option,
+            pos!(5.0),
+            Utc::now(),
+            Positive::ONE,
+            Positive::ONE,
+            None,
+            None,
+        );
         assert_eq!(position.break_even().unwrap(), 97.0);
     }
 }
@@ -1678,7 +1949,15 @@ mod tests_position_max_loss_profit {
             pos!(1.0),
             pos!(30.0),
         );
-        let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
+        let position = Position::new(
+            option,
+            pos!(5.0),
+            Utc::now(),
+            Positive::ONE,
+            Positive::ONE,
+            None,
+            None,
+        );
         assert_relative_eq!(position.max_loss().unwrap().to_f64(), 7.0, epsilon = 0.001);
         assert_eq!(position.max_profit().unwrap(), Positive::INFINITY);
     }
@@ -1693,7 +1972,15 @@ mod tests_position_max_loss_profit {
             pos!(10.0),
             pos!(30.0),
         );
-        let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
+        let position = Position::new(
+            option,
+            pos!(5.0),
+            Utc::now(),
+            Positive::ONE,
+            Positive::ONE,
+            None,
+            None,
+        );
         assert_relative_eq!(position.max_loss().unwrap().to_f64(), 70.0, epsilon = 0.001);
         assert_eq!(position.max_profit().unwrap(), Positive::INFINITY);
     }
@@ -1708,7 +1995,15 @@ mod tests_position_max_loss_profit {
             pos!(1.0),
             pos!(30.0),
         );
-        let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
+        let position = Position::new(
+            option,
+            pos!(5.0),
+            Utc::now(),
+            Positive::ONE,
+            Positive::ONE,
+            None,
+            None,
+        );
         assert_relative_eq!(position.max_loss().unwrap(), Positive::INFINITY);
         assert_relative_eq!(
             position.max_profit().unwrap().to_f64(),
@@ -1727,7 +2022,15 @@ mod tests_position_max_loss_profit {
             pos!(10.0),
             pos!(30.0),
         );
-        let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
+        let position = Position::new(
+            option,
+            pos!(5.0),
+            Utc::now(),
+            Positive::ONE,
+            Positive::ONE,
+            None,
+            None,
+        );
         assert_relative_eq!(position.max_loss().unwrap(), Positive::INFINITY);
         assert_relative_eq!(
             position.max_profit().unwrap().to_f64(),
@@ -1746,7 +2049,15 @@ mod tests_position_max_loss_profit {
             pos!(1.0),
             pos!(30.0),
         );
-        let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
+        let position = Position::new(
+            option,
+            pos!(5.0),
+            Utc::now(),
+            Positive::ONE,
+            Positive::ONE,
+            None,
+            None,
+        );
         assert_relative_eq!(position.max_loss().unwrap().to_f64(), 7.0, epsilon = 0.001);
         assert_relative_eq!(position.max_profit().unwrap(), Positive::INFINITY);
     }
@@ -1761,7 +2072,15 @@ mod tests_position_max_loss_profit {
             pos!(10.0),
             pos!(30.0),
         );
-        let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
+        let position = Position::new(
+            option,
+            pos!(5.0),
+            Utc::now(),
+            Positive::ONE,
+            Positive::ONE,
+            None,
+            None,
+        );
         assert_relative_eq!(position.max_loss().unwrap().to_f64(), 70.0, epsilon = 0.001);
         assert_relative_eq!(position.max_profit().unwrap(), Positive::INFINITY);
     }
@@ -1776,7 +2095,15 @@ mod tests_position_max_loss_profit {
             pos!(1.0),
             pos!(30.0),
         );
-        let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
+        let position = Position::new(
+            option,
+            pos!(5.0),
+            Utc::now(),
+            Positive::ONE,
+            Positive::ONE,
+            None,
+            None,
+        );
         assert_relative_eq!(position.max_loss().unwrap(), Positive::INFINITY);
         assert_relative_eq!(
             position.max_profit().unwrap().to_f64(),
@@ -1795,7 +2122,15 @@ mod tests_position_max_loss_profit {
             pos!(10.0),
             pos!(30.0),
         );
-        let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
+        let position = Position::new(
+            option,
+            pos!(5.0),
+            Utc::now(),
+            Positive::ONE,
+            Positive::ONE,
+            None,
+            None,
+        );
         assert_relative_eq!(position.max_loss().unwrap(), Positive::INFINITY);
         assert_relative_eq!(
             position.max_profit().unwrap().to_f64(),
@@ -1822,6 +2157,7 @@ mod tests_update_from_option_data {
             Some(dec!(-0.3)),
             Some(dec!(0.3)),
             Some(dec!(0.3)),
+            None,
             None,
             None,
             None,
@@ -1896,7 +2232,15 @@ mod tests_premium {
             ..Default::default()
         };
 
-        Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE)
+        Position::new(
+            option,
+            pos!(5.0),
+            Utc::now(),
+            Positive::ONE,
+            Positive::ONE,
+            None,
+            None,
+        )
     }
 
     #[test]
@@ -1932,7 +2276,15 @@ mod tests_premium {
             ..Default::default()
         };
 
-        let position = Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE);
+        let position = Position::new(
+            option,
+            pos!(5.0),
+            Utc::now(),
+            Positive::ONE,
+            Positive::ONE,
+            None,
+            None,
+        );
         assert_eq!(position.premium_received().unwrap(), 50.0);
     }
 }
@@ -1959,7 +2311,15 @@ mod tests_pnl_calculator {
             None,
         );
 
-        Position::new(option, pos!(5.0), Utc::now(), Positive::ONE, Positive::ONE)
+        Position::new(
+            option,
+            pos!(5.0),
+            Utc::now(),
+            Positive::ONE,
+            Positive::ONE,
+            None,
+            None,
+        )
     }
 
     #[test]
