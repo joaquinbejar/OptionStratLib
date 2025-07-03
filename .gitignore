@@ -27,3 +27,4 @@ src/.DS_Store
 /cobertura.xml
 /tarpaulin-report.html
 .secrets
+/coverage/tarpaulin-report.html
