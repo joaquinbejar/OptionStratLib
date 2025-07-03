@@ -263,7 +263,7 @@ impl FieldReceiver {
                 // Require a default
                 assert!(
                     self.default.is_some(),
-                    "Please provide #[field_setter(default=\"..\")] for the field {field_ident}",
+                    "Please provide #[field_setter(default=\"..\") for the field {field_ident}"
                 );
                 let val: proc_macro2::TokenStream = self.default.as_ref().unwrap().parse().unwrap();
                 quote![

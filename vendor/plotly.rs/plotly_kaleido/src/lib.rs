@@ -77,7 +77,7 @@ pub struct Kaleido {
 }
 
 impl Kaleido {
-    const KALEIDO_PATH_ENV: &str = "KALEIDO_PATH";
+    const KALEIDO_PATH_ENV: &'_ str = "KALEIDO_PATH";
 
     pub fn new() -> Kaleido {
         use std::env;

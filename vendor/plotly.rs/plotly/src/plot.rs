@@ -372,9 +372,7 @@ impl Plot {
     /// Display plot in Jupyter Notebook.
     pub fn notebook_display(&self) {
         let plot_data = self.to_jupyter_notebook_html();
-        println!(
-            "EVCXR_BEGIN_CONTENT text/html\n{plot_data}\nEVCXR_END_CONTENT"
-        );
+        println!("EVCXR_BEGIN_CONTENT text/html\n{plot_data}\nEVCXR_END_CONTENT");
     }
 
     /// Display plot in Jupyter Lab.
@@ -497,6 +495,29 @@ impl Plot {
         }
     }
 
+    fn offline_js_sources() -> String {
+        let local_plotly_js = include_str!("../templates/plotly.min.js");
+        let local_tex_mml_js = include_str!("../templates/tex-mml-chtml-3.2.0.js");
+        let local_tex_svg_js = include_str!("../templates/tex-svg-3.2.2.js");
+        format!(
+            "<script type=\"text/javascript\">{local_plotly_js}</script>\n
+            <script type=\"text/javascript\">
+            /**
+             * tex-mml-chtml JS script
+             **/
+            {local_tex_mml_js}
+            </script>\n
+            <script type=\"text/javascript\">
+            /**
+             * tex-svg JS script
+             **/
+            {local_tex_svg_js}
+            </script>\n"
+        )
+        .to_string()
+    }
+
+    fn online_cdn_js() -> String {
         r##"<script src="https://cdn.plot.ly/plotly-2.12.1.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-svg.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/mathjax@3.2.0/es5/tex-mml-chtml.js"></script>
