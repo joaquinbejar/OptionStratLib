@@ -256,7 +256,7 @@ impl Plot {
         let mut temp = env::temp_dir();
         let mut plot_name = Alphanumeric.sample_string(&mut rng(), 22);
         plot_name.push_str(".html");
-        plot_name = format!("plotly_{}", plot_name);
+        plot_name = format!("plotly_{plot_name}");
         temp.push(plot_name);
 
         // Save the rendered plot to the temp file.
@@ -298,7 +298,7 @@ impl Plot {
         let mut temp = env::temp_dir();
         let mut plot_name = Alphanumeric.sample_string(&mut rng(), 22);
         plot_name.push_str(".html");
-        plot_name = format!("plotly_{}", plot_name);
+        plot_name = format!("plotly_{plot_name}");
         temp.push(plot_name);
 
         // Save the rendered plot to the temp file.
@@ -373,8 +373,7 @@ impl Plot {
     pub fn notebook_display(&self) {
         let plot_data = self.to_jupyter_notebook_html();
         println!(
-            "EVCXR_BEGIN_CONTENT text/html\n{}\nEVCXR_END_CONTENT",
-            plot_data
+            "EVCXR_BEGIN_CONTENT text/html\n{plot_data}\nEVCXR_END_CONTENT"
         );
     }
 
@@ -382,8 +381,7 @@ impl Plot {
     pub fn lab_display(&self) {
         let plot_data = self.to_json();
         println!(
-            "EVCXR_BEGIN_CONTENT application/vnd.plotly.v1+json\n{}\nEVCXR_END_CONTENT",
-            plot_data
+            "EVCXR_BEGIN_CONTENT application/vnd.plotly.v1+json\n{plot_data}\nEVCXR_END_CONTENT"
         );
     }
 
@@ -499,30 +497,6 @@ impl Plot {
         }
     }
 
-    fn offline_js_sources() -> String {
-        let local_plotly_js = include_str!("../templates/plotly.min.js");
-        let local_tex_mml_js = include_str!("../templates/tex-mml-chtml-3.2.0.js");
-        let local_tex_svg_js = include_str!("../templates/tex-svg-3.2.2.js");
-        format!(
-            "<script type=\"text/javascript\">{}</script>\n
-            <script type=\"text/javascript\">
-            /**
-             * tex-mml-chtml JS script
-             **/
-            {}
-            </script>\n
-            <script type=\"text/javascript\">
-            /**
-             * tex-svg JS script
-             **/
-            {}
-            </script>\n",
-            local_plotly_js, local_tex_mml_js, local_tex_svg_js
-        )
-        .to_string()
-    }
-
-    fn online_cdn_js() -> String {
         r##"<script src="https://cdn.plot.ly/plotly-2.12.1.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-svg.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/mathjax@3.2.0/es5/tex-mml-chtml.js"></script>
