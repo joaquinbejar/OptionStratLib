@@ -53,11 +53,11 @@ impl Error for InterpolationError {}
 impl std::fmt::Display for InterpolationError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            InterpolationError::Linear(msg) => write!(f, "Linear interpolation error: {}", msg),
-            InterpolationError::Bilinear(msg) => write!(f, "Bilinear interpolation error: {}", msg),
-            InterpolationError::Cubic(msg) => write!(f, "Cubic interpolation error: {}", msg),
-            InterpolationError::Spline(msg) => write!(f, "Spline interpolation error: {}", msg),
-            InterpolationError::StdError(msg) => write!(f, "Standard error: {}", msg),
+            InterpolationError::Linear(msg) => write!(f, "Linear interpolation error: {msg}"),
+            InterpolationError::Bilinear(msg) => write!(f, "Bilinear interpolation error: {msg}"),
+            InterpolationError::Cubic(msg) => write!(f, "Cubic interpolation error: {msg}"),
+            InterpolationError::Spline(msg) => write!(f, "Spline interpolation error: {msg}"),
+            InterpolationError::StdError(msg) => write!(f, "Standard error: {msg}"),
         }
     }
 }
@@ -209,22 +209,22 @@ mod tests {
         let std_err = InterpolationError::StdError("test error".to_string());
 
         assert_eq!(
-            format!("{}", linear_err),
+            format!("{linear_err}"),
             "Linear interpolation error: test error"
         );
         assert_eq!(
-            format!("{}", bilinear_err),
+            format!("{bilinear_err}"),
             "Bilinear interpolation error: test error"
         );
         assert_eq!(
-            format!("{}", cubic_err),
+            format!("{cubic_err}"),
             "Cubic interpolation error: test error"
         );
         assert_eq!(
-            format!("{}", spline_err),
+            format!("{spline_err}"),
             "Spline interpolation error: test error"
         );
-        assert_eq!(format!("{}", std_err), "Standard error: test error");
+        assert_eq!(format!("{std_err}"), "Standard error: test error");
     }
 
     #[test]
@@ -293,7 +293,7 @@ mod tests {
     #[test]
     fn test_debug_implementation() {
         let err = InterpolationError::Linear("test debug".to_string());
-        let debug_str = format!("{:?}", err);
+        let debug_str = format!("{err:?}");
         assert!(
             debug_str.contains("Linear"),
             "Debug representation should include the variant"

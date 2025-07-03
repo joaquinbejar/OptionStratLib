@@ -469,7 +469,7 @@ impl Positionable for ShortStrangle {
     /// * `Err(PositionError)` if position was not found or validation failed
     fn modify_position(&mut self, position: &Position) -> Result<(), PositionError> {
         if !position.validate() {
-            let err_msg = format!("modify_position: Invalid position data: \n{}", position);
+            let err_msg = format!("modify_position: Invalid position data: \n{position}");
             return Err(PositionError::ValidationError(
                 PositionValidationErrorKind::InvalidPosition { reason: err_msg },
             ));
@@ -506,7 +506,7 @@ impl Positionable for ShortStrangle {
 
     fn replace_position(&mut self, position: &Position) -> Result<(), PositionError> {
         if !position.validate() {
-            let err_msg = format!("modify_position: Invalid position data: \n{}", position);
+            let err_msg = format!("modify_position: Invalid position data: \n{position}");
             return Err(PositionError::ValidationError(
                 PositionValidationErrorKind::InvalidPosition { reason: err_msg },
             ));

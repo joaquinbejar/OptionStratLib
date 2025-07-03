@@ -244,7 +244,7 @@ mod tests {
         assert_eq!(point.y, dec!(2.0));
         assert_eq!(point.z, dec!(3.0));
 
-        let display = format!("{}", point);
+        let display = format!("{point}");
         assert_eq!(display, "(x: 1.0, y: 2.0, z: 3.0)");
 
         let point2d = point.point2d();
@@ -262,7 +262,7 @@ mod tests {
         assert_eq!(point.y, dec!(-2.0));
         assert_eq!(point.z, dec!(-3.0));
 
-        let display = format!("{}", point);
+        let display = format!("{point}");
         assert_eq!(display, "(x: -1.0, y: -2.0, z: -3.0)");
 
         let tuple = point.to_tuple::<Positive, Decimal, Decimal>();

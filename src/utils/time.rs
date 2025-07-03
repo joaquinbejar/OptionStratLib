@@ -123,7 +123,7 @@ impl fmt::Display for TimeFrame {
             TimeFrame::Month => write!(f, "month"),
             TimeFrame::Quarter => write!(f, "quarter"),
             TimeFrame::Year => write!(f, "year"),
-            TimeFrame::Custom(periods) => write!(f, "custom ({})", periods),
+            TimeFrame::Custom(periods) => write!(f, "custom ({periods})"),
         }
     }
 }

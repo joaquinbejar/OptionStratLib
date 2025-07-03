@@ -193,7 +193,7 @@ mod tests {
         };
 
         // This just ensures that debug formatting doesn't panic
-        let debug_str = format!("{:?}", result);
+        let debug_str = format!("{result:?}");
         assert!(!debug_str.is_empty());
     }
 }

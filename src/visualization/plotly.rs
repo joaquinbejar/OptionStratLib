@@ -209,7 +209,7 @@ pub trait Graph {
 
         // Write HTML content to file
         std::fs::write(path, html)
-            .map_err(|e| GraphError::Render(format!("Failed to write HTML file: {}", e)))?;
+            .map_err(|e| GraphError::Render(format!("Failed to write HTML file: {e}")))?;
 
         Ok(())
     }

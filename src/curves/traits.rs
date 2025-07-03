@@ -303,7 +303,7 @@ pub trait StatisticalCurve: MetricsExtractor {
     ) -> Result<bool, CurveError> {
         let actual_metrics = curve
             .compute_basic_metrics()
-            .map_err(|e| CurveError::MetricsError(format!("Failed to compute metrics: {}", e)))?;
+            .map_err(|e| CurveError::MetricsError(format!("Failed to compute metrics: {e}")))?;
 
         // Check if the key metrics are within tolerance
         let mean_diff = (actual_metrics.mean - target_metrics.mean).abs();

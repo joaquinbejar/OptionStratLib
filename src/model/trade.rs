@@ -331,7 +331,7 @@ impl Trade {
 impl fmt::Display for Trade {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let string =
-            serde_json::to_string(self).unwrap_or_else(|e| format!(r#"{{"error":"{}"}}"#, e));
+            serde_json::to_string(self).unwrap_or_else(|e| format!(r#"{{"error":"{e}"}}"#));
         f.write_str(&string)
     }
 }

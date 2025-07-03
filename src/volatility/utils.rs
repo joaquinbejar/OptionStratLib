@@ -395,8 +395,7 @@ pub fn adjust_volatility(
         return Err(Box::new(VolatilityError::InvalidTime {
             time: to_periods,
             reason: format!(
-                "Cannot adjust volatility to timeframe with zero periods per year: {:?}",
-                to_frame
+                "Cannot adjust volatility to timeframe with zero periods per year: {to_frame:?}"
             ),
         }));
     }
@@ -720,7 +719,6 @@ mod tests_implied_volatility {
             None,                             // no exotic params
         )
     }
-    
 
     #[test]
     fn test_implied_volatility_max_iterations() {
@@ -1625,8 +1623,7 @@ mod tests_generate_ou_process {
         for value in process {
             assert!(
                 value >= Positive::ZERO,
-                "Found non-positive value: {:?}",
-                value
+                "Found non-positive value: {value:?}"
             );
         }
     }
@@ -1644,6 +1641,6 @@ mod tests_generate_ou_process {
 
         let last = process.last().unwrap().to_dec();
         let diff = (last - dec!(1.0)).abs();
-        assert!(diff < dec!(0.1), "Final value too far from mean: {}", last);
+        assert!(diff < dec!(0.1), "Final value too far from mean: {last}");
     }
 }

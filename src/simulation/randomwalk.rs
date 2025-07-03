@@ -268,7 +268,7 @@ where
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "RandomWalk Title: {}, Steps:  ", self.title)?;
         for step in &self.steps {
-            write!(f, "\t{}", step)?;
+            write!(f, "\t{step}")?;
         }
         Ok(())
     }
@@ -682,7 +682,7 @@ mod tests_random_walk {
         let walk = RandomWalk::new("Display Test".to_string(), &params, generate_test_steps);
 
         // Test that the display output contains the title
-        let display_output = format!("{}", walk);
+        let display_output = format!("{walk}");
         assert!(display_output.contains("Display Test"));
     }
 

@@ -579,7 +579,7 @@ mod tests_edge_cases {
     #[test]
     fn test_debug_output() {
         let point = Point2D::new(dec!(3.5), dec!(-2.25));
-        let debug_str = format!("{:?}", point);
+        let debug_str = format!("{point:?}");
 
         // Debug output should contain both x and y values
         assert!(debug_str.contains("3.5"));

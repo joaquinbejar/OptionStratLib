@@ -1375,9 +1375,7 @@ mod tests_get_position {
 
             assert!(
                 result.is_ok(),
-                "Failed to create position: {:?}, {:?}",
-                side,
-                style
+                "Failed to create position: {side:?}, {style:?}"
             );
             let position = result.unwrap();
 

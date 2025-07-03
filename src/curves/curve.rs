@@ -74,7 +74,7 @@ pub struct Curve {
 impl Display for Curve {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         for point in self.points.iter() {
-            writeln!(f, "{}", point)?;
+            writeln!(f, "{point}")?;
         }
         Ok(())
     }
@@ -3442,7 +3442,7 @@ mod tests_curve_display_and_default {
 
         let curve = Curve::new(points);
 
-        let display_string = format!("{}", curve);
+        let display_string = format!("{curve}");
         assert!(display_string.contains("(x: 1.0, y: 2.0)"));
         assert!(display_string.contains("(x: 3.0, y: 4.0)"));
     }

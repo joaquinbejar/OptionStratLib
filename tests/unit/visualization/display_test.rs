@@ -23,7 +23,7 @@ mod display_tests {
         };
 
         // Test Display implementation
-        let display_output = format!("{}", test_struct);
+        let display_output = format!("{test_struct}");
         let expected = serde_json::to_string_pretty(&test_struct).unwrap();
         assert_eq!(display_output, expected);
     }
@@ -36,7 +36,7 @@ mod display_tests {
         };
 
         // Test Debug implementation
-        let debug_output = format!("{:?}", test_struct);
+        let debug_output = format!("{test_struct:?}");
         let expected = serde_json::to_string_pretty(&test_struct).unwrap();
         assert_eq!(debug_output, expected);
     }
@@ -69,7 +69,7 @@ mod display_tests {
         };
 
         // Test error handling in Display implementation
-        let display_output = format!("{}", bad_struct);
+        let display_output = format!("{bad_struct}");
         assert!(display_output.starts_with("Error serializing to JSON:"));
     }
 
@@ -101,7 +101,7 @@ mod display_tests {
         };
 
         // Test error handling in Debug implementation
-        let debug_output = format!("{:?}", bad_struct);
+        let debug_output = format!("{bad_struct:?}");
         assert!(debug_output.starts_with("Error serializing to JSON:"));
     }
 }

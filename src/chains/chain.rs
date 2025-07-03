@@ -746,7 +746,7 @@ impl OptionChain {
         let expiration_date = match ExpirationDate::from_string(&self.expiration_date) {
             Ok(date) => date,
             Err(e) => {
-                panic!("Failed to parse expiration date: {}", e);
+                panic!("Failed to parse expiration date: {e}");
             }
         };
         let params = OptionDataPriceParams::new(
@@ -2040,10 +2040,10 @@ impl OptionChain {
         if filtered_options.is_empty() {
             let message = match option_style {
                 OptionStyle::Call => {
-                    format!("No call option with delta ≤ {} was found", target_delta)
+                    format!("No call option with delta ≤ {target_delta} was found")
                 }
                 OptionStyle::Put => {
-                    format!("No put option with delta ≥ {} was found", target_delta)
+                    format!("No put option with delta ≥ {target_delta} was found")
                 }
             };
 
@@ -2076,7 +2076,7 @@ impl OptionChain {
                         error!("Failed to create position: {}", e);
                         ChainError::OptionDataError(OptionDataErrorKind::InvalidDelta {
                             delta: Some(delta.to_f64().unwrap()),
-                            reason: format!("Failed to create position: {}", e),
+                            reason: format!("Failed to create position: {e}"),
                         })
                     })
             })
@@ -2240,7 +2240,7 @@ impl OptionChainParams for OptionChain {
             .iter()
             .find(|option| option.strike_price == strike_price);
         if option.is_none() {
-            let reason = format!("Option with strike price {} not found", strike_price);
+            let reason = format!("Option with strike price {strike_price} not found");
             return Err(ChainError::invalid_strike(strike_price.to_f64(), &reason));
         }
         Ok(OptionDataPriceParams::new(
@@ -2439,7 +2439,7 @@ impl fmt::Display for OptionChain {
         )?;
 
         for option in &self.options {
-            writeln!(f, "{}", option,)?;
+            writeln!(f, "{option}",)?;
         }
         Ok(())
     }
@@ -3579,7 +3579,7 @@ mod tests_option_data_display {
             None,
             None,
         );
-        let display_string = format!("{}", data);
+        let display_string = format!("{data}");
         assert!(display_string.contains("100"));
         assert!(display_string.contains("9.5"));
         assert!(display_string.contains("10"));
@@ -3594,7 +3594,7 @@ mod tests_option_data_display {
     #[test]
     fn test_display_empty_data() {
         let data = OptionData::default();
-        let display_string = format!("{}", data);
+        let display_string = format!("{data}");
 
         assert!(display_string.contains("0.0"));
         assert!(display_string.contains("")); // Para campos None
@@ -5508,15 +5508,11 @@ mod tests_basic_curves {
         for axis in axes {
             let curve = chain.curve(&axis, &OptionStyle::Call, &Side::Long);
 
-            assert!(curve.is_ok(), "Failed to create curve for axis: {:?}", axis);
+            assert!(curve.is_ok(), "Failed to create curve for axis: {axis:?}");
             let curve = curve.unwrap();
 
             // Each curve should have at least one point
-            assert!(
-                !curve.points.is_empty(),
-                "Curve for axis {:?} is empty",
-                axis
-            );
+            assert!(!curve.points.is_empty(), "Curve for axis {axis:?} is empty");
         }
     }
 
@@ -5729,7 +5725,7 @@ mod tests_option_chain_surfaces {
 
         for axis in axes {
             let result = chain.surface(&axis, &OptionStyle::Call, None, &Side::Long);
-            assert!(result.is_ok(), "Failed for axis: {:?}", axis);
+            assert!(result.is_ok(), "Failed for axis: {axis:?}");
         }
     }
 
@@ -7466,7 +7462,7 @@ mod chain_coverage_tests {
         let chain = create_test_chain();
 
         // Test the Display implementation - covers many lines
-        let display_output = format!("{}", chain);
+        let display_output = format!("{chain}");
 
         // Verify expected content in the display output
         assert!(display_output.contains("Symbol: TEST"));
@@ -7717,7 +7713,7 @@ mod chain_coverage_tests_bis {
         let chain = create_test_chain();
 
         // Test the Display implementation - covers many lines
-        let display_output = format!("{}", chain);
+        let display_output = format!("{chain}");
 
         // Verify expected content in the display output
         assert!(display_output.contains("Symbol: TEST"));
@@ -8147,11 +8143,10 @@ mod tests_get_position_with_delta {
                 assert_eq!(delta, Some(0.5));
                 assert!(
                     reason.contains("Option chain is empty"),
-                    "Error message should mention missing delta: {}",
-                    reason
+                    "Error message should mention missing delta: {reason}"
                 );
             }
-            err => panic!("Unexpected error type: {}", err),
+            err => panic!("Unexpected error type: {err}"),
         }
     }
 
@@ -8207,11 +8202,10 @@ mod tests_get_position_with_delta {
                 assert_eq!(delta, Some(0.5));
                 assert!(
                     reason.contains("No call option with delta ≤ 0.5 was found"),
-                    "Error message should mention missing delta: {}",
-                    reason
+                    "Error message should mention missing delta: {reason}"
                 );
             }
-            err => panic!("Unexpected error type: {}", err),
+            err => panic!("Unexpected error type: {err}"),
         }
     }
 
@@ -8289,9 +8283,7 @@ mod tests_get_position_with_delta {
 
             assert!(
                 result.is_ok(),
-                "Should find position for {:?} {:?}",
-                side,
-                style
+                "Should find position for {side:?} {style:?}"
             );
 
             let position = result.unwrap();
@@ -8310,9 +8302,7 @@ mod tests_get_position_with_delta {
             assert_eq!(
                 position.option.strike_price,
                 pos!(100.0),
-                "Should select ATM option with strike 100.0 for {:?} {:?}",
-                side,
-                style
+                "Should select ATM option with strike 100.0 for {side:?} {style:?}"
             );
         }
     }
@@ -8487,7 +8477,7 @@ mod tests_get_strikes_and_optiondata {
         assert!(result.is_err(), "Should return error for empty chain");
 
         let error = result.unwrap_err();
-        let error_msg = format!("{}", error);
+        let error_msg = format!("{error}");
         assert!(
             error_msg.contains("empty option chain"),
             "Error should mention empty chain"

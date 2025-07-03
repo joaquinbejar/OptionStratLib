@@ -100,7 +100,7 @@ pub trait BasicSurfaces {
             _ => Err(SurfaceError::OperationError(
                 crate::error::OperationErrorKind::InvalidParameters {
                     operation: "get_strike_volatility_versus".to_string(),
-                    reason: format!("Axis: {:?} not supported", axis),
+                    reason: format!("Axis: {axis:?} not supported"),
                 },
             )),
         }
@@ -168,7 +168,7 @@ pub trait BasicSurfaces {
             _ => Err(SurfaceError::OperationError(
                 crate::error::OperationErrorKind::InvalidParameters {
                     operation: "get_strike_volatility_versus".to_string(),
-                    reason: format!("Axis: {:?} not supported", axis),
+                    reason: format!("Axis: {axis:?} not supported"),
                 },
             )),
         }

@@ -219,15 +219,15 @@ impl fmt::Display for OptionSeries {
         let chains: String = self
             .chains
             .iter()
-            .map(|(e, o)| format!("{}:\n{}", e, o))
+            .map(|(e, o)| format!("{e}:\n{o}"))
             .collect();
 
         let risk_free_rate = match &self.risk_free_rate {
-            Some(r) => format!(" risk_free_rate: {}", r),
+            Some(r) => format!(" risk_free_rate: {r}"),
             None => "".to_string(),
         };
         let dividend_yield = match &self.dividend_yield {
-            Some(d) => format!(" dividend_yield: {}", d),
+            Some(d) => format!(" dividend_yield: {d}"),
             None => "".to_string(),
         };
 
@@ -364,7 +364,7 @@ impl<'de> Deserialize<'de> for OptionSeries {
                 let mut chains = BTreeMap::new();
                 for (date_str, chain) in string_chains {
                     let expiration_date = ExpirationDate::from_string_to_days(&date_str)
-                        .map_err(|e| de::Error::custom(format!("Invalid date format: {}", e)))?;
+                        .map_err(|e| de::Error::custom(format!("Invalid date format: {e}")))?;
                     chains.insert(expiration_date, chain);
                 }
 
@@ -649,7 +649,7 @@ mod tests_option_series {
         fn test_display_full_series() {
             let series = create_test_series();
 
-            let display = format!("{}", series);
+            let display = format!("{series}");
 
             // Verify the display string contains the important parts
             assert!(display.contains("symbol: TEST"));
@@ -658,15 +658,15 @@ mod tests_option_series {
             assert!(display.contains("dividend_yield: 0.02"));
 
             let date = get_x_days_formatted_pos(Positive::ONE);
-            let matches = format!("Expiration Date: {}", date);
+            let matches = format!("Expiration Date: {date}");
             assert!(display.contains(&matches));
 
             let date = get_x_days_formatted_pos(pos!(7.0));
-            let matches = format!("Expiration Date: {}", date);
+            let matches = format!("Expiration Date: {date}");
             assert!(display.contains(&matches));
 
             let date = get_x_days_formatted_pos(pos!(30.0));
-            let matches = format!("Expiration Date: {}", date);
+            let matches = format!("Expiration Date: {date}");
             assert!(display.contains(&matches));
         }
 
@@ -674,7 +674,7 @@ mod tests_option_series {
         fn test_display_minimal_series() {
             let series = OptionSeries::new("SPY".to_string(), pos!(450.0));
 
-            let display = format!("{}", series);
+            let display = format!("{series}");
 
             // Verify the minimal display string
             assert!(display.contains("symbol: SPY"));

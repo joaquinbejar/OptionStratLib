@@ -74,7 +74,7 @@ where
     {
         let mut random_walks = Vec::new();
         for i in 0..size {
-            let title = format!("{}_{}", title, i);
+            let title = format!("{title}_{i}");
             let random_walk = RandomWalk::new(title, params, &generator);
             random_walks.push(random_walk);
         }
@@ -367,7 +367,7 @@ where
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "{}", self.title)?;
         for random_walk in &self.random_walks {
-            writeln!(f, "\t{}", random_walk)?;
+            writeln!(f, "\t{random_walk}")?;
         }
         Ok(())
     }
@@ -410,7 +410,7 @@ where
                 .iter()
                 .map(|step| -step.get_graph_x_in_days_left().to_dec())
                 .collect();
-            let title = format!("Sim_{}", i);
+            let title = format!("Sim_{i}");
             series.push(Series2D {
                 x,
                 y,
@@ -678,7 +678,7 @@ mod tests {
 
         let simulator = Simulator::new("Display Test".to_string(), 2, &walk_params, test_generator);
 
-        let display_output = format!("{}", simulator);
+        let display_output = format!("{simulator}");
         assert!(display_output.starts_with("Display Test"));
         assert!(display_output.contains("Display Test_0"));
         assert!(display_output.contains("Display Test_1"));
@@ -774,7 +774,7 @@ mod tests {
 
         let step = random_walk[0].clone();
         assert_eq!(*step.get_index(), Positive::ONE);
-        let step_string = format!("{}", step);
+        let step_string = format!("{step}");
         assert_eq!(step.to_string(), step_string);
 
         let y_step = step.get_y_step();
@@ -789,19 +789,19 @@ mod tests {
 
         let next_step = step.next(pos!(200.0)).expect("should be Ok");
         assert_eq!(next_step.get_value(), &pos!(200.0));
-        let next_step_string = format!("{}", next_step);
+        let next_step_string = format!("{next_step}");
         assert_eq!(next_step.to_string(), next_step_string);
 
         let previous_step = step.previous(pos!(50.0))?;
         assert_eq!(previous_step.get_value(), &pos!(50.0));
-        let previous_step_string = format!("{}", previous_step);
+        let previous_step_string = format!("{previous_step}");
         assert_eq!(previous_step.to_string(), previous_step_string);
 
         let x_step = step.get_x_step();
         let next_x_step = x_step.next().expect("should be Ok");
         assert_eq!(*next_x_step.index(), 1);
         assert_eq!(*next_x_step.step_size_in_time(), Positive::ONE);
-        let next_x_step_string = format!("{}", next_x_step);
+        let next_x_step_string = format!("{next_x_step}");
         assert_eq!(next_x_step.to_string(), next_x_step_string);
 
         let y_step = step.get_y_step();

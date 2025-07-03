@@ -118,7 +118,7 @@ mod tests_risk_metrics {
     #[test]
     fn test_risk_metrics_simulation_debug() {
         let metrics = RiskMetricsSimulation::default();
-        let debug_string = format!("{:?}", metrics);
+        let debug_string = format!("{metrics:?}");
 
         // Verify the debug output contains all relevant fields
         assert!(debug_string.contains("var_95"));

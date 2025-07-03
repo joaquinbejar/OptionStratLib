@@ -243,7 +243,7 @@ impl PartialEq<Positive> for Decimal {
 /// ```
 pub fn decimal_to_f64(value: Decimal) -> Result<f64, DecimalError> {
     value.to_f64().ok_or(DecimalError::ConversionError {
-        from_type: format!("Decimal: {}", value),
+        from_type: format!("Decimal: {value}"),
         to_type: "f64".to_string(),
         reason: "Failed to convert Decimal to f64".to_string(),
     })
@@ -280,7 +280,7 @@ pub fn decimal_to_f64(value: Decimal) -> Result<f64, DecimalError> {
 /// ```
 pub fn f64_to_decimal(value: f64) -> Result<Decimal, DecimalError> {
     Decimal::from_f64(value).ok_or(DecimalError::ConversionError {
-        from_type: format!("f64: {}", value),
+        from_type: format!("f64: {value}"),
         to_type: "Decimal".to_string(),
         reason: "Failed to convert f64 to Decimal".to_string(),
     })

@@ -86,7 +86,7 @@ pub trait BasicCurves {
             _ => Err(CurveError::OperationError(
                 crate::error::OperationErrorKind::InvalidParameters {
                     operation: "get_axis_value".to_string(),
-                    reason: format!("Axis: {:?} not supported", axis),
+                    reason: format!("Axis: {axis:?} not supported"),
                 },
             )),
         }

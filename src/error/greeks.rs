@@ -310,10 +310,10 @@ pub enum CalculationErrorKind {
 impl fmt::Display for GreeksError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            GreeksError::MathError(err) => write!(f, "Mathematical error: {}", err),
-            GreeksError::InputError(err) => write!(f, "Input validation error: {}", err),
-            GreeksError::CalculationError(err) => write!(f, "Greek calculation error: {}", err),
-            GreeksError::StdError(msg) => write!(f, "Standard error: {}", msg),
+            GreeksError::MathError(err) => write!(f, "Mathematical error: {err}"),
+            GreeksError::InputError(err) => write!(f, "Input validation error: {err}"),
+            GreeksError::CalculationError(err) => write!(f, "Greek calculation error: {err}"),
+            GreeksError::StdError(msg) => write!(f, "Standard error: {msg}"),
         }
     }
 }
@@ -324,7 +324,7 @@ impl fmt::Display for MathErrorKind {
             MathErrorKind::DivisionByZero => write!(f, "Division by zero"),
             MathErrorKind::Overflow => write!(f, "Numerical overflow"),
             MathErrorKind::InvalidDomain { value, reason } => {
-                write!(f, "Invalid domain value {}: {}", value, reason)
+                write!(f, "Invalid domain value {value}: {reason}")
             }
             MathErrorKind::ConvergenceFailure {
                 iterations,
@@ -332,8 +332,7 @@ impl fmt::Display for MathErrorKind {
             } => {
                 write!(
                     f,
-                    "Failed to converge after {} iterations (tolerance: {})",
-                    iterations, tolerance
+                    "Failed to converge after {iterations} iterations (tolerance: {tolerance})"
                 )
             }
         }
@@ -344,19 +343,19 @@ impl fmt::Display for InputErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             InputErrorKind::InvalidVolatility { value, reason } => {
-                write!(f, "Invalid volatility {}: {}", value, reason)
+                write!(f, "Invalid volatility {value}: {reason}")
             }
             InputErrorKind::InvalidTime { value, reason } => {
-                write!(f, "Invalid time value {}: {}", value, reason)
+                write!(f, "Invalid time value {value}: {reason}")
             }
             InputErrorKind::InvalidPrice { value, reason } => {
-                write!(f, "Invalid price {}: {}", value, reason)
+                write!(f, "Invalid price {value}: {reason}")
             }
             InputErrorKind::InvalidRate { value, reason } => {
-                write!(f, "Invalid rate {}: {}", value, reason)
+                write!(f, "Invalid rate {value}: {reason}")
             }
             InputErrorKind::InvalidStrike { value, reason } => {
-                write!(f, "Invalid strike price {}: {}", value, reason)
+                write!(f, "Invalid strike price {value}: {reason}")
             }
         }
     }
@@ -366,21 +365,21 @@ impl fmt::Display for CalculationErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             CalculationErrorKind::DeltaError { reason } => {
-                write!(f, "Delta calculation error: {}", reason)
+                write!(f, "Delta calculation error: {reason}")
             }
             CalculationErrorKind::GammaError { reason } => {
-                write!(f, "Gamma calculation error: {}", reason)
+                write!(f, "Gamma calculation error: {reason}")
             }
             CalculationErrorKind::ThetaError { reason } => {
-                write!(f, "Theta calculation error: {}", reason)
+                write!(f, "Theta calculation error: {reason}")
             }
             CalculationErrorKind::VegaError { reason } => {
-                write!(f, "Vega calculation error: {}", reason)
+                write!(f, "Vega calculation error: {reason}")
             }
             CalculationErrorKind::RhoError { reason } => {
-                write!(f, "Rho calculation error: {}", reason)
+                write!(f, "Rho calculation error: {reason}")
             }
-            CalculationErrorKind::DecimalError { error } => write!(f, "Decimal error: {}", error),
+            CalculationErrorKind::DecimalError { error } => write!(f, "Decimal error: {error}"),
         }
     }
 }
@@ -628,7 +627,7 @@ mod tests {
     #[test]
     fn test_debug_implementation() {
         let error = GreeksError::delta_error("Test error");
-        let debug_string = format!("{:?}", error);
+        let debug_string = format!("{error:?}");
         assert!(debug_string.contains("DeltaError"));
         assert!(debug_string.contains("Test error"));
     }
@@ -644,13 +643,13 @@ mod tests_extended {
     #[test]
     fn test_greeks_error_std_error() {
         let error = GreeksError::StdError("An error occurred".to_string());
-        assert_eq!(format!("{}", error), "Standard error: An error occurred");
+        assert_eq!(format!("{error}"), "Standard error: An error occurred");
     }
 
     #[test]
     fn test_math_error_overflow() {
         let error = MathErrorKind::Overflow;
-        assert_eq!(format!("{}", error), "Numerical overflow");
+        assert_eq!(format!("{error}"), "Numerical overflow");
     }
 
     #[test]
@@ -659,10 +658,7 @@ mod tests_extended {
             value: 0.5,
             reason: "Out of bounds".to_string(),
         };
-        assert_eq!(
-            format!("{}", error),
-            "Invalid volatility 0.5: Out of bounds"
-        );
+        assert_eq!(format!("{error}"), "Invalid volatility 0.5: Out of bounds");
     }
 
     #[test]
@@ -671,7 +667,7 @@ mod tests_extended {
             reason: "Unable to compute delta".to_string(),
         };
         assert_eq!(
-            format!("{}", error),
+            format!("{error}"),
             "Delta calculation error: Unable to compute delta"
         );
     }
@@ -682,7 +678,7 @@ mod tests_extended {
             reason: "Negative time decay".to_string(),
         };
         assert_eq!(
-            format!("{}", error),
+            format!("{error}"),
             "Theta calculation error: Negative time decay"
         );
     }
@@ -693,7 +689,7 @@ mod tests_extended {
             reason: "Interest rate too high".to_string(),
         };
         assert_eq!(
-            format!("{}", error),
+            format!("{error}"),
             "Rho calculation error: Interest rate too high"
         );
     }
@@ -707,7 +703,7 @@ mod tests_extended {
             },
         };
         assert_eq!(
-            format!("{}", error),
+            format!("{error}"),
             "Decimal error: Invalid decimal precision 0: Precision error"
         );
     }
@@ -716,7 +712,7 @@ mod tests_extended {
     fn test_invalid_time_constructor() {
         let error = GreeksError::invalid_time(pos!(5.0), "Time must be positive");
         assert_eq!(
-            format!("{}", error),
+            format!("{error}"),
             "Input validation error: Invalid time value 5: Time must be positive"
         );
     }
@@ -743,7 +739,7 @@ mod tests_extended {
         let iv_error = VolatilityError::ZeroVega;
         let error: GreeksError = iv_error.into();
         assert_eq!(
-            format!("{}", error),
+            format!("{error}"),
             "Input validation error: Invalid volatility 0: Vega is zero, cannot calculate implied volatility"
         );
     }
@@ -752,6 +748,6 @@ mod tests_extended {
     fn test_boxed_error_conversion() {
         let boxed_error: Box<dyn Error> = Box::new(std::io::Error::other("Some IO error"));
         let error: GreeksError = boxed_error.into();
-        assert_eq!(format!("{}", error), "Standard error: Some IO error");
+        assert_eq!(format!("{error}"), "Standard error: Some IO error");
     }
 }

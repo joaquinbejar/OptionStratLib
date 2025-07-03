@@ -121,11 +121,11 @@ impl Error for SurfaceError {}
 impl fmt::Display for SurfaceError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            SurfaceError::OperationError(err) => write!(f, "Operation error: {}", err),
-            SurfaceError::StdError { reason } => write!(f, "Error: {}", reason),
-            SurfaceError::Point3DError { reason } => write!(f, "Error: {}", reason),
-            SurfaceError::ConstructionError(reason) => write!(f, "Construction error: {}", reason),
-            SurfaceError::AnalysisError(reason) => write!(f, "Analysis error: {}", reason),
+            SurfaceError::OperationError(err) => write!(f, "Operation error: {err}"),
+            SurfaceError::StdError { reason } => write!(f, "Error: {reason}"),
+            SurfaceError::Point3DError { reason } => write!(f, "Error: {reason}"),
+            SurfaceError::ConstructionError(reason) => write!(f, "Construction error: {reason}"),
+            SurfaceError::AnalysisError(reason) => write!(f, "Analysis error: {reason}"),
         }
     }
 }

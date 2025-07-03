@@ -296,7 +296,7 @@ mod tests_deltas_in_strike {
             short_put: dec!(0.4),
         };
 
-        let debug_output = format!("{:?}", deltas);
+        let debug_output = format!("{deltas:?}");
         assert!(debug_output.contains("0.6"));
         assert!(debug_output.contains("-0.6"));
         assert!(debug_output.contains("-0.4"));

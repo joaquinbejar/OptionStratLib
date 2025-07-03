@@ -75,13 +75,13 @@ pub enum OhlcvError {
 impl std::fmt::Display for OhlcvError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::IoError { reason, .. } => write!(f, "IO error: {}", reason),
-            Self::ZipError { reason, .. } => write!(f, "ZIP error: {}", reason),
-            Self::CsvError { reason } => write!(f, "CSV error: {}", reason),
-            Self::DateParseError { reason, .. } => write!(f, "Date parse error: {}", reason),
-            Self::DecimalParseError { reason, .. } => write!(f, "Decimal parse error: {}", reason),
-            Self::InvalidParameter { reason } => write!(f, "Invalid parameter {}", reason),
-            Self::OtherError { reason } => write!(f, "Error: {}", reason),
+            Self::IoError { reason, .. } => write!(f, "IO error: {reason}"),
+            Self::ZipError { reason, .. } => write!(f, "ZIP error: {reason}"),
+            Self::CsvError { reason } => write!(f, "CSV error: {reason}"),
+            Self::DateParseError { reason, .. } => write!(f, "Date parse error: {reason}"),
+            Self::DecimalParseError { reason, .. } => write!(f, "Decimal parse error: {reason}"),
+            Self::InvalidParameter { reason } => write!(f, "Invalid parameter {reason}"),
+            Self::OtherError { reason } => write!(f, "Error: {reason}"),
         }
     }
 }
@@ -99,7 +99,7 @@ impl From<std::io::Error> for OhlcvError {
 impl From<zip::result::ZipError> for OhlcvError {
     fn from(error: zip::result::ZipError) -> Self {
         Self::ZipError {
-            reason: format!("ZIP error: {:?}", error),
+            reason: format!("ZIP error: {error:?}"),
         }
     }
 }
@@ -107,7 +107,7 @@ impl From<zip::result::ZipError> for OhlcvError {
 impl From<chrono::ParseError> for OhlcvError {
     fn from(error: chrono::ParseError) -> Self {
         Self::DateParseError {
-            reason: format!("Date parse error: {}", error),
+            reason: format!("Date parse error: {error}"),
         }
     }
 }
@@ -115,7 +115,7 @@ impl From<chrono::ParseError> for OhlcvError {
 impl From<rust_decimal::Error> for OhlcvError {
     fn from(error: rust_decimal::Error) -> Self {
         Self::DecimalParseError {
-            reason: format!("Decimal parse error: {}", error),
+            reason: format!("Decimal parse error: {error}"),
         }
     }
 }
@@ -161,7 +161,7 @@ pub fn read_ohlcv_from_zip(
     if let (Some(start_date), Some(end_date)) = (&start, &end) {
         if start_date > end_date {
             return Err(OhlcvError::InvalidParameter {
-                reason: format!("Start date {} is after end date {}", start_date, end_date),
+                reason: format!("Start date {start_date} is after end date {end_date}"),
             });
         }
     }
@@ -568,32 +568,32 @@ mod ohlcv_tests {
         let io_error = OhlcvError::IoError {
             reason: "test reason".to_string(),
         };
-        assert_eq!(format!("{}", io_error), "IO error: test reason");
+        assert_eq!(format!("{io_error}"), "IO error: test reason");
 
         // Test ZipError display
         let zip_error = OhlcvError::ZipError {
             reason: "test reason".to_string(),
         };
-        assert_eq!(format!("{}", zip_error), "ZIP error: test reason");
+        assert_eq!(format!("{zip_error}"), "ZIP error: test reason");
 
         // Test CsvError display
         let csv_error = OhlcvError::CsvError {
             reason: "test reason".to_string(),
         };
-        assert_eq!(format!("{}", csv_error), "CSV error: test reason");
+        assert_eq!(format!("{csv_error}"), "CSV error: test reason");
 
         // Test DateParseError display
         let date_error = OhlcvError::DateParseError {
             reason: "test reason".to_string(),
         };
-        assert_eq!(format!("{}", date_error), "Date parse error: test reason");
+        assert_eq!(format!("{date_error}"), "Date parse error: test reason");
 
         // Test DecimalParseError display
         let decimal_error = OhlcvError::DecimalParseError {
             reason: "test reason".to_string(),
         };
         assert_eq!(
-            format!("{}", decimal_error),
+            format!("{decimal_error}"),
             "Decimal parse error: test reason"
         );
 
@@ -601,13 +601,13 @@ mod ohlcv_tests {
         let param_error = OhlcvError::InvalidParameter {
             reason: "test reason".to_string(),
         };
-        assert_eq!(format!("{}", param_error), "Invalid parameter test reason");
+        assert_eq!(format!("{param_error}"), "Invalid parameter test reason");
 
         // Test OtherError display
         let other_error = OhlcvError::OtherError {
             reason: "test reason".to_string(),
         };
-        assert_eq!(format!("{}", other_error), "Error: test reason");
+        assert_eq!(format!("{other_error}"), "Error: test reason");
     }
 
     #[test]

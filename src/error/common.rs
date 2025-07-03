@@ -82,15 +82,13 @@ impl fmt::Display for OperationErrorKind {
             } => {
                 write!(
                     f,
-                    "Operation '{}' is not supported for strategy '{}'",
-                    operation, strategy_type
+                    "Operation '{operation}' is not supported for strategy '{strategy_type}'"
                 )
             }
             OperationErrorKind::InvalidParameters { operation, reason } => {
                 write!(
                     f,
-                    "Invalid parameters for operation '{}': {}",
-                    operation, reason
+                    "Invalid parameters for operation '{operation}': {reason}"
                 )
             }
         }
@@ -135,7 +133,7 @@ mod tests {
         };
 
         assert_eq!(
-            format!("{:?}", error),
+            format!("{error:?}"),
             "NotSupported { operation: \"calculate_profit\", reason: \"IronCondor\" }"
         );
     }
@@ -166,7 +164,7 @@ mod tests {
             reason: "err".to_string(),
         };
 
-        assert_ne!(format!("{:?}", error1), format!("{:?}", error2));
+        assert_ne!(format!("{error1:?}"), format!("{:?}", error2));
     }
 
     #[test]

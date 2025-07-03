@@ -494,8 +494,7 @@ pub fn calculate_delta_neutral_sizes(
     let toral_size_check = size1 + size2;
     if (toral_size_check.to_dec() - total_size.to_dec()).abs() > DELTA_THRESHOLD {
         return Err(Box::from(format!(
-            "Calculated sizes {} do not match the total desired size of {} ",
-            toral_size_check, total_size
+            "Calculated sizes {toral_size_check} do not match the total desired size of {total_size} "
         )));
     }
 

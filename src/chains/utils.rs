@@ -232,8 +232,8 @@ impl OptionChainBuildParams {
 impl Display for OptionChainBuildParams {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match serde_json::to_string(self) {
-            Ok(pretty_json) => write!(f, "{}", pretty_json),
-            Err(e) => write!(f, "Error serializing to JSON: {}", e),
+            Ok(pretty_json) => write!(f, "{pretty_json}"),
+            Err(e) => write!(f, "Error serializing to JSON: {e}"),
         }
     }
 }
@@ -1076,7 +1076,7 @@ mod tests_random_positions_params {
     #[test]
     fn test_debug() {
         let params = create_test_params();
-        let debug_output = format!("{:?}", params);
+        let debug_output = format!("{params:?}");
         assert!(debug_output.contains("RandomPositionsParams"));
     }
 }
@@ -1217,7 +1217,7 @@ mod tests_option_data_price_params {
     fn test_display_price_params() {
         let params = get_params();
 
-        let display_string = format!("{}", params);
+        let display_string = format!("{params}");
         assert!(display_string.contains("Underlying Price: 100"));
         assert!(display_string.contains("Risk-Free Rate: 5"));
         assert!(display_string.contains("Dividend Yield: 2"));
@@ -1321,7 +1321,7 @@ mod tests_option_chain_build_params {
         assert_eq!(params.spread, pos!(0.02));
         assert_eq!(params.decimal_places, 2);
 
-        let display = format!("{}", params);
+        let display = format!("{params}");
         assert_eq!(
             display,
             r#"{"symbol":"TEST","volume":1000,"chain_size":10,"strike_interval":5,"skew_slope":"-0.2","smile_curve":"0.1","spread":0.02,"decimal_places":2,"price_params":{"underlying_price":100,"expiration_date":{"days":30.0},"risk_free_rate":"0.05","dividend_yield":0.02,"underlying_symbol":"AAPL"},"implied_volatility":0.25}"#

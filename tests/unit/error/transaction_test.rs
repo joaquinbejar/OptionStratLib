@@ -9,7 +9,7 @@ fn test_transaction_error_display() {
     };
 
     // Verify that the Display implementation works correctly
-    assert_eq!(format!("{}", error), "TransactionError: Test error message");
+    assert_eq!(format!("{error}"), "TransactionError: Test error message");
 }
 
 #[test]
@@ -20,7 +20,7 @@ fn test_transaction_error_debug() {
     };
 
     // Verify that the Debug implementation works correctly
-    assert!(format!("{:?}", error).contains("Test error message"));
+    assert!(format!("{error:?}").contains("Test error message"));
 }
 
 #[test]

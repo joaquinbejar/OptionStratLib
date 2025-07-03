@@ -153,8 +153,7 @@ impl Display for WalkType {
                 volatility,
             } => write!(
                 f,
-                "Brownian {{ dt: {}, drift: {}, volatility: {} }}",
-                dt, drift, volatility
+                "Brownian {{ dt: {dt}, drift: {drift}, volatility: {volatility} }}"
             ),
             WalkType::GeometricBrownian {
                 dt,
@@ -162,8 +161,7 @@ impl Display for WalkType {
                 volatility,
             } => write!(
                 f,
-                "GeometricBrownian {{ dt: {}, drift: {}, volatility: {} }}",
-                dt, drift, volatility
+                "GeometricBrownian {{ dt: {dt}, drift: {drift}, volatility: {volatility} }}"
             ),
             WalkType::LogReturns {
                 dt,
@@ -172,8 +170,7 @@ impl Display for WalkType {
                 autocorrelation,
             } => write!(
                 f,
-                "LogReturns {{ dt: {}, expected_return: {}, volatility: {}, autocorrelation: {:?} }}",
-                dt, expected_return, volatility, autocorrelation
+                "LogReturns {{ dt: {dt}, expected_return: {expected_return}, volatility: {volatility}, autocorrelation: {autocorrelation:?} }}"
             ),
             WalkType::MeanReverting {
                 dt,
@@ -182,8 +179,7 @@ impl Display for WalkType {
                 mean,
             } => write!(
                 f,
-                "MeanReverting {{ dt: {}, volatility: {}, speed: {}, mean: {} }}",
-                dt, volatility, speed, mean
+                "MeanReverting {{ dt: {dt}, volatility: {volatility}, speed: {speed}, mean: {mean} }}"
             ),
             WalkType::JumpDiffusion {
                 dt,
@@ -194,8 +190,7 @@ impl Display for WalkType {
                 jump_volatility,
             } => write!(
                 f,
-                "JumpDiffusion {{ dt: {}, drift: {}, volatility: {}, intensity: {}, jump_mean: {}, jump_volatility: {} }}",
-                dt, drift, volatility, intensity, jump_mean, jump_volatility
+                "JumpDiffusion {{ dt: {dt}, drift: {drift}, volatility: {volatility}, intensity: {intensity}, jump_mean: {jump_mean}, jump_volatility: {jump_volatility} }}"
             ),
             WalkType::Garch {
                 dt,
@@ -205,8 +200,7 @@ impl Display for WalkType {
                 beta,
             } => write!(
                 f,
-                "Garch {{ dt: {}, drift: {}, volatility: {}, alpha: {}, beta: {} }}",
-                dt, drift, volatility, alpha, beta
+                "Garch {{ dt: {dt}, drift: {drift}, volatility: {volatility}, alpha: {alpha}, beta: {beta} }}"
             ),
             WalkType::Heston {
                 dt,
@@ -218,8 +212,7 @@ impl Display for WalkType {
                 rho,
             } => write!(
                 f,
-                "Heston {{ dt: {}, drift: {}, volatility: {}, kappa: {}, theta: {}, xi: {}, rho: {} }}",
-                dt, drift, volatility, kappa, theta, xi, rho
+                "Heston {{ dt: {dt}, drift: {drift}, volatility: {volatility}, kappa: {kappa}, theta: {theta}, xi: {xi}, rho: {rho} }}"
             ),
             WalkType::Custom {
                 dt,
@@ -230,8 +223,7 @@ impl Display for WalkType {
                 vol_mean,
             } => write!(
                 f,
-                "Custom {{ dt: {}, drift: {}, volatility: {}, vov: {}, vol_speed: {}, vol_mean: {} }}",
-                dt, drift, volatility, vov, vol_speed, vol_mean
+                "Custom {{ dt: {dt}, drift: {drift}, volatility: {volatility}, vov: {vov}, vol_speed: {vol_speed}, vol_mean: {vol_mean} }}"
             ),
             WalkType::Historical {
                 timeframe,
@@ -239,8 +231,7 @@ impl Display for WalkType {
                 symbol,
             } => write!(
                 f,
-                "Historical {{ timeframe: {}, prices: {:?}, symbol: {:?} }}",
-                timeframe, prices, symbol
+                "Historical {{ timeframe: {timeframe}, prices: {prices:?}, symbol: {symbol:?} }}"
             ),
         }
     }
@@ -478,7 +469,7 @@ mod tests_walk_type {
             volatility: pos!(0.2),
         };
 
-        let display = format!("{}", walk);
+        let display = format!("{walk}");
         assert!(display.contains("Brownian"));
         assert!(display.contains("dt: 0.01"));
         assert!(display.contains("drift: 0.05"));
@@ -493,7 +484,7 @@ mod tests_walk_type {
             volatility: pos!(0.2),
         };
 
-        let display = format!("{}", walk);
+        let display = format!("{walk}");
         assert!(display.contains("GeometricBrownian"));
         assert!(display.contains("dt: 0.01"));
         assert!(display.contains("drift: 0.05"));
@@ -509,7 +500,7 @@ mod tests_walk_type {
             autocorrelation: Some(dec!(0.1)),
         };
 
-        let display = format!("{}", walk);
+        let display = format!("{walk}");
         assert!(display.contains("LogReturns"));
         assert!(display.contains("dt: 0.01"));
         assert!(display.contains("expected_return: 0.05"));
@@ -526,7 +517,7 @@ mod tests_walk_type {
             mean: pos!(100.0),
         };
 
-        let display = format!("{}", walk);
+        let display = format!("{walk}");
         assert!(display.contains("MeanReverting"));
         assert!(display.contains("dt: 0.01"));
         assert!(display.contains("volatility: 0.2"));
@@ -545,7 +536,7 @@ mod tests_walk_type {
             jump_volatility: pos!(0.3),
         };
 
-        let display = format!("{}", walk);
+        let display = format!("{walk}");
         assert!(display.contains("JumpDiffusion"));
         assert!(display.contains("dt: 0.01"));
         assert!(display.contains("drift: 0.05"));
@@ -565,7 +556,7 @@ mod tests_walk_type {
             beta: pos!(0.8),
         };
 
-        let display = format!("{}", walk);
+        let display = format!("{walk}");
         assert!(display.contains("Garch"));
         assert!(display.contains("dt: 0.01"));
         assert!(display.contains("drift: 0.05"));
@@ -586,7 +577,7 @@ mod tests_walk_type {
             rho: dec!(-0.7),
         };
 
-        let display = format!("{}", walk);
+        let display = format!("{walk}");
         assert!(display.contains("Heston"));
         assert!(display.contains("dt: 0.01"));
         assert!(display.contains("drift: 0.05"));
@@ -608,7 +599,7 @@ mod tests_walk_type {
             vol_mean: pos!(0.3),
         };
 
-        let display = format!("{}", walk);
+        let display = format!("{walk}");
         assert!(display.contains("Custom"));
         assert!(display.contains("dt: 0.01"));
         assert!(display.contains("drift: 0.05"));
@@ -642,7 +633,7 @@ mod tests_walk_type {
             panic!("Expected LogReturns variant");
         }
 
-        let display = format!("{}", walk);
+        let display = format!("{walk}");
         assert!(display.contains("LogReturns"));
         assert!(display.contains("autocorrelation: None"));
     }
@@ -682,7 +673,7 @@ mod tests_walk_type {
         let cloned = walk.clone();
 
         // Using Debug formatting to compare
-        assert_eq!(format!("{:?}", walk), format!("{:?}", cloned));
+        assert_eq!(format!("{walk:?}"), format!("{:?}", cloned));
     }
 }
 

@@ -95,7 +95,7 @@ mod tests {
         };
 
         // Verify that Debug trait is implemented by checking that debug string is not empty
-        let debug_str = format!("{:?}", analysis);
+        let debug_str = format!("{analysis:?}");
         assert!(!debug_str.is_empty());
         assert!(debug_str.contains("StrategyProbabilityAnalysis"));
     }

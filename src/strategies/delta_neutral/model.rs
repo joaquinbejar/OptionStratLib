@@ -177,8 +177,7 @@ impl fmt::Display for DeltaAdjustment {
             } => {
                 write!(
                     f,
-                    "Buy {} {} {} options at strike {}",
-                    quantity, side, option_style, strike
+                    "Buy {quantity} {side} {option_style} options at strike {strike}"
                 )
             }
             DeltaAdjustment::SellOptions {
@@ -189,21 +188,20 @@ impl fmt::Display for DeltaAdjustment {
             } => {
                 write!(
                     f,
-                    "Sell {} {} {} options at strike {}",
-                    quantity, side, option_style, strike
+                    "Sell {quantity} {side} {option_style} options at strike {strike}"
                 )
             }
             DeltaAdjustment::BuyUnderlying(quantity) => {
-                write!(f, "Buy {} units of the underlying asset", quantity)
+                write!(f, "Buy {quantity} units of the underlying asset")
             }
             DeltaAdjustment::SellUnderlying(quantity) => {
-                write!(f, "Sell {} units of the underlying asset", quantity)
+                write!(f, "Sell {quantity} units of the underlying asset")
             }
             DeltaAdjustment::NoAdjustmentNeeded => {
                 write!(f, "No adjustment needed")
             }
             DeltaAdjustment::SameSize(adj1, adj2) => {
-                write!(f, "Same size adjustments: [{}] and [{}]", adj1, adj2)
+                write!(f, "Same size adjustments: [{adj1}] and [{adj2}]")
             }
         }
     }

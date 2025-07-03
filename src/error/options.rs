@@ -172,25 +172,25 @@ impl fmt::Display for OptionsError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             OptionsError::ValidationError { field, reason } => {
-                write!(f, "Validation error for field '{}': {}", field, reason)
+                write!(f, "Validation error for field '{field}': {reason}")
             }
             OptionsError::PricingError { method, reason } => {
-                write!(f, "Pricing error using method '{}': {}", method, reason)
+                write!(f, "Pricing error using method '{method}': {reason}")
             }
             OptionsError::GreeksCalculationError { greek, reason } => {
-                write!(f, "Error calculating greek '{}': {}", greek, reason)
+                write!(f, "Error calculating greek '{greek}': {reason}")
             }
             OptionsError::TimeError { operation, reason } => {
-                write!(f, "Time calculation error in '{}': {}", operation, reason)
+                write!(f, "Time calculation error in '{operation}': {reason}")
             }
             OptionsError::PayoffError { reason } => {
-                write!(f, "Payoff calculation error: {}", reason)
+                write!(f, "Payoff calculation error: {reason}")
             }
             OptionsError::UpdateError { field, reason } => {
-                write!(f, "Update error for field '{}': {}", field, reason)
+                write!(f, "Update error for field '{field}': {reason}")
             }
             OptionsError::OtherError { reason } => {
-                write!(f, "Other error: {}", reason)
+                write!(f, "Other error: {reason}")
             }
         }
     }
@@ -720,7 +720,7 @@ mod tests_extended {
             reason: "Division by zero".to_string(),
         };
         assert_eq!(
-            format!("{}", error),
+            format!("{error}"),
             "Error calculating greek 'Delta': Division by zero"
         );
     }
@@ -732,7 +732,7 @@ mod tests_extended {
             reason: "Negative time value".to_string(),
         };
         assert_eq!(
-            format!("{}", error),
+            format!("{error}"),
             "Time calculation error in 'Option maturity': Negative time value"
         );
     }
@@ -743,7 +743,7 @@ mod tests_extended {
             reason: "Payoff cannot be negative".to_string(),
         };
         assert_eq!(
-            format!("{}", error),
+            format!("{error}"),
             "Payoff calculation error: Payoff cannot be negative"
         );
     }
@@ -755,7 +755,7 @@ mod tests_extended {
             reason: "Invalid update value".to_string(),
         };
         assert_eq!(
-            format!("{}", error),
+            format!("{error}"),
             "Update error for field 'Volatility': Invalid update value"
         );
     }

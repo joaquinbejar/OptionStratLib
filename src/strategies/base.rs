@@ -221,7 +221,7 @@ impl fmt::Display for StrategyType {
     ///
     /// A `fmt::Result` indicating whether the formatting was successful.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?}", self)
+        write!(f, "{self:?}")
     }
 }
 
@@ -1648,7 +1648,7 @@ mod tests_strategy_type {
     #[test]
     fn test_strategy_type_debug() {
         let strategy = StrategyType::ShortStraddle;
-        let debug_string = format!("{:?}", strategy);
+        let debug_string = format!("{strategy:?}");
         assert_eq!(debug_string, "ShortStraddle");
     }
 

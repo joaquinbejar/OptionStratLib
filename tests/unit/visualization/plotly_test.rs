@@ -3,7 +3,7 @@ mod plotly_tests {
     use optionstratlib::visualization::{ColorScheme, LineStyle, TraceMode};
     use optionstratlib::visualization::{Graph, GraphConfig, GraphData, Series2D, Surface3D};
     // use plotly::{Scatter, Surface}; // Scatter and Surface not directly used here after changes
-    use mockall::predicate::*;
+    // use mockall::predicate::*;
     use mockall::*;
     use rust_decimal::Decimal;
     use std::path::PathBuf;
@@ -276,8 +276,7 @@ mod plotly_tests {
             let trace_json = trace.to_json();
             assert!(
                 trace_json.contains("\"type\":\"scatter\""),
-                "Trace JSON should contain type scatter. Got: {}",
-                trace_json
+                "Trace JSON should contain type scatter. Got: {trace_json}"
             );
 
             // Check axis labels
@@ -296,8 +295,7 @@ mod plotly_tests {
             let trace_no_legend_json = trace_no_legend.to_json();
             assert!(
                 trace_no_legend_json.contains("\"type\":\"scatter\""),
-                "Trace (no legend) JSON should contain type scatter. Got: {}",
-                trace_no_legend_json
+                "Trace (no legend) JSON should contain type scatter. Got: {trace_no_legend_json}"
             );
         }
 
@@ -328,8 +326,7 @@ mod plotly_tests {
             let trace1_json = trace1.to_json();
             assert!(
                 trace1_json.contains("\"type\":\"scatter\""),
-                "Trace 1 JSON should contain type scatter. Got: {}",
-                trace1_json
+                "Trace 1 JSON should contain type scatter. Got: {trace1_json}"
             );
 
             // Trace 2 (specific color, legend)
@@ -337,8 +334,7 @@ mod plotly_tests {
             let trace2_json = trace2.to_json();
             assert!(
                 trace2_json.contains("\"type\":\"scatter\""),
-                "Trace 2 JSON should contain type scatter. Got: {}",
-                trace2_json
+                "Trace 2 JSON should contain type scatter. Got: {trace2_json}"
             );
 
             // Scenario: Fewer legends than series
@@ -353,14 +349,12 @@ mod plotly_tests {
             let trace1_less_json = plot_less_legends.data().iter().next().unwrap().to_json();
             assert!(
                 trace1_less_json.contains("\"type\":\"scatter\""),
-                "Trace 1 (less legends) JSON should contain type scatter. Got: {}",
-                trace1_less_json
+                "Trace 1 (less legends) JSON should contain type scatter. Got: {trace1_less_json}"
             );
             let trace2_less_json = plot_less_legends.data().iter().nth(1).unwrap().to_json();
             assert!(
                 trace2_less_json.contains("\"type\":\"scatter\""),
-                "Trace 2 (less legends) JSON should contain type scatter. Got: {}",
-                trace2_less_json
+                "Trace 2 (less legends) JSON should contain type scatter. Got: {trace2_less_json}"
             );
         }
 
@@ -382,8 +376,7 @@ mod plotly_tests {
             let trace_json = trace.to_json();
             assert!(
                 trace_json.contains("\"type\":\"surface\""),
-                "Trace JSON should contain type surface. Got: {}",
-                trace_json
+                "Trace JSON should contain type surface. Got: {trace_json}"
             );
 
             // Check axis labels
