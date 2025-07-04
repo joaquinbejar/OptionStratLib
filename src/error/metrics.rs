@@ -73,14 +73,14 @@ pub enum MetricsError {
 impl fmt::Display for MetricsError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            MetricsError::BasicError(msg) => write!(f, "Basic Error: {}", msg),
-            MetricsError::ShapeError(msg) => write!(f, "Shape Error: {}", msg),
-            MetricsError::RangeError(msg) => write!(f, "Range Error: {}", msg),
-            MetricsError::TrendError(msg) => write!(f, "Trend Error: {}", msg),
-            MetricsError::RiskError(msg) => write!(f, "Risk Error: {}", msg),
-            MetricsError::CurveError(msg) => write!(f, "Curve Error: {}", msg),
-            MetricsError::SurfaceError(msg) => write!(f, "Surface Error: {}", msg),
-            MetricsError::StdError { reason } => write!(f, "Standard Error: {}", reason),
+            MetricsError::BasicError(msg) => write!(f, "Basic Error: {msg}"),
+            MetricsError::ShapeError(msg) => write!(f, "Shape Error: {msg}"),
+            MetricsError::RangeError(msg) => write!(f, "Range Error: {msg}"),
+            MetricsError::TrendError(msg) => write!(f, "Trend Error: {msg}"),
+            MetricsError::RiskError(msg) => write!(f, "Risk Error: {msg}"),
+            MetricsError::CurveError(msg) => write!(f, "Curve Error: {msg}"),
+            MetricsError::SurfaceError(msg) => write!(f, "Surface Error: {msg}"),
+            MetricsError::StdError { reason } => write!(f, "Standard Error: {reason}"),
         }
     }
 }

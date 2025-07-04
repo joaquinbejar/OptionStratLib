@@ -39,7 +39,7 @@ impl fmt::Display for Options {
         )?;
         write!(f, "Dividend Yield: {:.2}%", self.dividend_yield * 100.0)?;
         if let Some(exotic) = &self.exotic_params {
-            write!(f, "\nExotic Parameters: {:?}", exotic)?;
+            write!(f, "\nExotic Parameters: {exotic:?}")?;
         }
         Ok(())
     }
@@ -69,15 +69,15 @@ impl fmt::Display for ExoticParams {
         let mut fields = vec![];
 
         if let Some(ref prices) = self.spot_prices {
-            fields.push(format!("Spot Prices: {:?}", prices));
+            fields.push(format!("Spot Prices: {prices:?}"));
         }
 
         if let Some(min) = self.spot_min {
-            fields.push(format!("Spot Min: {:.2}", min));
+            fields.push(format!("Spot Min: {min:.2}"));
         }
 
         if let Some(max) = self.spot_max {
-            fields.push(format!("Spot Max: {:.2}", max));
+            fields.push(format!("Spot Max: {max:.2}"));
         }
 
         write!(f, "{}", fields.join(", "))
@@ -113,9 +113,9 @@ impl fmt::Display for ExpirationDate {
 impl fmt::Debug for ExpirationDate {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            ExpirationDate::Days(days) => write!(f, "ExpirationDate::Days({:.2})", days),
+            ExpirationDate::Days(days) => write!(f, "ExpirationDate::Days({days:.2})"),
             ExpirationDate::DateTime(date_time) => {
-                write!(f, "ExpirationDate::DateTime({})", date_time)
+                write!(f, "ExpirationDate::DateTime({date_time})")
             }
         }
     }
@@ -163,47 +163,46 @@ impl fmt::Display for OptionType {
             OptionType::European => write!(f, "European Option"),
             OptionType::American => write!(f, "American Option"),
             OptionType::Bermuda { exercise_dates } => {
-                write!(f, "Bermuda Option (Exercise Dates: {:?})", exercise_dates)
+                write!(f, "Bermuda Option (Exercise Dates: {exercise_dates:?})")
             }
             OptionType::Asian { averaging_type } => {
-                write!(f, "Asian Option (Averaging Type: {})", averaging_type)
+                write!(f, "Asian Option (Averaging Type: {averaging_type})")
             }
             OptionType::Barrier {
                 barrier_type,
                 barrier_level,
             } => write!(
                 f,
-                "Barrier Option (Type: {}, Level: {})",
-                barrier_type, barrier_level
+                "Barrier Option (Type: {barrier_type}, Level: {barrier_level})"
             ),
             OptionType::Binary { binary_type } => {
-                write!(f, "Binary Option (Type: {})", binary_type)
+                write!(f, "Binary Option (Type: {binary_type})")
             }
             OptionType::Lookback { lookback_type } => {
-                write!(f, "Lookback Option (Type: {})", lookback_type)
+                write!(f, "Lookback Option (Type: {lookback_type})")
             }
             OptionType::Compound { underlying_option } => {
-                write!(f, "Compound Option (Underlying: {})", underlying_option)
+                write!(f, "Compound Option (Underlying: {underlying_option})")
             }
             OptionType::Chooser { choice_date } => {
-                write!(f, "Chooser Option (Choice Date: {})", choice_date)
+                write!(f, "Chooser Option (Choice Date: {choice_date})")
             }
             OptionType::Cliquet { reset_dates } => {
-                write!(f, "Cliquet Option (Reset Dates: {:?})", reset_dates)
+                write!(f, "Cliquet Option (Reset Dates: {reset_dates:?})")
             }
             OptionType::Rainbow { num_assets } => {
-                write!(f, "Rainbow Option (Number of Assets: {})", num_assets)
+                write!(f, "Rainbow Option (Number of Assets: {num_assets})")
             }
             OptionType::Spread { second_asset } => {
-                write!(f, "Spread Option (Second Asset: {})", second_asset)
+                write!(f, "Spread Option (Second Asset: {second_asset})")
             }
             OptionType::Quanto { exchange_rate } => {
-                write!(f, "Quanto Option (Exchange Rate: {})", exchange_rate)
+                write!(f, "Quanto Option (Exchange Rate: {exchange_rate})")
             }
             OptionType::Exchange { second_asset } => {
-                write!(f, "Exchange Option (Second Asset: {})", second_asset)
+                write!(f, "Exchange Option (Second Asset: {second_asset})")
             }
-            OptionType::Power { exponent } => write!(f, "Power Option (Exponent: {})", exponent),
+            OptionType::Power { exponent } => write!(f, "Power Option (Exponent: {exponent})"),
         }
     }
 }
@@ -277,17 +276,17 @@ impl fmt::Display for Strategy {
         writeln!(f, "Description: {}", self.description)?;
         writeln!(f, "Legs:")?;
         for leg in &self.legs {
-            writeln!(f, "  {}", leg)?;
+            writeln!(f, "  {leg}")?;
         }
         if let Some(max_profit) = self.max_profit {
-            writeln!(f, "Max Profit: ${:.2}", max_profit)?;
+            writeln!(f, "Max Profit: ${max_profit:.2}")?;
         }
         if let Some(max_loss) = self.max_loss {
-            writeln!(f, "Max Loss: ${:.2}", max_loss)?;
+            writeln!(f, "Max Loss: ${max_loss:.2}")?;
         }
         writeln!(f, "Break-even Points:")?;
         for point in &self.break_even_points {
-            writeln!(f, "  ${:.2}", point)?;
+            writeln!(f, "  ${point:.2}")?;
         }
         Ok(())
     }
@@ -336,7 +335,7 @@ mod tests_options {
             exotic_params: None,
         };
 
-        let debug_output = format!("{:?}", options);
+        let debug_output = format!("{options:?}");
         let expected_output = "Options { \
             option_type: European, \
             side: Side::Long, \
@@ -377,7 +376,7 @@ mod tests_options {
             exotic_params: None,
         };
 
-        let display_output = format!("{}", options);
+        let display_output = format!("{options}");
         let expected_output = "\
             Long Call European Option\n\
             Underlying: AAPL @ $155\n\
@@ -421,7 +420,7 @@ mod tests_options {
             exotic_params: Some(exotic_params),
         };
 
-        let display_output = format!("{}", options);
+        let display_output = format!("{options}");
         let expected_output = "\
             Short Call Barrier Option (Type: Up-And-In Barrier, Level: 100)\n\
             Underlying: GOOGL @ $1900\n\
@@ -447,7 +446,7 @@ mod tests_expiration_date {
     #[test]
     fn test_display_days() {
         let expiration = ExpirationDate::Days(pos!(30.5));
-        let display_string = format!("{}", expiration);
+        let display_string = format!("{expiration}");
         assert!(display_string.contains("UTC"));
     }
 
@@ -455,7 +454,7 @@ mod tests_expiration_date {
     fn test_display_datetime() {
         let future_date = Utc::now() + Duration::days(15) + Duration::minutes(1);
         let expiration = ExpirationDate::DateTime(future_date);
-        let display_string = format!("{}", expiration);
+        let display_string = format!("{expiration}");
         assert!(display_string.contains("UTC"));
         assert!(display_string.contains(&future_date.format("%Y-%m-%d %H:%M:%S").to_string()));
     }
@@ -463,7 +462,7 @@ mod tests_expiration_date {
     #[test]
     fn test_debug_days() {
         let expiration = ExpirationDate::Days(pos!(45.75));
-        let debug_string = format!("{:?}", expiration);
+        let debug_string = format!("{expiration:?}");
         assert_eq!(debug_string, "ExpirationDate::Days(45.75)");
     }
 
@@ -477,7 +476,7 @@ mod tests_expiration_date {
         );
 
         let expiration = ExpirationDate::DateTime(date);
-        let debug_string = format!("{:?}", expiration);
+        let debug_string = format!("{expiration:?}");
         assert_eq!(
             debug_string,
             "ExpirationDate::DateTime(2023-12-31 23:59:59 UTC)"
@@ -488,7 +487,7 @@ mod tests_expiration_date {
     fn test_display_past_date() {
         let past_date = Utc::now() - Duration::days(5);
         let expiration = ExpirationDate::DateTime(past_date);
-        let display_string = format!("{}", expiration);
+        let display_string = format!("{expiration}");
         assert!(display_string.contains("UTC"));
         assert!(display_string.contains(&past_date.format("%Y-%m-%d %H:%M:%S").to_string()));
     }
@@ -497,7 +496,7 @@ mod tests_expiration_date {
     fn test_display_today() {
         let today = Utc::now();
         let expiration = ExpirationDate::DateTime(today);
-        let display_string = format!("{}", expiration);
+        let display_string = format!("{expiration}");
         info!("{}", display_string);
         assert!(display_string.contains(&today.format("%Y-%m-%d %H:%M:%S").to_string()));
     }
@@ -539,28 +538,28 @@ mod tests_option_type_display_debug {
     #[test]
     fn test_debug_european_option() {
         let option = OptionType::European;
-        let debug_output = format!("{:?}", option);
+        let debug_output = format!("{option:?}");
         assert_eq!(debug_output, "European");
     }
 
     #[test]
     fn test_display_european_option() {
         let option = OptionType::European;
-        let display_output = format!("{}", option);
+        let display_output = format!("{option}");
         assert_eq!(display_output, "European Option");
     }
 
     #[test]
     fn test_debug_american_option() {
         let option = OptionType::American;
-        let debug_output = format!("{:?}", option);
+        let debug_output = format!("{option:?}");
         assert_eq!(debug_output, "American");
     }
 
     #[test]
     fn test_display_american_option() {
         let option = OptionType::American;
-        let display_output = format!("{}", option);
+        let display_output = format!("{option}");
         assert_eq!(display_output, "American Option");
     }
 
@@ -569,7 +568,7 @@ mod tests_option_type_display_debug {
         let option = OptionType::Bermuda {
             exercise_dates: vec![1.0, 2.0, 3.0],
         };
-        let debug_output = format!("{:?}", option);
+        let debug_output = format!("{option:?}");
         assert_eq!(debug_output, "Bermuda { exercise_dates: [1.0, 2.0, 3.0] }");
     }
 
@@ -578,7 +577,7 @@ mod tests_option_type_display_debug {
         let option = OptionType::Bermuda {
             exercise_dates: vec![1.0, 2.0, 3.0],
         };
-        let display_output = format!("{}", option);
+        let display_output = format!("{option}");
         assert_eq!(
             display_output,
             "Bermuda Option (Exercise Dates: [1.0, 2.0, 3.0])"
@@ -590,7 +589,7 @@ mod tests_option_type_display_debug {
         let option = OptionType::Asian {
             averaging_type: AsianAveragingType::Arithmetic,
         };
-        let debug_output = format!("{:?}", option);
+        let debug_output = format!("{option:?}");
         assert_eq!(debug_output, "Asian { averaging_type: Arithmetic }");
     }
 
@@ -599,7 +598,7 @@ mod tests_option_type_display_debug {
         let option = OptionType::Asian {
             averaging_type: AsianAveragingType::Arithmetic,
         };
-        let display_output = format!("{}", option);
+        let display_output = format!("{option}");
         assert_eq!(
             display_output,
             "Asian Option (Averaging Type: Arithmetic Averaging)"
@@ -612,7 +611,7 @@ mod tests_option_type_display_debug {
             barrier_type: BarrierType::UpAndIn,
             barrier_level: 100.0,
         };
-        let debug_output = format!("{:?}", option);
+        let debug_output = format!("{option:?}");
         assert_eq!(
             debug_output,
             "Barrier { barrier_type: UpAndIn, barrier_level: 100.0 }"
@@ -625,7 +624,7 @@ mod tests_option_type_display_debug {
             barrier_type: BarrierType::UpAndIn,
             barrier_level: 100.0,
         };
-        let display_output = format!("{}", option);
+        let display_output = format!("{option}");
         assert_eq!(
             display_output,
             "Barrier Option (Type: Up-And-In Barrier, Level: 100)"
@@ -637,7 +636,7 @@ mod tests_option_type_display_debug {
         let option = OptionType::Binary {
             binary_type: BinaryType::CashOrNothing,
         };
-        let debug_output = format!("{:?}", option);
+        let debug_output = format!("{option:?}");
         assert_eq!(debug_output, "Binary { binary_type: CashOrNothing }");
     }
 
@@ -646,7 +645,7 @@ mod tests_option_type_display_debug {
         let option = OptionType::Binary {
             binary_type: BinaryType::CashOrNothing,
         };
-        let display_output = format!("{}", option);
+        let display_output = format!("{option}");
         assert_eq!(
             display_output,
             "Binary Option (Type: Cash-Or-Nothing Binary Option)"
@@ -658,7 +657,7 @@ mod tests_option_type_display_debug {
         let option = OptionType::Lookback {
             lookback_type: LookbackType::FixedStrike,
         };
-        let debug_output = format!("{:?}", option);
+        let debug_output = format!("{option:?}");
         assert_eq!(debug_output, "Lookback { lookback_type: FixedStrike }");
     }
 
@@ -667,7 +666,7 @@ mod tests_option_type_display_debug {
         let option = OptionType::Lookback {
             lookback_type: LookbackType::FixedStrike,
         };
-        let display_output = format!("{}", option);
+        let display_output = format!("{option}");
         assert_eq!(
             display_output,
             "Lookback Option (Type: Fixed-Strike Lookback Option)"
@@ -679,7 +678,7 @@ mod tests_option_type_display_debug {
         let option = OptionType::Compound {
             underlying_option: Box::new(OptionType::European),
         };
-        let debug_output = format!("{:?}", option);
+        let debug_output = format!("{option:?}");
         assert_eq!(debug_output, "Compound { underlying_option: European }");
     }
 
@@ -688,7 +687,7 @@ mod tests_option_type_display_debug {
         let option = OptionType::Compound {
             underlying_option: Box::new(OptionType::European),
         };
-        let display_output = format!("{}", option);
+        let display_output = format!("{option}");
         assert_eq!(
             display_output,
             "Compound Option (Underlying: European Option)"
@@ -698,14 +697,14 @@ mod tests_option_type_display_debug {
     #[test]
     fn test_debug_chooser_option() {
         let option = OptionType::Chooser { choice_date: 2.0 };
-        let debug_output = format!("{:?}", option);
+        let debug_output = format!("{option:?}");
         assert_eq!(debug_output, "Chooser { choice_date: 2.0 }");
     }
 
     #[test]
     fn test_display_chooser_option() {
         let option = OptionType::Chooser { choice_date: 2.0 };
-        let display_output = format!("{}", option);
+        let display_output = format!("{option}");
         assert_eq!(display_output, "Chooser Option (Choice Date: 2)");
     }
 
@@ -714,7 +713,7 @@ mod tests_option_type_display_debug {
         let option = OptionType::Cliquet {
             reset_dates: vec![1.0, 2.0],
         };
-        let debug_output = format!("{:?}", option);
+        let debug_output = format!("{option:?}");
         assert_eq!(debug_output, "Cliquet { reset_dates: [1.0, 2.0] }");
     }
 
@@ -723,77 +722,77 @@ mod tests_option_type_display_debug {
         let option = OptionType::Cliquet {
             reset_dates: vec![1.0, 2.0],
         };
-        let display_output = format!("{}", option);
+        let display_output = format!("{option}");
         assert_eq!(display_output, "Cliquet Option (Reset Dates: [1.0, 2.0])");
     }
 
     #[test]
     fn test_debug_rainbow_option() {
         let option = OptionType::Rainbow { num_assets: 3 };
-        let debug_output = format!("{:?}", option);
+        let debug_output = format!("{option:?}");
         assert_eq!(debug_output, "Rainbow { num_assets: 3 }");
     }
 
     #[test]
     fn test_display_rainbow_option() {
         let option = OptionType::Rainbow { num_assets: 3 };
-        let display_output = format!("{}", option);
+        let display_output = format!("{option}");
         assert_eq!(display_output, "Rainbow Option (Number of Assets: 3)");
     }
 
     #[test]
     fn test_debug_spread_option() {
         let option = OptionType::Spread { second_asset: 50.0 };
-        let debug_output = format!("{:?}", option);
+        let debug_output = format!("{option:?}");
         assert_eq!(debug_output, "Spread { second_asset: 50.0 }");
     }
 
     #[test]
     fn test_display_spread_option() {
         let option = OptionType::Spread { second_asset: 50.0 };
-        let display_output = format!("{}", option);
+        let display_output = format!("{option}");
         assert_eq!(display_output, "Spread Option (Second Asset: 50)");
     }
 
     #[test]
     fn test_debug_quanto_option() {
         let option = OptionType::Quanto { exchange_rate: 1.2 };
-        let debug_output = format!("{:?}", option);
+        let debug_output = format!("{option:?}");
         assert_eq!(debug_output, "Quanto { exchange_rate: 1.2 }");
     }
 
     #[test]
     fn test_display_quanto_option() {
         let option = OptionType::Quanto { exchange_rate: 1.2 };
-        let display_output = format!("{}", option);
+        let display_output = format!("{option}");
         assert_eq!(display_output, "Quanto Option (Exchange Rate: 1.2)");
     }
 
     #[test]
     fn test_debug_exchange_option() {
         let option = OptionType::Exchange { second_asset: 75.0 };
-        let debug_output = format!("{:?}", option);
+        let debug_output = format!("{option:?}");
         assert_eq!(debug_output, "Exchange { second_asset: 75.0 }");
     }
 
     #[test]
     fn test_display_exchange_option() {
         let option = OptionType::Exchange { second_asset: 75.0 };
-        let display_output = format!("{}", option);
+        let display_output = format!("{option}");
         assert_eq!(display_output, "Exchange Option (Second Asset: 75)");
     }
 
     #[test]
     fn test_debug_power_option() {
         let option = OptionType::Power { exponent: 2.5 };
-        let debug_output = format!("{:?}", option);
+        let debug_output = format!("{option:?}");
         assert_eq!(debug_output, "Power { exponent: 2.5 }");
     }
 
     #[test]
     fn test_display_power_option() {
         let option = OptionType::Power { exponent: 2.5 };
-        let display_output = format!("{}", option);
+        let display_output = format!("{option}");
         assert_eq!(display_output, "Power Option (Exponent: 2.5)");
     }
 }
@@ -856,7 +855,7 @@ mod tests_position_type_display_debug {
                 Open Fee per contract: $0.50\n\
                 Close Fee per contract: $0.45";
 
-        assert_eq!(format!("{}", position), expected_display);
+        assert_eq!(format!("{position}"), expected_display);
     }
 
     #[test]
@@ -894,7 +893,7 @@ mod tests_position_type_display_debug {
         close_fee: 0.45 \
     }";
 
-        assert_eq!(format!("{:?}", position), expected_debug);
+        assert_eq!(format!("{position:?}"), expected_debug);
     }
 }
 
@@ -967,7 +966,7 @@ mod tests_strategy_type_display_debug {
 
         let expected_output = "Strategy: Bull Call Spread\nType: BullCallSpread\nDescription: A bullish options strategy\nLegs:\n  Position Details:\nOption: Long Call European Option\nUnderlying: AAPL @ $100\nStrike: $100\nExpiration: 2024-08-08 00:00:00 UTC\nImplied Volatility: 2%\nQuantity: 1\nRisk-free Rate: 5.00%\nDividend Yield: 1%\nPremium per contract: $5.75\nDate: 2024-08-08 00:00:00 UTC\nOpen Fee per contract: $0.50\nClose Fee per contract: $0.45\n  Position Details:\nOption: Short Call European Option\nUnderlying: AAPL @ $100\nStrike: $100\nExpiration: 2024-08-08 00:00:00 UTC\nImplied Volatility: 2%\nQuantity: 1\nRisk-free Rate: 5.00%\nDividend Yield: 1%\nPremium per contract: $5.75\nDate: 2024-08-08 00:00:00 UTC\nOpen Fee per contract: $0.50\nClose Fee per contract: $0.45\nMax Profit: $10.00\nMax Loss: $5.00\nBreak-even Points:\n  $102\n  $108\n";
 
-        assert_eq!(format!("{}", strategy), expected_output);
+        assert_eq!(format!("{strategy}"), expected_output);
     }
 
     #[test]
@@ -1031,6 +1030,6 @@ mod tests_strategy_type_display_debug {
 
         let expected_output = "Strategy { name: \"Bear Put Spread\", kind: BearPutSpread, description: \"A bearish options strategy\", legs: [Position { option: Options { option_type: European, side: Side::Long, underlying_symbol: \"AAPL\", strike_price: 110, expiration_date: ExpirationDate::DateTime(2024-08-08 00:00:00 UTC), implied_volatility: 0.02, quantity: 1, underlying_price: 100, risk_free_rate: 0.05, option_style: OptionStyle::Call, dividend_yield: 0.01, exotic_params: None }, premium: 5.75, date: 2024-08-08T00:00:00Z, open_fee: 0.5, close_fee: 0.45 }, Position { option: Options { option_type: European, side: Side::Short, underlying_symbol: \"AAPL\", strike_price: 110, expiration_date: ExpirationDate::DateTime(2024-08-08 00:00:00 UTC), implied_volatility: 0.02, quantity: 1, underlying_price: 100, risk_free_rate: 0.05, option_style: OptionStyle::Call, dividend_yield: 0.01, exotic_params: None }, premium: 5.75, date: 2024-08-08T00:00:00Z, open_fee: 0.5, close_fee: 0.45 }], max_profit: Some(8.0), max_loss: Some(2.0), break_even_points: [82, 88] }";
 
-        assert_eq!(format!("{:?}", strategy), expected_output);
+        assert_eq!(format!("{strategy:?}"), expected_output);
     }
 }

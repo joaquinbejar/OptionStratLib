@@ -5,38 +5,29 @@ use std::error::Error;
 fn test_metrics_error_display() {
     // Test each variant of MetricsError for Display implementation
     let basic_err = MetricsError::BasicError("calculation failed".to_string());
-    assert_eq!(format!("{}", basic_err), "Basic Error: calculation failed");
+    assert_eq!(format!("{basic_err}"), "Basic Error: calculation failed");
 
     let shape_err = MetricsError::ShapeError("incompatible dimensions".to_string());
     assert_eq!(
-        format!("{}", shape_err),
+        format!("{shape_err}"),
         "Shape Error: incompatible dimensions"
     );
 
     let range_err = MetricsError::RangeError("value out of bounds".to_string());
-    assert_eq!(format!("{}", range_err), "Range Error: value out of bounds");
+    assert_eq!(format!("{range_err}"), "Range Error: value out of bounds");
 
     let trend_err = MetricsError::TrendError("trend analysis failed".to_string());
-    assert_eq!(
-        format!("{}", trend_err),
-        "Trend Error: trend analysis failed"
-    );
+    assert_eq!(format!("{trend_err}"), "Trend Error: trend analysis failed");
 
     let risk_err = MetricsError::RiskError("risk calculation error".to_string());
-    assert_eq!(
-        format!("{}", risk_err),
-        "Risk Error: risk calculation error"
-    );
+    assert_eq!(format!("{risk_err}"), "Risk Error: risk calculation error");
 
     let curve_err = MetricsError::CurveError("curve fitting failed".to_string());
-    assert_eq!(
-        format!("{}", curve_err),
-        "Curve Error: curve fitting failed"
-    );
+    assert_eq!(format!("{curve_err}"), "Curve Error: curve fitting failed");
 
     let surface_err = MetricsError::SurfaceError("surface modeling error".to_string());
     assert_eq!(
-        format!("{}", surface_err),
+        format!("{surface_err}"),
         "Surface Error: surface modeling error"
     );
 
@@ -44,7 +35,7 @@ fn test_metrics_error_display() {
         reason: "standard error occurred".to_string(),
     };
     assert_eq!(
-        format!("{}", std_err),
+        format!("{std_err}"),
         "Standard Error: standard error occurred"
     );
 }
@@ -53,14 +44,14 @@ fn test_metrics_error_display() {
 fn test_metrics_error_debug() {
     // Test Debug implementation for a few variants
     let basic_err = MetricsError::BasicError("test message".to_string());
-    assert!(format!("{:?}", basic_err).contains("BasicError"));
-    assert!(format!("{:?}", basic_err).contains("test message"));
+    assert!(format!("{basic_err:?}").contains("BasicError"));
+    assert!(format!("{basic_err:?}").contains("test message"));
 
     let std_err = MetricsError::StdError {
         reason: "debug test".to_string(),
     };
-    assert!(format!("{:?}", std_err).contains("StdError"));
-    assert!(format!("{:?}", std_err).contains("debug test"));
+    assert!(format!("{std_err:?}").contains("StdError"));
+    assert!(format!("{std_err:?}").contains("debug test"));
 }
 
 #[test]

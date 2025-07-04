@@ -258,11 +258,11 @@ pub enum ProfitLossErrorKind {
 impl fmt::Display for StrategyError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            StrategyError::PriceError(err) => write!(f, "Price error: {}", err),
-            StrategyError::BreakEvenError(err) => write!(f, "Break-even error: {}", err),
-            StrategyError::ProfitLossError(err) => write!(f, "Profit/Loss error: {}", err),
-            StrategyError::OperationError(err) => write!(f, "Operation error: {}", err),
-            StrategyError::StdError { reason } => write!(f, "Error: {}", reason),
+            StrategyError::PriceError(err) => write!(f, "Price error: {err}"),
+            StrategyError::BreakEvenError(err) => write!(f, "Break-even error: {err}"),
+            StrategyError::ProfitLossError(err) => write!(f, "Profit/Loss error: {err}"),
+            StrategyError::OperationError(err) => write!(f, "Operation error: {err}"),
+            StrategyError::StdError { reason } => write!(f, "Error: {reason}"),
             StrategyError::NotImplemented => write!(f, "Operation not implemented"),
         }
     }
@@ -272,10 +272,10 @@ impl fmt::Display for PriceErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             PriceErrorKind::InvalidUnderlyingPrice { reason } => {
-                write!(f, "Invalid underlying price: {}", reason)
+                write!(f, "Invalid underlying price: {reason}")
             }
             PriceErrorKind::InvalidPriceRange { start, end, reason } => {
-                write!(f, "Invalid price range [{}, {}]: {}", start, end, reason)
+                write!(f, "Invalid price range [{start}, {end}]: {reason}")
             }
         }
     }
@@ -285,7 +285,7 @@ impl fmt::Display for BreakEvenErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             BreakEvenErrorKind::CalculationError { reason } => {
-                write!(f, "Break-even calculation error: {}", reason)
+                write!(f, "Break-even calculation error: {reason}")
             }
             BreakEvenErrorKind::NoBreakEvenPoints => {
                 write!(f, "No break-even points found")
@@ -298,13 +298,13 @@ impl fmt::Display for ProfitLossErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             ProfitLossErrorKind::MaxProfitError { reason } => {
-                write!(f, "Maximum profit calculation error: {}", reason)
+                write!(f, "Maximum profit calculation error: {reason}")
             }
             ProfitLossErrorKind::MaxLossError { reason } => {
-                write!(f, "Maximum loss calculation error: {}", reason)
+                write!(f, "Maximum loss calculation error: {reason}")
             }
             ProfitLossErrorKind::ProfitRangeError { reason } => {
-                write!(f, "Profit range calculation error: {}", reason)
+                write!(f, "Profit range calculation error: {reason}")
             }
         }
     }
@@ -502,7 +502,7 @@ mod tests_extended {
         let error = StrategyError::StdError {
             reason: "General failure".to_string(),
         };
-        assert_eq!(format!("{}", error), "Error: General failure");
+        assert_eq!(format!("{error}"), "Error: General failure");
     }
 
     #[test]
@@ -513,7 +513,7 @@ mod tests_extended {
             reason: "Start price must be less than end price".to_string(),
         };
         assert_eq!(
-            format!("{}", error),
+            format!("{error}"),
             "Invalid price range [10, 50]: Start price must be less than end price"
         );
     }
@@ -521,7 +521,7 @@ mod tests_extended {
     #[test]
     fn test_break_even_error_no_points() {
         let error = BreakEvenErrorKind::NoBreakEvenPoints;
-        assert_eq!(format!("{}", error), "No break-even points found");
+        assert_eq!(format!("{error}"), "No break-even points found");
     }
 
     #[test]
@@ -530,7 +530,7 @@ mod tests_extended {
             reason: "Loss exceeds margin requirements".to_string(),
         };
         assert_eq!(
-            format!("{}", error),
+            format!("{error}"),
             "Maximum loss calculation error: Loss exceeds margin requirements"
         );
     }
@@ -541,7 +541,7 @@ mod tests_extended {
             reason: "Profit calculation failed".to_string(),
         };
         assert_eq!(
-            format!("{}", error),
+            format!("{error}"),
             "Profit range calculation error: Profit calculation failed"
         );
     }
@@ -550,7 +550,7 @@ mod tests_extended {
     fn test_strategy_error_invalid_parameters_constructor() {
         let error = StrategyError::invalid_parameters("Open position", "Margin insufficient");
         assert_eq!(
-            format!("{}", error),
+            format!("{error}"),
             "Operation error: Invalid parameters for operation 'Open position': Margin insufficient"
         );
     }
@@ -559,6 +559,6 @@ mod tests_extended {
     fn test_strategy_error_from_boxed_error() {
         let boxed_error: Box<dyn Error> = Box::new(std::io::Error::other("Underlying failure"));
         let error: StrategyError = boxed_error.into();
-        assert_eq!(format!("{}", error), "Error: Underlying failure");
+        assert_eq!(format!("{error}"), "Error: Underlying failure");
     }
 }

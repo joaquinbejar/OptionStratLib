@@ -111,7 +111,7 @@ impl AtmIvProvider for OptionChain {
             Ok(iv) => Ok(iv),
             Err(e) => Err(Box::new(std::io::Error::new(
                 std::io::ErrorKind::NotFound,
-                format!("ATM IV not available: {}", e),
+                format!("ATM IV not available: {e}"),
             ))),
         }
     }

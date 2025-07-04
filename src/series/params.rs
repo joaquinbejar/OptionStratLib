@@ -176,7 +176,7 @@ mod tests {
   },
   "series": []
 }"#;
-        let debug_result = format!("{:?}", params);
+        let debug_result = format!("{params:?}");
         assert_eq!(debug_result, result);
     }
 }

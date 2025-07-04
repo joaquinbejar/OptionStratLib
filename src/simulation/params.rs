@@ -227,11 +227,11 @@ mod tests {
             walker: Box::new(MockWalker),
         };
 
-        let display_string = format!("{}", walk_params);
+        let display_string = format!("{walk_params}");
 
         // Check that the display string contains all the expected parts
         assert!(display_string.contains("size: 50"));
-        assert!(display_string.contains(&format!("{}", init_step)));
+        assert!(display_string.contains(&format!("{init_step}")));
         assert!(display_string.contains("walk_type: GeometricBrownian"));
     }
 
@@ -257,8 +257,8 @@ mod tests {
         };
 
         assert_eq!(walk_params.size, size);
-        let display_string = format!("{}", walk_params);
-        assert!(display_string.contains(&format!("size: {}", size)));
+        let display_string = format!("{walk_params}");
+        assert!(display_string.contains(&format!("size: {size}")));
     }
 
     #[test]

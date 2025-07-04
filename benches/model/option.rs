@@ -118,7 +118,7 @@ pub(crate) fn benchmark_binary_tree(c: &mut Criterion) {
     let option = create_test_option();
 
     for steps in [10, 50, 100].iter() {
-        group.bench_function(format!("binomial_tree_{}_steps", steps), |bencher| {
+        group.bench_function(format!("binomial_tree_{steps}_steps"), |bencher| {
             bencher.iter(|| black_box(option.calculate_price_binomial_tree(*steps)))
         });
     }

@@ -191,7 +191,7 @@ impl Positive {
         let dec = Decimal::from_f64(value);
         match dec {
             Some(value) if value >= Decimal::ZERO => Ok(Positive(value)),
-            Some(value) => Err(format!("Value must be positive, got {}", value)),
+            Some(value) => Err(format!("Value must be positive, got {value}")),
             None => Err("Failed to parse as Decimal".to_string()),
         }
     }
@@ -210,7 +210,7 @@ impl Positive {
         if value >= Decimal::ZERO {
             Ok(Positive(value))
         } else {
-            Err(format!("Value must be positive, got {}", value))
+            Err(format!("Value must be positive, got {value}"))
         }
     }
 
@@ -737,8 +737,8 @@ impl FromStr for Positive {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.parse::<Decimal>() {
             Ok(value) if value > Decimal::ZERO => Ok(Positive(value)),
-            Ok(value) => Err(format!("Value must be positive, got {}", value)),
-            Err(e) => Err(format!("Failed to parse as Decimal: {}", e)),
+            Ok(value) => Err(format!("Value must be positive, got {value}")),
+            Err(e) => Err(format!("Failed to parse as Decimal: {e}")),
         }
     }
 }
@@ -867,7 +867,7 @@ impl Display for Positive {
             write!(f, r#""infinity""#)
         } else if self.0.scale() == 0 {
             match self.0.to_i64() {
-                Some(val) => write!(f, "{}", val),
+                Some(val) => write!(f, "{val}"),
                 None => write!(f, "{}", self.0),
             }
         } else if let Some(precision) = f.precision() {
@@ -875,7 +875,7 @@ impl Display for Positive {
         } else {
             let s = self.0.to_string();
             let trimmed = s.trim_end_matches('0').trim_end_matches('.');
-            write!(f, "{}", trimmed)
+            write!(f, "{trimmed}")
         }
     }
 }
@@ -948,8 +948,7 @@ impl<'de> Deserialize<'de> for Positive {
                     return Ok(Positive::INFINITY);
                 }
                 Err(serde::de::Error::custom(format!(
-                    "Invalid string: '{}'. Expected \"infinity\".",
-                    value
+                    "Invalid string: '{value}'. Expected \"infinity\"."
                 )))
             }
 
@@ -1237,21 +1236,21 @@ mod tests_positive_decimal {
     #[test]
     fn test_positive_decimal_display() {
         let pos = Positive::new_decimal(dec!(4.5)).unwrap();
-        assert_eq!(format!("{}", pos), "4.5");
+        assert_eq!(format!("{pos}"), "4.5");
     }
 
     #[test]
     fn test_positive_decimal_debug() {
         let pos = Positive::new_decimal(dec!(4.5)).unwrap();
-        assert_eq!(format!("{:?}", pos), "4.5");
+        assert_eq!(format!("{pos:?}"), "4.5");
     }
 
     #[test]
     fn test_positive_decimal_display_decimal_fix() {
         let pos = Positive::new_decimal(dec!(4.578923789423789)).unwrap();
-        assert_eq!(format!("{:.2}", pos), "4.57");
-        assert_eq!(format!("{:.3}", pos), "4.578");
-        assert_eq!(format!("{:.0}", pos), "4");
+        assert_eq!(format!("{pos:.2}"), "4.57");
+        assert_eq!(format!("{pos:.3}"), "4.578");
+        assert_eq!(format!("{pos:.0}"), "4");
     }
 
     #[test]

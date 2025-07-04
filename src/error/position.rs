@@ -294,11 +294,11 @@ pub enum PositionLimitErrorKind {
 impl fmt::Display for PositionError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            PositionError::StrategyError(kind) => write!(f, "Strategy error: {}", kind),
+            PositionError::StrategyError(kind) => write!(f, "Strategy error: {kind}"),
             PositionError::ValidationError(kind) => {
-                write!(f, "Position validation error: {}", kind)
+                write!(f, "Position validation error: {kind}")
             }
-            PositionError::LimitError(kind) => write!(f, "Position limit error: {}", kind),
+            PositionError::LimitError(kind) => write!(f, "Position limit error: {kind}"),
         }
     }
 }
@@ -312,8 +312,7 @@ impl fmt::Display for StrategyErrorKind {
             } => {
                 write!(
                     f,
-                    "Operation '{}' is not supported for strategy type '{}'",
-                    operation, strategy_type
+                    "Operation '{operation}' is not supported for strategy type '{strategy_type}'"
                 )
             }
             StrategyErrorKind::StrategyFull {
@@ -322,12 +321,11 @@ impl fmt::Display for StrategyErrorKind {
             } => {
                 write!(
                     f,
-                    "Strategy '{}' is full (maximum {} positions)",
-                    strategy_type, max_positions
+                    "Strategy '{strategy_type}' is full (maximum {max_positions} positions)"
                 )
             }
             StrategyErrorKind::InvalidConfiguration(msg) => {
-                write!(f, "Invalid strategy configuration: {}", msg)
+                write!(f, "Invalid strategy configuration: {msg}")
             }
         }
     }
@@ -337,10 +335,10 @@ impl fmt::Display for PositionValidationErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             PositionValidationErrorKind::InvalidSize { size, reason } => {
-                write!(f, "Invalid position size {}: {}", size, reason)
+                write!(f, "Invalid position size {size}: {reason}")
             }
             PositionValidationErrorKind::InvalidPrice { price, reason } => {
-                write!(f, "Invalid position price {}: {}", price, reason)
+                write!(f, "Invalid position price {price}: {reason}")
             }
             PositionValidationErrorKind::IncompatibleSide {
                 position_side,
@@ -348,22 +346,20 @@ impl fmt::Display for PositionValidationErrorKind {
             } => {
                 write!(
                     f,
-                    "Position type '{}' is incompatible with strategy '{}'",
-                    position_side, strategy_type
+                    "Position type '{position_side}' is incompatible with strategy '{strategy_type}'"
                 )
             }
             PositionValidationErrorKind::InvalidPosition { reason } => {
-                write!(f, "Invalid position: {}", reason)
+                write!(f, "Invalid position: {reason}")
             }
             PositionValidationErrorKind::IncompatibleStyle { style, reason } => {
                 write!(
                     f,
-                    "Position style '{}' is incompatible with strategy: {}",
-                    style, reason
+                    "Position style '{style}' is incompatible with strategy: {reason}"
                 )
             }
             PositionValidationErrorKind::StdError { reason } => {
-                write!(f, "Error: {}", reason)
+                write!(f, "Error: {reason}")
             }
         }
     }
@@ -375,8 +371,7 @@ impl fmt::Display for PositionLimitErrorKind {
             PositionLimitErrorKind::MaxPositionsReached { current, maximum } => {
                 write!(
                     f,
-                    "Maximum number of positions reached ({}/{})",
-                    current, maximum
+                    "Maximum number of positions reached ({current}/{maximum})"
                 )
             }
             PositionLimitErrorKind::MaxExposureReached {
@@ -385,8 +380,7 @@ impl fmt::Display for PositionLimitErrorKind {
             } => {
                 write!(
                     f,
-                    "Maximum exposure reached (current: {}, max: {})",
-                    current_exposure, max_exposure
+                    "Maximum exposure reached (current: {current_exposure}, max: {max_exposure})"
                 )
             }
         }
@@ -682,7 +676,7 @@ mod tests_extended {
             reason: "Size must be positive".to_string(),
         });
         assert_eq!(
-            format!("{}", error),
+            format!("{error}"),
             "Position validation error: Invalid position size -1: Size must be positive"
         );
     }
@@ -694,7 +688,7 @@ mod tests_extended {
             maximum: 5,
         });
         assert_eq!(
-            format!("{}", error),
+            format!("{error}"),
             "Position limit error: Maximum number of positions reached (10/5)"
         );
     }
@@ -706,7 +700,7 @@ mod tests_extended {
             max_positions: 10,
         };
         assert_eq!(
-            format!("{}", error),
+            format!("{error}"),
             "Strategy 'Iron Condor' is full (maximum 10 positions)"
         );
     }
@@ -715,7 +709,7 @@ mod tests_extended {
     fn test_strategy_error_invalid_configuration() {
         let error = StrategyErrorKind::InvalidConfiguration("Invalid risk parameters".to_string());
         assert_eq!(
-            format!("{}", error),
+            format!("{error}"),
             "Invalid strategy configuration: Invalid risk parameters"
         );
     }
@@ -727,7 +721,7 @@ mod tests_extended {
             reason: "Outside allowable range".to_string(),
         };
         assert_eq!(
-            format!("{}", error),
+            format!("{error}"),
             "Invalid position price 105.5: Outside allowable range"
         );
     }
@@ -738,7 +732,7 @@ mod tests_extended {
             reason: "Position size exceeds margin".to_string(),
         };
         assert_eq!(
-            format!("{}", error),
+            format!("{error}"),
             "Invalid position: Position size exceeds margin"
         );
     }
@@ -750,7 +744,7 @@ mod tests_extended {
             reason: "Unsupported for Call options".to_string(),
         };
         assert_eq!(
-            format!("{}", error),
+            format!("{error}"),
             "Position style 'Call' is incompatible with strategy: Unsupported for Call options"
         );
     }
@@ -760,6 +754,6 @@ mod tests_extended {
         let error = PositionValidationErrorKind::StdError {
             reason: "Unexpected null value".to_string(),
         };
-        assert_eq!(format!("{}", error), "Error: Unexpected null value");
+        assert_eq!(format!("{error}"), "Error: Unexpected null value");
     }
 }

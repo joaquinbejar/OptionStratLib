@@ -1546,9 +1546,7 @@ pub mod tests_vega_equation {
         let expected_vega = 0.3752403469;
         assert!(
             (vega - expected_vega).abs() < 1e-5,
-            "Vega ATM test failed: expected {}, got {}",
-            expected_vega,
-            vega
+            "Vega ATM test failed: expected {expected_vega}, got {vega}"
         );
     }
 
@@ -1565,9 +1563,7 @@ pub mod tests_vega_equation {
         let expected_vega = 0.35347991;
         assert!(
             (vega - expected_vega).abs() < 1e-5,
-            "Vega OTM test failed: expected {}, got {}",
-            expected_vega,
-            vega
+            "Vega OTM test failed: expected {expected_vega}, got {vega}"
         );
     }
 
@@ -1584,9 +1580,7 @@ pub mod tests_vega_equation {
         let expected_vega = 0.020878089;
         assert!(
             (vega - expected_vega).abs() < 1e-5,
-            "Vega short expiration test failed: expected {}, got {}",
-            expected_vega,
-            vega
+            "Vega short expiration test failed: expected {expected_vega}, got {vega}"
         );
     }
 
@@ -1603,9 +1597,7 @@ pub mod tests_vega_equation {
         let expected_vega = 0.0208763735;
         assert!(
             (vega - expected_vega).abs() < 1e-5,
-            "Vega with dividends test failed: expected {}, got {}",
-            expected_vega,
-            vega
+            "Vega with dividends test failed: expected {expected_vega}, got {vega}"
         );
     }
 
@@ -1622,9 +1614,7 @@ pub mod tests_vega_equation {
         let expected_vega = 0.0;
         assert!(
             (vega - expected_vega).abs() < 1e-5,
-            "Vega ITM test failed: expected {}, got {}",
-            expected_vega,
-            vega
+            "Vega ITM test failed: expected {expected_vega}, got {vega}"
         );
     }
 }

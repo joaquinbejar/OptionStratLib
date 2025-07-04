@@ -91,25 +91,25 @@ fn test_surface_error_debug() {
     let point_error = SurfaceError::Point3DError {
         reason: "point debug test",
     };
-    let debug_str = format!("{:?}", point_error);
+    let debug_str = format!("{point_error:?}");
     assert!(debug_str.contains("Point3DError"));
 
     let op_error = SurfaceError::operation_not_supported("debug test", "not supported");
-    let debug_str = format!("{:?}", op_error);
+    let debug_str = format!("{op_error:?}");
     assert!(debug_str.contains("OperationError"));
 
     let std_error = SurfaceError::StdError {
         reason: "std debug test".to_string(),
     };
-    let debug_str = format!("{:?}", std_error);
+    let debug_str = format!("{std_error:?}");
     assert!(debug_str.contains("StdError"));
 
     let construction_error = SurfaceError::ConstructionError("construction debug test".to_string());
-    let debug_str = format!("{:?}", construction_error);
+    let debug_str = format!("{construction_error:?}");
     assert!(debug_str.contains("ConstructionError"));
 
     let analysis_error = SurfaceError::AnalysisError("analysis debug test".to_string());
-    let debug_str = format!("{:?}", analysis_error);
+    let debug_str = format!("{analysis_error:?}");
     assert!(debug_str.contains("AnalysisError"));
 }
 

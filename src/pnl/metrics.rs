@@ -503,7 +503,7 @@ mod tests_pnl_metrics {
         };
 
         // Test display output
-        let display = format!("{}", metrics_step);
+        let display = format!("{metrics_step}");
 
         // Check that all fields are present in the output
         assert!(display.contains("win: true"));
@@ -759,7 +759,7 @@ mod tests_pnl_metrics {
             let document = create_pnl_metrics_document(
                 metrics,
                 pos!(30.0),
-                format!("SYMBOL{}", i),
+                format!("SYMBOL{i}"),
                 pos!(0.65),
                 Decimal::from_f64(0.5).unwrap(),
                 Decimal::from_f64(0.1).unwrap(),
@@ -1110,7 +1110,7 @@ mod tests_pnl_metrics_serialization {
 
             let document = PnLMetricsDocument {
                 days: pos!(30.0 * i as f64),
-                symbol: format!("SYMBOL{}", i),
+                symbol: format!("SYMBOL{i}"),
                 fee: pos!(0.5 + (i as f64 * 0.1)),
                 delta: Decimal::from_f64(0.3 + (i as f64 * 0.1)).unwrap(),
                 delta_adjustment_at: Decimal::from_f64(0.05 * i as f64).unwrap(),

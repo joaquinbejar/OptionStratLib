@@ -126,14 +126,10 @@ impl fmt::Display for DecimalError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             DecimalError::InvalidValue { value, reason } => {
-                write!(f, "Invalid decimal value {}: {}", value, reason)
+                write!(f, "Invalid decimal value {value}: {reason}")
             }
             DecimalError::ArithmeticError { operation, reason } => {
-                write!(
-                    f,
-                    "Decimal arithmetic error during {}: {}",
-                    operation, reason
-                )
+                write!(f, "Decimal arithmetic error during {operation}: {reason}")
             }
             DecimalError::ConversionError {
                 from_type,
@@ -142,19 +138,17 @@ impl fmt::Display for DecimalError {
             } => {
                 write!(
                     f,
-                    "Failed to convert decimal from {} to {}: {}",
-                    from_type, to_type, reason
+                    "Failed to convert decimal from {from_type} to {to_type}: {reason}"
                 )
             }
             DecimalError::OutOfBounds { value, min, max } => {
                 write!(
                     f,
-                    "Decimal value {} is out of bounds (min: {}, max: {})",
-                    value, min, max
+                    "Decimal value {value} is out of bounds (min: {min}, max: {max})"
                 )
             }
             DecimalError::InvalidPrecision { precision, reason } => {
-                write!(f, "Invalid decimal precision {}: {}", precision, reason)
+                write!(f, "Invalid decimal precision {precision}: {reason}")
             }
         }
     }

@@ -169,9 +169,9 @@ fn test_short_call_get_max_loss() {
             ProfitLossErrorKind::MaxLossError { reason } => {
                 assert!(reason.to_lowercase().contains("unlimited"));
             }
-            _ => panic!("Expected MaxLossError, got {:?}", kind),
+            _ => panic!("Expected MaxLossError, got {kind:?}"),
         },
-        e => panic!("Expected ProfitLossError, got {:?}", e),
+        e => panic!("Expected ProfitLossError, got {e:?}"),
     }
 }
 

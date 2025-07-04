@@ -201,9 +201,7 @@ fn test_long_put_get_max_profit() {
             let expected_profit = Positive::new(94.0).unwrap();
             assert!(
                 (profit.to_f64() - expected_profit.to_f64()).abs() < 1.0,
-                "Max profit should be close to {}, but was {}",
-                expected_profit,
-                profit
+                "Max profit should be close to {expected_profit}, but was {profit}"
             );
         }
         Err(e) => {
@@ -214,8 +212,7 @@ fn test_long_put_get_max_profit() {
                     || e.to_string().contains("premium")
                     || e.to_string().contains("infinite")
                     || e.to_string().contains("unlimited"),
-                "Error message should be related to profit calculation: {}",
-                e
+                "Error message should be related to profit calculation: {e}"
             );
         }
     }
@@ -236,9 +233,7 @@ fn test_long_put_get_max_loss() {
             let expected_max_loss = Positive::new(6.0).unwrap();
             assert!(
                 (loss.to_f64() - expected_max_loss.to_f64()).abs() < 1.0,
-                "Max loss should be close to {}, but was {}",
-                expected_max_loss,
-                loss
+                "Max loss should be close to {expected_max_loss}, but was {loss}"
             );
         }
         Err(e) => {
@@ -249,8 +244,7 @@ fn test_long_put_get_max_loss() {
                     || e.to_string().contains("negative")
                     || e.to_string().contains("infinite")
                     || e.to_string().contains("unlimited"),
-                "Error message should be related to loss calculation: {}",
-                e
+                "Error message should be related to loss calculation: {e}"
             );
         }
     }
@@ -271,8 +265,7 @@ fn test_long_put_calculate_profit_at() {
     // Allow a margin of error of 2.0 for the profit calculation at the break-even point
     assert!(
         profit_at_break_even.abs() < Decimal::new(2, 0),
-        "Profit at break-even should be close to zero, but was {}",
-        profit_at_break_even
+        "Profit at break-even should be close to zero, but was {profit_at_break_even}"
     );
 
     // Test profit below break-even (should be positive)
@@ -280,8 +273,7 @@ fn test_long_put_calculate_profit_at() {
     let profit_below_break_even = long_put.calculate_profit_at(&below_break_even).unwrap();
     assert!(
         profit_below_break_even > Decimal::ZERO,
-        "Profit below break-even should be positive, but was {}",
-        profit_below_break_even
+        "Profit below break-even should be positive, but was {profit_below_break_even}"
     );
 }
 
@@ -373,8 +365,7 @@ fn test_long_put_get_profit_ratio() {
             // The actual ratio may vary depending on implementation details
             assert!(
                 ratio >= Decimal::ZERO,
-                "Profit ratio should be non-negative, but was {}",
-                ratio
+                "Profit ratio should be non-negative, but was {ratio}"
             );
         }
         Err(e) => {
@@ -384,8 +375,7 @@ fn test_long_put_get_profit_ratio() {
                 e.to_string().contains("division")
                     || e.to_string().contains("infinite")
                     || e.to_string().contains("undefined"),
-                "Error message should indicate an issue with ratio calculation: {}",
-                e
+                "Error message should indicate an issue with ratio calculation: {e}"
             );
         }
     }
@@ -403,7 +393,6 @@ fn test_long_put_get_profit_area() {
     // We just verify that it's a non-negative value
     assert!(
         area >= Decimal::ZERO,
-        "Profit area should be non-negative, but was {}",
-        area
+        "Profit area should be non-negative, but was {area}"
     );
 }

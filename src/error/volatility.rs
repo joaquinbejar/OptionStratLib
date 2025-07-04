@@ -79,19 +79,19 @@ impl fmt::Display for VolatilityError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match &self {
             VolatilityError::InvalidPrice { price, reason } => {
-                write!(f, "Invalid price {}: {}", price, reason)
+                write!(f, "Invalid price {price}: {reason}")
             }
             VolatilityError::InvalidTime { time, reason } => {
-                write!(f, "Invalid time {}: {}", time, reason)
+                write!(f, "Invalid time {time}: {reason}")
             }
             VolatilityError::ZeroVega => {
                 write!(f, "Vega is zero, cannot calculate implied volatility")
             }
             VolatilityError::VegaError { reason } => {
-                write!(f, "Error calculating vega: {}", reason)
+                write!(f, "Error calculating vega: {reason}")
             }
             VolatilityError::OptionError { reason } => {
-                write!(f, "Option error: {}", reason)
+                write!(f, "Option error: {reason}")
             }
             VolatilityError::NoConvergence {
                 iterations,
@@ -99,8 +99,7 @@ impl fmt::Display for VolatilityError {
             } => {
                 write!(
                     f,
-                    "No convergence after {} iterations. Last volatility: {}",
-                    iterations, last_volatility
+                    "No convergence after {iterations} iterations. Last volatility: {last_volatility}"
                 )
             }
         }

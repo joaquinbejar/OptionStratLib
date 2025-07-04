@@ -98,12 +98,12 @@ fn test_curve_error_construction_error() {
 
     // Verify the Display implementation
     assert_eq!(
-        format!("{}", error),
+        format!("{error}"),
         "Construction error: construction error test"
     );
 
     // Verify the Debug implementation
-    assert!(format!("{:?}", error).contains("construction error test"));
+    assert!(format!("{error:?}").contains("construction error test"));
 }
 
 #[test]
@@ -127,7 +127,7 @@ fn test_curve_error_operation_not_supported() {
 
     // Verify the Display implementation
     assert_eq!(
-        format!("{}", error),
+        format!("{error}"),
         "Operation error: Operation 'calculate' is not supported for strategy 'TestStrategy'"
     );
 }
@@ -153,7 +153,7 @@ fn test_curve_error_invalid_parameters() {
 
     // Verify the Display implementation
     assert_eq!(
-        format!("{}", error),
+        format!("{error}"),
         "Operation error: Invalid parameters for operation 'interpolate': insufficient data points"
     );
 }
@@ -166,10 +166,10 @@ fn test_curve_error_point2d_error() {
     };
 
     // Verify the Display implementation
-    assert_eq!(format!("{}", error), "Error: invalid coordinates");
+    assert_eq!(format!("{error}"), "Error: invalid coordinates");
 
     // Verify the Debug implementation
-    assert!(format!("{:?}", error).contains("invalid coordinates"));
+    assert!(format!("{error:?}").contains("invalid coordinates"));
 }
 
 #[test]

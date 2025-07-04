@@ -481,9 +481,7 @@ mod tests_utils {
         let expected_up_factor = (volatility * dt.sqrt().unwrap()).exp();
         assert!(
             (up_factor - expected_up_factor).abs() < EPSILON,
-            "Expected {}, got {}",
-            expected_up_factor,
-            up_factor
+            "Expected {expected_up_factor}, got {up_factor}"
         );
     }
 
@@ -504,9 +502,7 @@ mod tests_utils {
         let expected_down_factor = (-dt.sqrt().unwrap() * volatility).exp();
         assert!(
             (down_factor - expected_down_factor).abs() < EPSILON,
-            "Expected {}, got {}",
-            expected_down_factor,
-            down_factor
+            "Expected {expected_down_factor}, got {down_factor}"
         );
     }
 
@@ -531,9 +527,7 @@ mod tests_utils {
             .clamp(CLAMP_MIN, CLAMP_MAX);
         assert!(
             (probability - expected_probability).abs() < EPSILON,
-            "Expected {}, got {}",
-            expected_probability,
-            probability
+            "Expected {expected_probability}, got {probability}"
         );
     }
 
@@ -555,9 +549,7 @@ mod tests_utils {
         let expected_discount_factor = (-int_rate * dt).exp();
         assert!(
             (discount_factor - expected_discount_factor).abs() < EPSILON,
-            "Expected {}, got {}",
-            expected_discount_factor,
-            discount_factor
+            "Expected {expected_discount_factor}, got {discount_factor}"
         );
     }
 }

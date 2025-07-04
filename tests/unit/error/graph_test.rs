@@ -6,15 +6,12 @@ use std::io;
 fn test_graph_error_display() {
     // Test Render variant
     let render_error = GraphError::Render("Test render error".to_string());
-    assert_eq!(
-        format!("{}", render_error),
-        "Render error: Test render error"
-    );
+    assert_eq!(format!("{render_error}"), "Render error: Test render error");
 
     // Test Io variant
     let io_error = GraphError::Io(io::Error::new(io::ErrorKind::NotFound, "File not found"));
-    assert!(format!("{}", io_error).contains("IO error"));
-    assert!(format!("{}", io_error).contains("File not found"));
+    assert!(format!("{io_error}").contains("IO error"));
+    assert!(format!("{io_error}").contains("File not found"));
 }
 
 #[test]

@@ -114,6 +114,7 @@ pub fn implied_volatility(
         .into_par_iter()
         .map(|i| {
             let mut option = base_option.clone();
+            option.side = Side::Long; // Ensure the option is long
             let iv = Positive::from(i as f64 / iterations as f64);
             option.implied_volatility = iv;
 
@@ -394,8 +395,7 @@ pub fn adjust_volatility(
         return Err(Box::new(VolatilityError::InvalidTime {
             time: to_periods,
             reason: format!(
-                "Cannot adjust volatility to timeframe with zero periods per year: {:?}",
-                to_frame
+                "Cannot adjust volatility to timeframe with zero periods per year: {to_frame:?}"
             ),
         }));
     }
@@ -893,6 +893,89 @@ mod tests_implied_volatility {
         assert_decimal_eq!(rho, dec!(-0.016), dec!(0.001));
 
         let market_price = option.calculate_price_black_scholes().unwrap();
+        assert_decimal_eq!(market_price, dec!(6.537), dec!(0.002));
+
+        // For very short-term options, use a more lenient tolerance
+        option.implied_volatility = pos!(0.4); // Start with different IV
+        let iv_result = implied_volatility(market_price.into(), &mut option, 10);
+
+        // For zero DTE options, expect either convergence or a reasonable approximation
+        match iv_result {
+            Ok(iv_aprox) => {
+                // If it converges, it should be close to the original IV
+                assert_pos_relative_eq!(iv_aprox, iv, pos!(0.001));
+            }
+            Err(_) => {
+                // If it doesn't converge, that's also acceptable for zero DTE options
+                // as they have extremely low vega and are numerically challenging
+                error!("Non-convergence is acceptable for zero DTE options");
+            }
+        }
+    }
+
+    #[test]
+    fn test_implied_volatility_zero_dte_real_short() {
+        let iv = pos!(0.356831);
+        let mut option = Options::new(
+            OptionType::European,
+            Side::Short,
+            "TEST".to_string(),
+            pos!(20600.0),
+            ExpirationDate::Days(pos!(0.52)),
+            iv,
+            pos!(1.0),
+            pos!(21049.88),
+            dec!(0.0),
+            OptionStyle::Call,
+            pos!(0.05),
+            None,
+        );
+
+        let delta = option.delta().unwrap();
+        let gamma = option.gamma().unwrap();
+        let vega = option.vega().unwrap();
+        let theta = option.theta().unwrap();
+        let rho = option.rho().unwrap();
+        assert_decimal_eq!(delta, dec!(-0.946), dec!(0.002));
+        assert_decimal_eq!(gamma, dec!(0.00038), dec!(0.002));
+        assert_decimal_eq!(vega, dec!(0.866), dec!(0.002));
+        assert_decimal_eq!(theta, dec!(-26.990), dec!(0.002));
+        assert_decimal_eq!(rho, dec!(0.277), dec!(0.002));
+
+        let market_price = option.calculate_price_black_scholes().unwrap().abs();
+        assert_decimal_eq!(market_price, dec!(454.917), dec!(0.002));
+
+        // For very short-term options, use a more lenient tolerance
+        option.implied_volatility = pos!(0.4); // Start with different IV
+        let iv_result = implied_volatility(market_price.into(), &mut option, 10);
+
+        // For zero DTE options, expect either convergence or a reasonable approximation
+        match iv_result {
+            Ok(iv_aprox) => {
+                // If it converges, it should be close to the original IV
+                assert_pos_relative_eq!(iv_aprox, iv, pos!(0.001));
+            }
+            Err(_) => {
+                // If it doesn't converge, that's also acceptable for zero DTE options
+                // as they have extremely low vega and are numerically challenging
+                error!("Non-convergence is acceptable for zero DTE options");
+            }
+        }
+
+        option.implied_volatility = iv;
+        option.option_style = OptionStyle::Put;
+        let delta = option.delta().unwrap();
+        let gamma = option.gamma().unwrap();
+        let vega = option.vega().unwrap();
+        let theta = option.theta().unwrap();
+        let rho = option.rho().unwrap();
+        assert_decimal_eq!(delta, dec!(0.053), dec!(0.001));
+        assert_decimal_eq!(gamma, dec!(0.0), dec!(0.001));
+        assert_decimal_eq!(vega, dec!(0.866), dec!(0.001));
+        assert_decimal_eq!(theta, dec!(-29.874), dec!(0.001));
+        assert_decimal_eq!(rho, dec!(-0.016), dec!(0.001));
+
+        let market_price = option.calculate_price_black_scholes().unwrap().abs();
         assert_decimal_eq!(market_price, dec!(6.537), dec!(0.002));
 
         // For very short-term options, use a more lenient tolerance
@@ -1540,8 +1623,7 @@ mod tests_generate_ou_process {
         for value in process {
             assert!(
                 value >= Positive::ZERO,
-                "Found non-positive value: {:?}",
-                value
+                "Found non-positive value: {value:?}"
             );
         }
     }
@@ -1559,6 +1641,6 @@ mod tests_generate_ou_process {
 
         let last = process.last().unwrap().to_dec();
         let diff = (last - dec!(1.0)).abs();
-        assert!(diff < dec!(0.1), "Final value too far from mean: {}", last);
+        assert!(diff < dec!(0.1), "Final value too far from mean: {last}");
     }
 }

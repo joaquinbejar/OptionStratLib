@@ -190,13 +190,13 @@ impl CurveError {
 impl fmt::Display for CurveError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            CurveError::OperationError(err) => write!(f, "Operation error: {}", err),
-            CurveError::StdError { reason } => write!(f, "Error: {}", reason),
-            CurveError::Point2DError { reason } => write!(f, "Error: {}", reason),
-            CurveError::ConstructionError(reason) => write!(f, "Construction error: {}", reason),
-            CurveError::AnalysisError(reason) => write!(f, "Analysis error: {}", reason),
-            CurveError::MetricsError(reason) => write!(f, "Metrics error: {}", reason),
-            CurveError::InterpolationError(reason) => write!(f, "Interpolation error: {}", reason),
+            CurveError::OperationError(err) => write!(f, "Operation error: {err}"),
+            CurveError::StdError { reason } => write!(f, "Error: {reason}"),
+            CurveError::Point2DError { reason } => write!(f, "Error: {reason}"),
+            CurveError::ConstructionError(reason) => write!(f, "Construction error: {reason}"),
+            CurveError::AnalysisError(reason) => write!(f, "Analysis error: {reason}"),
+            CurveError::MetricsError(reason) => write!(f, "Metrics error: {reason}"),
+            CurveError::InterpolationError(reason) => write!(f, "Interpolation error: {reason}"),
         }
     }
 }
@@ -460,12 +460,12 @@ mod tests {
         let error = CurveError::Point2DError {
             reason: "test debug",
         };
-        assert!(format!("{:?}", error).contains("test debug"));
+        assert!(format!("{error:?}").contains("test debug"));
 
         let error = CurveError::StdError {
             reason: "test debug".to_string(),
         };
-        assert!(format!("{:?}", error).contains("test debug"));
+        assert!(format!("{error:?}").contains("test debug"));
     }
 }
 
@@ -478,7 +478,7 @@ mod tests_extended {
         let error =
             CurveError::ConstructionError("Invalid curve construction parameters".to_string());
         assert_eq!(
-            format!("{}", error),
+            format!("{error}"),
             "Construction error: Invalid curve construction parameters"
         );
     }
@@ -488,7 +488,7 @@ mod tests_extended {
         let error =
             CurveError::AnalysisError("Analysis failed due to insufficient data".to_string());
         assert_eq!(
-            format!("{}", error),
+            format!("{error}"),
             "Analysis error: Analysis failed due to insufficient data"
         );
     }

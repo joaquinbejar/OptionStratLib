@@ -358,12 +358,12 @@ pub enum PriceErrorKind {
 impl fmt::Display for ProbabilityError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            ProbabilityError::CalculationError(err) => write!(f, "Calculation error: {}", err),
-            ProbabilityError::RangeError(err) => write!(f, "Range error: {}", err),
-            ProbabilityError::ExpirationError(err) => write!(f, "Expiration error: {}", err),
-            ProbabilityError::PriceError(err) => write!(f, "Price error: {}", err),
-            ProbabilityError::StdError(msg) => write!(f, "Error: {}", msg),
-            ProbabilityError::NoPositions(msg) => write!(f, "No positions: {}", msg),
+            ProbabilityError::CalculationError(err) => write!(f, "Calculation error: {err}"),
+            ProbabilityError::RangeError(err) => write!(f, "Range error: {err}"),
+            ProbabilityError::ExpirationError(err) => write!(f, "Expiration error: {err}"),
+            ProbabilityError::PriceError(err) => write!(f, "Price error: {err}"),
+            ProbabilityError::StdError(msg) => write!(f, "Error: {msg}"),
+            ProbabilityError::NoPositions(msg) => write!(f, "No positions: {msg}"),
         }
     }
 }
@@ -372,7 +372,7 @@ impl fmt::Display for ExpirationErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             ExpirationErrorKind::InvalidExpiration { reason } => {
-                write!(f, "Invalid expiration: {}", reason)
+                write!(f, "Invalid expiration: {reason}")
             }
             ExpirationErrorKind::InvalidRiskFreeRate { rate, reason } => {
                 write!(
@@ -390,10 +390,10 @@ impl fmt::Display for PriceErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             PriceErrorKind::InvalidUnderlyingPrice { price, reason } => {
-                write!(f, "Invalid underlying price {}: {}", price, reason)
+                write!(f, "Invalid underlying price {price}: {reason}")
             }
             PriceErrorKind::InvalidPriceRange { range, reason } => {
-                write!(f, "Invalid price range {}: {}", range, reason)
+                write!(f, "Invalid price range {range}: {reason}")
             }
         }
     }
@@ -403,16 +403,16 @@ impl fmt::Display for ProbabilityCalculationErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             ProbabilityCalculationErrorKind::InvalidProbability { value, reason } => {
-                write!(f, "Invalid probability {}: {}", value, reason)
+                write!(f, "Invalid probability {value}: {reason}")
             }
             ProbabilityCalculationErrorKind::ExpectedValueError { reason } => {
-                write!(f, "Expected value error: {}", reason)
+                write!(f, "Expected value error: {reason}")
             }
             ProbabilityCalculationErrorKind::VolatilityAdjustmentError { reason } => {
-                write!(f, "Volatility adjustment error: {}", reason)
+                write!(f, "Volatility adjustment error: {reason}")
             }
             ProbabilityCalculationErrorKind::TrendError { reason } => {
-                write!(f, "Trend error: {}", reason)
+                write!(f, "Trend error: {reason}")
             }
         }
     }
@@ -422,13 +422,13 @@ impl fmt::Display for ProfitLossRangeErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             ProfitLossRangeErrorKind::InvalidProfitRange { range, reason } => {
-                write!(f, "Invalid profit range {}: {}", range, reason)
+                write!(f, "Invalid profit range {range}: {reason}")
             }
             ProfitLossRangeErrorKind::InvalidLossRange { range, reason } => {
-                write!(f, "Invalid loss range {}: {}", range, reason)
+                write!(f, "Invalid loss range {range}: {reason}")
             }
             ProfitLossRangeErrorKind::InvalidBreakEvenPoints { reason } => {
-                write!(f, "Invalid break-even points: {}", reason)
+                write!(f, "Invalid break-even points: {reason}")
             }
         }
     }
@@ -497,13 +497,11 @@ impl From<StrategyError> for ProbabilityError {
                     operation,
                     reason: strategy_type,
                 } => ProbabilityError::from(format!(
-                    "Operation '{}' not supported for strategy '{}'",
-                    operation, strategy_type
+                    "Operation '{operation}' not supported for strategy '{strategy_type}'"
                 )),
                 OperationErrorKind::InvalidParameters { operation, reason } => {
                     ProbabilityError::from(format!(
-                        "Invalid parameters for operation '{}': {}",
-                        operation, reason
+                        "Invalid parameters for operation '{operation}': {reason}"
                     ))
                 }
             },
@@ -520,17 +518,14 @@ impl From<OperationErrorKind> for ProbabilityError {
             OperationErrorKind::InvalidParameters { operation, reason } => {
                 ProbabilityError::CalculationError(
                     ProbabilityCalculationErrorKind::ExpectedValueError {
-                        reason: format!(
-                            "Invalid parameters for operation '{}': {}",
-                            operation, reason
-                        ),
+                        reason: format!("Invalid parameters for operation '{operation}': {reason}"),
                     },
                 )
             }
             OperationErrorKind::NotSupported { operation, reason } => {
                 ProbabilityError::CalculationError(
                     ProbabilityCalculationErrorKind::ExpectedValueError {
-                        reason: format!("Operation '{}' not supported: {}", operation, reason),
+                        reason: format!("Operation '{operation}' not supported: {reason}"),
                     },
                 )
             }
@@ -775,7 +770,7 @@ mod tests_extended {
     #[test]
     fn test_probability_error_std_error() {
         let error = ProbabilityError::StdError("Calculation failed".to_string());
-        assert_eq!(format!("{}", error), "Error: Calculation failed");
+        assert_eq!(format!("{error}"), "Error: Calculation failed");
     }
 
     #[test]
@@ -785,7 +780,7 @@ mod tests_extended {
             reason: "Negative values are not allowed".to_string(),
         };
         assert_eq!(
-            format!("{}", error),
+            format!("{error}"),
             "Invalid price range 0-100: Negative values are not allowed"
         );
     }
@@ -797,7 +792,7 @@ mod tests_extended {
             reason: "Range must be positive".to_string(),
         };
         assert_eq!(
-            format!("{}", error),
+            format!("{error}"),
             "Invalid loss range -50-0: Range must be positive"
         );
     }
@@ -808,7 +803,7 @@ mod tests_extended {
             reason: "Maximum loss exceeded".to_string(),
         };
         assert_eq!(
-            format!("{}", error),
+            format!("{error}"),
             "Maximum loss calculation error: Maximum loss exceeded"
         );
     }
@@ -830,7 +825,7 @@ mod tests_extended {
         });
         let converted_error: ProbabilityError = error.into();
         assert_eq!(
-            format!("{}", converted_error),
+            format!("{converted_error}"),
             "Calculation error: Expected value error: Failed to calculate break-even point"
         );
     }
@@ -843,7 +838,7 @@ mod tests_extended {
         };
         let converted_error: ProbabilityError = error.into();
         assert_eq!(
-            format!("{}", converted_error),
+            format!("{converted_error}"),
             "Calculation error: Expected value error: Invalid parameters for operation 'Calculate P/L': Invalid input values"
         );
     }
@@ -857,7 +852,7 @@ mod tests_extended {
         let converted_error: ProbabilityError = error.into();
 
         assert_eq!(
-            format!("{}", converted_error),
+            format!("{converted_error}"),
             "Error: General strategy failure"
         );
     }
@@ -866,7 +861,7 @@ mod tests_extended {
     fn test_invalid_profit_range_constructor() {
         let error = ProbabilityError::invalid_profit_range("0-100", "Range mismatch");
         assert_eq!(
-            format!("{}", error),
+            format!("{error}"),
             "Range error: Invalid profit range 0-100: Range mismatch"
         );
     }
@@ -875,7 +870,7 @@ mod tests_extended {
     fn test_invalid_expiration_constructor() {
         let error = ProbabilityError::invalid_expiration("Expiration date invalid");
         assert_eq!(
-            format!("{}", error),
+            format!("{error}"),
             "Expiration error: Invalid expiration: Expiration date invalid"
         );
     }
@@ -886,7 +881,7 @@ mod tests_extended {
             reason: "Exceeded allowed loss".to_string(),
         };
         assert_eq!(
-            format!("{}", error),
+            format!("{error}"),
             "Maximum loss calculation error: Exceeded allowed loss"
         );
     }
@@ -897,7 +892,7 @@ mod tests_extended {
             reason: "Profit range mismatch".to_string(),
         };
         assert_eq!(
-            format!("{}", error),
+            format!("{error}"),
             "Profit range calculation error: Profit range mismatch"
         );
     }
@@ -911,7 +906,7 @@ mod tests_extended {
         );
         let converted_error: ProbabilityError = ProbabilityError::from(error);
         assert_eq!(
-            format!("{}", converted_error),
+            format!("{converted_error}"),
             "Calculation error: Expected value error: Underlying price is negative"
         );
     }
@@ -927,7 +922,7 @@ mod tests_extended {
         );
         let converted_error: ProbabilityError = ProbabilityError::from(error);
         assert_eq!(
-            format!("{}", converted_error),
+            format!("{converted_error}"),
             "Calculation error: Expected value error: Start price is greater than end price"
         );
     }
@@ -939,9 +934,9 @@ mod tests_extended {
             reason: "Invalid input values".to_string(),
         };
         let converted_error: ProbabilityError =
-            ProbabilityError::from(format!("Invalid parameters for operation {}", error));
+            ProbabilityError::from(format!("Invalid parameters for operation {error}"));
         assert_eq!(
-            format!("{}", converted_error),
+            format!("{converted_error}"),
             "Calculation error: Expected value error: Invalid parameters for operation Invalid parameters for operation 'Calculate P/L': Invalid input values"
         );
     }
@@ -954,11 +949,11 @@ mod tests_extended {
         };
         let converted_error = ProbabilityError::CalculationError(
             ProbabilityCalculationErrorKind::ExpectedValueError {
-                reason: format!("Operation {}", error),
+                reason: format!("Operation {error}"),
             },
         );
         assert_eq!(
-            format!("{}", converted_error),
+            format!("{converted_error}"),
             "Calculation error: Expected value error: Operation Operation 'Hedging' is not supported for strategy 'Operation not implemented'"
         );
     }

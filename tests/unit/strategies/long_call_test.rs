@@ -201,8 +201,7 @@ fn test_long_call_get_max_profit() {
             let expected_min_profit = Positive::new(90.0).unwrap();
             assert!(
                 profit >= expected_min_profit,
-                "Max profit should be at least {}",
-                expected_min_profit
+                "Max profit should be at least {expected_min_profit}"
             );
         }
         Err(e) => {
@@ -214,8 +213,7 @@ fn test_long_call_get_max_profit() {
                     || e.to_string().contains("premium")
                     || e.to_string().contains("infinite")
                     || e.to_string().contains("unlimited"),
-                "Error message should be related to profit calculation: {}",
-                e
+                "Error message should be related to profit calculation: {e}"
             );
         }
     }

@@ -422,8 +422,8 @@ mod tests_extended {
         let mut chart = MockChart::new(); // Simular un gráfico
         chart
             .configure_mesh()
-            .x_label_formatter(&|v| format!("{:.2}", v))
-            .y_label_formatter(&|v| format!("{:.2}", v))
+            .x_label_formatter(&|v| format!("{v:.2}"))
+            .y_label_formatter(&|v| format!("{v:.2}"))
             .x_desc("X-axis")
             .y_desc("Y-axis");
         assert_eq!(chart.x_desc, "X-axis");

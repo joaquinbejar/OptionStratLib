@@ -97,10 +97,10 @@ impl Display for FindOptimalSide {
             FindOptimalSide::Upper => write!(f, "Upper"),
             FindOptimalSide::Lower => write!(f, "Lower"),
             FindOptimalSide::All => write!(f, "All"),
-            FindOptimalSide::Range(start, end) => write!(f, "Range: {} - {}", start, end),
-            FindOptimalSide::Deltable(threshold) => write!(f, "Deltable: {}", threshold),
+            FindOptimalSide::Range(start, end) => write!(f, "Range: {start} - {end}"),
+            FindOptimalSide::Deltable(threshold) => write!(f, "Deltable: {threshold}"),
             FindOptimalSide::Center => write!(f, "Center"),
-            FindOptimalSide::DeltaRange(min, max) => write!(f, "DeltaRange: {} - {}", min, max),
+            FindOptimalSide::DeltaRange(min, max) => write!(f, "DeltaRange: {min} - {max}"),
         }
     }
 }

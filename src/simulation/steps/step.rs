@@ -110,8 +110,7 @@ where
             Ok(x_step) => x_step,
             Err(e) => {
                 return Err(format!(
-                    "Cannot generate next step. Expiration date is already reached: {}",
-                    e
+                    "Cannot generate next step. Expiration date is already reached: {e}"
                 )
                 .into());
             }
@@ -139,8 +138,7 @@ where
             Ok(x_step) => x_step,
             Err(e) => {
                 return Err(format!(
-                    "Cannot generate previous step. Expiration date is already reached: {}",
-                    e
+                    "Cannot generate previous step. Expiration date is already reached: {e}"
                 )
                 .into());
             }

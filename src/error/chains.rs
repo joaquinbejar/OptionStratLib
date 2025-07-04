@@ -392,11 +392,11 @@ pub enum StrategyErrorKind {
 impl fmt::Display for ChainError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            ChainError::OptionDataError(err) => write!(f, "Option data error: {}", err),
-            ChainError::ChainBuildError(err) => write!(f, "Chain build error: {}", err),
-            ChainError::FileError(err) => write!(f, "File error: {}", err),
-            ChainError::StrategyError(err) => write!(f, "Strategy error: {}", err),
-            ChainError::DynError { message } => write!(f, "Error: {}", message),
+            ChainError::OptionDataError(err) => write!(f, "Option data error: {err}"),
+            ChainError::ChainBuildError(err) => write!(f, "Chain build error: {err}"),
+            ChainError::FileError(err) => write!(f, "File error: {err}"),
+            ChainError::StrategyError(err) => write!(f, "Strategy error: {err}"),
+            ChainError::DynError { message } => write!(f, "Error: {message}"),
         }
     }
 }
@@ -405,7 +405,7 @@ impl fmt::Display for OptionDataErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             OptionDataErrorKind::InvalidStrike { strike, reason } => {
-                write!(f, "Invalid strike price {}: {}", strike, reason)
+                write!(f, "Invalid strike price {strike}: {reason}")
             }
             OptionDataErrorKind::InvalidVolatility { volatility, reason } => {
                 write!(
@@ -416,19 +416,15 @@ impl fmt::Display for OptionDataErrorKind {
                 )
             }
             OptionDataErrorKind::InvalidPrices { bid, ask, reason } => {
-                write!(
-                    f,
-                    "Invalid prices (bid: {:?}, ask: {:?}): {}",
-                    bid, ask, reason
-                )
+                write!(f, "Invalid prices (bid: {bid:?}, ask: {ask:?}): {reason}")
             }
             OptionDataErrorKind::InvalidDelta { delta, reason } => {
-                write!(f, "Invalid delta {:?}: {}", delta, reason)
+                write!(f, "Invalid delta {delta:?}: {reason}")
             }
             OptionDataErrorKind::PriceCalculationError(msg) => {
-                write!(f, "Price calculation error: {}", msg)
+                write!(f, "Price calculation error: {msg}")
             }
-            OptionDataErrorKind::OtherError(msg) => write!(f, "{}", msg),
+            OptionDataErrorKind::OtherError(msg) => write!(f, "{msg}"),
         }
     }
 }
@@ -437,7 +433,7 @@ impl fmt::Display for ChainBuildErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             ChainBuildErrorKind::InvalidParameters { parameter, reason } => {
-                write!(f, "Invalid parameter '{}': {}", parameter, reason)
+                write!(f, "Invalid parameter '{parameter}': {reason}")
             }
             ChainBuildErrorKind::VolatilityAdjustmentError {
                 smile_curve,
@@ -445,8 +441,7 @@ impl fmt::Display for ChainBuildErrorKind {
             } => {
                 write!(
                     f,
-                    "Volatility adjustment error (skew factor: {}): {}",
-                    smile_curve, reason
+                    "Volatility adjustment error (skew factor: {smile_curve}): {reason}"
                 )
             }
             ChainBuildErrorKind::StrikeGenerationError {
@@ -456,8 +451,7 @@ impl fmt::Display for ChainBuildErrorKind {
             } => {
                 write!(
                     f,
-                    "Strike generation error (reference: {}, interval: {}): {}",
-                    reference_price, interval, reason
+                    "Strike generation error (reference: {reference_price}, interval: {interval}): {reason}"
                 )
             }
         }
@@ -467,9 +461,9 @@ impl fmt::Display for ChainBuildErrorKind {
 impl fmt::Display for FileErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            FileErrorKind::IOError(err) => write!(f, "IO error: {}", err),
+            FileErrorKind::IOError(err) => write!(f, "IO error: {err}"),
             FileErrorKind::InvalidFormat { format, reason } => {
-                write!(f, "Invalid {} format: {}", format, reason)
+                write!(f, "Invalid {format} format: {reason}")
             }
             FileErrorKind::ParseError {
                 line,
@@ -478,8 +472,7 @@ impl fmt::Display for FileErrorKind {
             } => {
                 write!(
                     f,
-                    "Parse error at line {}, content '{}': {}",
-                    line, content, reason
+                    "Parse error at line {line}, content '{content}': {reason}"
                 )
             }
         }
@@ -496,8 +489,7 @@ impl fmt::Display for StrategyErrorKind {
             } => {
                 write!(
                     f,
-                    "Invalid number of legs (expected: {}, found: {}): {}",
-                    expected, found, reason
+                    "Invalid number of legs (expected: {expected}, found: {found}): {reason}"
                 )
             }
             StrategyErrorKind::InvalidCombination {
@@ -506,8 +498,7 @@ impl fmt::Display for StrategyErrorKind {
             } => {
                 write!(
                     f,
-                    "Invalid combination for strategy '{}': {}",
-                    strategy_type, reason
+                    "Invalid combination for strategy '{strategy_type}': {reason}"
                 )
             }
         }
@@ -822,7 +813,7 @@ mod tests_extended {
             io::ErrorKind::NotFound,
             "File not found",
         )));
-        assert_eq!(format!("{}", error), "File error: IO error: File not found");
+        assert_eq!(format!("{error}"), "File error: IO error: File not found");
     }
 
     #[test]
@@ -830,7 +821,7 @@ mod tests_extended {
         let error = ChainError::DynError {
             message: "Dynamic error occurred".to_string(),
         };
-        assert_eq!(format!("{}", error), "Error: Dynamic error occurred");
+        assert_eq!(format!("{error}"), "Error: Dynamic error occurred");
     }
 
     #[test]
@@ -839,10 +830,7 @@ mod tests_extended {
             volatility: Some(0.25),
             reason: "Out of bounds".to_string(),
         };
-        assert_eq!(
-            format!("{}", error),
-            "Invalid volatility 0.25: Out of bounds"
-        );
+        assert_eq!(format!("{error}"), "Invalid volatility 0.25: Out of bounds");
     }
 
     #[test]
@@ -853,7 +841,7 @@ mod tests_extended {
             reason: "Bid-ask spread too wide".to_string(),
         };
         assert_eq!(
-            format!("{}", error),
+            format!("{error}"),
             "Invalid prices (bid: Some(1.0), ask: Some(2.0)): Bid-ask spread too wide"
         );
     }
@@ -862,7 +850,7 @@ mod tests_extended {
     fn test_option_data_error_price_calculation_error() {
         let error = OptionDataErrorKind::PriceCalculationError("Division by zero".to_string());
         assert_eq!(
-            format!("{}", error),
+            format!("{error}"),
             "Price calculation error: Division by zero"
         );
     }
@@ -875,7 +863,7 @@ mod tests_extended {
             reason: "Invalid strike intervals".to_string(),
         };
         assert_eq!(
-            format!("{}", error),
+            format!("{error}"),
             "Strike generation error (reference: 100, interval: 5): Invalid strike intervals"
         );
     }
@@ -886,7 +874,7 @@ mod tests_extended {
             io::ErrorKind::PermissionDenied,
             "Permission denied",
         ));
-        assert_eq!(format!("{}", error), "IO error: Permission denied");
+        assert_eq!(format!("{error}"), "IO error: Permission denied");
     }
 
     #[test]
@@ -896,7 +884,7 @@ mod tests_extended {
             reason: "Conflicting legs".to_string(),
         };
         assert_eq!(
-            format!("{}", error),
+            format!("{error}"),
             "Invalid combination for strategy 'Straddle': Conflicting legs"
         );
     }
@@ -905,7 +893,7 @@ mod tests_extended {
     fn test_chain_error_invalid_prices_constructor() {
         let error = ChainError::invalid_prices(Some(1.0), Some(2.0), "Spread too wide");
         assert_eq!(
-            format!("{}", error),
+            format!("{error}"),
             "Option data error: Invalid prices (bid: Some(1.0), ask: Some(2.0)): Spread too wide"
         );
     }

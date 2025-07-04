@@ -167,7 +167,7 @@ pub fn calculate_price_probability(
     if lower_bound > upper_bound {
         return Err(ProbabilityError::PriceError(
             PriceErrorKind::InvalidPriceRange {
-                range: format!("lower_bound: {} upper_bound: {}", lower_bound, upper_bound),
+                range: format!("lower_bound: {lower_bound} upper_bound: {upper_bound}"),
                 reason: "Lower bound must be less than upper bound".to_string(),
             },
         ));

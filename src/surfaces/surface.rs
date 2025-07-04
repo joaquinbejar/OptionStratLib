@@ -1751,10 +1751,7 @@ mod tests_surface_basic {
             // Allow small deviation due to interpolation
             assert!(
                 (result - expected).abs() < dec!(0.1),
-                "Failed for target {}, expected {}, got {}",
-                target,
-                expected,
-                result
+                "Failed for target {target}, expected {expected}, got {result}"
             );
         }
     }
@@ -1796,11 +1793,7 @@ mod tests_surface_basic {
                 .unwrap();
 
             // Should return endpoints for out-of-range values
-            assert_eq!(
-                result, expected,
-                "Failed for out-of-range target {}",
-                target
-            );
+            assert_eq!(result, expected, "Failed for out-of-range target {target}");
         }
     }
 }
@@ -2306,8 +2299,7 @@ mod tests_surface_cubic_interpolation {
             // Verify z is within reasonable bounds
             assert!(
                 result.z >= dec!(0.0) && result.z <= dec!(2.0),
-                "Failed for point {:?}",
-                point
+                "Failed for point {point:?}"
             );
 
             // Verify the interpolated point is on the surface
@@ -2334,8 +2326,7 @@ mod tests_surface_cubic_interpolation {
             // Verify z is interpolated correctly
             assert!(
                 result.z > dec!(0.0) && result.z < dec!(2.0),
-                "Failed for boundary point {:?}",
-                point
+                "Failed for boundary point {point:?}"
             );
         }
     }
@@ -2393,8 +2384,7 @@ mod tests_surface_cubic_interpolation {
             // Verify z is interpolated reasonably
             assert!(
                 result.z >= dec!(0.0) && result.z <= dec!(2.0),
-                "Failed for extreme point {:?}",
-                point
+                "Failed for extreme point {point:?}"
             );
         }
     }
@@ -2487,8 +2477,7 @@ mod tests_surface_spline_interpolation {
             // Verify z is within reasonable bounds
             assert!(
                 result.z >= dec!(0.0) && result.z <= dec!(2.0),
-                "Failed for point {:?}",
-                point
+                "Failed for point {point:?}"
             );
 
             // Verify the interpolated point is on the surface
@@ -2515,8 +2504,7 @@ mod tests_surface_spline_interpolation {
             // Verify z is interpolated correctly
             assert!(
                 result.z > dec!(0.0) && result.z < dec!(2.0),
-                "Failed for boundary point {:?}",
-                point
+                "Failed for boundary point {point:?}"
             );
         }
     }
@@ -2574,8 +2562,7 @@ mod tests_surface_spline_interpolation {
             // Verify z is interpolated reasonably
             assert!(
                 result.z >= dec!(0.0) && result.z <= dec!(2.0),
-                "Failed for extreme point {:?}",
-                point
+                "Failed for extreme point {point:?}"
             );
         }
     }
@@ -2607,10 +2594,7 @@ mod tests_surface_spline_interpolation {
             // Allow small deviation due to interpolation
             assert!(
                 (result - expected).abs() < dec!(0.1),
-                "Failed for target {}, expected {}, got {}",
-                target,
-                expected,
-                result
+                "Failed for target {target}, expected {expected}, got {result}"
             );
         }
     }
@@ -2628,7 +2612,7 @@ mod tests_surface_spline_interpolation {
 
         for point in edge_points {
             let result = surface.spline_interpolate(point);
-            assert!(result.is_ok(), "Failed for point {:?}", point);
+            assert!(result.is_ok(), "Failed for point {point:?}");
 
             let interpolated_point = result.unwrap();
             assert_eq!(interpolated_point.x, point.x);

@@ -40,8 +40,14 @@ lint:
 	cargo clippy --all-targets --all-features -- -D warnings
 
 .PHONY: lint-fix
-lint-fix: 
-	cargo clippy --fix --all-targets --all-features --allow-dirty --allow-staged -- -D warnings
+lint-fix: lint-fix-plotly
+	cargo clippy --fix --all-targets --all-features --allow-staged --allow-dirty -- -D warnings
+
+.PHONY: lint-fix-plotly
+lint-fix-plotly: 
+	cargo clippy --fix --allow-dirty --package plotly -- -D warnings
+	cargo clippy --fix --allow-dirty --package plotly_kaleido -- -D warnings
+	cargo clippy --fix --allow-dirty --package plotly_derive -- -D warnings
 
 # Clean the project
 .PHONY: clean

@@ -21,8 +21,8 @@ pub enum GraphError {
 impl fmt::Display for GraphError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            GraphError::Render(msg) => write!(f, "Render error: {}", msg),
-            GraphError::Io(err) => write!(f, "IO error: {}", err),
+            GraphError::Render(msg) => write!(f, "Render error: {msg}"),
+            GraphError::Io(err) => write!(f, "IO error: {err}"),
         }
     }
 }

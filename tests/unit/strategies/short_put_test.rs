@@ -212,9 +212,7 @@ fn test_short_put_get_max_loss() {
             let expected_max_loss = Positive::new(96.0).unwrap();
             assert!(
                 (loss.to_f64() - expected_max_loss.to_f64()).abs() < 1.0,
-                "Max loss should be close to {}, but was {}",
-                expected_max_loss,
-                loss
+                "Max loss should be close to {expected_max_loss}, but was {loss}"
             );
 
             // Also verify that the loss is less than the strike price
@@ -230,8 +228,7 @@ fn test_short_put_get_max_loss() {
                     || e.to_string().contains("negative")
                     || e.to_string().contains("infinite")
                     || e.to_string().contains("unlimited"),
-                "Error message should be related to loss calculation: {}",
-                e
+                "Error message should be related to loss calculation: {e}"
             );
         }
     }
@@ -250,9 +247,7 @@ fn test_short_put_calculate_profit_at() {
     let expected_profit = Decimal::new(4, 0);
     assert!(
         (profit_at_strike - expected_profit).abs() < Decimal::new(1, 0),
-        "Profit at strike should be close to {}, but was {}",
-        expected_profit,
-        profit_at_strike
+        "Profit at strike should be close to {expected_profit}, but was {profit_at_strike}"
     );
 
     // Test profit at break-even point (should be close to zero)

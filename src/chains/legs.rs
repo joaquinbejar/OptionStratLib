@@ -93,11 +93,7 @@ impl Display for StrategyLegs<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         match self {
             StrategyLegs::TwoLegs { first, second } => {
-                write!(
-                    f,
-                    "Two Legs Strategy:\n1st Leg: {}\n2nd Leg: {}",
-                    first, second
-                )
+                write!(f, "Two Legs Strategy:\n1st Leg: {first}\n2nd Leg: {second}")
             }
             StrategyLegs::ThreeLegs {
                 first,
@@ -106,8 +102,7 @@ impl Display for StrategyLegs<'_> {
             } => {
                 write!(
                     f,
-                    "Three Legs Strategy:\n1st Leg: {}\n2nd Leg: {}\n3rd Leg: {}",
-                    first, second, third
+                    "Three Legs Strategy:\n1st Leg: {first}\n2nd Leg: {second}\n3rd Leg: {third}"
                 )
             }
             StrategyLegs::FourLegs {
@@ -118,8 +113,7 @@ impl Display for StrategyLegs<'_> {
             } => {
                 write!(
                     f,
-                    "Four Legs Strategy:\n1st Leg: {}\n2nd Leg: {}\n3rd Leg: {}\n4th Leg: {}",
-                    first, second, third, fourth
+                    "Four Legs Strategy:\n1st Leg: {first}\n2nd Leg: {second}\n3rd Leg: {third}\n4th Leg: {fourth}"
                 )
             }
             StrategyLegs::SixLegs {
@@ -132,8 +126,7 @@ impl Display for StrategyLegs<'_> {
             } => {
                 write!(
                     f,
-                    "Six Legs Strategy:\n1st Leg: {}\n2nd Leg: {}\n3rd Leg: {}\n4th Leg: {}\n5th Leg: {}\n6th Leg: {}",
-                    first, second, third, fourth, fifth, sixth
+                    "Six Legs Strategy:\n1st Leg: {first}\n2nd Leg: {second}\n3rd Leg: {third}\n4th Leg: {fourth}\n5th Leg: {fifth}\n6th Leg: {sixth}"
                 )
             }
         }
@@ -268,7 +261,7 @@ mod tests {
             second: &option2,
         };
 
-        let display_string = format!("{}", strategy);
+        let display_string = format!("{strategy}");
         assert!(display_string.contains("Two Legs Strategy"));
         assert!(display_string.contains("1st Leg"));
         assert!(display_string.contains("2nd Leg"));
@@ -288,7 +281,7 @@ mod tests {
             fourth: &option4,
         };
 
-        let display_string = format!("{}", strategy);
+        let display_string = format!("{strategy}");
         assert!(display_string.contains("Four Legs Strategy"));
         assert!(display_string.contains("1st Leg"));
         assert!(display_string.contains("2nd Leg"));
@@ -314,7 +307,7 @@ mod tests {
             sixth: &option6,
         };
 
-        let display_string = format!("{}", strategy);
+        let display_string = format!("{strategy}");
         assert!(display_string.contains("Six Legs Strategy"));
         assert!(display_string.contains("1st Leg"));
         assert!(display_string.contains("2nd Leg"));
@@ -357,7 +350,7 @@ mod tests {
             third: &option3,
         };
 
-        let display_string = format!("{}", strategy);
+        let display_string = format!("{strategy}");
         assert!(display_string.contains("Three Legs Strategy")); // Note: This is actually a bug in the Display implementation
         assert!(display_string.contains("1st Leg"));
         assert!(display_string.contains("2nd Leg"));
