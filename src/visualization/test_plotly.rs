@@ -324,39 +324,37 @@ mod tests_interface {
     #[test]
     #[cfg(feature = "static_export")]
     fn test_write_png() {
-        let graph = create_test_graph_with_series();
-        let temp_path = PathBuf::from("test_output_png.png");
+        use tempfile::tempdir;
 
-        if temp_path.exists() {
-            fs::remove_file(&temp_path).unwrap();
-        }
+        let graph = create_test_graph_with_series();
+        let temp_dir = tempdir().expect("Failed to create temp directory");
+        let temp_path = temp_dir.path().join("test_output_png.png");
 
         let result = graph.write_png(&temp_path);
 
-        if temp_path.exists() {
-            fs::remove_file(&temp_path).unwrap();
+        if let Err(e) = &result {
+            println!("PNG export error: {e}");
         }
 
-        assert!(result.is_ok());
+        assert!(result.is_ok(), "PNG export should succeed");
     }
 
     #[test]
     #[cfg(feature = "static_export")]
     fn test_write_svg() {
-        let graph = create_test_graph_with_surface();
-        let temp_path = PathBuf::from("test_output_svg.svg");
+        use tempfile::tempdir;
 
-        if temp_path.exists() {
-            fs::remove_file(&temp_path).unwrap();
-        }
+        let graph = create_test_graph_with_surface();
+        let temp_dir = tempdir().expect("Failed to create temp directory");
+        let temp_path = temp_dir.path().join("test_output_svg.svg");
 
         let result = graph.write_svg(&temp_path);
 
-        if temp_path.exists() {
-            fs::remove_file(&temp_path).unwrap();
+        if let Err(e) = &result {
+            println!("SVG export error: {e}");
         }
 
-        assert!(result.is_ok());
+        assert!(result.is_ok(), "SVG export should succeed");
     }
 
     // Test for render with HTML OutputType

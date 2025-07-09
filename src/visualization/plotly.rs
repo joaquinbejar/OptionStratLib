@@ -130,16 +130,43 @@ pub trait Graph {
         debug!("Writing PNG to: {}", path.display());
         let cfg = self.graph_config();
 
-        match self.to_plot().write_image(
-            path,
-            ImageFormat::PNG,
-            cfg.width as usize,
-            cfg.height as usize,
-            1.0,
-        ) {
-            Ok(_) => Ok(()),
-            Err(e) => Err(GraphError::Render(format!("Failed to write PNG: {e}"))),
+        // Intentar hasta 3 veces con un pequeño retraso entre intentos
+        // Esto ayuda con problemas de concurrencia en entornos de prueba
+        let mut attempts = 0;
+        let max_attempts = 3;
+
+        while attempts < max_attempts {
+            attempts += 1;
+            debug!("PNG export attempt {} of {}", attempts, max_attempts);
+
+            match self.to_plot().write_image(
+                path,
+                ImageFormat::PNG,
+                cfg.width as usize,
+                cfg.height as usize,
+                1.0,
+            ) {
+                Ok(_) => {
+                    debug!("Successfully wrote PNG to: {}", path.display());
+                    return Ok(());
+                }
+                Err(e) => {
+                    if attempts >= max_attempts {
+                        return Err(GraphError::Render(format!(
+                            "Failed to write PNG after {max_attempts} attempts: {e}"
+                        )));
+                    }
+                    debug!("PNG export attempt {} failed: {}", attempts, e);
+                    // Pequeña pausa antes del siguiente intento
+                    std::thread::sleep(std::time::Duration::from_millis(100));
+                }
+            }
         }
+
+        // No debería llegar aquí, pero por si acaso
+        Err(GraphError::Render(
+            "Failed to write PNG: unexpected error".to_string(),
+        ))
     }
 
     /// Writes the graph data to an HTML file at the specified path.
@@ -243,17 +270,46 @@ pub trait Graph {
     #[cfg(feature = "static_export")]
     fn write_svg(&self, path: &std::path::Path) -> Result<(), GraphError> {
         prepare_file_path(path)?;
+        debug!("Writing SVG to: {}", path.display());
         let cfg = self.graph_config();
-        match self.to_plot().write_image(
-            path,
-            ImageFormat::SVG,
-            cfg.width as usize,
-            cfg.height as usize,
-            1.0,
-        ) {
-            Ok(_) => Ok(()),
-            Err(e) => Err(GraphError::Render(format!("Failed to write SVG: {e}"))),
+
+        // Intentar hasta 3 veces con un pequeño retraso entre intentos
+        // Esto ayuda con problemas de concurrencia en entornos de prueba
+        let mut attempts = 0;
+        let max_attempts = 3;
+
+        while attempts < max_attempts {
+            attempts += 1;
+            debug!("SVG export attempt {} of {}", attempts, max_attempts);
+
+            match self.to_plot().write_image(
+                path,
+                ImageFormat::SVG,
+                cfg.width as usize,
+                cfg.height as usize,
+                1.0,
+            ) {
+                Ok(_) => {
+                    debug!("Successfully wrote SVG to: {}", path.display());
+                    return Ok(());
+                }
+                Err(e) => {
+                    if attempts >= max_attempts {
+                        return Err(GraphError::Render(format!(
+                            "Failed to write SVG after {max_attempts} attempts: {e}"
+                        )));
+                    }
+                    debug!("SVG export attempt {} failed: {}", attempts, e);
+                    // Pequeña pausa antes del siguiente intento
+                    std::thread::sleep(std::time::Duration::from_millis(100));
+                }
+            }
         }
+
+        // No debería llegar aquí, pero por si acaso
+        Err(GraphError::Render(
+            "Failed to write SVG: unexpected error".to_string(),
+        ))
     }
 
     /// Show the plot in browser
@@ -268,9 +324,21 @@ pub trait Graph {
     fn render(&self, output: OutputType) -> Result<(), GraphError> {
         match output {
             #[cfg(feature = "static_export")]
-            OutputType::Png(path) => self.write_png(path)?,
+            OutputType::Png(path) => {
+                debug!("Rendering PNG to: {}", path.display());
+                match self.write_png(path) {
+                    Ok(_) => debug!("Successfully wrote PNG to: {}", path.display()),
+                    Err(e) => return Err(GraphError::Render(format!("Failed to write PNG: {e}"))),
+                }
+            }
             #[cfg(feature = "static_export")]
-            OutputType::Svg(path) => self.write_svg(path)?,
+            OutputType::Svg(path) => {
+                debug!("Rendering SVG to: {}", path.display());
+                match self.write_svg(path) {
+                    Ok(_) => debug!("Successfully wrote SVG to: {}", path.display()),
+                    Err(e) => return Err(GraphError::Render(format!("Failed to write SVG: {e}"))),
+                }
+            }
             OutputType::Browser => self.show()?,
             OutputType::Html(path) => self.to_interactive_html(path)?,
             #[cfg(not(feature = "static_export"))]
