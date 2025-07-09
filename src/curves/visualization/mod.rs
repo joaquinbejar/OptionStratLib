@@ -31,7 +31,7 @@
 //! ]);
 //!
 //! // Simple plot with default settings
-//! #[cfg(feature = "kaleido")]
+//! #[cfg(feature = "static_export")]
 //! {
 //!     let filename = "single_curve_doc.png";
 //!     let filename = PathBuf::from("single_curve_doc.png");
@@ -46,7 +46,7 @@
 //!
 //! // Customized multiple curve plot
 //! let curves = vec![curve.clone(), curve.clone()];
-//! #[cfg(feature = "kaleido")]
+//! #[cfg(feature = "static_export")]
 //! {
 //!     let filename = PathBuf::from("multiple_curves_doc.png");
 //!     curves.plot()

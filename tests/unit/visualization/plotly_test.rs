@@ -22,7 +22,7 @@ mod plotly_tests {
             fn add_trace<T: plotly::Trace + 'static>(&mut self, trace: T) -> &mut Self;
             fn set_layout(&mut self, layout: plotly::Layout) -> &mut Self;
             fn write_html(&self, path: &std::path::Path);
-            fn write_image(&self, path: &std::path::Path, format: plotly::ImageFormat, width: usize, height: usize, scale: f64);
+            fn write_image(&self, path: &std::path::Path, format: plotly::plotly_static::ImageFormat, width: usize, height: usize, scale: f64);
             fn show(&self);
         }
     }

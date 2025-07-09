@@ -22,7 +22,7 @@ release:
 test:
 	LOGLEVEL=WARN cargo test
 	LOGLEVEL=WARN cargo test --features plotly
-	LOGLEVEL=WARN cargo test --features kaleido plotly 
+	LOGLEVEL=WARN cargo test --features static_export plotly 
 
 # Format the code
 .PHONY: fmt
@@ -40,14 +40,8 @@ lint:
 	cargo clippy --all-targets --all-features -- -D warnings
 
 .PHONY: lint-fix
-lint-fix: lint-fix-plotly
+lint-fix: 
 	cargo clippy --fix --all-targets --all-features --allow-staged --allow-dirty -- -D warnings
-
-.PHONY: lint-fix-plotly
-lint-fix-plotly: 
-	cargo clippy --fix --allow-dirty --package plotly -- -D warnings
-	cargo clippy --fix --allow-dirty --package plotly_kaleido -- -D warnings
-	cargo clippy --fix --allow-dirty --package plotly_derive -- -D warnings
 
 # Clean the project
 .PHONY: clean

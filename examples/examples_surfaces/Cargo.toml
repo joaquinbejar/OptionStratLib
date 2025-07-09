@@ -4,8 +4,8 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-optionstratlib = { workspace = true , features = ["plotly", "kaleido"]}
+optionstratlib = { workspace = true , features = ["plotly", "static_export"]}
 tracing = { workspace = true }
 rust_decimal_macros = { workspace = true }
 rust_decimal = { workspace = true }
-plotly = { workspace = true,features = ["kaleido"] }
+plotly = { workspace = true, features = ["static_export_default"] }

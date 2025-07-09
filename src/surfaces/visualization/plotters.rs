@@ -29,7 +29,7 @@
 //! # let surface = Surface::from_vector(points);
 //!
 //! // Create a surface
-//! #[cfg(feature = "kaleido")]
+//! #[cfg(feature = "static_export")]
 //! {
 //!     let dst = PathBuf::from("surface_plot.png");
 //!     // Plot the surface and save to a file

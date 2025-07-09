@@ -243,14 +243,14 @@ impl From<Surface> for GraphData {
 #[derive(Clone, Copy, Debug, PartialEq, Serialize)]
 pub enum OutputType<'a> {
     /// PNG image output with a reference to the file path where it should be saved.
-    #[cfg(feature = "kaleido")]
+    #[cfg(feature = "plotly")]
     Png(&'a PathBuf),
 
     /// HTML document output with a reference to the file path where it should be saved.
     Html(&'a PathBuf),
 
     /// SVG image output with a reference to the file path where it should be saved.
-    #[cfg(feature = "kaleido")]
+    #[cfg(feature = "plotly")]
     Svg(&'a PathBuf),
 
     /// Output directly to the default web browser without saving to a file.

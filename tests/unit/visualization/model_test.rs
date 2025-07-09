@@ -135,8 +135,8 @@ fn test_output_type_variants() {
     let html_output = OutputType::Html(&path);
     assert!(matches!(html_output, OutputType::Html(_)));
 
-    // The following tests are conditionally compiled only when the kaleido feature is enabled
-    #[cfg(feature = "kaleido")]
+    // The following tests are conditionally compiled only when the static_export feature is enabled
+    #[cfg(feature = "static_export")]
     {
         let png_output = OutputType::Png(&path);
         assert!(matches!(png_output, OutputType::Png(_)));

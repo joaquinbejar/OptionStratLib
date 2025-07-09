@@ -1,6 +1,6 @@
 [package]
 name = "optionstratlib"
-version = "0.5.8"
+version = "0.6.0"
 edition = "2024"
 authors = ["Joaquin Bejar <jb@taunais.com>"]
 description = "OptionStratLib is a comprehensive Rust library for options trading and strategy development across multiple asset classes."
@@ -28,16 +28,15 @@ include = [
 [features]
 default = []
 plotly = ["dep:plotly"]
-kaleido = [
-    "plotly",
-    "plotly/kaleido",
-    "plotly/kaleido_download",
+static_export = [
+    "plotly"
 ]
 
 [dependencies]
 chrono = { version = "0.4", features = ["serde"] }
 approx = "0.5"
-plotly = { path = "./vendor/plotly.rs/plotly", version = "0.12.1", default-features = false, optional = true }
+plotly = { version = "0.13.1", default-features = false, optional = true, features = ["static_export_default"] }
+base64 = "0.22"
 statrs = "0.18"
 rand = { version = "0.9" }
 rand_distr = "0.5"
@@ -51,7 +50,7 @@ rayon = { version = "1.10" }
 itertools = "0.14"
 rust_decimal = { version = "1.37", features = ["maths", "serde"] }
 rust_decimal_macros = "1.37"
-zip = "3.0"
+zip = "4.0"
 lazy_static = "1.5"
 uuid = { version = "1.17", features = ["v4", "serde"] }
 
@@ -87,9 +86,6 @@ members = [
     "examples/examples_curves",
     "examples/examples_surfaces",
     "examples/Local",
-    "vendor/plotly.rs/plotly",
-    "vendor/plotly.rs/plotly_derive",
-    "vendor/plotly.rs/plotly_kaleido",
 ]
 
 [workspace.dependencies]
@@ -97,7 +93,7 @@ optionstratlib = { path = "." }
 tracing = "0.1.41"
 rust_decimal = { version = "1.37", features = ["maths", "serde"] }
 rust_decimal_macros = "1.37"
-plotly = { path = "./vendor/plotly.rs/plotly", version = "0.12.1" }
+plotly = { version = "0.13.1", features = ["static_export_default"] }
 chrono = { version = "0.4", features = ["serde"] }
 rand = { version = "0.9" }
 statrs = "0.18"

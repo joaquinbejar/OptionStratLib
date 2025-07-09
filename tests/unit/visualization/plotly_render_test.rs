@@ -1,4 +1,4 @@
-#[cfg(all(feature = "kaleido", feature = "plotly"))]
+#[cfg(all(feature = "static_export", feature = "plotly"))]
 mod plotly_render_tests {
 
     use optionstratlib::visualization::{Graph, GraphConfig, GraphData, OutputType, Series2D};

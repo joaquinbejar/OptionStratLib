@@ -100,7 +100,7 @@
 //!         }
 //!     }
 //! }
-//! #[cfg(feature = "kaleido")]
+//! #[cfg(feature = "static_export")]
 //! {
 //!     // Using the chart
 //!     let data = MyData {
@@ -265,7 +265,7 @@
 //!         line_width: Some(2.0),
 //!     };
 //!     
-//!     #[cfg(feature = "kaleido")]
+//!     #[cfg(feature = "static_export")]
 //!     {
 //!     let chart = SimpleChart { series };
 //!     let filename: PathBuf = PathBuf::from("interactive_chart.html");

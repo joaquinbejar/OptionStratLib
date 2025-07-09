@@ -208,7 +208,7 @@ mod tests_price_option_monte_carlo {
     use crate::simulation::{WalkParams, WalkType, WalkTypeAble};
     use crate::utils::TimeFrame;
     use crate::utils::time::convert_time_frame;
-    #[cfg(feature = "kaleido")]
+    #[cfg(feature = "static_export")]
     use crate::visualization::Graph;
     use crate::{ExpirationDate, OptionStyle, Side, assert_pos_relative_eq, pos};
     use rust_decimal_macros::dec;
@@ -306,7 +306,7 @@ mod tests_price_option_monte_carlo {
             generator_positive,
         );
 
-        #[cfg(feature = "kaleido")]
+        #[cfg(feature = "static_export")]
         simulator
             .write_html("Draws/Simulation/simulator_test_montecarlo.html".as_ref())
             .unwrap();
