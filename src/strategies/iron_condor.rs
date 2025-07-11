@@ -45,7 +45,7 @@ use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use tracing::{error, info};
 
-const IRON_CONDOR_DESCRIPTION: &str = "An Iron Condor is a neutral options strategy combining a bull put spread with a bear call spread. \
+pub const IRON_CONDOR_DESCRIPTION: &str = "An Iron Condor is a neutral options strategy combining a bull put spread with a bear call spread. \
     It involves selling an out-of-the-money put and call while buying further out-of-the-money put and call options. \
     This strategy is used when low volatility is expected and the underlying asset's price is anticipated to remain \
     within a specific range.";
@@ -108,13 +108,13 @@ pub struct IronCondor {
     /// Price points where the strategy neither makes nor loses money
     pub break_even_points: Vec<Positive>,
     /// The short call leg of the strategy (middle-upper strike)
-    short_call: Position,
+    pub short_call: Position,
     /// The short put leg of the strategy (middle-lower strike)
-    short_put: Position,
+    pub short_put: Position,
     /// The long call leg of the strategy (highest strike)
-    long_call: Position,
+    pub long_call: Position,
     /// The long put leg of the strategy (lowest strike)
-    long_put: Position,
+    pub long_put: Position,
 }
 
 impl IronCondor {
