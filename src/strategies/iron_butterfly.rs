@@ -47,7 +47,7 @@ use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use tracing::{error, info};
 
-const IRON_BUTTERFLY_DESCRIPTION: &str = "An Iron Butterfly is a neutral options strategy combining selling an at-the-money put and call \
+pub const IRON_BUTTERFLY_DESCRIPTION: &str = "An Iron Butterfly is a neutral options strategy combining selling an at-the-money put and call \
     while buying an out-of-the-money call and an out-of-the-money put. The short options have the same \
     strike price. This strategy profits from low volatility and time decay, with maximum profit when \
     the underlying price equals the strike price of the short options at expiration.";
@@ -106,13 +106,13 @@ pub struct IronButterfly {
     /// Price points where the strategy neither makes nor loses money
     pub break_even_points: Vec<Positive>,
     /// The short call position at the middle strike
-    short_call: Position,
+    pub short_call: Position,
     /// The short put position at the middle strike
-    short_put: Position,
+    pub short_put: Position,
     /// The long call position at a higher strike price
-    long_call: Position,
+    pub long_call: Position,
     /// The long put position at a lower strike price
-    long_put: Position,
+    pub long_put: Position,
 }
 
 impl IronButterfly {
