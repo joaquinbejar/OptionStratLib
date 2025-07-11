@@ -8,9 +8,9 @@ use optionstratlib::model::Options;
 use optionstratlib::model::types::{OptionStyle, Side};
 use optionstratlib::surfaces::{Point3D, Surface};
 use optionstratlib::utils::setup_logger;
+use optionstratlib::visualization::Graph;
 use optionstratlib::{ExpirationDate, OptionType, Positive, pos};
 use rust_decimal_macros::dec;
-use optionstratlib::visualization::Graph;
 
 fn main() -> Result<(), SurfaceError> {
     setup_logger();
