@@ -51,6 +51,7 @@ use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use tracing::debug;
 
+/// The default description for the Bull Put Spread strategy.
 pub const BULL_PUT_SPREAD_DESCRIPTION: &str = "A bull put spread is created by buying a put option with a lower strike price \
     and simultaneously selling a put option with a higher strike price, both with the same \
     expiration date. This strategy is used when you expect a moderate increase in the underlying \

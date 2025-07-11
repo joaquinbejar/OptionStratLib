@@ -47,6 +47,7 @@ use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use tracing::{error, info};
 
+/// The default description for the Iron Butterfly strategy.
 pub const IRON_BUTTERFLY_DESCRIPTION: &str = "An Iron Butterfly is a neutral options strategy combining selling an at-the-money put and call \
     while buying an out-of-the-money call and an out-of-the-money put. The short options have the same \
     strike price. This strategy profits from low volatility and time decay, with maximum profit when \

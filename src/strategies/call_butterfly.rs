@@ -35,6 +35,7 @@ use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use tracing::{error, info};
 
+/// The default description for the Call Butterfly (Ratio Call Spread) strategy.
 pub const CALL_BUTTERFLY_DESCRIPTION: &str = "A Ratio Call Spread involves buying one call option and selling multiple call options \
     at a higher strike price. This strategy is used when a moderate rise in the underlying \
     asset's price is expected, but with limited upside potential.";

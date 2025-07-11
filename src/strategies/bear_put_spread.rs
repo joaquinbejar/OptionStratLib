@@ -49,6 +49,7 @@ use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use tracing::{debug, info};
 
+/// The default description for the Bear Put Spread strategy.
 pub const BEAR_PUT_SPREAD_DESCRIPTION: &str = "A bear put spread is created by buying a put option with a higher strike price \
     and simultaneously selling a put option with a lower strike price, both with the same \
     expiration date. This strategy is used when you expect a moderate decrease in the underlying \

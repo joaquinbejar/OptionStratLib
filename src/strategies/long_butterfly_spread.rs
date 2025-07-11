@@ -34,6 +34,7 @@ use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use tracing::{debug, info};
 
+/// The default description for the Long Butterfly Spread strategy.
 pub const LONG_BUTTERFLY_DESCRIPTION: &str = "A long butterfly spread is created by buying one call at a lower strike price, \
     selling two calls at a middle strike price, and buying one call at a higher strike price, \
     all with the same expiration date. This strategy profits when the underlying price stays \

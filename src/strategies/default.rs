@@ -16,7 +16,8 @@ impl Default for BullCallSpread {
         BullCallSpread {
             name: "Bull Call Spread".to_string(),
             kind: StrategyType::BullCallSpread,
-            description: crate::strategies::bull_call_spread::BULL_CALL_SPREAD_DESCRIPTION.to_string(),
+            description: crate::strategies::bull_call_spread::BULL_CALL_SPREAD_DESCRIPTION
+                .to_string(),
             break_even_points: Vec::new(),
             long_call: Position::default(),
             short_call: Position::default(),
@@ -28,7 +29,8 @@ impl Default for BearCallSpread {
         BearCallSpread {
             name: "Bear Call Spread".to_string(),
             kind: StrategyType::BearCallSpread,
-            description: crate::strategies::bear_call_spread::BEAR_CALL_SPREAD_DESCRIPTION.to_string(),
+            description: crate::strategies::bear_call_spread::BEAR_CALL_SPREAD_DESCRIPTION
+                .to_string(),
             break_even_points: Vec::new(),
             short_call: Position::default(),
             long_call: Position::default(),
@@ -40,7 +42,8 @@ impl Default for BullPutSpread {
         BullPutSpread {
             name: "Bull Put Spread".to_string(),
             kind: StrategyType::BullPutSpread,
-            description: crate::strategies::bull_put_spread::BULL_PUT_SPREAD_DESCRIPTION.to_string(),
+            description: crate::strategies::bull_put_spread::BULL_PUT_SPREAD_DESCRIPTION
+                .to_string(),
             break_even_points: Vec::new(),
             long_put: Position::default(),
             short_put: Position::default(),
@@ -52,7 +55,8 @@ impl Default for BearPutSpread {
         BearPutSpread {
             name: "Bear Put Spread".to_string(),
             kind: StrategyType::BearPutSpread,
-            description: crate::strategies::bear_put_spread::BEAR_PUT_SPREAD_DESCRIPTION.to_string(),
+            description: crate::strategies::bear_put_spread::BEAR_PUT_SPREAD_DESCRIPTION
+                .to_string(),
             break_even_points: Vec::new(),
             long_put: Position::default(),
             short_put: Position::default(),
@@ -64,7 +68,8 @@ impl Default for LongButterflySpread {
         LongButterflySpread {
             name: "Long Butterfly Spread".to_string(),
             kind: StrategyType::LongButterflySpread,
-            description: crate::strategies::long_butterfly_spread::LONG_BUTTERFLY_DESCRIPTION.to_string(),
+            description: crate::strategies::long_butterfly_spread::LONG_BUTTERFLY_DESCRIPTION
+                .to_string(),
             break_even_points: Vec::new(),
             short_call: Position::default(),
             long_call_low: Position::default(),
@@ -77,7 +82,8 @@ impl Default for ShortButterflySpread {
         ShortButterflySpread {
             name: "Short Butterfly Spread".to_string(),
             kind: StrategyType::ShortButterflySpread,
-            description: crate::strategies::short_butterfly_spread::SHORT_BUTTERFLY_DESCRIPTION.to_string(),
+            description: crate::strategies::short_butterfly_spread::SHORT_BUTTERFLY_DESCRIPTION
+                .to_string(),
             break_even_points: Vec::new(),
             long_call: Position::default(),
             short_call_low: Position::default(),
@@ -175,7 +181,7 @@ impl Default for PoorMansCoveredCall {
 }
 impl Default for CallButterfly {
     fn default() -> Self {
-    CallButterfly {
+        CallButterfly {
             name: "Call Butterfly".to_string(),
             kind: StrategyType::CallButterfly,
             description: crate::strategies::call_butterfly::CALL_BUTTERFLY_DESCRIPTION.to_string(),

@@ -45,6 +45,7 @@ use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use tracing::{error, info};
 
+/// The default description for the Iron Condor strategy.
 pub const IRON_CONDOR_DESCRIPTION: &str = "An Iron Condor is a neutral options strategy combining a bull put spread with a bear call spread. \
     It involves selling an out-of-the-money put and call while buying further out-of-the-money put and call options. \
     This strategy is used when low volatility is expected and the underlying asset's price is anticipated to remain \

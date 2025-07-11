@@ -34,6 +34,7 @@ use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use tracing::{debug, info};
 
+/// The default description for the Short Butterfly Spread strategy.
 pub const SHORT_BUTTERFLY_DESCRIPTION: &str = "A short butterfly spread is created by selling one call at a lower strike price, \
     buying two calls at a middle strike price, and selling one call at a higher strike price, \
     all with the same expiration date. This strategy profits when the underlying price moves \
