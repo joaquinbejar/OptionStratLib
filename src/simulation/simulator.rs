@@ -747,7 +747,7 @@ mod tests {
                 y: Ystep::new(0, initial_price),
             },
             walk_type: WalkType::GeometricBrownian {
-                dt: convert_time_frame(pos!(1.0) / days, &TimeFrame::Hour, &TimeFrame::Day), // TODO
+                dt: convert_time_frame(pos!(1.0) / days, &TimeFrame::Hour, &TimeFrame::Day),
                 drift: dec!(0.0),
                 volatility: std_dev,
             },

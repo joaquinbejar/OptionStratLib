@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-optionstratlib = { workspace = true, features = ["plotly", "kaleido"] }
+optionstratlib = { workspace = true, features = ["plotly", "static_export"] }
 tracing = "0.1.41"
 rust_decimal = { version = "1.36.0", features = ["maths", "serde"] }
 chrono = "0.4.38"

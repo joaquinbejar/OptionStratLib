@@ -73,7 +73,7 @@ mod tests {
 
     impl Greeks for TestStrategy {
         fn get_options(&self) -> Result<Vec<&Options>, GreeksError> {
-            todo!()
+            unimplemented!()
         }
     }
 

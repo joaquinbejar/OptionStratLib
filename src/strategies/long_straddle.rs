@@ -37,6 +37,7 @@ use crate::{
         probabilities::{core::ProbabilityAnalysis, utils::VolatilityAdjustment},
         utils::{FindOptimalSide, OptimizationCriteria},
     },
+    test_strategy_traits,
 };
 use chrono::Utc;
 use num_traits::FromPrimitive;
@@ -63,7 +64,7 @@ use tracing::info;
 /// - Break-even points: Strike price +/- total premium paid
 /// - Ideal market forecast: High volatility, large price movement
 ///
-const LONG_STRADDLE_DESCRIPTION: &str = "Long Straddle strategy involves simultaneously \
+pub const LONG_STRADDLE_DESCRIPTION: &str = "Long Straddle strategy involves simultaneously \
 buying a put and a call option with identical strike prices and expiration dates. \
 Profits from increased volatility and significant price movements in either direction. \
 Maximum loss limited to premium paid with unlimited profit potential. Most effective \
@@ -116,9 +117,9 @@ pub struct LongStraddle {
     /// The price points where profit/loss equals zero (typically two points for a straddle)
     pub break_even_points: Vec<Positive>,
     /// The purchased call option position component
-    long_call: Position,
+    pub long_call: Position,
     /// The purchased put option position component
-    long_put: Position,
+    pub long_put: Position,
 }
 
 impl LongStraddle {
@@ -854,6 +855,8 @@ impl PnLCalculator for LongStraddle {
                 .calculate_pnl_at_expiration(underlying_price)?)
     }
 }
+
+test_strategy_traits!(LongStraddle, test_short_call_implementations);
 
 #[cfg(test)]
 mod tests_long_straddle_probability {

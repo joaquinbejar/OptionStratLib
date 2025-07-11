@@ -69,7 +69,7 @@ mod tests_interface {
 
     use crate::visualization::{Graph, GraphConfig, GraphData, Series2D, Surface3D, TraceMode};
     use rust_decimal_macros::dec;
-    #[cfg(feature = "kaleido")]
+    #[cfg(feature = "static_export")]
     use {
         crate::visualization::{ColorScheme, LineStyle, OutputType},
         plotly::Plot,
@@ -102,13 +102,13 @@ mod tests_interface {
         }
     }
 
-    #[cfg(feature = "kaleido")]
+    #[cfg(feature = "static_export")]
     struct TestGraph {
         data: GraphData,
         config: GraphConfig,
     }
 
-    #[cfg(feature = "kaleido")]
+    #[cfg(feature = "static_export")]
     impl Graph for TestGraph {
         fn graph_data(&self) -> GraphData {
             self.data.clone()
@@ -119,12 +119,12 @@ mod tests_interface {
         }
     }
 
-    #[cfg(feature = "kaleido")]
+    #[cfg(feature = "static_export")]
     trait PlotTestHelper {
         fn has_traces(&self) -> bool;
     }
 
-    #[cfg(feature = "kaleido")]
+    #[cfg(feature = "static_export")]
     impl PlotTestHelper for Plot {
         fn has_traces(&self) -> bool {
             // A plot is valid if it has been created successfully
@@ -133,7 +133,7 @@ mod tests_interface {
         }
     }
 
-    #[cfg(feature = "kaleido")]
+    #[cfg(feature = "static_export")]
     fn create_test_graph_with_series() -> TestGraph {
         let series = Series2D {
             x: vec![dec!(1.0), dec!(2.0), dec!(3.0)],
@@ -163,7 +163,7 @@ mod tests_interface {
         }
     }
 
-    #[cfg(feature = "kaleido")]
+    #[cfg(feature = "static_export")]
     fn create_test_graph_with_multi_series() -> TestGraph {
         let series1 = Series2D {
             x: vec![dec!(1.0), dec!(2.0), dec!(3.0)],
@@ -205,7 +205,7 @@ mod tests_interface {
         }
     }
 
-    #[cfg(feature = "kaleido")]
+    #[cfg(feature = "static_export")]
     fn create_test_graph_with_surface() -> TestGraph {
         let surface = Surface3D {
             x: vec![dec!(0.0), dec!(1.0), dec!(0.0), dec!(1.0)],
@@ -258,7 +258,7 @@ mod tests_interface {
 
     // Tests for to_plot
     #[test]
-    #[cfg(feature = "kaleido")]
+    #[cfg(feature = "static_export")]
     fn test_to_plot_with_series() {
         // Create a graph with Series data
         let graph = create_test_graph_with_series();
@@ -271,7 +271,7 @@ mod tests_interface {
     }
 
     #[test]
-    #[cfg(feature = "kaleido")]
+    #[cfg(feature = "static_export")]
     fn test_to_plot_with_multi_series() {
         // Create a graph with multiple Series
         let graph = create_test_graph_with_multi_series();
@@ -284,7 +284,7 @@ mod tests_interface {
     }
 
     #[test]
-    #[cfg(feature = "kaleido")]
+    #[cfg(feature = "static_export")]
     fn test_to_plot_with_surface() {
         // Create a graph with Surface data
         let graph = create_test_graph_with_surface();
@@ -298,7 +298,7 @@ mod tests_interface {
 
     // Tests for write_html
     #[test]
-    #[cfg(feature = "kaleido")]
+    #[cfg(feature = "static_export")]
     fn test_write_html() {
         // Create a graph with multiple Series
         let graph = create_test_graph_with_multi_series();
@@ -322,47 +322,45 @@ mod tests_interface {
     }
 
     #[test]
-    #[cfg(feature = "kaleido")]
+    #[cfg(feature = "static_export")]
     fn test_write_png() {
-        let graph = create_test_graph_with_series();
-        let temp_path = PathBuf::from("test_output_png.png");
+        use tempfile::tempdir;
 
-        if temp_path.exists() {
-            fs::remove_file(&temp_path).unwrap();
-        }
+        let graph = create_test_graph_with_series();
+        let temp_dir = tempdir().expect("Failed to create temp directory");
+        let temp_path = temp_dir.path().join("test_output_png.png");
 
         let result = graph.write_png(&temp_path);
 
-        if temp_path.exists() {
-            fs::remove_file(&temp_path).unwrap();
+        if let Err(e) = &result {
+            println!("PNG export error: {e}");
         }
 
-        assert!(result.is_ok());
+        assert!(result.is_ok(), "PNG export should succeed");
     }
 
     #[test]
-    #[cfg(feature = "kaleido")]
+    #[cfg(feature = "static_export")]
     fn test_write_svg() {
-        let graph = create_test_graph_with_surface();
-        let temp_path = PathBuf::from("test_output_svg.svg");
+        use tempfile::tempdir;
 
-        if temp_path.exists() {
-            fs::remove_file(&temp_path).unwrap();
-        }
+        let graph = create_test_graph_with_surface();
+        let temp_dir = tempdir().expect("Failed to create temp directory");
+        let temp_path = temp_dir.path().join("test_output_svg.svg");
 
         let result = graph.write_svg(&temp_path);
 
-        if temp_path.exists() {
-            fs::remove_file(&temp_path).unwrap();
+        if let Err(e) = &result {
+            println!("SVG export error: {e}");
         }
 
-        assert!(result.is_ok());
+        assert!(result.is_ok(), "SVG export should succeed");
     }
 
     // Test for render with HTML OutputType
     // (PNG and SVG are commented out because they require kaleido)
     #[test]
-    #[cfg(feature = "kaleido")]
+    #[cfg(feature = "static_export")]
     fn test_render_with_html_output_type() {
         let graph = create_test_graph_with_series();
 
@@ -411,7 +409,7 @@ mod tests_interface {
 
     // Test for to_interactive_html
     #[test]
-    #[cfg(feature = "kaleido")]
+    #[cfg(feature = "static_export")]
     fn test_to_interactive_html() {
         // Create a graph with multiple Series
         let graph = create_test_graph_with_multi_series();

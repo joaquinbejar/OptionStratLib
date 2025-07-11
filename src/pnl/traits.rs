@@ -138,11 +138,11 @@ mod tests_pnl_calculator {
 
     impl TransactionAble for DummyOption {
         fn add_transaction(&mut self, _transaction: Transaction) -> Result<(), TransactionError> {
-            todo!()
+            unimplemented!()
         }
 
         fn get_transactions(&self) -> Result<Vec<Transaction>, TransactionError> {
-            todo!()
+            unimplemented!()
         }
     }
 

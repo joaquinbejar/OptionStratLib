@@ -1,17 +1,28 @@
 use super::base::{BreakEvenable, Positionable, StrategyType};
-use crate::error::StrategyError;
+use crate::chains::OptionChain;
 use crate::error::strategies::ProfitLossErrorKind;
-use crate::model::types::OptionBasicType;
-use crate::pricing::Profit;
-use crate::strategies::{BasicAble, Strategies, Validable};
-use crate::{
-    ExpirationDate, Options, Positive,
-    error::position::{PositionError, PositionValidationErrorKind},
-    model::{
-        position::Position,
-        types::{OptionStyle, OptionType, Side},
-    },
+use crate::error::{
+    GreeksError, ProbabilityError, StrategyError,
+    position::{PositionError, PositionValidationErrorKind},
 };
+use crate::greeks::Greeks;
+use crate::model::{
+    ProfitLossRange,
+    position::Position,
+    types::{OptionBasicType, OptionStyle, OptionType, Side},
+};
+use crate::pnl::{PnL, PnLCalculator};
+use crate::pricing::payoff::Profit;
+use crate::strategies::base::Optimizable;
+use crate::strategies::delta_neutral::DeltaNeutrality;
+use crate::strategies::probabilities::core::ProbabilityAnalysis;
+use crate::strategies::probabilities::utils::{PriceTrend, VolatilityAdjustment};
+use crate::strategies::utils::OptimizationCriteria;
+use crate::strategies::{
+    BasicAble, DeltaAdjustment, FindOptimalSide, Strategable, Strategies, StrategyConstructor,
+    Validable,
+};
+use crate::{ExpirationDate, Options, Positive, test_strategy_traits};
 use chrono::Utc;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -384,4 +395,73 @@ impl Positionable for LongPut {
     }
 }
 
-// test_strategy_traits!(LongPut, test_long_put_implementations);
+impl StrategyConstructor for LongPut {
+    fn get_strategy(_vec_positions: &[Position]) -> Result<Self, StrategyError> {
+        todo!()
+    }
+}
+
+impl Optimizable for LongPut {
+    type Strategy = Self;
+
+    fn find_optimal(
+        &mut self,
+        _option_chain: &OptionChain,
+        _side: FindOptimalSide,
+        _criteria: OptimizationCriteria,
+    ) {
+        todo!()
+    }
+}
+
+impl ProbabilityAnalysis for LongPut {
+    fn expected_value(
+        &self,
+        _volatility_adj: Option<VolatilityAdjustment>,
+        _trend: Option<PriceTrend>,
+    ) -> Result<Positive, ProbabilityError> {
+        todo!()
+    }
+
+    fn get_profit_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
+        todo!()
+    }
+
+    fn get_loss_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
+        todo!()
+    }
+}
+
+impl Greeks for LongPut {
+    fn get_options(&self) -> Result<Vec<&Options>, GreeksError> {
+        todo!()
+    }
+}
+
+impl DeltaNeutrality for LongPut {}
+
+impl PnLCalculator for LongPut {
+    fn calculate_pnl(
+        &self,
+        _market_price: &Positive,
+        _expiration_date: ExpirationDate,
+        _implied_volatility: &Positive,
+    ) -> Result<PnL, Box<dyn Error>> {
+        todo!()
+    }
+
+    fn calculate_pnl_at_expiration(
+        &self,
+        _underlying_price: &Positive,
+    ) -> Result<PnL, Box<dyn Error>> {
+        todo!()
+    }
+
+    fn adjustments_pnl(&self, _adjustment: &DeltaAdjustment) -> Result<PnL, Box<dyn Error>> {
+        todo!()
+    }
+}
+
+impl Strategable for LongPut {}
+
+test_strategy_traits!(LongPut, test_long_put_implementations);

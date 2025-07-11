@@ -36,6 +36,7 @@ use crate::{
         probabilities::{core::ProbabilityAnalysis, utils::VolatilityAdjustment},
         utils::{FindOptimalSide, OptimizationCriteria, calculate_price_range},
     },
+    test_strategy_traits,
 };
 use chrono::Utc;
 use num_traits::FromPrimitive;
@@ -994,6 +995,8 @@ impl PnLCalculator for LongStrangle {
         Ok(pnl)
     }
 }
+
+test_strategy_traits!(LongStrangle, test_short_call_implementations);
 
 #[cfg(test)]
 mod tests_long_strangle_probability {

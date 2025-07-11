@@ -42,6 +42,7 @@ use crate::{
         probabilities::{core::ProbabilityAnalysis, utils::VolatilityAdjustment},
         utils::{FindOptimalSide, OptimizationCriteria},
     },
+    test_strategy_traits,
 };
 use chrono::Utc;
 use rust_decimal::Decimal;
@@ -50,7 +51,8 @@ use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use tracing::{debug, error, info};
 
-const BULL_CALL_SPREAD_DESCRIPTION: &str = "A bull call spread is created by buying a call option with a lower strike price \
+/// The default description for the Bull Call Spread strategy.
+pub const BULL_CALL_SPREAD_DESCRIPTION: &str = "A bull call spread is created by buying a call option with a lower strike price \
     and simultaneously selling a call option with a higher strike price, both with the same \
     expiration date. This strategy is used when you expect a moderate increase in the underlying \
     asset's price. The maximum profit is limited to the difference between strike prices minus \
@@ -87,10 +89,10 @@ pub struct BullCallSpread {
     pub break_even_points: Vec<Positive>,
 
     /// The long call position (lower strike price).
-    long_call: Position,
+    pub long_call: Position,
 
     /// The short call position (higher strike price).
-    short_call: Position,
+    pub short_call: Position,
 }
 
 impl BullCallSpread {
@@ -856,6 +858,9 @@ impl PnLCalculator for BullCallSpread {
                 .calculate_pnl_at_expiration(underlying_price)?)
     }
 }
+
+test_strategy_traits!(BullCallSpread, test_short_call_implementations);
+
 #[cfg(test)]
 fn bull_call_spread_test() -> BullCallSpread {
     use rust_decimal_macros::dec;

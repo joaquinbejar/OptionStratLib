@@ -1,6 +1,7 @@
 use optionstratlib::error::GraphError;
 use optionstratlib::visualization::{Surface3D, make_surface};
-use plotly::{ImageFormat, Layout, Plot, common::Title};
+use plotly::plotly_static::ImageFormat;
+use plotly::{Layout, Plot, common::Title};
 use rust_decimal::Decimal;
 use rust_decimal::prelude::FromPrimitive;
 use std::error::Error;

@@ -6,7 +6,7 @@ edition = "2024"
 [dependencies]
 statrs = { workspace = true }
 rand = { workspace = true }
-optionstratlib = { workspace = true , features = ["plotly", "kaleido"]}
+optionstratlib = { workspace = true , features = ["plotly", "static_export"]}
 tracing = { workspace = true }
 rust_decimal_macros = { workspace = true }
 rust_decimal = { workspace = true }

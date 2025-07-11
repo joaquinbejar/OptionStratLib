@@ -1,7 +1,7 @@
 #![allow(unknown_lints)]
 #![allow(clippy::literal_string_with_formatting_args)]
 
-//! # OptionStratLib v0.5.8: Financial Options Library
+//! # OptionStratLib v0.6.0: Financial Options Library
 //!
 //! ## Table of Contents
 //! 1. [Introduction](#introduction)
@@ -653,7 +653,7 @@
 //!     info!("Profit Ratio: {:.2}%", strategy.get_profit_ratio()?);
 //!
 //!     // Generate visualization and save to HTML file
-//!     #[cfg(feature = "kaleido")]
+//!     #[cfg(feature = "static_export")]
 //!     {
 //!         let file_path = "Draws/Strategy/bull_call_spread_profit_loss_chart.html".as_ref();
 //!         strategy.write_html(file_path)?;
@@ -707,7 +707,7 @@
 //!         line_width: Some(2.0),
 //!     };
 //!
-//!     #[cfg(feature = "kaleido")]
+//!     #[cfg(feature = "static_export")]
 //!     {
 //!         let chart = SimpleChart { series };
 //!         let filename: PathBuf = PathBuf::from("interactive_chart.html");

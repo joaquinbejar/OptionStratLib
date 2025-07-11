@@ -1,11 +1,14 @@
 use crate::error::GraphError;
 use crate::utils::file::prepare_file_path;
+use crate::visualization::OutputType;
 use crate::visualization::{GraphConfig, GraphData, make_scatter, make_surface, pick_color};
 use plotly::layout::Axis;
 use plotly::{Layout, Plot, common};
 
-#[cfg(feature = "kaleido")]
-use {crate::visualization::OutputType, plotly::ImageFormat, tracing::debug};
+#[cfg(feature = "static_export")]
+use plotly::plotly_static::ImageFormat;
+#[cfg(feature = "static_export")]
+use tracing::debug;
 
 pub trait Graph {
     /// Return the raw data ready for plotting.
@@ -121,25 +124,49 @@ pub trait Graph {
     /// Modifying global state like environment variables in a multithreaded context can lead to undefined behavior.
     /// Ensure this function is used in a controlled environment where such changes are safe.
     ///
-    #[cfg(feature = "kaleido")]
+    #[cfg(feature = "static_export")]
     fn write_png(&self, path: &std::path::Path) -> Result<(), GraphError> {
-        unsafe {
-            std::env::set_var("LC_ALL", "en_US.UTF-8");
-            std::env::set_var("LANG", "en_US.UTF-8");
-        }
-
         prepare_file_path(path)?;
         debug!("Writing PNG to: {}", path.display());
         let cfg = self.graph_config();
 
-        self.to_plot().write_image(
-            path,
-            ImageFormat::PNG,
-            cfg.width as usize,
-            cfg.height as usize,
-            1.0,
-        );
-        Ok(())
+        // Intentar hasta 3 veces con un pequeño retraso entre intentos
+        // Esto ayuda con problemas de concurrencia en entornos de prueba
+        let mut attempts = 0;
+        let max_attempts = 3;
+
+        while attempts < max_attempts {
+            attempts += 1;
+            debug!("PNG export attempt {} of {}", attempts, max_attempts);
+
+            match self.to_plot().write_image(
+                path,
+                ImageFormat::PNG,
+                cfg.width as usize,
+                cfg.height as usize,
+                1.0,
+            ) {
+                Ok(_) => {
+                    debug!("Successfully wrote PNG to: {}", path.display());
+                    return Ok(());
+                }
+                Err(e) => {
+                    if attempts >= max_attempts {
+                        return Err(GraphError::Render(format!(
+                            "Failed to write PNG after {max_attempts} attempts: {e}"
+                        )));
+                    }
+                    debug!("PNG export attempt {} failed: {}", attempts, e);
+                    // Pequeña pausa antes del siguiente intento
+                    std::thread::sleep(std::time::Duration::from_millis(100));
+                }
+            }
+        }
+
+        // No debería llegar aquí, pero por si acaso
+        Err(GraphError::Render(
+            "Failed to write PNG: unexpected error".to_string(),
+        ))
     }
 
     /// Writes the graph data to an HTML file at the specified path.
@@ -240,42 +267,89 @@ pub trait Graph {
     /// - The file path cannot be prepared (e.g., due to permissions issues or invalid path).
     /// - An error occurs during the conversion or writing process.
     ///
-    #[cfg(feature = "kaleido")]
+    #[cfg(feature = "static_export")]
     fn write_svg(&self, path: &std::path::Path) -> Result<(), GraphError> {
         prepare_file_path(path)?;
+        debug!("Writing SVG to: {}", path.display());
         let cfg = self.graph_config();
-        self.to_plot().write_image(
-            path,
-            ImageFormat::SVG,
-            cfg.width as usize,
-            cfg.height as usize,
-            1.0,
-        );
-        Ok(())
+
+        // Intentar hasta 3 veces con un pequeño retraso entre intentos
+        // Esto ayuda con problemas de concurrencia en entornos de prueba
+        let mut attempts = 0;
+        let max_attempts = 3;
+
+        while attempts < max_attempts {
+            attempts += 1;
+            debug!("SVG export attempt {} of {}", attempts, max_attempts);
+
+            match self.to_plot().write_image(
+                path,
+                ImageFormat::SVG,
+                cfg.width as usize,
+                cfg.height as usize,
+                1.0,
+            ) {
+                Ok(_) => {
+                    debug!("Successfully wrote SVG to: {}", path.display());
+                    return Ok(());
+                }
+                Err(e) => {
+                    if attempts >= max_attempts {
+                        return Err(GraphError::Render(format!(
+                            "Failed to write SVG after {max_attempts} attempts: {e}"
+                        )));
+                    }
+                    debug!("SVG export attempt {} failed: {}", attempts, e);
+                    // Pequeña pausa antes del siguiente intento
+                    std::thread::sleep(std::time::Duration::from_millis(100));
+                }
+            }
+        }
+
+        // No debería llegar aquí, pero por si acaso
+        Err(GraphError::Render(
+            "Failed to write SVG: unexpected error".to_string(),
+        ))
     }
 
     /// Show the plot in browser
-    #[cfg(feature = "kaleido")]
-    fn show(&self) {
+    #[cfg(feature = "plotly")]
+    fn show(&self) -> Result<(), GraphError> {
         self.to_plot().show();
+        Ok(())
     }
 
     /// One‑stop rendering with error propagation.
-    #[cfg(feature = "kaleido")]
+    #[cfg(feature = "plotly")]
     fn render(&self, output: OutputType) -> Result<(), GraphError> {
         match output {
-            OutputType::Png(path) => self.write_png(path)?,
-            OutputType::Svg(path) => self.write_svg(path)?,
-            OutputType::Html(path) => self.write_html(path)?,
-            OutputType::Browser => self.show(),
+            #[cfg(feature = "static_export")]
+            OutputType::Png(path) => {
+                debug!("Rendering PNG to: {}", path.display());
+                match self.write_png(path) {
+                    Ok(_) => debug!("Successfully wrote PNG to: {}", path.display()),
+                    Err(e) => return Err(GraphError::Render(format!("Failed to write PNG: {e}"))),
+                }
+            }
+            #[cfg(feature = "static_export")]
+            OutputType::Svg(path) => {
+                debug!("Rendering SVG to: {}", path.display());
+                match self.write_svg(path) {
+                    Ok(_) => debug!("Successfully wrote SVG to: {}", path.display()),
+                    Err(e) => return Err(GraphError::Render(format!("Failed to write SVG: {e}"))),
+                }
+            }
+            OutputType::Browser => self.show()?,
+            OutputType::Html(path) => self.to_interactive_html(path)?,
+            #[cfg(not(feature = "static_export"))]
+            _ => {}
         }
         Ok(())
     }
 
     /// Generate interactive HTML with hover info + annotations.
-    #[cfg(feature = "kaleido")]
+    #[cfg(feature = "plotly")]
     fn to_interactive_html(&self, path: &std::path::Path) -> Result<(), GraphError> {
-        self.write_html(path)?;
-        Ok(())
+        self.write_html(path)
     }
 }

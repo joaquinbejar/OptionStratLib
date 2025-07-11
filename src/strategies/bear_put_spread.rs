@@ -41,6 +41,7 @@ use crate::{
         probabilities::{core::ProbabilityAnalysis, utils::VolatilityAdjustment},
         utils::{FindOptimalSide, OptimizationCriteria},
     },
+    test_strategy_traits,
 };
 use chrono::Utc;
 use rust_decimal::Decimal;
@@ -49,7 +50,8 @@ use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use tracing::{debug, info};
 
-const BEAR_PUT_SPREAD_DESCRIPTION: &str = "A bear put spread is created by buying a put option with a higher strike price \
+/// The default description for the Bear Put Spread strategy.
+pub const BEAR_PUT_SPREAD_DESCRIPTION: &str = "A bear put spread is created by buying a put option with a higher strike price \
     and simultaneously selling a put option with a lower strike price, both with the same \
     expiration date. This strategy is used when you expect a moderate decrease in the underlying \
     asset's price. The maximum profit is limited to the difference between strike prices minus \
@@ -78,9 +80,9 @@ pub struct BearPutSpread {
     /// The price points at which the strategy breaks even (neither profit nor loss).
     pub break_even_points: Vec<Positive>,
     /// The long put position with the higher strike price.
-    long_put: Position,
+    pub long_put: Position,
     /// The short put position with the lower strike price.
-    short_put: Position,
+    pub short_put: Position,
 }
 
 impl BearPutSpread {
@@ -839,6 +841,8 @@ impl PnLCalculator for BearPutSpread {
                 .calculate_pnl_at_expiration(underlying_price)?)
     }
 }
+
+test_strategy_traits!(BearPutSpread, test_short_call_implementations);
 
 #[cfg(test)]
 mod tests_bear_put_spread_strategy {

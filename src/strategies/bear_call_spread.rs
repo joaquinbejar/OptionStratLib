@@ -42,6 +42,7 @@ use crate::{
         probabilities::{core::ProbabilityAnalysis, utils::VolatilityAdjustment},
         utils::{FindOptimalSide, OptimizationCriteria},
     },
+    test_strategy_traits,
 };
 use chrono::Utc;
 use rust_decimal::Decimal;
@@ -50,7 +51,8 @@ use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use tracing::debug;
 
-const BEAR_CALL_SPREAD_DESCRIPTION: &str = "A bear call spread is created by selling a call option with a lower strike price \
+/// The default description for the Bear Call Spread strategy.
+pub const BEAR_CALL_SPREAD_DESCRIPTION: &str = "A bear call spread is created by selling a call option with a lower strike price \
     and simultaneously buying a call option with a higher strike price, both with the same \
     expiration date. This strategy is used when you expect a moderate decline in the underlying \
     asset's price. The maximum profit is limited to the net credit received, while the maximum \
@@ -82,10 +84,10 @@ pub struct BearCallSpread {
     pub break_even_points: Vec<Positive>,
 
     /// The short call position (call option sold at the lower strike price).
-    short_call: Position,
+    pub short_call: Position,
 
     /// The long call position (call option purchased at the higher strike price).
-    long_call: Position,
+    pub long_call: Position,
 }
 
 impl BearCallSpread {
@@ -843,6 +845,8 @@ impl PnLCalculator for BearCallSpread {
                 .calculate_pnl_at_expiration(underlying_price)?)
     }
 }
+
+test_strategy_traits!(BearCallSpread, test_short_call_implementations);
 
 #[cfg(test)]
 mod tests_bear_call_spread_strategies {

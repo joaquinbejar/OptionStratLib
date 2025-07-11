@@ -36,6 +36,7 @@ use crate::{
         probabilities::{core::ProbabilityAnalysis, utils::VolatilityAdjustment},
         utils::{FindOptimalSide, OptimizationCriteria},
     },
+    test_strategy_traits,
 };
 use chrono::Utc;
 use num_traits::FromPrimitive;
@@ -45,7 +46,8 @@ use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use tracing::{error, info};
 
-const IRON_CONDOR_DESCRIPTION: &str = "An Iron Condor is a neutral options strategy combining a bull put spread with a bear call spread. \
+/// The default description for the Iron Condor strategy.
+pub const IRON_CONDOR_DESCRIPTION: &str = "An Iron Condor is a neutral options strategy combining a bull put spread with a bear call spread. \
     It involves selling an out-of-the-money put and call while buying further out-of-the-money put and call options. \
     This strategy is used when low volatility is expected and the underlying asset's price is anticipated to remain \
     within a specific range.";
@@ -108,13 +110,13 @@ pub struct IronCondor {
     /// Price points where the strategy neither makes nor loses money
     pub break_even_points: Vec<Positive>,
     /// The short call leg of the strategy (middle-upper strike)
-    short_call: Position,
+    pub short_call: Position,
     /// The short put leg of the strategy (middle-lower strike)
-    short_put: Position,
+    pub short_put: Position,
     /// The long call leg of the strategy (highest strike)
-    long_call: Position,
+    pub long_call: Position,
     /// The long put leg of the strategy (lowest strike)
-    long_put: Position,
+    pub long_put: Position,
 }
 
 impl IronCondor {
@@ -1117,6 +1119,8 @@ impl PnLCalculator for IronCondor {
                 .calculate_pnl_at_expiration(underlying_price)?)
     }
 }
+
+test_strategy_traits!(IronCondor, test_short_call_implementations);
 
 #[cfg(test)]
 mod tests_iron_condor {

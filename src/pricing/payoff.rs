@@ -217,7 +217,11 @@ pub trait Profit {
     /// * `ChartPoint<(f64, f64)>` - A formatted chart point with coordinates (price, profit),
     ///   styling, and a formatted profit label
     fn get_point_at_price(&self, _price: &Positive) -> Result<(Decimal, Decimal), Box<dyn Error>> {
-        todo!()
+        let profit = self.calculate_profit_at(_price)?;
+        let price: Decimal = _price.into();
+        let point = (price, profit);
+        trace!("get_point_at_price - point: {:?}", point);
+        Ok(point)
     }
 }
 

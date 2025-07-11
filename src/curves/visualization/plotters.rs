@@ -23,7 +23,7 @@
 //!             Point2D::new(Decimal::ZERO, Decimal::ONE),  // p21
 //!             Point2D::new(Decimal::ONE, Decimal::TWO),   // p22
 //!         ]);
-//! #[cfg(feature = "kaleido")]
+//! #[cfg(feature = "static_export")]
 //! {
 //!     let filename = PathBuf::from("single_curve.png");
 //!     curve.plot()
@@ -213,7 +213,7 @@ mod tests {
             curve.write_html(file_path_html).unwrap();
             cleanup_image(file_path_html);
 
-            #[cfg(feature = "kaleido")]
+            #[cfg(feature = "static_export")]
             {
                 let file_path_png = "single_curve_test.png".as_ref();
                 curve
@@ -256,7 +256,7 @@ mod tests {
             curve_vector.write_html(file_path_html).unwrap();
             cleanup_image(file_path_html);
 
-            #[cfg(feature = "kaleido")]
+            #[cfg(feature = "static_export")]
             {
                 let file_path_png = "multiple_curves_test.png".as_ref();
                 curve_vector
@@ -290,7 +290,7 @@ mod tests {
             curve.write_html(file_path_html).unwrap();
             cleanup_image(file_path_html);
 
-            #[cfg(feature = "kaleido")]
+            #[cfg(feature = "static_export")]
             {
                 let file_path_png = "single_curve_test.png".as_ref();
                 curve
@@ -320,7 +320,7 @@ mod tests {
             curve_vector.write_html(file_path_html).unwrap();
             cleanup_image(file_path_html);
 
-            #[cfg(feature = "kaleido")]
+            #[cfg(feature = "static_export")]
             {
                 let file_path_png = "multiple_curves_test.png".as_ref();
                 curve_vector
@@ -348,7 +348,7 @@ mod tests {
             curve_vector.write_html(file_path_html).unwrap();
             cleanup_image(file_path_html);
 
-            #[cfg(feature = "kaleido")]
+            #[cfg(feature = "static_export")]
             {
                 let file_path_png = "thick_line_curves_test.png".as_ref();
                 curve_vector

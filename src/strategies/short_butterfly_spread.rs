@@ -26,6 +26,7 @@ use crate::{
         probabilities::{core::ProbabilityAnalysis, utils::VolatilityAdjustment},
         utils::{FindOptimalSide, OptimizationCriteria},
     },
+    test_strategy_traits,
 };
 use chrono::Utc;
 use rust_decimal::Decimal;
@@ -34,7 +35,8 @@ use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use tracing::{debug, info};
 
-const SHORT_BUTTERFLY_DESCRIPTION: &str = "A short butterfly spread is created by selling one call at a lower strike price, \
+/// The default description for the Short Butterfly Spread strategy.
+pub const SHORT_BUTTERFLY_DESCRIPTION: &str = "A short butterfly spread is created by selling one call at a lower strike price, \
     buying two calls at a middle strike price, and selling one call at a higher strike price, \
     all with the same expiration date. This strategy profits when the underlying price moves \
     significantly away from the middle strike price in either direction.";
@@ -62,11 +64,11 @@ pub struct ShortButterflySpread {
     /// The price points at which the strategy breaks even (typically two points)
     pub break_even_points: Vec<Positive>,
     /// The short call position at the lowest strike price
-    long_call: Position,
+    pub long_call: Position,
     /// The first short call position at the middle strike price
-    short_call_low: Position,
+    pub short_call_low: Position,
     /// The second short call position at the middle strike price
-    short_call_high: Position,
+    pub short_call_high: Position,
 }
 
 impl ShortButterflySpread {
@@ -1026,6 +1028,8 @@ impl PnLCalculator for ShortButterflySpread {
                 .calculate_pnl_at_expiration(underlying_price)?)
     }
 }
+
+test_strategy_traits!(ShortButterflySpread, test_short_call_implementations);
 
 #[cfg(test)]
 mod tests_short_butterfly_spread {
