@@ -42,6 +42,7 @@ use crate::{
         probabilities::{core::ProbabilityAnalysis, utils::VolatilityAdjustment},
         utils::{FindOptimalSide, OptimizationCriteria},
     },
+    test_strategy_traits,
 };
 use chrono::Utc;
 use rust_decimal::Decimal;
@@ -857,6 +858,9 @@ impl PnLCalculator for BullCallSpread {
                 .calculate_pnl_at_expiration(underlying_price)?)
     }
 }
+
+test_strategy_traits!(BullCallSpread, test_short_call_implementations);
+
 #[cfg(test)]
 fn bull_call_spread_test() -> BullCallSpread {
     use rust_decimal_macros::dec;

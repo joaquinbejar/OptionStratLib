@@ -2,7 +2,6 @@ use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, StrategyBasics, StrategyType, Validable,
 };
 use crate::error::strategies::BreakEvenErrorKind;
-use crate::spos;
 use crate::{
     ExpirationDate, Options, Positive,
     chains::{StrategyLegs, chain::OptionChain, utils::OptionDataGroup},
@@ -28,6 +27,7 @@ use crate::{
         utils::{FindOptimalSide, OptimizationCriteria},
     },
 };
+use crate::{spos, test_strategy_traits};
 use chrono::Utc;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -1015,6 +1015,8 @@ impl PnLCalculator for CallButterfly {
                 .calculate_pnl_at_expiration(underlying_price)?)
     }
 }
+
+test_strategy_traits!(CallButterfly, test_short_call_implementations);
 
 #[cfg(test)]
 mod tests_call_butterfly {
