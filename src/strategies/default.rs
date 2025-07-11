@@ -58,7 +58,14 @@ impl Default for LongStraddle {
 }
 impl Default for ShortStraddle {
     fn default() -> Self {
-        todo!()
+        ShortStraddle {
+            name: "Short Straddle".to_string(),
+            kind: StrategyType::ShortStraddle,
+            description: crate::strategies::short_straddle::SHORT_STRADDLE_DESCRIPTION.to_string(),
+            break_even_points: Vec::new(),
+            short_call: Position::default(),
+            short_put: Position::default(),
+        }
     }
 }
 impl Default for LongStrangle {

@@ -62,7 +62,7 @@ use tracing::{info, trace};
 /// - Maximum loss: Unlimited
 /// - Break-even points: Strike price +/- total premium received
 /// - Ideal market forecast: Range-bound, low volatility
-const SHORT_STRADDLE_DESCRIPTION: &str = "Short Straddle strategy involves simultaneously \
+pub const SHORT_STRADDLE_DESCRIPTION: &str = "Short Straddle strategy involves simultaneously \
 selling a put and a call option with identical strike prices and expiration dates. \
 Profits from decreased volatility and time decay, with maximum gain limited to premium \
 received and unlimited potential loss. Most effective in range-bound markets with low \
@@ -124,9 +124,9 @@ pub struct ShortStraddle {
     /// Price points where the strategy neither makes nor loses money
     pub break_even_points: Vec<Positive>,
     /// The short call leg of the strategy
-    short_call: Position,
+    pub short_call: Position,
     /// The short put leg of the strategy  
-    short_put: Position,
+    pub short_put: Position,
 }
 
 impl ShortStraddle {
