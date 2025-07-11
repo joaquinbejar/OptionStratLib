@@ -26,6 +26,7 @@ use crate::{
         probabilities::{core::ProbabilityAnalysis, utils::VolatilityAdjustment},
         utils::{FindOptimalSide, OptimizationCriteria},
     },
+    test_strategy_traits,
 };
 use chrono::Utc;
 use rust_decimal::Decimal;
@@ -1055,6 +1056,8 @@ impl PnLCalculator for LongButterflySpread {
                 .calculate_pnl_at_expiration(underlying_price)?)
     }
 }
+
+test_strategy_traits!(LongButterflySpread, test_short_call_implementations);
 
 #[cfg(test)]
 mod tests_long_butterfly_spread {

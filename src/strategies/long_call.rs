@@ -1,14 +1,13 @@
 use super::base::{BreakEvenable, Positionable, StrategyType};
 use crate::chains::OptionChain;
-use crate::error::{
-    position::{PositionError, PositionValidationErrorKind},
-    GreeksError,
-    ProbabilityError,
-    StrategyError,
-};
 use crate::error::strategies::ProfitLossErrorKind;
+use crate::error::{
+    GreeksError, ProbabilityError, StrategyError,
+    position::{PositionError, PositionValidationErrorKind},
+};
 use crate::greeks::Greeks;
-use crate::model::{ProfitLossRange,
+use crate::model::{
+    ProfitLossRange,
     position::Position,
     types::{OptionBasicType, OptionStyle, OptionType, Side},
 };
@@ -19,7 +18,9 @@ use crate::strategies::delta_neutral::DeltaNeutrality;
 use crate::strategies::probabilities::core::ProbabilityAnalysis;
 use crate::strategies::probabilities::utils::{PriceTrend, VolatilityAdjustment};
 use crate::strategies::utils::OptimizationCriteria;
-use crate::strategies::{BasicAble, DeltaAdjustment, Strategable, Strategies, StrategyConstructor, Validable};
+use crate::strategies::{
+    BasicAble, DeltaAdjustment, Strategable, Strategies, StrategyConstructor, Validable,
+};
 use crate::{ExpirationDate, Options, Positive, test_strategy_traits};
 use chrono::Utc;
 use rust_decimal::Decimal;
@@ -466,6 +467,5 @@ impl PnLCalculator for LongCall {
 }
 
 impl Strategable for LongCall {}
-
 
 test_strategy_traits!(LongCall, test_long_call_implementations);

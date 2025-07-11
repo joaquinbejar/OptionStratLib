@@ -53,6 +53,7 @@ use crate::{
         probabilities::{core::ProbabilityAnalysis, utils::VolatilityAdjustment},
         utils::{FindOptimalSide, OptimizationCriteria},
     },
+    test_strategy_traits,
 };
 use chrono::Utc;
 use num_traits::FromPrimitive;
@@ -847,6 +848,8 @@ impl PnLCalculator for PoorMansCoveredCall {
                 .calculate_pnl_at_expiration(underlying_price)?)
     }
 }
+
+test_strategy_traits!(PoorMansCoveredCall, test_short_call_implementations);
 
 #[cfg(test)]
 mod tests_pmcc_validation {
