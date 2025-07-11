@@ -35,7 +35,7 @@ use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use tracing::{error, info};
 
-const CALL_BUTTERFLY_DESCRIPTION: &str = "A Ratio Call Spread involves buying one call option and selling multiple call options \
+pub const CALL_BUTTERFLY_DESCRIPTION: &str = "A Ratio Call Spread involves buying one call option and selling multiple call options \
     at a higher strike price. This strategy is used when a moderate rise in the underlying \
     asset's price is expected, but with limited upside potential.";
 
@@ -69,14 +69,14 @@ pub struct CallButterfly {
     pub break_even_points: Vec<Positive>,
 
     /// The long call position at the lower strike price.
-    long_call: Position,
+    pub long_call: Position,
 
     /// The first short call position at the middle strike price.
-    short_call_low: Position,
+    pub short_call_low: Position,
 
     /// The second short call position at the middle strike price.
     /// Combined with short_call_low, these represent the "body" of the butterfly.
-    short_call_high: Position,
+    pub short_call_high: Position,
 }
 
 impl CallButterfly {
