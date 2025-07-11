@@ -13,47 +13,116 @@ use crate::strategies::{
 
 impl Default for BullCallSpread {
     fn default() -> Self {
-        todo!()
+        BullCallSpread {
+            name: "Bull Call Spread".to_string(),
+            kind: StrategyType::BullCallSpread,
+            description: crate::strategies::bull_call_spread::BULL_CALL_SPREAD_DESCRIPTION.to_string(),
+            break_even_points: Vec::new(),
+            long_call: Position::default(),
+            short_call: Position::default(),
+        }
     }
 }
 impl Default for BearCallSpread {
     fn default() -> Self {
-        todo!()
+        BearCallSpread {
+            name: "Bear Call Spread".to_string(),
+            kind: StrategyType::BearCallSpread,
+            description: crate::strategies::bear_call_spread::BEAR_CALL_SPREAD_DESCRIPTION.to_string(),
+            break_even_points: Vec::new(),
+            short_call: Position::default(),
+            long_call: Position::default(),
+        }
     }
 }
 impl Default for BullPutSpread {
     fn default() -> Self {
-        todo!()
+        BullPutSpread {
+            name: "Bull Put Spread".to_string(),
+            kind: StrategyType::BullPutSpread,
+            description: crate::strategies::bull_put_spread::BULL_PUT_SPREAD_DESCRIPTION.to_string(),
+            break_even_points: Vec::new(),
+            long_put: Position::default(),
+            short_put: Position::default(),
+        }
     }
 }
 impl Default for BearPutSpread {
     fn default() -> Self {
-        todo!()
+        BearPutSpread {
+            name: "Bear Put Spread".to_string(),
+            kind: StrategyType::BearPutSpread,
+            description: crate::strategies::bear_put_spread::BEAR_PUT_SPREAD_DESCRIPTION.to_string(),
+            break_even_points: Vec::new(),
+            long_put: Position::default(),
+            short_put: Position::default(),
+        }
     }
 }
 impl Default for LongButterflySpread {
     fn default() -> Self {
-        todo!()
+        LongButterflySpread {
+            name: "Long Butterfly Spread".to_string(),
+            kind: StrategyType::LongButterflySpread,
+            description: crate::strategies::long_butterfly_spread::LONG_BUTTERFLY_DESCRIPTION.to_string(),
+            break_even_points: Vec::new(),
+            short_call: Position::default(),
+            long_call_low: Position::default(),
+            long_call_high: Position::default(),
+        }
     }
 }
 impl Default for ShortButterflySpread {
     fn default() -> Self {
-        todo!()
+        ShortButterflySpread {
+            name: "Short Butterfly Spread".to_string(),
+            kind: StrategyType::ShortButterflySpread,
+            description: crate::strategies::short_butterfly_spread::SHORT_BUTTERFLY_DESCRIPTION.to_string(),
+            break_even_points: Vec::new(),
+            long_call: Position::default(),
+            short_call_low: Position::default(),
+            short_call_high: Position::default(),
+        }
     }
 }
 impl Default for IronCondor {
     fn default() -> Self {
-        todo!()
+        IronCondor {
+            name: "Iron Condor".to_string(),
+            kind: StrategyType::IronCondor,
+            description: crate::strategies::iron_condor::IRON_CONDOR_DESCRIPTION.to_string(),
+            break_even_points: Vec::new(),
+            short_call: Position::default(),
+            short_put: Position::default(),
+            long_call: Position::default(),
+            long_put: Position::default(),
+        }
     }
 }
 impl Default for IronButterfly {
     fn default() -> Self {
-        todo!()
+        IronButterfly {
+            name: "Iron Butterfly".to_string(),
+            kind: StrategyType::IronButterfly,
+            description: crate::strategies::iron_butterfly::IRON_BUTTERFLY_DESCRIPTION.to_string(),
+            break_even_points: Vec::new(),
+            short_call: Position::default(),
+            short_put: Position::default(),
+            long_call: Position::default(),
+            long_put: Position::default(),
+        }
     }
 }
 impl Default for LongStraddle {
     fn default() -> Self {
-        todo!()
+        LongStraddle {
+            name: "Long Straddle".to_string(),
+            kind: StrategyType::LongStraddle,
+            description: crate::strategies::long_straddle::LONG_STRADDLE_DESCRIPTION.to_string(),
+            break_even_points: Vec::new(),
+            long_call: Position::default(),
+            long_put: Position::default(),
+        }
     }
 }
 impl Default for ShortStraddle {
@@ -106,33 +175,17 @@ impl Default for PoorMansCoveredCall {
 }
 impl Default for CallButterfly {
     fn default() -> Self {
-        CallButterfly::new(
-            "".to_string(),
-            Default::default(),
-            Default::default(),
-            Default::default(),
-            Default::default(),
-            Default::default(),
-            Default::default(),
-            Default::default(),
-            Default::default(),
-            Default::default(),
-            Default::default(),
-            Default::default(),
-            Default::default(),
-            Default::default(),
-            Default::default(),
-            Default::default(),
-            Default::default(),
-            Default::default(),
-            Default::default(),
-        )
+    CallButterfly {
+            name: "Call Butterfly".to_string(),
+            kind: StrategyType::CallButterfly,
+            description: crate::strategies::call_butterfly::CALL_BUTTERFLY_DESCRIPTION.to_string(),
+            break_even_points: Vec::new(),
+            short_call_low: Position::default(),
+            long_call: Position::default(),
+            short_call_high: Position::default(),
+        }
     }
 }
-
-// impl JsonDisplay for CoveredCall {}
-// impl JsonDisplay for ProtectivePut {}
-// impl JsonDisplay for Collar {}
 impl Default for LongCall {
     fn default() -> Self {
         LongCall {
