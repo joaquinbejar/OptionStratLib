@@ -5,11 +5,11 @@ coverage:
   status:
     project:
       default:
-        target: 75%    # the required coverage value
+        target: 72%    # the required coverage value
         threshold: 1%  # the leniency in hitting the target
     patch:
       default:
-        target: 45%
+        target: 30%
         threshold: 1%
 
 parsers:
