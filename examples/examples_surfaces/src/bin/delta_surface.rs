@@ -10,15 +10,16 @@ use optionstratlib::surfaces::{Point3D, Surface};
 use optionstratlib::utils::setup_logger;
 use optionstratlib::{ExpirationDate, OptionType, Positive, pos};
 use rust_decimal_macros::dec;
+use optionstratlib::visualization::Graph;
 
 fn main() -> Result<(), SurfaceError> {
     setup_logger();
     // Define construction parameters for the surface
     let params = ConstructionParams::D3 {
-        x_start: dec!(50.0), // Underlying price start
-        x_end: dec!(150.0),  // Underlying price end
-        y_start: dec!(50.0), // Strike price start
-        y_end: dec!(150.0),  // Strike price end
+        x_start: dec!(90.0), // Underlying price start
+        x_end: dec!(160.0),  // Underlying price end
+        y_start: dec!(90.0), // Strike price start
+        y_end: dec!(160.0),  // Strike price end
         x_steps: 250,        // Number of steps in underlying price
         y_steps: 250,        // Number of steps in strike price
     };
@@ -62,6 +63,7 @@ fn main() -> Result<(), SurfaceError> {
         .z_label("Delta")
         .dimensions(1600, 1200)
         .save("./Draws/Surfaces/delta_surface.png")?;
+    delta_surface.write_html("Draws/Surfaces/delta_surface.html".as_ref())?;
 
     Ok(())
 }

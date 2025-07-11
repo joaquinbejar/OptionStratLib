@@ -21,11 +21,11 @@ impl WalkTypeAble<Positive, Positive> for Walker {}
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     setup_logger();
-    let simulator_size: usize = 15;
+    let simulator_size: usize = 35;
     // let n_steps = 43_200; // 30 days in minutes
-    let n_steps = 1200;
-    let initial_price = pos!(100.0);
-    let std_dev = pos!(20.0);
+    let n_steps = 11200;
+    let initial_price = pos!(1200.0);
+    let iv = pos!(0.20);
     let walker = Box::new(Walker::new());
     let days = pos!(30.0);
 
@@ -38,7 +38,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         walk_type: WalkType::GeometricBrownian {
             dt: convert_time_frame(pos!(1.0) / days, &TimeFrame::Minute, &TimeFrame::Day),
             drift: dec!(0.0),
-            volatility: std_dev,
+            volatility: iv,
         },
         walker,
     };
