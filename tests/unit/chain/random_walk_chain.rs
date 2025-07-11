@@ -94,7 +94,7 @@ fn test_random_walk_chain() -> Result<(), Box<dyn Error>> {
             y: Ystep::new(0, initial_chain),
         },
         walk_type: WalkType::GeometricBrownian {
-            dt: convert_time_frame(pos!(1.0) / days, &TimeFrame::Minute, &TimeFrame::Day), // TODO
+            dt: convert_time_frame(pos!(1.0) / days, &TimeFrame::Minute, &TimeFrame::Day),
             drift: dec!(0.0),
             volatility: std_dev,
         },
