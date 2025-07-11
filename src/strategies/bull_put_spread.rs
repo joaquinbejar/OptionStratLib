@@ -51,7 +51,7 @@ use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use tracing::debug;
 
-const BULL_PUT_SPREAD_DESCRIPTION: &str = "A bull put spread is created by buying a put option with a lower strike price \
+pub const BULL_PUT_SPREAD_DESCRIPTION: &str = "A bull put spread is created by buying a put option with a lower strike price \
     and simultaneously selling a put option with a higher strike price, both with the same \
     expiration date. This strategy is used when you expect a moderate increase in the underlying \
     asset's price. The maximum profit is limited to the net credit received, while the maximum \
@@ -87,10 +87,10 @@ pub struct BullPutSpread {
     pub break_even_points: Vec<Positive>,
 
     /// The long put position (lower strike price) that limits the downside risk
-    long_put: Position,
+    pub long_put: Position,
 
     /// The short put position (higher strike price) that generates premium income
-    short_put: Position,
+    pub short_put: Position,
 }
 
 impl BullPutSpread {
