@@ -380,7 +380,11 @@ impl OptionChain {
         fn create_chain_data(strike: &Positive, p: &OptionChainBuildParams) -> OptionData {
             assert!(
                 p.implied_volatility <= Positive::ONE,
-                "Implied volatility should be between 0 and 1"
+                "{}",
+                format!(
+                    "Implied volatility should be between 0 and 1, got: {}",
+                    p.implied_volatility
+                )
             );
 
             let price = *p.price_params.underlying_price.clone().unwrap();

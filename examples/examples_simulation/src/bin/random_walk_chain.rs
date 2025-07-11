@@ -24,13 +24,13 @@ impl WalkTypeAble<Positive, OptionChain> for Walker {}
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     setup_logger();
     let n_steps = 43_200; // 30 days in minutes
-    let mut initial_chain =
-        OptionChain::load_from_json("examples/Chains/SP500-18-oct-2024-5781.88.json")?;
+    let mut initial_chain = OptionChain::load_from_json(
+        "examples/Chains/Germany-40-2025-05-27-15:29:00-UTC-24209.json",
+    )?;
     initial_chain.update_expiration_date(get_x_days_formatted(2));
-
-    let std_dev = pos!(20.0);
+    let iv = pos!(0.20);
     let walker = Box::new(Walker::new());
-    let days = pos!(30.0);
+    let days = pos!(2.0);
 
     let walk_params = WalkParams {
         size: n_steps,
@@ -41,7 +41,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         walk_type: WalkType::GeometricBrownian {
             dt: convert_time_frame(pos!(1.0) / days, &TimeFrame::Minute, &TimeFrame::Day),
             drift: dec!(0.0),
-            volatility: std_dev,
+            volatility: iv,
         },
         walker: walker,
     };
@@ -51,6 +51,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         &walk_params,
         generator_optionchain,
     );
+
     debug!("Random Walk: {}", random_walk);
     let path: &std::path::Path = "Draws/Simulation/random_walk_chain.png".as_ref();
     random_walk.write_png(path)?;

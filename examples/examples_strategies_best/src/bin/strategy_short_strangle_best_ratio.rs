@@ -9,6 +9,7 @@ use optionstratlib::strategies::base::{Optimizable, Strategies};
 use optionstratlib::strategies::utils::FindOptimalSide;
 use optionstratlib::utils::setup_logger;
 
+use optionstratlib::utils::time::get_x_days_formatted;
 use optionstratlib::visualization::Graph;
 use rust_decimal::Decimal;
 use std::error::Error;
@@ -16,9 +17,11 @@ use tracing::{debug, info};
 
 fn main() -> Result<(), Box<dyn Error>> {
     setup_logger();
-    let option_chain =
+    let mut option_chain =
         OptionChain::load_from_json("./examples/Chains/SP500-18-oct-2024-5781.88.json")?;
     let underlying_price = option_chain.underlying_price;
+    option_chain.update_expiration_date(get_x_days_formatted(30));
+
     let mut strategy = ShortStrangle::new(
         "SP500".to_string(),
         underlying_price, // underlying_price
