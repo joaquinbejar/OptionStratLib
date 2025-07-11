@@ -34,7 +34,7 @@ use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use tracing::{debug, info};
 
-const LONG_BUTTERFLY_DESCRIPTION: &str = "A long butterfly spread is created by buying one call at a lower strike price, \
+pub const LONG_BUTTERFLY_DESCRIPTION: &str = "A long butterfly spread is created by buying one call at a lower strike price, \
     selling two calls at a middle strike price, and buying one call at a higher strike price, \
     all with the same expiration date. This strategy profits when the underlying price stays \
     near the middle strike price at expiration.";
@@ -71,11 +71,11 @@ pub struct LongButterflySpread {
     /// Price points where the strategy transitions between profit and loss
     pub break_even_points: Vec<Positive>,
     /// The middle strike call positions that are sold (short)
-    short_call: Position,
+    pub short_call: Position,
     /// The lower strike call position that is bought (long)
-    long_call_low: Position,
+    pub long_call_low: Position,
     /// The higher strike call position that is bought (long)
-    long_call_high: Position,
+    pub long_call_high: Position,
 }
 
 impl LongButterflySpread {
