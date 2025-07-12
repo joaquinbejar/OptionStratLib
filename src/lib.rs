@@ -541,7 +541,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! optionstratlib = "0.5.1"
+//! optionstratlib = "0.6.0"
 //! ```
 //!
 //! Or use cargo to add it to your project:
@@ -556,7 +556,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! optionstratlib = { version = "0.5.1", features = ["plotly", "kaleido", "full"] }
+//! optionstratlib = { version = "0.6.0", features = ["plotly", "static_export"] }
 //! ```
 //!
 //! - `plotly`: Enables visualization using plotly.rs
