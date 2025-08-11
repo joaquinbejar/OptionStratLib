@@ -272,6 +272,7 @@ pub mod short_straddle;
 pub mod short_strangle;
 /// Utility functions for options calculations and analysis
 pub mod utils;
+pub mod custom;
 
 pub use base::{BasicAble, Strategable, Strategies, StrategyBasics, Validable};
 pub use bear_call_spread::BearCallSpread;

@@ -154,6 +154,8 @@ pub enum StrategyType {
     PoorMansCoveredCall,
     /// Call Butterfly strategy.
     CallButterfly,
+    /// Custom strategy.
+    Custom,
 }
 
 impl FromStr for StrategyType {
@@ -182,6 +184,7 @@ impl FromStr for StrategyType {
             "ShortPut" => Ok(StrategyType::ShortPut),
             "PoorMansCoveredCall" => Ok(StrategyType::PoorMansCoveredCall),
             "CallButterfly" => Ok(StrategyType::CallButterfly),
+            "Custom" => Ok(StrategyType::Custom),
             _ => Err(()),
         }
     }
