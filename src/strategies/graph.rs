@@ -375,5 +375,6 @@ impl_graph_for_payoff_strategy!(
     ShortCall,
     ShortPut,
     PoorMansCoveredCall,
-    CallButterfly
+    CallButterfly,
+    crate::strategies::custom::CustomStrategy
 );
