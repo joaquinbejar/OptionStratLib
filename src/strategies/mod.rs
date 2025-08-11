@@ -212,14 +212,14 @@ pub mod call_butterfly;
 pub mod collar;
 /// Covered Call strategy implementation
 pub mod covered_call;
+/// Custom strategy implementation and utilities
+pub mod custom;
 /// Default implementation for strategies
 pub mod default;
 /// Delta-neutral strategy implementation and utilities
 pub mod delta_neutral;
 /// Display implementation for strategies
 pub mod display;
-/// Custom strategy implementation and utilities 
-pub mod custom;
 /// The `graph` module provides functionality for creating, managing, and
 /// manipulating graph data structures. Common use cases include representing
 /// networks, dependency graphs, and other graph-based relationships.
