@@ -218,7 +218,8 @@ pub mod default;
 pub mod delta_neutral;
 /// Display implementation for strategies
 pub mod display;
-
+/// Custom strategy implementation and utilities 
+pub mod custom;
 /// The `graph` module provides functionality for creating, managing, and
 /// manipulating graph data structures. Common use cases include representing
 /// networks, dependency graphs, and other graph-based relationships.
@@ -272,7 +273,6 @@ pub mod short_straddle;
 pub mod short_strangle;
 /// Utility functions for options calculations and analysis
 pub mod utils;
-pub mod custom;
 
 pub use base::{BasicAble, Strategable, Strategies, StrategyBasics, Validable};
 pub use bear_call_spread::BearCallSpread;

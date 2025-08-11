@@ -567,7 +567,7 @@ impl BasicAble for LongButterflySpread {
             format!("{}\n\t{}", strategy_title, leg_titles.join("\n\t"))
         }
     }
-    fn get_option_basic_type(&self) -> HashSet<OptionBasicType> {
+    fn get_option_basic_type(&self) -> HashSet<OptionBasicType<'_>> {
         let mut hash_set = HashSet::new();
         let long_call_low = &self.long_call_low.option;
         let short_call = &self.short_call.option;
@@ -594,7 +594,7 @@ impl BasicAble for LongButterflySpread {
 
         hash_set
     }
-    fn get_implied_volatility(&self) -> HashMap<OptionBasicType, &Positive> {
+    fn get_implied_volatility(&self) -> HashMap<OptionBasicType<'_>, &Positive> {
         let options = [
             (
                 &self.long_call_low.option,
@@ -625,7 +625,7 @@ impl BasicAble for LongButterflySpread {
             })
             .collect()
     }
-    fn get_quantity(&self) -> HashMap<OptionBasicType, &Positive> {
+    fn get_quantity(&self) -> HashMap<OptionBasicType<'_>, &Positive> {
         let options = [
             (
                 &self.long_call_low.option,

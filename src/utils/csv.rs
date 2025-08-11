@@ -159,11 +159,12 @@ pub fn read_ohlcv_from_zip(
 
     // Validate date range if both dates are provided
     if let (Some(start_date), Some(end_date)) = (&start, &end)
-        && start_date > end_date {
-            return Err(OhlcvError::InvalidParameter {
-                reason: format!("Start date {start_date} is after end date {end_date}"),
-            });
-        }
+        && start_date > end_date
+    {
+        return Err(OhlcvError::InvalidParameter {
+            reason: format!("Start date {start_date} is after end date {end_date}"),
+        });
+    }
 
     // Open the ZIP file
     let file = File::open(Path::new(zip_path))?;

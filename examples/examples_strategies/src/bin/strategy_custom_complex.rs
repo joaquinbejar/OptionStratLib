@@ -1,16 +1,16 @@
-use optionstratlib::{ExpirationDate, Options, Positive};
+use chrono::Utc;
 use optionstratlib::greeks::Greeks;
 use optionstratlib::model::position::Position;
 use optionstratlib::model::types::{OptionStyle, OptionType, Side};
 use optionstratlib::pos;
-use optionstratlib::strategies::{BasicAble, Strategies};
 use optionstratlib::strategies::custom::CustomStrategy;
+use optionstratlib::strategies::{BasicAble, Strategies};
 use optionstratlib::utils::setup_logger;
 use optionstratlib::visualization::Graph;
+use optionstratlib::{ExpirationDate, Options, Positive};
 use rust_decimal_macros::dec;
 use std::error::Error;
 use tracing::info;
-use chrono::Utc;
 
 fn main() -> Result<(), Box<dyn Error>> {
     setup_logger();
@@ -22,7 +22,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // Create a complex custom strategy with multiple positions
     // This creates a modified Iron Condor with unequal quantities
-    
+
     // Long Put (protective) - Strike 90
     let long_put_option = Options::new(
         OptionType::European,
@@ -128,7 +128,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     let strategy = CustomStrategy::new(
         "Custom Complex Strategy".to_string(),
         underlying_symbol,
-        "Modified Iron Condor with unequal quantities - demonstrates CustomStrategy flexibility".to_string(),
+        "Modified Iron Condor with unequal quantities - demonstrates CustomStrategy flexibility"
+            .to_string(),
         underlying_price,
         positions,
         Default::default(),
@@ -142,7 +143,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     info!("Description: {}", strategy.description);
     info!("Number of Positions: {}", strategy.positions.len());
     info!("Break Even Points: {:?}", strategy.break_even_points);
-    
+
     // Show individual positions
     info!("=== POSITIONS BREAKDOWN ===");
     for (i, position) in strategy.positions.iter().enumerate() {
@@ -165,10 +166,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     }
 
     info!("=== FINANCIAL METRICS ===");
-    info!(
-        "Net Premium: ${:.2}",
-        strategy.get_net_premium_received()?
-    );
+    info!("Net Premium: ${:.2}", strategy.get_net_premium_received()?);
     info!(
         "Max Profit: ${:.2}",
         strategy.get_max_profit().unwrap_or(Positive::ZERO)

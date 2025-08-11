@@ -467,7 +467,7 @@ impl BasicAble for BearPutSpread {
             format!("{}\n\t{}", strategy_title, leg_titles.join("\n\t"))
         }
     }
-    fn get_option_basic_type(&self) -> HashSet<OptionBasicType> {
+    fn get_option_basic_type(&self) -> HashSet<OptionBasicType<'_>> {
         let mut hash_set = HashSet::new();
         let long_put = &self.long_put.option;
         let short_put = &self.short_put.option;
@@ -486,7 +486,7 @@ impl BasicAble for BearPutSpread {
 
         hash_set
     }
-    fn get_implied_volatility(&self) -> HashMap<OptionBasicType, &Positive> {
+    fn get_implied_volatility(&self) -> HashMap<OptionBasicType<'_>, &Positive> {
         let options = [
             (
                 &self.long_put.option,
@@ -513,7 +513,7 @@ impl BasicAble for BearPutSpread {
             })
             .collect()
     }
-    fn get_quantity(&self) -> HashMap<OptionBasicType, &Positive> {
+    fn get_quantity(&self) -> HashMap<OptionBasicType<'_>, &Positive> {
         let options = [
             (&self.long_put.option, &self.long_put.option.quantity),
             (&self.short_put.option, &self.short_put.option.quantity),

@@ -1,17 +1,17 @@
-use optionstratlib::{ExpirationDate, Options, Positive};
+use chrono::Utc;
 use optionstratlib::greeks::Greeks;
 use optionstratlib::model::position::Position;
 use optionstratlib::model::types::{OptionStyle, OptionType, Side};
 use optionstratlib::pos;
-use optionstratlib::strategies::{BasicAble, Strategies};
-use optionstratlib::strategies::custom::CustomStrategy;
 use optionstratlib::pricing::Profit;
+use optionstratlib::strategies::custom::CustomStrategy;
+use optionstratlib::strategies::{BasicAble, Strategies};
 use optionstratlib::utils::setup_logger;
 use optionstratlib::visualization::Graph;
+use optionstratlib::{ExpirationDate, Options, Positive};
 use rust_decimal_macros::dec;
 use std::error::Error;
 use tracing::info;
-use chrono::Utc;
 
 fn main() -> Result<(), Box<dyn Error>> {
     setup_logger();
@@ -23,7 +23,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // Create a simple covered call strategy using CustomStrategy
     // This demonstrates how to build standard strategies with CustomStrategy
-    
+
     // Long stock position (simulated with deep ITM call with very low premium)
     let stock_position_option = Options::new(
         OptionType::European,
@@ -31,7 +31,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         underlying_symbol.clone(),
         pos!(50.0), // Deep ITM call to simulate stock
         expiration,
-        pos!(0.01), // Very low volatility for deep ITM
+        pos!(0.01),  // Very low volatility for deep ITM
         pos!(100.0), // 100 shares equivalent
         underlying_price,
         risk_free_rate,
@@ -56,7 +56,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         underlying_symbol.clone(),
         pos!(155.0), // Strike above current price
         expiration,
-        pos!(0.20), // 20% implied volatility
+        pos!(0.20),  // 20% implied volatility
         pos!(100.0), // 100 shares covered
         underlying_price,
         risk_free_rate,
@@ -96,20 +96,26 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     info!("=== POSITION DETAILS ===");
     info!("Position 1: Long Stock (simulated with deep ITM call)");
-    info!("  - Strike: ${:.2}", strategy.positions[0].option.strike_price);
+    info!(
+        "  - Strike: ${:.2}",
+        strategy.positions[0].option.strike_price
+    );
     info!("  - Quantity: {}", strategy.positions[0].option.quantity);
     info!("  - Premium Paid: ${:.2}", strategy.positions[0].premium);
-    
+
     info!("Position 2: Short Call (covered call)");
-    info!("  - Strike: ${:.2}", strategy.positions[1].option.strike_price);
+    info!(
+        "  - Strike: ${:.2}",
+        strategy.positions[1].option.strike_price
+    );
     info!("  - Quantity: {}", strategy.positions[1].option.quantity);
-    info!("  - Premium Received: ${:.2}", strategy.positions[1].premium);
+    info!(
+        "  - Premium Received: ${:.2}",
+        strategy.positions[1].premium
+    );
 
     info!("=== FINANCIAL ANALYSIS ===");
-    info!(
-        "Net Premium: ${:.2}",
-        strategy.get_net_premium_received()?
-    );
+    info!("Net Premium: ${:.2}", strategy.get_net_premium_received()?);
     info!(
         "Max Profit: ${:.2}",
         strategy.get_max_profit().unwrap_or(Positive::ZERO)

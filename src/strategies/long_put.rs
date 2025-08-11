@@ -154,7 +154,7 @@ impl BasicAble for LongPut {
             format!("{}\n\t{}", strategy_title, leg_titles.join("\n\t"))
         }
     }
-    fn get_option_basic_type(&self) -> HashSet<OptionBasicType> {
+    fn get_option_basic_type(&self) -> HashSet<OptionBasicType<'_>> {
         let mut hash_set = HashSet::new();
         let long_put = &self.long_put.option;
 
@@ -167,7 +167,7 @@ impl BasicAble for LongPut {
 
         hash_set
     }
-    fn get_implied_volatility(&self) -> HashMap<OptionBasicType, &Positive> {
+    fn get_implied_volatility(&self) -> HashMap<OptionBasicType<'_>, &Positive> {
         let options = [(
             &self.long_put.option,
             &self.long_put.option.implied_volatility,
@@ -188,7 +188,7 @@ impl BasicAble for LongPut {
             })
             .collect()
     }
-    fn get_quantity(&self) -> HashMap<OptionBasicType, &Positive> {
+    fn get_quantity(&self) -> HashMap<OptionBasicType<'_>, &Positive> {
         let options = [(&self.long_put.option, &self.long_put.option.quantity)];
 
         options

@@ -134,15 +134,15 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
         // Special case: when volatility is zero, return the current value
         if let Some(ref vol_adj) = volatility_adj
             && vol_adj.base_volatility == Positive::ZERO
-                && vol_adj.std_dev_adjustment == Positive::ZERO
-            {
-                let current_profit = self.calculate_profit_at(self.get_underlying_price())?;
-                return if current_profit <= Decimal::ZERO {
-                    Ok(Positive::ZERO)
-                } else {
-                    Ok(current_profit.into())
-                };
-            }
+            && vol_adj.std_dev_adjustment == Positive::ZERO
+        {
+            let current_profit = self.calculate_profit_at(self.get_underlying_price())?;
+            return if current_profit <= Decimal::ZERO {
+                Ok(Positive::ZERO)
+            } else {
+                Ok(current_profit.into())
+            };
+        }
 
         let step = self.get_underlying_price() / 100.0;
         let range = self.get_best_range_to_show(step).unwrap();

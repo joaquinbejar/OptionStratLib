@@ -24,10 +24,11 @@ pub fn prepare_file_path(path: &Path) -> Result<(), IoError> {
 
     // Create parent directories if they don't exist
     if let Some(parent) = path.parent()
-        && !parent.exists() {
-            std::fs::create_dir_all(parent)?;
-            debug!("Created directory: {}", path.display());
-        }
+        && !parent.exists()
+    {
+        std::fs::create_dir_all(parent)?;
+        debug!("Created directory: {}", path.display());
+    }
 
     Ok(())
 }

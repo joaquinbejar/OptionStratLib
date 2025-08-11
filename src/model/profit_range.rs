@@ -46,9 +46,10 @@ impl ProfitLossRange {
     ) -> Result<Self, String> {
         // Validate boundaries if both are present
         if let (Some(lower), Some(upper)) = (lower_bound, upper_bound)
-            && lower >= upper {
-                return Err("Lower bound must be less than upper bound".to_string());
-            }
+            && lower >= upper
+        {
+            return Err("Lower bound must be less than upper bound".to_string());
+        }
 
         Ok(ProfitLossRange {
             lower_bound,

@@ -1,17 +1,17 @@
 use chrono::Utc;
-use optionstratlib::model::types::{OptionStyle, OptionType, Side};
+use optionstratlib::ExpirationDate;
+use optionstratlib::greeks::Greeks;
 use optionstratlib::model::option::Options;
 use optionstratlib::model::position::Position;
-use optionstratlib::ExpirationDate;
-use optionstratlib::strategies::custom::CustomStrategy;
-use optionstratlib::strategies::base::{Strategies, BreakEvenable, BasicAble};
-use optionstratlib::pricing::Profit;
-use optionstratlib::greeks::Greeks;
+use optionstratlib::model::types::{OptionStyle, OptionType, Side};
 use optionstratlib::pos;
+use optionstratlib::pricing::Profit;
+use optionstratlib::strategies::base::{BasicAble, BreakEvenable, Strategies};
+use optionstratlib::strategies::custom::CustomStrategy;
+use optionstratlib::utils::setup_logger;
 use optionstratlib::visualization::Graph;
 use rust_decimal_macros::dec;
 use tracing::info;
-use optionstratlib::utils::setup_logger;
 
 fn main() {
     setup_logger();
@@ -113,7 +113,7 @@ fn main() {
         underlying_price,
         positions,
         pos!(1.0), // Default quantity
-        1, // days to expiration
+        1,         // days to expiration
         implied_volatility,
     );
 
@@ -125,25 +125,25 @@ fn main() {
         Ok(be_points) => info!("Break Even Points: {:?}", be_points),
         Err(_) => info!("Break Even Points: Unable to calculate"),
     }
-    
+
     // Calculate net premium
     let net_premium = strategy.get_net_premium_received().unwrap_or(pos!(0.0));
     info!("Net Premium: ${:.2}", net_premium);
-    
+
     // Calculate max profit and loss
     let max_profit = strategy.get_max_profit().unwrap_or(pos!(0.0));
     let max_loss = strategy.get_max_loss().unwrap_or(pos!(0.0));
     info!("Max Profit: ${:.2}", max_profit);
     info!("Max Loss: ${:.2}", max_loss);
-    
+
     // Calculate total fees
     let total_fees = strategy.get_fees().unwrap_or(pos!(0.0));
     info!("Total Fees: ${:.2}", total_fees);
-    
+
     // Calculate profit area and ratio
     let profit_area = strategy.get_profit_area().unwrap_or(dec!(0.0));
     info!("Profit Area: {:.2}%", profit_area * dec!(100.0));
-    
+
     // Calculate profit ratio
     let profit_ratio = strategy.get_profit_ratio().unwrap_or(dec!(0.0));
     info!("Profit Ratio: {:.2}%", profit_ratio * dec!(100.0));
@@ -154,8 +154,10 @@ fn main() {
 
     // Test profit calculation at various price points
     info!("\n=== PROFIT/LOSS AT DIFFERENT PRICES ===");
-    let test_prices = vec![23800.0, 23950.0, 24050.0, 24067.0, 24070.0, 24100.0, 24210.0, 24350.0];
-    
+    let test_prices = vec![
+        23800.0, 23950.0, 24050.0, 24067.0, 24070.0, 24100.0, 24210.0, 24350.0,
+    ];
+
     for &price in &test_prices {
         let test_price = pos!(price);
         match strategy.calculate_profit_at(&test_price) {
@@ -173,18 +175,24 @@ fn main() {
     match strategy.get_best_range_to_show(pos!(1.0)) {
         Ok(range) => {
             if range.len() >= 2 {
-                info!("Chart range: ${:.0} to ${:.0}", range[0], range[range.len()-1]);
+                info!(
+                    "Chart range: ${:.0} to ${:.0}",
+                    range[0],
+                    range[range.len() - 1]
+                );
             }
-            
+
             // Generate PNG chart
-            let png_path: &std::path::Path = "Draws/Strategy/custom_dax_strategy_chart.png".as_ref();
+            let png_path: &std::path::Path =
+                "Draws/Strategy/custom_dax_strategy_chart.png".as_ref();
             match strategy.write_png(png_path) {
                 Ok(_) => info!("PNG chart saved to: {:?}", png_path),
                 Err(e) => info!("Error saving PNG chart: {:?}", e),
             }
 
             // Generate HTML chart
-            let html_path: &std::path::Path = "Draws/Strategy/custom_dax_strategy_chart.html".as_ref();
+            let html_path: &std::path::Path =
+                "Draws/Strategy/custom_dax_strategy_chart.html".as_ref();
             match strategy.write_html(html_path) {
                 Ok(_) => info!("HTML chart saved to: {:?}", html_path),
                 Err(e) => info!("Error saving HTML chart: {:?}", e),
@@ -198,7 +206,7 @@ fn main() {
     info!("\n=== STRATEGY ANALYSIS ===");
     info!("This DAX strategy combines:");
     info!("1. Long Call (24210) - Bullish exposure above 24210");
-    info!("2. Long Put (24070) - Bearish protection below 24070"); 
+    info!("2. Long Put (24070) - Bearish protection below 24070");
     info!("3. Short Put (24050) - Premium collection, risk below 24050");
     info!("");
     info!("Strategy characteristics:");

@@ -10,9 +10,7 @@ use crate::{
     ExpirationDate, Options, Positive,
     chains::{OptionData, chain::OptionChain},
     error::{
-        GreeksError, OperationErrorKind,
-        position::PositionError,
-        probability::ProbabilityError,
+        GreeksError, OperationErrorKind, position::PositionError, probability::ProbabilityError,
         strategies::StrategyError,
     },
     greeks::Greeks,
@@ -178,7 +176,7 @@ impl CustomStrategy {
 
         // Use a much more focused range calculation for better visualization
         let strike_range = *max_strike - *min_strike;
-        
+
         // For strategies with small strike ranges, use a very focused approach
         let base_extension = if strike_range < self.underlying_price * pos!(0.05) {
             // Very tight strikes (< 5% of underlying) - use minimal extension
@@ -187,7 +185,7 @@ impl CustomStrategy {
             // Wider strikes - use moderate extension
             strike_range * pos!(1.0) // 100% of strike range
         };
-        
+
         // Center around the underlying price for better focus
         let center_price = self.underlying_price;
         let min_price = center_price - base_extension;
@@ -267,7 +265,7 @@ impl CustomStrategy {
             self.break_even_points.push(point);
         }
     }
-    
+
     pub(crate) fn get_profit_loss_zones(
         &self,
         break_even_points: &[Positive],
@@ -374,10 +372,11 @@ impl BreakEvenable for CustomStrategy {
         let mut current_price = min_price;
         while current_price <= max_price {
             if let Ok(profit) = self.calculate_profit_at(&current_price)
-                && profit.abs() < rust_decimal::Decimal::new(1, 2) {
-                    // Close to zero
-                    self.break_even_points.push(current_price);
-                }
+                && profit.abs() < rust_decimal::Decimal::new(1, 2)
+            {
+                // Close to zero
+                self.break_even_points.push(current_price);
+            }
             current_price += step;
         }
 
@@ -393,7 +392,7 @@ impl Positionable for CustomStrategy {
                 "Strategy is not valid after adding new position",
             ));
         }
-        self.update_break_even_points();
+        let _ = self.update_break_even_points();
         Ok(())
     }
 
@@ -474,7 +473,7 @@ impl Positionable for CustomStrategy {
             ));
         }
 
-        self.update_break_even_points();
+        let _ = self.update_break_even_points();
         Ok(())
     }
 
@@ -505,7 +504,7 @@ impl Positionable for CustomStrategy {
             ));
         }
 
-        self.update_break_even_points();
+        let _ = self.update_break_even_points();
         Ok(())
     }
 }
@@ -525,7 +524,7 @@ impl BasicAble for CustomStrategy {
         format!("{} - {} Strategy", self.symbol, self.name)
     }
 
-    fn get_option_basic_type(&self) -> HashSet<OptionBasicType> {
+    fn get_option_basic_type(&self) -> HashSet<OptionBasicType<'_>> {
         let mut types = HashSet::new();
         for position in &self.positions {
             types.insert(OptionBasicType {
@@ -538,7 +537,7 @@ impl BasicAble for CustomStrategy {
         types
     }
 
-    fn get_implied_volatility(&self) -> HashMap<OptionBasicType, &Positive> {
+    fn get_implied_volatility(&self) -> HashMap<OptionBasicType<'_>, &Positive> {
         let mut volatilities = HashMap::new();
         for position in &self.positions {
             let basic_type = OptionBasicType {
@@ -552,7 +551,7 @@ impl BasicAble for CustomStrategy {
         volatilities
     }
 
-    fn get_quantity(&self) -> HashMap<OptionBasicType, &Positive> {
+    fn get_quantity(&self) -> HashMap<OptionBasicType<'_>, &Positive> {
         let mut quantities = HashMap::new();
         for position in &self.positions {
             let basic_type = OptionBasicType {
@@ -624,13 +623,10 @@ impl Strategies for CustomStrategy {
         let mut iterations = 0;
 
         while current_price <= max_price && iterations < max_iterations {
-            match self.calculate_profit_at(&current_price) {
-                Ok(current_profit) => {
-                    if current_profit > max_profit {
-                        max_profit = current_profit;
-                    }
-                }
-                Err(_) => {} // Skip calculation errors
+            if let Ok(current_profit) = self.calculate_profit_at(&current_price)
+                && current_profit > max_profit
+            {
+                max_profit = current_profit;
             }
             current_price += step;
             iterations += 1;
@@ -640,7 +636,7 @@ impl Strategies for CustomStrategy {
         if max_profit <= Decimal::ZERO {
             Ok(Positive::ZERO)
         } else {
-            Ok(max_profit.try_into().unwrap_or(Positive::ZERO))
+            Ok(max_profit.into())
         }
     }
 
@@ -659,13 +655,10 @@ impl Strategies for CustomStrategy {
         let mut iterations = 0;
 
         while current_price <= max_price && iterations < max_iterations {
-            match self.calculate_profit_at(&current_price) {
-                Ok(current_profit) => {
-                    if current_profit < max_loss {
-                        max_loss = current_profit;
-                    }
-                }
-                Err(_) => {} // Skip calculation errors
+            if let Ok(current_profit) = self.calculate_profit_at(&current_price)
+                && current_profit < max_loss
+            {
+                max_loss = current_profit;
             }
             current_price += step;
             iterations += 1;
@@ -675,7 +668,7 @@ impl Strategies for CustomStrategy {
         if max_loss >= Decimal::ZERO {
             Ok(Positive::ZERO)
         } else {
-            Ok((-max_loss).try_into().unwrap_or(Positive::ZERO))
+            Ok((-max_loss).into())
         }
     }
 
@@ -694,13 +687,10 @@ impl Strategies for CustomStrategy {
         let mut iterations = 0;
 
         while current_price <= max_price && iterations < max_iterations {
-            match self.calculate_profit_at(&current_price) {
-                Ok(current_profit) => {
-                    if current_profit > Decimal::ZERO {
-                        total_profit += current_profit;
-                    }
-                }
-                Err(_) => {} // Skip calculation errors
+            if let Ok(current_profit) = self.calculate_profit_at(&current_price)
+                && current_profit > Decimal::ZERO
+            {
+                total_profit += current_profit;
             }
             current_price += step;
             iterations += 1;
@@ -764,10 +754,11 @@ impl Validable for CustomStrategy {
 
         // Max loss point validation is optional during construction
         if let Some(loss) = self.max_loss_point
-            && loss.1 >= 0.0 {
-                error!("Max loss point is not valid");
-                return false;
-            }
+            && loss.1 >= 0.0
+        {
+            error!("Max loss point is not valid");
+            return false;
+        }
 
         true
     }

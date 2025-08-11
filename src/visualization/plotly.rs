@@ -29,9 +29,10 @@ pub trait Graph {
             GraphData::Series(s) => {
                 let mut series = s.clone();
                 if let Some(legend) = &cfg.legend
-                    && let Some(label) = legend.first() {
-                        series.name = label.clone();
-                    }
+                    && let Some(label) = legend.first()
+                {
+                    series.name = label.clone();
+                }
                 plot.add_trace(make_scatter(&series));
             }
             GraphData::MultiSeries(list) => {
@@ -43,9 +44,10 @@ pub trait Graph {
                     }
 
                     if let Some(legend) = &cfg.legend
-                        && idx < legend.len() {
-                            series.name = legend[idx].clone();
-                        }
+                        && idx < legend.len()
+                    {
+                        series.name = legend[idx].clone();
+                    }
 
                     plot.add_trace(make_scatter(&series));
                 }
@@ -53,9 +55,10 @@ pub trait Graph {
             GraphData::Surface(surf) => {
                 let mut surface = surf.clone();
                 if let Some(legend) = &cfg.legend
-                    && let Some(label) = legend.first() {
-                        surface.name = label.clone();
-                    }
+                    && let Some(label) = legend.first()
+                {
+                    surface.name = label.clone();
+                }
                 plot.add_trace(make_surface(&surface));
             }
         }

@@ -535,7 +535,7 @@ impl BasicAble for CallButterfly {
             format!("{}\n\t{}", strategy_title, leg_titles.join("\n\t"))
         }
     }
-    fn get_option_basic_type(&self) -> HashSet<OptionBasicType> {
+    fn get_option_basic_type(&self) -> HashSet<OptionBasicType<'_>> {
         let mut hash_set = HashSet::new();
         let short_call_low = &self.short_call_low.option;
         let long_call = &self.long_call.option;
@@ -562,7 +562,7 @@ impl BasicAble for CallButterfly {
 
         hash_set
     }
-    fn get_implied_volatility(&self) -> HashMap<OptionBasicType, &Positive> {
+    fn get_implied_volatility(&self) -> HashMap<OptionBasicType<'_>, &Positive> {
         let options = [
             (
                 &self.short_call_low.option,
@@ -593,7 +593,7 @@ impl BasicAble for CallButterfly {
             })
             .collect()
     }
-    fn get_quantity(&self) -> HashMap<OptionBasicType, &Positive> {
+    fn get_quantity(&self) -> HashMap<OptionBasicType<'_>, &Positive> {
         let options = [
             (
                 &self.short_call_low.option,

@@ -509,7 +509,7 @@ impl BasicAble for LongStrangle {
             format!("{}\n\t{}", strategy_title, leg_titles.join("\n\t"))
         }
     }
-    fn get_option_basic_type(&self) -> HashSet<OptionBasicType> {
+    fn get_option_basic_type(&self) -> HashSet<OptionBasicType<'_>> {
         let mut hash_set = HashSet::new();
         let long_call = &self.long_call.option;
         let long_put = &self.long_put.option;
@@ -528,7 +528,7 @@ impl BasicAble for LongStrangle {
 
         hash_set
     }
-    fn get_implied_volatility(&self) -> HashMap<OptionBasicType, &Positive> {
+    fn get_implied_volatility(&self) -> HashMap<OptionBasicType<'_>, &Positive> {
         let options = [
             (
                 &self.long_call.option,
@@ -555,7 +555,7 @@ impl BasicAble for LongStrangle {
             })
             .collect()
     }
-    fn get_quantity(&self) -> HashMap<OptionBasicType, &Positive> {
+    fn get_quantity(&self) -> HashMap<OptionBasicType<'_>, &Positive> {
         let options = [
             (&self.long_call.option, &self.long_call.option.quantity),
             (&self.long_put.option, &self.long_put.option.quantity),

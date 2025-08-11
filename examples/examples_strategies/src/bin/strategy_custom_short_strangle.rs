@@ -1,16 +1,16 @@
-use optionstratlib::{ExpirationDate, Options, Positive};
+use chrono::Utc;
 use optionstratlib::greeks::Greeks;
 use optionstratlib::model::position::Position;
 use optionstratlib::model::types::{OptionStyle, OptionType, Side};
 use optionstratlib::pos;
-use optionstratlib::strategies::{BasicAble, Strategies};
 use optionstratlib::strategies::custom::CustomStrategy;
+use optionstratlib::strategies::{BasicAble, Strategies};
 use optionstratlib::utils::setup_logger;
 use optionstratlib::visualization::Graph;
+use optionstratlib::{ExpirationDate, Options, Positive};
 use rust_decimal_macros::dec;
 use std::error::Error;
 use tracing::info;
-use chrono::Utc;
 
 fn main() -> Result<(), Box<dyn Error>> {
     setup_logger();
@@ -39,10 +39,10 @@ fn main() -> Result<(), Box<dyn Error>> {
     );
     let short_call = Position::new(
         short_call_option,
-        pos!(84.2),  // premium_short_call
+        pos!(84.2), // premium_short_call
         Utc::now(),
-        pos!(7.01),  // open_fee_short_call
-        pos!(7.01),  // close_fee_short_call
+        pos!(7.01), // open_fee_short_call
+        pos!(7.01), // close_fee_short_call
         None,
         None,
     );
@@ -66,8 +66,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         short_put_option,
         pos!(353.2), // premium_short_put
         Utc::now(),
-        pos!(7.01),  // open_fee_short_put
-        pos!(7.01),  // close_fee_short_put
+        pos!(7.01), // open_fee_short_put
+        pos!(7.01), // close_fee_short_put
         None,
         None,
     );
@@ -109,7 +109,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         strategy.get_max_loss().unwrap_or(Positive::ZERO)
     );
     info!("Total Fees: ${:.2}", strategy.get_fees()?);
-    
+
     if range > pos!(0.0) {
         info!(
             "Range of Profit: ${:.2} {:.2}%",
@@ -117,15 +117,17 @@ fn main() -> Result<(), Box<dyn Error>> {
             (range / 2.0) / underlying_price * 100.0
         );
     }
-    
+
     info!("Profit Area: {:.2}%", strategy.get_profit_area()?);
     info!("Profit Ratio: {:.2}%", strategy.get_profit_ratio()?);
 
     // Generate charts
-    let path: &std::path::Path = "Draws/Strategy/custom_short_strangle_profit_loss_chart.png".as_ref();
+    let path: &std::path::Path =
+        "Draws/Strategy/custom_short_strangle_profit_loss_chart.png".as_ref();
     strategy.write_png(path)?;
 
-    let path: &std::path::Path = "Draws/Strategy/custom_short_strangle_profit_loss_chart.html".as_ref();
+    let path: &std::path::Path =
+        "Draws/Strategy/custom_short_strangle_profit_loss_chart.html".as_ref();
     strategy.write_html(path)?;
 
     info!("Greeks: {:#?}", strategy.greeks());

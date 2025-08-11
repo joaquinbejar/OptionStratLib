@@ -7,13 +7,13 @@
 use crate::error::StrategyError;
 use crate::model::Position;
 use crate::strategies::base::StrategyType;
+use crate::strategies::custom::CustomStrategy;
 use crate::strategies::{
     BearCallSpread, BearPutSpread, BullCallSpread, BullPutSpread, CallButterfly, IronButterfly,
     IronCondor, LongButterflySpread, LongStraddle, LongStrangle, PoorMansCoveredCall,
     ShortButterflySpread, ShortStraddle, ShortStrangle, Strategable, StrategyConstructor,
 };
 use serde::{Deserialize, Serialize};
-use crate::strategies::custom::CustomStrategy;
 
 /// A request structure for creating and analyzing options trading strategies.
 ///
@@ -125,9 +125,7 @@ impl StrategyRequest {
             StrategyType::CallButterfly => {
                 Ok(Box::new(CallButterfly::get_strategy(&self.positions)?))
             }
-            StrategyType::Custom => {
-                Ok(Box::new(CustomStrategy::get_strategy(&self.positions)?))
-            },
+            StrategyType::Custom => Ok(Box::new(CustomStrategy::get_strategy(&self.positions)?)),
         }
     }
 }
