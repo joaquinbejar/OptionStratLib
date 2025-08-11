@@ -8,3 +8,4 @@ optionstratlib = { workspace = true , features = ["plotly", "static_export"] }
 tracing = { workspace = true }
 rust_decimal_macros = { workspace = true }
 rust_decimal = { workspace = true }
+chrono = { workspace = true }
