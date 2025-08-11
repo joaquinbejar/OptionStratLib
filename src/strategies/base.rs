@@ -154,6 +154,8 @@ pub enum StrategyType {
     PoorMansCoveredCall,
     /// Call Butterfly strategy.
     CallButterfly,
+    /// Custom strategy.
+    Custom,
 }
 
 impl FromStr for StrategyType {
@@ -182,6 +184,7 @@ impl FromStr for StrategyType {
             "ShortPut" => Ok(StrategyType::ShortPut),
             "PoorMansCoveredCall" => Ok(StrategyType::PoorMansCoveredCall),
             "CallButterfly" => Ok(StrategyType::CallButterfly),
+            "Custom" => Ok(StrategyType::Custom),
             _ => Err(()),
         }
     }
@@ -392,7 +395,7 @@ pub trait BasicAble {
     /// This function will panic with the message:
     /// `"get_option_basic_type is not implemented for this strategy"` if called.
     ///
-    fn get_option_basic_type(&self) -> HashSet<OptionBasicType> {
+    fn get_option_basic_type(&self) -> HashSet<OptionBasicType<'_>> {
         unimplemented!("get_option_basic_type is not implemented for this strategy");
     }
     /// Retrieves the symbol associated with the current instance by delegating the call to the `get_symbol`
@@ -423,7 +426,7 @@ pub trait BasicAble {
     /// - Ensure that the `one_option` method returns a valid object that implements a `get_strike` method.
     /// - The values in the returned map are references, so their lifetime is tied to the ownership of `self`.
     ///
-    fn get_strike(&self) -> HashMap<OptionBasicType, &Positive> {
+    fn get_strike(&self) -> HashMap<OptionBasicType<'_>, &Positive> {
         self.one_option().get_strike()
     }
     /// Retrieves a vector of strike prices from the option types.
@@ -468,7 +471,7 @@ pub trait BasicAble {
     ///
     /// Ensure that `get_option_basic_type` is properly implemented and returns
     /// an iterable collection of `OptionBasicType` elements that have valid `Side` associations.
-    fn get_side(&self) -> HashMap<OptionBasicType, &Side> {
+    fn get_side(&self) -> HashMap<OptionBasicType<'_>, &Side> {
         self.get_option_basic_type()
             .iter()
             .map(|option_type| (*option_type, option_type.side))
@@ -505,7 +508,7 @@ pub trait BasicAble {
     /// # Panics
     /// This function will panic if the `OptionStyle` reference is invalid or not properly
     /// initialized for any `OptionBasicType`.
-    fn get_style(&self) -> HashMap<OptionBasicType, &OptionStyle> {
+    fn get_style(&self) -> HashMap<OptionBasicType<'_>, &OptionStyle> {
         self.get_option_basic_type()
             .iter()
             .map(|option_type| (*option_type, option_type.option_style))
@@ -529,7 +532,7 @@ pub trait BasicAble {
     /// # Notes
     /// - Ensure `self.get_option_basic_type()` returns a valid iterable of `OptionBasicType` instances.
     /// - The lifetime of the returned `ExpirationDate` references is tied to the lifetime of `self`.
-    fn get_expiration(&self) -> HashMap<OptionBasicType, &ExpirationDate> {
+    fn get_expiration(&self) -> HashMap<OptionBasicType<'_>, &ExpirationDate> {
         self.get_option_basic_type()
             .iter()
             .map(|option_type| (*option_type, option_type.expiration_date))
@@ -553,7 +556,7 @@ pub trait BasicAble {
     ///
     /// This function will unconditionally panic with the message
     /// `"get_implied_volatility is not implemented for this strategy"`.
-    fn get_implied_volatility(&self) -> HashMap<OptionBasicType, &Positive> {
+    fn get_implied_volatility(&self) -> HashMap<OptionBasicType<'_>, &Positive> {
         unimplemented!("get_implied_volatility is not implemented for this strategy");
     }
     /// Retrieves the quantity information associated with the strategy.
@@ -573,7 +576,7 @@ pub trait BasicAble {
     /// # Example
     /// The function currently serves as a placeholder and should be implemented
     /// in a specific strategy that defines its behavior.
-    fn get_quantity(&self) -> HashMap<OptionBasicType, &Positive> {
+    fn get_quantity(&self) -> HashMap<OptionBasicType<'_>, &Positive> {
         unimplemented!("get_quantity is not implemented for this strategy");
     }
     /// Retrieves the underlying price of the financial instrument (e.g., option).
@@ -612,7 +615,7 @@ pub trait BasicAble {
     ///
     /// This function assumes that `one_option` and its underlying functionality
     /// are error-free. Errors, if any, must be handled within `one_option`.
-    fn get_risk_free_rate(&self) -> HashMap<OptionBasicType, &Decimal> {
+    fn get_risk_free_rate(&self) -> HashMap<OptionBasicType<'_>, &Decimal> {
         self.one_option().get_risk_free_rate()
     }
     /// Retrieves the dividend yield of a financial option.
@@ -623,13 +626,13 @@ pub trait BasicAble {
     /// of `Positive`.
     ///
     /// # Returns
-    /// * `HashMap<OptionBasicType, &Positive>`: A mapping of option basic types to their
+    /// * `HashMap<OptionBasicType<'_>, &Positive>`: A mapping of option basic types to their
     ///   respective positive dividend yield values.
     ///
     /// # Note
     /// Ensure that the associated `one_option()` method is correctly implemented
     /// and provides the desired dividend yield information.
-    fn get_dividend_yield(&self) -> HashMap<OptionBasicType, &Positive> {
+    fn get_dividend_yield(&self) -> HashMap<OptionBasicType<'_>, &Positive> {
         self.one_option().get_dividend_yield()
     }
     /// This method, `one_option`, is designed to retrieve a reference to an `Options` object.
@@ -1616,7 +1619,7 @@ mod tests_strategies_extended {
         }
         impl BreakEvenable for EmptyStrategy {}
         impl BasicAble for EmptyStrategy {
-            fn get_option_basic_type(&self) -> HashSet<OptionBasicType> {
+            fn get_option_basic_type(&self) -> HashSet<OptionBasicType<'_>> {
                 HashSet::new()
             }
         }
@@ -1736,7 +1739,7 @@ mod tests_best_range_to_show {
         fn get_underlying_price(&self) -> &Positive {
             &self.underlying_price
         }
-        fn get_option_basic_type(&self) -> HashSet<OptionBasicType> {
+        fn get_option_basic_type(&self) -> HashSet<OptionBasicType<'_>> {
             HashSet::new()
         }
     }
@@ -1832,7 +1835,7 @@ mod tests_range_to_show {
     }
 
     impl BasicAble for TestStrategy {
-        fn get_option_basic_type(&self) -> HashSet<OptionBasicType> {
+        fn get_option_basic_type(&self) -> HashSet<OptionBasicType<'_>> {
             HashSet::new()
         }
         fn get_underlying_price(&self) -> &Positive {

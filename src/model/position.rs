@@ -893,43 +893,43 @@ impl BasicAble for Position {
     fn get_title(&self) -> String {
         self.option.get_title()
     }
-    fn get_option_basic_type(&self) -> HashSet<OptionBasicType> {
+    fn get_option_basic_type(&self) -> HashSet<OptionBasicType<'_>> {
         self.option.get_option_basic_type()
     }
     fn get_symbol(&self) -> &str {
         self.option.get_symbol()
     }
-    fn get_strike(&self) -> HashMap<OptionBasicType, &Positive> {
+    fn get_strike(&self) -> HashMap<OptionBasicType<'_>, &Positive> {
         self.option.get_strike()
     }
     fn get_strikes(&self) -> Vec<&Positive> {
         self.option.get_strikes()
     }
-    fn get_side(&self) -> HashMap<OptionBasicType, &Side> {
+    fn get_side(&self) -> HashMap<OptionBasicType<'_>, &Side> {
         self.option.get_side()
     }
     fn get_type(&self) -> &OptionType {
         self.option.get_type()
     }
-    fn get_style(&self) -> HashMap<OptionBasicType, &OptionStyle> {
+    fn get_style(&self) -> HashMap<OptionBasicType<'_>, &OptionStyle> {
         self.option.get_style()
     }
-    fn get_expiration(&self) -> HashMap<OptionBasicType, &ExpirationDate> {
+    fn get_expiration(&self) -> HashMap<OptionBasicType<'_>, &ExpirationDate> {
         self.option.get_expiration()
     }
-    fn get_implied_volatility(&self) -> HashMap<OptionBasicType, &Positive> {
+    fn get_implied_volatility(&self) -> HashMap<OptionBasicType<'_>, &Positive> {
         self.option.get_implied_volatility()
     }
-    fn get_quantity(&self) -> HashMap<OptionBasicType, &Positive> {
+    fn get_quantity(&self) -> HashMap<OptionBasicType<'_>, &Positive> {
         self.option.get_quantity()
     }
     fn get_underlying_price(&self) -> &Positive {
         self.option.get_underlying_price()
     }
-    fn get_risk_free_rate(&self) -> HashMap<OptionBasicType, &Decimal> {
+    fn get_risk_free_rate(&self) -> HashMap<OptionBasicType<'_>, &Decimal> {
         self.option.get_risk_free_rate()
     }
-    fn get_dividend_yield(&self) -> HashMap<OptionBasicType, &Positive> {
+    fn get_dividend_yield(&self) -> HashMap<OptionBasicType<'_>, &Positive> {
         self.option.get_dividend_yield()
     }
     fn one_option(&self) -> &Options {

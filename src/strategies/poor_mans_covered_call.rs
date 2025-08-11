@@ -498,7 +498,7 @@ impl BasicAble for PoorMansCoveredCall {
             format!("{}\n\t{}", strategy_title, leg_titles.join("\n\t"))
         }
     }
-    fn get_option_basic_type(&self) -> HashSet<OptionBasicType> {
+    fn get_option_basic_type(&self) -> HashSet<OptionBasicType<'_>> {
         let mut hash_set = HashSet::new();
         let short_call = &self.short_call.option;
         let long_call = &self.long_call.option;
@@ -517,7 +517,7 @@ impl BasicAble for PoorMansCoveredCall {
 
         hash_set
     }
-    fn get_implied_volatility(&self) -> HashMap<OptionBasicType, &Positive> {
+    fn get_implied_volatility(&self) -> HashMap<OptionBasicType<'_>, &Positive> {
         let options = [
             (
                 &self.short_call.option,
@@ -544,7 +544,7 @@ impl BasicAble for PoorMansCoveredCall {
             })
             .collect()
     }
-    fn get_quantity(&self) -> HashMap<OptionBasicType, &Positive> {
+    fn get_quantity(&self) -> HashMap<OptionBasicType<'_>, &Positive> {
         let options = [
             (&self.short_call.option, &self.short_call.option.quantity),
             (&self.long_call.option, &self.long_call.option.quantity),

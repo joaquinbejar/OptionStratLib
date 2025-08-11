@@ -639,7 +639,7 @@ impl BasicAble for IronCondor {
             format!("{}\n\t{}", strategy_title, leg_titles.join("\n\t"))
         }
     }
-    fn get_option_basic_type(&self) -> HashSet<OptionBasicType> {
+    fn get_option_basic_type(&self) -> HashSet<OptionBasicType<'_>> {
         let mut hash_set = HashSet::new();
         let short_call = &self.short_call.option;
         let short_put = &self.short_put.option;
@@ -672,7 +672,7 @@ impl BasicAble for IronCondor {
 
         hash_set
     }
-    fn get_implied_volatility(&self) -> HashMap<OptionBasicType, &Positive> {
+    fn get_implied_volatility(&self) -> HashMap<OptionBasicType<'_>, &Positive> {
         let options = [
             (
                 &self.short_call.option,
@@ -707,7 +707,7 @@ impl BasicAble for IronCondor {
             })
             .collect()
     }
-    fn get_quantity(&self) -> HashMap<OptionBasicType, &Positive> {
+    fn get_quantity(&self) -> HashMap<OptionBasicType<'_>, &Positive> {
         let options = [
             (&self.short_call.option, &self.short_call.option.quantity),
             (&self.short_put.option, &self.short_put.option.quantity),

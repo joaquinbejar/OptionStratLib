@@ -28,10 +28,10 @@ pub trait Graph {
         match self.graph_data() {
             GraphData::Series(s) => {
                 let mut series = s.clone();
-                if let Some(legend) = &cfg.legend {
-                    if let Some(label) = legend.first() {
-                        series.name = label.clone();
-                    }
+                if let Some(legend) = &cfg.legend
+                    && let Some(label) = legend.first()
+                {
+                    series.name = label.clone();
                 }
                 plot.add_trace(make_scatter(&series));
             }
@@ -43,10 +43,10 @@ pub trait Graph {
                         series.line_color = pick_color(&cfg, idx);
                     }
 
-                    if let Some(legend) = &cfg.legend {
-                        if idx < legend.len() {
-                            series.name = legend[idx].clone();
-                        }
+                    if let Some(legend) = &cfg.legend
+                        && idx < legend.len()
+                    {
+                        series.name = legend[idx].clone();
                     }
 
                     plot.add_trace(make_scatter(&series));
@@ -54,10 +54,10 @@ pub trait Graph {
             }
             GraphData::Surface(surf) => {
                 let mut surface = surf.clone();
-                if let Some(legend) = &cfg.legend {
-                    if let Some(label) = legend.first() {
-                        surface.name = label.clone();
-                    }
+                if let Some(legend) = &cfg.legend
+                    && let Some(label) = legend.first()
+                {
+                    surface.name = label.clone();
                 }
                 plot.add_trace(make_surface(&surface));
             }

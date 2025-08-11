@@ -1012,7 +1012,7 @@ impl Default for OptionData {
 
 impl PartialOrd for OptionData {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.strike_price.cmp(&other.strike_price))
+        Some(self.cmp(other))
     }
 }
 
