@@ -13,6 +13,7 @@ use crate::strategies::{
     ShortButterflySpread, ShortStraddle, ShortStrangle, Strategable, StrategyConstructor,
 };
 use serde::{Deserialize, Serialize};
+use crate::strategies::custom::CustomStrategy;
 
 /// A request structure for creating and analyzing options trading strategies.
 ///
@@ -124,6 +125,9 @@ impl StrategyRequest {
             StrategyType::CallButterfly => {
                 Ok(Box::new(CallButterfly::get_strategy(&self.positions)?))
             }
+            StrategyType::Custom => {
+                Ok(Box::new(CustomStrategy::get_strategy(&self.positions)?))
+            },
         }
     }
 }
