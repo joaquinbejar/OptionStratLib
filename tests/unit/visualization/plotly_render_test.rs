@@ -68,8 +68,8 @@ mod plotly_render_tests {
 
     #[cfg(test)]
     mod tests {
-        use tracing::info;
         use super::*;
+        use tracing::info;
 
         // Test with different configuration options
         #[test]
