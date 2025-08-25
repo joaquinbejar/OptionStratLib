@@ -1,15 +1,5 @@
 use chrono::Utc;
-use optionstratlib::ExpirationDate;
-use optionstratlib::greeks::Greeks;
-use optionstratlib::model::option::Options;
-use optionstratlib::model::position::Position;
-use optionstratlib::model::types::{OptionStyle, OptionType, Side};
-use optionstratlib::pos;
-use optionstratlib::pricing::Profit;
-use optionstratlib::strategies::base::{BasicAble, BreakEvenable, Strategies};
-use optionstratlib::strategies::custom::CustomStrategy;
-use optionstratlib::utils::setup_logger;
-use optionstratlib::visualization::Graph;
+use optionstratlib::prelude::*;
 use rust_decimal_macros::dec;
 use tracing::info;
 

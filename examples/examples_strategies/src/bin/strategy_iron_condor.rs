@@ -1,14 +1,7 @@
-use optionstratlib::ExpirationDate;
-use optionstratlib::Positive;
-use optionstratlib::pos;
-use optionstratlib::strategies::iron_condor::IronCondor;
-use optionstratlib::strategies::{BasicAble, Strategies, Validable};
-use optionstratlib::utils::setup_logger;
-use optionstratlib::visualization::Graph;
+use optionstratlib::prelude::*;
 use rust_decimal_macros::dec;
 use std::error::Error;
 use tracing::info;
-
 fn main() -> Result<(), Box<dyn Error>> {
     setup_logger();
     let underlying_price = pos!(2646.9);

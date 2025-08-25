@@ -1,5 +1,4 @@
-use optionstratlib::error::GraphError;
-use optionstratlib::visualization::{Graph, GraphData, Series2D, TraceMode};
+use optionstratlib::prelude::*;
 use rust_decimal_macros::dec;
 use tracing::info;
 

@@ -3,13 +3,7 @@
    Email: jb@taunais.com
    Date: 29/1/25
 ******************************************************************************/
-use optionstratlib::chains::chain::OptionChain;
-use optionstratlib::curves::BasicCurves;
-use optionstratlib::geometrics::Plottable;
-use optionstratlib::model::BasicAxisTypes;
-use optionstratlib::utils::setup_logger;
-use optionstratlib::utils::time::get_x_days_formatted;
-use optionstratlib::{OptionStyle, Side};
+use optionstratlib::prelude::*;
 use tracing::info;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {

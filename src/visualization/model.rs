@@ -26,7 +26,7 @@ use std::path::PathBuf;
 /// This structure represents a point in a 2D space with additional styling properties
 /// for visualization purposes.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct Point2D {
+pub struct VisPoint2D {
     /// The x-coordinate of the point.
     pub x: Decimal,
 
@@ -51,7 +51,7 @@ pub struct Point2D {
 /// This structure represents a point in a 3D space with additional styling properties
 /// for visualization purposes.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct Point3D {
+pub struct VisPoint3D {
     /// The x-coordinate of the point.
     pub x: Decimal,
 
@@ -81,7 +81,7 @@ pub struct Point3D {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Label2D {
     /// The 2D point where the label should be positioned.
-    pub point: Point2D,
+    pub point: VisPoint2D,
 
     /// The text content of the label.
     pub label: String,
@@ -94,7 +94,7 @@ pub struct Label2D {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Label3D {
     /// The 3D point where the label should be positioned.
-    pub point: Point3D,
+    pub point: VisPoint3D,
 
     /// The text content of the label.
     pub label: String,
@@ -183,7 +183,7 @@ pub enum GraphData {
 
     /// A 3D surface representation with x, y, and z coordinates.
     /// Used for creating 3D surface plots and visualizations.
-    Surface(Surface3D),
+    GraphSurface(Surface3D),
 }
 
 impl From<Curve> for GraphData {
@@ -227,7 +227,7 @@ impl From<Vec<Curve>> for GraphData {
 
 impl From<Surface> for GraphData {
     fn from(surface: Surface) -> Self {
-        GraphData::Surface(Surface3D {
+        GraphData::GraphSurface(Surface3D {
             x: surface.points.iter().map(|p| p.x).collect(),
             y: surface.points.iter().map(|p| p.y).collect(),
             z: surface.points.iter().map(|p| p.z).collect(),

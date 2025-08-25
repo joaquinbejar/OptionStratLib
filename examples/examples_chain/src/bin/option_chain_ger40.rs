@@ -3,16 +3,7 @@
    Email: jb@taunais.com
    Date: 29/1/25
 ******************************************************************************/
-use optionstratlib::ExpirationDate;
-use optionstratlib::chains::chain::OptionChain;
-use optionstratlib::greeks::Greeks;
-use optionstratlib::strategies::base::Optimizable;
-use optionstratlib::strategies::{DeltaNeutrality, FindOptimalSide, ShortStrangle, Strategies};
-use optionstratlib::utils::setup_logger;
-
-use optionstratlib::model::types::Action;
-use optionstratlib::visualization::Graph;
-use optionstratlib::{Positive, pos};
+use optionstratlib::prelude::*;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use tracing::{debug, info};

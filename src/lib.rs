@@ -1,7 +1,7 @@
 #![allow(unknown_lints)]
 #![allow(clippy::literal_string_with_formatting_args)]
 
-//! # OptionStratLib v0.6.2: Comprehensive Financial Options Library
+//! # OptionStratLib v0.7.0: Financial Options Library
 //!
 //! ## Table of Contents
 //! 1. [Introduction](#introduction)
@@ -16,9 +16,9 @@
 //!
 //! ## Introduction
 //!
-//! OptionStratLib is a comprehensive Rust library for options trading and strategy development across multiple asset classes. 
-//! This versatile toolkit enables traders, quants, and developers to model, analyze, and visualize options strategies with a 
-//! robust, type-safe approach. The library focuses on precision with decimal-based calculations, extensive test coverage, 
+//! OptionStratLib is a comprehensive Rust library for options trading and strategy development across multiple asset classes.
+//! This versatile toolkit enables traders, quants, and developers to model, analyze, and visualize options strategies with a
+//! robust, type-safe approach. The library focuses on precision with decimal-based calculations, extensive test coverage,
 //! and a modular architecture built on modern Rust 2024 edition.
 //!
 //! ## Features
@@ -487,7 +487,7 @@
 //! let gamma = option.gamma().unwrap();
 //! let theta = option.theta().unwrap();
 //! let vega = option.vega().unwrap();
-//! println!("Greeks - Delta: {:.4}, Gamma: {:.4}, Theta: {:.4}, Vega: {:.4}", 
+//! println!("Greeks - Delta: {:.4}, Gamma: {:.4}, Theta: {:.4}, Vega: {:.4}",
 //!          delta, gamma, theta, vega);
 //! ```
 //!
@@ -503,7 +503,8 @@
 //! use std::error::Error;
 //!
 //! fn main() -> Result<(), Box<dyn Error>> {
-//!     let underlying_price = pos!(100.0);
+//!     use optionstratlib::pricing::Profit;
+//! let underlying_price = pos!(100.0);
 //!
 //!     // Create a Bull Call Spread strategy
 //!     let strategy = BullCallSpread::new(
@@ -532,8 +533,8 @@
 //!     // Calculate P&L at different price points
 //!     let prices = vec![pos!(90.0), pos!(95.0), pos!(100.0), pos!(105.0), pos!(110.0)];
 //!     for price in prices {
-//!         let pnl = strategy.get_profit_loss_at_price(price)?;
-//!         println!("P&L at ${}: ${:.2}", price, pnl);
+//!         let pnl = strategy.get_point_at_price(&price)?;
+//!         println!("P&L at ${}: ${:.2}", price, pnl.0);
 //!     }
 //!
 //!     // Generate visualization
@@ -549,85 +550,111 @@
 //! ### Advanced Features: Volatility Analysis
 //!
 //! ```rust
-//! use optionstratlib::volatility::utils::implied_volatility;
-//! use optionstratlib::{OptionStyle, OptionType};
-//! use rust_decimal_macros::dec;
-//! use optionstratlib::pos;
+//! use optionstratlib::prelude::*;
 //!
-//! // Calculate implied volatility from market price
-//! let market_price = dec!(5.50);
-//! let underlying_price = dec!(100.0);
-//! let strike_price = dec!(105.0);
-//! let time_to_expiration = dec!(0.25); // 3 months
-//! let risk_free_rate = dec!(0.05);
-//! let dividend_yield = dec!(0.02);
+//! fn main() -> Result<(), Box<dyn std::error::Error>> {
+//!     // Create an option for implied volatility calculation
+//!     let mut option = Options::new(
+//!         OptionType::European,
+//!         Side::Long,
+//!         "AAPL".to_string(),
+//!         pos!(105.0), // strike
+//!         ExpirationDate::Days(pos!(90.0)),
+//!         pos!(0.20), // initial IV guess
+//!         pos!(1.0), // quantity
+//!         pos!(100.0), // underlying price
+//!         dec!(0.05), // risk free rate
+//!         OptionStyle::Call,
+//!         pos!(0.02), // dividend yield
+//!         None,
+//!     );
 //!
-//! let iv = implied_volatility(
-//!     market_price,
-//!     underlying_price,
-//!     strike_price,
-//!     time_to_expiration,
-//!     risk_free_rate,
-//!     dividend_yield,
-//!     OptionType::European,
-//!     OptionStyle::Call,
-//! ).unwrap();
+//!     let market_price = pos!(5.50);
+//!     let iv = implied_volatility(market_price, &mut option, 100)?;
 //!
-//! println!("Implied Volatility: {:.2}%", iv * dec!(100));
+//!     println!("Implied volatility: {:.2}%", iv.to_f64() * 100.0);
+//!     Ok(())
+//! }
 //! ```
 //!
 //! ### Custom Strategy Creation
 //!
 //! ```rust
-//! use optionstratlib::strategies::custom::CustomStrategy;
-//! use optionstratlib::strategies::Strategies;
-//! use optionstratlib::{Options, OptionStyle, OptionType, Side, ExpirationDate, pos};
-//! use rust_decimal_macros::dec;
+//! use optionstratlib::prelude::*;
 //!
-//! // Create a custom Iron Condor using the flexible framework
-//! let mut custom_strategy = CustomStrategy::new(
-//!     "Custom Iron Condor".to_string(),
-//!     "AAPL".to_string(),
-//!     "Custom 4-leg Iron Condor strategy".to_string(),
-//!     pos!(150.0), // underlying_price
+//! // Define common parameters
+//! let underlying_symbol = "DAX".to_string();
+//! let underlying_price = pos!(24000.0);
+//! let expiration = ExpirationDate::Days(pos!(30.0));
+//! let implied_volatility = pos!(0.25);
+//! let risk_free_rate = dec!(0.05);
+//! let dividend_yield = pos!(0.02);
+//! let fee = pos!(2.0);
+//!
+//! // Create a long put option
+//! let long_put_option = Options::new(
+//!     OptionType::European,
+//!     Side::Long,
+//!     underlying_symbol.clone(),
+//!     pos!(24070.0), // strike
+//!     expiration.clone(),
+//!     implied_volatility,
+//!     pos!(1.0), // quantity
+//!     underlying_price,
+//!     risk_free_rate,
+//!     OptionStyle::Put,
+//!     dividend_yield,
+//!     None,
+//! );
+//! let long_put = Position::new(
+//!     long_put_option,
+//!     pos!(150.0), // premium
+//!     Utc::now(),
+//!     fee,
+//!     fee,
+//!     None,
+//!     None,
 //! );
 //!
-//! // Add the four legs of an Iron Condor
-//! // Long Put (lower strike)
-//! custom_strategy.add_option(Options::new(
-//!     OptionType::European, Side::Long, "AAPL".to_string(),
-//!     pos!(140.0), ExpirationDate::Days(pos!(30.0)), pos!(0.25),
-//!     pos!(1.0), pos!(150.0), dec!(0.05), OptionStyle::Put,
-//!     pos!(0.02), None
-//! )).unwrap();
+//! // Create a long call option  
+//! let long_call_option = Options::new(
+//!     OptionType::European,
+//!     Side::Long,
+//!     underlying_symbol.clone(),
+//!     pos!(24030.0), // strike
+//!     expiration.clone(),
+//!     implied_volatility,
+//!     pos!(1.0), // quantity
+//!     underlying_price,
+//!     risk_free_rate,
+//!     OptionStyle::Call,
+//!     dividend_yield,
+//!     None,
+//! );
+//! let long_call = Position::new(
+//!     long_call_option,
+//!     pos!(120.0), // premium
+//!     Utc::now(),
+//!     fee,
+//!     fee,
+//!     None,
+//!     None,
+//! );
 //!
-//! // Short Put (higher strike)
-//! custom_strategy.add_option(Options::new(
-//!     OptionType::European, Side::Short, "AAPL".to_string(),
-//!     pos!(145.0), ExpirationDate::Days(pos!(30.0)), pos!(0.25),
-//!     pos!(1.0), pos!(150.0), dec!(0.05), OptionStyle::Put,
-//!     pos!(0.02), None
-//! )).unwrap();
+//! // Create CustomStrategy with the positions
+//! let positions = vec![long_call, long_put];
+//! let strategy = CustomStrategy::new(
+//!     "DAX Straddle Strategy".to_string(),
+//!     underlying_symbol,
+//!     "A DAX long straddle strategy".to_string(),
+//!     underlying_price,
+//!     positions,
+//!     pos!(1.0),
+//!     30,
+//!     implied_volatility,
+//! );
 //!
-//! // Short Call (lower strike)
-//! custom_strategy.add_option(Options::new(
-//!     OptionType::European, Side::Short, "AAPL".to_string(),
-//!     pos!(155.0), ExpirationDate::Days(pos!(30.0)), pos!(0.25),
-//!     pos!(1.0), pos!(150.0), dec!(0.05), OptionStyle::Call,
-//!     pos!(0.02), None
-//! )).unwrap();
-//!
-//! // Long Call (higher strike)
-//! custom_strategy.add_option(Options::new(
-//!     OptionType::European, Side::Long, "AAPL".to_string(),
-//!     pos!(160.0), ExpirationDate::Days(pos!(30.0)), pos!(0.25),
-//!     pos!(1.0), pos!(150.0), dec!(0.05), OptionStyle::Call,
-//!     pos!(0.02), None
-//! )).unwrap();
-//!
-//! // Analyze the custom strategy
-//! println!("Max Profit: ${:.2}", custom_strategy.get_max_profit().unwrap_or(pos!(0.0)));
-//! println!("Max Loss: ${:.2}", custom_strategy.get_max_loss().unwrap_or(pos!(0.0)));
+//! println!("Strategy created: {}", strategy.get_title());
 //! ```
 //!
 //! ## Testing
@@ -737,7 +764,7 @@
 //!
 //! ---
 //!
-//! **OptionStratLib v0.6.2** - Built with ❤️ in Rust for the financial community
+//! **OptionStratLib v0.7.0** - Built with ❤️ in Rust for the financial community
 //!
 
 /// # OptionsStratLib: Financial Options Trading Library
@@ -873,6 +900,13 @@ pub mod volatility;
 /// Includes utilities for constructing series data, navigating expirations, and performing
 /// cross-expiration analysis and visualization.
 pub mod series;
+
+/// * `prelude` - Convenient re-exports of commonly used types and traits.
+///
+/// The prelude module provides a single import point for the most frequently used
+/// types, traits, and functions from the OptionStratLib library. This reduces the
+/// amount of boilerplate imports needed when working with the library.
+pub mod prelude;
 
 pub use model::ExpirationDate;
 pub use model::Options;

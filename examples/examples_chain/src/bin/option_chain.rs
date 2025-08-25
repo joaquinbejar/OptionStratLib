@@ -3,9 +3,7 @@
    Email: jb@taunais.com
    Date: 26/9/24
 ******************************************************************************/
-use optionstratlib::chains::chain::OptionChain;
-use optionstratlib::utils::setup_logger;
-use optionstratlib::{pos, spos};
+use optionstratlib::prelude::*;
 use rust_decimal_macros::dec;
 use tracing::info;
 

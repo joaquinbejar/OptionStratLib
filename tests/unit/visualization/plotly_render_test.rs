@@ -69,6 +69,7 @@ mod plotly_render_tests {
     #[cfg(test)]
     mod tests {
         use super::*;
+        use tracing::info;
 
         // Test with different configuration options
         #[test]
@@ -165,7 +166,7 @@ mod plotly_render_tests {
 
             let result = graph.render(OutputType::Png(&file_path));
             if let Err(e) = &result {
-                println!("PNG render error: {e}");
+                info!("PNG render error: {e}");
             }
             assert!(result.is_ok(), "Render to PNG should succeed");
         }
@@ -182,7 +183,7 @@ mod plotly_render_tests {
 
             let result = graph.render(OutputType::Svg(&file_path));
             if let Err(e) = &result {
-                println!("SVG render error: {e}");
+                info!("SVG render error: {e}");
             }
             assert!(result.is_ok(), "Render to SVG should succeed");
         }
@@ -225,7 +226,7 @@ mod plotly_render_tests {
 
             let result = graph.write_png(&file_path);
             if let Err(e) = &result {
-                println!("PNG export error: {e}");
+                info!("PNG export error: {e}");
             }
             assert!(result.is_ok(), "Write to PNG should succeed");
         }
@@ -242,7 +243,7 @@ mod plotly_render_tests {
 
             let result = graph.write_svg(&file_path);
             if let Err(e) = &result {
-                println!("SVG export error: {e}");
+                info!("SVG export error: {e}");
             }
             assert!(result.is_ok(), "Write to SVG should succeed");
         }

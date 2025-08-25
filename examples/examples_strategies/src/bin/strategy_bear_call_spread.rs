@@ -3,12 +3,7 @@
    Email: jb@taunais.com
    Date: 25/9/24
 ******************************************************************************/
-use optionstratlib::Positive;
-use optionstratlib::strategies::bear_call_spread::BearCallSpread;
-use optionstratlib::strategies::{BasicAble, Strategies};
-use optionstratlib::utils::setup_logger;
-use optionstratlib::visualization::Graph;
-use optionstratlib::{ExpirationDate, pos};
+use optionstratlib::prelude::*;
 use rust_decimal_macros::dec;
 use std::error::Error;
 use tracing::info;

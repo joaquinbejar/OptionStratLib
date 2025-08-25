@@ -4,17 +4,7 @@
    Date: 29/1/25
 ******************************************************************************/
 use chrono::DateTime;
-use optionstratlib::ExpirationDate;
-use optionstratlib::chains::chain::OptionChain;
-use optionstratlib::greeks::Greeks;
-use optionstratlib::strategies::base::Optimizable;
-use optionstratlib::strategies::{
-    BasicAble, DeltaNeutrality, FindOptimalSide, ShortStrangle, Strategies,
-};
-use optionstratlib::utils::setup_logger;
-
-use optionstratlib::visualization::Graph;
-use optionstratlib::{Positive, pos};
+use optionstratlib::prelude::*;
 use rust_decimal::Decimal;
 use tracing::{debug, info};
 

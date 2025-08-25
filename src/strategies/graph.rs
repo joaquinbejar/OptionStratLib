@@ -8,7 +8,7 @@ use crate::strategies::{
     Strategies,
 };
 use crate::visualization::{
-    ColorScheme, Graph, GraphConfig, GraphData, Label2D, LineStyle, Point2D, Series2D, TraceMode,
+    ColorScheme, Graph, GraphConfig, GraphData, Label2D, LineStyle, Series2D, TraceMode, VisPoint2D,
 };
 use rust_decimal::Decimal;
 
@@ -143,7 +143,7 @@ macro_rules! impl_graph_for_payoff_strategy {
                     let mut y_offset = Decimal::ZERO; // Initial value, will be updated later
 
                     // Create a Point2D for the label position
-                    let label_point = Point2D {
+                    let label_point = VisPoint2D {
                         x: underlying_price.to_dec(),
                         y: y_offset,
                         name: format!("P/L Label"),
@@ -216,7 +216,7 @@ macro_rules! impl_graph_for_payoff_strategy {
                         // For each break-even point, create a label showing its X value
                         for be_point in break_even_points.iter() {
                             // Create a Point2D for the break-even label position
-                            let be_label_point = Point2D {
+                            let be_label_point = VisPoint2D {
                                 x: be_point.to_dec(),
                                 y: max_profit + padding * Decimal::new(5, 1), // Position above the graph
                                 name: format!("Break-even"),

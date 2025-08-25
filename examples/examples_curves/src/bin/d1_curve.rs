@@ -1,10 +1,4 @@
-use optionstratlib::curves::{Curve, Point2D};
-use optionstratlib::geometrics::{
-    ConstructionMethod, ConstructionParams, GeometricObject, Plottable,
-};
-use optionstratlib::greeks::d1;
-use optionstratlib::utils::setup_logger;
-use optionstratlib::{Positive, pos};
+use optionstratlib::prelude::*;
 use rust_decimal_macros::dec;
 use std::error::Error;
 use tracing::info;

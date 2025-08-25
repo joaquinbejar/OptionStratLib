@@ -52,7 +52,7 @@ pub trait Graph {
                     plot.add_trace(make_scatter(&series));
                 }
             }
-            GraphData::Surface(surf) => {
+            GraphData::GraphSurface(surf) => {
                 let mut surface = surf.clone();
                 if let Some(legend) = &cfg.legend
                     && let Some(label) = legend.first()

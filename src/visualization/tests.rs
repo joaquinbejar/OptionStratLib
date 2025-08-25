@@ -163,7 +163,7 @@ mod tests_model {
         };
         let graph_data = GraphData::from(surface);
         match graph_data {
-            GraphData::Surface(surf3d) => {
+            GraphData::GraphSurface(surf3d) => {
                 assert_eq!(surf3d.name, "Surface");
                 assert_eq!(surf3d.x, vec![dec!(0.0), dec!(0.0), dec!(1.0), dec!(1.0)]);
                 assert_eq!(surf3d.y, vec![dec!(0.0), dec!(1.0), dec!(0.0), dec!(1.0)]);
@@ -194,7 +194,7 @@ mod tests_model {
         };
         let graph_data = GraphData::from(empty_surface);
         match graph_data {
-            GraphData::Surface(surf3d) => {
+            GraphData::GraphSurface(surf3d) => {
                 assert_eq!(surf3d.name, "Surface");
                 assert!(surf3d.x.is_empty());
                 assert!(surf3d.y.is_empty());

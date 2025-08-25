@@ -114,7 +114,7 @@ fn test_graph_data_from_surface() {
 
     // Verify the conversion
     match graph_data {
-        GraphData::Surface(surface3d) => {
+        GraphData::GraphSurface(surface3d) => {
             assert_eq!(surface3d.x, vec![dec!(1.0), dec!(4.0), dec!(7.0)]);
             assert_eq!(surface3d.y, vec![dec!(2.0), dec!(5.0), dec!(8.0)]);
             assert_eq!(surface3d.z, vec![dec!(3.0), dec!(6.0), dec!(9.0)]);

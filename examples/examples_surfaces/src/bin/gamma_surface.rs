@@ -1,11 +1,5 @@
-use optionstratlib::curves::Point2D;
-use optionstratlib::geometrics::{
-    ConstructionMethod, ConstructionParams, GeometricObject, Plottable,
-};
-use optionstratlib::greeks::Greeks;
-use optionstratlib::surfaces::{Point3D, Surface};
-use optionstratlib::utils::setup_logger;
-use optionstratlib::{ExpirationDate, OptionStyle, OptionType, Options, Positive, Side, pos};
+use optionstratlib::prelude::*;
+use optionstratlib::surfaces::Surface;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use std::error::Error;

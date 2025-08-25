@@ -69,6 +69,7 @@ mod tests_interface {
 
     use crate::visualization::{Graph, GraphConfig, GraphData, Series2D, Surface3D, TraceMode};
     use rust_decimal_macros::dec;
+
     #[cfg(feature = "static_export")]
     use {
         crate::visualization::{ColorScheme, LineStyle, OutputType},
@@ -228,7 +229,7 @@ mod tests_interface {
         };
 
         TestGraph {
-            data: GraphData::Surface(surface),
+            data: GraphData::GraphSurface(surface),
             config,
         }
     }
@@ -333,7 +334,7 @@ mod tests_interface {
         let result = graph.write_png(&temp_path);
 
         if let Err(e) = &result {
-            println!("PNG export error: {e}");
+            tracing::info!("PNG export error: {e}");
         }
 
         assert!(result.is_ok(), "PNG export should succeed");
@@ -351,7 +352,7 @@ mod tests_interface {
         let result = graph.write_svg(&temp_path);
 
         if let Err(e) = &result {
-            println!("SVG export error: {e}");
+            tracing::info!("SVG export error: {e}");
         }
 
         assert!(result.is_ok(), "SVG export should succeed");
