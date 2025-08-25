@@ -764,7 +764,7 @@
 //!
 //! ---
 //!
-//! **OptionStratLib v0.6.2** - Built with ❤️ in Rust for the financial community
+//! **OptionStratLib v0.7.0** - Built with ❤️ in Rust for the financial community
 //!
 
 /// # OptionsStratLib: Financial Options Trading Library
