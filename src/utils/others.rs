@@ -503,14 +503,14 @@ mod tests_random_decimal {
     use super::*;
     use rand::SeedableRng;
     use rand::rngs::SmallRng;
-    use rand::rngs::mock::StepRng;
+    // use rand::rngs::mock::StepRng; // Deprecated - replaced with SmallRng
 
     use tracing::info;
 
     #[test]
     fn test_random_decimal_generates_valid_value() {
         // Create a deterministic RNG for testing
-        let mut t_rng = StepRng::new(42, 1);
+        let mut t_rng = SmallRng::seed_from_u64(42);
 
         // Call the function
         let result = random_decimal(&mut t_rng);
@@ -560,9 +560,9 @@ mod tests_random_decimal {
     fn test_random_decimal_with_multiple_rng_types() {
         // Test with different RNG implementations
 
-        // Mock RNG
+        // Small RNG with deterministic seed (replaces deprecated StepRng)
         {
-            let mut t_rng = StepRng::new(1, 1);
+            let mut t_rng = SmallRng::seed_from_u64(1);
             assert!(random_decimal(&mut t_rng).is_ok());
         }
 
