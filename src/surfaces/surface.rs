@@ -302,7 +302,7 @@ impl Default for Surface {
 
 impl Graph for Surface {
     fn graph_data(&self) -> GraphData {
-        GraphData::Surface(Surface3D {
+        GraphData::GraphSurface(Surface3D {
             x: self.points.iter().map(|p| p.x).collect(),
             y: self.points.iter().map(|p| p.y).collect(),
             z: self.points.iter().map(|p| p.z).collect(),
@@ -1677,7 +1677,10 @@ mod tests_surface_basic {
         assert_eq!(default.y_range, (Decimal::ZERO, Decimal::ZERO));
 
         let graph_data = surface.graph_data();
-        assert!(matches!(graph_data, GraphData::Surface(Surface3D { .. })));
+        assert!(matches!(
+            graph_data,
+            GraphData::GraphSurface(Surface3D { .. })
+        ));
     }
 
     #[test]
