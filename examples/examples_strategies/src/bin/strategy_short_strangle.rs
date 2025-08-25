@@ -1,10 +1,4 @@
-use optionstratlib::ExpirationDate;
-use optionstratlib::Positive;
-use optionstratlib::greeks::Greeks;
-use optionstratlib::pos;
-use optionstratlib::strategies::{BasicAble, ShortStrangle, Strategies};
-use optionstratlib::utils::setup_logger;
-use optionstratlib::visualization::Graph;
+use optionstratlib::prelude::*;
 use rust_decimal_macros::dec;
 use std::error::Error;
 use tracing::info;

@@ -1,10 +1,4 @@
-use optionstratlib::ExpirationDate;
-use optionstratlib::Positive;
-use optionstratlib::pos;
-use optionstratlib::strategies::iron_butterfly::IronButterfly;
-use optionstratlib::strategies::{BasicAble, Strategies, Validable};
-use optionstratlib::utils::setup_logger;
-use optionstratlib::visualization::Graph;
+use optionstratlib::prelude::*;
 use rust_decimal_macros::dec;
 use std::error::Error;
 use tracing::info;

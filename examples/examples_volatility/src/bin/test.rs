@@ -3,8 +3,8 @@
    Email: jb@taunais.com
    Date: 5/5/25
 ******************************************************************************/
-use optionstratlib::pricing::black_scholes;
-use optionstratlib::{ExpirationDate, OptionStyle, OptionType, Options, Positive, Side, pos};
+
+use optionstratlib::prelude::*;
 use rand::{Rng, rng};
 use rust_decimal::prelude::FromPrimitive;
 use rust_decimal::{Decimal, MathematicalOps};

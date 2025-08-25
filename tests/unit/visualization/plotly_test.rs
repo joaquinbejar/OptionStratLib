@@ -169,10 +169,13 @@ mod plotly_tests {
         #[test]
         fn test_graph_data_surface() {
             let surface = create_sample_surface();
-            let graph = TestGraph::new(GraphData::Surface(surface.clone()), GraphConfig::default());
+            let graph = TestGraph::new(
+                GraphData::GraphSurface(surface.clone()),
+                GraphConfig::default(),
+            );
 
             match graph.graph_data() {
-                GraphData::Surface(s) => {
+                GraphData::GraphSurface(s) => {
                     assert_eq!(s.x, surface.x);
                     assert_eq!(s.y, surface.y);
                     assert_eq!(s.z, surface.z);
@@ -238,7 +241,7 @@ mod plotly_tests {
 
             // Surface data
             let _surface_graph = TestGraph::new(
-                GraphData::Surface(create_sample_surface()),
+                GraphData::GraphSurface(create_sample_surface()),
                 create_sample_config(),
             );
 
@@ -367,7 +370,7 @@ mod plotly_tests {
             config.z_label = Some("Custom Z Axis".to_string());
 
             let surface_data = create_sample_surface();
-            let graph = TestGraph::new(GraphData::Surface(surface_data), config.clone());
+            let graph = TestGraph::new(GraphData::GraphSurface(surface_data), config.clone());
             let plot = graph.to_plot();
 
             // Check trace name (legend)

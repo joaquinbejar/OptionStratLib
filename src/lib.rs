@@ -873,6 +873,13 @@ pub mod volatility;
 /// cross-expiration analysis and visualization.
 pub mod series;
 
+/// * `prelude` - Convenient re-exports of commonly used types and traits.
+///
+/// The prelude module provides a single import point for the most frequently used
+/// types, traits, and functions from the OptionStratLib library. This reduces the
+/// amount of boilerplate imports needed when working with the library.
+pub mod prelude;
+
 pub use model::ExpirationDate;
 pub use model::Options;
 pub use model::positive::Positive;

@@ -1,15 +1,4 @@
-use optionstratlib::curves::Point2D;
-use optionstratlib::error::SurfaceError;
-use optionstratlib::geometrics::{
-    ConstructionMethod, ConstructionParams, GeometricObject, Plottable,
-};
-use optionstratlib::greeks::delta;
-use optionstratlib::model::Options;
-use optionstratlib::model::types::{OptionStyle, Side};
-use optionstratlib::surfaces::{Point3D, Surface};
-use optionstratlib::utils::setup_logger;
-use optionstratlib::visualization::Graph;
-use optionstratlib::{ExpirationDate, OptionType, Positive, pos};
+use optionstratlib::prelude::*;
 use rust_decimal_macros::dec;
 
 fn main() -> Result<(), SurfaceError> {

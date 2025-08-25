@@ -3,12 +3,7 @@
    Email: jb@taunais.com
    Date: 12/6/25
 ******************************************************************************/
-use optionstratlib::chains::OptionChain;
-use optionstratlib::model::types::Action;
-use optionstratlib::strategies::base::Optimizable;
-use optionstratlib::strategies::{DeltaNeutrality, FindOptimalSide, ShortStrangle};
-use optionstratlib::utils::setup_logger;
-use optionstratlib::{Positive, pos};
+use optionstratlib::prelude::*;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use tracing::info;

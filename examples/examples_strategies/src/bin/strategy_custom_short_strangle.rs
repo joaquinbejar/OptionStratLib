@@ -1,13 +1,5 @@
 use chrono::Utc;
-use optionstratlib::greeks::Greeks;
-use optionstratlib::model::position::Position;
-use optionstratlib::model::types::{OptionStyle, OptionType, Side};
-use optionstratlib::pos;
-use optionstratlib::strategies::custom::CustomStrategy;
-use optionstratlib::strategies::{BasicAble, Strategies};
-use optionstratlib::utils::setup_logger;
-use optionstratlib::visualization::Graph;
-use optionstratlib::{ExpirationDate, Options, Positive};
+use optionstratlib::prelude::*;
 use rust_decimal_macros::dec;
 use std::error::Error;
 use tracing::info;

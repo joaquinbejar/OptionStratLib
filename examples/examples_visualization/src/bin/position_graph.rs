@@ -3,13 +3,9 @@
    Email: jb@taunais.com
    Date: 20/8/24
 ******************************************************************************/
+
 use chrono::Utc;
-use optionstratlib::Positive;
-use optionstratlib::model::position::Position;
-use optionstratlib::model::types::{OptionStyle, OptionType, Side};
-use optionstratlib::pos;
-use optionstratlib::visualization::Graph;
-use optionstratlib::{ExpirationDate, Options};
+use optionstratlib::prelude::*;
 use rust_decimal_macros::dec;
 use std::error::Error;
 
