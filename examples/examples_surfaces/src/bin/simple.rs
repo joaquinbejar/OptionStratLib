@@ -75,7 +75,7 @@ fn test_simple_surface() -> Result<(), GraphError> {
     // Save as PNG (should work)
     let png_path = Path::new("Draws/Surfaces/simple_surface.png");
     info!("Saving surface as PNG to: {}", png_path.display());
-    plot.write_image(png_path, ImageFormat::PNG, 1600, 900, 1.0);
+    let _ = plot.write_image(png_path, ImageFormat::PNG, 1600, 900, 1.0);
 
     // We comment out the generation of static images due to issues with Kaleido
     // en macOS con arquitectura ARM (Apple Silicon)
