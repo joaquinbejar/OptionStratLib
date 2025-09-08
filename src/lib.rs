@@ -748,13 +748,6 @@
 //! - Update documentation for API changes
 //! - Follow Rust 2024 edition best practices
 //!
-//! ### **Contact Information**
-//!
-//! - **Author**: Joaquín Béjar García
-//! - **Email**: jb@taunais.com
-//! - **Repository**: <https://github.com/joaquinbejar/OptionStratLib>
-//! - **Documentation**: <https://docs.rs/optionstratlib>
-//! - **License**: MIT
 //!
 //! ### **Support**
 //!
