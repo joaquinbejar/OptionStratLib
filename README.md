@@ -554,7 +554,7 @@ let underlying_price = pos!(100.0);
     // Generate visualization
     #[cfg(feature = "plotly")]
     {
-        strategy.write_html("bull_call_spread.html".as_ref())?;
+        strategy.write_html("Draws/Visualization/bull_call_spread.html".as_ref())?;
     }
 
     Ok(())

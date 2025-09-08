@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>BullCallSpread Strategy: 
+	Underlying: AAPL @ $105 Short Call European Option
+	Underlying: AAPL @ $95 Long Call European Option</title>
+    <script src="https://cdn.plot.ly/plotly-2.24.1.min.js" charset="utf-8"></script>
+    <style>
+        body { margin: 0; padding: 20px; font-family: Arial, sans-serif; }
+        #plotly-graph { width: 100%; height: 600px; }
+    </style>
+</head>
+<body>
+    <div id="plotly-graph"></div>
+    <script>
+        var plotJson = {"data":[{"type":"scatter","name":"BullCallSpread Strategy: \n\tUnderlying: AAPL @ $105 Short Call European Option\n\tUnderlying: AAPL @ $95 Long Call European Option","mode":"lines","x":["93.1","94.1"],"y":["0.00","0.00"],"line":{"width":2.0,"color":"#000000"}},{"type":"scatter","name":"Segment 2","mode":"lines","x":["95.1","96.1","97.1","98.1","99.1","100.1","101.1","102.1","103.1","104.1","105.1","106.1","107.1","108.1"],"y":["0.25","2.75","5.25","7.75","10.25","12.75","15.25","17.75","20.25","22.75","25.00","25.00","25.00","25.00"],"line":{"width":2.0,"color":"#2ca02c"}},{"type":"scatter","name":"Break Even","mode":"lines","x":["93.1","108.1"],"y":["0","0"],"line":{"width":1.0,"color":"#000000"}},{"type":"scatter","name":"Current Price","mode":"lines","x":["100","100"],"y":["-1.2500","26.2500"],"line":{"width":1.0,"color":"#0000FF"}},{"type":"scatter","name":"Current P/L: 12.50","mode":"markers","x":["100"],"y":["12.50"],"line":{"width":10.0,"color":"#2ca02c"}},{"type":"scatter","name":"12.50","mode":"text","x":["100"],"y":["26.2500"],"text":["12.50"],"line":{"width":0.0,"color":"#2ca02c"},"textfont":{"size":16,"color":"#2ca02c"}},{"type":"scatter","name":"BE: 95","mode":"text","x":["95"],"y":["25.62500"],"text":["BE: 95"],"line":{"width":0.0,"color":"#000000"},"textfont":{"size":16,"color":"#000000"}}],"layout":{"title":{"text":"BullCallSpread Strategy: \n\tUnderlying: AAPL @ $105 Short Call European Option\n\tUnderlying: AAPL @ $95 Long Call European Option"},"showlegend":false,"width":1600,"height":900,"xaxis":{"title":{"text":"Underlying Price"}},"yaxis":{"title":{"text":"Profit/Loss"}}},"config":{},"frames":null};
+        Plotly.newPlot('plotly-graph', plotJson);
+    </script>
+</body>
+</html>
