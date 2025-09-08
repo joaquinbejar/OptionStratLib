@@ -115,6 +115,24 @@ pub enum WalkType {
         vol_mean: Positive,
     },
 
+    /// Telegraph process (two-state regime switching model)
+    Telegraph {
+        /// Time step size (fraction of year: daily=1/365, weekly=1/52, etc.)
+        dt: Positive,
+        /// Drift parameter (expected return)
+        drift: Decimal,
+        /// Base volatility parameter (annualized standard deviation)
+        volatility: Positive,
+        /// Transition rate from state -1 to +1 (intensity of upward regime changes)
+        lambda_up: Positive,
+        /// Transition rate from state +1 to -1 (intensity of downward regime changes)
+        lambda_down: Positive,
+        /// Optional volatility multiplier for the +1 state (default: 1.0)
+        vol_multiplier_up: Option<Positive>,
+        /// Optional volatility multiplier for the -1 state (default: 1.0)
+        vol_multiplier_down: Option<Positive>,
+    },
+
     /// Represents historical price data for a given timeframe.
     ///
     /// This encapsulates the historical price data, including the timeframe
@@ -224,6 +242,18 @@ impl Display for WalkType {
             } => write!(
                 f,
                 "Custom {{ dt: {dt}, drift: {drift}, volatility: {volatility}, vov: {vov}, vol_speed: {vol_speed}, vol_mean: {vol_mean} }}"
+            ),
+            WalkType::Telegraph {
+                dt,
+                drift,
+                volatility,
+                lambda_up,
+                lambda_down,
+                vol_multiplier_up,
+                vol_multiplier_down,
+            } => write!(
+                f,
+                "Telegraph {{ dt: {dt}, drift: {drift}, volatility: {volatility}, lambda_up: {lambda_up}, lambda_down: {lambda_down}, vol_multiplier_up: {vol_multiplier_up:?}, vol_multiplier_down: {vol_multiplier_down:?} }}"
             ),
             WalkType::Historical {
                 timeframe,
@@ -462,6 +492,40 @@ mod tests_walk_type {
     }
 
     #[test]
+    fn test_telegraph_creation() {
+        let walk = WalkType::Telegraph {
+            dt: pos!(0.01),
+            drift: dec!(0.05),
+            volatility: pos!(0.2),
+            lambda_up: pos!(0.5),
+            lambda_down: pos!(0.3),
+            vol_multiplier_up: Some(pos!(1.2)),
+            vol_multiplier_down: Some(pos!(0.8)),
+        };
+
+        if let WalkType::Telegraph {
+            dt,
+            drift,
+            volatility,
+            lambda_up,
+            lambda_down,
+            vol_multiplier_up,
+            vol_multiplier_down,
+        } = walk
+        {
+            assert_eq!(dt, pos!(0.01));
+            assert_eq!(drift, dec!(0.05));
+            assert_eq!(volatility, pos!(0.2));
+            assert_eq!(lambda_up, pos!(0.5));
+            assert_eq!(lambda_down, pos!(0.3));
+            assert_eq!(vol_multiplier_up, Some(pos!(1.2)));
+            assert_eq!(vol_multiplier_down, Some(pos!(0.8)));
+        } else {
+            panic!("Expected Telegraph variant");
+        }
+    }
+
+    #[test]
     fn test_display_brownian() {
         let walk = WalkType::Brownian {
             dt: pos!(0.01),
@@ -607,6 +671,29 @@ mod tests_walk_type {
         assert!(display.contains("vov: 0.25"));
         assert!(display.contains("vol_speed: 0.15"));
         assert!(display.contains("vol_mean: 0.3"));
+    }
+
+    #[test]
+    fn test_display_telegraph() {
+        let walk = WalkType::Telegraph {
+            dt: pos!(0.01),
+            drift: dec!(0.05),
+            volatility: pos!(0.2),
+            lambda_up: pos!(0.5),
+            lambda_down: pos!(0.3),
+            vol_multiplier_up: Some(pos!(1.2)),
+            vol_multiplier_down: Some(pos!(0.8)),
+        };
+
+        let display = format!("{walk}");
+        assert!(display.contains("Telegraph"));
+        assert!(display.contains("dt: 0.01"));
+        assert!(display.contains("drift: 0.05"));
+        assert!(display.contains("volatility: 0.2"));
+        assert!(display.contains("lambda_up: 0.5"));
+        assert!(display.contains("lambda_down: 0.3"));
+        assert!(display.contains("vol_multiplier_up: Some(1.2)"));
+        assert!(display.contains("vol_multiplier_down: Some(0.8)"));
     }
 
     #[test]
@@ -905,6 +992,33 @@ mod tests_serialize {
         assert!(json.contains("\"vov\""));
         assert!(json.contains("\"vol_speed\""));
         assert!(json.contains("\"vol_mean\""));
+
+        let deserialized: WalkType = from_str(&json).unwrap();
+        assert_eq!(walk_type, deserialized);
+    }
+
+    #[test]
+    fn test_telegraph_serialization() {
+        let walk_type = WalkType::Telegraph {
+            dt: pos!(0.0027),
+            drift: dec!(0.05),
+            volatility: pos!(0.2),
+            lambda_up: pos!(0.5),
+            lambda_down: pos!(0.3),
+            vol_multiplier_up: Some(pos!(1.2)),
+            vol_multiplier_down: Some(pos!(0.8)),
+        };
+
+        let json = to_string(&walk_type).unwrap();
+
+        assert!(json.contains("\"Telegraph\""));
+        assert!(json.contains("\"dt\""));
+        assert!(json.contains("\"drift\""));
+        assert!(json.contains("\"volatility\""));
+        assert!(json.contains("\"lambda_up\""));
+        assert!(json.contains("\"lambda_down\""));
+        assert!(json.contains("\"vol_multiplier_up\""));
+        assert!(json.contains("\"vol_multiplier_down\""));
 
         let deserialized: WalkType = from_str(&json).unwrap();
         assert_eq!(walk_type, deserialized);

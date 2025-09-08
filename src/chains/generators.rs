@@ -99,6 +99,10 @@ pub fn generator_optionchain(
             walk_params.walker.custom(walk_params).unwrap(),
             Some(*volatility),
         ),
+        WalkType::Telegraph { volatility, .. } => (
+            walk_params.walker.telegraph(walk_params).unwrap(),
+            Some(*volatility),
+        ),
         WalkType::Historical {
             timeframe, prices, ..
         } => {
@@ -184,6 +188,7 @@ pub fn generator_positive(
         WalkType::Garch { .. } => walk_params.walker.garch(walk_params).unwrap(),
         WalkType::Heston { .. } => walk_params.walker.heston(walk_params).unwrap(),
         WalkType::Custom { .. } => walk_params.walker.custom(walk_params).unwrap(),
+        WalkType::Telegraph { .. } => walk_params.walker.telegraph(walk_params).unwrap(),
         WalkType::Historical { .. } => walk_params.walker.historical(walk_params).unwrap(),
     };
 

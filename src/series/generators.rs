@@ -132,6 +132,10 @@ pub fn generator_optionseries(
             walk_params.walker.custom(walk_params).unwrap(),
             Some(*volatility),
         ),
+        WalkType::Telegraph { volatility, .. } => (
+            walk_params.walker.telegraph(walk_params).unwrap(),
+            Some(*volatility),
+        ),
         WalkType::Historical {
             timeframe, prices, ..
         } => {
