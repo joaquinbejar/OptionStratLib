@@ -191,12 +191,8 @@ pub(crate) fn estimate_telegraph_parameters(
     returns: &[Decimal],
     threshold: Decimal,
 ) -> Result<(Decimal, Decimal), DecimalError> {
-    if threshold == Decimal::ZERO {
-        return Err(DecimalError::InvalidValue {
-            value: threshold.to_f64().unwrap(),
-            reason: "Threshold must be non-zero".to_string(),
-        });
-    }
+    // Allow threshold to be zero - it's a valid threshold for classification
+    // Returns are classified as +1 if > threshold, -1 if <= threshold
     let mut current_state = if returns[0] > threshold {
         Decimal::ONE
     } else {
@@ -231,7 +227,33 @@ pub(crate) fn estimate_telegraph_parameters(
         down_durations.push(current_duration);
     }
 
+    // Check if we have transitions in both directions
+    if down_durations.is_empty() {
+        return Err(DecimalError::InvalidValue {
+            value: 0.0,
+            reason: "No transitions from state +1 to -1 found. All returns are above threshold."
+                .to_string(),
+        });
+    }
+
+    if up_durations.is_empty() {
+        return Err(DecimalError::InvalidValue {
+            value: 0.0,
+            reason: "No transitions from state -1 to +1 found. All returns are below threshold."
+                .to_string(),
+        });
+    }
+
+    let sum_down = down_durations.iter().sum::<Decimal>();
     let sum_up = up_durations.iter().sum::<Decimal>();
+
+    if sum_down == Decimal::ZERO {
+        return Err(DecimalError::InvalidValue {
+            value: sum_down.to_f64().unwrap(),
+            reason: "Sum of down durations must be non-zero".to_string(),
+        });
+    }
+
     if sum_up == Decimal::ZERO {
         return Err(DecimalError::InvalidValue {
             value: sum_up.to_f64().unwrap(),
@@ -239,18 +261,8 @@ pub(crate) fn estimate_telegraph_parameters(
         });
     }
 
-    let lambda_up = Decimal::ONE / down_durations.iter().sum::<Decimal>()
-        * Decimal::from_usize(down_durations.len()).unwrap();
-
-    let sum_down = down_durations.iter().sum::<Decimal>();
-    if sum_down == Decimal::ZERO {
-        return Err(DecimalError::InvalidValue {
-            value: sum_down.to_f64().unwrap(),
-            reason: "Sum of down durations must be non-zero".to_string(),
-        });
-    }
-    let lambda_down = Decimal::ONE / up_durations.iter().sum::<Decimal>()
-        * Decimal::from_usize(up_durations.len()).unwrap();
+    let lambda_up = Decimal::ONE / sum_down * Decimal::from_usize(down_durations.len()).unwrap();
+    let lambda_down = Decimal::ONE / sum_up * Decimal::from_usize(up_durations.len()).unwrap();
     Ok((lambda_up, lambda_down))
 }
 
@@ -465,7 +477,11 @@ mod tests_telegraph_process_extended {
             dec!(-0.03),
         ];
         let threshold = Decimal::ZERO;
-        assert!(estimate_telegraph_parameters(&returns, threshold).is_err());
+        let result = estimate_telegraph_parameters(&returns, threshold);
+        assert!(result.is_ok());
+        let (lambda_up, lambda_down) = result.unwrap();
+        assert!(lambda_up > Decimal::ZERO);
+        assert!(lambda_down > Decimal::ZERO);
     }
 
     #[test]
@@ -481,6 +497,8 @@ mod tests_telegraph_process_extended {
             dec!(0.03),
         ];
         let threshold = Decimal::ZERO;
+        // All returns are positive, so all will be in state +1, no state transitions
+        // This should result in an error due to empty down_durations
         assert!(estimate_telegraph_parameters(&returns, threshold).is_err());
     }
 
