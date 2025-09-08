@@ -2,6 +2,7 @@ use crate::Positive;
 use crate::model::decimal::decimal_normal_sample;
 use crate::simulation::{WalkParams, WalkType};
 use crate::volatility::generate_ou_process;
+use num_traits::ToPrimitive;
 use rust_decimal::{Decimal, MathematicalOps};
 use std::error::Error;
 use std::fmt::{Debug, Display};
@@ -482,6 +483,89 @@ where
         }
     }
 
+    /// Generates a Telegraph process (two-state regime switching model).
+    ///
+    /// The Telegraph process alternates between two states (+1 and -1) with specified transition rates,
+    /// affecting the volatility of the price path. This model captures regime-switching behavior
+    /// in financial markets where volatility can suddenly change between high and low regimes.
+    ///
+    /// # Parameters
+    ///
+    /// * `params` - Walk parameters including initial value, drift, base volatility, transition rates,
+    ///   and optional volatility multipliers for each state.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<Vec<Positive>, Box<dyn Error>>` - A vector of positive values representing
+    ///   the generated Telegraph process path, or an error if parameters are invalid.
+    fn telegraph(&self, params: &WalkParams<X, Y>) -> Result<Vec<Positive>, Box<dyn Error>> {
+        match params.walk_type {
+            WalkType::Telegraph {
+                dt,
+                drift,
+                volatility,
+                lambda_up,
+                lambda_down,
+                vol_multiplier_up,
+                vol_multiplier_down,
+            } => {
+                let mut values = Vec::with_capacity(params.size);
+                let mut price = params.ystep_as_positive().to_dec();
+                values.push(Positive(price));
+
+                // Initialize telegraph state randomly
+                let mut state: i8 = if decimal_normal_sample().to_f64().unwrap_or(0.0) < 0.0 {
+                    1
+                } else {
+                    -1
+                };
+
+                let sqrt_dt = dt.sqrt();
+                let vol_mult_up = vol_multiplier_up.unwrap_or(Positive::ONE);
+                let vol_mult_down = vol_multiplier_down.unwrap_or(Positive::ONE);
+
+                for _ in 1..params.size {
+                    // Calculate transition probabilities
+                    let lambda = if state == 1 {
+                        lambda_down.to_dec()
+                    } else {
+                        lambda_up.to_dec()
+                    };
+
+                    let transition_prob = Decimal::ONE - (-lambda * dt.to_dec()).exp();
+
+                    // Check for state transition using uniform random sample
+                    let uniform_sample =
+                        (decimal_normal_sample().abs() + Decimal::ONE) / Decimal::TWO; // Convert normal to uniform [0,1]
+                    if uniform_sample < transition_prob {
+                        state *= -1;
+                    }
+
+                    // Apply volatility multiplier based on current state
+                    let current_vol = if state == 1 {
+                        volatility * vol_mult_up
+                    } else {
+                        volatility * vol_mult_down
+                    };
+
+                    // Generate price change
+                    let z = decimal_normal_sample();
+                    let diffusion = current_vol.to_dec() * sqrt_dt.to_dec() * z;
+                    let drift_term = drift * dt.to_dec();
+
+                    // Update price using geometric Brownian motion with regime-dependent volatility
+                    let price_change = drift_term + diffusion;
+                    price *= price_change.exp();
+
+                    values.push(Positive(price));
+                }
+
+                Ok(values)
+            }
+            _ => Err("Invalid walk type for Telegraph process".into()),
+        }
+    }
+
     /// Generates a historical walk based on the given parameters.
     ///
     /// This function processes the historical walk by extracting a specified number of elements
@@ -520,7 +604,7 @@ where
                     Err("Historical prices are not enough to generate the walk".into())
                 }
             }
-            _ => Err("Invalid walk type for Custom motion".into()),
+            _ => Err("Invalid walk type for Historical motion".into()),
         }
     }
 }
@@ -761,6 +845,31 @@ mod tests_walk_type_able {
         let result = walker.custom(&params)?;
 
         assert_eq!(result.len(), 5);
+        Ok(())
+    }
+
+    #[test]
+    fn test_telegraph_walk() -> Result<(), Box<dyn Error>> {
+        let params = create_test_params(
+            5,
+            10.0,
+            100.0,
+            WalkType::Telegraph {
+                dt: pos!(1.0),
+                drift: Decimal::new(5, 2), // 0.05
+                volatility: pos!(0.2),
+                lambda_up: pos!(0.5),
+                lambda_down: pos!(0.3),
+                vol_multiplier_up: Some(pos!(1.5)),
+                vol_multiplier_down: Some(pos!(0.8)),
+            },
+        );
+
+        let walker = TestWalker {};
+        let result = walker.telegraph(&params)?;
+
+        assert_eq!(result.len(), 5);
+        assert_eq!(result[0], pos!(100.0)); // Initial value should be preserved
         Ok(())
     }
 

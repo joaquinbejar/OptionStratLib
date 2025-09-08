@@ -1,7 +1,7 @@
 #![allow(unknown_lints)]
 #![allow(clippy::literal_string_with_formatting_args)]
 
-//! # OptionStratLib v0.7.0: Financial Options Library
+//! # OptionStratLib v0.7.1: Financial Options Library
 //!
 //! ## Table of Contents
 //! 1. [Introduction](#introduction)
@@ -540,7 +540,7 @@
 //!     // Generate visualization
 //!     #[cfg(feature = "plotly")]
 //!     {
-//!         strategy.write_html("bull_call_spread.html".as_ref())?;
+//!         strategy.write_html("Draws/Visualization/bull_call_spread.html".as_ref())?;
 //!     }
 //!
 //!     Ok(())

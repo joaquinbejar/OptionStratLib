@@ -15,7 +15,7 @@
 [![Wiki](https://img.shields.io/badge/wiki-latest-blue.svg)](https://deepwiki.com/joaquinbejar/OptionStratLib)
 
 
-## OptionStratLib v0.7.0: Financial Options Library
+## OptionStratLib v0.7.1: Financial Options Library
 
 ### Table of Contents
 1. [Introduction](#introduction)
@@ -554,7 +554,7 @@ let underlying_price = pos!(100.0);
     // Generate visualization
     #[cfg(feature = "plotly")]
     {
-        strategy.write_html("bull_call_spread.html".as_ref())?;
+        strategy.write_html("Draws/Visualization/bull_call_spread.html".as_ref())?;
     }
 
     Ok(())
