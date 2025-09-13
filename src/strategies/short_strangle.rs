@@ -41,6 +41,7 @@ use crate::{
 };
 use chrono::Utc;
 use num_traits::FromPrimitive;
+use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -88,7 +89,7 @@ is expected and the underlying asset's price is anticipated to remain stable.";
 /// and selling a put with a strike price of $90, when the underlying is trading at $100.
 /// The premium collected might be $2 for the call and $2 for the put, for a total of $4.
 /// Break-even points would be at $86 ($90 - $4) and $114 ($110 + $4).
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, DebugPretty, DisplaySimple, Serialize, Deserialize)]
 pub struct ShortStrangle {
     /// Name identifier for this specific strategy instance
     pub name: String,

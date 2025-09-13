@@ -13,10 +13,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // option_chain_base.update_expiration_date(get_today_formatted());
     option_chain_base.update_expiration_date(get_x_days_formatted(2));
     let chain_params = option_chain_base.to_build_params()?;
-    info!("Chain params: {:#?}", chain_params);
+    info!("Chain params: {}", chain_params);
     let mut option_chain = OptionChain::build_chain(&chain_params);
     option_chain.update_greeks();
-    info!("Chain: {}", option_chain);
+    // println!("{}", option_chain);
+    option_chain.show();
     let curve = option_chain.curve(&BasicAxisTypes::Volatility, &OptionStyle::Call, &Side::Long)?;
 
     curve

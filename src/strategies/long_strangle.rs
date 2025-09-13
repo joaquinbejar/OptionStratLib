@@ -40,6 +40,7 @@ use crate::{
 };
 use chrono::Utc;
 use num_traits::FromPrimitive;
+use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -107,7 +108,7 @@ direction is uncertain.";
 /// * Requires significant price movement to be profitable
 /// * Suffers from time decay (theta) as both options lose value over time
 /// * Generally more expensive than directional strategies due to purchasing two options
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, DebugPretty, DisplaySimple, Serialize, Deserialize)]
 pub struct LongStrangle {
     /// Name identifier for this specific strategy instance
     pub name: String,

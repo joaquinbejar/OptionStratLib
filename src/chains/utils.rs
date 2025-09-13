@@ -604,6 +604,10 @@ pub(crate) fn empty_string_round_to_2<T: ToString + ToRound>(input: Option<T>) -
     input.map_or_else(|| "".to_string(), |v| v.round_to(2).to_string())
 }
 
+pub(crate) fn empty_string_round_to_3<T: ToString + ToRound>(input: Option<T>) -> String {
+    input.map_or_else(|| "".to_string(), |v| v.round_to(3).to_string())
+}
+
 pub(crate) fn default_empty_string<T: ToString>(input: Option<T>) -> String {
     input.map_or_else(|| "".to_string(), |v| v.to_string())
 }

@@ -57,6 +57,7 @@ use crate::{
 };
 use chrono::Utc;
 use num_traits::FromPrimitive;
+use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -107,7 +108,7 @@ pub(super) const PMCC_DESCRIPTION: &str = "A Poor Man's Covered Call (PMCC) is a
 /// - The strategy often involves rolling the short call forward to continue generating income
 /// - The long call should have sufficient time value to avoid assignment complications
 /// - Ideally implemented when the underlying asset has a strong positive outlook over the long term
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, DebugPretty, DisplaySimple, Serialize, Deserialize)]
 pub struct PoorMansCoveredCall {
     /// Name identifier for this specific strategy instance
     pub name: String,

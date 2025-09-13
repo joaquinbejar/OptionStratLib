@@ -130,8 +130,6 @@ pub trait Graph {
         debug!("Writing PNG to: {}", path.display());
         let cfg = self.graph_config();
 
-        // Intentar hasta 3 veces con un pequeño retraso entre intentos
-        // Esto ayuda con problemas de concurrencia en entornos de prueba
         let mut attempts = 0;
         let max_attempts = 3;
 
@@ -153,17 +151,16 @@ pub trait Graph {
                 Err(e) => {
                     if attempts >= max_attempts {
                         return Err(GraphError::Render(format!(
-                            "Failed to write PNG after {max_attempts} attempts: {e}"
+                            "Failed to write PNG after {max_attempts} attempts: {e} on path: {}",
+                            path.display()
                         )));
                     }
                     debug!("PNG export attempt {} failed: {}", attempts, e);
-                    // Pequeña pausa antes del siguiente intento
                     std::thread::sleep(std::time::Duration::from_millis(100));
                 }
             }
         }
 
-        // No debería llegar aquí, pero por si acaso
         Err(GraphError::Render(
             "Failed to write PNG: unexpected error".to_string(),
         ))
@@ -273,8 +270,8 @@ pub trait Graph {
         debug!("Writing SVG to: {}", path.display());
         let cfg = self.graph_config();
 
-        // Intentar hasta 3 veces con un pequeño retraso entre intentos
-        // Esto ayuda con problemas de concurrencia en entornos de prueba
+        // Try up to 3 times with a small delay between attempts
+        // This helps with concurrency issues in test environments
         let mut attempts = 0;
         let max_attempts = 3;
 
@@ -296,17 +293,16 @@ pub trait Graph {
                 Err(e) => {
                     if attempts >= max_attempts {
                         return Err(GraphError::Render(format!(
-                            "Failed to write SVG after {max_attempts} attempts: {e}"
+                            "Failed to write SVG after {max_attempts} attempts: {e} on path: {}",
+                            path.display()
                         )));
                     }
                     debug!("SVG export attempt {} failed: {}", attempts, e);
-                    // Pequeña pausa antes del siguiente intento
                     std::thread::sleep(std::time::Duration::from_millis(100));
                 }
             }
         }
 
-        // No debería llegar aquí, pero por si acaso
         Err(GraphError::Render(
             "Failed to write SVG: unexpected error".to_string(),
         ))

@@ -24,6 +24,7 @@ use crate::strategies::{
 };
 use crate::{ExpirationDate, Options, Positive, test_strategy_traits};
 use chrono::Utc;
+use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -50,7 +51,7 @@ pub(super) const SHORT_CALL_DESCRIPTION: &str = "A Short Call (or Naked Call) is
 ///   any profit or loss. These points are represented as positive values.
 /// * `short_call` - Represents the short call position in the strategy, which involves selling
 ///   a call option to generate premium income.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, DebugPretty, DisplaySimple, Serialize, Deserialize)]
 pub struct ShortCall {
     /// Name identifier for this specific strategy instance
     pub name: String,

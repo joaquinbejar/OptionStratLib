@@ -45,6 +45,7 @@ use crate::{
     test_strategy_traits,
 };
 use chrono::Utc;
+use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -69,7 +70,7 @@ pub const BEAR_CALL_SPREAD_DESCRIPTION: &str = "A bear call spread is created by
 /// while the maximum loss occurs when the underlying price is at or above the higher strike price.
 ///
 /// # Attributes
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, DebugPretty, DisplaySimple, Serialize, Deserialize)]
 pub struct BearCallSpread {
     /// Name identifier for the strategy instance.
     pub name: String,

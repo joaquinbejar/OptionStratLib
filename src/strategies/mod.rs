@@ -218,8 +218,7 @@ pub mod custom;
 pub mod default;
 /// Delta-neutral strategy implementation and utilities
 pub mod delta_neutral;
-/// Display implementation for strategies
-pub mod display;
+
 /// The `graph` module provides functionality for creating, managing, and
 /// manipulating graph data structures. Common use cases include representing
 /// networks, dependency graphs, and other graph-based relationships.

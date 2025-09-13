@@ -633,6 +633,54 @@ impl Positive {
             None
         }
     }
+
+    /// Checks whether the numeric value of the current instance is a multiple of another specified value.
+    ///
+    /// This method determines if the numeric value represented by the current instance
+    /// is evenly divisible by the provided `other` value, using a small epsilon to handle floating-point precision.
+    ///
+    /// # Arguments
+    ///
+    /// * `other` - A 64-bit floating-point value (`f64`) representing the divisor
+    ///   against which the current instance will be tested.
+    ///
+    /// # Returns
+    ///
+    /// * `true` if the current instance is a multiple of the specified `other` value within a small tolerance.
+    /// * `false` if the current instance is not a multiple of the specified `other` value
+    ///   or if the current value is not finite (e.g., if it is `NaN`, infinity, or similar).
+    ///
+    /// # Behavior
+    ///
+    /// * The method first retrieves the numeric value of the current instance as an `f64`
+    ///   using a `to_f64()` method, which is assumed to be implemented elsewhere in the code.
+    /// * If the resulting value is not finite (e.g., `NaN` or infinity), `false` is returned.
+    /// * Otherwise, the modulo operation is used to check whether the remainder, when divided by `other`,
+    ///   is approximately zero (considering the tolerance defined by `f64::EPSILON`).
+    ///
+    /// # Notes
+    ///
+    /// * `f64::EPSILON` represents the smallest difference between two distinct `f64` values.
+    ///   It is used here to account for floating-point rounding errors when performing equality comparisons.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use optionstratlib::pos;
+    /// let num = pos!(10.0);
+    /// assert!(num.is_multiple(2.0));  // 10.0 is multiple of 2.0
+    /// assert!(!num.is_multiple(3.0)); // 10.0 is not a multiple of 3.0
+    /// ```
+    pub fn is_multiple(&self, other: f64) -> bool {
+        let value = self.to_f64();
+        if !value.is_finite() {
+            return false;
+        }
+
+        // Use modulo operation with floating point epsilon for comparison
+        let remainder = value % other;
+        remainder.abs() < f64::EPSILON || (other - remainder.abs()).abs() < f64::EPSILON
+    }
 }
 
 impl ToRound for Positive {
