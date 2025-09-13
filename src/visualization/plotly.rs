@@ -129,7 +129,7 @@ pub trait Graph {
         prepare_file_path(path)?;
         debug!("Writing PNG to: {}", path.display());
         let cfg = self.graph_config();
-        
+
         let mut attempts = 0;
         let max_attempts = 3;
 
@@ -151,7 +151,8 @@ pub trait Graph {
                 Err(e) => {
                     if attempts >= max_attempts {
                         return Err(GraphError::Render(format!(
-                            "Failed to write PNG after {max_attempts} attempts: {e} on path: {}", path.display()
+                            "Failed to write PNG after {max_attempts} attempts: {e} on path: {}",
+                            path.display()
                         )));
                     }
                     debug!("PNG export attempt {} failed: {}", attempts, e);
@@ -292,7 +293,8 @@ pub trait Graph {
                 Err(e) => {
                     if attempts >= max_attempts {
                         return Err(GraphError::Render(format!(
-                            "Failed to write SVG after {max_attempts} attempts: {e} on path: {}", path.display()
+                            "Failed to write SVG after {max_attempts} attempts: {e} on path: {}",
+                            path.display()
                         )));
                     }
                     debug!("SVG export attempt {} failed: {}", attempts, e);

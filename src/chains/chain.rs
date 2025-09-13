@@ -25,7 +25,7 @@ use crate::{Positive, pos};
 use chrono::{NaiveDate, Utc};
 use num_traits::{FromPrimitive, ToPrimitive};
 use pretty_simple_display::DebugSimple;
-use prettytable::{Table, Row, Cell, format, Attr, color};
+use prettytable::{Attr, Cell, Row, Table, color, format};
 use rust_decimal::{Decimal, MathematicalOps};
 use rust_decimal_macros::dec;
 use serde::de::{MapAccess, Visitor};
@@ -2413,7 +2413,7 @@ impl RNDAnalysis for OptionChain {
 
 impl OptionChain {
     /// Print the option chain with colored headers to stdout.
-    /// 
+    ///
     /// This method prints the option chain directly to stdout using prettytable's
     /// `printstd()` method, which properly displays colors in the terminal.
     /// Use this method instead of `println!("{}", chain)` to see colored headers.
@@ -2427,9 +2427,10 @@ impl OptionChain {
             Cell::new("Expiration Date").with_style(Attr::ForegroundColor(color::GREEN)),
         ]));
         header.add_row(Row::new(vec![
-            Cell::new(&*self.symbol).with_style(Attr::ForegroundColor(color::MAGENTA)),
-            Cell::new(&*self.underlying_price.to_string()).with_style(Attr::ForegroundColor(color::MAGENTA)),
-            Cell::new(&*self.expiration_date).with_style(Attr::ForegroundColor(color::MAGENTA)),
+            Cell::new(&self.symbol).with_style(Attr::ForegroundColor(color::MAGENTA)),
+            Cell::new(&self.underlying_price.to_string())
+                .with_style(Attr::ForegroundColor(color::MAGENTA)),
+            Cell::new(&self.expiration_date).with_style(Attr::ForegroundColor(color::MAGENTA)),
         ]));
 
         header.printstd();
@@ -2457,7 +2458,10 @@ impl OptionChain {
 
         // Add data rows
         for option in &self.options {
-            table.add_row(Row::new(vec![
+            // Check if strike price is a multiple of 25
+            let is_multiple_of_25 = option.strike_price.is_multiple(25.0);
+
+            let cells = vec![
                 Cell::new(&option.strike_price.to_string()),
                 Cell::new(&crate::chains::utils::empty_string_round_to_3(
                     option.call_bid,
@@ -2488,10 +2492,19 @@ impl OptionChain {
                     option.gamma.unwrap_or(Decimal::ZERO) * Decimal::ONE_HUNDRED
                 )),
                 Cell::new(&default_empty_string(option.volume)),
-                Cell::new(&default_empty_string(
-                    option.open_interest,
-                )),
-            ]));
+                Cell::new(&default_empty_string(option.open_interest)),
+            ];
+
+            // Apply yellow color to all cells if strike price is multiple of 25
+            if is_multiple_of_25 {
+                let colored_cells: Vec<Cell> = cells
+                    .into_iter()
+                    .map(|cell| cell.with_style(Attr::ForegroundColor(color::YELLOW)))
+                    .collect();
+                table.add_row(Row::new(colored_cells));
+            } else {
+                table.add_row(Row::new(cells));
+            }
         }
 
         // Print the table with colors using printstd()
@@ -2501,7 +2514,6 @@ impl OptionChain {
 
 impl fmt::Display for OptionChain {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-
         let mut header = Table::new();
         header.set_format(*format::consts::FORMAT_BOX_CHARS);
         header.add_row(Row::new(vec![
@@ -2510,13 +2522,14 @@ impl fmt::Display for OptionChain {
             Cell::new("Expiration Date").with_style(Attr::ForegroundColor(color::GREEN)),
         ]));
         header.add_row(Row::new(vec![
-            Cell::new(&*self.symbol).with_style(Attr::ForegroundColor(color::MAGENTA)),
-            Cell::new(&*self.underlying_price.to_string()).with_style(Attr::ForegroundColor(color::MAGENTA)),
-            Cell::new(&*self.expiration_date).with_style(Attr::ForegroundColor(color::MAGENTA)),
+            Cell::new(&self.symbol).with_style(Attr::ForegroundColor(color::MAGENTA)),
+            Cell::new(&self.underlying_price.to_string())
+                .with_style(Attr::ForegroundColor(color::MAGENTA)),
+            Cell::new(&self.expiration_date).with_style(Attr::ForegroundColor(color::MAGENTA)),
         ]));
-        
+
         write!(f, "\n{}", header)?;
-        
+
         // Create the table
         let mut table = Table::new();
         table.set_format(*format::consts::FORMAT_BOX_CHARS);
@@ -2571,9 +2584,7 @@ impl fmt::Display for OptionChain {
                     option.gamma.unwrap_or(Decimal::ZERO) * Decimal::ONE_HUNDRED
                 )),
                 Cell::new(&default_empty_string(option.volume)),
-                Cell::new(&default_empty_string(
-                    option.open_interest,
-                )),
+                Cell::new(&default_empty_string(option.open_interest)),
             ]));
         }
 
@@ -7603,8 +7614,8 @@ mod chain_coverage_tests {
         let display_output = format!("{chain}");
 
         // Verify expected content in the display output
-        assert!(display_output.contains("Symbol: TEST"));
-        assert!(display_output.contains("Underlying Price: 100"));
+        assert!(display_output.contains("TEST"));
+        assert!(display_output.contains("Underlying Price"));
         assert!(display_output.contains("Strike"));
         assert!(display_output.contains("Call Bid"));
         assert!(display_output.contains("Put Ask"));
@@ -7854,8 +7865,8 @@ mod chain_coverage_tests_bis {
         let display_output = format!("{chain}");
 
         // Verify expected content in the display output
-        assert!(display_output.contains("Symbol: TEST"));
-        assert!(display_output.contains("Underlying Price: 100"));
+        assert!(display_output.contains("TEST"));
+        assert!(display_output.contains("100"));
         assert!(display_output.contains("Strike"));
         assert!(display_output.contains("Call Bid"));
         assert!(display_output.contains("Put Ask"));

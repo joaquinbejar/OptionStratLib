@@ -25,7 +25,7 @@ pub fn prepare_file_path(path: &Path) -> Result<(), IoError> {
                 return Err(IoError::new(
                     e.kind(),
                     format!("Failed to remove existing file: {}", path.display()),
-                ))
+                ));
             }
         };
         trace!("Removed existing file: {}", path.display());
@@ -42,8 +42,8 @@ pub fn prepare_file_path(path: &Path) -> Result<(), IoError> {
                 return Err(IoError::new(
                     e.kind(),
                     format!("Failed to create parent directories: {}", path.display()),
-                ))
-            }       
+                ));
+            }
         };
         debug!("Created directory: {}", path.display());
     }
