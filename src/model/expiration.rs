@@ -47,11 +47,25 @@ impl Hash for ExpirationDate {
 
 impl PartialEq for ExpirationDate {
     fn eq(&self, other: &Self) -> bool {
-        match (self, other) {
-            (ExpirationDate::Days(a), ExpirationDate::Days(b)) => (a.0 - b.0).abs() < EPSILON,
-            (ExpirationDate::DateTime(a), ExpirationDate::DateTime(b)) => a == b,
-            _ => false, // Different variants are never equal
-        }
+        let (s,o) = match (self, other) {
+            (ExpirationDate::Days(a), ExpirationDate::Days(b)) => {
+                (*a, *b)
+            },
+            (ExpirationDate::DateTime(_), ExpirationDate::DateTime(_)) => {
+                let days_a = self.get_days().unwrap_or(Positive::ZERO);
+                let days_b = other.get_days().unwrap_or(Positive::ZERO);
+                (days_a, days_b)
+            },
+            (ExpirationDate::Days(a), ExpirationDate::DateTime(_)) => {
+                let days = other.get_days().unwrap_or(Positive::ZERO);
+                (*a, days)
+            }
+            (ExpirationDate::DateTime(_), ExpirationDate::Days(b)) => {
+                let days = self.get_days().unwrap_or(Positive::ZERO);
+                (days, *b)
+            }
+        };
+        (s.0 - o.0).abs() < EPSILON
     }
 }
 
@@ -1076,5 +1090,270 @@ mod tests_from_string {
         } else {
             panic!("Expected DateTime variant");
         }
+    }
+}
+
+#[cfg(test)]
+mod tests_comparisons {
+    use super::*;
+    use crate::constants::EPSILON;
+    use crate::model::positive::Positive;
+    use crate::pos;
+    use chrono::{TimeZone, Utc};
+    use rust_decimal_macros::dec;
+    use std::cmp::Ordering;
+
+    #[test]
+    fn test_partial_eq_days_variants_equal() {
+        let date1 = ExpirationDate::Days(pos!(30.0));
+        let date2 = ExpirationDate::Days(pos!(30.0));
+        assert_eq!(date1, date2);
+    }
+
+    #[test]
+    fn test_partial_eq_days_variants_within_epsilon() {
+        let date1 = ExpirationDate::Days(pos!(30.0));
+        let date2 =
+            ExpirationDate::Days(Positive::new_decimal(dec!(30.0) + EPSILON / dec!(2.0)).unwrap());
+        assert_eq!(date1, date2);
+    }
+
+    #[test]
+    fn test_partial_eq_days_variants_outside_epsilon() {
+        let date1 = ExpirationDate::Days(pos!(30.0));
+        let date2 = ExpirationDate::Days(pos!(30.1));
+        assert_ne!(date1, date2);
+    }
+
+    #[test]
+    fn test_partial_eq_datetime_variants_equal() {
+        let datetime = Utc.with_ymd_and_hms(2024, 12, 15, 16, 0, 0).unwrap();
+        let date1 = ExpirationDate::DateTime(datetime);
+        let date2 = ExpirationDate::DateTime(datetime);
+        assert_eq!(date1, date2);
+    }
+
+    #[test]
+    fn test_partial_eq_datetime_variants_different() {
+        let datetime1 = Utc.with_ymd_and_hms(2027, 12, 15, 16, 0, 0).unwrap();
+        let datetime2 = Utc.with_ymd_and_hms(2027, 12, 16, 16, 0, 0).unwrap();
+        let date1 = ExpirationDate::DateTime(datetime1);
+        let date2 = ExpirationDate::DateTime(datetime2);
+        assert_ne!(date1, date2);
+    }
+    
+    
+    #[test]
+    fn test_partial_eq_mixed_variants_with_zero_fallback() {
+        // Test case where get_days() might return an error and fall back to ZERO
+        let days_date = ExpirationDate::Days(Positive::ZERO);
+
+        // Create a past DateTime that should result in ZERO days
+        let past_datetime = Utc::now() - chrono::Duration::days(10);
+        let datetime_date = ExpirationDate::DateTime(past_datetime);
+
+        // Both should be equal when they fall back to ZERO
+        assert_eq!(days_date, datetime_date);
+    }
+
+    #[test]
+    fn test_eq_trait_consistency() {
+        // Test that Eq trait is properly implemented by testing reflexivity
+        let date1 = ExpirationDate::Days(pos!(30.0));
+        let date2 = ExpirationDate::Days(pos!(30.0));
+        let date3 = ExpirationDate::Days(pos!(30.0));
+
+        // Reflexive: a == a
+        assert_eq!(date1, date1);
+
+        // Symmetric: if a == b, then b == a
+        assert_eq!(date1, date2);
+        assert_eq!(date2, date1);
+
+        // Transitive: if a == b and b == c, then a == c
+        assert_eq!(date1, date2);
+        assert_eq!(date2, date3);
+        assert_eq!(date1, date3);
+    }
+
+    #[test]
+    fn test_partial_ord_returns_some() {
+        let date1 = ExpirationDate::Days(pos!(15.0));
+        let date2 = ExpirationDate::Days(pos!(30.0));
+
+        let result = date1.partial_cmp(&date2);
+        assert!(result.is_some());
+        assert_eq!(result.unwrap(), Ordering::Less);
+    }
+
+    #[test]
+    fn test_ord_days_variants_less() {
+        let date1 = ExpirationDate::Days(pos!(15.0));
+        let date2 = ExpirationDate::Days(pos!(30.0));
+
+        assert_eq!(date1.cmp(&date2), Ordering::Less);
+    }
+
+    #[test]
+    fn test_ord_days_variants_greater() {
+        let date1 = ExpirationDate::Days(pos!(45.0));
+        let date2 = ExpirationDate::Days(pos!(30.0));
+
+        assert_eq!(date1.cmp(&date2), Ordering::Greater);
+
+        let date1 = ExpirationDate::Days(pos!(45.0));
+        let datetime2 = Utc.with_ymd_and_hms(2027, 12, 20, 16, 0, 0).unwrap();
+        let date2 = ExpirationDate::DateTime(datetime2);
+
+        assert_eq!(date1.cmp(&date2), Ordering::Less);
+
+        let datetime1 = Utc.with_ymd_and_hms(2026, 12, 20, 16, 0, 0).unwrap();
+        let date1 = ExpirationDate::DateTime(datetime1);
+        let datetime2 = Utc.with_ymd_and_hms(2027, 12, 20, 16, 0, 0).unwrap();
+        let date2 = ExpirationDate::DateTime(datetime2);
+
+        assert_eq!(date1.cmp(&date2), Ordering::Less);
+
+        let date1 = ExpirationDate::Days(pos!(3000.0));
+        let datetime2 = Utc.with_ymd_and_hms(2027, 12, 20, 16, 0, 0).unwrap();
+        let date2 = ExpirationDate::DateTime(datetime2);
+
+        assert_eq!(date1.cmp(&date2), Ordering::Greater);
+    }
+
+    #[test]
+    fn test_ord_days_variants_equal() {
+        let date1 = ExpirationDate::Days(pos!(30.0));
+        let date2 = ExpirationDate::Days(pos!(30.0));
+
+        assert_eq!(date1.cmp(&date2), Ordering::Equal);
+    }
+
+    #[test]
+    fn test_ord_datetime_variants() {
+        let datetime1 = Utc.with_ymd_and_hms(2027, 12, 15, 16, 0, 0).unwrap();
+        let datetime2 = Utc.with_ymd_and_hms(2027, 12, 20, 16, 0, 0).unwrap();
+
+        let date1 = ExpirationDate::DateTime(datetime1);
+        let date2 = ExpirationDate::DateTime(datetime2);
+
+        // The comparison should be based on the days returned by get_days()
+        let result = date1.cmp(&date2);
+        assert!(result != Ordering::Equal); // Should not be equal
+    }
+
+    #[test]
+    fn test_ord_mixed_variants() {
+        let days_date = ExpirationDate::Days(pos!(20.0));
+        let future_datetime = Utc::now() + Duration::days(30);
+        let datetime_date = ExpirationDate::DateTime(future_datetime);
+
+        // Days variant should be less than DateTime variant (assuming 30 days)
+        let result = days_date.cmp(&datetime_date);
+        assert!(result != Ordering::Equal);
+        assert_eq!(result, Ordering::Less);
+    }
+
+    #[test]
+    fn test_ord_with_zero_fallback() {
+        // Test ordering when get_days() returns ZERO due to errors
+        let date1 = ExpirationDate::Days(Positive::ZERO);
+        let date2 = ExpirationDate::Days(pos!(10.0));
+
+        assert_eq!(date1.cmp(&date2), Ordering::Less);
+        assert_eq!(date2.cmp(&date1), Ordering::Greater);
+    }
+
+    #[test]
+    fn test_ord_consistency_with_partial_ord() {
+        // Test that cmp() and partial_cmp() return consistent results
+        let date1 = ExpirationDate::Days(pos!(25.0));
+        let date2 = ExpirationDate::Days(pos!(35.0));
+
+        let ord_result = date1.cmp(&date2);
+        let partial_ord_result = date1.partial_cmp(&date2);
+
+        assert_eq!(Some(ord_result), partial_ord_result);
+    }
+
+    #[test]
+    fn test_ord_transitivity() {
+        // Test that ordering is transitive: if a < b and b < c, then a < c
+        let date1 = ExpirationDate::Days(pos!(10.0));
+        let date2 = ExpirationDate::Days(pos!(20.0));
+        let date3 = ExpirationDate::Days(pos!(30.0));
+
+        assert_eq!(date1.cmp(&date2), Ordering::Less);
+        assert_eq!(date2.cmp(&date3), Ordering::Less);
+        assert_eq!(date1.cmp(&date3), Ordering::Less);
+    }
+
+    #[test]
+    fn test_ord_antisymmetry() {
+        // Test that if a <= b and b <= a, then a == b
+        let date1 = ExpirationDate::Days(pos!(25.0));
+        let date2 = ExpirationDate::Days(pos!(25.0));
+
+        assert!(date1.cmp(&date2) <= Ordering::Equal);
+        assert!(date2.cmp(&date1) <= Ordering::Equal);
+        assert_eq!(date1.cmp(&date2), Ordering::Equal);
+    }
+
+    #[test]
+    fn test_ord_reflexivity() {
+        // Test that a.cmp(&a) == Ordering::Equal
+        let date = ExpirationDate::Days(pos!(25.0));
+        assert_eq!(date.cmp(&date), Ordering::Equal);
+
+        let datetime = Utc.with_ymd_and_hms(2024, 12, 15, 16, 0, 0).unwrap();
+        let datetime_date = ExpirationDate::DateTime(datetime);
+        assert_eq!(datetime_date.cmp(&datetime_date), Ordering::Equal);
+    }
+
+    #[test]
+    fn test_sorting_expiration_dates() {
+        // Test that a collection of ExpirationDate can be sorted correctly
+        let mut dates = vec![
+            ExpirationDate::Days(pos!(45.0)),
+            ExpirationDate::Days(pos!(15.0)),
+            ExpirationDate::Days(pos!(30.0)),
+            ExpirationDate::Days(pos!(5.0)),
+        ];
+
+        dates.sort();
+
+        let expected = vec![
+            ExpirationDate::Days(pos!(5.0)),
+            ExpirationDate::Days(pos!(15.0)),
+            ExpirationDate::Days(pos!(30.0)),
+            ExpirationDate::Days(pos!(45.0)),
+        ];
+
+        assert_eq!(dates, expected);
+    }
+
+    #[test]
+    fn test_partial_eq_edge_case_epsilon_boundary() {
+        // Test exactly at the epsilon boundary
+        let base_value = pos!(100.0);
+        let date1 = ExpirationDate::Days(base_value);
+        let date2 =
+            ExpirationDate::Days(Positive::new_decimal(base_value.value() + EPSILON).unwrap());
+
+        // Should not be equal as difference equals epsilon (not less than)
+        assert_ne!(date1, date2);
+    }
+
+    #[test]
+    fn test_mixed_variant_comparison_edge_cases() {
+        // Test edge cases where one variant might fail to convert to days
+        let zero_days = ExpirationDate::Days(Positive::ZERO);
+
+        // Test with a very old datetime that should result in zero days
+        let very_old_datetime = Utc.with_ymd_and_hms(1990, 1, 1, 0, 0, 0).unwrap();
+        let old_datetime_date = ExpirationDate::DateTime(very_old_datetime);
+
+        // Both should fall back to ZERO and be equal
+        assert_eq!(zero_days, old_datetime_date);
     }
 }
