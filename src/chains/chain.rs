@@ -2414,14 +2414,14 @@ impl RNDAnalysis for OptionChain {
 impl fmt::Display for OptionChain {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // Create header information
-        writeln!(f, "Symbol: {}", self.symbol)?;
+        writeln!(f, "\nSymbol: {}", self.symbol)?;
         writeln!(f, "Underlying Price: {:.1}", self.underlying_price)?;
         writeln!(f, "Expiration Date: {}", self.expiration_date)?;
         writeln!(f)?;
 
         // Create the table
         let mut table = Table::new();
-        table.set_format(*format::consts::FORMAT_NO_LINESEP_WITH_TITLE);
+        table.set_format(*format::consts::FORMAT_BOX_CHARS);
 
         // Add header row with green color
         table.add_row(Row::new(vec![
@@ -2436,7 +2436,7 @@ impl fmt::Display for OptionChain {
             Cell::new("C-Delta").with_style(Attr::ForegroundColor(color::GREEN)),
             Cell::new("P-Delta").with_style(Attr::ForegroundColor(color::GREEN)),
             Cell::new("Gamma").with_style(Attr::ForegroundColor(color::GREEN)),
-            Cell::new("Volume").with_style(Attr::ForegroundColor(color::GREEN)),
+            Cell::new("Vol.").with_style(Attr::ForegroundColor(color::GREEN)),
             Cell::new("OI").with_style(Attr::ForegroundColor(color::GREEN)),
         ]));
 

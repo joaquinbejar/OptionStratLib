@@ -155,7 +155,6 @@ pub trait Graph {
                         )));
                     }
                     debug!("PNG export attempt {} failed: {}", attempts, e);
-                    // Pequeña pausa antes del siguiente intento
                     std::thread::sleep(std::time::Duration::from_millis(100));
                 }
             }
