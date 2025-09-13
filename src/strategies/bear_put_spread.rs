@@ -44,6 +44,7 @@ use crate::{
     test_strategy_traits,
 };
 use chrono::Utc;
+use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -69,7 +70,7 @@ pub const BEAR_PUT_SPREAD_DESCRIPTION: &str = "A bear put spread is created by b
 /// buying a single put outright due to premium received from the short put.
 ///
 /// # Attributes
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, DebugPretty, DisplaySimple, Serialize, Deserialize)]
 pub struct BearPutSpread {
     /// The name identifier for this specific strategy instance.
     pub name: String,

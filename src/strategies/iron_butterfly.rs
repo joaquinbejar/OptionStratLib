@@ -42,6 +42,7 @@ use crate::{
 };
 use chrono::Utc;
 use num_traits::FromPrimitive;
+use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -97,7 +98,7 @@ pub const IRON_BUTTERFLY_DESCRIPTION: &str = "An Iron Butterfly is a neutral opt
 /// - Implied volatility is high (making the sold options more expensive)
 /// - The trader wants defined risk/reward parameters compared to a short straddle
 ///
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, DebugPretty, DisplaySimple, Serialize, Deserialize)]
 pub struct IronButterfly {
     /// Name identifier for this specific strategy instance
     pub name: String,

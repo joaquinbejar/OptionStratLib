@@ -41,6 +41,7 @@ use crate::{
 };
 use chrono::Utc;
 use num_traits::FromPrimitive;
+use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -106,7 +107,7 @@ when expecting large price movements but uncertain about direction.";
 /// * Time decay (theta) works against this strategy, as both options lose value over time
 /// * Most effective when implemented with sufficient time to expiration
 /// * Consider closing the position if implied volatility increases significantly without price movement
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, DebugPretty, DisplaySimple, Serialize, Deserialize)]
 pub struct LongStraddle {
     /// The name identifier for this strategy instance
     pub name: String,

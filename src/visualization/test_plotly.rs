@@ -334,7 +334,8 @@ mod tests_interface {
         let result = graph.write_png(&temp_path);
 
         if let Err(e) = &result {
-            tracing::info!("PNG export error: {e}");
+            tracing::error!("PNG export error: {e}");
+            println!("PNG export error: {e}");
         }
 
         assert!(result.is_ok(), "PNG export should succeed");
@@ -352,7 +353,8 @@ mod tests_interface {
         let result = graph.write_svg(&temp_path);
 
         if let Err(e) = &result {
-            tracing::info!("SVG export error: {e}");
+            tracing::error!("SVG export error: {e}");
+            println!("SVG export error: {e}");
         }
 
         assert!(result.is_ok(), "SVG export should succeed");

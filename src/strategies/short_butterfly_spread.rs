@@ -29,6 +29,7 @@ use crate::{
     test_strategy_traits,
 };
 use chrono::Utc;
+use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -53,7 +54,7 @@ pub const SHORT_BUTTERFLY_DESCRIPTION: &str = "A short butterfly spread is creat
 /// - Two short calls at the middle strike price (represented as `short_call_low` and `short_call_high`)
 /// - Long call at the highest strike price
 ///
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, DebugPretty, DisplaySimple, Serialize, Deserialize)]
 pub struct ShortButterflySpread {
     /// The name of the strategy, typically including the underlying asset
     pub name: String,

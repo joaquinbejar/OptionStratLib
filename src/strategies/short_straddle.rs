@@ -40,6 +40,7 @@ use crate::{
 };
 use chrono::Utc;
 use num_traits::FromPrimitive;
+use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -113,7 +114,7 @@ volatility expectations.";
 /// - The trader believes the price will remain close to the current level
 /// - Implied volatility is high (making the options more expensive to sell)
 ///
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, DebugPretty, DisplaySimple, Serialize, Deserialize)]
 pub struct ShortStraddle {
     /// Name identifier for this specific strategy instance
     pub name: String,

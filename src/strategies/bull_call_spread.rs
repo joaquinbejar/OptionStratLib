@@ -45,6 +45,7 @@ use crate::{
     test_strategy_traits,
 };
 use chrono::Utc;
+use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -74,7 +75,7 @@ pub const BULL_CALL_SPREAD_DESCRIPTION: &str = "A bull call spread is created by
 /// - Limited profit potential (capped by the difference between strike prices minus the net debit)
 /// - Requires more capital than a single option position
 /// - Loses value as expiration approaches if the underlying price doesn't rise
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, DebugPretty, DisplaySimple, Serialize, Deserialize)]
 pub struct BullCallSpread {
     /// The name of the strategy, typically including underlying asset information.
     pub name: String,

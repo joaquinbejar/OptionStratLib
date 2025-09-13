@@ -24,6 +24,7 @@ use crate::strategies::{
 };
 use crate::{ExpirationDate, Options, Positive, test_strategy_traits};
 use chrono::Utc;
+use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -52,7 +53,7 @@ pub(super) const SHORT_PUT_DESCRIPTION: &str = "A Short Put (or Naked Put) is an
 /// - `short_put`: The short put position associated with this strategy. It is declared private (via
 ///   `pub(super)`) to restrict its accessibility from other modules, ensuring controlled and encapsulated
 ///   use.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, DebugPretty, DisplaySimple, Serialize, Deserialize)]
 pub struct ShortPut {
     /// Name identifier for this specific strategy instance
     pub name: String,

@@ -24,6 +24,8 @@ use crate::volatility::VolatilitySmile;
 use crate::{Positive, pos};
 use chrono::{NaiveDate, Utc};
 use num_traits::{FromPrimitive, ToPrimitive};
+use pretty_simple_display::DebugSimple;
+use prettytable::{Table, Row, Cell, format, Attr, color};
 use rust_decimal::{Decimal, MathematicalOps};
 use rust_decimal_macros::dec;
 use serde::de::{MapAccess, Visitor};
@@ -84,7 +86,7 @@ pub const SKEW_SLOPE: Decimal = dec!(-0.2);
 ///
 /// This struct is typically used as the primary container for options market data analysis,
 /// serving as input to pricing models, strategy backtesting, and risk management tools.
-#[derive(Debug, Clone)]
+#[derive(DebugSimple, Clone)]
 pub struct OptionChain {
     /// The ticker symbol for the underlying asset (e.g., "AAPL", "SPY").
     pub symbol: String,
@@ -2411,40 +2413,74 @@ impl RNDAnalysis for OptionChain {
 
 impl fmt::Display for OptionChain {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // Create header information
         writeln!(f, "Symbol: {}", self.symbol)?;
         writeln!(f, "Underlying Price: {:.1}", self.underlying_price)?;
         writeln!(f, "Expiration Date: {}", self.expiration_date)?;
-        writeln!(
-            f,
-            "-------------------------------------------------------------------------------\
-            ---------------------------------------------------------------------"
-        )?;
-        writeln!(
-            f,
-            "{:<10} {:<10} {:<10} {:<10} {:<10} {:<10} {:<10} {:<13} {:<10} {:<10} {:<10} {:<10} {:<10}",
-            "Strike",
-            "Call Bid",
-            "Call Ask",
-            "Call Mid",
-            "Put Bid",
-            "Put Ask",
-            "Put Mid",
-            "Implied Vol.",
-            "Delta",
-            "Delta",
-            "Gamma",
-            "Volume",
-            "Open Interest"
-        )?;
-        writeln!(
-            f,
-            "----------------------------------------------------------------------------------\
-            ------------------------------------------------------------------"
-        )?;
+        writeln!(f)?;
 
+        // Create the table
+        let mut table = Table::new();
+        table.set_format(*format::consts::FORMAT_NO_LINESEP_WITH_TITLE);
+
+        // Add header row with green color
+        table.add_row(Row::new(vec![
+            Cell::new("Strike").with_style(Attr::ForegroundColor(color::GREEN)),
+            Cell::new("Call Bid").with_style(Attr::ForegroundColor(color::GREEN)),
+            Cell::new("Call Ask").with_style(Attr::ForegroundColor(color::GREEN)),
+            Cell::new("Call Mid").with_style(Attr::ForegroundColor(color::GREEN)),
+            Cell::new("Put Bid").with_style(Attr::ForegroundColor(color::GREEN)),
+            Cell::new("Put Ask").with_style(Attr::ForegroundColor(color::GREEN)),
+            Cell::new("Put Mid").with_style(Attr::ForegroundColor(color::GREEN)),
+            Cell::new("IV").with_style(Attr::ForegroundColor(color::GREEN)),
+            Cell::new("C-Delta").with_style(Attr::ForegroundColor(color::GREEN)),
+            Cell::new("P-Delta").with_style(Attr::ForegroundColor(color::GREEN)),
+            Cell::new("Gamma").with_style(Attr::ForegroundColor(color::GREEN)),
+            Cell::new("Volume").with_style(Attr::ForegroundColor(color::GREEN)),
+            Cell::new("OI").with_style(Attr::ForegroundColor(color::GREEN)),
+        ]));
+
+        // Add data rows
         for option in &self.options {
-            writeln!(f, "{option}",)?;
+            table.add_row(Row::new(vec![
+                Cell::new(&option.strike_price.to_string()),
+                Cell::new(&crate::chains::utils::empty_string_round_to_3(
+                    option.call_bid,
+                )),
+                Cell::new(&crate::chains::utils::empty_string_round_to_3(
+                    option.call_ask,
+                )),
+                Cell::new(&crate::chains::utils::empty_string_round_to_3(
+                    option.call_middle,
+                )),
+                Cell::new(&crate::chains::utils::empty_string_round_to_3(
+                    option.put_bid,
+                )),
+                Cell::new(&crate::chains::utils::empty_string_round_to_3(
+                    option.put_ask,
+                )),
+                Cell::new(&crate::chains::utils::empty_string_round_to_3(
+                    option.put_middle,
+                )),
+                Cell::new(&format!("{:.3}", option.implied_volatility)),
+                Cell::new(&format!(
+                    "{:.3}",
+                    option.delta_call.unwrap_or(Decimal::ZERO)
+                )),
+                Cell::new(&format!("{:.3}", option.delta_put.unwrap_or(Decimal::ZERO))),
+                Cell::new(&format!(
+                    "{:.4}",
+                    option.gamma.unwrap_or(Decimal::ZERO) * Decimal::ONE_HUNDRED
+                )),
+                Cell::new(&default_empty_string(option.volume)),
+                Cell::new(&default_empty_string(
+                    option.open_interest,
+                )),
+            ]));
         }
+
+        // Print the table
+        write!(f, "{}", table)?;
         Ok(())
     }
 }

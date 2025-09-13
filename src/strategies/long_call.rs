@@ -23,6 +23,7 @@ use crate::strategies::{
 };
 use crate::{ExpirationDate, Options, Positive, test_strategy_traits};
 use chrono::Utc;
+use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -52,7 +53,7 @@ pub(super) const LONG_CALL_DESCRIPTION: &str = "A Long Call is an options strate
 /// This structure leverages the `Clone`, `Debug`, `Serialize`, and `Deserialize` traits for ease of duplication,
 /// debugging, and storage/transfer as structured data.
 ///
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, DebugPretty, DisplaySimple, Serialize, Deserialize)]
 pub struct LongCall {
     /// Name identifier for this specific strategy instance
     pub name: String,

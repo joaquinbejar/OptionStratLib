@@ -46,6 +46,7 @@ use crate::{
     test_strategy_traits,
 };
 use chrono::Utc;
+use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -73,7 +74,7 @@ pub const BULL_PUT_SPREAD_DESCRIPTION: &str = "A bull put spread is created by b
 /// - Generates upfront income from the net premium received
 ///
 /// # Attributes
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, DebugPretty, DisplaySimple, Serialize, Deserialize)]
 pub struct BullPutSpread {
     /// The name of the strategy, typically "Bull Put Spread"
     pub name: String,

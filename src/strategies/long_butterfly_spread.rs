@@ -29,6 +29,7 @@ use crate::{
     test_strategy_traits,
 };
 use chrono::Utc;
+use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -62,7 +63,7 @@ pub const LONG_BUTTERFLY_DESCRIPTION: &str = "A long butterfly spread is created
 /// - Profitability range is constrained between the break-even points
 ///
 /// # Attributes
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, DebugPretty, DisplaySimple, Serialize, Deserialize)]
 pub struct LongButterflySpread {
     /// Name identifier for the strategy
     pub name: String,

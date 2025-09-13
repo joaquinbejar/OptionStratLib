@@ -24,6 +24,7 @@ use crate::strategies::{
 };
 use crate::{ExpirationDate, Options, Positive, test_strategy_traits};
 use chrono::Utc;
+use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -50,7 +51,7 @@ pub(super) const LONG_PUT_DESCRIPTION: &str = "A Long Put is an options strategy
 ///   nor loses money based on the underlying asset's movement.
 /// * `long_put` - Represents the specific long put position within the strategy, detailing
 ///   the option contract being used.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, DebugPretty, DisplaySimple, Serialize, Deserialize)]
 pub struct LongPut {
     /// Name identifier for this specific strategy instance
     pub name: String,

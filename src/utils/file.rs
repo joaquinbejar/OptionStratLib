@@ -1,6 +1,6 @@
 use std::io::Error as IoError;
 use std::path::Path;
-use tracing::{debug, trace};
+use tracing::{debug, error, trace};
 
 /// Prepares a path for writing by removing any existing file and creating necessary directories.
 ///
@@ -18,7 +18,16 @@ use tracing::{debug, trace};
 pub fn prepare_file_path(path: &Path) -> Result<(), IoError> {
     // Remove file if it already exists
     if path.exists() {
-        std::fs::remove_file(path)?;
+        match std::fs::remove_file(path) {
+            Ok(_) => {}
+            Err(e) => {
+                error!("Failed to remove existing file: {}", path.display());
+                return Err(IoError::new(
+                    e.kind(),
+                    format!("Failed to remove existing file: {}", path.display()),
+                ))
+            }
+        };
         trace!("Removed existing file: {}", path.display());
     }
 
@@ -26,7 +35,16 @@ pub fn prepare_file_path(path: &Path) -> Result<(), IoError> {
     if let Some(parent) = path.parent()
         && !parent.exists()
     {
-        std::fs::create_dir_all(parent)?;
+        match std::fs::create_dir_all(parent) {
+            Ok(_) => {}
+            Err(e) => {
+                error!("Failed to create parent directories: {}", path.display());
+                return Err(IoError::new(
+                    e.kind(),
+                    format!("Failed to create parent directories: {}", path.display()),
+                ))
+            }       
+        };
         debug!("Created directory: {}", path.display());
     }
 
