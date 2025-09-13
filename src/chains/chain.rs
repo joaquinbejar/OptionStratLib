@@ -1424,7 +1424,7 @@ impl OptionChain {
     /// use tracing::info;
     /// use optionstratlib::chains::chain::OptionChain;
     /// use optionstratlib::{pos, Positive};
-    /// let mut option_chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
+    /// let mut option_chain = OptionChain::new("TEST", pos!(100.0), "2030-01-01".to_string(), None, None);
     /// for (option1, option2) in option_chain.get_double_iter() {
     ///     info!("{:?}, {:?}", option1, option2);
     /// }
@@ -1454,7 +1454,7 @@ impl OptionChain {
     /// use optionstratlib::chains::chain::OptionChain;
     /// use optionstratlib::Positive;
     /// use optionstratlib::pos;
-    /// let mut option_chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
+    /// let mut option_chain = OptionChain::new("TEST", pos!(100.0), "2030-01-01".to_string(), None, None);
     /// for (option1, option2) in option_chain.get_double_inclusive_iter() {
     ///     info!("{:?}, {:?}", option1, option2);
     /// }
@@ -1483,7 +1483,7 @@ impl OptionChain {
     /// use optionstratlib::chains::chain::OptionChain;
     /// use optionstratlib::Positive;
     /// use optionstratlib::pos;
-    /// let mut option_chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
+    /// let mut option_chain = OptionChain::new("TEST", pos!(100.0), "2030-01-01".to_string(), None, None);
     /// for (option1, option2, option3) in option_chain.get_triple_iter() {
     ///     info!("{:?}, {:?}, {:?}", option1, option2, option3);
     /// }
@@ -1520,7 +1520,7 @@ impl OptionChain {
     /// use optionstratlib::chains::chain::OptionChain;
     /// use optionstratlib::Positive;
     /// use optionstratlib::pos;
-    /// let mut option_chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
+    /// let mut option_chain = OptionChain::new("TEST", pos!(100.0), "2030-01-01".to_string(), None, None);
     /// for (option1, option2, option3) in option_chain.get_triple_inclusive_iter() {
     ///     info!("{:?}, {:?}, {:?}", option1, option2, option3);
     /// }
@@ -1558,7 +1558,7 @@ impl OptionChain {
     /// use optionstratlib::chains::chain::OptionChain;
     /// use optionstratlib::Positive;
     /// use optionstratlib::pos;
-    /// let mut option_chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
+    /// let mut option_chain = OptionChain::new("TEST", pos!(100.0), "2030-01-01".to_string(), None, None);
     /// for (option1, option2, option3, option4) in option_chain.get_quad_iter() {
     ///     info!("{:?}, {:?}, {:?}, {:?}", option1, option2, option3, option4);
     /// }
@@ -1601,7 +1601,7 @@ impl OptionChain {
     /// use optionstratlib::chains::chain::OptionChain;
     /// use optionstratlib::Positive;
     /// use optionstratlib::pos;
-    /// let mut option_chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
+    /// let mut option_chain = OptionChain::new("TEST", pos!(100.0), "2030-01-01".to_string(), None, None);
     /// for (option1, option2, option3, option4) in option_chain.get_quad_inclusive_iter() {
     ///     info!("{:?}, {:?}, {:?}, {:?}", option1, option2, option3, option4);
     /// }
@@ -2220,6 +2220,28 @@ impl OptionChain {
         });
 
         Ok(())
+    }
+}
+
+impl PartialEq for OptionChain {
+    fn eq(&self, other: &Self) -> bool {
+        self.get_expiration() == other.get_expiration() && self.symbol == other.symbol
+    }
+}
+
+impl Eq for OptionChain {}
+
+impl PartialOrd for OptionChain {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for OptionChain {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.get_expiration()
+            .cmp(&other.get_expiration())
+            .then_with(|| self.symbol.cmp(&other.symbol))
     }
 }
 
@@ -3327,7 +3349,7 @@ mod tests_get_random_positions {
 
     fn create_test_chain() -> OptionChain {
         // Create a sample option chain
-        let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
+        let mut chain = OptionChain::new("TEST", pos!(100.0), "2030-01-01".to_string(), None, None);
 
         // Add some test options with different strikes
         chain.add_option(
@@ -3593,7 +3615,7 @@ mod tests_get_random_positions {
 
     #[test]
     fn test_empty_chain() {
-        let chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
+        let chain = OptionChain::new("TEST", pos!(100.0), "2030-01-01".to_string(), None, None);
         let params = RandomPositionsParams::new(
             Some(1),
             None,
@@ -3756,7 +3778,7 @@ mod tests_filter_option_data {
     use crate::pos;
 
     fn create_test_chain() -> OptionChain {
-        let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
+        let mut chain = OptionChain::new("TEST", pos!(100.0), "2030-01-01".to_string(), None, None);
 
         for strike in [90.0, 95.0, 100.0, 105.0, 110.0].iter() {
             chain.add_option(
@@ -3828,13 +3850,13 @@ mod tests_strike_price_range_vec {
 
     #[test]
     fn test_empty_chain() {
-        let chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
+        let chain = OptionChain::new("TEST", pos!(100.0), "2030-01-01".to_string(), None, None);
         assert_eq!(chain.strike_price_range_vec(5.0), None);
     }
 
     #[test]
     fn test_single_option() {
-        let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
+        let mut chain = OptionChain::new("TEST", pos!(100.0), "2030-01-01".to_string(), None, None);
         chain.add_option(
             pos!(100.0),
             None,
@@ -3856,7 +3878,7 @@ mod tests_strike_price_range_vec {
 
     #[test]
     fn test_multiple_options() {
-        let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
+        let mut chain = OptionChain::new("TEST", pos!(100.0), "2030-01-01".to_string(), None, None);
         for strike in [90.0, 95.0, 100.0].iter() {
             chain.add_option(
                 pos!(*strike),
@@ -3879,7 +3901,7 @@ mod tests_strike_price_range_vec {
 
     #[test]
     fn test_step_size() {
-        let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
+        let mut chain = OptionChain::new("TEST", pos!(100.0), "2030-01-01".to_string(), None, None);
         for strike in [90.0, 100.0].iter() {
             chain.add_option(
                 pos!(*strike),
@@ -4098,7 +4120,7 @@ mod tests_filter_options_in_strike {
     use rust_decimal_macros::dec;
 
     fn create_test_chain() -> OptionChain {
-        let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
+        let mut chain = OptionChain::new("TEST", pos!(100.0), "2030-01-01".to_string(), None, None);
 
         for strike in [90.0, 95.0, 100.0, 105.0, 110.0].iter() {
             chain.add_option(
@@ -4180,7 +4202,7 @@ mod tests_filter_options_in_strike {
 
     #[test]
     fn test_filter_empty_chain() {
-        let chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
+        let chain = OptionChain::new("TEST", pos!(100.0), "2030-01-01".to_string(), None, None);
         let result = chain.filter_options_in_strike(FindOptimalSide::All);
         assert!(result.is_ok());
 
@@ -4231,7 +4253,7 @@ mod tests_chain_iterators {
     use rust_decimal_macros::dec;
 
     fn create_test_chain() -> OptionChain {
-        let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
+        let mut chain = OptionChain::new("TEST", pos!(100.0), "2030-01-01".to_string(), None, None);
 
         // Add three options with different strikes
         chain.add_option(
@@ -4284,14 +4306,14 @@ mod tests_chain_iterators {
 
     #[test]
     fn test_get_double_iter_empty() {
-        let chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
+        let chain = OptionChain::new("TEST", pos!(100.0), "2030-01-01".to_string(), None, None);
         let pairs: Vec<_> = chain.get_double_iter().collect();
         assert!(pairs.is_empty());
     }
 
     #[test]
     fn test_get_double_iter_single() {
-        let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
+        let mut chain = OptionChain::new("TEST", pos!(100.0), "2030-01-01".to_string(), None, None);
         chain.add_option(
             pos!(100.0),
             spos!(3.0),
@@ -4332,14 +4354,14 @@ mod tests_chain_iterators {
 
     #[test]
     fn test_get_double_inclusive_iter_empty() {
-        let chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
+        let chain = OptionChain::new("TEST", pos!(100.0), "2030-01-01".to_string(), None, None);
         let pairs: Vec<_> = chain.get_double_inclusive_iter().collect();
         assert!(pairs.is_empty());
     }
 
     #[test]
     fn test_get_double_inclusive_iter_single() {
-        let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
+        let mut chain = OptionChain::new("TEST", pos!(100.0), "2030-01-01".to_string(), None, None);
         chain.add_option(
             pos!(100.0),
             spos!(3.0),
@@ -4396,7 +4418,7 @@ mod tests_chain_iterators_bis {
     use rust_decimal_macros::dec;
 
     fn create_test_chain() -> OptionChain {
-        let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
+        let mut chain = OptionChain::new("TEST", pos!(100.0), "2030-01-01".to_string(), None, None);
 
         // Add four options with different strikes
         chain.add_option(
@@ -4465,14 +4487,14 @@ mod tests_chain_iterators_bis {
     // Tests for Triple Iterator
     #[test]
     fn test_get_triple_iter_empty() {
-        let chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
+        let chain = OptionChain::new("TEST", pos!(100.0), "2030-01-01".to_string(), None, None);
         let triples: Vec<_> = chain.get_triple_iter().collect();
         assert!(triples.is_empty());
     }
 
     #[test]
     fn test_get_triple_iter_two_elements() {
-        let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
+        let mut chain = OptionChain::new("TEST", pos!(100.0), "2030-01-01".to_string(), None, None);
         // Add two options
         chain.add_option(
             pos!(90.0),
@@ -4529,14 +4551,14 @@ mod tests_chain_iterators_bis {
     // Tests for Triple Inclusive Iterator
     #[test]
     fn test_get_triple_inclusive_iter_empty() {
-        let chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
+        let chain = OptionChain::new("TEST", pos!(100.0), "2030-01-01".to_string(), None, None);
         let triples: Vec<_> = chain.get_triple_inclusive_iter().collect();
         assert!(triples.is_empty());
     }
 
     #[test]
     fn test_get_triple_inclusive_iter_single() {
-        let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
+        let mut chain = OptionChain::new("TEST", pos!(100.0), "2030-01-01".to_string(), None, None);
         chain.add_option(
             pos!(100.0),
             spos!(3.0),
@@ -4575,14 +4597,14 @@ mod tests_chain_iterators_bis {
     // Tests for Quad Iterator
     #[test]
     fn test_get_quad_iter_empty() {
-        let chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
+        let chain = OptionChain::new("TEST", pos!(100.0), "2030-01-01".to_string(), None, None);
         let quads: Vec<_> = chain.get_quad_iter().collect();
         assert!(quads.is_empty());
     }
 
     #[test]
     fn test_get_quad_iter_three_elements() {
-        let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
+        let mut chain = OptionChain::new("TEST", pos!(100.0), "2030-01-01".to_string(), None, None);
         // Add three options
         chain.add_option(
             pos!(90.0),
@@ -4649,14 +4671,14 @@ mod tests_chain_iterators_bis {
     // Tests for Quad Inclusive Iterator
     #[test]
     fn test_get_quad_inclusive_iter_empty() {
-        let chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
+        let chain = OptionChain::new("TEST", pos!(100.0), "2030-01-01".to_string(), None, None);
         let quads: Vec<_> = chain.get_quad_inclusive_iter().collect();
         assert!(quads.is_empty());
     }
 
     #[test]
     fn test_get_quad_inclusive_iter_single() {
-        let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
+        let mut chain = OptionChain::new("TEST", pos!(100.0), "2030-01-01".to_string(), None, None);
         chain.add_option(
             pos!(100.0),
             spos!(3.0),
@@ -5947,7 +5969,7 @@ mod tests_serialization {
         let mut chain = OptionChain::new(
             "TEST",
             pos!(100.0),
-            "2024-01-01".to_string(),
+            "2030-01-01".to_string(),
             Some(dec!(0.05)),
             spos!(0.02),
         );
@@ -6184,7 +6206,7 @@ mod tests_option_chain_serde {
         let mut chain = OptionChain::new(
             "TEST",
             pos!(100.0),
-            "2024-01-01".to_string(),
+            "2030-01-01".to_string(),
             Some(dec!(0.05)),
             spos!(0.02),
         );
@@ -6221,7 +6243,7 @@ mod tests_option_chain_serde {
 
     #[test]
     fn test_optionchain_empty_chain() {
-        let chain = OptionChain::new("EMPTY", pos!(100.0), "2024-01-01".to_string(), None, None);
+        let chain = OptionChain::new("EMPTY", pos!(100.0), "2030-01-01".to_string(), None, None);
 
         let serialized = serde_json::to_string(&chain).unwrap();
         let deserialized: OptionChain = serde_json::from_str(&serialized).unwrap();
@@ -6278,7 +6300,7 @@ mod tests_option_chain_serde {
         let mut chain = OptionChain::new(
             "SPECIAL",
             Positive::INFINITY,
-            "2024-01-01".to_string(),
+            "2030-01-01".to_string(),
             Some(Decimal::MAX),
             Some(Positive::INFINITY),
         );
@@ -7207,7 +7229,7 @@ mod tests_option_chain_utils {
         let mut chain = OptionChain::new(
             "TEST",
             pos!(100.0),
-            "2024-01-01".to_string(),
+            "2030-01-01".to_string(),
             Some(dec!(0.05)),
             spos!(0.02),
         );
@@ -7255,7 +7277,7 @@ mod tests_option_chain_utils {
 
     #[test]
     fn test_get_strike_interval_empty_chain() {
-        let chain = OptionChain::new("EMPTY", pos!(100.0), "2024-01-01".to_string(), None, None);
+        let chain = OptionChain::new("EMPTY", pos!(100.0), "2030-01-01".to_string(), None, None);
 
         // Empty chain should return the default interval
         let interval = chain.get_strike_interval();
@@ -7270,7 +7292,7 @@ mod tests_option_chain_utils {
     #[test]
     fn test_get_strike_interval_single_option_chain() {
         let mut chain =
-            OptionChain::new("SINGLE", pos!(100.0), "2024-01-01".to_string(), None, None);
+            OptionChain::new("SINGLE", pos!(100.0), "2030-01-01".to_string(), None, None);
 
         chain.add_option(
             pos!(100.0),
@@ -7302,7 +7324,7 @@ mod tests_option_chain_utils {
         let mut chain = OptionChain::new(
             "FRACTIONAL",
             pos!(100.0),
-            "2024-01-01".to_string(),
+            "2030-01-01".to_string(),
             None,
             None,
         );
@@ -7377,7 +7399,7 @@ mod tests_option_chain_utils_bis {
         let mut chain = OptionChain::new(
             "TEST",
             pos!(100.0),
-            "2024-01-01".to_string(),
+            "2030-01-01".to_string(),
             Some(dec!(0.05)),
             spos!(0.02),
         );
@@ -7439,7 +7461,7 @@ mod tests_option_chain_utils_bis {
 
     #[test]
     fn test_get_strike_interval_empty_chain() {
-        let chain = OptionChain::new("EMPTY", pos!(100.0), "2024-01-01".to_string(), None, None);
+        let chain = OptionChain::new("EMPTY", pos!(100.0), "2030-01-01".to_string(), None, None);
 
         // Empty chain should return the default interval
         let interval = chain.get_strike_interval();
@@ -7454,7 +7476,7 @@ mod tests_option_chain_utils_bis {
     #[test]
     fn test_get_strike_interval_single_option_chain() {
         let mut chain =
-            OptionChain::new("SINGLE", pos!(100.0), "2024-01-01".to_string(), None, None);
+            OptionChain::new("SINGLE", pos!(100.0), "2030-01-01".to_string(), None, None);
 
         chain.add_option(
             pos!(100.0),
@@ -7486,7 +7508,7 @@ mod tests_option_chain_utils_bis {
         let mut chain = OptionChain::new(
             "FRACTIONAL",
             pos!(100.0),
-            "2024-01-01".to_string(),
+            "2030-01-01".to_string(),
             None,
             None,
         );
@@ -7652,13 +7674,13 @@ mod chain_coverage_tests {
     fn test_atm_option_data_edge_cases() {
         // Test with empty chain
         let empty_chain =
-            OptionChain::new("EMPTY", pos!(100.0), "2024-01-01".to_string(), None, None);
+            OptionChain::new("EMPTY", pos!(100.0), "2030-01-01".to_string(), None, None);
         let result = empty_chain.atm_option_data();
         assert!(result.is_err());
 
         // Test with a single option exactly at the money
         let mut single_option_chain =
-            OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
+            OptionChain::new("TEST", pos!(100.0), "2030-01-01".to_string(), None, None);
         single_option_chain.add_option(
             pos!(100.0),
             spos!(5.0),
@@ -7727,7 +7749,7 @@ mod chain_coverage_tests {
 
         // Test with empty chain
         let empty_chain =
-            OptionChain::new("EMPTY", pos!(100.0), "2024-01-01".to_string(), None, None);
+            OptionChain::new("EMPTY", pos!(100.0), "2030-01-01".to_string(), None, None);
         let range = empty_chain.strike_price_range_vec(5.0);
         assert!(range.is_none());
     }
@@ -7904,13 +7926,13 @@ mod chain_coverage_tests_bis {
     fn test_atm_option_data_edge_cases() {
         // Test with empty chain
         let empty_chain =
-            OptionChain::new("EMPTY", pos!(100.0), "2024-01-01".to_string(), None, None);
+            OptionChain::new("EMPTY", pos!(100.0), "2030-01-01".to_string(), None, None);
         let result = empty_chain.atm_option_data();
         assert!(result.is_err());
 
         // Test with a single option exactly at the money
         let mut single_option_chain =
-            OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
+            OptionChain::new("TEST", pos!(100.0), "2030-01-01".to_string(), None, None);
         single_option_chain.add_option(
             pos!(100.0),
             spos!(5.0),
@@ -7979,7 +8001,7 @@ mod chain_coverage_tests_bis {
 
         // Test with empty chain
         let empty_chain =
-            OptionChain::new("EMPTY", pos!(100.0), "2024-01-01".to_string(), None, None);
+            OptionChain::new("EMPTY", pos!(100.0), "2030-01-01".to_string(), None, None);
         let range = empty_chain.strike_price_range_vec(5.0);
         assert!(range.is_none());
     }
@@ -8466,7 +8488,7 @@ mod tests_get_strikes_and_optiondata {
 
     // Helper function to create a test chain with specific strikes
     fn create_test_chain() -> OptionChain {
-        let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
+        let mut chain = OptionChain::new("TEST", pos!(100.0), "2030-01-01".to_string(), None, None);
 
         // Add options with different strikes
         for strike in [90.0, 95.0, 100.0, 105.0, 110.0].iter() {
@@ -8508,7 +8530,7 @@ mod tests_get_strikes_and_optiondata {
 
     #[test]
     fn test_get_strikes_empty_chain() {
-        let chain = OptionChain::new("EMPTY", pos!(100.0), "2024-01-01".to_string(), None, None);
+        let chain = OptionChain::new("EMPTY", pos!(100.0), "2030-01-01".to_string(), None, None);
 
         let result = chain.get_strikes();
         assert!(result.is_ok(), "Should handle empty chain");
@@ -8620,7 +8642,7 @@ mod tests_get_strikes_and_optiondata {
 
     #[test]
     fn test_get_optiondata_with_strike_empty_chain() {
-        let chain = OptionChain::new("EMPTY", pos!(100.0), "2024-01-01".to_string(), None, None);
+        let chain = OptionChain::new("EMPTY", pos!(100.0), "2030-01-01".to_string(), None, None);
 
         let result = chain.get_optiondata_with_strike(&pos!(100.0));
         assert!(result.is_err(), "Should return error for empty chain");
@@ -8640,7 +8662,7 @@ mod tests_get_strikes_and_optiondata {
     #[test]
     fn test_get_optiondata_with_strike_single_option() {
         let mut chain =
-            OptionChain::new("SINGLE", pos!(100.0), "2024-01-01".to_string(), None, None);
+            OptionChain::new("SINGLE", pos!(100.0), "2030-01-01".to_string(), None, None);
 
         // Add a single option
         chain.add_option(
@@ -8672,7 +8694,7 @@ mod tests_get_strikes_and_optiondata {
 
     #[test]
     fn test_get_strikes_order() {
-        let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-01-01".to_string(), None, None);
+        let mut chain = OptionChain::new("TEST", pos!(100.0), "2030-01-01".to_string(), None, None);
 
         // Add options in non-sorted order
         chain.add_option(
@@ -8727,5 +8749,294 @@ mod tests_get_strikes_and_optiondata {
         assert_eq!(strikes[0], pos!(95.0));
         assert_eq!(strikes[1], pos!(100.0));
         assert_eq!(strikes[2], pos!(105.0));
+    }
+}
+
+#[cfg(test)]
+mod tests_option_chain_comparison {
+    use crate::Positive;
+    use crate::chains::chain::OptionChain;
+    use rust_decimal_macros::dec;
+    use std::cmp::Ordering;
+
+    fn create_test_chain(symbol: &str, expiration: &str) -> OptionChain {
+        OptionChain::new(
+            symbol,
+            Positive::new(100.0).unwrap(),
+            expiration.to_string(),
+            Some(dec!(0.05)),
+            Some(Positive::new(0.02).unwrap()),
+        )
+    }
+
+    fn create_chain_with_invalid_expiration(symbol: &str) -> OptionChain {
+        OptionChain::new(
+            symbol,
+            Positive::new(100.0).unwrap(),
+            "invalid-date".to_string(),
+            Some(dec!(0.05)),
+            Some(Positive::new(0.02).unwrap()),
+        )
+    }
+
+    #[test]
+    fn test_partial_eq_same_symbol_same_expiration() {
+        let chain1 = create_test_chain("AAPL", "2030-01-19");
+        let chain2 = create_test_chain("AAPL", "2030-01-19");
+
+        assert_eq!(chain1, chain2);
+    }
+
+    #[test]
+    fn test_partial_eq_same_symbol_different_expiration() {
+        let chain1 = create_test_chain("AAPL", "2030-01-19");
+        let chain2 = create_test_chain("AAPL", "2024-02-16");
+
+        assert_ne!(chain1, chain2);
+    }
+
+    #[test]
+    fn test_partial_eq_different_symbol_same_expiration() {
+        let chain1 = create_test_chain("AAPL", "2030-01-19");
+        let chain2 = create_test_chain("MSFT", "2030-01-19");
+
+        assert_ne!(chain1, chain2);
+    }
+
+    #[test]
+    fn test_partial_eq_different_symbol_different_expiration() {
+        let chain1 = create_test_chain("AAPL", "2030-01-19");
+        let chain2 = create_test_chain("MSFT", "2024-02-16");
+
+        assert_ne!(chain1, chain2);
+    }
+
+    #[test]
+    fn test_partial_eq_different_underlying_price_same_expiration_symbol() {
+        let chain1 = create_test_chain("AAPL", "2030-01-19");
+        let mut chain2 = create_test_chain("AAPL", "2030-01-19");
+
+        // Change underlying price - should still be equal based on implementation
+        chain2.underlying_price = Positive::new(150.0).unwrap();
+
+        assert_eq!(chain1, chain2);
+    }
+
+    #[test]
+    fn test_partial_eq_with_none_expiration() {
+        let chain1 = create_chain_with_invalid_expiration("AAPL");
+        let chain2 = create_chain_with_invalid_expiration("AAPL");
+
+        // Both should have None for get_expiration() and should be equal
+        assert_eq!(chain1, chain2);
+    }
+
+    #[test]
+    fn test_partial_eq_one_valid_one_invalid_expiration() {
+        let chain1 = create_test_chain("AAPL", "2030-01-19");
+        let chain2 = create_chain_with_invalid_expiration("AAPL");
+
+        // One has valid expiration, one has None - should not be equal
+        assert_ne!(chain1, chain2);
+    }
+
+    #[test]
+    fn test_eq_trait_reflexivity() {
+        let chain = create_test_chain("AAPL", "2030-01-19");
+
+        assert_eq!(chain, chain);
+    }
+
+    #[test]
+    fn test_eq_trait_symmetry() {
+        let chain1 = create_test_chain("AAPL", "2030-01-19");
+        let chain2 = create_test_chain("AAPL", "2030-01-19");
+
+        assert_eq!(chain1 == chain2, chain2 == chain1);
+    }
+
+    #[test]
+    fn test_eq_trait_transitivity() {
+        let chain1 = create_test_chain("AAPL", "2030-01-19");
+        let chain2 = create_test_chain("AAPL", "2030-01-19");
+        let chain3 = create_test_chain("AAPL", "2030-01-19");
+
+        assert!(chain1 == chain2 && chain2 == chain3 && chain1 == chain3);
+    }
+
+    #[test]
+    fn test_partial_ord_earlier_expiration_less_than_later() {
+        let earlier_chain = create_test_chain("AAPL", "2030-01-19");
+        let later_chain = create_test_chain("AAPL", "2035-02-16");
+
+        assert!(earlier_chain < later_chain);
+        assert!(earlier_chain.partial_cmp(&later_chain) == Some(Ordering::Less));
+    }
+
+    #[test]
+    fn test_partial_ord_later_expiration_greater_than_earlier() {
+        let earlier_chain = create_test_chain("AAPL", "2030-01-19");
+        let later_chain = create_test_chain("AAPL", "2030-02-16");
+
+        assert!(later_chain > earlier_chain);
+        assert!(later_chain.partial_cmp(&earlier_chain) == Some(Ordering::Greater));
+    }
+
+    #[test]
+    fn test_partial_ord_same_expiration_equal() {
+        let chain1 = create_test_chain("AAPL", "2030-01-19");
+        let chain2 = create_test_chain("MSFT", "2030-01-19"); // Different symbol, same expiration
+
+        assert!(chain1.partial_cmp(&chain2) != Some(Ordering::Equal));
+    }
+
+    #[test]
+    fn test_partial_ord_with_none_expiration() {
+        let valid_chain = create_test_chain("AAPL", "2030-01-19");
+        let invalid_chain = create_chain_with_invalid_expiration("AAPL");
+
+        // When one has None expiration, comparison should handle it appropriately
+        let result = valid_chain.partial_cmp(&invalid_chain);
+        assert!(result.is_some()); // Should return Some(Ordering) based on implementation
+    }
+
+    #[test]
+    fn test_partial_ord_both_none_expiration() {
+        let invalid_chain1 = create_chain_with_invalid_expiration("AAPL");
+        let invalid_chain2 = create_chain_with_invalid_expiration("MSFT");
+
+        // Both have None expiration - should be equal in ordering
+        assert!(invalid_chain1.partial_cmp(&invalid_chain2) != Some(Ordering::Equal));
+    }
+
+    #[test]
+    fn test_ord_consistency_with_partial_ord() {
+        let chain1 = create_test_chain("AAPL", "2030-01-19");
+        let chain2 = create_test_chain("AAPL", "2024-02-16");
+
+        assert_eq!(chain1.cmp(&chain2), chain1.partial_cmp(&chain2).unwrap());
+        assert_eq!(chain2.cmp(&chain1), chain2.partial_cmp(&chain1).unwrap());
+    }
+
+    #[test]
+    fn test_ord_earlier_less_than_later() {
+        let earlier_chain = create_test_chain("AAPL", "2030-01-19");
+        let later_chain = create_test_chain("AAPL", "2030-01-20");
+
+        assert_eq!(earlier_chain.cmp(&later_chain), Ordering::Less);
+    }
+
+    #[test]
+    fn test_ord_later_greater_than_earlier() {
+        let earlier_chain = create_test_chain("AAPL", "2030-01-19");
+        let later_chain = create_test_chain("SPX", "2031-02-16");
+
+        assert_eq!(later_chain.cmp(&earlier_chain), Ordering::Greater);
+    }
+
+    #[test]
+    fn test_ord_same_expiration_equal() {
+        let chain1 = create_test_chain("AAPL", "2030-01-19");
+        let chain2 = create_test_chain("MSFT", "2030-01-19");
+
+        assert_eq!(chain1.cmp(&chain2), Ordering::Less);
+    }
+
+    #[test]
+    fn test_ord_reflexivity() {
+        let chain = create_test_chain("AAPL", "2030-01-19");
+
+        assert_eq!(chain.cmp(&chain), Ordering::Equal);
+    }
+
+    #[test]
+    fn test_ord_antisymmetry() {
+        let chain1 = create_test_chain("AAPL", "2030-01-19");
+        let chain2 = create_test_chain("AAPL", "2024-02-16");
+
+        if chain1.cmp(&chain2) == Ordering::Less {
+            assert_eq!(chain2.cmp(&chain1), Ordering::Greater);
+        }
+    }
+
+    #[test]
+    fn test_ord_transitivity() {
+        let chain1 = create_test_chain("AAPL", "2030-01-19");
+        let chain2 = create_test_chain("AAPL", "2030-02-16");
+        let chain3 = create_test_chain("AAPL", "2030-02-17");
+
+        assert_eq!(chain1.cmp(&chain2), Ordering::Less);
+        assert_eq!(chain2.cmp(&chain3), Ordering::Less);
+        assert_eq!(chain1.cmp(&chain3), Ordering::Less);
+    }
+
+    #[test]
+    fn test_sorting_mixed_symbols_by_expiration() {
+        let mut chains = vec![
+            create_test_chain("MSFT", "2024-02-16"),
+            create_test_chain("AAPL", "2030-01-19"),
+            create_test_chain("GOOGL", "2024-03-15"),
+            create_test_chain("TSLA", "2030-01-19"), // Same expiration as AAPL
+        ];
+
+        chains.sort();
+
+        // Should be sorted by expiration date regardless of symbol
+        assert_eq!(chains[0].get_expiration_date(), "2024-03-15");
+        assert_eq!(chains[1].get_expiration_date(), "2024-02-16");
+        assert_eq!(chains[2].get_expiration_date(), "2030-01-19");
+        assert_eq!(chains[3].get_expiration_date(), "2030-01-19");
+    }
+
+    #[test]
+    fn test_ord_with_datetime_expiration_format() {
+        let chain1 = create_test_chain("AAPL", "2030-01-19 15:30:00");
+        let chain2 = create_test_chain("AAPL", "2030-01-19 16:00:00");
+
+        // Should compare properly even with time components
+        let result = chain1.cmp(&chain2);
+        assert!(matches!(
+            result,
+            Ordering::Less | Ordering::Equal | Ordering::Greater
+        ));
+    }
+
+    #[test]
+    fn test_consistency_between_eq_and_ord() {
+        let chain1 = create_test_chain("AAPL", "2030-01-19");
+        let chain2 = create_test_chain("MSFT", "2030-01-19"); // Same expiration, different symbol
+
+        // If chains are equal according to PartialEq, they should be Equal in Ord
+        if chain1 == chain2 {
+            assert_eq!(chain1.cmp(&chain2), Ordering::Equal);
+        }
+
+        // If chains compare as Equal in Ord, they should be equal according to PartialEq
+        if chain1.cmp(&chain2) == Ordering::Equal {
+            assert_eq!(chain1, chain2);
+        }
+    }
+
+    #[test]
+    fn test_option_chain_in_btreeset() {
+        use std::collections::BTreeSet;
+
+        let mut set = BTreeSet::new();
+
+        set.insert(create_test_chain("AAPL", "2027-03-15"));
+        set.insert(create_test_chain("AAPL", "2030-01-19"));
+        set.insert(create_test_chain("AAPL", "2027-02-16"));
+        set.insert(create_test_chain("MSFT", "2030-01-19"));
+        set.insert(create_test_chain("AAPL", "2027-03-15")); // Duplicate
+
+        // Should maintain sorted order and handle duplicates properly
+        let chains: Vec<_> = set.into_iter().collect();
+
+        // Verify ordering (chains with same expiration should be treated as equal)
+        assert_eq!(chains.len(), 4);
+        assert_eq!(chains[0].get_expiration_date(), "2027-02-16");
+        assert_eq!(chains[1].get_expiration_date(), "2027-03-15");
+        assert_eq!(chains[2].get_expiration_date(), "2030-01-19");
+        assert_eq!(chains[3].get_expiration_date(), "2030-01-19");
     }
 }

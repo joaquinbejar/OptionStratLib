@@ -47,15 +47,13 @@ impl Hash for ExpirationDate {
 
 impl PartialEq for ExpirationDate {
     fn eq(&self, other: &Self) -> bool {
-        let (s,o) = match (self, other) {
-            (ExpirationDate::Days(a), ExpirationDate::Days(b)) => {
-                (*a, *b)
-            },
+        let (s, o) = match (self, other) {
+            (ExpirationDate::Days(a), ExpirationDate::Days(b)) => (*a, *b),
             (ExpirationDate::DateTime(_), ExpirationDate::DateTime(_)) => {
                 let days_a = self.get_days().unwrap_or(Positive::ZERO);
                 let days_b = other.get_days().unwrap_or(Positive::ZERO);
                 (days_a, days_b)
-            },
+            }
             (ExpirationDate::Days(a), ExpirationDate::DateTime(_)) => {
                 let days = other.get_days().unwrap_or(Positive::ZERO);
                 (*a, days)
@@ -1141,8 +1139,7 @@ mod tests_comparisons {
         let date2 = ExpirationDate::DateTime(datetime2);
         assert_ne!(date1, date2);
     }
-    
-    
+
     #[test]
     fn test_partial_eq_mixed_variants_with_zero_fallback() {
         // Test case where get_days() might return an error and fall back to ZERO
