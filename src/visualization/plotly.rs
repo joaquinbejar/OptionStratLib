@@ -160,7 +160,6 @@ pub trait Graph {
             }
         }
 
-        // No debería llegar aquí, pero por si acaso
         Err(GraphError::Render(
             "Failed to write PNG: unexpected error".to_string(),
         ))

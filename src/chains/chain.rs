@@ -2411,13 +2411,28 @@ impl RNDAnalysis for OptionChain {
     }
 }
 
-impl fmt::Display for OptionChain {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        // Create header information
-        writeln!(f, "\nSymbol: {}", self.symbol)?;
-        writeln!(f, "Underlying Price: {:.1}", self.underlying_price)?;
-        writeln!(f, "Expiration Date: {}", self.expiration_date)?;
-        writeln!(f)?;
+impl OptionChain {
+    /// Print the option chain with colored headers to stdout.
+    /// 
+    /// This method prints the option chain directly to stdout using prettytable's
+    /// `printstd()` method, which properly displays colors in the terminal.
+    /// Use this method instead of `println!("{}", chain)` to see colored headers.
+    pub fn show(&self) {
+        // Print header information
+        let mut header = Table::new();
+        header.set_format(*format::consts::FORMAT_BOX_CHARS);
+        header.add_row(Row::new(vec![
+            Cell::new("Symbol").with_style(Attr::ForegroundColor(color::GREEN)),
+            Cell::new("Underlying Price").with_style(Attr::ForegroundColor(color::GREEN)),
+            Cell::new("Expiration Date").with_style(Attr::ForegroundColor(color::GREEN)),
+        ]));
+        header.add_row(Row::new(vec![
+            Cell::new(&*self.symbol).with_style(Attr::ForegroundColor(color::MAGENTA)),
+            Cell::new(&*self.underlying_price.to_string()).with_style(Attr::ForegroundColor(color::MAGENTA)),
+            Cell::new(&*self.expiration_date).with_style(Attr::ForegroundColor(color::MAGENTA)),
+        ]));
+
+        header.printstd();
 
         // Create the table
         let mut table = Table::new();
@@ -2479,7 +2494,90 @@ impl fmt::Display for OptionChain {
             ]));
         }
 
-        // Print the table
+        // Print the table with colors using printstd()
+        table.printstd();
+    }
+}
+
+impl fmt::Display for OptionChain {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+
+        let mut header = Table::new();
+        header.set_format(*format::consts::FORMAT_BOX_CHARS);
+        header.add_row(Row::new(vec![
+            Cell::new("Symbol").with_style(Attr::ForegroundColor(color::GREEN)),
+            Cell::new("Underlying Price").with_style(Attr::ForegroundColor(color::GREEN)),
+            Cell::new("Expiration Date").with_style(Attr::ForegroundColor(color::GREEN)),
+        ]));
+        header.add_row(Row::new(vec![
+            Cell::new(&*self.symbol).with_style(Attr::ForegroundColor(color::MAGENTA)),
+            Cell::new(&*self.underlying_price.to_string()).with_style(Attr::ForegroundColor(color::MAGENTA)),
+            Cell::new(&*self.expiration_date).with_style(Attr::ForegroundColor(color::MAGENTA)),
+        ]));
+        
+        write!(f, "\n{}", header)?;
+        
+        // Create the table
+        let mut table = Table::new();
+        table.set_format(*format::consts::FORMAT_BOX_CHARS);
+
+        // Add header row with green color (colors may not display through Display trait)
+        table.add_row(Row::new(vec![
+            Cell::new("Strike"),
+            Cell::new("Call Bid"),
+            Cell::new("Call Ask"),
+            Cell::new("Call Mid"),
+            Cell::new("Put Bid"),
+            Cell::new("Put Ask"),
+            Cell::new("Put Mid"),
+            Cell::new("IV"),
+            Cell::new("C-Delta"),
+            Cell::new("P-Delta"),
+            Cell::new("Gamma"),
+            Cell::new("Vol."),
+            Cell::new("OI"),
+        ]));
+
+        // Add data rows
+        for option in &self.options {
+            table.add_row(Row::new(vec![
+                Cell::new(&option.strike_price.to_string()),
+                Cell::new(&crate::chains::utils::empty_string_round_to_3(
+                    option.call_bid,
+                )),
+                Cell::new(&crate::chains::utils::empty_string_round_to_3(
+                    option.call_ask,
+                )),
+                Cell::new(&crate::chains::utils::empty_string_round_to_3(
+                    option.call_middle,
+                )),
+                Cell::new(&crate::chains::utils::empty_string_round_to_3(
+                    option.put_bid,
+                )),
+                Cell::new(&crate::chains::utils::empty_string_round_to_3(
+                    option.put_ask,
+                )),
+                Cell::new(&crate::chains::utils::empty_string_round_to_3(
+                    option.put_middle,
+                )),
+                Cell::new(&format!("{:.3}", option.implied_volatility)),
+                Cell::new(&format!(
+                    "{:.3}",
+                    option.delta_call.unwrap_or(Decimal::ZERO)
+                )),
+                Cell::new(&format!("{:.3}", option.delta_put.unwrap_or(Decimal::ZERO))),
+                Cell::new(&format!(
+                    "{:.4}",
+                    option.gamma.unwrap_or(Decimal::ZERO) * Decimal::ONE_HUNDRED
+                )),
+                Cell::new(&default_empty_string(option.volume)),
+                Cell::new(&default_empty_string(
+                    option.open_interest,
+                )),
+            ]));
+        }
+
+        // Print the table (colors may not display through Display trait)
         write!(f, "{}", table)?;
         Ok(())
     }
