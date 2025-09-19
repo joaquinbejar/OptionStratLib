@@ -212,10 +212,10 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
         let option = self.one_option();
         let expiration = option.expiration_date;
         let risk_free_rate = option.risk_free_rate;
-        let underlying_price = self.get_underlying_price();
+        let underlying_price = option.underlying_price;
         for mut range in ranges {
             range.calculate_probability(
-                underlying_price,
+                &underlying_price,
                 volatility_adj.clone(),
                 trend.clone(),
                 &expiration,
@@ -246,16 +246,17 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
     ) -> Result<Positive, ProbabilityError> {
         let mut sum_of_probabilities = Positive::ZERO;
         let ranges = self.get_loss_ranges()?;
-        let expiration = *self.get_expiration().values().next().unwrap();
-        let risk_free_rate = *self.get_risk_free_rate().values().next().unwrap();
-        let underlying_price = self.get_underlying_price();
+        let option = self.one_option();
+        let expiration = option.expiration_date;
+        let risk_free_rate = option.risk_free_rate;
+        let underlying_price = option.underlying_price;
         for mut range in ranges {
             range.calculate_probability(
-                underlying_price,
+                &underlying_price,
                 volatility_adj.clone(),
                 trend.clone(),
-                expiration,
-                Some(*risk_free_rate),
+                &expiration,
+                Some(risk_free_rate),
             )?;
             sum_of_probabilities += range.probability;
         }

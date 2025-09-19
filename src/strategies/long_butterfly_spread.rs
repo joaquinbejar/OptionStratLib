@@ -972,8 +972,10 @@ impl ProbabilityAnalysis for LongButterflySpread {
             std_dev_adjustment: std_dev,
         });
 
+        // Lower loss range: from 0 to lower break-even point
+        // This represents losses when price is below the lower break-even
         let mut lower_loss_range = ProfitLossRange::new(
-            Some(self.long_call_low.option.strike_price),
+            None, // No lower bound (losses extend to zero)
             Some(break_even_points[0]),
             pos!(self.get_max_loss()?.to_f64()),
         )?;
@@ -988,9 +990,11 @@ impl ProbabilityAnalysis for LongButterflySpread {
 
         ranges.push(lower_loss_range);
 
+        // Upper loss range: from upper break-even point to infinity
+        // This represents losses when price is above the upper break-even
         let mut upper_loss_range = ProfitLossRange::new(
             Some(break_even_points[1]),
-            Some(self.long_call_high.option.strike_price),
+            None, // No upper bound (losses extend to infinity)
             pos!(self.get_max_loss()?.to_f64()),
         )?;
 
@@ -2928,6 +2932,7 @@ mod tests_butterfly_probability {
     use super::*;
     use crate::model::ExpirationDate;
     use crate::pos;
+    use crate::strategies::probabilities::calculate_price_probability;
     use rust_decimal_macros::dec;
 
     fn create_test_long() -> LongButterflySpread {
@@ -2995,10 +3000,8 @@ mod tests_butterfly_probability {
             assert_eq!(ranges.len(), 2);
 
             let lower_range = &ranges[0];
-            assert_eq!(
-                lower_range.lower_bound.unwrap(),
-                butterfly.long_call_low.option.strike_price
-            );
+            // Lower loss range: from None (0) to lower break-even
+            assert!(lower_range.lower_bound.is_none());
             assert_eq!(
                 lower_range.upper_bound.unwrap(),
                 butterfly.get_break_even_points().unwrap()[0]
@@ -3006,14 +3009,12 @@ mod tests_butterfly_probability {
             assert!(lower_range.probability > Positive::ZERO);
 
             let upper_range = &ranges[1];
+            // Upper loss range: from upper break-even to None (infinity)
             assert_eq!(
                 upper_range.lower_bound.unwrap(),
                 butterfly.get_break_even_points().unwrap()[1]
             );
-            assert_eq!(
-                upper_range.upper_bound.unwrap(),
-                butterfly.long_call_high.option.strike_price
-            );
+            assert!(upper_range.upper_bound.is_none());
             assert!(upper_range.probability > Positive::ZERO);
         }
     }
@@ -3040,5 +3041,128 @@ mod tests_butterfly_probability {
                 .map(|r| r.probability.to_f64())
                 .sum::<f64>();
         assert!((long_total_prob - 1.0).abs() < 0.1);
+    }
+
+    #[test]
+    fn test_debug_user_case() {
+        // Recreate the exact user case
+        let underlying_price = pos!(23750.0);
+
+        let strategy = LongButterflySpread::new(
+            "DAX".to_string(),
+            underlying_price, // underlying_price
+            pos!(23600.0),    // long_strike_itm
+            pos!(23750.0),    // short_strike
+            pos!(23900.0),    // long_strike_otm
+            ExpirationDate::Days(pos!(63.0)),
+            pos!(0.14),     // implied_volatility
+            dec!(0.0),      // risk_free_rate
+            Positive::ZERO, // dividend_yield
+            pos!(1.0),      // long quantity
+            pos!(645.3),    // premium_long_low
+            pos!(545.6),    // premium_short
+            pos!(477.1),    // premium_long_high
+            pos!(0.05),     // open_fee_short_call
+            pos!(0.05),     // close_fee_short_call
+            pos!(0.05),     // open_fee_long_call_low
+            pos!(0.05),     // close_fee_long_call_low
+            pos!(0.05),     // open_fee_long_call_high
+            pos!(0.05),     // close_fee_long_call_high
+        );
+
+        info!("=== DEBUGGING USER CASE ===");
+
+        // Get break-even points
+        let break_even_points = strategy.get_break_even_points().unwrap();
+        info!("Break-even points: {:?}", break_even_points);
+
+        // Get profit ranges
+        let profit_ranges = strategy.get_profit_ranges().unwrap();
+        info!("\nProfit ranges:");
+        for (i, range) in profit_ranges.iter().enumerate() {
+            info!(
+                "  Range {}: lower={:?}, upper={:?}, probability={:.6}",
+                i, range.lower_bound, range.upper_bound, range.probability
+            );
+        }
+
+        // Get loss ranges
+        let loss_ranges = strategy.get_loss_ranges().unwrap();
+        info!("\nLoss ranges:");
+        for (i, range) in loss_ranges.iter().enumerate() {
+            info!(
+                "  Range {}: lower={:?}, upper={:?}, probability={:.6}",
+                i, range.lower_bound, range.upper_bound, range.probability
+            );
+        }
+
+        // Calculate total probabilities
+        let total_profit_prob: f64 = profit_ranges.iter().map(|r| r.probability.to_f64()).sum();
+        let total_loss_prob: f64 = loss_ranges.iter().map(|r| r.probability.to_f64()).sum();
+
+        info!("\n=== SUMMARY ===");
+        info!(
+            "Total Profit Probability: {:.6} ({:.2}%)",
+            total_profit_prob,
+            total_profit_prob * 100.0
+        );
+        info!(
+            "Total Loss Probability: {:.6} ({:.2}%)",
+            total_loss_prob,
+            total_loss_prob * 100.0
+        );
+        info!(
+            "Sum: {:.6} ({:.2}%)",
+            total_profit_prob + total_loss_prob,
+            (total_profit_prob + total_loss_prob) * 100.0
+        );
+
+        // Test individual probability calculations
+        info!("\n=== INDIVIDUAL PROBABILITY TESTS ===");
+
+        let current_price = &pos!(23750.0);
+        let lower_bound = break_even_points[0];
+        let upper_bound = break_even_points[1];
+
+        info!("Testing range: {} to {}", lower_bound, upper_bound);
+
+        let (prob_below_lower, prob_in_range, prob_above_upper) = calculate_price_probability(
+            current_price,
+            &lower_bound,
+            &upper_bound,
+            None,
+            None,
+            &ExpirationDate::Days(pos!(63.0)),
+            Some(dec!(0.0)),
+        )
+        .unwrap();
+
+        info!(
+            "Probability below lower bound ({}): {:.6}",
+            lower_bound, prob_below_lower
+        );
+        info!(
+            "Probability in range ({} to {}): {:.6}",
+            lower_bound, upper_bound, prob_in_range
+        );
+        info!(
+            "Probability above upper bound ({}): {:.6}",
+            upper_bound, prob_above_upper
+        );
+
+        let calculated_total = prob_below_lower + prob_in_range + prob_above_upper;
+        info!(
+            "Calculated total from individual probs: {:.6}",
+            calculated_total
+        );
+
+        // This should fail to show the problem
+        assert!(
+            (total_profit_prob + total_loss_prob - 1.0).abs() < 0.1,
+            "Probabilities don't sum to ~1.0: profit={:.6}, loss={:.6}, sum={:.6}",
+            total_profit_prob,
+            total_loss_prob,
+            total_profit_prob + total_loss_prob
+        );
     }
 }

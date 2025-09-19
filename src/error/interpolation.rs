@@ -81,7 +81,7 @@ impl From<SurfaceError> for InterpolationError {
 }
 
 impl From<Box<dyn Error>> for InterpolationError {
-    fn from(err: Box<(dyn Error)>) -> Self {
+    fn from(err: Box<dyn Error>) -> Self {
         InterpolationError::StdError(err.to_string())
     }
 }

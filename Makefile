@@ -37,11 +37,11 @@ fmt-check:
 # Run Clippy for linting
 .PHONY: lint
 lint:
-	cargo clippy --all-targets --all-features -- -D warnings
+	cargo clippy --all-targets --all-features --workspace -- -D warnings
 
 .PHONY: lint-fix
 lint-fix: 
-	cargo clippy --fix --all-targets --all-features --allow-staged --allow-dirty -- -D warnings
+	cargo clippy --fix --all-targets --all-features --allow-staged --allow-dirty --workspace -- -D warnings
 
 # Clean the project
 .PHONY: clean

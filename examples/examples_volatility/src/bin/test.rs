@@ -10,6 +10,7 @@ use rust_decimal::prelude::FromPrimitive;
 use rust_decimal::{Decimal, MathematicalOps};
 use tracing::info;
 
+#[allow(clippy::too_many_arguments)]
 fn calculate_error(
     days: Positive,
     risk_free_rate: Decimal,

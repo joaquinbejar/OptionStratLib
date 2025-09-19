@@ -51,5 +51,11 @@ fn main() -> Result<(), Box<dyn Error>> {
         "Draws/Strategy/short_butterfly_spread_profit_loss_chart.png".as_ref();
     strategy.write_png(path)?;
 
+    let prob = strategy.probability_of_profit(None, None)?;
+    info!("Probability of Profit: {:.2}%", prob);
+
+    let prob = strategy.probability_of_loss(None, None)?;
+    info!("Probability of Loss: {:.2}%", prob);
+
     Ok(())
 }

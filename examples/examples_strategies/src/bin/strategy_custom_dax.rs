@@ -25,7 +25,7 @@ fn main() {
         Side::Long,
         underlying_symbol.clone(),
         pos!(24210.0), // strike
-        expiration.clone(),
+        expiration,
         implied_volatility,
         pos!(1.0), // quantity
         underlying_price,
@@ -50,7 +50,7 @@ fn main() {
         Side::Long,
         underlying_symbol.clone(),
         pos!(24070.0), // strike
-        expiration.clone(),
+        expiration,
         implied_volatility,
         pos!(1.0), // quantity
         underlying_price,
@@ -75,7 +75,7 @@ fn main() {
         Side::Short,
         underlying_symbol.clone(),
         pos!(24060.0), // strike
-        expiration.clone(),
+        expiration,
         implied_volatility,
         pos!(1.0), // quantity
         underlying_price,

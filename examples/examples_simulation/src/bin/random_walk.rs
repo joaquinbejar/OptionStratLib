@@ -39,7 +39,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             drift: dec!(0.0),
             volatility: std_dev,
         },
-        walker: walker,
+        walker,
     };
 
     let random_walk = RandomWalk::new("Random Walk".to_string(), &walk_params, generator_positive);

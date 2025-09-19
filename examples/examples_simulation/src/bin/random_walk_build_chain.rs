@@ -65,7 +65,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             drift: dec!(0.0),
             volatility: implied_volatility,
         },
-        walker: walker,
+        walker,
     };
 
     let random_walk = RandomWalk::new(
