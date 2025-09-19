@@ -644,29 +644,30 @@ mod tests_option_series {
 
     mod tests_display {
         use super::*;
+        use tracing::info;
 
         #[test]
         fn test_display_full_series() {
             let series = create_test_series();
 
-            let display = format!("{series}");
-            println!("{}", display);
+            let displaying = format!("{series}");
+            info!("{}", displaying);
             // Verify the display string contains the important parts
-            assert!(display.contains("symbol"));
-            assert!(display.contains("100"));
-            assert!(display.contains("risk_free_rate: 0.05"));
-            assert!(display.contains("dividend_yield: 0.02"));
+            assert!(displaying.contains("symbol"));
+            assert!(displaying.contains("100"));
+            assert!(displaying.contains("risk_free_rate: 0.05"));
+            assert!(displaying.contains("dividend_yield: 0.02"));
 
             let date = get_x_days_formatted_pos(Positive::ONE);
             let matches = date.to_string();
-            assert!(display.contains(&matches));
+            assert!(displaying.contains(&matches));
 
             let date = get_x_days_formatted_pos(pos!(7.0));
             let matches = date.to_string();
-            assert!(display.contains(&matches));
+            assert!(displaying.contains(&matches));
 
             let matches = "Expiration Date".to_string();
-            assert!(display.contains(&matches));
+            assert!(displaying.contains(&matches));
         }
 
         #[test]
