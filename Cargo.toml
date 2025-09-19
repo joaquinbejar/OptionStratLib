@@ -1,6 +1,6 @@
 [package]
 name = "optionstratlib"
-version = "0.7.2"
+version = "0.7.3"
 edition = "2024"
 authors = ["Joaquin Bejar <jb@taunais.com>"]
 description = "OptionStratLib is a comprehensive Rust library for options trading and strategy development across multiple asset classes."
@@ -52,8 +52,8 @@ rust_decimal_macros = { workspace = true }
 zip = { workspace = true }
 lazy_static = { workspace = true }
 uuid = { workspace = true, features = ["v4", "serde"] }
-prettytable-rs = "0.10"
-pretty-simple-display = "0.1"
+prettytable-rs = { workspace = true }
+pretty-simple-display = { workspace = true }
 
 [dev-dependencies]
 criterion = { version = "0.7", default-features = false, features = ["html_reports"] }
@@ -110,3 +110,5 @@ lazy_static = "1.5"
 uuid = { version = "1.18", features = ["v4", "serde"] }
 approx = "0.5"
 rand_distr = "0.5"
+prettytable-rs = "0.10"
+pretty-simple-display = "0.1"

@@ -494,14 +494,14 @@ let option = Options::new(
 
 // Calculate option price using Black-Scholes
 let price = option.calculate_price_black_scholes().unwrap();
-println!("Option price: ${:.2}", price);
+tracing::info!("Option price: ${:.2}", price);
 
 // Calculate Greeks for risk management
 let delta = option.delta().unwrap();
 let gamma = option.gamma().unwrap();
 let theta = option.theta().unwrap();
 let vega = option.vega().unwrap();
-println!("Greeks - Delta: {:.4}, Gamma: {:.4}, Theta: {:.4}, Vega: {:.4}",
+tracing::info!("Greeks - Delta: {:.4}, Gamma: {:.4}, Theta: {:.4}, Vega: {:.4}",
          delta, gamma, theta, vega);
 ```
 
@@ -538,17 +538,17 @@ let underlying_price = pos!(100.0);
     );
 
     // Analyze the strategy
-    println!("Strategy: {}", strategy.get_title());
-    println!("Break-even points: {:?}", strategy.get_break_even_points()?);
-    println!("Max profit: ${:.2}", strategy.get_max_profit().unwrap_or(Positive::ZERO));
-    println!("Max loss: ${:.2}", strategy.get_max_loss().unwrap_or(Positive::ZERO));
-    println!("Net premium: ${:.2}", strategy.get_net_premium_received()?);
+    tracing::info!("Strategy: {}", strategy.get_title());
+    tracing::info!("Break-even points: {:?}", strategy.get_break_even_points()?);
+    tracing::info!("Max profit: ${:.2}", strategy.get_max_profit().unwrap_or(Positive::ZERO));
+    tracing::info!("Max loss: ${:.2}", strategy.get_max_loss().unwrap_or(Positive::ZERO));
+    tracing::info!("Net premium: ${:.2}", strategy.get_net_premium_received()?);
 
     // Calculate P&L at different price points
     let prices = vec![pos!(90.0), pos!(95.0), pos!(100.0), pos!(105.0), pos!(110.0)];
     for price in prices {
         let pnl = strategy.get_point_at_price(&price)?;
-        println!("P&L at ${}: ${:.2}", price, pnl.0);
+        tracing::info!("P&L at ${}: ${:.2}", price, pnl.0);
     }
 
     // Generate visualization
@@ -586,7 +586,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let market_price = pos!(5.50);
     let iv = implied_volatility(market_price, &mut option, 100)?;
 
-    println!("Implied volatility: {:.2}%", iv.to_f64() * 100.0);
+    tracing::info!("Implied volatility: {:.2}%", iv.to_f64() * 100.0);
     Ok(())
 }
 ```
@@ -668,7 +668,7 @@ let strategy = CustomStrategy::new(
     implied_volatility,
 );
 
-println!("Strategy created: {}", strategy.get_title());
+tracing::info!("Strategy created: {}", strategy.get_title());
 ```
 
 ### Testing
