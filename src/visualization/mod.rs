@@ -310,9 +310,6 @@ mod default;
 mod plotly;
 
 #[cfg(feature = "plotly")]
-mod test_plotly;
-
-#[cfg(feature = "plotly")]
 pub use {
     plotly::Graph,
     utils::{make_scatter, make_surface, pick_color, to_plotly_mode},
