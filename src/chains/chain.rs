@@ -2438,7 +2438,7 @@ impl OptionChain {
     ///
     /// This method prints the option chain directly to stdout using prettytable's
     /// `printstd()` method, which properly displays colors in the terminal.
-    /// Use this method instead of `println!("{}", chain)` to see colored headers.
+    /// Use this method instead of `info!("{}", chain)` to see colored headers.
     pub fn show(&self) {
         // Print header information
         let mut header = Table::new();

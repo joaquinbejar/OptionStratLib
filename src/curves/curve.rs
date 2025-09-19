@@ -986,7 +986,7 @@ impl MetricsExtractor for Curve {
         // Median
         let mut sorted_values = y_values.clone();
         sorted_values.sort_by(|a, b| a.partial_cmp(b).unwrap());
-        let median = if sorted_values.len() % 2 == 0 {
+        let median = if sorted_values.len().is_multiple_of(2) {
             (sorted_values[sorted_values.len() / 2 - 1] + sorted_values[sorted_values.len() / 2])
                 / Decimal::TWO
         } else {
@@ -2923,14 +2923,14 @@ mod tests_geometric_transformations {
                 .points
                 .iter()
                 .zip(curve.points.iter().skip(1))
-                .map(|(a, b)| (b.y - a.y))
+                .map(|(a, b)| b.y - a.y)
                 .collect();
 
             let translated_diffs: Vec<Decimal> = result
                 .points
                 .iter()
                 .zip(result.points.iter().skip(1))
-                .map(|(a, b)| (b.y - a.y))
+                .map(|(a, b)| b.y - a.y)
                 .collect();
 
             assert_eq!(original_diffs, translated_diffs);
