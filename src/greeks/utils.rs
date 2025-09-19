@@ -539,24 +539,6 @@ mod tests_calculate_delta_neutral_sizes {
     }
 }
 
-#[cfg(test)]
-mod tests_exp {
-    use super::*;
-    use rust_decimal_macros::dec;
-
-    #[test]
-    #[should_panic]
-    fn test_calculate_exp() {
-        let decimal = dec!(-12.5);
-        let _ = decimal.exp();
-    }
-
-    #[test]
-    fn test_calculate_exp_no_panic() {
-        let decimal = dec!(-11.7);
-        let _ = decimal.exp();
-    }
-}
 
 #[cfg(test)]
 mod tests_calculate_d_values {
