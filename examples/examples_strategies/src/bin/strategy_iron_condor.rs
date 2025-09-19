@@ -4,26 +4,26 @@ use std::error::Error;
 use tracing::info;
 fn main() -> Result<(), Box<dyn Error>> {
     setup_logger();
-    let underlying_price = pos!(2646.9);
+    let underlying_price = pos!(23684.0);
 
     let strategy = IronCondor::new(
-        "GOLD".to_string(),
+        "DAX".to_string(),
         underlying_price, // underlying_price
-        pos!(2725.0),     // short_call_strike
-        pos!(2560.0),     // short_put_strike
-        pos!(2800.0),     // long_call_strike
-        pos!(2500.0),     // long_put_strike
-        ExpirationDate::Days(pos!(30.0)),
-        pos!(0.1548),   // implied_volatility
-        dec!(0.05),     // risk_free_rate
+        pos!(23730.0),    // short_call_strike
+        pos!(23630.0),    // short_put_strike
+        pos!(23775.0),    // long_call_strike
+        pos!(23580.0),    // long_put_strike
+        ExpirationDate::Days(pos!(0.4)),
+        pos!(0.19),     // implied_volatility
+        dec!(0.0),      // risk_free_rate
         Positive::ZERO, // dividend_yield
-        pos!(1.1),      // quantity
-        pos!(38.8),     // premium_short_call
-        pos!(30.4),     // premium_short_put
-        pos!(23.3),     // premium_long_call
-        pos!(16.8),     // premium_long_put
-        pos!(0.96),     // open_fee
-        pos!(0.96),     // close_fee
+        pos!(1.0),      // quantity
+        pos!(40.1),     // premium_short_call
+        pos!(39.4),     // premium_short_put
+        pos!(30.4),     // premium_long_call
+        pos!(30.7),     // premium_long_put
+        pos!(0.1),      // open_fee
+        pos!(0.1),      // close_fee
     );
     if !strategy.validate() {
         return Err("Invalid strategy".into());

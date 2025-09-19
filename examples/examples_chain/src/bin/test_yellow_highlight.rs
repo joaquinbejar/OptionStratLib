@@ -31,10 +31,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut chain = OptionChain::build_chain(&params);
     chain.update_greeks();
 
-    println!("=== Testing Yellow Highlighting for Strike Prices Multiple of 25 ===");
-    println!("Expected: Rows with strike prices 125, 150, 175 should be in YELLOW");
-    println!("Other strikes (130, 135, 140, 145, 155, 160, 165, 170) should be normal color");
-    println!();
+    tracing::info!("=== Testing Yellow Highlighting for Strike Prices Multiple of 25 ===");
+    tracing::info!("Expected: Rows with strike prices 125, 150, 175 should be in YELLOW");
+    tracing::info!("Other strikes (130, 135, 140, 145, 155, 160, 165, 170) should be normal color");
 
     // Show the chain with the new yellow highlighting
     chain.show();

@@ -81,7 +81,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             prices,
             symbol: Some(symbol),
         },
-        walker: walker,
+        walker,
     };
 
     let random_walk = RandomWalk::new(

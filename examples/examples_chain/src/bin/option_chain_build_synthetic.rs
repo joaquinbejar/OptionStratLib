@@ -16,7 +16,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!("Chain params: {}", chain_params);
     let mut option_chain = OptionChain::build_chain(&chain_params);
     option_chain.update_greeks();
-    // println!("{}", option_chain);
+    // info!("{}", option_chain);
     option_chain.show();
     let curve = option_chain.curve(&BasicAxisTypes::Volatility, &OptionStyle::Call, &Side::Long)?;
 
