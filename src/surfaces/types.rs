@@ -12,6 +12,7 @@ use rust_decimal::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::fmt::Display;
+use utoipa::ToSchema;
 
 /// Represents a point in three-dimensional space with `x`, `y` and `z` coordinates.
 ///
@@ -42,7 +43,7 @@ use std::fmt::Display;
 /// `Point3D` is primarily used within the surface module to represent vertices
 /// of 3D surfaces and for various geometric calculations. The high-precision `Decimal`
 /// type ensures accuracy in scientific and engineering applications.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, ToSchema)]
 pub struct Point3D {
     /// The x-coordinate in the Cartesian system
     pub x: Decimal,

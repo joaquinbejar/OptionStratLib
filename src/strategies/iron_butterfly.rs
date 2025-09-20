@@ -48,6 +48,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use tracing::{error, info};
+use utoipa::ToSchema;
 
 /// The default description for the Iron Butterfly strategy.
 pub const IRON_BUTTERFLY_DESCRIPTION: &str = "An Iron Butterfly is a neutral options strategy combining selling an at-the-money put and call \
@@ -98,7 +99,7 @@ pub const IRON_BUTTERFLY_DESCRIPTION: &str = "An Iron Butterfly is a neutral opt
 /// - Implied volatility is high (making the sold options more expensive)
 /// - The trader wants defined risk/reward parameters compared to a short straddle
 ///
-#[derive(Clone, DebugPretty, DisplaySimple, Serialize, Deserialize)]
+#[derive(Clone, DebugPretty, DisplaySimple, Serialize, Deserialize, ToSchema)]
 pub struct IronButterfly {
     /// Name identifier for this specific strategy instance
     pub name: String,

@@ -35,6 +35,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use tracing::{debug, info};
+use utoipa::ToSchema;
 
 /// The default description for the Long Butterfly Spread strategy.
 pub const LONG_BUTTERFLY_DESCRIPTION: &str = "A long butterfly spread is created by buying one call at a lower strike price, \
@@ -63,7 +64,7 @@ pub const LONG_BUTTERFLY_DESCRIPTION: &str = "A long butterfly spread is created
 /// - Profitability range is constrained between the break-even points
 ///
 /// # Attributes
-#[derive(Clone, DebugPretty, DisplaySimple, Serialize, Deserialize)]
+#[derive(Clone, DebugPretty, DisplaySimple, Serialize, Deserialize, ToSchema)]
 pub struct LongButterflySpread {
     /// Name identifier for the strategy
     pub name: String,

@@ -23,6 +23,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use tracing::{debug, trace};
+use utoipa::ToSchema;
 
 /// The `Position` struct represents a financial position in an options market.
 ///
@@ -54,7 +55,7 @@ use tracing::{debug, trace};
 /// let total_cost = position.total_cost().unwrap();
 /// info!("Total position cost: {}", total_cost);
 /// ```
-#[derive(Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Serialize, Deserialize, ToSchema)]
 pub struct Position {
     /// The detailed options contract information, including the type, strike price,
     /// expiration, underlying asset details, and other option-specific parameters.

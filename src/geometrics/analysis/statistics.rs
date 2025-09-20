@@ -4,6 +4,9 @@
    Date: 26/8/24
 ******************************************************************************/
 use crate::geometrics::{BasicMetrics, ShapeMetrics};
+use pretty_simple_display::{DebugPretty, DisplaySimple};
+use serde::Serialize;
+use utoipa::ToSchema;
 
 /// Contains comprehensive analysis results for a curve or dataset.
 ///
@@ -46,7 +49,7 @@ use crate::geometrics::{BasicMetrics, ShapeMetrics};
 ///   - Analyze curve properties for more accurate modeling and representation.
 ///   - Identify key points that define the geometric behavior of a curve.
 ///
-#[derive(Debug)]
+#[derive(Clone, DebugPretty, DisplaySimple, ToSchema, Serialize)]
 pub struct AnalysisResult {
     /// The fundamental statistical metrics of the dataset, including measures of
     /// central tendency (mean, median, mode) and dispersion (standard deviation).

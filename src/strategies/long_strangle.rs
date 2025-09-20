@@ -46,6 +46,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use tracing::{debug, info};
+use utoipa::ToSchema;
 
 pub(super) const LONG_STRANGLE_DESCRIPTION: &str = "A long strangle involves buying an out-of-the-money call and an \
 out-of-the-money put with the same expiration date. This strategy is used when high volatility \
@@ -108,7 +109,7 @@ direction is uncertain.";
 /// * Requires significant price movement to be profitable
 /// * Suffers from time decay (theta) as both options lose value over time
 /// * Generally more expensive than directional strategies due to purchasing two options
-#[derive(Clone, DebugPretty, DisplaySimple, Serialize, Deserialize)]
+#[derive(Clone, DebugPretty, DisplaySimple, Serialize, Deserialize, ToSchema)]
 pub struct LongStrangle {
     /// Name identifier for this specific strategy instance
     pub name: String,
@@ -1363,8 +1364,8 @@ mod tests_long_strangle_delta_size {
                     assert!(result.is_ok());
                     assert!(temp_strategy.is_delta_neutral());
                 }
-                DeltaAdjustment::SameSize(first, second) => {
-                    let call_short_qty = match **first {
+                DeltaAdjustment::SameSize(adjustment) => {
+                    let call_short_qty = match *adjustment.first {
                         DeltaAdjustment::BuyOptions {
                             quantity,
                             strike,
@@ -1387,7 +1388,7 @@ mod tests_long_strangle_delta_size {
                         }
                         _ => panic!("Invalid first adjustment"),
                     };
-                    let put_short_qty = match **second {
+                    let put_short_qty = match *adjustment.second {
                         DeltaAdjustment::SellOptions {
                             quantity,
                             strike,

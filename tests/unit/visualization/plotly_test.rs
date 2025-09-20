@@ -463,7 +463,7 @@ mod tests_plotly_interface {
         Graph, GraphConfig, GraphData, Series2D, Surface3D, TraceMode,
     };
     use rust_decimal_macros::dec;
-    use tracing::info;
+
     #[cfg(feature = "static_export")]
     use {
         optionstratlib::visualization::{ColorScheme, LineStyle, OutputType},
@@ -729,7 +729,6 @@ mod tests_plotly_interface {
 
         if let Err(e) = &result {
             tracing::error!("PNG export error: {e}");
-            info!("PNG export error: {e}");
         }
 
         assert!(result.is_ok(), "PNG export should succeed");
@@ -748,7 +747,6 @@ mod tests_plotly_interface {
 
         if let Err(e) = &result {
             tracing::error!("SVG export error: {e}");
-            info!("SVG export error: {e}");
         }
 
         assert!(result.is_ok(), "SVG export should succeed");
@@ -771,38 +769,7 @@ mod tests_plotly_interface {
             fs::remove_file(&html_path).unwrap();
         }
         assert!(html_result.is_ok());
-
-        // Note: OutputType::Browser is not tested because it opens a browser window
     }
-
-    /*
-    #[test]
-    fn test_render_with_png_and_svg_output_types() {
-        let graph = create_test_graph_with_series();
-
-        // OutputType::Png
-        let png_path = PathBuf::from("test_render_png.png");
-        if png_path.exists() {
-            fs::remove_file(&png_path).unwrap();
-        }
-        let png_result = graph.render(OutputType::Png(&png_path));
-        if png_path.exists() {
-            fs::remove_file(&png_path).unwrap();
-        }
-        assert!(png_result.is_ok());
-
-        // OutputType::Svg
-        let svg_path = PathBuf::from("test_render_svg.svg");
-        if svg_path.exists() {
-            fs::remove_file(&svg_path).unwrap();
-        }
-        let svg_result = graph.render(OutputType::Svg(&svg_path));
-        if svg_path.exists() {
-            fs::remove_file(&svg_path).unwrap();
-        }
-        assert!(svg_result.is_ok());
-    }
-    */
 
     // Test for to_interactive_html
     #[test]

@@ -5,8 +5,11 @@
 ******************************************************************************/
 use crate::Options;
 use crate::greeks::Greeks;
+use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
+use serde::{Deserialize, Serialize};
 use std::error::Error;
+use utoipa::ToSchema;
 
 /// Represents a collection of option positions at the same strike price.
 ///
@@ -36,7 +39,7 @@ use std::error::Error;
 /// This struct is typically used in option strategy analysis, risk assessment,
 /// and for calculating combined payoff profiles of multiple option positions
 /// at the same strike price.
-#[derive(Debug, Clone)]
+#[derive(DebugPretty, DisplaySimple, Clone, ToSchema, Serialize, Deserialize)]
 pub struct OptionsInStrike {
     /// A long (bought) call option position at this strike price
     pub long_call: Options,
@@ -135,7 +138,7 @@ impl OptionsInStrike {
 ///
 /// Delta values are essential for understanding directional exposure and for implementing
 /// delta-neutral strategies in options trading.
-#[derive(Debug, Clone)]
+#[derive(DebugPretty, DisplaySimple, Clone, ToSchema, Serialize, Deserialize)]
 pub struct DeltasInStrike {
     /// Delta value for a long call option position
     pub long_call: Decimal,

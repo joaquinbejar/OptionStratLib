@@ -8,6 +8,7 @@ use std::cmp::Ordering;
 use std::error::Error;
 use std::fmt;
 use std::hash::{Hash, Hasher};
+use utoipa::ToSchema;
 
 /// Represents the expiration of an option contract or financial instrument.
 ///
@@ -17,7 +18,7 @@ use std::hash::{Hash, Hasher};
 ///
 /// `ExpirationDate` is used throughout the options modeling system to handle
 /// time-based calculations such as time decay (theta) and option valuation.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, ToSchema)]
 pub enum ExpirationDate {
     /// Represents expiration as a positive number of days from the current date.
     /// This is typically used for relative time specifications.

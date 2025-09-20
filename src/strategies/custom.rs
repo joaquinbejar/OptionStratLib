@@ -37,6 +37,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use tracing::{debug, error};
+use utoipa::ToSchema;
 
 /// Represents a custom options trading strategy with user-defined positions and characteristics.
 ///
@@ -47,7 +48,7 @@ use tracing::{debug, error};
 /// This structure supports both analytical calculations and visualization of custom strategies,
 /// enabling traders to evaluate potential outcomes across different price points of the underlying asset.
 ///
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
 pub struct CustomStrategy {
     /// The name of the custom strategy.
     pub name: String,

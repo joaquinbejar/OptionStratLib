@@ -9,6 +9,7 @@ use chrono::{Duration, Local, NaiveTime, Utc};
 use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
 use std::fmt;
+use utoipa::ToSchema;
 
 /// Represents different timeframes for volatility calculations.
 ///
@@ -36,7 +37,7 @@ use std::fmt;
 /// let periods_per_year = daily.periods_per_year(); // Returns 252.0
 /// let custom_periods = custom_period.periods_per_year(); // Returns 360.0
 /// ```
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, PartialOrd)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, PartialOrd, ToSchema)]
 pub enum TimeFrame {
     /// 1-microsecond data.
     Microsecond,

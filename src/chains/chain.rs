@@ -37,6 +37,7 @@ use std::error::Error;
 use std::fmt;
 use std::sync::Arc;
 use tracing::{debug, error, warn};
+use utoipa::ToSchema;
 use {crate::chains::utils::parse, csv::WriterBuilder, std::fs::File};
 
 /// A constant representing the skew value for the smile curve in financial modeling.
@@ -86,7 +87,7 @@ pub const SKEW_SLOPE: Decimal = dec!(-0.2);
 ///
 /// This struct is typically used as the primary container for options market data analysis,
 /// serving as input to pricing models, strategy backtesting, and risk management tools.
-#[derive(DebugSimple, Clone)]
+#[derive(DebugSimple, Clone, ToSchema)]
 pub struct OptionChain {
     /// The ticker symbol for the underlying asset (e.g., "AAPL", "SPY").
     pub symbol: String,

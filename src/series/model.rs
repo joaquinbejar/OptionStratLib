@@ -2,6 +2,7 @@ use crate::chains::OptionChain;
 use crate::series::params::OptionSeriesBuildParams;
 use crate::utils::Len;
 use crate::{ExpirationDate, Positive};
+use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
 use serde::de::{self, MapAccess, Visitor};
 use serde::{Deserialize, Serialize};
@@ -9,10 +10,11 @@ use serde::{Deserializer, Serializer};
 use std::collections::BTreeMap;
 use std::error::Error;
 use std::fmt;
+use utoipa::ToSchema;
 
 /// Represents a series of option chains for an underlying asset,
 /// providing detailed information about its options market and related financial data.
-#[derive(Debug, Clone)]
+#[derive(DebugPretty, DisplaySimple, Clone, ToSchema)]
 pub struct OptionSeries {
     /// The ticker symbol for the underlying asset (e.g., "AAPL", "SPY").
     pub symbol: String,
@@ -211,31 +213,6 @@ impl OptionSeries {
 impl Default for OptionSeries {
     fn default() -> Self {
         Self::new("".to_string(), Positive::ZERO)
-    }
-}
-
-impl fmt::Display for OptionSeries {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let chains: String = self
-            .chains
-            .iter()
-            .map(|(e, o)| format!("{e}:\n{o}"))
-            .collect();
-
-        let risk_free_rate = match &self.risk_free_rate {
-            Some(r) => format!(" risk_free_rate: {r}"),
-            None => "".to_string(),
-        };
-        let dividend_yield = match &self.dividend_yield {
-            Some(d) => format!(" dividend_yield: {d}"),
-            None => "".to_string(),
-        };
-
-        write!(
-            f,
-            "OptionSeries {{ symbol: {}, underlying_price: {}{}{}\n{} }}",
-            self.symbol, self.underlying_price, risk_free_rate, dividend_yield, chains
-        )
     }
 }
 
@@ -655,8 +632,8 @@ mod tests_option_series {
             // Verify the display string contains the important parts
             assert!(displaying.contains("symbol"));
             assert!(displaying.contains("100"));
-            assert!(displaying.contains("risk_free_rate: 0.05"));
-            assert!(displaying.contains("dividend_yield: 0.02"));
+            assert!(displaying.contains("risk_free_rate\":\"0.05"));
+            assert!(displaying.contains("dividend_yield\":0.02"));
 
             let date = get_x_days_formatted_pos(Positive::ONE);
             let matches = date.to_string();
@@ -666,7 +643,7 @@ mod tests_option_series {
             let matches = date.to_string();
             assert!(displaying.contains(&matches));
 
-            let matches = "Expiration Date".to_string();
+            let matches = "expiration_date".to_string();
             assert!(displaying.contains(&matches));
         }
 
@@ -674,15 +651,14 @@ mod tests_option_series {
         fn test_display_minimal_series() {
             let series = OptionSeries::new("SPY".to_string(), pos!(450.0));
 
-            let display = format!("{series}");
-
+            let displaying = format!("{series}");
             // Verify the minimal display string
-            assert!(display.contains("symbol: SPY"));
-            assert!(display.contains("underlying_price: 450"));
+            assert!(displaying.contains("symbol\":\"SPY"));
+            assert!(displaying.contains("underlying_price\":450"));
 
             // Should not include optional fields
-            assert!(!display.contains("risk_free_rate"));
-            assert!(!display.contains("dividend_yield"));
+            assert!(!displaying.contains("risk_free_rate"));
+            assert!(!displaying.contains("dividend_yield"));
         }
     }
 

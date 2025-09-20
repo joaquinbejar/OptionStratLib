@@ -51,6 +51,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use tracing::{debug, error, info};
+use utoipa::ToSchema;
 
 /// The default description for the Bull Call Spread strategy.
 pub const BULL_CALL_SPREAD_DESCRIPTION: &str = "A bull call spread is created by buying a call option with a lower strike price \
@@ -75,7 +76,7 @@ pub const BULL_CALL_SPREAD_DESCRIPTION: &str = "A bull call spread is created by
 /// - Limited profit potential (capped by the difference between strike prices minus the net debit)
 /// - Requires more capital than a single option position
 /// - Loses value as expiration approaches if the underlying price doesn't rise
-#[derive(Clone, DebugPretty, DisplaySimple, Serialize, Deserialize)]
+#[derive(Clone, DebugPretty, DisplaySimple, Serialize, Deserialize, ToSchema)]
 pub struct BullCallSpread {
     /// The name of the strategy, typically including underlying asset information.
     pub name: String,

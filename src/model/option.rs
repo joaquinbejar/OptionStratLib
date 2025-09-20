@@ -22,6 +22,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use tracing::{error, trace};
+use utoipa::ToSchema;
 
 /// Result type for binomial tree pricing models, containing:
 /// - The option price
@@ -36,7 +37,7 @@ type PriceBinomialTree = OptionsResult<(Decimal, Vec<Vec<Decimal>>, Vec<Vec<Deci
 /// (which depend on minimum/maximum prices during the option's lifetime).
 ///
 /// Each field is optional since different exotic option types require different parameters.
-#[derive(Clone, Default, PartialEq, Serialize, Deserialize, Debug)]
+#[derive(Clone, Default, PartialEq, Serialize, Deserialize, Debug, ToSchema)]
 pub struct ExoticParams {
     /// Historical spot prices, primarily used for Asian options which
     /// depend on the average price of the underlying asset.
@@ -61,7 +62,7 @@ pub struct ExoticParams {
 /// The `Options` struct supports both standard option types and exotic options through
 /// the optional `exotic_params` field, making it versatile for various financial modeling
 /// scenarios.
-#[derive(Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Serialize, Deserialize, ToSchema)]
 pub struct Options {
     /// Specifies whether this is a European or American option
     pub option_type: OptionType,

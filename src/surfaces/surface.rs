@@ -44,6 +44,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
 use std::ops::Index;
 use std::sync::Arc;
+use utoipa::ToSchema;
 
 /// Represents a mathematical surface in 3D space.
 ///
@@ -86,7 +87,7 @@ use std::sync::Arc;
 /// and numerical analysis. It can represent various 3D structures such as
 /// option pricing surfaces, terrain models, or any other data that can be
 /// plotted in three dimensions.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct Surface {
     /// Collection of 3D points defining the surface
     pub points: BTreeSet<Point3D>,

@@ -7,6 +7,7 @@
 use rust_decimal::Decimal;
 use std::collections::BTreeSet;
 use std::error::Error;
+use utoipa::ToSchema;
 
 /// A result type for geometric point operations that may fail.
 ///
@@ -20,7 +21,7 @@ pub type ResultPoint<Point> = Result<Point, Box<dyn Error>>;
 /// when generating geometric objects through parametric equations or sampling.
 /// It supports both 2D curves (with a single parameter t) and 3D surfaces
 /// (with two parameters x and y).
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, ToSchema)]
 pub enum ConstructionParams {
     /// Parameters for constructing a 2D curve with a single parameter t.
     D2 {

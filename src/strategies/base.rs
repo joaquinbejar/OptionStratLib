@@ -27,11 +27,12 @@ use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::str::FromStr;
 use tracing::error;
+use utoipa::ToSchema;
 
 /// Represents basic information about a trading strategy.
 ///
 /// This struct is used to store the name, type, and description of a strategy.
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, ToSchema)]
 pub struct StrategyBasics {
     /// The name of the strategy.
     pub name: String,
@@ -110,7 +111,7 @@ pub trait Strategable:
 }
 
 /// Represents different option trading strategies.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, ToSchema)]
 pub enum StrategyType {
     /// Bull Call Spread strategy.
     BullCallSpread,

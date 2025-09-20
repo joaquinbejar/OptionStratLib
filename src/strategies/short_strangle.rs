@@ -47,6 +47,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use tracing::{debug, error, trace, warn};
+use utoipa::ToSchema;
 
 pub(super) const SHORT_STRANGLE_DESCRIPTION: &str = "A short strangle involves selling an out-of-the-money call and an \
 out-of-the-money put with the same expiration date. This strategy is used when low volatility \
@@ -89,7 +90,7 @@ is expected and the underlying asset's price is anticipated to remain stable.";
 /// and selling a put with a strike price of $90, when the underlying is trading at $100.
 /// The premium collected might be $2 for the call and $2 for the put, for a total of $4.
 /// Break-even points would be at $86 ($90 - $4) and $114 ($110 + $4).
-#[derive(Clone, DebugPretty, DisplaySimple, Serialize, Deserialize)]
+#[derive(Clone, DebugPretty, DisplaySimple, Serialize, Deserialize, ToSchema)]
 pub struct ShortStrangle {
     /// Name identifier for this specific strategy instance
     pub name: String,
@@ -1884,15 +1885,15 @@ mod tests_short_strangle_delta {
                     assert_eq!(*option_style, OptionStyle::Put);
                     assert_eq!(*side, Side::Short);
                 }
-                DeltaAdjustment::SameSize(adj1, adj2) => {
+                DeltaAdjustment::SameSize(adjustment) => {
                     // Get quantities from both adjustments
-                    let qty1 = match **adj1 {
+                    let qty1 = match *adjustment.first {
                         DeltaAdjustment::BuyOptions { quantity, .. } => quantity,
                         DeltaAdjustment::SellOptions { quantity, .. } => quantity,
                         _ => panic!("Invalid adjustment type in SameSize"),
                     };
 
-                    let qty2 = match **adj2 {
+                    let qty2 = match *adjustment.second {
                         DeltaAdjustment::BuyOptions { quantity, .. } => quantity,
                         DeltaAdjustment::SellOptions { quantity, .. } => quantity,
                         _ => panic!("Invalid adjustment type in SameSize"),
@@ -2048,8 +2049,8 @@ mod tests_short_strangle_delta_size {
                     assert!(result.is_ok());
                     assert!(temp_strategy.is_delta_neutral());
                 }
-                DeltaAdjustment::SameSize(first, second) => {
-                    let call_short_qty = match **first {
+                DeltaAdjustment::SameSize(adjustment) => {
+                    let call_short_qty = match *adjustment.first {
                         DeltaAdjustment::BuyOptions {
                             quantity,
                             strike,
@@ -2072,7 +2073,7 @@ mod tests_short_strangle_delta_size {
                         }
                         _ => panic!("Invalid first adjustment"),
                     };
-                    let put_short_qty = match **second {
+                    let put_short_qty = match *adjustment.second {
                         DeltaAdjustment::SellOptions {
                             quantity,
                             strike,

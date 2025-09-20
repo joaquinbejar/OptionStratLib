@@ -47,12 +47,14 @@ use crate::model::{Trade, TradeStatusAble};
 use crate::strategies::Strategies;
 use crate::strategies::base::Positionable;
 use crate::{Options, Positive, Side};
+use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
 use std::error::Error;
 use std::fmt;
 use tracing::{debug, warn};
+use utoipa::ToSchema;
 
 /// # Delta Neutrality Threshold
 ///
@@ -95,7 +97,7 @@ pub const DELTA_THRESHOLD: Decimal = dec!(0.0001);
 ///
 /// Each variant provides detailed parameters needed for the associated adjustment,
 /// such as the quantity of options or underlying asset and other relevant details.
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize, ToSchema)]
 pub enum DeltaAdjustment {
     /// Represents buying a number of option contracts to adjust delta.
     ///
@@ -163,7 +165,13 @@ pub enum DeltaAdjustment {
     /// Fields:
     /// - `DeltaAdjustment, DeltaAdjustment`: The two adjustments to keep the same
     ///   size being combined.
-    SameSize(Box<DeltaAdjustment>, Box<DeltaAdjustment>),
+    SameSize(DeltaAdjustmentSameSize),
+}
+
+#[derive(DebugPretty, DisplaySimple, PartialEq, Serialize, Deserialize, ToSchema)]
+pub struct DeltaAdjustmentSameSize {
+    pub first: Box<DeltaAdjustment>,
+    pub second: Box<DeltaAdjustment>,
 }
 
 impl fmt::Display for DeltaAdjustment {
@@ -200,8 +208,12 @@ impl fmt::Display for DeltaAdjustment {
             DeltaAdjustment::NoAdjustmentNeeded => {
                 write!(f, "No adjustment needed")
             }
-            DeltaAdjustment::SameSize(adj1, adj2) => {
-                write!(f, "Same size adjustments: [{adj1}] and [{adj2}]")
+            DeltaAdjustment::SameSize(adj) => {
+                write!(
+                    f,
+                    "Same size adjustments: [{}] and [{}]",
+                    adj.first, adj.second
+                )
             }
         }
     }
@@ -227,7 +239,7 @@ impl fmt::Display for DeltaAdjustment {
 /// `DeltaPositionInfo` is typically used within a collection to represent all positions in a
 /// strategy when calculating net delta exposure or determining adjustments needed for
 /// delta neutrality.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, ToSchema)]
 pub struct DeltaPositionInfo {
     /// The delta value of the position, representing the sensitivity of the position's price
     /// to changes in the underlying asset price.
@@ -270,7 +282,7 @@ impl fmt::Display for DeltaPositionInfo {
 /// DeltaInfo serves as a central structure to analyze and manage the delta status
 /// of multi-position strategies, such as those used in options trading. It is particularly
 /// useful for implementing delta-neutral strategy adjustments.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct DeltaInfo {
     /// The net delta of the strategy, representing the overall sensitivity of the
     /// strategy to changes in the underlying asset price.
@@ -663,10 +675,10 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
                     // Do nothing, both adjustments are insignificant
                 }
                 _ => {
-                    adjustments.push(DeltaAdjustment::SameSize(
-                        Box::new(adjustment1),
-                        Box::new(adjustment2),
-                    ));
+                    adjustments.push(DeltaAdjustment::SameSize(DeltaAdjustmentSameSize {
+                        first: Box::new(adjustment1),
+                        second: Box::new(adjustment2),
+                    }));
                 }
             }
         }
@@ -739,9 +751,9 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
                 }
 
                 // When no action specified, apply all adjustments including SameSize
-                (None, DeltaAdjustment::SameSize(first, second)) => {
-                    self.apply_single_adjustment(&first)?;
-                    self.apply_single_adjustment(&second)?;
+                (None, DeltaAdjustment::SameSize(adjustment)) => {
+                    self.apply_single_adjustment(&adjustment.first)?;
+                    self.apply_single_adjustment(&adjustment.second)?;
                 }
 
                 // Skip other combinations
@@ -807,7 +819,7 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
                 debug!("Applying SellOptions adjustment");
                 self.adjust_option_position(-quantity.to_dec(), strike, option_style, side)
             }
-            DeltaAdjustment::SameSize(_, _) => {
+            DeltaAdjustment::SameSize(_) => {
                 debug!("Nested SameSize adjustment not supported");
                 Ok(())
             }
@@ -943,11 +955,11 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
                 }
 
                 // For Other action, process both adjustments in SameSize
-                (Action::Other, DeltaAdjustment::SameSize(a, b)) => {
-                    if let Some(trade) = process_single_adjustment(&a)? {
+                (Action::Other, DeltaAdjustment::SameSize(adjustment)) => {
+                    if let Some(trade) = process_single_adjustment(&adjustment.first)? {
                         trades.push(trade);
                     }
-                    if let Some(trade) = process_single_adjustment(&b)? {
+                    if let Some(trade) = process_single_adjustment(&adjustment.second)? {
                         trades.push(trade);
                     }
                 }
@@ -989,7 +1001,7 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
 /// Delta neutrality is achieved when the combined delta of all positions in a strategy is close to zero,
 /// meaning the strategy's overall value is not immediately sensitive to small movements in the underlying asset's price.
 ///
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, ToSchema)]
 pub struct DeltaNeutralResponse {
     /// Detailed information about the delta status of the strategy.
     pub delta_info: DeltaInfo,
@@ -1047,21 +1059,22 @@ mod tests_display_implementations {
         let no_adjustment = DeltaAdjustment::NoAdjustmentNeeded;
         assert_eq!(no_adjustment.to_string(), "No adjustment needed");
 
-        // Test SameSize display
-        let same_size = DeltaAdjustment::SameSize(
-            Box::new(DeltaAdjustment::BuyOptions {
+        let same_size = DeltaAdjustmentSameSize {
+            first: Box::new(DeltaAdjustment::BuyOptions {
                 quantity: pos!(1.0),
                 strike: pos!(100.0),
                 option_style: OptionStyle::Call,
                 side: Side::Long,
             }),
-            Box::new(DeltaAdjustment::SellOptions {
+            second: Box::new(DeltaAdjustment::SellOptions {
                 quantity: pos!(1.0),
                 strike: pos!(110.0),
                 option_style: OptionStyle::Call,
                 side: Side::Short,
             }),
-        );
+        };
+        // Test SameSize display
+        let same_size = DeltaAdjustment::SameSize(same_size);
         assert_eq!(
             same_size.to_string(),
             "Same size adjustments: [Buy 1 Long Call options at strike 100] and [Sell 1 Short Call options at strike 110]"
@@ -1184,21 +1197,22 @@ mod tests_serialization {
         let deserialized: DeltaAdjustment = serde_json::from_str(&serialized).unwrap();
         assert_eq!(no_adjustment, deserialized);
 
-        // Test SameSize serialization/deserialization
-        let same_size = DeltaAdjustment::SameSize(
-            Box::new(DeltaAdjustment::BuyOptions {
+        let same_size = DeltaAdjustmentSameSize {
+            first: Box::new(DeltaAdjustment::BuyOptions {
                 quantity: pos!(1.0),
                 strike: pos!(100.0),
                 option_style: OptionStyle::Call,
                 side: Side::Long,
             }),
-            Box::new(DeltaAdjustment::SellOptions {
+            second: Box::new(DeltaAdjustment::SellOptions {
                 quantity: pos!(1.0),
                 strike: pos!(110.0),
                 option_style: OptionStyle::Call,
                 side: Side::Short,
             }),
-        );
+        };
+        // Test SameSize serialization/deserialization
+        let same_size = DeltaAdjustment::SameSize(same_size);
         let serialized = serde_json::to_string(&same_size).unwrap();
         let deserialized: DeltaAdjustment = serde_json::from_str(&serialized).unwrap();
         assert_eq!(same_size, deserialized);

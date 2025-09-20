@@ -35,6 +35,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use tracing::{error, info};
+use utoipa::ToSchema;
 
 /// The default description for the Call Butterfly (Ratio Call Spread) strategy.
 pub const CALL_BUTTERFLY_DESCRIPTION: &str = "A Ratio Call Spread involves buying one call option and selling multiple call options \
@@ -55,7 +56,7 @@ pub const CALL_BUTTERFLY_DESCRIPTION: &str = "A Ratio Call Spread involves buyin
 /// # Attributes
 ///
 /// The structure stores both strategy metadata and the specific positions that make up the butterfly.
-#[derive(Clone, DebugPretty, DisplaySimple, Serialize, Deserialize)]
+#[derive(Clone, DebugPretty, DisplaySimple, Serialize, Deserialize, ToSchema)]
 pub struct CallButterfly {
     /// The name of the strategy, typically used for identification purposes.
     pub name: String,

@@ -47,6 +47,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use tracing::info;
+use utoipa::ToSchema;
 
 /// A Long Straddle is an options trading strategy that involves simultaneously buying
 /// a put and a call option with the same strike price and expiration date. This strategy
@@ -107,7 +108,7 @@ when expecting large price movements but uncertain about direction.";
 /// * Time decay (theta) works against this strategy, as both options lose value over time
 /// * Most effective when implemented with sufficient time to expiration
 /// * Consider closing the position if implied volatility increases significantly without price movement
-#[derive(Clone, DebugPretty, DisplaySimple, Serialize, Deserialize)]
+#[derive(Clone, DebugPretty, DisplaySimple, Serialize, Deserialize, ToSchema)]
 pub struct LongStraddle {
     /// The name identifier for this strategy instance
     pub name: String,
