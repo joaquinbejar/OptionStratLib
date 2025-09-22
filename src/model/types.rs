@@ -4,6 +4,7 @@ use crate::{ExpirationDate, Positive};
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
+use std::fmt;
 use std::hash::Hash;
 use utoipa::ToSchema;
 
@@ -29,6 +30,37 @@ mod datetime_format {
         DateTime::parse_from_rfc3339(&s)
             .map(|dt| dt.with_timezone(&Utc))
             .map_err(serde::de::Error::custom)
+    }
+}
+
+/// Represents different types of assets that can be held in a balance.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, ToSchema, Default)]
+pub enum UnderlyingAssetType {
+    /// Cryptocurrency assets (e.g., BTC, ETH)
+    Crypto,
+    /// Stock/equity assets (e.g., AAPL, GOOGL)
+    #[default]
+    Stock,
+    /// Options contracts
+    Forex,
+    /// Commodity assets (e.g., Gold, Oil)
+    Commodity,
+    /// Bond/fixed income securities
+    Bond,
+    /// Other asset types
+    Other,
+}
+
+impl fmt::Display for UnderlyingAssetType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            UnderlyingAssetType::Crypto => write!(f, "Crypto"),
+            UnderlyingAssetType::Stock => write!(f, "Stock"),
+            UnderlyingAssetType::Forex => write!(f, "Forex"),
+            UnderlyingAssetType::Commodity => write!(f, "Commodity"),
+            UnderlyingAssetType::Bond => write!(f, "Bond"),
+            UnderlyingAssetType::Other => write!(f, "Other"),
+        }
     }
 }
 
@@ -156,6 +188,8 @@ pub enum OptionType {
     /// A Compound option has an option as its underlying asset.
     /// This means the holder has the right to buy or sell another option.
     /// Compound options can be nested, adding layers of optionality and complexity, and are useful in structured finance and corporate finance.
+    #[serde(skip)]
+    #[schema(skip)] // DO NOT SERIALIZE THIS TYPE
     Compound {
         /// The underlying option, which can be any type of option, adding a layer of complexity.
         underlying_option: Box<OptionType>,

@@ -18,6 +18,7 @@ use crate::visualization::{Graph, GraphConfig, GraphData};
 use crate::{ExpirationDate, OptionType, Options};
 use crate::{Positive, pos};
 use chrono::{DateTime, Utc};
+use num_traits::ToPrimitive;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -863,6 +864,103 @@ impl PnLCalculator for Position {
             initial_income,
             date_time,
         ))
+    }
+
+    fn diff_position_pnl(&self, position: &Position) -> Result<PnL, Box<dyn Error>> {
+        // Validate that positions belong to the same options
+
+        // Check option_type
+        if self.option.option_type != position.option.option_type {
+            return Err(Box::new(PositionError::invalid_position(&format!(
+                "Option types do not match: {:?} vs {:?}",
+                self.option.option_type, position.option.option_type
+            ))));
+        }
+
+        // Check side
+        if self.option.side != position.option.side {
+            return Err(Box::new(PositionError::invalid_position(&format!(
+                "Sides do not match: {:?} vs {:?}",
+                self.option.side, position.option.side
+            ))));
+        }
+
+        // Check underlying_symbol
+        if self.option.underlying_symbol != position.option.underlying_symbol {
+            return Err(Box::new(PositionError::invalid_position(&format!(
+                "Underlying symbols do not match: {} vs {}",
+                self.option.underlying_symbol, position.option.underlying_symbol
+            ))));
+        }
+
+        // Check strike_price
+        if self.option.strike_price != position.option.strike_price {
+            return Err(Box::new(PositionError::invalid_position(&format!(
+                "Strike prices do not match: {} vs {}",
+                self.option.strike_price, position.option.strike_price
+            ))));
+        }
+
+        // Check expiration_date
+        if self.option.expiration_date != position.option.expiration_date {
+            return Err(Box::new(PositionError::invalid_position(&format!(
+                "Expiration dates do not match: {:?} vs {:?}",
+                self.option.expiration_date, position.option.expiration_date
+            ))));
+        }
+
+        // Check quantity
+        if self.option.quantity != position.option.quantity {
+            return Err(Box::new(PositionError::invalid_position(&format!(
+                "Quantities do not match: {} vs {}",
+                self.option.quantity, position.option.quantity
+            ))));
+        }
+
+        // Check epic
+        if self.epic != position.epic {
+            return Err(Box::new(PositionError::invalid_position(&format!(
+                "Epics do not match: {:?} vs {:?}",
+                self.epic, position.epic
+            ))));
+        }
+
+        // Calculate PnL as the difference between positions
+        let self_pnl = self.calculate_pnl(
+            &self.option.underlying_price,
+            self.option.expiration_date,
+            &self.option.implied_volatility,
+        )?;
+        let other_pnl = position.calculate_pnl(
+            &position.option.underlying_price,
+            position.option.expiration_date,
+            &position.option.implied_volatility,
+        )?;
+
+        let realized_diff = match (self_pnl.realized, other_pnl.realized) {
+            (Some(self_realized), Some(other_realized)) => Some(self_realized - other_realized),
+            _ => None,
+        };
+
+        let unrealized_diff = match (self_pnl.unrealized, other_pnl.unrealized) {
+            (Some(self_unrealized), Some(other_unrealized)) => {
+                Some(self_unrealized - other_unrealized)
+            }
+            _ => None,
+        };
+
+        let cost_diff = self_pnl.initial_costs.to_dec() - other_pnl.initial_costs.to_dec();
+        let income_diff = self_pnl.initial_income.to_dec() - other_pnl.initial_income.to_dec();
+
+        Ok(PnL {
+            realized: realized_diff,
+            unrealized: unrealized_diff,
+            initial_costs: Positive::new(cost_diff.abs().to_f64().unwrap_or(0.0))
+                .unwrap_or(Positive::ZERO),
+            initial_income: Positive::new(income_diff.abs().to_f64().unwrap_or(0.0))
+                .unwrap_or(Positive::ZERO),
+            date_time: self.date,
+        })
     }
 }
 
@@ -2456,6 +2554,278 @@ mod tests_pnl_calculator {
         assert_eq!(pnl.realized.unwrap(), dec!(-7.0)); // -10.0 + 5.0 (premium) - 2.0 (fees)
         assert_eq!(position.total_cost().unwrap(), 2.0);
         assert_eq!(position.premium_received().unwrap(), 5.0);
+    }
+
+    fn setup_test_position_with_epic(
+        side: Side,
+        option_style: OptionStyle,
+        epic: &str,
+    ) -> Position {
+        let option = Options::new(
+            OptionType::European,
+            side,
+            "AAPL".to_string(),
+            pos!(100.0),
+            ExpirationDate::Days(pos!(30.0)),
+            pos!(0.2),
+            Positive::ONE,
+            pos!(100.0),
+            dec!(0.05),
+            option_style,
+            pos!(0.0),
+            None,
+        );
+
+        Position::new(
+            option,
+            pos!(5.0),
+            Utc::now(),
+            Positive::ONE,
+            Positive::ONE,
+            Some(epic.to_string()),
+            None,
+        )
+    }
+
+    #[test]
+    fn test_from_position_pnl_compatible_positions() {
+        let position1 = setup_test_position_with_epic(Side::Long, OptionStyle::Call, "EPIC123");
+        let position2 = setup_test_position_with_epic(Side::Long, OptionStyle::Call, "EPIC123");
+
+        let result = position1.diff_position_pnl(&position2);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_from_position_pnl_different_option_type() {
+        let mut position1 = setup_test_position_with_epic(Side::Long, OptionStyle::Call, "EPIC123");
+        let mut position2 = setup_test_position_with_epic(Side::Long, OptionStyle::Call, "EPIC123");
+
+        position1.option.option_type = OptionType::European;
+        position2.option.option_type = OptionType::American;
+
+        let result = position1.diff_position_pnl(&position2);
+        assert!(result.is_err());
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("Option types do not match")
+        );
+    }
+
+    #[test]
+    fn test_from_position_pnl_different_side() {
+        let position1 = setup_test_position_with_epic(Side::Long, OptionStyle::Call, "EPIC123");
+        let position2 = setup_test_position_with_epic(Side::Short, OptionStyle::Call, "EPIC123");
+
+        let result = position1.diff_position_pnl(&position2);
+        assert!(result.is_err());
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("Sides do not match")
+        );
+    }
+
+    #[test]
+    fn test_from_position_pnl_different_underlying_symbol() {
+        let mut position1 = setup_test_position_with_epic(Side::Long, OptionStyle::Call, "EPIC123");
+        let mut position2 = setup_test_position_with_epic(Side::Long, OptionStyle::Call, "EPIC123");
+
+        position1.option.underlying_symbol = "AAPL".to_string();
+        position2.option.underlying_symbol = "MSFT".to_string();
+
+        let result = position1.diff_position_pnl(&position2);
+        assert!(result.is_err());
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("Underlying symbols do not match")
+        );
+    }
+
+    #[test]
+    fn test_from_position_pnl_different_strike_price() {
+        let mut position1 = setup_test_position_with_epic(Side::Long, OptionStyle::Call, "EPIC123");
+        let mut position2 = setup_test_position_with_epic(Side::Long, OptionStyle::Call, "EPIC123");
+
+        position1.option.strike_price = pos!(100.0);
+        position2.option.strike_price = pos!(105.0);
+
+        let result = position1.diff_position_pnl(&position2);
+        assert!(result.is_err());
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("Strike prices do not match")
+        );
+    }
+
+    #[test]
+    fn test_from_position_pnl_different_expiration_date() {
+        let mut position1 = setup_test_position_with_epic(Side::Long, OptionStyle::Call, "EPIC123");
+        let mut position2 = setup_test_position_with_epic(Side::Long, OptionStyle::Call, "EPIC123");
+
+        position1.option.expiration_date = ExpirationDate::Days(pos!(30.0));
+        position2.option.expiration_date = ExpirationDate::Days(pos!(60.0));
+
+        let result = position1.diff_position_pnl(&position2);
+        assert!(result.is_err());
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("Expiration dates do not match")
+        );
+    }
+
+    #[test]
+    fn test_from_position_pnl_different_quantity() {
+        let mut position1 = setup_test_position_with_epic(Side::Long, OptionStyle::Call, "EPIC123");
+        let mut position2 = setup_test_position_with_epic(Side::Long, OptionStyle::Call, "EPIC123");
+
+        position1.option.quantity = pos!(1.0);
+        position2.option.quantity = pos!(2.0);
+
+        let result = position1.diff_position_pnl(&position2);
+        assert!(result.is_err());
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("Quantities do not match")
+        );
+    }
+
+    #[test]
+    fn test_from_position_pnl_different_epic() {
+        let position1 = setup_test_position_with_epic(Side::Long, OptionStyle::Call, "EPIC123");
+        let position2 = setup_test_position_with_epic(Side::Long, OptionStyle::Call, "EPIC456");
+
+        let result = position1.diff_position_pnl(&position2);
+        assert!(result.is_err());
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("Epics do not match")
+        );
+    }
+
+    #[test]
+    fn test_from_position_pnl_calculation() {
+        let position1 = setup_test_position_with_epic(Side::Long, OptionStyle::Call, "EPIC123");
+        let position2 = setup_test_position_with_epic(Side::Long, OptionStyle::Call, "EPIC123");
+
+        let result = position1.diff_position_pnl(&position2);
+        assert!(result.is_ok());
+
+        let pnl = result.unwrap();
+        // Since both positions are identical, the PnL difference should be zero
+        assert_eq!(pnl.realized, Some(Decimal::ZERO));
+        assert_eq!(pnl.unrealized, Some(Decimal::ZERO));
+        assert_eq!(pnl.initial_costs, Positive::ZERO);
+        assert_eq!(pnl.initial_income, Positive::ZERO);
+    }
+
+    fn setup_test_position_with_premium(
+        side: Side,
+        option_style: OptionStyle,
+        epic: &str,
+        premium: Positive,
+    ) -> Position {
+        let option = Options::new(
+            OptionType::European,
+            side,
+            "AAPL".to_string(),
+            pos!(100.0),
+            ExpirationDate::Days(pos!(30.0)),
+            pos!(0.2),
+            Positive::ONE,
+            pos!(100.0),
+            dec!(0.05),
+            option_style,
+            pos!(0.0),
+            None,
+        );
+
+        Position::new(
+            option,
+            premium,
+            Utc::now(),
+            Positive::ONE,
+            Positive::ONE,
+            Some(epic.to_string()),
+            None,
+        )
+    }
+
+    #[test]
+    fn test_from_position_pnl_short_call() {
+        let position1 =
+            setup_test_position_with_premium(Side::Short, OptionStyle::Call, "EPIC123", pos!(5.0));
+        let position2 =
+            setup_test_position_with_premium(Side::Short, OptionStyle::Call, "EPIC123", pos!(3.0));
+
+        let result = position1.diff_position_pnl(&position2);
+        assert!(result.is_ok());
+
+        let pnl = result.unwrap();
+        // For short positions: premium difference should be positive (received more premium initially)
+        // PnL = (premium1 - premium2) = (5.0 - 3.0) = 2.0
+        assert_eq!(pnl.realized, Some(dec!(2.0)));
+    }
+
+    #[test]
+    fn test_from_position_pnl_long_call() {
+        let position1 =
+            setup_test_position_with_premium(Side::Long, OptionStyle::Call, "EPIC123", pos!(5.0));
+        let position2 =
+            setup_test_position_with_premium(Side::Long, OptionStyle::Call, "EPIC123", pos!(3.0));
+
+        let result = position1.diff_position_pnl(&position2);
+        assert!(result.is_ok());
+
+        let pnl = result.unwrap();
+        // For long positions: premium difference should be negative (paid more premium initially)
+        // PnL = -(premium1 - premium2) = -(5.0 - 3.0) = -2.0
+        assert_eq!(pnl.realized, Some(dec!(-2.0)));
+    }
+
+    #[test]
+    fn test_from_position_pnl_short_put() {
+        let position1 =
+            setup_test_position_with_premium(Side::Short, OptionStyle::Put, "EPIC123", pos!(4.0));
+        let position2 =
+            setup_test_position_with_premium(Side::Short, OptionStyle::Put, "EPIC123", pos!(2.5));
+
+        let result = position1.diff_position_pnl(&position2);
+        assert!(result.is_ok());
+
+        let pnl = result.unwrap();
+        // For short positions: premium difference should be positive (received more premium initially)
+        // PnL = (premium1 - premium2) = (4.0 - 2.5) = 1.5
+        assert_eq!(pnl.realized, Some(dec!(1.5)));
+    }
+
+    #[test]
+    fn test_from_position_pnl_long_put() {
+        let position1 =
+            setup_test_position_with_premium(Side::Long, OptionStyle::Put, "EPIC123", pos!(4.0));
+        let position2 =
+            setup_test_position_with_premium(Side::Long, OptionStyle::Put, "EPIC123", pos!(2.5));
+
+        let result = position1.diff_position_pnl(&position2);
+        assert!(result.is_ok());
+
+        let pnl = result.unwrap();
+        // For long positions: premium difference should be negative (paid more premium initially)
+        // PnL = -(premium1 - premium2) = -(4.0 - 2.5) = -1.5
+        assert_eq!(pnl.realized, Some(dec!(-1.5)));
     }
 }
 
