@@ -11,6 +11,11 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  RUSTUP_MAX_RETRIES: 3
+  RUSTUP_UPDATE_ROOT: https://static.rust-lang.org/rustup
+  RUSTUP_DIST_SERVER: https://static.rust-lang.org
+  CARGO_NET_RETRY: 3
+  CARGO_NET_GIT_FETCH_WITH_CLI: true
 
 jobs:
   build:
@@ -26,11 +31,44 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - name: Install Rust
+      
+      - name: Network diagnostics
+        run: |
+          echo "Testing network connectivity..."
+          ping -c 3 static.rust-lang.org || echo "Ping failed, but continuing..."
+          curl -I https://static.rust-lang.org/rustup/release-stable.toml || echo "Curl test failed, but continuing..."
+          
+      - name: Install Rust with retry
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 10
+          max_attempts: 3
+          retry_wait_seconds: 30
+          command: |
+            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable --component rustfmt --component clippy
+            source ~/.cargo/env
+            rustup --version
+            cargo --version
+            
+      - name: Setup Rust environment
+        run: |
+          source ~/.cargo/env
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+          rustup component add rustfmt clippy
+          
+      - name: Fallback Rust installation
+        if: failure()
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
           components: rustfmt, clippy
+          
+      - name: Verify Rust installation
+        run: |
+          rustc --version
+          cargo --version
+          rustfmt --version
+          cargo clippy --version
 
       - name: Cache Rust dependencies
         uses: actions/cache@v4
