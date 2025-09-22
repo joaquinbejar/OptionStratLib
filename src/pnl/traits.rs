@@ -1,4 +1,5 @@
 use crate::error::TransactionError;
+use crate::model::Position;
 use crate::pnl::transaction::Transaction;
 use crate::pnl::utils::PnL;
 use crate::strategies::DeltaAdjustment;
@@ -69,6 +70,31 @@ pub trait PnLCalculator {
     ///
     fn adjustments_pnl(&self, _adjustments: &DeltaAdjustment) -> Result<PnL, Box<dyn Error>> {
         panic!("adjustments_pnl is not implemented for this Strategy.")
+    }
+
+    /// Calculates the profit and loss (PnL) for a given trading position.
+    ///
+    /// # Parameters
+    /// - `_position`: A reference to a trading position (`Position`) for which the PnL is to be calculated.
+    ///
+    /// # Returns
+    /// - `Result<PnL, Box<dyn Error>>`: This function is intended to return a `PnL` value on success,
+    ///   or an error wrapped in a `Box<dyn Error>` on failure.
+    ///
+    /// # Errors
+    /// This method will always return an error because it is not implemented.
+    /// A call to this function will result in a panic with the message:
+    /// `"from_position_pnl is not implemented for this Strategy."`
+    ///
+    /// # Panics
+    /// This function will unconditionally panic when called. It serves as a placeholder to indicate
+    /// that the logic for calculating the PnL based on a given position has not been implemented yet.
+    ///
+    /// # Notes
+    /// Override this method in subclasses or implementations of the `Strategy` trait to provide the
+    /// desired functionality for calculating position PnL.
+    fn diff_position_pnl(&self, _position: &Position) -> Result<PnL, Box<dyn Error>> {
+        panic!("from_position_pnl is not implemented for this Strategy.")
     }
 }
 

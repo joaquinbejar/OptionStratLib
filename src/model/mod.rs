@@ -122,11 +122,13 @@ pub mod utils;
 /// Components for defining and working with chart axes in strategy visualizations.
 mod axis;
 
+mod balance;
 /// Components for defining and working with expiration dates.
 mod expiration;
 mod trade;
 
 pub use axis::BasicAxisTypes;
+pub use balance::*;
 pub use expiration::ExpirationDate;
 pub use option::Options;
 pub use position::Position;

@@ -29,6 +29,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use tracing::debug;
+use utoipa::ToSchema;
 
 pub(super) const LONG_CALL_DESCRIPTION: &str = "A Long Call is an options strategy where the trader buys a call option, acquiring the right (but not the obligation) to purchase the underlying asset at the strike price until expiration. \
     This strategy involves an upfront cost (the premium paid) and offers unlimited profit potential if the underlying asset's price increases significantly. \
@@ -53,7 +54,7 @@ pub(super) const LONG_CALL_DESCRIPTION: &str = "A Long Call is an options strate
 /// This structure leverages the `Clone`, `Debug`, `Serialize`, and `Deserialize` traits for ease of duplication,
 /// debugging, and storage/transfer as structured data.
 ///
-#[derive(Clone, DebugPretty, DisplaySimple, Serialize, Deserialize)]
+#[derive(Clone, DebugPretty, DisplaySimple, Serialize, Deserialize, ToSchema)]
 pub struct LongCall {
     /// Name identifier for this specific strategy instance
     pub name: String,

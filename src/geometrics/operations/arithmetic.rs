@@ -1,3 +1,5 @@
+use utoipa::ToSchema;
+
 /// Represents mathematical or aggregation operations that can be applied
 /// during a merge or combination process of geometric objects or curves.
 ///
@@ -16,7 +18,7 @@
 ///
 /// The operation specified will determine how values are combined when merging
 /// geometric objects that implement the `Arithmetic` trait.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, ToSchema)]
 pub enum MergeOperation {
     /// Adds values together (a + b)
     Add,

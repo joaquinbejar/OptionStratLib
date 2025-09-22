@@ -46,6 +46,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use tracing::{error, info};
+use utoipa::ToSchema;
 
 /// The default description for the Iron Condor strategy.
 pub const IRON_CONDOR_DESCRIPTION: &str = "An Iron Condor is a neutral options strategy combining a bull put spread with a bear call spread. \
@@ -100,7 +101,7 @@ pub const IRON_CONDOR_DESCRIPTION: &str = "An Iron Condor is a neutral options s
 /// - Selling an out-of-the-money call (short call)
 /// - Buying a further out-of-the-money call (long call)
 ///
-#[derive(Clone, DebugPretty, DisplaySimple, Serialize, Deserialize)]
+#[derive(Clone, DebugPretty, DisplaySimple, Serialize, Deserialize, ToSchema)]
 pub struct IronCondor {
     /// Name identifier for this specific strategy instance
     pub name: String,

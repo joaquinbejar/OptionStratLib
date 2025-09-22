@@ -20,6 +20,7 @@ use std::fmt::Display;
 use std::iter::Sum;
 use std::ops::{Add, AddAssign, Div, Mul, MulAssign, Neg, Sub};
 use std::str::FromStr;
+use utoipa::ToSchema;
 
 /// A wrapper type that represents a guaranteed positive decimal value.
 ///
@@ -38,7 +39,7 @@ use std::str::FromStr;
 /// use optionstratlib::pos;
 /// let strike_price = pos!(100.0);
 /// ```
-#[derive(PartialEq, Clone, Copy, Hash)]
+#[derive(PartialEq, Clone, Copy, Hash, ToSchema)]
 pub struct Positive(pub(crate) Decimal);
 
 /// Macro for creating a new `Positive` value with simplified syntax.

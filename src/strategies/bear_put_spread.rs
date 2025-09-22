@@ -50,6 +50,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use tracing::{debug, info};
+use utoipa::ToSchema;
 
 /// The default description for the Bear Put Spread strategy.
 pub const BEAR_PUT_SPREAD_DESCRIPTION: &str = "A bear put spread is created by buying a put option with a higher strike price \
@@ -70,7 +71,7 @@ pub const BEAR_PUT_SPREAD_DESCRIPTION: &str = "A bear put spread is created by b
 /// buying a single put outright due to premium received from the short put.
 ///
 /// # Attributes
-#[derive(Clone, DebugPretty, DisplaySimple, Serialize, Deserialize)]
+#[derive(Clone, DebugPretty, DisplaySimple, Serialize, Deserialize, ToSchema)]
 pub struct BearPutSpread {
     /// The name identifier for this specific strategy instance.
     pub name: String,

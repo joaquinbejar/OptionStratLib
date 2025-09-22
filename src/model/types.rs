@@ -4,7 +4,9 @@ use crate::{ExpirationDate, Positive};
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
+use std::fmt;
 use std::hash::Hash;
+use utoipa::ToSchema;
 
 mod datetime_format {
     use super::*;
@@ -31,6 +33,37 @@ mod datetime_format {
     }
 }
 
+/// Represents different types of assets that can be held in a balance.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, ToSchema, Default)]
+pub enum UnderlyingAssetType {
+    /// Cryptocurrency assets (e.g., BTC, ETH)
+    Crypto,
+    /// Stock/equity assets (e.g., AAPL, GOOGL)
+    #[default]
+    Stock,
+    /// Options contracts
+    Forex,
+    /// Commodity assets (e.g., Gold, Oil)
+    Commodity,
+    /// Bond/fixed income securities
+    Bond,
+    /// Other asset types
+    Other,
+}
+
+impl fmt::Display for UnderlyingAssetType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            UnderlyingAssetType::Crypto => write!(f, "Crypto"),
+            UnderlyingAssetType::Stock => write!(f, "Stock"),
+            UnderlyingAssetType::Forex => write!(f, "Forex"),
+            UnderlyingAssetType::Commodity => write!(f, "Commodity"),
+            UnderlyingAssetType::Bond => write!(f, "Bond"),
+            UnderlyingAssetType::Other => write!(f, "Other"),
+        }
+    }
+}
+
 /// Represents trading actions in a financial context.
 ///
 /// This enum defines the fundamental trade operations that can be performed
@@ -40,7 +73,7 @@ mod datetime_format {
 /// `Action` is used to indicate whether a security is being acquired or disposed of,
 /// and is commonly paired with other transaction details such as price, quantity,
 /// and timing information.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default, ToSchema)]
 pub enum Action {
     /// Represents a purchase transaction, where assets are acquired.
     #[default]
@@ -60,7 +93,7 @@ pub enum Action {
 ///
 /// `Side` is a fundamental concept in trading that determines how profits and losses
 /// are calculated and affects risk management considerations.
-#[derive(Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default, ToSchema)]
 pub enum Side {
     /// Represents a position that profits when the underlying asset's price increases.
     /// Long positions involve buying an asset with the expectation of selling at a higher price.
@@ -80,7 +113,9 @@ pub enum Side {
 ///
 /// `OptionStyle` is a critical attribute for options contracts as it directly
 /// affects valuation, pricing models, and exercise strategies.
-#[derive(Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default, Ord, PartialOrd)]
+#[derive(
+    Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default, Ord, PartialOrd, ToSchema,
+)]
 pub enum OptionStyle {
     /// Represents a call option, which gives the holder the right (but not obligation)
     /// to buy the underlying asset at the strike price before or at expiration.
@@ -95,7 +130,7 @@ pub enum OptionStyle {
 
 /// Represents the type of option in a financial context.
 /// Options can be categorized into various types based on their characteristics and the conditions under which they can be exercised.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default, ToSchema)]
 pub enum OptionType {
     /// A European option can only be exercised at the expiry date.
     /// This type of option does not allow the holder to exercise the option before the specified expiration date.
@@ -153,6 +188,8 @@ pub enum OptionType {
     /// A Compound option has an option as its underlying asset.
     /// This means the holder has the right to buy or sell another option.
     /// Compound options can be nested, adding layers of optionality and complexity, and are useful in structured finance and corporate finance.
+    #[serde(skip)]
+    #[schema(skip)] // DO NOT SERIALIZE THIS TYPE
     Compound {
         /// The underlying option, which can be any type of option, adding a layer of complexity.
         underlying_option: Box<OptionType>,
@@ -288,7 +325,7 @@ impl Payoff for OptionType {
 ///     expiration_date: &ExpirationDate::Days(pos!(30.0)),
 /// };
 /// ```
-#[derive(Clone, Copy, PartialEq, Serialize, Debug, Hash, Eq)]
+#[derive(Clone, Copy, PartialEq, Serialize, Debug, Hash, Eq, ToSchema)]
 pub struct OptionBasicType<'a> {
     /// - `option_style`: A reference to the style of the option (e.g., European
     ///   or American) represented by the `OptionStyle` type.
@@ -305,7 +342,7 @@ pub struct OptionBasicType<'a> {
 }
 
 /// Describes how the average price is calculated for Asian options.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, ToSchema)]
 pub enum AsianAveragingType {
     /// Arithmetic averaging sums all observed prices and divides by the number of observations.
     Arithmetic,
@@ -314,7 +351,7 @@ pub enum AsianAveragingType {
 }
 
 /// Describes the type of barrier for Barrier options.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, ToSchema)]
 pub enum BarrierType {
     /// The option becomes active if the underlying asset price goes above a certain level.
     UpAndIn,
@@ -339,7 +376,7 @@ pub enum BarrierType {
 /// - `Gap`:
 ///   Pays out based on how far the underlying asset price is above the strike price at expiration.
 ///   The payout is proportional to the difference between the asset price and the strike price.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, ToSchema)]
 pub enum BinaryType {
     /// The option pays a fixed amount of cash if the underlying asset is above or below a certain level.
     CashOrNothing,
@@ -350,7 +387,7 @@ pub enum BinaryType {
 }
 
 /// Describes the type of lookback option.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, ToSchema)]
 pub enum LookbackType {
     /// The strike price is fixed at the beginning, and the payoff is based on the maximum or minimum price of the underlying asset during the option's life.
     FixedStrike,

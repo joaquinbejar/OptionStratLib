@@ -30,6 +30,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use tracing::debug;
+use utoipa::ToSchema;
 
 pub(super) const SHORT_CALL_DESCRIPTION: &str = "A Short Call (or Naked Call) is an options strategy where the trader sells a call option without owning the underlying stock. \
     This strategy generates immediate income through the premium received but carries unlimited risk if the stock price rises significantly. \
@@ -51,7 +52,7 @@ pub(super) const SHORT_CALL_DESCRIPTION: &str = "A Short Call (or Naked Call) is
 ///   any profit or loss. These points are represented as positive values.
 /// * `short_call` - Represents the short call position in the strategy, which involves selling
 ///   a call option to generate premium income.
-#[derive(Clone, DebugPretty, DisplaySimple, Serialize, Deserialize)]
+#[derive(Clone, DebugPretty, DisplaySimple, Serialize, Deserialize, ToSchema)]
 pub struct ShortCall {
     /// Name identifier for this specific strategy instance
     pub name: String,

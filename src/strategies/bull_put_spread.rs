@@ -52,6 +52,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use tracing::debug;
+use utoipa::ToSchema;
 
 /// The default description for the Bull Put Spread strategy.
 pub const BULL_PUT_SPREAD_DESCRIPTION: &str = "A bull put spread is created by buying a put option with a lower strike price \
@@ -74,7 +75,7 @@ pub const BULL_PUT_SPREAD_DESCRIPTION: &str = "A bull put spread is created by b
 /// - Generates upfront income from the net premium received
 ///
 /// # Attributes
-#[derive(Clone, DebugPretty, DisplaySimple, Serialize, Deserialize)]
+#[derive(Clone, DebugPretty, DisplaySimple, Serialize, Deserialize, ToSchema)]
 pub struct BullPutSpread {
     /// The name of the strategy, typically "Bull Put Spread"
     pub name: String,

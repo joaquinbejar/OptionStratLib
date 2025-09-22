@@ -23,6 +23,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
 use std::fmt::{Display, Formatter};
 use std::ops::Index;
+use utoipa::ToSchema;
 
 /// Represents a mathematical curve as a collection of 2D points.
 ///
@@ -59,7 +60,7 @@ use std::ops::Index;
 /// # See Also
 /// - [`Point2D`]: The fundamental data type for representing points in 2D space.
 /// - [`MergeOperation`]: Enum for combining multiple curves.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct Curve {
     /// A ordered set of `Point2D` objects that defines the curve in terms of its x-y plane coordinates.
     /// Points are stored in a `BTreeSet` which automatically maintains them in sorted order by their x-coordinate.

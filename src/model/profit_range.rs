@@ -10,9 +10,13 @@ use crate::strategies::probabilities::utils::{
     PriceTrend, VolatilityAdjustment, calculate_single_point_probability,
 };
 use rust_decimal::Decimal;
+use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
 /// Represents a price range where a strategy is profitable
-#[derive(Debug, Clone)]
+#[derive(
+    Debug, Clone, ToSchema, Serialize, Deserialize, PartialEq, Eq, Default, Hash, PartialOrd, Ord,
+)]
 pub struct ProfitLossRange {
     /// Lower price boundary of the profitable range
     /// None represents negative infinity

@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::Write;
 use std::{fmt, io};
+use utoipa::ToSchema;
 
 /// # Transaction Status
 ///
@@ -24,7 +25,7 @@ use std::{fmt, io};
 /// * `Expired` - The transaction reached its expiration date without being exercised
 /// * `Exercised` - The option was exercised, converting it to a position in the underlying asset
 /// * `Assigned` - For short options, indicates the counterparty exercised the option
-#[derive(Debug, Default, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, ToSchema)]
 pub enum TradeStatus {
     /// * `open` - The transaction is open and active
     #[default]

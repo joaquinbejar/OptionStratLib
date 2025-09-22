@@ -539,7 +539,6 @@ mod tests_calculate_delta_neutral_sizes {
     }
 }
 
-
 #[cfg(test)]
 mod tests_calculate_d_values {
     use super::*;

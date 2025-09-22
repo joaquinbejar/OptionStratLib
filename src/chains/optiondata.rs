@@ -17,6 +17,7 @@ use serde_json::Value;
 use std::cmp::Ordering;
 use std::fmt;
 use tracing::{debug, error, trace};
+use utoipa::ToSchema;
 
 /// Struct representing a row in an option chain with detailed pricing and analytics data.
 ///
@@ -65,7 +66,7 @@ use tracing::{debug, error, trace};
 ///
 /// This struct implements Serialize and Deserialize traits, with fields that are `None`
 /// being skipped during serialization to produce more compact JSON output.
-#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone, ToSchema)]
 pub struct OptionData {
     /// The strike price of the option, represented as a positive floating-point number.
     #[serde(rename = "strike_price")]

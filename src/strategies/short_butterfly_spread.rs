@@ -35,6 +35,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use tracing::{debug, info};
+use utoipa::ToSchema;
 
 /// The default description for the Short Butterfly Spread strategy.
 pub const SHORT_BUTTERFLY_DESCRIPTION: &str = "A short butterfly spread is created by selling one call at a lower strike price, \
@@ -54,7 +55,7 @@ pub const SHORT_BUTTERFLY_DESCRIPTION: &str = "A short butterfly spread is creat
 /// - Two short calls at the middle strike price (represented as `short_call_low` and `short_call_high`)
 /// - Long call at the highest strike price
 ///
-#[derive(Clone, DebugPretty, DisplaySimple, Serialize, Deserialize)]
+#[derive(Clone, DebugPretty, DisplaySimple, Serialize, Deserialize, ToSchema)]
 pub struct ShortButterflySpread {
     /// The name of the strategy, typically including the underlying asset
     pub name: String,

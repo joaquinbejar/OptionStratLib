@@ -122,11 +122,13 @@
 //! The implementation focuses on numerical stability and accurate moment calculations,
 //! particularly for extreme market conditions.
 use crate::Positive;
+use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::{Decimal, MathematicalOps};
 use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::error::Error;
+use utoipa::ToSchema;
 
 /// Parameters for Risk-Neutral Density calculation
 ///
@@ -149,7 +151,7 @@ use std::error::Error;
 ///     derivative_tolerance: pos!(0.001),
 /// };
 /// ```
-#[derive(Debug, Clone)]
+#[derive(DebugPretty, DisplaySimple, Clone, ToSchema, Serialize, Deserialize)]
 pub struct RNDParameters {
     /// Risk-free rate for calculations
     pub risk_free_rate: Decimal,

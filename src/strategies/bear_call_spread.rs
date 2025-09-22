@@ -51,6 +51,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use tracing::debug;
+use utoipa::ToSchema;
 
 /// The default description for the Bear Call Spread strategy.
 pub const BEAR_CALL_SPREAD_DESCRIPTION: &str = "A bear call spread is created by selling a call option with a lower strike price \
@@ -70,7 +71,7 @@ pub const BEAR_CALL_SPREAD_DESCRIPTION: &str = "A bear call spread is created by
 /// while the maximum loss occurs when the underlying price is at or above the higher strike price.
 ///
 /// # Attributes
-#[derive(Clone, DebugPretty, DisplaySimple, Serialize, Deserialize)]
+#[derive(Clone, DebugPretty, DisplaySimple, Serialize, Deserialize, ToSchema)]
 pub struct BearCallSpread {
     /// Name identifier for the strategy instance.
     pub name: String,

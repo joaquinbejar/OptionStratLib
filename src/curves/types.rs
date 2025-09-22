@@ -12,6 +12,7 @@ use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::fmt::Display;
 use std::hash::{Hash, Hasher};
+use utoipa::ToSchema;
 
 /// Represents a point in two-dimensional space with `x` and `y` coordinates.
 ///
@@ -47,7 +48,7 @@ use std::hash::{Hash, Hasher};
 ///
 /// This struct is primarily used in conjunction with the `Curve` and `Curvable` types
 /// to represent mathematical curves and perform geometric operations.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, ToSchema)]
 pub struct Point2D {
     /// The x-coordinate in the Cartesian plane, represented as a high-precision `Decimal`
     /// value to ensure accuracy in mathematical operations.

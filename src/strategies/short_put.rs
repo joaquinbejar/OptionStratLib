@@ -30,6 +30,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use tracing::debug;
+use utoipa::ToSchema;
 
 pub(super) const SHORT_PUT_DESCRIPTION: &str = "A Short Put (or Naked Put) is an options strategy where the trader sells a put option without holding a short position in the underlying stock. \
     This strategy provides immediate income from the premium collected but includes substantial risk if the stock price falls below the strike price. \
@@ -53,7 +54,7 @@ pub(super) const SHORT_PUT_DESCRIPTION: &str = "A Short Put (or Naked Put) is an
 /// - `short_put`: The short put position associated with this strategy. It is declared private (via
 ///   `pub(super)`) to restrict its accessibility from other modules, ensuring controlled and encapsulated
 ///   use.
-#[derive(Clone, DebugPretty, DisplaySimple, Serialize, Deserialize)]
+#[derive(Clone, DebugPretty, DisplaySimple, Serialize, Deserialize, ToSchema)]
 pub struct ShortPut {
     /// Name identifier for this specific strategy instance
     pub name: String,

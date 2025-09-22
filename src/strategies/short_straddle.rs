@@ -46,6 +46,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use tracing::{info, trace};
+use utoipa::ToSchema;
 
 /// A Short Straddle is an options trading strategy that involves simultaneously selling
 /// a put and a call option with the same strike price and expiration date. This neutral
@@ -114,7 +115,7 @@ volatility expectations.";
 /// - The trader believes the price will remain close to the current level
 /// - Implied volatility is high (making the options more expensive to sell)
 ///
-#[derive(Clone, DebugPretty, DisplaySimple, Serialize, Deserialize)]
+#[derive(Clone, DebugPretty, DisplaySimple, Serialize, Deserialize, ToSchema)]
 pub struct ShortStraddle {
     /// Name identifier for this specific strategy instance
     pub name: String,

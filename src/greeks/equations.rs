@@ -8,8 +8,10 @@ use crate::error::greeks::GreeksError;
 use crate::greeks::utils::{big_n, d1, d2, n};
 use crate::model::types::OptionStyle;
 use crate::{Options, Positive, Side};
+use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::{Decimal, MathematicalOps};
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
 /// Represents a complete set of option Greeks, which measure the sensitivity of an option's
 /// price to various market factors.
@@ -30,7 +32,7 @@ use serde::{Deserialize, Serialize};
 /// * `alpha`: Represents a measure of an option's excess return relative to what would be predicted by models
 ///
 /// These metrics help traders understand and manage the various dimensions of risk in option positions.
-#[derive(Debug, PartialEq)]
+#[derive(PartialEq, Clone, DebugPretty, DisplaySimple, ToSchema, Serialize)]
 pub struct Greek {
     /// Measures sensitivity to changes in the underlying asset's price (first derivative)
     pub delta: Decimal,
@@ -55,7 +57,7 @@ pub struct Greek {
 /// or volatility, affect the theoretical value of derivatives. This struct supports serialization
 /// and deserialization for storage or communication purposes, and implements common traits like
 /// `Debug`, `Clone`, and `PartialEq`.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(DebugPretty, DisplaySimple, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
 pub struct GreeksSnapshot {
     /// Measures sensitivity to changes in the underlying asset's price (first derivative)
     pub delta: Decimal,

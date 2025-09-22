@@ -4,7 +4,9 @@
    Date: 7/12/24
 ******************************************************************************/
 use crate::chains::OptionData;
+use serde::Serialize;
 use std::fmt::{Display, Formatter, Result};
+use utoipa::ToSchema;
 
 /// Represents the various configurations of option strategy legs with different complexities.
 ///
@@ -32,7 +34,7 @@ use std::fmt::{Display, Formatter, Result};
 /// This enum is typically used when implementing option strategy analysis, pricing models,
 /// or visualizations where the number and configuration of legs determine the calculation
 /// approach.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, ToSchema, Serialize)]
 pub enum StrategyLegs<'a> {
     /// Two-legged option strategy configuration
     ///

@@ -3,9 +3,10 @@ use crate::utils::TimeFrame;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
+use utoipa::ToSchema;
 
 /// Enum defining different types of random walks
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, ToSchema)]
 pub enum WalkType {
     /// Standard Brownian motion (normal increments)
     Brownian {

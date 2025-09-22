@@ -14,6 +14,7 @@ use crate::strategies::{
     ShortButterflySpread, ShortStraddle, ShortStrangle, Strategable, StrategyConstructor,
 };
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
 /// A request structure for creating and analyzing options trading strategies.
 ///
@@ -26,7 +27,7 @@ use serde::{Deserialize, Serialize};
 /// or functions that construct, validate, and evaluate option strategies based
 /// on their positions.
 ///
-#[derive(Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Serialize, Deserialize, ToSchema)]
 pub struct StrategyRequest {
     /// The type of options trading strategy to construct or analyze.
     /// This determines the expected structure and validation rules

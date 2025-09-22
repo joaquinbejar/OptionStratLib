@@ -30,6 +30,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use tracing::debug;
+use utoipa::ToSchema;
 
 pub(super) const LONG_PUT_DESCRIPTION: &str = "A Long Put is an options strategy where the trader purchases a put option, gaining the right (but not the obligation) to sell the underlying asset at the strike price until expiration. \
     This strategy requires an initial investment (the premium paid) and provides downside protection or profit potential if the underlying asset's price decreases. \
@@ -51,7 +52,7 @@ pub(super) const LONG_PUT_DESCRIPTION: &str = "A Long Put is an options strategy
 ///   nor loses money based on the underlying asset's movement.
 /// * `long_put` - Represents the specific long put position within the strategy, detailing
 ///   the option contract being used.
-#[derive(Clone, DebugPretty, DisplaySimple, Serialize, Deserialize)]
+#[derive(Clone, DebugPretty, DisplaySimple, Serialize, Deserialize, ToSchema)]
 pub struct LongPut {
     /// Name identifier for this specific strategy instance
     pub name: String,

@@ -63,6 +63,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use tracing::debug;
+use utoipa::ToSchema;
 
 pub(super) const PMCC_DESCRIPTION: &str = "A Poor Man's Covered Call (PMCC) is an options strategy that simulates a covered call \
     using long-term equity anticipation securities (LEAPS) instead of the underlying stock. \
@@ -108,7 +109,7 @@ pub(super) const PMCC_DESCRIPTION: &str = "A Poor Man's Covered Call (PMCC) is a
 /// - The strategy often involves rolling the short call forward to continue generating income
 /// - The long call should have sufficient time value to avoid assignment complications
 /// - Ideally implemented when the underlying asset has a strong positive outlook over the long term
-#[derive(Clone, DebugPretty, DisplaySimple, Serialize, Deserialize)]
+#[derive(Clone, DebugPretty, DisplaySimple, Serialize, Deserialize, ToSchema)]
 pub struct PoorMansCoveredCall {
     /// Name identifier for this specific strategy instance
     pub name: String,
