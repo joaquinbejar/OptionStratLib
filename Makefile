@@ -81,20 +81,22 @@ publish: readme
 .PHONY: coverage
 coverage:
 	export LOGLEVEL=WARN
+	export RUST_lOG=WARN
 	cargo install cargo-tarpaulin
 	mkdir -p coverage
-	cargo tarpaulin --verbose --all-features --workspace --timeout 0 --out Xml
+	cargo tarpaulin --verbose --all-features --workspace --timeout 0 --out Xml --output-dir coverage
 
 .PHONY: coverage-html
 coverage-html:
 	export LOGLEVEL=WARN
+	export RUST_lOG=WARN
 	cargo install cargo-tarpaulin
 	mkdir -p coverage
-	cargo tarpaulin --color Always --engine llvm --tests --all-targets --all-features --workspace --timeout 0 --out Html
+	cargo tarpaulin --color Always --engine llvm --tests --all-targets --all-features --workspace --timeout 0 --out Html --output-dir coverage
 
 .PHONY: open-coverage
 open-coverage:
-	open tarpaulin-report.html
+	open coverage/tarpaulin-report.html
 
 # Rule to show git log
 git-log:
