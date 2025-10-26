@@ -134,19 +134,19 @@ pub struct OptionData {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub open_interest: Option<u64>,
     /// The symbol of the underlying asset.
-    #[serde(skip)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub symbol: Option<String>,
     /// The expiration date of the option contract.
-    #[serde(skip)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub expiration_date: Option<ExpirationDate>,
     /// The price of the underlying asset.
-    #[serde(skip)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub underlying_price: Option<Box<Positive>>,
     /// The risk-free interest rate used for option pricing.
-    #[serde(skip)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub risk_free_rate: Option<Decimal>,
     /// The dividend yield of the underlying asset.
-    #[serde(skip)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub dividend_yield: Option<Positive>,
     /// The epic identifier for the option contract, used for trading platforms.
     #[serde(skip_serializing_if = "Option::is_none")]
