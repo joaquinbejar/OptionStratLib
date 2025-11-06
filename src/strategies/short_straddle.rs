@@ -1933,7 +1933,7 @@ mod tests_short_straddle_pnl {
             pos!(0.2),   // Implied volatility
         );
 
-        ShortStraddle::get_strategy(&vec![short_call, short_put])
+        ShortStraddle::get_strategy(&[short_call, short_put])
     }
 
     #[test]

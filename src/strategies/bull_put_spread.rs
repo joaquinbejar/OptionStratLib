@@ -2605,7 +2605,7 @@ mod tests_bull_put_spread_pnl {
             pos!(0.2),   // Implied volatility
         );
 
-        BullPutSpread::get_strategy(&vec![short_put, long_put])
+        BullPutSpread::get_strategy(&[short_put, long_put])
     }
 
     #[test]

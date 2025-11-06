@@ -2830,7 +2830,7 @@ mod tests_bear_put_spread_pnl {
             pos!(0.2),   // Implied volatility
         );
 
-        BearPutSpread::get_strategy(&vec![short_put, long_put])
+        BearPutSpread::get_strategy(&[short_put, long_put])
     }
 
     /// Test PnL calculation when underlying price is below both strikes

@@ -2391,11 +2391,7 @@ mod tests_short_butterfly_spread_pnl {
             pos!(0.2),   // Implied volatility
         );
 
-        ShortButterflySpread::get_strategy(&vec![
-            lower_long_call,
-            middle_long_call,
-            higher_long_call,
-        ])
+        ShortButterflySpread::get_strategy(&[lower_long_call, middle_long_call, higher_long_call])
     }
 
     #[test]

@@ -2400,7 +2400,7 @@ mod tests_short_strangle_pnl {
             pos!(0.2),   // Implied volatility
         );
 
-        ShortStrangle::get_strategy(&vec![short_call, short_put])
+        ShortStrangle::get_strategy(&[short_call, short_put])
     }
 
     #[test]
@@ -2567,7 +2567,7 @@ mod tests_short_strangle_roll {
             pos!(0.2),   // Implied volatility
         );
 
-        ShortStrangle::get_strategy(&vec![short_call, short_put])
+        ShortStrangle::get_strategy(&[short_call, short_put])
     }
 
     #[test]

@@ -1964,7 +1964,7 @@ mod tests_long_strangle_pnl {
             pos!(0.2),   // Implied volatility
         );
 
-        LongStrangle::get_strategy(&vec![long_call, long_put])
+        LongStrangle::get_strategy(&[long_call, long_put])
     }
 
     #[test]
@@ -2123,7 +2123,7 @@ mod test_valid_premium_for_shorts {
             pos!(0.2),   // Implied volatility
         );
 
-        LongStrangle::get_strategy(&vec![long_call, long_put])
+        LongStrangle::get_strategy(&[long_call, long_put])
     }
 
     #[test]

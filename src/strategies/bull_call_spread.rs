@@ -2713,7 +2713,7 @@ mod tests_bull_call_spread_pnl {
             pos!(0.2),   // Implied volatility
         );
 
-        BullCallSpread::get_strategy(&vec![long_call, short_call])
+        BullCallSpread::get_strategy(&[long_call, short_call])
     }
 
     #[test]
