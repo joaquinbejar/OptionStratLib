@@ -3453,7 +3453,7 @@ mod tests_iron_condor_pnl {
             pos!(0.2),   // Implied volatility
         );
 
-        IronCondor::get_strategy(&vec![long_put, short_put, short_call, long_call])
+        IronCondor::get_strategy(&[long_put, short_put, short_call, long_call])
     }
 
     #[test]

@@ -2799,7 +2799,7 @@ mod tests_bear_call_spread_pnl {
             pos!(0.2),   // Implied volatility
         );
 
-        BearCallSpread::get_strategy(&vec![short_call, long_call])
+        BearCallSpread::get_strategy(&[short_call, long_call])
     }
 
     #[test]

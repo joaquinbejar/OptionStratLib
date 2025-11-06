@@ -1691,7 +1691,7 @@ mod tests_long_straddle_pnl {
             pos!(0.2),   // Implied volatility
         );
 
-        LongStraddle::get_strategy(&vec![long_call, long_put])
+        LongStraddle::get_strategy(&[long_call, long_put])
     }
 
     #[test]

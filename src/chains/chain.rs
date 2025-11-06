@@ -450,8 +450,16 @@ impl OptionChain {
         let atm_strike_option_data = create_chain_data(&atm_strike.clone(), params);
         option_chain.options.insert(atm_strike_option_data);
 
+        // Generate strikes above and below ATM based on chain_size parameter
         let mut counter = Positive::ONE;
+        let max_strikes = params.chain_size;
+
         loop {
+            // Check if we've reached the desired chain size
+            if counter.to_usize() > max_strikes {
+                break;
+            }
+
             let next_upper_strike = atm_strike + (strike_interval * counter);
             let next_upper_option_data = create_chain_data(&next_upper_strike, params);
             option_chain.options.insert(next_upper_option_data.clone());
@@ -473,9 +481,6 @@ impl OptionChain {
                 break;
             }
             counter += Positive::ONE;
-            if counter > pos!(200.0) {
-                break;
-            }
         }
         debug!("Option chain: {}", option_chain);
         option_chain
@@ -2857,18 +2862,25 @@ mod tests_chain_base {
 
         assert_eq!(chain.symbol, "SP500");
         info!("{}", chain);
-        assert!(chain.options.len() >= 21);
+        // With chain_size=10, we should get 21 strikes: 10 below + ATM + 10 above
+        assert_eq!(chain.options.len(), 21);
         assert_eq!(chain.underlying_price, pos!(100.0));
+
+        // First strike should be 10 strikes below ATM (100 - 10*1 = 90)
         let first = chain.options.iter().next().unwrap();
-        assert_eq!(first.call_ask.unwrap(), 12.21);
-        assert_eq!(first.call_bid.unwrap(), 12.19);
-        assert_eq!(first.put_ask, None);
-        assert_eq!(first.put_bid, None);
+        assert_eq!(first.strike_price, pos!(90.0));
+        assert_eq!(first.call_ask.unwrap(), 10.24);
+        assert_eq!(first.call_bid.unwrap(), 10.22);
+        assert_eq!(first.put_ask.unwrap(), 0.04);
+        assert_eq!(first.put_bid.unwrap(), 0.02);
+
+        // Last strike should be 10 strikes above ATM (100 + 10*1 = 110)
         let last = chain.options.iter().next_back().unwrap();
-        assert_eq!(last.call_ask, None);
-        assert_eq!(last.call_bid, None);
-        assert_eq!(last.put_ask, spos!(11.73));
-        assert_eq!(last.put_bid, spos!(11.71));
+        assert_eq!(last.strike_price, pos!(110.0));
+        assert_eq!(last.call_ask.unwrap(), 0.06);
+        assert_eq!(last.call_bid.unwrap(), 0.04);
+        assert_eq!(last.put_ask.unwrap(), 9.77);
+        assert_eq!(last.put_bid.unwrap(), 9.75);
     }
 
     #[test]
@@ -6961,10 +6973,10 @@ mod tests_atm_strike {
 
         let strike = result.unwrap();
 
-        // The lowest strike in the standard chain should be around 90.0
+        // The lowest strike in the standard chain should be 90.0 (chain_size=10, so 10 strikes below ATM)
         assert_eq!(
             *strike,
-            pos!(86.0),
+            pos!(90.0),
             "Should return the lowest available strike"
         );
     }
@@ -7145,10 +7157,10 @@ mod tests_atm_strike_bis {
 
         let strike = result.unwrap();
 
-        // The lowest strike in the standard chain should be around 90.0
+        // The lowest strike in the standard chain should be 90.0 (chain_size=10, so 10 strikes below ATM)
         assert_eq!(
             *strike,
-            pos!(86.0),
+            pos!(90.0),
             "Should return the lowest available strike"
         );
     }
@@ -8973,7 +8985,7 @@ mod tests_option_chain_comparison {
 
     #[test]
     fn test_sorting_mixed_symbols_by_expiration() {
-        let mut chains = vec![
+        let mut chains = [
             create_test_chain("MSFT", "2024-02-16"),
             create_test_chain("AAPL", "2030-01-19"),
             create_test_chain("GOOGL", "2024-03-15"),

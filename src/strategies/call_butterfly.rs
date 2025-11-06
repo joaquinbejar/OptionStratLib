@@ -2379,7 +2379,7 @@ mod tests_call_butterfly_pnl {
             pos!(0.2),   // Implied volatility
         );
 
-        CallButterfly::get_strategy(&vec![short_call_low, long_call, short_call_high])
+        CallButterfly::get_strategy(&[short_call_low, long_call, short_call_high])
     }
 
     #[test]

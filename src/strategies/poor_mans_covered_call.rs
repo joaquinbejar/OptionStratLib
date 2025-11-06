@@ -2244,7 +2244,7 @@ mod tests_poor_mans_covered_call_pnl {
             pos!(0.2),   // Implied volatility
         );
 
-        PoorMansCoveredCall::get_strategy(&vec![long_call, short_call])
+        PoorMansCoveredCall::get_strategy(&[long_call, short_call])
     }
 
     #[test]
