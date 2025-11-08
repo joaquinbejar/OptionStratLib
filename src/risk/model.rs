@@ -7,9 +7,10 @@ use crate::{Positive, pos};
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
 /// Represents various risk metrics for the options strategy
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct RiskMetricsSimulation {
     /// Value at Risk (VaR) at 95% confidence level
     pub var_95: Decimal,

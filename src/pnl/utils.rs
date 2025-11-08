@@ -7,11 +7,12 @@ use crate::Positive;
 use crate::model::Trade;
 pub use crate::pnl::PnLCalculator;
 use chrono::{DateTime, Utc};
+use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
-use std::fmt;
 use std::iter::Sum;
 use std::ops::Add;
+use utoipa::ToSchema;
 
 /// Represents the Profit and Loss (PnL) of a financial instrument.
 ///
@@ -22,7 +23,9 @@ use std::ops::Add;
 /// PnL serves as a fundamental measurement of trading performance, providing a comprehensive view
 /// of the current financial status of positions. It is particularly useful for options trading,
 /// portfolio management, and financial reporting.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[derive(
+    DebugPretty, DisplaySimple, Clone, Serialize, Deserialize, PartialEq, Default, ToSchema,
+)]
 pub struct PnL {
     /// The realized profit or loss that has been crystallized through closed positions.
     /// This represents actual gains or losses that have been confirmed by completing the trade.
@@ -138,28 +141,6 @@ impl PnL {
             (None, Some(u)) => Some(u),
             (None, None) => None,
         }
-    }
-}
-
-impl fmt::Display for PnL {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        // Helper function to format Option<Decimal> with rounding
-        fn format_decimal(value: &Option<Decimal>) -> String {
-            match value {
-                Some(dec) => dec.round_dp(3).to_string(),
-                None => "N/A".to_string(),
-            }
-        }
-
-        write!(
-            f,
-            "PnL: {{ realized: {}, unrealized: {}, initial_costs: {}, initial_income: {}, date_time: {} }}",
-            format_decimal(&self.realized),
-            format_decimal(&self.unrealized),
-            self.initial_costs.round_to(3),
-            self.initial_income.round_to(3),
-            self.date_time
-        )
     }
 }
 

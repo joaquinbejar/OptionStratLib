@@ -632,7 +632,7 @@ where
                 // Calculate expiration premium
                 let mut exp_option = self.long_put.option.clone();
                 exp_option.underlying_price = final_price;
-                exp_option.expiration_date = ExpirationDate::Days(Positive::ZERO);
+                exp_option.expiration_date = ExpirationDate::Days(Positive::new(0.001).unwrap());
                 expiration_premium = Some(exp_option.calculate_price_black_scholes()?.abs());
 
                 expired = true;
@@ -738,3 +738,91 @@ where
 impl Strategable for LongPut {}
 
 test_strategy_traits!(LongPut, test_long_put_implementations);
+
+#[cfg(test)]
+mod tests_simulate {
+    use super::*;
+    use crate::chains::generator_positive;
+    use crate::pos;
+    use crate::simulation::simulator::Simulator;
+    use crate::simulation::steps::Step;
+    use crate::simulation::{Simulate, WalkParams, WalkType, WalkTypeAble};
+    use crate::utils::TimeFrame;
+    use rust_decimal_macros::dec;
+
+    struct TestWalker;
+    impl WalkTypeAble<Positive, Positive> for TestWalker {}
+
+    fn create_test_long_put() -> LongPut {
+        LongPut::new(
+            "TEST".to_string(),
+            pos!(100.0),
+            ExpirationDate::Days(pos!(30.0)),
+            pos!(0.20),
+            pos!(1.0),
+            pos!(100.0),
+            dec!(0.05),
+            pos!(0.0),
+            pos!(5.0),
+            pos!(0.0),
+            pos!(0.0),
+        )
+    }
+
+    fn create_walk_params(prices: Vec<Positive>) -> WalkParams<Positive, Positive> {
+        let init_step = Step::new(
+            Positive::ONE,
+            TimeFrame::Day,
+            ExpirationDate::Days(pos!(30.0)),
+            pos!(100.0),
+        );
+        WalkParams {
+            size: prices.len(),
+            init_step,
+            walker: Box::new(TestWalker),
+            walk_type: WalkType::Historical {
+                timeframe: TimeFrame::Day,
+                prices,
+                symbol: Some("TEST".to_string()),
+            },
+        }
+    }
+
+    #[test]
+    fn test_simulate_profit_percent_exit() {
+        let strategy = create_test_long_put();
+        let prices = vec![pos!(100.0), pos!(95.0), pos!(90.0), pos!(85.0)];
+        let walk_params = create_walk_params(prices);
+        let simulator = Simulator::new("Test".to_string(), 1, &walk_params, generator_positive);
+        let results = strategy.simulate(&simulator, ExitPolicy::ProfitPercent(dec!(0.5)));
+        assert!(results.is_ok());
+        let stats = results.unwrap();
+        assert_eq!(stats.total_simulations, 1);
+    }
+
+    #[test]
+    fn test_simulate_expiration_exit() {
+        let strategy = create_test_long_put();
+        let prices = vec![pos!(100.0), pos!(99.0), pos!(98.0)];
+        let walk_params = create_walk_params(prices);
+        let simulator = Simulator::new("Test".to_string(), 1, &walk_params, generator_positive);
+        let results = strategy.simulate(&simulator, ExitPolicy::Expiration);
+        assert!(results.is_ok(), "Simulate failed: {:?}", results.err());
+        let stats = results.unwrap();
+        assert_eq!(stats.total_simulations, 1);
+    }
+
+    #[test]
+    fn test_simulate_stats_aggregation() {
+        let strategy = create_test_long_put();
+        let prices = vec![pos!(100.0), pos!(95.0), pos!(90.0)];
+        let walk_params = create_walk_params(prices);
+        let simulator = Simulator::new("Test".to_string(), 3, &walk_params, generator_positive);
+        let results = strategy.simulate(&simulator, ExitPolicy::Expiration);
+        assert!(results.is_ok(), "Simulate failed: {:?}", results.err());
+        let stats = results.unwrap();
+        assert!(stats.total_simulations >= 1);
+        assert_eq!(stats.total_simulations, stats.results.len());
+        assert!(stats.win_rate >= dec!(0.0) && stats.win_rate <= dec!(100.0));
+    }
+}

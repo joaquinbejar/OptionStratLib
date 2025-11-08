@@ -18,6 +18,7 @@ use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use utoipa::ToSchema;
 
 /// Comprehensive container for all results generated during a backtest simulation.
 ///
@@ -73,7 +74,38 @@ pub struct BacktestResult {
     pub custom_metrics: HashMap<String, Decimal>,
 }
 
-#[derive(DebugPretty, DisplaySimple, Clone, Serialize, Deserialize, Default)]
+/// `SimulationResult` represents the outcome of a financial or trading simulation,
+/// capturing the details of the simulation's performance and metrics.
+///
+/// # Fields
+///
+/// * `simulation_count` - The total number of simulation runs performed.
+/// * `risk_metrics` - Optional risk metrics derived from the simulations.
+/// * `final_equity_percentiles` - A map containing the percentiles of the final equity
+///   distribution. The keys represent the percentile (e.g., 5, 50, 95), and the values
+///   are the corresponding equity values.
+/// * `max_premium` - The maximum premium value observed during the simulation.
+/// * `min_premium` - The minimum premium value observed during the simulation.
+/// * `avg_premium` - The average premium value observed during the simulation.
+/// * `hit_take_profit` - A boolean indicating if the take profit target was achieved,
+///   defined as a 50% reduction in premium.
+/// * `hit_stop_loss` - A boolean indicating if the stop loss condition was triggered,
+///   defined as a 100% increase in premium.
+/// * `expired` - A boolean indicating if the option expired without hitting the take
+///   profit or stop loss conditions.
+/// * `expiration_premium` - Optional final premium value at expiration. Only available
+///   if the option expired.
+/// * `pnl` - The final profit or loss (P&L) resulting from the simulation.
+/// * `holding_period` - The number of simulation steps during which the asset was held.
+/// * `exit_reason` - The reason or policy that triggered the exit from the position
+///   (e.g., take profit, stop loss, expiration).
+///
+/// # Notes
+///
+/// `SimulationResult` is a serializable and cloneable structure, making it convenient
+/// for storing, displaying, and transmitting simulation outcomes. It also provides
+/// a user-friendly debug and display interface through derived traits.
+#[derive(DebugPretty, DisplaySimple, Clone, Serialize, Deserialize, Default, ToSchema)]
 pub struct SimulationResult {
     /// Number of simulation runs
     pub simulation_count: usize,

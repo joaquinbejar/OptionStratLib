@@ -17,12 +17,13 @@ use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
 use std::fmt;
+use utoipa::ToSchema;
 
 /// Defines exit policies for option positions.
 ///
 /// Exit policies determine when a position should be closed based on various
 /// market conditions, profit/loss levels, or time constraints.
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, Default, ToSchema)]
 pub enum ExitPolicy {
     /// Exit when profit reaches a percentage of initial premium.
     ///
