@@ -197,17 +197,18 @@ impl SimulationStats {
     /// - Holding period information
     /// - Exit reason distribution
     pub fn print_summary(&self) {
-        use prettytable::{Cell, Row, Table, format};
+        use prettytable::{Cell, Row, Table, format, color};
+        use rust_decimal_macros::dec;
         use tracing::info;
 
-        info!("--- Simulation Summary ---");
+        info!("\n========== SIMULATION SUMMARY ==========");
 
         // General Info Table
         let mut general_table = Table::new();
         general_table.set_format(*format::consts::FORMAT_BOX_CHARS);
         general_table.set_titles(Row::new(vec![
-            Cell::new("Metric"),
-            Cell::new("Value"),
+            Cell::new("Metric").with_style(prettytable::Attr::ForegroundColor(color::BLUE)),
+            Cell::new("Value").with_style(prettytable::Attr::ForegroundColor(color::BLUE)),
         ]));
         general_table.add_row(Row::new(vec![
             Cell::new("Total Simulations"),
@@ -216,13 +217,13 @@ impl SimulationStats {
         general_table.printstd();
 
         // Trade Outcomes Table
-        info!("--- Trade Outcomes ---");
+        info!("\n--- Trade Outcomes ---");
         let mut outcomes_table = Table::new();
         outcomes_table.set_format(*format::consts::FORMAT_BOX_CHARS);
         outcomes_table.set_titles(Row::new(vec![
-            Cell::new("Outcome"),
-            Cell::new("Count"),
-            Cell::new("Percentage"),
+            Cell::new("Outcome").with_style(prettytable::Attr::ForegroundColor(color::BLUE)),
+            Cell::new("Count").with_style(prettytable::Attr::ForegroundColor(color::BLUE)),
+            Cell::new("Percentage").with_style(prettytable::Attr::ForegroundColor(color::BLUE)),
         ]));
 
         let expired_count = self.results.iter().filter(|r| r.expired).count();
@@ -251,29 +252,41 @@ impl SimulationStats {
         outcomes_table.printstd();
 
         // P&L Statistics Table
-        info!("--- Profit/Loss Statistics ---");
+        info!("\n--- Profit/Loss Statistics ---");
         let mut pnl_table = Table::new();
         pnl_table.set_format(*format::consts::FORMAT_BOX_CHARS);
         pnl_table.set_titles(Row::new(vec![
-            Cell::new("Metric"),
-            Cell::new("Amount"),
+            Cell::new("Metric").with_style(prettytable::Attr::ForegroundColor(color::BLUE)),
+            Cell::new("Amount").with_style(prettytable::Attr::ForegroundColor(color::BLUE)),
         ]));
 
         let total_pnl: Decimal = self.results.iter()
             .filter_map(|r| r.pnl.total_pnl())
             .sum();
 
+        // Helper function to color P&L values
+        let color_pnl = |value: Decimal| -> Cell {
+            let text = format!("${:.2}", value);
+            if value < dec!(0.0) {
+                Cell::new(&text).with_style(prettytable::Attr::ForegroundColor(color::RED))
+            } else if value > dec!(0.0) {
+                Cell::new(&text).with_style(prettytable::Attr::ForegroundColor(color::GREEN))
+            } else {
+                Cell::new(&text)
+            }
+        };
+
         pnl_table.add_row(Row::new(vec![
             Cell::new("Total P&L"),
-            Cell::new(&format!("${:.2}", total_pnl)),
+            color_pnl(total_pnl),
         ]));
         pnl_table.add_row(Row::new(vec![
             Cell::new("Average P&L per Trade"),
-            Cell::new(&format!("${:.2}", self.average_pnl)),
+            color_pnl(self.average_pnl),
         ]));
         pnl_table.add_row(Row::new(vec![
             Cell::new("Median P&L"),
-            Cell::new(&format!("${:.2}", self.median_pnl)),
+            color_pnl(self.median_pnl),
         ]));
         pnl_table.add_row(Row::new(vec![
             Cell::new("Std Dev P&L"),
@@ -281,21 +294,21 @@ impl SimulationStats {
         ]));
         pnl_table.add_row(Row::new(vec![
             Cell::new("Maximum Profit"),
-            Cell::new(&format!("${:.2}", self.best_pnl)),
+            color_pnl(self.best_pnl),
         ]));
         pnl_table.add_row(Row::new(vec![
             Cell::new("Maximum Loss"),
-            Cell::new(&format!("${:.2}", self.worst_pnl)),
+            color_pnl(self.worst_pnl),
         ]));
         pnl_table.printstd();
 
         // Holding Period Table
-        info!("--- Holding Period ---");
+        info!("\n--- Holding Period ---");
         let mut holding_table = Table::new();
         holding_table.set_format(*format::consts::FORMAT_BOX_CHARS);
         holding_table.set_titles(Row::new(vec![
-            Cell::new("Metric"),
-            Cell::new("Value"),
+            Cell::new("Metric").with_style(prettytable::Attr::ForegroundColor(color::BLUE)),
+            Cell::new("Value").with_style(prettytable::Attr::ForegroundColor(color::BLUE)),
         ]));
         holding_table.add_row(Row::new(vec![
             Cell::new("Average Holding Period"),
@@ -304,7 +317,7 @@ impl SimulationStats {
         holding_table.printstd();
 
         // Exit Reasons Table
-        info!("--- Exit Reasons ---");
+        info!("\n--- Exit Reasons ---");
         let mut exit_reasons: HashMap<String, usize> = HashMap::new();
         for result in &self.results {
             *exit_reasons.entry(result.exit_reason.to_string()).or_insert(0) += 1;
@@ -313,9 +326,9 @@ impl SimulationStats {
         let mut exit_table = Table::new();
         exit_table.set_format(*format::consts::FORMAT_BOX_CHARS);
         exit_table.set_titles(Row::new(vec![
-            Cell::new("Exit Reason"),
-            Cell::new("Count"),
-            Cell::new("Percentage"),
+            Cell::new("Exit Reason").with_style(prettytable::Attr::ForegroundColor(color::BLUE)),
+            Cell::new("Count").with_style(prettytable::Attr::ForegroundColor(color::BLUE)),
+            Cell::new("Percentage").with_style(prettytable::Attr::ForegroundColor(color::BLUE)),
         ]));
 
         for (reason, count) in exit_reasons.iter() {
@@ -343,36 +356,238 @@ impl SimulationStats {
     /// - Holding period
     /// - Exit reason
     pub fn print_individual_results(&self) {
-        use prettytable::{Cell, Row, Table, format};
+        use prettytable::{Cell, Row, Table, format, color};
+        use rust_decimal_macros::dec;
         use tracing::info;
 
-        info!("--- Individual Simulation Results ---");
+        info!("\n========== INDIVIDUAL SIMULATION RESULTS ==========");
 
         let mut table = Table::new();
         table.set_format(*format::consts::FORMAT_BOX_CHARS);
         table.set_titles(Row::new(vec![
-            Cell::new("Sim"),
-            Cell::new("Max\nPremium"),
-            Cell::new("Min\nPremium"),
-            Cell::new("Avg\nPremium"),
-            Cell::new("Final\nP&L"),
-            Cell::new("Holding\nPeriod"),
-            Cell::new("Exit\nReason"),
+            Cell::new("Sim").with_style(prettytable::Attr::ForegroundColor(color::BLUE)),
+            Cell::new("Max\nPremium").with_style(prettytable::Attr::ForegroundColor(color::BLUE)),
+            Cell::new("Min\nPremium").with_style(prettytable::Attr::ForegroundColor(color::BLUE)),
+            Cell::new("Avg\nPremium").with_style(prettytable::Attr::ForegroundColor(color::BLUE)),
+            Cell::new("Final\nP&L").with_style(prettytable::Attr::ForegroundColor(color::BLUE)),
+            Cell::new("Holding\nPeriod").with_style(prettytable::Attr::ForegroundColor(color::BLUE)),
+            Cell::new("Exit\nReason").with_style(prettytable::Attr::ForegroundColor(color::BLUE)),
         ]));
 
         for result in &self.results {
             let pnl = result.pnl.total_pnl().unwrap_or_default();
+            
+            // Color the P&L cell based on value
+            let pnl_cell = if pnl < dec!(0.0) {
+                Cell::new(&format!("${:.2}", pnl))
+                    .with_style(prettytable::Attr::ForegroundColor(color::RED))
+            } else if pnl > dec!(0.0) {
+                Cell::new(&format!("${:.2}", pnl))
+                    .with_style(prettytable::Attr::ForegroundColor(color::GREEN))
+            } else {
+                Cell::new(&format!("${:.2}", pnl))
+            };
+            
             table.add_row(Row::new(vec![
                 Cell::new(&result.simulation_count.to_string()),
                 Cell::new(&format!("${:.2}", result.max_premium)),
                 Cell::new(&format!("${:.2}", result.min_premium)),
                 Cell::new(&format!("${:.2}", result.avg_premium)),
-                Cell::new(&format!("${:.2}", pnl)),
+                pnl_cell,
                 Cell::new(&result.holding_period.to_string()),
                 Cell::new(&result.exit_reason.to_string()),
             ]));
         }
         
         table.printstd();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::pnl::PnL;
+    use crate::pos;
+    use crate::simulation::ExitPolicy;
+    use rust_decimal_macros::dec;
+
+    fn create_test_simulation_result(
+        sim_count: usize,
+        pnl_value: Decimal,
+        holding_period: usize,
+        expired: bool,
+    ) -> SimulationResult {
+        SimulationResult {
+            simulation_count: sim_count,
+            risk_metrics: None,
+            final_equity_percentiles: HashMap::new(),
+            max_premium: dec!(100.0),
+            min_premium: dec!(50.0),
+            avg_premium: dec!(75.0),
+            hit_take_profit: pnl_value > dec!(0.0),
+            hit_stop_loss: pnl_value < dec!(0.0),
+            expired,
+            expiration_premium: if expired { Some(dec!(50.0)) } else { None },
+            pnl: PnL::new(
+                Some(pnl_value),
+                None,
+                pos!(10.0),
+                pos!(5.0),
+                Utc::now(),
+            ),
+            holding_period,
+            exit_reason: ExitPolicy::Expiration,
+        }
+    }
+
+    #[test]
+    fn test_simulation_stats_creation() {
+        let results = vec![
+            create_test_simulation_result(1, dec!(100.0), 10, false),
+            create_test_simulation_result(2, dec!(-50.0), 15, false),
+            create_test_simulation_result(3, dec!(75.0), 12, true),
+        ];
+
+        let stats = SimulationStats {
+            results: results.clone(),
+            total_simulations: 3,
+            profitable_count: 2,
+            loss_count: 1,
+            average_pnl: dec!(41.67),
+            median_pnl: dec!(75.0),
+            std_dev_pnl: dec!(62.92),
+            best_pnl: dec!(100.0),
+            worst_pnl: dec!(-50.0),
+            win_rate: dec!(66.67),
+            average_holding_period: dec!(12.33),
+        };
+
+        assert_eq!(stats.total_simulations, 3);
+        assert_eq!(stats.profitable_count, 2);
+        assert_eq!(stats.loss_count, 1);
+        assert_eq!(stats.results.len(), 3);
+    }
+
+    #[test]
+    fn test_simulation_stats_print_summary() {
+        let results = vec![
+            create_test_simulation_result(1, dec!(100.0), 10, false),
+            create_test_simulation_result(2, dec!(-50.0), 15, true),
+        ];
+
+        let stats = SimulationStats {
+            results,
+            total_simulations: 2,
+            profitable_count: 1,
+            loss_count: 1,
+            average_pnl: dec!(25.0),
+            median_pnl: dec!(25.0),
+            std_dev_pnl: dec!(75.0),
+            best_pnl: dec!(100.0),
+            worst_pnl: dec!(-50.0),
+            win_rate: dec!(50.0),
+            average_holding_period: dec!(12.5),
+        };
+
+        // This should not panic
+        stats.print_summary();
+    }
+
+    #[test]
+    fn test_simulation_stats_print_individual_results() {
+        let results = vec![
+            create_test_simulation_result(1, dec!(100.0), 10, false),
+            create_test_simulation_result(2, dec!(-50.0), 15, false),
+            create_test_simulation_result(3, dec!(75.0), 12, true),
+        ];
+
+        let stats = SimulationStats {
+            results,
+            total_simulations: 3,
+            profitable_count: 2,
+            loss_count: 1,
+            average_pnl: dec!(41.67),
+            median_pnl: dec!(75.0),
+            std_dev_pnl: dec!(62.92),
+            best_pnl: dec!(100.0),
+            worst_pnl: dec!(-50.0),
+            win_rate: dec!(66.67),
+            average_holding_period: dec!(12.33),
+        };
+
+        // This should not panic
+        stats.print_individual_results();
+    }
+
+    #[test]
+    fn test_simulation_stats_empty_results() {
+        let stats = SimulationStats {
+            results: vec![],
+            total_simulations: 0,
+            profitable_count: 0,
+            loss_count: 0,
+            average_pnl: dec!(0.0),
+            median_pnl: dec!(0.0),
+            std_dev_pnl: dec!(0.0),
+            best_pnl: dec!(0.0),
+            worst_pnl: dec!(0.0),
+            win_rate: dec!(0.0),
+            average_holding_period: dec!(0.0),
+        };
+
+        // Should handle empty results gracefully
+        stats.print_summary();
+        stats.print_individual_results();
+    }
+
+    #[test]
+    fn test_simulation_stats_all_profitable() {
+        let results = vec![
+            create_test_simulation_result(1, dec!(100.0), 10, false),
+            create_test_simulation_result(2, dec!(50.0), 15, false),
+            create_test_simulation_result(3, dec!(75.0), 12, false),
+        ];
+
+        let stats = SimulationStats {
+            results,
+            total_simulations: 3,
+            profitable_count: 3,
+            loss_count: 0,
+            average_pnl: dec!(75.0),
+            median_pnl: dec!(75.0),
+            std_dev_pnl: dec!(20.41),
+            best_pnl: dec!(100.0),
+            worst_pnl: dec!(50.0),
+            win_rate: dec!(100.0),
+            average_holding_period: dec!(12.33),
+        };
+
+        stats.print_summary();
+        assert_eq!(stats.win_rate, dec!(100.0));
+    }
+
+    #[test]
+    fn test_simulation_stats_all_losses() {
+        let results = vec![
+            create_test_simulation_result(1, dec!(-100.0), 10, false),
+            create_test_simulation_result(2, dec!(-50.0), 15, false),
+        ];
+
+        let stats = SimulationStats {
+            results,
+            total_simulations: 2,
+            profitable_count: 0,
+            loss_count: 2,
+            average_pnl: dec!(-75.0),
+            median_pnl: dec!(-75.0),
+            std_dev_pnl: dec!(25.0),
+            best_pnl: dec!(-50.0),
+            worst_pnl: dec!(-100.0),
+            win_rate: dec!(0.0),
+            average_holding_period: dec!(12.5),
+        };
+
+        stats.print_summary();
+        assert_eq!(stats.win_rate, dec!(0.0));
     }
 }

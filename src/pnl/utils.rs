@@ -301,6 +301,32 @@ mod tests_sum {
     }
 
     #[test]
+    fn test_pnl_sum_both_none() {
+        let pnl1 = PnL {
+            realized: None,
+            unrealized: None,
+            initial_costs: pos!(2.0),
+            initial_income: pos!(1.0),
+            date_time: Utc::now(),
+        };
+
+        let pnl2 = PnL {
+            realized: None,
+            unrealized: None,
+            initial_costs: pos!(3.0),
+            initial_income: pos!(2.0),
+            date_time: Utc::now(),
+        };
+
+        let sum: PnL = vec![pnl1, pnl2].into_iter().sum();
+
+        assert_eq!(sum.realized, None);
+        assert_eq!(sum.unrealized, None);
+        assert_eq!(sum.initial_costs, pos!(5.0));
+        assert_eq!(sum.initial_income, pos!(3.0));
+    }
+
+    #[test]
     fn test_pnl_sum_with_none() {
         let pnl1 = PnL {
             realized: None,
@@ -407,5 +433,90 @@ mod tests_add {
         assert_eq!(sum.unrealized, Some(dec!(15.0)));
         assert_eq!(sum.initial_costs, pos!(5.0));
         assert_eq!(sum.initial_income, pos!(3.0));
+    }
+}
+
+#[cfg(test)]
+mod tests_total_pnl {
+    use super::*;
+    use crate::pos;
+    use rust_decimal_macros::dec;
+
+    #[test]
+    fn test_total_pnl_both_some() {
+        let pnl = PnL::new(
+            Some(dec!(500.0)),
+            Some(dec!(250.0)),
+            pos!(100.0),
+            pos!(350.0),
+            Utc::now(),
+        );
+
+        assert_eq!(pnl.total_pnl(), Some(dec!(750.0)));
+    }
+
+    #[test]
+    fn test_total_pnl_only_realized() {
+        let pnl = PnL::new(
+            Some(dec!(300.0)),
+            None,
+            pos!(100.0),
+            pos!(200.0),
+            Utc::now(),
+        );
+
+        assert_eq!(pnl.total_pnl(), Some(dec!(300.0)));
+    }
+
+    #[test]
+    fn test_total_pnl_only_unrealized() {
+        let pnl = PnL::new(
+            None,
+            Some(dec!(150.0)),
+            pos!(50.0),
+            pos!(100.0),
+            Utc::now(),
+        );
+
+        assert_eq!(pnl.total_pnl(), Some(dec!(150.0)));
+    }
+
+    #[test]
+    fn test_total_pnl_both_none() {
+        let pnl = PnL::new(
+            None,
+            None,
+            pos!(0.0),
+            pos!(0.0),
+            Utc::now(),
+        );
+
+        assert_eq!(pnl.total_pnl(), None);
+    }
+
+    #[test]
+    fn test_total_pnl_negative_values() {
+        let pnl = PnL::new(
+            Some(dec!(-200.0)),
+            Some(dec!(-100.0)),
+            pos!(50.0),
+            pos!(25.0),
+            Utc::now(),
+        );
+
+        assert_eq!(pnl.total_pnl(), Some(dec!(-300.0)));
+    }
+
+    #[test]
+    fn test_total_pnl_mixed_signs() {
+        let pnl = PnL::new(
+            Some(dec!(500.0)),
+            Some(dec!(-200.0)),
+            pos!(100.0),
+            pos!(300.0),
+            Utc::now(),
+        );
+
+        assert_eq!(pnl.total_pnl(), Some(dec!(300.0)));
     }
 }

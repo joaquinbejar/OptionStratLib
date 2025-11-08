@@ -914,4 +914,280 @@ mod tests_simulate {
         assert!(stats.win_rate >= dec!(0.0) && stats.win_rate <= dec!(100.0));
         assert!(stats.average_holding_period >= dec!(0.0));
     }
+
+    #[test]
+    fn test_simulate_time_steps_exit() {
+        let strategy = create_test_short_put();
+        let prices = vec![pos!(100.0), pos!(101.0), pos!(102.0), pos!(103.0), pos!(104.0)];
+
+        let walk_params = create_walk_params(prices);
+        let simulator = Simulator::new(
+            "Test Simulator".to_string(),
+            1,
+            &walk_params,
+            generator_positive,
+        );
+
+        let exit_policy = ExitPolicy::TimeSteps(2);
+        let results = strategy.simulate(&simulator, exit_policy);
+
+        assert!(results.is_ok());
+        let stats = results.unwrap();
+        assert_eq!(stats.total_simulations, 1);
+        assert!(!stats.results.is_empty());
+    }
+
+    #[test]
+    fn test_simulate_underlying_below_exit() {
+        let strategy = create_test_short_put();
+        let prices = vec![pos!(100.0), pos!(95.0), pos!(90.0)];
+
+        let walk_params = create_walk_params(prices);
+        let simulator = Simulator::new(
+            "Test Simulator".to_string(),
+            1,
+            &walk_params,
+            generator_positive,
+        );
+
+        let exit_policy = ExitPolicy::UnderlyingBelow(pos!(92.0));
+        let results = strategy.simulate(&simulator, exit_policy);
+
+        assert!(results.is_ok());
+        let stats = results.unwrap();
+        assert_eq!(stats.total_simulations, 1);
+    }
+
+    #[test]
+    fn test_simulate_and_exit_policy() {
+        let strategy = create_test_short_put();
+        let prices = vec![pos!(100.0), pos!(105.0), pos!(110.0), pos!(115.0)];
+
+        let walk_params = create_walk_params(prices);
+        let simulator = Simulator::new(
+            "Test Simulator".to_string(),
+            1,
+            &walk_params,
+            generator_positive,
+        );
+
+        let exit_policy = ExitPolicy::And(vec![
+            ExitPolicy::TimeSteps(2),
+            ExitPolicy::UnderlyingAbove(pos!(105.0)),
+        ]);
+        let results = strategy.simulate(&simulator, exit_policy);
+
+        assert!(results.is_ok());
+        let stats = results.unwrap();
+        assert_eq!(stats.total_simulations, 1);
+    }
+
+    #[test]
+    fn test_simulate_multiple_simulations() {
+        let strategy = create_test_short_put();
+        let prices = vec![pos!(100.0), pos!(102.0), pos!(104.0)];
+
+        let walk_params = create_walk_params(prices);
+        let simulator = Simulator::new(
+            "Test Simulator".to_string(),
+            10,
+            &walk_params,
+            generator_positive,
+        );
+
+        let exit_policy = ExitPolicy::Expiration;
+        let results = strategy.simulate(&simulator, exit_policy);
+
+        assert!(results.is_ok());
+        let stats = results.unwrap();
+        assert_eq!(stats.total_simulations, 10);
+        assert_eq!(stats.results.len(), 10);
+        assert!(stats.profitable_count + stats.loss_count <= 10);
+    }
+
+    #[test]
+    fn test_simulate_stats_calculations() {
+        let strategy = create_test_short_put();
+        let prices = vec![pos!(100.0), pos!(105.0), pos!(110.0)];
+
+        let walk_params = create_walk_params(prices);
+        let simulator = Simulator::new(
+            "Test Simulator".to_string(),
+            3,
+            &walk_params,
+            generator_positive,
+        );
+
+        let exit_policy = ExitPolicy::Expiration;
+        let results = strategy.simulate(&simulator, exit_policy);
+
+        assert!(results.is_ok());
+        let stats = results.unwrap();
+        
+        // Verify stats are calculated
+        assert!(stats.average_pnl.abs() >= dec!(0.0));
+        assert!(stats.median_pnl.abs() >= dec!(0.0));
+        assert!(stats.std_dev_pnl >= dec!(0.0));
+        assert!(stats.best_pnl >= stats.worst_pnl);
+    }
+
+    #[test]
+    fn test_simulate_expiration_path() {
+        let strategy = create_test_short_put();
+        // Price stays stable, should expire
+        let prices = vec![pos!(100.0), pos!(100.5), pos!(101.0), pos!(100.8)];
+
+        let walk_params = create_walk_params(prices);
+        let simulator = Simulator::new(
+            "Test Simulator".to_string(),
+            1,
+            &walk_params,
+            generator_positive,
+        );
+
+        let exit_policy = ExitPolicy::Expiration;
+        let results = strategy.simulate(&simulator, exit_policy);
+
+        assert!(results.is_ok());
+        let stats = results.unwrap();
+        assert_eq!(stats.total_simulations, 1);
+        assert!(!stats.results.is_empty());
+        
+        // Verify expiration was triggered
+        let result = &stats.results[0];
+        assert!(result.expired);
+        assert!(result.expiration_premium.is_some());
+    }
+
+    #[test]
+    fn test_simulate_profit_target_hit() {
+        let strategy = create_test_short_put();
+        // Price rises significantly to trigger profit
+        let prices = vec![pos!(100.0), pos!(110.0), pos!(120.0)];
+
+        let walk_params = create_walk_params(prices);
+        let simulator = Simulator::new(
+            "Test Simulator".to_string(),
+            1,
+            &walk_params,
+            generator_positive,
+        );
+
+        let exit_policy = ExitPolicy::ProfitPercent(dec!(0.5));
+        let results = strategy.simulate(&simulator, exit_policy);
+
+        assert!(results.is_ok());
+        let stats = results.unwrap();
+        assert_eq!(stats.total_simulations, 1);
+        
+        let result = &stats.results[0];
+        assert!(result.hit_take_profit || result.expired);
+    }
+
+    #[test]
+    fn test_simulate_stop_loss_hit() {
+        let strategy = create_test_short_put();
+        // Price drops significantly to trigger stop loss
+        let prices = vec![pos!(100.0), pos!(85.0), pos!(70.0)];
+
+        let walk_params = create_walk_params(prices);
+        let simulator = Simulator::new(
+            "Test Simulator".to_string(),
+            1,
+            &walk_params,
+            generator_positive,
+        );
+
+        let exit_policy = ExitPolicy::LossPercent(dec!(1.0));
+        let results = strategy.simulate(&simulator, exit_policy);
+
+        assert!(results.is_ok());
+        let stats = results.unwrap();
+        assert_eq!(stats.total_simulations, 1);
+        
+        let result = &stats.results[0];
+        assert!(result.hit_stop_loss || result.expired);
+    }
+
+    #[test]
+    fn test_simulate_premium_tracking() {
+        let strategy = create_test_short_put();
+        let prices = vec![pos!(100.0), pos!(95.0), pos!(105.0), pos!(100.0)];
+
+        let walk_params = create_walk_params(prices);
+        let simulator = Simulator::new(
+            "Test Simulator".to_string(),
+            1,
+            &walk_params,
+            generator_positive,
+        );
+
+        let exit_policy = ExitPolicy::Expiration;
+        let results = strategy.simulate(&simulator, exit_policy);
+
+        assert!(results.is_ok());
+        let stats = results.unwrap();
+        
+        let result = &stats.results[0];
+        // Verify premium tracking
+        assert!(result.max_premium >= result.min_premium);
+        assert!(result.avg_premium >= result.min_premium);
+        assert!(result.avg_premium <= result.max_premium);
+    }
+
+    #[test]
+    fn test_simulate_holding_period() {
+        let strategy = create_test_short_put();
+        let prices = vec![pos!(100.0), pos!(101.0), pos!(102.0)];
+        let price_count = prices.len();
+
+        let walk_params = create_walk_params(prices);
+        let simulator = Simulator::new(
+            "Test Simulator".to_string(),
+            1,
+            &walk_params,
+            generator_positive,
+        );
+
+        let exit_policy = ExitPolicy::TimeSteps(1);
+        let results = strategy.simulate(&simulator, exit_policy);
+
+        assert!(results.is_ok());
+        let stats = results.unwrap();
+        
+        let result = &stats.results[0];
+        assert!(result.holding_period > 0);
+        assert!(result.holding_period <= price_count);
+    }
+
+    #[test]
+    fn test_simulate_mixed_results() {
+        let strategy = create_test_short_put();
+        let prices = vec![pos!(100.0), pos!(102.0), pos!(98.0)];
+
+        let walk_params = create_walk_params(prices);
+        let simulator = Simulator::new(
+            "Test Simulator".to_string(),
+            5,
+            &walk_params,
+            generator_positive,
+        );
+
+        let exit_policy = ExitPolicy::Or(vec![
+            ExitPolicy::ProfitPercent(dec!(0.5)),
+            ExitPolicy::LossPercent(dec!(1.0)),
+        ]);
+        let results = strategy.simulate(&simulator, exit_policy);
+
+        assert!(results.is_ok());
+        let stats = results.unwrap();
+        
+        // Verify we have results
+        assert_eq!(stats.total_simulations, 5);
+        assert_eq!(stats.results.len(), 5);
+        
+        // Verify win rate is calculated
+        assert!(stats.win_rate >= dec!(0.0));
+        assert!(stats.win_rate <= dec!(100.0));
+    }
 }
