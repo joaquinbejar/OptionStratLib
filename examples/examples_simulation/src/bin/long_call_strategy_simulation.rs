@@ -38,6 +38,7 @@
 //! - PNG visualization of the last simulation in `Draws/Simulation/long_call_strategy_simulation.png`
 
 use indicatif::{ProgressBar, ProgressStyle};
+use optionstratlib::Options;
 use optionstratlib::chains::generator_positive;
 use optionstratlib::model::types::{OptionStyle, OptionType, Side};
 use optionstratlib::prelude::*;
@@ -48,7 +49,6 @@ use optionstratlib::strategies::LongCall;
 use optionstratlib::utils::setup_logger;
 use optionstratlib::utils::time::{TimeFrame, convert_time_frame};
 use optionstratlib::volatility::volatility_for_dt;
-use optionstratlib::Options;
 use rust_decimal::prelude::ToPrimitive;
 use rust_decimal_macros::dec;
 use std::path::Path;
@@ -81,7 +81,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let days = pos!(7.0);
     let implied_volatility = pos!(0.27); // 27% annual volatility
     let symbol = "GOLD".to_string();
-    
+
     // For a Long Call with delta ~0.70, we need a strike slightly in-the-money
     // Delta 0.70 for a call means the strike is below current price
     // Approximate: strike = underlying * 0.98 for delta ~0.70
@@ -113,17 +113,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         implied_volatility,
         Positive::ONE,
         underlying_price,
-        dec!(0.0),         // risk_free_rate
-        pos!(0.0),         // dividend_yield
-        premium_positive,  // premium paid
-        pos!(0.0),         // open_fee
-        pos!(0.0),         // close_fee
+        dec!(0.0),        // risk_free_rate
+        pos!(0.0),        // dividend_yield
+        premium_positive, // premium paid
+        pos!(0.0),        // open_fee
+        pos!(0.0),        // close_fee
     );
 
     // Define exit policy: 100% profit OR expiration
     let exit_policy = ExitPolicy::Or(vec![
         ExitPolicy::ProfitPercent(dec!(0.5)), // 100% profit
-        ExitPolicy::Expiration,                // Or let it expire
+        ExitPolicy::Expiration,               // Or let it expire
     ]);
 
     info!("========== LONG CALL SIMULATION (Using Simulate Trait) ==========");
@@ -134,7 +134,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!("Implied Volatility: {:.2}%", implied_volatility * 100.0);
     info!("Initial Premium Paid: ${:.2}", initial_premium);
     info!("Exit Policy: 100% profit OR expiration");
-    info!("================================================================\n");
+    info!("================================================================");
 
     // Create WalkParams for the Simulator
     let walker = Box::new(Walker);

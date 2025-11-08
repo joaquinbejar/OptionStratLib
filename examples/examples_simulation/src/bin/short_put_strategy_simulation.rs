@@ -39,6 +39,7 @@
 //! - PNG visualization of the last simulation in `Draws/Simulation/short_put_strategy_simulation.png`
 
 use indicatif::{ProgressBar, ProgressStyle};
+use optionstratlib::Options;
 use optionstratlib::chains::generator_positive;
 use optionstratlib::model::types::{OptionStyle, OptionType, Side};
 use optionstratlib::prelude::*;
@@ -49,7 +50,6 @@ use optionstratlib::strategies::ShortPut;
 use optionstratlib::utils::setup_logger;
 use optionstratlib::utils::time::{TimeFrame, convert_time_frame};
 use optionstratlib::volatility::volatility_for_dt;
-use optionstratlib::Options;
 use rust_decimal::prelude::ToPrimitive;
 use rust_decimal_macros::dec;
 use tracing::info;
@@ -109,11 +109,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         implied_volatility,
         Positive::ONE,
         underlying_price,
-        dec!(0.0),         // risk_free_rate
-        pos!(0.0),         // dividend_yield
-        premium_positive,  // premium received
-        pos!(0.0),         // open_fee
-        pos!(0.0),         // close_fee
+        dec!(0.0),        // risk_free_rate
+        pos!(0.0),        // dividend_yield
+        premium_positive, // premium received
+        pos!(0.0),        // open_fee
+        pos!(0.0),        // close_fee
     );
 
     // Define exit policy: 50% profit OR 100% loss

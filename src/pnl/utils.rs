@@ -470,26 +470,14 @@ mod tests_total_pnl {
 
     #[test]
     fn test_total_pnl_only_unrealized() {
-        let pnl = PnL::new(
-            None,
-            Some(dec!(150.0)),
-            pos!(50.0),
-            pos!(100.0),
-            Utc::now(),
-        );
+        let pnl = PnL::new(None, Some(dec!(150.0)), pos!(50.0), pos!(100.0), Utc::now());
 
         assert_eq!(pnl.total_pnl(), Some(dec!(150.0)));
     }
 
     #[test]
     fn test_total_pnl_both_none() {
-        let pnl = PnL::new(
-            None,
-            None,
-            pos!(0.0),
-            pos!(0.0),
-            Utc::now(),
-        );
+        let pnl = PnL::new(None, None, pos!(0.0), pos!(0.0), Utc::now());
 
         assert_eq!(pnl.total_pnl(), None);
     }

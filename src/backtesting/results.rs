@@ -197,7 +197,7 @@ impl SimulationStats {
     /// - Holding period information
     /// - Exit reason distribution
     pub fn print_summary(&self) {
-        use prettytable::{Cell, Row, Table, format, color};
+        use prettytable::{Cell, Row, Table, color, format};
         use rust_decimal_macros::dec;
         use tracing::info;
 
@@ -260,9 +260,7 @@ impl SimulationStats {
             Cell::new("Amount").with_style(prettytable::Attr::ForegroundColor(color::BLUE)),
         ]));
 
-        let total_pnl: Decimal = self.results.iter()
-            .filter_map(|r| r.pnl.total_pnl())
-            .sum();
+        let total_pnl: Decimal = self.results.iter().filter_map(|r| r.pnl.total_pnl()).sum();
 
         // Helper function to color P&L values
         let color_pnl = |value: Decimal| -> Cell {
@@ -276,10 +274,7 @@ impl SimulationStats {
             }
         };
 
-        pnl_table.add_row(Row::new(vec![
-            Cell::new("Total P&L"),
-            color_pnl(total_pnl),
-        ]));
+        pnl_table.add_row(Row::new(vec![Cell::new("Total P&L"), color_pnl(total_pnl)]));
         pnl_table.add_row(Row::new(vec![
             Cell::new("Average P&L per Trade"),
             color_pnl(self.average_pnl),
@@ -320,7 +315,9 @@ impl SimulationStats {
         info!("\n--- Exit Reasons ---");
         let mut exit_reasons: HashMap<String, usize> = HashMap::new();
         for result in &self.results {
-            *exit_reasons.entry(result.exit_reason.to_string()).or_insert(0) += 1;
+            *exit_reasons
+                .entry(result.exit_reason.to_string())
+                .or_insert(0) += 1;
         }
 
         let mut exit_table = Table::new();
@@ -343,7 +340,6 @@ impl SimulationStats {
         }
 
         exit_table.printstd();
-        
     }
 
     /// Prints individual results for each simulation.
@@ -356,7 +352,7 @@ impl SimulationStats {
     /// - Holding period
     /// - Exit reason
     pub fn print_individual_results(&self) {
-        use prettytable::{Cell, Row, Table, format, color};
+        use prettytable::{Cell, Row, Table, color, format};
         use rust_decimal_macros::dec;
         use tracing::info;
 
@@ -370,13 +366,14 @@ impl SimulationStats {
             Cell::new("Min\nPremium").with_style(prettytable::Attr::ForegroundColor(color::BLUE)),
             Cell::new("Avg\nPremium").with_style(prettytable::Attr::ForegroundColor(color::BLUE)),
             Cell::new("Final\nP&L").with_style(prettytable::Attr::ForegroundColor(color::BLUE)),
-            Cell::new("Holding\nPeriod").with_style(prettytable::Attr::ForegroundColor(color::BLUE)),
+            Cell::new("Holding\nPeriod")
+                .with_style(prettytable::Attr::ForegroundColor(color::BLUE)),
             Cell::new("Exit\nReason").with_style(prettytable::Attr::ForegroundColor(color::BLUE)),
         ]));
 
         for result in &self.results {
             let pnl = result.pnl.total_pnl().unwrap_or_default();
-            
+
             // Color the P&L cell based on value
             let pnl_cell = if pnl < dec!(0.0) {
                 Cell::new(&format!("${:.2}", pnl))
@@ -387,7 +384,7 @@ impl SimulationStats {
             } else {
                 Cell::new(&format!("${:.2}", pnl))
             };
-            
+
             table.add_row(Row::new(vec![
                 Cell::new(&result.simulation_count.to_string()),
                 Cell::new(&format!("${:.2}", result.max_premium)),
@@ -398,7 +395,7 @@ impl SimulationStats {
                 Cell::new(&result.exit_reason.to_string()),
             ]));
         }
-        
+
         table.printstd();
     }
 }
@@ -428,13 +425,7 @@ mod tests {
             hit_stop_loss: pnl_value < dec!(0.0),
             expired,
             expiration_premium: if expired { Some(dec!(50.0)) } else { None },
-            pnl: PnL::new(
-                Some(pnl_value),
-                None,
-                pos!(10.0),
-                pos!(5.0),
-                Utc::now(),
-            ),
+            pnl: PnL::new(Some(pnl_value), None, pos!(10.0), pos!(5.0), Utc::now()),
             holding_period,
             exit_reason: ExitPolicy::Expiration,
         }

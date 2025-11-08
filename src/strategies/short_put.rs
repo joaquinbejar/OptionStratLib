@@ -918,7 +918,13 @@ mod tests_simulate {
     #[test]
     fn test_simulate_time_steps_exit() {
         let strategy = create_test_short_put();
-        let prices = vec![pos!(100.0), pos!(101.0), pos!(102.0), pos!(103.0), pos!(104.0)];
+        let prices = vec![
+            pos!(100.0),
+            pos!(101.0),
+            pos!(102.0),
+            pos!(103.0),
+            pos!(104.0),
+        ];
 
         let walk_params = create_walk_params(prices);
         let simulator = Simulator::new(
@@ -1023,7 +1029,7 @@ mod tests_simulate {
 
         assert!(results.is_ok());
         let stats = results.unwrap();
-        
+
         // Verify stats are calculated
         assert!(stats.average_pnl.abs() >= dec!(0.0));
         assert!(stats.median_pnl.abs() >= dec!(0.0));
@@ -1052,7 +1058,7 @@ mod tests_simulate {
         let stats = results.unwrap();
         assert_eq!(stats.total_simulations, 1);
         assert!(!stats.results.is_empty());
-        
+
         // Verify expiration was triggered
         let result = &stats.results[0];
         assert!(result.expired);
@@ -1079,7 +1085,7 @@ mod tests_simulate {
         assert!(results.is_ok());
         let stats = results.unwrap();
         assert_eq!(stats.total_simulations, 1);
-        
+
         let result = &stats.results[0];
         assert!(result.hit_take_profit || result.expired);
     }
@@ -1104,7 +1110,7 @@ mod tests_simulate {
         assert!(results.is_ok());
         let stats = results.unwrap();
         assert_eq!(stats.total_simulations, 1);
-        
+
         let result = &stats.results[0];
         assert!(result.hit_stop_loss || result.expired);
     }
@@ -1127,7 +1133,7 @@ mod tests_simulate {
 
         assert!(results.is_ok());
         let stats = results.unwrap();
-        
+
         let result = &stats.results[0];
         // Verify premium tracking
         assert!(result.max_premium >= result.min_premium);
@@ -1154,7 +1160,7 @@ mod tests_simulate {
 
         assert!(results.is_ok());
         let stats = results.unwrap();
-        
+
         let result = &stats.results[0];
         assert!(result.holding_period > 0);
         assert!(result.holding_period <= price_count);
@@ -1181,11 +1187,11 @@ mod tests_simulate {
 
         assert!(results.is_ok());
         let stats = results.unwrap();
-        
+
         // Verify we have results
         assert_eq!(stats.total_simulations, 5);
         assert_eq!(stats.results.len(), 5);
-        
+
         // Verify win rate is calculated
         assert!(stats.win_rate >= dec!(0.0));
         assert!(stats.win_rate <= dec!(100.0));
