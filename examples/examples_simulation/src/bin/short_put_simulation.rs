@@ -33,12 +33,15 @@
 //! - Distribution of exit reasons
 //! - PNG visualization of the last simulation in `Draws/Simulation/short_put_simulation.png`
 
+use indicatif::{ProgressBar, ProgressStyle};
 use optionstratlib::backtesting::results::SimulationResult;
 use optionstratlib::chains::generator_positive;
 use optionstratlib::prelude::*;
 use optionstratlib::simulation::simulator::Simulator;
 use optionstratlib::simulation::steps::{Step, Xstep, Ystep};
-use optionstratlib::simulation::{check_exit_policy, ExitPolicy, SimulationStats, WalkParams, WalkType, WalkTypeAble};
+use optionstratlib::simulation::{
+    ExitPolicy, SimulationStats, WalkParams, WalkType, WalkTypeAble, check_exit_policy,
+};
 use optionstratlib::utils::setup_logger;
 use optionstratlib::utils::time::{TimeFrame, convert_time_frame};
 use optionstratlib::volatility::volatility_for_dt;
@@ -112,34 +115,30 @@ fn evaluate_short_put_strategy(
 
         let market_price = step.get_value();
 
-        // Calculate P&L using the option's calculate_pnl method
-        let pnl_result = match option.calculate_pnl(
-            market_price,
-            ExpirationDate::Days(days_left),
-            implied_volatility,
-        ) {
-            Ok(pnl) => pnl,
+        // For a short put, we sold the option and want to buy it back
+        // The current premium is what we'd pay to buy it back now
+        // We need to calculate the current market value of the option
+        let mut current_option = option.clone();
+        current_option.underlying_price = *market_price;
+        current_option.expiration_date = ExpirationDate::Days(days_left);
+
+        let current_premium = match current_option.calculate_price_black_scholes() {
+            Ok(price) => price.abs(),
             Err(e) => {
                 error!(
-                    "Warning: Failed to calculate P&L at step {}: {}",
+                    "Warning: Failed to calculate option price at step {}: {}",
                     step_num, e
                 );
                 continue;
             }
         };
 
-        // For a short put, we sold the option and want to buy it back
-        // unrealized P&L is positive when the option value decreases
-        // current_premium is what we'd pay to buy it back now
-        let unrealized_pnl = pnl_result.unrealized.unwrap_or(dec!(0.0));
-        // Since we're tracking as long but it's actually short, invert the P&L
-        let current_premium = (initial_premium + unrealized_pnl).abs();
-
         // Debug: Print premium evolution for first simulation
         if simulation_count == 1 && step_num % 1000 == 0 {
+            let pnl = initial_premium - current_premium;
             info!(
                 "  Step {}: Premium = ${:.2}, Underlying = ${:.2}, Days left = {:.2}, P&L = ${:.2}",
-                step_num, current_premium, market_price, days_left, unrealized_pnl
+                step_num, current_premium, market_price, days_left, pnl
             );
         }
 
@@ -164,11 +163,22 @@ fn evaluate_short_put_strategy(
         ) {
             // Calculate P&L based on current premium
             let pnl = initial_premium - current_premium;
-            
+
+            debug!(
+                "Simulation {}: Exit at step {} - Strike: ${}, Underlying: ${}, Premium: ${}, P&L: ${}, Reason: {}",
+                simulation_count,
+                step_num,
+                option.strike_price,
+                market_price,
+                current_premium,
+                pnl,
+                exit_reason
+            );
+
             // Determine which exit condition was hit for backward compatibility
             let hit_take_profit = current_premium <= profit_target;
             let hit_stop_loss = current_premium >= loss_limit;
-            
+
             return SimulationResult {
                 simulation_count,
                 risk_metrics: None,
@@ -192,12 +202,76 @@ fn evaluate_short_put_strategy(
     if let Some(last_step) = random_walk.last() {
         let market_price = last_step.get_value();
         let strike_price = option.strike_price;
+
+        // Calculate intrinsic value at expiration
+        // For a SHORT PUT: we sold it, so we received initial_premium
+        // At expiration, if ITM (strike > underlying), we must pay (strike - underlying)
+        // If OTM (strike <= underlying), it expires worthless and we keep the full premium
         let final_premium = if strike_price > *market_price {
             (strike_price - *market_price).to_dec()
         } else {
             dec!(0.0)
         };
         let pnl = initial_premium - final_premium;
+
+        // Check if expiration would have triggered exit policy
+        // This handles cases where the intrinsic value at expiration exceeds stop loss
+        let days_left = pos!(0.0);
+        if let Some(exit_reason) = check_exit_policy(
+            exit_policy,
+            initial_premium,
+            final_premium,
+            random_walk.len(),
+            days_left,
+            *market_price,
+        ) {
+            let moneyness = if strike_price > *market_price {
+                "ITM"
+            } else {
+                "OTM"
+            };
+            info!(
+                "Simulation {}: Expired {} with Exit Policy - Strike: ${}, Final Underlying: ${}, Intrinsic Value: ${}, P&L: ${}, Exit: {}",
+                simulation_count,
+                moneyness,
+                strike_price,
+                market_price,
+                final_premium,
+                pnl,
+                exit_reason
+            );
+
+            // Determine which exit condition was hit
+            let hit_take_profit = final_premium <= profit_target;
+            let hit_stop_loss = final_premium >= loss_limit;
+
+            return SimulationResult {
+                simulation_count,
+                risk_metrics: None,
+                final_equity_percentiles: HashMap::new(),
+                max_premium,
+                min_premium,
+                avg_premium: premium_sum / Decimal::from(premium_count),
+                hit_take_profit,
+                hit_stop_loss,
+                expired: false,
+                expiration_premium: Some(final_premium),
+                pnl,
+                holding_period: random_walk.len(),
+                exit_reason,
+            };
+        }
+
+        // If no exit policy triggered, it truly expired
+        let moneyness = if strike_price > *market_price {
+            "ITM (loss)"
+        } else {
+            "OTM (profit)"
+        };
+        info!(
+            "Simulation {}: Expired {} - Strike: ${}, Final Underlying: ${}, Intrinsic Value: ${}, P&L: ${}",
+            simulation_count, moneyness, strike_price, market_price, final_premium, pnl
+        );
 
         return SimulationResult {
             simulation_count,
@@ -249,7 +323,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     setup_logger();
 
     // Simulation parameters
-    let n_simulations = 100; // Number of simulations to run
+    let n_simulations = 1000; // Number of simulations to run
     let n_steps = 10080; // 7 days in minutes
     let underlying_price = pos!(4011.95);
     let days = pos!(7.0);
@@ -257,10 +331,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let symbol = "GOLD".to_string();
     let strike_price = pos!(3930.0); // Strike price for the short put (delta ~-0.3)
 
-    // Create the short put option (use Long side to get positive premium, we'll track as short)
+    // Create the short put option
     let option = Options::new(
         OptionType::European,
-        Side::Long,
+        Side::Short,
         symbol.clone(),
         strike_price,
         ExpirationDate::Days(days),
@@ -276,8 +350,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let initial_premium = option.calculate_price_black_scholes()?.abs();
     // Define exit policy: 50% profit OR 100% loss
     let exit_policy = ExitPolicy::profit_or_loss(dec!(0.5), dec!(1.0));
-    
-    
+
     let mut stats = SimulationStats::new();
 
     info!("========== SHORT PUT SIMULATION ==========");
@@ -289,8 +362,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!("Initial Premium: ${:.2}", initial_premium);
     info!("Exit Policy: {}", exit_policy);
     info!("==========================================");
-
-
 
     // Create WalkParams for the Simulator
     let walker = Box::new(Walker::new());
@@ -314,7 +385,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             dt,
             drift: dec!(-0.1),
             volatility: volatility_dt,
-            vov: pos!(0.3),          // Volatility of volatility (30%)
+            vov: pos!(0.02),         // Volatility of volatility (30%)
             vol_speed: pos!(0.5),    // Mean reversion speed
             vol_mean: volatility_dt, // Mean volatility level (same as initial)
         },
@@ -331,6 +402,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         n_simulations,
         &walk_params,
         generator_positive,
+    );
+
+    // Create progress bar
+    let progress_bar = ProgressBar::new(n_simulations as u64);
+    progress_bar.set_style(
+        ProgressStyle::default_bar()
+            .template(
+                "{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} ({eta})",
+            )
+            .expect("Failed to set progress bar template")
+            .progress_chars("#>-"),
     );
 
     // Iterate over all random walks and evaluate each one
@@ -355,10 +437,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         // Update statistics
         stats.update(result);
 
-        if (sim_num + 1) % 10 == 0 {
-            info!("Completed {} / {} simulations", sim_num + 1, n_simulations);
-        }
+        // Update progress bar
+        progress_bar.inc(1);
     }
+
+    // Finish progress bar
+    progress_bar.finish_with_message("Simulations completed!");
 
     // Print final statistics
     stats.print_summary();
@@ -367,7 +451,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     stats.print_individual_results();
 
     // Save the simulator visualization
-    info!("\nGenerating visualization for all simulations...");
+    info!("Generating visualization for all simulations...");
     let path: &std::path::Path = "Draws/Simulation/short_put_simulation.png".as_ref();
     simulator.write_png(path)?;
     info!("Visualization saved to: {:?}", path);

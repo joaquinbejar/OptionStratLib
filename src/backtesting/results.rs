@@ -11,12 +11,12 @@ use crate::backtesting::types::{
     VolatilityData,
 };
 use crate::risk::RiskMetricsSimulation;
+use crate::simulation::ExitPolicy;
 use chrono::{DateTime, Utc};
+use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use pretty_simple_display::{DebugPretty, DisplaySimple};
-use crate::simulation::ExitPolicy;
 
 /// Comprehensive container for all results generated during a backtest simulation.
 ///
@@ -72,7 +72,6 @@ pub struct BacktestResult {
     pub custom_metrics: HashMap<String, Decimal>,
 }
 
-
 #[derive(DebugPretty, DisplaySimple, Clone, Serialize, Deserialize, Default)]
 pub struct SimulationResult {
     /// Number of simulation runs
@@ -83,34 +82,34 @@ pub struct SimulationResult {
 
     /// Percentiles of final equity distribution
     pub final_equity_percentiles: HashMap<u8, Decimal>,
-    
+
     /// Maximum premium value during the simulation
     pub max_premium: Decimal,
-    
+
     /// Minimum premium value during the simulation
     pub min_premium: Decimal,
-    
+
     /// Average premium value during the simulation
     pub avg_premium: Decimal,
-    
+
     /// Whether the take profit target was hit (50% premium reduction)
     pub hit_take_profit: bool,
-    
+
     /// Whether the stop loss was hit (100% premium increase)
     pub hit_stop_loss: bool,
-    
+
     /// Whether the option expired without hitting take profit or stop loss
     pub expired: bool,
-    
+
     /// Final premium value at expiration (only if expired)
     pub expiration_premium: Option<Decimal>,
-    
+
     /// Final P&L
     pub pnl: Decimal,
-    
+
     /// Holding period in steps
     pub holding_period: usize,
-    
+
     /// Exit policy that triggered the exit
     pub exit_reason: ExitPolicy,
 }

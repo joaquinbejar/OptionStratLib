@@ -130,8 +130,8 @@ mod params;
 pub mod exit;
 mod stats;
 
-pub use exit::{check_exit_policy, ExitPolicy};
+pub use exit::{ExitPolicy, check_exit_policy};
 pub use model::WalkType;
 pub use params::WalkParams;
 pub use stats::SimulationStats;
-pub use traits::WalkTypeAble;
+pub use traits::{Simulate, WalkTypeAble};

@@ -449,18 +449,19 @@ impl DeltaNeutrality for LongCall {}
 impl PnLCalculator for LongCall {
     fn calculate_pnl(
         &self,
-        _market_price: &Positive,
-        _expiration_date: ExpirationDate,
-        _implied_volatility: &Positive,
+        market_price: &Positive,
+        expiration_date: ExpirationDate,
+        implied_volatility: &Positive,
     ) -> Result<PnL, Box<dyn Error>> {
-        todo!()
+        self.long_call
+            .calculate_pnl(market_price, expiration_date, implied_volatility)
     }
 
     fn calculate_pnl_at_expiration(
         &self,
-        _underlying_price: &Positive,
+        underlying_price: &Positive,
     ) -> Result<PnL, Box<dyn Error>> {
-        todo!()
+        self.long_call.calculate_pnl_at_expiration(underlying_price)
     }
 
     fn adjustments_pnl(&self, _adjustment: &DeltaAdjustment) -> Result<PnL, Box<dyn Error>> {

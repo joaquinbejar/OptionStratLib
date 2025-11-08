@@ -1,15 +1,15 @@
 /******************************************************************************
-    Author: Joaquín Béjar García
-    Email: jb@taunais.com 
-    Date: 8/11/25
- ******************************************************************************/
-use std::collections::HashMap;
-use prettytable::{format, Cell, Row, Table};
-use rust_decimal::Decimal;
-use rust_decimal_macros::dec;
-use tracing::info;
+   Author: Joaquín Béjar García
+   Email: jb@taunais.com
+   Date: 8/11/25
+******************************************************************************/
 use crate::backtesting::results::SimulationResult;
 use crate::simulation::ExitPolicy;
+use prettytable::{Cell, Row, Table, format};
+use rust_decimal::Decimal;
+use rust_decimal_macros::dec;
+use std::collections::HashMap;
+use tracing::info;
 
 /// Statistics for tracking Short Put strategy performance across multiple simulations.
 #[derive(Debug, Clone)]
@@ -103,8 +103,8 @@ impl SimulationStats {
 
     /// Prints a formatted summary of the simulation statistics.
     pub fn print_summary(&self) {
-        info!("\n========== SHORT PUT SIMULATION SUMMARY ==========\n");
-        
+        info!("========== SHORT PUT SIMULATION SUMMARY ==========");
+
         // General Info Table
         let mut info_table = Table::new();
         info_table.set_format(*format::consts::FORMAT_BOX_CHARS);
@@ -117,10 +117,9 @@ impl SimulationStats {
             Cell::new(&self.total_simulations.to_string()),
         ]));
         info_table.printstd();
-        
 
         // Trade Outcomes Table
-        info!("--- Trade Outcomes ---\n");
+        info!("--- Trade Outcomes ---");
         let mut outcomes_table = Table::new();
         outcomes_table.set_format(*format::consts::FORMAT_BOX_CHARS);
         outcomes_table.add_row(Row::new(vec![
@@ -151,10 +150,9 @@ impl SimulationStats {
             ]));
         }
         outcomes_table.printstd();
-        
 
         // P&L Statistics Table
-        info!("--- Profit/Loss Statistics ---\n");
+        info!("--- Profit/Loss Statistics ---");
         let mut pnl_table = Table::new();
         pnl_table.set_format(*format::consts::FORMAT_BOX_CHARS);
         pnl_table.add_row(Row::new(vec![
@@ -184,10 +182,9 @@ impl SimulationStats {
             Cell::new(&format!("${:.2}", self.max_loss)).style_spec("Fr"),
         ]));
         pnl_table.printstd();
-        
 
         // Holding Period Table
-        info!("--- Holding Period ---\n");
+        info!("--- Holding Period ---");
         let mut holding_table = Table::new();
         holding_table.set_format(*format::consts::FORMAT_BOX_CHARS);
         holding_table.add_row(Row::new(vec![
@@ -199,10 +196,9 @@ impl SimulationStats {
             Cell::new(&format!("{:.2} steps", self.avg_holding_period)),
         ]));
         holding_table.printstd();
-        
 
         // Exit Reasons Table
-        info!("--- Exit Reasons ---\n");
+        info!("--- Exit Reasons ---");
         let mut exit_table = Table::new();
         exit_table.set_format(*format::consts::FORMAT_BOX_CHARS);
         exit_table.add_row(Row::new(vec![
@@ -220,13 +216,13 @@ impl SimulationStats {
             ]));
         }
         exit_table.printstd();
-        
-        info!("\n==================================================\n");
+
+        info!("==================================================");
     }
 
     /// Prints detailed results for each individual simulation in a table format.
     pub fn print_individual_results(&self) {
-        info!("\n========== INDIVIDUAL SIMULATION RESULTS ==========\n");
+        info!("========== INDIVIDUAL SIMULATION RESULTS ==========");
 
         let mut table = Table::new();
         table.set_format(*format::consts::FORMAT_BOX_CHARS);
@@ -256,6 +252,5 @@ impl SimulationStats {
         }
 
         table.printstd();
-        
     }
 }

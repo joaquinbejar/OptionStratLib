@@ -14,9 +14,9 @@
 
 use crate::Positive;
 use rust_decimal::Decimal;
+use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
 use std::fmt;
-use rust_decimal_macros::dec;
 
 /// Defines exit policies for option positions.
 ///
@@ -304,7 +304,6 @@ impl fmt::Display for ExitPolicy {
     }
 }
 
-
 /// Checks if an exit policy is triggered for a short put position.
 ///
 /// # Parameters
@@ -402,7 +401,7 @@ pub fn check_exit_policy(
                 None
             }
         }
-        ExitPolicy::Expiration => None, // Handled separately
+        ExitPolicy::Expiration => None,        // Handled separately
         ExitPolicy::DeltaThreshold(_) => None, // Not implemented in this example
         ExitPolicy::And(policies) => {
             let mut triggered = Vec::new();
