@@ -548,12 +548,24 @@ where
         sim: &Simulator<X, Y>,
         exit: ExitPolicy,
     ) -> Result<SimulationStats, Box<dyn Error>> {
+        use indicatif::{ProgressBar, ProgressStyle};
         use rust_decimal::MathematicalOps;
         use rust_decimal_macros::dec;
 
         let mut simulation_results = Vec::with_capacity(sim.len());
         let initial_premium = self.long_put.option.calculate_price_black_scholes()?.abs();
         let implied_volatility = self.long_put.option.implied_volatility;
+
+        // Create progress bar for simulations
+        let progress_bar = ProgressBar::new(sim.len() as u64);
+        progress_bar.set_style(
+            ProgressStyle::default_bar()
+                .template(
+                    "{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} simulations ({eta})",
+                )
+                .expect("Failed to set progress bar template")
+                .progress_chars("#>-"),
+        );
 
         for random_walk in sim.into_iter() {
             let mut max_premium = initial_premium;
@@ -660,7 +672,13 @@ where
                 holding_period,
                 exit_reason,
             });
+
+            // Update progress bar
+            progress_bar.inc(1);
         }
+
+        // Finish progress bar
+        progress_bar.finish_with_message("Simulations completed!");
 
         // Calculate aggregate statistics
         let total_simulations = simulation_results.len();

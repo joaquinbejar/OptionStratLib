@@ -55,6 +55,7 @@ uuid = { workspace = true, features = ["v4", "serde"] }
 prettytable-rs = { workspace = true }
 pretty-simple-display = { workspace = true }
 utoipa = { workspace = true, features = ["axum_extras", "chrono", "decimal"] }
+indicatif = { workspace = true }
 
 
 [dev-dependencies]
@@ -115,3 +116,4 @@ rand_distr = "0.5"
 prettytable-rs = "0.10"
 pretty-simple-display = "0.1"
 utoipa = { version = "5.4", features = ["axum_extras", "chrono", "decimal"] }
+indicatif = "0.17"

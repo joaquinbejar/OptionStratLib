@@ -38,7 +38,6 @@
 //! - Distribution of exit reasons
 //! - PNG visualization of the last simulation in `Draws/Simulation/short_put_strategy_simulation.png`
 
-use indicatif::{ProgressBar, ProgressStyle};
 use optionstratlib::Options;
 use optionstratlib::chains::generator_positive;
 use optionstratlib::model::types::{OptionStyle, OptionType, Side};
@@ -167,25 +166,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         generator_positive,
     );
 
-    // Create progress bar
-    let progress_bar = ProgressBar::new(n_simulations as u64);
-    progress_bar.set_style(
-        ProgressStyle::default_bar()
-            .template(
-                "{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} ({eta})",
-            )
-            .expect("Failed to set progress bar template")
-            .progress_chars("#>-"),
-    );
-
     info!("Running simulations using Simulate trait...");
-    progress_bar.set_message("Simulating...");
 
     // Use the Simulate trait to run all simulations
+    // (Progress bar is now handled inside the simulate method)
     let stats = strategy.simulate(&simulator, exit_policy)?;
-
-    // Finish progress bar
-    progress_bar.finish_with_message("Simulations completed!");
 
     // Print final statistics using the built-in formatting methods
     stats.print_summary();
