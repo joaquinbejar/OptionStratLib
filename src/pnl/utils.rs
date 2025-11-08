@@ -104,6 +104,41 @@ impl PnL {
             date_time,
         }
     }
+
+    /// Calculates the total P&L by summing realized and unrealized components.
+    ///
+    /// # Returns
+    ///
+    /// The total P&L as an `Option<Decimal>`. Returns `None` if both realized
+    /// and unrealized are `None`, otherwise returns the sum of available values.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use chrono::Utc;
+    /// use rust_decimal_macros::dec;
+    /// use optionstratlib::pnl::utils::PnL;
+    /// use optionstratlib::pos;
+    ///
+    /// let pnl = PnL::new(
+    ///     Some(dec!(500.0)),
+    ///     Some(dec!(250.0)),
+    ///     pos!(100.0),
+    ///     pos!(350.0),
+    ///     Utc::now(),
+    /// );
+    ///
+    /// assert_eq!(pnl.total_pnl(), Some(dec!(750.0)));
+    /// ```
+    #[must_use]
+    pub fn total_pnl(&self) -> Option<Decimal> {
+        match (self.realized, self.unrealized) {
+            (Some(r), Some(u)) => Some(r + u),
+            (Some(r), None) => Some(r),
+            (None, Some(u)) => Some(u),
+            (None, None) => None,
+        }
+    }
 }
 
 impl fmt::Display for PnL {

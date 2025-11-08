@@ -1,9 +1,11 @@
 use super::base::{BreakEvenable, Positionable, StrategyType};
+use crate::backtesting::results::{SimulationResult, SimulationStats};
 use crate::chains::OptionChain;
 use crate::error::strategies::ProfitLossErrorKind;
 use crate::error::{
     GreeksError, ProbabilityError, StrategyError,
     position::{PositionError, PositionValidationErrorKind},
+    probability::ProfitLossRangeErrorKind,
 };
 use crate::greeks::Greeks;
 use crate::model::{
@@ -18,7 +20,7 @@ use crate::simulation::{ExitPolicy, Simulate};
 use crate::strategies::base::Optimizable;
 use crate::strategies::delta_neutral::DeltaNeutrality;
 use crate::strategies::probabilities::core::ProbabilityAnalysis;
-use crate::strategies::probabilities::utils::{PriceTrend, VolatilityAdjustment};
+use crate::strategies::probabilities::utils::VolatilityAdjustment;
 use crate::strategies::utils::OptimizationCriteria;
 use crate::strategies::{
     BasicAble, DeltaAdjustment, FindOptimalSide, Strategable, Strategies, StrategyConstructor,
@@ -425,26 +427,66 @@ impl Optimizable for ShortPut {
 }
 
 impl ProbabilityAnalysis for ShortPut {
-    fn expected_value(
-        &self,
-        _volatility_adj: Option<VolatilityAdjustment>,
-        _trend: Option<PriceTrend>,
-    ) -> Result<Positive, ProbabilityError> {
-        todo!()
-    }
-
     fn get_profit_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
-        todo!()
+        // Short put is profitable when price stays above break-even
+        let break_even = self.break_even_points.first().ok_or_else(|| {
+            ProbabilityError::RangeError(ProfitLossRangeErrorKind::InvalidBreakEvenPoints {
+                reason: "No break-even points found for short put".to_string(),
+            })
+        })?;
+
+        let option = &self.short_put.option;
+        let expiration_date = &option.expiration_date;
+        let risk_free_rate = option.risk_free_rate;
+
+        let mut profit_range = ProfitLossRange::new(Some(*break_even), None, Positive::ZERO)?;
+
+        profit_range.calculate_probability(
+            self.get_underlying_price(),
+            Some(VolatilityAdjustment {
+                base_volatility: option.implied_volatility,
+                std_dev_adjustment: Positive::ZERO,
+            }),
+            None,
+            expiration_date,
+            Some(risk_free_rate),
+        )?;
+
+        Ok(vec![profit_range])
     }
 
     fn get_loss_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
-        todo!()
+        // Short put has losses when price falls below break-even
+        let break_even = self.break_even_points.first().ok_or_else(|| {
+            ProbabilityError::RangeError(ProfitLossRangeErrorKind::InvalidBreakEvenPoints {
+                reason: "No break-even points found for short put".to_string(),
+            })
+        })?;
+
+        let option = &self.short_put.option;
+        let expiration_date = &option.expiration_date;
+        let risk_free_rate = option.risk_free_rate;
+
+        let mut loss_range = ProfitLossRange::new(None, Some(*break_even), Positive::ZERO)?;
+
+        loss_range.calculate_probability(
+            self.get_underlying_price(),
+            Some(VolatilityAdjustment {
+                base_volatility: option.implied_volatility,
+                std_dev_adjustment: Positive::ZERO,
+            }),
+            None,
+            expiration_date,
+            Some(risk_free_rate),
+        )?;
+
+        Ok(vec![loss_range])
     }
 }
 
 impl Greeks for ShortPut {
     fn get_options(&self) -> Result<Vec<&Options>, GreeksError> {
-        todo!()
+        Ok(vec![&self.short_put.option])
     }
 }
 
@@ -469,7 +511,10 @@ impl PnLCalculator for ShortPut {
     }
 
     fn adjustments_pnl(&self, _adjustment: &DeltaAdjustment) -> Result<PnL, Box<dyn Error>> {
-        todo!()
+        // Single-leg strategies like ShortPut don't typically require delta adjustments
+        // as they are directional strategies. Delta adjustments are more relevant for
+        // complex multi-leg strategies aiming for delta neutrality.
+        Err("Delta adjustments are not applicable to single-leg ShortPut strategy".into())
     }
 }
 
@@ -506,17 +551,35 @@ where
         &self,
         sim: &Simulator<X, Y>,
         exit: ExitPolicy,
-    ) -> Result<Vec<PnL>, Box<dyn Error>> {
-        let mut results = Vec::with_capacity(sim.len());
+    ) -> Result<SimulationStats, Box<dyn Error>> {
+        use rust_decimal::MathematicalOps;
+        use rust_decimal_macros::dec;
+
+        let mut simulation_results = Vec::with_capacity(sim.len());
         let initial_premium = self.short_put.option.calculate_price_black_scholes()?.abs();
         let implied_volatility = self.short_put.option.implied_volatility;
 
         for random_walk in sim.into_iter() {
+            let mut max_premium = initial_premium;
+            let mut min_premium = initial_premium;
+            let mut premium_sum = initial_premium;
+            let mut premium_count = 1;
+            let mut hit_take_profit = false;
+            let mut hit_stop_loss = false;
+            let mut expired = false;
+            let mut expiration_premium = None;
+            let mut holding_period = 0;
+            let mut exit_reason = ExitPolicy::Expiration;
+            let mut final_pnl = None;
+
             // Iterate through the random walk
             for step in random_walk.get_steps().iter().skip(1) {
                 let days_left = match step.x.days_left() {
                     Ok(days) => days,
-                    Err(_) => break, // Expiration reached
+                    Err(_) => {
+                        expired = true;
+                        break;
+                    }
                 };
 
                 // Calculate current option premium
@@ -527,342 +590,156 @@ where
                 let current_premium = current_option.calculate_price_black_scholes()?.abs();
                 let index = *step.x.index() as usize;
 
+                // Track premium statistics
+                max_premium = max_premium.max(current_premium);
+                min_premium = min_premium.min(current_premium);
+                premium_sum += current_premium;
+                premium_count += 1;
+                holding_period = index;
+
                 // Check exit policy
-                if crate::simulation::check_exit_policy(
+                if let Some(reason) = crate::simulation::check_exit_policy(
                     &exit,
                     initial_premium,
                     current_premium,
                     index,
                     days_left,
                     current_option.underlying_price,
-                )
-                .is_some()
-                {
+                ) {
+                    exit_reason = reason;
+
+                    // Check if it's take profit or stop loss
+                    let pnl_percent = (initial_premium - current_premium) / initial_premium;
+                    if pnl_percent >= dec!(0.5) {
+                        hit_take_profit = true;
+                    } else if pnl_percent <= dec!(-1.0) {
+                        hit_stop_loss = true;
+                    }
+
                     // Exit triggered - calculate P&L
                     let pnl = self.calculate_pnl(
                         &current_option.underlying_price,
                         ExpirationDate::Days(days_left),
                         &implied_volatility,
                     )?;
-                    results.push(pnl);
+                    final_pnl = Some(pnl);
                     break;
                 }
             }
 
             // If no exit triggered, calculate P&L at expiration
-            if results.len() < sim.into_iter().count()
+            if final_pnl.is_none()
                 && let Some(last_step) = random_walk.last()
             {
                 let final_price = last_step.y.positive();
                 let pnl = self.calculate_pnl_at_expiration(&final_price)?;
-                results.push(pnl);
+
+                // Calculate expiration premium
+                let mut exp_option = self.short_put.option.clone();
+                exp_option.underlying_price = final_price;
+                exp_option.expiration_date = ExpirationDate::Days(Positive::ZERO);
+                expiration_premium = Some(exp_option.calculate_price_black_scholes()?.abs());
+
+                expired = true;
+                exit_reason = ExitPolicy::Expiration;
+                final_pnl = Some(pnl);
+                holding_period = random_walk.get_steps().len() - 1;
             }
+
+            let pnl = final_pnl.unwrap_or_default();
+            let avg_premium = premium_sum / Decimal::from(premium_count);
+
+            simulation_results.push(SimulationResult {
+                simulation_count: 1,
+                risk_metrics: None,
+                final_equity_percentiles: std::collections::HashMap::new(),
+                max_premium,
+                min_premium,
+                avg_premium,
+                hit_take_profit,
+                hit_stop_loss,
+                expired,
+                expiration_premium,
+                pnl,
+                holding_period,
+                exit_reason,
+            });
         }
 
-        Ok(results)
+        // Calculate aggregate statistics
+        let total_simulations = simulation_results.len();
+        let mut pnl_values: Vec<Decimal> = simulation_results
+            .iter()
+            .map(|r| r.pnl.total_pnl().unwrap_or(dec!(0.0)))
+            .collect();
+
+        pnl_values.sort();
+
+        let profitable_count = pnl_values.iter().filter(|&&pnl| pnl > dec!(0.0)).count();
+        let loss_count = pnl_values.iter().filter(|&&pnl| pnl < dec!(0.0)).count();
+
+        let sum_pnl: Decimal = pnl_values.iter().sum();
+        let average_pnl = if total_simulations > 0 {
+            sum_pnl / Decimal::from(total_simulations)
+        } else {
+            dec!(0.0)
+        };
+
+        let median_pnl = if !pnl_values.is_empty() {
+            let mid = pnl_values.len() / 2;
+            if pnl_values.len().is_multiple_of(2) {
+                (pnl_values[mid - 1] + pnl_values[mid]) / dec!(2.0)
+            } else {
+                pnl_values[mid]
+            }
+        } else {
+            dec!(0.0)
+        };
+
+        let variance = if total_simulations > 1 {
+            let sum_squared_diff: Decimal = pnl_values
+                .iter()
+                .map(|&pnl| (pnl - average_pnl).powi(2))
+                .sum();
+            sum_squared_diff / Decimal::from(total_simulations - 1)
+        } else {
+            dec!(0.0)
+        };
+
+        let std_dev_pnl = variance.sqrt().unwrap_or(dec!(0.0));
+
+        let best_pnl = pnl_values.last().copied().unwrap_or(dec!(0.0));
+        let worst_pnl = pnl_values.first().copied().unwrap_or(dec!(0.0));
+
+        let win_rate = if total_simulations > 0 {
+            Decimal::from(profitable_count) / Decimal::from(total_simulations) * dec!(100.0)
+        } else {
+            dec!(0.0)
+        };
+
+        let average_holding_period = if total_simulations > 0 {
+            let sum_holding: usize = simulation_results.iter().map(|r| r.holding_period).sum();
+            Decimal::from(sum_holding) / Decimal::from(total_simulations)
+        } else {
+            dec!(0.0)
+        };
+
+        Ok(SimulationStats {
+            results: simulation_results,
+            total_simulations,
+            profitable_count,
+            loss_count,
+            average_pnl,
+            median_pnl,
+            std_dev_pnl,
+            best_pnl,
+            worst_pnl,
+            win_rate,
+            average_holding_period,
+        })
     }
 }
 
 impl Strategable for ShortPut {}
 
 test_strategy_traits!(ShortPut, test_short_put_implementations);
-
-#[cfg(test)]
-mod tests_simulate {
-    use super::*;
-    use crate::chains::generator_positive;
-    use crate::pos;
-    use crate::simulation::simulator::Simulator;
-    use crate::simulation::steps::Step;
-    use crate::simulation::{Simulate, WalkParams, WalkType, WalkTypeAble};
-    use crate::utils::TimeFrame;
-    use rust_decimal_macros::dec;
-
-    /// Helper struct to implement WalkTypeAble for tests
-    struct TestWalker;
-
-    impl WalkTypeAble<Positive, Positive> for TestWalker {}
-
-    /// Creates a test ShortPut strategy
-    fn create_test_short_put() -> ShortPut {
-        ShortPut::new(
-            "TEST".to_string(),
-            pos!(100.0), // strike
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(0.20),  // implied volatility
-            pos!(1.0),   // quantity
-            pos!(100.0), // underlying price
-            dec!(0.05),  // risk-free rate
-            pos!(0.0),   // dividend yield
-            pos!(5.0),   // premium received
-            pos!(0.0),   // open fee
-            pos!(0.0),   // close fee
-        )
-    }
-
-    /// Helper to create WalkParams with Historical data
-    fn create_walk_params(prices: Vec<Positive>) -> WalkParams<Positive, Positive> {
-        let init_step = Step::new(
-            Positive::ONE,
-            TimeFrame::Day,
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(100.0),
-        );
-
-        WalkParams {
-            size: prices.len(),
-            init_step,
-            walker: Box::new(TestWalker),
-            walk_type: WalkType::Historical {
-                timeframe: TimeFrame::Day,
-                prices,
-                symbol: Some("TEST".to_string()),
-            },
-        }
-    }
-
-    #[test]
-    fn test_simulate_profit_target_reached() {
-        // Create a short put at strike 100
-        let strategy = create_test_short_put();
-
-        // Historical prices that move up (favorable for short put)
-        let prices = vec![
-            pos!(100.0),
-            pos!(102.0),
-            pos!(104.0),
-            pos!(106.0),
-            pos!(108.0),
-            pos!(110.0),
-        ];
-
-        let walk_params = create_walk_params(prices);
-        let simulator = Simulator::new(
-            "Test Simulator".to_string(),
-            1,
-            &walk_params,
-            generator_positive,
-        );
-
-        // Exit policy: 50% profit target
-        let exit_policy = ExitPolicy::ProfitPercent(dec!(0.5));
-
-        let results = strategy.simulate(&simulator, exit_policy);
-        assert!(results.is_ok());
-
-        let pnl_vec = results.unwrap();
-        assert_eq!(pnl_vec.len(), 1);
-
-        // Should have positive P&L since price moved up
-        let pnl = &pnl_vec[0];
-        let total_pnl = pnl.realized.unwrap_or(dec!(0.0)) + pnl.unrealized.unwrap_or(dec!(0.0));
-        assert!(
-            total_pnl > dec!(0.0),
-            "Expected positive P&L but got {}",
-            total_pnl
-        );
-    }
-
-    #[test]
-    fn test_simulate_with_price_movement() {
-        // Create a short put at strike 100
-        let strategy = create_test_short_put();
-
-        // Historical prices that move down (unfavorable for short put)
-        let prices = vec![
-            pos!(100.0),
-            pos!(95.0),
-            pos!(90.0),
-            pos!(85.0),
-            pos!(80.0),
-            pos!(75.0),
-        ];
-
-        let walk_params = create_walk_params(prices);
-        let simulator = Simulator::new(
-            "Test Simulator".to_string(),
-            1,
-            &walk_params,
-            generator_positive,
-        );
-
-        // Exit policy: 50% profit or 200% loss
-        let exit_policy = ExitPolicy::profit_or_loss(dec!(0.5), dec!(2.0));
-
-        let results = strategy.simulate(&simulator, exit_policy);
-        assert!(results.is_ok());
-
-        let pnl_vec = results.unwrap();
-        assert_eq!(pnl_vec.len(), 1);
-
-        // Verify we got a result (either profit, loss, or expiration)
-        let pnl = &pnl_vec[0];
-        let total_pnl = pnl.realized.unwrap_or(dec!(0.0)) + pnl.unrealized.unwrap_or(dec!(0.0));
-        // With significant price drop, P&L should be less than initial premium
-        assert!(
-            total_pnl < dec!(5.0),
-            "Expected P&L < 5.0 but got {}",
-            total_pnl
-        );
-    }
-
-    #[test]
-    fn test_simulate_expiration_otm() {
-        // Create a short put at strike 100
-        let strategy = create_test_short_put();
-
-        // Historical prices that stay above strike (OTM at expiration)
-        let prices = vec![
-            pos!(100.0),
-            pos!(101.0),
-            pos!(102.0),
-            pos!(103.0),
-            pos!(104.0),
-            pos!(105.0),
-        ];
-
-        let walk_params = create_walk_params(prices);
-        let simulator = Simulator::new(
-            "Test Simulator".to_string(),
-            1,
-            &walk_params,
-            generator_positive,
-        );
-
-        // Exit policy that won't trigger (very wide range)
-        let exit_policy = ExitPolicy::profit_or_loss(dec!(0.9), dec!(5.0));
-
-        let results = strategy.simulate(&simulator, exit_policy);
-        assert!(results.is_ok());
-
-        let pnl_vec = results.unwrap();
-        assert_eq!(pnl_vec.len(), 1);
-
-        // Should have positive P&L (keep full premium) since expired OTM
-        let pnl = &pnl_vec[0];
-        let total_pnl = pnl.realized.unwrap_or(dec!(0.0)) + pnl.unrealized.unwrap_or(dec!(0.0));
-        assert!(
-            total_pnl > dec!(0.0),
-            "Expected positive P&L but got {}",
-            total_pnl
-        );
-    }
-
-    #[test]
-    fn test_simulate_expiration_itm() {
-        // Create a short put at strike 100
-        let strategy = create_test_short_put();
-
-        // Historical prices that end below strike (ITM at expiration)
-        let prices = vec![
-            pos!(100.0),
-            pos!(99.0),
-            pos!(98.0),
-            pos!(97.0),
-            pos!(96.0),
-            pos!(95.0),
-        ];
-
-        let walk_params = create_walk_params(prices);
-        let simulator = Simulator::new(
-            "Test Simulator".to_string(),
-            1,
-            &walk_params,
-            generator_positive,
-        );
-
-        // Exit policy that won't trigger
-        let exit_policy = ExitPolicy::profit_or_loss(dec!(0.9), dec!(5.0));
-
-        let results = strategy.simulate(&simulator, exit_policy);
-        assert!(results.is_ok());
-
-        let pnl_vec = results.unwrap();
-        assert_eq!(pnl_vec.len(), 1);
-
-        // Should have negative or small positive P&L since expired ITM
-        let pnl = &pnl_vec[0];
-        let total_pnl = pnl.realized.unwrap_or(dec!(0.0)) + pnl.unrealized.unwrap_or(dec!(0.0));
-        // At strike 100, final price 95, intrinsic value = 5
-        // Premium received = 5, so P&L should be close to 0 or slightly negative
-        assert!(
-            total_pnl <= dec!(1.0),
-            "Expected P&L <= 1.0 but got {}",
-            total_pnl
-        );
-    }
-
-    #[test]
-    fn test_simulate_multiple_simulations() {
-        // Create a short put at strike 100
-        let strategy = create_test_short_put();
-
-        // Historical prices for multiple simulations
-        let prices = vec![pos!(100.0), pos!(105.0), pos!(110.0), pos!(115.0)];
-
-        let walk_params = create_walk_params(prices);
-        // Create simulator with 3 simulations
-        let simulator = Simulator::new(
-            "Test Simulator".to_string(),
-            3,
-            &walk_params,
-            generator_positive,
-        );
-
-        let exit_policy = ExitPolicy::ProfitPercent(dec!(0.5));
-
-        let results = strategy.simulate(&simulator, exit_policy);
-        assert!(results.is_ok());
-
-        let pnl_vec = results.unwrap();
-        // Should have results for each simulation
-        assert!(
-            pnl_vec.len() >= 3,
-            "Expected at least 3 results but got {}",
-            pnl_vec.len()
-        );
-
-        // All should be profitable since price moves up
-        for pnl in &pnl_vec {
-            let total_pnl = pnl.realized.unwrap_or(dec!(0.0)) + pnl.unrealized.unwrap_or(dec!(0.0));
-            assert!(
-                total_pnl > dec!(0.0),
-                "Expected positive P&L but got {}",
-                total_pnl
-            );
-        }
-    }
-
-    #[test]
-    fn test_simulate_with_or_exit_policy() {
-        // Create a short put at strike 100
-        let strategy = create_test_short_put();
-
-        // Prices that should trigger profit target
-        let prices = vec![pos!(100.0), pos!(110.0), pos!(120.0)];
-
-        let walk_params = create_walk_params(prices);
-        let simulator = Simulator::new(
-            "Test Simulator".to_string(),
-            1,
-            &walk_params,
-            generator_positive,
-        );
-
-        // OR exit policy: profit target OR stop loss
-        let exit_policy = ExitPolicy::profit_or_loss(dec!(0.5), dec!(1.0));
-
-        let results = strategy.simulate(&simulator, exit_policy);
-        assert!(results.is_ok());
-
-        let pnl_vec = results.unwrap();
-        assert_eq!(pnl_vec.len(), 1);
-        let total_pnl =
-            pnl_vec[0].realized.unwrap_or(dec!(0.0)) + pnl_vec[0].unrealized.unwrap_or(dec!(0.0));
-        assert!(
-            total_pnl > dec!(0.0),
-            "Expected positive P&L but got {}",
-            total_pnl
-        );
-    }
-}

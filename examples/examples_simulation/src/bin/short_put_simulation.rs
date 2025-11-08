@@ -36,6 +36,7 @@
 use indicatif::{ProgressBar, ProgressStyle};
 use optionstratlib::backtesting::results::SimulationResult;
 use optionstratlib::chains::generator_positive;
+use optionstratlib::pnl::PnL;
 use optionstratlib::prelude::*;
 use optionstratlib::simulation::simulator::Simulator;
 use optionstratlib::simulation::steps::{Step, Xstep, Ystep};
@@ -86,7 +87,7 @@ fn evaluate_short_put_strategy(
     random_walk: &RandomWalk<Positive, Positive>,
     option: &Options,
     initial_premium: Decimal,
-    implied_volatility: &Positive,
+    _implied_volatility: &Positive,
     exit_policy: &ExitPolicy,
 ) -> SimulationResult {
     let profit_target = initial_premium * dec!(0.5); // 50% profit (premium drops to 50%)
@@ -162,7 +163,13 @@ fn evaluate_short_put_strategy(
             *market_price,
         ) {
             // Calculate P&L based on current premium
-            let pnl = initial_premium - current_premium;
+            let pnl = PnL {
+                realized: Some(initial_premium - current_premium),
+                unrealized: None,
+                initial_costs: Default::default(),
+                initial_income: Default::default(),
+                date_time: Default::default(),
+            };
 
             debug!(
                 "Simulation {}: Exit at step {} - Strike: ${}, Underlying: ${}, Premium: ${}, P&L: ${}, Reason: {}",
@@ -212,7 +219,13 @@ fn evaluate_short_put_strategy(
         } else {
             dec!(0.0)
         };
-        let pnl = initial_premium - final_premium;
+        let pnl = PnL {
+            realized: Some(initial_premium - final_premium),
+            unrealized: None,
+            initial_costs: Default::default(),
+            initial_income: Default::default(),
+            date_time: Default::default(),
+        };
 
         // Check if expiration would have triggered exit policy
         // This handles cases where the intrinsic value at expiration exceeds stop loss
@@ -302,7 +315,13 @@ fn evaluate_short_put_strategy(
         hit_stop_loss: false,
         expired: true,
         expiration_premium: None,
-        pnl: dec!(0.0),
+        pnl: PnL {
+            realized: None,
+            unrealized: None,
+            initial_costs: Default::default(),
+            initial_income: Default::default(),
+            date_time: Default::default(),
+        },
         holding_period: random_walk.len(),
         exit_reason: ExitPolicy::Expiration,
     }

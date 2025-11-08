@@ -70,7 +70,7 @@ impl SimulationStats {
     /// * `result` - The simulation result containing all metrics
     pub fn update(&mut self, result: SimulationResult) {
         self.total_simulations += 1;
-        self.total_pnl += result.pnl;
+        self.total_pnl += result.pnl.realized.unwrap_or(dec!(0.0));
 
         if result.hit_take_profit {
             self.profitable_closes += 1;
@@ -86,11 +86,13 @@ impl SimulationStats {
             .entry(result.exit_reason.clone())
             .or_insert(0) += 1;
 
-        if result.pnl > self.max_profit {
-            self.max_profit = result.pnl;
-        }
-        if result.pnl < self.max_loss {
-            self.max_loss = result.pnl;
+        if let Some(realized) = result.pnl.realized {
+            if realized > self.max_profit {
+                self.max_profit = realized;
+            }
+            if realized < self.max_loss {
+                self.max_loss = realized;
+            }
         }
 
         // Update average holding period

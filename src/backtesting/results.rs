@@ -10,6 +10,7 @@ use crate::backtesting::types::{
     CapitalUtilization, DrawdownAnalysis, TimeSeriesData, TradeRecord, TradeStatistics,
     VolatilityData,
 };
+use crate::pnl::PnL;
 use crate::risk::RiskMetricsSimulation;
 use crate::simulation::ExitPolicy;
 use chrono::{DateTime, Utc};
@@ -105,11 +106,51 @@ pub struct SimulationResult {
     pub expiration_premium: Option<Decimal>,
 
     /// Final P&L
-    pub pnl: Decimal,
+    pub pnl: PnL,
 
     /// Holding period in steps
     pub holding_period: usize,
 
     /// Exit policy that triggered the exit
     pub exit_reason: ExitPolicy,
+}
+
+/// Statistics aggregated from multiple simulation runs.
+///
+/// This struct contains a vector of individual simulation results along with
+/// aggregate statistics computed across all simulations.
+#[derive(DebugPretty, DisplaySimple, Clone, Serialize, Deserialize, Default)]
+pub struct SimulationStats {
+    /// Individual results from each simulation run
+    pub results: Vec<SimulationResult>,
+
+    /// Total number of simulations performed
+    pub total_simulations: usize,
+
+    /// Number of profitable simulations
+    pub profitable_count: usize,
+
+    /// Number of loss-making simulations
+    pub loss_count: usize,
+
+    /// Average P&L across all simulations
+    pub average_pnl: Decimal,
+
+    /// Median P&L across all simulations
+    pub median_pnl: Decimal,
+
+    /// Standard deviation of P&L
+    pub std_dev_pnl: Decimal,
+
+    /// Best (maximum) P&L achieved
+    pub best_pnl: Decimal,
+
+    /// Worst (minimum) P&L achieved
+    pub worst_pnl: Decimal,
+
+    /// Win rate (percentage of profitable simulations)
+    pub win_rate: Decimal,
+
+    /// Average holding period across all simulations
+    pub average_holding_period: Decimal,
 }

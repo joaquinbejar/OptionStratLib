@@ -1,6 +1,6 @@
 use crate::Positive;
+use crate::backtesting::results::SimulationStats;
 use crate::model::decimal::decimal_normal_sample;
-use crate::pnl::PnL;
 use crate::simulation::simulator::Simulator;
 use crate::simulation::{ExitPolicy, WalkParams, WalkType};
 use crate::volatility::generate_ou_process;
@@ -664,7 +664,9 @@ where
     ///
     /// # Returns
     ///
-    /// A vector of `PnL` results, one for each simulation run
+    /// A `SimulationStats` struct containing:
+    /// - Individual `SimulationResult` for each run (with P&L, exit reason, holding period, etc.)
+    /// - Aggregate statistics (average P&L, win rate, std deviation, etc.)
     ///
     /// # Errors
     ///
@@ -672,8 +674,11 @@ where
     /// - Option pricing calculations fail
     /// - P&L calculations encounter errors
     /// - Invalid strategy parameters are detected
-    fn simulate(&self, sim: &Simulator<X, Y>, exit: ExitPolicy)
-    -> Result<Vec<PnL>, Box<dyn Error>>;
+    fn simulate(
+        &self,
+        sim: &Simulator<X, Y>,
+        exit: ExitPolicy,
+    ) -> Result<SimulationStats, Box<dyn Error>>;
 }
 
 #[cfg(test)]
