@@ -1,4 +1,5 @@
 use optionstratlib::chains::generator_positive;
+use optionstratlib::prelude::volatility_for_dt;
 use optionstratlib::simulation::simulator::Simulator;
 use optionstratlib::simulation::steps::{Step, Xstep, Ystep};
 use optionstratlib::simulation::{WalkParams, WalkType, WalkTypeAble};
@@ -23,11 +24,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     setup_logger();
     let simulator_size: usize = 35;
     // let n_steps = 43_200; // 30 days in minutes
-    let n_steps = 11200;
-    let initial_price = pos!(1200.0);
-    let iv = pos!(0.20);
+    let n_steps = 10080;
+    let initial_price = pos!(4011.0);
+    let iv = pos!(0.27);
     let walker = Box::new(Walker::new());
-    let days = pos!(30.0);
+    let days = pos!(7.0);
+    let dt = convert_time_frame(pos!(1.0) / days, &TimeFrame::Minute, &TimeFrame::Day);
+    let volatility_dt = volatility_for_dt(iv, dt, TimeFrame::Minute, TimeFrame::Day)?;
 
     let walk_params = WalkParams {
         size: n_steps,
@@ -35,10 +38,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             x: Xstep::new(Positive::ONE, TimeFrame::Minute, ExpirationDate::Days(days)),
             y: Ystep::new(0, initial_price),
         },
-        walk_type: WalkType::GeometricBrownian {
-            dt: convert_time_frame(pos!(1.0) / days, &TimeFrame::Minute, &TimeFrame::Day),
+        walk_type: WalkType::Brownian {
+            dt,
             drift: dec!(0.0),
-            volatility: iv,
+            volatility: volatility_dt,
         },
         walker,
     };
@@ -51,11 +54,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
     debug!("Simulator: {}", simulator);
 
-    let last_steps: Vec<&Step<Positive, Positive>> = simulator
-        .into_iter()
-        .map(|step| step.last().unwrap())
-        .collect();
-    info!("Last Steps: {:?}", last_steps);
+    // let last_steps: Vec<&Step<Positive, Positive>> = simulator
+    //     .into_iter()
+    //     .map(|step| step.last().unwrap())
+    //     .collect();
+    // info!("Last Steps: {:?}", last_steps);
 
     let last_values: Vec<&Positive> = simulator
         .into_iter()

@@ -9,7 +9,7 @@ use crate::simulation::{WalkParams, WalkType};
 use crate::utils::TimeFrame;
 use crate::utils::others::calculate_log_returns;
 use crate::volatility::{adjust_volatility, constant_volatility};
-use crate::{Positive, pos};
+use crate::{ExpirationDate, Positive, pos};
 use core::option::Option;
 use rust_decimal::Decimal;
 use std::error::Error;
@@ -36,6 +36,7 @@ fn create_chain_from_step(
     previous_y_step: &Ystep<OptionChain>,
     new_price: Option<Box<Positive>>,
     volatility: Option<Positive>,
+    expiration_date: Option<ExpirationDate>,
 ) -> Result<OptionChain, Box<dyn Error>> {
     let chain = previous_y_step.value();
     let mut chain_params = chain.to_build_params()?;
@@ -43,8 +44,12 @@ fn create_chain_from_step(
     if let Some(volatility) = volatility {
         chain_params.set_implied_volatility(volatility);
     }
+    if let Some(exp_date) = expiration_date {
+        chain_params.price_params.expiration_date = Some(exp_date);
+    }
 
-    let new_chain = OptionChain::build_chain(&chain_params);
+    let mut new_chain = OptionChain::build_chain(&chain_params);
+    new_chain.update_greeks();
     Ok(new_chain)
 }
 
@@ -144,9 +149,15 @@ pub fn generator_optionchain(
             Ok(x_step) => x_step,
             Err(_) => break,
         };
-        // convert y_step to OptionChain
-        let y_step_chain: OptionChain =
-            create_chain_from_step(&previous_y_step, Some(Box::new(*y_step)), volatility).unwrap();
+        // convert y_step to OptionChain with updated expiration date
+        let expiration_date = *previous_x_step.datetime();
+        let y_step_chain: OptionChain = create_chain_from_step(
+            &previous_y_step,
+            Some(Box::new(*y_step)),
+            volatility,
+            Some(expiration_date),
+        )
+        .unwrap();
         previous_y_step = previous_y_step.next(y_step_chain).clone();
         let step = Step {
             x: previous_x_step,
@@ -242,7 +253,7 @@ mod tests {
             y: Ystep::new(0, initial_price),
         };
 
-        let result = create_chain_from_step(&step.y, Some(Box::new(new_price)), None);
+        let result = create_chain_from_step(&step.y, Some(Box::new(new_price)), None, None);
         assert!(result.is_ok());
 
         let new_chain = result.unwrap();

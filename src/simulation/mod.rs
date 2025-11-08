@@ -116,6 +116,22 @@ mod traits;
 /// They encapsulate all the necessary inputs while ensuring proper validation.
 mod params;
 
+/// Module containing exit policy definitions for option trading strategies.
+///
+/// This module defines various exit conditions and policies that can be used
+/// to determine when to close an option position during simulations or live trading.
+/// Exit policies include percentage-based targets, fixed prices, time-based exits,
+/// and composite conditions using AND/OR logic.
+///
+/// # Usage
+///
+/// Exit policies are used in simulations to automatically close positions when
+/// specific conditions are met, enabling systematic strategy testing and risk management.
+pub mod exit;
+mod stats;
+
+pub use exit::{check_exit_policy, ExitPolicy};
 pub use model::WalkType;
 pub use params::WalkParams;
+pub use stats::SimulationStats;
 pub use traits::WalkTypeAble;
