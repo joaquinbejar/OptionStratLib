@@ -342,7 +342,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     setup_logger();
 
     // Simulation parameters
-    let n_simulations = 1000; // Number of simulations to run
+    let n_simulations = 10; // Number of simulations to run
     let n_steps = 10080; // 7 days in minutes
     let underlying_price = pos!(4011.95);
     let days = pos!(7.0);
@@ -470,7 +470,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     stats.print_individual_results();
 
     // Save the simulator visualization
-    info!("Generating visualization for all simulations...");
     let path: &std::path::Path = "Draws/Simulation/short_put_simulation.png".as_ref();
     simulator.write_png(path)?;
     info!("Visualization saved to: {:?}", path);

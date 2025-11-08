@@ -1,5 +1,6 @@
 use super::base::{BreakEvenable, Positionable, StrategyType};
 use crate::backtesting::results::{SimulationResult, SimulationStats};
+
 use crate::chains::OptionChain;
 use crate::error::strategies::ProfitLossErrorKind;
 use crate::error::{

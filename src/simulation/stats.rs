@@ -247,7 +247,7 @@ impl SimulationStats {
                 Cell::new(&format!("${:.2}", result.max_premium)),
                 Cell::new(&format!("${:.2}", result.min_premium)),
                 Cell::new(&format!("${:.2}", result.avg_premium)),
-                Cell::new(&format!("${:.2}", result.pnl)),
+                Cell::new(&format!("${:.2}", result.pnl.realized.unwrap_or(dec!(0.0)))),
                 Cell::new(&result.holding_period.to_string()),
                 Cell::new(&result.exit_reason.to_string()),
             ]));

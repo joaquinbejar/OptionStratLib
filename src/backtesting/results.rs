@@ -186,3 +186,193 @@ pub struct SimulationStats {
     /// Average holding period across all simulations
     pub average_holding_period: Decimal,
 }
+
+impl SimulationStats {
+    /// Prints a formatted summary of the simulation statistics.
+    ///
+    /// This method outputs comprehensive statistics including:
+    /// - Total number of simulations
+    /// - Trade outcomes (profitable, loss, expired)
+    /// - P&L statistics (total, average, max, min)
+    /// - Holding period information
+    /// - Exit reason distribution
+    pub fn print_summary(&self) {
+        use prettytable::{Cell, Row, Table, format};
+        use tracing::info;
+
+        info!("--- Simulation Summary ---");
+
+        // General Info Table
+        let mut general_table = Table::new();
+        general_table.set_format(*format::consts::FORMAT_BOX_CHARS);
+        general_table.set_titles(Row::new(vec![
+            Cell::new("Metric"),
+            Cell::new("Value"),
+        ]));
+        general_table.add_row(Row::new(vec![
+            Cell::new("Total Simulations"),
+            Cell::new(&self.total_simulations.to_string()),
+        ]));
+        general_table.printstd();
+
+        // Trade Outcomes Table
+        info!("--- Trade Outcomes ---");
+        let mut outcomes_table = Table::new();
+        outcomes_table.set_format(*format::consts::FORMAT_BOX_CHARS);
+        outcomes_table.set_titles(Row::new(vec![
+            Cell::new("Outcome"),
+            Cell::new("Count"),
+            Cell::new("Percentage"),
+        ]));
+
+        let expired_count = self.results.iter().filter(|r| r.expired).count();
+
+        outcomes_table.add_row(Row::new(vec![
+            Cell::new("Profitable Trades"),
+            Cell::new(&self.profitable_count.to_string()),
+            Cell::new(&format!("{:.2}%", self.win_rate)),
+        ]));
+        outcomes_table.add_row(Row::new(vec![
+            Cell::new("Loss Trades"),
+            Cell::new(&self.loss_count.to_string()),
+            Cell::new(&format!(
+                "{:.2}%",
+                (self.loss_count as f64 / self.total_simulations as f64) * 100.0
+            )),
+        ]));
+        outcomes_table.add_row(Row::new(vec![
+            Cell::new("Expired Trades"),
+            Cell::new(&expired_count.to_string()),
+            Cell::new(&format!(
+                "{:.2}%",
+                (expired_count as f64 / self.total_simulations as f64) * 100.0
+            )),
+        ]));
+        outcomes_table.printstd();
+
+        // P&L Statistics Table
+        info!("--- Profit/Loss Statistics ---");
+        let mut pnl_table = Table::new();
+        pnl_table.set_format(*format::consts::FORMAT_BOX_CHARS);
+        pnl_table.set_titles(Row::new(vec![
+            Cell::new("Metric"),
+            Cell::new("Amount"),
+        ]));
+
+        let total_pnl: Decimal = self.results.iter()
+            .filter_map(|r| r.pnl.total_pnl())
+            .sum();
+
+        pnl_table.add_row(Row::new(vec![
+            Cell::new("Total P&L"),
+            Cell::new(&format!("${:.2}", total_pnl)),
+        ]));
+        pnl_table.add_row(Row::new(vec![
+            Cell::new("Average P&L per Trade"),
+            Cell::new(&format!("${:.2}", self.average_pnl)),
+        ]));
+        pnl_table.add_row(Row::new(vec![
+            Cell::new("Median P&L"),
+            Cell::new(&format!("${:.2}", self.median_pnl)),
+        ]));
+        pnl_table.add_row(Row::new(vec![
+            Cell::new("Std Dev P&L"),
+            Cell::new(&format!("${:.2}", self.std_dev_pnl)),
+        ]));
+        pnl_table.add_row(Row::new(vec![
+            Cell::new("Maximum Profit"),
+            Cell::new(&format!("${:.2}", self.best_pnl)),
+        ]));
+        pnl_table.add_row(Row::new(vec![
+            Cell::new("Maximum Loss"),
+            Cell::new(&format!("${:.2}", self.worst_pnl)),
+        ]));
+        pnl_table.printstd();
+
+        // Holding Period Table
+        info!("--- Holding Period ---");
+        let mut holding_table = Table::new();
+        holding_table.set_format(*format::consts::FORMAT_BOX_CHARS);
+        holding_table.set_titles(Row::new(vec![
+            Cell::new("Metric"),
+            Cell::new("Value"),
+        ]));
+        holding_table.add_row(Row::new(vec![
+            Cell::new("Average Holding Period"),
+            Cell::new(&format!("{:.2} steps", self.average_holding_period)),
+        ]));
+        holding_table.printstd();
+
+        // Exit Reasons Table
+        info!("--- Exit Reasons ---");
+        let mut exit_reasons: HashMap<String, usize> = HashMap::new();
+        for result in &self.results {
+            *exit_reasons.entry(result.exit_reason.to_string()).or_insert(0) += 1;
+        }
+
+        let mut exit_table = Table::new();
+        exit_table.set_format(*format::consts::FORMAT_BOX_CHARS);
+        exit_table.set_titles(Row::new(vec![
+            Cell::new("Exit Reason"),
+            Cell::new("Count"),
+            Cell::new("Percentage"),
+        ]));
+
+        for (reason, count) in exit_reasons.iter() {
+            exit_table.add_row(Row::new(vec![
+                Cell::new(reason),
+                Cell::new(&count.to_string()),
+                Cell::new(&format!(
+                    "{:.2}%",
+                    (*count as f64 / self.total_simulations as f64) * 100.0
+                )),
+            ]));
+        }
+
+        exit_table.printstd();
+        
+    }
+
+    /// Prints individual results for each simulation.
+    ///
+    /// This method outputs a detailed table showing:
+    /// - Simulation number
+    /// - Maximum and minimum premium observed
+    /// - Average premium
+    /// - Final P&L
+    /// - Holding period
+    /// - Exit reason
+    pub fn print_individual_results(&self) {
+        use prettytable::{Cell, Row, Table, format};
+        use tracing::info;
+
+        info!("--- Individual Simulation Results ---");
+
+        let mut table = Table::new();
+        table.set_format(*format::consts::FORMAT_BOX_CHARS);
+        table.set_titles(Row::new(vec![
+            Cell::new("Sim"),
+            Cell::new("Max\nPremium"),
+            Cell::new("Min\nPremium"),
+            Cell::new("Avg\nPremium"),
+            Cell::new("Final\nP&L"),
+            Cell::new("Holding\nPeriod"),
+            Cell::new("Exit\nReason"),
+        ]));
+
+        for result in &self.results {
+            let pnl = result.pnl.total_pnl().unwrap_or_default();
+            table.add_row(Row::new(vec![
+                Cell::new(&result.simulation_count.to_string()),
+                Cell::new(&format!("${:.2}", result.max_premium)),
+                Cell::new(&format!("${:.2}", result.min_premium)),
+                Cell::new(&format!("${:.2}", result.avg_premium)),
+                Cell::new(&format!("${:.2}", pnl)),
+                Cell::new(&result.holding_period.to_string()),
+                Cell::new(&result.exit_reason.to_string()),
+            ]));
+        }
+        
+        table.printstd();
+    }
+}
