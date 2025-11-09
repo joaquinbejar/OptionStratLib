@@ -148,7 +148,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             drift: dec!(-0.1),
             volatility: volatility_dt,
             vov: pos!(0.02),         // Volatility of volatility (2%)
-            vol_speed: pos!(0.5),    // Mean reversion speed
+            vol_speed: pos!(0.2),    // Mean reversion speed
             vol_mean: volatility_dt, // Mean volatility level (same as initial)
         },
         walker,

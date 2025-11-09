@@ -74,7 +74,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     setup_logger();
 
     // Simulation parameters
-    let n_simulations = 100; // Number of simulations to run
+    let n_simulations = 1000; // Number of simulations to run
     let n_steps = 10080; // 7 days in minutes
     let underlying_price = pos!(4011.95);
     let days = pos!(7.0);
@@ -152,10 +152,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         },
         walk_type: WalkType::Custom {
             dt,
-            drift: dec!(0.1), // Slight upward drift for long call
+            drift: dec!(0.15), // Slight upward drift for long call
             volatility: volatility_dt,
             vov: pos!(0.02),         // Volatility of volatility (2%)
-            vol_speed: pos!(0.5),    // Mean reversion speed
+            vol_speed: pos!(0.02),   // Mean reversion speed
             vol_mean: volatility_dt, // Mean volatility level (same as initial)
         },
         walker,
