@@ -1,6 +1,8 @@
 use crate::Positive;
+use crate::backtesting::results::SimulationStats;
 use crate::model::decimal::decimal_normal_sample;
-use crate::simulation::{WalkParams, WalkType};
+use crate::simulation::simulator::Simulator;
+use crate::simulation::{ExitPolicy, WalkParams, WalkType};
 use crate::volatility::generate_ou_process;
 use num_traits::ToPrimitive;
 use rust_decimal::{Decimal, MathematicalOps};
@@ -619,6 +621,64 @@ impl<X, Y> Clone for Box<dyn WalkTypeAble<X, Y>> {
     fn clone(&self) -> Self {
         panic!("Box<dyn WalkTypeAble<X, Y>> cannot be cloned. Use clone_box() instead.")
     }
+}
+
+/// Trait for simulating trading strategies across multiple price paths.
+///
+/// This trait enables strategies to be tested against various market scenarios
+/// by running them through multiple simulated price paths (random walks) and
+/// evaluating their performance based on defined exit policies.
+///
+/// # Type Parameters
+///
+/// * `X` - The type representing time steps in the simulation
+/// * `Y` - The type representing price values in the simulation
+///
+/// # Examples
+///
+/// ```ignore
+/// use optionstratlib::simulation::{Simulate, ExitPolicy};
+/// use rust_decimal_macros::dec;
+///
+/// let strategy = ShortPut::new(/* ... */);
+/// let simulator = Simulator::new(/* ... */);
+/// let exit_policy = ExitPolicy::profit_or_loss(dec!(0.5), dec!(1.0));
+///
+/// let results = strategy.simulate(&simulator, exit_policy)?;
+/// ```
+pub trait Simulate<X, Y>
+where
+    X: Copy + Into<Positive> + AddAssign + Display,
+    Y: Into<Positive> + Display + Clone,
+{
+    /// Simulates the strategy across multiple price paths.
+    ///
+    /// Evaluates the strategy's performance by running it through each random walk
+    /// in the simulator, checking exit conditions at each step, and calculating
+    /// final P&L based on either exit triggers or expiration.
+    ///
+    /// # Parameters
+    ///
+    /// * `sim` - The simulator containing multiple random walks to test against
+    /// * `exit` - The exit policy defining when to close positions
+    ///
+    /// # Returns
+    ///
+    /// A `SimulationStats` struct containing:
+    /// - Individual `SimulationResult` for each run (with P&L, exit reason, holding period, etc.)
+    /// - Aggregate statistics (average P&L, win rate, std deviation, etc.)
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - Option pricing calculations fail
+    /// - P&L calculations encounter errors
+    /// - Invalid strategy parameters are detected
+    fn simulate(
+        &self,
+        sim: &Simulator<X, Y>,
+        exit: ExitPolicy,
+    ) -> Result<SimulationStats, Box<dyn Error>>;
 }
 
 #[cfg(test)]

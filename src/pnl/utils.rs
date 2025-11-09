@@ -7,11 +7,12 @@ use crate::Positive;
 use crate::model::Trade;
 pub use crate::pnl::PnLCalculator;
 use chrono::{DateTime, Utc};
+use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
-use std::fmt;
 use std::iter::Sum;
 use std::ops::Add;
+use utoipa::ToSchema;
 
 /// Represents the Profit and Loss (PnL) of a financial instrument.
 ///
@@ -22,7 +23,9 @@ use std::ops::Add;
 /// PnL serves as a fundamental measurement of trading performance, providing a comprehensive view
 /// of the current financial status of positions. It is particularly useful for options trading,
 /// portfolio management, and financial reporting.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[derive(
+    DebugPretty, DisplaySimple, Clone, Serialize, Deserialize, PartialEq, Default, ToSchema,
+)]
 pub struct PnL {
     /// The realized profit or loss that has been crystallized through closed positions.
     /// This represents actual gains or losses that have been confirmed by completing the trade.
@@ -104,27 +107,40 @@ impl PnL {
             date_time,
         }
     }
-}
 
-impl fmt::Display for PnL {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        // Helper function to format Option<Decimal> with rounding
-        fn format_decimal(value: &Option<Decimal>) -> String {
-            match value {
-                Some(dec) => dec.round_dp(3).to_string(),
-                None => "N/A".to_string(),
-            }
+    /// Calculates the total P&L by summing realized and unrealized components.
+    ///
+    /// # Returns
+    ///
+    /// The total P&L as an `Option<Decimal>`. Returns `None` if both realized
+    /// and unrealized are `None`, otherwise returns the sum of available values.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use chrono::Utc;
+    /// use rust_decimal_macros::dec;
+    /// use optionstratlib::pnl::utils::PnL;
+    /// use optionstratlib::pos;
+    ///
+    /// let pnl = PnL::new(
+    ///     Some(dec!(500.0)),
+    ///     Some(dec!(250.0)),
+    ///     pos!(100.0),
+    ///     pos!(350.0),
+    ///     Utc::now(),
+    /// );
+    ///
+    /// assert_eq!(pnl.total_pnl(), Some(dec!(750.0)));
+    /// ```
+    #[must_use]
+    pub fn total_pnl(&self) -> Option<Decimal> {
+        match (self.realized, self.unrealized) {
+            (Some(r), Some(u)) => Some(r + u),
+            (Some(r), None) => Some(r),
+            (None, Some(u)) => Some(u),
+            (None, None) => None,
         }
-
-        write!(
-            f,
-            "PnL: {{ realized: {}, unrealized: {}, initial_costs: {}, initial_income: {}, date_time: {} }}",
-            format_decimal(&self.realized),
-            format_decimal(&self.unrealized),
-            self.initial_costs.round_to(3),
-            self.initial_income.round_to(3),
-            self.date_time
-        )
     }
 }
 
@@ -285,6 +301,32 @@ mod tests_sum {
     }
 
     #[test]
+    fn test_pnl_sum_both_none() {
+        let pnl1 = PnL {
+            realized: None,
+            unrealized: None,
+            initial_costs: pos!(2.0),
+            initial_income: pos!(1.0),
+            date_time: Utc::now(),
+        };
+
+        let pnl2 = PnL {
+            realized: None,
+            unrealized: None,
+            initial_costs: pos!(3.0),
+            initial_income: pos!(2.0),
+            date_time: Utc::now(),
+        };
+
+        let sum: PnL = vec![pnl1, pnl2].into_iter().sum();
+
+        assert_eq!(sum.realized, None);
+        assert_eq!(sum.unrealized, None);
+        assert_eq!(sum.initial_costs, pos!(5.0));
+        assert_eq!(sum.initial_income, pos!(3.0));
+    }
+
+    #[test]
     fn test_pnl_sum_with_none() {
         let pnl1 = PnL {
             realized: None,
@@ -391,5 +433,78 @@ mod tests_add {
         assert_eq!(sum.unrealized, Some(dec!(15.0)));
         assert_eq!(sum.initial_costs, pos!(5.0));
         assert_eq!(sum.initial_income, pos!(3.0));
+    }
+}
+
+#[cfg(test)]
+mod tests_total_pnl {
+    use super::*;
+    use crate::pos;
+    use rust_decimal_macros::dec;
+
+    #[test]
+    fn test_total_pnl_both_some() {
+        let pnl = PnL::new(
+            Some(dec!(500.0)),
+            Some(dec!(250.0)),
+            pos!(100.0),
+            pos!(350.0),
+            Utc::now(),
+        );
+
+        assert_eq!(pnl.total_pnl(), Some(dec!(750.0)));
+    }
+
+    #[test]
+    fn test_total_pnl_only_realized() {
+        let pnl = PnL::new(
+            Some(dec!(300.0)),
+            None,
+            pos!(100.0),
+            pos!(200.0),
+            Utc::now(),
+        );
+
+        assert_eq!(pnl.total_pnl(), Some(dec!(300.0)));
+    }
+
+    #[test]
+    fn test_total_pnl_only_unrealized() {
+        let pnl = PnL::new(None, Some(dec!(150.0)), pos!(50.0), pos!(100.0), Utc::now());
+
+        assert_eq!(pnl.total_pnl(), Some(dec!(150.0)));
+    }
+
+    #[test]
+    fn test_total_pnl_both_none() {
+        let pnl = PnL::new(None, None, pos!(0.0), pos!(0.0), Utc::now());
+
+        assert_eq!(pnl.total_pnl(), None);
+    }
+
+    #[test]
+    fn test_total_pnl_negative_values() {
+        let pnl = PnL::new(
+            Some(dec!(-200.0)),
+            Some(dec!(-100.0)),
+            pos!(50.0),
+            pos!(25.0),
+            Utc::now(),
+        );
+
+        assert_eq!(pnl.total_pnl(), Some(dec!(-300.0)));
+    }
+
+    #[test]
+    fn test_total_pnl_mixed_signs() {
+        let pnl = PnL::new(
+            Some(dec!(500.0)),
+            Some(dec!(-200.0)),
+            pos!(100.0),
+            pos!(300.0),
+            Utc::now(),
+        );
+
+        assert_eq!(pnl.total_pnl(), Some(dec!(300.0)));
     }
 }

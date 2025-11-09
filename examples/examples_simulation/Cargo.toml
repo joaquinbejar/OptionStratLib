@@ -8,3 +8,6 @@ optionstratlib = { workspace = true , features = ["plotly", "static_export"] }
 tracing = { workspace = true }
 rust_decimal_macros = { workspace = true }
 rust_decimal = { workspace = true }
+prettytable-rs = "0.10"
+serde_json = { workspace = true }
+indicatif = "0.17"

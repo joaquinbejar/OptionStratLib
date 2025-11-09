@@ -406,6 +406,70 @@ pub fn adjust_volatility(
     Ok(volatility * scale_factor)
 }
 
+/// Adjusts annualized volatility for use in random walk simulations with a specific dt.
+///
+/// This function converts an annualized volatility to the appropriate volatility for the
+/// base timeframe used in the simulation. The random walk implementation will then scale
+/// this by sqrt(dt) internally, so this function only performs the de-annualization step.
+///
+/// **Important**: The random walk implementations (Brownian, GeometricBrownian, etc.) already
+/// multiply the volatility by `sqrt(dt)` internally, so this function should NOT do that scaling.
+/// It only converts from annual volatility to the base timeframe volatility.
+///
+/// # Arguments
+///
+/// * `annual_volatility` - The annualized volatility (e.g., 0.20 for 20% annual volatility)
+/// * `_dt` - The time step size (unused, kept for API compatibility)
+/// * `_dt_timeframe` - The timeframe that dt represents (unused, kept for API compatibility)
+/// * `dt_base_timeframe` - The base timeframe for the simulation (e.g., `TimeFrame::Day`)
+///
+/// # Returns
+///
+/// The de-annualized volatility for the base timeframe as `Positive`
+///
+/// # Formula
+///
+/// The adjustment follows:
+/// ```text
+/// volatility_base = annual_volatility / sqrt(periods_per_year)
+/// ```
+///
+/// The random walk will then apply: `volatility_base * sqrt(dt)` internally.
+///
+/// # Examples
+///
+/// ```
+/// use optionstratlib::pos;
+/// use optionstratlib::utils::time::{TimeFrame, convert_time_frame};
+/// use optionstratlib::volatility::volatility_for_dt;
+///
+/// let annual_vol = pos!(0.20); // 20% annual volatility
+/// let days = pos!(7.0);
+/// let dt = convert_time_frame(pos!(1.0) / days, &TimeFrame::Minute, &TimeFrame::Day);
+///
+/// // Get volatility for daily timeframe (random walk will scale by sqrt(dt))
+/// let vol_for_walk = volatility_for_dt(
+///     annual_vol,
+///     dt,
+///     TimeFrame::Minute,
+///     TimeFrame::Day
+/// ).unwrap();
+/// ```
+///
+/// # Errors
+///
+/// Returns an error if the de-annualization fails
+pub fn volatility_for_dt(
+    annual_volatility: Positive,
+    _dt: Positive,
+    _dt_timeframe: TimeFrame,
+    dt_base_timeframe: TimeFrame,
+) -> Result<Positive, Box<dyn Error>> {
+    // Only de-annualize to the base timeframe
+    // The random walk implementation will multiply by sqrt(dt) internally
+    de_annualized_volatility(annual_volatility, dt_base_timeframe)
+}
+
 /// Generates a mean-reverting Ornstein-Uhlenbeck process time series
 ///
 /// This function simulates a discrete-time Ornstein-Uhlenbeck stochastic process, which is

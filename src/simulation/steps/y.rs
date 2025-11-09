@@ -177,6 +177,15 @@ where
     }
 }
 
+impl<T> From<Ystep<T>> for Positive
+where
+    T: Into<Positive> + Display + Clone,
+{
+    fn from(step: Ystep<T>) -> Self {
+        step.positive()
+    }
+}
+
 #[cfg(test)]
 mod tests_ystep {
     use super::*;

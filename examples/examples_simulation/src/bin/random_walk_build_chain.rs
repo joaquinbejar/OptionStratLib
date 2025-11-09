@@ -15,20 +15,20 @@ impl WalkTypeAble<Positive, OptionChain> for Walker {}
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // let n_steps = 43_200; // 30 days in minutes
-    let n_steps = 5; // 30 days in minutes
-    let underlying_price = pos!(150.0);
-    let days = pos!(30.0);
-    let std_dev = pos!(20.0);
+    let n_steps = 10080; // 30 days in minutes
+    let underlying_price = pos!(4011.95);
+    let days = pos!(7.0);
+    let std_dev = pos!(2.0);
     let implied_volatility = std_dev / 100.0;
-    let risk_free_rate = dec!(0.02);
-    let dividend_yield = pos!(0.01);
-    let symbol = "AAPL".to_string();
+    let risk_free_rate = dec!(0.0);
+    let dividend_yield = pos!(0.0);
+    let symbol = "GOLF".to_string();
     let volume = Some(Positive::ONE);
     let chain_size = 30;
-    let strike_interval = None;
+    let strike_interval = spos!(10.0);
     let skew_slope = dec!(-0.3);
     let smile_curve = dec!(0.1);
-    let spread = pos!(0.01);
+    let spread = pos!(2.0);
     let decimal_places = 2;
 
     let price_params = OptionDataPriceParams::new(
