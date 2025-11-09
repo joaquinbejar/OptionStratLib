@@ -74,11 +74,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     setup_logger();
 
     // Simulation parameters
-    let n_simulations = 1000; // Number of simulations to run
+    let n_simulations = 10000; // Number of simulations to run
     let n_steps = 10080; // 7 days in minutes
-    let underlying_price = pos!(4011.95);
+    let underlying_price = pos!(4007.7);
     let days = pos!(7.0);
-    let implied_volatility = pos!(0.27); // 27% annual volatility
+    let implied_volatility = pos!(0.16); // 27% annual volatility
     let symbol = "GOLD".to_string();
     let strike_price = pos!(3930.0); // Strike price for the short put (delta ~-0.3)
 

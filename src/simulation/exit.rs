@@ -305,21 +305,31 @@ impl fmt::Display for ExitPolicy {
     }
 }
 
-/// Checks if an exit policy is triggered for a short put position.
+/// Checks if an exit policy is triggered for an option position.
 ///
 /// # Parameters
 ///
 /// * `policy` - The exit policy to evaluate
-/// * `initial_premium` - The initial premium received
+/// * `initial_premium` - The initial premium (paid for long, received for short)
 /// * `current_premium` - The current premium value
 /// * `step_num` - Current step number
 /// * `days_left` - Days remaining to expiration
 /// * `underlying_price` - Current underlying price
-/// * `_strike_price` - Strike price of the option (unused but kept for future extensions)
+/// * `is_long` - `true` for long positions (bought), `false` for short positions (sold)
 ///
 /// # Returns
 ///
 /// `Some(policy)` if the policy is triggered, `None` otherwise
+///
+/// # Logic
+///
+/// For **Long positions** (bought options):
+/// - Profit: current_premium > initial_premium (premium increases)
+/// - Loss: current_premium < initial_premium (premium decreases)
+///
+/// For **Short positions** (sold options):
+/// - Profit: current_premium < initial_premium (premium decreases)
+/// - Loss: current_premium > initial_premium (premium increases)
 #[allow(clippy::only_used_in_recursion)]
 pub fn check_exit_policy(
     policy: &ExitPolicy,
@@ -328,22 +338,45 @@ pub fn check_exit_policy(
     step_num: usize,
     days_left: Positive,
     underlying_price: Positive,
+    is_long: bool,
 ) -> Option<ExitPolicy> {
     match policy {
         ExitPolicy::ProfitPercent(pct) => {
-            let target = initial_premium * (Decimal::ONE - pct);
-            if current_premium <= target {
-                Some(ExitPolicy::ProfitPercent(*pct))
+            if is_long {
+                // For long: profit when premium increases
+                let target = initial_premium * (Decimal::ONE + pct);
+                if current_premium >= target {
+                    Some(ExitPolicy::ProfitPercent(*pct))
+                } else {
+                    None
+                }
             } else {
-                None
+                // For short: profit when premium decreases
+                let target = initial_premium * (Decimal::ONE - pct);
+                if current_premium <= target {
+                    Some(ExitPolicy::ProfitPercent(*pct))
+                } else {
+                    None
+                }
             }
         }
         ExitPolicy::LossPercent(pct) => {
-            let limit = initial_premium * (Decimal::ONE + pct);
-            if current_premium >= limit {
-                Some(ExitPolicy::LossPercent(*pct))
+            if is_long {
+                // For long: loss when premium decreases
+                let limit = initial_premium * (Decimal::ONE - pct);
+                if current_premium <= limit {
+                    Some(ExitPolicy::LossPercent(*pct))
+                } else {
+                    None
+                }
             } else {
-                None
+                // For short: loss when premium increases
+                let limit = initial_premium * (Decimal::ONE + pct);
+                if current_premium >= limit {
+                    Some(ExitPolicy::LossPercent(*pct))
+                } else {
+                    None
+                }
             }
         }
         ExitPolicy::FixedPrice(price) => {
@@ -414,6 +447,7 @@ pub fn check_exit_policy(
                     step_num,
                     days_left,
                     underlying_price,
+                    is_long,
                 ) {
                     triggered.push(triggered_policy);
                 } else {
@@ -431,6 +465,7 @@ pub fn check_exit_policy(
                     step_num,
                     days_left,
                     underlying_price,
+                    is_long,
                 ) {
                     return Some(triggered_policy);
                 }

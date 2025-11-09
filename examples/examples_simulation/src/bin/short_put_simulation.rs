@@ -161,6 +161,7 @@ fn evaluate_short_put_strategy(
             step_num,
             days_left,
             *market_price,
+            false, // is_long = false for Short Put
         ) {
             // Calculate P&L based on current premium
             let pnl = PnL {
@@ -237,6 +238,7 @@ fn evaluate_short_put_strategy(
             random_walk.len(),
             days_left,
             *market_price,
+            false, // is_long = false for Short Put
         ) {
             let moneyness = if strike_price > *market_price {
                 "ITM"

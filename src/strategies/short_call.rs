@@ -570,7 +570,6 @@ where
             .option
             .calculate_price_black_scholes()?
             .abs();
-        let implied_volatility = self.short_call.option.implied_volatility;
 
         // Create progress bar for simulations
         let progress_bar = ProgressBar::new(sim.len() as u64);
@@ -629,10 +628,12 @@ where
                     index,
                     days_left,
                     current_option.underlying_price,
+                    false, // is_long = false for Short Call
                 ) {
                     exit_reason = reason;
 
                     // Check if it's take profit or stop loss
+                    // For short: profit when current < initial, loss when current > initial
                     let pnl_percent = (initial_premium - current_premium) / initial_premium;
                     if pnl_percent >= dec!(0.5) {
                         hit_take_profit = true;
@@ -640,12 +641,17 @@ where
                         hit_stop_loss = true;
                     }
 
-                    // Exit triggered - calculate P&L
-                    let pnl = self.calculate_pnl(
-                        &current_option.underlying_price,
-                        ExpirationDate::Days(days_left),
-                        &implied_volatility,
-                    )?;
+                    // Exit triggered - calculate P&L directly from premiums
+                    // For short call: P&L = initial_premium - current_premium (we received initial, buy back at current)
+                    // We use direct premium calculation instead of calculate_pnl() to avoid discrepancies
+                    // from recalculating the initial premium
+                    let pnl = PnL {
+                        realized: Some(initial_premium - current_premium),
+                        unrealized: None,
+                        initial_costs: Positive::ZERO,
+                        initial_income: Positive::ZERO,
+                        date_time: chrono::Utc::now(),
+                    };
                     final_pnl = Some(pnl);
                     break;
                 }
