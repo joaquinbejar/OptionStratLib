@@ -96,7 +96,6 @@ pub trait PnLCalculator {
     fn diff_position_pnl(&self, _position: &Position) -> Result<PnL, Box<dyn Error>> {
         panic!("from_position_pnl is not implemented for this Strategy.")
     }
-    
 }
 
 /// # TransactionAble
