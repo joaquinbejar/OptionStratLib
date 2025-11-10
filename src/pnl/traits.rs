@@ -97,9 +97,6 @@ pub trait PnLCalculator {
         panic!("from_position_pnl is not implemented for this Strategy.")
     }
     
-    fn pnl_at_premium(&self, _initial_premium: &Positive, _current_premium: &Positive) -> Result<PnL, Box<dyn Error>> {
-        panic!("pnl_at_premium is not implemented for this Strategy.")
-    } 
 }
 
 /// # TransactionAble
