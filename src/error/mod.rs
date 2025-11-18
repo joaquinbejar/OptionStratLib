@@ -183,6 +183,15 @@ mod surfaces;
 
 mod graph;
 mod transaction;
+
+/// ### Pricing Errors (`PricingError`)
+/// Handles:
+/// * Pricing method failures (Black-Scholes, Binomial, etc.)
+/// * Monte Carlo simulation errors
+/// * Invalid pricing engine configurations
+/// * Generic pricing-related errors
+pub mod pricing;
+
 /// ### Volatility Errors (`VolatilityError`)
 /// Handles:
 /// * Implied volatility calculation failures
@@ -201,6 +210,7 @@ pub use interpolation::InterpolationError;
 pub use metrics::MetricsError;
 pub use options::{OptionsError, OptionsResult};
 pub use position::PositionError;
+pub use pricing::{PricingError, PricingResult};
 pub use probability::ProbabilityError;
 pub use strategies::StrategyError;
 pub use surfaces::SurfaceError;
