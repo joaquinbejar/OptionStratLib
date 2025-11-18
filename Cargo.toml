@@ -90,7 +90,6 @@ members = [
     "examples/examples_volatility",
     "examples/examples_curves",
     "examples/examples_surfaces",
-    "examples/Local",
 ]
 
 [workspace.dependencies]
@@ -118,4 +117,4 @@ prettytable-rs = "0.10"
 pretty-simple-display = "0.1"
 utoipa = { version = "5.4", features = ["axum_extras", "chrono", "decimal"] }
 indicatif = "0.18"
-thiserror = "1"
+thiserror = "2.0"
