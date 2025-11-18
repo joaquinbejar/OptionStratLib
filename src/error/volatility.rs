@@ -172,8 +172,8 @@ mod tests_volatility_errors {
         let implied_vol_error: VolatilityError = greeks_error.into();
 
         match implied_vol_error {
-            VolatilityError::VegaError { reason } => {
-                assert!(reason.contains("Volatility cannot be zero"));
+            VolatilityError::Greeks(_) => {
+                // Conversion successful
             }
             _ => panic!("Wrong error variant"),
         }
@@ -188,8 +188,8 @@ mod tests_volatility_errors {
         let implied_vol_error: VolatilityError = greeks_error.into();
 
         match implied_vol_error {
-            VolatilityError::OptionError { reason } => {
-                assert!(reason.contains("Invalid option parameters"));
+            VolatilityError::Options(_) => {
+                // Conversion successful
             }
             _ => panic!("Wrong error variant"),
         }

@@ -418,12 +418,8 @@ mod tests {
         let curves_error = CurveError::from(position_error);
 
         match curves_error {
-            CurveError::OperationError(OperationErrorKind::InvalidParameters {
-                operation,
-                reason,
-            }) => {
-                assert_eq!(operation, "Position");
-                assert!(reason.contains("test_op"));
+            CurveError::Position(_) => {
+                // Conversion successful
             }
             _ => panic!("Wrong error variant"),
         }

@@ -521,11 +521,10 @@ mod tests {
         let error: OptionsError = original_error.into();
 
         match error {
-            OptionsError::ValidationError { field, reason } => {
-                assert_eq!(field, "unknown");
+            OptionsError::OtherError { reason } => {
                 assert_eq!(reason, "test error");
             }
-            _ => panic!("Expected ValidationError"),
+            _ => panic!("Expected OtherError"),
         }
     }
 
@@ -590,15 +589,7 @@ mod tests_extended {
         let io_error = std::io::Error::other("test error");
         let boxed: Box<dyn std::error::Error> = Box::new(io_error);
         let error: OptionsError = boxed.into();
-
-        assert!(matches!(error, OptionsError::ValidationError { .. }));
-
-        match error {
-            OptionsError::ValidationError { field: _, reason } => {
-                assert!(reason.contains("test error"));
-            }
-            _ => panic!("Expected ValidationError"),
-        }
+        assert!(matches!(error, OptionsError::OtherError { .. }));
     }
 
     #[test]

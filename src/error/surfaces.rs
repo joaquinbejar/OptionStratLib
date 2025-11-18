@@ -342,13 +342,10 @@ mod tests {
         let surface_error = SurfaceError::from(pos_error);
 
         match surface_error {
-            SurfaceError::OperationError(OperationErrorKind::InvalidParameters {
-                operation,
-                ..
-            }) => {
-                assert_eq!(operation, "Position");
+            SurfaceError::Position(_) => {
+                // Conversion successful
             }
-            _ => panic!("Wrong error variant"),
+            _ => panic!("Expected Position variant"),
         }
     }
 

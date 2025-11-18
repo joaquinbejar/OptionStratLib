@@ -508,7 +508,7 @@ mod ohlcv_tests {
         let param_error = OhlcvError::InvalidParameter {
             reason: "test reason".to_string(),
         };
-        assert_eq!(format!("{param_error}"), "Invalid parameter test reason");
+        assert_eq!(format!("{param_error}"), "Invalid parameter: test reason");
 
         // Test OtherError display
         let other_error = OhlcvError::OtherError {
