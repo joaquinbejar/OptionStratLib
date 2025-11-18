@@ -45,17 +45,17 @@ pub use crate::strategies::{
     iron_butterfly::IronButterfly,
     iron_condor::IronCondor,
     long_butterfly_spread::LongButterflySpread,
+    long_call::LongCall,
+    long_put::LongPut,
     long_straddle::LongStraddle,
     long_strangle::LongStrangle,
     poor_mans_covered_call::PoorMansCoveredCall,
     probabilities::ProbabilityAnalysis,
     short_butterfly_spread::ShortButterflySpread,
+    short_call::ShortCall,
+    short_put::ShortPut,
     short_straddle::ShortStraddle,
     short_strangle::ShortStrangle,
-    short_put::ShortPut,
-    short_call::ShortCall,
-    long_put::LongPut,
-    long_call::LongCall,
     utils::FindOptimalSide,
 };
 
@@ -67,10 +67,9 @@ pub use crate::pricing::payoff::*;
 pub use crate::pricing::*;
 
 // PnL calculations
-pub use crate::pnl::{PnLCalculator, PnL};
+pub use crate::pnl::{PnL, PnLCalculator};
 
 pub use crate::backtesting::*;
-
 
 // Visualization
 pub use crate::visualization::{Graph, GraphData, Series2D, Surface3D, TraceMode};
@@ -110,26 +109,21 @@ pub use crate::utils::{
 // Commonly used external dependencies
 pub use chrono::Utc;
 pub use rust_decimal::Decimal;
+pub use rust_decimal::prelude::ToPrimitive;
 pub use rust_decimal_macros::dec;
 pub use std::path::Path;
-pub use rust_decimal::prelude::ToPrimitive;
 
 // Simulation types and functions
 pub use crate::simulation::{
-    ExitPolicy, WalkParams, WalkType, WalkTypeAble,
+    ExitPolicy, Simulate, SimulationStats, WalkParams, WalkType, WalkTypeAble, check_exit_policy,
     randomwalk::RandomWalk,
     simulator::Simulator,
     steps::{Step, Xstep, Ystep},
-    Simulate,
-    check_exit_policy, SimulationStats
 };
-
-
 
 // Chain and series types and generators
 pub use crate::chains::{
-    OptionChainBuildParams, generator_optionchain, generator_positive,
-    utils::OptionDataPriceParams,
+    OptionChainBuildParams, generator_optionchain, generator_positive, utils::OptionDataPriceParams,
 };
 pub use crate::series::{OptionSeries, OptionSeriesBuildParams, generator_optionseries};
 

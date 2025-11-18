@@ -454,7 +454,7 @@ mod tests_extended {
         let error = StrategyError::StdError {
             reason: "General failure".to_string(),
         };
-        assert_eq!(format!("{error}"), "Error: General failure");
+        assert_eq!(format!("{error}"), "Standard error: General failure");
     }
 
     #[test]
@@ -466,14 +466,14 @@ mod tests_extended {
         };
         assert_eq!(
             format!("{error}"),
-            "Invalid price range [10, 50]: Start price must be less than end price"
+            "Invalid price range (10 to 50): Start price must be less than end price"
         );
     }
 
     #[test]
     fn test_break_even_error_no_points() {
         let error = BreakEvenErrorKind::NoBreakEvenPoints;
-        assert_eq!(format!("{error}"), "No break-even points found");
+        assert_eq!(format!("{error}"), "No break-even points exist for this strategy");
     }
 
     #[test]
@@ -512,6 +512,6 @@ mod tests_extended {
         let boxed_error: Box<dyn std::error::Error> =
             Box::new(std::io::Error::other("Underlying failure"));
         let error: StrategyError = boxed_error.into();
-        assert_eq!(format!("{error}"), "Error: Underlying failure");
+        assert_eq!(format!("{error}"), "Standard error: Underlying failure");
     }
 }

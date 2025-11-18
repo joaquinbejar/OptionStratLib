@@ -733,7 +733,10 @@ mod tests_extended {
             volatility: Some(0.25),
             reason: "Out of bounds".to_string(),
         };
-        assert_eq!(format!("{error}"), "Invalid volatility Some(0.25): Out of bounds");
+        assert_eq!(
+            format!("{error}"),
+            "Invalid volatility Some(0.25): Out of bounds"
+        );
     }
 
     #[test]

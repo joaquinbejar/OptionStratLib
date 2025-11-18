@@ -3,10 +3,10 @@
    Email: jb@taunais.com
    Date: 5/5/25
 ******************************************************************************/
-use rand::{rng, Rng};
+use optionstratlib::prelude::*;
+use rand::{Rng, rng};
 use rust_decimal::MathematicalOps;
 use rust_decimal::prelude::FromPrimitive;
-use optionstratlib::prelude::*;
 
 #[allow(clippy::too_many_arguments)]
 fn calculate_error(

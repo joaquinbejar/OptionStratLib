@@ -39,9 +39,7 @@ use optionstratlib::error::Error;
 //! - Distribution of exit reasons
 //! - PNG visualization of the last simulation in `Draws/Simulation/short_put_strategy_simulation.png`
 
-
 use optionstratlib::prelude::*;
-
 
 /// Walker implementation for the simulation.
 struct Walker;

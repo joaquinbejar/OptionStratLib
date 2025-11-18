@@ -705,7 +705,7 @@ mod tests_extended {
     #[test]
     fn test_probability_error_std_error() {
         let error = ProbabilityError::StdError("Calculation failed".to_string());
-        assert_eq!(format!("{error}"), "Error: Calculation failed");
+        assert_eq!(format!("{error}"), "Standard error: Calculation failed");
     }
 
     #[test]
@@ -716,7 +716,7 @@ mod tests_extended {
         };
         assert_eq!(
             format!("{error}"),
-            "Invalid price range 0-100: Negative values are not allowed"
+            "Invalid price range '0-100': Negative values are not allowed"
         );
     }
 
@@ -728,7 +728,7 @@ mod tests_extended {
         };
         assert_eq!(
             format!("{error}"),
-            "Invalid loss range -50-0: Range must be positive"
+            "Invalid loss range '-50-0': Range must be positive"
         );
     }
 
@@ -761,7 +761,7 @@ mod tests_extended {
         let converted_error: ProbabilityError = error.into();
         assert_eq!(
             format!("{converted_error}"),
-            "Calculation error: Expected value error: Failed to calculate break-even point"
+            "Probability calculation error: Expected value calculation error: Failed to calculate break-even point"
         );
     }
 
@@ -774,7 +774,7 @@ mod tests_extended {
         let converted_error: ProbabilityError = error.into();
         assert_eq!(
             format!("{converted_error}"),
-            "Calculation error: Expected value error: Invalid parameters for operation 'Calculate P/L': Invalid input values"
+            "Probability calculation error: Expected value calculation error: Invalid parameters for operation 'Calculate P/L': Invalid input values"
         );
     }
 
@@ -788,7 +788,7 @@ mod tests_extended {
 
         assert_eq!(
             format!("{converted_error}"),
-            "Error: General strategy failure"
+            "Standard error: General strategy failure"
         );
     }
 
@@ -797,7 +797,7 @@ mod tests_extended {
         let error = ProbabilityError::invalid_profit_range("0-100", "Range mismatch");
         assert_eq!(
             format!("{error}"),
-            "Range error: Invalid profit range 0-100: Range mismatch"
+            "Profit/loss range error: Invalid profit range '0-100': Range mismatch"
         );
     }
 
@@ -842,7 +842,7 @@ mod tests_extended {
         let converted_error: ProbabilityError = ProbabilityError::from(error);
         assert_eq!(
             format!("{converted_error}"),
-            "Calculation error: Expected value error: Underlying price is negative"
+            "Probability calculation error: Expected value calculation error: Underlying price is negative"
         );
     }
 
@@ -858,7 +858,7 @@ mod tests_extended {
         let converted_error: ProbabilityError = ProbabilityError::from(error);
         assert_eq!(
             format!("{converted_error}"),
-            "Calculation error: Expected value error: Start price is greater than end price"
+            "Probability calculation error: Expected value calculation error: Start price is greater than end price"
         );
     }
 
@@ -872,7 +872,7 @@ mod tests_extended {
             ProbabilityError::from(format!("Invalid parameters for operation {error}"));
         assert_eq!(
             format!("{converted_error}"),
-            "Calculation error: Expected value error: Invalid parameters for operation Invalid parameters for operation 'Calculate P/L': Invalid input values"
+            "Probability calculation error: Expected value calculation error: Invalid parameters for operation Invalid parameters for operation 'Calculate P/L': Invalid input values"
         );
     }
 
@@ -889,7 +889,7 @@ mod tests_extended {
         );
         assert_eq!(
             format!("{converted_error}"),
-            "Calculation error: Expected value error: Operation Operation 'Hedging' is not supported for strategy 'Operation not implemented'"
+            "Probability calculation error: Expected value calculation error: Operation Operation 'Hedging' is not supported for strategy 'Operation not implemented'"
         );
     }
 }
