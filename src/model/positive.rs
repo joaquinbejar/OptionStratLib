@@ -84,15 +84,15 @@ macro_rules! pos {
 /// # Example
 ///
 /// ```rust
-/// use crate::Positive;
-/// use crate::spos;
+/// use optionstratlib::Positive;
+/// use optionstratlib::spos;
 ///
 /// // Example with a positive value
-/// let x = spos!(10);
+/// let x = spos!(10.0);
 /// assert_eq!(x.is_some(), true);
 ///
 /// // Example with a non-positive value
-/// let y = spos!(-5);
+/// let y = spos!(-5.0);
 /// assert_eq!(y.is_none(), true);
 /// ```
 ///

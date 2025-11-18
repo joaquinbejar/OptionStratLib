@@ -473,7 +473,10 @@ mod tests_extended {
     #[test]
     fn test_break_even_error_no_points() {
         let error = BreakEvenErrorKind::NoBreakEvenPoints;
-        assert_eq!(format!("{error}"), "No break-even points exist for this strategy");
+        assert_eq!(
+            format!("{error}"),
+            "No break-even points exist for this strategy"
+        );
     }
 
     #[test]

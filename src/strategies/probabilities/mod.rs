@@ -32,6 +32,7 @@
 //! use optionstratlib::Positive;
 //! use optionstratlib::pricing::Profit;
 //! use optionstratlib::strategies::Strategies;
+//! use optionstratlib::error::ProbabilityError;
 //!
 //! use optionstratlib::strategies::probabilities::{PriceTrend, StrategyProbabilityAnalysis, VolatilityAdjustment};
 //!
