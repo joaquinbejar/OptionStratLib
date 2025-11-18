@@ -4,11 +4,8 @@
    Date: 25/9/24
 ******************************************************************************/
 use optionstratlib::prelude::*;
-use rust_decimal_macros::dec;
-use std::error::Error;
-use tracing::info;
 
-fn main() -> Result<(), Box<dyn Error>> {
+fn main() -> Result<(), Error> {
     setup_logger();
     let underlying_price = pos!(5781.88);
 

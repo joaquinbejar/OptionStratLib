@@ -200,8 +200,22 @@ pub mod pricing;
 /// * Market data consistency checks
 mod volatility;
 
+/// ### CSV/OHLCV Errors (`OhlcvError`)
+/// Handles:
+/// * CSV parsing errors
+/// * ZIP file handling errors
+/// * OHLCV data validation
+/// * Date and decimal parsing issues
+mod csv;
+
+/// ### Unified Error Type
+/// Top-level error type that encompasses all errors in the library.
+/// Provides a single error type for unified error handling across modules.
+pub mod unified;
+
 pub use chains::ChainError;
 pub use common::OperationErrorKind;
+pub use csv::OhlcvError;
 pub use curves::CurveError;
 pub use decimal::{DecimalError, DecimalResult};
 pub use graph::GraphError;
@@ -215,4 +229,5 @@ pub use probability::ProbabilityError;
 pub use strategies::StrategyError;
 pub use surfaces::SurfaceError;
 pub use transaction::TransactionError;
+pub use unified::Error;
 pub use volatility::VolatilityError;

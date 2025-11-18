@@ -1,30 +1,36 @@
-use std::error::Error;
-use std::fmt;
+use thiserror::Error;
 
 /// Error type for option pricing operations.
 ///
 /// This enum represents the various errors that can occur during option pricing,
 /// providing domain-specific error handling for different pricing scenarios.
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum PricingError {
     /// Error from a specific pricing method (e.g., Black-Scholes, Binomial).
+    #[error("Pricing method '{method}' failed: {reason}")]
     MethodError {
         /// Name of the pricing method that failed
         method: String,
         /// Detailed reason for the failure
         reason: String,
     },
+
     /// Error during Monte Carlo simulation.
+    #[error("Pricing simulation failed: {reason}")]
     SimulationError {
         /// Detailed reason for the simulation failure
         reason: String,
     },
+
     /// Error due to invalid pricing engine configuration.
+    #[error("Invalid pricing engine: {reason}")]
     InvalidEngine {
         /// Detailed reason for the invalid engine
         reason: String,
     },
+
     /// Generic pricing error.
+    #[error("Pricing error: {reason}")]
     OtherError {
         /// Detailed reason for the error
         reason: String,
@@ -71,33 +77,6 @@ impl PricingError {
     pub fn other(reason: &str) -> Self {
         PricingError::OtherError {
             reason: reason.to_string(),
-        }
-    }
-}
-
-impl fmt::Display for PricingError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            PricingError::MethodError { method, reason } => {
-                write!(f, "Pricing method '{method}' failed: {reason}")
-            }
-            PricingError::SimulationError { reason } => {
-                write!(f, "Pricing simulation failed: {reason}")
-            }
-            PricingError::InvalidEngine { reason } => {
-                write!(f, "Invalid pricing engine: {reason}")
-            }
-            PricingError::OtherError { reason } => write!(f, "Pricing error: {reason}"),
-        }
-    }
-}
-
-impl Error for PricingError {}
-
-impl From<Box<dyn Error>> for PricingError {
-    fn from(err: Box<dyn Error>) -> Self {
-        PricingError::OtherError {
-            reason: err.to_string(),
         }
     }
 }

@@ -6,6 +6,7 @@
 
 use crate::chains::chain::OptionChain;
 use crate::constants::EPSILON;
+use crate::error::DecimalError;
 use crate::model::utils::ToRound;
 use crate::series::OptionSeries;
 use approx::{AbsDiffEq, RelativeEq};
@@ -65,28 +66,46 @@ macro_rules! pos {
     };
 }
 
-/// Macro for creating an `Option<Positive>` value with simplified syntax.
+/// A macro to create an optional `Positive` value from the given expression.
 ///
-/// This macro attempts to create a `Positive` value from the given expression,
-/// unwraps the result, and wraps it in `Some()`. It will panic if the value
-/// cannot be converted to a `Positive` (e.g., if the value is negative or not
-/// representable).
+/// This macro attempts to create a `Positive` value using the `Positive::new`
+/// function, which returns `None` if the value is not a positive number.
+/// The macro is useful for safely constructing optional `Positive` values
+/// in a concise manner.
 ///
-/// # Examples
+/// # Parameters
+/// - `$val:expr`: An expression that evaluates to a value intended to be
+///   wrapped in a `Positive` type.
+///
+/// # Returns
+/// - `Option<Positive>`: Returns `Some(Positive)` if the given value is positive,
+///   otherwise returns `None`.
+///
+/// # Example
 ///
 /// ```rust
-/// use optionstratlib::spos;
-/// let optional_positive = spos!(5.0); // Some(Positive(5.0))
+/// use crate::Positive;
+/// use crate::spos;
+///
+/// // Example with a positive value
+/// let x = spos!(10);
+/// assert_eq!(x.is_some(), true);
+///
+/// // Example with a non-positive value
+/// let y = spos!(-5);
+/// assert_eq!(y.is_none(), true);
 /// ```
 ///
-/// # Panics
+/// # Notes
+/// - Ensure that the type used with this macro implements the required constraints
+///   for constructing a `Positive` value (as defined in the `Positive::new` method).
 ///
-/// This macro will panic if the provided value cannot be converted to a `Positive` value.
+/// # See Also
+/// - [`Positive::new`](crate::Positive::new): The method that performs the actual validation
+///   for determining whether a value can be wrapped in the `Positive` type.
 #[macro_export]
 macro_rules! spos {
-    ($val:expr) => {
-        Some($crate::Positive::new($val).unwrap())
-    };
+    ($val:expr) => {{ $crate::Positive::new($val).ok() }};
 }
 
 /// Determines if the given type parameter `T` is the `Positive` type.
@@ -188,12 +207,20 @@ impl Positive {
     /// * `Ok(Positive)` if the value is non-negative and valid
     /// * `Err(String)` if the value is negative or cannot be parsed as a Decimal
     ///
-    pub fn new(value: f64) -> Result<Self, String> {
+    pub fn new(value: f64) -> Result<Self, DecimalError> {
         let dec = Decimal::from_f64(value);
         match dec {
             Some(value) if value >= Decimal::ZERO => Ok(Positive(value)),
-            Some(value) => Err(format!("Value must be positive, got {value}")),
-            None => Err("Failed to parse as Decimal".to_string()),
+            Some(value) => Err(DecimalError::OutOfBounds {
+                value: value.to_f64().unwrap_or(0.0),
+                min: 0.0,
+                max: f64::MAX,
+            }),
+            None => Err(DecimalError::ConversionError {
+                from_type: "f64".to_string(),
+                to_type: "Positive".to_string(),
+                reason: "failed to parse Decimal".to_string(),
+            }),
         }
     }
 
@@ -207,11 +234,15 @@ impl Positive {
     ///
     /// * `Ok(Positive)` if the value is non-negative
     /// * `Err(String)` if the value is negative
-    pub fn new_decimal(value: Decimal) -> Result<Self, String> {
+    pub fn new_decimal(value: Decimal) -> Result<Self, DecimalError> {
         if value >= Decimal::ZERO {
             Ok(Positive(value))
         } else {
-            Err(format!("Value must be positive, got {value}"))
+            Err(DecimalError::OutOfBounds {
+                value: value.to_f64().unwrap(),
+                min: 0.0,
+                max: f64::INFINITY,
+            })
         }
     }
 

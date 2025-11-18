@@ -8,7 +8,7 @@ use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use tracing::{debug, info};
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> Result<(), optionstratlib::error::Error> {
     setup_logger();
     let mut option_chain = OptionChain::load_from_json(
         "examples/Chains/Germany-40-2025-05-27-15:29:00-UTC-24209.json",

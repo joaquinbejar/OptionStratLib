@@ -3,10 +3,7 @@
    Email: jb@taunais.com
    Date: 8/1/25
 ******************************************************************************/
-use std::error::Error;
-use std::fmt;
-
-impl Error for OperationErrorKind {}
+use thiserror::Error;
 
 /// Represents the types of errors that can occur during operations related to trading strategies or other processes.
 ///
@@ -48,12 +45,13 @@ impl Error for OperationErrorKind {}
 ///
 /// This error type is typically used alongside other specialized error enums in the
 /// error module, such as `StrategyError`, `OptionsError`, and others.
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum OperationErrorKind {
     /// Operation not supported for this strategy or context
     ///
     /// Used when an operation cannot be performed due to incompatibility with
     /// the target strategy type or other contextual constraints.
+    #[error("Operation '{operation}' is not supported for strategy '{reason}'")]
     NotSupported {
         /// The name of the operation that was attempted
         operation: String,
@@ -65,34 +63,13 @@ pub enum OperationErrorKind {
     ///
     /// Used when the input parameters for an operation are invalid, insufficient,
     /// or incompatible with the requirements of the operation.
+    #[error("Invalid parameters for operation '{operation}': {reason}")]
     InvalidParameters {
         /// The name of the operation that failed
         operation: String,
         /// A detailed explanation of why the parameters are invalid
         reason: String,
     },
-}
-
-impl fmt::Display for OperationErrorKind {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            OperationErrorKind::NotSupported {
-                operation,
-                reason: strategy_type,
-            } => {
-                write!(
-                    f,
-                    "Operation '{operation}' is not supported for strategy '{strategy_type}'"
-                )
-            }
-            OperationErrorKind::InvalidParameters { operation, reason } => {
-                write!(
-                    f,
-                    "Invalid parameters for operation '{operation}': {reason}"
-                )
-            }
-        }
-    }
 }
 
 #[cfg(test)]
@@ -145,7 +122,7 @@ mod tests {
             reason: "Strike prices must be positive".to_string(),
         };
 
-        let error_ref: &dyn Error = &error;
+        let error_ref: &dyn std::error::Error = &error;
         assert_eq!(
             error_ref.to_string(),
             "Invalid parameters for operation 'validate_strikes': Strike prices must be positive"

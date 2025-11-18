@@ -61,8 +61,7 @@
 //! }
 //! ```
 
-use std::error::Error;
-use std::fmt;
+use thiserror::Error;
 
 /// Custom errors that can occur during Options operations
 ///
@@ -99,11 +98,12 @@ use std::fmt;
 /// This error type is typically returned in Result objects from functions that
 /// perform operations on option contracts, pricing calculations, or option strategy
 /// analysis where various error conditions need to be handled.
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum OptionsError {
     /// Error when validating option parameters
     ///
     /// Used when input parameters for option contracts fail validation.
+    #[error("Validation error for field '{field}': {reason}")]
     ValidationError {
         /// The field name that failed validation
         field: String,
@@ -114,6 +114,7 @@ pub enum OptionsError {
     /// Error during price calculation
     ///
     /// Used when an option pricing algorithm encounters problems.
+    #[error("Pricing error using method '{method}': {reason}")]
     PricingError {
         /// The pricing method that failed (e.g., "Black-Scholes", "Binomial")
         method: String,
@@ -124,6 +125,7 @@ pub enum OptionsError {
     /// Error when calculating greeks
     ///
     /// Used when calculations for option sensitivities (Greeks) fail.
+    #[error("Error calculating greek '{greek}': {reason}")]
     GreeksCalculationError {
         /// The specific Greek that failed to calculate (delta, gamma, theta, etc.)
         greek: String,
@@ -134,6 +136,7 @@ pub enum OptionsError {
     /// Error when dealing with time calculations
     ///
     /// Used for failures in time-related calculations like time to expiry.
+    #[error("Time calculation error in '{operation}': {reason}")]
     TimeError {
         /// The time-related operation that failed
         operation: String,
@@ -144,6 +147,7 @@ pub enum OptionsError {
     /// Error when performing payoff calculations
     ///
     /// Used when potential profit/loss calculations for options fail.
+    #[error("Payoff calculation error: {reason}")]
     PayoffError {
         /// Detailed explanation of the payoff calculation failure
         reason: String,
@@ -152,6 +156,7 @@ pub enum OptionsError {
     /// Error during option data updates
     ///
     /// Used when attempts to update option parameters or data fail.
+    #[error("Update error for field '{field}': {reason}")]
     UpdateError {
         /// The field that failed to update
         field: String,
@@ -162,41 +167,12 @@ pub enum OptionsError {
     /// Error when performing other operations
     ///
     /// A general-purpose error for cases not covered by other variants.
+    #[error("Other error: {reason}")]
     OtherError {
         /// Detailed explanation of the error
         reason: String,
     },
 }
-
-impl fmt::Display for OptionsError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            OptionsError::ValidationError { field, reason } => {
-                write!(f, "Validation error for field '{field}': {reason}")
-            }
-            OptionsError::PricingError { method, reason } => {
-                write!(f, "Pricing error using method '{method}': {reason}")
-            }
-            OptionsError::GreeksCalculationError { greek, reason } => {
-                write!(f, "Error calculating greek '{greek}': {reason}")
-            }
-            OptionsError::TimeError { operation, reason } => {
-                write!(f, "Time calculation error in '{operation}': {reason}")
-            }
-            OptionsError::PayoffError { reason } => {
-                write!(f, "Payoff calculation error: {reason}")
-            }
-            OptionsError::UpdateError { field, reason } => {
-                write!(f, "Update error for field '{field}': {reason}")
-            }
-            OptionsError::OtherError { reason } => {
-                write!(f, "Other error: {reason}")
-            }
-        }
-    }
-}
-
-impl Error for OptionsError {}
 
 /// A specialized result type for operations related to Options calculations and processing.
 ///
@@ -382,10 +358,9 @@ impl OptionsError {
     }
 }
 
-impl From<Box<dyn Error>> for OptionsError {
-    fn from(err: Box<dyn Error>) -> Self {
-        OptionsError::ValidationError {
-            field: "unknown".to_string(),
+impl From<Box<dyn std::error::Error>> for OptionsError {
+    fn from(err: Box<dyn std::error::Error>) -> Self {
+        OptionsError::OtherError {
             reason: err.to_string(),
         }
     }
@@ -527,21 +502,22 @@ mod tests {
     fn test_from_box_dyn_error_conversion() {
         struct TestError(String);
 
-        impl fmt::Display for TestError {
-            fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        impl std::fmt::Display for TestError {
+            fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
                 write!(f, "{}", self.0)
             }
         }
 
-        impl fmt::Debug for TestError {
-            fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        impl std::fmt::Debug for TestError {
+            fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
                 write!(f, "TestError({})", self.0)
             }
         }
 
-        impl Error for TestError {}
+        impl std::error::Error for TestError {}
 
-        let original_error: Box<dyn Error> = Box::new(TestError("test error".to_string()));
+        let original_error: Box<dyn std::error::Error> =
+            Box::new(TestError("test error".to_string()));
         let error: OptionsError = original_error.into();
 
         match error {
@@ -556,7 +532,7 @@ mod tests {
     #[test]
     fn test_to_box_dyn_error_conversion() {
         let error = OptionsError::validation_error("price", "must be positive");
-        let boxed: Box<dyn Error> = error.into();
+        let boxed: Box<dyn std::error::Error> = error.into();
         assert_eq!(
             boxed.to_string(),
             "Validation error for field 'price': must be positive"
@@ -612,7 +588,7 @@ mod tests_extended {
     #[test]
     fn test_multiple_conversions() {
         let io_error = std::io::Error::other("test error");
-        let boxed: Box<dyn Error> = Box::new(io_error);
+        let boxed: Box<dyn std::error::Error> = Box::new(io_error);
         let error: OptionsError = boxed.into();
 
         assert!(matches!(error, OptionsError::ValidationError { .. }));

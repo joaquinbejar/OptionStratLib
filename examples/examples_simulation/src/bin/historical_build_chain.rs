@@ -1,7 +1,4 @@
 use optionstratlib::prelude::*;
-use rust_decimal::Decimal;
-use rust_decimal_macros::dec;
-use tracing::{debug, info};
 
 #[warn(dead_code)]
 struct Walker {}
@@ -14,7 +11,7 @@ impl Walker {
 
 impl WalkTypeAble<Positive, OptionChain> for Walker {}
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> Result<(), Error> {
     setup_logger();
     let ohlc = read_ohlcv_from_zip("examples/Data/cl-1m-sample.zip", None, None)?;
     let ohlc = ohlc.iter().take(1000).collect::<Vec<_>>(); // Take only 1000 minutes

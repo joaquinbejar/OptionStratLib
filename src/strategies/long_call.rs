@@ -1,5 +1,5 @@
 use super::base::{BreakEvenable, Positionable, StrategyType};
-use crate::backtesting::results::{SimulationResult, SimulationStats};
+use crate::backtesting::results::{SimulationResult, SimulationStatsResult};
 use crate::chains::OptionChain;
 use crate::error::strategies::ProfitLossErrorKind;
 use crate::error::{
@@ -550,7 +550,7 @@ where
         &self,
         sim: &Simulator<X, Y>,
         exit: ExitPolicy,
-    ) -> Result<SimulationStats, Box<dyn Error>> {
+    ) -> Result<SimulationStatsResult, Box<dyn Error>> {
         use indicatif::{ProgressBar, ProgressStyle};
         use rust_decimal::MathematicalOps;
         use rust_decimal_macros::dec;
@@ -747,7 +747,7 @@ where
             dec!(0.0)
         };
 
-        Ok(SimulationStats {
+        Ok(SimulationStatsResult {
             results: simulation_results,
             total_simulations,
             profitable_count,

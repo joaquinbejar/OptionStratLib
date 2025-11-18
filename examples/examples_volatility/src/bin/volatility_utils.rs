@@ -4,9 +4,6 @@
    Date: 16/8/24
 ******************************************************************************/
 use optionstratlib::prelude::*;
-use rust_decimal::Decimal;
-use rust_decimal_macros::dec;
-use tracing::info;
 
 fn main() {
     let returns = vec![dec!(0.01), dec!(0.02), dec!(0.01), dec!(0.03), dec!(0.00)];

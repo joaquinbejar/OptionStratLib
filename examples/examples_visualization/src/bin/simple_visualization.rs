@@ -1,6 +1,4 @@
 use optionstratlib::prelude::*;
-use rust_decimal_macros::dec;
-use tracing::info;
 
 fn main() -> Result<(), GraphError> {
     let series = Series2D {

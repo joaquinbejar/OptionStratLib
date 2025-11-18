@@ -152,7 +152,7 @@ pub struct SimulationResult {
 /// This struct contains a vector of individual simulation results along with
 /// aggregate statistics computed across all simulations.
 #[derive(DebugPretty, DisplaySimple, Clone, Serialize, Deserialize, Default)]
-pub struct SimulationStats {
+pub struct SimulationStatsResult {
     /// Individual results from each simulation run
     pub results: Vec<SimulationResult>,
 
@@ -187,7 +187,7 @@ pub struct SimulationStats {
     pub average_holding_period: Decimal,
 }
 
-impl SimulationStats {
+impl SimulationStatsResult {
     /// Prints a formatted summary of the simulation statistics.
     ///
     /// This method outputs comprehensive statistics including:
@@ -439,7 +439,7 @@ mod tests {
             create_test_simulation_result(3, dec!(75.0), 12, true),
         ];
 
-        let stats = SimulationStats {
+        let stats = SimulationStatsResult {
             results: results.clone(),
             total_simulations: 3,
             profitable_count: 2,
@@ -466,7 +466,7 @@ mod tests {
             create_test_simulation_result(2, dec!(-50.0), 15, true),
         ];
 
-        let stats = SimulationStats {
+        let stats = SimulationStatsResult {
             results,
             total_simulations: 2,
             profitable_count: 1,
@@ -492,7 +492,7 @@ mod tests {
             create_test_simulation_result(3, dec!(75.0), 12, true),
         ];
 
-        let stats = SimulationStats {
+        let stats = SimulationStatsResult {
             results,
             total_simulations: 3,
             profitable_count: 2,
@@ -512,7 +512,7 @@ mod tests {
 
     #[test]
     fn test_simulation_stats_empty_results() {
-        let stats = SimulationStats {
+        let stats = SimulationStatsResult {
             results: vec![],
             total_simulations: 0,
             profitable_count: 0,
@@ -539,7 +539,7 @@ mod tests {
             create_test_simulation_result(3, dec!(75.0), 12, false),
         ];
 
-        let stats = SimulationStats {
+        let stats = SimulationStatsResult {
             results,
             total_simulations: 3,
             profitable_count: 3,
@@ -564,7 +564,7 @@ mod tests {
             create_test_simulation_result(2, dec!(-50.0), 15, false),
         ];
 
-        let stats = SimulationStats {
+        let stats = SimulationStatsResult {
             results,
             total_simulations: 2,
             profitable_count: 0,

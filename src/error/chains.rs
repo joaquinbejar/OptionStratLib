@@ -55,9 +55,8 @@
 //! handling and formatting.
 
 use crate::error::{GreeksError, OptionsError};
-use std::error::Error;
-use std::fmt;
 use std::io;
+use thiserror::Error;
 
 /// # ChainError
 ///
@@ -89,36 +88,41 @@ use std::io;
 /// This error type is used throughout the option chain functionality to provide
 /// detailed information about what went wrong during chain operations, allowing
 /// for proper error handling and debugging.
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum ChainError {
     /// Errors related to option data validation
     ///
     /// This variant captures issues with individual option contract data,
     /// such as invalid strikes, volatility values, or price information.
+    #[error("Option data error: {0}")]
     OptionDataError(OptionDataErrorKind),
 
     /// Errors related to chain building
     ///
     /// This variant represents problems that occur during the construction
     /// of option chains, including parameter validation and strike generation.
+    #[error("Chain build error: {0}")]
     ChainBuildError(ChainBuildErrorKind),
 
     /// Errors related to file operations
     ///
     /// This variant handles issues with reading, writing, or parsing files
     /// containing option chain data.
+    #[error("File error: {0}")]
     FileError(FileErrorKind),
 
     /// Errors related to strategies
     ///
     /// This variant captures problems with option trading strategies,
     /// such as invalid combinations or incorrect leg configurations.
+    #[error("Strategy error: {0}")]
     StrategyError(StrategyErrorKind),
 
     /// Dynamic error with custom message
     ///
     /// This variant provides flexibility for error conditions that don't
     /// fit into the other specific categories.
+    #[error("{message}")]
     DynError {
         /// A descriptive message explaining the error
         message: String,
@@ -162,12 +166,13 @@ pub enum ChainError {
 ///     Ok(())
 /// }
 /// ```
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum OptionDataErrorKind {
     /// Invalid strike price
     ///
     /// This variant is used when an option's strike price is invalid,
     /// such as being negative, zero, or otherwise unsuitable for options calculations.
+    #[error("Invalid strike price {strike}: {reason}")]
     InvalidStrike {
         /// The problematic strike price value
         strike: f64,
@@ -179,6 +184,7 @@ pub enum OptionDataErrorKind {
     ///
     /// This variant is used when the implied volatility value doesn't meet
     /// the required criteria for option pricing or calculations.
+    #[error("Invalid volatility {volatility:?}: {reason}")]
     InvalidVolatility {
         /// The problematic volatility value that caused the error (if available)
         volatility: Option<f64>,
@@ -190,6 +196,7 @@ pub enum OptionDataErrorKind {
     ///
     /// This variant is used when the bid and/or ask prices are problematic,
     /// such as negative values, bid higher than ask, or other inconsistencies.
+    #[error("Invalid prices (bid: {bid:?}, ask: {ask:?}): {reason}")]
     InvalidPrices {
         /// The problematic bid price value (if available)
         bid: Option<f64>,
@@ -203,6 +210,7 @@ pub enum OptionDataErrorKind {
     ///
     /// This variant is used when the delta value for an option is outside
     /// acceptable bounds or otherwise unsuitable for options calculations.
+    #[error("Invalid delta {delta:?}: {reason}")]
     InvalidDelta {
         /// The problematic delta value that caused the error (if available)
         delta: Option<f64>,
@@ -214,12 +222,14 @@ pub enum OptionDataErrorKind {
     ///
     /// This variant captures various errors that can occur during
     /// option price calculation processes.
+    #[error("Price calculation error: {0}")]
     PriceCalculationError(String),
 
     /// Other errors related to option data
     ///
     /// A general-purpose variant for errors that don't fit into other categories.
-    OtherError(String),
+    #[error("Option data error: {0}")]
+    Other(String),
 }
 
 /// Enum representing specific errors that can occur during option chain building processes.
@@ -247,12 +257,13 @@ pub enum OptionDataErrorKind {
 /// This error type is typically used in functions that build or modify option chains,
 /// especially those dealing with strike price generation, volatility adjustments,
 /// and parameter validation.
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum ChainBuildErrorKind {
     /// Error indicating invalid parameters were provided for chain building
     ///
     /// This variant is used when one or more input parameters don't meet
     /// the required criteria for option chain construction.
+    #[error("Invalid parameter '{parameter}': {reason}")]
     InvalidParameters {
         /// Name of the parameter that caused the error
         parameter: String,
@@ -264,6 +275,7 @@ pub enum ChainBuildErrorKind {
     ///
     /// This variant is used when the system encounters problems adjusting
     /// volatility values, typically related to skew modeling.
+    #[error("Volatility adjustment error (smile curve: {smile_curve}): {reason}")]
     VolatilityAdjustmentError {
         /// The skew factor that caused the error
         smile_curve: f64,
@@ -275,6 +287,9 @@ pub enum ChainBuildErrorKind {
     ///
     /// This variant is used when the system cannot properly generate
     /// strike prices for the option chain.
+    #[error(
+        "Strike generation error (ref price: {reference_price}, interval: {interval}): {reason}"
+    )]
     StrikeGenerationError {
         /// The reference price used as a basis for strike generation
         reference_price: f64,
@@ -308,18 +323,20 @@ pub enum ChainBuildErrorKind {
 /// This error type is typically used in file handling operations, data import/export
 /// functionality, and file-based data processing pipelines where structured error
 /// reporting is important for debugging and user feedback.
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum FileErrorKind {
     /// Error when reading or writing a file
     ///
     /// This variant wraps a standard library I/O error and is used for low-level
     /// file system operations that fail.
-    IOError(io::Error),
+    #[error("IO error: {0}")]
+    IOError(#[from] io::Error),
 
     /// Error indicating an invalid file format
     ///
     /// This variant is used when the file's overall structure or format doesn't
     /// match what's expected by the application.
+    #[error("Invalid file format '{format}': {reason}")]
     InvalidFormat {
         /// The format that was being processed (e.g., "CSV", "JSON", "XML")
         format: String,
@@ -331,6 +348,7 @@ pub enum FileErrorKind {
     ///
     /// This variant provides detailed context about parsing errors, including
     /// the specific line where the error occurred and its content.
+    #[error("Parse error at line {line} ('{content}'): {reason}")]
     ParseError {
         /// The line number where the parsing error occurred (0-based or 1-based, depending on implementation)
         line: usize,
@@ -361,12 +379,13 @@ pub enum FileErrorKind {
 /// This error type is typically used in strategy validation, construction, and analysis
 /// to provide specific feedback about why a particular options combination doesn't
 /// constitute a valid strategy.
-#[derive(Debug, PartialEq)]
+#[derive(Error, Debug, PartialEq)]
 pub enum StrategyErrorKind {
     /// Error indicating an invalid number of legs in a strategy
     ///
     /// This variant is used when the provided legs don't match the required
     /// count for a specific strategy type.
+    #[error("Invalid number of legs: expected {expected}, found {found} - {reason}")]
     InvalidLegs {
         /// The number of legs expected for the strategy
         expected: usize,
@@ -381,6 +400,7 @@ pub enum StrategyErrorKind {
     /// This variant is used when the provided options don't form a valid
     /// strategy according to specific rules (e.g., strike price relationships,
     /// expiration alignment, option types).
+    #[error("Invalid combination for strategy '{strategy_type}': {reason}")]
     InvalidCombination {
         /// The type of strategy being validated (e.g., "Iron Condor", "Butterfly")
         strategy_type: String,
@@ -389,135 +409,17 @@ pub enum StrategyErrorKind {
     },
 }
 
-impl fmt::Display for ChainError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            ChainError::OptionDataError(err) => write!(f, "Option data error: {err}"),
-            ChainError::ChainBuildError(err) => write!(f, "Chain build error: {err}"),
-            ChainError::FileError(err) => write!(f, "File error: {err}"),
-            ChainError::StrategyError(err) => write!(f, "Strategy error: {err}"),
-            ChainError::DynError { message } => write!(f, "Error: {message}"),
-        }
-    }
-}
-
-impl fmt::Display for OptionDataErrorKind {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            OptionDataErrorKind::InvalidStrike { strike, reason } => {
-                write!(f, "Invalid strike price {strike}: {reason}")
-            }
-            OptionDataErrorKind::InvalidVolatility { volatility, reason } => {
-                write!(
-                    f,
-                    "Invalid volatility {:?}: {}",
-                    volatility.unwrap_or(0.0),
-                    reason
-                )
-            }
-            OptionDataErrorKind::InvalidPrices { bid, ask, reason } => {
-                write!(f, "Invalid prices (bid: {bid:?}, ask: {ask:?}): {reason}")
-            }
-            OptionDataErrorKind::InvalidDelta { delta, reason } => {
-                write!(f, "Invalid delta {delta:?}: {reason}")
-            }
-            OptionDataErrorKind::PriceCalculationError(msg) => {
-                write!(f, "Price calculation error: {msg}")
-            }
-            OptionDataErrorKind::OtherError(msg) => write!(f, "{msg}"),
-        }
-    }
-}
-
-impl fmt::Display for ChainBuildErrorKind {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            ChainBuildErrorKind::InvalidParameters { parameter, reason } => {
-                write!(f, "Invalid parameter '{parameter}': {reason}")
-            }
-            ChainBuildErrorKind::VolatilityAdjustmentError {
-                smile_curve,
-                reason,
-            } => {
-                write!(
-                    f,
-                    "Volatility adjustment error (skew factor: {smile_curve}): {reason}"
-                )
-            }
-            ChainBuildErrorKind::StrikeGenerationError {
-                reference_price,
-                interval,
-                reason,
-            } => {
-                write!(
-                    f,
-                    "Strike generation error (reference: {reference_price}, interval: {interval}): {reason}"
-                )
-            }
-        }
-    }
-}
-
-impl fmt::Display for FileErrorKind {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            FileErrorKind::IOError(err) => write!(f, "IO error: {err}"),
-            FileErrorKind::InvalidFormat { format, reason } => {
-                write!(f, "Invalid {format} format: {reason}")
-            }
-            FileErrorKind::ParseError {
-                line,
-                content,
-                reason,
-            } => {
-                write!(
-                    f,
-                    "Parse error at line {line}, content '{content}': {reason}"
-                )
-            }
-        }
-    }
-}
-
-impl fmt::Display for StrategyErrorKind {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            StrategyErrorKind::InvalidLegs {
-                expected,
-                found,
-                reason,
-            } => {
-                write!(
-                    f,
-                    "Invalid number of legs (expected: {expected}, found: {found}): {reason}"
-                )
-            }
-            StrategyErrorKind::InvalidCombination {
-                strategy_type,
-                reason,
-            } => {
-                write!(
-                    f,
-                    "Invalid combination for strategy '{strategy_type}': {reason}"
-                )
-            }
-        }
-    }
-}
-
-impl Error for ChainError {}
-
-impl From<io::Error> for ChainError {
-    fn from(error: io::Error) -> Self {
-        ChainError::FileError(FileErrorKind::IOError(error))
-    }
-}
-
 impl From<OptionsError> for ChainError {
     fn from(error: OptionsError) -> Self {
         ChainError::OptionDataError(OptionDataErrorKind::PriceCalculationError(
             error.to_string(),
         ))
+    }
+}
+
+impl From<io::Error> for ChainError {
+    fn from(error: io::Error) -> Self {
+        ChainError::FileError(FileErrorKind::IOError(error))
     }
 }
 
@@ -640,12 +542,12 @@ impl From<String> for ChainError {
 
 impl From<GreeksError> for ChainError {
     fn from(err: GreeksError) -> Self {
-        ChainError::OptionDataError(OptionDataErrorKind::OtherError(err.to_string()))
+        ChainError::OptionDataError(OptionDataErrorKind::Other(err.to_string()))
     }
 }
 
-impl From<Box<dyn Error>> for ChainError {
-    fn from(error: Box<dyn Error>) -> Self {
+impl From<Box<dyn std::error::Error>> for ChainError {
+    fn from(error: Box<dyn std::error::Error>) -> Self {
         ChainError::DynError {
             message: error.to_string(),
         }
@@ -787,7 +689,8 @@ mod tests_extended {
             ChainError::FileError(FileErrorKind::IOError(_))
         ));
 
-        let std_error: Box<dyn Error> = Box::new(std::io::Error::other("dynamic error"));
+        let std_error: Box<dyn std::error::Error> =
+            Box::new(std::io::Error::other("dynamic error"));
         let chain_error = ChainError::from(std_error);
         assert!(matches!(chain_error, ChainError::DynError { .. }));
     }
@@ -821,7 +724,7 @@ mod tests_extended {
         let error = ChainError::DynError {
             message: "Dynamic error occurred".to_string(),
         };
-        assert_eq!(format!("{error}"), "Error: Dynamic error occurred");
+        assert_eq!(format!("{error}"), "Dynamic error occurred");
     }
 
     #[test]
@@ -830,7 +733,7 @@ mod tests_extended {
             volatility: Some(0.25),
             reason: "Out of bounds".to_string(),
         };
-        assert_eq!(format!("{error}"), "Invalid volatility 0.25: Out of bounds");
+        assert_eq!(format!("{error}"), "Invalid volatility Some(0.25): Out of bounds");
     }
 
     #[test]
@@ -864,7 +767,7 @@ mod tests_extended {
         };
         assert_eq!(
             format!("{error}"),
-            "Strike generation error (reference: 100, interval: 5): Invalid strike intervals"
+            "Strike generation error (ref price: 100, interval: 5): Invalid strike intervals"
         );
     }
 

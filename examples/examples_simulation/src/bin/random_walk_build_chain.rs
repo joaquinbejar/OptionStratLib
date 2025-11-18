@@ -1,6 +1,4 @@
 use optionstratlib::prelude::*;
-use rust_decimal_macros::dec;
-use tracing::{debug, info};
 
 #[warn(dead_code)]
 struct Walker {}
@@ -13,7 +11,7 @@ impl Walker {
 
 impl WalkTypeAble<Positive, OptionChain> for Walker {}
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> Result<(), Error> {
     // let n_steps = 43_200; // 30 days in minutes
     let n_steps = 10080; // 30 days in minutes
     let underlying_price = pos!(4011.95);

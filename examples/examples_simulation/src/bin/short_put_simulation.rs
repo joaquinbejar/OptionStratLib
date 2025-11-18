@@ -34,21 +34,8 @@
 //! - PNG visualization of the last simulation in `Draws/Simulation/short_put_simulation.png`
 
 use indicatif::{ProgressBar, ProgressStyle};
-use optionstratlib::backtesting::results::SimulationResult;
-use optionstratlib::chains::generator_positive;
-use optionstratlib::pnl::PnL;
 use optionstratlib::prelude::*;
-use optionstratlib::simulation::simulator::Simulator;
-use optionstratlib::simulation::steps::{Step, Xstep, Ystep};
-use optionstratlib::simulation::{
-    ExitPolicy, SimulationStats, WalkParams, WalkType, WalkTypeAble, check_exit_policy,
-};
-use optionstratlib::utils::setup_logger;
-use optionstratlib::utils::time::{TimeFrame, convert_time_frame};
-use optionstratlib::volatility::volatility_for_dt;
-use rust_decimal_macros::dec;
 use std::collections::HashMap;
-use tracing::{debug, error, info};
 
 /// Walker implementation for the simulation.
 #[warn(dead_code)]
@@ -340,7 +327,7 @@ fn evaluate_short_put_strategy(
 /// - The option chain cannot be built
 /// - The random walk simulation fails
 /// - File I/O operations fail
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> Result<(), Error> {
     setup_logger();
 
     // Simulation parameters

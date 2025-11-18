@@ -4,10 +4,7 @@
    Date: 20/8/24
 ******************************************************************************/
 
-use chrono::Utc;
 use optionstratlib::prelude::*;
-use rust_decimal_macros::dec;
-use std::error::Error;
 
 fn create_sample_option() -> Options {
     Options::new(
@@ -25,7 +22,7 @@ fn create_sample_option() -> Options {
         None,
     )
 }
-fn main() -> Result<(), Box<dyn Error>> {
+fn main() -> Result<(), Error> {
     let position = Position::new(
         create_sample_option(),
         pos!(5.71),

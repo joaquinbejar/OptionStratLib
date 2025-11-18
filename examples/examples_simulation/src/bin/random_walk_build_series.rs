@@ -1,6 +1,4 @@
 use optionstratlib::prelude::*;
-use rust_decimal_macros::dec;
-use tracing::{debug, info};
 
 #[warn(dead_code)]
 struct Walker {}
@@ -13,7 +11,7 @@ impl Walker {
 
 impl WalkTypeAble<Positive, OptionSeries> for Walker {}
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> Result<(), Error> {
     setup_logger();
     // let n_steps = 43_200; // 30 days in minutes
     let n_steps = 5; // 30 days in minutes

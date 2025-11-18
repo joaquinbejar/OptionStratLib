@@ -587,10 +587,9 @@ pub fn adjust_volatility(
         .into()
 }
 
-#[allow(dead_code)]
 pub(crate) fn parse<T: std::str::FromStr>(s: &str) -> Option<T> {
     let trimmed = s.trim();
-    let input: Result<T, String> = match trimmed.parse::<T>() {
+    let input: Result<T, <T as std::str::FromStr>::Err> = match trimmed.parse::<T>() {
         Ok(value) => Ok(value),
         Err(_) => {
             return None;

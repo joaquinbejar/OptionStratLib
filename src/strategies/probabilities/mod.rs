@@ -40,13 +40,13 @@
 //!         &self,
 //!         volatility_adj: Option<VolatilityAdjustment>,
 //!         trend: Option<PriceTrend>
-//!     ) -> Result<StrategyProbabilityAnalysis, String>;
+//!     ) -> Result<StrategyProbabilityAnalysis, ProbabilityError>;
 //!     
 //!     fn expected_value(
 //!         &self,
 //!         volatility_adj: Option<VolatilityAdjustment>,
 //!         trend: Option<PriceTrend>
-//!     ) -> Result<Positive, String>;
+//!     ) -> Result<Positive, ProbabilityError>;
 //! }
 //! ```
 //!

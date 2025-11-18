@@ -1,4 +1,5 @@
 /******************************************************************************
+use optionstratlib::error::Error;
    Author: Joaquín Béjar García
    Email: jb@taunais.com
    Date: 8/11/25
@@ -38,20 +39,9 @@
 //! - Distribution of exit reasons
 //! - PNG visualization of the last simulation in `Draws/Simulation/short_put_strategy_simulation.png`
 
-use optionstratlib::Options;
-use optionstratlib::chains::generator_positive;
-use optionstratlib::model::types::{OptionStyle, OptionType, Side};
+
 use optionstratlib::prelude::*;
-use optionstratlib::simulation::simulator::Simulator;
-use optionstratlib::simulation::steps::{Step, Xstep, Ystep};
-use optionstratlib::simulation::{ExitPolicy, Simulate, WalkParams, WalkType, WalkTypeAble};
-use optionstratlib::strategies::ShortPut;
-use optionstratlib::utils::setup_logger;
-use optionstratlib::utils::time::{TimeFrame, convert_time_frame};
-use optionstratlib::volatility::volatility_for_dt;
-use rust_decimal::prelude::ToPrimitive;
-use rust_decimal_macros::dec;
-use tracing::info;
+
 
 /// Walker implementation for the simulation.
 struct Walker;
@@ -70,7 +60,7 @@ impl WalkTypeAble<Positive, Positive> for Walker {}
 /// - The random walk simulation fails
 /// - The simulate trait execution fails
 /// - File I/O operations fail
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> Result<(), Error> {
     setup_logger();
 
     // Simulation parameters

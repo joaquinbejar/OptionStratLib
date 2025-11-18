@@ -69,13 +69,7 @@
 //! Provides `StrategyResult<T>` for convenient error handling in strategy operations.
 use crate::error::common::OperationErrorKind;
 use crate::error::{OptionsError, PositionError};
-use std::error::Error;
-use std::fmt;
-
-impl Error for StrategyError {}
-impl Error for PriceErrorKind {}
-impl Error for BreakEvenErrorKind {}
-impl Error for ProfitLossErrorKind {}
+use thiserror::Error;
 
 /// Represents the different types of errors that can occur in options trading strategies.
 ///
@@ -98,27 +92,33 @@ impl Error for ProfitLossErrorKind {}
 /// This error type is designed to be returned from functions that perform operations
 /// on options trading strategies, providing structured and detailed error information
 /// to facilitate debugging and error handling.
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum StrategyError {
     /// Errors related to price calculations
+    #[error("Price error: {0}")]
     PriceError(PriceErrorKind),
 
     /// Errors related to break-even points
+    #[error("Break-even error: {0}")]
     BreakEvenError(BreakEvenErrorKind),
 
     /// Errors related to profit/loss calculations
+    #[error("Profit/loss error: {0}")]
     ProfitLossError(ProfitLossErrorKind),
 
     /// Errors related to strategy operations
+    #[error("Operation error: {0}")]
     OperationError(OperationErrorKind),
 
     /// Standard error with descriptive reason
+    #[error("Standard error: {reason}")]
     StdError {
         /// Detailed explanation of the standard error
         reason: String,
     },
 
     /// Indicates a feature or operation that has not been implemented yet
+    #[error("Not implemented")]
     NotImplemented,
 }
 
@@ -128,7 +128,7 @@ pub enum StrategyError {
 /// and operations. Each variant contains detailed information about the error context
 /// to facilitate debugging and error handling in pricing operations.
 ///
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum PriceErrorKind {
     /// Error when underlying price is not available or invalid
     ///
@@ -137,6 +137,7 @@ pub enum PriceErrorKind {
     ///
     /// # Fields
     ///
+    #[error("Invalid underlying price: {reason}")]
     InvalidUnderlyingPrice {
         /// * `reason` - A detailed explanation of why the price is considered invalid
         reason: String,
@@ -148,6 +149,7 @@ pub enum PriceErrorKind {
     /// the end price is less than the start price, or when price points are outside
     /// of valid bounds.
     ///
+    #[error("Invalid price range ({start} to {end}): {reason}")]
     InvalidPriceRange {
         /// * `start` - The beginning price of the attempted range
         start: f64,
@@ -192,12 +194,13 @@ pub enum PriceErrorKind {
 /// This error type is typically used within the context of `StrategyError` to provide
 /// detailed information about failures in strategy analysis, particularly when evaluating
 /// profit/loss scenarios at different price points.
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum BreakEvenErrorKind {
     /// Error that occurs when the break-even calculation process fails
     ///
     /// The `reason` field provides specific details about why the calculation failed,
     /// which can be useful for debugging or providing user feedback.
+    #[error("Break-even calculation error: {reason}")]
     CalculationError {
         /// Detailed explanation of what caused the calculation to fail
         reason: String,
@@ -207,6 +210,7 @@ pub enum BreakEvenErrorKind {
     ///
     /// This typically occurs with strategies that maintain a consistent profit or loss
     /// profile regardless of the underlying asset's price.
+    #[error("No break-even points exist for this strategy")]
     NoBreakEvenPoints,
 }
 
@@ -225,12 +229,13 @@ pub enum BreakEvenErrorKind {
 ///
 /// Each variant includes a detailed reason string to help diagnose the specific
 /// cause of the error and facilitate troubleshooting.
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum ProfitLossErrorKind {
     /// Error that occurs when calculating maximum profit.
     ///
     /// This might happen due to issues such as invalid input parameters,
     /// computational limitations, or logical inconsistencies in the profit model.
+    #[error("Maximum profit calculation error: {reason}")]
     MaxProfitError {
         /// Detailed explanation of why the maximum profit calculation failed
         reason: String,
@@ -240,6 +245,7 @@ pub enum ProfitLossErrorKind {
     ///
     /// This might happen due to issues such as invalid input parameters,
     /// computational limitations, or logical inconsistencies in the loss model.
+    #[error("Maximum loss calculation error: {reason}")]
     MaxLossError {
         /// Detailed explanation of why the maximum loss calculation failed
         reason: String,
@@ -249,65 +255,11 @@ pub enum ProfitLossErrorKind {
     ///
     /// This might happen when trying to determine profit/loss at different price
     /// points, breakeven points, or when analyzing the profit curve of a strategy.
+    #[error("Profit range calculation error: {reason}")]
     ProfitRangeError {
         /// Detailed explanation of why the profit range calculation failed
         reason: String,
     },
-}
-
-impl fmt::Display for StrategyError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            StrategyError::PriceError(err) => write!(f, "Price error: {err}"),
-            StrategyError::BreakEvenError(err) => write!(f, "Break-even error: {err}"),
-            StrategyError::ProfitLossError(err) => write!(f, "Profit/Loss error: {err}"),
-            StrategyError::OperationError(err) => write!(f, "Operation error: {err}"),
-            StrategyError::StdError { reason } => write!(f, "Error: {reason}"),
-            StrategyError::NotImplemented => write!(f, "Operation not implemented"),
-        }
-    }
-}
-
-impl fmt::Display for PriceErrorKind {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            PriceErrorKind::InvalidUnderlyingPrice { reason } => {
-                write!(f, "Invalid underlying price: {reason}")
-            }
-            PriceErrorKind::InvalidPriceRange { start, end, reason } => {
-                write!(f, "Invalid price range [{start}, {end}]: {reason}")
-            }
-        }
-    }
-}
-
-impl fmt::Display for BreakEvenErrorKind {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            BreakEvenErrorKind::CalculationError { reason } => {
-                write!(f, "Break-even calculation error: {reason}")
-            }
-            BreakEvenErrorKind::NoBreakEvenPoints => {
-                write!(f, "No break-even points found")
-            }
-        }
-    }
-}
-
-impl fmt::Display for ProfitLossErrorKind {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            ProfitLossErrorKind::MaxProfitError { reason } => {
-                write!(f, "Maximum profit calculation error: {reason}")
-            }
-            ProfitLossErrorKind::MaxLossError { reason } => {
-                write!(f, "Maximum loss calculation error: {reason}")
-            }
-            ProfitLossErrorKind::ProfitRangeError { reason } => {
-                write!(f, "Profit range calculation error: {reason}")
-            }
-        }
-    }
 }
 
 /// A specialized result type for strategy operations.
@@ -398,8 +350,8 @@ impl From<OptionsError> for StrategyError {
     }
 }
 
-impl From<Box<dyn Error>> for StrategyError {
-    fn from(err: Box<dyn Error>) -> Self {
+impl From<Box<dyn std::error::Error>> for StrategyError {
+    fn from(err: Box<dyn std::error::Error>) -> Self {
         StrategyError::StdError {
             reason: err.to_string(),
         }
@@ -557,7 +509,8 @@ mod tests_extended {
 
     #[test]
     fn test_strategy_error_from_boxed_error() {
-        let boxed_error: Box<dyn Error> = Box::new(std::io::Error::other("Underlying failure"));
+        let boxed_error: Box<dyn std::error::Error> =
+            Box::new(std::io::Error::other("Underlying failure"));
         let error: StrategyError = boxed_error.into();
         assert_eq!(format!("{error}"), "Error: Underlying failure");
     }
