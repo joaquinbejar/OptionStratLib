@@ -2174,7 +2174,7 @@ mod tests_calculate_implied_volatility {
     fn test_invalid_market_price() {
         let option = Options::default();
         let result = option.calculate_implied_volatility(Decimal::ZERO);
-        assert!(matches!(result, Err(VolatilityError::OptionError { .. })));
+        assert!(matches!(result, Err(VolatilityError::Options(_))));
     }
 
     #[test]
@@ -2195,7 +2195,7 @@ mod tests_calculate_implied_volatility {
         );
 
         let result = option.calculate_implied_volatility(dec!(2.5));
-        assert!(matches!(result, Err(VolatilityError::OptionError { .. })));
+        assert!(matches!(result, Err(VolatilityError::Options(_))));
     }
 
     #[test]

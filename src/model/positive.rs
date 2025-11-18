@@ -1533,10 +1533,10 @@ mod tests_macros {
     }
 
     #[test]
-    #[should_panic(expected = "Value must be positive, got -1")]
+    #[should_panic(expected = "OutOfBounds")]
     fn test_pos_negative_values() {
-        // Negative values should return ZERO
-        assert_eq!(pos!(-1.0), Positive::ZERO);
+        // Negative values should panic with OutOfBounds error
+        pos!(-1.0);
     }
 
     #[test]
