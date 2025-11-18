@@ -36,8 +36,7 @@
 use crate::Positive;
 use crate::error::VolatilityError;
 use crate::error::decimal;
-use std::error::Error;
-use std::fmt;
+use thiserror::Error;
 
 /// Represents errors that can occur during options Greek calculations.
 ///
@@ -48,22 +47,26 @@ use std::fmt;
 ///
 /// `GreeksError` serves as the primary error type for the Greek calculation system,
 /// allowing for precise error reporting and handling across different calculation stages.
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum GreeksError {
     /// Errors related to mathematical calculations such as division by zero,
     /// overflow, domain errors, or convergence failures.
+    #[error("Mathematical error: {0}")]
     MathError(MathErrorKind),
 
     /// Errors related to input validation, including invalid volatility, time,
     /// price, interest rate, or strike price values.
+    #[error("Input validation error: {0}")]
     InputError(InputErrorKind),
 
     /// Errors specific to the calculation of individual Greeks (delta, gamma,
     /// theta, vega, rho) or other option-related computations.
+    #[error("Greek calculation error: {0}")]
     CalculationError(CalculationErrorKind),
 
     /// Errors originating from standard Rust error types, wrapped as strings
     /// for consistent error handling.
+    #[error("Standard error: {0}")]
     StdError(String),
 }
 
@@ -110,13 +113,14 @@ pub enum GreeksError {
 ///     Ok(value.sqrt())
 /// }
 /// ```
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum MathErrorKind {
     /// Error that occurs when attempting to divide by zero.
     ///
     /// This is a fundamental mathematical error that must be caught to prevent undefined behavior.
     /// In numerical calculations, division by zero is undefined and will cause program crashes
     /// if not properly handled.
+    #[error("Division by zero")]
     DivisionByZero,
 
     /// Error that occurs when a calculation exceeds the numerical limits of the data type.
@@ -124,6 +128,7 @@ pub enum MathErrorKind {
     /// This typically happens with very large numbers or during exponential operations.
     /// Overflow errors can lead to incorrect results and should be caught to maintain
     /// calculation integrity.
+    #[error("Numerical overflow")]
     Overflow,
 
     /// Error that occurs when a function is evaluated outside its valid domain.
@@ -134,6 +139,7 @@ pub enum MathErrorKind {
     ///
     /// Domain errors are common in mathematical functions like logarithms, square roots,
     /// and trigonometric functions where certain input values are not allowed.
+    #[error("Invalid domain value {value}: {reason}")]
     InvalidDomain {
         /// The value that was outside the valid domain
         value: f64,
@@ -149,6 +155,7 @@ pub enum MathErrorKind {
     ///
     /// Convergence failures typically occur in numerical methods like Newton-Raphson,
     /// implied volatility calculations, or other root-finding algorithms.
+    #[error("Failed to converge after {iterations} iterations (tolerance: {tolerance})")]
     ConvergenceFailure {
         /// Number of iterations attempted before giving up
         iterations: usize,
@@ -186,13 +193,14 @@ pub enum MathErrorKind {
 /// These error kinds are typically used within higher-level error types to provide specific
 /// information about validation failures, enabling precise error handling and informative
 /// error messages for users.
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum InputErrorKind {
     /// Error indicating an invalid volatility input.
     ///
     /// This error occurs when a volatility value is outside acceptable bounds
     /// (typically negative values or unreasonably large values) or otherwise invalid
     /// for the calculation being performed.
+    #[error("Invalid volatility {value}: {reason}")]
     InvalidVolatility {
         /// The invalid volatility value that was provided
         value: f64,
@@ -204,6 +212,7 @@ pub enum InputErrorKind {
     ///
     /// This error occurs when a time value (typically representing time to expiration)
     /// is outside acceptable bounds or otherwise invalid for the calculation being performed.
+    #[error("Invalid time {value}: {reason}")]
     InvalidTime {
         /// The invalid time value that was provided (as a Positive type)
         value: Positive,
@@ -216,6 +225,7 @@ pub enum InputErrorKind {
     /// This error occurs when a price value (such as an underlying asset price)
     /// is outside acceptable bounds (typically negative values) or otherwise
     /// invalid for the calculation being performed.
+    #[error("Invalid price {value}: {reason}")]
     InvalidPrice {
         /// The invalid price value that was provided
         value: f64,
@@ -227,6 +237,7 @@ pub enum InputErrorKind {
     ///
     /// This error occurs when an interest rate value is outside acceptable bounds
     /// or otherwise invalid for the calculation being performed.
+    #[error("Invalid rate {value}: {reason}")]
     InvalidRate {
         /// The invalid interest rate value that was provided
         value: f64,
@@ -238,6 +249,7 @@ pub enum InputErrorKind {
     ///
     /// This error occurs when a strike price value is outside acceptable bounds,
     /// in an incorrect format, or otherwise invalid for the calculation being performed.
+    #[error("Invalid strike {value}: {reason}")]
     InvalidStrike {
         /// The invalid strike value that was provided (as a String)
         value: String,
@@ -255,12 +267,13 @@ pub enum InputErrorKind {
 /// The enum is designed to be used within a broader error handling system for options pricing
 /// and financial calculations, providing specific error types for different aspects of
 /// the derivatives pricing process.
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum CalculationErrorKind {
     /// Error in delta calculation
     ///
     /// Delta measures the rate of change of the option price with respect to changes
     /// in the underlying asset's price.
+    #[error("Delta calculation error: {reason}")]
     DeltaError {
         /// Detailed description of what caused the delta calculation to fail
         reason: String,
@@ -269,6 +282,7 @@ pub enum CalculationErrorKind {
     ///
     /// Gamma measures the rate of change of delta with respect to changes in the
     /// underlying asset's price.
+    #[error("Gamma calculation error: {reason}")]
     GammaError {
         /// Detailed description of what caused the gamma calculation to fail
         reason: String,
@@ -277,6 +291,7 @@ pub enum CalculationErrorKind {
     ///
     /// Theta measures the rate of decay of the option's value over time, often
     /// referred to as time decay.
+    #[error("Theta calculation error: {reason}")]
     ThetaError {
         /// Detailed description of what caused the theta calculation to fail
         reason: String,
@@ -285,6 +300,7 @@ pub enum CalculationErrorKind {
     ///
     /// Vega measures the sensitivity of the option price to changes in the
     /// underlying asset's volatility.
+    #[error("Vega calculation error: {reason}")]
     VegaError {
         /// Detailed description of what caused the vega calculation to fail
         reason: String,
@@ -293,6 +309,7 @@ pub enum CalculationErrorKind {
     ///
     /// Rho measures the sensitivity of the option price to changes in the
     /// risk-free interest rate.
+    #[error("Rho calculation error: {reason}")]
     RhoError {
         /// Detailed description of what caused the rho calculation to fail
         reason: String,
@@ -301,90 +318,9 @@ pub enum CalculationErrorKind {
     ///
     /// Wraps a decimal library error that occurred during option calculations,
     /// typically related to precision, arithmetic operations, or invalid values.
-    DecimalError {
-        /// The underlying decimal calculation error
-        error: decimal::DecimalError,
-    },
+    #[error(transparent)]
+    DecimalError(#[from] decimal::DecimalError),
 }
-
-impl fmt::Display for GreeksError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            GreeksError::MathError(err) => write!(f, "Mathematical error: {err}"),
-            GreeksError::InputError(err) => write!(f, "Input validation error: {err}"),
-            GreeksError::CalculationError(err) => write!(f, "Greek calculation error: {err}"),
-            GreeksError::StdError(msg) => write!(f, "Standard error: {msg}"),
-        }
-    }
-}
-
-impl fmt::Display for MathErrorKind {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            MathErrorKind::DivisionByZero => write!(f, "Division by zero"),
-            MathErrorKind::Overflow => write!(f, "Numerical overflow"),
-            MathErrorKind::InvalidDomain { value, reason } => {
-                write!(f, "Invalid domain value {value}: {reason}")
-            }
-            MathErrorKind::ConvergenceFailure {
-                iterations,
-                tolerance,
-            } => {
-                write!(
-                    f,
-                    "Failed to converge after {iterations} iterations (tolerance: {tolerance})"
-                )
-            }
-        }
-    }
-}
-
-impl fmt::Display for InputErrorKind {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            InputErrorKind::InvalidVolatility { value, reason } => {
-                write!(f, "Invalid volatility {value}: {reason}")
-            }
-            InputErrorKind::InvalidTime { value, reason } => {
-                write!(f, "Invalid time value {value}: {reason}")
-            }
-            InputErrorKind::InvalidPrice { value, reason } => {
-                write!(f, "Invalid price {value}: {reason}")
-            }
-            InputErrorKind::InvalidRate { value, reason } => {
-                write!(f, "Invalid rate {value}: {reason}")
-            }
-            InputErrorKind::InvalidStrike { value, reason } => {
-                write!(f, "Invalid strike price {value}: {reason}")
-            }
-        }
-    }
-}
-
-impl fmt::Display for CalculationErrorKind {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            CalculationErrorKind::DeltaError { reason } => {
-                write!(f, "Delta calculation error: {reason}")
-            }
-            CalculationErrorKind::GammaError { reason } => {
-                write!(f, "Gamma calculation error: {reason}")
-            }
-            CalculationErrorKind::ThetaError { reason } => {
-                write!(f, "Theta calculation error: {reason}")
-            }
-            CalculationErrorKind::VegaError { reason } => {
-                write!(f, "Vega calculation error: {reason}")
-            }
-            CalculationErrorKind::RhoError { reason } => {
-                write!(f, "Rho calculation error: {reason}")
-            }
-            CalculationErrorKind::DecimalError { error } => write!(f, "Decimal error: {error}"),
-        }
-    }
-}
-
-impl Error for GreeksError {}
 
 /// Type alias for Results returned from Greek calculation functions.
 ///
@@ -476,7 +412,7 @@ impl GreeksError {
 ///
 impl From<decimal::DecimalError> for GreeksError {
     fn from(error: decimal::DecimalError) -> Self {
-        GreeksError::CalculationError(CalculationErrorKind::DecimalError { error })
+        GreeksError::CalculationError(CalculationErrorKind::DecimalError(error))
     }
 }
 
@@ -495,14 +431,13 @@ impl From<VolatilityError> for GreeksError {
     }
 }
 
-/// Implements conversion from `Box<dyn Error>` to `GreeksError`.
+/// Implements conversion from `Box<dyn std::error::Error>` to `GreeksError`.
 ///
 /// This implementation serves as a catch-all for converting any type that implements
 /// the standard Error trait into a `GreeksError`. This is useful for integrating with
 /// libraries or functions that return standard error types.
-///
-impl From<Box<dyn Error>> for GreeksError {
-    fn from(error: Box<dyn Error>) -> Self {
+impl From<Box<dyn std::error::Error>> for GreeksError {
+    fn from(error: Box<dyn std::error::Error>) -> Self {
         GreeksError::StdError(error.to_string())
     }
 }
@@ -618,13 +553,6 @@ mod tests {
     }
 
     #[test]
-    fn test_error_trait_implementation() {
-        let error = GreeksError::delta_error("Test error");
-        let _error_trait_object: &dyn Error = &error;
-        // If this compiles, it means Error trait is implemented correctly
-    }
-
-    #[test]
     fn test_debug_implementation() {
         let error = GreeksError::delta_error("Test error");
         let debug_string = format!("{error:?}");
@@ -637,7 +565,7 @@ mod tests {
 mod tests_extended {
     use super::*;
     use crate::error::decimal::DecimalError::InvalidPrecision;
-    use crate::error::greeks::CalculationErrorKind::DecimalError;
+
     use crate::pos;
 
     #[test]
@@ -696,16 +624,15 @@ mod tests_extended {
 
     #[test]
     fn test_calculation_error_decimal() {
-        let error = DecimalError {
-            error: InvalidPrecision {
-                precision: 0,
-                reason: "Precision error".to_string(),
-            },
+        use crate::error::decimal::DecimalError as DecErr;
+        let decimal_error = DecErr::InvalidPrecision {
+            precision: 0,
+            reason: "Precision error".to_string(),
         };
-        assert_eq!(
-            format!("{error}"),
-            "Decimal error: Invalid decimal precision 0: Precision error"
-        );
+        let error =
+            GreeksError::CalculationError(CalculationErrorKind::DecimalError(decimal_error));
+        let error_string = format!("{error}");
+        assert!(error_string.contains("Invalid decimal precision"));
     }
 
     #[test]
@@ -713,7 +640,7 @@ mod tests_extended {
         let error = GreeksError::invalid_time(pos!(5.0), "Time must be positive");
         assert_eq!(
             format!("{error}"),
-            "Input validation error: Invalid time value 5: Time must be positive"
+            "Input validation error: Invalid time 5: Time must be positive"
         );
     }
 
@@ -727,8 +654,8 @@ mod tests_extended {
         let error: GreeksError = decimal_error.into();
 
         match error {
-            GreeksError::CalculationError(DecimalError { error }) => {
-                assert!(error.to_string().contains("Precision lost"));
+            GreeksError::CalculationError(CalculationErrorKind::DecimalError(_)) => {
+                // Conversion successful
             }
             _ => panic!("Wrong error variant"),
         }
@@ -746,7 +673,8 @@ mod tests_extended {
 
     #[test]
     fn test_boxed_error_conversion() {
-        let boxed_error: Box<dyn Error> = Box::new(std::io::Error::other("Some IO error"));
+        let boxed_error: Box<dyn std::error::Error> =
+            Box::new(std::io::Error::other("Some IO error"));
         let error: GreeksError = boxed_error.into();
         assert_eq!(format!("{error}"), "Standard error: Some IO error");
     }

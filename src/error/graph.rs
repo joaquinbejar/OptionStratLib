@@ -1,61 +1,46 @@
 use crate::error::{CurveError, SurfaceError};
-use std::error::Error;
-use std::fmt;
+use thiserror::Error;
 
 /// Represents errors that can occur during graph generation and rendering operations.
 ///
 /// This error type encapsulates failures that may happen when creating, rendering,
 /// or saving graphical representations of financial data such as option chains,
 /// volatility surfaces, or strategy payoffs.
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum GraphError {
     /// Represents errors that occur during the rendering process.
     /// Contains a descriptive message about what went wrong.
+    #[error("Render error: {0}")]
     Render(String),
 
     /// Represents I/O errors that occur when reading from or writing to files
     /// (e.g., when saving graphs to disk).
-    Io(std::io::Error),
-}
+    #[error("IO error: {0}")]
+    Io(#[from] std::io::Error),
 
-impl fmt::Display for GraphError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            GraphError::Render(msg) => write!(f, "Render error: {msg}"),
-            GraphError::Io(err) => write!(f, "IO error: {err}"),
-        }
-    }
-}
+    /// Error from curve operations.
+    #[error(transparent)]
+    Curve(CurveError),
 
-impl Error for GraphError {
-    fn source(&self) -> Option<&(dyn Error + 'static)> {
-        match self {
-            GraphError::Render(_) => None,
-            GraphError::Io(err) => Some(err),
-        }
-    }
-}
-
-impl From<std::io::Error> for GraphError {
-    fn from(e: std::io::Error) -> Self {
-        GraphError::Io(e)
-    }
-}
-
-impl From<Box<dyn Error>> for GraphError {
-    fn from(err: Box<dyn Error>) -> Self {
-        GraphError::Io(std::io::Error::other(err.to_string()))
-    }
+    /// Error from surface operations.
+    #[error(transparent)]
+    Surface(SurfaceError),
 }
 
 impl From<CurveError> for GraphError {
     fn from(err: CurveError) -> Self {
-        GraphError::Render(err.to_string())
+        GraphError::Curve(err)
     }
 }
 
 impl From<SurfaceError> for GraphError {
     fn from(err: SurfaceError) -> Self {
+        GraphError::Surface(err)
+    }
+}
+
+impl From<Box<dyn std::error::Error>> for GraphError {
+    fn from(err: Box<dyn std::error::Error>) -> Self {
         GraphError::Render(err.to_string())
     }
 }

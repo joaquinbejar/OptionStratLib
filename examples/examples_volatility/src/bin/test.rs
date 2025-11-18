@@ -3,12 +3,10 @@
    Email: jb@taunais.com
    Date: 5/5/25
 ******************************************************************************/
-
 use optionstratlib::prelude::*;
 use rand::{Rng, rng};
+use rust_decimal::MathematicalOps;
 use rust_decimal::prelude::FromPrimitive;
-use rust_decimal::{Decimal, MathematicalOps};
-use tracing::info;
 
 #[allow(clippy::too_many_arguments)]
 fn calculate_error(
@@ -21,7 +19,7 @@ fn calculate_error(
     strike_price: Positive,
     implied_volatility: Positive,
     underlying_price: Positive,
-) -> Result<Decimal, Box<dyn std::error::Error>> {
+) -> Result<Decimal, optionstratlib::error::Error> {
     let mid_price = (bid + ask) / pos!(2.0);
     let option = Options {
         option_type: OptionType::European,
@@ -50,7 +48,7 @@ pub struct BestParams {
     pub days: Positive,
 }
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> Result<(), optionstratlib::error::Error> {
     // let risk_free_rate = dec!(0.0214);
     // let dividend_yield = pos!(0.0225);
     // let days = pos!(75.0);

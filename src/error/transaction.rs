@@ -1,5 +1,4 @@
-use std::error::Error;
-use std::fmt::{Debug, Display, Formatter};
+use thiserror::Error;
 
 /// # Transaction Error
 ///
@@ -12,16 +11,9 @@ use std::fmt::{Debug, Display, Formatter};
 /// This struct encapsulates error information for transaction-related operations,
 /// providing a descriptive message that explains the nature of the error.
 ///
-#[derive(Debug)]
+#[derive(Error, Debug)]
+#[error("TransactionError: {message}")]
 pub struct TransactionError {
     /// The error message
     pub message: String,
 }
-
-impl Display for TransactionError {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "TransactionError: {}", self.message)
-    }
-}
-
-impl Error for TransactionError {}

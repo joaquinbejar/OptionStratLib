@@ -3,8 +3,7 @@
    Email: jb@taunais.com
    Date: 25/12/24
 ******************************************************************************/
-use std::error::Error;
-use std::fmt;
+use thiserror::Error;
 
 /// # Decimal Error Management
 ///
@@ -57,13 +56,14 @@ use std::fmt;
 ///     Ok(())
 /// }
 /// ```
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum DecimalError {
     /// Error when attempting to create a decimal from an invalid value
     ///
     /// Occurs when a value cannot be properly represented as a decimal,
     /// such as when it's NaN, infinity, or otherwise unsuitable for
     /// financial calculations.
+    #[error("Invalid decimal value {value}: {reason}")]
     InvalidValue {
         /// The problematic value that caused the error
         value: f64,
@@ -76,6 +76,7 @@ pub enum DecimalError {
     /// Occurs during mathematical operations such as addition, subtraction,
     /// multiplication, or division when the operation cannot be completed
     /// correctly (e.g., division by zero, overflow).
+    #[error("Decimal arithmetic error during {operation}: {reason}")]
     ArithmeticError {
         /// The operation that failed (e.g., "addition", "division")
         operation: String,
@@ -88,6 +89,7 @@ pub enum DecimalError {
     /// Occurs when a decimal value cannot be correctly converted from one
     /// representation to another, such as between different precision levels
     /// or between different decimal formats.
+    #[error("Failed to convert decimal from {from_type} to {to_type}: {reason}")]
     ConversionError {
         /// The source type being converted from
         from_type: String,
@@ -101,6 +103,7 @@ pub enum DecimalError {
     ///
     /// Occurs when a decimal value falls outside of acceptable minimum
     /// or maximum values for a specific calculation context.
+    #[error("Decimal value {value} is out of bounds (min: {min}, max: {max})")]
     OutOfBounds {
         /// The value that is out of bounds
         value: f64,
@@ -114,6 +117,7 @@ pub enum DecimalError {
     ///
     /// Occurs when an operation specifies or results in an invalid precision
     /// level that cannot be properly handled.
+    #[error("Invalid decimal precision {precision}: {reason}")]
     InvalidPrecision {
         /// The problematic precision value
         precision: i32,
@@ -121,40 +125,6 @@ pub enum DecimalError {
         reason: String,
     },
 }
-
-impl fmt::Display for DecimalError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            DecimalError::InvalidValue { value, reason } => {
-                write!(f, "Invalid decimal value {value}: {reason}")
-            }
-            DecimalError::ArithmeticError { operation, reason } => {
-                write!(f, "Decimal arithmetic error during {operation}: {reason}")
-            }
-            DecimalError::ConversionError {
-                from_type,
-                to_type,
-                reason,
-            } => {
-                write!(
-                    f,
-                    "Failed to convert decimal from {from_type} to {to_type}: {reason}"
-                )
-            }
-            DecimalError::OutOfBounds { value, min, max } => {
-                write!(
-                    f,
-                    "Decimal value {value} is out of bounds (min: {min}, max: {max})"
-                )
-            }
-            DecimalError::InvalidPrecision { precision, reason } => {
-                write!(f, "Invalid decimal precision {precision}: {reason}")
-            }
-        }
-    }
-}
-
-impl Error for DecimalError {}
 
 /// A specialized `Result` type for decimal calculation operations.
 ///

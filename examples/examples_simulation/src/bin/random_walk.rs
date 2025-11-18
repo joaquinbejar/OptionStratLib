@@ -1,13 +1,4 @@
-use optionstratlib::chains::generator_positive;
-use optionstratlib::simulation::randomwalk::RandomWalk;
-use optionstratlib::simulation::steps::{Step, Xstep, Ystep};
-use optionstratlib::simulation::{WalkParams, WalkType, WalkTypeAble};
-use optionstratlib::utils::setup_logger;
-use optionstratlib::utils::time::{TimeFrame, convert_time_frame};
-use optionstratlib::visualization::Graph;
-use optionstratlib::{ExpirationDate, Positive, pos};
-use rust_decimal_macros::dec;
-use tracing::debug;
+use optionstratlib::prelude::*;
 
 #[warn(dead_code)]
 struct Walker {}
@@ -20,7 +11,7 @@ impl Walker {
 
 impl WalkTypeAble<Positive, Positive> for Walker {}
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> Result<(), Error> {
     setup_logger();
     let n_steps = 43_200; // 30 days in minutes
     let initial_price = pos!(100.0);

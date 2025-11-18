@@ -1,3 +1,4 @@
+use crate::error::OhlcvError;
 use chrono::NaiveDate;
 use rust_decimal::Decimal;
 use rust_decimal::prelude::FromStr;
@@ -24,100 +25,6 @@ pub struct OhlcvCandle {
     pub close: Decimal,
     /// Volume traded during the period
     pub volume: u64,
-}
-
-/// Error type for OHLCV operations
-#[derive(Debug)]
-pub enum OhlcvError {
-    /// IO errors
-    IoError {
-        /// Reason for the error
-        reason: String,
-    },
-
-    /// ZIP errors
-    ZipError {
-        /// Reason for the error
-        reason: String,
-    },
-
-    /// CSV parsing errors
-    CsvError {
-        /// Reason for the error
-        reason: String,
-    },
-
-    /// Date parsing errors
-    DateParseError {
-        /// Reason for the error
-        reason: String,
-    },
-
-    /// Decimal parsing errors
-    DecimalParseError {
-        /// Reason for the error
-        reason: String,
-    },
-
-    /// Invalid parameters error
-    InvalidParameter {
-        /// Reason for the error
-        reason: String,
-    },
-
-    /// General error
-    OtherError {
-        /// Reason for the error
-        reason: String,
-    },
-}
-
-impl std::fmt::Display for OhlcvError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::IoError { reason, .. } => write!(f, "IO error: {reason}"),
-            Self::ZipError { reason, .. } => write!(f, "ZIP error: {reason}"),
-            Self::CsvError { reason } => write!(f, "CSV error: {reason}"),
-            Self::DateParseError { reason, .. } => write!(f, "Date parse error: {reason}"),
-            Self::DecimalParseError { reason, .. } => write!(f, "Decimal parse error: {reason}"),
-            Self::InvalidParameter { reason } => write!(f, "Invalid parameter {reason}"),
-            Self::OtherError { reason } => write!(f, "Error: {reason}"),
-        }
-    }
-}
-
-impl std::error::Error for OhlcvError {}
-
-impl From<std::io::Error> for OhlcvError {
-    fn from(error: std::io::Error) -> Self {
-        Self::IoError {
-            reason: error.to_string(),
-        }
-    }
-}
-
-impl From<zip::result::ZipError> for OhlcvError {
-    fn from(error: zip::result::ZipError) -> Self {
-        Self::ZipError {
-            reason: format!("ZIP error: {error:?}"),
-        }
-    }
-}
-
-impl From<chrono::ParseError> for OhlcvError {
-    fn from(error: chrono::ParseError) -> Self {
-        Self::DateParseError {
-            reason: format!("Date parse error: {error}"),
-        }
-    }
-}
-
-impl From<rust_decimal::Error> for OhlcvError {
-    fn from(error: rust_decimal::Error) -> Self {
-        Self::DecimalParseError {
-            reason: format!("Decimal parse error: {error}"),
-        }
-    }
 }
 
 /// Reads OHLCV data from a zipped CSV file and filters it by date range
@@ -601,7 +508,7 @@ mod ohlcv_tests {
         let param_error = OhlcvError::InvalidParameter {
             reason: "test reason".to_string(),
         };
-        assert_eq!(format!("{param_error}"), "Invalid parameter test reason");
+        assert_eq!(format!("{param_error}"), "Invalid parameter: test reason");
 
         // Test OtherError display
         let other_error = OhlcvError::OtherError {

@@ -28,3 +28,6 @@ src/.DS_Store
 /tarpaulin-report.html
 .secrets
 /coverage/tarpaulin-report.html
+
+# Local development examples
+/examples/Local/

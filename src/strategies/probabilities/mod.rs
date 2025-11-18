@@ -32,6 +32,7 @@
 //! use optionstratlib::Positive;
 //! use optionstratlib::pricing::Profit;
 //! use optionstratlib::strategies::Strategies;
+//! use optionstratlib::error::ProbabilityError;
 //!
 //! use optionstratlib::strategies::probabilities::{PriceTrend, StrategyProbabilityAnalysis, VolatilityAdjustment};
 //!
@@ -40,13 +41,13 @@
 //!         &self,
 //!         volatility_adj: Option<VolatilityAdjustment>,
 //!         trend: Option<PriceTrend>
-//!     ) -> Result<StrategyProbabilityAnalysis, String>;
+//!     ) -> Result<StrategyProbabilityAnalysis, ProbabilityError>;
 //!     
 //!     fn expected_value(
 //!         &self,
 //!         volatility_adj: Option<VolatilityAdjustment>,
 //!         trend: Option<PriceTrend>
-//!     ) -> Result<Positive, String>;
+//!     ) -> Result<Positive, ProbabilityError>;
 //! }
 //! ```
 //!

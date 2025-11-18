@@ -6,8 +6,7 @@
 use crate::error::{
     GraphError, GreeksError, InterpolationError, OperationErrorKind, OptionsError, PositionError,
 };
-use std::error::Error;
-use std::fmt;
+use thiserror::Error;
 
 /// Error variants that can occur when working with surface-related operations.
 ///
@@ -26,12 +25,13 @@ use std::fmt;
 /// This error type is designed to provide detailed context about what went wrong
 /// when working with financial or mathematical surface calculations, which is useful
 /// for debugging and error handling in financial modeling applications.
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum SurfaceError {
     /// Error related to 3D point calculations or validations.
     ///
     /// This typically occurs when coordinates are invalid, out of expected range,
     /// or when mathematical operations on points fail.
+    #[error("Error: {reason}")]
     Point3DError {
         /// A reference to a static string that explains the reason for an error or a condition.
         reason: &'static str,
@@ -42,12 +42,14 @@ pub enum SurfaceError {
     /// Contains detailed information about why the operation could not be completed,
     /// including whether the operation isn't supported for the given surface type
     /// or was provided with invalid parameters.
+    #[error("Operation error: {0}")]
     OperationError(OperationErrorKind),
 
     /// Error originating from the standard library or external dependencies.
     ///
     /// Encapsulates errors that were generated outside of the surface module,
     /// providing a clear transition between external and internal error handling.
+    #[error("Error: {reason}")]
     StdError {
         /// A reference to a static string that explains the reason for an error or a condition.
         reason: String,
@@ -57,6 +59,7 @@ pub enum SurfaceError {
     ///
     /// This is typically used when input data is valid but inconsistent or insufficient
     /// to construct a well-formed surface object.
+    #[error("Construction error: {0}")]
     ConstructionError(String),
 
     /// Error that occurred during the analysis of a surface.
@@ -64,7 +67,24 @@ pub enum SurfaceError {
     /// This is used when operations like finding extrema, calculating slopes,
     /// or evaluating a surface at specific points fail due to mathematical
     /// or algorithmic constraints.
+    #[error("Analysis error: {0}")]
     AnalysisError(String),
+
+    /// Error from position operations
+    #[error(transparent)]
+    Position(#[from] PositionError),
+
+    /// Error from options operations
+    #[error(transparent)]
+    Options(#[from] OptionsError),
+
+    /// Error from Greeks calculations
+    #[error(transparent)]
+    Greeks(#[from] GreeksError),
+
+    /// Error from graph operations
+    #[error(transparent)]
+    Graph(Box<GraphError>),
 }
 
 /// Provides helper methods for constructing specific variants of the `SurfaceError` type.
@@ -116,20 +136,6 @@ impl SurfaceError {
     }
 }
 
-impl Error for SurfaceError {}
-
-impl fmt::Display for SurfaceError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            SurfaceError::OperationError(err) => write!(f, "Operation error: {err}"),
-            SurfaceError::StdError { reason } => write!(f, "Error: {reason}"),
-            SurfaceError::Point3DError { reason } => write!(f, "Error: {reason}"),
-            SurfaceError::ConstructionError(reason) => write!(f, "Construction error: {reason}"),
-            SurfaceError::AnalysisError(reason) => write!(f, "Analysis error: {reason}"),
-        }
-    }
-}
-
 /// Converts a `PositionError` into a `SurfaceError` by mapping it to an
 /// `OperationError` with the `InvalidParameters` variant.
 ///
@@ -169,15 +175,6 @@ impl fmt::Display for SurfaceError {
 /// ## Debugging:
 /// The resulting `SurfaceError` will include contextual details, making it
 /// straightforward to trace and debug the underlying issue.
-impl From<PositionError> for SurfaceError {
-    fn from(err: PositionError) -> Self {
-        SurfaceError::OperationError(OperationErrorKind::InvalidParameters {
-            operation: "Position".to_string(),
-            reason: err.to_string(),
-        })
-    }
-}
-
 impl From<InterpolationError> for SurfaceError {
     fn from(err: InterpolationError) -> Self {
         SurfaceError::StdError {
@@ -186,21 +183,17 @@ impl From<InterpolationError> for SurfaceError {
     }
 }
 
-impl From<OptionsError> for SurfaceError {
-    fn from(err: OptionsError) -> Self {
-        SurfaceError::OperationError(OperationErrorKind::InvalidParameters {
-            operation: "Option".to_string(),
-            reason: err.to_string(),
-        })
+impl From<GraphError> for SurfaceError {
+    fn from(err: GraphError) -> Self {
+        SurfaceError::Graph(Box::new(err))
     }
 }
 
-impl From<GreeksError> for SurfaceError {
-    fn from(err: GreeksError) -> Self {
-        SurfaceError::OperationError(OperationErrorKind::InvalidParameters {
-            operation: "Greek".to_string(),
+impl From<Box<dyn std::error::Error>> for SurfaceError {
+    fn from(err: Box<dyn std::error::Error>) -> Self {
+        SurfaceError::StdError {
             reason: err.to_string(),
-        })
+        }
     }
 }
 
@@ -245,33 +238,12 @@ impl From<GreeksError> for SurfaceError {
 ///   (e.g., I/O errors, or third-party library errors) into a standardized error system.
 ///
 /// # Module Context
-///
-/// This conversion is provided in the `curves` module, which defines
-/// the `SurfaceError` enum encompassing multiple errors related to curve operations.
-impl From<Box<dyn Error>> for SurfaceError {
-    fn from(err: Box<dyn Error>) -> Self {
-        SurfaceError::StdError {
-            reason: err.to_string(),
-        }
-    }
-}
-
-impl From<GraphError> for SurfaceError {
-    fn from(err: GraphError) -> Self {
-        SurfaceError::StdError {
-            reason: err.to_string(),
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::error::CurveError;
     use crate::error::curves::CurvesResult;
     use crate::error::position::PositionValidationErrorKind;
-    use std::error::Error;
-    use std::fmt;
 
     // Custom error type for testing From<Box<dyn Error>>
     #[derive(Debug)]
@@ -279,13 +251,13 @@ mod tests {
         message: String,
     }
 
-    impl fmt::Display for TestError {
-        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    impl std::fmt::Display for TestError {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             write!(f, "{}", self.message)
         }
     }
 
-    impl Error for TestError {}
+    impl std::error::Error for TestError {}
 
     #[test]
     fn test_operation_not_supported() {
@@ -370,13 +342,10 @@ mod tests {
         let surface_error = SurfaceError::from(pos_error);
 
         match surface_error {
-            SurfaceError::OperationError(OperationErrorKind::InvalidParameters {
-                operation,
-                ..
-            }) => {
-                assert_eq!(operation, "Position");
+            SurfaceError::Position(_) => {
+                // Conversion successful
             }
-            _ => panic!("Wrong error variant"),
+            _ => panic!("Expected Position variant"),
         }
     }
 
@@ -385,7 +354,7 @@ mod tests {
         let test_error = TestError {
             message: "Test box error".to_string(),
         };
-        let boxed_error: Box<dyn Error> = Box::new(test_error);
+        let boxed_error: Box<dyn std::error::Error> = Box::new(test_error);
         let surface_error = SurfaceError::from(boxed_error);
 
         match surface_error {

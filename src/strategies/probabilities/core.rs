@@ -111,7 +111,7 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
     ///   annual drift rate and the confidence level for the trend.
     ///
     /// # Returns
-    /// - `Result<Positive, String>`: On success, returns a `Positive` representing
+    /// - `Result<Positive, ProbabilityError>`: On success, returns a `Positive` representing
     ///   the expected value. On failure, returns an error message as a `String`.
     ///
     /// The function performs the following operations:

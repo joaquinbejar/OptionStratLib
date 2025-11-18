@@ -1263,7 +1263,7 @@ mod tests_pmcc_best_area {
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
-    fn set_up() -> Result<(PoorMansCoveredCall, OptionChain), String> {
+    fn set_up() -> Result<(PoorMansCoveredCall, OptionChain), crate::error::Error> {
         let option_chain =
             OptionChain::load_from_json("./examples/Chains/SP500-18-oct-2024-5781.88.json")
                 .unwrap();
@@ -1339,7 +1339,7 @@ mod tests_pmcc_best_ratio {
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
-    fn set_up() -> Result<(PoorMansCoveredCall, OptionChain), String> {
+    fn set_up() -> Result<(PoorMansCoveredCall, OptionChain), crate::error::Error> {
         let option_chain =
             OptionChain::load_from_json("./examples/Chains/SP500-18-oct-2024-5781.88.json")
                 .unwrap();

@@ -1,7 +1,7 @@
 #![allow(unknown_lints)]
 #![allow(clippy::literal_string_with_formatting_args)]
 
-//! # OptionStratLib v0.9.2: Financial Options Library
+//! # OptionStratLib v0.10.0: Financial Options Library
 //!
 //! ## Table of Contents
 //! 1. [Introduction](#introduction)

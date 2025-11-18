@@ -1,7 +1,6 @@
 use optionstratlib::prelude::*;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
-use std::error::Error;
 
 fn get_option(underlying_asset: &Positive) -> Options {
     Options::new(
@@ -19,7 +18,7 @@ fn get_option(underlying_asset: &Positive) -> Options {
         None,
     )
 }
-fn main() -> Result<(), Box<dyn Error>> {
+fn main() -> Result<(), Error> {
     setup_logger();
     let params = ConstructionParams::D2 {
         t_start: dec!(10.0),

@@ -1,5 +1,5 @@
 use crate::Positive;
-use crate::backtesting::results::SimulationStats;
+use crate::backtesting::results::SimulationStatsResult;
 use crate::model::decimal::decimal_normal_sample;
 use crate::simulation::simulator::Simulator;
 use crate::simulation::{ExitPolicy, WalkParams, WalkType};
@@ -678,7 +678,7 @@ where
         &self,
         sim: &Simulator<X, Y>,
         exit: ExitPolicy,
-    ) -> Result<SimulationStats, Box<dyn Error>>;
+    ) -> Result<SimulationStatsResult, Box<dyn Error>>;
 }
 
 #[cfg(test)]

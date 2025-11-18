@@ -207,9 +207,49 @@ pub mod telegraph;
 /// including numerical methods, date handling, and data transformation tools.
 pub(crate) mod utils;
 
+/// Unified pricing system for options.
+///
+/// This module provides a single, consistent API for pricing options using different models.
+/// It includes the `PricingEngine` enum for selecting pricing methods, the `price_option`
+/// function as the main entry point, and the `Priceable` trait for trait-based pricing.
+///
+/// ## Features
+/// - Black-Scholes closed-form pricing
+/// - Monte Carlo simulation with various stochastic models
+/// - Unified error handling via `PricingError`
+/// - Extensible design for adding new pricing models
+///
+/// ## Example
+/// ```rust
+/// use optionstratlib::pricing::{PricingEngine, Priceable};
+/// # use optionstratlib::{Options, ExpirationDate, Positive, pos};
+/// # use optionstratlib::model::types::{OptionStyle, OptionType, Side};
+/// # use rust_decimal_macros::dec;
+/// # let option = Options {
+/// #     option_type: OptionType::European,
+/// #     side: Side::Long,
+/// #     underlying_symbol: "AAPL".to_string(),
+/// #     strike_price: pos!(100.0),
+/// #     expiration_date: ExpirationDate::Days(pos!(30.0)),
+/// #     implied_volatility: pos!(0.2),
+/// #     quantity: Positive::ONE,
+/// #     underlying_price: pos!(105.0),
+/// #     risk_free_rate: dec!(0.05),
+/// #     option_style: OptionStyle::Call,
+/// #     dividend_yield: pos!(0.01),
+/// #     exotic_params: None,
+/// # };
+///
+/// let engine = PricingEngine::ClosedFormBS;
+/// let price = option.price(&engine)?;
+/// # Ok::<(), optionstratlib::error::PricingError>(())
+/// ```
+pub mod unified;
+
 pub use binomial_model::{BinomialPricingParams, generate_binomial_tree, price_binomial};
 pub use black_scholes_model::{BlackScholes, black_scholes};
 pub use monte_carlo::monte_carlo_option_pricing;
 pub use payoff::{Payoff, PayoffInfo, Profit};
 pub use telegraph::{TelegraphProcess, telegraph};
+pub use unified::{Priceable, PricingEngine, price_option};
 pub use utils::{probability_keep_under_strike, simulate_returns};

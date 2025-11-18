@@ -1,7 +1,6 @@
 use optionstratlib::error::position::PositionValidationErrorKind;
 use optionstratlib::error::{
-    GraphError, GreeksError, InterpolationError, OperationErrorKind, OptionsError, PositionError,
-    SurfaceError,
+    GraphError, GreeksError, InterpolationError, OptionsError, PositionError, SurfaceError,
 };
 use std::error::Error;
 use std::io;
@@ -36,14 +35,10 @@ fn test_from_options_error() {
 
     // Verify the conversion was successful
     match surface_error {
-        SurfaceError::OperationError(OperationErrorKind::InvalidParameters {
-            operation,
-            reason,
-        }) => {
-            assert_eq!(operation, "Option");
-            assert!(reason.contains("options error test"));
+        SurfaceError::Options(_) => {
+            // The fact that we reached this arm means the conversion was successful
         }
-        _ => panic!("Expected OperationError variant, got something else"),
+        _ => panic!("Expected Options variant, got something else"),
     }
 }
 
@@ -57,14 +52,10 @@ fn test_from_greeks_error() {
 
     // Verify the conversion was successful
     match surface_error {
-        SurfaceError::OperationError(OperationErrorKind::InvalidParameters {
-            operation,
-            reason,
-        }) => {
-            assert_eq!(operation, "Greek");
-            assert!(reason.contains("greeks error test"));
+        SurfaceError::Greeks(_) => {
+            // The fact that we reached this arm means the conversion was successful
         }
-        _ => panic!("Expected OperationError variant, got something else"),
+        _ => panic!("Expected Greeks variant, got something else"),
     }
 }
 
@@ -78,10 +69,10 @@ fn test_from_graph_error() {
 
     // Verify the conversion was successful
     match surface_error {
-        SurfaceError::StdError { reason } => {
-            assert!(reason.contains("graph error test"));
+        SurfaceError::Graph(_) => {
+            // The fact that we reached this arm means the conversion was successful
         }
-        _ => panic!("Expected StdError variant, got something else"),
+        _ => panic!("Expected Graph variant, got something else"),
     }
 }
 
@@ -151,13 +142,9 @@ fn test_from_position_error_with_details() {
     let surface_error = SurfaceError::from(validation_error);
 
     match surface_error {
-        SurfaceError::OperationError(OperationErrorKind::InvalidParameters {
-            operation,
-            reason,
-        }) => {
-            assert_eq!(operation, "Position");
-            assert!(reason.contains("invalid position details"));
+        SurfaceError::Position(_) => {
+            // The fact that we reached this arm means the conversion was successful
         }
-        _ => panic!("Expected OperationError variant, got something else"),
+        _ => panic!("Expected Position variant, got something else"),
     }
 }

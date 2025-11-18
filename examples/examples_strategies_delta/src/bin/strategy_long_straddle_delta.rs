@@ -1,15 +1,6 @@
-use optionstratlib::ExpirationDate;
-use optionstratlib::Positive;
-use optionstratlib::pos;
-use optionstratlib::strategies::delta_neutral::DeltaNeutrality;
-use optionstratlib::strategies::long_straddle::LongStraddle;
-use optionstratlib::strategies::{BasicAble, Strategies};
-use optionstratlib::utils::setup_logger;
-use rust_decimal::Decimal;
-use std::error::Error;
-use tracing::info;
+use optionstratlib::prelude::*;
 
-fn main() -> Result<(), Box<dyn Error>> {
+fn main() -> Result<(), Error> {
     setup_logger();
     let underlying_price = pos!(7140.0);
     let strategy = LongStraddle::new(

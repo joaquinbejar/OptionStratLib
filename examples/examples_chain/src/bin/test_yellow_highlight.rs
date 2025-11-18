@@ -3,7 +3,7 @@ use optionstratlib::chains::utils::{OptionChainBuildParams, OptionDataPriceParam
 use optionstratlib::{Positive, model::ExpirationDate};
 use rust_decimal_macros::dec;
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> Result<(), optionstratlib::error::Error> {
     // Create OptionDataPriceParams first
     let price_params = OptionDataPriceParams::new(
         Some(Box::new(Positive::new(150.0)?)), // underlying_price

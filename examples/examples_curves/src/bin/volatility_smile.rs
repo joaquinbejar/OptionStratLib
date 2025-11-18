@@ -1,10 +1,6 @@
-use optionstratlib::chains::chain::OptionChain;
-use optionstratlib::geometrics::Plottable;
-use optionstratlib::utils::setup_logger;
-use optionstratlib::volatility::VolatilitySmile;
-use std::error::Error;
+use optionstratlib::prelude::*;
 
-fn main() -> Result<(), Box<dyn Error>> {
+fn main() -> Result<(), Error> {
     setup_logger();
     let option_chain =
         OptionChain::load_from_json("./examples/Chains/SP500-18-oct-2024-5781.88.json")?;

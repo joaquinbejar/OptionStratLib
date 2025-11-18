@@ -1,7 +1,4 @@
-use chrono::Utc;
 use optionstratlib::prelude::*;
-use rust_decimal_macros::dec;
-use tracing::info;
 
 fn main() {
     setup_logger();

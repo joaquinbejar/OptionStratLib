@@ -47,12 +47,17 @@ impl ProfitLossRange {
         lower_bound: Option<Positive>,
         upper_bound: Option<Positive>,
         probability: Positive,
-    ) -> Result<Self, String> {
+    ) -> Result<Self, ProbabilityError> {
         // Validate boundaries if both are present
         if let (Some(lower), Some(upper)) = (lower_bound, upper_bound)
             && lower >= upper
         {
-            return Err("Lower bound must be less than upper bound".to_string());
+            return Err(ProbabilityError::RangeError(
+                crate::error::probability::ProfitLossRangeErrorKind::InvalidProfitRange {
+                    range: format!("[{}, {}]", lower.to_f64(), upper.to_f64()),
+                    reason: "Lower bound must be less than upper bound".to_string(),
+                },
+            ));
         }
 
         Ok(ProfitLossRange {

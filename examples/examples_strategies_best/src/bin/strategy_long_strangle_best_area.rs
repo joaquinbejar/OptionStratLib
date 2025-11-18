@@ -1,9 +1,6 @@
 use optionstratlib::prelude::*;
-use rust_decimal::Decimal;
-use std::error::Error;
-use tracing::{debug, info};
 
-fn main() -> Result<(), Box<dyn Error>> {
+fn main() -> Result<(), Error> {
     setup_logger();
     let option_chain =
         OptionChain::load_from_json("./examples/Chains/SP500-18-oct-2024-5781.88.json")?;

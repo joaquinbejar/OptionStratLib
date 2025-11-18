@@ -45,11 +45,15 @@ pub use crate::strategies::{
     iron_butterfly::IronButterfly,
     iron_condor::IronCondor,
     long_butterfly_spread::LongButterflySpread,
+    long_call::LongCall,
+    long_put::LongPut,
     long_straddle::LongStraddle,
     long_strangle::LongStrangle,
     poor_mans_covered_call::PoorMansCoveredCall,
     probabilities::ProbabilityAnalysis,
     short_butterfly_spread::ShortButterflySpread,
+    short_call::ShortCall,
+    short_put::ShortPut,
     short_straddle::ShortStraddle,
     short_strangle::ShortStrangle,
     utils::FindOptimalSide,
@@ -63,7 +67,9 @@ pub use crate::pricing::payoff::*;
 pub use crate::pricing::*;
 
 // PnL calculations
-pub use crate::pnl::PnLCalculator;
+pub use crate::pnl::{PnL, PnLCalculator};
+
+pub use crate::backtesting::*;
 
 // Visualization
 pub use crate::visualization::{Graph, GraphData, Series2D, Surface3D, TraceMode};
@@ -83,13 +89,18 @@ pub use crate::geometrics::{ConstructionMethod, ConstructionParams, GeometricObj
 
 // Volatility models
 pub use crate::volatility::*;
+
 // Error types (most commonly encountered)
-pub use crate::error::*;
+pub use crate::error::{
+    ChainError, CurveError, DecimalError, Error, GraphError, GreeksError, InterpolationError,
+    MetricsError, OhlcvError, OperationErrorKind, OptionsError, PositionError, PricingError,
+    ProbabilityError, StrategyError, SurfaceError, TransactionError, VolatilityError,
+};
 
 // Utility functions and traits
 pub use crate::model::utils::ToRound;
 pub use crate::utils::{
-    Len, TimeFrame,
+    Len, OhlcvCandle, TimeFrame,
     others::calculate_log_returns,
     read_ohlcv_from_zip, setup_logger,
     time::{convert_time_frame, get_tomorrow_formatted, get_x_days_formatted},
@@ -98,18 +109,21 @@ pub use crate::utils::{
 // Commonly used external dependencies
 pub use chrono::Utc;
 pub use rust_decimal::Decimal;
+pub use rust_decimal::prelude::ToPrimitive;
 pub use rust_decimal_macros::dec;
+pub use std::path::Path;
 
 // Simulation types and functions
 pub use crate::simulation::{
-    WalkParams, WalkType, WalkTypeAble,
+    ExitPolicy, Simulate, SimulationStats, WalkParams, WalkType, WalkTypeAble, check_exit_policy,
     randomwalk::RandomWalk,
+    simulator::Simulator,
     steps::{Step, Xstep, Ystep},
 };
 
 // Chain and series types and generators
 pub use crate::chains::{
-    OptionChainBuildParams, generator_optionchain, utils::OptionDataPriceParams,
+    OptionChainBuildParams, generator_optionchain, generator_positive, utils::OptionDataPriceParams,
 };
 pub use crate::series::{OptionSeries, OptionSeriesBuildParams, generator_optionseries};
 
@@ -119,3 +133,5 @@ pub use crate::volatility::{adjust_volatility, constant_volatility};
 // Re-export the pos! and spos! macros for creating Positive values
 pub use crate::pos;
 pub use crate::spos;
+
+pub use tracing::{debug, error, info, trace, warn};

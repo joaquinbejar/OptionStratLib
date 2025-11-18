@@ -30,7 +30,7 @@ use tracing::debug;
 /// # Returns
 ///
 /// * `Ok(OptionChain)` - A new `OptionChain` with the updated parameters.
-/// * `Err(Box<dyn std::error::Error>)` - If an error occurs during the creation of the new `OptionChain`.
+/// * `Err(optionstratlib::error::Error)` - If an error occurs during the creation of the new `OptionChain`.
 ///
 fn create_chain_from_step(
     previous_y_step: &Ystep<OptionChain>,

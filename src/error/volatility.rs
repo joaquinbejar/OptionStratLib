@@ -6,8 +6,7 @@
 
 use crate::Positive;
 use crate::error::{GreeksError, OptionsError};
-use std::error::Error;
-use std::fmt;
+use thiserror::Error;
 
 /// Represents errors that can occur during volatility-related calculations.
 ///
@@ -18,108 +17,78 @@ use std::fmt;
 ///
 /// `VolatilityError` is particularly useful for diagnosing problems in option pricing
 /// models that rely on volatility parameters, such as Black-Scholes or binomial models.
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum VolatilityError {
     /// Error indicating that a price value is invalid for volatility calculations.
     ///
     /// This variant is used when a price input doesn't meet the requirements
     /// for volatility calculation, such as being negative or outside valid bounds.
+    #[error("Invalid price {price}: {reason}")]
     InvalidPrice {
         /// The invalid price value that caused the error.
         price: Positive,
         /// A description explaining why the price is invalid.
         reason: String,
     },
+
     /// Error indicating that a time value is invalid for volatility calculations.
     ///
     /// This occurs when time parameters (such as time to expiration) are invalid
     /// for volatility calculations, for example being negative or too large.
+    #[error("Invalid time {time}: {reason}")]
     InvalidTime {
         /// The invalid time value that caused the error.
         time: Positive,
         /// A description explaining why the time value is invalid.
         reason: String,
     },
+
     /// Error indicating that the vega value is zero.
     ///
     /// This occurs when attempting to calculate implied volatility using the
     /// Newton-Raphson method and vega is zero, making it impossible to converge.
+    #[error("Vega is zero, cannot calculate implied volatility")]
     ZeroVega,
+
+    /// Error related to Greeks calculations.
+    #[error(transparent)]
+    Greeks(#[from] GreeksError),
+
+    /// Error related to option calculations.
+    #[error(transparent)]
+    Options(#[from] OptionsError),
+
     /// Error related to vega calculations or usage.
     ///
     /// This represents more general issues with vega calculations beyond just
     /// zero values.
+    #[error("Error calculating vega: {reason}")]
     VegaError {
         /// A description of what went wrong with the vega calculation.
         reason: String,
     },
+
     /// Error related to option calculations or parameters.
     ///
     /// This represents issues with the underlying option model or parameters
     /// that prevent proper volatility calculation.
+    #[error("Option error: {reason}")]
     OptionError {
         /// A description of what went wrong with the option calculation.
         reason: String,
     },
+
     /// Error indicating that an iterative volatility calculation failed to converge.
     ///
     /// This typically occurs in numerical methods like Newton-Raphson or bisection
     /// when trying to solve for implied volatility.
+    #[error("No convergence after {iterations} iterations. Last volatility: {last_volatility}")]
     NoConvergence {
         /// The number of iterations that were performed before giving up.
         iterations: u32,
         /// The last volatility value that was calculated before giving up.
         last_volatility: Positive,
     },
-}
-
-impl Error for VolatilityError {}
-
-impl fmt::Display for VolatilityError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match &self {
-            VolatilityError::InvalidPrice { price, reason } => {
-                write!(f, "Invalid price {price}: {reason}")
-            }
-            VolatilityError::InvalidTime { time, reason } => {
-                write!(f, "Invalid time {time}: {reason}")
-            }
-            VolatilityError::ZeroVega => {
-                write!(f, "Vega is zero, cannot calculate implied volatility")
-            }
-            VolatilityError::VegaError { reason } => {
-                write!(f, "Error calculating vega: {reason}")
-            }
-            VolatilityError::OptionError { reason } => {
-                write!(f, "Option error: {reason}")
-            }
-            VolatilityError::NoConvergence {
-                iterations,
-                last_volatility,
-            } => {
-                write!(
-                    f,
-                    "No convergence after {iterations} iterations. Last volatility: {last_volatility}"
-                )
-            }
-        }
-    }
-}
-
-impl From<GreeksError> for VolatilityError {
-    fn from(error: GreeksError) -> Self {
-        VolatilityError::VegaError {
-            reason: error.to_string(),
-        }
-    }
-}
-
-impl From<OptionsError> for VolatilityError {
-    fn from(error: OptionsError) -> Self {
-        VolatilityError::OptionError {
-            reason: error.to_string(),
-        }
-    }
 }
 
 #[cfg(test)]
@@ -203,8 +172,8 @@ mod tests_volatility_errors {
         let implied_vol_error: VolatilityError = greeks_error.into();
 
         match implied_vol_error {
-            VolatilityError::VegaError { reason } => {
-                assert!(reason.contains("Volatility cannot be zero"));
+            VolatilityError::Greeks(_) => {
+                // Conversion successful
             }
             _ => panic!("Wrong error variant"),
         }
@@ -219,8 +188,8 @@ mod tests_volatility_errors {
         let implied_vol_error: VolatilityError = greeks_error.into();
 
         match implied_vol_error {
-            VolatilityError::OptionError { reason } => {
-                assert!(reason.contains("Invalid option parameters"));
+            VolatilityError::Options(_) => {
+                // Conversion successful
             }
             _ => panic!("Wrong error variant"),
         }

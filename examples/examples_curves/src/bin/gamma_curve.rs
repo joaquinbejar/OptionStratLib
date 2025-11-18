@@ -1,13 +1,6 @@
-use optionstratlib::curves::{Curve, Point2D};
-use optionstratlib::geometrics::{
-    ConstructionMethod, ConstructionParams, GeometricObject, Plottable,
-};
-use optionstratlib::greeks::Greeks;
-use optionstratlib::utils::setup_logger;
-use optionstratlib::{ExpirationDate, OptionStyle, OptionType, Options, Positive, Side, pos};
+use optionstratlib::prelude::*;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
-use std::error::Error;
 
 fn get_option(strike: &Positive) -> Options {
     Options::new(
@@ -25,7 +18,7 @@ fn get_option(strike: &Positive) -> Options {
         None,
     )
 }
-fn main() -> Result<(), Box<dyn Error>> {
+fn main() -> Result<(), Error> {
     setup_logger();
     let params = ConstructionParams::D2 {
         t_start: dec!(10.0),
