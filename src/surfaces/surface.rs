@@ -1927,7 +1927,7 @@ mod tests_surface_geometric_object {
         let parametric_func: Box<dyn Fn(Point2D) -> ResultPoint<Point3D> + Send + Sync> =
             Box::new(move |t: Point2D| -> ResultPoint<Point3D> {
                 if t.x > dec!(0.5) && t.y > dec!(0.5) {
-                    Err(Box::from("Test error".to_string()))
+                    Err("Test error".into())
                 } else {
                     Ok(Point3D::new(t.x, t.y, t.x * t.y))
                 }
