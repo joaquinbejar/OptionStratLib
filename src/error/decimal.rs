@@ -124,6 +124,10 @@ pub enum DecimalError {
         /// Detailed explanation of why the precision is invalid
         reason: String,
     },
+
+    /// Catch-all error for other decimal errors
+    #[error("Other decimal error: {0}")]
+    Other(String),
 }
 
 /// A specialized `Result` type for decimal calculation operations.
@@ -280,6 +284,12 @@ impl DecimalError {
             precision,
             reason: reason.to_string(),
         }
+    }
+}
+
+impl From<&str> for DecimalError {
+    fn from(s: &str) -> Self {
+        DecimalError::Other(s.to_string())
     }
 }
 

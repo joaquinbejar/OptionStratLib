@@ -54,7 +54,7 @@
 //! All error types implement `std::error::Error` and `std::fmt::Display` for proper error
 //! handling and formatting.
 
-use crate::error::{GreeksError, OptionsError};
+use crate::error::{DecimalError, GreeksError, OptionsError};
 use std::io;
 use thiserror::Error;
 
@@ -423,6 +423,14 @@ impl From<io::Error> for ChainError {
     }
 }
 
+impl From<DecimalError> for ChainError {
+    fn from(error: DecimalError) -> Self {
+        ChainError::OptionDataError(OptionDataErrorKind::PriceCalculationError(
+            error.to_string(),
+        ))
+    }
+}
+
 /// Implementation of factory methods for creating specific `ChainError` variants.
 ///
 /// This implementation provides convenient factory methods for creating different types of errors
@@ -540,6 +548,12 @@ impl From<String> for ChainError {
     }
 }
 
+impl From<&str> for ChainError {
+    fn from(msg: &str) -> Self {
+        ChainError::OptionDataError(OptionDataErrorKind::PriceCalculationError(msg.to_string()))
+    }
+}
+
 impl From<GreeksError> for ChainError {
     fn from(err: GreeksError) -> Self {
         ChainError::OptionDataError(OptionDataErrorKind::Other(err.to_string()))
@@ -551,6 +565,44 @@ impl From<Box<dyn std::error::Error>> for ChainError {
         ChainError::DynError {
             message: error.to_string(),
         }
+    }
+}
+
+impl From<csv::Error> for ChainError {
+    fn from(err: csv::Error) -> Self {
+        ChainError::FileError(FileErrorKind::ParseError {
+            line: 0,
+            content: String::new(),
+            reason: err.to_string(),
+        })
+    }
+}
+
+impl From<serde_json::Error> for ChainError {
+    fn from(err: serde_json::Error) -> Self {
+        ChainError::FileError(FileErrorKind::ParseError {
+            line: 0,
+            content: String::new(),
+            reason: err.to_string(),
+        })
+    }
+}
+
+impl From<chrono::ParseError> for ChainError {
+    fn from(err: chrono::ParseError) -> Self {
+        ChainError::OptionDataError(OptionDataErrorKind::Other(err.to_string()))
+    }
+}
+
+impl From<std::num::ParseIntError> for ChainError {
+    fn from(err: std::num::ParseIntError) -> Self {
+        ChainError::OptionDataError(OptionDataErrorKind::Other(err.to_string()))
+    }
+}
+
+impl From<crate::error::CurveError> for ChainError {
+    fn from(err: crate::error::CurveError) -> Self {
+        ChainError::OptionDataError(OptionDataErrorKind::Other(err.to_string()))
     }
 }
 

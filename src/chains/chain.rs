@@ -33,7 +33,6 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
 use serde_json::Value;
 use std::cmp::Ordering;
 use std::collections::{BTreeMap, BTreeSet};
-use std::error::Error;
 use std::fmt;
 use std::sync::Arc;
 use tracing::{debug, error, warn};
@@ -500,7 +499,7 @@ impl OptionChain {
     /// this option chain. The method calculates appropriate values for chain size, strike interval,
     /// and estimated spread based on the current data.
     ///
-    pub fn to_build_params(&self) -> Result<OptionChainBuildParams, Box<dyn Error>> {
+    pub fn to_build_params(&self) -> Result<OptionChainBuildParams, ChainError> {
         // Calculate chain size based on the distance from ATM strike
         let atm_strike = self.atm_strike()?;
         let strike_interval = self.get_strike_interval();
@@ -783,7 +782,7 @@ impl OptionChain {
     /// # Returns
     ///
     /// * `Ok(&Positive)` - Reference to the strike price closest to the underlying price
-    /// * `Err(Box<dyn Error>)` - Error if the option chain is empty or if the operation fails
+    /// * `Err(ChainError)` - Error if the option chain is empty or if the operation fails
     ///
     /// # Example
     ///
@@ -800,7 +799,7 @@ impl OptionChain {
     ///     Err(e) => error!("Error finding ATM strike: {}", e),
     /// }
     /// ```
-    pub fn atm_strike(&self) -> Result<&Positive, Box<dyn Error>> {
+    pub fn atm_strike(&self) -> Result<&Positive, ChainError> {
         let option_data = self.atm_option_data()?;
         Ok(&option_data.strike_price)
     }
@@ -815,7 +814,7 @@ impl OptionChain {
     /// # Returns
     ///
     /// * `Ok(&OptionData)` - If a suitable ATM option is found, returns a reference to it.
-    /// * `Err(Box<dyn Error>)` - If the option chain is empty or no ATM option can be found,
+    /// * `Err(ChainError)` - If the option chain is empty or no ATM option can be found,
     ///   returns an error describing the failure.
     ///
     /// # Errors
@@ -824,7 +823,7 @@ impl OptionChain {
     ///
     /// * The option chain (`self.options`) is empty.
     /// * No option with a strike price close to the underlying price can be found.
-    pub fn atm_option_data(&self) -> Result<&OptionData, Box<dyn Error>> {
+    pub fn atm_option_data(&self) -> Result<&OptionData, ChainError> {
         // Check for empty option chain
         if self.options.is_empty() {
             return Err(format!(
@@ -899,7 +898,7 @@ impl OptionChain {
     /// # Panics
     ///
     /// This function will panic if the underlying price in the file name cannot be parsed as an f64.
-    pub fn set_from_title(&mut self, file: &str) -> Result<(), Box<dyn Error>> {
+    pub fn set_from_title(&mut self, file: &str) -> Result<(), ChainError> {
         let file_name = file.split('/').next_back().unwrap();
         let file_name = file_name
             .rsplit_once('.')
@@ -974,14 +973,14 @@ impl OptionChain {
     ///
     /// # Returns
     ///
-    /// * `Result<(), Box<dyn Error>>` - Ok(()) if successful, or an Error if the file couldn't be created
+    /// * `Result<(), ChainError>` - Ok(()) if successful, or an Error if the file couldn't be created
     ///   or written to.
     ///
     ///
     /// # Note
     ///
     /// This method is only available on non-WebAssembly targets.
-    pub fn save_to_csv(&self, file_path: &str) -> Result<(), Box<dyn Error>> {
+    pub fn save_to_csv(&self, file_path: &str) -> Result<(), ChainError> {
         let full_path = format!("{}/{}.csv", file_path, self.get_title());
         let mut wtr = WriterBuilder::new().from_path(full_path)?;
         wtr.write_record([
@@ -1028,13 +1027,13 @@ impl OptionChain {
     ///
     /// # Returns
     ///
-    /// * `Result<(), Box<dyn Error>>` - Ok(()) if successful, or an Error if the file couldn't be created
+    /// * `Result<(), ChainError>` - Ok(()) if successful, or an Error if the file couldn't be created
     ///   or written to.
     ///
     /// # Note
     ///
     /// This method is only available on non-WebAssembly targets.
-    pub fn save_to_json(&self, file_path: &str) -> Result<(), Box<dyn Error>> {
+    pub fn save_to_json(&self, file_path: &str) -> Result<(), ChainError> {
         let full_path = format!("{}/{}.json", file_path, self.get_title());
         let file = File::create(full_path)?;
         serde_json::to_writer_pretty(file, &self)?;
@@ -1052,13 +1051,13 @@ impl OptionChain {
     ///
     /// # Returns
     ///
-    /// * `Result<Self, Box<dyn Error>>` - An OptionChain if successful, or an Error if the file
+    /// * `Result<Self, ChainError>` - An OptionChain if successful, or an Error if the file
     ///   couldn't be read or the data is invalid.
     ///
     /// # Note
     ///
     /// This method is only available on non-WebAssembly targets.
-    pub fn load_from_csv(file_path: &str) -> Result<Self, Box<dyn Error>> {
+    pub fn load_from_csv(file_path: &str) -> Result<Self, ChainError> {
         let mut rdr = csv::Reader::from_path(file_path)?;
         let mut options = BTreeSet::new();
         for result in rdr.records() {
@@ -1113,13 +1112,13 @@ impl OptionChain {
     ///
     /// # Returns
     ///
-    /// * `Result<Self, Box<dyn Error>>` - An OptionChain if successful, or an Error if the file
+    /// * `Result<Self, ChainError>` - An OptionChain if successful, or an Error if the file
     ///   couldn't be read or the data is invalid.
     ///
     /// # Note
     ///
     /// This method is only available on non-WebAssembly targets.
-    pub fn load_from_json(file_path: &str) -> Result<Self, Box<dyn Error>> {
+    pub fn load_from_json(file_path: &str) -> Result<Self, ChainError> {
         let file = File::open(file_path)?;
         let mut option_chain: OptionChain = serde_json::from_reader(file)?;
         option_chain.set_optiondata_extra_params()?;
@@ -1666,13 +1665,13 @@ impl OptionChain {
     ///
     /// * `Ok(&Option<Positive>)` - If the ATM option is found, returns a reference
     ///   to its implied volatility, which is an `Option<Positive>`.
-    /// * `Err(Box<dyn Error>)` - If the ATM option cannot be found, returns an error.
+    /// * `Err(ChainError)` - If the ATM option cannot be found, returns an error.
     ///
     /// # Errors
     ///
     /// This function returns an error if the underlying `atm_option_data()` call fails,
     /// which can happen if the option chain is empty or no suitable ATM option is found.
-    pub fn get_atm_implied_volatility(&self) -> Result<&Positive, Box<dyn Error>> {
+    pub fn get_atm_implied_volatility(&self) -> Result<&Positive, ChainError> {
         let option_data = self.atm_option_data()?;
         Ok(&option_data.implied_volatility)
     }
@@ -2299,23 +2298,23 @@ impl RNDAnalysis for OptionChain {
     /// * Empty option chain
     /// * Zero derivative tolerance
     /// * Failed density calculations
-    fn calculate_rnd(&self, params: &RNDParameters) -> Result<RNDResult, Box<dyn Error>> {
+    fn calculate_rnd(&self, params: &RNDParameters) -> Result<RNDResult, ChainError> {
         let mut densities = BTreeMap::new();
         let mut h = params.derivative_tolerance.to_dec();
 
         // Step 1: Validate parameters
         if h == Positive::ZERO {
-            return Err(Box::from(
-                "Derivative tolerance must be greater than zero".to_string(),
-            ));
+            return Err("Derivative tolerance must be greater than zero"
+                .to_string()
+                .into());
         }
 
         // Step 2: Get all available strikes
         let strikes: Vec<Positive> = self.options.iter().map(|opt| opt.strike_price).collect();
         if strikes.is_empty() {
-            return Err(Box::from(
-                "No strikes available for RND calculation".to_string(),
-            ));
+            return Err("No strikes available for RND calculation"
+                .to_string()
+                .into());
         }
 
         // Calculate minimum strike interval
@@ -2393,7 +2392,7 @@ impl RNDAnalysis for OptionChain {
 
         // Step 6: Validate and normalize densities
         if densities.is_empty() {
-            return Err(Box::from("Failed to calculate valid densities".to_string()));
+            return Err("Failed to calculate valid densities".to_string().into());
         }
 
         let total: Decimal = densities.values().sum();
@@ -2420,7 +2419,7 @@ impl RNDAnalysis for OptionChain {
     /// # Error Conditions
     /// * Missing ATM volatility
     /// * Insufficient valid data points
-    fn calculate_skew(&self) -> Result<Vec<(Positive, Decimal)>, Box<dyn Error>> {
+    fn calculate_skew(&self) -> Result<Vec<(Positive, Decimal)>, ChainError> {
         let mut skew = Vec::new();
         let atm_strike = self.underlying_price;
         let atm_vol = self.get_atm_implied_volatility()?;
@@ -2432,7 +2431,7 @@ impl RNDAnalysis for OptionChain {
         }
 
         if skew.is_empty() {
-            return Err(Box::from("No valid data for skew calculation".to_string()));
+            return Err("No valid data for skew calculation".to_string().into());
         }
 
         Ok(skew)
@@ -5111,9 +5110,8 @@ mod rnd_analysis_tests {
 
             let result = chain.calculate_rnd(&params);
             assert!(result.is_err());
-            assert_eq!(
-                result.unwrap_err().to_string(),
-                "Derivative tolerance must be greater than zero"
+            assert!(
+                result.unwrap_err().to_string().contains("Derivative tolerance must be greater than zero")
             );
         }
 
@@ -5127,9 +5125,8 @@ mod rnd_analysis_tests {
 
             let result = chain.calculate_rnd(&params);
             assert!(result.is_err());
-            assert_eq!(
-                result.unwrap_err().to_string(),
-                "Derivative tolerance must be greater than zero"
+            assert!(
+                result.unwrap_err().to_string().contains("Derivative tolerance must be greater than zero")
             );
         }
 
@@ -5186,9 +5183,8 @@ mod rnd_analysis_tests {
 
             let result = chain.calculate_skew();
             assert!(result.is_err());
-            assert_eq!(
-                result.unwrap_err().to_string(),
-                "Cannot find ATM OptionData for empty option chain: TEST"
+            assert!(
+                result.unwrap_err().to_string().contains("Cannot find ATM OptionData for empty option chain: TEST")
             );
         }
 

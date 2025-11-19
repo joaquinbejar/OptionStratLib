@@ -306,14 +306,14 @@ impl From<Box<dyn std::error::Error>> for CurveError {
 ///
 /// # Behavior
 ///
-/// When constructing a `CurvesError` from a `Box<dyn Error>`, the `StdError` variant
-/// is utilized. The `Box<dyn Error>` is unwrapped, and its string representation
+/// When constructing a `CurveError` from a `Box<dyn std::error::Error>`, the `StdError` variant
+/// is utilized. The boxed error is unwrapped, and its string representation
 /// (via `to_string`) is used to populate the `reason` field of the `StdError` variant.
 ///
 /// # Parameters
 ///
-/// - `err`: A boxed standard error (`Box<dyn Error>`). Represents the error to be
-///   wrapped within a `CurvesError` variant.
+/// - `err`: A boxed standard error (`Box<dyn std::error::Error>`). Represents the error to be
+///   wrapped within a `CurveError` variant.
 ///
 /// # Returns
 ///
@@ -335,7 +335,7 @@ impl From<Box<dyn std::error::Error>> for CurveError {
 ///
 /// # Notes
 ///
-/// - This implementation assumes that all input errors (`Box<dyn Error>`) are stringifiable
+/// - This implementation assumes that all input errors (`Box<dyn std::error::Error>`) are stringifiable
 ///   using the `to_string()` method.
 /// - This conversion is particularly useful for libraries integrating generalized errors
 ///   (e.g., I/O errors, or third-party library errors) into a standardized error system.
