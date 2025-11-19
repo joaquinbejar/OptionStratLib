@@ -5,7 +5,7 @@
 [optionstratlib](../index.html)::[pricing](index.html)
 :::
 
-# Function [simulate_returns]{.fn}Copy item path
+# Function [simulate_returns]{.fn} Copy item path
 
 [[Source](../../src/optionstratlib/pricing/utils.rs.html#35-91){.src}
 ]{.sub-heading}

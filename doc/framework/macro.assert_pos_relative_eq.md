@@ -5,7 +5,7 @@
 [optionstratlib](index.html)
 :::
 
-# Macro [assert_pos_relative_eq]{.macro}Copy item path
+# Macro [assert_pos_relative_eq]{.macro} Copy item path
 
 [[Source](../src/optionstratlib/utils/tests.rs.html#45-81){.src}
 ]{.sub-heading}

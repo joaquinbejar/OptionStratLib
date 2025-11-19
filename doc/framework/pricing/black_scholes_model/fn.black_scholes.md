@@ -5,14 +5,14 @@
 [optionstratlib](../../index.html)::[pricing](../index.html)::[black_scholes_model](index.html)
 :::
 
-# Function [black_scholes]{.fn}Copy item path
+# Function [black_scholes]{.fn} Copy item path
 
 [[Source](../../../src/optionstratlib/pricing/black_scholes_model.rs.html#38-57){.src}
 ]{.sub-heading}
 ::::
 
 ``` {.rust .item-decl}
-pub fn black_scholes(option: &Options) -> Result<Decimal, Box<dyn Error>>
+pub fn black_scholes(option: &Options) -> Result<Decimal, PricingError>
 ```
 
 Expand description

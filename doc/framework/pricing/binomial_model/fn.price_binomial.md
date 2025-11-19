@@ -5,7 +5,7 @@
 [optionstratlib](../../index.html)::[pricing](../index.html)::[binomial_model](index.html)
 :::
 
-# Function [price_binomial]{.fn}Copy item path
+# Function [price_binomial]{.fn} Copy item path
 
 [[Source](../../../src/optionstratlib/pricing/binomial_model.rs.html#90-139){.src}
 ]{.sub-heading}
@@ -14,7 +14,7 @@
 ``` {.rust .item-decl}
 pub fn price_binomial(
     params: BinomialPricingParams<'_>,
-) -> Result<Decimal, Box<dyn Error>>
+) -> Result<Decimal, PricingError>
 ```
 
 Expand description

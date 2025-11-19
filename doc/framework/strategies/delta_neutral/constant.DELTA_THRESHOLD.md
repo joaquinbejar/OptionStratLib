@@ -5,9 +5,9 @@
 [optionstratlib](../../index.html)::[strategies](../index.html)::[delta_neutral](index.html)
 :::
 
-# Constant [DELTA_THRESHOLD]{.constant}Copy item path
+# Constant [DELTA_THRESHOLD]{.constant} Copy item path
 
-[[Source](../../../src/optionstratlib/strategies/delta_neutral/model.rs.html#78){.src}
+[[Source](../../../src/optionstratlib/strategies/delta_neutral/model.rs.html#80){.src}
 ]{.sub-heading}
 ::::
 

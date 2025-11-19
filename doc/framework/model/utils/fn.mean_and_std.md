@@ -5,9 +5,9 @@
 [optionstratlib](../../index.html)::[model](../index.html)::[utils](index.html)
 :::
 
-# Function [mean_and_std]{.fn}Copy item path
+# Function [mean_and_std]{.fn} Copy item path
 
-[[Source](../../../src/optionstratlib/model/utils.rs.html#343-352){.src}
+[[Source](../../../src/optionstratlib/model/utils.rs.html#347-356){.src}
 ]{.sub-heading}
 ::::
 

@@ -5,9 +5,9 @@
 [optionstratlib](index.html)
 :::
 
-# Macro [pos]{.macro}Copy item path
+# Macro [pos]{.macro} Copy item path
 
-[[Source](../src/optionstratlib/model/positive.rs.html#59-63){.src}
+[[Source](../src/optionstratlib/model/positive.rs.html#63-67){.src}
 ]{.sub-heading}
 ::::
 

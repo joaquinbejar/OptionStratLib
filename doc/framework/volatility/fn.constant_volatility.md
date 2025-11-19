@@ -5,16 +5,16 @@
 [optionstratlib](../index.html)::[volatility](index.html)
 :::
 
-# Function [constant_volatility]{.fn}Copy item path
+# Function [constant_volatility]{.fn} Copy item path
 
-[[Source](../../src/optionstratlib/volatility/utils.rs.html#29-41){.src}
+[[Source](../../src/optionstratlib/volatility/utils.rs.html#26-38){.src}
 ]{.sub-heading}
 ::::
 
 ``` {.rust .item-decl}
 pub fn constant_volatility(
     returns: &[Decimal],
-) -> Result<Positive, Box<dyn Error>>
+) -> Result<Positive, VolatilityError>
 ```
 
 Expand description

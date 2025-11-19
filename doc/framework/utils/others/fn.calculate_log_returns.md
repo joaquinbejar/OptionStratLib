@@ -5,7 +5,7 @@
 [optionstratlib](../../index.html)::[utils](../index.html)::[others](index.html)
 :::
 
-# Function [calculate_log_returns]{.fn}Copy item path
+# Function [calculate_log_returns]{.fn} Copy item path
 
 [[Source](../../../src/optionstratlib/utils/others.rs.html#200-217){.src}
 ]{.sub-heading}

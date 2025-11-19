@@ -5,9 +5,9 @@
 [optionstratlib](../../index.html)::[error](../index.html)
 :::
 
-# Module probabilityCopy item path
+# Module probability Copy item path
 
-[[Source](../../../src/optionstratlib/error/probability.rs.html#7-977){.src}
+[[Source](../../../src/optionstratlib/error/probability.rs.html#7-908){.src}
 ]{.sub-heading}
 ::::
 

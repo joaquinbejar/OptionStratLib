@@ -5,9 +5,9 @@
 [optionstratlib](../index.html)
 :::
 
-# Module riskCopy item path
+# Module risk Copy item path
 
-[[Source](../../src/optionstratlib/risk/mod.rs.html#7-180){.src}
+[[Source](../../src/optionstratlib/risk/mod.rs.html#7-186){.src}
 ]{.sub-heading}
 ::::
 
@@ -66,7 +66,7 @@ The module evaluates positions under multiple scenarios combining:
 
 ::: example-wrap
 ``` {.rust .rust-example-rendered}
-use optionstratlib::Options;
+use optionstratlib::{ExpirationDate, Options};
 use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
 use optionstratlib::Positive;
 use optionstratlib::model::position::Position;
@@ -97,6 +97,8 @@ let position = Position {
     date: Utc::now(),
     open_fee: pos!(0.5),
     close_fee: pos!(0.5),
+    epic: None,
+    extra_fields: None,
 };
 
 // Create SPAN calculator
@@ -118,7 +120,7 @@ let margin = span.calculate_margin(&position);
 use chrono::Utc;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
-use optionstratlib::Options;
+use optionstratlib::{ExpirationDate, Options};
 use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
 use optionstratlib::model::position::Position;
 use optionstratlib::Positive;
@@ -147,6 +149,8 @@ let positions = vec![
         date: Utc::now(),
         open_fee: pos!(0.5),
         close_fee: pos!(0.5),
+        epic: None,
+        extra_fields: None,
     },
     Position {
         option,
@@ -154,6 +158,8 @@ let positions = vec![
         date: Utc::now(),
         open_fee: pos!(0.5),
         close_fee: pos!(0.5),
+        epic: None,
+        extra_fields: None,
     },
 ];
 

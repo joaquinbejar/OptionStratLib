@@ -1,13 +1,13 @@
-:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::: width-limiter
-::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::: {#main-content .section .content}
+::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::: width-limiter
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::: {#main-content .section .content}
 :::: main-heading
 ::: rustdoc-breadcrumbs
 [optionstratlib](../index.html)::[curves](index.html)
 :::
 
-# Struct [Curve]{.struct}Copy item path
+# Struct [Curve]{.struct} Copy item path
 
-[[Source](../../src/optionstratlib/curves/curve.rs.html#62-71){.src}
+[[Source](../../src/optionstratlib/curves/curve.rs.html#64-73){.src}
 ]{.sub-heading}
 ::::
 
@@ -74,7 +74,7 @@ The `Curve` type fits into mathematical or graphical operations such as:
 ## Fields[§](#fields){.anchor} {#fields .fields .section-header}
 
 [[§](#structfield.points){.anchor
-.field}`points: `[`BTreeSet`](https://doc.rust-lang.org/1.86.0/alloc/collections/btree/set/struct.BTreeSet.html "struct alloc::collections::btree::set::BTreeSet"){.struct}`<`[`Point2D`](struct.Point2D.html "struct optionstratlib::curves::Point2D"){.struct}`>`]{#structfield.points
+.field}`points: `[`BTreeSet`](https://doc.rust-lang.org/1.91.1/alloc/collections/btree/set/struct.BTreeSet.html "struct alloc::collections::btree::set::BTreeSet"){.struct}`<`[`Point2D`](struct.Point2D.html "struct optionstratlib::curves::Point2D"){.struct}`>`]{#structfield.points
 .structfield .section-header}
 
 ::: docblock
@@ -84,8 +84,8 @@ automatically maintains them in sorted order by their x-coordinate.
 :::
 
 [[§](#structfield.x_range){.anchor
-.field}`x_range: (Decimal, Decimal)`]{#structfield.x_range .structfield
-.section-header}
+.field}`x_range: (`[`Decimal`](../prelude/struct.Decimal.html "struct optionstratlib::prelude::Decimal"){.struct}`, `[`Decimal`](../prelude/struct.Decimal.html "struct optionstratlib::prelude::Decimal"){.struct}`)`]{#structfield.x_range
+.structfield .section-header}
 
 ::: docblock
 A tuple `(min_x, max_x)` that specifies the minimum and maximum
@@ -98,7 +98,7 @@ should ensure they fall within this range. Both values are of type
 
 ::::::: {#implementations-list}
 ::: {#impl-Curve .section .impl}
-[Source](../../src/optionstratlib/curves/curve.rs.html#91-122){.src
+[Source](../../src/optionstratlib/curves/curve.rs.html#93-124){.src
 .rightside}[§](#impl-Curve){.anchor}
 
 ### impl [Curve](struct.Curve.html "struct optionstratlib::curves::Curve"){.struct} {#impl-curve .code-header}
@@ -106,10 +106,10 @@ should ensure they fall within this range. Both values are of type
 
 ::::: impl-items
 ::: {#method.new .section .method}
-[Source](../../src/optionstratlib/curves/curve.rs.html#118-121){.src
+[Source](../../src/optionstratlib/curves/curve.rs.html#120-123){.src
 .rightside}
 
-#### pub fn [new](#method.new){.fn}(points: [BTreeSet](https://doc.rust-lang.org/1.86.0/alloc/collections/btree/set/struct.BTreeSet.html "struct alloc::collections::btree::set::BTreeSet"){.struct}\<[Point2D](struct.Point2D.html "struct optionstratlib::curves::Point2D"){.struct}\>) -\> Self {#pub-fn-newpoints-btreesetpoint2d---self .code-header}
+#### pub fn [new](#method.new){.fn}(points: [BTreeSet](https://doc.rust-lang.org/1.91.1/alloc/collections/btree/set/struct.BTreeSet.html "struct alloc::collections::btree::set::BTreeSet"){.struct}\<[Point2D](struct.Point2D.html "struct optionstratlib::curves::Point2D"){.struct}\>) -\> Self {#pub-fn-newpoints-btreesetpoint2d---self .code-header}
 :::
 
 ::: docblock
@@ -149,9 +149,9 @@ points.
 
 ## Trait Implementations[§](#trait-implementations){.anchor} {#trait-implementations .section-header}
 
-::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::: {#trait-implementations-list}
+::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::: {#trait-implementations-list}
 :::: {#impl-Arithmetic%3CCurve%3E-for-Curve .section .impl}
-[Source](../../src/optionstratlib/curves/curve.rs.html#1254-1453){.src
+[Source](../../src/optionstratlib/curves/curve.rs.html#1268-1467){.src
 .rightside}[§](#impl-Arithmetic%3CCurve%3E-for-Curve){.anchor}
 
 ### impl [Arithmetic](../geometrics/trait.Arithmetic.html "trait optionstratlib::geometrics::Arithmetic"){.trait}\<[Curve](struct.Curve.html "struct optionstratlib::curves::Curve"){.struct}\> for [Curve](struct.Curve.html "struct optionstratlib::curves::Curve"){.struct} {#impl-arithmeticcurve-for-curve .code-header}
@@ -165,10 +165,10 @@ operation and performing arithmetic operations between two curves.
 
 ::::::::: impl-items
 ::: {#method.merge .section .method .trait-impl}
-[Source](../../src/optionstratlib/curves/curve.rs.html#1316-1418){.src
+[Source](../../src/optionstratlib/curves/curve.rs.html#1330-1432){.src
 .rightside}[§](#method.merge){.anchor}
 
-#### fn [merge](../geometrics/trait.Arithmetic.html#tymethod.merge){.fn}( curves: &\[&[Curve](struct.Curve.html "struct optionstratlib::curves::Curve"){.struct}\], operation: [MergeOperation](../geometrics/enum.MergeOperation.html "enum optionstratlib::geometrics::MergeOperation"){.enum}, ) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[Curve](struct.Curve.html "struct optionstratlib::curves::Curve"){.struct}, [CurveError](../error/curves/enum.CurveError.html "enum optionstratlib::error::curves::CurveError"){.enum}\> {#fn-merge-curves-curve-operation-mergeoperation---resultcurve-curveerror .code-header}
+#### fn [merge](../geometrics/trait.Arithmetic.html#tymethod.merge){.fn}( curves: &\[&[Curve](struct.Curve.html "struct optionstratlib::curves::Curve"){.struct}\], operation: [MergeOperation](../geometrics/enum.MergeOperation.html "enum optionstratlib::geometrics::MergeOperation"){.enum}, ) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[Curve](struct.Curve.html "struct optionstratlib::curves::Curve"){.struct}, [CurveError](../error/curves/enum.CurveError.html "enum optionstratlib::error::curves::CurveError"){.enum}\> {#fn-merge-curves-curve-operation-mergeoperation---resultcurve-curveerror .code-header}
 :::
 
 ::: docblock
@@ -248,10 +248,10 @@ This function enables combining multiple curves for tasks such as:
 :::
 
 ::: {#method.merge_with .section .method .trait-impl}
-[Source](../../src/optionstratlib/curves/curve.rs.html#1450-1452){.src
+[Source](../../src/optionstratlib/curves/curve.rs.html#1464-1466){.src
 .rightside}[§](#method.merge_with){.anchor}
 
-#### fn [merge_with](../geometrics/trait.Arithmetic.html#tymethod.merge_with){.fn}( &self, other: &[Curve](struct.Curve.html "struct optionstratlib::curves::Curve"){.struct}, operation: [MergeOperation](../geometrics/enum.MergeOperation.html "enum optionstratlib::geometrics::MergeOperation"){.enum}, ) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[Curve](struct.Curve.html "struct optionstratlib::curves::Curve"){.struct}, [CurveError](../error/curves/enum.CurveError.html "enum optionstratlib::error::curves::CurveError"){.enum}\> {#fn-merge_with-self-other-curve-operation-mergeoperation---resultcurve-curveerror .code-header}
+#### fn [merge_with](../geometrics/trait.Arithmetic.html#tymethod.merge_with){.fn}( &self, other: &[Curve](struct.Curve.html "struct optionstratlib::curves::Curve"){.struct}, operation: [MergeOperation](../geometrics/enum.MergeOperation.html "enum optionstratlib::geometrics::MergeOperation"){.enum}, ) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[Curve](struct.Curve.html "struct optionstratlib::curves::Curve"){.struct}, [CurveError](../error/curves/enum.CurveError.html "enum optionstratlib::error::curves::CurveError"){.enum}\> {#fn-merge_with-self-other-curve-operation-mergeoperation---resultcurve-curveerror .code-header}
 :::
 
 ::: docblock
@@ -292,7 +292,7 @@ maximum.
 :::
 
 ::: {#associatedtype.Error-1 .section .associatedtype .trait-impl}
-[Source](../../src/optionstratlib/curves/curve.rs.html#1255){.src
+[Source](../../src/optionstratlib/curves/curve.rs.html#1269){.src
 .rightside}[§](#associatedtype.Error-1){.anchor}
 
 #### type [Error](../geometrics/trait.Arithmetic.html#associatedtype.Error){.associatedtype} = [CurveError](../error/curves/enum.CurveError.html "enum optionstratlib::error::curves::CurveError"){.enum} {#type-error-curveerror .code-header}
@@ -304,15 +304,15 @@ The error type returned when merging operations fail
 :::::::::
 
 ::: {#impl-AxisOperations%3CPoint2D,+Decimal%3E-for-Curve .section .impl}
-[Source](../../src/optionstratlib/curves/curve.rs.html#1455-1494){.src
+[Source](../../src/optionstratlib/curves/curve.rs.html#1469-1508){.src
 .rightside}[§](#impl-AxisOperations%3CPoint2D,+Decimal%3E-for-Curve){.anchor}
 
-### impl [AxisOperations](../geometrics/trait.AxisOperations.html "trait optionstratlib::geometrics::AxisOperations"){.trait}\<[Point2D](struct.Point2D.html "struct optionstratlib::curves::Point2D"){.struct}, Decimal\> for [Curve](struct.Curve.html "struct optionstratlib::curves::Curve"){.struct} {#impl-axisoperationspoint2d-decimal-for-curve .code-header}
+### impl [AxisOperations](../geometrics/trait.AxisOperations.html "trait optionstratlib::geometrics::AxisOperations"){.trait}\<[Point2D](struct.Point2D.html "struct optionstratlib::curves::Point2D"){.struct}, [Decimal](../prelude/struct.Decimal.html "struct optionstratlib::prelude::Decimal"){.struct}\> for [Curve](struct.Curve.html "struct optionstratlib::curves::Curve"){.struct} {#impl-axisoperationspoint2d-decimal-for-curve .code-header}
 :::
 
 ::::::::::::::::: impl-items
 ::: {#associatedtype.Error-2 .section .associatedtype .trait-impl}
-[Source](../../src/optionstratlib/curves/curve.rs.html#1456){.src
+[Source](../../src/optionstratlib/curves/curve.rs.html#1470){.src
 .rightside}[§](#associatedtype.Error-2){.anchor}
 
 #### type [Error](../geometrics/trait.AxisOperations.html#associatedtype.Error){.associatedtype} = [CurveError](../error/curves/enum.CurveError.html "enum optionstratlib::error::curves::CurveError"){.enum} {#type-error-curveerror-1 .code-header}
@@ -323,10 +323,10 @@ The type of error that can occur during point operations
 :::
 
 ::: {#method.contains_point .section .method .trait-impl}
-[Source](../../src/optionstratlib/curves/curve.rs.html#1458-1460){.src
+[Source](../../src/optionstratlib/curves/curve.rs.html#1472-1474){.src
 .rightside}[§](#method.contains_point){.anchor}
 
-#### fn [contains_point](../geometrics/trait.AxisOperations.html#tymethod.contains_point){.fn}(&self, x: &Decimal) -\> [bool](https://doc.rust-lang.org/1.86.0/std/primitive.bool.html){.primitive} {#fn-contains_pointself-x-decimal---bool .code-header}
+#### fn [contains_point](../geometrics/trait.AxisOperations.html#tymethod.contains_point){.fn}(&self, x: &[Decimal](../prelude/struct.Decimal.html "struct optionstratlib::prelude::Decimal"){.struct}) -\> [bool](https://doc.rust-lang.org/1.91.1/std/primitive.bool.html){.primitive} {#fn-contains_pointself-x-decimal---bool .code-header}
 :::
 
 ::: docblock
@@ -335,10 +335,10 @@ more](../geometrics/trait.AxisOperations.html#tymethod.contains_point)
 :::
 
 ::: {#method.get_index_values .section .method .trait-impl}
-[Source](../../src/optionstratlib/curves/curve.rs.html#1462-1464){.src
+[Source](../../src/optionstratlib/curves/curve.rs.html#1476-1478){.src
 .rightside}[§](#method.get_index_values){.anchor}
 
-#### fn [get_index_values](../geometrics/trait.AxisOperations.html#tymethod.get_index_values){.fn}(&self) -\> [Vec](https://doc.rust-lang.org/1.86.0/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<Decimal\> {#fn-get_index_valuesself---vecdecimal .code-header}
+#### fn [get_index_values](../geometrics/trait.AxisOperations.html#tymethod.get_index_values){.fn}(&self) -\> [Vec](https://doc.rust-lang.org/1.91.1/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<[Decimal](../prelude/struct.Decimal.html "struct optionstratlib::prelude::Decimal"){.struct}\> {#fn-get_index_valuesself---vecdecimal .code-header}
 :::
 
 ::: docblock
@@ -348,10 +348,10 @@ more](../geometrics/trait.AxisOperations.html#tymethod.get_index_values)
 :::
 
 ::: {#method.get_values .section .method .trait-impl}
-[Source](../../src/optionstratlib/curves/curve.rs.html#1466-1472){.src
+[Source](../../src/optionstratlib/curves/curve.rs.html#1480-1486){.src
 .rightside}[§](#method.get_values){.anchor}
 
-#### fn [get_values](../geometrics/trait.AxisOperations.html#tymethod.get_values){.fn}(&self, x: Decimal) -\> [Vec](https://doc.rust-lang.org/1.86.0/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<&Decimal\> {#fn-get_valuesself-x-decimal---vecdecimal .code-header}
+#### fn [get_values](../geometrics/trait.AxisOperations.html#tymethod.get_values){.fn}(&self, x: [Decimal](../prelude/struct.Decimal.html "struct optionstratlib::prelude::Decimal"){.struct}) -\> [Vec](https://doc.rust-lang.org/1.91.1/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<&[Decimal](../prelude/struct.Decimal.html "struct optionstratlib::prelude::Decimal"){.struct}\> {#fn-get_valuesself-x-decimal---vecdecimal .code-header}
 :::
 
 ::: docblock
@@ -361,10 +361,10 @@ more](../geometrics/trait.AxisOperations.html#tymethod.get_values)
 :::
 
 ::: {#method.get_closest_point .section .method .trait-impl}
-[Source](../../src/optionstratlib/curves/curve.rs.html#1474-1485){.src
+[Source](../../src/optionstratlib/curves/curve.rs.html#1488-1499){.src
 .rightside}[§](#method.get_closest_point){.anchor}
 
-#### fn [get_closest_point](../geometrics/trait.AxisOperations.html#tymethod.get_closest_point){.fn}(&self, x: &Decimal) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<&[Point2D](struct.Point2D.html "struct optionstratlib::curves::Point2D"){.struct}, Self::[Error](../geometrics/trait.AxisOperations.html#associatedtype.Error "type optionstratlib::geometrics::AxisOperations::Error"){.associatedtype}\> {#fn-get_closest_pointself-x-decimal---resultpoint2d-selferror .code-header}
+#### fn [get_closest_point](../geometrics/trait.AxisOperations.html#tymethod.get_closest_point){.fn}(&self, x: &[Decimal](../prelude/struct.Decimal.html "struct optionstratlib::prelude::Decimal"){.struct}) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<&[Point2D](struct.Point2D.html "struct optionstratlib::curves::Point2D"){.struct}, Self::[Error](../geometrics/trait.AxisOperations.html#associatedtype.Error "type optionstratlib::geometrics::AxisOperations::Error"){.associatedtype}\> {#fn-get_closest_pointself-x-decimal---resultpoint2d-selferror .code-header}
 :::
 
 ::: docblock
@@ -373,10 +373,10 @@ more](../geometrics/trait.AxisOperations.html#tymethod.get_closest_point)
 :::
 
 ::: {#method.get_point .section .method .trait-impl}
-[Source](../../src/optionstratlib/curves/curve.rs.html#1487-1493){.src
+[Source](../../src/optionstratlib/curves/curve.rs.html#1501-1507){.src
 .rightside}[§](#method.get_point){.anchor}
 
-#### fn [get_point](../geometrics/trait.AxisOperations.html#tymethod.get_point){.fn}(&self, x: &Decimal) -\> [Option](https://doc.rust-lang.org/1.86.0/core/option/enum.Option.html "enum core::option::Option"){.enum}\<&[Point2D](struct.Point2D.html "struct optionstratlib::curves::Point2D"){.struct}\> {#fn-get_pointself-x-decimal---optionpoint2d .code-header}
+#### fn [get_point](../geometrics/trait.AxisOperations.html#tymethod.get_point){.fn}(&self, x: &[Decimal](../prelude/struct.Decimal.html "struct optionstratlib::prelude::Decimal"){.struct}) -\> [Option](https://doc.rust-lang.org/1.91.1/core/option/enum.Option.html "enum core::option::Option"){.enum}\<&[Point2D](struct.Point2D.html "struct optionstratlib::curves::Point2D"){.struct}\> {#fn-get_pointself-x-decimal---optionpoint2d .code-header}
 :::
 
 ::: docblock
@@ -388,7 +388,7 @@ more](../geometrics/trait.AxisOperations.html#tymethod.get_point)
 [Source](../../src/optionstratlib/geometrics/operations/axis.rs.html#85-115){.src
 .rightside}[§](#method.merge_indexes){.anchor}
 
-#### fn [merge_indexes](../geometrics/trait.AxisOperations.html#method.merge_indexes){.fn}(&self, axis: [Vec](https://doc.rust-lang.org/1.86.0/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<Input\>) -\> [Vec](https://doc.rust-lang.org/1.86.0/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<Input\> {#fn-merge_indexesself-axis-vecinput---vecinput .code-header}
+#### fn [merge_indexes](../geometrics/trait.AxisOperations.html#method.merge_indexes){.fn}(&self, axis: [Vec](https://doc.rust-lang.org/1.91.1/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<Input\>) -\> [Vec](https://doc.rust-lang.org/1.91.1/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<Input\> {#fn-merge_indexesself-axis-vecinput---vecinput .code-header}
 :::
 
 ::: docblock
@@ -400,10 +400,10 @@ more](../geometrics/trait.AxisOperations.html#method.merge_indexes)
 :::::::::::::::::
 
 :::: {#impl-BiLinearInterpolation%3CPoint2D,+Decimal%3E-for-Curve .section .impl}
-[Source](../../src/optionstratlib/curves/curve.rs.html#446-522){.src
+[Source](../../src/optionstratlib/curves/curve.rs.html#460-536){.src
 .rightside}[§](#impl-BiLinearInterpolation%3CPoint2D,+Decimal%3E-for-Curve){.anchor}
 
-### impl [BiLinearInterpolation](../geometrics/trait.BiLinearInterpolation.html "trait optionstratlib::geometrics::BiLinearInterpolation"){.trait}\<[Point2D](struct.Point2D.html "struct optionstratlib::curves::Point2D"){.struct}, Decimal\> for [Curve](struct.Curve.html "struct optionstratlib::curves::Curve"){.struct} {#impl-bilinearinterpolationpoint2d-decimal-for-curve .code-header}
+### impl [BiLinearInterpolation](../geometrics/trait.BiLinearInterpolation.html "trait optionstratlib::geometrics::BiLinearInterpolation"){.trait}\<[Point2D](struct.Point2D.html "struct optionstratlib::curves::Point2D"){.struct}, [Decimal](../prelude/struct.Decimal.html "struct optionstratlib::prelude::Decimal"){.struct}\> for [Curve](struct.Curve.html "struct optionstratlib::curves::Curve"){.struct} {#impl-bilinearinterpolationpoint2d-decimal-for-curve .code-header}
 
 ::: docblock
 Implementation of the `BiLinearInterpolation` trait for the `Curve`
@@ -508,10 +508,10 @@ within the bounds defined by the four surrounding points.
 
 ::::: impl-items
 ::: {#method.bilinear_interpolate .section .method .trait-impl}
-[Source](../../src/optionstratlib/curves/curve.rs.html#486-521){.src
+[Source](../../src/optionstratlib/curves/curve.rs.html#500-535){.src
 .rightside}[§](#method.bilinear_interpolate){.anchor}
 
-#### fn [bilinear_interpolate](../geometrics/trait.BiLinearInterpolation.html#tymethod.bilinear_interpolate){.fn}( &self, x: Decimal, ) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[Point2D](struct.Point2D.html "struct optionstratlib::curves::Point2D"){.struct}, [InterpolationError](../error/enum.InterpolationError.html "enum optionstratlib::error::InterpolationError"){.enum}\> {#fn-bilinear_interpolate-self-x-decimal---resultpoint2d-interpolationerror .code-header}
+#### fn [bilinear_interpolate](../geometrics/trait.BiLinearInterpolation.html#tymethod.bilinear_interpolate){.fn}( &self, x: [Decimal](../prelude/struct.Decimal.html "struct optionstratlib::prelude::Decimal"){.struct}, ) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[Point2D](struct.Point2D.html "struct optionstratlib::curves::Point2D"){.struct}, [InterpolationError](../error/enum.InterpolationError.html "enum optionstratlib::error::InterpolationError"){.enum}\> {#fn-bilinear_interpolate-self-x-decimal---resultpoint2d-interpolationerror .code-header}
 :::
 
 ::: docblock
@@ -578,43 +578,59 @@ dataset or a regularly sampled grid.
 :::::
 
 ::: {#impl-Clone-for-Curve .section .impl}
-[Source](../../src/optionstratlib/curves/curve.rs.html#61){.src
+[Source](../../src/optionstratlib/curves/curve.rs.html#63){.src
 .rightside}[§](#impl-Clone-for-Curve){.anchor}
 
-### impl [Clone](https://doc.rust-lang.org/1.86.0/core/clone/trait.Clone.html "trait core::clone::Clone"){.trait} for [Curve](struct.Curve.html "struct optionstratlib::curves::Curve"){.struct} {#impl-clone-for-curve .code-header}
+### impl [Clone](https://doc.rust-lang.org/1.91.1/core/clone/trait.Clone.html "trait core::clone::Clone"){.trait} for [Curve](struct.Curve.html "struct optionstratlib::curves::Curve"){.struct} {#impl-clone-for-curve .code-header}
 :::
 
 ::::::: impl-items
 ::: {#method.clone .section .method .trait-impl}
-[Source](../../src/optionstratlib/curves/curve.rs.html#61){.src
+[Source](../../src/optionstratlib/curves/curve.rs.html#63){.src
 .rightside}[§](#method.clone){.anchor}
 
-#### fn [clone](https://doc.rust-lang.org/1.86.0/core/clone/trait.Clone.html#tymethod.clone){.fn}(&self) -\> [Curve](struct.Curve.html "struct optionstratlib::curves::Curve"){.struct} {#fn-cloneself---curve .code-header}
+#### fn [clone](https://doc.rust-lang.org/1.91.1/core/clone/trait.Clone.html#tymethod.clone){.fn}(&self) -\> [Curve](struct.Curve.html "struct optionstratlib::curves::Curve"){.struct} {#fn-cloneself---curve .code-header}
 :::
 
 ::: docblock
-Returns a copy of the value. [Read
-more](https://doc.rust-lang.org/1.86.0/core/clone/trait.Clone.html#tymethod.clone)
+Returns a duplicate of the value. [Read
+more](https://doc.rust-lang.org/1.91.1/core/clone/trait.Clone.html#tymethod.clone)
 :::
 
 ::: {#method.clone_from .section .method .trait-impl}
 [[1.0.0]{.since title="Stable since Rust version 1.0.0"} ·
-[Source](https://doc.rust-lang.org/1.86.0/src/core/clone.rs.html#174){.src}]{.rightside}[§](#method.clone_from){.anchor}
+[Source](https://doc.rust-lang.org/1.91.1/src/core/clone.rs.html#245-247){.src}]{.rightside}[§](#method.clone_from){.anchor}
 
-#### fn [clone_from](https://doc.rust-lang.org/1.86.0/core/clone/trait.Clone.html#method.clone_from){.fn}(&mut self, source: &Self) {#fn-clone_frommut-self-source-self .code-header}
+#### fn [clone_from](https://doc.rust-lang.org/1.91.1/core/clone/trait.Clone.html#method.clone_from){.fn}(&mut self, source: &Self) {#fn-clone_frommut-self-source-self .code-header}
 :::
 
 ::: docblock
 Performs copy-assignment from `source`. [Read
-more](https://doc.rust-lang.org/1.86.0/core/clone/trait.Clone.html#method.clone_from)
+more](https://doc.rust-lang.org/1.91.1/core/clone/trait.Clone.html#method.clone_from)
 :::
 :::::::
 
+::: {#impl-ComposeSchema-for-Curve .section .impl}
+[Source](../../src/optionstratlib/curves/curve.rs.html#63){.src
+.rightside}[§](#impl-ComposeSchema-for-Curve){.anchor}
+
+### impl ComposeSchema for [Curve](struct.Curve.html "struct optionstratlib::curves::Curve"){.struct} {#impl-composeschema-for-curve .code-header}
+:::
+
+:::: impl-items
+::: {#method.compose .section .method .trait-impl}
+[Source](../../src/optionstratlib/curves/curve.rs.html#63){.src
+.rightside}[§](#method.compose){.anchor}
+
+#### fn [compose](#tymethod.compose){.fn}(generics: [Vec](https://doc.rust-lang.org/1.91.1/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<[RefOr](../../utoipa/openapi/enum.RefOr.html "enum utoipa::openapi::RefOr"){.enum}\<[Schema](../../utoipa/openapi/schema/enum.Schema.html "enum utoipa::openapi::schema::Schema"){.enum}\>\>) -\> [RefOr](../../utoipa/openapi/enum.RefOr.html "enum utoipa::openapi::RefOr"){.enum}\<[Schema](../../utoipa/openapi/schema/enum.Schema.html "enum utoipa::openapi::schema::Schema"){.enum}\> {#fn-composegenerics-vecreforschema---reforschema .code-header}
+:::
+::::
+
 :::: {#impl-CubicInterpolation%3CPoint2D,+Decimal%3E-for-Curve .section .impl}
-[Source](../../src/optionstratlib/curves/curve.rs.html#583-699){.src
+[Source](../../src/optionstratlib/curves/curve.rs.html#597-713){.src
 .rightside}[§](#impl-CubicInterpolation%3CPoint2D,+Decimal%3E-for-Curve){.anchor}
 
-### impl [CubicInterpolation](../geometrics/trait.CubicInterpolation.html "trait optionstratlib::geometrics::CubicInterpolation"){.trait}\<[Point2D](struct.Point2D.html "struct optionstratlib::curves::Point2D"){.struct}, Decimal\> for [Curve](struct.Curve.html "struct optionstratlib::curves::Curve"){.struct} {#impl-cubicinterpolationpoint2d-decimal-for-curve .code-header}
+### impl [CubicInterpolation](../geometrics/trait.CubicInterpolation.html "trait optionstratlib::geometrics::CubicInterpolation"){.trait}\<[Point2D](struct.Point2D.html "struct optionstratlib::curves::Point2D"){.struct}, [Decimal](../prelude/struct.Decimal.html "struct optionstratlib::prelude::Decimal"){.struct}\> for [Curve](struct.Curve.html "struct optionstratlib::curves::Curve"){.struct} {#impl-cubicinterpolationpoint2d-decimal-for-curve .code-header}
 
 ::: docblock
 Implements the `CubicInterpolation` trait for the `Curve` struct,
@@ -712,10 +728,10 @@ smooth manifolds or animations.
 
 ::::: impl-items
 ::: {#method.cubic_interpolate .section .method .trait-impl}
-[Source](../../src/optionstratlib/curves/curve.rs.html#651-698){.src
+[Source](../../src/optionstratlib/curves/curve.rs.html#665-712){.src
 .rightside}[§](#method.cubic_interpolate){.anchor}
 
-#### fn [cubic_interpolate](../geometrics/trait.CubicInterpolation.html#tymethod.cubic_interpolate){.fn}(&self, x: Decimal) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[Point2D](struct.Point2D.html "struct optionstratlib::curves::Point2D"){.struct}, [InterpolationError](../error/enum.InterpolationError.html "enum optionstratlib::error::InterpolationError"){.enum}\> {#fn-cubic_interpolateself-x-decimal---resultpoint2d-interpolationerror .code-header}
+#### fn [cubic_interpolate](../geometrics/trait.CubicInterpolation.html#tymethod.cubic_interpolate){.fn}(&self, x: [Decimal](../prelude/struct.Decimal.html "struct optionstratlib::prelude::Decimal"){.struct}) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[Point2D](struct.Point2D.html "struct optionstratlib::curves::Point2D"){.struct}, [InterpolationError](../error/enum.InterpolationError.html "enum optionstratlib::error::InterpolationError"){.enum}\> {#fn-cubic_interpolateself-x-decimal---resultpoint2d-interpolationerror .code-header}
 :::
 
 ::: docblock
@@ -800,104 +816,124 @@ This method returns an error in the following circumstances:
 :::::
 
 ::: {#impl-Debug-for-Curve .section .impl}
-[Source](../../src/optionstratlib/curves/curve.rs.html#61){.src
+[Source](../../src/optionstratlib/curves/curve.rs.html#63){.src
 .rightside}[§](#impl-Debug-for-Curve){.anchor}
 
-### impl [Debug](https://doc.rust-lang.org/1.86.0/core/fmt/trait.Debug.html "trait core::fmt::Debug"){.trait} for [Curve](struct.Curve.html "struct optionstratlib::curves::Curve"){.struct} {#impl-debug-for-curve .code-header}
+### impl [Debug](https://doc.rust-lang.org/1.91.1/core/fmt/trait.Debug.html "trait core::fmt::Debug"){.trait} for [Curve](struct.Curve.html "struct optionstratlib::curves::Curve"){.struct} {#impl-debug-for-curve .code-header}
 :::
 
 ::::: impl-items
 ::: {#method.fmt .section .method .trait-impl}
-[Source](../../src/optionstratlib/curves/curve.rs.html#61){.src
+[Source](../../src/optionstratlib/curves/curve.rs.html#63){.src
 .rightside}[§](#method.fmt){.anchor}
 
-#### fn [fmt](https://doc.rust-lang.org/1.86.0/core/fmt/trait.Debug.html#tymethod.fmt){.fn}(&self, f: &mut [Formatter](https://doc.rust-lang.org/1.86.0/core/fmt/struct.Formatter.html "struct core::fmt::Formatter"){.struct}\<\'\_\>) -\> [Result](https://doc.rust-lang.org/1.86.0/core/fmt/type.Result.html "type core::fmt::Result"){.type} {#fn-fmtself-f-mut-formatter_---result .code-header}
+#### fn [fmt](https://doc.rust-lang.org/1.91.1/core/fmt/trait.Debug.html#tymethod.fmt){.fn}(&self, f: &mut [Formatter](https://doc.rust-lang.org/1.91.1/core/fmt/struct.Formatter.html "struct core::fmt::Formatter"){.struct}\<\'\_\>) -\> [Result](https://doc.rust-lang.org/1.91.1/core/fmt/type.Result.html "type core::fmt::Result"){.type} {#fn-fmtself-f-mut-formatter_---result .code-header}
 :::
 
 ::: docblock
 Formats the value using the given formatter. [Read
-more](https://doc.rust-lang.org/1.86.0/core/fmt/trait.Debug.html#tymethod.fmt)
+more](https://doc.rust-lang.org/1.91.1/core/fmt/trait.Debug.html#tymethod.fmt)
 :::
 :::::
 
 ::: {#impl-Default-for-Curve .section .impl}
-[Source](../../src/optionstratlib/curves/curve.rs.html#82-89){.src
+[Source](../../src/optionstratlib/curves/curve.rs.html#84-91){.src
 .rightside}[§](#impl-Default-for-Curve){.anchor}
 
-### impl [Default](https://doc.rust-lang.org/1.86.0/core/default/trait.Default.html "trait core::default::Default"){.trait} for [Curve](struct.Curve.html "struct optionstratlib::curves::Curve"){.struct} {#impl-default-for-curve .code-header}
+### impl [Default](https://doc.rust-lang.org/1.91.1/core/default/trait.Default.html "trait core::default::Default"){.trait} for [Curve](struct.Curve.html "struct optionstratlib::curves::Curve"){.struct} {#impl-default-for-curve .code-header}
 :::
 
 ::::: impl-items
 ::: {#method.default .section .method .trait-impl}
-[Source](../../src/optionstratlib/curves/curve.rs.html#83-88){.src
+[Source](../../src/optionstratlib/curves/curve.rs.html#85-90){.src
 .rightside}[§](#method.default){.anchor}
 
-#### fn [default](https://doc.rust-lang.org/1.86.0/core/default/trait.Default.html#tymethod.default){.fn}() -\> Self {#fn-default---self .code-header}
+#### fn [default](https://doc.rust-lang.org/1.91.1/core/default/trait.Default.html#tymethod.default){.fn}() -\> Self {#fn-default---self .code-header}
 :::
 
 ::: docblock
 Returns the "default value" for a type. [Read
-more](https://doc.rust-lang.org/1.86.0/core/default/trait.Default.html#tymethod.default)
+more](https://doc.rust-lang.org/1.91.1/core/default/trait.Default.html#tymethod.default)
 :::
 :::::
 
 ::: {#impl-Deserialize%3C'de%3E-for-Curve .section .impl}
-[Source](../../src/optionstratlib/curves/curve.rs.html#61){.src
+[Source](../../src/optionstratlib/curves/curve.rs.html#63){.src
 .rightside}[§](#impl-Deserialize%3C'de%3E-for-Curve){.anchor}
 
-### impl\<\'de\> [Deserialize](https://docs.rs/serde/1.0.219/serde/de/trait.Deserialize.html "trait serde::de::Deserialize"){.trait}\<\'de\> for [Curve](struct.Curve.html "struct optionstratlib::curves::Curve"){.struct} {#implde-deserializede-for-curve .code-header}
+### impl\<\'de\> [Deserialize](../../serde_core/de/trait.Deserialize.html "trait serde_core::de::Deserialize"){.trait}\<\'de\> for [Curve](struct.Curve.html "struct optionstratlib::curves::Curve"){.struct} {#implde-deserializede-for-curve .code-header}
 :::
 
 :::::: impl-items
 :::: {#method.deserialize .section .method .trait-impl}
-[Source](../../src/optionstratlib/curves/curve.rs.html#61){.src
+[Source](../../src/optionstratlib/curves/curve.rs.html#63){.src
 .rightside}[§](#method.deserialize){.anchor}
 
-#### fn [deserialize](https://docs.rs/serde/1.0.219/serde/de/trait.Deserialize.html#tymethod.deserialize){.fn}\<\_\_D\>(\_\_deserializer: \_\_D) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<Self, \_\_D::[Error](https://docs.rs/serde/1.0.219/serde/de/trait.Deserializer.html#associatedtype.Error "type serde::de::Deserializer::Error"){.associatedtype}\> {#fn-deserialize__d__deserializer-__d---resultself-__derror .code-header}
+#### fn [deserialize](../../serde_core/de/trait.Deserialize.html#tymethod.deserialize){.fn}\<\_\_D\>(\_\_deserializer: \_\_D) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<Self, \_\_D::[Error](../../serde_core/de/trait.Deserializer.html#associatedtype.Error "type serde_core::de::Deserializer::Error"){.associatedtype}\> {#fn-deserialize__d__deserializer-__d---resultself-__derror .code-header}
 
 ::: where
 where \_\_D:
-[Deserializer](https://docs.rs/serde/1.0.219/serde/de/trait.Deserializer.html "trait serde::de::Deserializer"){.trait}\<\'de\>,
+[Deserializer](../../serde_core/de/trait.Deserializer.html "trait serde_core::de::Deserializer"){.trait}\<\'de\>,
 :::
 ::::
 
 ::: docblock
 Deserialize this value from the given Serde deserializer. [Read
-more](https://docs.rs/serde/1.0.219/serde/de/trait.Deserialize.html#tymethod.deserialize)
+more](../../serde_core/de/trait.Deserialize.html#tymethod.deserialize)
 :::
 ::::::
 
 ::: {#impl-Display-for-Curve .section .impl}
-[Source](../../src/optionstratlib/curves/curve.rs.html#73-80){.src
+[Source](../../src/optionstratlib/curves/curve.rs.html#75-82){.src
 .rightside}[§](#impl-Display-for-Curve){.anchor}
 
-### impl [Display](https://doc.rust-lang.org/1.86.0/core/fmt/trait.Display.html "trait core::fmt::Display"){.trait} for [Curve](struct.Curve.html "struct optionstratlib::curves::Curve"){.struct} {#impl-display-for-curve .code-header}
+### impl [Display](https://doc.rust-lang.org/1.91.1/core/fmt/trait.Display.html "trait core::fmt::Display"){.trait} for [Curve](struct.Curve.html "struct optionstratlib::curves::Curve"){.struct} {#impl-display-for-curve .code-header}
 :::
 
 ::::: impl-items
 ::: {#method.fmt-1 .section .method .trait-impl}
-[Source](../../src/optionstratlib/curves/curve.rs.html#74-79){.src
+[Source](../../src/optionstratlib/curves/curve.rs.html#76-81){.src
 .rightside}[§](#method.fmt-1){.anchor}
 
-#### fn [fmt](https://doc.rust-lang.org/1.86.0/core/fmt/trait.Display.html#tymethod.fmt){.fn}(&self, f: &mut [Formatter](https://doc.rust-lang.org/1.86.0/core/fmt/struct.Formatter.html "struct core::fmt::Formatter"){.struct}\<\'\_\>) -\> [Result](https://doc.rust-lang.org/1.86.0/core/fmt/type.Result.html "type core::fmt::Result"){.type} {#fn-fmtself-f-mut-formatter_---result-1 .code-header}
+#### fn [fmt](https://doc.rust-lang.org/1.91.1/core/fmt/trait.Display.html#tymethod.fmt){.fn}(&self, f: &mut [Formatter](https://doc.rust-lang.org/1.91.1/core/fmt/struct.Formatter.html "struct core::fmt::Formatter"){.struct}\<\'\_\>) -\> [Result](https://doc.rust-lang.org/1.91.1/core/fmt/type.Result.html "type core::fmt::Result"){.type} {#fn-fmtself-f-mut-formatter_---result-1 .code-header}
 :::
 
 ::: docblock
 Formats the value using the given formatter. [Read
-more](https://doc.rust-lang.org/1.86.0/core/fmt/trait.Display.html#tymethod.fmt)
+more](https://doc.rust-lang.org/1.91.1/core/fmt/trait.Display.html#tymethod.fmt)
+:::
+:::::
+
+::: {#impl-From%3CCurve%3E-for-GraphData .section .impl}
+[Source](../../src/optionstratlib/visualization/model.rs.html#189-200){.src
+.rightside}[§](#impl-From%3CCurve%3E-for-GraphData){.anchor}
+
+### impl [From](https://doc.rust-lang.org/1.91.1/core/convert/trait.From.html "trait core::convert::From"){.trait}\<[Curve](struct.Curve.html "struct optionstratlib::curves::Curve"){.struct}\> for [GraphData](../visualization/enum.GraphData.html "enum optionstratlib::visualization::GraphData"){.enum} {#impl-fromcurve-for-graphdata .code-header}
+:::
+
+::::: impl-items
+::: {#method.from .section .method .trait-impl}
+[Source](../../src/optionstratlib/visualization/model.rs.html#190-199){.src
+.rightside}[§](#method.from){.anchor}
+
+#### fn [from](https://doc.rust-lang.org/1.91.1/core/convert/trait.From.html#tymethod.from){.fn}(curve: [Curve](struct.Curve.html "struct optionstratlib::curves::Curve"){.struct}) -\> Self {#fn-fromcurve-curve---self .code-header}
+:::
+
+::: docblock
+Converts to this type from the input type.
 :::
 :::::
 
 ::: {#impl-GeometricObject%3CPoint2D,+Decimal%3E-for-Curve .section .impl}
-[Source](../../src/optionstratlib/curves/curve.rs.html#134-193){.src
+[Source](../../src/optionstratlib/curves/curve.rs.html#148-207){.src
 .rightside}[§](#impl-GeometricObject%3CPoint2D,+Decimal%3E-for-Curve){.anchor}
 
-### impl [GeometricObject](../geometrics/trait.GeometricObject.html "trait optionstratlib::geometrics::GeometricObject"){.trait}\<[Point2D](struct.Point2D.html "struct optionstratlib::curves::Point2D"){.struct}, Decimal\> for [Curve](struct.Curve.html "struct optionstratlib::curves::Curve"){.struct} {#impl-geometricobjectpoint2d-decimal-for-curve .code-header}
+### impl [GeometricObject](../geometrics/trait.GeometricObject.html "trait optionstratlib::geometrics::GeometricObject"){.trait}\<[Point2D](struct.Point2D.html "struct optionstratlib::curves::Point2D"){.struct}, [Decimal](../prelude/struct.Decimal.html "struct optionstratlib::prelude::Decimal"){.struct}\> for [Curve](struct.Curve.html "struct optionstratlib::curves::Curve"){.struct} {#impl-geometricobjectpoint2d-decimal-for-curve .code-header}
 :::
 
 :::::::::::::::::::: impl-items
 ::: {#associatedtype.Error .section .associatedtype .trait-impl}
-[Source](../../src/optionstratlib/curves/curve.rs.html#135){.src
+[Source](../../src/optionstratlib/curves/curve.rs.html#149){.src
 .rightside}[§](#associatedtype.Error){.anchor}
 
 #### type [Error](../geometrics/trait.GeometricObject.html#associatedtype.Error){.associatedtype} = [CurveError](../error/curves/enum.CurveError.html "enum optionstratlib::error::curves::CurveError"){.enum} {#type-error-curveerror-2 .code-header}
@@ -909,10 +945,10 @@ the geometric object.
 :::
 
 ::: {#method.get_points .section .method .trait-impl}
-[Source](../../src/optionstratlib/curves/curve.rs.html#137-139){.src
+[Source](../../src/optionstratlib/curves/curve.rs.html#151-153){.src
 .rightside}[§](#method.get_points){.anchor}
 
-#### fn [get_points](../geometrics/trait.GeometricObject.html#tymethod.get_points){.fn}(&self) -\> [BTreeSet](https://doc.rust-lang.org/1.86.0/alloc/collections/btree/set/struct.BTreeSet.html "struct alloc::collections::btree::set::BTreeSet"){.struct}\<&[Point2D](struct.Point2D.html "struct optionstratlib::curves::Point2D"){.struct}\> {#fn-get_pointsself---btreesetpoint2d .code-header}
+#### fn [get_points](../geometrics/trait.GeometricObject.html#tymethod.get_points){.fn}(&self) -\> [BTreeSet](https://doc.rust-lang.org/1.91.1/alloc/collections/btree/set/struct.BTreeSet.html "struct alloc::collections::btree::set::BTreeSet"){.struct}\<&[Point2D](struct.Point2D.html "struct optionstratlib::curves::Point2D"){.struct}\> {#fn-get_pointsself---btreesetpoint2d .code-header}
 :::
 
 ::: docblock
@@ -922,15 +958,15 @@ and unique.
 :::
 
 :::: {#method.from_vector .section .method .trait-impl}
-[Source](../../src/optionstratlib/curves/curve.rs.html#141-149){.src
+[Source](../../src/optionstratlib/curves/curve.rs.html#155-163){.src
 .rightside}[§](#method.from_vector){.anchor}
 
-#### fn [from_vector](../geometrics/trait.GeometricObject.html#tymethod.from_vector){.fn}\<T\>(points: [Vec](https://doc.rust-lang.org/1.86.0/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<T\>) -\> Self {#fn-from_vectortpoints-vect---self .code-header}
+#### fn [from_vector](../geometrics/trait.GeometricObject.html#tymethod.from_vector){.fn}\<T\>(points: [Vec](https://doc.rust-lang.org/1.91.1/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<T\>) -\> Self {#fn-from_vectortpoints-vect---self .code-header}
 
 ::: where
 where T:
-[Into](https://doc.rust-lang.org/1.86.0/core/convert/trait.Into.html "trait core::convert::Into"){.trait}\<[Point2D](struct.Point2D.html "struct optionstratlib::curves::Point2D"){.struct}\> +
-[Clone](https://doc.rust-lang.org/1.86.0/core/clone/trait.Clone.html "trait core::clone::Clone"){.trait},
+[Into](https://doc.rust-lang.org/1.91.1/core/convert/trait.Into.html "trait core::convert::Into"){.trait}\<[Point2D](struct.Point2D.html "struct optionstratlib::curves::Point2D"){.struct}\> +
+[Clone](https://doc.rust-lang.org/1.91.1/core/clone/trait.Clone.html "trait core::clone::Clone"){.trait},
 :::
 ::::
 
@@ -940,17 +976,17 @@ more](../geometrics/trait.GeometricObject.html#tymethod.from_vector)
 :::
 
 :::: {#method.construct .section .method .trait-impl}
-[Source](../../src/optionstratlib/curves/curve.rs.html#151-192){.src
+[Source](../../src/optionstratlib/curves/curve.rs.html#165-206){.src
 .rightside}[§](#method.construct){.anchor}
 
-#### fn [construct](../geometrics/trait.GeometricObject.html#tymethod.construct){.fn}\<T\>(method: T) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<Self, Self::[Error](../geometrics/trait.GeometricObject.html#associatedtype.Error "type optionstratlib::geometrics::GeometricObject::Error"){.associatedtype}\> {#fn-constructtmethod-t---resultself-selferror .code-header}
+#### fn [construct](../geometrics/trait.GeometricObject.html#tymethod.construct){.fn}\<T\>(method: T) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<Self, Self::[Error](../geometrics/trait.GeometricObject.html#associatedtype.Error "type optionstratlib::geometrics::GeometricObject::Error"){.associatedtype}\> {#fn-constructtmethod-t---resultself-selferror .code-header}
 
 ::: where
 where Self:
-[Sized](https://doc.rust-lang.org/1.86.0/core/marker/trait.Sized.html "trait core::marker::Sized"){.trait},
+[Sized](https://doc.rust-lang.org/1.91.1/core/marker/trait.Sized.html "trait core::marker::Sized"){.trait},
 T:
-[Into](https://doc.rust-lang.org/1.86.0/core/convert/trait.Into.html "trait core::convert::Into"){.trait}\<[ConstructionMethod](../geometrics/enum.ConstructionMethod.html "enum optionstratlib::geometrics::ConstructionMethod"){.enum}\<[Point2D](struct.Point2D.html "struct optionstratlib::curves::Point2D"){.struct},
-Decimal\>\>,
+[Into](https://doc.rust-lang.org/1.91.1/core/convert/trait.Into.html "trait core::convert::Into"){.trait}\<[ConstructionMethod](../geometrics/enum.ConstructionMethod.html "enum optionstratlib::geometrics::ConstructionMethod"){.enum}\<[Point2D](struct.Point2D.html "struct optionstratlib::curves::Point2D"){.struct},
+[Decimal](../prelude/struct.Decimal.html "struct optionstratlib::prelude::Decimal"){.struct}\>\>,
 :::
 ::::
 
@@ -963,7 +999,7 @@ Constructs a geometric object using a specific construction method.
 [Source](../../src/optionstratlib/geometrics/utils.rs.html#22-24){.src
 .rightside}[§](#method.vector){.anchor}
 
-#### fn [vector](../geometrics/trait.GeometricObject.html#method.vector){.fn}(&self) -\> [Vec](https://doc.rust-lang.org/1.86.0/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<[&Point](https://doc.rust-lang.org/1.86.0/std/primitive.reference.html){.primitive}\> {#fn-vectorself---vecpoint .code-header}
+#### fn [vector](../geometrics/trait.GeometricObject.html#method.vector){.fn}(&self) -\> [Vec](https://doc.rust-lang.org/1.91.1/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<[&Point](https://doc.rust-lang.org/1.91.1/std/primitive.reference.html){.primitive}\> {#fn-vectorself---vecpoint .code-header}
 :::
 
 ::: docblock
@@ -976,7 +1012,7 @@ geometric object. This method simply converts the `BTreeSet` from
 [Source](../../src/optionstratlib/geometrics/utils.rs.html#50-52){.src
 .rightside}[§](#method.to_vector){.anchor}
 
-#### fn [to_vector](../geometrics/trait.GeometricObject.html#method.to_vector){.fn}(&self) -\> [Vec](https://doc.rust-lang.org/1.86.0/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<[&Point](https://doc.rust-lang.org/1.86.0/std/primitive.reference.html){.primitive}\> {#fn-to_vectorself---vecpoint .code-header}
+#### fn [to_vector](../geometrics/trait.GeometricObject.html#method.to_vector){.fn}(&self) -\> [Vec](https://doc.rust-lang.org/1.91.1/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<[&Point](https://doc.rust-lang.org/1.91.1/std/primitive.reference.html){.primitive}\> {#fn-to_vectorself---vecpoint .code-header}
 :::
 
 ::: docblock
@@ -988,12 +1024,13 @@ Equivalent to calling the `vector()` method.
 [Source](../../src/optionstratlib/geometrics/utils.rs.html#57-64){.src
 .rightside}[§](#method.calculate_range){.anchor}
 
-#### fn [calculate_range](../geometrics/trait.GeometricObject.html#method.calculate_range){.fn}\<I\>(iter: I) -\> (Decimal, Decimal) {#fn-calculate_rangeiiter-i---decimal-decimal .code-header}
+#### fn [calculate_range](../geometrics/trait.GeometricObject.html#method.calculate_range){.fn}\<I\>(iter: I) -\> ([Decimal](../prelude/struct.Decimal.html "struct optionstratlib::prelude::Decimal"){.struct}, [Decimal](../prelude/struct.Decimal.html "struct optionstratlib::prelude::Decimal"){.struct}) {#fn-calculate_rangeiiter-i---decimal-decimal .code-header}
 
 ::: where
 where I:
-[Iterator](https://doc.rust-lang.org/1.86.0/core/iter/traits/iterator/trait.Iterator.html "trait core::iter::traits::iterator::Iterator"){.trait}\<Item
-= Decimal\>,
+[Iterator](https://doc.rust-lang.org/1.91.1/core/iter/traits/iterator/trait.Iterator.html "trait core::iter::traits::iterator::Iterator"){.trait}\<Item
+=
+[Decimal](../prelude/struct.Decimal.html "struct optionstratlib::prelude::Decimal"){.struct}\>,
 :::
 ::::
 
@@ -1005,7 +1042,7 @@ more](../geometrics/trait.GeometricObject.html#method.calculate_range)
 ::::::::::::::::::::
 
 ::: {#impl-GeometricTransformations%3CPoint2D%3E-for-Curve .section .impl}
-[Source](../../src/optionstratlib/curves/curve.rs.html#1536-1645){.src
+[Source](../../src/optionstratlib/curves/curve.rs.html#1550-1659){.src
 .rightside}[§](#impl-GeometricTransformations%3CPoint2D%3E-for-Curve){.anchor}
 
 ### impl [GeometricTransformations](../geometrics/trait.GeometricTransformations.html "trait optionstratlib::geometrics::GeometricTransformations"){.trait}\<[Point2D](struct.Point2D.html "struct optionstratlib::curves::Point2D"){.struct}\> for [Curve](struct.Curve.html "struct optionstratlib::curves::Curve"){.struct} {#impl-geometrictransformationspoint2d-for-curve .code-header}
@@ -1013,7 +1050,7 @@ more](../geometrics/trait.GeometricObject.html#method.calculate_range)
 
 ::::::::::::::::: impl-items
 ::: {#associatedtype.Error-3 .section .associatedtype .trait-impl}
-[Source](../../src/optionstratlib/curves/curve.rs.html#1537){.src
+[Source](../../src/optionstratlib/curves/curve.rs.html#1551){.src
 .rightside}[§](#associatedtype.Error-3){.anchor}
 
 #### type [Error](../geometrics/trait.GeometricTransformations.html#associatedtype.Error){.associatedtype} = [CurveError](../error/curves/enum.CurveError.html "enum optionstratlib::error::curves::CurveError"){.enum} {#type-error-curveerror-3 .code-header}
@@ -1024,10 +1061,10 @@ The error type that can be returned by geometric operations.
 :::
 
 ::: {#method.translate .section .method .trait-impl}
-[Source](../../src/optionstratlib/curves/curve.rs.html#1539-1554){.src
+[Source](../../src/optionstratlib/curves/curve.rs.html#1553-1568){.src
 .rightside}[§](#method.translate){.anchor}
 
-#### fn [translate](../geometrics/trait.GeometricTransformations.html#tymethod.translate){.fn}(&self, deltas: [Vec](https://doc.rust-lang.org/1.86.0/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<&Decimal\>) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<Self, Self::[Error](../geometrics/trait.GeometricTransformations.html#associatedtype.Error "type optionstratlib::geometrics::GeometricTransformations::Error"){.associatedtype}\> {#fn-translateself-deltas-vecdecimal---resultself-selferror .code-header}
+#### fn [translate](../geometrics/trait.GeometricTransformations.html#tymethod.translate){.fn}(&self, deltas: [Vec](https://doc.rust-lang.org/1.91.1/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<&[Decimal](../prelude/struct.Decimal.html "struct optionstratlib::prelude::Decimal"){.struct}\>) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<Self, Self::[Error](../geometrics/trait.GeometricTransformations.html#associatedtype.Error "type optionstratlib::geometrics::GeometricTransformations::Error"){.associatedtype}\> {#fn-translateself-deltas-vecdecimal---resultself-selferror .code-header}
 :::
 
 ::: docblock
@@ -1037,10 +1074,10 @@ more](../geometrics/trait.GeometricTransformations.html#tymethod.translate)
 :::
 
 ::: {#method.scale .section .method .trait-impl}
-[Source](../../src/optionstratlib/curves/curve.rs.html#1556-1571){.src
+[Source](../../src/optionstratlib/curves/curve.rs.html#1570-1585){.src
 .rightside}[§](#method.scale){.anchor}
 
-#### fn [scale](../geometrics/trait.GeometricTransformations.html#tymethod.scale){.fn}(&self, factors: [Vec](https://doc.rust-lang.org/1.86.0/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<&Decimal\>) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<Self, Self::[Error](../geometrics/trait.GeometricTransformations.html#associatedtype.Error "type optionstratlib::geometrics::GeometricTransformations::Error"){.associatedtype}\> {#fn-scaleself-factors-vecdecimal---resultself-selferror .code-header}
+#### fn [scale](../geometrics/trait.GeometricTransformations.html#tymethod.scale){.fn}(&self, factors: [Vec](https://doc.rust-lang.org/1.91.1/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<&[Decimal](../prelude/struct.Decimal.html "struct optionstratlib::prelude::Decimal"){.struct}\>) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<Self, Self::[Error](../geometrics/trait.GeometricTransformations.html#associatedtype.Error "type optionstratlib::geometrics::GeometricTransformations::Error"){.associatedtype}\> {#fn-scaleself-factors-vecdecimal---resultself-selferror .code-header}
 :::
 
 ::: docblock
@@ -1050,10 +1087,10 @@ more](../geometrics/trait.GeometricTransformations.html#tymethod.scale)
 :::
 
 ::: {#method.intersect_with .section .method .trait-impl}
-[Source](../../src/optionstratlib/curves/curve.rs.html#1573-1589){.src
+[Source](../../src/optionstratlib/curves/curve.rs.html#1587-1603){.src
 .rightside}[§](#method.intersect_with){.anchor}
 
-#### fn [intersect_with](../geometrics/trait.GeometricTransformations.html#tymethod.intersect_with){.fn}(&self, other: &Self) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[Vec](https://doc.rust-lang.org/1.86.0/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<[Point2D](struct.Point2D.html "struct optionstratlib::curves::Point2D"){.struct}\>, Self::[Error](../geometrics/trait.GeometricTransformations.html#associatedtype.Error "type optionstratlib::geometrics::GeometricTransformations::Error"){.associatedtype}\> {#fn-intersect_withself-other-self---resultvecpoint2d-selferror .code-header}
+#### fn [intersect_with](../geometrics/trait.GeometricTransformations.html#tymethod.intersect_with){.fn}(&self, other: &Self) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[Vec](https://doc.rust-lang.org/1.91.1/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<[Point2D](struct.Point2D.html "struct optionstratlib::curves::Point2D"){.struct}\>, Self::[Error](../geometrics/trait.GeometricTransformations.html#associatedtype.Error "type optionstratlib::geometrics::GeometricTransformations::Error"){.associatedtype}\> {#fn-intersect_withself-other-self---resultvecpoint2d-selferror .code-header}
 :::
 
 ::: docblock
@@ -1063,10 +1100,10 @@ more](../geometrics/trait.GeometricTransformations.html#tymethod.intersect_with)
 :::
 
 ::: {#method.derivative_at .section .method .trait-impl}
-[Source](../../src/optionstratlib/curves/curve.rs.html#1591-1601){.src
+[Source](../../src/optionstratlib/curves/curve.rs.html#1605-1615){.src
 .rightside}[§](#method.derivative_at){.anchor}
 
-#### fn [derivative_at](../geometrics/trait.GeometricTransformations.html#tymethod.derivative_at){.fn}(&self, point: &[Point2D](struct.Point2D.html "struct optionstratlib::curves::Point2D"){.struct}) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[Vec](https://doc.rust-lang.org/1.86.0/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<Decimal\>, Self::[Error](../geometrics/trait.GeometricTransformations.html#associatedtype.Error "type optionstratlib::geometrics::GeometricTransformations::Error"){.associatedtype}\> {#fn-derivative_atself-point-point2d---resultvecdecimal-selferror .code-header}
+#### fn [derivative_at](../geometrics/trait.GeometricTransformations.html#tymethod.derivative_at){.fn}(&self, point: &[Point2D](struct.Point2D.html "struct optionstratlib::curves::Point2D"){.struct}) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[Vec](https://doc.rust-lang.org/1.91.1/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<[Decimal](../prelude/struct.Decimal.html "struct optionstratlib::prelude::Decimal"){.struct}\>, Self::[Error](../geometrics/trait.GeometricTransformations.html#associatedtype.Error "type optionstratlib::geometrics::GeometricTransformations::Error"){.associatedtype}\> {#fn-derivative_atself-point-point2d---resultvecdecimal-selferror .code-header}
 :::
 
 ::: docblock
@@ -1076,10 +1113,10 @@ more](../geometrics/trait.GeometricTransformations.html#tymethod.derivative_at)
 :::
 
 ::: {#method.extrema .section .method .trait-impl}
-[Source](../../src/optionstratlib/curves/curve.rs.html#1603-1626){.src
+[Source](../../src/optionstratlib/curves/curve.rs.html#1617-1640){.src
 .rightside}[§](#method.extrema){.anchor}
 
-#### fn [extrema](../geometrics/trait.GeometricTransformations.html#tymethod.extrema){.fn}(&self) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<([Point2D](struct.Point2D.html "struct optionstratlib::curves::Point2D"){.struct}, [Point2D](struct.Point2D.html "struct optionstratlib::curves::Point2D"){.struct}), Self::[Error](../geometrics/trait.GeometricTransformations.html#associatedtype.Error "type optionstratlib::geometrics::GeometricTransformations::Error"){.associatedtype}\> {#fn-extremaself---resultpoint2d-point2d-selferror .code-header}
+#### fn [extrema](../geometrics/trait.GeometricTransformations.html#tymethod.extrema){.fn}(&self) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<([Point2D](struct.Point2D.html "struct optionstratlib::curves::Point2D"){.struct}, [Point2D](struct.Point2D.html "struct optionstratlib::curves::Point2D"){.struct}), Self::[Error](../geometrics/trait.GeometricTransformations.html#associatedtype.Error "type optionstratlib::geometrics::GeometricTransformations::Error"){.associatedtype}\> {#fn-extremaself---resultpoint2d-point2d-selferror .code-header}
 :::
 
 ::: docblock
@@ -1089,10 +1126,10 @@ more](../geometrics/trait.GeometricTransformations.html#tymethod.extrema)
 :::
 
 ::: {#method.measure_under .section .method .trait-impl}
-[Source](../../src/optionstratlib/curves/curve.rs.html#1628-1644){.src
+[Source](../../src/optionstratlib/curves/curve.rs.html#1642-1658){.src
 .rightside}[§](#method.measure_under){.anchor}
 
-#### fn [measure_under](../geometrics/trait.GeometricTransformations.html#tymethod.measure_under){.fn}(&self, base_value: &Decimal) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<Decimal, Self::[Error](../geometrics/trait.GeometricTransformations.html#associatedtype.Error "type optionstratlib::geometrics::GeometricTransformations::Error"){.associatedtype}\> {#fn-measure_underself-base_value-decimal---resultdecimal-selferror .code-header}
+#### fn [measure_under](../geometrics/trait.GeometricTransformations.html#tymethod.measure_under){.fn}(&self, base_value: &[Decimal](../prelude/struct.Decimal.html "struct optionstratlib::prelude::Decimal"){.struct}) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[Decimal](../prelude/struct.Decimal.html "struct optionstratlib::prelude::Decimal"){.struct}, Self::[Error](../geometrics/trait.GeometricTransformations.html#associatedtype.Error "type optionstratlib::geometrics::GeometricTransformations::Error"){.associatedtype}\> {#fn-measure_underself-base_value-decimal---resultdecimal-selferror .code-header}
 :::
 
 ::: docblock
@@ -1102,11 +1139,42 @@ more](../geometrics/trait.GeometricTransformations.html#tymethod.measure_under)
 :::
 :::::::::::::::::
 
+::: {#impl-Graph-for-Curve .section .impl}
+[Source](../../src/optionstratlib/curves/curve.rs.html#136-140){.src
+.rightside}[§](#impl-Graph-for-Curve){.anchor}
+
+### impl [Graph](../visualization/trait.Graph.html "trait optionstratlib::visualization::Graph"){.trait} for [Curve](struct.Curve.html "struct optionstratlib::curves::Curve"){.struct} {#impl-graph-for-curve .code-header}
+:::
+
+::::::: impl-items
+::: {#method.graph_data .section .method .trait-impl}
+[Source](../../src/optionstratlib/curves/curve.rs.html#137-139){.src
+.rightside}[§](#method.graph_data){.anchor}
+
+#### fn [graph_data](../visualization/trait.Graph.html#tymethod.graph_data){.fn}(&self) -\> [GraphData](../visualization/enum.GraphData.html "enum optionstratlib::visualization::GraphData"){.enum} {#fn-graph_dataself---graphdata .code-header}
+:::
+
+::: docblock
+Return the raw data ready for plotting.
+:::
+
+::: {#method.graph_config .section .method .trait-impl}
+[Source](../../src/optionstratlib/visualization/default.rs.html#38-40){.src
+.rightside}[§](#method.graph_config){.anchor}
+
+#### fn [graph_config](../visualization/trait.Graph.html#method.graph_config){.fn}(&self) -\> [GraphConfig](../visualization/struct.GraphConfig.html "struct optionstratlib::visualization::GraphConfig"){.struct} {#fn-graph_configself---graphconfig .code-header}
+:::
+
+::: docblock
+Optional per‑object configuration overrides.
+:::
+:::::::
+
 :::: {#impl-Index%3Cusize%3E-for-Curve .section .impl}
-[Source](../../src/optionstratlib/curves/curve.rs.html#249-258){.src
+[Source](../../src/optionstratlib/curves/curve.rs.html#263-272){.src
 .rightside}[§](#impl-Index%3Cusize%3E-for-Curve){.anchor}
 
-### impl [Index](https://doc.rust-lang.org/1.86.0/core/ops/index/trait.Index.html "trait core::ops::index::Index"){.trait}\<[usize](https://doc.rust-lang.org/1.86.0/std/primitive.usize.html){.primitive}\> for [Curve](struct.Curve.html "struct optionstratlib::curves::Curve"){.struct} {#impl-indexusize-for-curve .code-header}
+### impl [Index](https://doc.rust-lang.org/1.91.1/core/ops/index/trait.Index.html "trait core::ops::index::Index"){.trait}\<[usize](https://doc.rust-lang.org/1.91.1/std/primitive.usize.html){.primitive}\> for [Curve](struct.Curve.html "struct optionstratlib::curves::Curve"){.struct} {#impl-indexusize-for-curve .code-header}
 
 ::: docblock
 Allows indexed access to the points in a `Curve` using `usize` indices.
@@ -1192,10 +1260,10 @@ let point = curve[0]; // Access the first point
 
 ::::::: impl-items
 ::: {#method.index .section .method .trait-impl}
-[Source](../../src/optionstratlib/curves/curve.rs.html#255-257){.src
+[Source](../../src/optionstratlib/curves/curve.rs.html#269-271){.src
 .rightside}[§](#method.index){.anchor}
 
-#### fn [index](https://doc.rust-lang.org/1.86.0/core/ops/index/trait.Index.html#tymethod.index){.fn}(&self, index: [usize](https://doc.rust-lang.org/1.86.0/std/primitive.usize.html){.primitive}) -\> &Self::[Output](https://doc.rust-lang.org/1.86.0/core/ops/index/trait.Index.html#associatedtype.Output "type core::ops::index::Index::Output"){.associatedtype} {#fn-indexself-index-usize---selfoutput .code-header}
+#### fn [index](https://doc.rust-lang.org/1.91.1/core/ops/index/trait.Index.html#tymethod.index){.fn}(&self, index: [usize](https://doc.rust-lang.org/1.91.1/std/primitive.usize.html){.primitive}) -\> &Self::[Output](https://doc.rust-lang.org/1.91.1/core/ops/index/trait.Index.html#associatedtype.Output "type core::ops::index::Index::Output"){.associatedtype} {#fn-indexself-index-usize---selfoutput .code-header}
 :::
 
 ::: docblock
@@ -1205,10 +1273,10 @@ Panics if the index is invalid.
 :::
 
 ::: {#associatedtype.Output .section .associatedtype .trait-impl}
-[Source](../../src/optionstratlib/curves/curve.rs.html#250){.src
+[Source](../../src/optionstratlib/curves/curve.rs.html#264){.src
 .rightside}[§](#associatedtype.Output){.anchor}
 
-#### type [Output](https://doc.rust-lang.org/1.86.0/core/ops/index/trait.Index.html#associatedtype.Output){.associatedtype} = [Point2D](struct.Point2D.html "struct optionstratlib::curves::Point2D"){.struct} {#type-output-point2d .code-header}
+#### type [Output](https://doc.rust-lang.org/1.91.1/core/ops/index/trait.Index.html#associatedtype.Output){.associatedtype} = [Point2D](struct.Point2D.html "struct optionstratlib::curves::Point2D"){.struct} {#type-output-point2d .code-header}
 :::
 
 ::: docblock
@@ -1217,10 +1285,10 @@ The returned type after indexing.
 :::::::
 
 :::: {#impl-Interpolate%3CPoint2D,+Decimal%3E-for-Curve .section .impl}
-[Source](../../src/optionstratlib/curves/curve.rs.html#287){.src
+[Source](../../src/optionstratlib/curves/curve.rs.html#301){.src
 .rightside}[§](#impl-Interpolate%3CPoint2D,+Decimal%3E-for-Curve){.anchor}
 
-### impl [Interpolate](../geometrics/trait.Interpolate.html "trait optionstratlib::geometrics::Interpolate"){.trait}\<[Point2D](struct.Point2D.html "struct optionstratlib::curves::Point2D"){.struct}, Decimal\> for [Curve](struct.Curve.html "struct optionstratlib::curves::Curve"){.struct} {#impl-interpolatepoint2d-decimal-for-curve .code-header}
+### impl [Interpolate](../geometrics/trait.Interpolate.html "trait optionstratlib::geometrics::Interpolate"){.trait}\<[Point2D](struct.Point2D.html "struct optionstratlib::curves::Point2D"){.struct}, [Decimal](../prelude/struct.Decimal.html "struct optionstratlib::prelude::Decimal"){.struct}\> for [Curve](struct.Curve.html "struct optionstratlib::curves::Curve"){.struct} {#impl-interpolatepoint2d-decimal-for-curve .code-header}
 
 ::: docblock
 Implementation of the `Interpolate` trait for the `Curve` struct.
@@ -1266,7 +1334,7 @@ appropriate algorithm is invoked.
 [Source](../../src/optionstratlib/geometrics/interpolation/traits.rs.html#80-91){.src
 .rightside}[§](#method.interpolate){.anchor}
 
-#### fn [interpolate](../geometrics/trait.Interpolate.html#method.interpolate){.fn}( &self, x: Input, interpolation_type: [InterpolationType](../geometrics/enum.InterpolationType.html "enum optionstratlib::geometrics::InterpolationType"){.enum}, ) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<Point, [InterpolationError](../error/enum.InterpolationError.html "enum optionstratlib::error::InterpolationError"){.enum}\> {#fn-interpolate-self-x-input-interpolation_type-interpolationtype---resultpoint-interpolationerror .code-header}
+#### fn [interpolate](../geometrics/trait.Interpolate.html#method.interpolate){.fn}( &self, x: Input, interpolation_type: [InterpolationType](../geometrics/enum.InterpolationType.html "enum optionstratlib::geometrics::InterpolationType"){.enum}, ) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<Point, [InterpolationError](../error/enum.InterpolationError.html "enum optionstratlib::error::InterpolationError"){.enum}\> {#fn-interpolate-self-x-input-interpolation_type-interpolationtype---resultpoint-interpolationerror .code-header}
 :::
 
 ::: docblock
@@ -1279,7 +1347,7 @@ more](../geometrics/trait.Interpolate.html#method.interpolate)
 [Source](../../src/optionstratlib/geometrics/interpolation/traits.rs.html#110-132){.src
 .rightside}[§](#method.find_bracket_points){.anchor}
 
-#### fn [find_bracket_points](../geometrics/trait.Interpolate.html#method.find_bracket_points){.fn}( &self, x: Input, ) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<([usize](https://doc.rust-lang.org/1.86.0/std/primitive.usize.html){.primitive}, [usize](https://doc.rust-lang.org/1.86.0/std/primitive.usize.html){.primitive}), [InterpolationError](../error/enum.InterpolationError.html "enum optionstratlib::error::InterpolationError"){.enum}\> {#fn-find_bracket_points-self-x-input---resultusize-usize-interpolationerror .code-header}
+#### fn [find_bracket_points](../geometrics/trait.Interpolate.html#method.find_bracket_points){.fn}( &self, x: Input, ) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<([usize](https://doc.rust-lang.org/1.91.1/std/primitive.usize.html){.primitive}, [usize](https://doc.rust-lang.org/1.91.1/std/primitive.usize.html){.primitive}), [InterpolationError](../error/enum.InterpolationError.html "enum optionstratlib::error::InterpolationError"){.enum}\> {#fn-find_bracket_points-self-x-input---resultusize-usize-interpolationerror .code-header}
 :::
 
 ::: docblock
@@ -1289,7 +1357,7 @@ more](../geometrics/trait.Interpolate.html#method.find_bracket_points)
 :::::::
 
 ::: {#impl-Len-for-Curve .section .impl}
-[Source](../../src/optionstratlib/curves/curve.rs.html#124-132){.src
+[Source](../../src/optionstratlib/curves/curve.rs.html#126-134){.src
 .rightside}[§](#impl-Len-for-Curve){.anchor}
 
 ### impl [Len](../utils/trait.Len.html "trait optionstratlib::utils::Len"){.trait} for [Curve](struct.Curve.html "struct optionstratlib::curves::Curve"){.struct} {#impl-len-for-curve .code-header}
@@ -1297,10 +1365,10 @@ more](../geometrics/trait.Interpolate.html#method.find_bracket_points)
 
 ::::::: impl-items
 ::: {#method.len .section .method .trait-impl}
-[Source](../../src/optionstratlib/curves/curve.rs.html#125-127){.src
+[Source](../../src/optionstratlib/curves/curve.rs.html#127-129){.src
 .rightside}[§](#method.len){.anchor}
 
-#### fn [len](../utils/trait.Len.html#tymethod.len){.fn}(&self) -\> [usize](https://doc.rust-lang.org/1.86.0/std/primitive.usize.html){.primitive} {#fn-lenself---usize .code-header}
+#### fn [len](../utils/trait.Len.html#tymethod.len){.fn}(&self) -\> [usize](https://doc.rust-lang.org/1.91.1/std/primitive.usize.html){.primitive} {#fn-lenself---usize .code-header}
 :::
 
 ::: docblock
@@ -1309,10 +1377,10 @@ object. [Read more](../utils/trait.Len.html#tymethod.len)
 :::
 
 ::: {#method.is_empty .section .method .trait-impl}
-[Source](../../src/optionstratlib/curves/curve.rs.html#129-131){.src
+[Source](../../src/optionstratlib/curves/curve.rs.html#131-133){.src
 .rightside}[§](#method.is_empty){.anchor}
 
-#### fn [is_empty](../utils/trait.Len.html#method.is_empty){.fn}(&self) -\> [bool](https://doc.rust-lang.org/1.86.0/std/primitive.bool.html){.primitive} {#fn-is_emptyself---bool .code-header}
+#### fn [is_empty](../utils/trait.Len.html#method.is_empty){.fn}(&self) -\> [bool](https://doc.rust-lang.org/1.91.1/std/primitive.bool.html){.primitive} {#fn-is_emptyself---bool .code-header}
 :::
 
 ::: docblock
@@ -1322,10 +1390,10 @@ zero size. [Read more](../utils/trait.Len.html#method.is_empty)
 :::::::
 
 :::: {#impl-LinearInterpolation%3CPoint2D,+Decimal%3E-for-Curve .section .impl}
-[Source](../../src/optionstratlib/curves/curve.rs.html#352-370){.src
+[Source](../../src/optionstratlib/curves/curve.rs.html#366-384){.src
 .rightside}[§](#impl-LinearInterpolation%3CPoint2D,+Decimal%3E-for-Curve){.anchor}
 
-### impl [LinearInterpolation](../geometrics/trait.LinearInterpolation.html "trait optionstratlib::geometrics::LinearInterpolation"){.trait}\<[Point2D](struct.Point2D.html "struct optionstratlib::curves::Point2D"){.struct}, Decimal\> for [Curve](struct.Curve.html "struct optionstratlib::curves::Curve"){.struct} {#impl-linearinterpolationpoint2d-decimal-for-curve .code-header}
+### impl [LinearInterpolation](../geometrics/trait.LinearInterpolation.html "trait optionstratlib::geometrics::LinearInterpolation"){.trait}\<[Point2D](struct.Point2D.html "struct optionstratlib::curves::Point2D"){.struct}, [Decimal](../prelude/struct.Decimal.html "struct optionstratlib::prelude::Decimal"){.struct}\> for [Curve](struct.Curve.html "struct optionstratlib::curves::Curve"){.struct} {#impl-linearinterpolationpoint2d-decimal-for-curve .code-header}
 
 ::: docblock
 Implements the `LinearInterpolation` trait for the `Curve` struct.
@@ -1416,10 +1484,10 @@ It will return `Point2D { x: 3.0, y: 6.0 }`.
 
 ::::: impl-items
 ::: {#method.linear_interpolate .section .method .trait-impl}
-[Source](../../src/optionstratlib/curves/curve.rs.html#359-369){.src
+[Source](../../src/optionstratlib/curves/curve.rs.html#373-383){.src
 .rightside}[§](#method.linear_interpolate){.anchor}
 
-#### fn [linear_interpolate](../geometrics/trait.LinearInterpolation.html#tymethod.linear_interpolate){.fn}(&self, x: Decimal) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[Point2D](struct.Point2D.html "struct optionstratlib::curves::Point2D"){.struct}, [InterpolationError](../error/enum.InterpolationError.html "enum optionstratlib::error::InterpolationError"){.enum}\> {#fn-linear_interpolateself-x-decimal---resultpoint2d-interpolationerror .code-header}
+#### fn [linear_interpolate](../geometrics/trait.LinearInterpolation.html#tymethod.linear_interpolate){.fn}(&self, x: [Decimal](../prelude/struct.Decimal.html "struct optionstratlib::prelude::Decimal"){.struct}) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[Point2D](struct.Point2D.html "struct optionstratlib::curves::Point2D"){.struct}, [InterpolationError](../error/enum.InterpolationError.html "enum optionstratlib::error::InterpolationError"){.enum}\> {#fn-linear_interpolateself-x-decimal---resultpoint2d-interpolationerror .code-header}
 :::
 
 ::: docblock
@@ -1435,23 +1503,23 @@ interpolation formula:
 :::::
 
 :::: {#impl-MergeAxisInterpolate%3CPoint2D,+Decimal%3E-for-Curve .section .impl}
-[Source](../../src/optionstratlib/curves/curve.rs.html#1496-1534){.src
+[Source](../../src/optionstratlib/curves/curve.rs.html#1510-1548){.src
 .rightside}[§](#impl-MergeAxisInterpolate%3CPoint2D,+Decimal%3E-for-Curve){.anchor}
 
-### impl [MergeAxisInterpolate](../geometrics/trait.MergeAxisInterpolate.html "trait optionstratlib::geometrics::MergeAxisInterpolate"){.trait}\<[Point2D](struct.Point2D.html "struct optionstratlib::curves::Point2D"){.struct}, Decimal\> for [Curve](struct.Curve.html "struct optionstratlib::curves::Curve"){.struct} {#impl-mergeaxisinterpolatepoint2d-decimal-for-curve .code-header}
+### impl [MergeAxisInterpolate](../geometrics/trait.MergeAxisInterpolate.html "trait optionstratlib::geometrics::MergeAxisInterpolate"){.trait}\<[Point2D](struct.Point2D.html "struct optionstratlib::curves::Point2D"){.struct}, [Decimal](../prelude/struct.Decimal.html "struct optionstratlib::prelude::Decimal"){.struct}\> for [Curve](struct.Curve.html "struct optionstratlib::curves::Curve"){.struct} {#impl-mergeaxisinterpolatepoint2d-decimal-for-curve .code-header}
 
 ::: where
 where Self:
-[Sized](https://doc.rust-lang.org/1.86.0/core/marker/trait.Sized.html "trait core::marker::Sized"){.trait},
+[Sized](https://doc.rust-lang.org/1.91.1/core/marker/trait.Sized.html "trait core::marker::Sized"){.trait},
 :::
 ::::
 
 ::::::: impl-items
 ::: {#method.merge_axis_interpolate .section .method .trait-impl}
-[Source](../../src/optionstratlib/curves/curve.rs.html#1500-1533){.src
+[Source](../../src/optionstratlib/curves/curve.rs.html#1514-1547){.src
 .rightside}[§](#method.merge_axis_interpolate){.anchor}
 
-#### fn [merge_axis_interpolate](../geometrics/trait.MergeAxisInterpolate.html#tymethod.merge_axis_interpolate){.fn}( &self, other: &Self, interpolation: [InterpolationType](../geometrics/enum.InterpolationType.html "enum optionstratlib::geometrics::InterpolationType"){.enum}, ) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<(Self, Self), Self::[Error](../geometrics/trait.AxisOperations.html#associatedtype.Error "type optionstratlib::geometrics::AxisOperations::Error"){.associatedtype}\> {#fn-merge_axis_interpolate-self-other-self-interpolation-interpolationtype---resultself-self-selferror .code-header}
+#### fn [merge_axis_interpolate](../geometrics/trait.MergeAxisInterpolate.html#tymethod.merge_axis_interpolate){.fn}( &self, other: &Self, interpolation: [InterpolationType](../geometrics/enum.InterpolationType.html "enum optionstratlib::geometrics::InterpolationType"){.enum}, ) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<(Self, Self), Self::[Error](../geometrics/trait.AxisOperations.html#associatedtype.Error "type optionstratlib::geometrics::AxisOperations::Error"){.associatedtype}\> {#fn-merge_axis_interpolate-self-other-self-interpolation-interpolationtype---resultself-self-selferror .code-header}
 :::
 
 ::: docblock
@@ -1464,7 +1532,7 @@ more](../geometrics/trait.MergeAxisInterpolate.html#tymethod.merge_axis_interpol
 [Source](../../src/optionstratlib/geometrics/operations/axis.rs.html#144-147){.src
 .rightside}[§](#method.merge_axis_index){.anchor}
 
-#### fn [merge_axis_index](../geometrics/trait.MergeAxisInterpolate.html#method.merge_axis_index){.fn}\<\'a\>(&\'a self, other: &\'a Self) -\> [Vec](https://doc.rust-lang.org/1.86.0/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<Input\> {#fn-merge_axis_indexaa-self-other-a-self---vecinput .code-header}
+#### fn [merge_axis_index](../geometrics/trait.MergeAxisInterpolate.html#method.merge_axis_index){.fn}\<\'a\>(&\'a self, other: &\'a Self) -\> [Vec](https://doc.rust-lang.org/1.91.1/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<Input\> {#fn-merge_axis_indexaa-self-other-a-self---vecinput .code-header}
 :::
 
 ::: docblock
@@ -1475,7 +1543,7 @@ more](../geometrics/trait.MergeAxisInterpolate.html#method.merge_axis_index)
 :::::::
 
 :::: {#impl-MetricsExtractor-for-Curve .section .impl}
-[Source](../../src/optionstratlib/curves/curve.rs.html#956-1249){.src
+[Source](../../src/optionstratlib/curves/curve.rs.html#970-1263){.src
 .rightside}[§](#impl-MetricsExtractor-for-Curve){.anchor}
 
 ### impl [MetricsExtractor](../geometrics/trait.MetricsExtractor.html "trait optionstratlib::geometrics::MetricsExtractor"){.trait} for [Curve](struct.Curve.html "struct optionstratlib::curves::Curve"){.struct} {#impl-metricsextractor-for-curve .code-header}
@@ -1500,10 +1568,10 @@ needs.
 
 ::::::::::::::::: impl-items
 ::: {#method.compute_basic_metrics .section .method .trait-impl}
-[Source](../../src/optionstratlib/curves/curve.rs.html#957-1010){.src
+[Source](../../src/optionstratlib/curves/curve.rs.html#971-1024){.src
 .rightside}[§](#method.compute_basic_metrics){.anchor}
 
-#### fn [compute_basic_metrics](../geometrics/trait.MetricsExtractor.html#tymethod.compute_basic_metrics){.fn}(&self) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[BasicMetrics](../geometrics/struct.BasicMetrics.html "struct optionstratlib::geometrics::BasicMetrics"){.struct}, [MetricsError](../error/enum.MetricsError.html "enum optionstratlib::error::MetricsError"){.enum}\> {#fn-compute_basic_metricsself---resultbasicmetrics-metricserror .code-header}
+#### fn [compute_basic_metrics](../geometrics/trait.MetricsExtractor.html#tymethod.compute_basic_metrics){.fn}(&self) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[BasicMetrics](../geometrics/struct.BasicMetrics.html "struct optionstratlib::geometrics::BasicMetrics"){.struct}, [MetricsError](../error/enum.MetricsError.html "enum optionstratlib::error::MetricsError"){.enum}\> {#fn-compute_basic_metricsself---resultbasicmetrics-metricserror .code-header}
 :::
 
 ::: docblock
@@ -1512,10 +1580,10 @@ more](../geometrics/trait.MetricsExtractor.html#tymethod.compute_basic_metrics)
 :::
 
 ::: {#method.compute_shape_metrics .section .method .trait-impl}
-[Source](../../src/optionstratlib/curves/curve.rs.html#1012-1066){.src
+[Source](../../src/optionstratlib/curves/curve.rs.html#1026-1080){.src
 .rightside}[§](#method.compute_shape_metrics){.anchor}
 
-#### fn [compute_shape_metrics](../geometrics/trait.MetricsExtractor.html#tymethod.compute_shape_metrics){.fn}(&self) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[ShapeMetrics](../geometrics/struct.ShapeMetrics.html "struct optionstratlib::geometrics::ShapeMetrics"){.struct}, [MetricsError](../error/enum.MetricsError.html "enum optionstratlib::error::MetricsError"){.enum}\> {#fn-compute_shape_metricsself---resultshapemetrics-metricserror .code-header}
+#### fn [compute_shape_metrics](../geometrics/trait.MetricsExtractor.html#tymethod.compute_shape_metrics){.fn}(&self) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[ShapeMetrics](../geometrics/struct.ShapeMetrics.html "struct optionstratlib::geometrics::ShapeMetrics"){.struct}, [MetricsError](../error/enum.MetricsError.html "enum optionstratlib::error::MetricsError"){.enum}\> {#fn-compute_shape_metricsself---resultshapemetrics-metricserror .code-header}
 :::
 
 ::: docblock
@@ -1524,10 +1592,10 @@ more](../geometrics/trait.MetricsExtractor.html#tymethod.compute_shape_metrics)
 :::
 
 ::: {#method.compute_range_metrics .section .method .trait-impl}
-[Source](../../src/optionstratlib/curves/curve.rs.html#1068-1113){.src
+[Source](../../src/optionstratlib/curves/curve.rs.html#1082-1127){.src
 .rightside}[§](#method.compute_range_metrics){.anchor}
 
-#### fn [compute_range_metrics](../geometrics/trait.MetricsExtractor.html#tymethod.compute_range_metrics){.fn}(&self) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[RangeMetrics](../geometrics/struct.RangeMetrics.html "struct optionstratlib::geometrics::RangeMetrics"){.struct}, [MetricsError](../error/enum.MetricsError.html "enum optionstratlib::error::MetricsError"){.enum}\> {#fn-compute_range_metricsself---resultrangemetrics-metricserror .code-header}
+#### fn [compute_range_metrics](../geometrics/trait.MetricsExtractor.html#tymethod.compute_range_metrics){.fn}(&self) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[RangeMetrics](../geometrics/struct.RangeMetrics.html "struct optionstratlib::geometrics::RangeMetrics"){.struct}, [MetricsError](../error/enum.MetricsError.html "enum optionstratlib::error::MetricsError"){.enum}\> {#fn-compute_range_metricsself---resultrangemetrics-metricserror .code-header}
 :::
 
 ::: docblock
@@ -1536,10 +1604,10 @@ more](../geometrics/trait.MetricsExtractor.html#tymethod.compute_range_metrics)
 :::
 
 ::: {#method.compute_trend_metrics .section .method .trait-impl}
-[Source](../../src/optionstratlib/curves/curve.rs.html#1115-1188){.src
+[Source](../../src/optionstratlib/curves/curve.rs.html#1129-1202){.src
 .rightside}[§](#method.compute_trend_metrics){.anchor}
 
-#### fn [compute_trend_metrics](../geometrics/trait.MetricsExtractor.html#tymethod.compute_trend_metrics){.fn}(&self) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[TrendMetrics](../geometrics/struct.TrendMetrics.html "struct optionstratlib::geometrics::TrendMetrics"){.struct}, [MetricsError](../error/enum.MetricsError.html "enum optionstratlib::error::MetricsError"){.enum}\> {#fn-compute_trend_metricsself---resulttrendmetrics-metricserror .code-header}
+#### fn [compute_trend_metrics](../geometrics/trait.MetricsExtractor.html#tymethod.compute_trend_metrics){.fn}(&self) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[TrendMetrics](../geometrics/struct.TrendMetrics.html "struct optionstratlib::geometrics::TrendMetrics"){.struct}, [MetricsError](../error/enum.MetricsError.html "enum optionstratlib::error::MetricsError"){.enum}\> {#fn-compute_trend_metricsself---resulttrendmetrics-metricserror .code-header}
 :::
 
 ::: docblock
@@ -1548,10 +1616,10 @@ more](../geometrics/trait.MetricsExtractor.html#tymethod.compute_trend_metrics)
 :::
 
 ::: {#method.compute_risk_metrics .section .method .trait-impl}
-[Source](../../src/optionstratlib/curves/curve.rs.html#1190-1248){.src
+[Source](../../src/optionstratlib/curves/curve.rs.html#1204-1262){.src
 .rightside}[§](#method.compute_risk_metrics){.anchor}
 
-#### fn [compute_risk_metrics](../geometrics/trait.MetricsExtractor.html#tymethod.compute_risk_metrics){.fn}(&self) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[RiskMetrics](../geometrics/struct.RiskMetrics.html "struct optionstratlib::geometrics::RiskMetrics"){.struct}, [MetricsError](../error/enum.MetricsError.html "enum optionstratlib::error::MetricsError"){.enum}\> {#fn-compute_risk_metricsself---resultriskmetrics-metricserror .code-header}
+#### fn [compute_risk_metrics](../geometrics/trait.MetricsExtractor.html#tymethod.compute_risk_metrics){.fn}(&self) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[RiskMetrics](../geometrics/struct.RiskMetrics.html "struct optionstratlib::geometrics::RiskMetrics"){.struct}, [MetricsError](../error/enum.MetricsError.html "enum optionstratlib::error::MetricsError"){.enum}\> {#fn-compute_risk_metricsself---resultriskmetrics-metricserror .code-header}
 :::
 
 ::: docblock
@@ -1563,7 +1631,7 @@ more](../geometrics/trait.MetricsExtractor.html#tymethod.compute_risk_metrics)
 [Source](../../src/optionstratlib/geometrics/analysis/traits.rs.html#71-79){.src
 .rightside}[§](#method.compute_curve_metrics){.anchor}
 
-#### fn [compute_curve_metrics](../geometrics/trait.MetricsExtractor.html#method.compute_curve_metrics){.fn}(&self) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[Metrics](../geometrics/struct.Metrics.html "struct optionstratlib::geometrics::Metrics"){.struct}, [MetricsError](../error/enum.MetricsError.html "enum optionstratlib::error::MetricsError"){.enum}\> {#fn-compute_curve_metricsself---resultmetrics-metricserror .code-header}
+#### fn [compute_curve_metrics](../geometrics/trait.MetricsExtractor.html#method.compute_curve_metrics){.fn}(&self) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[Metrics](../geometrics/struct.Metrics.html "struct optionstratlib::geometrics::Metrics"){.struct}, [MetricsError](../error/enum.MetricsError.html "enum optionstratlib::error::MetricsError"){.enum}\> {#fn-compute_curve_metricsself---resultmetrics-metricserror .code-header}
 :::
 
 ::: docblock
@@ -1576,7 +1644,7 @@ more](../geometrics/trait.MetricsExtractor.html#method.compute_curve_metrics)
 [Source](../../src/optionstratlib/geometrics/analysis/traits.rs.html#104-111){.src
 .rightside}[§](#method.compute_surface_metrics){.anchor}
 
-#### fn [compute_surface_metrics](../geometrics/trait.MetricsExtractor.html#method.compute_surface_metrics){.fn}(&self) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[Metrics](../geometrics/struct.Metrics.html "struct optionstratlib::geometrics::Metrics"){.struct}, [MetricsError](../error/enum.MetricsError.html "enum optionstratlib::error::MetricsError"){.enum}\> {#fn-compute_surface_metricsself---resultmetrics-metricserror .code-header}
+#### fn [compute_surface_metrics](../geometrics/trait.MetricsExtractor.html#method.compute_surface_metrics){.fn}(&self) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[Metrics](../geometrics/struct.Metrics.html "struct optionstratlib::geometrics::Metrics"){.struct}, [MetricsError](../error/enum.MetricsError.html "enum optionstratlib::error::MetricsError"){.enum}\> {#fn-compute_surface_metricsself---resultmetrics-metricserror .code-header}
 :::
 
 ::: docblock
@@ -1585,33 +1653,8 @@ more](../geometrics/trait.MetricsExtractor.html#method.compute_surface_metrics)
 :::
 :::::::::::::::::
 
-:::: {#impl-PlotBuilderExt%3CCurve%3E-for-PlotBuilder%3CCurve%3E .section .impl}
-[Source](../../src/optionstratlib/curves/visualization/plotters.rs.html#153-233){.src
-.rightside}[§](#impl-PlotBuilderExt%3CCurve%3E-for-PlotBuilder%3CCurve%3E){.anchor}
-
-### impl [PlotBuilderExt](../geometrics/trait.PlotBuilderExt.html "trait optionstratlib::geometrics::PlotBuilderExt"){.trait}\<[Curve](struct.Curve.html "struct optionstratlib::curves::Curve"){.struct}\> for [PlotBuilder](../geometrics/struct.PlotBuilder.html "struct optionstratlib::geometrics::PlotBuilder"){.struct}\<[Curve](struct.Curve.html "struct optionstratlib::curves::Curve"){.struct}\> {#impl-plotbuilderextcurve-for-plotbuildercurve .code-header}
-
-::: docblock
-Plotting implementation for single Curve
-:::
-::::
-
-::::: impl-items
-::: {#method.save .section .method .trait-impl}
-[Source](../../src/optionstratlib/curves/visualization/plotters.rs.html#154-232){.src
-.rightside}[§](#method.save){.anchor}
-
-#### fn [save](../geometrics/trait.PlotBuilderExt.html#tymethod.save){.fn}(self, path: impl [AsRef](https://doc.rust-lang.org/1.86.0/core/convert/trait.AsRef.html "trait core::convert::AsRef"){.trait}\<[Path](https://doc.rust-lang.org/1.86.0/std/path/struct.Path.html "struct std::path::Path"){.struct}\>) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[()](https://doc.rust-lang.org/1.86.0/std/primitive.unit.html){.primitive}, [CurveError](../error/curves/enum.CurveError.html "enum optionstratlib::error::curves::CurveError"){.enum}\> {#fn-saveself-path-impl-asrefpath---result-curveerror .code-header}
-:::
-
-::: docblock
-Saves the configured plot to a file at the specified path. [Read
-more](../geometrics/trait.PlotBuilderExt.html#tymethod.save)
-:::
-:::::
-
 :::: {#impl-Plottable-for-Curve .section .impl}
-[Source](../../src/optionstratlib/curves/visualization/plotters.rs.html#58-70){.src
+[Source](../../src/optionstratlib/curves/visualization/plotters.rs.html#57-69){.src
 .rightside}[§](#impl-Plottable-for-Curve){.anchor}
 
 ### impl [Plottable](../geometrics/trait.Plottable.html "trait optionstratlib::geometrics::Plottable"){.trait} for [Curve](struct.Curve.html "struct optionstratlib::curves::Curve"){.struct} {#impl-plottable-for-curve .code-header}
@@ -1623,7 +1666,7 @@ Plottable implementation for single Curve
 
 :::::::: impl-items
 ::: {#associatedtype.Error-4 .section .associatedtype .trait-impl}
-[Source](../../src/optionstratlib/curves/visualization/plotters.rs.html#59){.src
+[Source](../../src/optionstratlib/curves/visualization/plotters.rs.html#58){.src
 .rightside}[§](#associatedtype.Error-4){.anchor}
 
 #### type [Error](../geometrics/trait.Plottable.html#associatedtype.Error){.associatedtype} = [CurveError](../error/curves/enum.CurveError.html "enum optionstratlib::error::curves::CurveError"){.enum} {#type-error-curveerror-4 .code-header}
@@ -1635,14 +1678,14 @@ more](../geometrics/trait.Plottable.html#associatedtype.Error)
 :::
 
 :::: {#method.plot .section .method .trait-impl}
-[Source](../../src/optionstratlib/curves/visualization/plotters.rs.html#61-69){.src
+[Source](../../src/optionstratlib/curves/visualization/plotters.rs.html#60-68){.src
 .rightside}[§](#method.plot){.anchor}
 
 #### fn [plot](../geometrics/trait.Plottable.html#tymethod.plot){.fn}(&self) -\> [PlotBuilder](../geometrics/struct.PlotBuilder.html "struct optionstratlib::geometrics::PlotBuilder"){.struct}\<Self\> {#fn-plotself---plotbuilderself .code-header}
 
 ::: where
 where Self:
-[Sized](https://doc.rust-lang.org/1.86.0/core/marker/trait.Sized.html "trait core::marker::Sized"){.trait},
+[Sized](https://doc.rust-lang.org/1.91.1/core/marker/trait.Sized.html "trait core::marker::Sized"){.trait},
 :::
 ::::
 
@@ -1653,36 +1696,36 @@ Creates a plot builder for configuring and generating visualizations.
 ::::::::
 
 ::: {#impl-Serialize-for-Curve .section .impl}
-[Source](../../src/optionstratlib/curves/curve.rs.html#61){.src
+[Source](../../src/optionstratlib/curves/curve.rs.html#63){.src
 .rightside}[§](#impl-Serialize-for-Curve){.anchor}
 
-### impl [Serialize](https://docs.rs/serde/1.0.219/serde/ser/trait.Serialize.html "trait serde::ser::Serialize"){.trait} for [Curve](struct.Curve.html "struct optionstratlib::curves::Curve"){.struct} {#impl-serialize-for-curve .code-header}
+### impl [Serialize](../../serde_core/ser/trait.Serialize.html "trait serde_core::ser::Serialize"){.trait} for [Curve](struct.Curve.html "struct optionstratlib::curves::Curve"){.struct} {#impl-serialize-for-curve .code-header}
 :::
 
 :::::: impl-items
 :::: {#method.serialize .section .method .trait-impl}
-[Source](../../src/optionstratlib/curves/curve.rs.html#61){.src
+[Source](../../src/optionstratlib/curves/curve.rs.html#63){.src
 .rightside}[§](#method.serialize){.anchor}
 
-#### fn [serialize](https://docs.rs/serde/1.0.219/serde/ser/trait.Serialize.html#tymethod.serialize){.fn}\<\_\_S\>(&self, \_\_serializer: \_\_S) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<\_\_S::[Ok](https://docs.rs/serde/1.0.219/serde/ser/trait.Serializer.html#associatedtype.Ok "type serde::ser::Serializer::Ok"){.associatedtype}, \_\_S::[Error](https://docs.rs/serde/1.0.219/serde/ser/trait.Serializer.html#associatedtype.Error "type serde::ser::Serializer::Error"){.associatedtype}\> {#fn-serialize__sself-__serializer-__s---result__sok-__serror .code-header}
+#### fn [serialize](../../serde_core/ser/trait.Serialize.html#tymethod.serialize){.fn}\<\_\_S\>(&self, \_\_serializer: \_\_S) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<\_\_S::[Ok](../../serde_core/ser/trait.Serializer.html#associatedtype.Ok "type serde_core::ser::Serializer::Ok"){.associatedtype}, \_\_S::[Error](../../serde_core/ser/trait.Serializer.html#associatedtype.Error "type serde_core::ser::Serializer::Error"){.associatedtype}\> {#fn-serialize__sself-__serializer-__s---result__sok-__serror .code-header}
 
 ::: where
 where \_\_S:
-[Serializer](https://docs.rs/serde/1.0.219/serde/ser/trait.Serializer.html "trait serde::ser::Serializer"){.trait},
+[Serializer](../../serde_core/ser/trait.Serializer.html "trait serde_core::ser::Serializer"){.trait},
 :::
 ::::
 
 ::: docblock
 Serialize this value into the given Serde serializer. [Read
-more](https://docs.rs/serde/1.0.219/serde/ser/trait.Serialize.html#tymethod.serialize)
+more](../../serde_core/ser/trait.Serialize.html#tymethod.serialize)
 :::
 ::::::
 
 :::: {#impl-SplineInterpolation%3CPoint2D,+Decimal%3E-for-Curve .section .impl}
-[Source](../../src/optionstratlib/curves/curve.rs.html#757-939){.src
+[Source](../../src/optionstratlib/curves/curve.rs.html#771-953){.src
 .rightside}[§](#impl-SplineInterpolation%3CPoint2D,+Decimal%3E-for-Curve){.anchor}
 
-### impl [SplineInterpolation](../geometrics/trait.SplineInterpolation.html "trait optionstratlib::geometrics::SplineInterpolation"){.trait}\<[Point2D](struct.Point2D.html "struct optionstratlib::curves::Point2D"){.struct}, Decimal\> for [Curve](struct.Curve.html "struct optionstratlib::curves::Curve"){.struct} {#impl-splineinterpolationpoint2d-decimal-for-curve .code-header}
+### impl [SplineInterpolation](../geometrics/trait.SplineInterpolation.html "trait optionstratlib::geometrics::SplineInterpolation"){.trait}\<[Point2D](struct.Point2D.html "struct optionstratlib::curves::Point2D"){.struct}, [Decimal](../prelude/struct.Decimal.html "struct optionstratlib::prelude::Decimal"){.struct}\> for [Curve](struct.Curve.html "struct optionstratlib::curves::Curve"){.struct} {#impl-splineinterpolationpoint2d-decimal-for-curve .code-header}
 
 ::: docblock
 Implements the `SplineInterpolation` trait for the `Curve` struct,
@@ -1773,10 +1816,10 @@ trait, as examples are not provided inline with this implementation.
 
 :::::: impl-items
 ::: {#method.spline_interpolate .section .method .trait-impl}
-[Source](../../src/optionstratlib/curves/curve.rs.html#853-938){.src
+[Source](../../src/optionstratlib/curves/curve.rs.html#867-952){.src
 .rightside}[§](#method.spline_interpolate){.anchor}
 
-#### fn [spline_interpolate](../geometrics/trait.SplineInterpolation.html#tymethod.spline_interpolate){.fn}(&self, x: Decimal) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[Point2D](struct.Point2D.html "struct optionstratlib::curves::Point2D"){.struct}, [InterpolationError](../error/enum.InterpolationError.html "enum optionstratlib::error::InterpolationError"){.enum}\> {#fn-spline_interpolateself-x-decimal---resultpoint2d-interpolationerror .code-header}
+#### fn [spline_interpolate](../geometrics/trait.SplineInterpolation.html#tymethod.spline_interpolate){.fn}(&self, x: [Decimal](../prelude/struct.Decimal.html "struct optionstratlib::prelude::Decimal"){.struct}) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[Point2D](struct.Point2D.html "struct optionstratlib::curves::Point2D"){.struct}, [InterpolationError](../error/enum.InterpolationError.html "enum optionstratlib::error::InterpolationError"){.enum}\> {#fn-spline_interpolateself-x-decimal---resultpoint2d-interpolationerror .code-header}
 :::
 
 :::: docblock
@@ -1897,7 +1940,7 @@ essential. Common applications include:
 ::::::
 
 ::: {#impl-StatisticalCurve-for-Curve .section .impl}
-[Source](../../src/optionstratlib/curves/curve.rs.html#941-945){.src
+[Source](../../src/optionstratlib/curves/curve.rs.html#955-959){.src
 .rightside}[§](#impl-StatisticalCurve-for-Curve){.anchor}
 
 ### impl [StatisticalCurve](trait.StatisticalCurve.html "trait optionstratlib::curves::StatisticalCurve"){.trait} for [Curve](struct.Curve.html "struct optionstratlib::curves::Curve"){.struct} {#impl-statisticalcurve-for-curve .code-header}
@@ -1905,10 +1948,10 @@ essential. Common applications include:
 
 ::::::::::: impl-items
 ::: {#method.get_x_values .section .method .trait-impl}
-[Source](../../src/optionstratlib/curves/curve.rs.html#942-944){.src
+[Source](../../src/optionstratlib/curves/curve.rs.html#956-958){.src
 .rightside}[§](#method.get_x_values){.anchor}
 
-#### fn [get_x_values](trait.StatisticalCurve.html#tymethod.get_x_values){.fn}(&self) -\> [Vec](https://doc.rust-lang.org/1.86.0/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<Decimal\> {#fn-get_x_valuesself---vecdecimal .code-header}
+#### fn [get_x_values](trait.StatisticalCurve.html#tymethod.get_x_values){.fn}(&self) -\> [Vec](https://doc.rust-lang.org/1.91.1/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<[Decimal](../prelude/struct.Decimal.html "struct optionstratlib::prelude::Decimal"){.struct}\> {#fn-get_x_valuesself---vecdecimal .code-header}
 :::
 
 ::: docblock
@@ -1920,7 +1963,7 @@ more](trait.StatisticalCurve.html#tymethod.get_x_values)
 [Source](../../src/optionstratlib/curves/traits.rs.html#113-223){.src
 .rightside}[§](#method.generate_statistical_curve){.anchor}
 
-#### fn [generate_statistical_curve](trait.StatisticalCurve.html#method.generate_statistical_curve){.fn}( &self, basic_metrics: &[BasicMetrics](../geometrics/struct.BasicMetrics.html "struct optionstratlib::geometrics::BasicMetrics"){.struct}, shape_metrics: &[ShapeMetrics](../geometrics/struct.ShapeMetrics.html "struct optionstratlib::geometrics::ShapeMetrics"){.struct}, range_metrics: &[RangeMetrics](../geometrics/struct.RangeMetrics.html "struct optionstratlib::geometrics::RangeMetrics"){.struct}, trend_metrics: &[TrendMetrics](../geometrics/struct.TrendMetrics.html "struct optionstratlib::geometrics::TrendMetrics"){.struct}, num_points: [usize](https://doc.rust-lang.org/1.86.0/std/primitive.usize.html){.primitive}, seed: [Option](https://doc.rust-lang.org/1.86.0/core/option/enum.Option.html "enum core::option::Option"){.enum}\<[u64](https://doc.rust-lang.org/1.86.0/std/primitive.u64.html){.primitive}\>, ) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[Curve](struct.Curve.html "struct optionstratlib::curves::Curve"){.struct}, [CurveError](../error/curves/enum.CurveError.html "enum optionstratlib::error::curves::CurveError"){.enum}\> {#fn-generate_statistical_curve-self-basic_metrics-basicmetrics-shape_metrics-shapemetrics-range_metrics-rangemetrics-trend_metrics-trendmetrics-num_points-usize-seed-optionu64---resultcurve-curveerror .code-header}
+#### fn [generate_statistical_curve](trait.StatisticalCurve.html#method.generate_statistical_curve){.fn}( &self, basic_metrics: &[BasicMetrics](../geometrics/struct.BasicMetrics.html "struct optionstratlib::geometrics::BasicMetrics"){.struct}, shape_metrics: &[ShapeMetrics](../geometrics/struct.ShapeMetrics.html "struct optionstratlib::geometrics::ShapeMetrics"){.struct}, range_metrics: &[RangeMetrics](../geometrics/struct.RangeMetrics.html "struct optionstratlib::geometrics::RangeMetrics"){.struct}, trend_metrics: &[TrendMetrics](../geometrics/struct.TrendMetrics.html "struct optionstratlib::geometrics::TrendMetrics"){.struct}, num_points: [usize](https://doc.rust-lang.org/1.91.1/std/primitive.usize.html){.primitive}, seed: [Option](https://doc.rust-lang.org/1.91.1/core/option/enum.Option.html "enum core::option::Option"){.enum}\<[u64](https://doc.rust-lang.org/1.91.1/std/primitive.u64.html){.primitive}\>, ) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[Curve](struct.Curve.html "struct optionstratlib::curves::Curve"){.struct}, [CurveError](../error/curves/enum.CurveError.html "enum optionstratlib::error::curves::CurveError"){.enum}\> {#fn-generate_statistical_curve-self-basic_metrics-basicmetrics-shape_metrics-shapemetrics-range_metrics-rangemetrics-trend_metrics-trendmetrics-num_points-usize-seed-optionu64---resultcurve-curveerror .code-header}
 :::
 
 ::: docblock
@@ -1933,7 +1976,7 @@ more](trait.StatisticalCurve.html#method.generate_statistical_curve)
 [Source](../../src/optionstratlib/curves/traits.rs.html#245-286){.src
 .rightside}[§](#method.generate_refined_statistical_curve){.anchor}
 
-#### fn [generate_refined_statistical_curve](trait.StatisticalCurve.html#method.generate_refined_statistical_curve){.fn}( &self, basic_metrics: &[BasicMetrics](../geometrics/struct.BasicMetrics.html "struct optionstratlib::geometrics::BasicMetrics"){.struct}, shape_metrics: &[ShapeMetrics](../geometrics/struct.ShapeMetrics.html "struct optionstratlib::geometrics::ShapeMetrics"){.struct}, range_metrics: &[RangeMetrics](../geometrics/struct.RangeMetrics.html "struct optionstratlib::geometrics::RangeMetrics"){.struct}, trend_metrics: &[TrendMetrics](../geometrics/struct.TrendMetrics.html "struct optionstratlib::geometrics::TrendMetrics"){.struct}, num_points: [usize](https://doc.rust-lang.org/1.86.0/std/primitive.usize.html){.primitive}, max_attempts: [usize](https://doc.rust-lang.org/1.86.0/std/primitive.usize.html){.primitive}, tolerance: Decimal, seed: [Option](https://doc.rust-lang.org/1.86.0/core/option/enum.Option.html "enum core::option::Option"){.enum}\<[u64](https://doc.rust-lang.org/1.86.0/std/primitive.u64.html){.primitive}\>, ) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[Curve](struct.Curve.html "struct optionstratlib::curves::Curve"){.struct}, [CurveError](../error/curves/enum.CurveError.html "enum optionstratlib::error::curves::CurveError"){.enum}\> {#fn-generate_refined_statistical_curve-self-basic_metrics-basicmetrics-shape_metrics-shapemetrics-range_metrics-rangemetrics-trend_metrics-trendmetrics-num_points-usize-max_attempts-usize-tolerance-decimal-seed-optionu64---resultcurve-curveerror .code-header}
+#### fn [generate_refined_statistical_curve](trait.StatisticalCurve.html#method.generate_refined_statistical_curve){.fn}( &self, basic_metrics: &[BasicMetrics](../geometrics/struct.BasicMetrics.html "struct optionstratlib::geometrics::BasicMetrics"){.struct}, shape_metrics: &[ShapeMetrics](../geometrics/struct.ShapeMetrics.html "struct optionstratlib::geometrics::ShapeMetrics"){.struct}, range_metrics: &[RangeMetrics](../geometrics/struct.RangeMetrics.html "struct optionstratlib::geometrics::RangeMetrics"){.struct}, trend_metrics: &[TrendMetrics](../geometrics/struct.TrendMetrics.html "struct optionstratlib::geometrics::TrendMetrics"){.struct}, num_points: [usize](https://doc.rust-lang.org/1.91.1/std/primitive.usize.html){.primitive}, max_attempts: [usize](https://doc.rust-lang.org/1.91.1/std/primitive.usize.html){.primitive}, tolerance: [Decimal](../prelude/struct.Decimal.html "struct optionstratlib::prelude::Decimal"){.struct}, seed: [Option](https://doc.rust-lang.org/1.91.1/core/option/enum.Option.html "enum core::option::Option"){.enum}\<[u64](https://doc.rust-lang.org/1.91.1/std/primitive.u64.html){.primitive}\>, ) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[Curve](struct.Curve.html "struct optionstratlib::curves::Curve"){.struct}, [CurveError](../error/curves/enum.CurveError.html "enum optionstratlib::error::curves::CurveError"){.enum}\> {#fn-generate_refined_statistical_curve-self-basic_metrics-basicmetrics-shape_metrics-shapemetrics-range_metrics-rangemetrics-trend_metrics-trendmetrics-num_points-usize-max_attempts-usize-tolerance-decimal-seed-optionu64---resultcurve-curveerror .code-header}
 :::
 
 ::: docblock
@@ -1946,7 +1989,7 @@ more](trait.StatisticalCurve.html#method.generate_refined_statistical_curve)
 [Source](../../src/optionstratlib/curves/traits.rs.html#298-313){.src
 .rightside}[§](#method.verify_curve_metrics){.anchor}
 
-#### fn [verify_curve_metrics](trait.StatisticalCurve.html#method.verify_curve_metrics){.fn}( &self, curve: &[Curve](struct.Curve.html "struct optionstratlib::curves::Curve"){.struct}, target_metrics: &[BasicMetrics](../geometrics/struct.BasicMetrics.html "struct optionstratlib::geometrics::BasicMetrics"){.struct}, tolerance: Decimal, ) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[bool](https://doc.rust-lang.org/1.86.0/std/primitive.bool.html){.primitive}, [CurveError](../error/curves/enum.CurveError.html "enum optionstratlib::error::curves::CurveError"){.enum}\> {#fn-verify_curve_metrics-self-curve-curve-target_metrics-basicmetrics-tolerance-decimal---resultbool-curveerror .code-header}
+#### fn [verify_curve_metrics](trait.StatisticalCurve.html#method.verify_curve_metrics){.fn}( &self, curve: &[Curve](struct.Curve.html "struct optionstratlib::curves::Curve"){.struct}, target_metrics: &[BasicMetrics](../geometrics/struct.BasicMetrics.html "struct optionstratlib::geometrics::BasicMetrics"){.struct}, tolerance: [Decimal](../prelude/struct.Decimal.html "struct optionstratlib::prelude::Decimal"){.struct}, ) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[bool](https://doc.rust-lang.org/1.91.1/std/primitive.bool.html){.primitive}, [CurveError](../error/curves/enum.CurveError.html "enum optionstratlib::error::curves::CurveError"){.enum}\> {#fn-verify_curve_metrics-self-curve-curve-target_metrics-basicmetrics-tolerance-decimal---resultbool-curveerror .code-header}
 :::
 
 ::: docblock
@@ -1955,7 +1998,42 @@ within the specified tolerance. [Read
 more](trait.StatisticalCurve.html#method.verify_curve_metrics)
 :::
 :::::::::::
-:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+::: {#impl-ToSchema-for-Curve .section .impl}
+[Source](../../src/optionstratlib/curves/curve.rs.html#63){.src
+.rightside}[§](#impl-ToSchema-for-Curve){.anchor}
+
+### impl [ToSchema](../../utoipa/trait.ToSchema.html "trait utoipa::ToSchema"){.trait} for [Curve](struct.Curve.html "struct optionstratlib::curves::Curve"){.struct} {#impl-toschema-for-curve .code-header}
+:::
+
+::::::: impl-items
+::: {#method.name .section .method .trait-impl}
+[Source](../../src/optionstratlib/curves/curve.rs.html#63){.src
+.rightside}[§](#method.name){.anchor}
+
+#### fn [name](../../utoipa/trait.ToSchema.html#method.name){.fn}() -\> [Cow](https://doc.rust-lang.org/1.91.1/alloc/borrow/enum.Cow.html "enum alloc::borrow::Cow"){.enum}\<\'static, [str](https://doc.rust-lang.org/1.91.1/std/primitive.str.html){.primitive}\> {#fn-name---cowstatic-str .code-header}
+:::
+
+::: docblock
+Return name of the schema. [Read
+more](../../utoipa/trait.ToSchema.html#method.name)
+:::
+
+::: {#method.schemas .section .method .trait-impl}
+[Source](../../src/optionstratlib/curves/curve.rs.html#63){.src
+.rightside}[§](#method.schemas){.anchor}
+
+#### fn [schemas](../../utoipa/trait.ToSchema.html#method.schemas){.fn}(schemas: &mut [Vec](https://doc.rust-lang.org/1.91.1/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<([String](https://doc.rust-lang.org/1.91.1/alloc/string/struct.String.html "struct alloc::string::String"){.struct}, [RefOr](../../utoipa/openapi/enum.RefOr.html "enum utoipa::openapi::RefOr"){.enum}\<[Schema](../../utoipa/openapi/schema/enum.Schema.html "enum utoipa::openapi::schema::Schema"){.enum}\>)\>) {#fn-schemasschemas-mut-vecstring-reforschema .code-header}
+:::
+
+::: docblock
+Implement reference
+[`utoipa::openapi::schema::Schema`](../../utoipa/openapi/schema/enum.Schema.html "enum utoipa::openapi::schema::Schema")s
+for this type. [Read
+more](../../utoipa/trait.ToSchema.html#method.schemas)
+:::
+:::::::
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 ## Auto Trait Implementations[§](#synthetic-implementations){.anchor} {#synthetic-implementations .section-header}
 
@@ -1963,139 +2041,139 @@ more](trait.StatisticalCurve.html#method.verify_curve_metrics)
 ::: {#impl-Freeze-for-Curve .section .impl}
 [§](#impl-Freeze-for-Curve){.anchor}
 
-### impl [Freeze](https://doc.rust-lang.org/1.86.0/core/marker/trait.Freeze.html "trait core::marker::Freeze"){.trait} for [Curve](struct.Curve.html "struct optionstratlib::curves::Curve"){.struct} {#impl-freeze-for-curve .code-header}
+### impl [Freeze](https://doc.rust-lang.org/1.91.1/core/marker/trait.Freeze.html "trait core::marker::Freeze"){.trait} for [Curve](struct.Curve.html "struct optionstratlib::curves::Curve"){.struct} {#impl-freeze-for-curve .code-header}
 :::
 
 ::: {#impl-RefUnwindSafe-for-Curve .section .impl}
 [§](#impl-RefUnwindSafe-for-Curve){.anchor}
 
-### impl [RefUnwindSafe](https://doc.rust-lang.org/1.86.0/core/panic/unwind_safe/trait.RefUnwindSafe.html "trait core::panic::unwind_safe::RefUnwindSafe"){.trait} for [Curve](struct.Curve.html "struct optionstratlib::curves::Curve"){.struct} {#impl-refunwindsafe-for-curve .code-header}
+### impl [RefUnwindSafe](https://doc.rust-lang.org/1.91.1/core/panic/unwind_safe/trait.RefUnwindSafe.html "trait core::panic::unwind_safe::RefUnwindSafe"){.trait} for [Curve](struct.Curve.html "struct optionstratlib::curves::Curve"){.struct} {#impl-refunwindsafe-for-curve .code-header}
 :::
 
 ::: {#impl-Send-for-Curve .section .impl}
 [§](#impl-Send-for-Curve){.anchor}
 
-### impl [Send](https://doc.rust-lang.org/1.86.0/core/marker/trait.Send.html "trait core::marker::Send"){.trait} for [Curve](struct.Curve.html "struct optionstratlib::curves::Curve"){.struct} {#impl-send-for-curve .code-header}
+### impl [Send](https://doc.rust-lang.org/1.91.1/core/marker/trait.Send.html "trait core::marker::Send"){.trait} for [Curve](struct.Curve.html "struct optionstratlib::curves::Curve"){.struct} {#impl-send-for-curve .code-header}
 :::
 
 ::: {#impl-Sync-for-Curve .section .impl}
 [§](#impl-Sync-for-Curve){.anchor}
 
-### impl [Sync](https://doc.rust-lang.org/1.86.0/core/marker/trait.Sync.html "trait core::marker::Sync"){.trait} for [Curve](struct.Curve.html "struct optionstratlib::curves::Curve"){.struct} {#impl-sync-for-curve .code-header}
+### impl [Sync](https://doc.rust-lang.org/1.91.1/core/marker/trait.Sync.html "trait core::marker::Sync"){.trait} for [Curve](struct.Curve.html "struct optionstratlib::curves::Curve"){.struct} {#impl-sync-for-curve .code-header}
 :::
 
 ::: {#impl-Unpin-for-Curve .section .impl}
 [§](#impl-Unpin-for-Curve){.anchor}
 
-### impl [Unpin](https://doc.rust-lang.org/1.86.0/core/marker/trait.Unpin.html "trait core::marker::Unpin"){.trait} for [Curve](struct.Curve.html "struct optionstratlib::curves::Curve"){.struct} {#impl-unpin-for-curve .code-header}
+### impl [Unpin](https://doc.rust-lang.org/1.91.1/core/marker/trait.Unpin.html "trait core::marker::Unpin"){.trait} for [Curve](struct.Curve.html "struct optionstratlib::curves::Curve"){.struct} {#impl-unpin-for-curve .code-header}
 :::
 
 ::: {#impl-UnwindSafe-for-Curve .section .impl}
 [§](#impl-UnwindSafe-for-Curve){.anchor}
 
-### impl [UnwindSafe](https://doc.rust-lang.org/1.86.0/core/panic/unwind_safe/trait.UnwindSafe.html "trait core::panic::unwind_safe::UnwindSafe"){.trait} for [Curve](struct.Curve.html "struct optionstratlib::curves::Curve"){.struct} {#impl-unwindsafe-for-curve .code-header}
+### impl [UnwindSafe](https://doc.rust-lang.org/1.91.1/core/panic/unwind_safe/trait.UnwindSafe.html "trait core::panic::unwind_safe::UnwindSafe"){.trait} for [Curve](struct.Curve.html "struct optionstratlib::curves::Curve"){.struct} {#impl-unwindsafe-for-curve .code-header}
 :::
 :::::::::
 
 ## Blanket Implementations[§](#blanket-implementations){.anchor} {#blanket-implementations .section-header}
 
-:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::: {#blanket-implementations-list}
+::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::: {#blanket-implementations-list}
 :::: {#impl-Any-for-T .section .impl}
-[Source](https://doc.rust-lang.org/1.86.0/src/core/any.rs.html#138){.src
+[Source](https://doc.rust-lang.org/1.91.1/src/core/any.rs.html#138){.src
 .rightside}[§](#impl-Any-for-T){.anchor}
 
-### impl\<T\> [Any](https://doc.rust-lang.org/1.86.0/core/any/trait.Any.html "trait core::any::Any"){.trait} for T {#implt-any-for-t .code-header}
+### impl\<T\> [Any](https://doc.rust-lang.org/1.91.1/core/any/trait.Any.html "trait core::any::Any"){.trait} for T {#implt-any-for-t .code-header}
 
 ::: where
 where T: \'static +
-?[Sized](https://doc.rust-lang.org/1.86.0/core/marker/trait.Sized.html "trait core::marker::Sized"){.trait},
+?[Sized](https://doc.rust-lang.org/1.91.1/core/marker/trait.Sized.html "trait core::marker::Sized"){.trait},
 :::
 ::::
 
 ::::: impl-items
 ::: {#method.type_id .section .method .trait-impl}
-[Source](https://doc.rust-lang.org/1.86.0/src/core/any.rs.html#139){.src
+[Source](https://doc.rust-lang.org/1.91.1/src/core/any.rs.html#139){.src
 .rightside}[§](#method.type_id){.anchor}
 
-#### fn [type_id](https://doc.rust-lang.org/1.86.0/core/any/trait.Any.html#tymethod.type_id){.fn}(&self) -\> [TypeId](https://doc.rust-lang.org/1.86.0/core/any/struct.TypeId.html "struct core::any::TypeId"){.struct} {#fn-type_idself---typeid .code-header}
+#### fn [type_id](https://doc.rust-lang.org/1.91.1/core/any/trait.Any.html#tymethod.type_id){.fn}(&self) -\> [TypeId](https://doc.rust-lang.org/1.91.1/core/any/struct.TypeId.html "struct core::any::TypeId"){.struct} {#fn-type_idself---typeid .code-header}
 :::
 
 ::: docblock
 Gets the `TypeId` of `self`. [Read
-more](https://doc.rust-lang.org/1.86.0/core/any/trait.Any.html#tymethod.type_id)
+more](https://doc.rust-lang.org/1.91.1/core/any/trait.Any.html#tymethod.type_id)
 :::
 :::::
 
 :::: {#impl-Borrow%3CT%3E-for-T .section .impl}
-[Source](https://doc.rust-lang.org/1.86.0/src/core/borrow.rs.html#209){.src
+[Source](https://doc.rust-lang.org/1.91.1/src/core/borrow.rs.html#212){.src
 .rightside}[§](#impl-Borrow%3CT%3E-for-T){.anchor}
 
-### impl\<T\> [Borrow](https://doc.rust-lang.org/1.86.0/core/borrow/trait.Borrow.html "trait core::borrow::Borrow"){.trait}\<T\> for T {#implt-borrowt-for-t .code-header}
+### impl\<T\> [Borrow](https://doc.rust-lang.org/1.91.1/core/borrow/trait.Borrow.html "trait core::borrow::Borrow"){.trait}\<T\> for T {#implt-borrowt-for-t .code-header}
 
 ::: where
 where T:
-?[Sized](https://doc.rust-lang.org/1.86.0/core/marker/trait.Sized.html "trait core::marker::Sized"){.trait},
+?[Sized](https://doc.rust-lang.org/1.91.1/core/marker/trait.Sized.html "trait core::marker::Sized"){.trait},
 :::
 ::::
 
 ::::: impl-items
 ::: {#method.borrow .section .method .trait-impl}
-[Source](https://doc.rust-lang.org/1.86.0/src/core/borrow.rs.html#211){.src
+[Source](https://doc.rust-lang.org/1.91.1/src/core/borrow.rs.html#214){.src
 .rightside}[§](#method.borrow){.anchor}
 
-#### fn [borrow](https://doc.rust-lang.org/1.86.0/core/borrow/trait.Borrow.html#tymethod.borrow){.fn}(&self) -\> [&T](https://doc.rust-lang.org/1.86.0/std/primitive.reference.html){.primitive} {#fn-borrowself---t .code-header}
+#### fn [borrow](https://doc.rust-lang.org/1.91.1/core/borrow/trait.Borrow.html#tymethod.borrow){.fn}(&self) -\> [&T](https://doc.rust-lang.org/1.91.1/std/primitive.reference.html){.primitive} {#fn-borrowself---t .code-header}
 :::
 
 ::: docblock
 Immutably borrows from an owned value. [Read
-more](https://doc.rust-lang.org/1.86.0/core/borrow/trait.Borrow.html#tymethod.borrow)
+more](https://doc.rust-lang.org/1.91.1/core/borrow/trait.Borrow.html#tymethod.borrow)
 :::
 :::::
 
 :::: {#impl-BorrowMut%3CT%3E-for-T .section .impl}
-[Source](https://doc.rust-lang.org/1.86.0/src/core/borrow.rs.html#217){.src
+[Source](https://doc.rust-lang.org/1.91.1/src/core/borrow.rs.html#221){.src
 .rightside}[§](#impl-BorrowMut%3CT%3E-for-T){.anchor}
 
-### impl\<T\> [BorrowMut](https://doc.rust-lang.org/1.86.0/core/borrow/trait.BorrowMut.html "trait core::borrow::BorrowMut"){.trait}\<T\> for T {#implt-borrowmutt-for-t .code-header}
+### impl\<T\> [BorrowMut](https://doc.rust-lang.org/1.91.1/core/borrow/trait.BorrowMut.html "trait core::borrow::BorrowMut"){.trait}\<T\> for T {#implt-borrowmutt-for-t .code-header}
 
 ::: where
 where T:
-?[Sized](https://doc.rust-lang.org/1.86.0/core/marker/trait.Sized.html "trait core::marker::Sized"){.trait},
+?[Sized](https://doc.rust-lang.org/1.91.1/core/marker/trait.Sized.html "trait core::marker::Sized"){.trait},
 :::
 ::::
 
 ::::: impl-items
 ::: {#method.borrow_mut .section .method .trait-impl}
-[Source](https://doc.rust-lang.org/1.86.0/src/core/borrow.rs.html#218){.src
+[Source](https://doc.rust-lang.org/1.91.1/src/core/borrow.rs.html#222){.src
 .rightside}[§](#method.borrow_mut){.anchor}
 
-#### fn [borrow_mut](https://doc.rust-lang.org/1.86.0/core/borrow/trait.BorrowMut.html#tymethod.borrow_mut){.fn}(&mut self) -\> [&mut T](https://doc.rust-lang.org/1.86.0/std/primitive.reference.html){.primitive} {#fn-borrow_mutmut-self---mut-t .code-header}
+#### fn [borrow_mut](https://doc.rust-lang.org/1.91.1/core/borrow/trait.BorrowMut.html#tymethod.borrow_mut){.fn}(&mut self) -\> [&mut T](https://doc.rust-lang.org/1.91.1/std/primitive.reference.html){.primitive} {#fn-borrow_mutmut-self---mut-t .code-header}
 :::
 
 ::: docblock
 Mutably borrows from an owned value. [Read
-more](https://doc.rust-lang.org/1.86.0/core/borrow/trait.BorrowMut.html#tymethod.borrow_mut)
+more](https://doc.rust-lang.org/1.91.1/core/borrow/trait.BorrowMut.html#tymethod.borrow_mut)
 :::
 :::::
 
 :::: {#impl-CloneToUninit-for-T .section .impl}
-[Source](https://doc.rust-lang.org/1.86.0/src/core/clone.rs.html#273){.src
+[Source](https://doc.rust-lang.org/1.91.1/src/core/clone.rs.html#515){.src
 .rightside}[§](#impl-CloneToUninit-for-T){.anchor}
 
-### impl\<T\> [CloneToUninit](https://doc.rust-lang.org/1.86.0/core/clone/trait.CloneToUninit.html "trait core::clone::CloneToUninit"){.trait} for T {#implt-clonetouninit-for-t .code-header}
+### impl\<T\> [CloneToUninit](https://doc.rust-lang.org/1.91.1/core/clone/trait.CloneToUninit.html "trait core::clone::CloneToUninit"){.trait} for T {#implt-clonetouninit-for-t .code-header}
 
 ::: where
 where T:
-[Clone](https://doc.rust-lang.org/1.86.0/core/clone/trait.Clone.html "trait core::clone::Clone"){.trait},
+[Clone](https://doc.rust-lang.org/1.91.1/core/clone/trait.Clone.html "trait core::clone::Clone"){.trait},
 :::
 ::::
 
 :::::: impl-items
 ::: {#method.clone_to_uninit .section .method .trait-impl}
-[Source](https://doc.rust-lang.org/1.86.0/src/core/clone.rs.html#275){.src
+[Source](https://doc.rust-lang.org/1.91.1/src/core/clone.rs.html#517){.src
 .rightside}[§](#method.clone_to_uninit){.anchor}
 
-#### unsafe fn [clone_to_uninit](https://doc.rust-lang.org/1.86.0/core/clone/trait.CloneToUninit.html#tymethod.clone_to_uninit){.fn}(&self, dst: [\*mut](https://doc.rust-lang.org/1.86.0/std/primitive.pointer.html){.primitive} [u8](https://doc.rust-lang.org/1.86.0/std/primitive.u8.html){.primitive}) {#unsafe-fn-clone_to_uninitself-dst-mut-u8 .code-header}
+#### unsafe fn [clone_to_uninit](https://doc.rust-lang.org/1.91.1/core/clone/trait.CloneToUninit.html#tymethod.clone_to_uninit){.fn}(&self, dest: [\*mut](https://doc.rust-lang.org/1.91.1/std/primitive.pointer.html){.primitive} [u8](https://doc.rust-lang.org/1.91.1/std/primitive.u8.html){.primitive}) {#unsafe-fn-clone_to_uninitself-dest-mut-u8 .code-header}
 :::
 
 []{.item-info}
@@ -2105,24 +2183,24 @@ where T:
 :::
 
 ::: docblock
-Performs copy-assignment from `self` to `dst`. [Read
-more](https://doc.rust-lang.org/1.86.0/core/clone/trait.CloneToUninit.html#tymethod.clone_to_uninit)
+Performs copy-assignment from `self` to `dest`. [Read
+more](https://doc.rust-lang.org/1.91.1/core/clone/trait.CloneToUninit.html#tymethod.clone_to_uninit)
 :::
 ::::::
 
 ::: {#impl-From%3CT%3E-for-T .section .impl}
-[Source](https://doc.rust-lang.org/1.86.0/src/core/convert/mod.rs.html#767){.src
+[Source](https://doc.rust-lang.org/1.91.1/src/core/convert/mod.rs.html#785){.src
 .rightside}[§](#impl-From%3CT%3E-for-T){.anchor}
 
-### impl\<T\> [From](https://doc.rust-lang.org/1.86.0/core/convert/trait.From.html "trait core::convert::From"){.trait}\<T\> for T {#implt-fromt-for-t .code-header}
+### impl\<T\> [From](https://doc.rust-lang.org/1.91.1/core/convert/trait.From.html "trait core::convert::From"){.trait}\<T\> for T {#implt-fromt-for-t .code-header}
 :::
 
 ::::: impl-items
-::: {#method.from .section .method .trait-impl}
-[Source](https://doc.rust-lang.org/1.86.0/src/core/convert/mod.rs.html#770){.src
-.rightside}[§](#method.from){.anchor}
+::: {#method.from-1 .section .method .trait-impl}
+[Source](https://doc.rust-lang.org/1.91.1/src/core/convert/mod.rs.html#788){.src
+.rightside}[§](#method.from-1){.anchor}
 
-#### fn [from](https://doc.rust-lang.org/1.86.0/core/convert/trait.From.html#tymethod.from){.fn}(t: T) -\> T {#fn-fromt-t---t .code-header}
+#### fn [from](https://doc.rust-lang.org/1.91.1/core/convert/trait.From.html#tymethod.from){.fn}(t: T) -\> T {#fn-fromt-t---t .code-header}
 :::
 
 ::: docblock
@@ -2131,131 +2209,167 @@ Returns the argument unchanged.
 :::::
 
 ::: {#impl-Instrument-for-T .section .impl}
-[§](#impl-Instrument-for-T){.anchor}
+[Source](../../src/tracing/instrument.rs.html#325){.src
+.rightside}[§](#impl-Instrument-for-T){.anchor}
 
-### impl\<T\> Instrument for T {#implt-instrument-for-t .code-header}
+### impl\<T\> [Instrument](../../tracing/instrument/trait.Instrument.html "trait tracing::instrument::Instrument"){.trait} for T {#implt-instrument-for-t .code-header}
 :::
 
 ::::::: impl-items
 ::: {#method.instrument .section .method .trait-impl}
-[§](#method.instrument){.anchor}
+[Source](../../src/tracing/instrument.rs.html#86){.src
+.rightside}[§](#method.instrument){.anchor}
 
-#### fn [instrument]{.fn}(self, span: Span) -\> Instrumented\<Self\> {#fn-instrumentself-span-span---instrumentedself .code-header}
+#### fn [instrument](../../tracing/instrument/trait.Instrument.html#method.instrument){.fn}(self, span: [Span](../../tracing/span/struct.Span.html "struct tracing::span::Span"){.struct}) -\> [Instrumented](../../tracing/instrument/struct.Instrumented.html "struct tracing::instrument::Instrumented"){.struct}\<Self\> {#fn-instrumentself-span-span---instrumentedself .code-header}
 :::
 
 ::: docblock
-Instruments this type with the provided \[`Span`\], returning an
-`Instrumented` wrapper. Read more
+Instruments this type with the provided
+[`Span`](../../tracing/span/struct.Span.html "struct tracing::span::Span"),
+returning an `Instrumented` wrapper. [Read
+more](../../tracing/instrument/trait.Instrument.html#method.instrument)
 :::
 
 ::: {#method.in_current_span .section .method .trait-impl}
-[§](#method.in_current_span){.anchor}
+[Source](../../src/tracing/instrument.rs.html#128){.src
+.rightside}[§](#method.in_current_span){.anchor}
 
-#### fn [in_current_span]{.fn}(self) -\> Instrumented\<Self\> {#fn-in_current_spanself---instrumentedself .code-header}
+#### fn [in_current_span](../../tracing/instrument/trait.Instrument.html#method.in_current_span){.fn}(self) -\> [Instrumented](../../tracing/instrument/struct.Instrumented.html "struct tracing::instrument::Instrumented"){.struct}\<Self\> {#fn-in_current_spanself---instrumentedself .code-header}
 :::
 
 ::: docblock
-Instruments this type with the [current](super::Span::current())
-[`Span`](crate::Span), returning an `Instrumented` wrapper. Read more
+Instruments this type with the
+[current](../../tracing/span/struct.Span.html#method.current "associated function tracing::span::Span::current")
+[`Span`](../../tracing/span/struct.Span.html "struct tracing::span::Span"),
+returning an `Instrumented` wrapper. [Read
+more](../../tracing/instrument/trait.Instrument.html#method.in_current_span)
 :::
 :::::::
 
 :::: {#impl-Into%3CU%3E-for-T .section .impl}
-[Source](https://doc.rust-lang.org/1.86.0/src/core/convert/mod.rs.html#750-752){.src
+[Source](https://doc.rust-lang.org/1.91.1/src/core/convert/mod.rs.html#767-769){.src
 .rightside}[§](#impl-Into%3CU%3E-for-T){.anchor}
 
-### impl\<T, U\> [Into](https://doc.rust-lang.org/1.86.0/core/convert/trait.Into.html "trait core::convert::Into"){.trait}\<U\> for T {#implt-u-intou-for-t .code-header}
+### impl\<T, U\> [Into](https://doc.rust-lang.org/1.91.1/core/convert/trait.Into.html "trait core::convert::Into"){.trait}\<U\> for T {#implt-u-intou-for-t .code-header}
 
 ::: where
 where U:
-[From](https://doc.rust-lang.org/1.86.0/core/convert/trait.From.html "trait core::convert::From"){.trait}\<T\>,
+[From](https://doc.rust-lang.org/1.91.1/core/convert/trait.From.html "trait core::convert::From"){.trait}\<T\>,
 :::
 ::::
 
 ::::: impl-items
 ::: {#method.into .section .method .trait-impl}
-[Source](https://doc.rust-lang.org/1.86.0/src/core/convert/mod.rs.html#760){.src
+[Source](https://doc.rust-lang.org/1.91.1/src/core/convert/mod.rs.html#777){.src
 .rightside}[§](#method.into){.anchor}
 
-#### fn [into](https://doc.rust-lang.org/1.86.0/core/convert/trait.Into.html#tymethod.into){.fn}(self) -\> U {#fn-intoself---u .code-header}
+#### fn [into](https://doc.rust-lang.org/1.91.1/core/convert/trait.Into.html#tymethod.into){.fn}(self) -\> U {#fn-intoself---u .code-header}
 :::
 
 ::: docblock
 Calls `U::from(self)`.
 
 That is, this conversion is whatever the implementation of
-[`From`](https://doc.rust-lang.org/1.86.0/core/convert/trait.From.html "trait core::convert::From")`<T> for U`
+[`From`](https://doc.rust-lang.org/1.91.1/core/convert/trait.From.html "trait core::convert::From")`<T> for U`
 chooses to do.
 :::
 :::::
 
 ::: {#impl-IntoEither-for-T .section .impl}
-[Source](https://docs.rs/either/1/src/either/into_either.rs.html#64){.src
+[Source](../../src/either/into_either.rs.html#64){.src
 .rightside}[§](#impl-IntoEither-for-T){.anchor}
 
-### impl\<T\> [IntoEither](https://docs.rs/either/1/either/into_either/trait.IntoEither.html "trait either::into_either::IntoEither"){.trait} for T {#implt-intoeither-for-t .code-header}
+### impl\<T\> [IntoEither](../../either/into_either/trait.IntoEither.html "trait either::into_either::IntoEither"){.trait} for T {#implt-intoeither-for-t .code-header}
 :::
 
 :::::::: impl-items
 ::: {#method.into_either .section .method .trait-impl}
-[Source](https://docs.rs/either/1/src/either/into_either.rs.html#29){.src
+[Source](../../src/either/into_either.rs.html#29){.src
 .rightside}[§](#method.into_either){.anchor}
 
-#### fn [into_either](https://docs.rs/either/1/either/into_either/trait.IntoEither.html#method.into_either){.fn}(self, into_left: [bool](https://doc.rust-lang.org/1.86.0/std/primitive.bool.html){.primitive}) -\> [Either](https://docs.rs/either/1/either/enum.Either.html "enum either::Either"){.enum}\<Self, Self\> {#fn-into_eitherself-into_left-bool---eitherself-self .code-header}
+#### fn [into_either](../../either/into_either/trait.IntoEither.html#method.into_either){.fn}(self, into_left: [bool](https://doc.rust-lang.org/1.91.1/std/primitive.bool.html){.primitive}) -\> [Either](../../either/enum.Either.html "enum either::Either"){.enum}\<Self, Self\> {#fn-into_eitherself-into_left-bool---eitherself-self .code-header}
 :::
 
 ::: docblock
 Converts `self` into a
-[`Left`](https://docs.rs/either/1/either/enum.Either.html#variant.Left "variant either::Either::Left")
+[`Left`](../../either/enum.Either.html#variant.Left "variant either::Either::Left")
 variant of
-[`Either<Self, Self>`](https://docs.rs/either/1/either/enum.Either.html "enum either::Either")
+[`Either<Self, Self>`](../../either/enum.Either.html "enum either::Either")
 if `into_left` is `true`. Converts `self` into a
-[`Right`](https://docs.rs/either/1/either/enum.Either.html#variant.Right "variant either::Either::Right")
+[`Right`](../../either/enum.Either.html#variant.Right "variant either::Either::Right")
 variant of
-[`Either<Self, Self>`](https://docs.rs/either/1/either/enum.Either.html "enum either::Either")
+[`Either<Self, Self>`](../../either/enum.Either.html "enum either::Either")
 otherwise. [Read
-more](https://docs.rs/either/1/either/into_either/trait.IntoEither.html#method.into_either)
+more](../../either/into_either/trait.IntoEither.html#method.into_either)
 :::
 
 :::: {#method.into_either_with .section .method .trait-impl}
-[Source](https://docs.rs/either/1/src/either/into_either.rs.html#55-57){.src
+[Source](../../src/either/into_either.rs.html#55-57){.src
 .rightside}[§](#method.into_either_with){.anchor}
 
-#### fn [into_either_with](https://docs.rs/either/1/either/into_either/trait.IntoEither.html#method.into_either_with){.fn}\<F\>(self, into_left: F) -\> [Either](https://docs.rs/either/1/either/enum.Either.html "enum either::Either"){.enum}\<Self, Self\> {#fn-into_either_withfself-into_left-f---eitherself-self .code-header}
+#### fn [into_either_with](../../either/into_either/trait.IntoEither.html#method.into_either_with){.fn}\<F\>(self, into_left: F) -\> [Either](../../either/enum.Either.html "enum either::Either"){.enum}\<Self, Self\> {#fn-into_either_withfself-into_left-f---eitherself-self .code-header}
 
 ::: where
 where F:
-[FnOnce](https://doc.rust-lang.org/1.86.0/core/ops/function/trait.FnOnce.html "trait core::ops::function::FnOnce"){.trait}(&Self)
+[FnOnce](https://doc.rust-lang.org/1.91.1/core/ops/function/trait.FnOnce.html "trait core::ops::function::FnOnce"){.trait}(&Self)
 -\>
-[bool](https://doc.rust-lang.org/1.86.0/std/primitive.bool.html){.primitive},
+[bool](https://doc.rust-lang.org/1.91.1/std/primitive.bool.html){.primitive},
 :::
 ::::
 
 ::: docblock
 Converts `self` into a
-[`Left`](https://docs.rs/either/1/either/enum.Either.html#variant.Left "variant either::Either::Left")
+[`Left`](../../either/enum.Either.html#variant.Left "variant either::Either::Left")
 variant of
-[`Either<Self, Self>`](https://docs.rs/either/1/either/enum.Either.html "enum either::Either")
+[`Either<Self, Self>`](../../either/enum.Either.html "enum either::Either")
 if `into_left(&self)` returns `true`. Converts `self` into a
-[`Right`](https://docs.rs/either/1/either/enum.Either.html#variant.Right "variant either::Either::Right")
+[`Right`](../../either/enum.Either.html#variant.Right "variant either::Either::Right")
 variant of
-[`Either<Self, Self>`](https://docs.rs/either/1/either/enum.Either.html "enum either::Either")
+[`Either<Self, Self>`](../../either/enum.Either.html "enum either::Either")
 otherwise. [Read
-more](https://docs.rs/either/1/either/into_either/trait.IntoEither.html#method.into_either_with)
+more](../../either/into_either/trait.IntoEither.html#method.into_either_with)
 :::
 ::::::::
 
-::: {#impl-Pointable-for-T .section .impl}
-[§](#impl-Pointable-for-T){.anchor}
+:::: {#impl-PartialSchema-for-T .section .impl}
+[Source](../../src/utoipa/lib.rs.html#1375){.src
+.rightside}[§](#impl-PartialSchema-for-T){.anchor}
 
-### impl\<T\> Pointable for T {#implt-pointable-for-t .code-header}
+### impl\<T\> [PartialSchema](../../utoipa/trait.PartialSchema.html "trait utoipa::PartialSchema"){.trait} for T {#implt-partialschema-for-t .code-header}
+
+::: where
+where T: ComposeSchema +
+?[Sized](https://doc.rust-lang.org/1.91.1/core/marker/trait.Sized.html "trait core::marker::Sized"){.trait},
+:::
+::::
+
+::::: impl-items
+::: {#method.schema .section .method .trait-impl}
+[Source](../../src/utoipa/lib.rs.html#1376){.src
+.rightside}[§](#method.schema){.anchor}
+
+#### fn [schema](../../utoipa/trait.PartialSchema.html#tymethod.schema){.fn}() -\> [RefOr](../../utoipa/openapi/enum.RefOr.html "enum utoipa::openapi::RefOr"){.enum}\<[Schema](../../utoipa/openapi/schema/enum.Schema.html "enum utoipa::openapi::schema::Schema"){.enum}\> {#fn-schema---reforschema .code-header}
+:::
+
+::: docblock
+Return ref or schema of implementing type that can then be used to
+construct combined schemas.
+:::
+:::::
+
+::: {#impl-Pointable-for-T .section .impl}
+[Source](../../src/crossbeam_epoch/atomic.rs.html#194){.src
+.rightside}[§](#impl-Pointable-for-T){.anchor}
+
+### impl\<T\> [Pointable](../../crossbeam_epoch/atomic/trait.Pointable.html "trait crossbeam_epoch::atomic::Pointable"){.trait} for T {#implt-pointable-for-t .code-header}
 :::
 
 ::::::::::::::: impl-items
 ::: {#associatedconstant.ALIGN .section .associatedconstant .trait-impl}
-[§](#associatedconstant.ALIGN){.anchor}
+[Source](../../src/crossbeam_epoch/atomic.rs.html#195){.src
+.rightside}[§](#associatedconstant.ALIGN){.anchor}
 
-#### const [ALIGN]{.constant}: [usize](https://doc.rust-lang.org/1.86.0/std/primitive.usize.html){.primitive} {#const-align-usize .code-header}
+#### const [ALIGN](../../crossbeam_epoch/atomic/trait.Pointable.html#associatedconstant.ALIGN){.constant}: [usize](https://doc.rust-lang.org/1.91.1/std/primitive.usize.html){.primitive} {#const-align-usize .code-header}
 :::
 
 ::: docblock
@@ -2263,9 +2377,10 @@ The alignment of pointer.
 :::
 
 ::: {#associatedtype.Init .section .associatedtype .trait-impl}
-[§](#associatedtype.Init){.anchor}
+[Source](../../src/crossbeam_epoch/atomic.rs.html#197){.src
+.rightside}[§](#associatedtype.Init){.anchor}
 
-#### type [Init]{.associatedtype} = T {#type-init-t .code-header}
+#### type [Init](../../crossbeam_epoch/atomic/trait.Pointable.html#associatedtype.Init){.associatedtype} = T {#type-init-t .code-header}
 :::
 
 ::: docblock
@@ -2273,59 +2388,67 @@ The type for initializers.
 :::
 
 ::: {#method.init .section .method .trait-impl}
-[§](#method.init){.anchor}
+[Source](../../src/crossbeam_epoch/atomic.rs.html#199){.src
+.rightside}[§](#method.init){.anchor}
 
-#### unsafe fn [init]{.fn}(init: \<T as Pointable\>::Init) -\> [usize](https://doc.rust-lang.org/1.86.0/std/primitive.usize.html){.primitive} {#unsafe-fn-initinit-t-as-pointableinit---usize .code-header}
+#### unsafe fn [init](../../crossbeam_epoch/atomic/trait.Pointable.html#tymethod.init){.fn}(init: \<T as [Pointable](../../crossbeam_epoch/atomic/trait.Pointable.html "trait crossbeam_epoch::atomic::Pointable"){.trait}\>::[Init](../../crossbeam_epoch/atomic/trait.Pointable.html#associatedtype.Init "type crossbeam_epoch::atomic::Pointable::Init"){.associatedtype}) -\> [usize](https://doc.rust-lang.org/1.91.1/std/primitive.usize.html){.primitive} {#unsafe-fn-initinit-t-as-pointableinit---usize .code-header}
 :::
 
 ::: docblock
-Initializes a with the given initializer. Read more
+Initializes a with the given initializer. [Read
+more](../../crossbeam_epoch/atomic/trait.Pointable.html#tymethod.init)
 :::
 
 ::: {#method.deref .section .method .trait-impl}
-[§](#method.deref){.anchor}
+[Source](../../src/crossbeam_epoch/atomic.rs.html#203){.src
+.rightside}[§](#method.deref){.anchor}
 
-#### unsafe fn [deref]{.fn}\<\'a\>(ptr: [usize](https://doc.rust-lang.org/1.86.0/std/primitive.usize.html){.primitive}) -\> [&\'a T](https://doc.rust-lang.org/1.86.0/std/primitive.reference.html){.primitive} {#unsafe-fn-derefaptr-usize---a-t .code-header}
+#### unsafe fn [deref](../../crossbeam_epoch/atomic/trait.Pointable.html#tymethod.deref){.fn}\<\'a\>(ptr: [usize](https://doc.rust-lang.org/1.91.1/std/primitive.usize.html){.primitive}) -\> [&\'a T](https://doc.rust-lang.org/1.91.1/std/primitive.reference.html){.primitive} {#unsafe-fn-derefaptr-usize---a-t .code-header}
 :::
 
 ::: docblock
-Dereferences the given pointer. Read more
+Dereferences the given pointer. [Read
+more](../../crossbeam_epoch/atomic/trait.Pointable.html#tymethod.deref)
 :::
 
 ::: {#method.deref_mut .section .method .trait-impl}
-[§](#method.deref_mut){.anchor}
+[Source](../../src/crossbeam_epoch/atomic.rs.html#207){.src
+.rightside}[§](#method.deref_mut){.anchor}
 
-#### unsafe fn [deref_mut]{.fn}\<\'a\>(ptr: [usize](https://doc.rust-lang.org/1.86.0/std/primitive.usize.html){.primitive}) -\> [&\'a mut T](https://doc.rust-lang.org/1.86.0/std/primitive.reference.html){.primitive} {#unsafe-fn-deref_mutaptr-usize---a-mut-t .code-header}
+#### unsafe fn [deref_mut](../../crossbeam_epoch/atomic/trait.Pointable.html#tymethod.deref_mut){.fn}\<\'a\>(ptr: [usize](https://doc.rust-lang.org/1.91.1/std/primitive.usize.html){.primitive}) -\> [&\'a mut T](https://doc.rust-lang.org/1.91.1/std/primitive.reference.html){.primitive} {#unsafe-fn-deref_mutaptr-usize---a-mut-t .code-header}
 :::
 
 ::: docblock
-Mutably dereferences the given pointer. Read more
+Mutably dereferences the given pointer. [Read
+more](../../crossbeam_epoch/atomic/trait.Pointable.html#tymethod.deref_mut)
 :::
 
 ::: {#method.drop .section .method .trait-impl}
-[§](#method.drop){.anchor}
+[Source](../../src/crossbeam_epoch/atomic.rs.html#211){.src
+.rightside}[§](#method.drop){.anchor}
 
-#### unsafe fn [drop]{.fn}(ptr: [usize](https://doc.rust-lang.org/1.86.0/std/primitive.usize.html){.primitive}) {#unsafe-fn-dropptr-usize .code-header}
+#### unsafe fn [drop](../../crossbeam_epoch/atomic/trait.Pointable.html#tymethod.drop){.fn}(ptr: [usize](https://doc.rust-lang.org/1.91.1/std/primitive.usize.html){.primitive}) {#unsafe-fn-dropptr-usize .code-header}
 :::
 
 ::: docblock
-Drops the object pointed to by the given pointer. Read more
+Drops the object pointed to by the given pointer. [Read
+more](../../crossbeam_epoch/atomic/trait.Pointable.html#tymethod.drop)
 :::
 :::::::::::::::
 
 ::: {#impl-Same-for-T .section .impl}
-[Source](https://docs.rs/typenum/1.18.0/src/typenum/type_operators.rs.html#34){.src
+[Source](../../src/typenum/type_operators.rs.html#34){.src
 .rightside}[§](#impl-Same-for-T){.anchor}
 
-### impl\<T\> [Same](https://docs.rs/typenum/1.18.0/typenum/type_operators/trait.Same.html "trait typenum::type_operators::Same"){.trait} for T {#implt-same-for-t .code-header}
+### impl\<T\> [Same](../../typenum/type_operators/trait.Same.html "trait typenum::type_operators::Same"){.trait} for T {#implt-same-for-t .code-header}
 :::
 
 ::::: impl-items
 ::: {#associatedtype.Output-1 .section .associatedtype .trait-impl}
-[Source](https://docs.rs/typenum/1.18.0/src/typenum/type_operators.rs.html#35){.src
+[Source](../../src/typenum/type_operators.rs.html#35){.src
 .rightside}[§](#associatedtype.Output-1){.anchor}
 
-#### type [Output](https://docs.rs/typenum/1.18.0/typenum/type_operators/trait.Same.html#associatedtype.Output){.associatedtype} = T {#type-output-t .code-header}
+#### type [Output](../../typenum/type_operators/trait.Same.html#associatedtype.Output){.associatedtype} = T {#type-output-t .code-header}
 :::
 
 ::: docblock
@@ -2334,31 +2457,36 @@ Should always be `Self`
 :::::
 
 :::: {#impl-SupersetOf%3CSS%3E-for-SP .section .impl}
-[§](#impl-SupersetOf%3CSS%3E-for-SP){.anchor}
+[Source](../../src/simba/scalar/subset.rs.html#90){.src
+.rightside}[§](#impl-SupersetOf%3CSS%3E-for-SP){.anchor}
 
-### impl\<SS, SP\> SupersetOf\<SS\> for SP {#implss-sp-supersetofss-for-sp .code-header}
+### impl\<SS, SP\> [SupersetOf](../../simba/scalar/subset/trait.SupersetOf.html "trait simba::scalar::subset::SupersetOf"){.trait}\<SS\> for SP {#implss-sp-supersetofss-for-sp .code-header}
 
 ::: where
-where SS: SubsetOf\<SP\>,
+where SS:
+[SubsetOf](../../simba/scalar/subset/trait.SubsetOf.html "trait simba::scalar::subset::SubsetOf"){.trait}\<SP\>,
 :::
 ::::
 
 ::::::::::: impl-items
 ::: {#method.to_subset .section .method .trait-impl}
-[§](#method.to_subset){.anchor}
+[Source](../../src/simba/scalar/subset.rs.html#92){.src
+.rightside}[§](#method.to_subset){.anchor}
 
-#### fn [to_subset]{.fn}(&self) -\> [Option](https://doc.rust-lang.org/1.86.0/core/option/enum.Option.html "enum core::option::Option"){.enum}\<SS\> {#fn-to_subsetself---optionss .code-header}
+#### fn [to_subset](../../simba/scalar/subset/trait.SupersetOf.html#method.to_subset){.fn}(&self) -\> [Option](https://doc.rust-lang.org/1.91.1/core/option/enum.Option.html "enum core::option::Option"){.enum}\<SS\> {#fn-to_subsetself---optionss .code-header}
 :::
 
 ::: docblock
 The inverse inclusion map: attempts to construct `self` from the
-equivalent element of its superset. Read more
+equivalent element of its superset. [Read
+more](../../simba/scalar/subset/trait.SupersetOf.html#method.to_subset)
 :::
 
 ::: {#method.is_in_subset .section .method .trait-impl}
-[§](#method.is_in_subset){.anchor}
+[Source](../../src/simba/scalar/subset.rs.html#97){.src
+.rightside}[§](#method.is_in_subset){.anchor}
 
-#### fn [is_in_subset]{.fn}(&self) -\> [bool](https://doc.rust-lang.org/1.86.0/std/primitive.bool.html){.primitive} {#fn-is_in_subsetself---bool .code-header}
+#### fn [is_in_subset](../../simba/scalar/subset/trait.SupersetOf.html#tymethod.is_in_subset){.fn}(&self) -\> [bool](https://doc.rust-lang.org/1.91.1/std/primitive.bool.html){.primitive} {#fn-is_in_subsetself---bool .code-header}
 :::
 
 ::: docblock
@@ -2367,9 +2495,10 @@ converted to it).
 :::
 
 ::: {#method.to_subset_unchecked .section .method .trait-impl}
-[§](#method.to_subset_unchecked){.anchor}
+[Source](../../src/simba/scalar/subset.rs.html#102){.src
+.rightside}[§](#method.to_subset_unchecked){.anchor}
 
-#### fn [to_subset_unchecked]{.fn}(&self) -\> SS {#fn-to_subset_uncheckedself---ss .code-header}
+#### fn [to_subset_unchecked](../../simba/scalar/subset/trait.SupersetOf.html#tymethod.to_subset_unchecked){.fn}(&self) -\> SS {#fn-to_subset_uncheckedself---ss .code-header}
 :::
 
 ::: docblock
@@ -2378,9 +2507,10 @@ Always succeeds.
 :::
 
 ::: {#method.from_subset .section .method .trait-impl}
-[§](#method.from_subset){.anchor}
+[Source](../../src/simba/scalar/subset.rs.html#107){.src
+.rightside}[§](#method.from_subset){.anchor}
 
-#### fn [from_subset]{.fn}(element: [&SS](https://doc.rust-lang.org/1.86.0/std/primitive.reference.html){.primitive}) -\> SP {#fn-from_subsetelement-ss---sp .code-header}
+#### fn [from_subset](../../simba/scalar/subset/trait.SupersetOf.html#tymethod.from_subset){.fn}(element: [&SS](https://doc.rust-lang.org/1.91.1/std/primitive.reference.html){.primitive}) -\> SP {#fn-from_subsetelement-ss---sp .code-header}
 :::
 
 ::: docblock
@@ -2390,23 +2520,23 @@ superset.
 :::::::::::
 
 :::: {#impl-ToOwned-for-T .section .impl}
-[Source](https://doc.rust-lang.org/1.86.0/src/alloc/borrow.rs.html#82-84){.src
+[Source](https://doc.rust-lang.org/1.91.1/src/alloc/borrow.rs.html#85-87){.src
 .rightside}[§](#impl-ToOwned-for-T){.anchor}
 
-### impl\<T\> [ToOwned](https://doc.rust-lang.org/1.86.0/alloc/borrow/trait.ToOwned.html "trait alloc::borrow::ToOwned"){.trait} for T {#implt-toowned-for-t .code-header}
+### impl\<T\> [ToOwned](https://doc.rust-lang.org/1.91.1/alloc/borrow/trait.ToOwned.html "trait alloc::borrow::ToOwned"){.trait} for T {#implt-toowned-for-t .code-header}
 
 ::: where
 where T:
-[Clone](https://doc.rust-lang.org/1.86.0/core/clone/trait.Clone.html "trait core::clone::Clone"){.trait},
+[Clone](https://doc.rust-lang.org/1.91.1/core/clone/trait.Clone.html "trait core::clone::Clone"){.trait},
 :::
 ::::
 
 ::::::::: impl-items
 ::: {#associatedtype.Owned .section .associatedtype .trait-impl}
-[Source](https://doc.rust-lang.org/1.86.0/src/alloc/borrow.rs.html#86){.src
+[Source](https://doc.rust-lang.org/1.91.1/src/alloc/borrow.rs.html#89){.src
 .rightside}[§](#associatedtype.Owned){.anchor}
 
-#### type [Owned](https://doc.rust-lang.org/1.86.0/alloc/borrow/trait.ToOwned.html#associatedtype.Owned){.associatedtype} = T {#type-owned-t .code-header}
+#### type [Owned](https://doc.rust-lang.org/1.91.1/alloc/borrow/trait.ToOwned.html#associatedtype.Owned){.associatedtype} = T {#type-owned-t .code-header}
 :::
 
 ::: docblock
@@ -2414,75 +2544,75 @@ The resulting type after obtaining ownership.
 :::
 
 ::: {#method.to_owned .section .method .trait-impl}
-[Source](https://doc.rust-lang.org/1.86.0/src/alloc/borrow.rs.html#87){.src
+[Source](https://doc.rust-lang.org/1.91.1/src/alloc/borrow.rs.html#90){.src
 .rightside}[§](#method.to_owned){.anchor}
 
-#### fn [to_owned](https://doc.rust-lang.org/1.86.0/alloc/borrow/trait.ToOwned.html#tymethod.to_owned){.fn}(&self) -\> T {#fn-to_ownedself---t .code-header}
+#### fn [to_owned](https://doc.rust-lang.org/1.91.1/alloc/borrow/trait.ToOwned.html#tymethod.to_owned){.fn}(&self) -\> T {#fn-to_ownedself---t .code-header}
 :::
 
 ::: docblock
 Creates owned data from borrowed data, usually by cloning. [Read
-more](https://doc.rust-lang.org/1.86.0/alloc/borrow/trait.ToOwned.html#tymethod.to_owned)
+more](https://doc.rust-lang.org/1.91.1/alloc/borrow/trait.ToOwned.html#tymethod.to_owned)
 :::
 
 ::: {#method.clone_into .section .method .trait-impl}
-[Source](https://doc.rust-lang.org/1.86.0/src/alloc/borrow.rs.html#91){.src
+[Source](https://doc.rust-lang.org/1.91.1/src/alloc/borrow.rs.html#94){.src
 .rightside}[§](#method.clone_into){.anchor}
 
-#### fn [clone_into](https://doc.rust-lang.org/1.86.0/alloc/borrow/trait.ToOwned.html#method.clone_into){.fn}(&self, target: [&mut T](https://doc.rust-lang.org/1.86.0/std/primitive.reference.html){.primitive}) {#fn-clone_intoself-target-mut-t .code-header}
+#### fn [clone_into](https://doc.rust-lang.org/1.91.1/alloc/borrow/trait.ToOwned.html#method.clone_into){.fn}(&self, target: [&mut T](https://doc.rust-lang.org/1.91.1/std/primitive.reference.html){.primitive}) {#fn-clone_intoself-target-mut-t .code-header}
 :::
 
 ::: docblock
 Uses borrowed data to replace owned data, usually by cloning. [Read
-more](https://doc.rust-lang.org/1.86.0/alloc/borrow/trait.ToOwned.html#method.clone_into)
+more](https://doc.rust-lang.org/1.91.1/alloc/borrow/trait.ToOwned.html#method.clone_into)
 :::
 :::::::::
 
 :::: {#impl-ToString-for-T .section .impl}
-[Source](https://doc.rust-lang.org/1.86.0/src/alloc/string.rs.html#2758){.src
+[Source](https://doc.rust-lang.org/1.91.1/src/alloc/string.rs.html#2796){.src
 .rightside}[§](#impl-ToString-for-T){.anchor}
 
-### impl\<T\> [ToString](https://doc.rust-lang.org/1.86.0/alloc/string/trait.ToString.html "trait alloc::string::ToString"){.trait} for T {#implt-tostring-for-t .code-header}
+### impl\<T\> [ToString](https://doc.rust-lang.org/1.91.1/alloc/string/trait.ToString.html "trait alloc::string::ToString"){.trait} for T {#implt-tostring-for-t .code-header}
 
 ::: where
 where T:
-[Display](https://doc.rust-lang.org/1.86.0/core/fmt/trait.Display.html "trait core::fmt::Display"){.trait} +
-?[Sized](https://doc.rust-lang.org/1.86.0/core/marker/trait.Sized.html "trait core::marker::Sized"){.trait},
+[Display](https://doc.rust-lang.org/1.91.1/core/fmt/trait.Display.html "trait core::fmt::Display"){.trait} +
+?[Sized](https://doc.rust-lang.org/1.91.1/core/marker/trait.Sized.html "trait core::marker::Sized"){.trait},
 :::
 ::::
 
 ::::: impl-items
 ::: {#method.to_string .section .method .trait-impl}
-[Source](https://doc.rust-lang.org/1.86.0/src/alloc/string.rs.html#2760){.src
+[Source](https://doc.rust-lang.org/1.91.1/src/alloc/string.rs.html#2798){.src
 .rightside}[§](#method.to_string){.anchor}
 
-#### fn [to_string](https://doc.rust-lang.org/1.86.0/alloc/string/trait.ToString.html#tymethod.to_string){.fn}(&self) -\> [String](https://doc.rust-lang.org/1.86.0/alloc/string/struct.String.html "struct alloc::string::String"){.struct} {#fn-to_stringself---string .code-header}
+#### fn [to_string](https://doc.rust-lang.org/1.91.1/alloc/string/trait.ToString.html#tymethod.to_string){.fn}(&self) -\> [String](https://doc.rust-lang.org/1.91.1/alloc/string/struct.String.html "struct alloc::string::String"){.struct} {#fn-to_stringself---string .code-header}
 :::
 
 ::: docblock
 Converts the given value to a `String`. [Read
-more](https://doc.rust-lang.org/1.86.0/alloc/string/trait.ToString.html#tymethod.to_string)
+more](https://doc.rust-lang.org/1.91.1/alloc/string/trait.ToString.html#tymethod.to_string)
 :::
 :::::
 
 :::: {#impl-TryFrom%3CU%3E-for-T .section .impl}
-[Source](https://doc.rust-lang.org/1.86.0/src/core/convert/mod.rs.html#807-809){.src
+[Source](https://doc.rust-lang.org/1.91.1/src/core/convert/mod.rs.html#827-829){.src
 .rightside}[§](#impl-TryFrom%3CU%3E-for-T){.anchor}
 
-### impl\<T, U\> [TryFrom](https://doc.rust-lang.org/1.86.0/core/convert/trait.TryFrom.html "trait core::convert::TryFrom"){.trait}\<U\> for T {#implt-u-tryfromu-for-t .code-header}
+### impl\<T, U\> [TryFrom](https://doc.rust-lang.org/1.91.1/core/convert/trait.TryFrom.html "trait core::convert::TryFrom"){.trait}\<U\> for T {#implt-u-tryfromu-for-t .code-header}
 
 ::: where
 where U:
-[Into](https://doc.rust-lang.org/1.86.0/core/convert/trait.Into.html "trait core::convert::Into"){.trait}\<T\>,
+[Into](https://doc.rust-lang.org/1.91.1/core/convert/trait.Into.html "trait core::convert::Into"){.trait}\<T\>,
 :::
 ::::
 
 ::::::: impl-items
 ::: {#associatedtype.Error-6 .section .associatedtype .trait-impl}
-[Source](https://doc.rust-lang.org/1.86.0/src/core/convert/mod.rs.html#811){.src
+[Source](https://doc.rust-lang.org/1.91.1/src/core/convert/mod.rs.html#831){.src
 .rightside}[§](#associatedtype.Error-6){.anchor}
 
-#### type [Error](https://doc.rust-lang.org/1.86.0/core/convert/trait.TryFrom.html#associatedtype.Error){.associatedtype} = [Infallible](https://doc.rust-lang.org/1.86.0/core/convert/enum.Infallible.html "enum core::convert::Infallible"){.enum} {#type-error-infallible .code-header}
+#### type [Error](https://doc.rust-lang.org/1.91.1/core/convert/trait.TryFrom.html#associatedtype.Error){.associatedtype} = [Infallible](https://doc.rust-lang.org/1.91.1/core/convert/enum.Infallible.html "enum core::convert::Infallible"){.enum} {#type-error-infallible .code-header}
 :::
 
 ::: docblock
@@ -2490,10 +2620,10 @@ The type returned in the event of a conversion error.
 :::
 
 ::: {#method.try_from .section .method .trait-impl}
-[Source](https://doc.rust-lang.org/1.86.0/src/core/convert/mod.rs.html#814){.src
+[Source](https://doc.rust-lang.org/1.91.1/src/core/convert/mod.rs.html#834){.src
 .rightside}[§](#method.try_from){.anchor}
 
-#### fn [try_from](https://doc.rust-lang.org/1.86.0/core/convert/trait.TryFrom.html#tymethod.try_from){.fn}(value: U) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<T, \<T as [TryFrom](https://doc.rust-lang.org/1.86.0/core/convert/trait.TryFrom.html "trait core::convert::TryFrom"){.trait}\<U\>\>::[Error](https://doc.rust-lang.org/1.86.0/core/convert/trait.TryFrom.html#associatedtype.Error "type core::convert::TryFrom::Error"){.associatedtype}\> {#fn-try_fromvalue-u---resultt-t-as-tryfromuerror .code-header}
+#### fn [try_from](https://doc.rust-lang.org/1.91.1/core/convert/trait.TryFrom.html#tymethod.try_from){.fn}(value: U) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<T, \<T as [TryFrom](https://doc.rust-lang.org/1.91.1/core/convert/trait.TryFrom.html "trait core::convert::TryFrom"){.trait}\<U\>\>::[Error](https://doc.rust-lang.org/1.91.1/core/convert/trait.TryFrom.html#associatedtype.Error "type core::convert::TryFrom::Error"){.associatedtype}\> {#fn-try_fromvalue-u---resultt-t-as-tryfromuerror .code-header}
 :::
 
 ::: docblock
@@ -2502,23 +2632,23 @@ Performs the conversion.
 :::::::
 
 :::: {#impl-TryInto%3CU%3E-for-T .section .impl}
-[Source](https://doc.rust-lang.org/1.86.0/src/core/convert/mod.rs.html#792-794){.src
+[Source](https://doc.rust-lang.org/1.91.1/src/core/convert/mod.rs.html#811-813){.src
 .rightside}[§](#impl-TryInto%3CU%3E-for-T){.anchor}
 
-### impl\<T, U\> [TryInto](https://doc.rust-lang.org/1.86.0/core/convert/trait.TryInto.html "trait core::convert::TryInto"){.trait}\<U\> for T {#implt-u-tryintou-for-t .code-header}
+### impl\<T, U\> [TryInto](https://doc.rust-lang.org/1.91.1/core/convert/trait.TryInto.html "trait core::convert::TryInto"){.trait}\<U\> for T {#implt-u-tryintou-for-t .code-header}
 
 ::: where
 where U:
-[TryFrom](https://doc.rust-lang.org/1.86.0/core/convert/trait.TryFrom.html "trait core::convert::TryFrom"){.trait}\<T\>,
+[TryFrom](https://doc.rust-lang.org/1.91.1/core/convert/trait.TryFrom.html "trait core::convert::TryFrom"){.trait}\<T\>,
 :::
 ::::
 
 ::::::: impl-items
 ::: {#associatedtype.Error-5 .section .associatedtype .trait-impl}
-[Source](https://doc.rust-lang.org/1.86.0/src/core/convert/mod.rs.html#796){.src
+[Source](https://doc.rust-lang.org/1.91.1/src/core/convert/mod.rs.html#815){.src
 .rightside}[§](#associatedtype.Error-5){.anchor}
 
-#### type [Error](https://doc.rust-lang.org/1.86.0/core/convert/trait.TryInto.html#associatedtype.Error){.associatedtype} = \<U as [TryFrom](https://doc.rust-lang.org/1.86.0/core/convert/trait.TryFrom.html "trait core::convert::TryFrom"){.trait}\<T\>\>::[Error](https://doc.rust-lang.org/1.86.0/core/convert/trait.TryFrom.html#associatedtype.Error "type core::convert::TryFrom::Error"){.associatedtype} {#type-error-u-as-tryfromterror .code-header}
+#### type [Error](https://doc.rust-lang.org/1.91.1/core/convert/trait.TryInto.html#associatedtype.Error){.associatedtype} = \<U as [TryFrom](https://doc.rust-lang.org/1.91.1/core/convert/trait.TryFrom.html "trait core::convert::TryFrom"){.trait}\<T\>\>::[Error](https://doc.rust-lang.org/1.91.1/core/convert/trait.TryFrom.html#associatedtype.Error "type core::convert::TryFrom::Error"){.associatedtype} {#type-error-u-as-tryfromterror .code-header}
 :::
 
 ::: docblock
@@ -2526,10 +2656,10 @@ The type returned in the event of a conversion error.
 :::
 
 ::: {#method.try_into .section .method .trait-impl}
-[Source](https://doc.rust-lang.org/1.86.0/src/core/convert/mod.rs.html#799){.src
+[Source](https://doc.rust-lang.org/1.91.1/src/core/convert/mod.rs.html#818){.src
 .rightside}[§](#method.try_into){.anchor}
 
-#### fn [try_into](https://doc.rust-lang.org/1.86.0/core/convert/trait.TryInto.html#tymethod.try_into){.fn}(self) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<U, \<U as [TryFrom](https://doc.rust-lang.org/1.86.0/core/convert/trait.TryFrom.html "trait core::convert::TryFrom"){.trait}\<T\>\>::[Error](https://doc.rust-lang.org/1.86.0/core/convert/trait.TryFrom.html#associatedtype.Error "type core::convert::TryFrom::Error"){.associatedtype}\> {#fn-try_intoself---resultu-u-as-tryfromterror .code-header}
+#### fn [try_into](https://doc.rust-lang.org/1.91.1/core/convert/trait.TryInto.html#tymethod.try_into){.fn}(self) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<U, \<U as [TryFrom](https://doc.rust-lang.org/1.91.1/core/convert/trait.TryFrom.html "trait core::convert::TryFrom"){.trait}\<T\>\>::[Error](https://doc.rust-lang.org/1.91.1/core/convert/trait.TryFrom.html#associatedtype.Error "type core::convert::TryFrom::Error"){.associatedtype}\> {#fn-try_intoself---resultu-u-as-tryfromterror .code-header}
 :::
 
 ::: docblock
@@ -2538,71 +2668,84 @@ Performs the conversion.
 :::::::
 
 :::: {#impl-VZip%3CV%3E-for-T .section .impl}
-[§](#impl-VZip%3CV%3E-for-T){.anchor}
+[Source](../../src/ppv_lite86/types.rs.html#221-223){.src
+.rightside}[§](#impl-VZip%3CV%3E-for-T){.anchor}
 
-### impl\<V, T\> VZip\<V\> for T {#implv-t-vzipv-for-t .code-header}
+### impl\<V, T\> [VZip](../../ppv_lite86/types/trait.VZip.html "trait ppv_lite86::types::VZip"){.trait}\<V\> for T {#implv-t-vzipv-for-t .code-header}
 
 ::: where
-where V: MultiLane\<T\>,
+where V:
+[MultiLane](../../ppv_lite86/types/trait.MultiLane.html "trait ppv_lite86::types::MultiLane"){.trait}\<T\>,
 :::
 ::::
 
 :::: impl-items
 ::: {#method.vzip .section .method .trait-impl}
-[§](#method.vzip){.anchor}
+[Source](../../src/ppv_lite86/types.rs.html#226){.src
+.rightside}[§](#method.vzip){.anchor}
 
-#### fn [vzip]{.fn}(self) -\> V {#fn-vzipself---v .code-header}
+#### fn [vzip](../../ppv_lite86/types/trait.VZip.html#tymethod.vzip){.fn}(self) -\> V {#fn-vzipself---v .code-header}
 :::
 ::::
 
 ::: {#impl-WithSubscriber-for-T .section .impl}
-[§](#impl-WithSubscriber-for-T){.anchor}
+[Source](../../src/tracing/instrument.rs.html#393){.src
+.rightside}[§](#impl-WithSubscriber-for-T){.anchor}
 
-### impl\<T\> WithSubscriber for T {#implt-withsubscriber-for-t .code-header}
+### impl\<T\> [WithSubscriber](../../tracing/instrument/trait.WithSubscriber.html "trait tracing::instrument::WithSubscriber"){.trait} for T {#implt-withsubscriber-for-t .code-header}
 :::
 
 :::::::: impl-items
 :::: {#method.with_subscriber .section .method .trait-impl}
-[§](#method.with_subscriber){.anchor}
+[Source](../../src/tracing/instrument.rs.html#176-178){.src
+.rightside}[§](#method.with_subscriber){.anchor}
 
-#### fn [with_subscriber]{.fn}\<S\>(self, subscriber: S) -\> WithDispatch\<Self\> {#fn-with_subscribersself-subscriber-s---withdispatchself .code-header}
+#### fn [with_subscriber](../../tracing/instrument/trait.WithSubscriber.html#method.with_subscriber){.fn}\<S\>(self, subscriber: S) -\> [WithDispatch](../../tracing/instrument/struct.WithDispatch.html "struct tracing::instrument::WithDispatch"){.struct}\<Self\> {#fn-with_subscribersself-subscriber-s---withdispatchself .code-header}
 
 ::: where
 where S:
-[Into](https://doc.rust-lang.org/1.86.0/core/convert/trait.Into.html "trait core::convert::Into"){.trait}\<Dispatch\>,
+[Into](https://doc.rust-lang.org/1.91.1/core/convert/trait.Into.html "trait core::convert::Into"){.trait}\<[Dispatch](../../tracing_core/dispatcher/struct.Dispatch.html "struct tracing_core::dispatcher::Dispatch"){.struct}\>,
 :::
 ::::
 
 ::: docblock
-Attaches the provided [`Subscriber`](super::Subscriber) to this type,
-returning a \[`WithDispatch`\] wrapper. Read more
+Attaches the provided
+[`Subscriber`](../../tracing_core/subscriber/trait.Subscriber.html "trait tracing_core::subscriber::Subscriber")
+to this type, returning a
+[`WithDispatch`](../../tracing/instrument/struct.WithDispatch.html "struct tracing::instrument::WithDispatch")
+wrapper. [Read
+more](../../tracing/instrument/trait.WithSubscriber.html#method.with_subscriber)
 :::
 
 ::: {#method.with_current_subscriber .section .method .trait-impl}
-[§](#method.with_current_subscriber){.anchor}
+[Source](../../src/tracing/instrument.rs.html#228){.src
+.rightside}[§](#method.with_current_subscriber){.anchor}
 
-#### fn [with_current_subscriber]{.fn}(self) -\> WithDispatch\<Self\> {#fn-with_current_subscriberself---withdispatchself .code-header}
+#### fn [with_current_subscriber](../../tracing/instrument/trait.WithSubscriber.html#method.with_current_subscriber){.fn}(self) -\> [WithDispatch](../../tracing/instrument/struct.WithDispatch.html "struct tracing::instrument::WithDispatch"){.struct}\<Self\> {#fn-with_current_subscriberself---withdispatchself .code-header}
 :::
 
 ::: docblock
 Attaches the current
-[default](crate::dispatcher#setting-the-default-subscriber)
-[`Subscriber`](super::Subscriber) to this type, returning a
-\[`WithDispatch`\] wrapper. Read more
+[default](../../tracing/dispatcher/index.html#setting-the-default-subscriber "mod tracing::dispatcher")
+[`Subscriber`](../../tracing_core/subscriber/trait.Subscriber.html "trait tracing_core::subscriber::Subscriber")
+to this type, returning a
+[`WithDispatch`](../../tracing/instrument/struct.WithDispatch.html "struct tracing::instrument::WithDispatch")
+wrapper. [Read
+more](../../tracing/instrument/trait.WithSubscriber.html#method.with_current_subscriber)
 :::
 ::::::::
 
 :::: {#impl-DeserializeOwned-for-T .section .impl}
-[Source](https://docs.rs/serde/1.0.219/src/serde/de/mod.rs.html#614){.src
+[Source](../../src/serde_core/de/mod.rs.html#633){.src
 .rightside}[§](#impl-DeserializeOwned-for-T){.anchor}
 
-### impl\<T\> [DeserializeOwned](https://docs.rs/serde/1.0.219/serde/de/trait.DeserializeOwned.html "trait serde::de::DeserializeOwned"){.trait} for T {#implt-deserializeowned-for-t .code-header}
+### impl\<T\> [DeserializeOwned](../../serde_core/de/trait.DeserializeOwned.html "trait serde_core::de::DeserializeOwned"){.trait} for T {#implt-deserializeowned-for-t .code-header}
 
 ::: where
 where T: for\<\'de\>
-[Deserialize](https://docs.rs/serde/1.0.219/serde/de/trait.Deserialize.html "trait serde::de::Deserialize"){.trait}\<\'de\>,
+[Deserialize](../../serde_core/de/trait.Deserialize.html "trait serde_core::de::Deserialize"){.trait}\<\'de\>,
 :::
 ::::
-::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::

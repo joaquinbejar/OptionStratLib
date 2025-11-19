@@ -5,9 +5,9 @@
 [optionstratlib](../../index.html)::[error](../index.html)
 :::
 
-# Module strategiesCopy item path
+# Module strategies Copy item path
 
-[[Source](../../../src/optionstratlib/error/strategies.rs.html#7-575){.src}
+[[Source](../../../src/optionstratlib/error/strategies.rs.html#7-533){.src}
 ]{.sub-heading}
 ::::
 
@@ -72,6 +72,7 @@ seamless error handling between strategy and probability calculations.
 
 ::: example-wrap
 ``` {.rust .rust-example-rendered}
+
 use optionstratlib::error::strategies::{StrategyError, StrategyResult};
 
 fn validate_strategy_operation(operation: &str, strategy: &str) -> StrategyResult<()> {

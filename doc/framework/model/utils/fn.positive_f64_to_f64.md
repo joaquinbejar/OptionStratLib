@@ -5,9 +5,9 @@
 [optionstratlib](../../index.html)::[model](../index.html)::[utils](index.html)
 :::
 
-# Function [positive_f64_to_f64]{.fn}Copy item path
+# Function [positive_f64_to_f64]{.fn} Copy item path
 
-[[Source](../../../src/optionstratlib/model/utils.rs.html#27-29){.src}
+[[Source](../../../src/optionstratlib/model/utils.rs.html#29-31){.src}
 ]{.sub-heading}
 ::::
 

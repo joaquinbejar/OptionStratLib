@@ -5,7 +5,7 @@
 [optionstratlib](../../index.html)::[strategies](../index.html)
 :::
 
-# Module delta_neutralCopy item path
+# Module delta_neutral Copy item path
 
 [[Source](../../../src/optionstratlib/strategies/delta_neutral/mod.rs.html#7-39){.src}
 ]{.sub-heading}

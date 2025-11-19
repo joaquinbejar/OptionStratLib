@@ -5,9 +5,9 @@
 [optionstratlib](../index.html)::[constants](index.html)
 :::
 
-# Constant [EPSILON]{.constant}Copy item path
+# Constant [EPSILON]{.constant} Copy item path
 
-[[Source](../../src/optionstratlib/constants.rs.html#34){.src}
+[[Source](../../src/optionstratlib/constants.rs.html#33){.src}
 ]{.sub-heading}
 ::::
 

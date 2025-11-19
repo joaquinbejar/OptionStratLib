@@ -5,7 +5,7 @@
 [optionstratlib](../index.html)::[surfaces](index.html)
 :::
 
-# Trait [BasicSurfaces]{.trait}Copy item path
+# Trait [BasicSurfaces]{.trait} Copy item path
 
 [[Source](../../src/optionstratlib/surfaces/basic.rs.html#22-176){.src}
 ]{.sub-heading}
@@ -57,7 +57,7 @@ various option metrics like delta, gamma, theta, vega, or price.
 [Source](../../src/optionstratlib/surfaces/basic.rs.html#35-41){.src
 .rightside}
 
-#### fn [surface](#tymethod.surface){.fn}( &self, axis: &[BasicAxisTypes](../model/enum.BasicAxisTypes.html "enum optionstratlib::model::BasicAxisTypes"){.enum}, option_style: &[OptionStyle](../model/types/enum.OptionStyle.html "enum optionstratlib::model::types::OptionStyle"){.enum}, volatility: [Option](https://doc.rust-lang.org/1.86.0/core/option/enum.Option.html "enum core::option::Option"){.enum}\<[Vec](https://doc.rust-lang.org/1.86.0/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<[Positive](../model/positive/struct.Positive.html "struct optionstratlib::model::positive::Positive"){.struct}\>\>, side: &[Side](../model/types/enum.Side.html "enum optionstratlib::model::types::Side"){.enum}, ) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[Surface](struct.Surface.html "struct optionstratlib::surfaces::Surface"){.struct}, [SurfaceError](../error/enum.SurfaceError.html "enum optionstratlib::error::SurfaceError"){.enum}\> {#fn-surface-self-axis-basicaxistypes-option_style-optionstyle-volatility-optionvecpositive-side-side---resultsurface-surfaceerror .code-header}
+#### fn [surface](#tymethod.surface){.fn}( &self, axis: &[BasicAxisTypes](../model/enum.BasicAxisTypes.html "enum optionstratlib::model::BasicAxisTypes"){.enum}, option_style: &[OptionStyle](../model/types/enum.OptionStyle.html "enum optionstratlib::model::types::OptionStyle"){.enum}, volatility: [Option](https://doc.rust-lang.org/1.91.1/core/option/enum.Option.html "enum core::option::Option"){.enum}\<[Vec](https://doc.rust-lang.org/1.91.1/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<[Positive](../model/positive/struct.Positive.html "struct optionstratlib::model::positive::Positive"){.struct}\>\>, side: &[Side](../model/types/enum.Side.html "enum optionstratlib::model::types::Side"){.enum}, ) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[Surface](struct.Surface.html "struct optionstratlib::surfaces::Surface"){.struct}, [SurfaceError](../error/enum.SurfaceError.html "enum optionstratlib::error::SurfaceError"){.enum}\> {#fn-surface-self-axis-basicaxistypes-option_style-optionstyle-volatility-optionvecpositive-side-side---resultsurface-surfaceerror .code-header}
 :::
 
 ::: docblock
@@ -87,7 +87,7 @@ option parameters.
 [Source](../../src/optionstratlib/surfaces/basic.rs.html#64-107){.src
 .rightside}
 
-#### fn [get_surface_strike_versus](#method.get_surface_strike_versus){.fn}( &self, axis: &[BasicAxisTypes](../model/enum.BasicAxisTypes.html "enum optionstratlib::model::BasicAxisTypes"){.enum}, option: &[Arc](https://doc.rust-lang.org/1.86.0/alloc/sync/struct.Arc.html "struct alloc::sync::Arc"){.struct}\<[Options](../model/option/struct.Options.html "struct optionstratlib::model::option::Options"){.struct}\>, ) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<(Decimal, Decimal, Decimal), [SurfaceError](../error/enum.SurfaceError.html "enum optionstratlib::error::SurfaceError"){.enum}\> {#fn-get_surface_strike_versus-self-axis-basicaxistypes-option-arcoptions---resultdecimal-decimal-decimal-surfaceerror .code-header}
+#### fn [get_surface_strike_versus](#method.get_surface_strike_versus){.fn}( &self, axis: &[BasicAxisTypes](../model/enum.BasicAxisTypes.html "enum optionstratlib::model::BasicAxisTypes"){.enum}, option: &[Arc](https://doc.rust-lang.org/1.91.1/alloc/sync/struct.Arc.html "struct alloc::sync::Arc"){.struct}\<[Options](../model/option/struct.Options.html "struct optionstratlib::model::option::Options"){.struct}\>, ) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<([Decimal](../prelude/struct.Decimal.html "struct optionstratlib::prelude::Decimal"){.struct}, [Decimal](../prelude/struct.Decimal.html "struct optionstratlib::prelude::Decimal"){.struct}, [Decimal](../prelude/struct.Decimal.html "struct optionstratlib::prelude::Decimal"){.struct}), [SurfaceError](../error/enum.SurfaceError.html "enum optionstratlib::error::SurfaceError"){.enum}\> {#fn-get_surface_strike_versus-self-axis-basicaxistypes-option-arcoptions---resultdecimal-decimal-decimal-surfaceerror .code-header}
 :::
 
 ::: docblock
@@ -120,7 +120,7 @@ calculation fails.
 [Source](../../src/optionstratlib/surfaces/basic.rs.html#131-175){.src
 .rightside}
 
-#### fn [get_surface_volatility_versus](#method.get_surface_volatility_versus){.fn}( &self, axis: &[BasicAxisTypes](../model/enum.BasicAxisTypes.html "enum optionstratlib::model::BasicAxisTypes"){.enum}, option: &[Arc](https://doc.rust-lang.org/1.86.0/alloc/sync/struct.Arc.html "struct alloc::sync::Arc"){.struct}\<[Options](../model/option/struct.Options.html "struct optionstratlib::model::option::Options"){.struct}\>, volatility: [Positive](../model/positive/struct.Positive.html "struct optionstratlib::model::positive::Positive"){.struct}, ) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<(Decimal, Decimal, Decimal), [SurfaceError](../error/enum.SurfaceError.html "enum optionstratlib::error::SurfaceError"){.enum}\> {#fn-get_surface_volatility_versus-self-axis-basicaxistypes-option-arcoptions-volatility-positive---resultdecimal-decimal-decimal-surfaceerror .code-header}
+#### fn [get_surface_volatility_versus](#method.get_surface_volatility_versus){.fn}( &self, axis: &[BasicAxisTypes](../model/enum.BasicAxisTypes.html "enum optionstratlib::model::BasicAxisTypes"){.enum}, option: &[Arc](https://doc.rust-lang.org/1.91.1/alloc/sync/struct.Arc.html "struct alloc::sync::Arc"){.struct}\<[Options](../model/option/struct.Options.html "struct optionstratlib::model::option::Options"){.struct}\>, volatility: [Positive](../model/positive/struct.Positive.html "struct optionstratlib::model::positive::Positive"){.struct}, ) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<([Decimal](../prelude/struct.Decimal.html "struct optionstratlib::prelude::Decimal"){.struct}, [Decimal](../prelude/struct.Decimal.html "struct optionstratlib::prelude::Decimal"){.struct}, [Decimal](../prelude/struct.Decimal.html "struct optionstratlib::prelude::Decimal"){.struct}), [SurfaceError](../error/enum.SurfaceError.html "enum optionstratlib::error::SurfaceError"){.enum}\> {#fn-get_surface_volatility_versus-self-axis-basicaxistypes-option-arcoptions-volatility-positive---resultdecimal-decimal-decimal-surfaceerror .code-header}
 :::
 
 ::: docblock
@@ -157,7 +157,7 @@ calculation fails.
 
 :::: {#implementors-list}
 ::: {#impl-BasicSurfaces-for-OptionChain .section .impl}
-[Source](../../src/optionstratlib/chains/chain.rs.html#2361-2424){.src
+[Source](../../src/optionstratlib/chains/chain.rs.html#2711-2777){.src
 .rightside}[§](#impl-BasicSurfaces-for-OptionChain){.anchor}
 
 ### impl [BasicSurfaces](trait.BasicSurfaces.html "trait optionstratlib::surfaces::BasicSurfaces"){.trait} for [OptionChain](../chains/chain/struct.OptionChain.html "struct optionstratlib::chains::chain::OptionChain"){.struct} {#impl-basicsurfaces-for-optionchain .code-header}

@@ -5,7 +5,7 @@
 [optionstratlib](../index.html)
 :::
 
-# Module pnlCopy item path
+# Module pnl Copy item path
 
 [[Source](../../src/optionstratlib/pnl/mod.rs.html#7-120){.src}
 ]{.sub-heading}
@@ -80,7 +80,7 @@ impl PnLCalculator for MyOption {
      market_price: &Positive,
      expiration_date: ExpirationDate,
      _implied_volatility: &Positive,
- ) -> Result<PnL, Box<dyn Error>> {
+ ) -> Result<PnL, PricingError> {
      Ok(PnL::new(
          Some(market_price.into()),
          None,
@@ -93,7 +93,7 @@ impl PnLCalculator for MyOption {
  fn calculate_pnl_at_expiration(
      &self,
      underlying_price: &Positive,
- ) -> Result<PnL, Box<dyn Error>> {
+ ) -> Result<PnL, PricingError> {
      let underlying_price = underlying_price.to_dec();
      Ok(PnL::new(
          Some(underlying_price),
@@ -154,11 +154,6 @@ The PnL module is particularly useful for:
 
 [Transaction](struct.Transaction.html "struct optionstratlib::pnl::Transaction"){.struct}
 :   Transaction
-
-## Enums[§](#enums){.anchor} {#enums .section-header}
-
-[TransactionStatus](enum.TransactionStatus.html "enum optionstratlib::pnl::TransactionStatus"){.enum}
-:   Transaction Status
 
 ## Traits[§](#traits){.anchor} {#traits .section-header}
 

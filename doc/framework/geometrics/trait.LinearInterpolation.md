@@ -5,7 +5,7 @@
 [optionstratlib](../index.html)::[geometrics](index.html)
 :::
 
-# Trait [LinearInterpolation]{.trait}Copy item path
+# Trait [LinearInterpolation]{.trait} Copy item path
 
 [[Source](../../src/optionstratlib/geometrics/interpolation/linear.rs.html#76-86){.src}
 ]{.sub-heading}
@@ -126,7 +126,7 @@ re-exported in higher-level library components for ease of use.
 [Source](../../src/optionstratlib/geometrics/interpolation/linear.rs.html#85){.src
 .rightside}
 
-#### fn [linear_interpolate](#tymethod.linear_interpolate){.fn}(&self, x: Input) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<Point, [InterpolationError](../error/enum.InterpolationError.html "enum optionstratlib::error::InterpolationError"){.enum}\> {#fn-linear_interpolateself-x-input---resultpoint-interpolationerror .code-header}
+#### fn [linear_interpolate](#tymethod.linear_interpolate){.fn}(&self, x: Input) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<Point, [InterpolationError](../error/enum.InterpolationError.html "enum optionstratlib::error::InterpolationError"){.enum}\> {#fn-linear_interpolateself-x-input---resultpoint-interpolationerror .code-header}
 :::
 
 ::: docblock
@@ -149,10 +149,10 @@ Performs linear interpolation for a given input value.
 
 ::::::::::: {#implementors-list}
 :::: {#impl-LinearInterpolation%3CPoint2D,+Decimal%3E-for-Curve .section .impl}
-[Source](../../src/optionstratlib/curves/curve.rs.html#352-370){.src
+[Source](../../src/optionstratlib/curves/curve.rs.html#366-384){.src
 .rightside}[§](#impl-LinearInterpolation%3CPoint2D,+Decimal%3E-for-Curve){.anchor}
 
-### impl [LinearInterpolation](trait.LinearInterpolation.html "trait optionstratlib::geometrics::LinearInterpolation"){.trait}\<[Point2D](../curves/struct.Point2D.html "struct optionstratlib::curves::Point2D"){.struct}, Decimal\> for [Curve](../curves/struct.Curve.html "struct optionstratlib::curves::Curve"){.struct} {#impl-linearinterpolationpoint2d-decimal-for-curve .code-header}
+### impl [LinearInterpolation](trait.LinearInterpolation.html "trait optionstratlib::geometrics::LinearInterpolation"){.trait}\<[Point2D](../curves/struct.Point2D.html "struct optionstratlib::curves::Point2D"){.struct}, [Decimal](../prelude/struct.Decimal.html "struct optionstratlib::prelude::Decimal"){.struct}\> for [Curve](../curves/struct.Curve.html "struct optionstratlib::curves::Curve"){.struct} {#impl-linearinterpolationpoint2d-decimal-for-curve .code-header}
 
 ::: docblock
 Implements the `LinearInterpolation` trait for the `Curve` struct.
@@ -242,7 +242,7 @@ It will return `Point2D { x: 3.0, y: 6.0 }`.
 :::::
 
 :::: {#impl-LinearInterpolation%3CPoint3D,+Point2D%3E-for-Surface .section .impl}
-[Source](../../src/optionstratlib/surfaces/surface.rs.html#608-688){.src
+[Source](../../src/optionstratlib/surfaces/surface.rs.html#621-701){.src
 .rightside}[§](#impl-LinearInterpolation%3CPoint3D,+Point2D%3E-for-Surface){.anchor}
 
 ### impl [LinearInterpolation](trait.LinearInterpolation.html "trait optionstratlib::geometrics::LinearInterpolation"){.trait}\<[Point3D](../surfaces/struct.Point3D.html "struct optionstratlib::surfaces::Point3D"){.struct}, [Point2D](../curves/struct.Point2D.html "struct optionstratlib::curves::Point2D"){.struct}\> for [Surface](../surfaces/struct.Surface.html "struct optionstratlib::surfaces::Surface"){.struct} {#impl-linearinterpolationpoint3d-point2d-for-surface .code-header}

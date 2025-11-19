@@ -5,9 +5,9 @@
 [optionstratlib](../../index.html)::[strategies](../index.html)
 :::
 
-# Module utilsCopy item path
+# Module utils Copy item path
 
-[[Source](../../../src/optionstratlib/strategies/utils.rs.html#1-247){.src}
+[[Source](../../../src/optionstratlib/strategies/utils.rs.html#1-240){.src}
 ]{.sub-heading}
 ::::
 

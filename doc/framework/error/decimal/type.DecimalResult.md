@@ -5,9 +5,9 @@
 [optionstratlib](../../index.html)::[error](../index.html)::[decimal](index.html)
 :::
 
-# Type Alias [DecimalResult]{.type}Copy item path
+# Type Alias [DecimalResult]{.type} Copy item path
 
-[[Source](../../../src/optionstratlib/error/decimal.rs.html#201){.src}
+[[Source](../../../src/optionstratlib/error/decimal.rs.html#169){.src}
 ]{.sub-heading}
 ::::
 
@@ -63,7 +63,7 @@ critical and error handling needs to be consistent and well-structured.
 ## Aliased Type[§](#aliased-type){.anchor} {#aliased-type .section-header}
 
 ``` {.rust .item-decl}
-enum DecimalResult<T> {
+pub enum DecimalResult<T> {
     Ok(T),
     Err(DecimalError),
 }

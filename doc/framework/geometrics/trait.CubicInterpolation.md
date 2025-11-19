@@ -5,7 +5,7 @@
 [optionstratlib](../index.html)::[geometrics](index.html)
 :::
 
-# Trait [CubicInterpolation]{.trait}Copy item path
+# Trait [CubicInterpolation]{.trait} Copy item path
 
 [[Source](../../src/optionstratlib/geometrics/interpolation/cubic.rs.html#96-108){.src}
 ]{.sub-heading}
@@ -154,7 +154,7 @@ impl CubicInterpolation<Point2D, Decimal> for MyCurve {
 [Source](../../src/optionstratlib/geometrics/interpolation/cubic.rs.html#107){.src
 .rightside}
 
-#### fn [cubic_interpolate](#tymethod.cubic_interpolate){.fn}(&self, x: Input) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<Point, [InterpolationError](../error/enum.InterpolationError.html "enum optionstratlib::error::InterpolationError"){.enum}\> {#fn-cubic_interpolateself-x-input---resultpoint-interpolationerror .code-header}
+#### fn [cubic_interpolate](#tymethod.cubic_interpolate){.fn}(&self, x: Input) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<Point, [InterpolationError](../error/enum.InterpolationError.html "enum optionstratlib::error::InterpolationError"){.enum}\> {#fn-cubic_interpolateself-x-input---resultpoint-interpolationerror .code-header}
 :::
 
 ::: docblock
@@ -178,10 +178,10 @@ cubic interpolation.
 
 ::::::: {#implementors-list}
 :::: {#impl-CubicInterpolation%3CPoint2D,+Decimal%3E-for-Curve .section .impl}
-[Source](../../src/optionstratlib/curves/curve.rs.html#583-699){.src
+[Source](../../src/optionstratlib/curves/curve.rs.html#597-713){.src
 .rightside}[§](#impl-CubicInterpolation%3CPoint2D,+Decimal%3E-for-Curve){.anchor}
 
-### impl [CubicInterpolation](trait.CubicInterpolation.html "trait optionstratlib::geometrics::CubicInterpolation"){.trait}\<[Point2D](../curves/struct.Point2D.html "struct optionstratlib::curves::Point2D"){.struct}, Decimal\> for [Curve](../curves/struct.Curve.html "struct optionstratlib::curves::Curve"){.struct} {#impl-cubicinterpolationpoint2d-decimal-for-curve .code-header}
+### impl [CubicInterpolation](trait.CubicInterpolation.html "trait optionstratlib::geometrics::CubicInterpolation"){.trait}\<[Point2D](../curves/struct.Point2D.html "struct optionstratlib::curves::Point2D"){.struct}, [Decimal](../prelude/struct.Decimal.html "struct optionstratlib::prelude::Decimal"){.struct}\> for [Curve](../curves/struct.Curve.html "struct optionstratlib::curves::Curve"){.struct} {#impl-cubicinterpolationpoint2d-decimal-for-curve .code-header}
 
 ::: docblock
 Implements the `CubicInterpolation` trait for the `Curve` struct,
@@ -278,7 +278,7 @@ smooth manifolds or animations.
 :::
 
 ::: {#impl-CubicInterpolation%3CPoint3D,+Point2D%3E-for-Surface .section .impl}
-[Source](../../src/optionstratlib/surfaces/surface.rs.html#771-842){.src
+[Source](../../src/optionstratlib/surfaces/surface.rs.html#784-855){.src
 .rightside}[§](#impl-CubicInterpolation%3CPoint3D,+Point2D%3E-for-Surface){.anchor}
 
 ### impl [CubicInterpolation](trait.CubicInterpolation.html "trait optionstratlib::geometrics::CubicInterpolation"){.trait}\<[Point3D](../surfaces/struct.Point3D.html "struct optionstratlib::surfaces::Point3D"){.struct}, [Point2D](../curves/struct.Point2D.html "struct optionstratlib::curves::Point2D"){.struct}\> for [Surface](../surfaces/struct.Surface.html "struct optionstratlib::surfaces::Surface"){.struct} {#impl-cubicinterpolationpoint3d-point2d-for-surface .code-header}

@@ -5,19 +5,19 @@
 [optionstratlib](../../index.html)::[pricing](../index.html)::[black_scholes_model](index.html)
 :::
 
-# Trait [BlackScholes]{.trait}Copy item path
+# Trait [BlackScholes]{.trait} Copy item path
 
-[[Source](../../../src/optionstratlib/pricing/black_scholes_model.rs.html#238-263){.src}
+[[Source](../../../src/optionstratlib/pricing/black_scholes_model.rs.html#246-271){.src}
 ]{.sub-heading}
 ::::
 
 ``` {.rust .item-decl}
 pub trait BlackScholes {
     // Required method
-    fn get_option(&self) -> Result<&Options, Box<dyn Error>>;
+    fn get_option(&self) -> Result<&Options, PricingError>;
 
     // Provided method
-    fn calculate_price_black_scholes(&self) -> Result<Decimal, Box<dyn Error>> { ... }
+    fn calculate_price_black_scholes(&self) -> Result<Decimal, PricingError> { ... }
 }
 ```
 
@@ -47,7 +47,7 @@ struct MyOption {
 }
 
 impl BlackScholes for MyOption {
-    fn get_option(&self) -> Result<&Options, Box<dyn Error>> {
+    fn get_option(&self) -> Result<&Options, PricingError> {
         Ok(&self.option)
     }
 }
@@ -59,10 +59,10 @@ impl BlackScholes for MyOption {
 
 ::::: methods
 ::: {#tymethod.get_option .section .method}
-[Source](../../../src/optionstratlib/pricing/black_scholes_model.rs.html#248){.src
+[Source](../../../src/optionstratlib/pricing/black_scholes_model.rs.html#256){.src
 .rightside}
 
-#### fn [get_option](#tymethod.get_option){.fn}(&self) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<&[Options](../../model/option/struct.Options.html "struct optionstratlib::model::option::Options"){.struct}, [Box](https://doc.rust-lang.org/1.86.0/alloc/boxed/struct.Box.html "struct alloc::boxed::Box"){.struct}\<dyn [Error](https://doc.rust-lang.org/1.86.0/core/error/trait.Error.html "trait core::error::Error"){.trait}\>\> {#fn-get_optionself---resultoptions-boxdyn-error .code-header}
+#### fn [get_option](#tymethod.get_option){.fn}(&self) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<&[Options](../../model/option/struct.Options.html "struct optionstratlib::model::option::Options"){.struct}, [PricingError](../../error/pricing/enum.PricingError.html "enum optionstratlib::error::pricing::PricingError"){.enum}\> {#fn-get_optionself---resultoptions-pricingerror .code-header}
 :::
 
 ::: docblock
@@ -75,7 +75,7 @@ calculations.
 
 ##### [§](#returns){.doc-anchor}Returns
 
-- `Result<&Options, Box<dyn Error>>` - A reference to the Options struct
+- `Result<&Options, PricingError>` - A reference to the Options struct
   on success, or an error if the option data cannot be retrieved.
 :::
 :::::
@@ -84,10 +84,10 @@ calculations.
 
 ::::: methods
 ::: {#method.calculate_price_black_scholes .section .method}
-[Source](../../../src/optionstratlib/pricing/black_scholes_model.rs.html#259-262){.src
+[Source](../../../src/optionstratlib/pricing/black_scholes_model.rs.html#267-270){.src
 .rightside}
 
-#### fn [calculate_price_black_scholes](#method.calculate_price_black_scholes){.fn}(&self) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<Decimal, [Box](https://doc.rust-lang.org/1.86.0/alloc/boxed/struct.Box.html "struct alloc::boxed::Box"){.struct}\<dyn [Error](https://doc.rust-lang.org/1.86.0/core/error/trait.Error.html "trait core::error::Error"){.trait}\>\> {#fn-calculate_price_black_scholesself---resultdecimal-boxdyn-error .code-header}
+#### fn [calculate_price_black_scholes](#method.calculate_price_black_scholes){.fn}(&self) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[Decimal](../../prelude/struct.Decimal.html "struct optionstratlib::prelude::Decimal"){.struct}, [PricingError](../../error/pricing/enum.PricingError.html "enum optionstratlib::error::pricing::PricingError"){.enum}\> {#fn-calculate_price_black_scholesself---resultdecimal-pricingerror .code-header}
 :::
 
 ::: docblock
@@ -99,7 +99,7 @@ calculation.
 
 ##### [§](#returns-1){.doc-anchor}Returns
 
-- `Result<Decimal, Box<dyn Error>>` - The calculated option price as a
+- `Result<Decimal, PricingError>` - The calculated option price as a
   Decimal on success, or an error if the calculation fails.
 :::
 :::::

@@ -5,7 +5,7 @@
 [optionstratlib](../index.html)
 :::
 
-# Module curvesCopy item path
+# Module curves Copy item path
 
 [[Source](../../src/optionstratlib/curves/mod.rs.html#1-13){.src}
 ]{.sub-heading}

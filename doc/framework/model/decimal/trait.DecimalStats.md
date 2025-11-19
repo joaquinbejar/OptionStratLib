@@ -5,7 +5,7 @@
 [optionstratlib](../../index.html)::[model](../index.html)::[decimal](index.html)
 :::
 
-# Trait [DecimalStats]{.trait}Copy item path
+# Trait [DecimalStats]{.trait} Copy item path
 
 [[Source](../../../src/optionstratlib/model/decimal.rs.html#91-105){.src}
 ]{.sub-heading}
@@ -77,7 +77,7 @@ impl DecimalStats for DecimalSeries {
 [Source](../../../src/optionstratlib/model/decimal.rs.html#96){.src
 .rightside}
 
-#### fn [mean](#tymethod.mean){.fn}(&self) -\> Decimal {#fn-meanself---decimal .code-header}
+#### fn [mean](#tymethod.mean){.fn}(&self) -\> [Decimal](../../prelude/struct.Decimal.html "struct optionstratlib::prelude::Decimal"){.struct} {#fn-meanself---decimal .code-header}
 :::
 
 ::: docblock
@@ -91,7 +91,7 @@ method should handle empty collections appropriately.
 [Source](../../../src/optionstratlib/model/decimal.rs.html#104){.src
 .rightside}
 
-#### fn [std_dev](#tymethod.std_dev){.fn}(&self) -\> Decimal {#fn-std_devself---decimal .code-header}
+#### fn [std_dev](#tymethod.std_dev){.fn}(&self) -\> [Decimal](../../prelude/struct.Decimal.html "struct optionstratlib::prelude::Decimal"){.struct} {#fn-std_devself---decimal .code-header}
 :::
 
 ::: docblock
@@ -110,7 +110,7 @@ spread out over a wider range.
 [Source](../../../src/optionstratlib/model/decimal.rs.html#126-143){.src
 .rightside}[§](#impl-DecimalStats-for-Vec%3CDecimal%3E){.anchor}
 
-### impl [DecimalStats](trait.DecimalStats.html "trait optionstratlib::model::decimal::DecimalStats"){.trait} for [Vec](https://doc.rust-lang.org/1.86.0/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<Decimal\> {#impl-decimalstats-for-vecdecimal .code-header}
+### impl [DecimalStats](trait.DecimalStats.html "trait optionstratlib::model::decimal::DecimalStats"){.trait} for [Vec](https://doc.rust-lang.org/1.91.1/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<[Decimal](../../prelude/struct.Decimal.html "struct optionstratlib::prelude::Decimal"){.struct}\> {#impl-decimalstats-for-vecdecimal .code-header}
 :::
 
 ::::: impl-items
@@ -118,14 +118,14 @@ spread out over a wider range.
 [Source](../../../src/optionstratlib/model/decimal.rs.html#127-133){.src
 .rightside}[§](#method.mean){.anchor}
 
-#### fn [mean](#tymethod.mean){.fn}(&self) -\> Decimal {#fn-meanself---decimal-1 .code-header}
+#### fn [mean](#tymethod.mean){.fn}(&self) -\> [Decimal](../../prelude/struct.Decimal.html "struct optionstratlib::prelude::Decimal"){.struct} {#fn-meanself---decimal-1 .code-header}
 :::
 
 ::: {#method.std_dev .section .method .trait-impl}
 [Source](../../../src/optionstratlib/model/decimal.rs.html#135-142){.src
 .rightside}[§](#method.std_dev){.anchor}
 
-#### fn [std_dev](#tymethod.std_dev){.fn}(&self) -\> Decimal {#fn-std_devself---decimal-1 .code-header}
+#### fn [std_dev](#tymethod.std_dev){.fn}(&self) -\> [Decimal](../../prelude/struct.Decimal.html "struct optionstratlib::prelude::Decimal"){.struct} {#fn-std_devself---decimal-1 .code-header}
 :::
 :::::
 

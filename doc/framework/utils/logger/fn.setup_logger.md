@@ -5,7 +5,7 @@
 [optionstratlib](../../index.html)::[utils](../index.html)::[logger](index.html)
 :::
 
-# Function [setup_logger]{.fn}Copy item path
+# Function [setup_logger]{.fn} Copy item path
 
 [[Source](../../../src/optionstratlib/utils/logger.rs.html#88-109){.src}
 ]{.sub-heading}

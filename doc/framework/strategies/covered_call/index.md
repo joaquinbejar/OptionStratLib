@@ -5,7 +5,7 @@
 [optionstratlib](../../index.html)::[strategies](../index.html)
 :::
 
-# Module covered_callCopy item path
+# Module covered_call Copy item path
 
 [[Source](../../../src/optionstratlib/strategies/covered_call.rs.html#11){.src}
 ]{.sub-heading}

@@ -5,9 +5,9 @@
 [optionstratlib](../index.html)::[volatility](index.html)
 :::
 
-# Function [implied_volatility]{.fn}Copy item path
+# Function [implied_volatility]{.fn} Copy item path
 
-[[Source](../../src/optionstratlib/volatility/utils.rs.html#108-156){.src}
+[[Source](../../src/optionstratlib/volatility/utils.rs.html#105-142){.src}
 ]{.sub-heading}
 ::::
 
@@ -16,7 +16,7 @@ pub fn implied_volatility(
     market_price: Positive,
     options: &mut Options,
     max_iterations: i64,
-) -> Result<Positive, Box<dyn Error>>
+) -> Result<Positive, VolatilityError>
 ```
 
 Expand description

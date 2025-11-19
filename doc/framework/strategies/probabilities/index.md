@@ -5,9 +5,9 @@
 [optionstratlib](../../index.html)::[strategies](../index.html)
 :::
 
-# Module probabilitiesCopy item path
+# Module probabilities Copy item path
 
-[[Source](../../../src/optionstratlib/strategies/probabilities/mod.rs.html#6-237){.src}
+[[Source](../../../src/optionstratlib/strategies/probabilities/mod.rs.html#6-238){.src}
 ]{.sub-heading}
 ::::
 
@@ -48,6 +48,7 @@ pub struct StrategyProbabilityAnalysis {
 use optionstratlib::Positive;
 use optionstratlib::pricing::Profit;
 use optionstratlib::strategies::Strategies;
+use optionstratlib::error::ProbabilityError;
 
 use optionstratlib::strategies::probabilities::{PriceTrend, StrategyProbabilityAnalysis, VolatilityAdjustment};
 
@@ -56,13 +57,13 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
         &self,
         volatility_adj: Option<VolatilityAdjustment>,
         trend: Option<PriceTrend>
-    ) -> Result<StrategyProbabilityAnalysis, String>;
+    ) -> Result<StrategyProbabilityAnalysis, ProbabilityError>;
      
     fn expected_value(
         &self,
         volatility_adj: Option<VolatilityAdjustment>,
         trend: Option<PriceTrend>
-    ) -> Result<Positive, String>;
+    ) -> Result<Positive, ProbabilityError>;
 }
 ```
 :::
@@ -77,7 +78,7 @@ use rust_decimal_macros::dec;
 use tracing::info;
 use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
 use optionstratlib::strategies::probabilities::{ProbabilityAnalysis, VolatilityAdjustment, PriceTrend, StrategyProbabilityAnalysis};
-use optionstratlib::Positive;
+use optionstratlib::{ExpirationDate, Positive};
 use optionstratlib::pos;
 use optionstratlib::strategies::bear_call_spread::BearCallSpread;
 
@@ -189,12 +190,12 @@ use optionstratlib::Positive;
 use optionstratlib::pos;
 
 let (prob_below, prob_in_range, prob_above) = calculate_price_probability(
-    pos!(100.0),   // current price
-    pos!(95.0),   // lower bound
-    pos!(105.0),   // upper bound
+    &pos!(100.0),   // current price
+    &pos!(95.0),   // lower bound
+    &pos!(105.0),   // upper bound
     None,   // volatility adjustment
     None,   // trend
-    ExpirationDate::Days(pos!(30.0)),
+    &ExpirationDate::Days(pos!(30.0)),
     None                 // risk-free rate
 ).unwrap();
 info!("Probabilities: {}, {}, {}", prob_below, prob_in_range, prob_above);

@@ -5,9 +5,9 @@
 [optionstratlib](../../index.html)::[pricing](../index.html)
 :::
 
-# Module telegraphCopy item path
+# Module telegraph Copy item path
 
-[[Source](../../../src/optionstratlib/pricing/telegraph.rs.html#6-631){.src}
+[[Source](../../../src/optionstratlib/pricing/telegraph.rs.html#6-581){.src}
 ]{.sub-heading}
 ::::
 

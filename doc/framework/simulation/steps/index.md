@@ -5,7 +5,7 @@
 [optionstratlib](../../index.html)::[simulation](../index.html)
 :::
 
-# Module stepsCopy item path
+# Module steps Copy item path
 
 [[Source](../../../src/optionstratlib/simulation/steps/mod.rs.html#1-47){.src}
 ]{.sub-heading}

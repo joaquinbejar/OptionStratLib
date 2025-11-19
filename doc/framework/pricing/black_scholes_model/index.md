@@ -5,9 +5,9 @@
 [optionstratlib](../../index.html)::[pricing](../index.html)
 :::
 
-# Module black_scholes_modelCopy item path
+# Module black_scholes_model Copy item path
 
-[[Source](../../../src/optionstratlib/pricing/black_scholes_model.rs.html#6-1086){.src}
+[[Source](../../../src/optionstratlib/pricing/black_scholes_model.rs.html#6-1061){.src}
 ]{.sub-heading}
 ::::
 

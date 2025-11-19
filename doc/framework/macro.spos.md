@@ -5,9 +5,9 @@
 [optionstratlib](index.html)
 :::
 
-# Macro [spos]{.macro}Copy item path
+# Macro [spos]{.macro} Copy item path
 
-[[Source](../src/optionstratlib/model/positive.rs.html#83-87){.src}
+[[Source](../src/optionstratlib/model/positive.rs.html#107-109){.src}
 ]{.sub-heading}
 ::::
 
@@ -20,26 +20,52 @@ macro_rules! spos {
 Expand description
 
 :::: docblock
-Macro for creating an `Option<Positive>` value with simplified syntax.
+A macro to create an optional `Positive` value from the given
+expression.
 
-This macro attempts to create a `Positive` value from the given
-expression, unwraps the result, and wraps it in `Some()`. It will panic
-if the value cannot be converted to a `Positive` (e.g., if the value is
-negative or not representable).
+This macro attempts to create a `Positive` value using the
+`Positive::new` function, which returns `None` if the value is not a
+positive number. The macro is useful for safely constructing optional
+`Positive` values in a concise manner.
 
-## [§](#examples){.doc-anchor}Examples
+## [§](#parameters){.doc-anchor}Parameters
+
+- `$val:expr`: An expression that evaluates to a value intended to be
+  wrapped in a `Positive` type.
+
+## [§](#returns){.doc-anchor}Returns
+
+- `Option<Positive>`: Returns `Some(Positive)` if the given value is
+  positive, otherwise returns `None`.
+
+## [§](#example){.doc-anchor}Example
 
 ::: example-wrap
 ``` {.rust .rust-example-rendered}
+use optionstratlib::Positive;
 use optionstratlib::spos;
-let optional_positive = spos!(5.0); // Some(Positive(5.0))
+
+// Example with a positive value
+let x = spos!(10.0);
+assert_eq!(x.is_some(), true);
+
+// Example with a non-positive value
+let y = spos!(-5.0);
+assert_eq!(y.is_none(), true);
 ```
 :::
 
-## [§](#panics){.doc-anchor}Panics
+## [§](#notes){.doc-anchor}Notes
 
-This macro will panic if the provided value cannot be converted to a
-`Positive` value.
+- Ensure that the type used with this macro implements the required
+  constraints for constructing a `Positive` value (as defined in the
+  `Positive::new` method).
+
+## [§](#see-also){.doc-anchor}See Also
+
+- [`Positive::new`](model/positive/struct.Positive.html#method.new "associated function optionstratlib::model::positive::Positive::new"):
+  The method that performs the actual validation for determining whether
+  a value can be wrapped in the `Positive` type.
 ::::
 :::::::
 ::::::::

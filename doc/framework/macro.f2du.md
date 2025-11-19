@@ -5,7 +5,7 @@
 [optionstratlib](index.html)
 :::
 
-# Macro [f2du]{.macro}Copy item path
+# Macro [f2du]{.macro} Copy item path
 
 [[Source](../src/optionstratlib/model/decimal.rs.html#372-376){.src}
 ]{.sub-heading}

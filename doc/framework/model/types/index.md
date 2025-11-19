@@ -5,9 +5,9 @@
 [optionstratlib](../../index.html)::[model](../index.html)
 :::
 
-# Module typesCopy item path
+# Module types Copy item path
 
-[[Source](../../../src/optionstratlib/model/types.rs.html#1-1733){.src}
+[[Source](../../../src/optionstratlib/model/types.rs.html#1-1156){.src}
 ]{.sub-heading}
 ::::
 
@@ -16,6 +16,13 @@ Expand description
 ::: docblock
 Common type definitions used throughout the options strategy library.
 :::
+
+## Structs[§](#structs){.anchor} {#structs .section-header}
+
+[OptionBasicType](struct.OptionBasicType.html "struct optionstratlib::model::types::OptionBasicType"){.struct}
+:   A structure representing the basic properties of an option in
+    financial terms. This structure is designed to be lightweight and
+    provides essential details about an options contract.
 
 ## Enums[§](#enums){.anchor} {#enums .section-header}
 
@@ -29,17 +36,15 @@ Common type definitions used throughout the options strategy library.
 :   Describes the type of barrier for Barrier options.
 
 [BinaryType](enum.BinaryType.html "enum optionstratlib::model::types::BinaryType"){.enum}
-:   Describes the type of binary option.
-
-[ExpirationDate](enum.ExpirationDate.html "enum optionstratlib::model::types::ExpirationDate"){.enum}
-:   Represents the expiration of an option contract or financial
-    instrument.
+:   Represents different types of binary options, which are financial
+    instruments that provide a fixed payout based on whether certain
+    conditions are met.
 
 [LookbackType](enum.LookbackType.html "enum optionstratlib::model::types::LookbackType"){.enum}
 :   Describes the type of lookback option.
 
 [OptionStyle](enum.OptionStyle.html "enum optionstratlib::model::types::OptionStyle"){.enum}
-:   Specifies the style of an options contract.
+:   Specifies the style of an option contract.
 
 [OptionType](enum.OptionType.html "enum optionstratlib::model::types::OptionType"){.enum}
 :   Represents the type of option in a financial context. Options can be
@@ -48,5 +53,8 @@ Common type definitions used throughout the options strategy library.
 
 [Side](enum.Side.html "enum optionstratlib::model::types::Side"){.enum}
 :   Defines the directional exposure of a financial position.
+
+[UnderlyingAssetType](enum.UnderlyingAssetType.html "enum optionstratlib::model::types::UnderlyingAssetType"){.enum}
+:   Represents different types of assets that can be held in a balance.
 ::::::
 :::::::

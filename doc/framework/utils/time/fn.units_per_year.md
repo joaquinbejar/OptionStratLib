@@ -5,9 +5,9 @@
 [optionstratlib](../../index.html)::[utils](../index.html)::[time](index.html)
 :::
 
-# Function [units_per_year]{.fn}Copy item path
+# Function [units_per_year]{.fn} Copy item path
 
-[[Source](../../../src/optionstratlib/utils/time.rs.html#140-154){.src}
+[[Source](../../../src/optionstratlib/utils/time.rs.html#141-155){.src}
 ]{.sub-heading}
 ::::
 

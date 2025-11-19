@@ -5,7 +5,7 @@
 [optionstratlib](../index.html)::[surfaces](index.html)
 :::
 
-# Trait [Surfacable]{.trait}Copy item path
+# Trait [Surfacable]{.trait} Copy item path
 
 [[Source](../../src/optionstratlib/surfaces/traits.rs.html#44-49){.src}
 ]{.sub-heading}
@@ -37,7 +37,7 @@ computational process.
 The
 [`Surfacable::surface`](trait.Surfacable.html#tymethod.surface "method optionstratlib::surfaces::Surfacable::surface")
 method returns a
-[`Result`](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result")
+[`Result`](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result")
 containing the generated surface on success. If an error occurs during
 the surface generation process, a
 [`SurfaceError`](../error/enum.SurfaceError.html "enum optionstratlib::error::SurfaceError")
@@ -100,7 +100,7 @@ outputs in a consistent manner.
 [Source](../../src/optionstratlib/surfaces/traits.rs.html#48){.src
 .rightside}
 
-#### fn [surface](#tymethod.surface){.fn}(&self) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[Surface](struct.Surface.html "struct optionstratlib::surfaces::Surface"){.struct}, [SurfaceError](../error/enum.SurfaceError.html "enum optionstratlib::error::SurfaceError"){.enum}\> {#fn-surfaceself---resultsurface-surfaceerror .code-header}
+#### fn [surface](#tymethod.surface){.fn}(&self) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[Surface](struct.Surface.html "struct optionstratlib::surfaces::Surface"){.struct}, [SurfaceError](../error/enum.SurfaceError.html "enum optionstratlib::error::SurfaceError"){.enum}\> {#fn-surfaceself---resultsurface-surfaceerror .code-header}
 :::
 
 ::: docblock

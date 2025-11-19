@@ -5,9 +5,9 @@
 [optionstratlib](../../index.html)::[model](../index.html)::[positive](index.html)
 :::
 
-# Function [is_positive]{.fn}Copy item path
+# Function [is_positive]{.fn} Copy item path
 
-[[Source](../../../src/optionstratlib/model/positive.rs.html#148-150){.src}
+[[Source](../../../src/optionstratlib/model/positive.rs.html#170-172){.src}
 ]{.sub-heading}
 ::::
 

@@ -5,7 +5,7 @@
 [optionstratlib](../index.html)::[curves](index.html)
 :::
 
-# Function [create_linear_curve]{.fn}Copy item path
+# Function [create_linear_curve]{.fn} Copy item path
 
 [[Source](../../src/optionstratlib/curves/utils.rs.html#92-105){.src}
 ]{.sub-heading}

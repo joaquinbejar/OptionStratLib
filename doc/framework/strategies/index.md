@@ -5,9 +5,9 @@
 [optionstratlib](../index.html)
 :::
 
-# Module strategiesCopy item path
+# Module strategies Copy item path
 
-[[Source](../../src/optionstratlib/strategies/mod.rs.html#7-273){.src}
+[[Source](../../src/optionstratlib/strategies/mod.rs.html#7-298){.src}
 ]{.sub-heading}
 ::::
 
@@ -88,8 +88,8 @@ let spread = BullCallSpread::new(
     pos!(0.73),   // close_fee_short
 );
 
-let profit = spread.max_profit().unwrap_or(Positive::ZERO);
-let loss = spread.max_loss().unwrap_or(Positive::ZERO);
+let profit = spread.get_max_profit().unwrap_or(Positive::ZERO);
+let loss = spread.get_max_loss().unwrap_or(Positive::ZERO);
 info!("Max Profit: {}, Max Loss: {}", profit, loss);
 ```
 :::
@@ -151,7 +151,7 @@ use optionstratlib::error::position::PositionError;
 use optionstratlib::model::position::Position;
 use optionstratlib::Positive;
 use optionstratlib::strategies::base::{BreakEvenable, Positionable, Strategies, Validable};
-use optionstratlib::strategies::Strategable;
+use optionstratlib::strategies::{BasicAble, Strategable};
 
 struct MyStrategy {
     legs: Vec<Position>,
@@ -176,6 +176,9 @@ impl Positionable for MyStrategy {
 }
 
 impl BreakEvenable for MyStrategy {}
+
+
+impl BasicAble for MyStrategy {}
 
 impl Strategies for MyStrategy {}
 ```
@@ -213,8 +216,8 @@ let condor = IronCondor::new(
     pos!(5.0),   // close_fee
 );
 
-let max_profit = condor.max_profit().unwrap_or(Positive::ZERO);
-let max_loss = condor.max_loss().unwrap_or(Positive::ZERO);
+let max_profit = condor.get_max_profit().unwrap_or(Positive::ZERO);
+let max_loss = condor.get_max_loss().unwrap_or(Positive::ZERO);
 info!("Max Profit: {}, Max Loss: {}", max_profit, max_loss);
 ```
 :::
@@ -225,7 +228,15 @@ specific strategies and their usage.
 
 ## Re-exports[§](#reexports){.anchor} {#reexports .section-header}
 
+`pub use base::`[`BasicAble`](base/trait.BasicAble.html "trait optionstratlib::strategies::base::BasicAble"){.trait}`;`
+
+`pub use base::`[`Strategable`](base/trait.Strategable.html "trait optionstratlib::strategies::base::Strategable"){.trait}`;`
+
 `pub use base::`[`Strategies`](base/trait.Strategies.html "trait optionstratlib::strategies::base::Strategies"){.trait}`;`
+
+`pub use base::`[`StrategyBasics`](base/struct.StrategyBasics.html "struct optionstratlib::strategies::base::StrategyBasics"){.struct}`;`
+
+`pub use base::`[`Validable`](base/trait.Validable.html "trait optionstratlib::strategies::base::Validable"){.trait}`;`
 
 `pub use bear_call_spread::`[`BearCallSpread`](bear_call_spread/struct.BearCallSpread.html "struct optionstratlib::strategies::bear_call_spread::BearCallSpread"){.struct}`;`
 
@@ -235,17 +246,7 @@ specific strategies and their usage.
 
 `pub use bull_put_spread::`[`BullPutSpread`](bull_put_spread/struct.BullPutSpread.html "struct optionstratlib::strategies::bull_put_spread::BullPutSpread"){.struct}`;`
 
-`pub use butterfly_spread::`[`LongButterflySpread`](butterfly_spread/struct.LongButterflySpread.html "struct optionstratlib::strategies::butterfly_spread::LongButterflySpread"){.struct}`;`
-
-`pub use butterfly_spread::`[`ShortButterflySpread`](butterfly_spread/struct.ShortButterflySpread.html "struct optionstratlib::strategies::butterfly_spread::ShortButterflySpread"){.struct}`;`
-
 `pub use call_butterfly::`[`CallButterfly`](call_butterfly/struct.CallButterfly.html "struct optionstratlib::strategies::call_butterfly::CallButterfly"){.struct}`;`
-
-`pub use base::`[`Strategable`](base/trait.Strategable.html "trait optionstratlib::strategies::base::Strategable"){.trait}`;`
-
-`pub use base::`[`StrategyBasics`](base/struct.StrategyBasics.html "struct optionstratlib::strategies::base::StrategyBasics"){.struct}`;`
-
-`pub use custom::`[`CustomStrategy`](custom/struct.CustomStrategy.html "struct optionstratlib::strategies::custom::CustomStrategy"){.struct}`;`
 
 `pub use delta_neutral::`[`DELTA_THRESHOLD`](delta_neutral/constant.DELTA_THRESHOLD.html "constant optionstratlib::strategies::delta_neutral::DELTA_THRESHOLD"){.constant}`;`
 
@@ -259,15 +260,27 @@ specific strategies and their usage.
 
 `pub use iron_condor::`[`IronCondor`](iron_condor/struct.IronCondor.html "struct optionstratlib::strategies::iron_condor::IronCondor"){.struct}`;`
 
+`pub use long_butterfly_spread::`[`LongButterflySpread`](long_butterfly_spread/struct.LongButterflySpread.html "struct optionstratlib::strategies::long_butterfly_spread::LongButterflySpread"){.struct}`;`
+
+`pub use long_call::`[`LongCall`](long_call/struct.LongCall.html "struct optionstratlib::strategies::long_call::LongCall"){.struct}`;`
+
+`pub use long_put::`[`LongPut`](long_put/struct.LongPut.html "struct optionstratlib::strategies::long_put::LongPut"){.struct}`;`
+
+`pub use long_straddle::`[`LongStraddle`](long_straddle/struct.LongStraddle.html "struct optionstratlib::strategies::long_straddle::LongStraddle"){.struct}`;`
+
+`pub use long_strangle::`[`LongStrangle`](long_strangle/struct.LongStrangle.html "struct optionstratlib::strategies::long_strangle::LongStrangle"){.struct}`;`
+
 `pub use poor_mans_covered_call::`[`PoorMansCoveredCall`](poor_mans_covered_call/struct.PoorMansCoveredCall.html "struct optionstratlib::strategies::poor_mans_covered_call::PoorMansCoveredCall"){.struct}`;`
 
-`pub use straddle::`[`LongStraddle`](straddle/struct.LongStraddle.html "struct optionstratlib::strategies::straddle::LongStraddle"){.struct}`;`
+`pub use short_butterfly_spread::`[`ShortButterflySpread`](short_butterfly_spread/struct.ShortButterflySpread.html "struct optionstratlib::strategies::short_butterfly_spread::ShortButterflySpread"){.struct}`;`
 
-`pub use straddle::`[`ShortStraddle`](straddle/struct.ShortStraddle.html "struct optionstratlib::strategies::straddle::ShortStraddle"){.struct}`;`
+`pub use short_call::`[`ShortCall`](short_call/struct.ShortCall.html "struct optionstratlib::strategies::short_call::ShortCall"){.struct}`;`
 
-`pub use strangle::`[`LongStrangle`](strangle/struct.LongStrangle.html "struct optionstratlib::strategies::strangle::LongStrangle"){.struct}`;`
+`pub use short_put::`[`ShortPut`](short_put/struct.ShortPut.html "struct optionstratlib::strategies::short_put::ShortPut"){.struct}`;`
 
-`pub use strangle::`[`ShortStrangle`](strangle/struct.ShortStrangle.html "struct optionstratlib::strategies::strangle::ShortStrangle"){.struct}`;`
+`pub use short_straddle::`[`ShortStraddle`](short_straddle/struct.ShortStraddle.html "struct optionstratlib::strategies::short_straddle::ShortStraddle"){.struct}`;`
+
+`pub use short_strangle::`[`ShortStrangle`](short_strangle/struct.ShortStrangle.html "struct optionstratlib::strategies::short_strangle::ShortStrangle"){.struct}`;`
 
 `pub use utils::`[`FindOptimalSide`](utils/enum.FindOptimalSide.html "enum optionstratlib::strategies::utils::FindOptimalSide"){.enum}`;`
 
@@ -288,9 +301,6 @@ specific strategies and their usage.
 [bull_put_spread](bull_put_spread/index.html "mod optionstratlib::strategies::bull_put_spread"){.mod}
 :   Bull Put Spread strategy implementation
 
-[butterfly_spread](butterfly_spread/index.html "mod optionstratlib::strategies::butterfly_spread"){.mod}
-:   Butterfly Spread strategy implementation
-
 [call_butterfly](call_butterfly/index.html "mod optionstratlib::strategies::call_butterfly"){.mod}
 :   Call Butterfly strategy implementation
 
@@ -301,16 +311,44 @@ specific strategies and their usage.
 :   Covered Call strategy implementation
 
 [custom](custom/index.html "mod optionstratlib::strategies::custom"){.mod}
-:   Custom strategy implementation for user-defined strategies
+:   Custom strategy implementation and utilities
+
+[default](default/index.html "mod optionstratlib::strategies::default"){.mod}
+:   Default implementation for strategies
 
 [delta_neutral](delta_neutral/index.html "mod optionstratlib::strategies::delta_neutral"){.mod}
 :   Delta-neutral strategy implementation and utilities
+
+[graph](graph/index.html "mod optionstratlib::strategies::graph"){.mod}
+:   The `graph` module provides functionality for creating, managing,
+    and manipulating graph data structures. Common use cases include
+    representing networks, dependency graphs, and other graph-based
+    relationships.
 
 [iron_butterfly](iron_butterfly/index.html "mod optionstratlib::strategies::iron_butterfly"){.mod}
 :   Iron Butterfly strategy implementation
 
 [iron_condor](iron_condor/index.html "mod optionstratlib::strategies::iron_condor"){.mod}
 :   Iron Condor strategy implementation
+
+[long_butterfly_spread](long_butterfly_spread/index.html "mod optionstratlib::strategies::long_butterfly_spread"){.mod}
+:   Butterfly Spread strategy implementation
+
+[long_call](long_call/index.html "mod optionstratlib::strategies::long_call"){.mod}
+:   Long Call strategy implementation
+
+[long_put](long_put/index.html "mod optionstratlib::strategies::long_put"){.mod}
+:   Long Put strategy implementation
+
+[long_straddle](long_straddle/index.html "mod optionstratlib::strategies::long_straddle"){.mod}
+:   Long Straddle strategy implementation
+
+[long_strangle](long_strangle/index.html "mod optionstratlib::strategies::long_strangle"){.mod}
+:   Strangle strategy implementation
+
+[macros](macros/index.html "mod optionstratlib::strategies::macros"){.mod}
+:   Macros for options strategies Simpler macro to test that a strategy
+    implements all required traits
 
 [poor_mans_covered_call](poor_mans_covered_call/index.html "mod optionstratlib::strategies::poor_mans_covered_call"){.mod}
 :   Poor Man's Covered Call strategy implementation
@@ -321,11 +359,20 @@ specific strategies and their usage.
 [protective_put](protective_put/index.html "mod optionstratlib::strategies::protective_put"){.mod}
 :   Protective Put strategy implementation
 
-[straddle](straddle/index.html "mod optionstratlib::strategies::straddle"){.mod}
-:   Straddle strategy implementation
+[short_butterfly_spread](short_butterfly_spread/index.html "mod optionstratlib::strategies::short_butterfly_spread"){.mod}
+:   Short Call strategy implementation
 
-[strangle](strangle/index.html "mod optionstratlib::strategies::strangle"){.mod}
-:   Strangle strategy implementation
+[short_call](short_call/index.html "mod optionstratlib::strategies::short_call"){.mod}
+:   Short Call strategy implementation
+
+[short_put](short_put/index.html "mod optionstratlib::strategies::short_put"){.mod}
+:   Short Put strategy implementation
+
+[short_straddle](short_straddle/index.html "mod optionstratlib::strategies::short_straddle"){.mod}
+:   Short Straddle strategy implementation
+
+[short_strangle](short_strangle/index.html "mod optionstratlib::strategies::short_strangle"){.mod}
+:   Short Strangle strategy implementation
 
 [utils](utils/index.html "mod optionstratlib::strategies::utils"){.mod}
 :   Utility functions for options calculations and analysis Price Range

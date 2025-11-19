@@ -5,7 +5,7 @@
 [optionstratlib](../../index.html)::[model](../index.html)::[decimal](index.html)
 :::
 
-# Constant [ONE_DAY]{.constant}Copy item path
+# Constant [ONE_DAY]{.constant} Copy item path
 
 [[Source](../../../src/optionstratlib/model/decimal.rs.html#30){.src}
 ]{.sub-heading}

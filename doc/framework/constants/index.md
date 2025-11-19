@@ -5,9 +5,9 @@
 [optionstratlib](../index.html)
 :::
 
-# Module constantsCopy item path
+# Module constants Copy item path
 
-[[Source](../../src/optionstratlib/constants.rs.html#6-121){.src}
+[[Source](../../src/optionstratlib/constants.rs.html#6-93){.src}
 ]{.sub-heading}
 ::::
 

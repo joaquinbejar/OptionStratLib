@@ -1,13 +1,13 @@
-:::::::::::::::::::::::::::::::::::::: width-limiter
-::::::::::::::::::::::::::::::::::::: {#main-content .section .content}
+:::::::::::::::::::::::::::::::::::::::: width-limiter
+::::::::::::::::::::::::::::::::::::::: {#main-content .section .content}
 :::: main-heading
 ::: rustdoc-breadcrumbs
 [optionstratlib](../index.html)::[simulation](index.html)
 :::
 
-# Trait [WalkTypeAble]{.trait}Copy item path
+# Trait [WalkTypeAble]{.trait} Copy item path
 
-[[Source](../../src/optionstratlib/simulation/traits.rs.html#37-483){.src}
+[[Source](../../src/optionstratlib/simulation/traits.rs.html#40-612){.src}
 ]{.sub-heading}
 ::::
 
@@ -19,39 +19,43 @@ pub trait WalkTypeAble<X, Y>where
     fn brownian(
         &self,
         params: &WalkParams<X, Y>,
-    ) -> Result<Vec<Positive>, Box<dyn Error>> { ... }
+    ) -> Result<Vec<Positive>, SimulationError> { ... }
     fn geometric_brownian(
         &self,
         params: &WalkParams<X, Y>,
-    ) -> Result<Vec<Positive>, Box<dyn Error>> { ... }
+    ) -> Result<Vec<Positive>, SimulationError> { ... }
     fn log_returns(
         &self,
         params: &WalkParams<X, Y>,
-    ) -> Result<Vec<Positive>, Box<dyn Error>> { ... }
+    ) -> Result<Vec<Positive>, SimulationError> { ... }
     fn mean_reverting(
         &self,
         params: &WalkParams<X, Y>,
-    ) -> Result<Vec<Positive>, Box<dyn Error>> { ... }
+    ) -> Result<Vec<Positive>, SimulationError> { ... }
     fn jump_diffusion(
         &self,
         params: &WalkParams<X, Y>,
-    ) -> Result<Vec<Positive>, Box<dyn Error>> { ... }
+    ) -> Result<Vec<Positive>, SimulationError> { ... }
     fn garch(
         &self,
         params: &WalkParams<X, Y>,
-    ) -> Result<Vec<Positive>, Box<dyn Error>> { ... }
+    ) -> Result<Vec<Positive>, SimulationError> { ... }
     fn heston(
         &self,
         params: &WalkParams<X, Y>,
-    ) -> Result<Vec<Positive>, Box<dyn Error>> { ... }
+    ) -> Result<Vec<Positive>, SimulationError> { ... }
     fn custom(
         &self,
         params: &WalkParams<X, Y>,
-    ) -> Result<Vec<Positive>, Box<dyn Error>> { ... }
+    ) -> Result<Vec<Positive>, SimulationError> { ... }
+    fn telegraph(
+        &self,
+        params: &WalkParams<X, Y>,
+    ) -> Result<Vec<Positive>, SimulationError> { ... }
     fn historical(
         &self,
         params: &WalkParams<X, Y>,
-    ) -> Result<Vec<Positive>, Box<dyn Error>> { ... }
+    ) -> Result<Vec<Positive>, SimulationError> { ... }
 }
 ```
 
@@ -95,12 +99,12 @@ processes:
 
 ## Provided Methods[§](#provided-methods){.anchor} {#provided-methods .section-header}
 
-::::::::::::::::::::: methods
+::::::::::::::::::::::: methods
 ::: {#method.brownian .section .method}
-[Source](../../src/optionstratlib/simulation/traits.rs.html#55-73){.src
+[Source](../../src/optionstratlib/simulation/traits.rs.html#58-83){.src
 .rightside}
 
-#### fn [brownian](#method.brownian){.fn}( &self, params: &[WalkParams](struct.WalkParams.html "struct optionstratlib::simulation::WalkParams"){.struct}\<X, Y\>, ) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[Vec](https://doc.rust-lang.org/1.86.0/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<[Positive](../model/positive/struct.Positive.html "struct optionstratlib::model::positive::Positive"){.struct}\>, [Box](https://doc.rust-lang.org/1.86.0/alloc/boxed/struct.Box.html "struct alloc::boxed::Box"){.struct}\<dyn [Error](https://doc.rust-lang.org/1.86.0/core/error/trait.Error.html "trait core::error::Error"){.trait}\>\> {#fn-brownian-self-params-walkparamsx-y---resultvecpositive-boxdyn-error .code-header}
+#### fn [brownian](#method.brownian){.fn}( &self, params: &[WalkParams](struct.WalkParams.html "struct optionstratlib::simulation::WalkParams"){.struct}\<X, Y\>, ) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[Vec](https://doc.rust-lang.org/1.91.1/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<[Positive](../model/positive/struct.Positive.html "struct optionstratlib::model::positive::Positive"){.struct}\>, [SimulationError](../error/simulation/enum.SimulationError.html "enum optionstratlib::error::simulation::SimulationError"){.enum}\> {#fn-brownian-self-params-walkparamsx-y---resultvecpositive-simulationerror .code-header}
 :::
 
 ::: docblock
@@ -116,16 +120,16 @@ are normally distributed with a drift term and volatility.
 
 ##### [§](#returns){.doc-anchor}Returns
 
-- `Result<Vec<Positive>, Box<dyn Error>>` - A vector of positive values
+- `Result<Vec<Positive>, SimulationError>` - A vector of positive values
   representing the generated Brownian motion path, or an error if
   parameters are invalid.
 :::
 
 ::: {#method.geometric_brownian .section .method}
-[Source](../../src/optionstratlib/simulation/traits.rs.html#89-110){.src
+[Source](../../src/optionstratlib/simulation/traits.rs.html#99-126){.src
 .rightside}
 
-#### fn [geometric_brownian](#method.geometric_brownian){.fn}( &self, params: &[WalkParams](struct.WalkParams.html "struct optionstratlib::simulation::WalkParams"){.struct}\<X, Y\>, ) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[Vec](https://doc.rust-lang.org/1.86.0/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<[Positive](../model/positive/struct.Positive.html "struct optionstratlib::model::positive::Positive"){.struct}\>, [Box](https://doc.rust-lang.org/1.86.0/alloc/boxed/struct.Box.html "struct alloc::boxed::Box"){.struct}\<dyn [Error](https://doc.rust-lang.org/1.86.0/core/error/trait.Error.html "trait core::error::Error"){.trait}\>\> {#fn-geometric_brownian-self-params-walkparamsx-y---resultvecpositive-boxdyn-error .code-header}
+#### fn [geometric_brownian](#method.geometric_brownian){.fn}( &self, params: &[WalkParams](struct.WalkParams.html "struct optionstratlib::simulation::WalkParams"){.struct}\<X, Y\>, ) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[Vec](https://doc.rust-lang.org/1.91.1/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<[Positive](../model/positive/struct.Positive.html "struct optionstratlib::model::positive::Positive"){.struct}\>, [SimulationError](../error/simulation/enum.SimulationError.html "enum optionstratlib::error::simulation::SimulationError"){.enum}\> {#fn-geometric_brownian-self-params-walkparamsx-y---resultvecpositive-simulationerror .code-header}
 :::
 
 ::: docblock
@@ -143,16 +147,16 @@ pricing model.
 
 ##### [§](#returns-1){.doc-anchor}Returns
 
-- `Result<Vec<Positive>, Box<dyn Error>>` - A vector of positive values
+- `Result<Vec<Positive>, SimulationError>` - A vector of positive values
   representing the generated Geometric Brownian motion path, or an error
   if parameters are invalid.
 :::
 
 ::: {#method.log_returns .section .method}
-[Source](../../src/optionstratlib/simulation/traits.rs.html#127-153){.src
+[Source](../../src/optionstratlib/simulation/traits.rs.html#143-178){.src
 .rightside}
 
-#### fn [log_returns](#method.log_returns){.fn}( &self, params: &[WalkParams](struct.WalkParams.html "struct optionstratlib::simulation::WalkParams"){.struct}\<X, Y\>, ) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[Vec](https://doc.rust-lang.org/1.86.0/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<[Positive](../model/positive/struct.Positive.html "struct optionstratlib::model::positive::Positive"){.struct}\>, [Box](https://doc.rust-lang.org/1.86.0/alloc/boxed/struct.Box.html "struct alloc::boxed::Box"){.struct}\<dyn [Error](https://doc.rust-lang.org/1.86.0/core/error/trait.Error.html "trait core::error::Error"){.trait}\>\> {#fn-log_returns-self-params-walkparamsx-y---resultvecpositive-boxdyn-error .code-header}
+#### fn [log_returns](#method.log_returns){.fn}( &self, params: &[WalkParams](struct.WalkParams.html "struct optionstratlib::simulation::WalkParams"){.struct}\<X, Y\>, ) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[Vec](https://doc.rust-lang.org/1.91.1/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<[Positive](../model/positive/struct.Positive.html "struct optionstratlib::model::positive::Positive"){.struct}\>, [SimulationError](../error/simulation/enum.SimulationError.html "enum optionstratlib::error::simulation::SimulationError"){.enum}\> {#fn-log_returns-self-params-walkparamsx-y---resultvecpositive-simulationerror .code-header}
 :::
 
 ::: docblock
@@ -169,16 +173,16 @@ of returns to be influenced by previous returns.
 
 ##### [§](#returns-2){.doc-anchor}Returns
 
-- `Result<Vec<Positive>, Box<dyn Error>>` - A vector of positive values
+- `Result<Vec<Positive>, SimulationError>` - A vector of positive values
   representing the generated Log Returns path, or an error if parameters
   are invalid.
 :::
 
 ::: {#method.mean_reverting .section .method}
-[Source](../../src/optionstratlib/simulation/traits.rs.html#170-188){.src
+[Source](../../src/optionstratlib/simulation/traits.rs.html#195-216){.src
 .rightside}
 
-#### fn [mean_reverting](#method.mean_reverting){.fn}( &self, params: &[WalkParams](struct.WalkParams.html "struct optionstratlib::simulation::WalkParams"){.struct}\<X, Y\>, ) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[Vec](https://doc.rust-lang.org/1.86.0/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<[Positive](../model/positive/struct.Positive.html "struct optionstratlib::model::positive::Positive"){.struct}\>, [Box](https://doc.rust-lang.org/1.86.0/alloc/boxed/struct.Box.html "struct alloc::boxed::Box"){.struct}\<dyn [Error](https://doc.rust-lang.org/1.86.0/core/error/trait.Error.html "trait core::error::Error"){.trait}\>\> {#fn-mean_reverting-self-params-walkparamsx-y---resultvecpositive-boxdyn-error .code-header}
+#### fn [mean_reverting](#method.mean_reverting){.fn}( &self, params: &[WalkParams](struct.WalkParams.html "struct optionstratlib::simulation::WalkParams"){.struct}\<X, Y\>, ) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[Vec](https://doc.rust-lang.org/1.91.1/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<[Positive](../model/positive/struct.Positive.html "struct optionstratlib::model::positive::Positive"){.struct}\>, [SimulationError](../error/simulation/enum.SimulationError.html "enum optionstratlib::error::simulation::SimulationError"){.enum}\> {#fn-mean_reverting-self-params-walkparamsx-y---resultvecpositive-simulationerror .code-header}
 :::
 
 ::: docblock
@@ -196,16 +200,16 @@ volatility, and other mean-reverting financial variables.
 
 ##### [§](#returns-3){.doc-anchor}Returns
 
-- `Result<Vec<Positive>, Box<dyn Error>>` - A vector of positive values
+- `Result<Vec<Positive>, SimulationError>` - A vector of positive values
   representing the generated Mean Reverting path, or an error if
   parameters are invalid.
 :::
 
 ::: {#method.jump_diffusion .section .method}
-[Source](../../src/optionstratlib/simulation/traits.rs.html#205-230){.src
+[Source](../../src/optionstratlib/simulation/traits.rs.html#233-272){.src
 .rightside}
 
-#### fn [jump_diffusion](#method.jump_diffusion){.fn}( &self, params: &[WalkParams](struct.WalkParams.html "struct optionstratlib::simulation::WalkParams"){.struct}\<X, Y\>, ) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[Vec](https://doc.rust-lang.org/1.86.0/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<[Positive](../model/positive/struct.Positive.html "struct optionstratlib::model::positive::Positive"){.struct}\>, [Box](https://doc.rust-lang.org/1.86.0/alloc/boxed/struct.Box.html "struct alloc::boxed::Box"){.struct}\<dyn [Error](https://doc.rust-lang.org/1.86.0/core/error/trait.Error.html "trait core::error::Error"){.trait}\>\> {#fn-jump_diffusion-self-params-walkparamsx-y---resultvecpositive-boxdyn-error .code-header}
+#### fn [jump_diffusion](#method.jump_diffusion){.fn}( &self, params: &[WalkParams](struct.WalkParams.html "struct optionstratlib::simulation::WalkParams"){.struct}\<X, Y\>, ) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[Vec](https://doc.rust-lang.org/1.91.1/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<[Positive](../model/positive/struct.Positive.html "struct optionstratlib::model::positive::Positive"){.struct}\>, [SimulationError](../error/simulation/enum.SimulationError.html "enum optionstratlib::error::simulation::SimulationError"){.enum}\> {#fn-jump_diffusion-self-params-walkparamsx-y---resultvecpositive-simulationerror .code-header}
 :::
 
 ::: docblock
@@ -223,16 +227,16 @@ Brownian motion cannot adequately model.
 
 ##### [§](#returns-4){.doc-anchor}Returns
 
-- `Result<Vec<Positive>, Box<dyn Error>>` - A vector of positive values
+- `Result<Vec<Positive>, SimulationError>` - A vector of positive values
   representing the generated Jump Diffusion path, or an error if
   parameters are invalid.
 :::
 
 ::: {#method.garch .section .method}
-[Source](../../src/optionstratlib/simulation/traits.rs.html#249-298){.src
+[Source](../../src/optionstratlib/simulation/traits.rs.html#291-338){.src
 .rightside}
 
-#### fn [garch](#method.garch){.fn}( &self, params: &[WalkParams](struct.WalkParams.html "struct optionstratlib::simulation::WalkParams"){.struct}\<X, Y\>, ) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[Vec](https://doc.rust-lang.org/1.86.0/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<[Positive](../model/positive/struct.Positive.html "struct optionstratlib::model::positive::Positive"){.struct}\>, [Box](https://doc.rust-lang.org/1.86.0/alloc/boxed/struct.Box.html "struct alloc::boxed::Box"){.struct}\<dyn [Error](https://doc.rust-lang.org/1.86.0/core/error/trait.Error.html "trait core::error::Error"){.trait}\>\> {#fn-garch-self-params-walkparamsx-y---resultvecpositive-boxdyn-error .code-header}
+#### fn [garch](#method.garch){.fn}( &self, params: &[WalkParams](struct.WalkParams.html "struct optionstratlib::simulation::WalkParams"){.struct}\<X, Y\>, ) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[Vec](https://doc.rust-lang.org/1.91.1/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<[Positive](../model/positive/struct.Positive.html "struct optionstratlib::model::positive::Positive"){.struct}\>, [SimulationError](../error/simulation/enum.SimulationError.html "enum optionstratlib::error::simulation::SimulationError"){.enum}\> {#fn-garch-self-params-walkparamsx-y---resultvecpositive-simulationerror .code-header}
 :::
 
 ::: docblock
@@ -249,7 +253,7 @@ low volatility.
 
 ##### [§](#returns-5){.doc-anchor}Returns
 
-- `Result<Vec<Positive>, Box<dyn Error>>` - A vector of positive values
+- `Result<Vec<Positive>, SimulationError>` - A vector of positive values
   representing the generated GARCH path, or an error if parameters are
   invalid.
 
@@ -260,10 +264,10 @@ vector.
 :::
 
 ::: {#method.heston .section .method}
-[Source](../../src/optionstratlib/simulation/traits.rs.html#344-398){.src
+[Source](../../src/optionstratlib/simulation/traits.rs.html#384-438){.src
 .rightside}
 
-#### fn [heston](#method.heston){.fn}( &self, params: &[WalkParams](struct.WalkParams.html "struct optionstratlib::simulation::WalkParams"){.struct}\<X, Y\>, ) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[Vec](https://doc.rust-lang.org/1.86.0/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<[Positive](../model/positive/struct.Positive.html "struct optionstratlib::model::positive::Positive"){.struct}\>, [Box](https://doc.rust-lang.org/1.86.0/alloc/boxed/struct.Box.html "struct alloc::boxed::Box"){.struct}\<dyn [Error](https://doc.rust-lang.org/1.86.0/core/error/trait.Error.html "trait core::error::Error"){.trait}\>\> {#fn-heston-self-params-walkparamsx-y---resultvecpositive-boxdyn-error .code-header}
+#### fn [heston](#method.heston){.fn}( &self, params: &[WalkParams](struct.WalkParams.html "struct optionstratlib::simulation::WalkParams"){.struct}\<X, Y\>, ) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[Vec](https://doc.rust-lang.org/1.91.1/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<[Positive](../model/positive/struct.Positive.html "struct optionstratlib::model::positive::Positive"){.struct}\>, [SimulationError](../error/simulation/enum.SimulationError.html "enum optionstratlib::error::simulation::SimulationError"){.enum}\> {#fn-heston-self-params-walkparamsx-y---resultvecpositive-simulationerror .code-header}
 :::
 
 ::: docblock
@@ -279,7 +283,7 @@ square-root process.
 
 ##### [§](#returns-6){.doc-anchor}Returns
 
-- `Result<Vec<Positive>, Box<dyn Error>>` - A vector of positive values
+- `Result<Vec<Positive>, SimulationError>` - A vector of positive values
   representing the generated Heston model path, or an error if
   parameters are invalid.
 
@@ -305,7 +309,7 @@ square-root process.
 
 ##### [§](#returns-7){.doc-anchor}Returns
 
-- `Result<Vec<Positive>, Box<dyn Error>>` - A vector of positive values
+- `Result<Vec<Positive>, SimulationError>` - A vector of positive values
   representing the generated Heston model path, or an error if
   parameters are invalid.
 
@@ -317,10 +321,10 @@ dW\^2_t = ρ dt
 :::
 
 ::: {#method.custom .section .method}
-[Source](../../src/optionstratlib/simulation/traits.rs.html#415-441){.src
+[Source](../../src/optionstratlib/simulation/traits.rs.html#455-486){.src
 .rightside}
 
-#### fn [custom](#method.custom){.fn}( &self, params: &[WalkParams](struct.WalkParams.html "struct optionstratlib::simulation::WalkParams"){.struct}\<X, Y\>, ) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[Vec](https://doc.rust-lang.org/1.86.0/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<[Positive](../model/positive/struct.Positive.html "struct optionstratlib::model::positive::Positive"){.struct}\>, [Box](https://doc.rust-lang.org/1.86.0/alloc/boxed/struct.Box.html "struct alloc::boxed::Box"){.struct}\<dyn [Error](https://doc.rust-lang.org/1.86.0/core/error/trait.Error.html "trait core::error::Error"){.trait}\>\> {#fn-custom-self-params-walkparamsx-y---resultvecpositive-boxdyn-error .code-header}
+#### fn [custom](#method.custom){.fn}( &self, params: &[WalkParams](struct.WalkParams.html "struct optionstratlib::simulation::WalkParams"){.struct}\<X, Y\>, ) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[Vec](https://doc.rust-lang.org/1.91.1/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<[Positive](../model/positive/struct.Positive.html "struct optionstratlib::model::positive::Positive"){.struct}\>, [SimulationError](../error/simulation/enum.SimulationError.html "enum optionstratlib::error::simulation::SimulationError"){.enum}\> {#fn-custom-self-params-walkparamsx-y---resultvecpositive-simulationerror .code-header}
 :::
 
 ::: docblock
@@ -339,16 +343,44 @@ than standard models.
 
 ##### [§](#returns-8){.doc-anchor}Returns
 
-- `Result<Vec<Positive>, Box<dyn Error>>` - A vector of positive values
+- `Result<Vec<Positive>, SimulationError>` - A vector of positive values
   representing the generated custom process path, or an error if
   parameters are invalid.
 :::
 
-::: {#method.historical .section .method}
-[Source](../../src/optionstratlib/simulation/traits.rs.html#468-482){.src
+::: {#method.telegraph .section .method}
+[Source](../../src/optionstratlib/simulation/traits.rs.html#503-569){.src
 .rightside}
 
-#### fn [historical](#method.historical){.fn}( &self, params: &[WalkParams](struct.WalkParams.html "struct optionstratlib::simulation::WalkParams"){.struct}\<X, Y\>, ) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[Vec](https://doc.rust-lang.org/1.86.0/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<[Positive](../model/positive/struct.Positive.html "struct optionstratlib::model::positive::Positive"){.struct}\>, [Box](https://doc.rust-lang.org/1.86.0/alloc/boxed/struct.Box.html "struct alloc::boxed::Box"){.struct}\<dyn [Error](https://doc.rust-lang.org/1.86.0/core/error/trait.Error.html "trait core::error::Error"){.trait}\>\> {#fn-historical-self-params-walkparamsx-y---resultvecpositive-boxdyn-error .code-header}
+#### fn [telegraph](#method.telegraph){.fn}( &self, params: &[WalkParams](struct.WalkParams.html "struct optionstratlib::simulation::WalkParams"){.struct}\<X, Y\>, ) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[Vec](https://doc.rust-lang.org/1.91.1/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<[Positive](../model/positive/struct.Positive.html "struct optionstratlib::model::positive::Positive"){.struct}\>, [SimulationError](../error/simulation/enum.SimulationError.html "enum optionstratlib::error::simulation::SimulationError"){.enum}\> {#fn-telegraph-self-params-walkparamsx-y---resultvecpositive-simulationerror .code-header}
+:::
+
+::: docblock
+Generates a Telegraph process (two-state regime switching model).
+
+The Telegraph process alternates between two states (+1 and -1) with
+specified transition rates, affecting the volatility of the price path.
+This model captures regime-switching behavior in financial markets where
+volatility can suddenly change between high and low regimes.
+
+##### [§](#parameters-9){.doc-anchor}Parameters
+
+- `params` - Walk parameters including initial value, drift, base
+  volatility, transition rates, and optional volatility multipliers for
+  each state.
+
+##### [§](#returns-9){.doc-anchor}Returns
+
+- `Result<Vec<Positive>, SimulationError>` - A vector of positive values
+  representing the generated Telegraph process path, or an error if
+  parameters are invalid.
+:::
+
+::: {#method.historical .section .method}
+[Source](../../src/optionstratlib/simulation/traits.rs.html#596-611){.src
+.rightside}
+
+#### fn [historical](#method.historical){.fn}( &self, params: &[WalkParams](struct.WalkParams.html "struct optionstratlib::simulation::WalkParams"){.struct}\<X, Y\>, ) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[Vec](https://doc.rust-lang.org/1.91.1/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<[Positive](../model/positive/struct.Positive.html "struct optionstratlib::model::positive::Positive"){.struct}\>, [SimulationError](../error/simulation/enum.SimulationError.html "enum optionstratlib::error::simulation::SimulationError"){.enum}\> {#fn-historical-self-params-walkparamsx-y---resultvecpositive-simulationerror .code-header}
 :::
 
 ::: docblock
@@ -358,7 +390,7 @@ This function processes the historical walk by extracting a specified
 number of elements from the provided price data (`prices`) based on the
 `size` defined in `params`.
 
-##### [§](#parameters-9){.doc-anchor}Parameters
+##### [§](#parameters-10){.doc-anchor}Parameters
 
 - `self`: Reference to the instance of the object.
 - `params`: A reference to `WalkParams<X, Y>` containing the
@@ -368,7 +400,7 @@ number of elements from the provided price data (`prices`) based on the
   - `params.size` determines the number of historical prices to include
     in the result.
 
-##### [§](#returns-9){.doc-anchor}Returns
+##### [§](#returns-10){.doc-anchor}Returns
 
 - `Ok(Vec<Positive>)`: A vector containing the first `params.size`
   elements from the given price data (`prices`), if there are at least
@@ -383,62 +415,62 @@ number of elements from the provided price data (`prices`) based on the
   - The `walk_type` in `params` is not `WalkType::Historical`.
   - The `prices` do not contain at least `params.size` elements.
 :::
-:::::::::::::::::::::
+:::::::::::::::::::::::
 
 ## Trait Implementations[§](#trait-implementations){.anchor} {#trait-implementations .section-header}
 
 ::::::::::::: {#trait-implementations-list}
 ::: {#impl-Clone-for-Box%3Cdyn+WalkTypeAble%3CX,+Y%3E%3E .section .impl}
-[Source](../../src/optionstratlib/simulation/traits.rs.html#491-495){.src
+[Source](../../src/optionstratlib/simulation/traits.rs.html#620-624){.src
 .rightside}[§](#impl-Clone-for-Box%3Cdyn+WalkTypeAble%3CX,+Y%3E%3E){.anchor}
 
-### impl\<X, Y\> [Clone](https://doc.rust-lang.org/1.86.0/core/clone/trait.Clone.html "trait core::clone::Clone"){.trait} for [Box](https://doc.rust-lang.org/1.86.0/alloc/boxed/struct.Box.html "struct alloc::boxed::Box"){.struct}\<dyn [WalkTypeAble](trait.WalkTypeAble.html "trait optionstratlib::simulation::WalkTypeAble"){.trait}\<X, Y\>\> {#implx-y-clone-for-boxdyn-walktypeablex-y .code-header}
+### impl\<X, Y\> [Clone](https://doc.rust-lang.org/1.91.1/core/clone/trait.Clone.html "trait core::clone::Clone"){.trait} for [Box](https://doc.rust-lang.org/1.91.1/alloc/boxed/struct.Box.html "struct alloc::boxed::Box"){.struct}\<dyn [WalkTypeAble](trait.WalkTypeAble.html "trait optionstratlib::simulation::WalkTypeAble"){.trait}\<X, Y\>\> {#implx-y-clone-for-boxdyn-walktypeablex-y .code-header}
 :::
 
 ::::::: impl-items
 ::: {#method.clone .section .method .trait-impl}
-[Source](../../src/optionstratlib/simulation/traits.rs.html#492-494){.src
+[Source](../../src/optionstratlib/simulation/traits.rs.html#621-623){.src
 .rightside}[§](#method.clone){.anchor}
 
-#### fn [clone](https://doc.rust-lang.org/1.86.0/core/clone/trait.Clone.html#tymethod.clone){.fn}(&self) -\> Self {#fn-cloneself---self .code-header}
+#### fn [clone](https://doc.rust-lang.org/1.91.1/core/clone/trait.Clone.html#tymethod.clone){.fn}(&self) -\> Self {#fn-cloneself---self .code-header}
 :::
 
 ::: docblock
-Returns a copy of the value. [Read
-more](https://doc.rust-lang.org/1.86.0/core/clone/trait.Clone.html#tymethod.clone)
+Returns a duplicate of the value. [Read
+more](https://doc.rust-lang.org/1.91.1/core/clone/trait.Clone.html#tymethod.clone)
 :::
 
 ::: {#method.clone_from .section .method .trait-impl}
 [[1.0.0]{.since title="Stable since Rust version 1.0.0"} ·
-[Source](https://doc.rust-lang.org/1.86.0/src/core/clone.rs.html#174){.src}]{.rightside}[§](#method.clone_from){.anchor}
+[Source](https://doc.rust-lang.org/1.91.1/src/core/clone.rs.html#245-247){.src}]{.rightside}[§](#method.clone_from){.anchor}
 
-#### fn [clone_from](https://doc.rust-lang.org/1.86.0/core/clone/trait.Clone.html#method.clone_from){.fn}(&mut self, source: &Self) {#fn-clone_frommut-self-source-self .code-header}
+#### fn [clone_from](https://doc.rust-lang.org/1.91.1/core/clone/trait.Clone.html#method.clone_from){.fn}(&mut self, source: &Self) {#fn-clone_frommut-self-source-self .code-header}
 :::
 
 ::: docblock
 Performs copy-assignment from `source`. [Read
-more](https://doc.rust-lang.org/1.86.0/core/clone/trait.Clone.html#method.clone_from)
+more](https://doc.rust-lang.org/1.91.1/core/clone/trait.Clone.html#method.clone_from)
 :::
 :::::::
 
 ::: {#impl-Debug-for-Box%3Cdyn+WalkTypeAble%3CX,+Y%3E%3E .section .impl}
-[Source](../../src/optionstratlib/simulation/traits.rs.html#485-489){.src
+[Source](../../src/optionstratlib/simulation/traits.rs.html#614-618){.src
 .rightside}[§](#impl-Debug-for-Box%3Cdyn+WalkTypeAble%3CX,+Y%3E%3E){.anchor}
 
-### impl\<X, Y\> [Debug](https://doc.rust-lang.org/1.86.0/core/fmt/trait.Debug.html "trait core::fmt::Debug"){.trait} for [Box](https://doc.rust-lang.org/1.86.0/alloc/boxed/struct.Box.html "struct alloc::boxed::Box"){.struct}\<dyn [WalkTypeAble](trait.WalkTypeAble.html "trait optionstratlib::simulation::WalkTypeAble"){.trait}\<X, Y\>\> {#implx-y-debug-for-boxdyn-walktypeablex-y .code-header}
+### impl\<X, Y\> [Debug](https://doc.rust-lang.org/1.91.1/core/fmt/trait.Debug.html "trait core::fmt::Debug"){.trait} for [Box](https://doc.rust-lang.org/1.91.1/alloc/boxed/struct.Box.html "struct alloc::boxed::Box"){.struct}\<dyn [WalkTypeAble](trait.WalkTypeAble.html "trait optionstratlib::simulation::WalkTypeAble"){.trait}\<X, Y\>\> {#implx-y-debug-for-boxdyn-walktypeablex-y .code-header}
 :::
 
 ::::: impl-items
 ::: {#method.fmt .section .method .trait-impl}
-[Source](../../src/optionstratlib/simulation/traits.rs.html#486-488){.src
+[Source](../../src/optionstratlib/simulation/traits.rs.html#615-617){.src
 .rightside}[§](#method.fmt){.anchor}
 
-#### fn [fmt](https://doc.rust-lang.org/1.86.0/core/fmt/trait.Debug.html#tymethod.fmt){.fn}(&self, f: &mut [Formatter](https://doc.rust-lang.org/1.86.0/core/fmt/struct.Formatter.html "struct core::fmt::Formatter"){.struct}\<\'\_\>) -\> [Result](https://doc.rust-lang.org/1.86.0/core/fmt/type.Result.html "type core::fmt::Result"){.type} {#fn-fmtself-f-mut-formatter_---result .code-header}
+#### fn [fmt](https://doc.rust-lang.org/1.91.1/core/fmt/trait.Debug.html#tymethod.fmt){.fn}(&self, f: &mut [Formatter](https://doc.rust-lang.org/1.91.1/core/fmt/struct.Formatter.html "struct core::fmt::Formatter"){.struct}\<\'\_\>) -\> [Result](https://doc.rust-lang.org/1.91.1/core/fmt/type.Result.html "type core::fmt::Result"){.type} {#fn-fmtself-f-mut-formatter_---result .code-header}
 :::
 
 ::: docblock
 Formats the value using the given formatter. [Read
-more](https://doc.rust-lang.org/1.86.0/core/fmt/trait.Debug.html#tymethod.fmt)
+more](https://doc.rust-lang.org/1.91.1/core/fmt/trait.Debug.html#tymethod.fmt)
 :::
 :::::
 :::::::::::::
@@ -447,5 +479,5 @@ more](https://doc.rust-lang.org/1.86.0/core/fmt/trait.Debug.html#tymethod.fmt)
 
 ::: {#implementors-list}
 :::
-:::::::::::::::::::::::::::::::::::::
-::::::::::::::::::::::::::::::::::::::
+:::::::::::::::::::::::::::::::::::::::
+::::::::::::::::::::::::::::::::::::::::

@@ -1,13 +1,13 @@
-::::::::::::::::::::::::::::::::::::::::::::::: width-limiter
-:::::::::::::::::::::::::::::::::::::::::::::: {#main-content .section .content}
+::::::::::::::::::::::::::::::::::::::::::::::::::: width-limiter
+:::::::::::::::::::::::::::::::::::::::::::::::::: {#main-content .section .content}
 :::: main-heading
 ::: rustdoc-breadcrumbs
 [optionstratlib](../index.html)::[greeks](index.html)
 :::
 
-# Trait [Greeks]{.trait}Copy item path
+# Trait [Greeks]{.trait} Copy item path
 
-[[Source](../../src/optionstratlib/greeks/equations.rs.html#80-236){.src}
+[[Source](../../src/optionstratlib/greeks/equations.rs.html#108-264){.src}
 ]{.sub-heading}
 ::::
 
@@ -72,10 +72,10 @@ errors that may occur during Greek computations.
 
 ::::: methods
 ::: {#tymethod.get_options .section .method}
-[Source](../../src/optionstratlib/greeks/equations.rs.html#89){.src
+[Source](../../src/optionstratlib/greeks/equations.rs.html#117){.src
 .rightside}
 
-#### fn [get_options](#tymethod.get_options){.fn}(&self) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[Vec](https://doc.rust-lang.org/1.86.0/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<&[Options](../model/option/struct.Options.html "struct optionstratlib::model::option::Options"){.struct}\>, [GreeksError](../error/greeks/enum.GreeksError.html "enum optionstratlib::error::greeks::GreeksError"){.enum}\> {#fn-get_optionsself---resultvecoptions-greekserror .code-header}
+#### fn [get_options](#tymethod.get_options){.fn}(&self) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[Vec](https://doc.rust-lang.org/1.91.1/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<&[Options](../model/option/struct.Options.html "struct optionstratlib::model::option::Options"){.struct}\>, [GreeksError](../error/greeks/enum.GreeksError.html "enum optionstratlib::error::greeks::GreeksError"){.enum}\> {#fn-get_optionsself---resultvecoptions-greekserror .code-header}
 :::
 
 ::: docblock
@@ -96,10 +96,10 @@ Returns a `GreeksError` if there is an issue retrieving the options.
 
 ::::::::::::::::::: methods
 ::: {#method.greeks .section .method}
-[Source](../../src/optionstratlib/greeks/equations.rs.html#99-116){.src
+[Source](../../src/optionstratlib/greeks/equations.rs.html#127-144){.src
 .rightside}
 
-#### fn [greeks](#method.greeks){.fn}(&self) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[Greek](struct.Greek.html "struct optionstratlib::greeks::Greek"){.struct}, [GreeksError](../error/greeks/enum.GreeksError.html "enum optionstratlib::error::greeks::GreeksError"){.enum}\> {#fn-greeksself---resultgreek-greekserror .code-header}
+#### fn [greeks](#method.greeks){.fn}(&self) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[Greek](struct.Greek.html "struct optionstratlib::greeks::Greek"){.struct}, [GreeksError](../error/greeks/enum.GreeksError.html "enum optionstratlib::error::greeks::GreeksError"){.enum}\> {#fn-greeksself---resultgreek-greekserror .code-header}
 :::
 
 ::: docblock
@@ -115,10 +115,10 @@ Returns a `GreeksError` if any individual Greek calculation fails.
 :::
 
 ::: {#method.delta .section .method}
-[Source](../../src/optionstratlib/greeks/equations.rs.html#126-133){.src
+[Source](../../src/optionstratlib/greeks/equations.rs.html#154-161){.src
 .rightside}
 
-#### fn [delta](#method.delta){.fn}(&self) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<Decimal, [GreeksError](../error/greeks/enum.GreeksError.html "enum optionstratlib::error::greeks::GreeksError"){.enum}\> {#fn-deltaself---resultdecimal-greekserror .code-header}
+#### fn [delta](#method.delta){.fn}(&self) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[Decimal](../prelude/struct.Decimal.html "struct optionstratlib::prelude::Decimal"){.struct}, [GreeksError](../error/greeks/enum.GreeksError.html "enum optionstratlib::error::greeks::GreeksError"){.enum}\> {#fn-deltaself---resultdecimal-greekserror .code-header}
 :::
 
 ::: docblock
@@ -134,10 +134,10 @@ calculation fails.
 :::
 
 ::: {#method.gamma .section .method}
-[Source](../../src/optionstratlib/greeks/equations.rs.html#143-150){.src
+[Source](../../src/optionstratlib/greeks/equations.rs.html#171-178){.src
 .rightside}
 
-#### fn [gamma](#method.gamma){.fn}(&self) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<Decimal, [GreeksError](../error/greeks/enum.GreeksError.html "enum optionstratlib::error::greeks::GreeksError"){.enum}\> {#fn-gammaself---resultdecimal-greekserror .code-header}
+#### fn [gamma](#method.gamma){.fn}(&self) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[Decimal](../prelude/struct.Decimal.html "struct optionstratlib::prelude::Decimal"){.struct}, [GreeksError](../error/greeks/enum.GreeksError.html "enum optionstratlib::error::greeks::GreeksError"){.enum}\> {#fn-gammaself---resultdecimal-greekserror .code-header}
 :::
 
 ::: docblock
@@ -153,10 +153,10 @@ calculation fails.
 :::
 
 ::: {#method.theta .section .method}
-[Source](../../src/optionstratlib/greeks/equations.rs.html#160-167){.src
+[Source](../../src/optionstratlib/greeks/equations.rs.html#188-195){.src
 .rightside}
 
-#### fn [theta](#method.theta){.fn}(&self) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<Decimal, [GreeksError](../error/greeks/enum.GreeksError.html "enum optionstratlib::error::greeks::GreeksError"){.enum}\> {#fn-thetaself---resultdecimal-greekserror .code-header}
+#### fn [theta](#method.theta){.fn}(&self) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[Decimal](../prelude/struct.Decimal.html "struct optionstratlib::prelude::Decimal"){.struct}, [GreeksError](../error/greeks/enum.GreeksError.html "enum optionstratlib::error::greeks::GreeksError"){.enum}\> {#fn-thetaself---resultdecimal-greekserror .code-header}
 :::
 
 ::: docblock
@@ -172,10 +172,10 @@ calculation fails.
 :::
 
 ::: {#method.vega .section .method}
-[Source](../../src/optionstratlib/greeks/equations.rs.html#177-184){.src
+[Source](../../src/optionstratlib/greeks/equations.rs.html#205-212){.src
 .rightside}
 
-#### fn [vega](#method.vega){.fn}(&self) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<Decimal, [GreeksError](../error/greeks/enum.GreeksError.html "enum optionstratlib::error::greeks::GreeksError"){.enum}\> {#fn-vegaself---resultdecimal-greekserror .code-header}
+#### fn [vega](#method.vega){.fn}(&self) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[Decimal](../prelude/struct.Decimal.html "struct optionstratlib::prelude::Decimal"){.struct}, [GreeksError](../error/greeks/enum.GreeksError.html "enum optionstratlib::error::greeks::GreeksError"){.enum}\> {#fn-vegaself---resultdecimal-greekserror .code-header}
 :::
 
 ::: docblock
@@ -191,10 +191,10 @@ calculation fails.
 :::
 
 ::: {#method.rho .section .method}
-[Source](../../src/optionstratlib/greeks/equations.rs.html#194-201){.src
+[Source](../../src/optionstratlib/greeks/equations.rs.html#222-229){.src
 .rightside}
 
-#### fn [rho](#method.rho){.fn}(&self) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<Decimal, [GreeksError](../error/greeks/enum.GreeksError.html "enum optionstratlib::error::greeks::GreeksError"){.enum}\> {#fn-rhoself---resultdecimal-greekserror .code-header}
+#### fn [rho](#method.rho){.fn}(&self) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[Decimal](../prelude/struct.Decimal.html "struct optionstratlib::prelude::Decimal"){.struct}, [GreeksError](../error/greeks/enum.GreeksError.html "enum optionstratlib::error::greeks::GreeksError"){.enum}\> {#fn-rhoself---resultdecimal-greekserror .code-header}
 :::
 
 ::: docblock
@@ -210,10 +210,10 @@ calculation fails.
 :::
 
 ::: {#method.rho_d .section .method}
-[Source](../../src/optionstratlib/greeks/equations.rs.html#211-218){.src
+[Source](../../src/optionstratlib/greeks/equations.rs.html#239-246){.src
 .rightside}
 
-#### fn [rho_d](#method.rho_d){.fn}(&self) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<Decimal, [GreeksError](../error/greeks/enum.GreeksError.html "enum optionstratlib::error::greeks::GreeksError"){.enum}\> {#fn-rho_dself---resultdecimal-greekserror .code-header}
+#### fn [rho_d](#method.rho_d){.fn}(&self) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[Decimal](../prelude/struct.Decimal.html "struct optionstratlib::prelude::Decimal"){.struct}, [GreeksError](../error/greeks/enum.GreeksError.html "enum optionstratlib::error::greeks::GreeksError"){.enum}\> {#fn-rho_dself---resultdecimal-greekserror .code-header}
 :::
 
 ::: docblock
@@ -229,10 +229,10 @@ calculation fails.
 :::
 
 ::: {#method.alpha .section .method}
-[Source](../../src/optionstratlib/greeks/equations.rs.html#228-235){.src
+[Source](../../src/optionstratlib/greeks/equations.rs.html#256-263){.src
 .rightside}
 
-#### fn [alpha](#method.alpha){.fn}(&self) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<Decimal, [GreeksError](../error/greeks/enum.GreeksError.html "enum optionstratlib::error::greeks::GreeksError"){.enum}\> {#fn-alphaself---resultdecimal-greekserror .code-header}
+#### fn [alpha](#method.alpha){.fn}(&self) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[Decimal](../prelude/struct.Decimal.html "struct optionstratlib::prelude::Decimal"){.struct}, [GreeksError](../error/greeks/enum.GreeksError.html "enum optionstratlib::error::greeks::GreeksError"){.enum}\> {#fn-alphaself---resultdecimal-greekserror .code-header}
 :::
 
 ::: docblock
@@ -250,16 +250,16 @@ calculation fails.
 
 ## Implementors[§](#implementors){.anchor} {#implementors .section-header}
 
-:::::::::::::::::::::: {#implementors-list}
+:::::::::::::::::::::::::: {#implementors-list}
 ::: {#impl-Greeks-for-Options .section .impl}
-[Source](../../src/optionstratlib/model/option.rs.html#659-663){.src
+[Source](../../src/optionstratlib/model/option.rs.html#714-718){.src
 .rightside}[§](#impl-Greeks-for-Options){.anchor}
 
 ### impl [Greeks](trait.Greeks.html "trait optionstratlib::greeks::Greeks"){.trait} for [Options](../model/option/struct.Options.html "struct optionstratlib::model::option::Options"){.struct} {#impl-greeks-for-options .code-header}
 :::
 
 :::: {#impl-Greeks-for-Position .section .impl}
-[Source](../../src/optionstratlib/model/position.rs.html#650-663){.src
+[Source](../../src/optionstratlib/model/position.rs.html#677-690){.src
 .rightside}[§](#impl-Greeks-for-Position){.anchor}
 
 ### impl [Greeks](trait.Greeks.html "trait optionstratlib::greeks::Greeks"){.trait} for [Position](../model/position/struct.Position.html "struct optionstratlib::model::position::Position"){.struct} {#impl-greeks-for-position .code-header}
@@ -277,109 +277,137 @@ position's option for use in Greek calculations.
 :::
 
 ::: {#impl-Greeks-for-BearCallSpread .section .impl}
-[Source](../../src/optionstratlib/strategies/bear_call_spread.rs.html#775-779){.src
+[Source](../../src/optionstratlib/strategies/bear_call_spread.rs.html#814-818){.src
 .rightside}[§](#impl-Greeks-for-BearCallSpread){.anchor}
 
 ### impl [Greeks](trait.Greeks.html "trait optionstratlib::greeks::Greeks"){.trait} for [BearCallSpread](../strategies/bear_call_spread/struct.BearCallSpread.html "struct optionstratlib::strategies::bear_call_spread::BearCallSpread"){.struct} {#impl-greeks-for-bearcallspread .code-header}
 :::
 
 ::: {#impl-Greeks-for-BearPutSpread .section .impl}
-[Source](../../src/optionstratlib/strategies/bear_put_spread.rs.html#765-769){.src
+[Source](../../src/optionstratlib/strategies/bear_put_spread.rs.html#810-814){.src
 .rightside}[§](#impl-Greeks-for-BearPutSpread){.anchor}
 
 ### impl [Greeks](trait.Greeks.html "trait optionstratlib::greeks::Greeks"){.trait} for [BearPutSpread](../strategies/bear_put_spread/struct.BearPutSpread.html "struct optionstratlib::strategies::bear_put_spread::BearPutSpread"){.struct} {#impl-greeks-for-bearputspread .code-header}
 :::
 
 ::: {#impl-Greeks-for-BullCallSpread .section .impl}
-[Source](../../src/optionstratlib/strategies/bull_call_spread.rs.html#778-782){.src
+[Source](../../src/optionstratlib/strategies/bull_call_spread.rs.html#827-831){.src
 .rightside}[§](#impl-Greeks-for-BullCallSpread){.anchor}
 
 ### impl [Greeks](trait.Greeks.html "trait optionstratlib::greeks::Greeks"){.trait} for [BullCallSpread](../strategies/bull_call_spread/struct.BullCallSpread.html "struct optionstratlib::strategies::bull_call_spread::BullCallSpread"){.struct} {#impl-greeks-for-bullcallspread .code-header}
 :::
 
 ::: {#impl-Greeks-for-BullPutSpread .section .impl}
-[Source](../../src/optionstratlib/strategies/bull_put_spread.rs.html#879-883){.src
+[Source](../../src/optionstratlib/strategies/bull_put_spread.rs.html#921-925){.src
 .rightside}[§](#impl-Greeks-for-BullPutSpread){.anchor}
 
 ### impl [Greeks](trait.Greeks.html "trait optionstratlib::greeks::Greeks"){.trait} for [BullPutSpread](../strategies/bull_put_spread/struct.BullPutSpread.html "struct optionstratlib::strategies::bull_put_spread::BullPutSpread"){.struct} {#impl-greeks-for-bullputspread .code-header}
 :::
 
-::: {#impl-Greeks-for-LongButterflySpread .section .impl}
-[Source](../../src/optionstratlib/strategies/butterfly_spread.rs.html#966-974){.src
-.rightside}[§](#impl-Greeks-for-LongButterflySpread){.anchor}
-
-### impl [Greeks](trait.Greeks.html "trait optionstratlib::greeks::Greeks"){.trait} for [LongButterflySpread](../strategies/butterfly_spread/struct.LongButterflySpread.html "struct optionstratlib::strategies::butterfly_spread::LongButterflySpread"){.struct} {#impl-greeks-for-longbutterflyspread .code-header}
-:::
-
-::: {#impl-Greeks-for-ShortButterflySpread .section .impl}
-[Source](../../src/optionstratlib/strategies/butterfly_spread.rs.html#1933-1941){.src
-.rightside}[§](#impl-Greeks-for-ShortButterflySpread){.anchor}
-
-### impl [Greeks](trait.Greeks.html "trait optionstratlib::greeks::Greeks"){.trait} for [ShortButterflySpread](../strategies/butterfly_spread/struct.ShortButterflySpread.html "struct optionstratlib::strategies::butterfly_spread::ShortButterflySpread"){.struct} {#impl-greeks-for-shortbutterflyspread .code-header}
-:::
-
 ::: {#impl-Greeks-for-CallButterfly .section .impl}
-[Source](../../src/optionstratlib/strategies/call_butterfly.rs.html#942-950){.src
+[Source](../../src/optionstratlib/strategies/call_butterfly.rs.html#970-978){.src
 .rightside}[§](#impl-Greeks-for-CallButterfly){.anchor}
 
 ### impl [Greeks](trait.Greeks.html "trait optionstratlib::greeks::Greeks"){.trait} for [CallButterfly](../strategies/call_butterfly/struct.CallButterfly.html "struct optionstratlib::strategies::call_butterfly::CallButterfly"){.struct} {#impl-greeks-for-callbutterfly .code-header}
 :::
 
 ::: {#impl-Greeks-for-CustomStrategy .section .impl}
-[Source](../../src/optionstratlib/strategies/custom.rs.html#745-753){.src
+[Source](../../src/optionstratlib/strategies/custom.rs.html#918-926){.src
 .rightside}[§](#impl-Greeks-for-CustomStrategy){.anchor}
 
 ### impl [Greeks](trait.Greeks.html "trait optionstratlib::greeks::Greeks"){.trait} for [CustomStrategy](../strategies/custom/struct.CustomStrategy.html "struct optionstratlib::strategies::custom::CustomStrategy"){.struct} {#impl-greeks-for-customstrategy .code-header}
 :::
 
 ::: {#impl-Greeks-for-IronButterfly .section .impl}
-[Source](../../src/optionstratlib/strategies/iron_butterfly.rs.html#1007-1016){.src
+[Source](../../src/optionstratlib/strategies/iron_butterfly.rs.html#1043-1052){.src
 .rightside}[§](#impl-Greeks-for-IronButterfly){.anchor}
 
 ### impl [Greeks](trait.Greeks.html "trait optionstratlib::greeks::Greeks"){.trait} for [IronButterfly](../strategies/iron_butterfly/struct.IronButterfly.html "struct optionstratlib::strategies::iron_butterfly::IronButterfly"){.struct} {#impl-greeks-for-ironbutterfly .code-header}
 :::
 
 ::: {#impl-Greeks-for-IronCondor .section .impl}
-[Source](../../src/optionstratlib/strategies/iron_condor.rs.html#1042-1051){.src
+[Source](../../src/optionstratlib/strategies/iron_condor.rs.html#1071-1080){.src
 .rightside}[§](#impl-Greeks-for-IronCondor){.anchor}
 
 ### impl [Greeks](trait.Greeks.html "trait optionstratlib::greeks::Greeks"){.trait} for [IronCondor](../strategies/iron_condor/struct.IronCondor.html "struct optionstratlib::strategies::iron_condor::IronCondor"){.struct} {#impl-greeks-for-ironcondor .code-header}
 :::
 
+::: {#impl-Greeks-for-LongButterflySpread .section .impl}
+[Source](../../src/optionstratlib/strategies/long_butterfly_spread.rs.html#1015-1023){.src
+.rightside}[§](#impl-Greeks-for-LongButterflySpread){.anchor}
+
+### impl [Greeks](trait.Greeks.html "trait optionstratlib::greeks::Greeks"){.trait} for [LongButterflySpread](../strategies/long_butterfly_spread/struct.LongButterflySpread.html "struct optionstratlib::strategies::long_butterfly_spread::LongButterflySpread"){.struct} {#impl-greeks-for-longbutterflyspread .code-header}
+:::
+
+::: {#impl-Greeks-for-LongCall .section .impl}
+[Source](../../src/optionstratlib/strategies/long_call.rs.html#485-489){.src
+.rightside}[§](#impl-Greeks-for-LongCall){.anchor}
+
+### impl [Greeks](trait.Greeks.html "trait optionstratlib::greeks::Greeks"){.trait} for [LongCall](../strategies/long_call/struct.LongCall.html "struct optionstratlib::strategies::long_call::LongCall"){.struct} {#impl-greeks-for-longcall .code-header}
+:::
+
+::: {#impl-Greeks-for-LongPut .section .impl}
+[Source](../../src/optionstratlib/strategies/long_put.rs.html#482-486){.src
+.rightside}[§](#impl-Greeks-for-LongPut){.anchor}
+
+### impl [Greeks](trait.Greeks.html "trait optionstratlib::greeks::Greeks"){.trait} for [LongPut](../strategies/long_put/struct.LongPut.html "struct optionstratlib::strategies::long_put::LongPut"){.struct} {#impl-greeks-for-longput .code-header}
+:::
+
+::: {#impl-Greeks-for-LongStraddle .section .impl}
+[Source](../../src/optionstratlib/strategies/long_straddle.rs.html#824-828){.src
+.rightside}[§](#impl-Greeks-for-LongStraddle){.anchor}
+
+### impl [Greeks](trait.Greeks.html "trait optionstratlib::greeks::Greeks"){.trait} for [LongStraddle](../strategies/long_straddle/struct.LongStraddle.html "struct optionstratlib::strategies::long_straddle::LongStraddle"){.struct} {#impl-greeks-for-longstraddle .code-header}
+:::
+
+::: {#impl-Greeks-for-LongStrangle .section .impl}
+[Source](../../src/optionstratlib/strategies/long_strangle.rs.html#883-887){.src
+.rightside}[§](#impl-Greeks-for-LongStrangle){.anchor}
+
+### impl [Greeks](trait.Greeks.html "trait optionstratlib::greeks::Greeks"){.trait} for [LongStrangle](../strategies/long_strangle/struct.LongStrangle.html "struct optionstratlib::strategies::long_strangle::LongStrangle"){.struct} {#impl-greeks-for-longstrangle .code-header}
+:::
+
 ::: {#impl-Greeks-for-PoorMansCoveredCall .section .impl}
-[Source](../../src/optionstratlib/strategies/poor_mans_covered_call.rs.html#803-807){.src
+[Source](../../src/optionstratlib/strategies/poor_mans_covered_call.rs.html#817-821){.src
 .rightside}[§](#impl-Greeks-for-PoorMansCoveredCall){.anchor}
 
 ### impl [Greeks](trait.Greeks.html "trait optionstratlib::greeks::Greeks"){.trait} for [PoorMansCoveredCall](../strategies/poor_mans_covered_call/struct.PoorMansCoveredCall.html "struct optionstratlib::strategies::poor_mans_covered_call::PoorMansCoveredCall"){.struct} {#impl-greeks-for-poormanscoveredcall .code-header}
 :::
 
-::: {#impl-Greeks-for-LongStraddle .section .impl}
-[Source](../../src/optionstratlib/strategies/straddle.rs.html#1610-1614){.src
-.rightside}[§](#impl-Greeks-for-LongStraddle){.anchor}
+::: {#impl-Greeks-for-ShortButterflySpread .section .impl}
+[Source](../../src/optionstratlib/strategies/short_butterfly_spread.rs.html#983-991){.src
+.rightside}[§](#impl-Greeks-for-ShortButterflySpread){.anchor}
 
-### impl [Greeks](trait.Greeks.html "trait optionstratlib::greeks::Greeks"){.trait} for [LongStraddle](../strategies/straddle/struct.LongStraddle.html "struct optionstratlib::strategies::straddle::LongStraddle"){.struct} {#impl-greeks-for-longstraddle .code-header}
+### impl [Greeks](trait.Greeks.html "trait optionstratlib::greeks::Greeks"){.trait} for [ShortButterflySpread](../strategies/short_butterfly_spread/struct.ShortButterflySpread.html "struct optionstratlib::strategies::short_butterfly_spread::ShortButterflySpread"){.struct} {#impl-greeks-for-shortbutterflyspread .code-header}
+:::
+
+::: {#impl-Greeks-for-ShortCall .section .impl}
+[Source](../../src/optionstratlib/strategies/short_call.rs.html#493-497){.src
+.rightside}[§](#impl-Greeks-for-ShortCall){.anchor}
+
+### impl [Greeks](trait.Greeks.html "trait optionstratlib::greeks::Greeks"){.trait} for [ShortCall](../strategies/short_call/struct.ShortCall.html "struct optionstratlib::strategies::short_call::ShortCall"){.struct} {#impl-greeks-for-shortcall .code-header}
+:::
+
+::: {#impl-Greeks-for-ShortPut .section .impl}
+[Source](../../src/optionstratlib/strategies/short_put.rs.html#487-491){.src
+.rightside}[§](#impl-Greeks-for-ShortPut){.anchor}
+
+### impl [Greeks](trait.Greeks.html "trait optionstratlib::greeks::Greeks"){.trait} for [ShortPut](../strategies/short_put/struct.ShortPut.html "struct optionstratlib::strategies::short_put::ShortPut"){.struct} {#impl-greeks-for-shortput .code-header}
 :::
 
 ::: {#impl-Greeks-for-ShortStraddle .section .impl}
-[Source](../../src/optionstratlib/strategies/straddle.rs.html#830-834){.src
+[Source](../../src/optionstratlib/strategies/short_straddle.rs.html#871-875){.src
 .rightside}[§](#impl-Greeks-for-ShortStraddle){.anchor}
 
-### impl [Greeks](trait.Greeks.html "trait optionstratlib::greeks::Greeks"){.trait} for [ShortStraddle](../strategies/straddle/struct.ShortStraddle.html "struct optionstratlib::strategies::straddle::ShortStraddle"){.struct} {#impl-greeks-for-shortstraddle .code-header}
-:::
-
-::: {#impl-Greeks-for-LongStrangle .section .impl}
-[Source](../../src/optionstratlib/strategies/strangle.rs.html#1914-1918){.src
-.rightside}[§](#impl-Greeks-for-LongStrangle){.anchor}
-
-### impl [Greeks](trait.Greeks.html "trait optionstratlib::greeks::Greeks"){.trait} for [LongStrangle](../strategies/strangle/struct.LongStrangle.html "struct optionstratlib::strategies::strangle::LongStrangle"){.struct} {#impl-greeks-for-longstrangle .code-header}
+### impl [Greeks](trait.Greeks.html "trait optionstratlib::greeks::Greeks"){.trait} for [ShortStraddle](../strategies/short_straddle/struct.ShortStraddle.html "struct optionstratlib::strategies::short_straddle::ShortStraddle"){.struct} {#impl-greeks-for-shortstraddle .code-header}
 :::
 
 ::: {#impl-Greeks-for-ShortStrangle .section .impl}
-[Source](../../src/optionstratlib/strategies/strangle.rs.html#926-930){.src
+[Source](../../src/optionstratlib/strategies/short_strangle.rs.html#1130-1134){.src
 .rightside}[§](#impl-Greeks-for-ShortStrangle){.anchor}
 
-### impl [Greeks](trait.Greeks.html "trait optionstratlib::greeks::Greeks"){.trait} for [ShortStrangle](../strategies/strangle/struct.ShortStrangle.html "struct optionstratlib::strategies::strangle::ShortStrangle"){.struct} {#impl-greeks-for-shortstrangle .code-header}
+### impl [Greeks](trait.Greeks.html "trait optionstratlib::greeks::Greeks"){.trait} for [ShortStrangle](../strategies/short_strangle/struct.ShortStrangle.html "struct optionstratlib::strategies::short_strangle::ShortStrangle"){.struct} {#impl-greeks-for-shortstrangle .code-header}
 :::
-::::::::::::::::::::::
-::::::::::::::::::::::::::::::::::::::::::::::
-:::::::::::::::::::::::::::::::::::::::::::::::
+::::::::::::::::::::::::::
+::::::::::::::::::::::::::::::::::::::::::::::::::
+:::::::::::::::::::::::::::::::::::::::::::::::::::

@@ -5,9 +5,9 @@
 [optionstratlib](../index.html)::[volatility](index.html)
 :::
 
-# Function [simulate_heston_volatility]{.fn}Copy item path
+# Function [simulate_heston_volatility]{.fn} Copy item path
 
-[[Source](../../src/optionstratlib/volatility/utils.rs.html#197-214){.src}
+[[Source](../../src/optionstratlib/volatility/utils.rs.html#238-255){.src}
 ]{.sub-heading}
 ::::
 
@@ -19,7 +19,7 @@ pub fn simulate_heston_volatility(
     v0: Decimal,
     dt: Decimal,
     steps: usize,
-) -> Result<Vec<Positive>, Box<dyn Error>>
+) -> Result<Vec<Positive>, VolatilityError>
 ```
 
 Expand description

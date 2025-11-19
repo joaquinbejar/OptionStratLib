@@ -5,7 +5,7 @@
 [optionstratlib](../../index.html)::[pricing](../index.html)::[binomial_model](index.html)
 :::
 
-# Function [generate_binomial_tree]{.fn}Copy item path
+# Function [generate_binomial_tree]{.fn} Copy item path
 
 [[Source](../../../src/optionstratlib/pricing/binomial_model.rs.html#188-251){.src}
 ]{.sub-heading}
@@ -14,7 +14,7 @@
 ``` {.rust .item-decl}
 pub fn generate_binomial_tree(
     params: &BinomialPricingParams<'_>,
-) -> Result<(Vec<Vec<Decimal>>, Vec<Vec<Decimal>>), Box<dyn Error>>
+) -> Result<(Vec<Vec<Decimal>>, Vec<Vec<Decimal>>), PricingError>
 ```
 
 Expand description

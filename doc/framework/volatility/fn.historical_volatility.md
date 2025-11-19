@@ -5,9 +5,9 @@
 [optionstratlib](../index.html)::[volatility](index.html)
 :::
 
-# Function [historical_volatility]{.fn}Copy item path
+# Function [historical_volatility]{.fn} Copy item path
 
-[[Source](../../src/optionstratlib/volatility/utils.rs.html#53-61){.src}
+[[Source](../../src/optionstratlib/volatility/utils.rs.html#50-58){.src}
 ]{.sub-heading}
 ::::
 
@@ -15,7 +15,7 @@
 pub fn historical_volatility(
     returns: &[Decimal],
     window_size: usize,
-) -> Result<Vec<Positive>, Box<dyn Error>>
+) -> Result<Vec<Positive>, VolatilityError>
 ```
 
 Expand description

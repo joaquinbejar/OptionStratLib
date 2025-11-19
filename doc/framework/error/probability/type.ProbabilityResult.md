@@ -5,9 +5,9 @@
 [optionstratlib](../../index.html)::[error](../index.html)::[probability](index.html)
 :::
 
-# Type Alias [ProbabilityResult]{.type}Copy item path
+# Type Alias [ProbabilityResult]{.type} Copy item path
 
-[[Source](../../../src/optionstratlib/error/probability.rs.html#446){.src}
+[[Source](../../../src/optionstratlib/error/probability.rs.html#399){.src}
 ]{.sub-heading}
 ::::
 
@@ -24,7 +24,7 @@ Convenient type alias for Results with ProbabilityError
 ## Aliased Type[§](#aliased-type){.anchor} {#aliased-type .section-header}
 
 ``` {.rust .item-decl}
-enum ProbabilityResult<T> {
+pub enum ProbabilityResult<T> {
     Ok(T),
     Err(ProbabilityError),
 }

@@ -5,9 +5,9 @@
 [optionstratlib](../index.html)
 :::
 
-# Module simulationCopy item path
+# Module simulation Copy item path
 
-[[Source](../../src/optionstratlib/simulation/mod.rs.html#1-121){.src}
+[[Source](../../src/optionstratlib/simulation/mod.rs.html#1-137){.src}
 ]{.sub-heading}
 ::::
 
@@ -81,16 +81,34 @@ model with:
 - Supports various time frames (daily, weekly, monthly)
 :::
 
+## Re-exports[§](#reexports){.anchor} {#reexports .section-header}
+
+`pub use exit::`[`ExitPolicy`](exit/enum.ExitPolicy.html "enum optionstratlib::simulation::exit::ExitPolicy"){.enum}`;`
+
+`pub use exit::`[`check_exit_policy`](exit/fn.check_exit_policy.html "fn optionstratlib::simulation::exit::check_exit_policy"){.fn}`;`
+
 ## Modules[§](#modules){.anchor} {#modules .section-header}
+
+[exit](exit/index.html "mod optionstratlib::simulation::exit"){.mod}
+:   Module containing exit policy definitions for option trading
+    strategies.
 
 [randomwalk](randomwalk/index.html "mod optionstratlib::simulation::randomwalk"){.mod}
 :   Random Walk Module
+
+[simulator](simulator/index.html "mod optionstratlib::simulation::simulator"){.mod}
+:   Provides simulation engines and algorithms for running stochastic
+    models.
 
 [steps](steps/index.html "mod optionstratlib::simulation::steps"){.mod}
 :   Module containing functionality for stepping through data or
     calculations.
 
 ## Structs[§](#structs){.anchor} {#structs .section-header}
+
+[SimulationStats](struct.SimulationStats.html "struct optionstratlib::simulation::SimulationStats"){.struct}
+:   Statistics for tracking Short Put strategy performance across
+    multiple simulations.
 
 [WalkParams](struct.WalkParams.html "struct optionstratlib::simulation::WalkParams"){.struct}
 :   Parameters for stochastic process simulations (random walks).
@@ -101,6 +119,9 @@ model with:
 :   Enum defining different types of random walks
 
 ## Traits[§](#traits){.anchor} {#traits .section-header}
+
+[Simulate](trait.Simulate.html "trait optionstratlib::simulation::Simulate"){.trait}
+:   Trait for simulating trading strategies across multiple price paths.
 
 [WalkTypeAble](trait.WalkTypeAble.html "trait optionstratlib::simulation::WalkTypeAble"){.trait}
 :   Trait for implementing various random walk models and stochastic

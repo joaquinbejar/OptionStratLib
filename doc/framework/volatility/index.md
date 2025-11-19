@@ -5,9 +5,9 @@
 [optionstratlib](../index.html)
 :::
 
-# Module volatilityCopy item path
+# Module volatility Copy item path
 
-[[Source](../../src/optionstratlib/volatility/mod.rs.html#7-177){.src}
+[[Source](../../src/optionstratlib/volatility/mod.rs.html#7-178){.src}
 ]{.sub-heading}
 ::::
 
@@ -60,7 +60,7 @@ let vol = constant_volatility(&returns);
 ::: example-wrap
 ``` {.rust .rust-example-rendered}
 use rust_decimal_macros::dec;
-use optionstratlib::Options;
+use optionstratlib::{ExpirationDate, Options};
 use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
 use optionstratlib::volatility::implied_volatility;
 use optionstratlib::Positive;
@@ -216,6 +216,10 @@ literature:
 [annualized_volatility](fn.annualized_volatility.html "fn optionstratlib::volatility::annualized_volatility"){.fn}
 :   Annualizes a volatility value from a specific timeframe.
 
+[calculate_iv](fn.calculate_iv.html "fn optionstratlib::volatility::calculate_iv"){.fn}
+:   Calculates the implied volatility (IV) of an option given its
+    parameters.
+
 [constant_volatility](fn.constant_volatility.html "fn optionstratlib::volatility::constant_volatility"){.fn}
 :   Calculates the constant volatility from a series of returns.
 
@@ -243,5 +247,9 @@ literature:
 
 [uncertain_volatility_bounds](fn.uncertain_volatility_bounds.html "fn optionstratlib::volatility::uncertain_volatility_bounds"){.fn}
 :   Calculates bounds for uncertain volatility.
+
+[volatility_for_dt](fn.volatility_for_dt.html "fn optionstratlib::volatility::volatility_for_dt"){.fn}
+:   Adjusts annualized volatility for use in random walk simulations
+    with a specific dt.
 :::::::::::::
 ::::::::::::::

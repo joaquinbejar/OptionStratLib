@@ -1,11 +1,11 @@
-:::::::::::::::: width-limiter
-::::::::::::::: {#main-content .section .content}
+:::::::::::::: width-limiter
+::::::::::::: {#main-content .section .content}
 :::: main-heading
 ::: rustdoc-breadcrumbs
 [optionstratlib](../index.html)::[geometrics](index.html)
 :::
 
-# Trait [HasX]{.trait}Copy item path
+# Trait [HasX]{.trait} Copy item path
 
 [[Source](../../src/optionstratlib/geometrics/interpolation/traits.rs.html#171-177){.src}
 ]{.sub-heading}
@@ -75,7 +75,7 @@ This trait can be implemented for various types such as:
 [Source](../../src/optionstratlib/geometrics/interpolation/traits.rs.html#176){.src
 .rightside}
 
-#### fn [get_x](#tymethod.get_x){.fn}(&self) -\> Decimal {#fn-get_xself---decimal .code-header}
+#### fn [get_x](#tymethod.get_x){.fn}(&self) -\> [Decimal](../prelude/struct.Decimal.html "struct optionstratlib::prelude::Decimal"){.struct} {#fn-get_xself---decimal .code-header}
 :::
 
 ::: docblock
@@ -87,40 +87,29 @@ Returns the X-coordinate value of this object.
 :::
 :::::
 
-## Implementations on Foreign Types[§](#foreign-impls){.anchor} {#foreign-impls .section-header}
-
-::: {#impl-HasX-for-Decimal .section .impl}
-[Source](../../src/optionstratlib/model/decimal.rs.html#314-318){.src
-.rightside}[§](#impl-HasX-for-Decimal){.anchor}
-
-### impl [HasX](trait.HasX.html "trait optionstratlib::geometrics::HasX"){.trait} for Decimal {#impl-hasx-for-decimal .code-header}
-:::
-
-:::: impl-items
-::: {#method.get_x .section .method .trait-impl}
-[Source](../../src/optionstratlib/model/decimal.rs.html#315-317){.src
-.rightside}[§](#method.get_x){.anchor}
-
-#### fn [get_x](#tymethod.get_x){.fn}(&self) -\> Decimal {#fn-get_xself---decimal-1 .code-header}
-:::
-::::
-
 ## Implementors[§](#implementors){.anchor} {#implementors .section-header}
 
-::::: {#implementors-list}
+:::::: {#implementors-list}
 ::: {#impl-HasX-for-Point2D .section .impl}
-[Source](../../src/optionstratlib/curves/types.rs.html#219-223){.src
+[Source](../../src/optionstratlib/curves/types.rs.html#220-224){.src
 .rightside}[§](#impl-HasX-for-Point2D){.anchor}
 
 ### impl [HasX](trait.HasX.html "trait optionstratlib::geometrics::HasX"){.trait} for [Point2D](../curves/struct.Point2D.html "struct optionstratlib::curves::Point2D"){.struct} {#impl-hasx-for-point2d .code-header}
 :::
 
+::: {#impl-HasX-for-Decimal .section .impl}
+[Source](../../src/optionstratlib/model/decimal.rs.html#314-318){.src
+.rightside}[§](#impl-HasX-for-Decimal){.anchor}
+
+### impl [HasX](trait.HasX.html "trait optionstratlib::geometrics::HasX"){.trait} for [Decimal](../prelude/struct.Decimal.html "struct optionstratlib::prelude::Decimal"){.struct} {#impl-hasx-for-decimal .code-header}
+:::
+
 ::: {#impl-HasX-for-Point3D .section .impl}
-[Source](../../src/optionstratlib/surfaces/types.rs.html#211-215){.src
+[Source](../../src/optionstratlib/surfaces/types.rs.html#212-216){.src
 .rightside}[§](#impl-HasX-for-Point3D){.anchor}
 
 ### impl [HasX](trait.HasX.html "trait optionstratlib::geometrics::HasX"){.trait} for [Point3D](../surfaces/struct.Point3D.html "struct optionstratlib::surfaces::Point3D"){.struct} {#impl-hasx-for-point3d .code-header}
 :::
-:::::
-:::::::::::::::
-::::::::::::::::
+::::::
+:::::::::::::
+::::::::::::::

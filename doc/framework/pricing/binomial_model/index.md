@@ -5,9 +5,9 @@
 [optionstratlib](../../index.html)::[pricing](../index.html)
 :::
 
-# Module binomial_modelCopy item path
+# Module binomial_model Copy item path
 
-[[Source](../../../src/optionstratlib/pricing/binomial_model.rs.html#1-655){.src}
+[[Source](../../../src/optionstratlib/pricing/binomial_model.rs.html#1-641){.src}
 ]{.sub-heading}
 ::::
 

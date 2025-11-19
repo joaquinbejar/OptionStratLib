@@ -5,7 +5,7 @@
 [optionstratlib](../index.html)::[geometrics](index.html)
 :::
 
-# Trait [GeometricObject]{.trait}Copy item path
+# Trait [GeometricObject]{.trait} Copy item path
 
 [[Source](../../src/optionstratlib/geometrics/utils.rs.html#12-65){.src}
 ]{.sub-heading}
@@ -62,7 +62,7 @@ the geometric object.
 [Source](../../src/optionstratlib/geometrics/utils.rs.html#18){.src
 .rightside}
 
-#### fn [get_points](#tymethod.get_points){.fn}(&self) -\> [BTreeSet](https://doc.rust-lang.org/1.86.0/alloc/collections/btree/set/struct.BTreeSet.html "struct alloc::collections::btree::set::BTreeSet"){.struct}\<[&Point](https://doc.rust-lang.org/1.86.0/std/primitive.reference.html){.primitive}\> {#fn-get_pointsself---btreesetpoint .code-header}
+#### fn [get_points](#tymethod.get_points){.fn}(&self) -\> [BTreeSet](https://doc.rust-lang.org/1.91.1/alloc/collections/btree/set/struct.BTreeSet.html "struct alloc::collections::btree::set::BTreeSet"){.struct}\<[&Point](https://doc.rust-lang.org/1.91.1/std/primitive.reference.html){.primitive}\> {#fn-get_pointsself---btreesetpoint .code-header}
 :::
 
 ::: docblock
@@ -75,14 +75,14 @@ and unique.
 [Source](../../src/optionstratlib/geometrics/utils.rs.html#31-34){.src
 .rightside}
 
-#### fn [from_vector](#tymethod.from_vector){.fn}\<T\>(points: [Vec](https://doc.rust-lang.org/1.86.0/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<T\>) -\> Self {#fn-from_vectortpoints-vect---self .code-header}
+#### fn [from_vector](#tymethod.from_vector){.fn}\<T\>(points: [Vec](https://doc.rust-lang.org/1.91.1/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<T\>) -\> Self {#fn-from_vectortpoints-vect---self .code-header}
 
 ::: where
 where Self:
-[Sized](https://doc.rust-lang.org/1.86.0/core/marker/trait.Sized.html "trait core::marker::Sized"){.trait},
+[Sized](https://doc.rust-lang.org/1.91.1/core/marker/trait.Sized.html "trait core::marker::Sized"){.trait},
 T:
-[Into](https://doc.rust-lang.org/1.86.0/core/convert/trait.Into.html "trait core::convert::Into"){.trait}\<Point\> +
-[Clone](https://doc.rust-lang.org/1.86.0/core/clone/trait.Clone.html "trait core::clone::Clone"){.trait},
+[Into](https://doc.rust-lang.org/1.91.1/core/convert/trait.Into.html "trait core::convert::Into"){.trait}\<Point\> +
+[Clone](https://doc.rust-lang.org/1.91.1/core/clone/trait.Clone.html "trait core::clone::Clone"){.trait},
 :::
 ::::
 
@@ -97,13 +97,13 @@ converted into the `Point` type associated with the geometric object.
 [Source](../../src/optionstratlib/geometrics/utils.rs.html#43-46){.src
 .rightside}
 
-#### fn [construct](#tymethod.construct){.fn}\<T\>(method: T) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<Self, Self::[Error](trait.GeometricObject.html#associatedtype.Error "type optionstratlib::geometrics::GeometricObject::Error"){.associatedtype}\> {#fn-constructtmethod-t---resultself-selferror .code-header}
+#### fn [construct](#tymethod.construct){.fn}\<T\>(method: T) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<Self, Self::[Error](trait.GeometricObject.html#associatedtype.Error "type optionstratlib::geometrics::GeometricObject::Error"){.associatedtype}\> {#fn-constructtmethod-t---resultself-selferror .code-header}
 
 ::: where
 where Self:
-[Sized](https://doc.rust-lang.org/1.86.0/core/marker/trait.Sized.html "trait core::marker::Sized"){.trait},
+[Sized](https://doc.rust-lang.org/1.91.1/core/marker/trait.Sized.html "trait core::marker::Sized"){.trait},
 T:
-[Into](https://doc.rust-lang.org/1.86.0/core/convert/trait.Into.html "trait core::convert::Into"){.trait}\<[ConstructionMethod](enum.ConstructionMethod.html "enum optionstratlib::geometrics::ConstructionMethod"){.enum}\<Point,
+[Into](https://doc.rust-lang.org/1.91.1/core/convert/trait.Into.html "trait core::convert::Into"){.trait}\<[ConstructionMethod](enum.ConstructionMethod.html "enum optionstratlib::geometrics::ConstructionMethod"){.enum}\<Point,
 Input\>\>,
 :::
 ::::
@@ -128,7 +128,7 @@ construction.
 [Source](../../src/optionstratlib/geometrics/utils.rs.html#22-24){.src
 .rightside}
 
-#### fn [vector](#method.vector){.fn}(&self) -\> [Vec](https://doc.rust-lang.org/1.86.0/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<[&Point](https://doc.rust-lang.org/1.86.0/std/primitive.reference.html){.primitive}\> {#fn-vectorself---vecpoint .code-header}
+#### fn [vector](#method.vector){.fn}(&self) -\> [Vec](https://doc.rust-lang.org/1.91.1/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<[&Point](https://doc.rust-lang.org/1.91.1/std/primitive.reference.html){.primitive}\> {#fn-vectorself---vecpoint .code-header}
 :::
 
 ::: docblock
@@ -141,7 +141,7 @@ geometric object. This method simply converts the `BTreeSet` from
 [Source](../../src/optionstratlib/geometrics/utils.rs.html#50-52){.src
 .rightside}
 
-#### fn [to_vector](#method.to_vector){.fn}(&self) -\> [Vec](https://doc.rust-lang.org/1.86.0/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<[&Point](https://doc.rust-lang.org/1.86.0/std/primitive.reference.html){.primitive}\> {#fn-to_vectorself---vecpoint .code-header}
+#### fn [to_vector](#method.to_vector){.fn}(&self) -\> [Vec](https://doc.rust-lang.org/1.91.1/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<[&Point](https://doc.rust-lang.org/1.91.1/std/primitive.reference.html){.primitive}\> {#fn-to_vectorself---vecpoint .code-header}
 :::
 
 ::: docblock
@@ -153,12 +153,13 @@ Equivalent to calling the `vector()` method.
 [Source](../../src/optionstratlib/geometrics/utils.rs.html#57-64){.src
 .rightside}
 
-#### fn [calculate_range](#method.calculate_range){.fn}\<I\>(iter: I) -\> (Decimal, Decimal) {#fn-calculate_rangeiiter-i---decimal-decimal .code-header}
+#### fn [calculate_range](#method.calculate_range){.fn}\<I\>(iter: I) -\> ([Decimal](../prelude/struct.Decimal.html "struct optionstratlib::prelude::Decimal"){.struct}, [Decimal](../prelude/struct.Decimal.html "struct optionstratlib::prelude::Decimal"){.struct}) {#fn-calculate_rangeiiter-i---decimal-decimal .code-header}
 
 ::: where
 where I:
-[Iterator](https://doc.rust-lang.org/1.86.0/core/iter/traits/iterator/trait.Iterator.html "trait core::iter::traits::iterator::Iterator"){.trait}\<Item
-= Decimal\>,
+[Iterator](https://doc.rust-lang.org/1.91.1/core/iter/traits/iterator/trait.Iterator.html "trait core::iter::traits::iterator::Iterator"){.trait}\<Item
+=
+[Decimal](../prelude/struct.Decimal.html "struct optionstratlib::prelude::Decimal"){.struct}\>,
 :::
 ::::
 
@@ -175,7 +176,7 @@ in a set of points.
 
 ::: dyn-compatibility-info
 This trait is **not** [dyn
-compatible](https://doc.rust-lang.org/1.86.0/reference/items/traits.html#dyn-compatibility).
+compatible](https://doc.rust-lang.org/1.91.1/reference/items/traits.html#dyn-compatibility).
 
 *In older versions of Rust, dyn compatibility was called \"object
 safety\", so this trait is not object safe.*
@@ -185,15 +186,15 @@ safety\", so this trait is not object safe.*
 
 ::::::::::: {#implementors-list}
 ::: {#impl-GeometricObject%3CPoint2D,+Decimal%3E-for-Curve .section .impl}
-[Source](../../src/optionstratlib/curves/curve.rs.html#134-193){.src
+[Source](../../src/optionstratlib/curves/curve.rs.html#148-207){.src
 .rightside}[§](#impl-GeometricObject%3CPoint2D,+Decimal%3E-for-Curve){.anchor}
 
-### impl [GeometricObject](trait.GeometricObject.html "trait optionstratlib::geometrics::GeometricObject"){.trait}\<[Point2D](../curves/struct.Point2D.html "struct optionstratlib::curves::Point2D"){.struct}, Decimal\> for [Curve](../curves/struct.Curve.html "struct optionstratlib::curves::Curve"){.struct} {#impl-geometricobjectpoint2d-decimal-for-curve .code-header}
+### impl [GeometricObject](trait.GeometricObject.html "trait optionstratlib::geometrics::GeometricObject"){.trait}\<[Point2D](../curves/struct.Point2D.html "struct optionstratlib::curves::Point2D"){.struct}, [Decimal](../prelude/struct.Decimal.html "struct optionstratlib::prelude::Decimal"){.struct}\> for [Curve](../curves/struct.Curve.html "struct optionstratlib::curves::Curve"){.struct} {#impl-geometricobjectpoint2d-decimal-for-curve .code-header}
 :::
 
 :::: impl-items
 ::: {#associatedtype.Error-1 .section .associatedtype .trait-impl}
-[Source](../../src/optionstratlib/curves/curve.rs.html#135){.src
+[Source](../../src/optionstratlib/curves/curve.rs.html#149){.src
 .rightside}[§](#associatedtype.Error-1){.anchor}
 
 #### type [Error](#associatedtype.Error){.associatedtype} = [CurveError](../error/curves/enum.CurveError.html "enum optionstratlib::error::curves::CurveError"){.enum} {#type-error-curveerror .code-header}
@@ -201,7 +202,7 @@ safety\", so this trait is not object safe.*
 ::::
 
 :::: {#impl-GeometricObject%3CPoint3D,+Point2D%3E-for-Surface .section .impl}
-[Source](../../src/optionstratlib/surfaces/surface.rs.html#322-522){.src
+[Source](../../src/optionstratlib/surfaces/surface.rs.html#335-535){.src
 .rightside}[§](#impl-GeometricObject%3CPoint3D,+Point2D%3E-for-Surface){.anchor}
 
 ### impl [GeometricObject](trait.GeometricObject.html "trait optionstratlib::geometrics::GeometricObject"){.trait}\<[Point3D](../surfaces/struct.Point3D.html "struct optionstratlib::surfaces::Point3D"){.struct}, [Point2D](../curves/struct.Point2D.html "struct optionstratlib::curves::Point2D"){.struct}\> for [Surface](../surfaces/struct.Surface.html "struct optionstratlib::surfaces::Surface"){.struct} {#impl-geometricobjectpoint3d-point2d-for-surface .code-header}
@@ -239,7 +240,7 @@ Uses `SurfaceError` for various error conditions, including:
 
 :::: impl-items
 ::: {#associatedtype.Error-2 .section .associatedtype .trait-impl}
-[Source](../../src/optionstratlib/surfaces/surface.rs.html#323){.src
+[Source](../../src/optionstratlib/surfaces/surface.rs.html#336){.src
 .rightside}[§](#associatedtype.Error-2){.anchor}
 
 #### type [Error](#associatedtype.Error){.associatedtype} = [SurfaceError](../error/enum.SurfaceError.html "enum optionstratlib::error::SurfaceError"){.enum} {#type-error-surfaceerror .code-header}

@@ -5,7 +5,7 @@
 [optionstratlib](../index.html)::[geometrics](index.html)
 :::
 
-# Trait [MetricsExtractor]{.trait}Copy item path
+# Trait [MetricsExtractor]{.trait} Copy item path
 
 [[Source](../../src/optionstratlib/geometrics/analysis/traits.rs.html#30-112){.src}
 ]{.sub-heading}
@@ -69,7 +69,7 @@ requirements.
 [Source](../../src/optionstratlib/geometrics/analysis/traits.rs.html#36){.src
 .rightside}
 
-#### fn [compute_basic_metrics](#tymethod.compute_basic_metrics){.fn}(&self) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[BasicMetrics](struct.BasicMetrics.html "struct optionstratlib::geometrics::BasicMetrics"){.struct}, [MetricsError](../error/enum.MetricsError.html "enum optionstratlib::error::MetricsError"){.enum}\> {#fn-compute_basic_metricsself---resultbasicmetrics-metricserror .code-header}
+#### fn [compute_basic_metrics](#tymethod.compute_basic_metrics){.fn}(&self) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[BasicMetrics](struct.BasicMetrics.html "struct optionstratlib::geometrics::BasicMetrics"){.struct}, [MetricsError](../error/enum.MetricsError.html "enum optionstratlib::error::MetricsError"){.enum}\> {#fn-compute_basic_metricsself---resultbasicmetrics-metricserror .code-header}
 :::
 
 ::: docblock
@@ -86,7 +86,7 @@ Computes basic statistical metrics for the curve.
 [Source](../../src/optionstratlib/geometrics/analysis/traits.rs.html#43){.src
 .rightside}
 
-#### fn [compute_shape_metrics](#tymethod.compute_shape_metrics){.fn}(&self) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[ShapeMetrics](struct.ShapeMetrics.html "struct optionstratlib::geometrics::ShapeMetrics"){.struct}, [MetricsError](../error/enum.MetricsError.html "enum optionstratlib::error::MetricsError"){.enum}\> {#fn-compute_shape_metricsself---resultshapemetrics-metricserror .code-header}
+#### fn [compute_shape_metrics](#tymethod.compute_shape_metrics){.fn}(&self) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[ShapeMetrics](struct.ShapeMetrics.html "struct optionstratlib::geometrics::ShapeMetrics"){.struct}, [MetricsError](../error/enum.MetricsError.html "enum optionstratlib::error::MetricsError"){.enum}\> {#fn-compute_shape_metricsself---resultshapemetrics-metricserror .code-header}
 :::
 
 ::: docblock
@@ -103,7 +103,7 @@ Computes shape-related metrics for the curve.
 [Source](../../src/optionstratlib/geometrics/analysis/traits.rs.html#50){.src
 .rightside}
 
-#### fn [compute_range_metrics](#tymethod.compute_range_metrics){.fn}(&self) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[RangeMetrics](struct.RangeMetrics.html "struct optionstratlib::geometrics::RangeMetrics"){.struct}, [MetricsError](../error/enum.MetricsError.html "enum optionstratlib::error::MetricsError"){.enum}\> {#fn-compute_range_metricsself---resultrangemetrics-metricserror .code-header}
+#### fn [compute_range_metrics](#tymethod.compute_range_metrics){.fn}(&self) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[RangeMetrics](struct.RangeMetrics.html "struct optionstratlib::geometrics::RangeMetrics"){.struct}, [MetricsError](../error/enum.MetricsError.html "enum optionstratlib::error::MetricsError"){.enum}\> {#fn-compute_range_metricsself---resultrangemetrics-metricserror .code-header}
 :::
 
 ::: docblock
@@ -120,7 +120,7 @@ Computes range-related metrics for the curve.
 [Source](../../src/optionstratlib/geometrics/analysis/traits.rs.html#57){.src
 .rightside}
 
-#### fn [compute_trend_metrics](#tymethod.compute_trend_metrics){.fn}(&self) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[TrendMetrics](struct.TrendMetrics.html "struct optionstratlib::geometrics::TrendMetrics"){.struct}, [MetricsError](../error/enum.MetricsError.html "enum optionstratlib::error::MetricsError"){.enum}\> {#fn-compute_trend_metricsself---resulttrendmetrics-metricserror .code-header}
+#### fn [compute_trend_metrics](#tymethod.compute_trend_metrics){.fn}(&self) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[TrendMetrics](struct.TrendMetrics.html "struct optionstratlib::geometrics::TrendMetrics"){.struct}, [MetricsError](../error/enum.MetricsError.html "enum optionstratlib::error::MetricsError"){.enum}\> {#fn-compute_trend_metricsself---resulttrendmetrics-metricserror .code-header}
 :::
 
 ::: docblock
@@ -137,7 +137,7 @@ Computes trend-related metrics for the curve.
 [Source](../../src/optionstratlib/geometrics/analysis/traits.rs.html#64){.src
 .rightside}
 
-#### fn [compute_risk_metrics](#tymethod.compute_risk_metrics){.fn}(&self) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[RiskMetrics](struct.RiskMetrics.html "struct optionstratlib::geometrics::RiskMetrics"){.struct}, [MetricsError](../error/enum.MetricsError.html "enum optionstratlib::error::MetricsError"){.enum}\> {#fn-compute_risk_metricsself---resultriskmetrics-metricserror .code-header}
+#### fn [compute_risk_metrics](#tymethod.compute_risk_metrics){.fn}(&self) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[RiskMetrics](struct.RiskMetrics.html "struct optionstratlib::geometrics::RiskMetrics"){.struct}, [MetricsError](../error/enum.MetricsError.html "enum optionstratlib::error::MetricsError"){.enum}\> {#fn-compute_risk_metricsself---resultriskmetrics-metricserror .code-header}
 :::
 
 ::: docblock
@@ -158,7 +158,7 @@ Computes risk-related metrics for the curve.
 [Source](../../src/optionstratlib/geometrics/analysis/traits.rs.html#71-79){.src
 .rightside}
 
-#### fn [compute_curve_metrics](#method.compute_curve_metrics){.fn}(&self) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[Metrics](struct.Metrics.html "struct optionstratlib::geometrics::Metrics"){.struct}, [MetricsError](../error/enum.MetricsError.html "enum optionstratlib::error::MetricsError"){.enum}\> {#fn-compute_curve_metricsself---resultmetrics-metricserror .code-header}
+#### fn [compute_curve_metrics](#method.compute_curve_metrics){.fn}(&self) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[Metrics](struct.Metrics.html "struct optionstratlib::geometrics::Metrics"){.struct}, [MetricsError](../error/enum.MetricsError.html "enum optionstratlib::error::MetricsError"){.enum}\> {#fn-compute_curve_metricsself---resultmetrics-metricserror .code-header}
 :::
 
 ::: docblock
@@ -175,7 +175,7 @@ Computes and aggregates all curve metrics into a comprehensive
 [Source](../../src/optionstratlib/geometrics/analysis/traits.rs.html#104-111){.src
 .rightside}
 
-#### fn [compute_surface_metrics](#method.compute_surface_metrics){.fn}(&self) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[Metrics](struct.Metrics.html "struct optionstratlib::geometrics::Metrics"){.struct}, [MetricsError](../error/enum.MetricsError.html "enum optionstratlib::error::MetricsError"){.enum}\> {#fn-compute_surface_metricsself---resultmetrics-metricserror .code-header}
+#### fn [compute_surface_metrics](#method.compute_surface_metrics){.fn}(&self) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[Metrics](struct.Metrics.html "struct optionstratlib::geometrics::Metrics"){.struct}, [MetricsError](../error/enum.MetricsError.html "enum optionstratlib::error::MetricsError"){.enum}\> {#fn-compute_surface_metricsself---resultmetrics-metricserror .code-header}
 :::
 
 ::: docblock
@@ -215,7 +215,7 @@ computation fails:
 
 ::::::: {#implementors-list}
 :::: {#impl-MetricsExtractor-for-Curve .section .impl}
-[Source](../../src/optionstratlib/curves/curve.rs.html#956-1249){.src
+[Source](../../src/optionstratlib/curves/curve.rs.html#970-1263){.src
 .rightside}[§](#impl-MetricsExtractor-for-Curve){.anchor}
 
 ### impl [MetricsExtractor](trait.MetricsExtractor.html "trait optionstratlib::geometrics::MetricsExtractor"){.trait} for [Curve](../curves/struct.Curve.html "struct optionstratlib::curves::Curve"){.struct} {#impl-metricsextractor-for-curve .code-header}
@@ -239,7 +239,7 @@ needs.
 :::
 
 ::: {#impl-MetricsExtractor-for-Surface .section .impl}
-[Source](../../src/optionstratlib/surfaces/surface.rs.html#946-1164){.src
+[Source](../../src/optionstratlib/surfaces/surface.rs.html#959-1177){.src
 .rightside}[§](#impl-MetricsExtractor-for-Surface){.anchor}
 
 ### impl [MetricsExtractor](trait.MetricsExtractor.html "trait optionstratlib::geometrics::MetricsExtractor"){.trait} for [Surface](../surfaces/struct.Surface.html "struct optionstratlib::surfaces::Surface"){.struct} {#impl-metricsextractor-for-surface .code-header}

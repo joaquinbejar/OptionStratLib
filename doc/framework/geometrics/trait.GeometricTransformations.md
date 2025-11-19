@@ -5,7 +5,7 @@
 [optionstratlib](../index.html)::[geometrics](index.html)
 :::
 
-# Trait [GeometricTransformations]{.trait}Copy item path
+# Trait [GeometricTransformations]{.trait} Copy item path
 
 [[Source](../../src/optionstratlib/geometrics/operations/transformations.rs.html#12-96){.src}
 ]{.sub-heading}
@@ -68,11 +68,11 @@ The error type that can be returned by geometric operations.
 [Source](../../src/optionstratlib/geometrics/operations/transformations.rs.html#28-30){.src
 .rightside}
 
-#### fn [translate](#tymethod.translate){.fn}(&self, deltas: [Vec](https://doc.rust-lang.org/1.86.0/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<&Decimal\>) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<Self, Self::[Error](trait.GeometricTransformations.html#associatedtype.Error "type optionstratlib::geometrics::GeometricTransformations::Error"){.associatedtype}\> {#fn-translateself-deltas-vecdecimal---resultself-selferror .code-header}
+#### fn [translate](#tymethod.translate){.fn}(&self, deltas: [Vec](https://doc.rust-lang.org/1.91.1/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<&[Decimal](../prelude/struct.Decimal.html "struct optionstratlib::prelude::Decimal"){.struct}\>) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<Self, Self::[Error](trait.GeometricTransformations.html#associatedtype.Error "type optionstratlib::geometrics::GeometricTransformations::Error"){.associatedtype}\> {#fn-translateself-deltas-vecdecimal---resultself-selferror .code-header}
 
 ::: where
 where Self:
-[Sized](https://doc.rust-lang.org/1.86.0/core/marker/trait.Sized.html "trait core::marker::Sized"){.trait},
+[Sized](https://doc.rust-lang.org/1.91.1/core/marker/trait.Sized.html "trait core::marker::Sized"){.trait},
 :::
 ::::
 
@@ -96,11 +96,11 @@ the transformation could not be applied.
 [Source](../../src/optionstratlib/geometrics/operations/transformations.rs.html#44-46){.src
 .rightside}
 
-#### fn [scale](#tymethod.scale){.fn}(&self, factors: [Vec](https://doc.rust-lang.org/1.86.0/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<&Decimal\>) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<Self, Self::[Error](trait.GeometricTransformations.html#associatedtype.Error "type optionstratlib::geometrics::GeometricTransformations::Error"){.associatedtype}\> {#fn-scaleself-factors-vecdecimal---resultself-selferror .code-header}
+#### fn [scale](#tymethod.scale){.fn}(&self, factors: [Vec](https://doc.rust-lang.org/1.91.1/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<&[Decimal](../prelude/struct.Decimal.html "struct optionstratlib::prelude::Decimal"){.struct}\>) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<Self, Self::[Error](trait.GeometricTransformations.html#associatedtype.Error "type optionstratlib::geometrics::GeometricTransformations::Error"){.associatedtype}\> {#fn-scaleself-factors-vecdecimal---resultself-selferror .code-header}
 
 ::: where
 where Self:
-[Sized](https://doc.rust-lang.org/1.86.0/core/marker/trait.Sized.html "trait core::marker::Sized"){.trait},
+[Sized](https://doc.rust-lang.org/1.91.1/core/marker/trait.Sized.html "trait core::marker::Sized"){.trait},
 :::
 ::::
 
@@ -123,7 +123,7 @@ transformation could not be applied.
 [Source](../../src/optionstratlib/geometrics/operations/transformations.rs.html#58){.src
 .rightside}
 
-#### fn [intersect_with](#tymethod.intersect_with){.fn}(&self, other: &Self) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[Vec](https://doc.rust-lang.org/1.86.0/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<Point\>, Self::[Error](trait.GeometricTransformations.html#associatedtype.Error "type optionstratlib::geometrics::GeometricTransformations::Error"){.associatedtype}\> {#fn-intersect_withself-other-self---resultvecpoint-selferror .code-header}
+#### fn [intersect_with](#tymethod.intersect_with){.fn}(&self, other: &Self) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[Vec](https://doc.rust-lang.org/1.91.1/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<Point\>, Self::[Error](trait.GeometricTransformations.html#associatedtype.Error "type optionstratlib::geometrics::GeometricTransformations::Error"){.associatedtype}\> {#fn-intersect_withself-other-self---resultvecpoint-selferror .code-header}
 :::
 
 ::: docblock
@@ -143,7 +143,7 @@ not be determined.
 [Source](../../src/optionstratlib/geometrics/operations/transformations.rs.html#73){.src
 .rightside}
 
-#### fn [derivative_at](#tymethod.derivative_at){.fn}(&self, point: [&Point](https://doc.rust-lang.org/1.86.0/std/primitive.reference.html){.primitive}) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[Vec](https://doc.rust-lang.org/1.86.0/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<Decimal\>, Self::[Error](trait.GeometricTransformations.html#associatedtype.Error "type optionstratlib::geometrics::GeometricTransformations::Error"){.associatedtype}\> {#fn-derivative_atself-point-point---resultvecdecimal-selferror .code-header}
+#### fn [derivative_at](#tymethod.derivative_at){.fn}(&self, point: [&Point](https://doc.rust-lang.org/1.91.1/std/primitive.reference.html){.primitive}) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[Vec](https://doc.rust-lang.org/1.91.1/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<[Decimal](../prelude/struct.Decimal.html "struct optionstratlib::prelude::Decimal"){.struct}\>, Self::[Error](trait.GeometricTransformations.html#associatedtype.Error "type optionstratlib::geometrics::GeometricTransformations::Error"){.associatedtype}\> {#fn-derivative_atself-point-point---resultvecdecimal-selferror .code-header}
 :::
 
 ::: docblock
@@ -166,7 +166,7 @@ error if the derivative could not be calculated.
 [Source](../../src/optionstratlib/geometrics/operations/transformations.rs.html#81){.src
 .rightside}
 
-#### fn [extrema](#tymethod.extrema){.fn}(&self) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[(Point, Point)](https://doc.rust-lang.org/1.86.0/std/primitive.tuple.html){.primitive}, Self::[Error](trait.GeometricTransformations.html#associatedtype.Error "type optionstratlib::geometrics::GeometricTransformations::Error"){.associatedtype}\> {#fn-extremaself---resultpoint-point-selferror .code-header}
+#### fn [extrema](#tymethod.extrema){.fn}(&self) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[(Point, Point)](https://doc.rust-lang.org/1.91.1/std/primitive.tuple.html){.primitive}, Self::[Error](trait.GeometricTransformations.html#associatedtype.Error "type optionstratlib::geometrics::GeometricTransformations::Error"){.associatedtype}\> {#fn-extremaself---resultpoint-point-selferror .code-header}
 :::
 
 ::: docblock
@@ -182,7 +182,7 @@ object, or an error if the extrema could not be determined.
 [Source](../../src/optionstratlib/geometrics/operations/transformations.rs.html#95){.src
 .rightside}
 
-#### fn [measure_under](#tymethod.measure_under){.fn}(&self, base_value: &Decimal) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<Decimal, Self::[Error](trait.GeometricTransformations.html#associatedtype.Error "type optionstratlib::geometrics::GeometricTransformations::Error"){.associatedtype}\> {#fn-measure_underself-base_value-decimal---resultdecimal-selferror .code-header}
+#### fn [measure_under](#tymethod.measure_under){.fn}(&self, base_value: &[Decimal](../prelude/struct.Decimal.html "struct optionstratlib::prelude::Decimal"){.struct}) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[Decimal](../prelude/struct.Decimal.html "struct optionstratlib::prelude::Decimal"){.struct}, Self::[Error](trait.GeometricTransformations.html#associatedtype.Error "type optionstratlib::geometrics::GeometricTransformations::Error"){.associatedtype}\> {#fn-measure_underself-base_value-decimal---resultdecimal-selferror .code-header}
 :::
 
 ::: docblock
@@ -206,7 +206,7 @@ The calculated area or volume, or an error if the calculation failed.
 
 ::: dyn-compatibility-info
 This trait is **not** [dyn
-compatible](https://doc.rust-lang.org/1.86.0/reference/items/traits.html#dyn-compatibility).
+compatible](https://doc.rust-lang.org/1.91.1/reference/items/traits.html#dyn-compatibility).
 
 *In older versions of Rust, dyn compatibility was called \"object
 safety\", so this trait is not object safe.*
@@ -216,7 +216,7 @@ safety\", so this trait is not object safe.*
 
 ::::::::: {#implementors-list}
 ::: {#impl-GeometricTransformations%3CPoint2D%3E-for-Curve .section .impl}
-[Source](../../src/optionstratlib/curves/curve.rs.html#1536-1645){.src
+[Source](../../src/optionstratlib/curves/curve.rs.html#1550-1659){.src
 .rightside}[§](#impl-GeometricTransformations%3CPoint2D%3E-for-Curve){.anchor}
 
 ### impl [GeometricTransformations](trait.GeometricTransformations.html "trait optionstratlib::geometrics::GeometricTransformations"){.trait}\<[Point2D](../curves/struct.Point2D.html "struct optionstratlib::curves::Point2D"){.struct}\> for [Curve](../curves/struct.Curve.html "struct optionstratlib::curves::Curve"){.struct} {#impl-geometrictransformationspoint2d-for-curve .code-header}
@@ -224,7 +224,7 @@ safety\", so this trait is not object safe.*
 
 :::: impl-items
 ::: {#associatedtype.Error-1 .section .associatedtype .trait-impl}
-[Source](../../src/optionstratlib/curves/curve.rs.html#1537){.src
+[Source](../../src/optionstratlib/curves/curve.rs.html#1551){.src
 .rightside}[§](#associatedtype.Error-1){.anchor}
 
 #### type [Error](#associatedtype.Error){.associatedtype} = [CurveError](../error/curves/enum.CurveError.html "enum optionstratlib::error::curves::CurveError"){.enum} {#type-error-curveerror .code-header}
@@ -232,7 +232,7 @@ safety\", so this trait is not object safe.*
 ::::
 
 ::: {#impl-GeometricTransformations%3CPoint3D%3E-for-Surface .section .impl}
-[Source](../../src/optionstratlib/surfaces/surface.rs.html#1374-1600){.src
+[Source](../../src/optionstratlib/surfaces/surface.rs.html#1387-1613){.src
 .rightside}[§](#impl-GeometricTransformations%3CPoint3D%3E-for-Surface){.anchor}
 
 ### impl [GeometricTransformations](trait.GeometricTransformations.html "trait optionstratlib::geometrics::GeometricTransformations"){.trait}\<[Point3D](../surfaces/struct.Point3D.html "struct optionstratlib::surfaces::Point3D"){.struct}\> for [Surface](../surfaces/struct.Surface.html "struct optionstratlib::surfaces::Surface"){.struct} {#impl-geometrictransformationspoint3d-for-surface .code-header}
@@ -240,7 +240,7 @@ safety\", so this trait is not object safe.*
 
 :::: impl-items
 ::: {#associatedtype.Error-2 .section .associatedtype .trait-impl}
-[Source](../../src/optionstratlib/surfaces/surface.rs.html#1375){.src
+[Source](../../src/optionstratlib/surfaces/surface.rs.html#1388){.src
 .rightside}[§](#associatedtype.Error-2){.anchor}
 
 #### type [Error](#associatedtype.Error){.associatedtype} = [SurfaceError](../error/enum.SurfaceError.html "enum optionstratlib::error::SurfaceError"){.enum} {#type-error-surfaceerror .code-header}

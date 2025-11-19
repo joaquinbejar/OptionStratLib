@@ -5,7 +5,7 @@
 [optionstratlib](../index.html)::[geometrics](index.html)
 :::
 
-# Trait [Arithmetic]{.trait}Copy item path
+# Trait [Arithmetic]{.trait} Copy item path
 
 [[Source](../../src/optionstratlib/geometrics/operations/traits.rs.html#67-76){.src}
 ]{.sub-heading}
@@ -141,7 +141,7 @@ The error type returned when merging operations fail
 [Source](../../src/optionstratlib/geometrics/operations/traits.rs.html#72){.src
 .rightside}
 
-#### fn [merge](#tymethod.merge){.fn}( geometries: &\[[&Input](https://doc.rust-lang.org/1.86.0/std/primitive.reference.html){.primitive}\], operation: [MergeOperation](enum.MergeOperation.html "enum optionstratlib::geometrics::MergeOperation"){.enum}, ) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<Input, Self::[Error](trait.Arithmetic.html#associatedtype.Error "type optionstratlib::geometrics::Arithmetic::Error"){.associatedtype}\> {#fn-merge-geometries-input-operation-mergeoperation---resultinput-selferror .code-header}
+#### fn [merge](#tymethod.merge){.fn}( geometries: &\[[&Input](https://doc.rust-lang.org/1.91.1/std/primitive.reference.html){.primitive}\], operation: [MergeOperation](enum.MergeOperation.html "enum optionstratlib::geometrics::MergeOperation"){.enum}, ) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<Input, Self::[Error](trait.Arithmetic.html#associatedtype.Error "type optionstratlib::geometrics::Arithmetic::Error"){.associatedtype}\> {#fn-merge-geometries-input-operation-mergeoperation---resultinput-selferror .code-header}
 :::
 
 ::: docblock
@@ -153,7 +153,7 @@ operation.
 [Source](../../src/optionstratlib/geometrics/operations/traits.rs.html#75){.src
 .rightside}
 
-#### fn [merge_with](#tymethod.merge_with){.fn}( &self, other: [&Input](https://doc.rust-lang.org/1.86.0/std/primitive.reference.html){.primitive}, operation: [MergeOperation](enum.MergeOperation.html "enum optionstratlib::geometrics::MergeOperation"){.enum}, ) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<Input, Self::[Error](trait.Arithmetic.html#associatedtype.Error "type optionstratlib::geometrics::Arithmetic::Error"){.associatedtype}\> {#fn-merge_with-self-other-input-operation-mergeoperation---resultinput-selferror .code-header}
+#### fn [merge_with](#tymethod.merge_with){.fn}( &self, other: [&Input](https://doc.rust-lang.org/1.91.1/std/primitive.reference.html){.primitive}, operation: [MergeOperation](enum.MergeOperation.html "enum optionstratlib::geometrics::MergeOperation"){.enum}, ) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<Input, Self::[Error](trait.Arithmetic.html#associatedtype.Error "type optionstratlib::geometrics::Arithmetic::Error"){.associatedtype}\> {#fn-merge_with-self-other-input-operation-mergeoperation---resultinput-selferror .code-header}
 :::
 
 ::: docblock
@@ -166,7 +166,7 @@ operation.
 
 ::: dyn-compatibility-info
 This trait is **not** [dyn
-compatible](https://doc.rust-lang.org/1.86.0/reference/items/traits.html#dyn-compatibility).
+compatible](https://doc.rust-lang.org/1.91.1/reference/items/traits.html#dyn-compatibility).
 
 *In older versions of Rust, dyn compatibility was called \"object
 safety\", so this trait is not object safe.*
@@ -176,7 +176,7 @@ safety\", so this trait is not object safe.*
 
 :::::::::: {#implementors-list}
 :::: {#impl-Arithmetic%3CCurve%3E-for-Curve .section .impl}
-[Source](../../src/optionstratlib/curves/curve.rs.html#1254-1453){.src
+[Source](../../src/optionstratlib/curves/curve.rs.html#1268-1467){.src
 .rightside}[§](#impl-Arithmetic%3CCurve%3E-for-Curve){.anchor}
 
 ### impl [Arithmetic](trait.Arithmetic.html "trait optionstratlib::geometrics::Arithmetic"){.trait}\<[Curve](../curves/struct.Curve.html "struct optionstratlib::curves::Curve"){.struct}\> for [Curve](../curves/struct.Curve.html "struct optionstratlib::curves::Curve"){.struct} {#impl-arithmeticcurve-for-curve .code-header}
@@ -190,7 +190,7 @@ operation and performing arithmetic operations between two curves.
 
 :::: impl-items
 ::: {#associatedtype.Error-1 .section .associatedtype .trait-impl}
-[Source](../../src/optionstratlib/curves/curve.rs.html#1255){.src
+[Source](../../src/optionstratlib/curves/curve.rs.html#1269){.src
 .rightside}[§](#associatedtype.Error-1){.anchor}
 
 #### type [Error](#associatedtype.Error){.associatedtype} = [CurveError](../error/curves/enum.CurveError.html "enum optionstratlib::error::curves::CurveError"){.enum} {#type-error-curveerror .code-header}
@@ -198,7 +198,7 @@ operation and performing arithmetic operations between two curves.
 ::::
 
 ::: {#impl-Arithmetic%3CSurface%3E-for-Surface .section .impl}
-[Source](../../src/optionstratlib/surfaces/surface.rs.html#1166-1285){.src
+[Source](../../src/optionstratlib/surfaces/surface.rs.html#1179-1298){.src
 .rightside}[§](#impl-Arithmetic%3CSurface%3E-for-Surface){.anchor}
 
 ### impl [Arithmetic](trait.Arithmetic.html "trait optionstratlib::geometrics::Arithmetic"){.trait}\<[Surface](../surfaces/struct.Surface.html "struct optionstratlib::surfaces::Surface"){.struct}\> for [Surface](../surfaces/struct.Surface.html "struct optionstratlib::surfaces::Surface"){.struct} {#impl-arithmeticsurface-for-surface .code-header}
@@ -206,7 +206,7 @@ operation and performing arithmetic operations between two curves.
 
 :::: impl-items
 ::: {#associatedtype.Error-2 .section .associatedtype .trait-impl}
-[Source](../../src/optionstratlib/surfaces/surface.rs.html#1167){.src
+[Source](../../src/optionstratlib/surfaces/surface.rs.html#1180){.src
 .rightside}[§](#associatedtype.Error-2){.anchor}
 
 #### type [Error](#associatedtype.Error){.associatedtype} = [SurfaceError](../error/enum.SurfaceError.html "enum optionstratlib::error::SurfaceError"){.enum} {#type-error-surfaceerror .code-header}
