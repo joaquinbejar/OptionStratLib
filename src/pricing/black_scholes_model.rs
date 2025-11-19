@@ -228,7 +228,8 @@ fn calculate_put_option_price(
 ///
 /// ```
 /// use std::error::Error;
-/// use optionstratlib::Options;///
+/// use optionstratlib::Options;
+/// use optionstratlib::prelude::PricingError;
 ///
 /// use optionstratlib::pricing::BlackScholes;
 ///

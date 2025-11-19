@@ -5111,7 +5111,10 @@ mod rnd_analysis_tests {
             let result = chain.calculate_rnd(&params);
             assert!(result.is_err());
             assert!(
-                result.unwrap_err().to_string().contains("Derivative tolerance must be greater than zero")
+                result
+                    .unwrap_err()
+                    .to_string()
+                    .contains("Derivative tolerance must be greater than zero")
             );
         }
 
@@ -5126,7 +5129,10 @@ mod rnd_analysis_tests {
             let result = chain.calculate_rnd(&params);
             assert!(result.is_err());
             assert!(
-                result.unwrap_err().to_string().contains("Derivative tolerance must be greater than zero")
+                result
+                    .unwrap_err()
+                    .to_string()
+                    .contains("Derivative tolerance must be greater than zero")
             );
         }
 
@@ -5184,7 +5190,10 @@ mod rnd_analysis_tests {
             let result = chain.calculate_skew();
             assert!(result.is_err());
             assert!(
-                result.unwrap_err().to_string().contains("Cannot find ATM OptionData for empty option chain: TEST")
+                result
+                    .unwrap_err()
+                    .to_string()
+                    .contains("Cannot find ATM OptionData for empty option chain: TEST")
             );
         }
 

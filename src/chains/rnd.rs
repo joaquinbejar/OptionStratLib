@@ -574,7 +574,12 @@ mod tests {
             let result = chain.calculate_rnd(&params);
             assert!(result.is_err());
 
-            assert!(result.unwrap_err().to_string().contains("Failed to calculate valid densities"));
+            assert!(
+                result
+                    .unwrap_err()
+                    .to_string()
+                    .contains("Failed to calculate valid densities")
+            );
         }
 
         #[test]
@@ -585,7 +590,10 @@ mod tests {
             let result = chain.calculate_rnd(&params);
             assert!(result.is_err());
             assert!(
-                result.unwrap_err().to_string().contains("Derivative tolerance must be greater than zero")
+                result
+                    .unwrap_err()
+                    .to_string()
+                    .contains("Derivative tolerance must be greater than zero")
             );
         }
 
@@ -600,7 +608,10 @@ mod tests {
             let result = chain.calculate_rnd(&params);
             assert!(result.is_err());
             assert!(
-                result.unwrap_err().to_string().contains("Derivative tolerance must be greater than zero")
+                result
+                    .unwrap_err()
+                    .to_string()
+                    .contains("Derivative tolerance must be greater than zero")
             );
         }
 
@@ -616,7 +627,12 @@ mod tests {
             let result = chain.calculate_rnd(&params);
             assert!(result.is_err());
             // Additional assertions about high interest rate effects could be added
-            assert!(result.unwrap_err().to_string().contains("Failed to calculate valid densities"));
+            assert!(
+                result
+                    .unwrap_err()
+                    .to_string()
+                    .contains("Failed to calculate valid densities")
+            );
         }
     }
 
@@ -645,7 +661,10 @@ mod tests {
 
             assert!(result.is_err());
             assert!(
-                result.unwrap_err().to_string().contains("Cannot find ATM OptionData for empty option chain: TEST")
+                result
+                    .unwrap_err()
+                    .to_string()
+                    .contains("Cannot find ATM OptionData for empty option chain: TEST")
             );
         }
 
@@ -721,7 +740,12 @@ mod tests {
 
             assert!(rnd_result.is_err());
 
-            assert!(rnd_result.unwrap_err().to_string().contains("Failed to calculate valid densities"));
+            assert!(
+                rnd_result
+                    .unwrap_err()
+                    .to_string()
+                    .contains("Failed to calculate valid densities")
+            );
         }
 
         #[test]
@@ -768,7 +792,12 @@ mod tests {
 
             let rnd_result = chain.calculate_rnd(&params);
             assert!(rnd_result.is_err());
-            assert!(rnd_result.unwrap_err().to_string().contains("Failed to calculate valid densities"));
+            assert!(
+                rnd_result
+                    .unwrap_err()
+                    .to_string()
+                    .contains("Failed to calculate valid densities")
+            );
         }
     }
 }
@@ -922,7 +951,12 @@ mod additional_tests {
 
             let result = chain.calculate_rnd(&params);
             assert!(result.is_err());
-            assert!(result.unwrap_err().to_string().contains("Failed to calculate valid densities"));
+            assert!(
+                result
+                    .unwrap_err()
+                    .to_string()
+                    .contains("Failed to calculate valid densities")
+            );
         }
 
         #[test]
@@ -936,7 +970,12 @@ mod additional_tests {
 
             let result = chain.calculate_rnd(&params);
             assert!(result.is_err());
-            assert!(result.unwrap_err().to_string().contains("Failed to calculate valid densities"));
+            assert!(
+                result
+                    .unwrap_err()
+                    .to_string()
+                    .contains("Failed to calculate valid densities")
+            );
         }
 
         #[test]
@@ -954,7 +993,12 @@ mod additional_tests {
 
                 let result = chain.calculate_rnd(&params);
                 assert!(result.is_err());
-                assert!(result.unwrap_err().to_string().contains("Failed to calculate valid densities"));
+                assert!(
+                    result
+                        .unwrap_err()
+                        .to_string()
+                        .contains("Failed to calculate valid densities")
+                );
             }
         }
     }
