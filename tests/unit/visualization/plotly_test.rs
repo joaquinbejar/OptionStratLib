@@ -735,6 +735,7 @@ mod tests_plotly_interface {
     }
 
     #[test]
+    #[ignore = "kaleido is not installed on CI"]
     #[cfg(feature = "static_export")]
     fn test_write_svg() {
         use tempfile::tempdir;
