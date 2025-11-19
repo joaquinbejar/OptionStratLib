@@ -1,11 +1,11 @@
 use crate::constants::{DAYS_IN_A_YEAR, EPSILON};
+use crate::error::{ChainError, DecimalError};
 use crate::{Positive, pos};
 use chrono::{DateTime, Duration, NaiveDate, NaiveDateTime, Utc};
 use serde::de::{MapAccess, Visitor};
 use serde::ser::SerializeMap;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::cmp::Ordering;
-use std::error::Error;
 use std::fmt;
 use std::hash::{Hash, Hasher};
 use utoipa::ToSchema;
@@ -90,7 +90,7 @@ impl Ord for ExpirationDate {
 impl ExpirationDate {
     /// Calculates the time to expiration in years.
     ///
-    /// Returns a `Result<Positive, Box<dyn Error>>`.
+    /// Returns a `Result<Positive, ChainError>`.
     ///
     /// # Arguments
     ///
@@ -118,7 +118,7 @@ impl ExpirationDate {
     /// let years = expiration_date_datetime.get_years().unwrap();
     /// assert_pos_relative_eq!(years, pos!(1.0), pos!(0.001));
     /// ```
-    pub fn get_years(&self) -> Result<Positive, Box<dyn Error>> {
+    pub fn get_years(&self) -> Result<Positive, DecimalError> {
         let days = self.get_days()?;
         Ok(pos!(days.to_f64() / DAYS_IN_A_YEAR))
     }
@@ -131,7 +131,7 @@ impl ExpirationDate {
     ///
     /// # Returns
     ///
-    /// * `Result<Positive, Box<dyn Error>>` - A `Positive` value representing the number of days
+    /// * `Result<Positive, DecimalError>` - A `Positive` value representing the number of days
     ///   until expiration, or an error if the calculation fails.
     ///
     /// # Details
@@ -143,7 +143,7 @@ impl ExpirationDate {
     /// If the calculation results in zero or negative days (meaning the expiration date
     /// is in the past), the method returns `Positive::ZERO` to indicate immediate expiration.
     ///
-    pub fn get_days(&self) -> Result<Positive, Box<dyn Error>> {
+    pub fn get_days(&self) -> Result<Positive, DecimalError> {
         match self {
             ExpirationDate::Days(days) => Ok(*days),
             ExpirationDate::DateTime(datetime) => {
@@ -185,7 +185,7 @@ impl ExpirationDate {
     /// let stored_date = expiration_date_datetime.get_date().unwrap();
     /// assert_eq!(stored_date, datetime);
     /// ```
-    pub fn get_date(&self) -> Result<DateTime<Utc>, Box<dyn Error>> {
+    pub fn get_date(&self) -> Result<DateTime<Utc>, DecimalError> {
         self.get_date_with_options(false)
     }
 
@@ -250,7 +250,7 @@ impl ExpirationDate {
     /// - `Ok(DateTime<Utc>)`:
     ///   - If the expiration date can be successfully calculated based on the provided options and
     ///     stored expiration criteria (`Days` or `DateTime`).
-    /// - `Err(Box<dyn Error>)`:
+    /// - `Err(ChainError)`:
     ///   - If there is an invalid time conversion or inconsistency in the configuration.
     ///
     /// # Behavior
@@ -273,7 +273,7 @@ impl ExpirationDate {
     pub fn get_date_with_options(
         &self,
         use_fixed_time: bool,
-    ) -> Result<DateTime<Utc>, Box<dyn Error>> {
+    ) -> Result<DateTime<Utc>, DecimalError> {
         match self {
             ExpirationDate::Days(days) => {
                 if use_fixed_time {
@@ -315,7 +315,7 @@ impl ExpirationDate {
     /// let date_string = expiration_date.get_date_string().unwrap();
     /// assert!(date_string.len() == 10); // YYYY-MM-DD format
     /// ```
-    pub fn get_date_string(&self) -> Result<String, Box<dyn Error>> {
+    pub fn get_date_string(&self) -> Result<String, ChainError> {
         // Use fixed time for backward compatibility with existing tests
         let date = self.get_date_with_options(true)?;
         Ok(date.format("%Y-%m-%d").to_string())
@@ -369,7 +369,7 @@ impl ExpirationDate {
     ///     info!("Expected ExpirationDate::DateTime");
     /// }
     /// ```
-    pub fn from_string(s: &str) -> Result<Self, Box<dyn Error>> {
+    pub fn from_string(s: &str) -> Result<Self, ChainError> {
         // First try parsing as Positive (days)
         if let Ok(days) = s.parse::<Positive>() {
             return Ok(ExpirationDate::Days(days));
@@ -482,8 +482,8 @@ impl ExpirationDate {
     /// * `Ok(Self)` - If the string is successfully parsed and converted into days.
     ///   The result is an `ExpirationDate::Days` variant containing the
     ///   floored number of days.
-    /// * `Err(Box<dyn Error>)` - If parsing or conversion fails, an error wrapped in a
-    ///   `Box<dyn Error>` is returned.
+    /// * `Err(ChainError)` - If parsing or conversion fails, an error wrapped in a
+    ///   `ChainError` is returned.
     ///
     /// # Errors
     /// This function may return an error in the following cases:
@@ -492,7 +492,7 @@ impl ExpirationDate {
     ///
     /// # Note
     /// The function assumes that `floor()` truncates any remaining fractional days.
-    pub fn from_string_to_days(s: &str) -> Result<Self, Box<dyn Error>> {
+    pub fn from_string_to_days(s: &str) -> Result<Self, ChainError> {
         // Try to parse as a date
         let date_result = Self::from_string(s);
         if let Ok(expiration_date) = date_result {
