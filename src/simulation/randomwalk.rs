@@ -4,6 +4,7 @@
    Date: 23/3/25
 ******************************************************************************/
 use crate::Positive;
+use crate::error::PricingError;
 use crate::pricing::Profit;
 use crate::simulation::WalkParams;
 use crate::simulation::steps::Step;
@@ -11,7 +12,6 @@ use crate::strategies::base::BasicAble;
 use crate::utils::Len;
 use crate::visualization::{ColorScheme, Graph, GraphConfig, GraphData, Series2D, TraceMode};
 use rust_decimal::Decimal;
-use std::error::Error;
 use std::fmt::Display;
 use std::ops::{AddAssign, Index, IndexMut};
 
@@ -279,8 +279,10 @@ where
     X: AddAssign + Copy + Display + Into<Positive>,
     Y: Into<Positive> + Display + Clone,
 {
-    fn calculate_profit_at(&self, _price: &Positive) -> Result<Decimal, Box<dyn Error>> {
-        Err("Profit calculation not implemented for RandomWalk".into())
+    fn calculate_profit_at(&self, _price: &Positive) -> Result<Decimal, PricingError> {
+        Err(PricingError::other(
+            "Profit calculation not implemented for RandomWalk",
+        ))
     }
 }
 
@@ -342,6 +344,7 @@ mod tests_random_walk {
     use crate::ExpirationDate;
     use crate::Positive;
 
+    use crate::error::SimulationError;
     use crate::pos;
     use crate::simulation::WalkParams;
     use crate::simulation::WalkType;
@@ -352,7 +355,6 @@ mod tests_random_walk {
     use num_traits::ToPrimitive;
     use rust_decimal::Decimal;
 
-    use std::error::Error;
     use std::fmt::Display;
     use std::ops::AddAssign;
 
@@ -365,7 +367,7 @@ mod tests_random_walk {
         Y: Into<Positive> + Display + Clone,
     {
         // We'll implement the simplest possible method for testing
-        fn brownian(&self, params: &WalkParams<X, Y>) -> Result<Vec<Positive>, Box<dyn Error>> {
+        fn brownian(&self, params: &WalkParams<X, Y>) -> Result<Vec<Positive>, SimulationError> {
             let mut values = Vec::new();
             let init_value: Positive = params.ystep_as_positive();
             values.push(init_value);

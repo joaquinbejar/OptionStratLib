@@ -4,7 +4,7 @@ use crate::backtesting::results::{SimulationResult, SimulationStatsResult};
 use crate::chains::OptionChain;
 use crate::error::strategies::ProfitLossErrorKind;
 use crate::error::{
-    GreeksError, ProbabilityError, StrategyError,
+    GreeksError, PricingError, ProbabilityError, SimulationError, StrategyError,
     position::{PositionError, PositionValidationErrorKind},
     probability::ProfitLossRangeErrorKind,
 };
@@ -34,7 +34,6 @@ use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
-use std::error::Error;
 use tracing::debug;
 use utoipa::ToSchema;
 
@@ -322,7 +321,7 @@ impl Strategies for ShortCall {
 }
 
 impl Profit for ShortCall {
-    fn calculate_profit_at(&self, price: &Positive) -> Result<Decimal, Box<dyn Error>> {
+    fn calculate_profit_at(&self, price: &Positive) -> Result<Decimal, PricingError> {
         let price = Some(price);
         self.short_call.pnl_at_expiration(&price)
     }
@@ -505,7 +504,7 @@ impl PnLCalculator for ShortCall {
         market_price: &Positive,
         expiration_date: ExpirationDate,
         implied_volatility: &Positive,
-    ) -> Result<PnL, Box<dyn Error>> {
+    ) -> Result<PnL, PricingError> {
         self.short_call
             .calculate_pnl(market_price, expiration_date, implied_volatility)
     }
@@ -513,12 +512,12 @@ impl PnLCalculator for ShortCall {
     fn calculate_pnl_at_expiration(
         &self,
         underlying_price: &Positive,
-    ) -> Result<PnL, Box<dyn Error>> {
+    ) -> Result<PnL, PricingError> {
         self.short_call
             .calculate_pnl_at_expiration(underlying_price)
     }
 
-    fn adjustments_pnl(&self, _adjustment: &DeltaAdjustment) -> Result<PnL, Box<dyn Error>> {
+    fn adjustments_pnl(&self, _adjustment: &DeltaAdjustment) -> Result<PnL, PricingError> {
         // Single-leg strategies like ShortCall don't typically require delta adjustments
         // as they are directional strategies. Delta adjustments are more relevant for
         // complex multi-leg strategies aiming for delta neutrality.
@@ -559,7 +558,7 @@ where
         &self,
         sim: &Simulator<X, Y>,
         exit: ExitPolicy,
-    ) -> Result<SimulationStatsResult, Box<dyn Error>> {
+    ) -> Result<SimulationStatsResult, SimulationError> {
         use indicatif::{ProgressBar, ProgressStyle};
         use rust_decimal::MathematicalOps;
         use rust_decimal_macros::dec;

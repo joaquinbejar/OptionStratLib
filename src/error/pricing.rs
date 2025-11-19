@@ -1,3 +1,4 @@
+use crate::error::{DecimalError, GreeksError, OptionsError, PositionError};
 use thiserror::Error;
 
 /// Error type for option pricing operations.
@@ -28,6 +29,22 @@ pub enum PricingError {
         /// Detailed reason for the invalid engine
         reason: String,
     },
+
+    /// Error from Greeks calculations.
+    #[error(transparent)]
+    Greeks(#[from] GreeksError),
+
+    /// Error from Options operations.
+    #[error(transparent)]
+    Options(#[from] OptionsError),
+
+    /// Error from Position operations.
+    #[error(transparent)]
+    Position(#[from] PositionError),
+
+    /// Error from Decimal operations.
+    #[error(transparent)]
+    Decimal(#[from] DecimalError),
 
     /// Generic pricing error.
     #[error("Pricing error: {reason}")]
@@ -77,6 +94,28 @@ impl PricingError {
     pub fn other(reason: &str) -> Self {
         PricingError::OtherError {
             reason: reason.to_string(),
+        }
+    }
+}
+
+impl From<Box<dyn std::error::Error>> for PricingError {
+    fn from(err: Box<dyn std::error::Error>) -> Self {
+        PricingError::OtherError {
+            reason: err.to_string(),
+        }
+    }
+}
+
+impl From<String> for PricingError {
+    fn from(s: String) -> Self {
+        PricingError::OtherError { reason: s }
+    }
+}
+
+impl From<&str> for PricingError {
+    fn from(s: &str) -> Self {
+        PricingError::OtherError {
+            reason: s.to_string(),
         }
     }
 }

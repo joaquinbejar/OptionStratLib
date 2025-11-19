@@ -383,6 +383,18 @@ impl From<GreeksError> for ProbabilityError {
     }
 }
 
+impl From<crate::error::PricingError> for ProbabilityError {
+    fn from(error: crate::error::PricingError) -> Self {
+        ProbabilityError::StdError(error.to_string())
+    }
+}
+
+impl From<crate::error::DecimalError> for ProbabilityError {
+    fn from(error: crate::error::DecimalError) -> Self {
+        ProbabilityError::StdError(error.to_string())
+    }
+}
+
 /// Convenient type alias for Results with ProbabilityError
 pub type ProbabilityResult<T> = Result<T, ProbabilityError>;
 
@@ -444,6 +456,7 @@ impl From<StrategyError> for ProbabilityError {
             StrategyError::NotImplemented => {
                 ProbabilityError::StdError("Strategy not implemented".to_string())
             }
+            StrategyError::GreeksError(err) => ProbabilityError::StdError(err.to_string()),
         }
     }
 }

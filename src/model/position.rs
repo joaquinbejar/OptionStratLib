@@ -5,7 +5,7 @@
 ******************************************************************************/
 use crate::chains::OptionData;
 use crate::error::position::PositionValidationErrorKind;
-use crate::error::{GreeksError, PositionError, StrategyError, TransactionError};
+use crate::error::{GreeksError, PositionError, PricingError, StrategyError, TransactionError};
 use crate::greeks::Greeks;
 use crate::model::trade::TradeStatusAble;
 use crate::model::types::{Action, OptionBasicType, OptionStyle, Side};
@@ -22,7 +22,6 @@ use num_traits::ToPrimitive;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
-use std::error::Error;
 use tracing::{debug, trace};
 use utoipa::ToSchema;
 
@@ -316,7 +315,7 @@ impl Position {
     ///
     /// # Returns
     ///
-    /// * `Result<Decimal, Box<dyn Error>>` - The calculated profit or loss as a Decimal value,
+    /// * `Result<Decimal, PricingError>` - The calculated profit or loss as a Decimal value,
     ///   or an error if the calculation fails.
     ///
     /// # Examples
@@ -347,7 +346,7 @@ impl Position {
     /// // Calculate PnL at expiration using the option's current underlying price
     /// let pnl_current = position.pnl_at_expiration(&None).unwrap();
     /// ```
-    pub fn pnl_at_expiration(&self, price: &Option<&Positive>) -> Result<Decimal, Box<dyn Error>> {
+    pub fn pnl_at_expiration(&self, price: &Option<&Positive>) -> Result<Decimal, PricingError> {
         match price {
             None => Ok(self.option.intrinsic_value(self.option.underlying_price)?
                 - self.total_cost()?
@@ -804,14 +803,14 @@ impl PnLCalculator for Position {
     ///
     /// # Returns
     ///
-    /// * `Result<PnL, Box<dyn Error>>` - A PnL object containing unrealized profit/loss and position cost details,
+    /// * `Result<PnL, PricingError>` - A PnL object containing unrealized profit/loss and position cost details,
     ///   or an error if the calculation fails
     fn calculate_pnl(
         &self,
         underlying_price: &Positive,
         expiration_date: ExpirationDate,
         implied_volatility: &Positive,
-    ) -> Result<PnL, Box<dyn Error>> {
+    ) -> Result<PnL, PricingError> {
         let price_at_buy = self.option.calculate_price_black_scholes()?;
         let mut current_option = self.option.clone();
         current_option.expiration_date = expiration_date;
@@ -845,12 +844,12 @@ impl PnLCalculator for Position {
     ///
     /// # Returns
     ///
-    /// * `Result<PnL, Box<dyn Error>>` - A PnL object containing realized profit/loss and position cost details,
+    /// * `Result<PnL, PricingError>` - A PnL object containing realized profit/loss and position cost details,
     ///   or an error if the calculation fails
     fn calculate_pnl_at_expiration(
         &self,
         underlying_price: &Positive,
-    ) -> Result<PnL, Box<dyn Error>> {
+    ) -> Result<PnL, PricingError> {
         let initial_cost = self.total_cost()?;
         let initial_income = self.premium_received()?;
         let date_time = self.option.expiration_date.get_date()?;
@@ -866,63 +865,70 @@ impl PnLCalculator for Position {
         ))
     }
 
-    fn diff_position_pnl(&self, position: &Position) -> Result<PnL, Box<dyn Error>> {
+    fn diff_position_pnl(&self, position: &Position) -> Result<PnL, PricingError> {
         // Validate that positions belong to the same options
 
         // Check option_type
         if self.option.option_type != position.option.option_type {
-            return Err(Box::new(PositionError::invalid_position(&format!(
+            return Err(PositionError::invalid_position(&format!(
                 "Option types do not match: {:?} vs {:?}",
                 self.option.option_type, position.option.option_type
-            ))));
+            ))
+            .into());
         }
 
         // Check side
         if self.option.side != position.option.side {
-            return Err(Box::new(PositionError::invalid_position(&format!(
+            return Err(PositionError::invalid_position(&format!(
                 "Sides do not match: {:?} vs {:?}",
                 self.option.side, position.option.side
-            ))));
+            ))
+            .into());
         }
 
         // Check underlying_symbol
         if self.option.underlying_symbol != position.option.underlying_symbol {
-            return Err(Box::new(PositionError::invalid_position(&format!(
+            return Err(PositionError::invalid_position(&format!(
                 "Underlying symbols do not match: {} vs {}",
                 self.option.underlying_symbol, position.option.underlying_symbol
-            ))));
+            ))
+            .into());
         }
 
         // Check strike_price
         if self.option.strike_price != position.option.strike_price {
-            return Err(Box::new(PositionError::invalid_position(&format!(
+            return Err(PositionError::invalid_position(&format!(
                 "Strike prices do not match: {} vs {}",
                 self.option.strike_price, position.option.strike_price
-            ))));
+            ))
+            .into());
         }
 
         // Check expiration_date
         if self.option.expiration_date != position.option.expiration_date {
-            return Err(Box::new(PositionError::invalid_position(&format!(
+            return Err(PositionError::invalid_position(&format!(
                 "Expiration dates do not match: {:?} vs {:?}",
                 self.option.expiration_date, position.option.expiration_date
-            ))));
+            ))
+            .into());
         }
 
         // Check quantity
         if self.option.quantity != position.option.quantity {
-            return Err(Box::new(PositionError::invalid_position(&format!(
+            return Err(PositionError::invalid_position(&format!(
                 "Quantities do not match: {} vs {}",
                 self.option.quantity, position.option.quantity
-            ))));
+            ))
+            .into());
         }
 
         // Check epic
         if self.epic != position.epic {
-            return Err(Box::new(PositionError::invalid_position(&format!(
+            return Err(PositionError::invalid_position(&format!(
                 "Epics do not match: {:?} vs {:?}",
                 self.epic, position.epic
-            ))));
+            ))
+            .into());
         }
 
         // Calculate PnL as the difference between positions
@@ -981,9 +987,9 @@ impl Profit for Position {
     ///
     /// # Returns
     ///
-    /// * `Result<Decimal, Box<dyn Error>>` - The calculated profit as a Decimal if successful,
+    /// * `Result<Decimal, PricingError>` - The calculated profit as a Decimal if successful,
     ///   or an error if the calculation fails.
-    fn calculate_profit_at(&self, price: &Positive) -> Result<Decimal, Box<dyn Error>> {
+    fn calculate_profit_at(&self, price: &Positive) -> Result<Decimal, PricingError> {
         self.pnl_at_expiration(&Some(price))
     }
 }
