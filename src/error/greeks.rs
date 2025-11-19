@@ -435,10 +435,22 @@ impl From<VolatilityError> for GreeksError {
 ///
 /// This implementation serves as a catch-all for converting any type that implements
 /// the standard Error trait into a `GreeksError`. This is useful for integrating with
-/// libraries or functions that return standard error types.
+/// libraries or functions that return boxed standard error types for compatibility.
 impl From<Box<dyn std::error::Error>> for GreeksError {
     fn from(error: Box<dyn std::error::Error>) -> Self {
         GreeksError::StdError(error.to_string())
+    }
+}
+
+impl From<String> for GreeksError {
+    fn from(s: String) -> Self {
+        GreeksError::StdError(s)
+    }
+}
+
+impl From<&str> for GreeksError {
+    fn from(s: &str) -> Self {
+        GreeksError::StdError(s.to_string())
     }
 }
 

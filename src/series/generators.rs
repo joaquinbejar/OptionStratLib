@@ -1,3 +1,4 @@
+use crate::error::ChainError;
 use crate::series::OptionSeries;
 use crate::simulation::steps::{Step, Ystep};
 use crate::simulation::{WalkParams, WalkType};
@@ -5,8 +6,8 @@ use crate::utils::TimeFrame;
 use crate::utils::others::calculate_log_returns;
 use crate::volatility::{adjust_volatility, constant_volatility};
 use crate::{Positive, pos};
+use core::option::Option;
 use rust_decimal::Decimal;
-use std::error::Error;
 use tracing::debug;
 
 /// Creates a new `OptionSeries` from a given previous `Ystep` series, a new price,
@@ -34,7 +35,7 @@ fn create_series_from_step(
     previous_y_step: &Ystep<OptionSeries>,
     new_price: &Positive,
     volatility: Option<Positive>,
-) -> Result<OptionSeries, Box<dyn Error>> {
+) -> Result<OptionSeries, ChainError> {
     let series = previous_y_step.value();
     let mut series_params = series.to_build_params()?;
     series_params.set_underlying_price(new_price);
@@ -198,7 +199,7 @@ mod tests_generator_optionseries {
     use super::*;
     use crate::chains::utils::OptionChainBuildParams;
     use crate::chains::utils::OptionDataPriceParams;
-    use crate::series::OptionSeriesBuildParams;
+    use crate::series::{OptionSeries, OptionSeriesBuildParams};
     use crate::simulation::steps::{Step, Xstep, Ystep};
     use crate::simulation::{WalkParams, WalkType, WalkTypeAble};
     use crate::utils::TimeFrame;
