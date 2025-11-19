@@ -22,7 +22,7 @@ use crate::{
     chains::{StrategyLegs, chain::OptionChain, utils::OptionDataGroup},
     constants::ZERO,
     error::{
-        GreeksError, OperationErrorKind,
+        GreeksError, OperationErrorKind, PricingError,
         position::{PositionError, PositionValidationErrorKind},
         probability::ProbabilityError,
         strategies::{ProfitLossErrorKind, StrategyError},
@@ -50,7 +50,6 @@ use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
-use std::error::Error;
 use tracing::debug;
 use utoipa::ToSchema;
 
@@ -849,7 +848,7 @@ impl Optimizable for BullPutSpread {
 }
 
 impl Profit for BullPutSpread {
-    fn calculate_profit_at(&self, price: &Positive) -> Result<Decimal, Box<dyn Error>> {
+    fn calculate_profit_at(&self, price: &Positive) -> Result<Decimal, PricingError> {
         let price = Some(price);
         Ok(self.long_put.pnl_at_expiration(&price)? + self.short_put.pnl_at_expiration(&price)?)
     }
@@ -933,7 +932,7 @@ impl PnLCalculator for BullPutSpread {
         market_price: &Positive,
         expiration_date: ExpirationDate,
         implied_volatility: &Positive,
-    ) -> Result<PnL, Box<dyn Error>> {
+    ) -> Result<PnL, PricingError> {
         Ok(self
             .short_put
             .calculate_pnl(market_price, expiration_date, implied_volatility)?
@@ -945,7 +944,7 @@ impl PnLCalculator for BullPutSpread {
     fn calculate_pnl_at_expiration(
         &self,
         underlying_price: &Positive,
-    ) -> Result<PnL, Box<dyn Error>> {
+    ) -> Result<PnL, PricingError> {
         Ok(self
             .short_put
             .calculate_pnl_at_expiration(underlying_price)?
@@ -2387,17 +2386,12 @@ mod tests_adjust_option_position {
         );
 
         assert!(result.is_err());
-        match result.unwrap_err().downcast_ref::<PositionError>() {
-            Some(PositionError::ValidationError(
-                PositionValidationErrorKind::IncompatibleSide {
-                    position_side: _,
-                    reason,
-                },
-            )) => {
-                assert_eq!(reason, "Call is not valid for BullPutSpread");
-            }
-            _ => panic!("Expected PositionError::ValidationError"),
-        }
+        let err = result.unwrap_err();
+        // StrategyError wraps PositionError, so we check the error message
+        assert!(
+            err.to_string()
+                .contains("Call is not valid for BullPutSpread")
+        );
     }
 
     #[test]

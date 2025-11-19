@@ -6,7 +6,7 @@ use crate::{
     ExpirationDate, Options, Positive,
     chains::{StrategyLegs, chain::OptionChain, utils::OptionDataGroup},
     error::{
-        GreeksError, OperationErrorKind,
+        GreeksError, OperationErrorKind, PricingError,
         position::{PositionError, PositionValidationErrorKind},
         probability::ProbabilityError,
         strategies::{ProfitLossErrorKind, StrategyError},
@@ -33,7 +33,6 @@ use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
-use std::error::Error;
 use tracing::{error, info};
 use utoipa::ToSchema;
 
@@ -882,7 +881,7 @@ impl Optimizable for CallButterfly {
 }
 
 impl Profit for CallButterfly {
-    fn calculate_profit_at(&self, price: &Positive) -> Result<Decimal, Box<dyn Error>> {
+    fn calculate_profit_at(&self, price: &Positive) -> Result<Decimal, PricingError> {
         let price = Some(price);
         let long_call_itm_profit = self.long_call.pnl_at_expiration(&price)?;
         let long_call_otm_profit = self.short_call_low.pnl_at_expiration(&price)?;
@@ -986,7 +985,7 @@ impl PnLCalculator for CallButterfly {
         market_price: &Positive,
         expiration_date: ExpirationDate,
         implied_volatility: &Positive,
-    ) -> Result<PnL, Box<dyn Error>> {
+    ) -> Result<PnL, PricingError> {
         Ok(self
             .long_call
             .calculate_pnl(market_price, expiration_date, implied_volatility)?
@@ -1005,7 +1004,7 @@ impl PnLCalculator for CallButterfly {
     fn calculate_pnl_at_expiration(
         &self,
         underlying_price: &Positive,
-    ) -> Result<PnL, Box<dyn Error>> {
+    ) -> Result<PnL, PricingError> {
         Ok(self
             .long_call
             .calculate_pnl_at_expiration(underlying_price)?
@@ -2088,17 +2087,9 @@ mod tests_adjust_option_position {
         );
 
         assert!(result.is_err());
-        match result.unwrap_err().downcast_ref::<PositionError>() {
-            Some(PositionError::ValidationError(
-                PositionValidationErrorKind::IncompatibleSide {
-                    position_side: _,
-                    reason,
-                },
-            )) => {
-                assert_eq!(reason, "Strike not found in positions");
-            }
-            _ => panic!("Expected PositionError::ValidationError"),
-        }
+        let err = result.unwrap_err();
+        // StrategyError wraps PositionError, so we check the error message
+        assert!(err.to_string().contains("Strike not found in positions"));
     }
 
     #[test]

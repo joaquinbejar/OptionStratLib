@@ -1,11 +1,11 @@
+use crate::error::PricingError;
 use crate::model::types::{OptionStyle, OptionType, Side};
 use crate::pricing::payoff::{Payoff, PayoffInfo};
 use crate::pricing::utils::*;
 use crate::{Positive, d2f, f2d, pos};
 use rust_decimal::{Decimal, MathematicalOps};
-use std::error::Error;
 
-type BinomialTreeResult = Result<(Vec<Vec<Decimal>>, Vec<Vec<Decimal>>), Box<dyn Error>>;
+type BinomialTreeResult = Result<(Vec<Vec<Decimal>>, Vec<Vec<Decimal>>), PricingError>;
 
 /// Parameters for pricing options using the Binomial Tree model.
 ///
@@ -87,7 +87,7 @@ pub struct BinomialPricingParams<'a> {
 /// - The model's accuracy increases with the number of steps, but so does the computation time.
 /// - This model assumes that the underlying asset follows a multiplicative binomial process.
 /// - For American options, this model accounts for the possibility of early exercise.
-pub fn price_binomial(params: BinomialPricingParams) -> Result<Decimal, Box<dyn Error>> {
+pub fn price_binomial(params: BinomialPricingParams) -> Result<Decimal, PricingError> {
     let mut info = PayoffInfo {
         spot: params.asset,
         strike: params.strike,
