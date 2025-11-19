@@ -13,7 +13,6 @@ use num_traits::{FromPrimitive, ToPrimitive};
 use rand::random;
 use rayon::prelude::*;
 use rust_decimal::{Decimal, MathematicalOps};
-use std::error::Error;
 
 /// Calculates the constant volatility from a series of returns.
 ///
@@ -24,7 +23,7 @@ use std::error::Error;
 /// # Returns
 ///
 /// The calculated volatility as an Decimal.
-pub fn constant_volatility(returns: &[Decimal]) -> Result<Positive, Box<dyn Error>> {
+pub fn constant_volatility(returns: &[Decimal]) -> Result<Positive, VolatilityError> {
     let n = Positive(Decimal::from_usize(returns.len()).unwrap());
 
     if n < Decimal::TWO {
@@ -51,7 +50,7 @@ pub fn constant_volatility(returns: &[Decimal]) -> Result<Positive, Box<dyn Erro
 pub fn historical_volatility(
     returns: &[Decimal],
     window_size: usize,
-) -> Result<Vec<Positive>, Box<dyn Error>> {
+) -> Result<Vec<Positive>, VolatilityError> {
     returns
         .windows(window_size)
         .map(constant_volatility)
@@ -71,7 +70,7 @@ pub fn historical_volatility(
 pub fn ewma_volatility(
     returns: &[Decimal],
     lambda: Decimal,
-) -> Result<Vec<Positive>, Box<dyn Error>> {
+) -> Result<Vec<Positive>, VolatilityError> {
     let mut variance = returns[0].powi(2);
     let mut volatilities = vec![Positive(variance.sqrt().unwrap())];
 
@@ -107,7 +106,7 @@ pub fn implied_volatility(
     market_price: Positive,
     options: &mut Options,
     max_iterations: i64,
-) -> Result<Positive, Box<dyn Error>> {
+) -> Result<Positive, VolatilityError> {
     let base_option = options.clone();
     let iterations = 100 * max_iterations;
     let result = (1..iterations)
@@ -179,7 +178,7 @@ pub fn calculate_iv(
     underlying_price: Positive,
     days: Positive,
     symbol: String,
-) -> Result<Positive, Box<dyn Error>> {
+) -> Result<Positive, VolatilityError> {
     let mut option = Options::new(
         OptionType::European,
         Side::Long,
@@ -212,7 +211,7 @@ pub fn garch_volatility(
     omega: Decimal,
     alpha: Decimal,
     beta: Decimal,
-) -> Result<Vec<Positive>, Box<dyn Error>> {
+) -> Result<Vec<Positive>, VolatilityError> {
     let mut variance = Positive(returns[0].powi(2));
     let mut volatilities = vec![variance.sqrt()];
     for &return_value in &returns[1..] {
@@ -243,7 +242,7 @@ pub fn simulate_heston_volatility(
     v0: Decimal,
     dt: Decimal,
     steps: usize,
-) -> Result<Vec<Positive>, Box<dyn Error>> {
+) -> Result<Vec<Positive>, VolatilityError> {
     let mut v = Positive(v0);
     let mut volatilities = vec![v.sqrt()];
     for _ in 1..steps {
@@ -270,7 +269,7 @@ pub fn uncertain_volatility_bounds(
     option: &Options,
     min_volatility: Positive,
     max_volatility: Positive,
-) -> Result<(Positive, Positive), Box<dyn Error>> {
+) -> Result<(Positive, Positive), VolatilityError> {
     // Create a clone of the option for lower bound calculation
     let mut lower_bound_option = option.clone();
     lower_bound_option.implied_volatility = min_volatility;
@@ -318,7 +317,7 @@ pub fn uncertain_volatility_bounds(
 pub fn annualized_volatility(
     volatility: Positive,
     timeframe: TimeFrame,
-) -> Result<Positive, Box<dyn Error>> {
+) -> Result<Positive, VolatilityError> {
     Ok(volatility * timeframe.periods_per_year().sqrt())
 }
 
@@ -352,7 +351,7 @@ pub fn annualized_volatility(
 pub fn de_annualized_volatility(
     annual_volatility: Positive,
     timeframe: TimeFrame,
-) -> Result<Positive, Box<dyn Error>> {
+) -> Result<Positive, VolatilityError> {
     Ok(annual_volatility / timeframe.periods_per_year().sqrt())
 }
 
@@ -378,7 +377,7 @@ pub fn adjust_volatility(
     volatility: Positive,
     from_frame: TimeFrame,
     to_frame: TimeFrame,
-) -> Result<Positive, Box<dyn Error>> {
+) -> Result<Positive, VolatilityError> {
     if from_frame == to_frame {
         return Ok(volatility);
     }
@@ -392,12 +391,12 @@ pub fn adjust_volatility(
 
     // Check for division by zero
     if to_periods.is_zero() {
-        return Err(Box::new(VolatilityError::InvalidTime {
+        return Err(VolatilityError::InvalidTime {
             time: to_periods,
             reason: format!(
                 "Cannot adjust volatility to timeframe with zero periods per year: {to_frame:?}"
             ),
-        }));
+        });
     }
 
     // Scale factor is square root of (from_periods / to_periods)
@@ -464,7 +463,7 @@ pub fn volatility_for_dt(
     _dt: Positive,
     _dt_timeframe: TimeFrame,
     dt_base_timeframe: TimeFrame,
-) -> Result<Positive, Box<dyn Error>> {
+) -> Result<Positive, VolatilityError> {
     // Only de-annualize to the base timeframe
     // The random walk implementation will multiply by sqrt(dt) internally
     de_annualized_volatility(annual_volatility, dt_base_timeframe)

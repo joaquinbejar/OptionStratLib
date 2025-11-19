@@ -94,6 +94,10 @@ pub enum Error {
     #[error(transparent)]
     Ohlcv(#[from] crate::error::OhlcvError),
 
+    /// Simulation-related errors.
+    #[error(transparent)]
+    Simulation(#[from] crate::error::SimulationError),
+
     /// Generic error with a custom message.
     #[error("{0}")]
     Other(String),

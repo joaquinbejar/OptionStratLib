@@ -91,6 +91,20 @@ pub enum VolatilityError {
     },
 }
 
+impl From<&str> for VolatilityError {
+    fn from(s: &str) -> Self {
+        VolatilityError::OptionError {
+            reason: s.to_string(),
+        }
+    }
+}
+
+impl From<String> for VolatilityError {
+    fn from(s: String) -> Self {
+        VolatilityError::OptionError { reason: s }
+    }
+}
+
 #[cfg(test)]
 mod tests_volatility_errors {
     use super::*;
