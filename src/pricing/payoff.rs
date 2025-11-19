@@ -1,8 +1,8 @@
 use crate::Positive;
+use crate::error::PricingError;
 use crate::model::types::{OptionStyle, Side};
 use num_traits::ToPrimitive;
 use rust_decimal::Decimal;
-use std::error::Error;
 use tracing::trace;
 
 /// Defines a contract for calculating the payoff value of an option.
@@ -199,9 +199,9 @@ pub trait Profit {
     ///
     /// # Returns
     ///
-    /// * `Result<Decimal, Box<dyn Error>>` - The calculated profit as a Decimal value,
+    /// * `Result<Decimal, PricingError>` - The calculated profit as a Decimal value,
     ///   or an error if the calculation fails
-    fn calculate_profit_at(&self, price: &Positive) -> Result<Decimal, Box<dyn Error>>;
+    fn calculate_profit_at(&self, price: &Positive) -> Result<Decimal, PricingError>;
 
     /// Creates a chart point representation of the profit at the given price.
     ///
@@ -216,7 +216,7 @@ pub trait Profit {
     ///
     /// * `ChartPoint<(f64, f64)>` - A formatted chart point with coordinates (price, profit),
     ///   styling, and a formatted profit label
-    fn get_point_at_price(&self, _price: &Positive) -> Result<(Decimal, Decimal), Box<dyn Error>> {
+    fn get_point_at_price(&self, _price: &Positive) -> Result<(Decimal, Decimal), PricingError> {
         let profit = self.calculate_profit_at(_price)?;
         let price: Decimal = _price.into();
         let point = (price, profit);

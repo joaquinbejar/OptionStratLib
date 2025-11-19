@@ -40,10 +40,7 @@
 //! The module supports conversion from:
 //! - `String`
 //! - `&str`
-//! - `Box<dyn Error>`
-//!
-//! And conversion to:
-//! - `Box<dyn Error>`
+//! - `Box<dyn std::error::Error>` (for compatibility)
 //!
 //! ## Examples
 //!
@@ -61,6 +58,7 @@
 //! }
 //! ```
 
+use crate::error::{DecimalError, GreeksError, PricingError};
 use thiserror::Error;
 
 /// Custom errors that can occur during Options operations
@@ -172,6 +170,14 @@ pub enum OptionsError {
         /// Detailed explanation of the error
         reason: String,
     },
+
+    /// Error when DecimalError occurs
+    #[error(transparent)]
+    Decimal(#[from] DecimalError),
+
+    /// Error when GreeksError occurs
+    #[error(transparent)]
+    Greeks(#[from] GreeksError),
 }
 
 /// A specialized result type for operations related to Options calculations and processing.
@@ -380,6 +386,15 @@ impl From<String> for OptionsError {
         OptionsError::ValidationError {
             field: "unknown".to_string(),
             reason: err,
+        }
+    }
+}
+
+impl From<PricingError> for OptionsError {
+    fn from(value: PricingError) -> Self {
+        Self::PricingError {
+            method: "unknown".to_string(),
+            reason: value.to_string(),
         }
     }
 }

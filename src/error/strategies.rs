@@ -68,7 +68,7 @@
 //!
 //! Provides `StrategyResult<T>` for convenient error handling in strategy operations.
 use crate::error::common::OperationErrorKind;
-use crate::error::{OptionsError, PositionError};
+use crate::error::{GreeksError, OptionsError, PositionError};
 use thiserror::Error;
 
 /// Represents the different types of errors that can occur in options trading strategies.
@@ -120,6 +120,10 @@ pub enum StrategyError {
     /// Indicates a feature or operation that has not been implemented yet
     #[error("Not implemented")]
     NotImplemented,
+
+    /// Greeks errors
+    #[error(transparent)]
+    GreeksError(#[from] GreeksError),
 }
 
 /// Represents different types of errors that can occur during price-related operations.
@@ -355,6 +359,15 @@ impl From<Box<dyn std::error::Error>> for StrategyError {
         StrategyError::StdError {
             reason: err.to_string(),
         }
+    }
+}
+
+impl From<crate::error::PricingError> for StrategyError {
+    fn from(err: crate::error::PricingError) -> Self {
+        StrategyError::OperationError(OperationErrorKind::InvalidParameters {
+            operation: "Pricing".to_string(),
+            reason: err.to_string(),
+        })
     }
 }
 

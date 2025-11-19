@@ -60,7 +60,7 @@
 //!      market_price: &Positive,
 //!      expiration_date: ExpirationDate,
 //!      _implied_volatility: &Positive,
-//!  ) -> Result<PnL, Box<dyn Error>> {
+//!  ) -> Result<PnL, PricingError> {
 //!      Ok(PnL::new(
 //!          Some(market_price.into()),
 //!          None,
@@ -73,7 +73,7 @@
 //!  fn calculate_pnl_at_expiration(
 //!      &self,
 //!      underlying_price: &Positive,
-//!  ) -> Result<PnL, Box<dyn Error>> {
+//!  ) -> Result<PnL, PricingError> {
 //!      let underlying_price = underlying_price.to_dec();
 //!      Ok(PnL::new(
 //!          Some(underlying_price),

@@ -1,4 +1,5 @@
 use crate::chains::OptionChain;
+use crate::error::ChainError;
 use crate::series::params::OptionSeriesBuildParams;
 use crate::utils::Len;
 use crate::{ExpirationDate, Positive};
@@ -8,7 +9,6 @@ use serde::de::{self, MapAccess, Visitor};
 use serde::{Deserialize, Serialize};
 use serde::{Deserializer, Serializer};
 use std::collections::BTreeMap;
-use std::error::Error;
 use std::fmt;
 use utoipa::ToSchema;
 
@@ -103,11 +103,12 @@ impl OptionSeries {
     /// - The `get_days` method on any key fails.
     /// - The process of mapping and collecting the keys fails.
     ///
-    pub fn get_expiration_dates(&self) -> Result<Vec<Positive>, Box<dyn Error>> {
-        let keys: Result<Vec<Positive>, Box<dyn Error>> =
-            self.chains.keys().map(|e| e.get_days()).collect();
-
-        keys
+    pub fn get_expiration_dates(&self) -> Result<Vec<Positive>, ChainError> {
+        self.chains
+            .keys()
+            .map(|e| e.get_days())
+            .collect::<Result<Vec<Positive>, _>>()
+            .map_err(|e| e.into())
     }
 
     /// Builds an option series object (`Self`) based on the provided parameters.
@@ -193,13 +194,13 @@ impl OptionSeries {
     /// # Related
     /// - `OptionSeriesBuildParams`: The resulting struct after conversion.
     /// - `to_build_params()`: Method on individual `option_chain` objects to extract parameters.
-    pub fn to_build_params(&self) -> Result<OptionSeriesBuildParams, Box<dyn Error>> {
+    pub fn to_build_params(&self) -> Result<OptionSeriesBuildParams, ChainError> {
         let chain_params = self.chains.first_key_value();
         let series = self.get_expiration_dates()?;
         let chain_params = match chain_params {
             Some((_, option_chain)) => option_chain.to_build_params()?,
             None => {
-                return Err(Box::new(std::io::Error::other("No chains found")));
+                return Err("No chains found".into());
             }
         };
 
@@ -615,7 +616,7 @@ mod tests_option_series {
 
             // Verify the error message
             let error = result.unwrap_err();
-            assert_eq!(error.to_string(), "No chains found");
+            assert!(error.to_string().contains("No chains found"));
         }
     }
 

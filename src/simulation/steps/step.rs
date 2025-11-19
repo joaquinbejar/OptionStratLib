@@ -3,6 +3,7 @@
    Email: jb@taunais.com
    Date: 23/3/25
 ******************************************************************************/
+use crate::error::SimulationError;
 use crate::simulation::steps::{Xstep, Ystep};
 use crate::utils::TimeFrame;
 use crate::{ExpirationDate, Positive};
@@ -10,7 +11,6 @@ use num_traits::FromPrimitive;
 use rust_decimal::Decimal;
 use serde::ser::SerializeStruct;
 use serde::{Serialize, Serializer};
-use std::error::Error;
 use std::fmt::{Display, Formatter};
 use std::ops::AddAssign;
 
@@ -105,7 +105,7 @@ where
     /// # Returns
     ///
     /// A new `Step<X, Y>` instance that represents the next step in the sequence
-    pub fn next(&self, new_y_value: Y) -> Result<Self, Box<dyn Error>> {
+    pub fn next(&self, new_y_value: Y) -> Result<Self, SimulationError> {
         let next_x = match self.x.next() {
             Ok(x_step) => x_step,
             Err(e) => {
@@ -133,7 +133,7 @@ where
     /// # Returns
     ///
     /// A new `Step<X, Y>` instance that represents the previous step in the sequence
-    pub fn previous(&self, new_y_value: Y) -> Result<Self, Box<dyn Error>> {
+    pub fn previous(&self, new_y_value: Y) -> Result<Self, SimulationError> {
         let previous_x = match self.x.previous() {
             Ok(x_step) => x_step,
             Err(e) => {
@@ -157,7 +157,7 @@ where
     /// # Returns
     ///
     /// A `Positive` representation of the x-axis index as a floating point value
-    pub fn get_graph_x_value(&self) -> Result<Decimal, Box<dyn Error>> {
+    pub fn get_graph_x_value(&self) -> Result<Decimal, SimulationError> {
         match Decimal::from_i32(*self.x.index()) {
             Some(x) => Ok(x),
             None => Err("Cannot convert x-axis index to decimal".into()),

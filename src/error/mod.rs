@@ -184,6 +184,14 @@ mod surfaces;
 mod graph;
 mod transaction;
 
+/// ### Simulation Errors (`SimulationError`)
+/// Handles:
+/// * Random walk generation failures
+/// * Monte Carlo simulation errors
+/// * Stochastic process parameter validation
+/// * Step calculation issues
+pub mod simulation;
+
 /// ### Pricing Errors (`PricingError`)
 /// Handles:
 /// * Pricing method failures (Black-Scholes, Binomial, etc.)
@@ -226,6 +234,7 @@ pub use options::{OptionsError, OptionsResult};
 pub use position::PositionError;
 pub use pricing::{PricingError, PricingResult};
 pub use probability::ProbabilityError;
+pub use simulation::{SimulationError, SimulationResult};
 pub use strategies::StrategyError;
 pub use surfaces::SurfaceError;
 pub use transaction::TransactionError;

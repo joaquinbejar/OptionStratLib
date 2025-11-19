@@ -1,6 +1,8 @@
 use crate::chains::OptionData;
 use crate::constants::{IV_TOLERANCE, MAX_ITERATIONS_IV, ZERO};
-use crate::error::{GreeksError, OptionsError, OptionsResult, StrategyError, VolatilityError};
+use crate::error::{
+    GreeksError, OptionsError, OptionsResult, PricingError, StrategyError, VolatilityError,
+};
 use crate::greeks::Greeks;
 use crate::model::types::{OptionBasicType, OptionStyle, OptionType, Side};
 use crate::model::utils::calculate_optimal_price_range;
@@ -20,7 +22,6 @@ use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
-use std::error::Error;
 use tracing::{error, trace};
 use utoipa::ToSchema;
 
@@ -369,10 +370,10 @@ impl Options {
     ///
     /// # Returns
     ///
-    /// * `Result<Decimal, Box<dyn Error>>` - A result containing the calculated option price
+    /// * `Result<Decimal, PricingError>` - A result containing the calculated option price
     ///   as a Decimal value, or a boxed error if the calculation failed.
-    pub fn calculate_price_telegraph(&self, no_steps: usize) -> Result<Decimal, Box<dyn Error>> {
-        telegraph(self, no_steps, None, None)
+    pub fn calculate_price_telegraph(&self, no_steps: usize) -> OptionsResult<Decimal> {
+        Ok(telegraph(self, no_steps, None, None)?)
     }
 
     /// Calculates the intrinsic value (payoff) of the option at the current underlying price.
@@ -722,7 +723,7 @@ impl PnLCalculator for Options {
         market_price: &Positive,
         expiration_date: ExpirationDate,
         implied_volatility: &Positive,
-    ) -> Result<PnL, Box<dyn Error>> {
+    ) -> Result<PnL, PricingError> {
         // Create a copy of the current option with updated parameters
         let mut current_option = self.clone();
         current_option.underlying_price = *market_price;
@@ -756,7 +757,7 @@ impl PnLCalculator for Options {
     fn calculate_pnl_at_expiration(
         &self,
         underlying_price: &Positive,
-    ) -> Result<PnL, Box<dyn Error>> {
+    ) -> Result<PnL, PricingError> {
         let realized = Some(self.payoff_at_price(underlying_price)?);
         let initial_price = self.calculate_price_black_scholes()?;
 
@@ -776,7 +777,7 @@ impl PnLCalculator for Options {
 }
 
 impl Profit for Options {
-    fn calculate_profit_at(&self, price: &Positive) -> Result<Decimal, Box<dyn Error>> {
+    fn calculate_profit_at(&self, price: &Positive) -> Result<Decimal, PricingError> {
         Ok(self.payoff_at_price(price)?)
     }
 }
