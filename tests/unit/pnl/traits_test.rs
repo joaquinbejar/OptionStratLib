@@ -1,10 +1,9 @@
 use chrono::Utc;
-use optionstratlib::error::TransactionError;
+use optionstratlib::error::{PricingError, TransactionError};
 use optionstratlib::pnl::{PnL, PnLCalculator, Transaction, TransactionAble};
 use optionstratlib::strategies::DeltaAdjustment;
 use optionstratlib::{ExpirationDate, Positive, pos, spos};
 use rust_decimal_macros::dec;
-use std::error::Error;
 
 // A simple implementation of PnLCalculator for testing
 struct TestPnLCalculator;
@@ -15,7 +14,7 @@ impl PnLCalculator for TestPnLCalculator {
         underlying_price: &Positive,
         expiration_date: ExpirationDate,
         implied_volatility: &Positive,
-    ) -> Result<PnL, Box<dyn Error>> {
+    ) -> Result<PnL, PricingError> {
         // Simple implementation for testing
         let realized = underlying_price.to_dec() * dec!(0.5);
         let unrealized = implied_volatility.to_dec() * dec!(100.0);
@@ -32,7 +31,7 @@ impl PnLCalculator for TestPnLCalculator {
     fn calculate_pnl_at_expiration(
         &self,
         underlying_price: &Positive,
-    ) -> Result<PnL, Box<dyn Error>> {
+    ) -> Result<PnL, PricingError> {
         // Simple implementation for testing
         let realized = underlying_price.to_dec() * dec!(2.0);
 

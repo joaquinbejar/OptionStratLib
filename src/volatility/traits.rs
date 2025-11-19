@@ -1,7 +1,7 @@
 use crate::Positive;
 use crate::chains::chain::OptionChain;
 use crate::curves::Curve;
-use std::error::Error;
+use crate::error::VolatilityError;
 
 /// A trait defining a volatility smile representation.
 ///
@@ -96,23 +96,20 @@ pub trait AtmIvProvider {
     /// * `Ok(Some(Positive))` - If the ATM implied volatility is successfully retrieved.
     /// * `Ok(None)` - If the ATM implied volatility is not available or not applicable.
     /// * `Err(Box<dyn Error>)` - If an error occurs during the retrieval process.
-    fn atm_iv(&self) -> Result<&Positive, Box<dyn Error>>;
+    fn atm_iv(&self) -> Result<&Positive, VolatilityError>;
 }
 
 impl AtmIvProvider for Positive {
-    fn atm_iv(&self) -> Result<&Positive, Box<dyn Error>> {
+    fn atm_iv(&self) -> Result<&Positive, VolatilityError> {
         Ok(self)
     }
 }
 
 impl AtmIvProvider for OptionChain {
-    fn atm_iv(&self) -> Result<&Positive, Box<dyn Error>> {
+    fn atm_iv(&self) -> Result<&Positive, VolatilityError> {
         match self.get_atm_implied_volatility() {
             Ok(iv) => Ok(iv),
-            Err(e) => Err(Box::new(std::io::Error::new(
-                std::io::ErrorKind::NotFound,
-                format!("ATM IV not available: {e}"),
-            ))),
+            Err(e) => Err(format!("ATM IV not available: {e}").into()),
         }
     }
 }
@@ -125,7 +122,6 @@ mod tests_volatility_traits {
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
     use std::collections::BTreeSet;
-    use std::io::ErrorKind;
 
     struct TestSmile;
 
@@ -140,7 +136,7 @@ mod tests_volatility_traits {
     }
 
     impl AtmIvProvider for TestIvProvider {
-        fn atm_iv(&self) -> Result<&Positive, Box<dyn Error>> {
+        fn atm_iv(&self) -> Result<&Positive, VolatilityError> {
             Ok(&self.iv)
         }
     }
@@ -238,11 +234,8 @@ mod tests_volatility_traits {
         struct ErrorIvProvider;
 
         impl AtmIvProvider for ErrorIvProvider {
-            fn atm_iv(&self) -> Result<&Positive, Box<dyn Error>> {
-                Err(Box::new(std::io::Error::new(
-                    ErrorKind::NotFound,
-                    "ATM IV not available: test error",
-                )))
+            fn atm_iv(&self) -> Result<&Positive, VolatilityError> {
+                Err("ATM IV not available: test error".into())
             }
         }
 
@@ -251,9 +244,7 @@ mod tests_volatility_traits {
 
         assert!(result.is_err());
         let error = result.unwrap_err();
-        let io_error = error.downcast_ref::<std::io::Error>().unwrap();
-        assert_eq!(io_error.kind(), ErrorKind::NotFound);
-        assert!(io_error.to_string().contains("ATM IV not available"));
+        assert!(error.to_string().contains("ATM IV not available"));
     }
 
     #[test]
@@ -270,7 +261,7 @@ mod tests_volatility_traits {
         }
 
         impl AtmIvProvider for CombinedProvider {
-            fn atm_iv(&self) -> Result<&Positive, Box<dyn Error>> {
+            fn atm_iv(&self) -> Result<&Positive, VolatilityError> {
                 Ok(&self.iv_value)
             }
         }
