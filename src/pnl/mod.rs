@@ -40,6 +40,7 @@
 //! use rust_decimal_macros::dec;
 //! use optionstratlib::{ExpirationDate, Positive};
 //! use optionstratlib::pos;
+//! use optionstratlib::prelude::PricingError;
 //!
 //! // Create a new PnL instance
 //! let pnl = PnL::new(

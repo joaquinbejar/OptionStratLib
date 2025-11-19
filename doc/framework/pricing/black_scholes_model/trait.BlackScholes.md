@@ -7,7 +7,7 @@
 
 # Trait [BlackScholes]{.trait} Copy item path
 
-[[Source](../../../src/optionstratlib/pricing/black_scholes_model.rs.html#246-271){.src}
+[[Source](../../../src/optionstratlib/pricing/black_scholes_model.rs.html#247-272){.src}
 ]{.sub-heading}
 ::::
 
@@ -38,7 +38,8 @@ must provide access to their underlying option data through the
 ::: example-wrap
 ``` {.rust .rust-example-rendered}
 use std::error::Error;
-use optionstratlib::Options;///
+use optionstratlib::Options;
+use optionstratlib::prelude::PricingError;
 
 use optionstratlib::pricing::BlackScholes;
 
@@ -59,7 +60,7 @@ impl BlackScholes for MyOption {
 
 ::::: methods
 ::: {#tymethod.get_option .section .method}
-[Source](../../../src/optionstratlib/pricing/black_scholes_model.rs.html#256){.src
+[Source](../../../src/optionstratlib/pricing/black_scholes_model.rs.html#257){.src
 .rightside}
 
 #### fn [get_option](#tymethod.get_option){.fn}(&self) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<&[Options](../../model/option/struct.Options.html "struct optionstratlib::model::option::Options"){.struct}, [PricingError](../../error/pricing/enum.PricingError.html "enum optionstratlib::error::pricing::PricingError"){.enum}\> {#fn-get_optionself---resultoptions-pricingerror .code-header}
@@ -84,7 +85,7 @@ calculations.
 
 ::::: methods
 ::: {#method.calculate_price_black_scholes .section .method}
-[Source](../../../src/optionstratlib/pricing/black_scholes_model.rs.html#267-270){.src
+[Source](../../../src/optionstratlib/pricing/black_scholes_model.rs.html#268-271){.src
 .rightside}
 
 #### fn [calculate_price_black_scholes](#method.calculate_price_black_scholes){.fn}(&self) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[Decimal](../../prelude/struct.Decimal.html "struct optionstratlib::prelude::Decimal"){.struct}, [PricingError](../../error/pricing/enum.PricingError.html "enum optionstratlib::error::pricing::PricingError"){.enum}\> {#fn-calculate_price_black_scholesself---resultdecimal-pricingerror .code-header}

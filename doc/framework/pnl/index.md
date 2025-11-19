@@ -7,7 +7,7 @@
 
 # Module pnl Copy item path
 
-[[Source](../../src/optionstratlib/pnl/mod.rs.html#7-120){.src}
+[[Source](../../src/optionstratlib/pnl/mod.rs.html#7-121){.src}
 ]{.sub-heading}
 ::::
 
@@ -60,6 +60,7 @@ use chrono::{DateTime, Utc};
 use rust_decimal_macros::dec;
 use optionstratlib::{ExpirationDate, Positive};
 use optionstratlib::pos;
+use optionstratlib::prelude::PricingError;
 
 // Create a new PnL instance
 let pnl = PnL::new(

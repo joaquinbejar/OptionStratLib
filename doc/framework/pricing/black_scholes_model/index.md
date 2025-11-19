@@ -7,7 +7,7 @@
 
 # Module black_scholes_model Copy item path
 
-[[Source](../../../src/optionstratlib/pricing/black_scholes_model.rs.html#6-1061){.src}
+[[Source](../../../src/optionstratlib/pricing/black_scholes_model.rs.html#6-1062){.src}
 ]{.sub-heading}
 ::::
 

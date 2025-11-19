@@ -7,7 +7,7 @@
 
 # Module chain Copy item path
 
-[[Source](../../../src/optionstratlib/chains/chain.rs.html#6-9051){.src}
+[[Source](../../../src/optionstratlib/chains/chain.rs.html#6-9060){.src}
 ]{.sub-heading}
 ::::
 
