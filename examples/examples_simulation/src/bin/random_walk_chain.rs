@@ -15,7 +15,7 @@ fn main() -> Result<(), Error> {
     setup_logger();
     let n_steps = 43_200; // 30 days in minutes
     let mut initial_chain = OptionChain::load_from_json(
-        "examples/Chains/Germany-40-2025-05-27-15:29:00-UTC-24209.json",
+        "examples/Chains/Germany-40-2025-05-27-15-29-00-UTC-24209.json",
     )?;
     initial_chain.update_expiration_date(get_x_days_formatted(2));
     let iv = pos!(0.20);

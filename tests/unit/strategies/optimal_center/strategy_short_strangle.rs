@@ -35,7 +35,7 @@ fn test_short_strangle_with_greeks_integration() -> Result<(), Box<dyn Error>> {
     );
 
     let option_chain = OptionChain::load_from_json(
-        "./examples/Chains/Germany-40-2025-05-27-15:29:00-UTC-24209.json",
+        "./examples/Chains/Germany-40-2025-05-27-15-29-00-UTC-24209.json",
     )?;
     strategy.get_best_area(&option_chain, FindOptimalSide::Center);
     let positions = strategy.get_positions()?;

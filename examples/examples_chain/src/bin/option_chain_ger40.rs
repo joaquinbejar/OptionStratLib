@@ -11,7 +11,7 @@ use tracing::{debug, info};
 fn main() -> Result<(), optionstratlib::error::Error> {
     setup_logger();
     let mut option_chain = OptionChain::load_from_json(
-        "examples/Chains/Germany-40-2025-05-27-15:29:00-UTC-24209.json",
+        "examples/Chains/Germany-40-2025-05-27-15-29-00-UTC-24209.json",
     )?;
 
     info!("Chain loaded");
