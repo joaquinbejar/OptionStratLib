@@ -61,17 +61,17 @@ fn main() -> Result<(), Error> {
     setup_logger();
 
     // Simulation parameters
-    let n_simulations = 10000; // Number of simulations to run
+    let n_simulations = 100; // Number of simulations to run
     let n_steps = 10080; // 7 days in minutes
-    let underlying_price = pos!(4007.7);
+    let underlying_price = pos!(4088.85);
     let days = pos!(7.0);
-    let implied_volatility = pos!(0.27); // 27% annual volatility
+    let implied_volatility = pos!(0.24); // 27% annual volatility
     let symbol = "GOLD".to_string();
 
     // For a Long Call with delta ~0.70, we need a strike slightly in-the-money
     // Delta 0.70 for a call means the strike is below current price
     // Approximate: strike = underlying * 0.98 for delta ~0.70
-    let strike_price = pos!(3930.0); // Strike price for the long call (delta ~0.70)
+    let strike_price = pos!(4150.0); // Strike price for the long call (delta ~0.30)
 
     // First, calculate the premium for the option
     let temp_option = Options::new(
@@ -108,7 +108,7 @@ fn main() -> Result<(), Error> {
 
     // Define exit policy: 100% profit OR expiration
     let exit_policy = ExitPolicy::Or(vec![
-        ExitPolicy::ProfitPercent(dec!(1.0)), // 100% profit (premium doubles)
+        ExitPolicy::ProfitPercent(dec!(0.5)), // 50% profit (premium doubles)
         ExitPolicy::Expiration,               // Or let it expire
     ]);
 
@@ -119,7 +119,7 @@ fn main() -> Result<(), Error> {
     info!("Expiration: {} days ({} steps)", days, n_steps);
     info!("Implied Volatility: {:.2}%", implied_volatility * 100.0);
     info!("Initial Premium Paid: ${:.2}", initial_premium);
-    info!("Exit Policy: 100% profit OR expiration");
+    info!("Exit Policy: 50% profit OR expiration");
     info!("================================================================");
 
     // Create WalkParams for the Simulator
@@ -137,13 +137,14 @@ fn main() -> Result<(), Error> {
             x: Xstep::new(Positive::ONE, TimeFrame::Minute, ExpirationDate::Days(days)),
             y: Ystep::new(0, underlying_price),
         },
-        walk_type: WalkType::Custom {
+        walk_type: WalkType::Heston {
             dt,
-            drift: dec!(0.15), // Slight upward drift for long call
+            drift: dec!(0.01),
             volatility: volatility_dt,
-            vov: pos!(0.02),         // Volatility of volatility (2%)
-            vol_speed: pos!(0.02),   // Mean reversion speed
-            vol_mean: volatility_dt, // Mean volatility level (same as initial)
+            kappa: pos!(0.0),
+            theta: pos!(0.0),
+            xi: pos!(0.0),
+            rho: dec!(0.0),
         },
         walker,
     };

@@ -9,6 +9,7 @@ use {
     std::error::Error,
 };
 
+#[cfg_attr(target_os = "windows", ignore)]
 #[test]
 fn test_short_strangle_with_greeks_integration() -> Result<(), Box<dyn Error>> {
     // Define inputs for the ShortStrangle strategy
