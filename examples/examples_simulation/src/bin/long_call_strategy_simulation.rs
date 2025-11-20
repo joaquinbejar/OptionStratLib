@@ -148,7 +148,6 @@ fn main() -> Result<(), Error> {
         },
         walker,
     };
-    
 
     // Create Simulator with all random walks at once
     info!(
