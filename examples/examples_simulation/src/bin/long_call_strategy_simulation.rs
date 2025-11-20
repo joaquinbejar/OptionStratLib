@@ -141,13 +141,14 @@ fn main() -> Result<(), Error> {
             dt,
             drift: dec!(0.01),
             volatility: volatility_dt,
-            kappa: pos!(0.0),
-            theta: pos!(0.0),
-            xi: pos!(0.0),
-            rho: dec!(0.0),
+            kappa: pos!(2.0),
+            theta: pos!(0.0225),
+            xi: pos!(0.3),
+            rho: dec!(-0.3),
         },
         walker,
     };
+    
 
     // Create Simulator with all random walks at once
     info!(
