@@ -42,6 +42,7 @@ jobs:
             ${{ runner.os }}-cargo-
 
       - name: Install dependencies
+        shell: bash
         run: |
           if [ "${{ matrix.container }}" = "archlinux:latest" ]; then
             pacman -Syu --noconfirm make fontconfig pkgconf
