@@ -1,4 +1,4 @@
-use crate::error::DecimalError;
+use crate::error::{DecimalError, StrategyError};
 use crate::prelude::GraphError;
 use thiserror::Error;
 
@@ -123,6 +123,14 @@ impl From<crate::error::OptionsError> for SimulationError {
 
 impl From<crate::error::PricingError> for SimulationError {
     fn from(err: crate::error::PricingError) -> Self {
+        SimulationError::OtherError {
+            reason: err.to_string(),
+        }
+    }
+}
+
+impl From<StrategyError> for SimulationError {
+    fn from(err: StrategyError) -> Self {
         SimulationError::OtherError {
             reason: err.to_string(),
         }

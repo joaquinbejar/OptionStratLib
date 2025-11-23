@@ -68,7 +68,7 @@
 //!
 //! Provides `StrategyResult<T>` for convenient error handling in strategy operations.
 use crate::error::common::OperationErrorKind;
-use crate::error::{GreeksError, OptionsError, PositionError};
+use crate::error::{GreeksError, OptionsError, PositionError, SimulationError};
 use thiserror::Error;
 
 /// Represents the different types of errors that can occur in options trading strategies.
@@ -367,6 +367,15 @@ impl From<crate::error::PricingError> for StrategyError {
         StrategyError::OperationError(OperationErrorKind::InvalidParameters {
             operation: "Pricing".to_string(),
             reason: err.to_string(),
+        })
+    }
+}
+
+impl From<SimulationError> for StrategyError {
+    fn from(value: SimulationError) -> Self {
+        StrategyError::OperationError(OperationErrorKind::InvalidParameters {
+            operation: "Simulation".to_string(),
+            reason: value.to_string(),
         })
     }
 }

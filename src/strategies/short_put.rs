@@ -598,7 +598,8 @@ where
                 current_option.underlying_price = step.y.positive();
                 current_option.expiration_date = ExpirationDate::Days(days_left);
 
-                let current_premium = current_option.calculate_price_black_scholes()?.abs();
+                let current_premium =
+                    current_option.calculate_price_black_scholes()?.abs() + self.get_fees()?;
                 let index = *step.x.index() as usize;
 
                 // Track premium statistics

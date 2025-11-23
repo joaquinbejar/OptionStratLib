@@ -62,13 +62,13 @@ fn main() -> Result<(), Error> {
     setup_logger();
 
     // Simulation parameters
-    let n_simulations = 10000; // Number of simulations to run
+    let n_simulations = 100; // Number of simulations to run
     let n_steps = 10080; // 7 days in minutes
     let underlying_price = pos!(4007.7);
     let days = pos!(7.0);
     let implied_volatility = pos!(0.16); // 27% annual volatility
     let symbol = "GOLD".to_string();
-    let strike_price = pos!(3930.0); // Strike price for the short put (delta ~-0.3)
+    let strike_price = pos!(3990.0); // Strike price for the short put (delta ~-0.3)
 
     // First, calculate the premium for the option
     let temp_option = Options::new(
@@ -99,12 +99,12 @@ fn main() -> Result<(), Error> {
         dec!(0.0),        // risk_free_rate
         pos!(0.0),        // dividend_yield
         premium_positive, // premium received
-        pos!(0.0),        // open_fee
-        pos!(0.0),        // close_fee
+        pos!(1.5),        // open_fee
+        pos!(1.5),        // close_fee
     );
 
     // Define exit policy: 50% profit OR 100% loss
-    let exit_policy = ExitPolicy::profit_or_loss(dec!(0.5), dec!(1.0));
+    let exit_policy = ExitPolicy::profit_or_loss(dec!(0.7), dec!(0.6));
 
     info!("========== SHORT PUT SIMULATION (Using Simulate Trait) ==========");
     info!("Starting {} Short Put simulations...", n_simulations);
