@@ -231,6 +231,117 @@ impl OptionData {
         }
     }
 
+    /// Calculates and returns the call spread as a `Positive` value if both call bid and call ask
+    /// prices are available. Otherwise, returns `None`.
+    ///
+    /// The call spread is determined as the absolute difference between the call ask price
+    /// and the call bid price.
+    ///
+    /// # Returns
+    /// - `Some(Positive)` if both `call_bid` and `call_ask` are present.
+    /// - `None` if either `call_bid` or `call_ask` is `None`.
+    ///
+    /// # Note
+    /// The `Positive` type is assumed to enforce non-negative values for correctness.
+    pub fn get_call_spread(&self) -> Option<Positive> {
+        match (self.call_bid, self.call_ask) {
+            (Some(call_bid), Some(call_ask)) => {
+                let spread = (call_ask.to_dec() - call_bid.to_dec()).abs();
+                Some(Positive(spread))
+            }
+            _ => None,
+        }
+    }
+
+    /// Calculates the percentage call spread based on the bid and ask prices of a call option.
+    ///
+    /// # Formula
+    /// The call spread percentage is computed using the absolute difference between the call ask
+    /// price and the call bid price, divided by the mid price of the call. Mathematically:
+    ///
+    /// ```text
+    /// Spread% = |CallAsk - CallBid| / ((CallAsk + CallBid) / 2)
+    /// ```
+    ///
+    /// # Returns
+    /// - Returns `Some(Positive)` if both `call_bid` and `call_ask` values are available and non-negative.
+    /// - Returns `None` if either `call_bid` or `call_ask` is missing.
+    ///
+    /// # Notes
+    /// - The method assumes both `call_bid` and `call_ask` are non-negative.
+    /// - `Positive` is a custom type encapsulating non-negative values.
+    /// - The resulting percentage is always positive due to the use of `.abs()` for the spread calculation.
+    ///
+    /// # Parameters
+    /// None (relies on internal `self.call_bid` and `self.call_ask` properties).
+    ///
+    /// # Errors
+    /// This function does not return an error. It simply returns `None` if the calculation is not feasible.
+    pub fn get_call_spread_per(&self) -> Option<Positive> {
+        match (self.call_bid, self.call_ask) {
+            (Some(call_bid), Some(call_ask)) => {
+                let spread = (call_ask.to_dec() - call_bid.to_dec()).abs();
+                let mid_price = (call_ask + call_bid) / 2.0;
+                Some(Positive(spread) / mid_price)
+            }
+            _ => None,
+        }
+    }
+
+    ///
+    /// Calculates and returns the spread between `put_bid` and `put_ask` if both values are present.
+    ///
+    /// The spread is calculated as the absolute difference between the `put_ask` price and the
+    /// `put_bid` price. The result is wrapped in a `Positive` type.
+    ///
+    /// # Returns
+    ///
+    /// - `Some(Positive)` if both `put_bid` and `put_ask` are `Some`, containing their calculated spread.
+    /// - `None` if either `put_bid` or `put_ask` is `None`.
+    ///
+    /// # Note
+    ///
+    /// The values of `put_bid` and `put_ask` must implement the `to_dec()` method
+    /// to convert to a numeric type for calculation purposes.
+    /// The spread is always represented as a positive value.
+    ///
+    pub fn get_put_spread(&self) -> Option<Positive> {
+        match (self.put_bid, self.put_ask) {
+            (Some(put_bid), Some(put_ask)) => {
+                let spread = (put_ask.to_dec() - put_bid.to_dec()).abs();
+                Some(Positive(spread))
+            }
+            _ => None,
+        }
+    }
+
+    /// Calculates the percentage spread of the bid and ask prices for a put option.
+    ///
+    /// The function computes the absolute difference (spread) between the bid and ask prices.
+    /// It then divides this spread by the midpoint of the bid and ask prices to yield the
+    /// percentage spread. Only positive values are returned wrapped in the `Positive` type.
+    ///
+    /// # Returns
+    /// - `Some(Positive)` if both `put_bid` and `put_ask` are present, containing the percentage spread.
+    /// - `None` if either `put_bid` or `put_ask` is unavailable.
+    ///
+    /// # Assumptions
+    /// - `put_bid` and `put_ask` are non-negative.
+    /// - The `Positive` type is a wrapper that ensures the value is greater than zero.
+    ///
+    /// # Note
+    /// This function returns `None` if there are missing values for either `put_bid` or `put_ask`.
+    pub fn get_put_spread_per(&self) -> Option<Positive> {
+        match (self.put_bid, self.put_ask) {
+            (Some(put_bid), Some(put_ask)) => {
+                let spread = (put_ask.to_dec() - put_bid.to_dec()).abs();
+                let mid_price = (put_ask + put_bid) / 2.0;
+                Some(Positive(spread) / mid_price)
+            }
+            _ => None,
+        }
+    }
+
     /// Retrieves the implied volatility of the underlying asset or option.
     ///
     /// # Returns

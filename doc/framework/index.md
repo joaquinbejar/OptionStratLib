@@ -9,7 +9,7 @@
 Expand description
 
 :::::::::::::::::::::: docblock
-## [§](#optionstratlib-v0100-financial-options-library){.doc-anchor}OptionStratLib v0.10.2: Financial Options Library {#optionstratlib-v0100-financial-options-library}
+## [§](#optionstratlib-v0100-financial-options-library){.doc-anchor}OptionStratLib v0.10.3: Financial Options Library {#optionstratlib-v0100-financial-options-library}
 
 ### [§](#table-of-contents){.doc-anchor}Table of Contents
 
