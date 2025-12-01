@@ -7681,11 +7681,11 @@ mod chain_coverage_tests {
         let original_date = chain.get_expiration_date();
 
         // Update to a new date
-        chain.update_expiration_date("2025-12-31".to_string());
+        chain.update_expiration_date("2026-12-31".to_string());
 
         // Verify the date was updated
         assert_ne!(chain.get_expiration_date(), original_date);
-        assert_eq!(chain.get_expiration_date(), "2025-12-31");
+        assert_eq!(chain.get_expiration_date(), "2026-12-31");
     }
 
     #[test]
@@ -7933,11 +7933,11 @@ mod chain_coverage_tests_bis {
         let original_date = chain.get_expiration_date();
 
         // Update to a new date
-        chain.update_expiration_date("2025-12-31".to_string());
+        chain.update_expiration_date("2026-12-31".to_string());
 
         // Verify the date was updated
         assert_ne!(chain.get_expiration_date(), original_date);
-        assert_eq!(chain.get_expiration_date(), "2025-12-31");
+        assert_eq!(chain.get_expiration_date(), "2026-12-31");
     }
 
     #[test]

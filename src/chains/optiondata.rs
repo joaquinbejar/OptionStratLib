@@ -2794,3 +2794,263 @@ mod tests_current_deltas {
         assert_eq!(put_delta, None);
     }
 }
+
+#[cfg(test)]
+mod tests_spreads {
+    use super::*;
+    use crate::{pos, spos};
+
+    #[test]
+    fn test_get_call_spread_some() {
+        let option_data = OptionData::new(
+            pos!(100.0),
+            spos!(100.0),
+            spos!(110.0),
+            spos!(8.5),
+            spos!(9.0),
+            pos!(0.2),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+        assert_eq!(option_data.get_call_spread(), Some(pos!(10.0)));
+    }
+
+    #[test]
+    fn test_get_call_spread_none_when_missing_prices() {
+        // Missing call_bid
+        let od1 = OptionData::new(
+            pos!(100.0),
+            None,
+            spos!(10.0),
+            None,
+            None,
+            pos!(0.2),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+        assert_eq!(od1.get_call_spread(), None);
+
+        // Missing call_ask
+        let od2 = OptionData::new(
+            pos!(100.0),
+            spos!(9.5),
+            None,
+            None,
+            None,
+            pos!(0.2),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+        assert_eq!(od2.get_call_spread(), None);
+    }
+
+    #[test]
+    fn test_get_call_spread_per_some() {
+        let option_data = OptionData::new(
+            pos!(95.0),
+            spos!(95.0),
+            spos!(105.0),
+            None,
+            None,
+            pos!(0.2),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+        let spread_per = option_data.get_call_spread_per().unwrap();
+        let got = spread_per.to_f64();
+        let expected = 0.1;
+        assert!((got - expected).abs() < 1e-12);
+    }
+
+    #[test]
+    fn test_get_call_spread_per_none_when_missing_prices() {
+        let od = OptionData::new(
+            pos!(100.0),
+            None,
+            spos!(10.0),
+            None,
+            None,
+            pos!(0.2),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+        assert_eq!(od.get_call_spread_per(), None);
+    }
+
+    #[test]
+    fn test_get_put_spread_some() {
+        let option_data = OptionData::new(
+            pos!(100.0),
+            None,
+            None,
+            spos!(8.5),
+            spos!(9.0),
+            pos!(0.2),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+        assert_eq!(option_data.get_put_spread(), Some(pos!(0.5)));
+    }
+
+    #[test]
+    fn test_get_put_spread_none_when_missing_prices() {
+        // Missing put_bid
+        let od1 = OptionData::new(
+            pos!(100.0),
+            None,
+            None,
+            None,
+            spos!(9.0),
+            pos!(0.2),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+        assert_eq!(od1.get_put_spread(), None);
+
+        // Missing put_ask
+        let od2 = OptionData::new(
+            pos!(100.0),
+            None,
+            None,
+            spos!(8.5),
+            None,
+            pos!(0.2),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+        assert_eq!(od2.get_put_spread(), None);
+    }
+
+    #[test]
+    fn test_get_put_spread_per_some() {
+        let option_data = OptionData::new(
+            pos!(100.0),
+            None,
+            None,
+            spos!(95.0),
+            spos!(105.0),
+            pos!(0.2),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+        let spread_per = option_data.get_put_spread_per().unwrap();
+        let got = spread_per.to_f64();
+        let expected = 0.1;
+        assert!((got - expected).abs() < 1e-12);
+    }
+
+    #[test]
+    fn test_get_put_spread_per_none_when_missing_prices() {
+        let od = OptionData::new(
+            pos!(100.0),
+            None,
+            None,
+            None,
+            spos!(9.0),
+            pos!(0.2),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+        assert_eq!(od.get_put_spread_per(), None);
+    }
+}
