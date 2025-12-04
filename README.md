@@ -44,7 +44,7 @@ and a modular architecture built on modern Rust 2024 edition.
 - **Telegraph Process Model**: Advanced stochastic modeling for jump-diffusion processes
 
 #### 2. **Greeks Calculation**
-- Complete Greeks suite: Delta, Gamma, Theta, Vega, Rho
+- Complete Greeks suite: Delta, Gamma, Theta, Vega, Rho, Vanna, Vomma, Veta
 - Real-time sensitivity analysis
 - Greeks visualization and risk profiling
 - Custom Greeks implementations with adjustable parameters
@@ -437,6 +437,12 @@ optionstratlib = { version = "0.6.1", features = ["plotly"] }
 ```
 
 - `plotly`: Enables interactive visualization using plotly.rs
+
+The library is using the crate `plotly_static` for exporting Plotly plots to
+static images using headless browsers via WebDriver.\
+Please refer to the official
+crate [documentation](https://docs.rs/plotly_static/latest/plotly_static/)
+for configuration details.
 
 #### Building from Source
 

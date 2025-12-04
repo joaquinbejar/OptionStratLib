@@ -40,6 +40,9 @@ fn test_bull_put_spread_integration() -> Result<(), Box<dyn Error>> {
     assert_decimal_eq!(greeks.vega, dec!(3.84242415), epsilon);
     assert_decimal_eq!(greeks.rho, dec!(-0.833461), epsilon);
     assert_decimal_eq!(greeks.rho_d, dec!(0.816525), epsilon);
+    assert_decimal_eq!(greeks.vanna, dec!(-0.0226839453), epsilon);
+    assert_decimal_eq!(greeks.vomma, dec!(31.9307265715), epsilon);
+    assert_decimal_eq!(greeks.veta, dec!(0.0486186188), epsilon);    
 
     assert_decimal_eq!(
         strategy.delta_neutrality().unwrap().net_delta,

@@ -161,7 +161,7 @@ pub fn create_paraboloid_surface(
 }
 
 #[cfg(test)]
-mod tests {
+mod tests_surfaces_utils {
     use super::*;
     use rust_decimal_macros::dec;
 

@@ -39,6 +39,9 @@ fn test_long_strangle_integration() -> Result<(), Box<dyn Error>> {
     assert_decimal_eq!(greeks.vega, dec!(19.569191489), epsilon);
     assert_decimal_eq!(greeks.rho, dec!(-0.705294073481), epsilon);
     assert_decimal_eq!(greeks.rho_d, dec!(0.00073528197151), epsilon);
+    assert_decimal_eq!(greeks.vanna, dec!(0.2742684839), epsilon);
+    assert_decimal_eq!(greeks.vomma, dec!(2.3016267940), epsilon);
+    assert_decimal_eq!(greeks.veta, dec!(0.0032881122), epsilon);
 
     assert_decimal_eq!(
         strategy.delta_neutrality().unwrap().net_delta,

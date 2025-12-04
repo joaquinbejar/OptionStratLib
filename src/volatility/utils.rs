@@ -530,8 +530,8 @@ pub fn generate_ou_process(
         let dw = decimal_normal_sample() * sqrt_dt; // Z√dt
         let drift = theta * mu.sub_or_zero(&x) * dt; // θ(μ−x)dt
         let diffusion = volatility * dw; // σ·Z√dt
-        x += drift + diffusion; // paso OU
-        x = x.max(Decimal::ZERO); // opcional: no negativos
+        x += drift + diffusion; // OU process step
+        x = x.max(Decimal::ZERO); // no negative values
         result.push(Positive(x));
     }
 
@@ -772,15 +772,15 @@ mod tests_implied_volatility {
             OptionType::European,
             Side::Long,
             "TEST".to_string(),
-            pos!(100.0),                      // strike price
-            ExpirationDate::Days(pos!(30.0)), // 30 days to expiration
-            pos!(0.2),                        // initial implied volatility
-            Positive::ONE,                    // quantity
-            pos!(100.0),                      // underlying price (ATM)
-            dec!(0.05),                       // risk-free rate
+            pos!(100.0),          // strike price
+            ExpirationDate::Days(pos!(30.0)),  // 30 days to expiration
+            pos!(0.2),     // initial implied volatility
+            Positive::ONE,           // quantity
+            pos!(100.0),     // underlying price (ATM)
+            dec!(0.05),        // risk-free rate
             OptionStyle::Call,                // call option
-            Positive::ZERO,                   // no dividend yield
-            None,                             // no exotic params
+            Positive::ZERO,   // no dividend yield
+            None,              // no exotic params
         )
     }
 
@@ -834,11 +834,17 @@ mod tests_implied_volatility {
         let vega = option.vega().unwrap();
         let theta = option.theta().unwrap();
         let rho = option.rho().unwrap();
+        let vanna = option.vanna().unwrap();
+        let vomma = option.vomma().unwrap();
+        let veta = option.veta().unwrap();
         assert_decimal_eq!(delta, dec!(0.502), dec!(0.002));
         assert_decimal_eq!(gamma, dec!(0.431), dec!(0.002));
         assert_decimal_eq!(vega, dec!(0.015), dec!(0.002));
         assert_decimal_eq!(theta, dec!(-0.369), dec!(0.002));
         assert_decimal_eq!(rho, dec!(0.001), dec!(0.002));
+        assert_decimal_eq!(vanna, dec!(0.0073826), dec!(0.0000001));
+        assert_decimal_eq!(vomma, dec!(-0.0000012641), dec!(0.0000000001));
+        assert_decimal_eq!(veta, dec!(0.0002138), dec!(0.0000001));
 
         let market_price = option.calculate_price_black_scholes().unwrap();
         assert_decimal_eq!(market_price, dec!(0.369), dec!(0.002));
@@ -867,11 +873,17 @@ mod tests_implied_volatility {
         let vega = option.vega().unwrap();
         let theta = option.theta().unwrap();
         let rho = option.rho().unwrap();
+        let vanna = option.vanna().unwrap();
+        let vomma = option.vomma().unwrap();
+        let veta = option.veta().unwrap();
         assert_decimal_eq!(delta, dec!(-0.498), dec!(0.002));
         assert_decimal_eq!(gamma, dec!(0.431), dec!(0.002));
         assert_decimal_eq!(vega, dec!(0.015), dec!(0.002));
         assert_decimal_eq!(theta, dec!(-0.369), dec!(0.002));
         assert_decimal_eq!(rho, dec!(0.001), dec!(0.002));
+        assert_decimal_eq!(vanna, dec!(0.0073826), dec!(0.0000001));
+        assert_decimal_eq!(vomma, dec!(-0.0000012641), dec!(0.0000000001));
+        assert_decimal_eq!(veta, dec!(0.0002138), dec!(0.0000001));        
 
         let market_price = option.calculate_price_black_scholes().unwrap();
         assert_decimal_eq!(market_price, dec!(0.369), dec!(0.002));
@@ -917,11 +929,17 @@ mod tests_implied_volatility {
         let vega = option.vega().unwrap();
         let theta = option.theta().unwrap();
         let rho = option.rho().unwrap();
+        let vanna = option.vanna().unwrap();
+        let vomma = option.vomma().unwrap();
+        let veta = option.veta().unwrap();        
         assert_decimal_eq!(delta, dec!(0.946), dec!(0.002));
         assert_decimal_eq!(gamma, dec!(0.00038), dec!(0.002));
         assert_decimal_eq!(vega, dec!(0.866), dec!(0.002));
         assert_decimal_eq!(theta, dec!(-26.990), dec!(0.002));
         assert_decimal_eq!(rho, dec!(0.277), dec!(0.002));
+        assert_decimal_eq!(vanna, dec!(-0.4879786), dec!(0.0000001));
+        assert_decimal_eq!(vomma, dec!(6.2450679681), dec!(0.0000000001));
+        assert_decimal_eq!(veta, dec!(0.0433019), dec!(0.0000001));
 
         let market_price = option.calculate_price_black_scholes().unwrap();
         assert_decimal_eq!(market_price, dec!(454.917), dec!(0.002));
@@ -950,11 +968,17 @@ mod tests_implied_volatility {
         let vega = option.vega().unwrap();
         let theta = option.theta().unwrap();
         let rho = option.rho().unwrap();
+        let vanna = option.vanna().unwrap();
+        let vomma = option.vomma().unwrap();
+        let veta = option.veta().unwrap();               
         assert_decimal_eq!(delta, dec!(-0.053), dec!(0.001));
         assert_decimal_eq!(gamma, dec!(0.0), dec!(0.001));
         assert_decimal_eq!(vega, dec!(0.866), dec!(0.001));
         assert_decimal_eq!(theta, dec!(-29.874), dec!(0.001));
         assert_decimal_eq!(rho, dec!(-0.016), dec!(0.001));
+        assert_decimal_eq!(vanna, dec!(-0.4879786), dec!(0.0000001));
+        assert_decimal_eq!(vomma, dec!(6.2450679681), dec!(0.0000000001));
+        assert_decimal_eq!(veta, dec!(0.0433019), dec!(0.0000001));        
 
         let market_price = option.calculate_price_black_scholes().unwrap();
         assert_decimal_eq!(market_price, dec!(6.537), dec!(0.002));
@@ -1000,11 +1024,17 @@ mod tests_implied_volatility {
         let vega = option.vega().unwrap();
         let theta = option.theta().unwrap();
         let rho = option.rho().unwrap();
+        let vanna = option.vanna().unwrap();
+        let vomma = option.vomma().unwrap();
+        let veta = option.veta().unwrap();         
         assert_decimal_eq!(delta, dec!(-0.946), dec!(0.002));
         assert_decimal_eq!(gamma, dec!(0.00038), dec!(0.002));
         assert_decimal_eq!(vega, dec!(0.866), dec!(0.002));
         assert_decimal_eq!(theta, dec!(-26.990), dec!(0.002));
         assert_decimal_eq!(rho, dec!(0.277), dec!(0.002));
+        assert_decimal_eq!(vanna, dec!(-0.4879786), dec!(0.0000001));
+        assert_decimal_eq!(vomma, dec!(6.2450679681), dec!(0.0000000001));
+        assert_decimal_eq!(veta, dec!(0.0433019), dec!(0.0000001));        
 
         let market_price = option.calculate_price_black_scholes().unwrap().abs();
         assert_decimal_eq!(market_price, dec!(454.917), dec!(0.002));
@@ -1033,11 +1063,17 @@ mod tests_implied_volatility {
         let vega = option.vega().unwrap();
         let theta = option.theta().unwrap();
         let rho = option.rho().unwrap();
+        let vanna = option.vanna().unwrap();
+        let vomma = option.vomma().unwrap();
+        let veta = option.veta().unwrap();         
         assert_decimal_eq!(delta, dec!(0.053), dec!(0.001));
         assert_decimal_eq!(gamma, dec!(0.0), dec!(0.001));
         assert_decimal_eq!(vega, dec!(0.866), dec!(0.001));
         assert_decimal_eq!(theta, dec!(-29.874), dec!(0.001));
         assert_decimal_eq!(rho, dec!(-0.016), dec!(0.001));
+        assert_decimal_eq!(vanna, dec!(-0.4879786), dec!(0.0000001));
+        assert_decimal_eq!(vomma, dec!(6.2450679681), dec!(0.0000000001));
+        assert_decimal_eq!(veta, dec!(0.0433019), dec!(0.0000001));        
 
         let market_price = option.calculate_price_black_scholes().unwrap().abs();
         assert_decimal_eq!(market_price, dec!(6.537), dec!(0.002));
@@ -1083,11 +1119,17 @@ mod tests_implied_volatility {
         let vega = option.vega().unwrap();
         let theta = option.theta().unwrap();
         let rho = option.rho().unwrap();
+        let vanna = option.vanna().unwrap();
+        let vomma = option.vomma().unwrap();
+        let veta = option.veta().unwrap();          
         assert_decimal_eq!(delta, dec!(-0.00043), dec!(0.002));
         assert_decimal_eq!(gamma, dec!(0.0000064), dec!(0.00001));
         assert_decimal_eq!(vega, dec!(0.0105), dec!(0.002));
         assert_decimal_eq!(theta, dec!(-0.64997), dec!(0.002));
         assert_decimal_eq!(rho, dec!(-0.000083), dec!(0.002));
+        assert_decimal_eq!(vanna, dec!(-0.0144632), dec!(0.0000001));
+        assert_decimal_eq!(vomma, dec!(0.3275301270), dec!(0.0000000001));
+        assert_decimal_eq!(veta, dec!(0.0031824), dec!(0.0000001));         
 
         let market_price = option.calculate_price_black_scholes().unwrap();
         assert_decimal_eq!(market_price, dec!(0.027), dec!(0.002)); // too small to be accurate
@@ -1133,11 +1175,17 @@ mod tests_implied_volatility {
         let vega = option.vega().unwrap();
         let theta = option.theta().unwrap();
         let rho = option.rho().unwrap();
+        let vanna = option.vanna().unwrap();
+        let vomma = option.vomma().unwrap();
+        let veta = option.veta().unwrap();         
         assert_decimal_eq!(delta, dec!(0.999), dec!(0.001));
         assert_decimal_eq!(gamma, dec!(0.00001), dec!(0.00001));
         assert_decimal_eq!(vega, dec!(0.02255), dec!(0.002));
         assert_decimal_eq!(theta, dec!(-1.25733), dec!(0.002));
         assert_decimal_eq!(rho, dec!(0.204), dec!(0.002));
+        assert_decimal_eq!(vanna, dec!(-0.0274529), dec!(0.0000001));
+        assert_decimal_eq!(vomma, dec!(0.6094669204), dec!(0.0000000001));
+        assert_decimal_eq!(veta, dec!(0.0054321), dec!(0.0000001));         
 
         let market_price = option.calculate_price_black_scholes().unwrap();
         assert_decimal_eq!(market_price, dec!(778.065), dec!(0.002));

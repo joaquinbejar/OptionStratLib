@@ -1,6 +1,4 @@
 use optionstratlib::prelude::*;
-use rust_decimal::Decimal;
-use rust_decimal_macros::dec;
 use std::error::Error;
 
 fn get_option(point2d: &Point2D) -> Options {
@@ -36,7 +34,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let parametric_curve = Surface::construct(ConstructionMethod::Parametric {
         f: Box::new(|t: Point2D| {
             let option = get_option(&t);
-            let value = option.vega().unwrap();
+            let value = option.theta().unwrap();
             let point = Point3D::new(t.x, t.y, value);
             Ok(point)
         }),
@@ -45,12 +43,12 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     parametric_curve
         .plot()
-        .title("Vega Surface")
+        .title("Theta Surface")
         .x_label("Asset value")
         .y_label("Volatility")
-        .z_label("Vega")
+        .z_label("Theta")
         .dimensions(1600, 1200)
-        .save("./Draws/Surfaces/vega_surface.png")?;
+        .save("./Draws/Surfaces/theta_surface.png")?;
 
     Ok(())
 }

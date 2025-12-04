@@ -62,9 +62,9 @@ fn test_simple_surface() -> Result<(), GraphError> {
 
     plot.set_layout(layout);
 
-    // Asegurarse de que el directorio existe
+    // Be sure that the output directory exists
     std::fs::create_dir_all("Draws/Surfaces").unwrap_or_else(|e| {
-        info!("Error al crear el directorio: {}", e);
+        info!("Error during directoty creation: {}", e);
     });
 
     // Save as HTML (should work)
@@ -78,11 +78,11 @@ fn test_simple_surface() -> Result<(), GraphError> {
     let _ = plot.write_image(png_path, ImageFormat::PNG, 1600, 900, 1.0);
 
     // We comment out the generation of static images due to issues with Kaleido
-    // en macOS con arquitectura ARM (Apple Silicon)
+    // in macOS with architecture ARM (Apple Silicon)
     info!("Skipping static image generation due to Kaleido issues on macOS ARM");
 
     // To generate static images, consider using the web version of plotly
-    // o exportar manualmente desde el archivo HTML generado
+    // or to manually export from the generated HTML 
 
     Ok(())
 }

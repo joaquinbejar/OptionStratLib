@@ -292,7 +292,7 @@ mod tests_serialization {
 }
 
 #[cfg(test)]
-mod tests {
+mod tests_strategies_build_model {
     use super::*;
     use crate::model::utils::create_sample_option_with_date;
     use crate::{OptionStyle, Side, assert_decimal_eq, pos};
@@ -411,6 +411,9 @@ mod tests {
         assert_decimal_eq!(greeks.theta, dec!(-4.5486), dec!(1e-4));
         assert_decimal_eq!(greeks.vega, dec!(0.2508), dec!(1e-4));
         assert_decimal_eq!(greeks.rho, dec!(0.0398), dec!(1e-4));
+        assert_decimal_eq!(greeks.vanna, dec!(-1.2135), dec!(1e-4));
+        assert_decimal_eq!(greeks.vomma, dec!(0.5476), dec!(1e-4));
+        assert_decimal_eq!(greeks.veta, dec!(0.0031), dec!(1e-4));
     }
 
     #[test]
@@ -464,6 +467,9 @@ mod tests {
         assert_decimal_eq!(greeks.theta, dec!(-4.5486), dec!(1e-4));
         assert_decimal_eq!(greeks.vega, dec!(0.2508), dec!(1e-4));
         assert_decimal_eq!(greeks.rho, dec!(0.0398), dec!(1e-4));
+        assert_decimal_eq!(greeks.vanna, dec!(-1.2135), dec!(1e-4));
+        assert_decimal_eq!(greeks.vomma, dec!(0.5476), dec!(1e-4));
+        assert_decimal_eq!(greeks.veta, dec!(0.0031), dec!(1e-4));
     }
 
     #[test]
@@ -517,6 +523,9 @@ mod tests {
         assert_decimal_eq!(greeks.theta, dec!(-4.3511), dec!(1e-4));
         assert_decimal_eq!(greeks.vega, dec!(0.2508), dec!(1e-4));
         assert_decimal_eq!(greeks.rho, dec!(-0.0097), dec!(1e-4));
+        assert_decimal_eq!(greeks.vanna, dec!(-1.2135), dec!(1e-4));
+        assert_decimal_eq!(greeks.vomma, dec!(0.5476), dec!(1e-4));
+        assert_decimal_eq!(greeks.veta, dec!(0.0031), dec!(1e-4));
     }
 
     #[test]
@@ -570,6 +579,9 @@ mod tests {
         assert_decimal_eq!(greeks.theta, dec!(-4.3511), dec!(1e-4));
         assert_decimal_eq!(greeks.vega, dec!(0.2508), dec!(1e-4));
         assert_decimal_eq!(greeks.rho, dec!(-0.0097), dec!(1e-4));
+        assert_decimal_eq!(greeks.vanna, dec!(-1.2135), dec!(1e-4));
+        assert_decimal_eq!(greeks.vomma, dec!(0.5476), dec!(1e-4));
+        assert_decimal_eq!(greeks.veta, dec!(0.0031), dec!(1e-4));
     }
 
     #[test]

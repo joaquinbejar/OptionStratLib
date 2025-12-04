@@ -44,7 +44,7 @@ pub trait BasicSurfaces {
     /// option metric for a given option.
     ///
     /// This method uses the option's existing implied volatility value to calculate the
-    /// desired metric (delta, gamma, theta, vega, or price).
+    /// desired metric (delta, gamma, theta, vega, vanna, vomma, veta or price).
     ///
     /// # Parameters
     ///
@@ -90,6 +90,21 @@ pub trait BasicSurfaces {
                 option_with_vol.implied_volatility.to_dec(),
                 option_with_vol.vega()?,
             )),
+            BasicAxisTypes::Vanna=> Ok((
+                option_with_vol.strike_price.to_dec(),
+                option_with_vol.implied_volatility.to_dec(),
+                option_with_vol.vanna()?,
+            )),
+            BasicAxisTypes::Vomma=> Ok((
+                option_with_vol.strike_price.to_dec(),
+                option_with_vol.implied_volatility.to_dec(),
+                option_with_vol.vomma()?,
+            )),
+            BasicAxisTypes::Veta=> Ok((
+                option_with_vol.strike_price.to_dec(),
+                option_with_vol.implied_volatility.to_dec(),
+                option_with_vol.veta()?,
+            )),
             BasicAxisTypes::Price => Ok((
                 option_with_vol.strike_price.to_dec(),
                 option_with_vol.implied_volatility.to_dec(),
@@ -110,7 +125,7 @@ pub trait BasicSurfaces {
     /// option metric for a given option.
     ///
     /// This method uses a custom volatility value (different from the option's current implied volatility)
-    /// to calculate the desired metric (delta, gamma, theta, vega, or price).
+    /// to calculate the desired metric (delta, gamma, theta, vega, vanna, vomma, veta or price).
     ///
     /// # Parameters
     ///
@@ -158,6 +173,21 @@ pub trait BasicSurfaces {
                 volatility.to_dec(),
                 option_with_vol.vega()?,
             )),
+            BasicAxisTypes::Vanna=> Ok((
+                option_with_vol.strike_price.to_dec(),
+                volatility.to_dec(),
+                option_with_vol.vanna()?,
+            )),
+            BasicAxisTypes::Vomma=> Ok((
+                option_with_vol.strike_price.to_dec(),
+                volatility.to_dec(),
+                option_with_vol.vomma()?,
+            )),
+            BasicAxisTypes::Veta=> Ok((
+                option_with_vol.strike_price.to_dec(),
+                volatility.to_dec(),
+                option_with_vol.veta()?,
+            )),
             BasicAxisTypes::Price => Ok((
                 option_with_vol.strike_price.to_dec(),
                 volatility.to_dec(),
@@ -203,14 +233,14 @@ mod tests_basic_surfaces {
             OptionType::European,
             Side::Long,
             "TEST".to_string(),
-            pos!(100.0),
+            pos!(100.0), // strike_price
             ExpirationDate::Days(pos!(30.0)),
-            pos!(0.2),
-            pos!(1.0),
-            pos!(100.0),
-            dec!(0.05),
+            pos!(0.2), // implied_volatility
+            pos!(1.0), // quantity
+            pos!(100.0), // underlying_price
+            dec!(0.05), // risk_free_rate
             OptionStyle::Call,
-            pos!(0.01),
+            pos!(0.01), // dividend_yield
             None,
         ))
     }
@@ -346,6 +376,54 @@ mod tests_basic_surfaces {
         assert_eq!(strike, dec!(100.0));
         assert_eq!(vol, dec!(0.4));
         assert!(vega >= dec!(0.0)); // Vega should be positive
+    }
+
+    #[test]
+    fn test_get_volatility_versus_vanna() {
+        let surfaces = MockBasicSurfaces;
+        let option = create_test_option();
+        let custom_vol = pos!(0.4);
+
+        let result =
+            surfaces.get_surface_volatility_versus(&BasicAxisTypes::Vanna, &option, custom_vol);
+
+        assert!(result.is_ok());
+        let (strike, vol, vanna) = result.unwrap();
+        assert_eq!(strike, dec!(100.0));
+        assert_eq!(vol, dec!(0.4));
+        assert!(vanna >= dec!(0.0));
+    }
+
+    #[test]
+    fn test_get_volatility_versus_vomma() {
+        let surfaces = MockBasicSurfaces;
+        let option = create_test_option();
+        let custom_vol = pos!(0.4);
+
+        let result =
+            surfaces.get_surface_volatility_versus(&BasicAxisTypes::Vomma, &option, custom_vol);
+
+        assert!(result.is_ok());
+        let (strike, vol, vomma) = result.unwrap();
+        assert_eq!(strike, dec!(100.0));
+        assert_eq!(vol, dec!(0.4));
+        assert!(vomma <= dec!(0.0));
+    }
+
+    #[test]
+    fn test_get_volatility_versus_veta() {
+        let surfaces = MockBasicSurfaces;
+        let option = create_test_option();
+        let custom_vol = pos!(0.4);
+
+        let result =
+            surfaces.get_surface_volatility_versus(&BasicAxisTypes::Veta, &option, custom_vol);
+
+        assert!(result.is_ok());
+        let (strike, vol, veta) = result.unwrap();
+        assert_eq!(strike, dec!(100.0));
+        assert_eq!(vol, dec!(0.4));
+        assert!(veta >= dec!(0.0));
     }
 
     #[test]

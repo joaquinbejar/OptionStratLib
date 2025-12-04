@@ -73,7 +73,9 @@ pub trait BasicCurves {
             BasicAxisTypes::Delta => Ok((option.strike_price.to_dec(), option.delta()?)),
             BasicAxisTypes::Gamma => Ok((option.strike_price.to_dec(), option.gamma()?)),
             BasicAxisTypes::Theta => Ok((option.strike_price.to_dec(), option.theta()?)),
+            BasicAxisTypes::Vanna=> Ok((option.strike_price.to_dec(), option.vanna()?)),
             BasicAxisTypes::Vega => Ok((option.strike_price.to_dec(), option.vega()?)),
+            BasicAxisTypes::Veta=> Ok((option.strike_price.to_dec(), option.veta()?)),
             BasicAxisTypes::Volatility => Ok((
                 option.strike_price.to_dec(),
                 option.implied_volatility.to_dec(),
@@ -193,6 +195,40 @@ mod tests_basic_curves_trait {
 
         assert_eq!(x, option.strike_price.to_dec());
         assert!(y >= Decimal::ZERO); // Vega is always non-negative
+    }
+
+    #[test]
+    fn test_get_strike_versus_vanna() {
+        let test_curves = TestBasicCurves;
+        let option = create_test_option();
+
+        let result = test_curves.get_curve_strike_versus(&BasicAxisTypes::Vanna, &option);
+
+        assert!(result.is_ok());
+        let (x, y) = result.unwrap();
+
+        assert_eq!(x, option.strike_price.to_dec());
+        // Vanna can be positive or negative, roughly its value is positive
+        // when the strike price is greater than the spot underlying price and
+        // negative when the strike price is less than the underlying price.
+        // In this case strike < spot price therefore we expect it to be a
+        // negative value. 
+        assert!(y <= Decimal::ZERO);
+    }
+
+    #[test]
+    fn test_get_strike_versus_veta() {
+        let test_curves = TestBasicCurves;
+        let option = create_test_option();
+
+        let result = test_curves.get_curve_strike_versus(&BasicAxisTypes::Veta, &option);
+
+        assert!(result.is_ok());
+        let (x, y) = result.unwrap();
+
+        assert_eq!(x, option.strike_price.to_dec());
+        // In this case veta is positive
+        assert!(y >= Decimal::ZERO);
     }
 
     #[test]

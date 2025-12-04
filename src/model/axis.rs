@@ -44,6 +44,15 @@ pub enum BasicAxisTypes {
 
     /// Time until expiration of the option
     Expiration,
+
+    /// Sensitivity of option price to changes in volatility
+    Vanna,
+
+    /// Sensitivity of option price to changes in volatility
+    Vomma,
+
+    /// Sensitivity of option price to time decay
+    Veta, 
 }
 
 /// Iterator for traversing the basic axis types.
@@ -68,7 +77,7 @@ impl BasicAxisTypes {
     /// This array allows efficient access to all available axis types without
     /// needing to manually enumerate them in multiple places in the codebase.
     /// The order of types is maintained consistently for iteration purposes.
-    const VALUES: [BasicAxisTypes; 9] = [
+    const VALUES: [BasicAxisTypes; 12] = [
         BasicAxisTypes::Delta,
         BasicAxisTypes::Gamma,
         BasicAxisTypes::Theta,
@@ -78,6 +87,9 @@ impl BasicAxisTypes {
         BasicAxisTypes::UnderlyingPrice,
         BasicAxisTypes::Strike,
         BasicAxisTypes::Expiration,
+        BasicAxisTypes::Vanna,
+        BasicAxisTypes::Vomma,
+        BasicAxisTypes::Veta,
     ];
 
     /// Creates an iterator over all variants of BasicAxisTypes.
@@ -135,6 +147,9 @@ mod tests_basic_axis_types {
         assert_eq!(format!("{:?}", BasicAxisTypes::Price), "Price");
         assert_eq!(format!("{:?}", BasicAxisTypes::Strike), "Strike");
         assert_eq!(format!("{:?}", BasicAxisTypes::Expiration), "Expiration");
+        assert_eq!(format!("{:?}", BasicAxisTypes::Vanna), "Vanna");
+        assert_eq!(format!("{:?}", BasicAxisTypes::Vomma), "Vomma");
+        assert_eq!(format!("{:?}", BasicAxisTypes::Veta), "Veta");
     }
 
     #[test]
@@ -170,6 +185,9 @@ mod tests_basic_axis_types {
             BasicAxisTypes::Volatility,
             BasicAxisTypes::Price,
             BasicAxisTypes::Strike,
+            BasicAxisTypes::Vanna,
+            BasicAxisTypes::Vomma,
+            BasicAxisTypes::Veta,
         ];
 
         for variant in variants {
@@ -218,6 +236,9 @@ mod tests_basic_axis_types {
         ));
         assert!(matches!(BasicAxisTypes::Price, BasicAxisTypes::Price));
         assert!(matches!(BasicAxisTypes::Strike, BasicAxisTypes::Strike));
+        assert!(matches!(BasicAxisTypes::Vanna, BasicAxisTypes::Vanna));
+        assert!(matches!(BasicAxisTypes::Vomma, BasicAxisTypes::Vomma));
+        assert!(matches!(BasicAxisTypes::Veta, BasicAxisTypes::Veta));
     }
 
     #[test]
@@ -262,6 +283,9 @@ mod tests_basic_axis_types_extended {
         assert_eq!(iterator.next(), Some(BasicAxisTypes::UnderlyingPrice));
         assert_eq!(iterator.next(), Some(BasicAxisTypes::Strike));
         assert_eq!(iterator.next(), Some(BasicAxisTypes::Expiration));
+        assert_eq!(iterator.next(), Some(BasicAxisTypes::Vanna));
+        assert_eq!(iterator.next(), Some(BasicAxisTypes::Vomma));
+        assert_eq!(iterator.next(), Some(BasicAxisTypes::Veta));
 
         // After all elements are exhausted, should return None
         assert_eq!(iterator.next(), None);
@@ -298,9 +322,12 @@ mod tests_basic_axis_types_extended {
         assert!(values_set.contains(&BasicAxisTypes::UnderlyingPrice));
         assert!(values_set.contains(&BasicAxisTypes::Strike));
         assert!(values_set.contains(&BasicAxisTypes::Expiration));
+        assert!(values_set.contains(&BasicAxisTypes::Vanna));
+        assert!(values_set.contains(&BasicAxisTypes::Vomma));
+        assert!(values_set.contains(&BasicAxisTypes::Veta));
 
         // Check for exact count (no duplicates)
-        assert_eq!(values_set.len(), 9);
+        assert_eq!(values_set.len(), 12);
     }
 
     #[test]
@@ -308,7 +335,7 @@ mod tests_basic_axis_types_extended {
         // Test collecting all values from the iterator
         let collected: Vec<BasicAxisTypes> = BasicAxisTypes::iter().collect();
 
-        assert_eq!(collected.len(), 9);
+        assert_eq!(collected.len(), 12);
         assert_eq!(collected, BasicAxisTypes::VALUES);
     }
 
@@ -316,7 +343,7 @@ mod tests_basic_axis_types_extended {
     fn test_iterator_count() {
         // Test counting the elements in the iterator
         let count = BasicAxisTypes::iter().count();
-        assert_eq!(count, 9);
+        assert_eq!(count, 12);
     }
 
     #[test]
@@ -328,7 +355,7 @@ mod tests_basic_axis_types_extended {
             encountered.push(axis_type);
         }
 
-        assert_eq!(encountered.len(), 9);
+        assert_eq!(encountered.len(), 12);
         assert_eq!(encountered, BasicAxisTypes::VALUES);
     }
 
@@ -378,13 +405,19 @@ mod tests_basic_axis_types_extended {
                         | BasicAxisTypes::Gamma
                         | BasicAxisTypes::Theta
                         | BasicAxisTypes::Vega
+                        | BasicAxisTypes::Vanna
+                        | BasicAxisTypes::Vomma
+                        | BasicAxisTypes::Veta
                 )
             })
             .collect();
 
-        assert_eq!(greeks.len(), 4);
+        assert_eq!(greeks.len(), 7);
         assert_eq!(greeks[0], BasicAxisTypes::Delta);
         assert_eq!(greeks[3], BasicAxisTypes::Vega);
+        assert_eq!(greeks[4], BasicAxisTypes::Vanna);
+        assert_eq!(greeks[5], BasicAxisTypes::Vomma);
+        assert_eq!(greeks[6], BasicAxisTypes::Veta);
 
         // Test mapping operation
         let names: Vec<&str> = BasicAxisTypes::iter()
@@ -398,12 +431,18 @@ mod tests_basic_axis_types_extended {
                 BasicAxisTypes::UnderlyingPrice => "underlying",
                 BasicAxisTypes::Strike => "strike",
                 BasicAxisTypes::Expiration => "expiration",
+                BasicAxisTypes::Vanna=> "vanna",
+                BasicAxisTypes::Vomma=> "vomma",
+                BasicAxisTypes::Veta=> "veta",
             })
             .collect();
 
-        assert_eq!(names.len(), 9);
+        assert_eq!(names.len(), 12);
         assert_eq!(names[0], "delta");
         assert_eq!(names[4], "volatility");
+        assert_eq!(names[9], "vanna");
+        assert_eq!(names[10], "vomma");
+        assert_eq!(names[11], "veta");
     }
 
     #[test]
@@ -413,9 +452,9 @@ mod tests_basic_axis_types_extended {
         let all_axes: Vec<BasicAxisTypes> = BasicAxisTypes::iter().collect();
         let reverse_order: Vec<BasicAxisTypes> = all_axes.into_iter().rev().collect();
 
-        assert_eq!(reverse_order.len(), 9);
-        assert_eq!(reverse_order[0], BasicAxisTypes::Expiration);
-        assert_eq!(reverse_order[8], BasicAxisTypes::Delta);
+        assert_eq!(reverse_order.len(), 12);
+        assert_eq!(reverse_order[0], BasicAxisTypes::Veta);
+        assert_eq!(reverse_order[11], BasicAxisTypes::Delta);
     }
 
     #[test]
@@ -453,7 +492,7 @@ mod tests_values_array {
 
     #[test]
     fn test_values_array_length() {
-        assert_eq!(BasicAxisTypes::VALUES.len(), 9);
+        assert_eq!(BasicAxisTypes::VALUES.len(), 12);
     }
 
     #[test]
@@ -467,6 +506,9 @@ mod tests_values_array {
         assert_eq!(BasicAxisTypes::VALUES[6], BasicAxisTypes::UnderlyingPrice);
         assert_eq!(BasicAxisTypes::VALUES[7], BasicAxisTypes::Strike);
         assert_eq!(BasicAxisTypes::VALUES[8], BasicAxisTypes::Expiration);
+        assert_eq!(BasicAxisTypes::VALUES[9], BasicAxisTypes::Vanna);
+        assert_eq!(BasicAxisTypes::VALUES[10], BasicAxisTypes::Vomma);
+        assert_eq!(BasicAxisTypes::VALUES[11], BasicAxisTypes::Veta);
     }
 
     #[test]

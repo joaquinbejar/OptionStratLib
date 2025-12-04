@@ -324,11 +324,11 @@ impl OptionChain {
     /// use optionstratlib::{pos, spos, ExpirationDate};
     /// use optionstratlib::chains::chain::OptionChain;
     /// let price_params = OptionDataPriceParams::new(
-    ///     Some(Box::new(pos!(100.0))),                         // underlying price
+    ///     Some(Box::new(pos!(100.0))),               // underlying price
     ///     Some(ExpirationDate::Days(pos!(30.0))),    // expiration date
     ///     Some(dec!(0.05)),                          // risk-free rate
-    ///     spos!(0.0),                           // dividend yield
-    ///     Some("SPY".to_string())              // underlying symbol
+    ///     spos!(0.0),                                // dividend yield
+    ///     Some("SPY".to_string())                    // underlying symbol
     /// );
     ///
     /// let build_params = OptionChainBuildParams::new(
@@ -1801,6 +1801,106 @@ impl OptionChain {
         Ok(theta_exposure)
     }
 
+    /// Calculates the total vanna exposure for all options in the chain.
+    ///
+    /// Vanna exposure represents the aggregate sensitivity of option delta to changes
+    /// in the implied volatility of the underlying asset. It measures how much option
+    /// delta will change for a 1% change in implied volatility.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<Decimal, ChainError>` - The aggregate vanna value, or an error if calculation fails
+    ///
+    /// # Errors
+    ///
+    /// Returns a `ChainError` if:
+    /// - Any option's vanna calculation fails
+    /// - Options greeks are not initialized
+    ///
+    /// # Note
+    ///
+    /// This method requires options greeks to be initialized first by calling the `update_greeks` method.
+    pub fn vanna_exposure(&self) -> Result<Decimal, ChainError> {
+        let mut vanna_exposure = Decimal::ZERO;
+        for option_data in &self.options {
+            let vanna = option_data
+                .get_option(Side::Long, OptionStyle::Call)?
+                .vanna()?;
+            vanna_exposure += vanna;
+            let vanna = option_data
+                .get_option(Side::Long, OptionStyle::Put)?
+                .vanna()?;
+            vanna_exposure += vanna;
+        }
+        Ok(vanna_exposure)
+    }
+
+    /// Calculates the total vomma exposure for all options in the chain.
+    ///
+    /// Vomma exposure represents the aggregate sensitivity of option Vega to changes
+    /// in the implied volatility of the underlying asset.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<Decimal, ChainError>` - The aggregate Vomma value, or an error if calculation fails
+    ///
+    /// # Errors
+    ///
+    /// Returns a `ChainError` if:
+    /// - Any option's vomma calculation fails
+    /// - Options greeks are not initialized
+    ///
+    /// # Note
+    ///
+    /// This method requires options greeks to be initialized first by calling the `update_greeks` method.
+    pub fn vomma_exposure(&self) -> Result<Decimal, ChainError> {
+        let mut vomma_exposure = Decimal::ZERO;
+        for option_data in &self.options {
+            let vomma = option_data
+                .get_option(Side::Long, OptionStyle::Call)?
+                .vomma()?;
+            vomma_exposure += vomma;
+            let vomma = option_data
+                .get_option(Side::Long, OptionStyle::Put)?
+                .vomma()?;
+            vomma_exposure += vomma;
+        }
+        Ok(vomma_exposure)
+    }
+
+    /// Calculates the total veta exposure for all options in the chain.
+    ///
+    /// Veta exposure represents the aggregate sensitivity of option Vega with respect
+    /// to the passage of time.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<Decimal, ChainError>` - The aggregate veta value, or an error if calculation fails
+    ///
+    /// # Errors
+    ///
+    /// Returns a `ChainError` if:
+    /// - Any option's veta calculation fails
+    /// - Options greeks are not initialized
+    ///
+    /// # Note
+    ///
+    /// This method requires options greeks to be initialized first by calling the `update_greeks` method.
+    pub fn veta_exposure(&self) -> Result<Decimal, ChainError> {
+        let mut veta_exposure = Decimal::ZERO;
+        for option_data in &self.options {
+            let veta = option_data
+                .get_option(Side::Long, OptionStyle::Call)?
+                .veta()?;
+            veta_exposure += veta;
+            let veta = option_data
+                .get_option(Side::Long, OptionStyle::Put)?
+                .veta()?;
+            veta_exposure += veta;
+        }
+        Ok(veta_exposure)
+    }
+
     /// Generates a gamma curve for visualization and analysis.
     ///
     /// Creates a curve representing gamma values across different strike prices
@@ -1871,6 +1971,42 @@ impl OptionChain {
     /// or calculation errors
     pub fn theta_curve(&self) -> Result<Curve, CurveError> {
         self.curve(&BasicAxisTypes::Theta, &OptionStyle::Call, &Side::Long)
+    }
+
+    /// Generates a vanna curve for visualization and analysis.
+    ///
+    /// Creates a curve representing vanna values across different strike prices
+    /// or other relevant parameters for long call options in the chain.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<Curve, CurveError>` - A curve object containing vanna data points,
+    ///   or an error if curve generation fails
+    ///
+    /// # Errors
+    ///
+    /// Returns a `CurveError` if the curve cannot be generated due to missing data
+    /// or calculation errors
+    pub fn vanna_curve(&self) -> Result<Curve, CurveError> {
+        self.curve(&BasicAxisTypes::Vanna, &OptionStyle::Call, &Side::Long)
+    }
+
+    /// Generates a veta curve for visualization and analysis.
+    ///
+    /// Creates a curve representing veta values across different strike prices
+    /// or other relevant parameters for long call options in the chain.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<Curve, CurveError>` - A curve object containing veta data points,
+    ///   or an error if curve generation fails
+    ///
+    /// # Errors
+    ///
+    /// Returns a `CurveError` if the curve cannot be generated due to missing data
+    /// or calculation errors
+    pub fn veta_curve(&self) -> Result<Curve, CurveError> {
+        self.curve(&BasicAxisTypes::Veta, &OptionStyle::Call, &Side::Long)
     }
 
     /// Updates the expiration date for the option chain and recalculates Greeks.
@@ -5687,6 +5823,8 @@ mod tests_basic_curves {
             BasicAxisTypes::Gamma,
             BasicAxisTypes::Theta,
             BasicAxisTypes::Vega,
+            BasicAxisTypes::Vanna,
+            BasicAxisTypes::Veta,
         ];
 
         for axis in axes {
@@ -5905,6 +6043,9 @@ mod tests_option_chain_surfaces {
             BasicAxisTypes::Theta,
             BasicAxisTypes::Vega,
             BasicAxisTypes::Price,
+            BasicAxisTypes::Vanna,
+            BasicAxisTypes::Vomma,
+            BasicAxisTypes::Veta,
         ];
 
         for axis in axes {
@@ -6843,6 +6984,192 @@ mod tests_theta_calculations {
         // Check monotonic decrease
         for i in 1..points.len() {
             assert!(points[i].y <= points[i - 1].y + dec!(0.1)); // Allow small non-monotonicity due to market data
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests_vanna_calculations {
+    use super::*;
+
+    use crate::{assert_decimal_eq, pos};
+    use rust_decimal_macros::dec;
+
+    // Helper function to create a test chain for vanna calculations
+    fn create_test_chain_with_vanna() -> OptionChain {
+        let mut option_chain =
+            OptionChain::load_from_json("examples/Chains/SP500-18-oct-2024-5781.88.json").unwrap();
+        // It is necessary to update the expiration date of all the options in the chain
+        // with a relative number of days in order to have a correct vanna calculation
+        option_chain.update_expiration_date("30.0".to_string());
+        option_chain
+    }
+
+    #[test]
+    fn test_vanna_exposure_basic() {
+        let mut chain = create_test_chain_with_vanna();
+        // Initialize the greeks first
+        chain.update_greeks();
+        let result = chain.vanna_exposure();
+
+        assert!(result.is_ok());
+        let vanna_exposure = result.unwrap();
+        // Test against expected value from sample data
+        assert_decimal_eq!(vanna_exposure, dec!(-38.1265860372), dec!(0.0001));
+    }
+
+    #[test]
+    fn test_vanna_exposure_empty_chain() {
+        let chain = OptionChain::new("TEST", pos!(100.0), "2024-12-31".to_string(), None, None);
+
+        let result = chain.vanna_exposure();
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), dec!(0.0));
+    }
+
+    #[test]
+    fn test_vanna_curve() {
+        let mut chain = create_test_chain_with_vanna();
+        chain.update_greeks();
+        let result = chain.vanna_curve();
+
+        assert!(result.is_ok());
+        let curve = result.unwrap();
+
+        // Test that curve contains points
+        assert!(!curve.points.is_empty());
+
+        // For each strike in the chain, there should be a corresponding point
+        assert_eq!(curve.points.len(), chain.options.len());
+
+        // Test x range of curve matches strike range
+        let first_strike = chain.options.iter().next().unwrap().strike_price;
+        let last_strike = chain.options.iter().last().unwrap().strike_price;
+        assert_eq!(curve.x_range.0, first_strike.to_dec());
+        assert_eq!(curve.x_range.1, last_strike.to_dec());
+    }
+
+    #[test]
+    fn test_vanna_curve_empty_chain() {
+        let chain = OptionChain::new("TEST", pos!(100.0), "2024-12-31".to_string(), None, None);
+
+        let result = chain.vanna_curve();
+        // Should return error or empty curve depending on implementation
+        if let Ok(curve) = result {
+            assert!(curve.points.is_empty())
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests_vomma_calculations {
+    use super::*;
+
+    use crate::{assert_decimal_eq, pos};
+    use rust_decimal_macros::dec;
+
+    // Helper function to create a test chain for vomma calculation
+    fn create_test_chain_with_vomma() -> OptionChain {
+        let mut option_chain =
+            OptionChain::load_from_json("examples/Chains/SP500-18-oct-2024-5781.88.json").unwrap();
+        // It is necessary to update the expiration date of all the options in the chain
+        // with a relative number of days in order to have a correct vomma calculation
+        option_chain.update_expiration_date("30.0".to_string());
+        option_chain
+    }
+
+    #[test]
+    fn test_vomma_exposure_basic() {
+        let mut chain = create_test_chain_with_vomma();
+        // Initialize the greeks first
+        chain.update_greeks();
+        let result = chain.vomma_exposure();
+
+        assert!(result.is_ok());
+        let vomma_exposure = result.unwrap();
+        // Test against expected value from sample data
+        assert_decimal_eq!(vomma_exposure, dec!(1393.74972558), dec!(0.0001));
+    }
+
+    #[test]
+    fn test_vomma_exposure_empty_chain() {
+        let chain = OptionChain::new("TEST", pos!(100.0), "2024-12-31".to_string(), None, None);
+
+        let result = chain.vomma_exposure();
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), dec!(0.0));
+    }
+}
+
+#[cfg(test)]
+mod tests_veta_calculations {
+    use super::*;
+
+    use crate::{assert_decimal_eq, pos};
+    use rust_decimal_macros::dec;
+
+    // Helper function to create a test chain for veta calculations
+    fn create_test_chain_with_veta() -> OptionChain {
+        let mut option_chain =
+            OptionChain::load_from_json("examples/Chains/SP500-18-oct-2024-5781.88.json").unwrap();
+        // It is necessary to update the expiration date of all the options in the chain
+        // with a relative number of days in order to have a correct veta calculation
+        option_chain.update_expiration_date("30.0".to_string());
+        option_chain
+    }
+
+    #[test]
+    fn test_veta_exposure_basic() {
+        let mut chain = create_test_chain_with_veta();
+        // Initialize the greeks first
+        chain.update_greeks();
+        let result = chain.veta_exposure();
+
+        assert!(result.is_ok());
+        let veta_exposure = result.unwrap();
+        // Test against expected value from sample data
+        assert_decimal_eq!(veta_exposure, dec!(0.15239781588122), dec!(0.0001));
+    }
+
+    #[test]
+    fn test_veta_exposure_empty_chain() {
+        let chain = OptionChain::new("TEST", pos!(100.0), "2024-12-31".to_string(), None, None);
+
+        let result = chain.veta_exposure();
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), dec!(0.0));
+    }
+
+    #[test]
+    fn test_veta_curve() {
+        let mut chain = create_test_chain_with_veta();
+        chain.update_greeks();
+        let result = chain.veta_curve();
+
+        assert!(result.is_ok());
+        let curve = result.unwrap();
+
+        // Test that curve contains points
+        assert!(!curve.points.is_empty());
+
+        // For each strike in the chain, there should be a corresponding point
+        assert_eq!(curve.points.len(), chain.options.len());
+
+        // Test x range of curve matches strike range
+        let first_strike = chain.options.iter().next().unwrap().strike_price;
+        let last_strike = chain.options.iter().last().unwrap().strike_price;
+        assert_eq!(curve.x_range.0, first_strike.to_dec());
+        assert_eq!(curve.x_range.1, last_strike.to_dec());
+    }
+
+    #[test]
+    fn test_veta_curve_empty_chain() {
+        let chain = OptionChain::new("TEST", pos!(100.0), "2024-12-31".to_string(), None, None);
+
+        let result = chain.veta_curve();
+        // Should return error or empty curve depending on implementation
+        if let Ok(curve) = result {
+            assert!(curve.points.is_empty())
         }
     }
 }
@@ -7816,6 +8143,15 @@ mod chain_coverage_tests {
 
         let theta_exposure = chain.theta_exposure();
         assert!(theta_exposure.is_ok());
+
+        let vanna_exposure = chain.vanna_exposure();
+        assert!(vanna_exposure.is_ok());
+
+        let vomma_exposure = chain.vomma_exposure();
+        assert!(vomma_exposure.is_ok());
+
+        let veta_exposure = chain.veta_exposure();
+        assert!(veta_exposure.is_ok());
     }
 
     #[test]
@@ -7837,6 +8173,12 @@ mod chain_coverage_tests {
 
         let theta_curve = chain.theta_curve();
         assert!(theta_curve.is_ok());
+
+        let vanna_curve = chain.vanna_curve();
+        assert!(vanna_curve.is_ok());
+
+        let veta_curve = chain.veta_curve();
+        assert!(veta_curve.is_ok());
     }
 }
 
@@ -8068,6 +8410,15 @@ mod chain_coverage_tests_bis {
 
         let theta_exposure = chain.theta_exposure();
         assert!(theta_exposure.is_ok());
+
+        let vanna_exposure = chain.vanna_exposure();
+        assert!(vanna_exposure.is_ok());
+
+        let vomma_exposure = chain.vomma_exposure();
+        assert!(vomma_exposure.is_ok());
+
+        let veta_exposure = chain.veta_exposure();
+        assert!(veta_exposure.is_ok());
     }
 
     #[test]
@@ -8089,6 +8440,12 @@ mod chain_coverage_tests_bis {
 
         let theta_curve = chain.theta_curve();
         assert!(theta_curve.is_ok());
+
+        let vanna_curve = chain.vanna_curve();
+        assert!(vanna_curve.is_ok());
+
+        let veta_curve = chain.veta_curve();
+        assert!(veta_curve.is_ok());
     }
 }
 

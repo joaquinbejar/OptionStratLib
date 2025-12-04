@@ -44,6 +44,7 @@ use std::error::Error;
 ///
 /// - `Ok(Decimal)`: The computed `d1` value.
 /// - `Err(GreeksError)`: Returns an error if input validation fails. Possible errors include:
+///   - Invalid underlying price (must be greater than zero).
 ///   - Invalid strike price (must be greater than zero).
 ///   - Invalid implied volatility (must be greater than zero).
 ///   - Invalid expiration time (must be greater than zero).
@@ -51,6 +52,7 @@ use std::error::Error;
 /// # Errors
 ///
 /// Returns a `GreeksError::InputError` in the following cases:
+/// - **InvalidPrice**: Triggered when `underlying_price` is zero or less.
 /// - **InvalidStrike**: Triggered when `strike_price` is zero or less.
 /// - **InvalidVolatility**: Triggered when `implied_volatility` is zero.
 /// - **InvalidTime**: Triggered when `expiration_date` is zero or less.
@@ -87,11 +89,9 @@ pub fn d1(
     expiration_date: Positive,
     implied_volatility: Positive,
 ) -> Result<Decimal, GreeksError> {
-    let underlying_price: Decimal = underlying_price.to_dec();
-
-    if underlying_price == Decimal::ZERO {
-        return Err(GreeksError::InputError(InputErrorKind::InvalidStrike {
-            value: underlying_price.to_string(),
+    if underlying_price == Positive::ZERO {
+        return Err(GreeksError::InputError(InputErrorKind::InvalidPrice {
+            value: underlying_price.to_f64(),
             reason: "Underlying price price cannot be zero".to_string(),
         }));
     }
@@ -102,12 +102,14 @@ pub fn d1(
             reason: "Strike price cannot be zero".to_string(),
         }));
     }
+
     if implied_volatility == Decimal::ZERO {
         return Err(GreeksError::InputError(InputErrorKind::InvalidVolatility {
             value: implied_volatility.to_f64(),
             reason: "Implied volatility cannot be zero".to_string(),
         }));
     }
+
     if expiration_date == Decimal::ZERO {
         return Err(GreeksError::InputError(InputErrorKind::InvalidTime {
             value: expiration_date,
@@ -116,6 +118,7 @@ pub fn d1(
     }
 
     // d1 = (ln(S / K) + (r + σ² / 2) * T) / (σ * sqrt(T))
+    let underlying_price: Decimal = underlying_price.to_dec();
     let implied_volatility_squared = implied_volatility.powd(Decimal::TWO);
     let ln_price_ratio = match strike_price {
         value if value == Positive::INFINITY => Decimal::MIN,
@@ -202,19 +205,21 @@ pub fn d2(
     expiration_date: Positive,
     implied_volatility: Positive,
 ) -> Result<Decimal, GreeksError> {
-    if implied_volatility == Decimal::ZERO {
-        return Err(GreeksError::InputError(InputErrorKind::InvalidVolatility {
-            value: implied_volatility.to_f64(),
-            reason: "Implied volatility cannot be zero".to_string(),
-        }));
-    }
-
-    if expiration_date == Decimal::ZERO {
-        return Err(GreeksError::InputError(InputErrorKind::InvalidTime {
-            value: expiration_date,
-            reason: "Expiration date cannot be zero".to_string(),
-        }));
-    }
+//    function d1 is already checking for validity of implied_volatility and
+//    expiration_date with error propagation. Can we comment out the two if blocks below?
+//    if implied_volatility == Decimal::ZERO {
+//        return Err(GreeksError::InputError(InputErrorKind::InvalidVolatility {
+//            value: implied_volatility.to_f64(),
+//            reason: "Implied volatility cannot be zero".to_string(),
+//        }));
+//    }
+//
+//    if expiration_date == Decimal::ZERO {
+//        return Err(GreeksError::InputError(InputErrorKind::InvalidTime {
+//            value: expiration_date,
+//            reason: "Expiration date cannot be zero".to_string(),
+//        }));
+//    }
 
     let d1_value = d1(
         underlying_price,
