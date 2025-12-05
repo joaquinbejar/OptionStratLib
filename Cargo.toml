@@ -60,8 +60,8 @@ thiserror = { workspace = true }
 
 
 [dev-dependencies]
-criterion = { version = "0.7", default-features = false, features = ["html_reports"] }
-mockall = "0.13"
+criterion = { version = "0.8", default-features = false, features = ["html_reports"] }
+mockall = "0.14"
 tempfile = "3.23"
 static_assertions = "1.1"
 
