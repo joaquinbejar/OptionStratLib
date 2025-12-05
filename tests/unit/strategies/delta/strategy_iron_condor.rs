@@ -44,7 +44,7 @@ fn test_iron_condor_integration() -> Result<(), Box<dyn Error>> {
     assert_decimal_eq!(greeks.rho_d, dec!(-0.633206), epsilon);
     assert_decimal_eq!(greeks.vanna, dec!(0.2487598459), epsilon);
     assert_decimal_eq!(greeks.vomma, dec!(170.9330480070), epsilon);
-    assert_decimal_eq!(greeks.veta, dec!(0.0134886944), epsilon);    
+    assert_decimal_eq!(greeks.veta, dec!(0.0134886944), epsilon);
 
     assert_decimal_eq!(
         strategy.delta_neutrality().unwrap().net_delta,

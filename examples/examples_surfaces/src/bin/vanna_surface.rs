@@ -6,17 +6,17 @@ fn get_option(point2d: &Point2D) -> Options {
     let volatilitity = Positive::new_decimal(point2d.y).unwrap();
 
     Options::new(
-        OptionType::European,               
-        Side::Long,                         
+        OptionType::European,
+        Side::Long,
         "XYZ".parse().unwrap(),
         strike,
         ExpirationDate::Days(pos!(365.0)),
         volatilitity,
-        pos!(1.0),                          // quantity
-        pos!(50.0),                         // underlying price
-        Decimal::ZERO,                      // risk free rate
+        pos!(1.0),     // quantity
+        pos!(50.0),    // underlying price
+        Decimal::ZERO, // risk free rate
         OptionStyle::Call,
-        Positive::ZERO,                     // dividend yield
+        Positive::ZERO, // dividend yield
         None,
     )
 }

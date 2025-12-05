@@ -52,7 +52,7 @@ pub enum BasicAxisTypes {
     Vomma,
 
     /// Sensitivity of option price to time decay
-    Veta, 
+    Veta,
 }
 
 /// Iterator for traversing the basic axis types.
@@ -431,9 +431,9 @@ mod tests_basic_axis_types_extended {
                 BasicAxisTypes::UnderlyingPrice => "underlying",
                 BasicAxisTypes::Strike => "strike",
                 BasicAxisTypes::Expiration => "expiration",
-                BasicAxisTypes::Vanna=> "vanna",
-                BasicAxisTypes::Vomma=> "vomma",
-                BasicAxisTypes::Veta=> "veta",
+                BasicAxisTypes::Vanna => "vanna",
+                BasicAxisTypes::Vomma => "vomma",
+                BasicAxisTypes::Veta => "veta",
             })
             .collect();
 

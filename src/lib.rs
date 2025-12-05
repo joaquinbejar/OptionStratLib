@@ -493,7 +493,7 @@
 //! let vanna = option.vanna().unwrap();
 //! let vomma = option.vomma().unwrap();
 //! let veta = option.veta().unwrap();
-//! tracing::info!("Greeks - Delta: {:.4}, Gamma: {:.4}, Theta: {:.4}, 
+//! tracing::info!("Greeks - Delta: {:.4}, Gamma: {:.4}, Theta: {:.4},
 //!     Vega: {:.4}, Vanna: {:.4}, Vomma: {:.4}, Veta: {:.4}",
 //!     delta, gamma, theta, vega, vanna, vomma, veta);
 //! ```

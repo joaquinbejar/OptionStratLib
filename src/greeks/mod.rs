@@ -98,7 +98,9 @@
 mod equations;
 mod utils;
 
-pub use equations::{Greek, Greeks, GreeksSnapshot, delta, gamma, rho, rho_d, theta, vanna, vega, veta, vomma};
+pub use equations::{
+    Greek, Greeks, GreeksSnapshot, delta, gamma, rho, rho_d, theta, vanna, vega, veta, vomma,
+};
 pub(crate) use utils::calculate_d_values;
 pub use utils::calculate_delta_neutral_sizes;
 pub use utils::{big_n, d1, d2, n};

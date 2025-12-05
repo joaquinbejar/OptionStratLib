@@ -1726,7 +1726,7 @@ mod tests_greeks {
         option.quantity = pos!(2.0);
         assert_decimal_eq!(option.rho_d().unwrap(), dec!(-0.0886882064063), EPSILON);
     }
-    
+
     #[test]
     fn test_vanna() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);

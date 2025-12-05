@@ -204,21 +204,21 @@ pub fn d2(
     expiration_date: Positive,
     implied_volatility: Positive,
 ) -> Result<Decimal, GreeksError> {
-//    function d1 is already checking for validity of implied_volatility and
-//    expiration_date with error propagation. Can we comment out the two if blocks below?
-//    if implied_volatility == Decimal::ZERO {
-//        return Err(GreeksError::InputError(InputErrorKind::InvalidVolatility {
-//            value: implied_volatility.to_f64(),
-//            reason: "Implied volatility cannot be zero".to_string(),
-//        }));
-//    }
-//
-//    if expiration_date == Decimal::ZERO {
-//        return Err(GreeksError::InputError(InputErrorKind::InvalidTime {
-//            value: expiration_date,
-//            reason: "Expiration date cannot be zero".to_string(),
-//        }));
-//    }
+    //    function d1 is already checking for validity of implied_volatility and
+    //    expiration_date with error propagation. Can we comment out the two if blocks below?
+    //    if implied_volatility == Decimal::ZERO {
+    //        return Err(GreeksError::InputError(InputErrorKind::InvalidVolatility {
+    //            value: implied_volatility.to_f64(),
+    //            reason: "Implied volatility cannot be zero".to_string(),
+    //        }));
+    //    }
+    //
+    //    if expiration_date == Decimal::ZERO {
+    //        return Err(GreeksError::InputError(InputErrorKind::InvalidTime {
+    //            value: expiration_date,
+    //            reason: "Expiration date cannot be zero".to_string(),
+    //        }));
+    //    }
 
     let d1_value = d1(
         underlying_price,

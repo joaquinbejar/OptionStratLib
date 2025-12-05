@@ -3,7 +3,7 @@
    Email: jb@taunais.com
    Date: 11/8/24
 ******************************************************************************/
-use crate::constants::{ZERO, TRADING_DAYS};
+use crate::constants::{TRADING_DAYS, ZERO};
 use crate::error::greeks::GreeksError;
 use crate::greeks::utils::{big_n, d1, d2, n};
 use crate::model::types::OptionStyle;
@@ -336,7 +336,7 @@ pub trait Greeks {
         }
         Ok(veta_value)
     }
- }
+}
 
 /// Calculates the delta of an option.
 ///
@@ -1259,7 +1259,7 @@ pub fn vanna(option: &Options) -> Result<Decimal, GreeksError> {
         option.expiration_date.get_years().unwrap(),
         option.implied_volatility,
     )?;
-    
+
     let expiration_date: Positive = option.expiration_date.get_years()?;
     let dividend_yield: Decimal = option.dividend_yield.into();
     let implied_volatility: Positive = option.implied_volatility;
@@ -1267,14 +1267,14 @@ pub fn vanna(option: &Options) -> Result<Decimal, GreeksError> {
     let e_rt: Decimal = -(expiration_date.to_dec() * -dividend_yield).exp();
 
     let vanna: Decimal = e_rt * n_d1 * d2 / implied_volatility;
-    
+
     let quantity: Decimal = option.quantity.into();
     Ok(vanna * quantity)
 }
 
 /// Computes the vomma of an option.
 ///
-/// Vomma (aka volga, vega convexity or DvegaDvol) measures the second order 
+/// Vomma (aka volga, vega convexity or DvegaDvol) measures the second order
 /// sensitivity to volatility. Is the second derivative of the option value
 /// with respect to the volatility. Stated in another way, vomma measures
 /// the rate of change to vega as volatility changes.
@@ -1352,10 +1352,10 @@ pub fn vanna(option: &Options) -> Result<Decimal, GreeksError> {
 ///
 /// Options far out-of-the money have the highest Vomma.
 /// If you are long options you typically want to have as high positive Vomma
-/// as possible. If short options, you typically want negative Vomma. 
+/// as possible. If short options, you typically want negative Vomma.
 /// Positive Vomma tells you that you will earn more for every percentage point
 /// increase in volatility, and if implied volatility is falling you will lose
-/// less and less. 
+/// less and less.
 /// If you think the implied volatility will be volatile in the short term
 /// you should typically try to find options with high Vomma.
 pub fn vomma(option: &Options) -> Result<Decimal, GreeksError> {
@@ -1464,7 +1464,7 @@ pub fn vomma(option: &Options) -> Result<Decimal, GreeksError> {
 ///
 /// - It is common practice to divide the mathematical result of veta by 100 times
 ///   the number of days per year to reduce the value to the percentage change in
-///   vega per one day. 
+///   vega per one day.
 pub fn veta(option: &Options) -> Result<Decimal, GreeksError> {
     let expiration_date: Positive = option.expiration_date.get_years()?;
     if expiration_date == Decimal::ZERO {
@@ -1488,14 +1488,14 @@ pub fn veta(option: &Options) -> Result<Decimal, GreeksError> {
     let vega = vega(option)?;
     let implied_volatility: Positive = option.implied_volatility;
     let dividend_yield: Decimal = option.dividend_yield.into();
-    let risk_free_rate:Decimal = option.risk_free_rate;
-    let add1 = (risk_free_rate - dividend_yield) * d1 / 
-        (implied_volatility * expiration_date.sqrt());
+    let risk_free_rate: Decimal = option.risk_free_rate;
+    let add1 =
+        (risk_free_rate - dividend_yield) * d1 / (implied_volatility * expiration_date.sqrt());
     let add2 = (Decimal::ONE + d1 * d2) / (Decimal::TWO * expiration_date);
-    
+
     let veta: Decimal = -vega * (dividend_yield + add1 - add2);
-    // It is common practice to divide the mathematical result of veta by 
-    // 100 times the number of days per year to reduce the value to the 
+    // It is common practice to divide the mathematical result of veta by
+    // 100 times the number of days per year to reduce the value to the
     // percentage change in vega per one day
     let veta_adj: Decimal = veta / (TRADING_DAYS * Decimal::ONE_HUNDRED);
 
@@ -2642,9 +2642,9 @@ pub mod tests_vanna_equation {
     #[test]
     fn test_vanna_atm() {
         let option = create_test_option(
-            pos!(100.0), // underlying_price
-            pos!(100.0), // strike_price
-            pos!(0.2), // implied_volatility
+            pos!(100.0),    // underlying_price
+            pos!(100.0),    // strike_price
+            pos!(0.2),      // implied_volatility
             Positive::ZERO, // dividend_yield
             DAYS_IN_A_YEAR, // expiration_in_days
         );
@@ -2659,9 +2659,9 @@ pub mod tests_vanna_equation {
     #[test]
     fn test_vanna_otm() {
         let option = create_test_option(
-            pos!(90.0), // underlying_price
-            pos!(100.0), // strike_price
-            pos!(0.2), // implied_volatility
+            pos!(90.0),     // underlying_price
+            pos!(100.0),    // strike_price
+            pos!(0.2),      // implied_volatility
             Positive::ZERO, // dividend_yield
             DAYS_IN_A_YEAR, // expiration_in_days
         );
@@ -2676,11 +2676,11 @@ pub mod tests_vanna_equation {
     #[test]
     fn test_vanna_short_expiration() {
         let option = create_test_option(
-            pos!(100.0), // underlying_price
-            pos!(100.0), // strike_price
-            pos!(0.2), // implied_volatility
+            pos!(100.0),    // underlying_price
+            pos!(100.0),    // strike_price
+            pos!(0.2),      // implied_volatility
             Positive::ZERO, // dividend_yield
-            Positive::ONE, // expiration_in_days
+            Positive::ONE,  // expiration_in_days
         );
         let vanna = vanna(&option).unwrap().to_f64().unwrap();
         let expected_vanna = -0.01565856;
@@ -2693,10 +2693,10 @@ pub mod tests_vanna_equation {
     #[test]
     fn test_vanna_with_dividends() {
         let option = create_test_option(
-            pos!(100.0), // underlying_price
-            pos!(100.0), // strike_price
-            pos!(0.2), // implied_volatility
-            pos!(0.03), // dividend_yield
+            pos!(100.0),   // underlying_price
+            pos!(100.0),   // strike_price
+            pos!(0.2),     // implied_volatility
+            pos!(0.03),    // dividend_yield
             Positive::ONE, // expiration_in_days
         );
         let vanna = vanna(&option).unwrap().to_f64().unwrap();
@@ -2710,11 +2710,11 @@ pub mod tests_vanna_equation {
     #[test]
     fn test_vanna_itm() {
         let option = create_test_option(
-            pos!(110.0), // underlying_price
-            pos!(100.0), // strike_price
-            pos!(0.2), // implied_volatility
+            pos!(110.0),    // underlying_price
+            pos!(100.0),    // strike_price
+            pos!(0.2),      // implied_volatility
             Positive::ZERO, // dividend_yield
-            Positive::ONE, // expiration_in_days
+            Positive::ONE,  // expiration_in_days
         );
         let vanna = vanna(&option).unwrap().to_f64().unwrap();
         let expected_vanna = 0.0;
@@ -2760,9 +2760,9 @@ pub mod tests_vomma_equation {
     #[test]
     fn test_vomma_atm() {
         let option = create_test_option(
-            pos!(100.0), // underlying_price
-            pos!(100.0), // strike_price
-            pos!(0.2), // implied_volatility
+            pos!(100.0),    // underlying_price
+            pos!(100.0),    // strike_price
+            pos!(0.2),      // implied_volatility
             Positive::ZERO, // dividend_yield
             DAYS_IN_A_YEAR, // expiration_in_days
         );
@@ -2777,9 +2777,9 @@ pub mod tests_vomma_equation {
     #[test]
     fn test_vomma_otm() {
         let option = create_test_option(
-            pos!(90.0), // underlying_price
-            pos!(100.0), // strike_price
-            pos!(0.2), // implied_volatility
+            pos!(90.0),     // underlying_price
+            pos!(100.0),    // strike_price
+            pos!(0.2),      // implied_volatility
             Positive::ZERO, // dividend_yield
             DAYS_IN_A_YEAR, // expiration_in_days
         );
@@ -2794,11 +2794,11 @@ pub mod tests_vomma_equation {
     #[test]
     fn test_vomma_short_expiration() {
         let option = create_test_option(
-            pos!(100.0), // underlying_price
-            pos!(100.0), // strike_price
-            pos!(0.2), // implied_volatility
+            pos!(100.0),    // underlying_price
+            pos!(100.0),    // strike_price
+            pos!(0.2),      // implied_volatility
             Positive::ZERO, // dividend_yield
-            Positive::ONE, // expiration_in_days
+            Positive::ONE,  // expiration_in_days
         );
         let vomma = vomma(&option).unwrap().to_f64().unwrap();
         let expected_vomma = 0.0000150150;
@@ -2811,10 +2811,10 @@ pub mod tests_vomma_equation {
     #[test]
     fn test_vomma_with_dividends() {
         let option = create_test_option(
-            pos!(100.0), // underlying_price
-            pos!(100.0), // strike_price
-            pos!(0.2), // implied_volatility
-            pos!(0.03), // dividend_yield
+            pos!(100.0),   // underlying_price
+            pos!(100.0),   // strike_price
+            pos!(0.2),     // implied_volatility
+            pos!(0.03),    // dividend_yield
             Positive::ONE, // expiration_in_days
         );
         let vomma = vomma(&option).unwrap().to_f64().unwrap();
@@ -2828,11 +2828,11 @@ pub mod tests_vomma_equation {
     #[test]
     fn test_vomma_itm() {
         let option = create_test_option(
-            pos!(110.0), // underlying_price
-            pos!(100.0), // strike_price
-            pos!(0.2), // implied_volatility
+            pos!(110.0),    // underlying_price
+            pos!(100.0),    // strike_price
+            pos!(0.2),      // implied_volatility
             Positive::ZERO, // dividend_yield
-            Positive::ONE, // expiration_in_days
+            Positive::ONE,  // expiration_in_days
         );
         let vomma = vomma(&option).unwrap().to_f64().unwrap();
         let expected_vomma = 0.0;
@@ -2878,9 +2878,9 @@ pub mod tests_veta_equation {
     #[test]
     fn test_veta_atm() {
         let option = create_test_option(
-            pos!(100.0), // underlying_price
-            pos!(100.0), // strike_price
-            pos!(0.2), // implied_volatility
+            pos!(100.0),    // underlying_price
+            pos!(100.0),    // strike_price
+            pos!(0.2),      // implied_volatility
             Positive::ZERO, // dividend_yield
             DAYS_IN_A_YEAR, // expiration_in_days
         );
@@ -2895,9 +2895,9 @@ pub mod tests_veta_equation {
     #[test]
     fn test_veta_otm() {
         let option = create_test_option(
-            pos!(90.0), // underlying_price
-            pos!(100.0), // strike_price
-            pos!(0.2), // implied_volatility
+            pos!(90.0),     // underlying_price
+            pos!(100.0),    // strike_price
+            pos!(0.2),      // implied_volatility
             Positive::ZERO, // dividend_yield
             DAYS_IN_A_YEAR, // expiration_in_days
         );
@@ -2912,14 +2912,14 @@ pub mod tests_veta_equation {
     #[test]
     fn test_veta_short_expiration() {
         let option = create_test_option(
-            pos!(100.0), // underlying_price
-            pos!(100.0), // strike_price
-            pos!(0.2), // implied_volatility
+            pos!(100.0),    // underlying_price
+            pos!(100.0),    // strike_price
+            pos!(0.2),      // implied_volatility
             Positive::ZERO, // dividend_yield
-            Positive::ONE, // expiration_in_days
+            Positive::ONE,  // expiration_in_days
         );
         let veta = veta(&option).unwrap().to_f64().unwrap();
-        let expected_veta = 0.0001511497; 
+        let expected_veta = 0.0001511497;
         assert!(
             (veta - expected_veta).abs() < 1e-5,
             "Veta short expiration test failed: expected {expected_veta}, got {veta}"
@@ -2929,10 +2929,10 @@ pub mod tests_veta_equation {
     #[test]
     fn test_veta_with_dividends() {
         let option = create_test_option(
-            pos!(100.0), // underlying_price
-            pos!(100.0), // strike_price
-            pos!(0.2), // implied_volatility
-            pos!(0.03), // dividend_yield
+            pos!(100.0),   // underlying_price
+            pos!(100.0),   // strike_price
+            pos!(0.2),     // implied_volatility
+            pos!(0.03),    // dividend_yield
             Positive::ONE, // expiration_in_days
         );
         let veta = veta(&option).unwrap().to_f64().unwrap();
@@ -2946,11 +2946,11 @@ pub mod tests_veta_equation {
     #[test]
     fn test_veta_itm() {
         let option = create_test_option(
-            pos!(110.0), // underlying_price
-            pos!(100.0), // strike_price
-            pos!(0.2), // implied_volatility
+            pos!(110.0),    // underlying_price
+            pos!(100.0),    // strike_price
+            pos!(0.2),      // implied_volatility
             Positive::ZERO, // dividend_yield
-            Positive::ONE, // expiration_in_days
+            Positive::ONE,  // expiration_in_days
         );
         let veta = veta(&option).unwrap().to_f64().unwrap();
         let expected_veta = 0.0;

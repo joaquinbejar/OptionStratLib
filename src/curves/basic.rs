@@ -73,9 +73,9 @@ pub trait BasicCurves {
             BasicAxisTypes::Delta => Ok((option.strike_price.to_dec(), option.delta()?)),
             BasicAxisTypes::Gamma => Ok((option.strike_price.to_dec(), option.gamma()?)),
             BasicAxisTypes::Theta => Ok((option.strike_price.to_dec(), option.theta()?)),
-            BasicAxisTypes::Vanna=> Ok((option.strike_price.to_dec(), option.vanna()?)),
+            BasicAxisTypes::Vanna => Ok((option.strike_price.to_dec(), option.vanna()?)),
             BasicAxisTypes::Vega => Ok((option.strike_price.to_dec(), option.vega()?)),
-            BasicAxisTypes::Veta=> Ok((option.strike_price.to_dec(), option.veta()?)),
+            BasicAxisTypes::Veta => Ok((option.strike_price.to_dec(), option.veta()?)),
             BasicAxisTypes::Volatility => Ok((
                 option.strike_price.to_dec(),
                 option.implied_volatility.to_dec(),
@@ -212,7 +212,7 @@ mod tests_basic_curves_trait {
         // when the strike price is greater than the spot underlying price and
         // negative when the strike price is less than the underlying price.
         // In this case strike < spot price therefore we expect it to be a
-        // negative value. 
+        // negative value.
         assert!(y <= Decimal::ZERO);
     }
 

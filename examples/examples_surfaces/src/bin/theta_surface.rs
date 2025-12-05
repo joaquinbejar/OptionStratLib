@@ -1,5 +1,4 @@
 use optionstratlib::prelude::*;
-use std::error::Error;
 
 fn get_option(point2d: &Point2D) -> Options {
     let strike = Positive::new_decimal(point2d.x).unwrap();

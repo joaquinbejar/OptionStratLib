@@ -46,7 +46,7 @@ fn test_call_butterfly_integration() -> Result<(), Box<dyn Error>> {
     assert_decimal_eq!(greeks.rho_d, dec!(-0.407342), epsilon);
     assert_decimal_eq!(greeks.vanna, dec!(0.9512896496), epsilon);
     assert_decimal_eq!(greeks.vomma, dec!(6.9207844661), epsilon);
-    assert_decimal_eq!(greeks.veta, dec!(0.0205704707), epsilon);     
+    assert_decimal_eq!(greeks.veta, dec!(0.0205704707), epsilon);
 
     assert_decimal_eq!(
         strategy.delta_neutrality().unwrap().net_delta,

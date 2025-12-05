@@ -42,7 +42,7 @@ use thiserror::Error;
 ///
 /// This enum encapsulates the various types of errors that might arise during
 /// the calculation of option Greeks (delta, gamma, theta, vega, rho, vanna, vomma,
-/// veta) and related financial computations. It provides a structured approach 
+/// veta) and related financial computations. It provides a structured approach
 /// to error handling by categorizing errors based on their nature and source.
 ///
 /// `GreeksError` serves as the primary error type for the Greek calculation system,
@@ -340,7 +340,7 @@ pub enum CalculationErrorKind {
     VetaError {
         /// Detailed description of what caused the veta calculation to fail
         reason: String,
-    },    
+    },
     /// Error originating from decimal operations
     ///
     /// Wraps a decimal library error that occurred during option calculations,
@@ -692,7 +692,7 @@ mod tests_error_greeks_extended {
             format!("{error}"),
             "Veta calculation error: Unable to compute veta"
         );
-    }   
+    }
 
     #[test]
     fn test_calculation_error_decimal() {

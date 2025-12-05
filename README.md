@@ -160,7 +160,7 @@ Volatility modeling and analysis:
 
 #### **Greeks** (`greeks/`)
 Complete Greeks calculation suite:
-- Delta, Gamma, Theta, Vega, Rho calculations
+- Delta, Gamma, Theta, Vega, Rho, Vanna, Vomma, Veta calculations
 - Real-time sensitivity analysis
 - Greeks-based risk management
 
@@ -246,6 +246,9 @@ class Options {
 +theta()
 +vega()
 +rho()
++vanna()
++vomma()
++veta()
 }
 
 class Position {
@@ -438,12 +441,6 @@ optionstratlib = { version = "0.6.1", features = ["plotly"] }
 
 - `plotly`: Enables interactive visualization using plotly.rs
 
-The library is using the crate `plotly_static` for exporting Plotly plots to
-static images using headless browsers via WebDriver.\
-Please refer to the official
-crate [documentation](https://docs.rs/plotly_static/latest/plotly_static/)
-for configuration details.
-
 #### Building from Source
 
 Clone the repository and build using Cargo:
@@ -507,8 +504,12 @@ let delta = option.delta().unwrap();
 let gamma = option.gamma().unwrap();
 let theta = option.theta().unwrap();
 let vega = option.vega().unwrap();
-tracing::info!("Greeks - Delta: {:.4}, Gamma: {:.4}, Theta: {:.4}, Vega: {:.4}",
-         delta, gamma, theta, vega);
+let vanna = option.vanna().unwrap();
+let vomma = option.vomma().unwrap();
+let veta = option.veta().unwrap();
+tracing::info!("Greeks - Delta: {:.4}, Gamma: {:.4}, Theta: {:.4},
+    Vega: {:.4}, Vanna: {:.4}, Vomma: {:.4}, Veta: {:.4}",
+    delta, gamma, theta, vega, vanna, vomma, veta);
 ```
 
 #### Working with Trading Strategies

@@ -90,17 +90,17 @@ pub trait BasicSurfaces {
                 option_with_vol.implied_volatility.to_dec(),
                 option_with_vol.vega()?,
             )),
-            BasicAxisTypes::Vanna=> Ok((
+            BasicAxisTypes::Vanna => Ok((
                 option_with_vol.strike_price.to_dec(),
                 option_with_vol.implied_volatility.to_dec(),
                 option_with_vol.vanna()?,
             )),
-            BasicAxisTypes::Vomma=> Ok((
+            BasicAxisTypes::Vomma => Ok((
                 option_with_vol.strike_price.to_dec(),
                 option_with_vol.implied_volatility.to_dec(),
                 option_with_vol.vomma()?,
             )),
-            BasicAxisTypes::Veta=> Ok((
+            BasicAxisTypes::Veta => Ok((
                 option_with_vol.strike_price.to_dec(),
                 option_with_vol.implied_volatility.to_dec(),
                 option_with_vol.veta()?,
@@ -173,17 +173,17 @@ pub trait BasicSurfaces {
                 volatility.to_dec(),
                 option_with_vol.vega()?,
             )),
-            BasicAxisTypes::Vanna=> Ok((
+            BasicAxisTypes::Vanna => Ok((
                 option_with_vol.strike_price.to_dec(),
                 volatility.to_dec(),
                 option_with_vol.vanna()?,
             )),
-            BasicAxisTypes::Vomma=> Ok((
+            BasicAxisTypes::Vomma => Ok((
                 option_with_vol.strike_price.to_dec(),
                 volatility.to_dec(),
                 option_with_vol.vomma()?,
             )),
-            BasicAxisTypes::Veta=> Ok((
+            BasicAxisTypes::Veta => Ok((
                 option_with_vol.strike_price.to_dec(),
                 volatility.to_dec(),
                 option_with_vol.veta()?,
@@ -235,10 +235,10 @@ mod tests_basic_surfaces {
             "TEST".to_string(),
             pos!(100.0), // strike_price
             ExpirationDate::Days(pos!(30.0)),
-            pos!(0.2), // implied_volatility
-            pos!(1.0), // quantity
+            pos!(0.2),   // implied_volatility
+            pos!(1.0),   // quantity
             pos!(100.0), // underlying_price
-            dec!(0.05), // risk_free_rate
+            dec!(0.05),  // risk_free_rate
             OptionStyle::Call,
             pos!(0.01), // dividend_yield
             None,
