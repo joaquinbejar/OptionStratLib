@@ -91,6 +91,12 @@ pub struct OptionsSpecificMetrics {
     pub avg_theta_exposure: Option<Decimal>,
     /// The average sensitivity of the portfolio's value to changes in the implied volatility of the underlying asset (Vega).
     pub avg_vega_exposure: Option<Decimal>,
+    /// The average sensitivity of the portfolio's Delta to changes in the implied volatility of the underlying asset (Vanna).
+    pub avg_vanna_exposure: Option<Decimal>,
+    /// The average sensitivity of the portfolio's Vega to changes in the implied volatility of the underlying asset (Vomma).
+    pub avg_vomma_exposure: Option<Decimal>,
+    /// The average sensitivity of the portfolio's Vega to the passage of time (Veta).
+    pub avg_veta_exposure: Option<Decimal>,
     /// The percentage of trades or positions involving call options.
     pub calls_percentage: Option<Decimal>,
     /// The percentage of trades or positions involving put options.

@@ -30,7 +30,7 @@
 //! - **Telegraph Process Model**: Advanced stochastic modeling for jump-diffusion processes
 //!
 //! ### 2. **Greeks Calculation**
-//! - Complete Greeks suite: Delta, Gamma, Theta, Vega, Rho
+//! - Complete Greeks suite: Delta, Gamma, Theta, Vega, Rho, Vanna, Vomma, Veta
 //! - Real-time sensitivity analysis
 //! - Greeks visualization and risk profiling
 //! - Custom Greeks implementations with adjustable parameters
@@ -146,7 +146,7 @@
 //!
 //! ### **Greeks** (`greeks/`)
 //! Complete Greeks calculation suite:
-//! - Delta, Gamma, Theta, Vega, Rho calculations
+//! - Delta, Gamma, Theta, Vega, Rho, Vanna, Vomma, Veta calculations
 //! - Real-time sensitivity analysis
 //! - Greeks-based risk management
 //!
@@ -232,6 +232,9 @@
 //! +theta()
 //! +vega()
 //! +rho()
+//! +vanna()
+//! +vomma()
+//! +veta()
 //! }
 //!
 //! class Position {
@@ -487,8 +490,12 @@
 //! let gamma = option.gamma().unwrap();
 //! let theta = option.theta().unwrap();
 //! let vega = option.vega().unwrap();
-//! tracing::info!("Greeks - Delta: {:.4}, Gamma: {:.4}, Theta: {:.4}, Vega: {:.4}",
-//!          delta, gamma, theta, vega);
+//! let vanna = option.vanna().unwrap();
+//! let vomma = option.vomma().unwrap();
+//! let veta = option.veta().unwrap();
+//! tracing::info!("Greeks - Delta: {:.4}, Gamma: {:.4}, Theta: {:.4},
+//!     Vega: {:.4}, Vanna: {:.4}, Vomma: {:.4}, Veta: {:.4}",
+//!     delta, gamma, theta, vega, vanna, vomma, veta);
 //! ```
 //!
 //! ### Working with Trading Strategies
@@ -813,7 +820,7 @@ pub mod geometrics;
 /// * `greeks` - Calculation and management of option sensitivity metrics (Delta, Gamma, etc.).
 ///
 /// Comprehensive implementation of options Greeks (sensitivity measures) including
-/// Delta, Gamma, Theta, Vega, and Rho. Includes analytical formulas, numerical
+/// Delta, Gamma, Theta, Vega, Rho, Vanna, Vomma and Veta. Includes analytical formulas, numerical
 /// approximations, and visualization tools for risk analysis.
 pub mod greeks;
 

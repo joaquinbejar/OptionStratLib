@@ -473,7 +473,7 @@ mod tests_timeframe {
 }
 
 #[cfg(test)]
-mod tests {
+mod tests_timeframe_convert {
     use super::*;
     use crate::{assert_pos_relative_eq, pos};
 

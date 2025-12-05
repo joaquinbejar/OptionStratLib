@@ -77,7 +77,7 @@ use thiserror::Error;
 ///   using various pricing models like Black-Scholes, Binomial, etc.
 ///
 /// * `GreeksCalculationError` - Errors that occur when calculating option Greeks
-///   (delta, gamma, theta, vega, rho) which measure option price sensitivities.
+///   (delta, gamma, theta, vega, rho, etc.) which measure option price sensitivities.
 ///
 /// * `TimeError` - Errors related to time calculations, such as determining
 ///   days to expiration, time decay, or handling calendar adjustments.

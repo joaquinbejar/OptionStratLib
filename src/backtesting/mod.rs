@@ -45,6 +45,9 @@
 //!         +Decimal? avg_gamma_exposure
 //!         +Decimal? avg_theta_exposure
 //!         +Decimal? avg_vega_exposure
+//!         +Decimal? avg_vanna_exposure
+//!         +Decimal? avg_vomma_exposure
+//!         +Decimal? avg_veta_exposure
 //!         +Decimal? calls_percentage
 //!         +Decimal? puts_percentage
 //!         +Decimal? long_percentage
@@ -107,6 +110,9 @@
 //!         +Vec? gamma_exposure
 //!         +Vec? theta_exposure
 //!         +Vec? vega_exposure
+//!         +Vec? vanna_exposure
+//!         +Vec? vomma_exposure
+//!         +Vec? veta_exposure
 //!         +HashMap custom_series
 //!         +new(capacity)
 //!         +add_data_point()
@@ -252,7 +258,7 @@
 //!     }
 //!
 //!     class GreeksExposure {
-//!         Vectors of Delta, Gamma, Theta, Vega
+//!         Vectors of Delta, Gamma, Theta, Vega, Vanna, Vomma, Veta
 //!     }
 //!
 //!     class WindowSize {

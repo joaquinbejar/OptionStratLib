@@ -404,7 +404,7 @@ impl ExpirationDate {
                 }
             }
 
-            // Si los formatos anteriores fallan, intentar construir manualmente
+            // If previous formats fail, try to build it manually
             if s.contains(" UTC") {
                 // Extract the date and time part without the UTC suffix
                 let date_time_part = s.trim_end_matches(" UTC").trim();

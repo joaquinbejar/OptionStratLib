@@ -39,6 +39,9 @@ fn test_long_straddle_integration() -> Result<(), Box<dyn Error>> {
     assert_decimal_eq!(greeks.vega, dec!(19.626624258), epsilon);
     assert_decimal_eq!(greeks.rho, dec!(-1.113739), epsilon);
     assert_decimal_eq!(greeks.rho_d, dec!(0.198109), epsilon);
+    assert_decimal_eq!(greeks.vanna, dec!(0.3412456242), epsilon);
+    assert_decimal_eq!(greeks.vomma, dec!(0.2413416787), epsilon);
+    assert_decimal_eq!(greeks.veta, dec!(0.0031816624), epsilon);
 
     assert_decimal_eq!(
         strategy.delta_neutrality().unwrap().net_delta,

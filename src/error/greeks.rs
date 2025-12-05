@@ -41,9 +41,9 @@ use thiserror::Error;
 /// Represents errors that can occur during options Greek calculations.
 ///
 /// This enum encapsulates the various types of errors that might arise during
-/// the calculation of option Greeks (delta, gamma, theta, vega, rho) and related
-/// financial computations. It provides a structured approach to error handling
-/// by categorizing errors based on their nature and source.
+/// the calculation of option Greeks (delta, gamma, theta, vega, rho, vanna, vomma,
+/// veta) and related financial computations. It provides a structured approach
+/// to error handling by categorizing errors based on their nature and source.
 ///
 /// `GreeksError` serves as the primary error type for the Greek calculation system,
 /// allowing for precise error reporting and handling across different calculation stages.
@@ -314,6 +314,33 @@ pub enum CalculationErrorKind {
         /// Detailed description of what caused the rho calculation to fail
         reason: String,
     },
+    /// Error in vanna calculation
+    ///
+    /// Vanna measures the sensitivity of the option delta to changes in the
+    /// underlying asset's volatility.
+    #[error("Vanna calculation error: {reason}")]
+    VannaError {
+        /// Detailed description of what caused the vanna calculation to fail
+        reason: String,
+    },
+    /// Error in vomma calculation
+    ///
+    /// Vomma measures the sensitivity of the option vega to changes in the
+    /// underlying asset's volatility.
+    #[error("Vomma calculation error: {reason}")]
+    VommaError {
+        /// Detailed description of what caused the vomma calculation to fail
+        reason: String,
+    },
+    /// Error in veta calculation
+    ///
+    /// Veta measures the sensitivity of the option vega with respect to the
+    /// passage of time.
+    #[error("Veta calculation error: {reason}")]
+    VetaError {
+        /// Detailed description of what caused the veta calculation to fail
+        reason: String,
+    },
     /// Error originating from decimal operations
     ///
     /// Wraps a decimal library error that occurred during option calculations,
@@ -339,8 +366,8 @@ pub enum CalculationErrorKind {
 /// # Usage Context
 ///
 /// Typically used in functions that calculate option Greeks (delta, gamma, theta,
-/// vega, rho) and other financial metrics where specialized error handling for
-/// mathematical and input validation errors is needed.
+/// vega, rho, vanna, vomma, veta) and other financial metrics where specialized
+/// error handling for mathematical and input validation errors is needed.
 pub type GreeksResult<T> = Result<T, GreeksError>;
 
 /// Implementation of factory methods for creating specific `GreeksError` instances.
@@ -455,7 +482,7 @@ impl From<&str> for GreeksError {
 }
 
 #[cfg(test)]
-mod tests {
+mod tests_error_greeks {
     use super::*;
 
     #[test]
@@ -574,7 +601,7 @@ mod tests {
 }
 
 #[cfg(test)]
-mod tests_extended {
+mod tests_error_greeks_extended {
     use super::*;
     use crate::error::decimal::DecimalError::InvalidPrecision;
 
@@ -631,6 +658,39 @@ mod tests_extended {
         assert_eq!(
             format!("{error}"),
             "Rho calculation error: Interest rate too high"
+        );
+    }
+
+    #[test]
+    fn test_calculation_error_vanna() {
+        let error = CalculationErrorKind::VannaError {
+            reason: "Unable to compute vanna".to_string(),
+        };
+        assert_eq!(
+            format!("{error}"),
+            "Vanna calculation error: Unable to compute vanna"
+        );
+    }
+
+    #[test]
+    fn test_calculation_error_vomma() {
+        let error = CalculationErrorKind::VommaError {
+            reason: "Unable to compute vomma".to_string(),
+        };
+        assert_eq!(
+            format!("{error}"),
+            "Vomma calculation error: Unable to compute vomma"
+        );
+    }
+
+    #[test]
+    fn test_calculation_error_veta() {
+        let error = CalculationErrorKind::VetaError {
+            reason: "Unable to compute veta".to_string(),
+        };
+        assert_eq!(
+            format!("{error}"),
+            "Veta calculation error: Unable to compute veta"
         );
     }
 

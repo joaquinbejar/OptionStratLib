@@ -1726,6 +1726,45 @@ mod tests_greeks {
         option.quantity = pos!(2.0);
         assert_decimal_eq!(option.rho_d().unwrap(), dec!(-0.0886882064063), EPSILON);
     }
+
+    #[test]
+    fn test_vanna() {
+        let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
+        assert_decimal_eq!(option.vanna().unwrap(), dec!(-0.085279024623), EPSILON);
+    }
+
+    #[test]
+    fn test_vanna_size() {
+        let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
+        option.quantity = pos!(2.0);
+        assert_decimal_eq!(option.vanna().unwrap(), dec!(-0.170558049246), EPSILON);
+    }
+
+    #[test]
+    fn test_vomma() {
+        let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
+        assert_decimal_eq!(option.vomma().unwrap(), dec!(0.002453232215), EPSILON);
+    }
+
+    #[test]
+    fn test_vomma_size() {
+        let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
+        option.quantity = pos!(2.0);
+        assert_decimal_eq!(option.vomma().unwrap(), dec!(0.009812928860), EPSILON);
+    }
+
+    #[test]
+    fn test_veta() {
+        let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
+        assert_decimal_eq!(option.veta().unwrap(), dec!(0.000027206189), EPSILON);
+    }
+
+    #[test]
+    fn test_veta_size() {
+        let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
+        option.quantity = pos!(2.0);
+        assert_decimal_eq!(option.veta().unwrap(), dec!(0.000108824758), EPSILON);
+    }
 }
 
 #[cfg(test)]
@@ -1748,6 +1787,9 @@ mod tests_greek_trait {
         assert_decimal_eq!(greeks.vega, option.vega().unwrap(), EPSILON);
         assert_decimal_eq!(greeks.rho, option.rho().unwrap(), EPSILON);
         assert_decimal_eq!(greeks.rho_d, option.rho_d().unwrap(), EPSILON);
+        assert_decimal_eq!(greeks.vanna, option.vanna().unwrap(), EPSILON);
+        assert_decimal_eq!(greeks.vomma, option.vomma().unwrap(), EPSILON);
+        assert_decimal_eq!(greeks.veta, option.veta().unwrap(), EPSILON);
     }
 
     #[test]
