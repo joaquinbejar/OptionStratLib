@@ -4,16 +4,16 @@
    Date: 26/8/24
 ******************************************************************************/
 
+use crate::error::ChainError;
 use rust_decimal::Decimal;
 use std::collections::BTreeSet;
-use std::error::Error;
 use utoipa::ToSchema;
 
 /// A result type for geometric point operations that may fail.
 ///
 /// This type alias provides a consistent way to handle point generation operations
 /// that could result in errors, encapsulating the resulting point or an error.
-pub type ResultPoint<Point> = Result<Point, Box<dyn Error>>;
+pub type ResultPoint<Point> = Result<Point, ChainError>;
 
 /// Parameters for constructing geometric objects in different dimensions.
 ///

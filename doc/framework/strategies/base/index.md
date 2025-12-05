@@ -5,9 +5,9 @@
 [optionstratlib](../../index.html)::[strategies](../index.html)
 :::
 
-# Module baseCopy item path
+# Module base Copy item path
 
-[[Source](../../../src/optionstratlib/strategies/base.rs.html#6-2184){.src}
+[[Source](../../../src/optionstratlib/strategies/base.rs.html#1-2276){.src}
 ]{.sub-heading}
 ::::
 
@@ -36,6 +36,10 @@ submodule represents a specific strategy or utility.
 :   Represents different option trading strategies.
 
 ## Traits[§](#traits){.anchor} {#traits .section-header}
+
+[BasicAble](trait.BasicAble.html "trait optionstratlib::strategies::base::BasicAble"){.trait}
+:   A trait that defines basic operations and attributes for managing
+    options-related strategies.
 
 [BreakEvenable](trait.BreakEvenable.html "trait optionstratlib::strategies::base::BreakEvenable"){.trait}
 :   Trait for strategies that can calculate and update break-even

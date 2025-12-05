@@ -5,9 +5,9 @@
 [optionstratlib](../../index.html)::[utils](../index.html)
 :::
 
-# Module timeCopy item path
+# Module time Copy item path
 
-[[Source](../../../src/optionstratlib/utils/time.rs.html#6-545){.src}
+[[Source](../../../src/optionstratlib/utils/time.rs.html#6-555){.src}
 ]{.sub-heading}
 ::::
 
@@ -39,6 +39,10 @@ Module for time-related utilities.
 
 [get_x_days_formatted](fn.get_x_days_formatted.html "fn optionstratlib::utils::time::get_x_days_formatted"){.fn}
 :   Formats a date a specified number of days from the current date.
+
+[get_x_days_formatted_pos](fn.get_x_days_formatted_pos.html "fn optionstratlib::utils::time::get_x_days_formatted_pos"){.fn}
+:   Returns a formatted date string representing the date `x` days in
+    the future.
 
 [units_per_year](fn.units_per_year.html "fn optionstratlib::utils::time::units_per_year"){.fn}
 :   Returns the number of units per year for each TimeFrame.

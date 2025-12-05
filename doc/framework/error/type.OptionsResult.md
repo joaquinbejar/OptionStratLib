@@ -5,9 +5,9 @@
 [optionstratlib](../index.html)::[error](index.html)
 :::
 
-# Type Alias [OptionsResult]{.type}Copy item path
+# Type Alias [OptionsResult]{.type} Copy item path
 
-[[Source](../../src/optionstratlib/error/options.rs.html#242){.src}
+[[Source](../../src/optionstratlib/error/options.rs.html#224){.src}
 ]{.sub-heading}
 ::::
 
@@ -67,7 +67,7 @@ This result type is commonly used throughout the library for:
 ## Aliased Type[§](#aliased-type){.anchor} {#aliased-type .section-header}
 
 ``` {.rust .item-decl}
-enum OptionsResult<T> {
+pub enum OptionsResult<T> {
     Ok(T),
     Err(OptionsError),
 }

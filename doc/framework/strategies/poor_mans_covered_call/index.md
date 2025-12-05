@@ -5,9 +5,9 @@
 [optionstratlib](../../index.html)::[strategies](../index.html)
 :::
 
-# Module poor_mans_covered_callCopy item path
+# Module poor_mans_covered_call Copy item path
 
-[[Source](../../../src/optionstratlib/strategies/poor_mans_covered_call.rs.html#1-2527){.src}
+[[Source](../../../src/optionstratlib/strategies/poor_mans_covered_call.rs.html#1-2315){.src}
 ]{.sub-heading}
 ::::
 

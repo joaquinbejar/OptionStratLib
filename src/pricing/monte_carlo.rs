@@ -1,9 +1,9 @@
+use crate::error::PricingError;
 use crate::f2d;
 use crate::pricing::utils::wiener_increment;
 use crate::{Options, Positive};
 use num_traits::{FromPrimitive, ToPrimitive};
 use rust_decimal::{Decimal, MathematicalOps};
-use std::error::Error;
 
 /// This function performs Monte Carlo simulation to price an option.
 ///
@@ -35,7 +35,7 @@ pub fn monte_carlo_option_pricing(
     option: &Options,
     steps: usize,       // Number of time steps
     simulations: usize, // Number of Monte Carlo simulations
-) -> Result<Decimal, Box<dyn Error>> {
+) -> Result<Decimal, PricingError> {
     let dt = option.expiration_date.get_years().unwrap() / steps as f64;
     let mut payoff_sum = 0.0;
 
@@ -70,9 +70,9 @@ pub fn monte_carlo_option_pricing(
 ///   corresponds to the number of simulations.
 ///
 /// # Returns
-/// - `Result<Positive, Box<dyn Error>>`: Returns a `Positive` value encapsulating the estimated
+/// - `Result<Positive, PricingError>`: Returns a `Positive` value encapsulating the estimated
 ///   option price calculated using the Monte Carlo method. If an error occurs during intermediate
-///   calculations (e.g., getting the expiration year), it returns an `Error` wrapped in a `Box<dyn Error>`.
+///   calculations (e.g., getting the expiration year), it returns a `PricingError`.
 ///
 /// # How it Works
 /// 1. The number of simulations is determined by the length of the `final_prices` slice. If the slice
@@ -95,7 +95,7 @@ pub fn monte_carlo_option_pricing(
 pub fn price_option_monte_carlo(
     option: &Options,
     final_prices: &[Positive],
-) -> Result<Positive, Box<dyn Error>> {
+) -> Result<Positive, PricingError> {
     // The number of simulations is the length of the final prices vector
     let num_simulations = final_prices.len();
 

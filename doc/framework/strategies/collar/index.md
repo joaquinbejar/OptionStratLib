@@ -5,7 +5,7 @@
 [optionstratlib](../../index.html)::[strategies](../index.html)
 :::
 
-# Module collarCopy item path
+# Module collar Copy item path
 
 [[Source](../../../src/optionstratlib/strategies/collar.rs.html#11){.src}
 ]{.sub-heading}

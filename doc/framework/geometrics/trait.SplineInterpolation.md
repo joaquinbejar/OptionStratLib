@@ -5,7 +5,7 @@
 [optionstratlib](../index.html)::[geometrics](index.html)
 :::
 
-# Trait [SplineInterpolation]{.trait}Copy item path
+# Trait [SplineInterpolation]{.trait} Copy item path
 
 [[Source](../../src/optionstratlib/geometrics/interpolation/spline.rs.html#88-117){.src}
 ]{.sub-heading}
@@ -134,7 +134,7 @@ specific methods as per the dataset requirements.
 [Source](../../src/optionstratlib/geometrics/interpolation/spline.rs.html#116){.src
 .rightside}
 
-#### fn [spline_interpolate](#tymethod.spline_interpolate){.fn}(&self, x: Input) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<Point, [InterpolationError](../error/enum.InterpolationError.html "enum optionstratlib::error::InterpolationError"){.enum}\> {#fn-spline_interpolateself-x-input---resultpoint-interpolationerror .code-header}
+#### fn [spline_interpolate](#tymethod.spline_interpolate){.fn}(&self, x: Input) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<Point, [InterpolationError](../error/enum.InterpolationError.html "enum optionstratlib::error::InterpolationError"){.enum}\> {#fn-spline_interpolateself-x-input---resultpoint-interpolationerror .code-header}
 :::
 
 :::: docblock
@@ -181,10 +181,10 @@ match result {
 
 ::::::: {#implementors-list}
 :::: {#impl-SplineInterpolation%3CPoint2D,+Decimal%3E-for-Curve .section .impl}
-[Source](../../src/optionstratlib/curves/curve.rs.html#757-939){.src
+[Source](../../src/optionstratlib/curves/curve.rs.html#771-953){.src
 .rightside}[§](#impl-SplineInterpolation%3CPoint2D,+Decimal%3E-for-Curve){.anchor}
 
-### impl [SplineInterpolation](trait.SplineInterpolation.html "trait optionstratlib::geometrics::SplineInterpolation"){.trait}\<[Point2D](../curves/struct.Point2D.html "struct optionstratlib::curves::Point2D"){.struct}, Decimal\> for [Curve](../curves/struct.Curve.html "struct optionstratlib::curves::Curve"){.struct} {#impl-splineinterpolationpoint2d-decimal-for-curve .code-header}
+### impl [SplineInterpolation](trait.SplineInterpolation.html "trait optionstratlib::geometrics::SplineInterpolation"){.trait}\<[Point2D](../curves/struct.Point2D.html "struct optionstratlib::curves::Point2D"){.struct}, [Decimal](../prelude/struct.Decimal.html "struct optionstratlib::prelude::Decimal"){.struct}\> for [Curve](../curves/struct.Curve.html "struct optionstratlib::curves::Curve"){.struct} {#impl-splineinterpolationpoint2d-decimal-for-curve .code-header}
 
 ::: docblock
 Implements the `SplineInterpolation` trait for the `Curve` struct,
@@ -274,7 +274,7 @@ trait, as examples are not provided inline with this implementation.
 :::
 
 ::: {#impl-SplineInterpolation%3CPoint3D,+Point2D%3E-for-Surface .section .impl}
-[Source](../../src/optionstratlib/surfaces/surface.rs.html#844-934){.src
+[Source](../../src/optionstratlib/surfaces/surface.rs.html#857-947){.src
 .rightside}[§](#impl-SplineInterpolation%3CPoint3D,+Point2D%3E-for-Surface){.anchor}
 
 ### impl [SplineInterpolation](trait.SplineInterpolation.html "trait optionstratlib::geometrics::SplineInterpolation"){.trait}\<[Point3D](../surfaces/struct.Point3D.html "struct optionstratlib::surfaces::Point3D"){.struct}, [Point2D](../curves/struct.Point2D.html "struct optionstratlib::curves::Point2D"){.struct}\> for [Surface](../surfaces/struct.Surface.html "struct optionstratlib::surfaces::Surface"){.struct} {#impl-splineinterpolationpoint3d-point2d-for-surface .code-header}

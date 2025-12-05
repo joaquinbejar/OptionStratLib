@@ -1,14 +1,4 @@
-use optionstratlib::chains::chain::OptionChain;
-use optionstratlib::chains::generator_optionchain;
-use optionstratlib::simulation::randomwalk::RandomWalk;
-use optionstratlib::simulation::steps::{Step, Xstep, Ystep};
-use optionstratlib::simulation::{WalkParams, WalkType, WalkTypeAble};
-use optionstratlib::utils::setup_logger;
-use optionstratlib::utils::time::{TimeFrame, convert_time_frame, get_x_days_formatted};
-use optionstratlib::visualization::Graph;
-use optionstratlib::{ExpirationDate, Positive, pos};
-use rust_decimal_macros::dec;
-use tracing::{debug, info};
+use optionstratlib::prelude::*;
 
 #[warn(dead_code)]
 struct Walker {}
@@ -21,11 +11,11 @@ impl Walker {
 
 impl WalkTypeAble<Positive, OptionChain> for Walker {}
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> Result<(), Error> {
     setup_logger();
     let n_steps = 43_200; // 30 days in minutes
     let mut initial_chain = OptionChain::load_from_json(
-        "examples/Chains/Germany-40-2025-05-27-15:29:00-UTC-24209.json",
+        "examples/Chains/Germany-40-2025-05-27-15-29-00-UTC-24209.json",
     )?;
     initial_chain.update_expiration_date(get_x_days_formatted(2));
     let iv = pos!(0.20);

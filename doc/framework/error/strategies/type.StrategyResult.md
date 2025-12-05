@@ -5,9 +5,9 @@
 [optionstratlib](../../index.html)::[error](../index.html)::[strategies](index.html)
 :::
 
-# Type Alias [StrategyResult]{.type}Copy item path
+# Type Alias [StrategyResult]{.type} Copy item path
 
-[[Source](../../../src/optionstratlib/error/strategies.rs.html#321){.src}
+[[Source](../../../src/optionstratlib/error/strategies.rs.html#277){.src}
 ]{.sub-heading}
 ::::
 
@@ -33,7 +33,7 @@ strategy-related code, compared to explicitly writing
 ## Aliased Type[§](#aliased-type){.anchor} {#aliased-type .section-header}
 
 ``` {.rust .item-decl}
-enum StrategyResult<T> {
+pub enum StrategyResult<T> {
     Ok(T),
     Err(StrategyError),
 }

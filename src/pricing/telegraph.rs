@@ -77,13 +77,13 @@
 //! for your specific model.
 
 use crate::Options;
+use crate::error::PricingError;
 use crate::error::decimal::DecimalError;
-use crate::pricing::utils::simulate_returns;
+use crate::prelude::simulate_returns;
 use num_traits::{FromPrimitive, ToPrimitive};
 use rand::random;
 use rust_decimal::{Decimal, MathematicalOps};
 use rust_decimal_macros::dec;
-use std::error::Error;
 
 /// Represents a Telegraph Process, a two-state continuous-time Markov chain model
 /// used to simulate stochastic processes with discrete state transitions.
@@ -282,7 +282,7 @@ pub(crate) fn estimate_telegraph_parameters(
 ///
 /// # Returns
 ///
-/// * `Result<Decimal, Box<dyn Error>>` - The simulated option price or an error
+/// * `Result<Decimal, PricingError>` - The simulated option price or an error
 ///
 /// # Details
 ///
@@ -294,7 +294,7 @@ pub fn telegraph(
     no_steps: usize,
     lambda_up: Option<Decimal>,
     lambda_down: Option<Decimal>,
-) -> Result<Decimal, Box<dyn Error>> {
+) -> Result<Decimal, PricingError> {
     let mut price = option.underlying_price;
     let dt = option.time_to_expiration()?.to_dec() / Decimal::from_f64(no_steps as f64).unwrap();
 

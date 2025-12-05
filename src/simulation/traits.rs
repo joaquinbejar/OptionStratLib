@@ -1,12 +1,12 @@
 use crate::Positive;
-use crate::backtesting::results::SimulationStats;
+use crate::backtesting::results::SimulationStatsResult;
+use crate::error::SimulationError;
 use crate::model::decimal::decimal_normal_sample;
 use crate::simulation::simulator::Simulator;
 use crate::simulation::{ExitPolicy, WalkParams, WalkType};
 use crate::volatility::generate_ou_process;
 use num_traits::ToPrimitive;
 use rust_decimal::{Decimal, MathematicalOps};
-use std::error::Error;
 use std::fmt::{Debug, Display};
 use std::ops::AddAssign;
 
@@ -53,9 +53,9 @@ where
     ///
     /// # Returns
     ///
-    /// * `Result<Vec<Positive>, Box<dyn Error>>` - A vector of positive values representing
+    /// * `Result<Vec<Positive>, SimulationError>` - A vector of positive values representing
     ///   the generated Brownian motion path, or an error if parameters are invalid.
-    fn brownian(&self, params: &WalkParams<X, Y>) -> Result<Vec<Positive>, Box<dyn Error>> {
+    fn brownian(&self, params: &WalkParams<X, Y>) -> Result<Vec<Positive>, SimulationError> {
         match params.walk_type {
             WalkType::Brownian {
                 dt,
@@ -94,12 +94,12 @@ where
     ///
     /// # Returns
     ///
-    /// * `Result<Vec<Positive>, Box<dyn Error>>` - A vector of positive values representing
+    /// * `Result<Vec<Positive>, SimulationError>` - A vector of positive values representing
     ///   the generated Geometric Brownian motion path, or an error if parameters are invalid.
     fn geometric_brownian(
         &self,
         params: &WalkParams<X, Y>,
-    ) -> Result<Vec<Positive>, Box<dyn Error>> {
+    ) -> Result<Vec<Positive>, SimulationError> {
         match params.walk_type {
             WalkType::GeometricBrownian {
                 dt,
@@ -138,9 +138,9 @@ where
     ///
     /// # Returns
     ///
-    /// * `Result<Vec<Positive>, Box<dyn Error>>` - A vector of positive values representing
+    /// * `Result<Vec<Positive>, SimulationError>` - A vector of positive values representing
     ///   the generated Log Returns path, or an error if parameters are invalid.
-    fn log_returns(&self, params: &WalkParams<X, Y>) -> Result<Vec<Positive>, Box<dyn Error>> {
+    fn log_returns(&self, params: &WalkParams<X, Y>) -> Result<Vec<Positive>, SimulationError> {
         match params.walk_type {
             WalkType::LogReturns {
                 dt,
@@ -190,9 +190,9 @@ where
     ///
     /// # Returns
     ///
-    /// * `Result<Vec<Positive>, Box<dyn Error>>` - A vector of positive values representing
+    /// * `Result<Vec<Positive>, SimulationError>` - A vector of positive values representing
     ///   the generated Mean Reverting path, or an error if parameters are invalid.
-    fn mean_reverting(&self, params: &WalkParams<X, Y>) -> Result<Vec<Positive>, Box<dyn Error>> {
+    fn mean_reverting(&self, params: &WalkParams<X, Y>) -> Result<Vec<Positive>, SimulationError> {
         match params.walk_type {
             WalkType::MeanReverting {
                 dt,
@@ -228,9 +228,9 @@ where
     ///
     /// # Returns
     ///
-    /// * `Result<Vec<Positive>, Box<dyn Error>>` - A vector of positive values representing
+    /// * `Result<Vec<Positive>, SimulationError>` - A vector of positive values representing
     ///   the generated Jump Diffusion path, or an error if parameters are invalid.
-    fn jump_diffusion(&self, params: &WalkParams<X, Y>) -> Result<Vec<Positive>, Box<dyn Error>> {
+    fn jump_diffusion(&self, params: &WalkParams<X, Y>) -> Result<Vec<Positive>, SimulationError> {
         match params.walk_type {
             WalkType::JumpDiffusion {
                 dt,
@@ -282,13 +282,13 @@ where
     ///
     /// # Returns
     ///
-    /// * `Result<Vec<Positive>, Box<dyn Error>>` - A vector of positive values representing
+    /// * `Result<Vec<Positive>, SimulationError>` - A vector of positive values representing
     ///   the generated GARCH path, or an error if parameters are invalid.
     ///
     /// # Note
     ///
     /// This implementation is currently a placeholder and returns an empty vector.
-    fn garch(&self, params: &WalkParams<X, Y>) -> Result<Vec<Positive>, Box<dyn Error>> {
+    fn garch(&self, params: &WalkParams<X, Y>) -> Result<Vec<Positive>, SimulationError> {
         match params.walk_type {
             WalkType::Garch {
                 dt,
@@ -348,7 +348,7 @@ where
     ///
     /// # Returns
     ///
-    /// * `Result<Vec<Positive>, Box<dyn Error>>` - A vector of positive values representing
+    /// * `Result<Vec<Positive>, SimulationError>` - A vector of positive values representing
     ///   the generated Heston model path, or an error if parameters are invalid.
     ///
     /// # Note
@@ -372,7 +372,7 @@ where
     ///
     /// # Returns
     ///
-    /// * `Result<Vec<Positive>, Box<dyn Error>>` - A vector of positive values representing
+    /// * `Result<Vec<Positive>, SimulationError>` - A vector of positive values representing
     ///   the generated Heston model path, or an error if parameters are invalid.
     ///
     /// # Notes
@@ -381,7 +381,7 @@ where
     /// dS_t = μS_t dt + √v_t S_t dW^1_t
     /// dv_t = κ(θ - v_t) dt + ξ√v_t dW^2_t
     /// with dW^1_t dW^2_t = ρ dt
-    fn heston(&self, params: &WalkParams<X, Y>) -> Result<Vec<Positive>, Box<dyn Error>> {
+    fn heston(&self, params: &WalkParams<X, Y>) -> Result<Vec<Positive>, SimulationError> {
         match params.walk_type {
             WalkType::Heston {
                 dt,
@@ -450,9 +450,9 @@ where
     ///
     /// # Returns
     ///
-    /// * `Result<Vec<Positive>, Box<dyn Error>>` - A vector of positive values representing
+    /// * `Result<Vec<Positive>, SimulationError>` - A vector of positive values representing
     ///   the generated custom process path, or an error if parameters are invalid.
-    fn custom(&self, params: &WalkParams<X, Y>) -> Result<Vec<Positive>, Box<dyn Error>> {
+    fn custom(&self, params: &WalkParams<X, Y>) -> Result<Vec<Positive>, SimulationError> {
         match params.walk_type {
             WalkType::Custom {
                 dt,
@@ -498,9 +498,9 @@ where
     ///
     /// # Returns
     ///
-    /// * `Result<Vec<Positive>, Box<dyn Error>>` - A vector of positive values representing
+    /// * `Result<Vec<Positive>, SimulationError>` - A vector of positive values representing
     ///   the generated Telegraph process path, or an error if parameters are invalid.
-    fn telegraph(&self, params: &WalkParams<X, Y>) -> Result<Vec<Positive>, Box<dyn Error>> {
+    fn telegraph(&self, params: &WalkParams<X, Y>) -> Result<Vec<Positive>, SimulationError> {
         match params.walk_type {
             WalkType::Telegraph {
                 dt,
@@ -593,7 +593,7 @@ where
     ///     - The `walk_type` in `params` is not `WalkType::Historical`.
     ///     - The `prices` do not contain at least `params.size` elements.
     ///
-    fn historical(&self, params: &WalkParams<X, Y>) -> Result<Vec<Positive>, Box<dyn Error>> {
+    fn historical(&self, params: &WalkParams<X, Y>) -> Result<Vec<Positive>, SimulationError> {
         match &params.walk_type {
             WalkType::Historical {
                 timeframe: _timeframe,
@@ -678,7 +678,7 @@ where
         &self,
         sim: &Simulator<X, Y>,
         exit: ExitPolicy,
-    ) -> Result<SimulationStats, Box<dyn Error>>;
+    ) -> Result<SimulationStatsResult, SimulationError>;
 }
 
 #[cfg(test)]
@@ -1001,47 +1001,47 @@ mod tests_walk_type_able {
             fn brownian(
                 &self,
                 _params: &WalkParams<X, Y>,
-            ) -> Result<Vec<Positive>, Box<dyn Error>> {
+            ) -> Result<Vec<Positive>, SimulationError> {
                 Err("Error simulado para prueba".into())
             }
 
             fn geometric_brownian(
                 &self,
                 params: &WalkParams<X, Y>,
-            ) -> Result<Vec<Positive>, Box<dyn Error>> {
+            ) -> Result<Vec<Positive>, SimulationError> {
                 self.brownian(params)
             }
 
             fn log_returns(
                 &self,
                 params: &WalkParams<X, Y>,
-            ) -> Result<Vec<Positive>, Box<dyn Error>> {
+            ) -> Result<Vec<Positive>, SimulationError> {
                 self.brownian(params)
             }
 
             fn mean_reverting(
                 &self,
                 params: &WalkParams<X, Y>,
-            ) -> Result<Vec<Positive>, Box<dyn Error>> {
+            ) -> Result<Vec<Positive>, SimulationError> {
                 self.brownian(params)
             }
 
             fn jump_diffusion(
                 &self,
                 params: &WalkParams<X, Y>,
-            ) -> Result<Vec<Positive>, Box<dyn Error>> {
+            ) -> Result<Vec<Positive>, SimulationError> {
                 self.brownian(params)
             }
 
-            fn garch(&self, params: &WalkParams<X, Y>) -> Result<Vec<Positive>, Box<dyn Error>> {
+            fn garch(&self, params: &WalkParams<X, Y>) -> Result<Vec<Positive>, SimulationError> {
                 self.brownian(params)
             }
 
-            fn heston(&self, params: &WalkParams<X, Y>) -> Result<Vec<Positive>, Box<dyn Error>> {
+            fn heston(&self, params: &WalkParams<X, Y>) -> Result<Vec<Positive>, SimulationError> {
                 self.brownian(params)
             }
 
-            fn custom(&self, params: &WalkParams<X, Y>) -> Result<Vec<Positive>, Box<dyn Error>> {
+            fn custom(&self, params: &WalkParams<X, Y>) -> Result<Vec<Positive>, SimulationError> {
                 self.brownian(params)
             }
         }

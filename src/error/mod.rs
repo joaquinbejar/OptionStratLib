@@ -183,6 +183,23 @@ mod surfaces;
 
 mod graph;
 mod transaction;
+
+/// ### Simulation Errors (`SimulationError`)
+/// Handles:
+/// * Random walk generation failures
+/// * Monte Carlo simulation errors
+/// * Stochastic process parameter validation
+/// * Step calculation issues
+pub mod simulation;
+
+/// ### Pricing Errors (`PricingError`)
+/// Handles:
+/// * Pricing method failures (Black-Scholes, Binomial, etc.)
+/// * Monte Carlo simulation errors
+/// * Invalid pricing engine configurations
+/// * Generic pricing-related errors
+pub mod pricing;
+
 /// ### Volatility Errors (`VolatilityError`)
 /// Handles:
 /// * Implied volatility calculation failures
@@ -191,8 +208,22 @@ mod transaction;
 /// * Market data consistency checks
 mod volatility;
 
+/// ### CSV/OHLCV Errors (`OhlcvError`)
+/// Handles:
+/// * CSV parsing errors
+/// * ZIP file handling errors
+/// * OHLCV data validation
+/// * Date and decimal parsing issues
+mod csv;
+
+/// ### Unified Error Type
+/// Top-level error type that encompasses all errors in the library.
+/// Provides a single error type for unified error handling across modules.
+pub mod unified;
+
 pub use chains::ChainError;
 pub use common::OperationErrorKind;
+pub use csv::OhlcvError;
 pub use curves::CurveError;
 pub use decimal::{DecimalError, DecimalResult};
 pub use graph::GraphError;
@@ -201,8 +232,11 @@ pub use interpolation::InterpolationError;
 pub use metrics::MetricsError;
 pub use options::{OptionsError, OptionsResult};
 pub use position::PositionError;
+pub use pricing::{PricingError, PricingResult};
 pub use probability::ProbabilityError;
+pub use simulation::{SimulationError, SimulationResult};
 pub use strategies::StrategyError;
 pub use surfaces::SurfaceError;
 pub use transaction::TransactionError;
+pub use unified::Error;
 pub use volatility::VolatilityError;

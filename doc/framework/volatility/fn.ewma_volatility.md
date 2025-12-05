@@ -5,9 +5,9 @@
 [optionstratlib](../index.html)::[volatility](index.html)
 :::
 
-# Function [ewma_volatility]{.fn}Copy item path
+# Function [ewma_volatility]{.fn} Copy item path
 
-[[Source](../../src/optionstratlib/volatility/utils.rs.html#73-86){.src}
+[[Source](../../src/optionstratlib/volatility/utils.rs.html#70-83){.src}
 ]{.sub-heading}
 ::::
 
@@ -15,7 +15,7 @@
 pub fn ewma_volatility(
     returns: &[Decimal],
     lambda: Decimal,
-) -> Result<Vec<Positive>, Box<dyn Error>>
+) -> Result<Vec<Positive>, VolatilityError>
 ```
 
 Expand description

@@ -3,11 +3,11 @@
    Email: jb@taunais.com
    Date: 24/3/25
 ******************************************************************************/
+use crate::error::SimulationError;
 use crate::utils::TimeFrame;
 use crate::utils::time::convert_time_frame;
 use crate::{ExpirationDate, Positive};
 use serde::{Serialize, Serializer};
-use std::error::Error;
 use std::fmt::{Display, Formatter};
 use std::ops::AddAssign;
 use tracing::debug;
@@ -166,11 +166,11 @@ where
     ///
     /// # Returns
     ///
-    /// * `Result<Positive, Box<dyn Error>>` - A positive decimal value representing the number of days
+    /// * `Result<Positive, SimulationError>` - A positive decimal value representing the number of days
     ///   until expiration, or an error if the calculation cannot be performed.
     ///
-    pub fn days_left(&self) -> Result<Positive, Box<dyn Error>> {
-        self.datetime.get_days()
+    pub fn days_left(&self) -> Result<Positive, SimulationError> {
+        Ok(self.datetime.get_days()?)
     }
 
     /// Generates the next step by reducing the expiration days by the step value.
@@ -181,7 +181,7 @@ where
     /// # Returns
     ///
     /// A new `Xstep<T>` instance with updated index and datetime values.
-    pub fn next(&self) -> Result<Self, Box<dyn Error>> {
+    pub fn next(&self) -> Result<Self, SimulationError> {
         let days = self.datetime.get_days().unwrap();
         if days == Positive::ZERO {
             return Err("Cannot generate next step. Expiration date is already reached.".into());
@@ -216,7 +216,7 @@ where
     /// # Returns
     ///
     /// A new `Xstep<T>` instance with updated index and datetime values.
-    pub fn previous(&self) -> Result<Self, Box<dyn Error>> {
+    pub fn previous(&self) -> Result<Self, SimulationError> {
         let days = self.datetime.get_days().unwrap();
         let days_to_rest = convert_time_frame(
             self.step_size_in_time.into(),

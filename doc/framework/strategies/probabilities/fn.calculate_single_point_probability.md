@@ -5,7 +5,7 @@
 [optionstratlib](../../index.html)::[strategies](../index.html)::[probabilities](index.html)
 :::
 
-# Function [calculate_single_point_probability]{.fn}Copy item path
+# Function [calculate_single_point_probability]{.fn} Copy item path
 
 [[Source](../../../src/optionstratlib/strategies/probabilities/utils.rs.html#64-130){.src}
 ]{.sub-heading}
@@ -13,11 +13,11 @@
 
 ``` {.rust .item-decl}
 pub fn calculate_single_point_probability(
-    current_price: Positive,
-    target_price: Positive,
+    current_price: &Positive,
+    target_price: &Positive,
     volatility_adj: Option<VolatilityAdjustment>,
     trend: Option<PriceTrend>,
-    expiration_date: ExpirationDate,
+    expiration_date: &ExpirationDate,
     risk_free_rate: Option<Decimal>,
 ) -> Result<(Positive, Positive), ProbabilityError>
 ```

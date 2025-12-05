@@ -4,10 +4,10 @@
    Date: 11/8/24
 ******************************************************************************/
 use crate::Options;
+use crate::error::PricingError;
 use crate::greeks::{big_n, calculate_d_values};
 use crate::model::types::{OptionStyle, OptionType, Side};
 use rust_decimal::{Decimal, MathematicalOps};
-use std::error::Error;
 use tracing::trace;
 
 /// Computes the price of an option using the Black-Scholes model.
@@ -35,7 +35,7 @@ use tracing::trace;
 ///
 /// The function returns the computed price based on the type of option provided.
 ///
-pub fn black_scholes(option: &Options) -> Result<Decimal, Box<dyn Error>> {
+pub fn black_scholes(option: &Options) -> Result<Decimal, PricingError> {
     let (d1, d2, expiry_time) = calculate_d1_d2_and_time(option)?;
     match option.option_type {
         OptionType::European => calculate_european_option_price(option, d1, d2, expiry_time),
@@ -78,7 +78,7 @@ fn calculate_european_option_price(
     d1: Decimal,
     d2: Decimal,
     expiry_time: Decimal,
-) -> Result<Decimal, Box<dyn Error>> {
+) -> Result<Decimal, PricingError> {
     match option.side {
         Side::Long => calculate_long_position(option, d1, d2, expiry_time),
         Side::Short => Ok(-calculate_long_position(option, d1, d2, expiry_time)?),
@@ -104,7 +104,7 @@ fn calculate_long_position(
     d1: Decimal,
     d2: Decimal,
     expiry_time: Decimal,
-) -> Result<Decimal, Box<dyn Error>> {
+) -> Result<Decimal, PricingError> {
     match option.option_style {
         OptionStyle::Call => calculate_call_option_price(option, d1, d2, expiry_time),
         OptionStyle::Put => calculate_put_option_price(option, d1, d2, expiry_time),
@@ -124,9 +124,7 @@ fn calculate_long_position(
 /// - `d2`: The second value computed based on the option's details and time to expiry.
 /// - `time_to_expiry`: The calculated or given time to expiry in years.
 ///
-fn calculate_d1_d2_and_time(
-    option: &Options,
-) -> Result<(Decimal, Decimal, Decimal), Box<dyn Error>> {
+fn calculate_d1_d2_and_time(option: &Options) -> Result<(Decimal, Decimal, Decimal), PricingError> {
     let calculated_time_to_expiry: Decimal = option.time_to_expiration()?.to_dec();
     let (d1, d2) = calculate_d_values(option)?;
     Ok((d1, d2, calculated_time_to_expiry))
@@ -148,7 +146,7 @@ fn calculate_call_option_price(
     d1: Decimal,
     d2: Decimal,
     t: Decimal,
-) -> Result<Decimal, Box<dyn Error>> {
+) -> Result<Decimal, PricingError> {
     let big_n_d1 = big_n(d1)?;
     let big_n_d2 = big_n(d2)?;
 
@@ -203,7 +201,7 @@ fn calculate_put_option_price(
     d1: Decimal,
     d2: Decimal,
     t: Decimal,
-) -> Result<Decimal, Box<dyn Error>> {
+) -> Result<Decimal, PricingError> {
     // N(–d1) and N(–d2)
     let big_n_neg_d1 = big_n(-d1)?;
     let big_n_neg_d2 = big_n(-d2)?;
@@ -230,7 +228,8 @@ fn calculate_put_option_price(
 ///
 /// ```
 /// use std::error::Error;
-/// use optionstratlib::Options;///
+/// use optionstratlib::Options;
+/// use optionstratlib::prelude::PricingError;
 ///
 /// use optionstratlib::pricing::BlackScholes;
 ///
@@ -239,7 +238,7 @@ fn calculate_put_option_price(
 /// }
 ///
 /// impl BlackScholes for MyOption {
-///     fn get_option(&self) -> Result<&Options, Box<dyn Error>> {
+///     fn get_option(&self) -> Result<&Options, PricingError> {
 ///         Ok(&self.option)
 ///     }
 /// }
@@ -253,9 +252,9 @@ pub trait BlackScholes {
     ///
     /// # Returns
     ///
-    /// * `Result<&Options, Box<dyn Error>>` - A reference to the Options struct on success,
+    /// * `Result<&Options, PricingError>` - A reference to the Options struct on success,
     ///   or an error if the option data cannot be retrieved.
-    fn get_option(&self) -> Result<&Options, Box<dyn Error>>;
+    fn get_option(&self) -> Result<&Options, PricingError>;
 
     /// Calculates the price of the option using the Black-Scholes model.
     ///
@@ -264,9 +263,9 @@ pub trait BlackScholes {
     ///
     /// # Returns
     ///
-    /// * `Result<Decimal, Box<dyn Error>>` - The calculated option price as a Decimal
+    /// * `Result<Decimal, PricingError>` - The calculated option price as a Decimal
     ///   on success, or an error if the calculation fails.
-    fn calculate_price_black_scholes(&self) -> Result<Decimal, Box<dyn Error>> {
+    fn calculate_price_black_scholes(&self) -> Result<Decimal, PricingError> {
         let option = self.get_option()?;
         black_scholes(option)
     }
@@ -546,7 +545,7 @@ mod tests_black_scholes_trait {
     }
 
     impl BlackScholes for MockOption {
-        fn get_option(&self) -> Result<&Options, Box<dyn Error>> {
+        fn get_option(&self) -> Result<&Options, PricingError> {
             Ok(&self.option)
         }
     }
@@ -707,7 +706,7 @@ mod tests_black_scholes_trait_bis {
     }
 
     impl BlackScholes for MockOption {
-        fn get_option(&self) -> Result<&Options, Box<dyn Error>> {
+        fn get_option(&self) -> Result<&Options, PricingError> {
             Ok(&self.option)
         }
     }

@@ -5,9 +5,9 @@
 [optionstratlib](../../index.html)::[model](../index.html)
 :::
 
-# Module decimalCopy item path
+# Module decimal Copy item path
 
-[[Source](../../../src/optionstratlib/model/decimal.rs.html#6-512){.src}
+[[Source](../../../src/optionstratlib/model/decimal.rs.html#6-508){.src}
 ]{.sub-heading}
 ::::
 

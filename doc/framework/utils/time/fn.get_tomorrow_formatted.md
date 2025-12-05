@@ -5,9 +5,9 @@
 [optionstratlib](../../index.html)::[utils](../index.html)::[time](index.html)
 :::
 
-# Function [get_tomorrow_formatted]{.fn}Copy item path
+# Function [get_tomorrow_formatted]{.fn} Copy item path
 
-[[Source](../../../src/optionstratlib/utils/time.rs.html#221-224){.src}
+[[Source](../../../src/optionstratlib/utils/time.rs.html#222-225){.src}
 ]{.sub-heading}
 ::::
 

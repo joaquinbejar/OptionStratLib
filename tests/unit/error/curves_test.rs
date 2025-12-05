@@ -16,10 +16,10 @@ fn test_curve_error_from_options_error() {
 
     // Verify the conversion was successful
     match curve_error {
-        CurveError::OperationError(_) => {
+        CurveError::Options(_) => {
             // The fact that we reached this arm means the conversion was successful
         }
-        _ => panic!("Expected OperationError variant, got something else"),
+        _ => panic!("Expected Options variant, got something else"),
     }
 }
 
@@ -33,10 +33,10 @@ fn test_curve_error_from_greeks_error() {
 
     // Verify the conversion was successful
     match curve_error {
-        CurveError::OperationError(_) => {
+        CurveError::Greeks(_) => {
             // The fact that we reached this arm means the conversion was successful
         }
-        _ => panic!("Expected OperationError variant, got something else"),
+        _ => panic!("Expected Greeks variant, got something else"),
     }
 }
 
@@ -50,10 +50,10 @@ fn test_curve_error_from_interpolation_error() {
 
     // Verify the conversion was successful
     match curve_error {
-        CurveError::StdError { reason } => {
-            assert!(reason.contains("interpolation error test"));
+        CurveError::InterpolationOp(_) => {
+            // The fact that we reached this arm means the conversion was successful
         }
-        _ => panic!("Expected StdError variant, got something else"),
+        _ => panic!("Expected InterpolationOp variant, got something else"),
     }
 }
 
@@ -84,10 +84,10 @@ fn test_curve_error_from_graph_error() {
 
     // Verify the conversion was successful
     match curve_error {
-        CurveError::StdError { reason } => {
-            assert!(reason.contains("graph error test"));
+        CurveError::Graph(_) => {
+            // The fact that we reached this arm means the conversion was successful
         }
-        _ => panic!("Expected StdError variant, got something else"),
+        _ => panic!("Expected Graph variant, got something else"),
     }
 }
 

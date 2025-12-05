@@ -5,9 +5,9 @@
 [optionstratlib](../../index.html)::[utils](../index.html)::[time](index.html)
 :::
 
-# Function [convert_time_frame]{.fn}Copy item path
+# Function [convert_time_frame]{.fn} Copy item path
 
-[[Source](../../../src/optionstratlib/utils/time.rs.html#183-209){.src}
+[[Source](../../../src/optionstratlib/utils/time.rs.html#184-210){.src}
 ]{.sub-heading}
 ::::
 

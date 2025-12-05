@@ -1,10 +1,9 @@
-use crate::error::TransactionError;
+use crate::error::{PricingError, TransactionError};
 use crate::model::Position;
 use crate::pnl::transaction::Transaction;
 use crate::pnl::utils::PnL;
 use crate::strategies::DeltaAdjustment;
 use crate::{ExpirationDate, Positive};
-use std::error::Error;
 
 /// Defines the interface for profit and loss (PnL) calculation on financial instruments.
 ///
@@ -26,13 +25,13 @@ pub trait PnLCalculator {
     /// * `_implied_volatility` - The current implied volatility
     ///
     /// # Returns
-    /// * `Result<PnL, Box<dyn Error>>` - The calculated PnL or an error
+    /// * `Result<PnL, PricingError>` - The calculated PnL or an error
     fn calculate_pnl(
         &self,
         _underlying_price: &Positive,
         _expiration_date: ExpirationDate,
         _implied_volatility: &Positive,
-    ) -> Result<PnL, Box<dyn Error>>;
+    ) -> Result<PnL, PricingError>;
 
     /// Calculates the PnL at the expiration of the instrument.
     ///
@@ -44,11 +43,11 @@ pub trait PnLCalculator {
     /// * `_underlying_price` - The price of the underlying asset at expiration
     ///
     /// # Returns
-    /// * `Result<PnL, Box<dyn Error>>` - The calculated PnL at expiration or an error
+    /// * `Result<PnL, PricingError>` - The calculated PnL at expiration or an error
     fn calculate_pnl_at_expiration(
         &self,
         _underlying_price: &Positive,
-    ) -> Result<PnL, Box<dyn Error>>;
+    ) -> Result<PnL, PricingError>;
 
     /// Calculates the Profit and Loss (PnL) for a series of delta adjustments in a trading strategy.
     ///
@@ -59,7 +58,7 @@ pub trait PnLCalculator {
     ///
     /// # Returns
     ///
-    /// * `Result<PnL, Box<dyn Error>>` - If successful, returns a `PnL` object containing information
+    /// * `Result<PnL, PricingError>` - If successful, returns a `PnL` object containing information
     ///   about realized and unrealized profits/losses, costs, and income.
     ///   Otherwise, returns an error.
     ///
@@ -68,7 +67,7 @@ pub trait PnLCalculator {
     /// This function always panics with the message "adjustments_pnl is not implemented for this Strategy."
     /// It serves as a placeholder or trait method that must be implemented by specific strategy implementations.
     ///
-    fn adjustments_pnl(&self, _adjustments: &DeltaAdjustment) -> Result<PnL, Box<dyn Error>> {
+    fn adjustments_pnl(&self, _adjustments: &DeltaAdjustment) -> Result<PnL, PricingError> {
         panic!("adjustments_pnl is not implemented for this Strategy.")
     }
 
@@ -78,8 +77,8 @@ pub trait PnLCalculator {
     /// - `_position`: A reference to a trading position (`Position`) for which the PnL is to be calculated.
     ///
     /// # Returns
-    /// - `Result<PnL, Box<dyn Error>>`: This function is intended to return a `PnL` value on success,
-    ///   or an error wrapped in a `Box<dyn Error>` on failure.
+    /// - `Result<PnL, PricingError>`: This function is intended to return a `PnL` value on success,
+    ///   or an error wrapped in a `PricingError` on failure.
     ///
     /// # Errors
     /// This method will always return an error because it is not implemented.
@@ -93,7 +92,7 @@ pub trait PnLCalculator {
     /// # Notes
     /// Override this method in subclasses or implementations of the `Strategy` trait to provide the
     /// desired functionality for calculating position PnL.
-    fn diff_position_pnl(&self, _position: &Position) -> Result<PnL, Box<dyn Error>> {
+    fn diff_position_pnl(&self, _position: &Position) -> Result<PnL, PricingError> {
         panic!("from_position_pnl is not implemented for this Strategy.")
     }
 }
@@ -178,7 +177,7 @@ mod tests_pnl_calculator {
             market_price: &Positive,
             expiration_date: ExpirationDate,
             _implied_volatility: &Positive,
-        ) -> Result<PnL, Box<dyn Error>> {
+        ) -> Result<PnL, PricingError> {
             Ok(PnL::new(
                 Some(market_price.into()),
                 None,
@@ -191,7 +190,7 @@ mod tests_pnl_calculator {
         fn calculate_pnl_at_expiration(
             &self,
             underlying_price: &Positive,
-        ) -> Result<PnL, Box<dyn Error>> {
+        ) -> Result<PnL, PricingError> {
             let underlying_price = underlying_price.to_dec();
             Ok(PnL::new(
                 Some(underlying_price),

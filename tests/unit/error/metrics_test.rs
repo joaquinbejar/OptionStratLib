@@ -1,5 +1,4 @@
 use optionstratlib::error::{CurveError, MetricsError, SurfaceError};
-use std::error::Error;
 
 #[test]
 fn test_metrics_error_display() {
@@ -22,14 +21,15 @@ fn test_metrics_error_display() {
     let risk_err = MetricsError::RiskError("risk calculation error".to_string());
     assert_eq!(format!("{risk_err}"), "Risk Error: risk calculation error");
 
-    let curve_err = MetricsError::CurveError("curve fitting failed".to_string());
-    assert_eq!(format!("{curve_err}"), "Curve Error: curve fitting failed");
+    let curve_err = MetricsError::Curve(CurveError::Point2DError {
+        reason: "curve fitting failed",
+    });
+    assert!(format!("{curve_err}").contains("curve fitting failed"));
 
-    let surface_err = MetricsError::SurfaceError("surface modeling error".to_string());
-    assert_eq!(
-        format!("{surface_err}"),
-        "Surface Error: surface modeling error"
-    );
+    let surface_err = MetricsError::Surface(SurfaceError::Point3DError {
+        reason: "surface modeling error",
+    });
+    assert!(format!("{surface_err}").contains("surface modeling error"));
 
     let std_err = MetricsError::StdError {
         reason: "standard error occurred".to_string(),
@@ -66,10 +66,10 @@ fn test_metrics_error_from_curve_error() {
 
     // Verify the conversion was successful
     match metrics_err {
-        MetricsError::CurveError(msg) => {
-            assert!(msg.contains("invalid point"));
+        MetricsError::Curve(_) => {
+            // Conversion successful
         }
-        _ => panic!("Expected CurveError variant, got something else"),
+        _ => panic!("Expected Curve variant, got something else"),
     }
 }
 
@@ -85,10 +85,10 @@ fn test_metrics_error_from_surface_error() {
 
     // Verify the conversion was successful
     match metrics_err {
-        MetricsError::SurfaceError(msg) => {
-            assert!(msg.contains("invalid surface point"));
+        MetricsError::Surface(_) => {
+            // Conversion successful
         }
-        _ => panic!("Expected SurfaceError variant, got something else"),
+        _ => panic!("Expected Surface variant, got something else"),
     }
 }
 
@@ -96,7 +96,7 @@ fn test_metrics_error_from_surface_error() {
 fn test_metrics_error_from_box_dyn_error() {
     // Create a simple error that implements Error trait
     let std_err = std::io::Error::other("IO error occurred");
-    let boxed_err: Box<dyn Error> = Box::new(std_err);
+    let boxed_err: Box<dyn std::error::Error> = Box::new(std_err);
 
     // Convert to MetricsError using From trait
     let metrics_err: MetricsError = boxed_err.into();
@@ -116,14 +116,14 @@ fn test_metrics_error_as_error() {
     let error = MetricsError::BasicError("test error".to_string());
 
     // Verify it can be used as a Box<dyn Error>
-    let boxed_error: Box<dyn Error> = Box::new(error);
+    let boxed_error: Box<dyn std::error::Error> = Box::new(error);
     assert_eq!(boxed_error.to_string(), "Basic Error: test error");
 
     // Test another variant
     let error = MetricsError::StdError {
         reason: "standard error test".to_string(),
     };
-    let boxed_error: Box<dyn Error> = Box::new(error);
+    let boxed_error: Box<dyn std::error::Error> = Box::new(error);
     assert_eq!(
         boxed_error.to_string(),
         "Standard Error: standard error test"

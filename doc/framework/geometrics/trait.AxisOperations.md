@@ -5,7 +5,7 @@
 [optionstratlib](../index.html)::[geometrics](index.html)
 :::
 
-# Trait [AxisOperations]{.trait}Copy item path
+# Trait [AxisOperations]{.trait} Copy item path
 
 [[Source](../../src/optionstratlib/geometrics/operations/axis.rs.html#21-116){.src}
 ]{.sub-heading}
@@ -67,7 +67,7 @@ The type of error that can occur during point operations
 [Source](../../src/optionstratlib/geometrics/operations/axis.rs.html#35){.src
 .rightside}
 
-#### fn [contains_point](#tymethod.contains_point){.fn}(&self, x: [&Input](https://doc.rust-lang.org/1.86.0/std/primitive.reference.html){.primitive}) -\> [bool](https://doc.rust-lang.org/1.86.0/std/primitive.bool.html){.primitive} {#fn-contains_pointself-x-input---bool .code-header}
+#### fn [contains_point](#tymethod.contains_point){.fn}(&self, x: [&Input](https://doc.rust-lang.org/1.91.1/std/primitive.reference.html){.primitive}) -\> [bool](https://doc.rust-lang.org/1.91.1/std/primitive.bool.html){.primitive} {#fn-contains_pointself-x-input---bool .code-header}
 :::
 
 ::: docblock
@@ -87,7 +87,7 @@ Checks if a coordinate value exists in the structure.
 [Source](../../src/optionstratlib/geometrics/operations/axis.rs.html#44){.src
 .rightside}
 
-#### fn [get_index_values](#tymethod.get_index_values){.fn}(&self) -\> [Vec](https://doc.rust-lang.org/1.86.0/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<Input\> {#fn-get_index_valuesself---vecinput .code-header}
+#### fn [get_index_values](#tymethod.get_index_values){.fn}(&self) -\> [Vec](https://doc.rust-lang.org/1.91.1/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<Input\> {#fn-get_index_valuesself---vecinput .code-header}
 :::
 
 ::: docblock
@@ -105,7 +105,7 @@ xy-coordinates.
 [Source](../../src/optionstratlib/geometrics/operations/axis.rs.html#56){.src
 .rightside}
 
-#### fn [get_values](#tymethod.get_values){.fn}(&self, x: Input) -\> [Vec](https://doc.rust-lang.org/1.86.0/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<&Decimal\> {#fn-get_valuesself-x-input---vecdecimal .code-header}
+#### fn [get_values](#tymethod.get_values){.fn}(&self, x: Input) -\> [Vec](https://doc.rust-lang.org/1.91.1/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<&[Decimal](../prelude/struct.Decimal.html "struct optionstratlib::prelude::Decimal"){.struct}\> {#fn-get_valuesself-x-input---vecdecimal .code-header}
 :::
 
 ::: docblock
@@ -128,7 +128,7 @@ returns z-values for a given xy-coordinate.
 [Source](../../src/optionstratlib/geometrics/operations/axis.rs.html#65){.src
 .rightside}
 
-#### fn [get_closest_point](#tymethod.get_closest_point){.fn}(&self, x: [&Input](https://doc.rust-lang.org/1.86.0/std/primitive.reference.html){.primitive}) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[&Point](https://doc.rust-lang.org/1.86.0/std/primitive.reference.html){.primitive}, Self::[Error](trait.AxisOperations.html#associatedtype.Error "type optionstratlib::geometrics::AxisOperations::Error"){.associatedtype}\> {#fn-get_closest_pointself-x-input---resultpoint-selferror .code-header}
+#### fn [get_closest_point](#tymethod.get_closest_point){.fn}(&self, x: [&Input](https://doc.rust-lang.org/1.91.1/std/primitive.reference.html){.primitive}) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[&Point](https://doc.rust-lang.org/1.91.1/std/primitive.reference.html){.primitive}, Self::[Error](trait.AxisOperations.html#associatedtype.Error "type optionstratlib::geometrics::AxisOperations::Error"){.associatedtype}\> {#fn-get_closest_pointself-x-input---resultpoint-selferror .code-header}
 :::
 
 ::: docblock
@@ -148,7 +148,7 @@ Finds the closest point to the given coordinate value.
 [Source](../../src/optionstratlib/geometrics/operations/axis.rs.html#74){.src
 .rightside}
 
-#### fn [get_point](#tymethod.get_point){.fn}(&self, x: [&Input](https://doc.rust-lang.org/1.86.0/std/primitive.reference.html){.primitive}) -\> [Option](https://doc.rust-lang.org/1.86.0/core/option/enum.Option.html "enum core::option::Option"){.enum}\<[&Point](https://doc.rust-lang.org/1.86.0/std/primitive.reference.html){.primitive}\> {#fn-get_pointself-x-input---optionpoint .code-header}
+#### fn [get_point](#tymethod.get_point){.fn}(&self, x: [&Input](https://doc.rust-lang.org/1.91.1/std/primitive.reference.html){.primitive}) -\> [Option](https://doc.rust-lang.org/1.91.1/core/option/enum.Option.html "enum core::option::Option"){.enum}\<[&Point](https://doc.rust-lang.org/1.91.1/std/primitive.reference.html){.primitive}\> {#fn-get_pointself-x-input---optionpoint .code-header}
 :::
 
 ::: docblock
@@ -172,7 +172,7 @@ Finds the closest point to the given coordinate value.
 [Source](../../src/optionstratlib/geometrics/operations/axis.rs.html#85-115){.src
 .rightside}
 
-#### fn [merge_indexes](#method.merge_indexes){.fn}(&self, axis: [Vec](https://doc.rust-lang.org/1.86.0/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<Input\>) -\> [Vec](https://doc.rust-lang.org/1.86.0/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<Input\> {#fn-merge_indexesself-axis-vecinput---vecinput .code-header}
+#### fn [merge_indexes](#method.merge_indexes){.fn}(&self, axis: [Vec](https://doc.rust-lang.org/1.91.1/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<Input\>) -\> [Vec](https://doc.rust-lang.org/1.91.1/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<Input\> {#fn-merge_indexesself-axis-vecinput---vecinput .code-header}
 :::
 
 ::: docblock
@@ -195,15 +195,15 @@ axis vector to create a single vector of unique indices.
 
 ::::::::: {#implementors-list}
 ::: {#impl-AxisOperations%3CPoint2D,+Decimal%3E-for-Curve .section .impl}
-[Source](../../src/optionstratlib/curves/curve.rs.html#1455-1494){.src
+[Source](../../src/optionstratlib/curves/curve.rs.html#1469-1508){.src
 .rightside}[§](#impl-AxisOperations%3CPoint2D,+Decimal%3E-for-Curve){.anchor}
 
-### impl [AxisOperations](trait.AxisOperations.html "trait optionstratlib::geometrics::AxisOperations"){.trait}\<[Point2D](../curves/struct.Point2D.html "struct optionstratlib::curves::Point2D"){.struct}, Decimal\> for [Curve](../curves/struct.Curve.html "struct optionstratlib::curves::Curve"){.struct} {#impl-axisoperationspoint2d-decimal-for-curve .code-header}
+### impl [AxisOperations](trait.AxisOperations.html "trait optionstratlib::geometrics::AxisOperations"){.trait}\<[Point2D](../curves/struct.Point2D.html "struct optionstratlib::curves::Point2D"){.struct}, [Decimal](../prelude/struct.Decimal.html "struct optionstratlib::prelude::Decimal"){.struct}\> for [Curve](../curves/struct.Curve.html "struct optionstratlib::curves::Curve"){.struct} {#impl-axisoperationspoint2d-decimal-for-curve .code-header}
 :::
 
 :::: impl-items
 ::: {#associatedtype.Error-1 .section .associatedtype .trait-impl}
-[Source](../../src/optionstratlib/curves/curve.rs.html#1456){.src
+[Source](../../src/optionstratlib/curves/curve.rs.html#1470){.src
 .rightside}[§](#associatedtype.Error-1){.anchor}
 
 #### type [Error](#associatedtype.Error){.associatedtype} = [CurveError](../error/curves/enum.CurveError.html "enum optionstratlib::error::curves::CurveError"){.enum} {#type-error-curveerror .code-header}
@@ -211,7 +211,7 @@ axis vector to create a single vector of unique indices.
 ::::
 
 ::: {#impl-AxisOperations%3CPoint3D,+Point2D%3E-for-Surface .section .impl}
-[Source](../../src/optionstratlib/surfaces/surface.rs.html#1287-1322){.src
+[Source](../../src/optionstratlib/surfaces/surface.rs.html#1300-1335){.src
 .rightside}[§](#impl-AxisOperations%3CPoint3D,+Point2D%3E-for-Surface){.anchor}
 
 ### impl [AxisOperations](trait.AxisOperations.html "trait optionstratlib::geometrics::AxisOperations"){.trait}\<[Point3D](../surfaces/struct.Point3D.html "struct optionstratlib::surfaces::Point3D"){.struct}, [Point2D](../curves/struct.Point2D.html "struct optionstratlib::curves::Point2D"){.struct}\> for [Surface](../surfaces/struct.Surface.html "struct optionstratlib::surfaces::Surface"){.struct} {#impl-axisoperationspoint3d-point2d-for-surface .code-header}
@@ -219,7 +219,7 @@ axis vector to create a single vector of unique indices.
 
 :::: impl-items
 ::: {#associatedtype.Error-2 .section .associatedtype .trait-impl}
-[Source](../../src/optionstratlib/surfaces/surface.rs.html#1288){.src
+[Source](../../src/optionstratlib/surfaces/surface.rs.html#1301){.src
 .rightside}[§](#associatedtype.Error-2){.anchor}
 
 #### type [Error](#associatedtype.Error){.associatedtype} = [SurfaceError](../error/enum.SurfaceError.html "enum optionstratlib::error::SurfaceError"){.enum} {#type-error-surfaceerror .code-header}

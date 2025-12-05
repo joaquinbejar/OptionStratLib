@@ -5,7 +5,7 @@
 [optionstratlib](../index.html)::[geometrics](index.html)
 :::
 
-# Trait [BiLinearInterpolation]{.trait}Copy item path
+# Trait [BiLinearInterpolation]{.trait} Copy item path
 
 [[Source](../../src/optionstratlib/geometrics/interpolation/bilinear.rs.html#62-91){.src}
 ]{.sub-heading}
@@ -114,7 +114,7 @@ In this example:
 [Source](../../src/optionstratlib/geometrics/interpolation/bilinear.rs.html#90){.src
 .rightside}
 
-#### fn [bilinear_interpolate](#tymethod.bilinear_interpolate){.fn}(&self, x: Input) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<Point, [InterpolationError](../error/enum.InterpolationError.html "enum optionstratlib::error::InterpolationError"){.enum}\> {#fn-bilinear_interpolateself-x-input---resultpoint-interpolationerror .code-header}
+#### fn [bilinear_interpolate](#tymethod.bilinear_interpolate){.fn}(&self, x: Input) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<Point, [InterpolationError](../error/enum.InterpolationError.html "enum optionstratlib::error::InterpolationError"){.enum}\> {#fn-bilinear_interpolateself-x-input---resultpoint-interpolationerror .code-header}
 :::
 
 :::: docblock
@@ -160,10 +160,10 @@ match result {
 
 ::::::: {#implementors-list}
 :::: {#impl-BiLinearInterpolation%3CPoint2D,+Decimal%3E-for-Curve .section .impl}
-[Source](../../src/optionstratlib/curves/curve.rs.html#446-522){.src
+[Source](../../src/optionstratlib/curves/curve.rs.html#460-536){.src
 .rightside}[§](#impl-BiLinearInterpolation%3CPoint2D,+Decimal%3E-for-Curve){.anchor}
 
-### impl [BiLinearInterpolation](trait.BiLinearInterpolation.html "trait optionstratlib::geometrics::BiLinearInterpolation"){.trait}\<[Point2D](../curves/struct.Point2D.html "struct optionstratlib::curves::Point2D"){.struct}, Decimal\> for [Curve](../curves/struct.Curve.html "struct optionstratlib::curves::Curve"){.struct} {#impl-bilinearinterpolationpoint2d-decimal-for-curve .code-header}
+### impl [BiLinearInterpolation](trait.BiLinearInterpolation.html "trait optionstratlib::geometrics::BiLinearInterpolation"){.trait}\<[Point2D](../curves/struct.Point2D.html "struct optionstratlib::curves::Point2D"){.struct}, [Decimal](../prelude/struct.Decimal.html "struct optionstratlib::prelude::Decimal"){.struct}\> for [Curve](../curves/struct.Curve.html "struct optionstratlib::curves::Curve"){.struct} {#impl-bilinearinterpolationpoint2d-decimal-for-curve .code-header}
 
 ::: docblock
 Implementation of the `BiLinearInterpolation` trait for the `Curve`
@@ -267,7 +267,7 @@ within the bounds defined by the four surrounding points.
 :::
 
 ::: {#impl-BiLinearInterpolation%3CPoint3D,+Point2D%3E-for-Surface .section .impl}
-[Source](../../src/optionstratlib/surfaces/surface.rs.html#690-769){.src
+[Source](../../src/optionstratlib/surfaces/surface.rs.html#703-782){.src
 .rightside}[§](#impl-BiLinearInterpolation%3CPoint3D,+Point2D%3E-for-Surface){.anchor}
 
 ### impl [BiLinearInterpolation](trait.BiLinearInterpolation.html "trait optionstratlib::geometrics::BiLinearInterpolation"){.trait}\<[Point3D](../surfaces/struct.Point3D.html "struct optionstratlib::surfaces::Point3D"){.struct}, [Point2D](../curves/struct.Point2D.html "struct optionstratlib::curves::Point2D"){.struct}\> for [Surface](../surfaces/struct.Surface.html "struct optionstratlib::surfaces::Surface"){.struct} {#impl-bilinearinterpolationpoint3d-point2d-for-surface .code-header}

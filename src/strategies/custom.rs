@@ -10,8 +10,8 @@ use crate::{
     ExpirationDate, Options, Positive,
     chains::{OptionData, chain::OptionChain},
     error::{
-        GreeksError, OperationErrorKind, position::PositionError, probability::ProbabilityError,
-        strategies::StrategyError,
+        GreeksError, OperationErrorKind, PricingError, position::PositionError,
+        probability::ProbabilityError, strategies::StrategyError,
     },
     greeks::Greeks,
     model::{
@@ -35,7 +35,6 @@ use num_traits::ToPrimitive;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
-use std::error::Error;
 use tracing::{debug, error};
 use utoipa::ToSchema;
 
@@ -825,7 +824,7 @@ impl Optimizable for CustomStrategy {
 }
 
 impl Profit for CustomStrategy {
-    fn calculate_profit_at(&self, price: &Positive) -> Result<Decimal, Box<dyn Error>> {
+    fn calculate_profit_at(&self, price: &Positive) -> Result<Decimal, PricingError> {
         let price = Some(price);
         self.positions
             .iter()
@@ -934,7 +933,7 @@ impl PnLCalculator for CustomStrategy {
         market_price: &Positive,
         expiration_date: ExpirationDate,
         implied_volatility: &Positive,
-    ) -> Result<PnL, Box<dyn Error>> {
+    ) -> Result<PnL, PricingError> {
         Ok(self
             .positions
             .iter()
@@ -949,7 +948,7 @@ impl PnLCalculator for CustomStrategy {
     fn calculate_pnl_at_expiration(
         &self,
         underlying_price: &Positive,
-    ) -> Result<PnL, Box<dyn Error>> {
+    ) -> Result<PnL, PricingError> {
         Ok(self
             .positions
             .iter()
@@ -961,7 +960,7 @@ impl PnLCalculator for CustomStrategy {
             .sum())
     }
 
-    fn adjustments_pnl(&self, adjustment: &DeltaAdjustment) -> Result<PnL, Box<dyn Error>> {
+    fn adjustments_pnl(&self, adjustment: &DeltaAdjustment) -> Result<PnL, PricingError> {
         let mut total_pnl = PnL::default();
 
         for position in &self.positions {

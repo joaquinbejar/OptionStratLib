@@ -5,9 +5,9 @@
 [optionstratlib](../index.html)::[constants](index.html)
 :::
 
-# Constant [ZERO]{.constant}Copy item path
+# Constant [ZERO]{.constant} Copy item path
 
-[[Source](../../src/optionstratlib/constants.rs.html#17){.src}
+[[Source](../../src/optionstratlib/constants.rs.html#16){.src}
 ]{.sub-heading}
 ::::
 

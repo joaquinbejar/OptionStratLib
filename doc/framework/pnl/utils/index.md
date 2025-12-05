@@ -5,9 +5,9 @@
 [optionstratlib](../../index.html)::[pnl](../index.html)
 :::
 
-# Module utilsCopy item path
+# Module utils Copy item path
 
-[[Source](../../../src/optionstratlib/pnl/utils.rs.html#6-370){.src}
+[[Source](../../../src/optionstratlib/pnl/utils.rs.html#6-510){.src}
 ]{.sub-heading}
 ::::
 

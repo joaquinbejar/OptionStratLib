@@ -5,7 +5,7 @@
 [optionstratlib](../index.html)
 :::
 
-# Module greeksCopy item path
+# Module greeks Copy item path
 
 [[Source](../../src/optionstratlib/greeks/mod.rs.html#7-94){.src}
 ]{.sub-heading}
@@ -64,7 +64,7 @@ calculations:
 ``` {.rust .rust-example-rendered}
 use rust_decimal_macros::dec;
 use optionstratlib::greeks::{delta, gamma, rho, theta, vega};
-use optionstratlib::Options;
+use optionstratlib::{ExpirationDate, Options};
 use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
 use optionstratlib::pos;
 use optionstratlib::Positive;
@@ -118,6 +118,11 @@ derivatives. Each Greek represents a different dimension of risk:
 [Greek](struct.Greek.html "struct optionstratlib::greeks::Greek"){.struct}
 :   Represents a complete set of option Greeks, which measure the
     sensitivity of an option's price to various market factors.
+
+[GreeksSnapshot](struct.GreeksSnapshot.html "struct optionstratlib::greeks::GreeksSnapshot"){.struct}
+:   A struct representing a snapshot of the Greeks, financial measures
+    used to assess risk and sensitivity of derivative instruments such
+    as options.
 
 ## Traits[§](#traits){.anchor} {#traits .section-header}
 

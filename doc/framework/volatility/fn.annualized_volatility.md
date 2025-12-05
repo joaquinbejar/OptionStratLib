@@ -5,9 +5,9 @@
 [optionstratlib](../index.html)::[volatility](index.html)
 :::
 
-# Function [annualized_volatility]{.fn}Copy item path
+# Function [annualized_volatility]{.fn} Copy item path
 
-[[Source](../../src/optionstratlib/volatility/utils.rs.html#276-281){.src}
+[[Source](../../src/optionstratlib/volatility/utils.rs.html#317-322){.src}
 ]{.sub-heading}
 ::::
 
@@ -15,7 +15,7 @@
 pub fn annualized_volatility(
     volatility: Positive,
     timeframe: TimeFrame,
-) -> Result<Positive, Box<dyn Error>>
+) -> Result<Positive, VolatilityError>
 ```
 
 Expand description

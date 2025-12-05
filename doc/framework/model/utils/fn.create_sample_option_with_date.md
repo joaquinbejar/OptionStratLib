@@ -5,9 +5,9 @@
 [optionstratlib](../../index.html)::[model](../index.html)::[utils](index.html)
 :::
 
-# Function [create_sample_option_with_date]{.fn}Copy item path
+# Function [create_sample_option_with_date]{.fn} Copy item path
 
-[[Source](../../../src/optionstratlib/model/utils.rs.html#181-204){.src}
+[[Source](../../../src/optionstratlib/model/utils.rs.html#185-208){.src}
 ]{.sub-heading}
 ::::
 

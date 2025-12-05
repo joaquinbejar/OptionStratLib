@@ -231,6 +231,117 @@ impl OptionData {
         }
     }
 
+    /// Calculates and returns the call spread as a `Positive` value if both call bid and call ask
+    /// prices are available. Otherwise, returns `None`.
+    ///
+    /// The call spread is determined as the absolute difference between the call ask price
+    /// and the call bid price.
+    ///
+    /// # Returns
+    /// - `Some(Positive)` if both `call_bid` and `call_ask` are present.
+    /// - `None` if either `call_bid` or `call_ask` is `None`.
+    ///
+    /// # Note
+    /// The `Positive` type is assumed to enforce non-negative values for correctness.
+    pub fn get_call_spread(&self) -> Option<Positive> {
+        match (self.call_bid, self.call_ask) {
+            (Some(call_bid), Some(call_ask)) => {
+                let spread = (call_ask.to_dec() - call_bid.to_dec()).abs();
+                Some(Positive(spread))
+            }
+            _ => None,
+        }
+    }
+
+    /// Calculates the percentage call spread based on the bid and ask prices of a call option.
+    ///
+    /// # Formula
+    /// The call spread percentage is computed using the absolute difference between the call ask
+    /// price and the call bid price, divided by the mid price of the call. Mathematically:
+    ///
+    /// ```text
+    /// Spread% = |CallAsk - CallBid| / ((CallAsk + CallBid) / 2)
+    /// ```
+    ///
+    /// # Returns
+    /// - Returns `Some(Positive)` if both `call_bid` and `call_ask` values are available and non-negative.
+    /// - Returns `None` if either `call_bid` or `call_ask` is missing.
+    ///
+    /// # Notes
+    /// - The method assumes both `call_bid` and `call_ask` are non-negative.
+    /// - `Positive` is a custom type encapsulating non-negative values.
+    /// - The resulting percentage is always positive due to the use of `.abs()` for the spread calculation.
+    ///
+    /// # Parameters
+    /// None (relies on internal `self.call_bid` and `self.call_ask` properties).
+    ///
+    /// # Errors
+    /// This function does not return an error. It simply returns `None` if the calculation is not feasible.
+    pub fn get_call_spread_per(&self) -> Option<Positive> {
+        match (self.call_bid, self.call_ask) {
+            (Some(call_bid), Some(call_ask)) => {
+                let spread = (call_ask.to_dec() - call_bid.to_dec()).abs();
+                let mid_price = (call_ask + call_bid) / 2.0;
+                Some(Positive(spread) / mid_price)
+            }
+            _ => None,
+        }
+    }
+
+    ///
+    /// Calculates and returns the spread between `put_bid` and `put_ask` if both values are present.
+    ///
+    /// The spread is calculated as the absolute difference between the `put_ask` price and the
+    /// `put_bid` price. The result is wrapped in a `Positive` type.
+    ///
+    /// # Returns
+    ///
+    /// - `Some(Positive)` if both `put_bid` and `put_ask` are `Some`, containing their calculated spread.
+    /// - `None` if either `put_bid` or `put_ask` is `None`.
+    ///
+    /// # Note
+    ///
+    /// The values of `put_bid` and `put_ask` must implement the `to_dec()` method
+    /// to convert to a numeric type for calculation purposes.
+    /// The spread is always represented as a positive value.
+    ///
+    pub fn get_put_spread(&self) -> Option<Positive> {
+        match (self.put_bid, self.put_ask) {
+            (Some(put_bid), Some(put_ask)) => {
+                let spread = (put_ask.to_dec() - put_bid.to_dec()).abs();
+                Some(Positive(spread))
+            }
+            _ => None,
+        }
+    }
+
+    /// Calculates the percentage spread of the bid and ask prices for a put option.
+    ///
+    /// The function computes the absolute difference (spread) between the bid and ask prices.
+    /// It then divides this spread by the midpoint of the bid and ask prices to yield the
+    /// percentage spread. Only positive values are returned wrapped in the `Positive` type.
+    ///
+    /// # Returns
+    /// - `Some(Positive)` if both `put_bid` and `put_ask` are present, containing the percentage spread.
+    /// - `None` if either `put_bid` or `put_ask` is unavailable.
+    ///
+    /// # Assumptions
+    /// - `put_bid` and `put_ask` are non-negative.
+    /// - The `Positive` type is a wrapper that ensures the value is greater than zero.
+    ///
+    /// # Note
+    /// This function returns `None` if there are missing values for either `put_bid` or `put_ask`.
+    pub fn get_put_spread_per(&self) -> Option<Positive> {
+        match (self.put_bid, self.put_ask) {
+            (Some(put_bid), Some(put_ask)) => {
+                let spread = (put_ask.to_dec() - put_bid.to_dec()).abs();
+                let mid_price = (put_ask + put_bid) / 2.0;
+                Some(Positive(spread) / mid_price)
+            }
+            _ => None,
+        }
+    }
+
     /// Retrieves the implied volatility of the underlying asset or option.
     ///
     /// # Returns
@@ -2681,5 +2792,265 @@ mod tests_current_deltas {
         // Verify returned values
         assert_eq!(call_delta, None);
         assert_eq!(put_delta, None);
+    }
+}
+
+#[cfg(test)]
+mod tests_spreads {
+    use super::*;
+    use crate::{pos, spos};
+
+    #[test]
+    fn test_get_call_spread_some() {
+        let option_data = OptionData::new(
+            pos!(100.0),
+            spos!(100.0),
+            spos!(110.0),
+            spos!(8.5),
+            spos!(9.0),
+            pos!(0.2),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+        assert_eq!(option_data.get_call_spread(), Some(pos!(10.0)));
+    }
+
+    #[test]
+    fn test_get_call_spread_none_when_missing_prices() {
+        // Missing call_bid
+        let od1 = OptionData::new(
+            pos!(100.0),
+            None,
+            spos!(10.0),
+            None,
+            None,
+            pos!(0.2),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+        assert_eq!(od1.get_call_spread(), None);
+
+        // Missing call_ask
+        let od2 = OptionData::new(
+            pos!(100.0),
+            spos!(9.5),
+            None,
+            None,
+            None,
+            pos!(0.2),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+        assert_eq!(od2.get_call_spread(), None);
+    }
+
+    #[test]
+    fn test_get_call_spread_per_some() {
+        let option_data = OptionData::new(
+            pos!(95.0),
+            spos!(95.0),
+            spos!(105.0),
+            None,
+            None,
+            pos!(0.2),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+        let spread_per = option_data.get_call_spread_per().unwrap();
+        let got = spread_per.to_f64();
+        let expected = 0.1;
+        assert!((got - expected).abs() < 1e-12);
+    }
+
+    #[test]
+    fn test_get_call_spread_per_none_when_missing_prices() {
+        let od = OptionData::new(
+            pos!(100.0),
+            None,
+            spos!(10.0),
+            None,
+            None,
+            pos!(0.2),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+        assert_eq!(od.get_call_spread_per(), None);
+    }
+
+    #[test]
+    fn test_get_put_spread_some() {
+        let option_data = OptionData::new(
+            pos!(100.0),
+            None,
+            None,
+            spos!(8.5),
+            spos!(9.0),
+            pos!(0.2),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+        assert_eq!(option_data.get_put_spread(), Some(pos!(0.5)));
+    }
+
+    #[test]
+    fn test_get_put_spread_none_when_missing_prices() {
+        // Missing put_bid
+        let od1 = OptionData::new(
+            pos!(100.0),
+            None,
+            None,
+            None,
+            spos!(9.0),
+            pos!(0.2),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+        assert_eq!(od1.get_put_spread(), None);
+
+        // Missing put_ask
+        let od2 = OptionData::new(
+            pos!(100.0),
+            None,
+            None,
+            spos!(8.5),
+            None,
+            pos!(0.2),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+        assert_eq!(od2.get_put_spread(), None);
+    }
+
+    #[test]
+    fn test_get_put_spread_per_some() {
+        let option_data = OptionData::new(
+            pos!(100.0),
+            None,
+            None,
+            spos!(95.0),
+            spos!(105.0),
+            pos!(0.2),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+        let spread_per = option_data.get_put_spread_per().unwrap();
+        let got = spread_per.to_f64();
+        let expected = 0.1;
+        assert!((got - expected).abs() < 1e-12);
+    }
+
+    #[test]
+    fn test_get_put_spread_per_none_when_missing_prices() {
+        let od = OptionData::new(
+            pos!(100.0),
+            None,
+            None,
+            None,
+            spos!(9.0),
+            pos!(0.2),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+        assert_eq!(od.get_put_spread_per(), None);
     }
 }

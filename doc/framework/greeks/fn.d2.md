@@ -5,7 +5,7 @@
 [optionstratlib](../index.html)::[greeks](index.html)
 :::
 
-# Function [d2]{.fn}Copy item path
+# Function [d2]{.fn} Copy item path
 
 [[Source](../../src/optionstratlib/greeks/utils.rs.html#197-227){.src}
 ]{.sub-heading}
@@ -78,6 +78,7 @@ Any errors from the `d1` function will propagate to this function.
 
 ::: example-wrap
 ``` {.rust .rust-example-rendered}
+
 use rust_decimal_macros::dec;
 use tracing::{error, info};
 use optionstratlib::greeks::d2;

@@ -5,9 +5,9 @@
 [optionstratlib](../index.html)::[volatility](index.html)
 :::
 
-# Function [garch_volatility]{.fn}Copy item path
+# Function [garch_volatility]{.fn} Copy item path
 
-[[Source](../../src/optionstratlib/volatility/utils.rs.html#168-181){.src}
+[[Source](../../src/optionstratlib/volatility/utils.rs.html#209-222){.src}
 ]{.sub-heading}
 ::::
 
@@ -17,7 +17,7 @@ pub fn garch_volatility(
     omega: Decimal,
     alpha: Decimal,
     beta: Decimal,
-) -> Result<Vec<Positive>, Box<dyn Error>>
+) -> Result<Vec<Positive>, VolatilityError>
 ```
 
 Expand description

@@ -71,8 +71,7 @@
 
 use crate::error::strategies::{BreakEvenErrorKind, ProfitLossErrorKind};
 use crate::error::{GreeksError, OperationErrorKind, StrategyError};
-use std::error::Error;
-use std::fmt;
+use thiserror::Error;
 
 /// Represents all possible errors that can occur during probability analysis calculations
 ///
@@ -104,42 +103,48 @@ use std::fmt;
 /// This error type is typically returned from functions that perform financial probability
 /// analysis, risk assessment, or option pricing. It provides a structured way to handle
 /// the various error conditions that might arise during these calculations.
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum ProbabilityError {
     /// Errors related to probability calculations
     ///
     /// Wraps a `ProbabilityCalculationErrorKind` that provides specific details
     /// about what went wrong during probability calculations.
+    #[error("Probability calculation error: {0}")]
     CalculationError(ProbabilityCalculationErrorKind),
 
     /// Errors related to profit/loss ranges
     ///
     /// Wraps a `ProfitLossRangeErrorKind` that provides specific details
     /// about what went wrong with profit or loss range calculations.
+    #[error("Profit/loss range error: {0}")]
     RangeError(ProfitLossRangeErrorKind),
 
     /// Errors related to expiration dates
     ///
     /// Wraps an `ExpirationErrorKind` that provides specific details
     /// about what went wrong with expiration dates or risk-free rates.
+    #[error("Expiration error: {0}")]
     ExpirationError(ExpirationErrorKind),
 
     /// Errors related to price parameters
     ///
     /// Wraps a `PriceErrorKind` that provides specific details
     /// about what went wrong with price-related calculations.
+    #[error("Price error: {0}")]
     PriceError(PriceErrorKind),
 
     /// Standard error from an external system or library
     ///
     /// Contains a string description of an error from a standard library
     /// or external dependency.
+    #[error("Standard error: {0}")]
     StdError(String),
 
     /// Error indicating no positions are available for analysis
     ///
     /// Contains a string description explaining why positions are missing
     /// or why they cannot be analyzed.
+    #[error("No positions available: {0}")]
     NoPositions(String),
 }
 
@@ -170,13 +175,14 @@ pub enum ProbabilityError {
 /// This error type is typically used in financial modeling components that deal with
 /// probabilistic outcomes, such as Monte Carlo simulations, risk models, and
 /// probability-based trading strategies.
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum ProbabilityCalculationErrorKind {
     /// Error indicating an invalid probability value
     ///
     /// This variant is used when a probability calculation produces a result that
     /// violates fundamental probability constraints (e.g., not in range \[0,1\])
     /// or other mathematical properties required for valid statistical analysis.
+    #[error("Invalid probability value {value}: {reason}")]
     InvalidProbability {
         /// The problematic probability value that caused the error
         value: f64,
@@ -189,6 +195,7 @@ pub enum ProbabilityCalculationErrorKind {
     /// This variant is used when expected value calculations fail due to
     /// mathematical constraints, invalid inputs, or problems with the
     /// underlying probability distribution.
+    #[error("Expected value calculation error: {reason}")]
     ExpectedValueError {
         /// Detailed explanation of the error in expected value calculation
         reason: String,
@@ -199,6 +206,7 @@ pub enum ProbabilityCalculationErrorKind {
     /// This variant is used when volatility-related adjustments to probability
     /// calculations encounter problems, such as extreme volatility values or
     /// mathematical errors in the adjustment algorithms.
+    #[error("Volatility adjustment error: {reason}")]
     VolatilityAdjustmentError {
         /// Detailed explanation of the volatility adjustment error
         reason: String,
@@ -209,6 +217,7 @@ pub enum ProbabilityCalculationErrorKind {
     /// This variant is used when trend-related probability calculations fail,
     /// such as issues with trend detection, invalid trend parameters, or
     /// insufficient data for meaningful trend analysis.
+    #[error("Price trend error: {reason}")]
     TrendError {
         /// Detailed explanation of the trend calculation error
         reason: String,
@@ -240,12 +249,13 @@ pub enum ProbabilityCalculationErrorKind {
 /// This error type is typically used in financial strategy analysis, particularly in
 /// options trading calculations where understanding the ranges of potential profit and loss
 /// is critical for risk assessment and decision making.
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum ProfitLossRangeErrorKind {
     /// Error indicating an invalid or problematic profit range calculation
     ///
     /// This variant is used when the calculated profit range contains errors,
     /// inconsistencies, or values that don't align with the underlying strategy.
+    #[error("Invalid profit range '{range}': {reason}")]
     InvalidProfitRange {
         /// String representation of the problematic range
         range: String,
@@ -257,6 +267,7 @@ pub enum ProfitLossRangeErrorKind {
     ///
     /// This variant is used when the calculated loss range contains errors,
     /// inconsistencies, or values that don't make mathematical sense.
+    #[error("Invalid loss range '{range}': {reason}")]
     InvalidLossRange {
         /// String representation of the problematic range
         range: String,
@@ -268,6 +279,7 @@ pub enum ProfitLossRangeErrorKind {
     ///
     /// This variant is used when break-even points couldn't be properly calculated,
     /// are missing, or contain unexpected values.
+    #[error("Invalid break-even points: {reason}")]
     InvalidBreakEvenPoints {
         /// Detailed explanation of the issue with break-even calculations
         reason: String,
@@ -295,12 +307,13 @@ pub enum ProfitLossRangeErrorKind {
 /// This error type is typically used in option pricing models, risk assessment,
 /// and other financial calculations where expiration dates and risk-free rates
 /// are critical input parameters.
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum ExpirationErrorKind {
     /// Error indicating an invalid or problematic expiration date
     ///
     /// This variant is used when the provided expiration date doesn't meet
     /// the required criteria for option calculations.
+    #[error("Invalid expiration: {reason}")]
     InvalidExpiration {
         /// Detailed explanation of why the expiration date is invalid
         reason: String,
@@ -310,6 +323,7 @@ pub enum ExpirationErrorKind {
     ///
     /// This variant is used when the provided risk-free rate is outside
     /// acceptable bounds or otherwise unsuitable for financial calculations.
+    #[error("Invalid risk-free rate {rate:?}: {reason}")]
     InvalidRiskFreeRate {
         /// The problematic rate value that caused the error, if available
         rate: Option<f64>,
@@ -329,13 +343,14 @@ pub enum ExpirationErrorKind {
 /// * `InvalidUnderlyingPrice` - Errors related to the underlying asset price
 /// * `InvalidPriceRange` - Errors related to price range validations
 ///
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum PriceErrorKind {
     /// Error indicating that the underlying asset price is invalid.
     ///
     /// This error occurs when the price of the underlying asset does not meet
     /// required validation criteria (e.g., non-negative, within expected bounds).
     ///
+    #[error("Invalid underlying price {price}: {reason}")]
     InvalidUnderlyingPrice {
         /// * `price` - The invalid price value that triggered the error       
         price: f64,
@@ -347,6 +362,7 @@ pub enum PriceErrorKind {
     /// This error occurs when a specified price range is inconsistent, malformed,
     /// or does not meet required validation criteria for financial calculations.
     ///
+    #[error("Invalid price range '{range}': {reason}")]
     InvalidPriceRange {
         /// * `range` - String representation of the invalid price range      
         range: String,
@@ -355,95 +371,26 @@ pub enum PriceErrorKind {
     },
 }
 
-impl fmt::Display for ProbabilityError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            ProbabilityError::CalculationError(err) => write!(f, "Calculation error: {err}"),
-            ProbabilityError::RangeError(err) => write!(f, "Range error: {err}"),
-            ProbabilityError::ExpirationError(err) => write!(f, "Expiration error: {err}"),
-            ProbabilityError::PriceError(err) => write!(f, "Price error: {err}"),
-            ProbabilityError::StdError(msg) => write!(f, "Error: {msg}"),
-            ProbabilityError::NoPositions(msg) => write!(f, "No positions: {msg}"),
-        }
-    }
-}
-
-impl fmt::Display for ExpirationErrorKind {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            ExpirationErrorKind::InvalidExpiration { reason } => {
-                write!(f, "Invalid expiration: {reason}")
-            }
-            ExpirationErrorKind::InvalidRiskFreeRate { rate, reason } => {
-                write!(
-                    f,
-                    "Invalid risk-free rate {:?}: {}",
-                    rate.unwrap_or(0.0),
-                    reason
-                )
-            }
-        }
-    }
-}
-
-impl fmt::Display for PriceErrorKind {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            PriceErrorKind::InvalidUnderlyingPrice { price, reason } => {
-                write!(f, "Invalid underlying price {price}: {reason}")
-            }
-            PriceErrorKind::InvalidPriceRange { range, reason } => {
-                write!(f, "Invalid price range {range}: {reason}")
-            }
-        }
-    }
-}
-
-impl fmt::Display for ProbabilityCalculationErrorKind {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            ProbabilityCalculationErrorKind::InvalidProbability { value, reason } => {
-                write!(f, "Invalid probability {value}: {reason}")
-            }
-            ProbabilityCalculationErrorKind::ExpectedValueError { reason } => {
-                write!(f, "Expected value error: {reason}")
-            }
-            ProbabilityCalculationErrorKind::VolatilityAdjustmentError { reason } => {
-                write!(f, "Volatility adjustment error: {reason}")
-            }
-            ProbabilityCalculationErrorKind::TrendError { reason } => {
-                write!(f, "Trend error: {reason}")
-            }
-        }
-    }
-}
-
-impl fmt::Display for ProfitLossRangeErrorKind {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            ProfitLossRangeErrorKind::InvalidProfitRange { range, reason } => {
-                write!(f, "Invalid profit range {range}: {reason}")
-            }
-            ProfitLossRangeErrorKind::InvalidLossRange { range, reason } => {
-                write!(f, "Invalid loss range {range}: {reason}")
-            }
-            ProfitLossRangeErrorKind::InvalidBreakEvenPoints { reason } => {
-                write!(f, "Invalid break-even points: {reason}")
-            }
-        }
-    }
-}
-
-impl Error for ProbabilityError {}
-
-impl From<Box<dyn Error>> for ProbabilityError {
-    fn from(error: Box<dyn Error>) -> Self {
+impl From<Box<dyn std::error::Error>> for ProbabilityError {
+    fn from(error: Box<dyn std::error::Error>) -> Self {
         ProbabilityError::StdError(error.to_string())
     }
 }
 
 impl From<GreeksError> for ProbabilityError {
     fn from(error: GreeksError) -> Self {
+        ProbabilityError::StdError(error.to_string())
+    }
+}
+
+impl From<crate::error::PricingError> for ProbabilityError {
+    fn from(error: crate::error::PricingError) -> Self {
+        ProbabilityError::StdError(error.to_string())
+    }
+}
+
+impl From<crate::error::DecimalError> for ProbabilityError {
+    fn from(error: crate::error::DecimalError) -> Self {
         ProbabilityError::StdError(error.to_string())
     }
 }
@@ -509,6 +456,7 @@ impl From<StrategyError> for ProbabilityError {
             StrategyError::NotImplemented => {
                 ProbabilityError::StdError("Strategy not implemented".to_string())
             }
+            StrategyError::GreeksError(err) => ProbabilityError::StdError(err.to_string()),
         }
     }
 }
@@ -746,7 +694,7 @@ mod tests_extended {
     #[test]
     fn test_box_dyn_error_conversion() {
         let io_error = std::io::Error::other("test error");
-        let boxed_error: Box<dyn Error> = Box::new(io_error);
+        let boxed_error: Box<dyn std::error::Error> = Box::new(io_error);
         let prob_error = ProbabilityError::from(boxed_error);
         assert!(matches!(prob_error, ProbabilityError::StdError(..)));
     }
@@ -770,7 +718,7 @@ mod tests_extended {
     #[test]
     fn test_probability_error_std_error() {
         let error = ProbabilityError::StdError("Calculation failed".to_string());
-        assert_eq!(format!("{error}"), "Error: Calculation failed");
+        assert_eq!(format!("{error}"), "Standard error: Calculation failed");
     }
 
     #[test]
@@ -781,7 +729,7 @@ mod tests_extended {
         };
         assert_eq!(
             format!("{error}"),
-            "Invalid price range 0-100: Negative values are not allowed"
+            "Invalid price range '0-100': Negative values are not allowed"
         );
     }
 
@@ -793,7 +741,7 @@ mod tests_extended {
         };
         assert_eq!(
             format!("{error}"),
-            "Invalid loss range -50-0: Range must be positive"
+            "Invalid loss range '-50-0': Range must be positive"
         );
     }
 
@@ -826,7 +774,7 @@ mod tests_extended {
         let converted_error: ProbabilityError = error.into();
         assert_eq!(
             format!("{converted_error}"),
-            "Calculation error: Expected value error: Failed to calculate break-even point"
+            "Probability calculation error: Expected value calculation error: Failed to calculate break-even point"
         );
     }
 
@@ -839,7 +787,7 @@ mod tests_extended {
         let converted_error: ProbabilityError = error.into();
         assert_eq!(
             format!("{converted_error}"),
-            "Calculation error: Expected value error: Invalid parameters for operation 'Calculate P/L': Invalid input values"
+            "Probability calculation error: Expected value calculation error: Invalid parameters for operation 'Calculate P/L': Invalid input values"
         );
     }
 
@@ -853,7 +801,7 @@ mod tests_extended {
 
         assert_eq!(
             format!("{converted_error}"),
-            "Error: General strategy failure"
+            "Standard error: General strategy failure"
         );
     }
 
@@ -862,7 +810,7 @@ mod tests_extended {
         let error = ProbabilityError::invalid_profit_range("0-100", "Range mismatch");
         assert_eq!(
             format!("{error}"),
-            "Range error: Invalid profit range 0-100: Range mismatch"
+            "Profit/loss range error: Invalid profit range '0-100': Range mismatch"
         );
     }
 
@@ -907,7 +855,7 @@ mod tests_extended {
         let converted_error: ProbabilityError = ProbabilityError::from(error);
         assert_eq!(
             format!("{converted_error}"),
-            "Calculation error: Expected value error: Underlying price is negative"
+            "Probability calculation error: Expected value calculation error: Underlying price is negative"
         );
     }
 
@@ -923,7 +871,7 @@ mod tests_extended {
         let converted_error: ProbabilityError = ProbabilityError::from(error);
         assert_eq!(
             format!("{converted_error}"),
-            "Calculation error: Expected value error: Start price is greater than end price"
+            "Probability calculation error: Expected value calculation error: Start price is greater than end price"
         );
     }
 
@@ -937,7 +885,7 @@ mod tests_extended {
             ProbabilityError::from(format!("Invalid parameters for operation {error}"));
         assert_eq!(
             format!("{converted_error}"),
-            "Calculation error: Expected value error: Invalid parameters for operation Invalid parameters for operation 'Calculate P/L': Invalid input values"
+            "Probability calculation error: Expected value calculation error: Invalid parameters for operation Invalid parameters for operation 'Calculate P/L': Invalid input values"
         );
     }
 
@@ -954,7 +902,7 @@ mod tests_extended {
         );
         assert_eq!(
             format!("{converted_error}"),
-            "Calculation error: Expected value error: Operation Operation 'Hedging' is not supported for strategy 'Operation not implemented'"
+            "Probability calculation error: Expected value calculation error: Operation Operation 'Hedging' is not supported for strategy 'Operation not implemented'"
         );
     }
 }

@@ -4,7 +4,7 @@
    Date: 21/1/25
 ******************************************************************************/
 use crate::error::{CurveError, PositionError, SurfaceError};
-use std::error::Error;
+use thiserror::Error;
 
 /// Represents errors that can occur during different interpolation operations.
 ///
@@ -15,73 +15,64 @@ use std::error::Error;
 ///
 /// Interpolation errors typically arise from invalid input data, mathematical
 /// constraints, or numerical stability issues specific to each interpolation method.
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum InterpolationError {
     /// Errors that occur during linear interpolation.
     ///
     /// These may include insufficient data points, non-monotonic input values,
     /// or out-of-bounds interpolation attempts.
+    #[error("Linear interpolation error: {0}")]
     Linear(String),
 
     /// Errors that occur during bilinear interpolation.
     ///
     /// These may include insufficient grid points, irregularly spaced grid,
     /// or extrapolation beyond the defined grid boundaries.
+    #[error("Bilinear interpolation error: {0}")]
     Bilinear(String),
 
     /// Errors that occur during cubic interpolation.
     ///
     /// These may include insufficient data points for cubic polynomial fitting,
     /// oscillation issues, or numerical instability.
+    #[error("Cubic interpolation error: {0}")]
     Cubic(String),
 
     /// Errors that occur during spline interpolation.
     ///
     /// These may include insufficient data points for spline construction,
     /// boundary condition issues, or knot placement problems.
+    #[error("Spline interpolation error: {0}")]
     Spline(String),
+
+    /// Error from position operations.
+    #[error(transparent)]
+    Position(#[from] PositionError),
+
+    /// Error from curve operations.
+    #[error(transparent)]
+    Curve(CurveError),
+
+    /// Error from surface operations.
+    #[error(transparent)]
+    Surface(#[from] SurfaceError),
 
     /// Standard errors not specific to a particular interpolation method.
     ///
     /// These represent general errors that may occur during interpolation
     /// operations, such as memory allocation failures or system errors.
+    #[error("Standard error: {0}")]
     StdError(String),
-}
-
-impl Error for InterpolationError {}
-
-impl std::fmt::Display for InterpolationError {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        match self {
-            InterpolationError::Linear(msg) => write!(f, "Linear interpolation error: {msg}"),
-            InterpolationError::Bilinear(msg) => write!(f, "Bilinear interpolation error: {msg}"),
-            InterpolationError::Cubic(msg) => write!(f, "Cubic interpolation error: {msg}"),
-            InterpolationError::Spline(msg) => write!(f, "Spline interpolation error: {msg}"),
-            InterpolationError::StdError(msg) => write!(f, "Standard error: {msg}"),
-        }
-    }
-}
-
-impl From<PositionError> for InterpolationError {
-    fn from(err: PositionError) -> Self {
-        InterpolationError::StdError(err.to_string())
-    }
 }
 
 impl From<CurveError> for InterpolationError {
     fn from(err: CurveError) -> Self {
-        InterpolationError::StdError(err.to_string())
+        InterpolationError::Curve(err)
     }
 }
 
-impl From<SurfaceError> for InterpolationError {
-    fn from(err: SurfaceError) -> Self {
-        InterpolationError::StdError(err.to_string())
-    }
-}
-
-impl From<Box<dyn Error>> for InterpolationError {
-    fn from(err: Box<dyn Error>) -> Self {
+impl From<Box<dyn std::error::Error>> for InterpolationError {
+    fn from(err: Box<dyn std::error::Error>) -> Self {
         InterpolationError::StdError(err.to_string())
     }
 }
@@ -247,13 +238,10 @@ mod tests {
         let interpolation_err = InterpolationError::from(position_err);
 
         match interpolation_err {
-            InterpolationError::StdError(msg) => {
-                assert!(
-                    msg.contains("position"),
-                    "Error message should contain 'position'"
-                );
+            InterpolationError::Position(_) => {
+                // Conversion successful
             }
-            _ => panic!("Expected StdError variant"),
+            _ => panic!("Expected Position variant"),
         }
     }
 
@@ -263,13 +251,10 @@ mod tests {
         let curve_err = CurveError::from(curve_err);
         let interpolation_err = InterpolationError::from(curve_err);
         match interpolation_err {
-            InterpolationError::StdError(msg) => {
-                assert!(
-                    msg.contains("curve"),
-                    "Error message should contain reference to 'curve'"
-                );
+            InterpolationError::Curve(_) => {
+                // Conversion successful
             }
-            _ => panic!("Expected StdError variant"),
+            _ => panic!("Expected Curve variant"),
         }
     }
 
@@ -280,13 +265,10 @@ mod tests {
         let interpolation_err = InterpolationError::from(surface_err);
 
         match interpolation_err {
-            InterpolationError::StdError(msg) => {
-                assert!(
-                    msg.contains("surface"),
-                    "Error message should contain reference to 'surface'"
-                );
+            InterpolationError::Surface(_) => {
+                // Conversion successful
             }
-            _ => panic!("Expected StdError variant"),
+            _ => panic!("Expected Surface variant"),
         }
     }
 

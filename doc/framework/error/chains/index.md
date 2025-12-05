@@ -5,9 +5,9 @@
 [optionstratlib](../../index.html)::[error](../index.html)
 :::
 
-# Module chainsCopy item path
+# Module chains Copy item path
 
-[[Source](../../../src/optionstratlib/error/chains.rs.html#7-935){.src}
+[[Source](../../../src/optionstratlib/error/chains.rs.html#7-858){.src}
 ]{.sub-heading}
 ::::
 

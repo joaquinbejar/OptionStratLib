@@ -5,9 +5,9 @@
 [optionstratlib](../index.html)::[chains](index.html)
 :::
 
-# Function [generator_positive]{.fn}Copy item path
+# Function [generator_positive]{.fn} Copy item path
 
-[[Source](../../src/optionstratlib/chains/generators.rs.html#162-189){.src}
+[[Source](../../src/optionstratlib/chains/generators.rs.html#187-227){.src}
 ]{.sub-heading}
 ::::
 

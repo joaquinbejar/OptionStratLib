@@ -5,9 +5,9 @@
 [optionstratlib](../../index.html)::[error](../index.html)::[curves](index.html)
 :::
 
-# Type Alias [CurvesResult]{.type}Copy item path
+# Type Alias [CurvesResult]{.type} Copy item path
 
-[[Source](../../../src/optionstratlib/error/curves.rs.html#226){.src}
+[[Source](../../../src/optionstratlib/error/curves.rs.html#236){.src}
 ]{.sub-heading}
 ::::
 
@@ -53,7 +53,7 @@ successful.
 ## Aliased Type[§](#aliased-type){.anchor} {#aliased-type .section-header}
 
 ``` {.rust .item-decl}
-enum CurvesResult<T> {
+pub enum CurvesResult<T> {
     Ok(T),
     Err(CurveError),
 }

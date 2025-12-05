@@ -5,7 +5,7 @@
 [optionstratlib](../index.html)::[pricing](index.html)
 :::
 
-# Function [probability_keep_under_strike]{.fn}Copy item path
+# Function [probability_keep_under_strike]{.fn} Copy item path
 
 [[Source](../../src/optionstratlib/pricing/utils.rs.html#335-353){.src}
 ]{.sub-heading}

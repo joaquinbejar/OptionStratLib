@@ -1,5 +1,4 @@
 use optionstratlib::prelude::*;
-use rust_decimal_macros::dec;
 
 fn main() -> Result<(), SurfaceError> {
     setup_logger();

@@ -5,7 +5,7 @@
 [optionstratlib](../../index.html)::[utils](../index.html)::[others](index.html)
 :::
 
-# Function [random_decimal]{.fn}Copy item path
+# Function [random_decimal]{.fn} Copy item path
 
 [[Source](../../../src/optionstratlib/utils/others.rs.html#96-105){.src}
 ]{.sub-heading}

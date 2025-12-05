@@ -5,9 +5,9 @@
 [optionstratlib](../index.html)::[pnl](index.html)
 :::
 
-# Trait [TransactionAble]{.trait}Copy item path
+# Trait [TransactionAble]{.trait} Copy item path
 
-[[Source](../../src/optionstratlib/pnl/traits.rs.html#92-98){.src}
+[[Source](../../src/optionstratlib/pnl/traits.rs.html#117-123){.src}
 ]{.sub-heading}
 ::::
 
@@ -51,10 +51,10 @@ propagation and handling in transaction-related operations.
 
 ::::::: methods
 ::: {#tymethod.add_transaction .section .method}
-[Source](../../src/optionstratlib/pnl/traits.rs.html#94){.src
+[Source](../../src/optionstratlib/pnl/traits.rs.html#119){.src
 .rightside}
 
-#### fn [add_transaction](#tymethod.add_transaction){.fn}( &mut self, transaction: [Transaction](struct.Transaction.html "struct optionstratlib::pnl::Transaction"){.struct}, ) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[()](https://doc.rust-lang.org/1.86.0/std/primitive.unit.html){.primitive}, [TransactionError](../error/struct.TransactionError.html "struct optionstratlib::error::TransactionError"){.struct}\> {#fn-add_transaction-mut-self-transaction-transaction---result-transactionerror .code-header}
+#### fn [add_transaction](#tymethod.add_transaction){.fn}( &mut self, transaction: [Transaction](struct.Transaction.html "struct optionstratlib::pnl::Transaction"){.struct}, ) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[()](https://doc.rust-lang.org/1.91.1/std/primitive.unit.html){.primitive}, [TransactionError](../error/struct.TransactionError.html "struct optionstratlib::error::TransactionError"){.struct}\> {#fn-add_transaction-mut-self-transaction-transaction---result-transactionerror .code-header}
 :::
 
 ::: docblock
@@ -62,10 +62,10 @@ Adds a new transaction to the implementing entity.
 :::
 
 ::: {#tymethod.get_transactions .section .method}
-[Source](../../src/optionstratlib/pnl/traits.rs.html#97){.src
+[Source](../../src/optionstratlib/pnl/traits.rs.html#122){.src
 .rightside}
 
-#### fn [get_transactions](#tymethod.get_transactions){.fn}(&self) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[Vec](https://doc.rust-lang.org/1.86.0/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<[Transaction](struct.Transaction.html "struct optionstratlib::pnl::Transaction"){.struct}\>, [TransactionError](../error/struct.TransactionError.html "struct optionstratlib::error::TransactionError"){.struct}\> {#fn-get_transactionsself---resultvectransaction-transactionerror .code-header}
+#### fn [get_transactions](#tymethod.get_transactions){.fn}(&self) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[Vec](https://doc.rust-lang.org/1.91.1/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<[Transaction](struct.Transaction.html "struct optionstratlib::pnl::Transaction"){.struct}\>, [TransactionError](../error/struct.TransactionError.html "struct optionstratlib::error::TransactionError"){.struct}\> {#fn-get_transactionsself---resultvectransaction-transactionerror .code-header}
 :::
 
 ::: docblock
@@ -77,7 +77,7 @@ Retrieves all transactions from the implementing entity.
 
 :::: {#implementors-list}
 ::: {#impl-TransactionAble-for-Position .section .impl}
-[Source](../../src/optionstratlib/model/position.rs.html#665-673){.src
+[Source](../../src/optionstratlib/model/position.rs.html#692-700){.src
 .rightside}[§](#impl-TransactionAble-for-Position){.anchor}
 
 ### impl [TransactionAble](trait.TransactionAble.html "trait optionstratlib::pnl::TransactionAble"){.trait} for [Position](../model/position/struct.Position.html "struct optionstratlib::model::position::Position"){.struct} {#impl-transactionable-for-position .code-header}

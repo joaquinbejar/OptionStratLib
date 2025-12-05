@@ -5,7 +5,7 @@
 [optionstratlib](../index.html)::[pnl](index.html)
 :::
 
-# Function [save_pnl_metrics]{.fn}Copy item path
+# Function [save_pnl_metrics]{.fn} Copy item path
 
 [[Source](../../src/optionstratlib/pnl/metrics.rs.html#216-228){.src}
 ]{.sub-heading}

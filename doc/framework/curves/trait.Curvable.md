@@ -5,7 +5,7 @@
 [optionstratlib](../index.html)::[curves](index.html)
 :::
 
-# Trait [Curvable]{.trait}Copy item path
+# Trait [Curvable]{.trait} Copy item path
 
 [[Source](../../src/optionstratlib/curves/traits.rs.html#52-74){.src}
 ]{.sub-heading}
@@ -76,7 +76,7 @@ visualization, analysis, and transformation.
 [Source](../../src/optionstratlib/curves/traits.rs.html#73){.src
 .rightside}
 
-#### fn [curve](#tymethod.curve){.fn}(&self) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[Curve](struct.Curve.html "struct optionstratlib::curves::Curve"){.struct}, [CurveError](../error/curves/enum.CurveError.html "enum optionstratlib::error::curves::CurveError"){.enum}\> {#fn-curveself---resultcurve-curveerror .code-header}
+#### fn [curve](#tymethod.curve){.fn}(&self) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[Curve](struct.Curve.html "struct optionstratlib::curves::Curve"){.struct}, [CurveError](../error/curves/enum.CurveError.html "enum optionstratlib::error::curves::CurveError"){.enum}\> {#fn-curveself---resultcurve-curveerror .code-header}
 :::
 
 ::: docblock

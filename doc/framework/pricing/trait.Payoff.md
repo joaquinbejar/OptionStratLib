@@ -5,9 +5,9 @@
 [optionstratlib](../index.html)::[pricing](index.html)
 :::
 
-# Trait [Payoff]{.trait}Copy item path
+# Trait [Payoff]{.trait} Copy item path
 
-[[Source](../../src/optionstratlib/pricing/payoff.rs.html#45-58){.src}
+[[Source](../../src/optionstratlib/pricing/payoff.rs.html#42-55){.src}
 ]{.sub-heading}
 ::::
 
@@ -66,10 +66,10 @@ This trait is typically used within the options pricing module to:
 
 ::::: methods
 ::: {#tymethod.payoff .section .method}
-[Source](../../src/optionstratlib/pricing/payoff.rs.html#57){.src
+[Source](../../src/optionstratlib/pricing/payoff.rs.html#54){.src
 .rightside}
 
-#### fn [payoff](#tymethod.payoff){.fn}(&self, info: &[PayoffInfo](struct.PayoffInfo.html "struct optionstratlib::pricing::PayoffInfo"){.struct}) -\> [f64](https://doc.rust-lang.org/1.86.0/std/primitive.f64.html){.primitive} {#fn-payoffself-info-payoffinfo---f64 .code-header}
+#### fn [payoff](#tymethod.payoff){.fn}(&self, info: &[PayoffInfo](struct.PayoffInfo.html "struct optionstratlib::pricing::PayoffInfo"){.struct}) -\> [f64](https://doc.rust-lang.org/1.91.1/std/primitive.f64.html){.primitive} {#fn-payoffself-info-payoffinfo---f64 .code-header}
 :::
 
 ::: docblock
@@ -93,7 +93,7 @@ Returns the calculated payoff value as a `f64`.
 
 :::: {#implementors-list}
 ::: {#impl-Payoff-for-OptionType .section .impl}
-[Source](../../src/optionstratlib/model/types.rs.html#655-692){.src
+[Source](../../src/optionstratlib/model/types.rs.html#255-292){.src
 .rightside}[§](#impl-Payoff-for-OptionType){.anchor}
 
 ### impl [Payoff](trait.Payoff.html "trait optionstratlib::pricing::Payoff"){.trait} for [OptionType](../model/types/enum.OptionType.html "enum optionstratlib::model::types::OptionType"){.enum} {#impl-payoff-for-optiontype .code-header}

@@ -5,9 +5,9 @@
 [optionstratlib](../../index.html)::[error](../index.html)
 :::
 
-# Module positionCopy item path
+# Module position Copy item path
 
-[[Source](../../../src/optionstratlib/error/position.rs.html#7-767){.src}
+[[Source](../../../src/optionstratlib/error/position.rs.html#7-675){.src}
 ]{.sub-heading}
 ::::
 

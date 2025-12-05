@@ -5,7 +5,7 @@
 [optionstratlib](../index.html)::[geometrics](index.html)
 :::
 
-# Trait [Interpolate]{.trait}Copy item path
+# Trait [Interpolate]{.trait} Copy item path
 
 [[Source](../../src/optionstratlib/geometrics/interpolation/traits.rs.html#58-133){.src}
 ]{.sub-heading}
@@ -116,7 +116,7 @@ Implementers must also implement the following traits:
 [Source](../../src/optionstratlib/geometrics/interpolation/traits.rs.html#80-91){.src
 .rightside}
 
-#### fn [interpolate](#method.interpolate){.fn}( &self, x: Input, interpolation_type: [InterpolationType](enum.InterpolationType.html "enum optionstratlib::geometrics::InterpolationType"){.enum}, ) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<Point, [InterpolationError](../error/enum.InterpolationError.html "enum optionstratlib::error::InterpolationError"){.enum}\> {#fn-interpolate-self-x-input-interpolation_type-interpolationtype---resultpoint-interpolationerror .code-header}
+#### fn [interpolate](#method.interpolate){.fn}( &self, x: Input, interpolation_type: [InterpolationType](enum.InterpolationType.html "enum optionstratlib::geometrics::InterpolationType"){.enum}, ) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<Point, [InterpolationError](../error/enum.InterpolationError.html "enum optionstratlib::error::InterpolationError"){.enum}\> {#fn-interpolate-self-x-input-interpolation_type-interpolationtype---resultpoint-interpolationerror .code-header}
 :::
 
 ::: docblock
@@ -142,7 +142,7 @@ interpolation type.
 [Source](../../src/optionstratlib/geometrics/interpolation/traits.rs.html#110-132){.src
 .rightside}
 
-#### fn [find_bracket_points](#method.find_bracket_points){.fn}( &self, x: Input, ) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<([usize](https://doc.rust-lang.org/1.86.0/std/primitive.usize.html){.primitive}, [usize](https://doc.rust-lang.org/1.86.0/std/primitive.usize.html){.primitive}), [InterpolationError](../error/enum.InterpolationError.html "enum optionstratlib::error::InterpolationError"){.enum}\> {#fn-find_bracket_points-self-x-input---resultusize-usize-interpolationerror .code-header}
+#### fn [find_bracket_points](#method.find_bracket_points){.fn}( &self, x: Input, ) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<([usize](https://doc.rust-lang.org/1.91.1/std/primitive.usize.html){.primitive}, [usize](https://doc.rust-lang.org/1.91.1/std/primitive.usize.html){.primitive}), [InterpolationError](../error/enum.InterpolationError.html "enum optionstratlib::error::InterpolationError"){.enum}\> {#fn-find_bracket_points-self-x-input---resultusize-usize-interpolationerror .code-header}
 :::
 
 ::: docblock
@@ -174,7 +174,7 @@ equal to the target x.
 
 ::: dyn-compatibility-info
 This trait is **not** [dyn
-compatible](https://doc.rust-lang.org/1.86.0/reference/items/traits.html#dyn-compatibility).
+compatible](https://doc.rust-lang.org/1.91.1/reference/items/traits.html#dyn-compatibility).
 
 *In older versions of Rust, dyn compatibility was called \"object
 safety\", so this trait is not object safe.*
@@ -184,10 +184,10 @@ safety\", so this trait is not object safe.*
 
 :::::::::: {#implementors-list}
 :::: {#impl-Interpolate%3CPoint2D,+Decimal%3E-for-Curve .section .impl}
-[Source](../../src/optionstratlib/curves/curve.rs.html#287){.src
+[Source](../../src/optionstratlib/curves/curve.rs.html#301){.src
 .rightside}[§](#impl-Interpolate%3CPoint2D,+Decimal%3E-for-Curve){.anchor}
 
-### impl [Interpolate](trait.Interpolate.html "trait optionstratlib::geometrics::Interpolate"){.trait}\<[Point2D](../curves/struct.Point2D.html "struct optionstratlib::curves::Point2D"){.struct}, Decimal\> for [Curve](../curves/struct.Curve.html "struct optionstratlib::curves::Curve"){.struct} {#impl-interpolatepoint2d-decimal-for-curve .code-header}
+### impl [Interpolate](trait.Interpolate.html "trait optionstratlib::geometrics::Interpolate"){.trait}\<[Point2D](../curves/struct.Point2D.html "struct optionstratlib::curves::Point2D"){.struct}, [Decimal](../prelude/struct.Decimal.html "struct optionstratlib::prelude::Decimal"){.struct}\> for [Curve](../curves/struct.Curve.html "struct optionstratlib::curves::Curve"){.struct} {#impl-interpolatepoint2d-decimal-for-curve .code-header}
 
 ::: docblock
 Implementation of the `Interpolate` trait for the `Curve` struct.
@@ -229,7 +229,7 @@ appropriate algorithm is invoked.
 :::
 
 :::: {#impl-Interpolate%3CPoint3D,+Point2D%3E-for-Surface .section .impl}
-[Source](../../src/optionstratlib/surfaces/surface.rs.html#585){.src
+[Source](../../src/optionstratlib/surfaces/surface.rs.html#598){.src
 .rightside}[§](#impl-Interpolate%3CPoint3D,+Point2D%3E-for-Surface){.anchor}
 
 ### impl [Interpolate](trait.Interpolate.html "trait optionstratlib::geometrics::Interpolate"){.trait}\<[Point3D](../surfaces/struct.Point3D.html "struct optionstratlib::surfaces::Point3D"){.struct}, [Point2D](../curves/struct.Point2D.html "struct optionstratlib::curves::Point2D"){.struct}\> for [Surface](../surfaces/struct.Surface.html "struct optionstratlib::surfaces::Surface"){.struct} {#impl-interpolatepoint3d-point2d-for-surface .code-header}

@@ -1,17 +1,4 @@
-use optionstratlib::chains::generator_positive;
-use optionstratlib::pnl::PnLCalculator;
-use optionstratlib::prelude::volatility_for_dt;
-use optionstratlib::simulation::simulator::Simulator;
-use optionstratlib::simulation::steps::{Step, Xstep, Ystep};
-use optionstratlib::simulation::{WalkParams, WalkType, WalkTypeAble};
-use optionstratlib::strategies::ShortPut;
-use optionstratlib::utils::setup_logger;
-use optionstratlib::utils::time::{TimeFrame, convert_time_frame};
-use optionstratlib::visualization::Graph;
-use optionstratlib::{ExpirationDate, Positive, pos};
-use rust_decimal::Decimal;
-use rust_decimal_macros::dec;
-use tracing::{debug, info};
+use optionstratlib::prelude::*;
 
 struct Walker {}
 
@@ -23,7 +10,7 @@ impl Walker {
 
 impl WalkTypeAble<Positive, Positive> for Walker {}
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> Result<(), Error> {
     setup_logger();
     let symbol = "GOLD".to_string();
     let strike_price = pos!(3930.0);

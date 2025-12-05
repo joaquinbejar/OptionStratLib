@@ -5,15 +5,20 @@
 [optionstratlib](../../index.html)::[utils](../index.html)
 :::
 
-# Module loggerCopy item path
+# Module logger Copy item path
 
-[[Source](../../../src/optionstratlib/utils/logger.rs.html#1-373){.src}
+[[Source](../../../src/optionstratlib/utils/logger.rs.html#1-295){.src}
 ]{.sub-heading}
 ::::
 
 Expand description
 
 ::: docblock
+This module contains the logger setup and configuration. It provides
+functionality for initializing the logger, setting log levels, and
+formatting log messages. It uses the `tracing` crate for structured
+logging and supports various log levels.
+
 ## [§](#utils-module){.doc-anchor}Utils Module
 
 This module provides a collection of utility functions, structures, and

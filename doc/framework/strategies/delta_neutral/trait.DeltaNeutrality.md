@@ -1,13 +1,13 @@
-:::::::::::::::::::::::::::::::::::::::: width-limiter
-::::::::::::::::::::::::::::::::::::::: {#main-content .section .content}
+:::::::::::::::::::::::::::::::::::::::::::::: width-limiter
+::::::::::::::::::::::::::::::::::::::::::::: {#main-content .section .content}
 :::: main-heading
 ::: rustdoc-breadcrumbs
 [optionstratlib](../../index.html)::[strategies](../index.html)::[delta_neutral](index.html)
 :::
 
-# Trait [DeltaNeutrality]{.trait}Copy item path
+# Trait [DeltaNeutrality]{.trait} Copy item path
 
-[[Source](../../../src/optionstratlib/strategies/delta_neutral/model.rs.html#317-755){.src}
+[[Source](../../../src/optionstratlib/strategies/delta_neutral/model.rs.html#334-971){.src}
 ]{.sub-heading}
 ::::
 
@@ -20,27 +20,32 @@ pub trait DeltaNeutrality:
     fn delta_neutrality(&self) -> Result<DeltaInfo, GreeksError> { ... }
     fn is_delta_neutral(&self) -> bool { ... }
     fn get_atm_strike(&self) -> Result<Positive, StrategyError> { ... }
+    fn generate_delta_adjustments(
+        &self,
+        net_delta: Decimal,
+        option_delta_per_contract: Decimal,
+        option: &Options,
+    ) -> Result<DeltaAdjustment, GreeksError> { ... }
     fn delta_adjustments(&self) -> Result<Vec<DeltaAdjustment>, GreeksError> { ... }
     fn apply_delta_adjustments(
         &mut self,
         action: Option<Action>,
-    ) -> Result<(), Box<dyn Error>> { ... }
+    ) -> Result<(), StrategyError> { ... }
     fn apply_single_adjustment(
         &mut self,
         adjustment: &DeltaAdjustment,
-    ) -> Result<(), Box<dyn Error>> { ... }
-    fn adjust_underlying_position(
-        &mut self,
-        _quantity: Positive,
-        _side: Side,
-    ) -> Result<(), Box<dyn Error>> { ... }
+    ) -> Result<(), StrategyError> { ... }
     fn adjust_option_position(
         &mut self,
         quantity: Decimal,
         strike: &Positive,
         option_type: &OptionStyle,
         side: &Side,
-    ) -> Result<(), Box<dyn Error>> { ... }
+    ) -> Result<(), StrategyError> { ... }
+    fn trade_from_delta_adjustment(
+        &mut self,
+        action: Action,
+    ) -> Result<Vec<Trade>, StrategyError> { ... }
 }
 ```
 
@@ -71,12 +76,12 @@ concepts needed to manage the delta exposure efficiently.
 
 ## Provided Methods[§](#provided-methods){.anchor} {#provided-methods .section-header}
 
-::::::::::::::::::: methods
+::::::::::::::::::::: methods
 ::: {#method.delta_neutrality .section .method}
-[Source](../../../src/optionstratlib/strategies/delta_neutral/model.rs.html#329-353){.src
+[Source](../../../src/optionstratlib/strategies/delta_neutral/model.rs.html#346-371){.src
 .rightside}
 
-#### fn [delta_neutrality](#method.delta_neutrality){.fn}(&self) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[DeltaInfo](struct.DeltaInfo.html "struct optionstratlib::strategies::delta_neutral::DeltaInfo"){.struct}, [GreeksError](../../error/greeks/enum.GreeksError.html "enum optionstratlib::error::greeks::GreeksError"){.enum}\> {#fn-delta_neutralityself---resultdeltainfo-greekserror .code-header}
+#### fn [delta_neutrality](#method.delta_neutrality){.fn}(&self) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[DeltaInfo](struct.DeltaInfo.html "struct optionstratlib::strategies::delta_neutral::DeltaInfo"){.struct}, [GreeksError](../../error/greeks/enum.GreeksError.html "enum optionstratlib::error::greeks::GreeksError"){.enum}\> {#fn-delta_neutralityself---resultdeltainfo-greekserror .code-header}
 :::
 
 ::: docblock
@@ -98,10 +103,10 @@ adjustments.
 :::
 
 ::: {#method.is_delta_neutral .section .method}
-[Source](../../../src/optionstratlib/strategies/delta_neutral/model.rs.html#364-369){.src
+[Source](../../../src/optionstratlib/strategies/delta_neutral/model.rs.html#382-387){.src
 .rightside}
 
-#### fn [is_delta_neutral](#method.is_delta_neutral){.fn}(&self) -\> [bool](https://doc.rust-lang.org/1.86.0/std/primitive.bool.html){.primitive} {#fn-is_delta_neutralself---bool .code-header}
+#### fn [is_delta_neutral](#method.is_delta_neutral){.fn}(&self) -\> [bool](https://doc.rust-lang.org/1.91.1/std/primitive.bool.html){.primitive} {#fn-is_delta_neutralself---bool .code-header}
 :::
 
 ::: docblock
@@ -121,10 +126,10 @@ A boolean (`true` or `false`):
 :::
 
 ::: {#method.get_atm_strike .section .method}
-[Source](../../../src/optionstratlib/strategies/delta_neutral/model.rs.html#393-395){.src
+[Source](../../../src/optionstratlib/strategies/delta_neutral/model.rs.html#411-413){.src
 .rightside}
 
-#### fn [get_atm_strike](#method.get_atm_strike){.fn}(&self) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[Positive](../../model/positive/struct.Positive.html "struct optionstratlib::model::positive::Positive"){.struct}, [StrategyError](../../error/strategies/enum.StrategyError.html "enum optionstratlib::error::strategies::StrategyError"){.enum}\> {#fn-get_atm_strikeself---resultpositive-strategyerror .code-header}
+#### fn [get_atm_strike](#method.get_atm_strike){.fn}(&self) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[Positive](../../model/positive/struct.Positive.html "struct optionstratlib::model::positive::Positive"){.struct}, [StrategyError](../../error/strategies/enum.StrategyError.html "enum optionstratlib::error::strategies::StrategyError"){.enum}\> {#fn-get_atm_strikeself---resultpositive-strategyerror .code-header}
 :::
 
 ::: docblock
@@ -156,11 +161,93 @@ strike might be the nearest available strike price offered by the
 exchange.
 :::
 
-::: {#method.delta_adjustments .section .method}
-[Source](../../../src/optionstratlib/strategies/delta_neutral/model.rs.html#410-520){.src
+::: {#method.generate_delta_adjustments .section .method}
+[Source](../../../src/optionstratlib/strategies/delta_neutral/model.rs.html#471-575){.src
 .rightside}
 
-#### fn [delta_adjustments](#method.delta_adjustments){.fn}(&self) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[Vec](https://doc.rust-lang.org/1.86.0/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<[DeltaAdjustment](enum.DeltaAdjustment.html "enum optionstratlib::strategies::delta_neutral::DeltaAdjustment"){.enum}\>, [GreeksError](../../error/greeks/enum.GreeksError.html "enum optionstratlib::error::greeks::GreeksError"){.enum}\> {#fn-delta_adjustmentsself---resultvecdeltaadjustment-greekserror .code-header}
+#### fn [generate_delta_adjustments](#method.generate_delta_adjustments){.fn}( &self, net_delta: [Decimal](../../prelude/struct.Decimal.html "struct optionstratlib::prelude::Decimal"){.struct}, option_delta_per_contract: [Decimal](../../prelude/struct.Decimal.html "struct optionstratlib::prelude::Decimal"){.struct}, option: &[Options](../../model/option/struct.Options.html "struct optionstratlib::model::option::Options"){.struct}, ) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[DeltaAdjustment](enum.DeltaAdjustment.html "enum optionstratlib::strategies::delta_neutral::DeltaAdjustment"){.enum}, [GreeksError](../../error/greeks/enum.GreeksError.html "enum optionstratlib::error::greeks::GreeksError"){.enum}\> {#fn-generate_delta_adjustments-self-net_delta-decimal-option_delta_per_contract-decimal-option-options---resultdeltaadjustment-greekserror .code-header}
+:::
+
+::: docblock
+Generates delta adjustments based on the given net delta and option
+delta per contract.
+
+This function calculates the necessary adjustments (buying or selling
+options) to bring the net delta of a position closer to neutral based on
+the delta of the options and current positions.
+
+##### [§](#parameters){.doc-anchor}Parameters
+
+- `net_delta`: The net delta of the current portfolio or position. A
+  positive value indicates excess positive delta, while a negative value
+  indicates excess negative delta.
+- `option_delta_per_contract`: The delta value of an individual option
+  contract. A positive value represents a positive delta option (e.g.,
+  calls for long positions), while a negative value represents a
+  negative delta option (e.g., puts for long positions).
+- `option`: A reference to an instance of the `Options` struct,
+  representing the specific option for which adjustments are to be made.
+  This includes attributes such as the option strike price, style, side,
+  and current quantity of contracts held.
+
+##### [§](#returns-3){.doc-anchor}Returns
+
+- `Ok(DeltaAdjustment)`: An adjustment object indicating the number of
+  contracts to buy or sell, along with relevant option details (e.g.,
+  strike price, style, side). If no adjustment is needed, the function
+  returns `DeltaAdjustment::NoAdjustmentNeeded`.
+- `Err(GreeksError)`: Returns an error if an adjustment cannot be made
+  due to invalid input (e.g., delta per contract is zero) or if the
+  required adjustment would violate contract limits (e.g., attempting to
+  sell more contracts than currently held).
+
+##### [§](#behavior){.doc-anchor}Behavior
+
+- If `net_delta` is zero, no adjustment is needed, and the function
+  immediately returns `DeltaAdjustment::NoAdjustmentNeeded`.
+- If `option_delta_per_contract` is zero, the function returns a
+  `GreeksError` as it is invalid to use an option with no delta.
+- The number of contracts required to neutralize the delta is calculated
+  as the absolute value of `net_delta / option_delta_per_contract`.
+- Based on whether the net delta and option delta are positive or
+  negative, the function determines whether to buy or sell options. It
+  also checks whether sufficient contracts are available for sale or if
+  additional contracts need to be acquired.
+- If the required contracts match the current quantity held in the
+  portfolio, no adjustment is needed.
+
+##### [§](#adjustment-logic){.doc-anchor}Adjustment Logic
+
+1.  **Sell Options**:
+    - If the net delta and option delta per contract are both positive,
+      selling options reduces the delta.
+    - If the net delta and option delta per contract are both negative,
+      selling options reduces the negative delta.
+    - If the required number of contracts to sell exceeds the quantity
+      currently held, an error is returned because selling more than
+      available is not possible.
+2.  **Buy Options**:
+    - If the net delta is positive and the option delta per contract is
+      negative, buying options adds negative delta (neutralizing the
+      positive net delta).
+    - If the net delta is negative and the option delta per contract is
+      positive, buying options adds positive delta (neutralizing the
+      negative net delta).
+
+##### [§](#errors-1){.doc-anchor}Errors
+
+- `GreeksError::StdError`:
+  - If `option_delta_per_contract` is zero because adjustments with zero
+    delta options are invalid.
+  - If insufficient contracts are available for an adjustment when
+    trying to sell options.
+:::
+
+::: {#method.delta_adjustments .section .method}
+[Source](../../../src/optionstratlib/strategies/delta_neutral/model.rs.html#590-686){.src
+.rightside}
+
+#### fn [delta_adjustments](#method.delta_adjustments){.fn}(&self) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[Vec](https://doc.rust-lang.org/1.91.1/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<[DeltaAdjustment](enum.DeltaAdjustment.html "enum optionstratlib::strategies::delta_neutral::DeltaAdjustment"){.enum}\>, [GreeksError](../../error/greeks/enum.GreeksError.html "enum optionstratlib::error::greeks::GreeksError"){.enum}\> {#fn-delta_adjustmentsself---resultvecdeltaadjustment-greekserror .code-header}
 :::
 
 ::: docblock
@@ -170,7 +257,7 @@ Calculates required position adjustments to maintain delta neutrality
 
 None - Uses internal position state
 
-##### [§](#returns-3){.doc-anchor}Returns
+##### [§](#returns-4){.doc-anchor}Returns
 
 - `Result<Vec<DeltaAdjustment>, GreeksError>` - Vector of suggested
   position adjustments or error if calculations fail
@@ -184,10 +271,10 @@ None - Uses internal position state
 :::
 
 ::: {#method.apply_delta_adjustments .section .method}
-[Source](../../../src/optionstratlib/strategies/delta_neutral/model.rs.html#552-600){.src
+[Source](../../../src/optionstratlib/strategies/delta_neutral/model.rs.html#718-766){.src
 .rightside}
 
-#### fn [apply_delta_adjustments](#method.apply_delta_adjustments){.fn}( &mut self, action: [Option](https://doc.rust-lang.org/1.86.0/core/option/enum.Option.html "enum core::option::Option"){.enum}\<[Action](../../model/types/enum.Action.html "enum optionstratlib::model::types::Action"){.enum}\>, ) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[()](https://doc.rust-lang.org/1.86.0/std/primitive.unit.html){.primitive}, [Box](https://doc.rust-lang.org/1.86.0/alloc/boxed/struct.Box.html "struct alloc::boxed::Box"){.struct}\<dyn [Error](https://doc.rust-lang.org/1.86.0/core/error/trait.Error.html "trait core::error::Error"){.trait}\>\> {#fn-apply_delta_adjustments-mut-self-action-optionaction---result-boxdyn-error .code-header}
+#### fn [apply_delta_adjustments](#method.apply_delta_adjustments){.fn}( &mut self, action: [Option](https://doc.rust-lang.org/1.91.1/core/option/enum.Option.html "enum core::option::Option"){.enum}\<[Action](../../model/types/enum.Action.html "enum optionstratlib::model::types::Action"){.enum}\>, ) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[()](https://doc.rust-lang.org/1.91.1/std/primitive.unit.html){.primitive}, [StrategyError](../../error/strategies/enum.StrategyError.html "enum optionstratlib::error::strategies::StrategyError"){.enum}\> {#fn-apply_delta_adjustments-mut-self-action-optionaction---result-strategyerror .code-header}
 :::
 
 ::: docblock
@@ -197,7 +284,7 @@ Applies delta-neutralizing adjustments to the current strategy based on
 calculated delta imbalances. This function ensures that the strategy
 remains delta-neutral by executing the appropriate position adjustments.
 
-###### [§](#parameters){.doc-anchor}Parameters
+###### [§](#parameters-1){.doc-anchor}Parameters
 
 - `action`: Optional filtering parameter that specifies which type of
   adjustments to apply:
@@ -218,9 +305,9 @@ remains delta-neutral by executing the appropriate position adjustments.
     - All adjustments including paired SameSize adjustments when no
       action is specified
 
-###### [§](#returns-4){.doc-anchor}Returns
+###### [§](#returns-5){.doc-anchor}Returns
 
-- `Result<(), Box<dyn Error>>` - Success if adjustments were applied
+- `Result<(), StrategyError>` - Success if adjustments were applied
   successfully, or an error if any adjustment operations failed
 
 ###### [§](#notes-2){.doc-anchor}Notes
@@ -235,10 +322,10 @@ remains delta-neutral by executing the appropriate position adjustments.
 :::
 
 ::: {#method.apply_single_adjustment .section .method}
-[Source](../../../src/optionstratlib/strategies/delta_neutral/model.rs.html#632-664){.src
+[Source](../../../src/optionstratlib/strategies/delta_neutral/model.rs.html#798-830){.src
 .rightside}
 
-#### fn [apply_single_adjustment](#method.apply_single_adjustment){.fn}( &mut self, adjustment: &[DeltaAdjustment](enum.DeltaAdjustment.html "enum optionstratlib::strategies::delta_neutral::DeltaAdjustment"){.enum}, ) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[()](https://doc.rust-lang.org/1.86.0/std/primitive.unit.html){.primitive}, [Box](https://doc.rust-lang.org/1.86.0/alloc/boxed/struct.Box.html "struct alloc::boxed::Box"){.struct}\<dyn [Error](https://doc.rust-lang.org/1.86.0/core/error/trait.Error.html "trait core::error::Error"){.trait}\>\> {#fn-apply_single_adjustment-mut-self-adjustment-deltaadjustment---result-boxdyn-error .code-header}
+#### fn [apply_single_adjustment](#method.apply_single_adjustment){.fn}( &mut self, adjustment: &[DeltaAdjustment](enum.DeltaAdjustment.html "enum optionstratlib::strategies::delta_neutral::DeltaAdjustment"){.enum}, ) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[()](https://doc.rust-lang.org/1.91.1/std/primitive.unit.html){.primitive}, [StrategyError](../../error/strategies/enum.StrategyError.html "enum optionstratlib::error::strategies::StrategyError"){.enum}\> {#fn-apply_single_adjustment-mut-self-adjustment-deltaadjustment---result-strategyerror .code-header}
 :::
 
 ::: docblock
@@ -251,15 +338,15 @@ object's state accordingly. It handles different types of adjustments
 that can be made to maintain or achieve delta neutrality in an options
 strategy.
 
-###### [§](#parameters-1){.doc-anchor}Parameters
+###### [§](#parameters-2){.doc-anchor}Parameters
 
 - `adjustment` - A reference to the `DeltaAdjustment` to apply, which
   can be one of several variants specifying different types of position
   adjustments.
 
-###### [§](#returns-5){.doc-anchor}Returns
+###### [§](#returns-6){.doc-anchor}Returns
 
-- `Result<(), Box<dyn Error>>` - Returns `Ok(())` if the adjustment was
+- `Result<(), StrategyError>` - Returns `Ok(())` if the adjustment was
   applied successfully, or an `Error` if something went wrong during the
   process.
 
@@ -281,64 +368,11 @@ quantities for buying options and negative quantities for selling
 options.
 :::
 
-::: {#method.adjust_underlying_position .section .method}
-[Source](../../../src/optionstratlib/strategies/delta_neutral/model.rs.html#697-705){.src
-.rightside}
-
-#### fn [adjust_underlying_position](#method.adjust_underlying_position){.fn}( &mut self, \_quantity: [Positive](../../model/positive/struct.Positive.html "struct optionstratlib::model::positive::Positive"){.struct}, \_side: [Side](../../model/types/enum.Side.html "enum optionstratlib::model::types::Side"){.enum}, ) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[()](https://doc.rust-lang.org/1.86.0/std/primitive.unit.html){.primitive}, [Box](https://doc.rust-lang.org/1.86.0/alloc/boxed/struct.Box.html "struct alloc::boxed::Box"){.struct}\<dyn [Error](https://doc.rust-lang.org/1.86.0/core/error/trait.Error.html "trait core::error::Error"){.trait}\>\> {#fn-adjust_underlying_position-mut-self-_quantity-positive-_side-side---result-boxdyn-error .code-header}
-:::
-
-::: docblock
-##### [§](#adjust-underlying-position){.doc-anchor}Adjust Underlying Position
-
-Adjusts the quantity of the underlying asset held in a position based on
-the specified side (Long/Short) and quantity.
-
-This method allows modifying the underlying asset position to achieve
-specific strategy goals, such as:
-
-- Adjusting delta exposure for hedging purposes
-- Implementing delta-neutral adjustments
-- Rebalancing positions after market movements
-- Executing rolling strategies
-
-###### [§](#parameters-2){.doc-anchor}Parameters
-
-- `_quantity`: The amount of the underlying asset to adjust, represented
-  as a `Positive` value
-- `_side`: The direction of the adjustment - `Side::Long` to increase
-  the position, `Side::Short` to decrease it
-
-###### [§](#returns-6){.doc-anchor}Returns
-
-- `Result<(), Box<dyn Error>>`: Returns Ok(()) on successful adjustment,
-  or an Error if the adjustment fails
-
-###### [§](#details){.doc-anchor}Details
-
-When adjusting the underlying position, the method will take into
-account current market conditions, available capital, and potentially
-transaction costs to determine the optimal execution strategy.
-
-###### [§](#example-use-cases){.doc-anchor}Example Use Cases
-
-- Delta hedging an options position
-- Rebalancing after a significant price move in the underlying
-- Implementing a dynamic hedging strategy
-- Gradually liquidating or building a position
-
-###### [§](#note){.doc-anchor}Note
-
-Adjustments to the underlying position directly affect the overall
-strategy's risk profile, particularly its delta exposure and potential
-profit/loss characteristics.
-:::
-
 ::: {#method.adjust_option_position .section .method}
-[Source](../../../src/optionstratlib/strategies/delta_neutral/model.rs.html#734-754){.src
+[Source](../../../src/optionstratlib/strategies/delta_neutral/model.rs.html#859-880){.src
 .rightside}
 
-#### fn [adjust_option_position](#method.adjust_option_position){.fn}( &mut self, quantity: Decimal, strike: &[Positive](../../model/positive/struct.Positive.html "struct optionstratlib::model::positive::Positive"){.struct}, option_type: &[OptionStyle](../../model/types/enum.OptionStyle.html "enum optionstratlib::model::types::OptionStyle"){.enum}, side: &[Side](../../model/types/enum.Side.html "enum optionstratlib::model::types::Side"){.enum}, ) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[()](https://doc.rust-lang.org/1.86.0/std/primitive.unit.html){.primitive}, [Box](https://doc.rust-lang.org/1.86.0/alloc/boxed/struct.Box.html "struct alloc::boxed::Box"){.struct}\<dyn [Error](https://doc.rust-lang.org/1.86.0/core/error/trait.Error.html "trait core::error::Error"){.trait}\>\> {#fn-adjust_option_position-mut-self-quantity-decimal-strike-positive-option_type-optionstyle-side-side---result-boxdyn-error .code-header}
+#### fn [adjust_option_position](#method.adjust_option_position){.fn}( &mut self, quantity: [Decimal](../../prelude/struct.Decimal.html "struct optionstratlib::prelude::Decimal"){.struct}, strike: &[Positive](../../model/positive/struct.Positive.html "struct optionstratlib::model::positive::Positive"){.struct}, option_type: &[OptionStyle](../../model/types/enum.OptionStyle.html "enum optionstratlib::model::types::OptionStyle"){.enum}, side: &[Side](../../model/types/enum.Side.html "enum optionstratlib::model::types::Side"){.enum}, ) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[()](https://doc.rust-lang.org/1.91.1/std/primitive.unit.html){.primitive}, [StrategyError](../../error/strategies/enum.StrategyError.html "enum optionstratlib::error::strategies::StrategyError"){.enum}\> {#fn-adjust_option_position-mut-self-quantity-decimal-strike-positive-option_type-optionstyle-side-side---result-strategyerror .code-header}
 :::
 
 ::: docblock
@@ -367,122 +401,170 @@ specified amount. If the position is not found, an error is returned.
 - `Ok(())` if the position was successfully adjusted.
 - `Err(PositionError::ValidationError)` if the position was not found.
 
-###### [§](#errors-1){.doc-anchor}Errors
+###### [§](#errors-2){.doc-anchor}Errors
 
 Returns a boxed error if:
 
 - The specified position does not exist in the strategy
 - The `get_position` or `modify_position` methods fail
 :::
-:::::::::::::::::::
+
+::: {#method.trade_from_delta_adjustment .section .method}
+[Source](../../../src/optionstratlib/strategies/delta_neutral/model.rs.html#890-970){.src
+.rightside}
+
+#### fn [trade_from_delta_adjustment](#method.trade_from_delta_adjustment){.fn}( &mut self, action: [Action](../../model/types/enum.Action.html "enum optionstratlib::model::types::Action"){.enum}, ) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[Vec](https://doc.rust-lang.org/1.91.1/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<[Trade](../../model/struct.Trade.html "struct optionstratlib::model::Trade"){.struct}\>, [StrategyError](../../error/strategies/enum.StrategyError.html "enum optionstratlib::error::strategies::StrategyError"){.enum}\> {#fn-trade_from_delta_adjustment-mut-self-action-action---resultvectrade-strategyerror .code-header}
+:::
+
+::: docblock
+Generates a `Trade` object based on the given delta adjustment action.
+
+##### [§](#parameters-4){.doc-anchor}Parameters
+
+- `_action`: An `Action` representing the delta adjustment based on
+  which the trade will be formulated.
+
+##### [§](#returns-8){.doc-anchor}Returns
+
+A `Trade` object derived from the delta adjustment logic.
+:::
+:::::::::::::::::::::
 
 ## Implementors[§](#implementors){.anchor} {#implementors .section-header}
 
-:::::::::::::::::: {#implementors-list}
+:::::::::::::::::::::: {#implementors-list}
 ::: {#impl-DeltaNeutrality-for-BearCallSpread .section .impl}
-[Source](../../../src/optionstratlib/strategies/bear_call_spread.rs.html#781){.src
+[Source](../../../src/optionstratlib/strategies/bear_call_spread.rs.html#820){.src
 .rightside}[§](#impl-DeltaNeutrality-for-BearCallSpread){.anchor}
 
 ### impl [DeltaNeutrality](trait.DeltaNeutrality.html "trait optionstratlib::strategies::delta_neutral::DeltaNeutrality"){.trait} for [BearCallSpread](../bear_call_spread/struct.BearCallSpread.html "struct optionstratlib::strategies::bear_call_spread::BearCallSpread"){.struct} {#impl-deltaneutrality-for-bearcallspread .code-header}
 :::
 
 ::: {#impl-DeltaNeutrality-for-BearPutSpread .section .impl}
-[Source](../../../src/optionstratlib/strategies/bear_put_spread.rs.html#771){.src
+[Source](../../../src/optionstratlib/strategies/bear_put_spread.rs.html#816){.src
 .rightside}[§](#impl-DeltaNeutrality-for-BearPutSpread){.anchor}
 
 ### impl [DeltaNeutrality](trait.DeltaNeutrality.html "trait optionstratlib::strategies::delta_neutral::DeltaNeutrality"){.trait} for [BearPutSpread](../bear_put_spread/struct.BearPutSpread.html "struct optionstratlib::strategies::bear_put_spread::BearPutSpread"){.struct} {#impl-deltaneutrality-for-bearputspread .code-header}
 :::
 
 ::: {#impl-DeltaNeutrality-for-BullCallSpread .section .impl}
-[Source](../../../src/optionstratlib/strategies/bull_call_spread.rs.html#784){.src
+[Source](../../../src/optionstratlib/strategies/bull_call_spread.rs.html#833){.src
 .rightside}[§](#impl-DeltaNeutrality-for-BullCallSpread){.anchor}
 
 ### impl [DeltaNeutrality](trait.DeltaNeutrality.html "trait optionstratlib::strategies::delta_neutral::DeltaNeutrality"){.trait} for [BullCallSpread](../bull_call_spread/struct.BullCallSpread.html "struct optionstratlib::strategies::bull_call_spread::BullCallSpread"){.struct} {#impl-deltaneutrality-for-bullcallspread .code-header}
 :::
 
 ::: {#impl-DeltaNeutrality-for-BullPutSpread .section .impl}
-[Source](../../../src/optionstratlib/strategies/bull_put_spread.rs.html#885){.src
+[Source](../../../src/optionstratlib/strategies/bull_put_spread.rs.html#927){.src
 .rightside}[§](#impl-DeltaNeutrality-for-BullPutSpread){.anchor}
 
 ### impl [DeltaNeutrality](trait.DeltaNeutrality.html "trait optionstratlib::strategies::delta_neutral::DeltaNeutrality"){.trait} for [BullPutSpread](../bull_put_spread/struct.BullPutSpread.html "struct optionstratlib::strategies::bull_put_spread::BullPutSpread"){.struct} {#impl-deltaneutrality-for-bullputspread .code-header}
 :::
 
-::: {#impl-DeltaNeutrality-for-LongButterflySpread .section .impl}
-[Source](../../../src/optionstratlib/strategies/butterfly_spread.rs.html#976){.src
-.rightside}[§](#impl-DeltaNeutrality-for-LongButterflySpread){.anchor}
-
-### impl [DeltaNeutrality](trait.DeltaNeutrality.html "trait optionstratlib::strategies::delta_neutral::DeltaNeutrality"){.trait} for [LongButterflySpread](../butterfly_spread/struct.LongButterflySpread.html "struct optionstratlib::strategies::butterfly_spread::LongButterflySpread"){.struct} {#impl-deltaneutrality-for-longbutterflyspread .code-header}
-:::
-
-::: {#impl-DeltaNeutrality-for-ShortButterflySpread .section .impl}
-[Source](../../../src/optionstratlib/strategies/butterfly_spread.rs.html#1943){.src
-.rightside}[§](#impl-DeltaNeutrality-for-ShortButterflySpread){.anchor}
-
-### impl [DeltaNeutrality](trait.DeltaNeutrality.html "trait optionstratlib::strategies::delta_neutral::DeltaNeutrality"){.trait} for [ShortButterflySpread](../butterfly_spread/struct.ShortButterflySpread.html "struct optionstratlib::strategies::butterfly_spread::ShortButterflySpread"){.struct} {#impl-deltaneutrality-for-shortbutterflyspread .code-header}
-:::
-
 ::: {#impl-DeltaNeutrality-for-CallButterfly .section .impl}
-[Source](../../../src/optionstratlib/strategies/call_butterfly.rs.html#952){.src
+[Source](../../../src/optionstratlib/strategies/call_butterfly.rs.html#980){.src
 .rightside}[§](#impl-DeltaNeutrality-for-CallButterfly){.anchor}
 
 ### impl [DeltaNeutrality](trait.DeltaNeutrality.html "trait optionstratlib::strategies::delta_neutral::DeltaNeutrality"){.trait} for [CallButterfly](../call_butterfly/struct.CallButterfly.html "struct optionstratlib::strategies::call_butterfly::CallButterfly"){.struct} {#impl-deltaneutrality-for-callbutterfly .code-header}
 :::
 
 ::: {#impl-DeltaNeutrality-for-CustomStrategy .section .impl}
-[Source](../../../src/optionstratlib/strategies/custom.rs.html#755){.src
+[Source](../../../src/optionstratlib/strategies/custom.rs.html#928){.src
 .rightside}[§](#impl-DeltaNeutrality-for-CustomStrategy){.anchor}
 
 ### impl [DeltaNeutrality](trait.DeltaNeutrality.html "trait optionstratlib::strategies::delta_neutral::DeltaNeutrality"){.trait} for [CustomStrategy](../custom/struct.CustomStrategy.html "struct optionstratlib::strategies::custom::CustomStrategy"){.struct} {#impl-deltaneutrality-for-customstrategy .code-header}
 :::
 
 ::: {#impl-DeltaNeutrality-for-IronButterfly .section .impl}
-[Source](../../../src/optionstratlib/strategies/iron_butterfly.rs.html#1018){.src
+[Source](../../../src/optionstratlib/strategies/iron_butterfly.rs.html#1054){.src
 .rightside}[§](#impl-DeltaNeutrality-for-IronButterfly){.anchor}
 
 ### impl [DeltaNeutrality](trait.DeltaNeutrality.html "trait optionstratlib::strategies::delta_neutral::DeltaNeutrality"){.trait} for [IronButterfly](../iron_butterfly/struct.IronButterfly.html "struct optionstratlib::strategies::iron_butterfly::IronButterfly"){.struct} {#impl-deltaneutrality-for-ironbutterfly .code-header}
 :::
 
 ::: {#impl-DeltaNeutrality-for-IronCondor .section .impl}
-[Source](../../../src/optionstratlib/strategies/iron_condor.rs.html#1053){.src
+[Source](../../../src/optionstratlib/strategies/iron_condor.rs.html#1082){.src
 .rightside}[§](#impl-DeltaNeutrality-for-IronCondor){.anchor}
 
 ### impl [DeltaNeutrality](trait.DeltaNeutrality.html "trait optionstratlib::strategies::delta_neutral::DeltaNeutrality"){.trait} for [IronCondor](../iron_condor/struct.IronCondor.html "struct optionstratlib::strategies::iron_condor::IronCondor"){.struct} {#impl-deltaneutrality-for-ironcondor .code-header}
 :::
 
+::: {#impl-DeltaNeutrality-for-LongButterflySpread .section .impl}
+[Source](../../../src/optionstratlib/strategies/long_butterfly_spread.rs.html#1025){.src
+.rightside}[§](#impl-DeltaNeutrality-for-LongButterflySpread){.anchor}
+
+### impl [DeltaNeutrality](trait.DeltaNeutrality.html "trait optionstratlib::strategies::delta_neutral::DeltaNeutrality"){.trait} for [LongButterflySpread](../long_butterfly_spread/struct.LongButterflySpread.html "struct optionstratlib::strategies::long_butterfly_spread::LongButterflySpread"){.struct} {#impl-deltaneutrality-for-longbutterflyspread .code-header}
+:::
+
+::: {#impl-DeltaNeutrality-for-LongCall .section .impl}
+[Source](../../../src/optionstratlib/strategies/long_call.rs.html#491){.src
+.rightside}[§](#impl-DeltaNeutrality-for-LongCall){.anchor}
+
+### impl [DeltaNeutrality](trait.DeltaNeutrality.html "trait optionstratlib::strategies::delta_neutral::DeltaNeutrality"){.trait} for [LongCall](../long_call/struct.LongCall.html "struct optionstratlib::strategies::long_call::LongCall"){.struct} {#impl-deltaneutrality-for-longcall .code-header}
+:::
+
+::: {#impl-DeltaNeutrality-for-LongPut .section .impl}
+[Source](../../../src/optionstratlib/strategies/long_put.rs.html#488){.src
+.rightside}[§](#impl-DeltaNeutrality-for-LongPut){.anchor}
+
+### impl [DeltaNeutrality](trait.DeltaNeutrality.html "trait optionstratlib::strategies::delta_neutral::DeltaNeutrality"){.trait} for [LongPut](../long_put/struct.LongPut.html "struct optionstratlib::strategies::long_put::LongPut"){.struct} {#impl-deltaneutrality-for-longput .code-header}
+:::
+
+::: {#impl-DeltaNeutrality-for-LongStraddle .section .impl}
+[Source](../../../src/optionstratlib/strategies/long_straddle.rs.html#830){.src
+.rightside}[§](#impl-DeltaNeutrality-for-LongStraddle){.anchor}
+
+### impl [DeltaNeutrality](trait.DeltaNeutrality.html "trait optionstratlib::strategies::delta_neutral::DeltaNeutrality"){.trait} for [LongStraddle](../long_straddle/struct.LongStraddle.html "struct optionstratlib::strategies::long_straddle::LongStraddle"){.struct} {#impl-deltaneutrality-for-longstraddle .code-header}
+:::
+
+::: {#impl-DeltaNeutrality-for-LongStrangle .section .impl}
+[Source](../../../src/optionstratlib/strategies/long_strangle.rs.html#889){.src
+.rightside}[§](#impl-DeltaNeutrality-for-LongStrangle){.anchor}
+
+### impl [DeltaNeutrality](trait.DeltaNeutrality.html "trait optionstratlib::strategies::delta_neutral::DeltaNeutrality"){.trait} for [LongStrangle](../long_strangle/struct.LongStrangle.html "struct optionstratlib::strategies::long_strangle::LongStrangle"){.struct} {#impl-deltaneutrality-for-longstrangle .code-header}
+:::
+
 ::: {#impl-DeltaNeutrality-for-PoorMansCoveredCall .section .impl}
-[Source](../../../src/optionstratlib/strategies/poor_mans_covered_call.rs.html#809){.src
+[Source](../../../src/optionstratlib/strategies/poor_mans_covered_call.rs.html#823){.src
 .rightside}[§](#impl-DeltaNeutrality-for-PoorMansCoveredCall){.anchor}
 
 ### impl [DeltaNeutrality](trait.DeltaNeutrality.html "trait optionstratlib::strategies::delta_neutral::DeltaNeutrality"){.trait} for [PoorMansCoveredCall](../poor_mans_covered_call/struct.PoorMansCoveredCall.html "struct optionstratlib::strategies::poor_mans_covered_call::PoorMansCoveredCall"){.struct} {#impl-deltaneutrality-for-poormanscoveredcall .code-header}
 :::
 
-::: {#impl-DeltaNeutrality-for-LongStraddle .section .impl}
-[Source](../../../src/optionstratlib/strategies/straddle.rs.html#1616){.src
-.rightside}[§](#impl-DeltaNeutrality-for-LongStraddle){.anchor}
+::: {#impl-DeltaNeutrality-for-ShortButterflySpread .section .impl}
+[Source](../../../src/optionstratlib/strategies/short_butterfly_spread.rs.html#993){.src
+.rightside}[§](#impl-DeltaNeutrality-for-ShortButterflySpread){.anchor}
 
-### impl [DeltaNeutrality](trait.DeltaNeutrality.html "trait optionstratlib::strategies::delta_neutral::DeltaNeutrality"){.trait} for [LongStraddle](../straddle/struct.LongStraddle.html "struct optionstratlib::strategies::straddle::LongStraddle"){.struct} {#impl-deltaneutrality-for-longstraddle .code-header}
+### impl [DeltaNeutrality](trait.DeltaNeutrality.html "trait optionstratlib::strategies::delta_neutral::DeltaNeutrality"){.trait} for [ShortButterflySpread](../short_butterfly_spread/struct.ShortButterflySpread.html "struct optionstratlib::strategies::short_butterfly_spread::ShortButterflySpread"){.struct} {#impl-deltaneutrality-for-shortbutterflyspread .code-header}
+:::
+
+::: {#impl-DeltaNeutrality-for-ShortCall .section .impl}
+[Source](../../../src/optionstratlib/strategies/short_call.rs.html#499){.src
+.rightside}[§](#impl-DeltaNeutrality-for-ShortCall){.anchor}
+
+### impl [DeltaNeutrality](trait.DeltaNeutrality.html "trait optionstratlib::strategies::delta_neutral::DeltaNeutrality"){.trait} for [ShortCall](../short_call/struct.ShortCall.html "struct optionstratlib::strategies::short_call::ShortCall"){.struct} {#impl-deltaneutrality-for-shortcall .code-header}
+:::
+
+::: {#impl-DeltaNeutrality-for-ShortPut .section .impl}
+[Source](../../../src/optionstratlib/strategies/short_put.rs.html#493){.src
+.rightside}[§](#impl-DeltaNeutrality-for-ShortPut){.anchor}
+
+### impl [DeltaNeutrality](trait.DeltaNeutrality.html "trait optionstratlib::strategies::delta_neutral::DeltaNeutrality"){.trait} for [ShortPut](../short_put/struct.ShortPut.html "struct optionstratlib::strategies::short_put::ShortPut"){.struct} {#impl-deltaneutrality-for-shortput .code-header}
 :::
 
 ::: {#impl-DeltaNeutrality-for-ShortStraddle .section .impl}
-[Source](../../../src/optionstratlib/strategies/straddle.rs.html#836){.src
+[Source](../../../src/optionstratlib/strategies/short_straddle.rs.html#877){.src
 .rightside}[§](#impl-DeltaNeutrality-for-ShortStraddle){.anchor}
 
-### impl [DeltaNeutrality](trait.DeltaNeutrality.html "trait optionstratlib::strategies::delta_neutral::DeltaNeutrality"){.trait} for [ShortStraddle](../straddle/struct.ShortStraddle.html "struct optionstratlib::strategies::straddle::ShortStraddle"){.struct} {#impl-deltaneutrality-for-shortstraddle .code-header}
-:::
-
-::: {#impl-DeltaNeutrality-for-LongStrangle .section .impl}
-[Source](../../../src/optionstratlib/strategies/strangle.rs.html#1920){.src
-.rightside}[§](#impl-DeltaNeutrality-for-LongStrangle){.anchor}
-
-### impl [DeltaNeutrality](trait.DeltaNeutrality.html "trait optionstratlib::strategies::delta_neutral::DeltaNeutrality"){.trait} for [LongStrangle](../strangle/struct.LongStrangle.html "struct optionstratlib::strategies::strangle::LongStrangle"){.struct} {#impl-deltaneutrality-for-longstrangle .code-header}
+### impl [DeltaNeutrality](trait.DeltaNeutrality.html "trait optionstratlib::strategies::delta_neutral::DeltaNeutrality"){.trait} for [ShortStraddle](../short_straddle/struct.ShortStraddle.html "struct optionstratlib::strategies::short_straddle::ShortStraddle"){.struct} {#impl-deltaneutrality-for-shortstraddle .code-header}
 :::
 
 ::: {#impl-DeltaNeutrality-for-ShortStrangle .section .impl}
-[Source](../../../src/optionstratlib/strategies/strangle.rs.html#932){.src
+[Source](../../../src/optionstratlib/strategies/short_strangle.rs.html#1136){.src
 .rightside}[§](#impl-DeltaNeutrality-for-ShortStrangle){.anchor}
 
-### impl [DeltaNeutrality](trait.DeltaNeutrality.html "trait optionstratlib::strategies::delta_neutral::DeltaNeutrality"){.trait} for [ShortStrangle](../strangle/struct.ShortStrangle.html "struct optionstratlib::strategies::strangle::ShortStrangle"){.struct} {#impl-deltaneutrality-for-shortstrangle .code-header}
+### impl [DeltaNeutrality](trait.DeltaNeutrality.html "trait optionstratlib::strategies::delta_neutral::DeltaNeutrality"){.trait} for [ShortStrangle](../short_strangle/struct.ShortStrangle.html "struct optionstratlib::strategies::short_strangle::ShortStrangle"){.struct} {#impl-deltaneutrality-for-shortstrangle .code-header}
 :::
-::::::::::::::::::
-:::::::::::::::::::::::::::::::::::::::
-::::::::::::::::::::::::::::::::::::::::
+::::::::::::::::::::::
+:::::::::::::::::::::::::::::::::::::::::::::
+::::::::::::::::::::::::::::::::::::::::::::::

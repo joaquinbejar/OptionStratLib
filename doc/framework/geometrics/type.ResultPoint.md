@@ -5,14 +5,14 @@
 [optionstratlib](../index.html)::[geometrics](index.html)
 :::
 
-# Type Alias [ResultPoint]{.type}Copy item path
+# Type Alias [ResultPoint]{.type} Copy item path
 
-[[Source](../../src/optionstratlib/geometrics/construction/types.rs.html#15){.src}
+[[Source](../../src/optionstratlib/geometrics/construction/types.rs.html#16){.src}
 ]{.sub-heading}
 ::::
 
 ``` {.rust .item-decl}
-pub type ResultPoint<Point> = Result<Point, Box<dyn Error>>;
+pub type ResultPoint<Point> = Result<Point, ChainError>;
 ```
 
 Expand description
@@ -28,9 +28,9 @@ point or an error.
 ## Aliased Type[§](#aliased-type){.anchor} {#aliased-type .section-header}
 
 ``` {.rust .item-decl}
-enum ResultPoint<Point> {
+pub enum ResultPoint<Point> {
     Ok(Point),
-    Err(Box<dyn Error>),
+    Err(ChainError),
 }
 ```
 
@@ -52,7 +52,7 @@ Contains the success value
 [§](#variant.Err){.anchor}[1.0.0]{.since .rightside
 title="Stable since Rust version 1.0.0"}
 
-### Err([Box](https://doc.rust-lang.org/1.86.0/alloc/boxed/struct.Box.html "struct alloc::boxed::Box"){.struct}\<dyn [Error](https://doc.rust-lang.org/1.86.0/core/error/trait.Error.html "trait core::error::Error"){.trait}\>) {#errboxdyn-error .code-header}
+### Err([ChainError](../error/chains/enum.ChainError.html "enum optionstratlib::error::chains::ChainError"){.enum}) {#errchainerror .code-header}
 :::
 
 ::: docblock

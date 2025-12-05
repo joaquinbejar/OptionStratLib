@@ -5,7 +5,7 @@
 [optionstratlib](../index.html)
 :::
 
-# Module geometricsCopy item path
+# Module geometrics Copy item path
 
 [[Source](../../src/optionstratlib/geometrics/mod.rs.html#6-31){.src}
 ]{.sub-heading}
@@ -36,9 +36,6 @@ transformations for volatility surfaces.
 
 [PlotBuilder](struct.PlotBuilder.html "struct optionstratlib::geometrics::PlotBuilder"){.struct}
 :   A builder for creating and configuring data visualizations.
-
-[PlotOptions](struct.PlotOptions.html "struct optionstratlib::geometrics::PlotOptions"){.struct}
-:   Plot configuration options for data visualization.
 
 [RangeMetrics](struct.RangeMetrics.html "struct optionstratlib::geometrics::RangeMetrics"){.struct}
 :   Represents statistical and range-related metrics for a dataset.
@@ -113,9 +110,6 @@ transformations for volatility surfaces.
 
 [MetricsExtractor](trait.MetricsExtractor.html "trait optionstratlib::geometrics::MetricsExtractor"){.trait}
 :   A trait for extracting comprehensive metrics from a curve.
-
-[PlotBuilderExt](trait.PlotBuilderExt.html "trait optionstratlib::geometrics::PlotBuilderExt"){.trait}
-:   Extension methods for the plot building process.
 
 [Plottable](trait.Plottable.html "trait optionstratlib::geometrics::Plottable"){.trait}
 :   Trait for defining objects that can be visualized as plots.

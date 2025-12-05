@@ -5,9 +5,9 @@
 [optionstratlib](../../index.html)::[error](../index.html)::[greeks](index.html)
 :::
 
-# Type Alias [GreeksResult]{.type}Copy item path
+# Type Alias [GreeksResult]{.type} Copy item path
 
-[[Source](../../../src/optionstratlib/error/greeks.rs.html#409){.src}
+[[Source](../../../src/optionstratlib/error/greeks.rs.html#344){.src}
 ]{.sub-heading}
 ::::
 
@@ -45,7 +45,7 @@ handling for mathematical and input validation errors is needed.
 ## Aliased Type[§](#aliased-type){.anchor} {#aliased-type .section-header}
 
 ``` {.rust .item-decl}
-enum GreeksResult<T> {
+pub enum GreeksResult<T> {
     Ok(T),
     Err(GreeksError),
 }

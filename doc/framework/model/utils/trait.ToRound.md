@@ -5,9 +5,9 @@
 [optionstratlib](../../index.html)::[model](../index.html)::[utils](index.html)
 :::
 
-# Trait [ToRound]{.trait}Copy item path
+# Trait [ToRound]{.trait} Copy item path
 
-[[Source](../../../src/optionstratlib/model/utils.rs.html#359-374){.src}
+[[Source](../../../src/optionstratlib/model/utils.rs.html#363-378){.src}
 ]{.sub-heading}
 ::::
 
@@ -34,10 +34,10 @@ in financial computations.
 
 ::::::: methods
 ::: {#tymethod.round .section .method}
-[Source](../../../src/optionstratlib/model/utils.rs.html#363){.src
+[Source](../../../src/optionstratlib/model/utils.rs.html#367){.src
 .rightside}
 
-#### fn [round](#tymethod.round){.fn}(&self) -\> Decimal {#fn-roundself---decimal .code-header}
+#### fn [round](#tymethod.round){.fn}(&self) -\> [Decimal](../../prelude/struct.Decimal.html "struct optionstratlib::prelude::Decimal"){.struct} {#fn-roundself---decimal .code-header}
 :::
 
 ::: docblock
@@ -48,10 +48,10 @@ fractional part.
 :::
 
 ::: {#tymethod.round_to .section .method}
-[Source](../../../src/optionstratlib/model/utils.rs.html#373){.src
+[Source](../../../src/optionstratlib/model/utils.rs.html#377){.src
 .rightside}
 
-#### fn [round_to](#tymethod.round_to){.fn}(&self, decimal_places: [u32](https://doc.rust-lang.org/1.86.0/std/primitive.u32.html){.primitive}) -\> Decimal {#fn-round_toself-decimal_places-u32---decimal .code-header}
+#### fn [round_to](#tymethod.round_to){.fn}(&self, decimal_places: [u32](https://doc.rust-lang.org/1.91.1/std/primitive.u32.html){.primitive}) -\> [Decimal](../../prelude/struct.Decimal.html "struct optionstratlib::prelude::Decimal"){.struct} {#fn-round_toself-decimal_places-u32---decimal .code-header}
 :::
 
 ::: docblock
@@ -71,7 +71,7 @@ value.
 
 :::: {#implementors-list}
 ::: {#impl-ToRound-for-Positive .section .impl}
-[Source](../../../src/optionstratlib/model/positive.rs.html#471-479){.src
+[Source](../../../src/optionstratlib/model/positive.rs.html#718-726){.src
 .rightside}[§](#impl-ToRound-for-Positive){.anchor}
 
 ### impl [ToRound](trait.ToRound.html "trait optionstratlib::model::utils::ToRound"){.trait} for [Positive](../positive/struct.Positive.html "struct optionstratlib::model::positive::Positive"){.struct} {#impl-toround-for-positive .code-header}

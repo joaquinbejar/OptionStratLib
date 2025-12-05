@@ -3,18 +3,9 @@
    Email: jb@taunais.com
    Date: 25/9/24
 ******************************************************************************/
-use optionstratlib::ExpirationDate;
-use optionstratlib::Positive;
-use optionstratlib::pos;
-use optionstratlib::strategies::bull_call_spread::BullCallSpread;
-use optionstratlib::strategies::delta_neutral::DeltaNeutrality;
-use optionstratlib::strategies::{BasicAble, Strategies};
-use optionstratlib::utils::setup_logger;
-use rust_decimal_macros::dec;
-use std::error::Error;
-use tracing::info;
+use optionstratlib::prelude::*;
 
-fn main() -> Result<(), Box<dyn Error>> {
+fn main() -> Result<(), Error> {
     setup_logger();
     let underlying_price = pos!(5781.88);
 

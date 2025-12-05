@@ -5,9 +5,9 @@
 [optionstratlib](../index.html)::[volatility](index.html)
 :::
 
-# Function [generate_ou_process]{.fn}Copy item path
+# Function [generate_ou_process]{.fn} Copy item path
 
-[[Source](../../src/optionstratlib/volatility/utils.rs.html#411-431){.src}
+[[Source](../../src/optionstratlib/volatility/utils.rs.html#515-538){.src}
 ]{.sub-heading}
 ::::
 

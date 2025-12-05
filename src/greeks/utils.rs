@@ -14,7 +14,6 @@ use core::f64;
 use num_traits::{FromPrimitive, ToPrimitive};
 use rust_decimal::{Decimal, MathematicalOps};
 use statrs::distribution::{ContinuousCDF, Normal};
-use std::error::Error;
 
 /// Calculates the `d1` parameter used in the Black-Scholes options pricing model.
 ///
@@ -456,28 +455,28 @@ pub fn calculate_delta_neutral_sizes(
     delta1: Decimal,
     delta2: Decimal,
     total_size: Positive,
-) -> Result<(Positive, Positive), Box<dyn Error>> {
+) -> Result<(Positive, Positive), GreeksError> {
     // The equation we want to solve is:
     // delta1 * size1 + delta2 * size2 = Decimal::ZERO
     // size1 + size2 = total_size
 
     if delta1.is_zero() || delta2.is_zero() {
-        return Err(Box::from(
-            "Deltas cannot be zero for delta neutrality".to_string(),
-        ));
+        return Err("Deltas cannot be zero for delta neutrality"
+            .to_string()
+            .into());
     }
 
     // Validate inputs
     if delta1 == delta2 {
-        return Err(Box::from(
-            "Deltas cannot be equal for delta neutrality".to_string(),
-        ));
+        return Err("Deltas cannot be equal for delta neutrality"
+            .to_string()
+            .into());
     }
 
     if delta1.is_sign_positive() == delta2.is_sign_positive() {
-        return Err(Box::from(
-            "Deltas must have opposite signs for delta neutrality".to_string(),
-        ));
+        return Err("Deltas must have opposite signs for delta neutrality"
+            .to_string()
+            .into());
     }
 
     let size1: Positive = Positive((-total_size.to_dec() * delta2) / (delta1 - delta2));
@@ -485,22 +484,22 @@ pub fn calculate_delta_neutral_sizes(
 
     // Validate results
     if size1 < Decimal::ZERO || size2 < Decimal::ZERO {
-        return Err(Box::from(
-            "Solution would require negative position sizes".to_string(),
-        ));
+        return Err("Solution would require negative position sizes"
+            .to_string()
+            .into());
     }
 
     // Verify the solution
     let total_delta: Decimal = size1.to_dec() * delta1 + size2.to_dec() * delta2;
     if total_delta.abs() > DELTA_THRESHOLD {
         // Allow small numerical errors
-        return Err(Box::from("Could not achieve delta neutrality".to_string()));
+        return Err("Could not achieve delta neutrality".to_string().into());
     }
     let toral_size_check = size1 + size2;
     if (toral_size_check.to_dec() - total_size.to_dec()).abs() > DELTA_THRESHOLD {
-        return Err(Box::from(format!(
+        return Err(format!(
             "Calculated sizes {toral_size_check} do not match the total desired size of {total_size} "
-        )));
+        ).into());
     }
 
     Ok((size1, size2))

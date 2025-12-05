@@ -5,7 +5,7 @@
 [optionstratlib](../../index.html)::[utils](../index.html)::[others](index.html)
 :::
 
-# Function [process_n_times_iter]{.fn}Copy item path
+# Function [process_n_times_iter]{.fn} Copy item path
 
 [[Source](../../../src/optionstratlib/utils/others.rs.html#144-168){.src}
 ]{.sub-heading}
@@ -16,7 +16,7 @@ pub fn process_n_times_iter<T, Y, F>(
     positions: &[T],
     n: usize,
     process_combination: F,
-) -> Result<Vec<Y>, String>where
+) -> Result<Vec<Y>, Error>where
     F: FnMut(&[&T]) -> Vec<Y> + Send + Sync,
     T: Clone + Send + Sync,
     Y: Send,
@@ -47,9 +47,9 @@ improved performance.
 
 ## [§](#returns){.doc-anchor}Returns
 
-- `Result<Vec<Y>, String>` - A `Result` containing a vector of the
-  combined results from the closure or an error string if the input
-  slice is empty.
+- `Result<Vec<Y>, Error>` - A `Result` containing a vector of the
+  combined results from the closure or an error if the input slice is
+  empty.
 
 ## [§](#errors){.doc-anchor}Errors
 

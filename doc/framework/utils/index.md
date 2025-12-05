@@ -5,9 +5,9 @@
 [optionstratlib](../index.html)
 :::
 
-# Module utilsCopy item path
+# Module utils Copy item path
 
-[[Source](../../src/optionstratlib/utils/mod.rs.html#1-194){.src}
+[[Source](../../src/optionstratlib/utils/mod.rs.html#1-209){.src}
 ]{.sub-heading}
 ::::
 
@@ -41,7 +41,6 @@ use optionstratlib::utils::logger::{setup_logger, setup_logger_with_level};
 
 
 // Initialize logger with specific level
-
 ```
 :::
 
@@ -232,8 +231,16 @@ fn test_values() {
 
 ## Modules[§](#modules){.anchor} {#modules .section-header}
 
+[file](file/index.html "mod optionstratlib::utils::file"){.mod}
+:   This module contains the file reader and writer for OHLCV data. It
+    provides functionality for reading and writing OHLCV data in various
+    file formats, including CSV and JSON.
+
 [logger](logger/index.html "mod optionstratlib::utils::logger"){.mod}
-:   Utils Module
+:   This module contains the logger setup and configuration. It provides
+    functionality for initializing the logger, setting log levels, and
+    formatting log messages. It uses the `tracing` crate for structured
+    logging and supports various log levels.
 
 [others](others/index.html "mod optionstratlib::utils::others"){.mod}
 :   This module contains other miscellaneous modules and functions. It
@@ -248,11 +255,6 @@ fn test_values() {
 
 [OhlcvCandle](struct.OhlcvCandle.html "struct optionstratlib::utils::OhlcvCandle"){.struct}
 :   Represents an OHLC+V candlestick with timestamp
-
-## Enums[§](#enums){.anchor} {#enums .section-header}
-
-[OhlcvError](enum.OhlcvError.html "enum optionstratlib::utils::OhlcvError"){.enum}
-:   Error type for OHLCV operations
 
 ## Traits[§](#traits){.anchor} {#traits .section-header}
 

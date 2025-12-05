@@ -5,9 +5,9 @@
 [optionstratlib](../../index.html)::[pricing](../index.html)::[monte_carlo](index.html)
 :::
 
-# Function [monte_carlo_option_pricing]{.fn}Copy item path
+# Function [monte_carlo_option_pricing]{.fn} Copy item path
 
-[[Source](../../../src/optionstratlib/pricing/monte_carlo.rs.html#35-61){.src}
+[[Source](../../../src/optionstratlib/pricing/monte_carlo.rs.html#34-60){.src}
 ]{.sub-heading}
 ::::
 
@@ -16,7 +16,7 @@ pub fn monte_carlo_option_pricing(
     option: &Options,
     steps: usize,
     simulations: usize,
-) -> Result<Decimal, Box<dyn Error>>
+) -> Result<Decimal, PricingError>
 ```
 
 Expand description

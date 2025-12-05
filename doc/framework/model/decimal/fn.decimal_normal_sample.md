@@ -5,7 +5,7 @@
 [optionstratlib](../../index.html)::[model](../index.html)::[decimal](index.html)
 :::
 
-# Function [decimal_normal_sample]{.fn}Copy item path
+# Function [decimal_normal_sample]{.fn} Copy item path
 
 [[Source](../../../src/optionstratlib/model/decimal.rs.html#308-312){.src}
 ]{.sub-heading}

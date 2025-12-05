@@ -8,7 +8,7 @@ use optionstratlib::prelude::*;
 use rust_decimal::Decimal;
 use tracing::{debug, info};
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> Result<(), optionstratlib::error::Error> {
     setup_logger();
     let mut option_chain =
         OptionChain::load_from_json("examples/Chains/DAX-30-jan-2025-21637.0.json")?;

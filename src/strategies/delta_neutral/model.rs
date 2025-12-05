@@ -51,7 +51,6 @@ use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
-use std::error::Error;
 use std::fmt;
 use tracing::{debug, warn};
 use utoipa::ToSchema;
@@ -708,7 +707,7 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
     ///    - All adjustments including paired SameSize adjustments when no action is specified
     ///
     /// ## Returns
-    /// * `Result<(), Box<dyn Error>>` - Success if adjustments were applied successfully, or an error
+    /// * `Result<(), StrategyError>` - Success if adjustments were applied successfully, or an error
     ///   if any adjustment operations failed
     ///
     /// ## Notes
@@ -716,7 +715,7 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
     ///   to determine the current state and required actions
     /// - SameSize adjustments are only applied when no specific action filter is provided
     /// - Incompatible adjustments for the specified action are skipped with a debug message
-    fn apply_delta_adjustments(&mut self, action: Option<Action>) -> Result<(), Box<dyn Error>> {
+    fn apply_delta_adjustments(&mut self, action: Option<Action>) -> Result<(), StrategyError> {
         let delta_info = self.delta_neutrality()?;
         if delta_info.is_neutral {
             return Ok(());
@@ -781,7 +780,7 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
     ///
     /// ## Returns
     ///
-    /// * `Result<(), Box<dyn Error>>` - Returns `Ok(())` if the adjustment was applied successfully,
+    /// * `Result<(), StrategyError>` - Returns `Ok(())` if the adjustment was applied successfully,
     ///   or an `Error` if something went wrong during the process.
     ///
     /// ## Supported Adjustments
@@ -799,7 +798,7 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
     fn apply_single_adjustment(
         &mut self,
         adjustment: &DeltaAdjustment,
-    ) -> Result<(), Box<dyn Error>> {
+    ) -> Result<(), StrategyError> {
         match adjustment {
             DeltaAdjustment::BuyOptions {
                 quantity,
@@ -863,18 +862,19 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
         strike: &Positive,
         option_type: &OptionStyle,
         side: &Side,
-    ) -> Result<(), Box<dyn Error>> {
+    ) -> Result<(), StrategyError> {
         let mut binding = self.get_position(option_type, side, strike)?;
         if let Some(current_position) = binding.first_mut() {
             let mut updated_position = (*current_position).clone();
             updated_position.option.quantity += quantity;
             self.modify_position(&updated_position)?;
         } else {
-            return Err(Box::new(PositionError::ValidationError(
+            return Err(PositionError::ValidationError(
                 PositionValidationErrorKind::InvalidPosition {
                     reason: "Position not found".to_string(),
                 },
-            )));
+            )
+            .into());
         }
         Ok(())
     }
@@ -887,16 +887,13 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
     /// # Returns
     /// A `Trade` object derived from the delta adjustment logic.
     ///
-    fn trade_from_delta_adjustment(
-        &mut self,
-        action: Action,
-    ) -> Result<Vec<Trade>, Box<dyn Error>> {
+    fn trade_from_delta_adjustment(&mut self, action: Action) -> Result<Vec<Trade>, StrategyError> {
         let adjustments = self.delta_adjustments()?;
         let mut trades = Vec::new();
 
         // Process a single BuyOptions or SellOptions adjustment
         let mut process_single_adjustment =
-            |adj: &DeltaAdjustment| -> Result<Option<Trade>, Box<dyn Error>> {
+            |adj: &DeltaAdjustment| -> Result<Option<Trade>, StrategyError> {
                 match adj {
                     DeltaAdjustment::BuyOptions {
                         quantity,

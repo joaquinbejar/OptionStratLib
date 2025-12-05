@@ -5,9 +5,9 @@
 [optionstratlib](../index.html)
 :::
 
-# Module chainsCopy item path
+# Module chains Copy item path
 
-[[Source](../../src/optionstratlib/chains/mod.rs.html#1-234){.src}
+[[Source](../../src/optionstratlib/chains/mod.rs.html#1-232){.src}
 ]{.sub-heading}
 ::::
 
@@ -59,18 +59,19 @@ let option_chain_params = OptionChainBuildParams::new(
             "SP500".to_string(),
             None,
             10,
-            pos!(1.0),
+            spos!(1.0),
+            dec!(-0.2),
             Decimal::ZERO,
             pos!(0.02),
             2,
             OptionDataPriceParams::new(
-                pos!(100.0),
-                ExpirationDate::Days(pos!(30.0)),
-                spos!(0.17),
-                dec!(0.0),
-                pos!(0.05),
+                Some(Box::new(pos!(100.0))),
+                Some(ExpirationDate::Days(pos!(30.0))),
+                Some(dec!(0.0)),
+                spos!(0.05),
                 Some("SP500".to_string()),
             ),
+            pos!(0.2),
         );
 
 let built_chain = OptionChain::build_chain(&option_chain_params);
@@ -158,23 +159,24 @@ let params = RNDParameters {
     derivative_tolerance: pos!(0.001),
 };
 let chain = OptionDataPriceParams::new(
-    Positive::new(2000.0).unwrap(),
-    ExpirationDate::Days(pos!(10.0)),
-    Some(Positive::new(0.01).unwrap()),
-    dec!(0.01),
-    Positive::ZERO,
-    None,
+    Some(Box::new(Positive::new(2000.0).unwrap())),
+    Some(ExpirationDate::Days(pos!(10.0))),
+    Some(dec!(0.01)),
+    Some(Positive::ZERO),
+    Some("Symbol".to_string()),
 );
 
 let option_chain_params = OptionChainBuildParams::new(
     "SP500".to_string(),
     Some(Positive::ONE),
     5,
-    Positive::ONE,
+    Some(Positive::ONE),
+    dec!(-0.2),
     dec!(0.0001),
     Positive::new(0.02).unwrap(),
     2,
     chain,
+    pos!(0.2),
 );
 
 let option_chain = OptionChain::build_chain(&option_chain_params);
@@ -265,10 +267,6 @@ calculations, particularly for extreme market conditions.
 [DeltasInStrike](struct.DeltasInStrike.html "struct optionstratlib::chains::DeltasInStrike"){.struct}
 :   Represents option delta values for all four basic option positions
     at a specific strike price.
-
-[FourOptions](struct.FourOptions.html "struct optionstratlib::chains::FourOptions"){.struct}
-:   Represents a combination of four option positions that form a
-    complete option strategy.
 
 [OptionData](struct.OptionData.html "struct optionstratlib::chains::OptionData"){.struct}
 :   Struct representing a row in an option chain with detailed pricing

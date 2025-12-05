@@ -1,14 +1,7 @@
-use optionstratlib::curves::{Curve, Point2D};
-use optionstratlib::geometrics::{
-    ConstructionMethod, ConstructionParams, GeometricObject, Plottable,
-};
-use optionstratlib::greeks::d2;
-use optionstratlib::utils::setup_logger;
-use optionstratlib::{Positive, pos};
+use optionstratlib::prelude::*;
 use rust_decimal_macros::dec;
-use std::error::Error;
 
-fn main() -> Result<(), Box<dyn Error>> {
+fn main() -> Result<(), Error> {
     setup_logger();
     let params = ConstructionParams::D2 {
         t_start: dec!(1.0),

@@ -5,7 +5,7 @@
 [optionstratlib](../index.html)::[greeks](index.html)
 :::
 
-# Function [d1]{.fn}Copy item path
+# Function [d1]{.fn} Copy item path
 
 [[Source](../../src/optionstratlib/greeks/utils.rs.html#82-132){.src}
 ]{.sub-heading}

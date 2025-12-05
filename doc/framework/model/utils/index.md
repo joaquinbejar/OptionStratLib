@@ -5,9 +5,9 @@
 [optionstratlib](../../index.html)::[model](../index.html)
 :::
 
-# Module utilsCopy item path
+# Module utils Copy item path
 
-[[Source](../../../src/optionstratlib/model/utils.rs.html#6-532){.src}
+[[Source](../../../src/optionstratlib/model/utils.rs.html#6-607){.src}
 ]{.sub-heading}
 ::::
 
@@ -24,6 +24,11 @@ Utility functions supporting various operations across the library.
     financial calculations.
 
 ## Functions[§](#functions){.anchor} {#functions .section-header}
+
+[calculate_optimal_price_range](fn.calculate_optimal_price_range.html "fn optionstratlib::model::utils::calculate_optimal_price_range"){.fn}
+:   Calculates the optimal price range for an option based on its
+    underlying price, strike price, implied volatility, and expiration
+    date.
 
 [create_sample_option](fn.create_sample_option.html "fn optionstratlib::model::utils::create_sample_option"){.fn}
 :   Creates a sample option contract with predefined parameters for
@@ -42,6 +47,9 @@ Utility functions supporting various operations across the library.
 
 [create_sample_position](fn.create_sample_position.html "fn optionstratlib::model::utils::create_sample_position"){.fn}
 :   Creates a sample position for testing and demonstration purposes.
+
+[generate_price_points](fn.generate_price_points.html "fn optionstratlib::model::utils::generate_price_points"){.fn}
+:   Generates a price vector for the payoff graph
 
 [mean_and_std](fn.mean_and_std.html "fn optionstratlib::model::utils::mean_and_std"){.fn}
 :   Computes the mean and standard deviation of a vector containing

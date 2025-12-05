@@ -3,13 +3,13 @@
    Email: jb@taunais.com
    Date: 21/8/24
 ******************************************************************************/
+use crate::error::ChainError;
 use crate::model::Position;
 use crate::model::types::{OptionStyle, OptionType, Side};
 use crate::{ExpirationDate, Options, Positive, pos};
 use chrono::{NaiveDateTime, TimeZone, Utc};
 use rust_decimal::{Decimal, MathematicalOps};
 use rust_decimal_macros::dec;
-use std::error::Error;
 use std::ops::Mul;
 
 /// Converts a vector of `Positive` values to a vector of `f64` values.
@@ -392,7 +392,7 @@ pub trait ToRound {
 /// - The `max_price` represents the upper bound of the price range.
 ///
 /// On success, the returned tuple includes both values rounded to a "nice" step value
-/// for better usability. On failure, an error boxed in `Box<dyn Error>` is returned.
+/// for better usability. On failure, an error boxed in `ChainError` is returned.
 ///
 /// # Calculations
 /// 1. Determines the number of years to expiration by calculating days to expiry
@@ -420,7 +420,7 @@ pub fn calculate_optimal_price_range(
     strike_price: Positive,
     implied_volatility: Positive,
     expiration_date: ExpirationDate,
-) -> Result<(Positive, Positive), Box<dyn Error>> {
+) -> Result<(Positive, Positive), ChainError> {
     let days_to_expiry = expiration_date.get_days()?;
     let years_to_expiry = Decimal::from(days_to_expiry) / dec!(365.0);
 

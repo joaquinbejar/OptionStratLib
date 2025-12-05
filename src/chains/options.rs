@@ -4,11 +4,11 @@
    Date: 12/12/24
 ******************************************************************************/
 use crate::Options;
+use crate::error::OptionsError;
 use crate::greeks::Greeks;
 use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
-use std::error::Error;
 use utoipa::ToSchema;
 
 /// Represents a collection of option positions at the same strike price.
@@ -101,7 +101,7 @@ impl OptionsInStrike {
     /// This method will return an error if any of the underlying delta calculations fail,
     /// which may occur due to invalid option parameters or computation errors.
     ///
-    pub fn deltas(&self) -> Result<DeltasInStrike, Box<dyn Error>> {
+    pub fn deltas(&self) -> Result<DeltasInStrike, OptionsError> {
         Ok(DeltasInStrike {
             long_call: self.long_call.delta()?,
             short_call: self.short_call.delta()?,

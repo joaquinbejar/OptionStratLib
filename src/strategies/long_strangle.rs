@@ -16,7 +16,7 @@ use crate::{
     ExpirationDate, Options, Positive,
     chains::{StrategyLegs, chain::OptionChain, utils::OptionDataGroup},
     error::{
-        GreeksError, OperationErrorKind,
+        GreeksError, OperationErrorKind, PricingError,
         position::{PositionError, PositionValidationErrorKind},
         probability::ProbabilityError,
         strategies::StrategyError,
@@ -44,7 +44,6 @@ use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
-use std::error::Error;
 use tracing::{debug, info};
 use utoipa::ToSchema;
 
@@ -800,7 +799,7 @@ impl Optimizable for LongStrangle {
 }
 
 impl Profit for LongStrangle {
-    fn calculate_profit_at(&self, price: &Positive) -> Result<Decimal, Box<dyn Error>> {
+    fn calculate_profit_at(&self, price: &Positive) -> Result<Decimal, PricingError> {
         let price = Some(price);
         Ok(self.long_call.pnl_at_expiration(&price)? + self.long_put.pnl_at_expiration(&price)?)
     }
@@ -895,7 +894,7 @@ impl PnLCalculator for LongStrangle {
         market_price: &Positive,
         expiration_date: ExpirationDate,
         implied_volatility: &Positive,
-    ) -> Result<PnL, Box<dyn Error>> {
+    ) -> Result<PnL, PricingError> {
         Ok(self
             .long_call
             .calculate_pnl(market_price, expiration_date, implied_volatility)?
@@ -907,7 +906,7 @@ impl PnLCalculator for LongStrangle {
     fn calculate_pnl_at_expiration(
         &self,
         underlying_price: &Positive,
-    ) -> Result<PnL, Box<dyn Error>> {
+    ) -> Result<PnL, PricingError> {
         Ok(self
             .long_call
             .calculate_pnl_at_expiration(underlying_price)?
@@ -916,7 +915,7 @@ impl PnLCalculator for LongStrangle {
                 .calculate_pnl_at_expiration(underlying_price)?)
     }
 
-    fn adjustments_pnl(&self, adjustment: &DeltaAdjustment) -> Result<PnL, Box<dyn Error>> {
+    fn adjustments_pnl(&self, adjustment: &DeltaAdjustment) -> Result<PnL, PricingError> {
         let pnl = {
             match adjustment {
                 DeltaAdjustment::BuyOptions {
@@ -1738,20 +1737,12 @@ mod tests_adjust_option_position_long {
         );
 
         assert!(result.is_err());
-        match result.unwrap_err().downcast_ref::<PositionError>() {
-            Some(PositionError::ValidationError(
-                PositionValidationErrorKind::IncompatibleSide {
-                    position_side: _,
-                    reason,
-                },
-            )) => {
-                assert_eq!(
-                    reason,
-                    "Position side is Short, it is not valid for LongStrangle"
-                );
-            }
-            _ => panic!("Expected PositionError::ValidationError"),
-        }
+        let err = result.unwrap_err();
+        // StrategyError wraps PositionError, so we check the error message
+        assert!(
+            err.to_string()
+                .contains("Position side is Short, it is not valid for LongStrangle")
+        );
     }
 
     #[test]

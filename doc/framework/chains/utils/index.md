@@ -5,9 +5,9 @@
 [optionstratlib](../../index.html)::[chains](../index.html)
 :::
 
-# Module utilsCopy item path
+# Module utils Copy item path
 
-[[Source](../../../src/optionstratlib/chains/utils.rs.html#6-1418){.src}
+[[Source](../../../src/optionstratlib/chains/utils.rs.html#6-1483){.src}
 ]{.sub-heading}
 ::::
 
@@ -40,5 +40,14 @@ Expand description
 [OptionChainParams](trait.OptionChainParams.html "trait optionstratlib::chains::utils::OptionChainParams"){.trait}
 :   A trait for obtaining option pricing parameters based on a strike
     price.
+
+## Functions[§](#functions){.anchor} {#functions .section-header}
+
+[adjust_volatility](fn.adjust_volatility.html "fn optionstratlib::chains::utils::adjust_volatility"){.fn}
+:   Adjust vol with skew/smile, using *relative* distance to ATM.
+
+[strike_step](fn.strike_step.html "fn optionstratlib::chains::utils::strike_step"){.fn}
+:   Return the strike interval that gives \~`size` strikes around ATM.
+    All units are in the same currency.
 ::::::
 :::::::

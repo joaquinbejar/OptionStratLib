@@ -5,16 +5,16 @@
 [optionstratlib](../../index.html)::[strategies](../index.html)
 :::
 
-# Module customCopy item path
+# Module custom Copy item path
 
-[[Source](../../../src/optionstratlib/strategies/custom.rs.html#6-2043){.src}
+[[Source](../../../src/optionstratlib/strategies/custom.rs.html#6-973){.src}
 ]{.sub-heading}
 ::::
 
 Expand description
 
 ::: docblock
-Custom strategy implementation for user-defined strategies
+Custom strategy implementation and utilities
 :::
 
 ## Structs[§](#structs){.anchor} {#structs .section-header}

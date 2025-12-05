@@ -5,7 +5,7 @@
 ******************************************************************************/
 use crate::Positive;
 use crate::constants::TOLERANCE;
-use crate::error::DecimalError;
+use crate::error::{DecimalError, Error};
 use itertools::Itertools;
 use num_traits::{FromPrimitive, ToPrimitive};
 use rand::{Rng, rng};
@@ -121,8 +121,8 @@ pub fn random_decimal(rng: &mut impl Rng) -> Result<Decimal, DecimalError> {
 ///
 /// # Returns
 ///
-/// * `Result<Vec<Y>, String>` - A `Result` containing a vector of the combined results from the closure
-///   or an error string if the input slice is empty.
+/// * `Result<Vec<Y>, Error>` - A `Result` containing a vector of the combined results from the closure
+///   or an error if the input slice is empty.
 ///
 /// # Errors
 ///
@@ -145,14 +145,14 @@ pub fn process_n_times_iter<T, Y, F>(
     positions: &[T],
     n: usize,
     process_combination: F,
-) -> Result<Vec<Y>, String>
+) -> Result<Vec<Y>, Error>
 where
     F: FnMut(&[&T]) -> Vec<Y> + Send + Sync,
     T: Clone + Send + Sync,
     Y: Send,
 {
     if positions.is_empty() {
-        return Err("Vector empty".to_string());
+        return Err(Error::Other("Vector empty".to_string()));
     }
 
     let combinations: Vec<_> = positions.iter().combinations_with_replacement(n).collect();
@@ -379,7 +379,7 @@ mod tests_process_n_times_iter {
         let empty_vec: Vec<i32> = vec![];
         let result = process_n_times_iter(&empty_vec, 1, |_| vec![42]);
         assert!(result.is_err());
-        assert_eq!(result.unwrap_err(), "Vector empty".to_string());
+        assert_eq!(result.unwrap_err().to_string(), "Vector empty");
     }
 
     #[test]

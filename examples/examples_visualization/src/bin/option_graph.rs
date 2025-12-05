@@ -4,9 +4,6 @@
    Date: 20/8/24
 ******************************************************************************/
 use optionstratlib::prelude::*;
-use rust_decimal_macros::dec;
-use std::error::Error;
-use tracing::info;
 
 fn create_sample_option() -> Options {
     Options::new(
@@ -24,7 +21,7 @@ fn create_sample_option() -> Options {
         None,
     )
 }
-fn main() -> Result<(), Box<dyn Error>> {
+fn main() -> Result<(), Error> {
     let option = create_sample_option();
     info!("Title: {}", option.get_title());
     info!("Greeks: {:?}", option.greeks());

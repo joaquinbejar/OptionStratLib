@@ -8,7 +8,7 @@ use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use tracing::info;
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> Result<(), optionstratlib::error::Error> {
     let symbol = "GER400";
     setup_logger();
     let option_chain = OptionChain::load_from_json(

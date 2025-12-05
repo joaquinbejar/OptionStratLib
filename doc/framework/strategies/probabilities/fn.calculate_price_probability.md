@@ -5,20 +5,20 @@
 [optionstratlib](../../index.html)::[strategies](../index.html)::[probabilities](index.html)
 :::
 
-# Function [calculate_price_probability]{.fn}Copy item path
+# Function [calculate_price_probability]{.fn} Copy item path
 
-[[Source](../../../src/optionstratlib/strategies/probabilities/utils.rs.html#159-203){.src}
+[[Source](../../../src/optionstratlib/strategies/probabilities/utils.rs.html#158-202){.src}
 ]{.sub-heading}
 ::::
 
 ``` {.rust .item-decl}
 pub fn calculate_price_probability(
-    current_price: Positive,
-    lower_bound: Positive,
-    upper_bound: Positive,
+    current_price: &Positive,
+    lower_bound: &Positive,
+    upper_bound: &Positive,
     volatility_adj: Option<VolatilityAdjustment>,
     trend: Option<PriceTrend>,
-    expiration_date: ExpirationDate,
+    expiration_date: &ExpirationDate,
     risk_free_rate: Option<Decimal>,
 ) -> Result<(Positive, Positive, Positive), ProbabilityError>
 ```

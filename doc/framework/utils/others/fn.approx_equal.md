@@ -5,7 +5,7 @@
 [optionstratlib](../../index.html)::[utils](../index.html)::[others](index.html)
 :::
 
-# Function [approx_equal]{.fn}Copy item path
+# Function [approx_equal]{.fn} Copy item path
 
 [[Source](../../../src/optionstratlib/utils/others.rs.html#45-47){.src}
 ]{.sub-heading}

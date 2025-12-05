@@ -5,9 +5,9 @@
 [optionstratlib](../../index.html)::[error](../index.html)
 :::
 
-# Module greeksCopy item path
+# Module greeks Copy item path
 
-[[Source](../../../src/optionstratlib/error/greeks.rs.html#7-769){.src}
+[[Source](../../../src/optionstratlib/error/greeks.rs.html#7-693){.src}
 ]{.sub-heading}
 ::::
 

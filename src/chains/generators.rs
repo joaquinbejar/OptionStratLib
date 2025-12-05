@@ -4,6 +4,7 @@
    Date: 27/3/25
 ******************************************************************************/
 use crate::chains::OptionChain;
+use crate::error::ChainError;
 use crate::simulation::steps::{Step, Ystep};
 use crate::simulation::{WalkParams, WalkType};
 use crate::utils::TimeFrame;
@@ -12,7 +13,6 @@ use crate::volatility::{adjust_volatility, constant_volatility};
 use crate::{ExpirationDate, Positive, pos};
 use core::option::Option;
 use rust_decimal::Decimal;
-use std::error::Error;
 use tracing::debug;
 
 /// Creates a new `OptionChain` from a previous `Ystep` and a new price.
@@ -30,14 +30,14 @@ use tracing::debug;
 /// # Returns
 ///
 /// * `Ok(OptionChain)` - A new `OptionChain` with the updated parameters.
-/// * `Err(Box<dyn std::error::Error>)` - If an error occurs during the creation of the new `OptionChain`.
+/// * `Err(optionstratlib::error::Error)` - If an error occurs during the creation of the new `OptionChain`.
 ///
 fn create_chain_from_step(
     previous_y_step: &Ystep<OptionChain>,
     new_price: Option<Box<Positive>>,
     volatility: Option<Positive>,
     expiration_date: Option<ExpirationDate>,
-) -> Result<OptionChain, Box<dyn Error>> {
+) -> Result<OptionChain, ChainError> {
     let chain = previous_y_step.value();
     let mut chain_params = chain.to_build_params()?;
     chain_params.set_underlying_price(new_price);

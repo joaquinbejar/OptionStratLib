@@ -1,4 +1,5 @@
 /******************************************************************************
+use optionstratlib::error::Error;
    Author: Joaquín Béjar García
    Email: jb@taunais.com
    Date: 8/11/25
@@ -37,21 +38,7 @@
 //! - Distribution of exit reasons
 //! - PNG visualization of the last simulation in `Draws/Simulation/long_call_strategy_simulation.png`
 
-use optionstratlib::Options;
-use optionstratlib::chains::generator_positive;
-use optionstratlib::model::types::{OptionStyle, OptionType, Side};
 use optionstratlib::prelude::*;
-use optionstratlib::simulation::simulator::Simulator;
-use optionstratlib::simulation::steps::{Step, Xstep, Ystep};
-use optionstratlib::simulation::{ExitPolicy, Simulate, WalkParams, WalkType, WalkTypeAble};
-use optionstratlib::strategies::LongCall;
-use optionstratlib::utils::setup_logger;
-use optionstratlib::utils::time::{TimeFrame, convert_time_frame};
-use optionstratlib::volatility::volatility_for_dt;
-use rust_decimal::prelude::ToPrimitive;
-use rust_decimal_macros::dec;
-use std::path::Path;
-use tracing::info;
 
 /// Walker implementation for the simulation.
 struct Walker;
@@ -70,21 +57,21 @@ impl WalkTypeAble<Positive, Positive> for Walker {}
 /// - The random walk simulation fails
 /// - The simulate trait execution fails
 /// - File I/O operations fail
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> Result<(), Error> {
     setup_logger();
 
     // Simulation parameters
-    let n_simulations = 10000; // Number of simulations to run
+    let n_simulations = 100; // Number of simulations to run
     let n_steps = 10080; // 7 days in minutes
-    let underlying_price = pos!(4007.7);
+    let underlying_price = pos!(4088.85);
     let days = pos!(7.0);
-    let implied_volatility = pos!(0.27); // 27% annual volatility
+    let implied_volatility = pos!(0.24); // 27% annual volatility
     let symbol = "GOLD".to_string();
 
     // For a Long Call with delta ~0.70, we need a strike slightly in-the-money
     // Delta 0.70 for a call means the strike is below current price
     // Approximate: strike = underlying * 0.98 for delta ~0.70
-    let strike_price = pos!(3930.0); // Strike price for the long call (delta ~0.70)
+    let strike_price = pos!(4150.0); // Strike price for the long call (delta ~0.30)
 
     // First, calculate the premium for the option
     let temp_option = Options::new(
@@ -121,7 +108,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Define exit policy: 100% profit OR expiration
     let exit_policy = ExitPolicy::Or(vec![
-        ExitPolicy::ProfitPercent(dec!(1.0)), // 100% profit (premium doubles)
+        ExitPolicy::ProfitPercent(dec!(0.5)), // 50% profit (premium doubles)
         ExitPolicy::Expiration,               // Or let it expire
     ]);
 
@@ -132,7 +119,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!("Expiration: {} days ({} steps)", days, n_steps);
     info!("Implied Volatility: {:.2}%", implied_volatility * 100.0);
     info!("Initial Premium Paid: ${:.2}", initial_premium);
-    info!("Exit Policy: 100% profit OR expiration");
+    info!("Exit Policy: 50% profit OR expiration");
     info!("================================================================");
 
     // Create WalkParams for the Simulator
@@ -150,13 +137,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             x: Xstep::new(Positive::ONE, TimeFrame::Minute, ExpirationDate::Days(days)),
             y: Ystep::new(0, underlying_price),
         },
-        walk_type: WalkType::Custom {
+        walk_type: WalkType::Heston {
             dt,
-            drift: dec!(0.15), // Slight upward drift for long call
+            drift: dec!(0.01),
             volatility: volatility_dt,
-            vov: pos!(0.02),         // Volatility of volatility (2%)
-            vol_speed: pos!(0.02),   // Mean reversion speed
-            vol_mean: volatility_dt, // Mean volatility level (same as initial)
+            kappa: pos!(2.0),
+            theta: pos!(0.0225),
+            xi: pos!(0.3),
+            rho: dec!(-0.3),
         },
         walker,
     };

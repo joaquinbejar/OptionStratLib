@@ -5,9 +5,9 @@
 [optionstratlib](../index.html)
 :::
 
-# Module errorCopy item path
+# Module error Copy item path
 
-[[Source](../../src/optionstratlib/error/mod.rs.html#6-206){.src}
+[[Source](../../src/optionstratlib/error/mod.rs.html#6-242){.src}
 ]{.sub-heading}
 ::::
 
@@ -127,9 +127,19 @@ error/
 
 `pub use position::`[`PositionError`](position/enum.PositionError.html "enum optionstratlib::error::position::PositionError"){.enum}`;`
 
+`pub use pricing::`[`PricingError`](pricing/enum.PricingError.html "enum optionstratlib::error::pricing::PricingError"){.enum}`;`
+
+`pub use pricing::`[`PricingResult`](pricing/type.PricingResult.html "type optionstratlib::error::pricing::PricingResult"){.type}`;`
+
 `pub use probability::`[`ProbabilityError`](probability/enum.ProbabilityError.html "enum optionstratlib::error::probability::ProbabilityError"){.enum}`;`
 
+`pub use simulation::`[`SimulationError`](simulation/enum.SimulationError.html "enum optionstratlib::error::simulation::SimulationError"){.enum}`;`
+
+`pub use simulation::`[`SimulationResult`](simulation/type.SimulationResult.html "type optionstratlib::error::simulation::SimulationResult"){.type}`;`
+
 `pub use strategies::`[`StrategyError`](strategies/enum.StrategyError.html "enum optionstratlib::error::strategies::StrategyError"){.enum}`;`
+
+`pub use unified::`[`Error`](unified/enum.Error.html "enum optionstratlib::error::unified::Error"){.enum}`;`
 
 ## Modules[§](#modules){.anchor} {#modules .section-header}
 
@@ -148,11 +158,20 @@ error/
 [position](position/index.html "mod optionstratlib::error::position"){.mod}
 :   Position Errors (`PositionError`)
 
+[pricing](pricing/index.html "mod optionstratlib::error::pricing"){.mod}
+:   Pricing Errors (`PricingError`)
+
 [probability](probability/index.html "mod optionstratlib::error::probability"){.mod}
 :   Probability Errors (`ProbabilityError`)
 
+[simulation](simulation/index.html "mod optionstratlib::error::simulation"){.mod}
+:   Simulation Errors (`SimulationError`)
+
 [strategies](strategies/index.html "mod optionstratlib::error::strategies"){.mod}
 :   Strategy Errors (`StrategyError`)
+
+[unified](unified/index.html "mod optionstratlib::error::unified"){.mod}
+:   Unified Error Type
 
 ## Structs[§](#structs){.anchor} {#structs .section-header}
 
@@ -161,6 +180,10 @@ error/
 
 ## Enums[§](#enums){.anchor} {#enums .section-header}
 
+[GraphError](enum.GraphError.html "enum optionstratlib::error::GraphError"){.enum}
+:   Represents errors that can occur during graph generation and
+    rendering operations.
+
 [InterpolationError](enum.InterpolationError.html "enum optionstratlib::error::InterpolationError"){.enum}
 :   Represents errors that can occur during different interpolation
     operations.
@@ -168,6 +191,9 @@ error/
 [MetricsError](enum.MetricsError.html "enum optionstratlib::error::MetricsError"){.enum}
 :   Error types specifically related to financial and statistical
     metrics calculations.
+
+[OhlcvError](enum.OhlcvError.html "enum optionstratlib::error::OhlcvError"){.enum}
+:   Error type for OHLCV operations
 
 [OperationErrorKind](enum.OperationErrorKind.html "enum optionstratlib::error::OperationErrorKind"){.enum}
 :   Represents the types of errors that can occur during operations

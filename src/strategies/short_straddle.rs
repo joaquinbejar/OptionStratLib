@@ -17,7 +17,7 @@ use crate::{
     chains::{StrategyLegs, chain::OptionChain, utils::OptionDataGroup},
     constants::ZERO,
     error::{
-        GreeksError, OperationErrorKind,
+        GreeksError, OperationErrorKind, PricingError,
         position::{PositionError, PositionValidationErrorKind},
         probability::ProbabilityError,
         strategies::{ProfitLossErrorKind, StrategyError},
@@ -44,7 +44,6 @@ use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
-use std::error::Error;
 use tracing::{info, trace};
 use utoipa::ToSchema;
 
@@ -775,7 +774,7 @@ impl Optimizable for ShortStraddle {
 }
 
 impl Profit for ShortStraddle {
-    fn calculate_profit_at(&self, price: &Positive) -> Result<Decimal, Box<dyn Error>> {
+    fn calculate_profit_at(&self, price: &Positive) -> Result<Decimal, PricingError> {
         let price = Some(price);
         trace!(
             "Price: {:?} Strike: {} Call: {:.2} Strike: {} Put: {:.2} Profit: {:.2}",
@@ -883,7 +882,7 @@ impl PnLCalculator for ShortStraddle {
         market_price: &Positive,
         expiration_date: ExpirationDate,
         implied_volatility: &Positive,
-    ) -> Result<PnL, Box<dyn Error>> {
+    ) -> Result<PnL, PricingError> {
         Ok(self
             .short_call
             .calculate_pnl(market_price, expiration_date, implied_volatility)?
@@ -895,7 +894,7 @@ impl PnLCalculator for ShortStraddle {
     fn calculate_pnl_at_expiration(
         &self,
         underlying_price: &Positive,
-    ) -> Result<PnL, Box<dyn Error>> {
+    ) -> Result<PnL, PricingError> {
         Ok(self
             .short_call
             .calculate_pnl_at_expiration(underlying_price)?
@@ -2211,20 +2210,12 @@ mod tests_adjust_option_position {
         );
 
         assert!(result.is_err());
-        match result.unwrap_err().downcast_ref::<PositionError>() {
-            Some(PositionError::ValidationError(
-                PositionValidationErrorKind::IncompatibleSide {
-                    position_side: _,
-                    reason,
-                },
-            )) => {
-                assert_eq!(
-                    reason,
-                    "Position side is Long, it is not valid for ShortStraddle"
-                );
-            }
-            _ => panic!("Expected PositionError::ValidationError"),
-        }
+        let err = result.unwrap_err();
+        // StrategyError wraps PositionError, so we check the error message
+        assert!(
+            err.to_string()
+                .contains("Position side is Long, it is not valid for ShortStraddle")
+        );
     }
 
     #[test]

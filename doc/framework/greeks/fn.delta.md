@@ -5,9 +5,9 @@
 [optionstratlib](../index.html)::[greeks](index.html)
 :::
 
-# Function [delta]{.fn}Copy item path
+# Function [delta]{.fn} Copy item path
 
-[[Source](../../src/optionstratlib/greeks/equations.rs.html#320-406){.src}
+[[Source](../../src/optionstratlib/greeks/equations.rs.html#348-434){.src}
 ]{.sub-heading}
 ::::
 
@@ -85,7 +85,7 @@ use rust_decimal_macros::dec;
 use tracing::{error, info};
 use optionstratlib::constants::ZERO;
 use optionstratlib::greeks::delta;
-use optionstratlib::Options;
+use optionstratlib::{ExpirationDate, Options};
 use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
 use optionstratlib::{pos, Positive};
 let option = Options {

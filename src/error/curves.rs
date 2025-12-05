@@ -7,10 +7,7 @@
 use crate::error::common::OperationErrorKind;
 use crate::error::metrics::MetricsError;
 use crate::error::{GraphError, GreeksError, InterpolationError, OptionsError, PositionError};
-use std::error::Error;
-use std::fmt;
-
-impl Error for CurveError {}
+use thiserror::Error;
 
 /// Represents different types of errors that can occur in the `curves` module.
 ///
@@ -93,49 +90,76 @@ impl Error for CurveError {}
 /// // Example of creating a point error
 /// let point_error = CurveError::Point2DError { reason: "Point coordinates out of bounds" };
 /// ```
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum CurveError {
     /// Error related to 2D point operations
+    #[error("Error: {reason}")]
     Point2DError {
         /// Static description of the point-related issue
         reason: &'static str,
     },
 
     /// General operational error
+    #[error("Operation error: {0}")]
     OperationError(
         /// The specific kind of operation failure
         OperationErrorKind,
     ),
 
     /// Standard error with additional context
+    #[error("Error: {reason}")]
     StdError {
         /// Detailed explanation of the error
         reason: String,
     },
 
     /// Error during curve interpolation
+    #[error("Interpolation error: {0}")]
     InterpolationError(
         /// Description of the interpolation issue
         String,
     ),
 
     /// Error during curve or structure construction
+    #[error("Construction error: {0}")]
     ConstructionError(
         /// Details about the construction failure
         String,
     ),
 
     /// Error during curve analysis operations
+    #[error("Analysis error: {0}")]
     AnalysisError(
         /// Explanation of the analysis issue
         String,
     ),
 
     /// Error when calculating or processing curve metrics
+    #[error("Metrics error: {0}")]
     MetricsError(
         /// Description of the metrics-related issue
         String,
     ),
+
+    /// Error from position operations
+    #[error(transparent)]
+    Position(#[from] PositionError),
+
+    /// Error from options operations
+    #[error(transparent)]
+    Options(#[from] OptionsError),
+
+    /// Error from Greeks calculations
+    #[error(transparent)]
+    Greeks(#[from] GreeksError),
+
+    /// Error from interpolation operations  
+    #[error("Interpolation error: {0}")]
+    InterpolationOp(String),
+
+    /// Error from graph operations
+    #[error(transparent)]
+    Graph(Box<GraphError>),
 }
 
 /// Provides helper methods for constructing specific variants of the `CurvesError` type.
@@ -184,20 +208,6 @@ impl CurveError {
             operation: operation.to_string(),
             reason: reason.to_string(),
         })
-    }
-}
-
-impl fmt::Display for CurveError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            CurveError::OperationError(err) => write!(f, "Operation error: {err}"),
-            CurveError::StdError { reason } => write!(f, "Error: {reason}"),
-            CurveError::Point2DError { reason } => write!(f, "Error: {reason}"),
-            CurveError::ConstructionError(reason) => write!(f, "Construction error: {reason}"),
-            CurveError::AnalysisError(reason) => write!(f, "Analysis error: {reason}"),
-            CurveError::MetricsError(reason) => write!(f, "Metrics error: {reason}"),
-            CurveError::InterpolationError(reason) => write!(f, "Interpolation error: {reason}"),
-        }
     }
 }
 
@@ -264,44 +274,29 @@ pub type CurvesResult<T> = Result<T, CurveError>;
 /// ## Debugging:
 /// The resulting `CurvesError` will include contextual details, making it
 /// straightforward to trace and debug the underlying issue.
-impl From<PositionError> for CurveError {
-    fn from(err: PositionError) -> Self {
-        CurveError::OperationError(OperationErrorKind::InvalidParameters {
-            operation: "Position".to_string(),
-            reason: err.to_string(),
-        })
-    }
-}
-
-impl From<OptionsError> for CurveError {
-    fn from(err: OptionsError) -> Self {
-        CurveError::OperationError(OperationErrorKind::InvalidParameters {
-            operation: "Option".to_string(),
-            reason: err.to_string(),
-        })
-    }
-}
-
-impl From<GreeksError> for CurveError {
-    fn from(err: GreeksError) -> Self {
-        CurveError::OperationError(OperationErrorKind::InvalidParameters {
-            operation: "Greeks".to_string(),
-            reason: err.to_string(),
-        })
+impl From<MetricsError> for CurveError {
+    fn from(err: MetricsError) -> Self {
+        CurveError::MetricsError(err.to_string())
     }
 }
 
 impl From<InterpolationError> for CurveError {
     fn from(err: InterpolationError) -> Self {
-        CurveError::StdError {
-            reason: err.to_string(),
-        }
+        CurveError::InterpolationOp(err.to_string())
     }
 }
 
-impl From<MetricsError> for CurveError {
-    fn from(err: MetricsError) -> Self {
-        CurveError::MetricsError(err.to_string())
+impl From<GraphError> for CurveError {
+    fn from(err: GraphError) -> Self {
+        CurveError::Graph(Box::new(err))
+    }
+}
+
+impl From<Box<dyn std::error::Error>> for CurveError {
+    fn from(err: Box<dyn std::error::Error>) -> Self {
+        CurveError::StdError {
+            reason: err.to_string(),
+        }
     }
 }
 
@@ -311,14 +306,14 @@ impl From<MetricsError> for CurveError {
 ///
 /// # Behavior
 ///
-/// When constructing a `CurvesError` from a `Box<dyn Error>`, the `StdError` variant
-/// is utilized. The `Box<dyn Error>` is unwrapped, and its string representation
+/// When constructing a `CurveError` from a `Box<dyn std::error::Error>`, the `StdError` variant
+/// is utilized. The boxed error is unwrapped, and its string representation
 /// (via `to_string`) is used to populate the `reason` field of the `StdError` variant.
 ///
 /// # Parameters
 ///
-/// - `err`: A boxed standard error (`Box<dyn Error>`). Represents the error to be
-///   wrapped within a `CurvesError` variant.
+/// - `err`: A boxed standard error (`Box<dyn std::error::Error>`). Represents the error to be
+///   wrapped within a `CurveError` variant.
 ///
 /// # Returns
 ///
@@ -340,31 +335,10 @@ impl From<MetricsError> for CurveError {
 ///
 /// # Notes
 ///
-/// - This implementation assumes that all input errors (`Box<dyn Error>`) are stringifiable
+/// - This implementation assumes that all input errors (`Box<dyn std::error::Error>`) are stringifiable
 ///   using the `to_string()` method.
 /// - This conversion is particularly useful for libraries integrating generalized errors
 ///   (e.g., I/O errors, or third-party library errors) into a standardized error system.
-///
-/// # Module Context
-///
-/// This conversion is provided in the `crate::error::curves` module, which defines
-/// the `CurvesError` enum encompassing multiple errors related to curve operations.
-impl From<Box<dyn Error>> for CurveError {
-    fn from(err: Box<dyn Error>) -> Self {
-        CurveError::StdError {
-            reason: err.to_string(),
-        }
-    }
-}
-
-impl From<GraphError> for CurveError {
-    fn from(err: GraphError) -> Self {
-        CurveError::StdError {
-            reason: err.to_string(),
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -430,7 +404,7 @@ mod tests {
 
     #[test]
     fn test_from_box_dyn_error() {
-        let boxed_error: Box<dyn Error> = Box::new(std::io::Error::other("io error"));
+        let boxed_error: Box<dyn std::error::Error> = Box::new(std::io::Error::other("io error"));
         let curves_error = CurveError::from(boxed_error);
         match curves_error {
             CurveError::StdError { reason } => assert_eq!(reason, "io error"),
@@ -444,12 +418,8 @@ mod tests {
         let curves_error = CurveError::from(position_error);
 
         match curves_error {
-            CurveError::OperationError(OperationErrorKind::InvalidParameters {
-                operation,
-                reason,
-            }) => {
-                assert_eq!(operation, "Position");
-                assert!(reason.contains("test_op"));
+            CurveError::Position(_) => {
+                // Conversion successful
             }
             _ => panic!("Wrong error variant"),
         }

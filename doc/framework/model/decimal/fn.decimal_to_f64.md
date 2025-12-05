@@ -5,7 +5,7 @@
 [optionstratlib](../../index.html)::[model](../index.html)::[decimal](index.html)
 :::
 
-# Function [decimal_to_f64]{.fn}Copy item path
+# Function [decimal_to_f64]{.fn} Copy item path
 
 [[Source](../../../src/optionstratlib/model/decimal.rs.html#244-250){.src}
 ]{.sub-heading}

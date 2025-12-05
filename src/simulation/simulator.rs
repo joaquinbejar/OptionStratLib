@@ -1,3 +1,4 @@
+use crate::error::PricingError;
 use crate::pricing::Profit;
 use crate::pricing::monte_carlo::price_option_monte_carlo;
 use crate::simulation::WalkParams;
@@ -8,7 +9,6 @@ use crate::utils::Len;
 use crate::visualization::{ColorScheme, Graph, GraphConfig, GraphData, Series2D, TraceMode};
 use crate::{Options, Positive};
 use rust_decimal::Decimal;
-use std::error::Error;
 use std::fmt::Display;
 use std::ops::{AddAssign, Index, IndexMut};
 
@@ -281,7 +281,7 @@ where
     /// The implementation assumes that the underlying asset's most recent positive values
     /// are available and meaningful for Monte Carlo simulation. Ensure that the input data
     /// and the `option` are valid before invoking this method.
-    pub fn get_mc_option_price(&self, option: &Options) -> Result<Positive, Box<dyn Error>> {
+    pub fn get_mc_option_price(&self, option: &Options) -> Result<Positive, PricingError> {
         let last_values = self.get_last_positive_values();
         price_option_monte_carlo(option, &last_values)
     }
@@ -378,8 +378,10 @@ where
     X: AddAssign + Copy + Display + Into<Positive>,
     Y: Clone + Display + Into<Positive>,
 {
-    fn calculate_profit_at(&self, _price: &Positive) -> Result<Decimal, Box<dyn Error>> {
-        Err("Profit calculation not implemented for Simulator".into())
+    fn calculate_profit_at(&self, _price: &Positive) -> Result<Decimal, PricingError> {
+        Err(PricingError::other(
+            "Profit calculation not implemented for Simulator",
+        ))
     }
 }
 
@@ -456,6 +458,7 @@ where
 mod tests {
     use super::*;
     use crate::chains::generator_positive;
+    use crate::error::SimulationError;
     use crate::simulation::{
         WalkParams, WalkType, WalkTypeAble,
         steps::{Step, Xstep, Ystep},
@@ -732,7 +735,7 @@ mod tests {
     }
 
     #[test]
-    fn test_full_simulation() -> Result<(), Box<dyn Error>> {
+    fn test_full_simulation() -> Result<(), SimulationError> {
         let simulator_size: usize = 5;
         let n_steps = 10;
         let initial_price = pos!(100.0);

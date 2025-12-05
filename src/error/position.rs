@@ -68,8 +68,7 @@
 
 use crate::error::StrategyError;
 use crate::model::types::{OptionStyle, Side};
-use std::error::Error;
-use std::fmt;
+use thiserror::Error;
 
 /// Represents errors that can occur when managing positions in strategies
 ///
@@ -92,15 +91,18 @@ use std::fmt;
 ///
 /// This error type is typically used in trading systems where positions need to
 /// be validated, managed, and executed within the context of trading strategies.
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum PositionError {
     /// Errors related to strategy operations
+    #[error("Strategy error: {0}")]
     StrategyError(StrategyErrorKind),
 
     /// Errors related to position validation
+    #[error("Validation error: {0}")]
     ValidationError(PositionValidationErrorKind),
 
     /// Errors related to position limits
+    #[error("Limit error: {0}")]
     LimitError(PositionLimitErrorKind),
 }
 
@@ -126,12 +128,13 @@ pub enum PositionError {
 ///
 /// Used when validating and executing strategy operations to provide detailed
 /// error information about why an operation could not be completed.
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum StrategyErrorKind {
     /// Operation is not supported by this strategy
     ///
     /// Occurs when attempting to perform an operation that is not compatible
     /// with the current strategy type.
+    #[error("Operation '{operation}' not supported by strategy '{strategy_type}'")]
     UnsupportedOperation {
         /// The type of strategy that doesn't support the operation
         strategy_type: String,
@@ -143,6 +146,7 @@ pub enum StrategyErrorKind {
     /// Strategy has reached its maximum capacity
     ///
     /// Occurs when attempting to add more positions than a strategy can handle.
+    #[error("Strategy '{strategy_type}' is full (max positions: {max_positions})")]
     StrategyFull {
         /// The type of strategy that reached its capacity
         strategy_type: String,
@@ -154,6 +158,7 @@ pub enum StrategyErrorKind {
     /// Invalid strategy configuration
     ///
     /// Occurs when the strategy's configuration parameters are invalid or inconsistent.
+    #[error("Invalid strategy configuration: {0}")]
     InvalidConfiguration(String),
 }
 
@@ -181,11 +186,12 @@ pub enum StrategyErrorKind {
 ///
 /// Used when validating positions to ensure they meet all requirements before
 /// being added to a strategy or executed in a trading system.
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum PositionValidationErrorKind {
     /// Position size is invalid
     ///
     /// Occurs when the specified position size violates size constraints.
+    #[error("Invalid position size {size}: {reason}")]
     InvalidSize {
         /// The invalid size value
         size: f64,
@@ -197,6 +203,7 @@ pub enum PositionValidationErrorKind {
     /// Position price is invalid
     ///
     /// Occurs when the specified price violates price constraints or is unrealistic.
+    #[error("Invalid position price {price}: {reason}")]
     InvalidPrice {
         /// The invalid price value
         price: f64,
@@ -208,6 +215,7 @@ pub enum PositionValidationErrorKind {
     /// Position type is incompatible with strategy
     ///
     /// Occurs when the position side (long/short) conflicts with strategy requirements.
+    #[error("Incompatible position side {position_side:?}: {reason}")]
     IncompatibleSide {
         /// The incompatible position side
         position_side: Side,
@@ -219,6 +227,7 @@ pub enum PositionValidationErrorKind {
     /// Option style is incompatible with strategy
     ///
     /// Occurs when the option style (American/European) conflicts with strategy requirements.
+    #[error("Incompatible option style {style:?}: {reason}")]
     IncompatibleStyle {
         /// The incompatible option style
         style: OptionStyle,
@@ -230,6 +239,7 @@ pub enum PositionValidationErrorKind {
     /// Position is invalid for other reasons
     ///
     /// A general error for positions that fail validation for reasons not covered by other variants.
+    #[error("Invalid position: {reason}")]
     InvalidPosition {
         /// Explanation of why the position is invalid
         reason: String,
@@ -238,6 +248,7 @@ pub enum PositionValidationErrorKind {
     /// Standard error from external systems
     ///
     /// Wraps standard errors from external libraries or systems.
+    #[error("Standard error: {reason}")]
     StdError {
         /// Description of the standard error
         reason: String,
@@ -264,13 +275,14 @@ pub enum PositionValidationErrorKind {
 /// mechanisms, and trading platforms to enforce safety limits and prevent excessive
 /// risk taking.
 ///
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum PositionLimitErrorKind {
     /// Error indicating the maximum number of positions has been reached
     ///
     /// This variant is triggered when attempting to create a new position would
     /// exceed the configured maximum number of positions allowed in a portfolio
     /// or trading account.
+    #[error("Maximum positions reached: {current}/{maximum}")]
     MaxPositionsReached {
         /// The current number of positions in the portfolio
         current: usize,
@@ -283,6 +295,7 @@ pub enum PositionLimitErrorKind {
     /// This variant is triggered when a new position or modification would cause
     /// the total portfolio exposure to exceed the configured maximum risk threshold.
     /// Exposure is typically measured in monetary terms based on position value or risk.
+    #[error("Maximum exposure reached: {current_exposure}/{max_exposure}")]
     MaxExposureReached {
         /// The current financial exposure level of the portfolio
         current_exposure: f64,
@@ -290,104 +303,6 @@ pub enum PositionLimitErrorKind {
         max_exposure: f64,
     },
 }
-
-impl fmt::Display for PositionError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            PositionError::StrategyError(kind) => write!(f, "Strategy error: {kind}"),
-            PositionError::ValidationError(kind) => {
-                write!(f, "Position validation error: {kind}")
-            }
-            PositionError::LimitError(kind) => write!(f, "Position limit error: {kind}"),
-        }
-    }
-}
-
-impl fmt::Display for StrategyErrorKind {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            StrategyErrorKind::UnsupportedOperation {
-                strategy_type,
-                operation,
-            } => {
-                write!(
-                    f,
-                    "Operation '{operation}' is not supported for strategy type '{strategy_type}'"
-                )
-            }
-            StrategyErrorKind::StrategyFull {
-                strategy_type,
-                max_positions,
-            } => {
-                write!(
-                    f,
-                    "Strategy '{strategy_type}' is full (maximum {max_positions} positions)"
-                )
-            }
-            StrategyErrorKind::InvalidConfiguration(msg) => {
-                write!(f, "Invalid strategy configuration: {msg}")
-            }
-        }
-    }
-}
-
-impl fmt::Display for PositionValidationErrorKind {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            PositionValidationErrorKind::InvalidSize { size, reason } => {
-                write!(f, "Invalid position size {size}: {reason}")
-            }
-            PositionValidationErrorKind::InvalidPrice { price, reason } => {
-                write!(f, "Invalid position price {price}: {reason}")
-            }
-            PositionValidationErrorKind::IncompatibleSide {
-                position_side,
-                reason: strategy_type,
-            } => {
-                write!(
-                    f,
-                    "Position type '{position_side}' is incompatible with strategy '{strategy_type}'"
-                )
-            }
-            PositionValidationErrorKind::InvalidPosition { reason } => {
-                write!(f, "Invalid position: {reason}")
-            }
-            PositionValidationErrorKind::IncompatibleStyle { style, reason } => {
-                write!(
-                    f,
-                    "Position style '{style}' is incompatible with strategy: {reason}"
-                )
-            }
-            PositionValidationErrorKind::StdError { reason } => {
-                write!(f, "Error: {reason}")
-            }
-        }
-    }
-}
-
-impl fmt::Display for PositionLimitErrorKind {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            PositionLimitErrorKind::MaxPositionsReached { current, maximum } => {
-                write!(
-                    f,
-                    "Maximum number of positions reached ({current}/{maximum})"
-                )
-            }
-            PositionLimitErrorKind::MaxExposureReached {
-                current_exposure,
-                max_exposure,
-            } => {
-                write!(
-                    f,
-                    "Maximum exposure reached (current: {current_exposure}, max: {max_exposure})"
-                )
-            }
-        }
-    }
-}
-
-impl Error for PositionError {}
 
 /// Factory methods for creating position-related errors
 ///
@@ -501,8 +416,8 @@ impl PositionError {
     }
 }
 
-impl From<Box<dyn Error>> for PositionError {
-    fn from(err: Box<dyn Error>) -> Self {
+impl From<Box<dyn std::error::Error>> for PositionError {
+    fn from(err: Box<dyn std::error::Error>) -> Self {
         PositionError::ValidationError(PositionValidationErrorKind::StdError {
             reason: err.to_string(),
         })
@@ -628,7 +543,8 @@ mod tests_extended {
         ));
 
         // Test de Box<dyn Error> a PositionError
-        let std_error: Box<dyn Error> = Box::new(std::io::Error::other("dynamic error"));
+        let std_error: Box<dyn std::error::Error> =
+            Box::new(std::io::Error::other("dynamic error"));
         let position_error = PositionError::from(std_error);
         assert!(matches!(
             position_error,
@@ -677,7 +593,7 @@ mod tests_extended {
         });
         assert_eq!(
             format!("{error}"),
-            "Position validation error: Invalid position size -1: Size must be positive"
+            "Validation error: Invalid position size -1: Size must be positive"
         );
     }
 
@@ -689,7 +605,7 @@ mod tests_extended {
         });
         assert_eq!(
             format!("{error}"),
-            "Position limit error: Maximum number of positions reached (10/5)"
+            "Limit error: Maximum positions reached: 10/5"
         );
     }
 
@@ -701,7 +617,7 @@ mod tests_extended {
         };
         assert_eq!(
             format!("{error}"),
-            "Strategy 'Iron Condor' is full (maximum 10 positions)"
+            "Strategy 'Iron Condor' is full (max positions: 10)"
         );
     }
 
@@ -745,7 +661,7 @@ mod tests_extended {
         };
         assert_eq!(
             format!("{error}"),
-            "Position style 'Call' is incompatible with strategy: Unsupported for Call options"
+            "Incompatible option style OptionStyle::Call: Unsupported for Call options"
         );
     }
 
@@ -754,6 +670,6 @@ mod tests_extended {
         let error = PositionValidationErrorKind::StdError {
             reason: "Unexpected null value".to_string(),
         };
-        assert_eq!(format!("{error}"), "Error: Unexpected null value");
+        assert_eq!(format!("{error}"), "Standard error: Unexpected null value");
     }
 }

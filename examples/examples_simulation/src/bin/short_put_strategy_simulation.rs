@@ -1,4 +1,5 @@
 /******************************************************************************
+use optionstratlib::error::Error;
    Author: Joaquín Béjar García
    Email: jb@taunais.com
    Date: 8/11/25
@@ -38,20 +39,7 @@
 //! - Distribution of exit reasons
 //! - PNG visualization of the last simulation in `Draws/Simulation/short_put_strategy_simulation.png`
 
-use optionstratlib::Options;
-use optionstratlib::chains::generator_positive;
-use optionstratlib::model::types::{OptionStyle, OptionType, Side};
 use optionstratlib::prelude::*;
-use optionstratlib::simulation::simulator::Simulator;
-use optionstratlib::simulation::steps::{Step, Xstep, Ystep};
-use optionstratlib::simulation::{ExitPolicy, Simulate, WalkParams, WalkType, WalkTypeAble};
-use optionstratlib::strategies::ShortPut;
-use optionstratlib::utils::setup_logger;
-use optionstratlib::utils::time::{TimeFrame, convert_time_frame};
-use optionstratlib::volatility::volatility_for_dt;
-use rust_decimal::prelude::ToPrimitive;
-use rust_decimal_macros::dec;
-use tracing::info;
 
 /// Walker implementation for the simulation.
 struct Walker;
@@ -70,17 +58,17 @@ impl WalkTypeAble<Positive, Positive> for Walker {}
 /// - The random walk simulation fails
 /// - The simulate trait execution fails
 /// - File I/O operations fail
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> Result<(), Error> {
     setup_logger();
 
     // Simulation parameters
-    let n_simulations = 10000; // Number of simulations to run
+    let n_simulations = 100; // Number of simulations to run
     let n_steps = 10080; // 7 days in minutes
     let underlying_price = pos!(4007.7);
     let days = pos!(7.0);
     let implied_volatility = pos!(0.16); // 27% annual volatility
     let symbol = "GOLD".to_string();
-    let strike_price = pos!(3930.0); // Strike price for the short put (delta ~-0.3)
+    let strike_price = pos!(3990.0); // Strike price for the short put (delta ~-0.3)
 
     // First, calculate the premium for the option
     let temp_option = Options::new(
@@ -111,12 +99,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         dec!(0.0),        // risk_free_rate
         pos!(0.0),        // dividend_yield
         premium_positive, // premium received
-        pos!(0.0),        // open_fee
-        pos!(0.0),        // close_fee
+        pos!(1.5),        // open_fee
+        pos!(1.5),        // close_fee
     );
 
     // Define exit policy: 50% profit OR 100% loss
-    let exit_policy = ExitPolicy::profit_or_loss(dec!(0.5), dec!(1.0));
+    let exit_policy = ExitPolicy::profit_or_loss(dec!(0.7), dec!(0.6));
 
     info!("========== SHORT PUT SIMULATION (Using Simulate Trait) ==========");
     info!("Starting {} Short Put simulations...", n_simulations);

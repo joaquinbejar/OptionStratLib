@@ -5,9 +5,9 @@
 [optionstratlib](../../index.html)::[chains](../index.html)::[utils](index.html)
 :::
 
-# Trait [OptionChainParams]{.trait}Copy item path
+# Trait [OptionChainParams]{.trait} Copy item path
 
-[[Source](../../../src/optionstratlib/chains/utils.rs.html#482-509){.src}
+[[Source](../../../src/optionstratlib/chains/utils.rs.html#419-446){.src}
 ]{.sub-heading}
 ::::
 
@@ -60,10 +60,10 @@ to access option pricing parameters regardless of their source.
 
 ::::: methods
 ::: {#tymethod.get_params .section .method}
-[Source](../../../src/optionstratlib/chains/utils.rs.html#508){.src
+[Source](../../../src/optionstratlib/chains/utils.rs.html#445){.src
 .rightside}
 
-#### fn [get_params](#tymethod.get_params){.fn}( &self, strike_price: [Positive](../../model/positive/struct.Positive.html "struct optionstratlib::model::positive::Positive"){.struct}, ) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[OptionDataPriceParams](struct.OptionDataPriceParams.html "struct optionstratlib::chains::utils::OptionDataPriceParams"){.struct}, [ChainError](../../error/chains/enum.ChainError.html "enum optionstratlib::error::chains::ChainError"){.enum}\> {#fn-get_params-self-strike_price-positive---resultoptiondatapriceparams-chainerror .code-header}
+#### fn [get_params](#tymethod.get_params){.fn}( &self, strike_price: [Positive](../../model/positive/struct.Positive.html "struct optionstratlib::model::positive::Positive"){.struct}, ) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[OptionDataPriceParams](struct.OptionDataPriceParams.html "struct optionstratlib::chains::utils::OptionDataPriceParams"){.struct}, [ChainError](../../error/chains/enum.ChainError.html "enum optionstratlib::error::chains::ChainError"){.enum}\> {#fn-get_params-self-strike_price-positive---resultoptiondatapriceparams-chainerror .code-header}
 :::
 
 ::: docblock
@@ -103,7 +103,7 @@ implementation, such as:
 
 :::: {#implementors-list}
 ::: {#impl-OptionChainParams-for-OptionChain .section .impl}
-[Source](../../../src/optionstratlib/chains/chain.rs.html#2059-2078){.src
+[Source](../../../src/optionstratlib/chains/chain.rs.html#2269-2287){.src
 .rightside}[§](#impl-OptionChainParams-for-OptionChain){.anchor}
 
 ### impl [OptionChainParams](trait.OptionChainParams.html "trait optionstratlib::chains::utils::OptionChainParams"){.trait} for [OptionChain](../chain/struct.OptionChain.html "struct optionstratlib::chains::chain::OptionChain"){.struct} {#impl-optionchainparams-for-optionchain .code-header}

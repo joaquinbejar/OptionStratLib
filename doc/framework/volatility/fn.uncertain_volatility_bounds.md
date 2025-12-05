@@ -5,9 +5,9 @@
 [optionstratlib](../index.html)::[volatility](index.html)
 :::
 
-# Function [uncertain_volatility_bounds]{.fn}Copy item path
+# Function [uncertain_volatility_bounds]{.fn} Copy item path
 
-[[Source](../../src/optionstratlib/volatility/utils.rs.html#227-247){.src}
+[[Source](../../src/optionstratlib/volatility/utils.rs.html#268-288){.src}
 ]{.sub-heading}
 ::::
 
@@ -16,7 +16,7 @@ pub fn uncertain_volatility_bounds(
     option: &Options,
     min_volatility: Positive,
     max_volatility: Positive,
-) -> Result<(Positive, Positive), Box<dyn Error>>
+) -> Result<(Positive, Positive), VolatilityError>
 ```
 
 Expand description

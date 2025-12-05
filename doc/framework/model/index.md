@@ -5,9 +5,9 @@
 [optionstratlib](../index.html)
 :::
 
-# Module modelCopy item path
+# Module model Copy item path
 
-[[Source](../../src/optionstratlib/model/mod.rs.html#7-129){.src}
+[[Source](../../src/optionstratlib/model/mod.rs.html#7-137){.src}
 ]{.sub-heading}
 ::::
 
@@ -90,7 +90,7 @@ Tools for analyzing potential outcomes:
 ``` {.rust .rust-example-rendered}
 use rust_decimal_macros::dec;
 use tracing::info;
-use optionstratlib::Options;
+use optionstratlib::{ExpirationDate, Options};
 use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
 use optionstratlib::pos;
 use optionstratlib::Positive;
@@ -121,8 +121,6 @@ info!("Debug View: {:?}", option);
 `pub use option::`[`Options`](option/struct.Options.html "struct optionstratlib::model::option::Options"){.struct}`;`
 
 `pub use position::`[`Position`](position/struct.Position.html "struct optionstratlib::model::position::Position"){.struct}`;`
-
-`pub use types::`[`ExpirationDate`](types/enum.ExpirationDate.html "enum optionstratlib::model::types::ExpirationDate"){.enum}`;`
 
 `pub use types::`[`OptionStyle`](types/enum.OptionStyle.html "enum optionstratlib::model::types::OptionStyle"){.enum}`;`
 
@@ -157,13 +155,47 @@ info!("Debug View: {:?}", option);
 
 ## Structs[§](#structs){.anchor} {#structs .section-header}
 
+[Balance](struct.Balance.html "struct optionstratlib::model::Balance"){.struct}
+:   Represents the balance of a specific option position in an exchange.
+
+[MarginInfo](struct.MarginInfo.html "struct optionstratlib::model::MarginInfo"){.struct}
+:   Represents margin information for accounts that support leverage
+
+[Portfolio](struct.Portfolio.html "struct optionstratlib::model::Portfolio"){.struct}
+:   Represents a portfolio containing multiple option balances.
+
 [ProfitLossRange](struct.ProfitLossRange.html "struct optionstratlib::model::ProfitLossRange"){.struct}
 :   Represents a price range where a strategy is profitable
+
+[Trade](struct.Trade.html "struct optionstratlib::model::Trade"){.struct}
+:   Represents a trade with detailed information such as action, side,
+    option style, associated fees, and various metadata.
 
 ## Enums[§](#enums){.anchor} {#enums .section-header}
 
 [BasicAxisTypes](enum.BasicAxisTypes.html "enum optionstratlib::model::BasicAxisTypes"){.enum}
 :   Represents the basic axis types used in financial option analysis
     and visualization.
+
+[ExpirationDate](enum.ExpirationDate.html "enum optionstratlib::model::ExpirationDate"){.enum}
+:   Represents the expiration of an option contract or financial
+    instrument.
+
+[TradeStatus](enum.TradeStatus.html "enum optionstratlib::model::TradeStatus"){.enum}
+:   Transaction Status
+
+## Traits[§](#traits){.anchor} {#traits .section-header}
+
+[TradeAble](trait.TradeAble.html "trait optionstratlib::model::TradeAble"){.trait}
+:   A trait that provides functionality for accessing and modifying
+    trade-related data.
+
+[TradeStatusAble](trait.TradeStatusAble.html "trait optionstratlib::model::TradeStatusAble"){.trait}
+:   A trait representing the status management of a trade.
+
+## Functions[§](#functions){.anchor} {#functions .section-header}
+
+[save_trades](fn.save_trades.html "fn optionstratlib::model::save_trades"){.fn}
+:   Saves a list of trades to a file in JSON format.
 :::::::
 ::::::::

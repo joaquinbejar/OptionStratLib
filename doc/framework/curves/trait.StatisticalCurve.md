@@ -5,7 +5,7 @@
 [optionstratlib](../index.html)::[curves](index.html)
 :::
 
-# Trait [StatisticalCurve]{.trait}Copy item path
+# Trait [StatisticalCurve]{.trait} Copy item path
 
 [[Source](../../src/optionstratlib/curves/traits.rs.html#81-314){.src}
 ]{.sub-heading}
@@ -63,7 +63,7 @@ ensure implementing types can both extract and generate metrics.
 [Source](../../src/optionstratlib/curves/traits.rs.html#92){.src
 .rightside}
 
-#### fn [get_x_values](#tymethod.get_x_values){.fn}(&self) -\> [Vec](https://doc.rust-lang.org/1.86.0/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<Decimal\> {#fn-get_x_valuesself---vecdecimal .code-header}
+#### fn [get_x_values](#tymethod.get_x_values){.fn}(&self) -\> [Vec](https://doc.rust-lang.org/1.91.1/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<[Decimal](../prelude/struct.Decimal.html "struct optionstratlib::prelude::Decimal"){.struct}\> {#fn-get_x_valuesself---vecdecimal .code-header}
 :::
 
 ::: docblock
@@ -88,7 +88,7 @@ A `Vec<Decimal>` containing the x-values of the statistical curve. Each
 [Source](../../src/optionstratlib/curves/traits.rs.html#113-223){.src
 .rightside}
 
-#### fn [generate_statistical_curve](#method.generate_statistical_curve){.fn}( &self, basic_metrics: &[BasicMetrics](../geometrics/struct.BasicMetrics.html "struct optionstratlib::geometrics::BasicMetrics"){.struct}, shape_metrics: &[ShapeMetrics](../geometrics/struct.ShapeMetrics.html "struct optionstratlib::geometrics::ShapeMetrics"){.struct}, range_metrics: &[RangeMetrics](../geometrics/struct.RangeMetrics.html "struct optionstratlib::geometrics::RangeMetrics"){.struct}, trend_metrics: &[TrendMetrics](../geometrics/struct.TrendMetrics.html "struct optionstratlib::geometrics::TrendMetrics"){.struct}, num_points: [usize](https://doc.rust-lang.org/1.86.0/std/primitive.usize.html){.primitive}, seed: [Option](https://doc.rust-lang.org/1.86.0/core/option/enum.Option.html "enum core::option::Option"){.enum}\<[u64](https://doc.rust-lang.org/1.86.0/std/primitive.u64.html){.primitive}\>, ) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[Curve](struct.Curve.html "struct optionstratlib::curves::Curve"){.struct}, [CurveError](../error/curves/enum.CurveError.html "enum optionstratlib::error::curves::CurveError"){.enum}\> {#fn-generate_statistical_curve-self-basic_metrics-basicmetrics-shape_metrics-shapemetrics-range_metrics-rangemetrics-trend_metrics-trendmetrics-num_points-usize-seed-optionu64---resultcurve-curveerror .code-header}
+#### fn [generate_statistical_curve](#method.generate_statistical_curve){.fn}( &self, basic_metrics: &[BasicMetrics](../geometrics/struct.BasicMetrics.html "struct optionstratlib::geometrics::BasicMetrics"){.struct}, shape_metrics: &[ShapeMetrics](../geometrics/struct.ShapeMetrics.html "struct optionstratlib::geometrics::ShapeMetrics"){.struct}, range_metrics: &[RangeMetrics](../geometrics/struct.RangeMetrics.html "struct optionstratlib::geometrics::RangeMetrics"){.struct}, trend_metrics: &[TrendMetrics](../geometrics/struct.TrendMetrics.html "struct optionstratlib::geometrics::TrendMetrics"){.struct}, num_points: [usize](https://doc.rust-lang.org/1.91.1/std/primitive.usize.html){.primitive}, seed: [Option](https://doc.rust-lang.org/1.91.1/core/option/enum.Option.html "enum core::option::Option"){.enum}\<[u64](https://doc.rust-lang.org/1.91.1/std/primitive.u64.html){.primitive}\>, ) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[Curve](struct.Curve.html "struct optionstratlib::curves::Curve"){.struct}, [CurveError](../error/curves/enum.CurveError.html "enum optionstratlib::error::curves::CurveError"){.enum}\> {#fn-generate_statistical_curve-self-basic_metrics-basicmetrics-shape_metrics-shapemetrics-range_metrics-rangemetrics-trend_metrics-trendmetrics-num_points-usize-seed-optionu64---resultcurve-curveerror .code-header}
 :::
 
 ::: docblock
@@ -124,7 +124,7 @@ statistical characteristics.
 [Source](../../src/optionstratlib/curves/traits.rs.html#245-286){.src
 .rightside}
 
-#### fn [generate_refined_statistical_curve](#method.generate_refined_statistical_curve){.fn}( &self, basic_metrics: &[BasicMetrics](../geometrics/struct.BasicMetrics.html "struct optionstratlib::geometrics::BasicMetrics"){.struct}, shape_metrics: &[ShapeMetrics](../geometrics/struct.ShapeMetrics.html "struct optionstratlib::geometrics::ShapeMetrics"){.struct}, range_metrics: &[RangeMetrics](../geometrics/struct.RangeMetrics.html "struct optionstratlib::geometrics::RangeMetrics"){.struct}, trend_metrics: &[TrendMetrics](../geometrics/struct.TrendMetrics.html "struct optionstratlib::geometrics::TrendMetrics"){.struct}, num_points: [usize](https://doc.rust-lang.org/1.86.0/std/primitive.usize.html){.primitive}, max_attempts: [usize](https://doc.rust-lang.org/1.86.0/std/primitive.usize.html){.primitive}, tolerance: Decimal, seed: [Option](https://doc.rust-lang.org/1.86.0/core/option/enum.Option.html "enum core::option::Option"){.enum}\<[u64](https://doc.rust-lang.org/1.86.0/std/primitive.u64.html){.primitive}\>, ) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[Curve](struct.Curve.html "struct optionstratlib::curves::Curve"){.struct}, [CurveError](../error/curves/enum.CurveError.html "enum optionstratlib::error::curves::CurveError"){.enum}\> {#fn-generate_refined_statistical_curve-self-basic_metrics-basicmetrics-shape_metrics-shapemetrics-range_metrics-rangemetrics-trend_metrics-trendmetrics-num_points-usize-max_attempts-usize-tolerance-decimal-seed-optionu64---resultcurve-curveerror .code-header}
+#### fn [generate_refined_statistical_curve](#method.generate_refined_statistical_curve){.fn}( &self, basic_metrics: &[BasicMetrics](../geometrics/struct.BasicMetrics.html "struct optionstratlib::geometrics::BasicMetrics"){.struct}, shape_metrics: &[ShapeMetrics](../geometrics/struct.ShapeMetrics.html "struct optionstratlib::geometrics::ShapeMetrics"){.struct}, range_metrics: &[RangeMetrics](../geometrics/struct.RangeMetrics.html "struct optionstratlib::geometrics::RangeMetrics"){.struct}, trend_metrics: &[TrendMetrics](../geometrics/struct.TrendMetrics.html "struct optionstratlib::geometrics::TrendMetrics"){.struct}, num_points: [usize](https://doc.rust-lang.org/1.91.1/std/primitive.usize.html){.primitive}, max_attempts: [usize](https://doc.rust-lang.org/1.91.1/std/primitive.usize.html){.primitive}, tolerance: [Decimal](../prelude/struct.Decimal.html "struct optionstratlib::prelude::Decimal"){.struct}, seed: [Option](https://doc.rust-lang.org/1.91.1/core/option/enum.Option.html "enum core::option::Option"){.enum}\<[u64](https://doc.rust-lang.org/1.91.1/std/primitive.u64.html){.primitive}\>, ) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[Curve](struct.Curve.html "struct optionstratlib::curves::Curve"){.struct}, [CurveError](../error/curves/enum.CurveError.html "enum optionstratlib::error::curves::CurveError"){.enum}\> {#fn-generate_refined_statistical_curve-self-basic_metrics-basicmetrics-shape_metrics-shapemetrics-range_metrics-rangemetrics-trend_metrics-trendmetrics-num_points-usize-max_attempts-usize-tolerance-decimal-seed-optionu64---resultcurve-curveerror .code-header}
 :::
 
 ::: docblock
@@ -156,7 +156,7 @@ within the specified tolerance of the target metrics.
 [Source](../../src/optionstratlib/curves/traits.rs.html#298-313){.src
 .rightside}
 
-#### fn [verify_curve_metrics](#method.verify_curve_metrics){.fn}( &self, curve: &[Curve](struct.Curve.html "struct optionstratlib::curves::Curve"){.struct}, target_metrics: &[BasicMetrics](../geometrics/struct.BasicMetrics.html "struct optionstratlib::geometrics::BasicMetrics"){.struct}, tolerance: Decimal, ) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[bool](https://doc.rust-lang.org/1.86.0/std/primitive.bool.html){.primitive}, [CurveError](../error/curves/enum.CurveError.html "enum optionstratlib::error::curves::CurveError"){.enum}\> {#fn-verify_curve_metrics-self-curve-curve-target_metrics-basicmetrics-tolerance-decimal---resultbool-curveerror .code-header}
+#### fn [verify_curve_metrics](#method.verify_curve_metrics){.fn}( &self, curve: &[Curve](struct.Curve.html "struct optionstratlib::curves::Curve"){.struct}, target_metrics: &[BasicMetrics](../geometrics/struct.BasicMetrics.html "struct optionstratlib::geometrics::BasicMetrics"){.struct}, tolerance: [Decimal](../prelude/struct.Decimal.html "struct optionstratlib::prelude::Decimal"){.struct}, ) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<[bool](https://doc.rust-lang.org/1.91.1/std/primitive.bool.html){.primitive}, [CurveError](../error/curves/enum.CurveError.html "enum optionstratlib::error::curves::CurveError"){.enum}\> {#fn-verify_curve_metrics-self-curve-curve-target_metrics-basicmetrics-tolerance-decimal---resultbool-curveerror .code-header}
 :::
 
 ::: docblock
@@ -181,7 +181,7 @@ within the specified tolerance.
 
 :::: {#implementors-list}
 ::: {#impl-StatisticalCurve-for-Curve .section .impl}
-[Source](../../src/optionstratlib/curves/curve.rs.html#941-945){.src
+[Source](../../src/optionstratlib/curves/curve.rs.html#955-959){.src
 .rightside}[§](#impl-StatisticalCurve-for-Curve){.anchor}
 
 ### impl [StatisticalCurve](trait.StatisticalCurve.html "trait optionstratlib::curves::StatisticalCurve"){.trait} for [Curve](struct.Curve.html "struct optionstratlib::curves::Curve"){.struct} {#impl-statisticalcurve-for-curve .code-header}

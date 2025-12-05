@@ -2437,9 +2437,8 @@ mod tests_curve_arithmetic {
 mod tests_extended {
     use super::*;
     use crate::error::CurveError::OperationError;
-    use crate::error::OperationErrorKind;
+    use crate::error::{ChainError, OperationErrorKind};
     use crate::geometrics::{ConstructionMethod, ConstructionParams};
-    use std::error::Error;
 
     #[test]
     fn test_construct_from_data_empty() {
@@ -2475,10 +2474,8 @@ mod tests_extended {
 
     #[test]
     fn test_construct_parametric_invalid_function() {
-        let f = |_t: Decimal| -> Result<Point2D, Box<dyn Error>> {
-            Err(Box::new(CurveError::ConstructionError(
-                "Function evaluation failed".to_string(),
-            )))
+        let f = |_t: Decimal| -> Result<Point2D, ChainError> {
+            Err(CurveError::ConstructionError("Function evaluation failed".to_string()).into())
         };
         let params = ConstructionParams::D2 {
             t_start: Decimal::ZERO,
@@ -2493,7 +2490,7 @@ mod tests_extended {
         let error = result.unwrap_err();
         match error {
             CurveError::ConstructionError(reason) => {
-                assert_eq!(reason, "Construction error: Function evaluation failed");
+                assert!(reason.contains("Function evaluation failed"));
             }
             _ => {
                 panic!("Unexpected error type");
@@ -3507,7 +3504,7 @@ mod tests_curve_len_and_geometric {
     fn test_construct_method_error() {
         // Test ConstructionMethod errors (lines 168-175, 179, 181, 189)
         let result = Curve::construct(ConstructionMethod::Parametric {
-            f: Box::new(|_| Err(Box::new(std::io::Error::other("Test error")))),
+            f: Box::new(|_| Err("Test error".into())),
             params: ConstructionParams::D2 {
                 t_start: dec!(0.0),
                 t_end: dec!(1.0),

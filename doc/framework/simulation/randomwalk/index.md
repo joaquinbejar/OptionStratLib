@@ -5,9 +5,9 @@
 [optionstratlib](../../index.html)::[simulation](../index.html)
 :::
 
-# Module randomwalkCopy item path
+# Module randomwalk Copy item path
 
-[[Source](../../../src/optionstratlib/simulation/randomwalk.rs.html#6-753){.src}
+[[Source](../../../src/optionstratlib/simulation/randomwalk.rs.html#6-781){.src}
 ]{.sub-heading}
 ::::
 

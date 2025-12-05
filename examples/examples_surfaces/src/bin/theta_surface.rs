@@ -20,7 +20,7 @@ fn get_option(point2d: &Point2D) -> Options {
         None,
     )
 }
-fn main() -> Result<(), Box<dyn Error>> {
+fn main() -> Result<(), Error> {
     setup_logger();
     let params = ConstructionParams::D3 {
         x_start: dec!(10.0), // Underlying price start

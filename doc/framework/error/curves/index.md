@@ -5,9 +5,9 @@
 [optionstratlib](../../index.html)::[error](../index.html)
 :::
 
-# Module curvesCopy item path
+# Module curves Copy item path
 
-[[Source](../../../src/optionstratlib/error/curves.rs.html#7-495){.src}
+[[Source](../../../src/optionstratlib/error/curves.rs.html#7-465){.src}
 ]{.sub-heading}
 ::::
 

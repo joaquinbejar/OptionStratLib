@@ -27,7 +27,7 @@ fn create_chain_from_step(
     previous_y_step: &Ystep<OptionChain>,
     new_price: &Positive,
     volatility: Option<Positive>,
-) -> Result<OptionChain, Box<dyn std::error::Error>> {
+) -> Result<OptionChain, optionstratlib::error::Error> {
     let chain = previous_y_step.value();
     let mut chain_params = chain.to_build_params()?;
     chain_params.set_underlying_price(Some(Box::new(*new_price)));

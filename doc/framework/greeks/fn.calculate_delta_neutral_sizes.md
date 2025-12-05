@@ -5,9 +5,9 @@
 [optionstratlib](../index.html)::[greeks](index.html)
 :::
 
-# Function [calculate_delta_neutral_sizes]{.fn}Copy item path
+# Function [calculate_delta_neutral_sizes]{.fn} Copy item path
 
-[[Source](../../src/optionstratlib/greeks/utils.rs.html#449-496){.src}
+[[Source](../../src/optionstratlib/greeks/utils.rs.html#449-501){.src}
 ]{.sub-heading}
 ::::
 
@@ -16,7 +16,7 @@ pub fn calculate_delta_neutral_sizes(
     delta1: Decimal,
     delta2: Decimal,
     total_size: Positive,
-) -> Result<(Positive, Positive), Box<dyn Error>>
+) -> Result<(Positive, Positive), GreeksError>
 ```
 
 Expand description

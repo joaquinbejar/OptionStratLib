@@ -5,7 +5,7 @@
 [optionstratlib](../index.html)::[volatility](index.html)
 :::
 
-# Trait [VolatilitySmile]{.trait}Copy item path
+# Trait [VolatilitySmile]{.trait} Copy item path
 
 [[Source](../../src/optionstratlib/volatility/traits.rs.html#70-82){.src}
 ]{.sub-heading}
@@ -133,7 +133,7 @@ Computes and returns a curve representing the volatility smile.
 
 :::: {#implementors-list}
 ::: {#impl-VolatilitySmile-for-OptionChain .section .impl}
-[Source](../../src/optionstratlib/chains/chain.rs.html#2273-2316){.src
+[Source](../../src/optionstratlib/chains/chain.rs.html#2624-2663){.src
 .rightside}[§](#impl-VolatilitySmile-for-OptionChain){.anchor}
 
 ### impl [VolatilitySmile](trait.VolatilitySmile.html "trait optionstratlib::volatility::VolatilitySmile"){.trait} for [OptionChain](../chains/chain/struct.OptionChain.html "struct optionstratlib::chains::chain::OptionChain"){.struct} {#impl-volatilitysmile-for-optionchain .code-header}

@@ -5,9 +5,9 @@
 [optionstratlib](../index.html)
 :::
 
-# Module pricingCopy item path
+# Module pricing Copy item path
 
-[[Source](../../src/optionstratlib/pricing/mod.rs.html#1-215){.src}
+[[Source](../../src/optionstratlib/pricing/mod.rs.html#1-255){.src}
 ]{.sub-heading}
 ::::
 
@@ -102,7 +102,7 @@ implementations:
 ``` {.rust .rust-example-rendered}
 use rust_decimal_macros::dec;
 use optionstratlib::pricing::telegraph::{TelegraphProcess, telegraph};
-use optionstratlib::Options;
+use optionstratlib::{ExpirationDate, Options};
 use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
 use optionstratlib::Positive;
 use optionstratlib::pos;
@@ -134,7 +134,7 @@ let price = telegraph(&option, 1000, Some(dec!(0.5)), Some(dec!(0.3)));
 ::: example-wrap
 ``` {.rust .rust-example-rendered}
 use rust_decimal_macros::dec;
-use optionstratlib::Options;
+use optionstratlib::{ExpirationDate, Options};
 use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
 use optionstratlib::Positive;
 use optionstratlib::pos;
@@ -209,6 +209,12 @@ when applicable, as it provides the fastest computation times.
 
 `pub use telegraph::`[`telegraph`](telegraph/fn.telegraph.html "fn optionstratlib::pricing::telegraph::telegraph"){.fn}`;`
 
+`pub use unified::`[`Priceable`](unified/trait.Priceable.html "trait optionstratlib::pricing::unified::Priceable"){.trait}`;`
+
+`pub use unified::`[`PricingEngine`](unified/enum.PricingEngine.html "enum optionstratlib::pricing::unified::PricingEngine"){.enum}`;`
+
+`pub use unified::`[`price_option`](unified/fn.price_option.html "fn optionstratlib::pricing::unified::price_option"){.fn}`;`
+
 ## Modules[§](#modules){.anchor} {#modules .section-header}
 
 [binomial_model](binomial_model/index.html "mod optionstratlib::pricing::binomial_model"){.mod}
@@ -222,6 +228,9 @@ when applicable, as it provides the fastest computation times.
 
 [telegraph](telegraph/index.html "mod optionstratlib::pricing::telegraph"){.mod}
 :   Telegraph process model for asset price movement.
+
+[unified](unified/index.html "mod optionstratlib::pricing::unified"){.mod}
+:   Unified pricing system for options.
 
 ## Structs[§](#structs){.anchor} {#structs .section-header}
 

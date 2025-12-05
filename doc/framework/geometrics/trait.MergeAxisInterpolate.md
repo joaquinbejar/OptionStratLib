@@ -5,7 +5,7 @@
 [optionstratlib](../index.html)::[geometrics](index.html)
 :::
 
-# Trait [MergeAxisInterpolate]{.trait}Copy item path
+# Trait [MergeAxisInterpolate]{.trait} Copy item path
 
 [[Source](../../src/optionstratlib/geometrics/operations/axis.rs.html#129-168){.src}
 ]{.sub-heading}
@@ -54,11 +54,11 @@ coordinates.
 [Source](../../src/optionstratlib/geometrics/operations/axis.rs.html#161-167){.src
 .rightside}
 
-#### fn [merge_axis_interpolate](#tymethod.merge_axis_interpolate){.fn}( &self, other: &Self, interpolation: [InterpolationType](enum.InterpolationType.html "enum optionstratlib::geometrics::InterpolationType"){.enum}, ) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<(Self, Self), Self::[Error](trait.AxisOperations.html#associatedtype.Error "type optionstratlib::geometrics::AxisOperations::Error"){.associatedtype}\> {#fn-merge_axis_interpolate-self-other-self-interpolation-interpolationtype---resultself-self-selferror .code-header}
+#### fn [merge_axis_interpolate](#tymethod.merge_axis_interpolate){.fn}( &self, other: &Self, interpolation: [InterpolationType](enum.InterpolationType.html "enum optionstratlib::geometrics::InterpolationType"){.enum}, ) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<(Self, Self), Self::[Error](trait.AxisOperations.html#associatedtype.Error "type optionstratlib::geometrics::AxisOperations::Error"){.associatedtype}\> {#fn-merge_axis_interpolate-self-other-self-interpolation-interpolationtype---resultself-self-selferror .code-header}
 
 ::: where
 where Self:
-[Sized](https://doc.rust-lang.org/1.86.0/core/marker/trait.Sized.html "trait core::marker::Sized"){.trait},
+[Sized](https://doc.rust-lang.org/1.91.1/core/marker/trait.Sized.html "trait core::marker::Sized"){.trait},
 :::
 ::::
 
@@ -90,7 +90,7 @@ coordinate positions by adding interpolated points where necessary.
 [Source](../../src/optionstratlib/geometrics/operations/axis.rs.html#144-147){.src
 .rightside}
 
-#### fn [merge_axis_index](#method.merge_axis_index){.fn}\<\'a\>(&\'a self, other: &\'a Self) -\> [Vec](https://doc.rust-lang.org/1.86.0/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<Input\> {#fn-merge_axis_indexaa-self-other-a-self---vecinput .code-header}
+#### fn [merge_axis_index](#method.merge_axis_index){.fn}\<\'a\>(&\'a self, other: &\'a Self) -\> [Vec](https://doc.rust-lang.org/1.91.1/alloc/vec/struct.Vec.html "struct alloc::vec::Vec"){.struct}\<Input\> {#fn-merge_axis_indexaa-self-other-a-self---vecinput .code-header}
 :::
 
 ::: docblock
@@ -114,7 +114,7 @@ a common set of indices that can be used for interpolation or alignment.
 
 ::: dyn-compatibility-info
 This trait is **not** [dyn
-compatible](https://doc.rust-lang.org/1.86.0/reference/items/traits.html#dyn-compatibility).
+compatible](https://doc.rust-lang.org/1.91.1/reference/items/traits.html#dyn-compatibility).
 
 *In older versions of Rust, dyn compatibility was called \"object
 safety\", so this trait is not object safe.*
@@ -124,26 +124,26 @@ safety\", so this trait is not object safe.*
 
 ::::::: {#implementors-list}
 :::: {#impl-MergeAxisInterpolate%3CPoint2D,+Decimal%3E-for-Curve .section .impl}
-[Source](../../src/optionstratlib/curves/curve.rs.html#1496-1534){.src
+[Source](../../src/optionstratlib/curves/curve.rs.html#1510-1548){.src
 .rightside}[§](#impl-MergeAxisInterpolate%3CPoint2D,+Decimal%3E-for-Curve){.anchor}
 
-### impl [MergeAxisInterpolate](trait.MergeAxisInterpolate.html "trait optionstratlib::geometrics::MergeAxisInterpolate"){.trait}\<[Point2D](../curves/struct.Point2D.html "struct optionstratlib::curves::Point2D"){.struct}, Decimal\> for [Curve](../curves/struct.Curve.html "struct optionstratlib::curves::Curve"){.struct} {#impl-mergeaxisinterpolatepoint2d-decimal-for-curve .code-header}
+### impl [MergeAxisInterpolate](trait.MergeAxisInterpolate.html "trait optionstratlib::geometrics::MergeAxisInterpolate"){.trait}\<[Point2D](../curves/struct.Point2D.html "struct optionstratlib::curves::Point2D"){.struct}, [Decimal](../prelude/struct.Decimal.html "struct optionstratlib::prelude::Decimal"){.struct}\> for [Curve](../curves/struct.Curve.html "struct optionstratlib::curves::Curve"){.struct} {#impl-mergeaxisinterpolatepoint2d-decimal-for-curve .code-header}
 
 ::: where
 where Self:
-[Sized](https://doc.rust-lang.org/1.86.0/core/marker/trait.Sized.html "trait core::marker::Sized"){.trait},
+[Sized](https://doc.rust-lang.org/1.91.1/core/marker/trait.Sized.html "trait core::marker::Sized"){.trait},
 :::
 ::::
 
 :::: {#impl-MergeAxisInterpolate%3CPoint3D,+Point2D%3E-for-Surface .section .impl}
-[Source](../../src/optionstratlib/surfaces/surface.rs.html#1324-1372){.src
+[Source](../../src/optionstratlib/surfaces/surface.rs.html#1337-1385){.src
 .rightside}[§](#impl-MergeAxisInterpolate%3CPoint3D,+Point2D%3E-for-Surface){.anchor}
 
 ### impl [MergeAxisInterpolate](trait.MergeAxisInterpolate.html "trait optionstratlib::geometrics::MergeAxisInterpolate"){.trait}\<[Point3D](../surfaces/struct.Point3D.html "struct optionstratlib::surfaces::Point3D"){.struct}, [Point2D](../curves/struct.Point2D.html "struct optionstratlib::curves::Point2D"){.struct}\> for [Surface](../surfaces/struct.Surface.html "struct optionstratlib::surfaces::Surface"){.struct} {#impl-mergeaxisinterpolatepoint3d-point2d-for-surface .code-header}
 
 ::: where
 where Self:
-[Sized](https://doc.rust-lang.org/1.86.0/core/marker/trait.Sized.html "trait core::marker::Sized"){.trait},
+[Sized](https://doc.rust-lang.org/1.91.1/core/marker/trait.Sized.html "trait core::marker::Sized"){.trait},
 :::
 ::::
 :::::::

@@ -5,9 +5,9 @@
 [optionstratlib](../index.html)::[utils](index.html)
 :::
 
-# Function [read_ohlcv_from_zip]{.fn}Copy item path
+# Function [read_ohlcv_from_zip]{.fn} Copy item path
 
-[[Source](../../src/optionstratlib/utils/csv.rs.html#142-240){.src}
+[[Source](../../src/optionstratlib/utils/csv.rs.html#49-147){.src}
 ]{.sub-heading}
 ::::
 

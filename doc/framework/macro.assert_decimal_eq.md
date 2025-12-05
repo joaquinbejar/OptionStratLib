@@ -5,7 +5,7 @@
 [optionstratlib](index.html)
 :::
 
-# Macro [assert_decimal_eq]{.macro}Copy item path
+# Macro [assert_decimal_eq]{.macro} Copy item path
 
 [[Source](../src/optionstratlib/model/decimal.rs.html#34-46){.src}
 ]{.sub-heading}

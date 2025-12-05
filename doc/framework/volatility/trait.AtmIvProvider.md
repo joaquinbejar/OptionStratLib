@@ -5,7 +5,7 @@
 [optionstratlib](../index.html)::[volatility](index.html)
 :::
 
-# Trait [AtmIvProvider]{.trait}Copy item path
+# Trait [AtmIvProvider]{.trait} Copy item path
 
 [[Source](../../src/optionstratlib/volatility/traits.rs.html#89-100){.src}
 ]{.sub-heading}
@@ -14,7 +14,7 @@
 ``` {.rust .item-decl}
 pub trait AtmIvProvider {
     // Required method
-    fn atm_iv(&self) -> Result<&Option<Positive>, Box<dyn Error>>;
+    fn atm_iv(&self) -> Result<&Positive, VolatilityError>;
 }
 ```
 
@@ -35,7 +35,7 @@ representing the ATM IV, or an error if the value cannot be determined.
 [Source](../../src/optionstratlib/volatility/traits.rs.html#99){.src
 .rightside}
 
-#### fn [atm_iv](#tymethod.atm_iv){.fn}(&self) -\> [Result](https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html "enum core::result::Result"){.enum}\<&[Option](https://doc.rust-lang.org/1.86.0/core/option/enum.Option.html "enum core::option::Option"){.enum}\<[Positive](../model/positive/struct.Positive.html "struct optionstratlib::model::positive::Positive"){.struct}\>, [Box](https://doc.rust-lang.org/1.86.0/alloc/boxed/struct.Box.html "struct alloc::boxed::Box"){.struct}\<dyn [Error](https://doc.rust-lang.org/1.86.0/core/error/trait.Error.html "trait core::error::Error"){.trait}\>\> {#fn-atm_ivself---resultoptionpositive-boxdyn-error .code-header}
+#### fn [atm_iv](#tymethod.atm_iv){.fn}(&self) -\> [Result](https://doc.rust-lang.org/1.91.1/core/result/enum.Result.html "enum core::result::Result"){.enum}\<&[Positive](../model/positive/struct.Positive.html "struct optionstratlib::model::positive::Positive"){.struct}, [VolatilityError](../error/enum.VolatilityError.html "enum optionstratlib::error::VolatilityError"){.enum}\> {#fn-atm_ivself---resultpositive-volatilityerror .code-header}
 :::
 
 ::: docblock
@@ -59,7 +59,7 @@ This method attempts to return the at-the-money implied volatility as an
 
 ::::: {#implementors-list}
 ::: {#impl-AtmIvProvider-for-OptionChain .section .impl}
-[Source](../../src/optionstratlib/volatility/traits.rs.html#108-118){.src
+[Source](../../src/optionstratlib/volatility/traits.rs.html#108-115){.src
 .rightside}[§](#impl-AtmIvProvider-for-OptionChain){.anchor}
 
 ### impl [AtmIvProvider](trait.AtmIvProvider.html "trait optionstratlib::volatility::AtmIvProvider"){.trait} for [OptionChain](../chains/chain/struct.OptionChain.html "struct optionstratlib::chains::chain::OptionChain"){.struct} {#impl-atmivprovider-for-optionchain .code-header}

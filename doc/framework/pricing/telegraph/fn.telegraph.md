@@ -5,9 +5,9 @@
 [optionstratlib](../../index.html)::[pricing](../index.html)::[telegraph](index.html)
 :::
 
-# Function [telegraph]{.fn}Copy item path
+# Function [telegraph]{.fn} Copy item path
 
-[[Source](../../../src/optionstratlib/pricing/telegraph.rs.html#280-331){.src}
+[[Source](../../../src/optionstratlib/pricing/telegraph.rs.html#292-343){.src}
 ]{.sub-heading}
 ::::
 
@@ -17,7 +17,7 @@ pub fn telegraph(
     no_steps: usize,
     lambda_up: Option<Decimal>,
     lambda_down: Option<Decimal>,
-) -> Result<Decimal, Box<dyn Error>>
+) -> Result<Decimal, PricingError>
 ```
 
 Expand description
@@ -43,7 +43,7 @@ behavior in market volatility.
 
 ## [§](#returns){.doc-anchor}Returns
 
-- `Result<Decimal, Box<dyn Error>>` - The simulated option price or an
+- `Result<Decimal, PricingError>` - The simulated option price or an
   error
 
 ## [§](#details){.doc-anchor}Details
