@@ -1765,6 +1765,32 @@ mod tests_greeks {
         option.quantity = pos!(2.0);
         assert_decimal_eq!(option.veta().unwrap(), dec!(0.000108824758), EPSILON);
     }
+
+    #[test]
+    fn test_charm() {
+        let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
+        assert_decimal_eq!(option.charm().unwrap(), dec!(-0.000458), EPSILON);
+    }
+
+    #[test]
+    fn test_charm_size() {
+        let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
+        option.quantity = pos!(2.0);
+        assert_decimal_eq!(option.charm().unwrap(), dec!(-0.000917), EPSILON);
+    }
+
+    #[test]
+    fn test_color() {
+        let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
+        assert_decimal_eq!(option.color().unwrap(), dec!(-0.001163), EPSILON);
+    }
+
+    #[test]
+    fn test_color_size() {
+        let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
+        option.quantity = pos!(2.0);
+        assert_decimal_eq!(option.color().unwrap(), dec!(-0.002326), EPSILON);
+    }
 }
 
 #[cfg(test)]
@@ -1790,6 +1816,8 @@ mod tests_greek_trait {
         assert_decimal_eq!(greeks.vanna, option.vanna().unwrap(), EPSILON);
         assert_decimal_eq!(greeks.vomma, option.vomma().unwrap(), EPSILON);
         assert_decimal_eq!(greeks.veta, option.veta().unwrap(), EPSILON);
+        assert_decimal_eq!(greeks.charm, option.charm().unwrap(), EPSILON);
+        assert_decimal_eq!(greeks.color, option.color().unwrap(), EPSILON);
     }
 
     #[test]

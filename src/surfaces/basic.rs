@@ -105,6 +105,16 @@ pub trait BasicSurfaces {
                 option_with_vol.implied_volatility.to_dec(),
                 option_with_vol.veta()?,
             )),
+            BasicAxisTypes::Charm => Ok((
+                option_with_vol.strike_price.to_dec(),
+                option_with_vol.implied_volatility.to_dec(),
+                option_with_vol.charm()?,
+            )),
+            BasicAxisTypes::Color => Ok((
+                option_with_vol.strike_price.to_dec(),
+                option_with_vol.implied_volatility.to_dec(),
+                option_with_vol.color()?,
+            )),
             BasicAxisTypes::Price => Ok((
                 option_with_vol.strike_price.to_dec(),
                 option_with_vol.implied_volatility.to_dec(),
@@ -188,6 +198,16 @@ pub trait BasicSurfaces {
                 volatility.to_dec(),
                 option_with_vol.veta()?,
             )),
+            BasicAxisTypes::Charm => Ok((
+                option_with_vol.strike_price.to_dec(),
+                volatility.to_dec(),
+                option_with_vol.charm()?,
+            )),
+            BasicAxisTypes::Color => Ok((
+                option_with_vol.strike_price.to_dec(),
+                volatility.to_dec(),
+                option_with_vol.color()?,
+            )),
             BasicAxisTypes::Price => Ok((
                 option_with_vol.strike_price.to_dec(),
                 volatility.to_dec(),
@@ -208,7 +228,7 @@ pub trait BasicSurfaces {
 #[cfg(test)]
 mod tests_basic_surfaces {
     use super::*;
-    use crate::{ExpirationDate, OptionType, pos};
+    use crate::{ExpirationDate, OptionType, assert_decimal_eq, pos};
     use rust_decimal_macros::dec;
     use std::sync::Arc;
 
@@ -271,6 +291,104 @@ mod tests_basic_surfaces {
         assert_eq!(strike, dec!(100.0));
         assert_eq!(vol, dec!(0.2));
         assert!(gamma >= dec!(0.0));
+    }
+
+    #[test]
+    fn test_get_strike_versus_theta() {
+        let surfaces = MockBasicSurfaces;
+        let option = create_test_option();
+
+        let result = surfaces.get_surface_strike_versus(&BasicAxisTypes::Theta, &option);
+
+        assert!(result.is_ok());
+        let (strike, vol, theta) = result.unwrap();
+        assert_eq!(strike, dec!(100.0));
+        assert_eq!(vol, dec!(0.2));
+        assert!(theta <= dec!(0.0));
+    }
+
+    #[test]
+    fn test_get_strike_versus_vega() {
+        let surfaces = MockBasicSurfaces;
+        let option = create_test_option();
+
+        let result = surfaces.get_surface_strike_versus(&BasicAxisTypes::Vega, &option);
+
+        assert!(result.is_ok());
+        let (strike, vol, vega) = result.unwrap();
+        assert_eq!(strike, dec!(100.0));
+        assert_eq!(vol, dec!(0.2));
+        assert!(vega >= dec!(0.0));
+    }
+
+    #[test]
+    fn test_get_strike_versus_vanna() {
+        let surfaces = MockBasicSurfaces;
+        let option = create_test_option();
+
+        let result = surfaces.get_surface_strike_versus(&BasicAxisTypes::Vanna, &option);
+
+        assert!(result.is_ok());
+        let (strike, vol, vanna) = result.unwrap();
+        assert_eq!(strike, dec!(100.0));
+        assert_eq!(vol, dec!(0.2));
+        assert!(vanna <= dec!(0.0));
+    }
+
+    #[test]
+    fn test_get_strike_versus_vomma() {
+        let surfaces = MockBasicSurfaces;
+        let option = create_test_option();
+
+        let result = surfaces.get_surface_strike_versus(&BasicAxisTypes::Vomma, &option);
+
+        assert!(result.is_ok());
+        let (strike, vol, vomma) = result.unwrap();
+        assert_eq!(strike, dec!(100.0));
+        assert_eq!(vol, dec!(0.2));
+        assert!(vomma >= dec!(0.0));
+    }
+
+    #[test]
+    fn test_get_strike_versus_veta() {
+        let surfaces = MockBasicSurfaces;
+        let option = create_test_option();
+
+        let result = surfaces.get_surface_strike_versus(&BasicAxisTypes::Veta, &option);
+
+        assert!(result.is_ok());
+        let (strike, vol, veta) = result.unwrap();
+        assert_eq!(strike, dec!(100.0));
+        assert_eq!(vol, dec!(0.2));
+        assert!(veta >= dec!(0.0));
+    }
+
+    #[test]
+    fn test_get_strike_versus_charm() {
+        let surfaces = MockBasicSurfaces;
+        let option = create_test_option();
+
+        let result = surfaces.get_surface_strike_versus(&BasicAxisTypes::Charm, &option);
+
+        assert!(result.is_ok());
+        let (strike, vol, charm) = result.unwrap();
+        assert_eq!(strike, dec!(100.0));
+        assert_eq!(vol, dec!(0.2));
+        assert!(charm <= dec!(0.0));
+    }
+
+    #[test]
+    fn test_get_strike_versus_color() {
+        let surfaces = MockBasicSurfaces;
+        let option = create_test_option();
+
+        let result = surfaces.get_surface_strike_versus(&BasicAxisTypes::Color, &option);
+
+        assert!(result.is_ok());
+        let (strike, vol, color) = result.unwrap();
+        assert_eq!(strike, dec!(100.0));
+        assert_eq!(vol, dec!(0.2));
+        assert!(color <= dec!(0.0));
     }
 
     #[test]
@@ -424,6 +542,38 @@ mod tests_basic_surfaces {
         assert_eq!(strike, dec!(100.0));
         assert_eq!(vol, dec!(0.4));
         assert!(veta >= dec!(0.0));
+    }
+
+    #[test]
+    fn test_get_volatility_versus_charm() {
+        let surfaces = MockBasicSurfaces;
+        let option = create_test_option();
+        let custom_vol = pos!(0.4);
+
+        let result =
+            surfaces.get_surface_volatility_versus(&BasicAxisTypes::Charm, &option, custom_vol);
+
+        assert!(result.is_ok());
+        let (strike, vol, charm) = result.unwrap();
+        assert_eq!(strike, dec!(100.0));
+        assert_eq!(vol, dec!(0.4));
+        assert_decimal_eq!(charm, dec!(-0.000506), dec!(0.000001));
+    }
+
+    #[test]
+    fn test_get_volatility_versus_color() {
+        let surfaces = MockBasicSurfaces;
+        let option = create_test_option();
+        let custom_vol = pos!(0.4);
+
+        let result =
+            surfaces.get_surface_volatility_versus(&BasicAxisTypes::Color, &option, custom_vol);
+
+        assert!(result.is_ok());
+        let (strike, vol, color) = result.unwrap();
+        assert_eq!(strike, dec!(100.0));
+        assert_eq!(vol, dec!(0.4));
+        assert_decimal_eq!(color, dec!(-0.000582), dec!(0.000001));
     }
 
     #[test]

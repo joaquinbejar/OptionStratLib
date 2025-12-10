@@ -48,6 +48,8 @@
 //!         +Decimal? avg_vanna_exposure
 //!         +Decimal? avg_vomma_exposure
 //!         +Decimal? avg_veta_exposure
+//!         +Decimal? avg_charm_exposure
+//!         +Decimal? avg_color_exposure
 //!         +Decimal? calls_percentage
 //!         +Decimal? puts_percentage
 //!         +Decimal? long_percentage
@@ -113,6 +115,8 @@
 //!         +Vec? vanna_exposure
 //!         +Vec? vomma_exposure
 //!         +Vec? veta_exposure
+//!         +Vec? charm_exposure
+//!         +Vec? color_exposure
 //!         +HashMap custom_series
 //!         +new(capacity)
 //!         +add_data_point()
@@ -258,7 +262,7 @@
 //!     }
 //!
 //!     class GreeksExposure {
-//!         Vectors of Delta, Gamma, Theta, Vega, Vanna, Vomma, Veta
+//!         Vectors of Delta, Gamma, Theta, Vega, Vanna, Vomma, Veta, Charm, Color
 //!     }
 //!
 //!     class WindowSize {

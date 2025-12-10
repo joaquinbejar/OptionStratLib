@@ -1900,6 +1900,74 @@ impl OptionChain {
         Ok(veta_exposure)
     }
 
+    /// Calculates the total charm exposure for all options in the chain.
+    ///
+    /// Charm exposure represents the aggregate sensitivity of option Delta
+    /// with respect to the passage of time.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<Decimal, ChainError>` - The aggregate charm value, or an error if calculation fails
+    ///
+    /// # Errors
+    ///
+    /// Returns a `ChainError` if:
+    /// - Any option's charm calculation fails
+    /// - Options greeks are not initialized
+    ///
+    /// # Note
+    ///
+    /// This method requires options greeks to be initialized first by calling
+    /// the `update_greeks` method.
+    pub fn charm_exposure(&self) -> Result<Decimal, ChainError> {
+        let mut charm_exposure = Decimal::ZERO;
+        for option_data in &self.options {
+            let charm = option_data
+                .get_option(Side::Long, OptionStyle::Call)?
+                .charm()?;
+            charm_exposure += charm;
+            let charm = option_data
+                .get_option(Side::Long, OptionStyle::Put)?
+                .charm()?;
+            charm_exposure += charm;
+        }
+        Ok(charm_exposure)
+    }
+
+    /// Calculates the total color exposure for all options in the chain.
+    ///
+    /// Color exposure represents the aggregate sensitivity of option Gamma
+    /// with respect to the passage of time.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<Decimal, ChainError>` - The aggregate color value, or an error if calculation fails
+    ///
+    /// # Errors
+    ///
+    /// Returns a `ChainError` if:
+    /// - Any option's color calculation fails
+    /// - Options greeks are not initialized
+    ///
+    /// # Note
+    ///
+    /// This method requires options greeks to be initialized first by calling
+    /// the `update_greeks` method.
+    pub fn color_exposure(&self) -> Result<Decimal, ChainError> {
+        let mut color_exposure = Decimal::ZERO;
+        for option_data in &self.options {
+            let color = option_data
+                .get_option(Side::Long, OptionStyle::Call)?
+                .color()?;
+            color_exposure += color;
+            let color = option_data
+                .get_option(Side::Long, OptionStyle::Put)?
+                .color()?;
+            color_exposure += color;
+        }
+        Ok(color_exposure)
+    }
+
     /// Generates a gamma curve for visualization and analysis.
     ///
     /// Creates a curve representing gamma values across different strike prices
@@ -2006,6 +2074,40 @@ impl OptionChain {
     /// or calculation errors
     pub fn veta_curve(&self) -> Result<Curve, CurveError> {
         self.curve(&BasicAxisTypes::Veta, &OptionStyle::Call, &Side::Long)
+    }
+
+    /// Generates a charm curve for visualization and analysis.
+    ///
+    /// Creates a curve representing charm values across different strike prices
+    /// or other relevant parameters for long call options in the chain.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<Curve, CurveError>` - A curve object containing charm data points, or an error if curve generation fails
+    ///
+    /// # Errors
+    ///
+    /// Returns a `CurveError` if the curve cannot be generated due to missing
+    /// data or calculation errors
+    pub fn charm_curve(&self) -> Result<Curve, CurveError> {
+        self.curve(&BasicAxisTypes::Charm, &OptionStyle::Call, &Side::Long)
+    }
+
+    /// Generates a color curve for visualization and analysis.
+    ///
+    /// Creates a curve representing color values across different strike prices
+    /// or other relevant parameters for long call options in the chain.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<Curve, CurveError>` - A curve object containing color data points, or an error if curve generation fails
+    ///
+    /// # Errors
+    ///
+    /// Returns a `CurveError` if the curve cannot be generated due to missing
+    /// data or calculation errors
+    pub fn color_curve(&self) -> Result<Curve, CurveError> {
+        self.curve(&BasicAxisTypes::Color, &OptionStyle::Call, &Side::Long)
     }
 
     /// Updates the expiration date for the option chain and recalculates Greeks.
@@ -5830,6 +5932,8 @@ mod tests_basic_curves {
             BasicAxisTypes::Vega,
             BasicAxisTypes::Vanna,
             BasicAxisTypes::Veta,
+            BasicAxisTypes::Charm,
+            BasicAxisTypes::Color,
         ];
 
         for axis in axes {
@@ -6051,6 +6155,8 @@ mod tests_option_chain_surfaces {
             BasicAxisTypes::Vanna,
             BasicAxisTypes::Vomma,
             BasicAxisTypes::Veta,
+            BasicAxisTypes::Charm,
+            BasicAxisTypes::Color,
         ];
 
         for axis in axes {
@@ -7180,6 +7286,152 @@ mod tests_veta_calculations {
 }
 
 #[cfg(test)]
+mod tests_charm_calculations {
+    use super::*;
+
+    use crate::{assert_decimal_eq, pos};
+    use rust_decimal_macros::dec;
+
+    // Helper function to create a test chain for charm calculations
+    fn create_test_chain_with_charm() -> OptionChain {
+        let mut option_chain =
+            OptionChain::load_from_json("examples/Chains/SP500-18-oct-2024-5781.88.json").unwrap();
+        // It is necessary to update the expiration date of all the options in the chain
+        // with a relative number of days in order to have a correct charm calculation
+        option_chain.update_expiration_date("30.0".to_string());
+        option_chain
+    }
+
+    #[test]
+    fn test_charm_exposure_basic() {
+        let mut chain = create_test_chain_with_charm();
+        // Initialize the greeks first
+        chain.update_greeks();
+        let result = chain.charm_exposure();
+
+        assert!(result.is_ok());
+        let charm_exposure = result.unwrap();
+        // Test against expected value from sample data
+        assert_decimal_eq!(charm_exposure, dec!(0.115107), dec!(0.000001));
+    }
+
+    #[test]
+    fn test_charm_exposure_empty_chain() {
+        let chain = OptionChain::new("TEST", pos!(100.0), "2024-12-31".to_string(), None, None);
+
+        let result = chain.charm_exposure();
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), dec!(0.0));
+    }
+
+    #[test]
+    fn test_charm_curve() {
+        let mut chain = create_test_chain_with_charm();
+        chain.update_greeks();
+        let result = chain.charm_curve();
+
+        assert!(result.is_ok());
+        let curve = result.unwrap();
+
+        // Test that curve contains points
+        assert!(!curve.points.is_empty());
+
+        // For each strike in the chain, there should be a corresponding point
+        assert_eq!(curve.points.len(), chain.options.len());
+
+        // Test x range of curve matches strike range
+        let first_strike = chain.options.iter().next().unwrap().strike_price;
+        let last_strike = chain.options.iter().last().unwrap().strike_price;
+        assert_eq!(curve.x_range.0, first_strike.to_dec());
+        assert_eq!(curve.x_range.1, last_strike.to_dec());
+    }
+
+    #[test]
+    fn test_charm_curve_empty_chain() {
+        let chain = OptionChain::new("TEST", pos!(100.0), "2024-12-31".to_string(), None, None);
+
+        let result = chain.charm_curve();
+        // Should return error or empty curve depending on implementation
+        if let Ok(curve) = result {
+            assert!(curve.points.is_empty())
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests_color_calculations {
+    use super::*;
+
+    use crate::{assert_decimal_eq, pos};
+    use rust_decimal_macros::dec;
+
+    // Helper function to create a test chain for charm calculations
+    fn create_test_chain_with_color() -> OptionChain {
+        let mut option_chain =
+            OptionChain::load_from_json("examples/Chains/SP500-18-oct-2024-5781.88.json").unwrap();
+        // It is necessary to update the expiration date of all the options in the chain
+        // with a relative number of days in order to have a correct color calculation
+        option_chain.update_expiration_date("30.0".to_string());
+        option_chain
+    }
+
+    #[test]
+    fn test_color_exposure_basic() {
+        let mut chain = create_test_chain_with_color();
+        // Initialize the greeks first
+        chain.update_greeks();
+        let result = chain.color_exposure();
+
+        assert!(result.is_ok());
+        let color_exposure = result.unwrap();
+        // Test against expected value from sample data
+        assert_decimal_eq!(color_exposure, dec!(-0.001356), dec!(0.000001));
+    }
+
+    #[test]
+    fn test_color_exposure_empty_chain() {
+        let chain = OptionChain::new("TEST", pos!(100.0), "2024-12-31".to_string(), None, None);
+
+        let result = chain.color_exposure();
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), dec!(0.0));
+    }
+
+    #[test]
+    fn test_color_curve() {
+        let mut chain = create_test_chain_with_color();
+        chain.update_greeks();
+        let result = chain.color_curve();
+
+        assert!(result.is_ok());
+        let curve = result.unwrap();
+
+        // Test that curve contains points
+        assert!(!curve.points.is_empty());
+
+        // For each strike in the chain, there should be a corresponding point
+        assert_eq!(curve.points.len(), chain.options.len());
+
+        // Test x range of curve matches strike range
+        let first_strike = chain.options.iter().next().unwrap().strike_price;
+        let last_strike = chain.options.iter().last().unwrap().strike_price;
+        assert_eq!(curve.x_range.0, first_strike.to_dec());
+        assert_eq!(curve.x_range.1, last_strike.to_dec());
+    }
+
+    #[test]
+    fn test_color_curve_empty_chain() {
+        let chain = OptionChain::new("TEST", pos!(100.0), "2024-12-31".to_string(), None, None);
+
+        let result = chain.color_curve();
+        // Should return error or empty curve depending on implementation
+        if let Ok(curve) = result {
+            assert!(curve.points.is_empty())
+        }
+    }
+}
+
+#[cfg(test)]
 mod tests_atm_strike {
     use super::*;
     use crate::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
@@ -8157,6 +8409,12 @@ mod chain_coverage_tests {
 
         let veta_exposure = chain.veta_exposure();
         assert!(veta_exposure.is_ok());
+
+        let charm_exposure = chain.charm_exposure();
+        assert!(charm_exposure.is_ok());
+
+        let color_exposure = chain.color_exposure();
+        assert!(color_exposure.is_ok());
     }
 
     #[test]
@@ -8184,6 +8442,12 @@ mod chain_coverage_tests {
 
         let veta_curve = chain.veta_curve();
         assert!(veta_curve.is_ok());
+
+        let charm_curve = chain.charm_curve();
+        assert!(charm_curve.is_ok());
+
+        let color_curve = chain.color_curve();
+        assert!(color_curve.is_ok());
     }
 }
 
@@ -8424,6 +8688,12 @@ mod chain_coverage_tests_bis {
 
         let veta_exposure = chain.veta_exposure();
         assert!(veta_exposure.is_ok());
+
+        let charm_exposure = chain.charm_exposure();
+        assert!(charm_exposure.is_ok());
+
+        let color_exposure = chain.color_exposure();
+        assert!(color_exposure.is_ok());
     }
 
     #[test]
@@ -8451,6 +8721,12 @@ mod chain_coverage_tests_bis {
 
         let veta_curve = chain.veta_curve();
         assert!(veta_curve.is_ok());
+
+        let charm_curve = chain.charm_curve();
+        assert!(charm_curve.is_ok());
+
+        let color_curve = chain.color_curve();
+        assert!(color_curve.is_ok());
     }
 }
 

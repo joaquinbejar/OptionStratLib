@@ -28,6 +28,8 @@
 //! * Vanna     - Measures the rate of change in delta with respect to volatility
 //! * Vomma     - Measures the rate of change in vega with respect to volatility
 //! * Veta      - Measures the rate of change in vega with respect to time
+//! * Charm     - Measures the rate of change in delta with respect to time
+//! * Color     - Measures the rate of change in gamma with respect to time
 //!
 //! ## Utilities Included
 //!
@@ -41,7 +43,9 @@
 //!
 //! ```rust
 //! use rust_decimal_macros::dec;
-//! use optionstratlib::greeks::{delta, gamma, rho, theta, vanna, vega, veta, vomma};
+//! use optionstratlib::greeks::{
+//!     delta, gamma, rho, theta, vanna, vega, veta, vomma, charm, color
+//! };
 //! use optionstratlib::{ExpirationDate, Options};
 //! use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
 //! use optionstratlib::pos;
@@ -72,6 +76,8 @@
 //! let vanna_value = vanna(&option);
 //! let vomma = vomma(&option);
 //! let veta_value = veta(&option);
+//! let charm_value = charm(&option);
+//! let color_value = color(&option);
 //! ```
 //!
 //! ## Mathematical Background
@@ -87,6 +93,8 @@
 //! * Vanna: Second-order volatility sensitivity
 //! * Vomma: Second-order volatility sensitivity
 //! * Veta: Second-order time sensitivity
+//! * Charm: Second-order time sensitivity
+//! * Color: Third-order time sensitivity
 //!
 //! ## Additional Features
 //!
@@ -99,7 +107,8 @@ mod equations;
 mod utils;
 
 pub use equations::{
-    Greek, Greeks, GreeksSnapshot, delta, gamma, rho, rho_d, theta, vanna, vega, veta, vomma,
+    Greek, Greeks, GreeksSnapshot, charm, color, delta, gamma, rho, rho_d, theta, vanna, vega,
+    veta, vomma,
 };
 pub(crate) use utils::calculate_d_values;
 pub use utils::calculate_delta_neutral_sizes;

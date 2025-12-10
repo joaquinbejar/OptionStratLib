@@ -47,6 +47,8 @@ fn test_long_butterfly_spread_integration() -> Result<(), Box<dyn Error>> {
     assert_decimal_eq!(greeks.vanna, dec!(-1.0392151544), epsilon);
     assert_decimal_eq!(greeks.vomma, dec!(11.7847657892), epsilon);
     assert_decimal_eq!(greeks.veta, dec!(0.0397196877), epsilon);
+    assert_decimal_eq!(greeks.charm, dec!(0.03338228), epsilon);
+    assert_decimal_eq!(greeks.color, dec!(-0.00276925), epsilon);
 
     assert_decimal_eq!(
         strategy.delta_neutrality().unwrap().net_delta,

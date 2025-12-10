@@ -42,6 +42,8 @@ fn test_long_straddle_integration() -> Result<(), Box<dyn Error>> {
     assert_decimal_eq!(greeks.vanna, dec!(0.3412456242), epsilon);
     assert_decimal_eq!(greeks.vomma, dec!(0.2413416787), epsilon);
     assert_decimal_eq!(greeks.veta, dec!(0.0031816624), epsilon);
+    assert_decimal_eq!(greeks.charm, dec!(-0.00225081), epsilon);
+    assert_decimal_eq!(greeks.color, dec!(-0.00000954), epsilon);
 
     assert_decimal_eq!(
         strategy.delta_neutrality().unwrap().net_delta,
