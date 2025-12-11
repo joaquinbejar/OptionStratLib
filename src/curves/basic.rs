@@ -76,6 +76,8 @@ pub trait BasicCurves {
             BasicAxisTypes::Vanna => Ok((option.strike_price.to_dec(), option.vanna()?)),
             BasicAxisTypes::Vega => Ok((option.strike_price.to_dec(), option.vega()?)),
             BasicAxisTypes::Veta => Ok((option.strike_price.to_dec(), option.veta()?)),
+            BasicAxisTypes::Charm => Ok((option.strike_price.to_dec(), option.charm()?)),
+            BasicAxisTypes::Color => Ok((option.strike_price.to_dec(), option.color()?)),
             BasicAxisTypes::Volatility => Ok((
                 option.strike_price.to_dec(),
                 option.implied_volatility.to_dec(),
@@ -112,14 +114,14 @@ mod tests_basic_curves_trait {
             OptionType::European,
             Side::Long,
             "AAPL".to_string(),
-            pos!(100.0),
+            pos!(100.0), // strike
             ExpirationDate::Days(pos!(30.0)),
-            pos!(0.2),
-            Positive::ONE,
-            pos!(105.0),
-            dec!(0.05),
+            pos!(0.2),     // implied volatility
+            Positive::ONE, // quantity
+            pos!(105.0),   // underlying price
+            dec!(0.05),    // risk free rate
             OptionStyle::Call,
-            pos!(0.01),
+            pos!(0.01), // dividend yield
             None,
         ))
     }
@@ -229,6 +231,34 @@ mod tests_basic_curves_trait {
         assert_eq!(x, option.strike_price.to_dec());
         // In this case veta is positive
         assert!(y >= Decimal::ZERO);
+    }
+
+    #[test]
+    fn test_get_strike_versus_charm() {
+        let test_curves = TestBasicCurves;
+        let option = create_test_option();
+
+        let result = test_curves.get_curve_strike_versus(&BasicAxisTypes::Charm, &option);
+
+        assert!(result.is_ok());
+        let (x, _y) = result.unwrap();
+
+        // Charm can be positive or negative
+        assert_eq!(x, option.strike_price.to_dec());
+    }
+
+    #[test]
+    fn test_get_strike_versus_color() {
+        let test_curves = TestBasicCurves;
+        let option = create_test_option();
+
+        let result = test_curves.get_curve_strike_versus(&BasicAxisTypes::Color, &option);
+
+        assert!(result.is_ok());
+        let (x, _y) = result.unwrap();
+
+        // Color can be positive or negative
+        assert_eq!(x, option.strike_price.to_dec());
     }
 
     #[test]

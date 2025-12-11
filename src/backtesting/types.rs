@@ -181,6 +181,10 @@ pub struct TimeSeriesData {
     pub vomma_exposure: Option<Vec<Decimal>>,
     /// Optional time series of the portfolio's veta exposure.
     pub veta_exposure: Option<Vec<Decimal>>,
+    /// Optional time series of the portfolio's charm exposure.
+    pub charm_exposure: Option<Vec<Decimal>>,
+    /// Optional time series of the portfolio's color exposure.
+    pub color_exposure: Option<Vec<Decimal>>,
     /// A map holding custom time series metrics, identified by a string key.
     /// Each key maps to a vector of decimal values corresponding to the timestamps.
     pub custom_series: HashMap<String, Vec<Decimal>>,
@@ -227,7 +231,7 @@ pub struct TradeRecord {
     pub exit_reason: Option<ExitReason>,
     /// Optional field for any textual notes, observations, or comments related to this specific trade.
     pub notes: Option<String>,
-    /// A snapshot of the calculated option Greeks (Delta, Gamma, Theta, Vega, Rho, Vanna, Vomma, Veta) at the moment of trade entry.
+    /// A snapshot of the calculated option Greeks (Delta, Gamma, Theta, Vega, Rho, Vanna, Vomma, Veta, etc.) at the moment of trade entry.
     /// See [`GreeksSnapshot`] for details. `None` if Greeks were not calculated or recorded at entry.
     pub entry_greeks: Option<GreeksSnapshot>,
     /// A snapshot of the calculated option Greeks at the moment of trade exit.

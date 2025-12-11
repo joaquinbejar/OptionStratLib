@@ -33,6 +33,8 @@ use utoipa::ToSchema;
 /// * `vanna`: Measures the rate of change of delta in relation to changes in implied volatility
 /// * `vomma`: Measures the rate of change of vega in relation to changes in implied volatility
 /// * `veta`: Measures the rate of change of vega in relation to changes in time
+/// * `charm`: Measures the rate of change of delta in relation to changes in time
+/// * `color`: Measures the rate of change of gamma in relation to changes in time
 ///
 /// These metrics help traders understand and manage the various dimensions of risk in option positions.
 #[derive(PartialEq, Clone, DebugPretty, DisplaySimple, ToSchema, Serialize)]
@@ -57,6 +59,10 @@ pub struct Greek {
     pub vomma: Decimal,
     /// Measures the rate of change of vega in relation to changes in time
     pub veta: Decimal,
+    /// Measures the rate of change of delta in relation to changes in time
+    pub charm: Decimal,
+    /// Measures the rate of change of gamma in relation to changes in time
+    pub color: Decimal,
 }
 
 /// A struct representing a snapshot of the Greeks, financial measures used to assess risk and
@@ -88,6 +94,10 @@ pub struct GreeksSnapshot {
     pub vomma: Decimal,
     /// Measures the rate of change of vega in relation to changes in time
     pub veta: Decimal,
+    /// Measures the rate of change of delta in relation to changes in time
+    pub charm: Decimal,
+    /// Measures the rate of change of gamma in relation to changes in time
+    pub color: Decimal,
 }
 
 /// Trait that provides option Greeks calculation functionality for financial instruments.
@@ -112,6 +122,8 @@ pub struct GreeksSnapshot {
 /// - Vanna: Rate of change of delta in relation to changes in implied volatility
 /// - Vomma: Rate of change of vega in relation to changes in implied volatility
 /// - Veta: Rate of change of vega in relation to changes in time
+/// - Charm: Rate of change of delta in relation to changes in time
+/// - Color: Rate of change of gamma in relation to changes in time
 ///
 /// # Usage
 ///
@@ -153,6 +165,8 @@ pub trait Greeks {
         let vanna = self.vanna()?;
         let vomma = self.vomma()?;
         let veta = self.veta()?;
+        let charm = self.charm()?;
+        let color = self.color()?;
         Ok(Greek {
             delta,
             gamma,
@@ -164,6 +178,8 @@ pub trait Greeks {
             vanna,
             vomma,
             veta,
+            charm,
+            color,
         })
     }
 
@@ -335,6 +351,40 @@ pub trait Greeks {
             veta_value += veta(option)?;
         }
         Ok(veta_value)
+    }
+
+    /// Calculates the aggregate charm value for all options.
+    ///
+    /// Charm measures the rate of change of the option delta with respect to time,
+    /// also known as delta decay.
+    ///
+    /// # Errors
+    ///
+    /// Returns a `GreeksError` if the options can't be retrieved or charm calculation fails.
+    fn charm(&self) -> Result<Decimal, GreeksError> {
+        let options = self.get_options()?;
+        let mut charm_value = Decimal::ZERO;
+        for option in options {
+            charm_value += charm(option)?;
+        }
+        Ok(charm_value)
+    }
+
+    /// Calculates the aggregate color value for all options.
+    ///
+    /// Color measures the rate of change of the option gamma with respect to time,
+    /// also known as gamma decay.
+    ///
+    /// # Errors
+    ///
+    /// Returns a `GreeksError` if the options can't be retrieved or color calculation fails.
+    fn color(&self) -> Result<Decimal, GreeksError> {
+        let options = self.get_options()?;
+        let mut color_value = Decimal::ZERO;
+        for option in options {
+            color_value += color(option)?;
+        }
+        Ok(color_value)
     }
 }
 
@@ -1266,7 +1316,7 @@ pub fn vanna(option: &Options) -> Result<Decimal, GreeksError> {
     let n_d1: Decimal = n(d1)?;
     let e_rt: Decimal = -(expiration_date.to_dec() * -dividend_yield).exp();
 
-    let vanna: Decimal = e_rt * n_d1 * d2 / implied_volatility;
+    let vanna: Decimal = e_rt * n_d1 * (d2 / implied_volatility);
 
     let quantity: Decimal = option.quantity.into();
     Ok(vanna * quantity)
@@ -1381,7 +1431,7 @@ pub fn vomma(option: &Options) -> Result<Decimal, GreeksError> {
     let vega = vega(option)?;
     let implied_volatility: Positive = option.implied_volatility;
 
-    let vomma: Decimal = vega * d1 * d2 / implied_volatility;
+    let vomma: Decimal = vega * (d1 * d2 / implied_volatility);
 
     let quantity: Decimal = option.quantity.into();
     Ok(vomma * quantity)
@@ -1501,6 +1551,285 @@ pub fn veta(option: &Options) -> Result<Decimal, GreeksError> {
 
     let quantity: Decimal = option.quantity.into();
     Ok(veta_adj * quantity)
+}
+
+/// Computes the Charm of an option.
+///
+/// Charm, also known as DdeltaDtime or Delta decay, measures the sensitivity of
+/// the option's delta to time decay. The mathematical result of the formula for
+/// charm is expressed in delta per year. It is useful to divide this by the
+/// number of days per year to arrive at the delta decay per day. This usage is
+/// fairly accurate when the number of days remaining until option expiration is
+/// large. When an option nears expiration, charm itsel may change quickly,
+/// rendering full day estimate of delta decay inaccurate.
+///
+/// # Parameters
+///
+/// - `option: &Options`
+///   A reference to an `Options` struct containing the following relevant parameters:
+///   - `underlying_price`: The current price of the underlying asset.
+///   - `strike_price`: The strike price of the option.
+///   - `risk_free_rate`: The risk-free interest rate.
+///   - `expiration_date`: The time to expiration in years (provides `get_years` method).
+///   - `implied_volatility`: The implied volatility of the option.
+///   - `dividend_yield`: The dividend yield of the underlying asset.
+///   - `option_style`: The style of the option (Call or Put).
+///   - `quantity`: The quantity of the options.
+///
+/// # Returns
+///
+/// - `Ok(Decimal)`: The calculated Charm value for the option.
+/// - `Err(GreeksError)`: Returns an error if any intermediate calculation fails
+///
+/// # Formula
+///
+/// The Charm is calculated using the Black-Scholes model. The formula differs
+/// for call and put options:
+///
+/// **Call Options:**
+///
+/// ```math
+/// \text{Charm}_{\text{Call}} =
+/// qe^{-q\tau}N(d_{\text{1}})
+/// -e^{-q\tau}n(d_{\text{1}})
+/// \frac{2(r-q)\tau-d_{\text{2}}\sigma\sqrt{\tau}}
+/// {2\tau\sigma\sqrt{\tau}}
+/// ```
+///
+/// **Put Options:**
+///
+/// ```math
+/// \text{Charm}_{\text{Put}} =
+/// -qe^{-q\tau}N(-d_{\text{1}})
+/// -e^{-q\tau}n(d_{\text{1}})
+/// \frac{2(r-q)\tau-d_{\text{2}}\sigma\sqrt{\tau}}
+/// {2\tau\sigma\sqrt{\tau}}
+/// ```
+///
+/// Where:
+/// - \( S \): Underlying price
+/// - \( \sigma \): Implied volatility
+/// - \( \tau \): Time to expiration (in years)
+/// - \( r \): Risk-free rate
+/// - \( q \): Dividend yield
+/// - \( K \): Strike price
+/// - \( N(d1) \): Cumulative distribution function (CDF) of the standard normal
+///   distribution at \( d1 \).
+/// - \( n(d1) \): Probability density function (PDF) of the standard normal
+///   distribution at \( d1 \).
+///
+/// # Calculation Steps
+/// 1. Compute \( d1 \) and \( d2 \) using the `d1` and `d2` functions.
+/// 2. Calculate the common term:
+///    ```math
+///    \text{common\_term} =
+///    \frac{2(r-q)\tau-d_{\text{2}}\sigma\sqrt{\tau}}
+///    {2\tau\sigma\sqrt{\tau}}
+///    ```
+/// 3. Apply the corresponding formula for Call or Put options, accounting for
+///    the effect of dividends (\( e^{-q\tau} \)).
+/// 4. Multiply the resulting Charm by the quantity of options.
+///
+/// # Example
+///
+/// ```rust
+/// use rust_decimal_macros::dec;
+/// use tracing::{error, info};
+/// use optionstratlib::greeks::charm;
+/// use optionstratlib::{ExpirationDate, Options};
+/// use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
+/// use optionstratlib::pos;
+/// let option = Options {
+///     option_type: OptionType::European,
+///     side: Side::Long,
+///     underlying_price: pos!(100.0),
+///     strike_price: pos!(95.0),
+///     risk_free_rate: dec!(0.05),
+///     expiration_date: ExpirationDate::Days(pos!(30.0)),
+///     implied_volatility: pos!(0.2),
+///     dividend_yield: pos!(0.01),
+///     quantity: pos!(1.0),
+///     option_style: OptionStyle::Call,
+///     underlying_symbol: "".to_string(),
+///     exotic_params: None,
+/// };
+///
+/// match charm(&option) {
+///     Ok(result) => info!("Charm: {}", result),
+///     Err(e) => error!("Error calculating Charm: {:?}", e),
+/// }
+/// ```
+///
+/// # Notes
+///
+/// - With zero DTE Charm can be considered as zero.
+/// - Charm effects are more pronounced near expiration.
+pub fn charm(option: &Options) -> Result<Decimal, GreeksError> {
+    let tau = option.expiration_date.get_years()?;
+    // if DTE is zero we can assume Charm is also zero
+    if tau == Decimal::ZERO {
+        return Ok(Decimal::ZERO);
+    }
+
+    let d1 = d1(
+        option.underlying_price,
+        option.strike_price,
+        option.risk_free_rate,
+        tau, // expiration date
+        option.implied_volatility,
+    )?;
+    let d2 = d2(
+        option.underlying_price,
+        option.strike_price,
+        option.risk_free_rate,
+        tau, // expiration date
+        option.implied_volatility,
+    )?;
+    let r = option.risk_free_rate;
+    let q = option.dividend_yield.to_dec();
+    let sigma = option.implied_volatility;
+    let exp_minus_qt = (-q * tau).exp();
+    let common_term = (Decimal::TWO * (r - q) * tau - d2 * sigma * tau.sqrt())
+        / (Decimal::TWO * tau * sigma * tau.sqrt());
+    let charm = match option.option_style {
+        OptionStyle::Call => {
+            (q * exp_minus_qt * big_n(d1)?) - (exp_minus_qt * n(d1)? * common_term)
+        }
+        OptionStyle::Put => {
+            (-q * exp_minus_qt * big_n(-d1)?) - (exp_minus_qt * n(d1)? * common_term)
+        }
+    };
+    // Adjust for quantity and convert to daily value
+    Ok((charm * option.quantity) / Decimal::from(365))
+}
+
+/// Computes the Color of an option.
+///
+/// Color, also known as DgammaDtime or Gamma decay, measures the sensitivity of
+/// the option's gamma to time decay. The mathematical result of the formula for
+/// color is expressed in gamma per year. It is useful to divide this by the
+/// number of days per year to arrive at the gamma decay per day. This usage is
+/// fairly accurate when the number of days remaining until option expiration is
+/// large. When an option nears expiration, color itsel may change quickly,
+/// rendering full days estimate of gamma decay inaccurate.
+///
+/// # Parameters
+///
+/// - `option: &Options`
+///   A reference to an `Options` struct containing the following relevant parameters:
+///   - `underlying_price`: The current price of the underlying asset.
+///   - `strike_price`: The strike price of the option.
+///   - `risk_free_rate`: The risk-free interest rate.
+///   - `expiration_date`: The time to expiration in years (provides `get_years` method).
+///   - `implied_volatility`: The implied volatility of the option.
+///   - `dividend_yield`: The dividend yield of the underlying asset.
+///   - `option_style`: The style of the option (Call or Put).
+///   - `quantity`: The quantity of the options.
+///
+/// # Returns
+///
+/// - `Ok(Decimal)`: The calculated Color value for the option.
+/// - `Err(GreeksError)`: Returns an error if any intermediate calculation fails
+///
+/// # Formula
+///
+/// The Color is calculated using the Black-Scholes model. The formula is the
+/// same for call and put options:
+///
+/// ```math
+/// \text{Color} = -e^{-q\tau}
+/// \frac{n(d_{\text{1}})}
+/// {2S\tau\sigma\sqrt{\tau}}
+/// \left[
+/// 2q\tau+1+
+/// \frac{2(r-q)\tau-d_{\text{2}}\sigma\sqrt{\tau}}
+/// {\sigma\sqrt{\tau}}d_{\text{1}}
+/// \right]
+/// ```
+///
+/// Where:
+/// - \( S \): Underlying price
+/// - \( \sigma \): Implied volatility
+/// - \( \tau \): Time to expiration (in years)
+/// - \( r \): Risk-free rate
+/// - \( q \): Dividend yield
+/// - \( n(d1) \): Probability density function (PDF) of the standard normal
+///   distribution at \( d1 \).
+///
+/// # Calculation Steps
+/// 1. Compute \( d1 \) and \( d2 \) using the `d1` and `d2` functions.
+/// 2. Compute \( n(d1) \) using the `n` function.
+/// 3. Apply the corresponding Color formula, accounting for
+///    the effect of dividends (\( e^{-q\tau} \)).
+/// 4. Multiply the resulting Color value by the quantity of options.
+///
+/// # Example
+///
+/// ```rust
+/// use rust_decimal_macros::dec;
+/// use tracing::{error, info};
+/// use optionstratlib::greeks::color;
+/// use optionstratlib::{ExpirationDate, Options};
+/// use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
+/// use optionstratlib::pos;
+/// let option = Options {
+///     option_type: OptionType::European,
+///     side: Side::Long,
+///     underlying_price: pos!(100.0),
+///     strike_price: pos!(95.0),
+///     risk_free_rate: dec!(0.05),
+///     expiration_date: ExpirationDate::Days(pos!(30.0)),
+///     implied_volatility: pos!(0.2),
+///     dividend_yield: pos!(0.01),
+///     quantity: pos!(1.0),
+///     option_style: OptionStyle::Call,
+///     underlying_symbol: "".to_string(),
+///     exotic_params: None,
+/// };
+///
+/// match color(&option) {
+///     Ok(result) => info!("Color: {}", result),
+///     Err(e) => error!("Error calculating Color: {:?}", e),
+/// }
+/// ```
+///
+/// # Notes
+/// - Color is generally negative for long options and positive for short options.
+/// - Color will be more pronounced as expiration date approaches.
+/// - When volatility increases Color sensitivity decrease.
+/// - Deep ITM and OTM options have negligible Color.
+pub fn color(option: &Options) -> Result<Decimal, GreeksError> {
+    let tau = option.expiration_date.get_years()?;
+    // if DTE is zero we can assume Color is also zero
+    if tau == Decimal::ZERO {
+        return Ok(Decimal::ZERO);
+    }
+
+    let d1 = d1(
+        option.underlying_price,
+        option.strike_price,
+        option.risk_free_rate,
+        tau, // expiration date
+        option.implied_volatility,
+    )?;
+    let d2 = d2(
+        option.underlying_price,
+        option.strike_price,
+        option.risk_free_rate,
+        tau, // expiration date
+        option.implied_volatility,
+    )?;
+    let r = option.risk_free_rate;
+    let s = option.underlying_price;
+    let q = option.dividend_yield.to_dec();
+    let sigma = option.implied_volatility;
+    let exp_minus_qt = (-q * tau).exp();
+    let factor1 = n(d1)? / (Decimal::TWO * s * tau * sigma * tau.sqrt());
+    let numerator = (Decimal::TWO * (r - q) * tau) - (d2 * sigma * tau.sqrt());
+    let denominator = sigma * tau.sqrt();
+    let factor2 = (Decimal::TWO * q * tau) + Decimal::ONE + ((numerator / denominator) * d1);
+    let color = (-exp_minus_qt * factor1 * factor2 * option.quantity) / Decimal::from(365);
+    Ok(color)
 }
 
 #[cfg(test)]
@@ -2958,5 +3287,207 @@ pub mod tests_veta_equation {
             (veta - expected_veta).abs() < 1e-5,
             "Veta ITM test failed: expected {expected_veta}, got {veta}"
         );
+    }
+}
+
+#[cfg(test)]
+pub mod tests_charm_equations {
+    use super::*;
+    use crate::model::types::{OptionStyle, Side};
+    use crate::model::utils::create_sample_option_with_days;
+    use crate::pos;
+    use approx::assert_relative_eq;
+    use num_traits::ToPrimitive;
+    use tracing::info;
+
+    #[test]
+    fn test_charm_call_itm() {
+        let option = create_sample_option_with_days(
+            OptionStyle::Call,
+            Side::Long,
+            pos!(100.0), // underlying price
+            pos!(1.0),   // quantity
+            pos!(95.0),  // strike price
+            pos!(0.3),   // volatility
+            pos!(30.0),  // expiration days
+        );
+        let charm_value = charm(&option).unwrap();
+        info!("Charm Call ITM Value: {}", charm_value);
+        assert_relative_eq!(charm_value.to_f64().unwrap(), 0.00277350, epsilon = 1e-8);
+    }
+
+    #[test]
+    fn test_charm_put_itm() {
+        let option = create_sample_option_with_days(
+            OptionStyle::Put,
+            Side::Long,
+            pos!(95.0),  // underlying price
+            pos!(1.0),   // quantity
+            pos!(100.0), // strike price
+            pos!(0.3),   // volatility
+            pos!(30.0),  // expiration days
+        );
+        let charm_value = charm(&option).unwrap();
+        info!("Charm Put ITM Value: {}", charm_value);
+        assert_relative_eq!(charm_value.to_f64().unwrap(), -0.00392474, epsilon = 1e-8);
+    }
+
+    #[test]
+    fn test_charm_call_atm() {
+        let option = create_sample_option_with_days(
+            OptionStyle::Call,
+            Side::Long,
+            pos!(95.0), // underlying price
+            pos!(1.0),  // quantity
+            pos!(95.0), // strike price
+            pos!(0.3),  // volatility
+            pos!(30.0), // expiration days
+        );
+        let charm_value = charm(&option).unwrap();
+        info!("Charm Call ATM Value: {}", charm_value);
+        assert_relative_eq!(charm_value.to_f64().unwrap(), -0.00045952, epsilon = 1e-8);
+    }
+
+    #[test]
+    fn test_charm_put_atm() {
+        let option = create_sample_option_with_days(
+            OptionStyle::Put,
+            Side::Long,
+            pos!(95.0), // underlying price
+            pos!(1.0),  // quantity
+            pos!(95.0), // strike price
+            pos!(0.3),  // volatility
+            pos!(30.0), // expiration days
+        );
+        let charm_value = charm(&option).unwrap();
+        info!("Charm Put ATM Value: {}", charm_value);
+        assert_relative_eq!(charm_value.to_f64().unwrap(), -0.00048690, epsilon = 1e-8);
+    }
+
+    #[test]
+    fn test_charm_call_otm() {
+        let option = create_sample_option_with_days(
+            OptionStyle::Call,
+            Side::Long,
+            pos!(90.0), // underlying price
+            pos!(1.0),  // quantity
+            pos!(95.0), // strike price
+            pos!(0.3),  // volatility
+            pos!(30.0), // expiration days
+        );
+        let charm_value = charm(&option).unwrap();
+        info!("Charm Call OTM Value: {}", charm_value);
+        assert_relative_eq!(charm_value.to_f64().unwrap(), -0.00401791, epsilon = 1e-8);
+    }
+
+    #[test]
+    fn test_charm_put_otm() {
+        let option = create_sample_option_with_days(
+            OptionStyle::Put,
+            Side::Long,
+            pos!(95.0), // underlying price
+            pos!(1.0),  // quantity
+            pos!(90.0), // strike price
+            pos!(0.3),  // volatility
+            pos!(30.0), // expiration days
+        );
+        let charm_value = charm(&option).unwrap();
+        info!("Charm Put OTM Value: {}", charm_value);
+        assert_relative_eq!(charm_value.to_f64().unwrap(), 0.00285007, epsilon = 1e-8);
+    }
+}
+
+#[cfg(test)]
+pub mod tests_color_equations {
+    use super::*;
+    use crate::model::types::{OptionStyle, Side};
+    use crate::model::utils::create_sample_option_with_days;
+    use crate::pos;
+    use approx::assert_relative_eq;
+    use num_traits::ToPrimitive;
+    use tracing::info;
+
+    #[test]
+    fn test_color_itm() {
+        let option = create_sample_option_with_days(
+            OptionStyle::Call,
+            Side::Long,
+            pos!(100.0), // underlying price
+            pos!(1.0),   // quantity
+            pos!(95.0),  // strike price
+            pos!(0.3),   // volatility
+            pos!(30.0),  // expiration days
+        );
+        let color_value = color(&option).unwrap();
+        info!("Color ITM Value: {}", color_value);
+        assert_relative_eq!(color_value.to_f64().unwrap(), -0.00039105, epsilon = 1e-8);
+    }
+
+    #[test]
+    fn test_color_atm() {
+        let option = create_sample_option_with_days(
+            OptionStyle::Call,
+            Side::Long,
+            pos!(95.0), // underlying price
+            pos!(1.0),  // quantity
+            pos!(95.0), // strike price
+            pos!(0.3),  // volatility
+            pos!(30.0), // expiration days
+        );
+        let color_value = color(&option).unwrap();
+        info!("Color ATM Value: {}", color_value);
+        assert_relative_eq!(color_value.to_f64().unwrap(), -0.00081635, epsilon = 1e-8);
+    }
+
+    #[test]
+    fn test_color_atm_near_expiration() {
+        let option = create_sample_option_with_days(
+            OptionStyle::Call,
+            Side::Long,
+            pos!(95.0), // underlying price
+            pos!(1.0),  // quantity
+            pos!(95.0), // strike price
+            pos!(0.3),  // volatility
+            pos!(0.5),  // expiration days
+        );
+        let color_value = color(&option).unwrap();
+        info!("Color ATM Near Expiration Value: {}", color_value);
+        assert_relative_eq!(color_value.to_f64().unwrap(), -0.37822466, epsilon = 1e-8);
+    }
+
+    #[test]
+    fn test_color_atm_right_before_expiration() {
+        let option = create_sample_option_with_days(
+            OptionStyle::Call,
+            Side::Long,
+            pos!(95.0),  // underlying price
+            pos!(1.0),   // quantity
+            pos!(95.0),  // strike price
+            pos!(0.3),   // volatility
+            pos!(0.001), // expiration days
+        );
+        let color_value = color(&option).unwrap();
+        info!("Color ATM Right Before Expiration Value: {}", color_value);
+        assert_relative_eq!(
+            color_value.to_f64().unwrap(),
+            -4228.45476344,
+            epsilon = 1e-8
+        );
+    }
+
+    #[test]
+    fn test_color_otm() {
+        let option = create_sample_option_with_days(
+            OptionStyle::Call,
+            Side::Long,
+            pos!(90.0), // underlying price
+            pos!(1.0),  // quantity
+            pos!(95.0), // strike price
+            pos!(0.3),  // volatility
+            pos!(30.0), // expiration days
+        );
+        let color_value = color(&option).unwrap();
+        info!("Color OTM Value: {}", color_value);
+        assert_relative_eq!(color_value.to_f64().unwrap(), -0.00046416, epsilon = 1e-8);
     }
 }

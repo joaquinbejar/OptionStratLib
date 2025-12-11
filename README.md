@@ -15,7 +15,7 @@
 [![Wiki](https://img.shields.io/badge/wiki-latest-blue.svg)](https://deepwiki.com/joaquinbejar/OptionStratLib)
 
 
-## OptionStratLib v0.11.0: Financial Options Library
+## OptionStratLib v0.12.0: Financial Options Library
 
 ### Table of Contents
 1. [Introduction](#introduction)
@@ -44,7 +44,8 @@ and a modular architecture built on modern Rust 2024 edition.
 - **Telegraph Process Model**: Advanced stochastic modeling for jump-diffusion processes
 
 #### 2. **Greeks Calculation**
-- Complete Greeks suite: Delta, Gamma, Theta, Vega, Rho, Vanna, Vomma, Veta
+- Complete Greeks suite: Delta, Gamma, Theta, Vega, Rho, Vanna, Vomma, Veta,
+  Charm, Color
 - Real-time sensitivity analysis
 - Greeks visualization and risk profiling
 - Custom Greeks implementations with adjustable parameters
@@ -160,7 +161,7 @@ Volatility modeling and analysis:
 
 #### **Greeks** (`greeks/`)
 Complete Greeks calculation suite:
-- Delta, Gamma, Theta, Vega, Rho, Vanna, Vomma, Veta calculations
+- Delta, Gamma, Theta, Vega, Rho, Vanna, Vomma, Veta, Charm, Color calculations
 - Real-time sensitivity analysis
 - Greeks-based risk management
 
@@ -249,6 +250,8 @@ class Options {
 +vanna()
 +vomma()
 +veta()
++charm()
++color()
 }
 
 class Position {
@@ -507,9 +510,12 @@ let vega = option.vega().unwrap();
 let vanna = option.vanna().unwrap();
 let vomma = option.vomma().unwrap();
 let veta = option.veta().unwrap();
+let charm = option.charm().unwrap();
+let color = option.color().unwrap();
 tracing::info!("Greeks - Delta: {:.4}, Gamma: {:.4}, Theta: {:.4},
-    Vega: {:.4}, Vanna: {:.4}, Vomma: {:.4}, Veta: {:.4}",
-    delta, gamma, theta, vega, vanna, vomma, veta);
+    Vega: {:.4}, Vanna: {:.4}, Vomma: {:.4}, Veta: {:.4}
+    Charm: {:.4}, Color: {:.4}",
+    delta, gamma, theta, vega, vanna, vomma, veta, charm, color);
 ```
 
 #### Working with Trading Strategies

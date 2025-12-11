@@ -43,6 +43,8 @@ fn test_bear_put_spread_integration() -> Result<(), Box<dyn Error>> {
     assert_decimal_eq!(greeks.vanna, dec!(0.0980755896), epsilon);
     assert_decimal_eq!(greeks.vomma, dec!(37.8187674591), epsilon);
     assert_decimal_eq!(greeks.veta, dec!(0.0593138779), epsilon);
+    assert_decimal_eq!(greeks.charm, dec!(-0.015910), epsilon);
+    assert_decimal_eq!(greeks.color, dec!(-0.001047), epsilon);
 
     assert_decimal_eq!(
         strategy.delta_neutrality().unwrap().net_delta,

@@ -42,7 +42,7 @@ use thiserror::Error;
 ///
 /// This enum encapsulates the various types of errors that might arise during
 /// the calculation of option Greeks (delta, gamma, theta, vega, rho, vanna, vomma,
-/// veta) and related financial computations. It provides a structured approach
+/// veta, etc.) and related financial computations. It provides a structured approach
 /// to error handling by categorizing errors based on their nature and source.
 ///
 /// `GreeksError` serves as the primary error type for the Greek calculation system,
@@ -339,6 +339,24 @@ pub enum CalculationErrorKind {
     #[error("Veta calculation error: {reason}")]
     VetaError {
         /// Detailed description of what caused the veta calculation to fail
+        reason: String,
+    },
+    /// Error in charm calculation
+    ///
+    /// Charm measures the sensitivity of the option delta with respect to the
+    /// passage of time.
+    #[error("Charm calculation error: {reason}")]
+    CharmError {
+        /// Detailed description of what caused the charm calculation to fail
+        reason: String,
+    },
+    /// Error in color calculation
+    ///
+    /// Color measures the sensitivity of the option gamma with respect to the
+    /// passage of time.
+    #[error("Color calculation error: {reason}")]
+    ColorError {
+        /// Detailed description of what caused the color calculation to fail
         reason: String,
     },
     /// Error originating from decimal operations
@@ -691,6 +709,28 @@ mod tests_error_greeks_extended {
         assert_eq!(
             format!("{error}"),
             "Veta calculation error: Unable to compute veta"
+        );
+    }
+
+    #[test]
+    fn test_calculation_error_charm() {
+        let error = CalculationErrorKind::CharmError {
+            reason: "Unable to compute charm".to_string(),
+        };
+        assert_eq!(
+            format!("{error}"),
+            "Charm calculation error: Unable to compute charm"
+        );
+    }
+
+    #[test]
+    fn test_calculation_error_color() {
+        let error = CalculationErrorKind::ColorError {
+            reason: "Unable to compute color".to_string(),
+        };
+        assert_eq!(
+            format!("{error}"),
+            "Color calculation error: Unable to compute color"
         );
     }
 

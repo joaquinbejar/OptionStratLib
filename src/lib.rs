@@ -1,7 +1,7 @@
 #![allow(unknown_lints)]
 #![allow(clippy::literal_string_with_formatting_args)]
 
-//! # OptionStratLib v0.11.0: Financial Options Library
+//! # OptionStratLib v0.12.0: Financial Options Library
 //!
 //! ## Table of Contents
 //! 1. [Introduction](#introduction)
@@ -30,7 +30,8 @@
 //! - **Telegraph Process Model**: Advanced stochastic modeling for jump-diffusion processes
 //!
 //! ### 2. **Greeks Calculation**
-//! - Complete Greeks suite: Delta, Gamma, Theta, Vega, Rho, Vanna, Vomma, Veta
+//! - Complete Greeks suite: Delta, Gamma, Theta, Vega, Rho, Vanna, Vomma, Veta,
+//!   Charm, Color
 //! - Real-time sensitivity analysis
 //! - Greeks visualization and risk profiling
 //! - Custom Greeks implementations with adjustable parameters
@@ -146,7 +147,7 @@
 //!
 //! ### **Greeks** (`greeks/`)
 //! Complete Greeks calculation suite:
-//! - Delta, Gamma, Theta, Vega, Rho, Vanna, Vomma, Veta calculations
+//! - Delta, Gamma, Theta, Vega, Rho, Vanna, Vomma, Veta, Charm, Color calculations
 //! - Real-time sensitivity analysis
 //! - Greeks-based risk management
 //!
@@ -235,6 +236,8 @@
 //! +vanna()
 //! +vomma()
 //! +veta()
+//! +charm()
+//! +color()
 //! }
 //!
 //! class Position {
@@ -493,9 +496,12 @@
 //! let vanna = option.vanna().unwrap();
 //! let vomma = option.vomma().unwrap();
 //! let veta = option.veta().unwrap();
+//! let charm = option.charm().unwrap();
+//! let color = option.color().unwrap();
 //! tracing::info!("Greeks - Delta: {:.4}, Gamma: {:.4}, Theta: {:.4},
-//!     Vega: {:.4}, Vanna: {:.4}, Vomma: {:.4}, Veta: {:.4}",
-//!     delta, gamma, theta, vega, vanna, vomma, veta);
+//!     Vega: {:.4}, Vanna: {:.4}, Vomma: {:.4}, Veta: {:.4}
+//!     Charm: {:.4}, Color: {:.4}",
+//!     delta, gamma, theta, vega, vanna, vomma, veta, charm, color);
 //! ```
 //!
 //! ### Working with Trading Strategies
@@ -820,8 +826,8 @@ pub mod geometrics;
 /// * `greeks` - Calculation and management of option sensitivity metrics (Delta, Gamma, etc.).
 ///
 /// Comprehensive implementation of options Greeks (sensitivity measures) including
-/// Delta, Gamma, Theta, Vega, Rho, Vanna, Vomma and Veta. Includes analytical formulas, numerical
-/// approximations, and visualization tools for risk analysis.
+/// Delta, Gamma, Theta, Vega, Rho, Vanna, Vomma, Veta, Charm and Color. Includes analytical
+/// formulas, numerical approximations, and visualization tools for risk analysis.
 pub mod greeks;
 
 /// * `model` - Core data structures and models for options and derivatives.

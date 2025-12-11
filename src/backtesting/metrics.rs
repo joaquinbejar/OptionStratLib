@@ -97,6 +97,10 @@ pub struct OptionsSpecificMetrics {
     pub avg_vomma_exposure: Option<Decimal>,
     /// The average sensitivity of the portfolio's Vega to the passage of time (Veta).
     pub avg_veta_exposure: Option<Decimal>,
+    /// The average sensitivity of the portfolio's Delta to the passage of time (Charm).
+    pub avg_charm_exposure: Option<Decimal>,
+    /// The average sensitivity of the portfolio's Gamma to the passage of time (Color).
+    pub avg_color_exposure: Option<Decimal>,
     /// The percentage of trades or positions involving call options.
     pub calls_percentage: Option<Decimal>,
     /// The percentage of trades or positions involving put options.

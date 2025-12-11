@@ -53,6 +53,12 @@ pub enum BasicAxisTypes {
 
     /// Sensitivity of option price to time decay
     Veta,
+
+    /// Sensitivity of option delta to time decay
+    Charm,
+
+    /// Sensitivity of option gamma to time decay
+    Color,
 }
 
 /// Iterator for traversing the basic axis types.
@@ -77,7 +83,7 @@ impl BasicAxisTypes {
     /// This array allows efficient access to all available axis types without
     /// needing to manually enumerate them in multiple places in the codebase.
     /// The order of types is maintained consistently for iteration purposes.
-    const VALUES: [BasicAxisTypes; 12] = [
+    const VALUES: [BasicAxisTypes; 14] = [
         BasicAxisTypes::Delta,
         BasicAxisTypes::Gamma,
         BasicAxisTypes::Theta,
@@ -90,6 +96,8 @@ impl BasicAxisTypes {
         BasicAxisTypes::Vanna,
         BasicAxisTypes::Vomma,
         BasicAxisTypes::Veta,
+        BasicAxisTypes::Charm,
+        BasicAxisTypes::Color,
     ];
 
     /// Creates an iterator over all variants of BasicAxisTypes.
@@ -150,6 +158,8 @@ mod tests_basic_axis_types {
         assert_eq!(format!("{:?}", BasicAxisTypes::Vanna), "Vanna");
         assert_eq!(format!("{:?}", BasicAxisTypes::Vomma), "Vomma");
         assert_eq!(format!("{:?}", BasicAxisTypes::Veta), "Veta");
+        assert_eq!(format!("{:?}", BasicAxisTypes::Charm), "Charm");
+        assert_eq!(format!("{:?}", BasicAxisTypes::Color), "Color");
     }
 
     #[test]
@@ -188,6 +198,8 @@ mod tests_basic_axis_types {
             BasicAxisTypes::Vanna,
             BasicAxisTypes::Vomma,
             BasicAxisTypes::Veta,
+            BasicAxisTypes::Charm,
+            BasicAxisTypes::Color,
         ];
 
         for variant in variants {
@@ -239,6 +251,8 @@ mod tests_basic_axis_types {
         assert!(matches!(BasicAxisTypes::Vanna, BasicAxisTypes::Vanna));
         assert!(matches!(BasicAxisTypes::Vomma, BasicAxisTypes::Vomma));
         assert!(matches!(BasicAxisTypes::Veta, BasicAxisTypes::Veta));
+        assert!(matches!(BasicAxisTypes::Charm, BasicAxisTypes::Charm));
+        assert!(matches!(BasicAxisTypes::Color, BasicAxisTypes::Color));
     }
 
     #[test]
@@ -286,6 +300,8 @@ mod tests_basic_axis_types_extended {
         assert_eq!(iterator.next(), Some(BasicAxisTypes::Vanna));
         assert_eq!(iterator.next(), Some(BasicAxisTypes::Vomma));
         assert_eq!(iterator.next(), Some(BasicAxisTypes::Veta));
+        assert_eq!(iterator.next(), Some(BasicAxisTypes::Charm));
+        assert_eq!(iterator.next(), Some(BasicAxisTypes::Color));
 
         // After all elements are exhausted, should return None
         assert_eq!(iterator.next(), None);
@@ -325,9 +341,11 @@ mod tests_basic_axis_types_extended {
         assert!(values_set.contains(&BasicAxisTypes::Vanna));
         assert!(values_set.contains(&BasicAxisTypes::Vomma));
         assert!(values_set.contains(&BasicAxisTypes::Veta));
+        assert!(values_set.contains(&BasicAxisTypes::Charm));
+        assert!(values_set.contains(&BasicAxisTypes::Color));
 
         // Check for exact count (no duplicates)
-        assert_eq!(values_set.len(), 12);
+        assert_eq!(values_set.len(), 14);
     }
 
     #[test]
@@ -335,7 +353,7 @@ mod tests_basic_axis_types_extended {
         // Test collecting all values from the iterator
         let collected: Vec<BasicAxisTypes> = BasicAxisTypes::iter().collect();
 
-        assert_eq!(collected.len(), 12);
+        assert_eq!(collected.len(), 14);
         assert_eq!(collected, BasicAxisTypes::VALUES);
     }
 
@@ -343,7 +361,7 @@ mod tests_basic_axis_types_extended {
     fn test_iterator_count() {
         // Test counting the elements in the iterator
         let count = BasicAxisTypes::iter().count();
-        assert_eq!(count, 12);
+        assert_eq!(count, 14);
     }
 
     #[test]
@@ -355,7 +373,7 @@ mod tests_basic_axis_types_extended {
             encountered.push(axis_type);
         }
 
-        assert_eq!(encountered.len(), 12);
+        assert_eq!(encountered.len(), 14);
         assert_eq!(encountered, BasicAxisTypes::VALUES);
     }
 
@@ -408,16 +426,20 @@ mod tests_basic_axis_types_extended {
                         | BasicAxisTypes::Vanna
                         | BasicAxisTypes::Vomma
                         | BasicAxisTypes::Veta
+                        | BasicAxisTypes::Charm
+                        | BasicAxisTypes::Color
                 )
             })
             .collect();
 
-        assert_eq!(greeks.len(), 7);
+        assert_eq!(greeks.len(), 9);
         assert_eq!(greeks[0], BasicAxisTypes::Delta);
         assert_eq!(greeks[3], BasicAxisTypes::Vega);
         assert_eq!(greeks[4], BasicAxisTypes::Vanna);
         assert_eq!(greeks[5], BasicAxisTypes::Vomma);
         assert_eq!(greeks[6], BasicAxisTypes::Veta);
+        assert_eq!(greeks[7], BasicAxisTypes::Charm);
+        assert_eq!(greeks[8], BasicAxisTypes::Color);
 
         // Test mapping operation
         let names: Vec<&str> = BasicAxisTypes::iter()
@@ -434,15 +456,19 @@ mod tests_basic_axis_types_extended {
                 BasicAxisTypes::Vanna => "vanna",
                 BasicAxisTypes::Vomma => "vomma",
                 BasicAxisTypes::Veta => "veta",
+                BasicAxisTypes::Charm => "charm",
+                BasicAxisTypes::Color => "color",
             })
             .collect();
 
-        assert_eq!(names.len(), 12);
+        assert_eq!(names.len(), 14);
         assert_eq!(names[0], "delta");
         assert_eq!(names[4], "volatility");
         assert_eq!(names[9], "vanna");
         assert_eq!(names[10], "vomma");
         assert_eq!(names[11], "veta");
+        assert_eq!(names[12], "charm");
+        assert_eq!(names[13], "color");
     }
 
     #[test]
@@ -452,9 +478,9 @@ mod tests_basic_axis_types_extended {
         let all_axes: Vec<BasicAxisTypes> = BasicAxisTypes::iter().collect();
         let reverse_order: Vec<BasicAxisTypes> = all_axes.into_iter().rev().collect();
 
-        assert_eq!(reverse_order.len(), 12);
-        assert_eq!(reverse_order[0], BasicAxisTypes::Veta);
-        assert_eq!(reverse_order[11], BasicAxisTypes::Delta);
+        assert_eq!(reverse_order.len(), 14);
+        assert_eq!(reverse_order[0], BasicAxisTypes::Color);
+        assert_eq!(reverse_order[13], BasicAxisTypes::Delta);
     }
 
     #[test]
@@ -492,7 +518,7 @@ mod tests_values_array {
 
     #[test]
     fn test_values_array_length() {
-        assert_eq!(BasicAxisTypes::VALUES.len(), 12);
+        assert_eq!(BasicAxisTypes::VALUES.len(), 14);
     }
 
     #[test]
@@ -509,6 +535,8 @@ mod tests_values_array {
         assert_eq!(BasicAxisTypes::VALUES[9], BasicAxisTypes::Vanna);
         assert_eq!(BasicAxisTypes::VALUES[10], BasicAxisTypes::Vomma);
         assert_eq!(BasicAxisTypes::VALUES[11], BasicAxisTypes::Veta);
+        assert_eq!(BasicAxisTypes::VALUES[12], BasicAxisTypes::Charm);
+        assert_eq!(BasicAxisTypes::VALUES[13], BasicAxisTypes::Color);
     }
 
     #[test]

@@ -207,6 +207,52 @@ pub fn create_sample_option_with_date(
     )
 }
 
+/// Creates a sample Options object with a specific expiration date in days.
+///
+/// This utility function simplifies the creation of option contracts for testing
+/// or demonstration purposes by providing a specific expiration date expressed
+/// in days.
+/// It creates a European-style option with predefined parameters and a fixed
+/// risk-free rate of 5% and dividend yield of 1%.
+///
+/// # Parameters
+///
+/// * `option_style` - The style of the option (Call or Put)
+/// * `side` - The position side (Long or Short)
+/// * `underlying_price` - The current price of the underlying asset
+/// * `quantity` - The number of option contracts
+/// * `strike_price` - The strike price of the option
+/// * `volatility` - The implied volatility for pricing the option
+/// * `expiration_days` - The expiration days
+///
+/// # Returns
+///
+/// Returns a fully configured Options instance with "AAPL" as the underlying symbol.
+pub fn create_sample_option_with_days(
+    option_style: OptionStyle,
+    side: Side,
+    underlying_price: Positive,
+    quantity: Positive,
+    strike_price: Positive,
+    volatility: Positive,
+    expiration_days: Positive,
+) -> Options {
+    Options::new(
+        OptionType::European,
+        side,
+        "AAPL".to_string(),
+        strike_price,
+        ExpirationDate::Days(expiration_days),
+        volatility,
+        quantity,
+        underlying_price,
+        dec!(0.05),
+        option_style,
+        pos!(0.01),
+        None,
+    )
+}
+
 /// Creates a simplified sample option contract for testing or demonstration purposes.
 ///
 /// This function generates an Options instance with pre-defined values, requiring only
