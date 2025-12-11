@@ -110,7 +110,7 @@ rayon = { version = "1.11" }
 itertools = "0.14"
 zip = "6.0"
 lazy_static = "1.5"
-uuid = { version = "1.18", features = ["v4", "serde"] }
+uuid = { version = "1.19", features = ["v4", "serde"] }
 approx = "0.5"
 rand_distr = "0.5"
 prettytable-rs = "0.10"
