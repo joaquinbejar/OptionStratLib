@@ -20,7 +20,7 @@ use crate::strategies::utils::FindOptimalSide;
 use crate::surfaces::{BasicSurfaces, Point3D, Surface};
 use crate::utils::Len;
 use crate::utils::others::get_random_element;
-use crate::volatility::VolatilitySmile;
+use crate::volatility::{VolatilitySkew, VolatilitySmile};
 use crate::{Positive, pos};
 use chrono::{NaiveDate, Utc};
 use num_traits::{FromPrimitive, ToPrimitive};
@@ -2888,7 +2888,58 @@ impl VolatilitySmile for OptionChain {
         let curve = Curve::new(bt_points.clone());
 
         // Interpolate missing points (options without implied volatility)
-        for option in self.options.iter().filter(|o| o.validate()) {
+        for option in self
+            .options
+            .iter()
+            .filter(|o| o.implied_volatility.is_zero())
+        {
+            // Use linear interpolation to estimate the missing implied volatility
+            if let Ok(interpolated_point) = curve.linear_interpolate(option.strike_price.to_dec()) {
+                bt_points.insert(interpolated_point);
+            }
+        }
+
+        // Return the final Curve with all points, including interpolated ones
+        Curve::new(bt_points)
+    }
+}
+
+impl VolatilitySkew for OptionChain {
+    /// Computes the volatility skew for the option chain.
+    ///
+    /// This function calculates the volatility skew by interpolating the implied
+    /// volatilities for all the calculated moneyness data points in the option chain.
+    /// It uses the available implied volatilities from the `options` field and
+    /// performs linear interpolation to estimate missing values.
+    ///
+    /// # Returns
+    ///
+    /// A `Curve` object representing the volatility skew. The x-coordinates of the curve
+    /// correspond to the moneyness, and the y-coordinates represent the corresponding
+    /// implied volatilities.
+    fn volatility_skew(&self) -> Curve {
+        // Build a BTreeSet with the known points (options with implied volatility)
+        let mut bt_points = self
+            .options
+            .iter()
+            .map(|option| {
+                Point2D::new(
+                    (option.strike_price.to_dec() / self.underlying_price.to_dec() - Decimal::ONE)
+                        * Decimal::ONE_HUNDRED,
+                    option.implied_volatility.to_dec(),
+                )
+            })
+            .collect::<BTreeSet<_>>();
+
+        // Create an initial Curve object using the known points
+        let curve = Curve::new(bt_points.clone());
+
+        // Interpolate missing points (options without implied volatility)
+        for option in self
+            .options
+            .iter()
+            .filter(|o| o.implied_volatility.is_zero())
+        {
             // Use linear interpolation to estimate the missing implied volatility
             if let Ok(interpolated_point) = curve.linear_interpolate(option.strike_price.to_dec()) {
                 bt_points.insert(interpolated_point);

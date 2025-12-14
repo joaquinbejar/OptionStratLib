@@ -1285,8 +1285,8 @@ mod tests_bull_call_spread_optimization {
             pos!(85.0),      // strike
             spos!(16.0),     // call_bid
             spos!(16.2),     // call_ask
-            None,            // put_bid
-            None,            // put_ask
+            spos!(15.6),     // put_bid
+            spos!(15.8),     // put_ask
             pos!(0.2),       // implied_volatility
             Some(dec!(0.8)), // delta
             Some(dec!(0.2)),
@@ -1300,8 +1300,8 @@ mod tests_bull_call_spread_optimization {
             pos!(90.0),
             spos!(11.5),
             spos!(11.7),
-            None,
-            None,
+            spos!(11.1),
+            spos!(11.3),
             pos!(0.2),
             Some(dec!(0.7)),
             Some(dec!(0.2)),
@@ -1315,8 +1315,8 @@ mod tests_bull_call_spread_optimization {
             pos!(95.0),
             spos!(7.0),
             spos!(7.2),
-            None,
-            None,
+            spos!(6.6),
+            spos!(6.8),
             pos!(0.2),
             Some(dec!(0.6)),
             Some(dec!(0.2)),
@@ -1330,8 +1330,8 @@ mod tests_bull_call_spread_optimization {
             pos!(100.0),
             spos!(3.5),
             spos!(3.7),
-            None,
-            None,
+            spos!(3.1),
+            spos!(3.3),
             pos!(0.2),
             Some(dec!(0.5)),
             Some(dec!(0.2)),
@@ -1345,8 +1345,8 @@ mod tests_bull_call_spread_optimization {
             pos!(105.0),
             spos!(1.0),
             spos!(1.2),
-            None,
-            None,
+            spos!(0.6),
+            spos!(0.8),
             pos!(0.2),
             Some(dec!(0.4)),
             Some(dec!(0.2)),
