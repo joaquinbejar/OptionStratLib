@@ -102,6 +102,59 @@
 //! * Handling of zero volatility cases
 //! * Adjustments for dividends
 //! * Special case handling for extreme values
+//!
+//! ## Second-Order Volatility Greeks
+//!
+//! The module provides specialized second-order Greeks for volatility analysis:
+//!
+//! ### Vanna (∂Δ/∂σ)
+//! Measures the sensitivity of delta to changes in implied volatility. Useful for:
+//! - Anticipating changes to delta-hedge effectiveness as volatility changes
+//! - Understanding how delta exposure shifts in volatile markets
+//!
+//! ### Vomma (Volga) (∂²V/∂σ²)
+//! Measures the second-order sensitivity of option price to volatility (rate of change
+//! of vega with respect to volatility). Key characteristics:
+//! - Options far out-of-the-money have the highest Vomma
+//! - Long options benefit from positive Vomma in rising volatility environments
+//! - Useful for volatility trading strategies
+//!
+//! ### Veta (∂Vega/∂t)
+//! Measures the rate of change of vega with respect to time. Important for:
+//! - Understanding how volatility sensitivity decays over time
+//! - Managing time-dependent volatility exposure
+//!
+//! ## Curve and Surface Representations
+//!
+//! These Greeks can be visualized using curves and surfaces:
+//!
+//! | Metric | Curve (by strike) | Surface (price vs. volatility) | Surface (price vs. time) |
+//! |--------|-------------------|-------------------------------|-------------------------|
+//! | Vanna  | ✓ `vanna_curve()` | ✓ `vanna_surface()`          | -                       |
+//! | Vomma  | -                 | ✓ `vomma_surface()`          | -                       |
+//! | Veta   | ✓ `veta_curve()`  | -                             | ✓ `veta_time_surface()` |
+//!
+//! ### Example: Generating Volatility Surfaces
+//!
+//! ```ignore
+//! use optionstratlib::chains::chain::OptionChain;
+//! use optionstratlib::pos;
+//!
+//! // Create an option chain with options at various strikes
+//! let chain = OptionChain::new("SPY", pos!(450.0), "2024-03-15".to_string(), None, None);
+//!
+//! // Generate Vanna surface across different volatility levels
+//! let volatilities = vec![pos!(0.1), pos!(0.2), pos!(0.3), pos!(0.4), pos!(0.5)];
+//! let vanna_surface = chain.vanna_surface(volatilities)?;
+//!
+//! // Generate Vomma surface
+//! let volatilities = vec![pos!(0.15), pos!(0.20), pos!(0.25), pos!(0.30)];
+//! let vomma_surface = chain.vomma_surface(volatilities)?;
+//!
+//! // Generate Veta time surface across different time horizons
+//! let days = vec![pos!(7.0), pos!(14.0), pos!(30.0), pos!(60.0), pos!(90.0)];
+//! let veta_surface = chain.veta_time_surface(days)?;
+//! ```
 
 mod equations;
 mod utils;

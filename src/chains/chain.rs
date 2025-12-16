@@ -2111,6 +2111,107 @@ impl OptionChain {
         self.curve(&BasicAxisTypes::Color, &OptionStyle::Call, &Side::Long)
     }
 
+    /// Generates a Veta time surface for visualization and analysis.
+    ///
+    /// Creates a 3D surface representing Veta values across different strike prices
+    /// and time horizons. Veta measures the rate of change of Vega with respect to time,
+    /// making this surface particularly useful for understanding how volatility sensitivity
+    /// evolves as expiration approaches.
+    ///
+    /// # Parameters
+    ///
+    /// * `days_to_expiry` - Vector of days to expiration values to use for surface calculations.
+    ///   Common values might be `vec![pos!(7.0), pos!(14.0), pos!(30.0), pos!(60.0), pos!(90.0)]`
+    ///
+    /// # Returns
+    ///
+    /// * `Result<Surface, SurfaceError>` - A surface object containing Veta data points,
+    ///   or an error if surface generation fails
+    ///
+    /// # Errors
+    ///
+    /// Returns a `SurfaceError` if the surface cannot be generated due to missing data
+    /// or calculation errors
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// use optionstratlib::pos;
+    ///
+    /// let days = vec![pos!(7.0), pos!(14.0), pos!(30.0), pos!(60.0), pos!(90.0)];
+    /// let veta_surface = chain.veta_time_surface(days)?;
+    /// ```
+    pub fn veta_time_surface(
+        &self,
+        days_to_expiry: Vec<Positive>,
+    ) -> Result<Surface, SurfaceError> {
+        self.time_surface(
+            &BasicAxisTypes::Veta,
+            &OptionStyle::Call,
+            days_to_expiry,
+            &Side::Long,
+        )
+    }
+
+    /// Generates a Vanna volatility surface for visualization and analysis.
+    ///
+    /// Creates a 3D surface representing Vanna values across different strike prices
+    /// and volatility levels. Vanna measures the sensitivity of Delta to changes in
+    /// implied volatility, making this surface useful for understanding how delta
+    /// hedging effectiveness changes with volatility.
+    ///
+    /// # Parameters
+    ///
+    /// * `volatilities` - Vector of volatility values to use for surface calculations.
+    ///   Common values might be `vec![pos!(0.1), pos!(0.2), pos!(0.3), pos!(0.4), pos!(0.5)]`
+    ///
+    /// # Returns
+    ///
+    /// * `Result<Surface, SurfaceError>` - A surface object containing Vanna data points,
+    ///   or an error if surface generation fails
+    ///
+    /// # Errors
+    ///
+    /// Returns a `SurfaceError` if the surface cannot be generated due to missing data
+    /// or calculation errors
+    pub fn vanna_surface(&self, volatilities: Vec<Positive>) -> Result<Surface, SurfaceError> {
+        self.surface(
+            &BasicAxisTypes::Vanna,
+            &OptionStyle::Call,
+            Some(volatilities),
+            &Side::Long,
+        )
+    }
+
+    /// Generates a Vomma volatility surface for visualization and analysis.
+    ///
+    /// Creates a 3D surface representing Vomma (Volga) values across different strike prices
+    /// and volatility levels. Vomma measures the second-order sensitivity of option price
+    /// to volatility (rate of change of Vega with respect to volatility).
+    ///
+    /// # Parameters
+    ///
+    /// * `volatilities` - Vector of volatility values to use for surface calculations.
+    ///   Common values might be `vec![pos!(0.1), pos!(0.2), pos!(0.3), pos!(0.4), pos!(0.5)]`
+    ///
+    /// # Returns
+    ///
+    /// * `Result<Surface, SurfaceError>` - A surface object containing Vomma data points,
+    ///   or an error if surface generation fails
+    ///
+    /// # Errors
+    ///
+    /// Returns a `SurfaceError` if the surface cannot be generated due to missing data
+    /// or calculation errors
+    pub fn vomma_surface(&self, volatilities: Vec<Positive>) -> Result<Surface, SurfaceError> {
+        self.surface(
+            &BasicAxisTypes::Vomma,
+            &OptionStyle::Call,
+            Some(volatilities),
+            &Side::Long,
+        )
+    }
+
     /// Updates the expiration date for the option chain and recalculates Greeks.
     ///
     /// This method changes the expiration date of the option chain to the provided value
@@ -3059,6 +3160,60 @@ impl BasicSurfaces for OptionChain {
         if points.is_empty() {
             return Err(SurfaceError::ConstructionError(
                 "No valid points generated for surface".to_string(),
+            ));
+        }
+
+        Ok(Surface::new(points))
+    }
+
+    fn time_surface(
+        &self,
+        axis: &BasicAxisTypes,
+        option_style: &OptionStyle,
+        days_to_expiry: Vec<Positive>,
+        side: &Side,
+    ) -> Result<Surface, SurfaceError> {
+        if axis == &BasicAxisTypes::UnderlyingPrice
+            || axis == &BasicAxisTypes::Strike
+            || axis == &BasicAxisTypes::Expiration
+            || axis == &BasicAxisTypes::Volatility
+        {
+            return Err(SurfaceError::ConstructionError(
+                "Axis not valid for time surface".to_string(),
+            ));
+        }
+
+        let mut points = BTreeSet::new();
+
+        for opt in self.get_single_iter() {
+            let option = match (option_style, side) {
+                (OptionStyle::Call, Side::Long) => opt.get_option(Side::Long, OptionStyle::Call),
+                (OptionStyle::Call, Side::Short) => opt.get_option(Side::Short, OptionStyle::Call),
+                (OptionStyle::Put, Side::Long) => opt.get_option(Side::Long, OptionStyle::Put),
+                (OptionStyle::Put, Side::Short) => opt.get_option(Side::Short, OptionStyle::Put),
+            };
+            let option: Arc<Options> = match option {
+                Ok(o) => Arc::new(o),
+                Err(_) => {
+                    return Err(SurfaceError::ConstructionError(
+                        "Failed to retrieve option data".to_string(),
+                    ));
+                }
+            };
+
+            for days in &days_to_expiry {
+                match self.get_surface_time_versus(axis, &option, *days) {
+                    Ok((x, y, z)) => {
+                        points.insert(Point3D::new(x, y, z));
+                    }
+                    Err(_) => continue,
+                }
+            }
+        }
+
+        if points.is_empty() {
+            return Err(SurfaceError::ConstructionError(
+                "No valid points generated for time surface".to_string(),
             ));
         }
 
