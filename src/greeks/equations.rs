@@ -3510,6 +3510,7 @@ pub mod tests_volatility_greeks_edge_cases {
             pos!(30.0),
         );
         let vanna_value = vanna(&option).unwrap();
+        info!("Vanna Zero Volatility: {}", vanna_value);
         // With zero volatility, vanna should be zero
         assert_eq!(vanna_value, Decimal::ZERO);
     }
@@ -3579,6 +3580,7 @@ pub mod tests_volatility_greeks_edge_cases {
             Positive::ZERO, // At expiration
         );
         let vomma_value = vomma(&option).unwrap();
+        info!("Vomma At Expiration: {}", vomma_value);
         // At expiration, vomma should be zero
         assert_eq!(vomma_value, Decimal::ZERO);
     }
@@ -3665,6 +3667,7 @@ pub mod tests_volatility_greeks_edge_cases {
             Positive::ZERO, // At expiration
         );
         let veta_value = veta(&option).unwrap();
+        info!("Veta At Expiration: {}", veta_value);
         // At expiration, veta should be zero
         assert_eq!(veta_value, Decimal::ZERO);
     }
@@ -3720,6 +3723,250 @@ pub mod tests_volatility_greeks_edge_cases {
         assert!(veta_value.abs() < Decimal::MAX);
     }
 
+    // ==================== CHARM EDGE CASES ====================
+
+    #[test]
+    fn test_charm_high_volatility() {
+        let option = create_sample_option_with_days(
+            OptionStyle::Call,
+            Side::Long,
+            pos!(100.0), // underlying_price
+            pos!(1.0),
+            pos!(100.0), // strike_price
+            pos!(0.8),   // High volatility (80%)
+            pos!(30.0),  // expiration_days
+        );
+        let charm_value = charm(&option).unwrap();
+        info!("Charm High Volatility: {}", charm_value);
+        // Charm when is far from expiration is negligible
+        assert!(charm_value.abs() < Decimal::ONE);
+    }
+
+    #[test]
+    fn test_charm_low_volatility() {
+        let option = create_sample_option_with_days(
+            OptionStyle::Call,
+            Side::Long,
+            pos!(100.0), // underlying_price
+            pos!(1.0),
+            pos!(100.0), // strike_price
+            pos!(0.05),  // Low volatility (5%)
+            pos!(30.0),  // expiration_days
+        );
+        let charm_value = charm(&option).unwrap();
+        info!("Charm Low Volatility: {}", charm_value);
+        // Charm when is far from expiration is negligible
+        // low volatility increases the value
+        assert!(charm_value.abs() < Decimal::ONE);
+    }
+
+    #[test]
+    fn test_charm_near_expiration() {
+        let option = create_sample_option_with_days(
+            OptionStyle::Call,
+            Side::Long,
+            pos!(100.0), // underlying_price
+            pos!(1.0),
+            pos!(100.0), // strike_price
+            pos!(0.2),
+            pos!(1.0), // 1 day to expiration
+        );
+        let charm_value = charm(&option).unwrap();
+        info!("Charm Near Expiration: {}", charm_value);
+        // Near expiration Charm is increasing
+        assert!(charm_value.abs() < Decimal::ONE);
+    }
+
+    #[test]
+    fn test_charm_at_expiration() {
+        let option = create_sample_option_with_days(
+            OptionStyle::Call,
+            Side::Long,
+            pos!(100.0), // underlying_price
+            pos!(1.0),
+            pos!(100.0), // strike_price
+            pos!(0.2),
+            Positive::ZERO, // At expiration
+        );
+        let charm_value = charm(&option).unwrap();
+        info!("Charm At Expiration: {}", charm_value);
+        // At expiration, Charm should be zero
+        assert_eq!(charm_value, Decimal::ZERO);
+    }
+
+    #[test]
+    fn test_charm_deep_itm() {
+        let option = create_sample_option_with_days(
+            OptionStyle::Call,
+            Side::Long,
+            pos!(150.0), // Deep ITM
+            pos!(1.0),
+            pos!(100.0),
+            pos!(0.2),
+            pos!(30.0), // expiration_days
+        );
+        let charm_value = charm(&option).unwrap();
+        info!("Charm Deep ITM: {}", charm_value);
+        // Deep ITM options far from expiration have small Charm
+        assert!(charm_value.abs() < Decimal::ONE);
+    }
+
+    #[test]
+    fn test_charm_deep_otm() {
+        let option = create_sample_option_with_days(
+            OptionStyle::Call,
+            Side::Long,
+            pos!(50.0), // Deep OTM
+            pos!(1.0),
+            pos!(100.0),
+            pos!(0.2),
+            pos!(30.0), // expiration_days
+        );
+        let charm_value = charm(&option).unwrap();
+        info!("Charm Deep OTM: {}", charm_value);
+        // For deep OTM options Charm should be zero
+        assert_eq!(charm_value.abs(), Decimal::ZERO);
+    }
+
+    #[test]
+    fn test_charm_long_dated_option() {
+        let option = create_sample_option_with_days(
+            OptionStyle::Call,
+            Side::Long,
+            pos!(100.0),
+            pos!(1.0),
+            pos!(100.0),
+            pos!(0.2),
+            pos!(365.0), // 1 year to expiration
+        );
+        let charm_value = charm(&option).unwrap();
+        info!("Charm Long Dated: {}", charm_value);
+        // Long dated options should have calculable Charm
+        assert!(charm_value.abs() < Decimal::ONE);
+    }
+
+    // ==================== COLOR EDGE CASES ====================
+
+    #[test]
+    fn test_color_high_volatility() {
+        let option = create_sample_option_with_days(
+            OptionStyle::Call,
+            Side::Long,
+            pos!(100.0), // underlying_price
+            pos!(1.0),
+            pos!(100.0), // strike_price
+            pos!(0.8),   // High volatility (80%)
+            pos!(30.0),  // expiration_days
+        );
+        let color_value = color(&option).unwrap();
+        info!("Color High Volatility: {}", color_value);
+        // Color when is far from expiration is negligible
+        assert!(color_value.abs() < Decimal::ONE);
+    }
+
+    #[test]
+    fn test_color_low_volatility() {
+        let option = create_sample_option_with_days(
+            OptionStyle::Call,
+            Side::Long,
+            pos!(100.0), // underlying_price
+            pos!(1.0),
+            pos!(100.0), // strike_price
+            pos!(0.05),  // Low volatility (5%)
+            pos!(30.0),  // expiration_days
+        );
+        let color_value = color(&option).unwrap();
+        info!("Color Low Volatility: {}", color_value);
+        // Color when is far from expiration is negligible
+        // low volatility increases the value
+        assert!(color_value.abs() < Decimal::ONE);
+    }
+
+    #[test]
+    fn test_color_near_expiration() {
+        let option = create_sample_option_with_days(
+            OptionStyle::Call,
+            Side::Long,
+            pos!(100.0), // underlying_price
+            pos!(1.0),
+            pos!(100.0), // strike_price
+            pos!(0.2),
+            pos!(1.0), // 1 day to expiration
+        );
+        let color_value = color(&option).unwrap();
+        info!("Color Near Expiration: {}", color_value);
+        // Near expiration Color is increasing
+        assert!(color_value.abs() < Decimal::ONE);
+    }
+
+    #[test]
+    fn test_color_at_expiration() {
+        let option = create_sample_option_with_days(
+            OptionStyle::Call,
+            Side::Long,
+            pos!(100.0), // underlying_price
+            pos!(1.0),
+            pos!(100.0), // strike_price
+            pos!(0.2),
+            Positive::ZERO, // At expiration
+        );
+        let color_value = color(&option).unwrap();
+        info!("Color At Expiration: {}", color_value);
+        // At expiration, Color should be zero
+        assert_eq!(color_value, Decimal::ZERO);
+    }
+
+    #[test]
+    fn test_color_deep_itm() {
+        let option = create_sample_option_with_days(
+            OptionStyle::Call,
+            Side::Long,
+            pos!(150.0), // Deep ITM
+            pos!(1.0),
+            pos!(100.0),
+            pos!(0.2),
+            pos!(30.0), // expiration_days
+        );
+        let color_value = color(&option).unwrap();
+        info!("Color Deep ITM: {}", color_value);
+        // Deep ITM options far from expiration have small Color
+        assert!(color_value.abs() < Decimal::ONE);
+    }
+
+    #[test]
+    fn test_color_deep_otm() {
+        let option = create_sample_option_with_days(
+            OptionStyle::Call,
+            Side::Long,
+            pos!(50.0), // Deep OTM
+            pos!(1.0),
+            pos!(100.0),
+            pos!(0.2),
+            pos!(30.0), // expiration_days
+        );
+        let color_value = color(&option).unwrap();
+        info!("Color Deep OTM: {}", color_value);
+        // For deep OTM options Color should be zero
+        assert_eq!(color_value.abs(), Decimal::ZERO);
+    }
+
+    #[test]
+    fn test_color_long_dated_option() {
+        let option = create_sample_option_with_days(
+            OptionStyle::Call,
+            Side::Long,
+            pos!(100.0),
+            pos!(1.0),
+            pos!(100.0),
+            pos!(0.2),
+            pos!(365.0), // 1 year to expiration
+        );
+        let color_value = color(&option).unwrap();
+        info!("Color Long Dated: {}", color_value);
+        // Long dated options should have calculable Color
+        assert!(color_value.abs() < Decimal::ONE);
+    }
+
     // ==================== COMBINED SCENARIOS ====================
 
     #[test]
@@ -3738,15 +3985,21 @@ pub mod tests_volatility_greeks_edge_cases {
         let vanna_value = vanna(&option).unwrap();
         let vomma_value = vomma(&option).unwrap();
         let veta_value = veta(&option).unwrap();
+        let charm_value = charm(&option).unwrap();
+        let color_value = color(&option).unwrap();
 
         info!("Extreme Scenario - Vanna: {}", vanna_value);
         info!("Extreme Scenario - Vomma: {}", vomma_value);
         info!("Extreme Scenario - Veta: {}", veta_value);
+        info!("Extreme Scenario - Charm: {}", charm_value);
+        info!("Extreme Scenario - Color: {}", color_value);
 
         // All should be finite values
         assert!(vanna_value.abs() < Decimal::MAX);
         assert!(vomma_value.abs() < Decimal::MAX);
         assert!(veta_value.abs() < Decimal::MAX);
+        assert!(charm_value.abs() < Decimal::MAX);
+        assert!(color_value.abs() < Decimal::MAX);
     }
 
     #[test]
@@ -3764,15 +4017,21 @@ pub mod tests_volatility_greeks_edge_cases {
         let vanna_value = vanna(&option).unwrap();
         let vomma_value = vomma(&option).unwrap();
         let veta_value = veta(&option).unwrap();
+        let charm_value = charm(&option).unwrap();
+        let color_value = color(&option).unwrap();
 
         info!("Put Option - Vanna: {}", vanna_value);
         info!("Put Option - Vomma: {}", vomma_value);
         info!("Put Option - Veta: {}", veta_value);
+        info!("Put Option - Charm: {}", charm_value);
+        info!("Put Option - Color: {}", color_value);
 
         // All should be finite values
         assert!(vanna_value.abs() < Decimal::MAX);
         assert!(vomma_value.abs() < Decimal::MAX);
         assert!(veta_value.abs() < Decimal::MAX);
+        assert!(charm_value.abs() < Decimal::MAX);
+        assert!(color_value.abs() < Decimal::MAX);
     }
 
     #[test]

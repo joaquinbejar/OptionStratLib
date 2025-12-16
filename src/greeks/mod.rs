@@ -124,6 +124,22 @@
 //! - Understanding how volatility sensitivity decays over time
 //! - Managing time-dependent volatility exposure
 //!
+//! ### Charm (Delta Decay) (∂Δ/∂t)
+//! Measures the rate of change of delta with respect to the passage of time. Key aspects:
+//! - Predicts how delta exposure evolves daily even if the underlying price remains unchanged
+//! - Particularly important for delta-hedged positions over weekends or holidays
+//! - Helps anticipate rehedging needs as time decay affects option moneyness
+//!
+//! ## Third-Order Volatility Greeks
+//!
+//! The module provides specialized third-order Greeks for volatility analysis:
+//!
+//! ### Color (Gamma Decay) (∂Γ/∂t)
+//! Measures the rate of change of gamma with respect to time (third-order Greek). Useful for:
+//! - Understanding how gamma exposure (and thus convexity) decays over time
+//! - Managing gamma-hedged portfolios where hedge effectiveness changes with time passage
+//! - Anticipating adjustments in dynamic hedging strategies near expiration
+//!
 //! ## Curve and Surface Representations
 //!
 //! These Greeks can be visualized using curves and surfaces:
@@ -133,6 +149,8 @@
 //! | Vanna  | ✓ `vanna_curve()` | ✓ `vanna_surface()`          | -                       |
 //! | Vomma  | -                 | ✓ `vomma_surface()`          | -                       |
 //! | Veta   | ✓ `veta_curve()`  | -                             | ✓ `veta_time_surface()` |
+//! | Charm  | ✓ `charm_curve()` | -                             | ✓ `charm_time_surface()` |
+//! | Color  | ✓ `color_curve()` | -                             | ✓ `color_time_surface()` |
 //!
 //! ### Example: Generating Volatility Surfaces
 //!
@@ -154,6 +172,14 @@
 //! // Generate Veta time surface across different time horizons
 //! let days = vec![pos!(7.0), pos!(14.0), pos!(30.0), pos!(60.0), pos!(90.0)];
 //! let veta_surface = chain.veta_time_surface(days)?;
+//!
+//! // Generate Charm time surface across different time horizons
+//! let days = vec![pos!(7.0), pos!(14.0), pos!(30.0), pos!(60.0), pos!(90.0)];
+//! let charm_surface = chain.charm_time_surface(days)?;
+//!
+//! // Generate Color time surface across different time horizons
+//! let days = vec![pos!(7.0), pos!(14.0), pos!(30.0), pos!(60.0), pos!(90.0)];
+//! let color_surface = chain.color_time_surface(days)?;
 //! ```
 
 mod equations;

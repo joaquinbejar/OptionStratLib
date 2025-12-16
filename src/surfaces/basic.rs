@@ -782,6 +782,22 @@ mod tests_basic_surfaces {
     }
 
     #[test]
+    fn test_get_time_versus_color() {
+        let surfaces = MockBasicSurfaces;
+        let option = create_test_option();
+        let days = pos!(30.0);
+
+        let result = surfaces.get_surface_time_versus(&BasicAxisTypes::Color, &option, days);
+
+        assert!(result.is_ok());
+        let (strike, time, color) = result.unwrap();
+        assert_eq!(strike, dec!(100.0));
+        assert_eq!(time, dec!(30.0));
+        // Color should be a small value
+        assert!(color.abs() < dec!(1.0));
+    }
+
+    #[test]
     fn test_get_time_versus_theta() {
         let surfaces = MockBasicSurfaces;
         let option = create_test_option();
