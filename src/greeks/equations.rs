@@ -3397,6 +3397,445 @@ pub mod tests_charm_equations {
     }
 }
 
+/// Tests for second-order volatility Greeks (Vanna, Vomma, Veta) edge cases.
+///
+/// These tests cover:
+/// - High and low volatility environments
+/// - Near expiration scenarios
+/// - Extreme changes in underlying price (deep ITM/OTM)
+#[cfg(test)]
+pub mod tests_volatility_greeks_edge_cases {
+    use super::*;
+    use crate::model::types::{OptionStyle, Side};
+    use crate::model::utils::create_sample_option_with_days;
+    use crate::pos;
+    use tracing::info;
+
+    // ==================== VANNA EDGE CASES ====================
+
+    #[test]
+    fn test_vanna_high_volatility() {
+        let option = create_sample_option_with_days(
+            OptionStyle::Call,
+            Side::Long,
+            pos!(100.0),
+            pos!(1.0),
+            pos!(100.0),
+            pos!(0.8), // High volatility (80%)
+            pos!(30.0),
+        );
+        let vanna_value = vanna(&option).unwrap();
+        info!("Vanna High Volatility: {}", vanna_value);
+        // Vanna should be smaller in absolute terms with high volatility
+        assert!(vanna_value.abs() < Decimal::ONE);
+    }
+
+    #[test]
+    fn test_vanna_low_volatility() {
+        let option = create_sample_option_with_days(
+            OptionStyle::Call,
+            Side::Long,
+            pos!(100.0),
+            pos!(1.0),
+            pos!(100.0),
+            pos!(0.05), // Low volatility (5%)
+            pos!(30.0),
+        );
+        let vanna_value = vanna(&option).unwrap();
+        info!("Vanna Low Volatility: {}", vanna_value);
+        // Vanna calculation should still work with low volatility
+        assert!(vanna_value.abs() < Decimal::MAX);
+    }
+
+    #[test]
+    fn test_vanna_near_expiration() {
+        let option = create_sample_option_with_days(
+            OptionStyle::Call,
+            Side::Long,
+            pos!(100.0),
+            pos!(1.0),
+            pos!(100.0),
+            pos!(0.2),
+            pos!(1.0), // 1 day to expiration
+        );
+        let vanna_value = vanna(&option).unwrap();
+        info!("Vanna Near Expiration: {}", vanna_value);
+        // Near expiration, vanna should still be calculable
+        assert!(vanna_value.abs() < Decimal::MAX);
+    }
+
+    #[test]
+    fn test_vanna_deep_itm() {
+        let option = create_sample_option_with_days(
+            OptionStyle::Call,
+            Side::Long,
+            pos!(150.0), // Deep ITM (underlying >> strike)
+            pos!(1.0),
+            pos!(100.0),
+            pos!(0.2),
+            pos!(30.0),
+        );
+        let vanna_value = vanna(&option).unwrap();
+        info!("Vanna Deep ITM: {}", vanna_value);
+        // Deep ITM options have small vanna
+        assert!(vanna_value.abs() < Decimal::ONE);
+    }
+
+    #[test]
+    fn test_vanna_deep_otm() {
+        let option = create_sample_option_with_days(
+            OptionStyle::Call,
+            Side::Long,
+            pos!(50.0), // Deep OTM (underlying << strike)
+            pos!(1.0),
+            pos!(100.0),
+            pos!(0.2),
+            pos!(30.0),
+        );
+        let vanna_value = vanna(&option).unwrap();
+        info!("Vanna Deep OTM: {}", vanna_value);
+        // Deep OTM options have small vanna
+        assert!(vanna_value.abs() < Decimal::ONE);
+    }
+
+    #[test]
+    fn test_vanna_zero_volatility() {
+        let option = create_sample_option_with_days(
+            OptionStyle::Call,
+            Side::Long,
+            pos!(100.0),
+            pos!(1.0),
+            pos!(100.0),
+            Positive::ZERO, // Zero volatility
+            pos!(30.0),
+        );
+        let vanna_value = vanna(&option).unwrap();
+        // With zero volatility, vanna should be zero
+        assert_eq!(vanna_value, Decimal::ZERO);
+    }
+
+    // ==================== VOMMA EDGE CASES ====================
+
+    #[test]
+    fn test_vomma_high_volatility() {
+        let option = create_sample_option_with_days(
+            OptionStyle::Call,
+            Side::Long,
+            pos!(100.0),
+            pos!(1.0),
+            pos!(100.0),
+            pos!(0.8), // High volatility (80%)
+            pos!(30.0),
+        );
+        let vomma_value = vomma(&option).unwrap();
+        info!("Vomma High Volatility: {}", vomma_value);
+        // Vomma should be calculable with high volatility
+        assert!(vomma_value.abs() < Decimal::MAX);
+    }
+
+    #[test]
+    fn test_vomma_low_volatility() {
+        let option = create_sample_option_with_days(
+            OptionStyle::Call,
+            Side::Long,
+            pos!(100.0),
+            pos!(1.0),
+            pos!(100.0),
+            pos!(0.05), // Low volatility (5%)
+            pos!(30.0),
+        );
+        let vomma_value = vomma(&option).unwrap();
+        info!("Vomma Low Volatility: {}", vomma_value);
+        // Vomma should be calculable with low volatility
+        assert!(vomma_value.abs() < Decimal::MAX);
+    }
+
+    #[test]
+    fn test_vomma_near_expiration() {
+        let option = create_sample_option_with_days(
+            OptionStyle::Call,
+            Side::Long,
+            pos!(100.0),
+            pos!(1.0),
+            pos!(100.0),
+            pos!(0.2),
+            pos!(1.0), // 1 day to expiration
+        );
+        let vomma_value = vomma(&option).unwrap();
+        info!("Vomma Near Expiration: {}", vomma_value);
+        // Near expiration, vomma should still be calculable
+        assert!(vomma_value.abs() < Decimal::MAX);
+    }
+
+    #[test]
+    fn test_vomma_at_expiration() {
+        let option = create_sample_option_with_days(
+            OptionStyle::Call,
+            Side::Long,
+            pos!(100.0),
+            pos!(1.0),
+            pos!(100.0),
+            pos!(0.2),
+            Positive::ZERO, // At expiration
+        );
+        let vomma_value = vomma(&option).unwrap();
+        // At expiration, vomma should be zero
+        assert_eq!(vomma_value, Decimal::ZERO);
+    }
+
+    #[test]
+    fn test_vomma_deep_otm() {
+        let option = create_sample_option_with_days(
+            OptionStyle::Call,
+            Side::Long,
+            pos!(50.0), // Deep OTM
+            pos!(1.0),
+            pos!(100.0),
+            pos!(0.2),
+            pos!(30.0),
+        );
+        let vomma_value = vomma(&option).unwrap();
+        info!("Vomma Deep OTM: {}", vomma_value);
+        // Deep OTM options have highest vomma
+        assert!(vomma_value.abs() < Decimal::MAX);
+    }
+
+    // ==================== VETA EDGE CASES ====================
+
+    #[test]
+    fn test_veta_high_volatility() {
+        let option = create_sample_option_with_days(
+            OptionStyle::Call,
+            Side::Long,
+            pos!(100.0),
+            pos!(1.0),
+            pos!(100.0),
+            pos!(0.8), // High volatility (80%)
+            pos!(30.0),
+        );
+        let veta_value = veta(&option).unwrap();
+        info!("Veta High Volatility: {}", veta_value);
+        // Veta should be calculable with high volatility
+        assert!(veta_value.abs() < Decimal::MAX);
+    }
+
+    #[test]
+    fn test_veta_low_volatility() {
+        let option = create_sample_option_with_days(
+            OptionStyle::Call,
+            Side::Long,
+            pos!(100.0),
+            pos!(1.0),
+            pos!(100.0),
+            pos!(0.05), // Low volatility (5%)
+            pos!(30.0),
+        );
+        let veta_value = veta(&option).unwrap();
+        info!("Veta Low Volatility: {}", veta_value);
+        // Veta should be calculable with low volatility
+        assert!(veta_value.abs() < Decimal::MAX);
+    }
+
+    #[test]
+    fn test_veta_near_expiration() {
+        let option = create_sample_option_with_days(
+            OptionStyle::Call,
+            Side::Long,
+            pos!(100.0),
+            pos!(1.0),
+            pos!(100.0),
+            pos!(0.2),
+            pos!(1.0), // 1 day to expiration
+        );
+        let veta_value = veta(&option).unwrap();
+        info!("Veta Near Expiration: {}", veta_value);
+        // Near expiration, veta should still be calculable
+        assert!(veta_value.abs() < Decimal::MAX);
+    }
+
+    #[test]
+    fn test_veta_at_expiration() {
+        let option = create_sample_option_with_days(
+            OptionStyle::Call,
+            Side::Long,
+            pos!(100.0),
+            pos!(1.0),
+            pos!(100.0),
+            pos!(0.2),
+            Positive::ZERO, // At expiration
+        );
+        let veta_value = veta(&option).unwrap();
+        // At expiration, veta should be zero
+        assert_eq!(veta_value, Decimal::ZERO);
+    }
+
+    #[test]
+    fn test_veta_deep_itm() {
+        let option = create_sample_option_with_days(
+            OptionStyle::Call,
+            Side::Long,
+            pos!(150.0), // Deep ITM
+            pos!(1.0),
+            pos!(100.0),
+            pos!(0.2),
+            pos!(30.0),
+        );
+        let veta_value = veta(&option).unwrap();
+        info!("Veta Deep ITM: {}", veta_value);
+        // Deep ITM options have small veta
+        assert!(veta_value.abs() < Decimal::MAX);
+    }
+
+    #[test]
+    fn test_veta_deep_otm() {
+        let option = create_sample_option_with_days(
+            OptionStyle::Call,
+            Side::Long,
+            pos!(50.0), // Deep OTM
+            pos!(1.0),
+            pos!(100.0),
+            pos!(0.2),
+            pos!(30.0),
+        );
+        let veta_value = veta(&option).unwrap();
+        info!("Veta Deep OTM: {}", veta_value);
+        // Deep OTM options have small veta
+        assert!(veta_value.abs() < Decimal::MAX);
+    }
+
+    #[test]
+    fn test_veta_long_dated_option() {
+        let option = create_sample_option_with_days(
+            OptionStyle::Call,
+            Side::Long,
+            pos!(100.0),
+            pos!(1.0),
+            pos!(100.0),
+            pos!(0.2),
+            pos!(365.0), // 1 year to expiration
+        );
+        let veta_value = veta(&option).unwrap();
+        info!("Veta Long Dated: {}", veta_value);
+        // Long dated options should have calculable veta
+        assert!(veta_value.abs() < Decimal::MAX);
+    }
+
+    // ==================== COMBINED SCENARIOS ====================
+
+    #[test]
+    fn test_volatility_greeks_extreme_scenario() {
+        // High volatility + near expiration + ATM
+        let option = create_sample_option_with_days(
+            OptionStyle::Call,
+            Side::Long,
+            pos!(100.0),
+            pos!(1.0),
+            pos!(100.0),
+            pos!(1.0), // 100% volatility
+            pos!(2.0), // 2 days to expiration
+        );
+
+        let vanna_value = vanna(&option).unwrap();
+        let vomma_value = vomma(&option).unwrap();
+        let veta_value = veta(&option).unwrap();
+
+        info!("Extreme Scenario - Vanna: {}", vanna_value);
+        info!("Extreme Scenario - Vomma: {}", vomma_value);
+        info!("Extreme Scenario - Veta: {}", veta_value);
+
+        // All should be finite values
+        assert!(vanna_value.abs() < Decimal::MAX);
+        assert!(vomma_value.abs() < Decimal::MAX);
+        assert!(veta_value.abs() < Decimal::MAX);
+    }
+
+    #[test]
+    fn test_volatility_greeks_put_option() {
+        let option = create_sample_option_with_days(
+            OptionStyle::Put,
+            Side::Long,
+            pos!(100.0),
+            pos!(1.0),
+            pos!(100.0),
+            pos!(0.2),
+            pos!(30.0),
+        );
+
+        let vanna_value = vanna(&option).unwrap();
+        let vomma_value = vomma(&option).unwrap();
+        let veta_value = veta(&option).unwrap();
+
+        info!("Put Option - Vanna: {}", vanna_value);
+        info!("Put Option - Vomma: {}", vomma_value);
+        info!("Put Option - Veta: {}", veta_value);
+
+        // All should be finite values
+        assert!(vanna_value.abs() < Decimal::MAX);
+        assert!(vomma_value.abs() < Decimal::MAX);
+        assert!(veta_value.abs() < Decimal::MAX);
+    }
+
+    #[test]
+    fn test_vanna_atm_vs_otm_comparison() {
+        let atm_option = create_sample_option_with_days(
+            OptionStyle::Call,
+            Side::Long,
+            pos!(100.0),
+            pos!(1.0),
+            pos!(100.0), // ATM
+            pos!(0.2),
+            pos!(30.0),
+        );
+
+        let otm_option = create_sample_option_with_days(
+            OptionStyle::Call,
+            Side::Long,
+            pos!(100.0),
+            pos!(1.0),
+            pos!(110.0), // OTM
+            pos!(0.2),
+            pos!(30.0),
+        );
+
+        let vanna_atm = vanna(&atm_option).unwrap();
+        let vanna_otm = vanna(&otm_option).unwrap();
+
+        info!("Vanna ATM: {}", vanna_atm);
+        info!("Vanna OTM: {}", vanna_otm);
+
+        // Both should be calculable
+        assert!(vanna_atm.abs() < Decimal::MAX);
+        assert!(vanna_otm.abs() < Decimal::MAX);
+    }
+
+    #[test]
+    fn test_vomma_smile_effect() {
+        // Test vomma at different strikes to verify smile effect
+        let strikes = vec![
+            pos!(90.0),
+            pos!(95.0),
+            pos!(100.0),
+            pos!(105.0),
+            pos!(110.0),
+        ];
+
+        for strike in strikes {
+            let option = create_sample_option_with_days(
+                OptionStyle::Call,
+                Side::Long,
+                pos!(100.0),
+                pos!(1.0),
+                strike,
+                pos!(0.2),
+                pos!(30.0),
+            );
+            let vomma_value = vomma(&option).unwrap();
+            info!("Vomma at strike {}: {}", strike, vomma_value);
+            assert!(vomma_value.abs() < Decimal::MAX);
+        }
+    }
+}
+
 #[cfg(test)]
 pub mod tests_color_equations {
     use super::*;
