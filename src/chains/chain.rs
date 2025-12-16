@@ -9743,3 +9743,705 @@ mod tests_option_chain_comparison {
         assert_eq!(chains[3].get_expiration_date(), "2030-01-19");
     }
 }
+
+#[cfg(test)]
+mod tests_volatility_smile_skew {
+    use super::*;
+    use crate::pos;
+    use crate::volatility::{VolatilitySkew, VolatilitySmile};
+    use rust_decimal_macros::dec;
+
+    fn create_chain_with_options() -> OptionChain {
+        let mut chain = OptionChain::new("TEST", pos!(100.0), "2030-01-01".to_string(), None, None);
+
+        chain.add_option(
+            pos!(90.0),
+            Some(pos!(11.0)),
+            Some(pos!(11.5)),
+            Some(pos!(0.5)),
+            Some(pos!(1.0)),
+            pos!(0.28),
+            Some(dec!(0.85)),
+            Some(dec!(-0.15)),
+            Some(dec!(0.015)),
+            None,
+            None,
+            None,
+        );
+
+        chain.add_option(
+            pos!(95.0),
+            Some(pos!(6.5)),
+            Some(pos!(7.0)),
+            Some(pos!(1.0)),
+            Some(pos!(1.5)),
+            pos!(0.24),
+            Some(dec!(0.72)),
+            Some(dec!(-0.28)),
+            Some(dec!(0.020)),
+            None,
+            None,
+            None,
+        );
+
+        chain.add_option(
+            pos!(100.0),
+            Some(pos!(3.5)),
+            Some(pos!(4.0)),
+            Some(pos!(3.0)),
+            Some(pos!(3.5)),
+            pos!(0.20),
+            Some(dec!(0.52)),
+            Some(dec!(-0.48)),
+            Some(dec!(0.025)),
+            None,
+            None,
+            None,
+        );
+
+        chain.add_option(
+            pos!(105.0),
+            Some(pos!(1.5)),
+            Some(pos!(2.0)),
+            Some(pos!(6.0)),
+            Some(pos!(6.5)),
+            pos!(0.22),
+            Some(dec!(0.32)),
+            Some(dec!(-0.68)),
+            Some(dec!(0.020)),
+            None,
+            None,
+            None,
+        );
+
+        chain.add_option(
+            pos!(110.0),
+            Some(pos!(0.5)),
+            Some(pos!(1.0)),
+            Some(pos!(10.0)),
+            Some(pos!(10.5)),
+            pos!(0.26),
+            Some(dec!(0.18)),
+            Some(dec!(-0.82)),
+            Some(dec!(0.015)),
+            None,
+            None,
+            None,
+        );
+
+        chain
+    }
+
+    #[test]
+    fn test_volatility_smile_returns_curve_with_correct_points() {
+        let chain = create_chain_with_options();
+        let smile = chain.smile();
+
+        assert_eq!(smile.points.len(), 5);
+    }
+
+    #[test]
+    fn test_volatility_smile_strike_prices_as_x_axis() {
+        let chain = create_chain_with_options();
+        let smile = chain.smile();
+
+        let points: Vec<_> = smile.points.iter().collect();
+
+        assert_eq!(points[0].x, dec!(90.0));
+        assert_eq!(points[1].x, dec!(95.0));
+        assert_eq!(points[2].x, dec!(100.0));
+        assert_eq!(points[3].x, dec!(105.0));
+        assert_eq!(points[4].x, dec!(110.0));
+    }
+
+    #[test]
+    fn test_volatility_smile_iv_as_y_axis() {
+        let chain = create_chain_with_options();
+        let smile = chain.smile();
+
+        let points: Vec<_> = smile.points.iter().collect();
+
+        assert_eq!(points[0].y, dec!(0.28));
+        assert_eq!(points[2].y, dec!(0.20)); // ATM
+        assert_eq!(points[4].y, dec!(0.26));
+    }
+
+    #[test]
+    fn test_volatility_skew_returns_curve_with_correct_points() {
+        let chain = create_chain_with_options();
+        let skew = chain.volatility_skew();
+
+        assert_eq!(skew.points.len(), 5);
+    }
+
+    #[test]
+    fn test_volatility_skew_moneyness_as_x_axis() {
+        let chain = create_chain_with_options();
+        let skew = chain.volatility_skew();
+
+        let points: Vec<_> = skew.points.iter().collect();
+
+        // Moneyness = (strike/underlying - 1) * 100
+        // For strike 90, underlying 100: (90/100 - 1) * 100 = -10
+        assert_eq!(points[0].x, dec!(-10.0));
+        // For strike 100, underlying 100: (100/100 - 1) * 100 = 0
+        assert_eq!(points[2].x, dec!(0.0));
+        // For strike 110, underlying 100: (110/100 - 1) * 100 = 10
+        assert_eq!(points[4].x, dec!(10.0));
+    }
+
+    #[test]
+    fn test_volatility_skew_iv_as_y_axis() {
+        let chain = create_chain_with_options();
+        let skew = chain.volatility_skew();
+
+        let points: Vec<_> = skew.points.iter().collect();
+
+        assert_eq!(points[0].y, dec!(0.28)); // OTM put
+        assert_eq!(points[2].y, dec!(0.20)); // ATM
+        assert_eq!(points[4].y, dec!(0.26)); // OTM call
+    }
+
+    #[test]
+    fn test_volatility_smile_empty_chain() {
+        let chain = OptionChain::new("TEST", pos!(100.0), "2030-01-01".to_string(), None, None);
+        let smile = chain.smile();
+
+        assert!(smile.points.is_empty());
+    }
+
+    #[test]
+    fn test_volatility_skew_empty_chain() {
+        let chain = OptionChain::new("TEST", pos!(100.0), "2030-01-01".to_string(), None, None);
+        let skew = chain.volatility_skew();
+
+        assert!(skew.points.is_empty());
+    }
+
+    #[test]
+    fn test_volatility_smile_single_option() {
+        let mut chain = OptionChain::new("TEST", pos!(100.0), "2030-01-01".to_string(), None, None);
+
+        chain.add_option(
+            pos!(100.0),
+            Some(pos!(3.0)),
+            Some(pos!(3.5)),
+            Some(pos!(3.0)),
+            Some(pos!(3.5)),
+            pos!(0.20),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+
+        let smile = chain.smile();
+        assert_eq!(smile.points.len(), 1);
+    }
+}
+
+#[cfg(test)]
+mod tests_get_call_price {
+    use super::*;
+    use crate::pos;
+    use rust_decimal_macros::dec;
+
+    #[test]
+    fn test_get_call_price_existing_strike() {
+        let mut chain = OptionChain::new("TEST", pos!(100.0), "2030-01-01".to_string(), None, None);
+
+        chain.add_option(
+            pos!(100.0),
+            Some(pos!(3.0)),
+            Some(pos!(3.5)),
+            Some(pos!(3.0)),
+            Some(pos!(3.5)),
+            pos!(0.20),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+
+        let price = chain.get_call_price(pos!(100.0));
+        assert!(price.is_some());
+        assert_eq!(price.unwrap(), dec!(3.5));
+    }
+
+    #[test]
+    fn test_get_call_price_non_existing_strike() {
+        let mut chain = OptionChain::new("TEST", pos!(100.0), "2030-01-01".to_string(), None, None);
+
+        chain.add_option(
+            pos!(100.0),
+            Some(pos!(3.0)),
+            Some(pos!(3.5)),
+            Some(pos!(3.0)),
+            Some(pos!(3.5)),
+            pos!(0.20),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+
+        let price = chain.get_call_price(pos!(105.0));
+        assert!(price.is_none());
+    }
+
+    #[test]
+    fn test_get_call_price_empty_chain() {
+        let chain = OptionChain::new("TEST", pos!(100.0), "2030-01-01".to_string(), None, None);
+
+        let price = chain.get_call_price(pos!(100.0));
+        assert!(price.is_none());
+    }
+
+    #[test]
+    fn test_get_call_price_no_ask_price() {
+        let mut chain = OptionChain::new("TEST", pos!(100.0), "2030-01-01".to_string(), None, None);
+
+        chain.add_option(
+            pos!(100.0),
+            Some(pos!(3.0)),
+            None, // No ask price
+            Some(pos!(3.0)),
+            Some(pos!(3.5)),
+            pos!(0.20),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+
+        let price = chain.get_call_price(pos!(100.0));
+        assert!(price.is_none());
+    }
+}
+
+#[cfg(test)]
+mod tests_title_operations {
+    use super::*;
+    use crate::pos;
+
+    #[test]
+    fn test_get_title_basic() {
+        let chain = OptionChain::new("AAPL", pos!(150.0), "2030-01-15".to_string(), None, None);
+
+        let title = chain.get_title();
+        assert_eq!(title, "AAPL-2030-01-15-150");
+    }
+
+    #[test]
+    fn test_get_title_with_spaces_in_symbol() {
+        let chain = OptionChain::new(
+            "SPX INDEX",
+            pos!(4500.0),
+            "2030-01-15".to_string(),
+            None,
+            None,
+        );
+
+        let title = chain.get_title();
+        assert_eq!(title, "SPX-INDEX-2030-01-15-4500");
+    }
+
+    #[test]
+    fn test_get_title_with_spaces_in_date() {
+        let chain = OptionChain::new("AAPL", pos!(150.0), "2030 01 15".to_string(), None, None);
+
+        let title = chain.get_title();
+        assert_eq!(title, "AAPL-2030-01-15-150");
+    }
+
+    #[test]
+    fn test_set_from_title_valid_format() {
+        let mut chain = OptionChain::new("", pos!(1.0), "".to_string(), None, None);
+
+        let result = chain.set_from_title("AAPL-15-01-2030-150.5.csv");
+
+        assert!(result.is_ok());
+        assert_eq!(chain.symbol, "AAPL");
+        assert_eq!(chain.expiration_date, "15-01-2030");
+        assert_eq!(chain.underlying_price, pos!(150.5));
+    }
+
+    #[test]
+    fn test_set_from_title_with_path() {
+        let mut chain = OptionChain::new("", pos!(1.0), "".to_string(), None, None);
+
+        let result = chain.set_from_title("/path/to/files/MSFT-20-03-2030-300.json");
+
+        assert!(result.is_ok());
+        assert_eq!(chain.symbol, "MSFT");
+        assert_eq!(chain.expiration_date, "20-03-2030");
+        assert_eq!(chain.underlying_price, pos!(300.0));
+    }
+
+    #[test]
+    fn test_set_from_title_invalid_format() {
+        let mut chain = OptionChain::new("", pos!(1.0), "".to_string(), None, None);
+
+        let result = chain.set_from_title("invalid-format.csv");
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_set_from_title_too_few_parts() {
+        let mut chain = OptionChain::new("", pos!(1.0), "".to_string(), None, None);
+
+        let result = chain.set_from_title("AAPL-15-01.csv");
+
+        assert!(result.is_err());
+    }
+}
+
+#[cfg(test)]
+mod tests_expiration_operations {
+    use super::*;
+    use crate::{pos, spos};
+    use rust_decimal_macros::dec;
+
+    #[test]
+    fn test_get_expiration_date() {
+        let chain = OptionChain::new("TEST", pos!(100.0), "2030-01-15".to_string(), None, None);
+
+        assert_eq!(chain.get_expiration_date(), "2030-01-15");
+    }
+
+    #[test]
+    fn test_get_expiration_valid_date() {
+        let chain = OptionChain::new("TEST", pos!(100.0), "2030-01-15".to_string(), None, None);
+
+        let expiration = chain.get_expiration();
+        assert!(expiration.is_some());
+    }
+
+    #[test]
+    fn test_get_expiration_invalid_date() {
+        let chain = OptionChain::new("TEST", pos!(100.0), "invalid-date".to_string(), None, None);
+
+        let expiration = chain.get_expiration();
+        assert!(expiration.is_none());
+    }
+
+    #[test]
+    fn test_update_expiration_date() {
+        let mut chain = OptionChain::new(
+            "TEST",
+            pos!(100.0),
+            "2030-01-15".to_string(),
+            Some(dec!(0.05)),
+            spos!(0.02),
+        );
+
+        chain.add_option(
+            pos!(100.0),
+            Some(pos!(3.0)),
+            Some(pos!(3.5)),
+            Some(pos!(3.0)),
+            Some(pos!(3.5)),
+            pos!(0.20),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+
+        chain.update_expiration_date("2030-06-15".to_string());
+
+        assert_eq!(chain.get_expiration_date(), "2030-06-15");
+    }
+
+    #[test]
+    fn test_update_expiration_date_invalid() {
+        let mut chain = OptionChain::new("TEST", pos!(100.0), "2030-01-15".to_string(), None, None);
+
+        // Update with invalid date - should still update the string but warn
+        chain.update_expiration_date("invalid".to_string());
+
+        assert_eq!(chain.get_expiration_date(), "invalid");
+    }
+}
+
+#[cfg(test)]
+mod tests_from_vec_option_data {
+    use super::*;
+    use crate::{pos, spos};
+    use rust_decimal_macros::dec;
+
+    #[test]
+    fn test_from_empty_vec() {
+        let options: Vec<OptionData> = vec![];
+        let chain = OptionChain::from(&options);
+
+        assert!(chain.options.is_empty());
+        assert_eq!(chain.symbol, "");
+    }
+
+    #[test]
+    fn test_from_vec_with_options() {
+        let mut opt1 = OptionData::new(
+            pos!(95.0),
+            Some(pos!(6.0)),
+            Some(pos!(6.5)),
+            Some(pos!(1.0)),
+            Some(pos!(1.5)),
+            pos!(0.25),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+        opt1.symbol = Some("TEST".to_string());
+        opt1.underlying_price = Some(Box::new(pos!(100.0)));
+        opt1.expiration_date = Some(ExpirationDate::Days(pos!(30.0)));
+        opt1.risk_free_rate = Some(dec!(0.05));
+        opt1.dividend_yield = spos!(0.02);
+
+        let mut opt2 = OptionData::new(
+            pos!(100.0),
+            Some(pos!(3.0)),
+            Some(pos!(3.5)),
+            Some(pos!(3.0)),
+            Some(pos!(3.5)),
+            pos!(0.20),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+        opt2.symbol = Some("TEST".to_string());
+        opt2.underlying_price = Some(Box::new(pos!(100.0)));
+        opt2.expiration_date = Some(ExpirationDate::Days(pos!(30.0)));
+
+        let options = vec![opt1, opt2];
+        let chain = OptionChain::from(&options);
+
+        assert_eq!(chain.symbol, "TEST");
+        assert_eq!(chain.underlying_price, pos!(100.0));
+        assert_eq!(chain.options.len(), 2);
+        assert_eq!(chain.risk_free_rate, Some(dec!(0.05)));
+        assert_eq!(chain.dividend_yield, spos!(0.02));
+    }
+
+    #[test]
+    fn test_from_vec_uses_first_option_metadata() {
+        let mut opt1 = OptionData::new(
+            pos!(95.0),
+            None,
+            None,
+            None,
+            None,
+            pos!(0.25),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+        opt1.symbol = Some("FIRST".to_string());
+        opt1.underlying_price = Some(Box::new(pos!(100.0)));
+
+        let mut opt2 = OptionData::new(
+            pos!(100.0),
+            None,
+            None,
+            None,
+            None,
+            pos!(0.20),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+        opt2.symbol = Some("SECOND".to_string());
+        opt2.underlying_price = Some(Box::new(pos!(150.0)));
+
+        let options = vec![opt1, opt2];
+        let chain = OptionChain::from(&options);
+
+        // Should use first option's metadata
+        assert_eq!(chain.symbol, "FIRST");
+        assert_eq!(chain.underlying_price, pos!(100.0));
+    }
+}
+
+#[cfg(test)]
+mod tests_len_trait {
+    use super::*;
+    use crate::pos;
+    use crate::utils::Len;
+
+    #[test]
+    fn test_len_empty_chain() {
+        let chain = OptionChain::new("TEST", pos!(100.0), "2030-01-01".to_string(), None, None);
+
+        assert_eq!(chain.len(), 0);
+        assert!(chain.is_empty());
+    }
+
+    #[test]
+    fn test_len_with_options() {
+        let mut chain = OptionChain::new("TEST", pos!(100.0), "2030-01-01".to_string(), None, None);
+
+        chain.add_option(
+            pos!(95.0),
+            None,
+            None,
+            None,
+            None,
+            pos!(0.20),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+        chain.add_option(
+            pos!(100.0),
+            None,
+            None,
+            None,
+            None,
+            pos!(0.20),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+        chain.add_option(
+            pos!(105.0),
+            None,
+            None,
+            None,
+            None,
+            pos!(0.20),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+
+        assert_eq!(chain.len(), 3);
+        assert!(!chain.is_empty());
+    }
+}
+
+#[cfg(test)]
+mod tests_default_trait {
+    use super::*;
+
+    #[test]
+    fn test_default_chain() {
+        let chain = OptionChain::default();
+
+        assert_eq!(chain.symbol, "");
+        assert_eq!(chain.underlying_price, Positive::ZERO);
+        assert_eq!(chain.get_expiration_date(), "");
+        assert!(chain.options.is_empty());
+        assert!(chain.risk_free_rate.is_none());
+        assert!(chain.dividend_yield.is_none());
+    }
+}
+
+#[cfg(test)]
+mod tests_option_chain_params_trait {
+    use super::*;
+    use crate::{pos, spos};
+    use rust_decimal_macros::dec;
+
+    #[test]
+    fn test_get_params_existing_strike() {
+        let mut chain = OptionChain::new(
+            "TEST",
+            pos!(100.0),
+            "2030-01-15".to_string(),
+            Some(dec!(0.05)),
+            spos!(0.02),
+        );
+
+        chain.add_option(
+            pos!(100.0),
+            Some(pos!(3.0)),
+            Some(pos!(3.5)),
+            Some(pos!(3.0)),
+            Some(pos!(3.5)),
+            pos!(0.20),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+
+        let result = chain.get_params(pos!(100.0));
+        assert!(result.is_ok());
+
+        let params = result.unwrap();
+        assert!(params.underlying_price.is_some());
+        assert_eq!(*params.underlying_price.unwrap(), pos!(100.0));
+    }
+
+    #[test]
+    fn test_get_params_non_existing_strike() {
+        let chain = OptionChain::new(
+            "TEST",
+            pos!(100.0),
+            "2030-01-15".to_string(),
+            Some(dec!(0.05)),
+            spos!(0.02),
+        );
+
+        let result = chain.get_params(pos!(150.0));
+        assert!(result.is_err());
+    }
+}
