@@ -430,17 +430,18 @@ impl OptionChain {
             );
             option_data.set_extra_params(price_params);
 
-            let result_calculate_prices = option_data.calculate_prices(Some(p.spread));
-            if result_calculate_prices.is_ok() {
-                option_data.apply_spread(p.spread, p.decimal_places);
-                option_data.calculate_delta();
-                option_data.calculate_gamma();
-            } else {
-                warn!(
-                    "Failed to calculate prices for strike: {} error: {}",
-                    strike,
-                    result_calculate_prices.unwrap_err()
-                );
+            match option_data.calculate_prices(Some(p.spread)) {
+                Ok(()) => {
+                    option_data.apply_spread(p.spread, p.decimal_places);
+                    option_data.calculate_delta();
+                    option_data.calculate_gamma();
+                }
+                Err(e) => {
+                    warn!(
+                        "Failed to calculate prices for strike: {} error: {}",
+                        strike, e
+                    );
+                }
             }
             option_data
         }
