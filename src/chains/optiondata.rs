@@ -418,7 +418,7 @@ impl OptionData {
             error!("Error: Strike price cannot be zero");
             return false;
         }
-        if !self.valid_call() && !self.valid_put() {
+        if !self.valid_call() || !self.valid_put() {
             error!("Error: No valid prices for call or put options");
             return false;
         }
@@ -3052,5 +3052,147 @@ mod tests_spreads {
             None,
         );
         assert_eq!(od.get_put_spread_per(), None);
+    }
+}
+
+#[cfg(test)]
+mod tests_validate_option_data {
+    use super::*;
+    use crate::spos;
+    use rust_decimal_macros::dec;
+
+    #[test]
+    fn test_validate_option_data_missing_strike_price() {
+        let option_data = OptionData::new(
+            pos!(0.0),   // strike_price is zero
+            spos!(9.5),  // call_bid
+            spos!(10.0), // call_ask
+            spos!(8.5),  // put_bid
+            spos!(9.0),  // put_ask
+            pos!(0.2),   // implied_volatility
+            Some(dec!(-0.3)),
+            Some(dec!(0.7)),
+            Some(dec!(0.5)),
+            spos!(1000.0),
+            Some(500),
+            Some("TEST".to_string()),
+            Some(ExpirationDate::Days(pos!(30.0))),
+            Some(Box::new(pos!(100.0))),
+            Some(dec!(0.05)),
+            Some(pos!(0.02)),
+            None,
+            None,
+        );
+        // Option data is not valid because the strike price is zero
+        let is_valid = option_data.validate();
+        assert!(!is_valid);
+    }
+
+    #[test]
+    fn test_validate_option_data_missing_call_bid() {
+        let option_data = OptionData::new(
+            pos!(100.0), // strike_price
+            None,        // call_bid is not provided
+            spos!(10.0), // call_ask
+            spos!(8.5),  // put_bid
+            spos!(9.0),  // put_ask
+            pos!(0.2),   // implied_volatility
+            Some(dec!(-0.3)),
+            Some(dec!(0.7)),
+            Some(dec!(0.5)),
+            spos!(1000.0),
+            Some(500),
+            Some("TEST".to_string()),
+            Some(ExpirationDate::Days(pos!(30.0))),
+            Some(Box::new(pos!(100.0))),
+            Some(dec!(0.05)),
+            Some(pos!(0.02)),
+            None,
+            None,
+        );
+        // Option data is not valid because the call bid price is not provided
+        let is_valid = option_data.validate();
+        assert!(!is_valid);
+    }
+
+    #[test]
+    fn test_validate_option_data_missing_call_ask() {
+        let option_data = OptionData::new(
+            pos!(100.0), // strike_price
+            spos!(9.5),  // call_bid
+            None,        // call_ask is not provided
+            spos!(8.5),  // put_bid
+            spos!(9.0),  // put_ask
+            pos!(0.2),   // implied_volatility is zero
+            Some(dec!(-0.3)),
+            Some(dec!(0.7)),
+            Some(dec!(0.5)),
+            spos!(1000.0),
+            Some(500),
+            Some("TEST".to_string()),
+            Some(ExpirationDate::Days(pos!(30.0))),
+            Some(Box::new(pos!(100.0))),
+            Some(dec!(0.05)),
+            Some(pos!(0.02)),
+            None,
+            None,
+        );
+        // Option data is not valid because the call ask price is not provided
+        let is_valid = option_data.validate();
+        assert!(!is_valid);
+    }
+
+    #[test]
+    fn test_validate_option_data_missing_put_bid() {
+        let option_data = OptionData::new(
+            pos!(100.0), // strike_price
+            spos!(9.5),  // call_bid
+            spos!(10.0), // call_ask
+            None,        // put_bid is not provided
+            spos!(9.0),  // put_ask
+            pos!(0.2),   // implied_volatility
+            Some(dec!(-0.3)),
+            Some(dec!(0.7)),
+            Some(dec!(0.5)),
+            spos!(1000.0),
+            Some(500),
+            Some("TEST".to_string()),
+            Some(ExpirationDate::Days(pos!(30.0))),
+            Some(Box::new(pos!(100.0))),
+            Some(dec!(0.05)),
+            Some(pos!(0.02)),
+            None,
+            None,
+        );
+        // Option data is not valid because the put bid price is not provided
+        let is_valid = option_data.validate();
+        assert!(!is_valid);
+    }
+
+    #[test]
+    fn test_validate_option_data_missing_put_ask() {
+        let option_data = OptionData::new(
+            pos!(100.0), // strike_price
+            spos!(9.5),  // call_bid
+            spos!(10.0), // call_ask
+            spos!(8.5),  // put_bid
+            None,        // put_ask is not provided
+            pos!(0.2),   // implied_volatility
+            Some(dec!(-0.3)),
+            Some(dec!(0.7)),
+            Some(dec!(0.5)),
+            spos!(1000.0),
+            Some(500),
+            Some("TEST".to_string()),
+            Some(ExpirationDate::Days(pos!(30.0))),
+            Some(Box::new(pos!(100.0))),
+            Some(dec!(0.05)),
+            Some(pos!(0.02)),
+            None,
+            None,
+        );
+        // Option data is not valid because the put ask price is not provided
+        let is_valid = option_data.validate();
+        assert!(!is_valid);
     }
 }

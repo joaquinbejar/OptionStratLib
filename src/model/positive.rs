@@ -1653,7 +1653,6 @@ mod tests_serialization {
 
 #[cfg(test)]
 mod tests_format_fixed_places {
-    use crate::pos;
 
     #[test]
     fn test_format_fixed_places() {

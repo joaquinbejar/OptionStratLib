@@ -1348,8 +1348,8 @@ mod tests_bull_put_spread_optimization {
 
         chain.add_option(
             pos!(85.0),       // strike
-            None,             // call_bid
-            None,             // call_ask
+            spos!(2.4),       // call_bid
+            spos!(2.6),       // call_ask
             spos!(2.0),       // put_bid
             spos!(2.2),       // put_ask
             pos!(0.2),        // implied_volatility
@@ -1363,8 +1363,8 @@ mod tests_bull_put_spread_optimization {
 
         chain.add_option(
             pos!(90.0),
-            None,
-            None,
+            spos!(3.4),
+            spos!(3.6),
             spos!(3.0),
             spos!(3.2),
             pos!(0.2),
@@ -1378,8 +1378,8 @@ mod tests_bull_put_spread_optimization {
 
         chain.add_option(
             pos!(95.0),
-            None,
-            None,
+            spos!(4.4),
+            spos!(4.6),
             spos!(4.0),
             spos!(4.2),
             pos!(0.2),
@@ -1393,8 +1393,8 @@ mod tests_bull_put_spread_optimization {
 
         chain.add_option(
             pos!(100.0),
-            None,
-            None,
+            spos!(5.4),
+            spos!(5.6),
             spos!(5.0),
             spos!(5.2),
             pos!(0.2),
@@ -1408,8 +1408,8 @@ mod tests_bull_put_spread_optimization {
 
         chain.add_option(
             pos!(105.0),
-            None,
-            None,
+            spos!(6.4),
+            spos!(6.6),
             spos!(6.0),
             spos!(6.2),
             pos!(0.2),
