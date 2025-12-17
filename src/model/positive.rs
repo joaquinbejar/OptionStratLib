@@ -944,7 +944,7 @@ impl PartialEq<f64> for Positive {
 impl Display for Positive {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if *self == Positive::INFINITY {
-            write!(f, r#""infinity""#)
+            write!(f, "{}", f64::MAX)
         } else if self.0.scale() == 0 {
             match self.0.to_i64() {
                 Some(val) => write!(f, "{val}"),
@@ -963,7 +963,7 @@ impl Display for Positive {
 impl fmt::Debug for Positive {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if *self == Positive::INFINITY {
-            write!(f, r#""infinity""#)
+            write!(f, "{}", f64::MAX)
         } else if self.0.scale() == 0 {
             write!(f, "{}", self.0.to_i64().unwrap())
         } else {
@@ -986,7 +986,7 @@ impl Serialize for Positive {
         let value = self.0;
 
         if *self == Positive::INFINITY {
-            return serializer.serialize_str("infinity");
+            return serializer.serialize_f64(f64::MAX);
         }
 
         if value.scale() == 0 {
@@ -1017,18 +1017,15 @@ impl<'de> Deserialize<'de> for Positive {
             type Value = Positive;
 
             fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-                formatter.write_str("a positive number or the string \"infinity\"")
+                formatter.write_str("a positive number")
             }
 
             fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
             where
                 E: serde::de::Error,
             {
-                if value.eq_ignore_ascii_case("infinity") {
-                    return Ok(Positive::INFINITY);
-                }
                 Err(serde::de::Error::custom(format!(
-                    "Invalid string: '{value}'. Expected \"infinity\"."
+                    "Invalid string: '{value}'. Expected a positive number."
                 )))
             }
 
@@ -1055,6 +1052,11 @@ impl<'de> Deserialize<'de> for Positive {
                 E: serde::de::Error,
             {
                 if value.is_infinite() && value.is_sign_positive() {
+                    return Ok(Positive::INFINITY);
+                }
+
+                // Treat f64::MAX as INFINITY
+                if value == f64::MAX {
                     return Ok(Positive::INFINITY);
                 }
 
@@ -1639,15 +1641,18 @@ mod tests_serialization {
     fn test_positive_infinity_serialization() {
         let value = Positive::INFINITY;
         let serialized = serde_json::to_string(&value).unwrap();
-        assert_eq!(serialized, r#""infinity""#);
+        // INFINITY serializes as f64::MAX (in scientific notation)
+        let deserialized: f64 = serde_json::from_str(&serialized).unwrap();
+        assert_eq!(deserialized, f64::MAX);
     }
 
     #[test]
     fn test_positive_infinity_deserialization() {
-        let json = r#""infinity""#;
-        let result = serde_json::from_str::<Positive>(json);
-
+        // f64::MAX deserializes back to INFINITY
+        let json = serde_json::to_string(&f64::MAX).unwrap();
+        let result = serde_json::from_str::<Positive>(&json);
         assert!(result.is_ok());
+        assert_eq!(result.unwrap(), Positive::INFINITY);
     }
 }
 
