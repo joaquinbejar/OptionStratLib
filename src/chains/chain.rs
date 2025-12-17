@@ -6521,6 +6521,22 @@ mod tests_option_chain_surfaces {
             _ => panic!("Expected ConstructionError"),
         }
     }
+
+    #[test]
+    fn test_vanna_surface() {
+        let chain = create_test_option_chain();
+        let volatilities = vec![pos!(0.15), pos!(0.20), pos!(0.25)];
+        let chain_result = chain.vanna_surface(volatilities);
+        assert!(chain_result.is_ok());
+    }
+
+    #[test]
+    fn test_vomma_surface() {
+        let chain = create_test_option_chain();
+        let volatilities = vec![pos!(0.15), pos!(0.20), pos!(0.25)];
+        let chain_result = chain.vomma_surface(volatilities);
+        assert!(chain_result.is_ok());
+    }
 }
 
 #[cfg(test)]
@@ -6722,6 +6738,38 @@ mod tests_option_chain_time_surfaces {
             }
             _ => panic!("Expected ConstructionError"),
         }
+    }
+
+    #[test]
+    fn test_theta_time_surface() {
+        let chain = create_test_option_chain();
+        let days_to_expiry = vec![pos!(30.0), pos!(60.0), pos!(90.0)];
+        let chain_result = chain.theta_time_surface(days_to_expiry);
+        assert!(chain_result.is_ok());
+    }
+
+    #[test]
+    fn test_veta_time_surface() {
+        let chain = create_test_option_chain();
+        let days_to_expiry = vec![pos!(30.0), pos!(60.0), pos!(90.0)];
+        let chain_result = chain.veta_time_surface(days_to_expiry);
+        assert!(chain_result.is_ok());
+    }
+
+    #[test]
+    fn test_charm_time_surface() {
+        let chain = create_test_option_chain();
+        let days_to_expiry = vec![pos!(30.0), pos!(60.0), pos!(90.0)];
+        let chain_result = chain.charm_time_surface(days_to_expiry);
+        assert!(chain_result.is_ok());
+    }
+
+    #[test]
+    fn test_color_time_surface() {
+        let chain = create_test_option_chain();
+        let days_to_expiry = vec![pos!(30.0), pos!(60.0), pos!(90.0)];
+        let chain_result = chain.color_time_surface(days_to_expiry);
+        assert!(chain_result.is_ok());
     }
 }
 
