@@ -830,6 +830,12 @@ pub mod geometrics;
 /// formulas, numerical approximations, and visualization tools for risk analysis.
 pub mod greeks;
 
+/// * `metrics` - Performance analysis for options.
+///
+/// Comprehensive tools for performance analysis including price metrics, risk metrics,
+/// composite metrics, liquidity metrics and stress metrics.
+pub mod metrics;
+
 /// * `model` - Core data structures and models for options and derivatives.
 ///
 /// Defines the fundamental data types and structures used throughout the library,
