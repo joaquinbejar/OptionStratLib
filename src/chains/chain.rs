@@ -2153,6 +2153,130 @@ impl OptionChain {
         )
     }
 
+    /// Generates a Theta time surface for visualization and analysis.
+    ///
+    /// Creates a 3D surface representing Theta values across different strike prices
+    /// and time horizons. Theta measures the sensitivity of the options's value to the passage of
+    /// time (time decay). As time passes with decreasing time to expiry an option's value
+    /// decreases.
+    ///
+    /// # Parameters
+    ///
+    /// * `days_to_expiry` - Vector of days to expiration values to use for surface calculations.
+    ///   Common values might be `vec![pos!(7.0), pos!(14.0), pos!(30.0), pos!(60.0), pos!(90.0)]`
+    ///
+    /// # Returns
+    ///
+    /// * `Result<Surface, SurfaceError>` - A surface object containing Theta data points,
+    ///   or an error if surface generation fails
+    ///
+    /// # Errors
+    ///
+    /// Returns a `SurfaceError` if the surface cannot be generated due to missing data
+    /// or calculation errors
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// use optionstratlib::pos;
+    ///
+    /// let days = vec![pos!(7.0), pos!(14.0), pos!(30.0), pos!(60.0), pos!(90.0)];
+    /// let theta_surface = chain.theta_time_surface(days)?;
+    /// ```
+    pub fn theta_time_surface(
+        &self,
+        days_to_expiry: Vec<Positive>,
+    ) -> Result<Surface, SurfaceError> {
+        self.time_surface(
+            &BasicAxisTypes::Theta,
+            &OptionStyle::Call,
+            days_to_expiry,
+            &Side::Long,
+        )
+    }
+
+    /// Generates a Charm time surface for visualization and analysis.
+    ///
+    /// Creates a 3D surface representing Charm values across different strike prices
+    /// and time horizons. Charm, also called DdeltaDtime or Delta decay,  measures the rate of
+    /// change of Delta over the passage of time.
+    ///
+    /// # Parameters
+    ///
+    /// * `days_to_expiry` - Vector of days to expiration values to use for surface calculations.
+    ///   Common values might be `vec![pos!(7.0), pos!(14.0), pos!(30.0), pos!(60.0), pos!(90.0)]`
+    ///
+    /// # Returns
+    ///
+    /// * `Result<Surface, SurfaceError>` - A surface object containing Charm data points,
+    ///   or an error if surface generation fails
+    ///
+    /// # Errors
+    ///
+    /// Returns a `SurfaceError` if the surface cannot be generated due to missing data
+    /// or calculation errors
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// use optionstratlib::pos;
+    ///
+    /// let days = vec![pos!(7.0), pos!(14.0), pos!(30.0), pos!(60.0), pos!(90.0)];
+    /// let charm_surface = chain.charm_time_surface(days)?;
+    /// ```
+    pub fn charm_time_surface(
+        &self,
+        days_to_expiry: Vec<Positive>,
+    ) -> Result<Surface, SurfaceError> {
+        self.time_surface(
+            &BasicAxisTypes::Charm,
+            &OptionStyle::Call,
+            days_to_expiry,
+            &Side::Long,
+        )
+    }
+
+    /// Generates a Color time surface for visualization and analysis.
+    ///
+    /// Creates a 3D surface representing Color values across different strike prices
+    /// and time horizons. Color, also called DgammaDtime or Gamma decay,  measures the rate of
+    /// change of Gamma over the passage of time.
+    ///
+    /// # Parameters
+    ///
+    /// * `days_to_expiry` - Vector of days to expiration values to use for surface calculations.
+    ///   Common values might be `vec![pos!(7.0), pos!(14.0), pos!(30.0), pos!(60.0), pos!(90.0)]`
+    ///
+    /// # Returns
+    ///
+    /// * `Result<Surface, SurfaceError>` - A surface object containing Color data points,
+    ///   or an error if surface generation fails
+    ///
+    /// # Errors
+    ///
+    /// Returns a `SurfaceError` if the surface cannot be generated due to missing data
+    /// or calculation errors
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// use optionstratlib::pos;
+    ///
+    /// let days = vec![pos!(7.0), pos!(14.0), pos!(30.0), pos!(60.0), pos!(90.0)];
+    /// let color_surface = chain.color_time_surface(days)?;
+    /// ```
+    pub fn color_time_surface(
+        &self,
+        days_to_expiry: Vec<Positive>,
+    ) -> Result<Surface, SurfaceError> {
+        self.time_surface(
+            &BasicAxisTypes::Color,
+            &OptionStyle::Call,
+            days_to_expiry,
+            &Side::Long,
+        )
+    }
+
     /// Generates a Vanna volatility surface for visualization and analysis.
     ///
     /// Creates a 3D surface representing Vanna values across different strike prices
@@ -6396,6 +6520,256 @@ mod tests_option_chain_surfaces {
             }
             _ => panic!("Expected ConstructionError"),
         }
+    }
+
+    #[test]
+    fn test_vanna_surface() {
+        let chain = create_test_option_chain();
+        let volatilities = vec![pos!(0.15), pos!(0.20), pos!(0.25)];
+        let chain_result = chain.vanna_surface(volatilities);
+        assert!(chain_result.is_ok());
+    }
+
+    #[test]
+    fn test_vomma_surface() {
+        let chain = create_test_option_chain();
+        let volatilities = vec![pos!(0.15), pos!(0.20), pos!(0.25)];
+        let chain_result = chain.vomma_surface(volatilities);
+        assert!(chain_result.is_ok());
+    }
+}
+
+#[cfg(test)]
+mod tests_option_chain_time_surfaces {
+    use super::*;
+    use crate::utils::time::get_tomorrow_formatted;
+    use crate::{pos, spos};
+    use rust_decimal_macros::dec;
+
+    fn create_test_option_chain() -> OptionChain {
+        let tomorrow_date = get_tomorrow_formatted();
+        let mut chain = OptionChain::new("TEST", pos!(100.0), tomorrow_date, None, None);
+
+        // Add some test options
+        chain.add_option(
+            pos!(90.0),        // strike_price
+            spos!(5.0),        // call_bid
+            spos!(5.5),        // call_ask
+            spos!(1.0),        // put_bid
+            spos!(1.5),        // put_ask
+            pos!(0.2),         // implied_volatility
+            Some(dec!(0.6)),   // delta
+            Some(dec!(100.0)), // volume
+            Some(dec!(50.0)),  // open_interest
+            None,
+            None,
+            None,
+        );
+
+        chain.add_option(
+            pos!(100.0),
+            spos!(3.0),
+            spos!(3.5),
+            spos!(3.0),
+            spos!(3.5),
+            pos!(0.25),
+            Some(dec!(0.5)),
+            Some(dec!(150.0)),
+            Some(dec!(75)),
+            None,
+            None,
+            None,
+        );
+
+        chain.add_option(
+            pos!(110.0),
+            spos!(1.0),
+            spos!(1.5),
+            spos!(5.0),
+            spos!(5.5),
+            pos!(0.3),
+            Some(dec!(0.4)),
+            Some(dec!(80.0)),
+            Some(dec!(40)),
+            None,
+            None,
+            None,
+        );
+        chain.update_greeks();
+        chain
+    }
+
+    #[test]
+    fn test_time_surface_invalid_axis() {
+        let chain = create_test_option_chain();
+        let days_to_expiry = vec![pos!(30.0), pos!(60.0), pos!(90.0)];
+        let result = chain.time_surface(
+            &BasicAxisTypes::Strike,
+            &OptionStyle::Call,
+            days_to_expiry,
+            &Side::Long,
+        );
+
+        assert!(result.is_err());
+        match result {
+            Err(SurfaceError::ConstructionError(msg)) => {
+                assert_eq!(msg, "Axis not valid for time surface");
+            }
+            _ => panic!("Expected ConstructionError"),
+        }
+    }
+
+    #[test]
+    fn test_time_surface_empty_dte_vector() {
+        let chain = create_test_option_chain();
+        let empty_dte: Vec<Positive> = vec![];
+
+        let result = chain.time_surface(
+            &BasicAxisTypes::Charm,
+            &OptionStyle::Call,
+            empty_dte,
+            &Side::Long,
+        );
+
+        assert!(result.is_err());
+        match result {
+            Err(SurfaceError::ConstructionError(msg)) => {
+                assert_eq!(msg, "No valid points generated for time surface");
+            }
+            _ => panic!("Expected ConstructionError"),
+        }
+    }
+
+    #[test]
+    fn test_time_surface_different_option_styles() {
+        let chain = create_test_option_chain();
+
+        // Test for calls
+        let days_to_expiry = vec![pos!(30.0), pos!(60.0), pos!(90.0)];
+        let call_result = chain.time_surface(
+            &BasicAxisTypes::Charm,
+            &OptionStyle::Call,
+            days_to_expiry,
+            &Side::Long,
+        );
+        assert!(call_result.is_ok());
+
+        // Test for puts
+        let days_to_expiry = vec![pos!(30.0), pos!(60.0), pos!(90.0)];
+        let put_result = chain.time_surface(
+            &BasicAxisTypes::Charm,
+            &OptionStyle::Put,
+            days_to_expiry,
+            &Side::Long,
+        );
+        assert!(put_result.is_ok());
+    }
+
+    #[test]
+    fn test_time_surface_different_sides() {
+        let chain = create_test_option_chain();
+
+        // Test for long position
+        let days_to_expiry = vec![pos!(30.0), pos!(60.0), pos!(90.0)];
+        let long_result = chain.time_surface(
+            &BasicAxisTypes::Color,
+            &OptionStyle::Call,
+            days_to_expiry,
+            &Side::Long,
+        );
+        assert!(long_result.is_ok());
+
+        // Test for short position
+        let days_to_expiry = vec![pos!(30.0), pos!(60.0), pos!(90.0)];
+        let short_result = chain.time_surface(
+            &BasicAxisTypes::Color,
+            &OptionStyle::Call,
+            days_to_expiry,
+            &Side::Short,
+        );
+        assert!(short_result.is_ok());
+    }
+
+    #[test]
+    fn test_time_surface_different_greeks() {
+        let chain = create_test_option_chain();
+        let axes = vec![
+            BasicAxisTypes::Delta,
+            BasicAxisTypes::Gamma,
+            BasicAxisTypes::Theta,
+            BasicAxisTypes::Vega,
+            BasicAxisTypes::Price,
+            BasicAxisTypes::Vanna,
+            BasicAxisTypes::Vomma,
+            BasicAxisTypes::Veta,
+            BasicAxisTypes::Charm,
+            BasicAxisTypes::Color,
+        ];
+
+        for axis in axes {
+            let days_to_expiry = vec![pos!(30.0), pos!(60.0), pos!(90.0)];
+            let result = chain.time_surface(&axis, &OptionStyle::Call, days_to_expiry, &Side::Long);
+            assert!(result.is_ok(), "Failed for axis: {axis:?}");
+        }
+    }
+
+    #[test]
+    fn test_time_surface_with_empty_chain() {
+        let empty_chain = OptionChain::new(
+            "TEST",
+            pos!(100.0),
+            "2024-12-31".to_string(),
+            Some(dec!(0.05)),
+            spos!(0.01),
+        );
+
+        let empty_dte: Vec<Positive> = vec![];
+        let result = empty_chain.time_surface(
+            &BasicAxisTypes::Delta,
+            &OptionStyle::Call,
+            empty_dte,
+            &Side::Long,
+        );
+
+        assert!(result.is_err());
+        match result {
+            Err(SurfaceError::ConstructionError(msg)) => {
+                assert_eq!(msg, "No valid points generated for time surface");
+            }
+            _ => panic!("Expected ConstructionError"),
+        }
+    }
+
+    #[test]
+    fn test_theta_time_surface() {
+        let chain = create_test_option_chain();
+        let days_to_expiry = vec![pos!(30.0), pos!(60.0), pos!(90.0)];
+        let chain_result = chain.theta_time_surface(days_to_expiry);
+        assert!(chain_result.is_ok());
+    }
+
+    #[test]
+    fn test_veta_time_surface() {
+        let chain = create_test_option_chain();
+        let days_to_expiry = vec![pos!(30.0), pos!(60.0), pos!(90.0)];
+        let chain_result = chain.veta_time_surface(days_to_expiry);
+        assert!(chain_result.is_ok());
+    }
+
+    #[test]
+    fn test_charm_time_surface() {
+        let chain = create_test_option_chain();
+        let days_to_expiry = vec![pos!(30.0), pos!(60.0), pos!(90.0)];
+        let chain_result = chain.charm_time_surface(days_to_expiry);
+        assert!(chain_result.is_ok());
+    }
+
+    #[test]
+    fn test_color_time_surface() {
+        let chain = create_test_option_chain();
+        let days_to_expiry = vec![pos!(30.0), pos!(60.0), pos!(90.0)];
+        let chain_result = chain.color_time_surface(days_to_expiry);
+        assert!(chain_result.is_ok());
     }
 }
 
