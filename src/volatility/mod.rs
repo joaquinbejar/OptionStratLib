@@ -175,4 +175,4 @@ pub use utils::{
     uncertain_volatility_bounds, volatility_for_dt,
 };
 
-pub use traits::{AtmIvProvider, VolatilitySkew, VolatilitySmile};
+pub use traits::{AtmIvProvider, VolatilitySmile};

@@ -1,7 +1,7 @@
 #![allow(unknown_lints)]
 #![allow(clippy::literal_string_with_formatting_args)]
 
-//! # OptionStratLib v0.13.1: Financial Options Library
+//! # OptionStratLib v0.14.0: Financial Options Library
 //!
 //! ## Table of Contents
 //! 1. [Introduction](#introduction)
@@ -829,6 +829,12 @@ pub mod geometrics;
 /// Delta, Gamma, Theta, Vega, Rho, Vanna, Vomma, Veta, Charm and Color. Includes analytical
 /// formulas, numerical approximations, and visualization tools for risk analysis.
 pub mod greeks;
+
+/// * `metrics` - Performance analysis for options.
+///
+/// Comprehensive tools for performance analysis including price metrics, risk metrics,
+/// composite metrics, liquidity metrics and stress metrics.
+pub mod metrics;
 
 /// * `model` - Core data structures and models for options and derivatives.
 ///

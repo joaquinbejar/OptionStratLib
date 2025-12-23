@@ -13,6 +13,7 @@ use crate::error::chains::{ChainError, OptionDataErrorKind};
 use crate::error::{CurveError, SurfaceError};
 use crate::geometrics::LinearInterpolation;
 use crate::greeks::Greeks;
+use crate::metrics::VolatilitySkew;
 use crate::model::{
     BasicAxisTypes, ExpirationDate, OptionStyle, OptionType, Options, Position, Side,
 };
@@ -20,7 +21,7 @@ use crate::strategies::utils::FindOptimalSide;
 use crate::surfaces::{BasicSurfaces, Point3D, Surface};
 use crate::utils::Len;
 use crate::utils::others::get_random_element;
-use crate::volatility::{VolatilitySkew, VolatilitySmile};
+use crate::volatility::VolatilitySmile;
 use crate::{Positive, pos};
 use chrono::{NaiveDate, Utc};
 use num_traits::{FromPrimitive, ToPrimitive};
@@ -10277,7 +10278,6 @@ mod tests_option_chain_comparison {
 mod tests_volatility_smile_skew {
     use super::*;
     use crate::pos;
-    use crate::volatility::{VolatilitySkew, VolatilitySmile};
     use rust_decimal_macros::dec;
 
     fn create_chain_with_options() -> OptionChain {

@@ -90,6 +90,9 @@ pub use crate::geometrics::{ConstructionMethod, ConstructionParams, GeometricObj
 // Volatility models
 pub use crate::volatility::*;
 
+// Performance metrics
+pub use crate::metrics::*;
+
 // Error types (most commonly encountered)
 pub use crate::error::{
     ChainError, CurveError, DecimalError, Error, GraphError, GreeksError, InterpolationError,
