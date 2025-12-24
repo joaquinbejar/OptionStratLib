@@ -5,6 +5,11 @@
 ******************************************************************************/
 use crate::error::position::PositionValidationErrorKind;
 use crate::error::{GreeksError, PositionError, StrategyError};
+use crate::prelude::OperationErrorKind;
+
+use super::adjustment::{AdjustmentConfig, AdjustmentPlan};
+use super::optimizer::AdjustmentOptimizer;
+use super::portfolio::{AdjustmentTarget, PortfolioGreeks};
 /// # Delta Neutrality Management Module
 ///
 /// This module provides tools and structures to manage and maintain delta neutrality
@@ -967,6 +972,137 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
         }
 
         Ok(trades)
+    }
+
+    /// Calculates portfolio-level Greeks for the strategy.
+    ///
+    /// This method aggregates all Greeks (delta, gamma, theta, vega, rho) across
+    /// all positions in the strategy, providing a comprehensive view of the
+    /// strategy's risk exposure.
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(PortfolioGreeks)` - Aggregated Greeks for all positions
+    /// * `Err(GreeksError)` - If any Greek calculation fails
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// let greeks = strategy.portfolio_greeks()?;
+    /// println!("Portfolio delta: {}", greeks.delta);
+    /// println!("Portfolio gamma: {}", greeks.gamma);
+    /// ```
+    fn portfolio_greeks(&self) -> Result<PortfolioGreeks, GreeksError> {
+        let positions: Vec<_> = self
+            .get_positions()
+            .map_err(|e| GreeksError::StdError(e.to_string()))?
+            .into_iter()
+            .cloned()
+            .collect();
+        PortfolioGreeks::from_positions(&positions)
+            .map_err(|e| GreeksError::StdError(e.to_string()))
+    }
+
+    /// Generates an optimized adjustment plan to achieve target Greeks.
+    ///
+    /// This method uses the `AdjustmentOptimizer` to find the best set of
+    /// adjustments to achieve the specified target Greeks, considering the
+    /// provided configuration constraints.
+    ///
+    /// # Arguments
+    ///
+    /// * `config` - Configuration for adjustment behavior (what's allowed, constraints)
+    /// * `target` - Target Greeks to achieve (e.g., delta neutral, delta-gamma neutral)
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(AdjustmentPlan)` - The optimal adjustment plan
+    /// * `Err(StrategyError)` - If no viable plan can be found
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// let config = AdjustmentConfig::default();
+    /// let target = AdjustmentTarget::delta_neutral();
+    /// let plan = strategy.optimized_adjustment_plan(config, target)?;
+    /// println!("Actions needed: {}", plan.actions.len());
+    /// ```
+    fn optimized_adjustment_plan(
+        &self,
+        config: AdjustmentConfig,
+        target: AdjustmentTarget,
+    ) -> Result<AdjustmentPlan, StrategyError> {
+        let positions: Vec<_> = self.get_positions()?.into_iter().cloned().collect();
+        let optimizer = AdjustmentOptimizer::new(&positions, config, target);
+        optimizer.optimize().map_err(|e| {
+            StrategyError::OperationError(OperationErrorKind::InvalidParameters {
+                operation: "optimized_adjustment_plan".to_string(),
+                reason: e.to_string(),
+            })
+        })
+    }
+
+    /// Generates an optimized adjustment plan using an option chain for new legs.
+    ///
+    /// This method extends `optimized_adjustment_plan` by allowing the optimizer
+    /// to consider adding new option legs from the provided chain.
+    ///
+    /// # Arguments
+    ///
+    /// * `chain` - Option chain to source new legs from
+    /// * `config` - Configuration for adjustment behavior
+    /// * `target` - Target Greeks to achieve
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(AdjustmentPlan)` - The optimal adjustment plan
+    /// * `Err(StrategyError)` - If no viable plan can be found
+    fn optimized_adjustment_plan_with_chain(
+        &self,
+        chain: &crate::chains::chain::OptionChain,
+        config: AdjustmentConfig,
+        target: AdjustmentTarget,
+    ) -> Result<AdjustmentPlan, StrategyError> {
+        let positions: Vec<_> = self.get_positions()?.into_iter().cloned().collect();
+        let optimizer = AdjustmentOptimizer::with_chain(&positions, chain, config, target);
+        optimizer.optimize().map_err(|e| {
+            StrategyError::OperationError(OperationErrorKind::InvalidParameters {
+                operation: "optimized_adjustment_plan_with_chain".to_string(),
+                reason: e.to_string(),
+            })
+        })
+    }
+
+    /// Checks if the strategy meets the specified Greek targets.
+    ///
+    /// # Arguments
+    ///
+    /// * `target` - Target Greeks to check against
+    /// * `tolerance` - Maximum deviation from target values
+    ///
+    /// # Returns
+    ///
+    /// `true` if all specified targets are met within tolerance
+    fn meets_greek_targets(&self, target: &AdjustmentTarget, tolerance: Decimal) -> bool {
+        match self.portfolio_greeks() {
+            Ok(greeks) => target.is_satisfied(&greeks, tolerance),
+            Err(_) => false,
+        }
+    }
+
+    /// Returns the delta gap from a target value.
+    ///
+    /// # Arguments
+    ///
+    /// * `target_delta` - Target delta value (typically 0 for neutral)
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(Decimal)` - The gap between current and target delta
+    /// * `Err(GreeksError)` - If delta calculation fails
+    fn delta_gap(&self, target_delta: Decimal) -> Result<Decimal, GreeksError> {
+        let current_delta = self.delta()?;
+        Ok(target_delta - current_delta)
     }
 }
 

@@ -20,6 +20,15 @@
 //!   and suggesting adjustments to achieve delta-neutrality. It extends the `Greeks` trait for
 //!   options calculations.
 //!
+//! ## Extended Adjustment Features (Issue #187)
+//!
+//! - **AdjustmentAction**: Extended actions including adding new legs, rolling positions,
+//!   and using underlying shares for hedging.
+//! - **AdjustmentConfig**: Configuration for adjustment behavior and constraints.
+//! - **PortfolioGreeks**: Aggregated Greeks at portfolio level.
+//! - **AdjustmentTarget**: Target Greeks for optimization.
+//! - **AdjustmentOptimizer**: Optimizer for finding best adjustment plans.
+//!
 //! ## Overview
 //!
 //! Delta neutrality is a core concept in options trading, where traders aim to balance
@@ -30,10 +39,18 @@
 //! - Tools to calculate net delta for multi-position strategies.
 //! - Utilities to evaluate whether a strategy is delta-neutral within a given threshold.
 //! - Suggestions for adjustments (buy/sell options or the underlying) to achieve neutrality.
+//! - Extended adjustment capabilities for multi-leg strategies.
+//! - Portfolio-level Greeks aggregation and optimization.
 //!
+pub mod adjustment;
 mod model;
+pub mod optimizer;
+pub mod portfolio;
 
+pub use adjustment::{AdjustmentAction, AdjustmentConfig, AdjustmentError, AdjustmentPlan};
 pub use model::{
     DELTA_THRESHOLD, DeltaAdjustment, DeltaInfo, DeltaNeutralResponse, DeltaNeutrality,
     DeltaPositionInfo,
 };
+pub use optimizer::AdjustmentOptimizer;
+pub use portfolio::{AdjustmentTarget, PortfolioGreeks};
