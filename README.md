@@ -193,6 +193,14 @@ Comprehensive plotting and charting:
 - 3D volatility surfaces
 - Risk profile charts
 
+#### **Metrics** (`metrics/`)
+Performance and risk metrics analysis:
+- **Price Metrics**: Volatility skew curves
+- **Risk Metrics**:
+  - Implied Volatility curves (by strike) and surfaces (strike vs time)
+  - Risk Reversal curves (by strike)
+  - Dollar Gamma curves (by strike)
+
 #### **Risk Management** (`risk/`)
 Risk analysis and management tools:
 - Position risk metrics
