@@ -41,7 +41,10 @@ pub use crate::strategies::{
     bull_put_spread::BullPutSpread,
     call_butterfly::CallButterfly,
     custom::CustomStrategy,
-    delta_neutral::DeltaNeutrality,
+    delta_neutral::{
+        AdjustmentAction, AdjustmentConfig, AdjustmentError, AdjustmentOptimizer, AdjustmentPlan,
+        AdjustmentTarget, DeltaNeutrality, PortfolioGreeks,
+    },
     iron_butterfly::IronButterfly,
     iron_condor::IronCondor,
     long_butterfly_spread::LongButterflySpread,
