@@ -78,7 +78,7 @@ fn main() -> Result<(), Error> {
         }
         Err(e) => warn!("Could not calculate portfolio Greeks: {}", e),
     }
-    
+
     // Optimized adjustment plan
     info!("\n--- Optimized Adjustment Plan (NEW) ---");
     let config = AdjustmentConfig::default()
