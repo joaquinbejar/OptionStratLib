@@ -14,11 +14,12 @@ use crate::error::{CurveError, SurfaceError};
 use crate::geometrics::LinearInterpolation;
 use crate::greeks::Greeks;
 use crate::metrics::{
-    BidAskSpreadCurve, DeltaGammaProfileCurve, DeltaGammaProfileSurface, DollarGammaCurve,
-    ImpliedVolatilityCurve, ImpliedVolatilitySurface, OpenInterestCurve, PriceShockCurve,
-    PriceShockSurface, RiskReversalCurve, SmileDynamicsCurve, SmileDynamicsSurface, TimeDecayCurve,
-    TimeDecaySurface, VannaVolgaSurface, VolatilitySensitivityCurve, VolatilitySensitivitySurface,
-    VolatilitySkew, VolumeProfileCurve, VolumeProfileSurface,
+    BidAskSpreadCurve, CharmCurve, CharmSurface, ColorCurve, ColorSurface, DeltaGammaProfileCurve,
+    DeltaGammaProfileSurface, DollarGammaCurve, ImpliedVolatilityCurve, ImpliedVolatilitySurface,
+    OpenInterestCurve, PriceShockCurve, PriceShockSurface, RiskReversalCurve, SmileDynamicsCurve,
+    SmileDynamicsSurface, ThetaCurve, ThetaSurface, TimeDecayCurve, TimeDecaySurface,
+    VannaVolgaSurface, VolatilitySensitivityCurve, VolatilitySensitivitySurface, VolatilitySkew,
+    VolumeProfileCurve, VolumeProfileSurface,
 };
 use crate::model::{
     BasicAxisTypes, ExpirationDate, OptionStyle, OptionType, Options, Position, Side,
@@ -4347,6 +4348,327 @@ impl PriceShockSurface for OptionChain {
         // This is essentially the same as volatility_sensitivity_surface
         // but conceptually represents stress scenarios
         self.volatility_sensitivity_surface(price_range, vol_range, price_steps, vol_steps)
+    }
+}
+
+impl ThetaCurve for OptionChain {
+    /// Computes the theta curve by strike price for this option chain.
+    ///
+    /// Shows theta (time decay) at each strike using the existing Greeks calculations.
+    ///
+    /// # Returns
+    ///
+    /// - `Ok(Curve)`: The theta curve with strike on x-axis and theta on y-axis
+    /// - `Err(CurveError)`: If no valid theta data is available
+    fn theta_curve(&self) -> Result<Curve, CurveError> {
+        let points: BTreeSet<Point2D> = self
+            .get_single_iter()
+            .filter_map(|opt| {
+                let option = opt.get_option(Side::Long, OptionStyle::Call).ok()?;
+                let theta = option.theta().ok()?;
+                Some(Point2D::new(opt.strike_price.to_dec(), theta))
+            })
+            .collect();
+
+        if points.is_empty() {
+            return Err(CurveError::ConstructionError(
+                "No options with valid theta data".to_string(),
+            ));
+        }
+
+        Ok(Curve::new(points))
+    }
+}
+
+impl ThetaSurface for OptionChain {
+    /// Computes the theta surface (price vs time) for this option chain.
+    ///
+    /// Shows how theta evolves across both underlying price and time to expiration.
+    ///
+    /// # Parameters
+    ///
+    /// - `price_range`: Tuple of (min_price, max_price) for the underlying
+    /// - `days_to_expiry`: Vector of days to expiration values
+    /// - `price_steps`: Number of steps along the price axis
+    ///
+    /// # Returns
+    ///
+    /// - `Ok(Surface)`: The theta surface
+    /// - `Err(SurfaceError)`: If the surface cannot be computed
+    fn theta_surface(
+        &self,
+        price_range: (Positive, Positive),
+        days_to_expiry: Vec<Positive>,
+        price_steps: usize,
+    ) -> Result<Surface, SurfaceError> {
+        let mut points = BTreeSet::new();
+
+        let price_step = if price_steps > 0 {
+            (price_range.1 - price_range.0).to_dec() / Decimal::from(price_steps)
+        } else {
+            Decimal::ZERO
+        };
+
+        let template_opt = self
+            .get_single_iter()
+            .find_map(|opt| opt.get_option(Side::Long, OptionStyle::Call).ok());
+
+        let template = match template_opt {
+            Some(opt) => opt,
+            None => {
+                return Err(SurfaceError::ConstructionError(
+                    "No valid options in chain".to_string(),
+                ));
+            }
+        };
+
+        for days in &days_to_expiry {
+            for p in 0..=price_steps {
+                let price = price_range.0.to_dec() + price_step * Decimal::from(p);
+                let price_pos = Positive::new_decimal(price).unwrap_or(pos!(1.0));
+
+                let modified_option = Options::new(
+                    template.option_type.clone(),
+                    template.side,
+                    template.underlying_symbol.clone(),
+                    template.strike_price,
+                    ExpirationDate::Days(*days),
+                    template.implied_volatility,
+                    template.quantity,
+                    price_pos,
+                    template.risk_free_rate,
+                    template.option_style,
+                    template.dividend_yield,
+                    template.exotic_params.clone(),
+                );
+
+                if let Ok(theta) = modified_option.theta() {
+                    points.insert(Point3D::new(price, days.to_dec(), theta));
+                }
+            }
+        }
+
+        if points.is_empty() {
+            return Err(SurfaceError::ConstructionError(
+                "No valid points for theta surface".to_string(),
+            ));
+        }
+
+        Ok(Surface::new(points))
+    }
+}
+
+impl CharmCurve for OptionChain {
+    /// Computes the charm curve by strike price for this option chain.
+    ///
+    /// Shows charm (delta decay) at each strike using the existing Greeks calculations.
+    ///
+    /// # Returns
+    ///
+    /// - `Ok(Curve)`: The charm curve with strike on x-axis and charm on y-axis
+    /// - `Err(CurveError)`: If no valid charm data is available
+    fn charm_curve(&self) -> Result<Curve, CurveError> {
+        let points: BTreeSet<Point2D> = self
+            .get_single_iter()
+            .filter_map(|opt| {
+                let option = opt.get_option(Side::Long, OptionStyle::Call).ok()?;
+                let charm = option.charm().ok()?;
+                Some(Point2D::new(opt.strike_price.to_dec(), charm))
+            })
+            .collect();
+
+        if points.is_empty() {
+            return Err(CurveError::ConstructionError(
+                "No options with valid charm data".to_string(),
+            ));
+        }
+
+        Ok(Curve::new(points))
+    }
+}
+
+impl CharmSurface for OptionChain {
+    /// Computes the charm surface (price vs time) for this option chain.
+    ///
+    /// Shows how charm evolves across both underlying price and time to expiration.
+    ///
+    /// # Parameters
+    ///
+    /// - `price_range`: Tuple of (min_price, max_price) for the underlying
+    /// - `days_to_expiry`: Vector of days to expiration values
+    /// - `price_steps`: Number of steps along the price axis
+    ///
+    /// # Returns
+    ///
+    /// - `Ok(Surface)`: The charm surface
+    /// - `Err(SurfaceError)`: If the surface cannot be computed
+    fn charm_surface(
+        &self,
+        price_range: (Positive, Positive),
+        days_to_expiry: Vec<Positive>,
+        price_steps: usize,
+    ) -> Result<Surface, SurfaceError> {
+        let mut points = BTreeSet::new();
+
+        let price_step = if price_steps > 0 {
+            (price_range.1 - price_range.0).to_dec() / Decimal::from(price_steps)
+        } else {
+            Decimal::ZERO
+        };
+
+        let template_opt = self
+            .get_single_iter()
+            .find_map(|opt| opt.get_option(Side::Long, OptionStyle::Call).ok());
+
+        let template = match template_opt {
+            Some(opt) => opt,
+            None => {
+                return Err(SurfaceError::ConstructionError(
+                    "No valid options in chain".to_string(),
+                ));
+            }
+        };
+
+        for days in &days_to_expiry {
+            for p in 0..=price_steps {
+                let price = price_range.0.to_dec() + price_step * Decimal::from(p);
+                let price_pos = Positive::new_decimal(price).unwrap_or(pos!(1.0));
+
+                let modified_option = Options::new(
+                    template.option_type.clone(),
+                    template.side,
+                    template.underlying_symbol.clone(),
+                    template.strike_price,
+                    ExpirationDate::Days(*days),
+                    template.implied_volatility,
+                    template.quantity,
+                    price_pos,
+                    template.risk_free_rate,
+                    template.option_style,
+                    template.dividend_yield,
+                    template.exotic_params.clone(),
+                );
+
+                if let Ok(charm) = modified_option.charm() {
+                    points.insert(Point3D::new(price, days.to_dec(), charm));
+                }
+            }
+        }
+
+        if points.is_empty() {
+            return Err(SurfaceError::ConstructionError(
+                "No valid points for charm surface".to_string(),
+            ));
+        }
+
+        Ok(Surface::new(points))
+    }
+}
+
+impl ColorCurve for OptionChain {
+    /// Computes the color curve by strike price for this option chain.
+    ///
+    /// Shows color (gamma decay) at each strike using the existing Greeks calculations.
+    ///
+    /// # Returns
+    ///
+    /// - `Ok(Curve)`: The color curve with strike on x-axis and color on y-axis
+    /// - `Err(CurveError)`: If no valid color data is available
+    fn color_curve(&self) -> Result<Curve, CurveError> {
+        let points: BTreeSet<Point2D> = self
+            .get_single_iter()
+            .filter_map(|opt| {
+                let option = opt.get_option(Side::Long, OptionStyle::Call).ok()?;
+                let color = option.color().ok()?;
+                Some(Point2D::new(opt.strike_price.to_dec(), color))
+            })
+            .collect();
+
+        if points.is_empty() {
+            return Err(CurveError::ConstructionError(
+                "No options with valid color data".to_string(),
+            ));
+        }
+
+        Ok(Curve::new(points))
+    }
+}
+
+impl ColorSurface for OptionChain {
+    /// Computes the color surface (price vs time) for this option chain.
+    ///
+    /// Shows how color evolves across both underlying price and time to expiration.
+    ///
+    /// # Parameters
+    ///
+    /// - `price_range`: Tuple of (min_price, max_price) for the underlying
+    /// - `days_to_expiry`: Vector of days to expiration values
+    /// - `price_steps`: Number of steps along the price axis
+    ///
+    /// # Returns
+    ///
+    /// - `Ok(Surface)`: The color surface
+    /// - `Err(SurfaceError)`: If the surface cannot be computed
+    fn color_surface(
+        &self,
+        price_range: (Positive, Positive),
+        days_to_expiry: Vec<Positive>,
+        price_steps: usize,
+    ) -> Result<Surface, SurfaceError> {
+        let mut points = BTreeSet::new();
+
+        let price_step = if price_steps > 0 {
+            (price_range.1 - price_range.0).to_dec() / Decimal::from(price_steps)
+        } else {
+            Decimal::ZERO
+        };
+
+        let template_opt = self
+            .get_single_iter()
+            .find_map(|opt| opt.get_option(Side::Long, OptionStyle::Call).ok());
+
+        let template = match template_opt {
+            Some(opt) => opt,
+            None => {
+                return Err(SurfaceError::ConstructionError(
+                    "No valid options in chain".to_string(),
+                ));
+            }
+        };
+
+        for days in &days_to_expiry {
+            for p in 0..=price_steps {
+                let price = price_range.0.to_dec() + price_step * Decimal::from(p);
+                let price_pos = Positive::new_decimal(price).unwrap_or(pos!(1.0));
+
+                let modified_option = Options::new(
+                    template.option_type.clone(),
+                    template.side,
+                    template.underlying_symbol.clone(),
+                    template.strike_price,
+                    ExpirationDate::Days(*days),
+                    template.implied_volatility,
+                    template.quantity,
+                    price_pos,
+                    template.risk_free_rate,
+                    template.option_style,
+                    template.dividend_yield,
+                    template.exotic_params.clone(),
+                );
+
+                if let Ok(color) = modified_option.color() {
+                    points.insert(Point3D::new(price, days.to_dec(), color));
+                }
+            }
+        }
+
+        if points.is_empty() {
+            return Err(SurfaceError::ConstructionError(
+                "No valid points for color surface".to_string(),
+            ));
+        }
+
+        Ok(Surface::new(points))
     }
 }
 
