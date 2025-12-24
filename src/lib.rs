@@ -198,6 +198,10 @@
 //!   - Volatility Sensitivity curves (by strike) and surfaces (price vs volatility)
 //!   - Time Decay Profile curves (by strike) and surfaces (price vs time)
 //!   - Price Shock Impact curves (by strike) and surfaces (price vs volatility)
+//! - **Temporal Metrics**:
+//!   - Theta curves (by strike) and surfaces (price vs time)
+//!   - Charm (Delta Decay) curves (by strike) and surfaces (price vs time)
+//!   - Color (Gamma Decay) curves (by strike) and surfaces (price vs time)
 //!
 //! ### **Risk Management** (`risk/`)
 //! Risk analysis and management tools:

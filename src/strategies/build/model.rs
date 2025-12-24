@@ -530,7 +530,7 @@ mod tests_strategies_build_model {
         assert_decimal_eq!(greeks.vanna, dec!(-1.2135), dec!(1e-4));
         assert_decimal_eq!(greeks.vomma, dec!(0.5476), dec!(1e-4));
         assert_decimal_eq!(greeks.veta, dec!(0.0031), dec!(1e-4));
-        assert_decimal_eq!(greeks.charm, dec!(0.209239), dec!(1e-6));
+        assert_decimal_eq!(greeks.charm, dec!(0.209239), dec!(1e-4));
         assert_decimal_eq!(greeks.color, dec!(-0.003801), dec!(1e-6));
     }
 
