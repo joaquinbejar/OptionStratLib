@@ -14,9 +14,10 @@ use crate::error::{CurveError, SurfaceError};
 use crate::geometrics::LinearInterpolation;
 use crate::greeks::Greeks;
 use crate::metrics::{
-    DeltaGammaProfileCurve, DeltaGammaProfileSurface, DollarGammaCurve, ImpliedVolatilityCurve,
-    ImpliedVolatilitySurface, RiskReversalCurve, SmileDynamicsCurve, SmileDynamicsSurface,
-    VannaVolgaSurface, VolatilitySkew,
+    BidAskSpreadCurve, DeltaGammaProfileCurve, DeltaGammaProfileSurface, DollarGammaCurve,
+    ImpliedVolatilityCurve, ImpliedVolatilitySurface, OpenInterestCurve, RiskReversalCurve,
+    SmileDynamicsCurve, SmileDynamicsSurface, VannaVolgaSurface, VolatilitySkew,
+    VolumeProfileCurve, VolumeProfileSurface,
 };
 use crate::model::{
     BasicAxisTypes, ExpirationDate, OptionStyle, OptionType, Options, Position, Side,
@@ -3894,6 +3895,156 @@ impl SmileDynamicsSurface for OptionChain {
         }
 
         Ok(Surface::new(points))
+    }
+}
+
+impl BidAskSpreadCurve for OptionChain {
+    /// Computes the bid-ask spread curve by strike price for this option chain.
+    ///
+    /// Shows how liquidity varies across different strike prices by calculating
+    /// the relative spread (spread / mid price) at each strike.
+    ///
+    /// # Returns
+    ///
+    /// - `Ok(Curve)`: The spread curve with strike on x-axis and relative spread on y-axis
+    /// - `Err(CurveError)`: If no valid bid/ask data is available
+    fn bid_ask_spread_curve(&self) -> Result<Curve, CurveError> {
+        let mut points = BTreeSet::new();
+
+        for opt in self.options.iter() {
+            // Calculate call spread if available
+            if let (Some(bid), Some(ask)) = (opt.call_bid, opt.call_ask) {
+                let mid = (bid + ask) / pos!(2.0);
+                if mid > Positive::ZERO {
+                    let spread = (ask - bid).to_dec() / mid.to_dec();
+                    points.insert(Point2D::new(opt.strike_price.to_dec(), spread));
+                }
+            }
+            // If no call data, try put spread
+            else if let (Some(bid), Some(ask)) = (opt.put_bid, opt.put_ask) {
+                let mid = (bid + ask) / pos!(2.0);
+                if mid > Positive::ZERO {
+                    let spread = (ask - bid).to_dec() / mid.to_dec();
+                    points.insert(Point2D::new(opt.strike_price.to_dec(), spread));
+                }
+            }
+        }
+
+        if points.is_empty() {
+            return Err(CurveError::ConstructionError(
+                "No options with valid bid/ask data".to_string(),
+            ));
+        }
+
+        Ok(Curve::new(points))
+    }
+}
+
+impl VolumeProfileCurve for OptionChain {
+    /// Computes the volume profile curve by strike price for this option chain.
+    ///
+    /// Shows how trading activity is distributed across different strike prices.
+    ///
+    /// # Returns
+    ///
+    /// - `Ok(Curve)`: The volume curve with strike on x-axis and volume on y-axis
+    /// - `Err(CurveError)`: If no valid volume data is available
+    fn volume_profile_curve(&self) -> Result<Curve, CurveError> {
+        let points: BTreeSet<Point2D> = self
+            .options
+            .iter()
+            .filter_map(|opt| {
+                opt.volume
+                    .map(|vol| Point2D::new(opt.strike_price.to_dec(), vol.to_dec()))
+            })
+            .collect();
+
+        if points.is_empty() {
+            return Err(CurveError::ConstructionError(
+                "No options with valid volume data".to_string(),
+            ));
+        }
+
+        Ok(Curve::new(points))
+    }
+}
+
+impl VolumeProfileSurface for OptionChain {
+    /// Computes the volume profile surface (strike vs time) for this option chain.
+    ///
+    /// Projects volume across different time horizons, simulating how volume
+    /// typically increases closer to expiration.
+    ///
+    /// # Parameters
+    ///
+    /// - `days`: Vector of time points (in days) to include in the surface
+    ///
+    /// # Returns
+    ///
+    /// - `Ok(Surface)`: The volume surface with strike on x-axis, days on y-axis,
+    ///   and volume on z-axis
+    /// - `Err(SurfaceError)`: If no valid volume data is available
+    fn volume_profile_surface(&self, days: Vec<Positive>) -> Result<Surface, SurfaceError> {
+        let mut points = BTreeSet::new();
+
+        for opt in self.options.iter() {
+            if let Some(base_vol) = opt.volume {
+                for day in &days {
+                    // Volume typically increases closer to expiration
+                    // Using a simple model: volume scales inversely with sqrt(time)
+                    let time_factor = if day.to_dec() > Decimal::ZERO {
+                        (dec!(30.0) / day.to_dec()).sqrt().unwrap_or(Decimal::ONE)
+                    } else {
+                        Decimal::ONE
+                    };
+
+                    let adjusted_vol = base_vol.to_dec() * time_factor;
+                    points.insert(Point3D::new(
+                        opt.strike_price.to_dec(),
+                        day.to_dec(),
+                        adjusted_vol,
+                    ));
+                }
+            }
+        }
+
+        if points.is_empty() {
+            return Err(SurfaceError::ConstructionError(
+                "No valid points for volume profile surface".to_string(),
+            ));
+        }
+
+        Ok(Surface::new(points))
+    }
+}
+
+impl OpenInterestCurve for OptionChain {
+    /// Computes the open interest distribution curve by strike price for this option chain.
+    ///
+    /// Shows how outstanding contracts are distributed across different strike prices,
+    /// helping identify key levels and market positioning.
+    ///
+    /// # Returns
+    ///
+    /// - `Ok(Curve)`: The OI curve with strike on x-axis and open interest on y-axis
+    /// - `Err(CurveError)`: If no valid open interest data is available
+    fn open_interest_curve(&self) -> Result<Curve, CurveError> {
+        let points: BTreeSet<Point2D> = self
+            .options
+            .iter()
+            .filter_map(|opt| {
+                opt.open_interest
+                    .map(|oi| Point2D::new(opt.strike_price.to_dec(), Decimal::from(oi)))
+            })
+            .collect();
+
+        if points.is_empty() {
+            return Err(CurveError::ConstructionError(
+                "No options with valid open interest data".to_string(),
+            ));
+        }
+
+        Ok(Curve::new(points))
     }
 }
 

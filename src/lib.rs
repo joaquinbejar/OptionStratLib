@@ -180,12 +180,20 @@
 //! - Risk profile charts
 //!
 //! ### **Metrics** (`metrics/`)
-//! Performance and risk metrics analysis:
+//! Performance, risk, and liquidity metrics analysis:
 //! - **Price Metrics**: Volatility skew curves
 //! - **Risk Metrics**:
 //!   - Implied Volatility curves (by strike) and surfaces (strike vs time)
 //!   - Risk Reversal curves (by strike)
 //!   - Dollar Gamma curves (by strike)
+//! - **Composite Metrics**:
+//!   - Vanna-Volga Hedge surfaces (price vs volatility)
+//!   - Delta-Gamma Profile curves (by strike) and surfaces (price vs time)
+//!   - Smile Dynamics curves (by strike) and surfaces (strike vs time)
+//! - **Liquidity Metrics**:
+//!   - Bid-Ask Spread curves (by strike)
+//!   - Volume Profile curves (by strike) and surfaces (strike vs time)
+//!   - Open Interest Distribution curves (by strike)
 //!
 //! ### **Risk Management** (`risk/`)
 //! Risk analysis and management tools:
