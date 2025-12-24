@@ -125,6 +125,8 @@ mod axis;
 mod balance;
 /// Components for defining and working with expiration dates.
 mod expiration;
+/// Components for different types of trading legs (spot, futures, perpetuals).
+pub mod leg;
 mod trade;
 
 pub use axis::BasicAxisTypes;

@@ -55,9 +55,10 @@
 //! - **Butterflies**: Long/Short Butterfly Spreads, Call Butterfly
 //! - **Complex**: Iron Condor, Iron Butterfly
 //! - **Volatility**: Long/Short Straddles and Strangles
-//! - **Income**: Covered Calls, Poor Man's Covered Call
+//! - **Income**: Covered Calls (with spot leg support), Poor Man's Covered Call
 //! - **Protection**: Protective Puts, Collars
 //! - **Custom**: Flexible custom strategy framework
+//! - **Multi-Asset**: Strategies combining options with spot, futures, or perpetuals
 //!
 //! ### 6. **Risk Management & Analysis**
 //! - Position tracking and management
@@ -116,6 +117,12 @@
 //! - `types.rs`: Common enums (OptionType, Side, OptionStyle)
 //! - `trade.rs`: Trade execution and management
 //! - `format.rs`: Data formatting utilities
+//! - **`leg/`**: Multi-instrument leg support for strategies
+//!   - `traits.rs`: Common leg traits (`LegAble`, `Marginable`, `Fundable`, `Expirable`)
+//!   - `spot.rs`: `SpotPosition` for underlying asset positions
+//!   - `perpetual.rs`: `PerpetualPosition` for crypto perpetual swaps
+//!   - `future.rs`: `FuturePosition` for exchange-traded futures
+//!   - `leg_enum.rs`: `Leg` enum unifying all position types
 //!
 //! ### **Pricing Models** (`pricing/`)
 //! Advanced pricing engines for options valuation:
@@ -277,6 +284,33 @@
 //! +validate()
 //! }
 //!
+//! class Leg {
+//! <<enumeration>>
+//! Option(Position)
+//! Spot(SpotPosition)
+//! Future(FuturePosition)
+//! Perpetual(PerpetualPosition)
+//! +is_option()
+//! +is_spot()
+//! +is_linear()
+//! +delta()
+//! +pnl_at_price()
+//! }
+//!
+//! class SpotPosition {
+//! +symbol: String
+//! +quantity: Positive
+//! +cost_basis: Positive
+//! +side: Side
+//! +date: DateTime<Utc>
+//! +open_fee: Positive
+//! +close_fee: Positive
+//! +pnl_at_price()
+//! +delta()
+//! +market_value()
+//! +break_even_price()
+//! }
+//!
 //! class ExpirationDate {
 //! +Days(Positive)
 //! +Date(NaiveDate)
@@ -337,6 +371,10 @@
 //! Options --|> Greeks : implements
 //! Options --|> Graph : implements
 //! Position o-- Options : contains
+//! Leg o-- Position : Option variant
+//! Leg o-- SpotPosition : Spot variant
+//! SpotPosition *-- Side : has
+//! SpotPosition *-- Positive : uses
 //! Options *-- OptionStyle : has
 //! Options *-- OptionType : has
 //! Options *-- Side : has
@@ -382,7 +420,7 @@
 //!
 //! ### **Income Generation Strategies**
 //! Strategies focused on generating regular income:
-//! - **Covered Call**: Stock ownership with call selling for income
+//! - **Covered Call**: Stock/spot ownership with call selling for income (now with full spot leg support)
 //! - **Poor Man's Covered Call**: LEAPS-based covered call alternative
 //!
 //! ### **Protection Strategies**
