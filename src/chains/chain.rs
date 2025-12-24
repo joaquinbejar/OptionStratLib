@@ -15,9 +15,10 @@ use crate::geometrics::LinearInterpolation;
 use crate::greeks::Greeks;
 use crate::metrics::{
     BidAskSpreadCurve, DeltaGammaProfileCurve, DeltaGammaProfileSurface, DollarGammaCurve,
-    ImpliedVolatilityCurve, ImpliedVolatilitySurface, OpenInterestCurve, RiskReversalCurve,
-    SmileDynamicsCurve, SmileDynamicsSurface, VannaVolgaSurface, VolatilitySkew,
-    VolumeProfileCurve, VolumeProfileSurface,
+    ImpliedVolatilityCurve, ImpliedVolatilitySurface, OpenInterestCurve, PriceShockCurve,
+    PriceShockSurface, RiskReversalCurve, SmileDynamicsCurve, SmileDynamicsSurface, TimeDecayCurve,
+    TimeDecaySurface, VannaVolgaSurface, VolatilitySensitivityCurve, VolatilitySensitivitySurface,
+    VolatilitySkew, VolumeProfileCurve, VolumeProfileSurface,
 };
 use crate::model::{
     BasicAxisTypes, ExpirationDate, OptionStyle, OptionType, Options, Position, Side,
@@ -4045,6 +4046,307 @@ impl OpenInterestCurve for OptionChain {
         }
 
         Ok(Curve::new(points))
+    }
+}
+
+impl VolatilitySensitivityCurve for OptionChain {
+    /// Computes the volatility sensitivity curve by strike price for this option chain.
+    ///
+    /// Shows vega exposure at each strike, helping identify where volatility
+    /// risk is concentrated.
+    ///
+    /// # Returns
+    ///
+    /// - `Ok(Curve)`: The vega curve with strike on x-axis and vega on y-axis
+    /// - `Err(CurveError)`: If no valid vega data is available
+    fn volatility_sensitivity_curve(&self) -> Result<Curve, CurveError> {
+        let points: BTreeSet<Point2D> = self
+            .get_single_iter()
+            .filter_map(|opt| {
+                let option = opt.get_option(Side::Long, OptionStyle::Call).ok()?;
+                let vega = option.vega().ok()?;
+                Some(Point2D::new(opt.strike_price.to_dec(), vega))
+            })
+            .collect();
+
+        if points.is_empty() {
+            return Err(CurveError::ConstructionError(
+                "No options with valid vega data".to_string(),
+            ));
+        }
+
+        Ok(Curve::new(points))
+    }
+}
+
+impl VolatilitySensitivitySurface for OptionChain {
+    /// Computes the volatility sensitivity surface (price vs volatility).
+    ///
+    /// Shows how option value changes across both underlying price and
+    /// volatility levels.
+    ///
+    /// # Parameters
+    ///
+    /// - `price_range`: Tuple of (min_price, max_price) for the underlying
+    /// - `vol_range`: Tuple of (min_vol, max_vol) for implied volatility
+    /// - `price_steps`: Number of steps along the price axis
+    /// - `vol_steps`: Number of steps along the volatility axis
+    ///
+    /// # Returns
+    ///
+    /// - `Ok(Surface)`: The sensitivity surface
+    /// - `Err(SurfaceError)`: If the surface cannot be computed
+    fn volatility_sensitivity_surface(
+        &self,
+        price_range: (Positive, Positive),
+        vol_range: (Positive, Positive),
+        price_steps: usize,
+        vol_steps: usize,
+    ) -> Result<Surface, SurfaceError> {
+        let mut points = BTreeSet::new();
+
+        let price_step = if price_steps > 0 {
+            (price_range.1 - price_range.0).to_dec() / Decimal::from(price_steps)
+        } else {
+            Decimal::ZERO
+        };
+
+        let vol_step = if vol_steps > 0 {
+            (vol_range.1 - vol_range.0).to_dec() / Decimal::from(vol_steps)
+        } else {
+            Decimal::ZERO
+        };
+
+        // Get a representative option to use as template
+        let template_opt = self
+            .get_single_iter()
+            .find_map(|opt| opt.get_option(Side::Long, OptionStyle::Call).ok());
+
+        let template = match template_opt {
+            Some(opt) => opt,
+            None => {
+                return Err(SurfaceError::ConstructionError(
+                    "No valid options in chain".to_string(),
+                ));
+            }
+        };
+
+        for p in 0..=price_steps {
+            let price = price_range.0.to_dec() + price_step * Decimal::from(p);
+            let price_pos = Positive::new_decimal(price).unwrap_or(pos!(1.0));
+
+            for v in 0..=vol_steps {
+                let vol = vol_range.0.to_dec() + vol_step * Decimal::from(v);
+                let vol_pos = Positive::new_decimal(vol).unwrap_or(pos!(0.01));
+
+                let modified_option = Options::new(
+                    template.option_type.clone(),
+                    template.side,
+                    template.underlying_symbol.clone(),
+                    template.strike_price,
+                    template.expiration_date,
+                    vol_pos,
+                    template.quantity,
+                    price_pos,
+                    template.risk_free_rate,
+                    template.option_style,
+                    template.dividend_yield,
+                    template.exotic_params.clone(),
+                );
+
+                if let Ok(option_price) = modified_option.calculate_price_black_scholes() {
+                    points.insert(Point3D::new(price, vol, option_price));
+                }
+            }
+        }
+
+        if points.is_empty() {
+            return Err(SurfaceError::ConstructionError(
+                "No valid points for volatility sensitivity surface".to_string(),
+            ));
+        }
+
+        Ok(Surface::new(points))
+    }
+}
+
+impl TimeDecayCurve for OptionChain {
+    /// Computes the time decay profile curve by strike price for this option chain.
+    ///
+    /// Shows theta at each strike, helping identify where time decay
+    /// exposure is concentrated.
+    ///
+    /// # Returns
+    ///
+    /// - `Ok(Curve)`: The theta curve with strike on x-axis and theta on y-axis
+    /// - `Err(CurveError)`: If no valid theta data is available
+    fn time_decay_curve(&self) -> Result<Curve, CurveError> {
+        let points: BTreeSet<Point2D> = self
+            .get_single_iter()
+            .filter_map(|opt| {
+                let option = opt.get_option(Side::Long, OptionStyle::Call).ok()?;
+                let theta = option.theta().ok()?;
+                Some(Point2D::new(opt.strike_price.to_dec(), theta))
+            })
+            .collect();
+
+        if points.is_empty() {
+            return Err(CurveError::ConstructionError(
+                "No options with valid theta data".to_string(),
+            ));
+        }
+
+        Ok(Curve::new(points))
+    }
+}
+
+impl TimeDecaySurface for OptionChain {
+    /// Computes the time decay profile surface (price vs time).
+    ///
+    /// Shows how option value evolves across both underlying price and
+    /// time to expiration.
+    ///
+    /// # Parameters
+    ///
+    /// - `price_range`: Tuple of (min_price, max_price) for the underlying
+    /// - `days_to_expiry`: Vector of days to expiration values
+    /// - `price_steps`: Number of steps along the price axis
+    ///
+    /// # Returns
+    ///
+    /// - `Ok(Surface)`: The decay surface
+    /// - `Err(SurfaceError)`: If the surface cannot be computed
+    fn time_decay_surface(
+        &self,
+        price_range: (Positive, Positive),
+        days_to_expiry: Vec<Positive>,
+        price_steps: usize,
+    ) -> Result<Surface, SurfaceError> {
+        let mut points = BTreeSet::new();
+
+        let price_step = if price_steps > 0 {
+            (price_range.1 - price_range.0).to_dec() / Decimal::from(price_steps)
+        } else {
+            Decimal::ZERO
+        };
+
+        // Get a representative option to use as template
+        let template_opt = self
+            .get_single_iter()
+            .find_map(|opt| opt.get_option(Side::Long, OptionStyle::Call).ok());
+
+        let template = match template_opt {
+            Some(opt) => opt,
+            None => {
+                return Err(SurfaceError::ConstructionError(
+                    "No valid options in chain".to_string(),
+                ));
+            }
+        };
+
+        for days in &days_to_expiry {
+            for p in 0..=price_steps {
+                let price = price_range.0.to_dec() + price_step * Decimal::from(p);
+                let price_pos = Positive::new_decimal(price).unwrap_or(pos!(1.0));
+
+                let modified_option = Options::new(
+                    template.option_type.clone(),
+                    template.side,
+                    template.underlying_symbol.clone(),
+                    template.strike_price,
+                    ExpirationDate::Days(*days),
+                    template.implied_volatility,
+                    template.quantity,
+                    price_pos,
+                    template.risk_free_rate,
+                    template.option_style,
+                    template.dividend_yield,
+                    template.exotic_params.clone(),
+                );
+
+                if let Ok(option_price) = modified_option.calculate_price_black_scholes() {
+                    points.insert(Point3D::new(price, days.to_dec(), option_price));
+                }
+            }
+        }
+
+        if points.is_empty() {
+            return Err(SurfaceError::ConstructionError(
+                "No valid points for time decay surface".to_string(),
+            ));
+        }
+
+        Ok(Surface::new(points))
+    }
+}
+
+impl PriceShockCurve for OptionChain {
+    /// Computes the price shock impact curve by strike price for this option chain.
+    ///
+    /// Shows P&L impact from a price shock at each strike.
+    ///
+    /// # Parameters
+    ///
+    /// - `shock_pct`: Price shock as a decimal (e.g., -0.10 for -10%)
+    ///
+    /// # Returns
+    ///
+    /// - `Ok(Curve)`: The shock curve with strike on x-axis and P&L on y-axis
+    /// - `Err(CurveError)`: If no valid delta/gamma data is available
+    fn price_shock_curve(&self, shock_pct: Decimal) -> Result<Curve, CurveError> {
+        let spot = self.underlying_price.to_dec();
+        let price_move = spot * shock_pct;
+
+        let points: BTreeSet<Point2D> = self
+            .get_single_iter()
+            .filter_map(|opt| {
+                let option = opt.get_option(Side::Long, OptionStyle::Call).ok()?;
+                let delta = option.delta().ok()?;
+                let gamma = option.gamma().ok()?;
+
+                // P&L = Delta × ΔS + 0.5 × Gamma × ΔS²
+                let pnl = delta * price_move + dec!(0.5) * gamma * price_move * price_move;
+
+                Some(Point2D::new(opt.strike_price.to_dec(), pnl))
+            })
+            .collect();
+
+        if points.is_empty() {
+            return Err(CurveError::ConstructionError(
+                "No options with valid delta/gamma data".to_string(),
+            ));
+        }
+
+        Ok(Curve::new(points))
+    }
+}
+
+impl PriceShockSurface for OptionChain {
+    /// Computes the price shock impact surface (price vs volatility).
+    ///
+    /// Shows option value across combined price and volatility scenarios.
+    ///
+    /// # Parameters
+    ///
+    /// - `price_range`: Tuple of (min_price, max_price) for the underlying
+    /// - `vol_range`: Tuple of (min_vol, max_vol) for implied volatility
+    /// - `price_steps`: Number of steps along the price axis
+    /// - `vol_steps`: Number of steps along the volatility axis
+    ///
+    /// # Returns
+    ///
+    /// - `Ok(Surface)`: The shock surface
+    /// - `Err(SurfaceError)`: If the surface cannot be computed
+    fn price_shock_surface(
+        &self,
+        price_range: (Positive, Positive),
+        vol_range: (Positive, Positive),
+        price_steps: usize,
+        vol_steps: usize,
+    ) -> Result<Surface, SurfaceError> {
+        // This is essentially the same as volatility_sensitivity_surface
+        // but conceptually represents stress scenarios
+        self.volatility_sensitivity_surface(price_range, vol_range, price_steps, vol_steps)
     }
 }
 
