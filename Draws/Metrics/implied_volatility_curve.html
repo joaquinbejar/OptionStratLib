@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Graph</title>
+    <script src="https://cdn.plot.ly/plotly-2.24.1.min.js" charset="utf-8"></script>
+    <style>
+        body { margin: 0; padding: 20px; font-family: Arial, sans-serif; }
+        #plotly-graph { width: 100%; height: 600px; }
+    </style>
+</head>
+<body>
+    <div id="plotly-graph"></div>
+    <script>
+        var plotJson = {"data":[{"type":"scatter","name":"Curve","mode":"lines","x":["5520","5525","5530","5540","5550","5560","5570","5575","5580","5590","5600","5610","5620","5625","5630","5640","5650","5660","5670","5675","5680","5690","5700","5710","5720","5730","5740","5750","5760","5770","5780","5790","5800","5810","5820","5830","5840","5850","5900","5950","6000","6050","6100","6150","6200"],"y":["0.1631","0.16205","0.161","0.1589","0.1568","0.1547","0.1526","0.15155","0.1505","0.1484","0.1463","0.1442","0.1421","0.14105","0.14","0.1382","0.1364","0.1346","0.1328","0.1319","0.131","0.1292","0.1274","0.1256","0.1238","0.122","0.1202","0.1184","0.1166","0.1148","0.113","0.1115","0.11","0.1085","0.107","0.1055","0.104","0.1025","0.10058","0.09928","0.09798","0.09668","0.09538","0.0946","0.0946"],"line":{"width":2.0,"color":"#1f77b4"}}],"layout":{"title":{"text":"Graph"},"showlegend":true,"width":1280,"height":720},"config":{},"frames":null};
+        Plotly.newPlot('plotly-graph', plotJson);
+    </script>
+</body>
+</html>

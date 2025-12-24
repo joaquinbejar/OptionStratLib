@@ -13,7 +13,10 @@ use crate::error::chains::{ChainError, OptionDataErrorKind};
 use crate::error::{CurveError, SurfaceError};
 use crate::geometrics::LinearInterpolation;
 use crate::greeks::Greeks;
-use crate::metrics::VolatilitySkew;
+use crate::metrics::{
+    DollarGammaCurve, ImpliedVolatilityCurve, ImpliedVolatilitySurface, RiskReversalCurve,
+    VolatilitySkew,
+};
 use crate::model::{
     BasicAxisTypes, ExpirationDate, OptionStyle, OptionType, Options, Position, Side,
 };
@@ -3343,6 +3346,239 @@ impl BasicSurfaces for OptionChain {
         }
 
         Ok(Surface::new(points))
+    }
+}
+
+impl ImpliedVolatilityCurve for OptionChain {
+    /// Computes the implied volatility curve by strike price for this option chain.
+    ///
+    /// Creates a curve showing how implied volatility varies across different strike
+    /// prices. This is useful for visualizing the volatility smile or skew pattern.
+    ///
+    /// # Returns
+    ///
+    /// - `Ok(Curve)`: A curve with strike prices on the x-axis and implied volatility
+    ///   values on the y-axis
+    /// - `Err(CurveError)`: If no options have valid implied volatility data
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// use optionstratlib::chains::chain::OptionChain;
+    /// use optionstratlib::metrics::ImpliedVolatilityCurve;
+    ///
+    /// let chain = OptionChain::new("SPY", pos!(450.0), "2024-03-15".to_string(), None, None);
+    /// let iv_curve = chain.iv_curve()?;
+    /// ```
+    fn iv_curve(&self) -> Result<Curve, CurveError> {
+        let points: BTreeSet<Point2D> = self
+            .options
+            .iter()
+            .filter(|opt| !opt.implied_volatility.is_zero())
+            .map(|opt| Point2D::new(opt.strike_price.to_dec(), opt.implied_volatility.to_dec()))
+            .collect();
+
+        if points.is_empty() {
+            return Err(CurveError::ConstructionError(
+                "No options with valid implied volatility".to_string(),
+            ));
+        }
+
+        Ok(Curve::new(points))
+    }
+}
+
+impl ImpliedVolatilitySurface for OptionChain {
+    /// Computes the implied volatility surface (strike vs time) for this option chain.
+    ///
+    /// Creates a 3D surface showing how implied volatility varies across both strike
+    /// prices and time to expiration. The IV is scaled using the square root of time
+    /// rule to project values across different time horizons.
+    ///
+    /// # Parameters
+    ///
+    /// - `days_to_expiry`: Vector of days to expiration values to include in the surface
+    ///
+    /// # Returns
+    ///
+    /// - `Ok(Surface)`: A surface with strike on x-axis, days on y-axis, and IV on z-axis
+    /// - `Err(SurfaceError)`: If no valid points can be generated
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// use optionstratlib::chains::chain::OptionChain;
+    /// use optionstratlib::metrics::ImpliedVolatilitySurface;
+    /// use optionstratlib::pos;
+    ///
+    /// let chain = OptionChain::new("SPY", pos!(450.0), "2024-03-15".to_string(), None, None);
+    /// let days = vec![pos!(7.0), pos!(14.0), pos!(30.0), pos!(60.0)];
+    /// let iv_surface = chain.iv_surface(days)?;
+    /// ```
+    fn iv_surface(&self, days_to_expiry: Vec<Positive>) -> Result<Surface, SurfaceError> {
+        let mut points = BTreeSet::new();
+
+        for opt in self.options.iter() {
+            if opt.implied_volatility.is_zero() {
+                continue;
+            }
+
+            for days in &days_to_expiry {
+                // Scale IV using square root of time rule
+                // This projects the current IV to different time horizons
+                let time_factor = (days.to_dec() / dec!(365.0)).sqrt().unwrap_or(Decimal::ONE);
+                let adjusted_iv = opt.implied_volatility.to_dec() * time_factor;
+
+                points.insert(Point3D::new(
+                    opt.strike_price.to_dec(),
+                    days.to_dec(),
+                    adjusted_iv,
+                ));
+            }
+        }
+
+        if points.is_empty() {
+            return Err(SurfaceError::ConstructionError(
+                "No valid points for IV surface".to_string(),
+            ));
+        }
+
+        Ok(Surface::new(points))
+    }
+}
+
+impl RiskReversalCurve for OptionChain {
+    /// Computes the risk reversal curve by strike price for this option chain.
+    ///
+    /// Risk reversal measures the difference between call and put implied volatilities
+    /// at each strike. Since this option chain stores a single IV per strike (typically
+    /// the average or ATM-adjusted IV), this implementation calculates the risk reversal
+    /// as the deviation from the ATM implied volatility.
+    ///
+    /// For strikes below ATM: negative values indicate put skew (puts more expensive)
+    /// For strikes above ATM: positive values indicate call skew (calls more expensive)
+    ///
+    /// # Returns
+    ///
+    /// - `Ok(Curve)`: A curve with strike prices on x-axis and risk reversal values on y-axis
+    /// - `Err(CurveError)`: If insufficient data is available
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// use optionstratlib::chains::chain::OptionChain;
+    /// use optionstratlib::metrics::RiskReversalCurve;
+    ///
+    /// let chain = OptionChain::new("SPY", pos!(450.0), "2024-03-15".to_string(), None, None);
+    /// let rr_curve = chain.risk_reversal_curve()?;
+    /// ```
+    fn risk_reversal_curve(&self) -> Result<Curve, CurveError> {
+        // Find ATM IV (closest strike to underlying price)
+        let atm_iv = self
+            .options
+            .iter()
+            .filter(|opt| !opt.implied_volatility.is_zero())
+            .min_by(|a, b| {
+                let diff_a = (a.strike_price.to_dec() - self.underlying_price.to_dec()).abs();
+                let diff_b = (b.strike_price.to_dec() - self.underlying_price.to_dec()).abs();
+                diff_a.partial_cmp(&diff_b).unwrap_or(Ordering::Equal)
+            })
+            .map(|opt| opt.implied_volatility.to_dec())
+            .ok_or_else(|| {
+                CurveError::ConstructionError(
+                    "No options with valid implied volatility".to_string(),
+                )
+            })?;
+
+        // Calculate risk reversal as deviation from ATM IV
+        // Positive for OTM calls (strike > spot), negative for OTM puts (strike < spot)
+        let points: BTreeSet<Point2D> = self
+            .options
+            .iter()
+            .filter(|opt| !opt.implied_volatility.is_zero())
+            .map(|opt| {
+                let iv = opt.implied_volatility.to_dec();
+                let strike = opt.strike_price.to_dec();
+                let spot = self.underlying_price.to_dec();
+
+                // Risk reversal: IV difference weighted by moneyness direction
+                let rr = if strike > spot {
+                    iv - atm_iv // OTM call premium
+                } else if strike < spot {
+                    atm_iv - iv // OTM put premium (inverted for standard RR convention)
+                } else {
+                    Decimal::ZERO // ATM
+                };
+
+                Point2D::new(strike, rr)
+            })
+            .collect();
+
+        if points.is_empty() {
+            return Err(CurveError::ConstructionError(
+                "No options with valid implied volatility".to_string(),
+            ));
+        }
+
+        Ok(Curve::new(points))
+    }
+}
+
+impl DollarGammaCurve for OptionChain {
+    /// Computes the dollar gamma curve by strike price for this option chain.
+    ///
+    /// Dollar gamma measures gamma exposure in monetary terms, showing how much
+    /// the delta will change for a 1% move in the underlying price.
+    ///
+    /// Formula: Dollar Gamma = Gamma × Spot² × 0.01
+    ///
+    /// # Parameters
+    ///
+    /// - `option_style`: Whether to compute for calls or puts (gamma is the same
+    ///   for both at the same strike, but this allows filtering by option type)
+    ///
+    /// # Returns
+    ///
+    /// - `Ok(Curve)`: A curve with strike prices on x-axis and dollar gamma on y-axis
+    /// - `Err(CurveError)`: If no valid gamma values can be computed
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// use optionstratlib::chains::chain::OptionChain;
+    /// use optionstratlib::metrics::DollarGammaCurve;
+    /// use optionstratlib::model::OptionStyle;
+    ///
+    /// let chain = OptionChain::new("SPY", pos!(450.0), "2024-03-15".to_string(), None, None);
+    /// let dg_curve = chain.dollar_gamma_curve(&OptionStyle::Call)?;
+    /// ```
+    fn dollar_gamma_curve(&self, option_style: &OptionStyle) -> Result<Curve, CurveError> {
+        let spot = self.underlying_price;
+        let spot_squared = spot.to_dec() * spot.to_dec();
+
+        let points: BTreeSet<Point2D> = self
+            .get_single_iter()
+            .filter_map(|opt| {
+                let option = match option_style {
+                    OptionStyle::Call => opt.get_option(Side::Long, OptionStyle::Call).ok()?,
+                    OptionStyle::Put => opt.get_option(Side::Long, OptionStyle::Put).ok()?,
+                };
+
+                let gamma = option.gamma().ok()?;
+                // Dollar Gamma = Gamma × Spot² × 0.01
+                let dollar_gamma = gamma * spot_squared * dec!(0.01);
+
+                Some(Point2D::new(opt.strike_price.to_dec(), dollar_gamma))
+            })
+            .collect();
+
+        if points.is_empty() {
+            return Err(CurveError::ConstructionError(
+                "No valid gamma values computed".to_string(),
+            ));
+        }
+
+        Ok(Curve::new(points))
     }
 }
 

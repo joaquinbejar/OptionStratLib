@@ -1,9 +1,3 @@
-/******************************************************************************
-   Author: Joaquín Béjar García
-   Email: jb@taunais.com
-   Date: 18/12/25
-******************************************************************************/
-
 use crate::curves::Curve;
 /// A trait defining a volatility skew representation.
 ///
