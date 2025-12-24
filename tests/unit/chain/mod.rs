@@ -4,5 +4,6 @@
    Date: 27/3/25
 ******************************************************************************/
 
+mod composite_metrics_test;
 mod random_walk_chain;
 mod risk_metrics_test;
