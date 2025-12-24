@@ -104,9 +104,14 @@
 //!     }
 //! }
 //! ```
+pub mod composite;
 mod price;
 pub mod risk;
 
+pub use composite::{
+    DeltaGammaProfileCurve, DeltaGammaProfileSurface, SmileDynamicsCurve, SmileDynamicsSurface,
+    VannaVolgaSurface,
+};
 pub use price::volatility_skew::VolatilitySkew;
 pub use risk::{
     DollarGammaCurve, ImpliedVolatilityCurve, ImpliedVolatilitySurface, RiskReversalCurve,

@@ -14,8 +14,9 @@ use crate::error::{CurveError, SurfaceError};
 use crate::geometrics::LinearInterpolation;
 use crate::greeks::Greeks;
 use crate::metrics::{
-    DollarGammaCurve, ImpliedVolatilityCurve, ImpliedVolatilitySurface, RiskReversalCurve,
-    VolatilitySkew,
+    DeltaGammaProfileCurve, DeltaGammaProfileSurface, DollarGammaCurve, ImpliedVolatilityCurve,
+    ImpliedVolatilitySurface, RiskReversalCurve, SmileDynamicsCurve, SmileDynamicsSurface,
+    VannaVolgaSurface, VolatilitySkew,
 };
 use crate::model::{
     BasicAxisTypes, ExpirationDate, OptionStyle, OptionType, Options, Position, Side,
@@ -3579,6 +3580,320 @@ impl DollarGammaCurve for OptionChain {
         }
 
         Ok(Curve::new(points))
+    }
+}
+
+impl VannaVolgaSurface for OptionChain {
+    /// Computes the Vanna-Volga hedge surface (price vs volatility) for this option chain.
+    ///
+    /// The Vanna-Volga method accounts for the volatility smile by computing hedge
+    /// costs across different underlying prices and volatility levels. This surface
+    /// helps traders understand where hedging costs are highest and how smile effects
+    /// impact pricing.
+    ///
+    /// # Parameters
+    ///
+    /// - `price_range`: Tuple of (min_price, max_price) for the underlying
+    /// - `vol_range`: Tuple of (min_vol, max_vol) for implied volatility
+    /// - `price_steps`: Number of steps along the price axis
+    /// - `vol_steps`: Number of steps along the volatility axis
+    ///
+    /// # Returns
+    ///
+    /// - `Ok(Surface)`: The Vanna-Volga surface with price on x-axis,
+    ///   volatility on y-axis, and hedge cost on z-axis
+    /// - `Err(SurfaceError)`: If the surface cannot be computed
+    fn vanna_volga_surface(
+        &self,
+        price_range: (Positive, Positive),
+        vol_range: (Positive, Positive),
+        price_steps: usize,
+        vol_steps: usize,
+    ) -> Result<Surface, SurfaceError> {
+        let mut points = BTreeSet::new();
+
+        // Get ATM volatility as reference
+        let atm_vol = self
+            .options
+            .iter()
+            .filter(|opt| !opt.implied_volatility.is_zero())
+            .min_by(|a, b| {
+                let diff_a = (a.strike_price.to_dec() - self.underlying_price.to_dec()).abs();
+                let diff_b = (b.strike_price.to_dec() - self.underlying_price.to_dec()).abs();
+                diff_a.partial_cmp(&diff_b).unwrap_or(Ordering::Equal)
+            })
+            .map(|opt| opt.implied_volatility.to_dec())
+            .unwrap_or(dec!(0.20));
+
+        let price_step = if price_steps > 0 {
+            (price_range.1 - price_range.0).to_dec() / Decimal::from(price_steps)
+        } else {
+            Decimal::ZERO
+        };
+
+        let vol_step = if vol_steps > 0 {
+            (vol_range.1 - vol_range.0).to_dec() / Decimal::from(vol_steps)
+        } else {
+            Decimal::ZERO
+        };
+
+        for p in 0..=price_steps {
+            let price = price_range.0.to_dec() + price_step * Decimal::from(p);
+
+            for v in 0..=vol_steps {
+                let vol = vol_range.0.to_dec() + vol_step * Decimal::from(v);
+
+                // Vanna-Volga cost model:
+                // Cost increases with distance from ATM and with volatility difference
+                let moneyness =
+                    (price - self.underlying_price.to_dec()).abs() / self.underlying_price.to_dec();
+                let vol_diff = (vol - atm_vol).abs();
+
+                // Simplified Vanna-Volga cost: combines moneyness and vol effects
+                // Vanna component: moneyness × vol_diff
+                // Volga component: vol_diff²
+                let vanna_cost = moneyness * vol_diff * dec!(100.0);
+                let volga_cost = vol_diff * vol_diff * dec!(50.0);
+                let vv_cost = vanna_cost + volga_cost;
+
+                points.insert(Point3D::new(price, vol, vv_cost));
+            }
+        }
+
+        if points.is_empty() {
+            return Err(SurfaceError::ConstructionError(
+                "No valid points for Vanna-Volga surface".to_string(),
+            ));
+        }
+
+        Ok(Surface::new(points))
+    }
+}
+
+impl DeltaGammaProfileCurve for OptionChain {
+    /// Computes the delta-gamma profile curve by strike price for this option chain.
+    ///
+    /// Shows the combined delta and gamma exposure at each strike, helping identify
+    /// where directional and convexity risks are concentrated.
+    ///
+    /// # Returns
+    ///
+    /// - `Ok(Curve)`: The profile curve with strike on x-axis and combined
+    ///   delta-gamma metric (dollar delta + dollar gamma) on y-axis
+    /// - `Err(CurveError)`: If the curve cannot be computed
+    fn delta_gamma_curve(&self) -> Result<Curve, CurveError> {
+        let spot = self.underlying_price.to_dec();
+        let spot_squared = spot * spot;
+
+        let points: BTreeSet<Point2D> = self
+            .get_single_iter()
+            .filter_map(|opt| {
+                // Use call options for the profile
+                let option = opt.get_option(Side::Long, OptionStyle::Call).ok()?;
+
+                let delta = option.delta().ok()?;
+                let gamma = option.gamma().ok()?;
+
+                // Dollar Delta = Delta × Spot
+                let dollar_delta = delta * spot;
+                // Dollar Gamma = Gamma × Spot² × 0.01
+                let dollar_gamma = gamma * spot_squared * dec!(0.01);
+
+                // Combined metric
+                let combined = dollar_delta + dollar_gamma;
+
+                Some(Point2D::new(opt.strike_price.to_dec(), combined))
+            })
+            .collect();
+
+        if points.is_empty() {
+            return Err(CurveError::ConstructionError(
+                "No valid delta-gamma values computed".to_string(),
+            ));
+        }
+
+        Ok(Curve::new(points))
+    }
+}
+
+impl DeltaGammaProfileSurface for OptionChain {
+    /// Computes the delta-gamma profile surface (price vs time) for this option chain.
+    ///
+    /// Shows how delta exposure varies across both underlying price and time to
+    /// expiration, providing a complete view of risk evolution.
+    ///
+    /// # Parameters
+    ///
+    /// - `price_range`: Tuple of (min_price, max_price) for the underlying
+    /// - `days_to_expiry`: Vector of days to expiration values
+    /// - `price_steps`: Number of steps along the price axis
+    ///
+    /// # Returns
+    ///
+    /// - `Ok(Surface)`: The profile surface with price on x-axis,
+    ///   days on y-axis, and delta exposure on z-axis
+    /// - `Err(SurfaceError)`: If the surface cannot be computed
+    fn delta_gamma_surface(
+        &self,
+        price_range: (Positive, Positive),
+        days_to_expiry: Vec<Positive>,
+        price_steps: usize,
+    ) -> Result<Surface, SurfaceError> {
+        let mut points = BTreeSet::new();
+
+        let price_step = if price_steps > 0 {
+            (price_range.1 - price_range.0).to_dec() / Decimal::from(price_steps)
+        } else {
+            Decimal::ZERO
+        };
+
+        // Get a representative option to use as template
+        let template_opt = self
+            .get_single_iter()
+            .find_map(|opt| opt.get_option(Side::Long, OptionStyle::Call).ok());
+
+        let template = match template_opt {
+            Some(opt) => opt,
+            None => {
+                return Err(SurfaceError::ConstructionError(
+                    "No valid options in chain".to_string(),
+                ));
+            }
+        };
+
+        for days in &days_to_expiry {
+            for p in 0..=price_steps {
+                let price = price_range.0.to_dec() + price_step * Decimal::from(p);
+                let price_pos = Positive::new_decimal(price).unwrap_or(pos!(1.0));
+
+                // Create option with modified price and expiration
+                let modified_option = Options::new(
+                    template.option_type.clone(),
+                    template.side,
+                    template.underlying_symbol.clone(),
+                    template.strike_price,
+                    ExpirationDate::Days(*days),
+                    template.implied_volatility,
+                    template.quantity,
+                    price_pos,
+                    template.risk_free_rate,
+                    template.option_style,
+                    template.dividend_yield,
+                    template.exotic_params.clone(),
+                );
+
+                if let Ok(delta) = modified_option.delta() {
+                    points.insert(Point3D::new(price, days.to_dec(), delta));
+                }
+            }
+        }
+
+        if points.is_empty() {
+            return Err(SurfaceError::ConstructionError(
+                "No valid points for delta-gamma surface".to_string(),
+            ));
+        }
+
+        Ok(Surface::new(points))
+    }
+}
+
+impl SmileDynamicsCurve for OptionChain {
+    /// Computes the smile dynamics curve by strike price for this option chain.
+    ///
+    /// Shows the current shape of the volatility smile, representing how implied
+    /// volatility varies across strike prices.
+    ///
+    /// # Returns
+    ///
+    /// - `Ok(Curve)`: The smile curve with strike on x-axis and IV on y-axis
+    /// - `Err(CurveError)`: If the curve cannot be computed
+    fn smile_dynamics_curve(&self) -> Result<Curve, CurveError> {
+        let points: BTreeSet<Point2D> = self
+            .options
+            .iter()
+            .filter(|opt| !opt.implied_volatility.is_zero())
+            .map(|opt| Point2D::new(opt.strike_price.to_dec(), opt.implied_volatility.to_dec()))
+            .collect();
+
+        if points.is_empty() {
+            return Err(CurveError::ConstructionError(
+                "No options with valid implied volatility".to_string(),
+            ));
+        }
+
+        Ok(Curve::new(points))
+    }
+}
+
+impl SmileDynamicsSurface for OptionChain {
+    /// Computes the smile dynamics surface (strike vs time) for this option chain.
+    ///
+    /// Shows how the volatility smile evolves across different time horizons,
+    /// providing insights into term structure and smile dynamics.
+    ///
+    /// # Parameters
+    ///
+    /// - `days_to_expiry`: Vector of days to expiration values to include
+    ///
+    /// # Returns
+    ///
+    /// - `Ok(Surface)`: The smile surface with strike on x-axis,
+    ///   days on y-axis, and IV on z-axis
+    /// - `Err(SurfaceError)`: If the surface cannot be computed
+    fn smile_dynamics_surface(
+        &self,
+        days_to_expiry: Vec<Positive>,
+    ) -> Result<Surface, SurfaceError> {
+        let mut points = BTreeSet::new();
+
+        // Get ATM volatility for reference
+        let atm_vol = self
+            .options
+            .iter()
+            .filter(|opt| !opt.implied_volatility.is_zero())
+            .min_by(|a, b| {
+                let diff_a = (a.strike_price.to_dec() - self.underlying_price.to_dec()).abs();
+                let diff_b = (b.strike_price.to_dec() - self.underlying_price.to_dec()).abs();
+                diff_a.partial_cmp(&diff_b).unwrap_or(Ordering::Equal)
+            })
+            .map(|opt| opt.implied_volatility.to_dec())
+            .unwrap_or(dec!(0.20));
+
+        for opt in self.options.iter() {
+            if opt.implied_volatility.is_zero() {
+                continue;
+            }
+
+            let strike = opt.strike_price.to_dec();
+            let base_iv = opt.implied_volatility.to_dec();
+
+            // Calculate skew from current smile
+            let skew = base_iv - atm_vol;
+
+            for days in &days_to_expiry {
+                // Smile dynamics: skew steepens for shorter expirations
+                let time_factor = (days.to_dec() / dec!(30.0)).sqrt().unwrap_or(Decimal::ONE);
+                let adjusted_skew = if time_factor > Decimal::ZERO {
+                    skew / time_factor
+                } else {
+                    skew
+                };
+
+                let adjusted_iv = atm_vol + adjusted_skew;
+                let final_iv = adjusted_iv.max(dec!(0.01)); // Ensure positive IV
+
+                points.insert(Point3D::new(strike, days.to_dec(), final_iv));
+            }
+        }
+
+        if points.is_empty() {
+            return Err(SurfaceError::ConstructionError(
+                "No valid points for smile dynamics surface".to_string(),
+            ));
+        }
+
+        Ok(Surface::new(points))
     }
 }
 

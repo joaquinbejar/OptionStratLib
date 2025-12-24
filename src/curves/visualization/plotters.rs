@@ -159,9 +159,14 @@ mod tests {
 
     #[cfg(feature = "plotly")]
     fn cleanup_image(filename: &Path) {
-        if Path::new(filename).exists() {
-            fs::remove_file(filename)
-                .unwrap_or_else(|_| error!("Failed to remove {}", filename.to_str().unwrap()));
+        match fs::remove_file(filename) {
+            Ok(_) => {}
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+                // File already gone - that's exactly what we wanted
+            }
+            Err(e) => {
+                error!("Failed to remove {}: {}", filename.display(), e);
+            }
         }
     }
 
