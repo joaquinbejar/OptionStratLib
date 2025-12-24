@@ -179,6 +179,14 @@
 //! - 3D volatility surfaces
 //! - Risk profile charts
 //!
+//! ### **Metrics** (`metrics/`)
+//! Performance and risk metrics analysis:
+//! - **Price Metrics**: Volatility skew curves
+//! - **Risk Metrics**:
+//!   - Implied Volatility curves (by strike) and surfaces (strike vs time)
+//!   - Risk Reversal curves (by strike)
+//!   - Dollar Gamma curves (by strike)
+//!
 //! ### **Risk Management** (`risk/`)
 //! Risk analysis and management tools:
 //! - Position risk metrics
@@ -830,10 +838,33 @@ pub mod geometrics;
 /// formulas, numerical approximations, and visualization tools for risk analysis.
 pub mod greeks;
 
-/// * `metrics` - Performance analysis for options.
+/// * `metrics` - Performance and risk metrics analysis for options.
 ///
-/// Comprehensive tools for performance analysis including price metrics, risk metrics,
-/// composite metrics, liquidity metrics and stress metrics.
+/// Comprehensive tools for performance and risk analysis including:
+/// - **Price Metrics**: Volatility skew analysis
+/// - **Risk Metrics**: Implied volatility curves/surfaces, risk reversal curves, dollar gamma curves
+///
+/// ## Risk Metrics
+///
+/// The risk metrics module provides key tools for assessing market risk, sentiment, and exposure:
+///
+/// | Metric | Curve (by strike) | Surface (strike vs time) |
+/// |--------|-------------------|--------------------------|
+/// | Implied Volatility | `iv_curve()` | `iv_surface(days)` |
+/// | Risk Reversal | `risk_reversal_curve()` | - |
+/// | Dollar Gamma | `dollar_gamma_curve(style)` | - |
+///
+/// ### Implied Volatility
+/// Shows how IV varies across strikes and time horizons. Essential for understanding
+/// market expectations and pricing options.
+///
+/// ### Risk Reversal
+/// Measures the difference between call and put implied volatilities, indicating
+/// market sentiment (bullish vs bearish bias).
+///
+/// ### Dollar Gamma
+/// Gamma exposure in monetary terms: `Dollar Gamma = Gamma × Spot² × 0.01`
+/// Shows how much delta changes for a 1% move in the underlying.
 pub mod metrics;
 
 /// * `model` - Core data structures and models for options and derivatives.
