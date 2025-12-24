@@ -1,7 +1,7 @@
 /******************************************************************************
    Author: Joaquín Béjar García
    Email: jb@taunais.com
-   Date: 24/12/24
+   Date: 24/12/25
 ******************************************************************************/
 //! Example demonstrating extended delta adjustment functionality for ShortStraddle.
 //!
