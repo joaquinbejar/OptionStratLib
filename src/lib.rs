@@ -194,6 +194,10 @@
 //!   - Bid-Ask Spread curves (by strike)
 //!   - Volume Profile curves (by strike) and surfaces (strike vs time)
 //!   - Open Interest Distribution curves (by strike)
+//! - **Stress Metrics**:
+//!   - Volatility Sensitivity curves (by strike) and surfaces (price vs volatility)
+//!   - Time Decay Profile curves (by strike) and surfaces (price vs time)
+//!   - Price Shock Impact curves (by strike) and surfaces (price vs volatility)
 //!
 //! ### **Risk Management** (`risk/`)
 //! Risk analysis and management tools:

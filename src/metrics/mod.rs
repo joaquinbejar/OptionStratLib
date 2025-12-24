@@ -108,6 +108,7 @@ pub mod composite;
 pub mod liquidity;
 mod price;
 pub mod risk;
+pub mod stress;
 
 pub use composite::{
     DeltaGammaProfileCurve, DeltaGammaProfileSurface, SmileDynamicsCurve, SmileDynamicsSurface,
@@ -119,4 +120,8 @@ pub use liquidity::{
 pub use price::volatility_skew::VolatilitySkew;
 pub use risk::{
     DollarGammaCurve, ImpliedVolatilityCurve, ImpliedVolatilitySurface, RiskReversalCurve,
+};
+pub use stress::{
+    PriceShockCurve, PriceShockSurface, TimeDecayCurve, TimeDecaySurface,
+    VolatilitySensitivityCurve, VolatilitySensitivitySurface,
 };
