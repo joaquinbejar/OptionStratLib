@@ -33,7 +33,7 @@
 //! * Invalid price values
 //! * Invalid rate values
 
-use crate::Positive;
+
 use crate::error::VolatilityError;
 use crate::error::decimal;
 use thiserror::Error;
@@ -622,7 +622,7 @@ mod tests_error_greeks {
 mod tests_error_greeks_extended {
     use super::*;
     use crate::error::decimal::DecimalError::InvalidPrecision;
-    use positive::pos_or_panic;
+use positive::pos_or_panic;
 
     #[test]
     fn test_greeks_error_std_error() {

@@ -3,12 +3,11 @@
    Email: jb@taunais.com
    Date: 2/10/24
 ******************************************************************************/
-use positive::pos_or_panic;
 use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, StrategyBasics, StrategyType, Validable,
 };
 use crate::{
-    ExpirationDate, Options, Positive,
+    ExpirationDate, Options,
     chains::{OptionData, chain::OptionChain},
     error::{
         GreeksError, OperationErrorKind, PricingError, position::PositionError,
@@ -32,6 +31,7 @@ use crate::{
     utils::process_n_times_iter,
 };
 use num_traits::ToPrimitive;
+use positive::{Positive, pos_or_panic};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};

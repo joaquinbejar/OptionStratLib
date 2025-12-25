@@ -33,7 +33,7 @@
 //! assert!(spot_leg.is_spot());
 //! ```
 
-use crate::Positive;
+
 use crate::error::GreeksError;
 use crate::model::leg::future::FuturePosition;
 use crate::model::leg::perpetual::PerpetualPosition;

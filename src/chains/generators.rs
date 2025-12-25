@@ -3,7 +3,7 @@
    Email: jb@taunais.com
    Date: 27/3/25
 ******************************************************************************/
-use positive::pos_or_panic;
+use positive::{pos_or_panic, spos};
 use crate::chains::OptionChain;
 use crate::error::ChainError;
 use crate::simulation::steps::{Step, Ystep};
@@ -351,7 +351,7 @@ mod tests {
 
 #[cfg(test)]
 mod generators_coverage_tests {
-    use positive::spos;
+    use positive::Positive;
     use super::*;
 
     use crate::ExpirationDate;

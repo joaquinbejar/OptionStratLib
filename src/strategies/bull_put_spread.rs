@@ -1,3 +1,4 @@
+use positive::{Positive, assert_pos_relative_eq, pos_or_panic, spos};
 /*
 Bull Put Spread Strategy
 
@@ -14,12 +15,11 @@ Key characteristics:
 - Maximum profit achieved when price stays above higher strike
 - Also known as a vertical put credit spread
 */
-use positive::pos_or_panic;
 use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, StrategyBasics, StrategyType, Validable,
 };
 use crate::{
-    ExpirationDate, Options, Positive,
+    ExpirationDate, Options,
     chains::{StrategyLegs, chain::OptionChain, utils::OptionDataGroup},
     constants::ZERO,
     error::{
@@ -1831,14 +1831,14 @@ mod tests_bull_put_spread_probability {
     fn bull_put_spread_test() -> BullPutSpread {
         BullPutSpread::new(
             "TEST".to_string(),
-            Positive::HUNDRED,                      // underlying_price
+            Positive::HUNDRED,                         // underlying_price
             pos_or_panic!(90.0),                       // long_strike
             pos_or_panic!(95.0),                       // short_strike
             ExpirationDate::Days(pos_or_panic!(30.0)), // expiration
             pos_or_panic!(0.2),                        // implied_volatility
             dec!(0.05),                                // risk_free_rate
             Positive::ZERO,                            // dividend_yield
-            Positive::ONE,                        // quantity
+            Positive::ONE,                             // quantity
             Positive::ONE,                             // premium_long_put
             Positive::TWO,                             // premium_short_put
             Positive::ZERO,                            // open_fee_long_put
@@ -1969,11 +1969,11 @@ mod tests_bull_put_spread_probability {
 mod tests_delta {
     use super::*;
 
+    use crate::assert_decimal_eq;
     use crate::model::types::OptionStyle;
     use crate::strategies::bull_put_spread::BullPutSpread;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
-    use crate::{assert_decimal_eq, assert_pos_relative_eq};
     use rust_decimal_macros::dec;
 
     fn get_strategy(long_strike: Positive, short_strike: Positive) -> BullPutSpread {
@@ -1987,7 +1987,7 @@ mod tests_delta {
             pos_or_panic!(0.18),  // implied_volatility
             dec!(0.05),           // risk_free_rate
             Positive::ZERO,       // dividend_yield
-            Positive::ONE,   // long quantity
+            Positive::ONE,        // long quantity
             pos_or_panic!(15.04), // premium_long
             pos_or_panic!(89.85), // premium_short
             pos_or_panic!(0.78),  // open_fee_long
@@ -2095,11 +2095,11 @@ mod tests_delta {
 mod tests_delta_size {
     use super::*;
 
+    use crate::assert_decimal_eq;
     use crate::model::types::OptionStyle;
     use crate::strategies::bull_put_spread::BullPutSpread;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
-    use crate::{assert_decimal_eq, assert_pos_relative_eq};
     use rust_decimal_macros::dec;
 
     fn get_strategy(long_strike: Positive, short_strike: Positive) -> BullPutSpread {
@@ -2113,7 +2113,7 @@ mod tests_delta_size {
             pos_or_panic!(0.18),  // implied_volatility
             dec!(0.05),           // risk_free_rate
             Positive::ZERO,       // dividend_yield
-            Positive::TWO,   // long quantity
+            Positive::TWO,        // long quantity
             pos_or_panic!(15.04), // premium_long
             pos_or_panic!(89.85), // premium_short
             pos_or_panic!(0.78),  // open_fee_long
@@ -2300,10 +2300,7 @@ mod tests_bear_call_spread_position_management {
         modified_put.option.quantity = Positive::TWO;
         let result = bull_put_spread.modify_position(&modified_put);
         assert!(result.is_ok());
-        assert_eq!(
-            bull_put_spread.short_put.option.quantity,
-            Positive::TWO
-        );
+        assert_eq!(bull_put_spread.short_put.option.quantity, Positive::TWO);
 
         // Modify short put position
         let mut modified_put = bull_put_spread.long_put.clone();
@@ -2612,20 +2609,20 @@ mod tests_bull_put_spread_pnl {
         let short_put = create_sample_position(
             OptionStyle::Put,
             Side::Short,
-            Positive::HUNDRED, // Underlying price
-            Positive::ONE,   // Quantity
-            pos_or_panic!(95.0),  // Lower strike price
-            pos_or_panic!(0.2),   // Implied volatility
+            Positive::HUNDRED,   // Underlying price
+            Positive::ONE,       // Quantity
+            pos_or_panic!(95.0), // Lower strike price
+            pos_or_panic!(0.2),  // Implied volatility
         );
 
         // Create long put with higher strike
         let long_put = create_sample_position(
             OptionStyle::Put,
             Side::Long,
-            Positive::HUNDRED, // Same underlying price
-            Positive::ONE,   // Quantity
-            Positive::HUNDRED, // Higher strike price
-            pos_or_panic!(0.2),   // Implied volatility
+            Positive::HUNDRED,  // Same underlying price
+            Positive::ONE,      // Quantity
+            Positive::HUNDRED,  // Higher strike price
+            pos_or_panic!(0.2), // Implied volatility
         );
 
         BullPutSpread::get_strategy(&[short_put, long_put])

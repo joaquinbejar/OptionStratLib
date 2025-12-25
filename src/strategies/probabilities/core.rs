@@ -7,8 +7,8 @@
 //! The `ProbabilityAnalysis` trait extends the `Strategies` and `Profit` traits to provide
 //! comprehensive probability analysis capabilities for option strategies.
 
-use positive::pos_or_panic;
-use crate::Positive;
+use positive::{Positive, pos_or_panic};
+
 use crate::error::probability::ProbabilityError;
 use crate::model::ProfitLossRange;
 use crate::pricing::payoff::Profit;
@@ -365,7 +365,7 @@ mod tests_probability_analysis {
             pos_or_panic!(0.2),   // implied_volatility
             dec!(0.05),           // risk_free_rate
             Positive::ZERO,       // dividend_yield
-            Positive::ONE,   // quantity
+            Positive::ONE,        // quantity
             pos_or_panic!(27.26), // premium_long
             pos_or_panic!(5.33),  // premium_short
             pos_or_panic!(0.58),  // open_fee_long
@@ -518,7 +518,7 @@ mod tests_expected_value {
             pos_or_panic!(0.2),   // implied_volatility
             dec!(0.05),           // risk_free_rate
             Positive::ZERO,       // dividend_yield
-            Positive::ONE,   // quantity
+            Positive::ONE,        // quantity
             pos_or_panic!(27.26), // premium_long
             pos_or_panic!(5.33),  // premium_short
             pos_or_panic!(0.58),  // open_fee_long

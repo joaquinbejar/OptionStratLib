@@ -12,7 +12,7 @@
 //! - **Underlying price**: Exit when the underlying asset reaches a price level
 //! - **Combined conditions**: Exit when multiple conditions are met (AND/OR logic)
 
-use crate::Positive;
+use positive::Positive;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
@@ -477,8 +477,8 @@ pub fn check_exit_policy(
 
 #[cfg(test)]
 mod tests {
-    use positive::pos_or_panic;
     use super::*;
+    use positive::pos_or_panic;
 
     use rust_decimal_macros::dec;
 

@@ -3,8 +3,8 @@
    Email: jb@taunais.com
    Date: 30/11/24
 ******************************************************************************/
-use crate::Positive;
-use positive::pos_or_panic;
+
+use positive::{Positive, pos_or_panic};
 
 /// # StrategyProbabilityAnalysis
 ///

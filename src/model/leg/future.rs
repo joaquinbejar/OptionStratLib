@@ -40,7 +40,7 @@
 //! );
 //! ```
 
-use crate::Positive;
+
 use crate::error::GreeksError;
 use crate::model::ExpirationDate;
 use crate::model::leg::traits::{Expirable, LegAble, Marginable};
@@ -424,7 +424,7 @@ impl Default for FuturePosition {
 
 #[cfg(test)]
 mod tests {
-    use positive::pos_or_panic;
+use positive::pos_or_panic;
     use super::*;
 
     #[test]

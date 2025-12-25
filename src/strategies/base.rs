@@ -1,9 +1,8 @@
 use crate::chains::OptionData;
 use crate::constants::{STRIKE_PRICE_LOWER_BOUND_MULTIPLIER, STRIKE_PRICE_UPPER_BOUND_MULTIPLIER};
 use crate::error::strategies::BreakEvenErrorKind;
-use positive::pos_or_panic;
 use crate::{
-    ExpirationDate, Options, Positive,
+    ExpirationDate, Options,
     chains::{StrategyLegs, chain::OptionChain, utils::OptionDataGroup},
     error::{OperationErrorKind, position::PositionError, strategies::StrategyError},
     greeks::Greeks,
@@ -22,6 +21,7 @@ use crate::{
     },
     visualization::Graph,
 };
+use positive::{Positive, pos_or_panic};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -1990,6 +1990,7 @@ mod tests_strategy_methods {
 #[cfg(test)]
 mod tests_optimizable {
     use super::*;
+    use positive::spos;
 
     use crate::chains::OptionData;
 
@@ -2019,13 +2020,13 @@ mod tests_optimizable {
     fn test_is_valid_long_option() {
         let strategy = TestOptimizableStrategy;
         let option_data = OptionData::new(
-            Positive::HUNDRED, // strike_price
-            spos!(5.0),           // call_bid
-            spos!(5.5),           // call_ask
-            spos!(4.0),           // put_bid
-            spos!(4.5),           // put_ask
-            pos_or_panic!(0.2),   // implied_volatility
-            Some(dec!(0.5)),      // delta
+            Positive::HUNDRED,  // strike_price
+            spos!(5.0),         // call_bid
+            spos!(5.5),         // call_ask
+            spos!(4.0),         // put_bid
+            spos!(4.5),         // put_ask
+            pos_or_panic!(0.2), // implied_volatility
+            Some(dec!(0.5)),    // delta
             Some(dec!(0.3)),
             Some(dec!(0.3)),
             spos!(1000.0), // volume
@@ -2050,13 +2051,13 @@ mod tests_optimizable {
     fn test_is_valid_long_option_upper_panic() {
         let strategy = TestOptimizableStrategy;
         let option_data = OptionData::new(
-            Positive::HUNDRED, // strike_price
-            spos!(5.0),           // call_bid
-            spos!(5.5),           // call_ask
-            spos!(4.0),           // put_bid
-            spos!(4.5),           // put_ask
-            pos_or_panic!(0.2),   // implied_volatility
-            Some(dec!(0.5)),      // delta
+            Positive::HUNDRED,  // strike_price
+            spos!(5.0),         // call_bid
+            spos!(5.5),         // call_ask
+            spos!(4.0),         // put_bid
+            spos!(4.5),         // put_ask
+            pos_or_panic!(0.2), // implied_volatility
+            Some(dec!(0.5)),    // delta
             Some(dec!(0.3)),
             Some(dec!(0.3)),
             spos!(1000.0), // volume
@@ -2077,13 +2078,13 @@ mod tests_optimizable {
     fn test_is_valid_long_option_lower_panic() {
         let strategy = TestOptimizableStrategy;
         let option_data = OptionData::new(
-            Positive::HUNDRED, // strike_price
-            spos!(5.0),           // call_bid
-            spos!(5.5),           // call_ask
-            spos!(4.0),           // put_bid
-            spos!(4.5),           // put_ask
-            pos_or_panic!(0.2),   // implied_volatility
-            Some(dec!(0.5)),      // delta
+            Positive::HUNDRED,  // strike_price
+            spos!(5.0),         // call_bid
+            spos!(5.5),         // call_ask
+            spos!(4.0),         // put_bid
+            spos!(4.5),         // put_ask
+            pos_or_panic!(0.2), // implied_volatility
+            Some(dec!(0.5)),    // delta
             Some(dec!(0.3)),
             Some(dec!(0.3)),
             spos!(1000.0), // volume
@@ -2103,13 +2104,13 @@ mod tests_optimizable {
     fn test_is_valid_short_option() {
         let strategy = TestOptimizableStrategy;
         let option_data = OptionData::new(
-            Positive::HUNDRED, // strike_price
-            spos!(5.0),           // call_bid
-            spos!(5.5),           // call_ask
-            spos!(4.0),           // put_bid
-            spos!(4.5),           // put_ask
-            pos_or_panic!(0.2),   // implied_volatility
-            Some(dec!(0.5)),      // delta
+            Positive::HUNDRED,  // strike_price
+            spos!(5.0),         // call_bid
+            spos!(5.5),         // call_ask
+            spos!(4.0),         // put_bid
+            spos!(4.5),         // put_ask
+            pos_or_panic!(0.2), // implied_volatility
+            Some(dec!(0.5)),    // delta
             Some(dec!(0.3)),
             Some(dec!(0.3)),
             spos!(1000.0), // volume
@@ -2134,13 +2135,13 @@ mod tests_optimizable {
     fn test_is_valid_short_option_upper_panic() {
         let strategy = TestOptimizableStrategy;
         let option_data = OptionData::new(
-            Positive::HUNDRED, // strike_price
-            spos!(5.0),           // call_bid
-            spos!(5.5),           // call_ask
-            spos!(4.0),           // put_bid
-            spos!(4.5),           // put_ask
-            pos_or_panic!(0.2),   // implied_volatility
-            Some(dec!(0.5)),      // delta
+            Positive::HUNDRED,  // strike_price
+            spos!(5.0),         // call_bid
+            spos!(5.5),         // call_ask
+            spos!(4.0),         // put_bid
+            spos!(4.5),         // put_ask
+            pos_or_panic!(0.2), // implied_volatility
+            Some(dec!(0.5)),    // delta
             Some(dec!(0.3)),
             Some(dec!(0.3)),
             spos!(1000.0), // volume
@@ -2161,13 +2162,13 @@ mod tests_optimizable {
     fn test_is_valid_short_option_lower_panic() {
         let strategy = TestOptimizableStrategy;
         let option_data = OptionData::new(
-            Positive::HUNDRED, // strike_price
-            spos!(5.0),           // call_bid
-            spos!(5.5),           // call_ask
-            spos!(4.0),           // put_bid
-            spos!(4.5),           // put_ask
-            pos_or_panic!(0.2),   // implied_volatility
-            Some(dec!(0.5)),      // delta
+            Positive::HUNDRED,  // strike_price
+            spos!(5.0),         // call_bid
+            spos!(5.5),         // call_ask
+            spos!(4.0),         // put_bid
+            spos!(4.5),         // put_ask
+            pos_or_panic!(0.2), // implied_volatility
+            Some(dec!(0.5)),    // delta
             Some(dec!(0.3)),
             Some(dec!(0.3)),
             spos!(1000.0), // volume

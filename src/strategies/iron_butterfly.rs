@@ -1,3 +1,4 @@
+use positive::{Positive, assert_pos_relative_eq, pos_or_panic, spos};
 /*
 Iron Butterfly Strategy
 
@@ -14,9 +15,8 @@ Key characteristics:
 use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, StrategyBasics, StrategyType, Validable,
 };
-use positive::pos_or_panic;
 use crate::{
-    ExpirationDate, Options, Positive,
+    ExpirationDate, Options,
     chains::{StrategyLegs, chain::OptionChain, utils::OptionDataGroup},
     error::{
         GreeksError, OperationErrorKind, PricingError,
@@ -1143,8 +1143,8 @@ mod tests_iron_butterfly {
         let date = Utc.with_ymd_and_hms(2024, 12, 1, 0, 0, 0).unwrap();
         let butterfly = IronButterfly::new(
             "AAPL".to_string(),
-            Positive::HUNDRED, // underlying price
-            Positive::HUNDRED, // short strike (at the money)
+            Positive::HUNDRED,    // underlying price
+            Positive::HUNDRED,    // short strike (at the money)
             pos_or_panic!(110.0), // long call strike
             pos_or_panic!(90.0),  // long put strike
             ExpirationDate::DateTime(date),
@@ -1168,8 +1168,8 @@ mod tests_iron_butterfly {
         let date = Utc.with_ymd_and_hms(2024, 12, 1, 0, 0, 0).unwrap();
         let butterfly = IronButterfly::new(
             "AAPL".to_string(),
-            Positive::HUNDRED, // underlying price
-            Positive::HUNDRED, // short strike (at the money)
+            Positive::HUNDRED,    // underlying price
+            Positive::HUNDRED,    // short strike (at the money)
             pos_or_panic!(110.0), // long call strike
             pos_or_panic!(90.0),  // long put strike
             ExpirationDate::DateTime(date),
@@ -1194,8 +1194,8 @@ mod tests_iron_butterfly {
         let date = Utc.with_ymd_and_hms(2024, 12, 1, 0, 0, 0).unwrap();
         let butterfly = IronButterfly::new(
             "AAPL".to_string(),
-            Positive::HUNDRED, // underlying price
-            Positive::HUNDRED, // short strike (at the money)
+            Positive::HUNDRED,    // underlying price
+            Positive::HUNDRED,    // short strike (at the money)
             pos_or_panic!(110.0), // long call strike
             pos_or_panic!(90.0),  // long put strike
             ExpirationDate::DateTime(date),
@@ -1345,15 +1345,15 @@ mod tests_iron_butterfly_validable {
     fn create_valid_butterfly() -> IronButterfly {
         IronButterfly::new(
             "TEST".to_string(),
-            Positive::HUNDRED, // underlying_price
-            Positive::HUNDRED, // short strike (both call and put)
+            Positive::HUNDRED,    // underlying_price
+            Positive::HUNDRED,    // short strike (both call and put)
             pos_or_panic!(110.0), // long call strike
             pos_or_panic!(90.0),  // long put strike
             ExpirationDate::Days(pos_or_panic!(30.0)),
             pos_or_panic!(0.2), // implied_volatility
             dec!(0.05),         // risk_free_rate
             Positive::ZERO,     // dividend_yield
-            Positive::ONE, // quantity
+            Positive::ONE,      // quantity
             Positive::TWO,      // premium_short_call
             Positive::TWO,      // premium_short_put
             Positive::ONE,      // premium_long_call
@@ -1503,15 +1503,15 @@ mod tests_iron_butterfly_strategies {
     fn create_test_butterfly() -> IronButterfly {
         IronButterfly::new(
             "TEST".to_string(),
-            Positive::HUNDRED, // underlying_price
-            Positive::HUNDRED, // short strike (both call and put)
+            Positive::HUNDRED,    // underlying_price
+            Positive::HUNDRED,    // short strike (both call and put)
             pos_or_panic!(110.0), // long call strike
             pos_or_panic!(90.0),  // long put strike
             ExpirationDate::Days(pos_or_panic!(30.0)),
             pos_or_panic!(0.2), // implied_volatility
             dec!(0.05),         // risk_free_rate
             Positive::ZERO,     // dividend_yield
-            Positive::ONE, // quantity
+            Positive::ONE,      // quantity
             Positive::TWO,      // premium_short_call
             Positive::TWO,      // premium_short_put
             Positive::ONE,      // premium_long_call
@@ -1706,7 +1706,7 @@ mod tests_iron_butterfly_strategies {
             Positive::ZERO,
             Positive::ONE,
             pos_or_panic!(3.0), // Higher short call premium
-            Positive::TWO, // Lower short put premium
+            Positive::TWO,      // Lower short put premium
             Positive::ONE,
             Positive::ONE,
             pos_or_panic!(0.5),
@@ -1719,7 +1719,6 @@ mod tests_iron_butterfly_strategies {
 
 #[cfg(test)]
 mod tests_iron_butterfly_optimizable {
-    use positive::spos;
     use super::*;
 
     use crate::chains::OptionData;
@@ -1730,15 +1729,15 @@ mod tests_iron_butterfly_optimizable {
     fn create_test_butterfly() -> IronButterfly {
         IronButterfly::new(
             "TEST".to_string(),
-            Positive::HUNDRED, // underlying_price
-            Positive::HUNDRED, // short strike (both call and put)
+            Positive::HUNDRED,    // underlying_price
+            Positive::HUNDRED,    // short strike (both call and put)
             pos_or_panic!(110.0), // long call strike
             pos_or_panic!(90.0),  // long put strike
             ExpirationDate::Days(pos_or_panic!(30.0)),
             pos_or_panic!(0.2), // implied_volatility
             dec!(0.05),         // risk_free_rate
             Positive::ZERO,     // dividend_yield
-            Positive::ONE, // quantity
+            Positive::ONE,      // quantity
             Positive::TWO,      // premium_short_call
             Positive::TWO,      // premium_short_put
             Positive::ONE,      // premium_long_call
@@ -1957,15 +1956,15 @@ mod tests_iron_butterfly_profit {
     fn create_test_butterfly() -> IronButterfly {
         IronButterfly::new(
             "TEST".to_string(),
-            Positive::HUNDRED, // underlying_price
-            Positive::HUNDRED, // short strike (both call and put)
+            Positive::HUNDRED,    // underlying_price
+            Positive::HUNDRED,    // short strike (both call and put)
             pos_or_panic!(110.0), // long call strike
             pos_or_panic!(90.0),  // long put strike
             ExpirationDate::Days(pos_or_panic!(30.0)),
             pos_or_panic!(0.2), // implied_volatility
             dec!(0.05),         // risk_free_rate
             Positive::ZERO,     // dividend_yield
-            Positive::ONE, // quantity
+            Positive::ONE,      // quantity
             Positive::TWO,      // premium_short_call
             Positive::TWO,      // premium_short_put
             Positive::ONE,      // premium_long_call
@@ -2177,11 +2176,11 @@ mod tests_iron_butterfly_profit {
 mod tests_iron_butterfly_delta {
     use super::*;
 
+    use crate::assert_decimal_eq;
     use crate::model::types::OptionStyle;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use crate::strategies::iron_butterfly::IronButterfly;
-    use crate::{assert_decimal_eq, assert_pos_relative_eq};
     use rust_decimal_macros::dec;
 
     fn get_strategy(underlying_price: Positive) -> IronButterfly {
@@ -2195,7 +2194,7 @@ mod tests_iron_butterfly_delta {
             pos_or_panic!(0.1548), // implied_volatility
             dec!(0.05),            // risk_free_rate
             Positive::ZERO,        // dividend_yield
-            Positive::ONE,    // quantity
+            Positive::ONE,         // quantity
             pos_or_panic!(38.8),   // premium_short_call
             pos_or_panic!(30.4),   // premium_short_put
             pos_or_panic!(23.3),   // premium_long_call
@@ -2337,11 +2336,11 @@ mod tests_iron_butterfly_delta {
 mod tests_iron_butterfly_delta_size {
     use super::*;
 
+    use crate::assert_decimal_eq;
     use crate::model::types::OptionStyle;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use crate::strategies::iron_butterfly::IronButterfly;
-    use crate::{assert_decimal_eq, assert_pos_relative_eq};
     use rust_decimal_macros::dec;
 
     fn get_strategy(underlying_price: Positive) -> IronButterfly {
@@ -2355,7 +2354,7 @@ mod tests_iron_butterfly_delta_size {
             pos_or_panic!(0.1548), // implied_volatility
             dec!(0.05),            // risk_free_rate
             Positive::ZERO,        // dividend_yield
-            Positive::TWO,    // quantity
+            Positive::TWO,         // quantity
             pos_or_panic!(38.8),   // premium_short_call
             pos_or_panic!(30.4),   // premium_short_put
             pos_or_panic!(23.3),   // premium_long_call
@@ -2498,7 +2497,6 @@ mod tests_iron_butterfly_delta_size {
 mod tests_iron_butterfly_probability {
     use super::*;
 
-    use crate::assert_pos_relative_eq;
     use crate::strategies::probabilities::utils::PriceTrend;
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
@@ -2515,7 +2513,7 @@ mod tests_iron_butterfly_probability {
             pos_or_panic!(0.1548), // implied_volatility
             dec!(0.05),            // risk_free_rate
             Positive::ZERO,        // dividend_yield
-            Positive::ONE,    // quantity
+            Positive::ONE,         // quantity
             pos_or_panic!(38.8),   // premium_short_call
             pos_or_panic!(30.4),   // premium_short_put
             pos_or_panic!(23.3),   // premium_long_call
@@ -2719,7 +2717,7 @@ mod tests_iron_butterfly_position_management {
             pos_or_panic!(0.1548), // implied_volatility
             dec!(0.05),            // risk_free_rate
             Positive::ZERO,        // dividend_yield
-            Positive::TWO,    // quantity
+            Positive::TWO,         // quantity
             pos_or_panic!(38.8),   // premium_short_call
             pos_or_panic!(30.4),   // premium_short_put
             pos_or_panic!(23.3),   // premium_long_call
@@ -2826,10 +2824,7 @@ mod tests_iron_butterfly_position_management {
         modified_call.option.quantity = Positive::TWO;
         let result = iron_butterfly.modify_position(&modified_call);
         assert!(result.is_ok());
-        assert_eq!(
-            iron_butterfly.short_call.option.quantity,
-            Positive::TWO
-        );
+        assert_eq!(iron_butterfly.short_call.option.quantity, Positive::TWO);
 
         // Modify short put position
         let mut modified_put = iron_butterfly.short_put.clone();
@@ -2915,7 +2910,7 @@ mod tests_adjust_option_position {
             pos_or_panic!(0.1548), // implied_volatility
             dec!(0.05),            // risk_free_rate
             Positive::ZERO,        // dividend_yield
-            Positive::TWO,    // quantity
+            Positive::TWO,         // quantity
             pos_or_panic!(38.8),   // premium_short_call
             pos_or_panic!(30.4),   // premium_short_put
             pos_or_panic!(23.3),   // premium_long_call
@@ -3064,10 +3059,7 @@ mod tests_strategy_constructor {
         let strategy = result.unwrap();
         assert_eq!(strategy.long_put.option.strike_price, pos_or_panic!(95.0));
         assert_eq!(strategy.short_put.option.strike_price, Positive::HUNDRED);
-        assert_eq!(
-            strategy.short_call.option.strike_price,
-            Positive::HUNDRED
-        );
+        assert_eq!(strategy.short_call.option.strike_price, Positive::HUNDRED);
         assert_eq!(strategy.long_call.option.strike_price, pos_or_panic!(105.0));
     }
 

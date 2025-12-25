@@ -38,7 +38,7 @@
 //! - Term structure analysis
 //! - Calendar spread opportunities identification
 
-use crate::Positive;
+
 use crate::curves::Curve;
 use crate::error::CurveError;
 use crate::error::SurfaceError;
@@ -162,7 +162,7 @@ mod tests_implied_volatility_traits {
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
     use std::collections::BTreeSet;
-    use positive::pos_or_panic;
+use positive::pos_or_panic;
 
     struct TestIVCurve;
 

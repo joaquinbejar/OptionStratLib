@@ -1843,7 +1843,7 @@ pub mod tests_delta_equations {
     use crate::{ExpirationDate, assert_decimal_eq};
     use approx::assert_relative_eq;
     use num_traits::ToPrimitive;
-    use positive::pos_or_panic;
+use positive::pos_or_panic;
     use rust_decimal_macros::dec;
     use tracing::info;
 
@@ -2071,7 +2071,6 @@ pub mod tests_gamma_equations {
     use crate::ExpirationDate;
     use approx::assert_relative_eq;
     use num_traits::ToPrimitive;
-    use positive::pos_or_panic;
     use tracing::info;
 
     #[test]
@@ -2190,7 +2189,6 @@ mod tests_gamma_equations_values {
     use crate::{ExpirationDate, OptionType};
     use approx::assert_relative_eq;
     use num_traits::ToPrimitive;
-    use positive::pos_or_panic;
     use tracing::info;
 
     #[test]
@@ -2264,7 +2262,6 @@ pub mod tests_vega_equation {
     use crate::model::types::{OptionType, Side};
     use crate::{ExpirationDate, Positive};
     use num_traits::ToPrimitive;
-    use positive::pos_or_panic;
     use rust_decimal_macros::dec;
 
     fn create_test_option(
@@ -2384,7 +2381,6 @@ pub mod tests_rho_equations {
     use crate::{ExpirationDate, assert_decimal_eq};
     use approx::assert_relative_eq;
     use num_traits::ToPrimitive;
-    use positive::pos_or_panic;
     use rust_decimal_macros::dec;
 
     fn create_test_option(style: OptionStyle) -> Options {
@@ -2469,7 +2465,6 @@ pub mod tests_theta_long_equations {
     use crate::model::utils::create_sample_option;
     use approx::assert_relative_eq;
     use num_traits::ToPrimitive;
-    use positive::pos_or_panic;
 
     #[test]
     fn test_theta_call_option() {
@@ -2571,7 +2566,6 @@ pub mod tests_theta_short_equations {
     use crate::model::utils::create_sample_option;
     use approx::assert_relative_eq;
     use num_traits::ToPrimitive;
-    use positive::pos_or_panic;
 
     #[test]
     fn test_theta_short_call_option() {
@@ -2666,7 +2660,6 @@ pub mod tests_theta_short_equations {
 
 #[cfg(test)]
 mod tests_greeks_trait {
-    use positive::pos_or_panic;
     use super::*;
     use crate::model::types::{OptionStyle, OptionType, Side};
     use crate::{ExpirationDate, assert_decimal_eq};
@@ -2951,7 +2944,6 @@ pub mod tests_vanna_equation {
     use crate::model::types::{OptionType, Side};
     use crate::{ExpirationDate, Positive};
     use num_traits::ToPrimitive;
-    use positive::pos_or_panic;
     use rust_decimal_macros::dec;
 
     fn create_test_option(
@@ -3070,7 +3062,6 @@ pub mod tests_vomma_equation {
     use crate::model::types::{OptionType, Side};
     use crate::{ExpirationDate, Positive};
     use num_traits::ToPrimitive;
-    use positive::pos_or_panic;
     use rust_decimal_macros::dec;
 
     fn create_test_option(
@@ -3189,7 +3180,6 @@ pub mod tests_veta_equation {
     use crate::model::types::{OptionType, Side};
     use crate::{ExpirationDate, Positive};
     use num_traits::ToPrimitive;
-    use positive::pos_or_panic;
     use rust_decimal_macros::dec;
 
     fn create_test_option(
@@ -3309,7 +3299,6 @@ pub mod tests_charm_equations {
 
     use approx::assert_relative_eq;
     use num_traits::ToPrimitive;
-    use positive::pos_or_panic;
     use tracing::info;
 
     #[test]
@@ -3417,7 +3406,6 @@ pub mod tests_charm_equations {
 /// - Extreme changes in underlying price (deep ITM/OTM)
 #[cfg(test)]
 pub mod tests_volatility_greeks_edge_cases {
-    use positive::pos_or_panic;
     use super::*;
     use crate::model::types::{OptionStyle, Side};
     use crate::model::utils::create_sample_option_with_days;
@@ -4116,7 +4104,6 @@ pub mod tests_color_equations {
 
     use approx::assert_relative_eq;
     use num_traits::ToPrimitive;
-    use positive::pos_or_panic;
     use tracing::info;
 
     #[test]

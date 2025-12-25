@@ -1,9 +1,10 @@
+use positive::{assert_pos_relative_eq, pos_or_panic, spos, Positive};
 /******************************************************************************
    Author: Joaquín Béjar García
    Email: jb@taunais.com
    Date: 26/9/24
 ******************************************************************************/
-use crate::Positive;
+
 use crate::chains::utils::{
     OptionChainBuildParams, OptionChainParams, OptionDataPriceParams, RandomPositionsParams,
     adjust_volatility, default_empty_string, rounder, strike_step,
@@ -32,7 +33,6 @@ use crate::utils::others::get_random_element;
 use crate::volatility::VolatilitySmile;
 use chrono::{NaiveDate, Utc};
 use num_traits::{FromPrimitive, ToPrimitive};
-use positive::pos_or_panic;
 use pretty_simple_display::DebugSimple;
 use prettytable::{Attr, Cell, Row, Table, color, format};
 use rust_decimal::{Decimal, MathematicalOps};
@@ -4715,7 +4715,6 @@ mod tests_chain_base {
 
     use rust_decimal_macros::dec;
 
-    use positive::spos;
     use std::fs;
     use tracing::info;
 
@@ -5060,7 +5059,6 @@ mod tests_chain_base {
 mod tests_option_data {
     use super::*;
     use num_traits::ToPrimitive;
-    use positive::{assert_pos_relative_eq, spos};
     use rust_decimal_macros::dec;
     use tracing::info;
 
@@ -5269,7 +5267,6 @@ mod tests_option_data {
 #[cfg(test)]
 mod tests_get_random_positions {
     use super::*;
-    use positive::spos;
 
     use crate::error::chains::ChainBuildErrorKind;
     use crate::model::ExpirationDate;
@@ -5584,7 +5581,6 @@ mod tests_get_random_positions {
 #[cfg(test)]
 mod tests_option_data_get_prices {
     use super::*;
-    use positive::spos;
 
     use rust_decimal_macros::dec;
 
@@ -5667,7 +5663,6 @@ mod tests_option_data_get_prices {
 #[cfg(test)]
 mod tests_option_data_display {
     use super::*;
-    use positive::spos;
 
     use rust_decimal_macros::dec;
 
@@ -5904,7 +5899,6 @@ mod tests_option_data_get_option {
     use super::*;
 
     use num_traits::ToPrimitive;
-    use positive::spos;
     use rust_decimal_macros::dec;
 
     fn create_test_option_data() -> OptionData {
@@ -5964,7 +5958,6 @@ mod tests_option_data_get_options_in_strike {
     use crate::assert_decimal_eq;
     use crate::greeks::Greeks;
     use num_traits::ToPrimitive;
-    use positive::spos;
     use rust_decimal_macros::dec;
 
     fn create_test_option_data() -> OptionData {
@@ -6093,7 +6086,6 @@ mod tests_option_data_get_options_in_strike {
 #[cfg(test)]
 mod tests_filter_options_in_strike {
     use super::*;
-    use positive::spos;
 
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
@@ -6244,7 +6236,6 @@ mod tests_filter_options_in_strike {
 #[cfg(test)]
 mod tests_chain_iterators {
     use super::*;
-    use positive::spos;
 
     use rust_decimal_macros::dec;
 
@@ -6440,7 +6431,6 @@ mod tests_chain_iterators {
 #[cfg(test)]
 mod tests_chain_iterators_bis {
     use super::*;
-    use positive::spos;
 
     use rust_decimal_macros::dec;
 
@@ -7095,7 +7085,6 @@ mod tests_is_valid_optimal_side {
 #[cfg(test)]
 mod rnd_analysis_tests {
     use super::*;
-    use positive::spos;
 
     use rust_decimal_macros::dec;
 
@@ -7236,7 +7225,6 @@ mod rnd_analysis_tests {
 
     mod calculate_skew_tests {
         use super::*;
-        use positive::spos;
 
         #[test]
         fn test_basic_skew_calculation() {
@@ -7415,7 +7403,6 @@ mod rnd_analysis_tests {
 
     mod calculate_skew_tests_bis {
         use super::*;
-        use positive::spos;
 
         #[test]
         fn test_skew_with_smile() {
@@ -7525,7 +7512,6 @@ mod rnd_analysis_tests {
 #[cfg(test)]
 mod tests_option_data_delta {
     use super::*;
-    use positive::spos;
 
     use crate::model::ExpirationDate;
 
@@ -7645,7 +7631,6 @@ mod tests_option_data_delta {
 #[cfg(test)]
 mod tests_basic_curves {
     use super::*;
-    use positive::spos;
 
     use crate::model::types::{OptionStyle, Side};
     use crate::utils::time::get_tomorrow_formatted;
@@ -7839,7 +7824,6 @@ mod tests_basic_curves {
 #[cfg(test)]
 mod tests_option_chain_surfaces {
     use super::*;
-    use positive::spos;
 
     use crate::utils::time::get_tomorrow_formatted;
 
@@ -8096,7 +8080,6 @@ mod tests_option_chain_surfaces {
 #[cfg(test)]
 mod tests_option_chain_time_surfaces {
     use super::*;
-    use positive::spos;
 
     use crate::utils::time::get_tomorrow_formatted;
 
@@ -8372,7 +8355,6 @@ mod tests_option_chain_time_surfaces {
 #[cfg(test)]
 mod tests_serialization {
     use super::*;
-    use positive::spos;
 
     use rust_decimal_macros::dec;
 
@@ -8478,7 +8460,6 @@ mod tests_serialization {
 #[cfg(test)]
 mod tests_option_data_serde {
     use super::*;
-    use positive::spos;
 
     use rust_decimal_macros::dec;
     use serde_json;
@@ -8643,7 +8624,6 @@ mod tests_option_data_serde {
 #[cfg(test)]
 mod tests_option_chain_serde {
     use super::*;
-    use positive::spos;
 
     use rust_decimal_macros::dec;
 
@@ -8842,7 +8822,6 @@ mod tests_option_chain_serde {
 #[cfg(test)]
 mod tests_gamma_calculations {
     use super::*;
-    use positive::spos;
 
     use crate::assert_decimal_eq;
     use crate::utils::time::get_tomorrow_formatted;
@@ -9723,7 +9702,6 @@ mod tests_color_calculations {
 #[cfg(test)]
 mod tests_atm_strike {
     use super::*;
-    use positive::spos;
 
     use crate::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
     use crate::model::ExpirationDate;
@@ -9930,7 +9908,6 @@ mod tests_atm_strike {
 #[cfg(test)]
 mod tests_atm_strike_bis {
     use super::*;
-    use positive::spos;
 
     use crate::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
     use crate::model::ExpirationDate;
@@ -10121,7 +10098,6 @@ mod tests_atm_strike_bis {
 #[cfg(test)]
 mod tests_option_chain_utils {
     use super::*;
-    use positive::spos;
 
     use rust_decimal_macros::dec;
 
@@ -10275,7 +10251,6 @@ mod tests_option_chain_utils {
 #[cfg(test)]
 mod tests_option_chain_utils_bis {
     use super::*;
-    use positive::spos;
 
     use crate::chains::utils::OptionChainBuildParams;
     use crate::chains::utils::OptionDataPriceParams;
@@ -10471,7 +10446,6 @@ mod tests_option_chain_utils_bis {
 #[cfg(test)]
 mod tests_to_build_params_bis {
     use super::*;
-    use positive::spos;
 
     use crate::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
     use crate::model::ExpirationDate;
@@ -10525,7 +10499,6 @@ mod tests_to_build_params_bis {
 #[cfg(test)]
 mod chain_coverage_tests {
     use super::*;
-    use positive::spos;
 
     use rust_decimal_macros::dec;
 
@@ -10797,7 +10770,6 @@ mod chain_coverage_tests {
 #[cfg(test)]
 mod chain_coverage_tests_bis {
     use super::*;
-    use positive::spos;
 
     use rust_decimal_macros::dec;
 
@@ -11091,7 +11063,6 @@ mod chain_coverage_tests_bis {
 #[cfg(test)]
 mod tests_get_position_with_delta {
     use super::*;
-    use positive::spos;
 
     use crate::error::chains::OptionDataErrorKind;
 
@@ -11492,7 +11463,6 @@ mod tests_get_position_with_delta {
 #[cfg(test)]
 mod tests_get_strikes_and_optiondata {
     use super::*;
-    use positive::spos;
 
     use rust_decimal_macros::dec;
 
@@ -11794,7 +11764,7 @@ mod tests_get_strikes_and_optiondata {
 
 #[cfg(test)]
 mod tests_option_chain_comparison {
-    use crate::Positive;
+    
     use crate::chains::chain::OptionChain;
     use rust_decimal_macros::dec;
     use std::cmp::Ordering;
@@ -12503,7 +12473,6 @@ mod tests_title_operations {
 #[cfg(test)]
 mod tests_expiration_operations {
     use super::*;
-    use positive::spos;
 
     use rust_decimal_macros::dec;
 
@@ -12598,7 +12567,6 @@ mod tests_expiration_operations {
 #[cfg(test)]
 mod tests_from_vec_option_data {
     use super::*;
-    use positive::spos;
 
     use rust_decimal_macros::dec;
 
@@ -12828,7 +12796,6 @@ mod tests_default_trait {
 #[cfg(test)]
 mod tests_option_chain_params_trait {
     use super::*;
-    use positive::spos;
 
     use rust_decimal_macros::dec;
 

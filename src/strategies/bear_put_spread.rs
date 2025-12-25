@@ -1,3 +1,4 @@
+use positive::{Positive, assert_pos_relative_eq, pos_or_panic, spos};
 /*
 Bear Put Spread Strategy
 
@@ -13,12 +14,11 @@ Key characteristics:
 - Maximum profit achieved when price falls below lower strike
 - Also known as a vertical put debit spread
 */
-use positive::pos_or_panic;
 use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, StrategyBasics, StrategyType, Validable,
 };
 use crate::{
-    ExpirationDate, Options, Positive,
+    ExpirationDate, Options,
     chains::{StrategyLegs, chain::OptionChain, utils::OptionDataGroup},
     error::{
         GreeksError, OperationErrorKind, PricingError,
@@ -857,16 +857,16 @@ mod tests_bear_put_spread_strategy {
     fn create_test_spread() -> BearPutSpread {
         BearPutSpread::new(
             "TEST".to_string(),
-            Positive::HUNDRED,                      // underlying_price
+            Positive::HUNDRED,                         // underlying_price
             pos_or_panic!(105.0),                      // long_strike
             pos_or_panic!(95.0),                       // short_strike
             ExpirationDate::Days(pos_or_panic!(30.0)), // expiration
             pos_or_panic!(0.2),                        // implied_volatility
             dec!(0.05),                                // risk_free_rate
             Positive::ZERO,                            // dividend_yield
-            Positive::ONE,                        // quantity
+            Positive::ONE,                             // quantity
             pos_or_panic!(4.0),                        // premium_long_put
-            Positive::TWO,                        // premium_short_put
+            Positive::TWO,                             // premium_short_put
             Positive::ZERO,                            // open_fee_long_put
             Positive::ZERO,                            // close_fee_long_put
             Positive::ZERO,                            // open_fee_short_put
@@ -1613,7 +1613,7 @@ mod tests_bear_put_spread_optimizable {
     fn create_test_bear_put_spread() -> BearPutSpread {
         BearPutSpread::new(
             "TEST".to_string(),
-            Positive::HUNDRED, // underlying_price
+            Positive::HUNDRED,    // underlying_price
             pos_or_panic!(105.0), // long strike (higher)
             pos_or_panic!(95.0),  // short strike (lower)
             ExpirationDate::Days(pos_or_panic!(30.0)),
@@ -1621,7 +1621,7 @@ mod tests_bear_put_spread_optimizable {
             dec!(0.05),
             Positive::ZERO,
             Positive::ONE,
-            Positive::TWO, // premium short put
+            Positive::TWO,      // premium short put
             pos_or_panic!(8.8), // premium long put
             Positive::ZERO,
             Positive::ZERO,
@@ -1814,16 +1814,16 @@ mod tests_bear_put_spread_profit {
     fn create_test_spread() -> BearPutSpread {
         BearPutSpread::new(
             "TEST".to_string(),
-            Positive::HUNDRED,                      // underlying_price
+            Positive::HUNDRED,                         // underlying_price
             pos_or_panic!(105.0),                      // long_strike
             pos_or_panic!(95.0),                       // short_strike
             ExpirationDate::Days(pos_or_panic!(30.0)), // expiration
             pos_or_panic!(0.2),                        // implied_volatility
             dec!(0.05),                                // risk_free_rate
             Positive::ZERO,                            // dividend_yield
-            Positive::ONE,                        // quantity
+            Positive::ONE,                             // quantity
             pos_or_panic!(4.0),                        // premium_long_put
-            Positive::TWO,                        // premium_short_put
+            Positive::TWO,                             // premium_short_put
             Positive::ZERO,                            // open_fee_long_put
             Positive::ZERO,                            // close_fee_long_put
             Positive::ZERO,                            // open_fee_short_put
@@ -2021,16 +2021,16 @@ mod tests_bear_put_spread_probability {
     fn create_test_spread() -> BearPutSpread {
         BearPutSpread::new(
             "TEST".to_string(),
-            Positive::HUNDRED,                      // underlying_price
+            Positive::HUNDRED,                         // underlying_price
             pos_or_panic!(105.0),                      // long_strike
             pos_or_panic!(95.0),                       // short_strike
             ExpirationDate::Days(pos_or_panic!(30.0)), // expiration
             pos_or_panic!(0.2),                        // implied_volatility
             dec!(0.05),                                // risk_free_rate
             Positive::ZERO,                            // dividend_yield
-            Positive::ONE,                        // quantity
+            Positive::ONE,                             // quantity
             pos_or_panic!(4.0),                        // premium_long_put
-            Positive::TWO,                        // premium_short_put
+            Positive::TWO,                             // premium_short_put
             Positive::ZERO,                            // open_fee_long_put
             Positive::ZERO,                            // close_fee_long_put
             Positive::ZERO,                            // open_fee_short_put
@@ -2167,16 +2167,16 @@ mod tests_bear_put_spread_graph {
     fn create_test_spread() -> BearPutSpread {
         BearPutSpread::new(
             "TEST".to_string(),
-            Positive::HUNDRED,                      // underlying_price
+            Positive::HUNDRED,                         // underlying_price
             pos_or_panic!(105.0),                      // long_strike
             pos_or_panic!(95.0),                       // short_strike
             ExpirationDate::Days(pos_or_panic!(30.0)), // expiration
             pos_or_panic!(0.2),                        // implied_volatility
             dec!(0.05),                                // risk_free_rate
             Positive::ZERO,                            // dividend_yield
-            Positive::ONE,                        // quantity
+            Positive::ONE,                             // quantity
             pos_or_panic!(4.0),                        // premium_long_put
-            Positive::TWO,                        // premium_short_put
+            Positive::TWO,                             // premium_short_put
             Positive::ZERO,                            // fees
             Positive::ZERO,
             Positive::ZERO,
@@ -2198,11 +2198,11 @@ mod tests_bear_put_spread_graph {
 mod tests_delta {
     use super::*;
 
+    use crate::assert_decimal_eq;
     use crate::model::types::OptionStyle;
     use crate::strategies::bear_put_spread::BearPutSpread;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
-    use crate::{assert_decimal_eq, assert_pos_relative_eq};
     use rust_decimal_macros::dec;
 
     fn get_strategy(long_strike: Positive, short_strike: Positive) -> BearPutSpread {
@@ -2216,7 +2216,7 @@ mod tests_delta {
             pos_or_panic!(0.18),  // implied_volatility
             dec!(0.05),           // risk_free_rate
             Positive::ZERO,       // dividend_yield
-            Positive::ONE,   // long quantity
+            Positive::ONE,        // long quantity
             pos_or_panic!(85.04), // premium_long
             pos_or_panic!(29.85), // premium_short
             pos_or_panic!(0.78),  // open_fee_long
@@ -2325,12 +2325,13 @@ mod tests_delta {
 #[cfg(test)]
 mod tests_delta_size {
     use super::*;
+    use positive::Positive;
 
+    use crate::assert_decimal_eq;
     use crate::model::types::OptionStyle;
     use crate::strategies::bear_put_spread::BearPutSpread;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
-    use crate::{assert_decimal_eq, assert_pos_relative_eq};
     use rust_decimal_macros::dec;
 
     fn get_strategy(long_strike: Positive, short_strike: Positive) -> BearPutSpread {
@@ -2344,7 +2345,7 @@ mod tests_delta_size {
             pos_or_panic!(0.18),  // implied_volatility
             dec!(0.05),           // risk_free_rate
             Positive::ZERO,       // dividend_yield
-            Positive::TWO,   // long quantity
+            Positive::TWO,        // long quantity
             pos_or_panic!(85.04), // premium_long
             pos_or_panic!(29.85), // premium_short
             pos_or_panic!(0.78),  // open_fee_long
@@ -2536,10 +2537,7 @@ mod tests_bear_call_spread_position_management {
         modified_put.option.quantity = Positive::TWO;
         let result = bear_put_spread.modify_position(&modified_put);
         assert!(result.is_ok());
-        assert_eq!(
-            bear_put_spread.short_put.option.quantity,
-            Positive::TWO
-        );
+        assert_eq!(bear_put_spread.short_put.option.quantity, Positive::TWO);
 
         // Modify short put position
         let mut modified_put = bear_put_spread.long_put.clone();
@@ -2848,20 +2846,20 @@ mod tests_bear_put_spread_pnl {
         let short_put = create_sample_position(
             OptionStyle::Put,
             Side::Short,
-            Positive::HUNDRED, // Underlying price
-            Positive::ONE,   // Quantity
-            Positive::HUNDRED, // Strike price (ATM)
-            pos_or_panic!(0.2),   // Implied volatility
+            Positive::HUNDRED,  // Underlying price
+            Positive::ONE,      // Quantity
+            Positive::HUNDRED,  // Strike price (ATM)
+            pos_or_panic!(0.2), // Implied volatility
         );
 
         // Create long put with lower strike
         let long_put = create_sample_position(
             OptionStyle::Put,
             Side::Long,
-            Positive::HUNDRED, // Same underlying price
-            Positive::ONE,   // Quantity
-            pos_or_panic!(95.0),  // Lower strike price
-            pos_or_panic!(0.2),   // Implied volatility
+            Positive::HUNDRED,   // Same underlying price
+            Positive::ONE,       // Quantity
+            pos_or_panic!(95.0), // Lower strike price
+            pos_or_panic!(0.2),  // Implied volatility
         );
 
         BearPutSpread::get_strategy(&[short_put, long_put])

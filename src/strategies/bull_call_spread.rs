@@ -1,3 +1,4 @@
+use positive::{assert_pos_relative_eq, pos_or_panic, spos, Positive};
 /*
 Bull Call Spread Strategy
 
@@ -14,12 +15,11 @@ Key characteristics:
 - Maximum profit achieved when price rises above higher strike
 - Also known as a vertical call debit spread
 */
-use positive::pos_or_panic;
 use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, StrategyBasics, StrategyType, Validable,
 };
 use crate::{
-    ExpirationDate, Options, Positive,
+    ExpirationDate, Options,
     chains::{StrategyLegs, chain::OptionChain, utils::OptionDataGroup},
     error::{
         GreeksError, OperationErrorKind, PricingError,
@@ -1876,8 +1876,7 @@ mod tests_bull_call_spread_graph {
 mod tests_bull_call_spread_probability {
     use super::*;
 
-    use crate::assert_pos_relative_eq;
-    use crate::strategies::probabilities::utils::PriceTrend;
+        use crate::strategies::probabilities::utils::PriceTrend;
     use rust_decimal_macros::dec;
 
     #[test]
@@ -2079,7 +2078,7 @@ mod tests_delta {
     use crate::strategies::bull_call_spread::BullCallSpread;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
-    use crate::{ExpirationDate, Positive, Side, assert_decimal_eq, assert_pos_relative_eq};
+    use crate::{ExpirationDate, Positive, Side, assert_decimal_eq};
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
 
@@ -2207,7 +2206,7 @@ mod tests_delta_size {
     use crate::strategies::bull_call_spread::BullCallSpread;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
-    use crate::{ExpirationDate, Positive, Side, assert_decimal_eq, assert_pos_relative_eq};
+    use crate::{ExpirationDate, Positive, Side, assert_decimal_eq};
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
 
@@ -2718,7 +2717,7 @@ mod tests_bull_call_spread_pnl {
     use super::*;
 
     use crate::model::utils::create_sample_position;
-    use crate::{assert_decimal_eq, assert_pos_relative_eq};
+    use crate::{assert_decimal_eq};
     use rust_decimal_macros::dec;
 
     /// Helper function to create a standard Bull Call Spread for testing

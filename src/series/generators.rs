@@ -1,4 +1,3 @@
-use crate::Positive;
 use crate::error::ChainError;
 use crate::series::OptionSeries;
 use crate::simulation::steps::{Step, Ystep};
@@ -7,7 +6,7 @@ use crate::utils::TimeFrame;
 use crate::utils::others::calculate_log_returns;
 use crate::volatility::{adjust_volatility, constant_volatility};
 use core::option::Option;
-use positive::pos_or_panic;
+use positive::{Positive, pos_or_panic, spos};
 use rust_decimal::Decimal;
 use tracing::debug;
 
@@ -147,7 +146,7 @@ pub fn generator_optionseries(
                 let log_returns: Vec<Decimal> = calculate_log_returns(prices)
                     .unwrap()
                     .iter()
-                    .map(|p| p.to_dec())
+                    .map(|p: &Positive| p.to_dec())
                     .collect();
                 let constant_volatility = constant_volatility(&log_returns).unwrap();
                 let implied_volatility =
@@ -197,7 +196,7 @@ pub fn generator_optionseries(
 
 #[cfg(test)]
 mod tests_generator_optionseries {
-    use positive::spos;
+    use positive::assert_pos_relative_eq;
     use super::*;
 
     use crate::ExpirationDate;

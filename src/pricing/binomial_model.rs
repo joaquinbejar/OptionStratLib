@@ -1,9 +1,9 @@
-use positive::pos_or_panic;
 use crate::error::PricingError;
 use crate::model::types::{OptionStyle, OptionType, Side};
 use crate::pricing::payoff::{Payoff, PayoffInfo};
 use crate::pricing::utils::*;
-use crate::{Positive, d2f, f2d};
+use crate::{d2f, f2d};
+use positive::{Positive, pos_or_panic};
 use rust_decimal::{Decimal, MathematicalOps};
 
 type BinomialTreeResult = Result<(Vec<Vec<Decimal>>, Vec<Vec<Decimal>>), PricingError>;

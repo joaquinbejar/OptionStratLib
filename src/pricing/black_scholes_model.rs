@@ -1,3 +1,4 @@
+use positive::{assert_pos_relative_eq, pos_or_panic};
 /******************************************************************************
    Author: Joaquín Béjar García
    Email: jb@taunais.com
@@ -273,12 +274,12 @@ pub trait BlackScholes {
 
 #[cfg(test)]
 mod tests_black_scholes {
-    use positive::{assert_pos_relative_eq, pos_or_panic};
     use super::*;
     use crate::constants::DAYS_IN_A_YEAR;
     use crate::greeks::{d1, d2};
     use crate::model::types::{OptionStyle, OptionType, Side};
     use crate::{ExpirationDate, Options, Positive, assert_decimal_eq};
+    use positive::Positive;
     use rust_decimal_macros::dec;
 
     fn mock_options_call() -> Options {
@@ -530,11 +531,11 @@ mod tests_black_scholes {
 
 #[cfg(test)]
 mod tests_black_scholes_trait {
-    use positive::pos_or_panic;
     use super::*;
+    use crate::assert_decimal_eq;
     use crate::model::types::{OptionStyle, Side};
     use crate::model::utils::create_sample_option;
-    use crate::{Positive, assert_decimal_eq};
+    use positive::Positive;
     use rust_decimal_macros::dec;
 
     // Mock struct to implement BlackScholes trait
@@ -559,10 +560,10 @@ mod tests_black_scholes_trait {
         let option = create_sample_option(
             OptionStyle::Call,
             Side::Long,
-            Positive::HUNDRED, // underlying price
-            Positive::ONE,   // quantity
-            Positive::HUNDRED, // strike price
-            pos_or_panic!(0.2),   // volatility
+            Positive::HUNDRED,  // underlying price
+            Positive::ONE,      // quantity
+            Positive::HUNDRED,  // strike price
+            pos_or_panic!(0.2), // volatility
         );
         let mock = MockOption::new(option);
         let price = mock.calculate_price_black_scholes().unwrap();
@@ -574,10 +575,10 @@ mod tests_black_scholes_trait {
         let option = create_sample_option(
             OptionStyle::Call,
             Side::Long,
-            Positive::HUNDRED, // underlying price
-            Positive::ONE,   // quantity
-            pos_or_panic!(90.0),  // strike price
-            pos_or_panic!(0.2),   // volatility
+            Positive::HUNDRED,   // underlying price
+            Positive::ONE,       // quantity
+            pos_or_panic!(90.0), // strike price
+            pos_or_panic!(0.2),  // volatility
         );
         let mock = MockOption::new(option);
         let price = mock.calculate_price_black_scholes().unwrap();
@@ -589,8 +590,8 @@ mod tests_black_scholes_trait {
         let option = create_sample_option(
             OptionStyle::Call,
             Side::Long,
-            Positive::HUNDRED, // underlying price
-            Positive::ONE,   // quantity
+            Positive::HUNDRED,    // underlying price
+            Positive::ONE,        // quantity
             pos_or_panic!(110.0), // strike price
             pos_or_panic!(0.2),   // volatility
         );
@@ -604,10 +605,10 @@ mod tests_black_scholes_trait {
         let option = create_sample_option(
             OptionStyle::Put,
             Side::Long,
-            Positive::HUNDRED, // underlying price
-            Positive::ONE,   // quantity
-            Positive::HUNDRED, // strike price
-            pos_or_panic!(0.2),   // volatility
+            Positive::HUNDRED,  // underlying price
+            Positive::ONE,      // quantity
+            Positive::HUNDRED,  // strike price
+            pos_or_panic!(0.2), // volatility
         );
         let mock = MockOption::new(option);
         let price = mock.calculate_price_black_scholes().unwrap();
@@ -619,10 +620,10 @@ mod tests_black_scholes_trait {
         let option = create_sample_option(
             OptionStyle::Call,
             Side::Long,
-            Positive::HUNDRED, // underlying price
-            Positive::ONE,   // quantity
-            Positive::HUNDRED, // strike price
-            pos_or_panic!(0.5),   // high volatility
+            Positive::HUNDRED,  // underlying price
+            Positive::ONE,      // quantity
+            Positive::HUNDRED,  // strike price
+            pos_or_panic!(0.5), // high volatility
         );
         let mock = MockOption::new(option);
         let price = mock.calculate_price_black_scholes().unwrap();
@@ -635,9 +636,9 @@ mod tests_black_scholes_trait {
             OptionStyle::Call,
             Side::Long,
             Positive::HUNDRED, // underlying price
-            Positive::ONE,   // quantity
+            Positive::ONE,     // quantity
             Positive::HUNDRED, // strike price
-            Positive::ZERO,       // zero volatility
+            Positive::ZERO,    // zero volatility
         );
         let mock = MockOption::new(option);
         let price = mock.calculate_price_black_scholes();
@@ -649,10 +650,10 @@ mod tests_black_scholes_trait {
         let option = create_sample_option(
             OptionStyle::Call,
             Side::Short,
-            Positive::HUNDRED, // underlying price
-            Positive::ONE,   // quantity
-            Positive::HUNDRED, // strike price
-            pos_or_panic!(0.2),   // volatility
+            Positive::HUNDRED,  // underlying price
+            Positive::ONE,      // quantity
+            Positive::HUNDRED,  // strike price
+            pos_or_panic!(0.2), // volatility
         );
         let mock = MockOption::new(option);
         let price = mock.calculate_price_black_scholes().unwrap();
@@ -664,10 +665,10 @@ mod tests_black_scholes_trait {
         let option = create_sample_option(
             OptionStyle::Put,
             Side::Short,
-            Positive::HUNDRED, // underlying price
-            Positive::ONE,   // quantity
-            Positive::HUNDRED, // strike price
-            pos_or_panic!(0.2),   // volatility
+            Positive::HUNDRED,  // underlying price
+            Positive::ONE,      // quantity
+            Positive::HUNDRED,  // strike price
+            pos_or_panic!(0.2), // volatility
         );
         let mock = MockOption::new(option);
         let price = mock.calculate_price_black_scholes().unwrap();
@@ -679,10 +680,10 @@ mod tests_black_scholes_trait {
         let option = create_sample_option(
             OptionStyle::Call,
             Side::Long,
-            Positive::HUNDRED, // underlying price
-            pos_or_panic!(10.0),  // quantity
-            Positive::HUNDRED, // strike price
-            pos_or_panic!(0.2),   // volatility
+            Positive::HUNDRED,   // underlying price
+            pos_or_panic!(10.0), // quantity
+            Positive::HUNDRED,   // strike price
+            pos_or_panic!(0.2),  // volatility
         );
         let mock = MockOption::new(option);
         let price = mock.calculate_price_black_scholes().unwrap();
@@ -693,11 +694,11 @@ mod tests_black_scholes_trait {
 #[cfg(test)]
 mod tests_black_scholes_trait_bis {
     use super::*;
+    use crate::assert_decimal_eq;
     use crate::model::types::{OptionStyle, Side};
     use crate::model::utils::create_sample_option;
-    use crate::{Positive, assert_decimal_eq};
     use num_traits::FromPrimitive;
-    use positive::pos_or_panic;
+    use positive::Positive;
     use rust_decimal_macros::dec;
 
     struct MockOption {
@@ -915,10 +916,10 @@ mod tests_black_scholes_trait_bis {
 
 #[cfg(test)]
 mod tests_black_scholes_bis {
-    use positive::pos_or_panic;
     use super::*;
     use crate::model::types::{OptionStyle, Side};
-    use crate::{ExpirationDate, Positive, assert_decimal_eq};
+    use crate::{ExpirationDate, assert_decimal_eq};
+    use positive::Positive;
     use rust_decimal_macros::dec;
 
     fn create_base_option(side: Side, style: OptionStyle) -> Options {
@@ -928,10 +929,10 @@ mod tests_black_scholes_bis {
             "TEST".to_string(),
             Positive::HUNDRED, // strike
             ExpirationDate::Days(pos_or_panic!(30.0)),
-            pos_or_panic!(0.2),   // volatility
-            Positive::ONE,   // quantity
-            Positive::HUNDRED, // underlying price
-            dec!(0.05),           // risk-free rate
+            pos_or_panic!(0.2), // volatility
+            Positive::ONE,      // quantity
+            Positive::HUNDRED,  // underlying price
+            dec!(0.05),         // risk-free rate
             style,
             Positive::ZERO, // dividend yield
             None,

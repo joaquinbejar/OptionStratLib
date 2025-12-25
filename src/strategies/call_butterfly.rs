@@ -1,11 +1,10 @@
-use positive::spos;
 use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, StrategyBasics, StrategyType, Validable,
 };
 use crate::error::strategies::BreakEvenErrorKind;
 use crate::test_strategy_traits;
 use crate::{
-    ExpirationDate, Options, Positive,
+    ExpirationDate, Options,
     chains::{StrategyLegs, chain::OptionChain, utils::OptionDataGroup},
     error::{
         GreeksError, OperationErrorKind, PricingError,
@@ -30,6 +29,7 @@ use crate::{
     },
 };
 use chrono::Utc;
+use positive::{Positive, assert_pos_relative_eq, pos_or_panic, spos};
 use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -1151,11 +1151,11 @@ mod tests_call_butterfly_validation {
 mod tests_call_butterfly_delta {
     use super::*;
 
+    use crate::assert_decimal_eq;
     use crate::model::types::OptionStyle;
     use crate::strategies::call_butterfly::CallButterfly;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
-    use crate::{assert_decimal_eq, assert_pos_relative_eq};
     use rust_decimal_macros::dec;
 
     fn get_strategy(underlying_price: Positive) -> CallButterfly {
@@ -1169,7 +1169,7 @@ mod tests_call_butterfly_delta {
             pos_or_panic!(0.18),  // implied_volatility
             dec!(0.05),           // risk_free_rate
             Positive::ZERO,       // dividend_yield
-            Positive::ONE,   // long quantity
+            Positive::ONE,        // long quantity
             pos_or_panic!(95.8),  // short_quantity
             pos_or_panic!(85.04), // premium_long_itm
             pos_or_panic!(31.65), // premium_long_otm
@@ -1297,11 +1297,11 @@ mod tests_call_butterfly_delta {
 mod tests_call_butterfly_delta_size {
     use super::*;
 
+    use crate::assert_decimal_eq;
     use crate::model::types::OptionStyle;
     use crate::strategies::call_butterfly::CallButterfly;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
-    use crate::{assert_decimal_eq, assert_pos_relative_eq};
     use rust_decimal_macros::dec;
 
     fn get_strategy(underlying_price: Positive) -> CallButterfly {
@@ -1315,7 +1315,7 @@ mod tests_call_butterfly_delta_size {
             pos_or_panic!(0.18),  // implied_volatility
             dec!(0.05),           // risk_free_rate
             Positive::ZERO,       // dividend_yield
-            Positive::ONE,   // long quantity
+            Positive::ONE,        // long quantity
             pos_or_panic!(97.8),  // short_quantity
             pos_or_panic!(85.04), // premium_long_itm
             pos_or_panic!(31.65), // premium_long_otm
@@ -1519,7 +1519,7 @@ mod tests_call_butterfly_optimizable {
             Positive::ONE,
             pos_or_panic!(6.2), // long call ask
             pos_or_panic!(3.0), // short call bid low
-            Positive::ONE, // short call bid high
+            Positive::ONE,      // short call bid high
             pos_or_panic!(0.1),
             pos_or_panic!(0.1),
             pos_or_panic!(0.1),
@@ -1635,7 +1635,6 @@ mod tests_call_butterfly_optimizable {
 mod tests_call_butterfly_probability {
     use super::*;
 
-    use crate::assert_pos_relative_eq;
     use crate::strategies::probabilities::utils::PriceTrend;
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
@@ -1963,10 +1962,7 @@ mod tests_call_butterfly_position_management {
         modified_call.option.quantity = Positive::TWO;
         let result = call_butterfly.modify_position(&modified_call);
         assert!(result.is_ok());
-        assert_eq!(
-            call_butterfly.short_call_low.option.quantity,
-            Positive::TWO
-        );
+        assert_eq!(call_butterfly.short_call_low.option.quantity, Positive::TWO);
 
         // Modify short put position
         let mut modified_put = call_butterfly.short_call_high.clone();
@@ -2339,8 +2335,8 @@ mod tests_strategy_constructor {
 mod tests_call_butterfly_pnl {
     use super::*;
 
+    use crate::assert_decimal_eq;
     use crate::model::utils::create_sample_position;
-    use crate::{assert_decimal_eq, assert_pos_relative_eq};
     use rust_decimal_macros::dec;
 
     fn setup_test_strategy() -> CallButterfly {
@@ -2372,28 +2368,28 @@ mod tests_call_butterfly_pnl {
         let short_call_low = create_sample_position(
             OptionStyle::Call,
             Side::Short,
-            Positive::HUNDRED, // Underlying price
-            Positive::ONE,   // Quantity
-            pos_or_panic!(95.0),  // Lower short strike
-            pos_or_panic!(0.2),   // Implied volatility
+            Positive::HUNDRED,   // Underlying price
+            Positive::ONE,       // Quantity
+            pos_or_panic!(95.0), // Lower short strike
+            pos_or_panic!(0.2),  // Implied volatility
         );
 
         // Create long call at middle strike
         let long_call = create_sample_position(
             OptionStyle::Call,
             Side::Long,
-            Positive::HUNDRED, // Same underlying price
-            Positive::ONE,   // Quantity
-            Positive::HUNDRED, // Middle (long) strike price
-            pos_or_panic!(0.2),   // Implied volatility
+            Positive::HUNDRED,  // Same underlying price
+            Positive::ONE,      // Quantity
+            Positive::HUNDRED,  // Middle (long) strike price
+            pos_or_panic!(0.2), // Implied volatility
         );
 
         // Create short call at higher strike
         let short_call_high = create_sample_position(
             OptionStyle::Call,
             Side::Short,
-            Positive::HUNDRED, // Same underlying price
-            Positive::ONE,   // Quantity
+            Positive::HUNDRED,    // Same underlying price
+            Positive::ONE,        // Quantity
             pos_or_panic!(105.0), // Higher short strike
             pos_or_panic!(0.2),   // Implied volatility
         );
