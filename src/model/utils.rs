@@ -3,12 +3,12 @@
    Email: jb@taunais.com
    Date: 21/8/24
 ******************************************************************************/
-use positive::{pos_or_panic, Positive};
 use crate::error::ChainError;
 use crate::model::Position;
 use crate::model::types::{OptionStyle, OptionType, Side};
 use crate::{ExpirationDate, Options};
 use chrono::{NaiveDateTime, TimeZone, Utc};
+use positive::{Positive, pos_or_panic};
 use rust_decimal::{Decimal, MathematicalOps};
 use rust_decimal_macros::dec;
 use std::ops::Mul;

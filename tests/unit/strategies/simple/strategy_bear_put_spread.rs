@@ -6,7 +6,6 @@ use optionstratlib::Positive;
 use optionstratlib::strategies::base::BreakEvenable;
 use optionstratlib::strategies::bear_put_spread::BearPutSpread;
 use optionstratlib::strategies::{BasicAble, Strategies};
-use optionstratlib::{assert_pos_relative_eq};
 use rust_decimal_macros::dec;
 use std::error::Error;
 

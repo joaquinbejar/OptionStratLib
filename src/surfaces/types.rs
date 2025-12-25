@@ -6,7 +6,7 @@
 use crate::curves::Point2D;
 use crate::error::SurfaceError;
 use crate::geometrics::HasX;
-use crate::model::positive::is_positive;
+use positive::is_positive;
 use rust_decimal::Decimal;
 use rust_decimal::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -237,7 +237,7 @@ mod tests {
     use crate::surfaces::Surface;
     use rust_decimal_macros::dec;
     use std::collections::BTreeSet;
-use positive::{pos_or_panic, Positive};
+use positive::{Positive, pos_or_panic};
 
     #[test]
     fn test_point3d_new() {

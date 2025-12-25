@@ -3,12 +3,12 @@
    Email: jb@taunais.com
    Date: 30/11/24
 ******************************************************************************/
-
 use crate::error::probability::{PriceErrorKind, ProbabilityError};
 use crate::model::ExpirationDate;
 use crate::strategies::probabilities::utils::{
     PriceTrend, VolatilityAdjustment, calculate_single_point_probability,
 };
+use positive::Positive;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
@@ -194,7 +194,7 @@ impl ProfitLossRange {
 #[cfg(test)]
 mod tests_profit_range {
     use super::*;
-use positive::{pos_or_panic, spos};
+    use positive::{Positive, pos_or_panic, spos};
 
     #[test]
     fn test_profit_range_creation() {
@@ -243,6 +243,7 @@ use positive::{pos_or_panic, spos};
 #[cfg(test)]
 mod tests_calculate_probability {
     use super::*;
+    use positive::{pos_or_panic, spos};
 
     use crate::constants::DAYS_IN_A_YEAR;
 
@@ -420,11 +421,7 @@ mod tests_calculate_probability {
     fn test_extreme_prices() {
         let mut range = create_basic_range();
 
-        let extreme_prices = vec![
-            Positive::ONE,
-            pos_or_panic!(1000.0),
-            pos_or_panic!(10000.0),
-        ];
+        let extreme_prices = vec![Positive::ONE, pos_or_panic!(1000.0), pos_or_panic!(10000.0)];
 
         for price in extreme_prices {
             let result = range.calculate_probability(

@@ -1,4 +1,3 @@
-use positive::pos_or_panic;
 /******************************************************************************
    Author: Joaquín Béjar García
    Email: jb@taunais.com
@@ -13,7 +12,8 @@ use positive::pos_or_panic;
 //! ## Output
 //! - PNG image: `./Draws/Metrics/open_interest_curve.png`
 //! - HTML interactive: `./Draws/Metrics/open_interest_curve.html`
-
+//! 
+use positive::pos_or_panic;
 use optionstratlib::chains::chain::OptionChain;
 use optionstratlib::chains::OptionData;
 use optionstratlib::error::CurveError;

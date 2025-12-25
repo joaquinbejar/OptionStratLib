@@ -374,7 +374,7 @@ impl<'de> Deserialize<'de> for OptionSeries {
 #[cfg(test)]
 mod tests_option_series {
     use super::*;
-    use positive::{pos_or_panic, spos};
+    use positive::{Positive, pos_or_panic, spos};
 
     use crate::chains::OptionChain;
     use crate::series::params::OptionSeriesBuildParams;

@@ -5,7 +5,7 @@ use optionstratlib::strategies::DELTA_THRESHOLD;
 use optionstratlib::strategies::delta_neutral::DeltaAdjustment::BuyOptions;
 use optionstratlib::strategies::delta_neutral::DeltaNeutrality;
 use optionstratlib::strategies::iron_butterfly::IronButterfly;
-use optionstratlib::{ExpirationDate, Side, assert_decimal_eq, assert_pos_relative_eq};
+use optionstratlib::{ExpirationDate, Side, assert_decimal_eq};
 use rust_decimal_macros::dec;
 use std::error::Error;
 

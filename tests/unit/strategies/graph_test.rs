@@ -8,7 +8,7 @@ use optionstratlib::{
     strategies::{BasicAble, base::Positionable, long_put::LongPut, short_call::ShortCall},
     visualization::{Graph, GraphData},
 };
-use positive::pos_or_panic;
+use positive::{Positive, pos_or_panic};
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use std::error::Error;
@@ -30,7 +30,7 @@ fn create_test_long_put() -> LongPut {
         Positive::HUNDRED, // Strike price
         ExpirationDate::Days(pos_or_panic!(30.0)),
         pos_or_panic!(0.3),  // Implied volatility
-        Positive::ONE,  // Quantity
+        Positive::ONE,       // Quantity
         pos_or_panic!(95.0), // Underlying price
         dec!(0.02),          // Risk-free rate
         OptionStyle::Put,    // Put option
@@ -75,7 +75,7 @@ fn create_test_short_call() -> ShortCall {
         Positive::HUNDRED, // Strike price
         ExpirationDate::Days(pos_or_panic!(30.0)),
         pos_or_panic!(0.3),  // Implied volatility
-        Positive::ONE,  // Quantity
+        Positive::ONE,       // Quantity
         pos_or_panic!(95.0), // Underlying price
         dec!(0.02),          // Risk-free rate
         OptionStyle::Call,   // Call option

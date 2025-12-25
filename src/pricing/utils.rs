@@ -355,8 +355,8 @@ pub fn probability_keep_under_strike(
 
 #[cfg(test)]
 mod tests_simulate_returns {
-use positive::{pos_or_panic, spos};
     use super::*;
+    use positive::pos_or_panic;
 
     use crate::assert_decimal_eq;
     use crate::model::decimal::DecimalStats;
@@ -388,8 +388,8 @@ use positive::{pos_or_panic, spos};
 
 #[cfg(test)]
 mod tests_simulate_returns_bis {
-    use positive::pos_or_panic;
     use super::*;
+    use positive::pos_or_panic;
 
     use crate::assert_decimal_eq;
     use crate::model::decimal::DecimalStats;
@@ -472,8 +472,8 @@ mod tests_simulate_returns_bis {
 
 #[cfg(test)]
 mod tests_utils {
-    use positive::pos_or_panic;
     use super::*;
+    use positive::pos_or_panic;
 
     use crate::assert_decimal_eq;
     use rust_decimal_macros::dec;
@@ -563,8 +563,8 @@ mod tests_utils {
 
 #[cfg(test)]
 mod tests_probability_keep_under_strike {
-    use positive::{pos_or_panic, spos};
     use super::*;
+    use positive::{Positive, pos_or_panic, spos};
 
     use crate::constants::DAYS_IN_A_YEAR;
     use crate::model::types::{OptionStyle, OptionType};
@@ -691,8 +691,8 @@ mod tests_probability_keep_under_strike {
 
 #[cfg(test)]
 mod tests_calculate_up_down_factor {
-    use positive::pos_or_panic;
     use super::*;
+    use positive::pos_or_panic;
 
     use crate::assert_decimal_eq;
     use crate::model::decimal::ONE_DAY;

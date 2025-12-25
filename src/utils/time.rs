@@ -1,4 +1,3 @@
-use positive::{Positive, assert_pos_relative_eq, pos_or_panic};
 /******************************************************************************
    Author: Joaquín Béjar García
    Email: jb@taunais.com
@@ -7,6 +6,7 @@ use positive::{Positive, assert_pos_relative_eq, pos_or_panic};
 
 use crate::constants::*;
 use chrono::{Duration, Local, NaiveTime, Utc};
+use positive::{Positive, pos_or_panic};
 use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
 use std::fmt;
@@ -170,7 +170,7 @@ pub fn units_per_year(time_frame: &TimeFrame) -> Positive {
 /// # Examples
 ///
 /// ```
-/// use optionstratlib::{assert_pos_relative_eq, pos_or_panic};
+/// 
 /// use optionstratlib::utils::time::convert_time_frame;
 /// use optionstratlib::utils::TimeFrame;
 ///
@@ -326,6 +326,7 @@ pub fn get_today_or_tomorrow_formatted() -> String {
 #[cfg(test)]
 mod tests_timeframe {
     use super::*;
+    use positive::assert_pos_relative_eq;
 
     #[test]
     fn test_microsecond_periods() {
@@ -482,6 +483,7 @@ mod tests_timeframe {
 #[cfg(test)]
 mod tests_timeframe_convert {
     use super::*;
+    use positive::assert_pos_relative_eq;
 
     #[test]
     fn test_convert_seconds_to_minutes() {

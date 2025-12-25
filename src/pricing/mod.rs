@@ -147,15 +147,6 @@
 //! For high-frequency calculations, consider using the Black-Scholes model
 //! when applicable, as it provides the fastest computation times.
 
-/// Binomial tree model implementation for option pricing.
-///
-/// This module provides functionality to price options using binomial tree methods,
-/// which discretize time and price movements to create a lattice of possible
-/// future asset prices.
-///
-/// The binomial model is particularly useful for pricing American options and
-/// other derivatives with early exercise features.
-use positive::pos_or_panic;
 pub mod binomial_model;
 
 /// Black-Scholes model for option pricing and analysis.

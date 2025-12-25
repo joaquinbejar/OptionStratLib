@@ -123,6 +123,7 @@
 //! particularly for extreme market conditions.
 
 use crate::error::ChainError;
+use positive::Positive;
 use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::{Decimal, MathematicalOps};
 use rust_decimal_macros::dec;
@@ -414,8 +415,8 @@ pub trait RNDAnalysis {
 
 #[cfg(test)]
 mod tests {
-use positive::{Positive, pos_or_panic, spos};
     use super::*;
+    use positive::{Positive, pos_or_panic, spos};
 
     use crate::chains::chain::OptionChain;
 
@@ -827,6 +828,7 @@ mod additional_tests {
 
     mod rnd_statistics_extended_tests {
         use super::*;
+        use positive::pos_or_panic;
 
         use crate::assert_decimal_eq;
 
@@ -885,6 +887,7 @@ mod additional_tests {
 
     mod rnd_calculation_extended_tests {
         use super::*;
+        use positive::{pos_or_panic, spos};
 
         use crate::chains::chain::OptionChain;
 
@@ -1045,18 +1048,14 @@ mod additional_tests {
 
     mod numerical_stability_tests {
         use super::*;
+        use positive::{pos_or_panic, spos};
 
         use crate::chains::chain::OptionChain;
 
         #[test]
         fn test_numerical_stability_small_values() {
-            let mut chain = OptionChain::new(
-                "TEST",
-                Positive::ONE,
-                "2024-12-31".to_string(),
-                None,
-                None,
-            );
+            let mut chain =
+                OptionChain::new("TEST", Positive::ONE, "2024-12-31".to_string(), None, None);
 
             chain.add_option(
                 pos_or_panic!(0.9),
@@ -1131,6 +1130,7 @@ mod statistical_validation_tests {
         use super::*;
 
         use num_traits::{FromPrimitive, ToPrimitive};
+        use positive::pos_or_panic;
         use tracing::info;
 
         #[test]
@@ -1462,6 +1462,7 @@ mod statistical_validation_tests {
 
     mod validation_utils {
         use super::*;
+        use positive::pos_or_panic;
 
         fn calculate_raw_moment(densities: &BTreeMap<Positive, Decimal>, order: i32) -> Decimal {
             let mut moment = Decimal::ZERO;
@@ -1503,6 +1504,7 @@ mod chain_test {
     use crate::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
     use crate::chains::{RNDAnalysis, RNDParameters};
     use crate::{ExpirationDate, assert_decimal_eq};
+    use positive::{Positive, pos_or_panic, spos};
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
     use tracing::debug;
@@ -1678,6 +1680,7 @@ mod rnd_coverage_tests {
     use crate::chains::RNDAnalysis;
     use crate::chains::RNDResult;
 
+    use positive::{pos_or_panic, spos};
     use std::collections::BTreeMap;
 
     // Test for line 322 in rnd.rs
@@ -1741,10 +1744,7 @@ mod rnd_coverage_tests {
         assert_eq!(skew.len(), 5);
 
         // With a symmetric smile, the skew around ATM should be symmetric
-        let atm_index = skew
-            .iter()
-            .position(|(k, _)| *k == Positive::ONE)
-            .unwrap();
+        let atm_index = skew.iter().position(|(k, _)| *k == Positive::ONE).unwrap();
         let lower = skew[atm_index - 1].1;
         let higher = skew[atm_index + 1].1;
 

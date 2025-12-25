@@ -13,10 +13,9 @@
 //! retrieving position information, and computing Greeks across different
 //! instrument types.
 
-
 use crate::error::GreeksError;
 use crate::model::types::Side;
-use positive::pos_or_panic;
+use positive::Positive;
 use rust_decimal::Decimal;
 
 /// Common trait for all leg types in a trading strategy.

@@ -1,4 +1,3 @@
-use positive::{assert_pos_relative_eq, pos_or_panic, spos, Positive};
 /*
 Bull Call Spread Strategy
 
@@ -45,6 +44,7 @@ use crate::{
     test_strategy_traits,
 };
 use chrono::Utc;
+use positive::{Positive, pos_or_panic};
 use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -1876,7 +1876,7 @@ mod tests_bull_call_spread_graph {
 mod tests_bull_call_spread_probability {
     use super::*;
 
-        use crate::strategies::probabilities::utils::PriceTrend;
+    use crate::strategies::probabilities::utils::PriceTrend;
     use rust_decimal_macros::dec;
 
     #[test]
@@ -2079,6 +2079,7 @@ mod tests_delta {
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use crate::{ExpirationDate, Positive, Side, assert_decimal_eq};
+    use positive::{assert_pos_relative_eq, pos_or_panic};
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
 
@@ -2093,7 +2094,7 @@ mod tests_delta {
             pos_or_panic!(0.18),  // implied_volatility
             dec!(0.05),           // risk_free_rate
             Positive::ZERO,       // dividend_yield
-            Positive::ONE,   // long quantity
+            Positive::ONE,        // long quantity
             pos_or_panic!(85.04), // premium_long
             pos_or_panic!(29.85), // premium_short
             pos_or_panic!(0.78),  // open_fee_long
@@ -2207,6 +2208,7 @@ mod tests_delta_size {
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use crate::{ExpirationDate, Positive, Side, assert_decimal_eq};
+    use positive::{assert_pos_relative_eq, pos_or_panic};
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
 
@@ -2221,7 +2223,7 @@ mod tests_delta_size {
             pos_or_panic!(0.18),  // implied_volatility
             dec!(0.05),           // risk_free_rate
             Positive::ZERO,       // dividend_yield
-            Positive::TWO,   // long quantity
+            Positive::TWO,        // long quantity
             pos_or_panic!(85.04), // premium_long
             pos_or_panic!(29.85), // premium_short
             pos_or_panic!(0.78),  // open_fee_long
@@ -2345,7 +2347,7 @@ mod tests_bull_call_spread_position_management {
             pos_or_panic!(0.18),  // implied_volatility
             dec!(0.05),           // risk_free_rate
             Positive::ZERO,       // dividend_yield
-            Positive::TWO,   // long quantity
+            Positive::TWO,        // long quantity
             pos_or_panic!(85.04), // premium_long
             pos_or_panic!(29.85), // premium_short
             pos_or_panic!(0.78),  // open_fee_long
@@ -2408,20 +2410,14 @@ mod tests_bull_call_spread_position_management {
         modified_call.option.quantity = Positive::TWO;
         let result = bull_call_spread.modify_position(&modified_call);
         assert!(result.is_ok());
-        assert_eq!(
-            bull_call_spread.short_call.option.quantity,
-            Positive::TWO
-        );
+        assert_eq!(bull_call_spread.short_call.option.quantity, Positive::TWO);
 
         // Modify short put position
         let mut modified_put = bull_call_spread.long_call.clone();
         modified_put.option.quantity = Positive::TWO;
         let result = bull_call_spread.modify_position(&modified_put);
         assert!(result.is_ok());
-        assert_eq!(
-            bull_call_spread.long_call.option.quantity,
-            Positive::TWO
-        );
+        assert_eq!(bull_call_spread.long_call.option.quantity, Positive::TWO);
 
         // Test modifying with invalid position
         let mut invalid_position = bull_call_spread.short_call.clone();
@@ -2462,7 +2458,7 @@ mod tests_adjust_option_position {
             pos_or_panic!(0.18),  // implied_volatility
             dec!(0.05),           // risk_free_rate
             Positive::ZERO,       // dividend_yield
-            Positive::TWO,   // long quantity
+            Positive::TWO,        // long quantity
             pos_or_panic!(85.04), // premium_long
             pos_or_panic!(29.85), // premium_short
             pos_or_panic!(0.78),  // open_fee_long
@@ -2716,8 +2712,8 @@ mod tests_bull_call_spread_constructor {
 mod tests_bull_call_spread_pnl {
     use super::*;
 
+    use crate::assert_decimal_eq;
     use crate::model::utils::create_sample_position;
-    use crate::{assert_decimal_eq};
     use rust_decimal_macros::dec;
 
     /// Helper function to create a standard Bull Call Spread for testing
@@ -2726,18 +2722,18 @@ mod tests_bull_call_spread_pnl {
         let long_call = create_sample_position(
             OptionStyle::Call,
             Side::Long,
-            Positive::HUNDRED, // Underlying price
-            Positive::ONE,   // Quantity
-            pos_or_panic!(95.0),  // Lower strike price
-            pos_or_panic!(0.2),   // Implied volatility
+            Positive::HUNDRED,   // Underlying price
+            Positive::ONE,       // Quantity
+            pos_or_panic!(95.0), // Lower strike price
+            pos_or_panic!(0.2),  // Implied volatility
         );
 
         // Create short call with higher strike
         let short_call = create_sample_position(
             OptionStyle::Call,
             Side::Short,
-            Positive::HUNDRED, // Same underlying price
-            Positive::ONE,   // Quantity
+            Positive::HUNDRED,    // Same underlying price
+            Positive::ONE,        // Quantity
             pos_or_panic!(105.0), // Higher strike price
             pos_or_panic!(0.2),   // Implied volatility
         );

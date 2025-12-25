@@ -6,7 +6,7 @@ use crate::utils::TimeFrame;
 use crate::utils::others::calculate_log_returns;
 use crate::volatility::{adjust_volatility, constant_volatility};
 use core::option::Option;
-use positive::{Positive, pos_or_panic, spos};
+use positive::{Positive, pos_or_panic};
 use rust_decimal::Decimal;
 use tracing::debug;
 
@@ -196,8 +196,8 @@ pub fn generator_optionseries(
 
 #[cfg(test)]
 mod tests_generator_optionseries {
-    use positive::assert_pos_relative_eq;
     use super::*;
+    use positive::{assert_pos_relative_eq, spos};
 
     use crate::ExpirationDate;
     use crate::chains::utils::OptionChainBuildParams;

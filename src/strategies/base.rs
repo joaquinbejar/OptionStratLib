@@ -21,7 +21,7 @@ use crate::{
     },
     visualization::Graph,
 };
-use positive::{Positive, pos_or_panic};
+use positive::Positive;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -1482,6 +1482,7 @@ pub trait Positionable {
 
 #[cfg(test)]
 mod tests_strategies_extended {
+    use positive::pos_or_panic;
     use super::*;
 
     use crate::model::position::Position;
@@ -1710,6 +1711,7 @@ mod tests_strategy_type {
 
 #[cfg(test)]
 mod tests_best_range_to_show {
+    use positive::pos_or_panic;
     use super::*;
 
     struct TestStrategy {
@@ -1828,6 +1830,7 @@ mod tests_best_range_to_show {
 
 #[cfg(test)]
 mod tests_range_to_show {
+    use positive::pos_or_panic;
     use super::*;
 
     struct TestStrategy {
@@ -1904,6 +1907,7 @@ mod tests_range_to_show {
 
 #[cfg(test)]
 mod tests_range_of_profit {
+    use positive::pos_or_panic;
     use super::*;
 
     struct TestStrategy {
@@ -1990,7 +1994,7 @@ mod tests_strategy_methods {
 #[cfg(test)]
 mod tests_optimizable {
     use super::*;
-    use positive::spos;
+    use positive::{pos_or_panic, spos};
 
     use crate::chains::OptionData;
 
@@ -2194,6 +2198,7 @@ mod tests_strategy_net_operations {
     use crate::model::utils::create_sample_option_simplest;
 
     use chrono::{TimeZone, Utc};
+    use positive::pos_or_panic;
 
     struct TestStrategy {
         positions: Vec<Position>,

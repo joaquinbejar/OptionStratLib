@@ -6,6 +6,7 @@
 
 
 use crate::error::{GreeksError, OptionsError};
+use positive::Positive;
 use thiserror::Error;
 
 /// Represents errors that can occur during volatility-related calculations.

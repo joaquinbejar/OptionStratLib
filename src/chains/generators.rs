@@ -3,7 +3,7 @@
    Email: jb@taunais.com
    Date: 27/3/25
 ******************************************************************************/
-use positive::{pos_or_panic, spos};
+use crate::ExpirationDate;
 use crate::chains::OptionChain;
 use crate::error::ChainError;
 use crate::simulation::steps::{Step, Ystep};
@@ -11,8 +11,8 @@ use crate::simulation::{WalkParams, WalkType};
 use crate::utils::TimeFrame;
 use crate::utils::others::calculate_log_returns;
 use crate::volatility::{adjust_volatility, constant_volatility};
-use crate::{ExpirationDate, Positive};
 use core::option::Option;
+use positive::{Positive, pos_or_panic};
 use rust_decimal::Decimal;
 use tracing::debug;
 
@@ -291,11 +291,7 @@ mod tests {
                 y: Ystep::new(0, initial_chain),
             },
             walk_type: WalkType::GeometricBrownian {
-                dt: convert_time_frame(
-                    Positive::ONE / days,
-                    &TimeFrame::Minute,
-                    &TimeFrame::Day,
-                ),
+                dt: convert_time_frame(Positive::ONE / days, &TimeFrame::Minute, &TimeFrame::Day),
                 drift: dec!(0.0),
                 volatility: std_dev / 100.0,
             },
@@ -333,11 +329,7 @@ mod tests {
                 y: Ystep::new(0, initial_price),
             },
             walk_type: WalkType::GeometricBrownian {
-                dt: convert_time_frame(
-                    Positive::ONE / days,
-                    &TimeFrame::Minute,
-                    &TimeFrame::Day,
-                ),
+                dt: convert_time_frame(Positive::ONE / days, &TimeFrame::Minute, &TimeFrame::Day),
                 drift: dec!(0.0),
                 volatility: std_dev,
             },
@@ -351,8 +343,8 @@ mod tests {
 
 #[cfg(test)]
 mod generators_coverage_tests {
-    use positive::Positive;
     use super::*;
+    use positive::{Positive, spos};
 
     use crate::ExpirationDate;
     use crate::chains::generators::{generator_optionchain, generator_positive};

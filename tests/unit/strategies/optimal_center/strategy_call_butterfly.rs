@@ -1,14 +1,15 @@
 use {
-use positive::pos_or_panic;
     optionstratlib::Side,
     optionstratlib::chains::chain::OptionChain,
     optionstratlib::strategies::base::Optimizable,
     optionstratlib::strategies::base::Positionable,
     optionstratlib::strategies::{CallButterfly, FindOptimalSide},
-    optionstratlib::{ExpirationDate, Positive, pos_or_panic},
+    optionstratlib::{ExpirationDate, Positive},
     rust_decimal_macros::dec,
     std::error::Error,
 };
+use positive::pos_or_panic;
+
 // long 276.06, short 269.62 short 58.5
 #[test]
 fn test_call_butterfly_integration() -> Result<(), Box<dyn Error>> {

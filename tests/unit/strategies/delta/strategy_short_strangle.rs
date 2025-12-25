@@ -1,13 +1,13 @@
+use optionstratlib::assert_decimal_eq;
 use optionstratlib::greeks::Greeks;
 use optionstratlib::strategies::delta_neutral::DeltaAdjustment::NoAdjustmentNeeded;
 use optionstratlib::strategies::delta_neutral::DeltaNeutrality;
 use optionstratlib::strategies::{DELTA_THRESHOLD, ShortStrangle};
 use optionstratlib::{ExpirationDate, Positive};
-use optionstratlib::{assert_decimal_eq, pos_or_panic};
+use positive::pos_or_panic;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use std::error::Error;
-use positive::pos_or_panic;
 
 #[test]
 fn test_short_strangle_with_greeks_integration() -> Result<(), Box<dyn Error>> {
@@ -16,21 +16,21 @@ fn test_short_strangle_with_greeks_integration() -> Result<(), Box<dyn Error>> {
 
     let strategy = ShortStrangle::new(
         "CL".to_string(),
-        underlying_price, // underlying_price
-        pos_or_panic!(7450.0),     // call_strike
-        pos_or_panic!(7050.0),     // put_strike
+        underlying_price,      // underlying_price
+        pos_or_panic!(7450.0), // call_strike
+        pos_or_panic!(7050.0), // put_strike
         ExpirationDate::Days(pos_or_panic!(45.0)),
-        pos_or_panic!(0.3745),   // implied_volatility
-        pos_or_panic!(0.3745),   // implied_volatility
-        dec!(0.05),     // risk_free_rate
-        Positive::ZERO, // dividend_yield
-        Positive::ONE,      // quantity
-        pos_or_panic!(84.2),     // premium_short_call
-        pos_or_panic!(353.2),    // premium_short_put
-        pos_or_panic!(7.01),     // open_fee_short_call
-        pos_or_panic!(7.01),     // close_fee_short_call
-        pos_or_panic!(7.01),     // open_fee_short_put
-        pos_or_panic!(7.01),     // close_fee_short_put
+        pos_or_panic!(0.3745), // implied_volatility
+        pos_or_panic!(0.3745), // implied_volatility
+        dec!(0.05),            // risk_free_rate
+        Positive::ZERO,        // dividend_yield
+        Positive::ONE,         // quantity
+        pos_or_panic!(84.2),   // premium_short_call
+        pos_or_panic!(353.2),  // premium_short_put
+        pos_or_panic!(7.01),   // open_fee_short_call
+        pos_or_panic!(7.01),   // close_fee_short_call
+        pos_or_panic!(7.01),   // open_fee_short_put
+        pos_or_panic!(7.01),   // close_fee_short_put
     );
 
     let greeks = strategy.greeks().unwrap();

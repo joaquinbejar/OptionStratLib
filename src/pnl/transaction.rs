@@ -260,7 +260,7 @@ mod tests {
     use super::*;
 
     use chrono::Utc;
-    use positive::{pos_or_panic, spos};
+    use positive::{Positive, pos_or_panic, spos};
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
 
@@ -676,7 +676,7 @@ mod tests_transaction_getters {
     use super::*;
 
     use chrono::Utc;
-    use positive::{pos_or_panic, spos};
+    use positive::{Positive, pos_or_panic, spos};
 
     fn create_test_transaction() -> Transaction {
         Transaction::new(
@@ -760,7 +760,7 @@ mod tests_transaction_updaters {
     use super::*;
 
     use chrono::Utc;
-    use positive::{pos_or_panic, spos};
+    use positive::{Positive, pos_or_panic, spos};
 
     fn create_test_transaction() -> Transaction {
         Transaction::new(
@@ -805,7 +805,7 @@ mod tests_transaction_status_pnl {
     use super::*;
 
     use chrono::Utc;
-    use positive::{pos_or_panic, spos};
+    use positive::{Positive, pos_or_panic, spos};
     use rust_decimal_macros::dec;
 
     #[test]

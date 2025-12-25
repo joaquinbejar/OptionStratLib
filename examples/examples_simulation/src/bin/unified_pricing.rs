@@ -1,4 +1,3 @@
-use positive::pos_or_panic;
 /******************************************************************************
    Author: Joaquín Béjar García
    Email: jb@taunais.com
@@ -19,6 +18,7 @@ use positive::pos_or_panic;
 //!   - Telegraph process
 //! - Using the Priceable trait for clean API
 
+use positive::pos_or_panic;
 use optionstratlib::prelude::*;
 use std::fmt::Display;
 use std::ops::AddAssign;

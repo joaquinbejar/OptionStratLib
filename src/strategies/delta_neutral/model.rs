@@ -6,7 +6,6 @@
 use crate::error::position::PositionValidationErrorKind;
 use crate::error::{GreeksError, PositionError, StrategyError};
 use crate::prelude::OperationErrorKind;
-
 use super::adjustment::{AdjustmentConfig, AdjustmentPlan};
 use super::optimizer::AdjustmentOptimizer;
 use super::portfolio::{AdjustmentTarget, PortfolioGreeks};
@@ -52,7 +51,7 @@ use crate::model::{Trade, TradeStatusAble};
 use crate::strategies::Strategies;
 use crate::strategies::base::Positionable;
 use crate::{Options, Side};
-use positive::{Positive, pos_or_panic};
+use positive::Positive;
 use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
@@ -1146,6 +1145,7 @@ pub struct DeltaNeutralResponse {
 #[cfg(test)]
 mod tests_display_implementations {
     use super::*;
+    use positive::pos_or_panic;
 
     use rust_decimal_macros::dec;
 
@@ -1285,6 +1285,7 @@ mod tests_serialization {
     use super::*;
     use crate::ExpirationDate;
     use crate::strategies::ShortStrangle;
+    use positive::pos_or_panic;
     use rust_decimal_macros::dec;
     use serde_json;
     use tracing::info;
@@ -1510,6 +1511,7 @@ mod tests_generate_delta_adjustments {
     use crate::ExpirationDate;
     use crate::strategies::base::BreakEvenable;
     use crate::strategies::{BasicAble, Validable};
+    use positive::pos_or_panic;
 
     struct MockDeltaNeutral;
     impl Greeks for MockDeltaNeutral {

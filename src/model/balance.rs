@@ -4,9 +4,9 @@
    Date: 22/9/25
 ******************************************************************************/
 
-
 use crate::model::types::UnderlyingAssetType;
 use num_traits::ToPrimitive;
+use positive::Positive;
 use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -361,7 +361,7 @@ impl Default for Portfolio {
 #[cfg(test)]
 mod tests {
     use super::*;
-use positive::pos_or_panic;
+    use positive::pos_or_panic;
 
     use rust_decimal_macros::dec;
 

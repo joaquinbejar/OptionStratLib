@@ -1,4 +1,4 @@
-use positive::{assert_pos_relative_eq, pos_or_panic, spos, Positive};
+use positive::Positive;
 /*
 Bear Call Spread Strategy
 
@@ -854,22 +854,23 @@ test_strategy_traits!(BearCallSpread, test_short_call_implementations);
 mod tests_bear_call_spread_strategies {
     use super::*;
 
-        use crate::model::ExpirationDate;
+    use crate::model::ExpirationDate;
     use approx::assert_relative_eq;
     use num_traits::ToPrimitive;
+    use positive::{assert_pos_relative_eq, pos_or_panic};
     use rust_decimal_macros::dec;
 
     fn create_test_spread() -> BearCallSpread {
         BearCallSpread::new(
             "TEST".to_string(),
-            Positive::HUNDRED,                      // underlying_price
+            Positive::HUNDRED,                         // underlying_price
             pos_or_panic!(95.0),                       // short_strike
             pos_or_panic!(105.0),                      // long_strike
             ExpirationDate::Days(pos_or_panic!(30.0)), // expiration
             pos_or_panic!(0.20),                       // implied_volatility
             dec!(0.05),                                // risk_free_rate
             Positive::ZERO,                            // dividend_yield
-            Positive::ONE,                        // quantity
+            Positive::ONE,                             // quantity
             pos_or_panic!(10.0),                       // premium_short_call
             pos_or_panic!(5.0),                        // premium_long_call
             pos_or_panic!(0.5),                        // open_fee_short_call
@@ -1096,6 +1097,7 @@ mod tests_bear_call_spread_positionable {
     use crate::model::types::OptionStyle;
     use crate::{ExpirationDate, Options};
     use chrono::Utc;
+    use positive::pos_or_panic;
     use rust_decimal_macros::dec;
 
     // Helper function to create a test option
@@ -1120,10 +1122,10 @@ mod tests_bear_call_spread_positionable {
     fn create_test_position(side: Side) -> Position {
         Position::new(
             create_test_option(side),
-            Positive::ONE, // premium
-            Utc::now(),         // timestamp
-            Positive::ZERO,     // open_fee
-            Positive::ZERO,     // close_fee
+            Positive::ONE,  // premium
+            Utc::now(),     // timestamp
+            Positive::ZERO, // open_fee
+            Positive::ZERO, // close_fee
             None,
             None,
         )
@@ -1311,6 +1313,7 @@ mod tests_bear_call_spread_positionable {
 
 #[cfg(test)]
 mod tests_bear_call_spread_validable {
+    use positive::pos_or_panic;
     use super::*;
 
     use crate::model::ExpirationDate;
@@ -1320,16 +1323,16 @@ mod tests_bear_call_spread_validable {
     fn create_valid_spread() -> BearCallSpread {
         BearCallSpread::new(
             "TEST".to_string(),
-            Positive::HUNDRED,                      // underlying_price
+            Positive::HUNDRED,                         // underlying_price
             pos_or_panic!(95.0),                       // short_strike
             pos_or_panic!(105.0),                      // long_strike
             ExpirationDate::Days(pos_or_panic!(30.0)), // expiration
             pos_or_panic!(0.2),                        // implied_volatility
             dec!(0.05),                                // risk_free_rate
             Positive::ZERO,                            // dividend_yield
-            Positive::ONE,                        // quantity
-            Positive::TWO,                        // premium_short_call
-            Positive::ONE,                        // premium_long_call
+            Positive::ONE,                             // quantity
+            Positive::TWO,                             // premium_short_call
+            Positive::ONE,                             // premium_long_call
             Positive::ZERO,                            // fees
             Positive::ZERO,
             Positive::ZERO,
@@ -1504,21 +1507,22 @@ mod tests_bear_call_spread_profit {
     use crate::pricing::payoff::Profit;
     use approx::assert_relative_eq;
     use num_traits::ToPrimitive;
+    use positive::pos_or_panic;
     use rust_decimal_macros::dec;
 
     fn create_test_spread() -> BearCallSpread {
         BearCallSpread::new(
             "TEST".to_string(),
-            Positive::HUNDRED,                      // underlying_price
+            Positive::HUNDRED,                         // underlying_price
             pos_or_panic!(95.0),                       // short_strike
             pos_or_panic!(105.0),                      // long_strike
             ExpirationDate::Days(pos_or_panic!(30.0)), // expiration
             pos_or_panic!(0.2),                        // implied_volatility
             dec!(0.05),                                // risk_free_rate
             Positive::ZERO,                            // dividend_yield
-            Positive::ONE,                        // quantity
-            Positive::TWO,                        // premium_short_call
-            Positive::ONE,                        // premium_long_call
+            Positive::ONE,                             // quantity
+            Positive::TWO,                             // premium_short_call
+            Positive::ONE,                             // premium_long_call
             Positive::ZERO,                            // open_fee_short_call
             Positive::ZERO,                            // close_fee_short_call
             Positive::ZERO,                            // open_fee_long_call
@@ -1623,13 +1627,13 @@ mod tests_bear_call_spread_profit {
             pos_or_panic!(0.2),
             dec!(0.05),
             Positive::ZERO,
-            Positive::TWO, // quantity = 2
-            Positive::TWO, // premium_short_call
-            Positive::ONE, // premium_long_call
-            Positive::ZERO,     // open_fee_short_call
-            Positive::ZERO,     // close_fee_short_call
-            Positive::ZERO,     // open_fee_long_call
-            Positive::ZERO,     // close_fee_long_call
+            Positive::TWO,  // quantity = 2
+            Positive::TWO,  // premium_short_call
+            Positive::ONE,  // premium_long_call
+            Positive::ZERO, // open_fee_short_call
+            Positive::ZERO, // close_fee_short_call
+            Positive::ZERO, // open_fee_long_call
+            Positive::ZERO, // close_fee_long_call
         );
 
         let profit = spread
@@ -1662,7 +1666,7 @@ mod tests_bear_call_spread_profit {
             pos_or_panic!(0.18),  // implied_volatility
             dec!(0.05),           // risk_free_rate
             Positive::ZERO,       // dividend_yield
-            Positive::TWO,   // long quantity
+            Positive::TWO,        // long quantity
             pos_or_panic!(85.04), // premium_long
             pos_or_panic!(29.85), // premium_short
             pos_or_panic!(0.78),  // open_fee_long
@@ -1691,6 +1695,7 @@ mod tests_bear_call_spread_optimizable {
     use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
 
     use num_traits::ToPrimitive;
+    use positive::{pos_or_panic, spos};
     use rust_decimal_macros::dec;
 
     // Helper function to create a mock OptionChain for testing
@@ -1974,6 +1979,7 @@ mod tests_bear_call_spread_optimizable {
 
 #[cfg(test)]
 mod tests_bear_call_spread_graph {
+    use positive::pos_or_panic;
     use super::*;
 
     use rust_decimal_macros::dec;
@@ -1981,14 +1987,14 @@ mod tests_bear_call_spread_graph {
     fn create_test_spread() -> BearCallSpread {
         BearCallSpread::new(
             "TEST".to_string(),
-            Positive::HUNDRED,                      // underlying_price
+            Positive::HUNDRED,                         // underlying_price
             pos_or_panic!(105.0),                      // short_strike
             pos_or_panic!(110.0),                      // long_strike
             ExpirationDate::Days(pos_or_panic!(30.0)), // expiration
             pos_or_panic!(0.2),                        // implied_volatility
             dec!(0.05),                                // risk_free_rate
             Positive::ZERO,                            // dividend_yield
-            Positive::ONE,                        // quantity
+            Positive::ONE,                             // quantity
             Positive::TWO,
             Positive::ONE,
             Positive::ZERO, // open_fee_short_call
@@ -2010,6 +2016,7 @@ mod tests_bear_call_spread_graph {
 
 #[cfg(test)]
 mod tests_bear_call_spread_probability {
+    use positive::pos_or_panic;
     use super::*;
 
     use crate::strategies::probabilities::utils::PriceTrend;
@@ -2025,7 +2032,7 @@ mod tests_bear_call_spread_probability {
             pos_or_panic!(0.18),  // implied_volatility
             dec!(0.05),           // risk_free_rate
             Positive::ZERO,       // dividend_yield
-            Positive::TWO,   // long quantity
+            Positive::TWO,        // long quantity
             pos_or_panic!(85.04), // premium_long
             pos_or_panic!(29.85), // premium_short
             pos_or_panic!(0.78),  // open_fee_long
@@ -2154,13 +2161,14 @@ mod tests_bear_call_spread_probability {
 
 #[cfg(test)]
 mod tests_delta {
+    use positive::{assert_pos_relative_eq, pos_or_panic};
     use super::*;
 
+    use crate::assert_decimal_eq;
     use crate::model::types::OptionStyle;
     use crate::strategies::bear_call_spread::BearCallSpread;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
-    use crate::{assert_decimal_eq};
     use rust_decimal_macros::dec;
 
     fn get_strategy(long_strike: Positive, short_strike: Positive) -> BearCallSpread {
@@ -2174,7 +2182,7 @@ mod tests_delta {
             pos_or_panic!(0.18),  // implied_volatility
             dec!(0.05),           // risk_free_rate
             Positive::ZERO,       // dividend_yield
-            Positive::ONE,   // long quantity
+            Positive::ONE,        // long quantity
             pos_or_panic!(85.04), // premium_long
             pos_or_panic!(29.85), // premium_short
             pos_or_panic!(0.78),  // open_fee_long
@@ -2289,6 +2297,7 @@ mod tests_delta_size {
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use crate::{ExpirationDate, Positive, Side, assert_decimal_eq};
+    use positive::{assert_pos_relative_eq, pos_or_panic};
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
 
@@ -2412,6 +2421,7 @@ mod tests_delta_size {
 
 #[cfg(test)]
 mod tests_bear_call_spread_position_management {
+    use positive::pos_or_panic;
     use super::*;
 
     use crate::error::position::PositionValidationErrorKind;
@@ -2493,20 +2503,14 @@ mod tests_bear_call_spread_position_management {
         modified_call.option.quantity = Positive::TWO;
         let result = bear_call_spread.modify_position(&modified_call);
         assert!(result.is_ok());
-        assert_eq!(
-            bear_call_spread.short_call.option.quantity,
-            Positive::TWO
-        );
+        assert_eq!(bear_call_spread.short_call.option.quantity, Positive::TWO);
 
         // Modify short put position
         let mut modified_put = bear_call_spread.long_call.clone();
         modified_put.option.quantity = Positive::TWO;
         let result = bear_call_spread.modify_position(&modified_put);
         assert!(result.is_ok());
-        assert_eq!(
-            bear_call_spread.long_call.option.quantity,
-            Positive::TWO
-        );
+        assert_eq!(bear_call_spread.long_call.option.quantity, Positive::TWO);
 
         // Test modifying with invalid position
         let mut invalid_position = bear_call_spread.short_call.clone();
@@ -2530,6 +2534,7 @@ mod tests_bear_call_spread_position_management {
 
 #[cfg(test)]
 mod tests_adjust_option_position_short {
+    use positive::pos_or_panic;
     use super::*;
 
     use crate::model::types::{OptionStyle, Side};
@@ -2652,6 +2657,7 @@ mod tests_adjust_option_position_short {
 
 #[cfg(test)]
 mod tests_strategy_constructor {
+    use positive::pos_or_panic;
     use super::*;
 
     use crate::model::utils::create_sample_position;
@@ -2796,10 +2802,11 @@ mod tests_strategy_constructor {
 
 #[cfg(test)]
 mod tests_bear_call_spread_pnl {
+    use positive::{assert_pos_relative_eq, pos_or_panic};
     use super::*;
 
+    use crate::assert_decimal_eq;
     use crate::model::utils::create_sample_position;
-    use crate::{assert_decimal_eq};
     use rust_decimal_macros::dec;
 
     fn create_test_bear_call_spread() -> Result<BearCallSpread, StrategyError> {
@@ -2807,18 +2814,18 @@ mod tests_bear_call_spread_pnl {
         let short_call = create_sample_position(
             OptionStyle::Call,
             Side::Short,
-            Positive::HUNDRED, // Underlying price
-            Positive::ONE,   // Quantity
-            Positive::HUNDRED, // Strike price (ATM)
-            pos_or_panic!(0.2),   // Implied volatility
+            Positive::HUNDRED,  // Underlying price
+            Positive::ONE,      // Quantity
+            Positive::HUNDRED,  // Strike price (ATM)
+            pos_or_panic!(0.2), // Implied volatility
         );
 
         // Create long call with higher strike
         let long_call = create_sample_position(
             OptionStyle::Call,
             Side::Long,
-            Positive::HUNDRED, // Same underlying price
-            Positive::ONE,   // Quantity
+            Positive::HUNDRED,    // Same underlying price
+            Positive::ONE,        // Quantity
             pos_or_panic!(105.0), // Higher strike price
             pos_or_panic!(0.2),   // Implied volatility
         );

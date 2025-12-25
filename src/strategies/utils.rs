@@ -4,7 +4,7 @@
 //! including enumerations for defining search strategies and functions for
 //! generating price ranges.
 
-use crate::model::positive::Positive;
+use positive::Positive;
 use rust_decimal::Decimal;
 use std::fmt::Display;
 
@@ -108,7 +108,7 @@ impl Display for FindOptimalSide {
 /// Defines the criteria used for price optimization.
 ///
 /// This enumeration specifies whether optimization should prioritize
-/// price-to-value ratio or overall area under the curve.
+/// price-to-value-ratio or overall area under the curve.
 pub enum OptimizationCriteria {
     /// Optimize based on price-to-value ratio.
     Ratio,

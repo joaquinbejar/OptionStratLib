@@ -39,7 +39,7 @@
 use crate::error::GreeksError;
 use crate::model::leg::traits::LegAble;
 use crate::model::types::Side;
-use positive::pos_or_panic;
+use positive::Positive;
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -310,6 +310,7 @@ impl Default for SpotPosition {
 
 #[cfg(test)]
 mod tests {
+    use positive::pos_or_panic;
     use super::*;
 
     #[test]

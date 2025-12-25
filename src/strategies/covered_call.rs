@@ -69,7 +69,7 @@ use crate::strategies::probabilities::core::ProbabilityAnalysis;
 use crate::strategies::probabilities::utils::VolatilityAdjustment;
 use crate::strategies::{BasicAble, Strategies};
 use chrono::Utc;
-use positive::{Positive, pos_or_panic};
+use positive::Positive;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};

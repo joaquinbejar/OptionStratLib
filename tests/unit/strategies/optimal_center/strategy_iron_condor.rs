@@ -4,7 +4,7 @@ use positive::pos_or_panic;
     optionstratlib::strategies::base::Optimizable,
     optionstratlib::strategies::base::Positionable,
     optionstratlib::strategies::{FindOptimalSide, IronCondor},
-    optionstratlib::{ExpirationDate, Positive, pos_or_panic},
+    optionstratlib::{ExpirationDate, Positive},
     optionstratlib::{OptionStyle, Side},
     rust_decimal_macros::dec,
     std::error::Error,

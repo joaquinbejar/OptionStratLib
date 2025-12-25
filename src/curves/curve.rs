@@ -1664,7 +1664,7 @@ mod tests_curves {
     
     use crate::curves::utils::{create_constant_curve, create_linear_curve};
     use Decimal;
-use positive::pos_or_panic;
+use positive::{pos_or_panic, Positive};
     use rust_decimal_macros::dec;
 
     #[test]

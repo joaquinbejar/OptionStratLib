@@ -7,10 +7,10 @@ use crate::error::SurfaceError;
 use crate::greeks::Greeks;
 use crate::model::BasicAxisTypes;
 use crate::surfaces::Surface;
-use crate::{OptionStyle, Options, Positive, Side};
+use crate::{OptionStyle, Options, Side};
+use positive::Positive;
 use rust_decimal::Decimal;
 use std::sync::Arc;
-use positive::Positive;
 
 /// # BasicSurfaces Trait
 ///

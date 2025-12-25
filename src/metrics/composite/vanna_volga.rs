@@ -47,6 +47,7 @@
 
 use crate::error::SurfaceError;
 use crate::surfaces::Surface;
+use positive::Positive;
 
 /// A trait for computing Vanna-Volga hedge surfaces.
 ///

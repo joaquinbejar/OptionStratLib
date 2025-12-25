@@ -50,6 +50,7 @@ use crate::curves::Curve;
 use crate::error::CurveError;
 use crate::error::SurfaceError;
 use crate::surfaces::Surface;
+use positive::Positive;
 
 #[cfg(test)]
 use rust_decimal::MathematicalOps;

@@ -1,4 +1,4 @@
-use positive::{assert_pos_relative_eq, pos_or_panic};
+use crate::ExpirationDate;
 use crate::chains::OptionData;
 use crate::constants::{IV_TOLERANCE, MAX_ITERATIONS_IV, ZERO};
 use crate::error::{
@@ -17,8 +17,8 @@ use crate::strategies::base::BasicAble;
 use crate::visualization::{
     ColorScheme, Graph, GraphConfig, GraphData, LineStyle, Series2D, TraceMode,
 };
-use crate::{ExpirationDate, Positive};
 use num_traits::FromPrimitive;
+use positive::{Positive, pos_or_panic};
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
@@ -1225,16 +1225,10 @@ mod tests_time_value {
 
     #[test]
     fn test_calculate_time_value_at_the_money() {
-        let call = create_sample_option_simplest_strike(
-            Side::Long,
-            OptionStyle::Call,
-            Positive::HUNDRED,
-        );
-        let put = create_sample_option_simplest_strike(
-            Side::Long,
-            OptionStyle::Put,
-            Positive::HUNDRED,
-        );
+        let call =
+            create_sample_option_simplest_strike(Side::Long, OptionStyle::Call, Positive::HUNDRED);
+        let put =
+            create_sample_option_simplest_strike(Side::Long, OptionStyle::Put, Positive::HUNDRED);
 
         let call_time_value = call.time_value().unwrap();
         let put_time_value = put.time_value().unwrap();
@@ -1923,7 +1917,7 @@ mod tests_greek_trait {
             pos_or_panic!(5790.0), // strike
             ExpirationDate::Days(pos_or_panic!(18.0)),
             pos_or_panic!(0.1),     // initial iv
-            Positive::ONE,     // qty
+            Positive::ONE,          // qty
             pos_or_panic!(5781.88), // underlying
             dec!(0.05),             // rate
             OptionStyle::Call,
@@ -1978,7 +1972,7 @@ mod tests_calculate_price_binomial {
             Positive::HUNDRED,
             ExpirationDate::Days(pos_or_panic!(30.0)),
             pos_or_panic!(0.2),  // volatility
-            Positive::ONE,  // quantity
+            Positive::ONE,       // quantity
             pos_or_panic!(95.0), // underlying price (slightly ITM for put)
             dec!(0.05),          // risk-free rate
             OptionStyle::Put,
@@ -2224,6 +2218,7 @@ mod tests_options_black_scholes {
 
 #[cfg(test)]
 mod tests_calculate_implied_volatility {
+    use positive::assert_pos_relative_eq;
     use super::*;
     use crate::error::VolatilityError;
     use rust_decimal_macros::dec;
@@ -2237,7 +2232,7 @@ mod tests_calculate_implied_volatility {
             pos_or_panic!(5790.0), // strike
             ExpirationDate::Days(pos_or_panic!(18.0)),
             pos_or_panic!(0.1),     // initial iv
-            Positive::ONE,     // qty
+            Positive::ONE,          // qty
             pos_or_panic!(5781.88), // underlying
             dec!(0.05),             // rate
             OptionStyle::Call,
@@ -2260,7 +2255,7 @@ mod tests_calculate_implied_volatility {
             pos_or_panic!(6050.0), // strike
             ExpirationDate::Days(pos_or_panic!(60.0)),
             pos_or_panic!(0.1),     // initial iv
-            Positive::ONE,     // qty
+            Positive::ONE,          // qty
             pos_or_panic!(6032.18), // underlying
             dec!(0.0),              // rate
             OptionStyle::Put,
@@ -2282,7 +2277,7 @@ mod tests_calculate_implied_volatility {
             pos_or_panic!(6050.0), // strike
             ExpirationDate::Days(pos_or_panic!(60.0)),
             pos_or_panic!(0.1),     // initial iv
-            Positive::ONE,     // qty
+            Positive::ONE,          // qty
             pos_or_panic!(6032.18), // underlying
             dec!(0.0),              // rate
             OptionStyle::Call,
@@ -2305,7 +2300,7 @@ mod tests_calculate_implied_volatility {
             pos_or_panic!(6050.0), // strike
             ExpirationDate::Days(pos_or_panic!(60.0)),
             pos_or_panic!(0.1),     // initial iv
-            Positive::ONE,     // qty
+            Positive::ONE,          // qty
             pos_or_panic!(6032.18), // underlying
             dec!(0.0),              // rate
             OptionStyle::Put,
@@ -2355,7 +2350,7 @@ mod tests_calculate_implied_volatility {
             pos_or_panic!(5790.0), // strike
             ExpirationDate::Days(pos_or_panic!(18.0)),
             pos_or_panic!(0.1),     // initial iv
-            Positive::ONE,     // qty
+            Positive::ONE,          // qty
             pos_or_panic!(5781.88), // underlying
             dec!(0.05),             // rate
             OptionStyle::Call,

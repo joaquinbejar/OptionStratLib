@@ -11,7 +11,7 @@
 //! - Delta-Gamma Profile Curve and Surface
 //! - Smile Dynamics Curve and Surface
 
-use positive::{pos_or_panic, spos};
+use positive::{pos_or_panic, spos, Positive};
 use optionstratlib::chains::OptionData;
 use optionstratlib::chains::chain::OptionChain;
 use optionstratlib::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};

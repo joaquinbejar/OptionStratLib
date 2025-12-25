@@ -41,7 +41,7 @@ use crate::model::leg::spot::SpotPosition;
 use crate::model::leg::traits::LegAble;
 use crate::model::position::Position;
 use crate::model::types::Side;
-use positive::pos_or_panic;
+use positive::Positive;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
@@ -389,6 +389,7 @@ mod tests {
     use crate::model::utils::create_sample_option_simplest;
 
     use chrono::Utc;
+    use positive::pos_or_panic;
 
     fn create_test_option_position() -> Position {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);

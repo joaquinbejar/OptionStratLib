@@ -100,7 +100,7 @@ pub enum Error {
 
     /// Positive value errors.
     #[error(transparent)]
-    Positive(#[from] crate::PositiveError),
+    Positive(#[from] positive::error::PositiveError),
 
     /// Generic error with a custom message.
     #[error("{0}")]

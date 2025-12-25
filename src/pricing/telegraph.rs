@@ -419,7 +419,7 @@ mod tests_telegraph_process_basis {
 #[cfg(test)]
 mod tests_telegraph_process_extended {
     use super::*;
-    use positive::Positive;
+    use positive::{Positive, pos_or_panic};
 
     use crate::model::types::{OptionStyle, OptionType, Side};
 

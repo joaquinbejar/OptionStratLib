@@ -40,12 +40,11 @@
 //! );
 //! ```
 
-
 use crate::error::GreeksError;
 use crate::model::leg::traits::{Fundable, LegAble, Marginable};
 use crate::model::types::Side;
-use positive::pos_or_panic;
 use chrono::{DateTime, Utc};
+use positive::Positive;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
@@ -464,6 +463,7 @@ impl Default for PerpetualPosition {
 
 #[cfg(test)]
 mod tests {
+    use positive::pos_or_panic;
     use super::*;
 
     use rust_decimal_macros::dec;

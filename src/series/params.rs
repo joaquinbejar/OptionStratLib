@@ -88,7 +88,7 @@ impl OptionSeriesBuildParams {
 
 #[cfg(test)]
 mod tests {
-use positive::{pos_or_panic, spos};
+use positive::{Positive, pos_or_panic, spos};
     use super::*;
 
     use crate::ExpirationDate;

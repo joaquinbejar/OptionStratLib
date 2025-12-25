@@ -41,7 +41,7 @@
 //!
 //! ```rust
 //! use optionstratlib::Positive;
-//! use optionstratlib::{assert_pos_relative_eq, pos_or_panic};
+//! 
 //!
 //! let a = Positive::ONE;
 //! let b = pos_or_panic!(1.0001);
@@ -172,7 +172,6 @@
 //! - Time frames use predefined constants for standard periods
 //! - Testing utilities provide accurate floating-point comparisons
 //! - Utility functions handle edge cases and error conditions
-use positive::{assert_pos_relative_eq, pos_or_panic};
 
 pub(crate) mod error;
 /// This module contains the logger setup and configuration.  It provides functionality for
@@ -184,7 +183,6 @@ pub mod logger;
 /// functionality that doesn't fit neatly into the main project structure.  More specific
 /// documentation can be found within each sub-module.
 pub mod others;
-
 
 /// This module contains the CSV reader and writer for OHLCV data.  It provides functionality for
 /// reading and writing OHLCV data in CSV format, as well as handling errors related to CSV

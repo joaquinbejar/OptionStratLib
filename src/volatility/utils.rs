@@ -1,10 +1,9 @@
-use positive::{Positive, assert_pos_relative_eq, pos_or_panic};
 /******************************************************************************
    Author: Joaquín Béjar García
    Email: jb@taunais.com
    Date: 15/8/24
 ******************************************************************************/
-
+use positive::{Positive, pos_or_panic};
 use crate::constants::{MAX_VOLATILITY, MIN_VOLATILITY};
 use crate::error::VolatilityError;
 use crate::model::decimal::decimal_normal_sample;
@@ -23,7 +22,7 @@ use rust_decimal::{Decimal, MathematicalOps};
 ///
 /// # Returns
 ///
-/// The calculated volatility as an Decimal.
+/// The calculated volatility as a Decimal.
 pub fn constant_volatility(returns: &[Decimal]) -> Result<Positive, VolatilityError> {
     let n = Positive(Decimal::from_usize(returns.len()).unwrap());
 
@@ -280,10 +279,10 @@ pub fn uncertain_volatility_bounds(
     upper_bound_option.implied_volatility = max_volatility;
 
     // Calculate the option price with minimum volatility
-    let lower_bound = Positive(lower_bound_option.calculate_price_black_scholes().unwrap());
+    let lower_bound = Positive(lower_bound_option.calculate_price_black_scholes()?);
 
     // Calculate the option price with maximum volatility
-    let upper_bound = Positive(upper_bound_option.calculate_price_black_scholes().unwrap());
+    let upper_bound = Positive(upper_bound_option.calculate_price_black_scholes()?);
 
     Ok((lower_bound, upper_bound))
 }
@@ -540,6 +539,7 @@ pub fn generate_ou_process(
 
 #[cfg(test)]
 mod tests_annualize_volatility {
+    use positive::assert_pos_relative_eq;
     use super::*;
 
     #[test]
@@ -586,6 +586,7 @@ mod tests_annualize_volatility {
 
 #[cfg(test)]
 mod tests_constant_volatility {
+    use positive::assert_pos_relative_eq;
     use super::*;
     use crate::constants::ZERO;
     use rust_decimal_macros::dec;
@@ -618,6 +619,7 @@ mod tests_constant_volatility {
 
 #[cfg(test)]
 mod tests_historical_volatility {
+    use positive::assert_pos_relative_eq;
     use super::*;
     use rust_decimal_macros::dec;
 
@@ -662,6 +664,7 @@ mod tests_historical_volatility {
 
 #[cfg(test)]
 mod tests_ewma_volatility {
+    use positive::assert_pos_relative_eq;
     use super::*;
     use rust_decimal_macros::dec;
 
@@ -758,6 +761,7 @@ mod tests_ewma_volatility {
 
 #[cfg(test)]
 mod tests_implied_volatility {
+    use positive::assert_pos_relative_eq;
     use super::*;
     use crate::ExpirationDate;
     use crate::assert_decimal_eq;
@@ -1243,6 +1247,7 @@ mod tests_implied_volatility {
 
 #[cfg(test)]
 mod tests_garch_volatility {
+    use positive::assert_pos_relative_eq;
     use super::*;
     use crate::assert_decimal_eq;
     use rust_decimal_macros::dec;
@@ -1508,6 +1513,7 @@ mod tests_heston_volatility {
 
 #[cfg(test)]
 mod tests_uncertain_volatility_bounds {
+    use positive::assert_pos_relative_eq;
     use super::*;
     use crate::model::types::{OptionStyle, OptionType, Side};
 
@@ -1619,6 +1625,7 @@ mod tests_uncertain_volatility_bounds {
 
 #[cfg(test)]
 mod tests_adjust_volatility {
+    use positive::assert_pos_relative_eq;
     use super::*;
 
     #[test]

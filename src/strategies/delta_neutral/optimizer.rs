@@ -20,13 +20,12 @@
 //! 2. **Add new legs**: Add options from the chain to fill gaps
 //! 3. **Use underlying**: Add shares for pure delta adjustment
 
-
 use crate::chains::chain::OptionChain;
 use crate::greeks::Greeks;
 use crate::model::position::Position;
 use crate::model::types::Side;
-use positive::{pos_or_panic, Positive};
 use num_traits::Signed;
+use positive::Positive;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use tracing::{debug, trace};
@@ -472,7 +471,7 @@ impl<'a> AdjustmentOptimizer<'a> {
 
 #[cfg(test)]
 mod tests_optimizer {
-    use positive::spos;
+    use positive::pos_or_panic;
     use super::*;
     use crate::model::ExpirationDate;
     use crate::model::types::{OptionStyle, OptionType};

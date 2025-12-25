@@ -1,14 +1,14 @@
 use {
-use positive::pos_or_panic;
     approx::assert_relative_eq,
     num_traits::ToPrimitive,
     optionstratlib::chains::chain::OptionChain,
     optionstratlib::strategies::base::Optimizable,
     optionstratlib::strategies::{BullPutSpread, FindOptimalSide, Strategies},
-    optionstratlib::{ExpirationDate, Positive, pos_or_panic},
+    optionstratlib::{ExpirationDate, Positive},
     rust_decimal_macros::dec,
     std::error::Error,
 };
+use positive::pos_or_panic;
 
 #[test]
 fn test_bull_put_spread_integration() -> Result<(), Box<dyn Error>> {

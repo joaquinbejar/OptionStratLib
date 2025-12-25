@@ -36,6 +36,7 @@
 
 use crate::error::VolatilityError;
 use crate::error::decimal;
+use positive::Positive;
 use thiserror::Error;
 
 /// Represents errors that can occur during options Greek calculations.

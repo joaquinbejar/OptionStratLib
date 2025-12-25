@@ -1,4 +1,4 @@
-use positive::{assert_pos_relative_eq, pos_or_panic, spos};
+use positive::Positive;
 /******************************************************************************
    Author: Joaquín Béjar García
    Email: jb@taunais.com
@@ -10,7 +10,7 @@ use crate::error::ChainError;
 use crate::greeks::{delta, gamma};
 use crate::model::Position;
 use crate::strategies::{BasicAble, FindOptimalSide};
-use crate::{ExpirationDate, OptionStyle, Options, Positive, Side};
+use crate::{ExpirationDate, OptionStyle, Options, Side};
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -1185,7 +1185,7 @@ mod optiondata_coverage_tests {
             Some(500),
             Some("TEST".to_string()),                        // symbol
             Some(ExpirationDate::Days(pos_or_panic!(30.0))), // expiration_date
-            Some(Box::new(Positive::HUNDRED)),            // underlying_price
+            Some(Box::new(Positive::HUNDRED)),               // underlying_price
             Some(dec!(0.05)),                                // risk_free_rate
             Some(pos_or_panic!(0.02)),                       // dividend_yield
             None,
@@ -1314,7 +1314,7 @@ mod tests_get_position {
     // Helper function to create a standard test option data
     fn create_test_option_data() -> OptionData {
         OptionData::new(
-            Positive::HUNDRED,                            // strike_price
+            Positive::HUNDRED,                               // strike_price
             spos!(9.5),                                      // call_bid
             spos!(10.0),                                     // call_ask
             spos!(8.5),                                      // put_bid
@@ -1327,7 +1327,7 @@ mod tests_get_position {
             Some(500),                                       // open_interest
             Some("TEST".to_string()),                        // symbol
             Some(ExpirationDate::Days(pos_or_panic!(30.0))), // expiration_date
-            Some(Box::new(Positive::HUNDRED)),            // underlying_price
+            Some(Box::new(Positive::HUNDRED)),               // underlying_price
             Some(dec!(0.05)),                                // risk_free_rate
             Some(pos_or_panic!(0.02)),                       // dividend_yield
             None,
@@ -1632,7 +1632,7 @@ mod tests_get_position {
     fn test_get_position_fallback_to_black_scholes() {
         // Test with option data that doesn't have market prices
         let option_data = OptionData::new(
-            Positive::HUNDRED,                            // strike_price
+            Positive::HUNDRED,                               // strike_price
             None,                                            // call_bid (missing)
             None,                                            // call_ask (missing)
             None,                                            // put_bid (missing)
@@ -1645,7 +1645,7 @@ mod tests_get_position {
             Some(500),                                       // open_interest
             Some("TEST".to_string()),                        // symbol
             Some(ExpirationDate::Days(pos_or_panic!(30.0))), // expiration_date
-            Some(Box::new(Positive::HUNDRED)),            // underlying_price
+            Some(Box::new(Positive::HUNDRED)),               // underlying_price
             Some(dec!(0.05)),                                // risk_free_rate
             Some(pos_or_panic!(0.02)),                       // dividend_yield
             None,
@@ -1868,7 +1868,7 @@ mod tests_get_option_for_iv {
             None,
             Some("TEST".to_string()),                        // symbol
             Some(ExpirationDate::Days(pos_or_panic!(30.0))), // expiration_date
-            Some(Box::new(Positive::HUNDRED)),            // underlying_price
+            Some(Box::new(Positive::HUNDRED)),               // underlying_price
             Some(dec!(0.05)),                                // risk_free_rate
             Some(pos_or_panic!(0.02)),                       // dividend_yield
             None,
@@ -1915,7 +1915,7 @@ mod tests_get_option_for_iv {
             None,
             Some("TEST".to_string()),                        // symbol
             Some(ExpirationDate::Days(pos_or_panic!(30.0))), // expiration_date
-            Some(Box::new(Positive::HUNDRED)),            // underlying_price
+            Some(Box::new(Positive::HUNDRED)),               // underlying_price
             Some(dec!(0.05)),                                // risk_free_rate
             Some(pos_or_panic!(0.02)),                       // dividend_yield
             None,
@@ -1950,7 +1950,7 @@ mod tests_get_option_for_iv {
             None,
             Some("TEST".to_string()),                        // symbol
             Some(ExpirationDate::Days(pos_or_panic!(30.0))), // expiration_date
-            Some(Box::new(Positive::HUNDRED)),            // underlying_price
+            Some(Box::new(Positive::HUNDRED)),               // underlying_price
             Some(dec!(0.05)),                                // risk_free_rate
             Some(pos_or_panic!(0.02)),                       // dividend_yield
             None,
@@ -3054,13 +3054,13 @@ mod tests_spreads {
 #[cfg(test)]
 mod tests_validate_option_data {
     use super::*;
-
+    use positive::spos;
     use rust_decimal_macros::dec;
 
     #[test]
     fn test_validate_option_data_missing_strike_price() {
         let option_data = OptionData::new(
-            Positive::ZERO, // strike_price is zero
+            Positive::ZERO,     // strike_price is zero
             spos!(9.5),         // call_bid
             spos!(10.0),        // call_ask
             spos!(8.5),         // put_bid
@@ -3087,12 +3087,12 @@ mod tests_validate_option_data {
     #[test]
     fn test_validate_option_data_missing_call_bid() {
         let option_data = OptionData::new(
-            Positive::HUNDRED, // strike_price
-            None,                 // call_bid is not provided
-            spos!(10.0),          // call_ask
-            spos!(8.5),           // put_bid
-            spos!(9.0),           // put_ask
-            pos_or_panic!(0.2),   // implied_volatility
+            Positive::HUNDRED,  // strike_price
+            None,               // call_bid is not provided
+            spos!(10.0),        // call_ask
+            spos!(8.5),         // put_bid
+            spos!(9.0),         // put_ask
+            pos_or_panic!(0.2), // implied_volatility
             Some(dec!(-0.3)),
             Some(dec!(0.7)),
             Some(dec!(0.5)),
@@ -3114,12 +3114,12 @@ mod tests_validate_option_data {
     #[test]
     fn test_validate_option_data_missing_call_ask() {
         let option_data = OptionData::new(
-            Positive::HUNDRED, // strike_price
-            spos!(9.5),           // call_bid
-            None,                 // call_ask is not provided
-            spos!(8.5),           // put_bid
-            spos!(9.0),           // put_ask
-            pos_or_panic!(0.2),   // implied_volatility is zero
+            Positive::HUNDRED,  // strike_price
+            spos!(9.5),         // call_bid
+            None,               // call_ask is not provided
+            spos!(8.5),         // put_bid
+            spos!(9.0),         // put_ask
+            pos_or_panic!(0.2), // implied_volatility is zero
             Some(dec!(-0.3)),
             Some(dec!(0.7)),
             Some(dec!(0.5)),
@@ -3141,12 +3141,12 @@ mod tests_validate_option_data {
     #[test]
     fn test_validate_option_data_missing_put_bid() {
         let option_data = OptionData::new(
-            Positive::HUNDRED, // strike_price
-            spos!(9.5),           // call_bid
-            spos!(10.0),          // call_ask
-            None,                 // put_bid is not provided
-            spos!(9.0),           // put_ask
-            pos_or_panic!(0.2),   // implied_volatility
+            Positive::HUNDRED,  // strike_price
+            spos!(9.5),         // call_bid
+            spos!(10.0),        // call_ask
+            None,               // put_bid is not provided
+            spos!(9.0),         // put_ask
+            pos_or_panic!(0.2), // implied_volatility
             Some(dec!(-0.3)),
             Some(dec!(0.7)),
             Some(dec!(0.5)),
@@ -3168,12 +3168,12 @@ mod tests_validate_option_data {
     #[test]
     fn test_validate_option_data_missing_put_ask() {
         let option_data = OptionData::new(
-            Positive::HUNDRED, // strike_price
-            spos!(9.5),           // call_bid
-            spos!(10.0),          // call_ask
-            spos!(8.5),           // put_bid
-            None,                 // put_ask is not provided
-            pos_or_panic!(0.2),   // implied_volatility
+            Positive::HUNDRED,  // strike_price
+            spos!(9.5),         // call_bid
+            spos!(10.0),        // call_ask
+            spos!(8.5),         // put_bid
+            None,               // put_ask is not provided
+            pos_or_panic!(0.2), // implied_volatility
             Some(dec!(-0.3)),
             Some(dec!(0.7)),
             Some(dec!(0.5)),

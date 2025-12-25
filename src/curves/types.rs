@@ -5,7 +5,7 @@
 ******************************************************************************/
 use crate::error::curves::CurveError;
 use crate::geometrics::HasX;
-use crate::model::positive::is_positive;
+use positive::is_positive;
 use rust_decimal::Decimal;
 use rust_decimal::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -226,6 +226,7 @@ impl HasX for Point2D {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use positive::is_positive;
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
 
@@ -518,12 +519,11 @@ mod tests_point2d_serde {
 #[cfg(test)]
 mod tests_edge_cases {
     use super::*;
+    use positive::Positive;
     use rust_decimal_macros::dec;
 
     #[test]
     fn test_to_tuple_positive_constraint_x() {
-        
-
         // Create a point with negative x
         let point = Point2D::new(dec!(-1.0), dec!(2.0));
 
@@ -542,8 +542,6 @@ mod tests_edge_cases {
 
     #[test]
     fn test_to_tuple_positive_constraint_y() {
-        
-
         // Create a point with negative y
         let point = Point2D::new(dec!(1.0), dec!(-2.0));
 
@@ -562,8 +560,6 @@ mod tests_edge_cases {
 
     #[test]
     fn test_to_tuple_positive_constraint_both_pass() {
-        
-
         // Create a point with positive x and y
         let point = Point2D::new(dec!(1.0), dec!(2.0));
 
@@ -726,7 +722,8 @@ mod tests_performance {
 #[cfg(test)]
 mod tests_point2d_specific_cases {
     use super::*;
-    
+    use positive::Positive;
+
     use crate::error::CurveError;
     use rust_decimal_macros::dec;
 

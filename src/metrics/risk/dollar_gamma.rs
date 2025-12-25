@@ -41,7 +41,6 @@
 use crate::curves::Curve;
 use crate::error::CurveError;
 use crate::model::OptionStyle;
-use positive::pos_or_panic;
 
 /// A trait for computing dollar gamma curves by strike price.
 ///

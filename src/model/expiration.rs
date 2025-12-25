@@ -1,5 +1,4 @@
-use positive::{Positive, assert_pos_relative_eq, pos_or_panic};
-
+use positive::{Positive, pos_or_panic};
 use crate::constants::{DAYS_IN_A_YEAR, EPSILON};
 use crate::error::{ChainError, DecimalError};
 use chrono::{DateTime, Duration, NaiveDate, NaiveDateTime, Utc};
@@ -752,6 +751,7 @@ mod test_expiration_date {
     use crate::model::ExpirationDate;
     use crate::utils::time::get_today_formatted;
     use chrono::{Local, Timelike, Utc};
+    use positive::{Positive, assert_pos_relative_eq, pos_or_panic};
 
     #[test]
     fn test_from_string_valid_days() {
@@ -1096,7 +1096,6 @@ mod tests_from_string {
 mod tests_comparisons {
     use super::*;
     use crate::constants::EPSILON;
-    use crate::model::positive::Positive;
 
     use chrono::{TimeZone, Utc};
     use rust_decimal_macros::dec;

@@ -30,7 +30,7 @@ use crate::strategies::{
 use crate::utils::Len;
 use crate::{ExpirationDate, Options, test_strategy_traits};
 use chrono::Utc;
-use positive::{Positive, pos_or_panic};
+use positive::Positive;
 use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};

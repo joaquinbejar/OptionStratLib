@@ -4,8 +4,8 @@ use {
     optionstratlib::strategies::base::Optimizable,
     optionstratlib::strategies::base::Positionable,
     optionstratlib::strategies::{FindOptimalSide, IronButterfly},
-    optionstratlib::{ExpirationDate, Positive, pos_or_panic},
-    optionstratlib::{OptionStyle, Side, assert_pos_relative_eq},
+    optionstratlib::{ExpirationDate, Positive},
+    optionstratlib::{OptionStyle, Side},
     rust_decimal_macros::dec,
     std::error::Error,
 };

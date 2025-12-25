@@ -1010,6 +1010,7 @@ pub mod prelude;
 pub use model::ExpirationDate;
 pub use model::Options;
 pub use model::types::{OptionStyle, OptionType, Side};
+pub use positive::{Positive, pos_or_panic, spos, assert_pos_relative_eq};
 
 /// Library version
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");

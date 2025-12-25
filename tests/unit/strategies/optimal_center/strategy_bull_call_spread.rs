@@ -1,14 +1,14 @@
 use {
-use positive::pos_or_panic;
     optionstratlib::Side,
     optionstratlib::chains::chain::OptionChain,
     optionstratlib::strategies::base::Optimizable,
     optionstratlib::strategies::base::Positionable,
     optionstratlib::strategies::{BullCallSpread, FindOptimalSide},
-    optionstratlib::{ExpirationDate, Positive, pos_or_panic},
+    optionstratlib::{ExpirationDate, Positive},
     rust_decimal_macros::dec,
     std::error::Error,
 };
+use positive::pos_or_panic;
 
 #[test]
 fn test_bull_call_spread_integration() -> Result<(), Box<dyn Error>> {

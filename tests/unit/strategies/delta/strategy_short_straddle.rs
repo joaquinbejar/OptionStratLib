@@ -1,10 +1,10 @@
-use positive::{assert_pos_relative_eq, pos_or_panic};
 use optionstratlib::greeks::Greeks;
 use optionstratlib::model::types::OptionStyle;
 use optionstratlib::strategies::DeltaAdjustment::BuyOptions;
 use optionstratlib::strategies::delta_neutral::DeltaNeutrality;
 use optionstratlib::strategies::{DELTA_THRESHOLD, ShortStraddle};
-use optionstratlib::{ExpirationDate, Positive, assert_decimal_eq, assert_pos_relative_eq, pos_or_panic};
+use optionstratlib::{ExpirationDate, Positive, assert_decimal_eq};
+use positive::{assert_pos_relative_eq, pos_or_panic};
 use rust_decimal_macros::dec;
 use std::error::Error;
 
@@ -15,19 +15,19 @@ fn test_short_straddle_integration() -> Result<(), Box<dyn Error>> {
 
     let strategy = ShortStraddle::new(
         "CL".to_string(),
-        underlying_price, // underlying_price
-        pos_or_panic!(7140.0),     // put_strike
+        underlying_price,      // underlying_price
+        pos_or_panic!(7140.0), // put_strike
         ExpirationDate::Days(pos_or_panic!(45.0)),
-        pos_or_panic!(0.3745),   // implied_volatility
-        dec!(0.05),     // risk_free_rate
-        Positive::ZERO, // dividend_yield
-        Positive::ONE,      // quantity
-        pos_or_panic!(84.2),     // premium_short_call
-        pos_or_panic!(353.2),    // premium_short_put
-        pos_or_panic!(7.01),     // open_fee_short_call
-        pos_or_panic!(7.01),     // close_fee_short_call
-        pos_or_panic!(7.01),     // open_fee_short_put
-        pos_or_panic!(7.01),     // close_fee_short_put
+        pos_or_panic!(0.3745), // implied_volatility
+        dec!(0.05),            // risk_free_rate
+        Positive::ZERO,        // dividend_yield
+        Positive::ONE,         // quantity
+        pos_or_panic!(84.2),   // premium_short_call
+        pos_or_panic!(353.2),  // premium_short_put
+        pos_or_panic!(7.01),   // open_fee_short_call
+        pos_or_panic!(7.01),   // close_fee_short_call
+        pos_or_panic!(7.01),   // open_fee_short_put
+        pos_or_panic!(7.01),   // close_fee_short_put
     );
 
     let greeks = strategy.greeks().unwrap();

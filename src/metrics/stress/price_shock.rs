@@ -52,6 +52,7 @@ use crate::curves::Curve;
 use crate::error::CurveError;
 use crate::error::SurfaceError;
 use crate::surfaces::Surface;
+use positive::Positive;
 use rust_decimal::Decimal;
 
 /// A trait for computing price shock impact curves by strike price.

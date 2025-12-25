@@ -1,14 +1,15 @@
-use {
 use positive::pos_or_panic;
+use {
     approx::assert_relative_eq,
     num_traits::ToPrimitive,
     optionstratlib::chains::chain::OptionChain,
     optionstratlib::strategies::base::Optimizable,
     optionstratlib::strategies::{FindOptimalSide, ShortButterflySpread, Strategies},
-    optionstratlib::{ExpirationDate, Positive, pos_or_panic},
+    optionstratlib::{ExpirationDate, Positive},
     rust_decimal_macros::dec,
     std::error::Error,
 };
+
 #[test]
 fn test_short_butterfly_spread_integration() -> Result<(), Box<dyn Error>> {
     // Define inputs for the ShortButterflySpread strategy
