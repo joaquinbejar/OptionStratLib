@@ -402,6 +402,7 @@ impl SimulationStatsResult {
 
 #[cfg(test)]
 mod tests {
+    use positive::pos_or_panic;
     use super::*;
     use crate::pnl::PnL;
 

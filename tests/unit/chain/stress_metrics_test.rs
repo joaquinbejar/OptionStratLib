@@ -18,7 +18,7 @@ use optionstratlib::metrics::{
     VolatilitySensitivityCurve, VolatilitySensitivitySurface,
 };
 use optionstratlib::model::ExpirationDate;
-use optionstratlib::{pos, spos};
+use positive::{ spos, pos_or_panic};
 use rust_decimal_macros::dec;
 
 /// Creates a test option chain with proper Greeks data

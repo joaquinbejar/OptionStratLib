@@ -168,7 +168,7 @@ set of options.
 ``` {.rust .rust-example-rendered}
 use rust_decimal_macros::dec;
 use optionstratlib::chains::chain::OptionChain;
-use optionstratlib::{pos, spos};
+use positive::{spos, pos_or_panic};
 
 let chain = OptionChain::new(
     "AAPL",

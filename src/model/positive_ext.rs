@@ -51,6 +51,7 @@ impl From<OptionSeries> for Positive {
 
 #[cfg(test)]
 mod tests {
+    use positive::pos_or_panic;
     use super::*;
 
     #[test]

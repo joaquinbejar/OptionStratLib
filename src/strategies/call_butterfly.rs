@@ -1,4 +1,4 @@
-use positive::{pos_or_panic, spos};
+use positive::spos;
 use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, StrategyBasics, StrategyType, Validable,
 };

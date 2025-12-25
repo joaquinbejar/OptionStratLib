@@ -373,6 +373,7 @@ pub trait BasicSurfaces {
 mod tests_basic_surfaces {
     use super::*;
     use crate::{ExpirationDate, OptionType, assert_decimal_eq};
+    use positive::pos_or_panic;
     use rust_decimal_macros::dec;
     use std::sync::Arc;
 

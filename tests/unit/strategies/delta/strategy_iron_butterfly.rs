@@ -4,9 +4,8 @@ use optionstratlib::strategies::DELTA_THRESHOLD;
 use optionstratlib::strategies::delta_neutral::DeltaAdjustment::BuyOptions;
 use optionstratlib::strategies::delta_neutral::DeltaNeutrality;
 use optionstratlib::strategies::iron_butterfly::IronButterfly;
-use optionstratlib::{
-    ExpirationDate, Positive, Side, assert_decimal_eq, assert_pos_relative_eq, pos,
-};
+use optionstratlib::{ExpirationDate, Side, assert_decimal_eq, assert_pos_relative_eq};
+use positive::{Positive, pos_or_panic};
 use rust_decimal_macros::dec;
 use std::error::Error;
 
@@ -17,21 +16,21 @@ fn test_iron_butterfly_integration() -> Result<(), Box<dyn Error>> {
 
     let strategy = IronButterfly::new(
         "GOLD".to_string(),
-        underlying_price, // underlying_price
-        pos_or_panic!(2725.0),     // short_call_strike
-        pos_or_panic!(2800.0),     // long_call_strike
-        pos_or_panic!(2500.0),     // long_put_strike
+        underlying_price,      // underlying_price
+        pos_or_panic!(2725.0), // short_call_strike
+        pos_or_panic!(2800.0), // long_call_strike
+        pos_or_panic!(2500.0), // long_put_strike
         ExpirationDate::Days(pos_or_panic!(30.0)),
-        pos_or_panic!(0.1548),   // implied_volatility
-        dec!(0.05),     // risk_free_rate
-        Positive::ZERO, // dividend_yield
-        pos_or_panic!(2.0),      // quantity
-        pos_or_panic!(38.8),     // premium_short_call
-        pos_or_panic!(30.4),     // premium_short_put
-        pos_or_panic!(23.3),     // premium_long_call
-        pos_or_panic!(16.8),     // premium_long_put
-        pos_or_panic!(0.96),     // open_fee
-        pos_or_panic!(0.96),     // close_fee
+        pos_or_panic!(0.1548), // implied_volatility
+        dec!(0.05),            // risk_free_rate
+        Positive::ZERO,        // dividend_yield
+        pos_or_panic!(2.0),    // quantity
+        pos_or_panic!(38.8),   // premium_short_call
+        pos_or_panic!(30.4),   // premium_short_put
+        pos_or_panic!(23.3),   // premium_long_call
+        pos_or_panic!(16.8),   // premium_long_put
+        pos_or_panic!(0.96),   // open_fee
+        pos_or_panic!(0.96),   // close_fee
     );
 
     let greeks = strategy.greeks().unwrap();

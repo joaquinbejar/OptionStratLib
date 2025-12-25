@@ -2,7 +2,8 @@ use chrono::Utc;
 use optionstratlib::error::{PricingError, TransactionError};
 use optionstratlib::pnl::{PnL, PnLCalculator, Transaction, TransactionAble};
 use optionstratlib::strategies::DeltaAdjustment;
-use optionstratlib::{ExpirationDate, Positive, pos, spos};
+use optionstratlib::{ExpirationDate};
+use positive::{ spos, pos_or_panic, Positive};
 use rust_decimal_macros::dec;
 
 // A simple implementation of PnLCalculator for testing

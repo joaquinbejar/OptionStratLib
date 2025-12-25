@@ -11,6 +11,7 @@
 //! - Delta-Gamma Profile Curve and Surface
 //! - Smile Dynamics Curve and Surface
 
+use positive::{pos_or_panic, spos};
 use optionstratlib::chains::OptionData;
 use optionstratlib::chains::chain::OptionChain;
 use optionstratlib::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
@@ -19,7 +20,6 @@ use optionstratlib::metrics::{
     VannaVolgaSurface,
 };
 use optionstratlib::model::ExpirationDate;
-use optionstratlib::{pos, spos};
 use rust_decimal_macros::dec;
 
 /// Creates a test option chain with proper IV values for testing

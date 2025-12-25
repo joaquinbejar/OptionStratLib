@@ -237,6 +237,7 @@ mod tests {
     use crate::surfaces::Surface;
     use rust_decimal_macros::dec;
     use std::collections::BTreeSet;
+    use positive::pos_or_panic;
 
     #[test]
     fn test_point3d_new() {

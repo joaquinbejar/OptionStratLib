@@ -17,7 +17,7 @@ use optionstratlib::metrics::{
     BidAskSpreadCurve, OpenInterestCurve, VolumeProfileCurve, VolumeProfileSurface,
 };
 use optionstratlib::model::ExpirationDate;
-use optionstratlib::{pos, spos};
+use positive::{ spos, pos_or_panic};
 use rust_decimal_macros::dec;
 
 /// Creates a test option chain with liquidity data (bid/ask, volume, OI)

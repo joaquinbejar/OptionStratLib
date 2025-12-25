@@ -183,9 +183,7 @@ pub mod logger;
 /// functionality that doesn't fit neatly into the main project structure.  More specific
 /// documentation can be found within each sub-module.
 pub mod others;
-/// This module contains testing utilities and macros.  It provides functionality for
-/// asserting relative equality, generating random elements, and processing combinations.
-pub(crate) mod tests;
+
 
 /// This module contains the CSV reader and writer for OHLCV data.  It provides functionality for
 /// reading and writing OHLCV data in CSV format, as well as handling errors related to CSV

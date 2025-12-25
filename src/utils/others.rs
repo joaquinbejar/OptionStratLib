@@ -288,6 +288,7 @@ mod tests_get_random_element {
     use crate::chains::OptionData;
 
     use std::collections::BTreeSet;
+    use positive::pos_or_panic;
 
     #[test]
     fn test_get_random_element_empty_set() {
@@ -602,6 +603,7 @@ mod tests_log_returns {
     use super::*;
 
     use approx::assert_relative_eq;
+    use positive::pos_or_panic;
 
     #[test]
     fn test_empty_input() {

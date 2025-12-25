@@ -3,9 +3,10 @@ use optionstratlib::ExpirationDate;
 use optionstratlib::strategies::base::BreakEvenable;
 use optionstratlib::strategies::bear_call_spread::BearCallSpread;
 use optionstratlib::strategies::{BasicAble, Strategies};
-use optionstratlib::{Positive, pos_or_panic};
+use positive::{Positive, pos_or_panic};
 use rust_decimal_macros::dec;
 use std::error::Error;
+
 
 #[test]
 fn test_bear_call_spread_integration() -> Result<(), Box<dyn Error>> {

@@ -593,7 +593,7 @@ tracing::info!("Greeks - Delta: {:.4}, Gamma: {:.4}, Theta: {:.4}, Vega: {:.4}",
 
 ::: example-wrap
 ``` {.rust .rust-example-rendered}
-use optionstratlib::{Positive, ExpirationDate, pos};
+use positive::{Positive, ExpirationDate, pos};
 use optionstratlib::strategies::Strategies;
 use optionstratlib::strategies::bull_call_spread::BullCallSpread;
 use optionstratlib::strategies::base::{BreakEvenable, BasicAble};

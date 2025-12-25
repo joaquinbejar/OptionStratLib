@@ -583,7 +583,7 @@ tracing::info!("Greeks - Delta: {:.4}, Gamma: {:.4}, Theta: {:.4},
 #### Working with Trading Strategies
 
 ```rust
-use optionstratlib::{Positive, ExpirationDate, pos_or_panic};
+use positive::{Positive, ExpirationDate, pos_or_panic};
 use optionstratlib::strategies::Strategies;
 use optionstratlib::strategies::bull_call_spread::BullCallSpread;
 use optionstratlib::strategies::base::{BreakEvenable, BasicAble};
