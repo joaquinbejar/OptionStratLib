@@ -15,7 +15,7 @@ fn main() -> Result<(), Error> {
         Positive::ZERO,
         Decimal::ZERO,
         Positive::ZERO,
-        pos_or_panic!(1.0),
+        Positive::ONE,
         Positive::ZERO,
         Positive::ZERO,
         Positive::ZERO,

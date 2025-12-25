@@ -54,11 +54,11 @@
 //!     pos_or_panic!(5780.0),   // underlying_price
 //!     pos_or_panic!(5750.0),   // long_strike_itm  
 //!     pos_or_panic!(5820.0),   // short_strike
-//!     ExpirationDate::Days(pos_or_panic!(2.0)),
+//!     ExpirationDate::Days(Positive::TWO),
 //!     pos_or_panic!(0.18),   // implied_volatility
 //!     dec!(0.05),   // risk_free_rate
 //!     Positive::ZERO,   // dividend_yield
-//!     pos_or_panic!(2.0),   // long quantity
+//!     Positive::TWO,   // long quantity
 //!     pos_or_panic!(85.04),   // premium_long
 //!     pos_or_panic!(29.85),   // premium_short
 //!     pos_or_panic!(0.78),   // open_fee_long
@@ -173,7 +173,7 @@
 //!     pos_or_panic!(0.2),   // implied_volatility
 //!     dec!(0.01),   // risk_free_rate
 //!     pos_or_panic!(0.02),   // dividend_yield
-//!     pos_or_panic!(1.0),   // quantity
+//!     Positive::ONE,   // quantity
 //!     pos_or_panic!(1.5),   // premium_short_call
 //!     Positive::ONE,   // premium_short_put
 //!     Positive::TWO,   // premium_long_call

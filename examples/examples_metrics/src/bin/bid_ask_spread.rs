@@ -13,8 +13,8 @@
 //! - PNG image: `./Draws/Metrics/bid_ask_spread_curve.png`
 //! - HTML interactive: `./Draws/Metrics/bid_ask_spread_curve.html`
 
-use optionstratlib::chains::OptionData;
 use optionstratlib::chains::chain::OptionChain;
+use optionstratlib::chains::OptionData;
 use optionstratlib::error::CurveError;
 use optionstratlib::metrics::BidAskSpreadCurve;
 use optionstratlib::model::ExpirationDate;
@@ -42,14 +42,14 @@ fn main() -> Result<(), CurveError> {
             pos_or_panic!(71.0),
             pos_or_panic!(73.0),
             pos_or_panic!(0.5),
-            pos_or_panic!(1.0),
+            Positive::ONE,
         ),
         (
             pos_or_panic!(400.0),
             pos_or_panic!(52.0),
             pos_or_panic!(53.5),
             pos_or_panic!(1.5),
-            pos_or_panic!(2.0),
+            Positive::TWO,
         ),
         (
             pos_or_panic!(420.0),

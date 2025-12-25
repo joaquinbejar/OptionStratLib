@@ -125,6 +125,7 @@ pub fn price_option_monte_carlo(
 
 #[cfg(test)]
 mod tests {
+    use positive::pos_or_panic;
     use super::*;
     use crate::constants::{DAYS_IN_A_YEAR, ZERO};
     use crate::model::types::{OptionStyle, OptionType, Side};
@@ -137,11 +138,11 @@ mod tests {
             option_type: OptionType::European,
             side: Side::Long,
             underlying_symbol: "TEST".to_string(),
-            strike_price: pos_or_panic!(100.0),
+            strike_price: Positive::HUNDRED,
             expiration_date: ExpirationDate::Days(DAYS_IN_A_YEAR), // 1 year
             implied_volatility: pos_or_panic!(0.2),
-            quantity: pos_or_panic!(1.0),
-            underlying_price: pos_or_panic!(100.0),
+            quantity: Positive::ONE,
+            underlying_price: Positive::HUNDRED,
             risk_free_rate: dec!(0.05),
             option_style: OptionStyle::Call,
             dividend_yield: Positive::ZERO,
@@ -200,6 +201,7 @@ mod tests {
 
 #[cfg(test)]
 mod tests_price_option_monte_carlo {
+    use positive::{assert_pos_relative_eq, pos_or_panic};
     use super::*;
     use crate::chains::generator_positive;
     use crate::model::utils::create_sample_option;
@@ -210,7 +212,7 @@ mod tests_price_option_monte_carlo {
     use crate::utils::time::convert_time_frame;
     #[cfg(feature = "static_export")]
     use crate::visualization::Graph;
-    use crate::{ExpirationDate, OptionStyle, Side, assert_pos_relative_eq};
+    use crate::{ExpirationDate, OptionStyle, Side};
     use rust_decimal_macros::dec;
 
     #[test]
@@ -219,9 +221,9 @@ mod tests_price_option_monte_carlo {
         let option = create_sample_option(
             OptionStyle::Call,
             Side::Long,
-            pos_or_panic!(100.0),
-            pos_or_panic!(1.0),
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
+            Positive::ONE,
+            Positive::HUNDRED,
             pos_or_panic!(0.2),
         );
         let empty_prices = &[];
@@ -240,9 +242,9 @@ mod tests_price_option_monte_carlo {
         let mut option = create_sample_option(
             OptionStyle::Call,
             Side::Long,
-            pos_or_panic!(100.0),
-            pos_or_panic!(1.0),
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
+            Positive::ONE,
+            Positive::HUNDRED,
             pos_or_panic!(0.2),
         );
 
@@ -279,7 +281,7 @@ mod tests_price_option_monte_carlo {
             OptionStyle::Call,
             Side::Long,
             initial_price,
-            pos_or_panic!(1.0),
+            Positive::ONE,
             initial_price,
             volatility,
         );
@@ -292,7 +294,7 @@ mod tests_price_option_monte_carlo {
             y: Ystep::new(0, initial_price),
         };
 
-        let dt = convert_time_frame(pos_or_panic!(1.0), &TimeFrame::Day, &TimeFrame::Year);
+        let dt = convert_time_frame(Positive::ONE, &TimeFrame::Day, &TimeFrame::Year);
         let walk_params = WalkParams {
             size: 365,
             init_step,

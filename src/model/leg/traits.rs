@@ -282,7 +282,7 @@ mod tests {
     fn test_mock_leg_long_pnl() {
         let leg = MockLeg {
             symbol: "BTC".to_string(),
-            quantity: crate::pos_or_panic!(1.0),
+            quantity: crate::Positive::ONE,
             side: Side::Long,
             cost_basis: crate::pos_or_panic!(50000.0),
             fees: crate::pos_or_panic!(10.0),
@@ -301,7 +301,7 @@ mod tests {
     fn test_mock_leg_short_pnl() {
         let leg = MockLeg {
             symbol: "BTC".to_string(),
-            quantity: crate::pos_or_panic!(1.0),
+            quantity: crate::Positive::ONE,
             side: Side::Short,
             cost_basis: crate::pos_or_panic!(50000.0),
             fees: crate::pos_or_panic!(10.0),
@@ -320,7 +320,7 @@ mod tests {
     fn test_mock_leg_delta() {
         let long_leg = MockLeg {
             symbol: "BTC".to_string(),
-            quantity: crate::pos_or_panic!(2.0),
+            quantity: crate::Positive::TWO,
             side: Side::Long,
             cost_basis: crate::pos_or_panic!(50000.0),
             fees: crate::pos_or_panic!(10.0),
@@ -328,7 +328,7 @@ mod tests {
 
         let short_leg = MockLeg {
             symbol: "BTC".to_string(),
-            quantity: crate::pos_or_panic!(2.0),
+            quantity: crate::Positive::TWO,
             side: Side::Short,
             cost_basis: crate::pos_or_panic!(50000.0),
             fees: crate::pos_or_panic!(10.0),
@@ -342,7 +342,7 @@ mod tests {
     fn test_is_long_short() {
         let long_leg = MockLeg {
             symbol: "BTC".to_string(),
-            quantity: crate::pos_or_panic!(1.0),
+            quantity: crate::Positive::ONE,
             side: Side::Long,
             cost_basis: crate::pos_or_panic!(50000.0),
             fees: crate::pos_or_panic!(10.0),
@@ -350,7 +350,7 @@ mod tests {
 
         let short_leg = MockLeg {
             symbol: "BTC".to_string(),
-            quantity: crate::pos_or_panic!(1.0),
+            quantity: crate::Positive::ONE,
             side: Side::Short,
             cost_basis: crate::pos_or_panic!(50000.0),
             fees: crate::pos_or_panic!(10.0),
@@ -366,7 +366,7 @@ mod tests {
     fn test_notional_value() {
         let leg = MockLeg {
             symbol: "BTC".to_string(),
-            quantity: crate::pos_or_panic!(2.0),
+            quantity: crate::Positive::TWO,
             side: Side::Long,
             cost_basis: crate::pos_or_panic!(50000.0),
             fees: crate::pos_or_panic!(10.0),

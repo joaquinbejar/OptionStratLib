@@ -22,14 +22,14 @@ where
 }
 
 fn make_params(size: usize, start_price: Positive) -> WalkParams<Positive, Positive> {
-    let init_x = Xstep::new(pos_or_panic!(1.0), TimeFrame::Day, ExpirationDate::Days(pos_or_panic!(size as f64)));
+    let init_x = Xstep::new(Positive::ONE, TimeFrame::Day, ExpirationDate::Days(pos_or_panic!(size as f64)));
     let init_y = Ystep::new(0, start_price);
     let init_step = Step { x: init_x, y: init_y };
 
     WalkParams {
         size,
         init_step,
-        walk_type: WalkType::Brownian { dt: pos_or_panic!(1.0), drift: Decimal::ZERO, volatility: pos_or_panic!(0.2) },
+        walk_type: WalkType::Brownian { dt: Positive::ONE, drift: Decimal::ZERO, volatility: pos_or_panic!(0.2) },
         walker: Box::new(TestWalker),
     }
 }
@@ -52,7 +52,7 @@ fn simple_generator(params: &WalkParams<Positive, Positive>) -> Vec<Step<Positiv
 fn walktype_historical_display_is_covered() {
     let wt = WalkType::Historical {
         timeframe: TimeFrame::Day,
-        prices: vec![pos_or_panic!(1.0), pos_or_panic!(2.0), pos_or_panic!(3.0)],
+        prices: vec![Positive::ONE, Positive::TWO, pos_or_panic!(3.0)],
         symbol: Some("ABC".to_string()),
     };
     let s = format!("{}", wt);
@@ -63,7 +63,7 @@ fn walktype_historical_display_is_covered() {
 
 #[test]
 fn randomwalk_profit_error_and_graph_paths() {
-    let params = make_params(5, pos_or_panic!(100.0));
+    let params = make_params(5, Positive::HUNDRED);
     let rw = RandomWalk::new("RW_Title".to_string(), &params, simple_generator);
 
     // Exercise Profit::calculate_profit_at error branch

@@ -20,7 +20,7 @@ fn main() -> Result<(), Error> {
     initial_chain.update_expiration_date(get_x_days_formatted(2));
     let iv = pos_or_panic!(0.20);
     let walker = Box::new(Walker::new());
-    let days = pos_or_panic!(2.0);
+    let days = Positive::TWO;
 
     let walk_params = WalkParams {
         size: n_steps,
@@ -30,7 +30,7 @@ fn main() -> Result<(), Error> {
         },
         walk_type: WalkType::GeometricBrownian {
             dt: convert_time_frame(
-                pos_or_panic!(1.0) / days,
+                Positive::ONE / days,
                 &TimeFrame::Minute,
                 &TimeFrame::Day,
             ),

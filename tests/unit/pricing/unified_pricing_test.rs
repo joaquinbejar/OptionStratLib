@@ -45,7 +45,7 @@ fn create_test_option() -> Options {
         option_type: OptionType::European,
         side: Side::Long,
         underlying_symbol: "TEST".to_string(),
-        strike_price: pos_or_panic!(100.0),
+        strike_price: Positive::HUNDRED,
         expiration_date: ExpirationDate::Days(pos_or_panic!(30.0)),
         implied_volatility: pos_or_panic!(0.2),
         quantity: Positive::ONE,
@@ -98,7 +98,7 @@ fn test_price_option_monte_carlo() {
 
     let init_step = Step {
         x: Xstep::new(
-            pos_or_panic!(1.0),
+            Positive::ONE,
             TimeFrame::Day,
             ExpirationDate::Days(pos_or_panic!(size as f64)),
         ),
@@ -106,7 +106,7 @@ fn test_price_option_monte_carlo() {
     };
 
     let walk = WalkType::GeometricBrownian {
-        dt: pos_or_panic!(1.0),
+        dt: Positive::ONE,
         drift: dec!(0.0),
         volatility: option.implied_volatility,
     };
@@ -135,7 +135,7 @@ fn test_priceable_trait_monte_carlo() {
 
     let init_step = Step {
         x: Xstep::new(
-            pos_or_panic!(1.0),
+            Positive::ONE,
             TimeFrame::Day,
             ExpirationDate::Days(pos_or_panic!(size as f64)),
         ),
@@ -143,7 +143,7 @@ fn test_priceable_trait_monte_carlo() {
     };
 
     let walk = WalkType::GeometricBrownian {
-        dt: pos_or_panic!(1.0),
+        dt: Positive::ONE,
         drift: dec!(0.0),
         volatility: option.implied_volatility,
     };
@@ -202,7 +202,7 @@ fn test_monte_carlo_with_heston() {
 
     let init_step = Step {
         x: Xstep::new(
-            pos_or_panic!(1.0),
+            Positive::ONE,
             TimeFrame::Day,
             ExpirationDate::Days(pos_or_panic!(size as f64)),
         ),
@@ -210,7 +210,7 @@ fn test_monte_carlo_with_heston() {
     };
 
     let walk = WalkType::Heston {
-        dt: pos_or_panic!(1.0),
+        dt: Positive::ONE,
         drift: dec!(0.0),
         volatility: option.implied_volatility,
         kappa: pos_or_panic!(1.5),
@@ -243,7 +243,7 @@ fn test_monte_carlo_with_jump_diffusion() {
 
     let init_step = Step {
         x: Xstep::new(
-            pos_or_panic!(1.0),
+            Positive::ONE,
             TimeFrame::Day,
             ExpirationDate::Days(pos_or_panic!(size as f64)),
         ),
@@ -251,7 +251,7 @@ fn test_monte_carlo_with_jump_diffusion() {
     };
 
     let walk = WalkType::JumpDiffusion {
-        dt: pos_or_panic!(1.0),
+        dt: Positive::ONE,
         drift: dec!(0.0),
         volatility: option.implied_volatility,
         intensity: pos_or_panic!(0.5),
@@ -291,7 +291,7 @@ fn test_monte_carlo_with_telegraph() {
 
     let init_step = Step {
         x: Xstep::new(
-            pos_or_panic!(1.0),
+            Positive::ONE,
             TimeFrame::Day,
             ExpirationDate::Days(pos_or_panic!(size as f64)),
         ),
@@ -299,7 +299,7 @@ fn test_monte_carlo_with_telegraph() {
     };
 
     let walk = WalkType::Telegraph {
-        dt: pos_or_panic!(1.0),
+        dt: Positive::ONE,
         drift: dec!(0.0),
         volatility: option.implied_volatility,
         lambda_up: pos_or_panic!(0.8),

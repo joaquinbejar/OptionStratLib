@@ -7,7 +7,7 @@ fn main() -> Result<(), Error> {
     let expiration = ExpirationDate::Days(pos_or_panic!(45.0));
     let risk_free_rate = dec!(0.05);
     let dividend_yield = Positive::ZERO;
-    let quantity = pos_or_panic!(2.0);
+    let quantity = Positive::TWO;
 
     // Create the same positions as ShortStrangle example
     // Short Call at 7450.0 strike
@@ -77,7 +77,7 @@ fn main() -> Result<(), Error> {
     let range = if strategy.break_even_points.len() >= 2 {
         strategy.break_even_points[1] - strategy.break_even_points[0]
     } else {
-        pos_or_panic!(0.0)
+        Positive::ZERO
     };
 
     // Display strategy information
@@ -98,7 +98,7 @@ fn main() -> Result<(), Error> {
     );
     info!("Total Fees: ${:.2}", strategy.get_fees()?);
 
-    if range > pos_or_panic!(0.0) {
+    if range > Positive::ZERO {
         info!(
             "Range of Profit: ${:.2} {:.2}%",
             range,

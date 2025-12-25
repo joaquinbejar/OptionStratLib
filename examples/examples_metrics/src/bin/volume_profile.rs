@@ -14,8 +14,8 @@
 //! - PNG image: `./Draws/Metrics/volume_profile_surface.png`
 //! - HTML interactive files
 
-use optionstratlib::chains::OptionData;
 use optionstratlib::chains::chain::OptionChain;
+use optionstratlib::chains::OptionData;
 use optionstratlib::error::CurveError;
 use optionstratlib::metrics::{VolumeProfileCurve, VolumeProfileSurface};
 use optionstratlib::model::ExpirationDate;
@@ -133,7 +133,7 @@ fn main() -> Result<(), CurveError> {
     tracing::info!("Generating Volume Profile Surface...");
 
     let days = vec![
-        pos_or_panic!(1.0),
+        Positive::ONE,
         pos_or_panic!(5.0),
         pos_or_panic!(10.0),
         pos_or_panic!(15.0),

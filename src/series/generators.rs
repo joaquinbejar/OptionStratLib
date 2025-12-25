@@ -1,4 +1,3 @@
-use positive::pos_or_panic;
 use crate::Positive;
 use crate::error::ChainError;
 use crate::series::OptionSeries;
@@ -8,6 +7,7 @@ use crate::utils::TimeFrame;
 use crate::utils::others::calculate_log_returns;
 use crate::volatility::{adjust_volatility, constant_volatility};
 use core::option::Option;
+use positive::pos_or_panic;
 use rust_decimal::Decimal;
 use tracing::debug;
 
@@ -197,8 +197,10 @@ pub fn generator_optionseries(
 
 #[cfg(test)]
 mod tests_generator_optionseries {
+    use positive::spos;
     use super::*;
 
+    use crate::ExpirationDate;
     use crate::chains::utils::OptionChainBuildParams;
     use crate::chains::utils::OptionDataPriceParams;
     use crate::series::{OptionSeries, OptionSeriesBuildParams};
@@ -206,7 +208,6 @@ mod tests_generator_optionseries {
     use crate::simulation::{WalkParams, WalkType, WalkTypeAble};
     use crate::utils::TimeFrame;
     use crate::utils::time::convert_time_frame;
-    use crate::{ExpirationDate, assert_pos_relative_eq};
     use rust_decimal_macros::dec;
 
     // Mock Walker for testing
@@ -223,7 +224,7 @@ mod tests_generator_optionseries {
     fn create_test_option_series() -> OptionSeries {
         // Create basic chain parameters
         let price_params = OptionDataPriceParams::new(
-            Some(Box::new(pos_or_panic!(100.0))),
+            Some(Box::new(Positive::HUNDRED)),
             Some(ExpirationDate::Days(pos_or_panic!(30.0))),
             Some(dec!(0.05)),
             spos!(0.02),
@@ -271,7 +272,7 @@ mod tests_generator_optionseries {
                 y: Ystep::new(0, initial_series),
             },
             walk_type: WalkType::GeometricBrownian {
-                dt: convert_time_frame(pos_or_panic!(1.0), &TimeFrame::Day, &TimeFrame::Day),
+                dt: convert_time_frame(Positive::ONE, &TimeFrame::Day, &TimeFrame::Day),
                 drift: dec!(0.0),
                 volatility: std_dev,
             },
@@ -384,7 +385,7 @@ mod tests_generator_optionseries {
             },
             walk_type: WalkType::Historical {
                 timeframe: TimeFrame::Day,
-                prices: vec![pos_or_panic!(100.0), pos_or_panic!(101.0)], // Less than size
+                prices: vec![Positive::HUNDRED, pos_or_panic!(101.0)], // Less than size
                 symbol: None,
             },
             walker,
@@ -429,7 +430,7 @@ mod tests_generator_optionseries {
                 dt: pos_or_panic!(0.01),
                 volatility,
                 speed: pos_or_panic!(0.1),
-                mean: pos_or_panic!(100.0),
+                mean: Positive::HUNDRED,
             },
             WalkType::JumpDiffusion {
                 dt: pos_or_panic!(0.01),
@@ -450,7 +451,7 @@ mod tests_generator_optionseries {
                 dt: pos_or_panic!(0.01),
                 drift: dec!(0.0),
                 volatility,
-                kappa: pos_or_panic!(2.0),
+                kappa: Positive::TWO,
                 theta: pos_or_panic!(0.04),
                 xi: pos_or_panic!(0.1),
                 rho: dec!(-0.7),
@@ -493,7 +494,7 @@ mod tests_generator_optionseries {
         let initial_series = create_test_option_series();
         let walker = Box::new(TestWalker {});
         let historical_prices = vec![
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             pos_or_panic!(102.0),
             pos_or_panic!(98.0),
             pos_or_panic!(105.0),

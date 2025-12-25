@@ -107,6 +107,7 @@ impl From<String> for VolatilityError {
 
 #[cfg(test)]
 mod tests_volatility_errors {
+    use positive::pos_or_panic;
     use super::*;
     use crate::error::greeks::InputErrorKind;
     use crate::error::{GreeksError, OptionsError};
@@ -114,7 +115,7 @@ mod tests_volatility_errors {
     #[test]
     fn test_invalid_price_error() {
         let error = VolatilityError::InvalidPrice {
-            price: pos_or_panic!(0.0),
+            price: Positive::ZERO,
             reason: "Price cannot be zero".to_string(),
         };
 
@@ -124,7 +125,7 @@ mod tests_volatility_errors {
     #[test]
     fn test_invalid_time_error() {
         let error = VolatilityError::InvalidTime {
-            time: pos_or_panic!(0.0),
+            time: Positive::ZERO,
             reason: "Time cannot be zero".to_string(),
         };
 

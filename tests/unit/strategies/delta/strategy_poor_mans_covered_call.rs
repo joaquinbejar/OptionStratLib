@@ -22,7 +22,7 @@ fn test_poor_mans_covered_call_integration() -> Result<(), Box<dyn Error>> {
         pos_or_panic!(0.17),                        // implied_volatility
         dec!(0.05),                        // risk_free_rate
         Positive::ZERO,                    // dividend_yield
-        pos_or_panic!(2.0),                         // quantity
+        Positive::TWO,                         // quantity
         pos_or_panic!(154.7),                       // premium_short_call
         pos_or_panic!(30.8),                        // premium_short_put
         pos_or_panic!(1.74),                        // open_fee_short_call

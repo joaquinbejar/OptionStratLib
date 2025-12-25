@@ -69,11 +69,11 @@
 //!         pos_or_panic!(5781.88),   // underlying_price
 //!         pos_or_panic!(5750.0),   // long_strike_itm
 //!         pos_or_panic!(5820.0),   // short_strike
-//!         ExpirationDate::Days(pos_or_panic!(2.0)),
+//!         ExpirationDate::Days(Positive::TWO),
 //!         pos_or_panic!(0.18),   // implied_volatility
 //!         dec!(0.05),   // risk_free_rate
 //!         Positive::ZERO,   // dividend_yield
-//!         pos_or_panic!(2.0),   // long quantity
+//!         Positive::TWO,   // long quantity
 //!         pos_or_panic!(85.04),   // premium_long
 //!         pos_or_panic!(29.85),   // premium_short
 //!         pos_or_panic!(0.78),   // open_fee_long
@@ -101,11 +101,11 @@
 //!         pos_or_panic!(5781.88),   // underlying_price
 //!         pos_or_panic!(5750.0),   // long_strike_itm
 //!         pos_or_panic!(5820.0),   // short_strike
-//!         ExpirationDate::Days(pos_or_panic!(2.0)),
+//!         ExpirationDate::Days(Positive::TWO),
 //!         pos_or_panic!(0.18),   // implied_volatility
 //!         dec!(0.05),   // risk_free_rate
 //!         Positive::ZERO,   // dividend_yield
-//!         pos_or_panic!(2.0),   // long quantity
+//!         Positive::TWO,   // long quantity
 //!         pos_or_panic!(85.04),   // premium_long
 //!         pos_or_panic!(29.85),   // premium_short
 //!         pos_or_panic!(0.78),   // open_fee_long
@@ -136,11 +136,11 @@
 //!         pos_or_panic!(5781.88),   // underlying_price
 //!         pos_or_panic!(5750.0),   // long_strike_itm
 //!         pos_or_panic!(5820.0),   // short_strike
-//!         ExpirationDate::Days(pos_or_panic!(2.0)),
+//!         ExpirationDate::Days(Positive::TWO),
 //!         pos_or_panic!(0.18),   // implied_volatility
 //!         dec!(0.05),   // risk_free_rate
 //!         Positive::ZERO,   // dividend_yield
-//!         pos_or_panic!(2.0),   // long quantity
+//!         Positive::TWO,   // long quantity
 //!         pos_or_panic!(85.04),   // premium_long
 //!         pos_or_panic!(29.85),   // premium_short
 //!         pos_or_panic!(0.78),   // open_fee_long
@@ -166,7 +166,7 @@
 //! use optionstratlib::pos_or_panic;
 //!
 //! let (prob_below, prob_in_range, prob_above) = calculate_price_probability(
-//!     &pos_or_panic!(100.0),   // current price
+//!     &Positive::HUNDRED,   // current price
 //!     &pos_or_panic!(95.0),   // lower bound
 //!     &pos_or_panic!(105.0),   // upper bound
 //!     None,   // volatility adjustment

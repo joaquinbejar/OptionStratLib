@@ -282,6 +282,7 @@ where
 
 #[cfg(test)]
 mod tests {
+    use positive::pos_or_panic;
     use super::*;
     use crate::Positive;
 
@@ -447,7 +448,7 @@ mod tests {
         // Test a sequence of steps
         let value = TestValue(10);
         let time_unit = TimeFrame::Day;
-        let datetime = ExpirationDate::Days(pos_or_panic!(100.0));
+        let datetime = ExpirationDate::Days(Positive::HUNDRED);
 
         let step = Xstep::new(value, time_unit, datetime);
         let step1 = step.next().unwrap();
@@ -493,6 +494,7 @@ mod tests {
 
 #[cfg(test)]
 mod tests_positive {
+    use positive::pos_or_panic;
     use super::*;
 
     #[test]
@@ -551,7 +553,7 @@ mod tests_positive {
         // Test time conversion for weeks
         // If we have a step with value 2 Week and 30 days expiration
         // Next step should have 16 days expiration (30 - (2 * 7))
-        let value = pos_or_panic!(2.0);
+        let value = Positive::TWO;
         let time_unit = TimeFrame::Week;
         let datetime = ExpirationDate::Days(pos_or_panic!(30.0));
 
@@ -559,7 +561,7 @@ mod tests_positive {
         let next_step = step.next().unwrap();
 
         assert_eq!(*next_step.index(), 1);
-        assert_eq!(*next_step.step_size_in_time(), pos_or_panic!(2.0));
+        assert_eq!(*next_step.step_size_in_time(), Positive::TWO);
         assert_eq!(*next_step.time_unit(), TimeFrame::Week);
         assert_eq!(
             *next_step.datetime(),
@@ -615,7 +617,7 @@ mod tests_positive {
         // Test a sequence of steps
         let value = Positive::TEN;
         let time_unit = TimeFrame::Day;
-        let datetime = ExpirationDate::Days(pos_or_panic!(100.0));
+        let datetime = ExpirationDate::Days(Positive::HUNDRED);
 
         let step = Xstep::new(value, time_unit, datetime);
         let step1 = step.next().unwrap();
@@ -661,6 +663,7 @@ mod tests_positive {
 
 #[cfg(test)]
 mod tests_step {
+    use positive::pos_or_panic;
     use super::*;
     use crate::Positive;
 
@@ -835,7 +838,7 @@ mod tests_step {
         // Test a chain of steps with different Y values
         let x_value = TestValue(10);
         let time_unit = TimeFrame::Day;
-        let datetime = ExpirationDate::Days(pos_or_panic!(100.0));
+        let datetime = ExpirationDate::Days(Positive::HUNDRED);
         let y_value = 50.0;
 
         let initial = Step::new(x_value, time_unit, datetime, y_value);
@@ -893,7 +896,7 @@ mod tests_step {
         // Test using Positive as both X and Y types
         let x_value = pos_or_panic!(5.0);
         let time_unit = TimeFrame::Day;
-        let datetime = ExpirationDate::Days(pos_or_panic!(0.0));
+        let datetime = ExpirationDate::Days(Positive::ZERO);
         let y_value = pos_or_panic!(50.0);
         let step = Step::new(x_value, time_unit, datetime, y_value);
         let result = step.next(pos_or_panic!(55.0));
@@ -909,7 +912,7 @@ mod tests_step {
     fn next_ok_increments_indices_and_builds_self() {
         let x_value = pos_or_panic!(5.0);
         let time_unit = TimeFrame::Day;
-        let datetime = ExpirationDate::Days(pos_or_panic!(2.0));
+        let datetime = ExpirationDate::Days(Positive::TWO);
         let y_value = pos_or_panic!(50.0);
         let step = Step::new(x_value, time_unit, datetime, y_value);
 
@@ -927,6 +930,7 @@ mod tests_step_serialization {
     use super::*;
 
     use chrono::{TimeZone, Utc};
+    use positive::pos_or_panic;
     use serde_json::{self, Value};
 
     // Helper function to create a test step with f64 values

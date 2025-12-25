@@ -85,7 +85,7 @@ fn main() -> Result<(), Error> {
         underlying_price,
         dec!(0.0), // risk_free_rate
         OptionStyle::Call,
-        pos_or_panic!(0.0), // dividend_yield
+        Positive::ZERO, // dividend_yield
         None,
     );
     let initial_premium = temp_option.calculate_price_black_scholes()?.abs();
@@ -100,10 +100,10 @@ fn main() -> Result<(), Error> {
         Positive::ONE,
         underlying_price,
         dec!(0.0),          // risk_free_rate
-        pos_or_panic!(0.0), // dividend_yield
+        Positive::ZERO, // dividend_yield
         premium_positive,   // premium paid
-        pos_or_panic!(0.0), // open_fee
-        pos_or_panic!(0.0), // close_fee
+        Positive::ZERO, // open_fee
+        Positive::ZERO, // close_fee
     );
 
     // Define exit policy: 100% profit OR expiration
@@ -125,7 +125,7 @@ fn main() -> Result<(), Error> {
     // Create WalkParams for the Simulator
     let walker = Box::new(Walker);
     let dt = convert_time_frame(
-        pos_or_panic!(1.0) / days,
+        Positive::ONE / days,
         &TimeFrame::Minute,
         &TimeFrame::Day,
     );
@@ -145,7 +145,7 @@ fn main() -> Result<(), Error> {
             dt,
             drift: dec!(0.01),
             volatility: volatility_dt,
-            kappa: pos_or_panic!(2.0),
+            kappa: Positive::TWO,
             theta: pos_or_panic!(0.0225),
             xi: pos_or_panic!(0.3),
             rho: dec!(-0.3),

@@ -27,7 +27,7 @@ pub(crate) fn benchmark_creation(c: &mut Criterion) {
 pub(crate) fn benchmark_arithmetic(c: &mut Criterion) {
     let mut group = c.benchmark_group("Arithmetic Operations");
 
-    let val1 = pos_or_panic!(100.0);
+    let val1 = Positive::HUNDRED;
     let val2 = pos_or_panic!(50.0);
     let decimal = dec!(25.0);
 
@@ -154,7 +154,7 @@ pub(crate) fn benchmark_math_operations(c: &mut Criterion) {
 pub(crate) fn benchmark_comparisons(c: &mut Criterion) {
     let mut group = c.benchmark_group("Comparison Operations");
 
-    let val1 = pos_or_panic!(100.0);
+    let val1 = Positive::HUNDRED;
     let val2 = pos_or_panic!(50.0);
 
     group.bench_function("max", |bencher| {

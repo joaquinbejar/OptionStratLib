@@ -137,6 +137,7 @@ impl Display for StrategyLegs<'_> {
 
 #[cfg(test)]
 mod tests {
+    use positive::{pos_or_panic, Positive};
     use super::*;
 
     use rust_decimal::Decimal;
@@ -178,7 +179,7 @@ mod tests {
 
         match strategy {
             StrategyLegs::TwoLegs { first, second } => {
-                assert_eq!(first.strike_price, pos_or_panic!(100.0));
+                assert_eq!(first.strike_price, Positive::HUNDRED);
                 assert_eq!(second.strike_price, pos_or_panic!(110.0));
             }
             _ => panic!("Expected TwoLegs variant"),
@@ -206,7 +207,7 @@ mod tests {
                 third,
                 fourth,
             } => {
-                assert_eq!(first.strike_price, pos_or_panic!(100.0));
+                assert_eq!(first.strike_price, Positive::HUNDRED);
                 assert_eq!(second.strike_price, pos_or_panic!(110.0));
                 assert_eq!(third.strike_price, pos_or_panic!(120.0));
                 assert_eq!(fourth.strike_price, pos_or_panic!(130.0));
@@ -242,7 +243,7 @@ mod tests {
                 fifth,
                 sixth,
             } => {
-                assert_eq!(first.strike_price, pos_or_panic!(100.0));
+                assert_eq!(first.strike_price, Positive::HUNDRED);
                 assert_eq!(second.strike_price, pos_or_panic!(110.0));
                 assert_eq!(third.strike_price, pos_or_panic!(120.0));
                 assert_eq!(fourth.strike_price, pos_or_panic!(130.0));
@@ -333,7 +334,7 @@ mod tests {
 
         match cloned_strategy {
             StrategyLegs::TwoLegs { first, second } => {
-                assert_eq!(first.strike_price, pos_or_panic!(100.0));
+                assert_eq!(first.strike_price, Positive::HUNDRED);
                 assert_eq!(second.strike_price, pos_or_panic!(110.0));
             }
             _ => panic!("Expected TwoLegs variant after cloning"),

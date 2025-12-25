@@ -26,7 +26,7 @@
 //! use optionstratlib::pos_or_panic;
 //!
 //! // Create a spot leg
-//! let spot = SpotPosition::long("AAPL".to_string(), pos_or_panic!(100.0), pos_or_panic!(150.0));
+//! let spot = SpotPosition::long("AAPL".to_string(), Positive::HUNDRED, pos_or_panic!(150.0));
 //! let spot_leg = Leg::Spot(spot);
 //!
 //! // Check leg type
@@ -405,7 +405,7 @@ mod tests {
     fn create_test_spot_position() -> SpotPosition {
         SpotPosition::long(
             "AAPL".to_string(),
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             pos_or_panic!(150.0),
         )
     }
@@ -413,7 +413,7 @@ mod tests {
     fn create_test_future_position() -> FuturePosition {
         FuturePosition::long(
             "ES".to_string(),
-            pos_or_panic!(1.0),
+            Positive::ONE,
             pos_or_panic!(4500.0),
             ExpirationDate::Days(pos_or_panic!(30.0)),
             pos_or_panic!(50.0),
@@ -424,7 +424,7 @@ mod tests {
     fn create_test_perpetual_position() -> PerpetualPosition {
         PerpetualPosition::long(
             "BTC-USDT-PERP".to_string(),
-            pos_or_panic!(1.0),
+            Positive::ONE,
             pos_or_panic!(50000.0),
             pos_or_panic!(10.0),
             pos_or_panic!(5000.0),
@@ -559,18 +559,18 @@ mod tests {
     fn test_leg_get_quantity() {
         let spot = SpotPosition::long(
             "AAPL".to_string(),
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             pos_or_panic!(150.0),
         );
         let leg = Leg::spot(spot);
-        assert_eq!(leg.get_quantity(), pos_or_panic!(100.0));
+        assert_eq!(leg.get_quantity(), Positive::HUNDRED);
     }
 
     #[test]
     fn test_leg_get_side() {
         let long_spot = SpotPosition::long(
             "AAPL".to_string(),
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             pos_or_panic!(150.0),
         );
         let leg = Leg::spot(long_spot);
@@ -578,7 +578,7 @@ mod tests {
 
         let short_spot = SpotPosition::short(
             "AAPL".to_string(),
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             pos_or_panic!(150.0),
         );
         let leg = Leg::spot(short_spot);
@@ -589,7 +589,7 @@ mod tests {
     fn test_leg_delta_spot() {
         let long_spot = SpotPosition::long(
             "AAPL".to_string(),
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             pos_or_panic!(150.0),
         );
         let leg = Leg::spot(long_spot);
@@ -597,7 +597,7 @@ mod tests {
 
         let short_spot = SpotPosition::short(
             "AAPL".to_string(),
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             pos_or_panic!(150.0),
         );
         let leg = Leg::spot(short_spot);
@@ -623,7 +623,7 @@ mod tests {
     fn test_leg_pnl_spot() {
         let spot = SpotPosition::long(
             "AAPL".to_string(),
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             pos_or_panic!(150.0),
         );
         let leg = Leg::spot(spot);
@@ -660,7 +660,7 @@ mod tests {
     fn test_leg_total_cost() {
         let spot = SpotPosition::new(
             "AAPL".to_string(),
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             pos_or_panic!(150.0),
             Side::Long,
             Utc::now(),
@@ -675,7 +675,7 @@ mod tests {
     fn test_leg_fees() {
         let spot = SpotPosition::new(
             "AAPL".to_string(),
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             pos_or_panic!(150.0),
             Side::Long,
             Utc::now(),

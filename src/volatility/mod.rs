@@ -50,11 +50,11 @@
 //!     OptionType::European,
 //!     Side::Long,
 //!     "STOCK".to_string(),
-//!     pos_or_panic!(100.0),   // Strike price
+//!     Positive::HUNDRED,   // Strike price
 //!     ExpirationDate::Days(pos_or_panic!(30.0)),
 //!     pos_or_panic!(0.2),   // Initial volatility guess
 //!     Positive::ONE,   // Quantity
-//!     pos_or_panic!(100.0),   // Current price
+//!     Positive::HUNDRED,   // Current price
 //!     dec!(0.05),   // Risk-free rate
 //!     OptionStyle::Call,
 //!     Positive::ZERO,   // Dividend yield

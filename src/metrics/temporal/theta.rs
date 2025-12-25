@@ -117,7 +117,7 @@ pub trait ThetaCurve {
 ///
 /// let chain = OptionChain::load_from_json("options.json")?;
 /// let price_range = (pos_or_panic!(400.0), pos_or_panic!(500.0));
-/// let days = vec![pos_or_panic!(1.0), pos_or_panic!(7.0), pos_or_panic!(14.0), pos_or_panic!(30.0)];
+/// let days = vec![Positive::ONE, pos_or_panic!(7.0), pos_or_panic!(14.0), pos_or_panic!(30.0)];
 /// let surface = chain.theta_surface(price_range, days, 20)?;
 /// ```
 pub trait ThetaSurface {
@@ -152,6 +152,7 @@ mod tests_theta {
     use rust_decimal::MathematicalOps;
     use rust_decimal_macros::dec;
     use std::collections::BTreeSet;
+    use positive::pos_or_panic;
 
     struct TestTheta {
         underlying_price: Positive,

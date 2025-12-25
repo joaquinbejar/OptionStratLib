@@ -354,6 +354,7 @@ pub fn probability_keep_under_strike(
 
 #[cfg(test)]
 mod tests_simulate_returns {
+    use positive::pos_or_panic;
     use super::*;
 
     use crate::assert_decimal_eq;
@@ -386,6 +387,7 @@ mod tests_simulate_returns {
 
 #[cfg(test)]
 mod tests_simulate_returns_bis {
+    use positive::pos_or_panic;
     use super::*;
 
     use crate::assert_decimal_eq;
@@ -469,6 +471,7 @@ mod tests_simulate_returns_bis {
 
 #[cfg(test)]
 mod tests_utils {
+    use positive::pos_or_panic;
     use super::*;
 
     use crate::assert_decimal_eq;
@@ -559,6 +562,7 @@ mod tests_utils {
 
 #[cfg(test)]
 mod tests_probability_keep_under_strike {
+    use positive::{pos_or_panic, spos};
     use super::*;
 
     use crate::constants::DAYS_IN_A_YEAR;
@@ -572,8 +576,8 @@ mod tests_probability_keep_under_strike {
         let option = Options {
             option_type: OptionType::European,
             side: Side::Long,
-            underlying_price: pos_or_panic!(100.0),
-            strike_price: pos_or_panic!(100.0),
+            underlying_price: Positive::HUNDRED,
+            strike_price: Positive::HUNDRED,
             risk_free_rate: Decimal::ZERO,
             option_style: OptionStyle::Call,
             dividend_yield: Positive::ZERO,
@@ -594,7 +598,7 @@ mod tests_probability_keep_under_strike {
         let option = Options {
             option_type: OptionType::European,
             side: Side::Long,
-            underlying_price: pos_or_panic!(100.0),
+            underlying_price: Positive::HUNDRED,
             strike_price: pos_or_panic!(110.0),
             risk_free_rate: dec!(0.05),
             option_style: OptionStyle::Call,
@@ -619,8 +623,8 @@ mod tests_probability_keep_under_strike {
         let option = Options {
             option_type: OptionType::European,
             side: Side::Long,
-            underlying_price: pos_or_panic!(100.0),
-            strike_price: pos_or_panic!(100.0),
+            underlying_price: Positive::HUNDRED,
+            strike_price: Positive::HUNDRED,
             risk_free_rate: dec!(0.05),
             option_style: OptionStyle::Call,
             dividend_yield: Positive::ZERO,
@@ -639,7 +643,7 @@ mod tests_probability_keep_under_strike {
         let option = Options {
             option_type: OptionType::European,
             side: Side::Long,
-            underlying_price: pos_or_panic!(100.0),
+            underlying_price: Positive::HUNDRED,
             strike_price: pos_or_panic!(110.0),
             risk_free_rate: dec!(0.05),
             option_style: OptionStyle::Call,
@@ -663,12 +667,12 @@ mod tests_probability_keep_under_strike {
         let option = Options {
             option_type: OptionType::European,
             side: Side::Long,
-            underlying_price: pos_or_panic!(100.0),
+            underlying_price: Positive::HUNDRED,
             strike_price: pos_or_panic!(110.0),
             risk_free_rate: dec!(0.05),
             option_style: OptionStyle::Call,
             dividend_yield: Positive::ZERO,
-            expiration_date: ExpirationDate::Days(pos_or_panic!(1.0)),
+            expiration_date: ExpirationDate::Days(Positive::ONE),
             implied_volatility: pos_or_panic!(0.2),
             underlying_symbol: "".to_string(),
             quantity: Positive::ZERO,
@@ -686,6 +690,7 @@ mod tests_probability_keep_under_strike {
 
 #[cfg(test)]
 mod tests_calculate_up_down_factor {
+    use positive::pos_or_panic;
     use super::*;
 
     use crate::assert_decimal_eq;

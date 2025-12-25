@@ -1194,13 +1194,13 @@ mod tests_display_implementations {
 
         let same_size = DeltaAdjustmentSameSize {
             first: Box::new(DeltaAdjustment::BuyOptions {
-                quantity: pos_or_panic!(1.0),
-                strike: pos_or_panic!(100.0),
+                quantity: Positive::ONE,
+                strike: Positive::HUNDRED,
                 option_style: OptionStyle::Call,
                 side: Side::Long,
             }),
             second: Box::new(DeltaAdjustment::SellOptions {
-                quantity: pos_or_panic!(1.0),
+                quantity: Positive::ONE,
                 strike: pos_or_panic!(110.0),
                 option_style: OptionStyle::Call,
                 side: Side::Short,
@@ -1219,8 +1219,8 @@ mod tests_display_implementations {
         let position_info = DeltaPositionInfo {
             delta: dec!(0.5),
             delta_per_contract: dec!(0.25),
-            quantity: pos_or_panic!(2.0),
-            strike: pos_or_panic!(100.0),
+            quantity: Positive::TWO,
+            strike: Positive::HUNDRED,
             option_style: OptionStyle::Call,
             side: Side::Long,
         };
@@ -1244,15 +1244,15 @@ mod tests_display_implementations {
                 DeltaPositionInfo {
                     delta: dec!(0.5),
                     delta_per_contract: dec!(0.25),
-                    quantity: pos_or_panic!(1.0),
-                    strike: pos_or_panic!(100.0),
+                    quantity: Positive::ONE,
+                    strike: Positive::HUNDRED,
                     option_style: OptionStyle::Call,
                     side: Side::Long,
                 },
                 DeltaPositionInfo {
                     delta: dec!(-0.75),
                     delta_per_contract: dec!(-0.375),
-                    quantity: pos_or_panic!(2.0),
+                    quantity: Positive::TWO,
                     strike: pos_or_panic!(95.0),
                     option_style: OptionStyle::Put,
                     side: Side::Short,
@@ -1332,13 +1332,13 @@ mod tests_serialization {
 
         let same_size = DeltaAdjustmentSameSize {
             first: Box::new(DeltaAdjustment::BuyOptions {
-                quantity: pos_or_panic!(1.0),
-                strike: pos_or_panic!(100.0),
+                quantity: Positive::ONE,
+                strike: Positive::HUNDRED,
                 option_style: OptionStyle::Call,
                 side: Side::Long,
             }),
             second: Box::new(DeltaAdjustment::SellOptions {
-                quantity: pos_or_panic!(1.0),
+                quantity: Positive::ONE,
                 strike: pos_or_panic!(110.0),
                 option_style: OptionStyle::Call,
                 side: Side::Short,
@@ -1356,8 +1356,8 @@ mod tests_serialization {
         let position_info = DeltaPositionInfo {
             delta: dec!(0.5),
             delta_per_contract: dec!(0.25),
-            quantity: pos_or_panic!(2.0),
-            strike: pos_or_panic!(100.0),
+            quantity: Positive::TWO,
+            strike: Positive::HUNDRED,
             option_style: OptionStyle::Call,
             side: Side::Long,
         };
@@ -1383,15 +1383,15 @@ mod tests_serialization {
                 DeltaPositionInfo {
                     delta: dec!(0.5),
                     delta_per_contract: dec!(0.25),
-                    quantity: pos_or_panic!(1.0),
-                    strike: pos_or_panic!(100.0),
+                    quantity: Positive::ONE,
+                    strike: Positive::HUNDRED,
                     option_style: OptionStyle::Call,
                     side: Side::Long,
                 },
                 DeltaPositionInfo {
                     delta: dec!(-0.75),
                     delta_per_contract: dec!(-0.375),
-                    quantity: pos_or_panic!(2.0),
+                    quantity: Positive::TWO,
                     strike: pos_or_panic!(95.0),
                     option_style: OptionStyle::Put,
                     side: Side::Short,
@@ -1482,7 +1482,7 @@ mod tests_serialization {
             pos_or_panic!(0.3745), // implied_volatility
             dec!(0.05),            // risk_free_rate
             Positive::ZERO,        // dividend_yield
-            pos_or_panic!(2.0),    // quantity
+            Positive::TWO,    // quantity
             pos_or_panic!(84.2),   // premium_short_call
             pos_or_panic!(353.2),  // premium_short_put
             pos_or_panic!(7.01),   // open_fee_short_call
@@ -1529,11 +1529,11 @@ mod tests_generate_delta_adjustments {
             option_type: crate::model::types::OptionType::European,
             side,
             underlying_symbol: "TEST".to_string(),
-            strike_price: pos_or_panic!(100.0),
+            strike_price: Positive::HUNDRED,
             expiration_date: ExpirationDate::Days(pos_or_panic!(30.0)),
             implied_volatility: pos_or_panic!(0.2),
             quantity: size,
-            underlying_price: pos_or_panic!(100.0),
+            underlying_price: Positive::HUNDRED,
             risk_free_rate: dec!(0.05),
             option_style,
             dividend_yield: pos_or_panic!(0.01),
@@ -1735,7 +1735,7 @@ mod tests_generate_delta_adjustments {
                 option_style,
                 side,
             } => {
-                assert_eq!(quantity, pos_or_panic!(2.0));
+                assert_eq!(quantity, Positive::TWO);
                 assert_eq!(strike, option.strike_price);
                 assert_eq!(option_style, option.option_style);
                 assert_eq!(side, option.side);
@@ -1801,7 +1801,7 @@ mod tests_generate_delta_adjustments {
                 ..
             } => {
                 assert_eq!(option_style, OptionStyle::Put);
-                let expected = pos_or_panic!(2.0);
+                let expected = Positive::TWO;
                 assert_eq!(quantity, expected);
             }
             _ => panic!("Expected SellOptions adjustment"),
@@ -1814,7 +1814,7 @@ mod tests_generate_delta_adjustments {
         let delta_neutral = MockDeltaNeutral;
         let net_delta = dec!(0.5);
         let option_delta_per_contract = dec!(0.25);
-        let short_option = create_test_option(OptionStyle::Call, Side::Short, pos_or_panic!(1.0));
+        let short_option = create_test_option(OptionStyle::Call, Side::Short, Positive::ONE);
 
         let adjustment = delta_neutral.generate_delta_adjustments(
             net_delta,

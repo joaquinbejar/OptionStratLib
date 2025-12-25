@@ -365,7 +365,7 @@ mod tests_probability_analysis {
             pos_or_panic!(0.2),   // implied_volatility
             dec!(0.05),           // risk_free_rate
             Positive::ZERO,       // dividend_yield
-            pos_or_panic!(1.0),   // quantity
+            Positive::ONE,   // quantity
             pos_or_panic!(27.26), // premium_long
             pos_or_panic!(5.33),  // premium_short
             pos_or_panic!(0.58),  // open_fee_long
@@ -440,7 +440,7 @@ mod tests_probability_analysis {
         assert!(result.is_ok());
         let prob = result.unwrap();
         assert!(prob > Positive::ZERO);
-        assert!(prob <= pos_or_panic!(1.0));
+        assert!(prob <= Positive::ONE);
     }
 
     #[test]
@@ -451,7 +451,7 @@ mod tests_probability_analysis {
         assert!(result.is_ok());
         let prob = result.unwrap();
         assert!(prob > Positive::ZERO);
-        assert!(prob <= pos_or_panic!(1.0));
+        assert!(prob <= Positive::ONE);
     }
 
     #[test]
@@ -463,7 +463,7 @@ mod tests_probability_analysis {
         let (max_profit_prob, max_loss_prob) = result.unwrap();
         assert!(max_profit_prob >= Positive::ZERO);
         assert!(max_loss_prob >= Positive::ZERO);
-        assert!(max_profit_prob + max_loss_prob <= pos_or_panic!(1.0));
+        assert!(max_profit_prob + max_loss_prob <= Positive::ONE);
     }
 
     #[test]
@@ -484,7 +484,7 @@ mod tests_probability_analysis {
         let (max_profit_prob, max_loss_prob) = result.unwrap();
         assert!(max_profit_prob >= Positive::ZERO);
         assert!(max_loss_prob >= Positive::ZERO);
-        assert!(max_profit_prob + max_loss_prob <= pos_or_panic!(1.0));
+        assert!(max_profit_prob + max_loss_prob <= Positive::ONE);
     }
 
     #[test]
@@ -518,7 +518,7 @@ mod tests_expected_value {
             pos_or_panic!(0.2),   // implied_volatility
             dec!(0.05),           // risk_free_rate
             Positive::ZERO,       // dividend_yield
-            pos_or_panic!(1.0),   // quantity
+            Positive::ONE,   // quantity
             pos_or_panic!(27.26), // premium_long
             pos_or_panic!(5.33),  // premium_short
             pos_or_panic!(0.58),  // open_fee_long
@@ -588,7 +588,7 @@ mod tests_expected_value {
     fn test_expected_value_with_high_volatility() {
         let strategy = create_test_strategy();
         let vol_adj = Some(VolatilityAdjustment {
-            base_volatility: pos_or_panic!(1.0),
+            base_volatility: Positive::ONE,
             std_dev_adjustment: pos_or_panic!(0.5),
         });
 

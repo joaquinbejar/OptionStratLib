@@ -13,7 +13,7 @@ fn main() -> Result<(), Error> {
         underlying_price,      // underlying_price
         pos_or_panic!(5850.0), // long_strike
         pos_or_panic!(5720.0), // short_strike
-        ExpirationDate::Days(pos_or_panic!(2.0)),
+        ExpirationDate::Days(Positive::TWO),
         pos_or_panic!(0.18),  // implied_volatility
         dec!(0.05),           // risk_free_rate
         Positive::ZERO,       // dividend_yield

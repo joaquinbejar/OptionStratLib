@@ -174,10 +174,10 @@ pub fn price_binomial(params: BinomialPricingParams) -> Result<Decimal, PricingE
 /// use optionstratlib::pricing::binomial_model::{BinomialPricingParams, generate_binomial_tree};
 /// use optionstratlib::Positive;
 /// let params = BinomialPricingParams {
-///             asset: pos_or_panic!(100.0),
+///             asset: Positive::HUNDRED,
 ///             volatility: pos_or_panic!(0.2),
 ///             int_rate: dec!(0.05),
-///             strike: pos_or_panic!(100.0),
+///             strike: Positive::HUNDRED,
 ///             expiry: Positive::ONE,
 ///             no_steps: 1000,
 ///             option_type: &OptionType::European,
@@ -263,8 +263,8 @@ mod tests_price_binomial {
     #[test]
     fn test_european_call_option() {
         let params = BinomialPricingParams {
-            asset: pos_or_panic!(100.0),
-            strike: pos_or_panic!(100.0),
+            asset: Positive::HUNDRED,
+            strike: Positive::HUNDRED,
             int_rate: dec!(0.05),
             volatility: pos_or_panic!(0.2),
             expiry: Positive::ONE,
@@ -281,10 +281,10 @@ mod tests_price_binomial {
     #[test]
     fn test_european_put_option() {
         let params = BinomialPricingParams {
-            asset: pos_or_panic!(100.0),
+            asset: Positive::HUNDRED,
             volatility: pos_or_panic!(0.2),
             int_rate: dec!(0.05),
-            strike: pos_or_panic!(100.0),
+            strike: Positive::HUNDRED,
             expiry: Positive::ONE,
             no_steps: 1000,
             option_type: &OptionType::European,
@@ -317,10 +317,10 @@ mod tests_price_binomial {
     #[test]
     fn test_short_option() {
         let params = BinomialPricingParams {
-            asset: pos_or_panic!(100.0),
+            asset: Positive::HUNDRED,
             volatility: pos_or_panic!(0.2),
             int_rate: dec!(0.05),
-            strike: pos_or_panic!(100.0),
+            strike: Positive::HUNDRED,
             expiry: Positive::ONE,
             no_steps: 1000,
             option_type: &OptionType::European,
@@ -339,8 +339,8 @@ mod tests_price_binomial {
 
     #[test]
     fn test_zero_volatility() {
-        let asset = pos_or_panic!(100.0);
-        let strike = pos_or_panic!(100.0);
+        let asset = Positive::HUNDRED;
+        let strike = Positive::HUNDRED;
         let int_rate = dec!(0.05);
         let expiry = Positive::ONE;
 
@@ -370,7 +370,7 @@ mod tests_price_binomial {
             asset: pos_or_panic!(150.0),
             volatility: pos_or_panic!(0.2),
             int_rate: dec!(0.05),
-            strike: pos_or_panic!(100.0),
+            strike: Positive::HUNDRED,
             expiry: Positive::ONE,
             no_steps: 1000,
             option_type: &OptionType::European,
@@ -388,7 +388,7 @@ mod tests_price_binomial {
             asset: pos_or_panic!(50.0),
             volatility: pos_or_panic!(0.2),
             int_rate: dec!(0.05),
-            strike: pos_or_panic!(100.0),
+            strike: Positive::HUNDRED,
             expiry: Positive::ONE,
             no_steps: 1000,
             option_type: &OptionType::European,
@@ -403,10 +403,10 @@ mod tests_price_binomial {
     #[test]
     fn test_zero_time_to_expiry() {
         let params = BinomialPricingParams {
-            asset: pos_or_panic!(100.0),
+            asset: Positive::HUNDRED,
             volatility: pos_or_panic!(0.2),
             int_rate: dec!(0.05),
-            strike: pos_or_panic!(100.0),
+            strike: Positive::HUNDRED,
             expiry: Positive::ZERO,
             no_steps: 1000,
             option_type: &OptionType::European,
@@ -431,8 +431,8 @@ mod tests_generate_binomial_tree {
     #[test]
     fn test_binomial_tree_basic() {
         let params = BinomialPricingParams {
-            asset: pos_or_panic!(100.0),
-            strike: pos_or_panic!(100.0),
+            asset: Positive::HUNDRED,
+            strike: Positive::HUNDRED,
             int_rate: dec!(0.05),
             volatility: pos_or_panic!(0.2),
             expiry: Positive::ONE,
@@ -463,8 +463,8 @@ mod tests_generate_binomial_tree {
     #[test]
     fn test_binomial_tree_put_option() {
         let params = BinomialPricingParams {
-            asset: pos_or_panic!(100.0),
-            strike: pos_or_panic!(100.0),
+            asset: Positive::HUNDRED,
+            strike: Positive::HUNDRED,
             int_rate: dec!(0.05),
             volatility: pos_or_panic!(0.2),
             expiry: Positive::ONE,
@@ -541,7 +541,7 @@ mod tests_generate_binomial_tree {
     #[test]
     fn test_binomial_tree_put_option_check() {
         let params = BinomialPricingParams {
-            asset: pos_or_panic!(100.0),
+            asset: Positive::HUNDRED,
             strike: pos_or_panic!(110.0),
             expiry: pos_or_panic!(3.0), // Assuming each time step is 1 unit of time
             int_rate: dec!(0.05),
@@ -586,7 +586,7 @@ mod tests_generate_binomial_tree {
             volatility: pos_or_panic!(0.2),
             int_rate: dec!(0.05),
             strike: pos_or_panic!(52.0),
-            expiry: pos_or_panic!(2.0),
+            expiry: Positive::TWO,
             no_steps: 2,
             option_type: &OptionType::European,
             option_style: &OptionStyle::Put,
@@ -617,7 +617,7 @@ mod tests_generate_binomial_tree {
             volatility: pos_or_panic!(0.2),
             int_rate: dec!(0.05),
             strike: pos_or_panic!(52.0),
-            expiry: pos_or_panic!(2.0),
+            expiry: Positive::TWO,
             no_steps: 2,
             option_type: &OptionType::American,
             option_style: &OptionStyle::Put,

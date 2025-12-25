@@ -16,7 +16,7 @@ fn main() -> Result<(), Error> {
                 pos_or_panic!(50.0),
                 strike,
                 dec!(0.0),
-                pos_or_panic!(1.0),
+                Positive::ONE,
                 pos_or_panic!(0.1),
             )
             .unwrap();

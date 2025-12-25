@@ -125,6 +125,7 @@ mod tests_vanna_volga {
     use crate::surfaces::Point3D;
     use rust_decimal_macros::dec;
     use std::collections::BTreeSet;
+    use positive::pos_or_panic;
 
     struct TestVannaVolgaSurface;
 

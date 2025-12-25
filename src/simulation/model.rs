@@ -270,6 +270,7 @@ impl Display for WalkType {
 
 #[cfg(test)]
 mod tests_walk_type {
+    use positive::pos_or_panic;
     use super::*;
 
     use rust_decimal_macros::dec;
@@ -349,7 +350,7 @@ mod tests_walk_type {
             dt: pos_or_panic!(0.01),
             volatility: pos_or_panic!(0.2),
             speed: pos_or_panic!(0.1),
-            mean: pos_or_panic!(100.0),
+            mean: Positive::HUNDRED,
         };
 
         if let WalkType::MeanReverting {
@@ -362,7 +363,7 @@ mod tests_walk_type {
             assert_eq!(dt, pos_or_panic!(0.01));
             assert_eq!(volatility, pos_or_panic!(0.2));
             assert_eq!(speed, pos_or_panic!(0.1));
-            assert_eq!(mean, pos_or_panic!(100.0));
+            assert_eq!(mean, Positive::HUNDRED);
         } else {
             panic!("Expected MeanReverting variant");
         }
@@ -374,7 +375,7 @@ mod tests_walk_type {
             dt: pos_or_panic!(0.01),
             drift: dec!(0.05),
             volatility: pos_or_panic!(0.2),
-            intensity: pos_or_panic!(1.0),
+            intensity: Positive::ONE,
             jump_mean: dec!(-0.05),
             jump_volatility: pos_or_panic!(0.3),
         };
@@ -391,7 +392,7 @@ mod tests_walk_type {
             assert_eq!(dt, pos_or_panic!(0.01));
             assert_eq!(drift, dec!(0.05));
             assert_eq!(volatility, pos_or_panic!(0.2));
-            assert_eq!(intensity, pos_or_panic!(1.0));
+            assert_eq!(intensity, Positive::ONE);
             assert_eq!(jump_mean, dec!(-0.05));
             assert_eq!(jump_volatility, pos_or_panic!(0.3));
         } else {
@@ -433,7 +434,7 @@ mod tests_walk_type {
             dt: pos_or_panic!(0.01),
             drift: dec!(0.05),
             volatility: pos_or_panic!(0.2),
-            kappa: pos_or_panic!(2.0),
+            kappa: Positive::TWO,
             theta: pos_or_panic!(0.04),
             xi: pos_or_panic!(0.3),
             rho: dec!(-0.7),
@@ -452,7 +453,7 @@ mod tests_walk_type {
             assert_eq!(dt, pos_or_panic!(0.01));
             assert_eq!(drift, dec!(0.05));
             assert_eq!(volatility, pos_or_panic!(0.2));
-            assert_eq!(kappa, pos_or_panic!(2.0));
+            assert_eq!(kappa, Positive::TWO);
             assert_eq!(theta, pos_or_panic!(0.04));
             assert_eq!(xi, pos_or_panic!(0.3));
             assert_eq!(rho, dec!(-0.7));
@@ -579,7 +580,7 @@ mod tests_walk_type {
             dt: pos_or_panic!(0.01),
             volatility: pos_or_panic!(0.2),
             speed: pos_or_panic!(0.1),
-            mean: pos_or_panic!(100.0),
+            mean: Positive::HUNDRED,
         };
 
         let display = format!("{walk}");
@@ -596,7 +597,7 @@ mod tests_walk_type {
             dt: pos_or_panic!(0.01),
             drift: dec!(0.05),
             volatility: pos_or_panic!(0.2),
-            intensity: pos_or_panic!(1.0),
+            intensity: Positive::ONE,
             jump_mean: dec!(-0.05),
             jump_volatility: pos_or_panic!(0.3),
         };
@@ -636,7 +637,7 @@ mod tests_walk_type {
             dt: pos_or_panic!(0.01),
             drift: dec!(0.05),
             volatility: pos_or_panic!(0.2),
-            kappa: pos_or_panic!(2.0),
+            kappa: Positive::TWO,
             theta: pos_or_panic!(0.04),
             xi: pos_or_panic!(0.3),
             rho: dec!(-0.7),
@@ -767,6 +768,7 @@ mod tests_walk_type {
 
 #[cfg(test)]
 mod tests_serialize {
+    use positive::pos_or_panic;
     use super::*;
 
     use rust_decimal_macros::dec;
@@ -871,7 +873,7 @@ mod tests_serialize {
             dt: pos_or_panic!(0.0027),
             volatility: pos_or_panic!(0.3),
             speed: pos_or_panic!(0.5),
-            mean: pos_or_panic!(100.0),
+            mean: Positive::HUNDRED,
         };
 
         let json = to_string(&walk_type).unwrap();
@@ -1030,7 +1032,7 @@ mod tests_serialize {
         let walk_type = WalkType::Historical {
             timeframe: TimeFrame::Day,
             prices: vec![
-                pos_or_panic!(100.0),
+                Positive::HUNDRED,
                 pos_or_panic!(101.5),
                 pos_or_panic!(99.8),
                 pos_or_panic!(102.3),
@@ -1087,7 +1089,7 @@ mod tests_serialize {
             dt: pos_or_panic!(0.0027),
             drift: dec!(-0.03), // Negative drift
             volatility: pos_or_panic!(0.15),
-            intensity: pos_or_panic!(2.0),
+            intensity: Positive::TWO,
             jump_mean: dec!(-0.1), // Negative jump mean
             jump_volatility: pos_or_panic!(0.05),
         };

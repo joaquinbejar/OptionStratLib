@@ -43,7 +43,7 @@
 //! use optionstratlib::Positive;
 //! use optionstratlib::{assert_pos_relative_eq, pos_or_panic};
 //!
-//! let a = pos_or_panic!(1.0);
+//! let a = Positive::ONE;
 //! let b = pos_or_panic!(1.0001);
 //! let epsilon = pos_or_panic!(0.001);
 //! assert_pos_relative_eq!(a, b, epsilon);
@@ -152,7 +152,7 @@
 //!
 //!
 //! fn test_values() {
-//!     let a = pos_or_panic!(1.0);
+//!     let a = Positive::ONE;
 //!     let b = pos_or_panic!(1.0001);
 //!     let epsilon = pos_or_panic!(0.001);
 //!     assert_pos_relative_eq!(a, b, epsilon);

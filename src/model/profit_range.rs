@@ -114,7 +114,7 @@ impl ProfitLossRange {
     ///     &pos_or_panic!(55.0),
     ///     Some(VolatilityAdjustment {
     ///         base_volatility: pos_or_panic!(0.2),
-    ///         std_dev_adjustment: pos_or_panic!(1.0)
+    ///         std_dev_adjustment: Positive::ONE
     ///     }),
     ///     None,
     ///     &ExpirationDate::Days(pos_or_panic!(30.0)),
@@ -222,7 +222,7 @@ mod tests_profit_range {
         let range = ProfitLossRange::new(spos!(100.0), spos!(110.0), pos_or_panic!(0.5)).unwrap();
 
         assert!(!range.contains(pos_or_panic!(99.0)));
-        assert!(range.contains(pos_or_panic!(100.0)));
+        assert!(range.contains(Positive::HUNDRED));
         assert!(range.contains(pos_or_panic!(105.0)));
         assert!(range.contains(pos_or_panic!(110.0)));
         assert!(!range.contains(pos_or_panic!(111.0)));
@@ -257,7 +257,7 @@ mod tests_calculate_probability {
     fn test_basic_probability_calculation() {
         let mut range = create_basic_range();
         let result = range.calculate_probability(
-            &pos_or_panic!(100.0),
+            &Positive::HUNDRED,
             None,
             None,
             &ExpirationDate::Days(pos_or_panic!(30.0)),
@@ -266,7 +266,7 @@ mod tests_calculate_probability {
 
         assert!(result.is_ok());
         assert!(range.probability > Positive::ZERO);
-        assert!(range.probability <= pos_or_panic!(1.0));
+        assert!(range.probability <= Positive::ONE);
     }
 
     #[test]
@@ -284,7 +284,7 @@ mod tests_calculate_probability {
         });
 
         let result = range.calculate_probability(
-            &pos_or_panic!(100.0),
+            &Positive::HUNDRED,
             vol_adj,
             None,
             &ExpirationDate::Days(pos_or_panic!(30.0)),
@@ -304,7 +304,7 @@ mod tests_calculate_probability {
         });
 
         let result = range.calculate_probability(
-            &pos_or_panic!(100.0),
+            &Positive::HUNDRED,
             None,
             trend,
             &ExpirationDate::Days(pos_or_panic!(30.0)),
@@ -324,7 +324,7 @@ mod tests_calculate_probability {
         });
 
         let result = range.calculate_probability(
-            &pos_or_panic!(100.0),
+            &Positive::HUNDRED,
             None,
             trend,
             &ExpirationDate::Days(pos_or_panic!(30.0)),
@@ -340,7 +340,7 @@ mod tests_calculate_probability {
         let mut range = ProfitLossRange::new(None, spos!(110.0), Positive::ZERO).unwrap();
 
         let result = range.calculate_probability(
-            &pos_or_panic!(100.0),
+            &Positive::HUNDRED,
             None,
             None,
             &ExpirationDate::Days(pos_or_panic!(30.0)),
@@ -356,7 +356,7 @@ mod tests_calculate_probability {
         let mut range = ProfitLossRange::new(spos!(90.0), None, Positive::ZERO).unwrap();
 
         let result = range.calculate_probability(
-            &pos_or_panic!(100.0),
+            &Positive::HUNDRED,
             None,
             None,
             &ExpirationDate::Days(pos_or_panic!(30.0)),
@@ -380,7 +380,7 @@ mod tests_calculate_probability {
         });
 
         let result = range.calculate_probability(
-            &pos_or_panic!(100.0),
+            &Positive::HUNDRED,
             vol_adj,
             trend,
             &ExpirationDate::Days(pos_or_panic!(30.0)),
@@ -396,7 +396,7 @@ mod tests_calculate_probability {
         let mut range = create_basic_range();
 
         let expirations = vec![
-            ExpirationDate::Days(pos_or_panic!(1.0)),
+            ExpirationDate::Days(Positive::ONE),
             ExpirationDate::Days(pos_or_panic!(30.0)),
             ExpirationDate::Days(pos_or_panic!(90.0)),
             ExpirationDate::Days(DAYS_IN_A_YEAR),
@@ -404,7 +404,7 @@ mod tests_calculate_probability {
 
         for expiration in expirations {
             let result = range.calculate_probability(
-                &pos_or_panic!(100.0),
+                &Positive::HUNDRED,
                 None,
                 None,
                 &expiration,
@@ -413,7 +413,7 @@ mod tests_calculate_probability {
 
             assert!(result.is_ok());
             assert!(range.probability > Positive::ZERO);
-            assert!(range.probability <= pos_or_panic!(1.0));
+            assert!(range.probability <= Positive::ONE);
         }
     }
 
@@ -422,7 +422,7 @@ mod tests_calculate_probability {
         let mut range = create_basic_range();
 
         let extreme_prices = vec![
-            pos_or_panic!(1.0),
+            Positive::ONE,
             pos_or_panic!(1000.0),
             pos_or_panic!(10000.0),
         ];
@@ -438,7 +438,7 @@ mod tests_calculate_probability {
 
             assert!(result.is_ok());
             assert!(range.probability >= Positive::ZERO);
-            assert!(range.probability <= pos_or_panic!(1.0));
+            assert!(range.probability <= Positive::ONE);
         }
     }
 }

@@ -22,7 +22,7 @@ fn test_poor_mans_covered_call_integration() -> Result<(), Box<dyn Error>> {
         pos_or_panic!(0.17),                        // implied_volatility
         dec!(0.05),                        // risk_free_rate
         Positive::ZERO,                    // dividend_yield
-        pos_or_panic!(2.0),                         // quantity
+        Positive::TWO,                         // quantity
         pos_or_panic!(154.7),                       // premium_short_call
         pos_or_panic!(30.8),                        // premium_short_put
         pos_or_panic!(1.74),                        // open_fee_short_call
@@ -42,7 +42,7 @@ fn test_poor_mans_covered_call_integration() -> Result<(), Box<dyn Error>> {
     assert!(strategy.get_profit_ratio().unwrap().to_f64().unwrap() > 0.0);
 
     // Test range calculations
-    let price_range = strategy.get_best_range_to_show(pos_or_panic!(1.0)).unwrap();
+    let price_range = strategy.get_best_range_to_show(Positive::ONE).unwrap();
     assert!(!price_range.is_empty());
 
     // Validate price range in relation to break even points

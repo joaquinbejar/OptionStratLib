@@ -154,7 +154,7 @@ mod tests_strategies_utils {
         let upper = FindOptimalSide::Upper;
         let lower = FindOptimalSide::Lower;
         let all = FindOptimalSide::All;
-        let range = FindOptimalSide::Range(pos_or_panic!(100.0), pos_or_panic!(200.0));
+        let range = FindOptimalSide::Range(Positive::HUNDRED, pos_or_panic!(200.0));
 
         assert!(matches!(upper, FindOptimalSide::Upper));
         assert!(matches!(lower, FindOptimalSide::Lower));
@@ -173,14 +173,14 @@ mod tests_strategies_utils {
 
     #[test]
     fn test_calculate_price_range_basic() {
-        let start = pos_or_panic!(100.0);
+        let start = Positive::HUNDRED;
         let end = pos_or_panic!(110.0);
-        let step = pos_or_panic!(2.0);
+        let step = Positive::TWO;
 
         let range = calculate_price_range(start, end, step);
 
         assert_eq!(range.len(), 7);
-        assert_eq!(range[0], pos_or_panic!(100.0));
+        assert_eq!(range[0], Positive::HUNDRED);
         assert_eq!(range[1], pos_or_panic!(102.0));
         assert_eq!(range[2], pos_or_panic!(104.0));
         assert_eq!(range[3], pos_or_panic!(106.0));
@@ -191,32 +191,32 @@ mod tests_strategies_utils {
 
     #[test]
     fn test_calculate_price_range_single_step() {
-        let start = pos_or_panic!(100.0);
-        let end = pos_or_panic!(100.0);
-        let step = pos_or_panic!(1.0);
+        let start = Positive::HUNDRED;
+        let end = Positive::HUNDRED;
+        let step = Positive::ONE;
 
         let range = calculate_price_range(start, end, step);
 
         assert_eq!(range.len(), 2);
-        assert_eq!(range[0], pos_or_panic!(100.0));
+        assert_eq!(range[0], Positive::HUNDRED);
     }
 
     #[test]
     fn test_calculate_price_range_large_step() {
-        let start = pos_or_panic!(100.0);
+        let start = Positive::HUNDRED;
         let end = pos_or_panic!(110.0);
         let step = pos_or_panic!(20.0);
 
         let range = calculate_price_range(start, end, step);
 
         assert_eq!(range.len(), 2);
-        assert_eq!(range[0], pos_or_panic!(100.0));
+        assert_eq!(range[0], Positive::HUNDRED);
     }
 
     #[test]
     fn test_calculate_price_range_fractional_step() {
-        let start = pos_or_panic!(1.0);
-        let end = pos_or_panic!(2.0);
+        let start = Positive::ONE;
+        let end = Positive::TWO;
         let step = pos_or_panic!(0.3);
 
         let range = calculate_price_range(start, end, step);
@@ -230,9 +230,9 @@ mod tests_strategies_utils {
 
     #[test]
     fn test_calculate_price_range_empty() {
-        let start = pos_or_panic!(100.0);
+        let start = Positive::HUNDRED;
         let end = pos_or_panic!(90.0);
-        let step = pos_or_panic!(1.0);
+        let step = Positive::ONE;
 
         let range = calculate_price_range(start, end, step);
 

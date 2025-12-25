@@ -1010,14 +1010,14 @@ mod tests_long_strangle_probability {
     fn create_test_long_strangle() -> LongStrangle {
         LongStrangle::new(
             "TEST".to_string(),
-            pos_or_panic!(100.0),                      // underlying_price
+            Positive::HUNDRED,                      // underlying_price
             pos_or_panic!(110.0),                      // call_strike
             pos_or_panic!(90.0),                       // put_strike
             ExpirationDate::Days(pos_or_panic!(30.0)), // expiration
             pos_or_panic!(0.2),                        // implied_volatility
             dec!(0.05),                                // risk_free_rate
             Positive::ZERO,                            // dividend_yield
-            pos_or_panic!(1.0),                        // quantity
+            Positive::ONE,                        // quantity
             Positive::TWO,                             // premium_long_call
             Positive::TWO,                             // premium_long_put
             Positive::ZERO,                            // open_fee_long_call
@@ -1078,7 +1078,7 @@ mod tests_long_strangle_probability {
         assert!(result.is_ok());
         let prob = result.unwrap();
         assert!(prob > Positive::ZERO);
-        assert!(prob <= pos_or_panic!(1.0));
+        assert!(prob <= Positive::ONE);
     }
 
     #[test]
@@ -1093,7 +1093,7 @@ mod tests_long_strangle_probability {
         assert!(result.is_ok());
         let prob = result.unwrap();
         assert!(prob > Positive::ZERO);
-        assert!(prob <= pos_or_panic!(1.0));
+        assert!(prob <= Positive::ONE);
     }
 
     #[test]
@@ -1108,7 +1108,7 @@ mod tests_long_strangle_probability {
         assert!(result.is_ok());
         let prob = result.unwrap();
         assert!(prob > Positive::ZERO);
-        assert!(prob <= pos_or_panic!(1.0));
+        assert!(prob <= Positive::ONE);
     }
 
     #[test]
@@ -1141,7 +1141,7 @@ mod tests_long_strangle_probability {
         let (max_profit_prob, max_loss_prob) = result.unwrap();
         assert!(max_profit_prob >= Positive::ZERO);
         assert!(max_loss_prob >= Positive::ZERO);
-        assert!(max_profit_prob + max_loss_prob <= pos_or_panic!(1.0));
+        assert!(max_profit_prob + max_loss_prob <= Positive::ONE);
     }
 }
 
@@ -1167,7 +1167,7 @@ mod tests_long_strangle_delta {
             pos_or_panic!(0.3745), // implied_volatility
             dec!(0.05),            // risk_free_rate
             Positive::ZERO,        // dividend_yield
-            pos_or_panic!(1.0),    // quantity
+            Positive::ONE,    // quantity
             pos_or_panic!(84.2),   // premium_long_call
             pos_or_panic!(353.2),  // premium_long_put
             pos_or_panic!(7.01),   // open_fee_long_call
@@ -1297,7 +1297,7 @@ mod tests_long_strangle_delta_size {
             pos_or_panic!(0.3745), // implied_volatility
             dec!(0.05),            // risk_free_rate
             Positive::ZERO,        // dividend_yield
-            pos_or_panic!(2.0),    // quantity
+            Positive::TWO,    // quantity
             pos_or_panic!(84.2),   // premium_long_call
             pos_or_panic!(353.2),  // premium_long_put
             pos_or_panic!(7.01),   // open_fee_long_call
@@ -1569,16 +1569,16 @@ mod tests_strangle_position_management {
     fn create_test_long_strangle() -> LongStrangle {
         LongStrangle::new(
             "TEST".to_string(),
-            pos_or_panic!(100.0), // underlying_price
+            Positive::HUNDRED, // underlying_price
             pos_or_panic!(110.0), // call_strike
             pos_or_panic!(90.0),  // put_strike
             ExpirationDate::Days(pos_or_panic!(30.0)),
             pos_or_panic!(0.2), // implied_volatility
             dec!(0.05),         // risk_free_rate
             Positive::ZERO,     // dividend_yield
-            pos_or_panic!(1.0), // quantity
-            pos_or_panic!(2.0), // premium_long_call
-            pos_or_panic!(2.0), // premium_long_put
+            Positive::ONE, // quantity
+            Positive::TWO, // premium_long_call
+            Positive::TWO, // premium_long_put
             pos_or_panic!(0.1), // open_fee_long_call
             pos_or_panic!(0.1), // close_fee_long_call
             pos_or_panic!(0.1), // open_fee_long_put
@@ -1612,7 +1612,7 @@ mod tests_strangle_position_management {
 
         // Test getting non-existent position
         let invalid_position =
-            strangle.get_position(&OptionStyle::Call, &Side::Long, &pos_or_panic!(100.0));
+            strangle.get_position(&OptionStyle::Call, &Side::Long, &Positive::HUNDRED);
         assert!(invalid_position.is_err());
         match invalid_position {
             Err(PositionError::ValidationError(
@@ -1635,17 +1635,17 @@ mod tests_strangle_position_management {
 
         // Modify long call position
         let mut modified_call = strangle.long_call.clone();
-        modified_call.option.quantity = pos_or_panic!(2.0);
+        modified_call.option.quantity = Positive::TWO;
         let result = strangle.modify_position(&modified_call);
         assert!(result.is_ok());
-        assert_eq!(strangle.long_call.option.quantity, pos_or_panic!(2.0));
+        assert_eq!(strangle.long_call.option.quantity, Positive::TWO);
 
         // Modify long put position
         let mut modified_put = strangle.long_put.clone();
-        modified_put.option.quantity = pos_or_panic!(2.0);
+        modified_put.option.quantity = Positive::TWO;
         let result = strangle.modify_position(&modified_put);
         assert!(result.is_ok());
-        assert_eq!(strangle.long_put.option.quantity, pos_or_panic!(2.0));
+        assert_eq!(strangle.long_put.option.quantity, Positive::TWO);
 
         // Test modifying with invalid position
         let mut invalid_position = strangle.long_call.clone();
@@ -1678,16 +1678,16 @@ mod tests_adjust_option_position_long {
     fn create_test_strategy() -> LongStrangle {
         LongStrangle::new(
             "TEST".to_string(),
-            pos_or_panic!(100.0), // underlying_price
+            Positive::HUNDRED, // underlying_price
             pos_or_panic!(110.0), // call_strike
             pos_or_panic!(90.0),  // put_strike
             ExpirationDate::Days(pos_or_panic!(30.0)),
             pos_or_panic!(0.2), // implied_volatility
             dec!(0.05),         // risk_free_rate
             Positive::ZERO,     // dividend_yield
-            pos_or_panic!(1.0), // quantity
-            pos_or_panic!(2.0), // premium_long_call
-            pos_or_panic!(2.0), // premium_long_put
+            Positive::ONE, // quantity
+            Positive::TWO, // premium_long_call
+            Positive::TWO, // premium_long_put
             pos_or_panic!(0.1), // open_fee_long_call
             pos_or_panic!(0.1), // close_fee_long_call
             pos_or_panic!(0.1), // open_fee_long_put
@@ -1699,7 +1699,7 @@ mod tests_adjust_option_position_long {
     fn test_adjust_existing_call_position() {
         let mut strategy = create_test_strategy();
         let initial_quantity = strategy.long_call.option.quantity;
-        let adjustment = pos_or_panic!(1.0);
+        let adjustment = Positive::ONE;
 
         let result = strategy.adjust_option_position(
             adjustment.to_dec(),
@@ -1719,7 +1719,7 @@ mod tests_adjust_option_position_long {
     fn test_adjust_existing_put_position() {
         let mut strategy = create_test_strategy();
         let initial_quantity = strategy.long_put.option.quantity;
-        let adjustment = pos_or_panic!(1.0);
+        let adjustment = Positive::ONE;
 
         let result = strategy.adjust_option_position(
             adjustment.to_dec(),
@@ -1763,7 +1763,7 @@ mod tests_adjust_option_position_long {
         // Try to adjust position with wrong strike price
         let result = strategy.adjust_option_position(
             Decimal::ONE,
-            &pos_or_panic!(100.0), // Invalid strike price
+            &Positive::HUNDRED, // Invalid strike price
             &OptionStyle::Call,
             &Side::Short,
         );
@@ -1803,16 +1803,16 @@ mod tests_strategy_constructor {
                 create_sample_position(
                     OptionStyle::Call,
                     Side::Long,
-                    pos_or_panic!(100.0),
-                    pos_or_panic!(1.0),
+                    Positive::HUNDRED,
+                    Positive::ONE,
                     pos_or_panic!(110.0),
                     pos_or_panic!(0.2),
                 ),
                 create_sample_position(
                     OptionStyle::Put,
                     Side::Long,
-                    pos_or_panic!(100.0),
-                    pos_or_panic!(1.0),
+                    Positive::HUNDRED,
+                    Positive::ONE,
                     pos_or_panic!(90.0),
                     pos_or_panic!(0.2),
                 ),
@@ -1831,8 +1831,8 @@ mod tests_strategy_constructor {
             let options = vec![create_sample_position(
                 OptionStyle::Call,
                 Side::Long,
-                pos_or_panic!(100.0),
-                pos_or_panic!(1.0),
+                Positive::HUNDRED,
+                Positive::ONE,
                 pos_or_panic!(110.0),
                 pos_or_panic!(0.2),
             )];
@@ -1852,16 +1852,16 @@ mod tests_strategy_constructor {
                 create_sample_position(
                     OptionStyle::Call,
                     Side::Long,
-                    pos_or_panic!(100.0),
-                    pos_or_panic!(1.0),
+                    Positive::HUNDRED,
+                    Positive::ONE,
                     pos_or_panic!(110.0),
                     pos_or_panic!(0.2),
                 ),
                 create_sample_position(
                     OptionStyle::Call,
                     Side::Long,
-                    pos_or_panic!(100.0),
-                    pos_or_panic!(1.0),
+                    Positive::HUNDRED,
+                    Positive::ONE,
                     pos_or_panic!(90.0),
                     pos_or_panic!(0.2),
                 ),
@@ -1882,16 +1882,16 @@ mod tests_strategy_constructor {
                 create_sample_position(
                     OptionStyle::Call,
                     Side::Short,
-                    pos_or_panic!(100.0),
-                    pos_or_panic!(1.0),
+                    Positive::HUNDRED,
+                    Positive::ONE,
                     pos_or_panic!(110.0),
                     pos_or_panic!(0.2),
                 ),
                 create_sample_position(
                     OptionStyle::Put,
                     Side::Long,
-                    pos_or_panic!(100.0),
-                    pos_or_panic!(1.0),
+                    Positive::HUNDRED,
+                    Positive::ONE,
                     pos_or_panic!(90.0),
                     pos_or_panic!(0.2),
                 ),
@@ -1912,16 +1912,16 @@ mod tests_strategy_constructor {
                 create_sample_position(
                     OptionStyle::Call,
                     Side::Long,
-                    pos_or_panic!(100.0),
-                    pos_or_panic!(1.0),
+                    Positive::HUNDRED,
+                    Positive::ONE,
                     pos_or_panic!(90.0),
                     pos_or_panic!(0.2),
                 ),
                 create_sample_position(
                     OptionStyle::Put,
                     Side::Long,
-                    pos_or_panic!(100.0),
-                    pos_or_panic!(1.0),
+                    Positive::HUNDRED,
+                    Positive::ONE,
                     pos_or_panic!(110.0),
                     pos_or_panic!(0.2),
                 ),
@@ -1950,8 +1950,8 @@ mod tests_long_strangle_pnl {
         let long_call = create_sample_position(
             OptionStyle::Call,
             Side::Long,
-            pos_or_panic!(100.0), // Underlying price
-            pos_or_panic!(1.0),   // Quantity
+            Positive::HUNDRED, // Underlying price
+            Positive::ONE,   // Quantity
             pos_or_panic!(105.0), // Strike price
             pos_or_panic!(0.2),   // Implied volatility
         );
@@ -1960,8 +1960,8 @@ mod tests_long_strangle_pnl {
         let long_put = create_sample_position(
             OptionStyle::Put,
             Side::Long,
-            pos_or_panic!(100.0), // Same underlying price
-            pos_or_panic!(1.0),   // Quantity
+            Positive::HUNDRED, // Same underlying price
+            Positive::ONE,   // Quantity
             pos_or_panic!(95.0),  // Strike price
             pos_or_panic!(0.2),   // Implied volatility
         );
@@ -1972,7 +1972,7 @@ mod tests_long_strangle_pnl {
     #[test]
     fn test_calculate_pnl_at_money() {
         let strangle = create_test_strangle().unwrap();
-        let market_price = pos_or_panic!(100.0);
+        let market_price = Positive::HUNDRED;
         let expiration_date = ExpirationDate::Days(pos_or_panic!(20.0));
         let implied_volatility = pos_or_panic!(0.3);
 
@@ -1986,7 +1986,7 @@ mod tests_long_strangle_pnl {
         // Initial cost is 2 * (premium + fees) = 2 * (5.0 + 1.0) = 12.0
         assert_pos_relative_eq!(pnl.initial_costs, pos_or_panic!(12.0), pos_or_panic!(1e-6));
         assert_decimal_eq!(pnl.unrealized.unwrap(), dec!(0.748425), dec!(1e-6));
-        assert_eq!(pnl.initial_income, pos_or_panic!(0.0));
+        assert_eq!(pnl.initial_income, Positive::ZERO);
         // Unrealized loss should be less than full premium paid (time value remains)
         assert!(pnl.unrealized.unwrap() > dec!(-12.0));
     }
@@ -2030,7 +2030,7 @@ mod tests_long_strangle_pnl {
     #[test]
     fn test_calculate_pnl_at_expiration_max_loss() {
         let strangle = create_test_strangle().unwrap();
-        let underlying_price = pos_or_panic!(100.0); // At the money
+        let underlying_price = Positive::HUNDRED; // At the money
 
         let result = strangle.calculate_pnl_at_expiration(&underlying_price);
         assert!(result.is_ok());
@@ -2042,7 +2042,7 @@ mod tests_long_strangle_pnl {
         // Max loss is the total premium paid plus fees
         assert_eq!(pnl.realized.unwrap(), dec!(-12.0));
         assert_eq!(pnl.initial_costs, pos_or_panic!(12.0));
-        assert_eq!(pnl.initial_income, pos_or_panic!(0.0));
+        assert_eq!(pnl.initial_income, Positive::ZERO);
     }
 
     #[test]
@@ -2082,7 +2082,7 @@ mod tests_long_strangle_pnl {
     #[test]
     fn test_calculate_pnl_with_higher_volatility() {
         let strangle = create_test_strangle().unwrap();
-        let market_price = pos_or_panic!(100.0);
+        let market_price = Positive::HUNDRED;
         let expiration_date = ExpirationDate::Days(pos_or_panic!(30.0));
         let implied_volatility = pos_or_panic!(0.4); // Higher volatility
 
@@ -2108,8 +2108,8 @@ mod test_valid_premium_for_shorts {
         let long_call = create_sample_position(
             OptionStyle::Call,
             Side::Long,
-            pos_or_panic!(100.0), // Underlying price
-            pos_or_panic!(1.0),   // Quantity
+            Positive::HUNDRED, // Underlying price
+            Positive::ONE,   // Quantity
             pos_or_panic!(105.0), // Strike price
             pos_or_panic!(0.2),   // Implied volatility
         );
@@ -2118,8 +2118,8 @@ mod test_valid_premium_for_shorts {
         let long_put = create_sample_position(
             OptionStyle::Put,
             Side::Long,
-            pos_or_panic!(100.0), // Same underlying price
-            pos_or_panic!(1.0),   // Quantity
+            Positive::HUNDRED, // Same underlying price
+            Positive::ONE,   // Quantity
             pos_or_panic!(95.0),  // Strike price
             pos_or_panic!(0.2),   // Implied volatility
         );
@@ -2131,7 +2131,7 @@ mod test_valid_premium_for_shorts {
     fn create_test_strangle() {
         let strategy = get_strategy().unwrap();
         assert!(strategy.valid_premium_for_shorts(&pos_or_panic!(10.0)));
-        assert!(strategy.valid_premium_for_shorts(&pos_or_panic!(100.0)));
+        assert!(strategy.valid_premium_for_shorts(&Positive::HUNDRED));
         assert!(strategy.valid_premium_for_shorts(&pos_or_panic!(400.0)));
     }
 }

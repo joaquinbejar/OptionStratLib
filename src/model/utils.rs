@@ -125,7 +125,7 @@ pub fn create_sample_option(
 ///     OptionStyle::Call,
 ///     Side::Long,
 ///     pos_or_panic!(150.0),  // underlying price
-///     pos_or_panic!(1.0),    // quantity
+///     Positive::ONE,    // quantity
 ///     pos_or_panic!(155.0),  // strike price
 ///     pos_or_panic!(0.25)    // implied volatility
 /// );
@@ -293,11 +293,11 @@ pub fn create_sample_option_simplest(option_style: OptionStyle, side: Side) -> O
         OptionType::European,
         side,
         "AAPL".to_string(),
-        pos_or_panic!(100.0),
+        Positive::HUNDRED,
         ExpirationDate::Days(pos_or_panic!(30.0)),
         pos_or_panic!(0.2),
-        pos_or_panic!(1.0),
-        pos_or_panic!(100.0),
+        Positive::ONE,
+        Positive::HUNDRED,
         dec!(0.05),
         option_style,
         pos_or_panic!(0.01),
@@ -348,8 +348,8 @@ pub fn create_sample_option_simplest_strike(
         strike,
         ExpirationDate::Days(pos_or_panic!(30.0)),
         pos_or_panic!(0.2),
-        pos_or_panic!(1.0),
-        pos_or_panic!(100.0),
+        Positive::ONE,
+        Positive::HUNDRED,
         dec!(0.05),
         option_style,
         pos_or_panic!(0.01),
@@ -549,7 +549,7 @@ mod tests_mean_and_std {
     #[test]
     fn test_basic_mean_and_std() {
         let values = vec![
-            pos_or_panic!(2.0),
+            Positive::TWO,
             pos_or_panic!(4.0),
             pos_or_panic!(4.0),
             pos_or_panic!(4.0),
@@ -633,8 +633,8 @@ mod tests_mean_and_std {
     #[test]
     fn test_symmetric_distribution() {
         let values = vec![
-            pos_or_panic!(1.0),
-            pos_or_panic!(2.0),
+            Positive::ONE,
+            Positive::TWO,
             pos_or_panic!(3.0),
             pos_or_panic!(4.0),
             pos_or_panic!(5.0),
@@ -647,7 +647,7 @@ mod tests_mean_and_std {
 
     #[test]
     fn test_result_is_positive() {
-        let values = vec![pos_or_panic!(1.0), pos_or_panic!(2.0), pos_or_panic!(3.0)];
+        let values = vec![Positive::ONE, Positive::TWO, pos_or_panic!(3.0)];
         let (mean, std) = mean_and_std(values);
 
         assert!(mean > Positive::ZERO);

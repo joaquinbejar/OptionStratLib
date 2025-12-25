@@ -19,7 +19,7 @@ fn test_short_butterfly_spread_integration() -> Result<(), Box<dyn Error>> {
         pos_or_panic!(5700.0),
         pos_or_panic!(5780.0),
         pos_or_panic!(5850.0),
-        ExpirationDate::Days(pos_or_panic!(2.0)),
+        ExpirationDate::Days(Positive::TWO),
         pos_or_panic!(0.18),
         dec!(0.05),
         Positive::ZERO,
@@ -55,7 +55,7 @@ fn test_short_butterfly_spread_integration() -> Result<(), Box<dyn Error>> {
     assert!(strategy.get_profit_ratio().unwrap().to_f64().unwrap() > 0.0);
 
     // Test range calculations
-    let price_range = strategy.get_best_range_to_show(pos_or_panic!(1.0)).unwrap();
+    let price_range = strategy.get_best_range_to_show(Positive::ONE).unwrap();
     assert!(!price_range.is_empty());
 
     // Validate price range in relation to break even points

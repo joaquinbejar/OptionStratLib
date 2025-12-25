@@ -312,6 +312,7 @@ mod tests_options {
     use crate::model::types::BarrierType;
 
     use chrono::{NaiveDate, TimeZone, Utc};
+    use positive::pos_or_panic;
 
     #[test]
     fn test_debug_options() {
@@ -441,6 +442,7 @@ mod tests_expiration_date {
     use super::*;
 
     use chrono::{Duration, NaiveDate, TimeZone};
+    use positive::pos_or_panic;
     use tracing::info;
 
     #[test]
@@ -802,6 +804,7 @@ mod tests_position_type_display_debug {
     use super::*;
 
     use chrono::{DateTime, NaiveDate, TimeZone};
+    use positive::pos_or_panic;
 
     fn get_option() -> (Options, DateTime<Utc>) {
         let naive_date = NaiveDate::from_ymd_opt(2024, 8, 8)
@@ -904,6 +907,7 @@ mod tests_strategy_type_display_debug {
 
     use crate::strategies::base::StrategyType;
     use chrono::{NaiveDate, TimeZone};
+    use positive::{pos_or_panic, Positive};
     use serde::Serialize;
 
     #[test]
@@ -928,9 +932,9 @@ mod tests_strategy_type_display_debug {
                     create_sample_option_with_date(
                         OptionStyle::Call,
                         Side::Long,
-                        pos_or_panic!(100.0),
-                        pos_or_panic!(1.0),
-                        pos_or_panic!(100.0),
+                        Positive::HUNDRED,
+                        Positive::ONE,
+                        Positive::HUNDRED,
                         pos_or_panic!(0.02),
                         naive_date,
                     ),
@@ -945,9 +949,9 @@ mod tests_strategy_type_display_debug {
                     create_sample_option_with_date(
                         OptionStyle::Call,
                         Side::Short,
-                        pos_or_panic!(100.0),
-                        pos_or_panic!(1.0),
-                        pos_or_panic!(100.0),
+                        Positive::HUNDRED,
+                        Positive::ONE,
+                        Positive::HUNDRED,
                         pos_or_panic!(0.02),
                         naive_date,
                     ),
@@ -992,8 +996,8 @@ mod tests_strategy_type_display_debug {
                     create_sample_option_with_date(
                         OptionStyle::Call,
                         Side::Long,
-                        pos_or_panic!(100.0),
-                        pos_or_panic!(1.0),
+                        Positive::HUNDRED,
+                        Positive::ONE,
                         pos_or_panic!(110.0),
                         pos_or_panic!(0.02),
                         naive_date,
@@ -1009,8 +1013,8 @@ mod tests_strategy_type_display_debug {
                     create_sample_option_with_date(
                         OptionStyle::Call,
                         Side::Short,
-                        pos_or_panic!(100.0),
-                        pos_or_panic!(1.0),
+                        Positive::HUNDRED,
+                        Positive::ONE,
                         pos_or_panic!(110.0),
                         pos_or_panic!(0.02),
                         naive_date,

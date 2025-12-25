@@ -4,9 +4,9 @@
    Date: 5/5/25
 ******************************************************************************/
 use optionstratlib::prelude::*;
-use rand::{Rng, rng};
-use rust_decimal::MathematicalOps;
+use rand::{rng, Rng};
 use rust_decimal::prelude::FromPrimitive;
+use rust_decimal::MathematicalOps;
 
 #[allow(clippy::too_many_arguments)]
 fn calculate_error(
@@ -20,7 +20,7 @@ fn calculate_error(
     implied_volatility: Positive,
     underlying_price: Positive,
 ) -> Result<Decimal, optionstratlib::error::Error> {
-    let mid_price = (bid + ask) / pos_or_panic!(2.0);
+    let mid_price = (bid + ask) / Positive::TWO;
     let option = Options {
         option_type: OptionType::European,
         side: Side::Long,

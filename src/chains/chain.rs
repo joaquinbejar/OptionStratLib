@@ -3,7 +3,6 @@
    Email: jb@taunais.com
    Date: 26/9/24
 ******************************************************************************/
-use positive::pos_or_panic;
 use crate::Positive;
 use crate::chains::utils::{
     OptionChainBuildParams, OptionChainParams, OptionDataPriceParams, RandomPositionsParams,
@@ -33,6 +32,7 @@ use crate::utils::others::get_random_element;
 use crate::volatility::VolatilitySmile;
 use chrono::{NaiveDate, Utc};
 use num_traits::{FromPrimitive, ToPrimitive};
+use positive::pos_or_panic;
 use pretty_simple_display::DebugSimple;
 use prettytable::{Attr, Cell, Row, Table, color, format};
 use rust_decimal::{Decimal, MathematicalOps};
@@ -332,7 +332,7 @@ impl OptionChain {
     /// use optionstratlib::{pos_or_panic, spos, ExpirationDate};
     /// use optionstratlib::chains::chain::OptionChain;
     /// let price_params = OptionDataPriceParams::new(
-    ///     Some(Box::new(pos_or_panic!(100.0))),               // underlying price
+    ///     Some(Box::new(Positive::HUNDRED)),               // underlying price
     ///     Some(ExpirationDate::Days(pos_or_panic!(30.0))),    // expiration date
     ///     Some(dec!(0.05)),                          // risk-free rate
     ///     spos!(0.0),                                // dividend yield
@@ -572,7 +572,7 @@ impl OptionChain {
         // Get ATM implied volatility with a default fallback
         let implied_volatility = match self.get_atm_implied_volatility() {
             Ok(iv) => {
-                assert!(*iv >= pos_or_panic!(0.0) && *iv <= pos_or_panic!(1.0));
+                assert!(*iv >= Positive::ZERO && *iv <= Positive::ONE);
                 *iv
             }
             _ => pos_or_panic!(0.2), // 20% is a reasonable default IV
@@ -591,7 +591,7 @@ impl OptionChain {
         );
 
         // Determine a reasonable number of decimal places based on the underlying price
-        let decimal_places = if self.underlying_price >= pos_or_panic!(100.0) {
+        let decimal_places = if self.underlying_price >= Positive::HUNDRED {
             2
         } else {
             3
@@ -1439,7 +1439,7 @@ impl OptionChain {
     /// use tracing::info;
     /// use optionstratlib::chains::chain::OptionChain;
     /// use optionstratlib::{pos_or_panic, Positive};
-    /// let mut option_chain = OptionChain::new("TEST", pos_or_panic!(100.0), "2030-01-01".to_string(), None, None);
+    /// let mut option_chain = OptionChain::new("TEST", Positive::HUNDRED, "2030-01-01".to_string(), None, None);
     /// for (option1, option2) in option_chain.get_double_iter() {
     ///     info!("{:?}, {:?}", option1, option2);
     /// }
@@ -1469,7 +1469,7 @@ impl OptionChain {
     /// use optionstratlib::chains::chain::OptionChain;
     /// use optionstratlib::Positive;
     /// use optionstratlib::pos_or_panic;
-    /// let mut option_chain = OptionChain::new("TEST", pos_or_panic!(100.0), "2030-01-01".to_string(), None, None);
+    /// let mut option_chain = OptionChain::new("TEST", Positive::HUNDRED, "2030-01-01".to_string(), None, None);
     /// for (option1, option2) in option_chain.get_double_inclusive_iter() {
     ///     info!("{:?}, {:?}", option1, option2);
     /// }
@@ -1498,7 +1498,7 @@ impl OptionChain {
     /// use optionstratlib::chains::chain::OptionChain;
     /// use optionstratlib::Positive;
     /// use optionstratlib::pos_or_panic;
-    /// let mut option_chain = OptionChain::new("TEST", pos_or_panic!(100.0), "2030-01-01".to_string(), None, None);
+    /// let mut option_chain = OptionChain::new("TEST", Positive::HUNDRED, "2030-01-01".to_string(), None, None);
     /// for (option1, option2, option3) in option_chain.get_triple_iter() {
     ///     info!("{:?}, {:?}, {:?}", option1, option2, option3);
     /// }
@@ -1535,7 +1535,7 @@ impl OptionChain {
     /// use optionstratlib::chains::chain::OptionChain;
     /// use optionstratlib::Positive;
     /// use optionstratlib::pos_or_panic;
-    /// let mut option_chain = OptionChain::new("TEST", pos_or_panic!(100.0), "2030-01-01".to_string(), None, None);
+    /// let mut option_chain = OptionChain::new("TEST", Positive::HUNDRED, "2030-01-01".to_string(), None, None);
     /// for (option1, option2, option3) in option_chain.get_triple_inclusive_iter() {
     ///     info!("{:?}, {:?}, {:?}", option1, option2, option3);
     /// }
@@ -1573,7 +1573,7 @@ impl OptionChain {
     /// use optionstratlib::chains::chain::OptionChain;
     /// use optionstratlib::Positive;
     /// use optionstratlib::pos_or_panic;
-    /// let mut option_chain = OptionChain::new("TEST", pos_or_panic!(100.0), "2030-01-01".to_string(), None, None);
+    /// let mut option_chain = OptionChain::new("TEST", Positive::HUNDRED, "2030-01-01".to_string(), None, None);
     /// for (option1, option2, option3, option4) in option_chain.get_quad_iter() {
     ///     info!("{:?}, {:?}, {:?}, {:?}", option1, option2, option3, option4);
     /// }
@@ -1616,7 +1616,7 @@ impl OptionChain {
     /// use optionstratlib::chains::chain::OptionChain;
     /// use optionstratlib::Positive;
     /// use optionstratlib::pos_or_panic;
-    /// let mut option_chain = OptionChain::new("TEST", pos_or_panic!(100.0), "2030-01-01".to_string(), None, None);
+    /// let mut option_chain = OptionChain::new("TEST", Positive::HUNDRED, "2030-01-01".to_string(), None, None);
     /// for (option1, option2, option3, option4) in option_chain.get_quad_inclusive_iter() {
     ///     info!("{:?}, {:?}, {:?}, {:?}", option1, option2, option3, option4);
     /// }
@@ -2451,7 +2451,7 @@ impl OptionChain {
 
             // Ensure we're not returning 0 as an interval
             if rounded_interval == Decimal::ZERO {
-                pos_or_panic!(1.0) // Minimum interval is 1
+                Positive::ONE // Minimum interval is 1
             } else {
                 Positive(rounded_interval)
             }
@@ -3768,7 +3768,7 @@ impl DeltaGammaProfileSurface for OptionChain {
         for days in &days_to_expiry {
             for p in 0..=price_steps {
                 let price = price_range.0.to_dec() + price_step * Decimal::from(p);
-                let price_pos = Positive::new_decimal(price).unwrap_or(pos_or_panic!(1.0));
+                let price_pos = Positive::new_decimal(price).unwrap_or(Positive::ONE);
 
                 // Create option with modified price and expiration
                 let modified_option = Options::new(
@@ -3917,7 +3917,7 @@ impl BidAskSpreadCurve for OptionChain {
         for opt in self.options.iter() {
             // Calculate call spread if available
             if let (Some(bid), Some(ask)) = (opt.call_bid, opt.call_ask) {
-                let mid = (bid + ask) / pos_or_panic!(2.0);
+                let mid = (bid + ask) / Positive::TWO;
                 if mid > Positive::ZERO {
                     let spread = (ask - bid).to_dec() / mid.to_dec();
                     points.insert(Point2D::new(opt.strike_price.to_dec(), spread));
@@ -3925,7 +3925,7 @@ impl BidAskSpreadCurve for OptionChain {
             }
             // If no call data, try put spread
             else if let (Some(bid), Some(ask)) = (opt.put_bid, opt.put_ask) {
-                let mid = (bid + ask) / pos_or_panic!(2.0);
+                let mid = (bid + ask) / Positive::TWO;
                 if mid > Positive::ZERO {
                     let spread = (ask - bid).to_dec() / mid.to_dec();
                     points.insert(Point2D::new(opt.strike_price.to_dec(), spread));
@@ -4135,7 +4135,7 @@ impl VolatilitySensitivitySurface for OptionChain {
 
         for p in 0..=price_steps {
             let price = price_range.0.to_dec() + price_step * Decimal::from(p);
-            let price_pos = Positive::new_decimal(price).unwrap_or(pos_or_panic!(1.0));
+            let price_pos = Positive::new_decimal(price).unwrap_or(Positive::ONE);
 
             for v in 0..=vol_steps {
                 let vol = vol_range.0.to_dec() + vol_step * Decimal::from(v);
@@ -4249,7 +4249,7 @@ impl TimeDecaySurface for OptionChain {
         for days in &days_to_expiry {
             for p in 0..=price_steps {
                 let price = price_range.0.to_dec() + price_step * Decimal::from(p);
-                let price_pos = Positive::new_decimal(price).unwrap_or(pos_or_panic!(1.0));
+                let price_pos = Positive::new_decimal(price).unwrap_or(Positive::ONE);
 
                 let modified_option = Options::new(
                     template.option_type.clone(),
@@ -4426,7 +4426,7 @@ impl ThetaSurface for OptionChain {
         for days in &days_to_expiry {
             for p in 0..=price_steps {
                 let price = price_range.0.to_dec() + price_step * Decimal::from(p);
-                let price_pos = Positive::new_decimal(price).unwrap_or(pos_or_panic!(1.0));
+                let price_pos = Positive::new_decimal(price).unwrap_or(Positive::ONE);
 
                 let modified_option = Options::new(
                     template.option_type.clone(),
@@ -4533,7 +4533,7 @@ impl CharmSurface for OptionChain {
         for days in &days_to_expiry {
             for p in 0..=price_steps {
                 let price = price_range.0.to_dec() + price_step * Decimal::from(p);
-                let price_pos = Positive::new_decimal(price).unwrap_or(pos_or_panic!(1.0));
+                let price_pos = Positive::new_decimal(price).unwrap_or(Positive::ONE);
 
                 let modified_option = Options::new(
                     template.option_type.clone(),
@@ -4640,7 +4640,7 @@ impl ColorSurface for OptionChain {
         for days in &days_to_expiry {
             for p in 0..=price_steps {
                 let price = price_range.0.to_dec() + price_step * Decimal::from(p);
-                let price_pos = Positive::new_decimal(price).unwrap_or(pos_or_panic!(1.0));
+                let price_pos = Positive::new_decimal(price).unwrap_or(Positive::ONE);
 
                 let modified_option = Options::new(
                     template.option_type.clone(),
@@ -4715,6 +4715,7 @@ mod tests_chain_base {
 
     use rust_decimal_macros::dec;
 
+    use positive::spos;
     use std::fs;
     use tracing::info;
 
@@ -4745,7 +4746,7 @@ mod tests_chain_base {
             pos_or_panic!(0.02),
             2,
             OptionDataPriceParams::new(
-                Some(Box::new(pos_or_panic!(100.0))),
+                Some(Box::new(Positive::HUNDRED)),
                 Some(ExpirationDate::Days(pos_or_panic!(30.0))),
                 Some(dec!(0.05)),
                 spos!(0.02),
@@ -4760,7 +4761,7 @@ mod tests_chain_base {
         info!("{}", chain);
         // With chain_size=10, we should get 21 strikes: 10 below + ATM + 10 above
         assert_eq!(chain.options.len(), 21);
-        assert_eq!(chain.underlying_price, pos_or_panic!(100.0));
+        assert_eq!(chain.underlying_price, Positive::HUNDRED);
 
         // First strike should be 10 strikes below ATM (100 - 10*1 = 90)
         let first = chain.options.iter().next().unwrap();
@@ -5058,21 +5059,20 @@ mod tests_chain_base {
 #[cfg(test)]
 mod tests_option_data {
     use super::*;
-
-    use crate::assert_pos_relative_eq;
     use num_traits::ToPrimitive;
+    use positive::{assert_pos_relative_eq, spos};
     use rust_decimal_macros::dec;
     use tracing::info;
 
     fn create_valid_option_data() -> OptionData {
         OptionData::new(
-            pos_or_panic!(100.0), // strike_price
-            spos!(9.5),           // call_bid
-            spos!(10.0),          // call_ask
-            spos!(8.5),           // put_bid
-            spos!(9.0),           // put_ask
-            pos_or_panic!(0.2),   // implied_volatility
-            Some(dec!(-0.3)),     // delta
+            Positive::HUNDRED,  // strike_price
+            spos!(9.5),         // call_bid
+            spos!(10.0),        // call_ask
+            spos!(8.5),         // put_bid
+            spos!(9.0),         // put_ask
+            pos_or_panic!(0.2), // implied_volatility
+            Some(dec!(-0.3)),   // delta
             Some(dec!(0.7)),
             Some(dec!(0.5)),
             spos!(1000.0), // volume
@@ -5090,7 +5090,7 @@ mod tests_option_data {
     #[test]
     fn test_new_option_data() {
         let option_data = create_valid_option_data();
-        assert_eq!(option_data.strike_price, pos_or_panic!(100.0));
+        assert_eq!(option_data.strike_price, Positive::HUNDRED);
         assert_eq!(option_data.call_bid, spos!(9.5));
         assert_eq!(option_data.call_ask, spos!(10.0));
         assert_eq!(option_data.put_bid, spos!(8.5));
@@ -5117,7 +5117,7 @@ mod tests_option_data {
     #[test]
     fn test_validate_missing_both_sides() {
         let mut option_data = OptionData {
-            strike_price: pos_or_panic!(100.0),
+            strike_price: Positive::HUNDRED,
             ..Default::default()
         };
         option_data.implied_volatility = pos_or_panic!(0.2);
@@ -5167,10 +5167,10 @@ mod tests_option_data {
     #[test]
     fn test_calculate_prices_success() {
         let mut option_data = OptionData {
-            strike_price: pos_or_panic!(100.0),
+            strike_price: Positive::HUNDRED,
             symbol: Some("TEST".to_string()),
             expiration_date: Some(ExpirationDate::Days(pos_or_panic!(30.0))),
-            underlying_price: Some(Box::new(pos_or_panic!(100.0))),
+            underlying_price: Some(Box::new(Positive::HUNDRED)),
             ..Default::default()
         };
         option_data.implied_volatility = pos_or_panic!(0.2);
@@ -5186,10 +5186,10 @@ mod tests_option_data {
     #[test]
     fn test_calculate_prices_missing_volatility() {
         let mut option_data = OptionData {
-            strike_price: pos_or_panic!(100.0),
+            strike_price: Positive::HUNDRED,
             symbol: Some("TEST".to_string()),
             expiration_date: Some(ExpirationDate::Days(pos_or_panic!(30.0))),
-            underlying_price: Some(Box::new(pos_or_panic!(100.0))),
+            underlying_price: Some(Box::new(Positive::HUNDRED)),
             ..Default::default()
         };
         let _ = option_data.calculate_prices(None);
@@ -5201,16 +5201,16 @@ mod tests_option_data {
         assert_eq!(option_data.put_bid, None);
         assert_eq!(option_data.implied_volatility, Positive::ZERO);
         assert_eq!(option_data.delta_call, None);
-        assert_eq!(option_data.strike_price, pos_or_panic!(100.0));
+        assert_eq!(option_data.strike_price, Positive::HUNDRED);
     }
 
     #[test]
     fn test_calculate_prices_override_volatility() {
         let mut option_data = OptionData {
-            strike_price: pos_or_panic!(100.0),
+            strike_price: Positive::HUNDRED,
             symbol: Some("TEST".to_string()),
             expiration_date: Some(ExpirationDate::Days(pos_or_panic!(30.0))),
-            underlying_price: Some(Box::new(pos_or_panic!(100.0))),
+            underlying_price: Some(Box::new(Positive::HUNDRED)),
             ..Default::default()
         };
         option_data.implied_volatility = pos_or_panic!(0.2);
@@ -5249,10 +5249,10 @@ mod tests_option_data {
     #[test]
     fn test_calculate_prices_with_all_parameters() {
         let mut option_data = OptionData {
-            strike_price: pos_or_panic!(100.0),
+            strike_price: Positive::HUNDRED,
             symbol: Some("TEST".to_string()),
             expiration_date: Some(ExpirationDate::Days(pos_or_panic!(30.0))),
-            underlying_price: Some(Box::new(pos_or_panic!(100.0))),
+            underlying_price: Some(Box::new(Positive::HUNDRED)),
             ..Default::default()
         };
         option_data.implied_volatility = pos_or_panic!(0.2);
@@ -5269,6 +5269,7 @@ mod tests_option_data {
 #[cfg(test)]
 mod tests_get_random_positions {
     use super::*;
+    use positive::spos;
 
     use crate::error::chains::ChainBuildErrorKind;
     use crate::model::ExpirationDate;
@@ -5279,7 +5280,7 @@ mod tests_get_random_positions {
         // Create a sample option chain
         let mut chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2030-01-01".to_string(),
             None,
             None,
@@ -5302,7 +5303,7 @@ mod tests_get_random_positions {
         );
 
         chain.add_option(
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             spos!(3.0),
             spos!(3.2),
             spos!(3.0),
@@ -5343,7 +5344,7 @@ mod tests_get_random_positions {
             None,
             None,
             ExpirationDate::Days(pos_or_panic!(30.0)),
-            pos_or_panic!(1.0),
+            Positive::ONE,
             dec!(0.05),
             pos_or_panic!(0.02),
             Positive::ONE,
@@ -5377,7 +5378,7 @@ mod tests_get_random_positions {
             None,
             None,
             ExpirationDate::Days(pos_or_panic!(30.0)),
-            pos_or_panic!(1.0),
+            Positive::ONE,
             dec!(0.05),
             pos_or_panic!(0.02),
             Positive::ONE,
@@ -5410,7 +5411,7 @@ mod tests_get_random_positions {
             None,
             None,
             ExpirationDate::Days(pos_or_panic!(30.0)),
-            pos_or_panic!(1.0),
+            Positive::ONE,
             dec!(0.05),
             pos_or_panic!(0.02),
             Positive::ONE,
@@ -5443,7 +5444,7 @@ mod tests_get_random_positions {
             Some(2),
             None,
             ExpirationDate::Days(pos_or_panic!(30.0)),
-            pos_or_panic!(1.0),
+            Positive::ONE,
             dec!(0.05),
             pos_or_panic!(0.02),
             Positive::ONE,
@@ -5476,7 +5477,7 @@ mod tests_get_random_positions {
             None,
             Some(2),
             ExpirationDate::Days(pos_or_panic!(30.0)),
-            pos_or_panic!(1.0),
+            Positive::ONE,
             dec!(0.05),
             pos_or_panic!(0.02),
             Positive::ONE,
@@ -5509,7 +5510,7 @@ mod tests_get_random_positions {
             Some(1),
             Some(1),
             ExpirationDate::Days(pos_or_panic!(30.0)),
-            pos_or_panic!(1.0),
+            Positive::ONE,
             dec!(0.05),
             pos_or_panic!(0.02),
             Positive::ONE,
@@ -5551,7 +5552,7 @@ mod tests_get_random_positions {
     fn test_empty_chain() {
         let chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2030-01-01".to_string(),
             None,
             None,
@@ -5562,7 +5563,7 @@ mod tests_get_random_positions {
             None,
             None,
             ExpirationDate::Days(pos_or_panic!(30.0)),
-            pos_or_panic!(1.0),
+            Positive::ONE,
             dec!(0.05),
             pos_or_panic!(0.02),
             Positive::ONE,
@@ -5583,12 +5584,13 @@ mod tests_get_random_positions {
 #[cfg(test)]
 mod tests_option_data_get_prices {
     use super::*;
+    use positive::spos;
 
     use rust_decimal_macros::dec;
 
     fn create_test_option_data() -> OptionData {
         OptionData::new(
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             spos!(9.5),
             spos!(10.0),
             spos!(8.5),
@@ -5636,7 +5638,7 @@ mod tests_option_data_get_prices {
     #[test]
     fn test_get_prices_with_none_values() {
         let data = OptionData::new(
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             None,
             None,
             None,
@@ -5665,13 +5667,14 @@ mod tests_option_data_get_prices {
 #[cfg(test)]
 mod tests_option_data_display {
     use super::*;
+    use positive::spos;
 
     use rust_decimal_macros::dec;
 
     #[test]
     fn test_display_full_data() {
         let data = OptionData::new(
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             spos!(9.5),
             spos!(10.0),
             spos!(8.5),
@@ -5719,7 +5722,7 @@ mod tests_filter_option_data {
     fn create_test_chain() -> OptionChain {
         let mut chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2030-01-01".to_string(),
             None,
             None,
@@ -5800,7 +5803,7 @@ mod tests_strike_price_range_vec {
     fn test_empty_chain() {
         let chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2030-01-01".to_string(),
             None,
             None,
@@ -5812,13 +5815,13 @@ mod tests_strike_price_range_vec {
     fn test_single_option() {
         let mut chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2030-01-01".to_string(),
             None,
             None,
         );
         chain.add_option(
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             None,
             None,
             None,
@@ -5840,7 +5843,7 @@ mod tests_strike_price_range_vec {
     fn test_multiple_options() {
         let mut chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2030-01-01".to_string(),
             None,
             None,
@@ -5869,7 +5872,7 @@ mod tests_strike_price_range_vec {
     fn test_step_size() {
         let mut chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2030-01-01".to_string(),
             None,
             None,
@@ -5901,11 +5904,12 @@ mod tests_option_data_get_option {
     use super::*;
 
     use num_traits::ToPrimitive;
+    use positive::spos;
     use rust_decimal_macros::dec;
 
     fn create_test_option_data() -> OptionData {
         OptionData::new(
-            pos_or_panic!(100.0),                            // strike_price
+            Positive::HUNDRED,                               // strike_price
             spos!(9.5),                                      // call_bid
             spos!(10.0),                                     // call_ask
             spos!(8.5),                                      // put_bid
@@ -5918,7 +5922,7 @@ mod tests_option_data_get_option {
             Some(500),                                       // open_interest
             Some("TEST".to_string()),                        // symbol
             Some(ExpirationDate::Days(pos_or_panic!(30.0))), // expiration_date
-            Some(Box::new(pos_or_panic!(100.0))),            // underlying_price
+            Some(Box::new(Positive::HUNDRED)),               // underlying_price
             Some(dec!(0.05)),                                // risk_free_rate
             Some(pos_or_panic!(0.02)),                       // dividend_yield
             None,
@@ -5933,9 +5937,9 @@ mod tests_option_data_get_option {
         assert!(result.is_ok());
 
         let option = result.unwrap();
-        assert_eq!(option.strike_price, pos_or_panic!(100.0));
+        assert_eq!(option.strike_price, Positive::HUNDRED);
         assert_eq!(option.implied_volatility, 0.25); // Uses provided IV
-        assert_eq!(option.underlying_price, pos_or_panic!(100.0));
+        assert_eq!(option.underlying_price, Positive::HUNDRED);
         assert_eq!(option.risk_free_rate.to_f64().unwrap(), 0.05);
         assert_eq!(option.dividend_yield.to_f64(), 0.02);
         assert_eq!(option.side, Side::Long);
@@ -5960,24 +5964,25 @@ mod tests_option_data_get_options_in_strike {
     use crate::assert_decimal_eq;
     use crate::greeks::Greeks;
     use num_traits::ToPrimitive;
+    use positive::spos;
     use rust_decimal_macros::dec;
 
     fn create_test_option_data() -> OptionData {
         OptionData::new(
-            pos_or_panic!(100.0), // strike_price
-            spos!(9.5),           // call_bid
-            spos!(10.0),          // call_ask
-            spos!(8.5),           // put_bid
-            spos!(9.0),           // put_ask
-            pos_or_panic!(0.2),   // implied_volatility
-            Some(dec!(-0.3)),     // delta
+            Positive::HUNDRED,  // strike_price
+            spos!(9.5),         // call_bid
+            spos!(10.0),        // call_ask
+            spos!(8.5),         // put_bid
+            spos!(9.0),         // put_ask
+            pos_or_panic!(0.2), // implied_volatility
+            Some(dec!(-0.3)),   // delta
             Some(dec!(-0.3)),
             Some(dec!(0.3)),
             spos!(1000.0),                                   // volume
             Some(500),                                       // open_interest
             Some("TEST".to_string()),                        // symbol
             Some(ExpirationDate::Days(pos_or_panic!(30.0))), // expiration_date
-            Some(Box::new(pos_or_panic!(100.0))),            // underlying_price
+            Some(Box::new(Positive::HUNDRED)),               // underlying_price
             Some(dec!(0.05)),                                // risk_free_rate
             Some(pos_or_panic!(0.02)),                       // dividend_yield
             None,
@@ -5994,22 +5999,22 @@ mod tests_option_data_get_options_in_strike {
         let options = result.unwrap();
 
         // Check long call
-        assert_eq!(options.long_call.strike_price, pos_or_panic!(100.0));
+        assert_eq!(options.long_call.strike_price, Positive::HUNDRED);
         assert_eq!(options.long_call.option_style, OptionStyle::Call);
         assert_eq!(options.long_call.side, Side::Long);
 
         // Check short call
-        assert_eq!(options.short_call.strike_price, pos_or_panic!(100.0));
+        assert_eq!(options.short_call.strike_price, Positive::HUNDRED);
         assert_eq!(options.short_call.option_style, OptionStyle::Call);
         assert_eq!(options.short_call.side, Side::Short);
 
         // Check long put
-        assert_eq!(options.long_put.strike_price, pos_or_panic!(100.0));
+        assert_eq!(options.long_put.strike_price, Positive::HUNDRED);
         assert_eq!(options.long_put.option_style, OptionStyle::Put);
         assert_eq!(options.long_put.side, Side::Long);
 
         // Check short put
-        assert_eq!(options.short_put.strike_price, pos_or_panic!(100.0));
+        assert_eq!(options.short_put.strike_price, Positive::HUNDRED);
         assert_eq!(options.short_put.option_style, OptionStyle::Put);
         assert_eq!(options.short_put.side, Side::Short);
     }
@@ -6037,13 +6042,13 @@ mod tests_option_data_get_options_in_strike {
 
         // Verify common properties across all options
         let check_common_properties = |option: &Options| {
-            assert_eq!(option.strike_price, pos_or_panic!(100.0));
-            assert_eq!(option.underlying_price, pos_or_panic!(100.0));
+            assert_eq!(option.strike_price, Positive::HUNDRED);
+            assert_eq!(option.underlying_price, Positive::HUNDRED);
             assert_eq!(option.implied_volatility, 0.2);
             assert_eq!(option.risk_free_rate.to_f64().unwrap(), 0.05);
             assert_eq!(option.dividend_yield.to_f64(), 0.02);
             assert_eq!(option.option_type, OptionType::European);
-            assert_eq!(option.quantity, pos_or_panic!(1.0));
+            assert_eq!(option.quantity, Positive::ONE);
         };
 
         check_common_properties(&options.long_call);
@@ -6088,6 +6093,7 @@ mod tests_option_data_get_options_in_strike {
 #[cfg(test)]
 mod tests_filter_options_in_strike {
     use super::*;
+    use positive::spos;
 
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
@@ -6095,7 +6101,7 @@ mod tests_filter_options_in_strike {
     fn create_test_chain() -> OptionChain {
         let mut chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2030-01-01".to_string(),
             None,
             None,
@@ -6185,7 +6191,7 @@ mod tests_filter_options_in_strike {
     fn test_filter_empty_chain() {
         let chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2030-01-01".to_string(),
             None,
             None,
@@ -6238,13 +6244,14 @@ mod tests_filter_options_in_strike {
 #[cfg(test)]
 mod tests_chain_iterators {
     use super::*;
+    use positive::spos;
 
     use rust_decimal_macros::dec;
 
     fn create_test_chain() -> OptionChain {
         let mut chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2030-01-01".to_string(),
             None,
             None,
@@ -6267,7 +6274,7 @@ mod tests_chain_iterators {
         );
 
         chain.add_option(
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             spos!(3.0),
             spos!(3.5),
             spos!(3.0),
@@ -6303,7 +6310,7 @@ mod tests_chain_iterators {
     fn test_get_double_iter_empty() {
         let chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2030-01-01".to_string(),
             None,
             None,
@@ -6316,13 +6323,13 @@ mod tests_chain_iterators {
     fn test_get_double_iter_single() {
         let mut chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2030-01-01".to_string(),
             None,
             None,
         );
         chain.add_option(
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             spos!(3.0),
             spos!(3.5),
             spos!(3.0),
@@ -6350,12 +6357,12 @@ mod tests_chain_iterators {
 
         // Check strikes of pairs
         assert_eq!(pairs[0].0.strike_price, pos_or_panic!(90.0));
-        assert_eq!(pairs[0].1.strike_price, pos_or_panic!(100.0));
+        assert_eq!(pairs[0].1.strike_price, Positive::HUNDRED);
 
         assert_eq!(pairs[1].0.strike_price, pos_or_panic!(90.0));
         assert_eq!(pairs[1].1.strike_price, pos_or_panic!(110.0));
 
-        assert_eq!(pairs[2].0.strike_price, pos_or_panic!(100.0));
+        assert_eq!(pairs[2].0.strike_price, Positive::HUNDRED);
         assert_eq!(pairs[2].1.strike_price, pos_or_panic!(110.0));
     }
 
@@ -6363,7 +6370,7 @@ mod tests_chain_iterators {
     fn test_get_double_inclusive_iter_empty() {
         let chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2030-01-01".to_string(),
             None,
             None,
@@ -6376,13 +6383,13 @@ mod tests_chain_iterators {
     fn test_get_double_inclusive_iter_single() {
         let mut chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2030-01-01".to_string(),
             None,
             None,
         );
         chain.add_option(
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             spos!(3.0),
             spos!(3.5),
             spos!(3.0),
@@ -6414,15 +6421,15 @@ mod tests_chain_iterators {
         assert_eq!(pairs[0].1.strike_price, pos_or_panic!(90.0));
 
         assert_eq!(pairs[1].0.strike_price, pos_or_panic!(90.0));
-        assert_eq!(pairs[1].1.strike_price, pos_or_panic!(100.0));
+        assert_eq!(pairs[1].1.strike_price, Positive::HUNDRED);
 
         assert_eq!(pairs[2].0.strike_price, pos_or_panic!(90.0));
         assert_eq!(pairs[2].1.strike_price, pos_or_panic!(110.0));
 
-        assert_eq!(pairs[3].0.strike_price, pos_or_panic!(100.0));
-        assert_eq!(pairs[3].1.strike_price, pos_or_panic!(100.0));
+        assert_eq!(pairs[3].0.strike_price, Positive::HUNDRED);
+        assert_eq!(pairs[3].1.strike_price, Positive::HUNDRED);
 
-        assert_eq!(pairs[4].0.strike_price, pos_or_panic!(100.0));
+        assert_eq!(pairs[4].0.strike_price, Positive::HUNDRED);
         assert_eq!(pairs[4].1.strike_price, pos_or_panic!(110.0));
 
         assert_eq!(pairs[5].0.strike_price, pos_or_panic!(110.0));
@@ -6433,13 +6440,14 @@ mod tests_chain_iterators {
 #[cfg(test)]
 mod tests_chain_iterators_bis {
     use super::*;
+    use positive::spos;
 
     use rust_decimal_macros::dec;
 
     fn create_test_chain() -> OptionChain {
         let mut chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2030-01-01".to_string(),
             None,
             None,
@@ -6462,7 +6470,7 @@ mod tests_chain_iterators_bis {
         );
 
         chain.add_option(
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             spos!(3.0),
             spos!(3.5),
             spos!(3.0),
@@ -6514,7 +6522,7 @@ mod tests_chain_iterators_bis {
     fn test_get_triple_iter_empty() {
         let chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2030-01-01".to_string(),
             None,
             None,
@@ -6527,7 +6535,7 @@ mod tests_chain_iterators_bis {
     fn test_get_triple_iter_two_elements() {
         let mut chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2030-01-01".to_string(),
             None,
             None,
@@ -6548,7 +6556,7 @@ mod tests_chain_iterators_bis {
             None,
         );
         chain.add_option(
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             None,
             None,
             None,
@@ -6576,11 +6584,11 @@ mod tests_chain_iterators_bis {
 
         // Check first triple
         assert_eq!(triples[0].0.strike_price, pos_or_panic!(90.0));
-        assert_eq!(triples[0].1.strike_price, pos_or_panic!(100.0));
+        assert_eq!(triples[0].1.strike_price, Positive::HUNDRED);
         assert_eq!(triples[0].2.strike_price, pos_or_panic!(110.0));
 
         // Check last triple
-        assert_eq!(triples[3].0.strike_price, pos_or_panic!(100.0));
+        assert_eq!(triples[3].0.strike_price, Positive::HUNDRED);
         assert_eq!(triples[3].1.strike_price, pos_or_panic!(110.0));
         assert_eq!(triples[3].2.strike_price, pos_or_panic!(120.0));
     }
@@ -6590,7 +6598,7 @@ mod tests_chain_iterators_bis {
     fn test_get_triple_inclusive_iter_empty() {
         let chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2030-01-01".to_string(),
             None,
             None,
@@ -6603,13 +6611,13 @@ mod tests_chain_iterators_bis {
     fn test_get_triple_inclusive_iter_single() {
         let mut chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2030-01-01".to_string(),
             None,
             None,
         );
         chain.add_option(
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             spos!(3.0),
             spos!(3.5),
             spos!(3.0),
@@ -6648,7 +6656,7 @@ mod tests_chain_iterators_bis {
     fn test_get_quad_iter_empty() {
         let chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2030-01-01".to_string(),
             None,
             None,
@@ -6661,7 +6669,7 @@ mod tests_chain_iterators_bis {
     fn test_get_quad_iter_three_elements() {
         let mut chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2030-01-01".to_string(),
             None,
             None,
@@ -6682,7 +6690,7 @@ mod tests_chain_iterators_bis {
             None,
         );
         chain.add_option(
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             None,
             None,
             None,
@@ -6724,7 +6732,7 @@ mod tests_chain_iterators_bis {
 
         // Check the quad
         assert_eq!(quads[0].0.strike_price, pos_or_panic!(90.0));
-        assert_eq!(quads[0].1.strike_price, pos_or_panic!(100.0));
+        assert_eq!(quads[0].1.strike_price, Positive::HUNDRED);
         assert_eq!(quads[0].2.strike_price, pos_or_panic!(110.0));
         assert_eq!(quads[0].3.strike_price, pos_or_panic!(120.0));
     }
@@ -6734,7 +6742,7 @@ mod tests_chain_iterators_bis {
     fn test_get_quad_inclusive_iter_empty() {
         let chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2030-01-01".to_string(),
             None,
             None,
@@ -6747,13 +6755,13 @@ mod tests_chain_iterators_bis {
     fn test_get_quad_inclusive_iter_single() {
         let mut chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2030-01-01".to_string(),
             None,
             None,
         );
         chain.add_option(
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             spos!(3.0),
             spos!(3.5),
             spos!(3.0),
@@ -6822,7 +6830,7 @@ mod tests_is_valid_optimal_side {
             None,
             None,
         );
-        let underlying_price = pos_or_panic!(100.0);
+        let underlying_price = Positive::HUNDRED;
 
         assert!(option_data.is_valid_optimal_side(&underlying_price, &FindOptimalSide::Upper));
     }
@@ -6849,7 +6857,7 @@ mod tests_is_valid_optimal_side {
             None,
             None,
         );
-        let underlying_price = pos_or_panic!(100.0);
+        let underlying_price = Positive::HUNDRED;
 
         assert!(!option_data.is_valid_optimal_side(&underlying_price, &FindOptimalSide::Upper));
     }
@@ -6876,7 +6884,7 @@ mod tests_is_valid_optimal_side {
             None,
             None,
         );
-        let underlying_price = pos_or_panic!(100.0);
+        let underlying_price = Positive::HUNDRED;
 
         assert!(option_data.is_valid_optimal_side(&underlying_price, &FindOptimalSide::Lower));
     }
@@ -6903,7 +6911,7 @@ mod tests_is_valid_optimal_side {
             None,
             None,
         );
-        let underlying_price = pos_or_panic!(100.0);
+        let underlying_price = Positive::HUNDRED;
 
         assert!(!option_data.is_valid_optimal_side(&underlying_price, &FindOptimalSide::Lower));
     }
@@ -6911,7 +6919,7 @@ mod tests_is_valid_optimal_side {
     #[test]
     fn test_all_side() {
         let option_data = OptionData::new(
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             None,
             None,
             None,
@@ -6930,7 +6938,7 @@ mod tests_is_valid_optimal_side {
             None,
             None,
         );
-        let underlying_price = pos_or_panic!(100.0);
+        let underlying_price = Positive::HUNDRED;
 
         assert!(option_data.is_valid_optimal_side(&underlying_price, &FindOptimalSide::All));
     }
@@ -6938,7 +6946,7 @@ mod tests_is_valid_optimal_side {
     #[test]
     fn test_range_side_valid() {
         let option_data = OptionData::new(
-            pos_or_panic!(100.0), // strike price within range
+            Positive::HUNDRED, // strike price within range
             None,
             None,
             None,
@@ -6961,7 +6969,7 @@ mod tests_is_valid_optimal_side {
         let range_end = pos_or_panic!(110.0);
 
         assert!(option_data.is_valid_optimal_side(
-            &pos_or_panic!(100.0),
+            &Positive::HUNDRED,
             &FindOptimalSide::Range(range_start, range_end)
         ));
     }
@@ -6992,7 +7000,7 @@ mod tests_is_valid_optimal_side {
         let range_end = pos_or_panic!(110.0);
 
         assert!(!option_data.is_valid_optimal_side(
-            &pos_or_panic!(100.0),
+            &Positive::HUNDRED,
             &FindOptimalSide::Range(range_start, range_end)
         ));
     }
@@ -7023,7 +7031,7 @@ mod tests_is_valid_optimal_side {
         let range_end = pos_or_panic!(110.0);
 
         assert!(!option_data.is_valid_optimal_side(
-            &pos_or_panic!(100.0),
+            &Positive::HUNDRED,
             &FindOptimalSide::Range(range_start, range_end)
         ));
     }
@@ -7074,11 +7082,11 @@ mod tests_is_valid_optimal_side {
         let range_end = pos_or_panic!(110.0);
 
         assert!(option_data_lower.is_valid_optimal_side(
-            &pos_or_panic!(100.0),
+            &Positive::HUNDRED,
             &FindOptimalSide::Range(range_start, range_end)
         ));
         assert!(option_data_upper.is_valid_optimal_side(
-            &pos_or_panic!(100.0),
+            &Positive::HUNDRED,
             &FindOptimalSide::Range(range_start, range_end)
         ));
     }
@@ -7087,6 +7095,7 @@ mod tests_is_valid_optimal_side {
 #[cfg(test)]
 mod rnd_analysis_tests {
     use super::*;
+    use positive::spos;
 
     use rust_decimal_macros::dec;
 
@@ -7094,7 +7103,7 @@ mod rnd_analysis_tests {
     fn create_standard_chain() -> OptionChain {
         let mut chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2025-02-01".to_string(),
             None,
             None,
@@ -7138,7 +7147,7 @@ mod rnd_analysis_tests {
             let params = RNDParameters {
                 risk_free_rate: dec!(0.05),
                 interpolation_points: 100,
-                derivative_tolerance: pos_or_panic!(1.0),
+                derivative_tolerance: Positive::ONE,
             };
 
             let result = chain.calculate_rnd(&params);
@@ -7174,7 +7183,7 @@ mod rnd_analysis_tests {
         fn test_default() {
             let chain = OptionChain::new(
                 "TEST",
-                pos_or_panic!(100.0),
+                Positive::HUNDRED,
                 "2025-02-01".to_string(),
                 None,
                 None,
@@ -7217,7 +7226,7 @@ mod rnd_analysis_tests {
             let params = RNDParameters {
                 risk_free_rate: dec!(0.05),
                 interpolation_points: 100,
-                derivative_tolerance: pos_or_panic!(1.0),
+                derivative_tolerance: Positive::ONE,
             };
 
             let result = chain.calculate_rnd(&params);
@@ -7227,6 +7236,7 @@ mod rnd_analysis_tests {
 
     mod calculate_skew_tests {
         use super::*;
+        use positive::spos;
 
         #[test]
         fn test_basic_skew_calculation() {
@@ -7260,7 +7270,7 @@ mod rnd_analysis_tests {
         fn test_empty_chain_skew() {
             let chain = OptionChain::new(
                 "TEST",
-                pos_or_panic!(100.0),
+                Positive::HUNDRED,
                 "2025-02-01".to_string(),
                 None,
                 None,
@@ -7324,7 +7334,7 @@ mod rnd_analysis_tests {
             let params = RNDParameters {
                 risk_free_rate: dec!(0.05),
                 interpolation_points: 100,
-                derivative_tolerance: pos_or_panic!(1.0),
+                derivative_tolerance: Positive::ONE,
             };
 
             let result = chain.calculate_rnd(&params);
@@ -7337,7 +7347,7 @@ mod rnd_analysis_tests {
             let params = RNDParameters {
                 risk_free_rate: dec!(-0.05),
                 interpolation_points: 100,
-                derivative_tolerance: pos_or_panic!(1.0),
+                derivative_tolerance: Positive::ONE,
             };
 
             let result = chain.calculate_rnd(&params);
@@ -7361,10 +7371,10 @@ mod rnd_analysis_tests {
                 .iter()
                 .max_by(|a, b| a.1.partial_cmp(b.1).unwrap())
                 .unwrap();
-            assert_eq!(*mode.0, pos_or_panic!(100.0));
+            assert_eq!(*mode.0, Positive::HUNDRED);
 
             // Verify densities decrease away from the money
-            let atm_density = densities.get(&pos_or_panic!(100.0)).unwrap();
+            let atm_density = densities.get(&Positive::HUNDRED).unwrap();
             for (strike, density) in densities.iter() {
                 if strike < &pos_or_panic!(90.0) || strike > &pos_or_panic!(110.0) {
                     assert!(density < atm_density);
@@ -7405,12 +7415,13 @@ mod rnd_analysis_tests {
 
     mod calculate_skew_tests_bis {
         use super::*;
+        use positive::spos;
 
         #[test]
         fn test_skew_with_smile() {
             let mut chain = OptionChain::new(
                 "TEST",
-                pos_or_panic!(100.0),
+                Positive::HUNDRED,
                 "2025-02-01".to_string(),
                 None,
                 None,
@@ -7457,7 +7468,7 @@ mod rnd_analysis_tests {
         fn test_skew_monotonic() {
             let mut chain = OptionChain::new(
                 "TEST",
-                pos_or_panic!(100.0),
+                Positive::HUNDRED,
                 "2025-02-01".to_string(),
                 None,
                 None,
@@ -7505,8 +7516,8 @@ mod rnd_analysis_tests {
             let max_rel_strike = result.iter().map(|(k, _)| k).max().unwrap();
 
             // Verify range coverage
-            assert!(*min_rel_strike < pos_or_panic!(1.0)); // Have strikes below ATM
-            assert!(*max_rel_strike > pos_or_panic!(1.0)); // Have strikes above ATM
+            assert!(*min_rel_strike < Positive::ONE); // Have strikes below ATM
+            assert!(*max_rel_strike > Positive::ONE); // Have strikes above ATM
         }
     }
 }
@@ -7514,6 +7525,7 @@ mod rnd_analysis_tests {
 #[cfg(test)]
 mod tests_option_data_delta {
     use super::*;
+    use positive::spos;
 
     use crate::model::ExpirationDate;
 
@@ -7522,7 +7534,7 @@ mod tests_option_data_delta {
     // Helper function to create a standard test OptionDataPriceParams
     fn create_standard_price_params() -> OptionDataPriceParams {
         OptionDataPriceParams::new(
-            Some(Box::new(pos_or_panic!(100.0))),
+            Some(Box::new(Positive::HUNDRED)),
             Some(ExpirationDate::Days(pos_or_panic!(30.0))),
             Some(dec!(0.05)),
             spos!(0.02),
@@ -7533,20 +7545,20 @@ mod tests_option_data_delta {
     // Helper function to create standard OptionData
     fn create_standard_option_data() -> OptionData {
         OptionData::new(
-            pos_or_panic!(100.0), // strike_price
-            spos!(5.0),           // call_bid
-            spos!(5.5),           // call_ask
-            spos!(4.5),           // put_bid
-            spos!(5.0),           // put_ask
-            pos_or_panic!(0.2),   // implied_volatility
-            None,                 // delta
+            Positive::HUNDRED,  // strike_price
+            spos!(5.0),         // call_bid
+            spos!(5.5),         // call_ask
+            spos!(4.5),         // put_bid
+            spos!(5.0),         // put_ask
+            pos_or_panic!(0.2), // implied_volatility
+            None,               // delta
             None,
             None,
             spos!(1000.0),            // volume
             Some(500),                // open_interest
             Some("AAPL".to_string()), // underlying_symbol
             Some(ExpirationDate::Days(pos_or_panic!(3.9))),
-            Some(Box::new(pos_or_panic!(100.0))), // underlying_price
+            Some(Box::new(Positive::HUNDRED)), // underlying_price
             None,
             None,
             None,
@@ -7633,6 +7645,7 @@ mod tests_option_data_delta {
 #[cfg(test)]
 mod tests_basic_curves {
     use super::*;
+    use positive::spos;
 
     use crate::model::types::{OptionStyle, Side};
     use crate::utils::time::get_tomorrow_formatted;
@@ -7642,7 +7655,7 @@ mod tests_basic_curves {
     // Helper function to create a sample OptionChain for testing
     fn create_test_option_chain() -> OptionChain {
         let tomorrow_date = get_tomorrow_formatted();
-        let mut chain = OptionChain::new("TEST", pos_or_panic!(100.0), tomorrow_date, None, None);
+        let mut chain = OptionChain::new("TEST", Positive::HUNDRED, tomorrow_date, None, None);
 
         // Add some test options
         chain.add_option(
@@ -7661,7 +7674,7 @@ mod tests_basic_curves {
         );
 
         chain.add_option(
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             spos!(3.0),
             spos!(3.5),
             spos!(3.0),
@@ -7761,7 +7774,7 @@ mod tests_basic_curves {
     fn test_curve_with_empty_chain() {
         let chain = OptionChain::new(
             "EMPTY",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2024-12-31".to_string(),
             None,
             None,
@@ -7826,6 +7839,7 @@ mod tests_basic_curves {
 #[cfg(test)]
 mod tests_option_chain_surfaces {
     use super::*;
+    use positive::spos;
 
     use crate::utils::time::get_tomorrow_formatted;
 
@@ -7833,7 +7847,7 @@ mod tests_option_chain_surfaces {
 
     fn create_test_option_chain() -> OptionChain {
         let tomorrow_date = get_tomorrow_formatted();
-        let mut chain = OptionChain::new("TEST", pos_or_panic!(100.0), tomorrow_date, None, None);
+        let mut chain = OptionChain::new("TEST", Positive::HUNDRED, tomorrow_date, None, None);
 
         // Add some test options
         chain.add_option(
@@ -7852,7 +7866,7 @@ mod tests_option_chain_surfaces {
         );
 
         chain.add_option(
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             spos!(3.0),
             spos!(3.5),
             spos!(3.0),
@@ -8032,7 +8046,7 @@ mod tests_option_chain_surfaces {
     fn test_surface_with_empty_chain() {
         let empty_chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2024-12-31".to_string(),
             Some(dec!(0.05)),
             spos!(0.01),
@@ -8082,6 +8096,7 @@ mod tests_option_chain_surfaces {
 #[cfg(test)]
 mod tests_option_chain_time_surfaces {
     use super::*;
+    use positive::spos;
 
     use crate::utils::time::get_tomorrow_formatted;
 
@@ -8089,7 +8104,7 @@ mod tests_option_chain_time_surfaces {
 
     fn create_test_option_chain() -> OptionChain {
         let tomorrow_date = get_tomorrow_formatted();
-        let mut chain = OptionChain::new("TEST", pos_or_panic!(100.0), tomorrow_date, None, None);
+        let mut chain = OptionChain::new("TEST", Positive::HUNDRED, tomorrow_date, None, None);
 
         // Add some test options
         chain.add_option(
@@ -8108,7 +8123,7 @@ mod tests_option_chain_time_surfaces {
         );
 
         chain.add_option(
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             spos!(3.0),
             spos!(3.5),
             spos!(3.0),
@@ -8282,7 +8297,7 @@ mod tests_option_chain_time_surfaces {
     fn test_time_surface_with_empty_chain() {
         let empty_chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2024-12-31".to_string(),
             Some(dec!(0.05)),
             spos!(0.01),
@@ -8357,13 +8372,14 @@ mod tests_option_chain_time_surfaces {
 #[cfg(test)]
 mod tests_serialization {
     use super::*;
+    use positive::spos;
 
     use rust_decimal_macros::dec;
 
     #[test]
     fn test_optiondata_serialization() {
         let option_data = OptionData {
-            strike_price: pos_or_panic!(100.0),
+            strike_price: Positive::HUNDRED,
             call_bid: spos!(9.5),
             call_ask: spos!(10.0),
             put_bid: spos!(8.5),
@@ -8395,7 +8411,7 @@ mod tests_serialization {
     fn test_optionchain_serialization() {
         let mut chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2030-01-01".to_string(),
             Some(dec!(0.05)),
             spos!(0.02),
@@ -8430,7 +8446,7 @@ mod tests_serialization {
     #[test]
     fn test_optiondata_empty_fields() {
         let option_data = OptionData {
-            strike_price: pos_or_panic!(100.0),
+            strike_price: Positive::HUNDRED,
             call_bid: None,
             call_ask: None,
             put_bid: None,
@@ -8462,6 +8478,7 @@ mod tests_serialization {
 #[cfg(test)]
 mod tests_option_data_serde {
     use super::*;
+    use positive::spos;
 
     use rust_decimal_macros::dec;
     use serde_json;
@@ -8469,7 +8486,7 @@ mod tests_option_data_serde {
     // Helper function to create a sample OptionData
     fn create_sample_option_data() -> OptionData {
         OptionData {
-            strike_price: pos_or_panic!(100.0),
+            strike_price: Positive::HUNDRED,
             call_bid: spos!(9.5),
             call_ask: spos!(10.0),
             put_bid: spos!(8.5),
@@ -8500,7 +8517,7 @@ mod tests_option_data_serde {
 
         assert_eq!(option_data, deserialized);
         // Verify specific fields
-        assert_eq!(deserialized.strike_price, pos_or_panic!(100.0));
+        assert_eq!(deserialized.strike_price, Positive::HUNDRED);
         assert_eq!(deserialized.delta_call, Some(dec!(0.5)));
     }
 
@@ -8508,7 +8525,7 @@ mod tests_option_data_serde {
     fn test_optiondata_minimal_serialization() {
         // Test with minimal required fields
         let option_data = OptionData {
-            strike_price: pos_or_panic!(100.0),
+            strike_price: Positive::HUNDRED,
             call_bid: None,
             call_ask: None,
             put_bid: None,
@@ -8544,7 +8561,7 @@ mod tests_option_data_serde {
             strike_price: pos_or_panic!(999999.99),
             call_bid: spos!(99999.99),
             call_ask: spos!(99999.99),
-            implied_volatility: pos_or_panic!(1.0),
+            implied_volatility: Positive::ONE,
             ..Default::default()
         };
 
@@ -8579,7 +8596,7 @@ mod tests_option_data_serde {
         let option_data = OptionData {
             strike_price: Positive::ONE,
             call_bid: Some(Positive::ZERO),
-            implied_volatility: pos_or_panic!(1.0),
+            implied_volatility: Positive::ONE,
             delta_call: Some(Decimal::ONE),
             delta_put: Some(Decimal::NEGATIVE_ONE),
             gamma: Some(Decimal::ZERO),
@@ -8626,13 +8643,14 @@ mod tests_option_data_serde {
 #[cfg(test)]
 mod tests_option_chain_serde {
     use super::*;
+    use positive::spos;
 
     use rust_decimal_macros::dec;
 
     fn create_sample_chain() -> OptionChain {
         let mut chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2030-01-01".to_string(),
             Some(dec!(0.05)),
             spos!(0.02),
@@ -8672,7 +8690,7 @@ mod tests_option_chain_serde {
     fn test_optionchain_empty_chain() {
         let chain = OptionChain::new(
             "EMPTY",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2030-01-01".to_string(),
             None,
             None,
@@ -8692,7 +8710,7 @@ mod tests_option_chain_serde {
 
         // Add more options
         chain.add_option(
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             spos!(5.0),
             spos!(5.5),
             spos!(5.0),
@@ -8824,6 +8842,7 @@ mod tests_option_chain_serde {
 #[cfg(test)]
 mod tests_gamma_calculations {
     use super::*;
+    use positive::spos;
 
     use crate::assert_decimal_eq;
     use crate::utils::time::get_tomorrow_formatted;
@@ -8852,7 +8871,7 @@ mod tests_gamma_calculations {
     fn test_gamma_exposure_empty_chain() {
         let chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2024-12-31".to_string(),
             None,
             None,
@@ -8914,7 +8933,7 @@ mod tests_gamma_calculations {
     fn test_gamma_curve_empty_chain() {
         let chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2024-12-31".to_string(),
             None,
             None,
@@ -8957,7 +8976,7 @@ mod tests_delta_calculations {
     fn test_delta_exposure_empty_chain() {
         let chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2024-12-31".to_string(),
             None,
             None,
@@ -9019,7 +9038,7 @@ mod tests_delta_calculations {
     fn test_delta_curve_empty_chain() {
         let chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2024-12-31".to_string(),
             None,
             None,
@@ -9086,7 +9105,7 @@ mod tests_vega_calculations {
     fn test_vega_exposure_empty_chain() {
         let chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2024-12-31".to_string(),
             None,
             None,
@@ -9148,7 +9167,7 @@ mod tests_vega_calculations {
     fn test_vega_curve_empty_chain() {
         let chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2024-12-31".to_string(),
             None,
             None,
@@ -9215,7 +9234,7 @@ mod tests_theta_calculations {
     fn test_theta_exposure_empty_chain() {
         let chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2024-12-31".to_string(),
             None,
             None,
@@ -9277,7 +9296,7 @@ mod tests_theta_calculations {
     fn test_theta_curve_empty_chain() {
         let chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2024-12-31".to_string(),
             None,
             None,
@@ -9349,7 +9368,7 @@ mod tests_vanna_calculations {
     fn test_vanna_exposure_empty_chain() {
         let chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2024-12-31".to_string(),
             None,
             None,
@@ -9386,7 +9405,7 @@ mod tests_vanna_calculations {
     fn test_vanna_curve_empty_chain() {
         let chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2024-12-31".to_string(),
             None,
             None,
@@ -9434,7 +9453,7 @@ mod tests_vomma_calculations {
     fn test_vomma_exposure_empty_chain() {
         let chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2024-12-31".to_string(),
             None,
             None,
@@ -9480,7 +9499,7 @@ mod tests_veta_calculations {
     fn test_veta_exposure_empty_chain() {
         let chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2024-12-31".to_string(),
             None,
             None,
@@ -9517,7 +9536,7 @@ mod tests_veta_calculations {
     fn test_veta_curve_empty_chain() {
         let chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2024-12-31".to_string(),
             None,
             None,
@@ -9565,7 +9584,7 @@ mod tests_charm_calculations {
     fn test_charm_exposure_empty_chain() {
         let chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2024-12-31".to_string(),
             None,
             None,
@@ -9602,7 +9621,7 @@ mod tests_charm_calculations {
     fn test_charm_curve_empty_chain() {
         let chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2024-12-31".to_string(),
             None,
             None,
@@ -9650,7 +9669,7 @@ mod tests_color_calculations {
     fn test_color_exposure_empty_chain() {
         let chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2024-12-31".to_string(),
             None,
             None,
@@ -9687,7 +9706,7 @@ mod tests_color_calculations {
     fn test_color_curve_empty_chain() {
         let chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2024-12-31".to_string(),
             None,
             None,
@@ -9704,6 +9723,7 @@ mod tests_color_calculations {
 #[cfg(test)]
 mod tests_atm_strike {
     use super::*;
+    use positive::spos;
 
     use crate::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
     use crate::model::ExpirationDate;
@@ -9721,7 +9741,7 @@ mod tests_atm_strike {
             pos_or_panic!(0.02),
             2,
             OptionDataPriceParams::new(
-                Some(Box::new(pos_or_panic!(100.0))),
+                Some(Box::new(Positive::HUNDRED)),
                 Some(ExpirationDate::Days(pos_or_panic!(30.0))),
                 Some(dec!(0.05)),
                 spos!(0.02),
@@ -9744,7 +9764,7 @@ mod tests_atm_strike {
         let strike = result.unwrap();
         assert_eq!(
             *strike,
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "Should return strike at exactly 100.0"
         );
     }
@@ -9762,7 +9782,7 @@ mod tests_atm_strike {
         let strike = result.unwrap();
         assert_eq!(
             *strike,
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "Should return the closest strike (100.0)"
         );
 
@@ -9784,7 +9804,7 @@ mod tests_atm_strike {
     fn test_atm_strike_empty_chain() {
         let chain = OptionChain::new(
             "EMPTY",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2023-12-15".to_string(),
             None,
             None,
@@ -9851,7 +9871,7 @@ mod tests_atm_strike {
         // Set up a custom chain with known strikes
         let mut options = BTreeSet::new();
         options.insert(OptionData::new(
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             spos!(1.0),
             spos!(1.1),
             spos!(1.0),
@@ -9901,7 +9921,7 @@ mod tests_atm_strike {
 
         // When equidistant, should return one of the two closest strikes
         assert!(
-            *strike == pos_or_panic!(100.0) || *strike == pos_or_panic!(101.0),
+            *strike == Positive::HUNDRED || *strike == pos_or_panic!(101.0),
             "Should return one of the equidistant strikes"
         );
     }
@@ -9910,6 +9930,7 @@ mod tests_atm_strike {
 #[cfg(test)]
 mod tests_atm_strike_bis {
     use super::*;
+    use positive::spos;
 
     use crate::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
     use crate::model::ExpirationDate;
@@ -9927,7 +9948,7 @@ mod tests_atm_strike_bis {
             pos_or_panic!(0.02),
             2,
             OptionDataPriceParams::new(
-                Some(Box::new(pos_or_panic!(100.0))),
+                Some(Box::new(Positive::HUNDRED)),
                 Some(ExpirationDate::Days(pos_or_panic!(30.0))),
                 Some(dec!(0.05)),
                 spos!(0.02),
@@ -9952,7 +9973,7 @@ mod tests_atm_strike_bis {
         let strike = result.unwrap();
         assert_eq!(
             *strike,
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "Should return the closest strike (100.0)"
         );
 
@@ -9974,7 +9995,7 @@ mod tests_atm_strike_bis {
     fn test_atm_strike_empty_chain() {
         let chain = OptionChain::new(
             "EMPTY",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2023-12-15".to_string(),
             None,
             None,
@@ -10041,7 +10062,7 @@ mod tests_atm_strike_bis {
         // Set up a custom chain with known strikes
         let mut options = BTreeSet::new();
         options.insert(OptionData::new(
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             spos!(1.0),
             spos!(1.1),
             spos!(1.0),
@@ -10091,7 +10112,7 @@ mod tests_atm_strike_bis {
 
         // When equidistant, should return one of the two closest strikes
         assert!(
-            *strike == pos_or_panic!(100.0) || *strike == pos_or_panic!(101.0),
+            *strike == Positive::HUNDRED || *strike == pos_or_panic!(101.0),
             "Should return one of the equidistant strikes"
         );
     }
@@ -10100,6 +10121,7 @@ mod tests_atm_strike_bis {
 #[cfg(test)]
 mod tests_option_chain_utils {
     use super::*;
+    use positive::spos;
 
     use rust_decimal_macros::dec;
 
@@ -10107,7 +10129,7 @@ mod tests_option_chain_utils {
     fn create_custom_strike_chain() -> OptionChain {
         let mut chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2030-01-01".to_string(),
             Some(dec!(0.05)),
             spos!(0.02),
@@ -10158,7 +10180,7 @@ mod tests_option_chain_utils {
     fn test_get_strike_interval_empty_chain() {
         let chain = OptionChain::new(
             "EMPTY",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2030-01-01".to_string(),
             None,
             None,
@@ -10178,14 +10200,14 @@ mod tests_option_chain_utils {
     fn test_get_strike_interval_single_option_chain() {
         let mut chain = OptionChain::new(
             "SINGLE",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2030-01-01".to_string(),
             None,
             None,
         );
 
         chain.add_option(
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             spos!(5.0),
             spos!(5.5),
             spos!(4.0),
@@ -10213,7 +10235,7 @@ mod tests_option_chain_utils {
     fn test_get_strike_interval_fractional_intervals() {
         let mut chain = OptionChain::new(
             "FRACTIONAL",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2030-01-01".to_string(),
             None,
             None,
@@ -10244,7 +10266,7 @@ mod tests_option_chain_utils {
 
         assert_eq!(
             interval,
-            pos_or_panic!(1.0),
+            Positive::ONE,
             "Fractional intervals should round to minimum of 1.0"
         );
     }
@@ -10253,6 +10275,7 @@ mod tests_option_chain_utils {
 #[cfg(test)]
 mod tests_option_chain_utils_bis {
     use super::*;
+    use positive::spos;
 
     use crate::chains::utils::OptionChainBuildParams;
     use crate::chains::utils::OptionDataPriceParams;
@@ -10272,7 +10295,7 @@ mod tests_option_chain_utils_bis {
             pos_or_panic!(0.02),
             2,
             OptionDataPriceParams::new(
-                Some(Box::new(pos_or_panic!(100.0))),
+                Some(Box::new(Positive::HUNDRED)),
                 Some(ExpirationDate::Days(pos_or_panic!(30.0))),
                 Some(dec!(0.05)),
                 spos!(0.02),
@@ -10288,7 +10311,7 @@ mod tests_option_chain_utils_bis {
     fn create_custom_strike_chain() -> OptionChain {
         let mut chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2030-01-01".to_string(),
             Some(dec!(0.05)),
             spos!(0.02),
@@ -10330,7 +10353,7 @@ mod tests_option_chain_utils_bis {
 
         assert_eq!(
             interval,
-            pos_or_panic!(1.0),
+            Positive::ONE,
             "Strike interval should be 1.0 for standard chain"
         );
     }
@@ -10353,7 +10376,7 @@ mod tests_option_chain_utils_bis {
     fn test_get_strike_interval_empty_chain() {
         let chain = OptionChain::new(
             "EMPTY",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2030-01-01".to_string(),
             None,
             None,
@@ -10373,14 +10396,14 @@ mod tests_option_chain_utils_bis {
     fn test_get_strike_interval_single_option_chain() {
         let mut chain = OptionChain::new(
             "SINGLE",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2030-01-01".to_string(),
             None,
             None,
         );
 
         chain.add_option(
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             spos!(5.0),
             spos!(5.5),
             spos!(4.0),
@@ -10408,7 +10431,7 @@ mod tests_option_chain_utils_bis {
     fn test_get_strike_interval_fractional_intervals() {
         let mut chain = OptionChain::new(
             "FRACTIONAL",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2030-01-01".to_string(),
             None,
             None,
@@ -10439,7 +10462,7 @@ mod tests_option_chain_utils_bis {
 
         assert_eq!(
             interval,
-            pos_or_panic!(1.0),
+            Positive::ONE,
             "Fractional intervals should round to minimum of 1.0"
         );
     }
@@ -10448,6 +10471,7 @@ mod tests_option_chain_utils_bis {
 #[cfg(test)]
 mod tests_to_build_params_bis {
     use super::*;
+    use positive::spos;
 
     use crate::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
     use crate::model::ExpirationDate;
@@ -10466,7 +10490,7 @@ mod tests_to_build_params_bis {
             pos_or_panic!(0.03),
             2,
             OptionDataPriceParams::new(
-                Some(Box::new(pos_or_panic!(100.0))),
+                Some(Box::new(Positive::HUNDRED)),
                 Some(ExpirationDate::Days(pos_or_panic!(30.0))),
                 Some(dec!(0.05)),
                 spos!(0.02),
@@ -10501,6 +10525,7 @@ mod tests_to_build_params_bis {
 #[cfg(test)]
 mod chain_coverage_tests {
     use super::*;
+    use positive::spos;
 
     use rust_decimal_macros::dec;
 
@@ -10516,7 +10541,7 @@ mod chain_coverage_tests {
             pos_or_panic!(0.02),
             2,
             OptionDataPriceParams::new(
-                Some(Box::new(pos_or_panic!(100.0))),
+                Some(Box::new(Positive::HUNDRED)),
                 Some(ExpirationDate::Days(pos_or_panic!(30.0))),
                 Some(dec!(0.05)),
                 spos!(0.02),
@@ -10575,7 +10600,7 @@ mod chain_coverage_tests {
         // Test with empty chain
         let empty_chain = OptionChain::new(
             "EMPTY",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2030-01-01".to_string(),
             None,
             None,
@@ -10586,13 +10611,13 @@ mod chain_coverage_tests {
         // Test with a single option exactly at the money
         let mut single_option_chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2030-01-01".to_string(),
             None,
             None,
         );
         single_option_chain.add_option(
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             spos!(5.0),
             spos!(5.5),
             spos!(4.5),
@@ -10608,7 +10633,7 @@ mod chain_coverage_tests {
 
         let result = single_option_chain.atm_option_data();
         assert!(result.is_ok());
-        assert_eq!(result.unwrap().strike_price, pos_or_panic!(100.0));
+        assert_eq!(result.unwrap().strike_price, Positive::HUNDRED);
     }
 
     #[test]
@@ -10660,7 +10685,7 @@ mod chain_coverage_tests {
         // Test with empty chain
         let empty_chain = OptionChain::new(
             "EMPTY",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2030-01-01".to_string(),
             None,
             None,
@@ -10772,6 +10797,7 @@ mod chain_coverage_tests {
 #[cfg(test)]
 mod chain_coverage_tests_bis {
     use super::*;
+    use positive::spos;
 
     use rust_decimal_macros::dec;
 
@@ -10787,7 +10813,7 @@ mod chain_coverage_tests_bis {
             pos_or_panic!(0.02),
             2,
             OptionDataPriceParams::new(
-                Some(Box::new(pos_or_panic!(100.0))),
+                Some(Box::new(Positive::HUNDRED)),
                 Some(ExpirationDate::Days(pos_or_panic!(30.0))),
                 Some(dec!(0.05)),
                 spos!(0.02),
@@ -10813,7 +10839,7 @@ mod chain_coverage_tests_bis {
 
         let loaded_chain = loaded_chain.unwrap();
         assert_eq!(loaded_chain.symbol, "TEST");
-        assert_eq!(loaded_chain.underlying_price, pos_or_panic!(100.0));
+        assert_eq!(loaded_chain.underlying_price, Positive::HUNDRED);
 
         // Clean up the test file
         std::fs::remove_file(file).unwrap();
@@ -10868,7 +10894,7 @@ mod chain_coverage_tests_bis {
         // Test with empty chain
         let empty_chain = OptionChain::new(
             "EMPTY",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2030-01-01".to_string(),
             None,
             None,
@@ -10879,13 +10905,13 @@ mod chain_coverage_tests_bis {
         // Test with a single option exactly at the money
         let mut single_option_chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2030-01-01".to_string(),
             None,
             None,
         );
         single_option_chain.add_option(
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             spos!(5.0),
             spos!(5.5),
             spos!(4.5),
@@ -10901,7 +10927,7 @@ mod chain_coverage_tests_bis {
 
         let result = single_option_chain.atm_option_data();
         assert!(result.is_ok());
-        assert_eq!(result.unwrap().strike_price, pos_or_panic!(100.0));
+        assert_eq!(result.unwrap().strike_price, Positive::HUNDRED);
     }
 
     #[test]
@@ -10953,7 +10979,7 @@ mod chain_coverage_tests_bis {
         // Test with empty chain
         let empty_chain = OptionChain::new(
             "EMPTY",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2030-01-01".to_string(),
             None,
             None,
@@ -11065,6 +11091,7 @@ mod chain_coverage_tests_bis {
 #[cfg(test)]
 mod tests_get_position_with_delta {
     use super::*;
+    use positive::spos;
 
     use crate::error::chains::OptionDataErrorKind;
 
@@ -11075,7 +11102,7 @@ mod tests_get_position_with_delta {
     fn create_test_chain_with_deltas() -> OptionChain {
         let mut chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2024-12-31".to_string(),
             Some(dec!(0.05)),
             spos!(0.02),
@@ -11119,7 +11146,7 @@ mod tests_get_position_with_delta {
 
         // ATM call and put
         chain.add_option(
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             spos!(5.0),
             spos!(5.3),
             spos!(5.0),
@@ -11181,7 +11208,7 @@ mod tests_get_position_with_delta {
 
         assert_eq!(
             position.option.strike_price,
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "Should select option with strike 100.0 (delta 0.5)"
         );
         assert_eq!(position.option.side, Side::Long);
@@ -11223,7 +11250,7 @@ mod tests_get_position_with_delta {
         // Should select the option with delta exactly 0.5
         assert_eq!(
             position.option.strike_price,
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "Should select option with strike 100.0 (delta exactly 0.5)"
         );
     }
@@ -11280,7 +11307,7 @@ mod tests_get_position_with_delta {
     fn test_get_position_with_delta_empty_chain() {
         let empty_chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2024-12-31".to_string(),
             Some(dec!(0.05)),
             spos!(0.02),
@@ -11308,7 +11335,7 @@ mod tests_get_position_with_delta {
     fn test_get_position_with_delta_missing_deltas() {
         let mut chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2024-12-31".to_string(),
             Some(dec!(0.05)),
             spos!(0.02),
@@ -11331,7 +11358,7 @@ mod tests_get_position_with_delta {
         );
 
         chain.add_option(
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             spos!(5.0),
             spos!(5.3),
             spos!(5.0),
@@ -11367,7 +11394,7 @@ mod tests_get_position_with_delta {
     fn test_get_position_with_delta_multiple_candidates() {
         let mut chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2024-12-31".to_string(),
             Some(dec!(0.05)),
             spos!(0.02),
@@ -11455,7 +11482,7 @@ mod tests_get_position_with_delta {
             // For this test with delta 0.5, all combinations should select the ATM option
             assert_eq!(
                 position.option.strike_price,
-                pos_or_panic!(100.0),
+                Positive::HUNDRED,
                 "Should select ATM option with strike 100.0 for {side:?} {style:?}"
             );
         }
@@ -11465,6 +11492,7 @@ mod tests_get_position_with_delta {
 #[cfg(test)]
 mod tests_get_strikes_and_optiondata {
     use super::*;
+    use positive::spos;
 
     use rust_decimal_macros::dec;
 
@@ -11472,7 +11500,7 @@ mod tests_get_strikes_and_optiondata {
     fn create_test_chain() -> OptionChain {
         let mut chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2030-01-01".to_string(),
             None,
             None,
@@ -11511,7 +11539,7 @@ mod tests_get_strikes_and_optiondata {
         // Verify strikes are in the expected order
         assert_eq!(strikes[0], pos_or_panic!(90.0));
         assert_eq!(strikes[1], pos_or_panic!(95.0));
-        assert_eq!(strikes[2], pos_or_panic!(100.0));
+        assert_eq!(strikes[2], Positive::HUNDRED);
         assert_eq!(strikes[3], pos_or_panic!(105.0));
         assert_eq!(strikes[4], pos_or_panic!(110.0));
     }
@@ -11520,7 +11548,7 @@ mod tests_get_strikes_and_optiondata {
     fn test_get_strikes_empty_chain() {
         let chain = OptionChain::new(
             "EMPTY",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2030-01-01".to_string(),
             None,
             None,
@@ -11541,13 +11569,13 @@ mod tests_get_strikes_and_optiondata {
         let chain = create_test_chain();
 
         // Test with exact strike match
-        let result = chain.get_optiondata_with_strike(&pos_or_panic!(100.0));
+        let result = chain.get_optiondata_with_strike(&Positive::HUNDRED);
         assert!(result.is_ok(), "Should find exact strike");
 
         let option_data = result.unwrap();
         assert_eq!(
             option_data.strike_price,
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "Should return option with strike 100.0"
         );
     }
@@ -11610,7 +11638,7 @@ mod tests_get_strikes_and_optiondata {
         let option_data = result.unwrap();
         assert_eq!(
             option_data.strike_price,
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "For equidistant strikes, should return the lower strike due to BTreeSet ordering"
         );
     }
@@ -11630,7 +11658,7 @@ mod tests_get_strikes_and_optiondata {
         // Could be either 95.0 or 100.0 depending on implementation details
         assert!(
             option_data.strike_price == pos_or_panic!(95.0)
-                || option_data.strike_price == pos_or_panic!(100.0),
+                || option_data.strike_price == Positive::HUNDRED,
             "Should return one of the equidistant strikes"
         );
     }
@@ -11639,13 +11667,13 @@ mod tests_get_strikes_and_optiondata {
     fn test_get_optiondata_with_strike_empty_chain() {
         let chain = OptionChain::new(
             "EMPTY",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2030-01-01".to_string(),
             None,
             None,
         );
 
-        let result = chain.get_optiondata_with_strike(&pos_or_panic!(100.0));
+        let result = chain.get_optiondata_with_strike(&Positive::HUNDRED);
         assert!(result.is_err(), "Should return error for empty chain");
 
         let error = result.unwrap_err();
@@ -11664,7 +11692,7 @@ mod tests_get_strikes_and_optiondata {
     fn test_get_optiondata_with_strike_single_option() {
         let mut chain = OptionChain::new(
             "SINGLE",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2030-01-01".to_string(),
             None,
             None,
@@ -11672,7 +11700,7 @@ mod tests_get_strikes_and_optiondata {
 
         // Add a single option
         chain.add_option(
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             spos!(1.0),
             spos!(1.1),
             spos!(1.0),
@@ -11693,7 +11721,7 @@ mod tests_get_strikes_and_optiondata {
         let option_data = result.unwrap();
         assert_eq!(
             option_data.strike_price,
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "Should return the only available strike"
         );
     }
@@ -11702,7 +11730,7 @@ mod tests_get_strikes_and_optiondata {
     fn test_get_strikes_order() {
         let mut chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2030-01-01".to_string(),
             None,
             None,
@@ -11738,7 +11766,7 @@ mod tests_get_strikes_and_optiondata {
             None,
         );
         chain.add_option(
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             None,
             None,
             None,
@@ -11759,7 +11787,7 @@ mod tests_get_strikes_and_optiondata {
 
         // Verify they're in ascending order regardless of insertion order
         assert_eq!(strikes[0], pos_or_panic!(95.0));
-        assert_eq!(strikes[1], pos_or_panic!(100.0));
+        assert_eq!(strikes[1], Positive::HUNDRED);
         assert_eq!(strikes[2], pos_or_panic!(105.0));
     }
 }
@@ -12062,7 +12090,7 @@ mod tests_volatility_smile_skew {
     fn create_chain_with_options() -> OptionChain {
         let mut chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2030-01-01".to_string(),
             None,
             None,
@@ -12073,7 +12101,7 @@ mod tests_volatility_smile_skew {
             Some(pos_or_panic!(11.0)),
             Some(pos_or_panic!(11.5)),
             Some(pos_or_panic!(0.5)),
-            Some(pos_or_panic!(1.0)),
+            Some(Positive::ONE),
             pos_or_panic!(0.28),
             Some(dec!(0.85)),
             Some(dec!(-0.15)),
@@ -12087,7 +12115,7 @@ mod tests_volatility_smile_skew {
             pos_or_panic!(95.0),
             Some(pos_or_panic!(6.5)),
             Some(pos_or_panic!(7.0)),
-            Some(pos_or_panic!(1.0)),
+            Some(Positive::ONE),
             Some(pos_or_panic!(1.5)),
             pos_or_panic!(0.24),
             Some(dec!(0.72)),
@@ -12099,7 +12127,7 @@ mod tests_volatility_smile_skew {
         );
 
         chain.add_option(
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             Some(pos_or_panic!(3.5)),
             Some(pos_or_panic!(4.0)),
             Some(pos_or_panic!(3.0)),
@@ -12116,7 +12144,7 @@ mod tests_volatility_smile_skew {
         chain.add_option(
             pos_or_panic!(105.0),
             Some(pos_or_panic!(1.5)),
-            Some(pos_or_panic!(2.0)),
+            Some(Positive::TWO),
             Some(pos_or_panic!(6.0)),
             Some(pos_or_panic!(6.5)),
             pos_or_panic!(0.22),
@@ -12131,7 +12159,7 @@ mod tests_volatility_smile_skew {
         chain.add_option(
             pos_or_panic!(110.0),
             Some(pos_or_panic!(0.5)),
-            Some(pos_or_panic!(1.0)),
+            Some(Positive::ONE),
             Some(pos_or_panic!(10.0)),
             Some(pos_or_panic!(10.5)),
             pos_or_panic!(0.26),
@@ -12220,7 +12248,7 @@ mod tests_volatility_smile_skew {
     fn test_volatility_smile_empty_chain() {
         let chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2030-01-01".to_string(),
             None,
             None,
@@ -12234,7 +12262,7 @@ mod tests_volatility_smile_skew {
     fn test_volatility_skew_empty_chain() {
         let chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2030-01-01".to_string(),
             None,
             None,
@@ -12248,14 +12276,14 @@ mod tests_volatility_smile_skew {
     fn test_volatility_smile_single_option() {
         let mut chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2030-01-01".to_string(),
             None,
             None,
         );
 
         chain.add_option(
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             Some(pos_or_panic!(3.0)),
             Some(pos_or_panic!(3.5)),
             Some(pos_or_panic!(3.0)),
@@ -12284,14 +12312,14 @@ mod tests_get_call_price {
     fn test_get_call_price_existing_strike() {
         let mut chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2030-01-01".to_string(),
             None,
             None,
         );
 
         chain.add_option(
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             Some(pos_or_panic!(3.0)),
             Some(pos_or_panic!(3.5)),
             Some(pos_or_panic!(3.0)),
@@ -12305,7 +12333,7 @@ mod tests_get_call_price {
             None,
         );
 
-        let price = chain.get_call_price(pos_or_panic!(100.0));
+        let price = chain.get_call_price(Positive::HUNDRED);
         assert!(price.is_some());
         assert_eq!(price.unwrap(), dec!(3.5));
     }
@@ -12314,14 +12342,14 @@ mod tests_get_call_price {
     fn test_get_call_price_non_existing_strike() {
         let mut chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2030-01-01".to_string(),
             None,
             None,
         );
 
         chain.add_option(
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             Some(pos_or_panic!(3.0)),
             Some(pos_or_panic!(3.5)),
             Some(pos_or_panic!(3.0)),
@@ -12343,13 +12371,13 @@ mod tests_get_call_price {
     fn test_get_call_price_empty_chain() {
         let chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2030-01-01".to_string(),
             None,
             None,
         );
 
-        let price = chain.get_call_price(pos_or_panic!(100.0));
+        let price = chain.get_call_price(Positive::HUNDRED);
         assert!(price.is_none());
     }
 
@@ -12357,14 +12385,14 @@ mod tests_get_call_price {
     fn test_get_call_price_no_ask_price() {
         let mut chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2030-01-01".to_string(),
             None,
             None,
         );
 
         chain.add_option(
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             Some(pos_or_panic!(3.0)),
             None, // No ask price
             Some(pos_or_panic!(3.0)),
@@ -12378,7 +12406,7 @@ mod tests_get_call_price {
             None,
         );
 
-        let price = chain.get_call_price(pos_or_panic!(100.0));
+        let price = chain.get_call_price(Positive::HUNDRED);
         assert!(price.is_none());
     }
 }
@@ -12431,7 +12459,7 @@ mod tests_title_operations {
 
     #[test]
     fn test_set_from_title_valid_format() {
-        let mut chain = OptionChain::new("", pos_or_panic!(1.0), "".to_string(), None, None);
+        let mut chain = OptionChain::new("", Positive::ONE, "".to_string(), None, None);
 
         let result = chain.set_from_title("AAPL-15-01-2030-150.5.csv");
 
@@ -12443,7 +12471,7 @@ mod tests_title_operations {
 
     #[test]
     fn test_set_from_title_with_path() {
-        let mut chain = OptionChain::new("", pos_or_panic!(1.0), "".to_string(), None, None);
+        let mut chain = OptionChain::new("", Positive::ONE, "".to_string(), None, None);
 
         let result = chain.set_from_title("/path/to/files/MSFT-20-03-2030-300.json");
 
@@ -12455,7 +12483,7 @@ mod tests_title_operations {
 
     #[test]
     fn test_set_from_title_invalid_format() {
-        let mut chain = OptionChain::new("", pos_or_panic!(1.0), "".to_string(), None, None);
+        let mut chain = OptionChain::new("", Positive::ONE, "".to_string(), None, None);
 
         let result = chain.set_from_title("invalid-format.csv");
 
@@ -12464,7 +12492,7 @@ mod tests_title_operations {
 
     #[test]
     fn test_set_from_title_too_few_parts() {
-        let mut chain = OptionChain::new("", pos_or_panic!(1.0), "".to_string(), None, None);
+        let mut chain = OptionChain::new("", Positive::ONE, "".to_string(), None, None);
 
         let result = chain.set_from_title("AAPL-15-01.csv");
 
@@ -12475,6 +12503,7 @@ mod tests_title_operations {
 #[cfg(test)]
 mod tests_expiration_operations {
     use super::*;
+    use positive::spos;
 
     use rust_decimal_macros::dec;
 
@@ -12482,7 +12511,7 @@ mod tests_expiration_operations {
     fn test_get_expiration_date() {
         let chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2030-01-15".to_string(),
             None,
             None,
@@ -12495,7 +12524,7 @@ mod tests_expiration_operations {
     fn test_get_expiration_valid_date() {
         let chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2030-01-15".to_string(),
             None,
             None,
@@ -12509,7 +12538,7 @@ mod tests_expiration_operations {
     fn test_get_expiration_invalid_date() {
         let chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "invalid-date".to_string(),
             None,
             None,
@@ -12523,14 +12552,14 @@ mod tests_expiration_operations {
     fn test_update_expiration_date() {
         let mut chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2030-01-15".to_string(),
             Some(dec!(0.05)),
             spos!(0.02),
         );
 
         chain.add_option(
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             Some(pos_or_panic!(3.0)),
             Some(pos_or_panic!(3.5)),
             Some(pos_or_panic!(3.0)),
@@ -12553,7 +12582,7 @@ mod tests_expiration_operations {
     fn test_update_expiration_date_invalid() {
         let mut chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2030-01-15".to_string(),
             None,
             None,
@@ -12569,6 +12598,7 @@ mod tests_expiration_operations {
 #[cfg(test)]
 mod tests_from_vec_option_data {
     use super::*;
+    use positive::spos;
 
     use rust_decimal_macros::dec;
 
@@ -12587,7 +12617,7 @@ mod tests_from_vec_option_data {
             pos_or_panic!(95.0),
             Some(pos_or_panic!(6.0)),
             Some(pos_or_panic!(6.5)),
-            Some(pos_or_panic!(1.0)),
+            Some(Positive::ONE),
             Some(pos_or_panic!(1.5)),
             pos_or_panic!(0.25),
             None,
@@ -12604,13 +12634,13 @@ mod tests_from_vec_option_data {
             None,
         );
         opt1.symbol = Some("TEST".to_string());
-        opt1.underlying_price = Some(Box::new(pos_or_panic!(100.0)));
+        opt1.underlying_price = Some(Box::new(Positive::HUNDRED));
         opt1.expiration_date = Some(ExpirationDate::Days(pos_or_panic!(30.0)));
         opt1.risk_free_rate = Some(dec!(0.05));
         opt1.dividend_yield = spos!(0.02);
 
         let mut opt2 = OptionData::new(
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             Some(pos_or_panic!(3.0)),
             Some(pos_or_panic!(3.5)),
             Some(pos_or_panic!(3.0)),
@@ -12630,14 +12660,14 @@ mod tests_from_vec_option_data {
             None,
         );
         opt2.symbol = Some("TEST".to_string());
-        opt2.underlying_price = Some(Box::new(pos_or_panic!(100.0)));
+        opt2.underlying_price = Some(Box::new(Positive::HUNDRED));
         opt2.expiration_date = Some(ExpirationDate::Days(pos_or_panic!(30.0)));
 
         let options = vec![opt1, opt2];
         let chain = OptionChain::from(&options);
 
         assert_eq!(chain.symbol, "TEST");
-        assert_eq!(chain.underlying_price, pos_or_panic!(100.0));
+        assert_eq!(chain.underlying_price, Positive::HUNDRED);
         assert_eq!(chain.options.len(), 2);
         assert_eq!(chain.risk_free_rate, Some(dec!(0.05)));
         assert_eq!(chain.dividend_yield, spos!(0.02));
@@ -12666,10 +12696,10 @@ mod tests_from_vec_option_data {
             None,
         );
         opt1.symbol = Some("FIRST".to_string());
-        opt1.underlying_price = Some(Box::new(pos_or_panic!(100.0)));
+        opt1.underlying_price = Some(Box::new(Positive::HUNDRED));
 
         let mut opt2 = OptionData::new(
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             None,
             None,
             None,
@@ -12696,7 +12726,7 @@ mod tests_from_vec_option_data {
 
         // Should use first option's metadata
         assert_eq!(chain.symbol, "FIRST");
-        assert_eq!(chain.underlying_price, pos_or_panic!(100.0));
+        assert_eq!(chain.underlying_price, Positive::HUNDRED);
     }
 }
 
@@ -12710,7 +12740,7 @@ mod tests_len_trait {
     fn test_len_empty_chain() {
         let chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2030-01-01".to_string(),
             None,
             None,
@@ -12724,7 +12754,7 @@ mod tests_len_trait {
     fn test_len_with_options() {
         let mut chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2030-01-01".to_string(),
             None,
             None,
@@ -12745,7 +12775,7 @@ mod tests_len_trait {
             None,
         );
         chain.add_option(
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             None,
             None,
             None,
@@ -12798,6 +12828,7 @@ mod tests_default_trait {
 #[cfg(test)]
 mod tests_option_chain_params_trait {
     use super::*;
+    use positive::spos;
 
     use rust_decimal_macros::dec;
 
@@ -12805,14 +12836,14 @@ mod tests_option_chain_params_trait {
     fn test_get_params_existing_strike() {
         let mut chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2030-01-15".to_string(),
             Some(dec!(0.05)),
             spos!(0.02),
         );
 
         chain.add_option(
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             Some(pos_or_panic!(3.0)),
             Some(pos_or_panic!(3.5)),
             Some(pos_or_panic!(3.0)),
@@ -12826,19 +12857,19 @@ mod tests_option_chain_params_trait {
             None,
         );
 
-        let result = chain.get_params(pos_or_panic!(100.0));
+        let result = chain.get_params(Positive::HUNDRED);
         assert!(result.is_ok());
 
         let params = result.unwrap();
         assert!(params.underlying_price.is_some());
-        assert_eq!(*params.underlying_price.unwrap(), pos_or_panic!(100.0));
+        assert_eq!(*params.underlying_price.unwrap(), Positive::HUNDRED);
     }
 
     #[test]
     fn test_get_params_non_existing_strike() {
         let chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2030-01-15".to_string(),
             Some(dec!(0.05)),
             spos!(0.02),

@@ -20,11 +20,11 @@ fn test_bear_put_spread_integration() -> Result<(), Box<dyn Error>> {
         underlying_price, // underlying_price
         pos_or_panic!(5850.0),     // long_strike
         pos_or_panic!(5720.0),     // short_strike
-        ExpirationDate::Days(pos_or_panic!(2.0)),
+        ExpirationDate::Days(Positive::TWO),
         pos_or_panic!(0.18),     // implied_volatility
         dec!(0.05),     // risk_free_rate
         Positive::ZERO, // dividend_yield
-        pos_or_panic!(2.0),      // long quantity
+        Positive::TWO,      // long quantity
         pos_or_panic!(85.04),    // premium_long
         pos_or_panic!(29.85),    // premium_short
         pos_or_panic!(0.78),     // open_fee_long
@@ -53,7 +53,7 @@ fn test_bear_put_spread_integration() -> Result<(), Box<dyn Error>> {
     assert!(strategy.get_profit_ratio().unwrap().to_f64().unwrap() > 0.0);
 
     // Validate price range calculations
-    let price_range = strategy.get_best_range_to_show(pos_or_panic!(1.0)).unwrap();
+    let price_range = strategy.get_best_range_to_show(Positive::ONE).unwrap();
     assert!(!price_range.is_empty());
     assert!(price_range[0] < strategy.get_break_even_points().unwrap()[0]);
     assert!(price_range[price_range.len() - 1] > strategy.get_break_even_points().unwrap()[0]);

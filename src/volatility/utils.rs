@@ -445,7 +445,7 @@ pub fn adjust_volatility(
 ///
 /// let annual_vol = pos_or_panic!(0.20); // 20% annual volatility
 /// let days = pos_or_panic!(7.0);
-/// let dt = convert_time_frame(pos_or_panic!(1.0) / days, &TimeFrame::Minute, &TimeFrame::Day);
+/// let dt = convert_time_frame(Positive::ONE / days, &TimeFrame::Minute, &TimeFrame::Day);
 ///
 /// // Get volatility for daily timeframe (random walk will scale by sqrt(dt))
 /// let vol_for_walk = volatility_for_dt(
@@ -505,7 +505,7 @@ pub fn volatility_for_dt(
 /// // Simulate an OU process with initial value 1.0, mean 1.5,
 /// // reversion speed 0.1, volatility 0.2, time step 0.01, for 1000 steps
 /// let process = generate_ou_process(
-///     pos_or_panic!(1.0),       // initial value
+///     Positive::ONE,       // initial value
 ///     pos_or_panic!(1.5),       // long-term mean
 ///     pos_or_panic!(0.1),       // speed of reversion
 ///     pos_or_panic!(0.2),       // volatility
@@ -561,7 +561,7 @@ mod tests_annualize_volatility {
 
     #[test]
     fn test_custom_timeframe() {
-        let custom_periods = pos_or_panic!(100.0);
+        let custom_periods = Positive::HUNDRED;
         let vol = pos_or_panic!(0.05);
         let annual_vol = annualized_volatility(vol, TimeFrame::Custom(custom_periods)).unwrap();
         let expected = vol * custom_periods.sqrt();
@@ -776,11 +776,11 @@ mod tests_implied_volatility {
             OptionType::European,
             Side::Long,
             "TEST".to_string(),
-            pos_or_panic!(100.0),                      // strike price
+            Positive::HUNDRED,                      // strike price
             ExpirationDate::Days(pos_or_panic!(30.0)), // 30 days to expiration
             pos_or_panic!(0.2),                        // initial implied volatility
             Positive::ONE,                             // quantity
-            pos_or_panic!(100.0),                      // underlying price (ATM)
+            Positive::HUNDRED,                      // underlying price (ATM)
             dec!(0.05),                                // risk-free rate
             OptionStyle::Call,                         // call option
             Positive::ZERO,                            // no dividend yield
@@ -802,9 +802,9 @@ mod tests_implied_volatility {
 
         let result = calculate_iv(
             market_price,
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             OptionStyle::Call,
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             pos_or_panic!(30.0),
             "TEST".to_string(),
         );
@@ -822,11 +822,11 @@ mod tests_implied_volatility {
             OptionType::European,
             Side::Long,
             "TEST".to_string(),
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             ExpirationDate::Days(pos_or_panic!(0.5)),
             iv,
             Positive::ONE,
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             dec!(0.0),
             OptionStyle::Call,
             Positive::ZERO,
@@ -928,7 +928,7 @@ mod tests_implied_volatility {
             pos_or_panic!(20600.0),
             ExpirationDate::Days(pos_or_panic!(0.52)),
             iv,
-            pos_or_panic!(1.0),
+            Positive::ONE,
             pos_or_panic!(21049.88),
             dec!(0.0),
             OptionStyle::Call,
@@ -1031,7 +1031,7 @@ mod tests_implied_volatility {
             pos_or_panic!(20600.0),
             ExpirationDate::Days(pos_or_panic!(0.52)),
             iv,
-            pos_or_panic!(1.0),
+            Positive::ONE,
             pos_or_panic!(21049.88),
             dec!(0.0),
             OptionStyle::Call,
@@ -1134,11 +1134,11 @@ mod tests_implied_volatility {
             pos_or_panic!(23325.0),
             ExpirationDate::Days(pos_or_panic!(0.29)),
             iv,
-            pos_or_panic!(1.0),
+            Positive::ONE,
             pos_or_panic!(24118.5),
             dec!(0.0),
             OptionStyle::Put,
-            pos_or_panic!(0.0),
+            Positive::ZERO,
             None,
         );
 
@@ -1194,11 +1194,11 @@ mod tests_implied_volatility {
             pos_or_panic!(23325.0),
             ExpirationDate::Days(pos_or_panic!(0.32)),
             iv,
-            pos_or_panic!(1.0),
+            Positive::ONE,
             pos_or_panic!(24103.00),
             dec!(0.0),
             OptionStyle::Call,
-            pos_or_panic!(0.0),
+            Positive::ZERO,
             None,
         );
 
@@ -1320,7 +1320,7 @@ mod tests_garch_volatility {
         let result = garch_volatility(&returns, omega, alpha, beta).unwrap();
 
         // Volatility should remain stable when alpha + beta < 1
-        assert!(result.iter().all(|&v| v < pos_or_panic!(1.0)));
+        assert!(result.iter().all(|&v| v < Positive::ONE));
     }
 
     #[test]
@@ -1334,7 +1334,7 @@ mod tests_garch_volatility {
 
         // Volatility should spike after large returns
         assert!(result[2] > result[1]);
-        assert!(result[2] > result[0] * pos_or_panic!(2.0)); // At least double the initial volatility
+        assert!(result[2] > result[0] * Positive::TWO); // At least double the initial volatility
     }
 
     #[test]
@@ -1459,7 +1459,7 @@ mod tests_heston_volatility {
         let result = simulate_heston_volatility(kappa, theta, xi, v0, dt, steps).unwrap();
 
         // Check that values remain finite and positive
-        assert!(result.iter().all(|&x| x < pos_or_panic!(100.0)));
+        assert!(result.iter().all(|&x| x < Positive::HUNDRED));
         assert!(result.iter().all(|&x| x >= Positive::ZERO));
     }
 
@@ -1528,7 +1528,7 @@ mod tests_uncertain_volatility_bounds {
             ExpirationDate::Days(pos_or_panic!(30.0)),
             pos_or_panic!(0.2),   // Initial implied volatility
             Positive::ONE,        // Quantity
-            pos_or_panic!(100.0), // Underlying price
+            Positive::HUNDRED, // Underlying price
             dec!(0.05),           // Risk-free rate
             style,
             Positive::ZERO, // No dividend yield
@@ -1538,7 +1538,7 @@ mod tests_uncertain_volatility_bounds {
 
     #[test]
     fn test_bounds_basic_call() {
-        let option = create_test_option(OptionStyle::Call, Side::Long, pos_or_panic!(100.0));
+        let option = create_test_option(OptionStyle::Call, Side::Long, Positive::HUNDRED);
         let (lower, upper) =
             uncertain_volatility_bounds(&option, pos_or_panic!(0.1), pos_or_panic!(0.3)).unwrap();
 
@@ -1551,7 +1551,7 @@ mod tests_uncertain_volatility_bounds {
 
     #[test]
     fn test_bounds_basic_put() {
-        let option = create_test_option(OptionStyle::Put, Side::Long, pos_or_panic!(100.0));
+        let option = create_test_option(OptionStyle::Put, Side::Long, Positive::HUNDRED);
         let (lower, upper) =
             uncertain_volatility_bounds(&option, pos_or_panic!(0.1), pos_or_panic!(0.3)).unwrap();
 
@@ -1564,7 +1564,7 @@ mod tests_uncertain_volatility_bounds {
 
     #[test]
     fn test_bounds_same_volatility() {
-        let option = create_test_option(OptionStyle::Call, Side::Long, pos_or_panic!(100.0));
+        let option = create_test_option(OptionStyle::Call, Side::Long, Positive::HUNDRED);
         let vol = pos_or_panic!(0.2);
         let (lower, upper) = uncertain_volatility_bounds(&option, vol, vol).unwrap();
 
@@ -1611,9 +1611,9 @@ mod tests_uncertain_volatility_bounds {
 
     #[test]
     fn test_bounds_extreme_volatilities() {
-        let option = create_test_option(OptionStyle::Call, Side::Long, pos_or_panic!(100.0));
+        let option = create_test_option(OptionStyle::Call, Side::Long, Positive::HUNDRED);
         let (lower, upper) =
-            uncertain_volatility_bounds(&option, pos_or_panic!(0.01), pos_or_panic!(1.0)).unwrap();
+            uncertain_volatility_bounds(&option, pos_or_panic!(0.01), Positive::ONE).unwrap();
 
         assert!(lower < upper);
         assert!(lower > Positive::ZERO);
@@ -1705,7 +1705,7 @@ mod tests_adjust_volatility {
     #[test]
     fn test_custom_timeframe() {
         let vol = pos_or_panic!(0.25);
-        let custom_periods = pos_or_panic!(100.0);
+        let custom_periods = Positive::HUNDRED;
         let result =
             adjust_volatility(vol, TimeFrame::Custom(custom_periods), TimeFrame::Day).unwrap();
 
@@ -1760,7 +1760,7 @@ mod tests_generate_ou_process {
     fn test_process_length() {
         let steps = 500;
         let process = generate_ou_process(
-            pos_or_panic!(1.0),
+            Positive::ONE,
             pos_or_panic!(1.5),
             pos_or_panic!(0.1),
             pos_or_panic!(0.2),
@@ -1773,7 +1773,7 @@ mod tests_generate_ou_process {
     #[test]
     fn test_all_values_positive() {
         let process = generate_ou_process(
-            pos_or_panic!(1.0),
+            Positive::ONE,
             pos_or_panic!(1.5),
             pos_or_panic!(0.2),
             pos_or_panic!(0.3),
@@ -1793,8 +1793,8 @@ mod tests_generate_ou_process {
     fn test_mean_reversion_tendency() {
         let process = generate_ou_process(
             pos_or_panic!(0.1),
-            pos_or_panic!(1.0),
-            pos_or_panic!(1.0),  // high theta for fast reversion
+            Positive::ONE,
+            Positive::ONE,  // high theta for fast reversion
             pos_or_panic!(0.01), // low volatility
             pos_or_panic!(0.01),
             1000,

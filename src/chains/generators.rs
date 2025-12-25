@@ -292,7 +292,7 @@ mod tests {
             },
             walk_type: WalkType::GeometricBrownian {
                 dt: convert_time_frame(
-                    pos_or_panic!(1.0) / days,
+                    Positive::ONE / days,
                     &TimeFrame::Minute,
                     &TimeFrame::Day,
                 ),
@@ -321,7 +321,7 @@ mod tests {
     #[test]
     fn test_generator_positive() {
         let n_steps = 100;
-        let initial_price = pos_or_panic!(100.0);
+        let initial_price = Positive::HUNDRED;
         let std_dev = pos_or_panic!(20.0);
         let walker = Box::new(Walker::new());
         let days = pos_or_panic!(30.0);
@@ -334,7 +334,7 @@ mod tests {
             },
             walk_type: WalkType::GeometricBrownian {
                 dt: convert_time_frame(
-                    pos_or_panic!(1.0) / days,
+                    Positive::ONE / days,
                     &TimeFrame::Minute,
                     &TimeFrame::Day,
                 ),
@@ -351,6 +351,7 @@ mod tests {
 
 #[cfg(test)]
 mod generators_coverage_tests {
+    use positive::spos;
     use super::*;
 
     use crate::ExpirationDate;
@@ -376,7 +377,7 @@ mod generators_coverage_tests {
         // Create a small walk with only one step to test early return
         let chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             get_tomorrow_formatted(),
             Some(dec!(0.05)),
             spos!(0.02),
@@ -412,7 +413,7 @@ mod generators_coverage_tests {
     #[test]
     fn test_generator_positive_early_return() {
         // Create a small walk with only one step to test early return
-        let initial_price = pos_or_panic!(100.0);
+        let initial_price = Positive::HUNDRED;
         let walker = Box::new(TestWalker::new());
 
         let walk_params = WalkParams {
@@ -444,7 +445,7 @@ mod generators_coverage_tests {
         // Create a small walk with only one step to test early return
         let chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             get_tomorrow_formatted(),
             Some(dec!(0.05)),
             spos!(0.02),
@@ -481,7 +482,7 @@ mod generators_coverage_tests {
         // Create a small walk with only one step to test early return
         let chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             get_tomorrow_formatted(),
             Some(dec!(0.05)),
             spos!(0.02),
@@ -519,7 +520,7 @@ mod generators_coverage_tests {
         // Create a small walk with only one step to test early return
         let chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             get_tomorrow_formatted(),
             Some(dec!(0.05)),
             spos!(0.02),
@@ -557,7 +558,7 @@ mod generators_coverage_tests {
         // Create a small walk with only one step to test early return
         let chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             get_tomorrow_formatted(),
             Some(dec!(0.05)),
             spos!(0.02),
@@ -597,7 +598,7 @@ mod generators_coverage_tests {
         // Create a small walk with only one step to test early return
         let chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             get_tomorrow_formatted(),
             Some(dec!(0.05)),
             spos!(0.02),
@@ -636,7 +637,7 @@ mod generators_coverage_tests {
         // Create a small walk with only one step to test early return
         let chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             get_tomorrow_formatted(),
             Some(dec!(0.05)),
             spos!(0.02),
@@ -677,7 +678,7 @@ mod generators_coverage_tests {
         // Create a small walk with only one step to test early return
         let chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             get_tomorrow_formatted(),
             Some(dec!(0.05)),
             spos!(0.02),
@@ -717,7 +718,7 @@ mod generators_coverage_tests {
         // Create a small walk with only one step to test early return
         let chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             get_tomorrow_formatted(),
             Some(dec!(0.05)),
             spos!(0.02),
@@ -738,7 +739,7 @@ mod generators_coverage_tests {
             walk_type: WalkType::Historical {
                 timeframe: TimeFrame::Microsecond,
                 prices: vec![
-                    pos_or_panic!(100.0),
+                    Positive::HUNDRED,
                     pos_or_panic!(101.0),
                     pos_or_panic!(102.0),
                 ],

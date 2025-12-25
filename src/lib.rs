@@ -538,7 +538,7 @@
 //!     pos_or_panic!(150.0),            // strike_price
 //!     ExpirationDate::Days(pos_or_panic!(30.0)),
 //!     pos_or_panic!(0.25),             // implied_volatility
-//!     pos_or_panic!(1.0),              // quantity
+//!     Positive::ONE,              // quantity
 //!     pos_or_panic!(155.0),            // underlying_price
 //!     dec!(0.05),             // risk_free_rate
 //!     OptionStyle::Call,
@@ -579,7 +579,7 @@
 //!
 //! fn main() -> Result<(), Box<dyn Error>> {
 //!     use optionstratlib::pricing::Profit;
-//! let underlying_price = pos_or_panic!(100.0);
+//! let underlying_price = Positive::HUNDRED;
 //!
 //!     // Create a Bull Call Spread strategy
 //!     let strategy = BullCallSpread::new(
@@ -606,7 +606,7 @@
 //!     tracing::info!("Net premium: ${:.2}", strategy.get_net_premium_received()?);
 //!
 //!     // Calculate P&L at different price points
-//!     let prices = vec![pos_or_panic!(90.0), pos_or_panic!(95.0), pos_or_panic!(100.0), pos_or_panic!(105.0), pos_or_panic!(110.0)];
+//!     let prices = vec![pos_or_panic!(90.0), pos_or_panic!(95.0), Positive::HUNDRED, pos_or_panic!(105.0), pos_or_panic!(110.0)];
 //!     for price in prices {
 //!         let pnl = strategy.get_point_at_price(&price)?;
 //!         tracing::info!("P&L at ${}: ${:.2}", price, pnl.0);
@@ -636,8 +636,8 @@
 //!         pos_or_panic!(105.0), // strike
 //!         ExpirationDate::Days(pos_or_panic!(90.0)),
 //!         pos_or_panic!(0.20), // initial IV guess
-//!         pos_or_panic!(1.0), // quantity
-//!         pos_or_panic!(100.0), // underlying price
+//!         Positive::ONE, // quantity
+//!         Positive::HUNDRED, // underlying price
 //!         dec!(0.05), // risk free rate
 //!         OptionStyle::Call,
 //!         pos_or_panic!(0.02), // dividend yield
@@ -664,7 +664,7 @@
 //! let implied_volatility = pos_or_panic!(0.25);
 //! let risk_free_rate = dec!(0.05);
 //! let dividend_yield = pos_or_panic!(0.02);
-//! let fee = pos_or_panic!(2.0);
+//! let fee = Positive::TWO;
 //!
 //! // Create a long put option
 //! let long_put_option = Options::new(
@@ -674,7 +674,7 @@
 //!     pos_or_panic!(24070.0), // strike
 //!     expiration.clone(),
 //!     implied_volatility,
-//!     pos_or_panic!(1.0), // quantity
+//!     Positive::ONE, // quantity
 //!     underlying_price,
 //!     risk_free_rate,
 //!     OptionStyle::Put,
@@ -699,7 +699,7 @@
 //!     pos_or_panic!(24030.0), // strike
 //!     expiration.clone(),
 //!     implied_volatility,
-//!     pos_or_panic!(1.0), // quantity
+//!     Positive::ONE, // quantity
 //!     underlying_price,
 //!     risk_free_rate,
 //!     OptionStyle::Call,
@@ -724,7 +724,7 @@
 //!     "A DAX long straddle strategy".to_string(),
 //!     underlying_price,
 //!     positions,
-//!     pos_or_panic!(1.0),
+//!     Positive::ONE,
 //!     30,
 //!     implied_volatility,
 //! );

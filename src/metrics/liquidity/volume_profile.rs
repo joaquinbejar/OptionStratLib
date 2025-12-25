@@ -98,7 +98,7 @@ pub trait VolumeProfileCurve {
 /// use optionstratlib::pos_or_panic;
 ///
 /// let chain = OptionChain::load_from_json("options.json")?;
-/// let days = vec![pos_or_panic!(1.0), pos_or_panic!(5.0), pos_or_panic!(10.0), pos_or_panic!(20.0)];
+/// let days = vec![Positive::ONE, pos_or_panic!(5.0), pos_or_panic!(10.0), pos_or_panic!(20.0)];
 /// let volume_surface = chain.volume_profile_surface(days)?;
 /// ```
 pub trait VolumeProfileSurface {
@@ -131,6 +131,7 @@ mod tests_volume_profile {
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
     use std::collections::BTreeSet;
+    use positive::pos_or_panic;
 
     struct TestVolumeProfile;
 

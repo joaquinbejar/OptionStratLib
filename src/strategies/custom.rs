@@ -183,7 +183,7 @@ impl CustomStrategy {
             strike_range * pos_or_panic!(1.5) // 150% of strike range
         } else {
             // Wider strikes - use moderate extension
-            strike_range * pos_or_panic!(1.0) // 100% of strike range
+            strike_range * Positive::ONE // 100% of strike range
         };
 
         // Center around the underlying price for better focus

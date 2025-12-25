@@ -872,7 +872,7 @@ mod tests_pmcc_validation {
             pos_or_panic!(0.2),
             dec!(0.01),
             pos_or_panic!(0.005),
-            pos_or_panic!(1.0),
+            Positive::ONE,
             pos_or_panic!(15.0),
             pos_or_panic!(5.0),
             Positive::ONE,
@@ -898,7 +898,7 @@ mod tests_pmcc_validation {
             pos_or_panic!(140.0),
             ExpirationDate::Days(DAYS_IN_A_YEAR),
             pos_or_panic!(0.2),
-            pos_or_panic!(1.0),
+            Positive::ONE,
             pos_or_panic!(150.0),
             dec!(0.01),
             OptionStyle::Call,
@@ -930,7 +930,7 @@ mod tests_pmcc_validation {
             pos_or_panic!(160.0),
             ExpirationDate::Days(pos_or_panic!(30.0)),
             pos_or_panic!(0.2),
-            pos_or_panic!(1.0),
+            Positive::ONE,
             pos_or_panic!(150.0),
             dec!(0.01),
             OptionStyle::Call,
@@ -962,7 +962,7 @@ mod tests_pmcc_validation {
             pos_or_panic!(140.0),
             ExpirationDate::Days(DAYS_IN_A_YEAR),
             pos_or_panic!(0.2),
-            pos_or_panic!(1.0),
+            Positive::ONE,
             pos_or_panic!(150.0),
             dec!(0.01),
             OptionStyle::Put,
@@ -1040,7 +1040,7 @@ mod tests_pmcc_optimization {
             pos_or_panic!(0.2),
             dec!(0.01),
             pos_or_panic!(0.005),
-            pos_or_panic!(1.0),
+            Positive::ONE,
             pos_or_panic!(15.0),
             pos_or_panic!(5.0),
             Positive::ONE,
@@ -1195,7 +1195,7 @@ mod tests_pmcc_pnl {
             pos_or_panic!(0.2),
             dec!(0.01),
             pos_or_panic!(0.005),
-            pos_or_panic!(1.0),
+            Positive::ONE,
             pos_or_panic!(15.0),
             pos_or_panic!(5.0),
             Positive::ONE,
@@ -1288,7 +1288,7 @@ mod tests_pmcc_best_area {
             pos_or_panic!(0.2),
             dec!(0.01),
             pos_or_panic!(0.005),
-            pos_or_panic!(1.0),
+            Positive::ONE,
             pos_or_panic!(15.0),
             pos_or_panic!(5.0),
             Positive::ONE,
@@ -1364,7 +1364,7 @@ mod tests_pmcc_best_ratio {
             pos_or_panic!(0.2),
             dec!(0.01),
             pos_or_panic!(0.005),
-            pos_or_panic!(1.0),
+            Positive::ONE,
             pos_or_panic!(15.0),
             pos_or_panic!(5.0),
             Positive::ONE,
@@ -1439,7 +1439,7 @@ mod tests_short_straddle_delta {
             pos_or_panic!(0.3745), // implied_volatility
             dec!(0.05),            // risk_free_rate
             Positive::ZERO,        // dividend_yield
-            pos_or_panic!(1.0),    // quantity
+            Positive::ONE,    // quantity
             pos_or_panic!(84.2),   // premium_short_call
             pos_or_panic!(353.2),  // premium_long_call
             pos_or_panic!(7.01),   // open_fee_short_call
@@ -1567,7 +1567,7 @@ mod tests_short_straddle_delta_size {
             pos_or_panic!(0.3745), // implied_volatility
             dec!(0.05),            // risk_free_rate
             Positive::ZERO,        // dividend_yield
-            pos_or_panic!(2.0),    // quantity
+            Positive::TWO,    // quantity
             pos_or_panic!(84.2),   // premium_short_call
             pos_or_panic!(353.2),  // premium_long_call
             pos_or_panic!(7.01),   // open_fee_short_call
@@ -1739,7 +1739,7 @@ mod tests_poor_mans_covered_call_probability {
         assert!(range.lower_bound.is_some());
         assert!(range.upper_bound.is_none()); // Unlimited upside
         assert!(range.probability > Positive::ZERO);
-        assert!(range.probability <= pos_or_panic!(1.0));
+        assert!(range.probability <= Positive::ONE);
 
         // Break-even point should be above long call strike
         assert!(range.lower_bound.unwrap() > pmcc.long_call.option.strike_price);
@@ -1759,7 +1759,7 @@ mod tests_poor_mans_covered_call_probability {
         assert!(loss_range.lower_bound.is_none()); // No lower bound
         assert!(loss_range.upper_bound.is_some());
         assert!(loss_range.probability > Positive::ZERO);
-        assert!(loss_range.probability <= pos_or_panic!(1.0));
+        assert!(loss_range.probability <= Positive::ONE);
     }
 
     #[test]
@@ -1775,7 +1775,7 @@ mod tests_poor_mans_covered_call_probability {
 
         assert_pos_relative_eq!(
             total_profit_prob + total_loss_prob,
-            pos_or_panic!(1.0),
+            Positive::ONE,
             pos_or_panic!(0.0001)
         );
     }
@@ -1803,7 +1803,7 @@ mod tests_poor_mans_covered_call_probability {
         assert!(prob.is_ok());
         let probability = prob.unwrap();
         assert!(probability > Positive::ZERO);
-        assert!(probability <= pos_or_panic!(1.0));
+        assert!(probability <= Positive::ONE);
     }
 
     #[test]
@@ -1818,7 +1818,7 @@ mod tests_poor_mans_covered_call_probability {
         assert!(prob.is_ok());
         let probability = prob.unwrap();
         assert!(probability > Positive::ZERO);
-        assert!(probability <= pos_or_panic!(1.0));
+        assert!(probability <= Positive::ONE);
     }
 
     #[test]
@@ -1869,7 +1869,7 @@ mod tests_poor_mans_covered_call_probability {
 
         assert!(max_profit_prob >= Positive::ZERO);
         assert!(max_loss_prob >= Positive::ZERO);
-        assert!(max_profit_prob + max_loss_prob <= pos_or_panic!(1.0));
+        assert!(max_profit_prob + max_loss_prob <= Positive::ONE);
     }
 
     #[test]
@@ -1901,7 +1901,7 @@ mod tests_poor_mans_covered_call_position_management {
             pos_or_panic!(0.17),                       // implied_volatility
             dec!(0.05),                                // risk_free_rate
             Positive::ZERO,                            // dividend_yield
-            pos_or_panic!(2.0),                        // quantity
+            Positive::TWO,                        // quantity
             pos_or_panic!(154.7),                      // premium_short_call
             pos_or_panic!(30.8),                       // premium_long_call
             pos_or_panic!(1.74),                       // open_fee_short_call
@@ -1970,22 +1970,22 @@ mod tests_poor_mans_covered_call_position_management {
 
         // Modify short call position
         let mut modified_call = poor_mans_covered_call.short_call.clone();
-        modified_call.option.quantity = pos_or_panic!(2.0);
+        modified_call.option.quantity = Positive::TWO;
         let result = poor_mans_covered_call.modify_position(&modified_call);
         assert!(result.is_ok());
         assert_eq!(
             poor_mans_covered_call.short_call.option.quantity,
-            pos_or_panic!(2.0)
+            Positive::TWO
         );
 
         // Modify short put position
         let mut modified_put = poor_mans_covered_call.long_call.clone();
-        modified_put.option.quantity = pos_or_panic!(2.0);
+        modified_put.option.quantity = Positive::TWO;
         let result = poor_mans_covered_call.modify_position(&modified_put);
         assert!(result.is_ok());
         assert_eq!(
             poor_mans_covered_call.long_call.option.quantity,
-            pos_or_panic!(2.0)
+            Positive::TWO
         );
 
         // Test modifying with invalid position
@@ -2028,7 +2028,7 @@ mod tests_adjust_option_position {
             pos_or_panic!(0.17),                       // implied_volatility
             dec!(0.05),                                // risk_free_rate
             Positive::ZERO,                            // dividend_yield
-            pos_or_panic!(2.0),                        // quantity
+            Positive::TWO,                        // quantity
             pos_or_panic!(154.7),                      // premium_short_call
             pos_or_panic!(30.8),                       // premium_long_call
             pos_or_panic!(1.74),                       // open_fee_short_call
@@ -2042,7 +2042,7 @@ mod tests_adjust_option_position {
     fn test_adjust_existing_call_position() {
         let mut strategy = create_test_strategy();
         let initial_quantity = strategy.short_call.option.quantity;
-        let adjustment = pos_or_panic!(1.0);
+        let adjustment = Positive::ONE;
 
         let result = strategy.adjust_option_position(
             adjustment.to_dec(),
@@ -2062,7 +2062,7 @@ mod tests_adjust_option_position {
     fn test_adjust_existing_put_position() {
         let mut strategy = create_test_strategy();
         let initial_quantity = strategy.long_call.option.quantity;
-        let adjustment = pos_or_panic!(1.0);
+        let adjustment = Positive::ONE;
 
         let result = strategy.adjust_option_position(
             adjustment.to_dec(),
@@ -2106,7 +2106,7 @@ mod tests_adjust_option_position {
         // Try to adjust position with wrong strike price
         let result = strategy.adjust_option_position(
             Decimal::ONE,
-            &pos_or_panic!(100.0), // Invalid strike price
+            &Positive::HUNDRED, // Invalid strike price
             &OptionStyle::Call,
             &Side::Short,
         );
@@ -2144,7 +2144,7 @@ mod tests_strategy_constructor {
                 OptionStyle::Call,
                 Side::Long,
                 pos_or_panic!(90.0),
-                pos_or_panic!(1.0),
+                Positive::ONE,
                 pos_or_panic!(95.0),
                 pos_or_panic!(0.2),
             ),
@@ -2152,7 +2152,7 @@ mod tests_strategy_constructor {
                 OptionStyle::Call,
                 Side::Short,
                 pos_or_panic!(90.0),
-                pos_or_panic!(1.0),
+                Positive::ONE,
                 pos_or_panic!(105.0),
                 pos_or_panic!(0.2),
             ),
@@ -2175,7 +2175,7 @@ mod tests_strategy_constructor {
             OptionStyle::Call,
             Side::Long,
             pos_or_panic!(90.0),
-            pos_or_panic!(1.0),
+            Positive::ONE,
             pos_or_panic!(95.0),
             pos_or_panic!(0.2),
         )];
@@ -2194,7 +2194,7 @@ mod tests_strategy_constructor {
             OptionStyle::Call,
             Side::Long,
             pos_or_panic!(90.0),
-            pos_or_panic!(1.0),
+            Positive::ONE,
             pos_or_panic!(95.0),
             pos_or_panic!(0.2),
         );
@@ -2203,7 +2203,7 @@ mod tests_strategy_constructor {
             OptionStyle::Call,
             Side::Short,
             pos_or_panic!(90.0),
-            pos_or_panic!(1.0),
+            Positive::ONE,
             pos_or_panic!(105.0),
             pos_or_panic!(0.2),
         );
@@ -2224,7 +2224,7 @@ mod tests_strategy_constructor {
                 OptionStyle::Call,
                 Side::Short,
                 pos_or_panic!(90.0),
-                pos_or_panic!(1.0),
+                Positive::ONE,
                 pos_or_panic!(95.0),
                 pos_or_panic!(0.2),
             ),
@@ -2232,7 +2232,7 @@ mod tests_strategy_constructor {
                 OptionStyle::Call,
                 Side::Long,
                 pos_or_panic!(90.0),
-                pos_or_panic!(1.0),
+                Positive::ONE,
                 pos_or_panic!(105.0),
                 pos_or_panic!(0.2),
             ),
@@ -2260,8 +2260,8 @@ mod tests_poor_mans_covered_call_pnl {
         let long_call = create_sample_position(
             OptionStyle::Call,
             Side::Long,
-            pos_or_panic!(100.0), // Underlying price
-            pos_or_panic!(1.0),   // Quantity
+            Positive::HUNDRED, // Underlying price
+            Positive::ONE,   // Quantity
             pos_or_panic!(95.0),  // Strike price (Lower)
             pos_or_panic!(0.2),   // Implied volatility
         );
@@ -2270,8 +2270,8 @@ mod tests_poor_mans_covered_call_pnl {
         let short_call = create_sample_position(
             OptionStyle::Call,
             Side::Short,
-            pos_or_panic!(100.0), // Same underlying price
-            pos_or_panic!(1.0),   // Quantity
+            Positive::HUNDRED, // Same underlying price
+            Positive::ONE,   // Quantity
             pos_or_panic!(105.0), // Higher strike price
             pos_or_panic!(0.2),   // Implied volatility
         );

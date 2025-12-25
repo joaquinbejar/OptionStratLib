@@ -21,12 +21,12 @@ fn main() -> Result<(), optionstratlib::error::Error> {
         option_chain.underlying_price, // underlying_price
         Positive::ZERO,                // call_strike
         Positive::ZERO,                // put_strike
-        ExpirationDate::Days(pos_or_panic!(1.0)),
+        ExpirationDate::Days(Positive::ONE),
         Positive::ZERO,     // implied_volatility
         Positive::ZERO,     // implied_volatility
         Decimal::ZERO,      // risk_free_rate
         Positive::ZERO,     // dividend_yield
-        pos_or_panic!(1.0), // quantity
+        Positive::ONE, // quantity
         Positive::ZERO,     // premium_short_call
         Positive::ZERO,     // premium_short_put
         pos_or_panic!(2.2), // open_fee_short_call

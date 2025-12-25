@@ -39,10 +39,10 @@
 //!     pos_or_panic!(0.25),     // implied volatility
 //!     dec!(0.05),     // risk-free rate
 //!     pos_or_panic!(0.01),     // dividend yield
-//!     pos_or_panic!(100.0),    // quantity (shares)
+//!     Positive::HUNDRED,    // quantity (shares)
 //!     pos_or_panic!(3.50),     // call premium received
-//!     pos_or_panic!(1.0),      // spot open fee
-//!     pos_or_panic!(1.0),      // spot close fee
+//!     Positive::ONE,      // spot open fee
+//!     Positive::ONE,      // spot close fee
 //!     pos_or_panic!(0.65),     // call open fee
 //!     pos_or_panic!(0.65),     // call close fee
 //! );
@@ -185,7 +185,7 @@ impl CoveredCall {
             call_strike,
             expiration,
             implied_volatility,
-            quantity / pos_or_panic!(100.0), // Convert shares to contracts
+            quantity / Positive::HUNDRED, // Convert shares to contracts
             underlying_price,
             risk_free_rate,
             OptionStyle::Call,
@@ -682,10 +682,10 @@ mod tests {
             pos_or_panic!(0.25),
             dec!(0.05),
             pos_or_panic!(0.01),
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             pos_or_panic!(3.50),
-            pos_or_panic!(1.0),
-            pos_or_panic!(1.0),
+            Positive::ONE,
+            Positive::ONE,
             pos_or_panic!(0.65),
             pos_or_panic!(0.65),
         )
@@ -698,7 +698,7 @@ mod tests {
         assert_eq!(cc.name, "Covered Call");
         assert_eq!(cc.kind, StrategyType::CoveredCall);
         assert_eq!(cc.spot_leg.symbol, "AAPL");
-        assert_eq!(cc.spot_leg.quantity, pos_or_panic!(100.0));
+        assert_eq!(cc.spot_leg.quantity, Positive::HUNDRED);
         assert_eq!(cc.spot_leg.cost_basis, pos_or_panic!(150.0));
         assert_eq!(cc.spot_leg.side, Side::Long);
         assert_eq!(cc.short_call.option.strike_price, pos_or_panic!(155.0));
@@ -826,6 +826,6 @@ mod tests {
     #[test]
     fn test_quantity() {
         let cc = create_test_covered_call();
-        assert_eq!(cc.quantity(), pos_or_panic!(100.0));
+        assert_eq!(cc.quantity(), Positive::HUNDRED);
     }
 }

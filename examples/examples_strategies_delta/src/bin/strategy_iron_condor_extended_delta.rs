@@ -25,7 +25,7 @@ fn main() -> Result<(), Error> {
         pos_or_panic!(0.1548),
         Decimal::ZERO,
         Positive::ZERO,
-        pos_or_panic!(2.0),
+        Positive::TWO,
         pos_or_panic!(38.8),
         pos_or_panic!(30.4),
         pos_or_panic!(23.3),

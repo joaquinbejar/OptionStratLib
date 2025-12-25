@@ -108,7 +108,7 @@
 //!             option_type: OptionType::European,
 //!             side: Side::Long,
 //!             underlying_symbol: "AAPL".to_string(),
-//!             strike_price: pos_or_panic!(100.0),
+//!             strike_price: Positive::HUNDRED,
 //!             expiration_date: ExpirationDate::Days(pos_or_panic!(30.0)),
 //!             implied_volatility: pos_or_panic!(0.2),
 //!             quantity: Positive::ONE,

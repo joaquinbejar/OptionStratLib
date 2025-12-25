@@ -19,7 +19,7 @@ fn main() -> Result<(), Error> {
         pos_or_panic!(50.0), // Deep ITM call to simulate stock
         expiration,
         pos_or_panic!(0.01),  // Very low volatility for deep ITM
-        pos_or_panic!(100.0), // 100 shares equivalent
+        Positive::HUNDRED, // 100 shares equivalent
         underlying_price,
         risk_free_rate,
         OptionStyle::Call,
@@ -28,7 +28,7 @@ fn main() -> Result<(), Error> {
     );
     let stock_position = Position::new(
         stock_position_option,
-        pos_or_panic!(100.0), // Intrinsic value (150-50)
+        Positive::HUNDRED, // Intrinsic value (150-50)
         Utc::now(),
         pos_or_panic!(0.5), // Low fee
         pos_or_panic!(0.5),
@@ -44,7 +44,7 @@ fn main() -> Result<(), Error> {
         pos_or_panic!(155.0), // Strike above current price
         expiration,
         pos_or_panic!(0.20),  // 20% implied volatility
-        pos_or_panic!(100.0), // 100 shares covered
+        Positive::HUNDRED, // 100 shares covered
         underlying_price,
         risk_free_rate,
         OptionStyle::Call,
@@ -55,8 +55,8 @@ fn main() -> Result<(), Error> {
         covered_call_option,
         pos_or_panic!(3.50), // Premium received
         Utc::now(),
-        pos_or_panic!(1.0),
-        pos_or_panic!(1.0),
+        Positive::ONE,
+        Positive::ONE,
         None,
         None,
     );

@@ -1142,8 +1142,8 @@ mod tests_iron_butterfly {
         let date = Utc.with_ymd_and_hms(2024, 12, 1, 0, 0, 0).unwrap();
         let butterfly = IronButterfly::new(
             "AAPL".to_string(),
-            pos_or_panic!(100.0), // underlying price
-            pos_or_panic!(100.0), // short strike (at the money)
+            Positive::HUNDRED, // underlying price
+            Positive::HUNDRED, // short strike (at the money)
             pos_or_panic!(110.0), // long call strike
             pos_or_panic!(90.0),  // long put strike
             ExpirationDate::DateTime(date),
@@ -1167,8 +1167,8 @@ mod tests_iron_butterfly {
         let date = Utc.with_ymd_and_hms(2024, 12, 1, 0, 0, 0).unwrap();
         let butterfly = IronButterfly::new(
             "AAPL".to_string(),
-            pos_or_panic!(100.0), // underlying price
-            pos_or_panic!(100.0), // short strike (at the money)
+            Positive::HUNDRED, // underlying price
+            Positive::HUNDRED, // short strike (at the money)
             pos_or_panic!(110.0), // long call strike
             pos_or_panic!(90.0),  // long put strike
             ExpirationDate::DateTime(date),
@@ -1193,8 +1193,8 @@ mod tests_iron_butterfly {
         let date = Utc.with_ymd_and_hms(2024, 12, 1, 0, 0, 0).unwrap();
         let butterfly = IronButterfly::new(
             "AAPL".to_string(),
-            pos_or_panic!(100.0), // underlying price
-            pos_or_panic!(100.0), // short strike (at the money)
+            Positive::HUNDRED, // underlying price
+            Positive::HUNDRED, // short strike (at the money)
             pos_or_panic!(110.0), // long call strike
             pos_or_panic!(90.0),  // long put strike
             ExpirationDate::DateTime(date),
@@ -1231,8 +1231,8 @@ mod tests_iron_butterfly {
         let date = Utc.with_ymd_and_hms(2024, 12, 1, 0, 0, 0).unwrap();
         let butterfly = IronButterfly::new(
             "AAPL".to_string(),
-            pos_or_panic!(100.0),
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
+            Positive::HUNDRED,
             pos_or_panic!(110.0),
             pos_or_panic!(90.0),
             ExpirationDate::DateTime(date),
@@ -1264,8 +1264,8 @@ mod tests_iron_butterfly {
         let date = Utc.with_ymd_and_hms(2024, 12, 1, 0, 0, 0).unwrap();
         let butterfly = IronButterfly::new(
             "AAPL".to_string(),
-            pos_or_panic!(100.0),
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
+            Positive::HUNDRED,
             pos_or_panic!(110.0),
             pos_or_panic!(90.0),
             ExpirationDate::DateTime(date),
@@ -1326,7 +1326,7 @@ mod tests_iron_butterfly_validable {
                 ExpirationDate::Days(pos_or_panic!(30.0)),
                 pos_or_panic!(0.2),
                 quantity,
-                pos_or_panic!(100.0),
+                Positive::HUNDRED,
                 dec!(0.05),
                 option_style,
                 Positive::ZERO,
@@ -1344,15 +1344,15 @@ mod tests_iron_butterfly_validable {
     fn create_valid_butterfly() -> IronButterfly {
         IronButterfly::new(
             "TEST".to_string(),
-            pos_or_panic!(100.0), // underlying_price
-            pos_or_panic!(100.0), // short strike (both call and put)
+            Positive::HUNDRED, // underlying_price
+            Positive::HUNDRED, // short strike (both call and put)
             pos_or_panic!(110.0), // long call strike
             pos_or_panic!(90.0),  // long put strike
             ExpirationDate::Days(pos_or_panic!(30.0)),
             pos_or_panic!(0.2), // implied_volatility
             dec!(0.05),         // risk_free_rate
             Positive::ZERO,     // dividend_yield
-            pos_or_panic!(1.0), // quantity
+            Positive::ONE, // quantity
             Positive::TWO,      // premium_short_call
             Positive::TWO,      // premium_short_put
             Positive::ONE,      // premium_long_call
@@ -1375,7 +1375,7 @@ mod tests_iron_butterfly_validable {
         butterfly.short_call = create_valid_position(
             Side::Short,
             OptionStyle::Call,
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             Positive::ZERO,
         );
         assert!(!butterfly.validate());
@@ -1388,7 +1388,7 @@ mod tests_iron_butterfly_validable {
         butterfly.short_put = create_valid_position(
             Side::Short,
             OptionStyle::Put,
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             Positive::ZERO,
         );
         assert!(!butterfly.validate());
@@ -1427,13 +1427,13 @@ mod tests_iron_butterfly_validable {
         butterfly.short_call = create_valid_position(
             Side::Short,
             OptionStyle::Call,
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             Positive::ZERO,
         );
         butterfly.short_put = create_valid_position(
             Side::Short,
             OptionStyle::Put,
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             Positive::ZERO,
         );
         butterfly.long_call = create_valid_position(
@@ -1459,13 +1459,13 @@ mod tests_iron_butterfly_validable {
             Side::Short,
             OptionStyle::Call,
             pos_or_panic!(105.0),
-            pos_or_panic!(1.0),
+            Positive::ONE,
         );
         butterfly.short_put = create_valid_position(
             Side::Short,
             OptionStyle::Put,
             pos_or_panic!(95.0),
-            pos_or_panic!(1.0),
+            Positive::ONE,
         );
         assert!(!butterfly.validate());
     }
@@ -1478,13 +1478,13 @@ mod tests_iron_butterfly_validable {
             Side::Long,
             OptionStyle::Put,
             pos_or_panic!(105.0),
-            pos_or_panic!(1.0),
+            Positive::ONE,
         );
         butterfly.short_put = create_valid_position(
             Side::Short,
             OptionStyle::Put,
             pos_or_panic!(110.0),
-            pos_or_panic!(1.0),
+            Positive::ONE,
         );
         assert!(!butterfly.validate());
     }
@@ -1502,15 +1502,15 @@ mod tests_iron_butterfly_strategies {
     fn create_test_butterfly() -> IronButterfly {
         IronButterfly::new(
             "TEST".to_string(),
-            pos_or_panic!(100.0), // underlying_price
-            pos_or_panic!(100.0), // short strike (both call and put)
+            Positive::HUNDRED, // underlying_price
+            Positive::HUNDRED, // short strike (both call and put)
             pos_or_panic!(110.0), // long call strike
             pos_or_panic!(90.0),  // long put strike
             ExpirationDate::Days(pos_or_panic!(30.0)),
             pos_or_panic!(0.2), // implied_volatility
             dec!(0.05),         // risk_free_rate
             Positive::ZERO,     // dividend_yield
-            pos_or_panic!(1.0), // quantity
+            Positive::ONE, // quantity
             Positive::TWO,      // premium_short_call
             Positive::TWO,      // premium_short_put
             Positive::ONE,      // premium_long_call
@@ -1530,11 +1530,11 @@ mod tests_iron_butterfly_strategies {
                 OptionType::European,
                 Side::Short,
                 "TEST".to_string(),
-                pos_or_panic!(100.0),
+                Positive::HUNDRED,
                 ExpirationDate::Days(pos_or_panic!(30.0)),
                 pos_or_panic!(0.2),
-                pos_or_panic!(1.0),
-                pos_or_panic!(100.0),
+                Positive::ONE,
+                Positive::HUNDRED,
                 dec!(0.05),
                 OptionStyle::Call,
                 Positive::ZERO,
@@ -1564,8 +1564,8 @@ mod tests_iron_butterfly_strategies {
                 pos_or_panic!(90.0),
                 ExpirationDate::Days(pos_or_panic!(30.0)),
                 pos_or_panic!(0.2),
-                pos_or_panic!(1.0),
-                pos_or_panic!(100.0),
+                Positive::ONE,
+                Positive::HUNDRED,
                 dec!(0.05),
                 OptionStyle::Put,
                 Positive::ZERO,
@@ -1671,15 +1671,15 @@ mod tests_iron_butterfly_strategies {
     fn test_with_multiple_contracts() {
         let butterfly = IronButterfly::new(
             "TEST".to_string(),
-            pos_or_panic!(100.0),
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
+            Positive::HUNDRED,
             pos_or_panic!(110.0),
             pos_or_panic!(90.0),
             ExpirationDate::Days(pos_or_panic!(30.0)),
             pos_or_panic!(0.2),
             dec!(0.05),
             Positive::ZERO,
-            pos_or_panic!(2.0), // quantity = 2
+            Positive::TWO, // quantity = 2
             Positive::TWO,
             Positive::TWO,
             Positive::ONE,
@@ -1695,17 +1695,17 @@ mod tests_iron_butterfly_strategies {
     fn test_with_asymmetric_premiums() {
         let butterfly = IronButterfly::new(
             "TEST".to_string(),
-            pos_or_panic!(100.0),
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
+            Positive::HUNDRED,
             pos_or_panic!(110.0),
             pos_or_panic!(90.0),
             ExpirationDate::Days(pos_or_panic!(30.0)),
             pos_or_panic!(0.2),
             dec!(0.05),
             Positive::ZERO,
-            pos_or_panic!(1.0),
+            Positive::ONE,
             pos_or_panic!(3.0), // Higher short call premium
-            pos_or_panic!(2.0), // Lower short put premium
+            Positive::TWO, // Lower short put premium
             Positive::ONE,
             Positive::ONE,
             pos_or_panic!(0.5),
@@ -1728,15 +1728,15 @@ mod tests_iron_butterfly_optimizable {
     fn create_test_butterfly() -> IronButterfly {
         IronButterfly::new(
             "TEST".to_string(),
-            pos_or_panic!(100.0), // underlying_price
-            pos_or_panic!(100.0), // short strike (both call and put)
+            Positive::HUNDRED, // underlying_price
+            Positive::HUNDRED, // short strike (both call and put)
             pos_or_panic!(110.0), // long call strike
             pos_or_panic!(90.0),  // long put strike
             ExpirationDate::Days(pos_or_panic!(30.0)),
             pos_or_panic!(0.2), // implied_volatility
             dec!(0.05),         // risk_free_rate
             Positive::ZERO,     // dividend_yield
-            pos_or_panic!(1.0), // quantity
+            Positive::ONE, // quantity
             Positive::TWO,      // premium_short_call
             Positive::TWO,      // premium_short_put
             Positive::ONE,      // premium_long_call
@@ -1749,7 +1749,7 @@ mod tests_iron_butterfly_optimizable {
     fn create_test_chain() -> OptionChain {
         let mut chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2024-12-31".to_string(),
             None,
             None,
@@ -1866,7 +1866,7 @@ mod tests_iron_butterfly_optimizable {
     fn test_is_valid_short_option() {
         let butterfly = create_test_butterfly();
         let option = OptionData::new(
-            pos_or_panic!(100.0), // At the money
+            Positive::HUNDRED, // At the money
             spos!(5.0),
             spos!(5.2),
             spos!(5.0),
@@ -1915,11 +1915,11 @@ mod tests_iron_butterfly_optimizable {
         );
         assert_eq!(
             new_strategy.short_put.option.strike_price,
-            pos_or_panic!(100.0)
+            Positive::HUNDRED
         );
         assert_eq!(
             new_strategy.short_call.option.strike_price,
-            pos_or_panic!(100.0)
+            Positive::HUNDRED
         );
         assert_eq!(
             new_strategy.long_call.option.strike_price,
@@ -1955,15 +1955,15 @@ mod tests_iron_butterfly_profit {
     fn create_test_butterfly() -> IronButterfly {
         IronButterfly::new(
             "TEST".to_string(),
-            pos_or_panic!(100.0), // underlying_price
-            pos_or_panic!(100.0), // short strike (both call and put)
+            Positive::HUNDRED, // underlying_price
+            Positive::HUNDRED, // short strike (both call and put)
             pos_or_panic!(110.0), // long call strike
             pos_or_panic!(90.0),  // long put strike
             ExpirationDate::Days(pos_or_panic!(30.0)),
             pos_or_panic!(0.2), // implied_volatility
             dec!(0.05),         // risk_free_rate
             Positive::ZERO,     // dividend_yield
-            pos_or_panic!(1.0), // quantity
+            Positive::ONE, // quantity
             Positive::TWO,      // premium_short_call
             Positive::TWO,      // premium_short_put
             Positive::ONE,      // premium_long_call
@@ -2075,15 +2075,15 @@ mod tests_iron_butterfly_profit {
     fn test_profit_with_fees() {
         let butterfly = IronButterfly::new(
             "TEST".to_string(),
-            pos_or_panic!(100.0),
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
+            Positive::HUNDRED,
             pos_or_panic!(110.0),
             pos_or_panic!(90.0),
             ExpirationDate::Days(pos_or_panic!(30.0)),
             pos_or_panic!(0.2),
             dec!(0.05),
             Positive::ZERO,
-            pos_or_panic!(1.0),
+            Positive::ONE,
             Positive::TWO,
             Positive::TWO,
             Positive::ONE,
@@ -2093,7 +2093,7 @@ mod tests_iron_butterfly_profit {
         );
 
         let profit = butterfly
-            .calculate_profit_at(&pos_or_panic!(100.0))
+            .calculate_profit_at(&Positive::HUNDRED)
             .unwrap()
             .to_f64()
             .unwrap();
@@ -2105,15 +2105,15 @@ mod tests_iron_butterfly_profit {
     fn test_profit_with_multiple_contracts() {
         let butterfly = IronButterfly::new(
             "TEST".to_string(),
-            pos_or_panic!(100.0),
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
+            Positive::HUNDRED,
             pos_or_panic!(110.0),
             pos_or_panic!(90.0),
             ExpirationDate::Days(pos_or_panic!(30.0)),
             pos_or_panic!(0.2),
             dec!(0.05),
             Positive::ZERO,
-            pos_or_panic!(2.0), // quantity = 2
+            Positive::TWO, // quantity = 2
             Positive::TWO,
             Positive::TWO,
             Positive::ONE,
@@ -2193,7 +2193,7 @@ mod tests_iron_butterfly_delta {
             pos_or_panic!(0.1548), // implied_volatility
             dec!(0.05),            // risk_free_rate
             Positive::ZERO,        // dividend_yield
-            pos_or_panic!(1.0),    // quantity
+            Positive::ONE,    // quantity
             pos_or_panic!(38.8),   // premium_short_call
             pos_or_panic!(30.4),   // premium_short_put
             pos_or_panic!(23.3),   // premium_long_call
@@ -2353,7 +2353,7 @@ mod tests_iron_butterfly_delta_size {
             pos_or_panic!(0.1548), // implied_volatility
             dec!(0.05),            // risk_free_rate
             Positive::ZERO,        // dividend_yield
-            pos_or_panic!(2.0),    // quantity
+            Positive::TWO,    // quantity
             pos_or_panic!(38.8),   // premium_short_call
             pos_or_panic!(30.4),   // premium_short_put
             pos_or_panic!(23.3),   // premium_long_call
@@ -2513,7 +2513,7 @@ mod tests_iron_butterfly_probability {
             pos_or_panic!(0.1548), // implied_volatility
             dec!(0.05),            // risk_free_rate
             Positive::ZERO,        // dividend_yield
-            pos_or_panic!(1.0),    // quantity
+            Positive::ONE,    // quantity
             pos_or_panic!(38.8),   // premium_short_call
             pos_or_panic!(30.4),   // premium_short_put
             pos_or_panic!(23.3),   // premium_long_call
@@ -2560,7 +2560,7 @@ mod tests_iron_butterfly_probability {
         assert!(range.lower_bound.is_some());
         assert!(range.upper_bound.is_some());
         assert!(range.probability > Positive::ZERO);
-        assert!(range.probability <= pos_or_panic!(1.0));
+        assert!(range.probability <= Positive::ONE);
     }
 
     #[test]
@@ -2600,7 +2600,7 @@ mod tests_iron_butterfly_probability {
         // Total probability should be approximately 1
         assert_pos_relative_eq!(
             total_profit_prob + total_loss_prob,
-            pos_or_panic!(1.0),
+            Positive::ONE,
             pos_or_panic!(0.0001)
         );
     }
@@ -2631,7 +2631,7 @@ mod tests_iron_butterfly_probability {
         assert!(prob.is_ok());
         let probability = prob.unwrap();
         assert!(probability > Positive::ZERO);
-        assert!(probability <= pos_or_panic!(1.0));
+        assert!(probability <= Positive::ONE);
     }
 
     #[test]
@@ -2646,7 +2646,7 @@ mod tests_iron_butterfly_probability {
         assert!(prob.is_ok());
         let probability = prob.unwrap();
         assert!(probability > Positive::ZERO);
-        assert!(probability <= pos_or_panic!(1.0));
+        assert!(probability <= Positive::ONE);
     }
 
     #[test]
@@ -2660,14 +2660,14 @@ mod tests_iron_butterfly_probability {
         assert!(max_profit_prob >= Positive::ZERO);
         assert!(max_loss_prob >= Positive::ZERO);
         // Sum of extreme probabilities should be less than or equal to 1
-        assert!(max_profit_prob + max_loss_prob <= pos_or_panic!(1.0));
+        assert!(max_profit_prob + max_loss_prob <= Positive::ONE);
     }
 
     #[test]
     fn test_zero_volatility() {
         let mut butterfly = create_test_butterfly();
         // Set invalid volatility for one leg
-        butterfly.short_call.option.implied_volatility = pos_or_panic!(0.0);
+        butterfly.short_call.option.implied_volatility = Positive::ZERO;
 
         let result = butterfly.get_profit_ranges();
         assert!(result.is_ok());
@@ -2692,7 +2692,7 @@ mod tests_iron_butterfly_probability {
             assert!(result.is_ok());
             let prob = result.unwrap();
             assert!(prob > Positive::ZERO);
-            assert!(prob <= pos_or_panic!(1.0));
+            assert!(prob <= Positive::ONE);
         }
     }
 }
@@ -2717,7 +2717,7 @@ mod tests_iron_butterfly_position_management {
             pos_or_panic!(0.1548), // implied_volatility
             dec!(0.05),            // risk_free_rate
             Positive::ZERO,        // dividend_yield
-            pos_or_panic!(2.0),    // quantity
+            Positive::TWO,    // quantity
             pos_or_panic!(38.8),   // premium_short_call
             pos_or_panic!(30.4),   // premium_short_put
             pos_or_panic!(23.3),   // premium_long_call
@@ -2821,20 +2821,20 @@ mod tests_iron_butterfly_position_management {
 
         // Modify short call position
         let mut modified_call = iron_butterfly.short_call.clone();
-        modified_call.option.quantity = pos_or_panic!(2.0);
+        modified_call.option.quantity = Positive::TWO;
         let result = iron_butterfly.modify_position(&modified_call);
         assert!(result.is_ok());
         assert_eq!(
             iron_butterfly.short_call.option.quantity,
-            pos_or_panic!(2.0)
+            Positive::TWO
         );
 
         // Modify short put position
         let mut modified_put = iron_butterfly.short_put.clone();
-        modified_put.option.quantity = pos_or_panic!(2.0);
+        modified_put.option.quantity = Positive::TWO;
         let result = iron_butterfly.modify_position(&modified_put);
         assert!(result.is_ok());
-        assert_eq!(iron_butterfly.short_put.option.quantity, pos_or_panic!(2.0));
+        assert_eq!(iron_butterfly.short_put.option.quantity, Positive::TWO);
 
         // Test modifying with invalid position
         let mut invalid_position = iron_butterfly.short_call.clone();
@@ -2861,17 +2861,17 @@ mod tests_iron_butterfly_position_management {
 
         // Modify long call position
         let mut modified_call = iron_butterfly.long_call.clone();
-        modified_call.option.quantity = pos_or_panic!(2.0);
+        modified_call.option.quantity = Positive::TWO;
         let result = iron_butterfly.modify_position(&modified_call);
         assert!(result.is_ok());
-        assert_eq!(iron_butterfly.long_call.option.quantity, pos_or_panic!(2.0));
+        assert_eq!(iron_butterfly.long_call.option.quantity, Positive::TWO);
 
         // Modify long put position
         let mut modified_put = iron_butterfly.long_put.clone();
-        modified_put.option.quantity = pos_or_panic!(2.0);
+        modified_put.option.quantity = Positive::TWO;
         let result = iron_butterfly.modify_position(&modified_put);
         assert!(result.is_ok());
-        assert_eq!(iron_butterfly.long_put.option.quantity, pos_or_panic!(2.0));
+        assert_eq!(iron_butterfly.long_put.option.quantity, Positive::TWO);
 
         // Test modifying with invalid position
         let mut invalid_position = iron_butterfly.long_call.clone();
@@ -2913,7 +2913,7 @@ mod tests_adjust_option_position {
             pos_or_panic!(0.1548), // implied_volatility
             dec!(0.05),            // risk_free_rate
             Positive::ZERO,        // dividend_yield
-            pos_or_panic!(2.0),    // quantity
+            Positive::TWO,    // quantity
             pos_or_panic!(38.8),   // premium_short_call
             pos_or_panic!(30.4),   // premium_short_put
             pos_or_panic!(23.3),   // premium_long_call
@@ -2927,7 +2927,7 @@ mod tests_adjust_option_position {
     fn test_adjust_existing_call_position() {
         let mut strategy = create_test_strategy();
         let initial_quantity = strategy.short_call.option.quantity;
-        let adjustment = pos_or_panic!(1.0);
+        let adjustment = Positive::ONE;
 
         let result = strategy.adjust_option_position(
             adjustment.to_dec(),
@@ -2947,7 +2947,7 @@ mod tests_adjust_option_position {
     fn test_adjust_existing_put_position() {
         let mut strategy = create_test_strategy();
         let initial_quantity = strategy.short_put.option.quantity;
-        let adjustment = pos_or_panic!(1.0);
+        let adjustment = Positive::ONE;
 
         let result = strategy.adjust_option_position(
             adjustment.to_dec(),
@@ -2988,7 +2988,7 @@ mod tests_adjust_option_position {
         // Try to adjust position with wrong strike price
         let result = strategy.adjust_option_position(
             Decimal::ONE,
-            &pos_or_panic!(100.0), // Invalid strike price
+            &Positive::HUNDRED, // Invalid strike price
             &OptionStyle::Call,
             &Side::Short,
         );
@@ -3025,32 +3025,32 @@ mod tests_strategy_constructor {
             create_sample_position(
                 OptionStyle::Put,
                 Side::Long,
-                pos_or_panic!(100.0),
-                pos_or_panic!(1.0),
+                Positive::HUNDRED,
+                Positive::ONE,
                 pos_or_panic!(95.0),
                 pos_or_panic!(0.2),
             ),
             create_sample_position(
                 OptionStyle::Put,
                 Side::Short,
-                pos_or_panic!(100.0),
-                pos_or_panic!(1.0),
-                pos_or_panic!(100.0),
+                Positive::HUNDRED,
+                Positive::ONE,
+                Positive::HUNDRED,
                 pos_or_panic!(0.2),
             ),
             create_sample_position(
                 OptionStyle::Call,
                 Side::Short,
-                pos_or_panic!(100.0),
-                pos_or_panic!(1.0),
-                pos_or_panic!(100.0),
+                Positive::HUNDRED,
+                Positive::ONE,
+                Positive::HUNDRED,
                 pos_or_panic!(0.2),
             ),
             create_sample_position(
                 OptionStyle::Call,
                 Side::Long,
-                pos_or_panic!(100.0),
-                pos_or_panic!(1.0),
+                Positive::HUNDRED,
+                Positive::ONE,
                 pos_or_panic!(105.0),
                 pos_or_panic!(0.2),
             ),
@@ -3061,10 +3061,10 @@ mod tests_strategy_constructor {
 
         let strategy = result.unwrap();
         assert_eq!(strategy.long_put.option.strike_price, pos_or_panic!(95.0));
-        assert_eq!(strategy.short_put.option.strike_price, pos_or_panic!(100.0));
+        assert_eq!(strategy.short_put.option.strike_price, Positive::HUNDRED);
         assert_eq!(
             strategy.short_call.option.strike_price,
-            pos_or_panic!(100.0)
+            Positive::HUNDRED
         );
         assert_eq!(strategy.long_call.option.strike_price, pos_or_panic!(105.0));
     }
@@ -3075,17 +3075,17 @@ mod tests_strategy_constructor {
             create_sample_position(
                 OptionStyle::Put,
                 Side::Long,
-                pos_or_panic!(100.0),
-                pos_or_panic!(1.0),
+                Positive::HUNDRED,
+                Positive::ONE,
                 pos_or_panic!(95.0),
                 pos_or_panic!(0.2),
             ),
             create_sample_position(
                 OptionStyle::Put,
                 Side::Short,
-                pos_or_panic!(100.0),
-                pos_or_panic!(1.0),
-                pos_or_panic!(100.0),
+                Positive::HUNDRED,
+                Positive::ONE,
+                Positive::HUNDRED,
                 pos_or_panic!(0.2),
             ),
         ];
@@ -3104,32 +3104,32 @@ mod tests_strategy_constructor {
             create_sample_position(
                 OptionStyle::Put,
                 Side::Long,
-                pos_or_panic!(100.0),
-                pos_or_panic!(1.0),
+                Positive::HUNDRED,
+                Positive::ONE,
                 pos_or_panic!(90.0),
                 pos_or_panic!(0.2),
             ),
             create_sample_position(
                 OptionStyle::Put,
                 Side::Short,
-                pos_or_panic!(100.0),
-                pos_or_panic!(1.0),
-                pos_or_panic!(100.0),
+                Positive::HUNDRED,
+                Positive::ONE,
+                Positive::HUNDRED,
                 pos_or_panic!(0.2),
             ),
             create_sample_position(
                 OptionStyle::Call,
                 Side::Short,
-                pos_or_panic!(100.0),
-                pos_or_panic!(1.0),
-                pos_or_panic!(100.0),
+                Positive::HUNDRED,
+                Positive::ONE,
+                Positive::HUNDRED,
                 pos_or_panic!(0.2),
             ),
             create_sample_position(
                 OptionStyle::Call,
                 Side::Long,
-                pos_or_panic!(100.0),
-                pos_or_panic!(1.0),
+                Positive::HUNDRED,
+                Positive::ONE,
                 pos_or_panic!(115.0),
                 pos_or_panic!(0.2),
             ),
@@ -3149,32 +3149,32 @@ mod tests_strategy_constructor {
             create_sample_position(
                 OptionStyle::Put,
                 Side::Long,
-                pos_or_panic!(100.0),
-                pos_or_panic!(1.0),
+                Positive::HUNDRED,
+                Positive::ONE,
                 pos_or_panic!(95.0),
                 pos_or_panic!(0.2),
             ),
             create_sample_position(
                 OptionStyle::Put,
                 Side::Short,
-                pos_or_panic!(100.0),
-                pos_or_panic!(1.0),
-                pos_or_panic!(100.0),
+                Positive::HUNDRED,
+                Positive::ONE,
+                Positive::HUNDRED,
                 pos_or_panic!(0.2),
             ),
             create_sample_position(
                 OptionStyle::Call,
                 Side::Short,
-                pos_or_panic!(100.0),
-                pos_or_panic!(1.0),
-                pos_or_panic!(100.0),
+                Positive::HUNDRED,
+                Positive::ONE,
+                Positive::HUNDRED,
                 pos_or_panic!(0.2),
             ),
             create_sample_position(
                 OptionStyle::Call,
                 Side::Long,
-                pos_or_panic!(100.0),
-                pos_or_panic!(1.0),
+                Positive::HUNDRED,
+                Positive::ONE,
                 pos_or_panic!(105.0),
                 pos_or_panic!(0.2),
             ),
@@ -3204,32 +3204,32 @@ mod tests_iron_butterfly_pnl {
             create_sample_position(
                 OptionStyle::Put,
                 Side::Long,
-                pos_or_panic!(100.0),
-                pos_or_panic!(1.0),
+                Positive::HUNDRED,
+                Positive::ONE,
                 pos_or_panic!(95.0),
                 pos_or_panic!(0.2),
             ),
             create_sample_position(
                 OptionStyle::Put,
                 Side::Short,
-                pos_or_panic!(100.0),
-                pos_or_panic!(1.0),
-                pos_or_panic!(100.0),
+                Positive::HUNDRED,
+                Positive::ONE,
+                Positive::HUNDRED,
                 pos_or_panic!(0.2),
             ),
             create_sample_position(
                 OptionStyle::Call,
                 Side::Short,
-                pos_or_panic!(100.0),
-                pos_or_panic!(1.0),
-                pos_or_panic!(100.0),
+                Positive::HUNDRED,
+                Positive::ONE,
+                Positive::HUNDRED,
                 pos_or_panic!(0.2),
             ),
             create_sample_position(
                 OptionStyle::Call,
                 Side::Long,
-                pos_or_panic!(100.0),
-                pos_or_panic!(1.0),
+                Positive::HUNDRED,
+                Positive::ONE,
                 pos_or_panic!(105.0),
                 pos_or_panic!(0.2),
             ),
@@ -3241,7 +3241,7 @@ mod tests_iron_butterfly_pnl {
     #[test]
     fn test_calculate_pnl_at_middle_strike() {
         let iron_butterfly = create_test_iron_butterfly().unwrap();
-        let underlying_price = pos_or_panic!(100.0); // At middle strike
+        let underlying_price = Positive::HUNDRED; // At middle strike
 
         let result = iron_butterfly.calculate_pnl_at_expiration(&underlying_price);
         assert!(result.is_ok());

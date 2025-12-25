@@ -9,7 +9,7 @@ fn get_option(underlying_asset: &Positive, maturity: &Positive) -> Options {
         pos_or_panic!(50.0), // strike price
         ExpirationDate::Days(*maturity),
         pos_or_panic!(0.2), // implied volatility
-        pos_or_panic!(1.0), // quantity
+        Positive::ONE, // quantity
         *underlying_asset,  // underlying price
         Decimal::ZERO,      // risk free rate
         OptionStyle::Call,
@@ -68,7 +68,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let dte_1_curve = Curve::construct(ConstructionMethod::Parametric {
         f: Box::new(|t| {
-            let option = get_option(&Positive::new_decimal(t).unwrap(), &pos_or_panic!(1.0));
+            let option = get_option(&Positive::new_decimal(t).unwrap(), &Positive::ONE);
             let value = option.charm().unwrap();
             let point = Point2D::new(t, value);
             Ok(point)

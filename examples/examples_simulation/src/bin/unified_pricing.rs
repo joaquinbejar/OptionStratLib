@@ -91,7 +91,7 @@ fn main() {
     let size = 365;
     let init_step = Step {
         x: Xstep::new(
-            pos_or_panic!(1.0),
+            Positive::ONE,
             TimeFrame::Day,
             ExpirationDate::Days(pos_or_panic!(size as f64)),
         ),
@@ -99,7 +99,7 @@ fn main() {
     };
 
     let gbm_walk = WalkType::GeometricBrownian {
-        dt: pos_or_panic!(1.0),
+        dt: Positive::ONE,
         drift: dec!(0.0),
         volatility: option.implied_volatility,
     };
@@ -129,10 +129,10 @@ fn main() {
     // 3. Monte Carlo with Heston Model
     println!("3. Monte Carlo with Heston Stochastic Volatility:");
     let heston_walk = WalkType::Heston {
-        dt: pos_or_panic!(1.0),
+        dt: Positive::ONE,
         drift: dec!(0.0),
         volatility: option.implied_volatility,
-        kappa: pos_or_panic!(2.0),  // Mean reversion speed
+        kappa: Positive::TWO,  // Mean reversion speed
         theta: pos_or_panic!(0.04), // Long-term variance
         xi: pos_or_panic!(0.3),     // Volatility of volatility
         rho: dec!(-0.7),            // Correlation
@@ -163,7 +163,7 @@ fn main() {
     // 4. Monte Carlo with Jump Diffusion
     println!("4. Monte Carlo with Jump Diffusion:");
     let jump_walk = WalkType::JumpDiffusion {
-        dt: pos_or_panic!(1.0),
+        dt: Positive::ONE,
         drift: dec!(0.0),
         volatility: option.implied_volatility,
         intensity: pos_or_panic!(0.5),        // Jump frequency
@@ -196,7 +196,7 @@ fn main() {
     // 5. Monte Carlo with Telegraph Process
     println!("5. Monte Carlo with Telegraph Process:");
     let telegraph_walk = WalkType::Telegraph {
-        dt: pos_or_panic!(1.0),
+        dt: Positive::ONE,
         drift: dec!(0.0),
         volatility: option.implied_volatility,
         lambda_up: pos_or_panic!(0.8),   // Transition rate to up state

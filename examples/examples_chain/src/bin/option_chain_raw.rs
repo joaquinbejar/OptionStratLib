@@ -28,7 +28,7 @@ fn main() -> Result<(), optionstratlib::error::Error> {
         Positive::ONE,      // implied_volatility
         Decimal::ZERO,      // risk_free_rate
         Positive::ZERO,     // dividend_yield
-        pos_or_panic!(1.0), // quantity
+        Positive::ONE, // quantity
         Positive::ZERO,     // premium_short_call
         Positive::ZERO,     // premium_short_put
         pos_or_panic!(2.2), // open_fee_short_call

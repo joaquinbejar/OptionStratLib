@@ -1584,7 +1584,7 @@ mod tests_strategies_extended {
         impl BasicAble for TestStrategy {}
         impl Strategies for TestStrategy {
             fn get_max_profit(&self) -> Result<Positive, StrategyError> {
-                Ok(pos_or_panic!(100.0))
+                Ok(Positive::HUNDRED)
             }
         }
 
@@ -1746,14 +1746,14 @@ mod tests_best_range_to_show {
 
     impl Strategies for TestStrategy {
         fn get_max_min_strikes(&self) -> Result<(Positive, Positive), StrategyError> {
-            Ok((pos_or_panic!(90.0), pos_or_panic!(100.0)))
+            Ok((pos_or_panic!(90.0), Positive::HUNDRED))
         }
     }
 
     #[test]
     fn test_basic_range_with_step() {
         let strategy = TestStrategy::new(
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             vec![pos_or_panic!(90.0), pos_or_panic!(110.0)],
         );
         let range = strategy.get_best_range_to_show(pos_or_panic!(5.0)).unwrap();
@@ -1764,18 +1764,18 @@ mod tests_best_range_to_show {
     #[test]
     fn test_range_with_small_step() {
         let strategy = TestStrategy::new(
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             vec![pos_or_panic!(95.0), pos_or_panic!(105.0)],
         );
-        let range = strategy.get_best_range_to_show(pos_or_panic!(1.0)).unwrap();
+        let range = strategy.get_best_range_to_show(Positive::ONE).unwrap();
         assert!(!range.is_empty());
-        assert_eq!(range[1] - range[0], pos_or_panic!(1.0));
+        assert_eq!(range[1] - range[0], Positive::ONE);
     }
 
     #[test]
     fn test_range_boundaries() {
         let strategy = TestStrategy::new(
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             vec![pos_or_panic!(90.0), pos_or_panic!(110.0)],
         );
         let range = strategy.get_best_range_to_show(pos_or_panic!(5.0)).unwrap();
@@ -1786,7 +1786,7 @@ mod tests_best_range_to_show {
     #[test]
     fn test_range_step_size() {
         let strategy = TestStrategy::new(
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             vec![pos_or_panic!(90.0), pos_or_panic!(110.0)],
         );
         let step = pos_or_panic!(5.0);
@@ -1799,7 +1799,7 @@ mod tests_best_range_to_show {
 
     #[test]
     fn test_range_includes_underlying() {
-        let underlying_price = pos_or_panic!(100.0);
+        let underlying_price = Positive::HUNDRED;
         let strategy = TestStrategy::new(
             underlying_price,
             vec![pos_or_panic!(90.0), pos_or_panic!(110.0)],
@@ -1813,7 +1813,7 @@ mod tests_best_range_to_show {
     #[test]
     fn test_range_with_extreme_values() {
         let strategy = TestStrategy::new(
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             vec![pos_or_panic!(50.0), pos_or_panic!(150.0)],
         );
         let range = strategy
@@ -1871,7 +1871,7 @@ mod tests_range_to_show {
     #[test]
     fn test_basic_range() {
         let strategy = TestStrategy::new(
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             vec![pos_or_panic!(90.0), pos_or_panic!(110.0)],
         );
         let (start, end) = strategy.get_range_to_show().unwrap();
@@ -1882,7 +1882,7 @@ mod tests_range_to_show {
     #[test]
     fn test_range_with_far_strikes() {
         let strategy = TestStrategy::new(
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             vec![pos_or_panic!(90.0), pos_or_panic!(110.0)],
         );
         let (start, end) = strategy.get_range_to_show().unwrap();
@@ -1937,7 +1937,7 @@ mod tests_range_of_profit {
 
     #[test]
     fn test_single_break_even_point() {
-        let strategy = TestStrategy::new(vec![pos_or_panic!(100.0)]);
+        let strategy = TestStrategy::new(vec![Positive::HUNDRED]);
         assert_eq!(strategy.get_range_of_profit().unwrap(), Positive::INFINITY);
     }
 
@@ -1951,7 +1951,7 @@ mod tests_range_of_profit {
     fn test_multiple_break_even_points() {
         let strategy = TestStrategy::new(vec![
             pos_or_panic!(80.0),
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             pos_or_panic!(120.0),
         ]);
         assert_eq!(strategy.get_range_of_profit().unwrap(), pos_or_panic!(40.0));
@@ -1962,7 +1962,7 @@ mod tests_range_of_profit {
         let strategy = TestStrategy::new(vec![
             pos_or_panic!(120.0),
             pos_or_panic!(80.0),
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
         ]);
         assert_eq!(strategy.get_range_of_profit().unwrap(), pos_or_panic!(40.0));
     }
@@ -2018,7 +2018,7 @@ mod tests_optimizable {
     fn test_is_valid_long_option() {
         let strategy = TestOptimizableStrategy;
         let option_data = OptionData::new(
-            pos_or_panic!(100.0), // strike_price
+            Positive::HUNDRED, // strike_price
             spos!(5.0),           // call_bid
             spos!(5.5),           // call_ask
             spos!(4.0),           // put_bid
@@ -2049,7 +2049,7 @@ mod tests_optimizable {
     fn test_is_valid_long_option_upper_panic() {
         let strategy = TestOptimizableStrategy;
         let option_data = OptionData::new(
-            pos_or_panic!(100.0), // strike_price
+            Positive::HUNDRED, // strike_price
             spos!(5.0),           // call_bid
             spos!(5.5),           // call_ask
             spos!(4.0),           // put_bid
@@ -2076,7 +2076,7 @@ mod tests_optimizable {
     fn test_is_valid_long_option_lower_panic() {
         let strategy = TestOptimizableStrategy;
         let option_data = OptionData::new(
-            pos_or_panic!(100.0), // strike_price
+            Positive::HUNDRED, // strike_price
             spos!(5.0),           // call_bid
             spos!(5.5),           // call_ask
             spos!(4.0),           // put_bid
@@ -2102,7 +2102,7 @@ mod tests_optimizable {
     fn test_is_valid_short_option() {
         let strategy = TestOptimizableStrategy;
         let option_data = OptionData::new(
-            pos_or_panic!(100.0), // strike_price
+            Positive::HUNDRED, // strike_price
             spos!(5.0),           // call_bid
             spos!(5.5),           // call_ask
             spos!(4.0),           // put_bid
@@ -2133,7 +2133,7 @@ mod tests_optimizable {
     fn test_is_valid_short_option_upper_panic() {
         let strategy = TestOptimizableStrategy;
         let option_data = OptionData::new(
-            pos_or_panic!(100.0), // strike_price
+            Positive::HUNDRED, // strike_price
             spos!(5.0),           // call_bid
             spos!(5.5),           // call_ask
             spos!(4.0),           // put_bid
@@ -2160,7 +2160,7 @@ mod tests_optimizable {
     fn test_is_valid_short_option_lower_panic() {
         let strategy = TestOptimizableStrategy;
         let option_data = OptionData::new(
-            pos_or_panic!(100.0), // strike_price
+            Positive::HUNDRED, // strike_price
             spos!(5.0),           // call_bid
             spos!(5.5),           // call_ask
             spos!(4.0),           // put_bid
@@ -2234,7 +2234,7 @@ mod tests_strategy_net_operations {
             option_long,
             Positive::ONE,
             Utc.with_ymd_and_hms(2024, 1, 1, 0, 0, 0).unwrap(),
-            pos_or_panic!(1.0),
+            Positive::ONE,
             pos_or_panic!(0.5),
             None,
             None,
@@ -2243,7 +2243,7 @@ mod tests_strategy_net_operations {
             option_short,
             Positive::ONE,
             Utc.with_ymd_and_hms(2024, 1, 1, 0, 0, 0).unwrap(),
-            pos_or_panic!(1.0),
+            Positive::ONE,
             pos_or_panic!(0.5),
             None,
             None,
@@ -2267,7 +2267,7 @@ mod tests_strategy_net_operations {
             option_long,
             Positive::ONE,
             fixed_date,
-            pos_or_panic!(1.0),
+            Positive::ONE,
             pos_or_panic!(0.5),
             None,
             None,
@@ -2276,7 +2276,7 @@ mod tests_strategy_net_operations {
             option_short,
             Positive::ONE,
             fixed_date,
-            pos_or_panic!(1.0),
+            Positive::ONE,
             pos_or_panic!(0.5),
             None,
             None,
@@ -2298,7 +2298,7 @@ mod tests_strategy_net_operations {
             option,
             Positive::ONE,
             fixed_date,
-            pos_or_panic!(1.0),
+            Positive::ONE,
             pos_or_panic!(0.5),
             None,
             None,

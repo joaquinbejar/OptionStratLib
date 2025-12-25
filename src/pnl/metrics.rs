@@ -431,6 +431,7 @@ mod tests_pnl_metrics {
     use chrono::Utc;
     use num_traits::FromPrimitive;
     use std::fs;
+    use positive::pos_or_panic;
     use tempfile::tempdir;
 
     #[test]
@@ -489,7 +490,7 @@ mod tests_pnl_metrics {
             win: true,
             step_number: 5,
             step_duration: pos_or_panic!(1.5),
-            max_unrealized_pnl: pos_or_panic!(100.0),
+            max_unrealized_pnl: Positive::HUNDRED,
             min_unrealized_pnl: pos_or_panic!(50.0),
             winning_steps: 3,
             losing_steps: 2,
@@ -497,12 +498,12 @@ mod tests_pnl_metrics {
             final_price: pos_or_panic!(105.0),
             strikes: vec![
                 pos_or_panic!(90.0),
-                pos_or_panic!(100.0),
+                Positive::HUNDRED,
                 pos_or_panic!(110.0),
             ],
-            initial_volumes: vec![pos_or_panic!(1.0), pos_or_panic!(2.0), pos_or_panic!(3.0)],
+            initial_volumes: vec![Positive::ONE, Positive::TWO, pos_or_panic!(3.0)],
             final_volumes: vec![pos_or_panic!(0.5), pos_or_panic!(1.5), pos_or_panic!(2.5)],
-            delta_adjustments: pos_or_panic!(2.0),
+            delta_adjustments: Positive::TWO,
             ..Default::default()
         };
 
@@ -536,7 +537,7 @@ mod tests_pnl_metrics {
         let metrics_step1 = PnLMetricsStep {
             step_number: 1,
             win: true,
-            initial_price: pos_or_panic!(100.0),
+            initial_price: Positive::HUNDRED,
             final_price: pos_or_panic!(105.0),
             ..Default::default()
         };
@@ -564,7 +565,7 @@ mod tests_pnl_metrics {
         assert_eq!(loaded_metrics.len(), 2);
         assert_eq!(loaded_metrics[0].step_number, 1);
         assert!(loaded_metrics[0].win);
-        assert_eq!(loaded_metrics[0].initial_price, pos_or_panic!(100.0));
+        assert_eq!(loaded_metrics[0].initial_price, Positive::HUNDRED);
         assert_eq!(loaded_metrics[0].final_price, pos_or_panic!(105.0));
         assert_eq!(loaded_metrics[1].step_number, 2);
         assert!(!loaded_metrics[1].win);
@@ -581,7 +582,7 @@ mod tests_pnl_metrics {
         let metrics_step = PnLMetricsStep {
             step_number: 1,
             win: true,
-            initial_price: pos_or_panic!(100.0),
+            initial_price: Positive::HUNDRED,
             final_price: pos_or_panic!(110.0),
             ..Default::default()
         };
@@ -610,7 +611,7 @@ mod tests_pnl_metrics {
         assert_eq!(document.metrics.len(), 1);
         assert_eq!(document.metrics[0].step_number, 1);
         assert!(document.metrics[0].win);
-        assert_eq!(document.metrics[0].initial_price, pos_or_panic!(100.0));
+        assert_eq!(document.metrics[0].initial_price, Positive::HUNDRED);
         assert_eq!(document.metrics[0].final_price, pos_or_panic!(110.0));
     }
 
@@ -805,6 +806,7 @@ mod tests_pnl_metrics_serialization {
     use super::*;
     use chrono::{TimeZone, Utc};
     use num_traits::FromPrimitive;
+    use positive::pos_or_panic;
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
 
@@ -825,7 +827,7 @@ mod tests_pnl_metrics_serialization {
             final_price: pos_or_panic!(105.25),
             strikes: vec![
                 pos_or_panic!(90.0),
-                pos_or_panic!(100.0),
+                Positive::HUNDRED,
                 pos_or_panic!(110.0),
             ],
             initial_volumes: vec![pos_or_panic!(1.5), pos_or_panic!(2.5), pos_or_panic!(3.5)],
@@ -872,7 +874,7 @@ mod tests_pnl_metrics_serialization {
         // Check arrays are preserved correctly
         assert_eq!(deserialized.strikes.len(), 3);
         assert_eq!(deserialized.strikes[0], pos_or_panic!(90.0));
-        assert_eq!(deserialized.strikes[1], pos_or_panic!(100.0));
+        assert_eq!(deserialized.strikes[1], Positive::HUNDRED);
         assert_eq!(deserialized.strikes[2], pos_or_panic!(110.0));
 
         assert_eq!(deserialized.initial_volumes.len(), 3);
@@ -963,7 +965,7 @@ mod tests_pnl_metrics_serialization {
         let metrics_step1 = PnLMetricsStep {
             step_number: 1,
             win: true,
-            initial_price: pos_or_panic!(100.0),
+            initial_price: Positive::HUNDRED,
             final_price: pos_or_panic!(105.0),
             ..Default::default()
         };
@@ -1017,7 +1019,7 @@ mod tests_pnl_metrics_serialization {
         assert_eq!(deserialized.metrics.len(), 2);
         assert_eq!(deserialized.metrics[0].step_number, 1);
         assert!(deserialized.metrics[0].win);
-        assert_eq!(deserialized.metrics[0].initial_price, pos_or_panic!(100.0));
+        assert_eq!(deserialized.metrics[0].initial_price, Positive::HUNDRED);
         assert_eq!(deserialized.metrics[0].final_price, pos_or_panic!(105.0));
         assert_eq!(deserialized.metrics[1].step_number, 2);
         assert!(!deserialized.metrics[1].win);

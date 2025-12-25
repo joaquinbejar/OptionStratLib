@@ -150,7 +150,7 @@ pub fn units_per_year(time_frame: &TimeFrame) -> Positive {
         TimeFrame::Week => Positive(dec!(365.0) / dec!(7.0)),      // 365 / 7
         TimeFrame::Month => pos_or_panic!(12.0),                   // 12
         TimeFrame::Quarter => pos_or_panic!(4.0),                  // 4
-        TimeFrame::Year => pos_or_panic!(1.0),                     // 1
+        TimeFrame::Year => Positive::ONE,                     // 1
         TimeFrame::Custom(periods) => *periods,                    // Custom periods per year
     }
 }
@@ -176,7 +176,7 @@ pub fn units_per_year(time_frame: &TimeFrame) -> Positive {
 ///
 /// // Convert 60 seconds to minutes
 /// let result = convert_time_frame(pos_or_panic!(60.0), &TimeFrame::Second, &TimeFrame::Minute);
-/// assert_pos_relative_eq!(result, pos_or_panic!(1.0), pos_or_panic!(0.0000001));
+/// assert_pos_relative_eq!(result, Positive::ONE, pos_or_panic!(0.0000001));
 ///
 /// // Convert 12 hours to days
 /// let result = convert_time_frame(pos_or_panic!(12.0), &TimeFrame::Hour, &TimeFrame::Day);
@@ -489,7 +489,7 @@ mod tests_timeframe_convert {
     fn test_convert_seconds_to_minutes() {
         let result =
             convert_time_frame(pos_or_panic!(60.0), &TimeFrame::Second, &TimeFrame::Minute);
-        assert_pos_relative_eq!(result, pos_or_panic!(1.0), pos_or_panic!(1e-10));
+        assert_pos_relative_eq!(result, Positive::ONE, pos_or_panic!(1e-10));
     }
 
     #[test]
@@ -501,25 +501,25 @@ mod tests_timeframe_convert {
     #[test]
     fn test_convert_days_to_weeks() {
         let result = convert_time_frame(pos_or_panic!(7.0), &TimeFrame::Day, &TimeFrame::Week);
-        assert_pos_relative_eq!(result, pos_or_panic!(1.0), pos_or_panic!(1e-10));
+        assert_pos_relative_eq!(result, Positive::ONE, pos_or_panic!(1e-10));
     }
 
     #[test]
     fn test_convert_weeks_to_days() {
-        let result = convert_time_frame(pos_or_panic!(2.0), &TimeFrame::Week, &TimeFrame::Day);
+        let result = convert_time_frame(Positive::TWO, &TimeFrame::Week, &TimeFrame::Day);
         assert_pos_relative_eq!(result, pos_or_panic!(14.0), pos_or_panic!(1e-10));
     }
 
     #[test]
     fn test_convert_months_to_quarters() {
         let result = convert_time_frame(pos_or_panic!(3.0), &TimeFrame::Month, &TimeFrame::Quarter);
-        assert_pos_relative_eq!(result, pos_or_panic!(1.0), pos_or_panic!(1e-10));
+        assert_pos_relative_eq!(result, Positive::ONE, pos_or_panic!(1e-10));
     }
 
     #[test]
     fn test_convert_minutes_to_hours() {
         let result = convert_time_frame(pos_or_panic!(120.0), &TimeFrame::Minute, &TimeFrame::Hour);
-        assert_pos_relative_eq!(result, pos_or_panic!(2.0), pos_or_panic!(1e-10));
+        assert_pos_relative_eq!(result, Positive::TWO, pos_or_panic!(1e-10));
     }
 
     #[test]
@@ -535,11 +535,11 @@ mod tests_timeframe_convert {
     #[test]
     fn test_convert_day_to_custom() {
         let result = convert_time_frame(
-            pos_or_panic!(2.0),
+            Positive::TWO,
             &TimeFrame::Day,
             &TimeFrame::Custom(pos_or_panic!(365.0)),
         );
-        assert_pos_relative_eq!(result, pos_or_panic!(2.0), pos_or_panic!(1e-10));
+        assert_pos_relative_eq!(result, Positive::TWO, pos_or_panic!(1e-10));
     }
 
     #[test]
@@ -566,7 +566,7 @@ mod tests_timeframe_convert {
             &TimeFrame::Millisecond,
             &TimeFrame::Second,
         );
-        assert_pos_relative_eq!(result, pos_or_panic!(1.0), pos_or_panic!(1e-10));
+        assert_pos_relative_eq!(result, Positive::ONE, pos_or_panic!(1e-10));
     }
 
     #[test]

@@ -76,7 +76,7 @@ pub enum ExitPolicy {
     /// # Example
     /// ```ignore
     /// // Exit when premium exceeds $100
-    /// ExitPolicy::MaxPrice(pos_or_panic!(100.0))
+    /// ExitPolicy::MaxPrice(Positive::HUNDRED)
     /// ```
     MaxPrice(Positive),
 
@@ -94,7 +94,7 @@ pub enum ExitPolicy {
     /// # Example
     /// ```ignore
     /// // Exit when less than 2 days remain
-    /// ExitPolicy::DaysToExpiration(pos_or_panic!(2.0))
+    /// ExitPolicy::DaysToExpiration(Positive::TWO)
     /// ```
     DaysToExpiration(Positive),
 
@@ -477,6 +477,7 @@ pub fn check_exit_policy(
 
 #[cfg(test)]
 mod tests {
+    use positive::pos_or_panic;
     use super::*;
 
     use rust_decimal_macros::dec;
@@ -629,9 +630,9 @@ mod tests {
             ExitPolicy::LossPercent(dec!(1.0)),
             ExitPolicy::FixedPrice(pos_or_panic!(50.0)),
             ExitPolicy::MinPrice(pos_or_panic!(5.0)),
-            ExitPolicy::MaxPrice(pos_or_panic!(100.0)),
+            ExitPolicy::MaxPrice(Positive::HUNDRED),
             ExitPolicy::TimeSteps(1000),
-            ExitPolicy::DaysToExpiration(pos_or_panic!(2.0)),
+            ExitPolicy::DaysToExpiration(Positive::TWO),
             ExitPolicy::DeltaThreshold(dec!(0.5)),
             ExitPolicy::UnderlyingPrice(pos_or_panic!(4000.0)),
             ExitPolicy::UnderlyingBelow(pos_or_panic!(3900.0)),

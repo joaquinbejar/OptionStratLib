@@ -47,7 +47,7 @@ fn main() {
     // Price range exit
     let price_range = ExitPolicy::Or(vec![
         ExitPolicy::MinPrice(pos_or_panic!(5.0)),
-        ExitPolicy::MaxPrice(pos_or_panic!(100.0)),
+        ExitPolicy::MaxPrice(Positive::HUNDRED),
     ]);
     info!("6. Price Range Exit (Min OR Max):");
     info!("   {}", price_range);
@@ -78,7 +78,7 @@ fn main() {
             ExitPolicy::TimeSteps(2000),
         ]),
         ExitPolicy::LossPercent(dec!(1.0)),
-        ExitPolicy::DaysToExpiration(pos_or_panic!(1.0)),
+        ExitPolicy::DaysToExpiration(Positive::ONE),
     ]);
     info!("9. Complex Nested Policy:");
     info!("   {}", complex_policy);

@@ -789,16 +789,16 @@ mod tests_simulate {
     fn create_test_short_put() -> ShortPut {
         ShortPut::new(
             "TEST".to_string(),
-            pos_or_panic!(100.0), // strike
+            Positive::HUNDRED, // strike
             ExpirationDate::Days(pos_or_panic!(30.0)),
             pos_or_panic!(0.20),  // implied volatility
-            pos_or_panic!(1.0),   // quantity
-            pos_or_panic!(100.0), // underlying price
+            Positive::ONE,   // quantity
+            Positive::HUNDRED, // underlying price
             dec!(0.05),           // risk-free rate
-            pos_or_panic!(0.0),   // dividend yield
+            Positive::ZERO,   // dividend yield
             pos_or_panic!(5.0),   // premium received
-            pos_or_panic!(0.0),   // open fee
-            pos_or_panic!(0.0),   // close fee
+            Positive::ZERO,   // open fee
+            Positive::ZERO,   // close fee
         )
     }
 
@@ -808,7 +808,7 @@ mod tests_simulate {
             Positive::ONE,
             TimeFrame::Day,
             ExpirationDate::Days(pos_or_panic!(30.0)),
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
         );
 
         WalkParams {
@@ -827,7 +827,7 @@ mod tests_simulate {
     fn test_simulate_profit_percent_exit() {
         let strategy = create_test_short_put();
         let prices = vec![
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             pos_or_panic!(105.0),
             pos_or_panic!(110.0),
             pos_or_panic!(115.0),
@@ -854,7 +854,7 @@ mod tests_simulate {
     fn test_simulate_loss_percent_exit() {
         let strategy = create_test_short_put();
         let prices = vec![
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             pos_or_panic!(95.0),
             pos_or_panic!(90.0),
             pos_or_panic!(85.0),
@@ -881,7 +881,7 @@ mod tests_simulate {
     fn test_simulate_expiration_exit() {
         let strategy = create_test_short_put();
         let prices = vec![
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             pos_or_panic!(101.0),
             pos_or_panic!(102.0),
             pos_or_panic!(103.0),
@@ -908,7 +908,7 @@ mod tests_simulate {
     fn test_simulate_or_exit_policy() {
         let strategy = create_test_short_put();
         let prices = vec![
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             pos_or_panic!(105.0),
             pos_or_panic!(110.0),
             pos_or_panic!(115.0),
@@ -938,7 +938,7 @@ mod tests_simulate {
     fn test_simulate_stats_aggregation() {
         let strategy = create_test_short_put();
         let prices = vec![
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             pos_or_panic!(105.0),
             pos_or_panic!(110.0),
         ];
@@ -967,7 +967,7 @@ mod tests_simulate {
     fn test_simulate_time_steps_exit() {
         let strategy = create_test_short_put();
         let prices = vec![
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             pos_or_panic!(101.0),
             pos_or_panic!(102.0),
             pos_or_panic!(103.0),
@@ -995,7 +995,7 @@ mod tests_simulate {
     fn test_simulate_underlying_below_exit() {
         let strategy = create_test_short_put();
         let prices = vec![
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             pos_or_panic!(95.0),
             pos_or_panic!(90.0),
         ];
@@ -1020,7 +1020,7 @@ mod tests_simulate {
     fn test_simulate_and_exit_policy() {
         let strategy = create_test_short_put();
         let prices = vec![
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             pos_or_panic!(105.0),
             pos_or_panic!(110.0),
             pos_or_panic!(115.0),
@@ -1049,7 +1049,7 @@ mod tests_simulate {
     fn test_simulate_multiple_simulations() {
         let strategy = create_test_short_put();
         let prices = vec![
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             pos_or_panic!(102.0),
             pos_or_panic!(104.0),
         ];
@@ -1076,7 +1076,7 @@ mod tests_simulate {
     fn test_simulate_stats_calculations() {
         let strategy = create_test_short_put();
         let prices = vec![
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             pos_or_panic!(105.0),
             pos_or_panic!(110.0),
         ];
@@ -1107,7 +1107,7 @@ mod tests_simulate {
         let strategy = create_test_short_put();
         // Price stays stable, should expire
         let prices = vec![
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             pos_or_panic!(100.5),
             pos_or_panic!(101.0),
             pos_or_panic!(100.8),
@@ -1140,7 +1140,7 @@ mod tests_simulate {
         let strategy = create_test_short_put();
         // Price rises significantly to trigger profit
         let prices = vec![
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             pos_or_panic!(110.0),
             pos_or_panic!(120.0),
         ];
@@ -1169,7 +1169,7 @@ mod tests_simulate {
         let strategy = create_test_short_put();
         // Price drops significantly to trigger stop loss
         let prices = vec![
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             pos_or_panic!(85.0),
             pos_or_panic!(70.0),
         ];
@@ -1197,10 +1197,10 @@ mod tests_simulate {
     fn test_simulate_premium_tracking() {
         let strategy = create_test_short_put();
         let prices = vec![
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             pos_or_panic!(95.0),
             pos_or_panic!(105.0),
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
         ];
 
         let walk_params = create_walk_params(prices);
@@ -1228,7 +1228,7 @@ mod tests_simulate {
     fn test_simulate_holding_period() {
         let strategy = create_test_short_put();
         let prices = vec![
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             pos_or_panic!(101.0),
             pos_or_panic!(102.0),
         ];
@@ -1257,7 +1257,7 @@ mod tests_simulate {
     fn test_simulate_mixed_results() {
         let strategy = create_test_short_put();
         let prices = vec![
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             pos_or_panic!(102.0),
             pos_or_panic!(98.0),
         ];

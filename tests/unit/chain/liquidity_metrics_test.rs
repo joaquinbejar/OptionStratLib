@@ -31,7 +31,7 @@ fn create_test_chain_with_liquidity() -> OptionChain {
             pos_or_panic!(400.0),
             pos_or_panic!(52.0),
             pos_or_panic!(54.0),
-            pos_or_panic!(2.0),
+            Positive::TWO,
             pos_or_panic!(2.5),
             pos_or_panic!(500.0),
             2500u64,
@@ -121,7 +121,7 @@ fn create_test_chain_with_liquidity() -> OptionChain {
 
 /// Creates an empty option chain for edge case testing
 fn create_empty_chain() -> OptionChain {
-    OptionChain::new("EMPTY", pos_or_panic!(100.0), "2024-12-31".to_string(), None, None)
+    OptionChain::new("EMPTY", Positive::HUNDRED, "2024-12-31".to_string(), None, None)
 }
 
 /// Creates a chain without liquidity data
@@ -455,7 +455,7 @@ mod edge_case_tests {
         let mut chain = create_empty_chain();
 
         let option_data = OptionData::new(
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             spos!(5.0),
             spos!(5.5),
             spos!(5.0),
@@ -468,7 +468,7 @@ mod edge_case_tests {
             Some(5000),
             Some("TEST".to_string()),
             Some(ExpirationDate::Days(pos_or_panic!(30.0))),
-            Some(Box::new(pos_or_panic!(100.0))),
+            Some(Box::new(Positive::HUNDRED)),
             Some(dec!(0.05)),
             spos!(0.02),
             None,
@@ -488,7 +488,7 @@ mod edge_case_tests {
 
         // Option with only volume (no bid/ask, no OI)
         let option_data = OptionData::new(
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             None,
             None,
             None,
@@ -501,7 +501,7 @@ mod edge_case_tests {
             None,
             Some("TEST".to_string()),
             Some(ExpirationDate::Days(pos_or_panic!(30.0))),
-            Some(Box::new(pos_or_panic!(100.0))),
+            Some(Box::new(Positive::HUNDRED)),
             Some(dec!(0.05)),
             None,
             None,
@@ -521,7 +521,7 @@ mod edge_case_tests {
 
         // Option with very wide spread (illiquid)
         let option_data = OptionData::new(
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             spos!(1.0),
             spos!(5.0), // 400% spread!
             None,
@@ -534,7 +534,7 @@ mod edge_case_tests {
             Some(100),
             Some("TEST".to_string()),
             Some(ExpirationDate::Days(pos_or_panic!(30.0))),
-            Some(Box::new(pos_or_panic!(100.0))),
+            Some(Box::new(Positive::HUNDRED)),
             Some(dec!(0.05)),
             spos!(0.02),
             None,
@@ -557,7 +557,7 @@ mod edge_case_tests {
         let strikes_data = [
             (pos_or_panic!(90.0), 100u64),
             (pos_or_panic!(95.0), 500u64),
-            (pos_or_panic!(100.0), 100000u64), // Extreme concentration
+            (Positive::HUNDRED, 100000u64), // Extreme concentration
             (pos_or_panic!(105.0), 500u64),
             (pos_or_panic!(110.0), 100u64),
         ];
@@ -577,7 +577,7 @@ mod edge_case_tests {
                 Some(oi),
                 Some("TEST".to_string()),
                 Some(ExpirationDate::Days(pos_or_panic!(30.0))),
-                Some(Box::new(pos_or_panic!(100.0))),
+                Some(Box::new(Positive::HUNDRED)),
                 Some(dec!(0.05)),
                 spos!(0.02),
                 None,

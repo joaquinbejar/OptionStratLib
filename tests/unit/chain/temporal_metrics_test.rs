@@ -44,7 +44,7 @@ fn create_test_chain() -> OptionChain {
 
 /// Creates an empty option chain for edge case testing
 fn create_empty_chain() -> OptionChain {
-    OptionChain::new("EMPTY", pos_or_panic!(100.0), "2024-12-31".to_string(), None, None)
+    OptionChain::new("EMPTY", Positive::HUNDRED, "2024-12-31".to_string(), None, None)
 }
 
 // ============================================================================
@@ -352,7 +352,7 @@ mod edge_case_tests {
     fn test_near_expiration_theta() {
         let chain = create_test_chain();
         let price_range = (pos_or_panic!(400.0), pos_or_panic!(500.0));
-        let days = vec![pos_or_panic!(1.0), pos_or_panic!(2.0), pos_or_panic!(3.0)];
+        let days = vec![Positive::ONE, Positive::TWO, pos_or_panic!(3.0)];
 
         let result = chain.theta_surface(price_range, days, 5);
         assert!(result.is_ok());
@@ -362,7 +362,7 @@ mod edge_case_tests {
     fn test_near_expiration_charm() {
         let chain = create_test_chain();
         let price_range = (pos_or_panic!(400.0), pos_or_panic!(500.0));
-        let days = vec![pos_or_panic!(1.0), pos_or_panic!(2.0), pos_or_panic!(3.0)];
+        let days = vec![Positive::ONE, Positive::TWO, pos_or_panic!(3.0)];
 
         let result = chain.charm_surface(price_range, days, 5);
         assert!(result.is_ok());
@@ -372,7 +372,7 @@ mod edge_case_tests {
     fn test_near_expiration_color() {
         let chain = create_test_chain();
         let price_range = (pos_or_panic!(400.0), pos_or_panic!(500.0));
-        let days = vec![pos_or_panic!(1.0), pos_or_panic!(2.0), pos_or_panic!(3.0)];
+        let days = vec![Positive::ONE, Positive::TWO, pos_or_panic!(3.0)];
 
         let result = chain.color_surface(price_range, days, 5);
         assert!(result.is_ok());

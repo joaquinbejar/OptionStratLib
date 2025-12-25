@@ -781,16 +781,16 @@ mod tests_simulate {
     fn create_test_long_call() -> LongCall {
         LongCall::new(
             "TEST".to_string(),
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             ExpirationDate::Days(pos_or_panic!(30.0)),
             pos_or_panic!(0.20),
-            pos_or_panic!(1.0),
-            pos_or_panic!(100.0),
+            Positive::ONE,
+            Positive::HUNDRED,
             dec!(0.05),
-            pos_or_panic!(0.0),
+            Positive::ZERO,
             pos_or_panic!(5.0),
-            pos_or_panic!(0.0),
-            pos_or_panic!(0.0),
+            Positive::ZERO,
+            Positive::ZERO,
         )
     }
 
@@ -799,7 +799,7 @@ mod tests_simulate {
             Positive::ONE,
             TimeFrame::Day,
             ExpirationDate::Days(pos_or_panic!(30.0)),
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
         );
         WalkParams {
             size: prices.len(),
@@ -817,7 +817,7 @@ mod tests_simulate {
     fn test_simulate_profit_percent_exit() {
         let strategy = create_test_long_call();
         let prices = vec![
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             pos_or_panic!(105.0),
             pos_or_panic!(110.0),
             pos_or_panic!(115.0),
@@ -834,7 +834,7 @@ mod tests_simulate {
     fn test_simulate_expiration_exit() {
         let strategy = create_test_long_call();
         let prices = vec![
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             pos_or_panic!(101.0),
             pos_or_panic!(102.0),
         ];
@@ -850,7 +850,7 @@ mod tests_simulate {
     fn test_simulate_stats_aggregation() {
         let strategy = create_test_long_call();
         let prices = vec![
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             pos_or_panic!(105.0),
             pos_or_panic!(110.0),
         ];

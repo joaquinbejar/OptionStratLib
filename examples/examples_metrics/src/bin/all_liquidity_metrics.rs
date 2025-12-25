@@ -15,8 +15,8 @@
 //! ## Output
 //! All graphs are saved to `./Draws/Metrics/`
 
-use optionstratlib::chains::OptionData;
 use optionstratlib::chains::chain::OptionChain;
+use optionstratlib::chains::OptionData;
 use optionstratlib::error::CurveError;
 use optionstratlib::metrics::{
     BidAskSpreadCurve, OpenInterestCurve, VolumeProfileCurve, VolumeProfileSurface,
@@ -47,7 +47,7 @@ fn main() -> Result<(), CurveError> {
             pos_or_panic!(71.0),
             pos_or_panic!(73.0),
             pos_or_panic!(0.5),
-            pos_or_panic!(1.0),
+            Positive::ONE,
             pos_or_panic!(500.0),
             2500u64,
         ),
@@ -56,7 +56,7 @@ fn main() -> Result<(), CurveError> {
             pos_or_panic!(52.0),
             pos_or_panic!(53.5),
             pos_or_panic!(1.5),
-            pos_or_panic!(2.0),
+            Positive::TWO,
             pos_or_panic!(1500.0),
             15000u64,
         ),
@@ -258,7 +258,7 @@ fn main() -> Result<(), CurveError> {
     tracing::info!("   Shows volume evolution across strike and time");
 
     let days = vec![
-        pos_or_panic!(1.0),
+        Positive::ONE,
         pos_or_panic!(5.0),
         pos_or_panic!(10.0),
         pos_or_panic!(15.0),

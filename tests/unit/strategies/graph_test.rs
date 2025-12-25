@@ -27,10 +27,10 @@ fn create_test_long_put() -> LongPut {
         OptionType::European,
         Side::Long,
         "AAPL".to_string(),
-        pos_or_panic!(100.0), // Strike price
+        Positive::HUNDRED, // Strike price
         ExpirationDate::Days(pos_or_panic!(30.0)),
         pos_or_panic!(0.3),  // Implied volatility
-        pos_or_panic!(1.0),  // Quantity
+        Positive::ONE,  // Quantity
         pos_or_panic!(95.0), // Underlying price
         dec!(0.02),          // Risk-free rate
         OptionStyle::Put,    // Put option
@@ -72,10 +72,10 @@ fn create_test_short_call() -> ShortCall {
         OptionType::European,
         Side::Short, // Short side
         "AAPL".to_string(),
-        pos_or_panic!(100.0), // Strike price
+        Positive::HUNDRED, // Strike price
         ExpirationDate::Days(pos_or_panic!(30.0)),
         pos_or_panic!(0.3),  // Implied volatility
-        pos_or_panic!(1.0),  // Quantity
+        Positive::ONE,  // Quantity
         pos_or_panic!(95.0), // Underlying price
         dec!(0.02),          // Risk-free rate
         OptionStyle::Call,   // Call option

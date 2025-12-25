@@ -64,7 +64,7 @@ use statrs::distribution::{ContinuousCDF, Normal};
 /// use optionstratlib::greeks::d1;
 /// use optionstratlib::{pos_or_panic, Positive};
 ///
-/// let underlying_price = pos_or_panic!(100.0);
+/// let underlying_price = Positive::HUNDRED;
 /// let strike_price = pos_or_panic!(95.0);
 /// let risk_free_rate = dec!(0.05);
 /// let expiration_date = pos_or_panic!(0.5); // 6 months
@@ -507,8 +507,8 @@ pub fn calculate_delta_neutral_sizes(
 
 #[cfg(test)]
 mod tests_calculate_delta_neutral_sizes {
+    use positive::{assert_pos_relative_eq, pos_or_panic};
     use super::*;
-    use crate::assert_pos_relative_eq;
     use rust_decimal_macros::dec;
 
     #[test]
@@ -549,6 +549,7 @@ mod tests_calculate_d_values {
     use crate::model::types::{OptionStyle, OptionType, Side};
 
     use approx::assert_relative_eq;
+    use positive::pos_or_panic;
     use rust_decimal_macros::dec;
 
     #[test]
@@ -558,11 +559,11 @@ mod tests_calculate_d_values {
             side: Side::Long,
             underlying_symbol: "".to_string(),
             strike_price: pos_or_panic!(110.0),
-            underlying_price: pos_or_panic!(100.0),
+            underlying_price: Positive::HUNDRED,
             risk_free_rate: dec!(0.05),
             implied_volatility: pos_or_panic!(10.12),
             expiration_date: Default::default(),
-            quantity: pos_or_panic!(1.0),
+            quantity: Positive::ONE,
             option_style: OptionStyle::Call,
             dividend_yield: Positive::ZERO,
             exotic_params: None,
@@ -588,14 +589,15 @@ mod tests_src_greeks_utils {
 
     use approx::assert_relative_eq;
     use num_traits::FloatConst;
+    use positive::pos_or_panic;
     use rust_decimal_macros::dec;
     use statrs::distribution::ContinuousCDF;
     use statrs::distribution::Normal;
 
     #[test]
     fn test_d1_zero_sigma() {
-        let s = pos_or_panic!(100.0);
-        let k = pos_or_panic!(100.0);
+        let s = Positive::HUNDRED;
+        let k = Positive::HUNDRED;
         let r = dec!(0.05);
         let t = Positive::ONE;
         let sigma = Positive::ZERO;
@@ -604,8 +606,8 @@ mod tests_src_greeks_utils {
 
     #[test]
     fn test_d1_zero_t() {
-        let s = pos_or_panic!(100.0);
-        let k = pos_or_panic!(100.0);
+        let s = Positive::HUNDRED;
+        let k = Positive::HUNDRED;
         let r = dec!(0.05);
         let t = Positive::ZERO;
         let sigma = pos_or_panic!(0.01);
@@ -614,7 +616,7 @@ mod tests_src_greeks_utils {
 
     #[test]
     fn test_d2_bis_i() {
-        let s = pos_or_panic!(100.0);
+        let s = Positive::HUNDRED;
         let k = pos_or_panic!(110.0);
         let r = dec!(0.05);
         let t = Positive::TWO;
@@ -627,7 +629,7 @@ mod tests_src_greeks_utils {
 
     #[test]
     fn test_d2_bis_ii() {
-        let s = pos_or_panic!(100.0);
+        let s = Positive::HUNDRED;
         let k = pos_or_panic!(95.0);
         let r = dec!(0.15);
         let t = Positive::ONE;
@@ -640,8 +642,8 @@ mod tests_src_greeks_utils {
 
     #[test]
     fn test_d2_zero_sigma() {
-        let s = pos_or_panic!(100.0);
-        let k = pos_or_panic!(100.0);
+        let s = Positive::HUNDRED;
+        let k = Positive::HUNDRED;
         let r = Decimal::ZERO;
         let t = Positive::ONE;
         let sigma = Positive::ZERO;
@@ -650,8 +652,8 @@ mod tests_src_greeks_utils {
 
     #[test]
     fn test_d2_zero_t() {
-        let s = pos_or_panic!(100.0);
-        let k = pos_or_panic!(100.0);
+        let s = Positive::HUNDRED;
+        let k = Positive::HUNDRED;
         let r = dec!(0.02);
         let t = Positive::ZERO;
         let sigma = pos_or_panic!(0.01);
@@ -694,6 +696,7 @@ mod tests_src_greeks_utils {
 
 #[cfg(test)]
 mod calculate_d1_values {
+    use positive::pos_or_panic;
     use super::*;
 
     use rust_decimal_macros::dec;
@@ -701,8 +704,8 @@ mod calculate_d1_values {
     #[test]
     fn test_d1_zero_volatility() {
         // Case where volatility (sigma) is zero
-        let underlying_price = pos_or_panic!(100.0);
-        let strike_price = pos_or_panic!(100.0);
+        let underlying_price = Positive::HUNDRED;
+        let strike_price = Positive::HUNDRED;
         let risk_free_rate = dec!(0.05);
         let expiration_date = Positive::ONE;
         let implied_volatility = Positive::ZERO;
@@ -723,8 +726,8 @@ mod calculate_d1_values {
     #[test]
     fn test_d1_zero_time_to_expiry() {
         // Case where time to expiry is zero
-        let underlying_price = pos_or_panic!(100.0);
-        let strike_price = pos_or_panic!(100.0);
+        let underlying_price = Positive::HUNDRED;
+        let strike_price = Positive::HUNDRED;
         let risk_free_rate = dec!(0.05);
         let expiration_date = Positive::ZERO;
         let implied_volatility = pos_or_panic!(0.2);
@@ -745,11 +748,11 @@ mod calculate_d1_values {
     #[test]
     fn test_d1_high_volatility() {
         // Case with extremely high volatility
-        let underlying_price = pos_or_panic!(100.0);
-        let strike_price = pos_or_panic!(100.0);
+        let underlying_price = Positive::HUNDRED;
+        let strike_price = Positive::HUNDRED;
         let risk_free_rate = dec!(0.05);
         let expiration_date = Positive::ONE;
-        let implied_volatility = pos_or_panic!(100.0); // Very high volatility
+        let implied_volatility = Positive::HUNDRED; // Very high volatility
 
         // High volatility should result in a small or large value for d1
         let calculated_d1 = d1(
@@ -774,7 +777,7 @@ mod calculate_d1_values {
     fn test_d1_high_underlying_price() {
         // Case with extremely high underlying price
         let underlying_price = Positive::INFINITY; // Very high stock price
-        let strike_price = pos_or_panic!(100.0);
+        let strike_price = Positive::HUNDRED;
         let risk_free_rate = dec!(0.05);
         let expiration_date = Positive::ONE;
         let implied_volatility = pos_or_panic!(0.2);
@@ -796,7 +799,7 @@ mod calculate_d1_values {
     fn test_d1_low_underlying_price() {
         // Case with extremely low underlying price (near zero)
         let underlying_price = pos_or_panic!(0.01); // Very low stock price
-        let strike_price = pos_or_panic!(100.0);
+        let strike_price = Positive::HUNDRED;
         let risk_free_rate = dec!(0.05);
         let expiration_date = Positive::ONE;
         let implied_volatility = pos_or_panic!(0.2);
@@ -823,7 +826,7 @@ mod calculate_d1_values {
     #[test]
     fn test_d1_zero_strike_price() {
         // Case where strike price is zero
-        let underlying_price = pos_or_panic!(100.0);
+        let underlying_price = Positive::HUNDRED;
         let strike_price = Positive::ZERO;
         let risk_free_rate = dec!(0.05);
         let expiration_date = Positive::ONE;
@@ -845,8 +848,8 @@ mod calculate_d1_values {
     #[test]
     fn test_d1_infinite_risk_free_rate() {
         // Case where risk-free rate is very high (infinite-like)
-        let underlying_price = pos_or_panic!(100.0);
-        let strike_price = pos_or_panic!(100.0);
+        let underlying_price = Positive::HUNDRED;
+        let strike_price = Positive::HUNDRED;
         let risk_free_rate = Decimal::MAX; // Very high risk-free rate
         let expiration_date = Positive::ONE;
         let implied_volatility = pos_or_panic!(0.2);
@@ -871,6 +874,7 @@ mod calculate_d1_values_bis {
     use crate::error::greeks::{GreeksError, InputErrorKind};
 
     use approx::assert_relative_eq;
+    use positive::pos_or_panic;
     use rust_decimal_macros::dec;
 
     // Helper function to convert Decimal to f64 for testing
@@ -881,7 +885,7 @@ mod calculate_d1_values_bis {
     #[test]
     fn test_d1_basic_calculation() {
         let result = d1(
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             pos_or_panic!(90.0),
             dec!(0.05),
             Positive::ONE,
@@ -912,7 +916,7 @@ mod calculate_d1_values_bis {
     fn test_d1_out_of_the_money() {
         let result = d1(
             pos_or_panic!(90.0),
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             dec!(0.05),
             Positive::ONE,
             pos_or_panic!(0.2),
@@ -926,7 +930,7 @@ mod calculate_d1_values_bis {
     #[test]
     fn test_d1_zero_strike_error() {
         let result = d1(
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             Positive::ZERO,
             dec!(0.05),
             Positive::ONE,
@@ -944,8 +948,8 @@ mod calculate_d1_values_bis {
     #[test]
     fn test_d1_zero_volatility_error() {
         let result = d1(
-            pos_or_panic!(100.0),
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
+            Positive::HUNDRED,
             dec!(0.05),
             Positive::ONE,
             Positive::ZERO,
@@ -962,8 +966,8 @@ mod calculate_d1_values_bis {
     #[test]
     fn test_d1_zero_time_error() {
         let result = d1(
-            pos_or_panic!(100.0),
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
+            Positive::HUNDRED,
             dec!(0.05),
             Positive::ZERO,
             pos_or_panic!(0.2),
@@ -978,8 +982,8 @@ mod calculate_d1_values_bis {
     #[test]
     fn test_d1_short_expiry() {
         let result = d1(
-            pos_or_panic!(100.0),
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
+            Positive::HUNDRED,
             dec!(0.05),
             pos_or_panic!(0.0833), // approximately one month
             pos_or_panic!(0.05),
@@ -993,8 +997,8 @@ mod calculate_d1_values_bis {
     #[test]
     fn test_d1_high_volatility() {
         let result = d1(
-            pos_or_panic!(100.0),
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
+            Positive::HUNDRED,
             dec!(0.05),
             Positive::ONE,
             pos_or_panic!(0.5), // 50% volatility
@@ -1008,8 +1012,8 @@ mod calculate_d1_values_bis {
     #[test]
     fn test_d1_zero_interest_rate() {
         let result = d1(
-            pos_or_panic!(100.0),
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
+            Positive::HUNDRED,
             dec!(0.0),
             Positive::ONE,
             pos_or_panic!(0.5),
@@ -1023,8 +1027,8 @@ mod calculate_d1_values_bis {
     #[test]
     fn test_d1_negative_interest_rate() {
         let result = d1(
-            pos_or_panic!(100.0),
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
+            Positive::HUNDRED,
             dec!(-0.02), // negative interest rate
             Positive::ONE,
             pos_or_panic!(0.5),
@@ -1038,8 +1042,8 @@ mod calculate_d1_values_bis {
     #[test]
     fn test_d1_negative_interest_rate_bis() {
         let result = d1(
-            pos_or_panic!(100.0),
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
+            Positive::HUNDRED,
             dec!(-0.02), // negative interest rate
             Positive::ONE,
             pos_or_panic!(0.5),
@@ -1053,6 +1057,7 @@ mod calculate_d1_values_bis {
 
 #[cfg(test)]
 mod calculate_d2_values {
+    use positive::pos_or_panic;
     use super::*;
 
     use rust_decimal_macros::dec;
@@ -1060,8 +1065,8 @@ mod calculate_d2_values {
     #[test]
     fn test_d2_zero_volatility() {
         // Case where volatility (implied_volatility) is zero
-        let underlying_price = pos_or_panic!(100.0);
-        let strike_price = pos_or_panic!(100.0);
+        let underlying_price = Positive::HUNDRED;
+        let strike_price = Positive::HUNDRED;
         let risk_free_rate = dec!(0.05);
         let expiration_date = Positive::ONE;
         let implied_volatility = Positive::ZERO;
@@ -1082,8 +1087,8 @@ mod calculate_d2_values {
     #[test]
     fn test_d2_zero_time_to_expiry() {
         // Case where time to expiration is zero
-        let underlying_price = pos_or_panic!(100.0);
-        let strike_price = pos_or_panic!(100.0);
+        let underlying_price = Positive::HUNDRED;
+        let strike_price = Positive::HUNDRED;
         let risk_free_rate = dec!(0.05);
         let expiration_date = Positive::ZERO;
         let implied_volatility = pos_or_panic!(0.2);
@@ -1104,11 +1109,11 @@ mod calculate_d2_values {
     #[test]
     fn test_d2_high_volatility() {
         // Case with extremely high volatility
-        let underlying_price = pos_or_panic!(100.0);
-        let strike_price = pos_or_panic!(100.0);
+        let underlying_price = Positive::HUNDRED;
+        let strike_price = Positive::HUNDRED;
         let risk_free_rate = dec!(0.05);
         let expiration_date = Positive::ONE;
-        let implied_volatility = pos_or_panic!(100.0); // Very high volatility
+        let implied_volatility = Positive::HUNDRED; // Very high volatility
 
         // High volatility should result in a significant negative shift in d2
         let calculated_d2 = d2(
@@ -1133,7 +1138,7 @@ mod calculate_d2_values {
     fn test_d2_high_underlying_price() {
         // Case with extremely high underlying price
         let underlying_price = Positive::INFINITY;
-        let strike_price = pos_or_panic!(100.0);
+        let strike_price = Positive::HUNDRED;
         let risk_free_rate = dec!(0.05);
         let expiration_date = Positive::ONE;
         let implied_volatility = pos_or_panic!(0.2);
@@ -1155,7 +1160,7 @@ mod calculate_d2_values {
     fn test_d2_low_underlying_price() {
         // Case with extremely low underlying price (near zero)
         let underlying_price = pos_or_panic!(0.01);
-        let strike_price = pos_or_panic!(100.0);
+        let strike_price = Positive::HUNDRED;
         let risk_free_rate = dec!(0.05);
         let expiration_date = Positive::ONE;
         let implied_volatility = pos_or_panic!(0.2);
@@ -1182,7 +1187,7 @@ mod calculate_d2_values {
     #[test]
     fn test_d2_zero_strike_price() {
         // Case where strike price is zero
-        let underlying_price = pos_or_panic!(100.0);
+        let underlying_price = Positive::HUNDRED;
         let strike_price = Positive::ZERO;
         let risk_free_rate = dec!(0.05);
         let expiration_date = Positive::ONE;
@@ -1204,8 +1209,8 @@ mod calculate_d2_values {
     #[test]
     fn test_d2_infinite_risk_free_rate() {
         // Case where risk-free rate is very high (infinite-like)
-        let underlying_price = pos_or_panic!(100.0);
-        let strike_price = pos_or_panic!(100.0);
+        let underlying_price = Positive::HUNDRED;
+        let strike_price = Positive::HUNDRED;
         let risk_free_rate = Decimal::MAX; // Very high risk-free rate
         let expiration_date = Positive::ONE;
         let implied_volatility = pos_or_panic!(0.2);
@@ -1229,6 +1234,7 @@ mod calculate_d2_values_bis {
     use super::*;
     use crate::assert_decimal_eq;
     use approx::assert_relative_eq;
+    use positive::pos_or_panic;
     use rust_decimal_macros::dec;
 
     const EPSILON: Decimal = dec!(0.0001);
@@ -1236,8 +1242,8 @@ mod calculate_d2_values_bis {
     #[test]
     fn test_d2_atm_option() {
         let result = d2(
-            pos_or_panic!(100.0),
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
+            Positive::HUNDRED,
             dec!(0.05),
             Positive::ONE,
             pos_or_panic!(0.2),
@@ -1250,7 +1256,7 @@ mod calculate_d2_values_bis {
     fn test_d2_itm_call() {
         let result = d2(
             pos_or_panic!(110.0),
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             dec!(0.05),
             Positive::ONE,
             pos_or_panic!(0.2),
@@ -1263,7 +1269,7 @@ mod calculate_d2_values_bis {
     fn test_d2_otm_call() {
         let result = d2(
             pos_or_panic!(90.0),
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             dec!(0.05),
             Positive::ONE,
             pos_or_panic!(0.2),
@@ -1280,8 +1286,8 @@ mod calculate_d2_values_bis {
     #[test]
     fn test_d2_short_expiry() {
         let result = d2(
-            pos_or_panic!(100.0),
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
+            Positive::HUNDRED,
             dec!(0.05),
             pos_or_panic!(0.0833), // 1 month
             pos_or_panic!(0.5),
@@ -1297,8 +1303,8 @@ mod calculate_d2_values_bis {
     #[test]
     fn test_d2_long_expiry() {
         let result = d2(
-            pos_or_panic!(100.0),
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
+            Positive::HUNDRED,
             dec!(0.05),
             Positive::TWO,
             pos_or_panic!(0.2),
@@ -1315,8 +1321,8 @@ mod calculate_d2_values_bis {
     #[test]
     fn test_d2_low_volatility() {
         let result = d2(
-            pos_or_panic!(100.0),
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
+            Positive::HUNDRED,
             dec!(0.05),
             Positive::ONE,
             pos_or_panic!(0.1),
@@ -1328,8 +1334,8 @@ mod calculate_d2_values_bis {
     #[test]
     fn test_d2_high_volatility() {
         let result = d2(
-            pos_or_panic!(100.0),
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
+            Positive::HUNDRED,
             dec!(0.05),
             Positive::ONE,
             pos_or_panic!(0.5),
@@ -1342,8 +1348,8 @@ mod calculate_d2_values_bis {
     #[test]
     fn test_d2_zero_interest() {
         let result = d2(
-            pos_or_panic!(100.0),
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
+            Positive::HUNDRED,
             Decimal::ZERO,
             Positive::ONE,
             pos_or_panic!(0.2),
@@ -1355,8 +1361,8 @@ mod calculate_d2_values_bis {
     #[test]
     fn test_d2_high_interest() {
         let result = d2(
-            pos_or_panic!(100.0),
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
+            Positive::HUNDRED,
             dec!(0.10),
             Positive::ONE,
             pos_or_panic!(0.2),
@@ -1370,7 +1376,7 @@ mod calculate_d2_values_bis {
     fn test_d2_deep_itm() {
         let result = d2(
             pos_or_panic!(200.0),
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             dec!(0.05),
             Positive::ONE,
             pos_or_panic!(0.2),
@@ -1387,7 +1393,7 @@ mod calculate_d2_values_bis {
     fn test_d2_deep_otm() {
         let result = d2(
             pos_or_panic!(50.0),
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             dec!(0.05),
             Positive::ONE,
             pos_or_panic!(0.2),
@@ -1417,8 +1423,8 @@ mod calculate_d2_values_bis {
     #[test]
     fn test_d2_small_time() {
         let result = d2(
-            pos_or_panic!(100.0),
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
+            Positive::HUNDRED,
             dec!(0.05),
             pos_or_panic!(0.001),
             pos_or_panic!(0.2),
@@ -1435,7 +1441,7 @@ mod calculate_d2_values_bis {
     fn test_d2_small_volatility() {
         let result = d2(
             pos_or_panic!(200.0),
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             dec!(0.05),
             Positive::ONE,
             pos_or_panic!(0.01),
@@ -1452,8 +1458,8 @@ mod calculate_d2_values_bis {
     #[test]
     fn test_d2_zero_volatility() {
         let result = d2(
-            pos_or_panic!(100.0),
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
+            Positive::HUNDRED,
             dec!(0.05),
             Positive::ONE,
             Positive::ZERO,
@@ -1469,8 +1475,8 @@ mod calculate_d2_values_bis {
     #[test]
     fn test_d2_zero_time() {
         let result = d2(
-            pos_or_panic!(100.0),
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
+            Positive::HUNDRED,
             dec!(0.05),
             Positive::ZERO,
             pos_or_panic!(0.2),
@@ -1485,8 +1491,8 @@ mod calculate_d2_values_bis {
     #[test]
     fn test_d2_negative_interest() {
         let result = d2(
-            pos_or_panic!(100.0),
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
+            Positive::HUNDRED,
             -dec!(0.05),
             Positive::ONE,
             pos_or_panic!(0.2),
@@ -1500,7 +1506,7 @@ mod calculate_d2_values_bis {
     fn test_d2_combined_extremes_high() {
         let result = d2(
             pos_or_panic!(1000.0),
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             dec!(0.15),
             pos_or_panic!(5.0),
             pos_or_panic!(0.8),
@@ -1517,7 +1523,7 @@ mod calculate_d2_values_bis {
     fn test_d2_combined_extremes_low() {
         let result = d2(
             pos_or_panic!(10.0),
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             dec!(0.01),
             pos_or_panic!(0.1),
             pos_or_panic!(0.05),
@@ -1535,7 +1541,7 @@ mod calculate_d2_values_bis {
     fn test_d2_large_price_ratio() {
         let result = d2(
             pos_or_panic!(1_000_000.0),
-            pos_or_panic!(1.0),
+            Positive::ONE,
             dec!(0.05),
             Positive::ONE,
             pos_or_panic!(0.2),
@@ -1552,8 +1558,8 @@ mod calculate_d2_values_bis {
     #[test]
     fn test_d2_leaps() {
         let result = d2(
-            pos_or_panic!(100.0),
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
+            Positive::HUNDRED,
             dec!(0.05),
             pos_or_panic!(2.5), // 2.5 years
             pos_or_panic!(0.15),
@@ -1570,8 +1576,8 @@ mod calculate_d2_values_bis {
     #[test]
     fn test_d2_near_zero_valid_values() {
         let result = d2(
-            pos_or_panic!(100.0),
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
+            Positive::HUNDRED,
             dec!(0.0001),
             pos_or_panic!(0.01),
             pos_or_panic!(0.001),
@@ -2025,6 +2031,7 @@ mod calculate_big_n_values {
 
 #[cfg(test)]
 mod tests_d1_d2_edge_cases {
+    use positive::pos_or_panic;
     use super::*;
     use crate::assert_decimal_eq;
     use rust_decimal_macros::dec;
@@ -2033,7 +2040,7 @@ mod tests_d1_d2_edge_cases {
     fn test_d1_zero_underlying_price() {
         let result = d1(
             Positive::ZERO,
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             dec!(0.05),
             Positive::ONE,
             pos_or_panic!(0.2),
@@ -2044,8 +2051,8 @@ mod tests_d1_d2_edge_cases {
     #[test]
     fn test_d2_negative_rates_and_high_volatility() {
         let result = d2(
-            pos_or_panic!(100.0),
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
+            Positive::HUNDRED,
             -dec!(0.05), // tasa negativa
             Positive::ONE,
             pos_or_panic!(0.8), // alta volatilidad
@@ -2134,6 +2141,7 @@ mod tests_cumulative_distribution {
 
 #[cfg(test)]
 mod tests_calculate_d_values_bis {
+    use positive::pos_or_panic;
     use super::*;
     use crate::assert_decimal_eq;
     use crate::model::ExpirationDate;
@@ -2146,12 +2154,12 @@ mod tests_calculate_d_values_bis {
             option_type: OptionType::European,
             side: Side::Long,
             underlying_symbol: "TEST".to_string(),
-            strike_price: pos_or_panic!(100.0),
-            underlying_price: pos_or_panic!(100.0),
+            strike_price: Positive::HUNDRED,
+            underlying_price: Positive::HUNDRED,
             risk_free_rate: dec!(0.05),
             implied_volatility: pos_or_panic!(0.5),
             expiration_date: ExpirationDate::Days(pos_or_panic!(30.0)),
-            quantity: pos_or_panic!(1.0),
+            quantity: Positive::ONE,
             option_style: OptionStyle::Call,
             dividend_yield: Positive::ZERO,
             exotic_params: None,
@@ -2164,6 +2172,7 @@ mod tests_calculate_d_values_bis {
 
 #[cfg(test)]
 mod tests_edge_cases_and_errors {
+    use positive::pos_or_panic;
     use super::*;
 
     use rust_decimal_macros::dec;
@@ -2171,8 +2180,8 @@ mod tests_edge_cases_and_errors {
     #[test]
     fn test_extreme_volatility_values() {
         let result = d1(
-            pos_or_panic!(100.0),
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
+            Positive::HUNDRED,
             dec!(0.05),
             Positive::ONE,
             pos_or_panic!(1000.0),

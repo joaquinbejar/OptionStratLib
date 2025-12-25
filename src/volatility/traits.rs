@@ -123,6 +123,7 @@ mod tests_volatility_traits {
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
     use std::collections::BTreeSet;
+    use positive::pos_or_panic;
 
     struct TestSmile;
 
@@ -289,7 +290,7 @@ mod tests_volatility_traits {
 
         let mut chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2025-12-31".to_string(),
             Some(dec!(0.05)),
             None,
@@ -300,7 +301,7 @@ mod tests_volatility_traits {
             pos_or_panic!(95.0),
             Some(pos_or_panic!(6.0)),
             Some(pos_or_panic!(6.5)),
-            Some(pos_or_panic!(1.0)),
+            Some(Positive::ONE),
             Some(pos_or_panic!(1.5)),
             pos_or_panic!(0.25),
             Some(dec!(0.7)),
@@ -312,7 +313,7 @@ mod tests_volatility_traits {
         );
 
         chain.add_option(
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             Some(pos_or_panic!(3.0)),
             Some(pos_or_panic!(3.5)),
             Some(pos_or_panic!(3.0)),
@@ -328,7 +329,7 @@ mod tests_volatility_traits {
 
         chain.add_option(
             pos_or_panic!(105.0),
-            Some(pos_or_panic!(1.0)),
+            Some(Positive::ONE),
             Some(pos_or_panic!(1.5)),
             Some(pos_or_panic!(6.0)),
             Some(pos_or_panic!(6.5)),
@@ -353,7 +354,7 @@ mod tests_volatility_traits {
 
         let chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2025-12-31".to_string(),
             None,
             None,

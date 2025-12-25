@@ -34,7 +34,7 @@ fn create_test_chain() -> OptionChain {
         pos_or_panic!(0.02),
         2,
         OptionDataPriceParams::new(
-            Some(Box::new(pos_or_panic!(100.0))),
+            Some(Box::new(Positive::HUNDRED)),
             Some(ExpirationDate::Days(pos_or_panic!(30.0))),
             Some(dec!(0.05)),
             spos!(0.02),
@@ -48,7 +48,7 @@ fn create_test_chain() -> OptionChain {
 
 /// Creates an empty option chain for edge case testing.
 fn create_empty_chain() -> OptionChain {
-    OptionChain::new("EMPTY", pos_or_panic!(100.0), "2024-12-31".to_string(), None, None)
+    OptionChain::new("EMPTY", Positive::HUNDRED, "2024-12-31".to_string(), None, None)
 }
 
 #[cfg(test)]
@@ -353,7 +353,7 @@ mod tests_edge_cases {
         // Add a single option data point
         use optionstratlib::chains::OptionData;
         let option_data = OptionData::new(
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             spos!(5.0),
             spos!(5.5),
             spos!(4.5),
@@ -366,7 +366,7 @@ mod tests_edge_cases {
             Some(5000),
             Some("TEST".to_string()),
             Some(ExpirationDate::Days(pos_or_panic!(30.0))),
-            Some(Box::new(pos_or_panic!(100.0))),
+            Some(Box::new(Positive::HUNDRED)),
             Some(dec!(0.05)),
             spos!(0.02),
             None,
@@ -396,7 +396,7 @@ mod tests_edge_cases {
             pos_or_panic!(0.02),
             2,
             OptionDataPriceParams::new(
-                Some(Box::new(pos_or_panic!(100.0))),
+                Some(Box::new(Positive::HUNDRED)),
                 Some(ExpirationDate::Days(pos_or_panic!(30.0))),
                 Some(dec!(0.05)),
                 spos!(0.02),
@@ -425,7 +425,7 @@ mod tests_edge_cases {
             pos_or_panic!(0.01),
             2,
             OptionDataPriceParams::new(
-                Some(Box::new(pos_or_panic!(100.0))),
+                Some(Box::new(Positive::HUNDRED)),
                 Some(ExpirationDate::Days(pos_or_panic!(30.0))),
                 Some(dec!(0.05)),
                 spos!(0.01),
@@ -454,7 +454,7 @@ mod tests_edge_cases {
             pos_or_panic!(0.02),
             2,
             OptionDataPriceParams::new(
-                Some(Box::new(pos_or_panic!(100.0))),
+                Some(Box::new(Positive::HUNDRED)),
                 Some(ExpirationDate::Days(pos_or_panic!(30.0))),
                 Some(dec!(0.05)),
                 spos!(0.02),

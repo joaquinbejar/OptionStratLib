@@ -259,6 +259,7 @@ mod tests {
     use super::*;
 
     use chrono::Utc;
+    use positive::{pos_or_panic, spos};
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
 
@@ -272,9 +273,9 @@ mod tests {
             OptionType::European, // European option
             Side::Long,           // Long position
             OptionStyle::Call,    // Call option
-            pos_or_panic!(1.0),   // 1 contract
+            Positive::ONE,   // 1 contract
             pos_or_panic!(5.0),   // Premium paid: $5.00
-            pos_or_panic!(1.0),   // Fees: $1.00
+            Positive::ONE,   // Fees: $1.00
             spos!(100.0),         // Underlying price at open: $100.00
             spos!(30.0),          // 30 days to expiration
             spos!(0.2),           // IV: 20%
@@ -297,9 +298,9 @@ mod tests {
             OptionType::European, // European option
             Side::Long,           // Long position
             OptionStyle::Call,    // Call option
-            pos_or_panic!(1.0),   // 1 contract
+            Positive::ONE,   // 1 contract
             pos_or_panic!(12.0),  // Closing premium: $12.00 (higher due to price increase)
-            pos_or_panic!(1.0),   // Closing fees: $1.00
+            Positive::ONE,   // Closing fees: $1.00
             spos!(110.0),         // Underlying price at close: $110.00
             spos!(20.0),          // 20 days to expiration (10 days elapsed)
             spos!(0.22),          // IV: 22%
@@ -325,9 +326,9 @@ mod tests {
             OptionType::European,
             Side::Long,
             OptionStyle::Call,
-            pos_or_panic!(1.0),
+            Positive::ONE,
             pos_or_panic!(5.0), // Premium paid: $5.00
-            pos_or_panic!(1.0), // Fees: $1.00
+            Positive::ONE, // Fees: $1.00
             spos!(100.0),
             spos!(30.0),
             spos!(0.2),
@@ -348,9 +349,9 @@ mod tests {
             OptionType::European,
             Side::Long,
             OptionStyle::Call,
-            pos_or_panic!(1.0),
-            pos_or_panic!(2.0), // Closing premium: $2.00 (lower due to price decrease)
-            pos_or_panic!(1.0), // Closing fees: $1.00
+            Positive::ONE,
+            Positive::TWO, // Closing premium: $2.00 (lower due to price decrease)
+            Positive::ONE, // Closing fees: $1.00
             spos!(95.0),
             spos!(20.0),
             spos!(0.18),
@@ -375,9 +376,9 @@ mod tests {
             OptionType::European,
             Side::Short,        // Short position
             OptionStyle::Call,  // Call option
-            pos_or_panic!(1.0), // 1 contract
+            Positive::ONE, // 1 contract
             pos_or_panic!(5.0), // Premium received: $5.00
-            pos_or_panic!(1.0), // Fees: $1.00
+            Positive::ONE, // Fees: $1.00
             spos!(100.0),       // Underlying price at open: $100.00
             spos!(30.0),        // 30 days to expiration
             spos!(0.2),         // IV: 20%
@@ -399,9 +400,9 @@ mod tests {
             OptionType::European,
             Side::Short,
             OptionStyle::Call,
-            pos_or_panic!(1.0),
-            pos_or_panic!(2.0), // Closing premium: $2.00 (lower due to price decrease)
-            pos_or_panic!(1.0), // Closing fees: $1.00
+            Positive::ONE,
+            Positive::TWO, // Closing premium: $2.00 (lower due to price decrease)
+            Positive::ONE, // Closing fees: $1.00
             spos!(95.0),
             spos!(20.0),
             spos!(0.18),
@@ -426,9 +427,9 @@ mod tests {
             OptionType::European,
             Side::Short,
             OptionStyle::Call,
-            pos_or_panic!(1.0),
+            Positive::ONE,
             pos_or_panic!(5.0), // Premium received: $5.00
-            pos_or_panic!(1.0), // Fees: $1.00
+            Positive::ONE, // Fees: $1.00
             spos!(100.0),
             spos!(30.0),
             spos!(0.2),
@@ -449,9 +450,9 @@ mod tests {
             OptionType::European,
             Side::Short,
             OptionStyle::Call,
-            pos_or_panic!(1.0),
+            Positive::ONE,
             pos_or_panic!(12.0), // Closing premium: $12.00 (higher due to price increase)
-            pos_or_panic!(1.0),  // Closing fees: $1.00
+            Positive::ONE,  // Closing fees: $1.00
             spos!(110.0),
             spos!(20.0),
             spos!(0.22),
@@ -476,9 +477,9 @@ mod tests {
             OptionType::European,
             Side::Long,         // Long position
             OptionStyle::Put,   // Put option
-            pos_or_panic!(1.0), // 1 contract
+            Positive::ONE, // 1 contract
             pos_or_panic!(4.0), // Premium paid: $4.00
-            pos_or_panic!(1.0), // Fees: $1.00
+            Positive::ONE, // Fees: $1.00
             spos!(100.0),       // Underlying price at open: $100.00
             spos!(30.0),        // 30 days to expiration
             spos!(0.2),         // IV: 20%
@@ -500,9 +501,9 @@ mod tests {
             OptionType::European,
             Side::Long,
             OptionStyle::Put,
-            pos_or_panic!(1.0),
+            Positive::ONE,
             pos_or_panic!(10.0), // Closing premium: $10.00 (higher due to price decrease)
-            pos_or_panic!(1.0),  // Closing fees: $1.00
+            Positive::ONE,  // Closing fees: $1.00
             spos!(90.0),
             spos!(20.0),
             spos!(0.25),
@@ -527,9 +528,9 @@ mod tests {
             OptionType::European,
             Side::Long,
             OptionStyle::Put,
-            pos_or_panic!(1.0),
+            Positive::ONE,
             pos_or_panic!(4.0), // Premium paid: $4.00
-            pos_or_panic!(1.0), // Fees: $1.00
+            Positive::ONE, // Fees: $1.00
             spos!(100.0),
             spos!(30.0),
             spos!(0.2),
@@ -550,9 +551,9 @@ mod tests {
             OptionType::European,
             Side::Long,
             OptionStyle::Put,
-            pos_or_panic!(1.0),
-            pos_or_panic!(2.0), // Closing premium: $2.00 (lower due to price increase)
-            pos_or_panic!(1.0), // Closing fees: $1.00
+            Positive::ONE,
+            Positive::TWO, // Closing premium: $2.00 (lower due to price increase)
+            Positive::ONE, // Closing fees: $1.00
             spos!(105.0),
             spos!(20.0),
             spos!(0.18),
@@ -577,9 +578,9 @@ mod tests {
             OptionType::European,
             Side::Short,        // Short position
             OptionStyle::Put,   // Put option
-            pos_or_panic!(1.0), // 1 contract
+            Positive::ONE, // 1 contract
             pos_or_panic!(4.0), // Premium received: $4.00
-            pos_or_panic!(1.0), // Fees: $1.00
+            Positive::ONE, // Fees: $1.00
             spos!(100.0),       // Underlying price at open: $100.00
             spos!(30.0),        // 30 days to expiration
             spos!(0.2),         // IV: 20%
@@ -601,9 +602,9 @@ mod tests {
             OptionType::European,
             Side::Short,
             OptionStyle::Put,
-            pos_or_panic!(1.0),
+            Positive::ONE,
             pos_or_panic!(1.5), // Closing premium: $1.50 (lower due to price increase)
-            pos_or_panic!(1.0), // Closing fees: $1.00
+            Positive::ONE, // Closing fees: $1.00
             spos!(105.0),
             spos!(20.0),
             spos!(0.15),
@@ -628,9 +629,9 @@ mod tests {
             OptionType::European,
             Side::Short,
             OptionStyle::Put,
-            pos_or_panic!(1.0),
+            Positive::ONE,
             pos_or_panic!(4.0), // Premium received: $4.00
-            pos_or_panic!(1.0), // Fees: $1.00
+            Positive::ONE, // Fees: $1.00
             spos!(100.0),
             spos!(30.0),
             spos!(0.2),
@@ -651,9 +652,9 @@ mod tests {
             OptionType::European,
             Side::Short,
             OptionStyle::Put,
-            pos_or_panic!(1.0),
+            Positive::ONE,
             pos_or_panic!(10.0), // Closing premium: $10.00 (higher due to price decrease)
-            pos_or_panic!(1.0),  // Closing fees: $1.00
+            Positive::ONE,  // Closing fees: $1.00
             spos!(90.0),
             spos!(20.0),
             spos!(0.25),
@@ -674,6 +675,7 @@ mod tests_transaction_getters {
     use super::*;
 
     use chrono::Utc;
+    use positive::{pos_or_panic, spos};
 
     fn create_test_transaction() -> Transaction {
         Transaction::new(
@@ -682,9 +684,9 @@ mod tests_transaction_getters {
             OptionType::European,
             Side::Long,
             OptionStyle::Call,
-            pos_or_panic!(2.0),
+            Positive::TWO,
             pos_or_panic!(5.0),
-            pos_or_panic!(1.0),
+            Positive::ONE,
             spos!(100.0),
             spos!(30.0),
             spos!(0.2),
@@ -718,7 +720,7 @@ mod tests_transaction_getters {
     #[test]
     fn test_quantity_getter() {
         let transaction = create_test_transaction();
-        assert_eq!(transaction.quantity(), pos_or_panic!(2.0));
+        assert_eq!(transaction.quantity(), Positive::TWO);
     }
 
     #[test]
@@ -730,7 +732,7 @@ mod tests_transaction_getters {
     #[test]
     fn test_fees_getter() {
         let transaction = create_test_transaction();
-        assert_eq!(transaction.fees(), pos_or_panic!(1.0));
+        assert_eq!(transaction.fees(), Positive::ONE);
     }
 
     #[test]
@@ -757,6 +759,7 @@ mod tests_transaction_updaters {
     use super::*;
 
     use chrono::Utc;
+    use positive::{pos_or_panic, spos};
 
     fn create_test_transaction() -> Transaction {
         Transaction::new(
@@ -765,9 +768,9 @@ mod tests_transaction_updaters {
             OptionType::European,
             Side::Long,
             OptionStyle::Call,
-            pos_or_panic!(2.0),
+            Positive::TWO,
             pos_or_panic!(5.0),
-            pos_or_panic!(1.0),
+            Positive::ONE,
             spos!(100.0),
             spos!(30.0),
             spos!(0.2),
@@ -801,6 +804,7 @@ mod tests_transaction_status_pnl {
     use super::*;
 
     use chrono::Utc;
+    use positive::{pos_or_panic, spos};
     use rust_decimal_macros::dec;
 
     #[test]
@@ -811,9 +815,9 @@ mod tests_transaction_status_pnl {
             OptionType::European,
             Side::Long,
             OptionStyle::Call,
-            pos_or_panic!(2.0),
+            Positive::TWO,
             pos_or_panic!(5.0),
-            pos_or_panic!(1.0),
+            Positive::ONE,
             spos!(100.0),
             spos!(30.0),
             spos!(0.2),
@@ -831,9 +835,9 @@ mod tests_transaction_status_pnl {
             OptionType::European,
             Side::Short,
             OptionStyle::Call,
-            pos_or_panic!(2.0),
+            Positive::TWO,
             pos_or_panic!(5.0),
-            pos_or_panic!(1.0),
+            Positive::ONE,
             spos!(100.0),
             spos!(30.0),
             spos!(0.2),
@@ -851,9 +855,9 @@ mod tests_transaction_status_pnl {
             OptionType::European,
             Side::Long,
             OptionStyle::Call,
-            pos_or_panic!(2.0),
+            Positive::TWO,
             pos_or_panic!(5.0),
-            pos_or_panic!(1.0),
+            Positive::ONE,
             spos!(100.0),
             spos!(30.0),
             spos!(0.2),
@@ -871,9 +875,9 @@ mod tests_transaction_status_pnl {
             OptionType::European,
             Side::Short,
             OptionStyle::Call,
-            pos_or_panic!(2.0),
+            Positive::TWO,
             pos_or_panic!(5.0),
-            pos_or_panic!(1.0),
+            Positive::ONE,
             spos!(100.0),
             spos!(30.0),
             spos!(0.2),
@@ -891,9 +895,9 @@ mod tests_transaction_status_pnl {
             OptionType::European,
             Side::Long,
             OptionStyle::Call,
-            pos_or_panic!(2.0),
+            Positive::TWO,
             pos_or_panic!(5.0),
-            pos_or_panic!(1.0),
+            Positive::ONE,
             spos!(100.0),
             spos!(0.0),
             spos!(0.2),
@@ -911,9 +915,9 @@ mod tests_transaction_status_pnl {
             OptionType::European,
             Side::Long,
             OptionStyle::Call,
-            pos_or_panic!(2.0),
+            Positive::TWO,
             pos_or_panic!(5.0),
-            pos_or_panic!(1.0),
+            Positive::ONE,
             spos!(110.0),
             spos!(0.0),
             spos!(0.2),
@@ -931,9 +935,9 @@ mod tests_transaction_status_pnl {
             OptionType::European,
             Side::Short,
             OptionStyle::Call,
-            pos_or_panic!(2.0),
+            Positive::TWO,
             pos_or_panic!(5.0),
-            pos_or_panic!(1.0),
+            Positive::ONE,
             spos!(110.0),
             spos!(0.0),
             spos!(0.2),
@@ -951,9 +955,9 @@ mod tests_transaction_status_pnl {
             OptionType::American, // Unsupported type
             Side::Long,
             OptionStyle::Call,
-            pos_or_panic!(2.0),
+            Positive::TWO,
             pos_or_panic!(5.0),
-            pos_or_panic!(1.0),
+            Positive::ONE,
             spos!(100.0),
             spos!(30.0),
             spos!(0.2),
@@ -975,9 +979,9 @@ mod tests_transaction_status_pnl {
             OptionType::American, // Unsupported type
             Side::Long,
             OptionStyle::Call,
-            pos_or_panic!(2.0),
+            Positive::TWO,
             pos_or_panic!(5.0),
-            pos_or_panic!(1.0),
+            Positive::ONE,
             spos!(100.0),
             spos!(30.0),
             spos!(0.2),

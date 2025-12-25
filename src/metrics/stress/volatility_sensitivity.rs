@@ -151,6 +151,7 @@ mod tests_volatility_sensitivity {
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
     use std::collections::BTreeSet;
+    use positive::pos_or_panic;
 
     struct TestVolatilitySensitivity {
         underlying_price: Positive,

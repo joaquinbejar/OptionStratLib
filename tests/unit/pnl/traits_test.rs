@@ -75,7 +75,7 @@ fn test_pnl_calculator_trait() {
     let calculator = TestPnLCalculator;
 
     // Test calculate_pnl
-    let underlying_price = pos_or_panic!(100.0);
+    let underlying_price = Positive::HUNDRED;
     let expiration_date = ExpirationDate::Days(pos_or_panic!(30.0));
     let implied_volatility = pos_or_panic!(0.2);
 
@@ -120,8 +120,8 @@ fn test_transaction_able_trait() {
         optionstratlib::OptionType::European,
         optionstratlib::Side::Long,
         optionstratlib::OptionStyle::Call,
-        pos_or_panic!(1.0),
-        pos_or_panic!(100.0),
+        Positive::ONE,
+        Positive::HUNDRED,
         pos_or_panic!(5.0),
         spos!(100.0),
         spos!(30.0),
@@ -134,7 +134,7 @@ fn test_transaction_able_trait() {
         optionstratlib::OptionType::European,
         optionstratlib::Side::Short,
         optionstratlib::OptionStyle::Put,
-        pos_or_panic!(2.0),
+        Positive::TWO,
         pos_or_panic!(95.0),
         pos_or_panic!(7.0),
         spos!(100.0),
@@ -149,10 +149,10 @@ fn test_transaction_able_trait() {
     // Test get_transactions
     let transactions = manager.get_transactions().unwrap();
     assert_eq!(transactions.len(), 2);
-    assert_eq!(transactions[0].quantity(), pos_or_panic!(1.0));
-    assert_eq!(transactions[0].premium(), pos_or_panic!(100.0));
+    assert_eq!(transactions[0].quantity(), Positive::ONE);
+    assert_eq!(transactions[0].premium(), Positive::HUNDRED);
     assert_eq!(transactions[0].fees(), pos_or_panic!(5.0));
-    assert_eq!(transactions[1].quantity(), pos_or_panic!(2.0));
+    assert_eq!(transactions[1].quantity(), Positive::TWO);
     assert_eq!(transactions[1].premium(), pos_or_panic!(95.0));
     assert_eq!(transactions[1].fees(), pos_or_panic!(7.0));
 }

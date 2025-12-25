@@ -345,7 +345,7 @@ mod tests_get_random_element {
         assert!(random_option.is_some());
 
         let strike = random_option.unwrap().strike_price;
-        assert!(strike >= pos_or_panic!(100.0) && strike <= pos_or_panic!(104.0));
+        assert!(strike >= Positive::HUNDRED && strike <= pos_or_panic!(104.0));
     }
 
     #[test]
@@ -615,7 +615,7 @@ mod tests_log_returns {
 
     #[test]
     fn test_single_input() {
-        let prices = vec![pos_or_panic!(100.0)];
+        let prices = vec![Positive::HUNDRED];
         let result = calculate_log_returns(&prices);
         assert!(result.is_ok());
         assert_eq!(result.unwrap().len(), 0);
@@ -624,7 +624,7 @@ mod tests_log_returns {
     #[test]
     fn test_basic_calculation() {
         let prices = vec![
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             pos_or_panic!(110.0),
             pos_or_panic!(105.0),
         ];
@@ -643,8 +643,8 @@ mod tests_log_returns {
     #[should_panic]
     fn test_zero_price() {
         let prices = vec![
-            pos_or_panic!(100.0),
-            pos_or_panic!(0.0),
+            Positive::HUNDRED,
+            Positive::ZERO,
             pos_or_panic!(105.0),
         ];
         let _ = calculate_log_returns(&prices);
@@ -654,7 +654,7 @@ mod tests_log_returns {
     #[should_panic]
     fn test_negative_price() {
         let prices = vec![
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             pos_or_panic!(-50.0),
             pos_or_panic!(105.0),
         ];
@@ -685,7 +685,7 @@ mod tests_log_returns {
     fn test_large_price_movements() {
         // Test with some large price movements (both up and down)
         let prices = vec![
-            pos_or_panic!(100.0), // Starting price
+            Positive::HUNDRED, // Starting price
             pos_or_panic!(200.0), // 100% increase
             pos_or_panic!(50.0),  // 75% decrease
             pos_or_panic!(300.0), // 500% increase
@@ -709,9 +709,9 @@ mod tests_log_returns {
     fn test_no_change_prices() {
         // Test with prices that don't change
         let prices = vec![
-            pos_or_panic!(100.0),
-            pos_or_panic!(100.0),
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
+            Positive::HUNDRED,
+            Positive::HUNDRED,
         ];
         let result = calculate_log_returns(&prices).unwrap();
 

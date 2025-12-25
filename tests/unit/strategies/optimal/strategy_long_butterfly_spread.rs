@@ -20,11 +20,11 @@ fn test_long_butterfly_spread_integration() -> Result<(), Box<dyn Error>> {
         pos_or_panic!(5710.0),
         pos_or_panic!(5780.0),
         pos_or_panic!(5850.0),
-        ExpirationDate::Days(pos_or_panic!(2.0)),
+        ExpirationDate::Days(Positive::TWO),
         pos_or_panic!(0.18),
         dec!(0.05),
         Positive::ZERO,
-        pos_or_panic!(1.0),
+        Positive::ONE,
         pos_or_panic!(113.3), // premium_long_low
         pos_or_panic!(64.20), // premium_short
         pos_or_panic!(31.65), // premium_long_high

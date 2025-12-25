@@ -88,6 +88,7 @@ impl OptionSeriesBuildParams {
 
 #[cfg(test)]
 mod tests {
+    use positive::{pos_or_panic, spos};
     use super::*;
 
     use crate::ExpirationDate;
@@ -98,7 +99,7 @@ mod tests {
     fn test_display_empty_series() {
         let expiration = ExpirationDate::Days(pos_or_panic!(30.0));
         let price_params = OptionDataPriceParams::new(
-            Some(Box::new(pos_or_panic!(100.0))),
+            Some(Box::new(Positive::HUNDRED)),
             Some(expiration),
             Some(dec!(0.05)),
             spos!(0.02),
@@ -129,7 +130,7 @@ mod tests {
     fn test_debug_empty_series() {
         let expiration = ExpirationDate::Days(pos_or_panic!(30.0));
         let price_params = OptionDataPriceParams::new(
-            Some(Box::new(pos_or_panic!(100.0))),
+            Some(Box::new(Positive::HUNDRED)),
             Some(expiration),
             Some(dec!(0.05)),
             spos!(0.02),

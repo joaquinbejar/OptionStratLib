@@ -138,6 +138,7 @@ mod tests {
     use rust_decimal_macros::dec;
     use std::fmt::Display;
     use std::ops::AddAssign;
+    use positive::pos_or_panic;
 
     struct MockWalker;
 
@@ -151,11 +152,11 @@ mod tests {
     #[test]
     fn test_walk_params_creation_with_positive() {
         let init_x = Xstep::new(
-            pos_or_panic!(1.0),
+            Positive::ONE,
             TimeFrame::Day,
             ExpirationDate::Days(pos_or_panic!(30.0)),
         );
-        let init_y = Ystep::new(0, pos_or_panic!(100.0));
+        let init_y = Ystep::new(0, Positive::HUNDRED);
         let init_step = Step {
             x: init_x,
             y: init_y,
@@ -165,7 +166,7 @@ mod tests {
             size: 100,
             init_step,
             walk_type: WalkType::Brownian {
-                dt: pos_or_panic!(1.0),
+                dt: Positive::ONE,
                 drift: Decimal::ZERO,
                 volatility: pos_or_panic!(0.2),
             },
@@ -175,22 +176,22 @@ mod tests {
         assert_eq!(walk_params.size, 100);
         assert_eq!(
             walk_params.init_step.x.step_size_in_time().value(),
-            pos_or_panic!(1.0).value()
+            Positive::ONE.value()
         );
         assert_eq!(
             walk_params.init_step.y.value().value(),
-            pos_or_panic!(100.0).value()
+            Positive::HUNDRED.value()
         );
     }
 
     #[test]
     fn test_walk_params_clone_with_positive() {
         let init_x = Xstep::new(
-            pos_or_panic!(1.0),
+            Positive::ONE,
             TimeFrame::Day,
             ExpirationDate::Days(pos_or_panic!(30.0)),
         );
-        let init_y = Ystep::new(0, pos_or_panic!(100.0));
+        let init_y = Ystep::new(0, Positive::HUNDRED);
         let init_step = Step {
             x: init_x,
             y: init_y,
@@ -199,7 +200,7 @@ mod tests {
             size: 100,
             init_step,
             walk_type: WalkType::Brownian {
-                dt: pos_or_panic!(1.0),
+                dt: Positive::ONE,
                 drift: Decimal::ZERO,
                 volatility: pos_or_panic!(0.2),
             },
@@ -253,11 +254,11 @@ mod tests {
     #[test]
     fn test_with_large_size_positive_types() {
         let init_x = Xstep::new(
-            pos_or_panic!(1.0),
+            Positive::ONE,
             TimeFrame::Day,
             ExpirationDate::Days(pos_or_panic!(30.0)),
         );
-        let init_y = Ystep::new(0, pos_or_panic!(100.0));
+        let init_y = Ystep::new(0, Positive::HUNDRED);
         let init_step = Step {
             x: init_x,
             y: init_y,
@@ -298,7 +299,7 @@ mod tests {
             size: 50,
             init_step,
             walk_type: WalkType::Brownian {
-                dt: pos_or_panic!(1.0),
+                dt: Positive::ONE,
                 drift: Decimal::ZERO,
                 volatility: pos_or_panic!(0.2),
             },

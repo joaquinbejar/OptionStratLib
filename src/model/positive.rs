@@ -15,7 +15,7 @@
 //!
 //! ```rust
 //! use optionstratlib::pos_or_panic;
-//! let strike_price = pos_or_panic!(100.0);
+//! let strike_price = Positive::HUNDRED;
 //! ```
 
 // Re-export everything from the positive crate

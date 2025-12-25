@@ -271,6 +271,7 @@ mod tests_span {
     use crate::model::utils::create_sample_option;
 
     use chrono::Utc;
+    use positive::pos_or_panic;
     use rust_decimal_macros::dec;
     use tracing::info;
 
@@ -280,7 +281,7 @@ mod tests_span {
             OptionStyle::Call,
             Side::Short,
             pos_or_panic!(155.0),
-            pos_or_panic!(1.0),
+            Positive::ONE,
             pos_or_panic!(150.0),
             pos_or_panic!(0.2),
         );

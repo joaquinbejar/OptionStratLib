@@ -357,6 +357,7 @@ mod tests_random_walk {
 
     use std::fmt::Display;
     use std::ops::AddAssign;
+    use positive::pos_or_panic;
 
     // Mock implementation of WalkTypeAble for testing
     struct TestWalker {}
@@ -445,7 +446,7 @@ mod tests_random_walk {
             1.0,
             100.0,
             WalkType::Brownian {
-                dt: pos_or_panic!(1.0),
+                dt: Positive::ONE,
                 drift: Decimal::ZERO,
                 volatility: pos_or_panic!(0.2),
             },
@@ -466,7 +467,7 @@ mod tests_random_walk {
             1.0,
             100.0,
             WalkType::Brownian {
-                dt: pos_or_panic!(1.0),
+                dt: Positive::ONE,
                 drift: Decimal::ZERO,
                 volatility: pos_or_panic!(0.2),
             },
@@ -489,7 +490,7 @@ mod tests_random_walk {
             1.0,
             100.0,
             WalkType::Brownian {
-                dt: pos_or_panic!(1.0),
+                dt: Positive::ONE,
                 drift: Decimal::ZERO,
                 volatility: pos_or_panic!(0.2),
             },
@@ -511,7 +512,7 @@ mod tests_random_walk {
             1.0,
             100.0,
             WalkType::Brownian {
-                dt: pos_or_panic!(1.0),
+                dt: Positive::ONE,
                 drift: Decimal::ZERO,
                 volatility: pos_or_panic!(0.2),
             },
@@ -533,7 +534,7 @@ mod tests_random_walk {
             1.0,
             100.0,
             WalkType::Brownian {
-                dt: pos_or_panic!(1.0),
+                dt: Positive::ONE,
                 drift: Decimal::ZERO,
                 volatility: pos_or_panic!(0.2),
             },
@@ -557,7 +558,7 @@ mod tests_random_walk {
             1.0,
             100.0,
             WalkType::Brownian {
-                dt: pos_or_panic!(1.0),
+                dt: Positive::ONE,
                 drift: Decimal::ZERO,
                 volatility: pos_or_panic!(0.2),
             },
@@ -580,7 +581,7 @@ mod tests_random_walk {
             1.0,
             100.0,
             WalkType::Brownian {
-                dt: pos_or_panic!(1.0),
+                dt: Positive::ONE,
                 drift: Decimal::ZERO,
                 volatility: pos_or_panic!(0.2),
             },
@@ -599,7 +600,7 @@ mod tests_random_walk {
             1.0,
             100.0,
             WalkType::Brownian {
-                dt: pos_or_panic!(1.0),
+                dt: Positive::ONE,
                 drift: Decimal::ZERO,
                 volatility: pos_or_panic!(0.2),
             },
@@ -627,7 +628,7 @@ mod tests_random_walk {
             1.0,
             100.0,
             WalkType::Brownian {
-                dt: pos_or_panic!(1.0),
+                dt: Positive::ONE,
                 drift: Decimal::ZERO,
                 volatility: pos_or_panic!(0.2),
             },
@@ -650,7 +651,7 @@ mod tests_random_walk {
             1.0,
             100.0,
             WalkType::Brownian {
-                dt: pos_or_panic!(1.0),
+                dt: Positive::ONE,
                 drift: Decimal::ZERO,
                 volatility: pos_or_panic!(0.2),
             },
@@ -677,7 +678,7 @@ mod tests_random_walk {
             1.0,
             100.0,
             WalkType::Brownian {
-                dt: pos_or_panic!(1.0),
+                dt: Positive::ONE,
                 drift: Decimal::ZERO,
                 volatility: pos_or_panic!(0.2),
             },
@@ -697,7 +698,7 @@ mod tests_random_walk {
             1.0,
             100.0,
             WalkType::Brownian {
-                dt: pos_or_panic!(1.0),
+                dt: Positive::ONE,
                 drift: Decimal::ZERO,
                 volatility: pos_or_panic!(0.2),
             },
@@ -754,7 +755,7 @@ mod tests_random_walk {
             TestX(1.0),
             TestY(100.0),
             WalkType::Brownian {
-                dt: pos_or_panic!(1.0),
+                dt: Positive::ONE,
                 drift: Decimal::ZERO,
                 volatility: pos_or_panic!(0.2),
             },

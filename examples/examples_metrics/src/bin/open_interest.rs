@@ -13,8 +13,8 @@
 //! - PNG image: `./Draws/Metrics/open_interest_curve.png`
 //! - HTML interactive: `./Draws/Metrics/open_interest_curve.html`
 
-use optionstratlib::chains::OptionData;
 use optionstratlib::chains::chain::OptionChain;
+use optionstratlib::chains::OptionData;
 use optionstratlib::error::CurveError;
 use optionstratlib::metrics::OpenInterestCurve;
 use optionstratlib::model::ExpirationDate;

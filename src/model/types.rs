@@ -616,7 +616,7 @@ mod tests_payoff {
         let option = OptionType::European;
         let info = PayoffInfo {
             spot: pos_or_panic!(110.0),
-            strike: pos_or_panic!(100.0),
+            strike: Positive::HUNDRED,
             style: OptionStyle::Call,
             side: Side::Long,
             ..Default::default()
@@ -629,7 +629,7 @@ mod tests_payoff {
         let option = OptionType::European;
         let info = PayoffInfo {
             spot: pos_or_panic!(90.0),
-            strike: pos_or_panic!(100.0),
+            strike: Positive::HUNDRED,
             style: OptionStyle::Put,
             side: Side::Long,
             ..Default::default()
@@ -643,8 +643,8 @@ mod tests_payoff {
             averaging_type: AsianAveragingType::Arithmetic,
         };
         let info = PayoffInfo {
-            spot: pos_or_panic!(100.0),
-            strike: pos_or_panic!(100.0),
+            spot: Positive::HUNDRED,
+            strike: Positive::HUNDRED,
             style: OptionStyle::Call,
             side: Side::Long,
             spot_prices: Some(vec![90.0, 100.0, 110.0]),
@@ -661,7 +661,7 @@ mod tests_payoff {
         };
         let info = PayoffInfo {
             spot: pos_or_panic!(130.0),
-            strike: pos_or_panic!(100.0),
+            strike: Positive::HUNDRED,
             style: OptionStyle::Call,
             side: Side::Long,
             ..Default::default()
@@ -676,7 +676,7 @@ mod tests_payoff {
         };
         let info = PayoffInfo {
             spot: pos_or_panic!(110.0),
-            strike: pos_or_panic!(100.0),
+            strike: Positive::HUNDRED,
             style: OptionStyle::Call,
             side: Side::Long,
             ..Default::default()
@@ -691,7 +691,7 @@ mod tests_payoff {
         };
         let info = PayoffInfo {
             spot: pos_or_panic!(90.0),
-            strike: pos_or_panic!(100.0),
+            strike: Positive::HUNDRED,
             style: OptionStyle::Put,
             side: Side::Long,
             ..Default::default()
@@ -704,7 +704,7 @@ mod tests_payoff {
         let option = OptionType::Quanto { exchange_rate: 1.5 };
         let info = PayoffInfo {
             spot: pos_or_panic!(110.0),
-            strike: pos_or_panic!(100.0),
+            strike: Positive::HUNDRED,
             style: OptionStyle::Call,
             side: Side::Long,
             ..Default::default()
@@ -734,7 +734,7 @@ mod tests_calculate_floating_strike_payoff {
     #[test]
     fn test_call_option_with_spot_min() {
         let info = PayoffInfo {
-            spot: pos_or_panic!(100.0),
+            spot: Positive::HUNDRED,
             strike: Positive::ZERO, // Not used in floating strike
             style: OptionStyle::Call,
             side: Side::Long,
@@ -748,7 +748,7 @@ mod tests_calculate_floating_strike_payoff {
     #[test]
     fn test_call_option_without_spot_min() {
         let info = PayoffInfo {
-            spot: pos_or_panic!(100.0),
+            spot: Positive::HUNDRED,
             strike: Positive::ZERO,
             style: OptionStyle::Call,
             side: Side::Long,
@@ -762,7 +762,7 @@ mod tests_calculate_floating_strike_payoff {
     #[test]
     fn test_put_option_with_spot_max() {
         let info = PayoffInfo {
-            spot: pos_or_panic!(100.0),
+            spot: Positive::HUNDRED,
             strike: Positive::ZERO,
             style: OptionStyle::Put,
             side: Side::Long,
@@ -776,7 +776,7 @@ mod tests_calculate_floating_strike_payoff {
     #[test]
     fn test_put_option_without_spot_max() {
         let info = PayoffInfo {
-            spot: pos_or_panic!(100.0),
+            spot: Positive::HUNDRED,
             strike: Positive::ZERO,
             style: OptionStyle::Put,
             side: Side::Long,
@@ -790,7 +790,7 @@ mod tests_calculate_floating_strike_payoff {
     #[test]
     fn test_call_option_spot_equals_min() {
         let info = PayoffInfo {
-            spot: pos_or_panic!(100.0),
+            spot: Positive::HUNDRED,
             strike: Positive::ZERO,
             style: OptionStyle::Call,
             side: Side::Long,
@@ -804,7 +804,7 @@ mod tests_calculate_floating_strike_payoff {
     #[test]
     fn test_put_option_spot_equals_max() {
         let info = PayoffInfo {
-            spot: pos_or_panic!(100.0),
+            spot: Positive::HUNDRED,
             strike: Positive::ZERO,
             style: OptionStyle::Put,
             side: Side::Long,
@@ -827,8 +827,8 @@ mod tests_option_type {
             averaging_type: AsianAveragingType::Geometric,
         };
         let info = PayoffInfo {
-            spot: pos_or_panic!(100.0),
-            strike: pos_or_panic!(100.0),
+            spot: Positive::HUNDRED,
+            strike: Positive::HUNDRED,
             style: OptionStyle::Call,
             side: Side::Long,
             spot_prices: Some(vec![90.0, 100.0, 110.0]),
@@ -844,7 +844,7 @@ mod tests_option_type {
             averaging_type: AsianAveragingType::Geometric,
         };
         let info = PayoffInfo {
-            spot: pos_or_panic!(100.0),
+            spot: Positive::HUNDRED,
             strike: pos_or_panic!(95.0),
             style: OptionStyle::Call,
             side: Side::Long,
@@ -864,7 +864,7 @@ mod tests_option_type {
         };
         let info = PayoffInfo {
             spot: pos_or_panic!(95.0),
-            strike: pos_or_panic!(100.0),
+            strike: Positive::HUNDRED,
             style: OptionStyle::Put,
             side: Side::Long,
             ..Default::default()
@@ -879,7 +879,7 @@ mod tests_option_type {
         };
         let info = PayoffInfo {
             spot: pos_or_panic!(90.0),
-            strike: pos_or_panic!(100.0),
+            strike: Positive::HUNDRED,
             style: OptionStyle::Put,
             side: Side::Long,
             ..Default::default()
@@ -895,7 +895,7 @@ mod tests_option_type {
         };
         let info = PayoffInfo {
             spot: pos_or_panic!(110.0),
-            strike: pos_or_panic!(100.0),
+            strike: Positive::HUNDRED,
             style: OptionStyle::Call,
             side: Side::Long,
             ..Default::default()
@@ -908,7 +908,7 @@ mod tests_option_type {
         let option = OptionType::Chooser { choice_date: 30.0 };
         let info = PayoffInfo {
             spot: pos_or_panic!(110.0),
-            strike: pos_or_panic!(100.0),
+            strike: Positive::HUNDRED,
             style: OptionStyle::Call,
             side: Side::Long,
             ..Default::default()
@@ -921,7 +921,7 @@ mod tests_option_type {
         let option = OptionType::Power { exponent: 2.0 };
         let info = PayoffInfo {
             spot: pos_or_panic!(8.0),
-            strike: pos_or_panic!(100.0),
+            strike: Positive::HUNDRED,
             style: OptionStyle::Put,
             side: Side::Long,
             ..Default::default()
@@ -944,27 +944,27 @@ mod tests_vec_collection {
 
     #[test]
     fn test_collect_single_value() {
-        let values = vec![pos_or_panic!(1.0)];
+        let values = vec![Positive::ONE];
         let collected: Vec<Positive> = values.into_iter().collect();
         assert_eq!(collected.len(), 1);
-        assert_eq!(collected[0], pos_or_panic!(1.0));
+        assert_eq!(collected[0], Positive::ONE);
     }
 
     #[test]
     fn test_collect_multiple_values() {
-        let values = vec![pos_or_panic!(1.0), pos_or_panic!(2.0), pos_or_panic!(3.0)];
+        let values = vec![Positive::ONE, Positive::TWO, pos_or_panic!(3.0)];
         let collected: Vec<Positive> = values.into_iter().collect();
         assert_eq!(collected.len(), 3);
-        assert_eq!(collected[0], pos_or_panic!(1.0));
-        assert_eq!(collected[1], pos_or_panic!(2.0));
+        assert_eq!(collected[0], Positive::ONE);
+        assert_eq!(collected[1], Positive::TWO);
         assert_eq!(collected[2], pos_or_panic!(3.0));
     }
 
     #[test]
     fn test_collect_from_filter() {
         let values = vec![
-            pos_or_panic!(1.0),
-            pos_or_panic!(2.0),
+            Positive::ONE,
+            Positive::TWO,
             pos_or_panic!(3.0),
             pos_or_panic!(4.0),
         ];
@@ -976,25 +976,25 @@ mod tests_vec_collection {
 
     #[test]
     fn test_collect_from_map() {
-        let values = vec![pos_or_panic!(1.0), pos_or_panic!(2.0), pos_or_panic!(3.0)];
+        let values = vec![Positive::ONE, Positive::TWO, pos_or_panic!(3.0)];
         let collected: Vec<Positive> = values
             .into_iter()
             .map(|x| pos_or_panic!(x.to_f64() * 2.0))
             .collect();
         assert_eq!(collected.len(), 3);
-        assert_eq!(collected[0], pos_or_panic!(2.0));
+        assert_eq!(collected[0], Positive::TWO);
         assert_eq!(collected[1], pos_or_panic!(4.0));
         assert_eq!(collected[2], pos_or_panic!(6.0));
     }
 
     #[test]
     fn test_collect_from_chain() {
-        let values1 = vec![pos_or_panic!(1.0), pos_or_panic!(2.0)];
+        let values1 = vec![Positive::ONE, Positive::TWO];
         let values2 = vec![pos_or_panic!(3.0), pos_or_panic!(4.0)];
         let collected: Vec<Positive> = values1.into_iter().chain(values2).collect();
         assert_eq!(collected.len(), 4);
-        assert_eq!(collected[0], pos_or_panic!(1.0));
-        assert_eq!(collected[1], pos_or_panic!(2.0));
+        assert_eq!(collected[0], Positive::ONE);
+        assert_eq!(collected[1], Positive::TWO);
         assert_eq!(collected[2], pos_or_panic!(3.0));
         assert_eq!(collected[3], pos_or_panic!(4.0));
     }
@@ -1015,7 +1015,7 @@ mod test_asian_options {
         };
         let info = PayoffInfo {
             spot: pos_or_panic!(90.0),
-            strike: pos_or_panic!(100.0),
+            strike: Positive::HUNDRED,
             style: OptionStyle::Put,
             side: Side::Long,
             spot_prices: Some(vec![85.0, 90.0, 95.0]),
@@ -1030,8 +1030,8 @@ mod test_asian_options {
             averaging_type: AsianAveragingType::Arithmetic,
         };
         let info = PayoffInfo {
-            spot: pos_or_panic!(100.0),
-            strike: pos_or_panic!(100.0),
+            spot: Positive::HUNDRED,
+            strike: Positive::HUNDRED,
             style: OptionStyle::Call,
             side: Side::Long,
             spot_prices: None,
@@ -1056,8 +1056,8 @@ mod test_barrier_options {
             barrier_level: 90.0,
         };
         let info = PayoffInfo {
-            spot: pos_or_panic!(100.0),
-            strike: pos_or_panic!(100.0),
+            spot: Positive::HUNDRED,
+            strike: Positive::HUNDRED,
             style: OptionStyle::Call,
             side: Side::Long,
             spot_prices: None,
@@ -1074,7 +1074,7 @@ mod test_barrier_options {
         };
         let info = PayoffInfo {
             spot: pos_or_panic!(120.0),
-            strike: pos_or_panic!(100.0),
+            strike: Positive::HUNDRED,
             style: OptionStyle::Call,
             side: Side::Long,
             spot_prices: None,
@@ -1098,7 +1098,7 @@ mod test_cliquet_options {
         };
         let info = PayoffInfo {
             spot: pos_or_panic!(120.0),
-            strike: pos_or_panic!(100.0),
+            strike: Positive::HUNDRED,
             style: OptionStyle::Call,
             side: Side::Long,
             spot_prices: None,
@@ -1120,7 +1120,7 @@ mod test_rainbow_options {
         let option = OptionType::Rainbow { num_assets: 3 };
         let info = PayoffInfo {
             spot: pos_or_panic!(120.0),
-            strike: pos_or_panic!(100.0),
+            strike: Positive::HUNDRED,
             style: OptionStyle::Call,
             side: Side::Long,
             spot_prices: None,
@@ -1142,7 +1142,7 @@ mod test_exchange_options {
         let option = OptionType::Exchange { second_asset: 90.0 };
         let info = PayoffInfo {
             spot: pos_or_panic!(120.0),
-            strike: pos_or_panic!(100.0),
+            strike: Positive::HUNDRED,
             style: OptionStyle::Call,
             side: Side::Long,
             spot_prices: None,
@@ -1158,7 +1158,7 @@ mod test_exchange_options {
         };
         let info = PayoffInfo {
             spot: pos_or_panic!(110.0),
-            strike: pos_or_panic!(100.0),
+            strike: Positive::HUNDRED,
             style: OptionStyle::Call,
             side: Side::Long,
             spot_prices: None,

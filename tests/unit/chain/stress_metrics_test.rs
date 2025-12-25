@@ -47,7 +47,7 @@ fn create_test_chain() -> OptionChain {
 
 /// Creates an empty option chain for edge case testing
 fn create_empty_chain() -> OptionChain {
-    OptionChain::new("EMPTY", pos_or_panic!(100.0), "2024-12-31".to_string(), None, None)
+    OptionChain::new("EMPTY", Positive::HUNDRED, "2024-12-31".to_string(), None, None)
 }
 
 // ============================================================================
@@ -391,7 +391,7 @@ mod edge_case_tests {
     fn test_near_expiration() {
         let chain = create_test_chain();
         let price_range = (pos_or_panic!(400.0), pos_or_panic!(500.0));
-        let days = vec![pos_or_panic!(1.0), pos_or_panic!(0.5)]; // Very short time to expiration
+        let days = vec![Positive::ONE, pos_or_panic!(0.5)]; // Very short time to expiration
 
         let result = chain.time_decay_surface(price_range, days, 5);
         assert!(result.is_ok());

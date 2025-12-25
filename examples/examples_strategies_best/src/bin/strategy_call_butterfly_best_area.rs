@@ -16,11 +16,11 @@ fn main() -> Result<(), Error> {
         Positive::ZERO,   // long_strike_itm
         Positive::ZERO,   // long_strike_otm
         Positive::ZERO,   // short_strike
-        ExpirationDate::Days(pos_or_panic!(2.0)),
+        ExpirationDate::Days(Positive::TWO),
         Positive::ZERO,      // implied_volatility
         dec!(0.05),          // risk_free_rate
         Positive::ZERO,      // dividend_yield
-        pos_or_panic!(1.0),  // long quantity
+        Positive::ONE,  // long quantity
         Positive::ZERO,      // short_quantity
         Positive::ZERO,      // premium_long_itm
         Positive::ZERO,      // premium_long_otm

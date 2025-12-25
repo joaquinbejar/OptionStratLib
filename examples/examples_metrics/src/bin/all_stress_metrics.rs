@@ -142,7 +142,7 @@ fn main() -> Result<(), CurveError> {
     tracing::info!("   Shows option value across price and time");
 
     let days = vec![
-        pos_or_panic!(1.0),
+        Positive::ONE,
         pos_or_panic!(7.0),
         pos_or_panic!(14.0),
         pos_or_panic!(21.0),

@@ -408,11 +408,11 @@ mod tests_basic_surfaces {
             OptionType::European,
             Side::Long,
             "TEST".to_string(),
-            pos_or_panic!(100.0), // strike_price
+            Positive::HUNDRED, // strike_price
             ExpirationDate::Days(pos_or_panic!(30.0)),
             pos_or_panic!(0.2),   // implied_volatility
-            pos_or_panic!(1.0),   // quantity
-            pos_or_panic!(100.0), // underlying_price
+            Positive::ONE,   // quantity
+            Positive::HUNDRED, // underlying_price
             dec!(0.05),           // risk_free_rate
             OptionStyle::Call,
             pos_or_panic!(0.01), // dividend_yield
@@ -885,7 +885,7 @@ mod tests_basic_surfaces {
     fn test_get_time_versus_near_expiration() {
         let surfaces = MockBasicSurfaces;
         let option = create_test_option();
-        let days = pos_or_panic!(1.0); // Near expiration
+        let days = Positive::ONE; // Near expiration
 
         let result = surfaces.get_surface_time_versus(&BasicAxisTypes::Veta, &option, days);
 

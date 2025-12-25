@@ -28,7 +28,7 @@
 //!
 //! let future = FuturePosition::new(
 //!     "ES".to_string(),        // E-mini S&P 500
-//!     pos_or_panic!(2.0),               // 2 contracts
+//!     Positive::TWO,               // 2 contracts
 //!     pos_or_panic!(4500.0),            // entry price
 //!     Side::Long,
 //!     ExpirationDate::Days(pos_or_panic!(30.0)),
@@ -341,7 +341,7 @@ impl Marginable for FuturePosition {
 
     fn leverage(&self) -> Positive {
         let lev = self.implied_leverage();
-        Positive::new_decimal(lev).unwrap_or(crate::pos_or_panic!(1.0))
+        Positive::new_decimal(lev).unwrap_or(crate::Positive::ONE)
     }
 
     fn liquidation_price(&self, _current_price: Positive) -> Positive {
@@ -413,7 +413,7 @@ impl Default for FuturePosition {
             entry_price: Positive::ZERO,
             side: Side::Long,
             expiration_date: ExpirationDate::Days(crate::pos_or_panic!(30.0)),
-            contract_size: crate::pos_or_panic!(1.0),
+            contract_size: crate::Positive::ONE,
             initial_margin_req: Positive::ZERO,
             maintenance_margin_req: Positive::ZERO,
             date: Utc::now(),
@@ -430,7 +430,7 @@ mod tests {
     fn test_future_position_new() {
         let future = FuturePosition::new(
             "ES".to_string(),
-            pos_or_panic!(2.0),
+            Positive::TWO,
             pos_or_panic!(4500.0),
             Side::Long,
             ExpirationDate::Days(pos_or_panic!(30.0)),
@@ -442,7 +442,7 @@ mod tests {
         );
 
         assert_eq!(future.symbol, "ES");
-        assert_eq!(future.quantity, pos_or_panic!(2.0));
+        assert_eq!(future.quantity, Positive::TWO);
         assert_eq!(future.entry_price, pos_or_panic!(4500.0));
         assert_eq!(future.side, Side::Long);
         assert_eq!(future.contract_size, pos_or_panic!(50.0));
@@ -452,7 +452,7 @@ mod tests {
     fn test_future_long_convenience() {
         let future = FuturePosition::long(
             "ES".to_string(),
-            pos_or_panic!(1.0),
+            Positive::ONE,
             pos_or_panic!(4500.0),
             ExpirationDate::Days(pos_or_panic!(30.0)),
             pos_or_panic!(50.0),
@@ -467,7 +467,7 @@ mod tests {
     fn test_future_short_convenience() {
         let future = FuturePosition::short(
             "ES".to_string(),
-            pos_or_panic!(1.0),
+            Positive::ONE,
             pos_or_panic!(4500.0),
             ExpirationDate::Days(pos_or_panic!(30.0)),
             pos_or_panic!(50.0),
@@ -481,7 +481,7 @@ mod tests {
     fn test_notional_value() {
         let future = FuturePosition::long(
             "ES".to_string(),
-            pos_or_panic!(2.0),
+            Positive::TWO,
             pos_or_panic!(4500.0),
             ExpirationDate::Days(pos_or_panic!(30.0)),
             pos_or_panic!(50.0),
@@ -495,7 +495,7 @@ mod tests {
     fn test_unrealized_pnl_long() {
         let future = FuturePosition::long(
             "ES".to_string(),
-            pos_or_panic!(1.0),
+            Positive::ONE,
             pos_or_panic!(4500.0),
             ExpirationDate::Days(pos_or_panic!(30.0)),
             pos_or_panic!(50.0),
@@ -513,7 +513,7 @@ mod tests {
     fn test_unrealized_pnl_short() {
         let future = FuturePosition::short(
             "ES".to_string(),
-            pos_or_panic!(1.0),
+            Positive::ONE,
             pos_or_panic!(4500.0),
             ExpirationDate::Days(pos_or_panic!(30.0)),
             pos_or_panic!(50.0),
@@ -531,7 +531,7 @@ mod tests {
     fn test_delta_long() {
         let future = FuturePosition::long(
             "ES".to_string(),
-            pos_or_panic!(2.0),
+            Positive::TWO,
             pos_or_panic!(4500.0),
             ExpirationDate::Days(pos_or_panic!(30.0)),
             pos_or_panic!(50.0),
@@ -545,7 +545,7 @@ mod tests {
     fn test_delta_short() {
         let future = FuturePosition::short(
             "ES".to_string(),
-            pos_or_panic!(2.0),
+            Positive::TWO,
             pos_or_panic!(4500.0),
             ExpirationDate::Days(pos_or_panic!(30.0)),
             pos_or_panic!(50.0),
@@ -559,7 +559,7 @@ mod tests {
     fn test_implied_leverage() {
         let future = FuturePosition::long(
             "ES".to_string(),
-            pos_or_panic!(1.0),
+            Positive::ONE,
             pos_or_panic!(4500.0),
             ExpirationDate::Days(pos_or_panic!(30.0)),
             pos_or_panic!(50.0),
@@ -574,7 +574,7 @@ mod tests {
     fn test_basis() {
         let future = FuturePosition::long(
             "ES".to_string(),
-            pos_or_panic!(1.0),
+            Positive::ONE,
             pos_or_panic!(4510.0),
             ExpirationDate::Days(pos_or_panic!(30.0)),
             pos_or_panic!(50.0),
@@ -589,7 +589,7 @@ mod tests {
     fn test_tick_value() {
         let future = FuturePosition::long(
             "ES".to_string(),
-            pos_or_panic!(1.0),
+            Positive::ONE,
             pos_or_panic!(4500.0),
             ExpirationDate::Days(pos_or_panic!(30.0)),
             pos_or_panic!(50.0),
@@ -604,7 +604,7 @@ mod tests {
     fn test_total_margin_required() {
         let future = FuturePosition::long(
             "ES".to_string(),
-            pos_or_panic!(2.0),
+            Positive::TWO,
             pos_or_panic!(4500.0),
             ExpirationDate::Days(pos_or_panic!(30.0)),
             pos_or_panic!(50.0),
@@ -618,7 +618,7 @@ mod tests {
     fn test_display() {
         let future = FuturePosition::long(
             "ES".to_string(),
-            pos_or_panic!(1.0),
+            Positive::ONE,
             pos_or_panic!(4500.0),
             ExpirationDate::Days(pos_or_panic!(30.0)),
             pos_or_panic!(50.0),

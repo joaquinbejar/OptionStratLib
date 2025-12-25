@@ -344,6 +344,7 @@ pub fn telegraph(
 
 #[cfg(test)]
 mod tests_telegraph_process_basis {
+    use positive::pos_or_panic;
     use super::*;
     use crate::Positive;
     use crate::model::types::{OptionStyle, OptionType, Side};
@@ -397,8 +398,8 @@ mod tests_telegraph_process_basis {
         let option = Options {
             option_type: OptionType::European,
             side: Side::Long,
-            underlying_price: pos_or_panic!(100.0),
-            strike_price: pos_or_panic!(100.0),
+            underlying_price: Positive::HUNDRED,
+            strike_price: Positive::ONE,
             risk_free_rate: dec!(0.05),
             option_style: OptionStyle::Call,
             dividend_yield: Positive::ZERO,
@@ -417,6 +418,7 @@ mod tests_telegraph_process_basis {
 
 #[cfg(test)]
 mod tests_telegraph_process_extended {
+    use positive::pos_or_panic;
     use super::*;
     use crate::Positive;
     use crate::model::types::{OptionStyle, OptionType, Side};
@@ -428,8 +430,8 @@ mod tests_telegraph_process_extended {
         Options {
             option_type: OptionType::European,
             side: Side::Long,
-            underlying_price: pos_or_panic!(100.0),
-            strike_price: pos_or_panic!(100.0),
+            underlying_price: Positive::HUNDRED,
+            strike_price: Positive::HUNDRED,
             risk_free_rate: dec!(0.05),
             option_style: OptionStyle::Call,
             dividend_yield: Positive::ZERO,

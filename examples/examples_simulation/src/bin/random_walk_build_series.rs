@@ -53,8 +53,8 @@ fn main() -> Result<(), Error> {
     let series_params = OptionSeriesBuildParams::new(
         build_params.clone(),
         vec![
-            pos_or_panic!(1.0),
-            pos_or_panic!(2.0),
+            Positive::ONE,
+            Positive::TWO,
             pos_or_panic!(5.0),
             pos_or_panic!(15.0),
             pos_or_panic!(30.0),
@@ -74,7 +74,7 @@ fn main() -> Result<(), Error> {
         },
         walk_type: WalkType::GeometricBrownian {
             dt: convert_time_frame(
-                pos_or_panic!(1.0) / days,
+                Positive::ONE / days,
                 &TimeFrame::Minute,
                 &TimeFrame::Day,
             ),

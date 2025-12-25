@@ -10,7 +10,7 @@ fn main() -> Result<(), Error> {
         pos_or_panic!(5700.0),
         pos_or_panic!(5780.0),
         pos_or_panic!(5850.0),
-        ExpirationDate::Days(pos_or_panic!(2.0)),
+        ExpirationDate::Days(Positive::TWO),
         pos_or_panic!(0.18),
         dec!(0.05),
         Positive::ZERO,
@@ -19,11 +19,11 @@ fn main() -> Result<(), Error> {
         pos_or_panic!(66.0),   // premium_short
         pos_or_panic!(29.85),  // open_fee_long
         pos_or_panic!(4.0),
-        pos_or_panic!(0.0),
-        pos_or_panic!(0.0),
-        pos_or_panic!(0.0),
-        pos_or_panic!(0.0),
-        pos_or_panic!(0.0),
+        Positive::ZERO,
+        Positive::ZERO,
+        Positive::ZERO,
+        Positive::ZERO,
+        Positive::ZERO,
     );
 
     info!("Title: {}", strategy.get_title());

@@ -127,6 +127,7 @@ mod tests_pnl_calculator {
     use super::*;
 
     use chrono::Utc;
+    use positive::pos_or_panic;
     use rust_decimal_macros::dec;
 
     #[test]
@@ -208,7 +209,7 @@ mod tests_pnl_calculator {
         let now = ExpirationDate::Days(pos_or_panic!(3.0));
 
         let pnl = dummy
-            .calculate_pnl(&pos_or_panic!(100.0), now, &pos_or_panic!(100.0))
+            .calculate_pnl(&Positive::HUNDRED, now, &Positive::HUNDRED)
             .unwrap();
         assert_eq!(pnl.realized, Some(dec!(100.0)));
         assert_eq!(pnl.unrealized, None);

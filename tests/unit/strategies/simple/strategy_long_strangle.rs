@@ -24,7 +24,7 @@ fn test_long_strangle_integration() -> Result<(), Box<dyn Error>> {
         pos_or_panic!(0.3745),   // implied_volatility
         dec!(0.05),     // risk_free_rate
         Positive::ZERO, // dividend_yield
-        pos_or_panic!(1.0),      // quantity
+        Positive::ONE,      // quantity
         pos_or_panic!(84.2),     // premium_short_call
         pos_or_panic!(353.2),    // premium_short_put
         pos_or_panic!(7.0),      // open_fee_short_call
@@ -51,7 +51,7 @@ fn test_long_strangle_integration() -> Result<(), Box<dyn Error>> {
     assert_eq!(strategy.get_fees().unwrap().to_f64(), 28.03);
 
     // Test range calculations
-    let price_range = strategy.get_best_range_to_show(pos_or_panic!(1.0)).unwrap();
+    let price_range = strategy.get_best_range_to_show(Positive::ONE).unwrap();
     assert!(!price_range.is_empty());
     let break_even_points = strategy.get_break_even_points().unwrap();
     let range = break_even_points[1] - break_even_points[0];

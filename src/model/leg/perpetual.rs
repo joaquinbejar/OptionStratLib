@@ -28,7 +28,7 @@
 //!
 //! let perp = PerpetualPosition::new(
 //!     "BTC-USDT-PERP".to_string(),
-//!     pos_or_panic!(1.0),           // 1 BTC position size
+//!     Positive::ONE,           // 1 BTC position size
 //!     pos_or_panic!(50000.0),       // entry price
 //!     Side::Long,
 //!     pos_or_panic!(10.0),          // 10x leverage
@@ -451,7 +451,7 @@ impl Default for PerpetualPosition {
             quantity: Positive::ZERO,
             entry_price: Positive::ZERO,
             side: Side::Long,
-            leverage: crate::pos_or_panic!(1.0),
+            leverage: crate::Positive::ONE,
             margin: Positive::ZERO,
             margin_type: MarginType::default(),
             funding_rate: Decimal::ZERO,
@@ -471,7 +471,7 @@ mod tests {
     fn test_perpetual_position_new() {
         let perp = PerpetualPosition::new(
             "BTC-USDT-PERP".to_string(),
-            pos_or_panic!(1.0),
+            Positive::ONE,
             pos_or_panic!(50000.0),
             Side::Long,
             pos_or_panic!(10.0),
@@ -483,7 +483,7 @@ mod tests {
         );
 
         assert_eq!(perp.symbol, "BTC-USDT-PERP");
-        assert_eq!(perp.quantity, pos_or_panic!(1.0));
+        assert_eq!(perp.quantity, Positive::ONE);
         assert_eq!(perp.entry_price, pos_or_panic!(50000.0));
         assert_eq!(perp.side, Side::Long);
         assert_eq!(perp.leverage, pos_or_panic!(10.0));
@@ -496,7 +496,7 @@ mod tests {
     fn test_perpetual_long_convenience() {
         let perp = PerpetualPosition::long(
             "BTC-USDT-PERP".to_string(),
-            pos_or_panic!(1.0),
+            Positive::ONE,
             pos_or_panic!(50000.0),
             pos_or_panic!(10.0),
             pos_or_panic!(5000.0),
@@ -510,7 +510,7 @@ mod tests {
     fn test_perpetual_short_convenience() {
         let perp = PerpetualPosition::short(
             "BTC-USDT-PERP".to_string(),
-            pos_or_panic!(1.0),
+            Positive::ONE,
             pos_or_panic!(50000.0),
             pos_or_panic!(10.0),
             pos_or_panic!(5000.0),
@@ -523,7 +523,7 @@ mod tests {
     fn test_notional_value() {
         let perp = PerpetualPosition::long(
             "BTC-USDT-PERP".to_string(),
-            pos_or_panic!(2.0),
+            Positive::TWO,
             pos_or_panic!(50000.0),
             pos_or_panic!(10.0),
             pos_or_panic!(10000.0),
@@ -540,7 +540,7 @@ mod tests {
     fn test_unrealized_pnl_long() {
         let perp = PerpetualPosition::long(
             "BTC-USDT-PERP".to_string(),
-            pos_or_panic!(1.0),
+            Positive::ONE,
             pos_or_panic!(50000.0),
             pos_or_panic!(10.0),
             pos_or_panic!(5000.0),
@@ -554,7 +554,7 @@ mod tests {
     fn test_unrealized_pnl_short() {
         let perp = PerpetualPosition::short(
             "BTC-USDT-PERP".to_string(),
-            pos_or_panic!(1.0),
+            Positive::ONE,
             pos_or_panic!(50000.0),
             pos_or_panic!(10.0),
             pos_or_panic!(5000.0),
@@ -568,7 +568,7 @@ mod tests {
     fn test_roe_percentage() {
         let perp = PerpetualPosition::long(
             "BTC-USDT-PERP".to_string(),
-            pos_or_panic!(1.0),
+            Positive::ONE,
             pos_or_panic!(50000.0),
             pos_or_panic!(10.0),
             pos_or_panic!(5000.0),
@@ -582,7 +582,7 @@ mod tests {
     fn test_delta_long() {
         let perp = PerpetualPosition::long(
             "BTC-USDT-PERP".to_string(),
-            pos_or_panic!(2.0),
+            Positive::TWO,
             pos_or_panic!(50000.0),
             pos_or_panic!(10.0),
             pos_or_panic!(10000.0),
@@ -595,7 +595,7 @@ mod tests {
     fn test_delta_short() {
         let perp = PerpetualPosition::short(
             "BTC-USDT-PERP".to_string(),
-            pos_or_panic!(2.0),
+            Positive::TWO,
             pos_or_panic!(50000.0),
             pos_or_panic!(10.0),
             pos_or_panic!(10000.0),
@@ -608,7 +608,7 @@ mod tests {
     fn test_funding_payment_long() {
         let perp = PerpetualPosition::new(
             "BTC-USDT-PERP".to_string(),
-            pos_or_panic!(1.0),
+            Positive::ONE,
             pos_or_panic!(50000.0),
             Side::Long,
             pos_or_panic!(10.0),
@@ -627,7 +627,7 @@ mod tests {
     fn test_funding_payment_short() {
         let perp = PerpetualPosition::new(
             "BTC-USDT-PERP".to_string(),
-            pos_or_panic!(1.0),
+            Positive::ONE,
             pos_or_panic!(50000.0),
             Side::Short,
             pos_or_panic!(10.0),
@@ -646,7 +646,7 @@ mod tests {
     fn test_liquidation_price_long() {
         let perp = PerpetualPosition::long(
             "BTC-USDT-PERP".to_string(),
-            pos_or_panic!(1.0),
+            Positive::ONE,
             pos_or_panic!(50000.0),
             pos_or_panic!(10.0),
             pos_or_panic!(5000.0),
@@ -661,7 +661,7 @@ mod tests {
     fn test_liquidation_price_short() {
         let perp = PerpetualPosition::short(
             "BTC-USDT-PERP".to_string(),
-            pos_or_panic!(1.0),
+            Positive::ONE,
             pos_or_panic!(50000.0),
             pos_or_panic!(10.0),
             pos_or_panic!(5000.0),
@@ -675,7 +675,7 @@ mod tests {
     fn test_effective_leverage() {
         let perp = PerpetualPosition::long(
             "BTC-USDT-PERP".to_string(),
-            pos_or_panic!(1.0),
+            Positive::ONE,
             pos_or_panic!(50000.0),
             pos_or_panic!(10.0),
             pos_or_panic!(5000.0),
@@ -695,7 +695,7 @@ mod tests {
     fn test_display() {
         let perp = PerpetualPosition::long(
             "BTC-USDT-PERP".to_string(),
-            pos_or_panic!(1.0),
+            Positive::ONE,
             pos_or_panic!(50000.0),
             pos_or_panic!(10.0),
             pos_or_panic!(5000.0),

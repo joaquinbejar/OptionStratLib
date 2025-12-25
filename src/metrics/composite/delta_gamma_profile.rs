@@ -171,6 +171,7 @@ mod tests_delta_gamma_profile {
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
     use std::collections::BTreeSet;
+    use positive::pos_or_panic;
 
     struct TestDeltaGammaProfile {
         underlying_price: Positive,
@@ -317,7 +318,7 @@ mod tests_delta_gamma_profile {
             underlying_price: pos_or_panic!(450.0),
         };
         let price_range = (pos_or_panic!(480.0), pos_or_panic!(480.0)); // ITM call
-        let days = vec![pos_or_panic!(30.0), pos_or_panic!(7.0), pos_or_panic!(1.0)];
+        let days = vec![pos_or_panic!(30.0), pos_or_panic!(7.0), Positive::ONE];
 
         let surface = profile.delta_gamma_surface(price_range, days, 0).unwrap();
 

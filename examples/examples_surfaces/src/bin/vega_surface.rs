@@ -11,7 +11,7 @@ fn get_option(point2d: &Point2D) -> Options {
         strike,
         ExpirationDate::Days(pos_or_panic!(365.0)),
         volatilitity,
-        pos_or_panic!(1.0),
+        Positive::ONE,
         pos_or_panic!(50.0),
         Decimal::ZERO,
         OptionStyle::Call,

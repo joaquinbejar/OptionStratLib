@@ -217,7 +217,7 @@ fn evaluate_short_put_strategy(
 
         // Check if expiration would have triggered exit policy
         // This handles cases where the intrinsic value at expiration exceeds stop loss
-        let days_left = pos_or_panic!(0.0);
+        let days_left = Positive::ZERO;
         if let Some(exit_reason) = check_exit_policy(
             exit_policy,
             initial_premium,
@@ -351,7 +351,7 @@ fn main() -> Result<(), Error> {
         underlying_price,
         dec!(0.0), // risk_free_rate
         OptionStyle::Put,
-        pos_or_panic!(0.0), // dividend_yield
+        Positive::ZERO, // dividend_yield
         None,
     );
 
@@ -374,7 +374,7 @@ fn main() -> Result<(), Error> {
     // Create WalkParams for the Simulator
     let walker = Box::new(Walker::new());
     let dt = convert_time_frame(
-        pos_or_panic!(1.0) / days,
+        Positive::ONE / days,
         &TimeFrame::Minute,
         &TimeFrame::Day,
     );

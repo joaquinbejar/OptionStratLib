@@ -37,7 +37,7 @@
 //!             pos_or_panic!(0.02),
 //!             2,
 //!             OptionDataPriceParams::new(
-//!                 Some(Box::new(pos_or_panic!(100.0))),
+//!                 Some(Box::new(Positive::HUNDRED)),
 //!                 Some(ExpirationDate::Days(pos_or_panic!(30.0))),
 //!                 Some(dec!(0.0)),
 //!                 spos!(0.05),

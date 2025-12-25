@@ -20,11 +20,11 @@ fn test_call_butterfly_integration() -> Result<(), Box<dyn Error>> {
         pos_or_panic!(5750.0), // long_call_strike
         pos_or_panic!(5800.0), // short_call_low_strike
         pos_or_panic!(5850.0), // short_call_high_strike
-        ExpirationDate::Days(pos_or_panic!(2.0)),
+        ExpirationDate::Days(Positive::TWO),
         pos_or_panic!(0.18),  // implied_volatility
         dec!(0.05),           // risk_free_rate
         Positive::ZERO,       // dividend_yield
-        pos_or_panic!(1.0),   // long quantity
+        Positive::ONE,   // long quantity
         pos_or_panic!(85.04), // premium_long_itm
         pos_or_panic!(53.04), // premium_long_otm
         pos_or_panic!(28.85), // premium_short
@@ -63,7 +63,7 @@ fn test_call_butterfly_integration() -> Result<(), Box<dyn Error>> {
     assert_eq!(strategy.get_fees()?.to_f64(), 4.53);
 
     // Test range calculations
-    let price_range = strategy.get_best_range_to_show(pos_or_panic!(1.0))?;
+    let price_range = strategy.get_best_range_to_show(Positive::ONE)?;
     assert!(!price_range.is_empty());
     let range = strategy.get_range_of_profit()?;
     assert_relative_eq!(range.to_f64(), 134.639, epsilon = 0.001);

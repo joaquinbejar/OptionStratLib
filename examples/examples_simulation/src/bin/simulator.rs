@@ -20,7 +20,7 @@ fn main() -> Result<(), Error> {
     let walker = Box::new(Walker::new());
     let days = pos_or_panic!(7.0);
     let dt = convert_time_frame(
-        pos_or_panic!(1.0) / days,
+        Positive::ONE / days,
         &TimeFrame::Minute,
         &TimeFrame::Day,
     );

@@ -107,6 +107,7 @@ mod tests_basic_curves_trait {
     use rust_decimal_macros::dec;
     use std::collections::BTreeSet;
     use std::sync::Arc;
+    use positive::pos_or_panic;
 
     // Helper function to create a sample Options for testing
     fn create_test_option() -> Arc<Options> {
@@ -114,7 +115,7 @@ mod tests_basic_curves_trait {
             OptionType::European,
             Side::Long,
             "AAPL".to_string(),
-            pos_or_panic!(100.0), // strike
+            Positive::HUNDRED, // strike
             ExpirationDate::Days(pos_or_panic!(30.0)),
             pos_or_panic!(0.2),   // implied volatility
             Positive::ONE,        // quantity

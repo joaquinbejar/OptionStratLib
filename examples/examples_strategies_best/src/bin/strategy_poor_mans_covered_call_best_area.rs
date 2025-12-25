@@ -15,7 +15,7 @@ fn main() -> Result<(), Error> {
         Positive::ZERO,                            // implied_volatility
         Decimal::ZERO,                             // risk_free_rate
         Positive::ZERO,                            // dividend_yield
-        pos_or_panic!(2.0),                        // quantity
+        Positive::TWO,                        // quantity
         Positive::ZERO,                            // premium_short_call
         Positive::ZERO,                            // premium_short_put
         pos_or_panic!(1.74),                       // open_fee_short_call

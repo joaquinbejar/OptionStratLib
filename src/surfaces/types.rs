@@ -290,7 +290,7 @@ mod tests {
 
     #[test]
     fn test_point3d_from_tuple() {
-        let result = Point3D::from_tuple(dec!(1.0), pos_or_panic!(2.0), pos_or_panic!(3.0));
+        let result = Point3D::from_tuple(dec!(1.0), Positive::TWO, pos_or_panic!(3.0));
         assert!(result.is_ok());
         let point = result.unwrap();
         assert_eq!(point.x, dec!(1.0));

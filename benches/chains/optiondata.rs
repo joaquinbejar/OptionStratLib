@@ -40,7 +40,7 @@ fn benchmark_basic_operations(
                 None,
                 Some("TEST".to_string()),                        // symbol
                 Some(ExpirationDate::Days(pos_or_panic!(30.0))), // expiration_date
-                Some(Box::new(pos_or_panic!(100.0))),            // underlying_price
+                Some(Box::new(Positive::HUNDRED)),            // underlying_price
                 Some(dec!(0.05)),                                // risk_free_rate
                 Some(pos_or_panic!(0.02)),                       // dividend_yield
                 None,
@@ -67,7 +67,7 @@ fn benchmark_basic_operations(
                 Some(100),
                 Some("TEST".to_string()),                        // symbol
                 Some(ExpirationDate::Days(pos_or_panic!(30.0))), // expiration_date
-                Some(Box::new(pos_or_panic!(100.0))),            // underlying_price
+                Some(Box::new(Positive::HUNDRED)),            // underlying_price
                 Some(dec!(0.05)),                                // risk_free_rate
                 Some(pos_or_panic!(0.02)),                       // dividend_yield
                 None,
@@ -131,7 +131,7 @@ fn create_test_option_data() -> OptionData {
         None,
         Some("TEST".to_string()),                        // symbol
         Some(ExpirationDate::Days(pos_or_panic!(30.0))), // expiration_date
-        Some(Box::new(pos_or_panic!(100.0))),            // underlying_price
+        Some(Box::new(Positive::HUNDRED)),            // underlying_price
         Some(dec!(0.05)),                                // risk_free_rate
         Some(pos_or_panic!(0.02)),                       // dividend_yield
         None,
@@ -141,7 +141,7 @@ fn create_test_option_data() -> OptionData {
 
 fn create_standard_price_params() -> OptionDataPriceParams {
     OptionDataPriceParams::new(
-        Some(Box::new(pos_or_panic!(100.0))),
+        Some(Box::new(Positive::HUNDRED)),
         Some(ExpirationDate::Days(pos_or_panic!(30.0))),
         Some(dec!(0.05)),
         spos!(0.02),

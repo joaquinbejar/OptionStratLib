@@ -57,7 +57,7 @@ fn main() -> Result<(), CurveError> {
 
     let price_range = (pos_or_panic!(380.0), pos_or_panic!(520.0));
     let days = vec![
-        pos_or_panic!(1.0),
+        Positive::ONE,
         pos_or_panic!(7.0),
         pos_or_panic!(14.0),
         pos_or_panic!(21.0),

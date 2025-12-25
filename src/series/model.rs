@@ -372,6 +372,7 @@ impl<'de> Deserialize<'de> for OptionSeries {
 
 #[cfg(test)]
 mod tests_option_series {
+    use positive::{pos_or_panic, spos};
     use super::*;
 
     use crate::chains::OptionChain;
@@ -386,7 +387,7 @@ mod tests_option_series {
         let date = get_x_days_formatted_pos(expiration_days);
         let mut chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             date,
             Some(dec!(0.05)),
             spos!(0.02),
@@ -394,7 +395,7 @@ mod tests_option_series {
 
         // Add a simple option to the chain
         chain.add_option(
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             spos!(5.0),
             spos!(5.5),
             spos!(4.5),
@@ -413,12 +414,12 @@ mod tests_option_series {
 
     // Helper function to create a basic OptionSeries for testing
     fn create_test_series() -> OptionSeries {
-        let mut series = OptionSeries::new("TEST".to_string(), pos_or_panic!(100.0));
+        let mut series = OptionSeries::new("TEST".to_string(), Positive::HUNDRED);
 
         // Add chains with different expiration dates
         series.chains.insert(
-            ExpirationDate::Days(pos_or_panic!(1.0)),
-            create_test_chain(pos_or_panic!(1.0)),
+            ExpirationDate::Days(Positive::ONE),
+            create_test_chain(Positive::ONE),
         );
         series.chains.insert(
             ExpirationDate::Days(pos_or_panic!(7.0)),
@@ -466,7 +467,7 @@ mod tests_option_series {
 
         #[test]
         fn test_odte_with_valid_chain() {
-            let mut series = OptionSeries::new("TEST".to_string(), pos_or_panic!(100.0));
+            let mut series = OptionSeries::new("TEST".to_string(), Positive::HUNDRED);
 
             // Add a chain with expiration of 1 day or less
             series.chains.insert(
@@ -481,12 +482,12 @@ mod tests_option_series {
 
         #[test]
         fn test_odte_with_invalid_chain() {
-            let mut series = OptionSeries::new("TEST".to_string(), pos_or_panic!(100.0));
+            let mut series = OptionSeries::new("TEST".to_string(), Positive::HUNDRED);
 
             // Add a chain with expiration longer than 1 day
             series.chains.insert(
-                ExpirationDate::Days(pos_or_panic!(2.0)),
-                create_test_chain(pos_or_panic!(2.0)),
+                ExpirationDate::Days(Positive::TWO),
+                create_test_chain(Positive::TWO),
             );
 
             let odte_chain = series.odte();
@@ -495,7 +496,7 @@ mod tests_option_series {
 
         #[test]
         fn test_odte_with_empty_chains() {
-            let series = OptionSeries::new("TEST".to_string(), pos_or_panic!(100.0));
+            let series = OptionSeries::new("TEST".to_string(), Positive::HUNDRED);
 
             // No chains added
             let odte_chain = series.odte();
@@ -504,11 +505,11 @@ mod tests_option_series {
 
         #[test]
         fn test_odte_with_exact_one_day() {
-            let mut series = OptionSeries::new("TEST".to_string(), pos_or_panic!(100.0));
+            let mut series = OptionSeries::new("TEST".to_string(), Positive::HUNDRED);
 
             // Add a chain with exactly 1 day expiration
             series.chains.insert(
-                ExpirationDate::Days(pos_or_panic!(1.0)),
+                ExpirationDate::Days(Positive::ONE),
                 create_test_chain(Positive::ONE),
             );
 
@@ -531,14 +532,14 @@ mod tests_option_series {
             assert_eq!(dates.len(), 3);
 
             // Verify the dates are in the correct order (BTreeMap sorts keys)
-            assert_eq!(dates[0], pos_or_panic!(1.0));
+            assert_eq!(dates[0], Positive::ONE);
             assert_eq!(dates[1], pos_or_panic!(7.0));
             assert_eq!(dates[2], pos_or_panic!(30.0));
         }
 
         #[test]
         fn test_get_expiration_dates_empty_chains() {
-            let series = OptionSeries::new("TEST".to_string(), pos_or_panic!(100.0));
+            let series = OptionSeries::new("TEST".to_string(), Positive::HUNDRED);
 
             let result = series.get_expiration_dates();
             assert!(result.is_ok());
@@ -557,7 +558,7 @@ mod tests_option_series {
         fn test_build_series_basic() {
             // Create price params
             let price_params = OptionDataPriceParams::new(
-                Some(Box::new(pos_or_panic!(100.0))),
+                Some(Box::new(Positive::HUNDRED)),
                 Some(ExpirationDate::Days(pos_or_panic!(30.0))),
                 Some(dec!(0.05)),
                 spos!(0.02),
@@ -589,7 +590,7 @@ mod tests_option_series {
 
             // Verify the series properties
             assert_eq!(series.symbol, "TEST");
-            assert_eq!(series.underlying_price, pos_or_panic!(100.0));
+            assert_eq!(series.underlying_price, Positive::HUNDRED);
             assert_eq!(series.chains.len(), 3);
             assert_eq!(series.risk_free_rate, Some(dec!(0.05)));
             assert_eq!(series.dividend_yield, spos!(0.02));
@@ -620,7 +621,7 @@ mod tests_option_series {
 
         #[test]
         fn test_to_build_params_empty_series() {
-            let series = OptionSeries::new("TEST".to_string(), pos_or_panic!(100.0));
+            let series = OptionSeries::new("TEST".to_string(), Positive::HUNDRED);
 
             let result = series.to_build_params();
             assert!(result.is_err());
@@ -688,7 +689,7 @@ mod tests_option_series {
 
         #[test]
         fn test_len_empty_chains() {
-            let series = OptionSeries::new("TEST".to_string(), pos_or_panic!(100.0));
+            let series = OptionSeries::new("TEST".to_string(), Positive::HUNDRED);
 
             assert_eq!(series.len(), 0);
             assert!(series.is_empty());
@@ -702,7 +703,7 @@ mod tests_option_series {
 
         #[test]
         fn test_serialization_minimal() {
-            let original = OptionSeries::new("TEST".to_string(), pos_or_panic!(100.0));
+            let original = OptionSeries::new("TEST".to_string(), Positive::HUNDRED);
 
             // Serialize
             let serialized = serde_json::to_string(&original).unwrap();
@@ -725,7 +726,7 @@ mod tests_option_series {
 
         #[test]
         fn test_serialization_empty_series() {
-            let original = OptionSeries::new("TEST".to_string(), pos_or_panic!(100.0));
+            let original = OptionSeries::new("TEST".to_string(), Positive::HUNDRED);
 
             // Serialize
             let serialized = serde_json::to_string(&original);

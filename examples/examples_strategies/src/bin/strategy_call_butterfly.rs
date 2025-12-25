@@ -15,7 +15,7 @@ fn main() -> Result<(), Error> {
         pos_or_panic!(5750.0), // long_call_strike
         pos_or_panic!(5800.0), // short_call_low_strike
         pos_or_panic!(5850.0), // short_call_high_strike
-        ExpirationDate::Days(pos_or_panic!(2.0)),
+        ExpirationDate::Days(Positive::TWO),
         pos_or_panic!(0.18),  // implied_volatility
         dec!(0.05),           // risk_free_rate
         Positive::ZERO,       // dividend_yield

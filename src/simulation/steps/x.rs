@@ -268,6 +268,7 @@ where
 
 #[cfg(test)]
 mod tests {
+    use positive::pos_or_panic;
     use super::*;
     use crate::model::ExpirationDate;
 
@@ -300,6 +301,7 @@ mod tests {
 
 #[cfg(test)]
 mod tests_serialize {
+    use positive::pos_or_panic;
     use super::*;
     use crate::model::ExpirationDate;
 
@@ -341,17 +343,17 @@ mod tests_serialize {
         let step_f64 = Xstep::new(
             2.5f64,
             TimeFrame::Day,
-            ExpirationDate::Days(pos_or_panic!(1.0)),
+            ExpirationDate::Days(Positive::ONE),
         );
         let step_decimal = Xstep::new(
             dec!(2.5),
             TimeFrame::Day,
-            ExpirationDate::Days(pos_or_panic!(1.0)),
+            ExpirationDate::Days(Positive::ONE),
         );
         let step_positive = Xstep::new(
             pos_or_panic!(2.5),
             TimeFrame::Day,
-            ExpirationDate::Days(pos_or_panic!(1.0)),
+            ExpirationDate::Days(Positive::ONE),
         );
 
         // Serialize all three
@@ -376,17 +378,17 @@ mod tests_serialize {
         let step_f64 = Xstep::new(
             3.1f64,
             TimeFrame::Hour,
-            ExpirationDate::Days(pos_or_panic!(1.0)),
+            ExpirationDate::Days(Positive::ONE),
         );
         let step_decimal = Xstep::new(
             dec!(3.1),
             TimeFrame::Hour,
-            ExpirationDate::Days(pos_or_panic!(1.0)),
+            ExpirationDate::Days(Positive::ONE),
         );
         let step_positive = Xstep::new(
             pos_or_panic!(3.1),
             TimeFrame::Hour,
-            ExpirationDate::Days(pos_or_panic!(1.0)),
+            ExpirationDate::Days(Positive::ONE),
         );
 
         // Serialize all three
@@ -405,7 +407,7 @@ mod tests_serialize {
         let step_zero = Xstep::new(
             0.01f64,
             TimeFrame::Minute,
-            ExpirationDate::Days(pos_or_panic!(0.0)),
+            ExpirationDate::Days(Positive::ZERO),
         );
         let json_zero = serde_json::to_string(&step_zero).unwrap();
         let parsed_zero: Value = serde_json::from_str(&json_zero).unwrap();
@@ -415,7 +417,7 @@ mod tests_serialize {
         let step_small = Xstep::new(
             0.00001f64,
             TimeFrame::Minute,
-            ExpirationDate::Days(pos_or_panic!(1.0)),
+            ExpirationDate::Days(Positive::ONE),
         );
         let json_small = serde_json::to_string(&step_small).unwrap();
         let parsed_small: Value = serde_json::from_str(&json_small).unwrap();
@@ -426,7 +428,7 @@ mod tests_serialize {
         let step_large = Xstep::new(
             1_000_000.01f64,
             TimeFrame::Minute,
-            ExpirationDate::Days(pos_or_panic!(1.0)),
+            ExpirationDate::Days(Positive::ONE),
         );
         let json_large = serde_json::to_string(&step_large).unwrap();
         let parsed_large: Value = serde_json::from_str(&json_large).unwrap();
@@ -439,7 +441,7 @@ mod tests_serialize {
         let step = Xstep::new(
             1.23456789f64,
             TimeFrame::Day,
-            ExpirationDate::Days(pos_or_panic!(1.0)),
+            ExpirationDate::Days(Positive::ONE),
         );
 
         // Serialize and parse

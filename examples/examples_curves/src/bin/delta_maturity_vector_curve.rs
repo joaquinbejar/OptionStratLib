@@ -10,7 +10,7 @@ fn get_option(underlying_asset: &Positive, maturity: &Positive) -> Options {
         pos_or_panic!(50.0),
         ExpirationDate::Days(*maturity),
         pos_or_panic!(0.1),
-        pos_or_panic!(1.0),
+        Positive::ONE,
         *underlying_asset,
         Decimal::ZERO,
         OptionStyle::Call,

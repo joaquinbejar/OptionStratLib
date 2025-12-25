@@ -12,8 +12,8 @@ fn get_option(point2d: &Point2D) -> Options {
         strike,
         expiration_date,
         pos_or_panic!(0.5),   // volatility
-        pos_or_panic!(1.0),   // quantity
-        pos_or_panic!(100.0), // underlying price
+        Positive::ONE,   // quantity
+        Positive::HUNDRED, // underlying price
         dec!(0.05),           // risk free rate
         OptionStyle::Call,
         Positive::ZERO, // dividend yield

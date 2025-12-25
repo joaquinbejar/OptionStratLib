@@ -25,7 +25,7 @@ fn test_iron_condor_integration() -> Result<(), Box<dyn Error>> {
         pos_or_panic!(0.1548),   // implied_volatility
         dec!(0.05),     // risk_free_rate
         Positive::ZERO, // dividend_yield
-        pos_or_panic!(2.0),      // quantity
+        Positive::TWO,      // quantity
         pos_or_panic!(38.8),     // premium_short_call
         pos_or_panic!(30.4),     // premium_short_put
         pos_or_panic!(23.3),     // premium_long_call

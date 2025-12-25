@@ -1280,7 +1280,7 @@ mod tests_short_strangle {
             pos_or_panic!(0.22),
             dec!(0.01),
             pos_or_panic!(0.02),
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             Positive::TWO,
             pos_or_panic!(1.5),
             pos_or_panic!(0.1),
@@ -1480,7 +1480,7 @@ is expected and the underlying asset's price is anticipated to remain stable."
     }
     fn create_test_option_chain() -> OptionChain {
         let option_data_price_params = OptionDataPriceParams::new(
-            Some(Box::new(pos_or_panic!(100.0))),
+            Some(Box::new(Positive::HUNDRED)),
             Some(ExpirationDate::Days(pos_or_panic!(30.0))),
             Some(dec!(0.05)),
             spos!(0.02),
@@ -1517,7 +1517,7 @@ mod tests_short_strangle_probability {
     fn create_test() -> ShortStrangle {
         ShortStrangle::new(
             "TEST".to_string(),
-            pos_or_panic!(100.0),                      // underlying_price
+            Positive::HUNDRED,                      // underlying_price
             pos_or_panic!(110.0),                      // call_strike
             pos_or_panic!(90.0),                       // put_strike
             ExpirationDate::Days(pos_or_panic!(30.0)), // expiration
@@ -1525,7 +1525,7 @@ mod tests_short_strangle_probability {
             pos_or_panic!(0.21),                       // put_implied_volatility
             dec!(0.05),                                // risk_free_rate
             Positive::ZERO,                            // dividend_yield
-            pos_or_panic!(1.0),                        // quantity
+            Positive::ONE,                        // quantity
             Positive::TWO,                             // premium_short_call
             Positive::TWO,                             // premium_short_put
             Positive::ZERO,                            // open_fee_short_call
@@ -1544,7 +1544,7 @@ mod tests_short_strangle_probability {
         let prob = result.unwrap();
         assert!(prob > Positive::ZERO, "Probability should be positive");
         assert!(
-            prob <= pos_or_panic!(1.0),
+            prob <= Positive::ONE,
             "Probability should not exceed 1.0"
         );
     }
@@ -1566,7 +1566,7 @@ mod tests_short_strangle_probability {
         let prob = result.unwrap();
         assert!(prob > Positive::ZERO, "Probability should be positive");
         assert!(
-            prob <= pos_or_panic!(1.0),
+            prob <= Positive::ONE,
             "Probability should not exceed 1.0"
         );
     }
@@ -1588,7 +1588,7 @@ mod tests_short_strangle_probability {
         let prob = result.unwrap();
         assert!(prob > Positive::ZERO, "Probability should be positive");
         assert!(
-            prob <= pos_or_panic!(1.0),
+            prob <= Positive::ONE,
             "Probability should not exceed 1.0"
         );
     }
@@ -1610,7 +1610,7 @@ mod tests_short_strangle_probability {
         let prob = result.unwrap();
         assert!(prob > Positive::ZERO, "Probability should be positive");
         assert!(
-            prob <= pos_or_panic!(1.0),
+            prob <= Positive::ONE,
             "Probability should not exceed 1.0"
         );
     }
@@ -1622,7 +1622,7 @@ mod tests_short_strangle_probability {
 
         assert_eq!(
             *result,
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "Reference price should match underlying price"
         );
     }
@@ -1666,7 +1666,7 @@ mod tests_short_strangle_probability_bis {
     fn create_test() -> ShortStrangle {
         ShortStrangle::new(
             "TEST".to_string(),
-            pos_or_panic!(100.0),                      // underlying_price
+            Positive::HUNDRED,                      // underlying_price
             pos_or_panic!(110.0),                      // call_strike
             pos_or_panic!(90.0),                       // put_strike
             ExpirationDate::Days(pos_or_panic!(30.0)), // expiration
@@ -1674,7 +1674,7 @@ mod tests_short_strangle_probability_bis {
             pos_or_panic!(0.21),                       // put_implied_volatility
             dec!(0.05),                                // risk_free_rate
             Positive::ZERO,                            // dividend_yield
-            pos_or_panic!(1.0),                        // quantity
+            Positive::ONE,                        // quantity
             Positive::TWO,                             // premium_short_call
             Positive::TWO,                             // premium_short_put
             Positive::ZERO,                            // open_fee_short_call
@@ -1727,7 +1727,7 @@ mod tests_short_strangle_probability_bis {
         assert!(result.is_ok());
         let prob = result.unwrap();
         assert!(prob > Positive::ZERO);
-        assert!(prob <= pos_or_panic!(1.0));
+        assert!(prob <= Positive::ONE);
     }
 
     #[test]
@@ -1742,7 +1742,7 @@ mod tests_short_strangle_probability_bis {
         assert!(result.is_ok());
         let prob = result.unwrap();
         assert!(prob > Positive::ZERO);
-        assert!(prob <= pos_or_panic!(1.0));
+        assert!(prob <= Positive::ONE);
     }
 
     #[test]
@@ -1757,7 +1757,7 @@ mod tests_short_strangle_probability_bis {
         assert!(result.is_ok());
         let prob = result.unwrap();
         assert!(prob > Positive::ZERO);
-        assert!(prob <= pos_or_panic!(1.0));
+        assert!(prob <= Positive::ONE);
     }
 
     #[test]
@@ -1785,7 +1785,7 @@ mod tests_short_strangle_probability_bis {
         let (max_profit_prob, max_loss_prob) = result.unwrap();
         assert!(max_profit_prob >= Positive::ZERO);
         assert!(max_loss_prob >= Positive::ZERO);
-        assert!(max_profit_prob + max_loss_prob <= pos_or_panic!(1.0));
+        assert!(max_profit_prob + max_loss_prob <= Positive::ONE);
     }
 }
 
@@ -1813,7 +1813,7 @@ mod tests_short_strangle_delta {
             pos_or_panic!(0.21),  // put_implied_volatility
             dec!(0.05),           // risk_free_rate
             Positive::ZERO,       // dividend_yield
-            pos_or_panic!(1.0),   // quantity
+            Positive::ONE,   // quantity
             pos_or_panic!(84.2),  // premium_short_call
             pos_or_panic!(353.2), // premium_short_put
             pos_or_panic!(7.01),  // open_fee_short_call
@@ -1986,7 +1986,7 @@ mod tests_short_strangle_delta_size {
             pos_or_panic!(0.21),  // put_implied_volatility
             dec!(0.05),           // risk_free_rate
             Positive::ZERO,       // dividend_yield
-            pos_or_panic!(2.0),   // quantity
+            Positive::TWO,   // quantity
             pos_or_panic!(84.2),  // premium_short_call
             pos_or_panic!(353.2), // premium_short_put
             pos_or_panic!(7.01),  // open_fee_short_call
@@ -2296,7 +2296,7 @@ mod tests_adjust_option_position_short {
     fn create_test_strategy() -> ShortStrangle {
         ShortStrangle::new(
             "TEST".to_string(),
-            pos_or_panic!(100.0), // underlying_price
+            Positive::HUNDRED, // underlying_price
             pos_or_panic!(110.0), // call_strike
             pos_or_panic!(90.0),  // put_strike
             ExpirationDate::Days(pos_or_panic!(30.0)),
@@ -2304,9 +2304,9 @@ mod tests_adjust_option_position_short {
             pos_or_panic!(0.21), // put_implied_volatility
             dec!(0.05),          // risk_free_rate
             Positive::ZERO,      // dividend_yield
-            pos_or_panic!(1.0),  // quantity
-            pos_or_panic!(2.0),  // premium_short_call
-            pos_or_panic!(2.0),  // premium_short_put
+            Positive::ONE,  // quantity
+            Positive::TWO,  // premium_short_call
+            Positive::TWO,  // premium_short_put
             pos_or_panic!(0.1),  // open_fee_short_call
             pos_or_panic!(0.1),  // close_fee_short_call
             pos_or_panic!(0.1),  // open_fee_short_put
@@ -2318,7 +2318,7 @@ mod tests_adjust_option_position_short {
     fn test_adjust_existing_call_position() {
         let mut strategy = create_test_strategy();
         let initial_quantity = strategy.short_call.option.quantity;
-        let adjustment = pos_or_panic!(1.0);
+        let adjustment = Positive::ONE;
 
         let result = strategy.adjust_option_position(
             adjustment.to_dec(),
@@ -2338,7 +2338,7 @@ mod tests_adjust_option_position_short {
     fn test_adjust_existing_put_position() {
         let mut strategy = create_test_strategy();
         let initial_quantity = strategy.short_put.option.quantity;
-        let adjustment = pos_or_panic!(1.0);
+        let adjustment = Positive::ONE;
 
         let result = strategy.adjust_option_position(
             adjustment.to_dec(),
@@ -2382,7 +2382,7 @@ mod tests_adjust_option_position_short {
         // Try to adjust position with wrong strike price
         let result = strategy.adjust_option_position(
             Decimal::ONE,
-            &pos_or_panic!(100.0), // Invalid strike price
+            &Positive::HUNDRED, // Invalid strike price
             &OptionStyle::Call,
             &Side::Short,
         );
@@ -2421,8 +2421,8 @@ mod tests_short_strangle_pnl {
         let short_call = create_sample_position(
             OptionStyle::Call,
             Side::Short,
-            pos_or_panic!(100.0), // Underlying price
-            pos_or_panic!(1.0),   // Quantity
+            Positive::HUNDRED, // Underlying price
+            Positive::ONE,   // Quantity
             pos_or_panic!(105.0), // Strike price
             pos_or_panic!(0.2),   // Implied volatility
         );
@@ -2431,8 +2431,8 @@ mod tests_short_strangle_pnl {
         let short_put = create_sample_position(
             OptionStyle::Put,
             Side::Short,
-            pos_or_panic!(100.0), // Same underlying price
-            pos_or_panic!(1.0),   // Quantity
+            Positive::HUNDRED, // Same underlying price
+            Positive::ONE,   // Quantity
             pos_or_panic!(95.0),  // Strike price
             pos_or_panic!(0.2),   // Implied volatility
         );
@@ -2443,7 +2443,7 @@ mod tests_short_strangle_pnl {
     #[test]
     fn test_calculate_pnl_at_money() {
         let strangle = create_test_strangle().unwrap();
-        let market_price = pos_or_panic!(100.0);
+        let market_price = Positive::HUNDRED;
         let expiration_date = ExpirationDate::Days(pos_or_panic!(20.0));
         let implied_volatility = pos_or_panic!(0.3);
 
@@ -2456,7 +2456,7 @@ mod tests_short_strangle_pnl {
         // At the money, both options should have time value but no intrinsic value
         // Initial cost is 2 * fees = 2 * (1.0) = 2.0
         // Initial income is 2 * premium = 2 * 5.0 = 10.0
-        assert_pos_relative_eq!(pnl.initial_costs, pos_or_panic!(2.0), pos_or_panic!(1e-6));
+        assert_pos_relative_eq!(pnl.initial_costs, Positive::TWO, pos_or_panic!(1e-6));
         assert_pos_relative_eq!(pnl.initial_income, pos_or_panic!(10.0), pos_or_panic!(1e-6));
         assert_decimal_eq!(pnl.unrealized.unwrap(), dec!(-0.748425), dec!(1e-6));
         // Unrealized loss should be less than max potential loss
@@ -2504,7 +2504,7 @@ mod tests_short_strangle_pnl {
     #[test]
     fn test_calculate_pnl_at_expiration_max_profit() {
         let strangle = create_test_strangle().unwrap();
-        let underlying_price = pos_or_panic!(100.0); // At the money
+        let underlying_price = Positive::HUNDRED; // At the money
 
         let result = strangle.calculate_pnl_at_expiration(&underlying_price);
         assert!(result.is_ok());
@@ -2517,7 +2517,7 @@ mod tests_short_strangle_pnl {
         // Premium received = 10.0 (2 * 5.0)
         // Fees = 2.0 (2 * 1.0)
         assert_eq!(pnl.realized.unwrap(), dec!(8.0)); // 10.0 - 2.0
-        assert_eq!(pnl.initial_costs, pos_or_panic!(2.0));
+        assert_eq!(pnl.initial_costs, Positive::TWO);
         assert_eq!(pnl.initial_income, pos_or_panic!(10.0));
     }
 
@@ -2558,7 +2558,7 @@ mod tests_short_strangle_pnl {
     #[test]
     fn test_calculate_pnl_with_higher_volatility() {
         let strangle = create_test_strangle().unwrap();
-        let market_price = pos_or_panic!(100.0);
+        let market_price = Positive::HUNDRED;
         let expiration_date = ExpirationDate::Days(pos_or_panic!(30.0));
         let implied_volatility = pos_or_panic!(0.4); // Higher volatility
 
@@ -2588,8 +2588,8 @@ mod tests_short_strangle_roll {
         let short_call = create_sample_position(
             OptionStyle::Call,
             Side::Short,
-            pos_or_panic!(100.0), // Underlying price
-            pos_or_panic!(1.0),   // Quantity
+            Positive::HUNDRED, // Underlying price
+            Positive::ONE,   // Quantity
             pos_or_panic!(105.0), // Strike price
             pos_or_panic!(0.2),   // Implied volatility
         );
@@ -2598,8 +2598,8 @@ mod tests_short_strangle_roll {
         let short_put = create_sample_position(
             OptionStyle::Put,
             Side::Short,
-            pos_or_panic!(100.0), // Same underlying price
-            pos_or_panic!(1.0),   // Quantity
+            Positive::HUNDRED, // Same underlying price
+            Positive::ONE,   // Quantity
             pos_or_panic!(95.0),  // Strike price
             pos_or_panic!(0.2),   // Implied volatility
         );
@@ -2616,7 +2616,7 @@ mod tests_short_strangle_roll {
             OptionStyle::Call,
             Side::Short,
             pos_or_panic!(98.0),  // Underlying price
-            pos_or_panic!(1.0),   // Quantity
+            Positive::ONE,   // Quantity
             pos_or_panic!(103.0), // Strike price
             pos_or_panic!(0.2),   // Implied volatility
         );
@@ -2638,7 +2638,7 @@ mod tests_short_strangle_roll {
         );
         assert_pos_relative_eq!(
             strangle.short_call.option.quantity,
-            pos_or_panic!(1.0),
+            Positive::ONE,
             pos_or_panic!(1e-6)
         );
         assert_pos_relative_eq!(
@@ -2665,8 +2665,8 @@ mod tests_short_strangle_roll {
         let close = close.unwrap();
         info!("open: {}", open);
         info!("close: {}", close);
-        assert_pos_relative_eq!(open.quantity, pos_or_panic!(1.0), pos_or_panic!(1e-6));
-        assert_pos_relative_eq!(close.quantity, pos_or_panic!(1.0), pos_or_panic!(1e-6));
+        assert_pos_relative_eq!(open.quantity, Positive::ONE, pos_or_panic!(1e-6));
+        assert_pos_relative_eq!(close.quantity, Positive::ONE, pos_or_panic!(1e-6));
         assert_pos_relative_eq!(
             open.underlying_price,
             pos_or_panic!(98.0),
@@ -2686,7 +2686,7 @@ mod tests_short_strangle_roll {
             OptionStyle::Call,
             Side::Short,
             pos_or_panic!(98.0),  // Underlying price
-            pos_or_panic!(1.0),   // Quantity
+            Positive::ONE,   // Quantity
             pos_or_panic!(107.0), // Strike price
             pos_or_panic!(0.2),   // Implied volatility
         );
@@ -2701,7 +2701,7 @@ mod tests_short_strangle_roll {
             OptionStyle::Put,
             Side::Short,
             pos_or_panic!(102.0), // Underlying price
-            pos_or_panic!(1.0),   // Quantity
+            Positive::ONE,   // Quantity
             pos_or_panic!(97.0),  // Strike price
             pos_or_panic!(0.2),   // Implied volatility
         );
@@ -2722,7 +2722,7 @@ mod tests_short_strangle_roll {
         );
         assert_pos_relative_eq!(
             strangle.short_put.option.quantity,
-            pos_or_panic!(1.0),
+            Positive::ONE,
             pos_or_panic!(1e-6)
         );
         assert_pos_relative_eq!(
@@ -2749,8 +2749,8 @@ mod tests_short_strangle_roll {
         let close = close.unwrap();
         info!("open: {}", open);
         info!("close: {}", close);
-        assert_pos_relative_eq!(open.quantity, pos_or_panic!(1.0), pos_or_panic!(1e-6));
-        assert_pos_relative_eq!(close.quantity, pos_or_panic!(1.0), pos_or_panic!(1e-6));
+        assert_pos_relative_eq!(open.quantity, Positive::ONE, pos_or_panic!(1e-6));
+        assert_pos_relative_eq!(close.quantity, Positive::ONE, pos_or_panic!(1e-6));
         assert_pos_relative_eq!(
             open.underlying_price,
             pos_or_panic!(102.0),
@@ -2770,7 +2770,7 @@ mod tests_short_strangle_roll {
             OptionStyle::Put,
             Side::Short,
             pos_or_panic!(98.0), // Underlying price
-            pos_or_panic!(1.0),  // Quantity
+            Positive::ONE,  // Quantity
             pos_or_panic!(93.0), // Strike price
             pos_or_panic!(0.2),  // Implied volatility
         );
@@ -2787,7 +2787,7 @@ mod tests_short_strangle_roll {
             OptionStyle::Call,
             Side::Short,
             pos_or_panic!(102.0), // Underlying price
-            pos_or_panic!(1.0),   // Quantity
+            Positive::ONE,   // Quantity
             pos_or_panic!(110.0), // Strike price (further OTM than original 105)
             pos_or_panic!(0.2),   // Implied volatility
         );
@@ -2809,7 +2809,7 @@ mod tests_short_strangle_roll {
         );
         assert_pos_relative_eq!(
             strangle.short_call.option.quantity,
-            pos_or_panic!(1.0),
+            Positive::ONE,
             pos_or_panic!(1e-6)
         );
         assert_pos_relative_eq!(
@@ -2836,8 +2836,8 @@ mod tests_short_strangle_roll {
         let close = close.unwrap();
         info!("open: {}", open);
         info!("close: {}", close);
-        assert_pos_relative_eq!(open.quantity, pos_or_panic!(1.0), pos_or_panic!(1e-6));
-        assert_pos_relative_eq!(close.quantity, pos_or_panic!(1.0), pos_or_panic!(1e-6));
+        assert_pos_relative_eq!(open.quantity, Positive::ONE, pos_or_panic!(1e-6));
+        assert_pos_relative_eq!(close.quantity, Positive::ONE, pos_or_panic!(1e-6));
         assert_pos_relative_eq!(
             open.underlying_price,
             pos_or_panic!(102.0),
@@ -2857,7 +2857,7 @@ mod tests_short_strangle_roll {
             OptionStyle::Call,
             Side::Short,
             pos_or_panic!(102.0), // Underlying price
-            pos_or_panic!(1.0),   // Quantity
+            Positive::ONE,   // Quantity
             pos_or_panic!(103.0), // Strike price (closer to ATM than original 105)
             pos_or_panic!(0.2),   // Implied volatility
         );
@@ -2874,7 +2874,7 @@ mod tests_short_strangle_roll {
             OptionStyle::Put,
             Side::Short,
             pos_or_panic!(98.0), // Underlying price
-            pos_or_panic!(1.0),  // Quantity
+            Positive::ONE,  // Quantity
             pos_or_panic!(90.0), // Strike price (further OTM than original 95)
             pos_or_panic!(0.2),  // Implied volatility
         );
@@ -2896,7 +2896,7 @@ mod tests_short_strangle_roll {
         );
         assert_pos_relative_eq!(
             strangle.short_put.option.quantity,
-            pos_or_panic!(1.0),
+            Positive::ONE,
             pos_or_panic!(1e-6)
         );
         assert_pos_relative_eq!(
@@ -2923,8 +2923,8 @@ mod tests_short_strangle_roll {
         let close = close.unwrap();
         info!("open: {}", open);
         info!("close: {}", close);
-        assert_pos_relative_eq!(open.quantity, pos_or_panic!(1.0), pos_or_panic!(1e-6));
-        assert_pos_relative_eq!(close.quantity, pos_or_panic!(1.0), pos_or_panic!(1e-6));
+        assert_pos_relative_eq!(open.quantity, Positive::ONE, pos_or_panic!(1e-6));
+        assert_pos_relative_eq!(close.quantity, Positive::ONE, pos_or_panic!(1e-6));
         assert_pos_relative_eq!(
             open.underlying_price,
             pos_or_panic!(98.0),
@@ -2944,7 +2944,7 @@ mod tests_short_strangle_roll {
             OptionStyle::Put,
             Side::Short,
             pos_or_panic!(98.0), // Underlying price
-            pos_or_panic!(1.0),  // Quantity
+            Positive::ONE,  // Quantity
             pos_or_panic!(97.0), // Strike price (closer to ATM than original 95)
             pos_or_panic!(0.2),  // Implied volatility
         );
@@ -2970,16 +2970,16 @@ mod tests_strategy_constructor {
                 create_sample_position(
                     OptionStyle::Call,
                     Side::Short,
-                    pos_or_panic!(100.0),
-                    pos_or_panic!(1.0),
+                    Positive::HUNDRED,
+                    Positive::ONE,
                     pos_or_panic!(110.0),
                     pos_or_panic!(0.2),
                 ),
                 create_sample_position(
                     OptionStyle::Put,
                     Side::Short,
-                    pos_or_panic!(100.0),
-                    pos_or_panic!(1.0),
+                    Positive::HUNDRED,
+                    Positive::ONE,
                     pos_or_panic!(90.0),
                     pos_or_panic!(0.2),
                 ),
@@ -3001,8 +3001,8 @@ mod tests_strategy_constructor {
             let options = vec![create_sample_position(
                 OptionStyle::Call,
                 Side::Short,
-                pos_or_panic!(100.0),
-                pos_or_panic!(1.0),
+                Positive::HUNDRED,
+                Positive::ONE,
                 pos_or_panic!(110.0),
                 pos_or_panic!(0.2),
             )];
@@ -3022,16 +3022,16 @@ mod tests_strategy_constructor {
                 create_sample_position(
                     OptionStyle::Call,
                     Side::Short,
-                    pos_or_panic!(100.0),
-                    pos_or_panic!(1.0),
+                    Positive::HUNDRED,
+                    Positive::ONE,
                     pos_or_panic!(110.0),
                     pos_or_panic!(0.2),
                 ),
                 create_sample_position(
                     OptionStyle::Call,
                     Side::Short,
-                    pos_or_panic!(100.0),
-                    pos_or_panic!(1.0),
+                    Positive::HUNDRED,
+                    Positive::ONE,
                     pos_or_panic!(90.0),
                     pos_or_panic!(0.2),
                 ),
@@ -3052,16 +3052,16 @@ mod tests_strategy_constructor {
                 create_sample_position(
                     OptionStyle::Call,
                     Side::Short,
-                    pos_or_panic!(100.0),
-                    pos_or_panic!(1.0),
+                    Positive::HUNDRED,
+                    Positive::ONE,
                     pos_or_panic!(110.0),
                     pos_or_panic!(0.2),
                 ),
                 create_sample_position(
                     OptionStyle::Put,
                     Side::Long,
-                    pos_or_panic!(100.0),
-                    pos_or_panic!(1.0),
+                    Positive::HUNDRED,
+                    Positive::ONE,
                     pos_or_panic!(90.0),
                     pos_or_panic!(0.2),
                 ),
@@ -3082,16 +3082,16 @@ mod tests_strategy_constructor {
                 create_sample_position(
                     OptionStyle::Call,
                     Side::Short,
-                    pos_or_panic!(100.0),
-                    pos_or_panic!(1.0),
+                    Positive::HUNDRED,
+                    Positive::ONE,
                     pos_or_panic!(90.0),
                     pos_or_panic!(0.2),
                 ),
                 create_sample_position(
                     OptionStyle::Put,
                     Side::Short,
-                    pos_or_panic!(100.0),
-                    pos_or_panic!(1.0),
+                    Positive::HUNDRED,
+                    Positive::ONE,
                     pos_or_panic!(110.0),
                     pos_or_panic!(0.2),
                 ),
@@ -3133,7 +3133,7 @@ mod test_adjustments_pnl {
             pos_or_panic!(0.21),  // put_implied_volatility
             dec!(0.05),           // risk_free_rate
             Positive::ZERO,       // dividend_yield
-            pos_or_panic!(1.0),   // quantity
+            Positive::ONE,   // quantity
             pos_or_panic!(84.2),  // premium_short_call
             pos_or_panic!(353.2), // premium_short_put
             pos_or_panic!(7.01),  // open_fee_short_call
@@ -3261,7 +3261,7 @@ mod test_valid_premium_for_shorts {
             pos_or_panic!(0.21),  // put_implied_volatility
             dec!(0.05),           // risk_free_rate
             Positive::ZERO,       // dividend_yield
-            pos_or_panic!(1.0),   // quantity
+            Positive::ONE,   // quantity
             pos_or_panic!(84.2),  // premium_short_call
             pos_or_panic!(353.2), // premium_short_put
             pos_or_panic!(7.01),  // open_fee_short_call
@@ -3275,7 +3275,7 @@ mod test_valid_premium_for_shorts {
     fn create_test_strangle() {
         let strategy = get_strategy(pos_or_panic!(7450.0), pos_or_panic!(7250.0));
         assert!(strategy.valid_premium_for_shorts(&pos_or_panic!(10.0)));
-        assert!(!strategy.valid_premium_for_shorts(&pos_or_panic!(100.0)));
+        assert!(!strategy.valid_premium_for_shorts(&Positive::HUNDRED));
         assert!(!strategy.valid_premium_for_shorts(&pos_or_panic!(400.0)));
     }
 }
@@ -3293,7 +3293,7 @@ mod tests_strangle_position_management {
     fn create_test_short_strangle() -> ShortStrangle {
         ShortStrangle::new(
             "TEST".to_string(),
-            pos_or_panic!(100.0), // underlying_price
+            Positive::HUNDRED, // underlying_price
             pos_or_panic!(110.0), // call_strike
             pos_or_panic!(90.0),  // put_strike
             ExpirationDate::Days(pos_or_panic!(30.0)),
@@ -3301,9 +3301,9 @@ mod tests_strangle_position_management {
             pos_or_panic!(0.21), // put_implied_volatility
             dec!(0.05),          // risk_free_rate
             Positive::ZERO,      // dividend_yield
-            pos_or_panic!(1.0),  // quantity
-            pos_or_panic!(2.0),  // premium_short_call
-            pos_or_panic!(2.0),  // premium_short_put
+            Positive::ONE,  // quantity
+            Positive::TWO,  // premium_short_call
+            Positive::TWO,  // premium_short_put
             pos_or_panic!(0.1),  // open_fee_short_call
             pos_or_panic!(0.1),  // close_fee_short_call
             pos_or_panic!(0.1),  // open_fee_short_put
@@ -3337,7 +3337,7 @@ mod tests_strangle_position_management {
 
         // Test getting non-existent position
         let invalid_position =
-            strangle.get_position(&OptionStyle::Call, &Side::Short, &pos_or_panic!(100.0));
+            strangle.get_position(&OptionStyle::Call, &Side::Short, &Positive::HUNDRED);
         assert!(invalid_position.is_err());
         match invalid_position {
             Err(PositionError::ValidationError(
@@ -3360,17 +3360,17 @@ mod tests_strangle_position_management {
 
         // Modify short call position
         let mut modified_call = strangle.short_call.clone();
-        modified_call.option.quantity = pos_or_panic!(2.0);
+        modified_call.option.quantity = Positive::TWO;
         let result = strangle.modify_position(&modified_call);
         assert!(result.is_ok());
-        assert_eq!(strangle.short_call.option.quantity, pos_or_panic!(2.0));
+        assert_eq!(strangle.short_call.option.quantity, Positive::TWO);
 
         // Modify short put position
         let mut modified_put = strangle.short_put.clone();
-        modified_put.option.quantity = pos_or_panic!(2.0);
+        modified_put.option.quantity = Positive::TWO;
         let result = strangle.modify_position(&modified_put);
         assert!(result.is_ok());
-        assert_eq!(strangle.short_put.option.quantity, pos_or_panic!(2.0));
+        assert_eq!(strangle.short_put.option.quantity, Positive::TWO);
 
         // Test modifying with invalid position
         let mut invalid_position = strangle.short_call.clone();
@@ -3404,7 +3404,7 @@ mod tests_generate_delta_adjustments {
     fn create_test_short_strangle() -> ShortStrangle {
         ShortStrangle::new(
             "TEST".to_string(),
-            pos_or_panic!(100.0), // underlying_price
+            Positive::HUNDRED, // underlying_price
             pos_or_panic!(110.0), // call_strike
             pos_or_panic!(90.0),  // put_strike
             ExpirationDate::Days(pos_or_panic!(45.0)),
@@ -3412,9 +3412,9 @@ mod tests_generate_delta_adjustments {
             pos_or_panic!(0.35), // put_implied_volatility
             dec!(0.05),          // risk_free_rate
             Positive::ZERO,      // dividend_yield
-            pos_or_panic!(1.0),  // quantity
-            pos_or_panic!(2.0),  // premium_short_call
-            pos_or_panic!(2.0),  // premium_short_put
+            Positive::ONE,  // quantity
+            Positive::TWO,  // premium_short_call
+            Positive::TWO,  // premium_short_put
             pos_or_panic!(0.1),  // open_fee_short_call
             pos_or_panic!(0.1),  // close_fee_short_call
             pos_or_panic!(0.1),  // open_fee_short_put
@@ -3443,7 +3443,7 @@ mod tests_generate_delta_adjustments {
             .unwrap();
 
         assert_eq!(option.quantity, pos_or_panic!(3.0));
-        assert_eq!(strategy.short_call.option.quantity, pos_or_panic!(1.0));
+        assert_eq!(strategy.short_call.option.quantity, Positive::ONE);
 
         // Assert
         match adjustment {
@@ -3486,7 +3486,7 @@ mod tests_generate_delta_adjustments {
             .generate_delta_adjustments(net_delta, option_delta_per_contract, &option)
             .unwrap();
 
-        assert_eq!(option.quantity, pos_or_panic!(1.0));
+        assert_eq!(option.quantity, Positive::ONE);
         assert_eq!(strategy.short_put.option.quantity, pos_or_panic!(3.0));
 
         // Assert
@@ -3526,8 +3526,8 @@ mod tests_generate_delta_adjustments {
             .generate_delta_adjustments(net_delta, option_delta_per_contract, &option)
             .unwrap();
 
-        assert_eq!(option.quantity, pos_or_panic!(1.0));
-        assert_eq!(strategy.short_call.option.quantity, pos_or_panic!(1.0));
+        assert_eq!(option.quantity, Positive::ONE);
+        assert_eq!(strategy.short_call.option.quantity, Positive::ONE);
 
         // Assert
         match adjustment {
@@ -3566,8 +3566,8 @@ mod tests_generate_delta_adjustments {
             .generate_delta_adjustments(net_delta, option_delta_per_contract, &option)
             .unwrap();
 
-        assert_eq!(option.quantity, pos_or_panic!(1.0));
-        assert_eq!(strategy.short_call.option.quantity, pos_or_panic!(1.0));
+        assert_eq!(option.quantity, Positive::ONE);
+        assert_eq!(strategy.short_call.option.quantity, Positive::ONE);
 
         // Assert
         match adjustment {

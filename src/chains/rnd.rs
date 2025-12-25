@@ -56,7 +56,7 @@
 //!             pos_or_panic!(0.02),
 //!             2,
 //!             OptionDataPriceParams::new(
-//!                 Some(Box::new(pos_or_panic!(100.0))),
+//!                 Some(Box::new(Positive::HUNDRED)),
 //!                 Some(ExpirationDate::Days(pos_or_panic!(30.0))),
 //!                 Some(Decimal::ZERO),
 //!                 spos!(0.05),
@@ -414,6 +414,7 @@ pub trait RNDAnalysis {
 
 #[cfg(test)]
 mod tests {
+    use positive::{pos_or_panic, spos};
     use super::*;
 
     use crate::chains::chain::OptionChain;
@@ -424,7 +425,7 @@ mod tests {
     fn create_test_option_chain() -> OptionChain {
         let mut chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2024-12-31".to_string(),
             None,
             None,
@@ -454,7 +455,7 @@ mod tests {
     fn create_empty_chain() -> OptionChain {
         OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2024-12-31".to_string(),
             None,
             None,
@@ -493,7 +494,7 @@ mod tests {
         fn create_test_densities() -> BTreeMap<Positive, Decimal> {
             let mut densities = BTreeMap::new();
             densities.insert(pos_or_panic!(90.0), dec!(0.2));
-            densities.insert(pos_or_panic!(100.0), dec!(0.5));
+            densities.insert(Positive::HUNDRED, dec!(0.5));
             densities.insert(pos_or_panic!(110.0), dec!(0.3));
             densities
         }
@@ -713,7 +714,7 @@ mod tests {
             let chain = create_test_option_chain();
 
             // Test existing strike
-            let price = chain.get_call_price(pos_or_panic!(100.0));
+            let price = chain.get_call_price(Positive::HUNDRED);
             assert!(price.is_some());
 
             // Test non-existing strike
@@ -765,7 +766,7 @@ mod tests {
         fn test_extreme_market_conditions() {
             let mut chain = OptionChain::new(
                 "TEST",
-                pos_or_panic!(100.0),
+                Positive::HUNDRED,
                 "2024-12-31".to_string(),
                 None,
                 None,
@@ -825,6 +826,7 @@ mod additional_tests {
     use super::*;
 
     mod rnd_statistics_extended_tests {
+        use positive::pos_or_panic;
         use super::*;
 
         use crate::assert_decimal_eq;
@@ -833,7 +835,7 @@ mod additional_tests {
         fn test_asymmetric_distribution() {
             let mut densities = BTreeMap::new();
             densities.insert(pos_or_panic!(90.0), dec!(0.1));
-            densities.insert(pos_or_panic!(100.0), dec!(0.7));
+            densities.insert(Positive::HUNDRED, dec!(0.7));
             densities.insert(pos_or_panic!(110.0), dec!(0.2));
 
             let stats = RNDStatistics::new(&densities);
@@ -844,7 +846,7 @@ mod additional_tests {
         fn test_extreme_values_distribution() {
             let mut densities = BTreeMap::new();
             densities.insert(pos_or_panic!(50.0), dec!(0.01));
-            densities.insert(pos_or_panic!(100.0), dec!(0.97));
+            densities.insert(Positive::HUNDRED, dec!(0.97));
             densities.insert(pos_or_panic!(150.0), dec!(0.02));
 
             let stats = RNDStatistics::new(&densities);
@@ -858,7 +860,7 @@ mod additional_tests {
 
             densities.insert(pos_or_panic!(90.0), dec!(0.2));
             densities.insert(pos_or_panic!(95.0), dec!(0.2));
-            densities.insert(pos_or_panic!(100.0), dec!(0.2));
+            densities.insert(Positive::HUNDRED, dec!(0.2));
             densities.insert(pos_or_panic!(105.0), dec!(0.2));
             densities.insert(pos_or_panic!(110.0), dec!(0.2));
 
@@ -873,7 +875,7 @@ mod additional_tests {
 
             densities.insert(pos_or_panic!(80.0), dec!(0.3));
             densities.insert(pos_or_panic!(90.0), dec!(0.1));
-            densities.insert(pos_or_panic!(100.0), dec!(0.1));
+            densities.insert(Positive::HUNDRED, dec!(0.1));
             densities.insert(pos_or_panic!(110.0), dec!(0.1));
             densities.insert(pos_or_panic!(120.0), dec!(0.4));
 
@@ -883,6 +885,7 @@ mod additional_tests {
     }
 
     mod rnd_calculation_extended_tests {
+        use positive::{pos_or_panic, spos};
         use super::*;
 
         use crate::chains::chain::OptionChain;
@@ -890,7 +893,7 @@ mod additional_tests {
         fn create_test_option_chain() -> OptionChain {
             let mut chain = OptionChain::new(
                 "TEST",
-                pos_or_panic!(100.0),
+                Positive::HUNDRED,
                 "2024-12-31".to_string(),
                 None,
                 None,
@@ -919,7 +922,7 @@ mod additional_tests {
         fn create_wide_spread_chain() -> OptionChain {
             let mut chain = OptionChain::new(
                 "TEST",
-                pos_or_panic!(100.0),
+                Positive::HUNDRED,
                 "2024-12-31".to_string(),
                 None,
                 None,
@@ -948,7 +951,7 @@ mod additional_tests {
         fn create_high_vol_chain() -> OptionChain {
             let mut chain = OptionChain::new(
                 "TEST",
-                pos_or_panic!(100.0),
+                Positive::HUNDRED,
                 "2024-12-31".to_string(),
                 None,
                 None,
@@ -1043,6 +1046,7 @@ mod additional_tests {
     }
 
     mod numerical_stability_tests {
+        use positive::{pos_or_panic, spos};
         use super::*;
 
         use crate::chains::chain::OptionChain;
@@ -1051,7 +1055,7 @@ mod additional_tests {
         fn test_numerical_stability_small_values() {
             let mut chain = OptionChain::new(
                 "TEST",
-                pos_or_panic!(1.0),
+                Positive::ONE,
                 "2024-12-31".to_string(),
                 None,
                 None,
@@ -1130,12 +1134,13 @@ mod statistical_validation_tests {
         use super::*;
 
         use num_traits::{FromPrimitive, ToPrimitive};
+        use positive::pos_or_panic;
         use tracing::info;
 
         #[test]
         fn test_simple_mean() {
             let mut densities = BTreeMap::new();
-            densities.insert(pos_or_panic!(100.0), dec!(0.5));
+            densities.insert(Positive::HUNDRED, dec!(0.5));
             densities.insert(pos_or_panic!(200.0), dec!(0.5));
 
             let stats = RNDStatistics::new(&densities);
@@ -1147,7 +1152,7 @@ mod statistical_validation_tests {
             let mut densities = BTreeMap::new();
             densities.insert(pos_or_panic!(80.0), dec!(0.1));
             densities.insert(pos_or_panic!(90.0), dec!(0.2));
-            densities.insert(pos_or_panic!(100.0), dec!(0.4));
+            densities.insert(Positive::HUNDRED, dec!(0.4));
             densities.insert(pos_or_panic!(110.0), dec!(0.2));
             densities.insert(pos_or_panic!(120.0), dec!(0.1));
 
@@ -1196,7 +1201,7 @@ mod statistical_validation_tests {
             let mut densities = BTreeMap::new();
             densities.insert(pos_or_panic!(80.0), dec!(0.1));
             densities.insert(pos_or_panic!(90.0), dec!(0.2));
-            densities.insert(pos_or_panic!(100.0), dec!(0.4));
+            densities.insert(Positive::HUNDRED, dec!(0.4));
             densities.insert(pos_or_panic!(110.0), dec!(0.2));
             densities.insert(pos_or_panic!(120.0), dec!(0.1));
 
@@ -1254,7 +1259,7 @@ mod statistical_validation_tests {
             let mut densities = BTreeMap::new();
             densities.insert(pos_or_panic!(80.0), dec!(0.1));
             densities.insert(pos_or_panic!(90.0), dec!(0.2));
-            densities.insert(pos_or_panic!(100.0), dec!(0.4));
+            densities.insert(Positive::HUNDRED, dec!(0.4));
             densities.insert(pos_or_panic!(110.0), dec!(0.2));
             densities.insert(pos_or_panic!(120.0), dec!(0.1));
 
@@ -1340,7 +1345,7 @@ mod statistical_validation_tests {
         #[test]
         fn test_normalization() {
             let mut densities = BTreeMap::new();
-            densities.insert(pos_or_panic!(100.0), dec!(2.0));
+            densities.insert(Positive::HUNDRED, dec!(2.0));
             densities.insert(pos_or_panic!(200.0), dec!(3.0));
             let stats = RNDStatistics::new(&densities);
             assert_decimal_eq!(stats.mean, dec!(160.0), dec!(0.00001));
@@ -1349,8 +1354,8 @@ mod statistical_validation_tests {
         #[test]
         fn test_small_values() {
             let mut densities = BTreeMap::new();
-            densities.insert(pos_or_panic!(1.0), dec!(0.001));
-            densities.insert(pos_or_panic!(2.0), dec!(0.002));
+            densities.insert(Positive::ONE, dec!(0.001));
+            densities.insert(Positive::TWO, dec!(0.002));
             densities.insert(pos_or_panic!(3.0), dec!(0.001));
 
             let stats = RNDStatistics::new(&densities);
@@ -1448,7 +1453,7 @@ mod statistical_validation_tests {
         fn test_moment_properties() {
             let mut densities = BTreeMap::new();
             densities.insert(pos_or_panic!(95.0), dec!(0.3));
-            densities.insert(pos_or_panic!(100.0), dec!(0.4));
+            densities.insert(Positive::HUNDRED, dec!(0.4));
             densities.insert(pos_or_panic!(105.0), dec!(0.3));
 
             let stats = RNDStatistics::new(&densities);
@@ -1460,6 +1465,7 @@ mod statistical_validation_tests {
     }
 
     mod validation_utils {
+        use positive::pos_or_panic;
         use super::*;
 
         fn calculate_raw_moment(densities: &BTreeMap<Positive, Decimal>, order: i32) -> Decimal {
@@ -1482,7 +1488,7 @@ mod statistical_validation_tests {
         fn test_raw_moments() {
             let mut densities = BTreeMap::new();
             densities.insert(pos_or_panic!(90.0), dec!(0.2));
-            densities.insert(pos_or_panic!(100.0), dec!(0.6));
+            densities.insert(Positive::HUNDRED, dec!(0.6));
             densities.insert(pos_or_panic!(110.0), dec!(0.2));
 
             // Primer momento (media)
@@ -1498,6 +1504,7 @@ mod statistical_validation_tests {
 
 #[cfg(test)]
 mod chain_test {
+    use positive::{pos_or_panic, spos, Positive};
     use crate::chains::chain::OptionChain;
     use crate::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
     use crate::chains::{RNDAnalysis, RNDParameters};
@@ -1517,7 +1524,7 @@ mod chain_test {
             pos_or_panic!(0.02),
             2,
             OptionDataPriceParams::new(
-                Some(Box::new(pos_or_panic!(100.0))),
+                Some(Box::new(Positive::HUNDRED)),
                 Some(ExpirationDate::Days(pos_or_panic!(30.0))),
                 Some(Decimal::ZERO),
                 spos!(0.05),
@@ -1540,7 +1547,7 @@ mod chain_test {
             pos_or_panic!(0.02),
             2,
             OptionDataPriceParams::new(
-                Some(Box::new(pos_or_panic!(100.0))),
+                Some(Box::new(Positive::HUNDRED)),
                 Some(ExpirationDate::Days(pos_or_panic!(30.0))),
                 Some(Decimal::ZERO),
                 spos!(0.0),
@@ -1584,7 +1591,7 @@ mod chain_test {
             pos_or_panic!(0.02),
             2,
             OptionDataPriceParams::new(
-                Some(Box::new(pos_or_panic!(100.0))),
+                Some(Box::new(Positive::HUNDRED)),
                 Some(ExpirationDate::Days(pos_or_panic!(30.0))),
                 Some(Decimal::ZERO),
                 spos!(0.05),
@@ -1597,7 +1604,7 @@ mod chain_test {
         let params = RNDParameters {
             risk_free_rate: dec!(0.05),
             interpolation_points: 100,
-            derivative_tolerance: pos_or_panic!(1.0), // Using larger step size for testing
+            derivative_tolerance: Positive::ONE, // Using larger step size for testing
         };
 
         debug!("Initial option chain:");
@@ -1625,7 +1632,7 @@ mod chain_test {
         let params_1 = RNDParameters {
             risk_free_rate: dec!(0.05),
             interpolation_points: 100,
-            derivative_tolerance: pos_or_panic!(1.0),
+            derivative_tolerance: Positive::ONE,
         };
 
         // Test with h = 0.1
@@ -1641,12 +1648,12 @@ mod chain_test {
             debug!(
                 "Strike {}: Found neighbors: k-h={}, k+h={}",
                 k,
-                chain.get_call_price(k - pos_or_panic!(1.0)).is_some(),
-                chain.get_call_price(k + pos_or_panic!(1.0)).is_some()
+                chain.get_call_price(k - Positive::ONE).is_some(),
+                chain.get_call_price(k + Positive::ONE).is_some()
             );
             assert!(
-                chain.get_call_price(k - pos_or_panic!(1.0)).is_some()
-                    || chain.get_call_price(k + pos_or_panic!(1.0)).is_some()
+                chain.get_call_price(k - Positive::ONE).is_some()
+                    || chain.get_call_price(k + Positive::ONE).is_some()
             );
         }
         assert!(chain.calculate_rnd(&params_1).is_ok());
@@ -1661,8 +1668,8 @@ mod chain_test {
                 chain.get_call_price(k + pos_or_panic!(0.1)).is_some()
             );
             assert!(
-                chain.get_call_price(k - pos_or_panic!(1.0)).is_some()
-                    || chain.get_call_price(k + pos_or_panic!(1.0)).is_some()
+                chain.get_call_price(k - Positive::ONE).is_some()
+                    || chain.get_call_price(k + Positive::ONE).is_some()
             );
         }
         assert!(chain.calculate_rnd(&params_2).is_ok());
@@ -1678,6 +1685,7 @@ mod rnd_coverage_tests {
     use crate::chains::RNDResult;
 
     use std::collections::BTreeMap;
+    use positive::{pos_or_panic, spos};
 
     // Test for line 322 in rnd.rs
     #[test]
@@ -1685,7 +1693,7 @@ mod rnd_coverage_tests {
         // Create a simple densities map
         let mut densities = BTreeMap::new();
         densities.insert(pos_or_panic!(90.0), dec!(0.2));
-        densities.insert(pos_or_panic!(100.0), dec!(0.6));
+        densities.insert(Positive::HUNDRED, dec!(0.6));
         densities.insert(pos_or_panic!(110.0), dec!(0.2));
 
         // Create a new RNDResult
@@ -1703,7 +1711,7 @@ mod rnd_coverage_tests {
         // Create a custom chain with specific volatility pattern
         let mut chain = OptionChain::new(
             "TEST",
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             "2024-06-30".to_string(),
             Some(dec!(0.05)),
             spos!(0.0),
@@ -1742,7 +1750,7 @@ mod rnd_coverage_tests {
         // With a symmetric smile, the skew around ATM should be symmetric
         let atm_index = skew
             .iter()
-            .position(|(k, _)| *k == pos_or_panic!(1.0))
+            .position(|(k, _)| *k == Positive::ONE)
             .unwrap();
         let lower = skew[atm_index - 1].1;
         let higher = skew[atm_index + 1].1;

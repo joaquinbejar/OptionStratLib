@@ -34,7 +34,7 @@ fn create_test_chain() -> OptionChain {
         pos_or_panic!(0.02),  // Spread
         2,           // Decimal places
         OptionDataPriceParams::new(
-            Some(Box::new(pos_or_panic!(100.0))),            // Underlying price
+            Some(Box::new(Positive::HUNDRED)),            // Underlying price
             Some(ExpirationDate::Days(pos_or_panic!(30.0))), // 30 days to expiry
             Some(dec!(0.05)),                       // Risk-free rate
             spos!(0.01),                            // Dividend yield
@@ -48,7 +48,7 @@ fn create_test_chain() -> OptionChain {
 
 /// Creates an empty option chain for edge case testing
 fn create_empty_chain() -> OptionChain {
-    OptionChain::new("EMPTY", pos_or_panic!(100.0), "2024-12-31".to_string(), None, None)
+    OptionChain::new("EMPTY", Positive::HUNDRED, "2024-12-31".to_string(), None, None)
 }
 
 // ============================================================================
@@ -75,7 +75,7 @@ mod vanna_volga_tests {
     #[test]
     fn test_vanna_volga_surface_single_point() {
         let chain = create_test_chain();
-        let price_range = (pos_or_panic!(100.0), pos_or_panic!(100.0));
+        let price_range = (Positive::HUNDRED, Positive::HUNDRED);
         let vol_range = (pos_or_panic!(0.20), pos_or_panic!(0.20));
 
         let result = chain.vanna_volga_surface(price_range, vol_range, 0, 0);
@@ -88,7 +88,7 @@ mod vanna_volga_tests {
     #[test]
     fn test_vanna_volga_surface_cost_at_atm() {
         let chain = create_test_chain();
-        let price_range = (pos_or_panic!(100.0), pos_or_panic!(100.0)); // ATM only
+        let price_range = (Positive::HUNDRED, Positive::HUNDRED); // ATM only
         let vol_range = (pos_or_panic!(0.20), pos_or_panic!(0.20)); // ATM vol
 
         let result = chain.vanna_volga_surface(price_range, vol_range, 0, 0);
@@ -395,7 +395,7 @@ mod edge_case_tests {
 
         // Add a single option
         let option_data = OptionData::new(
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             spos!(5.0),
             spos!(5.5),
             spos!(4.5),
@@ -408,7 +408,7 @@ mod edge_case_tests {
             Some(5000),
             Some("TEST".to_string()),
             Some(ExpirationDate::Days(pos_or_panic!(30.0))),
-            Some(Box::new(pos_or_panic!(100.0))),
+            Some(Box::new(Positive::HUNDRED)),
             Some(dec!(0.05)),
             spos!(0.02),
             None,
@@ -433,7 +433,7 @@ mod edge_case_tests {
 
         // Very wide price range
         let result =
-            chain.vanna_volga_surface((pos_or_panic!(10.0), pos_or_panic!(1000.0)), (pos_or_panic!(0.05), pos_or_panic!(1.0)), 20, 20);
+            chain.vanna_volga_surface((pos_or_panic!(10.0), pos_or_panic!(1000.0)), (pos_or_panic!(0.05), Positive::ONE), 20, 20);
         assert!(result.is_ok());
 
         let surface = result.unwrap();
@@ -445,7 +445,7 @@ mod edge_case_tests {
         let chain = create_test_chain();
 
         // Very short expiration (1 day)
-        let days = vec![pos_or_panic!(1.0)];
+        let days = vec![Positive::ONE];
         let result = chain.smile_dynamics_surface(days);
         assert!(result.is_ok());
     }

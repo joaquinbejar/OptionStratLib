@@ -8,7 +8,7 @@ fn get_option(strike: &Positive, volatility: &Positive) -> Options {
         *strike,
         ExpirationDate::Days(pos_or_panic!(365.0)),
         *volatility,
-        pos_or_panic!(1.0),
+        Positive::ONE,
         pos_or_panic!(50.0),
         Decimal::ZERO,
         OptionStyle::Call,

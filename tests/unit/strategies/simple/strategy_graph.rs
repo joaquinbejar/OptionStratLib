@@ -19,7 +19,7 @@ fn test_bull_call_spread_basic_integration() -> Result<(), Box<dyn Error>> {
         pos_or_panic!(0.2),      // implied_volatility
         dec!(0.05),     // risk_free_rate
         Positive::ZERO, // dividend_yield
-        pos_or_panic!(1.0),      // quantity
+        Positive::ONE,      // quantity
         pos_or_panic!(27.26),    // premium_long
         pos_or_panic!(5.33),     // premium_short
         pos_or_panic!(0.58),     // open_fee_long

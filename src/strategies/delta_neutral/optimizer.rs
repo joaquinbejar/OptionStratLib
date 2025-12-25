@@ -489,7 +489,7 @@ mod tests_optimizer {
             ExpirationDate::Days(pos_or_panic!(30.0)),
             pos_or_panic!(0.20),
             quantity,
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             dec!(0.05),
             option_style,
             Positive::ZERO,
@@ -506,7 +506,7 @@ mod tests_optimizer {
         let option = create_test_option(strike, option_style, side, quantity);
         Position::new(
             option,
-            pos_or_panic!(2.0),
+            Positive::TWO,
             chrono::Utc::now(),
             Positive::ZERO,
             Positive::ZERO,
@@ -531,16 +531,16 @@ mod tests_optimizer {
     fn test_optimizer_already_neutral() {
         // Create a delta-neutral position (long call + short call at same strike)
         let pos1 = create_test_position(
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             OptionStyle::Call,
             Side::Long,
-            pos_or_panic!(1.0),
+            Positive::ONE,
         );
         let pos2 = create_test_position(
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             OptionStyle::Call,
             Side::Short,
-            pos_or_panic!(1.0),
+            Positive::ONE,
         );
         let positions = vec![pos1, pos2];
 
@@ -558,10 +558,10 @@ mod tests_optimizer {
     #[test]
     fn test_optimizer_with_underlying() {
         let pos1 = create_test_position(
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             OptionStyle::Call,
             Side::Long,
-            pos_or_panic!(1.0),
+            Positive::ONE,
         );
         let positions = vec![pos1];
 
@@ -577,16 +577,16 @@ mod tests_optimizer {
     #[test]
     fn test_optimizer_existing_legs_only() {
         let pos1 = create_test_position(
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
             OptionStyle::Call,
             Side::Long,
-            pos_or_panic!(2.0),
+            Positive::TWO,
         );
         let pos2 = create_test_position(
             pos_or_panic!(110.0),
             OptionStyle::Put,
             Side::Long,
-            pos_or_panic!(1.0),
+            Positive::ONE,
         );
         let positions = vec![pos1, pos2];
 

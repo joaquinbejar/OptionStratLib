@@ -273,11 +273,12 @@ pub trait BlackScholes {
 
 #[cfg(test)]
 mod tests_black_scholes {
+    use positive::{assert_pos_relative_eq, pos_or_panic};
     use super::*;
     use crate::constants::DAYS_IN_A_YEAR;
     use crate::greeks::{d1, d2};
     use crate::model::types::{OptionStyle, OptionType, Side};
-    use crate::{ExpirationDate, Options, Positive, assert_decimal_eq, assert_pos_relative_eq};
+    use crate::{ExpirationDate, Options, Positive, assert_decimal_eq};
     use rust_decimal_macros::dec;
 
     fn mock_options_call() -> Options {
@@ -301,8 +302,8 @@ mod tests_black_scholes {
         Options {
             option_type: OptionType::European,
             side: Side::Long,
-            underlying_price: pos_or_panic!(100.0),
-            strike_price: pos_or_panic!(100.0),
+            underlying_price: Positive::HUNDRED,
+            strike_price: Positive::HUNDRED,
             implied_volatility: pos_or_panic!(0.01),
             risk_free_rate: Decimal::ZERO,
             expiration_date: ExpirationDate::Days(DAYS_IN_A_YEAR),
@@ -319,8 +320,8 @@ mod tests_black_scholes {
         Options {
             option_type: OptionType::European,
             side: Side::Long,
-            underlying_price: pos_or_panic!(100.0),
-            strike_price: pos_or_panic!(100.0),
+            underlying_price: Positive::HUNDRED,
+            strike_price: Positive::HUNDRED,
             implied_volatility: pos_or_panic!(0.2),
             risk_free_rate: dec!(0.05),
             expiration_date: ExpirationDate::Days(DAYS_IN_A_YEAR), // 1 year from now
@@ -385,7 +386,7 @@ mod tests_black_scholes {
         let price = black_scholes(&option).unwrap();
         assert_decimal_eq!(price, dec!(50.0), dec!(0.001));
 
-        option.strike_price = pos_or_panic!(100.0);
+        option.strike_price = Positive::HUNDRED;
         let price = black_scholes(&option).unwrap();
         assert_decimal_eq!(price, dec!(7.96556), dec!(0.001));
     }
@@ -395,7 +396,7 @@ mod tests_black_scholes {
     //     let option = Options {
     //         option_type: OptionType::European,
     //         side: Side::Long,
-    //         underlying_price: pos_or_panic!(100.0),
+    //         underlying_price: Positive::HUNDRED,
     //         strike_price: pos_or_panic!(50.0),
     //         implied_volatility: pos_or_panic!(0.01),
     //         risk_free_rate: Decimal::ZERO,
@@ -529,6 +530,7 @@ mod tests_black_scholes {
 
 #[cfg(test)]
 mod tests_black_scholes_trait {
+    use positive::pos_or_panic;
     use super::*;
     use crate::model::types::{OptionStyle, Side};
     use crate::model::utils::create_sample_option;
@@ -557,9 +559,9 @@ mod tests_black_scholes_trait {
         let option = create_sample_option(
             OptionStyle::Call,
             Side::Long,
-            pos_or_panic!(100.0), // underlying price
-            pos_or_panic!(1.0),   // quantity
-            pos_or_panic!(100.0), // strike price
+            Positive::HUNDRED, // underlying price
+            Positive::ONE,   // quantity
+            Positive::HUNDRED, // strike price
             pos_or_panic!(0.2),   // volatility
         );
         let mock = MockOption::new(option);
@@ -572,8 +574,8 @@ mod tests_black_scholes_trait {
         let option = create_sample_option(
             OptionStyle::Call,
             Side::Long,
-            pos_or_panic!(100.0), // underlying price
-            pos_or_panic!(1.0),   // quantity
+            Positive::HUNDRED, // underlying price
+            Positive::ONE,   // quantity
             pos_or_panic!(90.0),  // strike price
             pos_or_panic!(0.2),   // volatility
         );
@@ -587,8 +589,8 @@ mod tests_black_scholes_trait {
         let option = create_sample_option(
             OptionStyle::Call,
             Side::Long,
-            pos_or_panic!(100.0), // underlying price
-            pos_or_panic!(1.0),   // quantity
+            Positive::HUNDRED, // underlying price
+            Positive::ONE,   // quantity
             pos_or_panic!(110.0), // strike price
             pos_or_panic!(0.2),   // volatility
         );
@@ -602,9 +604,9 @@ mod tests_black_scholes_trait {
         let option = create_sample_option(
             OptionStyle::Put,
             Side::Long,
-            pos_or_panic!(100.0), // underlying price
-            pos_or_panic!(1.0),   // quantity
-            pos_or_panic!(100.0), // strike price
+            Positive::HUNDRED, // underlying price
+            Positive::ONE,   // quantity
+            Positive::HUNDRED, // strike price
             pos_or_panic!(0.2),   // volatility
         );
         let mock = MockOption::new(option);
@@ -617,9 +619,9 @@ mod tests_black_scholes_trait {
         let option = create_sample_option(
             OptionStyle::Call,
             Side::Long,
-            pos_or_panic!(100.0), // underlying price
-            pos_or_panic!(1.0),   // quantity
-            pos_or_panic!(100.0), // strike price
+            Positive::HUNDRED, // underlying price
+            Positive::ONE,   // quantity
+            Positive::HUNDRED, // strike price
             pos_or_panic!(0.5),   // high volatility
         );
         let mock = MockOption::new(option);
@@ -632,9 +634,9 @@ mod tests_black_scholes_trait {
         let option = create_sample_option(
             OptionStyle::Call,
             Side::Long,
-            pos_or_panic!(100.0), // underlying price
-            pos_or_panic!(1.0),   // quantity
-            pos_or_panic!(100.0), // strike price
+            Positive::HUNDRED, // underlying price
+            Positive::ONE,   // quantity
+            Positive::HUNDRED, // strike price
             Positive::ZERO,       // zero volatility
         );
         let mock = MockOption::new(option);
@@ -647,9 +649,9 @@ mod tests_black_scholes_trait {
         let option = create_sample_option(
             OptionStyle::Call,
             Side::Short,
-            pos_or_panic!(100.0), // underlying price
-            pos_or_panic!(1.0),   // quantity
-            pos_or_panic!(100.0), // strike price
+            Positive::HUNDRED, // underlying price
+            Positive::ONE,   // quantity
+            Positive::HUNDRED, // strike price
             pos_or_panic!(0.2),   // volatility
         );
         let mock = MockOption::new(option);
@@ -662,9 +664,9 @@ mod tests_black_scholes_trait {
         let option = create_sample_option(
             OptionStyle::Put,
             Side::Short,
-            pos_or_panic!(100.0), // underlying price
-            pos_or_panic!(1.0),   // quantity
-            pos_or_panic!(100.0), // strike price
+            Positive::HUNDRED, // underlying price
+            Positive::ONE,   // quantity
+            Positive::HUNDRED, // strike price
             pos_or_panic!(0.2),   // volatility
         );
         let mock = MockOption::new(option);
@@ -677,9 +679,9 @@ mod tests_black_scholes_trait {
         let option = create_sample_option(
             OptionStyle::Call,
             Side::Long,
-            pos_or_panic!(100.0), // underlying price
+            Positive::HUNDRED, // underlying price
             pos_or_panic!(10.0),  // quantity
-            pos_or_panic!(100.0), // strike price
+            Positive::HUNDRED, // strike price
             pos_or_panic!(0.2),   // volatility
         );
         let mock = MockOption::new(option);
@@ -695,6 +697,7 @@ mod tests_black_scholes_trait_bis {
     use crate::model::utils::create_sample_option;
     use crate::{Positive, assert_decimal_eq};
     use num_traits::FromPrimitive;
+    use positive::pos_or_panic;
     use rust_decimal_macros::dec;
 
     struct MockOption {
@@ -718,18 +721,18 @@ mod tests_black_scholes_trait_bis {
         let call_option = create_sample_option(
             OptionStyle::Call,
             Side::Long,
-            pos_or_panic!(100.0),
-            pos_or_panic!(1.0),
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
+            Positive::ONE,
+            Positive::HUNDRED,
             pos_or_panic!(0.2),
         );
 
         let put_option = create_sample_option(
             OptionStyle::Put,
             Side::Long,
-            pos_or_panic!(100.0),
-            pos_or_panic!(1.0),
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
+            Positive::ONE,
+            Positive::HUNDRED,
             pos_or_panic!(0.2),
         );
 
@@ -754,18 +757,18 @@ mod tests_black_scholes_trait_bis {
         let call_option = create_sample_option(
             OptionStyle::Call,
             Side::Short,
-            pos_or_panic!(100.0),
-            pos_or_panic!(1.0),
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
+            Positive::ONE,
+            Positive::HUNDRED,
             pos_or_panic!(0.2),
         );
 
         let put_option = create_sample_option(
             OptionStyle::Put,
             Side::Short,
-            pos_or_panic!(100.0),
-            pos_or_panic!(1.0),
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
+            Positive::ONE,
+            Positive::HUNDRED,
             pos_or_panic!(0.2),
         );
 
@@ -790,8 +793,8 @@ mod tests_black_scholes_trait_bis {
         let call1 = MockOption::new(create_sample_option(
             OptionStyle::Call,
             Side::Long,
-            pos_or_panic!(100.0),
-            pos_or_panic!(1.0),
+            Positive::HUNDRED,
+            Positive::ONE,
             pos_or_panic!(90.0),
             pos_or_panic!(0.2),
         ));
@@ -799,17 +802,17 @@ mod tests_black_scholes_trait_bis {
         let call2 = MockOption::new(create_sample_option(
             OptionStyle::Call,
             Side::Long,
-            pos_or_panic!(100.0),
-            pos_or_panic!(1.0),
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
+            Positive::ONE,
+            Positive::HUNDRED,
             pos_or_panic!(0.2),
         ));
 
         let call3 = MockOption::new(create_sample_option(
             OptionStyle::Call,
             Side::Long,
-            pos_or_panic!(100.0),
-            pos_or_panic!(1.0),
+            Positive::HUNDRED,
+            Positive::ONE,
             pos_or_panic!(110.0),
             pos_or_panic!(0.2),
         ));
@@ -827,8 +830,8 @@ mod tests_black_scholes_trait_bis {
         let option = MockOption::new(create_sample_option(
             OptionStyle::Call,
             Side::Long,
-            pos_or_panic!(100.0),
-            pos_or_panic!(1.0),
+            Positive::HUNDRED,
+            Positive::ONE,
             pos_or_panic!(95.0),
             Positive::ZERO,
         ));
@@ -842,8 +845,8 @@ mod tests_black_scholes_trait_bis {
             OptionStyle::Call,
             Side::Long,
             pos_or_panic!(150.0),
-            pos_or_panic!(1.0),
-            pos_or_panic!(100.0),
+            Positive::ONE,
+            Positive::HUNDRED,
             pos_or_panic!(0.2),
         ));
 
@@ -862,8 +865,8 @@ mod tests_black_scholes_trait_bis {
         let option = MockOption::new(create_sample_option(
             OptionStyle::Call,
             Side::Long,
-            pos_or_panic!(100.0),
-            pos_or_panic!(1.0),
+            Positive::HUNDRED,
+            Positive::ONE,
             pos_or_panic!(200.0),
             pos_or_panic!(0.2),
         ));
@@ -877,27 +880,27 @@ mod tests_black_scholes_trait_bis {
         let call1 = MockOption::new(create_sample_option(
             OptionStyle::Call,
             Side::Long,
-            pos_or_panic!(100.0),
-            pos_or_panic!(1.0),
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
+            Positive::ONE,
+            Positive::HUNDRED,
             pos_or_panic!(0.1),
         ));
 
         let call2 = MockOption::new(create_sample_option(
             OptionStyle::Call,
             Side::Long,
-            pos_or_panic!(100.0),
-            pos_or_panic!(1.0),
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
+            Positive::ONE,
+            Positive::HUNDRED,
             pos_or_panic!(0.2),
         ));
 
         let call3 = MockOption::new(create_sample_option(
             OptionStyle::Call,
             Side::Long,
-            pos_or_panic!(100.0),
-            pos_or_panic!(1.0),
-            pos_or_panic!(100.0),
+            Positive::HUNDRED,
+            Positive::ONE,
+            Positive::HUNDRED,
             pos_or_panic!(0.3),
         ));
 
@@ -912,6 +915,7 @@ mod tests_black_scholes_trait_bis {
 
 #[cfg(test)]
 mod tests_black_scholes_bis {
+    use positive::pos_or_panic;
     use super::*;
     use crate::model::types::{OptionStyle, Side};
     use crate::{ExpirationDate, Positive, assert_decimal_eq};
@@ -922,11 +926,11 @@ mod tests_black_scholes_bis {
             OptionType::European,
             side,
             "TEST".to_string(),
-            pos_or_panic!(100.0), // strike
+            Positive::HUNDRED, // strike
             ExpirationDate::Days(pos_or_panic!(30.0)),
             pos_or_panic!(0.2),   // volatility
-            pos_or_panic!(1.0),   // quantity
-            pos_or_panic!(100.0), // underlying price
+            Positive::ONE,   // quantity
+            Positive::HUNDRED, // underlying price
             dec!(0.05),           // risk-free rate
             style,
             Positive::ZERO, // dividend yield
@@ -1057,7 +1061,7 @@ mod tests_black_scholes_bis {
     #[test]
     fn test_with_dividend_yield() {
         let mut option = create_base_option(Side::Long, OptionStyle::Call);
-        option.dividend_yield = pos_or_panic!(0.0);
+        option.dividend_yield = Positive::ZERO;
         let price = black_scholes(&option).unwrap();
         assert_decimal_eq!(price, dec!(2.49), dec!(0.01));
     }

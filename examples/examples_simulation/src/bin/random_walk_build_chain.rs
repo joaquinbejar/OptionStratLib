@@ -16,17 +16,17 @@ fn main() -> Result<(), Error> {
     let n_steps = 10080; // 30 days in minutes
     let underlying_price = pos_or_panic!(4011.95);
     let days = pos_or_panic!(7.0);
-    let std_dev = pos_or_panic!(2.0);
+    let std_dev = Positive::TWO;
     let implied_volatility = std_dev / 100.0;
     let risk_free_rate = dec!(0.0);
-    let dividend_yield = pos_or_panic!(0.0);
+    let dividend_yield = Positive::ZERO;
     let symbol = "GOLF".to_string();
     let volume = Some(Positive::ONE);
     let chain_size = 30;
     let strike_interval = spos!(10.0);
     let skew_slope = dec!(-0.3);
     let smile_curve = dec!(0.1);
-    let spread = pos_or_panic!(2.0);
+    let spread = Positive::TWO;
     let decimal_places = 2;
 
     let price_params = OptionDataPriceParams::new(
@@ -60,7 +60,7 @@ fn main() -> Result<(), Error> {
         },
         walk_type: WalkType::GeometricBrownian {
             dt: convert_time_frame(
-                pos_or_panic!(1.0) / days,
+                Positive::ONE / days,
                 &TimeFrame::Minute,
                 &TimeFrame::Day,
             ),

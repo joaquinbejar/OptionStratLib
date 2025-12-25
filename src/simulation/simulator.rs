@@ -456,6 +456,7 @@ where
 
 #[cfg(test)]
 mod tests {
+    use positive::pos_or_panic;
     use super::*;
     use crate::chains::generator_positive;
     use crate::error::SimulationError;
@@ -488,7 +489,7 @@ mod tests {
     #[test]
     fn test_simulator_creation() {
         let walker = Box::new(TestWalker);
-        let initial_price = pos_or_panic!(100.0);
+        let initial_price = Positive::HUNDRED;
         let init_step = Step {
             x: Xstep::new(
                 Positive::ONE,
@@ -503,7 +504,7 @@ mod tests {
             init_step,
             walk_type: WalkType::GeometricBrownian {
                 dt: convert_time_frame(
-                    pos_or_panic!(1.0) / pos_or_panic!(30.0),
+                    Positive::ONE / pos_or_panic!(30.0),
                     &TimeFrame::Minute,
                     &TimeFrame::Day,
                 ),
@@ -529,7 +530,7 @@ mod tests {
     #[test]
     fn test_simulator_title_methods() {
         let walker = Box::new(TestWalker);
-        let initial_price = pos_or_panic!(100.0);
+        let initial_price = Positive::HUNDRED;
         let init_step = Step {
             x: Xstep::new(
                 Positive::ONE,
@@ -544,7 +545,7 @@ mod tests {
             init_step,
             walk_type: WalkType::GeometricBrownian {
                 dt: convert_time_frame(
-                    pos_or_panic!(1.0) / pos_or_panic!(30.0),
+                    Positive::ONE / pos_or_panic!(30.0),
                     &TimeFrame::Minute,
                     &TimeFrame::Day,
                 ),
@@ -571,7 +572,7 @@ mod tests {
     #[test]
     fn test_simulator_step_access() {
         let walker = Box::new(TestWalker);
-        let initial_price = pos_or_panic!(100.0);
+        let initial_price = Positive::HUNDRED;
         let init_step = Step {
             x: Xstep::new(
                 Positive::ONE,
@@ -586,7 +587,7 @@ mod tests {
             init_step,
             walk_type: WalkType::GeometricBrownian {
                 dt: convert_time_frame(
-                    pos_or_panic!(1.0) / pos_or_panic!(30.0),
+                    Positive::ONE / pos_or_panic!(30.0),
                     &TimeFrame::Minute,
                     &TimeFrame::Day,
                 ),
@@ -628,7 +629,7 @@ mod tests {
     #[test]
     fn test_simulator_indexing() {
         let walker = Box::new(TestWalker);
-        let initial_price = pos_or_panic!(100.0);
+        let initial_price = Positive::HUNDRED;
         let init_step = Step {
             x: Xstep::new(
                 Positive::ONE,
@@ -643,7 +644,7 @@ mod tests {
             init_step,
             walk_type: WalkType::GeometricBrownian {
                 dt: convert_time_frame(
-                    pos_or_panic!(1.0) / pos_or_panic!(30.0),
+                    Positive::ONE / pos_or_panic!(30.0),
                     &TimeFrame::Minute,
                     &TimeFrame::Day,
                 ),
@@ -674,7 +675,7 @@ mod tests {
     #[test]
     fn test_simulator_display() {
         let walker = Box::new(TestWalker);
-        let initial_price = pos_or_panic!(100.0);
+        let initial_price = Positive::HUNDRED;
         let init_step = Step {
             x: Xstep::new(
                 Positive::ONE,
@@ -689,7 +690,7 @@ mod tests {
             init_step,
             walk_type: WalkType::GeometricBrownian {
                 dt: convert_time_frame(
-                    pos_or_panic!(1.0) / pos_or_panic!(30.0),
+                    Positive::ONE / pos_or_panic!(30.0),
                     &TimeFrame::Minute,
                     &TimeFrame::Day,
                 ),
@@ -727,7 +728,7 @@ mod tests {
     #[should_panic(expected = "index out of bounds")]
     fn test_simulator_index_out_of_bounds() {
         let walker = Box::new(TestWalker);
-        let initial_price = pos_or_panic!(100.0);
+        let initial_price = Positive::HUNDRED;
         let init_step = Step {
             x: Xstep::new(
                 Positive::ONE,
@@ -742,7 +743,7 @@ mod tests {
             init_step,
             walk_type: WalkType::GeometricBrownian {
                 dt: convert_time_frame(
-                    pos_or_panic!(1.0) / pos_or_panic!(30.0),
+                    Positive::ONE / pos_or_panic!(30.0),
                     &TimeFrame::Minute,
                     &TimeFrame::Day,
                 ),
@@ -762,10 +763,10 @@ mod tests {
     fn test_full_simulation() -> Result<(), SimulationError> {
         let simulator_size: usize = 5;
         let n_steps = 10;
-        let initial_price = pos_or_panic!(100.0);
+        let initial_price = Positive::HUNDRED;
         let std_dev = pos_or_panic!(20.0);
         let walker = Box::new(TestWalker::new());
-        let days = pos_or_panic!(2.0);
+        let days = Positive::TWO;
 
         let walk_params = WalkParams {
             size: n_steps,
@@ -775,7 +776,7 @@ mod tests {
             },
             walk_type: WalkType::GeometricBrownian {
                 dt: convert_time_frame(
-                    pos_or_panic!(1.0) / days,
+                    Positive::ONE / days,
                     &TimeFrame::Hour,
                     &TimeFrame::Day,
                 ),
@@ -786,8 +787,8 @@ mod tests {
         };
 
         assert_eq!(walk_params.size, n_steps);
-        assert_eq!(walk_params.init_step.get_value(), &pos_or_panic!(100.0));
-        assert_eq!(walk_params.y(), &pos_or_panic!(100.0));
+        assert_eq!(walk_params.init_step.get_value(), &Positive::HUNDRED);
+        assert_eq!(walk_params.y(), &Positive::HUNDRED);
 
         let simulator = Simulator::new(
             "Simulator".to_string(),
@@ -810,13 +811,13 @@ mod tests {
 
         let y_step = step.get_y_step();
         assert_eq!(*y_step.index(), 0);
-        assert_eq!(*y_step.value(), pos_or_panic!(100.0));
+        assert_eq!(*y_step.value(), Positive::HUNDRED);
 
         let x_step = step.get_x_step();
         assert_eq!(*x_step.index(), 0);
         assert_eq!(*x_step.step_size_in_time(), Positive::ONE);
         assert_eq!(x_step.time_unit(), &TimeFrame::Hour);
-        assert_eq!(x_step.days_left()?, pos_or_panic!(2.0));
+        assert_eq!(x_step.days_left()?, Positive::TWO);
 
         let next_step = step.next(pos_or_panic!(200.0)).expect("should be Ok");
         assert_eq!(next_step.get_value(), &pos_or_panic!(200.0));
@@ -837,8 +838,8 @@ mod tests {
 
         let y_step = step.get_y_step();
         assert_eq!(*y_step.index(), 0);
-        assert_eq!(*y_step.value(), pos_or_panic!(100.0));
-        assert_eq!(y_step.positive(), pos_or_panic!(100.0));
+        assert_eq!(*y_step.value(), Positive::HUNDRED);
+        assert_eq!(y_step.positive(), Positive::HUNDRED);
 
         let last_steps: Vec<&Step<Positive, Positive>> = simulator
             .into_iter()

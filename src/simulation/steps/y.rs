@@ -203,6 +203,7 @@ mod tests_ystep {
 
 #[cfg(test)]
 mod tests_serialize {
+    use positive::pos_or_panic;
     use super::*;
 
     use rust_decimal_macros::dec;

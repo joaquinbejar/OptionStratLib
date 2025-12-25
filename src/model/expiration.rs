@@ -1,8 +1,8 @@
-use positive::pos_or_panic;
 use crate::Positive;
 use crate::constants::{DAYS_IN_A_YEAR, EPSILON};
 use crate::error::{ChainError, DecimalError};
 use chrono::{DateTime, Duration, NaiveDate, NaiveDateTime, Utc};
+use positive::pos_or_panic;
 use serde::de::{MapAccess, Visitor};
 use serde::ser::SerializeMap;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
@@ -112,12 +112,12 @@ impl ExpirationDate {
     /// let days = pos_or_panic!(365.0);
     /// let expiration_date_days = ExpirationDate::Days(days);
     /// let years = expiration_date_days.get_years().unwrap();
-    /// assert_pos_relative_eq!(years, pos_or_panic!(1.0), pos_or_panic!(0.001));
+    /// assert_pos_relative_eq!(years, Positive::ONE, pos_or_panic!(0.001));
     ///
     /// let datetime = Utc::now() + Duration::days(365);
     /// let expiration_date_datetime = ExpirationDate::DateTime(datetime);
     /// let years = expiration_date_datetime.get_years().unwrap();
-    /// assert_pos_relative_eq!(years, pos_or_panic!(1.0), pos_or_panic!(0.001));
+    /// assert_pos_relative_eq!(years, Positive::ONE, pos_or_panic!(0.001));
     /// ```
     pub fn get_years(&self) -> Result<Positive, DecimalError> {
         let days = self.get_days()?;
@@ -749,10 +749,10 @@ mod tests_expiration_date {
 
 #[cfg(test)]
 mod test_expiration_date {
-    use crate::assert_pos_relative_eq;
     use crate::model::ExpirationDate;
     use crate::utils::time::get_today_formatted;
     use chrono::{Local, Timelike, Utc};
+    use positive::{Positive, assert_pos_relative_eq, pos_or_panic};
 
     #[test]
     fn test_from_string_valid_days() {
@@ -851,7 +851,7 @@ mod test_expiration_date {
 
     #[test]
     fn test_from_expiration_date_zero() {
-        let zero_expiration_date = ExpirationDate::Days(pos_or_panic!(0.0));
+        let zero_expiration_date = ExpirationDate::Days(Positive::ZERO);
 
         let today = Local::now().date_naive();
         assert_eq!(
@@ -859,7 +859,7 @@ mod test_expiration_date {
             today.format("%Y-%m-%d").to_string()
         );
         let years = zero_expiration_date.get_years().unwrap();
-        assert_pos_relative_eq!(years, pos_or_panic!(0.0), pos_or_panic!(1e-3));
+        assert_pos_relative_eq!(years, Positive::ZERO, pos_or_panic!(1e-3));
 
         assert!(zero_expiration_date.get_date_string().is_ok());
 
@@ -1334,7 +1334,7 @@ mod tests_comparisons {
     #[test]
     fn test_partial_eq_edge_case_epsilon_boundary() {
         // Test exactly at the epsilon boundary
-        let base_value = pos_or_panic!(100.0);
+        let base_value = Positive::HUNDRED;
         let date1 = ExpirationDate::Days(base_value);
         let date2 =
             ExpirationDate::Days(Positive::new_decimal(base_value.value() + EPSILON).unwrap());

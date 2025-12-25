@@ -264,6 +264,7 @@ mod tests {
 
     use chrono::Utc;
     use std::collections::HashMap;
+    use positive::pos_or_panic;
 
     /// Helper function to create a test SimulationResult
     fn create_test_result(

@@ -14,7 +14,7 @@ fn main() -> Result<(), Error> {
         pos_or_panic!(0.3745), // implied_volatility
         dec!(0.05),            // risk_free_rate
         Positive::ZERO,        // dividend_yield
-        pos_or_panic!(1.0),    // quantity
+        Positive::ONE,    // quantity
         pos_or_panic!(84.2),   // premium_short_call
         pos_or_panic!(353.2),  // premium_short_put
         pos_or_panic!(7.01),   // open_fee_short_call
@@ -22,7 +22,7 @@ fn main() -> Result<(), Error> {
         pos_or_panic!(7.01),   // open_fee_short_put
         pos_or_panic!(7.01),   // close_fee_short_put
     );
-    // let price_range = strategy.best_range_to_show(pos_or_panic!(1.0)).unwrap();
+    // let price_range = strategy.best_range_to_show(Positive::ONE).unwrap();
     let range = strategy.break_even_points[1] - strategy.break_even_points[0];
 
     info!("Title: {}", strategy.get_title());
