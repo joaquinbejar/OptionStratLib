@@ -747,7 +747,7 @@ mod tests_error_greeks_extended {
 
     #[test]
     fn test_invalid_time_constructor() {
-        let error = GreeksError::invalid_time(pos!(5.0), "Time must be positive");
+        let error = GreeksError::invalid_time(pos_or_panic!(5.0), "Time must be positive");
         assert_eq!(
             format!("{error}"),
             "Input validation error: Invalid time 5: Time must be positive"

@@ -66,7 +66,7 @@ use rust_decimal_macros::dec;
 use optionstratlib::greeks::{delta, gamma, rho, theta, vega};
 use optionstratlib::{ExpirationDate, Options};
 use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
-use optionstratlib::pos;
+use optionstratlib::pos_or_panic;
 use optionstratlib::Positive;
 
 // Create a sample option

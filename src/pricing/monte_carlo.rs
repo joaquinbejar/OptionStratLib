@@ -137,11 +137,11 @@ mod tests {
             option_type: OptionType::European,
             side: Side::Long,
             underlying_symbol: "TEST".to_string(),
-            strike_price: pos!(100.0),
+            strike_price: pos_or_panic!(100.0),
             expiration_date: ExpirationDate::Days(DAYS_IN_A_YEAR), // 1 year
-            implied_volatility: pos!(0.2),
-            quantity: pos!(1.0),
-            underlying_price: pos!(100.0),
+            implied_volatility: pos_or_panic!(0.2),
+            quantity: pos_or_panic!(1.0),
+            underlying_price: pos_or_panic!(100.0),
             risk_free_rate: dec!(0.05),
             option_style: OptionStyle::Call,
             dividend_yield: Positive::ZERO,
@@ -173,7 +173,7 @@ mod tests {
     #[test]
     fn test_monte_carlo_option_pricing_high_volatility() {
         let mut option = create_test_option();
-        option.implied_volatility = pos!(0.5);
+        option.implied_volatility = pos_or_panic!(0.5);
         let price = monte_carlo_option_pricing(&option, 252, 100).unwrap();
         // The price should be higher with higher volatility
         assert!(price > dec!(10.0));
@@ -182,7 +182,7 @@ mod tests {
     #[test]
     fn test_monte_carlo_option_pricing_short_expiration() {
         let mut option = create_test_option();
-        option.expiration_date = ExpirationDate::Days(pos!(30.0)); // 30 days
+        option.expiration_date = ExpirationDate::Days(pos_or_panic!(30.0)); // 30 days
         let price = monte_carlo_option_pricing(&option, 30, 100).unwrap();
         // The price should be lower for a shorter expiration
         assert!(price < dec!(5.0));
@@ -219,10 +219,10 @@ mod tests_price_option_monte_carlo {
         let option = create_sample_option(
             OptionStyle::Call,
             Side::Long,
-            pos!(100.0),
-            pos!(1.0),
-            pos!(100.0),
-            pos!(0.2),
+            pos_or_panic!(100.0),
+            pos_or_panic!(1.0),
+            pos_or_panic!(100.0),
+            pos_or_panic!(0.2),
         );
         let empty_prices = &[];
 
@@ -240,23 +240,31 @@ mod tests_price_option_monte_carlo {
         let mut option = create_sample_option(
             OptionStyle::Call,
             Side::Long,
-            pos!(100.0),
-            pos!(1.0),
-            pos!(100.0),
-            pos!(0.2),
+            pos_or_panic!(100.0),
+            pos_or_panic!(1.0),
+            pos_or_panic!(100.0),
+            pos_or_panic!(0.2),
         );
 
         option.risk_free_rate = dec!(0.05);
-        option.dividend_yield = pos!(0.02);
-        option.expiration_date = ExpirationDate::Days(pos!(365.0));
+        option.dividend_yield = pos_or_panic!(0.02);
+        option.expiration_date = ExpirationDate::Days(pos_or_panic!(365.0));
 
         // Setup simulated prices and expected payoffs
-        let prices = vec![pos!(110.0), pos!(90.0), pos!(105.0)];
+        let prices = vec![
+            pos_or_panic!(110.0),
+            pos_or_panic!(90.0),
+            pos_or_panic!(105.0),
+        ];
 
         // Act
         let result = price_option_monte_carlo(&option, &prices);
         assert!(result.is_ok());
-        assert_pos_relative_eq!(result.unwrap(), pos!(4.85222766), pos!(0.001));
+        assert_pos_relative_eq!(
+            result.unwrap(),
+            pos_or_panic!(4.85222766),
+            pos_or_panic!(0.001)
+        );
     }
 
     #[test]
@@ -264,19 +272,19 @@ mod tests_price_option_monte_carlo {
         struct TestWalker;
         impl WalkTypeAble<Positive, Positive> for TestWalker {}
         let walker = Box::new(TestWalker);
-        let initial_price = pos!(1000.0);
-        let days = pos!(365.0);
-        let volatility = pos!(0.2);
+        let initial_price = pos_or_panic!(1000.0);
+        let days = pos_or_panic!(365.0);
+        let volatility = pos_or_panic!(0.2);
         let mut option = create_sample_option(
             OptionStyle::Call,
             Side::Long,
             initial_price,
-            pos!(1.0),
+            pos_or_panic!(1.0),
             initial_price,
             volatility,
         );
         option.risk_free_rate = dec!(0.05);
-        option.dividend_yield = pos!(0.02);
+        option.dividend_yield = pos_or_panic!(0.02);
         option.expiration_date = ExpirationDate::Days(days);
 
         let init_step = Step {
@@ -284,7 +292,7 @@ mod tests_price_option_monte_carlo {
             y: Ystep::new(0, initial_price),
         };
 
-        let dt = convert_time_frame(pos!(1.0), &TimeFrame::Day, &TimeFrame::Year);
+        let dt = convert_time_frame(pos_or_panic!(1.0), &TimeFrame::Day, &TimeFrame::Year);
         let walk_params = WalkParams {
             size: 365,
             init_step,
@@ -292,9 +300,9 @@ mod tests_price_option_monte_carlo {
                 dt,
                 drift: dec!(0.02),
                 volatility,
-                vov: pos!(0.01),
+                vov: pos_or_panic!(0.01),
                 vol_speed: Default::default(),
-                vol_mean: pos!(0.2),
+                vol_mean: pos_or_panic!(0.2),
             },
             walker,
         };
@@ -316,7 +324,7 @@ mod tests_price_option_monte_carlo {
         assert!(result.is_ok());
 
         let bs = option.calculate_price_black_scholes().unwrap();
-        assert_pos_relative_eq!(result.unwrap(), Positive(bs), pos!(10.0));
+        assert_pos_relative_eq!(result.unwrap(), Positive(bs), pos_or_panic!(10.0));
     }
 
     // #[test]

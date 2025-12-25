@@ -234,8 +234,8 @@ mod tests_standard_payoff {
     fn test_call_option_in_the_money() {
         let option_type = OptionType::European;
         let info = PayoffInfo {
-            spot: pos!(110.0),
-            strike: pos!(100.0),
+            spot: pos_or_panic!(110.0),
+            strike: pos_or_panic!(100.0),
             style: OptionStyle::Call,
             side: Side::Long,
             spot_prices: None,
@@ -249,8 +249,8 @@ mod tests_standard_payoff {
     fn test_call_option_at_the_money() {
         let option_type = OptionType::European;
         let info = PayoffInfo {
-            spot: pos!(100.0),
-            strike: pos!(100.0),
+            spot: pos_or_panic!(100.0),
+            strike: pos_or_panic!(100.0),
             style: OptionStyle::Call,
             side: Side::Long,
             spot_prices: None,
@@ -264,8 +264,8 @@ mod tests_standard_payoff {
     fn test_call_option_out_of_the_money() {
         let option_type = OptionType::European;
         let info = PayoffInfo {
-            spot: pos!(90.0),
-            strike: pos!(100.0),
+            spot: pos_or_panic!(90.0),
+            strike: pos_or_panic!(100.0),
             style: OptionStyle::Call,
             side: Side::Long,
             spot_prices: None,
@@ -279,8 +279,8 @@ mod tests_standard_payoff {
     fn test_put_option_in_the_money() {
         let option_type = OptionType::European;
         let info = PayoffInfo {
-            spot: pos!(90.0),
-            strike: pos!(100.0),
+            spot: pos_or_panic!(90.0),
+            strike: pos_or_panic!(100.0),
             style: OptionStyle::Put,
             side: Side::Long,
             spot_prices: None,
@@ -294,8 +294,8 @@ mod tests_standard_payoff {
     fn test_put_option_at_the_money() {
         let option_type = OptionType::European;
         let info = PayoffInfo {
-            spot: pos!(100.0),
-            strike: pos!(100.0),
+            spot: pos_or_panic!(100.0),
+            strike: pos_or_panic!(100.0),
             style: OptionStyle::Put,
             side: Side::Long,
             spot_prices: None,
@@ -309,8 +309,8 @@ mod tests_standard_payoff {
     fn test_put_option_out_of_the_money() {
         let option_type = OptionType::European;
         let info = PayoffInfo {
-            spot: pos!(110.0),
-            strike: pos!(100.0),
+            spot: pos_or_panic!(110.0),
+            strike: pos_or_panic!(100.0),
             style: OptionStyle::Put,
             side: Side::Long,
             spot_prices: None,

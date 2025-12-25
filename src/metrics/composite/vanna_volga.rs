@@ -80,11 +80,11 @@ use crate::surfaces::Surface;
 /// ```ignore
 /// use optionstratlib::chains::chain::OptionChain;
 /// use optionstratlib::metrics::VannaVolgaSurface;
-/// use optionstratlib::pos;
+/// use optionstratlib::pos_or_panic;
 ///
 /// let chain = OptionChain::load_from_json("options.json")?;
-/// let price_range = (pos!(400.0), pos!(500.0));
-/// let vol_range = (pos!(0.10), pos!(0.40));
+/// let price_range = (pos_or_panic!(400.0), pos_or_panic!(500.0));
+/// let vol_range = (pos_or_panic!(0.10), pos_or_panic!(0.40));
 /// let surface = chain.vanna_volga_surface(price_range, vol_range, 20, 20)?;
 /// ```
 pub trait VannaVolgaSurface {
@@ -171,8 +171,8 @@ mod tests_vanna_volga {
     #[test]
     fn test_vanna_volga_surface_creation() {
         let vv = TestVannaVolgaSurface;
-        let price_range = (pos!(400.0), pos!(500.0));
-        let vol_range = (pos!(0.10), pos!(0.40));
+        let price_range = (pos_or_panic!(400.0), pos_or_panic!(500.0));
+        let vol_range = (pos_or_panic!(0.10), pos_or_panic!(0.40));
 
         let surface = vv.vanna_volga_surface(price_range, vol_range, 10, 10);
         assert!(surface.is_ok());
@@ -185,8 +185,8 @@ mod tests_vanna_volga {
     #[test]
     fn test_vanna_volga_surface_cost_increases_with_moneyness() {
         let vv = TestVannaVolgaSurface;
-        let price_range = (pos!(400.0), pos!(500.0));
-        let vol_range = (pos!(0.20), pos!(0.20)); // Fixed vol
+        let price_range = (pos_or_panic!(400.0), pos_or_panic!(500.0));
+        let vol_range = (pos_or_panic!(0.20), pos_or_panic!(0.20)); // Fixed vol
 
         let surface = vv
             .vanna_volga_surface(price_range, vol_range, 10, 0)
@@ -212,8 +212,8 @@ mod tests_vanna_volga {
     #[test]
     fn test_vanna_volga_surface_cost_increases_with_volatility() {
         let vv = TestVannaVolgaSurface;
-        let price_range = (pos!(400.0), pos!(400.0)); // Fixed price (OTM)
-        let vol_range = (pos!(0.10), pos!(0.40));
+        let price_range = (pos_or_panic!(400.0), pos_or_panic!(400.0)); // Fixed price (OTM)
+        let vol_range = (pos_or_panic!(0.10), pos_or_panic!(0.40));
 
         let surface = vv
             .vanna_volga_surface(price_range, vol_range, 0, 10)

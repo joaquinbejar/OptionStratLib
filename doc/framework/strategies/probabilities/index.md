@@ -79,7 +79,7 @@ use tracing::info;
 use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
 use optionstratlib::strategies::probabilities::{ProbabilityAnalysis, VolatilityAdjustment, PriceTrend, StrategyProbabilityAnalysis};
 use optionstratlib::{ExpirationDate, Positive};
-use optionstratlib::pos;
+use optionstratlib::pos_or_panic;
 use optionstratlib::strategies::bear_call_spread::BearCallSpread;
 
 let strategy = BearCallSpread::new(
@@ -113,7 +113,7 @@ use rust_decimal_macros::dec;
 use optionstratlib::ExpirationDate;
 use optionstratlib::strategies::probabilities::{ProbabilityAnalysis, VolatilityAdjustment};
 use optionstratlib::Positive;
-use optionstratlib::pos;
+use optionstratlib::pos_or_panic;
 use optionstratlib::strategies::bear_call_spread::BearCallSpread;
 
 let strategy = BearCallSpread::new(
@@ -150,7 +150,7 @@ let analysis = strategy.analyze_probabilities(vol_adj, None);
 use rust_decimal_macros::dec;
 use optionstratlib::ExpirationDate;
 use optionstratlib::Positive;
-use optionstratlib::pos;
+use optionstratlib::pos_or_panic;
 use optionstratlib::strategies::bear_call_spread::BearCallSpread;
 use optionstratlib::strategies::probabilities::{PriceTrend, ProbabilityAnalysis};
 let strategy = BearCallSpread::new(
@@ -187,7 +187,7 @@ use tracing::info;
 use optionstratlib::strategies::probabilities::calculate_price_probability;
 use optionstratlib::ExpirationDate;
 use optionstratlib::Positive;
-use optionstratlib::pos;
+use optionstratlib::pos_or_panic;
 
 let (prob_below, prob_in_range, prob_above) = calculate_price_probability(
     &pos!(100.0),   // current price

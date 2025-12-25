@@ -277,9 +277,9 @@ mod tests_walk_type {
     #[test]
     fn test_brownian_creation() {
         let walk = WalkType::Brownian {
-            dt: pos!(0.01),
+            dt: pos_or_panic!(0.01),
             drift: dec!(0.05),
-            volatility: pos!(0.2),
+            volatility: pos_or_panic!(0.2),
         };
 
         if let WalkType::Brownian {
@@ -288,9 +288,9 @@ mod tests_walk_type {
             volatility,
         } = walk
         {
-            assert_eq!(dt, pos!(0.01));
+            assert_eq!(dt, pos_or_panic!(0.01));
             assert_eq!(drift, dec!(0.05));
-            assert_eq!(volatility, pos!(0.2));
+            assert_eq!(volatility, pos_or_panic!(0.2));
         } else {
             panic!("Expected Brownian variant");
         }
@@ -299,9 +299,9 @@ mod tests_walk_type {
     #[test]
     fn test_geometric_brownian_creation() {
         let walk = WalkType::GeometricBrownian {
-            dt: pos!(0.01),
+            dt: pos_or_panic!(0.01),
             drift: dec!(0.05),
-            volatility: pos!(0.2),
+            volatility: pos_or_panic!(0.2),
         };
 
         if let WalkType::GeometricBrownian {
@@ -310,9 +310,9 @@ mod tests_walk_type {
             volatility,
         } = walk
         {
-            assert_eq!(dt, pos!(0.01));
+            assert_eq!(dt, pos_or_panic!(0.01));
             assert_eq!(drift, dec!(0.05));
-            assert_eq!(volatility, pos!(0.2));
+            assert_eq!(volatility, pos_or_panic!(0.2));
         } else {
             panic!("Expected GeometricBrownian variant");
         }
@@ -321,9 +321,9 @@ mod tests_walk_type {
     #[test]
     fn test_log_returns_creation() {
         let walk = WalkType::LogReturns {
-            dt: pos!(0.01),
+            dt: pos_or_panic!(0.01),
             expected_return: dec!(0.05),
-            volatility: pos!(0.2),
+            volatility: pos_or_panic!(0.2),
             autocorrelation: Some(dec!(0.1)),
         };
 
@@ -334,9 +334,9 @@ mod tests_walk_type {
             autocorrelation,
         } = walk
         {
-            assert_eq!(dt, pos!(0.01));
+            assert_eq!(dt, pos_or_panic!(0.01));
             assert_eq!(expected_return, dec!(0.05));
-            assert_eq!(volatility, pos!(0.2));
+            assert_eq!(volatility, pos_or_panic!(0.2));
             assert_eq!(autocorrelation, Some(dec!(0.1)));
         } else {
             panic!("Expected LogReturns variant");
@@ -346,10 +346,10 @@ mod tests_walk_type {
     #[test]
     fn test_mean_reverting_creation() {
         let walk = WalkType::MeanReverting {
-            dt: pos!(0.01),
-            volatility: pos!(0.2),
-            speed: pos!(0.1),
-            mean: pos!(100.0),
+            dt: pos_or_panic!(0.01),
+            volatility: pos_or_panic!(0.2),
+            speed: pos_or_panic!(0.1),
+            mean: pos_or_panic!(100.0),
         };
 
         if let WalkType::MeanReverting {
@@ -359,10 +359,10 @@ mod tests_walk_type {
             mean,
         } = walk
         {
-            assert_eq!(dt, pos!(0.01));
-            assert_eq!(volatility, pos!(0.2));
-            assert_eq!(speed, pos!(0.1));
-            assert_eq!(mean, pos!(100.0));
+            assert_eq!(dt, pos_or_panic!(0.01));
+            assert_eq!(volatility, pos_or_panic!(0.2));
+            assert_eq!(speed, pos_or_panic!(0.1));
+            assert_eq!(mean, pos_or_panic!(100.0));
         } else {
             panic!("Expected MeanReverting variant");
         }
@@ -371,12 +371,12 @@ mod tests_walk_type {
     #[test]
     fn test_jump_diffusion_creation() {
         let walk = WalkType::JumpDiffusion {
-            dt: pos!(0.01),
+            dt: pos_or_panic!(0.01),
             drift: dec!(0.05),
-            volatility: pos!(0.2),
-            intensity: pos!(1.0),
+            volatility: pos_or_panic!(0.2),
+            intensity: pos_or_panic!(1.0),
             jump_mean: dec!(-0.05),
-            jump_volatility: pos!(0.3),
+            jump_volatility: pos_or_panic!(0.3),
         };
 
         if let WalkType::JumpDiffusion {
@@ -388,12 +388,12 @@ mod tests_walk_type {
             jump_volatility,
         } = walk
         {
-            assert_eq!(dt, pos!(0.01));
+            assert_eq!(dt, pos_or_panic!(0.01));
             assert_eq!(drift, dec!(0.05));
-            assert_eq!(volatility, pos!(0.2));
-            assert_eq!(intensity, pos!(1.0));
+            assert_eq!(volatility, pos_or_panic!(0.2));
+            assert_eq!(intensity, pos_or_panic!(1.0));
             assert_eq!(jump_mean, dec!(-0.05));
-            assert_eq!(jump_volatility, pos!(0.3));
+            assert_eq!(jump_volatility, pos_or_panic!(0.3));
         } else {
             panic!("Expected JumpDiffusion variant");
         }
@@ -402,11 +402,11 @@ mod tests_walk_type {
     #[test]
     fn test_garch_creation() {
         let walk = WalkType::Garch {
-            dt: pos!(0.01),
+            dt: pos_or_panic!(0.01),
             drift: dec!(0.05),
-            volatility: pos!(0.2),
-            alpha: pos!(0.1),
-            beta: pos!(0.8),
+            volatility: pos_or_panic!(0.2),
+            alpha: pos_or_panic!(0.1),
+            beta: pos_or_panic!(0.8),
         };
 
         if let WalkType::Garch {
@@ -417,11 +417,11 @@ mod tests_walk_type {
             beta,
         } = walk
         {
-            assert_eq!(dt, pos!(0.01));
+            assert_eq!(dt, pos_or_panic!(0.01));
             assert_eq!(drift, dec!(0.05));
-            assert_eq!(volatility, pos!(0.2));
-            assert_eq!(alpha, pos!(0.1));
-            assert_eq!(beta, pos!(0.8));
+            assert_eq!(volatility, pos_or_panic!(0.2));
+            assert_eq!(alpha, pos_or_panic!(0.1));
+            assert_eq!(beta, pos_or_panic!(0.8));
         } else {
             panic!("Expected Garch variant");
         }
@@ -430,12 +430,12 @@ mod tests_walk_type {
     #[test]
     fn test_heston_creation() {
         let walk = WalkType::Heston {
-            dt: pos!(0.01),
+            dt: pos_or_panic!(0.01),
             drift: dec!(0.05),
-            volatility: pos!(0.2),
-            kappa: pos!(2.0),
-            theta: pos!(0.04),
-            xi: pos!(0.3),
+            volatility: pos_or_panic!(0.2),
+            kappa: pos_or_panic!(2.0),
+            theta: pos_or_panic!(0.04),
+            xi: pos_or_panic!(0.3),
             rho: dec!(-0.7),
         };
 
@@ -449,12 +449,12 @@ mod tests_walk_type {
             rho,
         } = walk
         {
-            assert_eq!(dt, pos!(0.01));
+            assert_eq!(dt, pos_or_panic!(0.01));
             assert_eq!(drift, dec!(0.05));
-            assert_eq!(volatility, pos!(0.2));
-            assert_eq!(kappa, pos!(2.0));
-            assert_eq!(theta, pos!(0.04));
-            assert_eq!(xi, pos!(0.3));
+            assert_eq!(volatility, pos_or_panic!(0.2));
+            assert_eq!(kappa, pos_or_panic!(2.0));
+            assert_eq!(theta, pos_or_panic!(0.04));
+            assert_eq!(xi, pos_or_panic!(0.3));
             assert_eq!(rho, dec!(-0.7));
         } else {
             panic!("Expected Heston variant");
@@ -464,12 +464,12 @@ mod tests_walk_type {
     #[test]
     fn test_custom_creation() {
         let walk = WalkType::Custom {
-            dt: pos!(0.01),
+            dt: pos_or_panic!(0.01),
             drift: dec!(0.05),
-            volatility: pos!(0.2),
-            vov: pos!(0.25),
-            vol_speed: pos!(0.15),
-            vol_mean: pos!(0.3),
+            volatility: pos_or_panic!(0.2),
+            vov: pos_or_panic!(0.25),
+            vol_speed: pos_or_panic!(0.15),
+            vol_mean: pos_or_panic!(0.3),
         };
 
         if let WalkType::Custom {
@@ -481,12 +481,12 @@ mod tests_walk_type {
             vol_mean,
         } = walk
         {
-            assert_eq!(dt, pos!(0.01));
+            assert_eq!(dt, pos_or_panic!(0.01));
             assert_eq!(drift, dec!(0.05));
-            assert_eq!(volatility, pos!(0.2));
-            assert_eq!(vov, pos!(0.25));
-            assert_eq!(vol_speed, pos!(0.15));
-            assert_eq!(vol_mean, pos!(0.3));
+            assert_eq!(volatility, pos_or_panic!(0.2));
+            assert_eq!(vov, pos_or_panic!(0.25));
+            assert_eq!(vol_speed, pos_or_panic!(0.15));
+            assert_eq!(vol_mean, pos_or_panic!(0.3));
         } else {
             panic!("Expected Custom variant");
         }
@@ -495,13 +495,13 @@ mod tests_walk_type {
     #[test]
     fn test_telegraph_creation() {
         let walk = WalkType::Telegraph {
-            dt: pos!(0.01),
+            dt: pos_or_panic!(0.01),
             drift: dec!(0.05),
-            volatility: pos!(0.2),
-            lambda_up: pos!(0.5),
-            lambda_down: pos!(0.3),
-            vol_multiplier_up: Some(pos!(1.2)),
-            vol_multiplier_down: Some(pos!(0.8)),
+            volatility: pos_or_panic!(0.2),
+            lambda_up: pos_or_panic!(0.5),
+            lambda_down: pos_or_panic!(0.3),
+            vol_multiplier_up: Some(pos_or_panic!(1.2)),
+            vol_multiplier_down: Some(pos_or_panic!(0.8)),
         };
 
         if let WalkType::Telegraph {
@@ -514,13 +514,13 @@ mod tests_walk_type {
             vol_multiplier_down,
         } = walk
         {
-            assert_eq!(dt, pos!(0.01));
+            assert_eq!(dt, pos_or_panic!(0.01));
             assert_eq!(drift, dec!(0.05));
-            assert_eq!(volatility, pos!(0.2));
-            assert_eq!(lambda_up, pos!(0.5));
-            assert_eq!(lambda_down, pos!(0.3));
-            assert_eq!(vol_multiplier_up, Some(pos!(1.2)));
-            assert_eq!(vol_multiplier_down, Some(pos!(0.8)));
+            assert_eq!(volatility, pos_or_panic!(0.2));
+            assert_eq!(lambda_up, pos_or_panic!(0.5));
+            assert_eq!(lambda_down, pos_or_panic!(0.3));
+            assert_eq!(vol_multiplier_up, Some(pos_or_panic!(1.2)));
+            assert_eq!(vol_multiplier_down, Some(pos_or_panic!(0.8)));
         } else {
             panic!("Expected Telegraph variant");
         }
@@ -529,9 +529,9 @@ mod tests_walk_type {
     #[test]
     fn test_display_brownian() {
         let walk = WalkType::Brownian {
-            dt: pos!(0.01),
+            dt: pos_or_panic!(0.01),
             drift: dec!(0.05),
-            volatility: pos!(0.2),
+            volatility: pos_or_panic!(0.2),
         };
 
         let display = format!("{walk}");
@@ -544,9 +544,9 @@ mod tests_walk_type {
     #[test]
     fn test_display_geometric_brownian() {
         let walk = WalkType::GeometricBrownian {
-            dt: pos!(0.01),
+            dt: pos_or_panic!(0.01),
             drift: dec!(0.05),
-            volatility: pos!(0.2),
+            volatility: pos_or_panic!(0.2),
         };
 
         let display = format!("{walk}");
@@ -559,9 +559,9 @@ mod tests_walk_type {
     #[test]
     fn test_display_log_returns() {
         let walk = WalkType::LogReturns {
-            dt: pos!(0.01),
+            dt: pos_or_panic!(0.01),
             expected_return: dec!(0.05),
-            volatility: pos!(0.2),
+            volatility: pos_or_panic!(0.2),
             autocorrelation: Some(dec!(0.1)),
         };
 
@@ -576,10 +576,10 @@ mod tests_walk_type {
     #[test]
     fn test_display_mean_reverting() {
         let walk = WalkType::MeanReverting {
-            dt: pos!(0.01),
-            volatility: pos!(0.2),
-            speed: pos!(0.1),
-            mean: pos!(100.0),
+            dt: pos_or_panic!(0.01),
+            volatility: pos_or_panic!(0.2),
+            speed: pos_or_panic!(0.1),
+            mean: pos_or_panic!(100.0),
         };
 
         let display = format!("{walk}");
@@ -593,12 +593,12 @@ mod tests_walk_type {
     #[test]
     fn test_display_jump_diffusion() {
         let walk = WalkType::JumpDiffusion {
-            dt: pos!(0.01),
+            dt: pos_or_panic!(0.01),
             drift: dec!(0.05),
-            volatility: pos!(0.2),
-            intensity: pos!(1.0),
+            volatility: pos_or_panic!(0.2),
+            intensity: pos_or_panic!(1.0),
             jump_mean: dec!(-0.05),
-            jump_volatility: pos!(0.3),
+            jump_volatility: pos_or_panic!(0.3),
         };
 
         let display = format!("{walk}");
@@ -614,11 +614,11 @@ mod tests_walk_type {
     #[test]
     fn test_display_garch() {
         let walk = WalkType::Garch {
-            dt: pos!(0.01),
+            dt: pos_or_panic!(0.01),
             drift: dec!(0.05),
-            volatility: pos!(0.2),
-            alpha: pos!(0.1),
-            beta: pos!(0.8),
+            volatility: pos_or_panic!(0.2),
+            alpha: pos_or_panic!(0.1),
+            beta: pos_or_panic!(0.8),
         };
 
         let display = format!("{walk}");
@@ -633,12 +633,12 @@ mod tests_walk_type {
     #[test]
     fn test_display_heston() {
         let walk = WalkType::Heston {
-            dt: pos!(0.01),
+            dt: pos_or_panic!(0.01),
             drift: dec!(0.05),
-            volatility: pos!(0.2),
-            kappa: pos!(2.0),
-            theta: pos!(0.04),
-            xi: pos!(0.3),
+            volatility: pos_or_panic!(0.2),
+            kappa: pos_or_panic!(2.0),
+            theta: pos_or_panic!(0.04),
+            xi: pos_or_panic!(0.3),
             rho: dec!(-0.7),
         };
 
@@ -656,12 +656,12 @@ mod tests_walk_type {
     #[test]
     fn test_display_custom() {
         let walk = WalkType::Custom {
-            dt: pos!(0.01),
+            dt: pos_or_panic!(0.01),
             drift: dec!(0.05),
-            volatility: pos!(0.2),
-            vov: pos!(0.25),
-            vol_speed: pos!(0.15),
-            vol_mean: pos!(0.3),
+            volatility: pos_or_panic!(0.2),
+            vov: pos_or_panic!(0.25),
+            vol_speed: pos_or_panic!(0.15),
+            vol_mean: pos_or_panic!(0.3),
         };
 
         let display = format!("{walk}");
@@ -677,13 +677,13 @@ mod tests_walk_type {
     #[test]
     fn test_display_telegraph() {
         let walk = WalkType::Telegraph {
-            dt: pos!(0.01),
+            dt: pos_or_panic!(0.01),
             drift: dec!(0.05),
-            volatility: pos!(0.2),
-            lambda_up: pos!(0.5),
-            lambda_down: pos!(0.3),
-            vol_multiplier_up: Some(pos!(1.2)),
-            vol_multiplier_down: Some(pos!(0.8)),
+            volatility: pos_or_panic!(0.2),
+            lambda_up: pos_or_panic!(0.5),
+            lambda_down: pos_or_panic!(0.3),
+            vol_multiplier_up: Some(pos_or_panic!(1.2)),
+            vol_multiplier_down: Some(pos_or_panic!(0.8)),
         };
 
         let display = format!("{walk}");
@@ -700,9 +700,9 @@ mod tests_walk_type {
     #[test]
     fn test_log_returns_without_autocorrelation() {
         let walk = WalkType::LogReturns {
-            dt: pos!(0.01),
+            dt: pos_or_panic!(0.01),
             expected_return: dec!(0.05),
-            volatility: pos!(0.2),
+            volatility: pos_or_panic!(0.2),
             autocorrelation: None,
         };
 
@@ -713,9 +713,9 @@ mod tests_walk_type {
             autocorrelation,
         } = walk
         {
-            assert_eq!(dt, pos!(0.01));
+            assert_eq!(dt, pos_or_panic!(0.01));
             assert_eq!(expected_return, dec!(0.05));
-            assert_eq!(volatility, pos!(0.2));
+            assert_eq!(volatility, pos_or_panic!(0.2));
             assert_eq!(autocorrelation, None);
         } else {
             panic!("Expected LogReturns variant");
@@ -729,9 +729,9 @@ mod tests_walk_type {
     #[test]
     fn test_clone() {
         let walk = WalkType::Brownian {
-            dt: pos!(0.01),
+            dt: pos_or_panic!(0.01),
             drift: dec!(0.05),
-            volatility: pos!(0.2),
+            volatility: pos_or_panic!(0.2),
         };
 
         let cloned = walk;
@@ -742,9 +742,9 @@ mod tests_walk_type {
             volatility,
         } = cloned
         {
-            assert_eq!(dt, pos!(0.01));
+            assert_eq!(dt, pos_or_panic!(0.01));
             assert_eq!(drift, dec!(0.05));
-            assert_eq!(volatility, pos!(0.2));
+            assert_eq!(volatility, pos_or_panic!(0.2));
         } else {
             panic!("Expected Brownian variant");
         }
@@ -753,9 +753,9 @@ mod tests_walk_type {
     #[test]
     fn test_clone_equality() {
         let walk = WalkType::Brownian {
-            dt: pos!(0.01),
+            dt: pos_or_panic!(0.01),
             drift: dec!(0.05),
-            volatility: pos!(0.2),
+            volatility: pos_or_panic!(0.2),
         };
 
         let cloned = walk.clone();
@@ -775,9 +775,9 @@ mod tests_serialize {
     #[test]
     fn test_brownian_serialization() {
         let walk_type = WalkType::Brownian {
-            dt: pos!(0.0027), // ~1/365 for daily
+            dt: pos_or_panic!(0.0027), // ~1/365 for daily
             drift: dec!(0.05),
-            volatility: pos!(0.2),
+            volatility: pos_or_panic!(0.2),
         };
 
         let json = to_string(&walk_type).unwrap();
@@ -801,9 +801,9 @@ mod tests_serialize {
     #[test]
     fn test_geometric_brownian_serialization() {
         let walk_type = WalkType::GeometricBrownian {
-            dt: pos!(0.0192), // ~1/52 for weekly
+            dt: pos_or_panic!(0.0192), // ~1/52 for weekly
             drift: dec!(0.07),
-            volatility: pos!(0.25),
+            volatility: pos_or_panic!(0.25),
         };
 
         let json = to_string(&walk_type).unwrap();
@@ -824,9 +824,9 @@ mod tests_serialize {
     #[test]
     fn test_log_returns_serialization() {
         let walk_type = WalkType::LogReturns {
-            dt: pos!(0.0833), // ~1/12 for monthly
+            dt: pos_or_panic!(0.0833), // ~1/12 for monthly
             expected_return: dec!(0.06),
-            volatility: pos!(0.18),
+            volatility: pos_or_panic!(0.18),
             autocorrelation: Some(dec!(0.1)),
         };
 
@@ -850,9 +850,9 @@ mod tests_serialize {
     #[test]
     fn test_log_returns_with_none_autocorrelation() {
         let walk_type = WalkType::LogReturns {
-            dt: pos!(0.0833),
+            dt: pos_or_panic!(0.0833),
             expected_return: dec!(0.06),
-            volatility: pos!(0.18),
+            volatility: pos_or_panic!(0.18),
             autocorrelation: None,
         };
 
@@ -868,10 +868,10 @@ mod tests_serialize {
     #[test]
     fn test_mean_reverting_serialization() {
         let walk_type = WalkType::MeanReverting {
-            dt: pos!(0.0027),
-            volatility: pos!(0.3),
-            speed: pos!(0.5),
-            mean: pos!(100.0),
+            dt: pos_or_panic!(0.0027),
+            volatility: pos_or_panic!(0.3),
+            speed: pos_or_panic!(0.5),
+            mean: pos_or_panic!(100.0),
         };
 
         let json = to_string(&walk_type).unwrap();
@@ -894,12 +894,12 @@ mod tests_serialize {
     #[test]
     fn test_jump_diffusion_serialization() {
         let walk_type = WalkType::JumpDiffusion {
-            dt: pos!(0.0027),
+            dt: pos_or_panic!(0.0027),
             drift: dec!(0.04),
-            volatility: pos!(0.15),
-            intensity: pos!(3.0),   // 3 jumps per year expected
-            jump_mean: dec!(-0.05), // Negative mean for downward jumps
-            jump_volatility: pos!(0.1),
+            volatility: pos_or_panic!(0.15),
+            intensity: pos_or_panic!(3.0), // 3 jumps per year expected
+            jump_mean: dec!(-0.05),        // Negative mean for downward jumps
+            jump_volatility: pos_or_panic!(0.1),
         };
 
         let json = to_string(&walk_type).unwrap();
@@ -926,11 +926,11 @@ mod tests_serialize {
     #[test]
     fn test_garch_serialization() {
         let walk_type = WalkType::Garch {
-            dt: pos!(0.0027),
+            dt: pos_or_panic!(0.0027),
             drift: dec!(0.03),
-            volatility: pos!(0.2),
-            alpha: pos!(0.1),
-            beta: pos!(0.8),
+            volatility: pos_or_panic!(0.2),
+            alpha: pos_or_panic!(0.1),
+            beta: pos_or_panic!(0.8),
         };
 
         let json = to_string(&walk_type).unwrap();
@@ -949,12 +949,12 @@ mod tests_serialize {
     #[test]
     fn test_heston_serialization() {
         let walk_type = WalkType::Heston {
-            dt: pos!(0.0027),
+            dt: pos_or_panic!(0.0027),
             drift: dec!(0.05),
-            volatility: pos!(0.2),
-            kappa: pos!(1.5),
-            theta: pos!(0.04),
-            xi: pos!(0.3),
+            volatility: pos_or_panic!(0.2),
+            kappa: pos_or_panic!(1.5),
+            theta: pos_or_panic!(0.04),
+            xi: pos_or_panic!(0.3),
             rho: dec!(-0.7),
         };
 
@@ -976,12 +976,12 @@ mod tests_serialize {
     #[test]
     fn test_custom_serialization() {
         let walk_type = WalkType::Custom {
-            dt: pos!(0.0027),
+            dt: pos_or_panic!(0.0027),
             drift: dec!(0.05),
-            volatility: pos!(0.2),
-            vov: pos!(0.1),
-            vol_speed: pos!(0.5),
-            vol_mean: pos!(0.2),
+            volatility: pos_or_panic!(0.2),
+            vov: pos_or_panic!(0.1),
+            vol_speed: pos_or_panic!(0.5),
+            vol_mean: pos_or_panic!(0.2),
         };
 
         let json = to_string(&walk_type).unwrap();
@@ -1001,13 +1001,13 @@ mod tests_serialize {
     #[test]
     fn test_telegraph_serialization() {
         let walk_type = WalkType::Telegraph {
-            dt: pos!(0.0027),
+            dt: pos_or_panic!(0.0027),
             drift: dec!(0.05),
-            volatility: pos!(0.2),
-            lambda_up: pos!(0.5),
-            lambda_down: pos!(0.3),
-            vol_multiplier_up: Some(pos!(1.2)),
-            vol_multiplier_down: Some(pos!(0.8)),
+            volatility: pos_or_panic!(0.2),
+            lambda_up: pos_or_panic!(0.5),
+            lambda_down: pos_or_panic!(0.3),
+            vol_multiplier_up: Some(pos_or_panic!(1.2)),
+            vol_multiplier_down: Some(pos_or_panic!(0.8)),
         };
 
         let json = to_string(&walk_type).unwrap();
@@ -1030,11 +1030,11 @@ mod tests_serialize {
         let walk_type = WalkType::Historical {
             timeframe: TimeFrame::Day,
             prices: vec![
-                pos!(100.0),
-                pos!(101.5),
-                pos!(99.8),
-                pos!(102.3),
-                pos!(103.1),
+                pos_or_panic!(100.0),
+                pos_or_panic!(101.5),
+                pos_or_panic!(99.8),
+                pos_or_panic!(102.3),
+                pos_or_panic!(103.1),
             ],
             symbol: None,
         };
@@ -1073,9 +1073,9 @@ mod tests_serialize {
                 drift,
                 volatility,
             } => {
-                assert_eq!(dt, pos!(0.0027));
+                assert_eq!(dt, pos_or_panic!(0.0027));
                 assert_eq!(drift, dec!(0.06));
-                assert_eq!(volatility, pos!(0.22));
+                assert_eq!(volatility, pos_or_panic!(0.22));
             }
             _ => panic!("Wrong variant deserialized"),
         }
@@ -1084,12 +1084,12 @@ mod tests_serialize {
     #[test]
     fn test_negative_decimal_values() {
         let walk_type = WalkType::JumpDiffusion {
-            dt: pos!(0.0027),
+            dt: pos_or_panic!(0.0027),
             drift: dec!(-0.03), // Negative drift
-            volatility: pos!(0.15),
-            intensity: pos!(2.0),
+            volatility: pos_or_panic!(0.15),
+            intensity: pos_or_panic!(2.0),
             jump_mean: dec!(-0.1), // Negative jump mean
-            jump_volatility: pos!(0.05),
+            jump_volatility: pos_or_panic!(0.05),
         };
 
         let json = to_string(&walk_type).unwrap();

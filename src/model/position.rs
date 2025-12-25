@@ -3,6 +3,7 @@
    Email: jb@taunais.com
    Date: 18/8/24
 ******************************************************************************/
+use positive::pos_or_panic;
 use crate::Positive;
 use crate::chains::OptionData;
 use crate::error::position::PositionValidationErrorKind;
@@ -35,7 +36,7 @@ use utoipa::ToSchema;
 /// # Examples
 ///
 /// ```rust
-/// use optionstratlib::{Options, pos, Side, OptionStyle};
+/// use optionstratlib::{Options, pos_or_panic, Side, OptionStyle};
 /// use chrono::Utc;
 /// use tracing::info;
 /// use optionstratlib::model::Position;
@@ -44,10 +45,10 @@ use utoipa::ToSchema;
 /// let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
 /// let position = Position::new(
 ///     option,
-///     pos!(5.25),           // premium per contract
+///     pos_or_panic!(5.25),           // premium per contract
 ///     Utc::now(),           // position open date
-///     pos!(0.65),           // opening fee per contract
-///     pos!(0.65),           // closing fee per contract
+///     pos_or_panic!(0.65),           // opening fee per contract
+///     pos_or_panic!(0.65),           // closing fee per contract
 ///     None,
 ///     None,
 /// );
@@ -114,7 +115,7 @@ impl Position {
     /// # Examples
     ///
     /// ```rust
-    /// use optionstratlib::{Options, pos, Side, OptionStyle};
+    /// use optionstratlib::{Options, pos_or_panic, Side, OptionStyle};
     /// use chrono::Utc;
     /// use optionstratlib::model::Position;
     /// use optionstratlib::model::utils::create_sample_option_simplest;
@@ -122,10 +123,10 @@ impl Position {
     /// let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
     /// let position = Position::new(
     ///     option,
-    ///     pos!(5.25),           // premium per contract
+    ///     pos_or_panic!(5.25),           // premium per contract
     ///     Utc::now(),           // position open date
-    ///     pos!(0.65),           // opening fee per contract
-    ///     pos!(0.65),           // closing fee per contract
+    ///     pos_or_panic!(0.65),           // opening fee per contract
+    ///     pos_or_panic!(0.65),           // closing fee per contract
     ///    None,                  // epic (optional)
     ///   None,                  // extra fields (optional)
     /// );
@@ -235,7 +236,7 @@ impl Position {
     /// # Examples
     ///
     /// ```rust
-    /// use optionstratlib::{pos, Side, OptionStyle};
+    /// use optionstratlib::{pos_or_panic, Side, OptionStyle};
     /// use optionstratlib::model::Position;
     /// use optionstratlib::model::utils::create_sample_option_simplest;
     /// use chrono::Utc;
@@ -245,10 +246,10 @@ impl Position {
     /// let option = create_sample_option_simplest(OptionStyle::Call, Side::Short);
     /// let position = Position::new(
     ///     option,
-    ///     pos!(5.25),  // premium per contract
+    ///     pos_or_panic!(5.25),  // premium per contract
     ///     Utc::now(),  // position open date
-    ///     pos!(0.65),  // opening fee
-    ///     pos!(0.65),  // closing fee
+    ///     pos_or_panic!(0.65),  // opening fee
+    ///     pos_or_panic!(0.65),  // closing fee
     ///    None,        // epic (optional)
     ///   None,        // extra fields (optional)
     /// );
@@ -325,20 +326,20 @@ impl Position {
     /// // Assuming position is a properly initialized Position
     /// use chrono::Utc;
     /// use optionstratlib::model::utils::create_sample_option_simplest;
-    /// use optionstratlib::{pos, OptionStyle, Side};
+    /// use optionstratlib::{pos_or_panic, OptionStyle, Side};
     /// use optionstratlib::model::Position;
     ///
     /// let option = create_sample_option_simplest(OptionStyle::Call, Side::Short);
     /// let position = Position::new(
     ///     option,
-    ///     pos!(5.25),  // premium per contract
+    ///     pos_or_panic!(5.25),  // premium per contract
     ///     Utc::now(),  // position open date
-    ///     pos!(0.65),  // opening fee
-    ///     pos!(0.65),  // closing fee
+    ///     pos_or_panic!(0.65),  // opening fee
+    ///     pos_or_panic!(0.65),  // closing fee
     ///    None,        // epic (optional)
     ///   None,        // extra fields (optional)
     /// );
-    /// let current_price = pos!(105.0);
+    /// let current_price = pos_or_panic!(105.0);
     ///
     /// // Calculate PnL at expiration with specified price
     /// let pnl_specific = position.pnl_at_expiration(&Some(&current_price)).unwrap();
@@ -382,15 +383,15 @@ impl Position {
     /// use tracing::info;
     /// use optionstratlib::model::Position;
     /// use optionstratlib::model::utils::create_sample_option_simplest;
-    /// use optionstratlib::{pos, OptionStyle, Side};
-    /// let current_price = pos!(6.50);
+    /// use optionstratlib::{pos_or_panic, OptionStyle, Side};
+    /// let current_price = pos_or_panic!(6.50);
     /// let option = create_sample_option_simplest(OptionStyle::Call, Side::Short);
     /// let position = Position::new(
     ///     option,
-    ///     pos!(5.25),  // premium per contract
+    ///     pos_or_panic!(5.25),  // premium per contract
     ///     Utc::now(),  // position open date
-    ///     pos!(0.65),  // opening fee
-    ///     pos!(0.65),  // closing fee
+    ///     pos_or_panic!(0.65),  // opening fee
+    ///     pos_or_panic!(0.65),  // closing fee
     ///    None,        // epic (optional)
     ///   None,        // extra fields (optional)
     /// );
@@ -426,7 +427,7 @@ impl Position {
     /// * `Err(PositionError)` - If there's an error during the calculation or validation
     ///
     pub fn days_held(&self) -> Result<Positive, PositionError> {
-        Ok(pos!((Utc::now() - self.date).num_days() as f64))
+        Ok(pos_or_panic!((Utc::now() - self.date).num_days() as f64))
     }
 
     /// Calculates the number of days remaining until the option expires.
@@ -445,7 +446,7 @@ impl Position {
     pub fn days_to_expiration(&self) -> Result<Positive, PositionError> {
         match self.option.expiration_date {
             ExpirationDate::Days(days) => Ok(days),
-            ExpirationDate::DateTime(datetime) => Ok(pos!(
+            ExpirationDate::DateTime(datetime) => Ok(pos_or_panic!(
                 datetime.signed_duration_since(Utc::now()).num_days() as f64
             )),
         }
@@ -623,7 +624,7 @@ impl Position {
     ///
     /// ```rust
     /// use optionstratlib::model::{Position, Options};
-    /// use optionstratlib::{pos, Side, OptionStyle};
+    /// use optionstratlib::{pos_or_panic, Side, OptionStyle};
     /// use optionstratlib::model::utils::create_sample_option_simplest;
     /// use chrono::Utc;
     ///
@@ -631,10 +632,10 @@ impl Position {
     /// let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
     /// let position = Position::new(
     ///     option,
-    ///     pos!(5.25),
+    ///     pos_or_panic!(5.25),
     ///     Utc::now(),
-    ///     pos!(0.65),
-    ///     pos!(0.65),
+    ///     pos_or_panic!(0.65),
+    ///     pos_or_panic!(0.65),
     ///     None, // epic (optional)
     ///    None, // extra fields (optional)
     /// );
@@ -737,7 +738,7 @@ impl TradeStatusAble for Position {
 
     fn close(&self) -> Trade {
         let mut trade = self.trade();
-        if trade.premium <= pos!(0.01) {
+        if trade.premium <= pos_or_panic!(0.01) {
             trade.premium = Positive::ZERO;
         }
         trade.status = TradeStatus::Closed;
@@ -1093,6 +1094,7 @@ impl Graph for Position {
 #[cfg(test)]
 mod tests_position {
     use super::*;
+
     use crate::constants::ZERO;
     use crate::model::types::{OptionStyle, OptionType, Side};
 
@@ -1114,7 +1116,7 @@ mod tests_position {
             underlying_symbol: "".to_string(),
             strike_price,
             expiration_date: ExpirationDate::Days(expiration_days),
-            implied_volatility: pos!(0.2),
+            implied_volatility: pos_or_panic!(0.2),
             quantity,
             underlying_price,
             risk_free_rate: dec!(0.01),
@@ -1129,14 +1131,14 @@ mod tests_position {
         let option = setup_option(
             Side::Long,
             OptionStyle::Call,
-            pos!(100.0),
-            pos!(105.0),
-            pos!(1.0),
-            pos!(30.0),
+            pos_or_panic!(100.0),
+            pos_or_panic!(105.0),
+            pos_or_panic!(1.0),
+            pos_or_panic!(30.0),
         );
         let position = Position::new(
             option,
-            pos!(5.0),
+            pos_or_panic!(5.0),
             Utc::now(),
             Positive::ONE,
             Positive::ONE,
@@ -1155,14 +1157,14 @@ mod tests_position {
         let option = setup_option(
             Side::Long,
             OptionStyle::Call,
-            pos!(100.0),
-            pos!(105.0),
-            pos!(10.0),
-            pos!(30.0),
+            pos_or_panic!(100.0),
+            pos_or_panic!(105.0),
+            pos_or_panic!(10.0),
+            pos_or_panic!(30.0),
         );
         let position = Position::new(
             option,
-            pos!(5.0),
+            pos_or_panic!(5.0),
             Utc::now(),
             Positive::ONE,
             Positive::ONE,
@@ -1181,14 +1183,14 @@ mod tests_position {
         let option = setup_option(
             Side::Short,
             OptionStyle::Call,
-            pos!(100.0),
-            pos!(105.0),
-            pos!(1.0),
-            pos!(30.0),
+            pos_or_panic!(100.0),
+            pos_or_panic!(105.0),
+            pos_or_panic!(1.0),
+            pos_or_panic!(30.0),
         );
         let position = Position::new(
             option,
-            pos!(5.0),
+            pos_or_panic!(5.0),
             Utc::now(),
             Positive::ONE,
             Positive::ONE,
@@ -1207,14 +1209,14 @@ mod tests_position {
         let option = setup_option(
             Side::Short,
             OptionStyle::Call,
-            pos!(100.0),
-            pos!(105.0),
-            pos!(10.0),
-            pos!(30.0),
+            pos_or_panic!(100.0),
+            pos_or_panic!(105.0),
+            pos_or_panic!(10.0),
+            pos_or_panic!(30.0),
         );
         let position = Position::new(
             option,
-            pos!(5.0),
+            pos_or_panic!(5.0),
             Utc::now(),
             Positive::ONE,
             Positive::ONE,
@@ -1233,14 +1235,14 @@ mod tests_position {
         let option = setup_option(
             Side::Long,
             OptionStyle::Call,
-            pos!(100.0),
-            pos!(110.0),
-            pos!(1.0),
+            pos_or_panic!(100.0),
+            pos_or_panic!(110.0),
+            pos_or_panic!(1.0),
             Positive::ZERO,
         );
         let position = Position::new(
             option,
-            pos!(5.0),
+            pos_or_panic!(5.0),
             Utc::now(),
             Positive::ONE,
             Positive::ONE,
@@ -1259,14 +1261,14 @@ mod tests_position {
         let option = setup_option(
             Side::Long,
             OptionStyle::Call,
-            pos!(100.0),
-            pos!(110.0),
-            pos!(1.0),
+            pos_or_panic!(100.0),
+            pos_or_panic!(110.0),
+            pos_or_panic!(1.0),
             Positive::ZERO,
         );
         let position = Position::new(
             option,
-            pos!(5.0),
+            pos_or_panic!(5.0),
             Utc::now(),
             Positive::ONE,
             Positive::ONE,
@@ -1285,14 +1287,14 @@ mod tests_position {
         let option = setup_option(
             Side::Long,
             OptionStyle::Call,
-            pos!(100.0),
-            pos!(110.0),
-            pos!(10.0),
+            pos_or_panic!(100.0),
+            pos_or_panic!(110.0),
+            pos_or_panic!(10.0),
             Positive::ZERO,
         );
         let position = Position::new(
             option,
-            pos!(5.0),
+            pos_or_panic!(5.0),
             Utc::now(),
             Positive::ONE,
             Positive::ONE,
@@ -1311,14 +1313,14 @@ mod tests_position {
         let option = setup_option(
             Side::Short,
             OptionStyle::Call,
-            pos!(100.0),
-            pos!(110.0),
-            pos!(1.0),
+            pos_or_panic!(100.0),
+            pos_or_panic!(110.0),
+            pos_or_panic!(1.0),
             Positive::ZERO,
         );
         let position = Position::new(
             option,
-            pos!(5.0),
+            pos_or_panic!(5.0),
             Utc::now(),
             Positive::ONE,
             Positive::ONE,
@@ -1337,14 +1339,14 @@ mod tests_position {
         let option = setup_option(
             Side::Short,
             OptionStyle::Call,
-            pos!(100.0),
-            pos!(110.0),
-            pos!(10.0),
+            pos_or_panic!(100.0),
+            pos_or_panic!(110.0),
+            pos_or_panic!(10.0),
             Positive::ZERO,
         );
         let position = Position::new(
             option,
-            pos!(5.0),
+            pos_or_panic!(5.0),
             Utc::now(),
             Positive::ONE,
             Positive::ONE,
@@ -1363,14 +1365,14 @@ mod tests_position {
         let option = setup_option(
             Side::Long,
             OptionStyle::Put,
-            pos!(100.0),
-            pos!(90.0),
-            pos!(1.0),
+            pos_or_panic!(100.0),
+            pos_or_panic!(90.0),
+            pos_or_panic!(1.0),
             Positive::ZERO,
         );
         let position = Position::new(
             option,
-            pos!(5.0),
+            pos_or_panic!(5.0),
             Utc::now(),
             Positive::ONE,
             Positive::ONE,
@@ -1389,14 +1391,14 @@ mod tests_position {
         let option = setup_option(
             Side::Long,
             OptionStyle::Put,
-            pos!(100.0),
-            pos!(90.0),
-            pos!(10.0),
+            pos_or_panic!(100.0),
+            pos_or_panic!(90.0),
+            pos_or_panic!(10.0),
             Positive::ZERO,
         );
         let position = Position::new(
             option,
-            pos!(5.0),
+            pos_or_panic!(5.0),
             Utc::now(),
             Positive::ONE,
             Positive::ONE,
@@ -1415,14 +1417,14 @@ mod tests_position {
         let option = setup_option(
             Side::Short,
             OptionStyle::Put,
-            pos!(100.0),
-            pos!(90.0),
-            pos!(1.0),
+            pos_or_panic!(100.0),
+            pos_or_panic!(90.0),
+            pos_or_panic!(1.0),
             Positive::ZERO,
         );
         let position = Position::new(
             option,
-            pos!(5.0),
+            pos_or_panic!(5.0),
             Utc::now(),
             Positive::ONE,
             Positive::ONE,
@@ -1441,14 +1443,14 @@ mod tests_position {
         let option = setup_option(
             Side::Short,
             OptionStyle::Put,
-            pos!(100.0),
-            pos!(90.0),
-            pos!(10.0),
+            pos_or_panic!(100.0),
+            pos_or_panic!(90.0),
+            pos_or_panic!(10.0),
             Positive::ZERO,
         );
         let position = Position::new(
             option,
-            pos!(5.0),
+            pos_or_panic!(5.0),
             Utc::now(),
             Positive::ONE,
             Positive::ONE,
@@ -1467,14 +1469,14 @@ mod tests_position {
         let option = setup_option(
             Side::Short,
             OptionStyle::Put,
-            pos!(100.0),
-            pos!(110.0),
-            pos!(1.0),
+            pos_or_panic!(100.0),
+            pos_or_panic!(110.0),
+            pos_or_panic!(1.0),
             Positive::ZERO,
         );
         let position = Position::new(
             option,
-            pos!(5.0),
+            pos_or_panic!(5.0),
             Utc::now(),
             Positive::ONE,
             Positive::ONE,
@@ -1493,14 +1495,14 @@ mod tests_position {
         let option = setup_option(
             Side::Short,
             OptionStyle::Put,
-            pos!(100.0),
-            pos!(110.0),
-            pos!(10.0),
+            pos_or_panic!(100.0),
+            pos_or_panic!(110.0),
+            pos_or_panic!(10.0),
             Positive::ZERO,
         );
         let position = Position::new(
             option,
-            pos!(5.0),
+            pos_or_panic!(5.0),
             Utc::now(),
             Positive::ONE,
             Positive::ONE,
@@ -1519,14 +1521,14 @@ mod tests_position {
         let option = setup_option(
             Side::Long,
             OptionStyle::Call,
-            pos!(100.0),
-            pos!(105.0),
-            pos!(1.0),
-            pos!(30.0),
+            pos_or_panic!(100.0),
+            pos_or_panic!(105.0),
+            pos_or_panic!(1.0),
+            pos_or_panic!(30.0),
         );
         let position = Position::new(
             option,
-            pos!(5.0),
+            pos_or_panic!(5.0),
             Utc::now(),
             Positive::ONE,
             Positive::ONE,
@@ -1534,7 +1536,9 @@ mod tests_position {
             None,
         );
         assert_eq!(
-            position.pnl_at_expiration(&Some(&pos!(107.0))).unwrap(),
+            position
+                .pnl_at_expiration(&Some(&pos_or_panic!(107.0)))
+                .unwrap(),
             Positive::ZERO,
             "Unrealized PNL for long call is incorrect."
         );
@@ -1545,14 +1549,14 @@ mod tests_position {
         let option = setup_option(
             Side::Long,
             OptionStyle::Call,
-            pos!(100.0),
-            pos!(105.0),
-            pos!(10.0),
-            pos!(30.0),
+            pos_or_panic!(100.0),
+            pos_or_panic!(105.0),
+            pos_or_panic!(10.0),
+            pos_or_panic!(30.0),
         );
         let position = Position::new(
             option,
-            pos!(5.0),
+            pos_or_panic!(5.0),
             Utc::now(),
             Positive::ONE,
             Positive::ONE,
@@ -1561,7 +1565,7 @@ mod tests_position {
         );
         assert_eq!(
             position
-                .pnl_at_expiration(&Some(&pos!(107.0)))
+                .pnl_at_expiration(&Some(&pos_or_panic!(107.0)))
                 .unwrap()
                 .to_f64()
                 .unwrap(),
@@ -1575,14 +1579,14 @@ mod tests_position {
         let option = setup_option(
             Side::Short,
             OptionStyle::Call,
-            pos!(100.0),
-            pos!(105.0),
-            pos!(10.0),
-            pos!(30.0),
+            pos_or_panic!(100.0),
+            pos_or_panic!(105.0),
+            pos_or_panic!(10.0),
+            pos_or_panic!(30.0),
         );
         let position = Position::new(
             option,
-            pos!(5.0),
+            pos_or_panic!(5.0),
             Utc::now(),
             Positive::ONE,
             Positive::ONE,
@@ -1591,7 +1595,7 @@ mod tests_position {
         );
         assert_eq!(
             position
-                .unrealized_pnl(pos!(3.0))
+                .unrealized_pnl(pos_or_panic!(3.0))
                 .unwrap()
                 .to_f64()
                 .unwrap(),
@@ -1605,14 +1609,14 @@ mod tests_position {
         let option = setup_option(
             Side::Short,
             OptionStyle::Call,
-            pos!(100.0),
-            pos!(105.0),
-            pos!(1.0),
-            pos!(30.0),
+            pos_or_panic!(100.0),
+            pos_or_panic!(105.0),
+            pos_or_panic!(1.0),
+            pos_or_panic!(30.0),
         );
         let position = Position::new(
             option,
-            pos!(5.0),
+            pos_or_panic!(5.0),
             Utc::now(),
             Positive::ONE,
             Positive::ONE,
@@ -1621,7 +1625,7 @@ mod tests_position {
         );
         assert_eq!(
             position
-                .unrealized_pnl(pos!(10.0))
+                .unrealized_pnl(pos_or_panic!(10.0))
                 .unwrap()
                 .to_f64()
                 .unwrap(),
@@ -1635,15 +1639,15 @@ mod tests_position {
         let option = setup_option(
             Side::Long,
             OptionStyle::Call,
-            pos!(100.0),
-            pos!(105.0),
-            pos!(10.0),
-            pos!(30.0),
+            pos_or_panic!(100.0),
+            pos_or_panic!(105.0),
+            pos_or_panic!(10.0),
+            pos_or_panic!(30.0),
         );
         let date = Utc::now() - Duration::days(10);
         let position = Position::new(
             option,
-            pos!(5.0),
+            pos_or_panic!(5.0),
             date,
             Positive::ONE,
             Positive::ONE,
@@ -1662,14 +1666,14 @@ mod tests_position {
         let option = setup_option(
             Side::Long,
             OptionStyle::Call,
-            pos!(100.0),
-            pos!(105.0),
-            pos!(10.0),
-            pos!(30.0),
+            pos_or_panic!(100.0),
+            pos_or_panic!(105.0),
+            pos_or_panic!(10.0),
+            pos_or_panic!(30.0),
         );
         let position = Position::new(
             option,
-            pos!(5.0),
+            pos_or_panic!(5.0),
             Utc::now(),
             Positive::ONE,
             Positive::ONE,
@@ -1688,14 +1692,14 @@ mod tests_position {
         let option = setup_option(
             Side::Long,
             OptionStyle::Call,
-            pos!(100.0),
-            pos!(105.0),
-            pos!(10.0),
-            pos!(30.0),
+            pos_or_panic!(100.0),
+            pos_or_panic!(105.0),
+            pos_or_panic!(10.0),
+            pos_or_panic!(30.0),
         );
         let position = Position::new(
             option,
-            pos!(5.0),
+            pos_or_panic!(5.0),
             Utc::now(),
             Positive::ONE,
             Positive::ONE,
@@ -1717,14 +1721,14 @@ mod tests_position {
         let option = setup_option(
             Side::Short,
             OptionStyle::Call,
-            pos!(100.0),
-            pos!(105.0),
-            pos!(10.0),
-            pos!(30.0),
+            pos_or_panic!(100.0),
+            pos_or_panic!(105.0),
+            pos_or_panic!(10.0),
+            pos_or_panic!(30.0),
         );
         let position = Position::new(
             option,
-            pos!(5.0),
+            pos_or_panic!(5.0),
             Utc::now(),
             Positive::ONE,
             Positive::ONE,
@@ -1745,6 +1749,7 @@ mod tests_position {
 #[cfg(test)]
 mod tests_valid_position {
     use super::*;
+
     use crate::model::utils::create_sample_position;
 
     #[test]
@@ -1752,10 +1757,10 @@ mod tests_valid_position {
         let position = create_sample_position(
             OptionStyle::Call,
             Side::Short,
-            pos!(90.0),
-            pos!(1.0),
-            pos!(95.0),
-            pos!(0.2),
+            pos_or_panic!(90.0),
+            pos_or_panic!(1.0),
+            pos_or_panic!(95.0),
+            pos_or_panic!(0.2),
         );
         assert!(position.validate());
     }
@@ -1765,10 +1770,10 @@ mod tests_valid_position {
         let mut position = create_sample_position(
             OptionStyle::Call,
             Side::Short,
-            pos!(90.0),
-            pos!(1.0),
-            pos!(95.0),
-            pos!(0.2),
+            pos_or_panic!(90.0),
+            pos_or_panic!(1.0),
+            pos_or_panic!(95.0),
+            pos_or_panic!(0.2),
         );
         position.premium = Positive::ZERO;
         assert!(!position.validate());
@@ -1779,10 +1784,10 @@ mod tests_valid_position {
         let mut position = create_sample_position(
             OptionStyle::Call,
             Side::Short,
-            pos!(90.0),
-            pos!(1.0),
-            pos!(95.0),
-            pos!(0.2),
+            pos_or_panic!(90.0),
+            pos_or_panic!(1.0),
+            pos_or_panic!(95.0),
+            pos_or_panic!(0.2),
         );
         position.option.strike_price = Positive::ZERO; // This makes the option invalid
         assert!(!position.validate());
@@ -1793,10 +1798,10 @@ mod tests_valid_position {
         let mut position = create_sample_position(
             OptionStyle::Call,
             Side::Short,
-            pos!(90.0),
-            pos!(1.0),
-            pos!(95.0),
-            pos!(0.2),
+            pos_or_panic!(90.0),
+            pos_or_panic!(1.0),
+            pos_or_panic!(95.0),
+            pos_or_panic!(0.2),
         );
         position.open_fee = Positive::ZERO;
         position.close_fee = Positive::ZERO;
@@ -1807,6 +1812,7 @@ mod tests_valid_position {
 #[cfg(test)]
 mod tests_position_break_even {
     use super::*;
+
     use crate::model::types::{OptionStyle, OptionType, Side};
 
     use rust_decimal_macros::dec;
@@ -1825,7 +1831,7 @@ mod tests_position_break_even {
             underlying_symbol: "".to_string(),
             strike_price,
             expiration_date: ExpirationDate::Days(expiration_days),
-            implied_volatility: pos!(0.2),
+            implied_volatility: pos_or_panic!(0.2),
             quantity,
             underlying_price,
             risk_free_rate: dec!(0.01),
@@ -1840,14 +1846,14 @@ mod tests_position_break_even {
         let option = setup_option(
             Side::Long,
             OptionStyle::Call,
-            pos!(100.0),
-            pos!(105.0),
-            pos!(1.0),
-            pos!(30.0),
+            pos_or_panic!(100.0),
+            pos_or_panic!(105.0),
+            pos_or_panic!(1.0),
+            pos_or_panic!(30.0),
         );
         let position = Position::new(
             option,
-            pos!(5.0),
+            pos_or_panic!(5.0),
             Utc::now(),
             Positive::ONE,
             Positive::ONE,
@@ -1862,14 +1868,14 @@ mod tests_position_break_even {
         let option = setup_option(
             Side::Long,
             OptionStyle::Call,
-            pos!(100.0),
-            pos!(105.0),
-            pos!(10.0),
-            pos!(30.0),
+            pos_or_panic!(100.0),
+            pos_or_panic!(105.0),
+            pos_or_panic!(10.0),
+            pos_or_panic!(30.0),
         );
         let position = Position::new(
             option,
-            pos!(5.0),
+            pos_or_panic!(5.0),
             Utc::now(),
             Positive::ONE,
             Positive::ONE,
@@ -1884,14 +1890,14 @@ mod tests_position_break_even {
         let option = setup_option(
             Side::Short,
             OptionStyle::Call,
-            pos!(100.0),
-            pos!(105.0),
-            pos!(1.0),
-            pos!(30.0),
+            pos_or_panic!(100.0),
+            pos_or_panic!(105.0),
+            pos_or_panic!(1.0),
+            pos_or_panic!(30.0),
         );
         let position = Position::new(
             option,
-            pos!(5.0),
+            pos_or_panic!(5.0),
             Utc::now(),
             Positive::ONE,
             Positive::ONE,
@@ -1906,14 +1912,14 @@ mod tests_position_break_even {
         let option = setup_option(
             Side::Short,
             OptionStyle::Call,
-            pos!(100.0),
-            pos!(105.0),
-            pos!(10.0),
-            pos!(30.0),
+            pos_or_panic!(100.0),
+            pos_or_panic!(105.0),
+            pos_or_panic!(10.0),
+            pos_or_panic!(30.0),
         );
         let position = Position::new(
             option,
-            pos!(5.0),
+            pos_or_panic!(5.0),
             Utc::now(),
             Positive::ONE,
             Positive::ONE,
@@ -1928,14 +1934,14 @@ mod tests_position_break_even {
         let option = setup_option(
             Side::Long,
             OptionStyle::Put,
-            pos!(100.0),
-            pos!(105.0),
-            pos!(1.0),
-            pos!(30.0),
+            pos_or_panic!(100.0),
+            pos_or_panic!(105.0),
+            pos_or_panic!(1.0),
+            pos_or_panic!(30.0),
         );
         let position = Position::new(
             option,
-            pos!(5.0),
+            pos_or_panic!(5.0),
             Utc::now(),
             Positive::ONE,
             Positive::ONE,
@@ -1950,14 +1956,14 @@ mod tests_position_break_even {
         let option = setup_option(
             Side::Long,
             OptionStyle::Put,
-            pos!(100.0),
-            pos!(105.0),
-            pos!(10.0),
-            pos!(30.0),
+            pos_or_panic!(100.0),
+            pos_or_panic!(105.0),
+            pos_or_panic!(10.0),
+            pos_or_panic!(30.0),
         );
         let position = Position::new(
             option,
-            pos!(5.0),
+            pos_or_panic!(5.0),
             Utc::now(),
             Positive::ONE,
             Positive::ONE,
@@ -1972,14 +1978,14 @@ mod tests_position_break_even {
         let option = setup_option(
             Side::Short,
             OptionStyle::Put,
-            pos!(100.0),
-            pos!(105.0),
-            pos!(1.0),
-            pos!(30.0),
+            pos_or_panic!(100.0),
+            pos_or_panic!(105.0),
+            pos_or_panic!(1.0),
+            pos_or_panic!(30.0),
         );
         let position = Position::new(
             option,
-            pos!(5.0),
+            pos_or_panic!(5.0),
             Utc::now(),
             Positive::ONE,
             Positive::ONE,
@@ -1994,14 +2000,14 @@ mod tests_position_break_even {
         let option = setup_option(
             Side::Short,
             OptionStyle::Put,
-            pos!(100.0),
-            pos!(105.0),
-            pos!(10.0),
-            pos!(30.0),
+            pos_or_panic!(100.0),
+            pos_or_panic!(105.0),
+            pos_or_panic!(10.0),
+            pos_or_panic!(30.0),
         );
         let position = Position::new(
             option,
-            pos!(5.0),
+            pos_or_panic!(5.0),
             Utc::now(),
             Positive::ONE,
             Positive::ONE,
@@ -2015,6 +2021,7 @@ mod tests_position_break_even {
 #[cfg(test)]
 mod tests_position_max_loss_profit {
     use super::*;
+
     use crate::model::types::{OptionStyle, OptionType, Side};
 
     use approx::assert_relative_eq;
@@ -2034,7 +2041,7 @@ mod tests_position_max_loss_profit {
             underlying_symbol: "".to_string(),
             strike_price,
             expiration_date: ExpirationDate::Days(expiration_days),
-            implied_volatility: pos!(0.2),
+            implied_volatility: pos_or_panic!(0.2),
             quantity,
             underlying_price,
             risk_free_rate: dec!(0.01),
@@ -2049,14 +2056,14 @@ mod tests_position_max_loss_profit {
         let option = setup_option(
             Side::Long,
             OptionStyle::Call,
-            pos!(100.0),
-            pos!(105.0),
-            pos!(1.0),
-            pos!(30.0),
+            pos_or_panic!(100.0),
+            pos_or_panic!(105.0),
+            pos_or_panic!(1.0),
+            pos_or_panic!(30.0),
         );
         let position = Position::new(
             option,
-            pos!(5.0),
+            pos_or_panic!(5.0),
             Utc::now(),
             Positive::ONE,
             Positive::ONE,
@@ -2072,14 +2079,14 @@ mod tests_position_max_loss_profit {
         let option = setup_option(
             Side::Long,
             OptionStyle::Call,
-            pos!(100.0),
-            pos!(105.0),
-            pos!(10.0),
-            pos!(30.0),
+            pos_or_panic!(100.0),
+            pos_or_panic!(105.0),
+            pos_or_panic!(10.0),
+            pos_or_panic!(30.0),
         );
         let position = Position::new(
             option,
-            pos!(5.0),
+            pos_or_panic!(5.0),
             Utc::now(),
             Positive::ONE,
             Positive::ONE,
@@ -2095,14 +2102,14 @@ mod tests_position_max_loss_profit {
         let option = setup_option(
             Side::Short,
             OptionStyle::Call,
-            pos!(100.0),
-            pos!(105.0),
-            pos!(1.0),
-            pos!(30.0),
+            pos_or_panic!(100.0),
+            pos_or_panic!(105.0),
+            pos_or_panic!(1.0),
+            pos_or_panic!(30.0),
         );
         let position = Position::new(
             option,
-            pos!(5.0),
+            pos_or_panic!(5.0),
             Utc::now(),
             Positive::ONE,
             Positive::ONE,
@@ -2122,14 +2129,14 @@ mod tests_position_max_loss_profit {
         let option = setup_option(
             Side::Short,
             OptionStyle::Call,
-            pos!(100.0),
-            pos!(105.0),
-            pos!(10.0),
-            pos!(30.0),
+            pos_or_panic!(100.0),
+            pos_or_panic!(105.0),
+            pos_or_panic!(10.0),
+            pos_or_panic!(30.0),
         );
         let position = Position::new(
             option,
-            pos!(5.0),
+            pos_or_panic!(5.0),
             Utc::now(),
             Positive::ONE,
             Positive::ONE,
@@ -2149,14 +2156,14 @@ mod tests_position_max_loss_profit {
         let option = setup_option(
             Side::Long,
             OptionStyle::Put,
-            pos!(100.0),
-            pos!(105.0),
-            pos!(1.0),
-            pos!(30.0),
+            pos_or_panic!(100.0),
+            pos_or_panic!(105.0),
+            pos_or_panic!(1.0),
+            pos_or_panic!(30.0),
         );
         let position = Position::new(
             option,
-            pos!(5.0),
+            pos_or_panic!(5.0),
             Utc::now(),
             Positive::ONE,
             Positive::ONE,
@@ -2172,14 +2179,14 @@ mod tests_position_max_loss_profit {
         let option = setup_option(
             Side::Long,
             OptionStyle::Put,
-            pos!(100.0),
-            pos!(105.0),
-            pos!(10.0),
-            pos!(30.0),
+            pos_or_panic!(100.0),
+            pos_or_panic!(105.0),
+            pos_or_panic!(10.0),
+            pos_or_panic!(30.0),
         );
         let position = Position::new(
             option,
-            pos!(5.0),
+            pos_or_panic!(5.0),
             Utc::now(),
             Positive::ONE,
             Positive::ONE,
@@ -2195,14 +2202,14 @@ mod tests_position_max_loss_profit {
         let option = setup_option(
             Side::Short,
             OptionStyle::Put,
-            pos!(100.0),
-            pos!(105.0),
-            pos!(1.0),
-            pos!(30.0),
+            pos_or_panic!(100.0),
+            pos_or_panic!(105.0),
+            pos_or_panic!(1.0),
+            pos_or_panic!(30.0),
         );
         let position = Position::new(
             option,
-            pos!(5.0),
+            pos_or_panic!(5.0),
             Utc::now(),
             Positive::ONE,
             Positive::ONE,
@@ -2222,14 +2229,14 @@ mod tests_position_max_loss_profit {
         let option = setup_option(
             Side::Short,
             OptionStyle::Put,
-            pos!(100.0),
-            pos!(105.0),
-            pos!(10.0),
-            pos!(30.0),
+            pos_or_panic!(100.0),
+            pos_or_panic!(105.0),
+            pos_or_panic!(10.0),
+            pos_or_panic!(30.0),
         );
         let position = Position::new(
             option,
-            pos!(5.0),
+            pos_or_panic!(5.0),
             Utc::now(),
             Positive::ONE,
             Positive::ONE,
@@ -2253,12 +2260,12 @@ mod tests_update_from_option_data {
 
     fn create_test_option_data() -> OptionData {
         OptionData::new(
-            pos!(110.0),
+            pos_or_panic!(110.0),
             spos!(9.5),
             spos!(10.0),
             spos!(8.5),
             spos!(9.0),
-            pos!(0.25),
+            pos_or_panic!(0.25),
             Some(dec!(-0.3)),
             Some(dec!(0.3)),
             Some(dec!(0.3)),
@@ -2283,7 +2290,7 @@ mod tests_update_from_option_data {
         let option_data = create_test_option_data();
         position.update_from_option_data(&option_data);
 
-        assert_eq!(position.option.strike_price, pos!(110.0));
+        assert_eq!(position.option.strike_price, pos_or_panic!(110.0));
         assert_eq!(position.option.implied_volatility, 0.25);
         assert_eq!(position.premium, 10.0); // call_ask
     }
@@ -2332,13 +2339,13 @@ mod tests_premium {
     fn setup_basic_position(side: Side) -> Position {
         let option = Options {
             side,
-            quantity: pos!(1.0),
+            quantity: pos_or_panic!(1.0),
             ..Default::default()
         };
 
         Position::new(
             option,
-            pos!(5.0),
+            pos_or_panic!(5.0),
             Utc::now(),
             Positive::ONE,
             Positive::ONE,
@@ -2376,13 +2383,13 @@ mod tests_premium {
         let side = Side::Short;
         let option = Options {
             side,
-            quantity: pos!(10.0),
+            quantity: pos_or_panic!(10.0),
             ..Default::default()
         };
 
         let position = Position::new(
             option,
-            pos!(5.0),
+            pos_or_panic!(5.0),
             Utc::now(),
             Positive::ONE,
             Positive::ONE,
@@ -2396,6 +2403,7 @@ mod tests_premium {
 #[cfg(test)]
 mod tests_pnl_calculator {
     use super::*;
+
     use crate::{OptionType, assert_decimal_eq};
     use rust_decimal_macros::dec;
 
@@ -2404,20 +2412,20 @@ mod tests_pnl_calculator {
             OptionType::European,
             side,
             "AAPL".to_string(),
-            pos!(100.0),
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(0.2),
+            pos_or_panic!(100.0),
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.2),
             Positive::ONE,
-            pos!(100.0),
+            pos_or_panic!(100.0),
             dec!(0.05),
             option_style,
-            pos!(0.0),
+            pos_or_panic!(0.0),
             None,
         );
 
         Position::new(
             option,
-            pos!(5.0),
+            pos_or_panic!(5.0),
             Utc::now(),
             Positive::ONE,
             Positive::ONE,
@@ -2430,7 +2438,11 @@ mod tests_pnl_calculator {
     fn test_calculate_pnl_long_call_no_changes() {
         let position = setup_test_position(Side::Long, OptionStyle::Call);
         let pnl = position
-            .calculate_pnl(&pos!(100.0), ExpirationDate::Days(pos!(30.0)), &pos!(0.2))
+            .calculate_pnl(
+                &pos_or_panic!(100.0),
+                ExpirationDate::Days(pos_or_panic!(30.0)),
+                &pos_or_panic!(0.2),
+            )
             .unwrap();
 
         assert_eq!(pnl.unrealized.unwrap(), Decimal::ZERO); // 5.0 - 2.4933 - 2.0 (fees)
@@ -2442,7 +2454,11 @@ mod tests_pnl_calculator {
     fn test_calculate_pnl_long_call_price_up() {
         let position = setup_test_position(Side::Long, OptionStyle::Call);
         let pnl = position
-            .calculate_pnl(&pos!(107.0), ExpirationDate::Days(pos!(30.0)), &pos!(0.2))
+            .calculate_pnl(
+                &pos_or_panic!(107.0),
+                ExpirationDate::Days(pos_or_panic!(30.0)),
+                &pos_or_panic!(0.2),
+            )
             .unwrap();
 
         assert_decimal_eq!(pnl.unrealized.unwrap(), dec!(5.2150), dec!(0.0001));
@@ -2452,7 +2468,11 @@ mod tests_pnl_calculator {
     fn test_calculate_pnl_long_call_vol_down() {
         let position = setup_test_position(Side::Long, OptionStyle::Call);
         let pnl = position
-            .calculate_pnl(&pos!(100.0), ExpirationDate::Days(pos!(30.0)), &pos!(0.1))
+            .calculate_pnl(
+                &pos_or_panic!(100.0),
+                ExpirationDate::Days(pos_or_panic!(30.0)),
+                &pos_or_panic!(0.1),
+            )
             .unwrap();
 
         assert_decimal_eq!(pnl.unrealized.unwrap(), dec!(-1.1352), dec!(0.0001));
@@ -2462,7 +2482,11 @@ mod tests_pnl_calculator {
     fn test_calculate_pnl_long_call_date_closer() {
         let position = setup_test_position(Side::Long, OptionStyle::Call);
         let pnl = position
-            .calculate_pnl(&pos!(100.0), ExpirationDate::Days(pos!(3.0)), &pos!(0.2))
+            .calculate_pnl(
+                &pos_or_panic!(100.0),
+                ExpirationDate::Days(pos_or_panic!(3.0)),
+                &pos_or_panic!(0.2),
+            )
             .unwrap();
 
         assert_decimal_eq!(pnl.unrealized.unwrap(), dec!(-1.7494), dec!(0.0001));
@@ -2472,7 +2496,11 @@ mod tests_pnl_calculator {
     fn test_calculate_pnl_short_call_no_changes() {
         let position = setup_test_position(Side::Short, OptionStyle::Call);
         let pnl = position
-            .calculate_pnl(&pos!(100.0), ExpirationDate::Days(pos!(30.0)), &pos!(0.2))
+            .calculate_pnl(
+                &pos_or_panic!(100.0),
+                ExpirationDate::Days(pos_or_panic!(30.0)),
+                &pos_or_panic!(0.2),
+            )
             .unwrap();
 
         assert_eq!(pnl.unrealized.unwrap(), Decimal::ZERO); // 5.0 - 2.4933 - 2.0 (fees)
@@ -2484,7 +2512,11 @@ mod tests_pnl_calculator {
     fn test_calculate_pnl_short_call_price_up() {
         let position = setup_test_position(Side::Short, OptionStyle::Call);
         let pnl = position
-            .calculate_pnl(&pos!(107.0), ExpirationDate::Days(pos!(30.0)), &pos!(0.2))
+            .calculate_pnl(
+                &pos_or_panic!(107.0),
+                ExpirationDate::Days(pos_or_panic!(30.0)),
+                &pos_or_panic!(0.2),
+            )
             .unwrap();
 
         assert_decimal_eq!(pnl.unrealized.unwrap(), dec!(-5.2150), dec!(0.0001));
@@ -2494,7 +2526,11 @@ mod tests_pnl_calculator {
     fn test_calculate_pnl_short_call_price_down() {
         let position = setup_test_position(Side::Short, OptionStyle::Call);
         let pnl = position
-            .calculate_pnl(&pos!(97.0), ExpirationDate::Days(pos!(30.0)), &pos!(0.2))
+            .calculate_pnl(
+                &pos_or_panic!(97.0),
+                ExpirationDate::Days(pos_or_panic!(30.0)),
+                &pos_or_panic!(0.2),
+            )
             .unwrap();
 
         assert_decimal_eq!(pnl.unrealized.unwrap(), dec!(1.3069), dec!(0.0001));
@@ -2504,7 +2540,11 @@ mod tests_pnl_calculator {
     fn test_calculate_pnl_short_call_vol_down() {
         let position = setup_test_position(Side::Short, OptionStyle::Call);
         let pnl = position
-            .calculate_pnl(&pos!(100.0), ExpirationDate::Days(pos!(30.0)), &pos!(0.1))
+            .calculate_pnl(
+                &pos_or_panic!(100.0),
+                ExpirationDate::Days(pos_or_panic!(30.0)),
+                &pos_or_panic!(0.1),
+            )
             .unwrap();
 
         assert_decimal_eq!(pnl.unrealized.unwrap(), dec!(1.1352), dec!(0.0001));
@@ -2514,7 +2554,11 @@ mod tests_pnl_calculator {
     fn test_calculate_pnl_short_call_vol_up() {
         let position = setup_test_position(Side::Short, OptionStyle::Call);
         let pnl = position
-            .calculate_pnl(&pos!(100.0), ExpirationDate::Days(pos!(30.0)), &pos!(0.3))
+            .calculate_pnl(
+                &pos_or_panic!(100.0),
+                ExpirationDate::Days(pos_or_panic!(30.0)),
+                &pos_or_panic!(0.3),
+            )
             .unwrap();
 
         assert_decimal_eq!(pnl.unrealized.unwrap(), dec!(-1.1386), dec!(0.0001));
@@ -2524,7 +2568,11 @@ mod tests_pnl_calculator {
     fn test_calculate_pnl_short_call_date_closer() {
         let position = setup_test_position(Side::Short, OptionStyle::Call);
         let pnl = position
-            .calculate_pnl(&pos!(100.0), ExpirationDate::Days(pos!(3.0)), &pos!(0.2))
+            .calculate_pnl(
+                &pos_or_panic!(100.0),
+                ExpirationDate::Days(pos_or_panic!(3.0)),
+                &pos_or_panic!(0.2),
+            )
             .unwrap();
 
         assert_decimal_eq!(pnl.unrealized.unwrap(), dec!(1.7494), dec!(0.0001));
@@ -2534,7 +2582,11 @@ mod tests_pnl_calculator {
     fn test_calculate_pnl_short_call_date_further() {
         let position = setup_test_position(Side::Short, OptionStyle::Call);
         let pnl = position
-            .calculate_pnl(&pos!(100.0), ExpirationDate::Days(pos!(40.0)), &pos!(0.2))
+            .calculate_pnl(
+                &pos_or_panic!(100.0),
+                ExpirationDate::Days(pos_or_panic!(40.0)),
+                &pos_or_panic!(0.2),
+            )
             .unwrap();
 
         assert_decimal_eq!(pnl.unrealized.unwrap(), dec!(-0.4224), dec!(0.0001));
@@ -2543,7 +2595,9 @@ mod tests_pnl_calculator {
     #[test]
     fn test_calculate_pnl_at_expiration_long_call() {
         let position = setup_test_position(Side::Long, OptionStyle::Call);
-        let pnl = position.calculate_pnl_at_expiration(&pos!(110.0)).unwrap();
+        let pnl = position
+            .calculate_pnl_at_expiration(&pos_or_panic!(110.0))
+            .unwrap();
 
         assert_eq!(pnl.realized.unwrap(), dec!(3.0)); // 10.0 - 7.0 (total cost)
         assert_eq!(position.total_cost().unwrap(), 7.0);
@@ -2553,7 +2607,9 @@ mod tests_pnl_calculator {
     #[test]
     fn test_calculate_pnl_at_expiration_short_put() {
         let position = setup_test_position(Side::Short, OptionStyle::Put);
-        let pnl = position.calculate_pnl_at_expiration(&pos!(90.0)).unwrap();
+        let pnl = position
+            .calculate_pnl_at_expiration(&pos_or_panic!(90.0))
+            .unwrap();
 
         assert_eq!(pnl.realized.unwrap(), dec!(-7.0)); // -10.0 + 5.0 (premium) - 2.0 (fees)
         assert_eq!(position.total_cost().unwrap(), 2.0);
@@ -2569,20 +2625,20 @@ mod tests_pnl_calculator {
             OptionType::European,
             side,
             "AAPL".to_string(),
-            pos!(100.0),
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(0.2),
+            pos_or_panic!(100.0),
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.2),
             Positive::ONE,
-            pos!(100.0),
+            pos_or_panic!(100.0),
             dec!(0.05),
             option_style,
-            pos!(0.0),
+            pos_or_panic!(0.0),
             None,
         );
 
         Position::new(
             option,
-            pos!(5.0),
+            pos_or_panic!(5.0),
             Utc::now(),
             Positive::ONE,
             Positive::ONE,
@@ -2656,8 +2712,8 @@ mod tests_pnl_calculator {
         let mut position1 = setup_test_position_with_epic(Side::Long, OptionStyle::Call, "EPIC123");
         let mut position2 = setup_test_position_with_epic(Side::Long, OptionStyle::Call, "EPIC123");
 
-        position1.option.strike_price = pos!(100.0);
-        position2.option.strike_price = pos!(105.0);
+        position1.option.strike_price = pos_or_panic!(100.0);
+        position2.option.strike_price = pos_or_panic!(105.0);
 
         let result = position1.diff_position_pnl(&position2);
         assert!(result.is_err());
@@ -2674,8 +2730,8 @@ mod tests_pnl_calculator {
         let mut position1 = setup_test_position_with_epic(Side::Long, OptionStyle::Call, "EPIC123");
         let mut position2 = setup_test_position_with_epic(Side::Long, OptionStyle::Call, "EPIC123");
 
-        position1.option.expiration_date = ExpirationDate::Days(pos!(30.0));
-        position2.option.expiration_date = ExpirationDate::Days(pos!(60.0));
+        position1.option.expiration_date = ExpirationDate::Days(pos_or_panic!(30.0));
+        position2.option.expiration_date = ExpirationDate::Days(pos_or_panic!(60.0));
 
         let result = position1.diff_position_pnl(&position2);
         assert!(result.is_err());
@@ -2692,8 +2748,8 @@ mod tests_pnl_calculator {
         let mut position1 = setup_test_position_with_epic(Side::Long, OptionStyle::Call, "EPIC123");
         let mut position2 = setup_test_position_with_epic(Side::Long, OptionStyle::Call, "EPIC123");
 
-        position1.option.quantity = pos!(1.0);
-        position2.option.quantity = pos!(2.0);
+        position1.option.quantity = pos_or_panic!(1.0);
+        position2.option.quantity = pos_or_panic!(2.0);
 
         let result = position1.diff_position_pnl(&position2);
         assert!(result.is_err());
@@ -2746,14 +2802,14 @@ mod tests_pnl_calculator {
             OptionType::European,
             side,
             "AAPL".to_string(),
-            pos!(100.0),
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(0.2),
+            pos_or_panic!(100.0),
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.2),
             Positive::ONE,
-            pos!(100.0),
+            pos_or_panic!(100.0),
             dec!(0.05),
             option_style,
-            pos!(0.0),
+            pos_or_panic!(0.0),
             None,
         );
 
@@ -2770,10 +2826,18 @@ mod tests_pnl_calculator {
 
     #[test]
     fn test_from_position_pnl_short_call() {
-        let position1 =
-            setup_test_position_with_premium(Side::Short, OptionStyle::Call, "EPIC123", pos!(5.0));
-        let position2 =
-            setup_test_position_with_premium(Side::Short, OptionStyle::Call, "EPIC123", pos!(3.0));
+        let position1 = setup_test_position_with_premium(
+            Side::Short,
+            OptionStyle::Call,
+            "EPIC123",
+            pos_or_panic!(5.0),
+        );
+        let position2 = setup_test_position_with_premium(
+            Side::Short,
+            OptionStyle::Call,
+            "EPIC123",
+            pos_or_panic!(3.0),
+        );
 
         let result = position1.diff_position_pnl(&position2);
         assert!(result.is_ok());
@@ -2786,10 +2850,18 @@ mod tests_pnl_calculator {
 
     #[test]
     fn test_from_position_pnl_long_call() {
-        let position1 =
-            setup_test_position_with_premium(Side::Long, OptionStyle::Call, "EPIC123", pos!(5.0));
-        let position2 =
-            setup_test_position_with_premium(Side::Long, OptionStyle::Call, "EPIC123", pos!(3.0));
+        let position1 = setup_test_position_with_premium(
+            Side::Long,
+            OptionStyle::Call,
+            "EPIC123",
+            pos_or_panic!(5.0),
+        );
+        let position2 = setup_test_position_with_premium(
+            Side::Long,
+            OptionStyle::Call,
+            "EPIC123",
+            pos_or_panic!(3.0),
+        );
 
         let result = position1.diff_position_pnl(&position2);
         assert!(result.is_ok());
@@ -2802,10 +2874,18 @@ mod tests_pnl_calculator {
 
     #[test]
     fn test_from_position_pnl_short_put() {
-        let position1 =
-            setup_test_position_with_premium(Side::Short, OptionStyle::Put, "EPIC123", pos!(4.0));
-        let position2 =
-            setup_test_position_with_premium(Side::Short, OptionStyle::Put, "EPIC123", pos!(2.5));
+        let position1 = setup_test_position_with_premium(
+            Side::Short,
+            OptionStyle::Put,
+            "EPIC123",
+            pos_or_panic!(4.0),
+        );
+        let position2 = setup_test_position_with_premium(
+            Side::Short,
+            OptionStyle::Put,
+            "EPIC123",
+            pos_or_panic!(2.5),
+        );
 
         let result = position1.diff_position_pnl(&position2);
         assert!(result.is_ok());
@@ -2818,10 +2898,18 @@ mod tests_pnl_calculator {
 
     #[test]
     fn test_from_position_pnl_long_put() {
-        let position1 =
-            setup_test_position_with_premium(Side::Long, OptionStyle::Put, "EPIC123", pos!(4.0));
-        let position2 =
-            setup_test_position_with_premium(Side::Long, OptionStyle::Put, "EPIC123", pos!(2.5));
+        let position1 = setup_test_position_with_premium(
+            Side::Long,
+            OptionStyle::Put,
+            "EPIC123",
+            pos_or_panic!(4.0),
+        );
+        let position2 = setup_test_position_with_premium(
+            Side::Long,
+            OptionStyle::Put,
+            "EPIC123",
+            pos_or_panic!(2.5),
+        );
 
         let result = position1.diff_position_pnl(&position2);
         assert!(result.is_ok());
@@ -2836,6 +2924,7 @@ mod tests_pnl_calculator {
 #[cfg(test)]
 mod tests_position_serde {
     use super::*;
+
     use crate::model::utils::create_sample_position;
 
     use serde_json;
@@ -2846,10 +2935,10 @@ mod tests_position_serde {
         let position = create_sample_position(
             OptionStyle::Call,
             Side::Short,
-            pos!(90.0),
-            pos!(1.0),
-            pos!(95.0),
-            pos!(0.2),
+            pos_or_panic!(90.0),
+            pos_or_panic!(1.0),
+            pos_or_panic!(95.0),
+            pos_or_panic!(0.2),
         );
         let serialized = serde_json::to_string(&position).unwrap();
 
@@ -2868,20 +2957,20 @@ mod tests_position_serde {
         let position = create_sample_position(
             OptionStyle::Call,
             Side::Short,
-            pos!(90.0),
-            pos!(1.0),
-            pos!(95.0),
-            pos!(0.2),
+            pos_or_panic!(90.0),
+            pos_or_panic!(1.0),
+            pos_or_panic!(95.0),
+            pos_or_panic!(0.2),
         );
         let serialized = serde_json::to_string(&position).unwrap();
         let deserialized: Position = serde_json::from_str(&serialized).unwrap();
 
         assert_eq!(position, deserialized);
         assert_eq!(deserialized.option.underlying_symbol, "AAPL");
-        assert_eq!(deserialized.option.strike_price, pos!(95.0));
-        assert_eq!(deserialized.premium, pos!(5.0));
-        assert_eq!(deserialized.open_fee, pos!(0.5));
-        assert_eq!(deserialized.close_fee, pos!(0.5));
+        assert_eq!(deserialized.option.strike_price, pos_or_panic!(95.0));
+        assert_eq!(deserialized.premium, pos_or_panic!(5.0));
+        assert_eq!(deserialized.open_fee, pos_or_panic!(0.5));
+        assert_eq!(deserialized.close_fee, pos_or_panic!(0.5));
     }
 
     #[test]
@@ -2889,10 +2978,10 @@ mod tests_position_serde {
         let position = create_sample_position(
             OptionStyle::Call,
             Side::Short,
-            pos!(90.0),
-            pos!(1.0),
-            pos!(95.0),
-            pos!(0.2),
+            pos_or_panic!(90.0),
+            pos_or_panic!(1.0),
+            pos_or_panic!(95.0),
+            pos_or_panic!(0.2),
         );
         let serialized = serde_json::to_string_pretty(&position).unwrap();
 
@@ -2928,10 +3017,10 @@ mod tests_position_serde {
         let original = create_sample_position(
             OptionStyle::Call,
             Side::Short,
-            pos!(90.0),
-            pos!(1.0),
-            pos!(95.0),
-            pos!(0.2),
+            pos_or_panic!(90.0),
+            pos_or_panic!(1.0),
+            pos_or_panic!(95.0),
+            pos_or_panic!(0.2),
         );
         let serialized = serde_json::to_string(&original).unwrap();
         let deserialized: Position = serde_json::from_str(&serialized).unwrap();
@@ -2947,10 +3036,10 @@ mod tests_position_serde {
         let put_position = create_sample_position(
             OptionStyle::Put,
             Side::Short,
-            pos!(90.0),
-            pos!(1.0),
-            pos!(95.0),
-            pos!(0.2),
+            pos_or_panic!(90.0),
+            pos_or_panic!(1.0),
+            pos_or_panic!(95.0),
+            pos_or_panic!(0.2),
         );
 
         let serialized = serde_json::to_string(&put_position).unwrap();
@@ -2963,10 +3052,10 @@ mod tests_position_serde {
         let short_position = create_sample_position(
             OptionStyle::Call,
             Side::Short,
-            pos!(90.0),
-            pos!(1.0),
-            pos!(95.0),
-            pos!(0.2),
+            pos_or_panic!(90.0),
+            pos_or_panic!(1.0),
+            pos_or_panic!(95.0),
+            pos_or_panic!(0.2),
         );
 
         let serialized = serde_json::to_string(&short_position).unwrap();

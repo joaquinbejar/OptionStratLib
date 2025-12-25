@@ -25,13 +25,13 @@
 //! Handles various time frames for financial calculations:
 //!
 //! ```rust
-//! use optionstratlib::pos;
+//! use optionstratlib::pos_or_panic;
 //! use optionstratlib::utils::time::TimeFrame;
 //!
 //! let daily = TimeFrame::Day;
 //! let trading_days_per_year = daily.periods_per_year(); // Returns 252.0
 //!
-//! let custom = TimeFrame::Custom(pos!(365.0));
+//! let custom = TimeFrame::Custom(pos_or_panic!(365.0));
 //! let periods = custom.periods_per_year(); // Returns 365.0
 //! ```
 //!
@@ -41,11 +41,11 @@
 //!
 //! ```rust
 //! use optionstratlib::Positive;
-//! use optionstratlib::{assert_pos_relative_eq, pos};
+//! use optionstratlib::{assert_pos_relative_eq, pos_or_panic};
 //!
-//! let a = pos!(1.0);
-//! let b = pos!(1.0001);
-//! let epsilon = pos!(0.001);
+//! let a = pos_or_panic!(1.0);
+//! let b = pos_or_panic!(1.0001);
+//! let epsilon = pos_or_panic!(0.001);
 //! assert_pos_relative_eq!(a, b, epsilon);
 //! ```
 //!
@@ -93,14 +93,14 @@
 //!
 //! ```rust
 //! use tracing::info;
-//! use optionstratlib::pos;
+//! use optionstratlib::pos_or_panic;
 //! use optionstratlib::utils::time::TimeFrame;
 //!
 //! let timeframes = vec![
 //!     TimeFrame::Day,
 //!     TimeFrame::Week,
 //!     TimeFrame::Month,
-//!     TimeFrame::Custom(pos!(360.0))
+//!     TimeFrame::Custom(pos_or_panic!(360.0))
 //! ];
 //!
 //! for tf in timeframes {
@@ -147,14 +147,14 @@
 //!
 //! ```rust
 //! use optionstratlib::Positive;
-//! use optionstratlib::pos;
+//! use optionstratlib::pos_or_panic;
 //! use optionstratlib::assert_pos_relative_eq;
 //!
 //!
 //! fn test_values() {
-//!     let a = pos!(1.0);
-//!     let b = pos!(1.0001);
-//!     let epsilon = pos!(0.001);
+//!     let a = pos_or_panic!(1.0);
+//!     let b = pos_or_panic!(1.0001);
+//!     let epsilon = pos_or_panic!(0.001);
 //!     assert_pos_relative_eq!(a, b, epsilon);
 //! }
 //! ```

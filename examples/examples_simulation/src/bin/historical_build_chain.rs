@@ -32,16 +32,16 @@ fn main() -> Result<(), Error> {
 
     let n_steps = prices.len();
     let underlying_price = prices[0];
-    let days = pos!(30.0);
+    let days = pos_or_panic!(30.0);
     // let std_dev = implied_volatility * 100.0;
     let risk_free_rate = dec!(0.02);
-    let dividend_yield = pos!(0.01);
+    let dividend_yield = pos_or_panic!(0.01);
     let volume = Some(Positive::ONE);
     let chain_size = 30;
     let strike_interval = spos!(1.0);
     let skew_slope = dec!(-0.3);
     let smile_curve = dec!(0.5);
-    let spread = pos!(0.01);
+    let spread = pos_or_panic!(0.01);
     let decimal_places = 2;
 
     let price_params = OptionDataPriceParams::new(

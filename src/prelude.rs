@@ -136,8 +136,9 @@ pub use crate::series::{OptionSeries, OptionSeriesBuildParams, generator_options
 // Volatility functions
 pub use crate::volatility::{adjust_volatility, constant_volatility};
 
-// Re-export the pos! and spos! macros for creating Positive values
-pub use crate::pos;
-pub use crate::spos;
+// Re-export the pos!, pos_or_panic!, and spos! macros for creating Positive values
+pub use positive::pos;
+pub use positive::pos_or_panic;
+pub use positive::spos;
 
 pub use tracing::{debug, error, info, trace, warn};

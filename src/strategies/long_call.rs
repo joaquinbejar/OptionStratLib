@@ -781,16 +781,16 @@ mod tests_simulate {
     fn create_test_long_call() -> LongCall {
         LongCall::new(
             "TEST".to_string(),
-            pos!(100.0),
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(0.20),
-            pos!(1.0),
-            pos!(100.0),
+            pos_or_panic!(100.0),
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.20),
+            pos_or_panic!(1.0),
+            pos_or_panic!(100.0),
             dec!(0.05),
-            pos!(0.0),
-            pos!(5.0),
-            pos!(0.0),
-            pos!(0.0),
+            pos_or_panic!(0.0),
+            pos_or_panic!(5.0),
+            pos_or_panic!(0.0),
+            pos_or_panic!(0.0),
         )
     }
 
@@ -798,8 +798,8 @@ mod tests_simulate {
         let init_step = Step::new(
             Positive::ONE,
             TimeFrame::Day,
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(100.0),
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(100.0),
         );
         WalkParams {
             size: prices.len(),
@@ -816,7 +816,12 @@ mod tests_simulate {
     #[test]
     fn test_simulate_profit_percent_exit() {
         let strategy = create_test_long_call();
-        let prices = vec![pos!(100.0), pos!(105.0), pos!(110.0), pos!(115.0)];
+        let prices = vec![
+            pos_or_panic!(100.0),
+            pos_or_panic!(105.0),
+            pos_or_panic!(110.0),
+            pos_or_panic!(115.0),
+        ];
         let walk_params = create_walk_params(prices);
         let simulator = Simulator::new("Test".to_string(), 1, &walk_params, generator_positive);
         let results = strategy.simulate(&simulator, ExitPolicy::ProfitPercent(dec!(0.5)));
@@ -828,7 +833,11 @@ mod tests_simulate {
     #[test]
     fn test_simulate_expiration_exit() {
         let strategy = create_test_long_call();
-        let prices = vec![pos!(100.0), pos!(101.0), pos!(102.0)];
+        let prices = vec![
+            pos_or_panic!(100.0),
+            pos_or_panic!(101.0),
+            pos_or_panic!(102.0),
+        ];
         let walk_params = create_walk_params(prices);
         let simulator = Simulator::new("Test".to_string(), 1, &walk_params, generator_positive);
         let results = strategy.simulate(&simulator, ExitPolicy::Expiration);
@@ -840,7 +849,11 @@ mod tests_simulate {
     #[test]
     fn test_simulate_stats_aggregation() {
         let strategy = create_test_long_call();
-        let prices = vec![pos!(100.0), pos!(105.0), pos!(110.0)];
+        let prices = vec![
+            pos_or_panic!(100.0),
+            pos_or_panic!(105.0),
+            pos_or_panic!(110.0),
+        ];
         let walk_params = create_walk_params(prices);
         let simulator = Simulator::new("Test".to_string(), 3, &walk_params, generator_positive);
         let results = strategy.simulate(&simulator, ExitPolicy::Expiration);

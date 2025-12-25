@@ -279,18 +279,18 @@ mod tests_span {
         let option = create_sample_option(
             OptionStyle::Call,
             Side::Short,
-            pos!(155.0),
-            pos!(1.0),
-            pos!(150.0),
-            pos!(0.2),
+            pos_or_panic!(155.0),
+            pos_or_panic!(1.0),
+            pos_or_panic!(150.0),
+            pos_or_panic!(0.2),
         );
 
         let position = Position {
             option,
-            premium: pos!(5.0),
+            premium: pos_or_panic!(5.0),
             date: Utc::now(),
-            open_fee: pos!(0.5),
-            close_fee: pos!(0.5),
+            open_fee: pos_or_panic!(0.5),
+            close_fee: pos_or_panic!(0.5),
             epic: Some("Epic123".to_string()),
             extra_fields: None,
         };

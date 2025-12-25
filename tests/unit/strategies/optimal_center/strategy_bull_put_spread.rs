@@ -4,7 +4,7 @@ use {
     optionstratlib::strategies::base::Optimizable,
     optionstratlib::strategies::base::Positionable,
     optionstratlib::strategies::{BullPutSpread, FindOptimalSide},
-    optionstratlib::{ExpirationDate, Positive, pos},
+    optionstratlib::{ExpirationDate, Positive, pos_or_panic},
     rust_decimal_macros::dec,
     std::error::Error,
 };
@@ -12,24 +12,24 @@ use {
 #[test]
 fn test_bull_put_spread_integration() -> Result<(), Box<dyn Error>> {
     // Define inputs for the BullPutSpread strategy
-    let underlying_price = pos!(5781.88);
+    let underlying_price = pos_or_panic!(5781.88);
 
     let mut strategy = BullPutSpread::new(
         "SP500".to_string(),
         underlying_price, // underlying_price
-        pos!(5750.0),     // long_strike_itm
-        pos!(5920.0),     // short_strike
-        ExpirationDate::Days(pos!(2.0)),
-        pos!(0.18),     // implied_volatility
+        pos_or_panic!(5750.0),     // long_strike_itm
+        pos_or_panic!(5920.0),     // short_strike
+        ExpirationDate::Days(pos_or_panic!(2.0)),
+        pos_or_panic!(0.18),     // implied_volatility
         dec!(0.05),     // risk_free_rate
         Positive::ZERO, // dividend_yield
-        pos!(2.0),      // long quantity
-        pos!(15.04),    // premium_long
-        pos!(89.85),    // premium_short
-        pos!(0.78),     // open_fee_long
-        pos!(0.78),     // open_fee_long
-        pos!(0.73),     // close_fee_long
-        pos!(0.73),     // close_fee_short
+        pos_or_panic!(2.0),      // long quantity
+        pos_or_panic!(15.04),    // premium_long
+        pos_or_panic!(89.85),    // premium_short
+        pos_or_panic!(0.78),     // open_fee_long
+        pos_or_panic!(0.78),     // open_fee_long
+        pos_or_panic!(0.73),     // close_fee_long
+        pos_or_panic!(0.73),     // close_fee_short
     );
 
     let option_chain =

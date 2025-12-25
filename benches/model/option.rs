@@ -7,7 +7,7 @@
 use criterion::{Criterion, criterion_group, criterion_main};
 use optionstratlib::greeks::Greeks;
 use optionstratlib::pnl::utils::PnLCalculator;
-use optionstratlib::{ExpirationDate, OptionStyle, OptionType, Options, Side, pos};
+use optionstratlib::{ExpirationDate, OptionStyle, OptionType, Options, Side, pos_or_panic};
 use rust_decimal_macros::dec;
 use std::hint::black_box;
 
@@ -16,14 +16,14 @@ fn create_test_option() -> Options {
         OptionType::European,
         Side::Long,
         "AAPL".to_string(),
-        pos!(100.0),
-        ExpirationDate::Days(pos!(30.0)),
-        pos!(0.2),
-        pos!(1.0),
-        pos!(100.0),
+        pos_or_panic!(100.0),
+        ExpirationDate::Days(pos_or_panic!(30.0)),
+        pos_or_panic!(0.2),
+        pos_or_panic!(1.0),
+        pos_or_panic!(100.0),
         dec!(0.05),
         OptionStyle::Call,
-        pos!(0.01),
+        pos_or_panic!(0.01),
         None,
     )
 }
@@ -107,7 +107,7 @@ pub(crate) fn benchmark_valuations(c: &mut Criterion) {
     });
 
     group.bench_function("intrinsic_value", |bencher| {
-        bencher.iter(|| black_box(option.intrinsic_value(pos!(110.0))))
+        bencher.iter(|| black_box(option.intrinsic_value(pos_or_panic!(110.0))))
     });
 
     group.bench_function("time_value", |bencher| {
@@ -117,9 +117,9 @@ pub(crate) fn benchmark_valuations(c: &mut Criterion) {
     group.bench_function("pnl_calculation", |bencher| {
         bencher.iter(|| {
             black_box(option.calculate_pnl(
-                &pos!(110.0),
-                ExpirationDate::Days(pos!(15.0)),
-                &pos!(0.25),
+                &pos_or_panic!(110.0),
+                ExpirationDate::Days(pos_or_panic!(15.0)),
+                &pos_or_panic!(0.25),
             ))
         })
     });

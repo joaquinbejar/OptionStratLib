@@ -2,9 +2,9 @@ use optionstratlib::prelude::*;
 
 fn main() -> Result<(), Error> {
     setup_logger();
-    let underlying_price = pos!(100.0);
+    let underlying_price = pos_or_panic!(100.0);
     let underlying_symbol = "AAPL".to_string();
-    let expiration = ExpirationDate::Days(pos!(30.0));
+    let expiration = ExpirationDate::Days(pos_or_panic!(30.0));
     let risk_free_rate = dec!(0.05);
     let dividend_yield = Positive::ZERO;
 
@@ -16,10 +16,10 @@ fn main() -> Result<(), Error> {
         OptionType::European,
         Side::Long,
         underlying_symbol.clone(),
-        pos!(90.0),
+        pos_or_panic!(90.0),
         expiration,
-        pos!(0.25),
-        pos!(1.0), // quantity
+        pos_or_panic!(0.25),
+        pos_or_panic!(1.0), // quantity
         underlying_price,
         risk_free_rate,
         OptionStyle::Put,
@@ -28,10 +28,10 @@ fn main() -> Result<(), Error> {
     );
     let long_put = Position::new(
         long_put_option,
-        pos!(2.5), // premium paid
+        pos_or_panic!(2.5), // premium paid
         Utc::now(),
-        pos!(1.0), // open fee
-        pos!(1.0), // close fee
+        pos_or_panic!(1.0), // open fee
+        pos_or_panic!(1.0), // close fee
         None,
         None,
     );
@@ -41,10 +41,10 @@ fn main() -> Result<(), Error> {
         OptionType::European,
         Side::Short,
         underlying_symbol.clone(),
-        pos!(95.0),
+        pos_or_panic!(95.0),
         expiration,
-        pos!(0.28),
-        pos!(2.0), // double quantity
+        pos_or_panic!(0.28),
+        pos_or_panic!(2.0), // double quantity
         underlying_price,
         risk_free_rate,
         OptionStyle::Put,
@@ -53,10 +53,10 @@ fn main() -> Result<(), Error> {
     );
     let short_put = Position::new(
         short_put_option,
-        pos!(4.2), // premium received
+        pos_or_panic!(4.2), // premium received
         Utc::now(),
-        pos!(1.0),
-        pos!(1.0),
+        pos_or_panic!(1.0),
+        pos_or_panic!(1.0),
         None,
         None,
     );
@@ -66,10 +66,10 @@ fn main() -> Result<(), Error> {
         OptionType::European,
         Side::Short,
         underlying_symbol.clone(),
-        pos!(105.0),
+        pos_or_panic!(105.0),
         expiration,
-        pos!(0.26),
-        pos!(2.0), // double quantity
+        pos_or_panic!(0.26),
+        pos_or_panic!(2.0), // double quantity
         underlying_price,
         risk_free_rate,
         OptionStyle::Call,
@@ -78,10 +78,10 @@ fn main() -> Result<(), Error> {
     );
     let short_call = Position::new(
         short_call_option,
-        pos!(3.8), // premium received
+        pos_or_panic!(3.8), // premium received
         Utc::now(),
-        pos!(1.0),
-        pos!(1.0),
+        pos_or_panic!(1.0),
+        pos_or_panic!(1.0),
         None,
         None,
     );
@@ -91,10 +91,10 @@ fn main() -> Result<(), Error> {
         OptionType::European,
         Side::Long,
         underlying_symbol.clone(),
-        pos!(110.0),
+        pos_or_panic!(110.0),
         expiration,
-        pos!(0.23),
-        pos!(1.0), // quantity
+        pos_or_panic!(0.23),
+        pos_or_panic!(1.0), // quantity
         underlying_price,
         risk_free_rate,
         OptionStyle::Call,
@@ -103,10 +103,10 @@ fn main() -> Result<(), Error> {
     );
     let long_call = Position::new(
         long_call_option,
-        pos!(1.8), // premium paid
+        pos_or_panic!(1.8), // premium paid
         Utc::now(),
-        pos!(1.0),
-        pos!(1.0),
+        pos_or_panic!(1.0),
+        pos_or_panic!(1.0),
         None,
         None,
     );

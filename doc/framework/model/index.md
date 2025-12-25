@@ -92,7 +92,7 @@ use rust_decimal_macros::dec;
 use tracing::info;
 use optionstratlib::{ExpirationDate, Options};
 use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
-use optionstratlib::pos;
+use optionstratlib::pos_or_panic;
 use optionstratlib::Positive;
 
 let option = Options::new(

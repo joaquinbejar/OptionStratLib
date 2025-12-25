@@ -12,28 +12,28 @@ use optionstratlib::prelude::*;
 
 fn main() -> Result<(), Error> {
     setup_logger();
-    let underlying_price = pos!(5795.0);
+    let underlying_price = pos_or_panic!(5795.0);
 
     let strategy = CallButterfly::new(
         "SP500".to_string(),
         underlying_price,
-        pos!(5700.0),
-        pos!(5780.0),
-        pos!(5850.0),
-        ExpirationDate::Days(pos!(2.0)),
-        pos!(0.18),
+        pos_or_panic!(5700.0),
+        pos_or_panic!(5780.0),
+        pos_or_panic!(5850.0),
+        ExpirationDate::Days(pos_or_panic!(2.0)),
+        pos_or_panic!(0.18),
         dec!(0.05),
         Positive::ZERO,
-        pos!(1.0),
-        pos!(114.68),
-        pos!(67.26),
-        pos!(31.65),
-        pos!(0.78),
-        pos!(0.73),
-        pos!(0.78),
-        pos!(0.73),
-        pos!(0.78),
-        pos!(0.73),
+        pos_or_panic!(1.0),
+        pos_or_panic!(114.68),
+        pos_or_panic!(67.26),
+        pos_or_panic!(31.65),
+        pos_or_panic!(0.78),
+        pos_or_panic!(0.73),
+        pos_or_panic!(0.78),
+        pos_or_panic!(0.73),
+        pos_or_panic!(0.78),
+        pos_or_panic!(0.73),
     );
 
     info!("=== CallButterfly Extended Delta Analysis ===");

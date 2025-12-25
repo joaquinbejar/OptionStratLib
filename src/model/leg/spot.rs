@@ -21,17 +21,17 @@
 //! ```rust
 //! use optionstratlib::model::leg::SpotPosition;
 //! use optionstratlib::model::types::Side;
-//! use optionstratlib::pos;
+//! use optionstratlib::pos_or_panic;
 //! use chrono::Utc;
 //!
 //! let spot = SpotPosition::new(
 //!     "AAPL".to_string(),
-//!     pos!(100.0),      // 100 shares
-//!     pos!(150.0),      // cost basis $150 per share
+//!     pos_or_panic!(100.0),      // 100 shares
+//!     pos_or_panic!(150.0),      // cost basis $150 per share
 //!     Side::Long,
 //!     Utc::now(),
-//!     pos!(1.0),        // $1 open fee
-//!     pos!(1.0),        // $1 close fee
+//!     pos_or_panic!(1.0),        // $1 open fee
+//!     pos_or_panic!(1.0),        // $1 close fee
 //! );
 //! ```
 
@@ -315,80 +315,115 @@ mod tests {
     fn test_spot_position_new() {
         let spot = SpotPosition::new(
             "AAPL".to_string(),
-            pos!(100.0),
-            pos!(150.0),
+            pos_or_panic!(100.0),
+            pos_or_panic!(150.0),
             Side::Long,
             Utc::now(),
-            pos!(1.0),
-            pos!(1.0),
+            pos_or_panic!(1.0),
+            pos_or_panic!(1.0),
         );
 
         assert_eq!(spot.symbol, "AAPL");
-        assert_eq!(spot.quantity, pos!(100.0));
-        assert_eq!(spot.cost_basis, pos!(150.0));
+        assert_eq!(spot.quantity, pos_or_panic!(100.0));
+        assert_eq!(spot.cost_basis, pos_or_panic!(150.0));
         assert_eq!(spot.side, Side::Long);
-        assert_eq!(spot.open_fee, pos!(1.0));
-        assert_eq!(spot.close_fee, pos!(1.0));
+        assert_eq!(spot.open_fee, pos_or_panic!(1.0));
+        assert_eq!(spot.close_fee, pos_or_panic!(1.0));
     }
 
     #[test]
     fn test_spot_position_long_convenience() {
-        let spot = SpotPosition::long("BTC".to_string(), pos!(1.0), pos!(50000.0));
+        let spot = SpotPosition::long(
+            "BTC".to_string(),
+            pos_or_panic!(1.0),
+            pos_or_panic!(50000.0),
+        );
 
         assert_eq!(spot.symbol, "BTC");
-        assert_eq!(spot.quantity, pos!(1.0));
-        assert_eq!(spot.cost_basis, pos!(50000.0));
+        assert_eq!(spot.quantity, pos_or_panic!(1.0));
+        assert_eq!(spot.cost_basis, pos_or_panic!(50000.0));
         assert_eq!(spot.side, Side::Long);
         assert_eq!(spot.open_fee, Positive::ZERO);
     }
 
     #[test]
     fn test_spot_position_short_convenience() {
-        let spot = SpotPosition::short("ETH".to_string(), pos!(10.0), pos!(3000.0));
+        let spot = SpotPosition::short(
+            "ETH".to_string(),
+            pos_or_panic!(10.0),
+            pos_or_panic!(3000.0),
+        );
 
         assert_eq!(spot.symbol, "ETH");
-        assert_eq!(spot.quantity, pos!(10.0));
-        assert_eq!(spot.cost_basis, pos!(3000.0));
+        assert_eq!(spot.quantity, pos_or_panic!(10.0));
+        assert_eq!(spot.cost_basis, pos_or_panic!(3000.0));
         assert_eq!(spot.side, Side::Short);
     }
 
     #[test]
     fn test_initial_value() {
-        let spot = SpotPosition::long("AAPL".to_string(), pos!(100.0), pos!(150.0));
-        assert_eq!(spot.initial_value(), pos!(15000.0));
+        let spot = SpotPosition::long(
+            "AAPL".to_string(),
+            pos_or_panic!(100.0),
+            pos_or_panic!(150.0),
+        );
+        assert_eq!(spot.initial_value(), pos_or_panic!(15000.0));
     }
 
     #[test]
     fn test_market_value() {
-        let spot = SpotPosition::long("AAPL".to_string(), pos!(100.0), pos!(150.0));
-        assert_eq!(spot.market_value(pos!(160.0)), pos!(16000.0));
+        let spot = SpotPosition::long(
+            "AAPL".to_string(),
+            pos_or_panic!(100.0),
+            pos_or_panic!(150.0),
+        );
+        assert_eq!(
+            spot.market_value(pos_or_panic!(160.0)),
+            pos_or_panic!(16000.0)
+        );
     }
 
     #[test]
     fn test_long_pnl_profit() {
-        let spot = SpotPosition::long("AAPL".to_string(), pos!(100.0), pos!(150.0));
-        let pnl = spot.pnl_at_price(pos!(160.0));
+        let spot = SpotPosition::long(
+            "AAPL".to_string(),
+            pos_or_panic!(100.0),
+            pos_or_panic!(150.0),
+        );
+        let pnl = spot.pnl_at_price(pos_or_panic!(160.0));
         assert_eq!(pnl, Decimal::from(1000)); // (160-150) * 100
     }
 
     #[test]
     fn test_long_pnl_loss() {
-        let spot = SpotPosition::long("AAPL".to_string(), pos!(100.0), pos!(150.0));
-        let pnl = spot.pnl_at_price(pos!(140.0));
+        let spot = SpotPosition::long(
+            "AAPL".to_string(),
+            pos_or_panic!(100.0),
+            pos_or_panic!(150.0),
+        );
+        let pnl = spot.pnl_at_price(pos_or_panic!(140.0));
         assert_eq!(pnl, Decimal::from(-1000)); // (140-150) * 100
     }
 
     #[test]
     fn test_short_pnl_profit() {
-        let spot = SpotPosition::short("AAPL".to_string(), pos!(100.0), pos!(150.0));
-        let pnl = spot.pnl_at_price(pos!(140.0));
+        let spot = SpotPosition::short(
+            "AAPL".to_string(),
+            pos_or_panic!(100.0),
+            pos_or_panic!(150.0),
+        );
+        let pnl = spot.pnl_at_price(pos_or_panic!(140.0));
         assert_eq!(pnl, Decimal::from(1000)); // Short profits when price drops
     }
 
     #[test]
     fn test_short_pnl_loss() {
-        let spot = SpotPosition::short("AAPL".to_string(), pos!(100.0), pos!(150.0));
-        let pnl = spot.pnl_at_price(pos!(160.0));
+        let spot = SpotPosition::short(
+            "AAPL".to_string(),
+            pos_or_panic!(100.0),
+            pos_or_panic!(150.0),
+        );
+        let pnl = spot.pnl_at_price(pos_or_panic!(160.0));
         assert_eq!(pnl, Decimal::from(-1000)); // Short loses when price rises
     }
 
@@ -396,26 +431,34 @@ mod tests {
     fn test_pnl_with_fees() {
         let spot = SpotPosition::new(
             "AAPL".to_string(),
-            pos!(100.0),
-            pos!(150.0),
+            pos_or_panic!(100.0),
+            pos_or_panic!(150.0),
             Side::Long,
             Utc::now(),
-            pos!(10.0),
-            pos!(10.0),
+            pos_or_panic!(10.0),
+            pos_or_panic!(10.0),
         );
-        let pnl = spot.pnl_at_price(pos!(160.0));
+        let pnl = spot.pnl_at_price(pos_or_panic!(160.0));
         assert_eq!(pnl, Decimal::from(980)); // 1000 profit - 20 fees
     }
 
     #[test]
     fn test_delta_long() {
-        let spot = SpotPosition::long("AAPL".to_string(), pos!(100.0), pos!(150.0));
+        let spot = SpotPosition::long(
+            "AAPL".to_string(),
+            pos_or_panic!(100.0),
+            pos_or_panic!(150.0),
+        );
         assert_eq!(spot.delta().unwrap(), Decimal::from(100));
     }
 
     #[test]
     fn test_delta_short() {
-        let spot = SpotPosition::short("AAPL".to_string(), pos!(100.0), pos!(150.0));
+        let spot = SpotPosition::short(
+            "AAPL".to_string(),
+            pos_or_panic!(100.0),
+            pos_or_panic!(150.0),
+        );
         assert_eq!(spot.delta().unwrap(), Decimal::from(-100));
     }
 
@@ -423,41 +466,49 @@ mod tests {
     fn test_total_cost_long() {
         let spot = SpotPosition::new(
             "AAPL".to_string(),
-            pos!(100.0),
-            pos!(150.0),
+            pos_or_panic!(100.0),
+            pos_or_panic!(150.0),
             Side::Long,
             Utc::now(),
-            pos!(10.0),
-            pos!(10.0),
+            pos_or_panic!(10.0),
+            pos_or_panic!(10.0),
         );
-        assert_eq!(spot.total_cost(), pos!(15020.0)); // 15000 + 20 fees
+        assert_eq!(spot.total_cost(), pos_or_panic!(15020.0)); // 15000 + 20 fees
     }
 
     #[test]
     fn test_total_cost_short() {
         let spot = SpotPosition::new(
             "AAPL".to_string(),
-            pos!(100.0),
-            pos!(150.0),
+            pos_or_panic!(100.0),
+            pos_or_panic!(150.0),
             Side::Short,
             Utc::now(),
-            pos!(10.0),
-            pos!(10.0),
+            pos_or_panic!(10.0),
+            pos_or_panic!(10.0),
         );
-        assert_eq!(spot.total_cost(), pos!(20.0)); // Only fees for short
+        assert_eq!(spot.total_cost(), pos_or_panic!(20.0)); // Only fees for short
     }
 
     #[test]
     fn test_percentage_return_long() {
-        let spot = SpotPosition::long("AAPL".to_string(), pos!(100.0), pos!(100.0));
-        let return_pct = spot.percentage_return(pos!(110.0));
+        let spot = SpotPosition::long(
+            "AAPL".to_string(),
+            pos_or_panic!(100.0),
+            pos_or_panic!(100.0),
+        );
+        let return_pct = spot.percentage_return(pos_or_panic!(110.0));
         assert_eq!(return_pct, Decimal::new(1, 1)); // 10% = 0.1
     }
 
     #[test]
     fn test_percentage_return_short() {
-        let spot = SpotPosition::short("AAPL".to_string(), pos!(100.0), pos!(100.0));
-        let return_pct = spot.percentage_return(pos!(90.0));
+        let spot = SpotPosition::short(
+            "AAPL".to_string(),
+            pos_or_panic!(100.0),
+            pos_or_panic!(100.0),
+        );
+        let return_pct = spot.percentage_return(pos_or_panic!(90.0));
         assert_eq!(return_pct, Decimal::new(1, 1)); // 10% profit for short when price drops
     }
 
@@ -465,33 +516,37 @@ mod tests {
     fn test_break_even_long() {
         let spot = SpotPosition::new(
             "AAPL".to_string(),
-            pos!(100.0),
-            pos!(150.0),
+            pos_or_panic!(100.0),
+            pos_or_panic!(150.0),
             Side::Long,
             Utc::now(),
-            pos!(50.0),
-            pos!(50.0),
+            pos_or_panic!(50.0),
+            pos_or_panic!(50.0),
         );
-        assert_eq!(spot.break_even_price(), pos!(151.0)); // 150 + (100/100)
+        assert_eq!(spot.break_even_price(), pos_or_panic!(151.0)); // 150 + (100/100)
     }
 
     #[test]
     fn test_break_even_short() {
         let spot = SpotPosition::new(
             "AAPL".to_string(),
-            pos!(100.0),
-            pos!(150.0),
+            pos_or_panic!(100.0),
+            pos_or_panic!(150.0),
             Side::Short,
             Utc::now(),
-            pos!(50.0),
-            pos!(50.0),
+            pos_or_panic!(50.0),
+            pos_or_panic!(50.0),
         );
-        assert_eq!(spot.break_even_price(), pos!(149.0)); // 150 - (100/100)
+        assert_eq!(spot.break_even_price(), pos_or_panic!(149.0)); // 150 - (100/100)
     }
 
     #[test]
     fn test_display() {
-        let spot = SpotPosition::long("AAPL".to_string(), pos!(100.0), pos!(150.0));
+        let spot = SpotPosition::long(
+            "AAPL".to_string(),
+            pos_or_panic!(100.0),
+            pos_or_panic!(150.0),
+        );
         let display = format!("{}", spot);
         assert!(display.contains("Long"));
         assert!(display.contains("AAPL"));
@@ -500,8 +555,16 @@ mod tests {
 
     #[test]
     fn test_is_long_short() {
-        let long = SpotPosition::long("AAPL".to_string(), pos!(100.0), pos!(150.0));
-        let short = SpotPosition::short("AAPL".to_string(), pos!(100.0), pos!(150.0));
+        let long = SpotPosition::long(
+            "AAPL".to_string(),
+            pos_or_panic!(100.0),
+            pos_or_panic!(150.0),
+        );
+        let short = SpotPosition::short(
+            "AAPL".to_string(),
+            pos_or_panic!(100.0),
+            pos_or_panic!(150.0),
+        );
 
         assert!(long.is_long());
         assert!(!long.is_short());
@@ -511,19 +574,31 @@ mod tests {
 
     #[test]
     fn test_gamma_is_zero() {
-        let spot = SpotPosition::long("AAPL".to_string(), pos!(100.0), pos!(150.0));
+        let spot = SpotPosition::long(
+            "AAPL".to_string(),
+            pos_or_panic!(100.0),
+            pos_or_panic!(150.0),
+        );
         assert_eq!(spot.gamma().unwrap(), Decimal::ZERO);
     }
 
     #[test]
     fn test_theta_is_zero() {
-        let spot = SpotPosition::long("AAPL".to_string(), pos!(100.0), pos!(150.0));
+        let spot = SpotPosition::long(
+            "AAPL".to_string(),
+            pos_or_panic!(100.0),
+            pos_or_panic!(150.0),
+        );
         assert_eq!(spot.theta().unwrap(), Decimal::ZERO);
     }
 
     #[test]
     fn test_vega_is_zero() {
-        let spot = SpotPosition::long("AAPL".to_string(), pos!(100.0), pos!(150.0));
+        let spot = SpotPosition::long(
+            "AAPL".to_string(),
+            pos_or_panic!(100.0),
+            pos_or_panic!(150.0),
+        );
         assert_eq!(spot.vega().unwrap(), Decimal::ZERO);
     }
 }

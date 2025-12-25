@@ -73,21 +73,21 @@
 //! use tracing::info;
 //! use optionstratlib::{ExpirationDate, Options};
 //! use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
-//! use optionstratlib::pos;
+//! use optionstratlib::pos_or_panic;
 //! use optionstratlib::Positive;
 //!
 //! let option = Options::new(
 //!     OptionType::European,
 //!     Side::Long,
 //!     "AAPL".to_string(),
-//!     pos!(100.0),
-//!     ExpirationDate::Days(pos!(30.0)),
-//!     pos!(0.2),
-//!     pos!(1.0),
-//!     pos!(105.0),
+//!     pos_or_panic!(100.0),
+//!     ExpirationDate::Days(pos_or_panic!(30.0)),
+//!     pos_or_panic!(0.2),
+//!     pos_or_panic!(1.0),
+//!     pos_or_panic!(105.0),
 //!     dec!(0.05),
 //!     OptionStyle::Call,
-//!     pos!(0.01),
+//!     pos_or_panic!(0.01),
 //!     None,
 //! );
 //!

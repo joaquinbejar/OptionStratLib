@@ -48,7 +48,7 @@
 //! };
 //! use optionstratlib::{ExpirationDate, Options};
 //! use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
-//! use optionstratlib::pos;
+//! use optionstratlib::pos_or_panic;
 //! use optionstratlib::Positive;
 //!
 //! // Create a sample option
@@ -56,14 +56,14 @@
 //!             option_type: OptionType::European,
 //!             side: Side::Long,
 //!             underlying_symbol: "AAPL".to_string(),
-//!             strike_price: pos!(100.0),
-//!             expiration_date: ExpirationDate::Days(pos!(30.0)),
-//!             implied_volatility: pos!(0.2),
+//!             strike_price: pos_or_panic!(100.0),
+//!             expiration_date: ExpirationDate::Days(pos_or_panic!(30.0)),
+//!             implied_volatility: pos_or_panic!(0.2),
 //!             quantity: Positive::ONE,
-//!             underlying_price: pos!(105.0),
+//!             underlying_price: pos_or_panic!(105.0),
 //!             risk_free_rate: dec!(0.05),
 //!             option_style: OptionStyle::Call,
-//!             dividend_yield: pos!(0.01),
+//!             dividend_yield: pos_or_panic!(0.01),
 //!             exotic_params: None,
 //!         };
 //!
@@ -156,29 +156,29 @@
 //!
 //! ```ignore
 //! use optionstratlib::chains::chain::OptionChain;
-//! use optionstratlib::pos;
+//! use optionstratlib::pos_or_panic;
 //!
 //! // Create an option chain with options at various strikes
-//! let chain = OptionChain::new("SPY", pos!(450.0), "2024-03-15".to_string(), None, None);
+//! let chain = OptionChain::new("SPY", pos_or_panic!(450.0), "2024-03-15".to_string(), None, None);
 //!
 //! // Generate Vanna surface across different volatility levels
-//! let volatilities = vec![pos!(0.1), pos!(0.2), pos!(0.3), pos!(0.4), pos!(0.5)];
+//! let volatilities = vec![pos_or_panic!(0.1), pos_or_panic!(0.2), pos_or_panic!(0.3), pos_or_panic!(0.4), pos_or_panic!(0.5)];
 //! let vanna_surface = chain.vanna_surface(volatilities)?;
 //!
 //! // Generate Vomma surface
-//! let volatilities = vec![pos!(0.15), pos!(0.20), pos!(0.25), pos!(0.30)];
+//! let volatilities = vec![pos_or_panic!(0.15), pos_or_panic!(0.20), pos_or_panic!(0.25), pos_or_panic!(0.30)];
 //! let vomma_surface = chain.vomma_surface(volatilities)?;
 //!
 //! // Generate Veta time surface across different time horizons
-//! let days = vec![pos!(7.0), pos!(14.0), pos!(30.0), pos!(60.0), pos!(90.0)];
+//! let days = vec![pos_or_panic!(7.0), pos_or_panic!(14.0), pos_or_panic!(30.0), pos_or_panic!(60.0), pos_or_panic!(90.0)];
 //! let veta_surface = chain.veta_time_surface(days)?;
 //!
 //! // Generate Charm time surface across different time horizons
-//! let days = vec![pos!(7.0), pos!(14.0), pos!(30.0), pos!(60.0), pos!(90.0)];
+//! let days = vec![pos_or_panic!(7.0), pos_or_panic!(14.0), pos_or_panic!(30.0), pos_or_panic!(60.0), pos_or_panic!(90.0)];
 //! let charm_surface = chain.charm_time_surface(days)?;
 //!
 //! // Generate Color time surface across different time horizons
-//! let days = vec![pos!(7.0), pos!(14.0), pos!(30.0), pos!(60.0), pos!(90.0)];
+//! let days = vec![pos_or_panic!(7.0), pos_or_panic!(14.0), pos_or_panic!(30.0), pos_or_panic!(60.0), pos_or_panic!(90.0)];
 //! let color_surface = chain.color_time_surface(days)?;
 //! ```
 

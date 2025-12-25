@@ -23,14 +23,14 @@ fn main() -> Result<(), SurfaceError> {
                 Side::Long,
                 "Example".to_string(),
                 strike, // Strike price
-                ExpirationDate::Days(pos!(30.0)),
-                pos!(0.2),         // Implied volatility
-                Positive::ONE,     // Quantity
-                underlying,        // Underlying price
-                dec!(0.05),        // Risk-free rate
-                OptionStyle::Call, // Option style
-                Positive::ZERO,    // Dividend yield
-                None,              // Exotic params
+                ExpirationDate::Days(pos_or_panic!(30.0)),
+                pos_or_panic!(0.2), // Implied volatility
+                Positive::ONE,      // Quantity
+                underlying,         // Underlying price
+                dec!(0.05),         // Risk-free rate
+                OptionStyle::Call,  // Option style
+                Positive::ZERO,     // Dividend yield
+                None,               // Exotic params
             );
 
             // Calculate delta

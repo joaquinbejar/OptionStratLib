@@ -135,10 +135,10 @@ pub trait SmileDynamicsCurve {
 /// ```ignore
 /// use optionstratlib::chains::chain::OptionChain;
 /// use optionstratlib::metrics::SmileDynamicsSurface;
-/// use optionstratlib::pos;
+/// use optionstratlib::pos_or_panic;
 ///
 /// let chain = OptionChain::load_from_json("options.json")?;
-/// let days = vec![pos!(7.0), pos!(14.0), pos!(30.0), pos!(60.0), pos!(90.0)];
+/// let days = vec![pos_or_panic!(7.0), pos_or_panic!(14.0), pos_or_panic!(30.0), pos_or_panic!(60.0), pos_or_panic!(90.0)];
 /// let surface = chain.smile_dynamics_surface(days)?;
 /// ```
 pub trait SmileDynamicsSurface {
@@ -254,8 +254,8 @@ mod tests_smile_dynamics {
     #[test]
     fn test_smile_dynamics_curve_creation() {
         let smile = TestSmileDynamics {
-            underlying_price: pos!(450.0),
-            atm_vol: pos!(0.20),
+            underlying_price: pos_or_panic!(450.0),
+            atm_vol: pos_or_panic!(0.20),
             skew: dec!(-0.10),     // Negative skew (equity-like)
             curvature: dec!(0.05), // Positive curvature (smile)
         };
@@ -270,8 +270,8 @@ mod tests_smile_dynamics {
     #[test]
     fn test_smile_dynamics_curve_skew() {
         let smile = TestSmileDynamics {
-            underlying_price: pos!(450.0),
-            atm_vol: pos!(0.20),
+            underlying_price: pos_or_panic!(450.0),
+            atm_vol: pos_or_panic!(0.20),
             skew: dec!(-0.10),     // Negative skew
             curvature: dec!(0.00), // No curvature for pure skew test
         };
@@ -289,8 +289,8 @@ mod tests_smile_dynamics {
     #[test]
     fn test_smile_dynamics_curve_curvature() {
         let smile = TestSmileDynamics {
-            underlying_price: pos!(450.0),
-            atm_vol: pos!(0.20),
+            underlying_price: pos_or_panic!(450.0),
+            atm_vol: pos_or_panic!(0.20),
             skew: dec!(0.00),      // No skew for pure curvature test
             curvature: dec!(0.10), // Positive curvature
         };
@@ -316,13 +316,13 @@ mod tests_smile_dynamics {
     #[test]
     fn test_smile_dynamics_surface_creation() {
         let smile = TestSmileDynamics {
-            underlying_price: pos!(450.0),
-            atm_vol: pos!(0.20),
+            underlying_price: pos_or_panic!(450.0),
+            atm_vol: pos_or_panic!(0.20),
             skew: dec!(-0.10),
             curvature: dec!(0.05),
         };
 
-        let days = vec![pos!(7.0), pos!(14.0), pos!(30.0)];
+        let days = vec![pos_or_panic!(7.0), pos_or_panic!(14.0), pos_or_panic!(30.0)];
         let surface = smile.smile_dynamics_surface(days);
         assert!(surface.is_ok());
 
@@ -334,13 +334,13 @@ mod tests_smile_dynamics {
     #[test]
     fn test_smile_dynamics_surface_term_structure() {
         let smile = TestSmileDynamics {
-            underlying_price: pos!(450.0),
-            atm_vol: pos!(0.20),
+            underlying_price: pos_or_panic!(450.0),
+            atm_vol: pos_or_panic!(0.20),
             skew: dec!(-0.10),
             curvature: dec!(0.05),
         };
 
-        let days = vec![pos!(7.0), pos!(30.0)];
+        let days = vec![pos_or_panic!(7.0), pos_or_panic!(30.0)];
         let surface = smile.smile_dynamics_surface(days).unwrap();
 
         // Find OTM put points at different expirations
@@ -364,8 +364,8 @@ mod tests_smile_dynamics {
     #[test]
     fn test_smile_dynamics_surface_empty_days() {
         let smile = TestSmileDynamics {
-            underlying_price: pos!(450.0),
-            atm_vol: pos!(0.20),
+            underlying_price: pos_or_panic!(450.0),
+            atm_vol: pos_or_panic!(0.20),
             skew: dec!(-0.10),
             curvature: dec!(0.05),
         };

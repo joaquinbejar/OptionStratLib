@@ -108,11 +108,11 @@ pub trait TimeDecayCurve {
 /// ```ignore
 /// use optionstratlib::chains::chain::OptionChain;
 /// use optionstratlib::metrics::TimeDecaySurface;
-/// use optionstratlib::pos;
+/// use optionstratlib::pos_or_panic;
 ///
 /// let chain = OptionChain::load_from_json("options.json")?;
-/// let price_range = (pos!(400.0), pos!(500.0));
-/// let days = vec![pos!(1.0), pos!(7.0), pos!(14.0), pos!(30.0)];
+/// let price_range = (pos_or_panic!(400.0), pos_or_panic!(500.0));
+/// let days = vec![pos_or_panic!(1.0), pos_or_panic!(7.0), pos_or_panic!(14.0), pos_or_panic!(30.0)];
 /// let surface = chain.time_decay_surface(price_range, days, 20)?;
 /// ```
 pub trait TimeDecaySurface {
@@ -223,7 +223,7 @@ mod tests_time_decay {
     #[test]
     fn test_time_decay_curve_creation() {
         let td = TestTimeDecay {
-            underlying_price: pos!(450.0),
+            underlying_price: pos_or_panic!(450.0),
         };
         let curve = td.time_decay_curve();
         assert!(curve.is_ok());
@@ -235,7 +235,7 @@ mod tests_time_decay {
     #[test]
     fn test_time_decay_curve_atm_most_negative() {
         let td = TestTimeDecay {
-            underlying_price: pos!(450.0),
+            underlying_price: pos_or_panic!(450.0),
         };
         let curve = td.time_decay_curve().unwrap();
 
@@ -253,7 +253,7 @@ mod tests_time_decay {
     #[test]
     fn test_time_decay_curve_negative_theta() {
         let td = TestTimeDecay {
-            underlying_price: pos!(450.0),
+            underlying_price: pos_or_panic!(450.0),
         };
         let curve = td.time_decay_curve().unwrap();
 
@@ -266,10 +266,10 @@ mod tests_time_decay {
     #[test]
     fn test_time_decay_surface_creation() {
         let td = TestTimeDecay {
-            underlying_price: pos!(450.0),
+            underlying_price: pos_or_panic!(450.0),
         };
-        let price_range = (pos!(400.0), pos!(500.0));
-        let days = vec![pos!(7.0), pos!(14.0), pos!(30.0)];
+        let price_range = (pos_or_panic!(400.0), pos_or_panic!(500.0));
+        let days = vec![pos_or_panic!(7.0), pos_or_panic!(14.0), pos_or_panic!(30.0)];
 
         let surface = td.time_decay_surface(price_range, days, 10);
         assert!(surface.is_ok());
@@ -282,10 +282,10 @@ mod tests_time_decay {
     #[test]
     fn test_time_decay_surface_time_effect() {
         let td = TestTimeDecay {
-            underlying_price: pos!(450.0),
+            underlying_price: pos_or_panic!(450.0),
         };
-        let price_range = (pos!(480.0), pos!(480.0)); // ITM call
-        let days = vec![pos!(7.0), pos!(30.0)];
+        let price_range = (pos_or_panic!(480.0), pos_or_panic!(480.0)); // ITM call
+        let days = vec![pos_or_panic!(7.0), pos_or_panic!(30.0)];
 
         let surface = td.time_decay_surface(price_range, days, 0).unwrap();
 
@@ -304,9 +304,9 @@ mod tests_time_decay {
     #[test]
     fn test_time_decay_surface_empty_days() {
         let td = TestTimeDecay {
-            underlying_price: pos!(450.0),
+            underlying_price: pos_or_panic!(450.0),
         };
-        let price_range = (pos!(400.0), pos!(500.0));
+        let price_range = (pos_or_panic!(400.0), pos_or_panic!(500.0));
         let days: Vec<Positive> = vec![];
 
         let surface = td.time_decay_surface(price_range, days, 10).unwrap();

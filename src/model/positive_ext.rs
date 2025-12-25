@@ -55,7 +55,7 @@ mod tests {
 
     #[test]
     fn test_to_round_trait() {
-        let p = pos!(1.567);
+        let p = pos_or_panic!(1.567);
         assert_eq!(p.round(), Decimal::from(2));
         assert_eq!(p.round_to(1), Decimal::new(16, 1));
     }

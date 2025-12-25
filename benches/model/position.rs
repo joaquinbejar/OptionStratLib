@@ -8,7 +8,7 @@ use chrono::Utc;
 use criterion::{Criterion, criterion_group, criterion_main};
 use optionstratlib::model::Position;
 use optionstratlib::pnl::utils::PnLCalculator;
-use optionstratlib::{ExpirationDate, OptionStyle, OptionType, Options, Side, pos};
+use optionstratlib::{ExpirationDate, OptionStyle, OptionType, Options, Side, pos_or_panic};
 use rust_decimal_macros::dec;
 use std::hint::black_box;
 
@@ -17,14 +17,14 @@ fn create_test_option() -> Options {
         OptionType::European,
         Side::Long,
         "AAPL".to_string(),
-        pos!(100.0),
-        ExpirationDate::Days(pos!(30.0)),
-        pos!(0.2),
-        pos!(1.0),
-        pos!(100.0),
+        pos_or_panic!(100.0),
+        ExpirationDate::Days(pos_or_panic!(30.0)),
+        pos_or_panic!(0.2),
+        pos_or_panic!(1.0),
+        pos_or_panic!(100.0),
         dec!(0.05),
         OptionStyle::Call,
-        pos!(0.01),
+        pos_or_panic!(0.01),
         None,
     )
 }
@@ -32,10 +32,10 @@ fn create_test_option() -> Options {
 fn create_test_position() -> Position {
     Position::new(
         create_test_option(),
-        pos!(5.0),  // premium
-        Utc::now(), // date
-        pos!(0.5),  // open_fee
-        pos!(0.5),  // close_fee
+        pos_or_panic!(5.0), // premium
+        Utc::now(),         // date
+        pos_or_panic!(0.5), // open_fee
+        pos_or_panic!(0.5), // close_fee
         None,
         None,
     )
@@ -71,7 +71,7 @@ pub(crate) fn benchmark_costs_and_fees(c: &mut Criterion) {
 pub(crate) fn benchmark_profit_calculations(c: &mut Criterion) {
     let mut group = c.benchmark_group("Position Profit Calculations");
     let position = create_test_position();
-    let test_price = pos!(110.0);
+    let test_price = pos_or_panic!(110.0);
 
     group.bench_function("break_even", |bencher| {
         bencher.iter(|| black_box(position.break_even()))
@@ -89,8 +89,8 @@ pub(crate) fn benchmark_profit_calculations(c: &mut Criterion) {
         bencher.iter(|| {
             black_box(position.calculate_pnl(
                 &test_price,
-                ExpirationDate::Days(pos!(15.0)),
-                &pos!(0.25),
+                ExpirationDate::Days(pos_or_panic!(15.0)),
+                &pos_or_panic!(0.25),
             ))
         })
     });

@@ -6,10 +6,10 @@ fn get_option(strike: &Positive, volatility: &Positive) -> Options {
         Side::Long,
         "XYZ".parse().unwrap(),
         *strike,
-        ExpirationDate::Days(pos!(365.0)),
+        ExpirationDate::Days(pos_or_panic!(365.0)),
         *volatility,
-        pos!(1.0),
-        pos!(50.0),
+        pos_or_panic!(1.0),
+        pos_or_panic!(50.0),
         Decimal::ZERO,
         OptionStyle::Call,
         Positive::ZERO,
@@ -27,7 +27,7 @@ fn main() -> Result<(), Error> {
 
     let vol_20_curve = Curve::construct(ConstructionMethod::Parametric {
         f: Box::new(|t| {
-            let option = get_option(&Positive::new_decimal(t).unwrap(), &pos!(0.20));
+            let option = get_option(&Positive::new_decimal(t).unwrap(), &pos_or_panic!(0.20));
             let value = option.vega().unwrap();
             let point = Point2D::new(t, value);
             Ok(point)
@@ -37,7 +37,7 @@ fn main() -> Result<(), Error> {
 
     let vol_10_curve = Curve::construct(ConstructionMethod::Parametric {
         f: Box::new(|t| {
-            let option = get_option(&Positive::new_decimal(t).unwrap(), &pos!(0.10));
+            let option = get_option(&Positive::new_decimal(t).unwrap(), &pos_or_panic!(0.10));
             let value = option.vega().unwrap();
             let point = Point2D::new(t, value);
             Ok(point)
@@ -47,7 +47,7 @@ fn main() -> Result<(), Error> {
 
     let vol_5_curve = Curve::construct(ConstructionMethod::Parametric {
         f: Box::new(|t| {
-            let option = get_option(&Positive::new_decimal(t).unwrap(), &pos!(0.05));
+            let option = get_option(&Positive::new_decimal(t).unwrap(), &pos_or_panic!(0.05));
             let value = option.vega().unwrap();
             let point = Point2D::new(t, value);
             Ok(point)

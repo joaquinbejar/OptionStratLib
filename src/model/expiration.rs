@@ -1,3 +1,4 @@
+use positive::pos_or_panic;
 use crate::Positive;
 use crate::constants::{DAYS_IN_A_YEAR, EPSILON};
 use crate::error::{ChainError, DecimalError};
@@ -106,21 +107,21 @@ impl ExpirationDate {
     /// ```
     /// use chrono::{Duration, Utc};
     /// use rust_decimal_macros::dec;
-    /// use optionstratlib::{assert_pos_relative_eq, pos, ExpirationDate};
+    /// use optionstratlib::{assert_pos_relative_eq, pos_or_panic, ExpirationDate};
     ///
-    /// let days = pos!(365.0);
+    /// let days = pos_or_panic!(365.0);
     /// let expiration_date_days = ExpirationDate::Days(days);
     /// let years = expiration_date_days.get_years().unwrap();
-    /// assert_pos_relative_eq!(years, pos!(1.0), pos!(0.001));
+    /// assert_pos_relative_eq!(years, pos_or_panic!(1.0), pos_or_panic!(0.001));
     ///
     /// let datetime = Utc::now() + Duration::days(365);
     /// let expiration_date_datetime = ExpirationDate::DateTime(datetime);
     /// let years = expiration_date_datetime.get_years().unwrap();
-    /// assert_pos_relative_eq!(years, pos!(1.0), pos!(0.001));
+    /// assert_pos_relative_eq!(years, pos_or_panic!(1.0), pos_or_panic!(0.001));
     /// ```
     pub fn get_years(&self) -> Result<Positive, DecimalError> {
         let days = self.get_days()?;
-        Ok(pos!(days.to_f64() / DAYS_IN_A_YEAR))
+        Ok(pos_or_panic!(days.to_f64() / DAYS_IN_A_YEAR))
     }
 
     /// Calculates the number of days until expiration for this `ExpirationDate` instance.
@@ -156,7 +157,7 @@ impl ExpirationDate {
                 if num_days <= 0.0 {
                     return Ok(Positive::ZERO);
                 }
-                Ok(pos!(num_days))
+                Ok(pos_or_panic!(num_days))
             }
         }
     }
@@ -171,9 +172,9 @@ impl ExpirationDate {
     /// ```
     /// use chrono::{Duration, Utc};
     /// use rust_decimal_macros::dec;
-    /// use optionstratlib::{pos, ExpirationDate};
+    /// use optionstratlib::{pos_or_panic, ExpirationDate};
     ///
-    /// let days = pos!(30.0);
+    /// let days = pos_or_panic!(30.0);
     /// let expiration_date_days = ExpirationDate::Days(days);
     /// let future_date = Utc::now() + Duration::days(30);
     /// let calculated_date = expiration_date_days.get_date().unwrap();
@@ -308,9 +309,9 @@ impl ExpirationDate {
     /// ```
     /// use chrono::{Duration, Utc};
     /// use rust_decimal_macros::dec;
-    /// use optionstratlib::{pos, ExpirationDate};
+    /// use optionstratlib::{pos_or_panic, ExpirationDate};
     ///
-    /// let days = pos!(30.0);
+    /// let days = pos_or_panic!(30.0);
     /// let expiration_date = ExpirationDate::Days(days);
     /// let date_string = expiration_date.get_date_string().unwrap();
     /// assert!(date_string.len() == 10); // YYYY-MM-DD format
@@ -342,10 +343,10 @@ impl ExpirationDate {
     /// use chrono::{DateTime, Utc};
     /// use rust_decimal_macros::dec;
     /// use tracing::info;
-    /// use optionstratlib::{pos, ExpirationDate};
+    /// use optionstratlib::{pos_or_panic, ExpirationDate};
     ///
     /// let expiration_date_days = ExpirationDate::from_string("365").unwrap();
-    /// assert_eq!(expiration_date_days, ExpirationDate::Days(pos!(365.0)));
+    /// assert_eq!(expiration_date_days, ExpirationDate::Days(pos_or_panic!(365.0)));
     ///
     /// let rfc3339_string = "2025-01-01T12:00:00Z";
     /// let expiration_date_rfc3339 = ExpirationDate::from_string(rfc3339_string).unwrap();
@@ -516,7 +517,7 @@ impl ExpirationDate {
 
 impl Default for ExpirationDate {
     fn default() -> Self {
-        ExpirationDate::Days(pos!(365.0))
+        ExpirationDate::Days(pos_or_panic!(365.0))
     }
 }
 
@@ -607,7 +608,7 @@ impl<'de> Deserialize<'de> for ExpirationDate {
                                 return Err(serde::de::Error::duplicate_field("days"));
                             }
                             let value: f64 = map.next_value()?;
-                            days = Some(pos!(value));
+                            days = Some(pos_or_panic!(value));
                         }
                         Field::datetime => {
                             if datetime.is_some() {
@@ -649,7 +650,7 @@ mod tests_expiration_date {
         let expiration = ExpirationDate::Days(DAYS_IN_A_YEAR);
         assert_eq!(expiration.get_years().unwrap(), 1.0);
 
-        let expiration = ExpirationDate::Days(pos!(182.5));
+        let expiration = ExpirationDate::Days(pos_or_panic!(182.5));
         assert_eq!(expiration.get_years().unwrap(), 0.5);
 
         let expiration = ExpirationDate::Days(Positive::ZERO);
@@ -705,7 +706,7 @@ mod tests_expiration_date {
     #[test]
     fn test_comparisons() {
         let one_day = ExpirationDate::Days(Positive::ONE);
-        let less_than_one_day = ExpirationDate::Days(pos!(0.99));
+        let less_than_one_day = ExpirationDate::Days(pos_or_panic!(0.99));
 
         assert!(less_than_one_day < one_day);
 
@@ -731,7 +732,7 @@ mod tests_expiration_date {
         #[test]
         fn test_get_date_string_days() {
             let today = Utc::now();
-            let expiration = ExpirationDate::Days(pos!(30.0));
+            let expiration = ExpirationDate::Days(pos_or_panic!(30.0));
             let date_str = expiration.get_date_string().unwrap();
             let expected_date = (today + Duration::days(30)).format("%Y-%m-%d").to_string();
             assert_eq!(date_str, expected_date);
@@ -850,7 +851,7 @@ mod test_expiration_date {
 
     #[test]
     fn test_from_expiration_date_zero() {
-        let zero_expiration_date = ExpirationDate::Days(pos!(0.0));
+        let zero_expiration_date = ExpirationDate::Days(pos_or_panic!(0.0));
 
         let today = Local::now().date_naive();
         assert_eq!(
@@ -858,7 +859,7 @@ mod test_expiration_date {
             today.format("%Y-%m-%d").to_string()
         );
         let years = zero_expiration_date.get_years().unwrap();
-        assert_pos_relative_eq!(years, pos!(0.0), pos!(1e-3));
+        assert_pos_relative_eq!(years, pos_or_panic!(0.0), pos_or_panic!(1e-3));
 
         assert!(zero_expiration_date.get_date_string().is_ok());
 
@@ -875,14 +876,14 @@ mod test_expiration_date {
 
     #[test]
     fn test_from_expiration_date_almost_zero() {
-        let zero_expiration_date = ExpirationDate::Days(pos!(0.5));
+        let zero_expiration_date = ExpirationDate::Days(pos_or_panic!(0.5));
         let today = Local::now().date_naive();
         assert_eq!(
             zero_expiration_date.get_date_string().unwrap(),
             today.format("%Y-%m-%d").to_string()
         );
         let years = zero_expiration_date.get_years().unwrap();
-        assert_pos_relative_eq!(years, pos!(0.001369), pos!(1e-3));
+        assert_pos_relative_eq!(years, pos_or_panic!(0.001369), pos_or_panic!(1e-3));
 
         assert!(zero_expiration_date.get_date_string().is_ok());
 
@@ -905,7 +906,7 @@ mod tests_serialization {
 
     #[test]
     fn test_expiration_date_days_serialization() {
-        let days = pos!(30.0);
+        let days = pos_or_panic!(30.0);
         let expiration = ExpirationDate::Days(days);
         let serialized = serde_json::to_string(&expiration).unwrap();
         assert_eq!(serialized, r#"{"days":30.0}"#);
@@ -916,7 +917,7 @@ mod tests_serialization {
         let json = r#"{"days": 30.0}"#;
         let deserialized: ExpirationDate = serde_json::from_str(json).unwrap();
         match deserialized {
-            ExpirationDate::Days(days) => assert_eq!(days, pos!(30.0)),
+            ExpirationDate::Days(days) => assert_eq!(days, pos_or_panic!(30.0)),
             _ => panic!("Expected Days variant"),
         }
     }
@@ -943,7 +944,7 @@ mod tests_serialization {
 
     #[test]
     fn test_expiration_date_roundtrip_days() {
-        let original = ExpirationDate::Days(pos!(365.0));
+        let original = ExpirationDate::Days(pos_or_panic!(365.0));
         let serialized = serde_json::to_string(&original).unwrap();
         let modified_serialized = serialized.replace("Days", "days");
         let deserialized: ExpirationDate = serde_json::from_str(&modified_serialized).unwrap();
@@ -1104,14 +1105,14 @@ mod tests_comparisons {
 
     #[test]
     fn test_partial_eq_days_variants_equal() {
-        let date1 = ExpirationDate::Days(pos!(30.0));
-        let date2 = ExpirationDate::Days(pos!(30.0));
+        let date1 = ExpirationDate::Days(pos_or_panic!(30.0));
+        let date2 = ExpirationDate::Days(pos_or_panic!(30.0));
         assert_eq!(date1, date2);
     }
 
     #[test]
     fn test_partial_eq_days_variants_within_epsilon() {
-        let date1 = ExpirationDate::Days(pos!(30.0));
+        let date1 = ExpirationDate::Days(pos_or_panic!(30.0));
         let date2 =
             ExpirationDate::Days(Positive::new_decimal(dec!(30.0) + EPSILON / dec!(2.0)).unwrap());
         assert_eq!(date1, date2);
@@ -1119,8 +1120,8 @@ mod tests_comparisons {
 
     #[test]
     fn test_partial_eq_days_variants_outside_epsilon() {
-        let date1 = ExpirationDate::Days(pos!(30.0));
-        let date2 = ExpirationDate::Days(pos!(30.1));
+        let date1 = ExpirationDate::Days(pos_or_panic!(30.0));
+        let date2 = ExpirationDate::Days(pos_or_panic!(30.1));
         assert_ne!(date1, date2);
     }
 
@@ -1157,9 +1158,9 @@ mod tests_comparisons {
     #[test]
     fn test_eq_trait_consistency() {
         // Test that Eq trait is properly implemented by testing reflexivity
-        let date1 = ExpirationDate::Days(pos!(30.0));
-        let date2 = ExpirationDate::Days(pos!(30.0));
-        let date3 = ExpirationDate::Days(pos!(30.0));
+        let date1 = ExpirationDate::Days(pos_or_panic!(30.0));
+        let date2 = ExpirationDate::Days(pos_or_panic!(30.0));
+        let date3 = ExpirationDate::Days(pos_or_panic!(30.0));
 
         // Reflexive: a == a
         assert_eq!(date1, date1);
@@ -1176,8 +1177,8 @@ mod tests_comparisons {
 
     #[test]
     fn test_partial_ord_returns_some() {
-        let date1 = ExpirationDate::Days(pos!(15.0));
-        let date2 = ExpirationDate::Days(pos!(30.0));
+        let date1 = ExpirationDate::Days(pos_or_panic!(15.0));
+        let date2 = ExpirationDate::Days(pos_or_panic!(30.0));
 
         let result = date1.partial_cmp(&date2);
         assert!(result.is_some());
@@ -1186,20 +1187,20 @@ mod tests_comparisons {
 
     #[test]
     fn test_ord_days_variants_less() {
-        let date1 = ExpirationDate::Days(pos!(15.0));
-        let date2 = ExpirationDate::Days(pos!(30.0));
+        let date1 = ExpirationDate::Days(pos_or_panic!(15.0));
+        let date2 = ExpirationDate::Days(pos_or_panic!(30.0));
 
         assert_eq!(date1.cmp(&date2), Ordering::Less);
     }
 
     #[test]
     fn test_ord_days_variants_greater() {
-        let date1 = ExpirationDate::Days(pos!(45.0));
-        let date2 = ExpirationDate::Days(pos!(30.0));
+        let date1 = ExpirationDate::Days(pos_or_panic!(45.0));
+        let date2 = ExpirationDate::Days(pos_or_panic!(30.0));
 
         assert_eq!(date1.cmp(&date2), Ordering::Greater);
 
-        let date1 = ExpirationDate::Days(pos!(45.0));
+        let date1 = ExpirationDate::Days(pos_or_panic!(45.0));
         let datetime2 = Utc.with_ymd_and_hms(2027, 12, 20, 16, 0, 0).unwrap();
         let date2 = ExpirationDate::DateTime(datetime2);
 
@@ -1212,7 +1213,7 @@ mod tests_comparisons {
 
         assert_eq!(date1.cmp(&date2), Ordering::Less);
 
-        let date1 = ExpirationDate::Days(pos!(3000.0));
+        let date1 = ExpirationDate::Days(pos_or_panic!(3000.0));
         let datetime2 = Utc.with_ymd_and_hms(2027, 12, 20, 16, 0, 0).unwrap();
         let date2 = ExpirationDate::DateTime(datetime2);
 
@@ -1221,8 +1222,8 @@ mod tests_comparisons {
 
     #[test]
     fn test_ord_days_variants_equal() {
-        let date1 = ExpirationDate::Days(pos!(30.0));
-        let date2 = ExpirationDate::Days(pos!(30.0));
+        let date1 = ExpirationDate::Days(pos_or_panic!(30.0));
+        let date2 = ExpirationDate::Days(pos_or_panic!(30.0));
 
         assert_eq!(date1.cmp(&date2), Ordering::Equal);
     }
@@ -1242,7 +1243,7 @@ mod tests_comparisons {
 
     #[test]
     fn test_ord_mixed_variants() {
-        let days_date = ExpirationDate::Days(pos!(20.0));
+        let days_date = ExpirationDate::Days(pos_or_panic!(20.0));
         let future_datetime = Utc::now() + Duration::days(30);
         let datetime_date = ExpirationDate::DateTime(future_datetime);
 
@@ -1256,7 +1257,7 @@ mod tests_comparisons {
     fn test_ord_with_zero_fallback() {
         // Test ordering when get_days() returns ZERO due to errors
         let date1 = ExpirationDate::Days(Positive::ZERO);
-        let date2 = ExpirationDate::Days(pos!(10.0));
+        let date2 = ExpirationDate::Days(pos_or_panic!(10.0));
 
         assert_eq!(date1.cmp(&date2), Ordering::Less);
         assert_eq!(date2.cmp(&date1), Ordering::Greater);
@@ -1265,8 +1266,8 @@ mod tests_comparisons {
     #[test]
     fn test_ord_consistency_with_partial_ord() {
         // Test that cmp() and partial_cmp() return consistent results
-        let date1 = ExpirationDate::Days(pos!(25.0));
-        let date2 = ExpirationDate::Days(pos!(35.0));
+        let date1 = ExpirationDate::Days(pos_or_panic!(25.0));
+        let date2 = ExpirationDate::Days(pos_or_panic!(35.0));
 
         let ord_result = date1.cmp(&date2);
         let partial_ord_result = date1.partial_cmp(&date2);
@@ -1277,9 +1278,9 @@ mod tests_comparisons {
     #[test]
     fn test_ord_transitivity() {
         // Test that ordering is transitive: if a < b and b < c, then a < c
-        let date1 = ExpirationDate::Days(pos!(10.0));
-        let date2 = ExpirationDate::Days(pos!(20.0));
-        let date3 = ExpirationDate::Days(pos!(30.0));
+        let date1 = ExpirationDate::Days(pos_or_panic!(10.0));
+        let date2 = ExpirationDate::Days(pos_or_panic!(20.0));
+        let date3 = ExpirationDate::Days(pos_or_panic!(30.0));
 
         assert_eq!(date1.cmp(&date2), Ordering::Less);
         assert_eq!(date2.cmp(&date3), Ordering::Less);
@@ -1289,8 +1290,8 @@ mod tests_comparisons {
     #[test]
     fn test_ord_antisymmetry() {
         // Test that if a <= b and b <= a, then a == b
-        let date1 = ExpirationDate::Days(pos!(25.0));
-        let date2 = ExpirationDate::Days(pos!(25.0));
+        let date1 = ExpirationDate::Days(pos_or_panic!(25.0));
+        let date2 = ExpirationDate::Days(pos_or_panic!(25.0));
 
         assert!(date1.cmp(&date2) <= Ordering::Equal);
         assert!(date2.cmp(&date1) <= Ordering::Equal);
@@ -1300,7 +1301,7 @@ mod tests_comparisons {
     #[test]
     fn test_ord_reflexivity() {
         // Test that a.cmp(&a) == Ordering::Equal
-        let date = ExpirationDate::Days(pos!(25.0));
+        let date = ExpirationDate::Days(pos_or_panic!(25.0));
         assert_eq!(date.cmp(&date), Ordering::Equal);
 
         let datetime = Utc.with_ymd_and_hms(2024, 12, 15, 16, 0, 0).unwrap();
@@ -1312,19 +1313,19 @@ mod tests_comparisons {
     fn test_sorting_expiration_dates() {
         // Test that a collection of ExpirationDate can be sorted correctly
         let mut dates = vec![
-            ExpirationDate::Days(pos!(45.0)),
-            ExpirationDate::Days(pos!(15.0)),
-            ExpirationDate::Days(pos!(30.0)),
-            ExpirationDate::Days(pos!(5.0)),
+            ExpirationDate::Days(pos_or_panic!(45.0)),
+            ExpirationDate::Days(pos_or_panic!(15.0)),
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            ExpirationDate::Days(pos_or_panic!(5.0)),
         ];
 
         dates.sort();
 
         let expected = vec![
-            ExpirationDate::Days(pos!(5.0)),
-            ExpirationDate::Days(pos!(15.0)),
-            ExpirationDate::Days(pos!(30.0)),
-            ExpirationDate::Days(pos!(45.0)),
+            ExpirationDate::Days(pos_or_panic!(5.0)),
+            ExpirationDate::Days(pos_or_panic!(15.0)),
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            ExpirationDate::Days(pos_or_panic!(45.0)),
         ];
 
         assert_eq!(dates, expected);
@@ -1333,7 +1334,7 @@ mod tests_comparisons {
     #[test]
     fn test_partial_eq_edge_case_epsilon_boundary() {
         // Test exactly at the epsilon boundary
-        let base_value = pos!(100.0);
+        let base_value = pos_or_panic!(100.0);
         let date1 = ExpirationDate::Days(base_value);
         let date2 =
             ExpirationDate::Days(Positive::new_decimal(base_value.value() + EPSILON).unwrap());

@@ -39,15 +39,15 @@
 //! use chrono::{DateTime, Utc};
 //! use rust_decimal_macros::dec;
 //! use optionstratlib::{ExpirationDate, Positive};
-//! use optionstratlib::pos;
+//! use optionstratlib::pos_or_panic;
 //! use optionstratlib::prelude::PricingError;
 //!
 //! // Create a new PnL instance
 //! let pnl = PnL::new(
 //!     Some(dec!(100.0)),   // Realized PnL
 //!     Some(dec!(50.0)),   // Unrealized PnL
-//!     pos!(25.0),   // Initial costs
-//!     pos!(75.0),   // Initial income
+//!     pos_or_panic!(25.0),   // Initial costs
+//!     pos_or_panic!(75.0),   // Initial income
 //!     Utc::now(),   // Calculation timestamp
 //! );
 //!
@@ -65,8 +65,8 @@
 //!      Ok(PnL::new(
 //!          Some(market_price.into()),
 //!          None,
-//!          pos!(10.0),
-//!          pos!(20.0),
+//!          pos_or_panic!(10.0),
+//!          pos_or_panic!(20.0),
 //!          expiration_date.get_date()?,
 //!      ))
 //!  }
@@ -79,8 +79,8 @@
 //!      Ok(PnL::new(
 //!          Some(underlying_price),
 //!          None,
-//!          pos!(10.0),
-//!          pos!(20.0),
+//!          pos_or_panic!(10.0),
+//!          pos_or_panic!(20.0),
 //!          Utc::now(),
 //!      ))
 //!  }

@@ -41,7 +41,7 @@ Risk-Neutral Density (RND) from option chain data.
 ``` {.rust .rust-example-rendered}
 use rust_decimal_macros::dec;
 use optionstratlib::chains::RNDParameters;
-use optionstratlib::pos;
+use optionstratlib::pos_or_panic;
 let params = RNDParameters {
     risk_free_rate: dec!(0.05),
     interpolation_points: 100,

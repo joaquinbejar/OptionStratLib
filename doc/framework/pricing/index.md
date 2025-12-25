@@ -105,7 +105,7 @@ use optionstratlib::pricing::telegraph::{TelegraphProcess, telegraph};
 use optionstratlib::{ExpirationDate, Options};
 use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
 use optionstratlib::Positive;
-use optionstratlib::pos;
+use optionstratlib::pos_or_panic;
 
 // Create a Telegraph Process with transition rates
 let process = TelegraphProcess::new(dec!(0.5), dec!(0.3));
@@ -137,7 +137,7 @@ use rust_decimal_macros::dec;
 use optionstratlib::{ExpirationDate, Options};
 use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
 use optionstratlib::Positive;
-use optionstratlib::pos;
+use optionstratlib::pos_or_panic;
 use optionstratlib::pricing::{
     black_scholes_model::black_scholes,
     monte_carlo::monte_carlo_option_pricing,

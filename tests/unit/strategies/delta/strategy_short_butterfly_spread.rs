@@ -2,30 +2,30 @@ use optionstratlib::greeks::Greeks;
 use optionstratlib::model::types::OptionStyle;
 use optionstratlib::strategies::delta_neutral::DeltaNeutrality;
 use optionstratlib::strategies::{DELTA_THRESHOLD, DeltaAdjustment, ShortButterflySpread};
-use optionstratlib::{ExpirationDate, Positive, assert_decimal_eq, assert_pos_relative_eq, pos};
+use optionstratlib::{ExpirationDate, Positive, assert_decimal_eq, assert_pos_relative_eq, pos_or_panic};
 use rust_decimal_macros::dec;
 use std::error::Error;
 
 #[test]
 fn test_short_butterfly_spread_integration() -> Result<(), Box<dyn Error>> {
     // Define inputs for the ShortButterflySpread strategy
-    let underlying_price = pos!(5781.88);
+    let underlying_price = pos_or_panic!(5781.88);
 
     let strategy = ShortButterflySpread::new(
         "SP500".to_string(),
         underlying_price,
-        pos!(5700.0),
-        pos!(5780.0),
-        pos!(5850.0),
-        ExpirationDate::Days(pos!(2.0)),
-        pos!(0.18),
+        pos_or_panic!(5700.0),
+        pos_or_panic!(5780.0),
+        pos_or_panic!(5850.0),
+        ExpirationDate::Days(pos_or_panic!(2.0)),
+        pos_or_panic!(0.18),
         dec!(0.05),
         Positive::ZERO,
-        pos!(3.0),
-        pos!(119.01), // premium_long
-        pos!(66.0),   // premium_short
-        pos!(29.85),  // open_fee_long
-        pos!(4.0),
+        pos_or_panic!(3.0),
+        pos_or_panic!(119.01), // premium_long
+        pos_or_panic!(66.0),   // premium_short
+        pos_or_panic!(29.85),  // open_fee_long
+        pos_or_panic!(4.0),
         Positive::ZERO,
         Positive::ZERO,
         Positive::ZERO,
@@ -67,8 +67,8 @@ fn test_short_butterfly_spread_integration() -> Result<(), Box<dyn Error>> {
     assert_eq!(strategy.delta_adjustments().unwrap().len(), 3);
 
     let binding = strategy.delta_adjustments().unwrap();
-    let delta = pos!(0.11409430831966512);
-    let k = pos!(5780.0);
+    let delta = pos_or_panic!(0.11409430831966512);
+    let k = pos_or_panic!(5780.0);
     match &binding[1] {
         DeltaAdjustment::BuyOptions {
             quantity,

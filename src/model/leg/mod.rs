@@ -40,10 +40,10 @@
 //! use optionstratlib::model::leg::{Leg, SpotPosition};
 //! use optionstratlib::model::Position;
 //! use optionstratlib::model::types::Side;
-//! use optionstratlib::pos;
+//! use optionstratlib::pos_or_panic;
 //!
 //! // Long 100 shares of stock
-//! let spot = SpotPosition::long("AAPL".to_string(), pos!(100.0), pos!(150.0));
+//! let spot = SpotPosition::long("AAPL".to_string(), pos_or_panic!(100.0), pos_or_panic!(150.0));
 //! let spot_leg = Leg::Spot(spot);
 //!
 //! // The option leg would be created from a Position
@@ -59,20 +59,20 @@
 //! ```rust
 //! use optionstratlib::model::leg::{Leg, SpotPosition, PerpetualPosition, MarginType};
 //! use optionstratlib::model::types::Side;
-//! use optionstratlib::pos;
+//! use optionstratlib::pos_or_panic;
 //! use rust_decimal_macros::dec;
 //! use chrono::Utc;
 //!
 //! // Long 1 BTC spot
-//! let spot = SpotPosition::long("BTC".to_string(), pos!(1.0), pos!(50000.0));
+//! let spot = SpotPosition::long("BTC".to_string(), pos_or_panic!(1.0), pos_or_panic!(50000.0));
 //!
 //! // Short 1 BTC perpetual (delta neutral)
 //! let perp = PerpetualPosition::short(
 //!     "BTC-USDT-PERP".to_string(),
-//!     pos!(1.0),
-//!     pos!(50000.0),
-//!     pos!(1.0),  // 1x leverage for delta neutral
-//!     pos!(50000.0),
+//!     pos_or_panic!(1.0),
+//!     pos_or_panic!(50000.0),
+//!     pos_or_panic!(1.0),  // 1x leverage for delta neutral
+//!     pos_or_panic!(50000.0),
 //! );
 //!
 //! let spot_leg = Leg::Spot(spot);

@@ -1,4 +1,5 @@
 use crate::chains::OptionData;
+use positive::pos_or_panic;
 use crate::constants::{IV_TOLERANCE, MAX_ITERATIONS_IV, ZERO};
 use crate::error::{
     GreeksError, OptionsError, OptionsResult, PricingError, StrategyError, VolatilityError,
@@ -586,20 +587,20 @@ impl Options {
     /// use rust_decimal_macros::dec;
     /// use rust_decimal::Decimal;
     /// use tracing::{error, info};
-    /// use optionstratlib::{pos, ExpirationDate, OptionStyle, OptionType, Options, Side};
+    /// use optionstratlib::{pos_or_panic, ExpirationDate, OptionStyle, OptionType, Options, Side};
     ///
     /// let options = Options::new(
     ///             OptionType::European,
     ///             Side::Short,
     ///             "TEST".to_string(),
-    ///             pos!(6050.0), // strike
-    ///             ExpirationDate::Days(pos!(60.0)),
-    ///             pos!(0.1),     // initial iv
-    ///             pos!(1.0),     // qty
-    ///             pos!(6032.18), // underlying
+    ///             pos_or_panic!(6050.0), // strike
+    ///             ExpirationDate::Days(pos_or_panic!(60.0)),
+    ///             pos_or_panic!(0.1),     // initial iv
+    ///             pos_or_panic!(1.0),     // qty
+    ///             pos_or_panic!(6032.18), // underlying
     ///             dec!(0.0),     // rate
     ///             OptionStyle::Call,
-    ///             pos!(0.0), // div
+    ///             pos_or_panic!(0.0), // div
     ///             None,
     ///         ); // Configure your option parameters
     /// let market_price = dec!(133.5);  
@@ -621,8 +622,8 @@ impl Options {
         };
 
         // Initialize high and low bounds for volatility
-        let mut high = pos!(5.0); // 500% max volatility
-        let mut low = pos!(0.0);
+        let mut high = pos_or_panic!(5.0); // 500% max volatility
+        let mut low = pos_or_panic!(0.0);
 
         // Binary search through volatilities until we find one that gives us our target price
         // or until we reach maximum iterations
@@ -993,14 +994,14 @@ mod tests_options {
             OptionType::European,
             Side::Long,
             "AAPL".to_string(),
-            pos!(100.0),
+            pos_or_panic!(100.0),
             ExpirationDate::DateTime(future_date),
-            pos!(0.2),
+            pos_or_panic!(0.2),
             Positive::ONE,
-            pos!(105.0),
+            pos_or_panic!(105.0),
             dec!(0.05),
             OptionStyle::Call,
-            pos!(0.01),
+            pos_or_panic!(0.01),
             None,
         );
         assert!(option_with_datetime.time_to_expiration().unwrap() >= 59.0 / 365.0);
@@ -1017,14 +1018,14 @@ mod tests_options {
             OptionType::European,
             Side::Short,
             "AAPL".to_string(),
-            pos!(100.0),
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(0.2),
+            pos_or_panic!(100.0),
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.2),
             Positive::ONE,
-            pos!(105.0),
+            pos_or_panic!(105.0),
             dec!(0.05),
             OptionStyle::Call,
-            pos!(0.01),
+            pos_or_panic!(0.01),
             None,
         );
         assert!(!short_option.is_long());
@@ -1073,14 +1074,14 @@ mod tests_options {
             OptionType::European,
             Side::Long,
             "AAPL".to_string(),
-            pos!(100.0),
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(0.2),
+            pos_or_panic!(100.0),
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.2),
             Positive::ONE,
-            pos!(95.0),
+            pos_or_panic!(95.0),
             dec!(0.05),
             OptionStyle::Put,
-            pos!(0.01),
+            pos_or_panic!(0.01),
             None,
         );
         let put_payoff = put_option.payoff().unwrap();
@@ -1093,11 +1094,11 @@ mod tests_options {
             OptionType::European,
             Side::Long,
             "AAPL".to_string(),
-            pos!(100.0),
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(0.2),
+            pos_or_panic!(100.0),
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.2),
             Positive::ONE,
-            pos!(105.0),
+            pos_or_panic!(105.0),
             dec!(0.05),
             OptionStyle::Call,
             Positive::ZERO,
@@ -1121,14 +1122,14 @@ mod tests_valid_option {
             option_type: OptionType::European,
             side: Side::Long,
             underlying_symbol: "AAPL".to_string(),
-            strike_price: pos!(100.0),
-            expiration_date: ExpirationDate::Days(pos!(30.0)),
-            implied_volatility: pos!(0.2),
+            strike_price: pos_or_panic!(100.0),
+            expiration_date: ExpirationDate::Days(pos_or_panic!(30.0)),
+            implied_volatility: pos_or_panic!(0.2),
             quantity: Positive::ONE,
-            underlying_price: pos!(105.0),
+            underlying_price: pos_or_panic!(105.0),
             risk_free_rate: dec!(0.05),
             option_style: OptionStyle::Call,
-            dividend_yield: pos!(0.01),
+            dividend_yield: pos_or_panic!(0.01),
             exotic_params: None,
         }
     }
@@ -1179,8 +1180,11 @@ mod tests_time_value {
 
     #[test]
     fn test_calculate_time_value_long_call() {
-        let option =
-            create_sample_option_simplest_strike(Side::Long, OptionStyle::Call, pos!(105.0));
+        let option = create_sample_option_simplest_strike(
+            Side::Long,
+            OptionStyle::Call,
+            pos_or_panic!(105.0),
+        );
         let time_value = option.time_value().unwrap();
         assert!(time_value > Decimal::ZERO);
         assert!(time_value <= option.calculate_price_black_scholes().unwrap());
@@ -1188,8 +1192,11 @@ mod tests_time_value {
 
     #[test]
     fn test_calculate_time_value_short_call() {
-        let option =
-            create_sample_option_simplest_strike(Side::Short, OptionStyle::Call, pos!(105.0));
+        let option = create_sample_option_simplest_strike(
+            Side::Short,
+            OptionStyle::Call,
+            pos_or_panic!(105.0),
+        );
         let time_value = option.time_value().unwrap();
         assert!(time_value > Decimal::ZERO);
         assert!(time_value <= option.calculate_price_black_scholes().unwrap().abs());
@@ -1197,7 +1204,8 @@ mod tests_time_value {
 
     #[test]
     fn test_calculate_time_value_long_put() {
-        let option = create_sample_option_simplest_strike(Side::Long, OptionStyle::Put, pos!(95.0));
+        let option =
+            create_sample_option_simplest_strike(Side::Long, OptionStyle::Put, pos_or_panic!(95.0));
         let time_value = option.time_value().unwrap();
         assert!(time_value > Decimal::ZERO);
         assert!(time_value <= option.calculate_price_black_scholes().unwrap());
@@ -1205,8 +1213,11 @@ mod tests_time_value {
 
     #[test]
     fn test_calculate_time_value_short_put() {
-        let option =
-            create_sample_option_simplest_strike(Side::Short, OptionStyle::Put, pos!(95.0));
+        let option = create_sample_option_simplest_strike(
+            Side::Short,
+            OptionStyle::Put,
+            pos_or_panic!(95.0),
+        );
         let time_value = option.time_value().unwrap();
         assert!(time_value > Decimal::ZERO);
         assert!(time_value <= option.calculate_price_black_scholes().unwrap().abs());
@@ -1214,8 +1225,16 @@ mod tests_time_value {
 
     #[test]
     fn test_calculate_time_value_at_the_money() {
-        let call = create_sample_option_simplest_strike(Side::Long, OptionStyle::Call, pos!(100.0));
-        let put = create_sample_option_simplest_strike(Side::Long, OptionStyle::Put, pos!(100.0));
+        let call = create_sample_option_simplest_strike(
+            Side::Long,
+            OptionStyle::Call,
+            pos_or_panic!(100.0),
+        );
+        let put = create_sample_option_simplest_strike(
+            Side::Long,
+            OptionStyle::Put,
+            pos_or_panic!(100.0),
+        );
 
         let call_time_value = call.time_value().unwrap();
         let put_time_value = put.time_value().unwrap();
@@ -1231,8 +1250,13 @@ mod tests_time_value {
 
     #[test]
     fn test_calculate_time_value_deep_in_the_money() {
-        let call = create_sample_option_simplest_strike(Side::Long, OptionStyle::Call, pos!(150.0));
-        let put = create_sample_option_simplest_strike(Side::Long, OptionStyle::Put, pos!(50.0));
+        let call = create_sample_option_simplest_strike(
+            Side::Long,
+            OptionStyle::Call,
+            pos_or_panic!(150.0),
+        );
+        let put =
+            create_sample_option_simplest_strike(Side::Long, OptionStyle::Put, pos_or_panic!(50.0));
 
         let call_time_value = call.time_value().unwrap();
         let put_time_value = put.time_value().unwrap();
@@ -1260,52 +1284,73 @@ mod tests_options_payoffs {
 
     #[test]
     fn test_payoff_european_call_long() {
-        let call_option =
-            create_sample_option_simplest_strike(Side::Long, OptionStyle::Call, pos!(95.0));
+        let call_option = create_sample_option_simplest_strike(
+            Side::Long,
+            OptionStyle::Call,
+            pos_or_panic!(95.0),
+        );
         let call_payoff = call_option.payoff().unwrap();
         assert_eq!(call_payoff, dec!(5.0)); // max(100 - 95, 0) = 5
 
-        let call_option_otm =
-            create_sample_option_simplest_strike(Side::Long, OptionStyle::Call, pos!(105.0));
+        let call_option_otm = create_sample_option_simplest_strike(
+            Side::Long,
+            OptionStyle::Call,
+            pos_or_panic!(105.0),
+        );
         let call_payoff_otm = call_option_otm.payoff().unwrap();
         assert_eq!(call_payoff_otm, Decimal::ZERO); // max(100 - 105, 0) = 0
     }
 
     #[test]
     fn test_payoff_european_call_short() {
-        let call_option =
-            create_sample_option_simplest_strike(Side::Short, OptionStyle::Call, pos!(95.0));
+        let call_option = create_sample_option_simplest_strike(
+            Side::Short,
+            OptionStyle::Call,
+            pos_or_panic!(95.0),
+        );
         let call_payoff = call_option.payoff().unwrap();
         assert_eq!(call_payoff, dec!(-5.0)); // -max(100 - 95, 0) = -5
 
-        let call_option_otm =
-            create_sample_option_simplest_strike(Side::Short, OptionStyle::Call, pos!(105.0));
+        let call_option_otm = create_sample_option_simplest_strike(
+            Side::Short,
+            OptionStyle::Call,
+            pos_or_panic!(105.0),
+        );
         let call_payoff_otm = call_option_otm.payoff().unwrap();
         assert_eq!(call_payoff_otm, Decimal::ZERO); // -max(95 - 100, 0) = 0
     }
 
     #[test]
     fn test_payoff_european_put_long() {
-        let put_option =
-            create_sample_option_simplest_strike(Side::Long, OptionStyle::Put, pos!(105.0));
+        let put_option = create_sample_option_simplest_strike(
+            Side::Long,
+            OptionStyle::Put,
+            pos_or_panic!(105.0),
+        );
         let put_payoff = put_option.payoff().unwrap();
         assert_eq!(put_payoff, dec!(5.0)); // max(105 - 100, 0) = 5
 
         let put_option_otm =
-            create_sample_option_simplest_strike(Side::Long, OptionStyle::Put, pos!(95.0));
+            create_sample_option_simplest_strike(Side::Long, OptionStyle::Put, pos_or_panic!(95.0));
         let put_payoff_otm = put_option_otm.payoff().unwrap();
         assert_eq!(put_payoff_otm, Decimal::ZERO); // max(95 - 100, 0) = 0
     }
 
     #[test]
     fn test_payoff_european_put_short() {
-        let put_option =
-            create_sample_option_simplest_strike(Side::Short, OptionStyle::Put, pos!(105.0));
+        let put_option = create_sample_option_simplest_strike(
+            Side::Short,
+            OptionStyle::Put,
+            pos_or_panic!(105.0),
+        );
         let put_payoff = put_option.payoff().unwrap();
         assert_eq!(put_payoff, dec!(-5.0)); // -max(105 - 100, 0) = -5
 
-        let put_option_otm =
-            create_sample_option_simplest_strike(Side::Short, OptionStyle::Put, pos!(95.0));
+        let put_option_otm = create_sample_option_simplest_strike(
+            Side::Short,
+            OptionStyle::Put,
+            pos_or_panic!(95.0),
+        );
         let put_payoff_otm = put_option_otm.payoff().unwrap();
         assert_eq!(put_payoff_otm, Decimal::ZERO); // -max(95 - 100, 0) = 0
     }
@@ -1321,44 +1366,52 @@ mod tests_options_payoff_at_price {
     #[test]
     fn test_payoff_european_call_long() {
         let call_option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        let call_payoff = call_option.payoff_at_price(&pos!(105.0)).unwrap();
+        let call_payoff = call_option.payoff_at_price(&pos_or_panic!(105.0)).unwrap();
         assert_eq!(call_payoff, dec!(5.0)); // max(105 - 100, 0) = 5
 
         let call_option_otm = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        let call_payoff_otm = call_option_otm.payoff_at_price(&pos!(95.0)).unwrap();
+        let call_payoff_otm = call_option_otm
+            .payoff_at_price(&pos_or_panic!(95.0))
+            .unwrap();
         assert_eq!(call_payoff_otm, Decimal::ZERO); // max(95 - 100, 0) = 0
     }
 
     #[test]
     fn test_payoff_european_call_short() {
         let call_option = create_sample_option_simplest(OptionStyle::Call, Side::Short);
-        let call_payoff = call_option.payoff_at_price(&pos!(105.0)).unwrap();
+        let call_payoff = call_option.payoff_at_price(&pos_or_panic!(105.0)).unwrap();
         assert_eq!(call_payoff, dec!(-5.0)); // -max(105 - 100, 0) = -5
 
         let call_option_otm = create_sample_option_simplest(OptionStyle::Call, Side::Short);
-        let call_payoff_otm = call_option_otm.payoff_at_price(&pos!(95.0)).unwrap();
+        let call_payoff_otm = call_option_otm
+            .payoff_at_price(&pos_or_panic!(95.0))
+            .unwrap();
         assert_eq!(call_payoff_otm, Decimal::ZERO); // -max(95 - 100, 0) = 0
     }
 
     #[test]
     fn test_payoff_european_put_long() {
         let put_option = create_sample_option_simplest(OptionStyle::Put, Side::Long);
-        let put_payoff = put_option.payoff_at_price(&pos!(95.0)).unwrap();
+        let put_payoff = put_option.payoff_at_price(&pos_or_panic!(95.0)).unwrap();
         assert_eq!(put_payoff, dec!(5.0)); // max(100 - 95, 0) = 5
 
         let put_option_otm = create_sample_option_simplest(OptionStyle::Put, Side::Long);
-        let put_payoff_otm = put_option_otm.payoff_at_price(&pos!(105.0)).unwrap();
+        let put_payoff_otm = put_option_otm
+            .payoff_at_price(&pos_or_panic!(105.0))
+            .unwrap();
         assert_eq!(put_payoff_otm, Decimal::ZERO); // max(100 - 105, 0) = 0
     }
 
     #[test]
     fn test_payoff_european_put_short() {
         let put_option = create_sample_option_simplest(OptionStyle::Put, Side::Short);
-        let put_payoff = put_option.payoff_at_price(&pos!(95.0)).unwrap();
+        let put_payoff = put_option.payoff_at_price(&pos_or_panic!(95.0)).unwrap();
         assert_eq!(put_payoff, dec!(-5.0)); // -max(100 - 95, 0) = -5
 
         let put_option_otm = create_sample_option_simplest(OptionStyle::Put, Side::Short);
-        let put_payoff_otm = put_option_otm.payoff_at_price(&pos!(105.0)).unwrap();
+        let put_payoff_otm = put_option_otm
+            .payoff_at_price(&pos_or_panic!(105.0))
+            .unwrap();
         assert_eq!(put_payoff_otm, Decimal::ZERO); // -max(100 - 105, 0) = 0
     }
 }
@@ -1376,20 +1429,20 @@ mod tests_options_payoffs_with_quantity {
         let option = create_sample_option(
             OptionStyle::Call,
             Side::Long,
-            pos!(105.0),
-            pos!(10.0),
-            pos!(100.0),
-            pos!(0.02),
+            pos_or_panic!(105.0),
+            pos_or_panic!(10.0),
+            pos_or_panic!(100.0),
+            pos_or_panic!(0.02),
         );
         assert_eq!(option.payoff().unwrap().to_f64().unwrap(), 50.0);
 
         let option_otm = create_sample_option(
             OptionStyle::Call,
             Side::Long,
-            pos!(95.0),
-            pos!(4.0),
-            pos!(100.0),
-            pos!(0.02),
+            pos_or_panic!(95.0),
+            pos_or_panic!(4.0),
+            pos_or_panic!(100.0),
+            pos_or_panic!(0.02),
         );
         assert_eq!(option_otm.payoff().unwrap(), Decimal::ZERO);
     }
@@ -1399,20 +1452,20 @@ mod tests_options_payoffs_with_quantity {
         let option = create_sample_option(
             OptionStyle::Call,
             Side::Short,
-            pos!(105.0),
-            pos!(3.0),
-            pos!(100.0),
-            pos!(0.02),
+            pos_or_panic!(105.0),
+            pos_or_panic!(3.0),
+            pos_or_panic!(100.0),
+            pos_or_panic!(0.02),
         );
         assert_eq!(option.payoff().unwrap().to_f64().unwrap(), -15.0);
 
         let option_otm = create_sample_option(
             OptionStyle::Call,
             Side::Short,
-            pos!(95.0),
-            pos!(7.0),
-            pos!(100.0),
-            pos!(0.02),
+            pos_or_panic!(95.0),
+            pos_or_panic!(7.0),
+            pos_or_panic!(100.0),
+            pos_or_panic!(0.02),
         );
         assert_eq!(option_otm.payoff().unwrap(), Decimal::ZERO);
     }
@@ -1422,20 +1475,20 @@ mod tests_options_payoffs_with_quantity {
         let option = create_sample_option(
             OptionStyle::Put,
             Side::Long,
-            pos!(95.0),
-            pos!(2.0),
-            pos!(100.0),
-            pos!(0.02),
+            pos_or_panic!(95.0),
+            pos_or_panic!(2.0),
+            pos_or_panic!(100.0),
+            pos_or_panic!(0.02),
         );
         assert_eq!(option.payoff().unwrap().to_f64().unwrap(), 10.0);
 
         let option_otm = create_sample_option(
             OptionStyle::Put,
             Side::Long,
-            pos!(105.0),
-            pos!(7.0),
-            pos!(100.0),
-            pos!(0.02),
+            pos_or_panic!(105.0),
+            pos_or_panic!(7.0),
+            pos_or_panic!(100.0),
+            pos_or_panic!(0.02),
         );
         assert_eq!(option_otm.payoff().unwrap(), Decimal::ZERO);
     }
@@ -1445,20 +1498,20 @@ mod tests_options_payoffs_with_quantity {
         let option = create_sample_option(
             OptionStyle::Put,
             Side::Short,
-            pos!(95.0),
-            pos!(3.0),
-            pos!(100.0),
-            pos!(0.02),
+            pos_or_panic!(95.0),
+            pos_or_panic!(3.0),
+            pos_or_panic!(100.0),
+            pos_or_panic!(0.02),
         );
         assert_eq!(option.payoff().unwrap().to_f64().unwrap(), -15.0);
 
         let option_otm = create_sample_option(
             OptionStyle::Put,
             Side::Short,
-            pos!(105.0),
-            pos!(3.0),
-            pos!(100.0),
-            pos!(0.02),
+            pos_or_panic!(105.0),
+            pos_or_panic!(3.0),
+            pos_or_panic!(100.0),
+            pos_or_panic!(0.02),
         );
         assert_eq!(option_otm.payoff().unwrap(), Decimal::ZERO);
     }
@@ -1468,10 +1521,10 @@ mod tests_options_payoffs_with_quantity {
         let option = create_sample_option(
             OptionStyle::Call,
             Side::Long,
-            pos!(110.0),
-            pos!(3.0),
-            pos!(100.0),
-            pos!(0.02),
+            pos_or_panic!(110.0),
+            pos_or_panic!(3.0),
+            pos_or_panic!(100.0),
+            pos_or_panic!(0.02),
         );
         assert_eq!(option.payoff().unwrap().to_f64().unwrap(), 30.0); // (110 - 100) * 3
     }
@@ -1481,13 +1534,19 @@ mod tests_options_payoffs_with_quantity {
         let option = create_sample_option(
             OptionStyle::Call,
             Side::Long,
-            pos!(100.0),
-            pos!(11.0),
-            pos!(100.0),
-            pos!(0.02),
+            pos_or_panic!(100.0),
+            pos_or_panic!(11.0),
+            pos_or_panic!(100.0),
+            pos_or_panic!(0.02),
         );
-        assert_eq!(option.intrinsic_value(pos!(105.0)).unwrap(), dec!(55.0));
-        assert_eq!(option.intrinsic_value(pos!(95.0)).unwrap(), Decimal::ZERO);
+        assert_eq!(
+            option.intrinsic_value(pos_or_panic!(105.0)).unwrap(),
+            dec!(55.0)
+        );
+        assert_eq!(
+            option.intrinsic_value(pos_or_panic!(95.0)).unwrap(),
+            Decimal::ZERO
+        );
     }
 
     #[test]
@@ -1495,13 +1554,19 @@ mod tests_options_payoffs_with_quantity {
         let option = create_sample_option(
             OptionStyle::Call,
             Side::Short,
-            pos!(100.0),
-            pos!(13.0),
-            pos!(100.0),
-            pos!(0.02),
+            pos_or_panic!(100.0),
+            pos_or_panic!(13.0),
+            pos_or_panic!(100.0),
+            pos_or_panic!(0.02),
         );
-        assert_eq!(option.intrinsic_value(pos!(105.0)).unwrap(), dec!(-65.0));
-        assert_eq!(option.intrinsic_value(pos!(95.0)).unwrap(), Decimal::ZERO);
+        assert_eq!(
+            option.intrinsic_value(pos_or_panic!(105.0)).unwrap(),
+            dec!(-65.0)
+        );
+        assert_eq!(
+            option.intrinsic_value(pos_or_panic!(95.0)).unwrap(),
+            Decimal::ZERO
+        );
     }
 
     #[test]
@@ -1509,13 +1574,19 @@ mod tests_options_payoffs_with_quantity {
         let option = create_sample_option(
             OptionStyle::Put,
             Side::Long,
-            pos!(100.0),
-            pos!(17.0),
-            pos!(100.0),
-            pos!(0.02),
+            pos_or_panic!(100.0),
+            pos_or_panic!(17.0),
+            pos_or_panic!(100.0),
+            pos_or_panic!(0.02),
         );
-        assert_eq!(option.intrinsic_value(pos!(95.0)).unwrap(), dec!(85.0));
-        assert_eq!(option.intrinsic_value(pos!(105.0)).unwrap(), Decimal::ZERO);
+        assert_eq!(
+            option.intrinsic_value(pos_or_panic!(95.0)).unwrap(),
+            dec!(85.0)
+        );
+        assert_eq!(
+            option.intrinsic_value(pos_or_panic!(105.0)).unwrap(),
+            Decimal::ZERO
+        );
     }
 
     #[test]
@@ -1523,13 +1594,19 @@ mod tests_options_payoffs_with_quantity {
         let option = create_sample_option(
             OptionStyle::Put,
             Side::Short,
-            pos!(100.0),
-            pos!(19.0),
-            pos!(100.0),
-            pos!(0.02),
+            pos_or_panic!(100.0),
+            pos_or_panic!(19.0),
+            pos_or_panic!(100.0),
+            pos_or_panic!(0.02),
         );
-        assert_eq!(option.intrinsic_value(pos!(95.0)).unwrap(), dec!(-95.0));
-        assert_eq!(option.intrinsic_value(pos!(105.0)).unwrap(), Decimal::ZERO);
+        assert_eq!(
+            option.intrinsic_value(pos_or_panic!(95.0)).unwrap(),
+            dec!(-95.0)
+        );
+        assert_eq!(
+            option.intrinsic_value(pos_or_panic!(105.0)).unwrap(),
+            Decimal::ZERO
+        );
     }
 
     #[test]
@@ -1537,12 +1614,15 @@ mod tests_options_payoffs_with_quantity {
         let option = create_sample_option(
             OptionStyle::Call,
             Side::Long,
-            pos!(100.0),
-            pos!(23.0),
-            pos!(100.0),
-            pos!(0.02),
+            pos_or_panic!(100.0),
+            pos_or_panic!(23.0),
+            pos_or_panic!(100.0),
+            pos_or_panic!(0.02),
         );
-        assert_eq!(option.intrinsic_value(pos!(110.0)).unwrap(), dec!(230.0)); // (110 - 100) * 23
+        assert_eq!(
+            option.intrinsic_value(pos_or_panic!(110.0)).unwrap(),
+            dec!(230.0)
+        ); // (110 - 100) * 23
     }
 }
 
@@ -1556,12 +1636,12 @@ mod tests_in_the_money {
         let mut option = create_sample_option(
             OptionStyle::Call,
             Side::Long,
-            pos!(110.0),
-            pos!(1.0),
-            pos!(110.0),
-            pos!(0.02),
+            pos_or_panic!(110.0),
+            pos_or_panic!(1.0),
+            pos_or_panic!(110.0),
+            pos_or_panic!(0.02),
         );
-        option.strike_price = pos!(100.0);
+        option.strike_price = pos_or_panic!(100.0);
         assert!(option.is_in_the_money());
     }
 
@@ -1570,12 +1650,12 @@ mod tests_in_the_money {
         let mut option = create_sample_option(
             OptionStyle::Call,
             Side::Long,
-            pos!(100.0),
-            pos!(1.0),
-            pos!(110.0),
-            pos!(0.02),
+            pos_or_panic!(100.0),
+            pos_or_panic!(1.0),
+            pos_or_panic!(110.0),
+            pos_or_panic!(0.02),
         );
-        option.strike_price = pos!(100.0);
+        option.strike_price = pos_or_panic!(100.0);
         assert!(option.is_in_the_money());
     }
 
@@ -1584,12 +1664,12 @@ mod tests_in_the_money {
         let mut option = create_sample_option(
             OptionStyle::Call,
             Side::Long,
-            pos!(90.0),
-            pos!(1.0),
-            pos!(110.0),
-            pos!(0.02),
+            pos_or_panic!(90.0),
+            pos_or_panic!(1.0),
+            pos_or_panic!(110.0),
+            pos_or_panic!(0.02),
         );
-        option.strike_price = pos!(100.0);
+        option.strike_price = pos_or_panic!(100.0);
         assert!(!option.is_in_the_money());
     }
 
@@ -1598,12 +1678,12 @@ mod tests_in_the_money {
         let mut option = create_sample_option(
             OptionStyle::Put,
             Side::Long,
-            pos!(90.0),
-            pos!(1.0),
-            pos!(110.0),
-            pos!(0.02),
+            pos_or_panic!(90.0),
+            pos_or_panic!(1.0),
+            pos_or_panic!(110.0),
+            pos_or_panic!(0.02),
         );
-        option.strike_price = pos!(100.0);
+        option.strike_price = pos_or_panic!(100.0);
         assert!(option.is_in_the_money());
     }
 
@@ -1612,12 +1692,12 @@ mod tests_in_the_money {
         let mut option = create_sample_option(
             OptionStyle::Put,
             Side::Long,
-            pos!(100.0),
-            pos!(1.0),
-            pos!(110.0),
-            pos!(0.02),
+            pos_or_panic!(100.0),
+            pos_or_panic!(1.0),
+            pos_or_panic!(110.0),
+            pos_or_panic!(0.02),
         );
-        option.strike_price = pos!(100.0);
+        option.strike_price = pos_or_panic!(100.0);
         assert!(option.is_in_the_money());
     }
 
@@ -1626,12 +1706,12 @@ mod tests_in_the_money {
         let mut option = create_sample_option(
             OptionStyle::Put,
             Side::Long,
-            pos!(110.0),
-            pos!(1.0),
-            pos!(110.0),
-            pos!(0.02),
+            pos_or_panic!(110.0),
+            pos_or_panic!(1.0),
+            pos_or_panic!(110.0),
+            pos_or_panic!(0.02),
         );
-        option.strike_price = pos!(100.0);
+        option.strike_price = pos_or_panic!(100.0);
         assert!(!option.is_in_the_money());
     }
 }
@@ -1656,7 +1736,7 @@ mod tests_greeks {
     #[test]
     fn test_delta_size() {
         let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        option.quantity = pos!(2.0);
+        option.quantity = pos_or_panic!(2.0);
         assert_decimal_eq!(option.delta().unwrap(), dec!(1.0790398), EPSILON);
     }
 
@@ -1669,7 +1749,7 @@ mod tests_greeks {
     #[test]
     fn test_gamma_size() {
         let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        option.quantity = pos!(2.0);
+        option.quantity = pos_or_panic!(2.0);
         assert_decimal_eq!(option.gamma().unwrap(), dec!(0.1383415), EPSILON);
     }
 
@@ -1682,7 +1762,7 @@ mod tests_greeks {
     #[test]
     fn test_theta_size() {
         let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        option.quantity = pos!(2.0);
+        option.quantity = pos_or_panic!(2.0);
         assert_decimal_eq!(option.theta().unwrap(), dec!(-0.0870200), EPSILON);
     }
 
@@ -1695,7 +1775,7 @@ mod tests_greeks {
     #[test]
     fn test_vega_size() {
         let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        option.quantity = pos!(2.0);
+        option.quantity = pos_or_panic!(2.0);
         assert_decimal_eq!(option.vega().unwrap(), dec!(0.2274107), EPSILON);
     }
 
@@ -1708,7 +1788,7 @@ mod tests_greeks {
     #[test]
     fn test_rho_size() {
         let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        option.quantity = pos!(2.0);
+        option.quantity = pos_or_panic!(2.0);
         assert_decimal_eq!(option.rho().unwrap(), dec!(0.08466242), EPSILON);
     }
 
@@ -1721,7 +1801,7 @@ mod tests_greeks {
     #[test]
     fn test_rho_d_size() {
         let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        option.quantity = pos!(2.0);
+        option.quantity = pos_or_panic!(2.0);
         assert_decimal_eq!(option.rho_d().unwrap(), dec!(-0.0886882064063), EPSILON);
     }
 
@@ -1734,7 +1814,7 @@ mod tests_greeks {
     #[test]
     fn test_vanna_size() {
         let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        option.quantity = pos!(2.0);
+        option.quantity = pos_or_panic!(2.0);
         assert_decimal_eq!(option.vanna().unwrap(), dec!(-0.170558049246), EPSILON);
     }
 
@@ -1747,7 +1827,7 @@ mod tests_greeks {
     #[test]
     fn test_vomma_size() {
         let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        option.quantity = pos!(2.0);
+        option.quantity = pos_or_panic!(2.0);
         assert_decimal_eq!(option.vomma().unwrap(), dec!(0.009812928860), EPSILON);
     }
 
@@ -1760,7 +1840,7 @@ mod tests_greeks {
     #[test]
     fn test_veta_size() {
         let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        option.quantity = pos!(2.0);
+        option.quantity = pos_or_panic!(2.0);
         assert_decimal_eq!(option.veta().unwrap(), dec!(0.000108824758), EPSILON);
     }
 
@@ -1773,7 +1853,7 @@ mod tests_greeks {
     #[test]
     fn test_charm_size() {
         let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        option.quantity = pos!(2.0);
+        option.quantity = pos_or_panic!(2.0);
         assert_decimal_eq!(option.charm().unwrap(), dec!(-0.000917), EPSILON);
     }
 
@@ -1786,7 +1866,7 @@ mod tests_greeks {
     #[test]
     fn test_color_size() {
         let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        option.quantity = pos!(2.0);
+        option.quantity = pos_or_panic!(2.0);
         assert_decimal_eq!(option.color().unwrap(), dec!(-0.002326), EPSILON);
     }
 }
@@ -1840,14 +1920,14 @@ mod tests_greek_trait {
             OptionType::European,
             Side::Long,
             "TEST".to_string(),
-            pos!(5790.0), // strike
-            ExpirationDate::Days(pos!(18.0)),
-            pos!(0.1),     // initial iv
-            pos!(1.0),     // qty
-            pos!(5781.88), // underlying
-            dec!(0.05),    // rate
+            pos_or_panic!(5790.0), // strike
+            ExpirationDate::Days(pos_or_panic!(18.0)),
+            pos_or_panic!(0.1),     // initial iv
+            pos_or_panic!(1.0),     // qty
+            pos_or_panic!(5781.88), // underlying
+            dec!(0.05),             // rate
             OptionStyle::Call,
-            pos!(0.0), // div
+            pos_or_panic!(0.0), // div
             None,
         );
         let mut put_option = call_option.clone();
@@ -1895,12 +1975,12 @@ mod tests_calculate_price_binomial {
             OptionType::American,
             Side::Long,
             "TEST".to_string(),
-            pos!(100.0),
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(0.2),  // volatility
-            pos!(1.0),  // quantity
-            pos!(95.0), // underlying price (slightly ITM for put)
-            dec!(0.05), // risk-free rate
+            pos_or_panic!(100.0),
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.2),  // volatility
+            pos_or_panic!(1.0),  // quantity
+            pos_or_panic!(95.0), // underlying price (slightly ITM for put)
+            dec!(0.05),          // risk-free rate
             OptionStyle::Put,
             Positive::ZERO, // dividend yield
             None,
@@ -1929,10 +2009,10 @@ mod tests_calculate_price_binomial {
         let option = create_sample_option_with_date(
             OptionStyle::Call,
             Side::Long,
-            pos!(100.0),
-            pos!(1.0),
-            pos!(95.0),
-            pos!(0.2),
+            pos_or_panic!(100.0),
+            pos_or_panic!(1.0),
+            pos_or_panic!(95.0),
+            pos_or_panic!(0.2),
             now,
         );
 
@@ -1955,10 +2035,10 @@ mod tests_calculate_price_binomial {
         let option = create_sample_option(
             OptionStyle::Call,
             Side::Long,
-            pos!(150.0), // Underlying price much higher than strike
-            pos!(1.0),
-            pos!(100.0),
-            pos!(0.2),
+            pos_or_panic!(150.0), // Underlying price much higher than strike
+            pos_or_panic!(1.0),
+            pos_or_panic!(100.0),
+            pos_or_panic!(0.2),
         );
 
         let result = option.calculate_price_binomial(100);
@@ -1973,10 +2053,10 @@ mod tests_calculate_price_binomial {
         let option = create_sample_option(
             OptionStyle::Put,
             Side::Long,
-            pos!(150.0), // Underlying price much higher than strike
-            pos!(1.0),
-            pos!(100.0),
-            pos!(0.2),
+            pos_or_panic!(150.0), // Underlying price much higher than strike
+            pos_or_panic!(1.0),
+            pos_or_panic!(100.0),
+            pos_or_panic!(0.2),
         );
 
         let result = option.calculate_price_binomial(100);
@@ -2032,19 +2112,19 @@ mod tests_options_black_scholes {
             OptionType::European,
             Side::Long,
             "SP500".to_string(),
-            pos!(5790.0),
-            ExpirationDate::Days(pos!(18.0)),
-            pos!(0.1117),
-            pos!(1.0),
-            pos!(5781.88),
+            pos_or_panic!(5790.0),
+            ExpirationDate::Days(pos_or_panic!(18.0)),
+            pos_or_panic!(0.1117),
+            pos_or_panic!(1.0),
+            pos_or_panic!(5781.88),
             dec!(0.05),
             OptionStyle::Call,
-            pos!(0.0),
+            pos_or_panic!(0.0),
             None,
         );
         assert_decimal_eq!(
             option.calculate_price_black_scholes().unwrap(),
-            pos!(60.306_765_882_668_3),
+            pos_or_panic!(60.306_765_882_668_3),
             dec!(1e-8)
         );
     }
@@ -2055,19 +2135,19 @@ mod tests_options_black_scholes {
             OptionType::European,
             Side::Long,
             "SP500".to_string(),
-            pos!(6050.0),
-            ExpirationDate::Days(pos!(61.2)),
-            pos!(0.12594),
-            pos!(1.0),
-            pos!(6032.18),
+            pos_or_panic!(6050.0),
+            ExpirationDate::Days(pos_or_panic!(61.2)),
+            pos_or_panic!(0.12594),
+            pos_or_panic!(1.0),
+            pos_or_panic!(6032.18),
             dec!(0.0),
             OptionStyle::Call,
-            pos!(0.0),
+            pos_or_panic!(0.0),
             None,
         );
         assert_decimal_eq!(
             option.calculate_price_black_scholes().unwrap(),
-            pos!(115.56),
+            pos_or_panic!(115.56),
             dec!(1e-2)
         );
     }
@@ -2078,19 +2158,19 @@ mod tests_options_black_scholes {
             OptionType::European,
             Side::Long,
             "SP500".to_string(),
-            pos!(6050.0),
-            ExpirationDate::Days(pos!(61.2)),
-            pos!(0.1258),
-            pos!(1.0),
-            pos!(6032.18),
+            pos_or_panic!(6050.0),
+            ExpirationDate::Days(pos_or_panic!(61.2)),
+            pos_or_panic!(0.1258),
+            pos_or_panic!(1.0),
+            pos_or_panic!(6032.18),
             dec!(0.0),
             OptionStyle::Put,
-            pos!(0.0),
+            pos_or_panic!(0.0),
             None,
         );
         assert_decimal_eq!(
             option.calculate_price_black_scholes().unwrap(),
-            pos!(133.25),
+            pos_or_panic!(133.25),
             dec!(1e-2)
         );
     }
@@ -2101,14 +2181,14 @@ mod tests_options_black_scholes {
             OptionType::European,
             Side::Short,
             "SP500".to_string(),
-            pos!(6050.0),
-            ExpirationDate::Days(pos!(60.0)),
-            pos!(0.12594),
-            pos!(1.0),
-            pos!(6032.18),
+            pos_or_panic!(6050.0),
+            ExpirationDate::Days(pos_or_panic!(60.0)),
+            pos_or_panic!(0.12594),
+            pos_or_panic!(1.0),
+            pos_or_panic!(6032.18),
             dec!(0.0),
             OptionStyle::Call,
-            pos!(0.0),
+            pos_or_panic!(0.0),
             None,
         );
         assert_decimal_eq!(
@@ -2124,14 +2204,14 @@ mod tests_options_black_scholes {
             OptionType::European,
             Side::Short,
             "SP500".to_string(),
-            pos!(6050.0),
-            ExpirationDate::Days(pos!(60.0)),
-            pos!(0.12594),
-            pos!(1.0),
-            pos!(6032.18),
+            pos_or_panic!(6050.0),
+            ExpirationDate::Days(pos_or_panic!(60.0)),
+            pos_or_panic!(0.12594),
+            pos_or_panic!(1.0),
+            pos_or_panic!(6032.18),
             dec!(0.0),
             OptionStyle::Put,
-            pos!(0.0),
+            pos_or_panic!(0.0),
             None,
         );
         assert_decimal_eq!(
@@ -2155,21 +2235,21 @@ mod tests_calculate_implied_volatility {
             OptionType::European,
             Side::Long,
             "TEST".to_string(),
-            pos!(5790.0), // strike
-            ExpirationDate::Days(pos!(18.0)),
-            pos!(0.1),     // initial iv
-            pos!(1.0),     // qty
-            pos!(5781.88), // underlying
-            dec!(0.05),    // rate
+            pos_or_panic!(5790.0), // strike
+            ExpirationDate::Days(pos_or_panic!(18.0)),
+            pos_or_panic!(0.1),     // initial iv
+            pos_or_panic!(1.0),     // qty
+            pos_or_panic!(5781.88), // underlying
+            dec!(0.05),             // rate
             OptionStyle::Call,
-            pos!(0.0), // div
+            pos_or_panic!(0.0), // div
             None,
         );
 
         let market_price = dec!(60.30);
         let iv = option.calculate_implied_volatility(market_price).unwrap();
 
-        assert_pos_relative_eq!(iv, pos!(0.111618041), Positive(IV_TOLERANCE));
+        assert_pos_relative_eq!(iv, pos_or_panic!(0.111618041), Positive(IV_TOLERANCE));
     }
 
     #[test]
@@ -2178,20 +2258,20 @@ mod tests_calculate_implied_volatility {
             OptionType::European,
             Side::Long,
             "TEST".to_string(),
-            pos!(6050.0), // strike
-            ExpirationDate::Days(pos!(60.0)),
-            pos!(0.1),     // initial iv
-            pos!(1.0),     // qty
-            pos!(6032.18), // underlying
-            dec!(0.0),     // rate
+            pos_or_panic!(6050.0), // strike
+            ExpirationDate::Days(pos_or_panic!(60.0)),
+            pos_or_panic!(0.1),     // initial iv
+            pos_or_panic!(1.0),     // qty
+            pos_or_panic!(6032.18), // underlying
+            dec!(0.0),              // rate
             OptionStyle::Put,
-            pos!(0.0), // div
+            pos_or_panic!(0.0), // div
             None,
         );
 
         let market_price = dec!(132.16);
         let iv = option.calculate_implied_volatility(market_price).unwrap();
-        assert_pos_relative_eq!(iv, pos!(0.125961), Positive(IV_TOLERANCE));
+        assert_pos_relative_eq!(iv, pos_or_panic!(0.125961), Positive(IV_TOLERANCE));
     }
 
     #[test]
@@ -2200,21 +2280,21 @@ mod tests_calculate_implied_volatility {
             OptionType::European,
             Side::Short,
             "TEST".to_string(),
-            pos!(6050.0), // strike
-            ExpirationDate::Days(pos!(60.0)),
-            pos!(0.1),     // initial iv
-            pos!(1.0),     // qty
-            pos!(6032.18), // underlying
-            dec!(0.0),     // rate
+            pos_or_panic!(6050.0), // strike
+            ExpirationDate::Days(pos_or_panic!(60.0)),
+            pos_or_panic!(0.1),     // initial iv
+            pos_or_panic!(1.0),     // qty
+            pos_or_panic!(6032.18), // underlying
+            dec!(0.0),              // rate
             OptionStyle::Call,
-            pos!(0.0), // div
+            pos_or_panic!(0.0), // div
             None,
         );
 
         let market_price = dec!(-114.16);
         let iv = option.calculate_implied_volatility(market_price).unwrap();
 
-        assert_pos_relative_eq!(iv, pos!(0.1258087), Positive(IV_TOLERANCE));
+        assert_pos_relative_eq!(iv, pos_or_panic!(0.1258087), Positive(IV_TOLERANCE));
     }
 
     #[test]
@@ -2223,20 +2303,20 @@ mod tests_calculate_implied_volatility {
             OptionType::European,
             Side::Short,
             "TEST".to_string(),
-            pos!(6050.0), // strike
-            ExpirationDate::Days(pos!(60.0)),
-            pos!(0.1),     // initial iv
-            pos!(1.0),     // qty
-            pos!(6032.18), // underlying
-            dec!(0.0),     // rate
+            pos_or_panic!(6050.0), // strike
+            ExpirationDate::Days(pos_or_panic!(60.0)),
+            pos_or_panic!(0.1),     // initial iv
+            pos_or_panic!(1.0),     // qty
+            pos_or_panic!(6032.18), // underlying
+            dec!(0.0),              // rate
             OptionStyle::Put,
-            pos!(0.0), // div
+            pos_or_panic!(0.0), // div
             None,
         );
 
         let market_price = dec!(-132.27);
         let iv = option.calculate_implied_volatility(market_price).unwrap();
-        assert_pos_relative_eq!(iv, pos!(0.12611389), Positive(IV_TOLERANCE));
+        assert_pos_relative_eq!(iv, pos_or_panic!(0.12611389), Positive(IV_TOLERANCE));
     }
 
     #[test]
@@ -2252,14 +2332,14 @@ mod tests_calculate_implied_volatility {
             OptionType::European,
             Side::Long,
             "TEST".to_string(),
-            pos!(100.0),
+            pos_or_panic!(100.0),
             ExpirationDate::Days(Positive::ZERO),
-            pos!(0.2),
-            pos!(1.0),
-            pos!(100.0),
+            pos_or_panic!(0.2),
+            pos_or_panic!(1.0),
+            pos_or_panic!(100.0),
             dec!(0.05),
             OptionStyle::Call,
-            pos!(0.0),
+            pos_or_panic!(0.0),
             None,
         );
 
@@ -2273,24 +2353,24 @@ mod tests_calculate_implied_volatility {
             OptionType::European,
             Side::Long,
             "TEST".to_string(),
-            pos!(5790.0), // strike
-            ExpirationDate::Days(pos!(18.0)),
-            pos!(0.1),     // initial iv
-            pos!(1.0),     // qty
-            pos!(5781.88), // underlying
-            dec!(0.05),    // rate
+            pos_or_panic!(5790.0), // strike
+            ExpirationDate::Days(pos_or_panic!(18.0)),
+            pos_or_panic!(0.1),     // initial iv
+            pos_or_panic!(1.0),     // qty
+            pos_or_panic!(5781.88), // underlying
+            dec!(0.05),             // rate
             OptionStyle::Call,
-            pos!(0.0), // div
+            pos_or_panic!(0.0), // div
             None,
         );
 
         // Test with small initial vol
         let iv = option.calculate_implied_volatility(dec!(60.30)).unwrap();
-        assert_pos_relative_eq!(iv, pos!(0.111328125), pos!(0.01));
+        assert_pos_relative_eq!(iv, pos_or_panic!(0.111328125), pos_or_panic!(0.01));
 
         // Test with large initial vol
         let iv = option.calculate_implied_volatility(dec!(60.30)).unwrap();
-        assert_pos_relative_eq!(iv, pos!(0.111328125), pos!(0.01));
+        assert_pos_relative_eq!(iv, pos_or_panic!(0.111328125), pos_or_panic!(0.01));
     }
 }
 
@@ -2301,8 +2381,11 @@ mod tests_serialize_deserialize {
 
     #[test]
     fn test_serialize_deserialize_options() {
-        let options =
-            create_sample_option_simplest_strike(Side::Long, OptionStyle::Call, pos!(95.0));
+        let options = create_sample_option_simplest_strike(
+            Side::Long,
+            OptionStyle::Call,
+            pos_or_panic!(95.0),
+        );
         let serialized = serde_json::to_string(&options).expect("Failed to serialize");
         let deserialized: Options =
             serde_json::from_str(&serialized).expect("Failed to deserialize");

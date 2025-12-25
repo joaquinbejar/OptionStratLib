@@ -10,7 +10,7 @@ use optionstratlib::simulation::simulator::Simulator;
 use optionstratlib::simulation::steps::{Step, Xstep, Ystep};
 use optionstratlib::simulation::{WalkParams, WalkType, WalkTypeAble};
 use optionstratlib::utils::TimeFrame;
-use optionstratlib::{ExpirationDate, Options, Positive, pos};
+use optionstratlib::{ExpirationDate, Options, Positive, pos_or_panic};
 use rust_decimal_macros::dec;
 use std::fmt::Display;
 use std::ops::AddAssign;
@@ -31,7 +31,7 @@ fn simple_generator(params: &WalkParams<Positive, Positive>) -> Vec<Step<Positiv
     let mut current = params.init_step.clone();
     out.push(current.clone());
     for i in 1..params.size {
-        let new_y = current.get_positive_value() + pos!(i as f64 * 0.1);
+        let new_y = current.get_positive_value() + pos_or_panic!(i as f64 * 0.1);
         current = current.next(new_y).expect("step.next should succeed");
         out.push(current.clone());
     }
@@ -44,14 +44,14 @@ fn create_test_option() -> Options {
         option_type: OptionType::European,
         side: Side::Long,
         underlying_symbol: "TEST".to_string(),
-        strike_price: pos!(100.0),
-        expiration_date: ExpirationDate::Days(pos!(30.0)),
-        implied_volatility: pos!(0.2),
+        strike_price: pos_or_panic!(100.0),
+        expiration_date: ExpirationDate::Days(pos_or_panic!(30.0)),
+        implied_volatility: pos_or_panic!(0.2),
         quantity: Positive::ONE,
-        underlying_price: pos!(105.0),
+        underlying_price: pos_or_panic!(105.0),
         risk_free_rate: dec!(0.05),
         option_style: OptionStyle::Call,
-        dividend_yield: pos!(0.01),
+        dividend_yield: pos_or_panic!(0.01),
         exotic_params: None,
     }
 }
@@ -69,7 +69,7 @@ fn test_price_option_black_scholes() {
 
     // For a call option with S > K, price should be reasonable
     assert!(
-        price < pos!(50.0),
+        price < pos_or_panic!(50.0),
         "Price should be less than underlying price"
     );
 }
@@ -97,15 +97,15 @@ fn test_price_option_monte_carlo() {
 
     let init_step = Step {
         x: Xstep::new(
-            pos!(1.0),
+            pos_or_panic!(1.0),
             TimeFrame::Day,
-            ExpirationDate::Days(pos!(size as f64)),
+            ExpirationDate::Days(pos_or_panic!(size as f64)),
         ),
         y: Ystep::new(0, init_price),
     };
 
     let walk = WalkType::GeometricBrownian {
-        dt: pos!(1.0),
+        dt: pos_or_panic!(1.0),
         drift: dec!(0.0),
         volatility: option.implied_volatility,
     };
@@ -134,15 +134,15 @@ fn test_priceable_trait_monte_carlo() {
 
     let init_step = Step {
         x: Xstep::new(
-            pos!(1.0),
+            pos_or_panic!(1.0),
             TimeFrame::Day,
-            ExpirationDate::Days(pos!(size as f64)),
+            ExpirationDate::Days(pos_or_panic!(size as f64)),
         ),
         y: Ystep::new(0, init_price),
     };
 
     let walk = WalkType::GeometricBrownian {
-        dt: pos!(1.0),
+        dt: pos_or_panic!(1.0),
         drift: dec!(0.0),
         volatility: option.implied_volatility,
     };
@@ -170,7 +170,7 @@ fn test_priceable_trait_monte_carlo() {
 fn test_put_option_pricing() {
     let mut option = create_test_option();
     option.option_style = OptionStyle::Put;
-    option.underlying_price = pos!(95.0); // Out of the money put
+    option.underlying_price = pos_or_panic!(95.0); // Out of the money put
 
     let engine = PricingEngine::ClosedFormBS;
     let result = price_option(&option, &engine);
@@ -201,20 +201,20 @@ fn test_monte_carlo_with_heston() {
 
     let init_step = Step {
         x: Xstep::new(
-            pos!(1.0),
+            pos_or_panic!(1.0),
             TimeFrame::Day,
-            ExpirationDate::Days(pos!(size as f64)),
+            ExpirationDate::Days(pos_or_panic!(size as f64)),
         ),
         y: Ystep::new(0, init_price),
     };
 
     let walk = WalkType::Heston {
-        dt: pos!(1.0),
+        dt: pos_or_panic!(1.0),
         drift: dec!(0.0),
         volatility: option.implied_volatility,
-        kappa: pos!(1.5),
-        theta: pos!(0.04),
-        xi: pos!(0.5),
+        kappa: pos_or_panic!(1.5),
+        theta: pos_or_panic!(0.04),
+        xi: pos_or_panic!(0.5),
         rho: dec!(-0.7),
     };
 
@@ -242,20 +242,20 @@ fn test_monte_carlo_with_jump_diffusion() {
 
     let init_step = Step {
         x: Xstep::new(
-            pos!(1.0),
+            pos_or_panic!(1.0),
             TimeFrame::Day,
-            ExpirationDate::Days(pos!(size as f64)),
+            ExpirationDate::Days(pos_or_panic!(size as f64)),
         ),
         y: Ystep::new(0, init_price),
     };
 
     let walk = WalkType::JumpDiffusion {
-        dt: pos!(1.0),
+        dt: pos_or_panic!(1.0),
         drift: dec!(0.0),
         volatility: option.implied_volatility,
-        intensity: pos!(0.5),
+        intensity: pos_or_panic!(0.5),
         jump_mean: dec!(-0.03),
-        jump_volatility: pos!(0.2),
+        jump_volatility: pos_or_panic!(0.2),
     };
 
     let params = WalkParams {
@@ -290,19 +290,19 @@ fn test_monte_carlo_with_telegraph() {
 
     let init_step = Step {
         x: Xstep::new(
-            pos!(1.0),
+            pos_or_panic!(1.0),
             TimeFrame::Day,
-            ExpirationDate::Days(pos!(size as f64)),
+            ExpirationDate::Days(pos_or_panic!(size as f64)),
         ),
         y: Ystep::new(0, init_price),
     };
 
     let walk = WalkType::Telegraph {
-        dt: pos!(1.0),
+        dt: pos_or_panic!(1.0),
         drift: dec!(0.0),
         volatility: option.implied_volatility,
-        lambda_up: pos!(0.8),
-        lambda_down: pos!(1.2),
+        lambda_up: pos_or_panic!(0.8),
+        lambda_down: pos_or_panic!(1.2),
         vol_multiplier_up: None,
         vol_multiplier_down: None,
     };
@@ -327,7 +327,7 @@ fn test_monte_carlo_with_telegraph() {
 fn test_error_handling() {
     // Test with an option that might cause issues
     let mut option = create_test_option();
-    option.expiration_date = ExpirationDate::Days(pos!(0.1)); // Very short expiry
+    option.expiration_date = ExpirationDate::Days(pos_or_panic!(0.1)); // Very short expiry
 
     let engine = PricingEngine::ClosedFormBS;
     let result = price_option(&option, &engine);

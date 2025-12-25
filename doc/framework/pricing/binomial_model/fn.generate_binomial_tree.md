@@ -61,7 +61,7 @@ input parameters.
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use optionstratlib::model::types::{OptionStyle, OptionType, Side};
-use optionstratlib::pos;
+use optionstratlib::pos_or_panic;
 use optionstratlib::pricing::binomial_model::{BinomialPricingParams, generate_binomial_tree};
 use optionstratlib::Positive;
 let params = BinomialPricingParams {

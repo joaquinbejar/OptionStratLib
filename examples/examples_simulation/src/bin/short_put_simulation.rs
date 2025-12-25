@@ -217,7 +217,7 @@ fn evaluate_short_put_strategy(
 
         // Check if expiration would have triggered exit policy
         // This handles cases where the intrinsic value at expiration exceeds stop loss
-        let days_left = pos!(0.0);
+        let days_left = pos_or_panic!(0.0);
         if let Some(exit_reason) = check_exit_policy(
             exit_policy,
             initial_premium,
@@ -333,11 +333,11 @@ fn main() -> Result<(), Error> {
     // Simulation parameters
     let n_simulations = 10; // Number of simulations to run
     let n_steps = 10080; // 7 days in minutes
-    let underlying_price = pos!(4011.95);
-    let days = pos!(7.0);
-    let implied_volatility = pos!(0.27); // 27% annual volatility
+    let underlying_price = pos_or_panic!(4011.95);
+    let days = pos_or_panic!(7.0);
+    let implied_volatility = pos_or_panic!(0.27); // 27% annual volatility
     let symbol = "GOLD".to_string();
-    let strike_price = pos!(3930.0); // Strike price for the short put (delta ~-0.3)
+    let strike_price = pos_or_panic!(3930.0); // Strike price for the short put (delta ~-0.3)
 
     // Create the short put option
     let option = Options::new(
@@ -351,7 +351,7 @@ fn main() -> Result<(), Error> {
         underlying_price,
         dec!(0.0), // risk_free_rate
         OptionStyle::Put,
-        pos!(0.0), // dividend_yield
+        pos_or_panic!(0.0), // dividend_yield
         None,
     );
 
@@ -373,7 +373,11 @@ fn main() -> Result<(), Error> {
 
     // Create WalkParams for the Simulator
     let walker = Box::new(Walker::new());
-    let dt = convert_time_frame(pos!(1.0) / days, &TimeFrame::Minute, &TimeFrame::Day);
+    let dt = convert_time_frame(
+        pos_or_panic!(1.0) / days,
+        &TimeFrame::Minute,
+        &TimeFrame::Day,
+    );
 
     // Adjust volatility for the specific dt in the random walk
     let volatility_dt =
@@ -393,9 +397,9 @@ fn main() -> Result<(), Error> {
             dt,
             drift: dec!(-0.1),
             volatility: volatility_dt,
-            vov: pos!(0.02),         // Volatility of volatility (30%)
-            vol_speed: pos!(0.5),    // Mean reversion speed
-            vol_mean: volatility_dt, // Mean volatility level (same as initial)
+            vov: pos_or_panic!(0.02),      // Volatility of volatility (30%)
+            vol_speed: pos_or_panic!(0.5), // Mean reversion speed
+            vol_mean: volatility_dt,       // Mean volatility level (same as initial)
         },
         walker,
     };

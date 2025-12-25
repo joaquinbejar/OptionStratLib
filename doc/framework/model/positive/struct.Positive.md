@@ -33,7 +33,7 @@ through public methods that maintain the positive value invariant.
 
 ::: example-wrap
 ``` {.rust .rust-example-rendered}
-use optionstratlib::pos;
+use optionstratlib::pos_or_panic;
 let strike_price = pos!(100.0);
 ```
 :::
@@ -626,7 +626,7 @@ of decimal places.
 
 ::: example-wrap
 ``` {.rust .rust-example-rendered}
-use optionstratlib::pos;
+use optionstratlib::pos_or_panic;
 
 let value = pos!(10.5);
 assert_eq!(value.format_fixed_places(2), "10.50");
@@ -817,7 +817,7 @@ small epsilon to handle floating-point precision.
 
 ::: example-wrap
 ``` {.rust .rust-example-rendered}
-use optionstratlib::pos;
+use optionstratlib::pos_or_panic;
 let num = pos!(10.0);
 assert!(num.is_multiple(2.0));  // 10.0 is multiple of 2.0
 assert!(!num.is_multiple(3.0)); // 10.0 is not a multiple of 3.0

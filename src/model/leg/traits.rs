@@ -282,18 +282,18 @@ mod tests {
     fn test_mock_leg_long_pnl() {
         let leg = MockLeg {
             symbol: "BTC".to_string(),
-            quantity: crate::pos!(1.0),
+            quantity: crate::pos_or_panic!(1.0),
             side: Side::Long,
-            cost_basis: crate::pos!(50000.0),
-            fees: crate::pos!(10.0),
+            cost_basis: crate::pos_or_panic!(50000.0),
+            fees: crate::pos_or_panic!(10.0),
         };
 
         // Price goes up - profit
-        let pnl = leg.pnl_at_price(crate::pos!(55000.0));
+        let pnl = leg.pnl_at_price(crate::pos_or_panic!(55000.0));
         assert_eq!(pnl, Decimal::from(5000));
 
         // Price goes down - loss
-        let pnl = leg.pnl_at_price(crate::pos!(45000.0));
+        let pnl = leg.pnl_at_price(crate::pos_or_panic!(45000.0));
         assert_eq!(pnl, Decimal::from(-5000));
     }
 
@@ -301,18 +301,18 @@ mod tests {
     fn test_mock_leg_short_pnl() {
         let leg = MockLeg {
             symbol: "BTC".to_string(),
-            quantity: crate::pos!(1.0),
+            quantity: crate::pos_or_panic!(1.0),
             side: Side::Short,
-            cost_basis: crate::pos!(50000.0),
-            fees: crate::pos!(10.0),
+            cost_basis: crate::pos_or_panic!(50000.0),
+            fees: crate::pos_or_panic!(10.0),
         };
 
         // Price goes up - loss for short
-        let pnl = leg.pnl_at_price(crate::pos!(55000.0));
+        let pnl = leg.pnl_at_price(crate::pos_or_panic!(55000.0));
         assert_eq!(pnl, Decimal::from(-5000));
 
         // Price goes down - profit for short
-        let pnl = leg.pnl_at_price(crate::pos!(45000.0));
+        let pnl = leg.pnl_at_price(crate::pos_or_panic!(45000.0));
         assert_eq!(pnl, Decimal::from(5000));
     }
 
@@ -320,18 +320,18 @@ mod tests {
     fn test_mock_leg_delta() {
         let long_leg = MockLeg {
             symbol: "BTC".to_string(),
-            quantity: crate::pos!(2.0),
+            quantity: crate::pos_or_panic!(2.0),
             side: Side::Long,
-            cost_basis: crate::pos!(50000.0),
-            fees: crate::pos!(10.0),
+            cost_basis: crate::pos_or_panic!(50000.0),
+            fees: crate::pos_or_panic!(10.0),
         };
 
         let short_leg = MockLeg {
             symbol: "BTC".to_string(),
-            quantity: crate::pos!(2.0),
+            quantity: crate::pos_or_panic!(2.0),
             side: Side::Short,
-            cost_basis: crate::pos!(50000.0),
-            fees: crate::pos!(10.0),
+            cost_basis: crate::pos_or_panic!(50000.0),
+            fees: crate::pos_or_panic!(10.0),
         };
 
         assert_eq!(long_leg.delta().unwrap(), Decimal::from(2));
@@ -342,18 +342,18 @@ mod tests {
     fn test_is_long_short() {
         let long_leg = MockLeg {
             symbol: "BTC".to_string(),
-            quantity: crate::pos!(1.0),
+            quantity: crate::pos_or_panic!(1.0),
             side: Side::Long,
-            cost_basis: crate::pos!(50000.0),
-            fees: crate::pos!(10.0),
+            cost_basis: crate::pos_or_panic!(50000.0),
+            fees: crate::pos_or_panic!(10.0),
         };
 
         let short_leg = MockLeg {
             symbol: "BTC".to_string(),
-            quantity: crate::pos!(1.0),
+            quantity: crate::pos_or_panic!(1.0),
             side: Side::Short,
-            cost_basis: crate::pos!(50000.0),
-            fees: crate::pos!(10.0),
+            cost_basis: crate::pos_or_panic!(50000.0),
+            fees: crate::pos_or_panic!(10.0),
         };
 
         assert!(long_leg.is_long());
@@ -366,13 +366,13 @@ mod tests {
     fn test_notional_value() {
         let leg = MockLeg {
             symbol: "BTC".to_string(),
-            quantity: crate::pos!(2.0),
+            quantity: crate::pos_or_panic!(2.0),
             side: Side::Long,
-            cost_basis: crate::pos!(50000.0),
-            fees: crate::pos!(10.0),
+            cost_basis: crate::pos_or_panic!(50000.0),
+            fees: crate::pos_or_panic!(10.0),
         };
 
-        let notional = leg.notional_value(crate::pos!(55000.0));
-        assert_eq!(notional, crate::pos!(110000.0));
+        let notional = leg.notional_value(crate::pos_or_panic!(55000.0));
+        assert_eq!(notional, crate::pos_or_panic!(110000.0));
     }
 }

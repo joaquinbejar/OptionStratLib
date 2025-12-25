@@ -7,12 +7,12 @@ fn main() {
 
     // Strategy parameters
     let underlying_symbol = "DAX".to_string();
-    let underlying_price = pos!(24067.0);
-    let expiration = ExpirationDate::Days(pos!(1.0));
-    let implied_volatility = pos!(0.18); // 18%
+    let underlying_price = pos_or_panic!(24067.0);
+    let expiration = ExpirationDate::Days(pos_or_panic!(1.0));
+    let implied_volatility = pos_or_panic!(0.18); // 18%
     let risk_free_rate = dec!(0.0);
-    let dividend_yield = pos!(0.0);
-    let fee = pos!(0.10);
+    let dividend_yield = pos_or_panic!(0.0);
+    let fee = pos_or_panic!(0.10);
 
     // We'll create the strategy after creating positions
 
@@ -21,10 +21,10 @@ fn main() {
         OptionType::European,
         Side::Long,
         underlying_symbol.clone(),
-        pos!(24210.0), // strike
+        pos_or_panic!(24210.0), // strike
         expiration,
         implied_volatility,
-        pos!(1.0), // quantity
+        pos_or_panic!(1.0), // quantity
         underlying_price,
         risk_free_rate,
         OptionStyle::Call,
@@ -33,7 +33,7 @@ fn main() {
     );
     let long_call = Position::new(
         long_call_option,
-        pos!(27.3), // premium
+        pos_or_panic!(27.3), // premium
         Utc::now(),
         fee, // open_fee
         fee, // close_fee
@@ -46,10 +46,10 @@ fn main() {
         OptionType::European,
         Side::Long,
         underlying_symbol.clone(),
-        pos!(24070.0), // strike
+        pos_or_panic!(24070.0), // strike
         expiration,
         implied_volatility,
-        pos!(1.0), // quantity
+        pos_or_panic!(1.0), // quantity
         underlying_price,
         risk_free_rate,
         OptionStyle::Put,
@@ -58,7 +58,7 @@ fn main() {
     );
     let long_put = Position::new(
         long_put_option,
-        pos!(30.4), // premium
+        pos_or_panic!(30.4), // premium
         Utc::now(),
         fee, // open_fee
         fee, // close_fee
@@ -71,10 +71,10 @@ fn main() {
         OptionType::European,
         Side::Short,
         underlying_symbol.clone(),
-        pos!(24060.0), // strike
+        pos_or_panic!(24060.0), // strike
         expiration,
         implied_volatility,
-        pos!(1.0), // quantity
+        pos_or_panic!(1.0), // quantity
         underlying_price,
         risk_free_rate,
         OptionStyle::Put,
@@ -83,7 +83,7 @@ fn main() {
     );
     let short_put = Position::new(
         short_put_option,
-        pos!(60.0), // premium
+        pos_or_panic!(60.0), // premium
         Utc::now(),
         fee, // open_fee
         fee, // close_fee
@@ -99,8 +99,8 @@ fn main() {
         "A complex DAX strategy with long call, long put, and short put positions".to_string(),
         underlying_price,
         positions,
-        pos!(1.0), // Default quantity
-        1,         // days to expiration
+        pos_or_panic!(1.0), // Default quantity
+        1,                  // days to expiration
         implied_volatility,
     );
 
@@ -114,17 +114,19 @@ fn main() {
     }
 
     // Calculate net premium
-    let net_premium = strategy.get_net_premium_received().unwrap_or(pos!(0.0));
+    let net_premium = strategy
+        .get_net_premium_received()
+        .unwrap_or(pos_or_panic!(0.0));
     info!("Net Premium: ${:.2}", net_premium);
 
     // Calculate max profit and loss
-    let max_profit = strategy.get_max_profit().unwrap_or(pos!(0.0));
-    let max_loss = strategy.get_max_loss().unwrap_or(pos!(0.0));
+    let max_profit = strategy.get_max_profit().unwrap_or(pos_or_panic!(0.0));
+    let max_loss = strategy.get_max_loss().unwrap_or(pos_or_panic!(0.0));
     info!("Max Profit: ${:.2}", max_profit);
     info!("Max Loss: ${:.2}", max_loss);
 
     // Calculate total fees
-    let total_fees = strategy.get_fees().unwrap_or(pos!(0.0));
+    let total_fees = strategy.get_fees().unwrap_or(pos_or_panic!(0.0));
     info!("Total Fees: ${:.2}", total_fees);
 
     // Calculate profit area and ratio
@@ -146,7 +148,7 @@ fn main() {
     ];
 
     for &price in &test_prices {
-        let test_price = pos!(price);
+        let test_price = pos_or_panic!(price);
         match strategy.calculate_profit_at(&test_price) {
             Ok(profit) => {
                 info!("At ${:.0}: Profit/Loss = ${:.2}", price, profit);
@@ -159,7 +161,7 @@ fn main() {
 
     // Generate and save charts
     info!("\n=== GENERATING CHARTS ===");
-    match strategy.get_best_range_to_show(pos!(1.0)) {
+    match strategy.get_best_range_to_show(pos_or_panic!(1.0)) {
         Ok(range) => {
             if range.len() >= 2 {
                 info!(

@@ -37,14 +37,14 @@
 //! use tracing::info;
 //! use optionstratlib::chains::{RNDParameters, RNDAnalysis};
 //! use optionstratlib::chains::chain::OptionChain;
-//! use optionstratlib::{pos, spos, ExpirationDate, Positive};
+//! use optionstratlib::{pos_or_panic, spos, ExpirationDate, Positive};
 //! use optionstratlib::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
 //!
 //! // Create parameters for RND calculation
 //! let params = RNDParameters {
 //!     risk_free_rate: dec!(0.05),
 //!     interpolation_points: 100,
-//!     derivative_tolerance: pos!(0.001),
+//!     derivative_tolerance: pos_or_panic!(0.001),
 //! };
 //! let option_chain_params = OptionChainBuildParams::new(
 //!             "SP500".to_string(),
@@ -53,16 +53,16 @@
 //!             spos!(1.0),
 //!             dec!(-0.2),
 //!             dec!(0.00001),
-//!             pos!(0.02),
+//!             pos_or_panic!(0.02),
 //!             2,
 //!             OptionDataPriceParams::new(
-//!                 Some(Box::new(pos!(100.0))),
-//!                 Some(ExpirationDate::Days(pos!(30.0))),
+//!                 Some(Box::new(pos_or_panic!(100.0))),
+//!                 Some(ExpirationDate::Days(pos_or_panic!(30.0))),
 //!                 Some(Decimal::ZERO),
 //!                 spos!(0.05),
 //!                 Some("SP500".to_string()),
 //!             ),
-//!             pos!(0.1),
+//!             pos_or_panic!(0.1),
 //!         );
 //!
 //! let option_chain = OptionChain::build_chain(&option_chain_params);
@@ -144,11 +144,11 @@ use utoipa::ToSchema;
 /// ```
 /// use rust_decimal_macros::dec;
 /// use optionstratlib::chains::RNDParameters;
-/// use optionstratlib::pos;
+/// use optionstratlib::pos_or_panic;
 /// let params = RNDParameters {
 ///     risk_free_rate: dec!(0.05),
 ///     interpolation_points: 100,
-///     derivative_tolerance: pos!(0.001),
+///     derivative_tolerance: pos_or_panic!(0.001),
 /// };
 /// ```
 #[derive(DebugPretty, DisplaySimple, Clone, ToSchema, Serialize, Deserialize)]
@@ -415,23 +415,30 @@ pub trait RNDAnalysis {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     use crate::chains::chain::OptionChain;
 
     use rust_decimal_macros::dec;
 
     // Helper functions for test data creation
     fn create_test_option_chain() -> OptionChain {
-        let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-12-31".to_string(), None, None);
+        let mut chain = OptionChain::new(
+            "TEST",
+            pos_or_panic!(100.0),
+            "2024-12-31".to_string(),
+            None,
+            None,
+        );
 
         // Add a range of options around the money
         for strike in [80.0, 90.0, 95.0, 100.0, 105.0, 110.0, 120.0].iter() {
             chain.add_option(
-                pos!(*strike),
+                pos_or_panic!(*strike),
                 spos!(15.0),
                 spos!(15.5),
                 spos!(5.0),
                 spos!(5.5),
-                pos!(0.2),
+                pos_or_panic!(0.2),
                 Some(dec!(-0.3)),
                 Some(dec!(-0.3)),
                 Some(dec!(0.3)),
@@ -445,7 +452,13 @@ mod tests {
     }
 
     fn create_empty_chain() -> OptionChain {
-        OptionChain::new("TEST", pos!(100.0), "2024-12-31".to_string(), None, None)
+        OptionChain::new(
+            "TEST",
+            pos_or_panic!(100.0),
+            "2024-12-31".to_string(),
+            None,
+            None,
+        )
     }
 
     mod rnd_parameters_tests {
@@ -464,23 +477,24 @@ mod tests {
             let params = RNDParameters {
                 risk_free_rate: dec!(0.05),
                 interpolation_points: 200,
-                derivative_tolerance: pos!(0.001),
+                derivative_tolerance: pos_or_panic!(0.001),
             };
             assert_eq!(params.risk_free_rate, dec!(0.05));
             assert_eq!(params.interpolation_points, 200);
-            assert_eq!(params.derivative_tolerance, pos!(0.001));
+            assert_eq!(params.derivative_tolerance, pos_or_panic!(0.001));
         }
     }
 
     mod rnd_statistics_tests {
         use super::*;
+
         use crate::assert_decimal_eq;
 
         fn create_test_densities() -> BTreeMap<Positive, Decimal> {
             let mut densities = BTreeMap::new();
-            densities.insert(pos!(90.0), dec!(0.2));
-            densities.insert(pos!(100.0), dec!(0.5));
-            densities.insert(pos!(110.0), dec!(0.3));
+            densities.insert(pos_or_panic!(90.0), dec!(0.2));
+            densities.insert(pos_or_panic!(100.0), dec!(0.5));
+            densities.insert(pos_or_panic!(110.0), dec!(0.3));
             densities
         }
 
@@ -567,7 +581,7 @@ mod tests {
             let params = RNDParameters {
                 risk_free_rate: dec!(0.05),
                 interpolation_points: 100,
-                derivative_tolerance: pos!(0.001),
+                derivative_tolerance: pos_or_panic!(0.001),
             };
 
             let result = chain.calculate_rnd(&params);
@@ -619,7 +633,7 @@ mod tests {
             let chain = create_test_option_chain();
             let params = RNDParameters {
                 risk_free_rate: dec!(0.5), // 50% interest rate
-                derivative_tolerance: pos!(0.001),
+                derivative_tolerance: pos_or_panic!(0.001),
                 ..Default::default()
             };
 
@@ -672,12 +686,12 @@ mod tests {
             let mut chain = create_test_option_chain();
             // Add an option without implied volatility
             chain.add_option(
-                pos!(115.0),
+                pos_or_panic!(115.0),
                 spos!(5.0),
                 spos!(5.5),
                 spos!(15.0),
                 spos!(15.5),
-                pos!(0.2), // No implied volatility
+                pos_or_panic!(0.2), // No implied volatility
                 Some(dec!(0.3)),
                 Some(dec!(0.3)),
                 Some(dec!(0.3)),
@@ -699,11 +713,11 @@ mod tests {
             let chain = create_test_option_chain();
 
             // Test existing strike
-            let price = chain.get_call_price(pos!(100.0));
+            let price = chain.get_call_price(pos_or_panic!(100.0));
             assert!(price.is_some());
 
             // Test non-existing strike
-            let price = chain.get_call_price(pos!(99.0));
+            let price = chain.get_call_price(pos_or_panic!(99.0));
             assert!(price.is_none());
         }
 
@@ -731,7 +745,7 @@ mod tests {
             let params = RNDParameters {
                 risk_free_rate: dec!(0.05),
                 interpolation_points: 100,
-                derivative_tolerance: pos!(0.001),
+                derivative_tolerance: pos_or_panic!(0.001),
             };
 
             // Calculate RND
@@ -749,17 +763,22 @@ mod tests {
 
         #[test]
         fn test_extreme_market_conditions() {
-            let mut chain =
-                OptionChain::new("TEST", pos!(100.0), "2024-12-31".to_string(), None, None);
+            let mut chain = OptionChain::new(
+                "TEST",
+                pos_or_panic!(100.0),
+                "2024-12-31".to_string(),
+                None,
+                None,
+            );
 
             // Add options with extreme values
             chain.add_option(
-                pos!(50.0), // Deep ITM
+                pos_or_panic!(50.0), // Deep ITM
                 spos!(50.0),
                 spos!(51.0),
                 spos!(0.1),
                 spos!(0.2),
-                pos!(0.8), // High volatility
+                pos_or_panic!(0.8), // High volatility
                 Some(dec!(-0.99)),
                 Some(dec!(0.3)),
                 Some(dec!(0.3)),
@@ -769,12 +788,12 @@ mod tests {
             );
 
             chain.add_option(
-                pos!(150.0), // Deep OTM
+                pos_or_panic!(150.0), // Deep OTM
                 spos!(0.1),
                 spos!(0.2),
                 spos!(50.0),
                 spos!(51.0),
-                pos!(0.8), // High volatility
+                pos_or_panic!(0.8), // High volatility
                 Some(dec!(0.99)),
                 Some(dec!(0.3)),
                 Some(dec!(0.3)),
@@ -786,7 +805,7 @@ mod tests {
             let params = RNDParameters {
                 risk_free_rate: dec!(0.10), // High interest rate
                 interpolation_points: 200,
-                derivative_tolerance: pos!(0.001),
+                derivative_tolerance: pos_or_panic!(0.001),
             };
 
             let rnd_result = chain.calculate_rnd(&params);
@@ -807,14 +826,15 @@ mod additional_tests {
 
     mod rnd_statistics_extended_tests {
         use super::*;
+
         use crate::assert_decimal_eq;
 
         #[test]
         fn test_asymmetric_distribution() {
             let mut densities = BTreeMap::new();
-            densities.insert(pos!(90.0), dec!(0.1));
-            densities.insert(pos!(100.0), dec!(0.7));
-            densities.insert(pos!(110.0), dec!(0.2));
+            densities.insert(pos_or_panic!(90.0), dec!(0.1));
+            densities.insert(pos_or_panic!(100.0), dec!(0.7));
+            densities.insert(pos_or_panic!(110.0), dec!(0.2));
 
             let stats = RNDStatistics::new(&densities);
             assert_decimal_eq!(stats.skewness.abs(), dec!(0.076839), dec!(0.00001));
@@ -823,9 +843,9 @@ mod additional_tests {
         #[test]
         fn test_extreme_values_distribution() {
             let mut densities = BTreeMap::new();
-            densities.insert(pos!(50.0), dec!(0.01));
-            densities.insert(pos!(100.0), dec!(0.97));
-            densities.insert(pos!(150.0), dec!(0.02));
+            densities.insert(pos_or_panic!(50.0), dec!(0.01));
+            densities.insert(pos_or_panic!(100.0), dec!(0.97));
+            densities.insert(pos_or_panic!(150.0), dec!(0.02));
 
             let stats = RNDStatistics::new(&densities);
             assert!(stats.variance > Positive::ZERO);
@@ -836,11 +856,11 @@ mod additional_tests {
         fn test_uniform_distribution() {
             let mut densities = BTreeMap::new();
 
-            densities.insert(pos!(90.0), dec!(0.2));
-            densities.insert(pos!(95.0), dec!(0.2));
-            densities.insert(pos!(100.0), dec!(0.2));
-            densities.insert(pos!(105.0), dec!(0.2));
-            densities.insert(pos!(110.0), dec!(0.2));
+            densities.insert(pos_or_panic!(90.0), dec!(0.2));
+            densities.insert(pos_or_panic!(95.0), dec!(0.2));
+            densities.insert(pos_or_panic!(100.0), dec!(0.2));
+            densities.insert(pos_or_panic!(105.0), dec!(0.2));
+            densities.insert(pos_or_panic!(110.0), dec!(0.2));
 
             let stats = RNDStatistics::new(&densities);
             assert_decimal_eq!(stats.skewness.abs(), dec!(0.0), dec!(0.00001));
@@ -851,11 +871,11 @@ mod additional_tests {
         fn test_bimodal_distribution() {
             let mut densities = BTreeMap::new();
 
-            densities.insert(pos!(80.0), dec!(0.3));
-            densities.insert(pos!(90.0), dec!(0.1));
-            densities.insert(pos!(100.0), dec!(0.1));
-            densities.insert(pos!(110.0), dec!(0.1));
-            densities.insert(pos!(120.0), dec!(0.4));
+            densities.insert(pos_or_panic!(80.0), dec!(0.3));
+            densities.insert(pos_or_panic!(90.0), dec!(0.1));
+            densities.insert(pos_or_panic!(100.0), dec!(0.1));
+            densities.insert(pos_or_panic!(110.0), dec!(0.1));
+            densities.insert(pos_or_panic!(120.0), dec!(0.4));
 
             let stats = RNDStatistics::new(&densities);
             assert_decimal_eq!(stats.kurtosis, dec!(-1.69028), dec!(0.00001));
@@ -864,21 +884,27 @@ mod additional_tests {
 
     mod rnd_calculation_extended_tests {
         use super::*;
+
         use crate::chains::chain::OptionChain;
 
         fn create_test_option_chain() -> OptionChain {
-            let mut chain =
-                OptionChain::new("TEST", pos!(100.0), "2024-12-31".to_string(), None, None);
+            let mut chain = OptionChain::new(
+                "TEST",
+                pos_or_panic!(100.0),
+                "2024-12-31".to_string(),
+                None,
+                None,
+            );
 
             // Add a range of options around the money
             for strike in [80.0, 90.0, 95.0, 100.0, 105.0, 110.0, 120.0].iter() {
                 chain.add_option(
-                    pos!(*strike),
+                    pos_or_panic!(*strike),
                     spos!(15.0),
                     spos!(15.5),
                     spos!(5.0),
                     spos!(5.5),
-                    pos!(0.2),
+                    pos_or_panic!(0.2),
                     Some(dec!(-0.3)),
                     Some(dec!(0.3)),
                     Some(dec!(0.3)),
@@ -891,18 +917,23 @@ mod additional_tests {
         }
 
         fn create_wide_spread_chain() -> OptionChain {
-            let mut chain =
-                OptionChain::new("TEST", pos!(100.0), "2024-12-31".to_string(), None, None);
+            let mut chain = OptionChain::new(
+                "TEST",
+                pos_or_panic!(100.0),
+                "2024-12-31".to_string(),
+                None,
+                None,
+            );
 
             // Amplio rango de strikes
             for strike in [60.0, 80.0, 100.0, 120.0, 140.0].iter() {
                 chain.add_option(
-                    pos!(*strike),
+                    pos_or_panic!(*strike),
                     spos!(15.0),
                     spos!(15.5),
                     spos!(5.0),
                     spos!(5.5),
-                    pos!(0.2),
+                    pos_or_panic!(0.2),
                     Some(dec!(-0.3)),
                     Some(dec!(0.3)),
                     Some(dec!(0.3)),
@@ -915,18 +946,23 @@ mod additional_tests {
         }
 
         fn create_high_vol_chain() -> OptionChain {
-            let mut chain =
-                OptionChain::new("TEST", pos!(100.0), "2024-12-31".to_string(), None, None);
+            let mut chain = OptionChain::new(
+                "TEST",
+                pos_or_panic!(100.0),
+                "2024-12-31".to_string(),
+                None,
+                None,
+            );
 
             // Alta volatilidad
             for strike in [90.0, 95.0, 100.0, 105.0, 110.0].iter() {
                 chain.add_option(
-                    pos!(*strike),
+                    pos_or_panic!(*strike),
                     spos!(15.0),
                     spos!(15.5),
                     spos!(5.0),
                     spos!(5.5),
-                    pos!(0.5), // Alta volatilidad
+                    pos_or_panic!(0.5), // Alta volatilidad
                     Some(dec!(-0.3)),
                     Some(dec!(0.3)),
                     Some(dec!(0.3)),
@@ -944,7 +980,7 @@ mod additional_tests {
             let params = RNDParameters {
                 risk_free_rate: dec!(0.05),
                 interpolation_points: 100,
-                derivative_tolerance: pos!(0.001),
+                derivative_tolerance: pos_or_panic!(0.001),
             };
 
             let result = chain.calculate_rnd(&params);
@@ -963,7 +999,7 @@ mod additional_tests {
             let params = RNDParameters {
                 risk_free_rate: dec!(0.05),
                 interpolation_points: 100,
-                derivative_tolerance: pos!(0.001),
+                derivative_tolerance: pos_or_panic!(0.001),
             };
 
             let result = chain.calculate_rnd(&params);
@@ -980,7 +1016,12 @@ mod additional_tests {
         fn test_calculate_rnd_different_tolerances() {
             let chain = create_test_option_chain();
 
-            let tolerances = [pos!(0.0001), pos!(0.001), pos!(0.01), pos!(0.1)];
+            let tolerances = [
+                pos_or_panic!(0.0001),
+                pos_or_panic!(0.001),
+                pos_or_panic!(0.01),
+                pos_or_panic!(0.1),
+            ];
 
             for tolerance in tolerances.iter() {
                 let params = RNDParameters {
@@ -1003,20 +1044,26 @@ mod additional_tests {
 
     mod numerical_stability_tests {
         use super::*;
+
         use crate::chains::chain::OptionChain;
 
         #[test]
         fn test_numerical_stability_small_values() {
-            let mut chain =
-                OptionChain::new("TEST", pos!(1.0), "2024-12-31".to_string(), None, None);
+            let mut chain = OptionChain::new(
+                "TEST",
+                pos_or_panic!(1.0),
+                "2024-12-31".to_string(),
+                None,
+                None,
+            );
 
             chain.add_option(
-                pos!(0.9),
+                pos_or_panic!(0.9),
                 spos!(0.001),
                 spos!(0.002),
                 spos!(0.001),
                 spos!(0.002),
-                pos!(0.1),
+                pos_or_panic!(0.1),
                 Some(dec!(-0.3)),
                 Some(dec!(0.3)),
                 Some(dec!(0.3)),
@@ -1028,7 +1075,7 @@ mod additional_tests {
             let params = RNDParameters {
                 risk_free_rate: dec!(0.05),
                 interpolation_points: 100,
-                derivative_tolerance: pos!(0.0001),
+                derivative_tolerance: pos_or_panic!(0.0001),
             };
 
             let result = chain.calculate_rnd(&params);
@@ -1037,16 +1084,21 @@ mod additional_tests {
 
         #[test]
         fn test_numerical_stability_large_values() {
-            let mut chain =
-                OptionChain::new("TEST", pos!(10000.0), "2024-12-31".to_string(), None, None);
+            let mut chain = OptionChain::new(
+                "TEST",
+                pos_or_panic!(10000.0),
+                "2024-12-31".to_string(),
+                None,
+                None,
+            );
 
             chain.add_option(
-                pos!(9900.0),
+                pos_or_panic!(9900.0),
                 spos!(1000.0),
                 spos!(1001.0),
                 spos!(1000.0),
                 spos!(1001.0),
-                pos!(0.1),
+                pos_or_panic!(0.1),
                 Some(dec!(-0.3)),
                 Some(dec!(0.3)),
                 Some(dec!(0.3)),
@@ -1058,7 +1110,7 @@ mod additional_tests {
             let params = RNDParameters {
                 risk_free_rate: dec!(0.05),
                 interpolation_points: 100,
-                derivative_tolerance: pos!(0.0001),
+                derivative_tolerance: pos_or_panic!(0.0001),
             };
 
             let result = chain.calculate_rnd(&params);
@@ -1070,19 +1122,21 @@ mod additional_tests {
 #[cfg(test)]
 mod statistical_validation_tests {
     use super::*;
+
     use crate::assert_decimal_eq;
     use rust_decimal_macros::dec;
 
     mod moments_tests {
         use super::*;
+
         use num_traits::{FromPrimitive, ToPrimitive};
         use tracing::info;
 
         #[test]
         fn test_simple_mean() {
             let mut densities = BTreeMap::new();
-            densities.insert(pos!(100.0), dec!(0.5));
-            densities.insert(pos!(200.0), dec!(0.5));
+            densities.insert(pos_or_panic!(100.0), dec!(0.5));
+            densities.insert(pos_or_panic!(200.0), dec!(0.5));
 
             let stats = RNDStatistics::new(&densities);
             assert_decimal_eq!(stats.mean, dec!(150.0), dec!(0.00001));
@@ -1091,11 +1145,11 @@ mod statistical_validation_tests {
         #[test]
         fn test_normal_distribution_step_by_step() {
             let mut densities = BTreeMap::new();
-            densities.insert(pos!(80.0), dec!(0.1));
-            densities.insert(pos!(90.0), dec!(0.2));
-            densities.insert(pos!(100.0), dec!(0.4));
-            densities.insert(pos!(110.0), dec!(0.2));
-            densities.insert(pos!(120.0), dec!(0.1));
+            densities.insert(pos_or_panic!(80.0), dec!(0.1));
+            densities.insert(pos_or_panic!(90.0), dec!(0.2));
+            densities.insert(pos_or_panic!(100.0), dec!(0.4));
+            densities.insert(pos_or_panic!(110.0), dec!(0.2));
+            densities.insert(pos_or_panic!(120.0), dec!(0.1));
 
             // Step 1: Calculate mean
             let mut mean = Decimal::ZERO;
@@ -1140,11 +1194,11 @@ mod statistical_validation_tests {
         #[test]
         fn test_kurtosis_calculation_comparison() {
             let mut densities = BTreeMap::new();
-            densities.insert(pos!(80.0), dec!(0.1));
-            densities.insert(pos!(90.0), dec!(0.2));
-            densities.insert(pos!(100.0), dec!(0.4));
-            densities.insert(pos!(110.0), dec!(0.2));
-            densities.insert(pos!(120.0), dec!(0.1));
+            densities.insert(pos_or_panic!(80.0), dec!(0.1));
+            densities.insert(pos_or_panic!(90.0), dec!(0.2));
+            densities.insert(pos_or_panic!(100.0), dec!(0.4));
+            densities.insert(pos_or_panic!(110.0), dec!(0.2));
+            densities.insert(pos_or_panic!(120.0), dec!(0.1));
 
             // Manual calculation
             info!("Manual Calculation:");
@@ -1198,11 +1252,11 @@ mod statistical_validation_tests {
         #[test]
         fn test_normal_distribution_detailed() {
             let mut densities = BTreeMap::new();
-            densities.insert(pos!(80.0), dec!(0.1));
-            densities.insert(pos!(90.0), dec!(0.2));
-            densities.insert(pos!(100.0), dec!(0.4));
-            densities.insert(pos!(110.0), dec!(0.2));
-            densities.insert(pos!(120.0), dec!(0.1));
+            densities.insert(pos_or_panic!(80.0), dec!(0.1));
+            densities.insert(pos_or_panic!(90.0), dec!(0.2));
+            densities.insert(pos_or_panic!(100.0), dec!(0.4));
+            densities.insert(pos_or_panic!(110.0), dec!(0.2));
+            densities.insert(pos_or_panic!(120.0), dec!(0.1));
 
             // Step 1: Calculate mean
             let mut mean = Decimal::ZERO;
@@ -1258,8 +1312,8 @@ mod statistical_validation_tests {
         #[test]
         fn test_simple_variance() {
             let mut densities = BTreeMap::new();
-            densities.insert(pos!(90.0), dec!(0.5));
-            densities.insert(pos!(110.0), dec!(0.5));
+            densities.insert(pos_or_panic!(90.0), dec!(0.5));
+            densities.insert(pos_or_panic!(110.0), dec!(0.5));
 
             let stats = RNDStatistics::new(&densities);
 
@@ -1273,7 +1327,7 @@ mod statistical_validation_tests {
         fn test_discrete_uniform() {
             let mut densities = BTreeMap::new();
             for i in 1..=5 {
-                densities.insert(pos!(i as f64), dec!(0.2));
+                densities.insert(pos_or_panic!(i as f64), dec!(0.2));
             }
 
             let stats = RNDStatistics::new(&densities);
@@ -1286,8 +1340,8 @@ mod statistical_validation_tests {
         #[test]
         fn test_normalization() {
             let mut densities = BTreeMap::new();
-            densities.insert(pos!(100.0), dec!(2.0));
-            densities.insert(pos!(200.0), dec!(3.0));
+            densities.insert(pos_or_panic!(100.0), dec!(2.0));
+            densities.insert(pos_or_panic!(200.0), dec!(3.0));
             let stats = RNDStatistics::new(&densities);
             assert_decimal_eq!(stats.mean, dec!(160.0), dec!(0.00001));
         }
@@ -1295,9 +1349,9 @@ mod statistical_validation_tests {
         #[test]
         fn test_small_values() {
             let mut densities = BTreeMap::new();
-            densities.insert(pos!(1.0), dec!(0.001));
-            densities.insert(pos!(2.0), dec!(0.002));
-            densities.insert(pos!(3.0), dec!(0.001));
+            densities.insert(pos_or_panic!(1.0), dec!(0.001));
+            densities.insert(pos_or_panic!(2.0), dec!(0.002));
+            densities.insert(pos_or_panic!(3.0), dec!(0.001));
 
             let stats = RNDStatistics::new(&densities);
 
@@ -1308,9 +1362,9 @@ mod statistical_validation_tests {
         #[test]
         fn test_extreme_values() {
             let mut densities = BTreeMap::new();
-            densities.insert(pos!(1000000.0), dec!(0.3));
-            densities.insert(pos!(2000000.0), dec!(0.4));
-            densities.insert(pos!(3000000.0), dec!(0.3));
+            densities.insert(pos_or_panic!(1000000.0), dec!(0.3));
+            densities.insert(pos_or_panic!(2000000.0), dec!(0.4));
+            densities.insert(pos_or_panic!(3000000.0), dec!(0.3));
 
             let stats = RNDStatistics::new(&densities);
 
@@ -1321,8 +1375,8 @@ mod statistical_validation_tests {
         #[test]
         fn test_gap_distribution() {
             let mut densities = BTreeMap::new();
-            densities.insert(pos!(10.0), dec!(0.45));
-            densities.insert(pos!(90.0), dec!(0.55));
+            densities.insert(pos_or_panic!(10.0), dec!(0.45));
+            densities.insert(pos_or_panic!(90.0), dec!(0.55));
 
             let stats = RNDStatistics::new(&densities);
 
@@ -1334,8 +1388,8 @@ mod statistical_validation_tests {
         #[test]
         fn test_gap_distribution_detailed() {
             let mut densities = BTreeMap::new();
-            densities.insert(pos!(10.0), dec!(0.45));
-            densities.insert(pos!(90.0), dec!(0.55));
+            densities.insert(pos_or_panic!(10.0), dec!(0.45));
+            densities.insert(pos_or_panic!(90.0), dec!(0.55));
 
             // Step 1: Calculate mean manually
             let mut mean = Decimal::ZERO;
@@ -1393,9 +1447,9 @@ mod statistical_validation_tests {
         #[test]
         fn test_moment_properties() {
             let mut densities = BTreeMap::new();
-            densities.insert(pos!(95.0), dec!(0.3));
-            densities.insert(pos!(100.0), dec!(0.4));
-            densities.insert(pos!(105.0), dec!(0.3));
+            densities.insert(pos_or_panic!(95.0), dec!(0.3));
+            densities.insert(pos_or_panic!(100.0), dec!(0.4));
+            densities.insert(pos_or_panic!(105.0), dec!(0.3));
 
             let stats = RNDStatistics::new(&densities);
 
@@ -1427,9 +1481,9 @@ mod statistical_validation_tests {
         #[test]
         fn test_raw_moments() {
             let mut densities = BTreeMap::new();
-            densities.insert(pos!(90.0), dec!(0.2));
-            densities.insert(pos!(100.0), dec!(0.6));
-            densities.insert(pos!(110.0), dec!(0.2));
+            densities.insert(pos_or_panic!(90.0), dec!(0.2));
+            densities.insert(pos_or_panic!(100.0), dec!(0.6));
+            densities.insert(pos_or_panic!(110.0), dec!(0.2));
 
             // Primer momento (media)
             let mean = calculate_raw_moment(&densities, 1);
@@ -1460,16 +1514,16 @@ mod chain_test {
             spos!(1.0),
             dec!(-0.2),
             dec!(0.1),
-            pos!(0.02),
+            pos_or_panic!(0.02),
             2,
             OptionDataPriceParams::new(
-                Some(Box::new(pos!(100.0))),
-                Some(ExpirationDate::Days(pos!(30.0))),
+                Some(Box::new(pos_or_panic!(100.0))),
+                Some(ExpirationDate::Days(pos_or_panic!(30.0))),
                 Some(Decimal::ZERO),
                 spos!(0.05),
                 Some("SP500".to_string()),
             ),
-            pos!(0.2),
+            pos_or_panic!(0.2),
         );
 
         OptionChain::build_chain(&option_chain_params)
@@ -1483,16 +1537,16 @@ mod chain_test {
             spos!(1.0),
             dec!(-0.2),
             dec!(0.1),
-            pos!(0.02),
+            pos_or_panic!(0.02),
             2,
             OptionDataPriceParams::new(
-                Some(Box::new(pos!(100.0))),
-                Some(ExpirationDate::Days(pos!(30.0))),
+                Some(Box::new(pos_or_panic!(100.0))),
+                Some(ExpirationDate::Days(pos_or_panic!(30.0))),
                 Some(Decimal::ZERO),
                 spos!(0.0),
                 Some("SP500".to_string()),
             ),
-            pos!(0.2),
+            pos_or_panic!(0.2),
         );
 
         let chain = OptionChain::build_chain(&option_chain_params);
@@ -1500,7 +1554,7 @@ mod chain_test {
         let params = RNDParameters {
             risk_free_rate: dec!(0.05),
             interpolation_points: 100,
-            derivative_tolerance: pos!(0.01),
+            derivative_tolerance: pos_or_panic!(0.01),
         };
         // Calculate RND from option chain
         let rnd_result = chain.calculate_rnd(&params).unwrap();
@@ -1527,23 +1581,23 @@ mod chain_test {
             spos!(1.0),
             dec!(-0.2),
             dec!(0.1),
-            pos!(0.02),
+            pos_or_panic!(0.02),
             2,
             OptionDataPriceParams::new(
-                Some(Box::new(pos!(100.0))),
-                Some(ExpirationDate::Days(pos!(30.0))),
+                Some(Box::new(pos_or_panic!(100.0))),
+                Some(ExpirationDate::Days(pos_or_panic!(30.0))),
                 Some(Decimal::ZERO),
                 spos!(0.05),
                 Some("SP500".to_string()),
             ),
-            pos!(0.2),
+            pos_or_panic!(0.2),
         );
 
         let chain = OptionChain::build_chain(&option_chain_params);
         let params = RNDParameters {
             risk_free_rate: dec!(0.05),
             interpolation_points: 100,
-            derivative_tolerance: pos!(1.0), // Using larger step size for testing
+            derivative_tolerance: pos_or_panic!(1.0), // Using larger step size for testing
         };
 
         debug!("Initial option chain:");
@@ -1571,14 +1625,14 @@ mod chain_test {
         let params_1 = RNDParameters {
             risk_free_rate: dec!(0.05),
             interpolation_points: 100,
-            derivative_tolerance: pos!(1.0),
+            derivative_tolerance: pos_or_panic!(1.0),
         };
 
         // Test with h = 0.1
         let params_2 = RNDParameters {
             risk_free_rate: dec!(0.05),
             interpolation_points: 100,
-            derivative_tolerance: pos!(0.1),
+            derivative_tolerance: pos_or_panic!(0.1),
         };
 
         debug!("Testing with h = 1.0:");
@@ -1587,12 +1641,12 @@ mod chain_test {
             debug!(
                 "Strike {}: Found neighbors: k-h={}, k+h={}",
                 k,
-                chain.get_call_price(k - pos!(1.0)).is_some(),
-                chain.get_call_price(k + pos!(1.0)).is_some()
+                chain.get_call_price(k - pos_or_panic!(1.0)).is_some(),
+                chain.get_call_price(k + pos_or_panic!(1.0)).is_some()
             );
             assert!(
-                chain.get_call_price(k - pos!(1.0)).is_some()
-                    || chain.get_call_price(k + pos!(1.0)).is_some()
+                chain.get_call_price(k - pos_or_panic!(1.0)).is_some()
+                    || chain.get_call_price(k + pos_or_panic!(1.0)).is_some()
             );
         }
         assert!(chain.calculate_rnd(&params_1).is_ok());
@@ -1603,12 +1657,12 @@ mod chain_test {
             debug!(
                 "Strike {}: Found neighbors: k-h={}, k+h={}",
                 k,
-                chain.get_call_price(k - pos!(0.1)).is_some(),
-                chain.get_call_price(k + pos!(0.1)).is_some()
+                chain.get_call_price(k - pos_or_panic!(0.1)).is_some(),
+                chain.get_call_price(k + pos_or_panic!(0.1)).is_some()
             );
             assert!(
-                chain.get_call_price(k - pos!(1.0)).is_some()
-                    || chain.get_call_price(k + pos!(1.0)).is_some()
+                chain.get_call_price(k - pos_or_panic!(1.0)).is_some()
+                    || chain.get_call_price(k + pos_or_panic!(1.0)).is_some()
             );
         }
         assert!(chain.calculate_rnd(&params_2).is_ok());
@@ -1618,6 +1672,7 @@ mod chain_test {
 #[cfg(test)]
 mod rnd_coverage_tests {
     use super::*;
+
     use crate::chains::OptionChain;
     use crate::chains::RNDAnalysis;
     use crate::chains::RNDResult;
@@ -1629,9 +1684,9 @@ mod rnd_coverage_tests {
     fn test_rnd_result_new() {
         // Create a simple densities map
         let mut densities = BTreeMap::new();
-        densities.insert(pos!(90.0), dec!(0.2));
-        densities.insert(pos!(100.0), dec!(0.6));
-        densities.insert(pos!(110.0), dec!(0.2));
+        densities.insert(pos_or_panic!(90.0), dec!(0.2));
+        densities.insert(pos_or_panic!(100.0), dec!(0.6));
+        densities.insert(pos_or_panic!(110.0), dec!(0.2));
 
         // Create a new RNDResult
         let result = RNDResult::new(densities);
@@ -1648,7 +1703,7 @@ mod rnd_coverage_tests {
         // Create a custom chain with specific volatility pattern
         let mut chain = OptionChain::new(
             "TEST",
-            pos!(100.0),
+            pos_or_panic!(100.0),
             "2024-06-30".to_string(),
             Some(dec!(0.05)),
             spos!(0.0),
@@ -1660,12 +1715,12 @@ mod rnd_coverage_tests {
 
         for (i, strike) in strikes.iter().enumerate() {
             chain.add_option(
-                pos!(*strike),
+                pos_or_panic!(*strike),
                 spos!(10.0),
                 spos!(10.5),
                 spos!(10.0),
                 spos!(10.5),
-                pos!(vols[i]),
+                pos_or_panic!(vols[i]),
                 None,
                 None,
                 None,
@@ -1685,7 +1740,10 @@ mod rnd_coverage_tests {
         assert_eq!(skew.len(), 5);
 
         // With a symmetric smile, the skew around ATM should be symmetric
-        let atm_index = skew.iter().position(|(k, _)| *k == pos!(1.0)).unwrap();
+        let atm_index = skew
+            .iter()
+            .position(|(k, _)| *k == pos_or_panic!(1.0))
+            .unwrap();
         let lower = skew[atm_index - 1].1;
         let higher = skew[atm_index + 1].1;
 

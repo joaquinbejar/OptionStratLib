@@ -126,11 +126,11 @@ pub trait DeltaGammaProfileCurve {
 /// ```ignore
 /// use optionstratlib::chains::chain::OptionChain;
 /// use optionstratlib::metrics::DeltaGammaProfileSurface;
-/// use optionstratlib::pos;
+/// use optionstratlib::pos_or_panic;
 ///
 /// let chain = OptionChain::load_from_json("options.json")?;
-/// let price_range = (pos!(400.0), pos!(500.0));
-/// let days = vec![pos!(7.0), pos!(14.0), pos!(30.0)];
+/// let price_range = (pos_or_panic!(400.0), pos_or_panic!(500.0));
+/// let days = vec![pos_or_panic!(7.0), pos_or_panic!(14.0), pos_or_panic!(30.0)];
 /// let surface = chain.delta_gamma_surface(price_range, days, 20)?;
 /// ```
 pub trait DeltaGammaProfileSurface {
@@ -269,7 +269,7 @@ mod tests_delta_gamma_profile {
     #[test]
     fn test_delta_gamma_curve_creation() {
         let profile = TestDeltaGammaProfile {
-            underlying_price: pos!(450.0),
+            underlying_price: pos_or_panic!(450.0),
         };
         let curve = profile.delta_gamma_curve();
         assert!(curve.is_ok());
@@ -281,7 +281,7 @@ mod tests_delta_gamma_profile {
     #[test]
     fn test_delta_gamma_curve_monotonic_delta() {
         let profile = TestDeltaGammaProfile {
-            underlying_price: pos!(450.0),
+            underlying_price: pos_or_panic!(450.0),
         };
         let curve = profile.delta_gamma_curve().unwrap();
 
@@ -298,10 +298,10 @@ mod tests_delta_gamma_profile {
     #[test]
     fn test_delta_gamma_surface_creation() {
         let profile = TestDeltaGammaProfile {
-            underlying_price: pos!(450.0),
+            underlying_price: pos_or_panic!(450.0),
         };
-        let price_range = (pos!(400.0), pos!(500.0));
-        let days = vec![pos!(7.0), pos!(14.0), pos!(30.0)];
+        let price_range = (pos_or_panic!(400.0), pos_or_panic!(500.0));
+        let days = vec![pos_or_panic!(7.0), pos_or_panic!(14.0), pos_or_panic!(30.0)];
 
         let surface = profile.delta_gamma_surface(price_range, days, 10);
         assert!(surface.is_ok());
@@ -314,10 +314,10 @@ mod tests_delta_gamma_profile {
     #[test]
     fn test_delta_gamma_surface_time_decay() {
         let profile = TestDeltaGammaProfile {
-            underlying_price: pos!(450.0),
+            underlying_price: pos_or_panic!(450.0),
         };
-        let price_range = (pos!(480.0), pos!(480.0)); // ITM call
-        let days = vec![pos!(30.0), pos!(7.0), pos!(1.0)];
+        let price_range = (pos_or_panic!(480.0), pos_or_panic!(480.0)); // ITM call
+        let days = vec![pos_or_panic!(30.0), pos_or_panic!(7.0), pos_or_panic!(1.0)];
 
         let surface = profile.delta_gamma_surface(price_range, days, 0).unwrap();
 
@@ -337,9 +337,9 @@ mod tests_delta_gamma_profile {
     #[test]
     fn test_delta_gamma_surface_empty_days() {
         let profile = TestDeltaGammaProfile {
-            underlying_price: pos!(450.0),
+            underlying_price: pos_or_panic!(450.0),
         };
-        let price_range = (pos!(400.0), pos!(500.0));
+        let price_range = (pos_or_panic!(400.0), pos_or_panic!(500.0));
         let days: Vec<Positive> = vec![];
 
         let surface = profile.delta_gamma_surface(price_range, days, 10).unwrap();

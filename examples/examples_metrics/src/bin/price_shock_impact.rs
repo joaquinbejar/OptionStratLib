@@ -32,16 +32,16 @@ fn main() -> Result<(), CurveError> {
         spos!(5.0),
         dec!(-0.15),
         dec!(0.08),
-        pos!(0.02),
+        pos_or_panic!(0.02),
         2,
         OptionDataPriceParams::new(
-            Some(Box::new(pos!(450.0))),
-            Some(ExpirationDate::Days(pos!(30.0))),
+            Some(Box::new(pos_or_panic!(450.0))),
+            Some(ExpirationDate::Days(pos_or_panic!(30.0))),
             Some(dec!(0.05)),
             spos!(0.01),
             Some("SPY".to_string()),
         ),
-        pos!(0.20),
+        pos_or_panic!(0.20),
     );
 
     let option_chain = OptionChain::build_chain(&params);
@@ -94,8 +94,8 @@ fn main() -> Result<(), CurveError> {
     // ========================================
     tracing::info!("Generating Price Shock Surface (Scenario Analysis)...");
 
-    let price_range = (pos!(380.0), pos!(520.0));
-    let vol_range = (pos!(0.10), pos!(0.50));
+    let price_range = (pos_or_panic!(380.0), pos_or_panic!(520.0));
+    let vol_range = (pos_or_panic!(0.10), pos_or_panic!(0.50));
 
     let shock_surface = option_chain
         .price_shock_surface(price_range, vol_range, 20, 20)

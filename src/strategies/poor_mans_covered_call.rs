@@ -855,6 +855,7 @@ test_strategy_traits!(PoorMansCoveredCall, test_short_call_implementations);
 #[cfg(test)]
 mod tests_pmcc_validation {
     use super::*;
+
     use crate::constants::DAYS_IN_A_YEAR;
     use crate::error::position::PositionValidationErrorKind;
 
@@ -863,21 +864,21 @@ mod tests_pmcc_validation {
     fn create_basic_strategy() -> PoorMansCoveredCall {
         PoorMansCoveredCall::new(
             "AAPL".to_string(),
-            pos!(150.0),
-            pos!(140.0),
-            pos!(160.0),
+            pos_or_panic!(150.0),
+            pos_or_panic!(140.0),
+            pos_or_panic!(160.0),
             ExpirationDate::Days(DAYS_IN_A_YEAR),
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(0.2),
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.2),
             dec!(0.01),
-            pos!(0.005),
-            pos!(1.0),
-            pos!(15.0),
-            pos!(5.0),
+            pos_or_panic!(0.005),
+            pos_or_panic!(1.0),
+            pos_or_panic!(15.0),
+            pos_or_panic!(5.0),
             Positive::ONE,
             Positive::ONE,
-            pos!(0.5),
-            pos!(0.5),
+            pos_or_panic!(0.5),
+            pos_or_panic!(0.5),
         )
     }
 
@@ -894,19 +895,19 @@ mod tests_pmcc_validation {
             OptionType::European,
             Side::Long,
             "AAPL".to_string(),
-            pos!(140.0),
+            pos_or_panic!(140.0),
             ExpirationDate::Days(DAYS_IN_A_YEAR),
-            pos!(0.2),
-            pos!(1.0),
-            pos!(150.0),
+            pos_or_panic!(0.2),
+            pos_or_panic!(1.0),
+            pos_or_panic!(150.0),
             dec!(0.01),
             OptionStyle::Call,
-            pos!(0.005),
+            pos_or_panic!(0.005),
             None,
         );
         let position = Position::new(
             option,
-            pos!(15.0),
+            pos_or_panic!(15.0),
             Utc::now(),
             Positive::ONE,
             Positive::ONE,
@@ -926,22 +927,22 @@ mod tests_pmcc_validation {
             OptionType::European,
             Side::Short,
             "AAPL".to_string(),
-            pos!(160.0),
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(0.2),
-            pos!(1.0),
-            pos!(150.0),
+            pos_or_panic!(160.0),
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.2),
+            pos_or_panic!(1.0),
+            pos_or_panic!(150.0),
             dec!(0.01),
             OptionStyle::Call,
-            pos!(0.005),
+            pos_or_panic!(0.005),
             None,
         );
         let position = Position::new(
             option,
-            pos!(5.0),
+            pos_or_panic!(5.0),
             Utc::now(),
-            pos!(0.5),
-            pos!(0.5),
+            pos_or_panic!(0.5),
+            pos_or_panic!(0.5),
             None,
             None,
         );
@@ -958,19 +959,19 @@ mod tests_pmcc_validation {
             OptionType::European,
             Side::Long,
             "AAPL".to_string(),
-            pos!(140.0),
+            pos_or_panic!(140.0),
             ExpirationDate::Days(DAYS_IN_A_YEAR),
-            pos!(0.2),
-            pos!(1.0),
-            pos!(150.0),
+            pos_or_panic!(0.2),
+            pos_or_panic!(1.0),
+            pos_or_panic!(150.0),
             dec!(0.01),
             OptionStyle::Put,
-            pos!(0.005),
+            pos_or_panic!(0.005),
             None,
         );
         let position = Position::new(
             option,
-            pos!(15.0),
+            pos_or_panic!(15.0),
             Utc::now(),
             Positive::ONE,
             Positive::ONE,
@@ -993,23 +994,30 @@ mod tests_pmcc_validation {
 #[cfg(test)]
 mod tests_pmcc_optimization {
     use super::*;
+
     use crate::chains::OptionData;
     use crate::constants::DAYS_IN_A_YEAR;
 
     use rust_decimal_macros::dec;
 
     fn create_test_option_chain() -> OptionChain {
-        let mut chain = OptionChain::new("AAPL", pos!(150.0), "2024-01-01".to_string(), None, None);
+        let mut chain = OptionChain::new(
+            "AAPL",
+            pos_or_panic!(150.0),
+            "2024-01-01".to_string(),
+            None,
+            None,
+        );
 
         // Add options at various strikes
         for strike in [140.0, 145.0, 150.0, 155.0, 160.0].iter() {
             chain.add_option(
-                pos!(*strike),
+                pos_or_panic!(*strike),
                 spos!(5.0),
                 spos!(5.2),
                 spos!(4.8),
                 spos!(5.0),
-                pos!(0.2),
+                pos_or_panic!(0.2),
                 Some(dec!(0.5)),
                 None,
                 None,
@@ -1024,21 +1032,21 @@ mod tests_pmcc_optimization {
     fn create_base_strategy() -> PoorMansCoveredCall {
         PoorMansCoveredCall::new(
             "AAPL".to_string(),
-            pos!(150.0),
-            pos!(140.0),
-            pos!(160.0),
+            pos_or_panic!(150.0),
+            pos_or_panic!(140.0),
+            pos_or_panic!(160.0),
             ExpirationDate::Days(DAYS_IN_A_YEAR),
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(0.2),
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.2),
             dec!(0.01),
-            pos!(0.005),
-            pos!(1.0),
-            pos!(15.0),
-            pos!(5.0),
+            pos_or_panic!(0.005),
+            pos_or_panic!(1.0),
+            pos_or_panic!(15.0),
+            pos_or_panic!(5.0),
             Positive::ONE,
             Positive::ONE,
-            pos!(0.5),
-            pos!(0.5),
+            pos_or_panic!(0.5),
+            pos_or_panic!(0.5),
         )
     }
 
@@ -1046,12 +1054,12 @@ mod tests_pmcc_optimization {
     fn test_is_valid_short_option() {
         let strategy = create_base_strategy();
         let option = OptionData::new(
-            pos!(160.0),
+            pos_or_panic!(160.0),
             spos!(5.0),
             spos!(5.2),
             spos!(4.8),
             spos!(5.0),
-            pos!(0.2),
+            pos_or_panic!(0.2),
             None,
             None,
             None,
@@ -1072,12 +1080,12 @@ mod tests_pmcc_optimization {
     fn test_is_valid_long_option() {
         let strategy = create_base_strategy();
         let option = OptionData::new(
-            pos!(140.0),
+            pos_or_panic!(140.0),
             spos!(5.0),
             spos!(5.2),
             spos!(4.8),
             spos!(5.0),
-            pos!(0.2),
+            pos_or_panic!(0.2),
             None,
             None,
             None,
@@ -1116,12 +1124,12 @@ mod tests_pmcc_optimization {
         let mut strategy = create_base_strategy();
         strategy.short_call.option.underlying_price = Positive::ZERO;
         let option = OptionData::new(
-            pos!(160.0),
+            pos_or_panic!(160.0),
             spos!(5.0),
             spos!(5.2),
             spos!(4.8),
             spos!(5.0),
-            pos!(0.2),
+            pos_or_panic!(0.2),
             None,
             None,
             None,
@@ -1144,12 +1152,12 @@ mod tests_pmcc_optimization {
         let result = strategy.set_underlying_price(&Positive::ZERO);
         assert!(result.is_err());
         let option = OptionData::new(
-            pos!(140.0),
+            pos_or_panic!(140.0),
             spos!(5.0),
             spos!(5.2),
             spos!(4.8),
             spos!(5.0),
-            pos!(0.2),
+            pos_or_panic!(0.2),
             None,
             None,
             None,
@@ -1170,6 +1178,7 @@ mod tests_pmcc_optimization {
 #[cfg(test)]
 mod tests_pmcc_pnl {
     use super::*;
+
     use crate::constants::DAYS_IN_A_YEAR;
 
     use num_traits::ToPrimitive;
@@ -1178,21 +1187,21 @@ mod tests_pmcc_pnl {
     fn create_test_strategy() -> PoorMansCoveredCall {
         PoorMansCoveredCall::new(
             "AAPL".to_string(),
-            pos!(150.0),
-            pos!(140.0),
-            pos!(160.0),
+            pos_or_panic!(150.0),
+            pos_or_panic!(140.0),
+            pos_or_panic!(160.0),
             ExpirationDate::Days(DAYS_IN_A_YEAR),
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(0.2),
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.2),
             dec!(0.01),
-            pos!(0.005),
-            pos!(1.0),
-            pos!(15.0),
-            pos!(5.0),
+            pos_or_panic!(0.005),
+            pos_or_panic!(1.0),
+            pos_or_panic!(15.0),
+            pos_or_panic!(5.0),
             Positive::ONE,
             Positive::ONE,
-            pos!(0.5),
-            pos!(0.5),
+            pos_or_panic!(0.5),
+            pos_or_panic!(0.5),
         )
     }
 
@@ -1201,11 +1210,11 @@ mod tests_pmcc_pnl {
         let strategy = create_test_strategy();
 
         // Below long strike
-        let profit_below = strategy.calculate_profit_at(&pos!(130.0)).unwrap();
+        let profit_below = strategy.calculate_profit_at(&pos_or_panic!(130.0)).unwrap();
         assert!(profit_below < Decimal::ZERO);
 
         // Between strikes
-        let profit_middle = strategy.calculate_profit_at(&pos!(150.0)).unwrap();
+        let profit_middle = strategy.calculate_profit_at(&pos_or_panic!(150.0)).unwrap();
         assert!(profit_middle > profit_below);
 
         // At short strike
@@ -1218,7 +1227,7 @@ mod tests_pmcc_pnl {
         );
 
         // Above short strike
-        let profit_above = strategy.calculate_profit_at(&pos!(170.0)).unwrap();
+        let profit_above = strategy.calculate_profit_at(&pos_or_panic!(170.0)).unwrap();
         assert_eq!(profit_above, profit_above);
     }
 
@@ -1257,6 +1266,7 @@ mod tests_pmcc_pnl {
 #[cfg(test)]
 mod tests_pmcc_best_area {
     use super::*;
+
     use crate::constants::DAYS_IN_A_YEAR;
 
     use num_traits::ToPrimitive;
@@ -1271,20 +1281,20 @@ mod tests_pmcc_best_area {
         let strategy = PoorMansCoveredCall::new(
             "SP500".to_string(),
             underlying_price,
-            pos!(5700.0), // long strike ITM
-            pos!(5900.0), // short strike OTM
+            pos_or_panic!(5700.0), // long strike ITM
+            pos_or_panic!(5900.0), // short strike OTM
             ExpirationDate::Days(DAYS_IN_A_YEAR),
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(0.2),
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.2),
             dec!(0.01),
-            pos!(0.005),
-            pos!(1.0),
-            pos!(15.0),
-            pos!(5.0),
+            pos_or_panic!(0.005),
+            pos_or_panic!(1.0),
+            pos_or_panic!(15.0),
+            pos_or_panic!(5.0),
             Positive::ONE,
             Positive::ONE,
-            pos!(0.5),
-            pos!(0.5),
+            pos_or_panic!(0.5),
+            pos_or_panic!(0.5),
         );
 
         Ok((strategy, option_chain))
@@ -1332,6 +1342,7 @@ mod tests_pmcc_best_area {
 #[cfg(test)]
 mod tests_pmcc_best_ratio {
     use super::*;
+
     use crate::constants::DAYS_IN_A_YEAR;
 
     use num_traits::ToPrimitive;
@@ -1346,20 +1357,20 @@ mod tests_pmcc_best_ratio {
         let strategy = PoorMansCoveredCall::new(
             "SP500".to_string(),
             underlying_price,
-            pos!(5700.0),
-            pos!(5900.0),
+            pos_or_panic!(5700.0),
+            pos_or_panic!(5900.0),
             ExpirationDate::Days(DAYS_IN_A_YEAR),
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(0.2),
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.2),
             dec!(0.01),
-            pos!(0.005),
-            pos!(1.0),
-            pos!(15.0),
-            pos!(5.0),
+            pos_or_panic!(0.005),
+            pos_or_panic!(1.0),
+            pos_or_panic!(15.0),
+            pos_or_panic!(5.0),
             Positive::ONE,
             Positive::ONE,
-            pos!(0.5),
-            pos!(0.5),
+            pos_or_panic!(0.5),
+            pos_or_panic!(0.5),
         );
 
         Ok((strategy, option_chain))
@@ -1394,11 +1405,11 @@ mod tests_pmcc_best_ratio {
         let (mut strategy, option_chain) = set_up().unwrap();
         strategy.get_best_ratio(
             &option_chain,
-            FindOptimalSide::Range(pos!(5750.0), pos!(5850.0)),
+            FindOptimalSide::Range(pos_or_panic!(5750.0), pos_or_panic!(5850.0)),
         );
 
-        assert!(strategy.long_call.option.strike_price >= pos!(5750.0));
-        assert!(strategy.short_call.option.strike_price <= pos!(5850.0));
+        assert!(strategy.long_call.option.strike_price >= pos_or_panic!(5750.0));
+        assert!(strategy.short_call.option.strike_price <= pos_or_panic!(5850.0));
 
         assert!(strategy.get_profit_ratio().unwrap().to_f64().unwrap() > 0.0);
         assert!(strategy.validate());
@@ -1408,6 +1419,7 @@ mod tests_pmcc_best_ratio {
 #[cfg(test)]
 mod tests_short_straddle_delta {
     use super::*;
+
     use crate::model::types::OptionStyle;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
@@ -1416,33 +1428,33 @@ mod tests_short_straddle_delta {
     use rust_decimal_macros::dec;
 
     fn get_strategy(long_strike: Positive, short_strike: Positive) -> PoorMansCoveredCall {
-        let underlying_price = pos!(7138.5);
+        let underlying_price = pos_or_panic!(7138.5);
         PoorMansCoveredCall::new(
             "CL".to_string(),
             underlying_price, // underlying_price
             long_strike,      // call_strike 7450
             short_strike,     // put_strike 7050
-            ExpirationDate::Days(pos!(45.0)),
-            ExpirationDate::Days(pos!(15.0)),
-            pos!(0.3745),   // implied_volatility
-            dec!(0.05),     // risk_free_rate
-            Positive::ZERO, // dividend_yield
-            pos!(1.0),      // quantity
-            pos!(84.2),     // premium_short_call
-            pos!(353.2),    // premium_long_call
-            pos!(7.01),     // open_fee_short_call
-            pos!(7.01),     // close_fee_short_call
-            pos!(7.01),     // open_fee_long_call
-            pos!(7.01),     // close_fee_long_call
+            ExpirationDate::Days(pos_or_panic!(45.0)),
+            ExpirationDate::Days(pos_or_panic!(15.0)),
+            pos_or_panic!(0.3745), // implied_volatility
+            dec!(0.05),            // risk_free_rate
+            Positive::ZERO,        // dividend_yield
+            pos_or_panic!(1.0),    // quantity
+            pos_or_panic!(84.2),   // premium_short_call
+            pos_or_panic!(353.2),  // premium_long_call
+            pos_or_panic!(7.01),   // open_fee_short_call
+            pos_or_panic!(7.01),   // close_fee_short_call
+            pos_or_panic!(7.01),   // open_fee_long_call
+            pos_or_panic!(7.01),   // close_fee_long_call
         )
     }
 
     #[test]
     fn create_test_short_straddle_reducing_adjustments() {
-        let strategy = get_strategy(pos!(7250.0), pos!(7300.0));
+        let strategy = get_strategy(pos_or_panic!(7250.0), pos_or_panic!(7300.0));
         let size = dec!(0.0887293);
-        let delta = pos!(0.2168462168831);
-        let k = pos!(7300.0);
+        let delta = pos_or_panic!(0.2168462168831);
+        let k = pos_or_panic!(7300.0);
         assert_decimal_eq!(
             strategy.delta_neutrality().unwrap().net_delta,
             size,
@@ -1479,10 +1491,10 @@ mod tests_short_straddle_delta {
 
     #[test]
     fn create_test_short_straddle_increasing_adjustments() {
-        let strategy = get_strategy(pos!(7450.0), pos!(7250.0));
+        let strategy = get_strategy(pos_or_panic!(7450.0), pos_or_panic!(7250.0));
         let size = dec!(-0.028694805);
-        let delta = pos!(0.0689809869957862);
-        let k = pos!(7450.0);
+        let delta = pos_or_panic!(0.0689809869957862);
+        let k = pos_or_panic!(7450.0);
         assert_decimal_eq!(
             strategy.delta_neutrality().unwrap().net_delta,
             size,
@@ -1519,7 +1531,7 @@ mod tests_short_straddle_delta {
 
     #[test]
     fn create_test_short_straddle_no_adjustments() {
-        let strategy = get_strategy(pos!(7379.0), pos!(7250.0));
+        let strategy = get_strategy(pos_or_panic!(7379.0), pos_or_panic!(7250.0));
 
         assert_decimal_eq!(
             strategy.delta_neutrality().unwrap().net_delta,
@@ -1535,6 +1547,7 @@ mod tests_short_straddle_delta {
 #[cfg(test)]
 mod tests_short_straddle_delta_size {
     use super::*;
+
     use crate::model::types::OptionStyle;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
@@ -1543,33 +1556,33 @@ mod tests_short_straddle_delta_size {
     use rust_decimal_macros::dec;
 
     fn get_strategy(long_strike: Positive, short_strike: Positive) -> PoorMansCoveredCall {
-        let underlying_price = pos!(7138.5);
+        let underlying_price = pos_or_panic!(7138.5);
         PoorMansCoveredCall::new(
             "CL".to_string(),
             underlying_price, // underlying_price
             long_strike,      // call_strike 7450
             short_strike,     // put_strike 7050
-            ExpirationDate::Days(pos!(45.0)),
-            ExpirationDate::Days(pos!(15.0)),
-            pos!(0.3745),   // implied_volatility
-            dec!(0.05),     // risk_free_rate
-            Positive::ZERO, // dividend_yield
-            pos!(2.0),      // quantity
-            pos!(84.2),     // premium_short_call
-            pos!(353.2),    // premium_long_call
-            pos!(7.01),     // open_fee_short_call
-            pos!(7.01),     // close_fee_short_call
-            pos!(7.01),     // open_fee_long_call
-            pos!(7.01),     // close_fee_long_call
+            ExpirationDate::Days(pos_or_panic!(45.0)),
+            ExpirationDate::Days(pos_or_panic!(15.0)),
+            pos_or_panic!(0.3745), // implied_volatility
+            dec!(0.05),            // risk_free_rate
+            Positive::ZERO,        // dividend_yield
+            pos_or_panic!(2.0),    // quantity
+            pos_or_panic!(84.2),   // premium_short_call
+            pos_or_panic!(353.2),  // premium_long_call
+            pos_or_panic!(7.01),   // open_fee_short_call
+            pos_or_panic!(7.01),   // close_fee_short_call
+            pos_or_panic!(7.01),   // open_fee_long_call
+            pos_or_panic!(7.01),   // close_fee_long_call
         )
     }
 
     #[test]
     fn create_test_short_straddle_reducing_adjustments() {
-        let strategy = get_strategy(pos!(7250.1), pos!(7300.0));
+        let strategy = get_strategy(pos_or_panic!(7250.1), pos_or_panic!(7300.0));
         let size = dec!(0.1773);
-        let delta = pos!(0.4334878994986714);
-        let k = pos!(7300.0);
+        let delta = pos_or_panic!(0.4334878994986714);
+        let k = pos_or_panic!(7300.0);
         assert_decimal_eq!(
             strategy.delta_neutrality().unwrap().net_delta,
             size,
@@ -1606,10 +1619,10 @@ mod tests_short_straddle_delta_size {
 
     #[test]
     fn create_test_short_straddle_increasing_adjustments() {
-        let strategy = get_strategy(pos!(7450.0), pos!(7250.0));
+        let strategy = get_strategy(pos_or_panic!(7450.0), pos_or_panic!(7250.0));
         let size = dec!(-0.057389);
-        let delta = pos!(0.1379619739915724);
-        let k = pos!(7450.0);
+        let delta = pos_or_panic!(0.1379619739915724);
+        let k = pos_or_panic!(7450.0);
         assert_decimal_eq!(
             strategy.delta_neutrality().unwrap().net_delta,
             size,
@@ -1646,7 +1659,7 @@ mod tests_short_straddle_delta_size {
 
     #[test]
     fn create_test_short_straddle_no_adjustments() {
-        let strategy = get_strategy(pos!(7387.5), pos!(7255.0));
+        let strategy = get_strategy(pos_or_panic!(7387.5), pos_or_panic!(7255.0));
 
         assert_decimal_eq!(
             strategy.delta_neutrality().unwrap().net_delta,
@@ -1662,6 +1675,7 @@ mod tests_short_straddle_delta_size {
 #[cfg(test)]
 mod tests_poor_mans_covered_call_probability {
     use super::*;
+
     use crate::assert_pos_relative_eq;
     use crate::strategies::probabilities::utils::PriceTrend;
     use rust_decimal_macros::dec;
@@ -1669,22 +1683,22 @@ mod tests_poor_mans_covered_call_probability {
     /// Creates a test Poor Man's Covered Call with standard parameters
     fn create_test_pmcc() -> PoorMansCoveredCall {
         PoorMansCoveredCall::new(
-            "GOLD".to_string(),                // underlying_symbol
-            pos!(2703.3),                      // underlying_price
-            pos!(2600.0),                      // long_call_strike
-            pos!(2800.0),                      // short_call_strike OTM
-            ExpirationDate::Days(pos!(120.0)), // long_call_expiration
-            ExpirationDate::Days(pos!(30.0)),  // short_call_expiration
-            pos!(0.17),                        // implied_volatility
-            dec!(0.05),                        // risk_free_rate
-            Positive::ZERO,                    // dividend_yield
-            pos!(3.0),                         // quantity
-            pos!(154.7),                       // premium_short_call
-            pos!(30.8),                        // premium_long_call
-            pos!(1.74),                        // open_fee_short_call
-            pos!(1.74),                        // close_fee_short_call
-            pos!(0.85),                        // open_fee_long_call
-            pos!(0.85),                        // close_fee_long_call
+            "GOLD".to_string(),                         // underlying_symbol
+            pos_or_panic!(2703.3),                      // underlying_price
+            pos_or_panic!(2600.0),                      // long_call_strike
+            pos_or_panic!(2800.0),                      // short_call_strike OTM
+            ExpirationDate::Days(pos_or_panic!(120.0)), // long_call_expiration
+            ExpirationDate::Days(pos_or_panic!(30.0)),  // short_call_expiration
+            pos_or_panic!(0.17),                        // implied_volatility
+            dec!(0.05),                                 // risk_free_rate
+            Positive::ZERO,                             // dividend_yield
+            pos_or_panic!(3.0),                         // quantity
+            pos_or_panic!(154.7),                       // premium_short_call
+            pos_or_panic!(30.8),                        // premium_long_call
+            pos_or_panic!(1.74),                        // open_fee_short_call
+            pos_or_panic!(1.74),                        // close_fee_short_call
+            pos_or_panic!(0.85),                        // open_fee_long_call
+            pos_or_panic!(0.85),                        // close_fee_long_call
         )
     }
 
@@ -1692,8 +1706,8 @@ mod tests_poor_mans_covered_call_probability {
     fn test_get_expiration() {
         let pmcc = create_test_pmcc();
         let expected_dates = [
-            ExpirationDate::Days(pos!(30.0)),
-            ExpirationDate::Days(pos!(120.0)),
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            ExpirationDate::Days(pos_or_panic!(120.0)),
         ];
 
         for date in pmcc.get_expiration().values() {
@@ -1725,7 +1739,7 @@ mod tests_poor_mans_covered_call_probability {
         assert!(range.lower_bound.is_some());
         assert!(range.upper_bound.is_none()); // Unlimited upside
         assert!(range.probability > Positive::ZERO);
-        assert!(range.probability <= pos!(1.0));
+        assert!(range.probability <= pos_or_panic!(1.0));
 
         // Break-even point should be above long call strike
         assert!(range.lower_bound.unwrap() > pmcc.long_call.option.strike_price);
@@ -1745,7 +1759,7 @@ mod tests_poor_mans_covered_call_probability {
         assert!(loss_range.lower_bound.is_none()); // No lower bound
         assert!(loss_range.upper_bound.is_some());
         assert!(loss_range.probability > Positive::ZERO);
-        assert!(loss_range.probability <= pos!(1.0));
+        assert!(loss_range.probability <= pos_or_panic!(1.0));
     }
 
     #[test]
@@ -1759,7 +1773,11 @@ mod tests_poor_mans_covered_call_probability {
 
         let total_loss_prob: Positive = loss_ranges.iter().map(|r| r.probability).sum();
 
-        assert_pos_relative_eq!(total_profit_prob + total_loss_prob, pos!(1.0), pos!(0.0001));
+        assert_pos_relative_eq!(
+            total_profit_prob + total_loss_prob,
+            pos_or_panic!(1.0),
+            pos_or_panic!(0.0001)
+        );
     }
 
     #[test]
@@ -1777,15 +1795,15 @@ mod tests_poor_mans_covered_call_probability {
     fn test_with_volatility_adjustment() {
         let pmcc = create_test_pmcc();
         let vol_adj = Some(VolatilityAdjustment {
-            base_volatility: pos!(0.25),
-            std_dev_adjustment: pos!(0.05),
+            base_volatility: pos_or_panic!(0.25),
+            std_dev_adjustment: pos_or_panic!(0.05),
         });
 
         let prob = pmcc.probability_of_profit(vol_adj, None);
         assert!(prob.is_ok());
         let probability = prob.unwrap();
         assert!(probability > Positive::ZERO);
-        assert!(probability <= pos!(1.0));
+        assert!(probability <= pos_or_panic!(1.0));
     }
 
     #[test]
@@ -1800,7 +1818,7 @@ mod tests_poor_mans_covered_call_probability {
         assert!(prob.is_ok());
         let probability = prob.unwrap();
         assert!(probability > Positive::ZERO);
-        assert!(probability <= pos!(1.0));
+        assert!(probability <= pos_or_panic!(1.0));
     }
 
     #[test]
@@ -1833,8 +1851,8 @@ mod tests_poor_mans_covered_call_probability {
     fn test_high_volatility_scenario() {
         let pmcc = create_test_pmcc();
         let vol_adj = Some(VolatilityAdjustment {
-            base_volatility: pos!(0.7),
-            std_dev_adjustment: pos!(0.05),
+            base_volatility: pos_or_panic!(0.7),
+            std_dev_adjustment: pos_or_panic!(0.05),
         });
 
         let analysis = pmcc.analyze_probabilities(vol_adj, None).unwrap();
@@ -1851,7 +1869,7 @@ mod tests_poor_mans_covered_call_probability {
 
         assert!(max_profit_prob >= Positive::ZERO);
         assert!(max_loss_prob >= Positive::ZERO);
-        assert!(max_profit_prob + max_loss_prob <= pos!(1.0));
+        assert!(max_profit_prob + max_loss_prob <= pos_or_panic!(1.0));
     }
 
     #[test]
@@ -1865,6 +1883,7 @@ mod tests_poor_mans_covered_call_probability {
 #[cfg(test)]
 mod tests_poor_mans_covered_call_position_management {
     use super::*;
+
     use crate::error::position::PositionValidationErrorKind;
     use crate::model::types::{OptionStyle, Side};
 
@@ -1873,22 +1892,22 @@ mod tests_poor_mans_covered_call_position_management {
 
     fn create_test_short_poor_mans_covered_call() -> PoorMansCoveredCall {
         PoorMansCoveredCall::new(
-            "GOLD".to_string(),                // underlying_symbol
-            pos!(2703.3),                      // underlying_price
-            pos!(2600.0),                      // long_call_strike
-            pos!(2800.0),                      // short_call_strike OTM
-            ExpirationDate::Days(pos!(120.0)), // long_call_expiration
-            ExpirationDate::Days(pos!(30.0)), // short_call_expiration 30-45 days delta 0.30 or less
-            pos!(0.17),                       // implied_volatility
-            dec!(0.05),                       // risk_free_rate
-            Positive::ZERO,                   // dividend_yield
-            pos!(2.0),                        // quantity
-            pos!(154.7),                      // premium_short_call
-            pos!(30.8),                       // premium_long_call
-            pos!(1.74),                       // open_fee_short_call
-            pos!(1.74),                       // close_fee_short_call
-            pos!(0.85),                       // open_fee_long_call
-            pos!(0.85),                       // close_fee_long_call
+            "GOLD".to_string(),                         // underlying_symbol
+            pos_or_panic!(2703.3),                      // underlying_price
+            pos_or_panic!(2600.0),                      // long_call_strike
+            pos_or_panic!(2800.0),                      // short_call_strike OTM
+            ExpirationDate::Days(pos_or_panic!(120.0)), // long_call_expiration
+            ExpirationDate::Days(pos_or_panic!(30.0)), // short_call_expiration 30-45 days delta 0.30 or less
+            pos_or_panic!(0.17),                       // implied_volatility
+            dec!(0.05),                                // risk_free_rate
+            Positive::ZERO,                            // dividend_yield
+            pos_or_panic!(2.0),                        // quantity
+            pos_or_panic!(154.7),                      // premium_short_call
+            pos_or_panic!(30.8),                       // premium_long_call
+            pos_or_panic!(1.74),                       // open_fee_short_call
+            pos_or_panic!(1.74),                       // close_fee_short_call
+            pos_or_panic!(0.85),                       // open_fee_long_call
+            pos_or_panic!(0.85),                       // close_fee_long_call
         )
     }
 
@@ -1897,28 +1916,37 @@ mod tests_poor_mans_covered_call_position_management {
         let mut poor_mans_covered_call = create_test_short_poor_mans_covered_call();
 
         // Test getting short call position
-        let call_position =
-            poor_mans_covered_call.get_position(&OptionStyle::Call, &Side::Long, &pos!(2600.0));
+        let call_position = poor_mans_covered_call.get_position(
+            &OptionStyle::Call,
+            &Side::Long,
+            &pos_or_panic!(2600.0),
+        );
         assert!(call_position.is_ok());
         let positions = call_position.unwrap();
         assert_eq!(positions.len(), 1);
-        assert_eq!(positions[0].option.strike_price, pos!(2600.0));
+        assert_eq!(positions[0].option.strike_price, pos_or_panic!(2600.0));
         assert_eq!(positions[0].option.option_style, OptionStyle::Call);
         assert_eq!(positions[0].option.side, Side::Long);
 
         // Test getting short put position
-        let put_position =
-            poor_mans_covered_call.get_position(&OptionStyle::Call, &Side::Short, &pos!(2800.0));
+        let put_position = poor_mans_covered_call.get_position(
+            &OptionStyle::Call,
+            &Side::Short,
+            &pos_or_panic!(2800.0),
+        );
         assert!(put_position.is_ok());
         let positions = put_position.unwrap();
         assert_eq!(positions.len(), 1);
-        assert_eq!(positions[0].option.strike_price, pos!(2800.0));
+        assert_eq!(positions[0].option.strike_price, pos_or_panic!(2800.0));
         assert_eq!(positions[0].option.option_style, OptionStyle::Call);
         assert_eq!(positions[0].option.side, Side::Short);
 
         // Test getting non-existent position
-        let invalid_position =
-            poor_mans_covered_call.get_position(&OptionStyle::Call, &Side::Short, &pos!(2801.0));
+        let invalid_position = poor_mans_covered_call.get_position(
+            &OptionStyle::Call,
+            &Side::Short,
+            &pos_or_panic!(2801.0),
+        );
         assert!(invalid_position.is_err());
         match invalid_position {
             Err(PositionError::ValidationError(
@@ -1942,21 +1970,27 @@ mod tests_poor_mans_covered_call_position_management {
 
         // Modify short call position
         let mut modified_call = poor_mans_covered_call.short_call.clone();
-        modified_call.option.quantity = pos!(2.0);
+        modified_call.option.quantity = pos_or_panic!(2.0);
         let result = poor_mans_covered_call.modify_position(&modified_call);
         assert!(result.is_ok());
-        assert_eq!(poor_mans_covered_call.short_call.option.quantity, pos!(2.0));
+        assert_eq!(
+            poor_mans_covered_call.short_call.option.quantity,
+            pos_or_panic!(2.0)
+        );
 
         // Modify short put position
         let mut modified_put = poor_mans_covered_call.long_call.clone();
-        modified_put.option.quantity = pos!(2.0);
+        modified_put.option.quantity = pos_or_panic!(2.0);
         let result = poor_mans_covered_call.modify_position(&modified_put);
         assert!(result.is_ok());
-        assert_eq!(poor_mans_covered_call.long_call.option.quantity, pos!(2.0));
+        assert_eq!(
+            poor_mans_covered_call.long_call.option.quantity,
+            pos_or_panic!(2.0)
+        );
 
         // Test modifying with invalid position
         let mut invalid_position = poor_mans_covered_call.short_call.clone();
-        invalid_position.option.strike_price = pos!(95.0);
+        invalid_position.option.strike_price = pos_or_panic!(95.0);
         let result = poor_mans_covered_call.modify_position(&invalid_position);
         assert!(result.is_err());
         match result {
@@ -1977,6 +2011,7 @@ mod tests_poor_mans_covered_call_position_management {
 #[cfg(test)]
 mod tests_adjust_option_position {
     use super::*;
+
     use crate::model::types::{OptionStyle, Side};
 
     use rust_decimal_macros::dec;
@@ -1984,22 +2019,22 @@ mod tests_adjust_option_position {
     // Helper function to create a test strategy
     fn create_test_strategy() -> PoorMansCoveredCall {
         PoorMansCoveredCall::new(
-            "GOLD".to_string(),                // underlying_symbol
-            pos!(2703.3),                      // underlying_price
-            pos!(2600.0),                      // long_call_strike
-            pos!(2800.0),                      // short_call_strike OTM
-            ExpirationDate::Days(pos!(120.0)), // long_call_expiration
-            ExpirationDate::Days(pos!(30.0)), // short_call_expiration 30-45 days delta 0.30 or less
-            pos!(0.17),                       // implied_volatility
-            dec!(0.05),                       // risk_free_rate
-            Positive::ZERO,                   // dividend_yield
-            pos!(2.0),                        // quantity
-            pos!(154.7),                      // premium_short_call
-            pos!(30.8),                       // premium_long_call
-            pos!(1.74),                       // open_fee_short_call
-            pos!(1.74),                       // close_fee_short_call
-            pos!(0.85),                       // open_fee_long_call
-            pos!(0.85),                       // close_fee_long_call
+            "GOLD".to_string(),                         // underlying_symbol
+            pos_or_panic!(2703.3),                      // underlying_price
+            pos_or_panic!(2600.0),                      // long_call_strike
+            pos_or_panic!(2800.0),                      // short_call_strike OTM
+            ExpirationDate::Days(pos_or_panic!(120.0)), // long_call_expiration
+            ExpirationDate::Days(pos_or_panic!(30.0)), // short_call_expiration 30-45 days delta 0.30 or less
+            pos_or_panic!(0.17),                       // implied_volatility
+            dec!(0.05),                                // risk_free_rate
+            Positive::ZERO,                            // dividend_yield
+            pos_or_panic!(2.0),                        // quantity
+            pos_or_panic!(154.7),                      // premium_short_call
+            pos_or_panic!(30.8),                       // premium_long_call
+            pos_or_panic!(1.74),                       // open_fee_short_call
+            pos_or_panic!(1.74),                       // close_fee_short_call
+            pos_or_panic!(0.85),                       // open_fee_long_call
+            pos_or_panic!(0.85),                       // close_fee_long_call
         )
     }
 
@@ -2007,11 +2042,11 @@ mod tests_adjust_option_position {
     fn test_adjust_existing_call_position() {
         let mut strategy = create_test_strategy();
         let initial_quantity = strategy.short_call.option.quantity;
-        let adjustment = pos!(1.0);
+        let adjustment = pos_or_panic!(1.0);
 
         let result = strategy.adjust_option_position(
             adjustment.to_dec(),
-            &pos!(2800.0),
+            &pos_or_panic!(2800.0),
             &OptionStyle::Call,
             &Side::Short,
         );
@@ -2027,11 +2062,11 @@ mod tests_adjust_option_position {
     fn test_adjust_existing_put_position() {
         let mut strategy = create_test_strategy();
         let initial_quantity = strategy.long_call.option.quantity;
-        let adjustment = pos!(1.0);
+        let adjustment = pos_or_panic!(1.0);
 
         let result = strategy.adjust_option_position(
             adjustment.to_dec(),
-            &pos!(2600.0),
+            &pos_or_panic!(2600.0),
             &OptionStyle::Call,
             &Side::Long,
         );
@@ -2050,7 +2085,7 @@ mod tests_adjust_option_position {
         // Try to adjust a non-existent long call position
         let result = strategy.adjust_option_position(
             Decimal::ONE,
-            &pos!(110.0),
+            &pos_or_panic!(110.0),
             &OptionStyle::Put,
             &Side::Long,
         );
@@ -2071,7 +2106,7 @@ mod tests_adjust_option_position {
         // Try to adjust position with wrong strike price
         let result = strategy.adjust_option_position(
             Decimal::ONE,
-            &pos!(100.0), // Invalid strike price
+            &pos_or_panic!(100.0), // Invalid strike price
             &OptionStyle::Call,
             &Side::Short,
         );
@@ -2086,7 +2121,7 @@ mod tests_adjust_option_position {
 
         let result = strategy.adjust_option_position(
             Decimal::ZERO,
-            &pos!(2800.0),
+            &pos_or_panic!(2800.0),
             &OptionStyle::Call,
             &Side::Short,
         );
@@ -2099,6 +2134,7 @@ mod tests_adjust_option_position {
 #[cfg(test)]
 mod tests_strategy_constructor {
     use super::*;
+
     use crate::model::utils::create_sample_position;
 
     #[test]
@@ -2107,18 +2143,18 @@ mod tests_strategy_constructor {
             create_sample_position(
                 OptionStyle::Call,
                 Side::Long,
-                pos!(90.0),
-                pos!(1.0),
-                pos!(95.0),
-                pos!(0.2),
+                pos_or_panic!(90.0),
+                pos_or_panic!(1.0),
+                pos_or_panic!(95.0),
+                pos_or_panic!(0.2),
             ),
             create_sample_position(
                 OptionStyle::Call,
                 Side::Short,
-                pos!(90.0),
-                pos!(1.0),
-                pos!(105.0),
-                pos!(0.2),
+                pos_or_panic!(90.0),
+                pos_or_panic!(1.0),
+                pos_or_panic!(105.0),
+                pos_or_panic!(0.2),
             ),
         ];
 
@@ -2126,8 +2162,11 @@ mod tests_strategy_constructor {
         assert!(result.is_ok());
 
         let strategy = result.unwrap();
-        assert_eq!(strategy.long_call.option.strike_price, pos!(95.0));
-        assert_eq!(strategy.short_call.option.strike_price, pos!(105.0));
+        assert_eq!(strategy.long_call.option.strike_price, pos_or_panic!(95.0));
+        assert_eq!(
+            strategy.short_call.option.strike_price,
+            pos_or_panic!(105.0)
+        );
     }
 
     #[test]
@@ -2135,10 +2174,10 @@ mod tests_strategy_constructor {
         let options = vec![create_sample_position(
             OptionStyle::Call,
             Side::Long,
-            pos!(90.0),
-            pos!(1.0),
-            pos!(95.0),
-            pos!(0.2),
+            pos_or_panic!(90.0),
+            pos_or_panic!(1.0),
+            pos_or_panic!(95.0),
+            pos_or_panic!(0.2),
         )];
 
         let result = PoorMansCoveredCall::get_strategy(&options);
@@ -2154,19 +2193,19 @@ mod tests_strategy_constructor {
         let mut option1 = create_sample_position(
             OptionStyle::Call,
             Side::Long,
-            pos!(90.0),
-            pos!(1.0),
-            pos!(95.0),
-            pos!(0.2),
+            pos_or_panic!(90.0),
+            pos_or_panic!(1.0),
+            pos_or_panic!(95.0),
+            pos_or_panic!(0.2),
         );
         option1.option.option_style = OptionStyle::Put;
         let option2 = create_sample_position(
             OptionStyle::Call,
             Side::Short,
-            pos!(90.0),
-            pos!(1.0),
-            pos!(105.0),
-            pos!(0.2),
+            pos_or_panic!(90.0),
+            pos_or_panic!(1.0),
+            pos_or_panic!(105.0),
+            pos_or_panic!(0.2),
         );
 
         let options = vec![option1, option2];
@@ -2184,18 +2223,18 @@ mod tests_strategy_constructor {
             create_sample_position(
                 OptionStyle::Call,
                 Side::Short,
-                pos!(90.0),
-                pos!(1.0),
-                pos!(95.0),
-                pos!(0.2),
+                pos_or_panic!(90.0),
+                pos_or_panic!(1.0),
+                pos_or_panic!(95.0),
+                pos_or_panic!(0.2),
             ),
             create_sample_position(
                 OptionStyle::Call,
                 Side::Long,
-                pos!(90.0),
-                pos!(1.0),
-                pos!(105.0),
-                pos!(0.2),
+                pos_or_panic!(90.0),
+                pos_or_panic!(1.0),
+                pos_or_panic!(105.0),
+                pos_or_panic!(0.2),
             ),
         ];
         let result = PoorMansCoveredCall::get_strategy(&options);
@@ -2211,6 +2250,7 @@ mod tests_strategy_constructor {
 #[cfg(test)]
 mod tests_poor_mans_covered_call_pnl {
     use super::*;
+
     use crate::assert_pos_relative_eq;
     use crate::model::utils::create_sample_position;
     use rust_decimal_macros::dec;
@@ -2220,20 +2260,20 @@ mod tests_poor_mans_covered_call_pnl {
         let long_call = create_sample_position(
             OptionStyle::Call,
             Side::Long,
-            pos!(100.0), // Underlying price
-            pos!(1.0),   // Quantity
-            pos!(95.0),  // Strike price (Lower)
-            pos!(0.2),   // Implied volatility
+            pos_or_panic!(100.0), // Underlying price
+            pos_or_panic!(1.0),   // Quantity
+            pos_or_panic!(95.0),  // Strike price (Lower)
+            pos_or_panic!(0.2),   // Implied volatility
         );
 
         // Create short call with higher strike
         let short_call = create_sample_position(
             OptionStyle::Call,
             Side::Short,
-            pos!(100.0), // Same underlying price
-            pos!(1.0),   // Quantity
-            pos!(105.0), // Higher strike price
-            pos!(0.2),   // Implied volatility
+            pos_or_panic!(100.0), // Same underlying price
+            pos_or_panic!(1.0),   // Quantity
+            pos_or_panic!(105.0), // Higher strike price
+            pos_or_panic!(0.2),   // Implied volatility
         );
 
         PoorMansCoveredCall::get_strategy(&[long_call, short_call])
@@ -2242,9 +2282,9 @@ mod tests_poor_mans_covered_call_pnl {
     #[test]
     fn test_calculate_pnl_below_strikes() {
         let pmcc = create_test_poor_mans_covered_call().unwrap();
-        let market_price = pos!(90.0); // Below both strikes
-        let expiration_date = ExpirationDate::Days(pos!(20.0));
-        let implied_volatility = pos!(0.2);
+        let market_price = pos_or_panic!(90.0); // Below both strikes
+        let expiration_date = ExpirationDate::Days(pos_or_panic!(20.0));
+        let implied_volatility = pos_or_panic!(0.2);
 
         let result = pmcc.calculate_pnl(&market_price, expiration_date, &implied_volatility);
         assert!(result.is_ok());
@@ -2253,17 +2293,17 @@ mod tests_poor_mans_covered_call_pnl {
         assert!(pnl.unrealized.is_some());
 
         // Both options OTM
-        assert_pos_relative_eq!(pnl.initial_income, pos!(5.0), pos!(1e-6));
-        assert_pos_relative_eq!(pnl.initial_costs, pos!(7.0), pos!(1e-6));
+        assert_pos_relative_eq!(pnl.initial_income, pos_or_panic!(5.0), pos_or_panic!(1e-6));
+        assert_pos_relative_eq!(pnl.initial_costs, pos_or_panic!(7.0), pos_or_panic!(1e-6));
         assert!(pnl.unrealized.unwrap() < dec!(0.0)); // Loss due to time decay
     }
 
     #[test]
     fn test_calculate_pnl_between_strikes() {
         let pmcc = create_test_poor_mans_covered_call().unwrap();
-        let market_price = pos!(101.0); // Between strikes
-        let expiration_date = ExpirationDate::Days(pos!(20.0));
-        let implied_volatility = pos!(0.2);
+        let market_price = pos_or_panic!(101.0); // Between strikes
+        let expiration_date = ExpirationDate::Days(pos_or_panic!(20.0));
+        let implied_volatility = pos_or_panic!(0.2);
 
         let result = pmcc.calculate_pnl(&market_price, expiration_date, &implied_volatility);
         assert!(result.is_ok());
@@ -2278,9 +2318,9 @@ mod tests_poor_mans_covered_call_pnl {
     #[test]
     fn test_calculate_pnl_above_strikes() {
         let pmcc = create_test_poor_mans_covered_call().unwrap();
-        let market_price = pos!(110.0); // Above both strikes
-        let expiration_date = ExpirationDate::Days(pos!(20.0));
-        let implied_volatility = pos!(0.2);
+        let market_price = pos_or_panic!(110.0); // Above both strikes
+        let expiration_date = ExpirationDate::Days(pos_or_panic!(20.0));
+        let implied_volatility = pos_or_panic!(0.2);
 
         let result = pmcc.calculate_pnl(&market_price, expiration_date, &implied_volatility);
         assert!(result.is_ok());
@@ -2296,9 +2336,9 @@ mod tests_poor_mans_covered_call_pnl {
     #[test]
     fn test_calculate_pnl_with_higher_volatility() {
         let pmcc = create_test_poor_mans_covered_call().unwrap();
-        let market_price = pos!(105.0);
-        let expiration_date = ExpirationDate::Days(pos!(20.0));
-        let implied_volatility = pos!(0.4); // Higher volatility
+        let market_price = pos_or_panic!(105.0);
+        let expiration_date = ExpirationDate::Days(pos_or_panic!(20.0));
+        let implied_volatility = pos_or_panic!(0.4); // Higher volatility
 
         let result = pmcc.calculate_pnl(&market_price, expiration_date, &implied_volatility);
         assert!(result.is_ok());

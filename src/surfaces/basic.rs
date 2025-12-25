@@ -254,10 +254,10 @@ pub trait BasicSurfaces {
     /// ```ignore
     /// use optionstratlib::surfaces::BasicSurfaces;
     /// use optionstratlib::model::BasicAxisTypes;
-    /// use optionstratlib::pos;
+    /// use optionstratlib::pos_or_panic;
     ///
     /// // Generate veta values for different times to expiration
-    /// let days_values = vec![pos!(7.0), pos!(14.0), pos!(30.0), pos!(60.0), pos!(90.0)];
+    /// let days_values = vec![pos_or_panic!(7.0), pos_or_panic!(14.0), pos_or_panic!(30.0), pos_or_panic!(60.0), pos_or_panic!(90.0)];
     /// for days in days_values {
     ///     let (strike, time, veta) = surfaces.get_surface_time_versus(
     ///         &BasicAxisTypes::Veta,
@@ -407,14 +407,14 @@ mod tests_basic_surfaces {
             OptionType::European,
             Side::Long,
             "TEST".to_string(),
-            pos!(100.0), // strike_price
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(0.2),   // implied_volatility
-            pos!(1.0),   // quantity
-            pos!(100.0), // underlying_price
-            dec!(0.05),  // risk_free_rate
+            pos_or_panic!(100.0), // strike_price
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.2),   // implied_volatility
+            pos_or_panic!(1.0),   // quantity
+            pos_or_panic!(100.0), // underlying_price
+            dec!(0.05),           // risk_free_rate
             OptionStyle::Call,
-            pos!(0.01), // dividend_yield
+            pos_or_panic!(0.01), // dividend_yield
             None,
         ))
     }
@@ -565,7 +565,7 @@ mod tests_basic_surfaces {
     fn test_get_volatility_versus_with_custom_volatility() {
         let surfaces = MockBasicSurfaces;
         let option = create_test_option();
-        let custom_vol = pos!(0.3);
+        let custom_vol = pos_or_panic!(0.3);
 
         let result =
             surfaces.get_surface_volatility_versus(&BasicAxisTypes::Delta, &option, custom_vol);
@@ -590,7 +590,7 @@ mod tests_basic_surfaces {
     fn test_get_volatility_versus_price() {
         let surfaces = MockBasicSurfaces;
         let option = create_test_option();
-        let custom_vol = pos!(0.25);
+        let custom_vol = pos_or_panic!(0.25);
 
         let result =
             surfaces.get_surface_volatility_versus(&BasicAxisTypes::Price, &option, custom_vol);
@@ -606,7 +606,7 @@ mod tests_basic_surfaces {
     fn test_get_volatility_versus_theta() {
         let surfaces = MockBasicSurfaces;
         let option = create_test_option();
-        let custom_vol = pos!(0.15);
+        let custom_vol = pos_or_panic!(0.15);
 
         let result =
             surfaces.get_surface_volatility_versus(&BasicAxisTypes::Theta, &option, custom_vol);
@@ -622,7 +622,7 @@ mod tests_basic_surfaces {
     fn test_get_volatility_versus_gamma() {
         let surfaces = MockBasicSurfaces;
         let option = create_test_option();
-        let custom_vol = pos!(0.15);
+        let custom_vol = pos_or_panic!(0.15);
 
         let result =
             surfaces.get_surface_volatility_versus(&BasicAxisTypes::Gamma, &option, custom_vol);
@@ -638,7 +638,7 @@ mod tests_basic_surfaces {
     fn test_get_volatility_versus_vega() {
         let surfaces = MockBasicSurfaces;
         let option = create_test_option();
-        let custom_vol = pos!(0.4);
+        let custom_vol = pos_or_panic!(0.4);
 
         let result =
             surfaces.get_surface_volatility_versus(&BasicAxisTypes::Vega, &option, custom_vol);
@@ -654,7 +654,7 @@ mod tests_basic_surfaces {
     fn test_get_volatility_versus_vanna() {
         let surfaces = MockBasicSurfaces;
         let option = create_test_option();
-        let custom_vol = pos!(0.4);
+        let custom_vol = pos_or_panic!(0.4);
 
         let result =
             surfaces.get_surface_volatility_versus(&BasicAxisTypes::Vanna, &option, custom_vol);
@@ -670,7 +670,7 @@ mod tests_basic_surfaces {
     fn test_get_volatility_versus_vomma() {
         let surfaces = MockBasicSurfaces;
         let option = create_test_option();
-        let custom_vol = pos!(0.4);
+        let custom_vol = pos_or_panic!(0.4);
 
         let result =
             surfaces.get_surface_volatility_versus(&BasicAxisTypes::Vomma, &option, custom_vol);
@@ -686,7 +686,7 @@ mod tests_basic_surfaces {
     fn test_get_volatility_versus_veta() {
         let surfaces = MockBasicSurfaces;
         let option = create_test_option();
-        let custom_vol = pos!(0.4);
+        let custom_vol = pos_or_panic!(0.4);
 
         let result =
             surfaces.get_surface_volatility_versus(&BasicAxisTypes::Veta, &option, custom_vol);
@@ -702,7 +702,7 @@ mod tests_basic_surfaces {
     fn test_get_volatility_versus_charm() {
         let surfaces = MockBasicSurfaces;
         let option = create_test_option();
-        let custom_vol = pos!(0.4);
+        let custom_vol = pos_or_panic!(0.4);
 
         let result =
             surfaces.get_surface_volatility_versus(&BasicAxisTypes::Charm, &option, custom_vol);
@@ -718,7 +718,7 @@ mod tests_basic_surfaces {
     fn test_get_volatility_versus_color() {
         let surfaces = MockBasicSurfaces;
         let option = create_test_option();
-        let custom_vol = pos!(0.4);
+        let custom_vol = pos_or_panic!(0.4);
 
         let result =
             surfaces.get_surface_volatility_versus(&BasicAxisTypes::Color, &option, custom_vol);
@@ -753,7 +753,7 @@ mod tests_basic_surfaces {
     fn test_get_time_versus_veta() {
         let surfaces = MockBasicSurfaces;
         let option = create_test_option();
-        let days = pos!(30.0);
+        let days = pos_or_panic!(30.0);
 
         let result = surfaces.get_surface_time_versus(&BasicAxisTypes::Veta, &option, days);
 
@@ -769,7 +769,7 @@ mod tests_basic_surfaces {
     fn test_get_time_versus_charm() {
         let surfaces = MockBasicSurfaces;
         let option = create_test_option();
-        let days = pos!(30.0);
+        let days = pos_or_panic!(30.0);
 
         let result = surfaces.get_surface_time_versus(&BasicAxisTypes::Charm, &option, days);
 
@@ -785,7 +785,7 @@ mod tests_basic_surfaces {
     fn test_get_time_versus_color() {
         let surfaces = MockBasicSurfaces;
         let option = create_test_option();
-        let days = pos!(30.0);
+        let days = pos_or_panic!(30.0);
 
         let result = surfaces.get_surface_time_versus(&BasicAxisTypes::Color, &option, days);
 
@@ -801,7 +801,7 @@ mod tests_basic_surfaces {
     fn test_get_time_versus_theta() {
         let surfaces = MockBasicSurfaces;
         let option = create_test_option();
-        let days = pos!(30.0);
+        let days = pos_or_panic!(30.0);
 
         let result = surfaces.get_surface_time_versus(&BasicAxisTypes::Theta, &option, days);
 
@@ -817,7 +817,7 @@ mod tests_basic_surfaces {
     fn test_get_time_versus_vanna() {
         let surfaces = MockBasicSurfaces;
         let option = create_test_option();
-        let days = pos!(30.0);
+        let days = pos_or_panic!(30.0);
 
         let result = surfaces.get_surface_time_versus(&BasicAxisTypes::Vanna, &option, days);
 
@@ -831,7 +831,7 @@ mod tests_basic_surfaces {
     fn test_get_time_versus_vomma() {
         let surfaces = MockBasicSurfaces;
         let option = create_test_option();
-        let days = pos!(30.0);
+        let days = pos_or_panic!(30.0);
 
         let result = surfaces.get_surface_time_versus(&BasicAxisTypes::Vomma, &option, days);
 
@@ -845,7 +845,7 @@ mod tests_basic_surfaces {
     fn test_get_time_versus_invalid_axis() {
         let surfaces = MockBasicSurfaces;
         let option = create_test_option();
-        let days = pos!(30.0);
+        let days = pos_or_panic!(30.0);
 
         let result = surfaces.get_surface_time_versus(&BasicAxisTypes::Strike, &option, days);
 
@@ -864,7 +864,13 @@ mod tests_basic_surfaces {
         let option = create_test_option();
 
         // Test with different time horizons
-        let times = vec![pos!(7.0), pos!(14.0), pos!(30.0), pos!(60.0), pos!(90.0)];
+        let times = vec![
+            pos_or_panic!(7.0),
+            pos_or_panic!(14.0),
+            pos_or_panic!(30.0),
+            pos_or_panic!(60.0),
+            pos_or_panic!(90.0),
+        ];
 
         for days in times {
             let result = surfaces.get_surface_time_versus(&BasicAxisTypes::Veta, &option, days);
@@ -878,7 +884,7 @@ mod tests_basic_surfaces {
     fn test_get_time_versus_near_expiration() {
         let surfaces = MockBasicSurfaces;
         let option = create_test_option();
-        let days = pos!(1.0); // Near expiration
+        let days = pos_or_panic!(1.0); // Near expiration
 
         let result = surfaces.get_surface_time_versus(&BasicAxisTypes::Veta, &option, days);
 
@@ -892,7 +898,7 @@ mod tests_basic_surfaces {
     fn test_get_time_versus_price() {
         let surfaces = MockBasicSurfaces;
         let option = create_test_option();
-        let days = pos!(30.0);
+        let days = pos_or_panic!(30.0);
 
         let result = surfaces.get_surface_time_versus(&BasicAxisTypes::Price, &option, days);
 

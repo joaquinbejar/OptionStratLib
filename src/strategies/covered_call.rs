@@ -28,26 +28,27 @@
 //! ```rust
 //! use optionstratlib::strategies::covered_call::CoveredCall;
 //! use optionstratlib::model::ExpirationDate;
-//! use optionstratlib::pos;
+//! use optionstratlib::pos_or_panic;
 //! use rust_decimal_macros::dec;
 //!
 //! let covered_call = CoveredCall::new(
 //!     "AAPL".to_string(),
-//!     pos!(150.0),    // underlying price
-//!     pos!(155.0),    // call strike
-//!     ExpirationDate::Days(pos!(30.0)),
-//!     pos!(0.25),     // implied volatility
+//!     pos_or_panic!(150.0),    // underlying price
+//!     pos_or_panic!(155.0),    // call strike
+//!     ExpirationDate::Days(pos_or_panic!(30.0)),
+//!     pos_or_panic!(0.25),     // implied volatility
 //!     dec!(0.05),     // risk-free rate
-//!     pos!(0.01),     // dividend yield
-//!     pos!(100.0),    // quantity (shares)
-//!     pos!(3.50),     // call premium received
-//!     pos!(1.0),      // spot open fee
-//!     pos!(1.0),      // spot close fee
-//!     pos!(0.65),     // call open fee
-//!     pos!(0.65),     // call close fee
+//!     pos_or_panic!(0.01),     // dividend yield
+//!     pos_or_panic!(100.0),    // quantity (shares)
+//!     pos_or_panic!(3.50),     // call premium received
+//!     pos_or_panic!(1.0),      // spot open fee
+//!     pos_or_panic!(1.0),      // spot close fee
+//!     pos_or_panic!(0.65),     // call open fee
+//!     pos_or_panic!(0.65),     // call close fee
 //! );
 //! ```
 
+use positive::pos_or_panic;
 use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, StrategyBasics, StrategyType, Validable,
 };
@@ -184,7 +185,7 @@ impl CoveredCall {
             call_strike,
             expiration,
             implied_volatility,
-            quantity / pos!(100.0), // Convert shares to contracts
+            quantity / pos_or_panic!(100.0), // Convert shares to contracts
             underlying_price,
             risk_free_rate,
             OptionStyle::Call,
@@ -675,18 +676,18 @@ mod tests {
     fn create_test_covered_call() -> CoveredCall {
         CoveredCall::new(
             "AAPL".to_string(),
-            pos!(150.0),
-            pos!(155.0),
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(0.25),
+            pos_or_panic!(150.0),
+            pos_or_panic!(155.0),
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.25),
             dec!(0.05),
-            pos!(0.01),
-            pos!(100.0),
-            pos!(3.50),
-            pos!(1.0),
-            pos!(1.0),
-            pos!(0.65),
-            pos!(0.65),
+            pos_or_panic!(0.01),
+            pos_or_panic!(100.0),
+            pos_or_panic!(3.50),
+            pos_or_panic!(1.0),
+            pos_or_panic!(1.0),
+            pos_or_panic!(0.65),
+            pos_or_panic!(0.65),
         )
     }
 
@@ -697,10 +698,10 @@ mod tests {
         assert_eq!(cc.name, "Covered Call");
         assert_eq!(cc.kind, StrategyType::CoveredCall);
         assert_eq!(cc.spot_leg.symbol, "AAPL");
-        assert_eq!(cc.spot_leg.quantity, pos!(100.0));
-        assert_eq!(cc.spot_leg.cost_basis, pos!(150.0));
+        assert_eq!(cc.spot_leg.quantity, pos_or_panic!(100.0));
+        assert_eq!(cc.spot_leg.cost_basis, pos_or_panic!(150.0));
         assert_eq!(cc.spot_leg.side, Side::Long);
-        assert_eq!(cc.short_call.option.strike_price, pos!(155.0));
+        assert_eq!(cc.short_call.option.strike_price, pos_or_panic!(155.0));
         assert_eq!(cc.short_call.option.side, Side::Short);
     }
 
@@ -717,7 +718,7 @@ mod tests {
         // Break-even should be cost basis minus premium received per share
         assert!(!cc.break_even_points.is_empty());
         let break_even = cc.break_even_points[0];
-        assert!(break_even < pos!(150.0)); // Should be below cost basis
+        assert!(break_even < pos_or_panic!(150.0)); // Should be below cost basis
     }
 
     #[test]
@@ -734,7 +735,7 @@ mod tests {
         let cc = create_test_covered_call();
 
         // At strike price, should have maximum profit
-        let profit = cc.calculate_profit_at(&pos!(155.0)).unwrap();
+        let profit = cc.calculate_profit_at(&pos_or_panic!(155.0)).unwrap();
         assert!(profit > Decimal::ZERO);
     }
 
@@ -744,8 +745,8 @@ mod tests {
 
         // Above strike, the short call gets exercised
         // Spot gains continue but are offset by short call losses
-        let profit_at_strike = cc.calculate_profit_at(&pos!(155.0)).unwrap();
-        let profit_above = cc.calculate_profit_at(&pos!(170.0)).unwrap();
+        let profit_at_strike = cc.calculate_profit_at(&pos_or_panic!(155.0)).unwrap();
+        let profit_above = cc.calculate_profit_at(&pos_or_panic!(170.0)).unwrap();
 
         // Both should be positive (profitable strategy when price rises)
         assert!(profit_at_strike > Decimal::ZERO);
@@ -757,7 +758,7 @@ mod tests {
         let cc = create_test_covered_call();
 
         // At zero, maximum loss
-        let loss = cc.calculate_profit_at(&pos!(0.01)).unwrap();
+        let loss = cc.calculate_profit_at(&pos_or_panic!(0.01)).unwrap();
         assert!(loss < Decimal::ZERO);
     }
 
@@ -786,9 +787,9 @@ mod tests {
     fn test_is_call_itm() {
         let cc = create_test_covered_call();
 
-        assert!(!cc.is_call_itm(pos!(150.0))); // Below strike
-        assert!(!cc.is_call_itm(pos!(155.0))); // At strike
-        assert!(cc.is_call_itm(pos!(160.0))); // Above strike
+        assert!(!cc.is_call_itm(pos_or_panic!(150.0))); // Below strike
+        assert!(!cc.is_call_itm(pos_or_panic!(155.0))); // At strike
+        assert!(cc.is_call_itm(pos_or_panic!(160.0))); // Above strike
     }
 
     #[test]
@@ -813,18 +814,18 @@ mod tests {
     #[test]
     fn test_underlying_price() {
         let cc = create_test_covered_call();
-        assert_eq!(cc.underlying_price(), pos!(150.0));
+        assert_eq!(cc.underlying_price(), pos_or_panic!(150.0));
     }
 
     #[test]
     fn test_call_strike() {
         let cc = create_test_covered_call();
-        assert_eq!(cc.call_strike(), pos!(155.0));
+        assert_eq!(cc.call_strike(), pos_or_panic!(155.0));
     }
 
     #[test]
     fn test_quantity() {
         let cc = create_test_covered_call();
-        assert_eq!(cc.quantity(), pos!(100.0));
+        assert_eq!(cc.quantity(), pos_or_panic!(100.0));
     }
 }

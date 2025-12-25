@@ -1135,22 +1135,22 @@ mod tests_iron_condor {
         let date = Utc.with_ymd_and_hms(2024, 12, 1, 0, 0, 0).unwrap();
         let iron_condor = IronCondor::new(
             "AAPL".to_string(),
-            pos!(150.0),
-            pos!(155.0),
-            pos!(145.0),
-            pos!(160.0),
-            pos!(140.0),
+            pos_or_panic!(150.0),
+            pos_or_panic!(155.0),
+            pos_or_panic!(145.0),
+            pos_or_panic!(160.0),
+            pos_or_panic!(140.0),
             ExpirationDate::DateTime(date),
-            pos!(0.2),
+            pos_or_panic!(0.2),
             dec!(0.01),
-            pos!(0.02),
+            pos_or_panic!(0.02),
             Positive::ONE,
-            pos!(1.5),
+            pos_or_panic!(1.5),
             Positive::ONE,
             Positive::TWO,
-            pos!(1.8),
-            pos!(5.0),
-            pos!(5.0),
+            pos_or_panic!(1.8),
+            pos_or_panic!(5.0),
+            pos_or_panic!(5.0),
         );
 
         assert_eq!(iron_condor.name, "Iron Condor");
@@ -1168,22 +1168,22 @@ mod tests_iron_condor {
         let date = Utc.with_ymd_and_hms(2024, 12, 1, 0, 0, 0).unwrap();
         let iron_condor = IronCondor::new(
             "AAPL".to_string(),
-            pos!(150.0),
-            pos!(120.0),
-            pos!(110.0),
-            pos!(130.0),
-            pos!(100.0),
+            pos_or_panic!(150.0),
+            pos_or_panic!(120.0),
+            pos_or_panic!(110.0),
+            pos_or_panic!(130.0),
+            pos_or_panic!(100.0),
             ExpirationDate::DateTime(date),
-            pos!(0.2),
+            pos_or_panic!(0.2),
             dec!(0.01),
-            pos!(0.02),
+            pos_or_panic!(0.02),
             Positive::ONE,
-            pos!(1.5),
+            pos_or_panic!(1.5),
             Positive::ONE,
             Positive::TWO,
-            pos!(1.8),
-            pos!(5.0),
-            pos!(5.0),
+            pos_or_panic!(1.8),
+            pos_or_panic!(5.0),
+            pos_or_panic!(5.0),
         );
 
         assert_eq!(iron_condor.get_max_loss().unwrap_or(Positive::ZERO), 51.3);
@@ -1194,22 +1194,22 @@ mod tests_iron_condor {
         let date = Utc.with_ymd_and_hms(2024, 12, 1, 0, 0, 0).unwrap();
         let iron_condor = IronCondor::new(
             "AAPL".to_string(),
-            pos!(150.0),
-            pos!(155.0),
-            pos!(145.0),
-            pos!(160.0),
-            pos!(140.0),
+            pos_or_panic!(150.0),
+            pos_or_panic!(155.0),
+            pos_or_panic!(145.0),
+            pos_or_panic!(160.0),
+            pos_or_panic!(140.0),
             ExpirationDate::DateTime(date),
-            pos!(0.2),
+            pos_or_panic!(0.2),
             dec!(0.01),
-            pos!(0.02),
+            pos_or_panic!(0.02),
             Positive::ONE,
-            pos!(3.5),
-            pos!(3.3),
-            pos!(3.0),
-            pos!(2.8),
-            pos!(0.07),
-            pos!(0.07),
+            pos_or_panic!(3.5),
+            pos_or_panic!(3.3),
+            pos_or_panic!(3.0),
+            pos_or_panic!(2.8),
+            pos_or_panic!(0.07),
+            pos_or_panic!(0.07),
         );
 
         let expected_profit = iron_condor.get_net_premium_received().unwrap().to_f64();
@@ -1224,22 +1224,22 @@ mod tests_iron_condor {
         let date = Utc.with_ymd_and_hms(2024, 12, 1, 0, 0, 0).unwrap();
         let iron_condor = IronCondor::new(
             "AAPL".to_string(),
-            pos!(150.0),
-            pos!(155.0),
-            pos!(145.0),
-            pos!(160.0),
-            pos!(140.0),
+            pos_or_panic!(150.0),
+            pos_or_panic!(155.0),
+            pos_or_panic!(145.0),
+            pos_or_panic!(160.0),
+            pos_or_panic!(140.0),
             ExpirationDate::DateTime(date),
-            pos!(0.2),
+            pos_or_panic!(0.2),
             dec!(0.01),
-            pos!(0.02),
+            pos_or_panic!(0.02),
             Positive::ONE,
-            pos!(1.5),
+            pos_or_panic!(1.5),
             Positive::ONE,
             Positive::TWO,
-            pos!(1.8),
-            pos!(5.0),
-            pos!(5.0),
+            pos_or_panic!(1.8),
+            pos_or_panic!(5.0),
+            pos_or_panic!(5.0),
         );
 
         assert_eq!(
@@ -1253,22 +1253,22 @@ mod tests_iron_condor {
         let date = Utc.with_ymd_and_hms(2024, 12, 1, 0, 0, 0).unwrap();
         let iron_condor = IronCondor::new(
             "AAPL".to_string(),
-            pos!(150.0),
-            pos!(155.0),
-            pos!(145.0),
-            pos!(160.0),
-            pos!(140.0),
+            pos_or_panic!(150.0),
+            pos_or_panic!(155.0),
+            pos_or_panic!(145.0),
+            pos_or_panic!(160.0),
+            pos_or_panic!(140.0),
             ExpirationDate::DateTime(date),
-            pos!(0.2),
+            pos_or_panic!(0.2),
             dec!(0.01),
-            pos!(0.02),
+            pos_or_panic!(0.02),
             Positive::ONE,
-            pos!(1.5),
+            pos_or_panic!(1.5),
             Positive::ONE,
             Positive::TWO,
-            pos!(1.8),
-            pos!(5.0),
-            pos!(5.0),
+            pos_or_panic!(1.8),
+            pos_or_panic!(5.0),
+            pos_or_panic!(5.0),
         );
 
         let expected_fees = iron_condor.short_call.open_fee
@@ -1287,25 +1287,25 @@ mod tests_iron_condor {
         let date = Utc.with_ymd_and_hms(2024, 12, 1, 0, 0, 0).unwrap();
         let iron_condor = IronCondor::new(
             "AAPL".to_string(),
-            pos!(150.0),
-            pos!(155.0),
-            pos!(145.0),
-            pos!(160.0),
-            pos!(140.0),
+            pos_or_panic!(150.0),
+            pos_or_panic!(155.0),
+            pos_or_panic!(145.0),
+            pos_or_panic!(160.0),
+            pos_or_panic!(140.0),
             ExpirationDate::DateTime(date),
-            pos!(0.2),
+            pos_or_panic!(0.2),
             dec!(0.01),
-            pos!(0.02),
+            pos_or_panic!(0.02),
             Positive::ONE,
-            pos!(1.5),
+            pos_or_panic!(1.5),
             Positive::ONE,
             Positive::TWO,
-            pos!(1.8),
-            pos!(5.0),
-            pos!(5.0),
+            pos_or_panic!(1.8),
+            pos_or_panic!(5.0),
+            pos_or_panic!(5.0),
         );
 
-        let price = pos!(150.0);
+        let price = pos_or_panic!(150.0);
         let expected_profit = iron_condor
             .short_call
             .pnl_at_expiration(&Some(&price))
@@ -1332,6 +1332,7 @@ mod tests_iron_condor {
 #[cfg(test)]
 mod tests_iron_condor_validable {
     use super::*;
+
     use crate::model::ExpirationDate;
 
     use rust_decimal_macros::dec;
@@ -1348,10 +1349,10 @@ mod tests_iron_condor_validable {
                 side,
                 "TEST".to_string(),
                 strike_price,
-                ExpirationDate::Days(pos!(30.0)),
-                pos!(0.2),
+                ExpirationDate::Days(pos_or_panic!(30.0)),
+                pos_or_panic!(0.2),
                 quantity,
-                pos!(100.0),
+                pos_or_panic!(100.0),
                 dec!(0.05),
                 option_style,
                 Positive::ZERO,
@@ -1369,22 +1370,22 @@ mod tests_iron_condor_validable {
     fn create_valid_condor() -> IronCondor {
         IronCondor::new(
             "TEST".to_string(),
-            pos!(100.0), // underlying_price
-            pos!(105.0), // short_call_strike
-            pos!(95.0),  // short_put_strike
-            pos!(110.0), // long_call_strike
-            pos!(90.0),  // long_put_strike
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(0.2),      // implied_volatility
-            dec!(0.05),     // risk_free_rate
-            Positive::ZERO, // dividend_yield
-            pos!(1.0),      // quantity
-            Positive::TWO,  // premium_short_call
-            Positive::TWO,  // premium_short_put
-            Positive::ONE,  // premium_long_call
-            Positive::ONE,  // premium_long_put
-            Positive::ZERO, // open_fee
-            Positive::ZERO, // closing fee
+            pos_or_panic!(100.0), // underlying_price
+            pos_or_panic!(105.0), // short_call_strike
+            pos_or_panic!(95.0),  // short_put_strike
+            pos_or_panic!(110.0), // long_call_strike
+            pos_or_panic!(90.0),  // long_put_strike
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.2), // implied_volatility
+            dec!(0.05),         // risk_free_rate
+            Positive::ZERO,     // dividend_yield
+            pos_or_panic!(1.0), // quantity
+            Positive::TWO,      // premium_short_call
+            Positive::TWO,      // premium_short_put
+            Positive::ONE,      // premium_long_call
+            Positive::ONE,      // premium_long_put
+            Positive::ZERO,     // open_fee
+            Positive::ZERO,     // closing fee
         )
     }
 
@@ -1398,8 +1399,12 @@ mod tests_iron_condor_validable {
     fn test_validate_invalid_short_call() {
         let mut condor = create_valid_condor();
         // Make short call invalid by setting quantity to zero
-        condor.short_call =
-            create_valid_position(Side::Short, OptionStyle::Call, pos!(105.0), Positive::ZERO);
+        condor.short_call = create_valid_position(
+            Side::Short,
+            OptionStyle::Call,
+            pos_or_panic!(105.0),
+            Positive::ZERO,
+        );
         assert!(!condor.validate());
     }
 
@@ -1407,8 +1412,12 @@ mod tests_iron_condor_validable {
     fn test_validate_invalid_short_put() {
         let mut condor = create_valid_condor();
         // Make short put invalid by setting quantity to zero
-        condor.short_put =
-            create_valid_position(Side::Short, OptionStyle::Put, pos!(95.0), Positive::ZERO);
+        condor.short_put = create_valid_position(
+            Side::Short,
+            OptionStyle::Put,
+            pos_or_panic!(95.0),
+            Positive::ZERO,
+        );
         assert!(!condor.validate());
     }
 
@@ -1416,8 +1425,12 @@ mod tests_iron_condor_validable {
     fn test_validate_invalid_long_call() {
         let mut condor = create_valid_condor();
         // Make long call invalid by setting quantity to zero
-        condor.long_call =
-            create_valid_position(Side::Long, OptionStyle::Call, pos!(110.0), Positive::ZERO);
+        condor.long_call = create_valid_position(
+            Side::Long,
+            OptionStyle::Call,
+            pos_or_panic!(110.0),
+            Positive::ZERO,
+        );
         assert!(!condor.validate());
     }
 
@@ -1425,8 +1438,12 @@ mod tests_iron_condor_validable {
     fn test_validate_invalid_long_put() {
         let mut condor = create_valid_condor();
         // Make long put invalid by setting quantity to zero
-        condor.long_put =
-            create_valid_position(Side::Long, OptionStyle::Put, pos!(90.0), Positive::ZERO);
+        condor.long_put = create_valid_position(
+            Side::Long,
+            OptionStyle::Put,
+            pos_or_panic!(90.0),
+            Positive::ZERO,
+        );
         assert!(!condor.validate());
     }
 
@@ -1434,14 +1451,30 @@ mod tests_iron_condor_validable {
     fn test_validate_all_invalid() {
         let mut condor = create_valid_condor();
         // Make all positions invalid
-        condor.short_call =
-            create_valid_position(Side::Short, OptionStyle::Call, pos!(105.0), Positive::ZERO);
-        condor.short_put =
-            create_valid_position(Side::Short, OptionStyle::Put, pos!(95.0), Positive::ZERO);
-        condor.long_call =
-            create_valid_position(Side::Long, OptionStyle::Call, pos!(110.0), Positive::ZERO);
-        condor.long_put =
-            create_valid_position(Side::Long, OptionStyle::Put, pos!(90.0), Positive::ZERO);
+        condor.short_call = create_valid_position(
+            Side::Short,
+            OptionStyle::Call,
+            pos_or_panic!(105.0),
+            Positive::ZERO,
+        );
+        condor.short_put = create_valid_position(
+            Side::Short,
+            OptionStyle::Put,
+            pos_or_panic!(95.0),
+            Positive::ZERO,
+        );
+        condor.long_call = create_valid_position(
+            Side::Long,
+            OptionStyle::Call,
+            pos_or_panic!(110.0),
+            Positive::ZERO,
+        );
+        condor.long_put = create_valid_position(
+            Side::Long,
+            OptionStyle::Put,
+            pos_or_panic!(90.0),
+            Positive::ZERO,
+        );
         assert!(!condor.validate());
     }
 }
@@ -1449,6 +1482,7 @@ mod tests_iron_condor_validable {
 #[cfg(test)]
 mod tests_iron_condor_strategies {
     use super::*;
+
     use crate::constants::ZERO;
     use crate::model::ExpirationDate;
 
@@ -1458,22 +1492,22 @@ mod tests_iron_condor_strategies {
     fn create_test_condor() -> IronCondor {
         IronCondor::new(
             "TEST".to_string(),
-            pos!(100.0), // underlying_price
-            pos!(105.0), // short_call_strike
-            pos!(95.0),  // short_put_strike
-            pos!(110.0), // long_call_strike
-            pos!(90.0),  // long_put_strike
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(0.2),      // implied_volatility
-            dec!(0.05),     // risk_free_rate
-            Positive::ZERO, // dividend_yield
-            pos!(1.0),      // quantity
-            Positive::TWO,  // premium_short_call
-            Positive::TWO,  // premium_short_put
-            Positive::ONE,  // premium_long_call
-            Positive::ONE,  // premium_long_put
-            pos!(0.5),      // open_fee
-            pos!(0.5),      // closing fee
+            pos_or_panic!(100.0), // underlying_price
+            pos_or_panic!(105.0), // short_call_strike
+            pos_or_panic!(95.0),  // short_put_strike
+            pos_or_panic!(110.0), // long_call_strike
+            pos_or_panic!(90.0),  // long_put_strike
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.2), // implied_volatility
+            dec!(0.05),         // risk_free_rate
+            Positive::ZERO,     // dividend_yield
+            pos_or_panic!(1.0), // quantity
+            Positive::TWO,      // premium_short_call
+            Positive::TWO,      // premium_short_put
+            Positive::ONE,      // premium_long_call
+            Positive::ONE,      // premium_long_put
+            pos_or_panic!(0.5), // open_fee
+            pos_or_panic!(0.5), // closing fee
         )
     }
 
@@ -1487,27 +1521,27 @@ mod tests_iron_condor_strategies {
                 OptionType::European,
                 Side::Short,
                 "TEST".to_string(),
-                pos!(106.0),
-                ExpirationDate::Days(pos!(30.0)),
-                pos!(0.2),
-                pos!(1.0),
-                pos!(100.0),
+                pos_or_panic!(106.0),
+                ExpirationDate::Days(pos_or_panic!(30.0)),
+                pos_or_panic!(0.2),
+                pos_or_panic!(1.0),
+                pos_or_panic!(100.0),
                 dec!(0.05),
                 OptionStyle::Call,
                 Positive::ZERO,
                 None,
             ),
-            pos!(2.5),
+            pos_or_panic!(2.5),
             Utc::now(),
-            pos!(0.5),
-            pos!(0.5),
+            pos_or_panic!(0.5),
+            pos_or_panic!(0.5),
             None,
             None,
         );
         condor
             .add_position(&new_short_call.clone())
             .expect("Invalid short call");
-        assert_eq!(condor.short_call.option.strike_price, pos!(106.0));
+        assert_eq!(condor.short_call.option.strike_price, pos_or_panic!(106.0));
 
         // Test adding a long put
         let new_long_put = Position::new(
@@ -1515,27 +1549,27 @@ mod tests_iron_condor_strategies {
                 OptionType::European,
                 Side::Long,
                 "TEST".to_string(),
-                pos!(89.0),
-                ExpirationDate::Days(pos!(30.0)),
-                pos!(0.2),
-                pos!(1.0),
-                pos!(100.0),
+                pos_or_panic!(89.0),
+                ExpirationDate::Days(pos_or_panic!(30.0)),
+                pos_or_panic!(0.2),
+                pos_or_panic!(1.0),
+                pos_or_panic!(100.0),
                 dec!(0.05),
                 OptionStyle::Put,
                 Positive::ZERO,
                 None,
             ),
-            pos!(1.5),
+            pos_or_panic!(1.5),
             Utc::now(),
-            pos!(0.5),
-            pos!(0.5),
+            pos_or_panic!(0.5),
+            pos_or_panic!(0.5),
             None,
             None,
         );
         condor
             .add_position(&new_long_put.clone())
             .expect("Invalid long put");
-        assert_eq!(condor.long_put.option.strike_price, pos!(89.0));
+        assert_eq!(condor.long_put.option.strike_price, pos_or_panic!(89.0));
     }
 
     #[test]
@@ -1558,22 +1592,22 @@ mod tests_iron_condor_strategies {
     fn test_get_break_even_points() {
         let condor = IronCondor::new(
             "GOLD".to_string(),
-            pos!(2646.9), // underlying_price
-            pos!(2725.0), // short_call_strike
-            pos!(2560.0), // short_put_strike
-            pos!(2800.0), // long_call_strike
-            pos!(2500.0), // long_put_strike
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(0.1548),   // implied_volatility
-            dec!(0.05),     // risk_free_rate
-            Positive::ZERO, // dividend_yield
-            pos!(1.0),      // quantity
-            pos!(38.8),     // premium_short_call
-            pos!(30.4),     // premium_short_put
-            pos!(23.3),     // premium_long_call
-            pos!(16.8),     // premium_long_put
-            pos!(0.96),     // open_fee
-            pos!(0.96),     // close_fee
+            pos_or_panic!(2646.9), // underlying_price
+            pos_or_panic!(2725.0), // short_call_strike
+            pos_or_panic!(2560.0), // short_put_strike
+            pos_or_panic!(2800.0), // long_call_strike
+            pos_or_panic!(2500.0), // long_put_strike
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.1548), // implied_volatility
+            dec!(0.05),            // risk_free_rate
+            Positive::ZERO,        // dividend_yield
+            pos_or_panic!(1.0),    // quantity
+            pos_or_panic!(38.8),   // premium_short_call
+            pos_or_panic!(30.4),   // premium_short_put
+            pos_or_panic!(23.3),   // premium_long_call
+            pos_or_panic!(16.8),   // premium_long_put
+            pos_or_panic!(0.96),   // open_fee
+            pos_or_panic!(0.96),   // close_fee
         );
         let break_even_points = condor.get_break_even_points().unwrap();
 
@@ -1586,108 +1620,108 @@ mod tests_iron_condor_strategies {
     fn test_max_profit() {
         let condor = IronCondor::new(
             "TEST".to_string(),
-            pos!(100.0), // underlying_price
-            pos!(105.0), // short_call_strike
-            pos!(95.0),  // short_put_strike
-            pos!(110.0), // long_call_strike
-            pos!(90.0),  // long_put_strike
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(0.2),      // implied_volatility
-            dec!(0.05),     // risk_free_rate
-            Positive::ZERO, // dividend_yield
-            pos!(1.0),      // quantity
-            pos!(10.0),     // premium_short_call
-            pos!(10.0),     // premium_short_put
-            pos!(10.0),     // premium_long_call
-            pos!(10.0),     // premium_long_put
-            Positive::ZERO, // open_fee
-            Positive::ZERO, // closing fee
+            pos_or_panic!(100.0), // underlying_price
+            pos_or_panic!(105.0), // short_call_strike
+            pos_or_panic!(95.0),  // short_put_strike
+            pos_or_panic!(110.0), // long_call_strike
+            pos_or_panic!(90.0),  // long_put_strike
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.2),  // implied_volatility
+            dec!(0.05),          // risk_free_rate
+            Positive::ZERO,      // dividend_yield
+            pos_or_panic!(1.0),  // quantity
+            pos_or_panic!(10.0), // premium_short_call
+            pos_or_panic!(10.0), // premium_short_put
+            pos_or_panic!(10.0), // premium_long_call
+            pos_or_panic!(10.0), // premium_long_put
+            Positive::ZERO,      // open_fee
+            Positive::ZERO,      // closing fee
         );
         let max_profit = condor.get_max_profit().unwrap();
-        assert_eq!(max_profit, pos!(ZERO));
+        assert_eq!(max_profit, pos_or_panic!(ZERO));
     }
 
     #[test]
     fn test_max_profit_bis() {
         let condor = IronCondor::new(
             "TEST".to_string(),
-            pos!(100.0), // underlying_price
-            pos!(105.0), // short_call_strike
-            pos!(95.0),  // short_put_strike
-            pos!(110.0), // long_call_strike
-            pos!(90.0),  // long_put_strike
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(0.2),      // implied_volatility
-            dec!(0.05),     // risk_free_rate
-            Positive::ZERO, // dividend_yield
-            pos!(1.0),      // quantity
-            pos!(20.0),     // premium_short_call
-            pos!(20.0),     // premium_short_put
-            pos!(10.0),     // premium_long_call
-            pos!(10.0),     // premium_long_put
-            pos!(0.09),     // open_fee
-            pos!(0.09),     // closing fee
+            pos_or_panic!(100.0), // underlying_price
+            pos_or_panic!(105.0), // short_call_strike
+            pos_or_panic!(95.0),  // short_put_strike
+            pos_or_panic!(110.0), // long_call_strike
+            pos_or_panic!(90.0),  // long_put_strike
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.2),  // implied_volatility
+            dec!(0.05),          // risk_free_rate
+            Positive::ZERO,      // dividend_yield
+            pos_or_panic!(1.0),  // quantity
+            pos_or_panic!(20.0), // premium_short_call
+            pos_or_panic!(20.0), // premium_short_put
+            pos_or_panic!(10.0), // premium_long_call
+            pos_or_panic!(10.0), // premium_long_put
+            pos_or_panic!(0.09), // open_fee
+            pos_or_panic!(0.09), // closing fee
         );
         let max_profit = condor.get_max_profit().unwrap();
-        assert_eq!(max_profit, pos!(19.28));
+        assert_eq!(max_profit, pos_or_panic!(19.28));
     }
 
     #[test]
     fn test_max_loss() {
         let condor = IronCondor::new(
             "TEST".to_string(),
-            pos!(100.0), // underlying_price
-            pos!(105.0), // short_call_strike
-            pos!(95.0),  // short_put_strike
-            pos!(110.0), // long_call_strike
-            pos!(90.0),  // long_put_strike
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(0.2),      // implied_volatility
-            dec!(0.05),     // risk_free_rate
-            Positive::ZERO, // dividend_yield
-            pos!(1.0),      // quantity
-            pos!(10.0),     // premium_short_call
-            pos!(10.0),     // premium_short_put
-            pos!(11.1),     // premium_long_call
-            pos!(11.1),     // premium_long_put
-            pos!(0.1),      // open_fee
-            pos!(0.1),      // closing fee
+            pos_or_panic!(100.0), // underlying_price
+            pos_or_panic!(105.0), // short_call_strike
+            pos_or_panic!(95.0),  // short_put_strike
+            pos_or_panic!(110.0), // long_call_strike
+            pos_or_panic!(90.0),  // long_put_strike
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.2),  // implied_volatility
+            dec!(0.05),          // risk_free_rate
+            Positive::ZERO,      // dividend_yield
+            pos_or_panic!(1.0),  // quantity
+            pos_or_panic!(10.0), // premium_short_call
+            pos_or_panic!(10.0), // premium_short_put
+            pos_or_panic!(11.1), // premium_long_call
+            pos_or_panic!(11.1), // premium_long_put
+            pos_or_panic!(0.1),  // open_fee
+            pos_or_panic!(0.1),  // closing fee
         );
         let max_loss = condor.get_max_loss().unwrap();
-        assert_eq!(max_loss, pos!(7.9999999999999964));
+        assert_eq!(max_loss, pos_or_panic!(7.9999999999999964));
     }
 
     #[test]
     fn test_max_loss_with_uneven_wings() {
         let condor = IronCondor::new(
             "TEST".to_string(),
-            pos!(100.0),
-            pos!(105.0),
-            pos!(95.0),
-            pos!(115.0), // Wider call wing
-            pos!(90.0),
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(0.2),
+            pos_or_panic!(100.0),
+            pos_or_panic!(105.0),
+            pos_or_panic!(95.0),
+            pos_or_panic!(115.0), // Wider call wing
+            pos_or_panic!(90.0),
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.2),
             dec!(0.05),
             Positive::ZERO,
-            pos!(1.0),
+            pos_or_panic!(1.0),
             Positive::TWO,
             Positive::TWO,
             Positive::ONE,
             Positive::ONE,
-            pos!(0.5),
-            pos!(0.5),
+            pos_or_panic!(0.5),
+            pos_or_panic!(0.5),
         );
 
         let max_loss = condor.get_max_loss().unwrap();
-        assert_eq!(max_loss, pos!(12.0));
+        assert_eq!(max_loss, pos_or_panic!(12.0));
     }
 
     #[test]
     fn test_total_cost() {
         let condor = create_test_condor();
         // Total cost = 2.0 + 2.0 + 1.0 + 1.0 = 6.0
-        assert_eq!(condor.get_total_cost().unwrap(), pos!(6.0));
+        assert_eq!(condor.get_total_cost().unwrap(), pos_or_panic!(6.0));
     }
 
     #[test]
@@ -1700,22 +1734,22 @@ mod tests_iron_condor_strategies {
     fn test_net_premium_received_bis_i() {
         let condor = IronCondor::new(
             "TEST".to_string(),
-            pos!(100.0), // underlying_price
-            pos!(105.0), // short_call_strike
-            pos!(95.0),  // short_put_strike
-            pos!(110.0), // long_call_strike
-            pos!(90.0),  // long_put_strike
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(0.2),      // implied_volatility
-            dec!(0.05),     // risk_free_rate
-            Positive::ZERO, // dividend_yield
-            pos!(1.0),      // quantity
-            pos!(10.0),     // premium_short_call
-            pos!(10.0),     // premium_short_put
-            pos!(10.0),     // premium_long_call
-            pos!(10.0),     // premium_long_put
-            Positive::ZERO, // open_fee
-            Positive::ZERO, // closing fee
+            pos_or_panic!(100.0), // underlying_price
+            pos_or_panic!(105.0), // short_call_strike
+            pos_or_panic!(95.0),  // short_put_strike
+            pos_or_panic!(110.0), // long_call_strike
+            pos_or_panic!(90.0),  // long_put_strike
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.2),  // implied_volatility
+            dec!(0.05),          // risk_free_rate
+            Positive::ZERO,      // dividend_yield
+            pos_or_panic!(1.0),  // quantity
+            pos_or_panic!(10.0), // premium_short_call
+            pos_or_panic!(10.0), // premium_short_put
+            pos_or_panic!(10.0), // premium_long_call
+            pos_or_panic!(10.0), // premium_long_put
+            Positive::ZERO,      // open_fee
+            Positive::ZERO,      // closing fee
         );
         assert_eq!(condor.get_net_premium_received().unwrap().to_f64(), ZERO);
     }
@@ -1724,22 +1758,22 @@ mod tests_iron_condor_strategies {
     fn test_net_premium_received_bis_ii() {
         let condor = IronCondor::new(
             "TEST".to_string(),
-            pos!(100.0), // underlying_price
-            pos!(105.0), // short_call_strike
-            pos!(95.0),  // short_put_strike
-            pos!(110.0), // long_call_strike
-            pos!(90.0),  // long_put_strike
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(0.2),      // implied_volatility
-            dec!(0.05),     // risk_free_rate
-            Positive::ZERO, // dividend_yield
-            pos!(1.0),      // quantity
-            pos!(10.0),     // premium_short_call
-            pos!(10.0),     // premium_short_put
-            pos!(10.0),     // premium_long_call
-            pos!(10.0),     // premium_long_put
-            Positive::ONE,  // open_fee
-            Positive::ONE,  // closing fee
+            pos_or_panic!(100.0), // underlying_price
+            pos_or_panic!(105.0), // short_call_strike
+            pos_or_panic!(95.0),  // short_put_strike
+            pos_or_panic!(110.0), // long_call_strike
+            pos_or_panic!(90.0),  // long_put_strike
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.2),  // implied_volatility
+            dec!(0.05),          // risk_free_rate
+            Positive::ZERO,      // dividend_yield
+            pos_or_panic!(1.0),  // quantity
+            pos_or_panic!(10.0), // premium_short_call
+            pos_or_panic!(10.0), // premium_short_put
+            pos_or_panic!(10.0), // premium_long_call
+            pos_or_panic!(10.0), // premium_long_put
+            Positive::ONE,       // open_fee
+            Positive::ONE,       // closing fee
         );
         assert_eq!(condor.get_net_premium_received().unwrap().to_f64(), 0.0);
     }
@@ -1748,22 +1782,22 @@ mod tests_iron_condor_strategies {
     fn test_net_premium_received_bis_iii() {
         let condor = IronCondor::new(
             "TEST".to_string(),
-            pos!(100.0), // underlying_price
-            pos!(105.0), // short_call_strike
-            pos!(95.0),  // short_put_strike
-            pos!(110.0), // long_call_strike
-            pos!(90.0),  // long_put_strike
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(0.2),      // implied_volatility
-            dec!(0.05),     // risk_free_rate
-            Positive::ZERO, // dividend_yield
-            pos!(1.0),      // quantity
-            pos!(10.0),     // premium_short_call
-            pos!(20.0),     // premium_short_put
-            pos!(20.0),     // premium_long_call
-            pos!(10.0),     // premium_long_put
-            Positive::ONE,  // open_fee
-            Positive::ONE,  // closing fee
+            pos_or_panic!(100.0), // underlying_price
+            pos_or_panic!(105.0), // short_call_strike
+            pos_or_panic!(95.0),  // short_put_strike
+            pos_or_panic!(110.0), // long_call_strike
+            pos_or_panic!(90.0),  // long_put_strike
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.2),  // implied_volatility
+            dec!(0.05),          // risk_free_rate
+            Positive::ZERO,      // dividend_yield
+            pos_or_panic!(1.0),  // quantity
+            pos_or_panic!(10.0), // premium_short_call
+            pos_or_panic!(20.0), // premium_short_put
+            pos_or_panic!(20.0), // premium_long_call
+            pos_or_panic!(10.0), // premium_long_put
+            Positive::ONE,       // open_fee
+            Positive::ONE,       // closing fee
         );
         assert_eq!(condor.get_net_premium_received().unwrap().to_f64(), 0.0);
     }
@@ -1772,22 +1806,22 @@ mod tests_iron_condor_strategies {
     fn test_net_premium_received_bis_iv() {
         let condor = IronCondor::new(
             "TEST".to_string(),
-            pos!(100.0), // underlying_price
-            pos!(105.0), // short_call_strike
-            pos!(95.0),  // short_put_strike
-            pos!(110.0), // long_call_strike
-            pos!(90.0),  // long_put_strike
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(0.2),      // implied_volatility
-            dec!(0.05),     // risk_free_rate
-            Positive::ZERO, // dividend_yield
-            pos!(1.0),      // quantity
-            pos!(10.0),     // premium_short_call
-            pos!(20.0),     // premium_short_put
-            pos!(10.0),     // premium_long_call
-            pos!(10.0),     // premium_long_put
-            Positive::ONE,  // open_fee
-            Positive::ONE,  // closing fee
+            pos_or_panic!(100.0), // underlying_price
+            pos_or_panic!(105.0), // short_call_strike
+            pos_or_panic!(95.0),  // short_put_strike
+            pos_or_panic!(110.0), // long_call_strike
+            pos_or_panic!(90.0),  // long_put_strike
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.2),  // implied_volatility
+            dec!(0.05),          // risk_free_rate
+            Positive::ZERO,      // dividend_yield
+            pos_or_panic!(1.0),  // quantity
+            pos_or_panic!(10.0), // premium_short_call
+            pos_or_panic!(20.0), // premium_short_put
+            pos_or_panic!(10.0), // premium_long_call
+            pos_or_panic!(10.0), // premium_long_put
+            Positive::ONE,       // open_fee
+            Positive::ONE,       // closing fee
         );
         assert_eq!(condor.get_net_premium_received().unwrap().to_f64(), 2.0);
     }
@@ -1796,22 +1830,22 @@ mod tests_iron_condor_strategies {
     fn test_net_premium_received_bis_v() {
         let condor = IronCondor::new(
             "TEST".to_string(),
-            pos!(100.0), // underlying_price
-            pos!(105.0), // short_call_strike
-            pos!(95.0),  // short_put_strike
-            pos!(110.0), // long_call_strike
-            pos!(90.0),  // long_put_strike
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(0.2),      // implied_volatility
-            dec!(0.05),     // risk_free_rate
-            Positive::ZERO, // dividend_yield
-            pos!(1.0),      // quantity
-            pos!(10.0),     // premium_short_call
-            pos!(10.0),     // premium_short_put
-            pos!(10.0),     // premium_long_call
-            pos!(20.0),     // premium_long_put
-            Positive::ONE,  // open_fee
-            Positive::ONE,  // closing fee
+            pos_or_panic!(100.0), // underlying_price
+            pos_or_panic!(105.0), // short_call_strike
+            pos_or_panic!(95.0),  // short_put_strike
+            pos_or_panic!(110.0), // long_call_strike
+            pos_or_panic!(90.0),  // long_put_strike
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.2),  // implied_volatility
+            dec!(0.05),          // risk_free_rate
+            Positive::ZERO,      // dividend_yield
+            pos_or_panic!(1.0),  // quantity
+            pos_or_panic!(10.0), // premium_short_call
+            pos_or_panic!(10.0), // premium_short_put
+            pos_or_panic!(10.0), // premium_long_call
+            pos_or_panic!(20.0), // premium_long_put
+            Positive::ONE,       // open_fee
+            Positive::ONE,       // closing fee
         );
         assert_eq!(condor.get_net_premium_received().unwrap().to_f64(), 0.0);
     }
@@ -1832,7 +1866,7 @@ mod tests_iron_condor_strategies {
     #[test]
     fn test_best_range_to_show() {
         let condor = create_test_condor();
-        let range = condor.get_best_range_to_show(pos!(1.0)).unwrap();
+        let range = condor.get_best_range_to_show(pos_or_panic!(1.0)).unwrap();
         assert!(!range.is_empty());
         assert!(range[0] < condor.long_put.option.strike_price);
         assert!(range[range.len() - 1] > condor.long_call.option.strike_price);
@@ -1842,26 +1876,26 @@ mod tests_iron_condor_strategies {
     fn test_with_multiple_contracts() {
         let condor = IronCondor::new(
             "TEST".to_string(),
-            pos!(100.0),
-            pos!(105.0),
-            pos!(95.0),
-            pos!(110.0),
-            pos!(90.0),
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(0.2),
+            pos_or_panic!(100.0),
+            pos_or_panic!(105.0),
+            pos_or_panic!(95.0),
+            pos_or_panic!(110.0),
+            pos_or_panic!(90.0),
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.2),
             dec!(0.05),
             Positive::ZERO,
-            pos!(2.0), // quantity = 2
+            pos_or_panic!(2.0), // quantity = 2
             Positive::TWO,
             Positive::TWO,
             Positive::ONE,
             Positive::ONE,
-            pos!(0.5),
-            pos!(0.5),
+            pos_or_panic!(0.5),
+            pos_or_panic!(0.5),
         );
 
         assert!(condor.get_max_profit().is_err());
-        assert_eq!(condor.get_max_loss().unwrap(), pos!(14.0));
+        assert_eq!(condor.get_max_loss().unwrap(), pos_or_panic!(14.0));
     }
 
     #[test]
@@ -1880,6 +1914,7 @@ mod tests_iron_condor_strategies {
 #[cfg(test)]
 mod tests_iron_condor_optimizable {
     use super::*;
+
     use crate::chains::OptionData;
     use crate::model::ExpirationDate;
 
@@ -1888,38 +1923,44 @@ mod tests_iron_condor_optimizable {
     fn create_test_condor() -> IronCondor {
         IronCondor::new(
             "TEST".to_string(),
-            pos!(100.0), // underlying_price
-            pos!(105.0), // short_call_strike
-            pos!(95.0),  // short_put_strike
-            pos!(110.0), // long_call_strike
-            pos!(90.0),  // long_put_strike
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(0.2),      // implied_volatility
-            dec!(0.05),     // risk_free_rate
-            Positive::ZERO, // dividend_yield
-            pos!(1.0),      // quantity
-            Positive::TWO,  // premium_short_call
-            Positive::TWO,  // premium_short_put
-            Positive::ONE,  // premium_long_call
-            Positive::ONE,  // premium_long_put
-            pos!(0.5),      // open_fee
-            pos!(0.5),      // closing fee
+            pos_or_panic!(100.0), // underlying_price
+            pos_or_panic!(105.0), // short_call_strike
+            pos_or_panic!(95.0),  // short_put_strike
+            pos_or_panic!(110.0), // long_call_strike
+            pos_or_panic!(90.0),  // long_put_strike
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.2), // implied_volatility
+            dec!(0.05),         // risk_free_rate
+            Positive::ZERO,     // dividend_yield
+            pos_or_panic!(1.0), // quantity
+            Positive::TWO,      // premium_short_call
+            Positive::TWO,      // premium_short_put
+            Positive::ONE,      // premium_long_call
+            Positive::ONE,      // premium_long_put
+            pos_or_panic!(0.5), // open_fee
+            pos_or_panic!(0.5), // closing fee
         )
     }
 
     fn create_test_chain() -> OptionChain {
-        let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-12-31".to_string(), None, None);
+        let mut chain = OptionChain::new(
+            "TEST",
+            pos_or_panic!(100.0),
+            "2024-12-31".to_string(),
+            None,
+            None,
+        );
 
         // Add options at various strikes
         for strike in [85.0, 90.0, 95.0, 100.0, 105.0, 110.0, 115.0] {
             chain.add_option(
-                pos!(strike),
-                spos!(5.0), // call_bid
-                spos!(5.2), // call_ask
-                spos!(5.0), // put_bid
-                spos!(5.2), // put_ask
-                pos!(0.2),  // implied_volatility
-                None,       // delta
+                pos_or_panic!(strike),
+                spos!(5.0),         // call_bid
+                spos!(5.2),         // call_ask
+                spos!(5.0),         // put_bid
+                spos!(5.2),         // put_ask
+                pos_or_panic!(0.2), // implied_volatility
+                None,               // delta
                 None,
                 None,
                 spos!(100.0), // volume
@@ -1961,13 +2002,13 @@ mod tests_iron_condor_optimizable {
 
         condor.find_optimal(
             &chain,
-            FindOptimalSide::Range(pos!(95.0), pos!(105.0)),
+            FindOptimalSide::Range(pos_or_panic!(95.0), pos_or_panic!(105.0)),
             OptimizationCriteria::Ratio,
         );
 
         assert!(condor.validate());
-        assert!(condor.short_put.option.strike_price >= pos!(95.0));
-        assert!(condor.short_call.option.strike_price <= pos!(105.0));
+        assert!(condor.short_put.option.strike_price >= pos_or_panic!(95.0));
+        assert!(condor.short_call.option.strike_price <= pos_or_panic!(105.0));
     }
 
     #[test]
@@ -1986,12 +2027,12 @@ mod tests_iron_condor_optimizable {
     fn test_is_valid_long_option() {
         let condor = create_test_condor();
         let option = OptionData::new(
-            pos!(90.0),
+            pos_or_panic!(90.0),
             spos!(5.0),
             spos!(5.2),
             spos!(5.0),
             spos!(5.2),
-            pos!(0.2),
+            pos_or_panic!(0.2),
             None,
             None,
             None,
@@ -2010,22 +2051,22 @@ mod tests_iron_condor_optimizable {
         assert!(condor.is_valid_optimal_option(&option, &FindOptimalSide::All));
         assert!(condor.is_valid_optimal_option(&option, &FindOptimalSide::Lower));
         assert!(!condor.is_valid_optimal_option(&option, &FindOptimalSide::Upper));
-        assert!(
-            condor
-                .is_valid_optimal_option(&option, &FindOptimalSide::Range(pos!(85.0), pos!(95.0)))
-        );
+        assert!(condor.is_valid_optimal_option(
+            &option,
+            &FindOptimalSide::Range(pos_or_panic!(85.0), pos_or_panic!(95.0))
+        ));
     }
 
     #[test]
     fn test_is_valid_short_option() {
         let condor = create_test_condor();
         let option = OptionData::new(
-            pos!(105.0),
+            pos_or_panic!(105.0),
             spos!(5.0),
             spos!(5.2),
             spos!(5.0),
             spos!(5.2),
-            pos!(0.2),
+            pos_or_panic!(0.2),
             None,
             None,
             None,
@@ -2044,12 +2085,10 @@ mod tests_iron_condor_optimizable {
         assert!(condor.is_valid_optimal_option(&option, &FindOptimalSide::All));
         assert!(!condor.is_valid_optimal_option(&option, &FindOptimalSide::Lower));
         assert!(condor.is_valid_optimal_option(&option, &FindOptimalSide::Upper));
-        assert!(
-            condor.is_valid_optimal_option(
-                &option,
-                &FindOptimalSide::Range(pos!(100.0), pos!(110.0))
-            )
-        );
+        assert!(condor.is_valid_optimal_option(
+            &option,
+            &FindOptimalSide::Range(pos_or_panic!(100.0), pos_or_panic!(110.0))
+        ));
     }
 
     #[test]
@@ -2067,10 +2106,22 @@ mod tests_iron_condor_optimizable {
 
         let new_strategy = condor.create_strategy(&chain, &legs);
         assert!(new_strategy.validate());
-        assert_eq!(new_strategy.long_put.option.strike_price, pos!(90.0));
-        assert_eq!(new_strategy.short_put.option.strike_price, pos!(95.0));
-        assert_eq!(new_strategy.short_call.option.strike_price, pos!(105.0));
-        assert_eq!(new_strategy.long_call.option.strike_price, pos!(110.0));
+        assert_eq!(
+            new_strategy.long_put.option.strike_price,
+            pos_or_panic!(90.0)
+        );
+        assert_eq!(
+            new_strategy.short_put.option.strike_price,
+            pos_or_panic!(95.0)
+        );
+        assert_eq!(
+            new_strategy.short_call.option.strike_price,
+            pos_or_panic!(105.0)
+        );
+        assert_eq!(
+            new_strategy.long_call.option.strike_price,
+            pos_or_panic!(110.0)
+        );
     }
 
     #[test]
@@ -2092,6 +2143,7 @@ mod tests_iron_condor_optimizable {
 #[cfg(test)]
 mod tests_iron_condor_profit {
     use super::*;
+
     use crate::model::ExpirationDate;
 
     use num_traits::ToPrimitive;
@@ -2100,22 +2152,22 @@ mod tests_iron_condor_profit {
     fn create_test_condor() -> IronCondor {
         IronCondor::new(
             "TEST".to_string(),
-            pos!(100.0), // underlying_price
-            pos!(105.0), // short_call_strike
-            pos!(95.0),  // short_put_strike
-            pos!(110.0), // long_call_strike
-            pos!(90.0),  // long_put_strike
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(0.2),      // implied_volatility
-            dec!(0.05),     // risk_free_rate
-            Positive::ZERO, // dividend_yield
-            pos!(1.0),      // quantity
-            Positive::TWO,  // premium_short_call
-            Positive::TWO,  // premium_short_put
-            Positive::ONE,  // premium_long_call
-            Positive::ONE,  // premium_long_put
-            Positive::ZERO, // open_fee
-            Positive::ZERO, // closing fee
+            pos_or_panic!(100.0), // underlying_price
+            pos_or_panic!(105.0), // short_call_strike
+            pos_or_panic!(95.0),  // short_put_strike
+            pos_or_panic!(110.0), // long_call_strike
+            pos_or_panic!(90.0),  // long_put_strike
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.2), // implied_volatility
+            dec!(0.05),         // risk_free_rate
+            Positive::ZERO,     // dividend_yield
+            pos_or_panic!(1.0), // quantity
+            Positive::TWO,      // premium_short_call
+            Positive::TWO,      // premium_short_put
+            Positive::ONE,      // premium_long_call
+            Positive::ONE,      // premium_long_put
+            Positive::ZERO,     // open_fee
+            Positive::ZERO,     // closing fee
         )
     }
 
@@ -2123,7 +2175,7 @@ mod tests_iron_condor_profit {
     fn test_profit_at_max_profit_price() {
         let condor = create_test_condor();
         let profit = condor
-            .calculate_profit_at(&pos!(100.0))
+            .calculate_profit_at(&pos_or_panic!(100.0))
             .unwrap()
             .to_f64()
             .unwrap();
@@ -2135,7 +2187,7 @@ mod tests_iron_condor_profit {
     fn test_profit_below_long_put() {
         let condor = create_test_condor();
         let profit = condor
-            .calculate_profit_at(&pos!(85.0))
+            .calculate_profit_at(&pos_or_panic!(85.0))
             .unwrap()
             .to_f64()
             .unwrap();
@@ -2147,7 +2199,7 @@ mod tests_iron_condor_profit {
     fn test_profit_at_long_put() {
         let condor = create_test_condor();
         let profit = condor
-            .calculate_profit_at(&pos!(90.0))
+            .calculate_profit_at(&pos_or_panic!(90.0))
             .unwrap()
             .to_f64()
             .unwrap();
@@ -2159,7 +2211,7 @@ mod tests_iron_condor_profit {
     fn test_profit_between_puts() {
         let condor = create_test_condor();
         let profit = condor
-            .calculate_profit_at(&pos!(92.5))
+            .calculate_profit_at(&pos_or_panic!(92.5))
             .unwrap()
             .to_f64()
             .unwrap();
@@ -2170,7 +2222,7 @@ mod tests_iron_condor_profit {
     fn test_profit_at_short_put() {
         let condor = create_test_condor();
         let profit = condor
-            .calculate_profit_at(&pos!(95.0))
+            .calculate_profit_at(&pos_or_panic!(95.0))
             .unwrap()
             .to_f64()
             .unwrap();
@@ -2181,7 +2233,7 @@ mod tests_iron_condor_profit {
     fn test_profit_in_profit_zone() {
         let condor = create_test_condor();
         let profit = condor
-            .calculate_profit_at(&pos!(100.0))
+            .calculate_profit_at(&pos_or_panic!(100.0))
             .unwrap()
             .to_f64()
             .unwrap();
@@ -2192,7 +2244,7 @@ mod tests_iron_condor_profit {
     fn test_profit_at_short_call() {
         let condor = create_test_condor();
         let profit = condor
-            .calculate_profit_at(&pos!(105.0))
+            .calculate_profit_at(&pos_or_panic!(105.0))
             .unwrap()
             .to_f64()
             .unwrap();
@@ -2203,7 +2255,7 @@ mod tests_iron_condor_profit {
     fn test_profit_between_calls() {
         let condor = create_test_condor();
         let profit = condor
-            .calculate_profit_at(&pos!(107.5))
+            .calculate_profit_at(&pos_or_panic!(107.5))
             .unwrap()
             .to_f64()
             .unwrap();
@@ -2214,7 +2266,7 @@ mod tests_iron_condor_profit {
     fn test_profit_at_long_call() {
         let condor = create_test_condor();
         let profit = condor
-            .calculate_profit_at(&pos!(110.0))
+            .calculate_profit_at(&pos_or_panic!(110.0))
             .unwrap()
             .to_f64()
             .unwrap();
@@ -2226,7 +2278,7 @@ mod tests_iron_condor_profit {
     fn test_profit_above_long_call() {
         let condor = create_test_condor();
         let profit = condor
-            .calculate_profit_at(&pos!(115.0))
+            .calculate_profit_at(&pos_or_panic!(115.0))
             .unwrap()
             .to_f64()
             .unwrap();
@@ -2237,26 +2289,26 @@ mod tests_iron_condor_profit {
     fn test_profit_with_fees() {
         let condor = IronCondor::new(
             "TEST".to_string(),
-            pos!(100.0),
-            pos!(105.0),
-            pos!(95.0),
-            pos!(110.0),
-            pos!(90.0),
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(0.2),
+            pos_or_panic!(100.0),
+            pos_or_panic!(105.0),
+            pos_or_panic!(95.0),
+            pos_or_panic!(110.0),
+            pos_or_panic!(90.0),
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.2),
             dec!(0.05),
             Positive::ZERO,
-            pos!(1.0),
+            pos_or_panic!(1.0),
             Positive::TWO,
             Positive::TWO,
             Positive::ONE,
             Positive::ONE,
-            pos!(0.5), // open_fee
-            pos!(0.5), // closing fee
+            pos_or_panic!(0.5), // open_fee
+            pos_or_panic!(0.5), // closing fee
         );
 
         let profit = condor
-            .calculate_profit_at(&pos!(100.0))
+            .calculate_profit_at(&pos_or_panic!(100.0))
             .unwrap()
             .to_f64()
             .unwrap();
@@ -2269,26 +2321,26 @@ mod tests_iron_condor_profit {
     fn test_profit_with_fees_qty() {
         let condor = IronCondor::new(
             "TEST".to_string(),
-            pos!(100.0),
-            pos!(105.0),
-            pos!(95.0),
-            pos!(110.0),
-            pos!(90.0),
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(0.2),
+            pos_or_panic!(100.0),
+            pos_or_panic!(105.0),
+            pos_or_panic!(95.0),
+            pos_or_panic!(110.0),
+            pos_or_panic!(90.0),
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.2),
             dec!(0.05),
             Positive::ZERO,
-            pos!(3.0),
+            pos_or_panic!(3.0),
             Positive::TWO,
             Positive::TWO,
             Positive::ONE,
             Positive::ONE,
-            pos!(0.5), // open_fee
-            pos!(0.5), // closing fee
+            pos_or_panic!(0.5), // open_fee
+            pos_or_panic!(0.5), // closing fee
         );
 
         let profit = condor
-            .calculate_profit_at(&pos!(100.0))
+            .calculate_profit_at(&pos_or_panic!(100.0))
             .unwrap()
             .to_f64()
             .unwrap();
@@ -2300,16 +2352,16 @@ mod tests_iron_condor_profit {
     fn test_profit_with_multiple_contracts() {
         let condor = IronCondor::new(
             "TEST".to_string(),
-            pos!(100.0),
-            pos!(105.0),
-            pos!(95.0),
-            pos!(110.0),
-            pos!(90.0),
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(0.2),
+            pos_or_panic!(100.0),
+            pos_or_panic!(105.0),
+            pos_or_panic!(95.0),
+            pos_or_panic!(110.0),
+            pos_or_panic!(90.0),
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.2),
             dec!(0.05),
             Positive::ZERO,
-            pos!(2.0), // quantity = 2
+            pos_or_panic!(2.0), // quantity = 2
             Positive::TWO,
             Positive::TWO,
             Positive::ONE,
@@ -2319,7 +2371,7 @@ mod tests_iron_condor_profit {
         );
 
         let profit = condor
-            .calculate_profit_at(&pos!(100.0))
+            .calculate_profit_at(&pos_or_panic!(100.0))
             .unwrap()
             .to_f64()
             .unwrap();
@@ -2331,8 +2383,8 @@ mod tests_iron_condor_profit {
     fn test_profit_at_break_even_points() {
         let condor = create_test_condor();
 
-        let lower_break_even = pos!(93.0); // 95 - 2
-        let upper_break_even = pos!(107.0); // 105 + 2
+        let lower_break_even = pos_or_panic!(93.0); // 95 - 2
+        let upper_break_even = pos_or_panic!(107.0); // 105 + 2
 
         let lower_profit = condor
             .calculate_profit_at(&lower_break_even)
@@ -2354,6 +2406,7 @@ mod tests_iron_condor_profit {
 #[cfg(test)]
 mod tests_iron_condor_delta {
     use super::*;
+
     use crate::strategies::{DELTA_THRESHOLD, DeltaAdjustment};
     use crate::{assert_decimal_eq, assert_pos_relative_eq};
     use rust_decimal_macros::dec;
@@ -2361,33 +2414,33 @@ mod tests_iron_condor_delta {
     fn get_strategy(underlying_price: Positive) -> IronCondor {
         IronCondor::new(
             "GOLD".to_string(),
-            underlying_price, // underlying_price
-            pos!(2725.0),     // short_call_strike
-            pos!(2560.0),     // short_put_strike
-            pos!(2800.0),     // long_call_strike
-            pos!(2500.0),     // long_put_strike
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(0.1548),   // implied_volatility
-            Decimal::ZERO,  // risk_free_rate
-            Positive::ZERO, // dividend_yield
-            pos!(1.0),      // quantity
-            pos!(38.8),     // premium_short_call
-            pos!(30.4),     // premium_short_put
-            pos!(23.3),     // premium_long_call
-            pos!(16.8),     // premium_long_put
-            pos!(0.96),     // open_fee
-            pos!(0.96),     // close_fee
+            underlying_price,      // underlying_price
+            pos_or_panic!(2725.0), // short_call_strike
+            pos_or_panic!(2560.0), // short_put_strike
+            pos_or_panic!(2800.0), // long_call_strike
+            pos_or_panic!(2500.0), // long_put_strike
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.1548), // implied_volatility
+            Decimal::ZERO,         // risk_free_rate
+            Positive::ZERO,        // dividend_yield
+            pos_or_panic!(1.0),    // quantity
+            pos_or_panic!(38.8),   // premium_short_call
+            pos_or_panic!(30.4),   // premium_short_put
+            pos_or_panic!(23.3),   // premium_long_call
+            pos_or_panic!(16.8),   // premium_long_put
+            pos_or_panic!(0.96),   // open_fee
+            pos_or_panic!(0.96),   // close_fee
         )
     }
 
     #[test]
     fn create_test_reducing_adjustments() {
-        let strategy = get_strategy(pos!(2800.0));
+        let strategy = get_strategy(pos_or_panic!(2800.0));
         let size = dec!(-0.2124);
-        let delta1 = pos!(0.2883434684073368);
-        let delta2 = pos!(10.312_565_341_673_713);
-        let k1 = pos!(2725.0);
-        let k2 = pos!(2560.0);
+        let delta1 = pos_or_panic!(0.2883434684073368);
+        let delta2 = pos_or_panic!(10.312_565_341_673_713);
+        let k1 = pos_or_panic!(2725.0);
+        let k2 = pos_or_panic!(2560.0);
         assert_decimal_eq!(
             strategy.delta_neutrality().unwrap().net_delta,
             size,
@@ -2439,12 +2492,12 @@ mod tests_iron_condor_delta {
 
     #[test]
     fn create_test_increasing_adjustments() {
-        let strategy = get_strategy(pos!(2500.0));
+        let strategy = get_strategy(pos_or_panic!(2500.0));
         let size = dec!(0.18282752);
-        let delta1 = pos!(6.659_872_649_379_905);
-        let delta2 = pos!(0.262_778_440_960_323_7);
-        let k1 = pos!(2725.0);
-        let k2 = pos!(2560.0);
+        let delta1 = pos_or_panic!(6.659_872_649_379_905);
+        let delta2 = pos_or_panic!(0.262_778_440_960_323_7);
+        let k1 = pos_or_panic!(2725.0);
+        let k2 = pos_or_panic!(2560.0);
         assert_decimal_eq!(
             strategy.delta_neutrality().unwrap().net_delta,
             size,
@@ -2496,7 +2549,7 @@ mod tests_iron_condor_delta {
 
     #[test]
     fn create_test_no_adjustments() {
-        let strategy = get_strategy(pos!(2100.0));
+        let strategy = get_strategy(pos_or_panic!(2100.0));
 
         assert_decimal_eq!(
             strategy.delta_neutrality().unwrap().net_delta,
@@ -2512,6 +2565,7 @@ mod tests_iron_condor_delta {
 #[cfg(test)]
 mod tests_iron_condor_delta_size {
     use super::*;
+
     use crate::model::types::OptionStyle;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
@@ -2522,33 +2576,33 @@ mod tests_iron_condor_delta_size {
     fn get_strategy(underlying_price: Positive) -> IronCondor {
         IronCondor::new(
             "GOLD".to_string(),
-            underlying_price, // underlying_price
-            pos!(2725.0),     // short_call_strike
-            pos!(2560.0),     // short_put_strike
-            pos!(2800.0),     // long_call_strike
-            pos!(2500.0),     // long_put_strike
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(0.1548),   // implied_volatility
-            Decimal::ZERO,  // risk_free_rate
-            Positive::ZERO, // dividend_yield
-            pos!(2.0),      // quantity
-            pos!(38.8),     // premium_short_call
-            pos!(30.4),     // premium_short_put
-            pos!(23.3),     // premium_long_call
-            pos!(16.8),     // premium_long_put
-            pos!(0.96),     // open_fee
-            pos!(0.96),     // close_fee
+            underlying_price,      // underlying_price
+            pos_or_panic!(2725.0), // short_call_strike
+            pos_or_panic!(2560.0), // short_put_strike
+            pos_or_panic!(2800.0), // long_call_strike
+            pos_or_panic!(2500.0), // long_put_strike
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.1548), // implied_volatility
+            Decimal::ZERO,         // risk_free_rate
+            Positive::ZERO,        // dividend_yield
+            pos_or_panic!(2.0),    // quantity
+            pos_or_panic!(38.8),   // premium_short_call
+            pos_or_panic!(30.4),   // premium_short_put
+            pos_or_panic!(23.3),   // premium_long_call
+            pos_or_panic!(16.8),   // premium_long_put
+            pos_or_panic!(0.96),   // open_fee
+            pos_or_panic!(0.96),   // close_fee
         )
     }
 
     #[test]
     fn create_test_reducing_adjustments() {
-        let strategy = get_strategy(pos!(2800.9));
+        let strategy = get_strategy(pos_or_panic!(2800.9));
         let size = dec!(-0.42443);
-        let delta1 = pos!(0.5740980208367);
-        let delta2 = pos!(20.961338283036);
-        let k1 = pos!(2725.0);
-        let k2 = pos!(2560.0);
+        let delta1 = pos_or_panic!(0.5740980208367);
+        let delta2 = pos_or_panic!(20.961338283036);
+        let k1 = pos_or_panic!(2725.0);
+        let k2 = pos_or_panic!(2560.0);
         assert_decimal_eq!(
             strategy.delta_neutrality().unwrap().net_delta,
             size,
@@ -2599,12 +2653,12 @@ mod tests_iron_condor_delta_size {
 
     #[test]
     fn create_test_increasing_adjustments() {
-        let strategy = get_strategy(pos!(2500.9));
+        let strategy = get_strategy(pos_or_panic!(2500.9));
         let size = dec!(0.3656);
-        let delta1 = pos!(13.074221057885);
-        let delta2 = pos!(0.5277336881936);
-        let k1 = pos!(2725.0);
-        let k2 = pos!(2560.0);
+        let delta1 = pos_or_panic!(13.074221057885);
+        let delta2 = pos_or_panic!(0.5277336881936);
+        let k1 = pos_or_panic!(2725.0);
+        let k2 = pos_or_panic!(2560.0);
         assert_decimal_eq!(
             strategy.delta_neutrality().unwrap().net_delta,
             size,
@@ -2656,7 +2710,7 @@ mod tests_iron_condor_delta_size {
 
     #[test]
     fn create_test_no_adjustments() {
-        let strategy = get_strategy(pos!(2100.0));
+        let strategy = get_strategy(pos_or_panic!(2100.0));
 
         assert_decimal_eq!(
             strategy.delta_neutrality().unwrap().net_delta,
@@ -2672,6 +2726,7 @@ mod tests_iron_condor_delta_size {
 #[cfg(test)]
 mod tests_iron_condor_probability {
     use super::*;
+
     use crate::assert_pos_relative_eq;
     use crate::strategies::probabilities::utils::PriceTrend;
     use rust_decimal_macros::dec;
@@ -2680,22 +2735,22 @@ mod tests_iron_condor_probability {
     fn create_test_condor() -> IronCondor {
         IronCondor::new(
             "GOLD".to_string(),
-            pos!(2646.9), // underlying_price
-            pos!(2725.0), // short_call_strike
-            pos!(2560.0), // short_put_strike
-            pos!(2800.0), // long_call_strike
-            pos!(2500.0), // long_put_strike
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(0.1548),   // implied_volatility
-            dec!(0.05),     // risk_free_rate
-            Positive::ZERO, // dividend_yield
-            pos!(1.0),      // quantity
-            pos!(38.8),     // premium_short_call
-            pos!(30.4),     // premium_short_put
-            pos!(23.3),     // premium_long_call
-            pos!(16.8),     // premium_long_put
-            pos!(0.96),     // open_fee
-            pos!(0.96),     // close_fee
+            pos_or_panic!(2646.9), // underlying_price
+            pos_or_panic!(2725.0), // short_call_strike
+            pos_or_panic!(2560.0), // short_put_strike
+            pos_or_panic!(2800.0), // long_call_strike
+            pos_or_panic!(2500.0), // long_put_strike
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.1548), // implied_volatility
+            dec!(0.05),            // risk_free_rate
+            Positive::ZERO,        // dividend_yield
+            pos_or_panic!(1.0),    // quantity
+            pos_or_panic!(38.8),   // premium_short_call
+            pos_or_panic!(30.4),   // premium_short_put
+            pos_or_panic!(23.3),   // premium_long_call
+            pos_or_panic!(16.8),   // premium_long_put
+            pos_or_panic!(0.96),   // open_fee
+            pos_or_panic!(0.96),   // close_fee
         )
     }
 
@@ -2703,7 +2758,7 @@ mod tests_iron_condor_probability {
     fn test_get_expiration() {
         let condor = create_test_condor();
         let expiration_date = *condor.get_expiration().values().next().unwrap();
-        assert_eq!(expiration_date, &ExpirationDate::Days(pos!(30.0)));
+        assert_eq!(expiration_date, &ExpirationDate::Days(pos_or_panic!(30.0)));
     }
 
     #[test]
@@ -2728,7 +2783,7 @@ mod tests_iron_condor_probability {
         assert!(range.lower_bound.is_some());
         assert!(range.upper_bound.is_some());
         assert!(range.probability > Positive::ZERO);
-        assert!(range.probability <= pos!(1.0));
+        assert!(range.probability <= pos_or_panic!(1.0));
 
         // Verify profit range is between short strikes
         assert!(range.lower_bound.unwrap() <= condor.short_put.option.strike_price);
@@ -2769,7 +2824,11 @@ mod tests_iron_condor_probability {
 
         let total_loss_prob: Positive = loss_ranges.iter().map(|r| r.probability).sum();
 
-        assert_pos_relative_eq!(total_profit_prob + total_loss_prob, pos!(1.0), pos!(0.0001));
+        assert_pos_relative_eq!(
+            total_profit_prob + total_loss_prob,
+            pos_or_panic!(1.0),
+            pos_or_panic!(0.0001)
+        );
     }
 
     #[test]
@@ -2798,15 +2857,15 @@ mod tests_iron_condor_probability {
     fn test_with_volatility_adjustment() {
         let condor = create_test_condor();
         let vol_adj = Some(VolatilityAdjustment {
-            base_volatility: pos!(0.25),
-            std_dev_adjustment: pos!(0.05),
+            base_volatility: pos_or_panic!(0.25),
+            std_dev_adjustment: pos_or_panic!(0.05),
         });
 
         let prob = condor.probability_of_profit(vol_adj, None);
         assert!(prob.is_ok());
         let probability = prob.unwrap();
         assert!(probability > Positive::ZERO);
-        assert!(probability <= pos!(1.0));
+        assert!(probability <= pos_or_panic!(1.0));
     }
 
     #[test]
@@ -2821,7 +2880,7 @@ mod tests_iron_condor_probability {
         assert!(prob.is_ok());
         let probability = prob.unwrap();
         assert!(probability > Positive::ZERO);
-        assert!(probability <= pos!(1.0));
+        assert!(probability <= pos_or_panic!(1.0));
     }
 
     #[test]
@@ -2838,7 +2897,7 @@ mod tests_iron_condor_probability {
     #[test]
     fn test_high_volatility_scenario() {
         let mut condor = create_test_condor();
-        let high_vol = pos!(0.5);
+        let high_vol = pos_or_panic!(0.5);
         condor.long_call.option.implied_volatility = high_vol;
         condor.short_call.option.implied_volatility = high_vol;
         condor.short_put.option.implied_volatility = high_vol;
@@ -2846,7 +2905,7 @@ mod tests_iron_condor_probability {
 
         let analysis = condor.analyze_probabilities(None, None).unwrap();
         // Higher volatility should decrease probability of profit
-        assert!(analysis.probability_of_profit < pos!(0.7));
+        assert!(analysis.probability_of_profit < pos_or_panic!(0.7));
     }
 
     #[test]
@@ -2859,13 +2918,14 @@ mod tests_iron_condor_probability {
 
         assert!(max_profit_prob >= Positive::ZERO);
         assert!(max_loss_prob >= Positive::ZERO);
-        assert!(max_profit_prob + max_loss_prob <= pos!(1.0));
+        assert!(max_profit_prob + max_loss_prob <= pos_or_panic!(1.0));
     }
 }
 
 #[cfg(test)]
 mod tests_iron_condor_position_management {
     use super::*;
+
     use crate::error::position::PositionValidationErrorKind;
     use crate::model::types::{OptionStyle, Side};
 
@@ -2874,22 +2934,22 @@ mod tests_iron_condor_position_management {
     fn create_test_iron_condor() -> IronCondor {
         IronCondor::new(
             "GOLD".to_string(),
-            pos!(2646.9), // underlying_price
-            pos!(2725.0), // short_call_strike
-            pos!(2560.0), // short_put_strike
-            pos!(2800.0), // long_call_strike
-            pos!(2500.0), // long_put_strike
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(0.1548),   // implied_volatility
-            dec!(0.05),     // risk_free_rate
-            Positive::ZERO, // dividend_yield
-            pos!(1.0),      // quantity
-            pos!(38.8),     // premium_short_call
-            pos!(30.4),     // premium_short_put
-            pos!(23.3),     // premium_long_call
-            pos!(16.8),     // premium_long_put
-            pos!(0.96),     // open_fee
-            pos!(0.96),     // close_fee
+            pos_or_panic!(2646.9), // underlying_price
+            pos_or_panic!(2725.0), // short_call_strike
+            pos_or_panic!(2560.0), // short_put_strike
+            pos_or_panic!(2800.0), // long_call_strike
+            pos_or_panic!(2500.0), // long_put_strike
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.1548), // implied_volatility
+            dec!(0.05),            // risk_free_rate
+            Positive::ZERO,        // dividend_yield
+            pos_or_panic!(1.0),    // quantity
+            pos_or_panic!(38.8),   // premium_short_call
+            pos_or_panic!(30.4),   // premium_short_put
+            pos_or_panic!(23.3),   // premium_long_call
+            pos_or_panic!(16.8),   // premium_long_put
+            pos_or_panic!(0.96),   // open_fee
+            pos_or_panic!(0.96),   // close_fee
         )
     }
 
@@ -2899,26 +2959,27 @@ mod tests_iron_condor_position_management {
 
         // Test getting short call position
         let call_position =
-            iron_condor.get_position(&OptionStyle::Call, &Side::Short, &pos!(2725.0));
+            iron_condor.get_position(&OptionStyle::Call, &Side::Short, &pos_or_panic!(2725.0));
         assert!(call_position.is_ok());
         let positions = call_position.unwrap();
         assert_eq!(positions.len(), 1);
-        assert_eq!(positions[0].option.strike_price, pos!(2725.0));
+        assert_eq!(positions[0].option.strike_price, pos_or_panic!(2725.0));
         assert_eq!(positions[0].option.option_style, OptionStyle::Call);
         assert_eq!(positions[0].option.side, Side::Short);
 
         // Test getting short put position
-        let put_position = iron_condor.get_position(&OptionStyle::Put, &Side::Short, &pos!(2560.0));
+        let put_position =
+            iron_condor.get_position(&OptionStyle::Put, &Side::Short, &pos_or_panic!(2560.0));
         assert!(put_position.is_ok());
         let positions = put_position.unwrap();
         assert_eq!(positions.len(), 1);
-        assert_eq!(positions[0].option.strike_price, pos!(2560.0));
+        assert_eq!(positions[0].option.strike_price, pos_or_panic!(2560.0));
         assert_eq!(positions[0].option.option_style, OptionStyle::Put);
         assert_eq!(positions[0].option.side, Side::Short);
 
         // Test getting non-existent position
         let invalid_position =
-            iron_condor.get_position(&OptionStyle::Call, &Side::Short, &pos!(2715.0));
+            iron_condor.get_position(&OptionStyle::Call, &Side::Short, &pos_or_panic!(2715.0));
         assert!(invalid_position.is_err());
         match invalid_position {
             Err(PositionError::ValidationError(
@@ -2942,26 +3003,27 @@ mod tests_iron_condor_position_management {
 
         // Test getting short call position
         let call_position =
-            iron_condor.get_position(&OptionStyle::Call, &Side::Long, &pos!(2800.0));
+            iron_condor.get_position(&OptionStyle::Call, &Side::Long, &pos_or_panic!(2800.0));
         assert!(call_position.is_ok());
         let positions = call_position.unwrap();
         assert_eq!(positions.len(), 1);
-        assert_eq!(positions[0].option.strike_price, pos!(2800.0));
+        assert_eq!(positions[0].option.strike_price, pos_or_panic!(2800.0));
         assert_eq!(positions[0].option.option_style, OptionStyle::Call);
         assert_eq!(positions[0].option.side, Side::Long);
 
         // Test getting short put position
-        let put_position = iron_condor.get_position(&OptionStyle::Put, &Side::Long, &pos!(2500.0));
+        let put_position =
+            iron_condor.get_position(&OptionStyle::Put, &Side::Long, &pos_or_panic!(2500.0));
         assert!(put_position.is_ok());
         let positions = put_position.unwrap();
         assert_eq!(positions.len(), 1);
-        assert_eq!(positions[0].option.strike_price, pos!(2500.0));
+        assert_eq!(positions[0].option.strike_price, pos_or_panic!(2500.0));
         assert_eq!(positions[0].option.option_style, OptionStyle::Put);
         assert_eq!(positions[0].option.side, Side::Long);
 
         // Test getting non-existent position
         let invalid_position =
-            iron_condor.get_position(&OptionStyle::Call, &Side::Long, &pos!(2715.0));
+            iron_condor.get_position(&OptionStyle::Call, &Side::Long, &pos_or_panic!(2715.0));
         assert!(invalid_position.is_err());
         match invalid_position {
             Err(PositionError::ValidationError(
@@ -2985,21 +3047,21 @@ mod tests_iron_condor_position_management {
 
         // Modify short call position
         let mut modified_call = iron_condor.short_call.clone();
-        modified_call.option.quantity = pos!(2.0);
+        modified_call.option.quantity = pos_or_panic!(2.0);
         let result = iron_condor.modify_position(&modified_call);
         assert!(result.is_ok());
-        assert_eq!(iron_condor.short_call.option.quantity, pos!(2.0));
+        assert_eq!(iron_condor.short_call.option.quantity, pos_or_panic!(2.0));
 
         // Modify short put position
         let mut modified_put = iron_condor.short_put.clone();
-        modified_put.option.quantity = pos!(2.0);
+        modified_put.option.quantity = pos_or_panic!(2.0);
         let result = iron_condor.modify_position(&modified_put);
         assert!(result.is_ok());
-        assert_eq!(iron_condor.short_put.option.quantity, pos!(2.0));
+        assert_eq!(iron_condor.short_put.option.quantity, pos_or_panic!(2.0));
 
         // Test modifying with invalid position
         let mut invalid_position = iron_condor.short_call.clone();
-        invalid_position.option.strike_price = pos!(95.0);
+        invalid_position.option.strike_price = pos_or_panic!(95.0);
         let result = iron_condor.modify_position(&invalid_position);
         assert!(result.is_err());
         match result {
@@ -3022,21 +3084,21 @@ mod tests_iron_condor_position_management {
 
         // Modify long call position
         let mut modified_call = iron_condor.long_call.clone();
-        modified_call.option.quantity = pos!(2.0);
+        modified_call.option.quantity = pos_or_panic!(2.0);
         let result = iron_condor.modify_position(&modified_call);
         assert!(result.is_ok());
-        assert_eq!(iron_condor.long_call.option.quantity, pos!(2.0));
+        assert_eq!(iron_condor.long_call.option.quantity, pos_or_panic!(2.0));
 
         // Modify long put position
         let mut modified_put = iron_condor.long_put.clone();
-        modified_put.option.quantity = pos!(2.0);
+        modified_put.option.quantity = pos_or_panic!(2.0);
         let result = iron_condor.modify_position(&modified_put);
         assert!(result.is_ok());
-        assert_eq!(iron_condor.long_put.option.quantity, pos!(2.0));
+        assert_eq!(iron_condor.long_put.option.quantity, pos_or_panic!(2.0));
 
         // Test modifying with invalid position
         let mut invalid_position = iron_condor.long_call.clone();
-        invalid_position.option.strike_price = pos!(95.0);
+        invalid_position.option.strike_price = pos_or_panic!(95.0);
         let result = iron_condor.modify_position(&invalid_position);
         assert!(result.is_err());
         match result {
@@ -3057,6 +3119,7 @@ mod tests_iron_condor_position_management {
 #[cfg(test)]
 mod tests_adjust_option_position {
     use super::*;
+
     use crate::model::types::{OptionStyle, Side};
 
     use rust_decimal_macros::dec;
@@ -3065,22 +3128,22 @@ mod tests_adjust_option_position {
     fn create_test_strategy() -> IronCondor {
         IronCondor::new(
             "GOLD".to_string(),
-            pos!(2646.9), // underlying_price
-            pos!(2725.0), // short_call_strike
-            pos!(2560.0), // short_put_strike
-            pos!(2800.0), // long_call_strike
-            pos!(2500.0), // long_put_strike
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(0.1548),   // implied_volatility
-            dec!(0.05),     // risk_free_rate
-            Positive::ZERO, // dividend_yield
-            pos!(1.0),      // quantity
-            pos!(38.8),     // premium_short_call
-            pos!(30.4),     // premium_short_put
-            pos!(23.3),     // premium_long_call
-            pos!(16.8),     // premium_long_put
-            pos!(0.96),     // open_fee
-            pos!(0.96),     // close_fee
+            pos_or_panic!(2646.9), // underlying_price
+            pos_or_panic!(2725.0), // short_call_strike
+            pos_or_panic!(2560.0), // short_put_strike
+            pos_or_panic!(2800.0), // long_call_strike
+            pos_or_panic!(2500.0), // long_put_strike
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.1548), // implied_volatility
+            dec!(0.05),            // risk_free_rate
+            Positive::ZERO,        // dividend_yield
+            pos_or_panic!(1.0),    // quantity
+            pos_or_panic!(38.8),   // premium_short_call
+            pos_or_panic!(30.4),   // premium_short_put
+            pos_or_panic!(23.3),   // premium_long_call
+            pos_or_panic!(16.8),   // premium_long_put
+            pos_or_panic!(0.96),   // open_fee
+            pos_or_panic!(0.96),   // close_fee
         )
     }
 
@@ -3088,11 +3151,11 @@ mod tests_adjust_option_position {
     fn test_adjust_existing_call_position() {
         let mut strategy = create_test_strategy();
         let initial_quantity = strategy.short_call.option.quantity;
-        let adjustment = pos!(1.0);
+        let adjustment = pos_or_panic!(1.0);
 
         let result = strategy.adjust_option_position(
             adjustment.to_dec(),
-            &pos!(2725.0),
+            &pos_or_panic!(2725.0),
             &OptionStyle::Call,
             &Side::Short,
         );
@@ -3108,11 +3171,11 @@ mod tests_adjust_option_position {
     fn test_adjust_existing_put_position() {
         let mut strategy = create_test_strategy();
         let initial_quantity = strategy.short_put.option.quantity;
-        let adjustment = pos!(1.0);
+        let adjustment = pos_or_panic!(1.0);
 
         let result = strategy.adjust_option_position(
             adjustment.to_dec(),
-            &pos!(2560.0),
+            &pos_or_panic!(2560.0),
             &OptionStyle::Put,
             &Side::Short,
         );
@@ -3131,7 +3194,7 @@ mod tests_adjust_option_position {
         // Try to adjust a non-existent long call position
         let result = strategy.adjust_option_position(
             Decimal::ONE,
-            &pos!(110.0),
+            &pos_or_panic!(110.0),
             &OptionStyle::Call,
             &Side::Long,
         );
@@ -3149,7 +3212,7 @@ mod tests_adjust_option_position {
         // Try to adjust position with wrong strike price
         let result = strategy.adjust_option_position(
             Decimal::ONE,
-            &pos!(100.0), // Invalid strike price
+            &pos_or_panic!(100.0), // Invalid strike price
             &OptionStyle::Call,
             &Side::Short,
         );
@@ -3164,7 +3227,7 @@ mod tests_adjust_option_position {
 
         let result = strategy.adjust_option_position(
             Decimal::ZERO,
-            &pos!(2725.0),
+            &pos_or_panic!(2725.0),
             &OptionStyle::Call,
             &Side::Short,
         );
@@ -3177,6 +3240,7 @@ mod tests_adjust_option_position {
 #[cfg(test)]
 mod tests_strategy_constructor {
     use super::*;
+
     use crate::model::utils::create_sample_position;
 
     #[test]
@@ -3185,34 +3249,34 @@ mod tests_strategy_constructor {
             create_sample_position(
                 OptionStyle::Put,
                 Side::Long,
-                pos!(100.0),
-                pos!(1.0),
-                pos!(90.0),
-                pos!(0.2),
+                pos_or_panic!(100.0),
+                pos_or_panic!(1.0),
+                pos_or_panic!(90.0),
+                pos_or_panic!(0.2),
             ),
             create_sample_position(
                 OptionStyle::Put,
                 Side::Short,
-                pos!(100.0),
-                pos!(1.0),
-                pos!(95.0),
-                pos!(0.2),
+                pos_or_panic!(100.0),
+                pos_or_panic!(1.0),
+                pos_or_panic!(95.0),
+                pos_or_panic!(0.2),
             ),
             create_sample_position(
                 OptionStyle::Call,
                 Side::Short,
-                pos!(100.0),
-                pos!(1.0),
-                pos!(105.0),
-                pos!(0.2),
+                pos_or_panic!(100.0),
+                pos_or_panic!(1.0),
+                pos_or_panic!(105.0),
+                pos_or_panic!(0.2),
             ),
             create_sample_position(
                 OptionStyle::Call,
                 Side::Long,
-                pos!(100.0),
-                pos!(1.0),
-                pos!(110.0),
-                pos!(0.2),
+                pos_or_panic!(100.0),
+                pos_or_panic!(1.0),
+                pos_or_panic!(110.0),
+                pos_or_panic!(0.2),
             ),
         ];
 
@@ -3220,10 +3284,13 @@ mod tests_strategy_constructor {
         assert!(result.is_ok());
 
         let strategy = result.unwrap();
-        assert_eq!(strategy.long_put.option.strike_price, pos!(90.0));
-        assert_eq!(strategy.short_put.option.strike_price, pos!(95.0));
-        assert_eq!(strategy.short_call.option.strike_price, pos!(105.0));
-        assert_eq!(strategy.long_call.option.strike_price, pos!(110.0));
+        assert_eq!(strategy.long_put.option.strike_price, pos_or_panic!(90.0));
+        assert_eq!(strategy.short_put.option.strike_price, pos_or_panic!(95.0));
+        assert_eq!(
+            strategy.short_call.option.strike_price,
+            pos_or_panic!(105.0)
+        );
+        assert_eq!(strategy.long_call.option.strike_price, pos_or_panic!(110.0));
     }
 
     #[test]
@@ -3232,18 +3299,18 @@ mod tests_strategy_constructor {
             create_sample_position(
                 OptionStyle::Put,
                 Side::Long,
-                pos!(100.0),
-                pos!(1.0),
-                pos!(90.0),
-                pos!(0.2),
+                pos_or_panic!(100.0),
+                pos_or_panic!(1.0),
+                pos_or_panic!(90.0),
+                pos_or_panic!(0.2),
             ),
             create_sample_position(
                 OptionStyle::Put,
                 Side::Short,
-                pos!(100.0),
-                pos!(1.0),
-                pos!(95.0),
-                pos!(0.2),
+                pos_or_panic!(100.0),
+                pos_or_panic!(1.0),
+                pos_or_panic!(95.0),
+                pos_or_panic!(0.2),
             ),
         ];
 
@@ -3261,34 +3328,34 @@ mod tests_strategy_constructor {
             create_sample_position(
                 OptionStyle::Call, // Should be Put
                 Side::Long,
-                pos!(100.0),
-                pos!(1.0),
-                pos!(90.0),
-                pos!(0.2),
+                pos_or_panic!(100.0),
+                pos_or_panic!(1.0),
+                pos_or_panic!(90.0),
+                pos_or_panic!(0.2),
             ),
             create_sample_position(
                 OptionStyle::Put,
                 Side::Short,
-                pos!(100.0),
-                pos!(1.0),
-                pos!(95.0),
-                pos!(0.2),
+                pos_or_panic!(100.0),
+                pos_or_panic!(1.0),
+                pos_or_panic!(95.0),
+                pos_or_panic!(0.2),
             ),
             create_sample_position(
                 OptionStyle::Call,
                 Side::Short,
-                pos!(100.0),
-                pos!(1.0),
-                pos!(105.0),
-                pos!(0.2),
+                pos_or_panic!(100.0),
+                pos_or_panic!(1.0),
+                pos_or_panic!(105.0),
+                pos_or_panic!(0.2),
             ),
             create_sample_position(
                 OptionStyle::Call,
                 Side::Long,
-                pos!(100.0),
-                pos!(1.0),
-                pos!(110.0),
-                pos!(0.2),
+                pos_or_panic!(100.0),
+                pos_or_panic!(1.0),
+                pos_or_panic!(110.0),
+                pos_or_panic!(0.2),
             ),
         ];
 
@@ -3306,34 +3373,34 @@ mod tests_strategy_constructor {
             create_sample_position(
                 OptionStyle::Put,
                 Side::Short, // Should be Long
-                pos!(100.0),
-                pos!(1.0),
-                pos!(90.0),
-                pos!(0.2),
+                pos_or_panic!(100.0),
+                pos_or_panic!(1.0),
+                pos_or_panic!(90.0),
+                pos_or_panic!(0.2),
             ),
             create_sample_position(
                 OptionStyle::Put,
                 Side::Short,
-                pos!(100.0),
-                pos!(1.0),
-                pos!(95.0),
-                pos!(0.2),
+                pos_or_panic!(100.0),
+                pos_or_panic!(1.0),
+                pos_or_panic!(95.0),
+                pos_or_panic!(0.2),
             ),
             create_sample_position(
                 OptionStyle::Call,
                 Side::Short,
-                pos!(100.0),
-                pos!(1.0),
-                pos!(105.0),
-                pos!(0.2),
+                pos_or_panic!(100.0),
+                pos_or_panic!(1.0),
+                pos_or_panic!(105.0),
+                pos_or_panic!(0.2),
             ),
             create_sample_position(
                 OptionStyle::Call,
                 Side::Long,
-                pos!(100.0),
-                pos!(1.0),
-                pos!(110.0),
-                pos!(0.2),
+                pos_or_panic!(100.0),
+                pos_or_panic!(1.0),
+                pos_or_panic!(110.0),
+                pos_or_panic!(0.2),
             ),
         ];
 
@@ -3351,39 +3418,39 @@ mod tests_strategy_constructor {
             create_sample_position(
                 OptionStyle::Put,
                 Side::Long,
-                pos!(100.0),
-                pos!(1.0),
-                pos!(90.0),
-                pos!(0.2),
+                pos_or_panic!(100.0),
+                pos_or_panic!(1.0),
+                pos_or_panic!(90.0),
+                pos_or_panic!(0.2),
             ),
             create_sample_position(
                 OptionStyle::Put,
                 Side::Short,
-                pos!(100.0),
-                pos!(1.0),
-                pos!(95.0),
-                pos!(0.2),
+                pos_or_panic!(100.0),
+                pos_or_panic!(1.0),
+                pos_or_panic!(95.0),
+                pos_or_panic!(0.2),
             ),
             create_sample_position(
                 OptionStyle::Call,
                 Side::Short,
-                pos!(100.0),
-                pos!(1.0),
-                pos!(105.0),
-                pos!(0.2),
+                pos_or_panic!(100.0),
+                pos_or_panic!(1.0),
+                pos_or_panic!(105.0),
+                pos_or_panic!(0.2),
             ),
             create_sample_position(
                 OptionStyle::Call,
                 Side::Long,
-                pos!(100.0),
-                pos!(1.0),
-                pos!(110.0),
-                pos!(0.2),
+                pos_or_panic!(100.0),
+                pos_or_panic!(1.0),
+                pos_or_panic!(110.0),
+                pos_or_panic!(0.2),
             ),
         ];
 
         // Change expiration date of one option
-        options[0].option.expiration_date = ExpirationDate::Days(pos!(60.0));
+        options[0].option.expiration_date = ExpirationDate::Days(pos_or_panic!(60.0));
 
         let result = IronCondor::get_strategy(&options);
         assert!(matches!(
@@ -3397,6 +3464,7 @@ mod tests_strategy_constructor {
 #[cfg(test)]
 mod tests_iron_condor_pnl {
     use super::*;
+
     use crate::model::utils::create_sample_position;
 
     use rust_decimal_macros::dec;
@@ -3406,40 +3474,40 @@ mod tests_iron_condor_pnl {
         let long_put = create_sample_position(
             OptionStyle::Put,
             Side::Long,
-            pos!(100.0), // Underlying price
-            pos!(1.0),   // Quantity
-            pos!(90.0),  // Strike price
-            pos!(0.2),   // Implied volatility
+            pos_or_panic!(100.0), // Underlying price
+            pos_or_panic!(1.0),   // Quantity
+            pos_or_panic!(90.0),  // Strike price
+            pos_or_panic!(0.2),   // Implied volatility
         );
 
         // Create short put
         let short_put = create_sample_position(
             OptionStyle::Put,
             Side::Short,
-            pos!(100.0), // Underlying price
-            pos!(1.0),   // Quantity
-            pos!(95.0),  // Strike price
-            pos!(0.2),   // Implied volatility
+            pos_or_panic!(100.0), // Underlying price
+            pos_or_panic!(1.0),   // Quantity
+            pos_or_panic!(95.0),  // Strike price
+            pos_or_panic!(0.2),   // Implied volatility
         );
 
         // Create short call
         let short_call = create_sample_position(
             OptionStyle::Call,
             Side::Short,
-            pos!(100.0), // Underlying price
-            pos!(1.0),   // Quantity
-            pos!(105.0), // Strike price
-            pos!(0.2),   // Implied volatility
+            pos_or_panic!(100.0), // Underlying price
+            pos_or_panic!(1.0),   // Quantity
+            pos_or_panic!(105.0), // Strike price
+            pos_or_panic!(0.2),   // Implied volatility
         );
 
         // Create long call (highest strike)
         let long_call = create_sample_position(
             OptionStyle::Call,
             Side::Long,
-            pos!(100.0), // Underlying price
-            pos!(1.0),   // Quantity
-            pos!(110.0), // Strike price
-            pos!(0.2),   // Implied volatility
+            pos_or_panic!(100.0), // Underlying price
+            pos_or_panic!(1.0),   // Quantity
+            pos_or_panic!(110.0), // Strike price
+            pos_or_panic!(0.2),   // Implied volatility
         );
 
         IronCondor::get_strategy(&[long_put, short_put, short_call, long_call])
@@ -3448,9 +3516,9 @@ mod tests_iron_condor_pnl {
     #[test]
     fn test_calculate_pnl_below_all_strikes() {
         let condor = create_test_iron_condor().unwrap();
-        let market_price = pos!(85.0); // Below all strikes
-        let expiration_date = ExpirationDate::Days(pos!(20.0));
-        let implied_volatility = pos!(0.2);
+        let market_price = pos_or_panic!(85.0); // Below all strikes
+        let expiration_date = ExpirationDate::Days(pos_or_panic!(20.0));
+        let implied_volatility = pos_or_panic!(0.2);
 
         let result = condor.calculate_pnl(&market_price, expiration_date, &implied_volatility);
         assert!(result.is_ok());
@@ -3467,9 +3535,9 @@ mod tests_iron_condor_pnl {
     #[test]
     fn test_calculate_pnl_in_profit_zone_lower() {
         let condor = create_test_iron_condor().unwrap();
-        let market_price = pos!(97.0); // Between put strikes
-        let expiration_date = ExpirationDate::Days(pos!(20.0));
-        let implied_volatility = pos!(0.2);
+        let market_price = pos_or_panic!(97.0); // Between put strikes
+        let expiration_date = ExpirationDate::Days(pos_or_panic!(20.0));
+        let implied_volatility = pos_or_panic!(0.2);
 
         let result = condor.calculate_pnl(&market_price, expiration_date, &implied_volatility);
         assert!(result.is_ok());
@@ -3484,9 +3552,9 @@ mod tests_iron_condor_pnl {
     #[test]
     fn test_calculate_pnl_at_middle() {
         let condor = create_test_iron_condor().unwrap();
-        let market_price = pos!(100.0); // At middle of range
-        let expiration_date = ExpirationDate::Days(pos!(20.0));
-        let implied_volatility = pos!(0.2);
+        let market_price = pos_or_panic!(100.0); // At middle of range
+        let expiration_date = ExpirationDate::Days(pos_or_panic!(20.0));
+        let implied_volatility = pos_or_panic!(0.2);
 
         let result = condor.calculate_pnl(&market_price, expiration_date, &implied_volatility);
         assert!(result.is_ok());
@@ -3501,9 +3569,9 @@ mod tests_iron_condor_pnl {
     #[test]
     fn test_calculate_pnl_in_profit_zone_upper() {
         let condor = create_test_iron_condor().unwrap();
-        let market_price = pos!(101.0); // Between call strikes
-        let expiration_date = ExpirationDate::Days(pos!(20.0));
-        let implied_volatility = pos!(0.2);
+        let market_price = pos_or_panic!(101.0); // Between call strikes
+        let expiration_date = ExpirationDate::Days(pos_or_panic!(20.0));
+        let implied_volatility = pos_or_panic!(0.2);
 
         let result = condor.calculate_pnl(&market_price, expiration_date, &implied_volatility);
         assert!(result.is_ok());
@@ -3518,9 +3586,9 @@ mod tests_iron_condor_pnl {
     #[test]
     fn test_calculate_pnl_above_all_strikes() {
         let condor = create_test_iron_condor().unwrap();
-        let market_price = pos!(115.0); // Above all strikes
-        let expiration_date = ExpirationDate::Days(pos!(20.0));
-        let implied_volatility = pos!(0.2);
+        let market_price = pos_or_panic!(115.0); // Above all strikes
+        let expiration_date = ExpirationDate::Days(pos_or_panic!(20.0));
+        let implied_volatility = pos_or_panic!(0.2);
 
         let result = condor.calculate_pnl(&market_price, expiration_date, &implied_volatility);
         assert!(result.is_ok());
@@ -3537,7 +3605,7 @@ mod tests_iron_condor_pnl {
     #[test]
     fn test_calculate_pnl_at_expiration_max_profit() {
         let condor = create_test_iron_condor().unwrap();
-        let underlying_price = pos!(101.0); // At middle of range
+        let underlying_price = pos_or_panic!(101.0); // At middle of range
 
         let result = condor.calculate_pnl_at_expiration(&underlying_price);
         assert!(result.is_ok());
@@ -3553,7 +3621,7 @@ mod tests_iron_condor_pnl {
     #[test]
     fn test_calculate_pnl_at_expiration_max_loss_lower() {
         let condor = create_test_iron_condor().unwrap();
-        let underlying_price = pos!(85.0); // Below all strikes
+        let underlying_price = pos_or_panic!(85.0); // Below all strikes
 
         let result = condor.calculate_pnl_at_expiration(&underlying_price);
         assert!(result.is_ok());
@@ -3569,7 +3637,7 @@ mod tests_iron_condor_pnl {
     #[test]
     fn test_calculate_pnl_at_expiration_max_loss_upper() {
         let condor = create_test_iron_condor().unwrap();
-        let underlying_price = pos!(115.0); // Above all strikes
+        let underlying_price = pos_or_panic!(115.0); // Above all strikes
 
         let result = condor.calculate_pnl_at_expiration(&underlying_price);
         assert!(result.is_ok());
@@ -3585,9 +3653,9 @@ mod tests_iron_condor_pnl {
     #[test]
     fn test_calculate_pnl_with_higher_volatility() {
         let condor = create_test_iron_condor().unwrap();
-        let market_price = pos!(100.0);
-        let expiration_date = ExpirationDate::Days(pos!(20.0));
-        let implied_volatility = pos!(0.4); // Higher volatility
+        let market_price = pos_or_panic!(100.0);
+        let expiration_date = ExpirationDate::Days(pos_or_panic!(20.0));
+        let implied_volatility = pos_or_panic!(0.4); // Higher volatility
 
         let result = condor.calculate_pnl(&market_price, expiration_date, &implied_volatility);
         assert!(result.is_ok());
@@ -3605,9 +3673,9 @@ mod tests_iron_condor_pnl {
     #[test]
     fn test_calculate_pnl_near_expiration() {
         let condor = create_test_iron_condor().unwrap();
-        let market_price = pos!(100.0);
-        let expiration_date = ExpirationDate::Days(pos!(1.0)); // Near expiration
-        let implied_volatility = pos!(0.2);
+        let market_price = pos_or_panic!(100.0);
+        let expiration_date = ExpirationDate::Days(pos_or_panic!(1.0)); // Near expiration
+        let implied_volatility = pos_or_panic!(0.2);
 
         let result = condor.calculate_pnl(&market_price, expiration_date, &implied_volatility);
         assert!(result.is_ok());

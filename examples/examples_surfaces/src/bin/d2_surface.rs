@@ -20,7 +20,13 @@ fn main() -> Result<(), SurfaceError> {
             let underlying = Positive::new_decimal(t.x).unwrap();
 
             // Calculate delta
-            let delta_value = d2(underlying, strike, dec!(0.05), pos!(30.0), pos!(0.2))?;
+            let delta_value = d2(
+                underlying,
+                strike,
+                dec!(0.05),
+                pos_or_panic!(30.0),
+                pos_or_panic!(0.2),
+            )?;
 
             // Create a 3D point with underlying price (x), strike price (y), and delta (z)
             Ok(Point3D::new(t.x, t.y, delta_value))

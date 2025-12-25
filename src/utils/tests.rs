@@ -8,28 +8,28 @@
 ///
 /// ```
 /// use optionstratlib::Positive;
-/// use optionstratlib::{assert_pos_relative_eq, pos};
+/// use optionstratlib::{assert_pos_relative_eq, pos_or_panic};
 ///
-/// let a = pos!(1.0);
-/// let b = pos!(1.0001);
-/// let epsilon = pos!(0.001);
+/// let a = pos_or_panic!(1.0);
+/// let b = pos_or_panic!(1.0001);
+/// let epsilon = pos_or_panic!(0.001);
 /// assert_pos_relative_eq!(a, b, epsilon); // Passes
 ///
-/// let c = pos!(1.0);
-/// let d = pos!(2.0);
-/// let epsilon = pos!(0.001);
+/// let c = pos_or_panic!(1.0);
+/// let d = pos_or_panic!(2.0);
+/// let epsilon = pos_or_panic!(0.001);
 /// #[test]
 /// #[should_panic]
 /// assert_pos_relative_eq!(c, d, epsilon); // Panics
 ///
-/// let e = pos!(0.0);
-/// let f = pos!(0.0001);
-/// let epsilon = pos!(0.001);
+/// let e = pos_or_panic!(0.0);
+/// let f = pos_or_panic!(0.0001);
+/// let epsilon = pos_or_panic!(0.001);
 /// assert_pos_relative_eq!(e, f, epsilon); // Passes
 ///
-/// let g = pos!(0.0);
-/// let h = pos!(0.0011);
-/// let epsilon = pos!(0.001);
+/// let g = pos_or_panic!(0.0);
+/// let h = pos_or_panic!(0.0011);
+/// let epsilon = pos_or_panic!(0.001);
 /// #[test]
 /// #[should_panic]
 /// assert_pos_relative_eq!(g, h, epsilon); // Panics
@@ -86,17 +86,17 @@ mod tests_assert_positivef64_relative_eq {
 
     #[test]
     fn test_exact_equality() {
-        let a = pos!(1.0);
-        let b = pos!(1.0);
-        let epsilon = pos!(0.0001);
+        let a = pos_or_panic!(1.0);
+        let b = pos_or_panic!(1.0);
+        let epsilon = pos_or_panic!(0.0001);
         assert_pos_relative_eq!(a, b, epsilon);
     }
 
     #[test]
     fn test_close_values() {
-        let a = pos!(1.0);
-        let b = pos!(1.0001);
-        let epsilon = pos!(0.001);
+        let a = pos_or_panic!(1.0);
+        let b = pos_or_panic!(1.0001);
+        let epsilon = pos_or_panic!(0.001);
         assert_pos_relative_eq!(a, b, epsilon);
     }
 
@@ -104,57 +104,57 @@ mod tests_assert_positivef64_relative_eq {
     fn test_zero_values() {
         let a = Positive::ZERO;
         let b = Positive::ZERO;
-        let epsilon = pos!(0.0001);
+        let epsilon = pos_or_panic!(0.0001);
         assert_pos_relative_eq!(a, b, epsilon);
     }
 
     #[test]
     fn test_zero_and_small_value() {
         let a = Positive::ZERO;
-        let b = pos!(0.00001);
-        let epsilon = pos!(0.00001);
+        let b = pos_or_panic!(0.00001);
+        let epsilon = pos_or_panic!(0.00001);
         assert_pos_relative_eq!(a, b, epsilon);
     }
 
     #[test]
     #[should_panic(expected = "assertion failed")]
     fn test_values_exceeding_epsilon() {
-        let a = pos!(1.0);
-        let b = pos!(1.002);
-        let epsilon = pos!(0.001);
+        let a = pos_or_panic!(1.0);
+        let b = pos_or_panic!(1.002);
+        let epsilon = pos_or_panic!(0.001);
         assert_pos_relative_eq!(a, b, epsilon);
     }
 
     #[test]
     fn test_large_values() {
-        let a = pos!(1000000.0);
-        let b = pos!(1000001.0);
-        let epsilon = pos!(0.000002);
+        let a = pos_or_panic!(1000000.0);
+        let b = pos_or_panic!(1000001.0);
+        let epsilon = pos_or_panic!(0.000002);
         assert_pos_relative_eq!(a, b, epsilon);
     }
 
     #[test]
     fn test_very_small_values() {
-        let a = pos!(0.0000001);
-        let b = pos!(0.0000001000001);
-        let epsilon = pos!(0.000002);
+        let a = pos_or_panic!(0.0000001);
+        let b = pos_or_panic!(0.0000001000001);
+        let epsilon = pos_or_panic!(0.000002);
         assert_pos_relative_eq!(a, b, epsilon);
     }
 
     #[test]
     #[should_panic(expected = "assertion failed")]
     fn test_significantly_different_values() {
-        let a = pos!(1.0);
-        let b = pos!(2.0);
-        let epsilon = pos!(0.1);
+        let a = pos_or_panic!(1.0);
+        let b = pos_or_panic!(2.0);
+        let epsilon = pos_or_panic!(0.1);
         assert_pos_relative_eq!(a, b, epsilon);
     }
 
     #[test]
     fn test_equal_within_epsilon() {
-        let a = pos!(100.0);
-        let b = pos!(100.1);
-        let epsilon = pos!(0.002);
+        let a = pos_or_panic!(100.0);
+        let b = pos_or_panic!(100.1);
+        let epsilon = pos_or_panic!(0.002);
         assert_pos_relative_eq!(a, b, epsilon);
     }
 
@@ -162,8 +162,8 @@ mod tests_assert_positivef64_relative_eq {
     #[should_panic(expected = "assertion failed")]
     fn test_zero_and_large_value() {
         let a = Positive::ZERO;
-        let b = pos!(1.0);
-        let epsilon = pos!(0.0001);
+        let b = pos_or_panic!(1.0);
+        let epsilon = pos_or_panic!(0.0001);
         assert_pos_relative_eq!(a, b, epsilon);
     }
 }

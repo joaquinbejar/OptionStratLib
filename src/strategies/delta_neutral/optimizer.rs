@@ -486,10 +486,10 @@ mod tests_optimizer {
             side,
             "TEST".to_string(),
             strike,
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(0.20),
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.20),
             quantity,
-            pos!(100.0),
+            pos_or_panic!(100.0),
             dec!(0.05),
             option_style,
             Positive::ZERO,
@@ -506,7 +506,7 @@ mod tests_optimizer {
         let option = create_test_option(strike, option_style, side, quantity);
         Position::new(
             option,
-            pos!(2.0),
+            pos_or_panic!(2.0),
             chrono::Utc::now(),
             Positive::ZERO,
             Positive::ZERO,
@@ -530,8 +530,18 @@ mod tests_optimizer {
     #[test]
     fn test_optimizer_already_neutral() {
         // Create a delta-neutral position (long call + short call at same strike)
-        let pos1 = create_test_position(pos!(100.0), OptionStyle::Call, Side::Long, pos!(1.0));
-        let pos2 = create_test_position(pos!(100.0), OptionStyle::Call, Side::Short, pos!(1.0));
+        let pos1 = create_test_position(
+            pos_or_panic!(100.0),
+            OptionStyle::Call,
+            Side::Long,
+            pos_or_panic!(1.0),
+        );
+        let pos2 = create_test_position(
+            pos_or_panic!(100.0),
+            OptionStyle::Call,
+            Side::Short,
+            pos_or_panic!(1.0),
+        );
         let positions = vec![pos1, pos2];
 
         let config = AdjustmentConfig::default();
@@ -547,7 +557,12 @@ mod tests_optimizer {
 
     #[test]
     fn test_optimizer_with_underlying() {
-        let pos1 = create_test_position(pos!(100.0), OptionStyle::Call, Side::Long, pos!(1.0));
+        let pos1 = create_test_position(
+            pos_or_panic!(100.0),
+            OptionStyle::Call,
+            Side::Long,
+            pos_or_panic!(1.0),
+        );
         let positions = vec![pos1];
 
         let config = AdjustmentConfig::with_underlying();
@@ -561,8 +576,18 @@ mod tests_optimizer {
 
     #[test]
     fn test_optimizer_existing_legs_only() {
-        let pos1 = create_test_position(pos!(100.0), OptionStyle::Call, Side::Long, pos!(2.0));
-        let pos2 = create_test_position(pos!(110.0), OptionStyle::Put, Side::Long, pos!(1.0));
+        let pos1 = create_test_position(
+            pos_or_panic!(100.0),
+            OptionStyle::Call,
+            Side::Long,
+            pos_or_panic!(2.0),
+        );
+        let pos2 = create_test_position(
+            pos_or_panic!(110.0),
+            OptionStyle::Put,
+            Side::Long,
+            pos_or_panic!(1.0),
+        );
         let positions = vec![pos1, pos2];
 
         let config = AdjustmentConfig::existing_legs_only();
@@ -578,12 +603,15 @@ mod tests_optimizer {
     #[test]
     fn test_adjustment_config_builder() {
         let config = AdjustmentConfig::default()
-            .with_max_cost(pos!(1000.0))
+            .with_max_cost(pos_or_panic!(1000.0))
             .with_delta_tolerance(dec!(0.05))
-            .with_strike_range(pos!(90.0), pos!(110.0));
+            .with_strike_range(pos_or_panic!(90.0), pos_or_panic!(110.0));
 
-        assert_eq!(config.max_cost, Some(pos!(1000.0)));
+        assert_eq!(config.max_cost, Some(pos_or_panic!(1000.0)));
         assert_eq!(config.delta_tolerance, dec!(0.05));
-        assert_eq!(config.strike_range, Some((pos!(90.0), pos!(110.0))));
+        assert_eq!(
+            config.strike_range,
+            Some((pos_or_panic!(90.0), pos_or_panic!(110.0)))
+        );
     }
 }

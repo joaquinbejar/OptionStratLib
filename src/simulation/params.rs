@@ -150,8 +150,12 @@ mod tests {
 
     #[test]
     fn test_walk_params_creation_with_positive() {
-        let init_x = Xstep::new(pos!(1.0), TimeFrame::Day, ExpirationDate::Days(pos!(30.0)));
-        let init_y = Ystep::new(0, pos!(100.0));
+        let init_x = Xstep::new(
+            pos_or_panic!(1.0),
+            TimeFrame::Day,
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+        );
+        let init_y = Ystep::new(0, pos_or_panic!(100.0));
         let init_step = Step {
             x: init_x,
             y: init_y,
@@ -161,9 +165,9 @@ mod tests {
             size: 100,
             init_step,
             walk_type: WalkType::Brownian {
-                dt: pos!(1.0),
+                dt: pos_or_panic!(1.0),
                 drift: Decimal::ZERO,
-                volatility: pos!(0.2),
+                volatility: pos_or_panic!(0.2),
             },
             walker: Box::new(MockWalker),
         };
@@ -171,15 +175,22 @@ mod tests {
         assert_eq!(walk_params.size, 100);
         assert_eq!(
             walk_params.init_step.x.step_size_in_time().value(),
-            pos!(1.0).value()
+            pos_or_panic!(1.0).value()
         );
-        assert_eq!(walk_params.init_step.y.value().value(), pos!(100.0).value());
+        assert_eq!(
+            walk_params.init_step.y.value().value(),
+            pos_or_panic!(100.0).value()
+        );
     }
 
     #[test]
     fn test_walk_params_clone_with_positive() {
-        let init_x = Xstep::new(pos!(1.0), TimeFrame::Day, ExpirationDate::Days(pos!(30.0)));
-        let init_y = Ystep::new(0, pos!(100.0));
+        let init_x = Xstep::new(
+            pos_or_panic!(1.0),
+            TimeFrame::Day,
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+        );
+        let init_y = Ystep::new(0, pos_or_panic!(100.0));
         let init_step = Step {
             x: init_x,
             y: init_y,
@@ -188,9 +199,9 @@ mod tests {
             size: 100,
             init_step,
             walk_type: WalkType::Brownian {
-                dt: pos!(1.0),
+                dt: pos_or_panic!(1.0),
                 drift: Decimal::ZERO,
-                volatility: pos!(0.2),
+                volatility: pos_or_panic!(0.2),
             },
             walker: Box::new(MockWalker),
         };
@@ -209,8 +220,12 @@ mod tests {
 
     #[test]
     fn test_walk_params_display_with_positive() {
-        let init_x = Xstep::new(pos!(1.5), TimeFrame::Day, ExpirationDate::Days(pos!(30.0)));
-        let init_y = Ystep::new(0, pos!(200.0));
+        let init_x = Xstep::new(
+            pos_or_panic!(1.5),
+            TimeFrame::Day,
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+        );
+        let init_y = Ystep::new(0, pos_or_panic!(200.0));
         let init_step = Step {
             x: init_x,
             y: init_y,
@@ -220,9 +235,9 @@ mod tests {
             size: 50,
             init_step: init_step.clone(),
             walk_type: WalkType::GeometricBrownian {
-                dt: pos!(1.0 / 252.0),
+                dt: pos_or_panic!(1.0 / 252.0),
                 drift: dec!(0.0),
-                volatility: pos!(0.2),
+                volatility: pos_or_panic!(0.2),
             },
             walker: Box::new(MockWalker),
         };
@@ -237,8 +252,12 @@ mod tests {
 
     #[test]
     fn test_with_large_size_positive_types() {
-        let init_x = Xstep::new(pos!(1.0), TimeFrame::Day, ExpirationDate::Days(pos!(30.0)));
-        let init_y = Ystep::new(0, pos!(100.0));
+        let init_x = Xstep::new(
+            pos_or_panic!(1.0),
+            TimeFrame::Day,
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+        );
+        let init_y = Ystep::new(0, pos_or_panic!(100.0));
         let init_step = Step {
             x: init_x,
             y: init_y,
@@ -249,9 +268,9 @@ mod tests {
             size,
             init_step,
             walk_type: WalkType::Brownian {
-                dt: pos!(1.0 / 252.0),
+                dt: pos_or_panic!(1.0 / 252.0),
                 drift: dec!(0.0),
-                volatility: pos!(0.2),
+                volatility: pos_or_panic!(0.2),
             },
             walker: Box::new(MockWalker),
         };
@@ -265,11 +284,11 @@ mod tests {
     fn test_with_different_positive_values() {
         // Test with smaller and larger positive values
         let init_x = Xstep::new(
-            pos!(0.001), // Very small value
+            pos_or_panic!(0.001), // Very small value
             TimeFrame::Month,
-            ExpirationDate::Days(pos!(90.0)),
+            ExpirationDate::Days(pos_or_panic!(90.0)),
         );
-        let init_y = Ystep::new(0, pos!(1000000.0)); // Large value  
+        let init_y = Ystep::new(0, pos_or_panic!(1000000.0)); // Large value  
         let init_step = Step {
             x: init_x,
             y: init_y,
@@ -279,9 +298,9 @@ mod tests {
             size: 50,
             init_step,
             walk_type: WalkType::Brownian {
-                dt: pos!(1.0),
+                dt: pos_or_panic!(1.0),
                 drift: Decimal::ZERO,
-                volatility: pos!(0.2),
+                volatility: pos_or_panic!(0.2),
             },
             walker: Box::new(MockWalker),
         };
@@ -289,11 +308,11 @@ mod tests {
         assert_eq!(walk_params.size, 50);
         assert_eq!(
             walk_params.init_step.x.step_size_in_time().value(),
-            pos!(0.001).value()
+            pos_or_panic!(0.001).value()
         );
         assert_eq!(
             walk_params.init_step.y.value().value(),
-            pos!(1000000.0).value()
+            pos_or_panic!(1000000.0).value()
         );
 
         // Verify the time unit is correctly set

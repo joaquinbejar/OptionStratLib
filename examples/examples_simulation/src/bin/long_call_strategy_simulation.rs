@@ -63,15 +63,15 @@ fn main() -> Result<(), Error> {
     // Simulation parameters
     let n_simulations = 100; // Number of simulations to run
     let n_steps = 10080; // 7 days in minutes
-    let underlying_price = pos!(4088.85);
-    let days = pos!(7.0);
-    let implied_volatility = pos!(0.24); // 27% annual volatility
+    let underlying_price = pos_or_panic!(4088.85);
+    let days = pos_or_panic!(7.0);
+    let implied_volatility = pos_or_panic!(0.24); // 27% annual volatility
     let symbol = "GOLD".to_string();
 
     // For a Long Call with delta ~0.70, we need a strike slightly in-the-money
     // Delta 0.70 for a call means the strike is below current price
     // Approximate: strike = underlying * 0.98 for delta ~0.70
-    let strike_price = pos!(4150.0); // Strike price for the long call (delta ~0.30)
+    let strike_price = pos_or_panic!(4150.0); // Strike price for the long call (delta ~0.30)
 
     // First, calculate the premium for the option
     let temp_option = Options::new(
@@ -85,7 +85,7 @@ fn main() -> Result<(), Error> {
         underlying_price,
         dec!(0.0), // risk_free_rate
         OptionStyle::Call,
-        pos!(0.0), // dividend_yield
+        pos_or_panic!(0.0), // dividend_yield
         None,
     );
     let initial_premium = temp_option.calculate_price_black_scholes()?.abs();
@@ -99,11 +99,11 @@ fn main() -> Result<(), Error> {
         implied_volatility,
         Positive::ONE,
         underlying_price,
-        dec!(0.0),        // risk_free_rate
-        pos!(0.0),        // dividend_yield
-        premium_positive, // premium paid
-        pos!(0.0),        // open_fee
-        pos!(0.0),        // close_fee
+        dec!(0.0),          // risk_free_rate
+        pos_or_panic!(0.0), // dividend_yield
+        premium_positive,   // premium paid
+        pos_or_panic!(0.0), // open_fee
+        pos_or_panic!(0.0), // close_fee
     );
 
     // Define exit policy: 100% profit OR expiration
@@ -124,7 +124,11 @@ fn main() -> Result<(), Error> {
 
     // Create WalkParams for the Simulator
     let walker = Box::new(Walker);
-    let dt = convert_time_frame(pos!(1.0) / days, &TimeFrame::Minute, &TimeFrame::Day);
+    let dt = convert_time_frame(
+        pos_or_panic!(1.0) / days,
+        &TimeFrame::Minute,
+        &TimeFrame::Day,
+    );
 
     // Adjust volatility for the specific dt in the random walk
     let volatility_dt =
@@ -141,9 +145,9 @@ fn main() -> Result<(), Error> {
             dt,
             drift: dec!(0.01),
             volatility: volatility_dt,
-            kappa: pos!(2.0),
-            theta: pos!(0.0225),
-            xi: pos!(0.3),
+            kappa: pos_or_panic!(2.0),
+            theta: pos_or_panic!(0.0225),
+            xi: pos_or_panic!(0.3),
             rho: dec!(-0.3),
         },
         walker,

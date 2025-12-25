@@ -526,7 +526,7 @@
 //!
 //! ```rust
 //! use optionstratlib::{Options, OptionStyle, OptionType, Side, ExpirationDate};
-//! use optionstratlib::pos;
+//! use optionstratlib::pos_or_panic;
 //! use rust_decimal_macros::dec;
 //! use optionstratlib::greeks::Greeks;
 //!
@@ -535,14 +535,14 @@
 //!     OptionType::European,
 //!     Side::Long,
 //!     "AAPL".to_string(),
-//!     pos!(150.0),            // strike_price
-//!     ExpirationDate::Days(pos!(30.0)),
-//!     pos!(0.25),             // implied_volatility
-//!     pos!(1.0),              // quantity
-//!     pos!(155.0),            // underlying_price
+//!     pos_or_panic!(150.0),            // strike_price
+//!     ExpirationDate::Days(pos_or_panic!(30.0)),
+//!     pos_or_panic!(0.25),             // implied_volatility
+//!     pos_or_panic!(1.0),              // quantity
+//!     pos_or_panic!(155.0),            // underlying_price
 //!     dec!(0.05),             // risk_free_rate
 //!     OptionStyle::Call,
-//!     pos!(0.02),             // dividend_yield
+//!     pos_or_panic!(0.02),             // dividend_yield
 //!     None,                   // exotic_params
 //! );
 //!
@@ -569,7 +569,7 @@
 //! ### Working with Trading Strategies
 //!
 //! ```rust
-//! use optionstratlib::{Positive, ExpirationDate, pos};
+//! use optionstratlib::{Positive, ExpirationDate, pos_or_panic};
 //! use optionstratlib::strategies::Strategies;
 //! use optionstratlib::strategies::bull_call_spread::BullCallSpread;
 //! use optionstratlib::strategies::base::{BreakEvenable, BasicAble};
@@ -579,21 +579,21 @@
 //!
 //! fn main() -> Result<(), Box<dyn Error>> {
 //!     use optionstratlib::pricing::Profit;
-//! let underlying_price = pos!(100.0);
+//! let underlying_price = pos_or_panic!(100.0);
 //!
 //!     // Create a Bull Call Spread strategy
 //!     let strategy = BullCallSpread::new(
 //!         "AAPL".to_string(),
 //!         underlying_price,
-//!         pos!(95.0),   // long_strike
-//!         pos!(105.0),  // short_strike  
-//!         ExpirationDate::Days(pos!(30.0)),
-//!         pos!(0.25),   // implied_volatility
+//!         pos_or_panic!(95.0),   // long_strike
+//!         pos_or_panic!(105.0),  // short_strike  
+//!         ExpirationDate::Days(pos_or_panic!(30.0)),
+//!         pos_or_panic!(0.25),   // implied_volatility
 //!         dec!(0.05),   // risk_free_rate
-//!         pos!(2.50),   // long_call_premium
-//!         pos!(2.50),   // long_call_open_fee
-//!         pos!(1.20),   // short_call_premium
-//!         pos!(1.20),   // short_call_close_fee
+//!         pos_or_panic!(2.50),   // long_call_premium
+//!         pos_or_panic!(2.50),   // long_call_open_fee
+//!         pos_or_panic!(1.20),   // short_call_premium
+//!         pos_or_panic!(1.20),   // short_call_close_fee
 //!         Default::default(), Default::default(),
 //!         Default::default(), Default::default()
 //!     );
@@ -606,7 +606,7 @@
 //!     tracing::info!("Net premium: ${:.2}", strategy.get_net_premium_received()?);
 //!
 //!     // Calculate P&L at different price points
-//!     let prices = vec![pos!(90.0), pos!(95.0), pos!(100.0), pos!(105.0), pos!(110.0)];
+//!     let prices = vec![pos_or_panic!(90.0), pos_or_panic!(95.0), pos_or_panic!(100.0), pos_or_panic!(105.0), pos_or_panic!(110.0)];
 //!     for price in prices {
 //!         let pnl = strategy.get_point_at_price(&price)?;
 //!         tracing::info!("P&L at ${}: ${:.2}", price, pnl.0);
@@ -633,18 +633,18 @@
 //!         OptionType::European,
 //!         Side::Long,
 //!         "AAPL".to_string(),
-//!         pos!(105.0), // strike
-//!         ExpirationDate::Days(pos!(90.0)),
-//!         pos!(0.20), // initial IV guess
-//!         pos!(1.0), // quantity
-//!         pos!(100.0), // underlying price
+//!         pos_or_panic!(105.0), // strike
+//!         ExpirationDate::Days(pos_or_panic!(90.0)),
+//!         pos_or_panic!(0.20), // initial IV guess
+//!         pos_or_panic!(1.0), // quantity
+//!         pos_or_panic!(100.0), // underlying price
 //!         dec!(0.05), // risk free rate
 //!         OptionStyle::Call,
-//!         pos!(0.02), // dividend yield
+//!         pos_or_panic!(0.02), // dividend yield
 //!         None,
 //!     );
 //!
-//!     let market_price = pos!(5.50);
+//!     let market_price = pos_or_panic!(5.50);
 //!     let iv = implied_volatility(market_price, &mut option, 100)?;
 //!
 //!     tracing::info!("Implied volatility: {:.2}%", iv.to_f64() * 100.0);
@@ -659,22 +659,22 @@
 //!
 //! // Define common parameters
 //! let underlying_symbol = "DAX".to_string();
-//! let underlying_price = pos!(24000.0);
-//! let expiration = ExpirationDate::Days(pos!(30.0));
-//! let implied_volatility = pos!(0.25);
+//! let underlying_price = pos_or_panic!(24000.0);
+//! let expiration = ExpirationDate::Days(pos_or_panic!(30.0));
+//! let implied_volatility = pos_or_panic!(0.25);
 //! let risk_free_rate = dec!(0.05);
-//! let dividend_yield = pos!(0.02);
-//! let fee = pos!(2.0);
+//! let dividend_yield = pos_or_panic!(0.02);
+//! let fee = pos_or_panic!(2.0);
 //!
 //! // Create a long put option
 //! let long_put_option = Options::new(
 //!     OptionType::European,
 //!     Side::Long,
 //!     underlying_symbol.clone(),
-//!     pos!(24070.0), // strike
+//!     pos_or_panic!(24070.0), // strike
 //!     expiration.clone(),
 //!     implied_volatility,
-//!     pos!(1.0), // quantity
+//!     pos_or_panic!(1.0), // quantity
 //!     underlying_price,
 //!     risk_free_rate,
 //!     OptionStyle::Put,
@@ -683,7 +683,7 @@
 //! );
 //! let long_put = Position::new(
 //!     long_put_option,
-//!     pos!(150.0), // premium
+//!     pos_or_panic!(150.0), // premium
 //!     Utc::now(),
 //!     fee,
 //!     fee,
@@ -696,10 +696,10 @@
 //!     OptionType::European,
 //!     Side::Long,
 //!     underlying_symbol.clone(),
-//!     pos!(24030.0), // strike
+//!     pos_or_panic!(24030.0), // strike
 //!     expiration.clone(),
 //!     implied_volatility,
-//!     pos!(1.0), // quantity
+//!     pos_or_panic!(1.0), // quantity
 //!     underlying_price,
 //!     risk_free_rate,
 //!     OptionStyle::Call,
@@ -708,7 +708,7 @@
 //! );
 //! let long_call = Position::new(
 //!     long_call_option,
-//!     pos!(120.0), // premium
+//!     pos_or_panic!(120.0), // premium
 //!     Utc::now(),
 //!     fee,
 //!     fee,
@@ -724,7 +724,7 @@
 //!     "A DAX long straddle strategy".to_string(),
 //!     underlying_price,
 //!     positions,
-//!     pos!(1.0),
+//!     pos_or_panic!(1.0),
 //!     30,
 //!     implied_volatility,
 //! );
@@ -843,50 +843,6 @@
 ///
 /// ## Core Modules
 extern crate core;
-
-/// Macro for creating a new `Positive` value with simplified syntax.
-///
-/// This macro attempts to create a `Positive` value from the given expression
-/// and unwraps the result. It will panic if the value cannot be converted to a
-/// `Positive` (e.g., if the value is negative or not representable).
-///
-/// # Examples
-///
-/// ```rust
-/// use optionstratlib::pos;
-/// let positive_value = pos!(5.0);
-/// ```
-///
-/// # Panics
-///
-/// This macro will panic if the provided value cannot be converted to a `Positive` value.
-#[macro_export]
-macro_rules! pos {
-    ($val:expr) => {
-        $crate::Positive::new($val).unwrap()
-    };
-}
-
-/// A macro to create an optional `Positive` value from the given expression.
-///
-/// Returns `Some(Positive)` if the given value is positive, otherwise returns `None`.
-///
-/// # Example
-///
-/// ```rust
-/// use optionstratlib::Positive;
-/// use optionstratlib::spos;
-///
-/// let x = spos!(10.0);
-/// assert!(x.is_some());
-///
-/// let y = spos!(-5.0);
-/// assert!(y.is_none());
-/// ```
-#[macro_export]
-macro_rules! spos {
-    ($val:expr) => {{ $crate::Positive::new($val).ok() }};
-}
 
 /// * `model` - Core data structures and models for options and derivatives.
 ///
@@ -1055,6 +1011,11 @@ pub use model::ExpirationDate;
 pub use model::Options;
 pub use model::positive::{Positive, PositiveError, PositiveResult, is_positive};
 pub use model::types::{OptionStyle, OptionType, Side};
+
+// Re-export macros from positive crate
+pub use positive::pos;
+pub use positive::pos_or_panic;
+pub use positive::spos;
 
 /// Library version
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");

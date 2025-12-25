@@ -10,11 +10,11 @@ fn get_option(point2d: &Point2D) -> Options {
         Side::Long,
         "XYZ".parse().unwrap(),
         strike,
-        ExpirationDate::Days(pos!(365.0)),
+        ExpirationDate::Days(pos_or_panic!(365.0)),
         volatilitity,
-        pos!(1.0),     // quantity
-        pos!(50.0),    // underlying price
-        Decimal::ZERO, // risk free rate
+        pos_or_panic!(1.0),  // quantity
+        pos_or_panic!(50.0), // underlying price
+        Decimal::ZERO,       // risk free rate
         OptionStyle::Call,
         Positive::ZERO, // dividend yield
         None,

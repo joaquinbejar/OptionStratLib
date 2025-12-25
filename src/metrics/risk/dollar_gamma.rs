@@ -72,7 +72,7 @@ use crate::model::OptionStyle;
 /// use optionstratlib::metrics::DollarGammaCurve;
 /// use optionstratlib::model::OptionStyle;
 ///
-/// let chain = OptionChain::new("SPY", pos!(450.0), "2024-03-15".to_string(), None, None);
+/// let chain = OptionChain::new("SPY", pos_or_panic!(450.0), "2024-03-15".to_string(), None, None);
 /// let dg_curve = chain.dollar_gamma_curve(&OptionStyle::Call)?;
 ///
 /// // Find the strike with maximum dollar gamma exposure

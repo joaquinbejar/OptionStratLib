@@ -1,6 +1,6 @@
 use criterion::{Criterion, criterion_group, criterion_main};
 use optionstratlib::Positive;
-use optionstratlib::pos;
+use optionstratlib::pos_or_panic;
 use rust_decimal_macros::dec;
 use std::hint::black_box;
 
@@ -18,7 +18,7 @@ pub(crate) fn benchmark_creation(c: &mut Criterion) {
     });
 
     group.bench_function("pos! macro", |bencher| {
-        bencher.iter(|| pos!(black_box(100.0)))
+        bencher.iter(|| pos_or_panic!(black_box(100.0)))
     });
 
     group.finish();
@@ -27,8 +27,8 @@ pub(crate) fn benchmark_creation(c: &mut Criterion) {
 pub(crate) fn benchmark_arithmetic(c: &mut Criterion) {
     let mut group = c.benchmark_group("Arithmetic Operations");
 
-    let val1 = pos!(100.0);
-    let val2 = pos!(50.0);
+    let val1 = pos_or_panic!(100.0);
+    let val2 = pos_or_panic!(50.0);
     let decimal = dec!(25.0);
 
     group.bench_function("addition", |bencher| {
@@ -88,7 +88,7 @@ pub(crate) fn benchmark_arithmetic(c: &mut Criterion) {
 pub(crate) fn benchmark_conversions(c: &mut Criterion) {
     let mut group = c.benchmark_group("Conversion Operations");
 
-    let value = pos!(123.456);
+    let value = pos_or_panic!(123.456);
 
     group.bench_function("to_f64", |bencher| {
         let x = value;
@@ -111,7 +111,7 @@ pub(crate) fn benchmark_conversions(c: &mut Criterion) {
 pub(crate) fn benchmark_math_operations(c: &mut Criterion) {
     let mut group = c.benchmark_group("Mathematical Operations");
 
-    let value = pos!(2.5);
+    let value = pos_or_panic!(2.5);
 
     group.bench_function("powi", |bencher| {
         let x = value;
@@ -154,8 +154,8 @@ pub(crate) fn benchmark_math_operations(c: &mut Criterion) {
 pub(crate) fn benchmark_comparisons(c: &mut Criterion) {
     let mut group = c.benchmark_group("Comparison Operations");
 
-    let val1 = pos!(100.0);
-    let val2 = pos!(50.0);
+    let val1 = pos_or_panic!(100.0);
+    let val2 = pos_or_panic!(50.0);
 
     group.bench_function("max", |bencher| {
         let x = val1;

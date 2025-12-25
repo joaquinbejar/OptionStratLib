@@ -1010,20 +1010,20 @@ mod tests_long_strangle_probability {
     fn create_test_long_strangle() -> LongStrangle {
         LongStrangle::new(
             "TEST".to_string(),
-            pos!(100.0),                      // underlying_price
-            pos!(110.0),                      // call_strike
-            pos!(90.0),                       // put_strike
-            ExpirationDate::Days(pos!(30.0)), // expiration
-            pos!(0.2),                        // implied_volatility
-            dec!(0.05),                       // risk_free_rate
-            Positive::ZERO,                   // dividend_yield
-            pos!(1.0),                        // quantity
-            Positive::TWO,                    // premium_long_call
-            Positive::TWO,                    // premium_long_put
-            Positive::ZERO,                   // open_fee_long_call
-            Positive::ZERO,                   // close_fee_long_call
-            Positive::ZERO,                   // open_fee_long_put
-            Positive::ZERO,                   // close_fee_long_put
+            pos_or_panic!(100.0),                      // underlying_price
+            pos_or_panic!(110.0),                      // call_strike
+            pos_or_panic!(90.0),                       // put_strike
+            ExpirationDate::Days(pos_or_panic!(30.0)), // expiration
+            pos_or_panic!(0.2),                        // implied_volatility
+            dec!(0.05),                                // risk_free_rate
+            Positive::ZERO,                            // dividend_yield
+            pos_or_panic!(1.0),                        // quantity
+            Positive::TWO,                             // premium_long_call
+            Positive::TWO,                             // premium_long_put
+            Positive::ZERO,                            // open_fee_long_call
+            Positive::ZERO,                            // close_fee_long_call
+            Positive::ZERO,                            // open_fee_long_put
+            Positive::ZERO,                            // close_fee_long_put
         )
     }
 
@@ -1031,7 +1031,7 @@ mod tests_long_strangle_probability {
     fn test_get_expiration() {
         let strangle = create_test_long_strangle();
         let expiration_date = *strangle.get_expiration().values().next().unwrap();
-        assert_eq!(expiration_date, &ExpirationDate::Days(pos!(30.0)));
+        assert_eq!(expiration_date, &ExpirationDate::Days(pos_or_panic!(30.0)));
     }
 
     #[test]
@@ -1078,22 +1078,22 @@ mod tests_long_strangle_probability {
         assert!(result.is_ok());
         let prob = result.unwrap();
         assert!(prob > Positive::ZERO);
-        assert!(prob <= pos!(1.0));
+        assert!(prob <= pos_or_panic!(1.0));
     }
 
     #[test]
     fn test_probability_with_volatility_adjustment() {
         let strangle = create_test_long_strangle();
         let vol_adj = Some(VolatilityAdjustment {
-            base_volatility: pos!(0.25),
-            std_dev_adjustment: pos!(0.1),
+            base_volatility: pos_or_panic!(0.25),
+            std_dev_adjustment: pos_or_panic!(0.1),
         });
 
         let result = strangle.probability_of_profit(vol_adj, None);
         assert!(result.is_ok());
         let prob = result.unwrap();
         assert!(prob > Positive::ZERO);
-        assert!(prob <= pos!(1.0));
+        assert!(prob <= pos_or_panic!(1.0));
     }
 
     #[test]
@@ -1108,7 +1108,7 @@ mod tests_long_strangle_probability {
         assert!(result.is_ok());
         let prob = result.unwrap();
         assert!(prob > Positive::ZERO);
-        assert!(prob <= pos!(1.0));
+        assert!(prob <= pos_or_panic!(1.0));
     }
 
     #[test]
@@ -1124,8 +1124,8 @@ mod tests_long_strangle_probability {
         );
 
         let vol_adj = Some(VolatilityAdjustment {
-            base_volatility: pos!(0.25),
-            std_dev_adjustment: pos!(0.1),
+            base_volatility: pos_or_panic!(0.25),
+            std_dev_adjustment: pos_or_panic!(0.1),
         });
         let result_with_vol = strangle.expected_value(vol_adj, None);
         assert!(result_with_vol.is_ok());
@@ -1141,7 +1141,7 @@ mod tests_long_strangle_probability {
         let (max_profit_prob, max_loss_prob) = result.unwrap();
         assert!(max_profit_prob >= Positive::ZERO);
         assert!(max_loss_prob >= Positive::ZERO);
-        assert!(max_profit_prob + max_loss_prob <= pos!(1.0));
+        assert!(max_profit_prob + max_loss_prob <= pos_or_panic!(1.0));
     }
 }
 
@@ -1157,33 +1157,33 @@ mod tests_long_strangle_delta {
     use rust_decimal_macros::dec;
 
     fn get_strategy(call_strike: Positive, put_strike: Positive) -> LongStrangle {
-        let underlying_price = pos!(7138.5);
+        let underlying_price = pos_or_panic!(7138.5);
         LongStrangle::new(
             "CL".to_string(),
             underlying_price, // underlying_price
             call_strike,      // call_strike 7450 (delta -0.415981)
             put_strike,       // put_strike 7050 (delta 0.417810)
-            ExpirationDate::Days(pos!(45.0)),
-            pos!(0.3745),   // implied_volatility
-            dec!(0.05),     // risk_free_rate
-            Positive::ZERO, // dividend_yield
-            pos!(1.0),      // quantity
-            pos!(84.2),     // premium_long_call
-            pos!(353.2),    // premium_long_put
-            pos!(7.01),     // open_fee_long_call
-            pos!(7.01),     // close_fee_long_call
-            pos!(7.01),     // open_fee_long_put
-            pos!(7.01),     // close_fee_long_put
+            ExpirationDate::Days(pos_or_panic!(45.0)),
+            pos_or_panic!(0.3745), // implied_volatility
+            dec!(0.05),            // risk_free_rate
+            Positive::ZERO,        // dividend_yield
+            pos_or_panic!(1.0),    // quantity
+            pos_or_panic!(84.2),   // premium_long_call
+            pos_or_panic!(353.2),  // premium_long_put
+            pos_or_panic!(7.01),   // open_fee_long_call
+            pos_or_panic!(7.01),   // close_fee_long_call
+            pos_or_panic!(7.01),   // open_fee_long_put
+            pos_or_panic!(7.01),   // close_fee_long_put
         )
     }
 
     #[test]
     fn create_test_reducing_adjustments() {
-        let strike = pos!(7450.0);
-        let strategy = get_strategy(strike, pos!(7250.0));
+        let strike = pos_or_panic!(7450.0);
+        let strategy = get_strategy(strike, pos_or_panic!(7250.0));
         let size = dec!(-0.0861);
-        let delta = pos!(0.2070008842036104);
-        let k = pos!(7450.0);
+        let delta = pos_or_panic!(0.2070008842036104);
+        let k = pos_or_panic!(7450.0);
         assert_decimal_eq!(
             strategy.delta_neutrality().unwrap().net_delta,
             size,
@@ -1222,11 +1222,11 @@ mod tests_long_strangle_delta {
 
     #[test]
     fn create_test_increasing_adjustments() {
-        let strike = pos!(7050.0);
-        let strategy = get_strategy(pos!(7150.0), strike);
+        let strike = pos_or_panic!(7050.0);
+        let strategy = get_strategy(pos_or_panic!(7150.0), strike);
         let size = dec!(0.1221);
-        let delta = pos!(0.29240526858778937);
-        let k = pos!(7050.0);
+        let delta = pos_or_panic!(0.29240526858778937);
+        let k = pos_or_panic!(7050.0);
         assert_decimal_eq!(
             strategy.delta_neutrality().unwrap().net_delta,
             size,
@@ -1262,7 +1262,7 @@ mod tests_long_strangle_delta {
 
     #[test]
     fn create_test_no_adjustments() {
-        let strategy = get_strategy(pos!(7445.5), pos!(7050.0));
+        let strategy = get_strategy(pos_or_panic!(7445.5), pos_or_panic!(7050.0));
 
         assert_decimal_eq!(
             strategy.delta_neutrality().unwrap().net_delta,
@@ -1287,29 +1287,29 @@ mod tests_long_strangle_delta_size {
     use rust_decimal_macros::dec;
 
     fn get_strategy(call_strike: Positive, put_strike: Positive) -> LongStrangle {
-        let underlying_price = pos!(7138.5);
+        let underlying_price = pos_or_panic!(7138.5);
         LongStrangle::new(
             "CL".to_string(),
             underlying_price, // underlying_price
             call_strike,      // call_strike 7450 (delta -0.415981)
             put_strike,       // put_strike 7050 (delta 0.417810)
-            ExpirationDate::Days(pos!(45.0)),
-            pos!(0.3745),   // implied_volatility
-            dec!(0.05),     // risk_free_rate
-            Positive::ZERO, // dividend_yield
-            pos!(2.0),      // quantity
-            pos!(84.2),     // premium_long_call
-            pos!(353.2),    // premium_long_put
-            pos!(7.01),     // open_fee_long_call
-            pos!(7.01),     // close_fee_long_call
-            pos!(7.01),     // open_fee_long_put
-            pos!(7.01),     // close_fee_long_put
+            ExpirationDate::Days(pos_or_panic!(45.0)),
+            pos_or_panic!(0.3745), // implied_volatility
+            dec!(0.05),            // risk_free_rate
+            Positive::ZERO,        // dividend_yield
+            pos_or_panic!(2.0),    // quantity
+            pos_or_panic!(84.2),   // premium_long_call
+            pos_or_panic!(353.2),  // premium_long_put
+            pos_or_panic!(7.01),   // open_fee_long_call
+            pos_or_panic!(7.01),   // close_fee_long_call
+            pos_or_panic!(7.01),   // open_fee_long_put
+            pos_or_panic!(7.01),   // close_fee_long_put
         )
     }
 
     #[test]
     fn create_test_apply_adjustments() {
-        let strategy = get_strategy(pos!(7450.0), pos!(7250.0));
+        let strategy = get_strategy(pos_or_panic!(7450.0), pos_or_panic!(7250.0));
         let binding = strategy.delta_adjustments().unwrap();
         for suggestion in binding.iter() {
             match suggestion {
@@ -1321,10 +1321,14 @@ mod tests_long_strangle_delta_size {
                 } => {
                     assert_pos_relative_eq!(
                         *quantity,
-                        pos!(0.41400176840722),
+                        pos_or_panic!(0.41400176840722),
                         Positive(DELTA_THRESHOLD)
                     );
-                    assert_pos_relative_eq!(*strike, pos!(7450.0), Positive(DELTA_THRESHOLD));
+                    assert_pos_relative_eq!(
+                        *strike,
+                        pos_or_panic!(7450.0),
+                        Positive(DELTA_THRESHOLD)
+                    );
                     assert_eq!(*option_style, OptionStyle::Call);
                     assert_eq!(*side, Side::Long);
 
@@ -1346,10 +1350,14 @@ mod tests_long_strangle_delta_size {
                 } => {
                     assert_pos_relative_eq!(
                         *quantity,
-                        pos!(0.3430003853562),
+                        pos_or_panic!(0.3430003853562),
                         Positive(DELTA_THRESHOLD)
                     );
-                    assert_pos_relative_eq!(*strike, pos!(7250.0), Positive(DELTA_THRESHOLD));
+                    assert_pos_relative_eq!(
+                        *strike,
+                        pos_or_panic!(7250.0),
+                        Positive(DELTA_THRESHOLD)
+                    );
                     assert_eq!(*option_style, OptionStyle::Put);
                     assert_eq!(*side, Side::Long);
 
@@ -1373,12 +1381,12 @@ mod tests_long_strangle_delta_size {
                         } => {
                             assert_pos_relative_eq!(
                                 quantity,
-                                pos!(0.1875856830735),
+                                pos_or_panic!(0.1875856830735),
                                 Positive(DELTA_THRESHOLD)
                             );
                             assert_pos_relative_eq!(
                                 strike,
-                                pos!(7450.0),
+                                pos_or_panic!(7450.0),
                                 Positive(DELTA_THRESHOLD)
                             );
                             assert_eq!(option_style, OptionStyle::Call);
@@ -1396,12 +1404,12 @@ mod tests_long_strangle_delta_size {
                         } => {
                             assert_pos_relative_eq!(
                                 quantity,
-                                pos!(0.187585683073),
+                                pos_or_panic!(0.187585683073),
                                 Positive(DELTA_THRESHOLD)
                             );
                             assert_pos_relative_eq!(
                                 strike,
-                                pos!(7250.0),
+                                pos_or_panic!(7250.0),
                                 Positive(DELTA_THRESHOLD)
                             );
                             assert_eq!(option_style, OptionStyle::Put);
@@ -1416,14 +1424,14 @@ mod tests_long_strangle_delta_size {
                     let mut temp_strategy = strategy.clone();
                     let result = temp_strategy.adjust_option_position(
                         call_short_qty.to_dec(),
-                        &pos!(7450.0),
+                        &pos_or_panic!(7450.0),
                         &OptionStyle::Call,
                         &Side::Long,
                     );
                     assert!(result.is_ok());
                     let result = temp_strategy.adjust_option_position(
                         -put_short_qty.to_dec(),
-                        &pos!(7250.0),
+                        &pos_or_panic!(7250.0),
                         &OptionStyle::Put,
                         &Side::Long,
                     );
@@ -1437,17 +1445,17 @@ mod tests_long_strangle_delta_size {
 
     #[test]
     fn create_test_apply_delta_adjustments() {
-        let mut strategy = get_strategy(pos!(7450.0), pos!(7250.0));
+        let mut strategy = get_strategy(pos_or_panic!(7450.0), pos_or_panic!(7250.0));
         let result = strategy.apply_delta_adjustments(Some(Action::Buy));
         assert!(result.is_ok());
         assert!(strategy.is_delta_neutral());
 
-        let mut strategy = get_strategy(pos!(7450.0), pos!(7250.0));
+        let mut strategy = get_strategy(pos_or_panic!(7450.0), pos_or_panic!(7250.0));
         let result = strategy.apply_delta_adjustments(Some(Action::Sell));
         assert!(result.is_ok());
         assert!(strategy.is_delta_neutral());
 
-        let mut strategy = get_strategy(pos!(7450.0), pos!(7250.0));
+        let mut strategy = get_strategy(pos_or_panic!(7450.0), pos_or_panic!(7250.0));
         let result = strategy.apply_delta_adjustments(None);
         assert!(result.is_ok());
         assert!(strategy.is_delta_neutral());
@@ -1455,11 +1463,11 @@ mod tests_long_strangle_delta_size {
 
     #[test]
     fn create_test_reducing_adjustments() {
-        let strike = pos!(7450.0);
-        let strategy = get_strategy(strike, pos!(7250.0));
+        let strike = pos_or_panic!(7450.0);
+        let strategy = get_strategy(strike, pos_or_panic!(7250.0));
         let size = dec!(-0.17221);
-        let delta = pos!(0.4140017684072208);
-        let k = pos!(7450.0);
+        let delta = pos_or_panic!(0.4140017684072208);
+        let k = pos_or_panic!(7450.0);
         assert_decimal_eq!(
             strategy.delta_neutrality().unwrap().net_delta,
             size,
@@ -1496,9 +1504,9 @@ mod tests_long_strangle_delta_size {
 
     #[test]
     fn create_test_increasing_adjustments() {
-        let strategy = get_strategy(pos!(7150.0), pos!(7050.0));
+        let strategy = get_strategy(pos_or_panic!(7150.0), pos_or_panic!(7050.0));
         let size = dec!(0.244340);
-        let delta = pos!(0.452497797238);
+        let delta = pos_or_panic!(0.452497797238);
 
         assert_decimal_eq!(
             strategy.delta_neutrality().unwrap().net_delta,
@@ -1517,7 +1525,7 @@ mod tests_long_strangle_delta_size {
                 side,
             } => {
                 assert_pos_relative_eq!(*quantity, delta, Positive(DELTA_THRESHOLD));
-                assert_pos_relative_eq!(*strike, pos!(7150.0), Positive(DELTA_THRESHOLD));
+                assert_pos_relative_eq!(*strike, pos_or_panic!(7150.0), Positive(DELTA_THRESHOLD));
                 assert_eq!(*option_style, OptionStyle::Call);
                 assert_eq!(*side, Side::Long);
             }
@@ -1537,7 +1545,7 @@ mod tests_long_strangle_delta_size {
 
     #[test]
     fn create_test_no_adjustments() {
-        let strategy = get_strategy(pos!(7445.5), pos!(7050.0));
+        let strategy = get_strategy(pos_or_panic!(7445.5), pos_or_panic!(7050.0));
 
         assert_decimal_eq!(
             strategy.delta_neutrality().unwrap().net_delta,
@@ -1561,20 +1569,20 @@ mod tests_strangle_position_management {
     fn create_test_long_strangle() -> LongStrangle {
         LongStrangle::new(
             "TEST".to_string(),
-            pos!(100.0), // underlying_price
-            pos!(110.0), // call_strike
-            pos!(90.0),  // put_strike
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(0.2),      // implied_volatility
-            dec!(0.05),     // risk_free_rate
-            Positive::ZERO, // dividend_yield
-            pos!(1.0),      // quantity
-            pos!(2.0),      // premium_long_call
-            pos!(2.0),      // premium_long_put
-            pos!(0.1),      // open_fee_long_call
-            pos!(0.1),      // close_fee_long_call
-            pos!(0.1),      // open_fee_long_put
-            pos!(0.1),      // close_fee_long_put
+            pos_or_panic!(100.0), // underlying_price
+            pos_or_panic!(110.0), // call_strike
+            pos_or_panic!(90.0),  // put_strike
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.2), // implied_volatility
+            dec!(0.05),         // risk_free_rate
+            Positive::ZERO,     // dividend_yield
+            pos_or_panic!(1.0), // quantity
+            pos_or_panic!(2.0), // premium_long_call
+            pos_or_panic!(2.0), // premium_long_put
+            pos_or_panic!(0.1), // open_fee_long_call
+            pos_or_panic!(0.1), // close_fee_long_call
+            pos_or_panic!(0.1), // open_fee_long_put
+            pos_or_panic!(0.1), // close_fee_long_put
         )
     }
 
@@ -1583,25 +1591,28 @@ mod tests_strangle_position_management {
         let mut strangle = create_test_long_strangle();
 
         // Test getting long call position
-        let call_position = strangle.get_position(&OptionStyle::Call, &Side::Long, &pos!(110.0));
+        let call_position =
+            strangle.get_position(&OptionStyle::Call, &Side::Long, &pos_or_panic!(110.0));
         assert!(call_position.is_ok());
         let positions = call_position.unwrap();
         assert_eq!(positions.len(), 1);
-        assert_eq!(positions[0].option.strike_price, pos!(110.0));
+        assert_eq!(positions[0].option.strike_price, pos_or_panic!(110.0));
         assert_eq!(positions[0].option.option_style, OptionStyle::Call);
         assert_eq!(positions[0].option.side, Side::Long);
 
         // Test getting long put position
-        let put_position = strangle.get_position(&OptionStyle::Put, &Side::Long, &pos!(90.0));
+        let put_position =
+            strangle.get_position(&OptionStyle::Put, &Side::Long, &pos_or_panic!(90.0));
         assert!(put_position.is_ok());
         let positions = put_position.unwrap();
         assert_eq!(positions.len(), 1);
-        assert_eq!(positions[0].option.strike_price, pos!(90.0));
+        assert_eq!(positions[0].option.strike_price, pos_or_panic!(90.0));
         assert_eq!(positions[0].option.option_style, OptionStyle::Put);
         assert_eq!(positions[0].option.side, Side::Long);
 
         // Test getting non-existent position
-        let invalid_position = strangle.get_position(&OptionStyle::Call, &Side::Long, &pos!(100.0));
+        let invalid_position =
+            strangle.get_position(&OptionStyle::Call, &Side::Long, &pos_or_panic!(100.0));
         assert!(invalid_position.is_err());
         match invalid_position {
             Err(PositionError::ValidationError(
@@ -1624,21 +1635,21 @@ mod tests_strangle_position_management {
 
         // Modify long call position
         let mut modified_call = strangle.long_call.clone();
-        modified_call.option.quantity = pos!(2.0);
+        modified_call.option.quantity = pos_or_panic!(2.0);
         let result = strangle.modify_position(&modified_call);
         assert!(result.is_ok());
-        assert_eq!(strangle.long_call.option.quantity, pos!(2.0));
+        assert_eq!(strangle.long_call.option.quantity, pos_or_panic!(2.0));
 
         // Modify long put position
         let mut modified_put = strangle.long_put.clone();
-        modified_put.option.quantity = pos!(2.0);
+        modified_put.option.quantity = pos_or_panic!(2.0);
         let result = strangle.modify_position(&modified_put);
         assert!(result.is_ok());
-        assert_eq!(strangle.long_put.option.quantity, pos!(2.0));
+        assert_eq!(strangle.long_put.option.quantity, pos_or_panic!(2.0));
 
         // Test modifying with invalid position
         let mut invalid_position = strangle.long_call.clone();
-        invalid_position.option.strike_price = pos!(95.0);
+        invalid_position.option.strike_price = pos_or_panic!(95.0);
         let result = strangle.modify_position(&invalid_position);
         assert!(result.is_err());
         match result {
@@ -1667,20 +1678,20 @@ mod tests_adjust_option_position_long {
     fn create_test_strategy() -> LongStrangle {
         LongStrangle::new(
             "TEST".to_string(),
-            pos!(100.0), // underlying_price
-            pos!(110.0), // call_strike
-            pos!(90.0),  // put_strike
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(0.2),      // implied_volatility
-            dec!(0.05),     // risk_free_rate
-            Positive::ZERO, // dividend_yield
-            pos!(1.0),      // quantity
-            pos!(2.0),      // premium_long_call
-            pos!(2.0),      // premium_long_put
-            pos!(0.1),      // open_fee_long_call
-            pos!(0.1),      // close_fee_long_call
-            pos!(0.1),      // open_fee_long_put
-            pos!(0.1),      // close_fee_long_put
+            pos_or_panic!(100.0), // underlying_price
+            pos_or_panic!(110.0), // call_strike
+            pos_or_panic!(90.0),  // put_strike
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.2), // implied_volatility
+            dec!(0.05),         // risk_free_rate
+            Positive::ZERO,     // dividend_yield
+            pos_or_panic!(1.0), // quantity
+            pos_or_panic!(2.0), // premium_long_call
+            pos_or_panic!(2.0), // premium_long_put
+            pos_or_panic!(0.1), // open_fee_long_call
+            pos_or_panic!(0.1), // close_fee_long_call
+            pos_or_panic!(0.1), // open_fee_long_put
+            pos_or_panic!(0.1), // close_fee_long_put
         )
     }
 
@@ -1688,11 +1699,11 @@ mod tests_adjust_option_position_long {
     fn test_adjust_existing_call_position() {
         let mut strategy = create_test_strategy();
         let initial_quantity = strategy.long_call.option.quantity;
-        let adjustment = pos!(1.0);
+        let adjustment = pos_or_panic!(1.0);
 
         let result = strategy.adjust_option_position(
             adjustment.to_dec(),
-            &pos!(110.0),
+            &pos_or_panic!(110.0),
             &OptionStyle::Call,
             &Side::Long,
         );
@@ -1708,11 +1719,11 @@ mod tests_adjust_option_position_long {
     fn test_adjust_existing_put_position() {
         let mut strategy = create_test_strategy();
         let initial_quantity = strategy.long_put.option.quantity;
-        let adjustment = pos!(1.0);
+        let adjustment = pos_or_panic!(1.0);
 
         let result = strategy.adjust_option_position(
             adjustment.to_dec(),
-            &pos!(90.0),
+            &pos_or_panic!(90.0),
             &OptionStyle::Put,
             &Side::Long,
         );
@@ -1731,7 +1742,7 @@ mod tests_adjust_option_position_long {
         // Try to adjust a non-existent long call position
         let result = strategy.adjust_option_position(
             Decimal::ONE,
-            &pos!(110.0),
+            &pos_or_panic!(110.0),
             &OptionStyle::Call,
             &Side::Short,
         );
@@ -1752,7 +1763,7 @@ mod tests_adjust_option_position_long {
         // Try to adjust position with wrong strike price
         let result = strategy.adjust_option_position(
             Decimal::ONE,
-            &pos!(100.0), // Invalid strike price
+            &pos_or_panic!(100.0), // Invalid strike price
             &OptionStyle::Call,
             &Side::Short,
         );
@@ -1767,7 +1778,7 @@ mod tests_adjust_option_position_long {
 
         let result = strategy.adjust_option_position(
             Decimal::ZERO,
-            &pos!(110.0),
+            &pos_or_panic!(110.0),
             &OptionStyle::Call,
             &Side::Long,
         );
@@ -1792,18 +1803,18 @@ mod tests_strategy_constructor {
                 create_sample_position(
                     OptionStyle::Call,
                     Side::Long,
-                    pos!(100.0),
-                    pos!(1.0),
-                    pos!(110.0),
-                    pos!(0.2),
+                    pos_or_panic!(100.0),
+                    pos_or_panic!(1.0),
+                    pos_or_panic!(110.0),
+                    pos_or_panic!(0.2),
                 ),
                 create_sample_position(
                     OptionStyle::Put,
                     Side::Long,
-                    pos!(100.0),
-                    pos!(1.0),
-                    pos!(90.0),
-                    pos!(0.2),
+                    pos_or_panic!(100.0),
+                    pos_or_panic!(1.0),
+                    pos_or_panic!(90.0),
+                    pos_or_panic!(0.2),
                 ),
             ];
 
@@ -1811,8 +1822,8 @@ mod tests_strategy_constructor {
             assert!(result.is_ok());
 
             let strategy = result.unwrap();
-            assert_eq!(strategy.long_call.option.strike_price, pos!(110.0));
-            assert_eq!(strategy.long_put.option.strike_price, pos!(90.0));
+            assert_eq!(strategy.long_call.option.strike_price, pos_or_panic!(110.0));
+            assert_eq!(strategy.long_put.option.strike_price, pos_or_panic!(90.0));
         }
 
         #[test]
@@ -1820,10 +1831,10 @@ mod tests_strategy_constructor {
             let options = vec![create_sample_position(
                 OptionStyle::Call,
                 Side::Long,
-                pos!(100.0),
-                pos!(1.0),
-                pos!(110.0),
-                pos!(0.2),
+                pos_or_panic!(100.0),
+                pos_or_panic!(1.0),
+                pos_or_panic!(110.0),
+                pos_or_panic!(0.2),
             )];
 
             let result = LongStrangle::get_strategy(&options);
@@ -1841,18 +1852,18 @@ mod tests_strategy_constructor {
                 create_sample_position(
                     OptionStyle::Call,
                     Side::Long,
-                    pos!(100.0),
-                    pos!(1.0),
-                    pos!(110.0),
-                    pos!(0.2),
+                    pos_or_panic!(100.0),
+                    pos_or_panic!(1.0),
+                    pos_or_panic!(110.0),
+                    pos_or_panic!(0.2),
                 ),
                 create_sample_position(
                     OptionStyle::Call,
                     Side::Long,
-                    pos!(100.0),
-                    pos!(1.0),
-                    pos!(90.0),
-                    pos!(0.2),
+                    pos_or_panic!(100.0),
+                    pos_or_panic!(1.0),
+                    pos_or_panic!(90.0),
+                    pos_or_panic!(0.2),
                 ),
             ];
 
@@ -1871,18 +1882,18 @@ mod tests_strategy_constructor {
                 create_sample_position(
                     OptionStyle::Call,
                     Side::Short,
-                    pos!(100.0),
-                    pos!(1.0),
-                    pos!(110.0),
-                    pos!(0.2),
+                    pos_or_panic!(100.0),
+                    pos_or_panic!(1.0),
+                    pos_or_panic!(110.0),
+                    pos_or_panic!(0.2),
                 ),
                 create_sample_position(
                     OptionStyle::Put,
                     Side::Long,
-                    pos!(100.0),
-                    pos!(1.0),
-                    pos!(90.0),
-                    pos!(0.2),
+                    pos_or_panic!(100.0),
+                    pos_or_panic!(1.0),
+                    pos_or_panic!(90.0),
+                    pos_or_panic!(0.2),
                 ),
             ];
 
@@ -1901,18 +1912,18 @@ mod tests_strategy_constructor {
                 create_sample_position(
                     OptionStyle::Call,
                     Side::Long,
-                    pos!(100.0),
-                    pos!(1.0),
-                    pos!(90.0),
-                    pos!(0.2),
+                    pos_or_panic!(100.0),
+                    pos_or_panic!(1.0),
+                    pos_or_panic!(90.0),
+                    pos_or_panic!(0.2),
                 ),
                 create_sample_position(
                     OptionStyle::Put,
                     Side::Long,
-                    pos!(100.0),
-                    pos!(1.0),
-                    pos!(110.0),
-                    pos!(0.2),
+                    pos_or_panic!(100.0),
+                    pos_or_panic!(1.0),
+                    pos_or_panic!(110.0),
+                    pos_or_panic!(0.2),
                 ),
             ];
 
@@ -1939,20 +1950,20 @@ mod tests_long_strangle_pnl {
         let long_call = create_sample_position(
             OptionStyle::Call,
             Side::Long,
-            pos!(100.0), // Underlying price
-            pos!(1.0),   // Quantity
-            pos!(105.0), // Strike price
-            pos!(0.2),   // Implied volatility
+            pos_or_panic!(100.0), // Underlying price
+            pos_or_panic!(1.0),   // Quantity
+            pos_or_panic!(105.0), // Strike price
+            pos_or_panic!(0.2),   // Implied volatility
         );
 
         // Create long put position
         let long_put = create_sample_position(
             OptionStyle::Put,
             Side::Long,
-            pos!(100.0), // Same underlying price
-            pos!(1.0),   // Quantity
-            pos!(95.0),  // Strike price
-            pos!(0.2),   // Implied volatility
+            pos_or_panic!(100.0), // Same underlying price
+            pos_or_panic!(1.0),   // Quantity
+            pos_or_panic!(95.0),  // Strike price
+            pos_or_panic!(0.2),   // Implied volatility
         );
 
         LongStrangle::get_strategy(&[long_call, long_put])
@@ -1961,9 +1972,9 @@ mod tests_long_strangle_pnl {
     #[test]
     fn test_calculate_pnl_at_money() {
         let strangle = create_test_strangle().unwrap();
-        let market_price = pos!(100.0);
-        let expiration_date = ExpirationDate::Days(pos!(20.0));
-        let implied_volatility = pos!(0.3);
+        let market_price = pos_or_panic!(100.0);
+        let expiration_date = ExpirationDate::Days(pos_or_panic!(20.0));
+        let implied_volatility = pos_or_panic!(0.3);
 
         let result = strangle.calculate_pnl(&market_price, expiration_date, &implied_volatility);
         assert!(result.is_ok());
@@ -1973,9 +1984,9 @@ mod tests_long_strangle_pnl {
 
         // At the money, both options should have time value but no intrinsic value
         // Initial cost is 2 * (premium + fees) = 2 * (5.0 + 1.0) = 12.0
-        assert_pos_relative_eq!(pnl.initial_costs, pos!(12.0), pos!(1e-6));
+        assert_pos_relative_eq!(pnl.initial_costs, pos_or_panic!(12.0), pos_or_panic!(1e-6));
         assert_decimal_eq!(pnl.unrealized.unwrap(), dec!(0.748425), dec!(1e-6));
-        assert_eq!(pnl.initial_income, pos!(0.0));
+        assert_eq!(pnl.initial_income, pos_or_panic!(0.0));
         // Unrealized loss should be less than full premium paid (time value remains)
         assert!(pnl.unrealized.unwrap() > dec!(-12.0));
     }
@@ -1983,9 +1994,9 @@ mod tests_long_strangle_pnl {
     #[test]
     fn test_calculate_pnl_above_call_strike() {
         let strangle = create_test_strangle().unwrap();
-        let market_price = pos!(110.0); // Above call strike
-        let expiration_date = ExpirationDate::Days(pos!(30.0));
-        let implied_volatility = pos!(0.2);
+        let market_price = pos_or_panic!(110.0); // Above call strike
+        let expiration_date = ExpirationDate::Days(pos_or_panic!(30.0));
+        let implied_volatility = pos_or_panic!(0.2);
 
         let result = strangle.calculate_pnl(&market_price, expiration_date, &implied_volatility);
         assert!(result.is_ok());
@@ -2001,9 +2012,9 @@ mod tests_long_strangle_pnl {
     #[test]
     fn test_calculate_pnl_below_put_strike() {
         let strangle = create_test_strangle().unwrap();
-        let market_price = pos!(90.0); // Below put strike
-        let expiration_date = ExpirationDate::Days(pos!(30.0));
-        let implied_volatility = pos!(0.2);
+        let market_price = pos_or_panic!(90.0); // Below put strike
+        let expiration_date = ExpirationDate::Days(pos_or_panic!(30.0));
+        let implied_volatility = pos_or_panic!(0.2);
 
         let result = strangle.calculate_pnl(&market_price, expiration_date, &implied_volatility);
         assert!(result.is_ok());
@@ -2019,7 +2030,7 @@ mod tests_long_strangle_pnl {
     #[test]
     fn test_calculate_pnl_at_expiration_max_loss() {
         let strangle = create_test_strangle().unwrap();
-        let underlying_price = pos!(100.0); // At the money
+        let underlying_price = pos_or_panic!(100.0); // At the money
 
         let result = strangle.calculate_pnl_at_expiration(&underlying_price);
         assert!(result.is_ok());
@@ -2030,14 +2041,14 @@ mod tests_long_strangle_pnl {
         // At expiration, both options expire worthless
         // Max loss is the total premium paid plus fees
         assert_eq!(pnl.realized.unwrap(), dec!(-12.0));
-        assert_eq!(pnl.initial_costs, pos!(12.0));
-        assert_eq!(pnl.initial_income, pos!(0.0));
+        assert_eq!(pnl.initial_costs, pos_or_panic!(12.0));
+        assert_eq!(pnl.initial_income, pos_or_panic!(0.0));
     }
 
     #[test]
     fn test_calculate_pnl_at_expiration_call_profit() {
         let strangle = create_test_strangle().unwrap();
-        let underlying_price = pos!(115.0); // Well above call strike
+        let underlying_price = pos_or_panic!(115.0); // Well above call strike
 
         let result = strangle.calculate_pnl_at_expiration(&underlying_price);
         assert!(result.is_ok());
@@ -2054,7 +2065,7 @@ mod tests_long_strangle_pnl {
     #[test]
     fn test_calculate_pnl_at_expiration_put_profit() {
         let strangle = create_test_strangle().unwrap();
-        let underlying_price = pos!(85.0); // Well below put strike
+        let underlying_price = pos_or_panic!(85.0); // Well below put strike
 
         let result = strangle.calculate_pnl_at_expiration(&underlying_price);
         assert!(result.is_ok());
@@ -2071,9 +2082,9 @@ mod tests_long_strangle_pnl {
     #[test]
     fn test_calculate_pnl_with_higher_volatility() {
         let strangle = create_test_strangle().unwrap();
-        let market_price = pos!(100.0);
-        let expiration_date = ExpirationDate::Days(pos!(30.0));
-        let implied_volatility = pos!(0.4); // Higher volatility
+        let market_price = pos_or_panic!(100.0);
+        let expiration_date = ExpirationDate::Days(pos_or_panic!(30.0));
+        let implied_volatility = pos_or_panic!(0.4); // Higher volatility
 
         let result = strangle.calculate_pnl(&market_price, expiration_date, &implied_volatility);
         assert!(result.is_ok());
@@ -2097,20 +2108,20 @@ mod test_valid_premium_for_shorts {
         let long_call = create_sample_position(
             OptionStyle::Call,
             Side::Long,
-            pos!(100.0), // Underlying price
-            pos!(1.0),   // Quantity
-            pos!(105.0), // Strike price
-            pos!(0.2),   // Implied volatility
+            pos_or_panic!(100.0), // Underlying price
+            pos_or_panic!(1.0),   // Quantity
+            pos_or_panic!(105.0), // Strike price
+            pos_or_panic!(0.2),   // Implied volatility
         );
 
         // Create long put position
         let long_put = create_sample_position(
             OptionStyle::Put,
             Side::Long,
-            pos!(100.0), // Same underlying price
-            pos!(1.0),   // Quantity
-            pos!(95.0),  // Strike price
-            pos!(0.2),   // Implied volatility
+            pos_or_panic!(100.0), // Same underlying price
+            pos_or_panic!(1.0),   // Quantity
+            pos_or_panic!(95.0),  // Strike price
+            pos_or_panic!(0.2),   // Implied volatility
         );
 
         LongStrangle::get_strategy(&[long_call, long_put])
@@ -2119,8 +2130,8 @@ mod test_valid_premium_for_shorts {
     #[test]
     fn create_test_strangle() {
         let strategy = get_strategy().unwrap();
-        assert!(strategy.valid_premium_for_shorts(&pos!(10.0)));
-        assert!(strategy.valid_premium_for_shorts(&pos!(100.0)));
-        assert!(strategy.valid_premium_for_shorts(&pos!(400.0)));
+        assert!(strategy.valid_premium_for_shorts(&pos_or_panic!(10.0)));
+        assert!(strategy.valid_premium_for_shorts(&pos_or_panic!(100.0)));
+        assert!(strategy.valid_premium_for_shorts(&pos_or_panic!(400.0)));
     }
 }

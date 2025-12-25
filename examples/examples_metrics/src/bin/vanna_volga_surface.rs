@@ -28,20 +28,20 @@ fn main() -> Result<(), SurfaceError> {
     let params = OptionChainBuildParams::new(
         "SPY".to_string(),
         None,
-        15,          // 15 strikes on each side
-        spos!(5.0),  // $5 intervals
-        dec!(-0.15), // Negative skew
-        dec!(0.08),  // Smile curvature
-        pos!(0.02),  // Spread
+        15,                  // 15 strikes on each side
+        spos!(5.0),          // $5 intervals
+        dec!(-0.15),         // Negative skew
+        dec!(0.08),          // Smile curvature
+        pos_or_panic!(0.02), // Spread
         2,
         OptionDataPriceParams::new(
-            Some(Box::new(pos!(450.0))),
-            Some(ExpirationDate::Days(pos!(30.0))),
+            Some(Box::new(pos_or_panic!(450.0))),
+            Some(ExpirationDate::Days(pos_or_panic!(30.0))),
             Some(dec!(0.05)),
             spos!(0.01),
             Some("SPY".to_string()),
         ),
-        pos!(0.20), // 20% base IV
+        pos_or_panic!(0.20), // 20% base IV
     );
 
     let option_chain = OptionChain::build_chain(&params);
@@ -54,8 +54,8 @@ fn main() -> Result<(), SurfaceError> {
     tracing::info!("Underlying price: {}", option_chain.underlying_price);
 
     // Define price and volatility ranges for the surface
-    let price_range = (pos!(380.0), pos!(520.0)); // ±15% from ATM
-    let vol_range = (pos!(0.10), pos!(0.40)); // 10% to 40% volatility
+    let price_range = (pos_or_panic!(380.0), pos_or_panic!(520.0)); // ±15% from ATM
+    let vol_range = (pos_or_panic!(0.10), pos_or_panic!(0.40)); // 10% to 40% volatility
 
     tracing::info!("Generating Vanna-Volga surface...");
     tracing::info!("  Price range: {} to {}", price_range.0, price_range.1);

@@ -95,10 +95,10 @@ pub trait VolumeProfileCurve {
 /// ```ignore
 /// use optionstratlib::chains::chain::OptionChain;
 /// use optionstratlib::metrics::VolumeProfileSurface;
-/// use optionstratlib::pos;
+/// use optionstratlib::pos_or_panic;
 ///
 /// let chain = OptionChain::load_from_json("options.json")?;
-/// let days = vec![pos!(1.0), pos!(5.0), pos!(10.0), pos!(20.0)];
+/// let days = vec![pos_or_panic!(1.0), pos_or_panic!(5.0), pos_or_panic!(10.0), pos_or_panic!(20.0)];
 /// let volume_surface = chain.volume_profile_surface(days)?;
 /// ```
 pub trait VolumeProfileSurface {
@@ -227,7 +227,7 @@ mod tests_volume_profile {
     #[test]
     fn test_volume_profile_surface_creation() {
         let volume = TestVolumeProfile;
-        let days = vec![pos!(5.0), pos!(10.0), pos!(20.0)];
+        let days = vec![pos_or_panic!(5.0), pos_or_panic!(10.0), pos_or_panic!(20.0)];
 
         let surface = volume.volume_profile_surface(days);
         assert!(surface.is_ok());
@@ -240,7 +240,7 @@ mod tests_volume_profile {
     #[test]
     fn test_volume_profile_surface_time_effect() {
         let volume = TestVolumeProfile;
-        let days = vec![pos!(5.0), pos!(25.0)];
+        let days = vec![pos_or_panic!(5.0), pos_or_panic!(25.0)];
 
         let surface = volume.volume_profile_surface(days).unwrap();
 

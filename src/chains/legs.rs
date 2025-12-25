@@ -150,7 +150,7 @@ mod tests {
             None,
             None,
             None,
-            pos!(0.2),
+            pos_or_panic!(0.2),
             None,
             None,
             None,
@@ -178,8 +178,8 @@ mod tests {
 
         match strategy {
             StrategyLegs::TwoLegs { first, second } => {
-                assert_eq!(first.strike_price, pos!(100.0));
-                assert_eq!(second.strike_price, pos!(110.0));
+                assert_eq!(first.strike_price, pos_or_panic!(100.0));
+                assert_eq!(second.strike_price, pos_or_panic!(110.0));
             }
             _ => panic!("Expected TwoLegs variant"),
         }
@@ -206,10 +206,10 @@ mod tests {
                 third,
                 fourth,
             } => {
-                assert_eq!(first.strike_price, pos!(100.0));
-                assert_eq!(second.strike_price, pos!(110.0));
-                assert_eq!(third.strike_price, pos!(120.0));
-                assert_eq!(fourth.strike_price, pos!(130.0));
+                assert_eq!(first.strike_price, pos_or_panic!(100.0));
+                assert_eq!(second.strike_price, pos_or_panic!(110.0));
+                assert_eq!(third.strike_price, pos_or_panic!(120.0));
+                assert_eq!(fourth.strike_price, pos_or_panic!(130.0));
             }
             _ => panic!("Expected FourLegs variant"),
         }
@@ -242,12 +242,12 @@ mod tests {
                 fifth,
                 sixth,
             } => {
-                assert_eq!(first.strike_price, pos!(100.0));
-                assert_eq!(second.strike_price, pos!(110.0));
-                assert_eq!(third.strike_price, pos!(120.0));
-                assert_eq!(fourth.strike_price, pos!(130.0));
-                assert_eq!(fifth.strike_price, pos!(140.0));
-                assert_eq!(sixth.strike_price, pos!(150.0));
+                assert_eq!(first.strike_price, pos_or_panic!(100.0));
+                assert_eq!(second.strike_price, pos_or_panic!(110.0));
+                assert_eq!(third.strike_price, pos_or_panic!(120.0));
+                assert_eq!(fourth.strike_price, pos_or_panic!(130.0));
+                assert_eq!(fifth.strike_price, pos_or_panic!(140.0));
+                assert_eq!(sixth.strike_price, pos_or_panic!(150.0));
             }
             _ => panic!("Expected SixLegs variant"),
         }
@@ -333,8 +333,8 @@ mod tests {
 
         match cloned_strategy {
             StrategyLegs::TwoLegs { first, second } => {
-                assert_eq!(first.strike_price, pos!(100.0));
-                assert_eq!(second.strike_price, pos!(110.0));
+                assert_eq!(first.strike_price, pos_or_panic!(100.0));
+                assert_eq!(second.strike_price, pos_or_panic!(110.0));
             }
             _ => panic!("Expected TwoLegs variant after cloning"),
         }

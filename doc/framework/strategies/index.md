@@ -67,7 +67,7 @@ use tracing::info;
 use optionstratlib::ExpirationDate;
 use optionstratlib::strategies::bull_call_spread::BullCallSpread;
 use optionstratlib::Positive;
-use optionstratlib::pos;
+use optionstratlib::pos_or_panic;
 use optionstratlib::strategies::Strategies;
 
 let spread = BullCallSpread::new(
@@ -193,7 +193,7 @@ use tracing::info;
 use optionstratlib::ExpirationDate;
 use optionstratlib::strategies::iron_condor::IronCondor;
 use optionstratlib::Positive;
-use optionstratlib::pos;
+use optionstratlib::pos_or_panic;
 use optionstratlib::strategies::Strategies;
 
 let condor = IronCondor::new(

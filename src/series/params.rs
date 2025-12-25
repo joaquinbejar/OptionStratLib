@@ -89,15 +89,16 @@ impl OptionSeriesBuildParams {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     use crate::ExpirationDate;
     use crate::chains::utils::OptionDataPriceParams;
     use rust_decimal_macros::dec;
 
     #[test]
     fn test_display_empty_series() {
-        let expiration = ExpirationDate::Days(pos!(30.0));
+        let expiration = ExpirationDate::Days(pos_or_panic!(30.0));
         let price_params = OptionDataPriceParams::new(
-            Some(Box::new(pos!(100.0))),
+            Some(Box::new(pos_or_panic!(100.0))),
             Some(expiration),
             Some(dec!(0.05)),
             spos!(0.02),
@@ -110,10 +111,10 @@ mod tests {
             spos!(5.0),
             dec!(-0.2),
             dec!(0.1),
-            pos!(0.02),
+            pos_or_panic!(0.02),
             2,
             price_params,
-            pos!(0.2),
+            pos_or_panic!(0.2),
         );
 
         let params = OptionSeriesBuildParams {
@@ -126,9 +127,9 @@ mod tests {
 
     #[test]
     fn test_debug_empty_series() {
-        let expiration = ExpirationDate::Days(pos!(30.0));
+        let expiration = ExpirationDate::Days(pos_or_panic!(30.0));
         let price_params = OptionDataPriceParams::new(
-            Some(Box::new(pos!(100.0))),
+            Some(Box::new(pos_or_panic!(100.0))),
             Some(expiration),
             Some(dec!(0.05)),
             spos!(0.02),
@@ -141,10 +142,10 @@ mod tests {
             spos!(5.0),
             dec!(-0.2),
             dec!(0.1),
-            pos!(0.02),
+            pos_or_panic!(0.02),
             2,
             price_params,
-            pos!(0.2),
+            pos_or_panic!(0.2),
         );
 
         let params = OptionSeriesBuildParams {

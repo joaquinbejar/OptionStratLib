@@ -14,10 +14,10 @@ impl WalkTypeAble<Positive, Positive> for Walker {}
 fn main() -> Result<(), Error> {
     setup_logger();
     let n_steps = 43_200; // 30 days in minutes
-    let initial_price = pos!(100.0);
-    let std_dev = pos!(20.0);
+    let initial_price = pos_or_panic!(100.0);
+    let std_dev = pos_or_panic!(20.0);
     let walker = Box::new(Walker::new());
-    let days = pos!(30.0);
+    let days = pos_or_panic!(30.0);
 
     let walk_params = WalkParams {
         size: n_steps,
@@ -26,7 +26,11 @@ fn main() -> Result<(), Error> {
             y: Ystep::new(0, initial_price),
         },
         walk_type: WalkType::GeometricBrownian {
-            dt: convert_time_frame(pos!(1.0) / days, &TimeFrame::Minute, &TimeFrame::Day),
+            dt: convert_time_frame(
+                pos_or_panic!(1.0) / days,
+                &TimeFrame::Minute,
+                &TimeFrame::Day,
+            ),
             drift: dec!(0.0),
             volatility: std_dev,
         },

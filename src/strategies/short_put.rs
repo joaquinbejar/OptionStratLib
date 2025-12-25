@@ -789,16 +789,16 @@ mod tests_simulate {
     fn create_test_short_put() -> ShortPut {
         ShortPut::new(
             "TEST".to_string(),
-            pos!(100.0), // strike
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(0.20),  // implied volatility
-            pos!(1.0),   // quantity
-            pos!(100.0), // underlying price
-            dec!(0.05),  // risk-free rate
-            pos!(0.0),   // dividend yield
-            pos!(5.0),   // premium received
-            pos!(0.0),   // open fee
-            pos!(0.0),   // close fee
+            pos_or_panic!(100.0), // strike
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.20),  // implied volatility
+            pos_or_panic!(1.0),   // quantity
+            pos_or_panic!(100.0), // underlying price
+            dec!(0.05),           // risk-free rate
+            pos_or_panic!(0.0),   // dividend yield
+            pos_or_panic!(5.0),   // premium received
+            pos_or_panic!(0.0),   // open fee
+            pos_or_panic!(0.0),   // close fee
         )
     }
 
@@ -807,8 +807,8 @@ mod tests_simulate {
         let init_step = Step::new(
             Positive::ONE,
             TimeFrame::Day,
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(100.0),
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(100.0),
         );
 
         WalkParams {
@@ -826,7 +826,12 @@ mod tests_simulate {
     #[test]
     fn test_simulate_profit_percent_exit() {
         let strategy = create_test_short_put();
-        let prices = vec![pos!(100.0), pos!(105.0), pos!(110.0), pos!(115.0)];
+        let prices = vec![
+            pos_or_panic!(100.0),
+            pos_or_panic!(105.0),
+            pos_or_panic!(110.0),
+            pos_or_panic!(115.0),
+        ];
 
         let walk_params = create_walk_params(prices);
         let simulator = Simulator::new(
@@ -848,7 +853,12 @@ mod tests_simulate {
     #[test]
     fn test_simulate_loss_percent_exit() {
         let strategy = create_test_short_put();
-        let prices = vec![pos!(100.0), pos!(95.0), pos!(90.0), pos!(85.0)];
+        let prices = vec![
+            pos_or_panic!(100.0),
+            pos_or_panic!(95.0),
+            pos_or_panic!(90.0),
+            pos_or_panic!(85.0),
+        ];
 
         let walk_params = create_walk_params(prices);
         let simulator = Simulator::new(
@@ -870,7 +880,12 @@ mod tests_simulate {
     #[test]
     fn test_simulate_expiration_exit() {
         let strategy = create_test_short_put();
-        let prices = vec![pos!(100.0), pos!(101.0), pos!(102.0), pos!(103.0)];
+        let prices = vec![
+            pos_or_panic!(100.0),
+            pos_or_panic!(101.0),
+            pos_or_panic!(102.0),
+            pos_or_panic!(103.0),
+        ];
 
         let walk_params = create_walk_params(prices);
         let simulator = Simulator::new(
@@ -892,7 +907,12 @@ mod tests_simulate {
     #[test]
     fn test_simulate_or_exit_policy() {
         let strategy = create_test_short_put();
-        let prices = vec![pos!(100.0), pos!(105.0), pos!(110.0), pos!(115.0)];
+        let prices = vec![
+            pos_or_panic!(100.0),
+            pos_or_panic!(105.0),
+            pos_or_panic!(110.0),
+            pos_or_panic!(115.0),
+        ];
 
         let walk_params = create_walk_params(prices);
         let simulator = Simulator::new(
@@ -904,7 +924,7 @@ mod tests_simulate {
 
         let exit_policy = ExitPolicy::Or(vec![
             ExitPolicy::ProfitPercent(dec!(0.5)),
-            ExitPolicy::UnderlyingAbove(pos!(112.0)),
+            ExitPolicy::UnderlyingAbove(pos_or_panic!(112.0)),
         ]);
         let results = strategy.simulate(&simulator, exit_policy);
 
@@ -917,7 +937,11 @@ mod tests_simulate {
     #[test]
     fn test_simulate_stats_aggregation() {
         let strategy = create_test_short_put();
-        let prices = vec![pos!(100.0), pos!(105.0), pos!(110.0)];
+        let prices = vec![
+            pos_or_panic!(100.0),
+            pos_or_panic!(105.0),
+            pos_or_panic!(110.0),
+        ];
 
         let walk_params = create_walk_params(prices);
         let simulator = Simulator::new(
@@ -943,11 +967,11 @@ mod tests_simulate {
     fn test_simulate_time_steps_exit() {
         let strategy = create_test_short_put();
         let prices = vec![
-            pos!(100.0),
-            pos!(101.0),
-            pos!(102.0),
-            pos!(103.0),
-            pos!(104.0),
+            pos_or_panic!(100.0),
+            pos_or_panic!(101.0),
+            pos_or_panic!(102.0),
+            pos_or_panic!(103.0),
+            pos_or_panic!(104.0),
         ];
 
         let walk_params = create_walk_params(prices);
@@ -970,7 +994,11 @@ mod tests_simulate {
     #[test]
     fn test_simulate_underlying_below_exit() {
         let strategy = create_test_short_put();
-        let prices = vec![pos!(100.0), pos!(95.0), pos!(90.0)];
+        let prices = vec![
+            pos_or_panic!(100.0),
+            pos_or_panic!(95.0),
+            pos_or_panic!(90.0),
+        ];
 
         let walk_params = create_walk_params(prices);
         let simulator = Simulator::new(
@@ -980,7 +1008,7 @@ mod tests_simulate {
             generator_positive,
         );
 
-        let exit_policy = ExitPolicy::UnderlyingBelow(pos!(92.0));
+        let exit_policy = ExitPolicy::UnderlyingBelow(pos_or_panic!(92.0));
         let results = strategy.simulate(&simulator, exit_policy);
 
         assert!(results.is_ok());
@@ -991,7 +1019,12 @@ mod tests_simulate {
     #[test]
     fn test_simulate_and_exit_policy() {
         let strategy = create_test_short_put();
-        let prices = vec![pos!(100.0), pos!(105.0), pos!(110.0), pos!(115.0)];
+        let prices = vec![
+            pos_or_panic!(100.0),
+            pos_or_panic!(105.0),
+            pos_or_panic!(110.0),
+            pos_or_panic!(115.0),
+        ];
 
         let walk_params = create_walk_params(prices);
         let simulator = Simulator::new(
@@ -1003,7 +1036,7 @@ mod tests_simulate {
 
         let exit_policy = ExitPolicy::And(vec![
             ExitPolicy::TimeSteps(2),
-            ExitPolicy::UnderlyingAbove(pos!(105.0)),
+            ExitPolicy::UnderlyingAbove(pos_or_panic!(105.0)),
         ]);
         let results = strategy.simulate(&simulator, exit_policy);
 
@@ -1015,7 +1048,11 @@ mod tests_simulate {
     #[test]
     fn test_simulate_multiple_simulations() {
         let strategy = create_test_short_put();
-        let prices = vec![pos!(100.0), pos!(102.0), pos!(104.0)];
+        let prices = vec![
+            pos_or_panic!(100.0),
+            pos_or_panic!(102.0),
+            pos_or_panic!(104.0),
+        ];
 
         let walk_params = create_walk_params(prices);
         let simulator = Simulator::new(
@@ -1038,7 +1075,11 @@ mod tests_simulate {
     #[test]
     fn test_simulate_stats_calculations() {
         let strategy = create_test_short_put();
-        let prices = vec![pos!(100.0), pos!(105.0), pos!(110.0)];
+        let prices = vec![
+            pos_or_panic!(100.0),
+            pos_or_panic!(105.0),
+            pos_or_panic!(110.0),
+        ];
 
         let walk_params = create_walk_params(prices);
         let simulator = Simulator::new(
@@ -1065,7 +1106,12 @@ mod tests_simulate {
     fn test_simulate_expiration_path() {
         let strategy = create_test_short_put();
         // Price stays stable, should expire
-        let prices = vec![pos!(100.0), pos!(100.5), pos!(101.0), pos!(100.8)];
+        let prices = vec![
+            pos_or_panic!(100.0),
+            pos_or_panic!(100.5),
+            pos_or_panic!(101.0),
+            pos_or_panic!(100.8),
+        ];
 
         let walk_params = create_walk_params(prices);
         let simulator = Simulator::new(
@@ -1093,7 +1139,11 @@ mod tests_simulate {
     fn test_simulate_profit_target_hit() {
         let strategy = create_test_short_put();
         // Price rises significantly to trigger profit
-        let prices = vec![pos!(100.0), pos!(110.0), pos!(120.0)];
+        let prices = vec![
+            pos_or_panic!(100.0),
+            pos_or_panic!(110.0),
+            pos_or_panic!(120.0),
+        ];
 
         let walk_params = create_walk_params(prices);
         let simulator = Simulator::new(
@@ -1118,7 +1168,11 @@ mod tests_simulate {
     fn test_simulate_stop_loss_hit() {
         let strategy = create_test_short_put();
         // Price drops significantly to trigger stop loss
-        let prices = vec![pos!(100.0), pos!(85.0), pos!(70.0)];
+        let prices = vec![
+            pos_or_panic!(100.0),
+            pos_or_panic!(85.0),
+            pos_or_panic!(70.0),
+        ];
 
         let walk_params = create_walk_params(prices);
         let simulator = Simulator::new(
@@ -1142,7 +1196,12 @@ mod tests_simulate {
     #[test]
     fn test_simulate_premium_tracking() {
         let strategy = create_test_short_put();
-        let prices = vec![pos!(100.0), pos!(95.0), pos!(105.0), pos!(100.0)];
+        let prices = vec![
+            pos_or_panic!(100.0),
+            pos_or_panic!(95.0),
+            pos_or_panic!(105.0),
+            pos_or_panic!(100.0),
+        ];
 
         let walk_params = create_walk_params(prices);
         let simulator = Simulator::new(
@@ -1168,7 +1227,11 @@ mod tests_simulate {
     #[test]
     fn test_simulate_holding_period() {
         let strategy = create_test_short_put();
-        let prices = vec![pos!(100.0), pos!(101.0), pos!(102.0)];
+        let prices = vec![
+            pos_or_panic!(100.0),
+            pos_or_panic!(101.0),
+            pos_or_panic!(102.0),
+        ];
         let price_count = prices.len();
 
         let walk_params = create_walk_params(prices);
@@ -1193,7 +1256,11 @@ mod tests_simulate {
     #[test]
     fn test_simulate_mixed_results() {
         let strategy = create_test_short_put();
-        let prices = vec![pos!(100.0), pos!(102.0), pos!(98.0)];
+        let prices = vec![
+            pos_or_panic!(100.0),
+            pos_or_panic!(102.0),
+            pos_or_panic!(98.0),
+        ];
 
         let walk_params = create_walk_params(prices);
         let simulator = Simulator::new(

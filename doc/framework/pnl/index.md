@@ -59,7 +59,7 @@ use optionstratlib::pnl::utils::{PnL, PnLCalculator};
 use chrono::{DateTime, Utc};
 use rust_decimal_macros::dec;
 use optionstratlib::{ExpirationDate, Positive};
-use optionstratlib::pos;
+use optionstratlib::pos_or_panic;
 use optionstratlib::prelude::PricingError;
 
 // Create a new PnL instance

@@ -2,23 +2,23 @@ use optionstratlib::prelude::*;
 
 fn main() -> Result<(), Error> {
     setup_logger();
-    let underlying_price = pos!(7138.5);
+    let underlying_price = pos_or_panic!(7138.5);
 
     let strategy = ShortStraddle::new(
         "CL".to_string(),
-        underlying_price, // underlying_price
-        pos!(7460.0),     // call_strike
-        ExpirationDate::Days(pos!(45.0)),
-        pos!(0.3745),   // implied_volatility
-        Decimal::ZERO,  // risk_free_rate
-        Positive::ZERO, // dividend_yield
-        pos!(1.0),      // quantity
-        pos!(84.2),     // premium_short_call
-        pos!(353.2),    // premium_short_put
-        pos!(7.01),     // open_fee_short_call
-        pos!(7.01),     // close_fee_short_call
-        pos!(7.01),     // open_fee_short_put
-        pos!(7.01),     // close_fee_short_put
+        underlying_price,      // underlying_price
+        pos_or_panic!(7460.0), // call_strike
+        ExpirationDate::Days(pos_or_panic!(45.0)),
+        pos_or_panic!(0.3745), // implied_volatility
+        Decimal::ZERO,         // risk_free_rate
+        Positive::ZERO,        // dividend_yield
+        pos_or_panic!(1.0),    // quantity
+        pos_or_panic!(84.2),   // premium_short_call
+        pos_or_panic!(353.2),  // premium_short_put
+        pos_or_panic!(7.01),   // open_fee_short_call
+        pos_or_panic!(7.01),   // close_fee_short_call
+        pos_or_panic!(7.01),   // open_fee_short_put
+        pos_or_panic!(7.01),   // close_fee_short_put
     );
     let range = strategy.break_even_points[1] - strategy.break_even_points[0];
 

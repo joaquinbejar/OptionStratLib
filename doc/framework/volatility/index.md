@@ -64,7 +64,7 @@ use optionstratlib::{ExpirationDate, Options};
 use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
 use optionstratlib::volatility::implied_volatility;
 use optionstratlib::Positive;
-use optionstratlib::pos;
+use optionstratlib::pos_or_panic;
 
 let mut option = Options::new(
     OptionType::European,
@@ -161,7 +161,7 @@ frames:
 
 ::: example-wrap
 ``` {.rust .rust-example-rendered}
-use optionstratlib::pos;
+use optionstratlib::pos_or_panic;
 use optionstratlib::utils::time::TimeFrame;
 use optionstratlib::volatility::{annualized_volatility, de_annualized_volatility};
 

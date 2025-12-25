@@ -26,25 +26,31 @@ fn main() -> Result<(), CurveError> {
     setup_logger();
 
     // Build a synthetic option chain with volume data
-    let mut chain = OptionChain::new("SPY", pos!(450.0), "2024-12-31".to_string(), None, None);
+    let mut chain = OptionChain::new(
+        "SPY",
+        pos_or_panic!(450.0),
+        "2024-12-31".to_string(),
+        None,
+        None,
+    );
 
     // Add options with realistic volume distribution
     // Volume is highest near ATM and decreases for OTM options
     let strikes_data = [
         // (strike, volume)
-        (pos!(380.0), pos!(500.0)),
-        (pos!(400.0), pos!(1500.0)),
-        (pos!(420.0), pos!(3500.0)),
-        (pos!(430.0), pos!(5000.0)),
-        (pos!(440.0), pos!(8000.0)),
-        (pos!(445.0), pos!(12000.0)),
-        (pos!(450.0), pos!(18000.0)), // ATM - highest volume
-        (pos!(455.0), pos!(14000.0)),
-        (pos!(460.0), pos!(9000.0)),
-        (pos!(470.0), pos!(5500.0)),
-        (pos!(480.0), pos!(3000.0)),
-        (pos!(500.0), pos!(1200.0)),
-        (pos!(520.0), pos!(400.0)),
+        (pos_or_panic!(380.0), pos_or_panic!(500.0)),
+        (pos_or_panic!(400.0), pos_or_panic!(1500.0)),
+        (pos_or_panic!(420.0), pos_or_panic!(3500.0)),
+        (pos_or_panic!(430.0), pos_or_panic!(5000.0)),
+        (pos_or_panic!(440.0), pos_or_panic!(8000.0)),
+        (pos_or_panic!(445.0), pos_or_panic!(12000.0)),
+        (pos_or_panic!(450.0), pos_or_panic!(18000.0)), // ATM - highest volume
+        (pos_or_panic!(455.0), pos_or_panic!(14000.0)),
+        (pos_or_panic!(460.0), pos_or_panic!(9000.0)),
+        (pos_or_panic!(470.0), pos_or_panic!(5500.0)),
+        (pos_or_panic!(480.0), pos_or_panic!(3000.0)),
+        (pos_or_panic!(500.0), pos_or_panic!(1200.0)),
+        (pos_or_panic!(520.0), pos_or_panic!(400.0)),
     ];
 
     for (strike, volume) in strikes_data {
@@ -54,15 +60,15 @@ fn main() -> Result<(), CurveError> {
             spos!(10.5),
             spos!(10.0),
             spos!(10.5),
-            pos!(0.20),
+            pos_or_panic!(0.20),
             Some(dec!(0.5)),
             Some(dec!(-0.5)),
             Some(dec!(0.05)),
             spos!(volume.to_f64()),
             Some(5000),
             Some("SPY".to_string()),
-            Some(ExpirationDate::Days(pos!(30.0))),
-            Some(Box::new(pos!(450.0))),
+            Some(ExpirationDate::Days(pos_or_panic!(30.0))),
+            Some(Box::new(pos_or_panic!(450.0))),
             Some(dec!(0.05)),
             spos!(0.02),
             None,
@@ -127,13 +133,13 @@ fn main() -> Result<(), CurveError> {
     tracing::info!("Generating Volume Profile Surface...");
 
     let days = vec![
-        pos!(1.0),
-        pos!(5.0),
-        pos!(10.0),
-        pos!(15.0),
-        pos!(20.0),
-        pos!(25.0),
-        pos!(30.0),
+        pos_or_panic!(1.0),
+        pos_or_panic!(5.0),
+        pos_or_panic!(10.0),
+        pos_or_panic!(15.0),
+        pos_or_panic!(20.0),
+        pos_or_panic!(25.0),
+        pos_or_panic!(30.0),
     ];
 
     let volume_surface = chain

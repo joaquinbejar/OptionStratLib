@@ -7,22 +7,22 @@ fn main() -> Result<(), Error> {
     let underlying_price = option_chain.underlying_price;
 
     let mut strategy = PoorMansCoveredCall::new(
-        "SP500".to_string(),               // underlying_symbol
-        underlying_price,                  // underlying_price
-        Positive::ZERO,                    // long_call_strike
-        Positive::ZERO,                    // short_call_strike OTM
-        ExpirationDate::Days(pos!(120.0)), // long_call_expiration
-        ExpirationDate::Days(pos!(30.0)),  // short_call_expiration 30-45 days delta 0.30 or less
-        Positive::ZERO,                    // implied_volatility
-        Decimal::ZERO,                     // risk_free_rate
-        Positive::ZERO,                    // dividend_yield
-        pos!(2.0),                         // quantity
-        Positive::ZERO,                    // premium_short_call
-        Positive::ZERO,                    // premium_short_put
-        pos!(1.74),                        // open_fee_short_call
-        pos!(1.74),                        // close_fee_short_call
-        pos!(0.85),                        // open_fee_short_put
-        pos!(0.85),                        // close_fee_short_put
+        "SP500".to_string(),                        // underlying_symbol
+        underlying_price,                           // underlying_price
+        Positive::ZERO,                             // long_call_strike
+        Positive::ZERO,                             // short_call_strike OTM
+        ExpirationDate::Days(pos_or_panic!(120.0)), // long_call_expiration
+        ExpirationDate::Days(pos_or_panic!(30.0)), // short_call_expiration 30-45 days delta 0.30 or less
+        Positive::ZERO,                            // implied_volatility
+        Decimal::ZERO,                             // risk_free_rate
+        Positive::ZERO,                            // dividend_yield
+        pos_or_panic!(2.0),                        // quantity
+        Positive::ZERO,                            // premium_short_call
+        Positive::ZERO,                            // premium_short_put
+        pos_or_panic!(1.74),                       // open_fee_short_call
+        pos_or_panic!(1.74),                       // close_fee_short_call
+        pos_or_panic!(0.85),                       // open_fee_short_put
+        pos_or_panic!(0.85),                       // close_fee_short_put
     );
 
     strategy.get_best_ratio(&option_chain, FindOptimalSide::Upper);

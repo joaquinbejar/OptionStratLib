@@ -931,7 +931,7 @@ use optionstratlib::chains::chain::OptionChain;
 use optionstratlib::chains::utils::OptionDataGroup;
 use optionstratlib::ExpirationDate;
 use optionstratlib::Positive;
-use optionstratlib::pos;
+use optionstratlib::pos_or_panic;
 use optionstratlib::strategies::base::Optimizable;
 use optionstratlib::strategies::bull_put_spread::BullPutSpread;
 use optionstratlib::strategies::utils::FindOptimalSide;

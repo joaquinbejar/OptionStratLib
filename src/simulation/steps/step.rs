@@ -312,14 +312,14 @@ mod tests {
         // Test creation with valid parameters
         let value = TestValue(5);
         let time_unit = TimeFrame::Day;
-        let datetime = ExpirationDate::Days(pos!(30.0));
+        let datetime = ExpirationDate::Days(pos_or_panic!(30.0));
 
         let step = Xstep::new(value, time_unit, datetime);
 
         assert_eq!(*step.index(), 0);
         assert_eq!(step.step_size_in_time(), &TestValue(5));
         assert_eq!(*step.time_unit(), TimeFrame::Day);
-        assert_eq!(*step.datetime(), ExpirationDate::Days(pos!(30.0)));
+        assert_eq!(*step.datetime(), ExpirationDate::Days(pos_or_panic!(30.0)));
     }
 
     #[test]
@@ -344,7 +344,7 @@ mod tests {
         // Next step should have 25 days expiration (30 - 5)
         let value = TestValue(5);
         let time_unit = TimeFrame::Day;
-        let datetime = ExpirationDate::Days(pos!(30.0));
+        let datetime = ExpirationDate::Days(pos_or_panic!(30.0));
 
         let step = Xstep::new(value, time_unit, datetime);
         let next_step = step.next().unwrap();
@@ -352,12 +352,15 @@ mod tests {
         assert_eq!(*step.index(), 0);
         assert_eq!(step.step_size_in_time(), &TestValue(5));
         assert_eq!(*step.time_unit(), TimeFrame::Day);
-        assert_eq!(*step.datetime(), ExpirationDate::Days(pos!(30.0)));
+        assert_eq!(*step.datetime(), ExpirationDate::Days(pos_or_panic!(30.0)));
 
         assert_eq!(*next_step.index(), 1);
         assert_eq!(next_step.step_size_in_time(), &TestValue(5));
         assert_eq!(*next_step.time_unit(), TimeFrame::Day);
-        assert_eq!(*next_step.datetime(), ExpirationDate::Days(pos!(25.0)));
+        assert_eq!(
+            *next_step.datetime(),
+            ExpirationDate::Days(pos_or_panic!(25.0))
+        );
     }
 
     #[test]
@@ -367,7 +370,7 @@ mod tests {
         // Next step should have 16 days expiration (30 - (2 * 7))
         let value = TestValue(2);
         let time_unit = TimeFrame::Week;
-        let datetime = ExpirationDate::Days(pos!(30.0));
+        let datetime = ExpirationDate::Days(pos_or_panic!(30.0));
 
         let step = Xstep::new(value, time_unit, datetime);
         let next_step = step.next().unwrap();
@@ -375,12 +378,15 @@ mod tests {
         assert_eq!(*step.index(), 0);
         assert_eq!(step.step_size_in_time(), &TestValue(2));
         assert_eq!(*step.time_unit(), TimeFrame::Week);
-        assert_eq!(*step.datetime(), ExpirationDate::Days(pos!(30.0)));
+        assert_eq!(*step.datetime(), ExpirationDate::Days(pos_or_panic!(30.0)));
 
         assert_eq!(*next_step.index(), 1);
         assert_eq!(next_step.step_size_in_time(), &TestValue(2));
         assert_eq!(*next_step.time_unit(), TimeFrame::Week);
-        assert_eq!(*next_step.datetime(), ExpirationDate::Days(pos!(16.0)));
+        assert_eq!(
+            *next_step.datetime(),
+            ExpirationDate::Days(pos_or_panic!(16.0))
+        );
     }
 
     #[test]
@@ -390,7 +396,7 @@ mod tests {
         // Previous step should have 35 days expiration (30 + 5)
         let value = TestValue(5);
         let time_unit = TimeFrame::Day;
-        let datetime = ExpirationDate::Days(pos!(30.0));
+        let datetime = ExpirationDate::Days(pos_or_panic!(30.0));
 
         let step = Xstep::new(value, time_unit, datetime);
         let prev_step = step.previous().unwrap();
@@ -398,12 +404,15 @@ mod tests {
         assert_eq!(*step.index(), 0);
         assert_eq!(step.step_size_in_time(), &TestValue(5));
         assert_eq!(*step.time_unit(), TimeFrame::Day);
-        assert_eq!(*step.datetime(), ExpirationDate::Days(pos!(30.0)));
+        assert_eq!(*step.datetime(), ExpirationDate::Days(pos_or_panic!(30.0)));
 
         assert_eq!(*prev_step.index(), -1);
         assert_eq!(prev_step.step_size_in_time(), &TestValue(5));
         assert_eq!(*prev_step.time_unit(), TimeFrame::Day);
-        assert_eq!(*prev_step.datetime(), ExpirationDate::Days(pos!(35.0)));
+        assert_eq!(
+            *prev_step.datetime(),
+            ExpirationDate::Days(pos_or_panic!(35.0))
+        );
     }
 
     #[test]
@@ -414,7 +423,7 @@ mod tests {
         // Assuming convert_time_frame correctly converts 1 Month to 30 days
         let value = TestValue(3);
         let time_unit = TimeFrame::Month;
-        let datetime = ExpirationDate::Days(pos!(30.0));
+        let datetime = ExpirationDate::Days(pos_or_panic!(30.0));
 
         let step = Xstep::new(value, time_unit, datetime);
         let prev_step = step.previous().unwrap();
@@ -422,12 +431,15 @@ mod tests {
         assert_eq!(*step.index(), 0);
         assert_eq!(step.step_size_in_time(), &TestValue(3));
         assert_eq!(*step.time_unit(), TimeFrame::Month);
-        assert_eq!(*step.datetime(), ExpirationDate::Days(pos!(30.0)));
+        assert_eq!(*step.datetime(), ExpirationDate::Days(pos_or_panic!(30.0)));
 
         assert_eq!(*prev_step.index(), -1);
         assert_eq!(prev_step.step_size_in_time(), &TestValue(3));
         assert_eq!(*prev_step.time_unit(), TimeFrame::Month);
-        assert_eq!(*prev_step.datetime(), ExpirationDate::Days(pos!(121.25)));
+        assert_eq!(
+            *prev_step.datetime(),
+            ExpirationDate::Days(pos_or_panic!(121.25))
+        );
     }
 
     #[test]
@@ -435,7 +447,7 @@ mod tests {
         // Test a sequence of steps
         let value = TestValue(10);
         let time_unit = TimeFrame::Day;
-        let datetime = ExpirationDate::Days(pos!(100.0));
+        let datetime = ExpirationDate::Days(pos_or_panic!(100.0));
 
         let step = Xstep::new(value, time_unit, datetime);
         let step1 = step.next().unwrap();
@@ -443,11 +455,11 @@ mod tests {
         let step3 = step2.next().unwrap();
 
         assert_eq!(*step1.index(), 1);
-        assert_eq!(*step1.datetime(), ExpirationDate::Days(pos!(90.0)));
+        assert_eq!(*step1.datetime(), ExpirationDate::Days(pos_or_panic!(90.0)));
         assert_eq!(*step2.index(), 2);
-        assert_eq!(*step2.datetime(), ExpirationDate::Days(pos!(80.0)));
+        assert_eq!(*step2.datetime(), ExpirationDate::Days(pos_or_panic!(80.0)));
         assert_eq!(*step3.index(), 3);
-        assert_eq!(*step3.datetime(), ExpirationDate::Days(pos!(70.0)));
+        assert_eq!(*step3.datetime(), ExpirationDate::Days(pos_or_panic!(70.0)));
     }
 
     #[test]
@@ -455,7 +467,7 @@ mod tests {
         // Test going forward and then backward
         let value = TestValue(5);
         let time_unit = TimeFrame::Day;
-        let datetime = ExpirationDate::Days(pos!(50.0));
+        let datetime = ExpirationDate::Days(pos_or_panic!(50.0));
 
         let original = Xstep::new(value, time_unit, datetime);
         let forward = original.next().unwrap();
@@ -464,11 +476,17 @@ mod tests {
         assert_eq!(*original.index(), 0);
         assert_eq!(*forward.index(), 1);
         assert_eq!(*back_to_original.index(), 0);
-        assert_eq!(*original.datetime(), ExpirationDate::Days(pos!(50.0)));
-        assert_eq!(*forward.datetime(), ExpirationDate::Days(pos!(45.0)));
+        assert_eq!(
+            *original.datetime(),
+            ExpirationDate::Days(pos_or_panic!(50.0))
+        );
+        assert_eq!(
+            *forward.datetime(),
+            ExpirationDate::Days(pos_or_panic!(45.0))
+        );
         assert_eq!(
             *back_to_original.datetime(),
-            ExpirationDate::Days(pos!(50.0))
+            ExpirationDate::Days(pos_or_panic!(50.0))
         );
     }
 }
@@ -480,16 +498,16 @@ mod tests_positive {
     #[test]
     fn test_step_new() {
         // Test creation with valid parameters
-        let value = pos!(5.0);
+        let value = pos_or_panic!(5.0);
         let time_unit = TimeFrame::Day;
-        let datetime = ExpirationDate::Days(pos!(30.0));
+        let datetime = ExpirationDate::Days(pos_or_panic!(30.0));
 
         let step = Xstep::new(value, time_unit, datetime);
 
         assert_eq!(*step.index(), 0);
-        assert_eq!(*step.step_size_in_time(), pos!(5.0));
+        assert_eq!(*step.step_size_in_time(), pos_or_panic!(5.0));
         assert_eq!(*step.time_unit(), TimeFrame::Day);
-        assert_eq!(*step.datetime(), ExpirationDate::Days(pos!(30.0)));
+        assert_eq!(*step.datetime(), ExpirationDate::Days(pos_or_panic!(30.0)));
     }
 
     #[test]
@@ -498,7 +516,7 @@ mod tests_positive {
         // Using DateTime should panic
         use chrono::{Duration, Utc};
 
-        let value = pos!(5.0);
+        let value = pos_or_panic!(5.0);
         let time_unit = TimeFrame::Day;
         let dt = Utc::now() + Duration::days(30);
         let datetime = ExpirationDate::DateTime(dt);
@@ -512,17 +530,20 @@ mod tests_positive {
         // Test days calculation for next step
         // If we have a step with value 5 Day and 30 days expiration
         // Next step should have 25 days expiration (30 - 5)
-        let value = pos!(5.0);
+        let value = pos_or_panic!(5.0);
         let time_unit = TimeFrame::Day;
-        let datetime = ExpirationDate::Days(pos!(30.0));
+        let datetime = ExpirationDate::Days(pos_or_panic!(30.0));
 
         let step = Xstep::new(value, time_unit, datetime);
         let next_step = step.next().unwrap();
 
         assert_eq!(*next_step.index(), 1);
-        assert_eq!(*next_step.step_size_in_time(), pos!(5.0));
+        assert_eq!(*next_step.step_size_in_time(), pos_or_panic!(5.0));
         assert_eq!(*next_step.time_unit(), TimeFrame::Day);
-        assert_eq!(*next_step.datetime(), ExpirationDate::Days(pos!(25.0)));
+        assert_eq!(
+            *next_step.datetime(),
+            ExpirationDate::Days(pos_or_panic!(25.0))
+        );
     }
 
     #[test]
@@ -530,17 +551,20 @@ mod tests_positive {
         // Test time conversion for weeks
         // If we have a step with value 2 Week and 30 days expiration
         // Next step should have 16 days expiration (30 - (2 * 7))
-        let value = pos!(2.0);
+        let value = pos_or_panic!(2.0);
         let time_unit = TimeFrame::Week;
-        let datetime = ExpirationDate::Days(pos!(30.0));
+        let datetime = ExpirationDate::Days(pos_or_panic!(30.0));
 
         let step = Xstep::new(value, time_unit, datetime);
         let next_step = step.next().unwrap();
 
         assert_eq!(*next_step.index(), 1);
-        assert_eq!(*next_step.step_size_in_time(), pos!(2.0));
+        assert_eq!(*next_step.step_size_in_time(), pos_or_panic!(2.0));
         assert_eq!(*next_step.time_unit(), TimeFrame::Week);
-        assert_eq!(*next_step.datetime(), ExpirationDate::Days(pos!(16.0)));
+        assert_eq!(
+            *next_step.datetime(),
+            ExpirationDate::Days(pos_or_panic!(16.0))
+        );
     }
 
     #[test]
@@ -548,17 +572,20 @@ mod tests_positive {
         // Test days calculation for previous step
         // If we have a step with value 5 Day and 30 days expiration
         // Previous step should have 35 days expiration (30 + 5)
-        let value = pos!(5.0);
+        let value = pos_or_panic!(5.0);
         let time_unit = TimeFrame::Day;
-        let datetime = ExpirationDate::Days(pos!(30.0));
+        let datetime = ExpirationDate::Days(pos_or_panic!(30.0));
 
         let step = Xstep::new(value, time_unit, datetime);
         let prev_step = step.previous().unwrap();
 
         assert_eq!(*prev_step.index(), -1);
-        assert_eq!(*prev_step.step_size_in_time(), pos!(5.0));
+        assert_eq!(*prev_step.step_size_in_time(), pos_or_panic!(5.0));
         assert_eq!(*prev_step.time_unit(), TimeFrame::Day);
-        assert_eq!(*prev_step.datetime(), ExpirationDate::Days(pos!(35.0)));
+        assert_eq!(
+            *prev_step.datetime(),
+            ExpirationDate::Days(pos_or_panic!(35.0))
+        );
     }
 
     #[test]
@@ -567,17 +594,20 @@ mod tests_positive {
         // If we have a step with value 1 Month and 30 days expiration
         // Previous step should have 60 days expiration (30 + 30)
         // Assuming convert_time_frame correctly converts 1 Month to 30 days
-        let value = pos!(3.0);
+        let value = pos_or_panic!(3.0);
         let time_unit = TimeFrame::Month;
-        let datetime = ExpirationDate::Days(pos!(30.0));
+        let datetime = ExpirationDate::Days(pos_or_panic!(30.0));
 
         let step = Xstep::new(value, time_unit, datetime);
         let prev_step = step.previous().unwrap();
 
         assert_eq!(*prev_step.index(), -1);
-        assert_eq!(*prev_step.step_size_in_time(), pos!(3.0));
+        assert_eq!(*prev_step.step_size_in_time(), pos_or_panic!(3.0));
         assert_eq!(*prev_step.time_unit(), TimeFrame::Month);
-        assert_eq!(*prev_step.datetime(), ExpirationDate::Days(pos!(121.25)));
+        assert_eq!(
+            *prev_step.datetime(),
+            ExpirationDate::Days(pos_or_panic!(121.25))
+        );
     }
 
     #[test]
@@ -585,7 +615,7 @@ mod tests_positive {
         // Test a sequence of steps
         let value = Positive::TEN;
         let time_unit = TimeFrame::Day;
-        let datetime = ExpirationDate::Days(pos!(100.0));
+        let datetime = ExpirationDate::Days(pos_or_panic!(100.0));
 
         let step = Xstep::new(value, time_unit, datetime);
         let step1 = step.next().unwrap();
@@ -593,19 +623,19 @@ mod tests_positive {
         let step3 = step2.next().unwrap();
 
         assert_eq!(*step1.index(), 1);
-        assert_eq!(*step1.datetime(), ExpirationDate::Days(pos!(90.0)));
+        assert_eq!(*step1.datetime(), ExpirationDate::Days(pos_or_panic!(90.0)));
         assert_eq!(*step2.index(), 2);
-        assert_eq!(*step2.datetime(), ExpirationDate::Days(pos!(80.0)));
+        assert_eq!(*step2.datetime(), ExpirationDate::Days(pos_or_panic!(80.0)));
         assert_eq!(*step3.index(), 3);
-        assert_eq!(*step3.datetime(), ExpirationDate::Days(pos!(70.0)));
+        assert_eq!(*step3.datetime(), ExpirationDate::Days(pos_or_panic!(70.0)));
     }
 
     #[test]
     fn test_forward_and_backward() {
         // Test going forward and then backward
-        let value = pos!(5.0);
+        let value = pos_or_panic!(5.0);
         let time_unit = TimeFrame::Day;
-        let datetime = ExpirationDate::Days(pos!(50.0));
+        let datetime = ExpirationDate::Days(pos_or_panic!(50.0));
 
         let original = Xstep::new(value, time_unit, datetime);
         let forward = original.next().unwrap();
@@ -614,11 +644,17 @@ mod tests_positive {
         assert_eq!(*original.index(), 0);
         assert_eq!(*forward.index(), 1);
         assert_eq!(*back_to_original.index(), 0);
-        assert_eq!(*original.datetime(), ExpirationDate::Days(pos!(50.0)));
-        assert_eq!(*forward.datetime(), ExpirationDate::Days(pos!(45.0)));
+        assert_eq!(
+            *original.datetime(),
+            ExpirationDate::Days(pos_or_panic!(50.0))
+        );
+        assert_eq!(
+            *forward.datetime(),
+            ExpirationDate::Days(pos_or_panic!(45.0))
+        );
         assert_eq!(
             *back_to_original.datetime(),
-            ExpirationDate::Days(pos!(50.0))
+            ExpirationDate::Days(pos_or_panic!(50.0))
         );
     }
 }
@@ -655,7 +691,7 @@ mod tests_step {
         // Test creation with valid parameters
         let x_value = TestValue(5);
         let time_unit = TimeFrame::Day;
-        let datetime = ExpirationDate::Days(pos!(30.0));
+        let datetime = ExpirationDate::Days(pos_or_panic!(30.0));
         let y_value = 42.5;
 
         let step = Step::new(x_value, time_unit, datetime, y_value);
@@ -664,7 +700,10 @@ mod tests_step {
         assert_eq!(*step.x.index(), 0);
         assert_eq!(step.x.step_size_in_time(), &TestValue(5));
         assert_eq!(*step.x.time_unit(), TimeFrame::Day);
-        assert_eq!(*step.x.datetime(), ExpirationDate::Days(pos!(30.0)));
+        assert_eq!(
+            *step.x.datetime(),
+            ExpirationDate::Days(pos_or_panic!(30.0))
+        );
 
         // Check Y properties
         assert_eq!(*step.y.index(), 0);
@@ -698,7 +737,7 @@ mod tests_step {
         // Setup initial step
         let x_value = TestValue(5);
         let time_unit = TimeFrame::Day;
-        let datetime = ExpirationDate::Days(pos!(30.0));
+        let datetime = ExpirationDate::Days(pos_or_panic!(30.0));
         let y_value = 42.5;
 
         let step = Step::new(x_value, time_unit, datetime, y_value);
@@ -711,7 +750,10 @@ mod tests_step {
         assert_eq!(*step.x.index(), 0);
         assert_eq!(step.x.step_size_in_time(), &TestValue(5));
         assert_eq!(*step.x.time_unit(), TimeFrame::Day);
-        assert_eq!(*step.x.datetime(), ExpirationDate::Days(pos!(30.0)));
+        assert_eq!(
+            *step.x.datetime(),
+            ExpirationDate::Days(pos_or_panic!(30.0))
+        );
 
         // Check Y properties
         assert_eq!(*step.y.index(), 0);
@@ -720,7 +762,10 @@ mod tests_step {
         assert_eq!(*next_step.x.index(), 1);
         assert_eq!(next_step.x.step_size_in_time(), &TestValue(5));
         assert_eq!(*next_step.x.time_unit(), TimeFrame::Day);
-        assert_eq!(*next_step.x.datetime(), ExpirationDate::Days(pos!(25.0)));
+        assert_eq!(
+            *next_step.x.datetime(),
+            ExpirationDate::Days(pos_or_panic!(25.0))
+        );
 
         // Check Y properties
         assert_eq!(*next_step.y.index(), 1);
@@ -732,7 +777,7 @@ mod tests_step {
         // Setup initial step
         let x_value = TestValue(5);
         let time_unit = TimeFrame::Day;
-        let datetime = ExpirationDate::Days(pos!(30.0));
+        let datetime = ExpirationDate::Days(pos_or_panic!(30.0));
         let y_value = 42.5;
 
         let step = Step::new(x_value, time_unit, datetime, y_value);
@@ -745,7 +790,10 @@ mod tests_step {
         assert_eq!(*step.x.index(), 0);
         assert_eq!(step.x.step_size_in_time(), &TestValue(5));
         assert_eq!(*step.x.time_unit(), TimeFrame::Day);
-        assert_eq!(*step.x.datetime(), ExpirationDate::Days(pos!(30.0)));
+        assert_eq!(
+            *step.x.datetime(),
+            ExpirationDate::Days(pos_or_panic!(30.0))
+        );
 
         // Check Y properties
         assert_eq!(*prev_step.y.value(), 38.0);
@@ -756,7 +804,7 @@ mod tests_step {
         // Test step creation and manipulation with time frame conversion
         let x_value = TestValue(2);
         let time_unit = TimeFrame::Week;
-        let datetime = ExpirationDate::Days(pos!(30.0));
+        let datetime = ExpirationDate::Days(pos_or_panic!(30.0));
         let y_value = 100.0;
 
         let step = Step::new(x_value, time_unit, datetime, y_value);
@@ -765,14 +813,20 @@ mod tests_step {
         let next_y = 105.0;
         let next_step = step.next(next_y).unwrap();
 
-        assert_eq!(*next_step.x.datetime(), ExpirationDate::Days(pos!(16.0)));
+        assert_eq!(
+            *next_step.x.datetime(),
+            ExpirationDate::Days(pos_or_panic!(16.0))
+        );
         assert_eq!(*next_step.y.value(), 105.0);
 
         // Previous step from initial should increase days by 2 weeks
         let prev_y = 95.0;
         let prev_step = step.previous(prev_y).unwrap();
 
-        assert_eq!(*prev_step.x.datetime(), ExpirationDate::Days(pos!(44.0)));
+        assert_eq!(
+            *prev_step.x.datetime(),
+            ExpirationDate::Days(pos_or_panic!(44.0))
+        );
         assert_eq!(*prev_step.y.value(), 95.0);
     }
 
@@ -781,7 +835,7 @@ mod tests_step {
         // Test a chain of steps with different Y values
         let x_value = TestValue(10);
         let time_unit = TimeFrame::Day;
-        let datetime = ExpirationDate::Days(pos!(100.0));
+        let datetime = ExpirationDate::Days(pos_or_panic!(100.0));
         let y_value = 50.0;
 
         let initial = Step::new(x_value, time_unit, datetime, y_value);
@@ -793,15 +847,24 @@ mod tests_step {
 
         // Check progression of x and y values
         assert_eq!(*step1.x.index(), 1);
-        assert_eq!(*step1.x.datetime(), ExpirationDate::Days(pos!(90.0)));
+        assert_eq!(
+            *step1.x.datetime(),
+            ExpirationDate::Days(pos_or_panic!(90.0))
+        );
         assert_eq!(*step1.y.index(), 1);
         assert_eq!(*step1.y.value(), 55.0);
         assert_eq!(*step2.x.index(), 2);
-        assert_eq!(*step2.x.datetime(), ExpirationDate::Days(pos!(80.0)));
+        assert_eq!(
+            *step2.x.datetime(),
+            ExpirationDate::Days(pos_or_panic!(80.0))
+        );
         assert_eq!(*step2.y.index(), 2);
         assert_eq!(*step2.y.value(), 60.0);
         assert_eq!(*step3.x.index(), 3);
-        assert_eq!(*step3.x.datetime(), ExpirationDate::Days(pos!(70.0)));
+        assert_eq!(
+            *step3.x.datetime(),
+            ExpirationDate::Days(pos_or_panic!(70.0))
+        );
         assert_eq!(*step3.y.index(), 3);
         assert_eq!(*step3.y.value(), 65.0);
     }
@@ -809,45 +872,48 @@ mod tests_step {
     #[test]
     fn test_with_positive_type() {
         // Test using Positive as both X and Y types
-        let x_value = pos!(5.0);
+        let x_value = pos_or_panic!(5.0);
         let time_unit = TimeFrame::Day;
-        let datetime = ExpirationDate::Days(pos!(30.0));
-        let y_value = pos!(50.0);
+        let datetime = ExpirationDate::Days(pos_or_panic!(30.0));
+        let y_value = pos_or_panic!(50.0);
 
         let step = Step::new(x_value, time_unit, datetime, y_value);
 
-        let next_step = step.next(pos!(55.0)).unwrap();
+        let next_step = step.next(pos_or_panic!(55.0)).unwrap();
 
-        assert_eq!(*next_step.x.datetime(), ExpirationDate::Days(pos!(25.0)));
-        assert_eq!(*next_step.y.value(), pos!(55.0));
+        assert_eq!(
+            *next_step.x.datetime(),
+            ExpirationDate::Days(pos_or_panic!(25.0))
+        );
+        assert_eq!(*next_step.y.value(), pos_or_panic!(55.0));
     }
 
     #[test]
     fn test_with_zero_days() {
         // Test using Positive as both X and Y types
-        let x_value = pos!(5.0);
+        let x_value = pos_or_panic!(5.0);
         let time_unit = TimeFrame::Day;
-        let datetime = ExpirationDate::Days(pos!(0.0));
-        let y_value = pos!(50.0);
+        let datetime = ExpirationDate::Days(pos_or_panic!(0.0));
+        let y_value = pos_or_panic!(50.0);
         let step = Step::new(x_value, time_unit, datetime, y_value);
-        let result = step.next(pos!(55.0));
+        let result = step.next(pos_or_panic!(55.0));
         assert!(result.is_err());
         let step_x = step.get_x_step();
         assert_eq!(*step_x.index(), 0);
-        assert_eq!(*step_x.step_size_in_time(), pos!(5.0));
+        assert_eq!(*step_x.step_size_in_time(), pos_or_panic!(5.0));
         let result = step_x.next();
         assert!(result.is_err());
     }
 
     #[test]
     fn next_ok_increments_indices_and_builds_self() {
-        let x_value = pos!(5.0);
+        let x_value = pos_or_panic!(5.0);
         let time_unit = TimeFrame::Day;
-        let datetime = ExpirationDate::Days(pos!(2.0));
-        let y_value = pos!(50.0);
+        let datetime = ExpirationDate::Days(pos_or_panic!(2.0));
+        let y_value = pos_or_panic!(50.0);
         let step = Step::new(x_value, time_unit, datetime, y_value);
 
-        let new_y = pos!(55.0);
+        let new_y = pos_or_panic!(55.0);
         let next = step.next(new_y).unwrap();
 
         assert_eq!(next.get_value(), &new_y);
@@ -867,7 +933,7 @@ mod tests_step_serialization {
     fn create_test_step() -> Step<f64, f64> {
         let x_value = 1.5;
         let time_unit = TimeFrame::Day;
-        let expiration_date = ExpirationDate::Days(pos!(30.0));
+        let expiration_date = ExpirationDate::Days(pos_or_panic!(30.0));
         let y_value = 100.0;
 
         Step::new(x_value, time_unit, expiration_date, y_value)
@@ -914,9 +980,9 @@ mod tests_step_serialization {
 
     #[test]
     fn test_step_serialize() {
-        let x_value = pos!(5.0);
+        let x_value = pos_or_panic!(5.0);
         let time_unit = TimeFrame::Day;
-        let datetime = ExpirationDate::Days(pos!(30.0));
+        let datetime = ExpirationDate::Days(pos_or_panic!(30.0));
         let y_value = 42.5;
         let step = Step::new(x_value, time_unit, datetime, y_value);
 

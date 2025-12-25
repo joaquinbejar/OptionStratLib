@@ -35,13 +35,13 @@ fn main() -> Result<(), SurfaceError> {
 
     // Define days to expiration for the surface
     let days_to_expiry = vec![
-        pos!(7.0),  // 1 week
-        pos!(14.0), // 2 weeks
-        pos!(21.0), // 3 weeks
-        pos!(30.0), // 1 month
-        pos!(45.0), // 1.5 months
-        pos!(60.0), // 2 months
-        pos!(90.0), // 3 months
+        pos_or_panic!(7.0),  // 1 week
+        pos_or_panic!(14.0), // 2 weeks
+        pos_or_panic!(21.0), // 3 weeks
+        pos_or_panic!(30.0), // 1 month
+        pos_or_panic!(45.0), // 1.5 months
+        pos_or_panic!(60.0), // 2 months
+        pos_or_panic!(90.0), // 3 months
     ];
 
     tracing::info!(

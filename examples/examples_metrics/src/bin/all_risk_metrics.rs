@@ -85,13 +85,13 @@ fn main() -> Result<(), CurveError> {
     tracing::info!("   Shows IV across strikes AND time horizons");
 
     let days_to_expiry = vec![
-        pos!(7.0),
-        pos!(14.0),
-        pos!(21.0),
-        pos!(30.0),
-        pos!(45.0),
-        pos!(60.0),
-        pos!(90.0),
+        pos_or_panic!(7.0),
+        pos_or_panic!(14.0),
+        pos_or_panic!(21.0),
+        pos_or_panic!(30.0),
+        pos_or_panic!(45.0),
+        pos_or_panic!(60.0),
+        pos_or_panic!(90.0),
     ];
 
     let iv_surface = option_chain
@@ -171,20 +171,20 @@ fn main() -> Result<(), CurveError> {
     let dg_params = OptionChainBuildParams::new(
         "SPY".to_string(),
         None,
-        15,          // 15 strikes on each side
-        spos!(5.0),  // $5 intervals
-        dec!(-0.15), // Skew
-        dec!(0.08),  // Smile
-        pos!(0.02),  // Spread
+        15,                  // 15 strikes on each side
+        spos!(5.0),          // $5 intervals
+        dec!(-0.15),         // Skew
+        dec!(0.08),          // Smile
+        pos_or_panic!(0.02), // Spread
         2,
         OptionDataPriceParams::new(
-            Some(Box::new(pos!(450.0))),
-            Some(ExpirationDate::Days(pos!(30.0))),
+            Some(Box::new(pos_or_panic!(450.0))),
+            Some(ExpirationDate::Days(pos_or_panic!(30.0))),
             Some(dec!(0.05)),
             spos!(0.01),
             Some("SPY".to_string()),
         ),
-        pos!(0.20), // 20% base IV
+        pos_or_panic!(0.20), // 20% base IV
     );
 
     let dg_chain = OptionChain::build_chain(&dg_params);

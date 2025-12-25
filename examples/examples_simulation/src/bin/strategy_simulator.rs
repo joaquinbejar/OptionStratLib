@@ -13,15 +13,19 @@ impl WalkTypeAble<Positive, Positive> for Walker {}
 fn main() -> Result<(), Error> {
     setup_logger();
     let symbol = "GOLD".to_string();
-    let strike_price = pos!(3930.0);
+    let strike_price = pos_or_panic!(3930.0);
     let simulator_size: usize = 35;
     let n_steps = 10080;
-    let initial_price = pos!(4011.95);
-    let iv = pos!(0.27);
-    let open_premium = pos!(27.05);
+    let initial_price = pos_or_panic!(4011.95);
+    let iv = pos_or_panic!(0.27);
+    let open_premium = pos_or_panic!(27.05);
     let walker = Box::new(Walker::new());
-    let days = pos!(7.0);
-    let dt = convert_time_frame(pos!(1.0) / days, &TimeFrame::Minute, &TimeFrame::Day);
+    let days = pos_or_panic!(7.0);
+    let dt = convert_time_frame(
+        pos_or_panic!(1.0) / days,
+        &TimeFrame::Minute,
+        &TimeFrame::Day,
+    );
     let volatility_dt = volatility_for_dt(iv, dt, TimeFrame::Minute, TimeFrame::Day)?;
 
     let short_put_strategy = ShortPut::new(

@@ -318,15 +318,15 @@ mod tests_get_random_element {
         let mut set = BTreeSet::new();
         for i in 0..5 {
             let option_data = OptionData::new(
-                pos!(100.0 + i as f64), // strike_price
-                None,                   // call_bid
-                None,                   // call_ask
-                None,                   // put_bid
-                None,                   // put_ask
-                pos!(0.2),              // implied_volatility
-                None,                   // delta
-                None,                   // volume
-                None,                   // open_interest
+                pos_or_panic!(100.0 + i as f64), // strike_price
+                None,                            // call_bid
+                None,                            // call_ask
+                None,                            // put_bid
+                None,                            // put_ask
+                pos_or_panic!(0.2),              // implied_volatility
+                None,                            // delta
+                None,                            // volume
+                None,                            // open_interest
                 None,
                 None,
                 None,
@@ -344,7 +344,7 @@ mod tests_get_random_element {
         assert!(random_option.is_some());
 
         let strike = random_option.unwrap().strike_price;
-        assert!(strike >= pos!(100.0) && strike <= pos!(104.0));
+        assert!(strike >= pos_or_panic!(100.0) && strike <= pos_or_panic!(104.0));
     }
 
     #[test]
@@ -613,7 +613,7 @@ mod tests_log_returns {
 
     #[test]
     fn test_single_input() {
-        let prices = vec![pos!(100.0)];
+        let prices = vec![pos_or_panic!(100.0)];
         let result = calculate_log_returns(&prices);
         assert!(result.is_ok());
         assert_eq!(result.unwrap().len(), 0);
@@ -621,7 +621,11 @@ mod tests_log_returns {
 
     #[test]
     fn test_basic_calculation() {
-        let prices = vec![pos!(100.0), pos!(110.0), pos!(105.0)];
+        let prices = vec![
+            pos_or_panic!(100.0),
+            pos_or_panic!(110.0),
+            pos_or_panic!(105.0),
+        ];
         let result = calculate_log_returns(&prices).unwrap();
 
         assert_eq!(result.len(), 2);
@@ -636,25 +640,33 @@ mod tests_log_returns {
     #[test]
     #[should_panic]
     fn test_zero_price() {
-        let prices = vec![pos!(100.0), pos!(0.0), pos!(105.0)];
+        let prices = vec![
+            pos_or_panic!(100.0),
+            pos_or_panic!(0.0),
+            pos_or_panic!(105.0),
+        ];
         let _ = calculate_log_returns(&prices);
     }
 
     #[test]
     #[should_panic]
     fn test_negative_price() {
-        let prices = vec![pos!(100.0), pos!(-50.0), pos!(105.0)];
+        let prices = vec![
+            pos_or_panic!(100.0),
+            pos_or_panic!(-50.0),
+            pos_or_panic!(105.0),
+        ];
         let _ = calculate_log_returns(&prices);
     }
 
     #[test]
     fn test_realistic_stock_prices() {
         let prices = vec![
-            pos!(150.25),
-            pos!(151.50),
-            pos!(149.75),
-            pos!(152.25),
-            pos!(153.00),
+            pos_or_panic!(150.25),
+            pos_or_panic!(151.50),
+            pos_or_panic!(149.75),
+            pos_or_panic!(152.25),
+            pos_or_panic!(153.00),
         ];
 
         let result = calculate_log_returns(&prices).unwrap();
@@ -671,10 +683,10 @@ mod tests_log_returns {
     fn test_large_price_movements() {
         // Test with some large price movements (both up and down)
         let prices = vec![
-            pos!(100.0), // Starting price
-            pos!(200.0), // 100% increase
-            pos!(50.0),  // 75% decrease
-            pos!(300.0), // 500% increase
+            pos_or_panic!(100.0), // Starting price
+            pos_or_panic!(200.0), // 100% increase
+            pos_or_panic!(50.0),  // 75% decrease
+            pos_or_panic!(300.0), // 500% increase
         ];
 
         let result = calculate_log_returns(&prices).unwrap();
@@ -694,7 +706,11 @@ mod tests_log_returns {
     #[test]
     fn test_no_change_prices() {
         // Test with prices that don't change
-        let prices = vec![pos!(100.0), pos!(100.0), pos!(100.0)];
+        let prices = vec![
+            pos_or_panic!(100.0),
+            pos_or_panic!(100.0),
+            pos_or_panic!(100.0),
+        ];
         let result = calculate_log_returns(&prices).unwrap();
 
         assert_eq!(result.len(), 2);
@@ -706,7 +722,11 @@ mod tests_log_returns {
     #[test]
     fn test_very_small_price_changes() {
         // Test with very small price changes
-        let prices = vec![pos!(100.000), pos!(100.001), pos!(100.002)];
+        let prices = vec![
+            pos_or_panic!(100.000),
+            pos_or_panic!(100.001),
+            pos_or_panic!(100.002),
+        ];
 
         let result = calculate_log_returns(&prices).unwrap();
 

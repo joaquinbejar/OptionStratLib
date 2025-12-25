@@ -14,8 +14,8 @@
 //! ## Example
 //!
 //! ```rust
-//! use optionstratlib::pos;
-//! let strike_price = pos!(100.0);
+//! use optionstratlib::pos_or_panic;
+//! let strike_price = pos_or_panic!(100.0);
 //! ```
 
 // Re-export everything from the positive crate

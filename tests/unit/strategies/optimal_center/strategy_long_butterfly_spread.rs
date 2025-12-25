@@ -4,7 +4,7 @@ use {
     optionstratlib::strategies::base::Optimizable,
     optionstratlib::strategies::base::Positionable,
     optionstratlib::strategies::{FindOptimalSide, LongButterflySpread},
-    optionstratlib::{ExpirationDate, Positive, pos},
+    optionstratlib::{ExpirationDate, Positive, pos_or_panic},
     rust_decimal_macros::dec,
     std::error::Error,
 };
@@ -12,23 +12,23 @@ use {
 #[test]
 fn test_long_butterfly_spread_integration() -> Result<(), Box<dyn Error>> {
     // Define inputs for the LongButterflySpread strategy
-    let underlying_price = pos!(5795.88);
+    let underlying_price = pos_or_panic!(5795.88);
 
     let mut strategy = LongButterflySpread::new(
         "SP500".to_string(),
         underlying_price,
-        pos!(5710.0),
-        pos!(5780.0),
-        pos!(5850.0),
-        ExpirationDate::Days(pos!(2.0)),
-        pos!(0.18),
+        pos_or_panic!(5710.0),
+        pos_or_panic!(5780.0),
+        pos_or_panic!(5850.0),
+        ExpirationDate::Days(pos_or_panic!(2.0)),
+        pos_or_panic!(0.18),
         dec!(0.05),
         Positive::ZERO,
-        pos!(1.0),
-        pos!(113.3), // premium_long_low
-        pos!(64.20), // premium_short
-        pos!(31.65), // premium_long_high
-        pos!(0.07),
+        pos_or_panic!(1.0),
+        pos_or_panic!(113.3), // premium_long_low
+        pos_or_panic!(64.20), // premium_short
+        pos_or_panic!(31.65), // premium_long_high
+        pos_or_panic!(0.07),
         Positive::ZERO,
         Positive::ZERO,
         Positive::ZERO,

@@ -63,7 +63,7 @@ process at each time step
 ::: example-wrap
 ``` {.rust .rust-example-rendered}
 use rust_decimal_macros::dec;
-use optionstratlib::pos;
+use optionstratlib::pos_or_panic;
 use optionstratlib::volatility::generate_ou_process;
 
 // Simulate an OU process with initial value 1.0, mean 1.5,

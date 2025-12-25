@@ -470,7 +470,7 @@ mod tests_adjustment {
     fn test_adjustment_action_display() {
         let modify = AdjustmentAction::ModifyQuantity {
             leg_index: 0,
-            new_quantity: pos!(5.0),
+            new_quantity: pos_or_panic!(5.0),
         };
         assert!(modify.to_string().contains("Modify leg 0"));
 

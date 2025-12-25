@@ -114,14 +114,14 @@ mod tests_basic_curves_trait {
             OptionType::European,
             Side::Long,
             "AAPL".to_string(),
-            pos!(100.0), // strike
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(0.2),     // implied volatility
-            Positive::ONE, // quantity
-            pos!(105.0),   // underlying price
-            dec!(0.05),    // risk free rate
+            pos_or_panic!(100.0), // strike
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.2),   // implied volatility
+            Positive::ONE,        // quantity
+            pos_or_panic!(105.0), // underlying price
+            dec!(0.05),           // risk free rate
             OptionStyle::Call,
-            pos!(0.01), // dividend yield
+            pos_or_panic!(0.01), // dividend yield
             None,
         ))
     }

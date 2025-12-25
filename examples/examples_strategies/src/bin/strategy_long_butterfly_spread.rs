@@ -8,28 +8,28 @@ use optionstratlib::prelude::*;
 
 fn main() -> Result<(), Error> {
     setup_logger();
-    let underlying_price = pos!(23762.0);
+    let underlying_price = pos_or_panic!(23762.0);
 
     let strategy = LongButterflySpread::new(
         "DAX".to_string(),
-        underlying_price, // underlying_price
-        pos!(23600.0),    // long_strike_itm
-        pos!(23750.0),    // short_strike
-        pos!(23900.0),    // long_strike_otm
-        ExpirationDate::Days(pos!(63.0)),
-        pos!(0.14),     // implied_volatility
-        dec!(0.0),      // risk_free_rate
-        Positive::ZERO, // dividend_yield
-        pos!(1.0),      // long quantity
-        pos!(645.3),    // premium_long_low
-        pos!(545.6),    // premium_short
-        pos!(477.1),    // premium_long_high
-        pos!(0.05),     // open_fee_short_call
-        pos!(0.05),     // close_fee_short_call
-        pos!(0.05),     // open_fee_long_call_low
-        pos!(0.05),     // close_fee_long_call_low
-        pos!(0.05),     // open_fee_long_call_high
-        pos!(0.05),     // close_fee_long_call_high
+        underlying_price,       // underlying_price
+        pos_or_panic!(23600.0), // long_strike_itm
+        pos_or_panic!(23750.0), // short_strike
+        pos_or_panic!(23900.0), // long_strike_otm
+        ExpirationDate::Days(pos_or_panic!(63.0)),
+        pos_or_panic!(0.14),  // implied_volatility
+        dec!(0.0),            // risk_free_rate
+        Positive::ZERO,       // dividend_yield
+        pos_or_panic!(1.0),   // long quantity
+        pos_or_panic!(645.3), // premium_long_low
+        pos_or_panic!(545.6), // premium_short
+        pos_or_panic!(477.1), // premium_long_high
+        pos_or_panic!(0.05),  // open_fee_short_call
+        pos_or_panic!(0.05),  // close_fee_short_call
+        pos_or_panic!(0.05),  // open_fee_long_call_low
+        pos_or_panic!(0.05),  // close_fee_long_call_low
+        pos_or_panic!(0.05),  // open_fee_long_call_high
+        pos_or_panic!(0.05),  // close_fee_long_call_high
     );
 
     info!("Title: {}", strategy.get_title());

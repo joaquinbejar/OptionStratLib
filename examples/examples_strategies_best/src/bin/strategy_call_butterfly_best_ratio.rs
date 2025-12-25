@@ -16,25 +16,25 @@ fn main() -> Result<(), Error> {
         Positive::ZERO,   // long_strike_itm
         Positive::ZERO,   // long_strike_otm
         Positive::ZERO,   // short_strike
-        ExpirationDate::Days(pos!(2.0)),
-        Positive::ZERO, // implied_volatility
-        dec!(0.05),     // risk_free_rate
-        Positive::ZERO, // dividend_yield
-        pos!(2.0),      // long quantity
-        Positive::ZERO, // short_quantity
-        Positive::ZERO, // premium_long_itm
-        Positive::ZERO, // premium_long_otm
-        Positive::ZERO, // premium_short
-        pos!(0.78),     // open_fee_long
-        pos!(0.78),     // close_fee_long
-        pos!(0.73),     // close_fee_short
-        pos!(0.73),     // close_fee_short
-        pos!(0.73),
+        ExpirationDate::Days(pos_or_panic!(2.0)),
+        Positive::ZERO,      // implied_volatility
+        dec!(0.05),          // risk_free_rate
+        Positive::ZERO,      // dividend_yield
+        pos_or_panic!(2.0),  // long quantity
+        Positive::ZERO,      // short_quantity
+        Positive::ZERO,      // premium_long_itm
+        Positive::ZERO,      // premium_long_otm
+        Positive::ZERO,      // premium_short
+        pos_or_panic!(0.78), // open_fee_long
+        pos_or_panic!(0.78), // close_fee_long
+        pos_or_panic!(0.73), // close_fee_short
+        pos_or_panic!(0.73), // close_fee_short
+        pos_or_panic!(0.73),
     );
 
     strategy.get_best_ratio(
         &option_chain,
-        FindOptimalSide::Range(pos!(5700.0), pos!(6000.0)),
+        FindOptimalSide::Range(pos_or_panic!(5700.0), pos_or_panic!(6000.0)),
     );
     let range = strategy.get_range_of_profit().unwrap_or(Positive::ZERO);
     info!("Title: {}", strategy.get_title());

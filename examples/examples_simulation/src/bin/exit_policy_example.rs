@@ -38,7 +38,7 @@ fn main() {
     info!("   Conditions: {}\n", profit_or_time.condition_count());
 
     // Fixed price exit
-    let fixed_price = ExitPolicy::FixedPrice(pos!(50.0));
+    let fixed_price = ExitPolicy::FixedPrice(pos_or_panic!(50.0));
     info!("5. Fixed Price Exit:");
     info!("   {}", fixed_price);
     info!("   Composite: {}", fixed_price.is_composite());
@@ -46,8 +46,8 @@ fn main() {
 
     // Price range exit
     let price_range = ExitPolicy::Or(vec![
-        ExitPolicy::MinPrice(pos!(5.0)),
-        ExitPolicy::MaxPrice(pos!(100.0)),
+        ExitPolicy::MinPrice(pos_or_panic!(5.0)),
+        ExitPolicy::MaxPrice(pos_or_panic!(100.0)),
     ]);
     info!("6. Price Range Exit (Min OR Max):");
     info!("   {}", price_range);
@@ -63,8 +63,8 @@ fn main() {
 
     // Underlying price exits
     let underlying_exits = ExitPolicy::Or(vec![
-        ExitPolicy::UnderlyingBelow(pos!(3900.0)),
-        ExitPolicy::UnderlyingAbove(pos!(4100.0)),
+        ExitPolicy::UnderlyingBelow(pos_or_panic!(3900.0)),
+        ExitPolicy::UnderlyingAbove(pos_or_panic!(4100.0)),
     ]);
     info!("8. Underlying Price Range Exit:");
     info!("   {}", underlying_exits);
@@ -78,7 +78,7 @@ fn main() {
             ExitPolicy::TimeSteps(2000),
         ]),
         ExitPolicy::LossPercent(dec!(1.0)),
-        ExitPolicy::DaysToExpiration(pos!(1.0)),
+        ExitPolicy::DaysToExpiration(pos_or_panic!(1.0)),
     ]);
     info!("9. Complex Nested Policy:");
     info!("   {}", complex_policy);

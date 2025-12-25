@@ -38,16 +38,16 @@ fn main() -> Result<(), CurveError> {
         spos!(5.0),
         dec!(-0.18), // Negative skew
         dec!(0.10),  // Smile curvature
-        pos!(0.02),
+        pos_or_panic!(0.02),
         2,
         OptionDataPriceParams::new(
-            Some(Box::new(pos!(450.0))),
-            Some(ExpirationDate::Days(pos!(30.0))),
+            Some(Box::new(pos_or_panic!(450.0))),
+            Some(ExpirationDate::Days(pos_or_panic!(30.0))),
             Some(dec!(0.05)),
             spos!(0.01),
             Some("SPY".to_string()),
         ),
-        pos!(0.20),
+        pos_or_panic!(0.20),
     );
 
     let option_chain = OptionChain::build_chain(&params);
@@ -64,8 +64,8 @@ fn main() -> Result<(), CurveError> {
     tracing::info!("1. VANNA-VOLGA HEDGE SURFACE");
     tracing::info!("   Shows hedge costs across price and volatility space");
 
-    let price_range = (pos!(380.0), pos!(520.0));
-    let vol_range = (pos!(0.10), pos!(0.40));
+    let price_range = (pos_or_panic!(380.0), pos_or_panic!(520.0));
+    let vol_range = (pos_or_panic!(0.10), pos_or_panic!(0.40));
 
     let vv_surface = option_chain
         .vanna_volga_surface(price_range, vol_range, 25, 25)
@@ -131,12 +131,12 @@ fn main() -> Result<(), CurveError> {
     tracing::info!("   Delta exposure across price and time");
 
     let days = vec![
-        pos!(7.0),
-        pos!(14.0),
-        pos!(21.0),
-        pos!(30.0),
-        pos!(45.0),
-        pos!(60.0),
+        pos_or_panic!(7.0),
+        pos_or_panic!(14.0),
+        pos_or_panic!(21.0),
+        pos_or_panic!(30.0),
+        pos_or_panic!(45.0),
+        pos_or_panic!(60.0),
     ];
 
     let dg_surface = option_chain
@@ -191,13 +191,13 @@ fn main() -> Result<(), CurveError> {
     tracing::info!("   Smile evolution across time horizons");
 
     let smile_days = vec![
-        pos!(7.0),
-        pos!(14.0),
-        pos!(21.0),
-        pos!(30.0),
-        pos!(45.0),
-        pos!(60.0),
-        pos!(90.0),
+        pos_or_panic!(7.0),
+        pos_or_panic!(14.0),
+        pos_or_panic!(21.0),
+        pos_or_panic!(30.0),
+        pos_or_panic!(45.0),
+        pos_or_panic!(60.0),
+        pos_or_panic!(90.0),
     ];
 
     let smile_surface = option_chain

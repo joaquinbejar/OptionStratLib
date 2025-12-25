@@ -6,12 +6,12 @@ fn get_option(underlying_asset: &Positive, maturity: &Positive) -> Options {
         OptionType::European,
         Side::Long,
         "XYZ".parse().unwrap(),
-        pos!(50.0), // strike price
+        pos_or_panic!(50.0), // strike price
         ExpirationDate::Days(*maturity),
-        pos!(0.2),         // implied volatility
-        pos!(1.0),         // quantity
-        *underlying_asset, // underlying price
-        Decimal::ZERO,     // risk free rate
+        pos_or_panic!(0.2), // implied volatility
+        pos_or_panic!(1.0), // quantity
+        *underlying_asset,  // underlying price
+        Decimal::ZERO,      // risk free rate
         OptionStyle::Call,
         Positive::ZERO, // dividend yield
         None,           // exotic params
@@ -28,7 +28,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let dte_60_curve = Curve::construct(ConstructionMethod::Parametric {
         f: Box::new(|t| {
-            let option = get_option(&Positive::new_decimal(t).unwrap(), &pos!(60.0));
+            let option = get_option(&Positive::new_decimal(t).unwrap(), &pos_or_panic!(60.0));
             let value = option.color().unwrap();
             let point = Point2D::new(t, value);
             Ok(point)
@@ -38,7 +38,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let dte_30_curve = Curve::construct(ConstructionMethod::Parametric {
         f: Box::new(|t| {
-            let option = get_option(&Positive::new_decimal(t).unwrap(), &pos!(30.0));
+            let option = get_option(&Positive::new_decimal(t).unwrap(), &pos_or_panic!(30.0));
             let value = option.color().unwrap();
             let point = Point2D::new(t, value);
             Ok(point)
@@ -48,7 +48,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let dte_10_curve = Curve::construct(ConstructionMethod::Parametric {
         f: Box::new(|t| {
-            let option = get_option(&Positive::new_decimal(t).unwrap(), &pos!(10.0));
+            let option = get_option(&Positive::new_decimal(t).unwrap(), &pos_or_panic!(10.0));
             let value = option.color().unwrap();
             let point = Point2D::new(t, value);
             Ok(point)
@@ -58,7 +58,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let dte_5_curve = Curve::construct(ConstructionMethod::Parametric {
         f: Box::new(|t| {
-            let option = get_option(&Positive::new_decimal(t).unwrap(), &pos!(5.0));
+            let option = get_option(&Positive::new_decimal(t).unwrap(), &pos_or_panic!(5.0));
             let value = option.color().unwrap();
             let point = Point2D::new(t, value);
             Ok(point)
@@ -68,7 +68,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let dte_1_curve = Curve::construct(ConstructionMethod::Parametric {
         f: Box::new(|t| {
-            let option = get_option(&Positive::new_decimal(t).unwrap(), &pos!(1.0));
+            let option = get_option(&Positive::new_decimal(t).unwrap(), &pos_or_panic!(1.0));
             let value = option.color().unwrap();
             let point = Point2D::new(t, value);
             Ok(point)
@@ -78,7 +78,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let dte_05_curve = Curve::construct(ConstructionMethod::Parametric {
         f: Box::new(|t| {
-            let option = get_option(&Positive::new_decimal(t).unwrap(), &pos!(0.5));
+            let option = get_option(&Positive::new_decimal(t).unwrap(), &pos_or_panic!(0.5));
             let value = option.color().unwrap();
             let point = Point2D::new(t, value);
             Ok(point)

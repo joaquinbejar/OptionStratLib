@@ -15,11 +15,15 @@ fn main() -> Result<(), Error> {
     let simulator_size: usize = 35;
     // let n_steps = 43_200; // 30 days in minutes
     let n_steps = 10080;
-    let initial_price = pos!(4011.0);
-    let iv = pos!(0.27);
+    let initial_price = pos_or_panic!(4011.0);
+    let iv = pos_or_panic!(0.27);
     let walker = Box::new(Walker::new());
-    let days = pos!(7.0);
-    let dt = convert_time_frame(pos!(1.0) / days, &TimeFrame::Minute, &TimeFrame::Day);
+    let days = pos_or_panic!(7.0);
+    let dt = convert_time_frame(
+        pos_or_panic!(1.0) / days,
+        &TimeFrame::Minute,
+        &TimeFrame::Day,
+    );
     let volatility_dt = volatility_for_dt(iv, dt, TimeFrame::Minute, TimeFrame::Day)?;
 
     let walk_params = WalkParams {

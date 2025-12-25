@@ -42,7 +42,7 @@ annualized_vol = vol \* sqrt(periods_per_year)
 ::: example-wrap
 ``` {.rust .rust-example-rendered}
 use rust_decimal_macros::dec;
-use optionstratlib::pos;
+use optionstratlib::pos_or_panic;
 use optionstratlib::utils::time::TimeFrame;
 use optionstratlib::volatility::{annualized_volatility};
 let daily_vol = pos!(0.01); // 1% daily volatility

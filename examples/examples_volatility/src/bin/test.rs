@@ -20,7 +20,7 @@ fn calculate_error(
     implied_volatility: Positive,
     underlying_price: Positive,
 ) -> Result<Decimal, optionstratlib::error::Error> {
-    let mid_price = (bid + ask) / pos!(2.0);
+    let mid_price = (bid + ask) / pos_or_panic!(2.0);
     let option = Options {
         option_type: OptionType::European,
         side: Side::Long,
@@ -50,8 +50,8 @@ pub struct BestParams {
 
 fn main() -> Result<(), optionstratlib::error::Error> {
     // let risk_free_rate = dec!(0.0214);
-    // let dividend_yield = pos!(0.0225);
-    // let days = pos!(75.0);
+    // let dividend_yield = pos_or_panic!(0.0225);
+    // let days = pos_or_panic!(75.0);
     let mut thread_rng = rng();
     let mut best_params = BestParams {
         risk_free_rate: Default::default(),
@@ -66,60 +66,60 @@ fn main() -> Result<(), optionstratlib::error::Error> {
 
     for _ in 0..1000000 {
         let days_f64: f64 = thread_rng.random_range(74.34..=74.46);
-        let days = pos!(days_f64);
+        let days = pos_or_panic!(days_f64);
 
         let risk_free_rate_f64: f64 = thread_rng.random_range(0.0211..=0.0218);
         let risk_free_rate = Decimal::from_f64(risk_free_rate_f64).unwrap();
 
         let dividend_yield_f64: f64 = thread_rng.random_range(0.021..=0.0218);
-        let dividend_yield = pos!(dividend_yield_f64);
+        let dividend_yield = pos_or_panic!(dividend_yield_f64);
 
         let error1 = calculate_error(
             days,
             risk_free_rate,
             dividend_yield,
-            pos!(1590.6),
-            pos!(1602.6),
+            pos_or_panic!(1590.6),
+            pos_or_panic!(1602.6),
             OptionStyle::Call,
-            pos!(22000.0),
-            pos!(0.21657),
-            pos!(23196.0),
+            pos_or_panic!(22000.0),
+            pos_or_panic!(0.21657),
+            pos_or_panic!(23196.0),
         )?;
 
         let error2 = calculate_error(
             days,
             risk_free_rate,
             dividend_yield,
-            pos!(1005.4),
-            pos!(1017.4),
+            pos_or_panic!(1005.4),
+            pos_or_panic!(1017.4),
             OptionStyle::Call,
-            pos!(22800.0),
-            pos!(0.19404),
-            pos!(23196.0),
+            pos_or_panic!(22800.0),
+            pos_or_panic!(0.19404),
+            pos_or_panic!(23196.0),
         )?;
 
         let error3 = calculate_error(
             days,
             risk_free_rate,
             dividend_yield,
-            pos!(679.6),
-            pos!(691.6),
+            pos_or_panic!(679.6),
+            pos_or_panic!(691.6),
             OptionStyle::Put,
-            pos!(23000.0),
-            pos!(0.18844),
-            pos!(23196.0),
+            pos_or_panic!(23000.0),
+            pos_or_panic!(0.18844),
+            pos_or_panic!(23196.0),
         )?;
 
         let error4 = calculate_error(
             days,
             risk_free_rate,
             dividend_yield,
-            pos!(400.4),
-            pos!(412.4),
+            pos_or_panic!(400.4),
+            pos_or_panic!(412.4),
             OptionStyle::Put,
-            pos!(22000.0),
-            pos!(0.21657),
-            pos!(23196.0),
+            pos_or_panic!(22000.0),
+            pos_or_panic!(0.21657),
+            pos_or_panic!(23196.0),
         )?;
 
         let total_error = error1 + error2 + error3 + error4;

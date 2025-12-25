@@ -50,7 +50,7 @@ Handles various time frames for financial calculations:
 
 ::: example-wrap
 ``` {.rust .rust-example-rendered}
-use optionstratlib::pos;
+use optionstratlib::pos_or_panic;
 use optionstratlib::utils::time::TimeFrame;
 
 let daily = TimeFrame::Day;
@@ -124,7 +124,7 @@ The module supports various time frames for financial calculations:
 ::: example-wrap
 ``` {.rust .rust-example-rendered}
 use tracing::info;
-use optionstratlib::pos;
+use optionstratlib::pos_or_panic;
 use optionstratlib::utils::time::TimeFrame;
 
 let timeframes = vec![
@@ -185,7 +185,7 @@ The module provides testing utilities for:
 ::: example-wrap
 ``` {.rust .rust-example-rendered}
 use optionstratlib::Positive;
-use optionstratlib::pos;
+use optionstratlib::pos_or_panic;
 use optionstratlib::assert_pos_relative_eq;
 
 

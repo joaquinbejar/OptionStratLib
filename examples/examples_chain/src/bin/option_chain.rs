@@ -11,19 +11,19 @@ fn main() {
     setup_logger();
     let mut chain = OptionChain::new(
         "SP500",
-        pos!(5781.88),
+        pos_or_panic!(5781.88),
         "18 oct 2024".to_string(),
         None,
         None,
     );
 
     chain.add_option(
-        pos!(5520.0),
+        pos_or_panic!(5520.0),
         spos!(274.26),
         spos!(276.06),
         spos!(13.22),
         spos!(14.90),
-        pos!(16.31),
+        pos_or_panic!(16.31),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
@@ -32,12 +32,12 @@ fn main() {
         None,
     );
     chain.add_option(
-        pos!(5525.0),
+        pos_or_panic!(5525.0),
         spos!(269.62),
         spos!(271.42),
         spos!(13.54),
         spos!(15.27),
-        pos!(16.205),
+        pos_or_panic!(16.205),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
@@ -46,12 +46,12 @@ fn main() {
         None,
     );
     chain.add_option(
-        pos!(5530.0),
+        pos_or_panic!(5530.0),
         spos!(265.00),
         spos!(266.80),
         spos!(13.88),
         spos!(15.65),
-        pos!(16.1),
+        pos_or_panic!(16.1),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
@@ -60,12 +60,12 @@ fn main() {
         None,
     );
     chain.add_option(
-        pos!(5540.0),
+        pos_or_panic!(5540.0),
         spos!(255.78),
         spos!(257.58),
         spos!(14.62),
         spos!(16.42),
-        pos!(15.89),
+        pos_or_panic!(15.89),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
@@ -74,12 +74,12 @@ fn main() {
         None,
     );
     chain.add_option(
-        pos!(5550.0),
+        pos_or_panic!(5550.0),
         spos!(246.61),
         spos!(248.41),
         spos!(15.42),
         spos!(17.22),
-        pos!(15.68),
+        pos_or_panic!(15.68),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
@@ -88,12 +88,12 @@ fn main() {
         None,
     );
     chain.add_option(
-        pos!(5560.0),
+        pos_or_panic!(5560.0),
         spos!(237.49),
         spos!(239.29),
         spos!(15.96),
         spos!(18.07),
-        pos!(15.47),
+        pos_or_panic!(15.47),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
@@ -102,12 +102,12 @@ fn main() {
         None,
     );
     chain.add_option(
-        pos!(5570.0),
+        pos_or_panic!(5570.0),
         spos!(228.42),
         spos!(230.22),
         spos!(17.18),
         spos!(18.98),
-        pos!(15.26),
+        pos_or_panic!(15.26),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
@@ -116,12 +116,12 @@ fn main() {
         None,
     );
     chain.add_option(
-        pos!(5575.0),
+        pos_or_panic!(5575.0),
         spos!(223.91),
         spos!(225.71),
         spos!(17.65),
         spos!(19.45),
-        pos!(15.155),
+        pos_or_panic!(15.155),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
@@ -130,12 +130,12 @@ fn main() {
         None,
     );
     chain.add_option(
-        pos!(5580.0),
+        pos_or_panic!(5580.0),
         spos!(219.42),
         spos!(221.22),
         spos!(18.14),
         spos!(19.94),
-        pos!(15.05),
+        pos_or_panic!(15.05),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
@@ -144,12 +144,12 @@ fn main() {
         None,
     );
     chain.add_option(
-        pos!(5590.0),
+        pos_or_panic!(5590.0),
         spos!(210.48),
         spos!(212.28),
         spos!(18.07),
         spos!(20.23),
-        pos!(14.84),
+        pos_or_panic!(14.84),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
@@ -158,12 +158,12 @@ fn main() {
         None,
     );
     chain.add_option(
-        pos!(5600.0),
+        pos_or_panic!(5600.0),
         spos!(201.60),
         spos!(203.40),
         spos!(19.17),
         spos!(20.97),
-        pos!(14.63),
+        pos_or_panic!(14.63),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
@@ -172,12 +172,12 @@ fn main() {
         None,
     );
     chain.add_option(
-        pos!(5610.0),
+        pos_or_panic!(5610.0),
         spos!(192.80),
         spos!(194.60),
         spos!(21.43),
         spos!(23.23),
-        pos!(14.42),
+        pos_or_panic!(14.42),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
@@ -186,12 +186,12 @@ fn main() {
         None,
     );
     chain.add_option(
-        pos!(5620.0),
+        pos_or_panic!(5620.0),
         spos!(184.08),
         spos!(185.88),
         spos!(22.68),
         spos!(24.48),
-        pos!(14.21),
+        pos_or_panic!(14.21),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
@@ -200,12 +200,12 @@ fn main() {
         None,
     );
     chain.add_option(
-        pos!(5625.0),
+        pos_or_panic!(5625.0),
         spos!(179.75),
         spos!(181.55),
         spos!(23.33),
         spos!(25.13),
-        pos!(14.105),
+        pos_or_panic!(14.105),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
@@ -214,12 +214,12 @@ fn main() {
         None,
     );
     chain.add_option(
-        pos!(5630.0),
+        pos_or_panic!(5630.0),
         spos!(175.44),
         spos!(177.24),
         spos!(24.01),
         spos!(25.81),
-        pos!(14.0),
+        pos_or_panic!(14.0),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
@@ -228,12 +228,12 @@ fn main() {
         None,
     );
     chain.add_option(
-        pos!(5640.0),
+        pos_or_panic!(5640.0),
         spos!(167.02),
         spos!(168.82),
         spos!(25.56),
         spos!(27.36),
-        pos!(13.82),
+        pos_or_panic!(13.82),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
@@ -242,12 +242,12 @@ fn main() {
         None,
     );
     chain.add_option(
-        pos!(5650.0),
+        pos_or_panic!(5650.0),
         spos!(158.71),
         spos!(160.51),
         spos!(27.22),
         spos!(29.02),
-        pos!(13.64),
+        pos_or_panic!(13.64),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
@@ -256,12 +256,12 @@ fn main() {
         None,
     );
     chain.add_option(
-        pos!(5660.0),
+        pos_or_panic!(5660.0),
         spos!(150.51),
         spos!(152.31),
         spos!(28.99),
         spos!(30.79),
-        pos!(13.46),
+        pos_or_panic!(13.46),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
@@ -270,12 +270,12 @@ fn main() {
         None,
     );
     chain.add_option(
-        pos!(5670.0),
+        pos_or_panic!(5670.0),
         spos!(142.43),
         spos!(144.23),
         spos!(30.89),
         spos!(32.69),
-        pos!(13.28),
+        pos_or_panic!(13.28),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
@@ -284,12 +284,12 @@ fn main() {
         None,
     );
     chain.add_option(
-        pos!(5675.0),
+        pos_or_panic!(5675.0),
         spos!(138.44),
         spos!(140.24),
         spos!(31.88),
         spos!(33.68),
-        pos!(13.19),
+        pos_or_panic!(13.19),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
@@ -298,12 +298,12 @@ fn main() {
         None,
     );
     chain.add_option(
-        pos!(5680.0),
+        pos_or_panic!(5680.0),
         spos!(134.48),
         spos!(136.28),
         spos!(32.91),
         spos!(34.71),
-        pos!(13.1),
+        pos_or_panic!(13.1),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
@@ -312,12 +312,12 @@ fn main() {
         None,
     );
     chain.add_option(
-        pos!(5690.0),
+        pos_or_panic!(5690.0),
         spos!(126.67),
         spos!(128.47),
         spos!(35.07),
         spos!(36.87),
-        pos!(12.92),
+        pos_or_panic!(12.92),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
@@ -326,12 +326,12 @@ fn main() {
         None,
     );
     chain.add_option(
-        pos!(5700.0),
+        pos_or_panic!(5700.0),
         spos!(119.01),
         spos!(120.81),
         spos!(37.37),
         spos!(39.17),
-        pos!(12.74),
+        pos_or_panic!(12.74),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
@@ -340,12 +340,12 @@ fn main() {
         None,
     );
     chain.add_option(
-        pos!(5710.0),
+        pos_or_panic!(5710.0),
         spos!(111.50),
         spos!(113.30),
         spos!(39.83),
         spos!(41.63),
-        pos!(12.56),
+        pos_or_panic!(12.56),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
@@ -354,12 +354,12 @@ fn main() {
         None,
     );
     chain.add_option(
-        pos!(5720.0),
+        pos_or_panic!(5720.0),
         spos!(104.16),
         spos!(105.96),
         spos!(42.46),
         spos!(44.26),
-        pos!(12.38),
+        pos_or_panic!(12.38),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
@@ -368,12 +368,12 @@ fn main() {
         None,
     );
     chain.add_option(
-        pos!(5730.0),
+        pos_or_panic!(5730.0),
         spos!(96.99),
         spos!(98.79),
         spos!(45.27),
         spos!(47.07),
-        pos!(12.2),
+        pos_or_panic!(12.2),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
@@ -382,12 +382,12 @@ fn main() {
         None,
     );
     chain.add_option(
-        pos!(5740.0),
+        pos_or_panic!(5740.0),
         spos!(90.02),
         spos!(91.82),
         spos!(48.26),
         spos!(50.06),
-        pos!(12.02),
+        pos_or_panic!(12.02),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
@@ -396,12 +396,12 @@ fn main() {
         None,
     );
     chain.add_option(
-        pos!(5750.0),
+        pos_or_panic!(5750.0),
         spos!(83.24),
         spos!(85.04),
         spos!(51.45),
         spos!(53.25),
-        pos!(11.84),
+        pos_or_panic!(11.84),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
@@ -410,12 +410,12 @@ fn main() {
         None,
     );
     chain.add_option(
-        pos!(5760.0),
+        pos_or_panic!(5760.0),
         spos!(76.67),
         spos!(78.47),
         spos!(54.85),
         spos!(56.65),
-        pos!(11.66),
+        pos_or_panic!(11.66),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
@@ -424,12 +424,12 @@ fn main() {
         None,
     );
     chain.add_option(
-        pos!(5770.0),
+        pos_or_panic!(5770.0),
         spos!(70.32),
         spos!(72.12),
         spos!(58.47),
         spos!(60.27),
-        pos!(11.48),
+        pos_or_panic!(11.48),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
@@ -438,12 +438,12 @@ fn main() {
         None,
     );
     chain.add_option(
-        pos!(5780.0),
+        pos_or_panic!(5780.0),
         spos!(64.20),
         spos!(66.00),
         spos!(62.32),
         spos!(64.12),
-        pos!(11.3),
+        pos_or_panic!(11.3),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
@@ -452,12 +452,12 @@ fn main() {
         None,
     );
     chain.add_option(
-        pos!(5790.0),
+        pos_or_panic!(5790.0),
         spos!(58.50),
         spos!(60.30),
         spos!(66.59),
         spos!(68.39),
-        pos!(11.15),
+        pos_or_panic!(11.15),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
@@ -466,12 +466,12 @@ fn main() {
         None,
     );
     chain.add_option(
-        pos!(5800.0),
+        pos_or_panic!(5800.0),
         spos!(53.04),
         spos!(54.84),
         spos!(71.11),
         spos!(72.91),
-        pos!(11.0),
+        pos_or_panic!(11.0),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
@@ -480,12 +480,12 @@ fn main() {
         None,
     );
     chain.add_option(
-        pos!(5810.0),
+        pos_or_panic!(5810.0),
         spos!(47.85),
         spos!(49.65),
         spos!(75.89),
         spos!(77.69),
-        pos!(10.85),
+        pos_or_panic!(10.85),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
@@ -494,12 +494,12 @@ fn main() {
         None,
     );
     chain.add_option(
-        pos!(5820.0),
+        pos_or_panic!(5820.0),
         spos!(42.93),
         spos!(44.73),
         spos!(80.94),
         spos!(82.74),
-        pos!(10.7),
+        pos_or_panic!(10.7),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
@@ -508,12 +508,12 @@ fn main() {
         None,
     );
     chain.add_option(
-        pos!(5830.0),
+        pos_or_panic!(5830.0),
         spos!(38.29),
         spos!(40.09),
         spos!(86.27),
         spos!(88.07),
-        pos!(10.55),
+        pos_or_panic!(10.55),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
@@ -522,12 +522,12 @@ fn main() {
         None,
     );
     chain.add_option(
-        pos!(5840.0),
+        pos_or_panic!(5840.0),
         spos!(33.93),
         spos!(35.73),
         spos!(91.87),
         spos!(93.67),
-        pos!(10.4),
+        pos_or_panic!(10.4),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
@@ -536,12 +536,12 @@ fn main() {
         None,
     );
     chain.add_option(
-        pos!(5850.0),
+        pos_or_panic!(5850.0),
         spos!(29.85),
         spos!(31.65),
         spos!(97.77),
         spos!(99.57),
-        pos!(10.25),
+        pos_or_panic!(10.25),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
@@ -550,12 +550,12 @@ fn main() {
         None,
     );
     chain.add_option(
-        pos!(5900.0),
+        pos_or_panic!(5900.0),
         spos!(16.05),
         spos!(17.85),
         spos!(133.82),
         spos!(135.62),
-        pos!(10.058),
+        pos_or_panic!(10.058),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
@@ -564,12 +564,12 @@ fn main() {
         None,
     );
     chain.add_option(
-        pos!(5950.0),
+        pos_or_panic!(5950.0),
         spos!(8.05),
         spos!(9.08),
         spos!(175.28),
         spos!(177.08),
-        pos!(9.928),
+        pos_or_panic!(9.928),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
@@ -578,12 +578,12 @@ fn main() {
         None,
     );
     chain.add_option(
-        pos!(6000.0),
+        pos_or_panic!(6000.0),
         spos!(3.38),
         spos!(4.38),
         spos!(220.45),
         spos!(222.25),
-        pos!(9.798),
+        pos_or_panic!(9.798),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
@@ -592,12 +592,12 @@ fn main() {
         None,
     );
     chain.add_option(
-        pos!(6050.0),
+        pos_or_panic!(6050.0),
         spos!(1.06),
         spos!(2.06),
         spos!(267.98),
         spos!(269.78),
-        pos!(9.668),
+        pos_or_panic!(9.668),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
@@ -606,12 +606,12 @@ fn main() {
         None,
     );
     chain.add_option(
-        pos!(6100.0),
+        pos_or_panic!(6100.0),
         spos!(0.05),
         spos!(1.05),
         spos!(316.82),
         spos!(318.62),
-        pos!(9.538),
+        pos_or_panic!(9.538),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
@@ -620,12 +620,12 @@ fn main() {
         None,
     );
     chain.add_option(
-        pos!(6150.0),
+        pos_or_panic!(6150.0),
         spos!(0.00),
         spos!(1.00),
         spos!(366.30),
         spos!(368.10),
-        pos!(9.46),
+        pos_or_panic!(9.46),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
@@ -634,12 +634,12 @@ fn main() {
         None,
     );
     chain.add_option(
-        pos!(6200.0),
+        pos_or_panic!(6200.0),
         spos!(0.00),
         spos!(1.00),
         spos!(416.03),
         spos!(417.83),
-        pos!(9.46),
+        pos_or_panic!(9.46),
         Some(dec!(0.5)),
         Some(dec!(0.5)),
         Some(dec!(0.5)),

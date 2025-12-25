@@ -22,8 +22,8 @@ impl PnLCalculator for TestPnLCalculator {
         Ok(PnL::new(
             Some(realized),
             Some(unrealized),
-            pos!(10.0),
-            pos!(20.0),
+            pos_or_panic!(10.0),
+            pos_or_panic!(20.0),
             expiration_date.get_date()?,
         ))
     }
@@ -38,8 +38,8 @@ impl PnLCalculator for TestPnLCalculator {
         Ok(PnL::new(
             Some(realized),
             None,
-            pos!(10.0),
-            pos!(20.0),
+            pos_or_panic!(10.0),
+            pos_or_panic!(20.0),
             Utc::now(),
         ))
     }
@@ -74,9 +74,9 @@ fn test_pnl_calculator_trait() {
     let calculator = TestPnLCalculator;
 
     // Test calculate_pnl
-    let underlying_price = pos!(100.0);
-    let expiration_date = ExpirationDate::Days(pos!(30.0));
-    let implied_volatility = pos!(0.2);
+    let underlying_price = pos_or_panic!(100.0);
+    let expiration_date = ExpirationDate::Days(pos_or_panic!(30.0));
+    let implied_volatility = pos_or_panic!(0.2);
 
     let pnl = calculator
         .calculate_pnl(&underlying_price, expiration_date, &implied_volatility)
@@ -84,8 +84,8 @@ fn test_pnl_calculator_trait() {
 
     assert_eq!(pnl.realized, Some(dec!(50.0))); // 100.0 * 0.5
     assert_eq!(pnl.unrealized, Some(dec!(20.0))); // 0.2 * 100.0
-    assert_eq!(pnl.initial_costs, pos!(10.0));
-    assert_eq!(pnl.initial_income, pos!(20.0));
+    assert_eq!(pnl.initial_costs, pos_or_panic!(10.0));
+    assert_eq!(pnl.initial_income, pos_or_panic!(20.0));
 
     // Test calculate_pnl_at_expiration
     let pnl_at_expiration = calculator
@@ -94,8 +94,8 @@ fn test_pnl_calculator_trait() {
 
     assert_eq!(pnl_at_expiration.realized, Some(dec!(200.0))); // 100.0 * 2.0
     assert_eq!(pnl_at_expiration.unrealized, None);
-    assert_eq!(pnl_at_expiration.initial_costs, pos!(10.0));
-    assert_eq!(pnl_at_expiration.initial_income, pos!(20.0));
+    assert_eq!(pnl_at_expiration.initial_costs, pos_or_panic!(10.0));
+    assert_eq!(pnl_at_expiration.initial_income, pos_or_panic!(20.0));
 }
 
 #[test]
@@ -119,9 +119,9 @@ fn test_transaction_able_trait() {
         optionstratlib::OptionType::European,
         optionstratlib::Side::Long,
         optionstratlib::OptionStyle::Call,
-        pos!(1.0),
-        pos!(100.0),
-        pos!(5.0),
+        pos_or_panic!(1.0),
+        pos_or_panic!(100.0),
+        pos_or_panic!(5.0),
         spos!(100.0),
         spos!(30.0),
         spos!(0.2),
@@ -133,9 +133,9 @@ fn test_transaction_able_trait() {
         optionstratlib::OptionType::European,
         optionstratlib::Side::Short,
         optionstratlib::OptionStyle::Put,
-        pos!(2.0),
-        pos!(95.0),
-        pos!(7.0),
+        pos_or_panic!(2.0),
+        pos_or_panic!(95.0),
+        pos_or_panic!(7.0),
         spos!(100.0),
         spos!(30.0),
         spos!(0.2),
@@ -148,10 +148,10 @@ fn test_transaction_able_trait() {
     // Test get_transactions
     let transactions = manager.get_transactions().unwrap();
     assert_eq!(transactions.len(), 2);
-    assert_eq!(transactions[0].quantity(), pos!(1.0));
-    assert_eq!(transactions[0].premium(), pos!(100.0));
-    assert_eq!(transactions[0].fees(), pos!(5.0));
-    assert_eq!(transactions[1].quantity(), pos!(2.0));
-    assert_eq!(transactions[1].premium(), pos!(95.0));
-    assert_eq!(transactions[1].fees(), pos!(7.0));
+    assert_eq!(transactions[0].quantity(), pos_or_panic!(1.0));
+    assert_eq!(transactions[0].premium(), pos_or_panic!(100.0));
+    assert_eq!(transactions[0].fees(), pos_or_panic!(5.0));
+    assert_eq!(transactions[1].quantity(), pos_or_panic!(2.0));
+    assert_eq!(transactions[1].premium(), pos_or_panic!(95.0));
+    assert_eq!(transactions[1].fees(), pos_or_panic!(7.0));
 }

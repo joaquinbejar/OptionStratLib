@@ -18,9 +18,9 @@ fn main() -> Result<(), Error> {
         "examples/Chains/Germany-40-2025-05-27-15-29-00-UTC-24209.json",
     )?;
     initial_chain.update_expiration_date(get_x_days_formatted(2));
-    let iv = pos!(0.20);
+    let iv = pos_or_panic!(0.20);
     let walker = Box::new(Walker::new());
-    let days = pos!(2.0);
+    let days = pos_or_panic!(2.0);
 
     let walk_params = WalkParams {
         size: n_steps,
@@ -29,7 +29,11 @@ fn main() -> Result<(), Error> {
             y: Ystep::new(0, initial_chain),
         },
         walk_type: WalkType::GeometricBrownian {
-            dt: convert_time_frame(pos!(1.0) / days, &TimeFrame::Minute, &TimeFrame::Day),
+            dt: convert_time_frame(
+                pos_or_panic!(1.0) / days,
+                &TimeFrame::Minute,
+                &TimeFrame::Day,
+            ),
             drift: dec!(0.0),
             volatility: iv,
         },

@@ -32,16 +32,16 @@ fn main() -> Result<(), CurveError> {
         spos!(5.0),
         dec!(-0.15),
         dec!(0.08),
-        pos!(0.02),
+        pos_or_panic!(0.02),
         2,
         OptionDataPriceParams::new(
-            Some(Box::new(pos!(450.0))),
-            Some(ExpirationDate::Days(pos!(30.0))),
+            Some(Box::new(pos_or_panic!(450.0))),
+            Some(ExpirationDate::Days(pos_or_panic!(30.0))),
             Some(dec!(0.05)),
             spos!(0.01),
             Some("SPY".to_string()),
         ),
-        pos!(0.20),
+        pos_or_panic!(0.20),
     );
 
     let option_chain = OptionChain::build_chain(&params);
@@ -84,16 +84,16 @@ fn main() -> Result<(), CurveError> {
     // ========================================
     tracing::info!("Generating Color Surface...");
 
-    let price_range = (pos!(380.0), pos!(520.0));
+    let price_range = (pos_or_panic!(380.0), pos_or_panic!(520.0));
     let days = vec![
-        pos!(1.0),
-        pos!(3.0),
-        pos!(7.0),
-        pos!(14.0),
-        pos!(21.0),
-        pos!(30.0),
-        pos!(45.0),
-        pos!(60.0),
+        pos_or_panic!(1.0),
+        pos_or_panic!(3.0),
+        pos_or_panic!(7.0),
+        pos_or_panic!(14.0),
+        pos_or_panic!(21.0),
+        pos_or_panic!(30.0),
+        pos_or_panic!(45.0),
+        pos_or_panic!(60.0),
     ];
 
     let color_surface = option_chain

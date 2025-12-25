@@ -1677,8 +1677,8 @@ mod tests_curves {
 
     #[test]
     fn test_new_with_positive() {
-        let x = pos!(1.5_f64);
-        let y = pos!(2.5_f64);
+        let x = pos_or_panic!(1.5_f64);
+        let y = pos_or_panic!(2.5_f64);
         let point = Point2D::new(x, y);
         assert_eq!(point.x, dec!(1.5));
         assert_eq!(point.y, dec!(2.5));
@@ -1695,7 +1695,7 @@ mod tests_curves {
     fn test_to_tuple_with_positive() {
         let point = Point2D::new(dec!(1.5), dec!(2.5));
         let tuple: (Positive, Positive) = point.to_tuple().unwrap();
-        assert_eq!(tuple, (pos!(1.5), pos!(2.5)));
+        assert_eq!(tuple, (pos_or_panic!(1.5), pos_or_panic!(2.5)));
     }
 
     #[test]
@@ -1708,8 +1708,8 @@ mod tests_curves {
 
     #[test]
     fn test_from_tuple_with_positive() {
-        let x = pos!(1.5_f64);
-        let y = pos!(2.5_f64);
+        let x = pos_or_panic!(1.5_f64);
+        let y = pos_or_panic!(2.5_f64);
         let point = Point2D::from_tuple(x, y).unwrap();
         assert_eq!(point, Point2D::new(dec!(1.5), dec!(2.5)));
     }
@@ -1717,7 +1717,7 @@ mod tests_curves {
     #[test]
     fn test_new_with_mixed_types() {
         let x = dec!(1.5);
-        let y = pos!(2.5_f64);
+        let y = pos_or_panic!(2.5_f64);
         let point = Point2D::new(x, y);
         assert_eq!(point.x, dec!(1.5));
         assert_eq!(point.y, dec!(2.5));

@@ -30,16 +30,16 @@ fn create_test_chain() -> OptionChain {
         spos!(5.0),
         dec!(-0.15),
         dec!(0.08),
-        pos!(0.02),
+        pos_or_panic!(0.02),
         2,
         OptionDataPriceParams::new(
-            Some(Box::new(pos!(450.0))),
-            Some(ExpirationDate::Days(pos!(30.0))),
+            Some(Box::new(pos_or_panic!(450.0))),
+            Some(ExpirationDate::Days(pos_or_panic!(30.0))),
             Some(dec!(0.05)),
             spos!(0.01),
             Some("TEST".to_string()),
         ),
-        pos!(0.20),
+        pos_or_panic!(0.20),
     );
 
     OptionChain::build_chain(&params)
@@ -47,7 +47,7 @@ fn create_test_chain() -> OptionChain {
 
 /// Creates an empty option chain for edge case testing
 fn create_empty_chain() -> OptionChain {
-    OptionChain::new("EMPTY", pos!(100.0), "2024-12-31".to_string(), None, None)
+    OptionChain::new("EMPTY", pos_or_panic!(100.0), "2024-12-31".to_string(), None, None)
 }
 
 // ============================================================================
@@ -110,8 +110,8 @@ mod volatility_sensitivity_surface_tests {
     #[test]
     fn test_volatility_sensitivity_surface_basic() {
         let chain = create_test_chain();
-        let price_range = (pos!(400.0), pos!(500.0));
-        let vol_range = (pos!(0.10), pos!(0.40));
+        let price_range = (pos_or_panic!(400.0), pos_or_panic!(500.0));
+        let vol_range = (pos_or_panic!(0.10), pos_or_panic!(0.40));
 
         let result = chain.volatility_sensitivity_surface(price_range, vol_range, 10, 10);
         assert!(result.is_ok());
@@ -124,8 +124,8 @@ mod volatility_sensitivity_surface_tests {
     #[test]
     fn test_volatility_sensitivity_surface_single_point() {
         let chain = create_test_chain();
-        let price_range = (pos!(450.0), pos!(450.0));
-        let vol_range = (pos!(0.20), pos!(0.20));
+        let price_range = (pos_or_panic!(450.0), pos_or_panic!(450.0));
+        let vol_range = (pos_or_panic!(0.20), pos_or_panic!(0.20));
 
         let result = chain.volatility_sensitivity_surface(price_range, vol_range, 0, 0);
         assert!(result.is_ok());
@@ -137,8 +137,8 @@ mod volatility_sensitivity_surface_tests {
     #[test]
     fn test_volatility_sensitivity_surface_empty_chain() {
         let chain = create_empty_chain();
-        let price_range = (pos!(400.0), pos!(500.0));
-        let vol_range = (pos!(0.10), pos!(0.40));
+        let price_range = (pos_or_panic!(400.0), pos_or_panic!(500.0));
+        let vol_range = (pos_or_panic!(0.10), pos_or_panic!(0.40));
 
         let result = chain.volatility_sensitivity_surface(price_range, vol_range, 10, 10);
         assert!(result.is_err());
@@ -205,8 +205,8 @@ mod time_decay_surface_tests {
     #[test]
     fn test_time_decay_surface_basic() {
         let chain = create_test_chain();
-        let price_range = (pos!(400.0), pos!(500.0));
-        let days = vec![pos!(7.0), pos!(14.0), pos!(30.0)];
+        let price_range = (pos_or_panic!(400.0), pos_or_panic!(500.0));
+        let days = vec![pos_or_panic!(7.0), pos_or_panic!(14.0), pos_or_panic!(30.0)];
 
         let result = chain.time_decay_surface(price_range, days, 10);
         assert!(result.is_ok());
@@ -219,8 +219,8 @@ mod time_decay_surface_tests {
     #[test]
     fn test_time_decay_surface_single_day() {
         let chain = create_test_chain();
-        let price_range = (pos!(400.0), pos!(500.0));
-        let days = vec![pos!(30.0)];
+        let price_range = (pos_or_panic!(400.0), pos_or_panic!(500.0));
+        let days = vec![pos_or_panic!(30.0)];
 
         let result = chain.time_decay_surface(price_range, days, 10);
         assert!(result.is_ok());
@@ -232,7 +232,7 @@ mod time_decay_surface_tests {
     #[test]
     fn test_time_decay_surface_empty_days() {
         let chain = create_test_chain();
-        let price_range = (pos!(400.0), pos!(500.0));
+        let price_range = (pos_or_panic!(400.0), pos_or_panic!(500.0));
         let days: Vec<_> = vec![];
 
         let result = chain.time_decay_surface(price_range, days, 10);
@@ -242,8 +242,8 @@ mod time_decay_surface_tests {
     #[test]
     fn test_time_decay_surface_empty_chain() {
         let chain = create_empty_chain();
-        let price_range = (pos!(400.0), pos!(500.0));
-        let days = vec![pos!(30.0)];
+        let price_range = (pos_or_panic!(400.0), pos_or_panic!(500.0));
+        let days = vec![pos_or_panic!(30.0)];
 
         let result = chain.time_decay_surface(price_range, days, 10);
         assert!(result.is_err());
@@ -323,8 +323,8 @@ mod price_shock_surface_tests {
     #[test]
     fn test_price_shock_surface_basic() {
         let chain = create_test_chain();
-        let price_range = (pos!(400.0), pos!(500.0));
-        let vol_range = (pos!(0.10), pos!(0.40));
+        let price_range = (pos_or_panic!(400.0), pos_or_panic!(500.0));
+        let vol_range = (pos_or_panic!(0.10), pos_or_panic!(0.40));
 
         let result = chain.price_shock_surface(price_range, vol_range, 10, 10);
         assert!(result.is_ok());
@@ -336,8 +336,8 @@ mod price_shock_surface_tests {
     #[test]
     fn test_price_shock_surface_single_point() {
         let chain = create_test_chain();
-        let price_range = (pos!(450.0), pos!(450.0));
-        let vol_range = (pos!(0.20), pos!(0.20));
+        let price_range = (pos_or_panic!(450.0), pos_or_panic!(450.0));
+        let vol_range = (pos_or_panic!(0.20), pos_or_panic!(0.20));
 
         let result = chain.price_shock_surface(price_range, vol_range, 0, 0);
         assert!(result.is_ok());
@@ -349,8 +349,8 @@ mod price_shock_surface_tests {
     #[test]
     fn test_price_shock_surface_empty_chain() {
         let chain = create_empty_chain();
-        let price_range = (pos!(400.0), pos!(500.0));
-        let vol_range = (pos!(0.10), pos!(0.40));
+        let price_range = (pos_or_panic!(400.0), pos_or_panic!(500.0));
+        let vol_range = (pos_or_panic!(0.10), pos_or_panic!(0.40));
 
         let result = chain.price_shock_surface(price_range, vol_range, 10, 10);
         assert!(result.is_err());
@@ -380,8 +380,8 @@ mod edge_case_tests {
     #[test]
     fn test_extreme_volatility_range() {
         let chain = create_test_chain();
-        let price_range = (pos!(450.0), pos!(450.0));
-        let vol_range = (pos!(0.01), pos!(1.00)); // 1% to 100% vol
+        let price_range = (pos_or_panic!(450.0), pos_or_panic!(450.0));
+        let vol_range = (pos_or_panic!(0.01), pos_or_panic!(1.00)); // 1% to 100% vol
 
         let result = chain.volatility_sensitivity_surface(price_range, vol_range, 0, 10);
         assert!(result.is_ok());
@@ -390,8 +390,8 @@ mod edge_case_tests {
     #[test]
     fn test_near_expiration() {
         let chain = create_test_chain();
-        let price_range = (pos!(400.0), pos!(500.0));
-        let days = vec![pos!(1.0), pos!(0.5)]; // Very short time to expiration
+        let price_range = (pos_or_panic!(400.0), pos_or_panic!(500.0));
+        let days = vec![pos_or_panic!(1.0), pos_or_panic!(0.5)]; // Very short time to expiration
 
         let result = chain.time_decay_surface(price_range, days, 5);
         assert!(result.is_ok());
@@ -400,8 +400,8 @@ mod edge_case_tests {
     #[test]
     fn test_wide_price_range() {
         let chain = create_test_chain();
-        let price_range = (pos!(200.0), pos!(700.0)); // Very wide range
-        let vol_range = (pos!(0.20), pos!(0.20));
+        let price_range = (pos_or_panic!(200.0), pos_or_panic!(700.0)); // Very wide range
+        let vol_range = (pos_or_panic!(0.20), pos_or_panic!(0.20));
 
         let result = chain.volatility_sensitivity_surface(price_range, vol_range, 20, 0);
         assert!(result.is_ok());

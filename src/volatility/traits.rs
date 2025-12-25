@@ -214,7 +214,7 @@ mod tests_volatility_traits {
 
     #[test]
     fn test_atm_iv_provider_for_positive() {
-        let value = pos!(0.2);
+        let value = pos_or_panic!(0.2);
 
         // Test AtmIvProvider implementation for Positive
         let result = value.atm_iv();
@@ -224,7 +224,9 @@ mod tests_volatility_traits {
 
     #[test]
     fn test_atm_iv_provider_some() {
-        let provider = TestIvProvider { iv: pos!(0.25) };
+        let provider = TestIvProvider {
+            iv: pos_or_panic!(0.25),
+        };
 
         let result = provider.atm_iv();
         assert!(result.is_ok());
@@ -269,7 +271,7 @@ mod tests_volatility_traits {
 
         // Test with Some value
         let provider_with_iv = CombinedProvider {
-            iv_value: pos!(0.2),
+            iv_value: pos_or_panic!(0.2),
         };
 
         // As VolatilitySmile
@@ -287,7 +289,7 @@ mod tests_volatility_traits {
 
         let mut chain = OptionChain::new(
             "TEST",
-            pos!(100.0),
+            pos_or_panic!(100.0),
             "2025-12-31".to_string(),
             Some(dec!(0.05)),
             None,
@@ -295,12 +297,12 @@ mod tests_volatility_traits {
 
         // Add options with implied volatility
         chain.add_option(
-            pos!(95.0),
-            Some(pos!(6.0)),
-            Some(pos!(6.5)),
-            Some(pos!(1.0)),
-            Some(pos!(1.5)),
-            pos!(0.25),
+            pos_or_panic!(95.0),
+            Some(pos_or_panic!(6.0)),
+            Some(pos_or_panic!(6.5)),
+            Some(pos_or_panic!(1.0)),
+            Some(pos_or_panic!(1.5)),
+            pos_or_panic!(0.25),
             Some(dec!(0.7)),
             Some(dec!(-0.3)),
             Some(dec!(0.02)),
@@ -310,12 +312,12 @@ mod tests_volatility_traits {
         );
 
         chain.add_option(
-            pos!(100.0),
-            Some(pos!(3.0)),
-            Some(pos!(3.5)),
-            Some(pos!(3.0)),
-            Some(pos!(3.5)),
-            pos!(0.20),
+            pos_or_panic!(100.0),
+            Some(pos_or_panic!(3.0)),
+            Some(pos_or_panic!(3.5)),
+            Some(pos_or_panic!(3.0)),
+            Some(pos_or_panic!(3.5)),
+            pos_or_panic!(0.20),
             Some(dec!(0.5)),
             Some(dec!(-0.5)),
             Some(dec!(0.025)),
@@ -325,12 +327,12 @@ mod tests_volatility_traits {
         );
 
         chain.add_option(
-            pos!(105.0),
-            Some(pos!(1.0)),
-            Some(pos!(1.5)),
-            Some(pos!(6.0)),
-            Some(pos!(6.5)),
-            pos!(0.22),
+            pos_or_panic!(105.0),
+            Some(pos_or_panic!(1.0)),
+            Some(pos_or_panic!(1.5)),
+            Some(pos_or_panic!(6.0)),
+            Some(pos_or_panic!(6.5)),
+            pos_or_panic!(0.22),
             Some(dec!(0.3)),
             Some(dec!(-0.7)),
             Some(dec!(0.02)),
@@ -349,7 +351,13 @@ mod tests_volatility_traits {
     fn test_atm_iv_provider_for_option_chain_empty() {
         use crate::chains::chain::OptionChain;
 
-        let chain = OptionChain::new("TEST", pos!(100.0), "2025-12-31".to_string(), None, None);
+        let chain = OptionChain::new(
+            "TEST",
+            pos_or_panic!(100.0),
+            "2025-12-31".to_string(),
+            None,
+            None,
+        );
 
         let result = chain.atm_iv();
         assert!(result.is_err());
@@ -392,22 +400,22 @@ mod tests_volatility_traits {
 
     #[test]
     fn test_atm_iv_provider_positive_value() {
-        let value = pos!(0.35);
+        let value = pos_or_panic!(0.35);
         let result = value.atm_iv();
 
         assert!(result.is_ok());
         let iv = result.unwrap();
-        assert_eq!(*iv, pos!(0.35));
+        assert_eq!(*iv, pos_or_panic!(0.35));
     }
 
     #[test]
     fn test_atm_iv_provider_small_value() {
-        let value = pos!(0.01);
+        let value = pos_or_panic!(0.01);
         let result = value.atm_iv();
 
         assert!(result.is_ok());
         let iv = result.unwrap();
-        assert_eq!(*iv, pos!(0.01));
+        assert_eq!(*iv, pos_or_panic!(0.01));
     }
 
     #[test]

@@ -4,7 +4,7 @@ use {
     optionstratlib::chains::chain::OptionChain,
     optionstratlib::strategies::base::Optimizable,
     optionstratlib::strategies::{FindOptimalSide, IronCondor, Strategies},
-    optionstratlib::{ExpirationDate, Positive, pos},
+    optionstratlib::{ExpirationDate, Positive, pos_or_panic},
     rust_decimal_macros::dec,
     std::error::Error,
 };
@@ -12,26 +12,26 @@ use {
 #[test]
 fn test_iron_condor_integration() -> Result<(), Box<dyn Error>> {
     // Define inputs for the IronCondor strategy
-    let underlying_price = pos!(2646.9);
+    let underlying_price = pos_or_panic!(2646.9);
 
     let mut strategy = IronCondor::new(
         "GOLD".to_string(),
         underlying_price, // underlying_price
-        pos!(2725.0),     // short_call_strike
-        pos!(2560.0),     // short_put_strike
-        pos!(2800.0),     // long_call_strike
-        pos!(2500.0),     // long_put_strike
-        ExpirationDate::Days(pos!(30.0)),
-        pos!(0.1548),   // implied_volatility
+        pos_or_panic!(2725.0),     // short_call_strike
+        pos_or_panic!(2560.0),     // short_put_strike
+        pos_or_panic!(2800.0),     // long_call_strike
+        pos_or_panic!(2500.0),     // long_put_strike
+        ExpirationDate::Days(pos_or_panic!(30.0)),
+        pos_or_panic!(0.1548),   // implied_volatility
         dec!(0.05),     // risk_free_rate
         Positive::ZERO, // dividend_yield
-        pos!(2.0),      // quantity
-        pos!(38.8),     // premium_short_call
-        pos!(30.4),     // premium_short_put
-        pos!(23.3),     // premium_long_call
-        pos!(16.8),     // premium_long_put
-        pos!(0.96),     // open_fee
-        pos!(0.96),     // close_fee
+        pos_or_panic!(2.0),      // quantity
+        pos_or_panic!(38.8),     // premium_short_call
+        pos_or_panic!(30.4),     // premium_short_put
+        pos_or_panic!(23.3),     // premium_long_call
+        pos_or_panic!(16.8),     // premium_long_put
+        pos_or_panic!(0.96),     // open_fee
+        pos_or_panic!(0.96),     // close_fee
     );
 
     let option_chain =

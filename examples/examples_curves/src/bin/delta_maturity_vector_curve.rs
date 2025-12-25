@@ -7,10 +7,10 @@ fn get_option(underlying_asset: &Positive, maturity: &Positive) -> Options {
         OptionType::European,
         Side::Long,
         "XYZ".parse().unwrap(),
-        pos!(50.0),
+        pos_or_panic!(50.0),
         ExpirationDate::Days(*maturity),
-        pos!(0.1),
-        pos!(1.0),
+        pos_or_panic!(0.1),
+        pos_or_panic!(1.0),
         *underlying_asset,
         Decimal::ZERO,
         OptionStyle::Call,
@@ -33,7 +33,7 @@ fn main() -> Result<(), Error> {
 
     let one_month_curve = Curve::construct(ConstructionMethod::Parametric {
         f: Box::new(|t| {
-            let option = get_option(&Positive::new_decimal(t).unwrap(), &pos!(30.0));
+            let option = get_option(&Positive::new_decimal(t).unwrap(), &pos_or_panic!(30.0));
             let value = option.delta().unwrap();
             let point = Point2D::new(t, value);
             Ok(point)
@@ -43,7 +43,7 @@ fn main() -> Result<(), Error> {
 
     let three_month_curve = Curve::construct(ConstructionMethod::Parametric {
         f: Box::new(|t| {
-            let option = get_option(&Positive::new_decimal(t).unwrap(), &pos!(90.0));
+            let option = get_option(&Positive::new_decimal(t).unwrap(), &pos_or_panic!(90.0));
             let value = option.delta().unwrap();
             let point = Point2D::new(t, value);
             Ok(point)
@@ -53,7 +53,7 @@ fn main() -> Result<(), Error> {
 
     let six_month_curve = Curve::construct(ConstructionMethod::Parametric {
         f: Box::new(|t| {
-            let option = get_option(&Positive::new_decimal(t).unwrap(), &pos!(180.0));
+            let option = get_option(&Positive::new_decimal(t).unwrap(), &pos_or_panic!(180.0));
             let value = option.delta().unwrap();
             let point = Point2D::new(t, value);
             Ok(point)
@@ -63,7 +63,7 @@ fn main() -> Result<(), Error> {
 
     let nine_month_curve = Curve::construct(ConstructionMethod::Parametric {
         f: Box::new(|t| {
-            let option = get_option(&Positive::new_decimal(t).unwrap(), &pos!(270.0));
+            let option = get_option(&Positive::new_decimal(t).unwrap(), &pos_or_panic!(270.0));
             let value = option.delta().unwrap();
             let point = Point2D::new(t, value);
             Ok(point)
@@ -73,7 +73,7 @@ fn main() -> Result<(), Error> {
 
     let twelve_month_curve = Curve::construct(ConstructionMethod::Parametric {
         f: Box::new(|t| {
-            let option = get_option(&Positive::new_decimal(t).unwrap(), &pos!(365.0));
+            let option = get_option(&Positive::new_decimal(t).unwrap(), &pos_or_panic!(365.0));
             let value = option.delta().unwrap();
             let point = Point2D::new(t, value);
             Ok(point)
