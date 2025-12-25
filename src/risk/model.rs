@@ -3,7 +3,7 @@
    Email: jb@taunais.com
    Date: 26/2/25
 ******************************************************************************/
-use crate::{Positive, pos};
+use crate::Positive;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
@@ -60,7 +60,7 @@ pub enum RiskCategory {
 #[cfg(test)]
 mod tests_risk_metrics {
     use super::*;
-    use crate::pos;
+
     use rust_decimal_macros::dec;
     use serde_json;
 

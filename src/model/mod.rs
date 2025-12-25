@@ -108,7 +108,9 @@ pub mod option;
 pub mod position;
 
 /// Types and utilities for working with strictly positive numerical values in financial contexts.
+/// Re-exports the Positive type from the positive crate and adds OptionStratLib-specific extensions.
 pub mod positive;
+mod positive_ext;
 
 /// Tools for analyzing and visualizing profit ranges across different market scenarios.
 mod profit_range;

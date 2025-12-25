@@ -377,7 +377,7 @@ mod tests_option_series {
     use crate::series::params::OptionSeriesBuildParams;
     use crate::utils::Len;
     use crate::utils::time::get_x_days_formatted_pos;
-    use crate::{pos, spos};
+
     use rust_decimal_macros::dec;
 
     // Helper function to create a simple OptionChain for testing

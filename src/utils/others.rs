@@ -286,7 +286,7 @@ mod tests_approx_equal {
 mod tests_get_random_element {
     use super::*;
     use crate::chains::OptionData;
-    use crate::pos;
+
     use std::collections::BTreeSet;
 
     #[test]
@@ -600,7 +600,7 @@ mod tests_random_decimal {
 #[cfg(test)]
 mod tests_log_returns {
     use super::*;
-    use crate::pos;
+
     use approx::assert_relative_eq;
 
     #[test]

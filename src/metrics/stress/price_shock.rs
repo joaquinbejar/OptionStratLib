@@ -148,7 +148,7 @@ pub trait PriceShockSurface {
 mod tests_price_shock {
     use super::*;
     use crate::curves::Point2D;
-    use crate::pos;
+
     use crate::surfaces::Point3D;
     use rust_decimal::MathematicalOps;
     use rust_decimal_macros::dec;

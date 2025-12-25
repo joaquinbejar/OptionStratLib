@@ -1485,7 +1485,6 @@ mod tests_strategies_extended {
     use crate::model::position::Position;
     use crate::model::types::{OptionStyle, Side};
     use crate::model::utils::create_sample_option_simplest;
-    use crate::pos;
 
     #[test]
     fn test_strategy_enum() {
@@ -1710,7 +1709,6 @@ mod tests_strategy_type {
 #[cfg(test)]
 mod tests_best_range_to_show {
     use super::*;
-    use crate::pos;
 
     struct TestStrategy {
         underlying_price: Positive,
@@ -1809,7 +1807,6 @@ mod tests_best_range_to_show {
 #[cfg(test)]
 mod tests_range_to_show {
     use super::*;
-    use crate::pos;
 
     struct TestStrategy {
         underlying_price: Positive,
@@ -1877,7 +1874,6 @@ mod tests_range_to_show {
 #[cfg(test)]
 mod tests_range_of_profit {
     use super::*;
-    use crate::pos;
 
     struct TestStrategy {
         break_even_points: Vec<Positive>,
@@ -1956,7 +1952,7 @@ mod tests_strategy_methods {
 mod tests_optimizable {
     use super::*;
     use crate::chains::OptionData;
-    use crate::{pos, spos};
+
     use rust_decimal_macros::dec;
 
     struct TestOptimizableStrategy;
@@ -2154,7 +2150,7 @@ mod tests_strategy_net_operations {
     use crate::model::position::Position;
     use crate::model::types::{OptionStyle, Side};
     use crate::model::utils::create_sample_option_simplest;
-    use crate::pos;
+
     use chrono::{TimeZone, Utc};
 
     struct TestStrategy {

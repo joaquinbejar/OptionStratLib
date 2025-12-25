@@ -125,7 +125,7 @@ pub trait TransactionAble {
 #[cfg(test)]
 mod tests_pnl_calculator {
     use super::*;
-    use crate::pos;
+
     use chrono::Utc;
     use rust_decimal_macros::dec;
 

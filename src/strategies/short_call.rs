@@ -783,7 +783,7 @@ test_strategy_traits!(ShortCall, test_short_call_implementations);
 mod tests_simulate {
     use super::*;
     use crate::chains::generator_positive;
-    use crate::pos;
+
     use crate::simulation::simulator::Simulator;
     use crate::simulation::steps::Step;
     use crate::simulation::{Simulate, WalkParams, WalkType, WalkTypeAble};

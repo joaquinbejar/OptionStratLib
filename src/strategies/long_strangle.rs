@@ -1003,7 +1003,7 @@ test_strategy_traits!(LongStrangle, test_short_call_implementations);
 mod tests_long_strangle_probability {
     use super::*;
     use crate::model::ExpirationDate;
-    use crate::pos;
+
     use crate::strategies::probabilities::utils::PriceTrend;
     use rust_decimal_macros::dec;
 
@@ -1153,7 +1153,7 @@ mod tests_long_strangle_delta {
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use crate::strategies::long_strangle::{LongStrangle, Positive};
-    use crate::{assert_decimal_eq, assert_pos_relative_eq, pos};
+    use crate::{assert_decimal_eq, assert_pos_relative_eq};
     use rust_decimal_macros::dec;
 
     fn get_strategy(call_strike: Positive, put_strike: Positive) -> LongStrangle {
@@ -1283,7 +1283,7 @@ mod tests_long_strangle_delta_size {
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use crate::strategies::long_strangle::{LongStrangle, Positive};
-    use crate::{assert_decimal_eq, assert_pos_relative_eq, pos};
+    use crate::{assert_decimal_eq, assert_pos_relative_eq};
     use rust_decimal_macros::dec;
 
     fn get_strategy(call_strike: Positive, put_strike: Positive) -> LongStrangle {
@@ -1555,7 +1555,7 @@ mod tests_strangle_position_management {
     use super::*;
     use crate::error::position::PositionValidationErrorKind;
     use crate::model::types::{OptionStyle, Side};
-    use crate::pos;
+
     use rust_decimal_macros::dec;
 
     fn create_test_long_strangle() -> LongStrangle {
@@ -1660,7 +1660,7 @@ mod tests_strangle_position_management {
 mod tests_adjust_option_position_long {
     use super::*;
     use crate::model::types::{OptionStyle, Side};
-    use crate::pos;
+
     use rust_decimal_macros::dec;
 
     // Helper function to create a test strategy
@@ -1781,7 +1781,7 @@ mod tests_adjust_option_position_long {
 mod tests_strategy_constructor {
     use super::*;
     use crate::model::utils::create_sample_position;
-    use crate::{OptionStyle, Side, pos};
+    use crate::{OptionStyle, Side};
 
     mod long_strangle_tests {
         use super::*;
@@ -1931,7 +1931,7 @@ mod tests_strategy_constructor {
 mod tests_long_strangle_pnl {
     use super::*;
     use crate::model::utils::create_sample_position;
-    use crate::{assert_decimal_eq, assert_pos_relative_eq, pos};
+    use crate::{assert_decimal_eq, assert_pos_relative_eq};
     use rust_decimal_macros::dec;
 
     fn create_test_strangle() -> Result<LongStrangle, StrategyError> {
@@ -2091,7 +2091,6 @@ mod tests_long_strangle_pnl {
 mod test_valid_premium_for_shorts {
     use super::*;
     use crate::model::utils::create_sample_position;
-    use crate::pos;
 
     fn get_strategy() -> Result<LongStrangle, StrategyError> {
         // Create long call position

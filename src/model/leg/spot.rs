@@ -310,7 +310,6 @@ impl Default for SpotPosition {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::pos;
 
     #[test]
     fn test_spot_position_new() {

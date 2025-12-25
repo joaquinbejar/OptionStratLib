@@ -3,12 +3,12 @@
    Email: jb@taunais.com
    Date: 15/8/24
 ******************************************************************************/
+use crate::Positive;
 use crate::constants::{MAX_VOLATILITY, MIN_VOLATILITY};
 use crate::error::VolatilityError;
 use crate::model::decimal::decimal_normal_sample;
 use crate::utils::time::TimeFrame;
 use crate::{ExpirationDate, OptionStyle, OptionType, Options, Side};
-use crate::{Positive, pos};
 use num_traits::{FromPrimitive, ToPrimitive};
 use rand::random;
 use rayon::prelude::*;
@@ -758,11 +758,11 @@ mod tests_ewma_volatility {
 #[cfg(test)]
 mod tests_implied_volatility {
     use super::*;
+    use crate::assert_decimal_eq;
     use crate::constants::{MAX_VOLATILITY, MIN_VOLATILITY};
     use crate::greeks::Greeks;
     use crate::model::types::{OptionStyle, OptionType, Side};
     use crate::{ExpirationDate, assert_pos_relative_eq};
-    use crate::{assert_decimal_eq, pos};
     use rust_decimal_macros::dec;
     use tracing::error;
 
@@ -1509,7 +1509,7 @@ mod tests_heston_volatility {
 mod tests_uncertain_volatility_bounds {
     use super::*;
     use crate::model::types::{OptionStyle, OptionType, Side};
-    use crate::pos;
+
     use crate::{ExpirationDate, assert_pos_relative_eq};
     use rust_decimal_macros::dec;
 
@@ -1613,7 +1613,7 @@ mod tests_uncertain_volatility_bounds {
 #[cfg(test)]
 mod tests_adjust_volatility {
     use super::*;
-    use crate::{assert_pos_relative_eq, pos};
+    use crate::assert_pos_relative_eq;
 
     #[test]
     fn test_same_timeframe() {

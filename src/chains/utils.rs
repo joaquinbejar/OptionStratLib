@@ -3,12 +3,12 @@
    Email: jb@taunais.com
    Date: 25/10/24
 ******************************************************************************/
+use crate::Positive;
 use crate::chains::OptionData;
 use crate::chains::chain::{SKEW_SLOPE, SKEW_SMILE_CURVE};
 use crate::error::chains::ChainError;
 use crate::model::ExpirationDate;
 use crate::model::utils::ToRound;
-use crate::{Positive, pos};
 use num_traits::ToPrimitive;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
@@ -727,7 +727,7 @@ pub fn strike_step(
 mod tests_strike_step {
     use super::*;
     use crate::chains::OptionChain;
-    use crate::spos;
+
     use crate::utils::Len;
     #[test]
     fn basic() {
@@ -795,7 +795,6 @@ mod tests_strike_step {
 #[cfg(test)]
 mod tests_rounder {
     use super::*;
-    use crate::pos;
 
     #[test]
     fn test_rounder() {
@@ -819,7 +818,7 @@ mod tests_rounder {
 #[cfg(test)]
 mod tests_parse {
     use super::*;
-    use crate::spos;
+
     use std::f64::consts::PI;
 
     #[test]
@@ -854,7 +853,7 @@ mod tests_parse {
 #[cfg(test)]
 mod tests_parse_bis {
     use super::*;
-    use crate::{Positive, spos};
+    use crate::Positive;
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
 
@@ -988,7 +987,7 @@ mod tests_default_empty_string {
 #[cfg(test)]
 mod tests_random_positions_params {
     use super::*;
-    use crate::pos;
+
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
@@ -1179,7 +1178,7 @@ mod tests_adjust_volatility {
 #[cfg(test)]
 mod tests_option_data_price_params {
     use super::*;
-    use crate::{pos, spos};
+
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
@@ -1286,7 +1285,7 @@ mod tests_option_data_price_params {
 #[cfg(test)]
 mod tests_option_chain_build_params {
     use super::*;
-    use crate::{pos, spos};
+
     use rust_decimal_macros::dec;
 
     fn get_params() -> OptionDataPriceParams {
@@ -1355,7 +1354,7 @@ mod tests_option_chain_build_params {
 #[cfg(test)]
 mod tests_random_positions_params_extended {
     use super::*;
-    use crate::pos;
+
     use rust_decimal_macros::dec;
 
     #[test]
@@ -1436,7 +1435,7 @@ mod tests_random_positions_params_extended {
 mod tests_sample {
     use super::*;
     use crate::chains::chain::OptionChain;
-    use crate::{pos, spos};
+
     use rust_decimal_macros::dec;
 
     #[test]

@@ -310,7 +310,7 @@ impl fmt::Debug for Strategy {
 mod tests_options {
     use super::*;
     use crate::model::types::BarrierType;
-    use crate::pos;
+
     use chrono::{NaiveDate, TimeZone, Utc};
 
     #[test]
@@ -439,7 +439,7 @@ mod tests_options {
 #[cfg(test)]
 mod tests_expiration_date {
     use super::*;
-    use crate::pos;
+
     use chrono::{Duration, NaiveDate, TimeZone};
     use tracing::info;
 
@@ -800,7 +800,7 @@ mod tests_option_type_display_debug {
 #[cfg(test)]
 mod tests_position_type_display_debug {
     use super::*;
-    use crate::pos;
+
     use chrono::{DateTime, NaiveDate, TimeZone};
 
     fn get_option() -> (Options, DateTime<Utc>) {
@@ -901,7 +901,7 @@ mod tests_position_type_display_debug {
 mod tests_strategy_type_display_debug {
     use super::*;
     use crate::model::utils::create_sample_option_with_date;
-    use crate::pos;
+
     use crate::strategies::base::StrategyType;
     use chrono::{NaiveDate, TimeZone};
     use serde::Serialize;

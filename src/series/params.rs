@@ -89,8 +89,8 @@ impl OptionSeriesBuildParams {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::ExpirationDate;
     use crate::chains::utils::OptionDataPriceParams;
-    use crate::{ExpirationDate, pos, spos};
     use rust_decimal_macros::dec;
 
     #[test]

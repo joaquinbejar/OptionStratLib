@@ -110,7 +110,6 @@ mod tests_volatility_errors {
     use super::*;
     use crate::error::greeks::InputErrorKind;
     use crate::error::{GreeksError, OptionsError};
-    use crate::pos;
 
     #[test]
     fn test_invalid_price_error() {

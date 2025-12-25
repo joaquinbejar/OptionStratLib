@@ -3,6 +3,7 @@
    Email: jb@taunais.com
    Date: 26/9/24
 ******************************************************************************/
+use crate::Positive;
 use crate::chains::utils::{
     OptionChainBuildParams, OptionChainParams, OptionDataPriceParams, RandomPositionsParams,
     adjust_volatility, default_empty_string, rounder, strike_step,
@@ -29,7 +30,6 @@ use crate::surfaces::{BasicSurfaces, Point3D, Surface};
 use crate::utils::Len;
 use crate::utils::others::get_random_element;
 use crate::volatility::VolatilitySmile;
-use crate::{Positive, pos};
 use chrono::{NaiveDate, Utc};
 use num_traits::{FromPrimitive, ToPrimitive};
 use pretty_simple_display::DebugSimple;
@@ -4711,7 +4711,6 @@ mod tests_chain_base {
     use super::*;
     use crate::model::ExpirationDate;
 
-    use crate::{pos, spos};
     use rust_decimal_macros::dec;
 
     use std::fs;
@@ -5053,9 +5052,7 @@ mod tests_chain_base {
 mod tests_option_data {
     use super::*;
 
-    use crate::spos;
-
-    use crate::{assert_pos_relative_eq, pos};
+    use crate::assert_pos_relative_eq;
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
     use tracing::info;
@@ -5252,7 +5249,6 @@ mod tests_get_random_positions {
     use crate::error::chains::ChainBuildErrorKind;
     use crate::model::ExpirationDate;
 
-    use crate::{pos, spos};
     use rust_decimal_macros::dec;
 
     fn create_test_chain() -> OptionChain {
@@ -5551,7 +5547,7 @@ mod tests_get_random_positions {
 #[cfg(test)]
 mod tests_option_data_get_prices {
     use super::*;
-    use crate::{pos, spos};
+
     use rust_decimal_macros::dec;
 
     fn create_test_option_data() -> OptionData {
@@ -5633,7 +5629,7 @@ mod tests_option_data_get_prices {
 #[cfg(test)]
 mod tests_option_data_display {
     use super::*;
-    use crate::{pos, spos};
+
     use rust_decimal_macros::dec;
 
     #[test]
@@ -5683,7 +5679,6 @@ mod tests_option_data_display {
 #[cfg(test)]
 mod tests_filter_option_data {
     use super::*;
-    use crate::pos;
 
     fn create_test_chain() -> OptionChain {
         let mut chain = OptionChain::new("TEST", pos!(100.0), "2030-01-01".to_string(), None, None);
@@ -5754,7 +5749,6 @@ mod tests_filter_option_data {
 #[cfg(test)]
 mod tests_strike_price_range_vec {
     use super::*;
-    use crate::pos;
 
     #[test]
     fn test_empty_chain() {
@@ -5835,7 +5829,7 @@ mod tests_strike_price_range_vec {
 #[cfg(test)]
 mod tests_option_data_get_option {
     use super::*;
-    use crate::{pos, spos};
+
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
@@ -5892,8 +5886,8 @@ mod tests_option_data_get_option {
 #[cfg(test)]
 mod tests_option_data_get_options_in_strike {
     use super::*;
+    use crate::assert_decimal_eq;
     use crate::greeks::Greeks;
-    use crate::{assert_decimal_eq, pos, spos};
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
@@ -6023,7 +6017,7 @@ mod tests_option_data_get_options_in_strike {
 #[cfg(test)]
 mod tests_filter_options_in_strike {
     use super::*;
-    use crate::{pos, spos};
+
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
 
@@ -6157,7 +6151,7 @@ mod tests_filter_options_in_strike {
 #[cfg(test)]
 mod tests_chain_iterators {
     use super::*;
-    use crate::spos;
+
     use rust_decimal_macros::dec;
 
     fn create_test_chain() -> OptionChain {
@@ -6322,7 +6316,7 @@ mod tests_chain_iterators {
 #[cfg(test)]
 mod tests_chain_iterators_bis {
     use super::*;
-    use crate::spos;
+
     use rust_decimal_macros::dec;
 
     fn create_test_chain() -> OptionChain {
@@ -6922,7 +6916,7 @@ mod tests_is_valid_optimal_side {
 #[cfg(test)]
 mod rnd_analysis_tests {
     use super::*;
-    use crate::{pos, spos};
+
     use rust_decimal_macros::dec;
 
     // Helper function to create a standard option chain for testing
@@ -7323,7 +7317,6 @@ mod tests_option_data_delta {
     use super::*;
     use crate::model::ExpirationDate;
 
-    use crate::{pos, spos};
     use rust_decimal_macros::dec;
 
     // Helper function to create a standard test OptionDataPriceParams
@@ -7442,7 +7435,7 @@ mod tests_basic_curves {
     use super::*;
     use crate::model::types::{OptionStyle, Side};
     use crate::utils::time::get_tomorrow_formatted;
-    use crate::{pos, spos};
+
     use rust_decimal_macros::dec;
 
     // Helper function to create a sample OptionChain for testing
@@ -7627,7 +7620,7 @@ mod tests_basic_curves {
 mod tests_option_chain_surfaces {
     use super::*;
     use crate::utils::time::get_tomorrow_formatted;
-    use crate::{pos, spos};
+
     use rust_decimal_macros::dec;
 
     fn create_test_option_chain() -> OptionChain {
@@ -7870,7 +7863,7 @@ mod tests_option_chain_surfaces {
 mod tests_option_chain_time_surfaces {
     use super::*;
     use crate::utils::time::get_tomorrow_formatted;
-    use crate::{pos, spos};
+
     use rust_decimal_macros::dec;
 
     fn create_test_option_chain() -> OptionChain {
@@ -8103,7 +8096,7 @@ mod tests_option_chain_time_surfaces {
 #[cfg(test)]
 mod tests_serialization {
     use super::*;
-    use crate::spos;
+
     use rust_decimal_macros::dec;
 
     #[test]
@@ -8208,7 +8201,7 @@ mod tests_serialization {
 #[cfg(test)]
 mod tests_option_data_serde {
     use super::*;
-    use crate::spos;
+
     use rust_decimal_macros::dec;
     use serde_json;
 
@@ -8372,7 +8365,7 @@ mod tests_option_data_serde {
 #[cfg(test)]
 mod tests_option_chain_serde {
     use super::*;
-    use crate::spos;
+
     use rust_decimal_macros::dec;
 
     fn create_sample_chain() -> OptionChain {
@@ -8565,8 +8558,8 @@ mod tests_option_chain_serde {
 mod tests_gamma_calculations {
     use super::*;
 
+    use crate::assert_decimal_eq;
     use crate::utils::time::get_tomorrow_formatted;
-    use crate::{assert_decimal_eq, pos, spos};
     use rust_decimal_macros::dec;
 
     // Helper function to create a test chain with predefined gamma values
@@ -8660,7 +8653,7 @@ mod tests_gamma_calculations {
 mod tests_delta_calculations {
     use super::*;
 
-    use crate::{assert_decimal_eq, pos};
+    use crate::assert_decimal_eq;
     use rust_decimal_macros::dec;
 
     // Helper function to create a test chain with predefined delta values
@@ -8777,7 +8770,7 @@ mod tests_delta_calculations {
 mod tests_vega_calculations {
     use super::*;
 
-    use crate::{assert_decimal_eq, pos};
+    use crate::assert_decimal_eq;
     use rust_decimal_macros::dec;
 
     // Helper function to create a test chain with predefined vega values
@@ -8894,7 +8887,7 @@ mod tests_vega_calculations {
 mod tests_theta_calculations {
     use super::*;
 
-    use crate::{assert_decimal_eq, pos};
+    use crate::assert_decimal_eq;
     use rust_decimal_macros::dec;
 
     // Helper function to create a test chain with predefined theta values
@@ -9011,7 +9004,7 @@ mod tests_theta_calculations {
 mod tests_vanna_calculations {
     use super::*;
 
-    use crate::{assert_decimal_eq, pos};
+    use crate::assert_decimal_eq;
     use rust_decimal_macros::dec;
 
     // Helper function to create a test chain for vanna calculations
@@ -9084,7 +9077,7 @@ mod tests_vanna_calculations {
 mod tests_vomma_calculations {
     use super::*;
 
-    use crate::{assert_decimal_eq, pos};
+    use crate::assert_decimal_eq;
     use rust_decimal_macros::dec;
 
     // Helper function to create a test chain for vomma calculation
@@ -9124,7 +9117,7 @@ mod tests_vomma_calculations {
 mod tests_veta_calculations {
     use super::*;
 
-    use crate::{assert_decimal_eq, pos};
+    use crate::assert_decimal_eq;
     use rust_decimal_macros::dec;
 
     // Helper function to create a test chain for veta calculations
@@ -9197,7 +9190,7 @@ mod tests_veta_calculations {
 mod tests_charm_calculations {
     use super::*;
 
-    use crate::{assert_decimal_eq, pos};
+    use crate::assert_decimal_eq;
     use rust_decimal_macros::dec;
 
     // Helper function to create a test chain for charm calculations
@@ -9270,7 +9263,7 @@ mod tests_charm_calculations {
 mod tests_color_calculations {
     use super::*;
 
-    use crate::{assert_decimal_eq, pos};
+    use crate::assert_decimal_eq;
     use rust_decimal_macros::dec;
 
     // Helper function to create a test chain for charm calculations
@@ -9345,7 +9338,6 @@ mod tests_atm_strike {
     use crate::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
     use crate::model::ExpirationDate;
 
-    use crate::{pos, spos};
     use rust_decimal_macros::dec;
 
     fn create_standard_chain() -> OptionChain {
@@ -9545,7 +9537,6 @@ mod tests_atm_strike_bis {
     use crate::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
     use crate::model::ExpirationDate;
 
-    use crate::{pos, spos};
     use rust_decimal_macros::dec;
 
     fn create_standard_chain() -> OptionChain {
@@ -9726,7 +9717,7 @@ mod tests_atm_strike_bis {
 #[cfg(test)]
 mod tests_option_chain_utils {
     use super::*;
-    use crate::{pos, spos};
+
     use rust_decimal_macros::dec;
 
     // Helper function to create a chain with custom strikes for specific tests
@@ -9871,7 +9862,6 @@ mod tests_option_chain_utils_bis {
     use crate::chains::utils::OptionChainBuildParams;
     use crate::chains::utils::OptionDataPriceParams;
     use crate::model::ExpirationDate;
-    use crate::{pos, spos};
 
     use rust_decimal_macros::dec;
 
@@ -10055,7 +10045,6 @@ mod tests_to_build_params_bis {
     use crate::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
     use crate::model::ExpirationDate;
 
-    use crate::{pos, spos};
     use rust_decimal_macros::dec;
     use tracing::info;
 
@@ -10105,7 +10094,6 @@ mod tests_to_build_params_bis {
 #[cfg(test)]
 mod chain_coverage_tests {
     use super::*;
-    use crate::spos;
 
     use rust_decimal_macros::dec;
 
@@ -10362,7 +10350,6 @@ mod chain_coverage_tests {
 #[cfg(test)]
 mod chain_coverage_tests_bis {
     use super::*;
-    use crate::spos;
 
     use rust_decimal_macros::dec;
 
@@ -10643,7 +10630,6 @@ mod tests_get_position_with_delta {
     use super::*;
     use crate::error::chains::OptionDataErrorKind;
 
-    use crate::{pos, spos};
     use rust_decimal_macros::dec;
     use tracing::info;
 
@@ -11042,7 +11028,6 @@ mod tests_get_position_with_delta {
 mod tests_get_strikes_and_optiondata {
     use super::*;
 
-    use crate::{pos, spos};
     use rust_decimal_macros::dec;
 
     // Helper function to create a test chain with specific strikes
@@ -11603,7 +11588,7 @@ mod tests_option_chain_comparison {
 #[cfg(test)]
 mod tests_volatility_smile_skew {
     use super::*;
-    use crate::pos;
+
     use rust_decimal_macros::dec;
 
     fn create_chain_with_options() -> OptionChain {
@@ -11800,7 +11785,7 @@ mod tests_volatility_smile_skew {
 #[cfg(test)]
 mod tests_get_call_price {
     use super::*;
-    use crate::pos;
+
     use rust_decimal_macros::dec;
 
     #[test]
@@ -11885,7 +11870,6 @@ mod tests_get_call_price {
 #[cfg(test)]
 mod tests_title_operations {
     use super::*;
-    use crate::pos;
 
     #[test]
     fn test_get_title_basic() {
@@ -11963,7 +11947,7 @@ mod tests_title_operations {
 #[cfg(test)]
 mod tests_expiration_operations {
     use super::*;
-    use crate::{pos, spos};
+
     use rust_decimal_macros::dec;
 
     #[test]
@@ -12033,7 +12017,7 @@ mod tests_expiration_operations {
 #[cfg(test)]
 mod tests_from_vec_option_data {
     use super::*;
-    use crate::{pos, spos};
+
     use rust_decimal_macros::dec;
 
     #[test]
@@ -12167,7 +12151,7 @@ mod tests_from_vec_option_data {
 #[cfg(test)]
 mod tests_len_trait {
     use super::*;
-    use crate::pos;
+
     use crate::utils::Len;
 
     #[test]
@@ -12250,7 +12234,7 @@ mod tests_default_trait {
 #[cfg(test)]
 mod tests_option_chain_params_trait {
     use super::*;
-    use crate::{pos, spos};
+
     use rust_decimal_macros::dec;
 
     #[test]

@@ -908,7 +908,7 @@ impl PnLCalculator for ShortStraddle {
 mod tests_short_straddle {
     use super::*;
     use crate::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
-    use crate::{pos, spos};
+
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
@@ -1217,7 +1217,7 @@ mod tests_short_straddle {
 mod tests_short_straddle_probability {
     use super::*;
     use crate::model::ExpirationDate;
-    use crate::pos;
+
     use crate::strategies::probabilities::utils::PriceTrend;
     use rust_decimal_macros::dec;
 
@@ -1352,7 +1352,7 @@ mod tests_short_straddle_probability {
 mod tests_short_straddle_probability_bis {
     use super::*;
     use crate::model::ExpirationDate;
-    use crate::pos;
+
     use crate::strategies::probabilities::utils::PriceTrend;
     use rust_decimal_macros::dec;
 
@@ -1487,7 +1487,7 @@ mod tests_short_straddle_delta {
     use crate::model::types::OptionStyle;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
-    use crate::{assert_decimal_eq, assert_pos_relative_eq, pos};
+    use crate::{assert_decimal_eq, assert_pos_relative_eq};
     use rust_decimal_macros::dec;
 
     fn get_strategy(strike: Positive) -> ShortStraddle {
@@ -1610,7 +1610,7 @@ mod tests_short_straddle_delta_size {
     use crate::model::types::OptionStyle;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
-    use crate::{ExpirationDate, Side, assert_decimal_eq, assert_pos_relative_eq, pos};
+    use crate::{ExpirationDate, Side, assert_decimal_eq, assert_pos_relative_eq};
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
     use std::str::FromStr;
@@ -1737,7 +1737,6 @@ mod tests_short_straddle_delta_size {
 mod tests_short_strategy_constructor {
     use super::*;
     use crate::model::utils::create_sample_position;
-    use crate::pos;
 
     #[test]
     fn test_get_strategy_valid() {
@@ -1910,7 +1909,7 @@ mod tests_short_strategy_constructor {
 mod tests_short_straddle_pnl {
     use super::*;
     use crate::model::utils::create_sample_position;
-    use crate::{assert_decimal_eq, assert_pos_relative_eq, pos};
+    use crate::{assert_decimal_eq, assert_pos_relative_eq};
     use rust_decimal_macros::dec;
 
     fn create_test_short_straddle() -> Result<ShortStraddle, StrategyError> {
@@ -2028,7 +2027,7 @@ mod tests_straddle_position_management {
     use super::*;
     use crate::error::position::PositionValidationErrorKind;
     use crate::model::types::{OptionStyle, Side};
-    use crate::pos;
+
     use rust_decimal_macros::dec;
     use tracing::error;
 
@@ -2135,7 +2134,7 @@ mod tests_straddle_position_management {
 mod tests_adjust_option_position {
     use super::*;
     use crate::model::types::{OptionStyle, Side};
-    use crate::pos;
+
     use rust_decimal_macros::dec;
 
     fn create_test_short_straddle() -> ShortStraddle {

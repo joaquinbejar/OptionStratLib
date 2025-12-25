@@ -136,7 +136,7 @@ pub trait ColorSurface {
 mod tests_color {
     use super::*;
     use crate::curves::Point2D;
-    use crate::pos;
+
     use crate::surfaces::Point3D;
     use rust_decimal::Decimal;
     use rust_decimal::MathematicalOps;

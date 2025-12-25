@@ -57,6 +57,7 @@ pretty-simple-display = { workspace = true }
 utoipa = { workspace = true, features = ["axum_extras", "chrono", "decimal"] }
 indicatif = { workspace = true }
 thiserror = { workspace = true }
+positive = { workspace = true }
 
 
 [dev-dependencies]
@@ -119,3 +120,4 @@ pretty-simple-display = "0.1"
 utoipa = { version = "5.4", features = ["axum_extras", "chrono", "decimal"] }
 indicatif = "0.18"
 thiserror = "2.0"
+positive = { path = "../positive", features = ["utoipa"] }

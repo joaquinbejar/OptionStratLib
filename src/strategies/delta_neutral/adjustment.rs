@@ -434,7 +434,6 @@ impl From<GreeksError> for AdjustmentError {
 #[cfg(test)]
 mod tests_adjustment {
     use super::*;
-    use crate::pos;
 
     #[test]
     fn test_adjustment_config_default() {

@@ -345,8 +345,8 @@ pub fn telegraph(
 #[cfg(test)]
 mod tests_telegraph_process_basis {
     use super::*;
+    use crate::Positive;
     use crate::model::types::{OptionStyle, OptionType, Side};
-    use crate::{Positive, pos};
     use rust_decimal_macros::dec;
 
     #[test]
@@ -420,7 +420,7 @@ mod tests_telegraph_process_extended {
     use super::*;
     use crate::Positive;
     use crate::model::types::{OptionStyle, OptionType, Side};
-    use crate::pos;
+
     use rust_decimal_macros::dec;
 
     // Helper function to create a mock Options struct

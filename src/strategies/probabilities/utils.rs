@@ -9,7 +9,7 @@ use crate::error::probability::{
 };
 use crate::greeks::big_n;
 use crate::model::ExpirationDate;
-use crate::{Positive, f2du, pos};
+use crate::{Positive, f2du};
 use num_traits::ToPrimitive;
 use rust_decimal::Decimal;
 

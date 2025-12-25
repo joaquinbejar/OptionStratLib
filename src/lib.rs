@@ -844,6 +844,59 @@
 /// ## Core Modules
 extern crate core;
 
+/// Macro for creating a new `Positive` value with simplified syntax.
+///
+/// This macro attempts to create a `Positive` value from the given expression
+/// and unwraps the result. It will panic if the value cannot be converted to a
+/// `Positive` (e.g., if the value is negative or not representable).
+///
+/// # Examples
+///
+/// ```rust
+/// use optionstratlib::pos;
+/// let positive_value = pos!(5.0);
+/// ```
+///
+/// # Panics
+///
+/// This macro will panic if the provided value cannot be converted to a `Positive` value.
+#[macro_export]
+macro_rules! pos {
+    ($val:expr) => {
+        $crate::Positive::new($val).unwrap()
+    };
+}
+
+/// A macro to create an optional `Positive` value from the given expression.
+///
+/// Returns `Some(Positive)` if the given value is positive, otherwise returns `None`.
+///
+/// # Example
+///
+/// ```rust
+/// use optionstratlib::Positive;
+/// use optionstratlib::spos;
+///
+/// let x = spos!(10.0);
+/// assert!(x.is_some());
+///
+/// let y = spos!(-5.0);
+/// assert!(y.is_none());
+/// ```
+#[macro_export]
+macro_rules! spos {
+    ($val:expr) => {{ $crate::Positive::new($val).ok() }};
+}
+
+/// * `model` - Core data structures and models for options and derivatives.
+///
+/// Defines the fundamental data types and structures used throughout the library,
+/// including option contract representations, position tracking, and market data models.
+/// Serves as the foundation for all other modules.
+/// NOTE: This module must be declared first to ensure macros (pos!, spos!) are available
+/// to other modules.
+pub mod model;
+
 /// * `backtesting` - Tools for historical performance evaluation of options strategies.
 ///
 /// Provides framework and utilities to simulate and analyze how option strategies
@@ -920,13 +973,6 @@ pub mod greeks;
 /// Gamma exposure in monetary terms: `Dollar Gamma = Gamma × Spot² × 0.01`
 /// Shows how much delta changes for a 1% move in the underlying.
 pub mod metrics;
-
-/// * `model` - Core data structures and models for options and derivatives.
-///
-/// Defines the fundamental data types and structures used throughout the library,
-/// including option contract representations, position tracking, and market data models.
-/// Serves as the foundation for all other modules.
-pub mod model;
 
 /// * `pnl` - Profit and loss analysis tools for options positions.
 ///
@@ -1007,7 +1053,7 @@ pub mod prelude;
 
 pub use model::ExpirationDate;
 pub use model::Options;
-pub use model::positive::Positive;
+pub use model::positive::{Positive, PositiveError, PositiveResult, is_positive};
 pub use model::types::{OptionStyle, OptionType, Side};
 
 /// Library version

@@ -86,7 +86,7 @@ fn main() -> Result<(), Error> {
         None,
     );
     let initial_premium = temp_option.calculate_price_black_scholes()?.abs();
-    let premium_positive = Positive::new(initial_premium.to_f64().unwrap())?;
+    let premium_positive = Positive::new_decimal(initial_premium)?;
 
     // Create the short put strategy with the calculated premium
     let strategy = ShortPut::new(

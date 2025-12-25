@@ -404,7 +404,7 @@ impl SimulationStatsResult {
 mod tests {
     use super::*;
     use crate::pnl::PnL;
-    use crate::pos;
+
     use crate::simulation::ExitPolicy;
     use rust_decimal_macros::dec;
 

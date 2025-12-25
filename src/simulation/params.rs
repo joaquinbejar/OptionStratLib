@@ -130,10 +130,10 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::ExpirationDate;
     use crate::model::positive::Positive;
     use crate::simulation::steps::{Xstep, Ystep};
     use crate::utils::time::TimeFrame;
-    use crate::{ExpirationDate, pos};
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
     use std::fmt::Display;

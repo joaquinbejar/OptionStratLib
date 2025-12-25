@@ -1262,7 +1262,7 @@ impl PnLCalculator for ShortStrangle {
 mod tests_short_strangle {
     use super::*;
     use crate::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
-    use crate::{pos, spos};
+
     use approx::assert_relative_eq;
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
@@ -1504,7 +1504,7 @@ is expected and the underlying asset's price is anticipated to remain stable."
 mod tests_short_strangle_probability {
     use super::*;
     use crate::model::ExpirationDate;
-    use crate::pos;
+
     use crate::strategies::probabilities::utils::PriceTrend;
     use rust_decimal_macros::dec;
 
@@ -1641,7 +1641,7 @@ mod tests_short_strangle_probability {
 mod tests_short_strangle_probability_bis {
     use super::*;
     use crate::model::ExpirationDate;
-    use crate::pos;
+
     use crate::strategies::probabilities::utils::PriceTrend;
     use rust_decimal_macros::dec;
 
@@ -1778,7 +1778,7 @@ mod tests_short_strangle_delta {
     use crate::model::types::OptionStyle;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
-    use crate::{assert_decimal_eq, assert_pos_relative_eq, pos};
+    use crate::{assert_decimal_eq, assert_pos_relative_eq};
     use rust_decimal_macros::dec;
 
     fn get_strategy(call_strike: Positive, put_strike: Positive) -> ShortStrangle {
@@ -1941,7 +1941,7 @@ mod tests_short_strangle_delta_size {
     use crate::model::types::{Action, OptionStyle};
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
-    use crate::{assert_decimal_eq, assert_pos_relative_eq, pos};
+    use crate::{assert_decimal_eq, assert_pos_relative_eq};
     use rust_decimal_macros::dec;
 
     fn get_strategy(call_strike: Positive, put_strike: Positive) -> ShortStrangle {
@@ -2245,7 +2245,7 @@ mod tests_short_strangle_delta_size {
 mod tests_adjust_option_position_short {
     use super::*;
     use crate::model::types::{OptionStyle, Side};
-    use crate::pos;
+
     use rust_decimal_macros::dec;
 
     // Helper function to create a test strategy
@@ -2367,7 +2367,7 @@ mod tests_adjust_option_position_short {
 mod tests_short_strangle_pnl {
     use super::*;
     use crate::model::utils::create_sample_position;
-    use crate::{assert_decimal_eq, assert_pos_relative_eq, pos};
+    use crate::{assert_decimal_eq, assert_pos_relative_eq};
     use rust_decimal_macros::dec;
 
     fn create_test_strangle() -> Result<ShortStrangle, StrategyError> {
@@ -2533,8 +2533,8 @@ mod tests_short_strangle_pnl {
 #[cfg(test)]
 mod tests_short_strangle_roll {
     use super::*;
+    use crate::assert_pos_relative_eq;
     use crate::model::utils::create_sample_position;
-    use crate::{assert_pos_relative_eq, pos};
     use tracing::info;
 
     fn create_test_strangle() -> Result<ShortStrangle, StrategyError> {
@@ -2863,7 +2863,7 @@ mod tests_short_strangle_roll {
 mod tests_strategy_constructor {
     use super::*;
     use crate::model::utils::create_sample_position;
-    use crate::{OptionStyle, Side, pos};
+    use crate::{OptionStyle, Side};
 
     mod short_strangle_tests {
         use super::*;
@@ -3017,7 +3017,7 @@ mod test_adjustments_pnl {
         BasicAble, DELTA_THRESHOLD, DeltaAdjustment, DeltaNeutrality, ShortStrangle,
     };
     use crate::{
-        ExpirationDate, OptionStyle, Positive, Side, assert_decimal_eq, assert_pos_relative_eq, pos,
+        ExpirationDate, OptionStyle, Positive, Side, assert_decimal_eq, assert_pos_relative_eq,
     };
 
     use rust_decimal_macros::dec;
@@ -3127,7 +3127,7 @@ mod test_adjustments_pnl {
 #[cfg(test)]
 mod test_valid_premium_for_shorts {
     use crate::strategies::ShortStrangle;
-    use crate::{ExpirationDate, Positive, pos};
+    use crate::{ExpirationDate, Positive};
 
     use crate::strategies::base::Positionable;
     use rust_decimal_macros::dec;
@@ -3168,7 +3168,7 @@ mod tests_strangle_position_management {
     use super::*;
     use crate::error::position::PositionValidationErrorKind;
     use crate::model::types::{OptionStyle, Side};
-    use crate::pos;
+
     use rust_decimal_macros::dec;
 
     fn create_test_short_strangle() -> ShortStrangle {
@@ -3275,7 +3275,7 @@ mod tests_strangle_position_management {
 mod tests_generate_delta_adjustments {
     use super::*;
     use crate::strategies::DELTA_THRESHOLD;
-    use crate::{ExpirationDate, assert_pos_relative_eq, pos};
+    use crate::{ExpirationDate, assert_pos_relative_eq};
     use rust_decimal_macros::dec;
 
     fn create_test_short_strangle() -> ShortStrangle {

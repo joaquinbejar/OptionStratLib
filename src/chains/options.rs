@@ -156,8 +156,8 @@ pub struct DeltasInStrike {
 #[cfg(test)]
 mod tests_options_in_strike {
     use super::*;
+    use crate::ExpirationDate;
     use crate::model::types::{OptionStyle, OptionType, Side};
-    use crate::{ExpirationDate, pos};
     use rust_decimal_macros::dec;
 
     // Helper function to create a sample option for testing

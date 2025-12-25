@@ -474,7 +474,6 @@ mod tests_optimizer {
     use super::*;
     use crate::model::ExpirationDate;
     use crate::model::types::{OptionStyle, OptionType};
-    use crate::pos;
 
     fn create_test_option(
         strike: Positive,

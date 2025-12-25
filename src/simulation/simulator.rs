@@ -464,7 +464,7 @@ mod tests {
         steps::{Step, Xstep, Ystep},
     };
     use crate::utils::{TimeFrame, time::convert_time_frame};
-    use crate::{ExpirationDate, Positive, pos};
+    use crate::{ExpirationDate, Positive};
     use rust_decimal_macros::dec;
     use tracing::{debug, info};
     #[cfg(feature = "plotly")]

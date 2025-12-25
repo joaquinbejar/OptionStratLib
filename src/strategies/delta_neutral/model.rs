@@ -1145,7 +1145,7 @@ pub struct DeltaNeutralResponse {
 #[cfg(test)]
 mod tests_display_implementations {
     use super::*;
-    use crate::pos;
+
     use rust_decimal_macros::dec;
 
     #[test]
@@ -1282,8 +1282,8 @@ mod tests_display_implementations {
 #[cfg(test)]
 mod tests_serialization {
     use super::*;
+    use crate::ExpirationDate;
     use crate::strategies::ShortStrangle;
-    use crate::{ExpirationDate, pos};
     use rust_decimal_macros::dec;
     use serde_json;
     use tracing::info;
@@ -1506,9 +1506,9 @@ mod tests_serialization {
 #[cfg(test)]
 mod tests_generate_delta_adjustments {
     use super::*;
+    use crate::ExpirationDate;
     use crate::strategies::base::BreakEvenable;
     use crate::strategies::{BasicAble, Validable};
-    use crate::{ExpirationDate, pos};
 
     struct MockDeltaNeutral;
     impl Greeks for MockDeltaNeutral {

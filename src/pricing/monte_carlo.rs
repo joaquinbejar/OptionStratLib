@@ -128,7 +128,7 @@ mod tests {
     use super::*;
     use crate::constants::{DAYS_IN_A_YEAR, ZERO};
     use crate::model::types::{OptionStyle, OptionType, Side};
-    use crate::{ExpirationDate, Positive, assert_decimal_eq, f2du, pos};
+    use crate::{ExpirationDate, Positive, assert_decimal_eq, f2du};
     use rust_decimal::MathematicalOps;
     use rust_decimal_macros::dec;
 
@@ -210,7 +210,7 @@ mod tests_price_option_monte_carlo {
     use crate::utils::time::convert_time_frame;
     #[cfg(feature = "static_export")]
     use crate::visualization::Graph;
-    use crate::{ExpirationDate, OptionStyle, Side, assert_pos_relative_eq, pos};
+    use crate::{ExpirationDate, OptionStyle, Side, assert_pos_relative_eq};
     use rust_decimal_macros::dec;
 
     #[test]

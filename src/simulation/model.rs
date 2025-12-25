@@ -271,7 +271,7 @@ impl Display for WalkType {
 #[cfg(test)]
 mod tests_walk_type {
     use super::*;
-    use crate::pos;
+
     use rust_decimal_macros::dec;
 
     #[test]
@@ -768,7 +768,7 @@ mod tests_walk_type {
 #[cfg(test)]
 mod tests_serialize {
     use super::*;
-    use crate::pos;
+
     use rust_decimal_macros::dec;
     use serde_json::{from_str, to_string};
 

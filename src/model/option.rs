@@ -16,7 +16,7 @@ use crate::strategies::base::BasicAble;
 use crate::visualization::{
     ColorScheme, Graph, GraphConfig, GraphData, LineStyle, Series2D, TraceMode,
 };
-use crate::{ExpirationDate, Positive, pos};
+use crate::{ExpirationDate, Positive};
 use num_traits::FromPrimitive;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
@@ -965,7 +965,7 @@ impl Graph for Options {
 mod tests_options {
     use super::*;
     use crate::model::utils::create_sample_option_simplest;
-    use crate::pos;
+
     use approx::assert_relative_eq;
     use chrono::{Duration, Utc};
     use num_traits::ToPrimitive;
@@ -1113,7 +1113,7 @@ mod tests_options {
 #[cfg(test)]
 mod tests_valid_option {
     use super::*;
-    use crate::pos;
+
     use rust_decimal_macros::dec;
 
     fn create_valid_option() -> Options {
@@ -1173,7 +1173,7 @@ mod tests_time_value {
     use super::*;
     use crate::model::utils::create_sample_option_simplest_strike;
 
-    use crate::{assert_decimal_eq, pos};
+    use crate::assert_decimal_eq;
     use rust_decimal_macros::dec;
     use tracing::debug;
 
@@ -1255,7 +1255,6 @@ mod tests_time_value {
 mod tests_options_payoffs {
     use super::*;
     use crate::model::utils::create_sample_option_simplest_strike;
-    use crate::pos;
 
     use rust_decimal_macros::dec;
 
@@ -1316,7 +1315,7 @@ mod tests_options_payoffs {
 mod tests_options_payoff_at_price {
     use super::*;
     use crate::model::utils::create_sample_option_simplest;
-    use crate::pos;
+
     use rust_decimal_macros::dec;
 
     #[test]
@@ -1368,7 +1367,7 @@ mod tests_options_payoff_at_price {
 mod tests_options_payoffs_with_quantity {
     use super::*;
     use crate::model::utils::create_sample_option;
-    use crate::pos;
+
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
@@ -1551,7 +1550,6 @@ mod tests_options_payoffs_with_quantity {
 mod tests_in_the_money {
     use super::*;
     use crate::model::utils::create_sample_option;
-    use crate::pos;
 
     #[test]
     fn test_call_in_the_money() {
@@ -1641,8 +1639,8 @@ mod tests_in_the_money {
 #[cfg(test)]
 mod tests_greeks {
     use super::*;
+    use crate::assert_decimal_eq;
     use crate::model::utils::create_sample_option_simplest;
-    use crate::{assert_decimal_eq, pos};
     use rust_decimal_macros::dec;
 
     const EPSILON: Decimal = dec!(1e-6);
@@ -1874,7 +1872,7 @@ mod tests_calculate_price_binomial {
     use crate::model::utils::{
         create_sample_option, create_sample_option_simplest, create_sample_option_with_date,
     };
-    use crate::pos;
+
     use chrono::Utc;
     use rust_decimal_macros::dec;
     use std::str::FromStr;
@@ -2025,7 +2023,7 @@ mod tests_calculate_price_binomial {
 #[cfg(test)]
 mod tests_options_black_scholes {
     use super::*;
-    use crate::{assert_decimal_eq, pos};
+    use crate::assert_decimal_eq;
     use rust_decimal_macros::dec;
 
     #[test]
@@ -2147,8 +2145,8 @@ mod tests_options_black_scholes {
 #[cfg(test)]
 mod tests_calculate_implied_volatility {
     use super::*;
+    use crate::assert_pos_relative_eq;
     use crate::error::VolatilityError;
-    use crate::{assert_pos_relative_eq, pos};
     use rust_decimal_macros::dec;
 
     #[test]

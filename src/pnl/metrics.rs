@@ -427,7 +427,7 @@ pub fn save_pnl_metrics_with_document(
 mod tests_pnl_metrics {
     use super::*;
     use crate::pnl::PnL;
-    use crate::pos;
+
     use chrono::Utc;
     use num_traits::FromPrimitive;
     use std::fs;
@@ -805,7 +805,6 @@ mod tests_pnl_metrics_serialization {
     use rust_decimal_macros::dec;
 
     use crate::pnl::PnL;
-    use crate::pos;
 
     #[test]
     fn test_pnl_metrics_step_serialization() {

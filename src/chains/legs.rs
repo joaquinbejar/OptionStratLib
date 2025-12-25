@@ -138,7 +138,7 @@ impl Display for StrategyLegs<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::pos;
+
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
 

@@ -852,8 +852,8 @@ test_strategy_traits!(BearCallSpread, test_short_call_implementations);
 #[cfg(test)]
 mod tests_bear_call_spread_strategies {
     use super::*;
+    use crate::assert_pos_relative_eq;
     use crate::model::ExpirationDate;
-    use crate::{assert_pos_relative_eq, pos};
     use approx::assert_relative_eq;
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
@@ -1092,7 +1092,7 @@ mod tests_bear_call_spread_positionable {
     use super::*;
     use crate::model::position::Position;
     use crate::model::types::OptionStyle;
-    use crate::{ExpirationDate, Options, pos};
+    use crate::{ExpirationDate, Options};
     use chrono::Utc;
     use rust_decimal_macros::dec;
 
@@ -1311,7 +1311,7 @@ mod tests_bear_call_spread_positionable {
 mod tests_bear_call_spread_validable {
     use super::*;
     use crate::model::ExpirationDate;
-    use crate::pos;
+
     use rust_decimal_macros::dec;
 
     fn create_valid_spread() -> BearCallSpread {
@@ -1496,7 +1496,7 @@ mod tests_bear_call_spread_validable {
 mod tests_bear_call_spread_profit {
     use super::*;
     use crate::model::ExpirationDate;
-    use crate::pos;
+
     use crate::pricing::payoff::Profit;
     use approx::assert_relative_eq;
     use num_traits::ToPrimitive;
@@ -1684,7 +1684,7 @@ mod tests_bear_call_spread_optimizable {
     use super::*;
     use crate::model::ExpirationDate;
     use crate::strategies::utils::{FindOptimalSide, OptimizationCriteria};
-    use crate::{pos, spos};
+
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
@@ -1954,7 +1954,6 @@ mod tests_bear_call_spread_optimizable {
 #[cfg(test)]
 mod tests_bear_call_spread_graph {
     use super::*;
-    use crate::pos;
 
     use rust_decimal_macros::dec;
 
@@ -1991,7 +1990,7 @@ mod tests_bear_call_spread_graph {
 #[cfg(test)]
 mod tests_bear_call_spread_probability {
     use super::*;
-    use crate::pos;
+
     use crate::strategies::probabilities::utils::PriceTrend;
     use rust_decimal_macros::dec;
 
@@ -2139,7 +2138,7 @@ mod tests_delta {
     use crate::strategies::bear_call_spread::BearCallSpread;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
-    use crate::{assert_decimal_eq, assert_pos_relative_eq, pos};
+    use crate::{assert_decimal_eq, assert_pos_relative_eq};
     use rust_decimal_macros::dec;
 
     fn get_strategy(long_strike: Positive, short_strike: Positive) -> BearCallSpread {
@@ -2267,7 +2266,7 @@ mod tests_delta_size {
     use crate::strategies::bear_call_spread::BearCallSpread;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
-    use crate::{ExpirationDate, Positive, Side, assert_decimal_eq, assert_pos_relative_eq, pos};
+    use crate::{ExpirationDate, Positive, Side, assert_decimal_eq, assert_pos_relative_eq};
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
 
@@ -2394,7 +2393,7 @@ mod tests_bear_call_spread_position_management {
     use super::*;
     use crate::error::position::PositionValidationErrorKind;
     use crate::model::types::{OptionStyle, Side};
-    use crate::pos;
+
     use rust_decimal_macros::dec;
     use tracing::error;
 
@@ -2504,7 +2503,7 @@ mod tests_bear_call_spread_position_management {
 mod tests_adjust_option_position_short {
     use super::*;
     use crate::model::types::{OptionStyle, Side};
-    use crate::pos;
+
     use rust_decimal_macros::dec;
 
     // Helper function to create a test strategy
@@ -2625,7 +2624,6 @@ mod tests_adjust_option_position_short {
 mod tests_strategy_constructor {
     use super::*;
     use crate::model::utils::create_sample_position;
-    use crate::pos;
 
     #[test]
     fn test_get_strategy_valid() {
@@ -2769,7 +2767,7 @@ mod tests_strategy_constructor {
 mod tests_bear_call_spread_pnl {
     use super::*;
     use crate::model::utils::create_sample_position;
-    use crate::{assert_decimal_eq, assert_pos_relative_eq, pos};
+    use crate::{assert_decimal_eq, assert_pos_relative_eq};
     use rust_decimal_macros::dec;
 
     fn create_test_bear_call_spread() -> Result<BearCallSpread, StrategyError> {

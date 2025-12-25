@@ -1,3 +1,4 @@
+use crate::Positive;
 use crate::error::ChainError;
 use crate::series::OptionSeries;
 use crate::simulation::steps::{Step, Ystep};
@@ -5,7 +6,6 @@ use crate::simulation::{WalkParams, WalkType};
 use crate::utils::TimeFrame;
 use crate::utils::others::calculate_log_returns;
 use crate::volatility::{adjust_volatility, constant_volatility};
-use crate::{Positive, pos};
 use core::option::Option;
 use rust_decimal::Decimal;
 use tracing::debug;
@@ -204,7 +204,7 @@ mod tests_generator_optionseries {
     use crate::simulation::{WalkParams, WalkType, WalkTypeAble};
     use crate::utils::TimeFrame;
     use crate::utils::time::convert_time_frame;
-    use crate::{ExpirationDate, assert_pos_relative_eq, spos};
+    use crate::{ExpirationDate, assert_pos_relative_eq};
     use rust_decimal_macros::dec;
 
     // Mock Walker for testing

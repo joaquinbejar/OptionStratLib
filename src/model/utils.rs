@@ -6,7 +6,7 @@
 use crate::error::ChainError;
 use crate::model::Position;
 use crate::model::types::{OptionStyle, OptionType, Side};
-use crate::{ExpirationDate, Options, Positive, pos};
+use crate::{ExpirationDate, Options, Positive};
 use chrono::{NaiveDateTime, TimeZone, Utc};
 use rust_decimal::{Decimal, MathematicalOps};
 use rust_decimal_macros::dec;
@@ -542,7 +542,7 @@ mod tests_positive_f64_to_f64 {
 #[cfg(test)]
 mod tests_mean_and_std {
     use super::*;
-    use crate::pos;
+
     use approx::assert_relative_eq;
 
     #[test]

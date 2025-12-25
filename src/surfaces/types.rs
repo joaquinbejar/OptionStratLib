@@ -233,8 +233,8 @@ pub enum Axis {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::Positive;
     use crate::surfaces::Surface;
-    use crate::{Positive, pos};
     use rust_decimal_macros::dec;
     use std::collections::BTreeSet;
 

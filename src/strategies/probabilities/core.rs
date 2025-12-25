@@ -7,6 +7,7 @@
 //! The `ProbabilityAnalysis` trait extends the `Strategies` and `Profit` traits to provide
 //! comprehensive probability analysis capabilities for option strategies.
 
+use crate::Positive;
 use crate::error::probability::ProbabilityError;
 use crate::model::ProfitLossRange;
 use crate::pricing::payoff::Profit;
@@ -15,7 +16,6 @@ use crate::strategies::probabilities::analysis::StrategyProbabilityAnalysis;
 use crate::strategies::probabilities::utils::{
     PriceTrend, VolatilityAdjustment, calculate_single_point_probability,
 };
-use crate::{Positive, pos};
 use num_traits::ToPrimitive;
 use rust_decimal::Decimal;
 use tracing::warn;
@@ -350,8 +350,8 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
 #[cfg(test)]
 mod tests_probability_analysis {
     use super::*;
+    use crate::ExpirationDate;
     use crate::strategies::BullCallSpread;
-    use crate::{ExpirationDate, pos};
     use rust_decimal_macros::dec;
 
     fn test_strategy() -> BullCallSpread {

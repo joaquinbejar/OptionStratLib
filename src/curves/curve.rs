@@ -1661,8 +1661,8 @@ impl GeometricTransformations<Point2D> for Curve {
 #[cfg(test)]
 mod tests_curves {
     use super::*;
+    use crate::Positive;
     use crate::curves::utils::{create_constant_curve, create_linear_curve};
-    use crate::{Positive, pos};
     use Decimal;
     use rust_decimal_macros::dec;
 

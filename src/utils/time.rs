@@ -3,8 +3,8 @@
    Email: jb@taunais.com
    Date: 23/10/24
 ******************************************************************************/
+use crate::Positive;
 use crate::constants::*;
-use crate::{Positive, pos};
 use chrono::{Duration, Local, NaiveTime, Utc};
 use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
@@ -325,7 +325,7 @@ pub fn get_today_or_tomorrow_formatted() -> String {
 #[cfg(test)]
 mod tests_timeframe {
     use super::*;
-    use crate::{assert_pos_relative_eq, pos};
+    use crate::assert_pos_relative_eq;
 
     #[test]
     fn test_microsecond_periods() {
@@ -475,7 +475,7 @@ mod tests_timeframe {
 #[cfg(test)]
 mod tests_timeframe_convert {
     use super::*;
-    use crate::{assert_pos_relative_eq, pos};
+    use crate::assert_pos_relative_eq;
 
     #[test]
     fn test_convert_seconds_to_minutes() {

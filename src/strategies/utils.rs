@@ -145,7 +145,7 @@ pub(crate) fn calculate_price_range(
 #[cfg(test)]
 mod tests_strategies_utils {
     use super::*;
-    use crate::pos;
+
     use approx::assert_relative_eq;
 
     #[test]

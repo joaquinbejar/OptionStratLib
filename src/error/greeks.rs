@@ -623,8 +623,6 @@ mod tests_error_greeks_extended {
     use super::*;
     use crate::error::decimal::DecimalError::InvalidPrecision;
 
-    use crate::pos;
-
     #[test]
     fn test_greeks_error_std_error() {
         let error = GreeksError::StdError("An error occurred".to_string());

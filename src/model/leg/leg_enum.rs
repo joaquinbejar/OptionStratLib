@@ -386,7 +386,7 @@ mod tests {
     use crate::OptionStyle;
     use crate::model::ExpirationDate;
     use crate::model::utils::create_sample_option_simplest;
-    use crate::pos;
+
     use chrono::Utc;
 
     fn create_test_option_position() -> Position {

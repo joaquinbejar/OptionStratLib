@@ -135,7 +135,7 @@ impl StrategyRequest {
 mod tests_serialization {
     use super::*;
     use crate::model::utils::create_sample_option_with_date;
-    use crate::{OptionStyle, Side, pos};
+    use crate::{OptionStyle, Side};
     use chrono::{DateTime, NaiveDateTime, Utc};
     use serde_json;
 
@@ -295,7 +295,7 @@ mod tests_serialization {
 mod tests_strategies_build_model {
     use super::*;
     use crate::model::utils::create_sample_option_with_date;
-    use crate::{OptionStyle, Side, assert_decimal_eq, pos};
+    use crate::{OptionStyle, Side, assert_decimal_eq};
     use chrono::{DateTime, NaiveDateTime, Utc};
     use rust_decimal_macros::dec;
     use serde_json;

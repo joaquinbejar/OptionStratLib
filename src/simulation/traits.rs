@@ -686,7 +686,7 @@ mod tests_walk_type_able {
     use super::*;
     use crate::ExpirationDate;
     use crate::Positive;
-    use crate::pos;
+
     use crate::simulation::model::WalkType;
     use crate::simulation::params::WalkParams;
     use crate::simulation::steps::Step;

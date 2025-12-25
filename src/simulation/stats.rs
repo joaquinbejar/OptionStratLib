@@ -261,7 +261,7 @@ impl SimulationStats {
 mod tests {
     use super::*;
     use crate::pnl::PnL;
-    use crate::pos;
+
     use chrono::Utc;
     use std::collections::HashMap;
 

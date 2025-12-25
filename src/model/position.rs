@@ -3,6 +3,7 @@
    Email: jb@taunais.com
    Date: 18/8/24
 ******************************************************************************/
+use crate::Positive;
 use crate::chains::OptionData;
 use crate::error::position::PositionValidationErrorKind;
 use crate::error::{GreeksError, PositionError, PricingError, StrategyError, TransactionError};
@@ -16,7 +17,6 @@ use crate::pricing::payoff::Profit;
 use crate::strategies::base::BasicAble;
 use crate::visualization::{Graph, GraphConfig, GraphData};
 use crate::{ExpirationDate, OptionType, Options};
-use crate::{Positive, pos};
 use chrono::{DateTime, Utc};
 use num_traits::ToPrimitive;
 use rust_decimal::Decimal;
@@ -1095,7 +1095,7 @@ mod tests_position {
     use super::*;
     use crate::constants::ZERO;
     use crate::model::types::{OptionStyle, OptionType, Side};
-    use crate::pos;
+
     use chrono::Duration;
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
@@ -1746,7 +1746,6 @@ mod tests_position {
 mod tests_valid_position {
     use super::*;
     use crate::model::utils::create_sample_position;
-    use crate::pos;
 
     #[test]
     fn test_valid_position() {
@@ -1809,7 +1808,7 @@ mod tests_valid_position {
 mod tests_position_break_even {
     use super::*;
     use crate::model::types::{OptionStyle, OptionType, Side};
-    use crate::pos;
+
     use rust_decimal_macros::dec;
 
     fn setup_option(
@@ -2017,7 +2016,7 @@ mod tests_position_break_even {
 mod tests_position_max_loss_profit {
     use super::*;
     use crate::model::types::{OptionStyle, OptionType, Side};
-    use crate::pos;
+
     use approx::assert_relative_eq;
     use rust_decimal_macros::dec;
 
@@ -2249,7 +2248,7 @@ mod tests_position_max_loss_profit {
 #[cfg(test)]
 mod tests_update_from_option_data {
     use super::*;
-    use crate::{pos, spos};
+
     use rust_decimal_macros::dec;
 
     fn create_test_option_data() -> OptionData {
@@ -2329,7 +2328,6 @@ mod tests_update_from_option_data {
 #[cfg(test)]
 mod tests_premium {
     use super::*;
-    use crate::pos;
 
     fn setup_basic_position(side: Side) -> Position {
         let option = Options {
@@ -2398,7 +2396,7 @@ mod tests_premium {
 #[cfg(test)]
 mod tests_pnl_calculator {
     use super::*;
-    use crate::{OptionType, assert_decimal_eq, pos};
+    use crate::{OptionType, assert_decimal_eq};
     use rust_decimal_macros::dec;
 
     fn setup_test_position(side: Side, option_style: OptionStyle) -> Position {
@@ -2839,7 +2837,7 @@ mod tests_pnl_calculator {
 mod tests_position_serde {
     use super::*;
     use crate::model::utils::create_sample_position;
-    use crate::pos;
+
     use serde_json;
     use tracing::info;
 

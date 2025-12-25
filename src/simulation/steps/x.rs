@@ -270,7 +270,6 @@ where
 mod tests {
     use super::*;
     use crate::model::ExpirationDate;
-    use crate::pos;
 
     #[test]
     fn test_days_left() {
@@ -299,7 +298,7 @@ mod tests {
 mod tests_serialize {
     use super::*;
     use crate::model::ExpirationDate;
-    use crate::pos;
+
     use rust_decimal_macros::dec;
     use serde_json::{Value, json};
 

@@ -508,7 +508,7 @@ pub fn calculate_delta_neutral_sizes(
 #[cfg(test)]
 mod tests_calculate_delta_neutral_sizes {
     use super::*;
-    use crate::{assert_pos_relative_eq, pos};
+    use crate::assert_pos_relative_eq;
     use rust_decimal_macros::dec;
 
     #[test]
@@ -547,7 +547,7 @@ mod tests_calculate_delta_neutral_sizes {
 mod tests_calculate_d_values {
     use super::*;
     use crate::model::types::{OptionStyle, OptionType, Side};
-    use crate::pos;
+
     use approx::assert_relative_eq;
     use rust_decimal_macros::dec;
 
@@ -585,7 +585,7 @@ mod tests_calculate_d_values {
 #[cfg(test)]
 mod tests_src_greeks_utils {
     use super::*;
-    use crate::pos;
+
     use approx::assert_relative_eq;
     use num_traits::FloatConst;
     use rust_decimal_macros::dec;
@@ -695,7 +695,7 @@ mod tests_src_greeks_utils {
 #[cfg(test)]
 mod calculate_d1_values {
     use super::*;
-    use crate::pos;
+
     use rust_decimal_macros::dec;
 
     #[test]
@@ -869,7 +869,7 @@ mod calculate_d1_values {
 mod calculate_d1_values_bis {
     use super::*;
     use crate::error::greeks::{GreeksError, InputErrorKind};
-    use crate::pos;
+
     use approx::assert_relative_eq;
     use rust_decimal_macros::dec;
 
@@ -1054,7 +1054,7 @@ mod calculate_d1_values_bis {
 #[cfg(test)]
 mod calculate_d2_values {
     use super::*;
-    use crate::pos;
+
     use rust_decimal_macros::dec;
 
     #[test]
@@ -1227,7 +1227,7 @@ mod calculate_d2_values {
 #[cfg(test)]
 mod calculate_d2_values_bis {
     use super::*;
-    use crate::{assert_decimal_eq, pos};
+    use crate::assert_decimal_eq;
     use approx::assert_relative_eq;
     use rust_decimal_macros::dec;
 
@@ -1998,7 +1998,7 @@ mod calculate_big_n_values {
 #[cfg(test)]
 mod tests_d1_d2_edge_cases {
     use super::*;
-    use crate::{assert_decimal_eq, pos};
+    use crate::assert_decimal_eq;
     use rust_decimal_macros::dec;
 
     #[test]
@@ -2107,9 +2107,9 @@ mod tests_cumulative_distribution {
 #[cfg(test)]
 mod tests_calculate_d_values_bis {
     use super::*;
+    use crate::assert_decimal_eq;
     use crate::model::ExpirationDate;
     use crate::model::types::{OptionStyle, OptionType, Side};
-    use crate::{assert_decimal_eq, pos};
     use rust_decimal_macros::dec;
 
     #[test]
@@ -2137,7 +2137,7 @@ mod tests_calculate_d_values_bis {
 #[cfg(test)]
 mod tests_edge_cases_and_errors {
     use super::*;
-    use crate::pos;
+
     use rust_decimal_macros::dec;
 
     #[test]

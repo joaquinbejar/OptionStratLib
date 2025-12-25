@@ -857,7 +857,7 @@ mod tests_pmcc_validation {
     use super::*;
     use crate::constants::DAYS_IN_A_YEAR;
     use crate::error::position::PositionValidationErrorKind;
-    use crate::pos;
+
     use rust_decimal_macros::dec;
 
     fn create_basic_strategy() -> PoorMansCoveredCall {
@@ -995,7 +995,7 @@ mod tests_pmcc_optimization {
     use super::*;
     use crate::chains::OptionData;
     use crate::constants::DAYS_IN_A_YEAR;
-    use crate::{pos, spos};
+
     use rust_decimal_macros::dec;
 
     fn create_test_option_chain() -> OptionChain {
@@ -1171,7 +1171,7 @@ mod tests_pmcc_optimization {
 mod tests_pmcc_pnl {
     use super::*;
     use crate::constants::DAYS_IN_A_YEAR;
-    use crate::pos;
+
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
@@ -1258,7 +1258,7 @@ mod tests_pmcc_pnl {
 mod tests_pmcc_best_area {
     use super::*;
     use crate::constants::DAYS_IN_A_YEAR;
-    use crate::pos;
+
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
@@ -1333,7 +1333,6 @@ mod tests_pmcc_best_area {
 mod tests_pmcc_best_ratio {
     use super::*;
     use crate::constants::DAYS_IN_A_YEAR;
-    use crate::pos;
 
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
@@ -1413,7 +1412,7 @@ mod tests_short_straddle_delta {
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use crate::strategies::poor_mans_covered_call::PoorMansCoveredCall;
-    use crate::{assert_decimal_eq, assert_pos_relative_eq, pos};
+    use crate::{assert_decimal_eq, assert_pos_relative_eq};
     use rust_decimal_macros::dec;
 
     fn get_strategy(long_strike: Positive, short_strike: Positive) -> PoorMansCoveredCall {
@@ -1540,7 +1539,7 @@ mod tests_short_straddle_delta_size {
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use crate::strategies::poor_mans_covered_call::PoorMansCoveredCall;
-    use crate::{assert_decimal_eq, assert_pos_relative_eq, pos};
+    use crate::{assert_decimal_eq, assert_pos_relative_eq};
     use rust_decimal_macros::dec;
 
     fn get_strategy(long_strike: Positive, short_strike: Positive) -> PoorMansCoveredCall {
@@ -1663,8 +1662,8 @@ mod tests_short_straddle_delta_size {
 #[cfg(test)]
 mod tests_poor_mans_covered_call_probability {
     use super::*;
+    use crate::assert_pos_relative_eq;
     use crate::strategies::probabilities::utils::PriceTrend;
-    use crate::{assert_pos_relative_eq, pos};
     use rust_decimal_macros::dec;
 
     /// Creates a test Poor Man's Covered Call with standard parameters
@@ -1868,7 +1867,7 @@ mod tests_poor_mans_covered_call_position_management {
     use super::*;
     use crate::error::position::PositionValidationErrorKind;
     use crate::model::types::{OptionStyle, Side};
-    use crate::pos;
+
     use rust_decimal_macros::dec;
     use tracing::error;
 
@@ -1979,7 +1978,7 @@ mod tests_poor_mans_covered_call_position_management {
 mod tests_adjust_option_position {
     use super::*;
     use crate::model::types::{OptionStyle, Side};
-    use crate::pos;
+
     use rust_decimal_macros::dec;
 
     // Helper function to create a test strategy
@@ -2101,7 +2100,6 @@ mod tests_adjust_option_position {
 mod tests_strategy_constructor {
     use super::*;
     use crate::model::utils::create_sample_position;
-    use crate::pos;
 
     #[test]
     fn test_get_strategy_valid() {
@@ -2213,8 +2211,8 @@ mod tests_strategy_constructor {
 #[cfg(test)]
 mod tests_poor_mans_covered_call_pnl {
     use super::*;
+    use crate::assert_pos_relative_eq;
     use crate::model::utils::create_sample_position;
-    use crate::{assert_pos_relative_eq, pos};
     use rust_decimal_macros::dec;
 
     fn create_test_poor_mans_covered_call() -> Result<PoorMansCoveredCall, StrategyError> {

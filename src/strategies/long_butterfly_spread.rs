@@ -18,7 +18,6 @@ use crate::{
         utils::mean_and_std,
     },
     pnl::{PnLCalculator, utils::PnL},
-    pos,
     pricing::payoff::Profit,
     strategies::{
         BasicAble, Strategies, StrategyConstructor,
@@ -1068,7 +1067,7 @@ test_strategy_traits!(LongButterflySpread, test_short_call_implementations);
 mod tests_long_butterfly_spread {
     use super::*;
     use crate::model::ExpirationDate;
-    use crate::pos;
+
     use rust_decimal_macros::dec;
 
     fn create_test_butterfly() -> LongButterflySpread {
@@ -1458,7 +1457,7 @@ mod tests_long_butterfly_profit {
     use super::*;
     use crate::constants::ZERO;
     use crate::model::ExpirationDate;
-    use crate::pos;
+
     use approx::assert_relative_eq;
     use num_traits::ToPrimitive;
     use rust_decimal::Decimal;
@@ -1578,7 +1577,7 @@ mod tests_long_butterfly_delta {
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use crate::strategies::long_butterfly_spread::LongButterflySpread;
-    use crate::{assert_decimal_eq, assert_pos_relative_eq, pos};
+    use crate::{assert_decimal_eq, assert_pos_relative_eq};
 
     use rust_decimal_macros::dec;
 
@@ -1726,7 +1725,7 @@ mod tests_long_butterfly_delta_size {
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use crate::strategies::long_butterfly_spread::LongButterflySpread;
-    use crate::{assert_decimal_eq, assert_pos_relative_eq, pos};
+    use crate::{assert_decimal_eq, assert_pos_relative_eq};
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
     use std::str::FromStr;
@@ -1874,7 +1873,7 @@ mod tests_long_butterfly_position_management {
     use super::*;
     use crate::error::position::PositionValidationErrorKind;
     use crate::model::types::{OptionStyle, Side};
-    use crate::pos;
+
     use rust_decimal_macros::dec;
     use tracing::error;
 
@@ -2049,7 +2048,7 @@ mod tests_long_butterfly_position_management {
 mod tests_adjust_option_position_long {
     use super::*;
     use crate::model::types::{OptionStyle, Side};
-    use crate::pos;
+
     use rust_decimal_macros::dec;
 
     // Helper function to create a test strategy
@@ -2171,7 +2170,6 @@ mod tests_adjust_option_position_long {
 mod tests_long_butterfly_spread_constructor {
     use super::*;
     use crate::model::utils::create_sample_position;
-    use crate::pos;
 
     #[test]
     fn test_get_strategy_valid() {
@@ -2462,8 +2460,8 @@ mod tests_long_butterfly_spread_constructor {
 #[cfg(test)]
 mod tests_long_butterfly_spread_pnl {
     use super::*;
+    use crate::assert_decimal_eq;
     use crate::model::utils::create_sample_position;
-    use crate::{assert_decimal_eq, pos};
     use rust_decimal_macros::dec;
 
     fn create_test_long_butterfly_spread() -> Result<LongButterflySpread, StrategyError> {
@@ -2611,7 +2609,7 @@ mod tests_butterfly_strategies {
     use super::*;
     use crate::constants::ZERO;
     use crate::model::ExpirationDate;
-    use crate::pos;
+
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
@@ -2810,7 +2808,6 @@ mod tests_butterfly_strategies {
 mod tests_butterfly_optimizable {
     use super::*;
     use crate::model::ExpirationDate;
-    use crate::{pos, spos};
 
     use rust_decimal_macros::dec;
 
@@ -2919,7 +2916,7 @@ mod tests_butterfly_optimizable {
 mod tests_butterfly_probability {
     use super::*;
     use crate::model::ExpirationDate;
-    use crate::pos;
+
     use crate::strategies::probabilities::calculate_price_probability;
     use rust_decimal_macros::dec;
 

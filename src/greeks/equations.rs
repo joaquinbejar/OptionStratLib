@@ -1840,7 +1840,7 @@ pub mod tests_delta_equations {
     use crate::model::utils::create_sample_option;
     use crate::strategies::DELTA_THRESHOLD;
 
-    use crate::{ExpirationDate, assert_decimal_eq, pos};
+    use crate::{ExpirationDate, assert_decimal_eq};
     use approx::assert_relative_eq;
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
@@ -2067,7 +2067,7 @@ pub mod tests_gamma_equations {
     use crate::model::types::{OptionStyle, Side};
     use crate::model::utils::create_sample_option;
 
-    use crate::{ExpirationDate, pos};
+    use crate::ExpirationDate;
     use approx::assert_relative_eq;
     use num_traits::ToPrimitive;
     use tracing::info;
@@ -2185,7 +2185,7 @@ mod tests_gamma_equations_values {
     use super::*;
     use crate::model::types::{OptionStyle, Side};
 
-    use crate::{ExpirationDate, OptionType, pos};
+    use crate::{ExpirationDate, OptionType};
     use approx::assert_relative_eq;
     use num_traits::ToPrimitive;
     use tracing::info;
@@ -2259,7 +2259,7 @@ pub mod tests_vega_equation {
     use super::*;
     use crate::constants::DAYS_IN_A_YEAR;
     use crate::model::types::{OptionType, Side};
-    use crate::{ExpirationDate, Positive, pos};
+    use crate::{ExpirationDate, Positive};
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
@@ -2377,7 +2377,7 @@ pub mod tests_rho_equations {
     use super::*;
     use crate::constants::DAYS_IN_A_YEAR;
     use crate::model::types::{OptionStyle, OptionType, Side};
-    use crate::{ExpirationDate, assert_decimal_eq, pos};
+    use crate::{ExpirationDate, assert_decimal_eq};
     use approx::assert_relative_eq;
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
@@ -2458,10 +2458,10 @@ pub mod tests_rho_equations {
 #[cfg(test)]
 pub mod tests_theta_long_equations {
     use super::*;
+    use crate::ExpirationDate;
     use crate::constants::DAYS_IN_A_YEAR;
     use crate::model::types::Side;
     use crate::model::utils::create_sample_option;
-    use crate::{ExpirationDate, pos};
     use approx::assert_relative_eq;
     use num_traits::ToPrimitive;
 
@@ -2559,10 +2559,10 @@ pub mod tests_theta_long_equations {
 #[cfg(test)]
 pub mod tests_theta_short_equations {
     use super::*;
+    use crate::ExpirationDate;
     use crate::constants::DAYS_IN_A_YEAR;
     use crate::model::types::Side;
     use crate::model::utils::create_sample_option;
-    use crate::{ExpirationDate, pos};
     use approx::assert_relative_eq;
     use num_traits::ToPrimitive;
 
@@ -2661,7 +2661,7 @@ pub mod tests_theta_short_equations {
 mod tests_greeks_trait {
     use super::*;
     use crate::model::types::{OptionStyle, OptionType, Side};
-    use crate::{ExpirationDate, assert_decimal_eq, pos};
+    use crate::{ExpirationDate, assert_decimal_eq};
     use rust_decimal_macros::dec;
 
     // A simple struct for testing the Greeks trait
@@ -2941,7 +2941,7 @@ pub mod tests_vanna_equation {
     use super::*;
     use crate::constants::DAYS_IN_A_YEAR;
     use crate::model::types::{OptionType, Side};
-    use crate::{ExpirationDate, Positive, pos};
+    use crate::{ExpirationDate, Positive};
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
@@ -3059,7 +3059,7 @@ pub mod tests_vomma_equation {
     use super::*;
     use crate::constants::DAYS_IN_A_YEAR;
     use crate::model::types::{OptionType, Side};
-    use crate::{ExpirationDate, Positive, pos};
+    use crate::{ExpirationDate, Positive};
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
@@ -3177,7 +3177,7 @@ pub mod tests_veta_equation {
     use super::*;
     use crate::constants::DAYS_IN_A_YEAR;
     use crate::model::types::{OptionType, Side};
-    use crate::{ExpirationDate, Positive, pos};
+    use crate::{ExpirationDate, Positive};
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
@@ -3295,7 +3295,7 @@ pub mod tests_charm_equations {
     use super::*;
     use crate::model::types::{OptionStyle, Side};
     use crate::model::utils::create_sample_option_with_days;
-    use crate::pos;
+
     use approx::assert_relative_eq;
     use num_traits::ToPrimitive;
     use tracing::info;
@@ -3408,7 +3408,7 @@ pub mod tests_volatility_greeks_edge_cases {
     use super::*;
     use crate::model::types::{OptionStyle, Side};
     use crate::model::utils::create_sample_option_with_days;
-    use crate::pos;
+
     use tracing::info;
 
     // ==================== VANNA EDGE CASES ====================
@@ -4100,7 +4100,7 @@ pub mod tests_color_equations {
     use super::*;
     use crate::model::types::{OptionStyle, Side};
     use crate::model::utils::create_sample_option_with_days;
-    use crate::pos;
+
     use approx::assert_relative_eq;
     use num_traits::ToPrimitive;
     use tracing::info;

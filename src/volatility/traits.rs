@@ -119,7 +119,7 @@ mod tests_volatility_traits {
     use super::*;
     use crate::curves::{Curve, Point2D};
     use crate::metrics::VolatilitySkew;
-    use crate::pos;
+
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
     use std::collections::BTreeSet;

@@ -146,7 +146,7 @@ pub trait VolatilitySensitivitySurface {
 mod tests_volatility_sensitivity {
     use super::*;
     use crate::curves::Point2D;
-    use crate::pos;
+
     use crate::surfaces::Point3D;
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;

@@ -345,7 +345,7 @@ mod tests_random_walk {
     use crate::Positive;
 
     use crate::error::SimulationError;
-    use crate::pos;
+
     use crate::simulation::WalkParams;
     use crate::simulation::WalkType;
     use crate::simulation::WalkTypeAble;

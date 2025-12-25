@@ -2,6 +2,7 @@ use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, StrategyBasics, StrategyType, Validable,
 };
 use crate::error::strategies::BreakEvenErrorKind;
+use crate::test_strategy_traits;
 use crate::{
     ExpirationDate, Options, Positive,
     chains::{StrategyLegs, chain::OptionChain, utils::OptionDataGroup},
@@ -27,7 +28,6 @@ use crate::{
         utils::{FindOptimalSide, OptimizationCriteria},
     },
 };
-use crate::{spos, test_strategy_traits};
 use chrono::Utc;
 use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
@@ -1022,7 +1022,7 @@ test_strategy_traits!(CallButterfly, test_short_call_implementations);
 #[cfg(test)]
 mod tests_call_butterfly {
     use super::*;
-    use crate::pos;
+
     use approx::assert_relative_eq;
     use rust_decimal_macros::dec;
 
@@ -1105,7 +1105,7 @@ mod tests_call_butterfly {
 #[cfg(test)]
 mod tests_call_butterfly_validation {
     use super::*;
-    use crate::pos;
+
     use rust_decimal_macros::dec;
 
     fn setup_basic_strategy() -> CallButterfly {
@@ -1153,7 +1153,7 @@ mod tests_call_butterfly_delta {
     use crate::strategies::call_butterfly::CallButterfly;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
-    use crate::{assert_decimal_eq, assert_pos_relative_eq, pos};
+    use crate::{assert_decimal_eq, assert_pos_relative_eq};
     use rust_decimal_macros::dec;
 
     fn get_strategy(underlying_price: Positive) -> CallButterfly {
@@ -1298,7 +1298,7 @@ mod tests_call_butterfly_delta_size {
     use crate::strategies::call_butterfly::CallButterfly;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
-    use crate::{assert_decimal_eq, assert_pos_relative_eq, pos};
+    use crate::{assert_decimal_eq, assert_pos_relative_eq};
     use rust_decimal_macros::dec;
 
     fn get_strategy(underlying_price: Positive) -> CallButterfly {
@@ -1440,7 +1440,7 @@ mod tests_call_butterfly_delta_size {
 #[cfg(test)]
 mod tests_call_butterfly_optimizable {
     use super::*;
-    use crate::pos;
+
     use approx::assert_relative_eq;
     use rust_decimal_macros::dec;
 
@@ -1620,8 +1620,8 @@ mod tests_call_butterfly_optimizable {
 #[cfg(test)]
 mod tests_call_butterfly_probability {
     use super::*;
+    use crate::assert_pos_relative_eq;
     use crate::strategies::probabilities::utils::PriceTrend;
-    use crate::{assert_pos_relative_eq, pos};
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
@@ -1829,7 +1829,7 @@ mod tests_call_butterfly_position_management {
     use super::*;
     use crate::error::position::PositionValidationErrorKind;
     use crate::model::types::{OptionStyle, Side};
-    use crate::pos;
+
     use rust_decimal_macros::dec;
 
     fn create_test_call_butterfly() -> CallButterfly {
@@ -2006,7 +2006,7 @@ mod tests_call_butterfly_position_management {
 mod tests_adjust_option_position {
     use super::*;
     use crate::model::types::{OptionStyle, Side};
-    use crate::pos;
+
     use rust_decimal_macros::dec;
 
     // Helper function to create a test strategy
@@ -2128,7 +2128,6 @@ mod tests_adjust_option_position {
 mod tests_strategy_constructor {
     use super::*;
     use crate::model::utils::create_sample_position;
-    use crate::pos;
 
     #[test]
     fn test_get_strategy_valid() {
@@ -2312,7 +2311,7 @@ mod tests_strategy_constructor {
 mod tests_call_butterfly_pnl {
     use super::*;
     use crate::model::utils::create_sample_position;
-    use crate::{assert_decimal_eq, assert_pos_relative_eq, pos};
+    use crate::{assert_decimal_eq, assert_pos_relative_eq};
     use rust_decimal_macros::dec;
 
     fn setup_test_strategy() -> CallButterfly {

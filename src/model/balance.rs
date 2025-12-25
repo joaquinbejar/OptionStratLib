@@ -361,7 +361,7 @@ impl Default for Portfolio {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::pos;
+
     use rust_decimal_macros::dec;
 
     #[test]

@@ -233,8 +233,6 @@ mod tests_implied_volatility_traits {
 
     #[test]
     fn test_iv_surface_implementation() {
-        use crate::pos;
-
         let iv = TestIVSurface;
         let days = vec![pos!(30.0), pos!(60.0), pos!(90.0)];
         let surface = iv.iv_surface(days).unwrap();
@@ -245,8 +243,6 @@ mod tests_implied_volatility_traits {
 
     #[test]
     fn test_iv_surface_time_scaling() {
-        use crate::pos;
-
         let iv = TestIVSurface;
         let days = vec![pos!(30.0), pos!(90.0)];
         let surface = iv.iv_surface(days).unwrap();

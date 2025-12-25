@@ -21,7 +21,6 @@ use crate::{
         utils::mean_and_std,
     },
     pnl::{PnLCalculator, utils::PnL},
-    pos,
     pricing::payoff::Profit,
     strategies::{
         BasicAble, DeltaAdjustment, Strategies, StrategyConstructor,

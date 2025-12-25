@@ -425,7 +425,6 @@ impl Default for FuturePosition {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::pos;
 
     #[test]
     fn test_future_position_new() {

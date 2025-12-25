@@ -609,7 +609,6 @@ fn calculate_floating_strike_payoff(info: &PayoffInfo) -> f64 {
 #[cfg(test)]
 mod tests_payoff {
     use super::*;
-    use crate::pos;
 
     #[test]
     fn test_european_call() {
@@ -729,7 +728,6 @@ mod tests_payoff {
 #[cfg(test)]
 mod tests_calculate_floating_strike_payoff {
     use super::*;
-    use crate::pos;
 
     #[test]
     fn test_call_option_with_spot_min() {
@@ -819,7 +817,6 @@ mod tests_calculate_floating_strike_payoff {
 #[cfg(test)]
 mod tests_option_type {
     use super::*;
-    use crate::pos;
 
     #[test]
     fn test_asian_geometric_call() {
@@ -933,7 +930,6 @@ mod tests_option_type {
 #[cfg(test)]
 mod tests_vec_collection {
     use crate::model::positive::Positive;
-    use crate::pos;
 
     #[test]
     fn test_collect_empty_iterator() {
@@ -996,7 +992,7 @@ mod tests_vec_collection {
 mod test_asian_options {
     use crate::model::types::AsianAveragingType;
     use crate::model::{OptionStyle, OptionType, Side};
-    use crate::pos;
+
     use crate::pricing::{Payoff, PayoffInfo};
 
     #[test]
@@ -1036,7 +1032,7 @@ mod test_asian_options {
 mod test_barrier_options {
     use crate::model::types::BarrierType;
     use crate::model::{OptionStyle, OptionType, Side};
-    use crate::pos;
+
     use crate::pricing::{Payoff, PayoffInfo};
 
     #[test]
@@ -1077,7 +1073,7 @@ mod test_barrier_options {
 #[cfg(test)]
 mod test_cliquet_options {
     use crate::model::{OptionStyle, OptionType, Side};
-    use crate::pos;
+
     use crate::pricing::{Payoff, PayoffInfo};
 
     #[test]
@@ -1100,7 +1096,7 @@ mod test_cliquet_options {
 #[cfg(test)]
 mod test_rainbow_options {
     use crate::model::{OptionStyle, OptionType, Side};
-    use crate::pos;
+
     use crate::pricing::{Payoff, PayoffInfo};
 
     #[test]
@@ -1121,7 +1117,7 @@ mod test_rainbow_options {
 #[cfg(test)]
 mod test_exchange_options {
     use crate::model::{OptionStyle, OptionType, Side};
-    use crate::pos;
+
     use crate::pricing::{Payoff, PayoffInfo};
 
     #[test]

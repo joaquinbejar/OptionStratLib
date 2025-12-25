@@ -121,7 +121,7 @@ pub trait VannaVolgaSurface {
 #[cfg(test)]
 mod tests_vanna_volga {
     use super::*;
-    use crate::pos;
+
     use crate::surfaces::Point3D;
     use rust_decimal_macros::dec;
     use std::collections::BTreeSet;

@@ -269,7 +269,6 @@ mod tests_span {
     use super::*;
     use crate::model::types::{OptionStyle, Side};
     use crate::model::utils::create_sample_option;
-    use crate::pos;
 
     use chrono::Utc;
     use rust_decimal_macros::dec;

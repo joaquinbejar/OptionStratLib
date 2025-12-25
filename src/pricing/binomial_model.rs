@@ -2,7 +2,7 @@ use crate::error::PricingError;
 use crate::model::types::{OptionStyle, OptionType, Side};
 use crate::pricing::payoff::{Payoff, PayoffInfo};
 use crate::pricing::utils::*;
-use crate::{Positive, d2f, f2d, pos};
+use crate::{Positive, d2f, f2d};
 use rust_decimal::{Decimal, MathematicalOps};
 
 type BinomialTreeResult = Result<(Vec<Vec<Decimal>>, Vec<Vec<Decimal>>), PricingError>;
@@ -253,8 +253,8 @@ pub fn generate_binomial_tree(params: &BinomialPricingParams) -> BinomialTreeRes
 #[cfg(test)]
 mod tests_price_binomial {
     use super::*;
+    use crate::assert_decimal_eq;
     use crate::model::types::OptionType;
-    use crate::{assert_decimal_eq, pos};
     use rust_decimal_macros::dec;
 
     const EPSILON: Decimal = dec!(1e-6);
@@ -421,8 +421,8 @@ mod tests_price_binomial {
 #[cfg(test)]
 mod tests_generate_binomial_tree {
     use super::*;
+    use crate::assert_decimal_eq;
     use crate::model::types::OptionType;
-    use crate::{assert_decimal_eq, pos};
     use rust_decimal_macros::dec;
 
     const EPSILON: Decimal = dec!(1e-6);

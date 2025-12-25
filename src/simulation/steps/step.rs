@@ -283,7 +283,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{Positive, pos};
+    use crate::Positive;
 
     // Helper struct for testing
     #[derive(Debug, Copy, Clone, PartialEq)]
@@ -476,7 +476,6 @@ mod tests {
 #[cfg(test)]
 mod tests_positive {
     use super::*;
-    use crate::pos;
 
     #[test]
     fn test_step_new() {
@@ -627,7 +626,7 @@ mod tests_positive {
 #[cfg(test)]
 mod tests_step {
     use super::*;
-    use crate::{Positive, pos};
+    use crate::Positive;
 
     // Helper struct for testing
     #[derive(Debug, Copy, Clone, PartialEq)]
@@ -860,7 +859,7 @@ mod tests_step {
 #[cfg(test)]
 mod tests_step_serialization {
     use super::*;
-    use crate::pos;
+
     use chrono::{TimeZone, Utc};
     use serde_json::{self, Value};
 

@@ -1098,7 +1098,7 @@ test_strategy_traits!(IronButterfly, test_short_call_implementations);
 #[cfg(test)]
 mod tests_iron_butterfly {
     use super::*;
-    use crate::pos;
+
     use chrono::{TimeZone, Utc};
     use rust_decimal_macros::dec;
 
@@ -1307,7 +1307,7 @@ mod tests_iron_butterfly {
 mod tests_iron_butterfly_validable {
     use super::*;
     use crate::model::ExpirationDate;
-    use crate::pos;
+
     use rust_decimal_macros::dec;
 
     fn create_valid_position(
@@ -1445,7 +1445,7 @@ mod tests_iron_butterfly_validable {
 mod tests_iron_butterfly_strategies {
     use super::*;
     use crate::model::ExpirationDate;
-    use crate::pos;
+
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
@@ -1671,7 +1671,6 @@ mod tests_iron_butterfly_optimizable {
     use super::*;
     use crate::chains::OptionData;
     use crate::model::ExpirationDate;
-    use crate::{pos, spos};
 
     use rust_decimal_macros::dec;
 
@@ -1879,7 +1878,7 @@ mod tests_iron_butterfly_optimizable {
 mod tests_iron_butterfly_profit {
     use super::*;
     use crate::model::ExpirationDate;
-    use crate::pos;
+
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
@@ -2109,7 +2108,7 @@ mod tests_iron_butterfly_delta {
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use crate::strategies::iron_butterfly::IronButterfly;
-    use crate::{assert_decimal_eq, assert_pos_relative_eq, pos};
+    use crate::{assert_decimal_eq, assert_pos_relative_eq};
     use rust_decimal_macros::dec;
 
     fn get_strategy(underlying_price: Positive) -> IronButterfly {
@@ -2268,7 +2267,7 @@ mod tests_iron_butterfly_delta_size {
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use crate::strategies::iron_butterfly::IronButterfly;
-    use crate::{assert_decimal_eq, assert_pos_relative_eq, pos};
+    use crate::{assert_decimal_eq, assert_pos_relative_eq};
     use rust_decimal_macros::dec;
 
     fn get_strategy(underlying_price: Positive) -> IronButterfly {
@@ -2424,8 +2423,8 @@ mod tests_iron_butterfly_delta_size {
 #[cfg(test)]
 mod tests_iron_butterfly_probability {
     use super::*;
+    use crate::assert_pos_relative_eq;
     use crate::strategies::probabilities::utils::PriceTrend;
-    use crate::{assert_pos_relative_eq, pos};
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
@@ -2626,7 +2625,7 @@ mod tests_iron_butterfly_position_management {
     use super::*;
     use crate::error::position::PositionValidationErrorKind;
     use crate::model::types::{OptionStyle, Side};
-    use crate::pos;
+
     use rust_decimal_macros::dec;
 
     fn create_test_iron_butterfly() -> IronButterfly {
@@ -2817,7 +2816,7 @@ mod tests_iron_butterfly_position_management {
 mod tests_adjust_option_position {
     use super::*;
     use crate::model::types::{OptionStyle, Side};
-    use crate::pos;
+
     use rust_decimal_macros::dec;
 
     // Helper function to create a test strategy
@@ -2936,7 +2935,6 @@ mod tests_adjust_option_position {
 mod tests_strategy_constructor {
     use super::*;
     use crate::model::utils::create_sample_position;
-    use crate::pos;
 
     #[test]
     fn test_get_strategy_valid() {
@@ -3110,8 +3108,8 @@ mod tests_strategy_constructor {
 #[cfg(test)]
 mod tests_iron_butterfly_pnl {
     use super::*;
+    use crate::assert_decimal_eq;
     use crate::model::utils::create_sample_position;
-    use crate::{assert_decimal_eq, pos};
     use rust_decimal_macros::dec;
 
     fn create_test_iron_butterfly() -> Result<IronButterfly, StrategyError> {

@@ -229,7 +229,6 @@ pub trait Profit {
 mod tests_standard_payoff {
     use super::*;
     use crate::model::types::OptionType;
-    use crate::pos;
 
     #[test]
     fn test_call_option_in_the_money() {

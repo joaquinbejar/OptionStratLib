@@ -416,8 +416,7 @@ pub trait RNDAnalysis {
 mod tests {
     use super::*;
     use crate::chains::chain::OptionChain;
-    use crate::pos;
-    use crate::spos;
+
     use rust_decimal_macros::dec;
 
     // Helper functions for test data creation
@@ -808,7 +807,7 @@ mod additional_tests {
 
     mod rnd_statistics_extended_tests {
         use super::*;
-        use crate::{assert_decimal_eq, pos};
+        use crate::assert_decimal_eq;
 
         #[test]
         fn test_asymmetric_distribution() {
@@ -866,7 +865,6 @@ mod additional_tests {
     mod rnd_calculation_extended_tests {
         use super::*;
         use crate::chains::chain::OptionChain;
-        use crate::{pos, spos};
 
         fn create_test_option_chain() -> OptionChain {
             let mut chain =
@@ -1006,7 +1004,6 @@ mod additional_tests {
     mod numerical_stability_tests {
         use super::*;
         use crate::chains::chain::OptionChain;
-        use crate::{pos, spos};
 
         #[test]
         fn test_numerical_stability_small_values() {
@@ -1073,7 +1070,7 @@ mod additional_tests {
 #[cfg(test)]
 mod statistical_validation_tests {
     use super::*;
-    use crate::{assert_decimal_eq, pos};
+    use crate::assert_decimal_eq;
     use rust_decimal_macros::dec;
 
     mod moments_tests {
@@ -1450,7 +1447,7 @@ mod chain_test {
     use crate::chains::chain::OptionChain;
     use crate::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
     use crate::chains::{RNDAnalysis, RNDParameters};
-    use crate::{ExpirationDate, assert_decimal_eq, pos, spos};
+    use crate::{ExpirationDate, assert_decimal_eq};
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
     use tracing::debug;
@@ -1624,7 +1621,7 @@ mod rnd_coverage_tests {
     use crate::chains::OptionChain;
     use crate::chains::RNDAnalysis;
     use crate::chains::RNDResult;
-    use crate::{pos, spos};
+
     use std::collections::BTreeMap;
 
     // Test for line 322 in rnd.rs

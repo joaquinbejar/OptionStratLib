@@ -257,7 +257,7 @@ impl Transaction {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{pos, spos};
+
     use chrono::Utc;
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
@@ -672,7 +672,7 @@ mod tests {
 #[cfg(test)]
 mod tests_transaction_getters {
     use super::*;
-    use crate::{pos, spos};
+
     use chrono::Utc;
 
     fn create_test_transaction() -> Transaction {
@@ -755,7 +755,7 @@ mod tests_transaction_getters {
 #[cfg(test)]
 mod tests_transaction_updaters {
     use super::*;
-    use crate::{pos, spos};
+
     use chrono::Utc;
 
     fn create_test_transaction() -> Transaction {
@@ -799,7 +799,7 @@ mod tests_transaction_updaters {
 #[cfg(test)]
 mod tests_transaction_status_pnl {
     use super::*;
-    use crate::{pos, spos};
+
     use chrono::Utc;
     use rust_decimal_macros::dec;
 

@@ -9,7 +9,7 @@ use crate::error::ChainError;
 use crate::greeks::{delta, gamma};
 use crate::model::Position;
 use crate::strategies::{BasicAble, FindOptimalSide};
-use crate::{ExpirationDate, OptionStyle, Options, Positive, Side, pos};
+use crate::{ExpirationDate, OptionStyle, Options, Positive, Side};
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -1167,7 +1167,6 @@ impl fmt::Display for OptionData {
 mod optiondata_coverage_tests {
     use super::*;
 
-    use crate::spos;
     use rust_decimal_macros::dec;
 
     // Helper function to create test option data
@@ -1309,7 +1308,7 @@ mod tests_get_position {
     use super::*;
     use crate::model::ExpirationDate;
 
-    use crate::{assert_pos_relative_eq, pos, spos};
+    use crate::assert_pos_relative_eq;
     use chrono::{Duration, Utc};
     use rust_decimal_macros::dec;
 
@@ -1768,7 +1767,6 @@ mod tests_get_position {
 #[cfg(test)]
 mod tests_check_convert_implied_volatility {
     use super::*;
-    use crate::pos;
 
     #[test]
     fn test_check_and_convert_implied_volatility_over_one() {
@@ -1839,8 +1837,8 @@ mod tests_check_convert_implied_volatility {
 #[cfg(test)]
 mod tests_get_option_for_iv {
     use super::*;
+    use crate::OptionType;
     use crate::model::ExpirationDate;
-    use crate::{OptionType, pos, spos};
     use rust_decimal_macros::dec;
 
     // Helper function to create a standard OptionDataPriceParams for testing
@@ -1974,7 +1972,6 @@ mod tests_get_option_for_iv {
 #[cfg(test)]
 mod tests_some_price_is_none {
     use super::*;
-    use crate::{pos, spos};
 
     #[test]
     fn test_some_price_is_none_all_prices_present() {
@@ -2148,7 +2145,7 @@ mod tests_some_price_is_none {
 #[cfg(test)]
 mod tests_is_valid_optimal_side_deltable {
     use super::*;
-    use crate::pos;
+
     use rust_decimal_macros::dec;
 
     #[test]
@@ -2350,7 +2347,6 @@ mod tests_is_valid_optimal_side_deltable {
 #[cfg(test)]
 mod tests_set_mid_prices {
     use super::*;
-    use crate::{pos, spos};
 
     #[test]
     fn test_set_mid_prices_with_both_call_prices() {
@@ -2520,7 +2516,6 @@ mod tests_set_mid_prices {
 #[cfg(test)]
 mod tests_get_mid_prices {
     use super::*;
-    use crate::{pos, spos};
 
     #[test]
     fn test_get_mid_prices_with_both_mid_prices() {
@@ -2663,7 +2658,7 @@ mod tests_get_mid_prices {
 #[cfg(test)]
 mod tests_current_deltas {
     use super::*;
-    use crate::pos;
+
     use rust_decimal_macros::dec;
 
     #[test]
@@ -2798,7 +2793,6 @@ mod tests_current_deltas {
 #[cfg(test)]
 mod tests_spreads {
     use super::*;
-    use crate::{pos, spos};
 
     #[test]
     fn test_get_call_spread_some() {
@@ -3058,7 +3052,7 @@ mod tests_spreads {
 #[cfg(test)]
 mod tests_validate_option_data {
     use super::*;
-    use crate::spos;
+
     use rust_decimal_macros::dec;
 
     #[test]

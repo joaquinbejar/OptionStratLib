@@ -863,7 +863,7 @@ test_strategy_traits!(LongStraddle, test_short_call_implementations);
 mod tests_long_straddle_probability {
     use super::*;
     use crate::model::ExpirationDate;
-    use crate::pos;
+
     use crate::strategies::probabilities::utils::PriceTrend;
     use rust_decimal_macros::dec;
 
@@ -1011,7 +1011,7 @@ mod tests_long_straddle_delta {
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use crate::strategies::long_straddle::{LongStraddle, Positive};
-    use crate::{assert_decimal_eq, assert_pos_relative_eq, pos};
+    use crate::{assert_decimal_eq, assert_pos_relative_eq};
     use rust_decimal_macros::dec;
 
     fn get_strategy(strike: Positive) -> LongStraddle {
@@ -1137,7 +1137,7 @@ mod tests_long_straddle_delta_size {
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use crate::strategies::long_straddle::{LongStraddle, Positive};
-    use crate::{ExpirationDate, Side, assert_decimal_eq, assert_pos_relative_eq, pos};
+    use crate::{ExpirationDate, Side, assert_decimal_eq, assert_pos_relative_eq};
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
     use std::str::FromStr;
@@ -1263,7 +1263,7 @@ mod tests_straddle_position_management {
     use super::*;
     use crate::error::position::PositionValidationErrorKind;
     use crate::model::types::{OptionStyle, Side};
-    use crate::pos;
+
     use rust_decimal_macros::dec;
     use tracing::error;
 
@@ -1369,7 +1369,7 @@ mod tests_straddle_position_management {
 mod tests_adjust_option_position {
     use super::*;
     use crate::model::types::{OptionStyle, Side};
-    use crate::pos;
+
     use rust_decimal_macros::dec;
 
     fn create_test_long_straddle() -> LongStraddle {
@@ -1487,7 +1487,6 @@ mod tests_adjust_option_position {
 mod tests_long_strategy_constructor {
     use super::*;
     use crate::model::utils::create_sample_position;
-    use crate::pos;
 
     #[test]
     fn test_get_strategy_valid() {
@@ -1660,7 +1659,7 @@ mod tests_long_strategy_constructor {
 mod tests_long_straddle_pnl {
     use super::*;
     use crate::model::utils::create_sample_position;
-    use crate::{assert_decimal_eq, assert_pos_relative_eq, pos};
+    use crate::{assert_decimal_eq, assert_pos_relative_eq};
     use rust_decimal_macros::dec;
 
     fn create_test_long_straddle() -> Result<LongStraddle, StrategyError> {

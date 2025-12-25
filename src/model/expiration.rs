@@ -1,6 +1,6 @@
+use crate::Positive;
 use crate::constants::{DAYS_IN_A_YEAR, EPSILON};
 use crate::error::{ChainError, DecimalError};
-use crate::{Positive, pos};
 use chrono::{DateTime, Duration, NaiveDate, NaiveDateTime, Utc};
 use serde::de::{MapAccess, Visitor};
 use serde::ser::SerializeMap;
@@ -748,9 +748,9 @@ mod tests_expiration_date {
 
 #[cfg(test)]
 mod test_expiration_date {
+    use crate::assert_pos_relative_eq;
     use crate::model::ExpirationDate;
     use crate::utils::time::get_today_formatted;
-    use crate::{assert_pos_relative_eq, pos};
     use chrono::{Local, Timelike, Utc};
 
     #[test]
@@ -1097,7 +1097,7 @@ mod tests_comparisons {
     use super::*;
     use crate::constants::EPSILON;
     use crate::model::positive::Positive;
-    use crate::pos;
+
     use chrono::{TimeZone, Utc};
     use rust_decimal_macros::dec;
     use std::cmp::Ordering;

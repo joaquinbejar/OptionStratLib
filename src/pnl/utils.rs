@@ -271,7 +271,7 @@ impl From<&Trade> for PnL {
 #[cfg(test)]
 mod tests_sum {
     use super::*;
-    use crate::pos;
+
     use rust_decimal_macros::dec;
 
     #[test]
@@ -382,7 +382,7 @@ mod tests_sum {
 #[cfg(test)]
 mod tests_add {
     use super::*;
-    use crate::pos;
+
     use rust_decimal_macros::dec;
 
     #[test]
@@ -439,7 +439,7 @@ mod tests_add {
 #[cfg(test)]
 mod tests_total_pnl {
     use super::*;
-    use crate::pos;
+
     use rust_decimal_macros::dec;
 
     #[test]

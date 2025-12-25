@@ -194,7 +194,6 @@ impl ProfitLossRange {
 #[cfg(test)]
 mod tests_profit_range {
     use super::*;
-    use crate::{pos, spos};
 
     #[test]
     fn test_profit_range_creation() {
@@ -244,7 +243,7 @@ mod tests_profit_range {
 mod tests_calculate_probability {
     use super::*;
     use crate::constants::DAYS_IN_A_YEAR;
-    use crate::{pos, spos};
+
     use rust_decimal_macros::dec;
 
     fn create_basic_range() -> ProfitLossRange {

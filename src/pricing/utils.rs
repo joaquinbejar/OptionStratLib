@@ -355,8 +355,8 @@ pub fn probability_keep_under_strike(
 #[cfg(test)]
 mod tests_simulate_returns {
     use super::*;
+    use crate::assert_decimal_eq;
     use crate::model::decimal::DecimalStats;
-    use crate::{assert_decimal_eq, pos};
     use rust_decimal_macros::dec;
 
     #[test]
@@ -386,8 +386,8 @@ mod tests_simulate_returns {
 #[cfg(test)]
 mod tests_simulate_returns_bis {
     use super::*;
+    use crate::assert_decimal_eq;
     use crate::model::decimal::DecimalStats;
-    use crate::{assert_decimal_eq, pos};
 
     use rust_decimal_macros::dec;
 
@@ -468,7 +468,7 @@ mod tests_simulate_returns_bis {
 #[cfg(test)]
 mod tests_utils {
     use super::*;
-    use crate::{assert_decimal_eq, pos};
+    use crate::assert_decimal_eq;
     use rust_decimal_macros::dec;
 
     const EPSILON: Decimal = dec!(1e-6);
@@ -559,7 +559,7 @@ mod tests_probability_keep_under_strike {
     use super::*;
     use crate::constants::DAYS_IN_A_YEAR;
     use crate::model::types::{OptionStyle, OptionType};
-    use crate::{ExpirationDate, Positive, assert_decimal_eq, pos, spos};
+    use crate::{ExpirationDate, Positive, assert_decimal_eq};
     use rust_decimal_macros::dec;
     use tracing::info;
 
@@ -683,8 +683,8 @@ mod tests_probability_keep_under_strike {
 #[cfg(test)]
 mod tests_calculate_up_down_factor {
     use super::*;
+    use crate::assert_decimal_eq;
     use crate::model::decimal::ONE_DAY;
-    use crate::{assert_decimal_eq, pos};
     use rust_decimal_macros::dec;
 
     const EPSILON: Decimal = dec!(1e-6);

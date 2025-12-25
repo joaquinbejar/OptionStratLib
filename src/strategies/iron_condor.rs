@@ -1126,7 +1126,7 @@ test_strategy_traits!(IronCondor, test_short_call_implementations);
 #[cfg(test)]
 mod tests_iron_condor {
     use super::*;
-    use crate::pos;
+
     use chrono::{TimeZone, Utc};
     use rust_decimal_macros::dec;
 
@@ -1333,7 +1333,7 @@ mod tests_iron_condor {
 mod tests_iron_condor_validable {
     use super::*;
     use crate::model::ExpirationDate;
-    use crate::pos;
+
     use rust_decimal_macros::dec;
 
     fn create_valid_position(
@@ -1451,7 +1451,7 @@ mod tests_iron_condor_strategies {
     use super::*;
     use crate::constants::ZERO;
     use crate::model::ExpirationDate;
-    use crate::pos;
+
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
@@ -1882,7 +1882,6 @@ mod tests_iron_condor_optimizable {
     use super::*;
     use crate::chains::OptionData;
     use crate::model::ExpirationDate;
-    use crate::{pos, spos};
 
     use rust_decimal_macros::dec;
 
@@ -2094,7 +2093,7 @@ mod tests_iron_condor_optimizable {
 mod tests_iron_condor_profit {
     use super::*;
     use crate::model::ExpirationDate;
-    use crate::pos;
+
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
@@ -2356,7 +2355,7 @@ mod tests_iron_condor_profit {
 mod tests_iron_condor_delta {
     use super::*;
     use crate::strategies::{DELTA_THRESHOLD, DeltaAdjustment};
-    use crate::{assert_decimal_eq, assert_pos_relative_eq, pos};
+    use crate::{assert_decimal_eq, assert_pos_relative_eq};
     use rust_decimal_macros::dec;
 
     fn get_strategy(underlying_price: Positive) -> IronCondor {
@@ -2517,7 +2516,7 @@ mod tests_iron_condor_delta_size {
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use crate::strategies::iron_condor::IronCondor;
-    use crate::{assert_decimal_eq, assert_pos_relative_eq, pos};
+    use crate::{assert_decimal_eq, assert_pos_relative_eq};
     use rust_decimal_macros::dec;
 
     fn get_strategy(underlying_price: Positive) -> IronCondor {
@@ -2673,8 +2672,8 @@ mod tests_iron_condor_delta_size {
 #[cfg(test)]
 mod tests_iron_condor_probability {
     use super::*;
+    use crate::assert_pos_relative_eq;
     use crate::strategies::probabilities::utils::PriceTrend;
-    use crate::{assert_pos_relative_eq, pos};
     use rust_decimal_macros::dec;
 
     /// Creates a test Iron Condor with standard parameters
@@ -2869,7 +2868,7 @@ mod tests_iron_condor_position_management {
     use super::*;
     use crate::error::position::PositionValidationErrorKind;
     use crate::model::types::{OptionStyle, Side};
-    use crate::pos;
+
     use rust_decimal_macros::dec;
 
     fn create_test_iron_condor() -> IronCondor {
@@ -3059,7 +3058,7 @@ mod tests_iron_condor_position_management {
 mod tests_adjust_option_position {
     use super::*;
     use crate::model::types::{OptionStyle, Side};
-    use crate::pos;
+
     use rust_decimal_macros::dec;
 
     // Helper function to create a test strategy
@@ -3179,7 +3178,6 @@ mod tests_adjust_option_position {
 mod tests_strategy_constructor {
     use super::*;
     use crate::model::utils::create_sample_position;
-    use crate::pos;
 
     #[test]
     fn test_get_strategy_valid() {
@@ -3400,7 +3398,7 @@ mod tests_strategy_constructor {
 mod tests_iron_condor_pnl {
     use super::*;
     use crate::model::utils::create_sample_position;
-    use crate::pos;
+
     use rust_decimal_macros::dec;
 
     fn create_test_iron_condor() -> Result<IronCondor, StrategyError> {
