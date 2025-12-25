@@ -40,6 +40,7 @@
 
 use crate::curves::Curve;
 use crate::error::CurveError;
+use positive::pos_or_panic;
 
 /// A trait for computing risk reversal curves by strike price.
 ///

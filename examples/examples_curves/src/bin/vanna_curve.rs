@@ -1,5 +1,6 @@
 use optionstratlib::prelude::*;
 use std::error::Error;
+use positive::pos_or_panic;
 
 fn get_option(strike: &Positive) -> Options {
     Options::new(

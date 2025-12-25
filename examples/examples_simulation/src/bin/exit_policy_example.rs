@@ -4,6 +4,7 @@
 //! for option trading strategies.
 
 use optionstratlib::prelude::*;
+use positive::pos_or_panic;
 
 fn main() {
     setup_logger();

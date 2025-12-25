@@ -4,6 +4,7 @@
    Date: 20/8/24
 ******************************************************************************/
 use optionstratlib::prelude::*;
+use positive::pos_or_panic;
 
 fn main() -> Result<(), Error> {
     setup_logger();

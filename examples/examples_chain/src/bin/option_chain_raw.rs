@@ -7,6 +7,7 @@ use chrono::DateTime;
 use optionstratlib::prelude::*;
 use rust_decimal::Decimal;
 use tracing::{debug, info};
+use positive::pos_or_panic;
 
 fn main() -> Result<(), optionstratlib::error::Error> {
     setup_logger();

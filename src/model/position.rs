@@ -3,7 +3,6 @@
    Email: jb@taunais.com
    Date: 18/8/24
 ******************************************************************************/
-use positive::pos_or_panic;
 use crate::Positive;
 use crate::chains::OptionData;
 use crate::error::position::PositionValidationErrorKind;
@@ -20,6 +19,7 @@ use crate::visualization::{Graph, GraphConfig, GraphData};
 use crate::{ExpirationDate, OptionType, Options};
 use chrono::{DateTime, Utc};
 use num_traits::ToPrimitive;
+use positive::pos_or_panic;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -2255,6 +2255,7 @@ mod tests_position_max_loss_profit {
 #[cfg(test)]
 mod tests_update_from_option_data {
     use super::*;
+    use positive::spos;
 
     use rust_decimal_macros::dec;
 

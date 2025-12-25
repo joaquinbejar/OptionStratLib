@@ -205,6 +205,7 @@
 //!
 
 /// * `chain` - Public module for handling option chains and related functionalities
+use positive::pos_or_panic;
 pub mod chain;
 
 /// * `legs` - Private module implementing multi-leg option strategies and combinations

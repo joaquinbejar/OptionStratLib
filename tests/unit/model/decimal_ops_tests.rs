@@ -2,6 +2,7 @@ use optionstratlib::model::decimal::DecimalStats;
 use optionstratlib::{pos, Positive};
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
+use positive::pos_or_panic;
 
 #[test]
 fn decimal_add_and_addassign_with_positive_ref() {

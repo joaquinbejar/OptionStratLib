@@ -25,6 +25,7 @@ use crate::chains::chain::OptionChain;
 use crate::greeks::Greeks;
 use crate::model::position::Position;
 use crate::model::types::Side;
+use positive::pos_or_panic;
 use num_traits::Signed;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;

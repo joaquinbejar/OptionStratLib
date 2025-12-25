@@ -1002,7 +1002,7 @@ mod tests_vec_collection {
 
 #[cfg(test)]
 mod test_asian_options {
-    use positive::pos_or_panic;
+    use positive::{pos_or_panic, Positive};
     use crate::model::types::AsianAveragingType;
     use crate::model::{OptionStyle, OptionType, Side};
 
@@ -1043,7 +1043,7 @@ mod test_asian_options {
 
 #[cfg(test)]
 mod test_barrier_options {
-    use positive::pos_or_panic;
+    use positive::{pos_or_panic, Positive};
     use crate::model::types::BarrierType;
     use crate::model::{OptionStyle, OptionType, Side};
 
@@ -1132,7 +1132,7 @@ mod test_rainbow_options {
 
 #[cfg(test)]
 mod test_exchange_options {
-    use positive::pos_or_panic;
+    use positive::{pos_or_panic, Positive};
     use crate::model::{OptionStyle, OptionType, Side};
 
     use crate::pricing::{Payoff, PayoffInfo};

@@ -41,6 +41,7 @@ use crate::model::leg::spot::SpotPosition;
 use crate::model::leg::traits::LegAble;
 use crate::model::position::Position;
 use crate::model::types::Side;
+use positive::pos_or_panic;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;

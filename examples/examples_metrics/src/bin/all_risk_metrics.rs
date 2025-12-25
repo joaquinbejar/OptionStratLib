@@ -23,6 +23,7 @@ use optionstratlib::metrics::{
 use optionstratlib::model::OptionStyle;
 use optionstratlib::prelude::*;
 use rust_decimal::Decimal;
+use positive::pos_or_panic;
 
 fn main() -> Result<(), CurveError> {
     setup_logger();

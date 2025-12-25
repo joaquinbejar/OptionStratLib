@@ -36,6 +36,7 @@
 use indicatif::{ProgressBar, ProgressStyle};
 use optionstratlib::prelude::*;
 use std::collections::HashMap;
+use positive::pos_or_panic;
 
 /// Walker implementation for the simulation.
 #[warn(dead_code)]

@@ -7,6 +7,7 @@ use optionstratlib::prelude::*;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use tracing::info;
+use positive::pos_or_panic;
 
 fn main() -> Result<(), optionstratlib::error::Error> {
     let symbol = "GER400";

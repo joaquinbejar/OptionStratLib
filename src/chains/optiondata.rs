@@ -1167,7 +1167,7 @@ impl fmt::Display for OptionData {
 #[cfg(test)]
 mod optiondata_coverage_tests {
     use super::*;
-
+    use positive::{pos_or_panic, spos};
     use rust_decimal_macros::dec;
 
     // Helper function to create test option data
@@ -1309,8 +1309,6 @@ mod tests_get_position {
     use super::*;
 
     use crate::model::ExpirationDate;
-
-    use crate::assert_pos_relative_eq;
     use chrono::{Duration, Utc};
     use rust_decimal_macros::dec;
 

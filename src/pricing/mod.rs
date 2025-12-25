@@ -155,6 +155,7 @@
 ///
 /// The binomial model is particularly useful for pricing American options and
 /// other derivatives with early exercise features.
+use positive::pos_or_panic;
 pub mod binomial_model;
 
 /// Black-Scholes model for option pricing and analysis.

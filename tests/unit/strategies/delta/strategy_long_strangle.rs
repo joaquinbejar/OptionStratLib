@@ -6,6 +6,7 @@ use optionstratlib::{ExpirationDate, Positive};
 use optionstratlib::{assert_decimal_eq, pos_or_panic};
 use rust_decimal_macros::dec;
 use std::error::Error;
+use positive::pos_or_panic;
 
 #[test]
 fn test_long_strangle_integration() -> Result<(), Box<dyn Error>> {

@@ -7,6 +7,7 @@ use optionstratlib::strategies::delta_neutral::DeltaNeutrality;
 use optionstratlib::{ExpirationDate, Positive, assert_decimal_eq, assert_pos_relative_eq, pos_or_panic};
 use rust_decimal_macros::dec;
 use std::error::Error;
+use positive::pos_or_panic;
 
 #[test]
 fn test_bear_call_spread_integration() -> Result<(), Box<dyn Error>> {

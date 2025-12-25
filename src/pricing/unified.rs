@@ -2,6 +2,7 @@ use crate::error::{PricingError, PricingResult};
 use crate::pricing::black_scholes_model::black_scholes;
 use crate::simulation::simulator::Simulator;
 use crate::{Options, Positive};
+use positive::pos_or_panic;
 
 /// Pricing engine selector for option pricing.
 ///

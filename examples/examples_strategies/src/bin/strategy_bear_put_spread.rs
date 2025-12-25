@@ -4,6 +4,7 @@
    Date: 25/9/24
 ******************************************************************************/
 use optionstratlib::prelude::*;
+use positive::pos_or_panic;
 fn main() -> Result<(), Error> {
     setup_logger();
     let underlying_price = pos_or_panic!(5781.88);

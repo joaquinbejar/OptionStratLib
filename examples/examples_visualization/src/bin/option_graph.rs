@@ -4,6 +4,7 @@
    Date: 20/8/24
 ******************************************************************************/
 use optionstratlib::prelude::*;
+use positive::pos_or_panic;
 
 fn create_sample_option() -> Options {
     Options::new(

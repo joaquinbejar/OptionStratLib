@@ -2224,8 +2224,8 @@ mod tests_options_black_scholes {
 
 #[cfg(test)]
 mod tests_calculate_implied_volatility {
+    use positive::assert_pos_relative_eq;
     use super::*;
-    use crate::assert_pos_relative_eq;
     use crate::error::VolatilityError;
     use rust_decimal_macros::dec;
 

@@ -23,7 +23,7 @@
 //! use optionstratlib::model::leg::FuturePosition;
 //! use optionstratlib::model::types::Side;
 //! use optionstratlib::model::ExpirationDate;
-//! use optionstratlib::pos_or_panic;
+//! use positive::pos_or_panic;
 //! use chrono::Utc;
 //!
 //! let future = FuturePosition::new(
@@ -424,6 +424,7 @@ impl Default for FuturePosition {
 
 #[cfg(test)]
 mod tests {
+    use positive::pos_or_panic;
     use super::*;
 
     #[test]

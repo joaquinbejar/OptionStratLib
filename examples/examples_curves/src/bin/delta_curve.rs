@@ -1,6 +1,7 @@
 use optionstratlib::prelude::*;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
+use positive::pos_or_panic;
 
 fn get_option(underlying_asset: &Positive) -> Options {
     Options::new(

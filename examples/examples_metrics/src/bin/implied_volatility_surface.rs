@@ -17,6 +17,7 @@
 use optionstratlib::error::SurfaceError;
 use optionstratlib::metrics::ImpliedVolatilitySurface;
 use optionstratlib::prelude::*;
+use positive::pos_or_panic;
 
 fn main() -> Result<(), SurfaceError> {
     setup_logger();

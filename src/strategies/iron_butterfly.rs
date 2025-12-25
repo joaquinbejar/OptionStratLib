@@ -14,6 +14,7 @@ Key characteristics:
 use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, StrategyBasics, StrategyType, Validable,
 };
+use positive::pos_or_panic;
 use crate::{
     ExpirationDate, Options, Positive,
     chains::{StrategyLegs, chain::OptionChain, utils::OptionDataGroup},
@@ -1718,6 +1719,7 @@ mod tests_iron_butterfly_strategies {
 
 #[cfg(test)]
 mod tests_iron_butterfly_optimizable {
+    use positive::spos;
     use super::*;
 
     use crate::chains::OptionData;

@@ -7,6 +7,7 @@ use optionstratlib::strategies::{BasicAble, Strategies};
 use optionstratlib::{assert_pos_relative_eq, pos_or_panic};
 use rust_decimal_macros::dec;
 use std::error::Error;
+use positive::pos_or_panic;
 
 #[test]
 fn test_bull_call_spread_basic_integration() -> Result<(), Box<dyn Error>> {

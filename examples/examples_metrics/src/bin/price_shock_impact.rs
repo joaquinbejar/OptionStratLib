@@ -20,6 +20,7 @@ use optionstratlib::metrics::{PriceShockCurve, PriceShockSurface};
 use optionstratlib::model::ExpirationDate;
 use optionstratlib::prelude::*;
 use rust_decimal_macros::dec;
+use positive::pos_or_panic;
 
 fn main() -> Result<(), CurveError> {
     setup_logger();
