@@ -3,8 +3,8 @@
    Email: jb@taunais.com
    Date: 26/2/25
 ******************************************************************************/
-use positive::pos_or_panic;
-use crate::Positive;
+use positive::{Positive, pos_or_panic};
+
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};

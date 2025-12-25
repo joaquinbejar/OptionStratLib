@@ -2,9 +2,9 @@
 //!
 //! This example shows how to create and use different exit policies
 //! for option trading strategies.
+use positive::pos_or_panic;
 
 use optionstratlib::prelude::*;
-use positive::pos_or_panic;
 
 fn main() {
     setup_logger();

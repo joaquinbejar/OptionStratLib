@@ -3,10 +3,11 @@
    Email: jb@taunais.com
    Date: 24/3/25
 ******************************************************************************/
+use crate::ExpirationDate;
 use crate::error::SimulationError;
 use crate::utils::TimeFrame;
 use crate::utils::time::convert_time_frame;
-use crate::{ExpirationDate, Positive};
+use positive::Positive;
 use serde::{Serialize, Serializer};
 use std::fmt::{Display, Formatter};
 use std::ops::AddAssign;
@@ -268,9 +269,9 @@ where
 
 #[cfg(test)]
 mod tests {
-    use positive::pos_or_panic;
     use super::*;
     use crate::model::ExpirationDate;
+    use positive::pos_or_panic;
 
     #[test]
     fn test_days_left() {
@@ -340,11 +341,7 @@ mod tests_serialize {
     #[test]
     fn test_serialization_value_conversion() {
         // Create instances with different types but same value
-        let step_f64 = Xstep::new(
-            2.5f64,
-            TimeFrame::Day,
-            ExpirationDate::Days(Positive::ONE),
-        );
+        let step_f64 = Xstep::new(2.5f64, TimeFrame::Day, ExpirationDate::Days(Positive::ONE));
         let step_decimal = Xstep::new(
             dec!(2.5),
             TimeFrame::Day,
@@ -375,11 +372,7 @@ mod tests_serialize {
     #[test]
     fn test_serialization_format_identity() {
         // Create instances with different types
-        let step_f64 = Xstep::new(
-            3.1f64,
-            TimeFrame::Hour,
-            ExpirationDate::Days(Positive::ONE),
-        );
+        let step_f64 = Xstep::new(3.1f64, TimeFrame::Hour, ExpirationDate::Days(Positive::ONE));
         let step_decimal = Xstep::new(
             dec!(3.1),
             TimeFrame::Hour,

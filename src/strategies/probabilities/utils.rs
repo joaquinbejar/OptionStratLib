@@ -4,14 +4,14 @@
    Date: 30/11/24
 ******************************************************************************/
 
-use positive::pos_or_panic;
 use crate::error::probability::{
     ExpirationErrorKind, PriceErrorKind, ProbabilityCalculationErrorKind, ProbabilityError,
 };
+use crate::f2du;
 use crate::greeks::big_n;
 use crate::model::ExpirationDate;
-use crate::{Positive, f2du};
 use num_traits::ToPrimitive;
+use positive::{Positive, pos_or_panic};
 use rust_decimal::Decimal;
 
 /// Struct to hold volatility adjustment parameters

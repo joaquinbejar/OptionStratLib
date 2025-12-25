@@ -147,7 +147,7 @@ mod tests_strategies_utils {
     use super::*;
 
     use approx::assert_relative_eq;
-    use positive::pos_or_panic;
+    use positive::{Positive, pos_or_panic};
 
     #[test]
     fn test_find_optimal_side_variants() {

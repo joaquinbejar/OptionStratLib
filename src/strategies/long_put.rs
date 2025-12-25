@@ -28,9 +28,9 @@ use crate::strategies::{
     Validable,
 };
 use crate::utils::Len;
-use crate::{ExpirationDate, Options, Positive, test_strategy_traits};
-use positive::pos_or_panic;
+use crate::{ExpirationDate, Options, test_strategy_traits};
 use chrono::Utc;
+use positive::{Positive, pos_or_panic};
 use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -833,11 +833,7 @@ mod tests_simulate {
     #[test]
     fn test_simulate_expiration_exit() {
         let strategy = create_test_long_put();
-        let prices = vec![
-            Positive::HUNDRED,
-            pos_or_panic!(99.0),
-            pos_or_panic!(98.0),
-        ];
+        let prices = vec![Positive::HUNDRED, pos_or_panic!(99.0), pos_or_panic!(98.0)];
         let walk_params = create_walk_params(prices);
         let simulator = Simulator::new("Test".to_string(), 1, &walk_params, generator_positive);
         let results = strategy.simulate(&simulator, ExitPolicy::Expiration);
@@ -849,11 +845,7 @@ mod tests_simulate {
     #[test]
     fn test_simulate_stats_aggregation() {
         let strategy = create_test_long_put();
-        let prices = vec![
-            Positive::HUNDRED,
-            pos_or_panic!(95.0),
-            pos_or_panic!(90.0),
-        ];
+        let prices = vec![Positive::HUNDRED, pos_or_panic!(95.0), pos_or_panic!(90.0)];
         let walk_params = create_walk_params(prices);
         let simulator = Simulator::new("Test".to_string(), 3, &walk_params, generator_positive);
         let results = strategy.simulate(&simulator, ExitPolicy::Expiration);

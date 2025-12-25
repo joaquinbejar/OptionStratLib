@@ -15,7 +15,7 @@ use optionstratlib::chains::chain::OptionChain;
 use optionstratlib::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
 use optionstratlib::metrics::{CharmSurface, ColorSurface, ThetaSurface};
 use optionstratlib::model::ExpirationDate;
-use positive::{spos, pos_or_panic};
+use positive::{pos_or_panic, spos};
 use rust_decimal_macros::dec;
 
 /// Creates a test option chain with proper Greeks data

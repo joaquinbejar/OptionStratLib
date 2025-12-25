@@ -608,7 +608,7 @@ fn calculate_floating_strike_payoff(info: &PayoffInfo) -> f64 {
 
 #[cfg(test)]
 mod tests_payoff {
-    use positive::pos_or_panic;
+use positive::{Positive, pos_or_panic};
     use super::*;
 
     #[test]
@@ -728,7 +728,6 @@ mod tests_payoff {
 
 #[cfg(test)]
 mod tests_calculate_floating_strike_payoff {
-    use positive::pos_or_panic;
     use super::*;
 
     #[test]
@@ -818,7 +817,6 @@ mod tests_calculate_floating_strike_payoff {
 
 #[cfg(test)]
 mod tests_option_type {
-    use positive::pos_or_panic;
     use super::*;
 
     #[test]
@@ -932,7 +930,6 @@ mod tests_option_type {
 
 #[cfg(test)]
 mod tests_vec_collection {
-    use positive::pos_or_panic;
     use crate::model::positive::Positive;
 
     #[test]
@@ -1002,7 +999,6 @@ mod tests_vec_collection {
 
 #[cfg(test)]
 mod test_asian_options {
-    use positive::{pos_or_panic, Positive};
     use crate::model::types::AsianAveragingType;
     use crate::model::{OptionStyle, OptionType, Side};
 
@@ -1043,7 +1039,6 @@ mod test_asian_options {
 
 #[cfg(test)]
 mod test_barrier_options {
-    use positive::{pos_or_panic, Positive};
     use crate::model::types::BarrierType;
     use crate::model::{OptionStyle, OptionType, Side};
 
@@ -1086,7 +1081,6 @@ mod test_barrier_options {
 
 #[cfg(test)]
 mod test_cliquet_options {
-    use positive::pos_or_panic;
     use crate::model::{OptionStyle, OptionType, Side};
 
     use crate::pricing::{Payoff, PayoffInfo};
@@ -1110,7 +1104,6 @@ mod test_cliquet_options {
 
 #[cfg(test)]
 mod test_rainbow_options {
-    use positive::pos_or_panic;
     use crate::model::{OptionStyle, OptionType, Side};
 
     use crate::pricing::{Payoff, PayoffInfo};
@@ -1132,7 +1125,6 @@ mod test_rainbow_options {
 
 #[cfg(test)]
 mod test_exchange_options {
-    use positive::{pos_or_panic, Positive};
     use crate::model::{OptionStyle, OptionType, Side};
 
     use crate::pricing::{Payoff, PayoffInfo};

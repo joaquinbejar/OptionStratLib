@@ -3,10 +3,11 @@
    Email: jb@taunais.com
    Date: 16/8/24
 ******************************************************************************/
-use crate::Positive;
+
 use crate::model::Trade;
 pub use crate::pnl::PnLCalculator;
 use chrono::{DateTime, Utc};
+use positive::Positive;
 use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -270,8 +271,8 @@ impl From<&Trade> for PnL {
 
 #[cfg(test)]
 mod tests_sum {
-    use positive::pos_or_panic;
     use super::*;
+    use positive::pos_or_panic;
 
     use rust_decimal_macros::dec;
 
@@ -382,8 +383,8 @@ mod tests_sum {
 
 #[cfg(test)]
 mod tests_add {
-    use positive::pos_or_panic;
     use super::*;
+    use positive::pos_or_panic;
 
     use rust_decimal_macros::dec;
 
@@ -440,8 +441,8 @@ mod tests_add {
 
 #[cfg(test)]
 mod tests_total_pnl {
-    use positive::pos_or_panic;
     use super::*;
+    use positive::pos_or_panic;
 
     use rust_decimal_macros::dec;
 
@@ -486,13 +487,7 @@ mod tests_total_pnl {
 
     #[test]
     fn test_total_pnl_both_none() {
-        let pnl = PnL::new(
-            None,
-            None,
-            Positive::ZERO,
-            Positive::ZERO,
-            Utc::now(),
-        );
+        let pnl = PnL::new(None, None, Positive::ZERO, Positive::ZERO, Utc::now());
 
         assert_eq!(pnl.total_pnl(), None);
     }

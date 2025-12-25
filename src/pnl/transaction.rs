@@ -1,8 +1,9 @@
 use crate::error::TransactionError;
 use crate::model::TradeStatus;
 use crate::pnl::utils::PnL;
-use crate::{OptionStyle, OptionType, Positive, Side};
+use crate::{OptionStyle, OptionType, Side};
 use chrono::{DateTime, Utc};
+use positive::Positive;
 use serde::{Deserialize, Serialize};
 
 /// # Transaction
@@ -273,9 +274,9 @@ mod tests {
             OptionType::European, // European option
             Side::Long,           // Long position
             OptionStyle::Call,    // Call option
-            Positive::ONE,   // 1 contract
+            Positive::ONE,        // 1 contract
             pos_or_panic!(5.0),   // Premium paid: $5.00
-            Positive::ONE,   // Fees: $1.00
+            Positive::ONE,        // Fees: $1.00
             spos!(100.0),         // Underlying price at open: $100.00
             spos!(30.0),          // 30 days to expiration
             spos!(0.2),           // IV: 20%
@@ -298,9 +299,9 @@ mod tests {
             OptionType::European, // European option
             Side::Long,           // Long position
             OptionStyle::Call,    // Call option
-            Positive::ONE,   // 1 contract
+            Positive::ONE,        // 1 contract
             pos_or_panic!(12.0),  // Closing premium: $12.00 (higher due to price increase)
-            Positive::ONE,   // Closing fees: $1.00
+            Positive::ONE,        // Closing fees: $1.00
             spos!(110.0),         // Underlying price at close: $110.00
             spos!(20.0),          // 20 days to expiration (10 days elapsed)
             spos!(0.22),          // IV: 22%
@@ -328,7 +329,7 @@ mod tests {
             OptionStyle::Call,
             Positive::ONE,
             pos_or_panic!(5.0), // Premium paid: $5.00
-            Positive::ONE, // Fees: $1.00
+            Positive::ONE,      // Fees: $1.00
             spos!(100.0),
             spos!(30.0),
             spos!(0.2),
@@ -376,9 +377,9 @@ mod tests {
             OptionType::European,
             Side::Short,        // Short position
             OptionStyle::Call,  // Call option
-            Positive::ONE, // 1 contract
+            Positive::ONE,      // 1 contract
             pos_or_panic!(5.0), // Premium received: $5.00
-            Positive::ONE, // Fees: $1.00
+            Positive::ONE,      // Fees: $1.00
             spos!(100.0),       // Underlying price at open: $100.00
             spos!(30.0),        // 30 days to expiration
             spos!(0.2),         // IV: 20%
@@ -429,7 +430,7 @@ mod tests {
             OptionStyle::Call,
             Positive::ONE,
             pos_or_panic!(5.0), // Premium received: $5.00
-            Positive::ONE, // Fees: $1.00
+            Positive::ONE,      // Fees: $1.00
             spos!(100.0),
             spos!(30.0),
             spos!(0.2),
@@ -452,7 +453,7 @@ mod tests {
             OptionStyle::Call,
             Positive::ONE,
             pos_or_panic!(12.0), // Closing premium: $12.00 (higher due to price increase)
-            Positive::ONE,  // Closing fees: $1.00
+            Positive::ONE,       // Closing fees: $1.00
             spos!(110.0),
             spos!(20.0),
             spos!(0.22),
@@ -477,9 +478,9 @@ mod tests {
             OptionType::European,
             Side::Long,         // Long position
             OptionStyle::Put,   // Put option
-            Positive::ONE, // 1 contract
+            Positive::ONE,      // 1 contract
             pos_or_panic!(4.0), // Premium paid: $4.00
-            Positive::ONE, // Fees: $1.00
+            Positive::ONE,      // Fees: $1.00
             spos!(100.0),       // Underlying price at open: $100.00
             spos!(30.0),        // 30 days to expiration
             spos!(0.2),         // IV: 20%
@@ -503,7 +504,7 @@ mod tests {
             OptionStyle::Put,
             Positive::ONE,
             pos_or_panic!(10.0), // Closing premium: $10.00 (higher due to price decrease)
-            Positive::ONE,  // Closing fees: $1.00
+            Positive::ONE,       // Closing fees: $1.00
             spos!(90.0),
             spos!(20.0),
             spos!(0.25),
@@ -530,7 +531,7 @@ mod tests {
             OptionStyle::Put,
             Positive::ONE,
             pos_or_panic!(4.0), // Premium paid: $4.00
-            Positive::ONE, // Fees: $1.00
+            Positive::ONE,      // Fees: $1.00
             spos!(100.0),
             spos!(30.0),
             spos!(0.2),
@@ -578,9 +579,9 @@ mod tests {
             OptionType::European,
             Side::Short,        // Short position
             OptionStyle::Put,   // Put option
-            Positive::ONE, // 1 contract
+            Positive::ONE,      // 1 contract
             pos_or_panic!(4.0), // Premium received: $4.00
-            Positive::ONE, // Fees: $1.00
+            Positive::ONE,      // Fees: $1.00
             spos!(100.0),       // Underlying price at open: $100.00
             spos!(30.0),        // 30 days to expiration
             spos!(0.2),         // IV: 20%
@@ -604,7 +605,7 @@ mod tests {
             OptionStyle::Put,
             Positive::ONE,
             pos_or_panic!(1.5), // Closing premium: $1.50 (lower due to price increase)
-            Positive::ONE, // Closing fees: $1.00
+            Positive::ONE,      // Closing fees: $1.00
             spos!(105.0),
             spos!(20.0),
             spos!(0.15),
@@ -631,7 +632,7 @@ mod tests {
             OptionStyle::Put,
             Positive::ONE,
             pos_or_panic!(4.0), // Premium received: $4.00
-            Positive::ONE, // Fees: $1.00
+            Positive::ONE,      // Fees: $1.00
             spos!(100.0),
             spos!(30.0),
             spos!(0.2),
@@ -654,7 +655,7 @@ mod tests {
             OptionStyle::Put,
             Positive::ONE,
             pos_or_panic!(10.0), // Closing premium: $10.00 (higher due to price decrease)
-            Positive::ONE,  // Closing fees: $1.00
+            Positive::ONE,       // Closing fees: $1.00
             spos!(90.0),
             spos!(20.0),
             spos!(0.25),

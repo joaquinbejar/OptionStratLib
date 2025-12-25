@@ -1,10 +1,10 @@
+use positive::{Positive, assert_pos_relative_eq, pos_or_panic};
 /******************************************************************************
    Author: Joaquín Béjar García
    Email: jb@taunais.com
    Date: 15/8/24
 ******************************************************************************/
-use positive::pos_or_panic;
-use crate::Positive;
+
 use crate::constants::{MAX_VOLATILITY, MIN_VOLATILITY};
 use crate::error::VolatilityError;
 use crate::model::decimal::decimal_normal_sample;
@@ -541,7 +541,6 @@ pub fn generate_ou_process(
 #[cfg(test)]
 mod tests_annualize_volatility {
     use super::*;
-    use crate::assert_pos_relative_eq;
 
     #[test]
     fn test_annualize_daily_volatility() {
@@ -588,7 +587,6 @@ mod tests_annualize_volatility {
 #[cfg(test)]
 mod tests_constant_volatility {
     use super::*;
-    use crate::assert_pos_relative_eq;
     use crate::constants::ZERO;
     use rust_decimal_macros::dec;
 
@@ -621,7 +619,6 @@ mod tests_constant_volatility {
 #[cfg(test)]
 mod tests_historical_volatility {
     use super::*;
-    use crate::assert_pos_relative_eq;
     use rust_decimal_macros::dec;
 
     #[test]
@@ -666,7 +663,6 @@ mod tests_historical_volatility {
 #[cfg(test)]
 mod tests_ewma_volatility {
     use super::*;
-    use crate::assert_pos_relative_eq;
     use rust_decimal_macros::dec;
 
     #[test]
@@ -763,11 +759,11 @@ mod tests_ewma_volatility {
 #[cfg(test)]
 mod tests_implied_volatility {
     use super::*;
+    use crate::ExpirationDate;
     use crate::assert_decimal_eq;
     use crate::constants::{MAX_VOLATILITY, MIN_VOLATILITY};
     use crate::greeks::Greeks;
     use crate::model::types::{OptionStyle, OptionType, Side};
-    use crate::{ExpirationDate, assert_pos_relative_eq};
     use rust_decimal_macros::dec;
     use tracing::error;
 
@@ -776,11 +772,11 @@ mod tests_implied_volatility {
             OptionType::European,
             Side::Long,
             "TEST".to_string(),
-            Positive::HUNDRED,                      // strike price
+            Positive::HUNDRED,                         // strike price
             ExpirationDate::Days(pos_or_panic!(30.0)), // 30 days to expiration
             pos_or_panic!(0.2),                        // initial implied volatility
             Positive::ONE,                             // quantity
-            Positive::HUNDRED,                      // underlying price (ATM)
+            Positive::HUNDRED,                         // underlying price (ATM)
             dec!(0.05),                                // risk-free rate
             OptionStyle::Call,                         // call option
             Positive::ZERO,                            // no dividend yield
@@ -1248,7 +1244,7 @@ mod tests_implied_volatility {
 #[cfg(test)]
 mod tests_garch_volatility {
     use super::*;
-    use crate::{assert_decimal_eq, assert_pos_relative_eq};
+    use crate::assert_decimal_eq;
     use rust_decimal_macros::dec;
 
     #[test]
@@ -1515,7 +1511,7 @@ mod tests_uncertain_volatility_bounds {
     use super::*;
     use crate::model::types::{OptionStyle, OptionType, Side};
 
-    use crate::{ExpirationDate, assert_pos_relative_eq};
+    use crate::ExpirationDate;
     use rust_decimal_macros::dec;
 
     // Helper function to create a test option
@@ -1526,10 +1522,10 @@ mod tests_uncertain_volatility_bounds {
             "TEST".to_string(),
             strike,
             ExpirationDate::Days(pos_or_panic!(30.0)),
-            pos_or_panic!(0.2),   // Initial implied volatility
-            Positive::ONE,        // Quantity
-            Positive::HUNDRED, // Underlying price
-            dec!(0.05),           // Risk-free rate
+            pos_or_panic!(0.2), // Initial implied volatility
+            Positive::ONE,      // Quantity
+            Positive::HUNDRED,  // Underlying price
+            dec!(0.05),         // Risk-free rate
             style,
             Positive::ZERO, // No dividend yield
             None,           // No exotic params
@@ -1624,7 +1620,6 @@ mod tests_uncertain_volatility_bounds {
 #[cfg(test)]
 mod tests_adjust_volatility {
     use super::*;
-    use crate::assert_pos_relative_eq;
 
     #[test]
     fn test_same_timeframe() {
@@ -1794,7 +1789,7 @@ mod tests_generate_ou_process {
         let process = generate_ou_process(
             pos_or_panic!(0.1),
             Positive::ONE,
-            Positive::ONE,  // high theta for fast reversion
+            Positive::ONE,       // high theta for fast reversion
             pos_or_panic!(0.01), // low volatility
             pos_or_panic!(0.01),
             1000,

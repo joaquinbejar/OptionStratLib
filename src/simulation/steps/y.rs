@@ -3,7 +3,8 @@
    Email: jb@taunais.com
    Date: 24/3/25
 ******************************************************************************/
-use crate::Positive;
+
+use positive::Positive;
 use serde::{Serialize, Serializer};
 use std::fmt::{Display, Formatter};
 
@@ -203,8 +204,8 @@ mod tests_ystep {
 
 #[cfg(test)]
 mod tests_serialize {
-    use positive::pos_or_panic;
     use super::*;
+    use positive::pos_or_panic;
 
     use rust_decimal_macros::dec;
     use serde_json::{Value, json};

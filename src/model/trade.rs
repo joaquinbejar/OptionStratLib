@@ -450,7 +450,7 @@ mod tests {
     use super::*;
 
     use chrono::{TimeZone, Utc};
-    use positive::pos_or_panic;
+use positive::pos_or_panic;
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
     use uuid::Uuid;

@@ -344,9 +344,9 @@ pub fn telegraph(
 
 #[cfg(test)]
 mod tests_telegraph_process_basis {
-    use positive::pos_or_panic;
     use super::*;
-    use crate::Positive;
+    use positive::{Positive, pos_or_panic};
+
     use crate::model::types::{OptionStyle, OptionType, Side};
     use rust_decimal_macros::dec;
 
@@ -418,9 +418,9 @@ mod tests_telegraph_process_basis {
 
 #[cfg(test)]
 mod tests_telegraph_process_extended {
-    use positive::pos_or_panic;
     use super::*;
-    use crate::Positive;
+    use positive::Positive;
+
     use crate::model::types::{OptionStyle, OptionType, Side};
 
     use rust_decimal_macros::dec;

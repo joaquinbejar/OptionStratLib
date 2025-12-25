@@ -1,3 +1,4 @@
+use positive::{Positive, assert_pos_relative_eq, pos_or_panic, spos};
 /*
 Straddle Strategy
 
@@ -13,7 +14,7 @@ use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, StrategyBasics, StrategyType, Validable,
 };
 use crate::{
-    ExpirationDate, Options, Positive,
+    ExpirationDate, Options,
     chains::{StrategyLegs, chain::OptionChain, utils::OptionDataGroup},
     constants::ZERO,
     error::{
@@ -911,7 +912,6 @@ mod tests_short_straddle {
     use crate::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
 
     use num_traits::ToPrimitive;
-    use positive::{pos_or_panic, spos};
     use rust_decimal_macros::dec;
 
     fn setup() -> ShortStraddle {
@@ -1217,7 +1217,6 @@ mod tests_short_straddle {
 
 #[cfg(test)]
 mod tests_short_straddle_probability {
-    use positive::pos_or_panic;
     use super::*;
 
     use crate::model::ExpirationDate;
@@ -1230,13 +1229,13 @@ mod tests_short_straddle_probability {
     fn create_test_short_straddle() -> ShortStraddle {
         ShortStraddle::new(
             "TEST".to_string(),
-            Positive::HUNDRED,                      // underlying_price
+            Positive::HUNDRED,                         // underlying_price
             pos_or_panic!(110.0),                      // strike
             ExpirationDate::Days(pos_or_panic!(30.0)), // expiration
             pos_or_panic!(0.2),                        // implied_volatility
             dec!(0.05),                                // risk_free_rate
             Positive::ZERO,                            // dividend_yield
-            Positive::ONE,                        // quantity
+            Positive::ONE,                             // quantity
             Positive::TWO,                             // premium_short_call
             Positive::TWO,                             // premium_short_put
             Positive::ZERO,                            // open_fee_short_call
@@ -1254,10 +1253,7 @@ mod tests_short_straddle_probability {
         assert!(result.is_ok(), "Probability calculation should succeed");
         let prob = result.unwrap();
         assert!(prob > Positive::ZERO, "Probability should be positive");
-        assert!(
-            prob <= Positive::ONE,
-            "Probability should not exceed 1.0"
-        );
+        assert!(prob <= Positive::ONE, "Probability should not exceed 1.0");
     }
 
     #[test]
@@ -1276,10 +1272,7 @@ mod tests_short_straddle_probability {
         );
         let prob = result.unwrap();
         assert!(prob > Positive::ZERO, "Probability should be positive");
-        assert!(
-            prob <= Positive::ONE,
-            "Probability should not exceed 1.0"
-        );
+        assert!(prob <= Positive::ONE, "Probability should not exceed 1.0");
     }
 
     #[test]
@@ -1298,10 +1291,7 @@ mod tests_short_straddle_probability {
         );
         let prob = result.unwrap();
         assert!(prob > Positive::ZERO, "Probability should be positive");
-        assert!(
-            prob <= Positive::ONE,
-            "Probability should not exceed 1.0"
-        );
+        assert!(prob <= Positive::ONE, "Probability should not exceed 1.0");
     }
 
     #[test]
@@ -1320,10 +1310,7 @@ mod tests_short_straddle_probability {
         );
         let prob = result.unwrap();
         assert!(prob > Positive::ZERO, "Probability should be positive");
-        assert!(
-            prob <= Positive::ONE,
-            "Probability should not exceed 1.0"
-        );
+        assert!(prob <= Positive::ONE, "Probability should not exceed 1.0");
     }
 
     #[test]
@@ -1366,7 +1353,6 @@ mod tests_short_straddle_probability {
 
 #[cfg(test)]
 mod tests_short_straddle_probability_bis {
-    use positive::pos_or_panic;
     use super::*;
 
     use crate::model::ExpirationDate;
@@ -1377,13 +1363,13 @@ mod tests_short_straddle_probability_bis {
     fn create_test_short_straddle() -> ShortStraddle {
         ShortStraddle::new(
             "TEST".to_string(),
-            Positive::HUNDRED,                      // underlying_price
+            Positive::HUNDRED,                         // underlying_price
             pos_or_panic!(110.0),                      // strike
             ExpirationDate::Days(pos_or_panic!(30.0)), // expiration
             pos_or_panic!(0.2),                        // implied_volatility
             dec!(0.05),                                // risk_free_rate
             Positive::ZERO,                            // dividend_yield
-            Positive::ONE,                        // quantity
+            Positive::ONE,                             // quantity
             Positive::TWO,                             // premium_short_call
             Positive::TWO,                             // premium_short_put
             Positive::ZERO,                            // open_fee_short_call
@@ -1500,14 +1486,13 @@ mod tests_short_straddle_probability_bis {
 
 #[cfg(test)]
 mod tests_short_straddle_delta {
-    use positive::{assert_pos_relative_eq, pos_or_panic};
     use super::*;
 
+    use crate::assert_decimal_eq;
     use crate::greeks::Greeks;
     use crate::model::types::OptionStyle;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
-    use crate::{assert_decimal_eq};
     use rust_decimal_macros::dec;
 
     fn get_strategy(strike: Positive) -> ShortStraddle {
@@ -1520,7 +1505,7 @@ mod tests_short_straddle_delta {
             pos_or_panic!(0.3745), // implied_volatility
             dec!(0.05),            // risk_free_rate
             Positive::ZERO,        // dividend_yield
-            Positive::ONE,    // quantity
+            Positive::ONE,         // quantity
             pos_or_panic!(84.2),   // premium_short_call
             pos_or_panic!(353.2),  // premium_short_put
             pos_or_panic!(7.01),   // open_fee_short_call
@@ -1635,7 +1620,6 @@ mod tests_short_straddle_delta_size {
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
     use std::str::FromStr;
-    use positive::{assert_pos_relative_eq, pos_or_panic};
 
     fn get_strategy(strike: Positive) -> ShortStraddle {
         let underlying_price = pos_or_panic!(7138.5);
@@ -1647,7 +1631,7 @@ mod tests_short_straddle_delta_size {
             pos_or_panic!(0.3745), // implied_volatility
             dec!(0.05),            // risk_free_rate
             Positive::ZERO,        // dividend_yield
-            Positive::TWO,    // quantity
+            Positive::TWO,         // quantity
             pos_or_panic!(84.2),   // premium_short_call
             pos_or_panic!(353.2),  // premium_short_put
             pos_or_panic!(7.01),   // open_fee_short_call
@@ -1757,7 +1741,6 @@ mod tests_short_straddle_delta_size {
 
 #[cfg(test)]
 mod tests_short_strategy_constructor {
-    use positive::pos_or_panic;
     use super::*;
 
     use crate::model::utils::create_sample_position;
@@ -1787,10 +1770,7 @@ mod tests_short_strategy_constructor {
         assert!(result.is_ok());
 
         let strategy = result.unwrap();
-        assert_eq!(
-            strategy.short_call.option.strike_price,
-            Positive::HUNDRED
-        );
+        assert_eq!(strategy.short_call.option.strike_price, Positive::HUNDRED);
         assert_eq!(strategy.short_put.option.strike_price, Positive::HUNDRED);
     }
 
@@ -1934,30 +1914,29 @@ mod tests_short_strategy_constructor {
 
 #[cfg(test)]
 mod tests_short_straddle_pnl {
-    use positive::{assert_pos_relative_eq, pos_or_panic};
     use super::*;
 
+    use crate::assert_decimal_eq;
     use crate::model::utils::create_sample_position;
-    use crate::{assert_decimal_eq};
     use rust_decimal_macros::dec;
 
     fn create_test_short_straddle() -> Result<ShortStraddle, StrategyError> {
         let short_call = create_sample_position(
             OptionStyle::Call,
             Side::Short,
-            Positive::HUNDRED, // Underlying price
-            Positive::ONE,   // Quantity
-            Positive::HUNDRED, // Strike price (ATM)
-            pos_or_panic!(0.2),   // Implied volatility
+            Positive::HUNDRED,  // Underlying price
+            Positive::ONE,      // Quantity
+            Positive::HUNDRED,  // Strike price (ATM)
+            pos_or_panic!(0.2), // Implied volatility
         );
 
         let short_put = create_sample_position(
             OptionStyle::Put,
             Side::Short,
-            Positive::HUNDRED, // Same underlying price
-            Positive::ONE,   // Quantity
-            Positive::HUNDRED, // Same strike price
-            pos_or_panic!(0.2),   // Implied volatility
+            Positive::HUNDRED,  // Same underlying price
+            Positive::ONE,      // Quantity
+            Positive::HUNDRED,  // Same strike price
+            pos_or_panic!(0.2), // Implied volatility
         );
 
         ShortStraddle::get_strategy(&[short_call, short_put])
@@ -2053,7 +2032,6 @@ mod tests_short_straddle_pnl {
 
 #[cfg(test)]
 mod tests_straddle_position_management {
-    use positive::pos_or_panic;
     use super::*;
 
     use crate::error::position::PositionValidationErrorKind;
@@ -2065,15 +2043,15 @@ mod tests_straddle_position_management {
     fn create_test_short_straddle() -> ShortStraddle {
         ShortStraddle::new(
             "TEST".to_string(),
-            Positive::HUNDRED, // underlying_price
+            Positive::HUNDRED,    // underlying_price
             pos_or_panic!(110.0), // strike
             ExpirationDate::Days(pos_or_panic!(30.0)),
             pos_or_panic!(0.2), // implied_volatility
             dec!(0.05),         // risk_free_rate
             Positive::ZERO,     // dividend_yield
-            Positive::ONE, // quantity
-            Positive::TWO, // premium_short_call
-            Positive::TWO, // premium_short_put
+            Positive::ONE,      // quantity
+            Positive::TWO,      // premium_short_call
+            Positive::TWO,      // premium_short_put
             pos_or_panic!(0.1), // open_fee_short_call
             pos_or_panic!(0.1), // close_fee_short_call
             pos_or_panic!(0.1), // open_fee_short_put
@@ -2165,7 +2143,6 @@ mod tests_straddle_position_management {
 
 #[cfg(test)]
 mod tests_adjust_option_position {
-    use positive::pos_or_panic;
     use super::*;
 
     use crate::model::types::{OptionStyle, Side};
@@ -2175,15 +2152,15 @@ mod tests_adjust_option_position {
     fn create_test_short_straddle() -> ShortStraddle {
         ShortStraddle::new(
             "TEST".to_string(),
-            Positive::HUNDRED, // underlying_price
+            Positive::HUNDRED,    // underlying_price
             pos_or_panic!(110.0), // strike
             ExpirationDate::Days(pos_or_panic!(30.0)),
             pos_or_panic!(0.2), // implied_volatility
             dec!(0.05),         // risk_free_rate
             Positive::ZERO,     // dividend_yield
-            Positive::ONE, // quantity
-            Positive::TWO, // premium_short_call
-            Positive::TWO, // premium_short_put
+            Positive::ONE,      // quantity
+            Positive::TWO,      // premium_short_call
+            Positive::TWO,      // premium_short_put
             pos_or_panic!(0.1), // open_fee_short_call
             pos_or_panic!(0.1), // close_fee_short_call
             pos_or_panic!(0.1), // open_fee_short_put

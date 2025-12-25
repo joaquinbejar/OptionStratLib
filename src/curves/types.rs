@@ -522,7 +522,7 @@ mod tests_edge_cases {
 
     #[test]
     fn test_to_tuple_positive_constraint_x() {
-        use crate::Positive;
+        
 
         // Create a point with negative x
         let point = Point2D::new(dec!(-1.0), dec!(2.0));
@@ -542,7 +542,7 @@ mod tests_edge_cases {
 
     #[test]
     fn test_to_tuple_positive_constraint_y() {
-        use crate::Positive;
+        
 
         // Create a point with negative y
         let point = Point2D::new(dec!(1.0), dec!(-2.0));
@@ -562,7 +562,7 @@ mod tests_edge_cases {
 
     #[test]
     fn test_to_tuple_positive_constraint_both_pass() {
-        use crate::Positive;
+        
 
         // Create a point with positive x and y
         let point = Point2D::new(dec!(1.0), dec!(2.0));
@@ -726,7 +726,7 @@ mod tests_performance {
 #[cfg(test)]
 mod tests_point2d_specific_cases {
     use super::*;
-    use crate::Positive;
+    
     use crate::error::CurveError;
     use rust_decimal_macros::dec;
 

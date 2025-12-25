@@ -1,3 +1,4 @@
+use positive::{assert_pos_relative_eq, pos_or_panic};
 use num_traits::ToPrimitive;
 use optionstratlib::ExpirationDate;
 use optionstratlib::Positive;
@@ -7,7 +8,6 @@ use optionstratlib::strategies::poor_mans_covered_call::PoorMansCoveredCall;
 use optionstratlib::{assert_pos_relative_eq, pos_or_panic};
 use rust_decimal_macros::dec;
 use std::error::Error;
-use positive::pos_or_panic;
 
 #[test]
 fn test_poor_mans_covered_call_integration() -> Result<(), Box<dyn Error>> {

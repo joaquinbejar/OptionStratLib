@@ -1,8 +1,8 @@
+use crate::ExpirationDate;
 use crate::chains::OptionChain;
 use crate::error::ChainError;
 use crate::series::params::OptionSeriesBuildParams;
 use crate::utils::Len;
-use crate::{ExpirationDate, Positive};
 use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
 use serde::de::{self, MapAccess, Visitor};
@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 use serde::{Deserializer, Serializer};
 use std::collections::BTreeMap;
 use std::fmt;
+use positive::Positive;
 use utoipa::ToSchema;
 
 /// Represents a series of option chains for an underlying asset,
@@ -372,8 +373,8 @@ impl<'de> Deserialize<'de> for OptionSeries {
 
 #[cfg(test)]
 mod tests_option_series {
-    use positive::{pos_or_panic, spos};
     use super::*;
+    use positive::{pos_or_panic, spos};
 
     use crate::chains::OptionChain;
     use crate::series::params::OptionSeriesBuildParams;

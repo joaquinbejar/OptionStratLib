@@ -1,7 +1,7 @@
-use crate::Positive;
 use crate::error::PricingError;
 use crate::model::types::{OptionStyle, Side};
 use num_traits::ToPrimitive;
+use positive::Positive;
 use rust_decimal::Decimal;
 use tracing::trace;
 
@@ -227,9 +227,9 @@ pub trait Profit {
 
 #[cfg(test)]
 mod tests_standard_payoff {
-    use positive::pos_or_panic;
     use super::*;
     use crate::model::types::OptionType;
+    use positive::pos_or_panic;
 
     #[test]
     fn test_call_option_in_the_money() {

@@ -1,6 +1,6 @@
+use positive::pos_or_panic;
 use optionstratlib::prelude::*;
 use rust_decimal_macros::dec;
-use positive::pos_or_panic;
 
 fn get_option(strike: &Positive, volatility: &Positive) -> Options {
     Options::new(

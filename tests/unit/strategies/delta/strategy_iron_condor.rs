@@ -1,3 +1,4 @@
+use positive::{assert_pos_relative_eq, pos_or_panic};
 use optionstratlib::greeks::Greeks;
 use optionstratlib::model::types::OptionStyle;
 use optionstratlib::strategies::DELTA_THRESHOLD;
@@ -7,7 +8,6 @@ use optionstratlib::strategies::iron_condor::IronCondor;
 use optionstratlib::{ExpirationDate, Positive, assert_decimal_eq, assert_pos_relative_eq, pos_or_panic};
 use rust_decimal_macros::dec;
 use std::error::Error;
-use positive::pos_or_panic;
 
 #[test]
 fn test_iron_condor_integration() -> Result<(), Box<dyn Error>> {

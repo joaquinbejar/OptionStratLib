@@ -1,3 +1,4 @@
+use positive::pos_or_panic;
 /******************************************************************************
    Author: Joaquín Béjar García
    Email: jb@taunais.com
@@ -6,7 +7,6 @@
 use optionstratlib::prelude::*;
 use rust_decimal_macros::dec;
 use tracing::info;
-use positive::pos_or_panic;
 
 fn main() {
     setup_logger();

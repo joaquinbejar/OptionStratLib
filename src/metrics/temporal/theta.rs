@@ -50,7 +50,7 @@
 //! - **Y-axis**: Days to expiration
 //! - **Z-axis**: Theta value
 
-use crate::Positive;
+
 use crate::curves::Curve;
 use crate::error::CurveError;
 use crate::error::SurfaceError;
@@ -152,7 +152,7 @@ mod tests_theta {
     use rust_decimal::MathematicalOps;
     use rust_decimal_macros::dec;
     use std::collections::BTreeSet;
-    use positive::pos_or_panic;
+use positive::pos_or_panic;
 
     struct TestTheta {
         underlying_price: Positive,

@@ -1,7 +1,7 @@
-use crate::Positive;
 use crate::pnl::PnL;
 use chrono::{DateTime, Utc};
 use lazy_static::lazy_static;
+use positive::Positive;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -430,8 +430,8 @@ mod tests_pnl_metrics {
 
     use chrono::Utc;
     use num_traits::FromPrimitive;
-    use std::fs;
     use positive::pos_or_panic;
+    use std::fs;
     use tempfile::tempdir;
 
     #[test]
@@ -496,11 +496,7 @@ mod tests_pnl_metrics {
             losing_steps: 2,
             initial_price: pos_or_panic!(95.0),
             final_price: pos_or_panic!(105.0),
-            strikes: vec![
-                pos_or_panic!(90.0),
-                Positive::HUNDRED,
-                pos_or_panic!(110.0),
-            ],
+            strikes: vec![pos_or_panic!(90.0), Positive::HUNDRED, pos_or_panic!(110.0)],
             initial_volumes: vec![Positive::ONE, Positive::TWO, pos_or_panic!(3.0)],
             final_volumes: vec![pos_or_panic!(0.5), pos_or_panic!(1.5), pos_or_panic!(2.5)],
             delta_adjustments: Positive::TWO,
@@ -825,11 +821,7 @@ mod tests_pnl_metrics_serialization {
             losing_steps: 12,
             initial_price: pos_or_panic!(95.75),
             final_price: pos_or_panic!(105.25),
-            strikes: vec![
-                pos_or_panic!(90.0),
-                Positive::HUNDRED,
-                pos_or_panic!(110.0),
-            ],
+            strikes: vec![pos_or_panic!(90.0), Positive::HUNDRED, pos_or_panic!(110.0)],
             initial_volumes: vec![pos_or_panic!(1.5), pos_or_panic!(2.5), pos_or_panic!(3.5)],
             final_volumes: vec![pos_or_panic!(0.5), pos_or_panic!(1.5), pos_or_panic!(2.5)],
             delta_adjustments: pos_or_panic!(2.25),

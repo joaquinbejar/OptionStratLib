@@ -13,7 +13,7 @@
 //! retrieving position information, and computing Greeks across different
 //! instrument types.
 
-use crate::Positive;
+
 use crate::error::GreeksError;
 use crate::model::types::Side;
 use positive::pos_or_panic;

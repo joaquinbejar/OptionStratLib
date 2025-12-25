@@ -28,9 +28,9 @@ use crate::strategies::{
     Validable,
 };
 use crate::utils::Len;
-use crate::{ExpirationDate, Options, Positive, test_strategy_traits};
-use positive::pos_or_panic;
+use crate::{ExpirationDate, Options, test_strategy_traits};
 use chrono::Utc;
+use positive::{Positive, pos_or_panic};
 use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -774,6 +774,7 @@ test_strategy_traits!(ShortPut, test_short_put_implementations);
 mod tests_simulate {
     use super::*;
     use crate::chains::generator_positive;
+    use positive::Positive;
 
     use crate::simulation::simulator::Simulator;
     use crate::simulation::steps::Step;
@@ -792,14 +793,14 @@ mod tests_simulate {
             "TEST".to_string(),
             Positive::HUNDRED, // strike
             ExpirationDate::Days(pos_or_panic!(30.0)),
-            pos_or_panic!(0.20),  // implied volatility
-            Positive::ONE,   // quantity
-            Positive::HUNDRED, // underlying price
-            dec!(0.05),           // risk-free rate
-            Positive::ZERO,   // dividend yield
-            pos_or_panic!(5.0),   // premium received
-            Positive::ZERO,   // open fee
-            Positive::ZERO,   // close fee
+            pos_or_panic!(0.20), // implied volatility
+            Positive::ONE,       // quantity
+            Positive::HUNDRED,   // underlying price
+            dec!(0.05),          // risk-free rate
+            Positive::ZERO,      // dividend yield
+            pos_or_panic!(5.0),  // premium received
+            Positive::ZERO,      // open fee
+            Positive::ZERO,      // close fee
         )
     }
 
@@ -995,11 +996,7 @@ mod tests_simulate {
     #[test]
     fn test_simulate_underlying_below_exit() {
         let strategy = create_test_short_put();
-        let prices = vec![
-            Positive::HUNDRED,
-            pos_or_panic!(95.0),
-            pos_or_panic!(90.0),
-        ];
+        let prices = vec![Positive::HUNDRED, pos_or_panic!(95.0), pos_or_panic!(90.0)];
 
         let walk_params = create_walk_params(prices);
         let simulator = Simulator::new(
@@ -1169,11 +1166,7 @@ mod tests_simulate {
     fn test_simulate_stop_loss_hit() {
         let strategy = create_test_short_put();
         // Price drops significantly to trigger stop loss
-        let prices = vec![
-            Positive::HUNDRED,
-            pos_or_panic!(85.0),
-            pos_or_panic!(70.0),
-        ];
+        let prices = vec![Positive::HUNDRED, pos_or_panic!(85.0), pos_or_panic!(70.0)];
 
         let walk_params = create_walk_params(prices);
         let simulator = Simulator::new(
@@ -1257,11 +1250,7 @@ mod tests_simulate {
     #[test]
     fn test_simulate_mixed_results() {
         let strategy = create_test_short_put();
-        let prices = vec![
-            Positive::HUNDRED,
-            pos_or_panic!(102.0),
-            pos_or_panic!(98.0),
-        ];
+        let prices = vec![Positive::HUNDRED, pos_or_panic!(102.0), pos_or_panic!(98.0)];
 
         let walk_params = create_walk_params(prices);
         let simulator = Simulator::new(

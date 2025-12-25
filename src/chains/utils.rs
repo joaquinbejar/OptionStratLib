@@ -3,8 +3,8 @@
    Email: jb@taunais.com
    Date: 25/10/24
 ******************************************************************************/
-use positive::pos_or_panic;
-use crate::Positive;
+use positive::{pos_or_panic, spos};
+
 use crate::chains::OptionData;
 use crate::chains::chain::{SKEW_SLOPE, SKEW_SMILE_CURVE};
 use crate::error::chains::ChainError;
@@ -726,7 +726,6 @@ pub fn strike_step(
 
 #[cfg(test)]
 mod tests_strike_step {
-    use positive::spos;
     use super::*;
 
     use crate::chains::OptionChain;
@@ -871,7 +870,6 @@ mod tests_parse {
     use super::*;
 
     use std::f64::consts::PI;
-    use positive::spos;
 
     #[test]
     fn test_parse_valid_integer() {
@@ -904,10 +902,9 @@ mod tests_parse {
 
 #[cfg(test)]
 mod tests_parse_bis {
-    use positive::spos;
     use super::*;
 
-    use crate::Positive;
+    
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
 
@@ -1235,7 +1232,6 @@ mod tests_option_data_price_params {
     use super::*;
 
     use num_traits::ToPrimitive;
-    use positive::spos;
     use rust_decimal_macros::dec;
 
     fn get_params() -> OptionDataPriceParams {
@@ -1340,7 +1336,6 @@ mod tests_option_data_price_params {
 
 #[cfg(test)]
 mod tests_option_chain_build_params {
-    use positive::spos;
     use super::*;
 
     use rust_decimal_macros::dec;
@@ -1490,7 +1485,6 @@ mod tests_random_positions_params_extended {
 
 #[cfg(test)]
 mod tests_sample {
-    use positive::spos;
     use super::*;
 
     use crate::chains::chain::OptionChain;

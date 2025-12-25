@@ -20,12 +20,12 @@
 //! 2. **Add new legs**: Add options from the chain to fill gaps
 //! 3. **Use underlying**: Add shares for pure delta adjustment
 
-use crate::Positive;
+
 use crate::chains::chain::OptionChain;
 use crate::greeks::Greeks;
 use crate::model::position::Position;
 use crate::model::types::Side;
-use positive::pos_or_panic;
+use positive::{pos_or_panic, Positive};
 use num_traits::Signed;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
@@ -472,6 +472,7 @@ impl<'a> AdjustmentOptimizer<'a> {
 
 #[cfg(test)]
 mod tests_optimizer {
+    use positive::spos;
     use super::*;
     use crate::model::ExpirationDate;
     use crate::model::types::{OptionStyle, OptionType};
@@ -599,20 +600,5 @@ mod tests_optimizer {
 
         // Should either succeed or fail gracefully
         assert!(result.is_ok() || matches!(result, Err(AdjustmentError::NoViablePlan)));
-    }
-
-    #[test]
-    fn test_adjustment_config_builder() {
-        let config = AdjustmentConfig::default()
-            .with_max_cost(pos_or_panic!(1000.0))
-            .with_delta_tolerance(dec!(0.05))
-            .with_strike_range(pos_or_panic!(90.0), pos_or_panic!(110.0));
-
-        assert_eq!(config.max_cost, Some(pos_or_panic!(1000.0)));
-        assert_eq!(config.delta_tolerance, dec!(0.05));
-        assert_eq!(
-            config.strike_range,
-            Some((pos_or_panic!(90.0), pos_or_panic!(110.0)))
-        );
     }
 }

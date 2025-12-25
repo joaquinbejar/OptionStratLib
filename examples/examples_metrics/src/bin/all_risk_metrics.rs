@@ -1,3 +1,4 @@
+use positive::pos_or_panic;
 /******************************************************************************
    Author: Joaquín Béjar García
    Email: jb@taunais.com
@@ -23,7 +24,6 @@ use optionstratlib::metrics::{
 use optionstratlib::model::OptionStyle;
 use optionstratlib::prelude::*;
 use rust_decimal::Decimal;
-use positive::pos_or_panic;
 
 fn main() -> Result<(), CurveError> {
     setup_logger();

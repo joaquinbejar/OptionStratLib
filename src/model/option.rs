@@ -1,5 +1,5 @@
+use positive::{assert_pos_relative_eq, pos_or_panic};
 use crate::chains::OptionData;
-use positive::pos_or_panic;
 use crate::constants::{IV_TOLERANCE, MAX_ITERATIONS_IV, ZERO};
 use crate::error::{
     GreeksError, OptionsError, OptionsResult, PricingError, StrategyError, VolatilityError,
@@ -2224,7 +2224,6 @@ mod tests_options_black_scholes {
 
 #[cfg(test)]
 mod tests_calculate_implied_volatility {
-    use positive::assert_pos_relative_eq;
     use super::*;
     use crate::error::VolatilityError;
     use rust_decimal_macros::dec;

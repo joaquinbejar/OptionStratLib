@@ -1,3 +1,4 @@
+use positive::pos_or_panic;
 /******************************************************************************
 use optionstratlib::error::Error;
    Author: Joaquín Béjar García
@@ -40,7 +41,6 @@ use optionstratlib::error::Error;
 //! - PNG visualization of the last simulation in `Draws/Simulation/short_put_strategy_simulation.png`
 
 use optionstratlib::prelude::*;
-use positive::pos_or_panic;
 
 /// Walker implementation for the simulation.
 struct Walker;

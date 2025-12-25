@@ -1,5 +1,5 @@
-use optionstratlib::prelude::*;
 use positive::pos_or_panic;
+use optionstratlib::prelude::*;
 
 fn get_option(point2d: &Point2D) -> Options {
     let strike = Positive::new_decimal(point2d.x).unwrap();

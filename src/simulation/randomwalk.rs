@@ -3,7 +3,7 @@
    Email: jb@taunais.com
    Date: 23/3/25
 ******************************************************************************/
-use crate::Positive;
+
 use crate::error::PricingError;
 use crate::pricing::Profit;
 use crate::simulation::WalkParams;
@@ -11,6 +11,7 @@ use crate::simulation::steps::Step;
 use crate::strategies::base::BasicAble;
 use crate::utils::Len;
 use crate::visualization::{ColorScheme, Graph, GraphConfig, GraphData, Series2D, TraceMode};
+use positive::Positive;
 use rust_decimal::Decimal;
 use std::fmt::Display;
 use std::ops::{AddAssign, Index, IndexMut};
@@ -342,7 +343,6 @@ where
 mod tests_random_walk {
     use super::*;
     use crate::ExpirationDate;
-    use crate::Positive;
 
     use crate::error::SimulationError;
 
@@ -355,9 +355,9 @@ mod tests_random_walk {
     use num_traits::ToPrimitive;
     use rust_decimal::Decimal;
 
+    use positive::pos_or_panic;
     use std::fmt::Display;
     use std::ops::AddAssign;
-    use positive::pos_or_panic;
 
     // Mock implementation of WalkTypeAble for testing
     struct TestWalker {}

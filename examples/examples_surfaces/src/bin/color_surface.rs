@@ -1,6 +1,6 @@
+use positive::pos_or_panic;
 use optionstratlib::prelude::*;
 use std::error::Error;
-use positive::pos_or_panic;
 
 fn get_option(point2d: &Point2D) -> Options {
     let strike = Positive::new_decimal(point2d.y).unwrap();

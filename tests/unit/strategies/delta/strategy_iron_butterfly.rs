@@ -1,3 +1,4 @@
+use positive::{Positive, assert_pos_relative_eq, pos_or_panic};
 use optionstratlib::greeks::Greeks;
 use optionstratlib::model::types::OptionStyle;
 use optionstratlib::strategies::DELTA_THRESHOLD;
@@ -5,7 +6,6 @@ use optionstratlib::strategies::delta_neutral::DeltaAdjustment::BuyOptions;
 use optionstratlib::strategies::delta_neutral::DeltaNeutrality;
 use optionstratlib::strategies::iron_butterfly::IronButterfly;
 use optionstratlib::{ExpirationDate, Side, assert_decimal_eq, assert_pos_relative_eq};
-use positive::{Positive, pos_or_panic};
 use rust_decimal_macros::dec;
 use std::error::Error;
 

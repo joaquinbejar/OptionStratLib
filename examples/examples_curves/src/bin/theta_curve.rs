@@ -1,5 +1,5 @@
-use optionstratlib::prelude::*;
 use positive::pos_or_panic;
+use optionstratlib::prelude::*;
 
 fn get_option(strike: &Positive) -> Options {
     Options::new(

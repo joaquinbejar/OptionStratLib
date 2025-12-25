@@ -20,4 +20,4 @@
 
 // Re-export everything from the positive crate
 pub use positive::error::{PositiveError, PositiveResult};
-pub use positive::{EPSILON as POSITIVE_EPSILON, Positive, is_positive};
+use positive::{EPSILON as POSITIVE_EPSILON, Positive, is_positive};

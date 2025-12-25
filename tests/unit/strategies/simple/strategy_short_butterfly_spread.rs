@@ -1,3 +1,4 @@
+use positive::{assert_pos_relative_eq, pos_or_panic};
 use approx::assert_relative_eq;
 use num_traits::ToPrimitive;
 use optionstratlib::ExpirationDate;
@@ -7,7 +8,6 @@ use optionstratlib::strategies::{ShortButterflySpread, Strategies};
 use optionstratlib::{assert_pos_relative_eq, pos_or_panic};
 use rust_decimal_macros::dec;
 use std::error::Error;
-use positive::pos_or_panic;
 
 #[test]
 fn test_short_butterfly_spread_integration() -> Result<(), Box<dyn Error>> {

@@ -3,11 +3,12 @@
    Email: jb@taunais.com
    Date: 27/9/24
 ******************************************************************************/
-use crate::Positive;
+
 use crate::constants::TOLERANCE;
 use crate::error::{DecimalError, Error};
 use itertools::Itertools;
 use num_traits::{FromPrimitive, ToPrimitive};
+use positive::Positive;
 use rand::{Rng, rng};
 use rayon::prelude::*;
 use rust_decimal::Decimal;
@@ -287,8 +288,8 @@ mod tests_get_random_element {
     use super::*;
     use crate::chains::OptionData;
 
-    use std::collections::BTreeSet;
     use positive::pos_or_panic;
+    use std::collections::BTreeSet;
 
     #[test]
     fn test_get_random_element_empty_set() {
@@ -642,11 +643,7 @@ mod tests_log_returns {
     #[test]
     #[should_panic]
     fn test_zero_price() {
-        let prices = vec![
-            Positive::HUNDRED,
-            Positive::ZERO,
-            pos_or_panic!(105.0),
-        ];
+        let prices = vec![Positive::HUNDRED, Positive::ZERO, pos_or_panic!(105.0)];
         let _ = calculate_log_returns(&prices);
     }
 
@@ -685,7 +682,7 @@ mod tests_log_returns {
     fn test_large_price_movements() {
         // Test with some large price movements (both up and down)
         let prices = vec![
-            Positive::HUNDRED, // Starting price
+            Positive::HUNDRED,    // Starting price
             pos_or_panic!(200.0), // 100% increase
             pos_or_panic!(50.0),  // 75% decrease
             pos_or_panic!(300.0), // 500% increase
@@ -708,11 +705,7 @@ mod tests_log_returns {
     #[test]
     fn test_no_change_prices() {
         // Test with prices that don't change
-        let prices = vec![
-            Positive::HUNDRED,
-            Positive::HUNDRED,
-            Positive::HUNDRED,
-        ];
+        let prices = vec![Positive::HUNDRED, Positive::HUNDRED, Positive::HUNDRED];
         let result = calculate_log_returns(&prices).unwrap();
 
         assert_eq!(result.len(), 2);

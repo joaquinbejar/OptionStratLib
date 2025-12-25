@@ -1,3 +1,4 @@
+use positive::{Positive, assert_pos_relative_eq, pos_or_panic};
 use approx::assert_relative_eq;
 use num_traits::ToPrimitive;
 use optionstratlib::ExpirationDate;
@@ -5,7 +6,6 @@ use optionstratlib::constants::ZERO;
 use optionstratlib::strategies::base::BreakEvenable;
 use optionstratlib::strategies::call_butterfly::CallButterfly;
 use optionstratlib::strategies::{BasicAble, Strategies};
-use positive::{Positive, assert_pos_relative_eq, pos_or_panic};
 use rust_decimal_macros::dec;
 use std::error::Error;
 

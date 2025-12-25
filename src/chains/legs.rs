@@ -137,7 +137,7 @@ impl Display for StrategyLegs<'_> {
 
 #[cfg(test)]
 mod tests {
-    use positive::{pos_or_panic, Positive};
+use positive::{Positive, pos_or_panic};
     use super::*;
 
     use rust_decimal::Decimal;

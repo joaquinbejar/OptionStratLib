@@ -40,7 +40,7 @@
 //! );
 //! ```
 
-use crate::Positive;
+
 use crate::error::GreeksError;
 use crate::model::leg::traits::{Fundable, LegAble, Marginable};
 use crate::model::types::Side;

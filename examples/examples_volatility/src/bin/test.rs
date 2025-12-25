@@ -1,3 +1,4 @@
+use positive::pos_or_panic;
 /******************************************************************************
    Author: Joaquín Béjar García
    Email: jb@taunais.com
@@ -7,7 +8,6 @@ use optionstratlib::prelude::*;
 use rand::{rng, Rng};
 use rust_decimal::prelude::FromPrimitive;
 use rust_decimal::MathematicalOps;
-use positive::pos_or_panic;
 
 #[allow(clippy::too_many_arguments)]
 fn calculate_error(

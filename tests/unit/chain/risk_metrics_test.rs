@@ -18,7 +18,7 @@ use optionstratlib::metrics::{
     DollarGammaCurve, ImpliedVolatilityCurve, ImpliedVolatilitySurface, RiskReversalCurve,
 };
 use optionstratlib::model::{ExpirationDate, OptionStyle};
-use positive::{ spos, pos_or_panic};
+use positive::{pos_or_panic, spos};
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 

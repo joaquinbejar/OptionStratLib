@@ -3,7 +3,7 @@
    Email: jb@taunais.com
    Date: 30/11/24
 ******************************************************************************/
-use crate::Positive;
+
 use crate::error::probability::{PriceErrorKind, ProbabilityError};
 use crate::model::ExpirationDate;
 use crate::strategies::probabilities::utils::{
@@ -194,7 +194,7 @@ impl ProfitLossRange {
 #[cfg(test)]
 mod tests_profit_range {
     use super::*;
-    use positive::{pos_or_panic, spos};
+use positive::{pos_or_panic, spos};
 
     #[test]
     fn test_profit_range_creation() {
@@ -243,7 +243,6 @@ mod tests_profit_range {
 #[cfg(test)]
 mod tests_calculate_probability {
     use super::*;
-    use positive::{pos_or_panic, spos};
 
     use crate::constants::DAYS_IN_A_YEAR;
 

@@ -28,9 +28,8 @@ use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, StrategyBasics, StrategyType, Validable,
 };
 use crate::chains::OptionData;
-use positive::pos_or_panic;
 use crate::{
-    ExpirationDate, Options, Positive,
+    ExpirationDate, Options,
     chains::{StrategyLegs, chain::OptionChain},
     constants::ZERO,
     error::{
@@ -58,6 +57,7 @@ use crate::{
 };
 use chrono::Utc;
 use num_traits::FromPrimitive;
+use positive::{Positive, assert_pos_relative_eq, pos_or_panic, spos};
 use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -1421,11 +1421,11 @@ mod tests_pmcc_best_ratio {
 mod tests_short_straddle_delta {
     use super::*;
 
+    use crate::assert_decimal_eq;
     use crate::model::types::OptionStyle;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use crate::strategies::poor_mans_covered_call::PoorMansCoveredCall;
-    use crate::{assert_decimal_eq, assert_pos_relative_eq};
     use rust_decimal_macros::dec;
 
     fn get_strategy(long_strike: Positive, short_strike: Positive) -> PoorMansCoveredCall {
@@ -1440,7 +1440,7 @@ mod tests_short_straddle_delta {
             pos_or_panic!(0.3745), // implied_volatility
             dec!(0.05),            // risk_free_rate
             Positive::ZERO,        // dividend_yield
-            Positive::ONE,    // quantity
+            Positive::ONE,         // quantity
             pos_or_panic!(84.2),   // premium_short_call
             pos_or_panic!(353.2),  // premium_long_call
             pos_or_panic!(7.01),   // open_fee_short_call
@@ -1549,11 +1549,11 @@ mod tests_short_straddle_delta {
 mod tests_short_straddle_delta_size {
     use super::*;
 
+    use crate::assert_decimal_eq;
     use crate::model::types::OptionStyle;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use crate::strategies::poor_mans_covered_call::PoorMansCoveredCall;
-    use crate::{assert_decimal_eq, assert_pos_relative_eq};
     use rust_decimal_macros::dec;
 
     fn get_strategy(long_strike: Positive, short_strike: Positive) -> PoorMansCoveredCall {
@@ -1568,7 +1568,7 @@ mod tests_short_straddle_delta_size {
             pos_or_panic!(0.3745), // implied_volatility
             dec!(0.05),            // risk_free_rate
             Positive::ZERO,        // dividend_yield
-            Positive::TWO,    // quantity
+            Positive::TWO,         // quantity
             pos_or_panic!(84.2),   // premium_short_call
             pos_or_panic!(353.2),  // premium_long_call
             pos_or_panic!(7.01),   // open_fee_short_call
@@ -1677,7 +1677,6 @@ mod tests_short_straddle_delta_size {
 mod tests_poor_mans_covered_call_probability {
     use super::*;
 
-    use crate::assert_pos_relative_eq;
     use crate::strategies::probabilities::utils::PriceTrend;
     use rust_decimal_macros::dec;
 
@@ -1902,7 +1901,7 @@ mod tests_poor_mans_covered_call_position_management {
             pos_or_panic!(0.17),                       // implied_volatility
             dec!(0.05),                                // risk_free_rate
             Positive::ZERO,                            // dividend_yield
-            Positive::TWO,                        // quantity
+            Positive::TWO,                             // quantity
             pos_or_panic!(154.7),                      // premium_short_call
             pos_or_panic!(30.8),                       // premium_long_call
             pos_or_panic!(1.74),                       // open_fee_short_call
@@ -2029,7 +2028,7 @@ mod tests_adjust_option_position {
             pos_or_panic!(0.17),                       // implied_volatility
             dec!(0.05),                                // risk_free_rate
             Positive::ZERO,                            // dividend_yield
-            Positive::TWO,                        // quantity
+            Positive::TWO,                             // quantity
             pos_or_panic!(154.7),                      // premium_short_call
             pos_or_panic!(30.8),                       // premium_long_call
             pos_or_panic!(1.74),                       // open_fee_short_call
@@ -2252,7 +2251,6 @@ mod tests_strategy_constructor {
 mod tests_poor_mans_covered_call_pnl {
     use super::*;
 
-    use crate::assert_pos_relative_eq;
     use crate::model::utils::create_sample_position;
     use rust_decimal_macros::dec;
 
@@ -2261,18 +2259,18 @@ mod tests_poor_mans_covered_call_pnl {
         let long_call = create_sample_position(
             OptionStyle::Call,
             Side::Long,
-            Positive::HUNDRED, // Underlying price
-            Positive::ONE,   // Quantity
-            pos_or_panic!(95.0),  // Strike price (Lower)
-            pos_or_panic!(0.2),   // Implied volatility
+            Positive::HUNDRED,   // Underlying price
+            Positive::ONE,       // Quantity
+            pos_or_panic!(95.0), // Strike price (Lower)
+            pos_or_panic!(0.2),  // Implied volatility
         );
 
         // Create short call with higher strike
         let short_call = create_sample_position(
             OptionStyle::Call,
             Side::Short,
-            Positive::HUNDRED, // Same underlying price
-            Positive::ONE,   // Quantity
+            Positive::HUNDRED,    // Same underlying price
+            Positive::ONE,        // Quantity
             pos_or_panic!(105.0), // Higher strike price
             pos_or_panic!(0.2),   // Implied volatility
         );

@@ -51,8 +51,8 @@ use crate::model::types::{Action, OptionStyle};
 use crate::model::{Trade, TradeStatusAble};
 use crate::strategies::Strategies;
 use crate::strategies::base::Positionable;
-use crate::{Options, Positive, Side};
-use positive::pos_or_panic;
+use crate::{Options, Side};
+use positive::{Positive, pos_or_panic};
 use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
@@ -1483,7 +1483,7 @@ mod tests_serialization {
             pos_or_panic!(0.3745), // implied_volatility
             dec!(0.05),            // risk_free_rate
             Positive::ZERO,        // dividend_yield
-            Positive::TWO,    // quantity
+            Positive::TWO,         // quantity
             pos_or_panic!(84.2),   // premium_short_call
             pos_or_panic!(353.2),  // premium_short_put
             pos_or_panic!(7.01),   // open_fee_short_call

@@ -1,5 +1,5 @@
-use optionstratlib::prelude::*;
 use positive::pos_or_panic;
+use optionstratlib::prelude::*;
 fn main() -> Result<(), Error> {
     setup_logger();
     let option_chain =

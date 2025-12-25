@@ -32,11 +32,11 @@
 //! - Average holding period
 //! - Distribution of exit reasons
 //! - PNG visualization of the last simulation in `Draws/Simulation/short_put_simulation.png`
+use positive::pos_or_panic;
 
 use indicatif::{ProgressBar, ProgressStyle};
 use optionstratlib::prelude::*;
 use std::collections::HashMap;
-use positive::pos_or_panic;
 
 /// Walker implementation for the simulation.
 #[warn(dead_code)]

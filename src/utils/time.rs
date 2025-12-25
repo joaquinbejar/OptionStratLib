@@ -1,10 +1,10 @@
+use positive::{Positive, assert_pos_relative_eq, pos_or_panic};
 /******************************************************************************
    Author: Joaquín Béjar García
    Email: jb@taunais.com
    Date: 23/10/24
 ******************************************************************************/
-use positive::pos_or_panic;
-use crate::Positive;
+
 use crate::constants::*;
 use chrono::{Duration, Local, NaiveTime, Utc};
 use rust_decimal_macros::dec;
@@ -150,7 +150,7 @@ pub fn units_per_year(time_frame: &TimeFrame) -> Positive {
         TimeFrame::Week => Positive(dec!(365.0) / dec!(7.0)),      // 365 / 7
         TimeFrame::Month => pos_or_panic!(12.0),                   // 12
         TimeFrame::Quarter => pos_or_panic!(4.0),                  // 4
-        TimeFrame::Year => Positive::ONE,                     // 1
+        TimeFrame::Year => Positive::ONE,                          // 1
         TimeFrame::Custom(periods) => *periods,                    // Custom periods per year
     }
 }
@@ -326,7 +326,6 @@ pub fn get_today_or_tomorrow_formatted() -> String {
 #[cfg(test)]
 mod tests_timeframe {
     use super::*;
-    use crate::assert_pos_relative_eq;
 
     #[test]
     fn test_microsecond_periods() {
@@ -483,7 +482,6 @@ mod tests_timeframe {
 #[cfg(test)]
 mod tests_timeframe_convert {
     use super::*;
-    use crate::assert_pos_relative_eq;
 
     #[test]
     fn test_convert_seconds_to_minutes() {

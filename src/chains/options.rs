@@ -155,7 +155,7 @@ pub struct DeltasInStrike {
 
 #[cfg(test)]
 mod tests_options_in_strike {
-    use positive::{pos_or_panic, Positive};
+use positive::{Positive, pos_or_panic};
     use super::*;
     use crate::ExpirationDate;
     use crate::model::types::{OptionStyle, OptionType, Side};

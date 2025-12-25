@@ -1,5 +1,5 @@
-use crate::Positive;
 use crate::utils::TimeFrame;
+use positive::Positive;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
@@ -270,8 +270,8 @@ impl Display for WalkType {
 
 #[cfg(test)]
 mod tests_walk_type {
-    use positive::pos_or_panic;
     use super::*;
+    use positive::pos_or_panic;
 
     use rust_decimal_macros::dec;
 
@@ -768,8 +768,8 @@ mod tests_walk_type {
 
 #[cfg(test)]
 mod tests_serialize {
-    use positive::pos_or_panic;
     use super::*;
+    use positive::pos_or_panic;
 
     use rust_decimal_macros::dec;
     use serde_json::{from_str, to_string};

@@ -3,11 +3,12 @@
    Email: jb@taunais.com
    Date: 23/3/25
 ******************************************************************************/
+use crate::ExpirationDate;
 use crate::error::SimulationError;
 use crate::simulation::steps::{Xstep, Ystep};
 use crate::utils::TimeFrame;
-use crate::{ExpirationDate, Positive};
 use num_traits::FromPrimitive;
+use positive::Positive;
 use rust_decimal::Decimal;
 use serde::ser::SerializeStruct;
 use serde::{Serialize, Serializer};
@@ -282,9 +283,8 @@ where
 
 #[cfg(test)]
 mod tests {
-    use positive::pos_or_panic;
     use super::*;
-    use crate::Positive;
+    use positive::pos_or_panic;
 
     // Helper struct for testing
     #[derive(Debug, Copy, Clone, PartialEq)]
@@ -494,8 +494,8 @@ mod tests {
 
 #[cfg(test)]
 mod tests_positive {
-    use positive::pos_or_panic;
     use super::*;
+    use positive::pos_or_panic;
 
     #[test]
     fn test_step_new() {
@@ -663,9 +663,8 @@ mod tests_positive {
 
 #[cfg(test)]
 mod tests_step {
-    use positive::pos_or_panic;
     use super::*;
-    use crate::Positive;
+    use positive::pos_or_panic;
 
     // Helper struct for testing
     #[derive(Debug, Copy, Clone, PartialEq)]

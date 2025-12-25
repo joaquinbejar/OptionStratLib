@@ -1009,13 +1009,7 @@ pub mod prelude;
 
 pub use model::ExpirationDate;
 pub use model::Options;
-pub use model::positive::{Positive, PositiveError, PositiveResult, is_positive};
 pub use model::types::{OptionStyle, OptionType, Side};
-
-// Re-export macros from positive crate
-pub use positive::pos;
-pub use positive::pos_or_panic;
-pub use positive::spos;
 
 /// Library version
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");

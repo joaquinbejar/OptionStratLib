@@ -47,7 +47,7 @@
 //! - **Y-axis**: Volatility level (or vol shock %)
 //! - **Z-axis**: P&L or option value
 
-use crate::Positive;
+
 use crate::curves::Curve;
 use crate::error::CurveError;
 use crate::error::SurfaceError;
@@ -153,7 +153,7 @@ mod tests_price_shock {
     use rust_decimal::MathematicalOps;
     use rust_decimal_macros::dec;
     use std::collections::BTreeSet;
-    use positive::pos_or_panic;
+use positive::pos_or_panic;
 
     struct TestPriceShock {
         underlying_price: Positive,

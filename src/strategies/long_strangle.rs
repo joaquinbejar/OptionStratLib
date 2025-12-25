@@ -1,3 +1,4 @@
+use positive::{assert_pos_relative_eq, pos_or_panic, Positive};
 /*
 Strangle Strategy
 
@@ -12,9 +13,8 @@ Key characteristics:
 use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, StrategyBasics, StrategyType, Validable,
 };
-use positive::pos_or_panic;
 use crate::{
-    ExpirationDate, Options, Positive,
+    ExpirationDate, Options,
     chains::{StrategyLegs, chain::OptionChain, utils::OptionDataGroup},
     error::{
         GreeksError, OperationErrorKind, PricingError,
@@ -1154,7 +1154,7 @@ mod tests_long_strangle_delta {
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use crate::strategies::long_strangle::{LongStrangle, Positive};
-    use crate::{assert_decimal_eq, assert_pos_relative_eq};
+    use crate::{assert_decimal_eq};
     use rust_decimal_macros::dec;
 
     fn get_strategy(call_strike: Positive, put_strike: Positive) -> LongStrangle {
@@ -1284,7 +1284,7 @@ mod tests_long_strangle_delta_size {
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use crate::strategies::long_strangle::{LongStrangle, Positive};
-    use crate::{assert_decimal_eq, assert_pos_relative_eq};
+    use crate::{assert_decimal_eq};
     use rust_decimal_macros::dec;
 
     fn get_strategy(call_strike: Positive, put_strike: Positive) -> LongStrangle {
@@ -1943,7 +1943,7 @@ mod tests_strategy_constructor {
 mod tests_long_strangle_pnl {
     use super::*;
     use crate::model::utils::create_sample_position;
-    use crate::{assert_decimal_eq, assert_pos_relative_eq};
+    use crate::{assert_decimal_eq};
     use rust_decimal_macros::dec;
 
     fn create_test_strangle() -> Result<LongStrangle, StrategyError> {

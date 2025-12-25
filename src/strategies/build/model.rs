@@ -9,11 +9,11 @@ use crate::model::Position;
 use crate::strategies::base::StrategyType;
 use crate::strategies::custom::CustomStrategy;
 use crate::strategies::{
-    use positive::pos_or_panic;
     BearCallSpread, BearPutSpread, BullCallSpread, BullPutSpread, CallButterfly, IronButterfly,
     IronCondor, LongButterflySpread, LongStraddle, LongStrangle, PoorMansCoveredCall,
     ShortButterflySpread, ShortStraddle, ShortStrangle, Strategable, StrategyConstructor,
 };
+use positive::{Positive, pos_or_panic};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
@@ -138,7 +138,6 @@ mod tests_serialization {
     use crate::model::utils::create_sample_option_with_date;
     use crate::{OptionStyle, Side};
     use chrono::{DateTime, NaiveDateTime, Utc};
-    use positive::{pos_or_panic, Positive};
     use serde_json;
 
     fn sample_date() -> NaiveDateTime {
@@ -299,7 +298,6 @@ mod tests_strategies_build_model {
     use crate::model::utils::create_sample_option_with_date;
     use crate::{OptionStyle, Side, assert_decimal_eq};
     use chrono::{DateTime, NaiveDateTime, Utc};
-    use positive::{pos_or_panic, Positive};
     use rust_decimal_macros::dec;
     use serde_json;
 

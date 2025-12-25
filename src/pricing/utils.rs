@@ -4,7 +4,7 @@
    Date: 5/8/24
 ******************************************************************************/
 use crate::Options;
-use crate::Positive;
+
 use crate::error::decimal::DecimalError;
 use crate::greeks::{big_n, d2};
 use crate::model::types::Side;
@@ -13,6 +13,7 @@ use crate::pricing::constants::{CLAMP_MAX, CLAMP_MIN};
 use crate::pricing::payoff::{Payoff, PayoffInfo};
 use crate::utils::random_decimal;
 use num_traits::FromPrimitive;
+use positive::Positive;
 use rand::Rng;
 use rand_distr::{Distribution, Normal};
 use rust_decimal::{Decimal, MathematicalOps};
@@ -354,7 +355,7 @@ pub fn probability_keep_under_strike(
 
 #[cfg(test)]
 mod tests_simulate_returns {
-    use positive::pos_or_panic;
+use positive::{pos_or_panic, spos};
     use super::*;
 
     use crate::assert_decimal_eq;
@@ -567,7 +568,7 @@ mod tests_probability_keep_under_strike {
 
     use crate::constants::DAYS_IN_A_YEAR;
     use crate::model::types::{OptionStyle, OptionType};
-    use crate::{ExpirationDate, Positive, assert_decimal_eq};
+    use crate::{ExpirationDate, assert_decimal_eq};
     use rust_decimal_macros::dec;
     use tracing::info;
 

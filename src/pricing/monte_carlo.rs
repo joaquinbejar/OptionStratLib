@@ -1,8 +1,9 @@
+use crate::Options;
 use crate::error::PricingError;
 use crate::f2d;
 use crate::pricing::utils::wiener_increment;
-use crate::{Options, Positive};
 use num_traits::{FromPrimitive, ToPrimitive};
+use positive::{Positive, assert_pos_relative_eq, pos_or_panic};
 use rust_decimal::{Decimal, MathematicalOps};
 
 /// This function performs Monte Carlo simulation to price an option.
@@ -125,11 +126,11 @@ pub fn price_option_monte_carlo(
 
 #[cfg(test)]
 mod tests {
-    use positive::pos_or_panic;
     use super::*;
     use crate::constants::{DAYS_IN_A_YEAR, ZERO};
     use crate::model::types::{OptionStyle, OptionType, Side};
-    use crate::{ExpirationDate, Positive, assert_decimal_eq, f2du};
+    use crate::{ExpirationDate, assert_decimal_eq, f2du};
+    use positive::Positive;
     use rust_decimal::MathematicalOps;
     use rust_decimal_macros::dec;
 
@@ -201,7 +202,6 @@ mod tests {
 
 #[cfg(test)]
 mod tests_price_option_monte_carlo {
-    use positive::{assert_pos_relative_eq, pos_or_panic};
     use super::*;
     use crate::chains::generator_positive;
     use crate::model::utils::create_sample_option;
@@ -213,6 +213,7 @@ mod tests_price_option_monte_carlo {
     #[cfg(feature = "static_export")]
     use crate::visualization::Graph;
     use crate::{ExpirationDate, OptionStyle, Side};
+    use positive::Positive;
     use rust_decimal_macros::dec;
 
     #[test]

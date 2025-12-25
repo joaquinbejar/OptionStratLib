@@ -35,7 +35,7 @@
 //! );
 //! ```
 
-use crate::Positive;
+
 use crate::error::GreeksError;
 use crate::model::leg::traits::LegAble;
 use crate::model::types::Side;

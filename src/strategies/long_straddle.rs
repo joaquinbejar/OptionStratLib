@@ -1,3 +1,4 @@
+use positive::{Positive, assert_pos_relative_eq, pos_or_panic};
 /*
 Straddle Strategy
 
@@ -12,9 +13,8 @@ Key characteristics:
 use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, StrategyBasics, StrategyType, Validable,
 };
-use positive::pos_or_panic;
 use crate::{
-    ExpirationDate, Options, Positive,
+    ExpirationDate, Options,
     chains::{StrategyLegs, chain::OptionChain, utils::OptionDataGroup},
     constants::ZERO,
     error::{
@@ -871,13 +871,13 @@ mod tests_long_straddle_probability {
     fn create_test_long_straddle() -> LongStraddle {
         LongStraddle::new(
             "TEST".to_string(),
-            Positive::HUNDRED,                      // underlying_price
+            Positive::HUNDRED,                         // underlying_price
             pos_or_panic!(110.0),                      // strike
             ExpirationDate::Days(pos_or_panic!(30.0)), // expiration
             pos_or_panic!(0.2),                        // implied_volatility
             dec!(0.05),                                // risk_free_rate
             Positive::ZERO,                            // dividend_yield
-            Positive::ONE,                        // quantity
+            Positive::ONE,                             // quantity
             Positive::TWO,                             // premium_long_call
             Positive::TWO,                             // premium_long_put
             Positive::ZERO,                            // open_fee_long_call
@@ -1007,12 +1007,12 @@ mod tests_long_straddle_probability {
 #[cfg(test)]
 mod tests_long_straddle_delta {
     use super::*;
+    use crate::assert_decimal_eq;
     use crate::greeks::Greeks;
     use crate::model::types::OptionStyle;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use crate::strategies::long_straddle::{LongStraddle, Positive};
-    use crate::{assert_decimal_eq, assert_pos_relative_eq};
     use rust_decimal_macros::dec;
 
     fn get_strategy(strike: Positive) -> LongStraddle {
@@ -1025,7 +1025,7 @@ mod tests_long_straddle_delta {
             pos_or_panic!(0.3745), // implied_volatility
             dec!(0.05),            // risk_free_rate
             Positive::ZERO,        // dividend_yield
-            Positive::ONE,    // quantity
+            Positive::ONE,         // quantity
             pos_or_panic!(84.2),   // premium_long_call
             pos_or_panic!(353.2),  // premium_long_put
             pos_or_panic!(7.01),   // open_fee_long_call
@@ -1138,7 +1138,8 @@ mod tests_long_straddle_delta_size {
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use crate::strategies::long_straddle::{LongStraddle, Positive};
-    use crate::{ExpirationDate, Side, assert_decimal_eq, assert_pos_relative_eq};
+    use crate::{ExpirationDate, Side, assert_decimal_eq};
+    use positive::{assert_pos_relative_eq, pos_or_panic};
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
     use std::str::FromStr;
@@ -1153,7 +1154,7 @@ mod tests_long_straddle_delta_size {
             pos_or_panic!(0.3745), // implied_volatility
             dec!(0.05),            // risk_free_rate
             Positive::ZERO,        // dividend_yield
-            Positive::TWO,    // quantity
+            Positive::TWO,         // quantity
             pos_or_panic!(84.2),   // premium_long_call
             pos_or_panic!(353.2),  // premium_long_put
             pos_or_panic!(7.01),   // open_fee_long_call
@@ -1271,15 +1272,15 @@ mod tests_straddle_position_management {
     fn create_test_long_straddle() -> LongStraddle {
         LongStraddle::new(
             "TEST".to_string(),
-            Positive::HUNDRED, // underlying_price
+            Positive::HUNDRED,    // underlying_price
             pos_or_panic!(110.0), // strike
             ExpirationDate::Days(pos_or_panic!(30.0)),
             pos_or_panic!(0.2), // implied_volatility
             dec!(0.05),         // risk_free_rate
             Positive::ZERO,     // dividend_yield
-            Positive::ONE, // quantity
-            Positive::TWO, // premium_long_call
-            Positive::TWO, // premium_long_put
+            Positive::ONE,      // quantity
+            Positive::TWO,      // premium_long_call
+            Positive::TWO,      // premium_long_put
             pos_or_panic!(0.1), // open_fee_long_call
             pos_or_panic!(0.1), // close_fee_long_call
             pos_or_panic!(0.1), // open_fee_long_put
@@ -1379,15 +1380,15 @@ mod tests_adjust_option_position {
     fn create_test_long_straddle() -> LongStraddle {
         LongStraddle::new(
             "TEST".to_string(),
-            Positive::HUNDRED, // underlying_price
+            Positive::HUNDRED,    // underlying_price
             pos_or_panic!(110.0), // strike
             ExpirationDate::Days(pos_or_panic!(30.0)),
             pos_or_panic!(0.2), // implied_volatility
             dec!(0.05),         // risk_free_rate
             Positive::ZERO,     // dividend_yield
-            Positive::ONE, // quantity
-            Positive::TWO, // premium_long_call
-            Positive::TWO, // premium_long_put
+            Positive::ONE,      // quantity
+            Positive::TWO,      // premium_long_call
+            Positive::TWO,      // premium_long_put
             pos_or_panic!(0.1), // open_fee_long_call
             pos_or_panic!(0.1), // close_fee_long_call
             pos_or_panic!(0.1), // open_fee_long_put
@@ -1662,27 +1663,27 @@ mod tests_long_strategy_constructor {
 #[cfg(test)]
 mod tests_long_straddle_pnl {
     use super::*;
+    use crate::assert_decimal_eq;
     use crate::model::utils::create_sample_position;
-    use crate::{assert_decimal_eq, assert_pos_relative_eq};
     use rust_decimal_macros::dec;
 
     fn create_test_long_straddle() -> Result<LongStraddle, StrategyError> {
         let long_call = create_sample_position(
             OptionStyle::Call,
             Side::Long,
-            Positive::HUNDRED, // Underlying price
-            Positive::ONE,   // Quantity
-            Positive::HUNDRED, // Strike price (ATM)
-            pos_or_panic!(0.2),   // Implied volatility
+            Positive::HUNDRED,  // Underlying price
+            Positive::ONE,      // Quantity
+            Positive::HUNDRED,  // Strike price (ATM)
+            pos_or_panic!(0.2), // Implied volatility
         );
 
         let long_put = create_sample_position(
             OptionStyle::Put,
             Side::Long,
-            Positive::HUNDRED, // Same underlying price
-            Positive::ONE,   // Quantity
-            Positive::HUNDRED, // Same strike price
-            pos_or_panic!(0.2),   // Implied volatility
+            Positive::HUNDRED,  // Same underlying price
+            Positive::ONE,      // Quantity
+            Positive::HUNDRED,  // Same strike price
+            pos_or_panic!(0.2), // Implied volatility
         );
 
         LongStraddle::get_strategy(&[long_call, long_put])

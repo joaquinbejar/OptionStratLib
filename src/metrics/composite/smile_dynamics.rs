@@ -49,7 +49,7 @@
 //! - **Y-axis**: Days to expiration
 //! - **Z-axis**: Implied volatility
 
-use crate::Positive;
+
 use crate::curves::Curve;
 use crate::error::CurveError;
 use crate::error::SurfaceError;
@@ -176,7 +176,7 @@ mod tests_smile_dynamics {
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
     use std::collections::BTreeSet;
-    use positive::pos_or_panic;
+use positive::pos_or_panic;
 
     struct TestSmileDynamics {
         underlying_price: Positive,

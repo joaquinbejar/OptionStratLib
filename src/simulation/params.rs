@@ -1,6 +1,6 @@
-use crate::Positive;
 use crate::simulation::steps::{Step, Ystep};
 use crate::simulation::{WalkType, WalkTypeAble};
+use positive::Positive;
 use std::fmt::{Display, Formatter};
 use std::ops::AddAssign;
 
@@ -134,11 +134,11 @@ mod tests {
     use crate::model::positive::Positive;
     use crate::simulation::steps::{Xstep, Ystep};
     use crate::utils::time::TimeFrame;
+    use positive::pos_or_panic;
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
     use std::fmt::Display;
     use std::ops::AddAssign;
-    use positive::pos_or_panic;
 
     struct MockWalker;
 

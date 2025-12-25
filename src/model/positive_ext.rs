@@ -12,7 +12,7 @@
 use crate::chains::chain::OptionChain;
 use crate::model::utils::ToRound;
 use crate::series::OptionSeries;
-use positive::Positive;
+use positive::{Positive, pos_or_panic};
 use rust_decimal::Decimal;
 
 impl ToRound for Positive {
@@ -51,7 +51,6 @@ impl From<OptionSeries> for Positive {
 
 #[cfg(test)]
 mod tests {
-    use positive::pos_or_panic;
     use super::*;
 
     #[test]

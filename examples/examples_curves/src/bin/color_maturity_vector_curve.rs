@@ -1,6 +1,6 @@
+use positive::pos_or_panic;
 use optionstratlib::prelude::*;
 use std::error::Error;
-use positive::pos_or_panic;
 
 fn get_option(underlying_asset: &Positive, maturity: &Positive) -> Options {
     Options::new(

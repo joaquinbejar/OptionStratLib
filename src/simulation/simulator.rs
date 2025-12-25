@@ -1,3 +1,4 @@
+use crate::Options;
 use crate::error::PricingError;
 use crate::pricing::Profit;
 use crate::pricing::monte_carlo::price_option_monte_carlo;
@@ -7,7 +8,7 @@ use crate::simulation::steps::Step;
 use crate::strategies::base::BasicAble;
 use crate::utils::Len;
 use crate::visualization::{ColorScheme, Graph, GraphConfig, GraphData, Series2D, TraceMode};
-use crate::{Options, Positive};
+use positive::Positive;
 use rust_decimal::Decimal;
 use std::fmt::Display;
 use std::ops::{AddAssign, Index, IndexMut};
@@ -456,8 +457,8 @@ where
 
 #[cfg(test)]
 mod tests {
-    use positive::pos_or_panic;
     use super::*;
+    use crate::ExpirationDate;
     use crate::chains::generator_positive;
     use crate::error::SimulationError;
     use crate::simulation::{
@@ -465,7 +466,7 @@ mod tests {
         steps::{Step, Xstep, Ystep},
     };
     use crate::utils::{TimeFrame, time::convert_time_frame};
-    use crate::{ExpirationDate, Positive};
+    use positive::pos_or_panic;
     use rust_decimal_macros::dec;
     use tracing::{debug, info};
     #[cfg(feature = "plotly")]
@@ -775,11 +776,7 @@ mod tests {
                 y: Ystep::new(0, initial_price),
             },
             walk_type: WalkType::GeometricBrownian {
-                dt: convert_time_frame(
-                    Positive::ONE / days,
-                    &TimeFrame::Hour,
-                    &TimeFrame::Day,
-                ),
+                dt: convert_time_frame(Positive::ONE / days, &TimeFrame::Hour, &TimeFrame::Day),
                 drift: dec!(0.0),
                 volatility: std_dev,
             },
