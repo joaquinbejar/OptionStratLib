@@ -1,4 +1,3 @@
-use positive::Positive;
 /******************************************************************************
    Author: Joaquín Béjar García
    Email: jb@taunais.com
@@ -12,6 +11,8 @@ use crate::model::Position;
 use crate::strategies::{BasicAble, FindOptimalSide};
 use crate::{ExpirationDate, OptionStyle, Options, Side};
 use chrono::{DateTime, Utc};
+use positive::Positive;
+use positive::pos_or_panic;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;

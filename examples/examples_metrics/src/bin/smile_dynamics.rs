@@ -1,4 +1,3 @@
-use positive::pos_or_panic;
 /******************************************************************************
    Author: Joaquín Béjar García
    Email: jb@taunais.com
@@ -20,6 +19,7 @@ use optionstratlib::error::CurveError;
 use optionstratlib::metrics::{SmileDynamicsCurve, SmileDynamicsSurface};
 use optionstratlib::model::ExpirationDate;
 use optionstratlib::prelude::*;
+use positive::pos_or_panic;
 use rust_decimal_macros::dec;
 
 fn main() -> Result<(), CurveError> {

@@ -1284,6 +1284,7 @@ mod tests_bull_call_spread_optimization {
     use crate::model::ExpirationDate;
 
     use num_traits::ToPrimitive;
+    use positive::spos;
     use rust_decimal_macros::dec;
 
     fn create_test_chain() -> OptionChain {
@@ -1874,6 +1875,7 @@ mod tests_bull_call_spread_graph {
 
 #[cfg(test)]
 mod tests_bull_call_spread_probability {
+    use positive::assert_pos_relative_eq;
     use super::*;
 
     use crate::strategies::probabilities::utils::PriceTrend;
@@ -2710,6 +2712,7 @@ mod tests_bull_call_spread_constructor {
 
 #[cfg(test)]
 mod tests_bull_call_spread_pnl {
+    use positive::assert_pos_relative_eq;
     use super::*;
 
     use crate::assert_decimal_eq;

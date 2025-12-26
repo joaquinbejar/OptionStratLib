@@ -1025,6 +1025,7 @@ mod tests_call_butterfly {
     use super::*;
 
     use approx::assert_relative_eq;
+    use positive::pos_or_panic;
     use rust_decimal_macros::dec;
 
     fn setup() -> CallButterfly {
@@ -1106,6 +1107,7 @@ mod tests_call_butterfly {
 #[cfg(test)]
 mod tests_call_butterfly_validation {
     use super::*;
+    use positive::pos_or_panic;
 
     use rust_decimal_macros::dec;
 
@@ -1150,6 +1152,7 @@ mod tests_call_butterfly_validation {
 #[cfg(test)]
 mod tests_call_butterfly_delta {
     use super::*;
+    use positive::{assert_pos_relative_eq, pos_or_panic};
 
     use crate::assert_decimal_eq;
     use crate::model::types::OptionStyle;
@@ -1296,6 +1299,7 @@ mod tests_call_butterfly_delta {
 #[cfg(test)]
 mod tests_call_butterfly_delta_size {
     use super::*;
+    use positive::{assert_pos_relative_eq, pos_or_panic};
 
     use crate::assert_decimal_eq;
     use crate::model::types::OptionStyle;
@@ -1445,6 +1449,7 @@ mod tests_call_butterfly_optimizable {
     use super::*;
 
     use approx::assert_relative_eq;
+    use positive::pos_or_panic;
     use rust_decimal_macros::dec;
 
     fn create_test_option_chain() -> OptionChain {
@@ -1637,6 +1642,7 @@ mod tests_call_butterfly_probability {
 
     use crate::strategies::probabilities::utils::PriceTrend;
     use num_traits::ToPrimitive;
+    use positive::{assert_pos_relative_eq, pos_or_panic};
     use rust_decimal_macros::dec;
 
     /// Creates a test Call Butterfly with standard parameters based on SP500
@@ -1845,6 +1851,7 @@ mod tests_call_butterfly_probability {
 #[cfg(test)]
 mod tests_call_butterfly_position_management {
     use super::*;
+    use positive::pos_or_panic;
 
     use crate::error::position::PositionValidationErrorKind;
     use crate::model::types::{OptionStyle, Side};
@@ -2027,6 +2034,7 @@ mod tests_call_butterfly_position_management {
 #[cfg(test)]
 mod tests_adjust_option_position {
     use super::*;
+    use positive::pos_or_panic;
 
     use crate::model::types::{OptionStyle, Side};
 
@@ -2150,6 +2158,7 @@ mod tests_adjust_option_position {
 #[cfg(test)]
 mod tests_strategy_constructor {
     use super::*;
+    use positive::pos_or_panic;
 
     use crate::model::utils::create_sample_position;
 
@@ -2334,6 +2343,7 @@ mod tests_strategy_constructor {
 #[cfg(test)]
 mod tests_call_butterfly_pnl {
     use super::*;
+    use positive::{assert_pos_relative_eq, pos_or_panic};
 
     use crate::assert_decimal_eq;
     use crate::model::utils::create_sample_position;

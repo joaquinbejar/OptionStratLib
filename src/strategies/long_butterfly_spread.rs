@@ -1587,6 +1587,7 @@ mod tests_long_butterfly_profit {
 #[cfg(test)]
 mod tests_long_butterfly_delta {
     use super::*;
+    use positive::assert_pos_relative_eq;
 
     use crate::assert_decimal_eq;
     use crate::model::types::OptionStyle;
@@ -1742,6 +1743,7 @@ mod tests_long_butterfly_delta_size {
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use crate::strategies::long_butterfly_spread::LongButterflySpread;
+    use positive::assert_pos_relative_eq;
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
     use std::str::FromStr;
@@ -2842,6 +2844,7 @@ mod tests_butterfly_strategies {
 #[cfg(test)]
 mod tests_butterfly_optimizable {
     use super::*;
+    use positive::spos;
 
     use crate::model::ExpirationDate;
 

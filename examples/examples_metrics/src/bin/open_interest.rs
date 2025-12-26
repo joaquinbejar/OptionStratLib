@@ -12,14 +12,14 @@
 //! ## Output
 //! - PNG image: `./Draws/Metrics/open_interest_curve.png`
 //! - HTML interactive: `./Draws/Metrics/open_interest_curve.html`
-//! 
-use positive::pos_or_panic;
-use optionstratlib::chains::chain::OptionChain;
+//!
 use optionstratlib::chains::OptionData;
+use optionstratlib::chains::chain::OptionChain;
 use optionstratlib::error::CurveError;
 use optionstratlib::metrics::OpenInterestCurve;
 use optionstratlib::model::ExpirationDate;
 use optionstratlib::prelude::*;
+use positive::pos_or_panic;
 use rust_decimal_macros::dec;
 
 fn main() -> Result<(), CurveError> {

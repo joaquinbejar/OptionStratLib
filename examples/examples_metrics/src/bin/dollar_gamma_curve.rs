@@ -1,4 +1,3 @@
-use positive::pos_or_panic;
 /******************************************************************************
    Author: Joaquín Béjar García
    Email: jb@taunais.com
@@ -28,6 +27,7 @@ use optionstratlib::metrics::DollarGammaCurve;
 use optionstratlib::model::OptionStyle;
 use optionstratlib::prelude::*;
 use rust_decimal_macros::dec;
+use positive::pos_or_panic;
 
 fn main() -> Result<(), CurveError> {
     setup_logger();

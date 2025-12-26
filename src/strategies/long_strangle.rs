@@ -9,7 +9,6 @@ Key characteristics:
 - Lower cost than a straddle
 - Requires a larger price move to become profitable
 */
-use positive::Positive;
 use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, StrategyBasics, StrategyType, Validable,
 };
@@ -41,6 +40,7 @@ use crate::{
 };
 use chrono::Utc;
 use num_traits::FromPrimitive;
+use positive::Positive;
 use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -1004,6 +1004,7 @@ test_strategy_traits!(LongStrangle, test_short_call_implementations);
 mod tests_long_strangle_probability {
     use super::*;
     use crate::model::ExpirationDate;
+    use positive::pos_or_panic;
 
     use crate::strategies::probabilities::utils::PriceTrend;
     use rust_decimal_macros::dec;
@@ -1155,6 +1156,7 @@ mod tests_long_strangle_delta {
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use crate::strategies::long_strangle::{LongStrangle, Positive};
+    use positive::{assert_pos_relative_eq, pos_or_panic};
     use rust_decimal_macros::dec;
 
     fn get_strategy(call_strike: Positive, put_strike: Positive) -> LongStrangle {
@@ -1285,6 +1287,7 @@ mod tests_long_strangle_delta_size {
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use crate::strategies::long_strangle::{LongStrangle, Positive};
+    use positive::{assert_pos_relative_eq, pos_or_panic};
     use rust_decimal_macros::dec;
 
     fn get_strategy(call_strike: Positive, put_strike: Positive) -> LongStrangle {
@@ -1564,6 +1567,7 @@ mod tests_strangle_position_management {
     use super::*;
     use crate::error::position::PositionValidationErrorKind;
     use crate::model::types::{OptionStyle, Side};
+    use positive::pos_or_panic;
 
     use rust_decimal_macros::dec;
 
@@ -1672,6 +1676,7 @@ mod tests_strangle_position_management {
 mod tests_adjust_option_position_long {
     use super::*;
     use crate::model::types::{OptionStyle, Side};
+    use positive::pos_or_panic;
 
     use rust_decimal_macros::dec;
 
@@ -1797,6 +1802,7 @@ mod tests_strategy_constructor {
 
     mod long_strangle_tests {
         use super::*;
+        use positive::pos_or_panic;
 
         #[test]
         fn test_valid_long_strangle() {
@@ -1944,6 +1950,7 @@ mod tests_long_strangle_pnl {
     use super::*;
     use crate::assert_decimal_eq;
     use crate::model::utils::create_sample_position;
+    use positive::{assert_pos_relative_eq, pos_or_panic};
     use rust_decimal_macros::dec;
 
     fn create_test_strangle() -> Result<LongStrangle, StrategyError> {
@@ -2103,6 +2110,7 @@ mod tests_long_strangle_pnl {
 mod test_valid_premium_for_shorts {
     use super::*;
     use crate::model::utils::create_sample_position;
+    use positive::pos_or_panic;
 
     fn get_strategy() -> Result<LongStrangle, StrategyError> {
         // Create long call position

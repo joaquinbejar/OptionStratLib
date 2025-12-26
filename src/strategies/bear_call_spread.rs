@@ -1,4 +1,3 @@
-use positive::Positive;
 /*
 Bear Call Spread Strategy
 
@@ -46,6 +45,7 @@ use crate::{
     test_strategy_traits,
 };
 use chrono::Utc;
+use positive::Positive;
 use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -1313,8 +1313,8 @@ mod tests_bear_call_spread_positionable {
 
 #[cfg(test)]
 mod tests_bear_call_spread_validable {
-    use positive::pos_or_panic;
     use super::*;
+    use positive::pos_or_panic;
 
     use crate::model::ExpirationDate;
 
@@ -1979,8 +1979,8 @@ mod tests_bear_call_spread_optimizable {
 
 #[cfg(test)]
 mod tests_bear_call_spread_graph {
-    use positive::pos_or_panic;
     use super::*;
+    use positive::pos_or_panic;
 
     use rust_decimal_macros::dec;
 
@@ -2016,8 +2016,8 @@ mod tests_bear_call_spread_graph {
 
 #[cfg(test)]
 mod tests_bear_call_spread_probability {
-    use positive::pos_or_panic;
     use super::*;
+    use positive::pos_or_panic;
 
     use crate::strategies::probabilities::utils::PriceTrend;
     use rust_decimal_macros::dec;
@@ -2161,8 +2161,8 @@ mod tests_bear_call_spread_probability {
 
 #[cfg(test)]
 mod tests_delta {
-    use positive::{assert_pos_relative_eq, pos_or_panic};
     use super::*;
+    use positive::{assert_pos_relative_eq, pos_or_panic};
 
     use crate::assert_decimal_eq;
     use crate::model::types::OptionStyle;
@@ -2421,8 +2421,8 @@ mod tests_delta_size {
 
 #[cfg(test)]
 mod tests_bear_call_spread_position_management {
-    use positive::pos_or_panic;
     use super::*;
+    use positive::pos_or_panic;
 
     use crate::error::position::PositionValidationErrorKind;
     use crate::model::types::{OptionStyle, Side};
@@ -2534,8 +2534,8 @@ mod tests_bear_call_spread_position_management {
 
 #[cfg(test)]
 mod tests_adjust_option_position_short {
-    use positive::pos_or_panic;
     use super::*;
+    use positive::pos_or_panic;
 
     use crate::model::types::{OptionStyle, Side};
 
@@ -2657,8 +2657,8 @@ mod tests_adjust_option_position_short {
 
 #[cfg(test)]
 mod tests_strategy_constructor {
-    use positive::pos_or_panic;
     use super::*;
+    use positive::pos_or_panic;
 
     use crate::model::utils::create_sample_position;
 
@@ -2802,8 +2802,8 @@ mod tests_strategy_constructor {
 
 #[cfg(test)]
 mod tests_bear_call_spread_pnl {
-    use positive::{assert_pos_relative_eq, pos_or_panic};
     use super::*;
+    use positive::{assert_pos_relative_eq, pos_or_panic};
 
     use crate::assert_decimal_eq;
     use crate::model::utils::create_sample_position;

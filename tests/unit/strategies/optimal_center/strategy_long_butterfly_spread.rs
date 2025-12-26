@@ -1,5 +1,5 @@
-use {
 use positive::pos_or_panic;
+use {
     optionstratlib::Side,
     optionstratlib::chains::chain::OptionChain,
     optionstratlib::strategies::base::Optimizable,

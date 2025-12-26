@@ -767,6 +767,7 @@ impl Strategable for LongCall {}
 
 #[cfg(test)]
 mod tests_simulate {
+    use positive::pos_or_panic;
     use super::*;
     use crate::chains::generator_positive;
 

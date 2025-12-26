@@ -670,6 +670,7 @@ impl std::fmt::Display for CoveredCall {
 
 #[cfg(test)]
 mod tests {
+    use positive::pos_or_panic;
     use super::*;
     use rust_decimal_macros::dec;
 

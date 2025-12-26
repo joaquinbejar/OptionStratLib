@@ -1,5 +1,5 @@
-use {
 use positive::pos_or_panic;
+use {
     optionstratlib::OptionStyle,
     optionstratlib::chains::chain::OptionChain,
     optionstratlib::strategies::base::Optimizable,
@@ -18,21 +18,21 @@ fn test_short_strangle_with_greeks_integration() -> Result<(), Box<dyn Error>> {
 
     let mut strategy = ShortStrangle::new(
         "CL".to_string(),
-        underlying_price, // underlying_price
-        pos_or_panic!(24100.0),    // call_strike
-        pos_or_panic!(24300.0),    // put_strike
+        underlying_price,       // underlying_price
+        pos_or_panic!(24100.0), // call_strike
+        pos_or_panic!(24300.0), // put_strike
         ExpirationDate::Days(pos_or_panic!(45.0)),
-        pos_or_panic!(0.3745),   // implied_volatility
-        pos_or_panic!(0.3745),   // implied_volatility
-        dec!(0.05),     // risk_free_rate
-        Positive::ZERO, // dividend_yield
-        Positive::ONE,      // quantity
-        pos_or_panic!(84.2),     // premium_short_call
-        pos_or_panic!(35.2),     // premium_short_put
-        pos_or_panic!(0.1),      // open_fee_short_call
-        pos_or_panic!(0.1),      // close_fee_short_call
-        pos_or_panic!(0.1),      // open_fee_short_put
-        pos_or_panic!(0.1),      // close_fee_short_put
+        pos_or_panic!(0.3745), // implied_volatility
+        pos_or_panic!(0.3745), // implied_volatility
+        dec!(0.05),            // risk_free_rate
+        Positive::ZERO,        // dividend_yield
+        Positive::ONE,         // quantity
+        pos_or_panic!(84.2),   // premium_short_call
+        pos_or_panic!(35.2),   // premium_short_put
+        pos_or_panic!(0.1),    // open_fee_short_call
+        pos_or_panic!(0.1),    // close_fee_short_call
+        pos_or_panic!(0.1),    // open_fee_short_put
+        pos_or_panic!(0.1),    // close_fee_short_put
     );
 
     let option_chain = OptionChain::load_from_json(

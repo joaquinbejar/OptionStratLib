@@ -1243,6 +1243,7 @@ mod tests_bear_put_spread_optimization {
     use super::*;
 
     use num_traits::ToPrimitive;
+    use positive::spos;
     use rust_decimal_macros::dec;
 
     use crate::model::ExpirationDate;
@@ -1545,6 +1546,7 @@ mod tests_bear_put_spread_optimization {
 #[cfg(test)]
 mod tests_bear_put_spread_optimizable {
     use super::*;
+    use positive::spos;
 
     use crate::model::ExpirationDate;
 
@@ -2197,6 +2199,7 @@ mod tests_bear_put_spread_graph {
 #[cfg(test)]
 mod tests_delta {
     use super::*;
+    use positive::assert_pos_relative_eq;
 
     use crate::assert_decimal_eq;
     use crate::model::types::OptionStyle;
@@ -2325,7 +2328,7 @@ mod tests_delta {
 #[cfg(test)]
 mod tests_delta_size {
     use super::*;
-    use positive::Positive;
+    use positive::{Positive, assert_pos_relative_eq};
 
     use crate::assert_decimal_eq;
     use crate::model::types::OptionStyle;

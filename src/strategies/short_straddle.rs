@@ -1,4 +1,3 @@
-use positive::Positive;
 /*
 Straddle Strategy
 
@@ -47,6 +46,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use tracing::{info, trace};
 use utoipa::ToSchema;
+use positive::Positive;
 
 /// A Short Straddle is an options trading strategy that involves simultaneously selling
 /// a put and a call option with the same strike price and expiration date. This neutral
@@ -912,6 +912,7 @@ mod tests_short_straddle {
     use crate::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
 
     use num_traits::ToPrimitive;
+    use positive::{pos_or_panic, spos};
     use rust_decimal_macros::dec;
 
     fn setup() -> ShortStraddle {
@@ -1218,6 +1219,7 @@ mod tests_short_straddle {
 #[cfg(test)]
 mod tests_short_straddle_probability {
     use super::*;
+    use positive::pos_or_panic;
 
     use crate::model::ExpirationDate;
 
@@ -1354,6 +1356,7 @@ mod tests_short_straddle_probability {
 #[cfg(test)]
 mod tests_short_straddle_probability_bis {
     use super::*;
+    use positive::pos_or_panic;
 
     use crate::model::ExpirationDate;
 
@@ -1487,6 +1490,7 @@ mod tests_short_straddle_probability_bis {
 #[cfg(test)]
 mod tests_short_straddle_delta {
     use super::*;
+    use positive::{assert_pos_relative_eq, pos_or_panic};
 
     use crate::assert_decimal_eq;
     use crate::greeks::Greeks;
@@ -1617,6 +1621,7 @@ mod tests_short_straddle_delta_size {
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use crate::{ExpirationDate, Side, assert_decimal_eq};
+    use positive::{assert_pos_relative_eq, pos_or_panic};
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
     use std::str::FromStr;
@@ -1742,6 +1747,7 @@ mod tests_short_straddle_delta_size {
 #[cfg(test)]
 mod tests_short_strategy_constructor {
     use super::*;
+    use positive::pos_or_panic;
 
     use crate::model::utils::create_sample_position;
 
@@ -1915,6 +1921,7 @@ mod tests_short_strategy_constructor {
 #[cfg(test)]
 mod tests_short_straddle_pnl {
     use super::*;
+    use positive::{assert_pos_relative_eq, pos_or_panic};
 
     use crate::assert_decimal_eq;
     use crate::model::utils::create_sample_position;
@@ -2033,6 +2040,7 @@ mod tests_short_straddle_pnl {
 #[cfg(test)]
 mod tests_straddle_position_management {
     use super::*;
+    use positive::pos_or_panic;
 
     use crate::error::position::PositionValidationErrorKind;
     use crate::model::types::{OptionStyle, Side};
@@ -2144,6 +2152,7 @@ mod tests_straddle_position_management {
 #[cfg(test)]
 mod tests_adjust_option_position {
     use super::*;
+    use positive::pos_or_panic;
 
     use crate::model::types::{OptionStyle, Side};
 
