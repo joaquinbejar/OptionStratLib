@@ -147,6 +147,7 @@
 //! For high-frequency calculations, consider using the Black-Scholes model
 //! when applicable, as it provides the fastest computation times.
 
+/// Binomial Tree model for option pricing.
 pub mod binomial_model;
 
 /// Black-Scholes model for option pricing and analysis.

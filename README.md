@@ -540,7 +540,7 @@ cargo bench
 
 ```rust
 use optionstratlib::{Options, OptionStyle, OptionType, Side, ExpirationDate};
-use positive::pos_or_panic;
+use positive::{pos_or_panic,Positive};
 use rust_decimal_macros::dec;
 use optionstratlib::greeks::Greeks;
 
@@ -583,7 +583,8 @@ tracing::info!("Greeks - Delta: {:.4}, Gamma: {:.4}, Theta: {:.4},
 #### Working with Trading Strategies
 
 ```rust
-use positive::{Positive, ExpirationDate, pos_or_panic};
+use positive::{Positive, pos_or_panic};
+use optionstratlib::ExpirationDate;
 use optionstratlib::strategies::Strategies;
 use optionstratlib::strategies::bull_call_spread::BullCallSpread;
 use optionstratlib::strategies::base::{BreakEvenable, BasicAble};
