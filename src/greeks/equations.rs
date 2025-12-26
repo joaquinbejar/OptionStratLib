@@ -545,7 +545,7 @@ pub fn delta(option: &Options) -> Result<Decimal, GreeksError> {
         option.underlying_price,
         option.strike_price,
         option.risk_free_rate,
-        option.expiration_date.get_years().unwrap(),
+        expiration_date,
         option.implied_volatility,
     )?;
 
@@ -657,7 +657,7 @@ pub fn gamma(option: &Options) -> Result<Decimal, GreeksError> {
         option.underlying_price,
         option.strike_price,
         option.risk_free_rate,
-        option.expiration_date.get_years().unwrap(),
+        expiration_date,
         option.implied_volatility,
     )?;
 
@@ -916,7 +916,7 @@ pub fn vega(option: &Options) -> Result<Decimal, GreeksError> {
         option.underlying_price,
         option.strike_price,
         option.risk_free_rate,
-        option.expiration_date.get_years().unwrap(),
+        expiration_date,
         option.implied_volatility,
     )?;
 
@@ -1166,15 +1166,14 @@ pub fn rho(option: &Options) -> Result<Decimal, GreeksError> {
 /// - This calculation assumes that dividends are continuously compounded at the dividend yield rate.
 /// - \( Rho_d \) is generally more significant for options with longer times to expiration.
 pub fn rho_d(option: &Options) -> Result<Decimal, GreeksError> {
+    let expiration_date: Positive = option.expiration_date.get_years()?;
     let d1 = d1(
         option.underlying_price,
         option.strike_price,
         option.risk_free_rate,
-        option.expiration_date.get_years().unwrap(),
+        expiration_date,
         option.implied_volatility,
     )?;
-
-    let expiration_date: Positive = option.expiration_date.get_years()?;
     let dividend_yield: Positive = option.dividend_yield;
     let underlying_price: Decimal = option.underlying_price.to_dec();
 
@@ -1295,11 +1294,12 @@ pub fn vanna(option: &Options) -> Result<Decimal, GreeksError> {
         return Ok(Decimal::ZERO);
     }
 
+    let expiration_date: Positive = option.expiration_date.get_years()?;
     let d1 = d1(
         option.underlying_price,
         option.strike_price,
         option.risk_free_rate,
-        option.expiration_date.get_years().unwrap(),
+        expiration_date,
         option.implied_volatility,
     )?;
 
@@ -1307,11 +1307,9 @@ pub fn vanna(option: &Options) -> Result<Decimal, GreeksError> {
         option.underlying_price,
         option.strike_price,
         option.risk_free_rate,
-        option.expiration_date.get_years().unwrap(),
+        expiration_date,
         option.implied_volatility,
     )?;
-
-    let expiration_date: Positive = option.expiration_date.get_years()?;
     let dividend_yield: Decimal = option.dividend_yield.into();
     let implied_volatility: Positive = option.implied_volatility;
     let n_d1: Decimal = n(d1)?;
@@ -1419,14 +1417,14 @@ pub fn vomma(option: &Options) -> Result<Decimal, GreeksError> {
         option.underlying_price,
         option.strike_price,
         option.risk_free_rate,
-        option.expiration_date.get_years().unwrap(),
+        expiration_date,
         option.implied_volatility,
     )?;
     let d2 = d2(
         option.underlying_price,
         option.strike_price,
         option.risk_free_rate,
-        option.expiration_date.get_years().unwrap(),
+        expiration_date,
         option.implied_volatility,
     )?;
     let vega = vega(option)?;
@@ -1526,14 +1524,14 @@ pub fn veta(option: &Options) -> Result<Decimal, GreeksError> {
         option.underlying_price,
         option.strike_price,
         option.risk_free_rate,
-        option.expiration_date.get_years().unwrap(),
+        expiration_date,
         option.implied_volatility,
     )?;
     let d2 = d2(
         option.underlying_price,
         option.strike_price,
         option.risk_free_rate,
-        option.expiration_date.get_years().unwrap(),
+        expiration_date,
         option.implied_volatility,
     )?;
     let vega = vega(option)?;
