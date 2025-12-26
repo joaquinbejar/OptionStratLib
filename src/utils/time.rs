@@ -173,6 +173,8 @@ pub fn units_per_year(time_frame: &TimeFrame) -> Positive {
 ///
 /// use optionstratlib::utils::time::convert_time_frame;
 /// use optionstratlib::utils::TimeFrame;
+/// use positive::pos_or_panic;
+/// use positive::assert_pos_relative_eq;
 ///
 /// // Convert 60 seconds to minutes
 /// let result = convert_time_frame(pos_or_panic!(60.0), &TimeFrame::Second, &TimeFrame::Minute);

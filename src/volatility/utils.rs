@@ -438,7 +438,7 @@ pub fn adjust_volatility(
 /// # Examples
 ///
 /// ```
-/// use optionstratlib::{pos_or_panic, Positive};
+/// use positive::{pos_or_panic, Positive};
 /// use optionstratlib::utils::time::{TimeFrame, convert_time_frame};
 /// use optionstratlib::volatility::volatility_for_dt;
 ///
