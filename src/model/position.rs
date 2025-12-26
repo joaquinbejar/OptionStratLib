@@ -36,7 +36,8 @@ use utoipa::ToSchema;
 /// # Examples
 ///
 /// ```rust
-/// use optionstratlib::{Options, pos_or_panic, Side, OptionStyle};
+/// use optionstratlib::{Options, Side, OptionStyle};
+/// use positive::pos_or_panic;
 /// use chrono::Utc;
 /// use tracing::info;
 /// use optionstratlib::model::Position;
@@ -115,7 +116,8 @@ impl Position {
     /// # Examples
     ///
     /// ```rust
-    /// use optionstratlib::{Options, pos_or_panic, Side, OptionStyle};
+    /// use optionstratlib::{Options, Side, OptionStyle};
+    /// use positive::pos_or_panic;
     /// use chrono::Utc;
     /// use optionstratlib::model::Position;
     /// use optionstratlib::model::utils::create_sample_option_simplest;
@@ -236,7 +238,8 @@ impl Position {
     /// # Examples
     ///
     /// ```rust
-    /// use optionstratlib::{pos_or_panic, Side, OptionStyle};
+    /// use optionstratlib::{ Side, OptionStyle};
+    /// use positive::pos_or_panic;
     /// use optionstratlib::model::Position;
     /// use optionstratlib::model::utils::create_sample_option_simplest;
     /// use chrono::Utc;
@@ -326,7 +329,8 @@ impl Position {
     /// // Assuming position is a properly initialized Position
     /// use chrono::Utc;
     /// use optionstratlib::model::utils::create_sample_option_simplest;
-    /// use optionstratlib::{pos_or_panic, OptionStyle, Side};
+    /// use optionstratlib::{OptionStyle, Side};
+    /// use positive::pos_or_panic;
     /// use optionstratlib::model::Position;
     ///
     /// let option = create_sample_option_simplest(OptionStyle::Call, Side::Short);
@@ -383,7 +387,8 @@ impl Position {
     /// use tracing::info;
     /// use optionstratlib::model::Position;
     /// use optionstratlib::model::utils::create_sample_option_simplest;
-    /// use optionstratlib::{pos_or_panic, OptionStyle, Side};
+    /// use optionstratlib::{ OptionStyle, Side};
+    /// use positive::pos_or_panic;
     /// let current_price = pos_or_panic!(6.50);
     /// let option = create_sample_option_simplest(OptionStyle::Call, Side::Short);
     /// let position = Position::new(
@@ -624,7 +629,8 @@ impl Position {
     ///
     /// ```rust
     /// use optionstratlib::model::{Position, Options};
-    /// use optionstratlib::{pos_or_panic, Side, OptionStyle};
+    /// use optionstratlib::{Side, OptionStyle};
+    /// use positive::pos_or_panic;
     /// use optionstratlib::model::utils::create_sample_option_simplest;
     /// use chrono::Utc;
     ///

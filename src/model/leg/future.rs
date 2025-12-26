@@ -23,7 +23,7 @@
 //! use optionstratlib::model::leg::FuturePosition;
 //! use optionstratlib::model::types::Side;
 //! use optionstratlib::model::ExpirationDate;
-//! use positive::pos_or_panic;
+//! use positive::{pos_or_panic,Positive};
 //! use chrono::Utc;
 //!
 //! let future = FuturePosition::new(

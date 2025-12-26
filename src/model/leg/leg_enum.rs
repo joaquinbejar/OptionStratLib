@@ -23,7 +23,7 @@
 //! use optionstratlib::model::leg::{Leg, SpotPosition};
 //! use optionstratlib::model::Position;
 //! use optionstratlib::model::types::Side;
-//! use positive::pos_or_panic;
+//! use positive::{pos_or_panic,Positive};
 //!
 //! // Create a spot leg
 //! let spot = SpotPosition::long("AAPL".to_string(), Positive::HUNDRED, pos_or_panic!(150.0));

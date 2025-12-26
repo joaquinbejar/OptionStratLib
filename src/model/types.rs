@@ -318,7 +318,8 @@ impl Payoff for OptionType {
 /// # Example
 /// ```rust
 /// use optionstratlib::model::types::OptionBasicType;
-/// use optionstratlib::{pos_or_panic, ExpirationDate, OptionStyle, Positive, Side};
+/// use optionstratlib::{ExpirationDate, OptionStyle, Side};
+/// use positive::{pos_or_panic, Positive};
 /// let european_call_option = OptionBasicType {
 ///     option_style: &OptionStyle::Call,
 ///     side: &Side::Long,

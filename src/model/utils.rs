@@ -53,7 +53,8 @@ pub fn positive_f64_to_f64(vec: Vec<Positive>) -> Vec<f64> {
 /// # Examples
 ///
 /// ```rust
-/// use optionstratlib::{pos_or_panic, OptionStyle, Side};
+/// use optionstratlib::{OptionStyle, Side};
+/// use positive::pos_or_panic;
 /// use optionstratlib::model::utils::create_sample_option;
 /// let option = create_sample_option(
 ///     OptionStyle::Call,
@@ -120,7 +121,8 @@ pub fn create_sample_option(
 ///
 /// ```rust
 /// use optionstratlib::model::utils::create_sample_position;
-/// use optionstratlib::{pos_or_panic, OptionStyle, Side};
+/// use optionstratlib::{OptionStyle, Side};
+/// use positive::pos_or_panic;
 /// let sample_call = create_sample_position(
 ///     OptionStyle::Call,
 ///     Side::Long,
@@ -329,7 +331,8 @@ pub fn create_sample_option_simplest(option_style: OptionStyle, side: Side) -> O
 /// # Examples
 /// ```
 /// use optionstratlib::model::utils::create_sample_option_simplest_strike;
-/// use optionstratlib::{pos_or_panic, OptionStyle, Side};
+/// use optionstratlib::{ OptionStyle, Side};
+/// use positive::pos_or_panic;
 /// let long_call = create_sample_option_simplest_strike(
 ///     Side::Long,
 ///     OptionStyle::Call,

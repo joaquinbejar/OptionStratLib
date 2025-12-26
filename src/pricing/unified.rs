@@ -45,28 +45,28 @@ pub enum PricingEngine {
 ///
 /// ```rust
 /// use optionstratlib::pricing::{PricingEngine, price_option};
-/// use optionstratlib::{Options, Positive};
-/// # use optionstratlib::{ExpirationDate, pos_or_panic};
-/// # use optionstratlib::model::types::{OptionStyle, OptionType, Side};
-/// # use rust_decimal_macros::dec;
+/// use positive::{Positive, pos_or_panic};
+/// use optionstratlib::{ExpirationDate, Options};
+/// use optionstratlib::model::types::{OptionStyle, OptionType, Side};
+/// use rust_decimal_macros::dec;
 ///
-/// # let option = Options {
-/// #     option_type: OptionType::European,
-/// #     side: Side::Long,
-/// #     underlying_symbol: "AAPL".to_string(),
-/// #     strike_price: Positive::HUNDRED,
-/// #     expiration_date: ExpirationDate::Days(pos_or_panic!(30.0)),
-/// #     implied_volatility: pos_or_panic!(0.2),
-/// #     quantity: Positive::ONE,
-/// #     underlying_price: pos_or_panic!(105.0),
-/// #     risk_free_rate: dec!(0.05),
-/// #     option_style: OptionStyle::Call,
-/// #     dividend_yield: pos_or_panic!(0.01),
-/// #     exotic_params: None,
-/// # };
+/// let option = Options {
+///     option_type: OptionType::European,
+///     side: Side::Long,
+///     underlying_symbol: "AAPL".to_string(),
+///     strike_price: Positive::HUNDRED,
+///     expiration_date: ExpirationDate::Days(pos_or_panic!(30.0)),
+///     implied_volatility: pos_or_panic!(0.2),
+///     quantity: Positive::ONE,
+///     underlying_price: pos_or_panic!(105.0),
+///     risk_free_rate: dec!(0.05),
+///     option_style: OptionStyle::Call,
+///     dividend_yield: pos_or_panic!(0.01),
+///     exotic_params: None,
+/// };
 /// let engine = PricingEngine::ClosedFormBS;
 /// let price = price_option(&option, &engine)?;
-/// # Ok::<(), optionstratlib::error::PricingError>(())
+/// Ok::<(), optionstratlib::error::PricingError>(())
 /// ```
 pub fn price_option(option: &Options, engine: &PricingEngine) -> PricingResult<Positive> {
     match engine {

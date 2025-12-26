@@ -102,7 +102,8 @@ impl ProfitLossRange {
     /// ```rust
     /// use rust_decimal_macros::dec;
     /// use optionstratlib::model::ProfitLossRange;
-    /// use optionstratlib::{pos_or_panic, spos, ExpirationDate, Positive};
+    /// use positive::{pos_or_panic, spos, Positive};
+    /// use optionstratlib::ExpirationDate;
     /// use optionstratlib::strategies::probabilities::VolatilityAdjustment;
     /// let mut range = ProfitLossRange {
     ///     lower_bound: spos!(50.0),

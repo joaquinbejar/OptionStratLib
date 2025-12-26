@@ -63,7 +63,7 @@ use statrs::distribution::{ContinuousCDF, Normal};
 /// use rust_decimal_macros::dec;
 /// use tracing::{error, info};
 /// use optionstratlib::greeks::d1;
-/// use optionstratlib::{pos_or_panic, Positive};
+/// use positive::{pos_or_panic, Positive};
 ///
 /// let underlying_price = Positive::HUNDRED;
 /// let strike_price = pos_or_panic!(95.0);
@@ -180,7 +180,7 @@ pub fn d1(
 /// use rust_decimal_macros::dec;
 /// use tracing::{error, info};
 /// use optionstratlib::greeks::d2;
-/// use optionstratlib::{pos_or_panic, Positive};
+/// use positive::{pos_or_panic, Positive};
 /// let underlying_price = Positive::new(100.0).unwrap();
 /// let strike_price = Positive::new(95.0).unwrap();
 /// let risk_free_rate = dec!(0.05);

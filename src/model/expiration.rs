@@ -106,7 +106,8 @@ impl ExpirationDate {
     /// ```
     /// use chrono::{Duration, Utc};
     /// use rust_decimal_macros::dec;
-    /// use optionstratlib::{assert_pos_relative_eq, pos_or_panic, ExpirationDate};
+    /// use positive::{assert_pos_relative_eq, pos_or_panic, Positive};
+    /// use optionstratlib::ExpirationDate;
     ///
     /// let days = pos_or_panic!(365.0);
     /// let expiration_date_days = ExpirationDate::Days(days);
@@ -171,7 +172,8 @@ impl ExpirationDate {
     /// ```
     /// use chrono::{Duration, Utc};
     /// use rust_decimal_macros::dec;
-    /// use optionstratlib::{pos_or_panic, ExpirationDate};
+    /// use positive::pos_or_panic;
+    /// use optionstratlib::ExpirationDate;
     ///
     /// let days = pos_or_panic!(30.0);
     /// let expiration_date_days = ExpirationDate::Days(days);
@@ -308,7 +310,8 @@ impl ExpirationDate {
     /// ```
     /// use chrono::{Duration, Utc};
     /// use rust_decimal_macros::dec;
-    /// use optionstratlib::{pos_or_panic, ExpirationDate};
+    /// use positive::pos_or_panic;
+    /// use optionstratlib::ExpirationDate;
     ///
     /// let days = pos_or_panic!(30.0);
     /// let expiration_date = ExpirationDate::Days(days);
@@ -342,7 +345,8 @@ impl ExpirationDate {
     /// use chrono::{DateTime, Utc};
     /// use rust_decimal_macros::dec;
     /// use tracing::info;
-    /// use optionstratlib::{pos_or_panic, ExpirationDate};
+    /// use optionstratlib::ExpirationDate;
+    /// use positive::pos_or_panic;
     ///
     /// let expiration_date_days = ExpirationDate::from_string("365").unwrap();
     /// assert_eq!(expiration_date_days, ExpirationDate::Days(pos_or_panic!(365.0)));

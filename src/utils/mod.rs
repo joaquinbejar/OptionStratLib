@@ -146,10 +146,7 @@
 //! ### Example: Testing Positive Values
 //!
 //! ```rust
-//! use positive::Positive;
-//! use positive::pos_or_panic;
-//! use optionstratlib::assert_pos_relative_eq;
-//!
+//! use positive::{Positive,pos_or_panic,assert_pos_relative_eq};
 //!
 //! fn test_values() {
 //!     let a = Positive::ONE;

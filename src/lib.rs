@@ -526,7 +526,7 @@
 //!
 //! ```rust
 //! use optionstratlib::{Options, OptionStyle, OptionType, Side, ExpirationDate};
-//! use positive::pos_or_panic;
+//! use positive::{pos_or_panic,Positive};
 //! use rust_decimal_macros::dec;
 //! use optionstratlib::greeks::Greeks;
 //!
@@ -569,7 +569,8 @@
 //! ### Working with Trading Strategies
 //!
 //! ```rust
-//! use optionstratlib::{Positive, ExpirationDate, pos_or_panic};
+//! use positive::{Positive, pos_or_panic};
+//! use optionstratlib::ExpirationDate;
 //! use optionstratlib::strategies::Strategies;
 //! use optionstratlib::strategies::bull_call_spread::BullCallSpread;
 //! use optionstratlib::strategies::base::{BreakEvenable, BasicAble};

@@ -25,7 +25,8 @@
 //! use rust_decimal_macros::dec;
 //! use optionstratlib::chains::OptionChain;
 //! use optionstratlib::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
-//! use optionstratlib::{pos_or_panic, spos, ExpirationDate, Positive};
+//! use positive::{pos_or_panic, spos, Positive};
+//! use optionstratlib::ExpirationDate;
 //!
 //! let option_chain_params = OptionChainBuildParams::new(
 //!             "SP500".to_string(),
@@ -117,7 +118,8 @@
 //! use optionstratlib::chains::{RNDParameters, RNDAnalysis};
 //! use optionstratlib::chains::chain::OptionChain;
 //! use optionstratlib::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
-//! use optionstratlib::{pos_or_panic, ExpirationDate, Positive};
+//! use positive::{pos_or_panic, Positive};
+//! use optionstratlib::ExpirationDate;
 //!
 //! // Create parameters for RND calculation
 //! let params = RNDParameters {

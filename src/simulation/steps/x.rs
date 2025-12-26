@@ -67,7 +67,8 @@ where
 /// ```rust
 ///
 /// // Create a step with 7 days as the value, using days as the time unit
-/// use optionstratlib::{pos_or_panic, ExpirationDate};
+/// use positive::pos_or_panic;
+/// use optionstratlib::ExpirationDate;
 /// use optionstratlib::simulation::steps::Xstep;
 /// use optionstratlib::utils::TimeFrame;
 /// let step = Xstep::new(7, TimeFrame::Day, ExpirationDate::Days(pos_or_panic!(30.0)));

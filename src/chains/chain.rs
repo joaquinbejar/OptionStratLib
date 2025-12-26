@@ -281,7 +281,7 @@ impl OptionChain {
     /// ```rust
     /// use rust_decimal_macros::dec;
     /// use optionstratlib::chains::chain::OptionChain;
-    /// use optionstratlib::{pos_or_panic, spos};
+    /// use positive::{pos_or_panic, spos};
     ///
     /// let chain = OptionChain::new(
     ///     "AAPL",
@@ -328,7 +328,8 @@ impl OptionChain {
     /// ```
     /// use rust_decimal_macros::dec;
     /// use optionstratlib::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
-    /// use optionstratlib::{pos_or_panic, spos, ExpirationDate};
+    /// use positive::{pos_or_panic, spos, Positive};
+    /// use optionstratlib::ExpirationDate;
     /// use optionstratlib::chains::chain::OptionChain;
     /// let price_params = OptionDataPriceParams::new(
     ///     Some(Box::new(Positive::HUNDRED)),               // underlying price
@@ -1437,7 +1438,7 @@ impl OptionChain {
     /// ```rust
     /// use tracing::info;
     /// use optionstratlib::chains::chain::OptionChain;
-    /// use optionstratlib::{pos_or_panic, Positive};
+    /// use positive::{pos_or_panic, Positive};
     /// let mut option_chain = OptionChain::new("TEST", Positive::HUNDRED, "2030-01-01".to_string(), None, None);
     /// for (option1, option2) in option_chain.get_double_iter() {
     ///     info!("{:?}, {:?}", option1, option2);

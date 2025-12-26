@@ -587,7 +587,8 @@ impl Options {
     /// use rust_decimal_macros::dec;
     /// use rust_decimal::Decimal;
     /// use tracing::{error, info};
-    /// use optionstratlib::{pos_or_panic, ExpirationDate, OptionStyle, OptionType, Options, Side};
+    /// use positive::pos_or_panic;
+    /// use optionstratlib::{ExpirationDate, OptionStyle, OptionType, Options, Side};
     ///
     /// let options = Options::new(
     ///             OptionType::European,

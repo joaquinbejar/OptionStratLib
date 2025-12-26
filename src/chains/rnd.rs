@@ -37,7 +37,8 @@
 //! use tracing::info;
 //! use optionstratlib::chains::{RNDParameters, RNDAnalysis};
 //! use optionstratlib::chains::chain::OptionChain;
-//! use optionstratlib::{pos_or_panic, spos, ExpirationDate, Positive};
+//! use positive::{pos_or_panic, spos, Positive};
+//! use optionstratlib::ExpirationDate;
 //! use optionstratlib::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
 //!
 //! // Create parameters for RND calculation

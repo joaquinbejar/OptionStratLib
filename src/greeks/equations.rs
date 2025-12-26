@@ -450,7 +450,7 @@ pub trait Greeks {
 /// use optionstratlib::greeks::delta;
 /// use optionstratlib::{ExpirationDate, Options};
 /// use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
-/// use optionstratlib::{pos_or_panic, Positive};
+/// use positive::{pos_or_panic, Positive};
 /// let option = Options {
 ///     option_type: OptionType::European,
 ///     side: Side::Long,
@@ -615,7 +615,7 @@ pub fn delta(option: &Options) -> Result<Decimal, GreeksError> {
 /// use optionstratlib::greeks::gamma;
 /// use optionstratlib::{ExpirationDate, Options};
 /// use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
-/// use positive::pos_or_panic;
+/// use positive::{pos_or_panic,Positive};
 /// let option = Options {
 ///     option_type: OptionType::European,
 ///     side: Side::Long,
@@ -747,7 +747,7 @@ pub fn gamma(option: &Options) -> Result<Decimal, GreeksError> {
 /// use optionstratlib::greeks::theta;
 /// use optionstratlib::{ExpirationDate, Options};
 /// use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
-/// use positive::pos_or_panic;
+/// use positive::{pos_or_panic,Positive};
 /// let option = Options {
 ///     option_type: OptionType::European,
 ///     side: Side::Long,
@@ -877,7 +877,7 @@ pub fn theta(option: &Options) -> Result<Decimal, GreeksError> {
 /// use optionstratlib::greeks::vega;
 /// use optionstratlib::{ExpirationDate, Options};
 /// use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
-/// use positive::pos_or_panic;
+/// use positive::{pos_or_panic,Positive};
 ///
 /// let option = Options {
 ///     option_type: OptionType::European,
@@ -1001,7 +1001,7 @@ pub fn vega(option: &Options) -> Result<Decimal, GreeksError> {
 /// use optionstratlib::greeks::rho;
 /// use optionstratlib::{ExpirationDate, Options};
 /// use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
-/// use positive::pos_or_panic;
+/// use positive::{pos_or_panic,Positive};
 ///
 /// let option = Options {
 ///     option_type: OptionType::European,
@@ -1264,7 +1264,7 @@ pub fn alpha(option: &Options) -> Result<Decimal, GreeksError> {
 /// use optionstratlib::greeks::vanna;
 /// use optionstratlib::{ExpirationDate, Options};
 /// use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
-/// use positive::pos_or_panic;
+/// use positive::{pos_or_panic,Positive};
 /// let option = Options {
 ///     option_type: OptionType::European,
 ///     side: Side::Long,
@@ -1377,7 +1377,7 @@ pub fn vanna(option: &Options) -> Result<Decimal, GreeksError> {
 /// use optionstratlib::greeks::vomma;
 /// use optionstratlib::{ExpirationDate, Options};
 /// use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
-/// use positive::pos_or_panic;
+/// use positive::{pos_or_panic,Positive};
 ///
 /// let option = Options {
 ///     option_type: OptionType::European,
@@ -1489,7 +1489,7 @@ pub fn vomma(option: &Options) -> Result<Decimal, GreeksError> {
 /// use optionstratlib::greeks::veta;
 /// use optionstratlib::{ExpirationDate, Options};
 /// use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
-/// use positive::pos_or_panic;
+/// use positive::{pos_or_panic,Positive};
 ///
 /// let option = Options {
 ///     option_type: OptionType::European,
@@ -1638,8 +1638,8 @@ pub fn veta(option: &Options) -> Result<Decimal, GreeksError> {
 /// use tracing::{error, info};
 /// use optionstratlib::greeks::charm;
 /// use optionstratlib::{ExpirationDate, Options};
-/// use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
-/// use positive::pos_or_panic;
+/// use optionstratlib::model::types::{OptionStyle, OptionType, Side};
+/// use positive::{pos_or_panic, Positive};
 /// let option = Options {
 ///     option_type: OptionType::European,
 ///     side: Side::Long,
@@ -1772,7 +1772,7 @@ pub fn charm(option: &Options) -> Result<Decimal, GreeksError> {
 /// use optionstratlib::greeks::color;
 /// use optionstratlib::{ExpirationDate, Options};
 /// use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
-/// use positive::pos_or_panic;
+/// use positive::{pos_or_panic,Positive};
 /// let option = Options {
 ///     option_type: OptionType::European,
 ///     side: Side::Long,

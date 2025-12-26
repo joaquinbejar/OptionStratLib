@@ -21,7 +21,7 @@
 //! ```rust
 //! use optionstratlib::model::leg::SpotPosition;
 //! use optionstratlib::model::types::Side;
-//! use positive::pos_or_panic;
+//! use positive::{pos_or_panic,Positive};
 //! use chrono::Utc;
 //!
 //! let spot = SpotPosition::new(

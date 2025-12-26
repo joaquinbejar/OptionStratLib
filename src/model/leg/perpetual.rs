@@ -22,7 +22,7 @@
 //! ```rust
 //! use optionstratlib::model::leg::{PerpetualPosition, MarginType};
 //! use optionstratlib::model::types::Side;
-//! use positive::pos_or_panic;
+//! use positive::{pos_or_panic,Positive};
 //! use chrono::Utc;
 //! use rust_decimal_macros::dec;
 //!
