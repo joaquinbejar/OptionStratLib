@@ -49,7 +49,7 @@ fn create_chain_from_step(
         chain_params.price_params.expiration_date = Some(exp_date);
     }
 
-    let mut new_chain = OptionChain::build_chain(&chain_params);
+    let mut new_chain = OptionChain::build_chain(&chain_params)?;
     new_chain.update_greeks();
     Ok(new_chain)
 }

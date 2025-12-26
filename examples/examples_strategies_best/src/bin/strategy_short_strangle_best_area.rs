@@ -8,7 +8,7 @@ fn main() -> Result<(), Error> {
     option_chain.update_expiration_date(get_x_days_formatted(30));
     let chain_params = option_chain.to_build_params()?;
     info!("Chain params: {:#?}", chain_params);
-    let mut option_chain = OptionChain::build_chain(&chain_params);
+    let mut option_chain = OptionChain::build_chain(&chain_params)?;
     option_chain.update_greeks();
 
     debug!("Option Chain:  {}", option_chain);

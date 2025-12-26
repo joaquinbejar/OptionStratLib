@@ -64,7 +64,7 @@ fn main() -> Result<(), Error> {
             pos_or_panic!(120.0),
         ],
     );
-    let initial_series = OptionSeries::build_series(&series_params);
+    let initial_series = OptionSeries::build_series(&series_params)?;
     let walker = Box::new(Walker::new());
 
     let walk_params = WalkParams {

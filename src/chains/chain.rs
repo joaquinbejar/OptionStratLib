@@ -352,63 +352,105 @@ impl OptionChain {
     ///     pos_or_panic!(0.2) // implied volatility
     /// );
     ///
-    /// let chain = OptionChain::build_chain(&build_params);
+    /// let chain = OptionChain::build_chain(&build_params).unwrap();
     /// ```
-    pub fn build_chain(params: &OptionChainBuildParams) -> Self {
+    /// Builds a complete option chain based on the provided parameters.
+    ///
+    /// # Errors
+    ///
+    /// Returns `ChainError` if:
+    /// - `underlying_price` is missing from price params
+    /// - `expiration_date` is missing from price params
+    /// - Failed to get days from expiration date
+    /// - Failed to get date string from expiration date
+    pub fn build_chain(params: &OptionChainBuildParams) -> Result<Self, ChainError> {
+        let underlying_price = params
+            .price_params
+            .underlying_price
+            .clone()
+            .ok_or_else(|| {
+                ChainError::invalid_parameters(
+                    "underlying_price",
+                    "missing underlying price in price params",
+                )
+            })?;
+        let underlying_price = *underlying_price;
+
+        let expiration_date = params.price_params.expiration_date.ok_or_else(|| {
+            ChainError::invalid_parameters(
+                "expiration_date",
+                "missing expiration date in price params",
+            )
+        })?;
+
         let strike_interval = if let Some(strike_interval) = params.strike_interval {
             strike_interval
         } else {
-            assert!(params.price_params.underlying_price.is_some());
-            assert!(params.price_params.expiration_date.is_some());
+            let days = expiration_date.get_days().map_err(|e| {
+                ChainError::invalid_parameters(
+                    "expiration_date",
+                    &format!("failed to get days: {e}"),
+                )
+            })?;
             strike_step(
-                *params.price_params.underlying_price.clone().unwrap(),
+                underlying_price,
                 params.implied_volatility,
-                params
-                    .price_params
-                    .expiration_date
-                    .unwrap()
-                    .get_days()
-                    .unwrap(),
+                days,
                 params.chain_size,
                 None,
             )
         };
-        let underlying_price = *params.price_params.underlying_price.clone().unwrap();
+
+        let date_string = expiration_date.get_date_string().map_err(|e| {
+            ChainError::invalid_parameters(
+                "expiration_date",
+                &format!("failed to get date string: {e}"),
+            )
+        })?;
 
         let mut option_chain = OptionChain::new(
             &params.symbol,
             underlying_price,
-            params
-                .price_params
-                .expiration_date
-                .unwrap()
-                .get_date_string()
-                .unwrap(),
+            date_string,
             params.price_params.risk_free_rate,
             params.price_params.dividend_yield,
         );
 
-        fn create_chain_data(strike: &Positive, p: &OptionChainBuildParams) -> OptionData {
-            assert!(
-                p.implied_volatility <= Positive::ONE,
-                "{}",
-                format!(
-                    "Implied volatility should be between 0 and 1, got: {}",
-                    p.implied_volatility
-                )
-            );
+        fn create_chain_data(
+            strike: &Positive,
+            p: &OptionChainBuildParams,
+            price: Positive,
+        ) -> Result<OptionData, ChainError> {
+            if p.implied_volatility > Positive::ONE {
+                return Err(ChainError::invalid_volatility(
+                    Some(p.implied_volatility.to_f64()),
+                    &format!(
+                        "Implied volatility should be between 0 and 1, got: {}",
+                        p.implied_volatility
+                    ),
+                ));
+            }
+            if strike.is_zero() {
+                return Err(ChainError::invalid_strike(
+                    0.0,
+                    "strike price cannot be zero",
+                ));
+            }
+            if p.implied_volatility.is_zero() {
+                return Err(ChainError::invalid_volatility(
+                    Some(0.0),
+                    "implied volatility cannot be zero",
+                ));
+            }
 
-            let price = *p.price_params.underlying_price.clone().unwrap();
-            assert!(!strike.is_zero());
-            assert!(!p.implied_volatility.is_zero());
             let adjusted_volatility = adjust_volatility(
                 &Some(p.implied_volatility),
                 &Some(p.skew_slope),
                 &Some(p.smile_curve),
                 strike,
                 &price,
-            );
-            assert!(adjusted_volatility.is_some());
+            )
+            .ok_or_else(|| ChainError::invalid_volatility(None, "failed to adjust volatility"))?;
 
             let mut option_data = OptionData::new(
                 *strike,
@@ -416,7 +458,7 @@ impl OptionChain {
                 None,
                 None,
                 None,
-                adjusted_volatility.unwrap(),
+                adjusted_volatility,
                 None,
                 None,
                 None,
@@ -452,11 +494,12 @@ impl OptionChain {
                     );
                 }
             }
-            option_data
+            Ok(option_data)
         }
 
         let atm_strike = rounder(underlying_price, strike_interval);
-        let atm_strike_option_data = create_chain_data(&atm_strike.clone(), params);
+        let atm_strike_option_data =
+            create_chain_data(&atm_strike.clone(), params, underlying_price)?;
         option_chain.options.insert(atm_strike_option_data);
 
         // Generate strikes above and below ATM based on chain_size parameter
@@ -470,7 +513,8 @@ impl OptionChain {
             }
 
             let next_upper_strike = atm_strike + (strike_interval * counter);
-            let next_upper_option_data = create_chain_data(&next_upper_strike, params);
+            let next_upper_option_data =
+                create_chain_data(&next_upper_strike, params, underlying_price)?;
             option_chain.options.insert(next_upper_option_data.clone());
 
             let strike_step = (strike_interval * counter).to_dec();
@@ -481,7 +525,8 @@ impl OptionChain {
             if next_lower_strike == Positive::ZERO {
                 break;
             }
-            let next_lower_option_data = create_chain_data(&next_lower_strike, params);
+            let next_lower_option_data =
+                create_chain_data(&next_lower_strike, params, underlying_price)?;
             option_chain.options.insert(next_lower_option_data.clone());
 
             if next_upper_option_data.some_price_is_none()
@@ -492,7 +537,7 @@ impl OptionChain {
             counter += Positive::ONE;
         }
         debug!("Option chain: {}", option_chain);
-        option_chain
+        Ok(option_chain)
     }
 
     /// Generates build parameters that would reproduce the current option chain.
@@ -521,8 +566,15 @@ impl OptionChain {
 
         if !strike_prices.is_empty() {
             // Find the maximum distance from ATM in number of strikes
-            let min_strike = strike_prices.iter().min().unwrap();
-            let max_strike = strike_prices.iter().max().unwrap();
+            // SAFETY: We just checked that strike_prices is not empty
+            let min_strike = strike_prices
+                .iter()
+                .min()
+                .expect("strike_prices is not empty");
+            let max_strike = strike_prices
+                .iter()
+                .max()
+                .expect("strike_prices is not empty");
 
             let strikes_below = ((atm_strike.to_dec() - min_strike.to_dec())
                 / strike_interval.to_dec())
@@ -647,12 +699,12 @@ impl OptionChain {
                     panic!("Center should be managed by the strategy");
                 }
                 FindOptimalSide::DeltaRange(min, max) => {
-                    (option.delta_put.is_some()
-                        && option.delta_put.unwrap() >= min
-                        && option.delta_put.unwrap() <= max)
-                        || (option.delta_call.is_some()
-                            && option.delta_call.unwrap() >= min
-                            && option.delta_call.unwrap() <= max)
+                    option
+                        .delta_put
+                        .is_some_and(|delta| delta >= min && delta <= max)
+                        || option
+                            .delta_call
+                            .is_some_and(|delta| delta >= min && delta <= max)
                 }
             })
             .collect()
@@ -695,12 +747,12 @@ impl OptionChain {
                     panic!("Center should be managed by the strategy");
                 }
                 FindOptimalSide::DeltaRange(min, max) => {
-                    (option.delta_put.is_some()
-                        && option.delta_put.unwrap() >= min
-                        && option.delta_put.unwrap() <= max)
-                        || (option.delta_call.is_some()
-                            && option.delta_call.unwrap() >= min
-                            && option.delta_call.unwrap() <= max)
+                    option
+                        .delta_put
+                        .is_some_and(|delta| delta >= min && delta <= max)
+                        || option
+                            .delta_call
+                            .is_some_and(|delta| delta >= min && delta <= max)
                 }
             })
             .map(|option| option.get_options_in_strike())
@@ -905,28 +957,38 @@ impl OptionChain {
     /// * `Ok(())` - If the file name was successfully parsed and the properties were set
     /// * `Err(...)` - If the file name format is invalid or the underlying price cannot be parsed
     ///
-    /// # Panics
+    /// # Errors
     ///
-    /// This function will panic if the underlying price in the file name cannot be parsed as an f64.
+    /// Returns `ChainError` if:
+    /// - The file path is empty
+    /// - The file name format is invalid (expected 5 parts: symbol, day, month, year, price)
+    /// - The underlying price cannot be parsed as a valid number
     pub fn set_from_title(&mut self, file: &str) -> Result<(), ChainError> {
-        let file_name = file.split('/').next_back().unwrap();
+        let file_name = file
+            .split('/')
+            .next_back()
+            .ok_or_else(|| ChainError::invalid_parameters("file", "empty file path"))?;
         let file_name = file_name
             .rsplit_once('.')
             .map_or(file_name, |(name, _ext)| name);
         let parts: Vec<&str> = file_name.split('-').collect();
         if parts.len() != 5 {
-            return Err("Invalid file name format: expected exactly 5 parts (symbol, day, month, year, price)".to_string().into());
+            return Err(ChainError::invalid_parameters(
+                "file_name",
+                "expected exactly 5 parts (symbol, day, month, year, price)",
+            ));
         }
         self.symbol = parts[0].to_string();
         self.expiration_date = format!("{}-{}-{}", parts[1], parts[2], parts[3]);
         let underlying_price_str = parts[4].replace(",", ".");
-        match underlying_price_str.parse::<f64>() {
-            Ok(price) => {
-                self.underlying_price = pos_or_panic!(price);
-                Ok(())
-            }
-            Err(_) => panic!("Invalid underlying price format in file name"),
-        }
+        let price = underlying_price_str.parse::<f64>().map_err(|_| {
+            ChainError::invalid_parameters(
+                "underlying_price",
+                "invalid underlying price format in file name",
+            )
+        })?;
+        self.underlying_price = pos_or_panic!(price);
+        Ok(())
     }
 
     /// Updates the mid prices for all options in the chain.
@@ -1081,7 +1143,9 @@ impl OptionChain {
                 put_ask: parse(&record[4]),
                 call_middle: None,
                 put_middle: None,
-                implied_volatility: parse(&record[5]).unwrap(),
+                implied_volatility: parse(&record[5]).ok_or_else(|| {
+                    ChainError::invalid_volatility(None, "missing implied volatility in CSV record")
+                })?,
                 delta_call: parse(&record[6]),
                 delta_put: parse(&record[7]),
                 gamma: parse(&record[8]),
@@ -2490,7 +2554,7 @@ impl OptionChain {
         if self.options.is_empty() {
             return Err(ChainError::OptionDataError(
                 OptionDataErrorKind::InvalidDelta {
-                    delta: Some(target_delta.to_f64().unwrap()),
+                    delta: target_delta.to_f64(),
                     reason: "Option chain is empty".to_string(),
                 },
             ));
@@ -2533,7 +2597,7 @@ impl OptionChain {
 
             return Err(ChainError::OptionDataError(
                 OptionDataErrorKind::InvalidDelta {
-                    delta: Some(target_delta.to_f64().unwrap()),
+                    delta: target_delta.to_f64(),
                     reason: message,
                 },
             ));
@@ -2559,7 +2623,7 @@ impl OptionChain {
                     .map_err(|e| {
                         error!("Failed to create position: {}", e);
                         ChainError::OptionDataError(OptionDataErrorKind::InvalidDelta {
-                            delta: Some(delta.to_f64().unwrap()),
+                            delta: delta.to_f64(),
                             reason: format!("Failed to create position: {e}"),
                         })
                     })
@@ -2569,7 +2633,7 @@ impl OptionChain {
                 // but included for completeness
                 Err(ChainError::OptionDataError(
                     OptionDataErrorKind::InvalidDelta {
-                        delta: Some(target_delta.to_f64().unwrap()),
+                        delta: target_delta.to_f64(),
                         reason: "Unexpected error when selecting option with closest delta"
                             .to_string(),
                     },
@@ -2808,7 +2872,7 @@ impl RNDAnalysis for OptionChain {
 
         let now = Utc::now().naive_utc();
         let time_to_expiry =
-            Decimal::from_f64((expiry_date - now).num_days() as f64 / 365.0).unwrap();
+            Decimal::from_f64((expiry_date - now).num_days() as f64 / 365.0).unwrap_or_default();
 
         // Step 4: Calculate discount factor
         let discount = (-params.risk_free_rate * time_to_expiry).exp();
@@ -4755,7 +4819,7 @@ mod tests_chain_base {
             pos_or_panic!(0.17),
         );
 
-        let chain = OptionChain::build_chain(&params);
+        let chain = OptionChain::build_chain(&params).unwrap();
 
         assert_eq!(chain.symbol, "SP500");
         info!("{}", chain);
@@ -4800,7 +4864,7 @@ mod tests_chain_base {
             ),
             pos_or_panic!(0.2),
         );
-        let chain = OptionChain::build_chain(&params);
+        let chain = OptionChain::build_chain(&params).unwrap();
 
         assert_eq!(chain.symbol, "SP500");
         info!("{}", chain);
@@ -9748,7 +9812,7 @@ mod tests_atm_strike {
             pos_or_panic!(0.2),
         );
 
-        OptionChain::build_chain(&params)
+        OptionChain::build_chain(&params).unwrap()
     }
 
     #[test]
@@ -9955,7 +10019,7 @@ mod tests_atm_strike_bis {
             pos_or_panic!(0.2),
         );
 
-        OptionChain::build_chain(&params)
+        OptionChain::build_chain(&params).unwrap()
     }
 
     #[test]
@@ -10302,7 +10366,7 @@ mod tests_option_chain_utils_bis {
             pos_or_panic!(0.2),
         );
 
-        OptionChain::build_chain(&params)
+        OptionChain::build_chain(&params).unwrap()
     }
 
     // Helper function to create a chain with custom strikes for specific tests
@@ -10497,7 +10561,7 @@ mod tests_to_build_params_bis {
             pos_or_panic!(0.2),
         );
 
-        OptionChain::build_chain(&params)
+        OptionChain::build_chain(&params).unwrap()
     }
 
     #[test]
@@ -10515,7 +10579,7 @@ mod tests_to_build_params_bis {
             pos_or_panic!(params.implied_volatility.to_f64() * f64::exp(0.2)).max(Positive::ZERO);
         info!("{}", params);
 
-        let new_chain = OptionChain::build_chain(&params);
+        let new_chain = OptionChain::build_chain(&params).unwrap();
         info!("{}", new_chain);
     }
 }
@@ -10548,7 +10612,7 @@ mod chain_coverage_tests {
             pos_or_panic!(0.2),
         );
 
-        OptionChain::build_chain(&params)
+        OptionChain::build_chain(&params).unwrap()
     }
 
     #[test]
@@ -10820,7 +10884,7 @@ mod chain_coverage_tests_bis {
             pos_or_panic!(0.17),
         );
 
-        OptionChain::build_chain(&params)
+        OptionChain::build_chain(&params).unwrap()
     }
 
     #[test]

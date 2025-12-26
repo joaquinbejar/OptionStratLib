@@ -188,7 +188,8 @@ fn main() -> Result<(), CurveError> {
         pos_or_panic!(0.20), // 20% base IV
     );
 
-    let dg_chain = OptionChain::build_chain(&dg_params);
+    let dg_chain = OptionChain::build_chain(&dg_params)
+        .map_err(|e| CurveError::ConstructionError(e.to_string()))?;
 
     let dg_curve_call = dg_chain.dollar_gamma_curve(&OptionStyle::Call)?;
     let dg_curve_put = dg_chain.dollar_gamma_curve(&OptionStyle::Put)?;

@@ -36,7 +36,7 @@ fn create_chain_from_step(
         chain_params.set_implied_volatility(volatility);
     }
 
-    let new_chain = OptionChain::build_chain(&chain_params);
+    let new_chain = OptionChain::build_chain(&chain_params)?;
     assert!(new_chain.len() > 0,);
     Ok(new_chain)
 }

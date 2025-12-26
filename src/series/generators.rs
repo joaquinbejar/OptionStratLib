@@ -42,7 +42,7 @@ fn create_series_from_step(
     if let Some(volatility) = volatility {
         series_params.set_implied_volatility(volatility);
     }
-    let new_chain = OptionSeries::build_series(&series_params);
+    let new_chain = OptionSeries::build_series(&series_params)?;
     Ok(new_chain)
 }
 
@@ -252,7 +252,7 @@ mod tests_generator_optionseries {
         let series_params = OptionSeriesBuildParams::new(chain_params, series);
 
         // Build the option series
-        OptionSeries::build_series(&series_params)
+        OptionSeries::build_series(&series_params).unwrap()
     }
 
     #[test]

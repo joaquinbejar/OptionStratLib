@@ -29,7 +29,7 @@ fn main() -> Result<(), optionstratlib::error::Error> {
         Positive::new(0.20)?,        // implied_volatility
     );
 
-    let mut chain = OptionChain::build_chain(&params);
+    let mut chain = OptionChain::build_chain(&params).unwrap();
     chain.update_greeks();
 
     tracing::info!("=== Testing Yellow Highlighting for Strike Prices Multiple of 25 ===");

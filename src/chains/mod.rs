@@ -47,7 +47,7 @@
 //!             pos_or_panic!(0.2),
 //!         );
 //!
-//! let built_chain = OptionChain::build_chain(&option_chain_params);
+//! let built_chain = OptionChain::build_chain(&option_chain_params).unwrap();
 //! assert_eq!(built_chain.symbol, "SP500");
 //! assert_eq!(built_chain.underlying_price, Positive::new(100.0).unwrap());
 //! ```
@@ -148,7 +148,7 @@
 //!     pos_or_panic!(0.2),
 //! );
 //!
-//! let option_chain = OptionChain::build_chain(&option_chain_params);
+//! let option_chain = OptionChain::build_chain(&option_chain_params).unwrap();
 //! // Calculate RND from option chain
 //! let rnd_result = option_chain.calculate_rnd(&params).unwrap();
 //!

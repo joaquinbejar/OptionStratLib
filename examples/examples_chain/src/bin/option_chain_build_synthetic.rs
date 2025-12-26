@@ -14,7 +14,7 @@ fn main() -> Result<(), optionstratlib::error::Error> {
     option_chain_base.update_expiration_date(get_x_days_formatted(2));
     let chain_params = option_chain_base.to_build_params()?;
     info!("Chain params: {}", chain_params);
-    let mut option_chain = OptionChain::build_chain(&chain_params);
+    let mut option_chain = OptionChain::build_chain(&chain_params)?;
     option_chain.update_greeks();
     info!("{}", option_chain);
     option_chain.show();
