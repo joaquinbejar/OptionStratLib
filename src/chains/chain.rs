@@ -16,10 +16,10 @@ use crate::greeks::Greeks;
 use crate::metrics::{
     BidAskSpreadCurve, CharmCurve, CharmSurface, ColorCurve, ColorSurface, DeltaGammaProfileCurve,
     DeltaGammaProfileSurface, DollarGammaCurve, ImpliedVolatilityCurve, ImpliedVolatilitySurface,
-    OpenInterestCurve, PriceShockCurve, PriceShockSurface, RiskReversalCurve, SmileDynamicsCurve,
-    SmileDynamicsSurface, ThetaCurve, ThetaSurface, TimeDecayCurve, TimeDecaySurface,
-    VannaVolgaSurface, VolatilitySensitivityCurve, VolatilitySensitivitySurface, VolatilitySkew,
-    VolumeProfileCurve, VolumeProfileSurface,
+    OpenInterestCurve, PriceShockCurve, PriceShockSurface, PutCallRatioCurve, RiskReversalCurve,
+    SmileDynamicsCurve, SmileDynamicsSurface, StrikeConcentrationCurve, ThetaCurve, ThetaSurface,
+    TimeDecayCurve, TimeDecaySurface, VannaVolgaSurface, VolatilitySensitivityCurve,
+    VolatilitySensitivitySurface, VolatilitySkewCurve, VolumeProfileCurve, VolumeProfileSurface,
 };
 use crate::model::{
     BasicAxisTypes, ExpirationDate, OptionStyle, OptionType, Options, Position, Side,
@@ -3203,7 +3203,7 @@ impl VolatilitySmile for OptionChain {
     }
 }
 
-impl VolatilitySkew for OptionChain {
+impl VolatilitySkewCurve for OptionChain {
     /// Computes the volatility skew for the option chain.
     ///
     /// This function calculates the volatility skew by interpolating the implied
@@ -3216,7 +3216,7 @@ impl VolatilitySkew for OptionChain {
     /// A `Curve` object representing the volatility skew. The x-coordinates of the curve
     /// correspond to the moneyness, and the y-coordinates represent the corresponding
     /// implied volatilities.
-    fn volatility_skew(&self) -> Curve {
+    fn volatility_skew(&self) -> Result<Curve, CurveError> {
         // Build a BTreeSet with the known points (options with implied volatility)
         let mut bt_points = self
             .options
@@ -3246,7 +3246,13 @@ impl VolatilitySkew for OptionChain {
         }
 
         // Return the final Curve with all points, including interpolated ones
-        Curve::new(bt_points)
+        // if no available points return an error
+        if bt_points.is_empty() {
+            return Err(CurveError::ConstructionError(
+                "No options with valid volatility skew data".to_string(),
+            ));
+        }
+        Ok(Curve::new(bt_points))
     }
 }
 
@@ -3454,6 +3460,99 @@ impl ImpliedVolatilityCurve for OptionChain {
         }
 
         Ok(Curve::new(points))
+    }
+}
+
+impl PutCallRatioCurve for OptionChain {
+    /// Computes the Put/Call Ratio curve by strike price for this option chain.
+    ///
+    /// Creates a curve showing how Put/Call Ratio varies across different strike
+    /// prices. PCR is calculated as premium-weighted.
+    ///
+    /// # Returns
+    ///
+    /// - `Ok(Curve)`: A curve with strike prices on the x-axis and PCR values on the y-axis.
+    /// - `Err(CurveError)`: If the Put/Call Ratio calculation is not successful.
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// use optionstratlib::chains::chain::OptionChain;
+    /// use optionstratlib::metrics::PutCallRatioCurve;
+    ///
+    /// let chain = OptionChain::new("SPY", pos!(450.0), "2024-03-15".to_string(), None, None);
+    /// let pcr_curve = chain.open_interest_pcr().unwrap();
+    /// ```
+    fn premium_weighted_pcr(&self) -> Result<Curve, CurveError> {
+        let mut points = BTreeSet::new();
+        for opt in self.options.iter() {
+            // Calculate Put/Call Ratio premium weighted
+            if let (Some(put_mid), Some(call_mid)) = (opt.put_middle, opt.call_middle) {
+                points.insert(Point2D::new(
+                    opt.strike_price.to_dec(),
+                    put_mid.to_dec() / call_mid.to_dec(),
+                ));
+            }
+        }
+        if points.is_empty() {
+            return Err(CurveError::ConstructionError(
+                "No options with valid premium weighted Put/Call ratio data".to_string(),
+            ));
+        }
+        Ok(Curve::new(points))
+    }
+}
+
+impl StrikeConcentrationCurve for OptionChain {
+    /// Computes the Strike Concentration curve by strike price for this option chain.
+    ///
+    /// Creates a curve showing how Strike Concentration varies across different strike
+    /// prices. Strike Concentration is calculated as premium-weighted.
+    ///
+    /// # Returns
+    ///
+    /// - `Ok(Curve)`: A curve with strike prices on the x-axis and Strike Concentration
+    ///   values on the y-axis.
+    /// - `Err(CurveError)`: If the Strike Concentration calculation is not successful.
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// use optionstratlib::chains::chain::OptionChain;
+    /// use optionstratlib::metrics::StrikeConcentrationCurve;
+    ///
+    /// let chain = OptionChain::new("SPY", pos!(450.0), "2024-03-15".to_string(), None, None);
+    /// let strike_concentration_curve = chain.premium_concentration().unwrap();
+    /// ```
+    fn premium_concentration(&self) -> Result<Curve, CurveError> {
+        let mut points = BTreeSet::new();
+        // Calculate total premium per each strike and total chain premium
+        let mut total_chain_premium = Decimal::ZERO;
+        let mut _strike_premium = Decimal::ZERO;
+        let mut strike_count = Decimal::ZERO;
+        for opt in self.options.iter() {
+            if let (Some(put_mid), Some(call_mid)) = (opt.put_middle, opt.call_middle) {
+                _strike_premium = put_mid.to_dec() + call_mid.to_dec();
+                points.insert(Point2D::new(opt.strike_price.to_dec(), _strike_premium));
+                total_chain_premium += _strike_premium;
+                strike_count += Decimal::ONE;
+            }
+        }
+        // If there are no points calculated return an error
+        if points.is_empty() {
+            return Err(CurveError::ConstructionError(
+                "No options with valid premium weighted Strike Concentration data".to_string(),
+            ));
+        }
+        // Calculate the average chain premium
+        let average_premium = total_chain_premium / strike_count;
+        // Normalize Strike Concentration data points based on average premium
+        let mut points_normalized = BTreeSet::new();
+        for point in points.iter() {
+            points_normalized.insert(Point2D::new(point.x, point.y / average_premium));
+        }
+
+        Ok(Curve::new(points_normalized))
     }
 }
 
@@ -12274,7 +12373,7 @@ mod tests_volatility_smile_skew {
     #[test]
     fn test_volatility_skew_returns_curve_with_correct_points() {
         let chain = create_chain_with_options();
-        let skew = chain.volatility_skew();
+        let skew = chain.volatility_skew().unwrap();
 
         assert_eq!(skew.points.len(), 5);
     }
@@ -12282,7 +12381,7 @@ mod tests_volatility_smile_skew {
     #[test]
     fn test_volatility_skew_moneyness_as_x_axis() {
         let chain = create_chain_with_options();
-        let skew = chain.volatility_skew();
+        let skew = chain.volatility_skew().unwrap();
 
         let points: Vec<_> = skew.points.iter().collect();
 
@@ -12298,7 +12397,7 @@ mod tests_volatility_smile_skew {
     #[test]
     fn test_volatility_skew_iv_as_y_axis() {
         let chain = create_chain_with_options();
-        let skew = chain.volatility_skew();
+        let skew = chain.volatility_skew().unwrap();
 
         let points: Vec<_> = skew.points.iter().collect();
 
@@ -12332,7 +12431,7 @@ mod tests_volatility_smile_skew {
         );
         let skew = chain.volatility_skew();
 
-        assert!(skew.points.is_empty());
+        assert!(skew.is_err());
     }
 
     #[test]
@@ -12940,5 +13039,46 @@ mod tests_option_chain_params_trait {
 
         let result = chain.get_params(pos_or_panic!(150.0));
         assert!(result.is_err());
+    }
+}
+
+#[cfg(test)]
+mod tests_price_metrics_traits {
+    use super::*;
+    use crate::assert_decimal_eq;
+    use rust_decimal_macros::dec;
+
+    #[test]
+    fn test_put_call_ratio_premium_weighted_trait() {
+        let result = OptionChain::load_from_json("examples/Chains/SP500-18-oct-2024-5781.88.json");
+        assert!(result.is_ok());
+        let chain = result.unwrap();
+        let put_call_ratio_curve = chain.premium_weighted_pcr().unwrap();
+        let pcr_vec: Vec<_> = put_call_ratio_curve.points.iter().collect();
+
+        // Check specific points for correct put call ratio calculation
+        let epsilon = dec!(1e-5);
+        assert_decimal_eq!(pcr_vec[0].y, dec!(0.05109), epsilon);
+        assert_decimal_eq!(pcr_vec[1].y, dec!(0.05324), epsilon);
+        assert_decimal_eq!(pcr_vec[2].y, dec!(0.05552), epsilon);
+        assert_decimal_eq!(pcr_vec[3].y, dec!(0.06046), epsilon);
+        assert_decimal_eq!(pcr_vec[4].y, dec!(0.06593), epsilon);
+    }
+
+    #[test]
+    fn test_strike_concentration_premium_weighted_trait() {
+        let result = OptionChain::load_from_json("examples/Chains/SP500-18-oct-2024-5781.88.json");
+        assert!(result.is_ok());
+        let chain = result.unwrap();
+        let strike_concentration_curve = chain.premium_concentration().unwrap();
+        let strike_concentration_vec: Vec<_> = strike_concentration_curve.points.iter().collect();
+
+        // Check specific points for correct strike concentration calculation
+        let epsilon = dec!(1e-5);
+        assert_decimal_eq!(strike_concentration_vec[0].y, dec!(1.44624), epsilon);
+        assert_decimal_eq!(strike_concentration_vec[1].y, dec!(1.42477), epsilon);
+        assert_decimal_eq!(strike_concentration_vec[2].y, dec!(1.40347), epsilon);
+        assert_decimal_eq!(strike_concentration_vec[3].y, dec!(1.36114), epsilon);
+        assert_decimal_eq!(strike_concentration_vec[4].y, dec!(1.31928), epsilon);
     }
 }

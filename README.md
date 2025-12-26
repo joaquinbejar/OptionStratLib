@@ -202,7 +202,10 @@ Comprehensive plotting and charting:
 
 #### **Metrics** (`metrics/`)
 Performance, risk, and liquidity metrics analysis:
-- **Price Metrics**: Volatility skew curves
+- **Price Metrics**:
+  - Volatility Skew curves (by moneyness)
+  - Put/Call Ratio Premium Weighted (by strike)
+  - Strike Concentration Premium Weighted (by strike)
 - **Risk Metrics**:
   - Implied Volatility curves (by strike) and surfaces (strike vs time)
   - Risk Reversal curves (by strike)

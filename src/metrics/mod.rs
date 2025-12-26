@@ -7,7 +7,7 @@
 //! # Metrics Module
 //!
 //! This module provides comprehensive performance metrics tools for financial applications:
-//! - Price Metrics (Volatility Skew)
+//! - Price Metrics (Volatility Skew, Put/Call Ratio, Strike Concentration)
 //! - Risk Metrics (Implied Volatility, Risk Reversal, Dollar Gamma)
 //!
 //! ## Core Features
@@ -19,6 +19,11 @@
 //!   for developing effective trading strategies. Volatility skew reflects differences in
 //!   moneyness among options with the same expiration but different strike prices, highlighting
 //!   market sentiment and expectations.
+//! - Put Call Ratio: indicates if the investors are placing more bets on prices falling or rising.
+//!   It has been conceived to be a measure of market sentiment.
+//! - Strike Concentration: identifies specific strike prices with unusually high open
+//!   interest or trading volume. It looks for clusters of activity where a large number of
+//!   contracts are concentrated.
 //!
 //! ### Risk Metrics
 //!
@@ -34,19 +39,61 @@
 //! use std::collections::BTreeSet;
 //! use rust_decimal::Decimal;
 //! use optionstratlib::curves::Curve;
-//! use optionstratlib::error::greeks::CalculationErrorKind::DecimalError;
-//! use optionstratlib::metrics::VolatilitySkew;
+//! use optionstratlib::error::CurveError;
+//! use optionstratlib::metrics::VolatilitySkewCurve;
 //!
 //! struct MySkew;
 //!
-//! impl VolatilitySkew for MySkew {
-//!     fn volatility_skew(&self) -> Curve {
+//! impl VolatilitySkewCurve for MySkew {
+//!     fn volatility_skew(&self) -> Result<Curve, CurveError> {
 //!         // Custom logic to build and return a Curve representing the skew
-//!         Curve { points: BTreeSet::new(), x_range: (Decimal::ZERO, Decimal::ZERO) }
+//!         let curve = Curve { points: BTreeSet::new(), x_range: (Decimal::ZERO, Decimal::ZERO) };
+//!         Ok(curve)
 //!     }
 //! }
 //! ```
 //!
+//! ### Put Call Ratio
+//!
+//! ```rust
+//! use std::collections::BTreeSet;
+//! use rust_decimal::Decimal;
+//! use optionstratlib::curves::Curve;
+//! use optionstratlib::error::CurveError;
+//! use optionstratlib::metrics::PutCallRatioCurve;
+//!
+//! struct MyPcr;
+//!
+//! impl PutCallRatioCurve for MyPcr {
+//!     fn premium_weighted_pcr(&self) -> Result<Curve, CurveError> {
+//!         // Custom logic to build and return a Curve representing the premium
+//!         // weighted put/call ratio
+//!         let curve = Curve { points: BTreeSet::new(), x_range: (Decimal::ZERO, Decimal::ZERO) };
+//!         Ok(curve)
+//!     }
+//! }
+//! ```
+//!
+//! ### Strike Concetration
+//!
+//! ```rust
+//! use std::collections::BTreeSet;
+//! use rust_decimal::Decimal;
+//! use optionstratlib::curves::Curve;
+//! use optionstratlib::error::CurveError;
+//! use optionstratlib::metrics::StrikeConcentrationCurve;
+//!
+//! struct MyStrikeConcentration;
+//!
+//! impl StrikeConcentrationCurve for MyStrikeConcentration {
+//!     fn premium_concentration(&self) -> Result<Curve, CurveError> {
+//!         // Custom logic to build and return a Curve representing the premium
+//!         // weighted strike concentration
+//!         let curve = Curve { points: BTreeSet::new(), x_range: (Decimal::ZERO, Decimal::ZERO) };
+//!         Ok(curve)
+//!     }
+//! }
+//! ```
 //! ### Implied Volatility Curve
 //!
 //! ```rust
@@ -106,7 +153,7 @@
 //! ```
 pub mod composite;
 pub mod liquidity;
-mod price;
+pub mod price;
 pub mod risk;
 pub mod stress;
 pub mod temporal;
@@ -118,7 +165,7 @@ pub use composite::{
 pub use liquidity::{
     BidAskSpreadCurve, OpenInterestCurve, VolumeProfileCurve, VolumeProfileSurface,
 };
-pub use price::volatility_skew::VolatilitySkew;
+pub use price::{PutCallRatioCurve, StrikeConcentrationCurve, VolatilitySkewCurve};
 pub use risk::{
     DollarGammaCurve, ImpliedVolatilityCurve, ImpliedVolatilitySurface, RiskReversalCurve,
 };
