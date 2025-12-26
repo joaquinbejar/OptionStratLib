@@ -103,11 +103,11 @@ mod tests_basic_curves_trait {
     use crate::curves::Point2D;
     use crate::error::OperationErrorKind;
     use crate::model::types::{OptionStyle, Side};
-    use crate::{ExpirationDate, OptionType, Positive};
+    use crate::{ExpirationDate, OptionType};
+    use positive::{Positive, pos_or_panic};
     use rust_decimal_macros::dec;
     use std::collections::BTreeSet;
     use std::sync::Arc;
-use positive::pos_or_panic;
 
     // Helper function to create a sample Options for testing
     fn create_test_option() -> Arc<Options> {

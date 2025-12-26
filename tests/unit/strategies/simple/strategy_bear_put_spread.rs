@@ -1,11 +1,11 @@
-use positive::{assert_pos_relative_eq, pos_or_panic};
 use approx::assert_relative_eq;
 use num_traits::ToPrimitive;
 use optionstratlib::ExpirationDate;
-use optionstratlib::Positive;
 use optionstratlib::strategies::base::BreakEvenable;
 use optionstratlib::strategies::bear_put_spread::BearPutSpread;
 use optionstratlib::strategies::{BasicAble, Strategies};
+use positive::Positive;
+use positive::{assert_pos_relative_eq, pos_or_panic};
 use rust_decimal_macros::dec;
 use std::error::Error;
 
@@ -16,20 +16,20 @@ fn test_bear_put_spread_integration() -> Result<(), Box<dyn Error>> {
 
     let strategy = BearPutSpread::new(
         "SP500".to_string(),
-        underlying_price, // underlying_price
-        pos_or_panic!(5850.0),     // long_strike
-        pos_or_panic!(5720.0),     // short_strike
+        underlying_price,      // underlying_price
+        pos_or_panic!(5850.0), // long_strike
+        pos_or_panic!(5720.0), // short_strike
         ExpirationDate::Days(Positive::TWO),
-        pos_or_panic!(0.18),     // implied_volatility
-        dec!(0.05),     // risk_free_rate
-        Positive::ZERO, // dividend_yield
-        Positive::TWO,      // long quantity
-        pos_or_panic!(85.04),    // premium_long
-        pos_or_panic!(29.85),    // premium_short
-        pos_or_panic!(0.78),     // open_fee_long
-        pos_or_panic!(0.78),     // open_fee_long
-        pos_or_panic!(0.73),     // close_fee_long
-        pos_or_panic!(0.73),     // close_fee_short
+        pos_or_panic!(0.18),  // implied_volatility
+        dec!(0.05),           // risk_free_rate
+        Positive::ZERO,       // dividend_yield
+        Positive::TWO,        // long quantity
+        pos_or_panic!(85.04), // premium_long
+        pos_or_panic!(29.85), // premium_short
+        pos_or_panic!(0.78),  // open_fee_long
+        pos_or_panic!(0.78),  // open_fee_long
+        pos_or_panic!(0.73),  // close_fee_long
+        pos_or_panic!(0.73),  // close_fee_short
     );
 
     // Assertions to validate strategy properties and computations
@@ -45,8 +45,16 @@ fn test_bear_put_spread_integration() -> Result<(), Box<dyn Error>> {
     );
     assert!(strategy.get_max_profit().is_ok());
     assert!(strategy.get_max_loss().is_ok());
-    assert_pos_relative_eq!(strategy.get_max_loss()?, pos_or_panic!(116.42), pos_or_panic!(0.0001));
-    assert_pos_relative_eq!(strategy.get_total_cost()?, pos_or_panic!(176.12), pos_or_panic!(0.0001));
+    assert_pos_relative_eq!(
+        strategy.get_max_loss()?,
+        pos_or_panic!(116.42),
+        pos_or_panic!(0.0001)
+    );
+    assert_pos_relative_eq!(
+        strategy.get_total_cost()?,
+        pos_or_panic!(176.12),
+        pos_or_panic!(0.0001)
+    );
     assert_eq!(strategy.get_fees().unwrap().to_f64(), 6.04);
     assert!(strategy.get_profit_area().unwrap().to_f64().unwrap() > 0.0);
     assert!(strategy.get_profit_ratio().unwrap().to_f64().unwrap() > 0.0);

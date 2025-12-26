@@ -774,7 +774,7 @@ test_strategy_traits!(ShortPut, test_short_put_implementations);
 mod tests_simulate {
     use super::*;
     use crate::chains::generator_positive;
-    use positive::{pos_or_panic, Positive};
+    use positive::{Positive, pos_or_panic};
 
     use crate::simulation::simulator::Simulator;
     use crate::simulation::steps::Step;

@@ -1,6 +1,6 @@
 use criterion::{Criterion, criterion_group, criterion_main};
-use optionstratlib::Positive;
-use optionstratlib::pos_or_panic;
+use positive::Positive;
+use positive::pos_or_panic;
 use rust_decimal_macros::dec;
 use std::hint::black_box;
 

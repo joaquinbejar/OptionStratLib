@@ -1,7 +1,7 @@
-use positive::Positive;
 use crate::chains::chain::OptionChain;
 use crate::curves::Curve;
 use crate::error::VolatilityError;
+use positive::Positive;
 
 /// A trait defining a volatility smile representation.
 ///
@@ -120,10 +120,10 @@ mod tests_volatility_traits {
     use crate::curves::{Curve, Point2D};
     use crate::metrics::VolatilitySkew;
 
+    use positive::pos_or_panic;
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
     use std::collections::BTreeSet;
-use positive::pos_or_panic;
 
     struct TestSmile;
 

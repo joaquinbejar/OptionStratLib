@@ -51,8 +51,8 @@ impl From<OptionSeries> for Positive {
 
 #[cfg(test)]
 mod tests {
-    use positive::pos_or_panic;
     use super::*;
+    use positive::pos_or_panic;
 
     #[test]
     fn test_to_round_trait() {

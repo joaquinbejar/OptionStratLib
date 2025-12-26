@@ -39,7 +39,7 @@ The adjusted volatility for the target timeframe
 
 ::: example-wrap
 ``` {.rust .rust-example-rendered}
-use optionstratlib::pos_or_panic;
+use positive::pos_or_panic;
 use optionstratlib::utils::TimeFrame;
 use optionstratlib::volatility::adjust_volatility;
 let daily_vol = pos!(0.2); // 20% daily volatility

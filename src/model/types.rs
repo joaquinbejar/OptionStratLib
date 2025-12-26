@@ -1,7 +1,8 @@
+use crate::ExpirationDate;
 use crate::constants::ZERO;
 use crate::pricing::payoff::{Payoff, PayoffInfo, standard_payoff};
-use crate::{ExpirationDate, Positive};
 use chrono::{DateTime, Utc};
+use positive::Positive;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::fmt;
@@ -1084,8 +1085,8 @@ mod test_barrier_options {
 
 #[cfg(test)]
 mod test_cliquet_options {
-    use positive::{pos_or_panic, Positive};
     use crate::model::{OptionStyle, OptionType, Side};
+    use positive::{Positive, pos_or_panic};
 
     use crate::pricing::{Payoff, PayoffInfo};
 

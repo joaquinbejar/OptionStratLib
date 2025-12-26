@@ -25,7 +25,7 @@ use utoipa::ToSchema;
 ///
 /// ```
 /// use optionstratlib::utils::time::TimeFrame;
-/// use optionstratlib::pos_or_panic;
+/// use positive::pos_or_panic;
 ///
 /// // Using standard timeframes
 /// let daily = TimeFrame::Day;
@@ -77,7 +77,7 @@ impl TimeFrame {
     ///
     /// ```
     /// use optionstratlib::utils::time::TimeFrame;
-    /// use optionstratlib::pos_or_panic;
+    /// use positive::pos_or_panic;
     ///
     /// let daily = TimeFrame::Day;
     /// let periods_per_year = daily.periods_per_year(); // Returns 252
@@ -170,7 +170,7 @@ pub fn units_per_year(time_frame: &TimeFrame) -> Positive {
 /// # Examples
 ///
 /// ```
-/// 
+///
 /// use optionstratlib::utils::time::convert_time_frame;
 /// use optionstratlib::utils::TimeFrame;
 ///

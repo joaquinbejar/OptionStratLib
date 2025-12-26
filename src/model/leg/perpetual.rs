@@ -22,7 +22,7 @@
 //! ```rust
 //! use optionstratlib::model::leg::{PerpetualPosition, MarginType};
 //! use optionstratlib::model::types::Side;
-//! use optionstratlib::pos_or_panic;
+//! use positive::pos_or_panic;
 //! use chrono::Utc;
 //! use rust_decimal_macros::dec;
 //!
@@ -451,7 +451,7 @@ impl Default for PerpetualPosition {
             quantity: Positive::ZERO,
             entry_price: Positive::ZERO,
             side: Side::Long,
-            leverage: crate::Positive::ONE,
+            leverage: positive::Positive::ONE,
             margin: Positive::ZERO,
             margin_type: MarginType::default(),
             funding_rate: Decimal::ZERO,
@@ -463,8 +463,8 @@ impl Default for PerpetualPosition {
 
 #[cfg(test)]
 mod tests {
-    use positive::pos_or_panic;
     use super::*;
+    use positive::pos_or_panic;
 
     use rust_decimal_macros::dec;
 

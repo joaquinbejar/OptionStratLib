@@ -255,7 +255,7 @@ pub trait BasicSurfaces {
     /// ```ignore
     /// use optionstratlib::surfaces::BasicSurfaces;
     /// use optionstratlib::model::BasicAxisTypes;
-    /// use optionstratlib::pos_or_panic;
+    /// use positive::pos_or_panic;
     ///
     /// // Generate veta values for different times to expiration
     /// let days_values = vec![pos_or_panic!(7.0), pos_or_panic!(14.0), pos_or_panic!(30.0), pos_or_panic!(60.0), pos_or_panic!(90.0)];
@@ -374,7 +374,7 @@ pub trait BasicSurfaces {
 mod tests_basic_surfaces {
     use super::*;
     use crate::{ExpirationDate, OptionType, assert_decimal_eq};
-use positive::pos_or_panic;
+    use positive::pos_or_panic;
     use rust_decimal_macros::dec;
     use std::sync::Arc;
 
@@ -411,10 +411,10 @@ use positive::pos_or_panic;
             "TEST".to_string(),
             Positive::HUNDRED, // strike_price
             ExpirationDate::Days(pos_or_panic!(30.0)),
-            pos_or_panic!(0.2),   // implied_volatility
-            Positive::ONE,   // quantity
-            Positive::HUNDRED, // underlying_price
-            dec!(0.05),           // risk_free_rate
+            pos_or_panic!(0.2), // implied_volatility
+            Positive::ONE,      // quantity
+            Positive::HUNDRED,  // underlying_price
+            dec!(0.05),         // risk_free_rate
             OptionStyle::Call,
             pos_or_panic!(0.01), // dividend_yield
             None,

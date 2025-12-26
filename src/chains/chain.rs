@@ -798,7 +798,7 @@ impl OptionChain {
     /// ```rust
     /// use tracing::{error, info};
     /// use optionstratlib::chains::chain::OptionChain;
-    /// use optionstratlib::pos_or_panic;
+    /// use positive::pos_or_panic;
     ///
     /// let chain = OptionChain::new("SPY", pos_or_panic!(450.75), "2023-12-15".to_string(), None, None);
     /// // Add options to the chain...
@@ -1466,8 +1466,8 @@ impl OptionChain {
     /// ```rust
     /// use tracing::info;
     /// use optionstratlib::chains::chain::OptionChain;
-    /// use optionstratlib::Positive;
-    /// use optionstratlib::pos_or_panic;
+    /// use positive::Positive;
+    /// use positive::pos_or_panic;
     /// let mut option_chain = OptionChain::new("TEST", Positive::HUNDRED, "2030-01-01".to_string(), None, None);
     /// for (option1, option2) in option_chain.get_double_inclusive_iter() {
     ///     info!("{:?}, {:?}", option1, option2);
@@ -1495,8 +1495,8 @@ impl OptionChain {
     /// ```rust
     /// use tracing::info;
     /// use optionstratlib::chains::chain::OptionChain;
-    /// use optionstratlib::Positive;
-    /// use optionstratlib::pos_or_panic;
+    /// use positive::Positive;
+    /// use positive::pos_or_panic;
     /// let mut option_chain = OptionChain::new("TEST", Positive::HUNDRED, "2030-01-01".to_string(), None, None);
     /// for (option1, option2, option3) in option_chain.get_triple_iter() {
     ///     info!("{:?}, {:?}, {:?}", option1, option2, option3);
@@ -1532,8 +1532,8 @@ impl OptionChain {
     /// ```rust
     /// use tracing::info;
     /// use optionstratlib::chains::chain::OptionChain;
-    /// use optionstratlib::Positive;
-    /// use optionstratlib::pos_or_panic;
+    /// use positive::Positive;
+    /// use positive::pos_or_panic;
     /// let mut option_chain = OptionChain::new("TEST", Positive::HUNDRED, "2030-01-01".to_string(), None, None);
     /// for (option1, option2, option3) in option_chain.get_triple_inclusive_iter() {
     ///     info!("{:?}, {:?}, {:?}", option1, option2, option3);
@@ -1570,8 +1570,8 @@ impl OptionChain {
     /// ```rust
     /// use tracing::info;
     /// use optionstratlib::chains::chain::OptionChain;
-    /// use optionstratlib::Positive;
-    /// use optionstratlib::pos_or_panic;
+    /// use positive::Positive;
+    /// use positive::pos_or_panic;
     /// let mut option_chain = OptionChain::new("TEST", Positive::HUNDRED, "2030-01-01".to_string(), None, None);
     /// for (option1, option2, option3, option4) in option_chain.get_quad_iter() {
     ///     info!("{:?}, {:?}, {:?}, {:?}", option1, option2, option3, option4);
@@ -1613,8 +1613,8 @@ impl OptionChain {
     /// ```rust
     /// use tracing::info;
     /// use optionstratlib::chains::chain::OptionChain;
-    /// use optionstratlib::Positive;
-    /// use optionstratlib::pos_or_panic;
+    /// use positive::Positive;
+    /// use positive::pos_or_panic;
     /// let mut option_chain = OptionChain::new("TEST", Positive::HUNDRED, "2030-01-01".to_string(), None, None);
     /// for (option1, option2, option3, option4) in option_chain.get_quad_inclusive_iter() {
     ///     info!("{:?}, {:?}, {:?}, {:?}", option1, option2, option3, option4);
@@ -2144,7 +2144,7 @@ impl OptionChain {
     /// # Example
     ///
     /// ```ignore
-    /// use optionstratlib::pos_or_panic;
+    /// use positive::pos_or_panic;
     ///
     /// let days = vec![pos_or_panic!(7.0), pos_or_panic!(14.0), pos_or_panic!(30.0), pos_or_panic!(60.0), pos_or_panic!(90.0)];
     /// let veta_surface = chain.veta_time_surface(days)?;
@@ -2186,7 +2186,7 @@ impl OptionChain {
     /// # Example
     ///
     /// ```ignore
-    /// use optionstratlib::pos_or_panic;
+    /// use positive::pos_or_panic;
     ///
     /// let days = vec![pos_or_panic!(7.0), pos_or_panic!(14.0), pos_or_panic!(30.0), pos_or_panic!(60.0), pos_or_panic!(90.0)];
     /// let theta_surface = chain.theta_time_surface(days)?;
@@ -2227,7 +2227,7 @@ impl OptionChain {
     /// # Example
     ///
     /// ```ignore
-    /// use optionstratlib::pos_or_panic;
+    /// use positive::pos_or_panic;
     ///
     /// let days = vec![pos_or_panic!(7.0), pos_or_panic!(14.0), pos_or_panic!(30.0), pos_or_panic!(60.0), pos_or_panic!(90.0)];
     /// let charm_surface = chain.charm_time_surface(days)?;
@@ -2268,7 +2268,7 @@ impl OptionChain {
     /// # Example
     ///
     /// ```ignore
-    /// use optionstratlib::pos_or_panic;
+    /// use positive::pos_or_panic;
     ///
     /// let days = vec![pos_or_panic!(7.0), pos_or_panic!(14.0), pos_or_panic!(30.0), pos_or_panic!(60.0), pos_or_panic!(90.0)];
     /// let color_surface = chain.color_time_surface(days)?;
@@ -3413,7 +3413,7 @@ impl ImpliedVolatilitySurface for OptionChain {
     /// ```ignore
     /// use optionstratlib::chains::chain::OptionChain;
     /// use optionstratlib::metrics::ImpliedVolatilitySurface;
-    /// use optionstratlib::pos_or_panic;
+    /// use positive::pos_or_panic;
     ///
     /// let chain = OptionChain::new("SPY", pos_or_panic!(450.0), "2024-03-15".to_string(), None, None);
     /// let days = vec![pos_or_panic!(7.0), pos_or_panic!(14.0), pos_or_panic!(30.0), pos_or_panic!(60.0)];
@@ -10467,8 +10467,8 @@ mod tests_option_chain_utils_bis {
 
 #[cfg(test)]
 mod tests_to_build_params_bis {
-    use positive::spos;
     use super::*;
+    use positive::spos;
 
     use crate::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
     use crate::model::ExpirationDate;
@@ -12500,8 +12500,8 @@ mod tests_title_operations {
 
 #[cfg(test)]
 mod tests_expiration_operations {
-    use positive::spos;
     use super::*;
+    use positive::spos;
 
     use rust_decimal_macros::dec;
 
@@ -12595,8 +12595,8 @@ mod tests_expiration_operations {
 
 #[cfg(test)]
 mod tests_from_vec_option_data {
-    use positive::spos;
     use super::*;
+    use positive::spos;
 
     use rust_decimal_macros::dec;
 
@@ -12825,8 +12825,8 @@ mod tests_default_trait {
 
 #[cfg(test)]
 mod tests_option_chain_params_trait {
-    use positive::spos;
     use super::*;
+    use positive::spos;
 
     use rust_decimal_macros::dec;
 

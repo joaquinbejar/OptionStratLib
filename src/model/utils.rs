@@ -373,7 +373,7 @@ pub fn create_sample_option_simplest_strike(
 /// # Example
 ///
 /// ```rust
-/// use optionstratlib::Positive;
+/// use positive::Positive;
 /// use optionstratlib::model::utils::mean_and_std;
 ///
 /// let data = vec![Positive::new(2.0).unwrap(), Positive::new(4.0).unwrap(), Positive::new(4.0).unwrap(), Positive::new(4.0).unwrap(), Positive::new(5.0).unwrap(), Positive::new(5.0).unwrap(), Positive::new(7.0).unwrap(), Positive::new(9.0).unwrap()];

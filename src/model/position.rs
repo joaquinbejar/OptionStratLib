@@ -2254,8 +2254,8 @@ mod tests_position_max_loss_profit {
 
 #[cfg(test)]
 mod tests_update_from_option_data {
-    use positive::spos;
     use super::*;
+    use positive::spos;
 
     use rust_decimal_macros::dec;
 

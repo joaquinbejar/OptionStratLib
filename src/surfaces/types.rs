@@ -233,11 +233,11 @@ pub enum Axis {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     use crate::surfaces::Surface;
+    use positive::{Positive, pos_or_panic};
     use rust_decimal_macros::dec;
     use std::collections::BTreeSet;
-use positive::{Positive, pos_or_panic};
 
     #[test]
     fn test_point3d_new() {

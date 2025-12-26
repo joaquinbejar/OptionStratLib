@@ -1,10 +1,10 @@
-use positive::{assert_pos_relative_eq, pos_or_panic};
 use approx::assert_relative_eq;
 use optionstratlib::ExpirationDate;
-use optionstratlib::Positive;
 use optionstratlib::strategies::base::BreakEvenable;
 use optionstratlib::strategies::bull_call_spread::BullCallSpread;
 use optionstratlib::strategies::{BasicAble, Strategies};
+use positive::Positive;
+use positive::{assert_pos_relative_eq, pos_or_panic};
 
 use rust_decimal_macros::dec;
 use std::error::Error;
@@ -17,16 +17,16 @@ fn test_bull_call_spread_basic_integration() -> Result<(), Box<dyn Error>> {
         pos_or_panic!(2460.0), // long_strike_itm
         pos_or_panic!(2515.0), // short_strike
         ExpirationDate::Days(pos_or_panic!(30.0)),
-        pos_or_panic!(0.2),      // implied_volatility
-        dec!(0.05),     // risk_free_rate
-        Positive::ZERO, // dividend_yield
-        Positive::ONE,      // quantity
-        pos_or_panic!(27.26),    // premium_long
-        pos_or_panic!(5.33),     // premium_short
-        pos_or_panic!(0.58),     // open_fee_long
-        pos_or_panic!(0.58),     // close_fee_long
-        pos_or_panic!(0.55),     // close_fee_short
-        pos_or_panic!(0.54),     // open_fee_short
+        pos_or_panic!(0.2),   // implied_volatility
+        dec!(0.05),           // risk_free_rate
+        Positive::ZERO,       // dividend_yield
+        Positive::ONE,        // quantity
+        pos_or_panic!(27.26), // premium_long
+        pos_or_panic!(5.33),  // premium_short
+        pos_or_panic!(0.58),  // open_fee_long
+        pos_or_panic!(0.58),  // close_fee_long
+        pos_or_panic!(0.55),  // close_fee_short
+        pos_or_panic!(0.54),  // open_fee_short
     );
 
     // Validate strategy properties
@@ -44,9 +44,21 @@ fn test_bull_call_spread_basic_integration() -> Result<(), Box<dyn Error>> {
     );
     assert!(strategy.get_max_profit().is_ok());
     assert!(strategy.get_max_loss().is_ok());
-    assert_pos_relative_eq!(strategy.get_max_profit()?, pos_or_panic!(30.82), pos_or_panic!(0.0001));
-    assert_pos_relative_eq!(strategy.get_max_loss()?, pos_or_panic!(24.18), pos_or_panic!(0.0001));
-    assert_pos_relative_eq!(strategy.get_total_cost()?, pos_or_panic!(29.51), pos_or_panic!(0.0001));
+    assert_pos_relative_eq!(
+        strategy.get_max_profit()?,
+        pos_or_panic!(30.82),
+        pos_or_panic!(0.0001)
+    );
+    assert_pos_relative_eq!(
+        strategy.get_max_loss()?,
+        pos_or_panic!(24.18),
+        pos_or_panic!(0.0001)
+    );
+    assert_pos_relative_eq!(
+        strategy.get_total_cost()?,
+        pos_or_panic!(29.51),
+        pos_or_panic!(0.0001)
+    );
     assert_eq!(strategy.get_fees().unwrap().to_f64(), 2.25);
 
     // Test price range calculations

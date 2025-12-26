@@ -1,4 +1,3 @@
-use positive::{Positive, assert_pos_relative_eq, pos_or_panic};
 use optionstratlib::greeks::Greeks;
 use optionstratlib::model::types::OptionStyle;
 use optionstratlib::strategies::DELTA_THRESHOLD;
@@ -6,6 +5,7 @@ use optionstratlib::strategies::delta_neutral::DeltaAdjustment::BuyOptions;
 use optionstratlib::strategies::delta_neutral::DeltaNeutrality;
 use optionstratlib::strategies::iron_butterfly::IronButterfly;
 use optionstratlib::{ExpirationDate, Side, assert_decimal_eq};
+use positive::{Positive, assert_pos_relative_eq, pos_or_panic};
 use rust_decimal_macros::dec;
 use std::error::Error;
 
@@ -24,7 +24,7 @@ fn test_iron_butterfly_integration() -> Result<(), Box<dyn Error>> {
         pos_or_panic!(0.1548), // implied_volatility
         dec!(0.05),            // risk_free_rate
         Positive::ZERO,        // dividend_yield
-        Positive::TWO,    // quantity
+        Positive::TWO,         // quantity
         pos_or_panic!(38.8),   // premium_short_call
         pos_or_panic!(30.4),   // premium_short_put
         pos_or_panic!(23.3),   // premium_long_call

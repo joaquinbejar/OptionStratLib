@@ -374,11 +374,7 @@ fn main() -> Result<(), Error> {
 
     // Create WalkParams for the Simulator
     let walker = Box::new(Walker::new());
-    let dt = convert_time_frame(
-        Positive::ONE / days,
-        &TimeFrame::Minute,
-        &TimeFrame::Day,
-    );
+    let dt = convert_time_frame(Positive::ONE / days, &TimeFrame::Minute, &TimeFrame::Day);
 
     // Adjust volatility for the specific dt in the random walk
     let volatility_dt =

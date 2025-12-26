@@ -1,12 +1,12 @@
-use positive::{assert_pos_relative_eq, pos_or_panic};
 use approx::assert_relative_eq;
 use num_traits::ToPrimitive;
 use optionstratlib::ExpirationDate;
-use optionstratlib::Positive;
 use optionstratlib::constants::ZERO;
 use optionstratlib::strategies::base::BreakEvenable;
 use optionstratlib::strategies::long_straddle::LongStraddle;
 use optionstratlib::strategies::{BasicAble, Strategies};
+use positive::Positive;
+use positive::{assert_pos_relative_eq, pos_or_panic};
 
 use rust_decimal_macros::dec;
 use std::error::Error;
@@ -18,19 +18,19 @@ fn test_long_straddle_integration() -> Result<(), Box<dyn Error>> {
 
     let strategy = LongStraddle::new(
         "CL".to_string(),
-        underlying_price, // underlying_price
-        pos_or_panic!(7140.0),     // put_strike
+        underlying_price,      // underlying_price
+        pos_or_panic!(7140.0), // put_strike
         ExpirationDate::Days(pos_or_panic!(45.0)),
-        pos_or_panic!(0.3745),   // implied_volatility
-        dec!(0.05),     // risk_free_rate
-        Positive::ZERO, // dividend_yield
-        Positive::ONE,      // quantity
-        pos_or_panic!(84.2),     // premium_short_call
-        pos_or_panic!(353.2),    // premium_short_put
-        pos_or_panic!(7.0),      // open_fee_short_call
-        pos_or_panic!(7.01),     // close_fee_short_call
-        pos_or_panic!(7.01),     // open_fee_short_put
-        pos_or_panic!(7.01),     // close_fee_short_put
+        pos_or_panic!(0.3745), // implied_volatility
+        dec!(0.05),            // risk_free_rate
+        Positive::ZERO,        // dividend_yield
+        Positive::ONE,         // quantity
+        pos_or_panic!(84.2),   // premium_short_call
+        pos_or_panic!(353.2),  // premium_short_put
+        pos_or_panic!(7.0),    // open_fee_short_call
+        pos_or_panic!(7.01),   // close_fee_short_call
+        pos_or_panic!(7.01),   // open_fee_short_put
+        pos_or_panic!(7.01),   // close_fee_short_put
     );
 
     // Assertions to validate strategy properties and computations
@@ -46,8 +46,16 @@ fn test_long_straddle_integration() -> Result<(), Box<dyn Error>> {
     );
     assert!(strategy.get_max_profit().is_ok());
     assert!(strategy.get_max_loss().is_ok());
-    assert_pos_relative_eq!(strategy.get_max_loss()?, pos_or_panic!(465.429), pos_or_panic!(0.0001));
-    assert_pos_relative_eq!(strategy.get_total_cost()?, pos_or_panic!(465.4299), pos_or_panic!(0.0001));
+    assert_pos_relative_eq!(
+        strategy.get_max_loss()?,
+        pos_or_panic!(465.429),
+        pos_or_panic!(0.0001)
+    );
+    assert_pos_relative_eq!(
+        strategy.get_total_cost()?,
+        pos_or_panic!(465.4299),
+        pos_or_panic!(0.0001)
+    );
     assert_eq!(strategy.get_fees().unwrap().to_f64(), 28.03);
 
     // Test range calculations

@@ -1,5 +1,5 @@
-use positive::pos_or_panic;
 use optionstratlib::prelude::*;
+use positive::pos_or_panic;
 
 struct Walker {}
 
@@ -19,11 +19,7 @@ fn main() -> Result<(), Error> {
     let iv = pos_or_panic!(0.27);
     let walker = Box::new(Walker::new());
     let days = pos_or_panic!(7.0);
-    let dt = convert_time_frame(
-        Positive::ONE / days,
-        &TimeFrame::Minute,
-        &TimeFrame::Day,
-    );
+    let dt = convert_time_frame(Positive::ONE / days, &TimeFrame::Minute, &TimeFrame::Day);
     let volatility_dt = volatility_for_dt(iv, dt, TimeFrame::Minute, TimeFrame::Day)?;
 
     let walk_params = WalkParams {

@@ -1,4 +1,3 @@
-use positive::{Positive, assert_pos_relative_eq, pos_or_panic};
 use approx::assert_relative_eq;
 use num_traits::ToPrimitive;
 use optionstratlib::ExpirationDate;
@@ -6,6 +5,7 @@ use optionstratlib::constants::ZERO;
 use optionstratlib::strategies::base::BreakEvenable;
 use optionstratlib::strategies::call_butterfly::CallButterfly;
 use optionstratlib::strategies::{BasicAble, Strategies};
+use positive::{Positive, assert_pos_relative_eq, pos_or_panic};
 use rust_decimal_macros::dec;
 use std::error::Error;
 
@@ -24,7 +24,7 @@ fn test_call_butterfly_integration() -> Result<(), Box<dyn Error>> {
         pos_or_panic!(0.18),  // implied_volatility
         dec!(0.05),           // risk_free_rate
         Positive::ZERO,       // dividend_yield
-        Positive::ONE,   // long quantity
+        Positive::ONE,        // long quantity
         pos_or_panic!(85.04), // premium_long_itm
         pos_or_panic!(53.04), // premium_long_otm
         pos_or_panic!(28.85), // premium_short

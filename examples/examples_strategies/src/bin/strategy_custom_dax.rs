@@ -1,5 +1,5 @@
-use positive::pos_or_panic;
 use optionstratlib::prelude::*;
+use positive::pos_or_panic;
 
 fn main() {
     setup_logger();
@@ -101,7 +101,7 @@ fn main() {
         underlying_price,
         positions,
         Positive::ONE, // Default quantity
-        1,                  // days to expiration
+        1,             // days to expiration
         implied_volatility,
     );
 

@@ -28,7 +28,7 @@
 //! ```rust
 //! use optionstratlib::strategies::covered_call::CoveredCall;
 //! use optionstratlib::model::ExpirationDate;
-//! use optionstratlib::pos_or_panic;
+//! use positive::pos_or_panic;
 //! use rust_decimal_macros::dec;
 //!
 //! let covered_call = CoveredCall::new(
@@ -670,8 +670,8 @@ impl std::fmt::Display for CoveredCall {
 
 #[cfg(test)]
 mod tests {
-    use positive::pos_or_panic;
     use super::*;
+    use positive::pos_or_panic;
     use rust_decimal_macros::dec;
 
     fn create_test_covered_call() -> CoveredCall {

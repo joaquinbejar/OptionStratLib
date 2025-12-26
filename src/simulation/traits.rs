@@ -1,4 +1,3 @@
-
 use crate::backtesting::results::SimulationStatsResult;
 use crate::error::SimulationError;
 use crate::model::decimal::decimal_normal_sample;
@@ -6,10 +5,10 @@ use crate::simulation::simulator::Simulator;
 use crate::simulation::{ExitPolicy, WalkParams, WalkType};
 use crate::volatility::generate_ou_process;
 use num_traits::ToPrimitive;
+use positive::Positive;
 use rust_decimal::{Decimal, MathematicalOps};
 use std::fmt::{Debug, Display};
 use std::ops::AddAssign;
-use positive::Positive;
 
 /// Trait for implementing various random walk models and stochastic processes.
 ///
@@ -686,18 +685,17 @@ where
 mod tests_walk_type_able {
     use super::*;
     use crate::ExpirationDate;
-    
 
     use crate::simulation::model::WalkType;
     use crate::simulation::params::WalkParams;
     use crate::simulation::steps::Step;
     use crate::simulation::traits::WalkTypeAble;
     use crate::utils::TimeFrame;
+    use positive::pos_or_panic;
     use rust_decimal::Decimal;
     use std::error::Error;
     use std::fmt::Display;
     use std::ops::AddAssign;
-use positive::pos_or_panic;
 
     #[derive(Debug)]
     struct TestWalker {}

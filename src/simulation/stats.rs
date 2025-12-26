@@ -263,8 +263,8 @@ mod tests {
     use crate::pnl::PnL;
 
     use chrono::Utc;
+    use positive::pos_or_panic;
     use std::collections::HashMap;
-use positive::pos_or_panic;
 
     /// Helper function to create a test SimulationResult
     fn create_test_result(

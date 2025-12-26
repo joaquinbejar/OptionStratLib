@@ -21,7 +21,7 @@ fn main() -> Result<(), Error> {
         Positive::ZERO,      // implied_volatility
         dec!(0.05),          // risk_free_rate
         Positive::ZERO,      // dividend_yield
-        Positive::ONE,  // long quantity
+        Positive::ONE,       // long quantity
         Positive::ZERO,      // short_quantity
         Positive::ZERO,      // premium_long_itm
         Positive::ZERO,      // premium_long_otm

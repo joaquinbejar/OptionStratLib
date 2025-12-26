@@ -1,11 +1,11 @@
-use positive::pos_or_panic;
+use positive::{Positive, pos_or_panic};
 use {
+    optionstratlib::ExpirationDate,
     optionstratlib::Side,
     optionstratlib::chains::chain::OptionChain,
     optionstratlib::strategies::base::Optimizable,
     optionstratlib::strategies::base::Positionable,
     optionstratlib::strategies::{FindOptimalSide, LongButterflySpread},
-    optionstratlib::{ExpirationDate, Positive},
     rust_decimal_macros::dec,
     std::error::Error,
 };

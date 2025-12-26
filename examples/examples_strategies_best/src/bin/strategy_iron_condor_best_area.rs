@@ -1,5 +1,5 @@
-use positive::pos_or_panic;
 use optionstratlib::prelude::*;
+use positive::pos_or_panic;
 
 fn main() -> Result<(), Error> {
     setup_logger();
@@ -15,16 +15,16 @@ fn main() -> Result<(), Error> {
         Positive::ZERO,   // long_call_strike
         Positive::ZERO,   // long_put_strike
         ExpirationDate::Days(pos_or_panic!(5.0)),
-        Positive::ZERO,     // implied_volatility
-        Decimal::ZERO,      // risk_free_rate
-        Positive::ZERO,     // dividend_yield
-        Positive::ONE, // quantity
-        Positive::ZERO,     // premium_short_call
-        Positive::ZERO,     // premium_short_put
-        Positive::ZERO,     // premium_long_call
-        Positive::ZERO,     // premium_long_put
-        Positive::ONE,      // open_fee
-        Positive::ONE,      // close_fee
+        Positive::ZERO, // implied_volatility
+        Decimal::ZERO,  // risk_free_rate
+        Positive::ZERO, // dividend_yield
+        Positive::ONE,  // quantity
+        Positive::ZERO, // premium_short_call
+        Positive::ZERO, // premium_short_put
+        Positive::ZERO, // premium_long_call
+        Positive::ZERO, // premium_long_put
+        Positive::ONE,  // open_fee
+        Positive::ONE,  // close_fee
     );
 
     strategy.get_best_area(&option_chain, FindOptimalSide::All);

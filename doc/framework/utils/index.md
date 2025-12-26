@@ -50,7 +50,7 @@ Handles various time frames for financial calculations:
 
 ::: example-wrap
 ``` {.rust .rust-example-rendered}
-use optionstratlib::pos_or_panic;
+use positive::pos_or_panic;
 use optionstratlib::utils::time::TimeFrame;
 
 let daily = TimeFrame::Day;
@@ -67,7 +67,7 @@ Provides testing utilities and macros for relative equality assertions:
 
 ::: example-wrap
 ``` {.rust .rust-example-rendered}
-use optionstratlib::Positive;
+use positive::Positive;
 use optionstratlib::{assert_pos_relative_eq, pos};
 
 let a = pos!(1.0);
@@ -124,7 +124,7 @@ The module supports various time frames for financial calculations:
 ::: example-wrap
 ``` {.rust .rust-example-rendered}
 use tracing::info;
-use optionstratlib::pos_or_panic;
+use positive::pos_or_panic;
 use optionstratlib::utils::time::TimeFrame;
 
 let timeframes = vec![
@@ -184,8 +184,8 @@ The module provides testing utilities for:
 
 ::: example-wrap
 ``` {.rust .rust-example-rendered}
-use optionstratlib::Positive;
-use optionstratlib::pos_or_panic;
+use positive::Positive;
+use positive::pos_or_panic;
 use optionstratlib::assert_pos_relative_eq;
 
 

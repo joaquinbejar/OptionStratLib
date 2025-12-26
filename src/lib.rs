@@ -526,7 +526,7 @@
 //!
 //! ```rust
 //! use optionstratlib::{Options, OptionStyle, OptionType, Side, ExpirationDate};
-//! use optionstratlib::pos_or_panic;
+//! use positive::pos_or_panic;
 //! use rust_decimal_macros::dec;
 //! use optionstratlib::greeks::Greeks;
 //!
@@ -1010,7 +1010,6 @@ pub mod prelude;
 pub use model::ExpirationDate;
 pub use model::Options;
 pub use model::types::{OptionStyle, OptionType, Side};
-pub use positive::{Positive, pos_or_panic, spos, assert_pos_relative_eq};
 
 /// Library version
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");

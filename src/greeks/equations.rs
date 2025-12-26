@@ -7,7 +7,8 @@ use crate::constants::{TRADING_DAYS, ZERO};
 use crate::error::greeks::GreeksError;
 use crate::greeks::utils::{big_n, d1, d2, n};
 use crate::model::types::OptionStyle;
-use crate::{Options, Positive, Side};
+use crate::{Options, Side};
+use positive::Positive;
 use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::{Decimal, MathematicalOps};
 use serde::{Deserialize, Serialize};
@@ -614,7 +615,7 @@ pub fn delta(option: &Options) -> Result<Decimal, GreeksError> {
 /// use optionstratlib::greeks::gamma;
 /// use optionstratlib::{ExpirationDate, Options};
 /// use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
-/// use optionstratlib::pos_or_panic;
+/// use positive::pos_or_panic;
 /// let option = Options {
 ///     option_type: OptionType::European,
 ///     side: Side::Long,
@@ -746,7 +747,7 @@ pub fn gamma(option: &Options) -> Result<Decimal, GreeksError> {
 /// use optionstratlib::greeks::theta;
 /// use optionstratlib::{ExpirationDate, Options};
 /// use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
-/// use optionstratlib::pos_or_panic;
+/// use positive::pos_or_panic;
 /// let option = Options {
 ///     option_type: OptionType::European,
 ///     side: Side::Long,
@@ -876,7 +877,7 @@ pub fn theta(option: &Options) -> Result<Decimal, GreeksError> {
 /// use optionstratlib::greeks::vega;
 /// use optionstratlib::{ExpirationDate, Options};
 /// use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
-/// use optionstratlib::pos_or_panic;
+/// use positive::pos_or_panic;
 ///
 /// let option = Options {
 ///     option_type: OptionType::European,
@@ -1000,7 +1001,7 @@ pub fn vega(option: &Options) -> Result<Decimal, GreeksError> {
 /// use optionstratlib::greeks::rho;
 /// use optionstratlib::{ExpirationDate, Options};
 /// use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
-/// use optionstratlib::pos_or_panic;
+/// use positive::pos_or_panic;
 ///
 /// let option = Options {
 ///     option_type: OptionType::European,
@@ -1133,7 +1134,7 @@ pub fn rho(option: &Options) -> Result<Decimal, GreeksError> {
 /// use optionstratlib::greeks::rho_d;
 /// use optionstratlib::{ExpirationDate, Options};
 /// use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
-/// use optionstratlib::pos_or_panic;
+/// use positive::pos_or_panic;
 ///
 /// let option = Options {
 ///     option_type: OptionType::European,
@@ -1263,7 +1264,7 @@ pub fn alpha(option: &Options) -> Result<Decimal, GreeksError> {
 /// use optionstratlib::greeks::vanna;
 /// use optionstratlib::{ExpirationDate, Options};
 /// use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
-/// use optionstratlib::pos_or_panic;
+/// use positive::pos_or_panic;
 /// let option = Options {
 ///     option_type: OptionType::European,
 ///     side: Side::Long,
@@ -1376,7 +1377,7 @@ pub fn vanna(option: &Options) -> Result<Decimal, GreeksError> {
 /// use optionstratlib::greeks::vomma;
 /// use optionstratlib::{ExpirationDate, Options};
 /// use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
-/// use optionstratlib::pos_or_panic;
+/// use positive::pos_or_panic;
 ///
 /// let option = Options {
 ///     option_type: OptionType::European,
@@ -1488,7 +1489,7 @@ pub fn vomma(option: &Options) -> Result<Decimal, GreeksError> {
 /// use optionstratlib::greeks::veta;
 /// use optionstratlib::{ExpirationDate, Options};
 /// use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
-/// use optionstratlib::pos_or_panic;
+/// use positive::pos_or_panic;
 ///
 /// let option = Options {
 ///     option_type: OptionType::European,
@@ -1638,7 +1639,7 @@ pub fn veta(option: &Options) -> Result<Decimal, GreeksError> {
 /// use optionstratlib::greeks::charm;
 /// use optionstratlib::{ExpirationDate, Options};
 /// use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
-/// use optionstratlib::pos_or_panic;
+/// use positive::pos_or_panic;
 /// let option = Options {
 ///     option_type: OptionType::European,
 ///     side: Side::Long,
@@ -1771,7 +1772,7 @@ pub fn charm(option: &Options) -> Result<Decimal, GreeksError> {
 /// use optionstratlib::greeks::color;
 /// use optionstratlib::{ExpirationDate, Options};
 /// use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
-/// use optionstratlib::pos_or_panic;
+/// use positive::pos_or_panic;
 /// let option = Options {
 ///     option_type: OptionType::European,
 ///     side: Side::Long,
@@ -1843,7 +1844,7 @@ pub mod tests_delta_equations {
     use crate::{ExpirationDate, assert_decimal_eq};
     use approx::assert_relative_eq;
     use num_traits::ToPrimitive;
-    use positive::pos_or_panic;
+    use positive::{Positive, pos_or_panic};
     use rust_decimal_macros::dec;
     use tracing::info;
 
@@ -2260,9 +2261,9 @@ mod tests_gamma_equations_values {
 #[cfg(test)]
 pub mod tests_vega_equation {
     use super::*;
+    use crate::ExpirationDate;
     use crate::constants::DAYS_IN_A_YEAR;
     use crate::model::types::{OptionType, Side};
-    use crate::{ExpirationDate, Positive};
     use num_traits::ToPrimitive;
     use positive::pos_or_panic;
     use rust_decimal_macros::dec;
@@ -2947,9 +2948,9 @@ mod tests_greeks_trait {
 #[cfg(test)]
 pub mod tests_vanna_equation {
     use super::*;
+    use crate::ExpirationDate;
     use crate::constants::DAYS_IN_A_YEAR;
     use crate::model::types::{OptionType, Side};
-    use crate::{ExpirationDate, Positive};
     use num_traits::ToPrimitive;
     use positive::pos_or_panic;
     use rust_decimal_macros::dec;
@@ -3066,9 +3067,9 @@ pub mod tests_vanna_equation {
 #[cfg(test)]
 pub mod tests_vomma_equation {
     use super::*;
+    use crate::ExpirationDate;
     use crate::constants::DAYS_IN_A_YEAR;
     use crate::model::types::{OptionType, Side};
-    use crate::{ExpirationDate, Positive};
     use num_traits::ToPrimitive;
     use positive::pos_or_panic;
     use rust_decimal_macros::dec;
@@ -3185,9 +3186,9 @@ pub mod tests_vomma_equation {
 #[cfg(test)]
 pub mod tests_veta_equation {
     use super::*;
+    use crate::ExpirationDate;
     use crate::constants::DAYS_IN_A_YEAR;
     use crate::model::types::{OptionType, Side};
-    use crate::{ExpirationDate, Positive};
     use num_traits::ToPrimitive;
     use positive::pos_or_panic;
     use rust_decimal_macros::dec;

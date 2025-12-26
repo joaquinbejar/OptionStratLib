@@ -3,7 +3,7 @@ use optionstratlib::simulation::{WalkParams, WalkType, WalkTypeAble};
 use optionstratlib::simulation::randomwalk::RandomWalk;
 use optionstratlib::simulation::simulator::Simulator;
 use optionstratlib::visualization::Graph; // to exercise graph_data/graph_config
-use optionstratlib::{ExpirationDate, Positive};
+use optionstratlib::ExpirationDate;use positive::Positive;
 use optionstratlib::utils::TimeFrame;
 use positive::pos_or_panic;
 use rust_decimal::Decimal;

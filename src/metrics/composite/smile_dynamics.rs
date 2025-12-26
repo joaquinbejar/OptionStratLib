@@ -49,7 +49,6 @@
 //! - **Y-axis**: Days to expiration
 //! - **Z-axis**: Implied volatility
 
-
 use crate::curves::Curve;
 use crate::error::CurveError;
 use crate::error::SurfaceError;
@@ -136,7 +135,7 @@ pub trait SmileDynamicsCurve {
 /// ```ignore
 /// use optionstratlib::chains::chain::OptionChain;
 /// use optionstratlib::metrics::SmileDynamicsSurface;
-/// use optionstratlib::pos_or_panic;
+/// use positive::pos_or_panic;
 ///
 /// let chain = OptionChain::load_from_json("options.json")?;
 /// let days = vec![pos_or_panic!(7.0), pos_or_panic!(14.0), pos_or_panic!(30.0), pos_or_panic!(60.0), pos_or_panic!(90.0)];
@@ -174,10 +173,10 @@ mod tests_smile_dynamics {
     use crate::curves::Point2D;
 
     use crate::surfaces::Point3D;
+    use positive::pos_or_panic;
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
     use std::collections::BTreeSet;
-use positive::pos_or_panic;
 
     struct TestSmileDynamics {
         underlying_price: Positive,

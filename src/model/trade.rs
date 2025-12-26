@@ -1,7 +1,8 @@
 use crate::model::types::Action;
 use crate::pnl::PnL;
-use crate::{OptionStyle, Positive, Side};
+use crate::{OptionStyle, Side};
 use chrono::{DateTime, Utc};
+use positive::Positive;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::fs::File;
@@ -450,7 +451,7 @@ mod tests {
     use super::*;
 
     use chrono::{TimeZone, Utc};
-use positive::pos_or_panic;
+    use positive::pos_or_panic;
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
     use uuid::Uuid;

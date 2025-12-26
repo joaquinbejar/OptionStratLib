@@ -25,7 +25,7 @@
 //! Handles various time frames for financial calculations:
 //!
 //! ```rust
-//! use optionstratlib::pos_or_panic;
+//! use positive::pos_or_panic;
 //! use optionstratlib::utils::time::TimeFrame;
 //!
 //! let daily = TimeFrame::Day;
@@ -40,8 +40,8 @@
 //! Provides testing utilities and macros for relative equality assertions:
 //!
 //! ```rust
-//! use optionstratlib::Positive;
-//! 
+//! use positive::Positive;
+//!
 //!
 //! let a = Positive::ONE;
 //! let b = pos_or_panic!(1.0001);
@@ -93,7 +93,7 @@
 //!
 //! ```rust
 //! use tracing::info;
-//! use optionstratlib::pos_or_panic;
+//! use positive::pos_or_panic;
 //! use optionstratlib::utils::time::TimeFrame;
 //!
 //! let timeframes = vec![
@@ -146,8 +146,8 @@
 //! ### Example: Testing Positive Values
 //!
 //! ```rust
-//! use optionstratlib::Positive;
-//! use optionstratlib::pos_or_panic;
+//! use positive::Positive;
+//! use positive::pos_or_panic;
 //! use optionstratlib::assert_pos_relative_eq;
 //!
 //!

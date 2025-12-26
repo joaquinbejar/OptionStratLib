@@ -48,9 +48,9 @@ use positive::pos_or_panic;
 //! ```rust
 //! use optionstratlib::{ExpirationDate, Options};
 //! use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
-//! use optionstratlib::Positive;
+//! use positive::Positive;
 //! use optionstratlib::model::position::Position;
-//! use optionstratlib::pos_or_panic;
+//! use positive::pos_or_panic;
 //! use chrono::Utc;
 //! use rust_decimal_macros::dec;
 //! use optionstratlib::risk::SPANMargin;
@@ -101,8 +101,8 @@ use positive::pos_or_panic;
 //! use optionstratlib::{ExpirationDate, Options};
 //! use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
 //! use optionstratlib::model::position::Position;
-//! use optionstratlib::Positive;
-//! use optionstratlib::pos_or_panic;
+//! use positive::Positive;
+//! use positive::pos_or_panic;
 //! use optionstratlib::risk::SPANMargin;
 //!
 //! let option = Options {

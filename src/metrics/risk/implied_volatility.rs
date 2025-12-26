@@ -38,7 +38,6 @@
 //! - Term structure analysis
 //! - Calendar spread opportunities identification
 
-
 use crate::curves::Curve;
 use crate::error::CurveError;
 use crate::error::SurfaceError;
@@ -126,7 +125,7 @@ pub trait ImpliedVolatilityCurve {
 /// ```ignore
 /// use optionstratlib::chains::chain::OptionChain;
 /// use optionstratlib::metrics::ImpliedVolatilitySurface;
-/// use optionstratlib::pos_or_panic;
+/// use positive::pos_or_panic;
 ///
 /// let chain = OptionChain::new("SPY", pos_or_panic!(450.0), "2024-03-15".to_string(), None, None);
 /// let days = vec![pos_or_panic!(7.0), pos_or_panic!(14.0), pos_or_panic!(30.0), pos_or_panic!(60.0), pos_or_panic!(90.0)];
@@ -160,10 +159,10 @@ mod tests_implied_volatility_traits {
     use super::*;
     use crate::curves::Point2D;
     use crate::surfaces::Point3D;
+    use positive::pos_or_panic;
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
     use std::collections::BTreeSet;
-use positive::pos_or_panic;
 
     struct TestIVCurve;
 

@@ -7,10 +7,10 @@
 use criterion::{Criterion, criterion_group, criterion_main};
 use optionstratlib::greeks::Greeks;
 use optionstratlib::pnl::utils::PnLCalculator;
-use optionstratlib::{ExpirationDate, OptionStyle, OptionType, Options, Side, pos_or_panic};
+use optionstratlib::{ExpirationDate, OptionStyle, OptionType, Options, Side};
+use positive::{Positive, pos_or_panic};
 use rust_decimal_macros::dec;
 use std::hint::black_box;
-use positive::Positive;
 
 fn create_test_option() -> Options {
     Options::new(

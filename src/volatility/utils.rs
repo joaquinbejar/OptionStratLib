@@ -3,13 +3,13 @@
    Email: jb@taunais.com
    Date: 15/8/24
 ******************************************************************************/
-use positive::{Positive, pos_or_panic};
 use crate::constants::{MAX_VOLATILITY, MIN_VOLATILITY};
 use crate::error::VolatilityError;
 use crate::model::decimal::decimal_normal_sample;
 use crate::utils::time::TimeFrame;
 use crate::{ExpirationDate, OptionStyle, OptionType, Options, Side};
 use num_traits::{FromPrimitive, ToPrimitive};
+use positive::{Positive, pos_or_panic};
 use rand::random;
 use rayon::prelude::*;
 use rust_decimal::{Decimal, MathematicalOps};
@@ -307,7 +307,7 @@ pub fn uncertain_volatility_bounds(
 ///
 /// ```
 /// use rust_decimal_macros::dec;
-/// use optionstratlib::pos_or_panic;
+/// use positive::pos_or_panic;
 /// use optionstratlib::utils::time::TimeFrame;
 /// use optionstratlib::volatility::{annualized_volatility};
 /// let daily_vol = pos_or_panic!(0.01); // 1% daily volatility
@@ -341,7 +341,7 @@ pub fn annualized_volatility(
 ///
 /// ```
 /// use rust_decimal_macros::dec;
-/// use optionstratlib::pos_or_panic;
+/// use positive::pos_or_panic;
 /// use optionstratlib::utils::time::TimeFrame;
 /// use optionstratlib::volatility::{de_annualized_volatility};
 /// let annual_vol = pos_or_panic!(0.20); // 20% annual volatility
@@ -367,7 +367,7 @@ pub fn de_annualized_volatility(
 ///
 /// # Example
 /// ```
-/// use optionstratlib::pos_or_panic;
+/// use positive::pos_or_panic;
 /// use optionstratlib::utils::TimeFrame;
 /// use optionstratlib::volatility::adjust_volatility;
 /// let daily_vol = pos_or_panic!(0.2); // 20% daily volatility
@@ -438,7 +438,7 @@ pub fn adjust_volatility(
 /// # Examples
 ///
 /// ```
-/// use optionstratlib::pos_or_panic;
+/// use optionstratlib::{pos_or_panic, Positive};
 /// use optionstratlib::utils::time::{TimeFrame, convert_time_frame};
 /// use optionstratlib::volatility::volatility_for_dt;
 ///
@@ -498,7 +498,7 @@ pub fn volatility_for_dt(
 ///
 /// ```rust
 /// use rust_decimal_macros::dec;
-/// use optionstratlib::pos_or_panic;
+/// use positive::pos_or_panic;
 /// use optionstratlib::volatility::generate_ou_process;
 ///
 /// // Simulate an OU process with initial value 1.0, mean 1.5,
@@ -539,8 +539,8 @@ pub fn generate_ou_process(
 
 #[cfg(test)]
 mod tests_annualize_volatility {
-    use positive::assert_pos_relative_eq;
     use super::*;
+    use positive::assert_pos_relative_eq;
 
     #[test]
     fn test_annualize_daily_volatility() {
@@ -586,9 +586,9 @@ mod tests_annualize_volatility {
 
 #[cfg(test)]
 mod tests_constant_volatility {
-    use positive::assert_pos_relative_eq;
     use super::*;
     use crate::constants::ZERO;
+    use positive::assert_pos_relative_eq;
     use rust_decimal_macros::dec;
 
     #[test]
@@ -619,8 +619,8 @@ mod tests_constant_volatility {
 
 #[cfg(test)]
 mod tests_historical_volatility {
-    use positive::assert_pos_relative_eq;
     use super::*;
+    use positive::assert_pos_relative_eq;
     use rust_decimal_macros::dec;
 
     #[test]
@@ -664,8 +664,8 @@ mod tests_historical_volatility {
 
 #[cfg(test)]
 mod tests_ewma_volatility {
-    use positive::assert_pos_relative_eq;
     use super::*;
+    use positive::assert_pos_relative_eq;
     use rust_decimal_macros::dec;
 
     #[test]
@@ -761,13 +761,13 @@ mod tests_ewma_volatility {
 
 #[cfg(test)]
 mod tests_implied_volatility {
-    use positive::assert_pos_relative_eq;
     use super::*;
     use crate::ExpirationDate;
     use crate::assert_decimal_eq;
     use crate::constants::{MAX_VOLATILITY, MIN_VOLATILITY};
     use crate::greeks::Greeks;
     use crate::model::types::{OptionStyle, OptionType, Side};
+    use positive::assert_pos_relative_eq;
     use rust_decimal_macros::dec;
     use tracing::error;
 
@@ -1247,9 +1247,9 @@ mod tests_implied_volatility {
 
 #[cfg(test)]
 mod tests_garch_volatility {
-    use positive::assert_pos_relative_eq;
     use super::*;
     use crate::assert_decimal_eq;
+    use positive::assert_pos_relative_eq;
     use rust_decimal_macros::dec;
 
     #[test]
@@ -1513,9 +1513,9 @@ mod tests_heston_volatility {
 
 #[cfg(test)]
 mod tests_uncertain_volatility_bounds {
-    use positive::assert_pos_relative_eq;
     use super::*;
     use crate::model::types::{OptionStyle, OptionType, Side};
+    use positive::assert_pos_relative_eq;
 
     use crate::ExpirationDate;
     use rust_decimal_macros::dec;
@@ -1625,8 +1625,8 @@ mod tests_uncertain_volatility_bounds {
 
 #[cfg(test)]
 mod tests_adjust_volatility {
-    use positive::assert_pos_relative_eq;
     use super::*;
+    use positive::assert_pos_relative_eq;
 
     #[test]
     fn test_same_timeframe() {

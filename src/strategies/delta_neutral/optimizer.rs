@@ -471,10 +471,10 @@ impl<'a> AdjustmentOptimizer<'a> {
 
 #[cfg(test)]
 mod tests_optimizer {
-    use positive::pos_or_panic;
     use super::*;
     use crate::model::ExpirationDate;
     use crate::model::types::{OptionStyle, OptionType};
+    use positive::pos_or_panic;
 
     fn create_test_option(
         strike: Positive,

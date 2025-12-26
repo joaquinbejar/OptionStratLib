@@ -43,7 +43,7 @@ neutrality while maintaining a specified total position size.
 ``` {.rust .rust-example-rendered}
 use rust_decimal_macros::dec;
 use optionstratlib::greeks::calculate_delta_neutral_sizes;
-use optionstratlib::pos_or_panic;
+use positive::pos_or_panic;
 let (call_size, put_size) = calculate_delta_neutral_sizes(
     dec!(-0.30),  // Short call delta
     dec!(0.20),   // Short put delta

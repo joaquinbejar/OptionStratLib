@@ -341,7 +341,7 @@ impl Marginable for FuturePosition {
 
     fn leverage(&self) -> Positive {
         let lev = self.implied_leverage();
-        Positive::new_decimal(lev).unwrap_or(crate::Positive::ONE)
+        Positive::new_decimal(lev).unwrap_or(positive::Positive::ONE)
     }
 
     fn liquidation_price(&self, _current_price: Positive) -> Positive {
@@ -412,8 +412,8 @@ impl Default for FuturePosition {
             quantity: Positive::ZERO,
             entry_price: Positive::ZERO,
             side: Side::Long,
-            expiration_date: ExpirationDate::Days(crate::pos_or_panic!(30.0)),
-            contract_size: crate::Positive::ONE,
+            expiration_date: ExpirationDate::Days(positive::pos_or_panic!(30.0)),
+            contract_size: positive::Positive::ONE,
             initial_margin_req: Positive::ZERO,
             maintenance_margin_req: Positive::ZERO,
             date: Utc::now(),

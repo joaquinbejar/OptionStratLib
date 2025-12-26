@@ -18,8 +18,8 @@
 //!   - Telegraph process
 //! - Using the Priceable trait for clean API
 
-use positive::pos_or_panic;
 use optionstratlib::prelude::*;
+use positive::pos_or_panic;
 use std::fmt::Display;
 use std::ops::AddAssign;
 
@@ -133,7 +133,7 @@ fn main() {
         dt: Positive::ONE,
         drift: dec!(0.0),
         volatility: option.implied_volatility,
-        kappa: Positive::TWO,  // Mean reversion speed
+        kappa: Positive::TWO,       // Mean reversion speed
         theta: pos_or_panic!(0.04), // Long-term variance
         xi: pos_or_panic!(0.3),     // Volatility of volatility
         rho: dec!(-0.7),            // Correlation

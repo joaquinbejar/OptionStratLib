@@ -4,7 +4,6 @@
    Date: 19/1/25
 ******************************************************************************/
 
-
 use crate::error::{GreeksError, OptionsError};
 use positive::Positive;
 use thiserror::Error;
@@ -108,10 +107,10 @@ impl From<String> for VolatilityError {
 
 #[cfg(test)]
 mod tests_volatility_errors {
-use positive::pos_or_panic;
     use super::*;
     use crate::error::greeks::InputErrorKind;
     use crate::error::{GreeksError, OptionsError};
+    use positive::pos_or_panic;
 
     #[test]
     fn test_invalid_price_error() {

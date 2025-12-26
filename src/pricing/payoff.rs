@@ -123,7 +123,7 @@ impl PayoffInfo {
     ///
     /// ```
     /// use optionstratlib::pricing::PayoffInfo;
-    /// use optionstratlib::Positive;
+    /// use positive::Positive;
     /// use optionstratlib::model::types::{OptionStyle, Side};
     ///
     /// let payoff_info = PayoffInfo {

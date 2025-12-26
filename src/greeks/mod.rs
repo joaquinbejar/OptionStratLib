@@ -49,8 +49,8 @@ use positive::pos_or_panic;
 //! };
 //! use optionstratlib::{ExpirationDate, Options};
 //! use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
-//! use optionstratlib::pos_or_panic;
-//! use optionstratlib::Positive;
+//! use positive::pos_or_panic;
+//! use positive::Positive;
 //!
 //! // Create a sample option
 //! let option = Options {
@@ -157,7 +157,7 @@ use positive::pos_or_panic;
 //!
 //! ```ignore
 //! use optionstratlib::chains::chain::OptionChain;
-//! use optionstratlib::pos_or_panic;
+//! use positive::pos_or_panic;
 //!
 //! // Create an option chain with options at various strikes
 //! let chain = OptionChain::new("SPY", pos_or_panic!(450.0), "2024-03-15".to_string(), None, None);

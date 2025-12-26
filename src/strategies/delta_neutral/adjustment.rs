@@ -433,8 +433,8 @@ impl From<GreeksError> for AdjustmentError {
 
 #[cfg(test)]
 mod tests_adjustment {
-    use positive::pos_or_panic;
     use super::*;
+    use positive::pos_or_panic;
 
     #[test]
     fn test_adjustment_config_default() {

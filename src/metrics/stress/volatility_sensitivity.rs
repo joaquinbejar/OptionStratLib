@@ -45,7 +45,6 @@
 //! - **Y-axis**: Volatility level
 //! - **Z-axis**: Option value or P&L
 
-
 use crate::curves::Curve;
 use crate::error::CurveError;
 use crate::error::SurfaceError;
@@ -112,7 +111,7 @@ pub trait VolatilitySensitivityCurve {
 /// ```ignore
 /// use optionstratlib::chains::chain::OptionChain;
 /// use optionstratlib::metrics::VolatilitySensitivitySurface;
-/// use optionstratlib::pos_or_panic;
+/// use positive::pos_or_panic;
 ///
 /// let chain = OptionChain::load_from_json("options.json")?;
 /// let price_range = (pos_or_panic!(400.0), pos_or_panic!(500.0));
@@ -149,10 +148,10 @@ mod tests_volatility_sensitivity {
     use crate::curves::Point2D;
 
     use crate::surfaces::Point3D;
+    use positive::pos_or_panic;
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
     use std::collections::BTreeSet;
-use positive::pos_or_panic;
 
     struct TestVolatilitySensitivity {
         underlying_price: Positive,

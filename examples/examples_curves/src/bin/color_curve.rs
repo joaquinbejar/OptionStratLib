@@ -1,5 +1,5 @@
-use positive::pos_or_panic;
 use optionstratlib::prelude::*;
+use positive::pos_or_panic;
 use std::error::Error;
 
 fn get_option(strike: &Positive) -> Options {
@@ -10,7 +10,7 @@ fn get_option(strike: &Positive) -> Options {
         *strike,
         ExpirationDate::Days(pos_or_panic!(30.0)),
         pos_or_panic!(0.10), // implied volatility
-        Positive::ONE,  // quantity
+        Positive::ONE,       // quantity
         pos_or_panic!(50.0), // underlying price
         Decimal::ZERO,       // risk free rate
         OptionStyle::Call,

@@ -855,8 +855,8 @@ test_strategy_traits!(PoorMansCoveredCall, test_short_call_implementations);
 
 #[cfg(test)]
 mod tests_pmcc_validation {
-    use positive::pos_or_panic;
     use super::*;
+    use positive::pos_or_panic;
 
     use crate::constants::DAYS_IN_A_YEAR;
     use crate::error::position::PositionValidationErrorKind;
@@ -995,8 +995,8 @@ mod tests_pmcc_validation {
 
 #[cfg(test)]
 mod tests_pmcc_optimization {
-    use positive::{pos_or_panic, spos};
     use super::*;
+    use positive::{pos_or_panic, spos};
 
     use crate::chains::OptionData;
     use crate::constants::DAYS_IN_A_YEAR;
@@ -1424,8 +1424,8 @@ mod tests_pmcc_best_ratio {
 
 #[cfg(test)]
 mod tests_short_straddle_delta {
-    use positive::{assert_pos_relative_eq, pos_or_panic};
     use super::*;
+    use positive::{assert_pos_relative_eq, pos_or_panic};
 
     use crate::assert_decimal_eq;
     use crate::model::types::OptionStyle;
@@ -1553,8 +1553,8 @@ mod tests_short_straddle_delta {
 
 #[cfg(test)]
 mod tests_short_straddle_delta_size {
-    use positive::{assert_pos_relative_eq, pos_or_panic};
     use super::*;
+    use positive::{assert_pos_relative_eq, pos_or_panic};
 
     use crate::assert_decimal_eq;
     use crate::model::types::OptionStyle;
@@ -1682,8 +1682,8 @@ mod tests_short_straddle_delta_size {
 
 #[cfg(test)]
 mod tests_poor_mans_covered_call_probability {
-    use positive::{assert_pos_relative_eq, pos_or_panic};
     use super::*;
+    use positive::{assert_pos_relative_eq, pos_or_panic};
 
     use crate::strategies::probabilities::utils::PriceTrend;
     use rust_decimal_macros::dec;
@@ -1890,8 +1890,8 @@ mod tests_poor_mans_covered_call_probability {
 
 #[cfg(test)]
 mod tests_poor_mans_covered_call_position_management {
-    use positive::pos_or_panic;
     use super::*;
+    use positive::pos_or_panic;
 
     use crate::error::position::PositionValidationErrorKind;
     use crate::model::types::{OptionStyle, Side};
@@ -2019,8 +2019,8 @@ mod tests_poor_mans_covered_call_position_management {
 
 #[cfg(test)]
 mod tests_adjust_option_position {
-    use positive::pos_or_panic;
     use super::*;
+    use positive::pos_or_panic;
 
     use crate::model::types::{OptionStyle, Side};
 
@@ -2143,8 +2143,8 @@ mod tests_adjust_option_position {
 
 #[cfg(test)]
 mod tests_strategy_constructor {
-    use positive::pos_or_panic;
     use super::*;
+    use positive::pos_or_panic;
 
     use crate::model::utils::create_sample_position;
 
@@ -2260,8 +2260,8 @@ mod tests_strategy_constructor {
 
 #[cfg(test)]
 mod tests_poor_mans_covered_call_pnl {
-    use positive::{assert_pos_relative_eq, pos_or_panic};
     use super::*;
+    use positive::{assert_pos_relative_eq, pos_or_panic};
 
     use crate::model::utils::create_sample_position;
     use rust_decimal_macros::dec;

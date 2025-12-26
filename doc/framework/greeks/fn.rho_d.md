@@ -96,7 +96,7 @@ use tracing::{error, info};
 use optionstratlib::greeks::rho_d;
 use optionstratlib::{ExpirationDate, Options};
 use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
-use optionstratlib::pos_or_panic;
+use positive::pos_or_panic;
 
 let option = Options {
     option_type: OptionType::European,

@@ -1,5 +1,5 @@
-use positive::pos_or_panic;
 use optionstratlib::prelude::*;
+use positive::pos_or_panic;
 
 fn main() -> Result<(), Error> {
     setup_logger();
@@ -19,8 +19,8 @@ fn main() -> Result<(), Error> {
         underlying_symbol.clone(),
         pos_or_panic!(50.0), // Deep ITM call to simulate stock
         expiration,
-        pos_or_panic!(0.01),  // Very low volatility for deep ITM
-        Positive::HUNDRED, // 100 shares equivalent
+        pos_or_panic!(0.01), // Very low volatility for deep ITM
+        Positive::HUNDRED,   // 100 shares equivalent
         underlying_price,
         risk_free_rate,
         OptionStyle::Call,
@@ -44,8 +44,8 @@ fn main() -> Result<(), Error> {
         underlying_symbol.clone(),
         pos_or_panic!(155.0), // Strike above current price
         expiration,
-        pos_or_panic!(0.20),  // 20% implied volatility
-        Positive::HUNDRED, // 100 shares covered
+        pos_or_panic!(0.20), // 20% implied volatility
+        Positive::HUNDRED,   // 100 shares covered
         underlying_price,
         risk_free_rate,
         OptionStyle::Call,

@@ -170,9 +170,9 @@ pub fn price_binomial(params: BinomialPricingParams) -> Result<Decimal, PricingE
 /// use rust_decimal::Decimal;
 /// use rust_decimal_macros::dec;
 /// use optionstratlib::model::types::{OptionStyle, OptionType, Side};
-/// use optionstratlib::pos_or_panic;
+/// use positive::pos_or_panic;
 /// use optionstratlib::pricing::binomial_model::{BinomialPricingParams, generate_binomial_tree};
-/// use optionstratlib::Positive;
+/// use positive::Positive;
 /// let params = BinomialPricingParams {
 ///             asset: Positive::HUNDRED,
 ///             volatility: pos_or_panic!(0.2),

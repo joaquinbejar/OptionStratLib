@@ -8,8 +8,8 @@ use chrono::Utc;
 use criterion::{Criterion, criterion_group, criterion_main};
 use optionstratlib::model::Position;
 use optionstratlib::pnl::utils::PnLCalculator;
-use optionstratlib::{ExpirationDate, OptionStyle, OptionType, Options, Side, pos_or_panic};
-use positive::Positive;
+use optionstratlib::{ExpirationDate, OptionStyle, OptionType, Options, Side};
+use positive::{Positive, pos_or_panic};
 use rust_decimal_macros::dec;
 use std::hint::black_box;
 

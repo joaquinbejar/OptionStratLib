@@ -19,8 +19,8 @@ use optionstratlib::error::SurfaceError;
 use optionstratlib::metrics::VannaVolgaSurface;
 use optionstratlib::model::ExpirationDate;
 use optionstratlib::prelude::*;
-use rust_decimal_macros::dec;
 use positive::pos_or_panic;
+use rust_decimal_macros::dec;
 
 fn main() -> Result<(), SurfaceError> {
     setup_logger();

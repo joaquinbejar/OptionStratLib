@@ -17,12 +17,18 @@ use optionstratlib::metrics::{
     BidAskSpreadCurve, OpenInterestCurve, VolumeProfileCurve, VolumeProfileSurface,
 };
 use optionstratlib::model::ExpirationDate;
-use positive::{pos_or_panic, spos, Positive};
+use positive::{Positive, pos_or_panic, spos};
 use rust_decimal_macros::dec;
 
 /// Creates a test option chain with liquidity data (bid/ask, volume, OI)
 fn create_test_chain_with_liquidity() -> OptionChain {
-    let mut chain = OptionChain::new("TEST", pos_or_panic!(450.0), "2024-12-31".to_string(), None, None);
+    let mut chain = OptionChain::new(
+        "TEST",
+        pos_or_panic!(450.0),
+        "2024-12-31".to_string(),
+        None,
+        None,
+    );
 
     // Add options with liquidity data
     let strikes_data = [
@@ -121,12 +127,24 @@ fn create_test_chain_with_liquidity() -> OptionChain {
 
 /// Creates an empty option chain for edge case testing
 fn create_empty_chain() -> OptionChain {
-    OptionChain::new("EMPTY", Positive::HUNDRED, "2024-12-31".to_string(), None, None)
+    OptionChain::new(
+        "EMPTY",
+        Positive::HUNDRED,
+        "2024-12-31".to_string(),
+        None,
+        None,
+    )
 }
 
 /// Creates a chain without liquidity data
 fn create_chain_without_liquidity() -> OptionChain {
-    let mut chain = OptionChain::new("NOLIQ", pos_or_panic!(450.0), "2024-12-31".to_string(), None, None);
+    let mut chain = OptionChain::new(
+        "NOLIQ",
+        pos_or_panic!(450.0),
+        "2024-12-31".to_string(),
+        None,
+        None,
+    );
 
     // Add option without bid/ask, volume, or OI
     let option_data = OptionData::new(

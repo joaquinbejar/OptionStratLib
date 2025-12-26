@@ -1482,8 +1482,8 @@ pub trait Positionable {
 
 #[cfg(test)]
 mod tests_strategies_extended {
-    use positive::pos_or_panic;
     use super::*;
+    use positive::pos_or_panic;
 
     use crate::model::position::Position;
     use crate::model::types::{OptionStyle, Side};
@@ -1711,8 +1711,8 @@ mod tests_strategy_type {
 
 #[cfg(test)]
 mod tests_best_range_to_show {
-    use positive::pos_or_panic;
     use super::*;
+    use positive::pos_or_panic;
 
     struct TestStrategy {
         underlying_price: Positive,
@@ -1830,8 +1830,8 @@ mod tests_best_range_to_show {
 
 #[cfg(test)]
 mod tests_range_to_show {
-    use positive::pos_or_panic;
     use super::*;
+    use positive::pos_or_panic;
 
     struct TestStrategy {
         underlying_price: Positive,
@@ -1907,8 +1907,8 @@ mod tests_range_to_show {
 
 #[cfg(test)]
 mod tests_range_of_profit {
-    use positive::pos_or_panic;
     use super::*;
+    use positive::pos_or_panic;
 
     struct TestStrategy {
         break_even_points: Vec<Positive>,

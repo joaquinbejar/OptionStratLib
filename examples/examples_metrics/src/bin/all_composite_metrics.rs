@@ -23,8 +23,8 @@ use optionstratlib::metrics::{
 };
 use optionstratlib::model::ExpirationDate;
 use optionstratlib::prelude::*;
-use rust_decimal_macros::dec;
 use positive::pos_or_panic;
+use rust_decimal_macros::dec;
 
 fn main() -> Result<(), CurveError> {
     setup_logger();

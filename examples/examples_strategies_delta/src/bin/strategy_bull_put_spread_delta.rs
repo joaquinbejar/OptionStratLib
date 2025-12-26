@@ -19,7 +19,7 @@ fn main() -> Result<(), Error> {
         pos_or_panic!(0.18),  // implied_volatility
         dec!(0.05),           // risk_free_rate
         Positive::ZERO,       // dividend_yield
-        Positive::ONE,   // long quantity
+        Positive::ONE,        // long quantity
         pos_or_panic!(15.04), // premium_long
         pos_or_panic!(89.85), // premium_short
         pos_or_panic!(0.78),  // open_fee_long

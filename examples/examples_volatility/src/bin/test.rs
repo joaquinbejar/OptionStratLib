@@ -5,9 +5,9 @@ use positive::pos_or_panic;
    Date: 5/5/25
 ******************************************************************************/
 use optionstratlib::prelude::*;
-use rand::{rng, Rng};
-use rust_decimal::prelude::FromPrimitive;
+use rand::{Rng, rng};
 use rust_decimal::MathematicalOps;
+use rust_decimal::prelude::FromPrimitive;
 
 #[allow(clippy::too_many_arguments)]
 fn calculate_error(

@@ -211,7 +211,7 @@ pub fn f64_to_decimal(value: f64) -> Result<Decimal, DecimalError> {
 ///
 /// ```rust
 /// use optionstratlib::model::decimal::decimal_normal_sample;
-/// use optionstratlib::Positive;
+/// use positive::Positive;
 /// let normal = decimal_normal_sample();
 /// ```
 pub fn decimal_normal_sample() -> Decimal {

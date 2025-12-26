@@ -11,7 +11,6 @@ use crate::visualization::{
 };
 use rust_decimal::Decimal;
 
-
 /// Macro `impl_graph_for_payoff_strategy` generates implementations of the `Graph` trait
 /// for one or more given types. This is specifically designed for types that represent
 /// payoff strategies, enabling them to produce graph data and configurations for financial

@@ -41,7 +41,7 @@ use positive::pos_or_panic;
 //! use optionstratlib::model::leg::{Leg, SpotPosition};
 //! use optionstratlib::model::Position;
 //! use optionstratlib::model::types::Side;
-//! use optionstratlib::pos_or_panic;
+//! use positive::pos_or_panic;
 //!
 //! // Long 100 shares of stock
 //! let spot = SpotPosition::long("AAPL".to_string(), Positive::HUNDRED, pos_or_panic!(150.0));
@@ -60,7 +60,7 @@ use positive::pos_or_panic;
 //! ```rust
 //! use optionstratlib::model::leg::{Leg, SpotPosition, PerpetualPosition, MarginType};
 //! use optionstratlib::model::types::Side;
-//! use optionstratlib::pos_or_panic;
+//! use positive::pos_or_panic;
 //! use rust_decimal_macros::dec;
 //! use chrono::Utc;
 //!

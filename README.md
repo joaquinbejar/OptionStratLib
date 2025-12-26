@@ -540,7 +540,7 @@ cargo bench
 
 ```rust
 use optionstratlib::{Options, OptionStyle, OptionType, Side, ExpirationDate};
-use optionstratlib::pos_or_panic;
+use positive::pos_or_panic;
 use rust_decimal_macros::dec;
 use optionstratlib::greeks::Greeks;
 

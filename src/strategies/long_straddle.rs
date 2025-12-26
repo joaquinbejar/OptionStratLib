@@ -41,13 +41,13 @@ use crate::{
 };
 use chrono::Utc;
 use num_traits::FromPrimitive;
+use positive::Positive;
 use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use tracing::info;
 use utoipa::ToSchema;
-use positive::Positive;
 
 /// A Long Straddle is an options trading strategy that involves simultaneously buying
 /// a put and a call option with the same strike price and expiration date. This strategy
@@ -862,9 +862,9 @@ test_strategy_traits!(LongStraddle, test_short_call_implementations);
 
 #[cfg(test)]
 mod tests_long_straddle_probability {
-    use positive::pos_or_panic;
     use super::*;
     use crate::model::ExpirationDate;
+    use positive::pos_or_panic;
 
     use crate::strategies::probabilities::utils::PriceTrend;
     use rust_decimal_macros::dec;
@@ -1007,7 +1007,6 @@ mod tests_long_straddle_probability {
 
 #[cfg(test)]
 mod tests_long_straddle_delta {
-    use positive::{assert_pos_relative_eq, pos_or_panic};
     use super::*;
     use crate::assert_decimal_eq;
     use crate::greeks::Greeks;
@@ -1015,6 +1014,7 @@ mod tests_long_straddle_delta {
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
     use crate::strategies::long_straddle::{LongStraddle, Positive};
+    use positive::{assert_pos_relative_eq, pos_or_panic};
     use rust_decimal_macros::dec;
 
     fn get_strategy(strike: Positive) -> LongStraddle {
@@ -1264,10 +1264,10 @@ mod tests_long_straddle_delta_size {
 
 #[cfg(test)]
 mod tests_straddle_position_management {
-    use positive::pos_or_panic;
     use super::*;
     use crate::error::position::PositionValidationErrorKind;
     use crate::model::types::{OptionStyle, Side};
+    use positive::pos_or_panic;
 
     use rust_decimal_macros::dec;
     use tracing::error;
@@ -1375,9 +1375,9 @@ mod tests_straddle_position_management {
 
 #[cfg(test)]
 mod tests_adjust_option_position {
-    use positive::pos_or_panic;
     use super::*;
     use crate::model::types::{OptionStyle, Side};
+    use positive::pos_or_panic;
 
     use rust_decimal_macros::dec;
 
@@ -1494,9 +1494,9 @@ mod tests_adjust_option_position {
 
 #[cfg(test)]
 mod tests_long_strategy_constructor {
-    use positive::pos_or_panic;
     use super::*;
     use crate::model::utils::create_sample_position;
+    use positive::pos_or_panic;
 
     #[test]
     fn test_get_strategy_valid() {
@@ -1667,10 +1667,10 @@ mod tests_long_strategy_constructor {
 
 #[cfg(test)]
 mod tests_long_straddle_pnl {
-    use positive::{assert_pos_relative_eq, pos_or_panic};
     use super::*;
     use crate::assert_decimal_eq;
     use crate::model::utils::create_sample_position;
+    use positive::{assert_pos_relative_eq, pos_or_panic};
     use rust_decimal_macros::dec;
 
     fn create_test_long_straddle() -> Result<LongStraddle, StrategyError> {

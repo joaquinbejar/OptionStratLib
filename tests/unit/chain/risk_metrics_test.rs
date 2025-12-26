@@ -18,7 +18,7 @@ use optionstratlib::metrics::{
     DollarGammaCurve, ImpliedVolatilityCurve, ImpliedVolatilitySurface, RiskReversalCurve,
 };
 use optionstratlib::model::{ExpirationDate, OptionStyle};
-use positive::{pos_or_panic, spos, Positive};
+use positive::{Positive, pos_or_panic, spos};
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 
@@ -48,7 +48,13 @@ fn create_test_chain() -> OptionChain {
 
 /// Creates an empty option chain for edge case testing.
 fn create_empty_chain() -> OptionChain {
-    OptionChain::new("EMPTY", Positive::HUNDRED, "2024-12-31".to_string(), None, None)
+    OptionChain::new(
+        "EMPTY",
+        Positive::HUNDRED,
+        "2024-12-31".to_string(),
+        None,
+        None,
+    )
 }
 
 #[cfg(test)]
@@ -148,7 +154,7 @@ mod tests_implied_volatility_surface {
     #[test]
     fn test_iv_surface_empty_days() {
         let chain = create_test_chain();
-        let days: Vec<optionstratlib::Positive> = vec![];
+        let days: Vec<Positive> = vec![];
         let result = chain.iv_surface(days);
 
         assert!(result.is_err());

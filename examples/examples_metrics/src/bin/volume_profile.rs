@@ -14,14 +14,14 @@
 //! - PNG image: `./Draws/Metrics/volume_profile_surface.png`
 //! - HTML interactive files
 
-use optionstratlib::chains::chain::OptionChain;
 use optionstratlib::chains::OptionData;
+use optionstratlib::chains::chain::OptionChain;
 use optionstratlib::error::CurveError;
 use optionstratlib::metrics::{VolumeProfileCurve, VolumeProfileSurface};
 use optionstratlib::model::ExpirationDate;
 use optionstratlib::prelude::*;
-use rust_decimal_macros::dec;
 use positive::pos_or_panic;
+use rust_decimal_macros::dec;
 
 fn main() -> Result<(), CurveError> {
     setup_logger();

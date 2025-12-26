@@ -21,7 +21,7 @@
 //! ```rust
 //! use optionstratlib::model::leg::SpotPosition;
 //! use optionstratlib::model::types::Side;
-//! use optionstratlib::pos_or_panic;
+//! use positive::pos_or_panic;
 //! use chrono::Utc;
 //!
 //! let spot = SpotPosition::new(
@@ -35,12 +35,11 @@
 //! );
 //! ```
 
-
 use crate::error::GreeksError;
 use crate::model::leg::traits::LegAble;
 use crate::model::types::Side;
-use positive::Positive;
 use chrono::{DateTime, Utc};
+use positive::Positive;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
@@ -310,8 +309,8 @@ impl Default for SpotPosition {
 
 #[cfg(test)]
 mod tests {
-    use positive::pos_or_panic;
     use super::*;
+    use positive::pos_or_panic;
 
     #[test]
     fn test_spot_position_new() {
@@ -335,11 +334,7 @@ mod tests {
 
     #[test]
     fn test_spot_position_long_convenience() {
-        let spot = SpotPosition::long(
-            "BTC".to_string(),
-            Positive::ONE,
-            pos_or_panic!(50000.0),
-        );
+        let spot = SpotPosition::long("BTC".to_string(), Positive::ONE, pos_or_panic!(50000.0));
 
         assert_eq!(spot.symbol, "BTC");
         assert_eq!(spot.quantity, Positive::ONE);
@@ -364,21 +359,13 @@ mod tests {
 
     #[test]
     fn test_initial_value() {
-        let spot = SpotPosition::long(
-            "AAPL".to_string(),
-            Positive::HUNDRED,
-            pos_or_panic!(150.0),
-        );
+        let spot = SpotPosition::long("AAPL".to_string(), Positive::HUNDRED, pos_or_panic!(150.0));
         assert_eq!(spot.initial_value(), pos_or_panic!(15000.0));
     }
 
     #[test]
     fn test_market_value() {
-        let spot = SpotPosition::long(
-            "AAPL".to_string(),
-            Positive::HUNDRED,
-            pos_or_panic!(150.0),
-        );
+        let spot = SpotPosition::long("AAPL".to_string(), Positive::HUNDRED, pos_or_panic!(150.0));
         assert_eq!(
             spot.market_value(pos_or_panic!(160.0)),
             pos_or_panic!(16000.0)
@@ -387,44 +374,28 @@ mod tests {
 
     #[test]
     fn test_long_pnl_profit() {
-        let spot = SpotPosition::long(
-            "AAPL".to_string(),
-            Positive::HUNDRED,
-            pos_or_panic!(150.0),
-        );
+        let spot = SpotPosition::long("AAPL".to_string(), Positive::HUNDRED, pos_or_panic!(150.0));
         let pnl = spot.pnl_at_price(pos_or_panic!(160.0));
         assert_eq!(pnl, Decimal::from(1000)); // (160-150) * 100
     }
 
     #[test]
     fn test_long_pnl_loss() {
-        let spot = SpotPosition::long(
-            "AAPL".to_string(),
-            Positive::HUNDRED,
-            pos_or_panic!(150.0),
-        );
+        let spot = SpotPosition::long("AAPL".to_string(), Positive::HUNDRED, pos_or_panic!(150.0));
         let pnl = spot.pnl_at_price(pos_or_panic!(140.0));
         assert_eq!(pnl, Decimal::from(-1000)); // (140-150) * 100
     }
 
     #[test]
     fn test_short_pnl_profit() {
-        let spot = SpotPosition::short(
-            "AAPL".to_string(),
-            Positive::HUNDRED,
-            pos_or_panic!(150.0),
-        );
+        let spot = SpotPosition::short("AAPL".to_string(), Positive::HUNDRED, pos_or_panic!(150.0));
         let pnl = spot.pnl_at_price(pos_or_panic!(140.0));
         assert_eq!(pnl, Decimal::from(1000)); // Short profits when price drops
     }
 
     #[test]
     fn test_short_pnl_loss() {
-        let spot = SpotPosition::short(
-            "AAPL".to_string(),
-            Positive::HUNDRED,
-            pos_or_panic!(150.0),
-        );
+        let spot = SpotPosition::short("AAPL".to_string(), Positive::HUNDRED, pos_or_panic!(150.0));
         let pnl = spot.pnl_at_price(pos_or_panic!(160.0));
         assert_eq!(pnl, Decimal::from(-1000)); // Short loses when price rises
     }
@@ -446,21 +417,13 @@ mod tests {
 
     #[test]
     fn test_delta_long() {
-        let spot = SpotPosition::long(
-            "AAPL".to_string(),
-            Positive::HUNDRED,
-            pos_or_panic!(150.0),
-        );
+        let spot = SpotPosition::long("AAPL".to_string(), Positive::HUNDRED, pos_or_panic!(150.0));
         assert_eq!(spot.delta().unwrap(), Decimal::from(100));
     }
 
     #[test]
     fn test_delta_short() {
-        let spot = SpotPosition::short(
-            "AAPL".to_string(),
-            Positive::HUNDRED,
-            pos_or_panic!(150.0),
-        );
+        let spot = SpotPosition::short("AAPL".to_string(), Positive::HUNDRED, pos_or_panic!(150.0));
         assert_eq!(spot.delta().unwrap(), Decimal::from(-100));
     }
 
@@ -494,22 +457,14 @@ mod tests {
 
     #[test]
     fn test_percentage_return_long() {
-        let spot = SpotPosition::long(
-            "AAPL".to_string(),
-            Positive::HUNDRED,
-            Positive::HUNDRED,
-        );
+        let spot = SpotPosition::long("AAPL".to_string(), Positive::HUNDRED, Positive::HUNDRED);
         let return_pct = spot.percentage_return(pos_or_panic!(110.0));
         assert_eq!(return_pct, Decimal::new(1, 1)); // 10% = 0.1
     }
 
     #[test]
     fn test_percentage_return_short() {
-        let spot = SpotPosition::short(
-            "AAPL".to_string(),
-            Positive::HUNDRED,
-            Positive::HUNDRED,
-        );
+        let spot = SpotPosition::short("AAPL".to_string(), Positive::HUNDRED, Positive::HUNDRED);
         let return_pct = spot.percentage_return(pos_or_panic!(90.0));
         assert_eq!(return_pct, Decimal::new(1, 1)); // 10% profit for short when price drops
     }
@@ -544,11 +499,7 @@ mod tests {
 
     #[test]
     fn test_display() {
-        let spot = SpotPosition::long(
-            "AAPL".to_string(),
-            Positive::HUNDRED,
-            pos_or_panic!(150.0),
-        );
+        let spot = SpotPosition::long("AAPL".to_string(), Positive::HUNDRED, pos_or_panic!(150.0));
         let display = format!("{}", spot);
         assert!(display.contains("Long"));
         assert!(display.contains("AAPL"));
@@ -557,16 +508,9 @@ mod tests {
 
     #[test]
     fn test_is_long_short() {
-        let long = SpotPosition::long(
-            "AAPL".to_string(),
-            Positive::HUNDRED,
-            pos_or_panic!(150.0),
-        );
-        let short = SpotPosition::short(
-            "AAPL".to_string(),
-            Positive::HUNDRED,
-            pos_or_panic!(150.0),
-        );
+        let long = SpotPosition::long("AAPL".to_string(), Positive::HUNDRED, pos_or_panic!(150.0));
+        let short =
+            SpotPosition::short("AAPL".to_string(), Positive::HUNDRED, pos_or_panic!(150.0));
 
         assert!(long.is_long());
         assert!(!long.is_short());
@@ -576,31 +520,19 @@ mod tests {
 
     #[test]
     fn test_gamma_is_zero() {
-        let spot = SpotPosition::long(
-            "AAPL".to_string(),
-            Positive::HUNDRED,
-            pos_or_panic!(150.0),
-        );
+        let spot = SpotPosition::long("AAPL".to_string(), Positive::HUNDRED, pos_or_panic!(150.0));
         assert_eq!(spot.gamma().unwrap(), Decimal::ZERO);
     }
 
     #[test]
     fn test_theta_is_zero() {
-        let spot = SpotPosition::long(
-            "AAPL".to_string(),
-            Positive::HUNDRED,
-            pos_or_panic!(150.0),
-        );
+        let spot = SpotPosition::long("AAPL".to_string(), Positive::HUNDRED, pos_or_panic!(150.0));
         assert_eq!(spot.theta().unwrap(), Decimal::ZERO);
     }
 
     #[test]
     fn test_vega_is_zero() {
-        let spot = SpotPosition::long(
-            "AAPL".to_string(),
-            Positive::HUNDRED,
-            pos_or_panic!(150.0),
-        );
+        let spot = SpotPosition::long("AAPL".to_string(), Positive::HUNDRED, pos_or_panic!(150.0));
         assert_eq!(spot.vega().unwrap(), Decimal::ZERO);
     }
 }

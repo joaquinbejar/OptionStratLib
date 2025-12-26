@@ -782,9 +782,9 @@ test_strategy_traits!(ShortCall, test_short_call_implementations);
 
 #[cfg(test)]
 mod tests_simulate {
-    use positive::pos_or_panic;
     use super::*;
     use crate::chains::generator_positive;
+    use positive::pos_or_panic;
 
     use crate::simulation::simulator::Simulator;
     use crate::simulation::steps::Step;

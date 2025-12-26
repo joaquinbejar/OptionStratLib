@@ -15,7 +15,7 @@ use positive::pos_or_panic;
 //! ### Strategy Probability Analysis
 //!
 //! ```rust
-//! use optionstratlib::Positive;
+//! use positive::Positive;
 //!
 //! pub struct StrategyProbabilityAnalysis {
 //!     pub probability_of_profit: Positive,
@@ -30,7 +30,7 @@ use positive::pos_or_panic;
 //! ### Probability Analysis Trait
 //!
 //! ```rust
-//! use optionstratlib::Positive;
+//! use positive::Positive;
 //! use optionstratlib::pricing::Profit;
 //! use optionstratlib::strategies::Strategies;
 //! use optionstratlib::error::ProbabilityError;
@@ -61,8 +61,8 @@ use positive::pos_or_panic;
 //! use tracing::info;
 //! use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
 //! use optionstratlib::strategies::probabilities::{ProbabilityAnalysis, VolatilityAdjustment, PriceTrend, StrategyProbabilityAnalysis};
-//! use optionstratlib::{ExpirationDate, Positive};
-//! use optionstratlib::pos_or_panic;
+//! use optionstratlib::ExpirationDate;use positive::Positive;
+//! use positive::pos_or_panic;
 //! use optionstratlib::strategies::bear_call_spread::BearCallSpread;
 //!
 //! let strategy = BearCallSpread::new(
@@ -93,8 +93,8 @@ use positive::pos_or_panic;
 //! use rust_decimal_macros::dec;
 //! use optionstratlib::ExpirationDate;
 //! use optionstratlib::strategies::probabilities::{ProbabilityAnalysis, VolatilityAdjustment};
-//! use optionstratlib::Positive;
-//! use optionstratlib::pos_or_panic;
+//! use positive::Positive;
+//! use positive::pos_or_panic;
 //! use optionstratlib::strategies::bear_call_spread::BearCallSpread;
 //!
 //! let strategy = BearCallSpread::new(
@@ -128,8 +128,8 @@ use positive::pos_or_panic;
 //! ```rust
 //! use rust_decimal_macros::dec;
 //! use optionstratlib::ExpirationDate;
-//! use optionstratlib::Positive;
-//! use optionstratlib::pos_or_panic;
+//! use positive::Positive;
+//! use positive::pos_or_panic;
 //! use optionstratlib::strategies::bear_call_spread::BearCallSpread;
 //! use optionstratlib::strategies::probabilities::{PriceTrend, ProbabilityAnalysis};
 //! let strategy = BearCallSpread::new(
@@ -163,8 +163,8 @@ use positive::pos_or_panic;
 //! use tracing::info;
 //! use optionstratlib::strategies::probabilities::calculate_price_probability;
 //! use optionstratlib::ExpirationDate;
-//! use optionstratlib::Positive;
-//! use optionstratlib::pos_or_panic;
+//! use positive::Positive;
+//! use positive::pos_or_panic;
 //!
 //! let (prob_below, prob_in_range, prob_above) = calculate_price_probability(
 //!     &Positive::HUNDRED,   // current price

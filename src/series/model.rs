@@ -3,6 +3,7 @@ use crate::chains::OptionChain;
 use crate::error::ChainError;
 use crate::series::params::OptionSeriesBuildParams;
 use crate::utils::Len;
+use positive::Positive;
 use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
 use serde::de::{self, MapAccess, Visitor};
@@ -10,7 +11,6 @@ use serde::{Deserialize, Serialize};
 use serde::{Deserializer, Serializer};
 use std::collections::BTreeMap;
 use std::fmt;
-use positive::Positive;
 use utoipa::ToSchema;
 
 /// Represents a series of option chains for an underlying asset,

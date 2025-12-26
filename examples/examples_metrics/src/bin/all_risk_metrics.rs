@@ -22,8 +22,8 @@ use optionstratlib::metrics::{
 };
 use optionstratlib::model::OptionStyle;
 use optionstratlib::prelude::*;
-use rust_decimal::Decimal;
 use positive::pos_or_panic;
+use rust_decimal::Decimal;
 
 fn main() -> Result<(), CurveError> {
     setup_logger();

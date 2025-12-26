@@ -11,7 +11,6 @@
 //! - Delta-Gamma Profile Curve and Surface
 //! - Smile Dynamics Curve and Surface
 
-use positive::{pos_or_panic, spos, Positive};
 use optionstratlib::chains::OptionData;
 use optionstratlib::chains::chain::OptionChain;
 use optionstratlib::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
@@ -20,6 +19,7 @@ use optionstratlib::metrics::{
     VannaVolgaSurface,
 };
 use optionstratlib::model::ExpirationDate;
+use positive::{Positive, pos_or_panic, spos};
 use rust_decimal_macros::dec;
 
 /// Creates a test option chain with proper IV values for testing
@@ -27,17 +27,17 @@ fn create_test_chain() -> OptionChain {
     let params = OptionChainBuildParams::new(
         "TEST".to_string(),
         None,
-        10,          // 10 strikes on each side
-        spos!(5.0),  // $5 strike intervals
-        dec!(-0.15), // Negative skew
-        dec!(0.08),  // Smile curvature
-        pos_or_panic!(0.02),  // Spread
-        2,           // Decimal places
+        10,                  // 10 strikes on each side
+        spos!(5.0),          // $5 strike intervals
+        dec!(-0.15),         // Negative skew
+        dec!(0.08),          // Smile curvature
+        pos_or_panic!(0.02), // Spread
+        2,                   // Decimal places
         OptionDataPriceParams::new(
-            Some(Box::new(Positive::HUNDRED)),            // Underlying price
+            Some(Box::new(Positive::HUNDRED)),               // Underlying price
             Some(ExpirationDate::Days(pos_or_panic!(30.0))), // 30 days to expiry
-            Some(dec!(0.05)),                       // Risk-free rate
-            spos!(0.01),                            // Dividend yield
+            Some(dec!(0.05)),                                // Risk-free rate
+            spos!(0.01),                                     // Dividend yield
             Some("TEST".to_string()),
         ),
         pos_or_panic!(0.20), // Base IV of 20%
@@ -48,7 +48,13 @@ fn create_test_chain() -> OptionChain {
 
 /// Creates an empty option chain for edge case testing
 fn create_empty_chain() -> OptionChain {
-    OptionChain::new("EMPTY", Positive::HUNDRED, "2024-12-31".to_string(), None, None)
+    OptionChain::new(
+        "EMPTY",
+        Positive::HUNDRED,
+        "2024-12-31".to_string(),
+        None,
+        None,
+    )
 }
 
 // ============================================================================
@@ -422,8 +428,12 @@ mod edge_case_tests {
         assert_eq!(smile_result.unwrap().points.len(), 1);
 
         // Vanna-Volga surface should work
-        let vv_result =
-            chain.vanna_volga_surface((pos_or_panic!(90.0), pos_or_panic!(110.0)), (pos_or_panic!(0.15), pos_or_panic!(0.25)), 5, 5);
+        let vv_result = chain.vanna_volga_surface(
+            (pos_or_panic!(90.0), pos_or_panic!(110.0)),
+            (pos_or_panic!(0.15), pos_or_panic!(0.25)),
+            5,
+            5,
+        );
         assert!(vv_result.is_ok());
     }
 
@@ -432,8 +442,12 @@ mod edge_case_tests {
         let chain = create_test_chain();
 
         // Very wide price range
-        let result =
-            chain.vanna_volga_surface((pos_or_panic!(10.0), pos_or_panic!(1000.0)), (pos_or_panic!(0.05), Positive::ONE), 20, 20);
+        let result = chain.vanna_volga_surface(
+            (pos_or_panic!(10.0), pos_or_panic!(1000.0)),
+            (pos_or_panic!(0.05), Positive::ONE),
+            20,
+            20,
+        );
         assert!(result.is_ok());
 
         let surface = result.unwrap();

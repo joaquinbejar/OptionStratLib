@@ -1167,9 +1167,8 @@ impl fmt::Display for OptionData {
 #[cfg(test)]
 mod optiondata_coverage_tests {
     use super::*;
-    use rust_decimal_macros::dec;
     use positive::{pos_or_panic, spos};
-
+    use rust_decimal_macros::dec;
 
     // Helper function to create test option data
     fn create_test_option_data() -> OptionData {
@@ -1308,9 +1307,9 @@ mod optiondata_coverage_tests {
 #[cfg(test)]
 mod tests_get_position {
     use super::*;
-    use positive::{pos_or_panic, assert_pos_relative_eq, spos};
     use crate::model::ExpirationDate;
     use chrono::{Duration, Utc};
+    use positive::{assert_pos_relative_eq, pos_or_panic, spos};
     use rust_decimal_macros::dec;
 
     // Helper function to create a standard test option data
@@ -1839,9 +1838,9 @@ mod tests_check_convert_implied_volatility {
 #[cfg(test)]
 mod tests_get_option_for_iv {
     use super::*;
-    use positive::{pos_or_panic, spos};
     use crate::OptionType;
     use crate::model::ExpirationDate;
+    use positive::{pos_or_panic, spos};
     use rust_decimal_macros::dec;
 
     // Helper function to create a standard OptionDataPriceParams for testing
@@ -2149,8 +2148,8 @@ mod tests_some_price_is_none {
 #[cfg(test)]
 mod tests_is_valid_optimal_side_deltable {
     use super::*;
-    use rust_decimal_macros::dec;
     use positive::pos_or_panic;
+    use rust_decimal_macros::dec;
 
     #[test]
     fn test_is_valid_optimal_side_deltable() {
@@ -2666,8 +2665,8 @@ mod tests_get_mid_prices {
 #[cfg(test)]
 mod tests_current_deltas {
     use super::*;
-    use rust_decimal_macros::dec;
     use positive::pos_or_panic;
+    use rust_decimal_macros::dec;
 
     #[test]
     fn test_current_deltas_with_both_deltas() {
@@ -3061,9 +3060,9 @@ mod tests_spreads {
 #[cfg(test)]
 mod tests_validate_option_data {
     use super::*;
+    use positive::pos_or_panic;
     use positive::spos;
     use rust_decimal_macros::dec;
-    use positive::pos_or_panic;
 
     #[test]
     fn test_validate_option_data_missing_strike_price() {

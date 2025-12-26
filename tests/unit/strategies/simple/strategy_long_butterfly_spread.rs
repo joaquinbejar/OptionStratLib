@@ -1,11 +1,11 @@
-use positive::{assert_pos_relative_eq, pos_or_panic};
 use approx::assert_relative_eq;
 use num_traits::ToPrimitive;
 use optionstratlib::ExpirationDate;
-use optionstratlib::Positive;
 use optionstratlib::strategies::Strategies;
 use optionstratlib::strategies::base::BreakEvenable;
 use optionstratlib::strategies::long_butterfly_spread::LongButterflySpread;
+use positive::Positive;
+use positive::{assert_pos_relative_eq, pos_or_panic};
 
 use rust_decimal_macros::dec;
 use std::error::Error;
@@ -46,9 +46,21 @@ fn test_long_butterfly_spread_integration() -> Result<(), Box<dyn Error>> {
     );
     assert!(strategy.get_max_profit().is_ok());
     assert!(strategy.get_max_loss().is_ok());
-    assert_pos_relative_eq!(strategy.get_max_profit()?, pos_or_panic!(53.31), pos_or_panic!(0.0001));
-    assert_pos_relative_eq!(strategy.get_max_loss()?, pos_or_panic!(16.68999), pos_or_panic!(0.0001));
-    assert_pos_relative_eq!(strategy.get_total_cost()?, pos_or_panic!(145.09), pos_or_panic!(0.0001));
+    assert_pos_relative_eq!(
+        strategy.get_max_profit()?,
+        pos_or_panic!(53.31),
+        pos_or_panic!(0.0001)
+    );
+    assert_pos_relative_eq!(
+        strategy.get_max_loss()?,
+        pos_or_panic!(16.68999),
+        pos_or_panic!(0.0001)
+    );
+    assert_pos_relative_eq!(
+        strategy.get_total_cost()?,
+        pos_or_panic!(145.09),
+        pos_or_panic!(0.0001)
+    );
     assert_eq!(strategy.get_fees().unwrap().to_f64(), 0.14);
     assert!(strategy.get_profit_area().unwrap().to_f64().unwrap() > 0.0);
     assert!(strategy.get_profit_ratio().unwrap().to_f64().unwrap() > 0.0);

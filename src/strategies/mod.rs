@@ -46,8 +46,8 @@ use positive::pos_or_panic;
 //! use tracing::info;
 //! use optionstratlib::ExpirationDate;
 //! use optionstratlib::strategies::bull_call_spread::BullCallSpread;
-//! use optionstratlib::Positive;
-//! use optionstratlib::pos_or_panic;
+//! use positive::Positive;
+//! use positive::pos_or_panic;
 //! use optionstratlib::strategies::Strategies;
 //!
 //! let spread = BullCallSpread::new(
@@ -119,7 +119,7 @@ use positive::pos_or_panic;
 //! ```rust
 //! use optionstratlib::error::position::PositionError;
 //! use optionstratlib::model::position::Position;
-//! use optionstratlib::Positive;
+//! use positive::Positive;
 //! use optionstratlib::strategies::base::{BreakEvenable, Positionable, Strategies, Validable};
 //! use optionstratlib::strategies::{BasicAble, Strategable};
 //!
@@ -159,8 +159,8 @@ use positive::pos_or_panic;
 //! use tracing::info;
 //! use optionstratlib::ExpirationDate;
 //! use optionstratlib::strategies::iron_condor::IronCondor;
-//! use optionstratlib::Positive;
-//! use optionstratlib::pos_or_panic;
+//! use positive::Positive;
+//! use positive::pos_or_panic;
 //! use optionstratlib::strategies::Strategies;
 //!
 //! let condor = IronCondor::new(

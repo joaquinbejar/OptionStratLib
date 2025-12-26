@@ -1,5 +1,5 @@
-use positive::Positive;
 use crate::chains::OptionChainBuildParams;
+use positive::Positive;
 use pretty_simple_display::{DebugPretty, DisplaySimple};
 use serde::{Deserialize, Serialize};
 
@@ -88,8 +88,8 @@ impl OptionSeriesBuildParams {
 
 #[cfg(test)]
 mod tests {
-use positive::{Positive, pos_or_panic, spos};
     use super::*;
+    use positive::{Positive, pos_or_panic, spos};
 
     use crate::ExpirationDate;
     use crate::chains::utils::OptionDataPriceParams;

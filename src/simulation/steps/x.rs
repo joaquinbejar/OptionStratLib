@@ -302,9 +302,9 @@ mod tests {
 
 #[cfg(test)]
 mod tests_serialize {
-    use positive::pos_or_panic;
     use super::*;
     use crate::model::ExpirationDate;
+    use positive::pos_or_panic;
 
     use rust_decimal_macros::dec;
     use serde_json::{Value, json};

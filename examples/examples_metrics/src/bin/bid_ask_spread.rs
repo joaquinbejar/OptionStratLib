@@ -13,14 +13,14 @@
 //! - PNG image: `./Draws/Metrics/bid_ask_spread_curve.png`
 //! - HTML interactive: `./Draws/Metrics/bid_ask_spread_curve.html`
 
-use optionstratlib::chains::chain::OptionChain;
 use optionstratlib::chains::OptionData;
+use optionstratlib::chains::chain::OptionChain;
 use optionstratlib::error::CurveError;
 use optionstratlib::metrics::BidAskSpreadCurve;
 use optionstratlib::model::ExpirationDate;
 use optionstratlib::prelude::*;
-use rust_decimal_macros::dec;
 use positive::pos_or_panic;
+use rust_decimal_macros::dec;
 
 fn main() -> Result<(), CurveError> {
     setup_logger();

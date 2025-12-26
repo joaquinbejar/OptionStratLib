@@ -1,5 +1,5 @@
-use positive::pos_or_panic;
 use optionstratlib::prelude::*;
+use positive::pos_or_panic;
 
 fn get_option(underlying_price: &Positive) -> Options {
     Options::new(

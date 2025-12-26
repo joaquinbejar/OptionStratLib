@@ -1875,8 +1875,8 @@ mod tests_bull_call_spread_graph {
 
 #[cfg(test)]
 mod tests_bull_call_spread_probability {
-    use positive::assert_pos_relative_eq;
     use super::*;
+    use positive::assert_pos_relative_eq;
 
     use crate::strategies::probabilities::utils::PriceTrend;
     use rust_decimal_macros::dec;
@@ -2080,8 +2080,8 @@ mod tests_delta {
     use crate::strategies::bull_call_spread::BullCallSpread;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
-    use crate::{ExpirationDate, Positive, Side, assert_decimal_eq};
-    use positive::{assert_pos_relative_eq, pos_or_panic};
+    use crate::{ExpirationDate, Side, assert_decimal_eq};
+    use positive::{Positive, assert_pos_relative_eq, pos_or_panic};
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
 
@@ -2209,8 +2209,8 @@ mod tests_delta_size {
     use crate::strategies::bull_call_spread::BullCallSpread;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
-    use crate::{ExpirationDate, Positive, Side, assert_decimal_eq};
-    use positive::{assert_pos_relative_eq, pos_or_panic};
+    use crate::{ExpirationDate, Side, assert_decimal_eq};
+    use positive::{Positive, assert_pos_relative_eq, pos_or_panic};
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
 
@@ -2712,8 +2712,8 @@ mod tests_bull_call_spread_constructor {
 
 #[cfg(test)]
 mod tests_bull_call_spread_pnl {
-    use positive::assert_pos_relative_eq;
     use super::*;
+    use positive::assert_pos_relative_eq;
 
     use crate::assert_decimal_eq;
     use crate::model::utils::create_sample_position;

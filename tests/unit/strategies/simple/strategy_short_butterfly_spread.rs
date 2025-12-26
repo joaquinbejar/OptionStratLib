@@ -1,10 +1,10 @@
-use positive::{assert_pos_relative_eq, pos_or_panic};
 use approx::assert_relative_eq;
 use num_traits::ToPrimitive;
 use optionstratlib::ExpirationDate;
-use optionstratlib::Positive;
 use optionstratlib::strategies::base::BreakEvenable;
 use optionstratlib::strategies::{ShortButterflySpread, Strategies};
+use positive::Positive;
+use positive::{assert_pos_relative_eq, pos_or_panic};
 
 use rust_decimal_macros::dec;
 use std::error::Error;
@@ -45,8 +45,16 @@ fn test_short_butterfly_spread_integration() -> Result<(), Box<dyn Error>> {
     );
     assert!(strategy.get_max_profit().is_ok());
     assert!(strategy.get_max_loss().is_ok());
-    assert_pos_relative_eq!(strategy.get_max_profit()?, pos_or_panic!(26.58), pos_or_panic!(0.0001));
-    assert_pos_relative_eq!(strategy.get_max_loss()?, pos_or_panic!(213.42), pos_or_panic!(0.0001));
+    assert_pos_relative_eq!(
+        strategy.get_max_profit()?,
+        pos_or_panic!(26.58),
+        pos_or_panic!(0.0001)
+    );
+    assert_pos_relative_eq!(
+        strategy.get_max_loss()?,
+        pos_or_panic!(213.42),
+        pos_or_panic!(0.0001)
+    );
     assert_relative_eq!(
         strategy.get_fees().unwrap().to_f64(),
         23.9999,
@@ -65,7 +73,8 @@ fn test_short_butterfly_spread_integration() -> Result<(), Box<dyn Error>> {
 
     // Additional strategy-specific validations
     assert!(
-        pos_or_panic!(5700.0) < pos_or_panic!(5780.0) && pos_or_panic!(5780.0) < pos_or_panic!(5850.0),
+        pos_or_panic!(5700.0) < pos_or_panic!(5780.0)
+            && pos_or_panic!(5780.0) < pos_or_panic!(5850.0),
         "Strikes should be in ascending order: short ITM < long < short OTM"
     );
 

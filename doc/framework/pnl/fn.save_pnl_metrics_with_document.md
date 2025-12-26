@@ -60,7 +60,7 @@ concurrent writes to the file.
 use rust_decimal::Decimal;
 use tracing::{error, info};
 use optionstratlib::pnl::{save_pnl_metrics_with_document, PnLMetricsDocument};
-use optionstratlib::pos_or_panic;
+use positive::pos_or_panic;
 
 // Assume 'document' is a valid PnLMetricsDocument instance
 let document = PnLMetricsDocument {

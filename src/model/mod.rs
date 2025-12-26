@@ -74,8 +74,8 @@ use positive::pos_or_panic;
 //! use tracing::info;
 //! use optionstratlib::{ExpirationDate, Options};
 //! use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
-//! use optionstratlib::pos_or_panic;
-//! use optionstratlib::Positive;
+//! use positive::pos_or_panic;
+//! use positive::Positive;
 //!
 //! let option = Options::new(
 //!     OptionType::European,

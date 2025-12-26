@@ -63,7 +63,7 @@ efficient and avoids adding unnecessary overhead.
 ::: example-wrap
 ``` {.rust .rust-example-rendered}
 use optionstratlib::model::positive::is_positive;
-use optionstratlib::Positive;
+use positive::Positive;
 assert!(is_positive::<Positive>());
 assert!(!is_positive::<i32>());
 ```

@@ -18,7 +18,7 @@ use optionstratlib::metrics::{
     VolatilitySensitivityCurve, VolatilitySensitivitySurface,
 };
 use optionstratlib::model::ExpirationDate;
-use positive::{pos_or_panic, spos, Positive};
+use positive::{Positive, pos_or_panic, spos};
 use rust_decimal_macros::dec;
 
 /// Creates a test option chain with proper Greeks data
@@ -47,7 +47,13 @@ fn create_test_chain() -> OptionChain {
 
 /// Creates an empty option chain for edge case testing
 fn create_empty_chain() -> OptionChain {
-    OptionChain::new("EMPTY", Positive::HUNDRED, "2024-12-31".to_string(), None, None)
+    OptionChain::new(
+        "EMPTY",
+        Positive::HUNDRED,
+        "2024-12-31".to_string(),
+        None,
+        None,
+    )
 }
 
 // ============================================================================

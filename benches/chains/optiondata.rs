@@ -1,7 +1,8 @@
 use criterion::Criterion;
+use optionstratlib::ExpirationDate;
 use optionstratlib::chains::OptionData;
 use optionstratlib::chains::utils::OptionDataPriceParams;
-use optionstratlib::{ExpirationDate, Positive, pos_or_panic, spos};
+use positive::{Positive, pos_or_panic, spos};
 use rust_decimal_macros::dec;
 use std::hint::black_box;
 
@@ -40,7 +41,7 @@ fn benchmark_basic_operations(
                 None,
                 Some("TEST".to_string()),                        // symbol
                 Some(ExpirationDate::Days(pos_or_panic!(30.0))), // expiration_date
-                Some(Box::new(Positive::HUNDRED)),            // underlying_price
+                Some(Box::new(Positive::HUNDRED)),               // underlying_price
                 Some(dec!(0.05)),                                // risk_free_rate
                 Some(pos_or_panic!(0.02)),                       // dividend_yield
                 None,
@@ -67,7 +68,7 @@ fn benchmark_basic_operations(
                 Some(100),
                 Some("TEST".to_string()),                        // symbol
                 Some(ExpirationDate::Days(pos_or_panic!(30.0))), // expiration_date
-                Some(Box::new(Positive::HUNDRED)),            // underlying_price
+                Some(Box::new(Positive::HUNDRED)),               // underlying_price
                 Some(dec!(0.05)),                                // risk_free_rate
                 Some(pos_or_panic!(0.02)),                       // dividend_yield
                 None,
@@ -131,7 +132,7 @@ fn create_test_option_data() -> OptionData {
         None,
         Some("TEST".to_string()),                        // symbol
         Some(ExpirationDate::Days(pos_or_panic!(30.0))), // expiration_date
-        Some(Box::new(Positive::HUNDRED)),            // underlying_price
+        Some(Box::new(Positive::HUNDRED)),               // underlying_price
         Some(dec!(0.05)),                                // risk_free_rate
         Some(pos_or_panic!(0.02)),                       // dividend_yield
         None,

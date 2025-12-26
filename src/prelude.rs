@@ -113,7 +113,7 @@ pub use crate::utils::{
 
 // Commonly used external dependencies
 pub use chrono::Utc;
-pub use positive::{Positive, pos_or_panic, spos, assert_pos_relative_eq};
+pub use positive::{Positive, assert_pos_relative_eq, pos_or_panic, spos};
 pub use rust_decimal::Decimal;
 pub use rust_decimal::prelude::ToPrimitive;
 pub use rust_decimal_macros::dec;

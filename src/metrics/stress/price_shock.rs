@@ -47,7 +47,6 @@
 //! - **Y-axis**: Volatility level (or vol shock %)
 //! - **Z-axis**: P&L or option value
 
-
 use crate::curves::Curve;
 use crate::error::CurveError;
 use crate::error::SurfaceError;
@@ -114,7 +113,7 @@ pub trait PriceShockCurve {
 /// ```ignore
 /// use optionstratlib::chains::chain::OptionChain;
 /// use optionstratlib::metrics::PriceShockSurface;
-/// use optionstratlib::pos_or_panic;
+/// use positive::pos_or_panic;
 ///
 /// let chain = OptionChain::load_from_json("options.json")?;
 /// let price_range = (pos_or_panic!(400.0), pos_or_panic!(500.0));
@@ -151,10 +150,10 @@ mod tests_price_shock {
     use crate::curves::Point2D;
 
     use crate::surfaces::Point3D;
+    use positive::pos_or_panic;
     use rust_decimal::MathematicalOps;
     use rust_decimal_macros::dec;
     use std::collections::BTreeSet;
-use positive::pos_or_panic;
 
     struct TestPriceShock {
         underlying_price: Positive,

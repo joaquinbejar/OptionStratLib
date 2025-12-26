@@ -1,11 +1,11 @@
-use positive::pos_or_panic;
+use positive::{Positive, pos_or_panic};
 use {
     approx::assert_relative_eq,
     num_traits::ToPrimitive,
+    optionstratlib::ExpirationDate,
     optionstratlib::chains::chain::OptionChain,
     optionstratlib::strategies::base::Optimizable,
     optionstratlib::strategies::{BearPutSpread, FindOptimalSide, Strategies},
-    optionstratlib::{ExpirationDate, Positive},
     rust_decimal_macros::dec,
     std::error::Error,
 };

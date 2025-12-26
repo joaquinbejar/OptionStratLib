@@ -1,14 +1,14 @@
+use positive::{Positive, pos_or_panic};
 use {
     approx::assert_relative_eq,
     num_traits::ToPrimitive,
+    optionstratlib::ExpirationDate,
     optionstratlib::chains::chain::OptionChain,
     optionstratlib::strategies::base::Optimizable,
     optionstratlib::strategies::{FindOptimalSide, LongButterflySpread, Strategies},
-    optionstratlib::{ExpirationDate, Positive},
     rust_decimal_macros::dec,
     std::error::Error,
 };
-use positive::pos_or_panic;
 
 #[test]
 fn test_long_butterfly_spread_integration() -> Result<(), Box<dyn Error>> {

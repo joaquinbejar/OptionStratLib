@@ -98,7 +98,7 @@ fn main() -> Result<(), Error> {
         Positive::ONE,
         underlying_price,
         dec!(0.0),          // risk_free_rate
-        Positive::ZERO, // dividend_yield
+        Positive::ZERO,     // dividend_yield
         premium_positive,   // premium received
         pos_or_panic!(1.5), // open_fee
         pos_or_panic!(1.5), // close_fee
@@ -119,11 +119,7 @@ fn main() -> Result<(), Error> {
 
     // Create WalkParams for the Simulator
     let walker = Box::new(Walker);
-    let dt = convert_time_frame(
-        Positive::ONE / days,
-        &TimeFrame::Minute,
-        &TimeFrame::Day,
-    );
+    let dt = convert_time_frame(Positive::ONE / days, &TimeFrame::Minute, &TimeFrame::Day);
 
     // Adjust volatility for the specific dt in the random walk
     let volatility_dt =

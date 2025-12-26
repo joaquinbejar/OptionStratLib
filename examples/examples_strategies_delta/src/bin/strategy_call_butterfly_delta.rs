@@ -1,5 +1,5 @@
-use positive::pos_or_panic;
 use optionstratlib::prelude::*;
+use positive::pos_or_panic;
 
 fn main() -> Result<(), Error> {
     setup_logger();
@@ -15,7 +15,7 @@ fn main() -> Result<(), Error> {
         pos_or_panic!(0.18),  // implied_volatility
         dec!(0.05),           // risk_free_rate
         Positive::ZERO,       // dividend_yield
-        Positive::ONE,   // long quantity
+        Positive::ONE,        // long quantity
         pos_or_panic!(97.8),  // short_quantity
         pos_or_panic!(85.04), // premium_long_itm
         pos_or_panic!(31.65), // premium_long_otm

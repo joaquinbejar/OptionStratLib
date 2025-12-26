@@ -402,9 +402,9 @@ impl SimulationStatsResult {
 
 #[cfg(test)]
 mod tests {
-use positive::pos_or_panic;
     use super::*;
     use crate::pnl::PnL;
+    use positive::pos_or_panic;
 
     use crate::simulation::ExitPolicy;
     use rust_decimal_macros::dec;

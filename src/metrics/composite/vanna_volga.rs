@@ -44,7 +44,6 @@
 //! - How smile effects impact pricing at different spots
 //! - Optimal hedge ratios across the price-vol space
 
-
 use crate::error::SurfaceError;
 use crate::surfaces::Surface;
 use positive::Positive;
@@ -81,7 +80,7 @@ use positive::Positive;
 /// ```ignore
 /// use optionstratlib::chains::chain::OptionChain;
 /// use optionstratlib::metrics::VannaVolgaSurface;
-/// use optionstratlib::pos_or_panic;
+/// use positive::pos_or_panic;
 ///
 /// let chain = OptionChain::load_from_json("options.json")?;
 /// let price_range = (pos_or_panic!(400.0), pos_or_panic!(500.0));
@@ -124,9 +123,9 @@ mod tests_vanna_volga {
     use super::*;
 
     use crate::surfaces::Point3D;
+    use positive::pos_or_panic;
     use rust_decimal_macros::dec;
     use std::collections::BTreeSet;
-use positive::pos_or_panic;
 
     struct TestVannaVolgaSurface;
 
