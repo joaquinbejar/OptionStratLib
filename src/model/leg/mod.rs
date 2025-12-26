@@ -60,7 +60,7 @@ use positive::pos_or_panic;
 //! ```rust
 //! use optionstratlib::model::leg::{Leg, SpotPosition, PerpetualPosition, MarginType};
 //! use optionstratlib::model::types::Side;
-//! use positive::pos_or_panic;
+//! use positive::{pos_or_panic, Positive};
 //! use rust_decimal_macros::dec;
 //! use chrono::Utc;
 //!

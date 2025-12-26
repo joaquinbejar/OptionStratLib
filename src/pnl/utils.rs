@@ -83,7 +83,7 @@ impl PnL {
     /// use chrono::Utc;
     /// use rust_decimal_macros::dec;
     /// use optionstratlib::pnl::utils::PnL;
-    /// use positive::pos_or_panic;
+    /// use positive::{pos_or_panic, Positive};
     ///
     /// let pnl = PnL::new(
     ///     Some(dec!(500.0)),  // Realized PnL

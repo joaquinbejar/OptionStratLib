@@ -28,7 +28,7 @@
 //! ```rust
 //! use optionstratlib::strategies::covered_call::CoveredCall;
 //! use optionstratlib::model::ExpirationDate;
-//! use positive::pos_or_panic;
+//! use positive::{pos_or_panic, Positive};
 //! use rust_decimal_macros::dec;
 //!
 //! let covered_call = CoveredCall::new(

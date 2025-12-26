@@ -12,12 +12,6 @@
 //!
 //! ```rust
 //! use optionstratlib::utils::logger::{setup_logger, setup_logger_with_level};
-//!
-//! // Initialize logger with environment variable
-//!
-//!
-//! // Initialize logger with specific level
-//!
 //! ```
 //!
 //! ### Time (`time.rs`)
@@ -40,8 +34,7 @@
 //! Provides testing utilities and macros for relative equality assertions:
 //!
 //! ```rust
-//! use positive::Positive;
-//!
+//! use positive::{Positive,assert_pos_relative_eq,pos_or_panic};
 //!
 //! let a = Positive::ONE;
 //! let b = pos_or_panic!(1.0001);
@@ -170,7 +163,6 @@
 //! - Testing utilities provide accurate floating-point comparisons
 //! - Utility functions handle edge cases and error conditions
 
-pub(crate) mod error;
 /// This module contains the logger setup and configuration.  It provides functionality for
 /// initializing the logger, setting log levels, and formatting log messages.  It uses the `tracing`
 /// crate for structured logging and supports various log levels.
