@@ -12,7 +12,6 @@ use crate::strategies::{BasicAble, FindOptimalSide};
 use crate::{ExpirationDate, OptionStyle, Options, Side};
 use chrono::{DateTime, Utc};
 use positive::Positive;
-use positive::pos_or_panic;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -1169,6 +1168,8 @@ impl fmt::Display for OptionData {
 mod optiondata_coverage_tests {
     use super::*;
     use rust_decimal_macros::dec;
+    use positive::{pos_or_panic, spos};
+
 
     // Helper function to create test option data
     fn create_test_option_data() -> OptionData {
@@ -1307,7 +1308,7 @@ mod optiondata_coverage_tests {
 #[cfg(test)]
 mod tests_get_position {
     use super::*;
-
+    use positive::{pos_or_panic, assert_pos_relative_eq, spos};
     use crate::model::ExpirationDate;
     use chrono::{Duration, Utc};
     use rust_decimal_macros::dec;
@@ -1767,6 +1768,7 @@ mod tests_get_position {
 #[cfg(test)]
 mod tests_check_convert_implied_volatility {
     use super::*;
+    use positive::pos_or_panic;
 
     #[test]
     fn test_check_and_convert_implied_volatility_over_one() {
@@ -1837,7 +1839,7 @@ mod tests_check_convert_implied_volatility {
 #[cfg(test)]
 mod tests_get_option_for_iv {
     use super::*;
-
+    use positive::{pos_or_panic, spos};
     use crate::OptionType;
     use crate::model::ExpirationDate;
     use rust_decimal_macros::dec;
@@ -1973,6 +1975,7 @@ mod tests_get_option_for_iv {
 #[cfg(test)]
 mod tests_some_price_is_none {
     use super::*;
+    use positive::{pos_or_panic, spos};
 
     #[test]
     fn test_some_price_is_none_all_prices_present() {
@@ -2146,8 +2149,8 @@ mod tests_some_price_is_none {
 #[cfg(test)]
 mod tests_is_valid_optimal_side_deltable {
     use super::*;
-
     use rust_decimal_macros::dec;
+    use positive::pos_or_panic;
 
     #[test]
     fn test_is_valid_optimal_side_deltable() {
@@ -2350,6 +2353,7 @@ mod tests_is_valid_optimal_side_deltable {
 #[cfg(test)]
 mod tests_set_mid_prices {
     use super::*;
+    use positive::{pos_or_panic, spos};
 
     #[test]
     fn test_set_mid_prices_with_both_call_prices() {
@@ -2519,6 +2523,7 @@ mod tests_set_mid_prices {
 #[cfg(test)]
 mod tests_get_mid_prices {
     use super::*;
+    use positive::{pos_or_panic, spos};
 
     #[test]
     fn test_get_mid_prices_with_both_mid_prices() {
@@ -2661,8 +2666,8 @@ mod tests_get_mid_prices {
 #[cfg(test)]
 mod tests_current_deltas {
     use super::*;
-
     use rust_decimal_macros::dec;
+    use positive::pos_or_panic;
 
     #[test]
     fn test_current_deltas_with_both_deltas() {
@@ -2796,6 +2801,7 @@ mod tests_current_deltas {
 #[cfg(test)]
 mod tests_spreads {
     use super::*;
+    use positive::{pos_or_panic, spos};
 
     #[test]
     fn test_get_call_spread_some() {
@@ -3057,6 +3063,7 @@ mod tests_validate_option_data {
     use super::*;
     use positive::spos;
     use rust_decimal_macros::dec;
+    use positive::pos_or_panic;
 
     #[test]
     fn test_validate_option_data_missing_strike_price() {
