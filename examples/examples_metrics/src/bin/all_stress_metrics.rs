@@ -51,7 +51,7 @@ fn main() -> Result<(), CurveError> {
         pos_or_panic!(0.20),
     );
 
-    let option_chain = OptionChain::build_chain(&params);
+    let option_chain = OptionChain::build_chain(&params).unwrap();
 
     tracing::info!("Option Chain Information:");
     tracing::info!("  Symbol: {}", option_chain.symbol);

@@ -45,7 +45,7 @@ fn main() -> Result<(), CurveError> {
         pos_or_panic!(0.18), // 18% base IV
     );
 
-    let option_chain = OptionChain::build_chain(&params);
+    let option_chain = OptionChain::build_chain(&params).unwrap();
 
     tracing::info!(
         "Built option chain for {} with {} options",

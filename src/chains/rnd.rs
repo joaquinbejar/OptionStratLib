@@ -66,7 +66,7 @@
 //!             pos_or_panic!(0.1),
 //!         );
 //!
-//! let option_chain = OptionChain::build_chain(&option_chain_params);
+//! let option_chain = OptionChain::build_chain(&option_chain_params).unwrap();
 //! // Calculate RND from option chain
 //! let rnd_result = option_chain.calculate_rnd(&params).unwrap();
 //!
@@ -1530,7 +1530,7 @@ mod chain_test {
             pos_or_panic!(0.2),
         );
 
-        OptionChain::build_chain(&option_chain_params)
+        OptionChain::build_chain(&option_chain_params).unwrap()
     }
     #[test]
     fn test_chain_creation() {
@@ -1553,7 +1553,7 @@ mod chain_test {
             pos_or_panic!(0.2),
         );
 
-        let chain = OptionChain::build_chain(&option_chain_params);
+        let chain = OptionChain::build_chain(&option_chain_params).unwrap();
 
         let params = RNDParameters {
             risk_free_rate: dec!(0.05),
@@ -1597,7 +1597,7 @@ mod chain_test {
             pos_or_panic!(0.2),
         );
 
-        let chain = OptionChain::build_chain(&option_chain_params);
+        let chain = OptionChain::build_chain(&option_chain_params).unwrap();
         let params = RNDParameters {
             risk_free_rate: dec!(0.05),
             interpolation_points: 100,

@@ -1212,7 +1212,7 @@ mod tests_short_straddle {
             option_data_price_params,
             pos_or_panic!(0.2),
         );
-        OptionChain::build_chain(&option_chain_build_params)
+        OptionChain::build_chain(&option_chain_build_params).unwrap()
     }
 }
 

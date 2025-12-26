@@ -45,7 +45,7 @@ fn main() -> Result<(), SurfaceError> {
         pos_or_panic!(0.20), // 20% base IV
     );
 
-    let option_chain = OptionChain::build_chain(&params);
+    let option_chain = OptionChain::build_chain(&params).unwrap();
 
     tracing::info!(
         "Built option chain for {} with {} options",

@@ -49,7 +49,7 @@ fn main() -> Result<(), Error> {
         price_params,
         implied_volatility,
     );
-    let mut initial_chain = OptionChain::build_chain(&build_params);
+    let mut initial_chain = OptionChain::build_chain(&build_params)?;
     initial_chain.update_expiration_date(get_x_days_formatted(2));
     let walker = Box::new(Walker::new());
 

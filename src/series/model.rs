@@ -148,26 +148,41 @@ impl OptionSeries {
     /// - This method assumes that valid expiration dates and series data are provided. Ensure proper
     ///   validation of `params` before calling this method.
     /// - The use of a `BTreeMap` ensures that the resulting chains are sorted based on the expiration dates.
-    pub fn build_series(params: &OptionSeriesBuildParams) -> Self {
+    ///
+    /// # Errors
+    ///
+    /// Returns `ChainError` if:
+    /// - Failed to build any option chain in the series
+    /// - Failed to get date string from expiration date
+    /// - Missing underlying price in price params
+    pub fn build_series(params: &OptionSeriesBuildParams) -> Result<Self, ChainError> {
         let mut params = params.clone();
         let mut chains: BTreeMap<ExpirationDate, OptionChain> = BTreeMap::new();
         for series in params.series.clone().into_iter() {
             let expiration_date: ExpirationDate = ExpirationDate::Days(series);
             params.chain_params.price_params.expiration_date = Some(expiration_date);
             params.chain_params.strike_interval = None;
-            let mut chain: OptionChain = OptionChain::build_chain(&params.chain_params);
-            chain.update_expiration_date(expiration_date.get_date_string().unwrap());
+            let mut chain: OptionChain = OptionChain::build_chain(&params.chain_params)?;
+            let date_string = expiration_date.get_date_string().map_err(|e| {
+                ChainError::invalid_parameters(
+                    "expiration_date",
+                    &format!("failed to get date string: {e}"),
+                )
+            })?;
+            chain.update_expiration_date(date_string);
             chains.insert(expiration_date, chain);
         }
         let price_params = params.chain_params.price_params.clone();
-        let underlying_price = *price_params.underlying_price.unwrap();
-        Self {
+        let underlying_price = *price_params.underlying_price.ok_or_else(|| {
+            ChainError::invalid_parameters("underlying_price", "missing underlying price")
+        })?;
+        Ok(Self {
             symbol: params.chain_params.symbol.clone(),
             underlying_price,
             chains,
             risk_free_rate: price_params.risk_free_rate,
             dividend_yield: price_params.dividend_yield,
-        }
+        })
     }
 
     /// Converts the current object to `OptionSeriesBuildParams`.
@@ -587,7 +602,7 @@ mod tests_option_series {
             };
 
             // Build the series
-            let series = OptionSeries::build_series(&series_params);
+            let series = OptionSeries::build_series(&series_params).unwrap();
 
             // Verify the series properties
             assert_eq!(series.symbol, "TEST");

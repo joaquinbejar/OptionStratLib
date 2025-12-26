@@ -42,7 +42,7 @@ fn create_test_chain() -> OptionChain {
         pos_or_panic!(0.20),
     );
 
-    OptionChain::build_chain(&params)
+    OptionChain::build_chain(&params).unwrap()
 }
 
 /// Creates an empty option chain for edge case testing

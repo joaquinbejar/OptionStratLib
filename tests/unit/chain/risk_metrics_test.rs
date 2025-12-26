@@ -43,7 +43,7 @@ fn create_test_chain() -> OptionChain {
         pos_or_panic!(0.20),
     );
 
-    OptionChain::build_chain(&params)
+    OptionChain::build_chain(&params).unwrap()
 }
 
 /// Creates an empty option chain for edge case testing.
@@ -411,7 +411,7 @@ mod tests_edge_cases {
             pos_or_panic!(0.80), // High base volatility
         );
 
-        let chain = OptionChain::build_chain(&params);
+        let chain = OptionChain::build_chain(&params).unwrap();
 
         // All metrics should still work
         assert!(chain.iv_curve().is_ok());
@@ -440,7 +440,7 @@ mod tests_edge_cases {
             pos_or_panic!(0.05), // Low base volatility
         );
 
-        let chain = OptionChain::build_chain(&params);
+        let chain = OptionChain::build_chain(&params).unwrap();
 
         // All metrics should still work
         assert!(chain.iv_curve().is_ok());
@@ -469,7 +469,7 @@ mod tests_edge_cases {
             pos_or_panic!(0.25),
         );
 
-        let chain = OptionChain::build_chain(&params);
+        let chain = OptionChain::build_chain(&params).unwrap();
 
         // Risk reversal should show the skew
         let rr_curve = chain.risk_reversal_curve().unwrap();

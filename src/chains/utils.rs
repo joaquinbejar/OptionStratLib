@@ -802,7 +802,7 @@ mod tests_strike_step {
             price_params,
             implied_volatility,
         );
-        let initial_chain = OptionChain::build_chain(&build_params);
+        let initial_chain = OptionChain::build_chain(&build_params).unwrap();
         assert_eq!(initial_chain.len() - 1, chain_size);
     }
 }
@@ -1519,7 +1519,7 @@ mod tests_sample {
             pos_or_panic!(0.25),
         );
 
-        let built_chain = OptionChain::build_chain(&params);
+        let built_chain = OptionChain::build_chain(&params).unwrap();
 
         assert_eq!(built_chain.symbol, "AAPL");
         assert_eq!(built_chain.underlying_price, Positive::new(100.0).unwrap());
