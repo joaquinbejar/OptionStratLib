@@ -31,7 +31,7 @@ representable).
 
 ::: example-wrap
 ``` {.rust .rust-example-rendered}
-use optionstratlib::pos;
+use positive::pos_or_panic;
 let positive_value = pos!(5.0);
 ```
 :::

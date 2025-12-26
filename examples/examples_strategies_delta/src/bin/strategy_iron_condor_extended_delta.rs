@@ -9,29 +9,30 @@
 //! This example shows portfolio-level Greeks and adjustment planning.
 
 use optionstratlib::prelude::*;
+use positive::pos_or_panic;
 
 fn main() -> Result<(), Error> {
     setup_logger();
-    let underlying_price = pos!(2800.0);
+    let underlying_price = pos_or_panic!(2800.0);
 
     let strategy = IronCondor::new(
         "GOLD".to_string(),
         underlying_price,
-        pos!(2725.0),
-        pos!(2560.0),
-        pos!(2800.0),
-        pos!(2500.0),
-        ExpirationDate::Days(pos!(30.0)),
-        pos!(0.1548),
+        pos_or_panic!(2725.0),
+        pos_or_panic!(2560.0),
+        pos_or_panic!(2800.0),
+        pos_or_panic!(2500.0),
+        ExpirationDate::Days(pos_or_panic!(30.0)),
+        pos_or_panic!(0.1548),
         Decimal::ZERO,
         Positive::ZERO,
-        pos!(2.0),
-        pos!(38.8),
-        pos!(30.4),
-        pos!(23.3),
-        pos!(16.8),
-        pos!(0.96),
-        pos!(0.96),
+        Positive::TWO,
+        pos_or_panic!(38.8),
+        pos_or_panic!(30.4),
+        pos_or_panic!(23.3),
+        pos_or_panic!(16.8),
+        pos_or_panic!(0.96),
+        pos_or_panic!(0.96),
     );
 
     info!("=== IronCondor Extended Delta Analysis ===");

@@ -73,21 +73,21 @@
 //! use tracing::info;
 //! use optionstratlib::{ExpirationDate, Options};
 //! use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
-//! use optionstratlib::pos;
-//! use optionstratlib::Positive;
+//! use positive::pos_or_panic;
+//! use positive::Positive;
 //!
 //! let option = Options::new(
 //!     OptionType::European,
 //!     Side::Long,
 //!     "AAPL".to_string(),
-//!     pos!(100.0),
-//!     ExpirationDate::Days(pos!(30.0)),
-//!     pos!(0.2),
-//!     pos!(1.0),
-//!     pos!(105.0),
+//!     Positive::HUNDRED,
+//!     ExpirationDate::Days(pos_or_panic!(30.0)),
+//!     pos_or_panic!(0.2),
+//!     Positive::ONE,
+//!     pos_or_panic!(105.0),
 //!     dec!(0.05),
 //!     OptionStyle::Call,
-//!     pos!(0.01),
+//!     pos_or_panic!(0.01),
 //!     None,
 //! );
 //!
@@ -107,8 +107,7 @@ pub mod option;
 /// Definitions and utilities for managing trading positions, including risk metrics and exposure tracking.
 pub mod position;
 
-/// Types and utilities for working with strictly positive numerical values in financial contexts.
-pub mod positive;
+mod positive_ext;
 
 /// Tools for analyzing and visualizing profit ranges across different market scenarios.
 mod profit_range;

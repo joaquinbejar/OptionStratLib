@@ -9,27 +9,28 @@
 //! This example shows portfolio-level Greeks and adjustment planning.
 
 use optionstratlib::prelude::*;
+use positive::pos_or_panic;
 
 fn main() -> Result<(), Error> {
     setup_logger();
-    let underlying_price = pos!(5780.0);
+    let underlying_price = pos_or_panic!(5780.0);
 
     let strategy = BearCallSpread::new(
         "SP500".to_string(),
         underlying_price,
-        pos!(5750.0),
-        pos!(5820.0),
-        ExpirationDate::Days(pos!(30.0)),
-        pos!(0.18),
+        pos_or_panic!(5750.0),
+        pos_or_panic!(5820.0),
+        ExpirationDate::Days(pos_or_panic!(30.0)),
+        pos_or_panic!(0.18),
         dec!(0.05),
         Positive::ZERO,
-        pos!(2.0),
-        pos!(85.04),
-        pos!(53.04),
-        pos!(0.78),
-        pos!(0.78),
-        pos!(0.73),
-        pos!(0.73),
+        Positive::TWO,
+        pos_or_panic!(85.04),
+        pos_or_panic!(53.04),
+        pos_or_panic!(0.78),
+        pos_or_panic!(0.78),
+        pos_or_panic!(0.73),
+        pos_or_panic!(0.73),
     );
 
     info!("=== BearCallSpread Extended Delta Analysis ===");

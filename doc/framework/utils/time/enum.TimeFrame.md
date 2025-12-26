@@ -45,7 +45,7 @@ time-dependent metrics.
 ::: example-wrap
 ``` {.rust .rust-example-rendered}
 use optionstratlib::utils::time::TimeFrame;
-use optionstratlib::pos;
+use positive::pos_or_panic;
 
 // Using standard timeframes
 let daily = TimeFrame::Day;
@@ -208,7 +208,7 @@ the user.
 ::: example-wrap
 ``` {.rust .rust-example-rendered}
 use optionstratlib::utils::time::TimeFrame;
-use optionstratlib::pos;
+use positive::pos_or_panic;
 
 let daily = TimeFrame::Day;
 let periods_per_year = daily.periods_per_year(); // Returns 252

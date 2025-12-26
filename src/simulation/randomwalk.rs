@@ -3,7 +3,7 @@
    Email: jb@taunais.com
    Date: 23/3/25
 ******************************************************************************/
-use crate::Positive;
+
 use crate::error::PricingError;
 use crate::pricing::Profit;
 use crate::simulation::WalkParams;
@@ -11,6 +11,7 @@ use crate::simulation::steps::Step;
 use crate::strategies::base::BasicAble;
 use crate::utils::Len;
 use crate::visualization::{ColorScheme, Graph, GraphConfig, GraphData, Series2D, TraceMode};
+use positive::Positive;
 use rust_decimal::Decimal;
 use std::fmt::Display;
 use std::ops::{AddAssign, Index, IndexMut};
@@ -342,10 +343,9 @@ where
 mod tests_random_walk {
     use super::*;
     use crate::ExpirationDate;
-    use crate::Positive;
 
     use crate::error::SimulationError;
-    use crate::pos;
+
     use crate::simulation::WalkParams;
     use crate::simulation::WalkType;
     use crate::simulation::WalkTypeAble;
@@ -355,6 +355,7 @@ mod tests_random_walk {
     use num_traits::ToPrimitive;
     use rust_decimal::Decimal;
 
+    use positive::pos_or_panic;
     use std::fmt::Display;
     use std::ops::AddAssign;
 
@@ -374,7 +375,9 @@ mod tests_random_walk {
 
             // Generate some simple steps for test purposes
             for i in 1..params.size {
-                values.push(pos!(init_value.value().to_f64().unwrap() + i as f64));
+                values.push(pos_or_panic!(
+                    init_value.value().to_f64().unwrap() + i as f64
+                ));
             }
 
             Ok(values)
@@ -395,7 +398,7 @@ mod tests_random_walk {
         let init_step = Step::new(
             x_value,
             TimeFrame::Day,
-            ExpirationDate::Days(pos!(30.0)),
+            ExpirationDate::Days(pos_or_panic!(30.0)),
             y_value,
         );
 
@@ -443,9 +446,9 @@ mod tests_random_walk {
             1.0,
             100.0,
             WalkType::Brownian {
-                dt: pos!(1.0),
+                dt: Positive::ONE,
                 drift: Decimal::ZERO,
-                volatility: pos!(0.2),
+                volatility: pos_or_panic!(0.2),
             },
         );
 
@@ -464,9 +467,9 @@ mod tests_random_walk {
             1.0,
             100.0,
             WalkType::Brownian {
-                dt: pos!(1.0),
+                dt: Positive::ONE,
                 drift: Decimal::ZERO,
-                volatility: pos!(0.2),
+                volatility: pos_or_panic!(0.2),
             },
         );
 
@@ -487,9 +490,9 @@ mod tests_random_walk {
             1.0,
             100.0,
             WalkType::Brownian {
-                dt: pos!(1.0),
+                dt: Positive::ONE,
                 drift: Decimal::ZERO,
-                volatility: pos!(0.2),
+                volatility: pos_or_panic!(0.2),
             },
         );
 
@@ -509,9 +512,9 @@ mod tests_random_walk {
             1.0,
             100.0,
             WalkType::Brownian {
-                dt: pos!(1.0),
+                dt: Positive::ONE,
                 drift: Decimal::ZERO,
-                volatility: pos!(0.2),
+                volatility: pos_or_panic!(0.2),
             },
         );
 
@@ -531,9 +534,9 @@ mod tests_random_walk {
             1.0,
             100.0,
             WalkType::Brownian {
-                dt: pos!(1.0),
+                dt: Positive::ONE,
                 drift: Decimal::ZERO,
-                volatility: pos!(0.2),
+                volatility: pos_or_panic!(0.2),
             },
         );
 
@@ -555,9 +558,9 @@ mod tests_random_walk {
             1.0,
             100.0,
             WalkType::Brownian {
-                dt: pos!(1.0),
+                dt: Positive::ONE,
                 drift: Decimal::ZERO,
-                volatility: pos!(0.2),
+                volatility: pos_or_panic!(0.2),
             },
         );
 
@@ -578,9 +581,9 @@ mod tests_random_walk {
             1.0,
             100.0,
             WalkType::Brownian {
-                dt: pos!(1.0),
+                dt: Positive::ONE,
                 drift: Decimal::ZERO,
-                volatility: pos!(0.2),
+                volatility: pos_or_panic!(0.2),
             },
         );
 
@@ -597,9 +600,9 @@ mod tests_random_walk {
             1.0,
             100.0,
             WalkType::Brownian {
-                dt: pos!(1.0),
+                dt: Positive::ONE,
                 drift: Decimal::ZERO,
-                volatility: pos!(0.2),
+                volatility: pos_or_panic!(0.2),
             },
         );
 
@@ -625,9 +628,9 @@ mod tests_random_walk {
             1.0,
             100.0,
             WalkType::Brownian {
-                dt: pos!(1.0),
+                dt: Positive::ONE,
                 drift: Decimal::ZERO,
-                volatility: pos!(0.2),
+                volatility: pos_or_panic!(0.2),
             },
         );
 
@@ -648,9 +651,9 @@ mod tests_random_walk {
             1.0,
             100.0,
             WalkType::Brownian {
-                dt: pos!(1.0),
+                dt: Positive::ONE,
                 drift: Decimal::ZERO,
-                volatility: pos!(0.2),
+                volatility: pos_or_panic!(0.2),
             },
         );
 
@@ -675,9 +678,9 @@ mod tests_random_walk {
             1.0,
             100.0,
             WalkType::Brownian {
-                dt: pos!(1.0),
+                dt: Positive::ONE,
                 drift: Decimal::ZERO,
-                volatility: pos!(0.2),
+                volatility: pos_or_panic!(0.2),
             },
         );
 
@@ -695,9 +698,9 @@ mod tests_random_walk {
             1.0,
             100.0,
             WalkType::Brownian {
-                dt: pos!(1.0),
+                dt: Positive::ONE,
                 drift: Decimal::ZERO,
-                volatility: pos!(0.2),
+                volatility: pos_or_panic!(0.2),
             },
         );
 
@@ -727,7 +730,7 @@ mod tests_random_walk {
 
         impl From<TestX> for Positive {
             fn from(val: TestX) -> Self {
-                pos!(val.0)
+                pos_or_panic!(val.0)
             }
         }
 
@@ -742,7 +745,7 @@ mod tests_random_walk {
 
         impl From<TestY> for Positive {
             fn from(val: TestY) -> Self {
-                pos!(val.0)
+                pos_or_panic!(val.0)
             }
         }
 
@@ -752,9 +755,9 @@ mod tests_random_walk {
             TestX(1.0),
             TestY(100.0),
             WalkType::Brownian {
-                dt: pos!(1.0),
+                dt: Positive::ONE,
                 drift: Decimal::ZERO,
-                volatility: pos!(0.2),
+                volatility: pos_or_panic!(0.2),
             },
         );
 

@@ -2,7 +2,7 @@ use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, StrategyBasics, StrategyType, Validable,
 };
 use crate::{
-    ExpirationDate, Options, Positive,
+    ExpirationDate, Options,
     chains::{StrategyLegs, chain::OptionChain, utils::OptionDataGroup},
     error::{
         GreeksError, OperationErrorKind, PricingError,
@@ -18,7 +18,6 @@ use crate::{
         utils::mean_and_std,
     },
     pnl::{PnLCalculator, utils::PnL},
-    pos,
     pricing::payoff::Profit,
     strategies::{
         BasicAble, Strategies, StrategyConstructor,
@@ -29,6 +28,7 @@ use crate::{
     test_strategy_traits,
 };
 use chrono::Utc;
+use positive::{Positive, pos_or_panic};
 use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -962,7 +962,7 @@ impl ProbabilityAnalysis for ShortButterflySpread {
         let mut loss_range = ProfitLossRange::new(
             Some(break_even_points[0]),
             Some(break_even_points[1]),
-            pos!(self.get_max_loss()?.to_f64()),
+            pos_or_panic!(self.get_max_loss()?.to_f64()),
         )?;
 
         loss_range.calculate_probability(
@@ -1035,31 +1035,32 @@ test_strategy_traits!(ShortButterflySpread, test_short_call_implementations);
 #[cfg(test)]
 mod tests_short_butterfly_spread {
     use super::*;
+
     use crate::model::ExpirationDate;
-    use crate::pos;
+
     use rust_decimal_macros::dec;
 
     fn create_test_butterfly() -> ShortButterflySpread {
         ShortButterflySpread::new(
             "TEST".to_string(),
-            pos!(100.0),                      // underlying_price
-            pos!(90.0),                       // low_strike
-            pos!(100.0),                      // middle_strike
-            pos!(110.0),                      // high_strike
-            ExpirationDate::Days(pos!(30.0)), // expiration
-            pos!(0.2),                        // implied_volatility
-            dec!(0.05),                       // risk_free_rate
-            Positive::ZERO,                   // dividend_yield
-            pos!(1.0),                        // quantity
-            pos!(10.0),                       // premium_low
-            Positive::ONE,                    // premium_middle
-            pos!(0.5),                        // premium_high
-            pos!(0.05),                       // open_fee_short_call
-            pos!(0.05),                       // close_fee_short_call
-            pos!(0.05),                       // open_fee_short_call_low
-            pos!(0.05),                       // close_fee_short_call_low
-            pos!(0.05),                       // open_fee_short_call_high
-            pos!(0.05),                       // close_fee_short_call_high
+            Positive::HUNDRED,                         // underlying_price
+            pos_or_panic!(90.0),                       // low_strike
+            Positive::HUNDRED,                         // middle_strike
+            pos_or_panic!(110.0),                      // high_strike
+            ExpirationDate::Days(pos_or_panic!(30.0)), // expiration
+            pos_or_panic!(0.2),                        // implied_volatility
+            dec!(0.05),                                // risk_free_rate
+            Positive::ZERO,                            // dividend_yield
+            Positive::ONE,                             // quantity
+            pos_or_panic!(10.0),                       // premium_low
+            Positive::ONE,                             // premium_middle
+            pos_or_panic!(0.5),                        // premium_high
+            pos_or_panic!(0.05),                       // open_fee_short_call
+            pos_or_panic!(0.05),                       // close_fee_short_call
+            pos_or_panic!(0.05),                       // open_fee_short_call_low
+            pos_or_panic!(0.05),                       // close_fee_short_call_low
+            pos_or_panic!(0.05),                       // open_fee_short_call_high
+            pos_or_panic!(0.05),                       // close_fee_short_call_high
         )
     }
 
@@ -1077,18 +1078,24 @@ mod tests_short_butterfly_spread {
     fn test_butterfly_strikes() {
         let butterfly = create_test_butterfly();
 
-        assert_eq!(butterfly.short_call_low.option.strike_price, pos!(90.0));
-        assert_eq!(butterfly.long_call.option.strike_price, pos!(100.0));
-        assert_eq!(butterfly.short_call_high.option.strike_price, pos!(110.0));
+        assert_eq!(
+            butterfly.short_call_low.option.strike_price,
+            pos_or_panic!(90.0)
+        );
+        assert_eq!(butterfly.long_call.option.strike_price, Positive::HUNDRED);
+        assert_eq!(
+            butterfly.short_call_high.option.strike_price,
+            pos_or_panic!(110.0)
+        );
     }
 
     #[test]
     fn test_butterfly_quantities() {
         let butterfly = create_test_butterfly();
 
-        assert_eq!(butterfly.short_call_low.option.quantity, pos!(1.0));
-        assert_eq!(butterfly.long_call.option.quantity, pos!(2.0)); // Double quantity
-        assert_eq!(butterfly.short_call_high.option.quantity, pos!(1.0));
+        assert_eq!(butterfly.short_call_low.option.quantity, Positive::ONE);
+        assert_eq!(butterfly.long_call.option.quantity, Positive::TWO); // Double quantity
+        assert_eq!(butterfly.short_call_high.option.quantity, Positive::ONE);
     }
 
     #[test]
@@ -1118,7 +1125,7 @@ mod tests_short_butterfly_spread {
     #[test]
     fn test_butterfly_expiration_consistency() {
         let butterfly = create_test_butterfly();
-        let expiration = ExpirationDate::Days(pos!(30.0));
+        let expiration = ExpirationDate::Days(pos_or_panic!(30.0));
 
         assert_eq!(
             format!("{:?}", butterfly.short_call_low.option.expiration_date),
@@ -1138,24 +1145,24 @@ mod tests_short_butterfly_spread {
     fn test_butterfly_fees_distribution() {
         let butterfly = ShortButterflySpread::new(
             "TEST".to_string(),
-            pos!(100.0),
-            pos!(90.0),
-            pos!(100.0),
-            pos!(110.0),
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(0.2),
+            Positive::HUNDRED,
+            pos_or_panic!(90.0),
+            Positive::HUNDRED,
+            pos_or_panic!(110.0),
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.2),
             dec!(0.05),
             Positive::ZERO,
-            pos!(1.0),
-            pos!(3.0),
+            Positive::ONE,
+            pos_or_panic!(3.0),
             Positive::TWO,
             Positive::ONE,
-            Positive::ONE, // open_fee_short_call
-            pos!(0.05),    // close_fee_short_call
-            Positive::ONE, // open_fee_short_call_low
-            pos!(0.05),    // close_fee_short_call_low
-            Positive::ONE, // open_fee_short_call_high
-            pos!(0.05),    // close_fee_short_call_high
+            Positive::ONE,       // open_fee_short_call
+            pos_or_panic!(0.05), // close_fee_short_call
+            Positive::ONE,       // open_fee_short_call_low
+            pos_or_panic!(0.05), // close_fee_short_call_low
+            Positive::ONE,       // open_fee_short_call_high
+            pos_or_panic!(0.05), // close_fee_short_call_high
         );
 
         assert_eq!(butterfly.short_call_low.open_fee, 1.0); // fees / 3
@@ -1179,29 +1186,29 @@ mod tests_short_butterfly_spread {
     fn test_butterfly_with_different_quantities() {
         let butterfly = ShortButterflySpread::new(
             "TEST".to_string(),
-            pos!(100.0),
-            pos!(90.0),
-            pos!(100.0),
-            pos!(110.0),
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(0.2),
+            Positive::HUNDRED,
+            pos_or_panic!(90.0),
+            Positive::HUNDRED,
+            pos_or_panic!(110.0),
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.2),
             dec!(0.05),
             Positive::ZERO,
-            pos!(2.0),
-            pos!(3.0),
+            Positive::TWO,
+            pos_or_panic!(3.0),
             Positive::TWO,
             Positive::ONE,
-            pos!(0.05), // open_fee_short_call
-            pos!(0.05), // close_fee_short_call
-            pos!(0.05), // open_fee_short_call_low
-            pos!(0.05), // close_fee_short_call_low
-            pos!(0.05), // open_fee_short_call_high
-            pos!(0.05), // close_fee_short_call_high
+            pos_or_panic!(0.05), // open_fee_short_call
+            pos_or_panic!(0.05), // close_fee_short_call
+            pos_or_panic!(0.05), // open_fee_short_call_low
+            pos_or_panic!(0.05), // close_fee_short_call_low
+            pos_or_panic!(0.05), // open_fee_short_call_high
+            pos_or_panic!(0.05), // close_fee_short_call_high
         );
 
-        assert_eq!(butterfly.short_call_low.option.quantity, pos!(2.0));
-        assert_eq!(butterfly.long_call.option.quantity, pos!(4.0)); // 2 * 2
-        assert_eq!(butterfly.short_call_high.option.quantity, pos!(2.0));
+        assert_eq!(butterfly.short_call_low.option.quantity, Positive::TWO);
+        assert_eq!(butterfly.long_call.option.quantity, pos_or_panic!(4.0)); // 2 * 2
+        assert_eq!(butterfly.short_call_high.option.quantity, Positive::TWO);
     }
 
     #[test]
@@ -1233,7 +1240,7 @@ mod tests_short_butterfly_spread {
     #[test]
     fn test_butterfly_underlying_price_consistency() {
         let butterfly = create_test_butterfly();
-        let underlying_price = pos!(100.0);
+        let underlying_price = Positive::HUNDRED;
 
         assert_eq!(
             butterfly.short_call_low.option.underlying_price,
@@ -1253,24 +1260,24 @@ mod tests_short_butterfly_spread {
     fn test_butterfly_with_invalid_premiums() {
         let max_loss = ShortButterflySpread::new(
             "TEST".to_string(),
-            pos!(100.0),
-            pos!(90.0),
-            pos!(100.0),
-            pos!(110.0),
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(0.2),
+            Positive::HUNDRED,
+            pos_or_panic!(90.0),
+            Positive::HUNDRED,
+            pos_or_panic!(110.0),
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.2),
             dec!(0.05),
             Positive::ZERO,
-            pos!(1.0),
-            pos!(10.0),
             Positive::ONE,
-            pos!(10.0),
-            pos!(0.05), // open_fee_short_call
-            pos!(0.05), // close_fee_short_call
-            pos!(0.05), // open_fee_short_call_low
-            pos!(0.05), // close_fee_short_call_low
-            pos!(0.05), // open_fee_short_call_high
-            pos!(0.05), // close_fee_short_call_high
+            pos_or_panic!(10.0),
+            Positive::ONE,
+            pos_or_panic!(10.0),
+            pos_or_panic!(0.05), // open_fee_short_call
+            pos_or_panic!(0.05), // close_fee_short_call
+            pos_or_panic!(0.05), // open_fee_short_call_low
+            pos_or_panic!(0.05), // close_fee_short_call_low
+            pos_or_panic!(0.05), // open_fee_short_call_high
+            pos_or_panic!(0.05), // close_fee_short_call_high
         );
         assert!(max_loss.get_max_loss().is_err());
     }
@@ -1295,6 +1302,7 @@ mod tests_short_butterfly_spread {
 #[cfg(test)]
 mod tests_short_butterfly_validation {
     use super::*;
+
     use rust_decimal_macros::dec;
 
     fn create_valid_position(side: Side, strike_price: Positive, quantity: Positive) -> Position {
@@ -1304,10 +1312,10 @@ mod tests_short_butterfly_validation {
                 side,
                 "TEST".to_string(),
                 strike_price,
-                ExpirationDate::Days(pos!(30.0)),
-                pos!(0.2),
+                ExpirationDate::Days(pos_or_panic!(30.0)),
+                pos_or_panic!(0.2),
                 quantity,
-                pos!(100.0),
+                Positive::HUNDRED,
                 dec!(0.05),
                 OptionStyle::Call,
                 Positive::ZERO,
@@ -1326,24 +1334,24 @@ mod tests_short_butterfly_validation {
     fn test_valid_short_butterfly() {
         let butterfly = ShortButterflySpread::new(
             "TEST".to_string(),
-            pos!(100.0),
-            pos!(90.0),
-            pos!(100.0),
-            pos!(110.0),
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(0.2),
+            Positive::HUNDRED,
+            pos_or_panic!(90.0),
+            Positive::HUNDRED,
+            pos_or_panic!(110.0),
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.2),
             dec!(0.05),
             Positive::ZERO,
-            pos!(1.0),
+            Positive::ONE,
             Positive::ONE,
             Positive::TWO,
             Positive::ONE,
-            pos!(0.05), // open_fee_short_call
-            pos!(0.05), // close_fee_short_call
-            pos!(0.05), // open_fee_short_call_low
-            pos!(0.05), // close_fee_short_call_low
-            pos!(0.05), // open_fee_short_call_high
-            pos!(0.05), // close_fee_short_call_high
+            pos_or_panic!(0.05), // open_fee_short_call
+            pos_or_panic!(0.05), // close_fee_short_call
+            pos_or_panic!(0.05), // open_fee_short_call_low
+            pos_or_panic!(0.05), // close_fee_short_call_low
+            pos_or_panic!(0.05), // open_fee_short_call_high
+            pos_or_panic!(0.05), // close_fee_short_call_high
         );
         assert!(butterfly.validate());
     }
@@ -1352,26 +1360,27 @@ mod tests_short_butterfly_validation {
     fn test_invalid_short_call_low() {
         let mut butterfly = ShortButterflySpread::new(
             "TEST".to_string(),
-            pos!(100.0),
-            pos!(90.0),
-            pos!(100.0),
-            pos!(110.0),
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(0.2),
+            Positive::HUNDRED,
+            pos_or_panic!(90.0),
+            Positive::HUNDRED,
+            pos_or_panic!(110.0),
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.2),
             dec!(0.05),
             Positive::ZERO,
-            pos!(1.0),
+            Positive::ONE,
             Positive::ONE,
             Positive::TWO,
             Positive::ONE,
-            pos!(0.05), // open_fee_short_call
-            pos!(0.05), // close_fee_short_call
-            pos!(0.05), // open_fee_short_call_low
-            pos!(0.05), // close_fee_short_call_low
-            pos!(0.05), // open_fee_short_call_high
-            pos!(0.05), // close_fee_short_call_high
+            pos_or_panic!(0.05), // open_fee_short_call
+            pos_or_panic!(0.05), // close_fee_short_call
+            pos_or_panic!(0.05), // open_fee_short_call_low
+            pos_or_panic!(0.05), // close_fee_short_call_low
+            pos_or_panic!(0.05), // open_fee_short_call_high
+            pos_or_panic!(0.05), // close_fee_short_call_high
         );
-        butterfly.short_call_low = create_valid_position(Side::Short, pos!(90.0), Positive::ZERO);
+        butterfly.short_call_low =
+            create_valid_position(Side::Short, pos_or_panic!(90.0), Positive::ZERO);
         assert!(!butterfly.validate());
     }
 
@@ -1379,24 +1388,24 @@ mod tests_short_butterfly_validation {
     fn test_invalid_strike_order_high() {
         let butterfly = ShortButterflySpread::new(
             "TEST".to_string(),
-            pos!(90.0),
-            pos!(100.0),
-            pos!(100.0),
-            pos!(100.0),
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(0.2),
+            pos_or_panic!(90.0),
+            Positive::HUNDRED,
+            Positive::HUNDRED,
+            Positive::HUNDRED,
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.2),
             dec!(0.05),
             Positive::ZERO,
-            pos!(1.0),
+            Positive::ONE,
             Positive::ONE,
             Positive::TWO,
             Positive::ONE,
-            pos!(0.05), // open_fee_short_call
-            pos!(0.05), // close_fee_short_call
-            pos!(0.05), // open_fee_short_call_low
-            pos!(0.05), // close_fee_short_call_low
-            pos!(0.05), // open_fee_short_call_high
-            pos!(0.05), // close_fee_short_call_high
+            pos_or_panic!(0.05), // open_fee_short_call
+            pos_or_panic!(0.05), // close_fee_short_call
+            pos_or_panic!(0.05), // open_fee_short_call_low
+            pos_or_panic!(0.05), // close_fee_short_call_low
+            pos_or_panic!(0.05), // open_fee_short_call_high
+            pos_or_panic!(0.05), // close_fee_short_call_high
         );
         assert!(!butterfly.validate());
     }
@@ -1405,26 +1414,26 @@ mod tests_short_butterfly_validation {
     fn test_invalid_middle_quantities() {
         let mut butterfly = ShortButterflySpread::new(
             "TEST".to_string(),
-            pos!(100.0),
-            pos!(90.0),
-            pos!(100.0),
-            pos!(110.0),
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(0.2),
+            Positive::HUNDRED,
+            pos_or_panic!(90.0),
+            Positive::HUNDRED,
+            pos_or_panic!(110.0),
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.2),
             dec!(0.05),
             Positive::ZERO,
-            pos!(1.0),
+            Positive::ONE,
             Positive::ONE,
             Positive::TWO,
             Positive::ONE,
-            pos!(0.05), // open_fee_short_call
-            pos!(0.05), // close_fee_short_call
-            pos!(0.05), // open_fee_short_call_low
-            pos!(0.05), // close_fee_short_call_low
-            pos!(0.05), // open_fee_short_call_high
-            pos!(0.05), // close_fee_short_call_high
+            pos_or_panic!(0.05), // open_fee_short_call
+            pos_or_panic!(0.05), // close_fee_short_call
+            pos_or_panic!(0.05), // open_fee_short_call_low
+            pos_or_panic!(0.05), // close_fee_short_call_low
+            pos_or_panic!(0.05), // open_fee_short_call_high
+            pos_or_panic!(0.05), // close_fee_short_call_high
         );
-        butterfly.long_call = create_valid_position(Side::Long, pos!(100.0), pos!(1.0));
+        butterfly.long_call = create_valid_position(Side::Long, Positive::HUNDRED, Positive::ONE);
         assert!(!butterfly.validate());
     }
 
@@ -1432,26 +1441,27 @@ mod tests_short_butterfly_validation {
     fn test_unequal_wing_quantities_short() {
         let mut butterfly = ShortButterflySpread::new(
             "TEST".to_string(),
-            pos!(100.0),
-            pos!(90.0),
-            pos!(100.0),
-            pos!(110.0),
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(0.2),
+            Positive::HUNDRED,
+            pos_or_panic!(90.0),
+            Positive::HUNDRED,
+            pos_or_panic!(110.0),
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.2),
             dec!(0.05),
             Positive::ZERO,
-            pos!(1.0),
+            Positive::ONE,
             Positive::ONE,
             Positive::TWO,
             Positive::ONE,
-            pos!(0.05), // open_fee_short_call
-            pos!(0.05), // close_fee_short_call
-            pos!(0.05), // open_fee_short_call_low
-            pos!(0.05), // close_fee_short_call_low
-            pos!(0.05), // open_fee_short_call_high
-            pos!(0.05), // close_fee_short_call_high
+            pos_or_panic!(0.05), // open_fee_short_call
+            pos_or_panic!(0.05), // close_fee_short_call
+            pos_or_panic!(0.05), // open_fee_short_call_low
+            pos_or_panic!(0.05), // close_fee_short_call_low
+            pos_or_panic!(0.05), // open_fee_short_call_high
+            pos_or_panic!(0.05), // close_fee_short_call_high
         );
-        butterfly.short_call_high = create_valid_position(Side::Short, pos!(110.0), pos!(2.0));
+        butterfly.short_call_high =
+            create_valid_position(Side::Short, pos_or_panic!(110.0), Positive::TWO);
         assert!(!butterfly.validate());
     }
 }
@@ -1459,8 +1469,9 @@ mod tests_short_butterfly_validation {
 #[cfg(test)]
 mod tests_short_butterfly_profit {
     use super::*;
+
     use crate::model::ExpirationDate;
-    use crate::pos;
+
     use approx::assert_relative_eq;
     use num_traits::ToPrimitive;
     use rust_decimal::Decimal;
@@ -1470,31 +1481,31 @@ mod tests_short_butterfly_profit {
     fn create_test() -> ShortButterflySpread {
         ShortButterflySpread::new(
             "TEST".to_string(),
-            pos!(100.0), // underlying_price
-            pos!(90.0),  // low_strike
-            pos!(100.0), // middle_strike
-            pos!(110.0), // high_strike
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(0.2),      // implied_volatility
-            dec!(0.05),     // risk_free_rate
-            Positive::ZERO, // dividend_yield
-            pos!(1.0),      // quantity
-            pos!(3.0),      // premium_low
-            Positive::TWO,  // premium_middle
-            Positive::ONE,  // premium_high
-            pos!(0.05),     // open_fee_short_call
-            pos!(0.05),     // close_fee_short_call
-            pos!(0.05),     // open_fee_short_call_low
-            pos!(0.05),     // close_fee_short_call_low
-            pos!(0.05),     // open_fee_short_call_high
-            pos!(0.05),     // close_fee_short_call_high
+            Positive::HUNDRED,    // underlying_price
+            pos_or_panic!(90.0),  // low_strike
+            Positive::HUNDRED,    // middle_strike
+            pos_or_panic!(110.0), // high_strike
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.2),  // implied_volatility
+            dec!(0.05),          // risk_free_rate
+            Positive::ZERO,      // dividend_yield
+            Positive::ONE,       // quantity
+            pos_or_panic!(3.0),  // premium_low
+            Positive::TWO,       // premium_middle
+            Positive::ONE,       // premium_high
+            pos_or_panic!(0.05), // open_fee_short_call
+            pos_or_panic!(0.05), // close_fee_short_call
+            pos_or_panic!(0.05), // open_fee_short_call_low
+            pos_or_panic!(0.05), // close_fee_short_call_low
+            pos_or_panic!(0.05), // open_fee_short_call_high
+            pos_or_panic!(0.05), // close_fee_short_call_high
         )
     }
 
     #[test]
     fn test_profit_at_middle_strike() {
         let butterfly = create_test();
-        let profit = butterfly.calculate_profit_at(&pos!(100.0)).unwrap();
+        let profit = butterfly.calculate_profit_at(&Positive::HUNDRED).unwrap();
         assert!(profit < Decimal::ZERO);
         let expected = Positive::new_decimal(Decimal::from_str("10.4").unwrap()).unwrap();
 
@@ -1520,27 +1531,27 @@ mod tests_short_butterfly_profit {
     fn test_profit_with_different_quantities() {
         let butterfly = ShortButterflySpread::new(
             "TEST".to_string(),
-            pos!(100.0),
-            pos!(90.0),
-            pos!(100.0),
-            pos!(110.0),
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(0.2),
+            Positive::HUNDRED,
+            pos_or_panic!(90.0),
+            Positive::HUNDRED,
+            pos_or_panic!(110.0),
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.2),
             dec!(0.05),
             Positive::ZERO,
-            pos!(2.0), // quantity = 2
-            pos!(3.0),
+            Positive::TWO, // quantity = 2
+            pos_or_panic!(3.0),
             Positive::TWO,
             Positive::ONE,
-            pos!(0.05), // open_fee_short_call
-            pos!(0.05), // close_fee_short_call
-            pos!(0.05), // open_fee_short_call_low
-            pos!(0.05), // close_fee_short_call_low
-            pos!(0.05), // open_fee_short_call_high
-            pos!(0.05), // close_fee_short_call_high
+            pos_or_panic!(0.05), // open_fee_short_call
+            pos_or_panic!(0.05), // close_fee_short_call
+            pos_or_panic!(0.05), // open_fee_short_call_low
+            pos_or_panic!(0.05), // close_fee_short_call_low
+            pos_or_panic!(0.05), // open_fee_short_call_high
+            pos_or_panic!(0.05), // close_fee_short_call_high
         );
         let scaled_profit = butterfly
-            .calculate_profit_at(&pos!(85.0))
+            .calculate_profit_at(&pos_or_panic!(85.0))
             .unwrap()
             .to_f64()
             .unwrap();
@@ -1551,12 +1562,12 @@ mod tests_short_butterfly_profit {
     fn test_profit_symmetry() {
         let butterfly = create_test();
         let low_extreme_profit = butterfly
-            .calculate_profit_at(&pos!(85.0))
+            .calculate_profit_at(&pos_or_panic!(85.0))
             .unwrap()
             .to_f64()
             .unwrap();
         let high_extreme_profit = butterfly
-            .calculate_profit_at(&pos!(115.0))
+            .calculate_profit_at(&pos_or_panic!(115.0))
             .unwrap()
             .to_f64()
             .unwrap();
@@ -1568,16 +1579,16 @@ mod tests_short_butterfly_profit {
     fn test_profit_with_fees() {
         let butterfly = ShortButterflySpread::new(
             "TEST".to_string(),
-            pos!(100.0),
-            pos!(90.0),
-            pos!(100.0),
-            pos!(110.0),
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(0.2),
+            Positive::HUNDRED,
+            pos_or_panic!(90.0),
+            Positive::HUNDRED,
+            pos_or_panic!(110.0),
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.2),
             dec!(0.05),
             Positive::ZERO,
-            pos!(1.0),
-            pos!(3.0),
+            Positive::ONE,
+            pos_or_panic!(3.0),
             Positive::TWO,
             Positive::ONE,
             Positive::ZERO, // open_fee_short_call
@@ -1590,12 +1601,12 @@ mod tests_short_butterfly_profit {
 
         let base_butterfly = create_test();
         let profit_without_fees = butterfly
-            .calculate_profit_at(&pos!(85.0))
+            .calculate_profit_at(&pos_or_panic!(85.0))
             .unwrap()
             .to_f64()
             .unwrap();
         let profit_with_fees = base_butterfly
-            .calculate_profit_at(&pos!(85.0))
+            .calculate_profit_at(&pos_or_panic!(85.0))
             .unwrap()
             .to_f64()
             .unwrap();
@@ -1606,10 +1617,12 @@ mod tests_short_butterfly_profit {
 #[cfg(test)]
 mod tests_short_butterfly_delta {
     use super::*;
+
+    use crate::assert_decimal_eq;
     use crate::model::types::OptionStyle;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
-    use crate::{assert_decimal_eq, assert_pos_relative_eq, pos};
+    use positive::assert_pos_relative_eq;
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
     use std::str::FromStr;
@@ -1617,34 +1630,34 @@ mod tests_short_butterfly_delta {
     fn get_strategy(underlying_price: Positive) -> ShortButterflySpread {
         ShortButterflySpread::new(
             "SP500".to_string(),
-            underlying_price, // underlying_price
-            pos!(5700.0),     // short_strike_itm
-            pos!(5780.0),     // short_strike
-            pos!(5850.0),     // short_strike_otm
-            ExpirationDate::Days(pos!(2.0)),
-            pos!(0.18),     // implied_volatility
-            Decimal::ZERO,  // risk_free_rate
-            Positive::ZERO, // dividend_yield
-            pos!(1.0),      // short quantity
-            pos!(119.01),   // premium_short
-            pos!(66.0),     // premium_short
-            pos!(29.85),    // open_fee_short
-            pos!(0.05),     // open_fee_short_call
-            pos!(0.05),     // close_fee_short_call
-            pos!(0.05),     // open_fee_short_call_low
-            pos!(0.05),     // close_fee_short_call_low
-            pos!(0.05),     // open_fee_short_call_high
-            pos!(0.05),     // close_fee_short_call_high
+            underlying_price,      // underlying_price
+            pos_or_panic!(5700.0), // short_strike_itm
+            pos_or_panic!(5780.0), // short_strike
+            pos_or_panic!(5850.0), // short_strike_otm
+            ExpirationDate::Days(Positive::TWO),
+            pos_or_panic!(0.18),   // implied_volatility
+            Decimal::ZERO,         // risk_free_rate
+            Positive::ZERO,        // dividend_yield
+            Positive::ONE,         // short quantity
+            pos_or_panic!(119.01), // premium_short
+            pos_or_panic!(66.0),   // premium_short
+            pos_or_panic!(29.85),  // open_fee_short
+            pos_or_panic!(0.05),   // open_fee_short_call
+            pos_or_panic!(0.05),   // close_fee_short_call
+            pos_or_panic!(0.05),   // open_fee_short_call_low
+            pos_or_panic!(0.05),   // close_fee_short_call_low
+            pos_or_panic!(0.05),   // open_fee_short_call_high
+            pos_or_panic!(0.05),   // close_fee_short_call_high
         )
     }
 
     #[test]
     fn create_test_reducing_adjustments() {
-        let strategy = get_strategy(pos!(5781.88));
+        let strategy = get_strategy(pos_or_panic!(5781.88));
         let size = dec!(-0.0259);
         let delta =
             Positive::new_decimal(Decimal::from_str("0.05072646985065364").unwrap()).unwrap();
-        let k = pos!(5780.0);
+        let k = pos_or_panic!(5780.0);
         assert_decimal_eq!(
             strategy.delta_neutrality().unwrap().net_delta,
             size,
@@ -1681,12 +1694,12 @@ mod tests_short_butterfly_delta {
 
     #[test]
     fn create_test_increasing_adjustments() {
-        let strategy = get_strategy(pos!(5881.88));
+        let strategy = get_strategy(pos_or_panic!(5881.88));
         let size = dec!(0.16077612);
-        let delta1 = pos!(0.16224251196539);
-        let delta2 = pos!(0.17740792537439);
-        let k1 = pos!(5700.0);
-        let k2 = pos!(5780.0);
+        let delta1 = pos_or_panic!(0.16224251196539);
+        let delta2 = pos_or_panic!(0.17740792537439);
+        let k1 = pos_or_panic!(5700.0);
+        let k2 = pos_or_panic!(5780.0);
         assert_decimal_eq!(
             strategy.delta_neutrality().unwrap().net_delta,
             size,
@@ -1737,7 +1750,7 @@ mod tests_short_butterfly_delta {
 
     #[test]
     fn create_test_no_adjustments() {
-        let strategy = get_strategy(pos!(5788.55));
+        let strategy = get_strategy(pos_or_panic!(5788.55));
 
         assert_decimal_eq!(
             strategy.delta_neutrality().unwrap().net_delta,
@@ -1753,43 +1766,45 @@ mod tests_short_butterfly_delta {
 #[cfg(test)]
 mod tests_short_butterfly_delta_size {
     use super::*;
+    use positive::assert_pos_relative_eq;
+
+    use crate::assert_decimal_eq;
     use crate::model::types::OptionStyle;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
-    use crate::{assert_decimal_eq, assert_pos_relative_eq, pos};
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
 
     fn get_strategy(underlying_price: Positive) -> ShortButterflySpread {
         ShortButterflySpread::new(
             "SP500".to_string(),
-            underlying_price, // underlying_price
-            pos!(5700.0),     // short_strike_itm
-            pos!(5780.0),     // short_strike
-            pos!(5850.0),     // short_strike_otm
-            ExpirationDate::Days(pos!(2.0)),
-            pos!(0.18),     // implied_volatility
-            dec!(0.05),     // risk_free_rate
-            Positive::ZERO, // dividend_yield
-            pos!(3.0),      // short quantity
-            pos!(119.01),   // premium_short
-            pos!(66.0),     // premium_short
-            pos!(29.85),    // open_fee_short
-            pos!(0.05),     // open_fee_short_call
-            pos!(0.05),     // close_fee_short_call
-            pos!(0.05),     // open_fee_short_call_low
-            pos!(0.05),     // close_fee_short_call_low
-            pos!(0.05),     // open_fee_short_call_high
-            pos!(0.05),     // close_fee_short_call_high
+            underlying_price,      // underlying_price
+            pos_or_panic!(5700.0), // short_strike_itm
+            pos_or_panic!(5780.0), // short_strike
+            pos_or_panic!(5850.0), // short_strike_otm
+            ExpirationDate::Days(Positive::TWO),
+            pos_or_panic!(0.18),   // implied_volatility
+            dec!(0.05),            // risk_free_rate
+            Positive::ZERO,        // dividend_yield
+            pos_or_panic!(3.0),    // short quantity
+            pos_or_panic!(119.01), // premium_short
+            pos_or_panic!(66.0),   // premium_short
+            pos_or_panic!(29.85),  // open_fee_short
+            pos_or_panic!(0.05),   // open_fee_short_call
+            pos_or_panic!(0.05),   // close_fee_short_call
+            pos_or_panic!(0.05),   // open_fee_short_call_low
+            pos_or_panic!(0.05),   // close_fee_short_call_low
+            pos_or_panic!(0.05),   // open_fee_short_call_high
+            pos_or_panic!(0.05),   // close_fee_short_call_high
         )
     }
 
     #[test]
     fn create_test_reducing_adjustments() {
-        let strategy = get_strategy(pos!(5781.88));
+        let strategy = get_strategy(pos_or_panic!(5781.88));
         let size = dec!(-0.0593);
-        let delta = pos!(0.11409430831966512);
-        let k = pos!(5780.0);
+        let delta = pos_or_panic!(0.11409430831966512);
+        let k = pos_or_panic!(5780.0);
         assert_decimal_eq!(
             strategy.delta_neutrality().unwrap().net_delta,
             size,
@@ -1826,12 +1841,12 @@ mod tests_short_butterfly_delta_size {
 
     #[test]
     fn create_test_increasing_adjustments() {
-        let strategy = get_strategy(pos!(5881.88));
+        let strategy = get_strategy(pos_or_panic!(5881.88));
         let size = dec!(0.4787);
-        let delta1 = pos!(0.4828726371186378);
-        let delta2 = pos!(0.5262977508284383);
-        let k1 = pos!(5700.0);
-        let k2 = pos!(5780.0);
+        let delta1 = pos_or_panic!(0.4828726371186378);
+        let delta2 = pos_or_panic!(0.5262977508284383);
+        let k1 = pos_or_panic!(5700.0);
+        let k2 = pos_or_panic!(5780.0);
         assert_decimal_eq!(
             strategy.delta_neutrality().unwrap().net_delta,
             size,
@@ -1882,7 +1897,7 @@ mod tests_short_butterfly_delta_size {
 
     #[test]
     fn create_test_no_adjustments() {
-        let strategy = get_strategy(pos!(5786.99));
+        let strategy = get_strategy(pos_or_panic!(5786.99));
 
         assert_decimal_eq!(
             strategy.delta_neutrality().unwrap().net_delta,
@@ -1898,32 +1913,33 @@ mod tests_short_butterfly_delta_size {
 #[cfg(test)]
 mod tests_adjust_option_position_short {
     use super::*;
+
     use crate::model::types::{OptionStyle, Side};
-    use crate::pos;
+
     use rust_decimal_macros::dec;
 
     // Helper function to create a test strategy
     fn create_test_strategy() -> ShortButterflySpread {
         ShortButterflySpread::new(
             "SP500".to_string(),
-            pos!(5781.88), // underlying_price
-            pos!(5700.0),  // short_strike_itm
-            pos!(5780.0),  // short_strike
-            pos!(5850.0),  // short_strike_otm
-            ExpirationDate::Days(pos!(2.0)),
-            pos!(0.18),     // implied_volatility
-            dec!(0.05),     // risk_free_rate
-            Positive::ZERO, // dividend_yield
-            pos!(1.0),      // short quantity
-            pos!(119.01),   // premium_short
-            pos!(66.0),     // premium_short
-            pos!(29.85),    // open_fee_short
-            pos!(0.05),
-            pos!(0.05),
-            pos!(0.05),
-            pos!(0.05),
-            pos!(0.05),
-            pos!(0.05),
+            pos_or_panic!(5781.88), // underlying_price
+            pos_or_panic!(5700.0),  // short_strike_itm
+            pos_or_panic!(5780.0),  // short_strike
+            pos_or_panic!(5850.0),  // short_strike_otm
+            ExpirationDate::Days(Positive::TWO),
+            pos_or_panic!(0.18),   // implied_volatility
+            dec!(0.05),            // risk_free_rate
+            Positive::ZERO,        // dividend_yield
+            Positive::ONE,         // short quantity
+            pos_or_panic!(119.01), // premium_short
+            pos_or_panic!(66.0),   // premium_short
+            pos_or_panic!(29.85),  // open_fee_short
+            pos_or_panic!(0.05),
+            pos_or_panic!(0.05),
+            pos_or_panic!(0.05),
+            pos_or_panic!(0.05),
+            pos_or_panic!(0.05),
+            pos_or_panic!(0.05),
         )
     }
 
@@ -1931,11 +1947,11 @@ mod tests_adjust_option_position_short {
     fn test_adjust_existing_call_position() {
         let mut strategy = create_test_strategy();
         let initial_quantity = strategy.short_call_low.option.quantity;
-        let adjustment = pos!(1.0);
+        let adjustment = Positive::ONE;
 
         let result = strategy.adjust_option_position(
             adjustment.to_dec(),
-            &pos!(5700.0),
+            &pos_or_panic!(5700.0),
             &OptionStyle::Call,
             &Side::Short,
         );
@@ -1951,11 +1967,11 @@ mod tests_adjust_option_position_short {
     fn test_adjust_existing_short_call_position() {
         let mut strategy = create_test_strategy();
         let initial_quantity = strategy.long_call.option.quantity;
-        let adjustment = pos!(1.0);
+        let adjustment = Positive::ONE;
 
         let result = strategy.adjust_option_position(
             adjustment.to_dec(),
-            &pos!(5780.0),
+            &pos_or_panic!(5780.0),
             &OptionStyle::Call,
             &Side::Long,
         );
@@ -1974,7 +1990,7 @@ mod tests_adjust_option_position_short {
         // Try to adjust a non-existent short call position
         let result = strategy.adjust_option_position(
             Decimal::ONE,
-            &pos!(5780.0),
+            &pos_or_panic!(5780.0),
             &OptionStyle::Put,
             &Side::Long,
         );
@@ -1992,7 +2008,7 @@ mod tests_adjust_option_position_short {
         // Try to adjust position with wrong strike price
         let result = strategy.adjust_option_position(
             Decimal::ONE,
-            &pos!(100.0), // Invalid strike price
+            &Positive::HUNDRED, // Invalid strike price
             &OptionStyle::Call,
             &Side::Short,
         );
@@ -2007,7 +2023,7 @@ mod tests_adjust_option_position_short {
 
         let result = strategy.adjust_option_position(
             Decimal::ZERO,
-            &pos!(5850.0),
+            &pos_or_panic!(5850.0),
             &OptionStyle::Call,
             &Side::Short,
         );
@@ -2020,33 +2036,34 @@ mod tests_adjust_option_position_short {
 #[cfg(test)]
 mod tests_short_butterfly_position_management {
     use super::*;
+
     use crate::error::position::PositionValidationErrorKind;
     use crate::model::types::{OptionStyle, Side};
-    use crate::pos;
+
     use rust_decimal_macros::dec;
     use tracing::error;
 
     fn create_test_butterfly() -> ShortButterflySpread {
         ShortButterflySpread::new(
             "SP500".to_string(),
-            pos!(5781.88), // underlying_price
-            pos!(5700.0),  // short_strike_itm
-            pos!(5780.0),  // short_strike
-            pos!(5850.0),  // short_strike_otm
-            ExpirationDate::Days(pos!(2.0)),
-            pos!(0.18),     // implied_volatility
-            dec!(0.05),     // risk_free_rate
-            Positive::ZERO, // dividend_yield
-            pos!(1.0),      // short quantity
-            pos!(119.01),   // premium_short
-            pos!(66.0),     // premium_short
-            pos!(29.85),    // open_fee_short
-            pos!(0.05),
-            pos!(0.05),
-            pos!(0.05),
-            pos!(0.05),
-            pos!(0.05),
-            pos!(0.05),
+            pos_or_panic!(5781.88), // underlying_price
+            pos_or_panic!(5700.0),  // short_strike_itm
+            pos_or_panic!(5780.0),  // short_strike
+            pos_or_panic!(5850.0),  // short_strike_otm
+            ExpirationDate::Days(Positive::TWO),
+            pos_or_panic!(0.18),   // implied_volatility
+            dec!(0.05),            // risk_free_rate
+            Positive::ZERO,        // dividend_yield
+            Positive::ONE,         // short quantity
+            pos_or_panic!(119.01), // premium_short
+            pos_or_panic!(66.0),   // premium_short
+            pos_or_panic!(29.85),  // open_fee_short
+            pos_or_panic!(0.05),
+            pos_or_panic!(0.05),
+            pos_or_panic!(0.05),
+            pos_or_panic!(0.05),
+            pos_or_panic!(0.05),
+            pos_or_panic!(0.05),
         )
     }
 
@@ -2055,21 +2072,23 @@ mod tests_short_butterfly_position_management {
         let mut butterfly = create_test_butterfly();
 
         // Test getting short call position
-        let call_position = butterfly.get_position(&OptionStyle::Call, &Side::Long, &pos!(5780.0));
+        let call_position =
+            butterfly.get_position(&OptionStyle::Call, &Side::Long, &pos_or_panic!(5780.0));
         assert!(call_position.is_ok());
         let positions = call_position.unwrap();
         assert_eq!(positions.len(), 1);
-        assert_eq!(positions[0].option.strike_price, pos!(5780.0));
+        assert_eq!(positions[0].option.strike_price, pos_or_panic!(5780.0));
         assert_eq!(positions[0].option.option_style, OptionStyle::Call);
         assert_eq!(positions[0].option.side, Side::Long);
 
         // Test getting short put position
-        let put_position = butterfly.get_position(&OptionStyle::Put, &Side::Short, &pos!(2560.0));
+        let put_position =
+            butterfly.get_position(&OptionStyle::Put, &Side::Short, &pos_or_panic!(2560.0));
         assert!(put_position.is_err());
 
         // Test getting non-existent position
         let invalid_position =
-            butterfly.get_position(&OptionStyle::Call, &Side::Short, &pos!(2715.0));
+            butterfly.get_position(&OptionStyle::Call, &Side::Short, &pos_or_panic!(2715.0));
         assert!(invalid_position.is_err());
         match invalid_position {
             Err(PositionError::ValidationError(
@@ -2093,14 +2112,14 @@ mod tests_short_butterfly_position_management {
 
         // Modify short call position
         let mut modified_call = butterfly.long_call.clone();
-        modified_call.option.quantity = pos!(2.0);
+        modified_call.option.quantity = Positive::TWO;
         let result = butterfly.modify_position(&modified_call);
         assert!(result.is_ok());
-        assert_eq!(butterfly.long_call.option.quantity, pos!(2.0));
+        assert_eq!(butterfly.long_call.option.quantity, Positive::TWO);
 
         // Test modifying with invalid position
         let mut invalid_position = butterfly.long_call.clone();
-        invalid_position.option.strike_price = pos!(95.0);
+        invalid_position.option.strike_price = pos_or_panic!(95.0);
         let result = butterfly.modify_position(&invalid_position);
         assert!(result.is_err());
         match result {
@@ -2121,8 +2140,8 @@ mod tests_short_butterfly_position_management {
 #[cfg(test)]
 mod tests_short_butterfly_spread_constructor {
     use super::*;
+
     use crate::model::utils::create_sample_position;
-    use crate::pos;
 
     #[test]
     fn test_get_strategy_valid() {
@@ -2130,26 +2149,26 @@ mod tests_short_butterfly_spread_constructor {
             create_sample_position(
                 OptionStyle::Call,
                 Side::Short,
-                pos!(90.0),
-                pos!(1.0),
-                pos!(95.0),
-                pos!(0.2),
+                pos_or_panic!(90.0),
+                Positive::ONE,
+                pos_or_panic!(95.0),
+                pos_or_panic!(0.2),
             ),
             create_sample_position(
                 OptionStyle::Call,
                 Side::Long,
-                pos!(90.0),
-                pos!(1.0),
-                pos!(100.0),
-                pos!(0.2),
+                pos_or_panic!(90.0),
+                Positive::ONE,
+                Positive::HUNDRED,
+                pos_or_panic!(0.2),
             ),
             create_sample_position(
                 OptionStyle::Call,
                 Side::Short,
-                pos!(90.0),
-                pos!(1.0),
-                pos!(105.0),
-                pos!(0.2),
+                pos_or_panic!(90.0),
+                Positive::ONE,
+                pos_or_panic!(105.0),
+                pos_or_panic!(0.2),
             ),
         ];
 
@@ -2157,9 +2176,15 @@ mod tests_short_butterfly_spread_constructor {
         assert!(result.is_ok());
 
         let strategy = result.unwrap();
-        assert_eq!(strategy.short_call_low.option.strike_price, pos!(95.0));
-        assert_eq!(strategy.long_call.option.strike_price, pos!(100.0));
-        assert_eq!(strategy.short_call_high.option.strike_price, pos!(105.0));
+        assert_eq!(
+            strategy.short_call_low.option.strike_price,
+            pos_or_panic!(95.0)
+        );
+        assert_eq!(strategy.long_call.option.strike_price, Positive::HUNDRED);
+        assert_eq!(
+            strategy.short_call_high.option.strike_price,
+            pos_or_panic!(105.0)
+        );
     }
 
     #[test]
@@ -2168,18 +2193,18 @@ mod tests_short_butterfly_spread_constructor {
             create_sample_position(
                 OptionStyle::Call,
                 Side::Short,
-                pos!(90.0),
-                pos!(1.0),
-                pos!(95.0),
-                pos!(0.2),
+                pos_or_panic!(90.0),
+                Positive::ONE,
+                pos_or_panic!(95.0),
+                pos_or_panic!(0.2),
             ),
             create_sample_position(
                 OptionStyle::Call,
                 Side::Long,
-                pos!(90.0),
-                pos!(1.0),
-                pos!(100.0),
-                pos!(0.2),
+                pos_or_panic!(90.0),
+                Positive::ONE,
+                Positive::HUNDRED,
+                pos_or_panic!(0.2),
             ),
         ];
 
@@ -2196,27 +2221,27 @@ mod tests_short_butterfly_spread_constructor {
         let mut option1 = create_sample_position(
             OptionStyle::Call,
             Side::Short,
-            pos!(90.0),
-            pos!(1.0),
-            pos!(95.0),
-            pos!(0.2),
+            pos_or_panic!(90.0),
+            Positive::ONE,
+            pos_or_panic!(95.0),
+            pos_or_panic!(0.2),
         );
         option1.option.option_style = OptionStyle::Put;
         let option2 = create_sample_position(
             OptionStyle::Call,
             Side::Long,
-            pos!(90.0),
-            pos!(1.0),
-            pos!(100.0),
-            pos!(0.2),
+            pos_or_panic!(90.0),
+            Positive::ONE,
+            Positive::HUNDRED,
+            pos_or_panic!(0.2),
         );
         let option3 = create_sample_position(
             OptionStyle::Call,
             Side::Short,
-            pos!(90.0),
-            pos!(1.0),
-            pos!(105.0),
-            pos!(0.2),
+            pos_or_panic!(90.0),
+            Positive::ONE,
+            pos_or_panic!(105.0),
+            pos_or_panic!(0.2),
         );
 
         let options = vec![option1, option2, option3];
@@ -2234,26 +2259,26 @@ mod tests_short_butterfly_spread_constructor {
             create_sample_position(
                 OptionStyle::Call,
                 Side::Long,
-                pos!(90.0),
-                pos!(1.0),
-                pos!(95.0),
-                pos!(0.2),
+                pos_or_panic!(90.0),
+                Positive::ONE,
+                pos_or_panic!(95.0),
+                pos_or_panic!(0.2),
             ),
             create_sample_position(
                 OptionStyle::Call,
                 Side::Long,
-                pos!(90.0),
-                pos!(1.0),
-                pos!(100.0),
-                pos!(0.2),
+                pos_or_panic!(90.0),
+                Positive::ONE,
+                Positive::HUNDRED,
+                pos_or_panic!(0.2),
             ),
             create_sample_position(
                 OptionStyle::Call,
                 Side::Long,
-                pos!(90.0),
-                pos!(1.0),
-                pos!(105.0),
-                pos!(0.2),
+                pos_or_panic!(90.0),
+                Positive::ONE,
+                pos_or_panic!(105.0),
+                pos_or_panic!(0.2),
             ),
         ];
 
@@ -2272,26 +2297,26 @@ mod tests_short_butterfly_spread_constructor {
             create_sample_position(
                 OptionStyle::Call,
                 Side::Short,
-                pos!(90.0),
-                pos!(1.0),
-                pos!(95.0),
-                pos!(0.2),
+                pos_or_panic!(90.0),
+                Positive::ONE,
+                pos_or_panic!(95.0),
+                pos_or_panic!(0.2),
             ),
             create_sample_position(
                 OptionStyle::Call,
                 Side::Long,
-                pos!(90.0),
-                pos!(1.0),
-                pos!(101.0),
-                pos!(0.2),
+                pos_or_panic!(90.0),
+                Positive::ONE,
+                pos_or_panic!(101.0),
+                pos_or_panic!(0.2),
             ),
             create_sample_position(
                 OptionStyle::Call,
                 Side::Short,
-                pos!(90.0),
-                pos!(1.0),
-                pos!(105.0),
-                pos!(0.2),
+                pos_or_panic!(90.0),
+                Positive::ONE,
+                pos_or_panic!(105.0),
+                pos_or_panic!(0.2),
             ),
         ];
 
@@ -2308,31 +2333,31 @@ mod tests_short_butterfly_spread_constructor {
         let mut option1 = create_sample_position(
             OptionStyle::Call,
             Side::Short,
-            pos!(90.0),
-            pos!(1.0),
-            pos!(95.0),
-            pos!(0.2),
+            pos_or_panic!(90.0),
+            Positive::ONE,
+            pos_or_panic!(95.0),
+            pos_or_panic!(0.2),
         );
         let mut option2 = create_sample_position(
             OptionStyle::Call,
             Side::Long,
-            pos!(90.0),
-            pos!(1.0),
-            pos!(100.0),
-            pos!(0.2),
+            pos_or_panic!(90.0),
+            Positive::ONE,
+            Positive::HUNDRED,
+            pos_or_panic!(0.2),
         );
         let mut option3 = create_sample_position(
             OptionStyle::Call,
             Side::Short,
-            pos!(90.0),
-            pos!(1.0),
-            pos!(105.0),
-            pos!(0.2),
+            pos_or_panic!(90.0),
+            Positive::ONE,
+            pos_or_panic!(105.0),
+            pos_or_panic!(0.2),
         );
 
-        option1.option.expiration_date = ExpirationDate::Days(pos!(30.0));
-        option2.option.expiration_date = ExpirationDate::Days(pos!(60.0));
-        option3.option.expiration_date = ExpirationDate::Days(pos!(30.0));
+        option1.option.expiration_date = ExpirationDate::Days(pos_or_panic!(30.0));
+        option2.option.expiration_date = ExpirationDate::Days(pos_or_panic!(60.0));
+        option3.option.expiration_date = ExpirationDate::Days(pos_or_panic!(30.0));
 
         let options = vec![option1, option2, option3];
         let result = ShortButterflySpread::get_strategy(&options);
@@ -2347,8 +2372,9 @@ mod tests_short_butterfly_spread_constructor {
 #[cfg(test)]
 mod tests_short_butterfly_spread_pnl {
     use super::*;
+
+    use crate::assert_decimal_eq;
     use crate::model::utils::create_sample_position;
-    use crate::{assert_decimal_eq, pos};
     use rust_decimal_macros::dec;
 
     fn create_test_short_butterfly_spread() -> Result<ShortButterflySpread, StrategyError> {
@@ -2356,30 +2382,30 @@ mod tests_short_butterfly_spread_pnl {
         let lower_long_call = create_sample_position(
             OptionStyle::Call,
             Side::Short,
-            pos!(100.0), // Underlying price
-            pos!(1.0),   // Quantity
-            pos!(95.0),  // Lower strike price
-            pos!(0.2),   // Implied volatility
+            Positive::HUNDRED,   // Underlying price
+            Positive::ONE,       // Quantity
+            pos_or_panic!(95.0), // Lower strike price
+            pos_or_panic!(0.2),  // Implied volatility
         );
 
         // Create middle short call
         let middle_long_call = create_sample_position(
             OptionStyle::Call,
             Side::Long,
-            pos!(100.0), // Same underlying price
-            pos!(1.0),   // Quantity
-            pos!(100.0), // Middle strike price (ATM)
-            pos!(0.2),   // Implied volatility
+            Positive::HUNDRED,  // Same underlying price
+            Positive::ONE,      // Quantity
+            Positive::HUNDRED,  // Middle strike price (ATM)
+            pos_or_panic!(0.2), // Implied volatility
         );
 
         // Create higher short call
         let higher_long_call = create_sample_position(
             OptionStyle::Call,
             Side::Short,
-            pos!(100.0), // Same underlying price
-            pos!(1.0),   // Quantity
-            pos!(105.0), // Higher strike price
-            pos!(0.2),   // Implied volatility
+            Positive::HUNDRED,    // Same underlying price
+            Positive::ONE,        // Quantity
+            pos_or_panic!(105.0), // Higher strike price
+            pos_or_panic!(0.2),   // Implied volatility
         );
 
         ShortButterflySpread::get_strategy(&[lower_long_call, middle_long_call, higher_long_call])
@@ -2388,9 +2414,9 @@ mod tests_short_butterfly_spread_pnl {
     #[test]
     fn test_calculate_pnl_below_strikes() {
         let spread = create_test_short_butterfly_spread().unwrap();
-        let market_price = pos!(90.0); // Below all strikes
-        let expiration_date = ExpirationDate::Days(pos!(20.0));
-        let implied_volatility = pos!(0.2);
+        let market_price = pos_or_panic!(90.0); // Below all strikes
+        let expiration_date = ExpirationDate::Days(pos_or_panic!(20.0));
+        let implied_volatility = pos_or_panic!(0.2);
 
         let result = spread.calculate_pnl(&market_price, expiration_date, &implied_volatility);
         assert!(result.is_ok());
@@ -2406,9 +2432,9 @@ mod tests_short_butterfly_spread_pnl {
     #[test]
     fn test_calculate_pnl_between_strikes() {
         let spread = create_test_short_butterfly_spread().unwrap();
-        let market_price = pos!(99.0);
-        let expiration_date = ExpirationDate::Days(pos!(20.0));
-        let implied_volatility = pos!(0.1);
+        let market_price = pos_or_panic!(99.0);
+        let expiration_date = ExpirationDate::Days(pos_or_panic!(20.0));
+        let implied_volatility = pos_or_panic!(0.1);
 
         let result = spread.calculate_pnl(&market_price, expiration_date, &implied_volatility);
         assert!(result.is_ok());
@@ -2424,9 +2450,9 @@ mod tests_short_butterfly_spread_pnl {
     #[test]
     fn test_calculate_pnl_above_strikes() {
         let spread = create_test_short_butterfly_spread().unwrap();
-        let market_price = pos!(90.0);
-        let expiration_date = ExpirationDate::Days(pos!(20.0));
-        let implied_volatility = pos!(0.2);
+        let market_price = pos_or_panic!(90.0);
+        let expiration_date = ExpirationDate::Days(pos_or_panic!(20.0));
+        let implied_volatility = pos_or_panic!(0.2);
 
         let result = spread.calculate_pnl(&market_price, expiration_date, &implied_volatility);
         assert!(result.is_ok());
@@ -2442,7 +2468,7 @@ mod tests_short_butterfly_spread_pnl {
     #[test]
     fn test_calculate_pnl_at_expiration_max_profit() {
         let spread = create_test_short_butterfly_spread().unwrap();
-        let underlying_price = pos!(95.0); // At or below lowest strike
+        let underlying_price = pos_or_panic!(95.0); // At or below lowest strike
 
         let result = spread.calculate_pnl_at_expiration(&underlying_price);
         assert!(result.is_ok());
@@ -2457,7 +2483,7 @@ mod tests_short_butterfly_spread_pnl {
     #[test]
     fn test_calculate_pnl_at_expiration_max_loss() {
         let spread = create_test_short_butterfly_spread().unwrap();
-        let underlying_price = pos!(110.0); // Above highest strike
+        let underlying_price = pos_or_panic!(110.0); // Above highest strike
 
         let result = spread.calculate_pnl_at_expiration(&underlying_price);
         assert!(result.is_ok());
@@ -2472,7 +2498,7 @@ mod tests_short_butterfly_spread_pnl {
     #[test]
     fn test_calculate_pnl_at_expiration_at_middle_strike() {
         let spread = create_test_short_butterfly_spread().unwrap();
-        let underlying_price = pos!(100.0); // At middle strike
+        let underlying_price = Positive::HUNDRED; // At middle strike
 
         let result = spread.calculate_pnl_at_expiration(&underlying_price);
         assert!(result.is_ok());
@@ -2488,40 +2514,41 @@ mod tests_short_butterfly_spread_pnl {
 #[cfg(test)]
 mod tests_butterfly_strategies {
     use super::*;
+
     use crate::constants::ZERO;
     use crate::model::ExpirationDate;
-    use crate::pos;
+
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
     fn create_test_short() -> ShortButterflySpread {
         ShortButterflySpread::new(
             "TEST".to_string(),
-            pos!(100.0), // underlying_price
-            pos!(90.0),  // low_strike
-            pos!(100.0), // middle_strike
-            pos!(110.0), // high_strike
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(0.2),      // implied_volatility
-            dec!(0.05),     // risk_free_rate
-            Positive::ZERO, // dividend_yield
-            pos!(1.0),      // quantity
-            pos!(10.0),     // premium_low
-            pos!(5.0),      // premium_middle
-            Positive::ONE,  // premium_high
-            pos!(0.05),     // open_fee_short_call
-            pos!(0.05),     // close_fee_short_call
-            pos!(0.05),     // open_fee_short_call_low
-            pos!(0.05),     // close_fee_short_call_low
-            pos!(0.05),     // open_fee_short_call_high
-            pos!(0.05),     // close_fee_short_call_high
+            Positive::HUNDRED,    // underlying_price
+            pos_or_panic!(90.0),  // low_strike
+            Positive::HUNDRED,    // middle_strike
+            pos_or_panic!(110.0), // high_strike
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.2),  // implied_volatility
+            dec!(0.05),          // risk_free_rate
+            Positive::ZERO,      // dividend_yield
+            Positive::ONE,       // quantity
+            pos_or_panic!(10.0), // premium_low
+            pos_or_panic!(5.0),  // premium_middle
+            Positive::ONE,       // premium_high
+            pos_or_panic!(0.05), // open_fee_short_call
+            pos_or_panic!(0.05), // close_fee_short_call
+            pos_or_panic!(0.05), // open_fee_short_call_low
+            pos_or_panic!(0.05), // close_fee_short_call_low
+            pos_or_panic!(0.05), // open_fee_short_call_high
+            pos_or_panic!(0.05), // close_fee_short_call_high
         )
     }
 
     #[test]
     fn test_underlying_price() {
         let short_butterfly = create_test_short();
-        assert_eq!(short_butterfly.get_underlying_price(), &pos!(100.0));
+        assert_eq!(short_butterfly.get_underlying_price(), &Positive::HUNDRED);
     }
 
     #[test]
@@ -2532,11 +2559,11 @@ mod tests_butterfly_strategies {
                 OptionType::European,
                 Side::Short,
                 "TEST".to_string(),
-                pos!(85.0),
-                ExpirationDate::Days(pos!(30.0)),
-                pos!(0.2),
-                pos!(1.0),
-                pos!(100.0),
+                pos_or_panic!(85.0),
+                ExpirationDate::Days(pos_or_panic!(30.0)),
+                pos_or_panic!(0.2),
+                Positive::ONE,
+                Positive::HUNDRED,
                 dec!(0.05),
                 OptionStyle::Call,
                 Positive::ZERO,
@@ -2553,7 +2580,10 @@ mod tests_butterfly_strategies {
         butterfly
             .add_position(&new_short.clone())
             .expect("Failed to add position");
-        assert_eq!(butterfly.short_call_low.option.strike_price, pos!(85.0));
+        assert_eq!(
+            butterfly.short_call_low.option.strike_price,
+            pos_or_panic!(85.0)
+        );
     }
 
     #[test]
@@ -2581,16 +2611,16 @@ mod tests_butterfly_strategies {
     fn test_fees() {
         let butterfly = ShortButterflySpread::new(
             "TEST".to_string(),
-            pos!(100.0),
-            pos!(90.0),
-            pos!(100.0),
-            pos!(110.0),
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(0.2),
+            Positive::HUNDRED,
+            pos_or_panic!(90.0),
+            Positive::HUNDRED,
+            pos_or_panic!(110.0),
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.2),
             dec!(0.05),
             Positive::ZERO,
-            pos!(1.0),
-            pos!(3.0),
+            Positive::ONE,
+            pos_or_panic!(3.0),
             Positive::TWO,
             Positive::ONE,
             Positive::ONE, // open_fee_short_call
@@ -2607,16 +2637,16 @@ mod tests_butterfly_strategies {
     fn test_fees_bis() {
         let butterfly = ShortButterflySpread::new(
             "TEST".to_string(),
-            pos!(100.0),
-            pos!(90.0),
-            pos!(100.0),
-            pos!(110.0),
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(0.2),
+            Positive::HUNDRED,
+            pos_or_panic!(90.0),
+            Positive::HUNDRED,
+            pos_or_panic!(110.0),
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.2),
             dec!(0.05),
             Positive::ZERO,
-            pos!(2.0),
-            pos!(3.0),
+            Positive::TWO,
+            pos_or_panic!(3.0),
             Positive::TWO,
             Positive::ONE,
             Positive::ONE, // open_fee_short_call
@@ -2627,7 +2657,7 @@ mod tests_butterfly_strategies {
             Positive::ONE, // close_fee_short_call_high
         );
 
-        assert_eq!(butterfly.get_fees().unwrap(), pos!(16.0));
+        assert_eq!(butterfly.get_fees().unwrap(), pos_or_panic!(16.0));
     }
 
     #[test]
@@ -2660,28 +2690,28 @@ mod tests_butterfly_strategies {
     fn test_profits_with_quantities() {
         let short_butterfly = ShortButterflySpread::new(
             "SP500".to_string(),
-            pos!(5781.88), // underlying_price
-            pos!(5700.0),  // short_strike_itm
-            pos!(5780.0),  // long_strike
-            pos!(5850.0),  // short_strike_otm
-            ExpirationDate::Days(pos!(2.0)),
-            pos!(0.18),     // implied_volatility
-            dec!(0.05),     // risk_free_rate
-            Positive::ZERO, // dividend_yield
-            pos!(1.1),      // long quantity
-            pos!(119.01),   // premium_long
-            pos!(66.0),     // premium_short
-            pos!(29.85),    // open_fee_long
-            pos!(0.05),
-            pos!(0.05),
-            pos!(0.05),
-            pos!(0.05),
-            pos!(0.05),
-            pos!(0.05),
+            pos_or_panic!(5781.88), // underlying_price
+            pos_or_panic!(5700.0),  // short_strike_itm
+            pos_or_panic!(5780.0),  // long_strike
+            pos_or_panic!(5850.0),  // short_strike_otm
+            ExpirationDate::Days(Positive::TWO),
+            pos_or_panic!(0.18),   // implied_volatility
+            dec!(0.05),            // risk_free_rate
+            Positive::ZERO,        // dividend_yield
+            pos_or_panic!(1.1),    // long quantity
+            pos_or_panic!(119.01), // premium_long
+            pos_or_panic!(66.0),   // premium_short
+            pos_or_panic!(29.85),  // open_fee_long
+            pos_or_panic!(0.05),
+            pos_or_panic!(0.05),
+            pos_or_panic!(0.05),
+            pos_or_panic!(0.05),
+            pos_or_panic!(0.05),
+            pos_or_panic!(0.05),
         );
         assert_eq!(
             short_butterfly.get_max_profit().unwrap().to_f64(),
-            pos!(18.106)
+            pos_or_panic!(18.106)
         );
     }
 }
@@ -2689,23 +2719,30 @@ mod tests_butterfly_strategies {
 #[cfg(test)]
 mod tests_butterfly_optimizable {
     use super::*;
+    use positive::spos;
+
     use crate::model::ExpirationDate;
-    use crate::{pos, spos};
 
     use rust_decimal_macros::dec;
 
     fn create_test_option_chain() -> OptionChain {
-        let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-12-31".to_string(), None, None);
+        let mut chain = OptionChain::new(
+            "TEST",
+            Positive::HUNDRED,
+            "2024-12-31".to_string(),
+            None,
+            None,
+        );
 
         for strike in [85.0, 90.0, 95.0, 100.0, 105.0, 110.0, 115.0] {
             chain.add_option(
-                pos!(strike),
-                spos!(5.0),      // call_bid
-                spos!(5.2),      // call_ask
-                spos!(5.0),      // put_bid
-                spos!(5.2),      // put_ask
-                pos!(0.2),       // implied_volatility
-                Some(dec!(0.5)), // delta
+                pos_or_panic!(strike),
+                spos!(5.0),         // call_bid
+                spos!(5.2),         // call_ask
+                spos!(5.0),         // put_bid
+                spos!(5.2),         // put_ask
+                pos_or_panic!(0.2), // implied_volatility
+                Some(dec!(0.5)),    // delta
                 Some(dec!(0.2)),
                 Some(dec!(0.2)),
                 spos!(100.0), // volume
@@ -2719,24 +2756,24 @@ mod tests_butterfly_optimizable {
     fn create_test_short() -> ShortButterflySpread {
         ShortButterflySpread::new(
             "TEST".to_string(),
-            pos!(100.0),
-            pos!(90.0),
-            pos!(100.0),
-            pos!(110.0),
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(0.2),
+            Positive::HUNDRED,
+            pos_or_panic!(90.0),
+            Positive::HUNDRED,
+            pos_or_panic!(110.0),
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.2),
             dec!(0.05),
             Positive::ZERO,
             Positive::ONE,
-            pos!(3.0),
+            pos_or_panic!(3.0),
             Positive::TWO,
             Positive::ONE,
-            pos!(0.05), // open_fee_short_call
-            pos!(0.05), // close_fee_short_call
-            pos!(0.05), // open_fee_short_call_low
-            pos!(0.05), // close_fee_short_call_low
-            pos!(0.05), // open_fee_short_call_high
-            pos!(0.05), // close_fee_short_call_high
+            pos_or_panic!(0.05), // open_fee_short_call
+            pos_or_panic!(0.05), // close_fee_short_call
+            pos_or_panic!(0.05), // open_fee_short_call_low
+            pos_or_panic!(0.05), // close_fee_short_call_low
+            pos_or_panic!(0.05), // open_fee_short_call_high
+            pos_or_panic!(0.05), // close_fee_short_call_high
         )
     }
 
@@ -2813,50 +2850,51 @@ mod tests_butterfly_optimizable {
 
         short_butterfly.find_optimal(
             &chain,
-            FindOptimalSide::Range(pos!(95.0), pos!(105.0)),
+            FindOptimalSide::Range(pos_or_panic!(95.0), pos_or_panic!(105.0)),
             OptimizationCriteria::Ratio,
         );
         short_butterfly.find_optimal(
             &chain,
-            FindOptimalSide::Range(pos!(95.0), pos!(105.0)),
+            FindOptimalSide::Range(pos_or_panic!(95.0), pos_or_panic!(105.0)),
             OptimizationCriteria::Ratio,
         );
 
-        assert!(short_butterfly.long_call.option.strike_price >= pos!(95.0));
-        assert!(short_butterfly.long_call.option.strike_price <= pos!(105.0));
-        assert!(short_butterfly.long_call.option.strike_price >= pos!(95.0));
-        assert!(short_butterfly.long_call.option.strike_price <= pos!(105.0));
+        assert!(short_butterfly.long_call.option.strike_price >= pos_or_panic!(95.0));
+        assert!(short_butterfly.long_call.option.strike_price <= pos_or_panic!(105.0));
+        assert!(short_butterfly.long_call.option.strike_price >= pos_or_panic!(95.0));
+        assert!(short_butterfly.long_call.option.strike_price <= pos_or_panic!(105.0));
     }
 }
 
 #[cfg(test)]
 mod tests_butterfly_probability {
     use super::*;
+
     use crate::model::ExpirationDate;
-    use crate::pos;
+
     use rust_decimal_macros::dec;
 
     fn create_test_short() -> ShortButterflySpread {
         ShortButterflySpread::new(
             "TEST".to_string(),
-            pos!(100.0),
-            pos!(90.0),
-            pos!(100.0),
-            pos!(110.0),
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(0.2),
+            Positive::HUNDRED,
+            pos_or_panic!(90.0),
+            Positive::HUNDRED,
+            pos_or_panic!(110.0),
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.2),
             dec!(0.05),
             Positive::ZERO,
-            pos!(1.0),
-            pos!(10.0),
+            Positive::ONE,
+            pos_or_panic!(10.0),
             Positive::TWO,
             Positive::ONE,
-            pos!(0.05), // open_fee_short_call
-            pos!(0.05), // close_fee_short_call
-            pos!(0.05), // open_fee_short_call_low
-            pos!(0.05), // close_fee_short_call_low
-            pos!(0.05), // open_fee_short_call_high
-            pos!(0.05), // close_fee_short_call_high
+            pos_or_panic!(0.05), // open_fee_short_call
+            pos_or_panic!(0.05), // close_fee_short_call
+            pos_or_panic!(0.05), // open_fee_short_call_low
+            pos_or_panic!(0.05), // close_fee_short_call_low
+            pos_or_panic!(0.05), // open_fee_short_call_high
+            pos_or_panic!(0.05), // close_fee_short_call_high
         )
     }
 
@@ -2867,7 +2905,7 @@ mod tests_butterfly_probability {
         fn test_get_expiration() {
             let butterfly = create_test_short();
             let expiration_date = *butterfly.get_expiration().values().next().unwrap();
-            assert_eq!(expiration_date, &ExpirationDate::Days(pos!(30.0)));
+            assert_eq!(expiration_date, &ExpirationDate::Days(pos_or_panic!(30.0)));
         }
 
         #[test]
@@ -2883,24 +2921,24 @@ mod tests_butterfly_probability {
         fn test_get_profit_ranges() {
             let butterfly = ShortButterflySpread::new(
                 "SP500".to_string(),
-                pos!(5781.88), // underlying_price
-                pos!(5700.0),  // short_strike_itm
-                pos!(5780.0),  // long_strike
-                pos!(5850.0),  // short_strike_otm
-                ExpirationDate::Days(pos!(2.0)),
-                pos!(0.18),     // implied_volatility
-                dec!(0.05),     // risk_free_rate
-                Positive::ZERO, // dividend_yield
-                pos!(1.1),      // long quantity
-                pos!(119.01),   // premium_long
-                pos!(66.0),     // premium_short
-                pos!(29.85),    // open_fee_long
-                pos!(0.05),
-                pos!(0.05),
-                pos!(0.05),
-                pos!(0.05),
-                pos!(0.05),
-                pos!(0.05),
+                pos_or_panic!(5781.88), // underlying_price
+                pos_or_panic!(5700.0),  // short_strike_itm
+                pos_or_panic!(5780.0),  // long_strike
+                pos_or_panic!(5850.0),  // short_strike_otm
+                ExpirationDate::Days(Positive::TWO),
+                pos_or_panic!(0.18),   // implied_volatility
+                dec!(0.05),            // risk_free_rate
+                Positive::ZERO,        // dividend_yield
+                pos_or_panic!(1.1),    // long quantity
+                pos_or_panic!(119.01), // premium_long
+                pos_or_panic!(66.0),   // premium_short
+                pos_or_panic!(29.85),  // open_fee_long
+                pos_or_panic!(0.05),
+                pos_or_panic!(0.05),
+                pos_or_panic!(0.05),
+                pos_or_panic!(0.05),
+                pos_or_panic!(0.05),
+                pos_or_panic!(0.05),
             );
             let ranges = butterfly.get_profit_ranges().unwrap();
 

@@ -66,8 +66,8 @@ use rust_decimal_macros::dec;
 use tracing::info;
 use optionstratlib::ExpirationDate;
 use optionstratlib::strategies::bull_call_spread::BullCallSpread;
-use optionstratlib::Positive;
-use optionstratlib::pos;
+use positive::Positive;
+use positive::pos_or_panic;
 use optionstratlib::strategies::Strategies;
 
 let spread = BullCallSpread::new(
@@ -149,7 +149,7 @@ Example:
 ``` {.rust .rust-example-rendered}
 use optionstratlib::error::position::PositionError;
 use optionstratlib::model::position::Position;
-use optionstratlib::Positive;
+use positive::Positive;
 use optionstratlib::strategies::base::{BreakEvenable, Positionable, Strategies, Validable};
 use optionstratlib::strategies::{BasicAble, Strategable};
 
@@ -192,8 +192,8 @@ use rust_decimal_macros::dec;
 use tracing::info;
 use optionstratlib::ExpirationDate;
 use optionstratlib::strategies::iron_condor::IronCondor;
-use optionstratlib::Positive;
-use optionstratlib::pos;
+use positive::Positive;
+use positive::pos_or_panic;
 use optionstratlib::strategies::Strategies;
 
 let condor = IronCondor::new(

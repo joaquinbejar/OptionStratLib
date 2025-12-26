@@ -6,8 +6,9 @@
 use crate::error::ChainError;
 use crate::model::Position;
 use crate::model::types::{OptionStyle, OptionType, Side};
-use crate::{ExpirationDate, Options, Positive, pos};
+use crate::{ExpirationDate, Options};
 use chrono::{NaiveDateTime, TimeZone, Utc};
+use positive::{Positive, pos_or_panic};
 use rust_decimal::{Decimal, MathematicalOps};
 use rust_decimal_macros::dec;
 use std::ops::Mul;
@@ -52,15 +53,16 @@ pub fn positive_f64_to_f64(vec: Vec<Positive>) -> Vec<f64> {
 /// # Examples
 ///
 /// ```rust
-/// use optionstratlib::{pos, OptionStyle, Side};
+/// use optionstratlib::{OptionStyle, Side};
+/// use positive::pos_or_panic;
 /// use optionstratlib::model::utils::create_sample_option;
 /// let option = create_sample_option(
 ///     OptionStyle::Call,
 ///     Side::Long,
-///     pos!(150.0),  // underlying price
-///     pos!(10.0),   // quantity
-///     pos!(155.0),  // strike price
-///     pos!(0.25),   // volatility (25%)
+///     pos_or_panic!(150.0),  // underlying price
+///     pos_or_panic!(10.0),   // quantity
+///     pos_or_panic!(155.0),  // strike price
+///     pos_or_panic!(0.25),   // volatility (25%)
 /// );
 /// ```
 #[allow(dead_code)]
@@ -77,13 +79,13 @@ pub fn create_sample_option(
         side,
         "AAPL".to_string(),
         strike_price,
-        ExpirationDate::Days(pos!(30.0)),
+        ExpirationDate::Days(pos_or_panic!(30.0)),
         volatility,
         quantity,
         underlying_price,
         dec!(0.05),
         option_style,
-        pos!(0.01),
+        pos_or_panic!(0.01),
         None,
     )
 }
@@ -119,14 +121,15 @@ pub fn create_sample_option(
 ///
 /// ```rust
 /// use optionstratlib::model::utils::create_sample_position;
-/// use optionstratlib::{pos, OptionStyle, Side};
+/// use optionstratlib::{OptionStyle, Side};
+/// use positive::{pos_or_panic, Positive};
 /// let sample_call = create_sample_position(
 ///     OptionStyle::Call,
 ///     Side::Long,
-///     pos!(150.0),  // underlying price
-///     pos!(1.0),    // quantity
-///     pos!(155.0),  // strike price
-///     pos!(0.25)    // implied volatility
+///     pos_or_panic!(150.0),  // underlying price
+///     Positive::ONE,    // quantity
+///     pos_or_panic!(155.0),  // strike price
+///     pos_or_panic!(0.25)    // implied volatility
 /// );
 /// ```
 #[allow(dead_code)]
@@ -144,19 +147,19 @@ pub fn create_sample_position(
             side,
             underlying_symbol: "AAPL".to_string(),
             strike_price,
-            expiration_date: ExpirationDate::Days(pos!(30.0)),
+            expiration_date: ExpirationDate::Days(pos_or_panic!(30.0)),
             implied_volatility,
             quantity,
             underlying_price,
             risk_free_rate: dec!(0.05),
             option_style,
-            dividend_yield: pos!(0.01),
+            dividend_yield: pos_or_panic!(0.01),
             exotic_params: None,
         },
-        premium: pos!(5.0),
+        premium: pos_or_panic!(5.0),
         date: Utc::now(),
-        open_fee: pos!(0.5),
-        close_fee: pos!(0.5),
+        open_fee: pos_or_panic!(0.5),
+        close_fee: pos_or_panic!(0.5),
         epic: Some("Epic123".to_string()),
         extra_fields: None,
     }
@@ -202,7 +205,7 @@ pub fn create_sample_option_with_date(
         underlying_price,
         dec!(0.05),
         option_style,
-        pos!(0.01),
+        pos_or_panic!(0.01),
         None,
     )
 }
@@ -248,7 +251,7 @@ pub fn create_sample_option_with_days(
         underlying_price,
         dec!(0.05),
         option_style,
-        pos!(0.01),
+        pos_or_panic!(0.01),
         None,
     )
 }
@@ -292,14 +295,14 @@ pub fn create_sample_option_simplest(option_style: OptionStyle, side: Side) -> O
         OptionType::European,
         side,
         "AAPL".to_string(),
-        pos!(100.0),
-        ExpirationDate::Days(pos!(30.0)),
-        pos!(0.2),
-        pos!(1.0),
-        pos!(100.0),
+        Positive::HUNDRED,
+        ExpirationDate::Days(pos_or_panic!(30.0)),
+        pos_or_panic!(0.2),
+        Positive::ONE,
+        Positive::HUNDRED,
         dec!(0.05),
         option_style,
-        pos!(0.01),
+        pos_or_panic!(0.01),
         None,
     )
 }
@@ -328,11 +331,12 @@ pub fn create_sample_option_simplest(option_style: OptionStyle, side: Side) -> O
 /// # Examples
 /// ```
 /// use optionstratlib::model::utils::create_sample_option_simplest_strike;
-/// use optionstratlib::{pos, OptionStyle, Side};
+/// use optionstratlib::{ OptionStyle, Side};
+/// use positive::pos_or_panic;
 /// let long_call = create_sample_option_simplest_strike(
 ///     Side::Long,
 ///     OptionStyle::Call,
-///     pos!(105.0)
+///     pos_or_panic!(105.0)
 /// );
 /// ```
 pub fn create_sample_option_simplest_strike(
@@ -345,13 +349,13 @@ pub fn create_sample_option_simplest_strike(
         side,
         "AAPL".to_string(),
         strike,
-        ExpirationDate::Days(pos!(30.0)),
-        pos!(0.2),
-        pos!(1.0),
-        pos!(100.0),
+        ExpirationDate::Days(pos_or_panic!(30.0)),
+        pos_or_panic!(0.2),
+        Positive::ONE,
+        Positive::HUNDRED,
         dec!(0.05),
         option_style,
-        pos!(0.01),
+        pos_or_panic!(0.01),
         None,
     )
 }
@@ -372,7 +376,7 @@ pub fn create_sample_option_simplest_strike(
 /// # Example
 ///
 /// ```rust
-/// use optionstratlib::Positive;
+/// use positive::Positive;
 /// use optionstratlib::model::utils::mean_and_std;
 ///
 /// let data = vec![Positive::new(2.0).unwrap(), Positive::new(4.0).unwrap(), Positive::new(4.0).unwrap(), Positive::new(4.0).unwrap(), Positive::new(5.0).unwrap(), Positive::new(5.0).unwrap(), Positive::new(7.0).unwrap(), Positive::new(9.0).unwrap()];
@@ -394,11 +398,11 @@ pub fn mean_and_std(vec: Vec<Positive>) -> (Positive, Positive) {
     let mean = vec.iter().sum::<Positive>() / vec.len() as f64;
     let variance = vec
         .iter()
-        .map(|x| pos!((x.to_f64() - mean.to_f64()).powi(2)))
+        .map(|x| pos_or_panic!((x.to_f64() - mean.to_f64()).powi(2)))
         .sum::<Positive>()
         / vec.len() as f64;
     let std = variance.to_f64().sqrt();
-    (mean, pos!(std))
+    (mean, pos_or_panic!(std))
 }
 
 /// Trait for rounding operations on numeric types, specifically for financial calculations.
@@ -542,20 +546,20 @@ mod tests_positive_f64_to_f64 {
 #[cfg(test)]
 mod tests_mean_and_std {
     use super::*;
-    use crate::pos;
+
     use approx::assert_relative_eq;
 
     #[test]
     fn test_basic_mean_and_std() {
         let values = vec![
-            pos!(2.0),
-            pos!(4.0),
-            pos!(4.0),
-            pos!(4.0),
-            pos!(5.0),
-            pos!(5.0),
-            pos!(7.0),
-            pos!(9.0),
+            Positive::TWO,
+            pos_or_panic!(4.0),
+            pos_or_panic!(4.0),
+            pos_or_panic!(4.0),
+            pos_or_panic!(5.0),
+            pos_or_panic!(5.0),
+            pos_or_panic!(7.0),
+            pos_or_panic!(9.0),
         ];
         let (mean, std) = mean_and_std(values);
 
@@ -565,7 +569,12 @@ mod tests_mean_and_std {
 
     #[test]
     fn test_identical_values() {
-        let values = vec![pos!(5.0), pos!(5.0), pos!(5.0), pos!(5.0)];
+        let values = vec![
+            pos_or_panic!(5.0),
+            pos_or_panic!(5.0),
+            pos_or_panic!(5.0),
+            pos_or_panic!(5.0),
+        ];
         let (mean, std) = mean_and_std(values);
 
         assert_relative_eq!(mean.to_f64(), 5.0, epsilon = 0.0001);
@@ -574,7 +583,7 @@ mod tests_mean_and_std {
 
     #[test]
     fn test_single_value() {
-        let values = vec![pos!(3.0)];
+        let values = vec![pos_or_panic!(3.0)];
         let (mean, std) = mean_and_std(values);
 
         assert_relative_eq!(mean.to_f64(), 3.0, epsilon = 0.0001);
@@ -583,7 +592,7 @@ mod tests_mean_and_std {
 
     #[test]
     fn test_small_numbers() {
-        let values = vec![pos!(0.1), pos!(0.2), pos!(0.3)];
+        let values = vec![pos_or_panic!(0.1), pos_or_panic!(0.2), pos_or_panic!(0.3)];
         let (mean, std) = mean_and_std(values);
 
         assert_relative_eq!(mean.to_f64(), 0.2, epsilon = 0.0001);
@@ -592,7 +601,11 @@ mod tests_mean_and_std {
 
     #[test]
     fn test_large_numbers() {
-        let values = vec![pos!(1000.0), pos!(2000.0), pos!(3000.0)];
+        let values = vec![
+            pos_or_panic!(1000.0),
+            pos_or_panic!(2000.0),
+            pos_or_panic!(3000.0),
+        ];
         let (mean, std) = mean_and_std(values);
 
         assert_relative_eq!(mean.to_f64(), 2000.0, epsilon = 0.0001);
@@ -601,7 +614,12 @@ mod tests_mean_and_std {
 
     #[test]
     fn test_mixed_range() {
-        let values = vec![pos!(0.5), pos!(5.0), pos!(50.0), pos!(500.0)];
+        let values = vec![
+            pos_or_panic!(0.5),
+            pos_or_panic!(5.0),
+            pos_or_panic!(50.0),
+            pos_or_panic!(500.0),
+        ];
         let (mean, std) = mean_and_std(values);
 
         assert_relative_eq!(mean.to_f64(), 138.875, epsilon = 0.001);
@@ -617,7 +635,13 @@ mod tests_mean_and_std {
 
     #[test]
     fn test_symmetric_distribution() {
-        let values = vec![pos!(1.0), pos!(2.0), pos!(3.0), pos!(4.0), pos!(5.0)];
+        let values = vec![
+            Positive::ONE,
+            Positive::TWO,
+            pos_or_panic!(3.0),
+            pos_or_panic!(4.0),
+            pos_or_panic!(5.0),
+        ];
         let (mean, std) = mean_and_std(values);
 
         assert_relative_eq!(mean.to_f64(), 3.0, epsilon = 0.0001);
@@ -626,7 +650,7 @@ mod tests_mean_and_std {
 
     #[test]
     fn test_result_is_positive() {
-        let values = vec![pos!(1.0), pos!(2.0), pos!(3.0)];
+        let values = vec![Positive::ONE, Positive::TWO, pos_or_panic!(3.0)];
         let (mean, std) = mean_and_std(values);
 
         assert!(mean > Positive::ZERO);
@@ -635,7 +659,11 @@ mod tests_mean_and_std {
 
     #[test]
     fn test_precision() {
-        let values = vec![pos!(1.23456789), pos!(2.34567890), pos!(3.45678901)];
+        let values = vec![
+            pos_or_panic!(1.23456789),
+            pos_or_panic!(2.34567890),
+            pos_or_panic!(3.45678901),
+        ];
         let (mean, std) = mean_and_std(values);
 
         assert_relative_eq!(mean.to_f64(), 2.34567860, epsilon = 0.00000001);
@@ -644,7 +672,11 @@ mod tests_mean_and_std {
 
     #[test]
     fn test_precision_bis() {
-        let values = vec![pos!(0.123456789), pos!(0.134567890), pos!(0.145678901)];
+        let values = vec![
+            pos_or_panic!(0.123456789),
+            pos_or_panic!(0.134567890),
+            pos_or_panic!(0.145678901),
+        ];
         let (mean, std) = mean_and_std(values);
 
         assert_relative_eq!(mean.to_f64(), 0.13456786, epsilon = 0.00000001);

@@ -23,17 +23,16 @@
 //! use optionstratlib::model::leg::{Leg, SpotPosition};
 //! use optionstratlib::model::Position;
 //! use optionstratlib::model::types::Side;
-//! use optionstratlib::pos;
+//! use positive::{pos_or_panic,Positive};
 //!
 //! // Create a spot leg
-//! let spot = SpotPosition::long("AAPL".to_string(), pos!(100.0), pos!(150.0));
+//! let spot = SpotPosition::long("AAPL".to_string(), Positive::HUNDRED, pos_or_panic!(150.0));
 //! let spot_leg = Leg::Spot(spot);
 //!
 //! // Check leg type
 //! assert!(spot_leg.is_spot());
 //! ```
 
-use crate::Positive;
 use crate::error::GreeksError;
 use crate::model::leg::future::FuturePosition;
 use crate::model::leg::perpetual::PerpetualPosition;
@@ -41,6 +40,7 @@ use crate::model::leg::spot::SpotPosition;
 use crate::model::leg::traits::LegAble;
 use crate::model::position::Position;
 use crate::model::types::Side;
+use positive::Positive;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
@@ -386,44 +386,45 @@ mod tests {
     use crate::OptionStyle;
     use crate::model::ExpirationDate;
     use crate::model::utils::create_sample_option_simplest;
-    use crate::pos;
+
     use chrono::Utc;
+    use positive::pos_or_panic;
 
     fn create_test_option_position() -> Position {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         Position::new(
             option,
-            pos!(5.0),
+            pos_or_panic!(5.0),
             Utc::now(),
-            pos!(0.5),
-            pos!(0.5),
+            pos_or_panic!(0.5),
+            pos_or_panic!(0.5),
             None,
             None,
         )
     }
 
     fn create_test_spot_position() -> SpotPosition {
-        SpotPosition::long("AAPL".to_string(), pos!(100.0), pos!(150.0))
+        SpotPosition::long("AAPL".to_string(), Positive::HUNDRED, pos_or_panic!(150.0))
     }
 
     fn create_test_future_position() -> FuturePosition {
         FuturePosition::long(
             "ES".to_string(),
-            pos!(1.0),
-            pos!(4500.0),
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(50.0),
-            pos!(15000.0),
+            Positive::ONE,
+            pos_or_panic!(4500.0),
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(50.0),
+            pos_or_panic!(15000.0),
         )
     }
 
     fn create_test_perpetual_position() -> PerpetualPosition {
         PerpetualPosition::long(
             "BTC-USDT-PERP".to_string(),
-            pos!(1.0),
-            pos!(50000.0),
-            pos!(10.0),
-            pos!(5000.0),
+            Positive::ONE,
+            pos_or_panic!(50000.0),
+            pos_or_panic!(10.0),
+            pos_or_panic!(5000.0),
         )
     }
 
@@ -553,29 +554,33 @@ mod tests {
 
     #[test]
     fn test_leg_get_quantity() {
-        let spot = SpotPosition::long("AAPL".to_string(), pos!(100.0), pos!(150.0));
+        let spot = SpotPosition::long("AAPL".to_string(), Positive::HUNDRED, pos_or_panic!(150.0));
         let leg = Leg::spot(spot);
-        assert_eq!(leg.get_quantity(), pos!(100.0));
+        assert_eq!(leg.get_quantity(), Positive::HUNDRED);
     }
 
     #[test]
     fn test_leg_get_side() {
-        let long_spot = SpotPosition::long("AAPL".to_string(), pos!(100.0), pos!(150.0));
+        let long_spot =
+            SpotPosition::long("AAPL".to_string(), Positive::HUNDRED, pos_or_panic!(150.0));
         let leg = Leg::spot(long_spot);
         assert_eq!(leg.get_side(), Side::Long);
 
-        let short_spot = SpotPosition::short("AAPL".to_string(), pos!(100.0), pos!(150.0));
+        let short_spot =
+            SpotPosition::short("AAPL".to_string(), Positive::HUNDRED, pos_or_panic!(150.0));
         let leg = Leg::spot(short_spot);
         assert_eq!(leg.get_side(), Side::Short);
     }
 
     #[test]
     fn test_leg_delta_spot() {
-        let long_spot = SpotPosition::long("AAPL".to_string(), pos!(100.0), pos!(150.0));
+        let long_spot =
+            SpotPosition::long("AAPL".to_string(), Positive::HUNDRED, pos_or_panic!(150.0));
         let leg = Leg::spot(long_spot);
         assert_eq!(leg.delta().unwrap(), Decimal::from(100));
 
-        let short_spot = SpotPosition::short("AAPL".to_string(), pos!(100.0), pos!(150.0));
+        let short_spot =
+            SpotPosition::short("AAPL".to_string(), Positive::HUNDRED, pos_or_panic!(150.0));
         let leg = Leg::spot(short_spot);
         assert_eq!(leg.delta().unwrap(), Decimal::from(-100));
     }
@@ -597,10 +602,10 @@ mod tests {
 
     #[test]
     fn test_leg_pnl_spot() {
-        let spot = SpotPosition::long("AAPL".to_string(), pos!(100.0), pos!(150.0));
+        let spot = SpotPosition::long("AAPL".to_string(), Positive::HUNDRED, pos_or_panic!(150.0));
         let leg = Leg::spot(spot);
 
-        let pnl = leg.pnl_at_price(pos!(160.0));
+        let pnl = leg.pnl_at_price(pos_or_panic!(160.0));
         assert_eq!(pnl, Decimal::from(1000));
     }
 
@@ -632,29 +637,29 @@ mod tests {
     fn test_leg_total_cost() {
         let spot = SpotPosition::new(
             "AAPL".to_string(),
-            pos!(100.0),
-            pos!(150.0),
+            Positive::HUNDRED,
+            pos_or_panic!(150.0),
             Side::Long,
             Utc::now(),
-            pos!(10.0),
-            pos!(10.0),
+            pos_or_panic!(10.0),
+            pos_or_panic!(10.0),
         );
         let leg = Leg::spot(spot);
-        assert_eq!(leg.total_cost(), pos!(15020.0));
+        assert_eq!(leg.total_cost(), pos_or_panic!(15020.0));
     }
 
     #[test]
     fn test_leg_fees() {
         let spot = SpotPosition::new(
             "AAPL".to_string(),
-            pos!(100.0),
-            pos!(150.0),
+            Positive::HUNDRED,
+            pos_or_panic!(150.0),
             Side::Long,
             Utc::now(),
-            pos!(10.0),
-            pos!(15.0),
+            pos_or_panic!(10.0),
+            pos_or_panic!(15.0),
         );
         let leg = Leg::spot(spot);
-        assert_eq!(leg.fees(), pos!(25.0));
+        assert_eq!(leg.fees(), pos_or_panic!(25.0));
     }
 }

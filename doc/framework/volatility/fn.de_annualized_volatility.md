@@ -42,7 +42,7 @@ sqrt(periods_per_year)
 ::: example-wrap
 ``` {.rust .rust-example-rendered}
 use rust_decimal_macros::dec;
-use optionstratlib::pos;
+use positive::pos_or_panic;
 use optionstratlib::utils::time::TimeFrame;
 use optionstratlib::volatility::{de_annualized_volatility};
 let annual_vol = pos!(0.20); // 20% annual volatility

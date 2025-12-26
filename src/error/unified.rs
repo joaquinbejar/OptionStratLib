@@ -98,6 +98,10 @@ pub enum Error {
     #[error(transparent)]
     Simulation(#[from] crate::error::SimulationError),
 
+    /// Positive value errors.
+    #[error(transparent)]
+    Positive(#[from] positive::error::PositiveError),
+
     /// Generic error with a custom message.
     #[error("{0}")]
     Other(String),

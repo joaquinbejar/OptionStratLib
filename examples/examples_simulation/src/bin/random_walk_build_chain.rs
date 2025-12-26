@@ -1,4 +1,5 @@
 use optionstratlib::prelude::*;
+use positive::pos_or_panic;
 
 #[warn(dead_code)]
 struct Walker {}
@@ -14,19 +15,19 @@ impl WalkTypeAble<Positive, OptionChain> for Walker {}
 fn main() -> Result<(), Error> {
     // let n_steps = 43_200; // 30 days in minutes
     let n_steps = 10080; // 30 days in minutes
-    let underlying_price = pos!(4011.95);
-    let days = pos!(7.0);
-    let std_dev = pos!(2.0);
+    let underlying_price = pos_or_panic!(4011.95);
+    let days = pos_or_panic!(7.0);
+    let std_dev = Positive::TWO;
     let implied_volatility = std_dev / 100.0;
     let risk_free_rate = dec!(0.0);
-    let dividend_yield = pos!(0.0);
+    let dividend_yield = Positive::ZERO;
     let symbol = "GOLF".to_string();
     let volume = Some(Positive::ONE);
     let chain_size = 30;
     let strike_interval = spos!(10.0);
     let skew_slope = dec!(-0.3);
     let smile_curve = dec!(0.1);
-    let spread = pos!(2.0);
+    let spread = Positive::TWO;
     let decimal_places = 2;
 
     let price_params = OptionDataPriceParams::new(
@@ -59,7 +60,7 @@ fn main() -> Result<(), Error> {
             y: Ystep::new(0, initial_chain),
         },
         walk_type: WalkType::GeometricBrownian {
-            dt: convert_time_frame(pos!(1.0) / days, &TimeFrame::Minute, &TimeFrame::Day),
+            dt: convert_time_frame(Positive::ONE / days, &TimeFrame::Minute, &TimeFrame::Day),
             drift: dec!(0.0),
             volatility: implied_volatility,
         },

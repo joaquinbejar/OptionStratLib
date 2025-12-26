@@ -3,12 +3,13 @@
    Email: jb@taunais.com
    Date: 25/10/24
 ******************************************************************************/
+use positive::{Positive, pos_or_panic};
+
 use crate::chains::OptionData;
 use crate::chains::chain::{SKEW_SLOPE, SKEW_SMILE_CURVE};
 use crate::error::chains::ChainError;
 use crate::model::ExpirationDate;
 use crate::model::utils::ToRound;
-use crate::{Positive, pos};
 use num_traits::ToPrimitive;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
@@ -635,46 +636,46 @@ pub(crate) fn rounder(reference_price: Positive, strike_interval: Positive) -> P
 fn round_to_clean_interval(interval: Positive, price: Positive) -> Positive {
     let v = interval.to_f64();
 
-    if price < pos!(25.0) {
+    if price < pos_or_panic!(25.0) {
         if v <= 0.25 {
-            pos!(0.25)
+            pos_or_panic!(0.25)
         } else if v <= 0.5 {
-            pos!(0.5)
+            pos_or_panic!(0.5)
         } else if v <= 1.0 {
-            pos!(1.0)
+            Positive::ONE
         } else if v <= 2.5 {
-            pos!(2.5)
+            pos_or_panic!(2.5)
         } else {
-            pos!(5.0)
+            pos_or_panic!(5.0)
         }
-    } else if price < pos!(100.0) {
+    } else if price < Positive::HUNDRED {
         if v <= 1.0 {
-            pos!(1.0)
+            Positive::ONE
         } else if v <= 2.5 {
-            pos!(2.5)
+            pos_or_panic!(2.5)
         } else if v <= 5.0 {
-            pos!(5.0)
+            pos_or_panic!(5.0)
         } else {
-            pos!(10.0)
+            pos_or_panic!(10.0)
         }
     } else if v <= 5.0 {
-        pos!(1.0)
+        Positive::ONE
     } else if v <= 8.0 {
-        pos!(2.0)
+        Positive::TWO
     } else if v <= 12.5 {
-        pos!(5.0)
+        pos_or_panic!(5.0)
     } else if v <= 15.0 {
-        pos!(10.0)
+        pos_or_panic!(10.0)
     } else if v <= 20.0 {
-        pos!(15.0)
+        pos_or_panic!(15.0)
     } else if v <= 25.0 {
-        pos!(20.0)
+        pos_or_panic!(20.0)
     } else if v <= 35.0 {
-        pos!(25.0)
+        pos_or_panic!(25.0)
     } else if v <= 50.0 {
-        pos!(50.0)
+        pos_or_panic!(50.0)
     } else {
-        pos!(100.0)
+        Positive::HUNDRED
     }
 }
 
@@ -687,29 +688,29 @@ pub fn strike_step(
     size: usize,         // desired number of strikes
     k: Option<Positive>, // σ-multiplier you want to cover (2.0-3.0 typical)
 ) -> Positive {
-    let k = k.unwrap_or_else(|| pos!(4.0));
+    let k = k.unwrap_or_else(|| pos_or_panic!(4.0));
     assert!(size > 1, "need at least two strikes");
     let t = days_to_exp / 365.0;
     let sigma = underlying_price * implied_vol * t.sqrt();
-    let raw_step = pos!(2.0) * k * sigma / (size as f64 - 1.0);
+    let raw_step = Positive::TWO * k * sigma / (size as f64 - 1.0);
 
     // Standard “nice” grids used by most exchanges
     let bins: &[Positive] = &[
-        pos!(0.01),
-        pos!(0.05),
-        pos!(0.10),
-        pos!(0.25),
-        pos!(0.5),
-        pos!(1.0),
-        pos!(2.5),
-        pos!(5.0),
-        pos!(10.0),
-        pos!(25.0),
-        pos!(50.0),
-        pos!(100.0),
-        pos!(150.0),
-        pos!(200.0),
-        pos!(250.0),
+        pos_or_panic!(0.01),
+        pos_or_panic!(0.05),
+        pos_or_panic!(0.10),
+        pos_or_panic!(0.25),
+        pos_or_panic!(0.5),
+        Positive::ONE,
+        pos_or_panic!(2.5),
+        pos_or_panic!(5.0),
+        pos_or_panic!(10.0),
+        pos_or_panic!(25.0),
+        pos_or_panic!(50.0),
+        Positive::HUNDRED,
+        pos_or_panic!(150.0),
+        pos_or_panic!(200.0),
+        pos_or_panic!(250.0),
     ];
 
     // Pick the closest one
@@ -726,18 +727,32 @@ pub fn strike_step(
 #[cfg(test)]
 mod tests_strike_step {
     use super::*;
+    use positive::spos;
+
     use crate::chains::OptionChain;
-    use crate::spos;
+
     use crate::utils::Len;
     #[test]
     fn basic() {
-        let step = strike_step(pos!(100.0), pos!(0.2), pos!(30.0), 11, None);
+        let step = strike_step(
+            Positive::HUNDRED,
+            pos_or_panic!(0.2),
+            pos_or_panic!(30.0),
+            11,
+            None,
+        );
         assert_eq!(step, 5.0);
     }
 
     #[test]
     fn long_days() {
-        let step = strike_step(pos!(150.0), pos!(0.5), pos!(120.0), 30, spos!(3.0));
+        let step = strike_step(
+            pos_or_panic!(150.0),
+            pos_or_panic!(0.5),
+            pos_or_panic!(120.0),
+            30,
+            spos!(3.0),
+        );
 
         assert_eq!(step, 10.0);
     }
@@ -746,16 +761,16 @@ mod tests_strike_step {
     fn long_discrepancy() {
         let symbol = "AAPL".to_string();
         let risk_free_rate = dec!(0.02);
-        let dividend_yield = pos!(0.0);
+        let dividend_yield = Positive::ZERO;
         let volume = Some(Positive::ONE);
-        let spread = pos!(0.01);
+        let spread = pos_or_panic!(0.01);
         let decimal_places = 2;
         let skew_slope = dec!(-0.2);
         let smile_curve = dec!(0.1);
 
-        let underlying_price = Some(Box::new(pos!(1547.0)));
-        let days = pos!(45.0);
-        let implied_volatility = pos!(0.17);
+        let underlying_price = Some(Box::new(pos_or_panic!(1547.0)));
+        let days = pos_or_panic!(45.0);
+        let implied_volatility = pos_or_panic!(0.17);
         let chain_size = 28;
 
         let strike_interval = strike_step(
@@ -795,31 +810,67 @@ mod tests_strike_step {
 #[cfg(test)]
 mod tests_rounder {
     use super::*;
-    use crate::pos;
 
     #[test]
     fn test_rounder() {
-        assert_eq!(rounder(pos!(151.0), pos!(5.0)), pos!(150.0));
-        assert_eq!(rounder(pos!(154.0), pos!(5.0)), pos!(155.0));
-        assert_eq!(rounder(pos!(152.5), pos!(5.0)), pos!(155.0));
-        assert_eq!(rounder(pos!(152.4), pos!(5.0)), pos!(150.0));
+        assert_eq!(
+            rounder(pos_or_panic!(151.0), pos_or_panic!(5.0)),
+            pos_or_panic!(150.0)
+        );
+        assert_eq!(
+            rounder(pos_or_panic!(154.0), pos_or_panic!(5.0)),
+            pos_or_panic!(155.0)
+        );
+        assert_eq!(
+            rounder(pos_or_panic!(152.5), pos_or_panic!(5.0)),
+            pos_or_panic!(155.0)
+        );
+        assert_eq!(
+            rounder(pos_or_panic!(152.4), pos_or_panic!(5.0)),
+            pos_or_panic!(150.0)
+        );
 
-        assert_eq!(rounder(pos!(151.0), pos!(10.0)), pos!(150.0));
-        assert_eq!(rounder(pos!(156.0), pos!(10.0)), pos!(160.0));
-        assert_eq!(rounder(pos!(155.0), pos!(10.0)), pos!(160.0));
-        assert_eq!(rounder(pos!(154.9), pos!(10.0)), pos!(150.0));
+        assert_eq!(
+            rounder(pos_or_panic!(151.0), pos_or_panic!(10.0)),
+            pos_or_panic!(150.0)
+        );
+        assert_eq!(
+            rounder(pos_or_panic!(156.0), pos_or_panic!(10.0)),
+            pos_or_panic!(160.0)
+        );
+        assert_eq!(
+            rounder(pos_or_panic!(155.0), pos_or_panic!(10.0)),
+            pos_or_panic!(160.0)
+        );
+        assert_eq!(
+            rounder(pos_or_panic!(154.9), pos_or_panic!(10.0)),
+            pos_or_panic!(150.0)
+        );
 
-        assert_eq!(rounder(pos!(17.0), pos!(15.0)), pos!(15.0));
-        assert_eq!(rounder(pos!(43.0), pos!(15.0)), pos!(45.0));
-        assert_eq!(rounder(pos!(37.5), pos!(15.0)), pos!(45.0));
-        assert_eq!(rounder(pos!(37.4), pos!(15.0)), pos!(30.0));
+        assert_eq!(
+            rounder(pos_or_panic!(17.0), pos_or_panic!(15.0)),
+            pos_or_panic!(15.0)
+        );
+        assert_eq!(
+            rounder(pos_or_panic!(43.0), pos_or_panic!(15.0)),
+            pos_or_panic!(45.0)
+        );
+        assert_eq!(
+            rounder(pos_or_panic!(37.5), pos_or_panic!(15.0)),
+            pos_or_panic!(45.0)
+        );
+        assert_eq!(
+            rounder(pos_or_panic!(37.4), pos_or_panic!(15.0)),
+            pos_or_panic!(30.0)
+        );
     }
 }
 
 #[cfg(test)]
 mod tests_parse {
     use super::*;
-    use crate::spos;
+
+    use positive::spos;
     use std::f64::consts::PI;
 
     #[test]
@@ -854,7 +905,8 @@ mod tests_parse {
 #[cfg(test)]
 mod tests_parse_bis {
     use super::*;
-    use crate::{Positive, spos};
+    use positive::spos;
+
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
 
@@ -988,7 +1040,7 @@ mod tests_default_empty_string {
 #[cfg(test)]
 mod tests_random_positions_params {
     use super::*;
-    use crate::pos;
+
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
@@ -998,10 +1050,10 @@ mod tests_random_positions_params {
             Some(1),
             Some(1),
             Some(1),
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(1.0),
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            Positive::ONE,
             dec!(0.05),
-            pos!(0.02),
+            pos_or_panic!(0.02),
             Positive::ONE,
             Positive::ONE,
             Positive::ONE,
@@ -1037,10 +1089,10 @@ mod tests_random_positions_params {
             None,
             Some(3),
             None,
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(1.0),
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            Positive::ONE,
             dec!(0.05),
-            pos!(0.02),
+            pos_or_panic!(0.02),
             Positive::ONE,
             Positive::ONE,
             Positive::ONE,
@@ -1055,10 +1107,10 @@ mod tests_random_positions_params {
             None,
             None,
             None,
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(1.0),
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            Positive::ONE,
             dec!(0.05),
-            pos!(0.02),
+            pos_or_panic!(0.02),
             Positive::ONE,
             Positive::ONE,
             Positive::ONE,
@@ -1087,14 +1139,15 @@ mod tests_random_positions_params {
 #[cfg(test)]
 mod tests_adjust_volatility {
     use super::*;
+
     use approx::assert_relative_eq;
     use rust_decimal_macros::dec;
 
     /* 1 ─ base_vol = None → devuelve None */
     #[test]
     fn returns_none_when_base_is_none() {
-        let strike = pos!(100.0);
-        let spot = pos!(100.0);
+        let strike = Positive::HUNDRED;
+        let spot = Positive::HUNDRED;
 
         let out = adjust_volatility(
             &None, // base vol ausente
@@ -1106,9 +1159,9 @@ mod tests_adjust_volatility {
     /* 2 ─ sin skew/smile (defaults) la ATM vol no cambia */
     #[test]
     fn atm_unchanged_with_defaults() {
-        let base = pos!(0.17);
-        let strike = pos!(1500.0);
-        let spot = pos!(1500.0);
+        let base = pos_or_panic!(0.17);
+        let strike = pos_or_panic!(1500.0);
+        let spot = pos_or_panic!(1500.0);
 
         let out = adjust_volatility(
             &Some(base),
@@ -1125,9 +1178,9 @@ mod tests_adjust_volatility {
     /* 3 ─ factor > 1 se clampa al techo 1.0 */
     #[test]
     fn huge_positive_smile_clamps_upper() {
-        let base = pos!(0.20);
-        let strike = pos!(3000.0);
-        let spot = pos!(1000.0);
+        let base = pos_or_panic!(0.20);
+        let strike = pos_or_panic!(3000.0);
+        let spot = pos_or_panic!(1000.0);
 
         let smile = dec!(5.0);
         let out = adjust_volatility(&Some(base), &None, &Some(smile), &strike, &spot).unwrap();
@@ -1138,10 +1191,10 @@ mod tests_adjust_volatility {
     /* factor < 0.01 se clampa al suelo 0.01 */
     #[test]
     fn extreme_moneyness_clamps_lower() {
-        let base = pos!(0.30);
+        let base = pos_or_panic!(0.30);
         // strike muy ITM → moneyness negativa grande
-        let strike = pos!(10.0);
-        let spot = pos!(1000.0);
+        let strike = pos_or_panic!(10.0);
+        let spot = pos_or_panic!(1000.0);
 
         // pendiente positiva fuerte → 1 + (+)·(−) = 1 − algo grande < 0
         let skew = dec!(10.0);
@@ -1155,7 +1208,7 @@ mod tests_adjust_volatility {
         )
         .unwrap();
 
-        let expected = base * pos!(0.01); // piso 1 %
+        let expected = base * pos_or_panic!(0.01); // piso 1 %
         assert_relative_eq!(
             out.to_dec().to_f64().unwrap(),
             expected.to_dec().to_f64().unwrap(),
@@ -1165,9 +1218,9 @@ mod tests_adjust_volatility {
 
     #[test]
     fn negative_skew_increases_vol_below_atm() {
-        let base = pos!(0.20);
-        let strike = pos!(1000.0);
-        let spot = pos!(1500.0);
+        let base = pos_or_panic!(0.20);
+        let strike = pos_or_panic!(1000.0);
+        let spot = pos_or_panic!(1500.0);
 
         let skew = dec!(-1.0);
         let out = adjust_volatility(&Some(base), &Some(skew), &None, &strike, &spot).unwrap();
@@ -1179,14 +1232,15 @@ mod tests_adjust_volatility {
 #[cfg(test)]
 mod tests_option_data_price_params {
     use super::*;
-    use crate::{pos, spos};
+
     use num_traits::ToPrimitive;
+    use positive::spos;
     use rust_decimal_macros::dec;
 
     fn get_params() -> OptionDataPriceParams {
         OptionDataPriceParams::new(
-            Some(Box::new(pos!(100.0))),
-            Some(ExpirationDate::Days(pos!(30.0))),
+            Some(Box::new(Positive::HUNDRED)),
+            Some(ExpirationDate::Days(pos_or_panic!(30.0))),
             Some(dec!(0.05)),
             spos!(0.02),
             Some("AAPL".to_string()),
@@ -1197,10 +1251,10 @@ mod tests_option_data_price_params {
     fn test_new_price_params() {
         let params = get_params();
 
-        assert_eq!(*params.underlying_price.unwrap(), pos!(100.0));
+        assert_eq!(*params.underlying_price.unwrap(), Positive::HUNDRED);
         assert_eq!(
             params.expiration_date.unwrap().get_days().unwrap(),
-            pos!(30.0)
+            pos_or_panic!(30.0)
         );
         assert_eq!(params.risk_free_rate.unwrap().to_f64().unwrap(), 0.05);
         assert_eq!(params.dividend_yield.unwrap().to_f64(), 0.02);
@@ -1231,8 +1285,8 @@ mod tests_option_data_price_params {
     #[test]
     fn test_option_data_price_params_getters() {
         // Setup test parameters
-        let underlying_price = Some(Box::new(pos!(100.0)));
-        let expiration_date = Some(ExpirationDate::Days(pos!(30.0)));
+        let underlying_price = Some(Box::new(Positive::HUNDRED));
+        let expiration_date = Some(ExpirationDate::Days(pos_or_panic!(30.0)));
         let risk_free_rate = Some(dec!(0.05));
         let dividend_yield = spos!(0.02);
         let underlying_symbol = Some("AAPL".to_string());
@@ -1268,8 +1322,8 @@ mod tests_option_data_price_params {
     #[test]
     fn test_option_data_price_params_getters_zero_values() {
         let mut params = get_params();
-        params.underlying_price = Some(Box::new(pos!(0.0)));
-        params.expiration_date = Some(ExpirationDate::Days(pos!(0.0)));
+        params.underlying_price = Some(Box::new(Positive::ZERO));
+        params.expiration_date = Some(ExpirationDate::Days(Positive::ZERO));
         params.risk_free_rate = Some(Decimal::ZERO);
         params.dividend_yield = Some(Positive::ZERO);
 
@@ -1286,13 +1340,14 @@ mod tests_option_data_price_params {
 #[cfg(test)]
 mod tests_option_chain_build_params {
     use super::*;
-    use crate::{pos, spos};
+    use positive::spos;
+
     use rust_decimal_macros::dec;
 
     fn get_params() -> OptionDataPriceParams {
         OptionDataPriceParams::new(
-            Some(Box::new(pos!(100.0))),
-            Some(ExpirationDate::Days(pos!(30.0))),
+            Some(Box::new(Positive::HUNDRED)),
+            Some(ExpirationDate::Days(pos_or_panic!(30.0))),
             Some(dec!(0.05)),
             spos!(0.02),
             Some("AAPL".to_string()),
@@ -1310,10 +1365,10 @@ mod tests_option_chain_build_params {
             spos!(5.0),
             dec!(-0.2),
             dec!(0.1),
-            pos!(0.02),
+            pos_or_panic!(0.02),
             2,
             price_params,
-            pos!(0.25),
+            pos_or_panic!(0.25),
         );
 
         assert_eq!(params.symbol, "TEST");
@@ -1321,7 +1376,7 @@ mod tests_option_chain_build_params {
         assert_eq!(params.chain_size, 10);
         assert_eq!(params.strike_interval, spos!(5.0));
         assert_eq!(params.smile_curve, dec!(0.1));
-        assert_eq!(params.spread, pos!(0.02));
+        assert_eq!(params.spread, pos_or_panic!(0.02));
         assert_eq!(params.decimal_places, 2);
 
         let display = format!("{params}");
@@ -1342,10 +1397,10 @@ mod tests_option_chain_build_params {
             spos!(5.0),
             dec!(-0.2),
             dec!(0.1),
-            pos!(0.02),
+            pos_or_panic!(0.02),
             2,
             price_params,
-            pos!(0.25),
+            pos_or_panic!(0.25),
         );
 
         assert_eq!(params.volume, None);
@@ -1355,7 +1410,7 @@ mod tests_option_chain_build_params {
 #[cfg(test)]
 mod tests_random_positions_params_extended {
     use super::*;
-    use crate::pos;
+
     use rust_decimal_macros::dec;
 
     #[test]
@@ -1365,10 +1420,10 @@ mod tests_random_positions_params_extended {
             None,
             Some(1),
             None,
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(1.0),
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            Positive::ONE,
             dec!(0.05),
-            pos!(0.02),
+            pos_or_panic!(0.02),
             Positive::ONE,
             Positive::ONE,
             Positive::ONE,
@@ -1391,10 +1446,10 @@ mod tests_random_positions_params_extended {
             None,
             None,
             None,
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(1.0),
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            Positive::ONE,
             dec!(0.05),
-            pos!(0.02),
+            pos_or_panic!(0.02),
             Positive::ONE,
             Positive::ONE,
             Positive::ONE,
@@ -1413,10 +1468,10 @@ mod tests_random_positions_params_extended {
             None,
             None,
             None,
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(1.0),
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            Positive::ONE,
             dec!(0.05),
-            pos!(0.02),
+            pos_or_panic!(0.02),
             Positive::ONE,
             Positive::ONE,
             Positive::ONE,
@@ -1435,15 +1490,17 @@ mod tests_random_positions_params_extended {
 #[cfg(test)]
 mod tests_sample {
     use super::*;
+    use positive::spos;
+
     use crate::chains::chain::OptionChain;
-    use crate::{pos, spos};
+
     use rust_decimal_macros::dec;
 
     #[test]
     fn test_chain() {
         let chain = OptionDataPriceParams::new(
-            Some(Box::new(pos!(100.0))),
-            Some(ExpirationDate::Days(pos!(30.0))),
+            Some(Box::new(Positive::HUNDRED)),
+            Some(ExpirationDate::Days(pos_or_panic!(30.0))),
             Some(dec!(0.05)),
             spos!(0.02),
             Some("AAPL".to_string()),
@@ -1459,7 +1516,7 @@ mod tests_sample {
             Positive::new(0.02).unwrap(),
             2,
             chain,
-            pos!(0.25),
+            pos_or_panic!(0.25),
         );
 
         let built_chain = OptionChain::build_chain(&params);

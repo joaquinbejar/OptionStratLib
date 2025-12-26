@@ -261,8 +261,9 @@ impl SimulationStats {
 mod tests {
     use super::*;
     use crate::pnl::PnL;
-    use crate::pos;
+
     use chrono::Utc;
+    use positive::pos_or_panic;
     use std::collections::HashMap;
 
     /// Helper function to create a test SimulationResult
@@ -285,7 +286,13 @@ mod tests {
             hit_stop_loss,
             expired,
             expiration_premium: if expired { Some(dec!(50.0)) } else { None },
-            pnl: PnL::new(Some(pnl_value), None, pos!(10.0), pos!(5.0), Utc::now()),
+            pnl: PnL::new(
+                Some(pnl_value),
+                None,
+                pos_or_panic!(10.0),
+                pos_or_panic!(5.0),
+                Utc::now(),
+            ),
             holding_period,
             exit_reason,
         }

@@ -1,4 +1,5 @@
 use optionstratlib::prelude::*;
+use positive::pos_or_panic;
 fn main() -> Result<(), Error> {
     setup_logger();
     let option_chain =
@@ -9,17 +10,17 @@ fn main() -> Result<(), Error> {
         underlying_price, // underlying_price
         Positive::ZERO,   // short_strike
         Positive::ZERO,   // long_strike
-        ExpirationDate::Days(pos!(5.0)),
-        Positive::ZERO, // implied_volatility
-        Decimal::ZERO,  // risk_free_rate
-        Positive::ZERO, // dividend_yield
-        pos!(1.0),      // quantity
-        Positive::ZERO, // premium_short_call
-        Positive::ZERO, // premium_short_put
-        pos!(0.81),     // open_fee_short_call
-        pos!(0.82),     // close_fee_short_call
-        pos!(0.82),     // open_fee_short_put
-        pos!(0.82),     // close_fee_short_put
+        ExpirationDate::Days(pos_or_panic!(5.0)),
+        Positive::ZERO,      // implied_volatility
+        Decimal::ZERO,       // risk_free_rate
+        Positive::ZERO,      // dividend_yield
+        Positive::ONE,       // quantity
+        Positive::ZERO,      // premium_short_call
+        Positive::ZERO,      // premium_short_put
+        pos_or_panic!(0.81), // open_fee_short_call
+        pos_or_panic!(0.82), // close_fee_short_call
+        pos_or_panic!(0.82), // open_fee_short_put
+        pos_or_panic!(0.82), // close_fee_short_put
     );
     strategy.get_best_area(&option_chain, FindOptimalSide::Center);
     debug!("Option Chain: {}", option_chain);

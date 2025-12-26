@@ -7,10 +7,11 @@
 use crate::error::probability::{
     ExpirationErrorKind, PriceErrorKind, ProbabilityCalculationErrorKind, ProbabilityError,
 };
+use crate::f2du;
 use crate::greeks::big_n;
 use crate::model::ExpirationDate;
-use crate::{Positive, f2du, pos};
 use num_traits::ToPrimitive;
+use positive::{Positive, pos_or_panic};
 use rust_decimal::Decimal;
 
 /// Struct to hold volatility adjustment parameters
@@ -96,7 +97,7 @@ pub fn calculate_single_point_probability(
             }
             adj.base_volatility * (1.0 + adj.std_dev_adjustment)
         }
-        None => pos!(0.2), // Default volatility if not provided
+        None => pos_or_panic!(0.2), // Default volatility if not provided
     };
 
     // Adjust drift rate based on trend if provided
@@ -212,8 +213,8 @@ mod tests_single_point_probability {
     // Helper function to create default volatility adjustment
     fn default_volatility_adj() -> VolatilityAdjustment {
         VolatilityAdjustment {
-            base_volatility: pos!(0.2),
-            std_dev_adjustment: pos!(0.1),
+            base_volatility: pos_or_panic!(0.2),
+            std_dev_adjustment: pos_or_panic!(0.1),
         }
     }
 
@@ -227,8 +228,8 @@ mod tests_single_point_probability {
 
     #[test]
     fn test_basic_calculation_with_days() {
-        let current_price = pos!(100.0);
-        let target_price = pos!(105.0);
+        let current_price = Positive::HUNDRED;
+        let target_price = pos_or_panic!(105.0);
         let result = calculate_single_point_probability(
             &current_price,
             &target_price,
@@ -240,14 +241,14 @@ mod tests_single_point_probability {
 
         assert!(result.is_ok());
         let (prob_below, prob_above) = result.unwrap();
-        assert!(prob_below >= Positive::ZERO && prob_above <= pos!(1.0));
+        assert!(prob_below >= Positive::ZERO && prob_above <= Positive::ONE);
         assert_relative_eq!((prob_below + prob_above).to_f64(), 1.0, epsilon = 1e-10);
     }
 
     #[test]
     fn test_calculation_with_datetime() {
-        let current_price = pos!(100.0);
-        let target_price = pos!(105.0);
+        let current_price = Positive::HUNDRED;
+        let target_price = pos_or_panic!(105.0);
         let expiration_date = Utc::now() + Duration::days(365);
 
         let result = calculate_single_point_probability(
@@ -261,14 +262,14 @@ mod tests_single_point_probability {
 
         assert!(result.is_ok());
         let (prob_below, prob_above) = result.unwrap();
-        assert!(prob_below >= Positive::ZERO && prob_above <= pos!(1.0));
+        assert!(prob_below >= Positive::ZERO && prob_above <= Positive::ONE);
         assert_relative_eq!((prob_below + prob_above).to_f64(), 1.0, epsilon = 1e-10);
     }
 
     #[test]
     fn test_with_volatility_adjustment() {
-        let current_price = pos!(100.0);
-        let target_price = pos!(105.0);
+        let current_price = Positive::HUNDRED;
+        let target_price = pos_or_panic!(105.0);
         let vol_adj = Some(default_volatility_adj());
 
         let result = calculate_single_point_probability(
@@ -282,14 +283,14 @@ mod tests_single_point_probability {
 
         assert!(result.is_ok());
         let (prob_below, prob_above) = result.unwrap();
-        assert!(prob_below >= Positive::ZERO && prob_above <= pos!(1.0));
+        assert!(prob_below >= Positive::ZERO && prob_above <= Positive::ONE);
         assert_relative_eq!((prob_below + prob_above).to_f64(), 1.0, epsilon = 1e-10);
     }
 
     #[test]
     fn test_with_trend() {
-        let current_price = pos!(100.0);
-        let target_price = pos!(105.0);
+        let current_price = Positive::HUNDRED;
+        let target_price = pos_or_panic!(105.0);
         let trend = Some(default_trend());
 
         let result = calculate_single_point_probability(
@@ -303,14 +304,14 @@ mod tests_single_point_probability {
 
         assert!(result.is_ok());
         let (prob_below, prob_above) = result.unwrap();
-        assert!(prob_below >= Positive::ZERO && prob_above <= pos!(1.0));
+        assert!(prob_below >= Positive::ZERO && prob_above <= Positive::ONE);
         assert_relative_eq!((prob_below + prob_above).to_f64(), 1.0, epsilon = 1e-10);
     }
 
     #[test]
     fn test_with_risk_free_rate() {
-        let current_price = pos!(100.0);
-        let target_price = pos!(105.0);
+        let current_price = Positive::HUNDRED;
+        let target_price = pos_or_panic!(105.0);
 
         let result = calculate_single_point_probability(
             &current_price,
@@ -323,14 +324,14 @@ mod tests_single_point_probability {
 
         assert!(result.is_ok());
         let (prob_below, prob_above) = result.unwrap();
-        assert!(prob_below >= Positive::ZERO && prob_above <= pos!(1.0));
+        assert!(prob_below >= Positive::ZERO && prob_above <= Positive::ONE);
         assert_relative_eq!((prob_below + prob_above).to_f64(), 1.0, epsilon = 1e-10);
     }
 
     #[test]
     fn test_all_parameters() {
-        let current_price = pos!(100.0);
-        let target_price = pos!(105.0);
+        let current_price = Positive::HUNDRED;
+        let target_price = pos_or_panic!(105.0);
         let vol_adj = Some(default_volatility_adj());
         let trend = Some(default_trend());
 
@@ -345,20 +346,20 @@ mod tests_single_point_probability {
 
         assert!(result.is_ok());
         let (prob_below, prob_above) = result.unwrap();
-        assert!(prob_below >= Positive::ZERO && prob_above <= pos!(1.0));
+        assert!(prob_below >= Positive::ZERO && prob_above <= Positive::ONE);
         assert_relative_eq!((prob_below + prob_above).to_f64(), 1.0, epsilon = 1e-10);
     }
 
     #[test]
     fn test_target_equals_current() {
-        let price = pos!(100.0);
+        let price = Positive::HUNDRED;
 
         let result = calculate_single_point_probability(
             &price,
             &price,
             Some({
                 VolatilityAdjustment {
-                    base_volatility: pos!(0.8),
+                    base_volatility: pos_or_panic!(0.8),
                     std_dev_adjustment: Positive::ZERO,
                 }
             }),
@@ -382,8 +383,8 @@ mod tests_single_point_probability {
     #[test]
     fn test_zero_days_to_expiry() {
         let result = calculate_single_point_probability(
-            &pos!(100.0),
-            &pos!(105.0),
+            &Positive::HUNDRED,
+            &pos_or_panic!(105.0),
             None,
             None,
             &ExpirationDate::Days(Positive::ZERO),
@@ -407,8 +408,8 @@ mod tests_single_point_probability {
         let past_date = Utc::now() - Duration::days(1);
 
         let result = calculate_single_point_probability(
-            &pos!(100.0),
-            &pos!(105.0),
+            &Positive::HUNDRED,
+            &pos_or_panic!(105.0),
             None,
             None,
             &ExpirationDate::DateTime(past_date),
@@ -422,12 +423,12 @@ mod tests_single_point_probability {
     fn test_invalid_volatility() {
         let vol_adj = Some(VolatilityAdjustment {
             base_volatility: Positive::ZERO,
-            std_dev_adjustment: pos!(0.1),
+            std_dev_adjustment: pos_or_panic!(0.1),
         });
 
         let result = calculate_single_point_probability(
-            &pos!(100.0),
-            &pos!(105.0),
+            &Positive::HUNDRED,
+            &pos_or_panic!(105.0),
             vol_adj,
             None,
             &ExpirationDate::Days(DAYS_IN_A_YEAR),
@@ -454,8 +455,8 @@ mod tests_single_point_probability {
         });
 
         let result = calculate_single_point_probability(
-            &pos!(100.0),
-            &pos!(105.0),
+            &Positive::HUNDRED,
+            &pos_or_panic!(105.0),
             None,
             trend,
             &ExpirationDate::Days(DAYS_IN_A_YEAR),
@@ -478,8 +479,8 @@ mod tests_single_point_probability {
     fn test_extreme_target_prices() {
         // Test with very high target price
         let result_high = calculate_single_point_probability(
-            &pos!(100.0),
-            &pos!(1000000.0),
+            &Positive::HUNDRED,
+            &pos_or_panic!(1000000.0),
             None,
             None,
             &ExpirationDate::Days(DAYS_IN_A_YEAR),
@@ -488,12 +489,12 @@ mod tests_single_point_probability {
 
         assert!(result_high.is_ok());
         let (_, prob_above) = result_high.unwrap();
-        assert!(prob_above < pos!(0.01)); // Probability should be very low
+        assert!(prob_above < pos_or_panic!(0.01)); // Probability should be very low
 
         // Test with very low target price
         let result_low = calculate_single_point_probability(
-            &pos!(100.0),
-            &pos!(0.1),
+            &Positive::HUNDRED,
+            &pos_or_panic!(0.1),
             None,
             None,
             &ExpirationDate::Days(DAYS_IN_A_YEAR),
@@ -502,21 +503,21 @@ mod tests_single_point_probability {
 
         assert!(result_low.is_ok());
         let (prob_below, prob_above) = result_low.unwrap();
-        assert!(prob_above > pos!(0.99)); // Probability should be very high
-        assert!(prob_below < pos!(0.01)); // Probability should be very low
+        assert!(prob_above > pos_or_panic!(0.99)); // Probability should be very high
+        assert!(prob_below < pos_or_panic!(0.01)); // Probability should be very low
         assert_relative_eq!((prob_below + prob_above).to_f64(), 1.0, epsilon = 1e-10);
     }
 
     #[test]
     fn test_extreme_volatility() {
         let vol_adj = Some(VolatilityAdjustment {
-            base_volatility: pos!(1.0),
-            std_dev_adjustment: pos!(5.0),
+            base_volatility: Positive::ONE,
+            std_dev_adjustment: pos_or_panic!(5.0),
         });
 
         let result = calculate_single_point_probability(
-            &pos!(100.0),
-            &pos!(105.0),
+            &Positive::HUNDRED,
+            &pos_or_panic!(105.0),
             vol_adj,
             None,
             &ExpirationDate::Days(DAYS_IN_A_YEAR),
@@ -525,7 +526,7 @@ mod tests_single_point_probability {
 
         assert!(result.is_ok());
         let (prob_below, prob_above) = result.unwrap();
-        assert!(prob_below >= Positive::ZERO && prob_above <= pos!(1.0));
+        assert!(prob_below >= Positive::ZERO && prob_above <= Positive::ONE);
         assert_relative_eq!((prob_below + prob_above).to_f64(), 1.0, epsilon = 1e-10);
     }
 
@@ -537,8 +538,8 @@ mod tests_single_point_probability {
         });
 
         let result = calculate_single_point_probability(
-            &pos!(100.0),
-            &pos!(105.0),
+            &Positive::HUNDRED,
+            &pos_or_panic!(105.0),
             None,
             trend,
             &ExpirationDate::Days(DAYS_IN_A_YEAR),
@@ -547,7 +548,7 @@ mod tests_single_point_probability {
 
         assert!(result.is_ok());
         let (prob_below, prob_above) = result.unwrap();
-        assert!(prob_below >= Positive::ZERO && prob_above <= pos!(1.0));
+        assert!(prob_below >= Positive::ZERO && prob_above <= Positive::ONE);
         assert_relative_eq!((prob_below + prob_above).to_f64(), 1.0, epsilon = 1e-10);
     }
 }
@@ -561,9 +562,9 @@ mod tests_calculate_price_probability {
     #[test]
     fn test_price_probability_basic() {
         let result = calculate_price_probability(
-            &pos!(100.0),
-            &pos!(95.0),
-            &pos!(105.0),
+            &Positive::HUNDRED,
+            &pos_or_panic!(95.0),
+            &pos_or_panic!(105.0),
             None,
             None,
             &ExpirationDate::Days(DAYS_IN_A_YEAR),
@@ -572,9 +573,9 @@ mod tests_calculate_price_probability {
 
         assert!(result.is_ok());
         let (prob_below, prob_in_range, prob_above) = result.unwrap();
-        assert!(prob_below >= Positive::ZERO && prob_above <= pos!(1.0));
-        assert!(prob_in_range >= Positive::ZERO && prob_in_range <= pos!(1.0));
-        assert!(prob_above >= Positive::ZERO && prob_above <= pos!(1.0));
+        assert!(prob_below >= Positive::ZERO && prob_above <= Positive::ONE);
+        assert!(prob_in_range >= Positive::ZERO && prob_in_range <= Positive::ONE);
+        assert!(prob_above >= Positive::ZERO && prob_above <= Positive::ONE);
         assert_relative_eq!(
             (prob_below + prob_in_range + prob_above).to_f64(),
             1.0,
@@ -585,9 +586,9 @@ mod tests_calculate_price_probability {
     #[test]
     fn test_price_probability_invalid_bounds() {
         let result = calculate_price_probability(
-            &pos!(100.0),
-            &pos!(105.0), // Lower bound higher than upper bound
-            &pos!(95.0),
+            &Positive::HUNDRED,
+            &pos_or_panic!(105.0), // Lower bound higher than upper bound
+            &pos_or_panic!(95.0),
             None,
             None,
             &ExpirationDate::Days(DAYS_IN_A_YEAR),
@@ -608,14 +609,14 @@ mod tests_calculate_price_probability {
     #[test]
     fn test_price_probability_with_volatility() {
         let vol_adj = Some(VolatilityAdjustment {
-            base_volatility: pos!(0.5),
+            base_volatility: pos_or_panic!(0.5),
             std_dev_adjustment: Positive::ZERO,
         });
 
         let result = calculate_price_probability(
-            &pos!(100.0),
-            &pos!(90.0),
-            &pos!(110.0),
+            &Positive::HUNDRED,
+            &pos_or_panic!(90.0),
+            &pos_or_panic!(110.0),
             vol_adj,
             None,
             &ExpirationDate::Days(DAYS_IN_A_YEAR),

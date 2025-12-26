@@ -13,9 +13,9 @@
 //! retrieving position information, and computing Greeks across different
 //! instrument types.
 
-use crate::Positive;
 use crate::error::GreeksError;
 use crate::model::types::Side;
+use positive::Positive;
 use rust_decimal::Decimal;
 
 /// Common trait for all leg types in a trading strategy.
@@ -282,18 +282,18 @@ mod tests {
     fn test_mock_leg_long_pnl() {
         let leg = MockLeg {
             symbol: "BTC".to_string(),
-            quantity: crate::pos!(1.0),
+            quantity: positive::Positive::ONE,
             side: Side::Long,
-            cost_basis: crate::pos!(50000.0),
-            fees: crate::pos!(10.0),
+            cost_basis: positive::pos_or_panic!(50000.0),
+            fees: positive::pos_or_panic!(10.0),
         };
 
         // Price goes up - profit
-        let pnl = leg.pnl_at_price(crate::pos!(55000.0));
+        let pnl = leg.pnl_at_price(positive::pos_or_panic!(55000.0));
         assert_eq!(pnl, Decimal::from(5000));
 
         // Price goes down - loss
-        let pnl = leg.pnl_at_price(crate::pos!(45000.0));
+        let pnl = leg.pnl_at_price(positive::pos_or_panic!(45000.0));
         assert_eq!(pnl, Decimal::from(-5000));
     }
 
@@ -301,18 +301,18 @@ mod tests {
     fn test_mock_leg_short_pnl() {
         let leg = MockLeg {
             symbol: "BTC".to_string(),
-            quantity: crate::pos!(1.0),
+            quantity: positive::Positive::ONE,
             side: Side::Short,
-            cost_basis: crate::pos!(50000.0),
-            fees: crate::pos!(10.0),
+            cost_basis: positive::pos_or_panic!(50000.0),
+            fees: positive::pos_or_panic!(10.0),
         };
 
         // Price goes up - loss for short
-        let pnl = leg.pnl_at_price(crate::pos!(55000.0));
+        let pnl = leg.pnl_at_price(positive::pos_or_panic!(55000.0));
         assert_eq!(pnl, Decimal::from(-5000));
 
         // Price goes down - profit for short
-        let pnl = leg.pnl_at_price(crate::pos!(45000.0));
+        let pnl = leg.pnl_at_price(positive::pos_or_panic!(45000.0));
         assert_eq!(pnl, Decimal::from(5000));
     }
 
@@ -320,18 +320,18 @@ mod tests {
     fn test_mock_leg_delta() {
         let long_leg = MockLeg {
             symbol: "BTC".to_string(),
-            quantity: crate::pos!(2.0),
+            quantity: positive::Positive::TWO,
             side: Side::Long,
-            cost_basis: crate::pos!(50000.0),
-            fees: crate::pos!(10.0),
+            cost_basis: positive::pos_or_panic!(50000.0),
+            fees: positive::pos_or_panic!(10.0),
         };
 
         let short_leg = MockLeg {
             symbol: "BTC".to_string(),
-            quantity: crate::pos!(2.0),
+            quantity: positive::Positive::TWO,
             side: Side::Short,
-            cost_basis: crate::pos!(50000.0),
-            fees: crate::pos!(10.0),
+            cost_basis: positive::pos_or_panic!(50000.0),
+            fees: positive::pos_or_panic!(10.0),
         };
 
         assert_eq!(long_leg.delta().unwrap(), Decimal::from(2));
@@ -342,18 +342,18 @@ mod tests {
     fn test_is_long_short() {
         let long_leg = MockLeg {
             symbol: "BTC".to_string(),
-            quantity: crate::pos!(1.0),
+            quantity: positive::Positive::ONE,
             side: Side::Long,
-            cost_basis: crate::pos!(50000.0),
-            fees: crate::pos!(10.0),
+            cost_basis: positive::pos_or_panic!(50000.0),
+            fees: positive::pos_or_panic!(10.0),
         };
 
         let short_leg = MockLeg {
             symbol: "BTC".to_string(),
-            quantity: crate::pos!(1.0),
+            quantity: Positive::ONE,
             side: Side::Short,
-            cost_basis: crate::pos!(50000.0),
-            fees: crate::pos!(10.0),
+            cost_basis: positive::pos_or_panic!(50000.0),
+            fees: positive::pos_or_panic!(10.0),
         };
 
         assert!(long_leg.is_long());
@@ -366,13 +366,13 @@ mod tests {
     fn test_notional_value() {
         let leg = MockLeg {
             symbol: "BTC".to_string(),
-            quantity: crate::pos!(2.0),
+            quantity: positive::Positive::TWO,
             side: Side::Long,
-            cost_basis: crate::pos!(50000.0),
-            fees: crate::pos!(10.0),
+            cost_basis: positive::pos_or_panic!(50000.0),
+            fees: positive::pos_or_panic!(10.0),
         };
 
-        let notional = leg.notional_value(crate::pos!(55000.0));
-        assert_eq!(notional, crate::pos!(110000.0));
+        let notional = leg.notional_value(positive::pos_or_panic!(55000.0));
+        assert_eq!(notional, positive::pos_or_panic!(110000.0));
     }
 }

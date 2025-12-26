@@ -45,26 +45,26 @@
 //! use tracing::info;
 //! use optionstratlib::ExpirationDate;
 //! use optionstratlib::strategies::bull_call_spread::BullCallSpread;
-//! use optionstratlib::Positive;
-//! use optionstratlib::pos;
+//! use positive::Positive;
+//! use positive::pos_or_panic;
 //! use optionstratlib::strategies::Strategies;
 //!
 //! let spread = BullCallSpread::new(
 //!     "SP500".to_string(),
-//!     pos!(5780.0),   // underlying_price
-//!     pos!(5750.0),   // long_strike_itm  
-//!     pos!(5820.0),   // short_strike
-//!     ExpirationDate::Days(pos!(2.0)),
-//!     pos!(0.18),   // implied_volatility
+//!     pos_or_panic!(5780.0),   // underlying_price
+//!     pos_or_panic!(5750.0),   // long_strike_itm  
+//!     pos_or_panic!(5820.0),   // short_strike
+//!     ExpirationDate::Days(Positive::TWO),
+//!     pos_or_panic!(0.18),   // implied_volatility
 //!     dec!(0.05),   // risk_free_rate
 //!     Positive::ZERO,   // dividend_yield
-//!     pos!(2.0),   // long quantity
-//!     pos!(85.04),   // premium_long
-//!     pos!(29.85),   // premium_short
-//!     pos!(0.78),   // open_fee_long
-//!     pos!(0.78),   // open_fee_long
-//!     pos!(0.73),   // close_fee_long
-//!     pos!(0.73),   // close_fee_short
+//!     Positive::TWO,   // long quantity
+//!     pos_or_panic!(85.04),   // premium_long
+//!     pos_or_panic!(29.85),   // premium_short
+//!     pos_or_panic!(0.78),   // open_fee_long
+//!     pos_or_panic!(0.78),   // open_fee_long
+//!     pos_or_panic!(0.73),   // close_fee_long
+//!     pos_or_panic!(0.73),   // close_fee_short
 //! );
 //!
 //! let profit = spread.get_max_profit().unwrap_or(Positive::ZERO);
@@ -118,7 +118,7 @@
 //! ```rust
 //! use optionstratlib::error::position::PositionError;
 //! use optionstratlib::model::position::Position;
-//! use optionstratlib::Positive;
+//! use positive::Positive;
 //! use optionstratlib::strategies::base::{BreakEvenable, Positionable, Strategies, Validable};
 //! use optionstratlib::strategies::{BasicAble, Strategable};
 //!
@@ -158,28 +158,28 @@
 //! use tracing::info;
 //! use optionstratlib::ExpirationDate;
 //! use optionstratlib::strategies::iron_condor::IronCondor;
-//! use optionstratlib::Positive;
-//! use optionstratlib::pos;
+//! use positive::Positive;
+//! use positive::pos_or_panic;
 //! use optionstratlib::strategies::Strategies;
 //!
 //! let condor = IronCondor::new(
 //!     "AAPL".to_string(),
-//!     pos!(150.0),   // underlying_price
-//!     pos!(155.0),   // short_call_strike
-//!     pos!(145.0),   // short_put_strike  
-//!     pos!(160.0),   // long_call_strike
-//!     pos!(140.0),   // long_put_strike
-//!     ExpirationDate::Days(pos!(30.0)),
-//!     pos!(0.2),   // implied_volatility
+//!     pos_or_panic!(150.0),   // underlying_price
+//!     pos_or_panic!(155.0),   // short_call_strike
+//!     pos_or_panic!(145.0),   // short_put_strike  
+//!     pos_or_panic!(160.0),   // long_call_strike
+//!     pos_or_panic!(140.0),   // long_put_strike
+//!     ExpirationDate::Days(pos_or_panic!(30.0)),
+//!     pos_or_panic!(0.2),   // implied_volatility
 //!     dec!(0.01),   // risk_free_rate
-//!     pos!(0.02),   // dividend_yield
-//!     pos!(1.0),   // quantity
-//!     pos!(1.5),   // premium_short_call
+//!     pos_or_panic!(0.02),   // dividend_yield
+//!     Positive::ONE,   // quantity
+//!     pos_or_panic!(1.5),   // premium_short_call
 //!     Positive::ONE,   // premium_short_put
 //!     Positive::TWO,   // premium_long_call
-//!     pos!(1.8),   // premium_long_put
-//!     pos!(5.0),   // open_fee
-//!     pos!(5.0),   // close_fee
+//!     pos_or_panic!(1.8),   // premium_long_put
+//!     pos_or_panic!(5.0),   // open_fee
+//!     pos_or_panic!(5.0),   // close_fee
 //! );
 //!
 //! let max_profit = condor.get_max_profit().unwrap_or(Positive::ZERO);

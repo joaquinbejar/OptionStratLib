@@ -1,6 +1,7 @@
+use optionstratlib::ExpirationDate;
 use optionstratlib::chains::chain::OptionChain;
 use optionstratlib::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
-use optionstratlib::{Positive, model::ExpirationDate};
+use positive::Positive;
 use rust_decimal_macros::dec;
 
 fn main() -> Result<(), optionstratlib::error::Error> {

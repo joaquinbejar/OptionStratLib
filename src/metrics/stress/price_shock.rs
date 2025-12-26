@@ -47,11 +47,11 @@
 //! - **Y-axis**: Volatility level (or vol shock %)
 //! - **Z-axis**: P&L or option value
 
-use crate::Positive;
 use crate::curves::Curve;
 use crate::error::CurveError;
 use crate::error::SurfaceError;
 use crate::surfaces::Surface;
+use positive::Positive;
 use rust_decimal::Decimal;
 
 /// A trait for computing price shock impact curves by strike price.
@@ -113,11 +113,11 @@ pub trait PriceShockCurve {
 /// ```ignore
 /// use optionstratlib::chains::chain::OptionChain;
 /// use optionstratlib::metrics::PriceShockSurface;
-/// use optionstratlib::pos;
+/// use positive::pos_or_panic;
 ///
 /// let chain = OptionChain::load_from_json("options.json")?;
-/// let price_range = (pos!(400.0), pos!(500.0));
-/// let vol_range = (pos!(0.10), pos!(0.50));
+/// let price_range = (pos_or_panic!(400.0), pos_or_panic!(500.0));
+/// let vol_range = (pos_or_panic!(0.10), pos_or_panic!(0.50));
 /// let surface = chain.price_shock_surface(price_range, vol_range, 20, 20)?;
 /// ```
 pub trait PriceShockSurface {
@@ -148,8 +148,9 @@ pub trait PriceShockSurface {
 mod tests_price_shock {
     use super::*;
     use crate::curves::Point2D;
-    use crate::pos;
+
     use crate::surfaces::Point3D;
+    use positive::pos_or_panic;
     use rust_decimal::MathematicalOps;
     use rust_decimal_macros::dec;
     use std::collections::BTreeSet;
@@ -241,7 +242,7 @@ mod tests_price_shock {
     #[test]
     fn test_price_shock_curve_creation() {
         let ps = TestPriceShock {
-            underlying_price: pos!(450.0),
+            underlying_price: pos_or_panic!(450.0),
         };
         let curve = ps.price_shock_curve(dec!(-0.10));
         assert!(curve.is_ok());
@@ -253,7 +254,7 @@ mod tests_price_shock {
     #[test]
     fn test_price_shock_curve_negative_shock() {
         let ps = TestPriceShock {
-            underlying_price: pos!(450.0),
+            underlying_price: pos_or_panic!(450.0),
         };
         let curve = ps.price_shock_curve(dec!(-0.10)).unwrap();
 
@@ -273,7 +274,7 @@ mod tests_price_shock {
     #[test]
     fn test_price_shock_curve_positive_shock() {
         let ps = TestPriceShock {
-            underlying_price: pos!(450.0),
+            underlying_price: pos_or_panic!(450.0),
         };
         let curve = ps.price_shock_curve(dec!(0.10)).unwrap();
 
@@ -292,10 +293,10 @@ mod tests_price_shock {
     #[test]
     fn test_price_shock_surface_creation() {
         let ps = TestPriceShock {
-            underlying_price: pos!(450.0),
+            underlying_price: pos_or_panic!(450.0),
         };
-        let price_range = (pos!(400.0), pos!(500.0));
-        let vol_range = (pos!(0.10), pos!(0.40));
+        let price_range = (pos_or_panic!(400.0), pos_or_panic!(500.0));
+        let vol_range = (pos_or_panic!(0.10), pos_or_panic!(0.40));
 
         let surface = ps.price_shock_surface(price_range, vol_range, 10, 10);
         assert!(surface.is_ok());
@@ -308,10 +309,10 @@ mod tests_price_shock {
     #[test]
     fn test_price_shock_surface_price_effect() {
         let ps = TestPriceShock {
-            underlying_price: pos!(450.0),
+            underlying_price: pos_or_panic!(450.0),
         };
-        let price_range = (pos!(400.0), pos!(500.0));
-        let vol_range = (pos!(0.20), pos!(0.20)); // Fixed vol
+        let price_range = (pos_or_panic!(400.0), pos_or_panic!(500.0));
+        let vol_range = (pos_or_panic!(0.20), pos_or_panic!(0.20)); // Fixed vol
 
         let surface = ps
             .price_shock_surface(price_range, vol_range, 10, 0)
@@ -328,10 +329,10 @@ mod tests_price_shock {
     #[test]
     fn test_price_shock_surface_vol_effect() {
         let ps = TestPriceShock {
-            underlying_price: pos!(450.0),
+            underlying_price: pos_or_panic!(450.0),
         };
-        let price_range = (pos!(450.0), pos!(450.0)); // Fixed price (ATM)
-        let vol_range = (pos!(0.10), pos!(0.40));
+        let price_range = (pos_or_panic!(450.0), pos_or_panic!(450.0)); // Fixed price (ATM)
+        let vol_range = (pos_or_panic!(0.10), pos_or_panic!(0.40));
 
         let surface = ps
             .price_shock_surface(price_range, vol_range, 0, 10)

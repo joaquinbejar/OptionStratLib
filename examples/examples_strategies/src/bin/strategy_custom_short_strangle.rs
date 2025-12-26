@@ -1,13 +1,14 @@
 use optionstratlib::prelude::*;
+use positive::pos_or_panic;
 
 fn main() -> Result<(), Error> {
     setup_logger();
-    let underlying_price = pos!(7138.5);
+    let underlying_price = pos_or_panic!(7138.5);
     let underlying_symbol = "CL".to_string();
-    let expiration = ExpirationDate::Days(pos!(45.0));
+    let expiration = ExpirationDate::Days(pos_or_panic!(45.0));
     let risk_free_rate = dec!(0.05);
     let dividend_yield = Positive::ZERO;
-    let quantity = pos!(2.0);
+    let quantity = Positive::TWO;
 
     // Create the same positions as ShortStrangle example
     // Short Call at 7450.0 strike
@@ -15,9 +16,9 @@ fn main() -> Result<(), Error> {
         OptionType::European,
         Side::Short,
         underlying_symbol.clone(),
-        pos!(7450.0), // call_strike
+        pos_or_panic!(7450.0), // call_strike
         expiration,
-        pos!(0.3745), // call_implied_volatility
+        pos_or_panic!(0.3745), // call_implied_volatility
         quantity,
         underlying_price,
         risk_free_rate,
@@ -27,10 +28,10 @@ fn main() -> Result<(), Error> {
     );
     let short_call = Position::new(
         short_call_option,
-        pos!(84.2), // premium_short_call
+        pos_or_panic!(84.2), // premium_short_call
         Utc::now(),
-        pos!(7.01), // open_fee_short_call
-        pos!(7.01), // close_fee_short_call
+        pos_or_panic!(7.01), // open_fee_short_call
+        pos_or_panic!(7.01), // close_fee_short_call
         None,
         None,
     );
@@ -40,9 +41,9 @@ fn main() -> Result<(), Error> {
         OptionType::European,
         Side::Short,
         underlying_symbol.clone(),
-        pos!(7050.0), // put_strike
+        pos_or_panic!(7050.0), // put_strike
         expiration,
-        pos!(0.3745), // put_implied_volatility
+        pos_or_panic!(0.3745), // put_implied_volatility
         quantity,
         underlying_price,
         risk_free_rate,
@@ -52,10 +53,10 @@ fn main() -> Result<(), Error> {
     );
     let short_put = Position::new(
         short_put_option,
-        pos!(353.2), // premium_short_put
+        pos_or_panic!(353.2), // premium_short_put
         Utc::now(),
-        pos!(7.01), // open_fee_short_put
-        pos!(7.01), // close_fee_short_put
+        pos_or_panic!(7.01), // open_fee_short_put
+        pos_or_panic!(7.01), // close_fee_short_put
         None,
         None,
     );
@@ -77,7 +78,7 @@ fn main() -> Result<(), Error> {
     let range = if strategy.break_even_points.len() >= 2 {
         strategy.break_even_points[1] - strategy.break_even_points[0]
     } else {
-        pos!(0.0)
+        Positive::ZERO
     };
 
     // Display strategy information
@@ -98,7 +99,7 @@ fn main() -> Result<(), Error> {
     );
     info!("Total Fees: ${:.2}", strategy.get_fees()?);
 
-    if range > pos!(0.0) {
+    if range > Positive::ZERO {
         info!(
             "Range of Profit: ${:.2} {:.2}%",
             range,

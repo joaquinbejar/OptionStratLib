@@ -38,11 +38,11 @@
 //! - Term structure analysis
 //! - Calendar spread opportunities identification
 
-use crate::Positive;
 use crate::curves::Curve;
 use crate::error::CurveError;
 use crate::error::SurfaceError;
 use crate::surfaces::Surface;
+use positive::Positive;
 
 #[cfg(test)]
 use rust_decimal::MathematicalOps;
@@ -71,7 +71,7 @@ use rust_decimal::MathematicalOps;
 /// use optionstratlib::chains::chain::OptionChain;
 /// use optionstratlib::metrics::ImpliedVolatilityCurve;
 ///
-/// let chain = OptionChain::new("SPY", pos!(450.0), "2024-03-15".to_string(), None, None);
+/// let chain = OptionChain::new("SPY", pos_or_panic!(450.0), "2024-03-15".to_string(), None, None);
 /// let iv_curve = chain.iv_curve()?;
 ///
 /// // The curve can be used for visualization or analysis
@@ -125,10 +125,10 @@ pub trait ImpliedVolatilityCurve {
 /// ```ignore
 /// use optionstratlib::chains::chain::OptionChain;
 /// use optionstratlib::metrics::ImpliedVolatilitySurface;
-/// use optionstratlib::pos;
+/// use positive::pos_or_panic;
 ///
-/// let chain = OptionChain::new("SPY", pos!(450.0), "2024-03-15".to_string(), None, None);
-/// let days = vec![pos!(7.0), pos!(14.0), pos!(30.0), pos!(60.0), pos!(90.0)];
+/// let chain = OptionChain::new("SPY", pos_or_panic!(450.0), "2024-03-15".to_string(), None, None);
+/// let days = vec![pos_or_panic!(7.0), pos_or_panic!(14.0), pos_or_panic!(30.0), pos_or_panic!(60.0), pos_or_panic!(90.0)];
 /// let iv_surface = chain.iv_surface(days)?;
 /// ```
 pub trait ImpliedVolatilitySurface {
@@ -159,6 +159,7 @@ mod tests_implied_volatility_traits {
     use super::*;
     use crate::curves::Point2D;
     use crate::surfaces::Point3D;
+    use positive::pos_or_panic;
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
     use std::collections::BTreeSet;
@@ -233,10 +234,12 @@ mod tests_implied_volatility_traits {
 
     #[test]
     fn test_iv_surface_implementation() {
-        use crate::pos;
-
         let iv = TestIVSurface;
-        let days = vec![pos!(30.0), pos!(60.0), pos!(90.0)];
+        let days = vec![
+            pos_or_panic!(30.0),
+            pos_or_panic!(60.0),
+            pos_or_panic!(90.0),
+        ];
         let surface = iv.iv_surface(days).unwrap();
 
         // 5 strikes × 3 days = 15 points
@@ -245,10 +248,8 @@ mod tests_implied_volatility_traits {
 
     #[test]
     fn test_iv_surface_time_scaling() {
-        use crate::pos;
-
         let iv = TestIVSurface;
-        let days = vec![pos!(30.0), pos!(90.0)];
+        let days = vec![pos_or_panic!(30.0), pos_or_panic!(90.0)];
         let surface = iv.iv_surface(days).unwrap();
 
         // Find points at same strike but different times

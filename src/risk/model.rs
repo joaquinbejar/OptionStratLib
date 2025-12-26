@@ -3,7 +3,8 @@
    Email: jb@taunais.com
    Date: 26/2/25
 ******************************************************************************/
-use crate::{Positive, pos};
+use positive::{Positive, pos_or_panic};
+
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
@@ -37,8 +38,8 @@ impl Default for RiskMetricsSimulation {
             var_95: dec!(0.0),
             var_99: dec!(0.0),
             cvar_95: dec!(0.0),
-            severe_loss_probability: pos!(0.01),
-            max_drawdown: pos!(0.01),
+            severe_loss_probability: pos_or_panic!(0.01),
+            max_drawdown: pos_or_panic!(0.01),
             sharpe_ratio: dec!(0.0),
         }
     }
@@ -60,7 +61,7 @@ pub enum RiskCategory {
 #[cfg(test)]
 mod tests_risk_metrics {
     use super::*;
-    use crate::pos;
+
     use rust_decimal_macros::dec;
     use serde_json;
 
@@ -71,8 +72,8 @@ mod tests_risk_metrics {
         assert_eq!(metrics.var_95, dec!(0.0));
         assert_eq!(metrics.var_99, dec!(0.0));
         assert_eq!(metrics.cvar_95, dec!(0.0));
-        assert_eq!(metrics.severe_loss_probability, pos!(0.01));
-        assert_eq!(metrics.max_drawdown, pos!(0.01));
+        assert_eq!(metrics.severe_loss_probability, pos_or_panic!(0.01));
+        assert_eq!(metrics.max_drawdown, pos_or_panic!(0.01));
         assert_eq!(metrics.sharpe_ratio, dec!(0.0));
     }
 
@@ -82,8 +83,8 @@ mod tests_risk_metrics {
             var_95: dec!(-100.0),
             var_99: dec!(-150.0),
             cvar_95: dec!(-120.0),
-            severe_loss_probability: pos!(0.15),
-            max_drawdown: pos!(0.25),
+            severe_loss_probability: pos_or_panic!(0.15),
+            max_drawdown: pos_or_panic!(0.25),
             sharpe_ratio: dec!(1.2),
         };
 
@@ -92,8 +93,8 @@ mod tests_risk_metrics {
         assert_eq!(cloned.var_95, dec!(-100.0));
         assert_eq!(cloned.var_99, dec!(-150.0));
         assert_eq!(cloned.cvar_95, dec!(-120.0));
-        assert_eq!(cloned.severe_loss_probability, pos!(0.15));
-        assert_eq!(cloned.max_drawdown, pos!(0.25));
+        assert_eq!(cloned.severe_loss_probability, pos_or_panic!(0.15));
+        assert_eq!(cloned.max_drawdown, pos_or_panic!(0.25));
         assert_eq!(cloned.sharpe_ratio, dec!(1.2));
     }
 
@@ -103,16 +104,16 @@ mod tests_risk_metrics {
             var_95: dec!(-75.5),
             var_99: dec!(-120.25),
             cvar_95: dec!(-90.75),
-            severe_loss_probability: pos!(0.22),
-            max_drawdown: pos!(0.35),
+            severe_loss_probability: pos_or_panic!(0.22),
+            max_drawdown: pos_or_panic!(0.35),
             sharpe_ratio: dec!(0.88),
         };
 
         assert_eq!(metrics.var_95, dec!(-75.5));
         assert_eq!(metrics.var_99, dec!(-120.25));
         assert_eq!(metrics.cvar_95, dec!(-90.75));
-        assert_eq!(metrics.severe_loss_probability, pos!(0.22));
-        assert_eq!(metrics.max_drawdown, pos!(0.35));
+        assert_eq!(metrics.severe_loss_probability, pos_or_panic!(0.22));
+        assert_eq!(metrics.max_drawdown, pos_or_panic!(0.35));
         assert_eq!(metrics.sharpe_ratio, dec!(0.88));
     }
 
@@ -136,8 +137,8 @@ mod tests_risk_metrics {
             var_95: dec!(-50.0),
             var_99: dec!(-75.0),
             cvar_95: dec!(-60.0),
-            severe_loss_probability: pos!(0.1),
-            max_drawdown: pos!(0.2),
+            severe_loss_probability: pos_or_panic!(0.1),
+            max_drawdown: pos_or_panic!(0.2),
             sharpe_ratio: dec!(1.5),
         };
 
@@ -148,8 +149,8 @@ mod tests_risk_metrics {
         assert_eq!(deserialized.var_95, dec!(-50.0));
         assert_eq!(deserialized.var_99, dec!(-75.0));
         assert_eq!(deserialized.cvar_95, dec!(-60.0));
-        assert_eq!(deserialized.severe_loss_probability, pos!(0.1));
-        assert_eq!(deserialized.max_drawdown, pos!(0.2));
+        assert_eq!(deserialized.severe_loss_probability, pos_or_panic!(0.1));
+        assert_eq!(deserialized.max_drawdown, pos_or_panic!(0.2));
         assert_eq!(deserialized.sharpe_ratio, dec!(1.5));
     }
 
@@ -159,8 +160,8 @@ mod tests_risk_metrics {
             var_95: dec!(-30.0),
             var_99: dec!(-45.0),
             cvar_95: dec!(-35.0),
-            severe_loss_probability: pos!(0.05),
-            max_drawdown: pos!(0.15),
+            severe_loss_probability: pos_or_panic!(0.05),
+            max_drawdown: pos_or_panic!(0.15),
             sharpe_ratio: dec!(1.0),
         };
 
@@ -168,8 +169,8 @@ mod tests_risk_metrics {
         assert_eq!(metrics.var_95, dec!(-30.0));
         assert_eq!(metrics.var_99, dec!(-45.0));
         assert_eq!(metrics.cvar_95, dec!(-35.0));
-        assert_eq!(metrics.severe_loss_probability, pos!(0.05));
-        assert_eq!(metrics.max_drawdown, pos!(0.15));
+        assert_eq!(metrics.severe_loss_probability, pos_or_panic!(0.05));
+        assert_eq!(metrics.max_drawdown, pos_or_panic!(0.15));
         assert_eq!(metrics.sharpe_ratio, dec!(1.0));
     }
 
@@ -180,8 +181,8 @@ mod tests_risk_metrics {
             var_95: dec!(-123.45678),
             var_99: dec!(-234.56789),
             cvar_95: dec!(-345.67890),
-            severe_loss_probability: pos!(0.12345),
-            max_drawdown: pos!(0.23456),
+            severe_loss_probability: pos_or_panic!(0.12345),
+            max_drawdown: pos_or_panic!(0.23456),
             sharpe_ratio: dec!(1.23456),
         };
 
@@ -189,8 +190,8 @@ mod tests_risk_metrics {
         assert_eq!(metrics.var_95, dec!(-123.45678));
         assert_eq!(metrics.var_99, dec!(-234.56789));
         assert_eq!(metrics.cvar_95, dec!(-345.67890));
-        assert_eq!(metrics.severe_loss_probability, pos!(0.12345));
-        assert_eq!(metrics.max_drawdown, pos!(0.23456));
+        assert_eq!(metrics.severe_loss_probability, pos_or_panic!(0.12345));
+        assert_eq!(metrics.max_drawdown, pos_or_panic!(0.23456));
         assert_eq!(metrics.sharpe_ratio, dec!(1.23456));
     }
 
@@ -201,16 +202,16 @@ mod tests_risk_metrics {
             var_95: dec!(0.0),
             var_99: dec!(-200.0),
             cvar_95: dec!(-100.0),
-            severe_loss_probability: pos!(0.0001), // Near-zero positive value
-            max_drawdown: pos!(0.0001),            // Near-zero positive value
-            sharpe_ratio: dec!(-0.5),              // Negative Sharpe ratio (poor performance)
+            severe_loss_probability: pos_or_panic!(0.0001), // Near-zero positive value
+            max_drawdown: pos_or_panic!(0.0001),            // Near-zero positive value
+            sharpe_ratio: dec!(-0.5), // Negative Sharpe ratio (poor performance)
         };
 
         assert_eq!(metrics.var_95, dec!(0.0));
         assert_eq!(metrics.var_99, dec!(-200.0));
         assert_eq!(metrics.cvar_95, dec!(-100.0));
-        assert_eq!(metrics.severe_loss_probability, pos!(0.0001));
-        assert_eq!(metrics.max_drawdown, pos!(0.0001));
+        assert_eq!(metrics.severe_loss_probability, pos_or_panic!(0.0001));
+        assert_eq!(metrics.max_drawdown, pos_or_panic!(0.0001));
         assert_eq!(metrics.sharpe_ratio, dec!(-0.5));
     }
 

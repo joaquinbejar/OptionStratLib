@@ -1,4 +1,5 @@
 use optionstratlib::prelude::*;
+use positive::pos_or_panic;
 use std::error::Error;
 
 fn get_option(point2d: &Point2D) -> Options {
@@ -11,10 +12,10 @@ fn get_option(point2d: &Point2D) -> Options {
         "XYZ".parse().unwrap(),
         strike,
         expiration_date,
-        pos!(0.5),   // volatility
-        pos!(1.0),   // quantity
-        pos!(100.0), // underlying price
-        dec!(0.05),  // risk free rate
+        pos_or_panic!(0.5), // volatility
+        Positive::ONE,      // quantity
+        Positive::HUNDRED,  // underlying price
+        dec!(0.05),         // risk free rate
         OptionStyle::Call,
         Positive::ZERO, // dividend yield
         None,

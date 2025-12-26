@@ -1,3 +1,4 @@
+use positive::pos_or_panic;
 /******************************************************************************
    Author: Joaquín Béjar García
    Email: jb@taunais.com
@@ -16,20 +17,20 @@ fn main() -> Result<(), Error> {
         Positive::ZERO,   // long_strike_itm
         Positive::ZERO,   // long_strike_otm
         Positive::ZERO,   // short_strike
-        ExpirationDate::Days(pos!(2.0)),
-        Positive::ZERO, // implied_volatility
-        dec!(0.05),     // risk_free_rate
-        Positive::ZERO, // dividend_yield
-        pos!(1.0),      // long quantity
-        Positive::ZERO, // short_quantity
-        Positive::ZERO, // premium_long_itm
-        Positive::ZERO, // premium_long_otm
-        pos!(0.95),     //    open_fee_long
-        pos!(0.95),     //    close_fee_long
-        pos!(0.95),     //    open_fee_short_low
-        pos!(0.95),     //    close_fee_short_low
-        pos!(0.95),     //    open_fee_short_high
-        pos!(0.95),     //    close_fee_short_high
+        ExpirationDate::Days(Positive::TWO),
+        Positive::ZERO,      // implied_volatility
+        dec!(0.05),          // risk_free_rate
+        Positive::ZERO,      // dividend_yield
+        Positive::ONE,       // long quantity
+        Positive::ZERO,      // short_quantity
+        Positive::ZERO,      // premium_long_itm
+        Positive::ZERO,      // premium_long_otm
+        pos_or_panic!(0.95), //    open_fee_long
+        pos_or_panic!(0.95), //    close_fee_long
+        pos_or_panic!(0.95), //    open_fee_short_low
+        pos_or_panic!(0.95), //    close_fee_short_low
+        pos_or_panic!(0.95), //    open_fee_short_high
+        pos_or_panic!(0.95), //    close_fee_short_high
     );
 
     strategy.get_best_area(&option_chain, FindOptimalSide::Center);

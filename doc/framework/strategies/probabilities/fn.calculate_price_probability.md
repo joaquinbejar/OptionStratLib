@@ -20,7 +20,7 @@ pub fn calculate_price_probability(
     trend: Option<PriceTrend>,
     expiration_date: &ExpirationDate,
     risk_free_rate: Option<Decimal>,
-) -> Result<(Positive, Positive, Positive), ProbabilityError>
+) -> Result<(Positive, Positive), ProbabilityError>
 ```
 
 Expand description

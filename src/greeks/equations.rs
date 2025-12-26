@@ -7,7 +7,8 @@ use crate::constants::{TRADING_DAYS, ZERO};
 use crate::error::greeks::GreeksError;
 use crate::greeks::utils::{big_n, d1, d2, n};
 use crate::model::types::OptionStyle;
-use crate::{Options, Positive, Side};
+use crate::{Options, Side};
+use positive::Positive;
 use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::{Decimal, MathematicalOps};
 use serde::{Deserialize, Serialize};
@@ -449,17 +450,17 @@ pub trait Greeks {
 /// use optionstratlib::greeks::delta;
 /// use optionstratlib::{ExpirationDate, Options};
 /// use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
-/// use optionstratlib::{pos, Positive};
+/// use positive::{pos_or_panic, Positive};
 /// let option = Options {
 ///     option_type: OptionType::European,
 ///     side: Side::Long,
-///     underlying_price: pos!(100.0),
-///     strike_price: pos!(95.0),
+///     underlying_price: Positive::HUNDRED,
+///     strike_price: pos_or_panic!(95.0),
 ///     risk_free_rate: dec!(0.05),
-///     expiration_date: ExpirationDate::Days(pos!(30.0)),
-///     implied_volatility: pos!(0.2),
+///     expiration_date: ExpirationDate::Days(pos_or_panic!(30.0)),
+///     implied_volatility: pos_or_panic!(0.2),
 ///     dividend_yield: Positive::ZERO,
-///     quantity: pos!(1.0),
+///     quantity: Positive::ONE,
 ///     option_style: OptionStyle::Call,
 ///     underlying_symbol: "AAPL".to_string(),
 ///     exotic_params: None,
@@ -614,17 +615,17 @@ pub fn delta(option: &Options) -> Result<Decimal, GreeksError> {
 /// use optionstratlib::greeks::gamma;
 /// use optionstratlib::{ExpirationDate, Options};
 /// use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
-/// use optionstratlib::pos;
+/// use positive::{pos_or_panic,Positive};
 /// let option = Options {
 ///     option_type: OptionType::European,
 ///     side: Side::Long,
-///     underlying_price: pos!(100.0),
-///     strike_price: pos!(95.0),
+///     underlying_price: Positive::HUNDRED,
+///     strike_price: pos_or_panic!(95.0),
 ///     risk_free_rate: dec!(0.05),
-///     expiration_date: ExpirationDate::Days(pos!(30.0)),
-///     implied_volatility: pos!(0.2),
-///     dividend_yield: pos!(0.01),
-///     quantity: pos!(1.0),
+///     expiration_date: ExpirationDate::Days(pos_or_panic!(30.0)),
+///     implied_volatility: pos_or_panic!(0.2),
+///     dividend_yield: pos_or_panic!(0.01),
+///     quantity: Positive::ONE,
 ///     option_style: OptionStyle::Call,
 ///     underlying_symbol: "".to_string(),
 ///     exotic_params: None,
@@ -746,17 +747,17 @@ pub fn gamma(option: &Options) -> Result<Decimal, GreeksError> {
 /// use optionstratlib::greeks::theta;
 /// use optionstratlib::{ExpirationDate, Options};
 /// use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
-/// use optionstratlib::pos;
+/// use positive::{pos_or_panic,Positive};
 /// let option = Options {
 ///     option_type: OptionType::European,
 ///     side: Side::Long,
-///     underlying_price: pos!(100.0),
-///     strike_price: pos!(95.0),
+///     underlying_price: Positive::HUNDRED,
+///     strike_price: pos_or_panic!(95.0),
 ///     risk_free_rate: dec!(0.05),
-///     expiration_date: ExpirationDate::Days(pos!(30.0)),
-///     implied_volatility: pos!(0.2),
-///     dividend_yield: pos!(0.01),
-///     quantity: pos!(1.0),
+///     expiration_date: ExpirationDate::Days(pos_or_panic!(30.0)),
+///     implied_volatility: pos_or_panic!(0.2),
+///     dividend_yield: pos_or_panic!(0.01),
+///     quantity: Positive::ONE,
 ///     option_style: OptionStyle::Call,
 ///     underlying_symbol: "".to_string(),
 ///     exotic_params: None,
@@ -876,18 +877,18 @@ pub fn theta(option: &Options) -> Result<Decimal, GreeksError> {
 /// use optionstratlib::greeks::vega;
 /// use optionstratlib::{ExpirationDate, Options};
 /// use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
-/// use optionstratlib::pos;
+/// use positive::{pos_or_panic,Positive};
 ///
 /// let option = Options {
 ///     option_type: OptionType::European,
 ///     side: Side::Long,
-///     underlying_price: pos!(100.0),
-///     strike_price: pos!(95.0),
+///     underlying_price: Positive::HUNDRED,
+///     strike_price: pos_or_panic!(95.0),
 ///     risk_free_rate: dec!(0.05),
-///     expiration_date: ExpirationDate::Days(pos!(30.0)),
-///     implied_volatility: pos!(0.2),
-///     dividend_yield: pos!(0.01),
-///     quantity: pos!(1.0),
+///     expiration_date: ExpirationDate::Days(pos_or_panic!(30.0)),
+///     implied_volatility: pos_or_panic!(0.2),
+///     dividend_yield: pos_or_panic!(0.01),
+///     quantity: Positive::ONE,
 ///     option_style: OptionStyle::Call,
 ///     underlying_symbol: "".to_string(),
 ///     exotic_params: None,
@@ -1000,18 +1001,18 @@ pub fn vega(option: &Options) -> Result<Decimal, GreeksError> {
 /// use optionstratlib::greeks::rho;
 /// use optionstratlib::{ExpirationDate, Options};
 /// use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
-/// use optionstratlib::pos;
+/// use positive::{pos_or_panic,Positive};
 ///
 /// let option = Options {
 ///     option_type: OptionType::European,
 ///     side: Side::Long,
-///     underlying_price: pos!(100.0),
-///     strike_price: pos!(95.0),
+///     underlying_price: Positive::HUNDRED,
+///     strike_price: pos_or_panic!(95.0),
 ///     risk_free_rate: dec!(0.05),
-///     expiration_date: ExpirationDate::Days(pos!(30.0)),
-///     implied_volatility: pos!(0.2),
-///     dividend_yield: pos!(0.01),
-///     quantity: pos!(1.0),
+///     expiration_date: ExpirationDate::Days(pos_or_panic!(30.0)),
+///     implied_volatility: pos_or_panic!(0.2),
+///     dividend_yield: pos_or_panic!(0.01),
+///     quantity: Positive::ONE,
 ///     option_style: OptionStyle::Call,
 ///     underlying_symbol: "".to_string(),
 ///     exotic_params: None,
@@ -1133,18 +1134,18 @@ pub fn rho(option: &Options) -> Result<Decimal, GreeksError> {
 /// use optionstratlib::greeks::rho_d;
 /// use optionstratlib::{ExpirationDate, Options};
 /// use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
-/// use optionstratlib::pos;
+/// use positive::{pos_or_panic, Positive};
 ///
 /// let option = Options {
 ///     option_type: OptionType::European,
 ///     side: Side::Long,
-///     underlying_price: pos!(100.0),
-///     strike_price: pos!(95.0),
+///     underlying_price: Positive::HUNDRED,
+///     strike_price: pos_or_panic!(95.0),
 ///     risk_free_rate: dec!(0.05),
-///     expiration_date: ExpirationDate::Days(pos!(30.0)),
-///     implied_volatility: pos!(0.2),
-///     dividend_yield: pos!(0.01),
-///     quantity: pos!(1.0),
+///     expiration_date: ExpirationDate::Days(pos_or_panic!(30.0)),
+///     implied_volatility: pos_or_panic!(0.2),
+///     dividend_yield: pos_or_panic!(0.01),
+///     quantity: Positive::ONE,
 ///     option_style: OptionStyle::Call,
 ///     underlying_symbol: "".to_string(),
 ///     exotic_params: None,
@@ -1263,17 +1264,17 @@ pub fn alpha(option: &Options) -> Result<Decimal, GreeksError> {
 /// use optionstratlib::greeks::vanna;
 /// use optionstratlib::{ExpirationDate, Options};
 /// use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
-/// use optionstratlib::pos;
+/// use positive::{pos_or_panic,Positive};
 /// let option = Options {
 ///     option_type: OptionType::European,
 ///     side: Side::Long,
-///     underlying_price: pos!(100.0),
-///     strike_price: pos!(95.0),
+///     underlying_price: Positive::HUNDRED,
+///     strike_price: pos_or_panic!(95.0),
 ///     risk_free_rate: dec!(0.05),
-///     expiration_date: ExpirationDate::Days(pos!(30.0)),
-///     implied_volatility: pos!(0.2),
-///     dividend_yield: pos!(0.01),
-///     quantity: pos!(1.0),
+///     expiration_date: ExpirationDate::Days(pos_or_panic!(30.0)),
+///     implied_volatility: pos_or_panic!(0.2),
+///     dividend_yield: pos_or_panic!(0.01),
+///     quantity: Positive::ONE,
 ///     option_style: OptionStyle::Call,
 ///     underlying_symbol: "".to_string(),
 ///     exotic_params: None,
@@ -1376,18 +1377,18 @@ pub fn vanna(option: &Options) -> Result<Decimal, GreeksError> {
 /// use optionstratlib::greeks::vomma;
 /// use optionstratlib::{ExpirationDate, Options};
 /// use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
-/// use optionstratlib::pos;
+/// use positive::{pos_or_panic,Positive};
 ///
 /// let option = Options {
 ///     option_type: OptionType::European,
 ///     side: Side::Long,
-///     underlying_price: pos!(100.0),
-///     strike_price: pos!(95.0),
+///     underlying_price: Positive::HUNDRED,
+///     strike_price: pos_or_panic!(95.0),
 ///     risk_free_rate: dec!(0.05),
-///     expiration_date: ExpirationDate::Days(pos!(30.0)),
-///     implied_volatility: pos!(0.2),
-///     dividend_yield: pos!(0.01),
-///     quantity: pos!(1.0),
+///     expiration_date: ExpirationDate::Days(pos_or_panic!(30.0)),
+///     implied_volatility: pos_or_panic!(0.2),
+///     dividend_yield: pos_or_panic!(0.01),
+///     quantity: Positive::ONE,
 ///     option_style: OptionStyle::Call,
 ///     underlying_symbol: "".to_string(),
 ///     exotic_params: None,
@@ -1488,18 +1489,18 @@ pub fn vomma(option: &Options) -> Result<Decimal, GreeksError> {
 /// use optionstratlib::greeks::veta;
 /// use optionstratlib::{ExpirationDate, Options};
 /// use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
-/// use optionstratlib::pos;
+/// use positive::{pos_or_panic,Positive};
 ///
 /// let option = Options {
 ///     option_type: OptionType::European,
 ///     side: Side::Long,
-///     underlying_price: pos!(100.0),
-///     strike_price: pos!(95.0),
+///     underlying_price: Positive::HUNDRED,
+///     strike_price: pos_or_panic!(95.0),
 ///     risk_free_rate: dec!(0.05),
-///     expiration_date: ExpirationDate::Days(pos!(30.0)),
-///     implied_volatility: pos!(0.2),
-///     dividend_yield: pos!(0.01),
-///     quantity: pos!(1.0),
+///     expiration_date: ExpirationDate::Days(pos_or_panic!(30.0)),
+///     implied_volatility: pos_or_panic!(0.2),
+///     dividend_yield: pos_or_panic!(0.01),
+///     quantity: Positive::ONE,
 ///     option_style: OptionStyle::Call,
 ///     underlying_symbol: "".to_string(),
 ///     exotic_params: None,
@@ -1637,18 +1638,18 @@ pub fn veta(option: &Options) -> Result<Decimal, GreeksError> {
 /// use tracing::{error, info};
 /// use optionstratlib::greeks::charm;
 /// use optionstratlib::{ExpirationDate, Options};
-/// use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
-/// use optionstratlib::pos;
+/// use optionstratlib::model::types::{OptionStyle, OptionType, Side};
+/// use positive::{pos_or_panic, Positive};
 /// let option = Options {
 ///     option_type: OptionType::European,
 ///     side: Side::Long,
-///     underlying_price: pos!(100.0),
-///     strike_price: pos!(95.0),
+///     underlying_price: Positive::HUNDRED,
+///     strike_price: pos_or_panic!(95.0),
 ///     risk_free_rate: dec!(0.05),
-///     expiration_date: ExpirationDate::Days(pos!(30.0)),
-///     implied_volatility: pos!(0.2),
-///     dividend_yield: pos!(0.01),
-///     quantity: pos!(1.0),
+///     expiration_date: ExpirationDate::Days(pos_or_panic!(30.0)),
+///     implied_volatility: pos_or_panic!(0.2),
+///     dividend_yield: pos_or_panic!(0.01),
+///     quantity: Positive::ONE,
 ///     option_style: OptionStyle::Call,
 ///     underlying_symbol: "".to_string(),
 ///     exotic_params: None,
@@ -1771,17 +1772,17 @@ pub fn charm(option: &Options) -> Result<Decimal, GreeksError> {
 /// use optionstratlib::greeks::color;
 /// use optionstratlib::{ExpirationDate, Options};
 /// use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
-/// use optionstratlib::pos;
+/// use positive::{pos_or_panic,Positive};
 /// let option = Options {
 ///     option_type: OptionType::European,
 ///     side: Side::Long,
-///     underlying_price: pos!(100.0),
-///     strike_price: pos!(95.0),
+///     underlying_price: Positive::HUNDRED,
+///     strike_price: pos_or_panic!(95.0),
 ///     risk_free_rate: dec!(0.05),
-///     expiration_date: ExpirationDate::Days(pos!(30.0)),
-///     implied_volatility: pos!(0.2),
-///     dividend_yield: pos!(0.01),
-///     quantity: pos!(1.0),
+///     expiration_date: ExpirationDate::Days(pos_or_panic!(30.0)),
+///     implied_volatility: pos_or_panic!(0.2),
+///     dividend_yield: pos_or_panic!(0.01),
+///     quantity: Positive::ONE,
 ///     option_style: OptionStyle::Call,
 ///     underlying_symbol: "".to_string(),
 ///     exotic_params: None,
@@ -1840,9 +1841,10 @@ pub mod tests_delta_equations {
     use crate::model::utils::create_sample_option;
     use crate::strategies::DELTA_THRESHOLD;
 
-    use crate::{ExpirationDate, assert_decimal_eq, pos};
+    use crate::{ExpirationDate, assert_decimal_eq};
     use approx::assert_relative_eq;
     use num_traits::ToPrimitive;
+    use positive::{Positive, pos_or_panic};
     use rust_decimal_macros::dec;
     use tracing::info;
 
@@ -1851,9 +1853,9 @@ pub mod tests_delta_equations {
         let option = create_sample_option(
             OptionStyle::Call,
             Side::Long,
-            pos!(150.0),
-            pos!(1.0),
-            pos!(150.0),
+            pos_or_panic!(150.0),
+            Positive::ONE,
+            pos_or_panic!(150.0),
             Positive::ZERO,
         );
         let delta_value = delta(&option).unwrap();
@@ -1866,9 +1868,9 @@ pub mod tests_delta_equations {
         let option = create_sample_option(
             OptionStyle::Call,
             Side::Long,
-            pos!(110.0),
-            pos!(1.0),
-            pos!(150.0),
+            pos_or_panic!(110.0),
+            Positive::ONE,
+            pos_or_panic!(150.0),
             Positive::ZERO,
         );
         let delta_value = delta(&option).unwrap().to_f64().unwrap();
@@ -1881,9 +1883,9 @@ pub mod tests_delta_equations {
         let option = create_sample_option(
             OptionStyle::Put,
             Side::Long,
-            pos!(150.0),
-            pos!(1.0),
-            pos!(150.0),
+            pos_or_panic!(150.0),
+            Positive::ONE,
+            pos_or_panic!(150.0),
             Positive::ZERO,
         );
         let delta_value = delta(&option).unwrap().to_f64().unwrap();
@@ -1896,9 +1898,9 @@ pub mod tests_delta_equations {
         let option = create_sample_option(
             OptionStyle::Put,
             Side::Long,
-            pos!(160.0),
-            pos!(1.0),
-            pos!(150.0),
+            pos_or_panic!(160.0),
+            Positive::ONE,
+            pos_or_panic!(150.0),
             Positive::ZERO,
         );
         let delta_value = delta(&option).unwrap().to_f64().unwrap();
@@ -1911,9 +1913,9 @@ pub mod tests_delta_equations {
         let option = create_sample_option(
             OptionStyle::Call,
             Side::Short,
-            pos!(150.0),
-            pos!(1.0),
-            pos!(150.0),
+            pos_or_panic!(150.0),
+            Positive::ONE,
+            pos_or_panic!(150.0),
             Positive::ZERO,
         );
         let delta_value = delta(&option).unwrap().to_f64().unwrap();
@@ -1926,9 +1928,9 @@ pub mod tests_delta_equations {
         let option = create_sample_option(
             OptionStyle::Call,
             Side::Short,
-            pos!(110.0),
-            pos!(1.0),
-            pos!(150.0),
+            pos_or_panic!(110.0),
+            Positive::ONE,
+            pos_or_panic!(150.0),
             Positive::ZERO,
         );
         let delta_value = delta(&option).unwrap().to_f64().unwrap();
@@ -1941,9 +1943,9 @@ pub mod tests_delta_equations {
         let option = create_sample_option(
             OptionStyle::Put,
             Side::Short,
-            pos!(150.0),
-            pos!(1.0),
-            pos!(150.0),
+            pos_or_panic!(150.0),
+            Positive::ONE,
+            pos_or_panic!(150.0),
             Positive::ZERO,
         );
         let delta_value = delta(&option).unwrap().to_f64().unwrap();
@@ -1956,9 +1958,9 @@ pub mod tests_delta_equations {
         let option = create_sample_option(
             OptionStyle::Put,
             Side::Short,
-            pos!(160.0),
-            pos!(1.0),
-            pos!(150.0),
+            pos_or_panic!(160.0),
+            Positive::ONE,
+            pos_or_panic!(150.0),
             Positive::ZERO,
         );
         let delta_value = delta(&option).unwrap().to_f64().unwrap();
@@ -1971,10 +1973,10 @@ pub mod tests_delta_equations {
         let option = create_sample_option(
             OptionStyle::Call,
             Side::Long,
-            pos!(150.0),
-            pos!(1.0),
-            pos!(100.0),
-            pos!(0.20),
+            pos_or_panic!(150.0),
+            Positive::ONE,
+            Positive::HUNDRED,
+            pos_or_panic!(0.20),
         );
         let delta_value = delta(&option).unwrap().to_f64().unwrap();
         info!("Deep ITM Call Delta: {}", delta_value);
@@ -1986,10 +1988,10 @@ pub mod tests_delta_equations {
         let option = create_sample_option(
             OptionStyle::Call,
             Side::Long,
-            pos!(50.0),
-            pos!(1.0),
-            pos!(100.0),
-            pos!(0.20),
+            pos_or_panic!(50.0),
+            Positive::ONE,
+            Positive::HUNDRED,
+            pos_or_panic!(0.20),
         );
         let delta_value = delta(&option).unwrap().to_f64().unwrap();
         info!("Deep OTM Call Delta: {}", delta_value);
@@ -2001,10 +2003,10 @@ pub mod tests_delta_equations {
         let option = create_sample_option(
             OptionStyle::Put,
             Side::Long,
-            pos!(100.0),
-            pos!(1.0),
-            pos!(100.0),
-            pos!(0.20),
+            Positive::HUNDRED,
+            Positive::ONE,
+            Positive::HUNDRED,
+            pos_or_panic!(0.20),
         );
         let delta_value = delta(&option).unwrap();
         info!("ATM Put Delta: {}", delta_value);
@@ -2016,12 +2018,12 @@ pub mod tests_delta_equations {
         let mut option = create_sample_option(
             OptionStyle::Call,
             Side::Long,
-            pos!(100.0),
-            pos!(1.0),
-            pos!(100.0),
-            pos!(0.50),
+            Positive::HUNDRED,
+            Positive::ONE,
+            Positive::HUNDRED,
+            pos_or_panic!(0.50),
         );
-        option.expiration_date = ExpirationDate::Days(pos!(7.0));
+        option.expiration_date = ExpirationDate::Days(pos_or_panic!(7.0));
         let delta_value = delta(&option).unwrap().to_f64().unwrap();
         info!("Short-term High Vol Call Delta: {}", delta_value);
         assert_relative_eq!(delta_value, 0.519229469584234, epsilon = 1e-4);
@@ -2032,10 +2034,10 @@ pub mod tests_delta_equations {
         let mut option = create_sample_option(
             OptionStyle::Put,
             Side::Long,
-            pos!(100.0),
-            pos!(1.0),
-            pos!(100.0),
-            pos!(0.10),
+            Positive::HUNDRED,
+            Positive::ONE,
+            Positive::HUNDRED,
+            pos_or_panic!(0.10),
         );
         option.expiration_date = ExpirationDate::Days(DAYS_IN_A_YEAR);
         let delta_value = delta(&option).unwrap();
@@ -2048,12 +2050,12 @@ pub mod tests_delta_equations {
         let mut option = create_sample_option(
             OptionStyle::Call,
             Side::Short,
-            pos!(21637.0),
-            pos!(1.0),
-            pos!(21825.0),
-            pos!(0.219),
+            pos_or_panic!(21637.0),
+            Positive::ONE,
+            pos_or_panic!(21825.0),
+            pos_or_panic!(0.219),
         );
-        option.expiration_date = ExpirationDate::Days(pos!(1.0));
+        option.expiration_date = ExpirationDate::Days(Positive::ONE);
         let delta_value = delta(&option).unwrap();
         info!("Long-term Low Vol Put Delta: {}", delta_value);
         assert_decimal_eq!(delta_value, dec!(-0.230544), DELTA_THRESHOLD);
@@ -2067,9 +2069,10 @@ pub mod tests_gamma_equations {
     use crate::model::types::{OptionStyle, Side};
     use crate::model::utils::create_sample_option;
 
-    use crate::{ExpirationDate, pos};
+    use crate::ExpirationDate;
     use approx::assert_relative_eq;
     use num_traits::ToPrimitive;
+    use positive::pos_or_panic;
     use tracing::info;
 
     #[test]
@@ -2077,10 +2080,10 @@ pub mod tests_gamma_equations {
         let option = create_sample_option(
             OptionStyle::Call,
             Side::Long,
-            pos!(150.0),
-            pos!(1.0),
-            pos!(120.0),
-            pos!(0.2),
+            pos_or_panic!(150.0),
+            Positive::ONE,
+            pos_or_panic!(120.0),
+            pos_or_panic!(0.2),
         );
         let gamma_value = gamma(&option).unwrap().to_f64().unwrap();
         info!("Deep ITM Call Gamma: {}", gamma_value);
@@ -2092,10 +2095,10 @@ pub mod tests_gamma_equations {
         let option = create_sample_option(
             OptionStyle::Call,
             Side::Long,
-            pos!(50.0),
-            pos!(1.0),
-            pos!(100.0),
-            pos!(0.20),
+            pos_or_panic!(50.0),
+            Positive::ONE,
+            Positive::HUNDRED,
+            pos_or_panic!(0.20),
         );
         let gamma_value = gamma(&option).unwrap().to_f64().unwrap();
         info!("Deep OTM Call Gamma: {}", gamma_value);
@@ -2107,10 +2110,10 @@ pub mod tests_gamma_equations {
         let option = create_sample_option(
             OptionStyle::Put,
             Side::Long,
-            pos!(100.0),
-            pos!(1.0),
-            pos!(100.0),
-            pos!(0.20),
+            Positive::HUNDRED,
+            Positive::ONE,
+            Positive::HUNDRED,
+            pos_or_panic!(0.20),
         );
         let gamma_value = gamma(&option).unwrap().to_f64().unwrap();
         info!("ATM Put Gamma: {}", gamma_value);
@@ -2122,12 +2125,12 @@ pub mod tests_gamma_equations {
         let mut option = create_sample_option(
             OptionStyle::Call,
             Side::Long,
-            pos!(100.0),
-            pos!(1.0),
-            pos!(100.0),
-            pos!(0.50),
+            Positive::HUNDRED,
+            Positive::ONE,
+            Positive::HUNDRED,
+            pos_or_panic!(0.50),
         );
-        option.expiration_date = ExpirationDate::Days(pos!(7.0));
+        option.expiration_date = ExpirationDate::Days(pos_or_panic!(7.0));
         let gamma_value = gamma(&option).unwrap().to_f64().unwrap();
         info!("Short-term High Vol Call Gamma: {}", gamma_value);
         assert_relative_eq!(gamma_value, 0.05753657912620555, epsilon = 1e-8);
@@ -2138,10 +2141,10 @@ pub mod tests_gamma_equations {
         let mut option = create_sample_option(
             OptionStyle::Put,
             Side::Long,
-            pos!(100.0),
-            pos!(1.0),
-            pos!(100.0),
-            pos!(0.10),
+            Positive::HUNDRED,
+            Positive::ONE,
+            Positive::HUNDRED,
+            pos_or_panic!(0.10),
         );
         option.expiration_date = ExpirationDate::Days(DAYS_IN_A_YEAR);
         let gamma_value = gamma(&option).unwrap().to_f64().unwrap();
@@ -2154,9 +2157,9 @@ pub mod tests_gamma_equations {
         let option = create_sample_option(
             OptionStyle::Call,
             Side::Long,
-            pos!(100.0),
-            pos!(1.0),
-            pos!(100.0),
+            Positive::HUNDRED,
+            Positive::ONE,
+            Positive::HUNDRED,
             Positive::ZERO,
         );
         let gamma_value = gamma(&option).unwrap().to_f64().unwrap();
@@ -2169,10 +2172,10 @@ pub mod tests_gamma_equations {
         let option = create_sample_option(
             OptionStyle::Put,
             Side::Short,
-            pos!(100.0),
-            pos!(1.0),
-            pos!(100.0),
-            pos!(5.0),
+            Positive::HUNDRED,
+            Positive::ONE,
+            Positive::HUNDRED,
+            pos_or_panic!(5.0),
         );
         let gamma_value = gamma(&option).unwrap().to_f64().unwrap();
         info!("Extreme High Volatility Put Gamma: {}", gamma_value);
@@ -2185,9 +2188,10 @@ mod tests_gamma_equations_values {
     use super::*;
     use crate::model::types::{OptionStyle, Side};
 
-    use crate::{ExpirationDate, OptionType, pos};
+    use crate::{ExpirationDate, OptionType};
     use approx::assert_relative_eq;
     use num_traits::ToPrimitive;
+    use positive::pos_or_panic;
     use tracing::info;
 
     #[test]
@@ -2196,11 +2200,11 @@ mod tests_gamma_equations_values {
             OptionType::European,
             Side::Long,
             "XYZ".parse().unwrap(),
-            pos!(50.0),
-            ExpirationDate::Days(pos!(365.0)),
-            pos!(0.10),
-            pos!(1.0),
-            pos!(50.0),
+            pos_or_panic!(50.0),
+            ExpirationDate::Days(pos_or_panic!(365.0)),
+            pos_or_panic!(0.10),
+            Positive::ONE,
+            pos_or_panic!(50.0),
             Decimal::ZERO,
             OptionStyle::Call,
             Positive::ZERO,
@@ -2217,11 +2221,11 @@ mod tests_gamma_equations_values {
             OptionType::European,
             Side::Long,
             "XYZ".parse().unwrap(),
-            pos!(50.0),
-            ExpirationDate::Days(pos!(365.0)),
-            pos!(0.05),
-            pos!(1.0),
-            pos!(50.0),
+            pos_or_panic!(50.0),
+            ExpirationDate::Days(pos_or_panic!(365.0)),
+            pos_or_panic!(0.05),
+            Positive::ONE,
+            pos_or_panic!(50.0),
             Decimal::ZERO,
             OptionStyle::Call,
             Positive::ZERO,
@@ -2238,11 +2242,11 @@ mod tests_gamma_equations_values {
             OptionType::European,
             Side::Long,
             "XYZ".parse().unwrap(),
-            pos!(50.0),
-            ExpirationDate::Days(pos!(365.0)),
-            pos!(0.2),
-            pos!(1.0),
-            pos!(50.0),
+            pos_or_panic!(50.0),
+            ExpirationDate::Days(pos_or_panic!(365.0)),
+            pos_or_panic!(0.2),
+            Positive::ONE,
+            pos_or_panic!(50.0),
             Decimal::ZERO,
             OptionStyle::Call,
             Positive::ZERO,
@@ -2257,10 +2261,11 @@ mod tests_gamma_equations_values {
 #[cfg(test)]
 pub mod tests_vega_equation {
     use super::*;
+    use crate::ExpirationDate;
     use crate::constants::DAYS_IN_A_YEAR;
     use crate::model::types::{OptionType, Side};
-    use crate::{ExpirationDate, Positive, pos};
     use num_traits::ToPrimitive;
+    use positive::pos_or_panic;
     use rust_decimal_macros::dec;
 
     fn create_test_option(
@@ -2277,7 +2282,7 @@ pub mod tests_vega_equation {
             strike_price,
             ExpirationDate::Days(expiration_in_days),
             implied_volatility,
-            pos!(1.0), // Quantity
+            Positive::ONE, // Quantity
             underlying_price,
             dec!(0.05), // Risk-free rate
             OptionStyle::Call,
@@ -2289,9 +2294,9 @@ pub mod tests_vega_equation {
     #[test]
     fn test_vega_atm() {
         let option = create_test_option(
-            pos!(100.0),
-            pos!(100.0),
-            pos!(0.2),
+            Positive::HUNDRED,
+            Positive::HUNDRED,
+            pos_or_panic!(0.2),
             Positive::ZERO,
             DAYS_IN_A_YEAR,
         );
@@ -2306,9 +2311,9 @@ pub mod tests_vega_equation {
     #[test]
     fn test_vega_otm() {
         let option = create_test_option(
-            pos!(90.0),
-            pos!(100.0),
-            pos!(0.2),
+            pos_or_panic!(90.0),
+            Positive::HUNDRED,
+            pos_or_panic!(0.2),
             Positive::ZERO,
             DAYS_IN_A_YEAR,
         );
@@ -2323,9 +2328,9 @@ pub mod tests_vega_equation {
     #[test]
     fn test_vega_short_expiration() {
         let option = create_test_option(
-            pos!(100.0),
-            pos!(100.0),
-            pos!(0.2),
+            Positive::HUNDRED,
+            Positive::HUNDRED,
+            pos_or_panic!(0.2),
             Positive::ZERO,
             Positive::ONE,
         );
@@ -2340,10 +2345,10 @@ pub mod tests_vega_equation {
     #[test]
     fn test_vega_with_dividends() {
         let option = create_test_option(
-            pos!(100.0),
-            pos!(100.0),
-            pos!(0.2),
-            pos!(0.03),
+            Positive::HUNDRED,
+            Positive::HUNDRED,
+            pos_or_panic!(0.2),
+            pos_or_panic!(0.03),
             Positive::ONE,
         );
         let vega = vega(&option).unwrap().to_f64().unwrap();
@@ -2357,9 +2362,9 @@ pub mod tests_vega_equation {
     #[test]
     fn test_vega_itm() {
         let option = create_test_option(
-            pos!(110.0),
-            pos!(100.0),
-            pos!(0.2),
+            pos_or_panic!(110.0),
+            Positive::HUNDRED,
+            pos_or_panic!(0.2),
             Positive::ZERO,
             Positive::ONE,
         );
@@ -2377,9 +2382,10 @@ pub mod tests_rho_equations {
     use super::*;
     use crate::constants::DAYS_IN_A_YEAR;
     use crate::model::types::{OptionStyle, OptionType, Side};
-    use crate::{ExpirationDate, assert_decimal_eq, pos};
+    use crate::{ExpirationDate, assert_decimal_eq};
     use approx::assert_relative_eq;
     use num_traits::ToPrimitive;
+    use positive::pos_or_panic;
     use rust_decimal_macros::dec;
 
     fn create_test_option(style: OptionStyle) -> Options {
@@ -2387,11 +2393,11 @@ pub mod tests_rho_equations {
             option_type: OptionType::European,
             side: Side::Long,
             underlying_symbol: "TEST".to_string(),
-            strike_price: pos!(100.0),
+            strike_price: Positive::HUNDRED,
             expiration_date: ExpirationDate::Days(DAYS_IN_A_YEAR),
-            implied_volatility: pos!(0.2),
-            quantity: pos!(1.0),
-            underlying_price: pos!(100.0),
+            implied_volatility: pos_or_panic!(0.2),
+            quantity: Positive::ONE,
+            underlying_price: Positive::HUNDRED,
             risk_free_rate: dec!(0.05),
             option_style: style,
             dividend_yield: Positive::ZERO,
@@ -2433,7 +2439,7 @@ pub mod tests_rho_equations {
     #[test]
     fn test_rho_deep_out_of_money_call() {
         let mut option = create_test_option(OptionStyle::Call);
-        option.strike_price = pos!(1000.0);
+        option.strike_price = pos_or_panic!(1000.0);
         let result = rho(&option).unwrap().to_f64().unwrap();
         assert_relative_eq!(result, 0.0, epsilon = 1e-8);
     }
@@ -2441,7 +2447,7 @@ pub mod tests_rho_equations {
     #[test]
     fn test_rho_deep_out_of_money_put() {
         let mut option = create_test_option(OptionStyle::Put);
-        option.strike_price = pos!(1.0);
+        option.strike_price = Positive::ONE;
         let result = rho(&option).unwrap().to_f64().unwrap();
         assert_relative_eq!(result, 0.0, epsilon = 1e-8);
     }
@@ -2458,12 +2464,13 @@ pub mod tests_rho_equations {
 #[cfg(test)]
 pub mod tests_theta_long_equations {
     use super::*;
+    use crate::ExpirationDate;
     use crate::constants::DAYS_IN_A_YEAR;
     use crate::model::types::Side;
     use crate::model::utils::create_sample_option;
-    use crate::{ExpirationDate, pos};
     use approx::assert_relative_eq;
     use num_traits::ToPrimitive;
+    use positive::pos_or_panic;
 
     #[test]
     fn test_theta_call_option() {
@@ -2471,10 +2478,10 @@ pub mod tests_theta_long_equations {
         let option = create_sample_option(
             OptionStyle::Call,
             Side::Long,
-            pos!(150.0), // underlying price
-            pos!(1.0),   // quantity
-            pos!(155.0), // strike price
-            pos!(0.20),  // implied volatility
+            pos_or_panic!(150.0), // underlying price
+            Positive::ONE,        // quantity
+            pos_or_panic!(155.0), // strike price
+            pos_or_panic!(0.20),  // implied volatility
         );
 
         // Expected theta value for a call option (precomputed or from known source)
@@ -2493,10 +2500,10 @@ pub mod tests_theta_long_equations {
         let option = create_sample_option(
             OptionStyle::Put,
             Side::Long,
-            pos!(150.0), // underlying price
-            pos!(1.0),   // quantity
-            pos!(145.0), // strike price
-            pos!(0.25),  // implied volatility
+            pos_or_panic!(150.0), // underlying price
+            Positive::ONE,        // quantity
+            pos_or_panic!(145.0), // strike price
+            pos_or_panic!(0.25),  // implied volatility
         );
 
         // Expected theta value for a put option (precomputed or from known source)
@@ -2515,12 +2522,12 @@ pub mod tests_theta_long_equations {
         let mut option = create_sample_option(
             OptionStyle::Call,
             Side::Long,
-            pos!(150.0), // underlying price
-            pos!(1.0),   // quantity
-            pos!(150.0), // strike price
-            pos!(0.15),  // implied volatility
+            pos_or_panic!(150.0), // underlying price
+            Positive::ONE,        // quantity
+            pos_or_panic!(150.0), // strike price
+            pos_or_panic!(0.15),  // implied volatility
         );
-        option.expiration_date = ExpirationDate::Days(pos!(1.0)); // Option close to expiry
+        option.expiration_date = ExpirationDate::Days(Positive::ONE); // Option close to expiry
 
         // Expected theta value for a near-expiry call option (precomputed)
         let expected_theta = -0.24315788969;
@@ -2538,10 +2545,10 @@ pub mod tests_theta_long_equations {
         let mut option = create_sample_option(
             OptionStyle::Put,
             Side::Long,
-            pos!(140.0), // underlying price
-            pos!(1.0),   // quantity
-            pos!(130.0), // strike price
-            pos!(0.30),  // implied volatility
+            pos_or_panic!(140.0), // underlying price
+            Positive::ONE,        // quantity
+            pos_or_panic!(130.0), // strike price
+            pos_or_panic!(0.30),  // implied volatility
         );
         option.expiration_date = ExpirationDate::Days(DAYS_IN_A_YEAR); // Option far from expiry
 
@@ -2559,12 +2566,13 @@ pub mod tests_theta_long_equations {
 #[cfg(test)]
 pub mod tests_theta_short_equations {
     use super::*;
+    use crate::ExpirationDate;
     use crate::constants::DAYS_IN_A_YEAR;
     use crate::model::types::Side;
     use crate::model::utils::create_sample_option;
-    use crate::{ExpirationDate, pos};
     use approx::assert_relative_eq;
     use num_traits::ToPrimitive;
+    use positive::pos_or_panic;
 
     #[test]
     fn test_theta_short_call_option() {
@@ -2572,10 +2580,10 @@ pub mod tests_theta_short_equations {
         let option = create_sample_option(
             OptionStyle::Call,
             Side::Short,
-            pos!(150.0), // underlying price
-            pos!(1.0),   // quantity
-            pos!(155.0), // strike price
-            pos!(0.20),  // implied volatility
+            pos_or_panic!(150.0), // underlying price
+            Positive::ONE,        // quantity
+            pos_or_panic!(155.0), // strike price
+            pos_or_panic!(0.20),  // implied volatility
         );
 
         // Expected theta value for a short call option (precomputed or from known source)
@@ -2594,10 +2602,10 @@ pub mod tests_theta_short_equations {
         let option = create_sample_option(
             OptionStyle::Put,
             Side::Short,
-            pos!(150.0), // underlying price
-            pos!(1.0),   // quantity
-            pos!(145.0), // strike price
-            pos!(0.25),  // implied volatility
+            pos_or_panic!(150.0), // underlying price
+            Positive::ONE,        // quantity
+            pos_or_panic!(145.0), // strike price
+            pos_or_panic!(0.25),  // implied volatility
         );
 
         // Expected theta value for a short put option (precomputed or from known source)
@@ -2616,12 +2624,12 @@ pub mod tests_theta_short_equations {
         let mut option = create_sample_option(
             OptionStyle::Call,
             Side::Short,
-            pos!(150.0), // underlying price
-            pos!(1.0),   // quantity
-            pos!(150.0), // strike price
-            pos!(0.15),  // implied volatility
+            pos_or_panic!(150.0), // underlying price
+            Positive::ONE,        // quantity
+            pos_or_panic!(150.0), // strike price
+            pos_or_panic!(0.15),  // implied volatility
         );
-        option.expiration_date = ExpirationDate::Days(pos!(1.0)); // Option close to expiry
+        option.expiration_date = ExpirationDate::Days(Positive::ONE); // Option close to expiry
 
         // Expected theta value for a short near-expiry call option (precomputed)
         let expected_theta = -0.2431578896;
@@ -2639,10 +2647,10 @@ pub mod tests_theta_short_equations {
         let mut option = create_sample_option(
             OptionStyle::Put,
             Side::Short,
-            pos!(140.0), // underlying price
-            pos!(1.0),   // quantity
-            pos!(130.0), // strike price
-            pos!(0.30),  // implied volatility
+            pos_or_panic!(140.0), // underlying price
+            Positive::ONE,        // quantity
+            pos_or_panic!(130.0), // strike price
+            pos_or_panic!(0.30),  // implied volatility
         );
         option.expiration_date = ExpirationDate::Days(DAYS_IN_A_YEAR); // Option far from expiry
 
@@ -2661,7 +2669,8 @@ pub mod tests_theta_short_equations {
 mod tests_greeks_trait {
     use super::*;
     use crate::model::types::{OptionStyle, OptionType, Side};
-    use crate::{ExpirationDate, assert_decimal_eq, pos};
+    use crate::{ExpirationDate, assert_decimal_eq};
+    use positive::pos_or_panic;
     use rust_decimal_macros::dec;
 
     // A simple struct for testing the Greeks trait
@@ -2681,21 +2690,21 @@ mod tests_greeks_trait {
             OptionType::European,
             side,
             "TEST".to_string(),
-            pos!(100.0), // strike_price
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(0.2), // implied_volatility
+            Positive::HUNDRED, // strike_price
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.2), // implied_volatility
             quantity,
-            pos!(100.0), // underlying_price
-            dec!(0.05),  // risk_free_rate
+            Positive::HUNDRED, // underlying_price
+            dec!(0.05),        // risk_free_rate
             style,
-            pos!(0.01), // dividend_yield
-            None,       // exotic_params
+            pos_or_panic!(0.01), // dividend_yield
+            None,                // exotic_params
         )
     }
 
     #[test]
     fn test_greeks_single_option() {
-        let option = create_test_option(Side::Long, OptionStyle::Call, pos!(1.0));
+        let option = create_test_option(Side::Long, OptionStyle::Call, Positive::ONE);
         let collection = TestOptionCollection {
             options: vec![option],
         };
@@ -2716,8 +2725,8 @@ mod tests_greeks_trait {
 
     #[test]
     fn test_greeks_multiple_options() {
-        let option1 = create_test_option(Side::Long, OptionStyle::Call, pos!(1.0));
-        let option2 = create_test_option(Side::Short, OptionStyle::Put, pos!(1.0));
+        let option1 = create_test_option(Side::Long, OptionStyle::Call, Positive::ONE);
+        let option2 = create_test_option(Side::Short, OptionStyle::Put, Positive::ONE);
         let collection = TestOptionCollection {
             options: vec![option1, option2],
         };
@@ -2769,14 +2778,14 @@ mod tests_greeks_trait {
             OptionType::European,
             Side::Long,
             "AAPL".to_string(),
-            pos!(155.0),
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(0.20),
-            pos!(1.0),
-            pos!(150.0),
+            pos_or_panic!(155.0),
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.20),
+            Positive::ONE,
+            pos_or_panic!(150.0),
             dec!(0.05),
             OptionStyle::Call,
-            pos!(0.00),
+            pos_or_panic!(0.00),
             None,
         );
 
@@ -2795,7 +2804,7 @@ mod tests_greeks_trait {
 
     #[test]
     fn test_greeks_zero_quantity() {
-        let option = create_test_option(Side::Long, OptionStyle::Call, pos!(0.0));
+        let option = create_test_option(Side::Long, OptionStyle::Call, Positive::ZERO);
         let collection = TestOptionCollection {
             options: vec![option],
         };
@@ -2820,29 +2829,29 @@ mod tests_greeks_trait {
             OptionType::European,
             Side::Long,
             "TEST".to_string(),
-            pos!(50.0), // strike_price
-            ExpirationDate::Days(pos!(365.0)),
-            pos!(0.2), // implied_volatility
+            pos_or_panic!(50.0), // strike_price
+            ExpirationDate::Days(pos_or_panic!(365.0)),
+            pos_or_panic!(0.2), // implied_volatility
             Positive::ONE,
-            pos!(50.0), // underlying_price
-            dec!(0.05), // risk_free_rate
+            pos_or_panic!(50.0), // underlying_price
+            dec!(0.05),          // risk_free_rate
             OptionStyle::Call,
-            pos!(0.01), // dividend_yield
-            None,       // exotic_params
+            pos_or_panic!(0.01), // dividend_yield
+            None,                // exotic_params
         );
         let option2 = Options::new(
             OptionType::European,
             Side::Short,
             "TEST".to_string(),
-            pos!(50.0), // strike_price
-            ExpirationDate::Days(pos!(365.0)),
-            pos!(0.2), // implied_volatility
+            pos_or_panic!(50.0), // strike_price
+            ExpirationDate::Days(pos_or_panic!(365.0)),
+            pos_or_panic!(0.2), // implied_volatility
             Positive::ONE,
-            pos!(50.0), // underlying_price
-            dec!(0.05), // risk_free_rate
+            pos_or_panic!(50.0), // underlying_price
+            dec!(0.05),          // risk_free_rate
             OptionStyle::Call,
-            pos!(0.01), // dividend_yield
-            None,       // exotic_params
+            pos_or_panic!(0.01), // dividend_yield
+            None,                // exotic_params
         );
         let collection = TestOptionCollection {
             options: vec![option1, option2],
@@ -2862,8 +2871,8 @@ mod tests_greeks_trait {
 
     #[test]
     fn test_individual_greek_methods() {
-        let option1 = create_test_option(Side::Long, OptionStyle::Call, pos!(1.0));
-        let option2 = create_test_option(Side::Short, OptionStyle::Put, pos!(1.0));
+        let option1 = create_test_option(Side::Long, OptionStyle::Call, Positive::ONE);
+        let option2 = create_test_option(Side::Short, OptionStyle::Put, Positive::ONE);
         let collection = TestOptionCollection {
             options: vec![option1, option2],
         };
@@ -2910,12 +2919,12 @@ mod tests_greeks_trait {
 
     #[test]
     fn test_greeks_with_different_expirations() {
-        let mut option1 = create_test_option(Side::Long, OptionStyle::Call, pos!(1.0));
-        let mut option2 = create_test_option(Side::Long, OptionStyle::Call, pos!(1.0));
+        let mut option1 = create_test_option(Side::Long, OptionStyle::Call, Positive::ONE);
+        let mut option2 = create_test_option(Side::Long, OptionStyle::Call, Positive::ONE);
 
         // Set different expiration dates
-        option1.expiration_date = ExpirationDate::Days(pos!(30.0));
-        option2.expiration_date = ExpirationDate::Days(pos!(60.0));
+        option1.expiration_date = ExpirationDate::Days(pos_or_panic!(30.0));
+        option2.expiration_date = ExpirationDate::Days(pos_or_panic!(60.0));
 
         let collection = TestOptionCollection {
             options: vec![option1, option2],
@@ -2939,10 +2948,11 @@ mod tests_greeks_trait {
 #[cfg(test)]
 pub mod tests_vanna_equation {
     use super::*;
+    use crate::ExpirationDate;
     use crate::constants::DAYS_IN_A_YEAR;
     use crate::model::types::{OptionType, Side};
-    use crate::{ExpirationDate, Positive, pos};
     use num_traits::ToPrimitive;
+    use positive::pos_or_panic;
     use rust_decimal_macros::dec;
 
     fn create_test_option(
@@ -2959,7 +2969,7 @@ pub mod tests_vanna_equation {
             strike_price,
             ExpirationDate::Days(expiration_in_days),
             implied_volatility,
-            pos!(1.0), // Quantity
+            Positive::ONE, // Quantity
             underlying_price,
             dec!(0.05), // Risk-free rate
             OptionStyle::Call,
@@ -2971,11 +2981,11 @@ pub mod tests_vanna_equation {
     #[test]
     fn test_vanna_atm() {
         let option = create_test_option(
-            pos!(100.0),    // underlying_price
-            pos!(100.0),    // strike_price
-            pos!(0.2),      // implied_volatility
-            Positive::ZERO, // dividend_yield
-            DAYS_IN_A_YEAR, // expiration_in_days
+            Positive::HUNDRED,  // underlying_price
+            Positive::HUNDRED,  // strike_price
+            pos_or_panic!(0.2), // implied_volatility
+            Positive::ZERO,     // dividend_yield
+            DAYS_IN_A_YEAR,     // expiration_in_days
         );
         let vanna = vanna(&option).unwrap().to_f64().unwrap();
         let expected_vanna = -0.28143026;
@@ -2988,11 +2998,11 @@ pub mod tests_vanna_equation {
     #[test]
     fn test_vanna_otm() {
         let option = create_test_option(
-            pos!(90.0),     // underlying_price
-            pos!(100.0),    // strike_price
-            pos!(0.2),      // implied_volatility
-            Positive::ZERO, // dividend_yield
-            DAYS_IN_A_YEAR, // expiration_in_days
+            pos_or_panic!(90.0), // underlying_price
+            Positive::HUNDRED,   // strike_price
+            pos_or_panic!(0.2),  // implied_volatility
+            Positive::ZERO,      // dividend_yield
+            DAYS_IN_A_YEAR,      // expiration_in_days
         );
         let vanna = vanna(&option).unwrap().to_f64().unwrap();
         let expected_vanna = 0.73995634;
@@ -3005,11 +3015,11 @@ pub mod tests_vanna_equation {
     #[test]
     fn test_vanna_short_expiration() {
         let option = create_test_option(
-            pos!(100.0),    // underlying_price
-            pos!(100.0),    // strike_price
-            pos!(0.2),      // implied_volatility
-            Positive::ZERO, // dividend_yield
-            Positive::ONE,  // expiration_in_days
+            Positive::HUNDRED,  // underlying_price
+            Positive::HUNDRED,  // strike_price
+            pos_or_panic!(0.2), // implied_volatility
+            Positive::ZERO,     // dividend_yield
+            Positive::ONE,      // expiration_in_days
         );
         let vanna = vanna(&option).unwrap().to_f64().unwrap();
         let expected_vanna = -0.01565856;
@@ -3022,11 +3032,11 @@ pub mod tests_vanna_equation {
     #[test]
     fn test_vanna_with_dividends() {
         let option = create_test_option(
-            pos!(100.0),   // underlying_price
-            pos!(100.0),   // strike_price
-            pos!(0.2),     // implied_volatility
-            pos!(0.03),    // dividend_yield
-            Positive::ONE, // expiration_in_days
+            Positive::HUNDRED,   // underlying_price
+            Positive::HUNDRED,   // strike_price
+            pos_or_panic!(0.2),  // implied_volatility
+            pos_or_panic!(0.03), // dividend_yield
+            Positive::ONE,       // expiration_in_days
         );
         let vanna = vanna(&option).unwrap().to_f64().unwrap();
         let expected_vanna = -0.01565728;
@@ -3039,11 +3049,11 @@ pub mod tests_vanna_equation {
     #[test]
     fn test_vanna_itm() {
         let option = create_test_option(
-            pos!(110.0),    // underlying_price
-            pos!(100.0),    // strike_price
-            pos!(0.2),      // implied_volatility
-            Positive::ZERO, // dividend_yield
-            Positive::ONE,  // expiration_in_days
+            pos_or_panic!(110.0), // underlying_price
+            Positive::HUNDRED,    // strike_price
+            pos_or_panic!(0.2),   // implied_volatility
+            Positive::ZERO,       // dividend_yield
+            Positive::ONE,        // expiration_in_days
         );
         let vanna = vanna(&option).unwrap().to_f64().unwrap();
         let expected_vanna = 0.0;
@@ -3057,10 +3067,11 @@ pub mod tests_vanna_equation {
 #[cfg(test)]
 pub mod tests_vomma_equation {
     use super::*;
+    use crate::ExpirationDate;
     use crate::constants::DAYS_IN_A_YEAR;
     use crate::model::types::{OptionType, Side};
-    use crate::{ExpirationDate, Positive, pos};
     use num_traits::ToPrimitive;
+    use positive::pos_or_panic;
     use rust_decimal_macros::dec;
 
     fn create_test_option(
@@ -3077,7 +3088,7 @@ pub mod tests_vomma_equation {
             strike_price,
             ExpirationDate::Days(expiration_in_days),
             implied_volatility,
-            pos!(1.0), // Quantity
+            Positive::ONE, // Quantity
             underlying_price,
             dec!(0.05), // Risk-free rate
             OptionStyle::Call,
@@ -3089,11 +3100,11 @@ pub mod tests_vomma_equation {
     #[test]
     fn test_vomma_atm() {
         let option = create_test_option(
-            pos!(100.0),    // underlying_price
-            pos!(100.0),    // strike_price
-            pos!(0.2),      // implied_volatility
-            Positive::ZERO, // dividend_yield
-            DAYS_IN_A_YEAR, // expiration_in_days
+            Positive::HUNDRED,  // underlying_price
+            Positive::HUNDRED,  // strike_price
+            pos_or_panic!(0.2), // implied_volatility
+            Positive::ZERO,     // dividend_yield
+            DAYS_IN_A_YEAR,     // expiration_in_days
         );
         let vomma = vomma(&option).unwrap().to_f64().unwrap();
         let expected_vomma = 0.09850059;
@@ -3106,11 +3117,11 @@ pub mod tests_vomma_equation {
     #[test]
     fn test_vomma_otm() {
         let option = create_test_option(
-            pos!(90.0),     // underlying_price
-            pos!(100.0),    // strike_price
-            pos!(0.2),      // implied_volatility
-            Positive::ZERO, // dividend_yield
-            DAYS_IN_A_YEAR, // expiration_in_days
+            pos_or_panic!(90.0), // underlying_price
+            Positive::HUNDRED,   // strike_price
+            pos_or_panic!(0.2),  // implied_volatility
+            Positive::ZERO,      // dividend_yield
+            DAYS_IN_A_YEAR,      // expiration_in_days
         );
         let vomma = vomma(&option).unwrap().to_f64().unwrap();
         let expected_vomma = 0.11774357;
@@ -3123,11 +3134,11 @@ pub mod tests_vomma_equation {
     #[test]
     fn test_vomma_short_expiration() {
         let option = create_test_option(
-            pos!(100.0),    // underlying_price
-            pos!(100.0),    // strike_price
-            pos!(0.2),      // implied_volatility
-            Positive::ZERO, // dividend_yield
-            Positive::ONE,  // expiration_in_days
+            Positive::HUNDRED,  // underlying_price
+            Positive::HUNDRED,  // strike_price
+            pos_or_panic!(0.2), // implied_volatility
+            Positive::ZERO,     // dividend_yield
+            Positive::ONE,      // expiration_in_days
         );
         let vomma = vomma(&option).unwrap().to_f64().unwrap();
         let expected_vomma = 0.0000150150;
@@ -3140,11 +3151,11 @@ pub mod tests_vomma_equation {
     #[test]
     fn test_vomma_with_dividends() {
         let option = create_test_option(
-            pos!(100.0),   // underlying_price
-            pos!(100.0),   // strike_price
-            pos!(0.2),     // implied_volatility
-            pos!(0.03),    // dividend_yield
-            Positive::ONE, // expiration_in_days
+            Positive::HUNDRED,   // underlying_price
+            Positive::HUNDRED,   // strike_price
+            pos_or_panic!(0.2),  // implied_volatility
+            pos_or_panic!(0.03), // dividend_yield
+            Positive::ONE,       // expiration_in_days
         );
         let vomma = vomma(&option).unwrap().to_f64().unwrap();
         let expected_vomma = 0.0000150138;
@@ -3157,11 +3168,11 @@ pub mod tests_vomma_equation {
     #[test]
     fn test_vomma_itm() {
         let option = create_test_option(
-            pos!(110.0),    // underlying_price
-            pos!(100.0),    // strike_price
-            pos!(0.2),      // implied_volatility
-            Positive::ZERO, // dividend_yield
-            Positive::ONE,  // expiration_in_days
+            pos_or_panic!(110.0), // underlying_price
+            Positive::HUNDRED,    // strike_price
+            pos_or_panic!(0.2),   // implied_volatility
+            Positive::ZERO,       // dividend_yield
+            Positive::ONE,        // expiration_in_days
         );
         let vomma = vomma(&option).unwrap().to_f64().unwrap();
         let expected_vomma = 0.0;
@@ -3175,10 +3186,11 @@ pub mod tests_vomma_equation {
 #[cfg(test)]
 pub mod tests_veta_equation {
     use super::*;
+    use crate::ExpirationDate;
     use crate::constants::DAYS_IN_A_YEAR;
     use crate::model::types::{OptionType, Side};
-    use crate::{ExpirationDate, Positive, pos};
     use num_traits::ToPrimitive;
+    use positive::pos_or_panic;
     use rust_decimal_macros::dec;
 
     fn create_test_option(
@@ -3195,7 +3207,7 @@ pub mod tests_veta_equation {
             strike_price,
             ExpirationDate::Days(expiration_in_days),
             implied_volatility,
-            pos!(1.0), // Quantity
+            Positive::ONE, // Quantity
             underlying_price,
             dec!(0.05), // Risk-free rate
             OptionStyle::Call,
@@ -3207,11 +3219,11 @@ pub mod tests_veta_equation {
     #[test]
     fn test_veta_atm() {
         let option = create_test_option(
-            pos!(100.0),    // underlying_price
-            pos!(100.0),    // strike_price
-            pos!(0.2),      // implied_volatility
-            Positive::ZERO, // dividend_yield
-            DAYS_IN_A_YEAR, // expiration_in_days
+            Positive::HUNDRED,  // underlying_price
+            Positive::HUNDRED,  // strike_price
+            pos_or_panic!(0.2), // implied_volatility
+            Positive::ZERO,     // dividend_yield
+            DAYS_IN_A_YEAR,     // expiration_in_days
         );
         let veta = veta(&option).unwrap().to_f64().unwrap();
         let expected_veta = 0.0000065332;
@@ -3224,11 +3236,11 @@ pub mod tests_veta_equation {
     #[test]
     fn test_veta_otm() {
         let option = create_test_option(
-            pos!(90.0),     // underlying_price
-            pos!(100.0),    // strike_price
-            pos!(0.2),      // implied_volatility
-            Positive::ZERO, // dividend_yield
-            DAYS_IN_A_YEAR, // expiration_in_days
+            pos_or_panic!(90.0), // underlying_price
+            Positive::HUNDRED,   // strike_price
+            pos_or_panic!(0.2),  // implied_volatility
+            Positive::ZERO,      // dividend_yield
+            DAYS_IN_A_YEAR,      // expiration_in_days
         );
         let veta = veta(&option).unwrap().to_f64().unwrap();
         let expected_veta = 0.0000081007;
@@ -3241,11 +3253,11 @@ pub mod tests_veta_equation {
     #[test]
     fn test_veta_short_expiration() {
         let option = create_test_option(
-            pos!(100.0),    // underlying_price
-            pos!(100.0),    // strike_price
-            pos!(0.2),      // implied_volatility
-            Positive::ZERO, // dividend_yield
-            Positive::ONE,  // expiration_in_days
+            Positive::HUNDRED,  // underlying_price
+            Positive::HUNDRED,  // strike_price
+            pos_or_panic!(0.2), // implied_volatility
+            Positive::ZERO,     // dividend_yield
+            Positive::ONE,      // expiration_in_days
         );
         let veta = veta(&option).unwrap().to_f64().unwrap();
         let expected_veta = 0.0001511497;
@@ -3258,11 +3270,11 @@ pub mod tests_veta_equation {
     #[test]
     fn test_veta_with_dividends() {
         let option = create_test_option(
-            pos!(100.0),   // underlying_price
-            pos!(100.0),   // strike_price
-            pos!(0.2),     // implied_volatility
-            pos!(0.03),    // dividend_yield
-            Positive::ONE, // expiration_in_days
+            Positive::HUNDRED,   // underlying_price
+            Positive::HUNDRED,   // strike_price
+            pos_or_panic!(0.2),  // implied_volatility
+            pos_or_panic!(0.03), // dividend_yield
+            Positive::ONE,       // expiration_in_days
         );
         let veta = veta(&option).unwrap().to_f64().unwrap();
         let expected_veta = 0.0001511559;
@@ -3275,11 +3287,11 @@ pub mod tests_veta_equation {
     #[test]
     fn test_veta_itm() {
         let option = create_test_option(
-            pos!(110.0),    // underlying_price
-            pos!(100.0),    // strike_price
-            pos!(0.2),      // implied_volatility
-            Positive::ZERO, // dividend_yield
-            Positive::ONE,  // expiration_in_days
+            pos_or_panic!(110.0), // underlying_price
+            Positive::HUNDRED,    // strike_price
+            pos_or_panic!(0.2),   // implied_volatility
+            Positive::ZERO,       // dividend_yield
+            Positive::ONE,        // expiration_in_days
         );
         let veta = veta(&option).unwrap().to_f64().unwrap();
         let expected_veta = 0.0;
@@ -3295,9 +3307,10 @@ pub mod tests_charm_equations {
     use super::*;
     use crate::model::types::{OptionStyle, Side};
     use crate::model::utils::create_sample_option_with_days;
-    use crate::pos;
+
     use approx::assert_relative_eq;
     use num_traits::ToPrimitive;
+    use positive::pos_or_panic;
     use tracing::info;
 
     #[test]
@@ -3305,11 +3318,11 @@ pub mod tests_charm_equations {
         let option = create_sample_option_with_days(
             OptionStyle::Call,
             Side::Long,
-            pos!(100.0), // underlying price
-            pos!(1.0),   // quantity
-            pos!(95.0),  // strike price
-            pos!(0.3),   // volatility
-            pos!(30.0),  // expiration days
+            Positive::HUNDRED,   // underlying price
+            Positive::ONE,       // quantity
+            pos_or_panic!(95.0), // strike price
+            pos_or_panic!(0.3),  // volatility
+            pos_or_panic!(30.0), // expiration days
         );
         let charm_value = charm(&option).unwrap();
         info!("Charm Call ITM Value: {}", charm_value);
@@ -3321,11 +3334,11 @@ pub mod tests_charm_equations {
         let option = create_sample_option_with_days(
             OptionStyle::Put,
             Side::Long,
-            pos!(95.0),  // underlying price
-            pos!(1.0),   // quantity
-            pos!(100.0), // strike price
-            pos!(0.3),   // volatility
-            pos!(30.0),  // expiration days
+            pos_or_panic!(95.0), // underlying price
+            Positive::ONE,       // quantity
+            Positive::HUNDRED,   // strike price
+            pos_or_panic!(0.3),  // volatility
+            pos_or_panic!(30.0), // expiration days
         );
         let charm_value = charm(&option).unwrap();
         info!("Charm Put ITM Value: {}", charm_value);
@@ -3337,11 +3350,11 @@ pub mod tests_charm_equations {
         let option = create_sample_option_with_days(
             OptionStyle::Call,
             Side::Long,
-            pos!(95.0), // underlying price
-            pos!(1.0),  // quantity
-            pos!(95.0), // strike price
-            pos!(0.3),  // volatility
-            pos!(30.0), // expiration days
+            pos_or_panic!(95.0), // underlying price
+            Positive::ONE,       // quantity
+            pos_or_panic!(95.0), // strike price
+            pos_or_panic!(0.3),  // volatility
+            pos_or_panic!(30.0), // expiration days
         );
         let charm_value = charm(&option).unwrap();
         info!("Charm Call ATM Value: {}", charm_value);
@@ -3353,11 +3366,11 @@ pub mod tests_charm_equations {
         let option = create_sample_option_with_days(
             OptionStyle::Put,
             Side::Long,
-            pos!(95.0), // underlying price
-            pos!(1.0),  // quantity
-            pos!(95.0), // strike price
-            pos!(0.3),  // volatility
-            pos!(30.0), // expiration days
+            pos_or_panic!(95.0), // underlying price
+            Positive::ONE,       // quantity
+            pos_or_panic!(95.0), // strike price
+            pos_or_panic!(0.3),  // volatility
+            pos_or_panic!(30.0), // expiration days
         );
         let charm_value = charm(&option).unwrap();
         info!("Charm Put ATM Value: {}", charm_value);
@@ -3369,11 +3382,11 @@ pub mod tests_charm_equations {
         let option = create_sample_option_with_days(
             OptionStyle::Call,
             Side::Long,
-            pos!(90.0), // underlying price
-            pos!(1.0),  // quantity
-            pos!(95.0), // strike price
-            pos!(0.3),  // volatility
-            pos!(30.0), // expiration days
+            pos_or_panic!(90.0), // underlying price
+            Positive::ONE,       // quantity
+            pos_or_panic!(95.0), // strike price
+            pos_or_panic!(0.3),  // volatility
+            pos_or_panic!(30.0), // expiration days
         );
         let charm_value = charm(&option).unwrap();
         info!("Charm Call OTM Value: {}", charm_value);
@@ -3385,11 +3398,11 @@ pub mod tests_charm_equations {
         let option = create_sample_option_with_days(
             OptionStyle::Put,
             Side::Long,
-            pos!(95.0), // underlying price
-            pos!(1.0),  // quantity
-            pos!(90.0), // strike price
-            pos!(0.3),  // volatility
-            pos!(30.0), // expiration days
+            pos_or_panic!(95.0), // underlying price
+            Positive::ONE,       // quantity
+            pos_or_panic!(90.0), // strike price
+            pos_or_panic!(0.3),  // volatility
+            pos_or_panic!(30.0), // expiration days
         );
         let charm_value = charm(&option).unwrap();
         info!("Charm Put OTM Value: {}", charm_value);
@@ -3408,7 +3421,8 @@ pub mod tests_volatility_greeks_edge_cases {
     use super::*;
     use crate::model::types::{OptionStyle, Side};
     use crate::model::utils::create_sample_option_with_days;
-    use crate::pos;
+    use positive::pos_or_panic;
+
     use tracing::info;
 
     // ==================== VANNA EDGE CASES ====================
@@ -3418,11 +3432,11 @@ pub mod tests_volatility_greeks_edge_cases {
         let option = create_sample_option_with_days(
             OptionStyle::Call,
             Side::Long,
-            pos!(100.0),
-            pos!(1.0),
-            pos!(100.0),
-            pos!(0.8), // High volatility (80%)
-            pos!(30.0),
+            Positive::HUNDRED,
+            Positive::ONE,
+            Positive::HUNDRED,
+            pos_or_panic!(0.8), // High volatility (80%)
+            pos_or_panic!(30.0),
         );
         let vanna_value = vanna(&option).unwrap();
         info!("Vanna High Volatility: {}", vanna_value);
@@ -3435,11 +3449,11 @@ pub mod tests_volatility_greeks_edge_cases {
         let option = create_sample_option_with_days(
             OptionStyle::Call,
             Side::Long,
-            pos!(100.0),
-            pos!(1.0),
-            pos!(100.0),
-            pos!(0.05), // Low volatility (5%)
-            pos!(30.0),
+            Positive::HUNDRED,
+            Positive::ONE,
+            Positive::HUNDRED,
+            pos_or_panic!(0.05), // Low volatility (5%)
+            pos_or_panic!(30.0),
         );
         let vanna_value = vanna(&option).unwrap();
         info!("Vanna Low Volatility: {}", vanna_value);
@@ -3452,11 +3466,11 @@ pub mod tests_volatility_greeks_edge_cases {
         let option = create_sample_option_with_days(
             OptionStyle::Call,
             Side::Long,
-            pos!(100.0),
-            pos!(1.0),
-            pos!(100.0),
-            pos!(0.2),
-            pos!(1.0), // 1 day to expiration
+            Positive::HUNDRED,
+            Positive::ONE,
+            Positive::HUNDRED,
+            pos_or_panic!(0.2),
+            Positive::ONE, // 1 day to expiration
         );
         let vanna_value = vanna(&option).unwrap();
         info!("Vanna Near Expiration: {}", vanna_value);
@@ -3469,11 +3483,11 @@ pub mod tests_volatility_greeks_edge_cases {
         let option = create_sample_option_with_days(
             OptionStyle::Call,
             Side::Long,
-            pos!(150.0), // Deep ITM (underlying >> strike)
-            pos!(1.0),
-            pos!(100.0),
-            pos!(0.2),
-            pos!(30.0),
+            pos_or_panic!(150.0), // Deep ITM (underlying >> strike)
+            Positive::ONE,
+            Positive::HUNDRED,
+            pos_or_panic!(0.2),
+            pos_or_panic!(30.0),
         );
         let vanna_value = vanna(&option).unwrap();
         info!("Vanna Deep ITM: {}", vanna_value);
@@ -3486,11 +3500,11 @@ pub mod tests_volatility_greeks_edge_cases {
         let option = create_sample_option_with_days(
             OptionStyle::Call,
             Side::Long,
-            pos!(50.0), // Deep OTM (underlying << strike)
-            pos!(1.0),
-            pos!(100.0),
-            pos!(0.2),
-            pos!(30.0),
+            pos_or_panic!(50.0), // Deep OTM (underlying << strike)
+            Positive::ONE,
+            Positive::HUNDRED,
+            pos_or_panic!(0.2),
+            pos_or_panic!(30.0),
         );
         let vanna_value = vanna(&option).unwrap();
         info!("Vanna Deep OTM: {}", vanna_value);
@@ -3503,11 +3517,11 @@ pub mod tests_volatility_greeks_edge_cases {
         let option = create_sample_option_with_days(
             OptionStyle::Call,
             Side::Long,
-            pos!(100.0),
-            pos!(1.0),
-            pos!(100.0),
+            Positive::HUNDRED,
+            Positive::ONE,
+            Positive::HUNDRED,
             Positive::ZERO, // Zero volatility
-            pos!(30.0),
+            pos_or_panic!(30.0),
         );
         let vanna_value = vanna(&option).unwrap();
         info!("Vanna Zero Volatility: {}", vanna_value);
@@ -3522,11 +3536,11 @@ pub mod tests_volatility_greeks_edge_cases {
         let option = create_sample_option_with_days(
             OptionStyle::Call,
             Side::Long,
-            pos!(100.0),
-            pos!(1.0),
-            pos!(100.0),
-            pos!(0.8), // High volatility (80%)
-            pos!(30.0),
+            Positive::HUNDRED,
+            Positive::ONE,
+            Positive::HUNDRED,
+            pos_or_panic!(0.8), // High volatility (80%)
+            pos_or_panic!(30.0),
         );
         let vomma_value = vomma(&option).unwrap();
         info!("Vomma High Volatility: {}", vomma_value);
@@ -3539,11 +3553,11 @@ pub mod tests_volatility_greeks_edge_cases {
         let option = create_sample_option_with_days(
             OptionStyle::Call,
             Side::Long,
-            pos!(100.0),
-            pos!(1.0),
-            pos!(100.0),
-            pos!(0.05), // Low volatility (5%)
-            pos!(30.0),
+            Positive::HUNDRED,
+            Positive::ONE,
+            Positive::HUNDRED,
+            pos_or_panic!(0.05), // Low volatility (5%)
+            pos_or_panic!(30.0),
         );
         let vomma_value = vomma(&option).unwrap();
         info!("Vomma Low Volatility: {}", vomma_value);
@@ -3556,11 +3570,11 @@ pub mod tests_volatility_greeks_edge_cases {
         let option = create_sample_option_with_days(
             OptionStyle::Call,
             Side::Long,
-            pos!(100.0),
-            pos!(1.0),
-            pos!(100.0),
-            pos!(0.2),
-            pos!(1.0), // 1 day to expiration
+            Positive::HUNDRED,
+            Positive::ONE,
+            Positive::HUNDRED,
+            pos_or_panic!(0.2),
+            Positive::ONE, // 1 day to expiration
         );
         let vomma_value = vomma(&option).unwrap();
         info!("Vomma Near Expiration: {}", vomma_value);
@@ -3573,10 +3587,10 @@ pub mod tests_volatility_greeks_edge_cases {
         let option = create_sample_option_with_days(
             OptionStyle::Call,
             Side::Long,
-            pos!(100.0),
-            pos!(1.0),
-            pos!(100.0),
-            pos!(0.2),
+            Positive::HUNDRED,
+            Positive::ONE,
+            Positive::HUNDRED,
+            pos_or_panic!(0.2),
             Positive::ZERO, // At expiration
         );
         let vomma_value = vomma(&option).unwrap();
@@ -3590,11 +3604,11 @@ pub mod tests_volatility_greeks_edge_cases {
         let option = create_sample_option_with_days(
             OptionStyle::Call,
             Side::Long,
-            pos!(50.0), // Deep OTM
-            pos!(1.0),
-            pos!(100.0),
-            pos!(0.2),
-            pos!(30.0),
+            pos_or_panic!(50.0), // Deep OTM
+            Positive::ONE,
+            Positive::HUNDRED,
+            pos_or_panic!(0.2),
+            pos_or_panic!(30.0),
         );
         let vomma_value = vomma(&option).unwrap();
         info!("Vomma Deep OTM: {}", vomma_value);
@@ -3609,11 +3623,11 @@ pub mod tests_volatility_greeks_edge_cases {
         let option = create_sample_option_with_days(
             OptionStyle::Call,
             Side::Long,
-            pos!(100.0),
-            pos!(1.0),
-            pos!(100.0),
-            pos!(0.8), // High volatility (80%)
-            pos!(30.0),
+            Positive::HUNDRED,
+            Positive::ONE,
+            Positive::HUNDRED,
+            pos_or_panic!(0.8), // High volatility (80%)
+            pos_or_panic!(30.0),
         );
         let veta_value = veta(&option).unwrap();
         info!("Veta High Volatility: {}", veta_value);
@@ -3626,11 +3640,11 @@ pub mod tests_volatility_greeks_edge_cases {
         let option = create_sample_option_with_days(
             OptionStyle::Call,
             Side::Long,
-            pos!(100.0),
-            pos!(1.0),
-            pos!(100.0),
-            pos!(0.05), // Low volatility (5%)
-            pos!(30.0),
+            Positive::HUNDRED,
+            Positive::ONE,
+            Positive::HUNDRED,
+            pos_or_panic!(0.05), // Low volatility (5%)
+            pos_or_panic!(30.0),
         );
         let veta_value = veta(&option).unwrap();
         info!("Veta Low Volatility: {}", veta_value);
@@ -3643,11 +3657,11 @@ pub mod tests_volatility_greeks_edge_cases {
         let option = create_sample_option_with_days(
             OptionStyle::Call,
             Side::Long,
-            pos!(100.0),
-            pos!(1.0),
-            pos!(100.0),
-            pos!(0.2),
-            pos!(1.0), // 1 day to expiration
+            Positive::HUNDRED,
+            Positive::ONE,
+            Positive::HUNDRED,
+            pos_or_panic!(0.2),
+            Positive::ONE, // 1 day to expiration
         );
         let veta_value = veta(&option).unwrap();
         info!("Veta Near Expiration: {}", veta_value);
@@ -3660,10 +3674,10 @@ pub mod tests_volatility_greeks_edge_cases {
         let option = create_sample_option_with_days(
             OptionStyle::Call,
             Side::Long,
-            pos!(100.0),
-            pos!(1.0),
-            pos!(100.0),
-            pos!(0.2),
+            Positive::HUNDRED,
+            Positive::ONE,
+            Positive::HUNDRED,
+            pos_or_panic!(0.2),
             Positive::ZERO, // At expiration
         );
         let veta_value = veta(&option).unwrap();
@@ -3677,11 +3691,11 @@ pub mod tests_volatility_greeks_edge_cases {
         let option = create_sample_option_with_days(
             OptionStyle::Call,
             Side::Long,
-            pos!(150.0), // Deep ITM
-            pos!(1.0),
-            pos!(100.0),
-            pos!(0.2),
-            pos!(30.0),
+            pos_or_panic!(150.0), // Deep ITM
+            Positive::ONE,
+            Positive::HUNDRED,
+            pos_or_panic!(0.2),
+            pos_or_panic!(30.0),
         );
         let veta_value = veta(&option).unwrap();
         info!("Veta Deep ITM: {}", veta_value);
@@ -3694,11 +3708,11 @@ pub mod tests_volatility_greeks_edge_cases {
         let option = create_sample_option_with_days(
             OptionStyle::Call,
             Side::Long,
-            pos!(50.0), // Deep OTM
-            pos!(1.0),
-            pos!(100.0),
-            pos!(0.2),
-            pos!(30.0),
+            pos_or_panic!(50.0), // Deep OTM
+            Positive::ONE,
+            Positive::HUNDRED,
+            pos_or_panic!(0.2),
+            pos_or_panic!(30.0),
         );
         let veta_value = veta(&option).unwrap();
         info!("Veta Deep OTM: {}", veta_value);
@@ -3711,11 +3725,11 @@ pub mod tests_volatility_greeks_edge_cases {
         let option = create_sample_option_with_days(
             OptionStyle::Call,
             Side::Long,
-            pos!(100.0),
-            pos!(1.0),
-            pos!(100.0),
-            pos!(0.2),
-            pos!(365.0), // 1 year to expiration
+            Positive::HUNDRED,
+            Positive::ONE,
+            Positive::HUNDRED,
+            pos_or_panic!(0.2),
+            pos_or_panic!(365.0), // 1 year to expiration
         );
         let veta_value = veta(&option).unwrap();
         info!("Veta Long Dated: {}", veta_value);
@@ -3730,11 +3744,11 @@ pub mod tests_volatility_greeks_edge_cases {
         let option = create_sample_option_with_days(
             OptionStyle::Call,
             Side::Long,
-            pos!(100.0), // underlying_price
-            pos!(1.0),
-            pos!(100.0), // strike_price
-            pos!(0.8),   // High volatility (80%)
-            pos!(30.0),  // expiration_days
+            Positive::HUNDRED, // underlying_price
+            Positive::ONE,
+            Positive::HUNDRED,   // strike_price
+            pos_or_panic!(0.8),  // High volatility (80%)
+            pos_or_panic!(30.0), // expiration_days
         );
         let charm_value = charm(&option).unwrap();
         info!("Charm High Volatility: {}", charm_value);
@@ -3747,11 +3761,11 @@ pub mod tests_volatility_greeks_edge_cases {
         let option = create_sample_option_with_days(
             OptionStyle::Call,
             Side::Long,
-            pos!(100.0), // underlying_price
-            pos!(1.0),
-            pos!(100.0), // strike_price
-            pos!(0.05),  // Low volatility (5%)
-            pos!(30.0),  // expiration_days
+            Positive::HUNDRED, // underlying_price
+            Positive::ONE,
+            Positive::HUNDRED,   // strike_price
+            pos_or_panic!(0.05), // Low volatility (5%)
+            pos_or_panic!(30.0), // expiration_days
         );
         let charm_value = charm(&option).unwrap();
         info!("Charm Low Volatility: {}", charm_value);
@@ -3765,11 +3779,11 @@ pub mod tests_volatility_greeks_edge_cases {
         let option = create_sample_option_with_days(
             OptionStyle::Call,
             Side::Long,
-            pos!(100.0), // underlying_price
-            pos!(1.0),
-            pos!(100.0), // strike_price
-            pos!(0.2),
-            pos!(1.0), // 1 day to expiration
+            Positive::HUNDRED, // underlying_price
+            Positive::ONE,
+            Positive::HUNDRED, // strike_price
+            pos_or_panic!(0.2),
+            Positive::ONE, // 1 day to expiration
         );
         let charm_value = charm(&option).unwrap();
         info!("Charm Near Expiration: {}", charm_value);
@@ -3782,10 +3796,10 @@ pub mod tests_volatility_greeks_edge_cases {
         let option = create_sample_option_with_days(
             OptionStyle::Call,
             Side::Long,
-            pos!(100.0), // underlying_price
-            pos!(1.0),
-            pos!(100.0), // strike_price
-            pos!(0.2),
+            Positive::HUNDRED, // underlying_price
+            Positive::ONE,
+            Positive::HUNDRED, // strike_price
+            pos_or_panic!(0.2),
             Positive::ZERO, // At expiration
         );
         let charm_value = charm(&option).unwrap();
@@ -3799,11 +3813,11 @@ pub mod tests_volatility_greeks_edge_cases {
         let option = create_sample_option_with_days(
             OptionStyle::Call,
             Side::Long,
-            pos!(150.0), // Deep ITM
-            pos!(1.0),
-            pos!(100.0),
-            pos!(0.2),
-            pos!(30.0), // expiration_days
+            pos_or_panic!(150.0), // Deep ITM
+            Positive::ONE,
+            Positive::HUNDRED,
+            pos_or_panic!(0.2),
+            pos_or_panic!(30.0), // expiration_days
         );
         let charm_value = charm(&option).unwrap();
         info!("Charm Deep ITM: {}", charm_value);
@@ -3816,11 +3830,11 @@ pub mod tests_volatility_greeks_edge_cases {
         let option = create_sample_option_with_days(
             OptionStyle::Call,
             Side::Long,
-            pos!(50.0), // Deep OTM
-            pos!(1.0),
-            pos!(100.0),
-            pos!(0.2),
-            pos!(30.0), // expiration_days
+            pos_or_panic!(50.0), // Deep OTM
+            Positive::ONE,
+            Positive::HUNDRED,
+            pos_or_panic!(0.2),
+            pos_or_panic!(30.0), // expiration_days
         );
         let charm_value = charm(&option).unwrap();
         info!("Charm Deep OTM: {}", charm_value);
@@ -3833,11 +3847,11 @@ pub mod tests_volatility_greeks_edge_cases {
         let option = create_sample_option_with_days(
             OptionStyle::Call,
             Side::Long,
-            pos!(100.0),
-            pos!(1.0),
-            pos!(100.0),
-            pos!(0.2),
-            pos!(365.0), // 1 year to expiration
+            Positive::HUNDRED,
+            Positive::ONE,
+            Positive::HUNDRED,
+            pos_or_panic!(0.2),
+            pos_or_panic!(365.0), // 1 year to expiration
         );
         let charm_value = charm(&option).unwrap();
         info!("Charm Long Dated: {}", charm_value);
@@ -3852,11 +3866,11 @@ pub mod tests_volatility_greeks_edge_cases {
         let option = create_sample_option_with_days(
             OptionStyle::Call,
             Side::Long,
-            pos!(100.0), // underlying_price
-            pos!(1.0),
-            pos!(100.0), // strike_price
-            pos!(0.8),   // High volatility (80%)
-            pos!(30.0),  // expiration_days
+            Positive::HUNDRED, // underlying_price
+            Positive::ONE,
+            Positive::HUNDRED,   // strike_price
+            pos_or_panic!(0.8),  // High volatility (80%)
+            pos_or_panic!(30.0), // expiration_days
         );
         let color_value = color(&option).unwrap();
         info!("Color High Volatility: {}", color_value);
@@ -3869,11 +3883,11 @@ pub mod tests_volatility_greeks_edge_cases {
         let option = create_sample_option_with_days(
             OptionStyle::Call,
             Side::Long,
-            pos!(100.0), // underlying_price
-            pos!(1.0),
-            pos!(100.0), // strike_price
-            pos!(0.05),  // Low volatility (5%)
-            pos!(30.0),  // expiration_days
+            Positive::HUNDRED, // underlying_price
+            Positive::ONE,
+            Positive::HUNDRED,   // strike_price
+            pos_or_panic!(0.05), // Low volatility (5%)
+            pos_or_panic!(30.0), // expiration_days
         );
         let color_value = color(&option).unwrap();
         info!("Color Low Volatility: {}", color_value);
@@ -3887,11 +3901,11 @@ pub mod tests_volatility_greeks_edge_cases {
         let option = create_sample_option_with_days(
             OptionStyle::Call,
             Side::Long,
-            pos!(100.0), // underlying_price
-            pos!(1.0),
-            pos!(100.0), // strike_price
-            pos!(0.2),
-            pos!(1.0), // 1 day to expiration
+            Positive::HUNDRED, // underlying_price
+            Positive::ONE,
+            Positive::HUNDRED, // strike_price
+            pos_or_panic!(0.2),
+            Positive::ONE, // 1 day to expiration
         );
         let color_value = color(&option).unwrap();
         info!("Color Near Expiration: {}", color_value);
@@ -3904,10 +3918,10 @@ pub mod tests_volatility_greeks_edge_cases {
         let option = create_sample_option_with_days(
             OptionStyle::Call,
             Side::Long,
-            pos!(100.0), // underlying_price
-            pos!(1.0),
-            pos!(100.0), // strike_price
-            pos!(0.2),
+            Positive::HUNDRED, // underlying_price
+            Positive::ONE,
+            Positive::HUNDRED, // strike_price
+            pos_or_panic!(0.2),
             Positive::ZERO, // At expiration
         );
         let color_value = color(&option).unwrap();
@@ -3921,11 +3935,11 @@ pub mod tests_volatility_greeks_edge_cases {
         let option = create_sample_option_with_days(
             OptionStyle::Call,
             Side::Long,
-            pos!(150.0), // Deep ITM
-            pos!(1.0),
-            pos!(100.0),
-            pos!(0.2),
-            pos!(30.0), // expiration_days
+            pos_or_panic!(150.0), // Deep ITM
+            Positive::ONE,
+            Positive::HUNDRED,
+            pos_or_panic!(0.2),
+            pos_or_panic!(30.0), // expiration_days
         );
         let color_value = color(&option).unwrap();
         info!("Color Deep ITM: {}", color_value);
@@ -3938,11 +3952,11 @@ pub mod tests_volatility_greeks_edge_cases {
         let option = create_sample_option_with_days(
             OptionStyle::Call,
             Side::Long,
-            pos!(50.0), // Deep OTM
-            pos!(1.0),
-            pos!(100.0),
-            pos!(0.2),
-            pos!(30.0), // expiration_days
+            pos_or_panic!(50.0), // Deep OTM
+            Positive::ONE,
+            Positive::HUNDRED,
+            pos_or_panic!(0.2),
+            pos_or_panic!(30.0), // expiration_days
         );
         let color_value = color(&option).unwrap();
         info!("Color Deep OTM: {}", color_value);
@@ -3955,11 +3969,11 @@ pub mod tests_volatility_greeks_edge_cases {
         let option = create_sample_option_with_days(
             OptionStyle::Call,
             Side::Long,
-            pos!(100.0),
-            pos!(1.0),
-            pos!(100.0),
-            pos!(0.2),
-            pos!(365.0), // 1 year to expiration
+            Positive::HUNDRED,
+            Positive::ONE,
+            Positive::HUNDRED,
+            pos_or_panic!(0.2),
+            pos_or_panic!(365.0), // 1 year to expiration
         );
         let color_value = color(&option).unwrap();
         info!("Color Long Dated: {}", color_value);
@@ -3975,11 +3989,11 @@ pub mod tests_volatility_greeks_edge_cases {
         let option = create_sample_option_with_days(
             OptionStyle::Call,
             Side::Long,
-            pos!(100.0),
-            pos!(1.0),
-            pos!(100.0),
-            pos!(1.0), // 100% volatility
-            pos!(2.0), // 2 days to expiration
+            Positive::HUNDRED,
+            Positive::ONE,
+            Positive::HUNDRED,
+            Positive::ONE, // 100% volatility
+            Positive::TWO, // 2 days to expiration
         );
 
         let vanna_value = vanna(&option).unwrap();
@@ -4007,11 +4021,11 @@ pub mod tests_volatility_greeks_edge_cases {
         let option = create_sample_option_with_days(
             OptionStyle::Put,
             Side::Long,
-            pos!(100.0),
-            pos!(1.0),
-            pos!(100.0),
-            pos!(0.2),
-            pos!(30.0),
+            Positive::HUNDRED,
+            Positive::ONE,
+            Positive::HUNDRED,
+            pos_or_panic!(0.2),
+            pos_or_panic!(30.0),
         );
 
         let vanna_value = vanna(&option).unwrap();
@@ -4039,21 +4053,21 @@ pub mod tests_volatility_greeks_edge_cases {
         let atm_option = create_sample_option_with_days(
             OptionStyle::Call,
             Side::Long,
-            pos!(100.0),
-            pos!(1.0),
-            pos!(100.0), // ATM
-            pos!(0.2),
-            pos!(30.0),
+            Positive::HUNDRED,
+            Positive::ONE,
+            Positive::HUNDRED, // ATM
+            pos_or_panic!(0.2),
+            pos_or_panic!(30.0),
         );
 
         let otm_option = create_sample_option_with_days(
             OptionStyle::Call,
             Side::Long,
-            pos!(100.0),
-            pos!(1.0),
-            pos!(110.0), // OTM
-            pos!(0.2),
-            pos!(30.0),
+            Positive::HUNDRED,
+            Positive::ONE,
+            pos_or_panic!(110.0), // OTM
+            pos_or_panic!(0.2),
+            pos_or_panic!(30.0),
         );
 
         let vanna_atm = vanna(&atm_option).unwrap();
@@ -4071,22 +4085,22 @@ pub mod tests_volatility_greeks_edge_cases {
     fn test_vomma_smile_effect() {
         // Test vomma at different strikes to verify smile effect
         let strikes = vec![
-            pos!(90.0),
-            pos!(95.0),
-            pos!(100.0),
-            pos!(105.0),
-            pos!(110.0),
+            pos_or_panic!(90.0),
+            pos_or_panic!(95.0),
+            Positive::HUNDRED,
+            pos_or_panic!(105.0),
+            pos_or_panic!(110.0),
         ];
 
         for strike in strikes {
             let option = create_sample_option_with_days(
                 OptionStyle::Call,
                 Side::Long,
-                pos!(100.0),
-                pos!(1.0),
+                Positive::HUNDRED,
+                Positive::ONE,
                 strike,
-                pos!(0.2),
-                pos!(30.0),
+                pos_or_panic!(0.2),
+                pos_or_panic!(30.0),
             );
             let vomma_value = vomma(&option).unwrap();
             info!("Vomma at strike {}: {}", strike, vomma_value);
@@ -4100,9 +4114,10 @@ pub mod tests_color_equations {
     use super::*;
     use crate::model::types::{OptionStyle, Side};
     use crate::model::utils::create_sample_option_with_days;
-    use crate::pos;
+
     use approx::assert_relative_eq;
     use num_traits::ToPrimitive;
+    use positive::pos_or_panic;
     use tracing::info;
 
     #[test]
@@ -4110,11 +4125,11 @@ pub mod tests_color_equations {
         let option = create_sample_option_with_days(
             OptionStyle::Call,
             Side::Long,
-            pos!(100.0), // underlying price
-            pos!(1.0),   // quantity
-            pos!(95.0),  // strike price
-            pos!(0.3),   // volatility
-            pos!(30.0),  // expiration days
+            Positive::HUNDRED,   // underlying price
+            Positive::ONE,       // quantity
+            pos_or_panic!(95.0), // strike price
+            pos_or_panic!(0.3),  // volatility
+            pos_or_panic!(30.0), // expiration days
         );
         let color_value = color(&option).unwrap();
         info!("Color ITM Value: {}", color_value);
@@ -4126,11 +4141,11 @@ pub mod tests_color_equations {
         let option = create_sample_option_with_days(
             OptionStyle::Call,
             Side::Long,
-            pos!(95.0), // underlying price
-            pos!(1.0),  // quantity
-            pos!(95.0), // strike price
-            pos!(0.3),  // volatility
-            pos!(30.0), // expiration days
+            pos_or_panic!(95.0), // underlying price
+            Positive::ONE,       // quantity
+            pos_or_panic!(95.0), // strike price
+            pos_or_panic!(0.3),  // volatility
+            pos_or_panic!(30.0), // expiration days
         );
         let color_value = color(&option).unwrap();
         info!("Color ATM Value: {}", color_value);
@@ -4142,11 +4157,11 @@ pub mod tests_color_equations {
         let option = create_sample_option_with_days(
             OptionStyle::Call,
             Side::Long,
-            pos!(95.0), // underlying price
-            pos!(1.0),  // quantity
-            pos!(95.0), // strike price
-            pos!(0.3),  // volatility
-            pos!(0.5),  // expiration days
+            pos_or_panic!(95.0), // underlying price
+            Positive::ONE,       // quantity
+            pos_or_panic!(95.0), // strike price
+            pos_or_panic!(0.3),  // volatility
+            pos_or_panic!(0.5),  // expiration days
         );
         let color_value = color(&option).unwrap();
         info!("Color ATM Near Expiration Value: {}", color_value);
@@ -4158,11 +4173,11 @@ pub mod tests_color_equations {
         let option = create_sample_option_with_days(
             OptionStyle::Call,
             Side::Long,
-            pos!(95.0),  // underlying price
-            pos!(1.0),   // quantity
-            pos!(95.0),  // strike price
-            pos!(0.3),   // volatility
-            pos!(0.001), // expiration days
+            pos_or_panic!(95.0),  // underlying price
+            Positive::ONE,        // quantity
+            pos_or_panic!(95.0),  // strike price
+            pos_or_panic!(0.3),   // volatility
+            pos_or_panic!(0.001), // expiration days
         );
         let color_value = color(&option).unwrap();
         info!("Color ATM Right Before Expiration Value: {}", color_value);
@@ -4178,11 +4193,11 @@ pub mod tests_color_equations {
         let option = create_sample_option_with_days(
             OptionStyle::Call,
             Side::Long,
-            pos!(90.0), // underlying price
-            pos!(1.0),  // quantity
-            pos!(95.0), // strike price
-            pos!(0.3),  // volatility
-            pos!(30.0), // expiration days
+            pos_or_panic!(90.0), // underlying price
+            Positive::ONE,       // quantity
+            pos_or_panic!(95.0), // strike price
+            pos_or_panic!(0.3),  // volatility
+            pos_or_panic!(30.0), // expiration days
         );
         let color_value = color(&option).unwrap();
         info!("Color OTM Value: {}", color_value);

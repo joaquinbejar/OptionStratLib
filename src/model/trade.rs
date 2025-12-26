@@ -1,7 +1,8 @@
 use crate::model::types::Action;
 use crate::pnl::PnL;
-use crate::{OptionStyle, Positive, Side};
+use crate::{OptionStyle, Side};
 use chrono::{DateTime, Utc};
+use positive::Positive;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::fs::File;
@@ -448,8 +449,9 @@ mod ts_ns {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::pos;
+
     use chrono::{TimeZone, Utc};
+    use positive::pos_or_panic;
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
     use uuid::Uuid;
@@ -467,7 +469,7 @@ mod tests {
             expiry: Utc.with_ymd_and_hms(2025, 6, 20, 0, 0, 0).unwrap(),
             timestamp: 1_700_000_000_000_000_000, // arbitrary nanos
             quantity: Positive(Decimal::from(3u32)),
-            premium: pos!(2.5),                                // 2.50
+            premium: pos_or_panic!(2.5),                       // 2.50
             underlying_price: Positive(Decimal::new(1850, 1)), // 185.0
             notes: Some("unit-test".to_string()),
             status: TradeStatus::Open,
@@ -511,7 +513,7 @@ mod tests {
             Positive(Decimal::new(2000, 1)), // 200.0
             Utc::now(),
             Positive(Decimal::from(1u32)),
-            pos!(3.0),                       // 3.00
+            pos_or_panic!(3.0),              // 3.00
             Positive(Decimal::new(1900, 1)), // 190.0
             None,
             TradeStatus::Open,
@@ -535,13 +537,13 @@ mod tests {
             action,
             side,
             OptionStyle::Call,        // option_style
-            pos!(0.15),               // fee   = 0.15
+            pos_or_panic!(0.15),      // fee   = 0.15
             Some("AAPL".to_string()), // symbol
-            pos!(180.0),              // strike = 180
+            pos_or_panic!(180.0),     // strike = 180
             Utc.with_ymd_and_hms(2025, 6, 20, 0, 0, 0).unwrap(),
-            pos!(3.0),                // quantity = 3
-            pos!(2.50),               // premium  = 2.50
-            pos!(185.0),              // underlying_price
+            pos_or_panic!(3.0),       // quantity = 3
+            pos_or_panic!(2.50),      // premium  = 2.50
+            pos_or_panic!(185.0),     // underlying_price
             Some("unit-test".into()), // notes
             status,
         )

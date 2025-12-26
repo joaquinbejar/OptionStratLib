@@ -19,31 +19,116 @@ use optionstratlib::error::CurveError;
 use optionstratlib::metrics::BidAskSpreadCurve;
 use optionstratlib::model::ExpirationDate;
 use optionstratlib::prelude::*;
+use positive::pos_or_panic;
 use rust_decimal_macros::dec;
 
 fn main() -> Result<(), CurveError> {
     setup_logger();
 
     // Build a synthetic option chain with bid/ask data
-    let mut chain = OptionChain::new("SPY", pos!(450.0), "2024-12-31".to_string(), None, None);
+    let mut chain = OptionChain::new(
+        "SPY",
+        pos_or_panic!(450.0),
+        "2024-12-31".to_string(),
+        None,
+        None,
+    );
 
     // Add options with realistic bid/ask spreads
     // Spreads are tighter near ATM and wider for OTM options
     let strikes_data = [
         // (strike, call_bid, call_ask, put_bid, put_ask)
-        (pos!(380.0), pos!(71.0), pos!(73.0), pos!(0.5), pos!(1.0)),
-        (pos!(400.0), pos!(52.0), pos!(53.5), pos!(1.5), pos!(2.0)),
-        (pos!(420.0), pos!(33.0), pos!(33.8), pos!(3.5), pos!(4.0)),
-        (pos!(430.0), pos!(24.0), pos!(24.5), pos!(5.5), pos!(6.0)),
-        (pos!(440.0), pos!(16.0), pos!(16.3), pos!(9.0), pos!(9.3)),
-        (pos!(445.0), pos!(12.5), pos!(12.7), pos!(11.5), pos!(11.7)),
-        (pos!(450.0), pos!(9.5), pos!(9.6), pos!(14.5), pos!(14.6)), // ATM - tightest
-        (pos!(455.0), pos!(7.0), pos!(7.2), pos!(18.0), pos!(18.2)),
-        (pos!(460.0), pos!(5.0), pos!(5.2), pos!(22.0), pos!(22.3)),
-        (pos!(470.0), pos!(2.5), pos!(2.8), pos!(30.0), pos!(30.5)),
-        (pos!(480.0), pos!(1.2), pos!(1.5), pos!(40.0), pos!(41.0)),
-        (pos!(500.0), pos!(0.3), pos!(0.6), pos!(58.0), pos!(60.0)),
-        (pos!(520.0), pos!(0.1), pos!(0.4), pos!(75.0), pos!(78.0)),
+        (
+            pos_or_panic!(380.0),
+            pos_or_panic!(71.0),
+            pos_or_panic!(73.0),
+            pos_or_panic!(0.5),
+            Positive::ONE,
+        ),
+        (
+            pos_or_panic!(400.0),
+            pos_or_panic!(52.0),
+            pos_or_panic!(53.5),
+            pos_or_panic!(1.5),
+            Positive::TWO,
+        ),
+        (
+            pos_or_panic!(420.0),
+            pos_or_panic!(33.0),
+            pos_or_panic!(33.8),
+            pos_or_panic!(3.5),
+            pos_or_panic!(4.0),
+        ),
+        (
+            pos_or_panic!(430.0),
+            pos_or_panic!(24.0),
+            pos_or_panic!(24.5),
+            pos_or_panic!(5.5),
+            pos_or_panic!(6.0),
+        ),
+        (
+            pos_or_panic!(440.0),
+            pos_or_panic!(16.0),
+            pos_or_panic!(16.3),
+            pos_or_panic!(9.0),
+            pos_or_panic!(9.3),
+        ),
+        (
+            pos_or_panic!(445.0),
+            pos_or_panic!(12.5),
+            pos_or_panic!(12.7),
+            pos_or_panic!(11.5),
+            pos_or_panic!(11.7),
+        ),
+        (
+            pos_or_panic!(450.0),
+            pos_or_panic!(9.5),
+            pos_or_panic!(9.6),
+            pos_or_panic!(14.5),
+            pos_or_panic!(14.6),
+        ), // ATM - tightest
+        (
+            pos_or_panic!(455.0),
+            pos_or_panic!(7.0),
+            pos_or_panic!(7.2),
+            pos_or_panic!(18.0),
+            pos_or_panic!(18.2),
+        ),
+        (
+            pos_or_panic!(460.0),
+            pos_or_panic!(5.0),
+            pos_or_panic!(5.2),
+            pos_or_panic!(22.0),
+            pos_or_panic!(22.3),
+        ),
+        (
+            pos_or_panic!(470.0),
+            pos_or_panic!(2.5),
+            pos_or_panic!(2.8),
+            pos_or_panic!(30.0),
+            pos_or_panic!(30.5),
+        ),
+        (
+            pos_or_panic!(480.0),
+            pos_or_panic!(1.2),
+            pos_or_panic!(1.5),
+            pos_or_panic!(40.0),
+            pos_or_panic!(41.0),
+        ),
+        (
+            pos_or_panic!(500.0),
+            pos_or_panic!(0.3),
+            pos_or_panic!(0.6),
+            pos_or_panic!(58.0),
+            pos_or_panic!(60.0),
+        ),
+        (
+            pos_or_panic!(520.0),
+            pos_or_panic!(0.1),
+            pos_or_panic!(0.4),
+            pos_or_panic!(75.0),
+            pos_or_panic!(78.0),
+        ),
     ];
 
     for (strike, call_bid, call_ask, put_bid, put_ask) in strikes_data {
@@ -53,15 +138,15 @@ fn main() -> Result<(), CurveError> {
             spos!(call_ask.to_f64()),
             spos!(put_bid.to_f64()),
             spos!(put_ask.to_f64()),
-            pos!(0.20),
+            pos_or_panic!(0.20),
             Some(dec!(0.5)),
             Some(dec!(-0.5)),
             Some(dec!(0.05)),
             spos!(1000.0),
             Some(5000),
             Some("SPY".to_string()),
-            Some(ExpirationDate::Days(pos!(30.0))),
-            Some(Box::new(pos!(450.0))),
+            Some(ExpirationDate::Days(pos_or_panic!(30.0))),
+            Some(Box::new(pos_or_panic!(450.0))),
             Some(dec!(0.05)),
             spos!(0.02),
             None,

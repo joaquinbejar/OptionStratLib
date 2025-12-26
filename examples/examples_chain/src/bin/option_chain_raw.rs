@@ -1,3 +1,4 @@
+use positive::pos_or_panic;
 /******************************************************************************
    Author: Joaquín Béjar García
    Email: jb@taunais.com
@@ -24,20 +25,20 @@ fn main() -> Result<(), optionstratlib::error::Error> {
         Positive::ZERO,                // call_strike
         Positive::ZERO,                // put_strike
         ExpirationDate::DateTime(DateTime::from(datetime)),
-        Positive::ONE,  // implied_volatility
-        Positive::ONE,  // implied_volatility
-        Decimal::ZERO,  // risk_free_rate
-        Positive::ZERO, // dividend_yield
-        pos!(1.0),      // quantity
-        Positive::ZERO, // premium_short_call
-        Positive::ZERO, // premium_short_put
-        pos!(2.2),      // open_fee_short_call
-        pos!(2.2),      // close_fee_short_call
-        pos!(1.7),      // open_fee_short_put
-        pos!(1.7),      // close_fee_short_put
+        Positive::ONE,      // implied_volatility
+        Positive::ONE,      // implied_volatility
+        Decimal::ZERO,      // risk_free_rate
+        Positive::ZERO,     // dividend_yield
+        Positive::ONE,      // quantity
+        Positive::ZERO,     // premium_short_call
+        Positive::ZERO,     // premium_short_put
+        pos_or_panic!(2.2), // open_fee_short_call
+        pos_or_panic!(2.2), // close_fee_short_call
+        pos_or_panic!(1.7), // open_fee_short_put
+        pos_or_panic!(1.7), // close_fee_short_put
     );
 
-    // strategy.best_area(&option_chain, FindOptimalSide::Range(pos!(21600.0), pos!(21700.0) ));
+    // strategy.best_area(&option_chain, FindOptimalSide::Range(pos_or_panic!(21600.0), pos_or_panic!(21700.0) ));
     strategy.get_best_area(&option_chain, FindOptimalSide::Upper);
     debug!("Strategy:  {:#?}", strategy);
     let range = strategy.get_range_of_profit().unwrap_or(Positive::ZERO);

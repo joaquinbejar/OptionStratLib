@@ -7,6 +7,7 @@ edition = "2024"
 statrs = { workspace = true }
 rand = { workspace = true }
 optionstratlib = { workspace = true , features = ["plotly", "static_export"]}
+positive = { workspace = true }
 tracing = { workspace = true }
 rust_decimal_macros = { workspace = true }
 rust_decimal = { workspace = true }

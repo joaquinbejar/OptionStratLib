@@ -3,7 +3,8 @@
    Email: jb@taunais.com
    Date: 30/11/24
 ******************************************************************************/
-use crate::Positive;
+
+use positive::Positive;
 
 /// # StrategyProbabilityAnalysis
 ///
@@ -56,19 +57,20 @@ pub struct StrategyProbabilityAnalysis {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::pos;
+    use positive::pos_or_panic;
+
     use rust_decimal_macros::dec;
 
     #[test]
     fn test_strategy_analysis_creation() {
         // Create a valid StrategyProbabilityAnalysis instance
         let analysis = StrategyProbabilityAnalysis {
-            probability_of_profit: pos!(0.65),
-            probability_of_max_profit: pos!(0.30),
-            probability_of_max_loss: pos!(0.20),
-            expected_value: pos!(250.00),
-            break_even_points: vec![pos!(45.50), pos!(55.50)],
-            risk_reward_ratio: pos!(0.75),
+            probability_of_profit: pos_or_panic!(0.65),
+            probability_of_max_profit: pos_or_panic!(0.30),
+            probability_of_max_loss: pos_or_panic!(0.20),
+            expected_value: pos_or_panic!(250.00),
+            break_even_points: vec![pos_or_panic!(45.50), pos_or_panic!(55.50)],
+            risk_reward_ratio: pos_or_panic!(0.75),
         };
 
         // Verify that the fields were set correctly
@@ -86,12 +88,12 @@ mod tests {
     fn test_debug_implementation() {
         // Create a simple StrategyProbabilityAnalysis instance
         let analysis = StrategyProbabilityAnalysis {
-            probability_of_profit: pos!(0.60),
-            probability_of_max_profit: pos!(0.25),
-            probability_of_max_loss: pos!(0.15),
-            expected_value: pos!(100.00),
-            break_even_points: vec![pos!(50.00)],
-            risk_reward_ratio: pos!(1.00),
+            probability_of_profit: pos_or_panic!(0.60),
+            probability_of_max_profit: pos_or_panic!(0.25),
+            probability_of_max_loss: pos_or_panic!(0.15),
+            expected_value: pos_or_panic!(100.00),
+            break_even_points: vec![pos_or_panic!(50.00)],
+            risk_reward_ratio: pos_or_panic!(1.00),
         };
 
         // Verify that Debug trait is implemented by checking that debug string is not empty
@@ -104,12 +106,12 @@ mod tests {
     fn test_with_empty_break_even_points() {
         // Create a StrategyProbabilityAnalysis with no break-even points
         let analysis = StrategyProbabilityAnalysis {
-            probability_of_profit: pos!(0.70),
-            probability_of_max_profit: pos!(0.40),
-            probability_of_max_loss: pos!(0.10),
-            expected_value: pos!(350.00),
+            probability_of_profit: pos_or_panic!(0.70),
+            probability_of_max_profit: pos_or_panic!(0.40),
+            probability_of_max_loss: pos_or_panic!(0.10),
+            expected_value: pos_or_panic!(350.00),
             break_even_points: vec![],
-            risk_reward_ratio: pos!(0.50),
+            risk_reward_ratio: pos_or_panic!(0.50),
         };
 
         // Verify that empty vector is handled correctly
@@ -120,12 +122,16 @@ mod tests {
     fn test_with_multiple_break_even_points() {
         // Create a StrategyProbabilityAnalysis with multiple break-even points
         let analysis = StrategyProbabilityAnalysis {
-            probability_of_profit: pos!(0.55),
-            probability_of_max_profit: pos!(0.20),
-            probability_of_max_loss: pos!(0.25),
-            expected_value: pos!(150.00),
-            break_even_points: vec![pos!(40.00), pos!(50.00), pos!(60.00)],
-            risk_reward_ratio: pos!(1.25),
+            probability_of_profit: pos_or_panic!(0.55),
+            probability_of_max_profit: pos_or_panic!(0.20),
+            probability_of_max_loss: pos_or_panic!(0.25),
+            expected_value: pos_or_panic!(150.00),
+            break_even_points: vec![
+                pos_or_panic!(40.00),
+                pos_or_panic!(50.00),
+                pos_or_panic!(60.00),
+            ],
+            risk_reward_ratio: pos_or_panic!(1.25),
         };
 
         // Verify that multiple break-even points are handled correctly
@@ -139,12 +145,12 @@ mod tests {
     fn test_probability_values_within_range() {
         // Create an analysis with probabilities that should be between 0 and 1
         let analysis = StrategyProbabilityAnalysis {
-            probability_of_profit: pos!(0.65),
-            probability_of_max_profit: pos!(0.30),
-            probability_of_max_loss: pos!(0.20),
-            expected_value: pos!(250.00),
-            break_even_points: vec![pos!(45.50), pos!(55.50)],
-            risk_reward_ratio: pos!(0.75),
+            probability_of_profit: pos_or_panic!(0.65),
+            probability_of_max_profit: pos_or_panic!(0.30),
+            probability_of_max_loss: pos_or_panic!(0.20),
+            expected_value: pos_or_panic!(250.00),
+            break_even_points: vec![pos_or_panic!(45.50), pos_or_panic!(55.50)],
+            risk_reward_ratio: pos_or_panic!(0.75),
         };
 
         // Verify that probabilities are within expected range

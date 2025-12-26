@@ -12,38 +12,45 @@
 //! ## Output
 //! - PNG image: `./Draws/Metrics/open_interest_curve.png`
 //! - HTML interactive: `./Draws/Metrics/open_interest_curve.html`
-
+//!
 use optionstratlib::chains::OptionData;
 use optionstratlib::chains::chain::OptionChain;
 use optionstratlib::error::CurveError;
 use optionstratlib::metrics::OpenInterestCurve;
 use optionstratlib::model::ExpirationDate;
 use optionstratlib::prelude::*;
+use positive::pos_or_panic;
 use rust_decimal_macros::dec;
 
 fn main() -> Result<(), CurveError> {
     setup_logger();
 
     // Build a synthetic option chain with open interest data
-    let mut chain = OptionChain::new("SPY", pos!(450.0), "2024-12-31".to_string(), None, None);
+    let mut chain = OptionChain::new(
+        "SPY",
+        pos_or_panic!(450.0),
+        "2024-12-31".to_string(),
+        None,
+        None,
+    );
 
     // Add options with realistic OI distribution
     // OI tends to concentrate at round strikes and near ATM
     let strikes_data = [
         // (strike, open_interest)
-        (pos!(380.0), 2500u64),
-        (pos!(400.0), 15000u64), // Round strike
-        (pos!(420.0), 8000u64),
-        (pos!(430.0), 6000u64),
-        (pos!(440.0), 12000u64),
-        (pos!(445.0), 9000u64),
-        (pos!(450.0), 45000u64), // ATM round strike - highest OI
-        (pos!(455.0), 11000u64),
-        (pos!(460.0), 14000u64),
-        (pos!(470.0), 7500u64),
-        (pos!(480.0), 10000u64),
-        (pos!(500.0), 25000u64), // Round strike
-        (pos!(520.0), 5000u64),
+        (pos_or_panic!(380.0), 2500u64),
+        (pos_or_panic!(400.0), 15000u64), // Round strike
+        (pos_or_panic!(420.0), 8000u64),
+        (pos_or_panic!(430.0), 6000u64),
+        (pos_or_panic!(440.0), 12000u64),
+        (pos_or_panic!(445.0), 9000u64),
+        (pos_or_panic!(450.0), 45000u64), // ATM round strike - highest OI
+        (pos_or_panic!(455.0), 11000u64),
+        (pos_or_panic!(460.0), 14000u64),
+        (pos_or_panic!(470.0), 7500u64),
+        (pos_or_panic!(480.0), 10000u64),
+        (pos_or_panic!(500.0), 25000u64), // Round strike
+        (pos_or_panic!(520.0), 5000u64),
     ];
 
     for (strike, oi) in strikes_data {
@@ -53,15 +60,15 @@ fn main() -> Result<(), CurveError> {
             spos!(10.5),
             spos!(10.0),
             spos!(10.5),
-            pos!(0.20),
+            pos_or_panic!(0.20),
             Some(dec!(0.5)),
             Some(dec!(-0.5)),
             Some(dec!(0.05)),
             spos!(1000.0),
             Some(oi),
             Some("SPY".to_string()),
-            Some(ExpirationDate::Days(pos!(30.0))),
-            Some(Box::new(pos!(450.0))),
+            Some(ExpirationDate::Days(pos_or_panic!(30.0))),
+            Some(Box::new(pos_or_panic!(450.0))),
             Some(dec!(0.05)),
             spos!(0.02),
             None,

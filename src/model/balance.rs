@@ -4,9 +4,9 @@
    Date: 22/9/25
 ******************************************************************************/
 
-use crate::Positive;
 use crate::model::types::UnderlyingAssetType;
 use num_traits::ToPrimitive;
+use positive::Positive;
 use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -361,15 +361,16 @@ impl Default for Portfolio {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::pos;
+    use positive::pos_or_panic;
+
     use rust_decimal_macros::dec;
 
     #[test]
     fn test_balance_creation() {
         let balance = Balance::new(
             "AAPL240315C00150000".to_string(),
-            pos!(10.0),
-            pos!(5.50),
+            pos_or_panic!(10.0),
+            pos_or_panic!(5.50),
             None,
             "CBOE".to_string(),
             UnderlyingAssetType::Stock,
@@ -377,8 +378,8 @@ mod tests {
         );
 
         assert_eq!(balance.symbol, "AAPL240315C00150000");
-        assert_eq!(balance.quantity, pos!(10.0));
-        assert_eq!(balance.average_premium, pos!(5.50));
+        assert_eq!(balance.quantity, pos_or_panic!(10.0));
+        assert_eq!(balance.average_premium, pos_or_panic!(5.50));
         assert_eq!(balance.exchange, "CBOE");
         assert_eq!(balance.underlying_asset_type, UnderlyingAssetType::Stock);
         assert!(balance.current_premium.is_none());
@@ -389,25 +390,25 @@ mod tests {
     fn test_balance_total_value() {
         let balance = Balance::new(
             "TSLA240315C00200000".to_string(),
-            pos!(5.0),
-            pos!(8.00),
-            Some(pos!(12.50)),
+            pos_or_panic!(5.0),
+            pos_or_panic!(8.00),
+            Some(pos_or_panic!(12.50)),
             "CBOE".to_string(),
             UnderlyingAssetType::Stock,
             None,
         );
 
         let total_value = balance.get_total_value();
-        assert_eq!(total_value, pos!(62.5)); // 5 * 12.50
+        assert_eq!(total_value, pos_or_panic!(62.5)); // 5 * 12.50
     }
 
     #[test]
     fn test_balance_unrealized_pnl() {
         let balance = Balance::new(
             "AAPL240315C00150000".to_string(),
-            pos!(10.0),
-            pos!(5.50),
-            Some(pos!(7.00)),
+            pos_or_panic!(10.0),
+            pos_or_panic!(5.50),
+            Some(pos_or_panic!(7.00)),
             "CBOE".to_string(),
             UnderlyingAssetType::Stock,
             None,
@@ -421,9 +422,9 @@ mod tests {
     fn test_balance_is_profitable() {
         let profitable_balance = Balance::new(
             "GOOGL240315C00200000".to_string(),
-            pos!(5.0),
-            pos!(10.00),
-            Some(pos!(12.00)),
+            pos_or_panic!(5.0),
+            pos_or_panic!(10.00),
+            Some(pos_or_panic!(12.00)),
             "CBOE".to_string(),
             UnderlyingAssetType::Stock,
             None,
@@ -431,9 +432,9 @@ mod tests {
 
         let losing_balance = Balance::new(
             "TSLA240315C00080000".to_string(),
-            pos!(3.0),
-            pos!(8.00),
-            Some(pos!(6.50)),
+            pos_or_panic!(3.0),
+            pos_or_panic!(8.00),
+            Some(pos_or_panic!(6.50)),
             "CBOE".to_string(),
             UnderlyingAssetType::Stock,
             None,
@@ -456,9 +457,9 @@ mod tests {
         let mut portfolio = Portfolio::new("Test Portfolio".to_string());
         let balance = Balance::new(
             "AAPL240315C00150000".to_string(),
-            pos!(10.0),
-            pos!(5.50),
-            Some(pos!(7.00)),
+            pos_or_panic!(10.0),
+            pos_or_panic!(5.50),
+            Some(pos_or_panic!(7.00)),
             "CBOE".to_string(),
             UnderlyingAssetType::Stock,
             None,
@@ -475,9 +476,9 @@ mod tests {
 
         let balance1 = Balance::new(
             "AAPL240315C00150000".to_string(),
-            pos!(10.0),
-            pos!(5.50),
-            Some(pos!(7.00)),
+            pos_or_panic!(10.0),
+            pos_or_panic!(5.50),
+            Some(pos_or_panic!(7.00)),
             "CBOE".to_string(),
             UnderlyingAssetType::Stock,
             None,
@@ -485,9 +486,9 @@ mod tests {
 
         let balance2 = Balance::new(
             "TSLA240315C00200000".to_string(),
-            pos!(5.0),
-            pos!(8.00),
-            Some(pos!(12.50)),
+            pos_or_panic!(5.0),
+            pos_or_panic!(8.00),
+            Some(pos_or_panic!(12.50)),
             "CBOE".to_string(),
             UnderlyingAssetType::Stock,
             None,
@@ -497,7 +498,7 @@ mod tests {
         portfolio.add_balance(balance2);
 
         let total_value = portfolio.get_total_value();
-        assert_eq!(total_value, pos!(132.5)); // 70.0 + 62.5
+        assert_eq!(total_value, pos_or_panic!(132.5)); // 70.0 + 62.5
     }
 
     #[test]
@@ -505,9 +506,9 @@ mod tests {
         let mut portfolio = Portfolio::new("Test Portfolio".to_string());
         let balance = Balance::new(
             "AAPL240315C00150000".to_string(),
-            pos!(10.0),
-            pos!(5.50),
-            Some(pos!(7.00)),
+            pos_or_panic!(10.0),
+            pos_or_panic!(5.50),
+            Some(pos_or_panic!(7.00)),
             "CBOE".to_string(),
             UnderlyingAssetType::Stock,
             None,

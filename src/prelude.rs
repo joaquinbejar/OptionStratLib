@@ -25,7 +25,6 @@
 // Core model types
 pub use crate::model::{
     BasicAxisTypes, ExpirationDate, Options, Position, Trade,
-    positive::Positive,
     types::{Action, OptionStyle, OptionType, Side},
 };
 pub use crate::strategies::{
@@ -114,6 +113,7 @@ pub use crate::utils::{
 
 // Commonly used external dependencies
 pub use chrono::Utc;
+pub use positive::{Positive, assert_pos_relative_eq, pos_or_panic, spos};
 pub use rust_decimal::Decimal;
 pub use rust_decimal::prelude::ToPrimitive;
 pub use rust_decimal_macros::dec;
@@ -135,9 +135,4 @@ pub use crate::series::{OptionSeries, OptionSeriesBuildParams, generator_options
 
 // Volatility functions
 pub use crate::volatility::{adjust_volatility, constant_volatility};
-
-// Re-export the pos! and spos! macros for creating Positive values
-pub use crate::pos;
-pub use crate::spos;
-
 pub use tracing::{debug, error, info, trace, warn};

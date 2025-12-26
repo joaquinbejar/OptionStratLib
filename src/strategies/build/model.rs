@@ -135,8 +135,9 @@ impl StrategyRequest {
 mod tests_serialization {
     use super::*;
     use crate::model::utils::create_sample_option_with_date;
-    use crate::{OptionStyle, Side, pos};
+    use crate::{OptionStyle, Side};
     use chrono::{DateTime, NaiveDateTime, Utc};
+    use positive::{Positive, pos_or_panic};
     use serde_json;
 
     fn sample_date() -> NaiveDateTime {
@@ -152,16 +153,16 @@ mod tests_serialization {
                     create_sample_option_with_date(
                         OptionStyle::Call,
                         Side::Short,
-                        pos!(920.0),
-                        pos!(1.0),
-                        pos!(900.0),
-                        pos!(0.35),
+                        pos_or_panic!(920.0),
+                        Positive::ONE,
+                        pos_or_panic!(900.0),
+                        pos_or_panic!(0.35),
                         sample_date(),
                     ),
-                    pos!(4.5),
+                    pos_or_panic!(4.5),
                     Utc::now(),
-                    pos!(1.0),
-                    pos!(1.2),
+                    Positive::ONE,
+                    pos_or_panic!(1.2),
                     None,
                     None,
                 ),
@@ -169,16 +170,16 @@ mod tests_serialization {
                     create_sample_option_with_date(
                         OptionStyle::Call,
                         Side::Long,
-                        pos!(920.0),
-                        pos!(1.0),
-                        pos!(910.0),
-                        pos!(0.35),
+                        pos_or_panic!(920.0),
+                        Positive::ONE,
+                        pos_or_panic!(910.0),
+                        pos_or_panic!(0.35),
                         sample_date(),
                     ),
-                    pos!(3.5),
+                    pos_or_panic!(3.5),
                     Utc::now(),
-                    pos!(1.0),
-                    pos!(1.2),
+                    Positive::ONE,
+                    pos_or_panic!(1.2),
                     None,
                     None,
                 ),
@@ -253,18 +254,18 @@ mod tests_serialization {
         // Verify first option (Short Call)
         let short_call = &deserialized.positions[0];
         assert_eq!(short_call.option.side, Side::Short);
-        assert_eq!(short_call.option.strike_price, pos!(900.0));
-        assert_eq!(short_call.premium, pos!(4.5));
-        assert_eq!(short_call.open_fee, pos!(1.0));
-        assert_eq!(short_call.close_fee, pos!(1.2));
+        assert_eq!(short_call.option.strike_price, pos_or_panic!(900.0));
+        assert_eq!(short_call.premium, pos_or_panic!(4.5));
+        assert_eq!(short_call.open_fee, Positive::ONE);
+        assert_eq!(short_call.close_fee, pos_or_panic!(1.2));
 
         // Verify second option (Long Call)
         let long_call = &deserialized.positions[1];
         assert_eq!(long_call.option.side, Side::Long);
-        assert_eq!(long_call.option.strike_price, pos!(910.0));
-        assert_eq!(long_call.premium, pos!(3.5));
-        assert_eq!(long_call.open_fee, pos!(1.0));
-        assert_eq!(long_call.close_fee, pos!(1.2));
+        assert_eq!(long_call.option.strike_price, pos_or_panic!(910.0));
+        assert_eq!(long_call.premium, pos_or_panic!(3.5));
+        assert_eq!(long_call.open_fee, Positive::ONE);
+        assert_eq!(long_call.close_fee, pos_or_panic!(1.2));
     }
 
     #[test]
@@ -295,8 +296,9 @@ mod tests_serialization {
 mod tests_strategies_build_model {
     use super::*;
     use crate::model::utils::create_sample_option_with_date;
-    use crate::{OptionStyle, Side, assert_decimal_eq, pos};
+    use crate::{OptionStyle, Side, assert_decimal_eq};
     use chrono::{DateTime, NaiveDateTime, Utc};
+    use positive::{Positive, pos_or_panic};
     use rust_decimal_macros::dec;
     use serde_json;
 
@@ -316,16 +318,16 @@ mod tests_strategies_build_model {
                     create_sample_option_with_date(
                         OptionStyle::Call,
                         Side::Short,
-                        pos!(920.0),
-                        pos!(1.0),
-                        pos!(900.0),
-                        pos!(0.35),
+                        pos_or_panic!(920.0),
+                        Positive::ONE,
+                        pos_or_panic!(900.0),
+                        pos_or_panic!(0.35),
                         sample_date(),
                     ),
-                    pos!(4.5),
+                    pos_or_panic!(4.5),
                     Utc::now(),
-                    pos!(1.0),
-                    pos!(1.2),
+                    Positive::ONE,
+                    pos_or_panic!(1.2),
                     None,
                     None,
                 ),
@@ -333,16 +335,16 @@ mod tests_strategies_build_model {
                     create_sample_option_with_date(
                         OptionStyle::Call,
                         Side::Long,
-                        pos!(920.0),
-                        pos!(1.0),
-                        pos!(910.0),
-                        pos!(0.35),
+                        pos_or_panic!(920.0),
+                        Positive::ONE,
+                        pos_or_panic!(910.0),
+                        pos_or_panic!(0.35),
                         sample_date(),
                     ),
-                    pos!(3.5),
+                    pos_or_panic!(3.5),
                     Utc::now(),
-                    pos!(1.0),
-                    pos!(1.2),
+                    Positive::ONE,
+                    pos_or_panic!(1.2),
                     None,
                     None,
                 ),
@@ -369,16 +371,16 @@ mod tests_strategies_build_model {
                     create_sample_option_with_date(
                         OptionStyle::Call,
                         Side::Long,
-                        pos!(920.0),
-                        pos!(1.0),
-                        pos!(900.0),
-                        pos!(0.35),
+                        pos_or_panic!(920.0),
+                        Positive::ONE,
+                        pos_or_panic!(900.0),
+                        pos_or_panic!(0.35),
                         sample_date(),
                     ),
-                    pos!(4.5),
+                    pos_or_panic!(4.5),
                     Utc::now(),
-                    pos!(1.0),
-                    pos!(1.2),
+                    Positive::ONE,
+                    pos_or_panic!(1.2),
                     None,
                     None,
                 ),
@@ -386,16 +388,16 @@ mod tests_strategies_build_model {
                     create_sample_option_with_date(
                         OptionStyle::Call,
                         Side::Short,
-                        pos!(920.0),
-                        pos!(1.0),
-                        pos!(910.0),
-                        pos!(0.35),
+                        pos_or_panic!(920.0),
+                        Positive::ONE,
+                        pos_or_panic!(910.0),
+                        pos_or_panic!(0.35),
                         sample_date(),
                     ),
-                    pos!(3.5),
+                    pos_or_panic!(3.5),
                     Utc::now(),
-                    pos!(1.0),
-                    pos!(1.2),
+                    Positive::ONE,
+                    pos_or_panic!(1.2),
                     None,
                     None,
                 ),
@@ -427,16 +429,16 @@ mod tests_strategies_build_model {
                     create_sample_option_with_date(
                         OptionStyle::Call,
                         Side::Short,
-                        pos!(920.0),
-                        pos!(1.0),
-                        pos!(900.0),
-                        pos!(0.35),
+                        pos_or_panic!(920.0),
+                        Positive::ONE,
+                        pos_or_panic!(900.0),
+                        pos_or_panic!(0.35),
                         sample_date(),
                     ),
-                    pos!(4.5),
+                    pos_or_panic!(4.5),
                     Utc::now(),
-                    pos!(1.0),
-                    pos!(1.2),
+                    Positive::ONE,
+                    pos_or_panic!(1.2),
                     None,
                     None,
                 ),
@@ -444,16 +446,16 @@ mod tests_strategies_build_model {
                     create_sample_option_with_date(
                         OptionStyle::Call,
                         Side::Long,
-                        pos!(920.0),
-                        pos!(1.0),
-                        pos!(910.0),
-                        pos!(0.35),
+                        pos_or_panic!(920.0),
+                        Positive::ONE,
+                        pos_or_panic!(910.0),
+                        pos_or_panic!(0.35),
                         sample_date(),
                     ),
-                    pos!(3.5),
+                    pos_or_panic!(3.5),
                     Utc::now(),
-                    pos!(1.0),
-                    pos!(1.2),
+                    Positive::ONE,
+                    pos_or_panic!(1.2),
                     None,
                     None,
                 ),
@@ -485,16 +487,16 @@ mod tests_strategies_build_model {
                     create_sample_option_with_date(
                         OptionStyle::Put,
                         Side::Long,
-                        pos!(920.0),
-                        pos!(1.0),
-                        pos!(900.0),
-                        pos!(0.35),
+                        pos_or_panic!(920.0),
+                        Positive::ONE,
+                        pos_or_panic!(900.0),
+                        pos_or_panic!(0.35),
                         sample_date(),
                     ),
-                    pos!(4.5),
+                    pos_or_panic!(4.5),
                     Utc::now(),
-                    pos!(1.0),
-                    pos!(1.2),
+                    Positive::ONE,
+                    pos_or_panic!(1.2),
                     None,
                     None,
                 ),
@@ -502,16 +504,16 @@ mod tests_strategies_build_model {
                     create_sample_option_with_date(
                         OptionStyle::Put,
                         Side::Short,
-                        pos!(920.0),
-                        pos!(1.0),
-                        pos!(910.0),
-                        pos!(0.35),
+                        pos_or_panic!(920.0),
+                        Positive::ONE,
+                        pos_or_panic!(910.0),
+                        pos_or_panic!(0.35),
                         sample_date(),
                     ),
-                    pos!(3.5),
+                    pos_or_panic!(3.5),
                     Utc::now(),
-                    pos!(1.0),
-                    pos!(1.2),
+                    Positive::ONE,
+                    pos_or_panic!(1.2),
                     None,
                     None,
                 ),
@@ -543,16 +545,16 @@ mod tests_strategies_build_model {
                     create_sample_option_with_date(
                         OptionStyle::Put,
                         Side::Short,
-                        pos!(920.0),
-                        pos!(1.0),
-                        pos!(900.0),
-                        pos!(0.35),
+                        pos_or_panic!(920.0),
+                        Positive::ONE,
+                        pos_or_panic!(900.0),
+                        pos_or_panic!(0.35),
                         sample_date(),
                     ),
-                    pos!(4.5),
+                    pos_or_panic!(4.5),
                     Utc::now(),
-                    pos!(1.0),
-                    pos!(1.2),
+                    Positive::ONE,
+                    pos_or_panic!(1.2),
                     None,
                     None,
                 ),
@@ -560,16 +562,16 @@ mod tests_strategies_build_model {
                     create_sample_option_with_date(
                         OptionStyle::Put,
                         Side::Long,
-                        pos!(920.0),
-                        pos!(1.0),
-                        pos!(910.0),
-                        pos!(0.35),
+                        pos_or_panic!(920.0),
+                        Positive::ONE,
+                        pos_or_panic!(910.0),
+                        pos_or_panic!(0.35),
                         sample_date(),
                     ),
-                    pos!(3.5),
+                    pos_or_panic!(3.5),
                     Utc::now(),
-                    pos!(1.0),
-                    pos!(1.2),
+                    Positive::ONE,
+                    pos_or_panic!(1.2),
                     None,
                     None,
                 ),

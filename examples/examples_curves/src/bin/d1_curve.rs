@@ -1,4 +1,5 @@
 use optionstratlib::prelude::*;
+use positive::pos_or_panic;
 use rust_decimal_macros::dec;
 use tracing::info;
 
@@ -12,7 +13,14 @@ fn main() -> Result<(), Error> {
     let parametric_curve = Curve::construct(ConstructionMethod::Parametric {
         f: Box::new(|t| {
             let strike = Positive::new_decimal(t).unwrap();
-            let value = d1(pos!(50.0), strike, dec!(0.0), pos!(1.0), pos!(0.1)).unwrap();
+            let value = d1(
+                pos_or_panic!(50.0),
+                strike,
+                dec!(0.0),
+                Positive::ONE,
+                pos_or_panic!(0.1),
+            )
+            .unwrap();
             let point = Point2D::new(t, value);
             Ok(point)
         }),

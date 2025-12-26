@@ -1,29 +1,30 @@
 use optionstratlib::prelude::*;
+use positive::pos_or_panic;
 
 fn main() -> Result<(), Error> {
     setup_logger();
-    let underlying_price = pos!(5781.88);
+    let underlying_price = pos_or_panic!(5781.88);
 
     let strategy = ShortButterflySpread::new(
         "SP500".to_string(),
         underlying_price,
-        pos!(5700.0),
-        pos!(5780.0),
-        pos!(5850.0),
-        ExpirationDate::Days(pos!(2.0)),
-        pos!(0.18),
+        pos_or_panic!(5700.0),
+        pos_or_panic!(5780.0),
+        pos_or_panic!(5850.0),
+        ExpirationDate::Days(Positive::TWO),
+        pos_or_panic!(0.18),
         dec!(0.05),
         Positive::ZERO,
-        pos!(3.0),
-        pos!(119.01), // premium_long
-        pos!(66.0),   // premium_short
-        pos!(29.85),  // open_fee_long
-        pos!(4.0),
-        pos!(0.0),
-        pos!(0.0),
-        pos!(0.0),
-        pos!(0.0),
-        pos!(0.0),
+        pos_or_panic!(3.0),
+        pos_or_panic!(119.01), // premium_long
+        pos_or_panic!(66.0),   // premium_short
+        pos_or_panic!(29.85),  // open_fee_long
+        pos_or_panic!(4.0),
+        Positive::ZERO,
+        Positive::ZERO,
+        Positive::ZERO,
+        Positive::ZERO,
+        Positive::ZERO,
     );
 
     info!("Title: {}", strategy.get_title());

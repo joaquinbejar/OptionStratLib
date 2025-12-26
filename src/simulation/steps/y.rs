@@ -3,7 +3,8 @@
    Email: jb@taunais.com
    Date: 24/3/25
 ******************************************************************************/
-use crate::Positive;
+
+use positive::Positive;
 use serde::{Serialize, Serializer};
 use std::fmt::{Display, Formatter};
 
@@ -204,7 +205,8 @@ mod tests_ystep {
 #[cfg(test)]
 mod tests_serialize {
     use super::*;
-    use crate::pos;
+    use positive::pos_or_panic;
+
     use rust_decimal_macros::dec;
     use serde_json::{Value, json};
 
@@ -240,7 +242,7 @@ mod tests_serialize {
         // Test with different types but same values
         let step_f64 = Ystep::new(1, 2.5f64);
         let step_decimal = Ystep::new(1, dec!(2.5));
-        let step_positive = Ystep::new(1, pos!(2.5));
+        let step_positive = Ystep::new(1, pos_or_panic!(2.5));
 
         // Serialize all
         let json_f64 = serde_json::to_string(&step_f64).unwrap();
@@ -263,7 +265,7 @@ mod tests_serialize {
         // Test with different types but same values
         let step_f64 = Ystep::new(3, 4.01f64);
         let step_decimal = Ystep::new(3, dec!(4.01));
-        let step_positive = Ystep::new(3, pos!(4.01));
+        let step_positive = Ystep::new(3, pos_or_panic!(4.01));
 
         // Serialize all
         let json_f64 = serde_json::to_string(&step_f64).unwrap();

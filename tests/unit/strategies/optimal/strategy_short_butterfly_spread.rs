@@ -1,33 +1,35 @@
+use positive::{Positive, pos_or_panic};
 use {
     approx::assert_relative_eq,
     num_traits::ToPrimitive,
+    optionstratlib::ExpirationDate,
     optionstratlib::chains::chain::OptionChain,
     optionstratlib::strategies::base::Optimizable,
     optionstratlib::strategies::{FindOptimalSide, ShortButterflySpread, Strategies},
-    optionstratlib::{ExpirationDate, Positive, pos},
     rust_decimal_macros::dec,
     std::error::Error,
 };
+
 #[test]
 fn test_short_butterfly_spread_integration() -> Result<(), Box<dyn Error>> {
     // Define inputs for the ShortButterflySpread strategy
-    let underlying_price = pos!(5781.88);
+    let underlying_price = pos_or_panic!(5781.88);
 
     let mut strategy = ShortButterflySpread::new(
         "SP500".to_string(),
         underlying_price,
-        pos!(5700.0),
-        pos!(5780.0),
-        pos!(5850.0),
-        ExpirationDate::Days(pos!(2.0)),
-        pos!(0.18),
+        pos_or_panic!(5700.0),
+        pos_or_panic!(5780.0),
+        pos_or_panic!(5850.0),
+        ExpirationDate::Days(Positive::TWO),
+        pos_or_panic!(0.18),
         dec!(0.05),
         Positive::ZERO,
-        pos!(3.0),
-        pos!(119.01),
-        pos!(66.0),
-        pos!(29.85),
-        pos!(4.0),
+        pos_or_panic!(3.0),
+        pos_or_panic!(119.01),
+        pos_or_panic!(66.0),
+        pos_or_panic!(29.85),
+        pos_or_panic!(4.0),
         Positive::ZERO,
         Positive::ZERO,
         Positive::ZERO,

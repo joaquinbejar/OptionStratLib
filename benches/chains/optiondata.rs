@@ -1,7 +1,8 @@
 use criterion::Criterion;
+use optionstratlib::ExpirationDate;
 use optionstratlib::chains::OptionData;
 use optionstratlib::chains::utils::OptionDataPriceParams;
-use optionstratlib::{ExpirationDate, Positive, pos, spos};
+use positive::{Positive, pos_or_panic, spos};
 use rust_decimal_macros::dec;
 use std::hint::black_box;
 
@@ -38,11 +39,11 @@ fn benchmark_basic_operations(
                 None,
                 None,
                 None,
-                Some("TEST".to_string()),               // symbol
-                Some(ExpirationDate::Days(pos!(30.0))), // expiration_date
-                Some(Box::new(pos!(100.0))),            // underlying_price
-                Some(dec!(0.05)),                       // risk_free_rate
-                Some(pos!(0.02)),                       // dividend_yield
+                Some("TEST".to_string()),                        // symbol
+                Some(ExpirationDate::Days(pos_or_panic!(30.0))), // expiration_date
+                Some(Box::new(Positive::HUNDRED)),               // underlying_price
+                Some(dec!(0.05)),                                // risk_free_rate
+                Some(pos_or_panic!(0.02)),                       // dividend_yield
                 None,
                 None,
             );
@@ -65,11 +66,11 @@ fn benchmark_basic_operations(
                 Some(dec!(0.5)),
                 Some(Positive::new(1000.0).unwrap()),
                 Some(100),
-                Some("TEST".to_string()),               // symbol
-                Some(ExpirationDate::Days(pos!(30.0))), // expiration_date
-                Some(Box::new(pos!(100.0))),            // underlying_price
-                Some(dec!(0.05)),                       // risk_free_rate
-                Some(pos!(0.02)),                       // dividend_yield
+                Some("TEST".to_string()),                        // symbol
+                Some(ExpirationDate::Days(pos_or_panic!(30.0))), // expiration_date
+                Some(Box::new(Positive::HUNDRED)),               // underlying_price
+                Some(dec!(0.05)),                                // risk_free_rate
+                Some(pos_or_panic!(0.02)),                       // dividend_yield
                 None,
                 None,
             );
@@ -129,11 +130,11 @@ fn create_test_option_data() -> OptionData {
         None,
         None,
         None,
-        Some("TEST".to_string()),               // symbol
-        Some(ExpirationDate::Days(pos!(30.0))), // expiration_date
-        Some(Box::new(pos!(100.0))),            // underlying_price
-        Some(dec!(0.05)),                       // risk_free_rate
-        Some(pos!(0.02)),                       // dividend_yield
+        Some("TEST".to_string()),                        // symbol
+        Some(ExpirationDate::Days(pos_or_panic!(30.0))), // expiration_date
+        Some(Box::new(Positive::HUNDRED)),               // underlying_price
+        Some(dec!(0.05)),                                // risk_free_rate
+        Some(pos_or_panic!(0.02)),                       // dividend_yield
         None,
         None,
     )
@@ -141,8 +142,8 @@ fn create_test_option_data() -> OptionData {
 
 fn create_standard_price_params() -> OptionDataPriceParams {
     OptionDataPriceParams::new(
-        Some(Box::new(pos!(100.0))),
-        Some(ExpirationDate::Days(pos!(30.0))),
+        Some(Box::new(Positive::HUNDRED)),
+        Some(ExpirationDate::Days(pos_or_panic!(30.0))),
         Some(dec!(0.05)),
         spos!(0.02),
         Some("AAPL".to_string()),

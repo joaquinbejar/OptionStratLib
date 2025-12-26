@@ -65,8 +65,8 @@
 //! use optionstratlib::pricing::telegraph::{TelegraphProcess, telegraph};
 //! use optionstratlib::{ExpirationDate, Options};
 //! use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
-//! use optionstratlib::Positive;
-//! use optionstratlib::pos;
+//! use positive::Positive;
+//! use positive::pos_or_panic;
 //!
 //! // Create a Telegraph Process with transition rates
 //! let process = TelegraphProcess::new(dec!(0.5), dec!(0.3));
@@ -76,14 +76,14 @@
 //!             option_type: OptionType::European,
 //!             side: Side::Long,
 //!             underlying_symbol: "AAPL".to_string(),
-//!             strike_price: pos!(100.0),
-//!             expiration_date: ExpirationDate::Days(pos!(30.0)),
-//!             implied_volatility: pos!(0.2),
+//!             strike_price: Positive::HUNDRED,
+//!             expiration_date: ExpirationDate::Days(pos_or_panic!(30.0)),
+//!             implied_volatility: pos_or_panic!(0.2),
 //!             quantity: Positive::ONE,
-//!             underlying_price: pos!(105.0),
+//!             underlying_price: pos_or_panic!(105.0),
 //!             risk_free_rate: dec!(0.05),
 //!             option_style: OptionStyle::Call,
-//!             dividend_yield: pos!(0.01),
+//!             dividend_yield: pos_or_panic!(0.01),
 //!             exotic_params: None,
 //!         };
 //! let price = telegraph(&option, 1000, Some(dec!(0.5)), Some(dec!(0.3)));
@@ -95,8 +95,8 @@
 //! use rust_decimal_macros::dec;
 //! use optionstratlib::{ExpirationDate, Options};
 //! use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
-//! use optionstratlib::Positive;
-//! use optionstratlib::pos;
+//! use positive::Positive;
+//! use positive::pos_or_panic;
 //! use optionstratlib::pricing::{
 //!     black_scholes_model::black_scholes,
 //!     monte_carlo::monte_carlo_option_pricing,
@@ -106,14 +106,14 @@
 //!             option_type: OptionType::European,
 //!             side: Side::Long,
 //!             underlying_symbol: "AAPL".to_string(),
-//!             strike_price: pos!(100.0),
-//!             expiration_date: ExpirationDate::Days(pos!(30.0)),
-//!             implied_volatility: pos!(0.2),
+//!             strike_price: Positive::HUNDRED,
+//!             expiration_date: ExpirationDate::Days(pos_or_panic!(30.0)),
+//!             implied_volatility: pos_or_panic!(0.2),
 //!             quantity: Positive::ONE,
-//!             underlying_price: pos!(105.0),
+//!             underlying_price: pos_or_panic!(105.0),
 //!             risk_free_rate: dec!(0.05),
 //!             option_style: OptionStyle::Call,
-//!             dividend_yield: pos!(0.01),
+//!             dividend_yield: pos_or_panic!(0.01),
 //!             exotic_params: None,
 //!         };
 //! // Compare prices across different models
@@ -147,14 +147,7 @@
 //! For high-frequency calculations, consider using the Black-Scholes model
 //! when applicable, as it provides the fastest computation times.
 
-/// Binomial tree model implementation for option pricing.
-///
-/// This module provides functionality to price options using binomial tree methods,
-/// which discretize time and price movements to create a lattice of possible
-/// future asset prices.
-///
-/// The binomial model is particularly useful for pricing American options and
-/// other derivatives with early exercise features.
+/// Binomial Tree model for option pricing.
 pub mod binomial_model;
 
 /// Black-Scholes model for option pricing and analysis.
@@ -222,23 +215,24 @@ pub(crate) mod utils;
 /// ## Example
 /// ```rust
 /// use optionstratlib::pricing::{PricingEngine, Priceable};
-/// # use optionstratlib::{Options, ExpirationDate, Positive, pos};
-/// # use optionstratlib::model::types::{OptionStyle, OptionType, Side};
-/// # use rust_decimal_macros::dec;
-/// # let option = Options {
-/// #     option_type: OptionType::European,
-/// #     side: Side::Long,
-/// #     underlying_symbol: "AAPL".to_string(),
-/// #     strike_price: pos!(100.0),
-/// #     expiration_date: ExpirationDate::Days(pos!(30.0)),
-/// #     implied_volatility: pos!(0.2),
-/// #     quantity: Positive::ONE,
-/// #     underlying_price: pos!(105.0),
-/// #     risk_free_rate: dec!(0.05),
-/// #     option_style: OptionStyle::Call,
-/// #     dividend_yield: pos!(0.01),
-/// #     exotic_params: None,
-/// # };
+/// use optionstratlib::{Options, ExpirationDate};
+/// use positive::{Positive, pos_or_panic};
+/// use optionstratlib::model::types::{OptionStyle, OptionType, Side};
+/// use rust_decimal_macros::dec;
+/// let option = Options {
+///     option_type: OptionType::European,
+///     side: Side::Long,
+///     underlying_symbol: "AAPL".to_string(),
+///     strike_price: Positive::HUNDRED,
+///     expiration_date: ExpirationDate::Days(pos_or_panic!(30.0)),
+///     implied_volatility: pos_or_panic!(0.2),
+///     quantity: Positive::ONE,
+///     underlying_price: pos_or_panic!(105.0),
+///     risk_free_rate: dec!(0.05),
+///     option_style: OptionStyle::Call,
+///     dividend_yield: pos_or_panic!(0.01),
+///     exotic_params: None,
+/// };
 ///
 /// let engine = PricingEngine::ClosedFormBS;
 /// let price = option.price(&engine)?;

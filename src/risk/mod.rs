@@ -1,4 +1,5 @@
 /******************************************************************************
+use positive::pos_or_panic;
    Author: Joaquín Béjar García
    Email: jb@taunais.com
    Date: 1/8/24
@@ -47,9 +48,9 @@
 //! ```rust
 //! use optionstratlib::{ExpirationDate, Options};
 //! use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
-//! use optionstratlib::Positive;
+//! use positive::Positive;
 //! use optionstratlib::model::position::Position;
-//! use optionstratlib::pos;
+//! use positive::pos_or_panic;
 //! use chrono::Utc;
 //! use rust_decimal_macros::dec;
 //! use optionstratlib::risk::SPANMargin;
@@ -59,11 +60,11 @@
 //!     OptionType::European,
 //!     Side::Short,
 //!     "STOCK".to_string(),
-//!     pos!(150.0),   // Strike price
-//!     ExpirationDate::Days(pos!(30.0)),
-//!     pos!(0.2),   // Volatility
+//!     pos_or_panic!(150.0),   // Strike price
+//!     ExpirationDate::Days(pos_or_panic!(30.0)),
+//!     pos_or_panic!(0.2),   // Volatility
 //!     Positive::ONE,   // Quantity
-//!     pos!(155.0),   // Current price
+//!     pos_or_panic!(155.0),   // Current price
 //!     dec!(0.05),   // Risk-free rate
 //!     OptionStyle::Call,
 //!     Positive::ZERO,   // Dividend yield
@@ -72,10 +73,10 @@
 //!
 //! let position = Position {
 //!     option,
-//!     premium: pos!(5.0),
+//!     premium: pos_or_panic!(5.0),
 //!     date: Utc::now(),
-//!     open_fee: pos!(0.5),
-//!     close_fee: pos!(0.5),
+//!     open_fee: pos_or_panic!(0.5),
+//!     close_fee: pos_or_panic!(0.5),
 //!     epic: None,
 //!     extra_fields: None,
 //! };
@@ -100,41 +101,41 @@
 //! use optionstratlib::{ExpirationDate, Options};
 //! use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
 //! use optionstratlib::model::position::Position;
-//! use optionstratlib::Positive;
-//! use optionstratlib::pos;
+//! use positive::Positive;
+//! use positive::pos_or_panic;
 //! use optionstratlib::risk::SPANMargin;
 //!
 //! let option = Options {
 //!             option_type: OptionType::European,
 //!             side: Side::Long,
 //!             underlying_symbol: "AAPL".to_string(),
-//!             strike_price: pos!(100.0),
-//!             expiration_date: ExpirationDate::Days(pos!(30.0)),
-//!             implied_volatility: pos!(0.2),
+//!             strike_price: Positive::HUNDRED,
+//!             expiration_date: ExpirationDate::Days(pos_or_panic!(30.0)),
+//!             implied_volatility: pos_or_panic!(0.2),
 //!             quantity: Positive::ONE,
-//!             underlying_price: pos!(105.0),
+//!             underlying_price: pos_or_panic!(105.0),
 //!             risk_free_rate: dec!(0.05),
 //!             option_style: OptionStyle::Call,
-//!             dividend_yield: pos!(0.01),
+//!             dividend_yield: pos_or_panic!(0.01),
 //!             exotic_params: None,
 //!         };
 //! // Create multiple positions
 //! let positions = vec![
 //!     Position {
 //!         option: option.clone(),
-//!         premium: pos!(5.0),
+//!         premium: pos_or_panic!(5.0),
 //!         date: Utc::now(),
-//!         open_fee: pos!(0.5),
-//!         close_fee: pos!(0.5),
+//!         open_fee: pos_or_panic!(0.5),
+//!         close_fee: pos_or_panic!(0.5),
 //!         epic: None,
 //!         extra_fields: None,
 //!     },
 //!     Position {
 //!         option,
-//!         premium: pos!(3.0),
+//!         premium: pos_or_panic!(3.0),
 //!         date: Utc::now(),
-//!         open_fee: pos!(0.5),
-//!         close_fee: pos!(0.5),
+//!         open_fee: pos_or_panic!(0.5),
+//!         close_fee: pos_or_panic!(0.5),
 //!         epic: None,
 //!         extra_fields: None,
 //!     },

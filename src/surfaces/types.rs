@@ -6,7 +6,7 @@
 use crate::curves::Point2D;
 use crate::error::SurfaceError;
 use crate::geometrics::HasX;
-use crate::model::positive::is_positive;
+use positive::is_positive;
 use rust_decimal::Decimal;
 use rust_decimal::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -233,8 +233,9 @@ pub enum Axis {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     use crate::surfaces::Surface;
-    use crate::{Positive, pos};
+    use positive::{Positive, pos_or_panic};
     use rust_decimal_macros::dec;
     use std::collections::BTreeSet;
 
@@ -289,7 +290,7 @@ mod tests {
 
     #[test]
     fn test_point3d_from_tuple() {
-        let result = Point3D::from_tuple(dec!(1.0), pos!(2.0), pos!(3.0));
+        let result = Point3D::from_tuple(dec!(1.0), Positive::TWO, pos_or_panic!(3.0));
         assert!(result.is_ok());
         let point = result.unwrap();
         assert_eq!(point.x, dec!(1.0));

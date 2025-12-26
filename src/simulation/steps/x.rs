@@ -3,10 +3,11 @@
    Email: jb@taunais.com
    Date: 24/3/25
 ******************************************************************************/
+use crate::ExpirationDate;
 use crate::error::SimulationError;
 use crate::utils::TimeFrame;
 use crate::utils::time::convert_time_frame;
-use crate::{ExpirationDate, Positive};
+use positive::Positive;
 use serde::{Serialize, Serializer};
 use std::fmt::{Display, Formatter};
 use std::ops::AddAssign;
@@ -66,10 +67,11 @@ where
 /// ```rust
 ///
 /// // Create a step with 7 days as the value, using days as the time unit
-/// use optionstratlib::{pos, ExpirationDate};
+/// use positive::pos_or_panic;
+/// use optionstratlib::ExpirationDate;
 /// use optionstratlib::simulation::steps::Xstep;
 /// use optionstratlib::utils::TimeFrame;
-/// let step = Xstep::new(7, TimeFrame::Day, ExpirationDate::Days(pos!(30.0)));
+/// let step = Xstep::new(7, TimeFrame::Day, ExpirationDate::Days(pos_or_panic!(30.0)));
 ///
 /// // Move to the next step (forward in time)
 /// let next_step = step.next();
@@ -270,28 +272,32 @@ where
 mod tests {
     use super::*;
     use crate::model::ExpirationDate;
-    use crate::pos;
+    use positive::pos_or_panic;
 
     #[test]
     fn test_days_left() {
-        let mut step = Xstep::new(1.5f64, TimeFrame::Day, ExpirationDate::Days(pos!(30.0)));
+        let mut step = Xstep::new(
+            1.5f64,
+            TimeFrame::Day,
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+        );
         step.index = 42;
 
         assert!(step.next().is_ok());
 
-        assert_eq!(step.days_left().unwrap(), pos!(30.0));
+        assert_eq!(step.days_left().unwrap(), pos_or_panic!(30.0));
         let step1 = step.next().unwrap();
         assert_eq!(*step1.index(), 43);
-        assert_eq!(step1.days_left().unwrap(), pos!(28.5));
+        assert_eq!(step1.days_left().unwrap(), pos_or_panic!(28.5));
         let step2 = step1.next().unwrap();
         assert_eq!(*step2.index(), 44);
-        assert_eq!(step2.days_left().unwrap(), pos!(27.0));
+        assert_eq!(step2.days_left().unwrap(), pos_or_panic!(27.0));
         let step3 = step2.next().unwrap();
         assert_eq!(*step3.index(), 45);
-        assert_eq!(step3.days_left().unwrap(), pos!(25.5));
+        assert_eq!(step3.days_left().unwrap(), pos_or_panic!(25.5));
         let step4 = step3.previous().unwrap();
         assert_eq!(*step4.index(), 44);
-        assert_eq!(step4.days_left().unwrap(), pos!(27.0));
+        assert_eq!(step4.days_left().unwrap(), pos_or_panic!(27.0));
     }
 }
 
@@ -299,14 +305,19 @@ mod tests {
 mod tests_serialize {
     use super::*;
     use crate::model::ExpirationDate;
-    use crate::pos;
+    use positive::pos_or_panic;
+
     use rust_decimal_macros::dec;
     use serde_json::{Value, json};
 
     #[test]
     fn test_serialized_structure() {
         // Create an Xstep with f64
-        let mut step = Xstep::new(1.5f64, TimeFrame::Day, ExpirationDate::Days(pos!(30.0)));
+        let mut step = Xstep::new(
+            1.5f64,
+            TimeFrame::Day,
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+        );
         step.index = 42;
 
         // Serialize to JSON
@@ -331,9 +342,17 @@ mod tests_serialize {
     #[test]
     fn test_serialization_value_conversion() {
         // Create instances with different types but same value
-        let step_f64 = Xstep::new(2.5f64, TimeFrame::Day, ExpirationDate::Days(pos!(1.0)));
-        let step_decimal = Xstep::new(dec!(2.5), TimeFrame::Day, ExpirationDate::Days(pos!(1.0)));
-        let step_positive = Xstep::new(pos!(2.5), TimeFrame::Day, ExpirationDate::Days(pos!(1.0)));
+        let step_f64 = Xstep::new(2.5f64, TimeFrame::Day, ExpirationDate::Days(Positive::ONE));
+        let step_decimal = Xstep::new(
+            dec!(2.5),
+            TimeFrame::Day,
+            ExpirationDate::Days(Positive::ONE),
+        );
+        let step_positive = Xstep::new(
+            pos_or_panic!(2.5),
+            TimeFrame::Day,
+            ExpirationDate::Days(Positive::ONE),
+        );
 
         // Serialize all three
         let json_f64 = serde_json::to_string(&step_f64).unwrap();
@@ -354,9 +373,17 @@ mod tests_serialize {
     #[test]
     fn test_serialization_format_identity() {
         // Create instances with different types
-        let step_f64 = Xstep::new(3.1f64, TimeFrame::Hour, ExpirationDate::Days(pos!(1.0)));
-        let step_decimal = Xstep::new(dec!(3.1), TimeFrame::Hour, ExpirationDate::Days(pos!(1.0)));
-        let step_positive = Xstep::new(pos!(3.1), TimeFrame::Hour, ExpirationDate::Days(pos!(1.0)));
+        let step_f64 = Xstep::new(3.1f64, TimeFrame::Hour, ExpirationDate::Days(Positive::ONE));
+        let step_decimal = Xstep::new(
+            dec!(3.1),
+            TimeFrame::Hour,
+            ExpirationDate::Days(Positive::ONE),
+        );
+        let step_positive = Xstep::new(
+            pos_or_panic!(3.1),
+            TimeFrame::Hour,
+            ExpirationDate::Days(Positive::ONE),
+        );
 
         // Serialize all three
         let json_f64 = serde_json::to_string(&step_f64).unwrap();
@@ -371,7 +398,11 @@ mod tests_serialize {
     #[test]
     fn test_serialization_edge_cases() {
         // Test with zero
-        let step_zero = Xstep::new(0.01f64, TimeFrame::Minute, ExpirationDate::Days(pos!(0.0)));
+        let step_zero = Xstep::new(
+            0.01f64,
+            TimeFrame::Minute,
+            ExpirationDate::Days(Positive::ZERO),
+        );
         let json_zero = serde_json::to_string(&step_zero).unwrap();
         let parsed_zero: Value = serde_json::from_str(&json_zero).unwrap();
         assert_eq!(parsed_zero["step_size_in_time"], json!(0.01));
@@ -380,7 +411,7 @@ mod tests_serialize {
         let step_small = Xstep::new(
             0.00001f64,
             TimeFrame::Minute,
-            ExpirationDate::Days(pos!(1.0)),
+            ExpirationDate::Days(Positive::ONE),
         );
         let json_small = serde_json::to_string(&step_small).unwrap();
         let parsed_small: Value = serde_json::from_str(&json_small).unwrap();
@@ -391,7 +422,7 @@ mod tests_serialize {
         let step_large = Xstep::new(
             1_000_000.01f64,
             TimeFrame::Minute,
-            ExpirationDate::Days(pos!(1.0)),
+            ExpirationDate::Days(Positive::ONE),
         );
         let json_large = serde_json::to_string(&step_large).unwrap();
         let parsed_large: Value = serde_json::from_str(&json_large).unwrap();
@@ -404,7 +435,7 @@ mod tests_serialize {
         let step = Xstep::new(
             1.23456789f64,
             TimeFrame::Day,
-            ExpirationDate::Days(pos!(1.0)),
+            ExpirationDate::Days(Positive::ONE),
         );
 
         // Serialize and parse
@@ -419,7 +450,11 @@ mod tests_serialize {
     #[test]
     fn test_datetime_serialization() {
         // Test with Days expiration
-        let step_days = Xstep::new(1.0f64, TimeFrame::Day, ExpirationDate::Days(pos!(30.0)));
+        let step_days = Xstep::new(
+            1.0f64,
+            TimeFrame::Day,
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+        );
 
         let serialized_days = serde_json::to_string(&step_days).unwrap();
         let parsed_days: Value = serde_json::from_str(&serialized_days).unwrap();

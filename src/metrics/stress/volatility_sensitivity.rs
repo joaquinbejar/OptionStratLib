@@ -45,11 +45,11 @@
 //! - **Y-axis**: Volatility level
 //! - **Z-axis**: Option value or P&L
 
-use crate::Positive;
 use crate::curves::Curve;
 use crate::error::CurveError;
 use crate::error::SurfaceError;
 use crate::surfaces::Surface;
+use positive::Positive;
 
 #[cfg(test)]
 use rust_decimal::MathematicalOps;
@@ -111,11 +111,11 @@ pub trait VolatilitySensitivityCurve {
 /// ```ignore
 /// use optionstratlib::chains::chain::OptionChain;
 /// use optionstratlib::metrics::VolatilitySensitivitySurface;
-/// use optionstratlib::pos;
+/// use positive::pos_or_panic;
 ///
 /// let chain = OptionChain::load_from_json("options.json")?;
-/// let price_range = (pos!(400.0), pos!(500.0));
-/// let vol_range = (pos!(0.10), pos!(0.40));
+/// let price_range = (pos_or_panic!(400.0), pos_or_panic!(500.0));
+/// let vol_range = (pos_or_panic!(0.10), pos_or_panic!(0.40));
 /// let surface = chain.volatility_sensitivity_surface(price_range, vol_range, 20, 20)?;
 /// ```
 pub trait VolatilitySensitivitySurface {
@@ -146,8 +146,9 @@ pub trait VolatilitySensitivitySurface {
 mod tests_volatility_sensitivity {
     use super::*;
     use crate::curves::Point2D;
-    use crate::pos;
+
     use crate::surfaces::Point3D;
+    use positive::pos_or_panic;
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
     use std::collections::BTreeSet;
@@ -232,7 +233,7 @@ mod tests_volatility_sensitivity {
     #[test]
     fn test_volatility_sensitivity_curve_creation() {
         let vs = TestVolatilitySensitivity {
-            underlying_price: pos!(450.0),
+            underlying_price: pos_or_panic!(450.0),
         };
         let curve = vs.volatility_sensitivity_curve();
         assert!(curve.is_ok());
@@ -244,7 +245,7 @@ mod tests_volatility_sensitivity {
     #[test]
     fn test_volatility_sensitivity_curve_atm_highest() {
         let vs = TestVolatilitySensitivity {
-            underlying_price: pos!(450.0),
+            underlying_price: pos_or_panic!(450.0),
         };
         let curve = vs.volatility_sensitivity_curve().unwrap();
 
@@ -262,10 +263,10 @@ mod tests_volatility_sensitivity {
     #[test]
     fn test_volatility_sensitivity_surface_creation() {
         let vs = TestVolatilitySensitivity {
-            underlying_price: pos!(450.0),
+            underlying_price: pos_or_panic!(450.0),
         };
-        let price_range = (pos!(400.0), pos!(500.0));
-        let vol_range = (pos!(0.10), pos!(0.40));
+        let price_range = (pos_or_panic!(400.0), pos_or_panic!(500.0));
+        let vol_range = (pos_or_panic!(0.10), pos_or_panic!(0.40));
 
         let surface = vs.volatility_sensitivity_surface(price_range, vol_range, 10, 10);
         assert!(surface.is_ok());
@@ -278,10 +279,10 @@ mod tests_volatility_sensitivity {
     #[test]
     fn test_volatility_sensitivity_surface_vol_effect() {
         let vs = TestVolatilitySensitivity {
-            underlying_price: pos!(450.0),
+            underlying_price: pos_or_panic!(450.0),
         };
-        let price_range = (pos!(450.0), pos!(450.0)); // Fixed price
-        let vol_range = (pos!(0.10), pos!(0.40));
+        let price_range = (pos_or_panic!(450.0), pos_or_panic!(450.0)); // Fixed price
+        let vol_range = (pos_or_panic!(0.10), pos_or_panic!(0.40));
 
         let surface = vs
             .volatility_sensitivity_surface(price_range, vol_range, 0, 10)
@@ -298,7 +299,7 @@ mod tests_volatility_sensitivity {
     #[test]
     fn test_volatility_sensitivity_curve_positive_vega() {
         let vs = TestVolatilitySensitivity {
-            underlying_price: pos!(450.0),
+            underlying_price: pos_or_panic!(450.0),
         };
         let curve = vs.volatility_sensitivity_curve().unwrap();
 

@@ -2,10 +2,11 @@ use optionstratlib::model::decimal::DecimalStats;
 use optionstratlib::{pos, Positive};
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
+use positive::pos_or_panic;
 
 #[test]
 fn decimal_add_and_addassign_with_positive_ref() {
-    let p: Positive = pos!(2.5);
+    let p: Positive = pos_or_panic!(2.5);
 
     // Decimal + &Positive
     let d = dec!(10);
@@ -20,7 +21,7 @@ fn decimal_add_and_addassign_with_positive_ref() {
 
 #[test]
 fn decimal_mulassign_with_positive_ref() {
-    let p: Positive = pos!(4);
+    let p: Positive = pos_or_panic!(4);
     let mut d = dec!(2.5);
     d *= &p; // MulAssign<&Positive>
     assert_eq!(d, dec!(10.0));
@@ -28,7 +29,7 @@ fn decimal_mulassign_with_positive_ref() {
 
 #[test]
 fn decimal_partial_eq_with_positive() {
-    let p = pos!(7.25);
+    let p = pos_or_panic!(7.25);
     let d = Decimal::from(p.clone());
     assert!(d == p);
 }

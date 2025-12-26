@@ -7,7 +7,7 @@ use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, StrategyBasics, StrategyType, Validable,
 };
 use crate::{
-    ExpirationDate, Options, Positive,
+    ExpirationDate, Options,
     chains::{OptionData, chain::OptionChain},
     error::{
         GreeksError, OperationErrorKind, PricingError, position::PositionError,
@@ -21,7 +21,6 @@ use crate::{
         utils::mean_and_std,
     },
     pnl::{PnLCalculator, utils::PnL},
-    pos,
     pricing::payoff::Profit,
     strategies::{
         BasicAble, DeltaAdjustment, Strategies, StrategyConstructor,
@@ -32,6 +31,7 @@ use crate::{
     utils::process_n_times_iter,
 };
 use num_traits::ToPrimitive;
+use positive::{Positive, pos_or_panic};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -178,12 +178,12 @@ impl CustomStrategy {
         let strike_range = *max_strike - *min_strike;
 
         // For strategies with small strike ranges, use a very focused approach
-        let base_extension = if strike_range < self.underlying_price * pos!(0.05) {
+        let base_extension = if strike_range < self.underlying_price * pos_or_panic!(0.05) {
             // Very tight strikes (< 5% of underlying) - use minimal extension
-            strike_range * pos!(1.5) // 150% of strike range
+            strike_range * pos_or_panic!(1.5) // 150% of strike range
         } else {
             // Wider strikes - use moderate extension
-            strike_range * pos!(1.0) // 100% of strike range
+            strike_range * Positive::ONE // 100% of strike range
         };
 
         // Center around the underlying price for better focus
@@ -198,8 +198,8 @@ impl CustomStrategy {
     #[allow(dead_code)]
     fn best_range_to_show(&self, step: Positive) -> Result<Vec<Positive>, StrategyError> {
         let mut prices = Vec::new();
-        let mut current_price = self.underlying_price * pos!(0.5);
-        let max_price = self.underlying_price * pos!(1.5);
+        let mut current_price = self.underlying_price * pos_or_panic!(0.5);
+        let max_price = self.underlying_price * pos_or_panic!(1.5);
 
         while current_price <= max_price {
             prices.push(current_price);
@@ -279,7 +279,7 @@ impl CustomStrategy {
 
         if break_even_points.len() == 1 {
             let break_even = break_even_points[0];
-            let test_point = break_even - pos!(0.01);
+            let test_point = break_even - pos_or_panic!(0.01);
             let is_profit_below = self.calculate_profit_at(&test_point)? > Decimal::ZERO;
 
             if is_profit_below {
@@ -307,7 +307,7 @@ impl CustomStrategy {
             }
         } else {
             // Multiple break-even points
-            let test_point = break_even_points[0] - pos!(0.01);
+            let test_point = break_even_points[0] - pos_or_panic!(0.01);
             let is_profit_below = self.calculate_profit_at(&test_point)? > Decimal::ZERO;
             let is_first_zone_profit = is_profit_below;
 
@@ -365,9 +365,9 @@ impl BreakEvenable for CustomStrategy {
         self.break_even_points.clear();
 
         // Get a reasonable price range
-        let min_price = self.underlying_price * pos!(0.5);
-        let max_price = self.underlying_price * pos!(1.5);
-        let step = pos!(0.01);
+        let min_price = self.underlying_price * pos_or_panic!(0.5);
+        let max_price = self.underlying_price * pos_or_panic!(1.5);
+        let step = pos_or_panic!(0.01);
 
         let mut current_price = min_price;
         while current_price <= max_price {
@@ -614,7 +614,7 @@ impl Strategies for CustomStrategy {
         }
 
         let (min_price, max_price) = self.range_to_show()?;
-        let step = (max_price - min_price) / pos!(50.0); // Use 50 steps max
+        let step = (max_price - min_price) / pos_or_panic!(50.0); // Use 50 steps max
         let mut max_profit = Decimal::ZERO;
         let mut current_price = min_price;
 
@@ -646,7 +646,7 @@ impl Strategies for CustomStrategy {
         }
 
         let (min_price, max_price) = self.range_to_show()?;
-        let step = (max_price - min_price) / pos!(50.0); // Use 50 steps max
+        let step = (max_price - min_price) / pos_or_panic!(50.0); // Use 50 steps max
         let mut max_loss = Decimal::ZERO;
         let mut current_price = min_price;
 
@@ -678,7 +678,7 @@ impl Strategies for CustomStrategy {
         }
 
         let (min_price, max_price) = self.range_to_show()?;
-        let step = (max_price - min_price) / pos!(50.0); // Use 50 steps max
+        let step = (max_price - min_price) / pos_or_panic!(50.0); // Use 50 steps max
         let mut total_profit = Decimal::ZERO;
         let mut current_price = min_price;
 

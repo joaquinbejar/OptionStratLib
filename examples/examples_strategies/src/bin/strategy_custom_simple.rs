@@ -1,12 +1,13 @@
 use optionstratlib::prelude::*;
+use positive::pos_or_panic;
 
 fn main() -> Result<(), Error> {
     setup_logger();
-    let underlying_price = pos!(150.0);
+    let underlying_price = pos_or_panic!(150.0);
     let underlying_symbol = "SPY".to_string();
-    let expiration = ExpirationDate::Days(pos!(21.0));
+    let expiration = ExpirationDate::Days(pos_or_panic!(21.0));
     let risk_free_rate = dec!(0.05);
-    let dividend_yield = pos!(0.02); // 2% dividend yield
+    let dividend_yield = pos_or_panic!(0.02); // 2% dividend yield
 
     // Create a simple covered call strategy using CustomStrategy
     // This demonstrates how to build standard strategies with CustomStrategy
@@ -16,10 +17,10 @@ fn main() -> Result<(), Error> {
         OptionType::European,
         Side::Long,
         underlying_symbol.clone(),
-        pos!(50.0), // Deep ITM call to simulate stock
+        pos_or_panic!(50.0), // Deep ITM call to simulate stock
         expiration,
-        pos!(0.01),  // Very low volatility for deep ITM
-        pos!(100.0), // 100 shares equivalent
+        pos_or_panic!(0.01), // Very low volatility for deep ITM
+        Positive::HUNDRED,   // 100 shares equivalent
         underlying_price,
         risk_free_rate,
         OptionStyle::Call,
@@ -28,10 +29,10 @@ fn main() -> Result<(), Error> {
     );
     let stock_position = Position::new(
         stock_position_option,
-        pos!(100.0), // Intrinsic value (150-50)
+        Positive::HUNDRED, // Intrinsic value (150-50)
         Utc::now(),
-        pos!(0.5), // Low fee
-        pos!(0.5),
+        pos_or_panic!(0.5), // Low fee
+        pos_or_panic!(0.5),
         None,
         None,
     );
@@ -41,10 +42,10 @@ fn main() -> Result<(), Error> {
         OptionType::European,
         Side::Short,
         underlying_symbol.clone(),
-        pos!(155.0), // Strike above current price
+        pos_or_panic!(155.0), // Strike above current price
         expiration,
-        pos!(0.20),  // 20% implied volatility
-        pos!(100.0), // 100 shares covered
+        pos_or_panic!(0.20), // 20% implied volatility
+        Positive::HUNDRED,   // 100 shares covered
         underlying_price,
         risk_free_rate,
         OptionStyle::Call,
@@ -53,10 +54,10 @@ fn main() -> Result<(), Error> {
     );
     let covered_call = Position::new(
         covered_call_option,
-        pos!(3.50), // Premium received
+        pos_or_panic!(3.50), // Premium received
         Utc::now(),
-        pos!(1.0),
-        pos!(1.0),
+        Positive::ONE,
+        Positive::ONE,
         None,
         None,
     );
@@ -119,7 +120,7 @@ fn main() -> Result<(), Error> {
     info!("=== PROFIT/LOSS AT DIFFERENT PRICES ===");
     let test_prices = vec![140.0, 145.0, 150.0, 155.0, 160.0, 165.0];
     for price in test_prices {
-        let test_price = pos!(price);
+        let test_price = pos_or_panic!(price);
         match strategy.calculate_profit_at(&test_price) {
             Ok(profit) => info!("At ${:.2}: Profit/Loss = ${:.2}", price, profit),
             Err(e) => info!("At ${:.2}: Error calculating profit: {}", price, e),

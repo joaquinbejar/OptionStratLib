@@ -33,9 +33,9 @@
 //! * Invalid price values
 //! * Invalid rate values
 
-use crate::Positive;
 use crate::error::VolatilityError;
 use crate::error::decimal;
+use positive::Positive;
 use thiserror::Error;
 
 /// Represents errors that can occur during options Greek calculations.
@@ -622,8 +622,7 @@ mod tests_error_greeks {
 mod tests_error_greeks_extended {
     use super::*;
     use crate::error::decimal::DecimalError::InvalidPrecision;
-
-    use crate::pos;
+    use positive::pos_or_panic;
 
     #[test]
     fn test_greeks_error_std_error() {
@@ -749,7 +748,7 @@ mod tests_error_greeks_extended {
 
     #[test]
     fn test_invalid_time_constructor() {
-        let error = GreeksError::invalid_time(pos!(5.0), "Time must be positive");
+        let error = GreeksError::invalid_time(pos_or_panic!(5.0), "Time must be positive");
         assert_eq!(
             format!("{error}"),
             "Input validation error: Invalid time 5: Time must be positive"

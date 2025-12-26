@@ -1,4 +1,3 @@
-use crate::Positive;
 use crate::pricing::Profit;
 use crate::strategies::base::BreakEvenable;
 use crate::strategies::{
@@ -74,7 +73,7 @@ macro_rules! impl_graph_for_payoff_strategy {
                     };
                     let underlying_price = self.get_underlying_price();
                     let pay_off_at_underlying_price = self.calculate_profit_at(&underlying_price).unwrap_or(Decimal::ZERO);
-                    let range = match self.get_best_range_to_show(Positive::ONE){
+                    let range = match self.get_best_range_to_show(positive::Positive::ONE){
                         Ok(range) => range,
                         Err(_) => return GraphData::Series(Series2D::default()),
                     };

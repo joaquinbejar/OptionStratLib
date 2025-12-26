@@ -1,4 +1,5 @@
 /******************************************************************************
+use positive::pos_or_panic;
    Author: Joaquín Béjar García
    Email: jb@taunais.com
    Date: 14/8/24
@@ -29,7 +30,7 @@
 //!
 //! ```rust
 //! use rust_decimal_macros::dec;
-//! use optionstratlib::Positive;
+//! use positive::Positive;
 //! use optionstratlib::volatility::constant_volatility;
 //!
 //! let returns = [dec!(0.02), dec!(0.02), dec!(0.02), dec!(0.02)];
@@ -43,25 +44,25 @@
 //! use optionstratlib::{ExpirationDate, Options};
 //! use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
 //! use optionstratlib::volatility::implied_volatility;
-//! use optionstratlib::Positive;
-//! use optionstratlib::pos;
+//! use positive::Positive;
+//! use positive::pos_or_panic;
 //!
 //! let mut option = Options::new(
 //!     OptionType::European,
 //!     Side::Long,
 //!     "STOCK".to_string(),
-//!     pos!(100.0),   // Strike price
-//!     ExpirationDate::Days(pos!(30.0)),
-//!     pos!(0.2),   // Initial volatility guess
+//!     Positive::HUNDRED,   // Strike price
+//!     ExpirationDate::Days(pos_or_panic!(30.0)),
+//!     pos_or_panic!(0.2),   // Initial volatility guess
 //!     Positive::ONE,   // Quantity
-//!     pos!(100.0),   // Current price
+//!     Positive::HUNDRED,   // Current price
 //!     dec!(0.05),   // Risk-free rate
 //!     OptionStyle::Call,
 //!     Positive::ZERO,   // Dividend yield
 //!     None,   // Exotic parameters
 //! );
 //!
-//! let market_price = pos!(30.0);
+//! let market_price = pos_or_panic!(30.0);
 //! let iv = implied_volatility(market_price, &mut option, 100);
 //! ```
 //!
@@ -132,11 +133,11 @@
 //! The module includes utilities for converting between different time frames:
 //!
 //! ```rust
-//! use optionstratlib::pos;
+//! use positive::pos_or_panic;
 //! use optionstratlib::utils::time::TimeFrame;
 //! use optionstratlib::volatility::{annualized_volatility, de_annualized_volatility};
 //!
-//! let daily_vol = pos!(0.01);
+//! let daily_vol = pos_or_panic!(0.01);
 //! let annual_vol = annualized_volatility(daily_vol, TimeFrame::Day).unwrap();
 //! let daily_vol_again = de_annualized_volatility(annual_vol, TimeFrame::Day);
 //! ```

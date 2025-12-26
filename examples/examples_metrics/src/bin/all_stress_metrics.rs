@@ -23,6 +23,7 @@ use optionstratlib::metrics::{
 };
 use optionstratlib::model::ExpirationDate;
 use optionstratlib::prelude::*;
+use positive::pos_or_panic;
 use rust_decimal_macros::dec;
 
 fn main() -> Result<(), CurveError> {
@@ -38,16 +39,16 @@ fn main() -> Result<(), CurveError> {
         spos!(5.0),
         dec!(-0.15),
         dec!(0.08),
-        pos!(0.02),
+        pos_or_panic!(0.02),
         2,
         OptionDataPriceParams::new(
-            Some(Box::new(pos!(450.0))),
-            Some(ExpirationDate::Days(pos!(30.0))),
+            Some(Box::new(pos_or_panic!(450.0))),
+            Some(ExpirationDate::Days(pos_or_panic!(30.0))),
             Some(dec!(0.05)),
             spos!(0.01),
             Some("SPY".to_string()),
         ),
-        pos!(0.20),
+        pos_or_panic!(0.20),
     );
 
     let option_chain = OptionChain::build_chain(&params);
@@ -87,8 +88,8 @@ fn main() -> Result<(), CurveError> {
     tracing::info!("2. VOLATILITY SENSITIVITY SURFACE");
     tracing::info!("   Shows option value across price and volatility");
 
-    let price_range = (pos!(380.0), pos!(520.0));
-    let vol_range = (pos!(0.10), pos!(0.40));
+    let price_range = (pos_or_panic!(380.0), pos_or_panic!(520.0));
+    let vol_range = (pos_or_panic!(0.10), pos_or_panic!(0.40));
 
     let vol_surface = option_chain
         .volatility_sensitivity_surface(price_range, vol_range, 20, 20)
@@ -142,13 +143,13 @@ fn main() -> Result<(), CurveError> {
     tracing::info!("   Shows option value across price and time");
 
     let days = vec![
-        pos!(1.0),
-        pos!(7.0),
-        pos!(14.0),
-        pos!(21.0),
-        pos!(30.0),
-        pos!(45.0),
-        pos!(60.0),
+        Positive::ONE,
+        pos_or_panic!(7.0),
+        pos_or_panic!(14.0),
+        pos_or_panic!(21.0),
+        pos_or_panic!(30.0),
+        pos_or_panic!(45.0),
+        pos_or_panic!(60.0),
     ];
 
     let decay_surface = option_chain
@@ -202,7 +203,7 @@ fn main() -> Result<(), CurveError> {
     tracing::info!("6. PRICE SHOCK SURFACE");
     tracing::info!("   Shows option value across price and volatility scenarios");
 
-    let vol_range_stress = (pos!(0.10), pos!(0.50));
+    let vol_range_stress = (pos_or_panic!(0.10), pos_or_panic!(0.50));
 
     let shock_surface = option_chain
         .price_shock_surface(price_range, vol_range_stress, 20, 20)

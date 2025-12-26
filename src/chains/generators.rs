@@ -3,6 +3,7 @@
    Email: jb@taunais.com
    Date: 27/3/25
 ******************************************************************************/
+use crate::ExpirationDate;
 use crate::chains::OptionChain;
 use crate::error::ChainError;
 use crate::simulation::steps::{Step, Ystep};
@@ -10,8 +11,8 @@ use crate::simulation::{WalkParams, WalkType};
 use crate::utils::TimeFrame;
 use crate::utils::others::calculate_log_returns;
 use crate::volatility::{adjust_volatility, constant_volatility};
-use crate::{ExpirationDate, Positive, pos};
 use core::option::Option;
+use positive::{Positive, pos_or_panic};
 use rust_decimal::Decimal;
 use tracing::debug;
 
@@ -141,7 +142,7 @@ pub fn generator_optionchain(
     if let Some(volatility) = volatility {
         volatility
     } else {
-        pos!(0.20)
+        pos_or_panic!(0.20)
     };
 
     for y_step in y_steps.iter() {
@@ -229,8 +230,9 @@ pub fn generator_positive(
 #[cfg(test)]
 mod tests {
     use super::*;
+
     use crate::ExpirationDate;
-    use crate::pos;
+
     use crate::simulation::randomwalk::RandomWalk;
     use crate::simulation::steps::Xstep;
     use crate::simulation::{WalkType, WalkTypeAble};
@@ -243,12 +245,12 @@ mod tests {
         let mut initial_price =
             OptionChain::load_from_json("examples/Chains/SP500-18-oct-2024-5781.88.json").unwrap();
         initial_price.update_expiration_date(get_x_days_formatted(2));
-        let new_price: Positive = pos!(5790.0);
+        let new_price: Positive = pos_or_panic!(5790.0);
         let step = Step {
             x: Xstep::new(
                 Positive::ONE,
                 TimeFrame::Minute,
-                ExpirationDate::Days(pos!(30.0)),
+                ExpirationDate::Days(pos_or_panic!(30.0)),
             ),
             y: Ystep::new(0, initial_price),
         };
@@ -258,7 +260,7 @@ mod tests {
 
         let new_chain = result.unwrap();
         assert!(new_chain.len() > 1);
-        assert_eq!(*new_chain.atm_strike().unwrap(), pos!(5790.0));
+        assert_eq!(*new_chain.atm_strike().unwrap(), pos_or_panic!(5790.0));
         for option in new_chain.get_single_iter() {
             assert!(option.valid_put() || option.valid_call());
         }
@@ -278,8 +280,8 @@ mod tests {
         let mut initial_chain =
             OptionChain::load_from_json("examples/Chains/SP500-18-oct-2024-5781.88.json").unwrap();
         initial_chain.update_expiration_date(get_x_days_formatted(2));
-        let days = pos!(30.0);
-        let std_dev = pos!(20.0);
+        let days = pos_or_panic!(30.0);
+        let std_dev = pos_or_panic!(20.0);
         let walker = Box::new(WalkerOptionChain::new());
 
         let walk_params = WalkParams {
@@ -289,7 +291,7 @@ mod tests {
                 y: Ystep::new(0, initial_chain),
             },
             walk_type: WalkType::GeometricBrownian {
-                dt: convert_time_frame(pos!(1.0) / days, &TimeFrame::Minute, &TimeFrame::Day),
+                dt: convert_time_frame(Positive::ONE / days, &TimeFrame::Minute, &TimeFrame::Day),
                 drift: dec!(0.0),
                 volatility: std_dev / 100.0,
             },
@@ -315,10 +317,10 @@ mod tests {
     #[test]
     fn test_generator_positive() {
         let n_steps = 100;
-        let initial_price = pos!(100.0);
-        let std_dev = pos!(20.0);
+        let initial_price = Positive::HUNDRED;
+        let std_dev = pos_or_panic!(20.0);
         let walker = Box::new(Walker::new());
-        let days = pos!(30.0);
+        let days = pos_or_panic!(30.0);
 
         let walk_params = WalkParams {
             size: n_steps,
@@ -327,7 +329,7 @@ mod tests {
                 y: Ystep::new(0, initial_price),
             },
             walk_type: WalkType::GeometricBrownian {
-                dt: convert_time_frame(pos!(1.0) / days, &TimeFrame::Minute, &TimeFrame::Day),
+                dt: convert_time_frame(Positive::ONE / days, &TimeFrame::Minute, &TimeFrame::Day),
                 drift: dec!(0.0),
                 volatility: std_dev,
             },
@@ -342,12 +344,14 @@ mod tests {
 #[cfg(test)]
 mod generators_coverage_tests {
     use super::*;
+    use positive::{Positive, spos};
+
+    use crate::ExpirationDate;
     use crate::chains::generators::{generator_optionchain, generator_positive};
     use crate::simulation::steps::{Step, Xstep, Ystep};
     use crate::simulation::{WalkParams, WalkType, WalkTypeAble};
     use crate::utils::TimeFrame;
     use crate::utils::time::get_tomorrow_formatted;
-    use crate::{ExpirationDate, spos};
     use rust_decimal_macros::dec;
 
     struct TestWalker {}
@@ -365,7 +369,7 @@ mod generators_coverage_tests {
         // Create a small walk with only one step to test early return
         let chain = OptionChain::new(
             "TEST",
-            pos!(100.0),
+            Positive::HUNDRED,
             get_tomorrow_formatted(),
             Some(dec!(0.05)),
             spos!(0.02),
@@ -379,14 +383,14 @@ mod generators_coverage_tests {
                 x: Xstep::new(
                     Positive::ONE,
                     TimeFrame::Minute,
-                    ExpirationDate::Days(pos!(30.0)),
+                    ExpirationDate::Days(pos_or_panic!(30.0)),
                 ),
                 y: Ystep::new(0, chain),
             },
             walk_type: WalkType::GeometricBrownian {
-                dt: pos!(0.01),
+                dt: pos_or_panic!(0.01),
                 drift: dec!(0.0),
-                volatility: pos!(0.2),
+                volatility: pos_or_panic!(0.2),
             },
             walker,
         };
@@ -401,7 +405,7 @@ mod generators_coverage_tests {
     #[test]
     fn test_generator_positive_early_return() {
         // Create a small walk with only one step to test early return
-        let initial_price = pos!(100.0);
+        let initial_price = Positive::HUNDRED;
         let walker = Box::new(TestWalker::new());
 
         let walk_params = WalkParams {
@@ -410,14 +414,14 @@ mod generators_coverage_tests {
                 x: Xstep::new(
                     Positive::ONE,
                     TimeFrame::Minute,
-                    ExpirationDate::Days(pos!(30.0)),
+                    ExpirationDate::Days(pos_or_panic!(30.0)),
                 ),
                 y: Ystep::new(0, initial_price),
             },
             walk_type: WalkType::GeometricBrownian {
-                dt: pos!(0.01),
+                dt: pos_or_panic!(0.01),
                 drift: dec!(0.0),
-                volatility: pos!(0.2),
+                volatility: pos_or_panic!(0.2),
             },
             walker,
         };
@@ -433,7 +437,7 @@ mod generators_coverage_tests {
         // Create a small walk with only one step to test early return
         let chain = OptionChain::new(
             "TEST",
-            pos!(100.0),
+            Positive::HUNDRED,
             get_tomorrow_formatted(),
             Some(dec!(0.05)),
             spos!(0.02),
@@ -447,14 +451,14 @@ mod generators_coverage_tests {
                 x: Xstep::new(
                     Positive::ONE,
                     TimeFrame::Minute,
-                    ExpirationDate::Days(pos!(30.0)),
+                    ExpirationDate::Days(pos_or_panic!(30.0)),
                 ),
                 y: Ystep::new(0, chain),
             },
             walk_type: WalkType::Brownian {
-                dt: pos!(0.01),
+                dt: pos_or_panic!(0.01),
                 drift: dec!(0.0),
-                volatility: pos!(0.2),
+                volatility: pos_or_panic!(0.2),
             },
             walker,
         };
@@ -470,7 +474,7 @@ mod generators_coverage_tests {
         // Create a small walk with only one step to test early return
         let chain = OptionChain::new(
             "TEST",
-            pos!(100.0),
+            Positive::HUNDRED,
             get_tomorrow_formatted(),
             Some(dec!(0.05)),
             spos!(0.02),
@@ -484,14 +488,14 @@ mod generators_coverage_tests {
                 x: Xstep::new(
                     Positive::ONE,
                     TimeFrame::Minute,
-                    ExpirationDate::Days(pos!(30.0)),
+                    ExpirationDate::Days(pos_or_panic!(30.0)),
                 ),
                 y: Ystep::new(0, chain),
             },
             walk_type: WalkType::LogReturns {
-                dt: pos!(0.01),
+                dt: pos_or_panic!(0.01),
                 expected_return: Default::default(),
-                volatility: pos!(0.2),
+                volatility: pos_or_panic!(0.2),
                 autocorrelation: None,
             },
             walker,
@@ -508,7 +512,7 @@ mod generators_coverage_tests {
         // Create a small walk with only one step to test early return
         let chain = OptionChain::new(
             "TEST",
-            pos!(100.0),
+            Positive::HUNDRED,
             get_tomorrow_formatted(),
             Some(dec!(0.05)),
             spos!(0.02),
@@ -522,13 +526,13 @@ mod generators_coverage_tests {
                 x: Xstep::new(
                     Positive::ONE,
                     TimeFrame::Minute,
-                    ExpirationDate::Days(pos!(30.0)),
+                    ExpirationDate::Days(pos_or_panic!(30.0)),
                 ),
                 y: Ystep::new(0, chain),
             },
             walk_type: WalkType::MeanReverting {
-                dt: pos!(0.01),
-                volatility: pos!(0.2),
+                dt: pos_or_panic!(0.01),
+                volatility: pos_or_panic!(0.2),
                 speed: Default::default(),
                 mean: Default::default(),
             },
@@ -546,7 +550,7 @@ mod generators_coverage_tests {
         // Create a small walk with only one step to test early return
         let chain = OptionChain::new(
             "TEST",
-            pos!(100.0),
+            Positive::HUNDRED,
             get_tomorrow_formatted(),
             Some(dec!(0.05)),
             spos!(0.02),
@@ -560,14 +564,14 @@ mod generators_coverage_tests {
                 x: Xstep::new(
                     Positive::ONE,
                     TimeFrame::Minute,
-                    ExpirationDate::Days(pos!(30.0)),
+                    ExpirationDate::Days(pos_or_panic!(30.0)),
                 ),
                 y: Ystep::new(0, chain),
             },
             walk_type: WalkType::JumpDiffusion {
-                dt: pos!(0.01),
+                dt: pos_or_panic!(0.01),
                 drift: Default::default(),
-                volatility: pos!(0.2),
+                volatility: pos_or_panic!(0.2),
                 intensity: Default::default(),
                 jump_mean: Default::default(),
                 jump_volatility: Default::default(),
@@ -586,7 +590,7 @@ mod generators_coverage_tests {
         // Create a small walk with only one step to test early return
         let chain = OptionChain::new(
             "TEST",
-            pos!(100.0),
+            Positive::HUNDRED,
             get_tomorrow_formatted(),
             Some(dec!(0.05)),
             spos!(0.02),
@@ -600,14 +604,14 @@ mod generators_coverage_tests {
                 x: Xstep::new(
                     Positive::ONE,
                     TimeFrame::Minute,
-                    ExpirationDate::Days(pos!(30.0)),
+                    ExpirationDate::Days(pos_or_panic!(30.0)),
                 ),
                 y: Ystep::new(0, chain),
             },
             walk_type: WalkType::Garch {
-                dt: pos!(0.01),
+                dt: pos_or_panic!(0.01),
                 drift: Default::default(),
-                volatility: pos!(0.2),
+                volatility: pos_or_panic!(0.2),
                 alpha: Default::default(),
                 beta: Default::default(),
             },
@@ -625,7 +629,7 @@ mod generators_coverage_tests {
         // Create a small walk with only one step to test early return
         let chain = OptionChain::new(
             "TEST",
-            pos!(100.0),
+            Positive::HUNDRED,
             get_tomorrow_formatted(),
             Some(dec!(0.05)),
             spos!(0.02),
@@ -639,14 +643,14 @@ mod generators_coverage_tests {
                 x: Xstep::new(
                     Positive::ONE,
                     TimeFrame::Minute,
-                    ExpirationDate::Days(pos!(30.0)),
+                    ExpirationDate::Days(pos_or_panic!(30.0)),
                 ),
                 y: Ystep::new(0, chain),
             },
             walk_type: WalkType::Heston {
-                dt: pos!(0.01),
+                dt: pos_or_panic!(0.01),
                 drift: Default::default(),
-                volatility: pos!(0.2),
+                volatility: pos_or_panic!(0.2),
                 kappa: Default::default(),
                 theta: Default::default(),
                 xi: Default::default(),
@@ -666,7 +670,7 @@ mod generators_coverage_tests {
         // Create a small walk with only one step to test early return
         let chain = OptionChain::new(
             "TEST",
-            pos!(100.0),
+            Positive::HUNDRED,
             get_tomorrow_formatted(),
             Some(dec!(0.05)),
             spos!(0.02),
@@ -680,14 +684,14 @@ mod generators_coverage_tests {
                 x: Xstep::new(
                     Positive::ONE,
                     TimeFrame::Minute,
-                    ExpirationDate::Days(pos!(30.0)),
+                    ExpirationDate::Days(pos_or_panic!(30.0)),
                 ),
                 y: Ystep::new(0, chain),
             },
             walk_type: WalkType::Custom {
-                dt: pos!(0.01),
+                dt: pos_or_panic!(0.01),
                 drift: Default::default(),
-                volatility: pos!(0.2),
+                volatility: pos_or_panic!(0.2),
                 vov: Default::default(),
                 vol_speed: Default::default(),
                 vol_mean: Default::default(),
@@ -706,7 +710,7 @@ mod generators_coverage_tests {
         // Create a small walk with only one step to test early return
         let chain = OptionChain::new(
             "TEST",
-            pos!(100.0),
+            Positive::HUNDRED,
             get_tomorrow_formatted(),
             Some(dec!(0.05)),
             spos!(0.02),
@@ -720,13 +724,17 @@ mod generators_coverage_tests {
                 x: Xstep::new(
                     Positive::ONE,
                     TimeFrame::Minute,
-                    ExpirationDate::Days(pos!(30.0)),
+                    ExpirationDate::Days(pos_or_panic!(30.0)),
                 ),
                 y: Ystep::new(0, chain),
             },
             walk_type: WalkType::Historical {
                 timeframe: TimeFrame::Microsecond,
-                prices: vec![pos!(100.0), pos!(101.0), pos!(102.0)],
+                prices: vec![
+                    Positive::HUNDRED,
+                    pos_or_panic!(101.0),
+                    pos_or_panic!(102.0),
+                ],
                 symbol: None,
             },
             walker,

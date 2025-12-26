@@ -25,10 +25,10 @@
 //! - [`AdjustmentConfig`]: Configuration for adjustment behavior
 //! - [`AdjustmentPlan`]: Result of adjustment calculation with actions and metrics
 
-use crate::Positive;
 use crate::error::GreeksError;
 use crate::model::types::{OptionStyle, Side};
 use crate::model::{ExpirationDate, Options};
+use positive::Positive;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
@@ -434,7 +434,7 @@ impl From<GreeksError> for AdjustmentError {
 #[cfg(test)]
 mod tests_adjustment {
     use super::*;
-    use crate::pos;
+    use positive::pos_or_panic;
 
     #[test]
     fn test_adjustment_config_default() {
@@ -471,7 +471,7 @@ mod tests_adjustment {
     fn test_adjustment_action_display() {
         let modify = AdjustmentAction::ModifyQuantity {
             leg_index: 0,
-            new_quantity: pos!(5.0),
+            new_quantity: pos_or_panic!(5.0),
         };
         assert!(modify.to_string().contains("Modify leg 0"));
 

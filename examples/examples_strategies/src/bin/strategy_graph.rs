@@ -1,3 +1,4 @@
+use positive::pos_or_panic;
 /******************************************************************************
    Author: Joaquín Béjar García
    Email: jb@taunais.com
@@ -9,20 +10,20 @@ fn main() -> Result<(), Error> {
     setup_logger();
     let strategy = BullCallSpread::new(
         "GOLD".to_string(),
-        pos!(2505.8),
-        pos!(2460.0),
-        pos!(2515.0),
-        ExpirationDate::Days(pos!(30.0)),
-        pos!(0.2),
+        pos_or_panic!(2505.8),
+        pos_or_panic!(2460.0),
+        pos_or_panic!(2515.0),
+        ExpirationDate::Days(pos_or_panic!(30.0)),
+        pos_or_panic!(0.2),
         dec!(0.05),
         Positive::ZERO,
-        pos!(1.0),
-        pos!(27.26),
-        pos!(5.33),
-        pos!(0.58),
-        pos!(0.58),
-        pos!(0.55),
-        pos!(0.54),
+        Positive::ONE,
+        pos_or_panic!(27.26),
+        pos_or_panic!(5.33),
+        pos_or_panic!(0.58),
+        pos_or_panic!(0.58),
+        pos_or_panic!(0.55),
+        pos_or_panic!(0.54),
     );
 
     info!("Title: {}", strategy.get_title());

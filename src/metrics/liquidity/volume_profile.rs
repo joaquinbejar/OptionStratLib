@@ -31,11 +31,11 @@
 //! - **Y-axis**: Time (days)
 //! - **Z-axis**: Trading volume
 
-use crate::Positive;
 use crate::curves::Curve;
 use crate::error::CurveError;
 use crate::error::SurfaceError;
 use crate::surfaces::Surface;
+use positive::Positive;
 
 /// A trait for computing volume profile curves by strike price.
 ///
@@ -95,10 +95,10 @@ pub trait VolumeProfileCurve {
 /// ```ignore
 /// use optionstratlib::chains::chain::OptionChain;
 /// use optionstratlib::metrics::VolumeProfileSurface;
-/// use optionstratlib::pos;
+/// use positive::pos_or_panic;
 ///
 /// let chain = OptionChain::load_from_json("options.json")?;
-/// let days = vec![pos!(1.0), pos!(5.0), pos!(10.0), pos!(20.0)];
+/// let days = vec![Positive::ONE, pos_or_panic!(5.0), pos_or_panic!(10.0), pos_or_panic!(20.0)];
 /// let volume_surface = chain.volume_profile_surface(days)?;
 /// ```
 pub trait VolumeProfileSurface {
@@ -126,8 +126,9 @@ pub trait VolumeProfileSurface {
 mod tests_volume_profile {
     use super::*;
     use crate::curves::Point2D;
-    use crate::pos;
+
     use crate::surfaces::Point3D;
+    use positive::pos_or_panic;
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
     use std::collections::BTreeSet;
@@ -227,7 +228,7 @@ mod tests_volume_profile {
     #[test]
     fn test_volume_profile_surface_creation() {
         let volume = TestVolumeProfile;
-        let days = vec![pos!(5.0), pos!(10.0), pos!(20.0)];
+        let days = vec![pos_or_panic!(5.0), pos_or_panic!(10.0), pos_or_panic!(20.0)];
 
         let surface = volume.volume_profile_surface(days);
         assert!(surface.is_ok());
@@ -240,7 +241,7 @@ mod tests_volume_profile {
     #[test]
     fn test_volume_profile_surface_time_effect() {
         let volume = TestVolumeProfile;
-        let days = vec![pos!(5.0), pos!(25.0)];
+        let days = vec![pos_or_panic!(5.0), pos_or_panic!(25.0)];
 
         let surface = volume.volume_profile_surface(days).unwrap();
 

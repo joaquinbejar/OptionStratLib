@@ -345,8 +345,9 @@ pub fn telegraph(
 #[cfg(test)]
 mod tests_telegraph_process_basis {
     use super::*;
+    use positive::{Positive, pos_or_panic};
+
     use crate::model::types::{OptionStyle, OptionType, Side};
-    use crate::{Positive, pos};
     use rust_decimal_macros::dec;
 
     #[test]
@@ -397,12 +398,12 @@ mod tests_telegraph_process_basis {
         let option = Options {
             option_type: OptionType::European,
             side: Side::Long,
-            underlying_price: pos!(100.0),
-            strike_price: pos!(100.0),
+            underlying_price: Positive::HUNDRED,
+            strike_price: Positive::ONE,
             risk_free_rate: dec!(0.05),
             option_style: OptionStyle::Call,
             dividend_yield: Positive::ZERO,
-            implied_volatility: pos!(0.2),
+            implied_volatility: pos_or_panic!(0.2),
             underlying_symbol: "".to_string(),
             expiration_date: Default::default(),
             quantity: Positive::ONE,
@@ -418,9 +419,10 @@ mod tests_telegraph_process_basis {
 #[cfg(test)]
 mod tests_telegraph_process_extended {
     use super::*;
-    use crate::Positive;
+    use positive::{Positive, pos_or_panic};
+
     use crate::model::types::{OptionStyle, OptionType, Side};
-    use crate::pos;
+
     use rust_decimal_macros::dec;
 
     // Helper function to create a mock Options struct
@@ -428,12 +430,12 @@ mod tests_telegraph_process_extended {
         Options {
             option_type: OptionType::European,
             side: Side::Long,
-            underlying_price: pos!(100.0),
-            strike_price: pos!(100.0),
+            underlying_price: Positive::HUNDRED,
+            strike_price: Positive::HUNDRED,
             risk_free_rate: dec!(0.05),
             option_style: OptionStyle::Call,
             dividend_yield: Positive::ZERO,
-            implied_volatility: pos!(0.2),
+            implied_volatility: pos_or_panic!(0.2),
             underlying_symbol: "".to_string(),
             expiration_date: Default::default(),
             quantity: Positive::ZERO,

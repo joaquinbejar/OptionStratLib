@@ -310,8 +310,9 @@ impl fmt::Debug for Strategy {
 mod tests_options {
     use super::*;
     use crate::model::types::BarrierType;
-    use crate::pos;
+
     use chrono::{NaiveDate, TimeZone, Utc};
+    use positive::pos_or_panic;
 
     #[test]
     fn test_debug_options() {
@@ -324,14 +325,14 @@ mod tests_options {
             option_type: OptionType::European,
             side: Side::Long,
             underlying_symbol: "AAPL".to_string(),
-            strike_price: pos!(150.0),
+            strike_price: pos_or_panic!(150.0),
             expiration_date: ExpirationDate::DateTime(Utc.from_utc_datetime(&naive_date)),
-            implied_volatility: pos!(0.25),
-            quantity: pos!(10.0),
-            underlying_price: pos!(155.0),
+            implied_volatility: pos_or_panic!(0.25),
+            quantity: pos_or_panic!(10.0),
+            underlying_price: pos_or_panic!(155.0),
             risk_free_rate: dec!(0.01),
             option_style: OptionStyle::Call,
-            dividend_yield: pos!(0.02),
+            dividend_yield: pos_or_panic!(0.02),
             exotic_params: None,
         };
 
@@ -365,14 +366,14 @@ mod tests_options {
             option_type: OptionType::European,
             side: Side::Long,
             underlying_symbol: "AAPL".to_string(),
-            strike_price: pos!(150.0),
+            strike_price: pos_or_panic!(150.0),
             expiration_date: ExpirationDate::DateTime(Utc.from_utc_datetime(&naive_date)),
-            implied_volatility: pos!(0.25),
-            quantity: pos!(10.0),
-            underlying_price: pos!(155.0),
+            implied_volatility: pos_or_panic!(0.25),
+            quantity: pos_or_panic!(10.0),
+            underlying_price: pos_or_panic!(155.0),
             risk_free_rate: dec!(0.01),
             option_style: OptionStyle::Call,
-            dividend_yield: pos!(0.02),
+            dividend_yield: pos_or_panic!(0.02),
             exotic_params: None,
         };
 
@@ -409,14 +410,14 @@ mod tests_options {
             },
             side: Side::Short,
             underlying_symbol: "GOOGL".to_string(),
-            strike_price: pos!(2000.0),
+            strike_price: pos_or_panic!(2000.0),
             expiration_date: ExpirationDate::DateTime(Utc.from_utc_datetime(&naive_date)),
-            implied_volatility: pos!(0.30),
-            quantity: pos!(5.0),
-            underlying_price: pos!(1900.0),
+            implied_volatility: pos_or_panic!(0.30),
+            quantity: pos_or_panic!(5.0),
+            underlying_price: pos_or_panic!(1900.0),
             risk_free_rate: dec!(0.015),
             option_style: OptionStyle::Call,
-            dividend_yield: pos!(0.01),
+            dividend_yield: pos_or_panic!(0.01),
             exotic_params: Some(exotic_params),
         };
 
@@ -439,13 +440,14 @@ mod tests_options {
 #[cfg(test)]
 mod tests_expiration_date {
     use super::*;
-    use crate::pos;
+
     use chrono::{Duration, NaiveDate, TimeZone};
+    use positive::pos_or_panic;
     use tracing::info;
 
     #[test]
     fn test_display_days() {
-        let expiration = ExpirationDate::Days(pos!(30.5));
+        let expiration = ExpirationDate::Days(pos_or_panic!(30.5));
         let display_string = format!("{expiration}");
         assert!(display_string.contains("UTC"));
     }
@@ -461,7 +463,7 @@ mod tests_expiration_date {
 
     #[test]
     fn test_debug_days() {
-        let expiration = ExpirationDate::Days(pos!(45.75));
+        let expiration = ExpirationDate::Days(pos_or_panic!(45.75));
         let debug_string = format!("{expiration:?}");
         assert_eq!(debug_string, "ExpirationDate::Days(45.75)");
     }
@@ -800,8 +802,9 @@ mod tests_option_type_display_debug {
 #[cfg(test)]
 mod tests_position_type_display_debug {
     use super::*;
-    use crate::pos;
+
     use chrono::{DateTime, NaiveDate, TimeZone};
+    use positive::pos_or_panic;
 
     fn get_option() -> (Options, DateTime<Utc>) {
         let naive_date = NaiveDate::from_ymd_opt(2024, 8, 8)
@@ -814,14 +817,14 @@ mod tests_position_type_display_debug {
                 option_type: OptionType::European,
                 side: Side::Long,
                 underlying_symbol: "AAPL".to_string(),
-                strike_price: pos!(150.0),
+                strike_price: pos_or_panic!(150.0),
                 expiration_date: ExpirationDate::DateTime(Utc.from_utc_datetime(&naive_date)),
-                implied_volatility: pos!(0.25),
-                quantity: pos!(10.0),
-                underlying_price: pos!(155.0),
+                implied_volatility: pos_or_panic!(0.25),
+                quantity: pos_or_panic!(10.0),
+                underlying_price: pos_or_panic!(155.0),
                 risk_free_rate: dec!(0.01),
                 option_style: OptionStyle::Call,
-                dividend_yield: pos!(0.02),
+                dividend_yield: pos_or_panic!(0.02),
                 exotic_params: None,
             },
             Utc.from_utc_datetime(&naive_date),
@@ -833,10 +836,10 @@ mod tests_position_type_display_debug {
         let (option, naive_date) = get_option();
         let position = Position {
             option,
-            premium: pos!(5.75),
+            premium: pos_or_panic!(5.75),
             date: naive_date,
-            open_fee: pos!(0.50),
-            close_fee: pos!(0.45),
+            open_fee: pos_or_panic!(0.50),
+            close_fee: pos_or_panic!(0.45),
             epic: Some("Epic123".to_string()),
             extra_fields: None,
         };
@@ -864,10 +867,10 @@ mod tests_position_type_display_debug {
 
         let position = Position {
             option,
-            premium: pos!(5.75),
+            premium: pos_or_panic!(5.75),
             date: naive_date,
-            open_fee: pos!(0.50),
-            close_fee: pos!(0.45),
+            open_fee: pos_or_panic!(0.50),
+            close_fee: pos_or_panic!(0.45),
             epic: Some("Epic123".to_string()),
             extra_fields: None,
         };
@@ -901,9 +904,10 @@ mod tests_position_type_display_debug {
 mod tests_strategy_type_display_debug {
     use super::*;
     use crate::model::utils::create_sample_option_with_date;
-    use crate::pos;
+
     use crate::strategies::base::StrategyType;
     use chrono::{NaiveDate, TimeZone};
+    use positive::{Positive, pos_or_panic};
     use serde::Serialize;
 
     #[test]
@@ -928,16 +932,16 @@ mod tests_strategy_type_display_debug {
                     create_sample_option_with_date(
                         OptionStyle::Call,
                         Side::Long,
-                        pos!(100.0),
-                        pos!(1.0),
-                        pos!(100.0),
-                        pos!(0.02),
+                        Positive::HUNDRED,
+                        Positive::ONE,
+                        Positive::HUNDRED,
+                        pos_or_panic!(0.02),
                         naive_date,
                     ),
-                    pos!(5.75),
+                    pos_or_panic!(5.75),
                     Utc.from_utc_datetime(&naive_date),
-                    pos!(0.50),
-                    pos!(0.45),
+                    pos_or_panic!(0.50),
+                    pos_or_panic!(0.45),
                     Some("Epic123".to_string()),
                     None,
                 ),
@@ -945,23 +949,23 @@ mod tests_strategy_type_display_debug {
                     create_sample_option_with_date(
                         OptionStyle::Call,
                         Side::Short,
-                        pos!(100.0),
-                        pos!(1.0),
-                        pos!(100.0),
-                        pos!(0.02),
+                        Positive::HUNDRED,
+                        Positive::ONE,
+                        Positive::HUNDRED,
+                        pos_or_panic!(0.02),
                         naive_date,
                     ),
-                    pos!(5.75),
+                    pos_or_panic!(5.75),
                     Utc.from_utc_datetime(&naive_date),
-                    pos!(0.50),
-                    pos!(0.45),
+                    pos_or_panic!(0.50),
+                    pos_or_panic!(0.45),
                     Some("Epic123".to_string()),
                     Some(serde_json::to_value(&extra_fields).unwrap()),
                 ),
             ],
             max_profit: Some(10.0),
             max_loss: Some(5.0),
-            break_even_points: vec![pos!(102.0), pos!(108.0)],
+            break_even_points: vec![pos_or_panic!(102.0), pos_or_panic!(108.0)],
         };
 
         let expected_output = "Strategy: Bull Call Spread\nType: BullCallSpread\nDescription: A bullish options strategy\nLegs:\n  Position Details:\nOption: Long Call European Option\nUnderlying: AAPL @ $100\nStrike: $100\nExpiration: 2024-08-08 00:00:00 UTC\nImplied Volatility: 2%\nQuantity: 1\nRisk-free Rate: 5.00%\nDividend Yield: 1%\nPremium per contract: $5.75\nDate: 2024-08-08 00:00:00 UTC\nOpen Fee per contract: $0.50\nClose Fee per contract: $0.45\n  Position Details:\nOption: Short Call European Option\nUnderlying: AAPL @ $100\nStrike: $100\nExpiration: 2024-08-08 00:00:00 UTC\nImplied Volatility: 2%\nQuantity: 1\nRisk-free Rate: 5.00%\nDividend Yield: 1%\nPremium per contract: $5.75\nDate: 2024-08-08 00:00:00 UTC\nOpen Fee per contract: $0.50\nClose Fee per contract: $0.45\nMax Profit: $10.00\nMax Loss: $5.00\nBreak-even Points:\n  $102\n  $108\n";
@@ -992,16 +996,16 @@ mod tests_strategy_type_display_debug {
                     create_sample_option_with_date(
                         OptionStyle::Call,
                         Side::Long,
-                        pos!(100.0),
-                        pos!(1.0),
-                        pos!(110.0),
-                        pos!(0.02),
+                        Positive::HUNDRED,
+                        Positive::ONE,
+                        pos_or_panic!(110.0),
+                        pos_or_panic!(0.02),
                         naive_date,
                     ),
-                    pos!(5.75),
+                    pos_or_panic!(5.75),
                     Utc.from_utc_datetime(&naive_date),
-                    pos!(0.50),
-                    pos!(0.45),
+                    pos_or_panic!(0.50),
+                    pos_or_panic!(0.45),
                     Some("Epic123".to_string()),
                     None,
                 ),
@@ -1009,23 +1013,23 @@ mod tests_strategy_type_display_debug {
                     create_sample_option_with_date(
                         OptionStyle::Call,
                         Side::Short,
-                        pos!(100.0),
-                        pos!(1.0),
-                        pos!(110.0),
-                        pos!(0.02),
+                        Positive::HUNDRED,
+                        Positive::ONE,
+                        pos_or_panic!(110.0),
+                        pos_or_panic!(0.02),
                         naive_date,
                     ),
-                    pos!(5.75),
+                    pos_or_panic!(5.75),
                     Utc.from_utc_datetime(&naive_date),
-                    pos!(0.50),
-                    pos!(0.45),
+                    pos_or_panic!(0.50),
+                    pos_or_panic!(0.45),
                     Some("Epic123".to_string()),
                     Some(serde_json::to_value(&extra_fields).unwrap()),
                 ),
             ],
             max_profit: Some(8.0),
             max_loss: Some(2.0),
-            break_even_points: vec![pos!(82.0), pos!(88.0)],
+            break_even_points: vec![pos_or_panic!(82.0), pos_or_panic!(88.0)],
         };
 
         let expected_output = "Strategy { name: \"Bear Put Spread\", kind: BearPutSpread, description: \"A bearish options strategy\", legs: [Position { option: Options { option_type: European, side: Side::Long, underlying_symbol: \"AAPL\", strike_price: 110, expiration_date: ExpirationDate::DateTime(2024-08-08 00:00:00 UTC), implied_volatility: 0.02, quantity: 1, underlying_price: 100, risk_free_rate: 0.05, option_style: OptionStyle::Call, dividend_yield: 0.01, exotic_params: None }, premium: 5.75, date: 2024-08-08T00:00:00Z, open_fee: 0.5, close_fee: 0.45 }, Position { option: Options { option_type: European, side: Side::Short, underlying_symbol: \"AAPL\", strike_price: 110, expiration_date: ExpirationDate::DateTime(2024-08-08 00:00:00 UTC), implied_volatility: 0.02, quantity: 1, underlying_price: 100, risk_free_rate: 0.05, option_style: OptionStyle::Call, dividend_yield: 0.01, exotic_params: None }, premium: 5.75, date: 2024-08-08T00:00:00Z, open_fee: 0.5, close_fee: 0.45 }], max_profit: Some(8.0), max_loss: Some(2.0), break_even_points: [82, 88] }";

@@ -7,6 +7,8 @@
 //! The `ProbabilityAnalysis` trait extends the `Strategies` and `Profit` traits to provide
 //! comprehensive probability analysis capabilities for option strategies.
 
+use positive::{Positive, pos_or_panic};
+
 use crate::error::probability::ProbabilityError;
 use crate::model::ProfitLossRange;
 use crate::pricing::payoff::Profit;
@@ -15,7 +17,6 @@ use crate::strategies::probabilities::analysis::StrategyProbabilityAnalysis;
 use crate::strategies::probabilities::utils::{
     PriceTrend, VolatilityAdjustment, calculate_single_point_probability,
 };
-use crate::{Positive, pos};
 use num_traits::ToPrimitive;
 use rust_decimal::Decimal;
 use tracing::warn;
@@ -185,7 +186,7 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
             Ok(Positive::ZERO)
         } else {
             let trend_adjustment = trend.map_or(1.0, |t| 1.0 / (1.0 + t.drift_rate.abs()));
-            Ok(pos!(expected_value * trend_adjustment))
+            Ok(pos_or_panic!(expected_value * trend_adjustment))
         }
     }
 
@@ -350,27 +351,27 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
 #[cfg(test)]
 mod tests_probability_analysis {
     use super::*;
+    use crate::ExpirationDate;
     use crate::strategies::BullCallSpread;
-    use crate::{ExpirationDate, pos};
     use rust_decimal_macros::dec;
 
     fn test_strategy() -> BullCallSpread {
         BullCallSpread::new(
             "GOLD".to_string(),
-            pos!(2505.8), // underlying_price
-            pos!(2460.0), // long_strike_itm
-            pos!(2515.0), // short_strike
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(0.2),      // implied_volatility
-            dec!(0.05),     // risk_free_rate
-            Positive::ZERO, // dividend_yield
-            pos!(1.0),      // quantity
-            pos!(27.26),    // premium_long
-            pos!(5.33),     // premium_short
-            pos!(0.58),     // open_fee_long
-            pos!(0.58),     // close_fee_long
-            pos!(0.55),     // close_fee_short
-            pos!(0.54),     // open_fee_short
+            pos_or_panic!(2505.8), // underlying_price
+            pos_or_panic!(2460.0), // long_strike_itm
+            pos_or_panic!(2515.0), // short_strike
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.2),   // implied_volatility
+            dec!(0.05),           // risk_free_rate
+            Positive::ZERO,       // dividend_yield
+            Positive::ONE,        // quantity
+            pos_or_panic!(27.26), // premium_long
+            pos_or_panic!(5.33),  // premium_short
+            pos_or_panic!(0.58),  // open_fee_long
+            pos_or_panic!(0.58),  // close_fee_long
+            pos_or_panic!(0.55),  // close_fee_short
+            pos_or_panic!(0.54),  // open_fee_short
         )
     }
 
@@ -391,8 +392,8 @@ mod tests_probability_analysis {
     fn test_analyze_probabilities_with_adjustments() {
         let strategy = test_strategy();
         let vol_adj = Some(VolatilityAdjustment {
-            base_volatility: pos!(0.2),
-            std_dev_adjustment: pos!(0.05),
+            base_volatility: pos_or_panic!(0.2),
+            std_dev_adjustment: pos_or_panic!(0.05),
         });
         let trend = Some(PriceTrend {
             drift_rate: 0.1,
@@ -439,7 +440,7 @@ mod tests_probability_analysis {
         assert!(result.is_ok());
         let prob = result.unwrap();
         assert!(prob > Positive::ZERO);
-        assert!(prob <= pos!(1.0));
+        assert!(prob <= Positive::ONE);
     }
 
     #[test]
@@ -450,7 +451,7 @@ mod tests_probability_analysis {
         assert!(result.is_ok());
         let prob = result.unwrap();
         assert!(prob > Positive::ZERO);
-        assert!(prob <= pos!(1.0));
+        assert!(prob <= Positive::ONE);
     }
 
     #[test]
@@ -462,15 +463,15 @@ mod tests_probability_analysis {
         let (max_profit_prob, max_loss_prob) = result.unwrap();
         assert!(max_profit_prob >= Positive::ZERO);
         assert!(max_loss_prob >= Positive::ZERO);
-        assert!(max_profit_prob + max_loss_prob <= pos!(1.0));
+        assert!(max_profit_prob + max_loss_prob <= Positive::ONE);
     }
 
     #[test]
     fn test_extreme_probabilities_with_adjustments() {
         let strategy = test_strategy();
         let vol_adj = Some(VolatilityAdjustment {
-            base_volatility: pos!(0.2),
-            std_dev_adjustment: pos!(0.05),
+            base_volatility: pos_or_panic!(0.2),
+            std_dev_adjustment: pos_or_panic!(0.05),
         });
         let trend = Some(PriceTrend {
             drift_rate: 0.1,
@@ -483,15 +484,15 @@ mod tests_probability_analysis {
         let (max_profit_prob, max_loss_prob) = result.unwrap();
         assert!(max_profit_prob >= Positive::ZERO);
         assert!(max_loss_prob >= Positive::ZERO);
-        assert!(max_profit_prob + max_loss_prob <= pos!(1.0));
+        assert!(max_profit_prob + max_loss_prob <= Positive::ONE);
     }
 
     #[test]
     fn test_expected_value_with_volatility() {
         let strategy = test_strategy();
         let vol_adj = Some(VolatilityAdjustment {
-            base_volatility: pos!(0.3),
-            std_dev_adjustment: pos!(0.05),
+            base_volatility: pos_or_panic!(0.3),
+            std_dev_adjustment: pos_or_panic!(0.05),
         });
 
         let result = strategy.expected_value(vol_adj, None);
@@ -510,20 +511,20 @@ mod tests_expected_value {
     fn create_test_strategy() -> BullCallSpread {
         BullCallSpread::new(
             "GOLD".to_string(),
-            pos!(2505.8), // underlying_price
-            pos!(2460.0), // long_strike_itm
-            pos!(2515.0), // short_strike
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(0.2),      // implied_volatility
-            dec!(0.05),     // risk_free_rate
-            Positive::ZERO, // dividend_yield
-            pos!(1.0),      // quantity
-            pos!(27.26),    // premium_long
-            pos!(5.33),     // premium_short
-            pos!(0.58),     // open_fee_long
-            pos!(0.58),     // close_fee_long
-            pos!(0.55),     // close_fee_short
-            pos!(0.54),     // open_fee_short
+            pos_or_panic!(2505.8), // underlying_price
+            pos_or_panic!(2460.0), // long_strike_itm
+            pos_or_panic!(2515.0), // short_strike
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.2),   // implied_volatility
+            dec!(0.05),           // risk_free_rate
+            Positive::ZERO,       // dividend_yield
+            Positive::ONE,        // quantity
+            pos_or_panic!(27.26), // premium_long
+            pos_or_panic!(5.33),  // premium_short
+            pos_or_panic!(0.58),  // open_fee_long
+            pos_or_panic!(0.58),  // close_fee_long
+            pos_or_panic!(0.55),  // close_fee_short
+            pos_or_panic!(0.54),  // open_fee_short
         )
     }
 
@@ -544,8 +545,8 @@ mod tests_expected_value {
     fn test_expected_value_with_volatility() {
         let strategy = create_test_strategy();
         let vol_adj = Some(VolatilityAdjustment {
-            base_volatility: pos!(0.25),
-            std_dev_adjustment: pos!(0.1),
+            base_volatility: pos_or_panic!(0.25),
+            std_dev_adjustment: pos_or_panic!(0.1),
         });
 
         let result = strategy.expected_value(vol_adj, None);
@@ -570,8 +571,8 @@ mod tests_expected_value {
     fn test_expected_value_with_both_adjustments() {
         let strategy = create_test_strategy();
         let vol_adj = Some(VolatilityAdjustment {
-            base_volatility: pos!(0.25),
-            std_dev_adjustment: pos!(0.1),
+            base_volatility: pos_or_panic!(0.25),
+            std_dev_adjustment: pos_or_panic!(0.1),
         });
         let trend = Some(PriceTrend {
             drift_rate: 0.1,
@@ -587,8 +588,8 @@ mod tests_expected_value {
     fn test_expected_value_with_high_volatility() {
         let strategy = create_test_strategy();
         let vol_adj = Some(VolatilityAdjustment {
-            base_volatility: pos!(1.0),
-            std_dev_adjustment: pos!(0.5),
+            base_volatility: Positive::ONE,
+            std_dev_adjustment: pos_or_panic!(0.5),
         });
 
         let result = strategy.expected_value(vol_adj, None);
@@ -624,7 +625,7 @@ mod tests_expected_value {
         let strategy = create_test_strategy();
         // Use a very small but positive volatility value
         let vol_adj = Some(VolatilityAdjustment {
-            base_volatility: pos!(0.0001), // Very small but non-zero volatility
+            base_volatility: pos_or_panic!(0.0001), // Very small but non-zero volatility
             std_dev_adjustment: Positive::ZERO,
         });
 

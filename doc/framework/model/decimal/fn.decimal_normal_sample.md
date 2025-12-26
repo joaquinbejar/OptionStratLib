@@ -36,7 +36,7 @@ A `Positive` value sampled from a standard normal distribution.
 ::: example-wrap
 ``` {.rust .rust-example-rendered}
 use optionstratlib::model::decimal::decimal_normal_sample;
-use optionstratlib::Positive;
+use positive::Positive;
 let normal = decimal_normal_sample();
 ```
 :::

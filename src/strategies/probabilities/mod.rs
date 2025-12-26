@@ -1,4 +1,5 @@
 /******************************************************************************
+use positive::pos_or_panic;
    Author: Joaquín Béjar García
    Email: jb@taunais.com
    Date: 30/11/24
@@ -14,7 +15,7 @@
 //! ### Strategy Probability Analysis
 //!
 //! ```rust
-//! use optionstratlib::Positive;
+//! use positive::Positive;
 //!
 //! pub struct StrategyProbabilityAnalysis {
 //!     pub probability_of_profit: Positive,
@@ -29,7 +30,7 @@
 //! ### Probability Analysis Trait
 //!
 //! ```rust
-//! use optionstratlib::Positive;
+//! use positive::Positive;
 //! use optionstratlib::pricing::Profit;
 //! use optionstratlib::strategies::Strategies;
 //! use optionstratlib::error::ProbabilityError;
@@ -60,26 +61,26 @@
 //! use tracing::info;
 //! use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
 //! use optionstratlib::strategies::probabilities::{ProbabilityAnalysis, VolatilityAdjustment, PriceTrend, StrategyProbabilityAnalysis};
-//! use optionstratlib::{ExpirationDate, Positive};
-//! use optionstratlib::pos;
+//! use optionstratlib::ExpirationDate;use positive::Positive;
+//! use positive::pos_or_panic;
 //! use optionstratlib::strategies::bear_call_spread::BearCallSpread;
 //!
 //! let strategy = BearCallSpread::new(
 //!         "SP500".to_string(),
-//!         pos!(5781.88),   // underlying_price
-//!         pos!(5750.0),   // long_strike_itm
-//!         pos!(5820.0),   // short_strike
-//!         ExpirationDate::Days(pos!(2.0)),
-//!         pos!(0.18),   // implied_volatility
+//!         pos_or_panic!(5781.88),   // underlying_price
+//!         pos_or_panic!(5750.0),   // long_strike_itm
+//!         pos_or_panic!(5820.0),   // short_strike
+//!         ExpirationDate::Days(Positive::TWO),
+//!         pos_or_panic!(0.18),   // implied_volatility
 //!         dec!(0.05),   // risk_free_rate
 //!         Positive::ZERO,   // dividend_yield
-//!         pos!(2.0),   // long quantity
-//!         pos!(85.04),   // premium_long
-//!         pos!(29.85),   // premium_short
-//!         pos!(0.78),   // open_fee_long
-//!         pos!(0.78),   // open_fee_long
-//!         pos!(0.73),   // close_fee_long
-//!         pos!(0.73),   // close_fee_short
+//!         Positive::TWO,   // long quantity
+//!         pos_or_panic!(85.04),   // premium_long
+//!         pos_or_panic!(29.85),   // premium_short
+//!         pos_or_panic!(0.78),   // open_fee_long
+//!         pos_or_panic!(0.78),   // open_fee_long
+//!         pos_or_panic!(0.73),   // close_fee_long
+//!         pos_or_panic!(0.73),   // close_fee_short
 //!     );
 //! let analysis = strategy.analyze_probabilities(None, None);
 //!
@@ -92,31 +93,31 @@
 //! use rust_decimal_macros::dec;
 //! use optionstratlib::ExpirationDate;
 //! use optionstratlib::strategies::probabilities::{ProbabilityAnalysis, VolatilityAdjustment};
-//! use optionstratlib::Positive;
-//! use optionstratlib::pos;
+//! use positive::Positive;
+//! use positive::pos_or_panic;
 //! use optionstratlib::strategies::bear_call_spread::BearCallSpread;
 //!
 //! let strategy = BearCallSpread::new(
 //!         "SP500".to_string(),
-//!         pos!(5781.88),   // underlying_price
-//!         pos!(5750.0),   // long_strike_itm
-//!         pos!(5820.0),   // short_strike
-//!         ExpirationDate::Days(pos!(2.0)),
-//!         pos!(0.18),   // implied_volatility
+//!         pos_or_panic!(5781.88),   // underlying_price
+//!         pos_or_panic!(5750.0),   // long_strike_itm
+//!         pos_or_panic!(5820.0),   // short_strike
+//!         ExpirationDate::Days(Positive::TWO),
+//!         pos_or_panic!(0.18),   // implied_volatility
 //!         dec!(0.05),   // risk_free_rate
 //!         Positive::ZERO,   // dividend_yield
-//!         pos!(2.0),   // long quantity
-//!         pos!(85.04),   // premium_long
-//!         pos!(29.85),   // premium_short
-//!         pos!(0.78),   // open_fee_long
-//!         pos!(0.78),   // open_fee_long
-//!         pos!(0.73),   // close_fee_long
-//!         pos!(0.73),   // close_fee_short
+//!         Positive::TWO,   // long quantity
+//!         pos_or_panic!(85.04),   // premium_long
+//!         pos_or_panic!(29.85),   // premium_short
+//!         pos_or_panic!(0.78),   // open_fee_long
+//!         pos_or_panic!(0.78),   // open_fee_long
+//!         pos_or_panic!(0.73),   // close_fee_long
+//!         pos_or_panic!(0.73),   // close_fee_short
 //!     );
 //!
 //! let vol_adj = Some(VolatilityAdjustment {
-//!     base_volatility: pos!(0.20),   // 20% base volatility
-//!     std_dev_adjustment: pos!(0.10),   // 10% adjustment
+//!     base_volatility: pos_or_panic!(0.20),   // 20% base volatility
+//!     std_dev_adjustment: pos_or_panic!(0.10),   // 10% adjustment
 //! });
 //!
 //! let analysis = strategy.analyze_probabilities(vol_adj, None);
@@ -127,26 +128,26 @@
 //! ```rust
 //! use rust_decimal_macros::dec;
 //! use optionstratlib::ExpirationDate;
-//! use optionstratlib::Positive;
-//! use optionstratlib::pos;
+//! use positive::Positive;
+//! use positive::pos_or_panic;
 //! use optionstratlib::strategies::bear_call_spread::BearCallSpread;
 //! use optionstratlib::strategies::probabilities::{PriceTrend, ProbabilityAnalysis};
 //! let strategy = BearCallSpread::new(
 //!         "SP500".to_string(),
-//!         pos!(5781.88),   // underlying_price
-//!         pos!(5750.0),   // long_strike_itm
-//!         pos!(5820.0),   // short_strike
-//!         ExpirationDate::Days(pos!(2.0)),
-//!         pos!(0.18),   // implied_volatility
+//!         pos_or_panic!(5781.88),   // underlying_price
+//!         pos_or_panic!(5750.0),   // long_strike_itm
+//!         pos_or_panic!(5820.0),   // short_strike
+//!         ExpirationDate::Days(Positive::TWO),
+//!         pos_or_panic!(0.18),   // implied_volatility
 //!         dec!(0.05),   // risk_free_rate
 //!         Positive::ZERO,   // dividend_yield
-//!         pos!(2.0),   // long quantity
-//!         pos!(85.04),   // premium_long
-//!         pos!(29.85),   // premium_short
-//!         pos!(0.78),   // open_fee_long
-//!         pos!(0.78),   // open_fee_long
-//!         pos!(0.73),   // close_fee_long
-//!         pos!(0.73),   // close_fee_short
+//!         Positive::TWO,   // long quantity
+//!         pos_or_panic!(85.04),   // premium_long
+//!         pos_or_panic!(29.85),   // premium_short
+//!         pos_or_panic!(0.78),   // open_fee_long
+//!         pos_or_panic!(0.78),   // open_fee_long
+//!         pos_or_panic!(0.73),   // close_fee_long
+//!         pos_or_panic!(0.73),   // close_fee_short
 //!     );
 //! let trend = Some(PriceTrend {
 //!     drift_rate: 0.05,   // 5% annual drift
@@ -162,16 +163,16 @@
 //! use tracing::info;
 //! use optionstratlib::strategies::probabilities::calculate_price_probability;
 //! use optionstratlib::ExpirationDate;
-//! use optionstratlib::Positive;
-//! use optionstratlib::pos;
+//! use positive::Positive;
+//! use positive::pos_or_panic;
 //!
 //! let (prob_below, prob_in_range, prob_above) = calculate_price_probability(
-//!     &pos!(100.0),   // current price
-//!     &pos!(95.0),   // lower bound
-//!     &pos!(105.0),   // upper bound
+//!     &Positive::HUNDRED,   // current price
+//!     &pos_or_panic!(95.0),   // lower bound
+//!     &pos_or_panic!(105.0),   // upper bound
 //!     None,   // volatility adjustment
 //!     None,   // trend
-//!     &ExpirationDate::Days(pos!(30.0)),
+//!     &ExpirationDate::Days(pos_or_panic!(30.0)),
 //!     None                 // risk-free rate
 //! ).unwrap();
 //! info!("Probabilities: {}, {}, {}", prob_below, prob_in_range, prob_above);

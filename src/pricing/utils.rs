@@ -4,7 +4,7 @@
    Date: 5/8/24
 ******************************************************************************/
 use crate::Options;
-use crate::Positive;
+
 use crate::error::decimal::DecimalError;
 use crate::greeks::{big_n, d2};
 use crate::model::types::Side;
@@ -13,6 +13,7 @@ use crate::pricing::constants::{CLAMP_MAX, CLAMP_MIN};
 use crate::pricing::payoff::{Payoff, PayoffInfo};
 use crate::utils::random_decimal;
 use num_traits::FromPrimitive;
+use positive::Positive;
 use rand::Rng;
 use rand_distr::{Distribution, Normal};
 use rust_decimal::{Decimal, MathematicalOps};
@@ -355,14 +356,16 @@ pub fn probability_keep_under_strike(
 #[cfg(test)]
 mod tests_simulate_returns {
     use super::*;
+    use positive::pos_or_panic;
+
+    use crate::assert_decimal_eq;
     use crate::model::decimal::DecimalStats;
-    use crate::{assert_decimal_eq, pos};
     use rust_decimal_macros::dec;
 
     #[test]
     fn test_simulate_returns() {
         let mean = dec!(0.05); // 5% annual return
-        let std_dev = pos!(0.2); // 20% annual volatility
+        let std_dev = pos_or_panic!(0.2); // 20% annual volatility
         let length = 252; // One year of daily returns
         let time_step = Decimal::from_f64(1.0 / 252.0).unwrap(); // Daily time step
 
@@ -386,8 +389,10 @@ mod tests_simulate_returns {
 #[cfg(test)]
 mod tests_simulate_returns_bis {
     use super::*;
+    use positive::pos_or_panic;
+
+    use crate::assert_decimal_eq;
     use crate::model::decimal::DecimalStats;
-    use crate::{assert_decimal_eq, pos};
 
     use rust_decimal_macros::dec;
 
@@ -396,7 +401,7 @@ mod tests_simulate_returns_bis {
         let length = 1000;
         let returns = simulate_returns(
             dec!(0.05),
-            pos!(0.2),
+            pos_or_panic!(0.2),
             length,
             Decimal::from_f64(1.0 / 252.0).unwrap(),
         )
@@ -408,7 +413,7 @@ mod tests_simulate_returns_bis {
     fn test_simulate_returns_zero_mean() {
         let returns = simulate_returns(
             dec!(0.0),
-            pos!(0.2),
+            pos_or_panic!(0.2),
             1000,
             Decimal::from_f64(1.0 / 252.0).unwrap(),
         )
@@ -433,7 +438,7 @@ mod tests_simulate_returns_bis {
     fn test_simulate_returns_single_value() {
         let returns = simulate_returns(
             dec!(0.05),
-            pos!(0.2),
+            pos_or_panic!(0.2),
             1,
             Decimal::from_f64(1.0 / 252.0).unwrap(),
         )
@@ -443,7 +448,7 @@ mod tests_simulate_returns_bis {
 
     #[test]
     fn test_simulate_returns_yearly_step() {
-        let returns = simulate_returns(dec!(0.05), pos!(0.2), 100, dec!(1.0)).unwrap();
+        let returns = simulate_returns(dec!(0.05), pos_or_panic!(0.2), 100, dec!(1.0)).unwrap();
         assert_eq!(returns.len(), 100);
         for r in returns {
             assert!(r > dec!(-1.0));
@@ -456,7 +461,7 @@ mod tests_simulate_returns_bis {
         assert!(
             simulate_returns(
                 dec!(0.05),
-                pos!(-0.2),
+                pos_or_panic!(-0.2),
                 100,
                 Decimal::from_f64(1.0 / 252.0).unwrap(),
             )
@@ -468,14 +473,16 @@ mod tests_simulate_returns_bis {
 #[cfg(test)]
 mod tests_utils {
     use super::*;
-    use crate::{assert_decimal_eq, pos};
+    use positive::pos_or_panic;
+
+    use crate::assert_decimal_eq;
     use rust_decimal_macros::dec;
 
     const EPSILON: Decimal = dec!(1e-6);
 
     #[test]
     fn test_calculate_up_factor() {
-        let volatility = pos!(0.09531018);
+        let volatility = pos_or_panic!(0.09531018);
         let dt = dec!(1.0);
         let up_factor = calculate_up_factor(volatility, dt).unwrap();
         let expected_up_factor = (volatility * dt.sqrt().unwrap()).exp();
@@ -487,7 +494,7 @@ mod tests_utils {
 
     #[test]
     fn test_calculate_up_factor_2() {
-        let volatility = pos!(0.17);
+        let volatility = pos_or_panic!(0.17);
         let dt = dec!(1.0);
         let up_factor = calculate_up_factor(volatility, dt).unwrap();
         let expected_up_factor = dec!(1.1853048504885680);
@@ -496,7 +503,7 @@ mod tests_utils {
 
     #[test]
     fn test_calculate_down_factor() {
-        let volatility = pos!(0.09531018);
+        let volatility = pos_or_panic!(0.09531018);
         let dt = dec!(1.0);
         let down_factor = calculate_down_factor(volatility, dt).unwrap();
         let expected_down_factor = (-dt.sqrt().unwrap() * volatility).exp();
@@ -508,7 +515,7 @@ mod tests_utils {
 
     #[test]
     fn test_calculate_down_factor_2() {
-        let volatility = pos!(0.17);
+        let volatility = pos_or_panic!(0.17);
         let dt = dec!(1.0);
         let up_factor = calculate_down_factor(volatility, dt).unwrap();
         let expected_up_factor = dec!(0.843664817188432427);
@@ -557,9 +564,11 @@ mod tests_utils {
 #[cfg(test)]
 mod tests_probability_keep_under_strike {
     use super::*;
+    use positive::{Positive, pos_or_panic, spos};
+
     use crate::constants::DAYS_IN_A_YEAR;
     use crate::model::types::{OptionStyle, OptionType};
-    use crate::{ExpirationDate, Positive, assert_decimal_eq, pos, spos};
+    use crate::{ExpirationDate, assert_decimal_eq};
     use rust_decimal_macros::dec;
     use tracing::info;
 
@@ -568,13 +577,13 @@ mod tests_probability_keep_under_strike {
         let option = Options {
             option_type: OptionType::European,
             side: Side::Long,
-            underlying_price: pos!(100.0),
-            strike_price: pos!(100.0),
+            underlying_price: Positive::HUNDRED,
+            strike_price: Positive::HUNDRED,
             risk_free_rate: Decimal::ZERO,
             option_style: OptionStyle::Call,
             dividend_yield: Positive::ZERO,
             expiration_date: ExpirationDate::Days(DAYS_IN_A_YEAR),
-            implied_volatility: pos!(0.001),
+            implied_volatility: pos_or_panic!(0.001),
             underlying_symbol: "".to_string(),
             quantity: Positive::ONE,
             exotic_params: None,
@@ -590,13 +599,13 @@ mod tests_probability_keep_under_strike {
         let option = Options {
             option_type: OptionType::European,
             side: Side::Long,
-            underlying_price: pos!(100.0),
-            strike_price: pos!(110.0),
+            underlying_price: Positive::HUNDRED,
+            strike_price: pos_or_panic!(110.0),
             risk_free_rate: dec!(0.05),
             option_style: OptionStyle::Call,
             dividend_yield: Positive::ZERO,
             expiration_date: ExpirationDate::Days(DAYS_IN_A_YEAR),
-            implied_volatility: pos!(0.2),
+            implied_volatility: pos_or_panic!(0.2),
             underlying_symbol: "".to_string(),
             quantity: Positive::ZERO,
             exotic_params: None,
@@ -615,8 +624,8 @@ mod tests_probability_keep_under_strike {
         let option = Options {
             option_type: OptionType::European,
             side: Side::Long,
-            underlying_price: pos!(100.0),
-            strike_price: pos!(100.0),
+            underlying_price: Positive::HUNDRED,
+            strike_price: Positive::HUNDRED,
             risk_free_rate: dec!(0.05),
             option_style: OptionStyle::Call,
             dividend_yield: Positive::ZERO,
@@ -635,13 +644,13 @@ mod tests_probability_keep_under_strike {
         let option = Options {
             option_type: OptionType::European,
             side: Side::Long,
-            underlying_price: pos!(100.0),
-            strike_price: pos!(110.0),
+            underlying_price: Positive::HUNDRED,
+            strike_price: pos_or_panic!(110.0),
             risk_free_rate: dec!(0.05),
             option_style: OptionStyle::Call,
             dividend_yield: Positive::ZERO,
             expiration_date: ExpirationDate::Days(DAYS_IN_A_YEAR),
-            implied_volatility: pos!(5.0), // Alta volatilidad
+            implied_volatility: pos_or_panic!(5.0), // Alta volatilidad
             underlying_symbol: "".to_string(),
             quantity: Positive::ZERO,
             exotic_params: None,
@@ -659,13 +668,13 @@ mod tests_probability_keep_under_strike {
         let option = Options {
             option_type: OptionType::European,
             side: Side::Long,
-            underlying_price: pos!(100.0),
-            strike_price: pos!(110.0),
+            underlying_price: Positive::HUNDRED,
+            strike_price: pos_or_panic!(110.0),
             risk_free_rate: dec!(0.05),
             option_style: OptionStyle::Call,
             dividend_yield: Positive::ZERO,
-            expiration_date: ExpirationDate::Days(pos!(1.0)),
-            implied_volatility: pos!(0.2),
+            expiration_date: ExpirationDate::Days(Positive::ONE),
+            implied_volatility: pos_or_panic!(0.2),
             underlying_symbol: "".to_string(),
             quantity: Positive::ZERO,
             exotic_params: None,
@@ -683,15 +692,17 @@ mod tests_probability_keep_under_strike {
 #[cfg(test)]
 mod tests_calculate_up_down_factor {
     use super::*;
+    use positive::pos_or_panic;
+
+    use crate::assert_decimal_eq;
     use crate::model::decimal::ONE_DAY;
-    use crate::{assert_decimal_eq, pos};
     use rust_decimal_macros::dec;
 
     const EPSILON: Decimal = dec!(1e-6);
 
     #[test]
     fn test_factors_standard_case() {
-        let volatility = pos!(0.2); // 20% volatility
+        let volatility = pos_or_panic!(0.2); // 20% volatility
         let dt = ONE_DAY; // One trading day
 
         let up = calculate_up_factor(volatility, dt).unwrap();
@@ -719,7 +730,7 @@ mod tests_calculate_up_down_factor {
 
     #[test]
     fn test_factors_zero_dt() {
-        let volatility = pos!(0.2);
+        let volatility = pos_or_panic!(0.2);
         let dt = Decimal::ZERO;
 
         let up = calculate_up_factor(volatility, dt).unwrap();
@@ -746,7 +757,7 @@ mod tests_calculate_up_down_factor {
 
     #[test]
     fn test_factors_small_dt() {
-        let volatility = pos!(0.2);
+        let volatility = pos_or_panic!(0.2);
         let dt = ONE_DAY / dec!(24.0); // One hour (assuming 24-hour trading day)
 
         let up = calculate_up_factor(volatility, dt).unwrap();
@@ -760,7 +771,7 @@ mod tests_calculate_up_down_factor {
 
     #[test]
     fn test_factors_different_time_periods() {
-        let volatility = pos!(0.2);
+        let volatility = pos_or_panic!(0.2);
         let daily_dt = ONE_DAY;
         let weekly_dt = dec!(5.0) / dec!(252.0);
         let monthly_dt = dec!(21.0) / dec!(252.0);
@@ -776,7 +787,7 @@ mod tests_calculate_up_down_factor {
 
     #[test]
     fn test_factors_extreme_volatility() {
-        let volatility = pos!(5.0); // 500% volatility
+        let volatility = pos_or_panic!(5.0); // 500% volatility
         let dt = Decimal::ONE; // One year
 
         let up = calculate_up_factor(volatility, dt).unwrap();
@@ -790,7 +801,7 @@ mod tests_calculate_up_down_factor {
 
     #[test]
     fn test_factors_symmetry() {
-        let volatility = pos!(0.3);
+        let volatility = pos_or_panic!(0.3);
         let dt = dec!(1.0) / dec!(12.0); // One month
 
         let up = calculate_up_factor(volatility, dt).unwrap();
@@ -802,7 +813,7 @@ mod tests_calculate_up_down_factor {
 
     #[test]
     fn test_factors_consistency() {
-        let volatility = pos!(0.2);
+        let volatility = pos_or_panic!(0.2);
         let dt1 = ONE_DAY;
         let dt2 = dt1 / dec!(2.0);
 

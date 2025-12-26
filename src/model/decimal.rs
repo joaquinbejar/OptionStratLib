@@ -3,7 +3,6 @@
    Email: jb@taunais.com
    Date: 25/12/24
 ******************************************************************************/
-use crate::Positive;
 use crate::error::decimal::DecimalError;
 use crate::geometrics::HasX;
 use num_traits::{FromPrimitive, ToPrimitive};
@@ -11,7 +10,6 @@ use rand::distr::Distribution;
 use rand_distr::Normal;
 use rust_decimal::{Decimal, MathematicalOps};
 use rust_decimal_macros::dec;
-use std::ops::{Add, AddAssign, Div, Mul, MulAssign, Sub};
 
 /// Represents the daily interest rate factor used for financial calculations,
 /// approximately equivalent to 1/252 (a standard value for the number of trading days in a year).
@@ -103,25 +101,6 @@ pub trait DecimalStats {
     /// spread out over a wider range.
     fn std_dev(&self) -> Decimal;
 }
-impl From<Positive> for Decimal {
-    fn from(pos: Positive) -> Self {
-        pos.0
-    }
-}
-
-impl From<&Positive> for Decimal {
-    fn from(pos: &Positive) -> Self {
-        pos.0
-    }
-}
-
-impl Mul<Positive> for Decimal {
-    type Output = Decimal;
-
-    fn mul(self, rhs: Positive) -> Decimal {
-        self * rhs.0
-    }
-}
 
 impl DecimalStats for Vec<Decimal> {
     fn mean(&self) -> Decimal {
@@ -139,76 +118,6 @@ impl DecimalStats for Vec<Decimal> {
         let mean = self.mean();
         let variance: Decimal = self.iter().map(|x| (x - mean).powd(Decimal::TWO)).sum();
         (variance / Decimal::from(self.len() - 1)).sqrt().unwrap()
-    }
-}
-
-impl Div<Positive> for Decimal {
-    type Output = Decimal;
-
-    fn div(self, rhs: Positive) -> Decimal {
-        self / rhs.0
-    }
-}
-
-impl Sub<Positive> for Decimal {
-    type Output = Decimal;
-
-    fn sub(self, rhs: Positive) -> Self::Output {
-        self - rhs.0
-    }
-}
-
-impl Sub<&Positive> for Decimal {
-    type Output = Decimal;
-
-    fn sub(self, rhs: &Positive) -> Self::Output {
-        self - rhs.0
-    }
-}
-
-impl Add<Positive> for Decimal {
-    type Output = Decimal;
-
-    fn add(self, rhs: Positive) -> Self::Output {
-        self + rhs.0
-    }
-}
-
-impl Add<&Positive> for Decimal {
-    type Output = Decimal;
-
-    fn add(self, rhs: &Positive) -> Decimal {
-        self + rhs.0
-    }
-}
-
-impl AddAssign<Positive> for Decimal {
-    fn add_assign(&mut self, rhs: Positive) {
-        *self += rhs.0;
-    }
-}
-
-impl AddAssign<&Positive> for Decimal {
-    fn add_assign(&mut self, rhs: &Positive) {
-        *self += rhs.0;
-    }
-}
-
-impl MulAssign<Positive> for Decimal {
-    fn mul_assign(&mut self, rhs: Positive) {
-        *self *= rhs.0;
-    }
-}
-
-impl MulAssign<&Positive> for Decimal {
-    fn mul_assign(&mut self, rhs: &Positive) {
-        *self *= rhs.0;
-    }
-}
-
-impl PartialEq<Positive> for Decimal {
-    fn eq(&self, other: &Positive) -> bool {
-        *self == other.0
     }
 }
 
@@ -302,7 +211,7 @@ pub fn f64_to_decimal(value: f64) -> Result<Decimal, DecimalError> {
 ///
 /// ```rust
 /// use optionstratlib::model::decimal::decimal_normal_sample;
-/// use optionstratlib::Positive;
+/// use positive::Positive;
 /// let normal = decimal_normal_sample();
 /// ```
 pub fn decimal_normal_sample() -> Decimal {

@@ -1,4 +1,5 @@
 /******************************************************************************
+use positive::pos_or_panic;
    Author: Joaquín Béjar García
    Email: jb@taunais.com
    Date: 24/12/25
@@ -40,7 +41,7 @@
 //! use optionstratlib::chains::chain::OptionChain;
 //! use optionstratlib::metrics::ImpliedVolatilityCurve;
 //!
-//! let chain = OptionChain::new("SPY", pos!(450.0), "2024-03-15".to_string(), None, None);
+//! let chain = OptionChain::new("SPY", pos_or_panic!(450.0), "2024-03-15".to_string(), None, None);
 //! let iv_curve = chain.iv_curve()?;
 //! ```
 //!
@@ -50,7 +51,7 @@
 //! use optionstratlib::chains::chain::OptionChain;
 //! use optionstratlib::metrics::RiskReversalCurve;
 //!
-//! let chain = OptionChain::new("SPY", pos!(450.0), "2024-03-15".to_string(), None, None);
+//! let chain = OptionChain::new("SPY", pos_or_panic!(450.0), "2024-03-15".to_string(), None, None);
 //! let rr_curve = chain.risk_reversal_curve()?;
 //! ```
 //!
@@ -61,7 +62,7 @@
 //! use optionstratlib::metrics::DollarGammaCurve;
 //! use optionstratlib::model::OptionStyle;
 //!
-//! let chain = OptionChain::new("SPY", pos!(450.0), "2024-03-15".to_string(), None, None);
+//! let chain = OptionChain::new("SPY", pos_or_panic!(450.0), "2024-03-15".to_string(), None, None);
 //! let dg_curve = chain.dollar_gamma_curve(&OptionStyle::Call)?;
 //! ```
 

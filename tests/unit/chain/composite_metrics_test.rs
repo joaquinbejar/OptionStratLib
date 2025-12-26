@@ -19,7 +19,7 @@ use optionstratlib::metrics::{
     VannaVolgaSurface,
 };
 use optionstratlib::model::ExpirationDate;
-use optionstratlib::{pos, spos};
+use positive::{Positive, pos_or_panic, spos};
 use rust_decimal_macros::dec;
 
 /// Creates a test option chain with proper IV values for testing
@@ -27,20 +27,20 @@ fn create_test_chain() -> OptionChain {
     let params = OptionChainBuildParams::new(
         "TEST".to_string(),
         None,
-        10,          // 10 strikes on each side
-        spos!(5.0),  // $5 strike intervals
-        dec!(-0.15), // Negative skew
-        dec!(0.08),  // Smile curvature
-        pos!(0.02),  // Spread
-        2,           // Decimal places
+        10,                  // 10 strikes on each side
+        spos!(5.0),          // $5 strike intervals
+        dec!(-0.15),         // Negative skew
+        dec!(0.08),          // Smile curvature
+        pos_or_panic!(0.02), // Spread
+        2,                   // Decimal places
         OptionDataPriceParams::new(
-            Some(Box::new(pos!(100.0))),            // Underlying price
-            Some(ExpirationDate::Days(pos!(30.0))), // 30 days to expiry
-            Some(dec!(0.05)),                       // Risk-free rate
-            spos!(0.01),                            // Dividend yield
+            Some(Box::new(Positive::HUNDRED)),               // Underlying price
+            Some(ExpirationDate::Days(pos_or_panic!(30.0))), // 30 days to expiry
+            Some(dec!(0.05)),                                // Risk-free rate
+            spos!(0.01),                                     // Dividend yield
             Some("TEST".to_string()),
         ),
-        pos!(0.20), // Base IV of 20%
+        pos_or_panic!(0.20), // Base IV of 20%
     );
 
     OptionChain::build_chain(&params)
@@ -48,7 +48,13 @@ fn create_test_chain() -> OptionChain {
 
 /// Creates an empty option chain for edge case testing
 fn create_empty_chain() -> OptionChain {
-    OptionChain::new("EMPTY", pos!(100.0), "2024-12-31".to_string(), None, None)
+    OptionChain::new(
+        "EMPTY",
+        Positive::HUNDRED,
+        "2024-12-31".to_string(),
+        None,
+        None,
+    )
 }
 
 // ============================================================================
@@ -61,8 +67,8 @@ mod vanna_volga_tests {
     #[test]
     fn test_vanna_volga_surface_basic() {
         let chain = create_test_chain();
-        let price_range = (pos!(80.0), pos!(120.0));
-        let vol_range = (pos!(0.10), pos!(0.40));
+        let price_range = (pos_or_panic!(80.0), pos_or_panic!(120.0));
+        let vol_range = (pos_or_panic!(0.10), pos_or_panic!(0.40));
 
         let result = chain.vanna_volga_surface(price_range, vol_range, 10, 10);
         assert!(result.is_ok());
@@ -75,8 +81,8 @@ mod vanna_volga_tests {
     #[test]
     fn test_vanna_volga_surface_single_point() {
         let chain = create_test_chain();
-        let price_range = (pos!(100.0), pos!(100.0));
-        let vol_range = (pos!(0.20), pos!(0.20));
+        let price_range = (Positive::HUNDRED, Positive::HUNDRED);
+        let vol_range = (pos_or_panic!(0.20), pos_or_panic!(0.20));
 
         let result = chain.vanna_volga_surface(price_range, vol_range, 0, 0);
         assert!(result.is_ok());
@@ -88,8 +94,8 @@ mod vanna_volga_tests {
     #[test]
     fn test_vanna_volga_surface_cost_at_atm() {
         let chain = create_test_chain();
-        let price_range = (pos!(100.0), pos!(100.0)); // ATM only
-        let vol_range = (pos!(0.20), pos!(0.20)); // ATM vol
+        let price_range = (Positive::HUNDRED, Positive::HUNDRED); // ATM only
+        let vol_range = (pos_or_panic!(0.20), pos_or_panic!(0.20)); // ATM vol
 
         let result = chain.vanna_volga_surface(price_range, vol_range, 0, 0);
         assert!(result.is_ok());
@@ -104,8 +110,8 @@ mod vanna_volga_tests {
     #[test]
     fn test_vanna_volga_surface_cost_increases_otm() {
         let chain = create_test_chain();
-        let price_range = (pos!(80.0), pos!(120.0));
-        let vol_range = (pos!(0.20), pos!(0.20)); // Fixed vol
+        let price_range = (pos_or_panic!(80.0), pos_or_panic!(120.0));
+        let vol_range = (pos_or_panic!(0.20), pos_or_panic!(0.20)); // Fixed vol
 
         let result = chain.vanna_volga_surface(price_range, vol_range, 10, 0);
         assert!(result.is_ok());
@@ -194,8 +200,8 @@ mod delta_gamma_surface_tests {
     #[test]
     fn test_delta_gamma_surface_basic() {
         let chain = create_test_chain();
-        let price_range = (pos!(80.0), pos!(120.0));
-        let days = vec![pos!(7.0), pos!(14.0), pos!(30.0)];
+        let price_range = (pos_or_panic!(80.0), pos_or_panic!(120.0));
+        let days = vec![pos_or_panic!(7.0), pos_or_panic!(14.0), pos_or_panic!(30.0)];
 
         let result = chain.delta_gamma_surface(price_range, days, 10);
         assert!(result.is_ok());
@@ -208,8 +214,8 @@ mod delta_gamma_surface_tests {
     #[test]
     fn test_delta_gamma_surface_single_day() {
         let chain = create_test_chain();
-        let price_range = (pos!(90.0), pos!(110.0));
-        let days = vec![pos!(30.0)];
+        let price_range = (pos_or_panic!(90.0), pos_or_panic!(110.0));
+        let days = vec![pos_or_panic!(30.0)];
 
         let result = chain.delta_gamma_surface(price_range, days, 5);
         assert!(result.is_ok());
@@ -222,7 +228,7 @@ mod delta_gamma_surface_tests {
     #[test]
     fn test_delta_gamma_surface_empty_days() {
         let chain = create_test_chain();
-        let price_range = (pos!(80.0), pos!(120.0));
+        let price_range = (pos_or_panic!(80.0), pos_or_panic!(120.0));
         let days: Vec<_> = vec![];
 
         let result = chain.delta_gamma_surface(price_range, days, 10);
@@ -232,8 +238,8 @@ mod delta_gamma_surface_tests {
     #[test]
     fn test_delta_gamma_surface_delta_range() {
         let chain = create_test_chain();
-        let price_range = (pos!(80.0), pos!(120.0));
-        let days = vec![pos!(30.0)];
+        let price_range = (pos_or_panic!(80.0), pos_or_panic!(120.0));
+        let days = vec![pos_or_panic!(30.0)];
 
         let surface = chain.delta_gamma_surface(price_range, days, 10).unwrap();
 
@@ -304,7 +310,7 @@ mod smile_dynamics_surface_tests {
     #[test]
     fn test_smile_dynamics_surface_basic() {
         let chain = create_test_chain();
-        let days = vec![pos!(7.0), pos!(14.0), pos!(30.0)];
+        let days = vec![pos_or_panic!(7.0), pos_or_panic!(14.0), pos_or_panic!(30.0)];
 
         let result = chain.smile_dynamics_surface(days);
         assert!(result.is_ok());
@@ -319,7 +325,7 @@ mod smile_dynamics_surface_tests {
     #[test]
     fn test_smile_dynamics_surface_single_day() {
         let chain = create_test_chain();
-        let days = vec![pos!(30.0)];
+        let days = vec![pos_or_panic!(30.0)];
 
         let result = chain.smile_dynamics_surface(days);
         assert!(result.is_ok());
@@ -341,7 +347,7 @@ mod smile_dynamics_surface_tests {
     #[test]
     fn test_smile_dynamics_surface_iv_positive() {
         let chain = create_test_chain();
-        let days = vec![pos!(7.0), pos!(30.0)];
+        let days = vec![pos_or_panic!(7.0), pos_or_panic!(30.0)];
 
         let surface = chain.smile_dynamics_surface(days).unwrap();
 
@@ -354,7 +360,7 @@ mod smile_dynamics_surface_tests {
     #[test]
     fn test_smile_dynamics_surface_skew_steepens() {
         let chain = create_test_chain();
-        let days = vec![pos!(7.0), pos!(30.0)];
+        let days = vec![pos_or_panic!(7.0), pos_or_panic!(30.0)];
 
         let surface = chain.smile_dynamics_surface(days).unwrap();
 
@@ -395,20 +401,20 @@ mod edge_case_tests {
 
         // Add a single option
         let option_data = OptionData::new(
-            pos!(100.0),
+            Positive::HUNDRED,
             spos!(5.0),
             spos!(5.5),
             spos!(4.5),
             spos!(5.0),
-            pos!(0.20),
+            pos_or_panic!(0.20),
             Some(dec!(0.5)),
             Some(dec!(-0.5)),
             Some(dec!(0.05)),
             spos!(1000.0),
             Some(5000),
             Some("TEST".to_string()),
-            Some(ExpirationDate::Days(pos!(30.0))),
-            Some(Box::new(pos!(100.0))),
+            Some(ExpirationDate::Days(pos_or_panic!(30.0))),
+            Some(Box::new(Positive::HUNDRED)),
             Some(dec!(0.05)),
             spos!(0.02),
             None,
@@ -422,8 +428,12 @@ mod edge_case_tests {
         assert_eq!(smile_result.unwrap().points.len(), 1);
 
         // Vanna-Volga surface should work
-        let vv_result =
-            chain.vanna_volga_surface((pos!(90.0), pos!(110.0)), (pos!(0.15), pos!(0.25)), 5, 5);
+        let vv_result = chain.vanna_volga_surface(
+            (pos_or_panic!(90.0), pos_or_panic!(110.0)),
+            (pos_or_panic!(0.15), pos_or_panic!(0.25)),
+            5,
+            5,
+        );
         assert!(vv_result.is_ok());
     }
 
@@ -432,8 +442,12 @@ mod edge_case_tests {
         let chain = create_test_chain();
 
         // Very wide price range
-        let result =
-            chain.vanna_volga_surface((pos!(10.0), pos!(1000.0)), (pos!(0.05), pos!(1.0)), 20, 20);
+        let result = chain.vanna_volga_surface(
+            (pos_or_panic!(10.0), pos_or_panic!(1000.0)),
+            (pos_or_panic!(0.05), Positive::ONE),
+            20,
+            20,
+        );
         assert!(result.is_ok());
 
         let surface = result.unwrap();
@@ -445,7 +459,7 @@ mod edge_case_tests {
         let chain = create_test_chain();
 
         // Very short expiration (1 day)
-        let days = vec![pos!(1.0)];
+        let days = vec![Positive::ONE];
         let result = chain.smile_dynamics_surface(days);
         assert!(result.is_ok());
     }
@@ -455,7 +469,7 @@ mod edge_case_tests {
         let chain = create_test_chain();
 
         // Very long expiration (365 days)
-        let days = vec![pos!(365.0)];
+        let days = vec![pos_or_panic!(365.0)];
         let result = chain.smile_dynamics_surface(days);
         assert!(result.is_ok());
     }

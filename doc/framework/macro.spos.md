@@ -42,7 +42,7 @@ positive number. The macro is useful for safely constructing optional
 
 ::: example-wrap
 ``` {.rust .rust-example-rendered}
-use optionstratlib::Positive;
+use positive::Positive;
 use optionstratlib::spos;
 
 // Example with a positive value

@@ -1,24 +1,25 @@
 use optionstratlib::prelude::*;
+use positive::pos_or_panic;
 
 fn main() -> Result<(), Error> {
     setup_logger();
-    let underlying_price = pos!(5781.88);
+    let underlying_price = pos_or_panic!(5781.88);
 
     let strategy = LongButterflySpread::new(
         "SP500".to_string(),
         underlying_price,
-        pos!(5710.0),
-        pos!(5820.0),
-        pos!(6100.0),
-        ExpirationDate::Days(pos!(2.0)),
-        pos!(0.18),
+        pos_or_panic!(5710.0),
+        pos_or_panic!(5820.0),
+        pos_or_panic!(6100.0),
+        ExpirationDate::Days(Positive::TWO),
+        pos_or_panic!(0.18),
         dec!(0.05),
         Positive::ZERO,
-        pos!(1.0),
-        pos!(49.65),
-        pos!(42.93),
         Positive::ONE,
-        pos!(4.0),
+        pos_or_panic!(49.65),
+        pos_or_panic!(42.93),
+        Positive::ONE,
+        pos_or_panic!(4.0),
         Positive::ZERO,
         Positive::ZERO,
         Positive::ZERO,

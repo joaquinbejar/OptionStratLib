@@ -2,8 +2,9 @@ use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, StrategyBasics, StrategyType, Validable,
 };
 use crate::error::strategies::BreakEvenErrorKind;
+use crate::test_strategy_traits;
 use crate::{
-    ExpirationDate, Options, Positive,
+    ExpirationDate, Options,
     chains::{StrategyLegs, chain::OptionChain, utils::OptionDataGroup},
     error::{
         GreeksError, OperationErrorKind, PricingError,
@@ -27,8 +28,8 @@ use crate::{
         utils::{FindOptimalSide, OptimizationCriteria},
     },
 };
-use crate::{spos, test_strategy_traits};
 use chrono::Utc;
+use positive::{Positive, spos};
 use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -720,7 +721,7 @@ impl Strategies for CallButterfly {
         };
 
         match (self.get_max_profit(), max_loss) {
-            (Ok(max_profit), Some(ml)) => Ok((max_profit / ml * 100.0).into()),
+            (Ok(max_profit), Some(ml)) => Ok(Decimal::from(max_profit / ml * 100.0)),
             _ => Ok(Decimal::ZERO),
         }
     }
@@ -1022,31 +1023,32 @@ test_strategy_traits!(CallButterfly, test_short_call_implementations);
 #[cfg(test)]
 mod tests_call_butterfly {
     use super::*;
-    use crate::pos;
+
     use approx::assert_relative_eq;
+    use positive::pos_or_panic;
     use rust_decimal_macros::dec;
 
     fn setup() -> CallButterfly {
         CallButterfly::new(
             "AAPL".to_string(),
-            pos!(150.0),
-            pos!(155.0),
-            pos!(160.0),
-            pos!(157.5),
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(0.2),
+            pos_or_panic!(150.0),
+            pos_or_panic!(155.0),
+            pos_or_panic!(160.0),
+            pos_or_panic!(157.5),
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.2),
             dec!(0.01),
-            pos!(0.02),
-            pos!(1.0),
-            pos!(45.0),
-            pos!(30.0),
-            pos!(20.5),
-            pos!(0.1),
-            pos!(0.1),
-            pos!(0.1),
-            pos!(0.1),
-            pos!(0.1),
-            pos!(0.1),
+            pos_or_panic!(0.02),
+            Positive::ONE,
+            pos_or_panic!(45.0),
+            pos_or_panic!(30.0),
+            pos_or_panic!(20.5),
+            pos_or_panic!(0.1),
+            pos_or_panic!(0.1),
+            pos_or_panic!(0.1),
+            pos_or_panic!(0.1),
+            pos_or_panic!(0.1),
+            pos_or_panic!(0.1),
         )
     }
 
@@ -1072,7 +1074,7 @@ mod tests_call_butterfly {
     fn test_calculate_profit_at() {
         let strategy = setup();
         let price = 172.0;
-        assert!(strategy.calculate_profit_at(&pos!(price)).unwrap() < Decimal::ZERO);
+        assert!(strategy.calculate_profit_at(&pos_or_panic!(price)).unwrap() < Decimal::ZERO);
     }
 
     #[test]
@@ -1105,30 +1107,31 @@ mod tests_call_butterfly {
 #[cfg(test)]
 mod tests_call_butterfly_validation {
     use super::*;
-    use crate::pos;
+    use positive::pos_or_panic;
+
     use rust_decimal_macros::dec;
 
     fn setup_basic_strategy() -> CallButterfly {
         CallButterfly::new(
             "AAPL".to_string(),
-            pos!(150.0),
-            pos!(145.0),
-            pos!(150.0),
-            pos!(155.0),
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(0.2),
+            pos_or_panic!(150.0),
+            pos_or_panic!(145.0),
+            pos_or_panic!(150.0),
+            pos_or_panic!(155.0),
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.2),
             dec!(0.01),
-            pos!(0.02),
-            pos!(1.0),
-            pos!(7.0),
-            pos!(5.0),
-            pos!(3.0),
-            pos!(4.0),
-            pos!(0.1),
-            pos!(0.1),
-            pos!(0.1),
-            pos!(0.1),
-            pos!(0.1),
+            pos_or_panic!(0.02),
+            Positive::ONE,
+            pos_or_panic!(7.0),
+            pos_or_panic!(5.0),
+            pos_or_panic!(3.0),
+            pos_or_panic!(4.0),
+            pos_or_panic!(0.1),
+            pos_or_panic!(0.1),
+            pos_or_panic!(0.1),
+            pos_or_panic!(0.1),
+            pos_or_panic!(0.1),
         )
     }
 
@@ -1149,43 +1152,45 @@ mod tests_call_butterfly_validation {
 #[cfg(test)]
 mod tests_call_butterfly_delta {
     use super::*;
+    use positive::{assert_pos_relative_eq, pos_or_panic};
+
+    use crate::assert_decimal_eq;
     use crate::model::types::OptionStyle;
     use crate::strategies::call_butterfly::CallButterfly;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
-    use crate::{assert_decimal_eq, assert_pos_relative_eq, pos};
     use rust_decimal_macros::dec;
 
     fn get_strategy(underlying_price: Positive) -> CallButterfly {
         CallButterfly::new(
             "SP500".to_string(),
-            underlying_price, // underlying_price
-            pos!(5750.0),     // long_strike_itm
-            pos!(5850.0),     // long_strike_otm
-            pos!(5800.0),     // short_strike
-            ExpirationDate::Days(pos!(2.0)),
-            pos!(0.18),     // implied_volatility
-            dec!(0.05),     // risk_free_rate
-            Positive::ZERO, // dividend_yield
-            pos!(1.0),      // long quantity
-            pos!(95.8),     // short_quantity
-            pos!(85.04),    // premium_long_itm
-            pos!(31.65),    // premium_long_otm
-            pos!(53.04),    // premium_short
-            pos!(0.78),     // open_fee_long
-            pos!(0.78),     // close_fee_long
-            pos!(0.73),     // close_fee_short
-            pos!(0.73),     // close_fee_short
-            pos!(0.73),     // close_fee_short
+            underlying_price,      // underlying_price
+            pos_or_panic!(5750.0), // long_strike_itm
+            pos_or_panic!(5850.0), // long_strike_otm
+            pos_or_panic!(5800.0), // short_strike
+            ExpirationDate::Days(Positive::TWO),
+            pos_or_panic!(0.18),  // implied_volatility
+            dec!(0.05),           // risk_free_rate
+            Positive::ZERO,       // dividend_yield
+            Positive::ONE,        // long quantity
+            pos_or_panic!(95.8),  // short_quantity
+            pos_or_panic!(85.04), // premium_long_itm
+            pos_or_panic!(31.65), // premium_long_otm
+            pos_or_panic!(53.04), // premium_short
+            pos_or_panic!(0.78),  // open_fee_long
+            pos_or_panic!(0.78),  // close_fee_long
+            pos_or_panic!(0.73),  // close_fee_short
+            pos_or_panic!(0.73),  // close_fee_short
+            pos_or_panic!(0.73),  // close_fee_short
         )
     }
 
     #[test]
     fn create_test_reducing_adjustments() {
-        let strategy = get_strategy(pos!(5901.88));
+        let strategy = get_strategy(pos_or_panic!(5901.88));
         let size = dec!(-0.687410);
-        let delta = pos!(0.7040502965074396);
-        let k = pos!(5750.0);
+        let delta = pos_or_panic!(0.7040502965074396);
+        let k = pos_or_panic!(5750.0);
         assert_decimal_eq!(
             strategy.delta_neutrality().unwrap().net_delta,
             size,
@@ -1222,12 +1227,12 @@ mod tests_call_butterfly_delta {
 
     #[test]
     fn create_test_increasing_adjustments() {
-        let strategy = get_strategy(pos!(5781.88));
+        let strategy = get_strategy(pos_or_panic!(5781.88));
         let size = dec!(0.055904);
-        let delta1 = pos!(0.0833378661861126);
-        let delta2 = pos!(0.2835618144021385);
-        let k1 = pos!(5750.0);
-        let k2 = pos!(5850.0);
+        let delta1 = pos_or_panic!(0.0833378661861126);
+        let delta2 = pos_or_panic!(0.2835618144021385);
+        let k1 = pos_or_panic!(5750.0);
+        let k2 = pos_or_panic!(5850.0);
         assert_decimal_eq!(
             strategy.delta_neutrality().unwrap().net_delta,
             size,
@@ -1278,7 +1283,7 @@ mod tests_call_butterfly_delta {
 
     #[test]
     fn create_test_no_adjustments() {
-        let strategy = get_strategy(pos!(5794.4));
+        let strategy = get_strategy(pos_or_panic!(5794.4));
 
         assert_decimal_eq!(
             strategy.delta_neutrality().unwrap().net_delta,
@@ -1294,43 +1299,45 @@ mod tests_call_butterfly_delta {
 #[cfg(test)]
 mod tests_call_butterfly_delta_size {
     use super::*;
+    use positive::{assert_pos_relative_eq, pos_or_panic};
+
+    use crate::assert_decimal_eq;
     use crate::model::types::OptionStyle;
     use crate::strategies::call_butterfly::CallButterfly;
     use crate::strategies::delta_neutral::DELTA_THRESHOLD;
     use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
-    use crate::{assert_decimal_eq, assert_pos_relative_eq, pos};
     use rust_decimal_macros::dec;
 
     fn get_strategy(underlying_price: Positive) -> CallButterfly {
         CallButterfly::new(
             "SP500".to_string(),
-            underlying_price, // underlying_price
-            pos!(5750.0),     // long_strike_itm
-            pos!(5850.0),     // long_strike_otm
-            pos!(5800.0),     // short_strike
-            ExpirationDate::Days(pos!(2.0)),
-            pos!(0.18),     // implied_volatility
-            dec!(0.05),     // risk_free_rate
-            Positive::ZERO, // dividend_yield
-            pos!(1.0),      // long quantity
-            pos!(97.8),     // short_quantity
-            pos!(85.04),    // premium_long_itm
-            pos!(31.65),    // premium_long_otm
-            pos!(53.04),    // premium_short
-            pos!(0.78),     // open_fee_long
-            pos!(0.78),     // close_fee_long
-            pos!(0.73),     // close_fee_short
-            pos!(0.73),     // close_fee_short
-            pos!(0.73),
+            underlying_price,      // underlying_price
+            pos_or_panic!(5750.0), // long_strike_itm
+            pos_or_panic!(5850.0), // long_strike_otm
+            pos_or_panic!(5800.0), // short_strike
+            ExpirationDate::Days(Positive::TWO),
+            pos_or_panic!(0.18),  // implied_volatility
+            dec!(0.05),           // risk_free_rate
+            Positive::ZERO,       // dividend_yield
+            Positive::ONE,        // long quantity
+            pos_or_panic!(97.8),  // short_quantity
+            pos_or_panic!(85.04), // premium_long_itm
+            pos_or_panic!(31.65), // premium_long_otm
+            pos_or_panic!(53.04), // premium_short
+            pos_or_panic!(0.78),  // open_fee_long
+            pos_or_panic!(0.78),  // close_fee_long
+            pos_or_panic!(0.73),  // close_fee_short
+            pos_or_panic!(0.73),  // close_fee_short
+            pos_or_panic!(0.73),
         )
     }
 
     #[test]
     fn create_test_reducing_adjustments() {
-        let strategy = get_strategy(pos!(5881.88));
+        let strategy = get_strategy(pos_or_panic!(5881.88));
         let size = dec!(-0.5699325);
-        let delta = pos!(0.5948524360242063);
-        let k = pos!(5750.0);
+        let delta = pos_or_panic!(0.5948524360242063);
+        let k = pos_or_panic!(5750.0);
         assert_decimal_eq!(
             strategy.delta_neutrality().unwrap().net_delta,
             size,
@@ -1367,12 +1374,12 @@ mod tests_call_butterfly_delta_size {
 
     #[test]
     fn create_test_increasing_adjustments() {
-        let strategy = get_strategy(pos!(5781.88));
+        let strategy = get_strategy(pos_or_panic!(5781.88));
         let size = dec!(0.05590);
-        let delta1 = pos!(0.0833378661861126);
-        let delta2 = pos!(0.2835618144021385);
-        let k1 = pos!(5750.0);
-        let k2 = pos!(5850.0);
+        let delta1 = pos_or_panic!(0.0833378661861126);
+        let delta2 = pos_or_panic!(0.2835618144021385);
+        let k1 = pos_or_panic!(5750.0);
+        let k2 = pos_or_panic!(5850.0);
         assert_decimal_eq!(
             strategy.delta_neutrality().unwrap().net_delta,
             size,
@@ -1424,7 +1431,7 @@ mod tests_call_butterfly_delta_size {
 
     #[test]
     fn create_test_no_adjustments() {
-        let strategy = get_strategy(pos!(5794.4));
+        let strategy = get_strategy(pos_or_panic!(5794.4));
 
         assert_decimal_eq!(
             strategy.delta_neutrality().unwrap().net_delta,
@@ -1440,22 +1447,29 @@ mod tests_call_butterfly_delta_size {
 #[cfg(test)]
 mod tests_call_butterfly_optimizable {
     use super::*;
-    use crate::pos;
+
     use approx::assert_relative_eq;
+    use positive::pos_or_panic;
     use rust_decimal_macros::dec;
 
     fn create_test_option_chain() -> OptionChain {
-        let mut chain = OptionChain::new("TEST", pos!(100.0), "2024-12-19".to_string(), None, None);
+        let mut chain = OptionChain::new(
+            "TEST",
+            Positive::HUNDRED,
+            "2024-12-19".to_string(),
+            None,
+            None,
+        );
 
         // Add options with different strikes
         chain.add_option(
-            pos!(95.0),      // strike
-            spos!(6.0),      // call_bid
-            spos!(6.2),      // call_ask
-            spos!(1.0),      // put_bid
-            spos!(1.2),      // put_ask
-            pos!(0.2),       // iv
-            Some(dec!(0.4)), // delta
+            pos_or_panic!(95.0), // strike
+            spos!(6.0),          // call_bid
+            spos!(6.2),          // call_ask
+            spos!(1.0),          // put_bid
+            spos!(1.2),          // put_ask
+            pos_or_panic!(0.2),  // iv
+            Some(dec!(0.4)),     // delta
             Some(dec!(0.2)),
             Some(dec!(0.2)),
             spos!(100.0), // volume
@@ -1464,12 +1478,12 @@ mod tests_call_butterfly_optimizable {
         );
 
         chain.add_option(
-            pos!(100.0),
+            Positive::HUNDRED,
             spos!(3.0),
             spos!(3.2),
             spos!(3.0),
             spos!(3.2),
-            pos!(0.2),
+            pos_or_panic!(0.2),
             Some(dec!(0.5)),
             Some(dec!(0.2)),
             Some(dec!(0.2)),
@@ -1479,12 +1493,12 @@ mod tests_call_butterfly_optimizable {
         );
 
         chain.add_option(
-            pos!(105.0),
+            pos_or_panic!(105.0),
             spos!(1.0),
             spos!(1.2),
             spos!(6.0),
             spos!(6.2),
-            pos!(0.2),
+            pos_or_panic!(0.2),
             Some(dec!(0.6)),
             Some(dec!(0.2)),
             Some(dec!(0.2)),
@@ -1499,24 +1513,24 @@ mod tests_call_butterfly_optimizable {
     fn setup_test_butterfly() -> CallButterfly {
         CallButterfly::new(
             "TEST".to_string(),
-            pos!(100.0),
-            pos!(95.0),
-            pos!(100.0),
-            pos!(105.0),
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(0.2),
+            Positive::HUNDRED,
+            pos_or_panic!(95.0),
+            Positive::HUNDRED,
+            pos_or_panic!(105.0),
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.2),
             dec!(0.01),
-            pos!(0.02),
-            pos!(1.0),
-            pos!(6.2), // long call ask
-            pos!(3.0), // short call bid low
-            pos!(1.0), // short call bid high
-            pos!(0.1),
-            pos!(0.1),
-            pos!(0.1),
-            pos!(0.1),
-            pos!(0.1),
-            pos!(0.1),
+            pos_or_panic!(0.02),
+            Positive::ONE,
+            pos_or_panic!(6.2), // long call ask
+            pos_or_panic!(3.0), // short call bid low
+            Positive::ONE,      // short call bid high
+            pos_or_panic!(0.1),
+            pos_or_panic!(0.1),
+            pos_or_panic!(0.1),
+            pos_or_panic!(0.1),
+            pos_or_panic!(0.1),
+            pos_or_panic!(0.1),
         )
     }
 
@@ -1603,8 +1617,13 @@ mod tests_call_butterfly_optimizable {
     #[test]
     fn test_filter_combinations_empty_chain() {
         let butterfly = setup_test_butterfly();
-        let empty_chain =
-            OptionChain::new("TEST", pos!(100.0), "2024-12-19".to_string(), None, None);
+        let empty_chain = OptionChain::new(
+            "TEST",
+            Positive::HUNDRED,
+            "2024-12-19".to_string(),
+            None,
+            None,
+        );
 
         let combinations: Vec<_> = butterfly
             .filter_combinations(&empty_chain, FindOptimalSide::All)
@@ -1620,33 +1639,34 @@ mod tests_call_butterfly_optimizable {
 #[cfg(test)]
 mod tests_call_butterfly_probability {
     use super::*;
+
     use crate::strategies::probabilities::utils::PriceTrend;
-    use crate::{assert_pos_relative_eq, pos};
     use num_traits::ToPrimitive;
+    use positive::{assert_pos_relative_eq, pos_or_panic};
     use rust_decimal_macros::dec;
 
     /// Creates a test Call Butterfly with standard parameters based on SP500
     fn create_test_butterfly() -> CallButterfly {
         CallButterfly::new(
             "SP500".to_string(),
-            pos!(5781.88), // underlying_price
-            pos!(5750.0),  // long_call_strike
-            pos!(5800.0),  // short_call_low_strike
-            pos!(5850.0),  // short_call_high_strike
-            ExpirationDate::Days(pos!(2.0)),
-            pos!(0.18),     // implied_volatility
-            dec!(0.05),     // risk_free_rate
-            Positive::ZERO, // dividend_yield
-            pos!(3.0),      // long quantity
-            pos!(85.04),    // premium_long_itm
-            pos!(53.04),    // premium_long_otm
-            pos!(28.85),    // premium_short
-            pos!(0.78),     // premium_short
-            pos!(0.78),     // open_fee_long
-            pos!(0.78),     // close_fee_long
-            pos!(0.73),     // close_fee_short
-            pos!(0.73),     // close_fee_short
-            pos!(0.72),     // open_fee_short
+            pos_or_panic!(5781.88), // underlying_price
+            pos_or_panic!(5750.0),  // long_call_strike
+            pos_or_panic!(5800.0),  // short_call_low_strike
+            pos_or_panic!(5850.0),  // short_call_high_strike
+            ExpirationDate::Days(Positive::TWO),
+            pos_or_panic!(0.18),  // implied_volatility
+            dec!(0.05),           // risk_free_rate
+            Positive::ZERO,       // dividend_yield
+            pos_or_panic!(3.0),   // long quantity
+            pos_or_panic!(85.04), // premium_long_itm
+            pos_or_panic!(53.04), // premium_long_otm
+            pos_or_panic!(28.85), // premium_short
+            pos_or_panic!(0.78),  // premium_short
+            pos_or_panic!(0.78),  // open_fee_long
+            pos_or_panic!(0.78),  // close_fee_long
+            pos_or_panic!(0.73),  // close_fee_short
+            pos_or_panic!(0.73),  // close_fee_short
+            pos_or_panic!(0.72),  // open_fee_short
         )
     }
 
@@ -1654,7 +1674,7 @@ mod tests_call_butterfly_probability {
     fn test_get_expiration() {
         let butterfly = create_test_butterfly();
         let expiration = *butterfly.get_expiration().values().next().unwrap();
-        assert_eq!(expiration, &ExpirationDate::Days(pos!(2.0)));
+        assert_eq!(expiration, &ExpirationDate::Days(Positive::TWO));
     }
 
     #[test]
@@ -1687,7 +1707,7 @@ mod tests_call_butterfly_probability {
         assert!(range.lower_bound.is_some());
         assert!(range.upper_bound.is_some());
         assert!(range.probability > Positive::ZERO);
-        assert!(range.probability <= pos!(1.0));
+        assert!(range.probability <= Positive::ONE);
 
         // Verify bounds are within strike prices
         assert!(range.lower_bound.unwrap() >= butterfly.long_call.option.strike_price);
@@ -1728,7 +1748,11 @@ mod tests_call_butterfly_probability {
 
         let total_loss_prob: Positive = loss_ranges.iter().map(|r| r.probability).sum();
 
-        assert_pos_relative_eq!(total_profit_prob + total_loss_prob, pos!(1.0), pos!(0.0001));
+        assert_pos_relative_eq!(
+            total_profit_prob + total_loss_prob,
+            Positive::ONE,
+            pos_or_panic!(0.0001)
+        );
     }
 
     #[test]
@@ -1749,15 +1773,15 @@ mod tests_call_butterfly_probability {
     fn test_with_volatility_adjustment() {
         let butterfly = create_test_butterfly();
         let vol_adj = Some(VolatilityAdjustment {
-            base_volatility: pos!(0.25),
-            std_dev_adjustment: pos!(0.05),
+            base_volatility: pos_or_panic!(0.25),
+            std_dev_adjustment: pos_or_panic!(0.05),
         });
 
         let prob = butterfly.probability_of_profit(vol_adj, None);
         assert!(prob.is_ok());
         let probability = prob.unwrap();
         assert!(probability > Positive::ZERO);
-        assert!(probability <= pos!(1.0));
+        assert!(probability <= Positive::ONE);
     }
 
     #[test]
@@ -1772,7 +1796,7 @@ mod tests_call_butterfly_probability {
         assert!(prob.is_ok());
         let probability = prob.unwrap();
         assert!(probability > Positive::ZERO);
-        assert!(probability <= pos!(1.0));
+        assert!(probability <= Positive::ONE);
     }
 
     #[test]
@@ -1789,25 +1813,25 @@ mod tests_call_butterfly_probability {
     #[test]
     fn test_near_expiration() {
         let mut butterfly = create_test_butterfly();
-        butterfly.long_call.option.expiration_date = ExpirationDate::Days(pos!(0.5));
-        butterfly.short_call_low.option.expiration_date = ExpirationDate::Days(pos!(0.5));
-        butterfly.short_call_high.option.expiration_date = ExpirationDate::Days(pos!(0.5));
+        butterfly.long_call.option.expiration_date = ExpirationDate::Days(pos_or_panic!(0.5));
+        butterfly.short_call_low.option.expiration_date = ExpirationDate::Days(pos_or_panic!(0.5));
+        butterfly.short_call_high.option.expiration_date = ExpirationDate::Days(pos_or_panic!(0.5));
 
         let prob = butterfly.probability_of_profit(None, None).unwrap();
         // Near expiration probabilities should be more extreme
-        assert!(prob < pos!(0.3) || prob > pos!(0.7));
+        assert!(prob < pos_or_panic!(0.3) || prob > pos_or_panic!(0.7));
     }
 
     #[test]
     fn test_high_volatility_scenario() {
         let mut butterfly = create_test_butterfly();
-        butterfly.long_call.option.implied_volatility = pos!(0.5);
-        butterfly.short_call_low.option.implied_volatility = pos!(0.5);
-        butterfly.short_call_high.option.implied_volatility = pos!(0.5);
+        butterfly.long_call.option.implied_volatility = pos_or_panic!(0.5);
+        butterfly.short_call_low.option.implied_volatility = pos_or_panic!(0.5);
+        butterfly.short_call_high.option.implied_volatility = pos_or_panic!(0.5);
 
         let analysis = butterfly.analyze_probabilities(None, None).unwrap();
         // Higher volatility should increase potential profit/loss ranges
-        assert!(analysis.expected_value > pos!(10.0));
+        assert!(analysis.expected_value > pos_or_panic!(10.0));
     }
 
     #[test]
@@ -1820,39 +1844,41 @@ mod tests_call_butterfly_probability {
 
         assert!(max_profit_prob >= Positive::ZERO);
         assert!(max_loss_prob >= Positive::ZERO);
-        assert!(max_profit_prob + max_loss_prob <= pos!(1.0));
+        assert!(max_profit_prob + max_loss_prob <= Positive::ONE);
     }
 }
 
 #[cfg(test)]
 mod tests_call_butterfly_position_management {
     use super::*;
+    use positive::pos_or_panic;
+
     use crate::error::position::PositionValidationErrorKind;
     use crate::model::types::{OptionStyle, Side};
-    use crate::pos;
+
     use rust_decimal_macros::dec;
 
     fn create_test_call_butterfly() -> CallButterfly {
         CallButterfly::new(
             "SP500".to_string(),
-            pos!(5781.88), // underlying_price
-            pos!(5750.0),  // long_call_strike
-            pos!(5800.0),  // short_call_low_strike
-            pos!(5850.0),  // short_call_high_strike
-            ExpirationDate::Days(pos!(2.0)),
-            pos!(0.18),     // implied_volatility
-            dec!(0.05),     // risk_free_rate
-            Positive::ZERO, // dividend_yield
-            pos!(3.0),      // long quantity
-            pos!(85.04),    // premium_long_itm
-            pos!(53.04),    // premium_long_otm
-            pos!(28.85),    // premium_short
-            pos!(0.78),     // premium_short
-            pos!(0.78),     // open_fee_long
-            pos!(0.78),     // close_fee_long
-            pos!(0.73),     // close_fee_short
-            pos!(0.73),     // close_fee_short
-            pos!(0.72),     // open_fee_short
+            pos_or_panic!(5781.88), // underlying_price
+            pos_or_panic!(5750.0),  // long_call_strike
+            pos_or_panic!(5800.0),  // short_call_low_strike
+            pos_or_panic!(5850.0),  // short_call_high_strike
+            ExpirationDate::Days(Positive::TWO),
+            pos_or_panic!(0.18),  // implied_volatility
+            dec!(0.05),           // risk_free_rate
+            Positive::ZERO,       // dividend_yield
+            pos_or_panic!(3.0),   // long quantity
+            pos_or_panic!(85.04), // premium_long_itm
+            pos_or_panic!(53.04), // premium_long_otm
+            pos_or_panic!(28.85), // premium_short
+            pos_or_panic!(0.78),  // premium_short
+            pos_or_panic!(0.78),  // open_fee_long
+            pos_or_panic!(0.78),  // close_fee_long
+            pos_or_panic!(0.73),  // close_fee_short
+            pos_or_panic!(0.73),  // close_fee_short
+            pos_or_panic!(0.72),  // open_fee_short
         )
     }
 
@@ -1862,27 +1888,27 @@ mod tests_call_butterfly_position_management {
 
         // Test getting short call position
         let call_position =
-            call_butterfly.get_position(&OptionStyle::Call, &Side::Short, &pos!(5800.0));
+            call_butterfly.get_position(&OptionStyle::Call, &Side::Short, &pos_or_panic!(5800.0));
         assert!(call_position.is_ok());
         let positions = call_position.unwrap();
         assert_eq!(positions.len(), 1);
-        assert_eq!(positions[0].option.strike_price, pos!(5800.0));
+        assert_eq!(positions[0].option.strike_price, pos_or_panic!(5800.0));
         assert_eq!(positions[0].option.option_style, OptionStyle::Call);
         assert_eq!(positions[0].option.side, Side::Short);
 
         // Test getting short put position
         let put_position =
-            call_butterfly.get_position(&OptionStyle::Call, &Side::Short, &pos!(5850.0));
+            call_butterfly.get_position(&OptionStyle::Call, &Side::Short, &pos_or_panic!(5850.0));
         assert!(put_position.is_ok());
         let positions = put_position.unwrap();
         assert_eq!(positions.len(), 1);
-        assert_eq!(positions[0].option.strike_price, pos!(5850.0));
+        assert_eq!(positions[0].option.strike_price, pos_or_panic!(5850.0));
         assert_eq!(positions[0].option.option_style, OptionStyle::Call);
         assert_eq!(positions[0].option.side, Side::Short);
 
         // Test getting non-existent position
         let invalid_position =
-            call_butterfly.get_position(&OptionStyle::Call, &Side::Short, &pos!(2715.0));
+            call_butterfly.get_position(&OptionStyle::Call, &Side::Short, &pos_or_panic!(2715.0));
         assert!(invalid_position.is_err());
         match invalid_position {
             Err(PositionError::ValidationError(
@@ -1906,17 +1932,17 @@ mod tests_call_butterfly_position_management {
 
         // Test getting short call position
         let call_position =
-            call_butterfly.get_position(&OptionStyle::Call, &Side::Long, &pos!(5750.0));
+            call_butterfly.get_position(&OptionStyle::Call, &Side::Long, &pos_or_panic!(5750.0));
         assert!(call_position.is_ok());
         let positions = call_position.unwrap();
         assert_eq!(positions.len(), 1);
-        assert_eq!(positions[0].option.strike_price, pos!(5750.0));
+        assert_eq!(positions[0].option.strike_price, pos_or_panic!(5750.0));
         assert_eq!(positions[0].option.option_style, OptionStyle::Call);
         assert_eq!(positions[0].option.side, Side::Long);
 
         // Test getting non-existent position
         let invalid_position =
-            call_butterfly.get_position(&OptionStyle::Call, &Side::Long, &pos!(2715.0));
+            call_butterfly.get_position(&OptionStyle::Call, &Side::Long, &pos_or_panic!(2715.0));
         assert!(invalid_position.is_err());
         match invalid_position {
             Err(PositionError::ValidationError(
@@ -1940,21 +1966,24 @@ mod tests_call_butterfly_position_management {
 
         // Modify short call position
         let mut modified_call = call_butterfly.short_call_low.clone();
-        modified_call.option.quantity = pos!(2.0);
+        modified_call.option.quantity = Positive::TWO;
         let result = call_butterfly.modify_position(&modified_call);
         assert!(result.is_ok());
-        assert_eq!(call_butterfly.short_call_low.option.quantity, pos!(2.0));
+        assert_eq!(call_butterfly.short_call_low.option.quantity, Positive::TWO);
 
         // Modify short put position
         let mut modified_put = call_butterfly.short_call_high.clone();
-        modified_put.option.quantity = pos!(2.0);
+        modified_put.option.quantity = Positive::TWO;
         let result = call_butterfly.modify_position(&modified_put);
         assert!(result.is_ok());
-        assert_eq!(call_butterfly.short_call_high.option.quantity, pos!(2.0));
+        assert_eq!(
+            call_butterfly.short_call_high.option.quantity,
+            Positive::TWO
+        );
 
         // Test modifying with invalid position
         let mut invalid_position = call_butterfly.short_call_high.clone();
-        invalid_position.option.strike_price = pos!(95.0);
+        invalid_position.option.strike_price = pos_or_panic!(95.0);
         let result = call_butterfly.modify_position(&invalid_position);
         assert!(result.is_err());
         match result {
@@ -1977,14 +2006,14 @@ mod tests_call_butterfly_position_management {
 
         // Modify long call position
         let mut modified_call = call_butterfly.long_call.clone();
-        modified_call.option.quantity = pos!(2.0);
+        modified_call.option.quantity = Positive::TWO;
         let result = call_butterfly.modify_position(&modified_call);
         assert!(result.is_ok());
-        assert_eq!(call_butterfly.long_call.option.quantity, pos!(2.0));
+        assert_eq!(call_butterfly.long_call.option.quantity, Positive::TWO);
 
         // Test modifying with invalid position
         let mut invalid_position = call_butterfly.long_call.clone();
-        invalid_position.option.strike_price = pos!(95.0);
+        invalid_position.option.strike_price = pos_or_panic!(95.0);
         let result = call_butterfly.modify_position(&invalid_position);
         assert!(result.is_err());
         match result {
@@ -2005,32 +2034,34 @@ mod tests_call_butterfly_position_management {
 #[cfg(test)]
 mod tests_adjust_option_position {
     use super::*;
+    use positive::pos_or_panic;
+
     use crate::model::types::{OptionStyle, Side};
-    use crate::pos;
+
     use rust_decimal_macros::dec;
 
     // Helper function to create a test strategy
     fn create_test_strategy() -> CallButterfly {
         CallButterfly::new(
             "SP500".to_string(),
-            pos!(5781.88), // underlying_price
-            pos!(5750.0),  // long_call_strike
-            pos!(5800.0),  // short_call_low_strike
-            pos!(5850.0),  // short_call_high_strike
-            ExpirationDate::Days(pos!(2.0)),
-            pos!(0.18),     // implied_volatility
-            dec!(0.05),     // risk_free_rate
-            Positive::ZERO, // dividend_yield
-            pos!(3.0),      // long quantity
-            pos!(85.04),    // premium_long_itm
-            pos!(53.04),    // premium_long_otm
-            pos!(28.85),    // premium_short
-            pos!(0.78),     // premium_short
-            pos!(0.78),     // open_fee_long
-            pos!(0.78),     // close_fee_long
-            pos!(0.73),     // close_fee_short
-            pos!(0.73),     // close_fee_short
-            pos!(0.72),     // open_fee_short
+            pos_or_panic!(5781.88), // underlying_price
+            pos_or_panic!(5750.0),  // long_call_strike
+            pos_or_panic!(5800.0),  // short_call_low_strike
+            pos_or_panic!(5850.0),  // short_call_high_strike
+            ExpirationDate::Days(Positive::TWO),
+            pos_or_panic!(0.18),  // implied_volatility
+            dec!(0.05),           // risk_free_rate
+            Positive::ZERO,       // dividend_yield
+            pos_or_panic!(3.0),   // long quantity
+            pos_or_panic!(85.04), // premium_long_itm
+            pos_or_panic!(53.04), // premium_long_otm
+            pos_or_panic!(28.85), // premium_short
+            pos_or_panic!(0.78),  // premium_short
+            pos_or_panic!(0.78),  // open_fee_long
+            pos_or_panic!(0.78),  // close_fee_long
+            pos_or_panic!(0.73),  // close_fee_short
+            pos_or_panic!(0.73),  // close_fee_short
+            pos_or_panic!(0.72),  // open_fee_short
         )
     }
 
@@ -2038,11 +2069,11 @@ mod tests_adjust_option_position {
     fn test_adjust_existing_call_position() {
         let mut strategy = create_test_strategy();
         let initial_quantity = strategy.short_call_low.option.quantity;
-        let adjustment = pos!(1.0);
+        let adjustment = Positive::ONE;
 
         let result = strategy.adjust_option_position(
             adjustment.to_dec(),
-            &pos!(5800.0),
+            &pos_or_panic!(5800.0),
             &OptionStyle::Call,
             &Side::Short,
         );
@@ -2058,11 +2089,11 @@ mod tests_adjust_option_position {
     fn test_adjust_existing_long_call_position() {
         let mut strategy = create_test_strategy();
         let initial_quantity = strategy.long_call.option.quantity;
-        let adjustment = pos!(1.0);
+        let adjustment = Positive::ONE;
 
         let result = strategy.adjust_option_position(
             adjustment.to_dec(),
-            &pos!(5750.0),
+            &pos_or_panic!(5750.0),
             &OptionStyle::Call,
             &Side::Long,
         );
@@ -2081,7 +2112,7 @@ mod tests_adjust_option_position {
         // Try to adjust a non-existent long call position
         let result = strategy.adjust_option_position(
             Decimal::ONE,
-            &pos!(110.0),
+            &pos_or_panic!(110.0),
             &OptionStyle::Call,
             &Side::Long,
         );
@@ -2099,7 +2130,7 @@ mod tests_adjust_option_position {
         // Try to adjust position with wrong strike price
         let result = strategy.adjust_option_position(
             Decimal::ONE,
-            &pos!(100.0), // Invalid strike price
+            &Positive::HUNDRED, // Invalid strike price
             &OptionStyle::Call,
             &Side::Short,
         );
@@ -2114,7 +2145,7 @@ mod tests_adjust_option_position {
 
         let result = strategy.adjust_option_position(
             Decimal::ZERO,
-            &pos!(5750.0),
+            &pos_or_panic!(5750.0),
             &OptionStyle::Call,
             &Side::Long,
         );
@@ -2127,8 +2158,9 @@ mod tests_adjust_option_position {
 #[cfg(test)]
 mod tests_strategy_constructor {
     use super::*;
+    use positive::pos_or_panic;
+
     use crate::model::utils::create_sample_position;
-    use crate::pos;
 
     #[test]
     fn test_get_strategy_valid() {
@@ -2136,26 +2168,26 @@ mod tests_strategy_constructor {
             create_sample_position(
                 OptionStyle::Call,
                 Side::Short,
-                pos!(90.0),
-                pos!(1.0),
-                pos!(95.0),
-                pos!(0.2),
+                pos_or_panic!(90.0),
+                Positive::ONE,
+                pos_or_panic!(95.0),
+                pos_or_panic!(0.2),
             ),
             create_sample_position(
                 OptionStyle::Call,
                 Side::Long,
-                pos!(90.0),
-                pos!(1.0),
-                pos!(100.0),
-                pos!(0.2),
+                pos_or_panic!(90.0),
+                Positive::ONE,
+                Positive::HUNDRED,
+                pos_or_panic!(0.2),
             ),
             create_sample_position(
                 OptionStyle::Call,
                 Side::Short,
-                pos!(90.0),
-                pos!(1.0),
-                pos!(105.0),
-                pos!(0.2),
+                pos_or_panic!(90.0),
+                Positive::ONE,
+                pos_or_panic!(105.0),
+                pos_or_panic!(0.2),
             ),
         ];
 
@@ -2169,18 +2201,18 @@ mod tests_strategy_constructor {
             create_sample_position(
                 OptionStyle::Call,
                 Side::Short,
-                pos!(95.0),
-                pos!(1.0),
-                pos!(100.0),
-                pos!(0.2),
+                pos_or_panic!(95.0),
+                Positive::ONE,
+                Positive::HUNDRED,
+                pos_or_panic!(0.2),
             ),
             create_sample_position(
                 OptionStyle::Call,
                 Side::Long,
-                pos!(100.0),
-                pos!(1.0),
-                pos!(105.0),
-                pos!(0.2),
+                Positive::HUNDRED,
+                Positive::ONE,
+                pos_or_panic!(105.0),
+                pos_or_panic!(0.2),
             ),
         ];
 
@@ -2198,26 +2230,26 @@ mod tests_strategy_constructor {
             create_sample_position(
                 OptionStyle::Put,
                 Side::Short,
-                pos!(95.0),
-                pos!(1.0),
-                pos!(100.0),
-                pos!(0.2),
+                pos_or_panic!(95.0),
+                Positive::ONE,
+                Positive::HUNDRED,
+                pos_or_panic!(0.2),
             ),
             create_sample_position(
                 OptionStyle::Call,
                 Side::Long,
-                pos!(100.0),
-                pos!(1.0),
-                pos!(105.0),
-                pos!(0.2),
+                Positive::HUNDRED,
+                Positive::ONE,
+                pos_or_panic!(105.0),
+                pos_or_panic!(0.2),
             ),
             create_sample_position(
                 OptionStyle::Call,
                 Side::Short,
-                pos!(105.0),
-                pos!(1.0),
-                pos!(110.0),
-                pos!(0.2),
+                pos_or_panic!(105.0),
+                Positive::ONE,
+                pos_or_panic!(110.0),
+                pos_or_panic!(0.2),
             ),
         ];
 
@@ -2235,26 +2267,26 @@ mod tests_strategy_constructor {
             create_sample_position(
                 OptionStyle::Call,
                 Side::Long,
-                pos!(95.0),
-                pos!(1.0),
-                pos!(100.0),
-                pos!(0.2),
+                pos_or_panic!(95.0),
+                Positive::ONE,
+                Positive::HUNDRED,
+                pos_or_panic!(0.2),
             ),
             create_sample_position(
                 OptionStyle::Call,
                 Side::Long,
-                pos!(100.0),
-                pos!(1.0),
-                pos!(105.0),
-                pos!(0.2),
+                Positive::HUNDRED,
+                Positive::ONE,
+                pos_or_panic!(105.0),
+                pos_or_panic!(0.2),
             ),
             create_sample_position(
                 OptionStyle::Call,
                 Side::Short,
-                pos!(105.0),
-                pos!(1.0),
-                pos!(110.0),
-                pos!(0.2),
+                pos_or_panic!(105.0),
+                Positive::ONE,
+                pos_or_panic!(110.0),
+                pos_or_panic!(0.2),
             ),
         ];
 
@@ -2273,31 +2305,31 @@ mod tests_strategy_constructor {
             create_sample_position(
                 OptionStyle::Call,
                 Side::Short,
-                pos!(95.0),
-                pos!(1.0),
-                pos!(100.0),
-                pos!(0.2),
+                pos_or_panic!(95.0),
+                Positive::ONE,
+                Positive::HUNDRED,
+                pos_or_panic!(0.2),
             ),
             create_sample_position(
                 OptionStyle::Call,
                 Side::Long,
-                pos!(100.0),
-                pos!(1.0),
-                pos!(105.0),
-                pos!(0.2),
+                Positive::HUNDRED,
+                Positive::ONE,
+                pos_or_panic!(105.0),
+                pos_or_panic!(0.2),
             ),
             create_sample_position(
                 OptionStyle::Call,
                 Side::Short,
-                pos!(105.0),
-                pos!(1.0),
-                pos!(110.0),
-                pos!(0.2),
+                pos_or_panic!(105.0),
+                Positive::ONE,
+                pos_or_panic!(110.0),
+                pos_or_panic!(0.2),
             ),
         ];
 
         // Modify expiration date for second option
-        options[1].option.expiration_date = ExpirationDate::Days(pos!(60.0));
+        options[1].option.expiration_date = ExpirationDate::Days(pos_or_panic!(60.0));
 
         let result = CallButterfly::get_strategy(&options);
         assert!(matches!(
@@ -2311,31 +2343,33 @@ mod tests_strategy_constructor {
 #[cfg(test)]
 mod tests_call_butterfly_pnl {
     use super::*;
+    use positive::{assert_pos_relative_eq, pos_or_panic};
+
+    use crate::assert_decimal_eq;
     use crate::model::utils::create_sample_position;
-    use crate::{assert_decimal_eq, assert_pos_relative_eq, pos};
     use rust_decimal_macros::dec;
 
     fn setup_test_strategy() -> CallButterfly {
         CallButterfly::new(
             "AAPL".to_string(),
-            pos!(150.0),
-            pos!(145.0),
-            pos!(150.0),
-            pos!(155.0),
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(0.2),
+            pos_or_panic!(150.0),
+            pos_or_panic!(145.0),
+            pos_or_panic!(150.0),
+            pos_or_panic!(155.0),
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.2),
             dec!(0.01),
-            pos!(0.02),
-            pos!(1.0),
-            pos!(7.0),
-            pos!(5.0),
-            pos!(3.0),
-            pos!(4.0),
-            pos!(0.1),
-            pos!(0.1),
-            pos!(0.1),
-            pos!(0.1),
-            pos!(0.1),
+            pos_or_panic!(0.02),
+            Positive::ONE,
+            pos_or_panic!(7.0),
+            pos_or_panic!(5.0),
+            pos_or_panic!(3.0),
+            pos_or_panic!(4.0),
+            pos_or_panic!(0.1),
+            pos_or_panic!(0.1),
+            pos_or_panic!(0.1),
+            pos_or_panic!(0.1),
+            pos_or_panic!(0.1),
         )
     }
 
@@ -2344,30 +2378,30 @@ mod tests_call_butterfly_pnl {
         let short_call_low = create_sample_position(
             OptionStyle::Call,
             Side::Short,
-            pos!(100.0), // Underlying price
-            pos!(1.0),   // Quantity
-            pos!(95.0),  // Lower short strike
-            pos!(0.2),   // Implied volatility
+            Positive::HUNDRED,   // Underlying price
+            Positive::ONE,       // Quantity
+            pos_or_panic!(95.0), // Lower short strike
+            pos_or_panic!(0.2),  // Implied volatility
         );
 
         // Create long call at middle strike
         let long_call = create_sample_position(
             OptionStyle::Call,
             Side::Long,
-            pos!(100.0), // Same underlying price
-            pos!(1.0),   // Quantity
-            pos!(100.0), // Middle (long) strike price
-            pos!(0.2),   // Implied volatility
+            Positive::HUNDRED,  // Same underlying price
+            Positive::ONE,      // Quantity
+            Positive::HUNDRED,  // Middle (long) strike price
+            pos_or_panic!(0.2), // Implied volatility
         );
 
         // Create short call at higher strike
         let short_call_high = create_sample_position(
             OptionStyle::Call,
             Side::Short,
-            pos!(100.0), // Same underlying price
-            pos!(1.0),   // Quantity
-            pos!(105.0), // Higher short strike
-            pos!(0.2),   // Implied volatility
+            Positive::HUNDRED,    // Same underlying price
+            Positive::ONE,        // Quantity
+            pos_or_panic!(105.0), // Higher short strike
+            pos_or_panic!(0.2),   // Implied volatility
         );
 
         CallButterfly::get_strategy(&[short_call_low, long_call, short_call_high])
@@ -2376,14 +2410,14 @@ mod tests_call_butterfly_pnl {
     #[test]
     fn test_profit_below_lower_strike() {
         let strategy = setup_test_strategy();
-        let profit = strategy.calculate_profit_at(&pos!(140.0)).unwrap();
+        let profit = strategy.calculate_profit_at(&pos_or_panic!(140.0)).unwrap();
         assert!(profit <= Decimal::ZERO);
     }
 
     #[test]
     fn test_profit_above_upper_strike() {
         let strategy = setup_test_strategy();
-        let profit = strategy.calculate_profit_at(&pos!(160.0)).unwrap();
+        let profit = strategy.calculate_profit_at(&pos_or_panic!(160.0)).unwrap();
         assert!(profit <= Decimal::ZERO);
     }
 
@@ -2397,9 +2431,9 @@ mod tests_call_butterfly_pnl {
     #[test]
     fn test_calculate_pnl_below_strikes() {
         let butterfly = create_test_call_butterfly().unwrap();
-        let market_price = pos!(90.0); // Below all strikes
-        let expiration_date = ExpirationDate::Days(pos!(20.0));
-        let implied_volatility = pos!(0.2);
+        let market_price = pos_or_panic!(90.0); // Below all strikes
+        let expiration_date = ExpirationDate::Days(pos_or_panic!(20.0));
+        let implied_volatility = pos_or_panic!(0.2);
 
         let result = butterfly.calculate_pnl(&market_price, expiration_date, &implied_volatility);
         assert!(result.is_ok());
@@ -2410,17 +2444,17 @@ mod tests_call_butterfly_pnl {
         // All options OTM, should be close to max profit
         // Initial income from short calls
         // Initial costs: Premium for long call + total fees
-        assert_pos_relative_eq!(pnl.initial_income, pos!(10.0), pos!(1e-6)); // Premiums from two short calls
-        assert_pos_relative_eq!(pnl.initial_costs, pos!(8.0), pos!(1e-6)); // Premium for long call + fees
+        assert_pos_relative_eq!(pnl.initial_income, pos_or_panic!(10.0), pos_or_panic!(1e-6)); // Premiums from two short calls
+        assert_pos_relative_eq!(pnl.initial_costs, pos_or_panic!(8.0), pos_or_panic!(1e-6)); // Premium for long call + fees
         assert!(pnl.unrealized.unwrap() > dec!(-2.0)); // Should be near max profit
     }
 
     #[test]
     fn test_calculate_pnl_between_strikes() {
         let butterfly = create_test_call_butterfly().unwrap();
-        let market_price = pos!(100.0); // At middle strike
-        let expiration_date = ExpirationDate::Days(pos!(20.0));
-        let implied_volatility = pos!(0.1);
+        let market_price = Positive::HUNDRED; // At middle strike
+        let expiration_date = ExpirationDate::Days(pos_or_panic!(20.0));
+        let implied_volatility = pos_or_panic!(0.1);
 
         let result = butterfly.calculate_pnl(&market_price, expiration_date, &implied_volatility);
         assert!(result.is_ok());
@@ -2436,9 +2470,9 @@ mod tests_call_butterfly_pnl {
     #[test]
     fn test_calculate_pnl_above_strikes() {
         let butterfly = create_test_call_butterfly().unwrap();
-        let market_price = pos!(110.0); // Above all strikes
-        let expiration_date = ExpirationDate::Days(pos!(20.0));
-        let implied_volatility = pos!(0.2);
+        let market_price = pos_or_panic!(110.0); // Above all strikes
+        let expiration_date = ExpirationDate::Days(pos_or_panic!(20.0));
+        let implied_volatility = pos_or_panic!(0.2);
 
         let result = butterfly.calculate_pnl(&market_price, expiration_date, &implied_volatility);
         assert!(result.is_ok());
@@ -2454,7 +2488,7 @@ mod tests_call_butterfly_pnl {
     #[test]
     fn test_calculate_pnl_at_expiration_max_profit() {
         let butterfly = create_test_call_butterfly().unwrap();
-        let underlying_price = pos!(95.0); // Below lower short strike
+        let underlying_price = pos_or_panic!(95.0); // Below lower short strike
 
         let result = butterfly.calculate_pnl_at_expiration(&underlying_price);
         assert!(result.is_ok());
@@ -2463,14 +2497,14 @@ mod tests_call_butterfly_pnl {
         assert!(pnl.realized.is_some());
 
         assert_decimal_eq!(pnl.realized.unwrap(), dec!(2.0), dec!(1e-6));
-        assert_eq!(pnl.initial_income, pos!(10.0)); // Premiums from short calls
-        assert_eq!(pnl.initial_costs, pos!(8.0)); // Premium for long call + fees
+        assert_eq!(pnl.initial_income, pos_or_panic!(10.0)); // Premiums from short calls
+        assert_eq!(pnl.initial_costs, pos_or_panic!(8.0)); // Premium for long call + fees
     }
 
     #[test]
     fn test_calculate_pnl_at_expiration_max_loss() {
         let butterfly = create_test_call_butterfly().unwrap();
-        let underlying_price = pos!(110.0); // Above highest short strike
+        let underlying_price = pos_or_panic!(110.0); // Above highest short strike
 
         let result = butterfly.calculate_pnl_at_expiration(&underlying_price);
         assert!(result.is_ok());
@@ -2481,14 +2515,14 @@ mod tests_call_butterfly_pnl {
         // Max loss at expiration when price is above highest strike
         // Loss = width of spread - net premium received
         assert_decimal_eq!(pnl.realized.unwrap(), dec!(-8.0), dec!(1e-6));
-        assert_eq!(pnl.initial_income, pos!(10.0)); // Premiums from short calls
-        assert_eq!(pnl.initial_costs, pos!(8.0)); // Premium for long call + fees
+        assert_eq!(pnl.initial_income, pos_or_panic!(10.0)); // Premiums from short calls
+        assert_eq!(pnl.initial_costs, pos_or_panic!(8.0)); // Premium for long call + fees
     }
 
     #[test]
     fn test_calculate_pnl_at_expiration_between_strikes() {
         let butterfly = create_test_call_butterfly().unwrap();
-        let underlying_price = pos!(100.0); // At middle strike
+        let underlying_price = Positive::HUNDRED; // At middle strike
 
         let result = butterfly.calculate_pnl_at_expiration(&underlying_price);
         assert!(result.is_ok());
@@ -2503,9 +2537,9 @@ mod tests_call_butterfly_pnl {
     #[test]
     fn test_calculate_pnl_with_higher_volatility() {
         let butterfly = create_test_call_butterfly().unwrap();
-        let market_price = pos!(100.0);
-        let expiration_date = ExpirationDate::Days(pos!(20.0));
-        let implied_volatility = pos!(0.4); // Higher volatility
+        let market_price = Positive::HUNDRED;
+        let expiration_date = ExpirationDate::Days(pos_or_panic!(20.0));
+        let implied_volatility = pos_or_panic!(0.4); // Higher volatility
 
         let result = butterfly.calculate_pnl(&market_price, expiration_date, &implied_volatility);
         assert!(result.is_ok());

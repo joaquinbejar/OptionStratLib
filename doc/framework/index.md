@@ -555,7 +555,7 @@ cargo bench
 ::: example-wrap
 ``` {.rust .rust-example-rendered}
 use optionstratlib::{Options, OptionStyle, OptionType, Side, ExpirationDate};
-use optionstratlib::pos;
+use positive::pos_or_panic;
 use rust_decimal_macros::dec;
 use optionstratlib::greeks::Greeks;
 
@@ -593,7 +593,7 @@ tracing::info!("Greeks - Delta: {:.4}, Gamma: {:.4}, Theta: {:.4}, Vega: {:.4}",
 
 ::: example-wrap
 ``` {.rust .rust-example-rendered}
-use optionstratlib::{Positive, ExpirationDate, pos};
+use positive::{Positive, ExpirationDate, pos};
 use optionstratlib::strategies::Strategies;
 use optionstratlib::strategies::bull_call_spread::BullCallSpread;
 use optionstratlib::strategies::base::{BreakEvenable, BasicAble};
@@ -1005,7 +1005,7 @@ community
     visualizations, such as profit/loss graphs based on an underlying
     price range.
 
-[pos](macro.pos.html "macro optionstratlib::pos"){.macro}
+[pos](macro.pos.html "macro optionstratlib::pos_or_panic"){.macro}
 :   Macro for creating a new `Positive` value with simplified syntax.
 
 [spos](macro.spos.html "macro optionstratlib::spos"){.macro}

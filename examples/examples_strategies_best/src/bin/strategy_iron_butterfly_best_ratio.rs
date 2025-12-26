@@ -1,4 +1,5 @@
 use optionstratlib::prelude::*;
+use positive::pos_or_panic;
 
 fn main() -> Result<(), Error> {
     setup_logger();
@@ -12,11 +13,11 @@ fn main() -> Result<(), Error> {
         Positive::ZERO,   // short_strike
         Positive::ZERO,   // long_call_strike
         Positive::ZERO,   // long_put_strike
-        ExpirationDate::Days(pos!(5.0)),
+        ExpirationDate::Days(pos_or_panic!(5.0)),
         Positive::ZERO, // implied_volatility
         Decimal::ZERO,  // risk_free_rate
         Positive::ZERO, // dividend_yield
-        pos!(1.0),      // quantity
+        Positive::ONE,  // quantity
         Positive::ZERO, // premium_short_call
         Positive::ZERO, // premium_short_put
         Positive::ZERO, // premium_long_call

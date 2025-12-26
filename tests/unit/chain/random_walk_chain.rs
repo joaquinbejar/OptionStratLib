@@ -3,13 +3,14 @@
    Email: jb@taunais.com
    Date: 27/3/25
 ******************************************************************************/
+use optionstratlib::ExpirationDate;
 use optionstratlib::chains::OptionChain;
 use optionstratlib::simulation::randomwalk::RandomWalk;
 use optionstratlib::simulation::steps::{Step, Xstep, Ystep};
 use optionstratlib::simulation::{WalkParams, WalkType, WalkTypeAble};
 use optionstratlib::utils::time::{convert_time_frame, get_x_days_formatted};
 use optionstratlib::utils::{Len, TimeFrame};
-use optionstratlib::{ExpirationDate, Positive, pos, spos};
+use positive::{Positive, pos_or_panic, spos};
 use rust_decimal_macros::dec;
 use std::error::Error;
 use tracing::info;
@@ -80,12 +81,12 @@ fn test_random_walk_chain() -> Result<(), Box<dyn Error>> {
         OptionChain::load_from_json("examples/Chains/SP500-18-oct-2024-5781.88.json")?;
     initial_chain.update_expiration_date(get_x_days_formatted(2));
 
-    assert_eq!(initial_chain.underlying_price, pos!(5781.88));
+    assert_eq!(initial_chain.underlying_price, pos_or_panic!(5781.88));
     assert_eq!(initial_chain.symbol, "SP500");
 
-    let std_dev = pos!(20.0);
+    let std_dev = pos_or_panic!(20.0);
     let walker = Box::new(MockWalker::new());
-    let days = pos!(30.0);
+    let days = pos_or_panic!(30.0);
 
     let walk_params = WalkParams {
         size: n_steps,
@@ -94,7 +95,7 @@ fn test_random_walk_chain() -> Result<(), Box<dyn Error>> {
             y: Ystep::new(0, initial_chain),
         },
         walk_type: WalkType::GeometricBrownian {
-            dt: convert_time_frame(pos!(1.0) / days, &TimeFrame::Minute, &TimeFrame::Day),
+            dt: convert_time_frame(Positive::ONE / days, &TimeFrame::Minute, &TimeFrame::Day),
             drift: dec!(0.0),
             volatility: std_dev,
         },

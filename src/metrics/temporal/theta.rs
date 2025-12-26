@@ -50,11 +50,11 @@
 //! - **Y-axis**: Days to expiration
 //! - **Z-axis**: Theta value
 
-use crate::Positive;
 use crate::curves::Curve;
 use crate::error::CurveError;
 use crate::error::SurfaceError;
 use crate::surfaces::Surface;
+use positive::Positive;
 
 /// A trait for computing theta curves by strike price.
 ///
@@ -113,11 +113,11 @@ pub trait ThetaCurve {
 /// ```ignore
 /// use optionstratlib::chains::chain::OptionChain;
 /// use optionstratlib::metrics::ThetaSurface;
-/// use optionstratlib::pos;
+/// use positive::pos_or_panic;
 ///
 /// let chain = OptionChain::load_from_json("options.json")?;
-/// let price_range = (pos!(400.0), pos!(500.0));
-/// let days = vec![pos!(1.0), pos!(7.0), pos!(14.0), pos!(30.0)];
+/// let price_range = (pos_or_panic!(400.0), pos_or_panic!(500.0));
+/// let days = vec![Positive::ONE, pos_or_panic!(7.0), pos_or_panic!(14.0), pos_or_panic!(30.0)];
 /// let surface = chain.theta_surface(price_range, days, 20)?;
 /// ```
 pub trait ThetaSurface {
@@ -146,8 +146,9 @@ pub trait ThetaSurface {
 mod tests_theta {
     use super::*;
     use crate::curves::Point2D;
-    use crate::pos;
+
     use crate::surfaces::Point3D;
+    use positive::pos_or_panic;
     use rust_decimal::Decimal;
     use rust_decimal::MathematicalOps;
     use rust_decimal_macros::dec;
@@ -224,7 +225,7 @@ mod tests_theta {
     #[test]
     fn test_theta_curve_creation() {
         let theta = TestTheta {
-            underlying_price: pos!(450.0),
+            underlying_price: pos_or_panic!(450.0),
         };
         let curve = theta.theta_curve();
         assert!(curve.is_ok());
@@ -236,7 +237,7 @@ mod tests_theta {
     #[test]
     fn test_theta_curve_atm_most_negative() {
         let theta = TestTheta {
-            underlying_price: pos!(450.0),
+            underlying_price: pos_or_panic!(450.0),
         };
         let curve = theta.theta_curve().unwrap();
 
@@ -253,7 +254,7 @@ mod tests_theta {
     #[test]
     fn test_theta_curve_negative_values() {
         let theta = TestTheta {
-            underlying_price: pos!(450.0),
+            underlying_price: pos_or_panic!(450.0),
         };
         let curve = theta.theta_curve().unwrap();
 
@@ -265,10 +266,10 @@ mod tests_theta {
     #[test]
     fn test_theta_surface_creation() {
         let theta = TestTheta {
-            underlying_price: pos!(450.0),
+            underlying_price: pos_or_panic!(450.0),
         };
-        let price_range = (pos!(400.0), pos!(500.0));
-        let days = vec![pos!(7.0), pos!(14.0), pos!(30.0)];
+        let price_range = (pos_or_panic!(400.0), pos_or_panic!(500.0));
+        let days = vec![pos_or_panic!(7.0), pos_or_panic!(14.0), pos_or_panic!(30.0)];
 
         let surface = theta.theta_surface(price_range, days, 10);
         assert!(surface.is_ok());
@@ -280,10 +281,10 @@ mod tests_theta {
     #[test]
     fn test_theta_surface_time_acceleration() {
         let theta = TestTheta {
-            underlying_price: pos!(450.0),
+            underlying_price: pos_or_panic!(450.0),
         };
-        let price_range = (pos!(450.0), pos!(450.0));
-        let days = vec![pos!(7.0), pos!(30.0)];
+        let price_range = (pos_or_panic!(450.0), pos_or_panic!(450.0));
+        let days = vec![pos_or_panic!(7.0), pos_or_panic!(30.0)];
 
         let surface = theta.theta_surface(price_range, days, 0).unwrap();
 

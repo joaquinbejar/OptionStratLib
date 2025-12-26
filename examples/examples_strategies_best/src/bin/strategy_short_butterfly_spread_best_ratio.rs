@@ -1,4 +1,5 @@
 use optionstratlib::prelude::*;
+use positive::pos_or_panic;
 
 fn main() -> Result<(), Error> {
     setup_logger();
@@ -11,15 +12,15 @@ fn main() -> Result<(), Error> {
         Positive::ZERO,
         Positive::ZERO,
         Positive::ZERO,
-        ExpirationDate::Days(pos!(5.0)),
+        ExpirationDate::Days(pos_or_panic!(5.0)),
         Positive::ZERO,
         Decimal::ZERO,
         Positive::ZERO,
-        pos!(1.0),
+        Positive::ONE,
         Positive::ZERO,
         Positive::ZERO,
         Positive::ZERO,
-        pos!(4.0),
+        pos_or_panic!(4.0),
         Positive::ZERO,
         Positive::ZERO,
         Positive::ZERO,

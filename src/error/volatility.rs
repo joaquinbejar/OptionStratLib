@@ -4,8 +4,8 @@
    Date: 19/1/25
 ******************************************************************************/
 
-use crate::Positive;
 use crate::error::{GreeksError, OptionsError};
+use positive::Positive;
 use thiserror::Error;
 
 /// Represents errors that can occur during volatility-related calculations.
@@ -110,12 +110,12 @@ mod tests_volatility_errors {
     use super::*;
     use crate::error::greeks::InputErrorKind;
     use crate::error::{GreeksError, OptionsError};
-    use crate::pos;
+    use positive::pos_or_panic;
 
     #[test]
     fn test_invalid_price_error() {
         let error = VolatilityError::InvalidPrice {
-            price: pos!(0.0),
+            price: Positive::ZERO,
             reason: "Price cannot be zero".to_string(),
         };
 
@@ -125,7 +125,7 @@ mod tests_volatility_errors {
     #[test]
     fn test_invalid_time_error() {
         let error = VolatilityError::InvalidTime {
-            time: pos!(0.0),
+            time: Positive::ZERO,
             reason: "Time cannot be zero".to_string(),
         };
 
@@ -167,7 +167,7 @@ mod tests_volatility_errors {
     fn test_no_convergence_error() {
         let error = VolatilityError::NoConvergence {
             iterations: 100,
-            last_volatility: pos!(0.5),
+            last_volatility: pos_or_panic!(0.5),
         };
 
         assert_eq!(

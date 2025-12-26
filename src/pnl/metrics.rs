@@ -1,7 +1,7 @@
-use crate::Positive;
 use crate::pnl::PnL;
 use chrono::{DateTime, Utc};
 use lazy_static::lazy_static;
+use positive::Positive;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -352,13 +352,13 @@ fn get_file_lock(file_path: &str) -> Arc<Mutex<()>> {
 /// use rust_decimal::Decimal;
 /// use tracing::{error, info};
 /// use optionstratlib::pnl::{save_pnl_metrics_with_document, PnLMetricsDocument};
-/// use optionstratlib::pos;
+/// use positive::pos_or_panic;
 ///
 /// // Assume 'document' is a valid PnLMetricsDocument instance
 /// let document = PnLMetricsDocument {
-///     days: pos!(10.0),
+///     days: pos_or_panic!(10.0),
 ///     symbol: "AAPL".to_string(),
-///     fee: pos!(0.01),
+///     fee: pos_or_panic!(0.01),
 ///     delta: Decimal::new(5, 1),
 ///     delta_adjustment_at: Decimal::new(0, 0),
 ///     metrics: vec![],
@@ -427,9 +427,10 @@ pub fn save_pnl_metrics_with_document(
 mod tests_pnl_metrics {
     use super::*;
     use crate::pnl::PnL;
-    use crate::pos;
+
     use chrono::Utc;
     use num_traits::FromPrimitive;
+    use positive::pos_or_panic;
     use std::fs;
     use tempfile::tempdir;
 
@@ -488,17 +489,17 @@ mod tests_pnl_metrics {
         let metrics_step = PnLMetricsStep {
             win: true,
             step_number: 5,
-            step_duration: pos!(1.5),
-            max_unrealized_pnl: pos!(100.0),
-            min_unrealized_pnl: pos!(50.0),
+            step_duration: pos_or_panic!(1.5),
+            max_unrealized_pnl: Positive::HUNDRED,
+            min_unrealized_pnl: pos_or_panic!(50.0),
             winning_steps: 3,
             losing_steps: 2,
-            initial_price: pos!(95.0),
-            final_price: pos!(105.0),
-            strikes: vec![pos!(90.0), pos!(100.0), pos!(110.0)],
-            initial_volumes: vec![pos!(1.0), pos!(2.0), pos!(3.0)],
-            final_volumes: vec![pos!(0.5), pos!(1.5), pos!(2.5)],
-            delta_adjustments: pos!(2.0),
+            initial_price: pos_or_panic!(95.0),
+            final_price: pos_or_panic!(105.0),
+            strikes: vec![pos_or_panic!(90.0), Positive::HUNDRED, pos_or_panic!(110.0)],
+            initial_volumes: vec![Positive::ONE, Positive::TWO, pos_or_panic!(3.0)],
+            final_volumes: vec![pos_or_panic!(0.5), pos_or_panic!(1.5), pos_or_panic!(2.5)],
+            delta_adjustments: Positive::TWO,
             ..Default::default()
         };
 
@@ -532,15 +533,15 @@ mod tests_pnl_metrics {
         let metrics_step1 = PnLMetricsStep {
             step_number: 1,
             win: true,
-            initial_price: pos!(100.0),
-            final_price: pos!(105.0),
+            initial_price: Positive::HUNDRED,
+            final_price: pos_or_panic!(105.0),
             ..Default::default()
         };
         let metrics_step2 = PnLMetricsStep {
             step_number: 2,
             win: false,
-            initial_price: pos!(105.0),
-            final_price: pos!(95.0),
+            initial_price: pos_or_panic!(105.0),
+            final_price: pos_or_panic!(95.0),
             ..Default::default()
         };
 
@@ -560,12 +561,12 @@ mod tests_pnl_metrics {
         assert_eq!(loaded_metrics.len(), 2);
         assert_eq!(loaded_metrics[0].step_number, 1);
         assert!(loaded_metrics[0].win);
-        assert_eq!(loaded_metrics[0].initial_price, pos!(100.0));
-        assert_eq!(loaded_metrics[0].final_price, pos!(105.0));
+        assert_eq!(loaded_metrics[0].initial_price, Positive::HUNDRED);
+        assert_eq!(loaded_metrics[0].final_price, pos_or_panic!(105.0));
         assert_eq!(loaded_metrics[1].step_number, 2);
         assert!(!loaded_metrics[1].win);
-        assert_eq!(loaded_metrics[1].initial_price, pos!(105.0));
-        assert_eq!(loaded_metrics[1].final_price, pos!(95.0));
+        assert_eq!(loaded_metrics[1].initial_price, pos_or_panic!(105.0));
+        assert_eq!(loaded_metrics[1].final_price, pos_or_panic!(95.0));
 
         // Clean up
         temp_dir.close().expect("Failed to remove temp directory");
@@ -577,8 +578,8 @@ mod tests_pnl_metrics {
         let metrics_step = PnLMetricsStep {
             step_number: 1,
             win: true,
-            initial_price: pos!(100.0),
-            final_price: pos!(110.0),
+            initial_price: Positive::HUNDRED,
+            final_price: pos_or_panic!(110.0),
             ..Default::default()
         };
 
@@ -587,17 +588,17 @@ mod tests_pnl_metrics {
         // Create the document
         let document = create_pnl_metrics_document(
             metrics.clone(),
-            pos!(30.0),
+            pos_or_panic!(30.0),
             "AAPL".to_string(),
-            pos!(0.65),
+            pos_or_panic!(0.65),
             Decimal::from_f64(0.5).unwrap(),
             Decimal::from_f64(0.1).unwrap(),
         );
 
         // Verify document properties
-        assert_eq!(document.days, pos!(30.0));
+        assert_eq!(document.days, pos_or_panic!(30.0));
         assert_eq!(document.symbol, "AAPL");
-        assert_eq!(document.fee, pos!(0.65));
+        assert_eq!(document.fee, pos_or_panic!(0.65));
         assert_eq!(document.delta, Decimal::from_f64(0.5).unwrap());
         assert_eq!(
             document.delta_adjustment_at,
@@ -606,8 +607,8 @@ mod tests_pnl_metrics {
         assert_eq!(document.metrics.len(), 1);
         assert_eq!(document.metrics[0].step_number, 1);
         assert!(document.metrics[0].win);
-        assert_eq!(document.metrics[0].initial_price, pos!(100.0));
-        assert_eq!(document.metrics[0].final_price, pos!(110.0));
+        assert_eq!(document.metrics[0].initial_price, Positive::HUNDRED);
+        assert_eq!(document.metrics[0].final_price, pos_or_panic!(110.0));
     }
 
     #[test]
@@ -629,9 +630,9 @@ mod tests_pnl_metrics {
         // Create the document
         let document = create_pnl_metrics_document(
             metrics,
-            pos!(30.0),
+            pos_or_panic!(30.0),
             "AAPL".to_string(),
-            pos!(0.65),
+            pos_or_panic!(0.65),
             Decimal::from_f64(0.5).unwrap(),
             Decimal::from_f64(0.1).unwrap(),
         );
@@ -655,7 +656,7 @@ mod tests_pnl_metrics {
         // Verify content
         assert_eq!(documents.len(), 1);
         assert_eq!(documents[0].symbol, "AAPL");
-        assert_eq!(documents[0].days, pos!(30.0));
+        assert_eq!(documents[0].days, pos_or_panic!(30.0));
 
         // Create a second document
         let metrics_step2 = PnLMetricsStep {
@@ -668,9 +669,9 @@ mod tests_pnl_metrics {
 
         let document2 = create_pnl_metrics_document(
             metrics2,
-            pos!(60.0),
+            pos_or_panic!(60.0),
             "MSFT".to_string(),
-            pos!(0.75),
+            pos_or_panic!(0.75),
             Decimal::from_f64(0.6).unwrap(),
             Decimal::from_f64(0.2).unwrap(),
         );
@@ -691,9 +692,9 @@ mod tests_pnl_metrics {
         // Verify content
         assert_eq!(documents.len(), 2);
         assert_eq!(documents[0].symbol, "AAPL");
-        assert_eq!(documents[0].days, pos!(30.0));
+        assert_eq!(documents[0].days, pos_or_panic!(30.0));
         assert_eq!(documents[1].symbol, "MSFT");
-        assert_eq!(documents[1].days, pos!(60.0));
+        assert_eq!(documents[1].days, pos_or_panic!(60.0));
 
         // Clean up
         temp_dir.close().expect("Failed to remove temp directory");
@@ -758,9 +759,9 @@ mod tests_pnl_metrics {
 
             let document = create_pnl_metrics_document(
                 metrics,
-                pos!(30.0),
+                pos_or_panic!(30.0),
                 format!("SYMBOL{i}"),
-                pos!(0.65),
+                pos_or_panic!(0.65),
                 Decimal::from_f64(0.5).unwrap(),
                 Decimal::from_f64(0.1).unwrap(),
             );
@@ -801,11 +802,11 @@ mod tests_pnl_metrics_serialization {
     use super::*;
     use chrono::{TimeZone, Utc};
     use num_traits::FromPrimitive;
+    use positive::pos_or_panic;
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
 
     use crate::pnl::PnL;
-    use crate::pos;
 
     #[test]
     fn test_pnl_metrics_step_serialization() {
@@ -813,17 +814,17 @@ mod tests_pnl_metrics_serialization {
         let mut metrics_step = PnLMetricsStep {
             win: true,
             step_number: 42,
-            step_duration: pos!(1.5),
-            max_unrealized_pnl: pos!(100.5),
-            min_unrealized_pnl: pos!(50.25),
+            step_duration: pos_or_panic!(1.5),
+            max_unrealized_pnl: pos_or_panic!(100.5),
+            min_unrealized_pnl: pos_or_panic!(50.25),
             winning_steps: 30,
             losing_steps: 12,
-            initial_price: pos!(95.75),
-            final_price: pos!(105.25),
-            strikes: vec![pos!(90.0), pos!(100.0), pos!(110.0)],
-            initial_volumes: vec![pos!(1.5), pos!(2.5), pos!(3.5)],
-            final_volumes: vec![pos!(0.5), pos!(1.5), pos!(2.5)],
-            delta_adjustments: pos!(2.25),
+            initial_price: pos_or_panic!(95.75),
+            final_price: pos_or_panic!(105.25),
+            strikes: vec![pos_or_panic!(90.0), Positive::HUNDRED, pos_or_panic!(110.0)],
+            initial_volumes: vec![pos_or_panic!(1.5), pos_or_panic!(2.5), pos_or_panic!(3.5)],
+            final_volumes: vec![pos_or_panic!(0.5), pos_or_panic!(1.5), pos_or_panic!(2.5)],
+            delta_adjustments: pos_or_panic!(2.25),
             ..Default::default()
         };
 
@@ -831,8 +832,8 @@ mod tests_pnl_metrics_serialization {
         let pnl = PnL::new(
             Some(dec!(123.45)),
             Some(dec!(67.89)),
-            pos!(500.0),
-            pos!(250.0),
+            pos_or_panic!(500.0),
+            pos_or_panic!(250.0),
             Utc::now(),
         );
         metrics_step.pnl = pnl;
@@ -853,36 +854,36 @@ mod tests_pnl_metrics_serialization {
         // Verify values are preserved
         assert!(deserialized.win);
         assert_eq!(deserialized.step_number, 42);
-        assert_eq!(deserialized.step_duration, pos!(1.5));
-        assert_eq!(deserialized.max_unrealized_pnl, pos!(100.5));
-        assert_eq!(deserialized.min_unrealized_pnl, pos!(50.25));
+        assert_eq!(deserialized.step_duration, pos_or_panic!(1.5));
+        assert_eq!(deserialized.max_unrealized_pnl, pos_or_panic!(100.5));
+        assert_eq!(deserialized.min_unrealized_pnl, pos_or_panic!(50.25));
         assert_eq!(deserialized.winning_steps, 30);
         assert_eq!(deserialized.losing_steps, 12);
-        assert_eq!(deserialized.initial_price, pos!(95.75));
-        assert_eq!(deserialized.final_price, pos!(105.25));
-        assert_eq!(deserialized.delta_adjustments, pos!(2.25));
+        assert_eq!(deserialized.initial_price, pos_or_panic!(95.75));
+        assert_eq!(deserialized.final_price, pos_or_panic!(105.25));
+        assert_eq!(deserialized.delta_adjustments, pos_or_panic!(2.25));
 
         // Check arrays are preserved correctly
         assert_eq!(deserialized.strikes.len(), 3);
-        assert_eq!(deserialized.strikes[0], pos!(90.0));
-        assert_eq!(deserialized.strikes[1], pos!(100.0));
-        assert_eq!(deserialized.strikes[2], pos!(110.0));
+        assert_eq!(deserialized.strikes[0], pos_or_panic!(90.0));
+        assert_eq!(deserialized.strikes[1], Positive::HUNDRED);
+        assert_eq!(deserialized.strikes[2], pos_or_panic!(110.0));
 
         assert_eq!(deserialized.initial_volumes.len(), 3);
-        assert_eq!(deserialized.initial_volumes[0], pos!(1.5));
-        assert_eq!(deserialized.initial_volumes[1], pos!(2.5));
-        assert_eq!(deserialized.initial_volumes[2], pos!(3.5));
+        assert_eq!(deserialized.initial_volumes[0], pos_or_panic!(1.5));
+        assert_eq!(deserialized.initial_volumes[1], pos_or_panic!(2.5));
+        assert_eq!(deserialized.initial_volumes[2], pos_or_panic!(3.5));
 
         assert_eq!(deserialized.final_volumes.len(), 3);
-        assert_eq!(deserialized.final_volumes[0], pos!(0.5));
-        assert_eq!(deserialized.final_volumes[1], pos!(1.5));
-        assert_eq!(deserialized.final_volumes[2], pos!(2.5));
+        assert_eq!(deserialized.final_volumes[0], pos_or_panic!(0.5));
+        assert_eq!(deserialized.final_volumes[1], pos_or_panic!(1.5));
+        assert_eq!(deserialized.final_volumes[2], pos_or_panic!(2.5));
 
         // Check PnL values
         assert_eq!(deserialized.pnl.realized, Some(dec!(123.45)));
         assert_eq!(deserialized.pnl.unrealized, Some(dec!(67.89)));
-        assert_eq!(deserialized.pnl.initial_costs, pos!(500.0));
-        assert_eq!(deserialized.pnl.initial_income, pos!(250.0));
+        assert_eq!(deserialized.pnl.initial_costs, pos_or_panic!(500.0));
+        assert_eq!(deserialized.pnl.initial_income, pos_or_panic!(250.0));
     }
 
     #[test]
@@ -893,8 +894,8 @@ mod tests_pnl_metrics_serialization {
 
         let metrics = PnLMetrics {
             total_pnl: dec!(1234.56),
-            max_profit: pos!(500.75),
-            max_loss: pos!(200.25),
+            max_profit: pos_or_panic!(500.75),
+            max_loss: pos_or_panic!(200.25),
             win_rate: dec!(0.65),
             loss_rate: dec!(0.35),
             total_steps: 100,
@@ -902,7 +903,7 @@ mod tests_pnl_metrics_serialization {
             losing_steps: 35,
             avg_win: dec!(20.5),
             avg_loss: dec!(15.75),
-            max_drawdown: pos!(150.0),
+            max_drawdown: pos_or_panic!(150.0),
             sharpe_ratio: dec!(1.75),
             sortino_ratio: dec!(2.5),
             profit_factor: dec!(2.25),
@@ -930,8 +931,8 @@ mod tests_pnl_metrics_serialization {
 
         // Verify values are preserved
         assert_eq!(deserialized.total_pnl, dec!(1234.56));
-        assert_eq!(deserialized.max_profit, pos!(500.75));
-        assert_eq!(deserialized.max_loss, pos!(200.25));
+        assert_eq!(deserialized.max_profit, pos_or_panic!(500.75));
+        assert_eq!(deserialized.max_loss, pos_or_panic!(200.25));
         assert_eq!(deserialized.win_rate, dec!(0.65));
         assert_eq!(deserialized.loss_rate, dec!(0.35));
         assert_eq!(deserialized.total_steps, 100);
@@ -939,7 +940,7 @@ mod tests_pnl_metrics_serialization {
         assert_eq!(deserialized.losing_steps, 35);
         assert_eq!(deserialized.avg_win, dec!(20.5));
         assert_eq!(deserialized.avg_loss, dec!(15.75));
-        assert_eq!(deserialized.max_drawdown, pos!(150.0));
+        assert_eq!(deserialized.max_drawdown, pos_or_panic!(150.0));
         assert_eq!(deserialized.sharpe_ratio, dec!(1.75));
         assert_eq!(deserialized.sortino_ratio, dec!(2.5));
         assert_eq!(deserialized.profit_factor, dec!(2.25));
@@ -956,16 +957,16 @@ mod tests_pnl_metrics_serialization {
         let metrics_step1 = PnLMetricsStep {
             step_number: 1,
             win: true,
-            initial_price: pos!(100.0),
-            final_price: pos!(105.0),
+            initial_price: Positive::HUNDRED,
+            final_price: pos_or_panic!(105.0),
             ..Default::default()
         };
 
         let metrics_step2 = PnLMetricsStep {
             step_number: 2,
             win: false,
-            initial_price: pos!(105.0),
-            final_price: pos!(95.0),
+            initial_price: pos_or_panic!(105.0),
+            final_price: pos_or_panic!(95.0),
             ..Default::default()
         };
 
@@ -973,9 +974,9 @@ mod tests_pnl_metrics_serialization {
 
         // Create the document
         let document = PnLMetricsDocument {
-            days: pos!(30.0),
+            days: pos_or_panic!(30.0),
             symbol: "AAPL".to_string(),
-            fee: pos!(0.65),
+            fee: pos_or_panic!(0.65),
             delta: dec!(0.5),
             delta_adjustment_at: dec!(0.1),
             metrics,
@@ -1000,9 +1001,9 @@ mod tests_pnl_metrics_serialization {
             serde_json::from_str(&serialized).expect("Failed to deserialize");
 
         // Verify values are preserved
-        assert_eq!(deserialized.days, pos!(30.0));
+        assert_eq!(deserialized.days, pos_or_panic!(30.0));
         assert_eq!(deserialized.symbol, "AAPL");
-        assert_eq!(deserialized.fee, pos!(0.65));
+        assert_eq!(deserialized.fee, pos_or_panic!(0.65));
         assert_eq!(deserialized.delta, dec!(0.5));
         assert_eq!(deserialized.delta_adjustment_at, dec!(0.1));
 
@@ -1010,12 +1011,12 @@ mod tests_pnl_metrics_serialization {
         assert_eq!(deserialized.metrics.len(), 2);
         assert_eq!(deserialized.metrics[0].step_number, 1);
         assert!(deserialized.metrics[0].win);
-        assert_eq!(deserialized.metrics[0].initial_price, pos!(100.0));
-        assert_eq!(deserialized.metrics[0].final_price, pos!(105.0));
+        assert_eq!(deserialized.metrics[0].initial_price, Positive::HUNDRED);
+        assert_eq!(deserialized.metrics[0].final_price, pos_or_panic!(105.0));
         assert_eq!(deserialized.metrics[1].step_number, 2);
         assert!(!deserialized.metrics[1].win);
-        assert_eq!(deserialized.metrics[1].initial_price, pos!(105.0));
-        assert_eq!(deserialized.metrics[1].final_price, pos!(95.0));
+        assert_eq!(deserialized.metrics[1].initial_price, pos_or_panic!(105.0));
+        assert_eq!(deserialized.metrics[1].final_price, pos_or_panic!(95.0));
     }
 
     #[test]
@@ -1025,8 +1026,8 @@ mod tests_pnl_metrics_serialization {
         let pnl = PnL::new(
             Some(dec!(123.45)),
             Some(dec!(-67.89)),
-            pos!(500.0),
-            pos!(250.0),
+            pos_or_panic!(500.0),
+            pos_or_panic!(250.0),
             date_time,
         );
 
@@ -1046,8 +1047,8 @@ mod tests_pnl_metrics_serialization {
         // Verify values are preserved
         assert_eq!(deserialized.realized, Some(dec!(123.45)));
         assert_eq!(deserialized.unrealized, Some(dec!(-67.89)));
-        assert_eq!(deserialized.initial_costs, pos!(500.0));
-        assert_eq!(deserialized.initial_income, pos!(250.0));
+        assert_eq!(deserialized.initial_costs, pos_or_panic!(500.0));
+        assert_eq!(deserialized.initial_income, pos_or_panic!(250.0));
         assert_eq!(deserialized.date_time, date_time);
     }
 
@@ -1076,7 +1077,13 @@ mod tests_pnl_metrics_serialization {
     fn test_pnl_with_null_fields() {
         // Create a PnL with null fields
         let date_time = Utc.with_ymd_and_hms(2023, 3, 15, 14, 30, 0).unwrap();
-        let pnl = PnL::new(None, None, pos!(500.0), pos!(250.0), date_time);
+        let pnl = PnL::new(
+            None,
+            None,
+            pos_or_panic!(500.0),
+            pos_or_panic!(250.0),
+            date_time,
+        );
 
         // Serialize to JSON
         let serialized = serde_json::to_string(&pnl).expect("Failed to serialize");
@@ -1091,8 +1098,8 @@ mod tests_pnl_metrics_serialization {
         // Verify null values are preserved
         assert_eq!(deserialized.realized, None);
         assert_eq!(deserialized.unrealized, None);
-        assert_eq!(deserialized.initial_costs, pos!(500.0));
-        assert_eq!(deserialized.initial_income, pos!(250.0));
+        assert_eq!(deserialized.initial_costs, pos_or_panic!(500.0));
+        assert_eq!(deserialized.initial_income, pos_or_panic!(250.0));
         assert_eq!(deserialized.date_time, date_time);
     }
 
@@ -1109,9 +1116,9 @@ mod tests_pnl_metrics_serialization {
             };
 
             let document = PnLMetricsDocument {
-                days: pos!(30.0 * i as f64),
+                days: pos_or_panic!(30.0 * i as f64),
                 symbol: format!("SYMBOL{i}"),
-                fee: pos!(0.5 + (i as f64 * 0.1)),
+                fee: pos_or_panic!(0.5 + (i as f64 * 0.1)),
                 delta: Decimal::from_f64(0.3 + (i as f64 * 0.1)).unwrap(),
                 delta_adjustment_at: Decimal::from_f64(0.05 * i as f64).unwrap(),
                 metrics: vec![metrics_step],
@@ -1141,9 +1148,9 @@ mod tests_pnl_metrics_serialization {
         assert_eq!(deserialized[1].symbol, "SYMBOL2");
         assert_eq!(deserialized[2].symbol, "SYMBOL3");
 
-        assert_eq!(deserialized[0].days, pos!(30.0));
-        assert_eq!(deserialized[1].days, pos!(60.0));
-        assert_eq!(deserialized[2].days, pos!(90.0));
+        assert_eq!(deserialized[0].days, pos_or_panic!(30.0));
+        assert_eq!(deserialized[1].days, pos_or_panic!(60.0));
+        assert_eq!(deserialized[2].days, pos_or_panic!(90.0));
 
         assert_eq!(deserialized[0].metrics[0].step_number, 1);
         assert_eq!(deserialized[1].metrics[0].step_number, 2);

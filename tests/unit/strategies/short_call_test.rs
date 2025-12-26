@@ -1,6 +1,6 @@
 use chrono::Utc;
 use optionstratlib::{
-    ExpirationDate, Options, Positive,
+    ExpirationDate, Options,
     error::StrategyError,
     error::strategies::ProfitLossErrorKind,
     model::{
@@ -14,6 +14,7 @@ use optionstratlib::{
         short_call::ShortCall,
     },
 };
+use positive::Positive;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 

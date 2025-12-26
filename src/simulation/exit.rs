@@ -12,7 +12,7 @@
 //! - **Underlying price**: Exit when the underlying asset reaches a price level
 //! - **Combined conditions**: Exit when multiple conditions are met (AND/OR logic)
 
-use crate::Positive;
+use positive::Positive;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
@@ -54,7 +54,7 @@ pub enum ExitPolicy {
     /// # Example
     /// ```ignore
     /// // Exit when premium reaches $50
-    /// ExitPolicy::FixedPrice(pos!(50.0))
+    /// ExitPolicy::FixedPrice(pos_or_panic!(50.0))
     /// ```
     FixedPrice(Positive),
 
@@ -65,7 +65,7 @@ pub enum ExitPolicy {
     /// # Example
     /// ```ignore
     /// // Exit when premium falls below $5
-    /// ExitPolicy::MinPrice(pos!(5.0))
+    /// ExitPolicy::MinPrice(pos_or_panic!(5.0))
     /// ```
     MinPrice(Positive),
 
@@ -76,7 +76,7 @@ pub enum ExitPolicy {
     /// # Example
     /// ```ignore
     /// // Exit when premium exceeds $100
-    /// ExitPolicy::MaxPrice(pos!(100.0))
+    /// ExitPolicy::MaxPrice(Positive::HUNDRED)
     /// ```
     MaxPrice(Positive),
 
@@ -94,7 +94,7 @@ pub enum ExitPolicy {
     /// # Example
     /// ```ignore
     /// // Exit when less than 2 days remain
-    /// ExitPolicy::DaysToExpiration(pos!(2.0))
+    /// ExitPolicy::DaysToExpiration(Positive::TWO)
     /// ```
     DaysToExpiration(Positive),
 
@@ -112,7 +112,7 @@ pub enum ExitPolicy {
     /// # Example
     /// ```ignore
     /// // Exit when underlying reaches $4000
-    /// ExitPolicy::UnderlyingPrice(pos!(4000.0))
+    /// ExitPolicy::UnderlyingPrice(pos_or_panic!(4000.0))
     /// ```
     UnderlyingPrice(Positive),
 
@@ -121,7 +121,7 @@ pub enum ExitPolicy {
     /// # Example
     /// ```ignore
     /// // Exit when underlying falls below $3900
-    /// ExitPolicy::UnderlyingBelow(pos!(3900.0))
+    /// ExitPolicy::UnderlyingBelow(pos_or_panic!(3900.0))
     /// ```
     UnderlyingBelow(Positive),
 
@@ -130,7 +130,7 @@ pub enum ExitPolicy {
     /// # Example
     /// ```ignore
     /// // Exit when underlying exceeds $4100
-    /// ExitPolicy::UnderlyingAbove(pos!(4100.0))
+    /// ExitPolicy::UnderlyingAbove(pos_or_panic!(4100.0))
     /// ```
     UnderlyingAbove(Positive),
 
@@ -478,7 +478,8 @@ pub fn check_exit_policy(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::pos;
+    use positive::pos_or_panic;
+
     use rust_decimal_macros::dec;
 
     #[test]
@@ -566,7 +567,7 @@ mod tests {
 
     #[test]
     fn test_display_fixed_price() {
-        let policy = ExitPolicy::FixedPrice(pos!(50.0));
+        let policy = ExitPolicy::FixedPrice(pos_or_panic!(50.0));
         assert_eq!(format!("{policy}"), "Fixed Price: $50");
     }
 
@@ -627,15 +628,15 @@ mod tests {
         let policies = vec![
             ExitPolicy::ProfitPercent(dec!(0.5)),
             ExitPolicy::LossPercent(dec!(1.0)),
-            ExitPolicy::FixedPrice(pos!(50.0)),
-            ExitPolicy::MinPrice(pos!(5.0)),
-            ExitPolicy::MaxPrice(pos!(100.0)),
+            ExitPolicy::FixedPrice(pos_or_panic!(50.0)),
+            ExitPolicy::MinPrice(pos_or_panic!(5.0)),
+            ExitPolicy::MaxPrice(Positive::HUNDRED),
             ExitPolicy::TimeSteps(1000),
-            ExitPolicy::DaysToExpiration(pos!(2.0)),
+            ExitPolicy::DaysToExpiration(Positive::TWO),
             ExitPolicy::DeltaThreshold(dec!(0.5)),
-            ExitPolicy::UnderlyingPrice(pos!(4000.0)),
-            ExitPolicy::UnderlyingBelow(pos!(3900.0)),
-            ExitPolicy::UnderlyingAbove(pos!(4100.0)),
+            ExitPolicy::UnderlyingPrice(pos_or_panic!(4000.0)),
+            ExitPolicy::UnderlyingBelow(pos_or_panic!(3900.0)),
+            ExitPolicy::UnderlyingAbove(pos_or_panic!(4100.0)),
             ExitPolicy::Expiration,
         ];
 

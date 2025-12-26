@@ -1,3 +1,4 @@
+use positive::pos_or_panic;
 /******************************************************************************
    Author: Joaquín Béjar García
    Email: jb@taunais.com
@@ -33,17 +34,17 @@ fn main() -> Result<(), optionstratlib::error::Error> {
         Positive::ZERO,   // call_strike
         Positive::ZERO,   // put_strike
         expiration_date,
-        Positive::ZERO, // implied_volatility
-        Positive::ZERO, // implied_volatility
-        Decimal::ZERO,  // risk_free_rate
-        Positive::ZERO, // dividend_yield
-        pos!(1.0),      // quantity
-        Positive::ZERO, // premium_short_call
-        Positive::ZERO, // premium_short_put
-        pos!(0.1),      // open_fee_short_call
-        pos!(0.1),      // close_fee_short_call
-        pos!(0.1),      // open_fee_short_put
-        pos!(0.1),      // close_fee_short_put
+        Positive::ZERO,     // implied_volatility
+        Positive::ZERO,     // implied_volatility
+        Decimal::ZERO,      // risk_free_rate
+        Positive::ZERO,     // dividend_yield
+        Positive::ONE,      // quantity
+        Positive::ZERO,     // premium_short_call
+        Positive::ZERO,     // premium_short_put
+        pos_or_panic!(0.1), // open_fee_short_call
+        pos_or_panic!(0.1), // close_fee_short_call
+        pos_or_panic!(0.1), // open_fee_short_put
+        pos_or_panic!(0.1), // close_fee_short_put
     );
     let max_delta = dec!(0.3);
     let min_delta = dec!(0.15);

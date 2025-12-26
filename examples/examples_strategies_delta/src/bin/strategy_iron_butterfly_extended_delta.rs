@@ -9,28 +9,29 @@
 //! This example shows portfolio-level Greeks and adjustment planning.
 
 use optionstratlib::prelude::*;
+use positive::pos_or_panic;
 
 fn main() -> Result<(), Error> {
     setup_logger();
-    let underlying_price = pos!(5780.0);
+    let underlying_price = pos_or_panic!(5780.0);
 
     let strategy = IronButterfly::new(
         "SP500".to_string(),
         underlying_price,
-        pos!(5800.0),
-        pos!(5750.0),
-        pos!(5850.0),
-        ExpirationDate::Days(pos!(60.0)),
-        pos!(0.18),
+        pos_or_panic!(5800.0),
+        pos_or_panic!(5750.0),
+        pos_or_panic!(5850.0),
+        ExpirationDate::Days(pos_or_panic!(60.0)),
+        pos_or_panic!(0.18),
         dec!(0.05),
         Positive::ZERO,
-        pos!(1.0),
-        pos!(42.0),
-        pos!(38.0),
-        pos!(18.0),
-        pos!(16.0),
-        pos!(0.96),
-        pos!(0.96),
+        Positive::ONE,
+        pos_or_panic!(42.0),
+        pos_or_panic!(38.0),
+        pos_or_panic!(18.0),
+        pos_or_panic!(16.0),
+        pos_or_panic!(0.96),
+        pos_or_panic!(0.96),
     );
 
     info!("=== IronButterfly Extended Delta Analysis ===");

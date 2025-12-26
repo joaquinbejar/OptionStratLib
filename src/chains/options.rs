@@ -156,8 +156,9 @@ pub struct DeltasInStrike {
 #[cfg(test)]
 mod tests_options_in_strike {
     use super::*;
+    use crate::ExpirationDate;
     use crate::model::types::{OptionStyle, OptionType, Side};
-    use crate::{ExpirationDate, pos};
+    use positive::{Positive, pos_or_panic};
     use rust_decimal_macros::dec;
 
     // Helper function to create a sample option for testing
@@ -166,14 +167,14 @@ mod tests_options_in_strike {
             OptionType::European,
             side,
             "TEST".to_string(),
-            pos!(100.0), // strike_price
-            ExpirationDate::Days(pos!(30.0)),
-            pos!(0.2),   // implied_volatility
-            pos!(1.0),   // quantity
-            pos!(100.0), // underlying_price
-            dec!(0.05),  // risk_free_rate
+            Positive::HUNDRED, // strike_price
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.2), // implied_volatility
+            Positive::ONE,      // quantity
+            Positive::HUNDRED,  // underlying_price
+            dec!(0.05),         // risk_free_rate
             style,
-            pos!(0.01), // dividend_yield
+            pos_or_panic!(0.01), // dividend_yield
             None,
         )
     }

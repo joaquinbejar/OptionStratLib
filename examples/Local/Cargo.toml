@@ -5,5 +5,6 @@ edition = "2024"
 
 [dependencies]
 optionstratlib = { workspace = true, features = ["plotly", "static_export"] }
+positive = { workspace = true }
 tracing = { workspace = true }
 rust_decimal = { workspace = true, features = ["maths", "serde"] }

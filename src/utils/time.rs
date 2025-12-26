@@ -3,9 +3,10 @@
    Email: jb@taunais.com
    Date: 23/10/24
 ******************************************************************************/
+
 use crate::constants::*;
-use crate::{Positive, pos};
 use chrono::{Duration, Local, NaiveTime, Utc};
+use positive::{Positive, pos_or_panic};
 use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
 use std::fmt;
@@ -24,14 +25,14 @@ use utoipa::ToSchema;
 ///
 /// ```
 /// use optionstratlib::utils::time::TimeFrame;
-/// use optionstratlib::pos;
+/// use positive::pos_or_panic;
 ///
 /// // Using standard timeframes
 /// let daily = TimeFrame::Day;
 /// let weekly = TimeFrame::Week;
 ///
 /// // Using custom timeframes
-/// let custom_period = TimeFrame::Custom(pos!(360.0));
+/// let custom_period = TimeFrame::Custom(pos_or_panic!(360.0));
 ///
 /// // Accessing the number of periods per year
 /// let periods_per_year = daily.periods_per_year(); // Returns 252.0
@@ -76,19 +77,19 @@ impl TimeFrame {
     ///
     /// ```
     /// use optionstratlib::utils::time::TimeFrame;
-    /// use optionstratlib::pos;
+    /// use positive::pos_or_panic;
     ///
     /// let daily = TimeFrame::Day;
     /// let periods_per_year = daily.periods_per_year(); // Returns 252
-    /// assert_eq!(periods_per_year, pos!(252.0));
+    /// assert_eq!(periods_per_year, pos_or_panic!(252.0));
     ///
     /// let hourly = TimeFrame::Hour;
     /// let periods_per_year = hourly.periods_per_year(); // Returns 1638
-    /// assert_eq!(periods_per_year, pos!(1638.0));
+    /// assert_eq!(periods_per_year, pos_or_panic!(1638.0));
     ///
-    /// let custom = TimeFrame::Custom(pos!(360.0));
+    /// let custom = TimeFrame::Custom(pos_or_panic!(360.0));
     /// let periods_per_year = custom.periods_per_year(); // Returns 360
-    /// assert_eq!(periods_per_year, pos!(360.0));
+    /// assert_eq!(periods_per_year, pos_or_panic!(360.0));
     /// ```
     pub fn periods_per_year(&self) -> Positive {
         match self {
@@ -140,17 +141,17 @@ impl fmt::Display for TimeFrame {
 /// A Decimal representing how many of the given time frame fit in a year
 pub fn units_per_year(time_frame: &TimeFrame) -> Positive {
     match time_frame {
-        TimeFrame::Microsecond => pos!(31536000000000.0), // 365 * 24 * 60 * 60 * 1_000_000
-        TimeFrame::Millisecond => pos!(31536000000.0),    // 365 * 24 * 60 * 60 * 1_000
-        TimeFrame::Second => pos!(31536000.0),            // 365 * 24 * 60 * 60
-        TimeFrame::Minute => pos!(525600.0),              // 365 * 24 * 60
-        TimeFrame::Hour => pos!(8760.0),                  // 365 * 24
-        TimeFrame::Day => pos!(365.0),                    // 365
-        TimeFrame::Week => Positive(dec!(365.0) / dec!(7.0)), // 365 / 7
-        TimeFrame::Month => pos!(12.0),                   // 12
-        TimeFrame::Quarter => pos!(4.0),                  // 4
-        TimeFrame::Year => pos!(1.0),                     // 1
-        TimeFrame::Custom(periods) => *periods,           // Custom periods per year
+        TimeFrame::Microsecond => pos_or_panic!(31536000000000.0), // 365 * 24 * 60 * 60 * 1_000_000
+        TimeFrame::Millisecond => pos_or_panic!(31536000000.0),    // 365 * 24 * 60 * 60 * 1_000
+        TimeFrame::Second => pos_or_panic!(31536000.0),            // 365 * 24 * 60 * 60
+        TimeFrame::Minute => pos_or_panic!(525600.0),              // 365 * 24 * 60
+        TimeFrame::Hour => pos_or_panic!(8760.0),                  // 365 * 24
+        TimeFrame::Day => pos_or_panic!(365.0),                    // 365
+        TimeFrame::Week => Positive(dec!(365.0) / dec!(7.0)),      // 365 / 7
+        TimeFrame::Month => pos_or_panic!(12.0),                   // 12
+        TimeFrame::Quarter => pos_or_panic!(4.0),                  // 4
+        TimeFrame::Year => Positive::ONE,                          // 1
+        TimeFrame::Custom(periods) => *periods,                    // Custom periods per year
     }
 }
 
@@ -169,17 +170,18 @@ pub fn units_per_year(time_frame: &TimeFrame) -> Positive {
 /// # Examples
 ///
 /// ```
-/// use optionstratlib::{assert_pos_relative_eq, pos};
+///
 /// use optionstratlib::utils::time::convert_time_frame;
 /// use optionstratlib::utils::TimeFrame;
+/// use positive::{pos_or_panic, Positive, assert_pos_relative_eq};
 ///
 /// // Convert 60 seconds to minutes
-/// let result = convert_time_frame(pos!(60.0), &TimeFrame::Second, &TimeFrame::Minute);
-/// assert_pos_relative_eq!(result, pos!(1.0), pos!(0.0000001));
+/// let result = convert_time_frame(pos_or_panic!(60.0), &TimeFrame::Second, &TimeFrame::Minute);
+/// assert_pos_relative_eq!(result, Positive::ONE, pos_or_panic!(0.0000001));
 ///
 /// // Convert 12 hours to days
-/// let result = convert_time_frame(pos!(12.0), &TimeFrame::Hour, &TimeFrame::Day);
-/// assert_pos_relative_eq!(result, pos!(0.5), pos!(0.0000001));
+/// let result = convert_time_frame(pos_or_panic!(12.0), &TimeFrame::Hour, &TimeFrame::Day);
+/// assert_pos_relative_eq!(result, pos_or_panic!(0.5), pos_or_panic!(0.0000001));
 /// ```
 pub fn convert_time_frame(
     value: Positive,
@@ -325,7 +327,7 @@ pub fn get_today_or_tomorrow_formatted() -> String {
 #[cfg(test)]
 mod tests_timeframe {
     use super::*;
-    use crate::{assert_pos_relative_eq, pos};
+    use positive::assert_pos_relative_eq;
 
     #[test]
     fn test_microsecond_periods() {
@@ -384,7 +386,7 @@ mod tests_timeframe {
 
     #[test]
     fn test_custom_periods() {
-        let custom_periods = pos!(123.45);
+        let custom_periods = pos_or_panic!(123.45);
         assert_eq!(
             TimeFrame::Custom(custom_periods).periods_per_year(),
             custom_periods
@@ -413,31 +415,35 @@ mod tests_timeframe {
         assert_pos_relative_eq!(
             TimeFrame::Hour.periods_per_year() / TimeFrame::Day.periods_per_year(),
             TRADING_HOURS,
-            pos!(1e-10)
+            pos_or_panic!(1e-10)
         );
 
         assert_pos_relative_eq!(
             TimeFrame::Minute.periods_per_year() / TimeFrame::Hour.periods_per_year(),
             MINUTES_PER_HOUR,
-            pos!(1e-10)
+            pos_or_panic!(1e-10)
         );
 
         assert_pos_relative_eq!(
             TimeFrame::Second.periods_per_year() / TimeFrame::Minute.periods_per_year(),
             MINUTES_PER_HOUR,
-            pos!(1e-10)
+            pos_or_panic!(1e-10)
         );
     }
 
     #[test]
     fn test_trading_days_relationship() {
         // Verify relationships with trading days
-        assert_pos_relative_eq!(TimeFrame::Day.periods_per_year(), TRADING_DAYS, pos!(1e-10));
+        assert_pos_relative_eq!(
+            TimeFrame::Day.periods_per_year(),
+            TRADING_DAYS,
+            pos_or_panic!(1e-10)
+        );
 
         assert_pos_relative_eq!(
             TimeFrame::Hour.periods_per_year() / TRADING_HOURS,
             TRADING_DAYS,
-            pos!(1e-10)
+            pos_or_panic!(1e-10)
         );
     }
 
@@ -454,7 +460,10 @@ mod tests_timeframe {
     #[test]
     fn test_timeframe_debug() {
         assert_eq!(format!("{:?}", TimeFrame::Day), "Day");
-        assert_eq!(format!("{:?}", TimeFrame::Custom(pos!(1.5))), "Custom(1.5)");
+        assert_eq!(
+            format!("{:?}", TimeFrame::Custom(pos_or_panic!(1.5))),
+            "Custom(1.5)"
+        );
     }
 
     #[test]
@@ -475,81 +484,96 @@ mod tests_timeframe {
 #[cfg(test)]
 mod tests_timeframe_convert {
     use super::*;
-    use crate::{assert_pos_relative_eq, pos};
+    use positive::assert_pos_relative_eq;
 
     #[test]
     fn test_convert_seconds_to_minutes() {
-        let result = convert_time_frame(pos!(60.0), &TimeFrame::Second, &TimeFrame::Minute);
-        assert_pos_relative_eq!(result, pos!(1.0), pos!(1e-10));
+        let result =
+            convert_time_frame(pos_or_panic!(60.0), &TimeFrame::Second, &TimeFrame::Minute);
+        assert_pos_relative_eq!(result, Positive::ONE, pos_or_panic!(1e-10));
     }
 
     #[test]
     fn test_convert_hours_to_days() {
-        let result = convert_time_frame(pos!(12.0), &TimeFrame::Hour, &TimeFrame::Day);
-        assert_pos_relative_eq!(result, pos!(0.5), pos!(1e-10));
+        let result = convert_time_frame(pos_or_panic!(12.0), &TimeFrame::Hour, &TimeFrame::Day);
+        assert_pos_relative_eq!(result, pos_or_panic!(0.5), pos_or_panic!(1e-10));
     }
 
     #[test]
     fn test_convert_days_to_weeks() {
-        let result = convert_time_frame(pos!(7.0), &TimeFrame::Day, &TimeFrame::Week);
-        assert_pos_relative_eq!(result, pos!(1.0), pos!(1e-10));
+        let result = convert_time_frame(pos_or_panic!(7.0), &TimeFrame::Day, &TimeFrame::Week);
+        assert_pos_relative_eq!(result, Positive::ONE, pos_or_panic!(1e-10));
     }
 
     #[test]
     fn test_convert_weeks_to_days() {
-        let result = convert_time_frame(pos!(2.0), &TimeFrame::Week, &TimeFrame::Day);
-        assert_pos_relative_eq!(result, pos!(14.0), pos!(1e-10));
+        let result = convert_time_frame(Positive::TWO, &TimeFrame::Week, &TimeFrame::Day);
+        assert_pos_relative_eq!(result, pos_or_panic!(14.0), pos_or_panic!(1e-10));
     }
 
     #[test]
     fn test_convert_months_to_quarters() {
-        let result = convert_time_frame(pos!(3.0), &TimeFrame::Month, &TimeFrame::Quarter);
-        assert_pos_relative_eq!(result, pos!(1.0), pos!(1e-10));
+        let result = convert_time_frame(pos_or_panic!(3.0), &TimeFrame::Month, &TimeFrame::Quarter);
+        assert_pos_relative_eq!(result, Positive::ONE, pos_or_panic!(1e-10));
     }
 
     #[test]
     fn test_convert_minutes_to_hours() {
-        let result = convert_time_frame(pos!(120.0), &TimeFrame::Minute, &TimeFrame::Hour);
-        assert_pos_relative_eq!(result, pos!(2.0), pos!(1e-10));
+        let result = convert_time_frame(pos_or_panic!(120.0), &TimeFrame::Minute, &TimeFrame::Hour);
+        assert_pos_relative_eq!(result, Positive::TWO, pos_or_panic!(1e-10));
     }
 
     #[test]
     fn test_convert_custom_to_day() {
-        let result =
-            convert_time_frame(pos!(10.0), &TimeFrame::Custom(pos!(365.0)), &TimeFrame::Day);
-        assert_pos_relative_eq!(result, pos!(10.0), pos!(1e-10));
+        let result = convert_time_frame(
+            pos_or_panic!(10.0),
+            &TimeFrame::Custom(pos_or_panic!(365.0)),
+            &TimeFrame::Day,
+        );
+        assert_pos_relative_eq!(result, pos_or_panic!(10.0), pos_or_panic!(1e-10));
     }
 
     #[test]
     fn test_convert_day_to_custom() {
-        let result =
-            convert_time_frame(pos!(2.0), &TimeFrame::Day, &TimeFrame::Custom(pos!(365.0)));
-        assert_pos_relative_eq!(result, pos!(2.0), pos!(1e-10));
+        let result = convert_time_frame(
+            Positive::TWO,
+            &TimeFrame::Day,
+            &TimeFrame::Custom(pos_or_panic!(365.0)),
+        );
+        assert_pos_relative_eq!(result, Positive::TWO, pos_or_panic!(1e-10));
     }
 
     #[test]
     fn test_convert_same_timeframe() {
-        let result = convert_time_frame(pos!(42.0), &TimeFrame::Hour, &TimeFrame::Hour);
-        assert_pos_relative_eq!(result, pos!(42.0), pos!(1e-10));
+        let result = convert_time_frame(pos_or_panic!(42.0), &TimeFrame::Hour, &TimeFrame::Hour);
+        assert_pos_relative_eq!(result, pos_or_panic!(42.0), pos_or_panic!(1e-10));
     }
 
     #[test]
     fn test_convert_weeks_to_months() {
-        let result = convert_time_frame(pos!(4.0), &TimeFrame::Week, &TimeFrame::Month);
+        let result = convert_time_frame(pos_or_panic!(4.0), &TimeFrame::Week, &TimeFrame::Month);
         // Approximately 0.92 months (4 weeks / 4.33 weeks per month)
-        assert_pos_relative_eq!(result, pos!(0.920_547_945_255_920_4), pos!(1e-10));
+        assert_pos_relative_eq!(
+            result,
+            pos_or_panic!(0.920_547_945_255_920_4),
+            pos_or_panic!(1e-10)
+        );
     }
 
     #[test]
     fn test_convert_milliseconds_to_seconds() {
-        let result = convert_time_frame(pos!(1000.0), &TimeFrame::Millisecond, &TimeFrame::Second);
-        assert_pos_relative_eq!(result, pos!(1.0), pos!(1e-10));
+        let result = convert_time_frame(
+            pos_or_panic!(1000.0),
+            &TimeFrame::Millisecond,
+            &TimeFrame::Second,
+        );
+        assert_pos_relative_eq!(result, Positive::ONE, pos_or_panic!(1e-10));
     }
 
     #[test]
     fn test_zero() {
         let result =
             convert_time_frame(Positive::ZERO, &TimeFrame::Millisecond, &TimeFrame::Second);
-        assert_pos_relative_eq!(result, Positive::ZERO, pos!(1e-10));
+        assert_pos_relative_eq!(result, Positive::ZERO, pos_or_panic!(1e-10));
     }
 }

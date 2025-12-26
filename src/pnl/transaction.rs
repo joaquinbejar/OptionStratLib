@@ -1,8 +1,9 @@
 use crate::error::TransactionError;
 use crate::model::TradeStatus;
 use crate::pnl::utils::PnL;
-use crate::{OptionStyle, OptionType, Positive, Side};
+use crate::{OptionStyle, OptionType, Side};
 use chrono::{DateTime, Utc};
+use positive::Positive;
 use serde::{Deserialize, Serialize};
 
 /// # Transaction
@@ -257,8 +258,9 @@ impl Transaction {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{pos, spos};
+
     use chrono::Utc;
+    use positive::{Positive, pos_or_panic, spos};
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
 
@@ -272,9 +274,9 @@ mod tests {
             OptionType::European, // European option
             Side::Long,           // Long position
             OptionStyle::Call,    // Call option
-            pos!(1.0),            // 1 contract
-            pos!(5.0),            // Premium paid: $5.00
-            pos!(1.0),            // Fees: $1.00
+            Positive::ONE,        // 1 contract
+            pos_or_panic!(5.0),   // Premium paid: $5.00
+            Positive::ONE,        // Fees: $1.00
             spos!(100.0),         // Underlying price at open: $100.00
             spos!(30.0),          // 30 days to expiration
             spos!(0.2),           // IV: 20%
@@ -287,7 +289,7 @@ mod tests {
 
         // 3. Now let's simulate price movement and close the position
         // Price has increased from $100 to $110
-        long_call.update_underlying_price(pos!(110.0));
+        long_call.update_underlying_price(pos_or_panic!(110.0));
 
         // Close the position
         let closed_date = Utc::now();
@@ -297,9 +299,9 @@ mod tests {
             OptionType::European, // European option
             Side::Long,           // Long position
             OptionStyle::Call,    // Call option
-            pos!(1.0),            // 1 contract
-            pos!(12.0),           // Closing premium: $12.00 (higher due to price increase)
-            pos!(1.0),            // Closing fees: $1.00
+            Positive::ONE,        // 1 contract
+            pos_or_panic!(12.0),  // Closing premium: $12.00 (higher due to price increase)
+            Positive::ONE,        // Closing fees: $1.00
             spos!(110.0),         // Underlying price at close: $110.00
             spos!(20.0),          // 20 days to expiration (10 days elapsed)
             spos!(0.22),          // IV: 22%
@@ -325,9 +327,9 @@ mod tests {
             OptionType::European,
             Side::Long,
             OptionStyle::Call,
-            pos!(1.0),
-            pos!(5.0), // Premium paid: $5.00
-            pos!(1.0), // Fees: $1.00
+            Positive::ONE,
+            pos_or_panic!(5.0), // Premium paid: $5.00
+            Positive::ONE,      // Fees: $1.00
             spos!(100.0),
             spos!(30.0),
             spos!(0.2),
@@ -338,7 +340,7 @@ mod tests {
         assert_eq!(initial_pnl.realized.unwrap(), dec!(-6.0));
 
         // Price has decreased from $100 to $95
-        long_call.update_underlying_price(pos!(95.0));
+        long_call.update_underlying_price(pos_or_panic!(95.0));
 
         // Close the position for less than we paid
         let closed_date = Utc::now();
@@ -348,9 +350,9 @@ mod tests {
             OptionType::European,
             Side::Long,
             OptionStyle::Call,
-            pos!(1.0),
-            pos!(2.0), // Closing premium: $2.00 (lower due to price decrease)
-            pos!(1.0), // Closing fees: $1.00
+            Positive::ONE,
+            Positive::TWO, // Closing premium: $2.00 (lower due to price decrease)
+            Positive::ONE, // Closing fees: $1.00
             spos!(95.0),
             spos!(20.0),
             spos!(0.18),
@@ -373,14 +375,14 @@ mod tests {
             TradeStatus::Open,
             Some(open_date),
             OptionType::European,
-            Side::Short,       // Short position
-            OptionStyle::Call, // Call option
-            pos!(1.0),         // 1 contract
-            pos!(5.0),         // Premium received: $5.00
-            pos!(1.0),         // Fees: $1.00
-            spos!(100.0),      // Underlying price at open: $100.00
-            spos!(30.0),       // 30 days to expiration
-            spos!(0.2),        // IV: 20%
+            Side::Short,        // Short position
+            OptionStyle::Call,  // Call option
+            Positive::ONE,      // 1 contract
+            pos_or_panic!(5.0), // Premium received: $5.00
+            Positive::ONE,      // Fees: $1.00
+            spos!(100.0),       // Underlying price at open: $100.00
+            spos!(30.0),        // 30 days to expiration
+            spos!(0.2),         // IV: 20%
         );
 
         // 2. Calculate initial PnL (should be positive as we receive premium - fees)
@@ -389,7 +391,7 @@ mod tests {
         assert_eq!(initial_pnl.realized.unwrap(), dec!(4.0)); // Premium - fees = $5.00 - $1.00 = $4.00
 
         // 3. Simulate price decrease from $100 to $95 (favorable for short call)
-        short_call.update_underlying_price(pos!(95.0));
+        short_call.update_underlying_price(pos_or_panic!(95.0));
 
         // 4. Close the position by buying it back for less than we received
         let closed_date = Utc::now();
@@ -399,9 +401,9 @@ mod tests {
             OptionType::European,
             Side::Short,
             OptionStyle::Call,
-            pos!(1.0),
-            pos!(2.0), // Closing premium: $2.00 (lower due to price decrease)
-            pos!(1.0), // Closing fees: $1.00
+            Positive::ONE,
+            Positive::TWO, // Closing premium: $2.00 (lower due to price decrease)
+            Positive::ONE, // Closing fees: $1.00
             spos!(95.0),
             spos!(20.0),
             spos!(0.18),
@@ -426,9 +428,9 @@ mod tests {
             OptionType::European,
             Side::Short,
             OptionStyle::Call,
-            pos!(1.0),
-            pos!(5.0), // Premium received: $5.00
-            pos!(1.0), // Fees: $1.00
+            Positive::ONE,
+            pos_or_panic!(5.0), // Premium received: $5.00
+            Positive::ONE,      // Fees: $1.00
             spos!(100.0),
             spos!(30.0),
             spos!(0.2),
@@ -439,7 +441,7 @@ mod tests {
         assert_eq!(initial_pnl.realized.unwrap(), dec!(4.0)); // Premium - fees = $4.00
 
         // 3. Simulate price increase from $100 to $110 (unfavorable for short call)
-        short_call.update_underlying_price(pos!(110.0));
+        short_call.update_underlying_price(pos_or_panic!(110.0));
 
         // 4. Close the position by buying it back for more than we received
         let closed_date = Utc::now();
@@ -449,9 +451,9 @@ mod tests {
             OptionType::European,
             Side::Short,
             OptionStyle::Call,
-            pos!(1.0),
-            pos!(12.0), // Closing premium: $12.00 (higher due to price increase)
-            pos!(1.0),  // Closing fees: $1.00
+            Positive::ONE,
+            pos_or_panic!(12.0), // Closing premium: $12.00 (higher due to price increase)
+            Positive::ONE,       // Closing fees: $1.00
             spos!(110.0),
             spos!(20.0),
             spos!(0.22),
@@ -474,14 +476,14 @@ mod tests {
             TradeStatus::Open,
             Some(open_date),
             OptionType::European,
-            Side::Long,       // Long position
-            OptionStyle::Put, // Put option
-            pos!(1.0),        // 1 contract
-            pos!(4.0),        // Premium paid: $4.00
-            pos!(1.0),        // Fees: $1.00
-            spos!(100.0),     // Underlying price at open: $100.00
-            spos!(30.0),      // 30 days to expiration
-            spos!(0.2),       // IV: 20%
+            Side::Long,         // Long position
+            OptionStyle::Put,   // Put option
+            Positive::ONE,      // 1 contract
+            pos_or_panic!(4.0), // Premium paid: $4.00
+            Positive::ONE,      // Fees: $1.00
+            spos!(100.0),       // Underlying price at open: $100.00
+            spos!(30.0),        // 30 days to expiration
+            spos!(0.2),         // IV: 20%
         );
 
         // 2. Calculate initial PnL (should be negative as we paid premium + fees)
@@ -490,7 +492,7 @@ mod tests {
         assert_eq!(initial_pnl.realized.unwrap(), dec!(-5.0)); // Premium + fees = -$5.00
 
         // 3. Simulate price decrease from $100 to $90 (favorable for long put)
-        long_put.update_underlying_price(pos!(90.0));
+        long_put.update_underlying_price(pos_or_panic!(90.0));
 
         // 4. Close the position by selling it for more than we paid
         let closed_date = Utc::now();
@@ -500,9 +502,9 @@ mod tests {
             OptionType::European,
             Side::Long,
             OptionStyle::Put,
-            pos!(1.0),
-            pos!(10.0), // Closing premium: $10.00 (higher due to price decrease)
-            pos!(1.0),  // Closing fees: $1.00
+            Positive::ONE,
+            pos_or_panic!(10.0), // Closing premium: $10.00 (higher due to price decrease)
+            Positive::ONE,       // Closing fees: $1.00
             spos!(90.0),
             spos!(20.0),
             spos!(0.25),
@@ -527,9 +529,9 @@ mod tests {
             OptionType::European,
             Side::Long,
             OptionStyle::Put,
-            pos!(1.0),
-            pos!(4.0), // Premium paid: $4.00
-            pos!(1.0), // Fees: $1.00
+            Positive::ONE,
+            pos_or_panic!(4.0), // Premium paid: $4.00
+            Positive::ONE,      // Fees: $1.00
             spos!(100.0),
             spos!(30.0),
             spos!(0.2),
@@ -540,7 +542,7 @@ mod tests {
         assert_eq!(initial_pnl.realized.unwrap(), dec!(-5.0)); // Premium + fees = -$5.00
 
         // 3. Simulate price increase from $100 to $105 (unfavorable for long put)
-        long_put.update_underlying_price(pos!(105.0));
+        long_put.update_underlying_price(pos_or_panic!(105.0));
 
         // 4. Close the position by selling it for less than we paid
         let closed_date = Utc::now();
@@ -550,9 +552,9 @@ mod tests {
             OptionType::European,
             Side::Long,
             OptionStyle::Put,
-            pos!(1.0),
-            pos!(2.0), // Closing premium: $2.00 (lower due to price increase)
-            pos!(1.0), // Closing fees: $1.00
+            Positive::ONE,
+            Positive::TWO, // Closing premium: $2.00 (lower due to price increase)
+            Positive::ONE, // Closing fees: $1.00
             spos!(105.0),
             spos!(20.0),
             spos!(0.18),
@@ -575,14 +577,14 @@ mod tests {
             TradeStatus::Open,
             Some(open_date),
             OptionType::European,
-            Side::Short,      // Short position
-            OptionStyle::Put, // Put option
-            pos!(1.0),        // 1 contract
-            pos!(4.0),        // Premium received: $4.00
-            pos!(1.0),        // Fees: $1.00
-            spos!(100.0),     // Underlying price at open: $100.00
-            spos!(30.0),      // 30 days to expiration
-            spos!(0.2),       // IV: 20%
+            Side::Short,        // Short position
+            OptionStyle::Put,   // Put option
+            Positive::ONE,      // 1 contract
+            pos_or_panic!(4.0), // Premium received: $4.00
+            Positive::ONE,      // Fees: $1.00
+            spos!(100.0),       // Underlying price at open: $100.00
+            spos!(30.0),        // 30 days to expiration
+            spos!(0.2),         // IV: 20%
         );
 
         // 2. Calculate initial PnL (should be positive as we receive premium - fees)
@@ -591,7 +593,7 @@ mod tests {
         assert_eq!(initial_pnl.realized.unwrap(), dec!(3.0)); // Premium - fees = $4.00 - $1.00 = $3.00
 
         // 3. Simulate price increase from $100 to $105 (favorable for short put)
-        short_put.update_underlying_price(pos!(105.0));
+        short_put.update_underlying_price(pos_or_panic!(105.0));
 
         // 4. Close the position by buying it back for less than we received
         let closed_date = Utc::now();
@@ -601,9 +603,9 @@ mod tests {
             OptionType::European,
             Side::Short,
             OptionStyle::Put,
-            pos!(1.0),
-            pos!(1.5), // Closing premium: $1.50 (lower due to price increase)
-            pos!(1.0), // Closing fees: $1.00
+            Positive::ONE,
+            pos_or_panic!(1.5), // Closing premium: $1.50 (lower due to price increase)
+            Positive::ONE,      // Closing fees: $1.00
             spos!(105.0),
             spos!(20.0),
             spos!(0.15),
@@ -628,9 +630,9 @@ mod tests {
             OptionType::European,
             Side::Short,
             OptionStyle::Put,
-            pos!(1.0),
-            pos!(4.0), // Premium received: $4.00
-            pos!(1.0), // Fees: $1.00
+            Positive::ONE,
+            pos_or_panic!(4.0), // Premium received: $4.00
+            Positive::ONE,      // Fees: $1.00
             spos!(100.0),
             spos!(30.0),
             spos!(0.2),
@@ -641,7 +643,7 @@ mod tests {
         assert_eq!(initial_pnl.realized.unwrap(), dec!(3.0)); // Premium - fees = $3.00
 
         // 3. Simulate price decrease from $100 to $90 (unfavorable for short put)
-        short_put.update_underlying_price(pos!(90.0));
+        short_put.update_underlying_price(pos_or_panic!(90.0));
 
         // 4. Close the position by buying it back for more than we received
         let closed_date = Utc::now();
@@ -651,9 +653,9 @@ mod tests {
             OptionType::European,
             Side::Short,
             OptionStyle::Put,
-            pos!(1.0),
-            pos!(10.0), // Closing premium: $10.00 (higher due to price decrease)
-            pos!(1.0),  // Closing fees: $1.00
+            Positive::ONE,
+            pos_or_panic!(10.0), // Closing premium: $10.00 (higher due to price decrease)
+            Positive::ONE,       // Closing fees: $1.00
             spos!(90.0),
             spos!(20.0),
             spos!(0.25),
@@ -672,8 +674,9 @@ mod tests {
 #[cfg(test)]
 mod tests_transaction_getters {
     use super::*;
-    use crate::{pos, spos};
+
     use chrono::Utc;
+    use positive::{Positive, pos_or_panic, spos};
 
     fn create_test_transaction() -> Transaction {
         Transaction::new(
@@ -682,9 +685,9 @@ mod tests_transaction_getters {
             OptionType::European,
             Side::Long,
             OptionStyle::Call,
-            pos!(2.0),
-            pos!(5.0),
-            pos!(1.0),
+            Positive::TWO,
+            pos_or_panic!(5.0),
+            Positive::ONE,
             spos!(100.0),
             spos!(30.0),
             spos!(0.2),
@@ -718,19 +721,19 @@ mod tests_transaction_getters {
     #[test]
     fn test_quantity_getter() {
         let transaction = create_test_transaction();
-        assert_eq!(transaction.quantity(), pos!(2.0));
+        assert_eq!(transaction.quantity(), Positive::TWO);
     }
 
     #[test]
     fn test_premium_getter() {
         let transaction = create_test_transaction();
-        assert_eq!(transaction.premium(), pos!(5.0));
+        assert_eq!(transaction.premium(), pos_or_panic!(5.0));
     }
 
     #[test]
     fn test_fees_getter() {
         let transaction = create_test_transaction();
-        assert_eq!(transaction.fees(), pos!(1.0));
+        assert_eq!(transaction.fees(), Positive::ONE);
     }
 
     #[test]
@@ -755,8 +758,9 @@ mod tests_transaction_getters {
 #[cfg(test)]
 mod tests_transaction_updaters {
     use super::*;
-    use crate::{pos, spos};
+
     use chrono::Utc;
+    use positive::{Positive, pos_or_panic, spos};
 
     fn create_test_transaction() -> Transaction {
         Transaction::new(
@@ -765,9 +769,9 @@ mod tests_transaction_updaters {
             OptionType::European,
             Side::Long,
             OptionStyle::Call,
-            pos!(2.0),
-            pos!(5.0),
-            pos!(1.0),
+            Positive::TWO,
+            pos_or_panic!(5.0),
+            Positive::ONE,
             spos!(100.0),
             spos!(30.0),
             spos!(0.2),
@@ -777,21 +781,21 @@ mod tests_transaction_updaters {
     #[test]
     fn test_update_implied_volatility() {
         let mut transaction = create_test_transaction();
-        transaction.update_implied_volatility(pos!(0.25));
+        transaction.update_implied_volatility(pos_or_panic!(0.25));
         assert_eq!(transaction.implied_volatility(), spos!(0.25));
     }
 
     #[test]
     fn test_update_underlying_price() {
         let mut transaction = create_test_transaction();
-        transaction.update_underlying_price(pos!(110.0));
+        transaction.update_underlying_price(pos_or_panic!(110.0));
         assert_eq!(transaction.underlying_price(), spos!(110.0));
     }
 
     #[test]
     fn test_update_days_to_expiration() {
         let mut transaction = create_test_transaction();
-        transaction.update_days_to_expiration(pos!(25.0));
+        transaction.update_days_to_expiration(pos_or_panic!(25.0));
         assert_eq!(transaction.days_to_expiration(), spos!(25.0));
     }
 }
@@ -799,8 +803,9 @@ mod tests_transaction_updaters {
 #[cfg(test)]
 mod tests_transaction_status_pnl {
     use super::*;
-    use crate::{pos, spos};
+
     use chrono::Utc;
+    use positive::{Positive, pos_or_panic, spos};
     use rust_decimal_macros::dec;
 
     #[test]
@@ -811,9 +816,9 @@ mod tests_transaction_status_pnl {
             OptionType::European,
             Side::Long,
             OptionStyle::Call,
-            pos!(2.0),
-            pos!(5.0),
-            pos!(1.0),
+            Positive::TWO,
+            pos_or_panic!(5.0),
+            Positive::ONE,
             spos!(100.0),
             spos!(30.0),
             spos!(0.2),
@@ -831,9 +836,9 @@ mod tests_transaction_status_pnl {
             OptionType::European,
             Side::Short,
             OptionStyle::Call,
-            pos!(2.0),
-            pos!(5.0),
-            pos!(1.0),
+            Positive::TWO,
+            pos_or_panic!(5.0),
+            Positive::ONE,
             spos!(100.0),
             spos!(30.0),
             spos!(0.2),
@@ -851,9 +856,9 @@ mod tests_transaction_status_pnl {
             OptionType::European,
             Side::Long,
             OptionStyle::Call,
-            pos!(2.0),
-            pos!(5.0),
-            pos!(1.0),
+            Positive::TWO,
+            pos_or_panic!(5.0),
+            Positive::ONE,
             spos!(100.0),
             spos!(30.0),
             spos!(0.2),
@@ -871,9 +876,9 @@ mod tests_transaction_status_pnl {
             OptionType::European,
             Side::Short,
             OptionStyle::Call,
-            pos!(2.0),
-            pos!(5.0),
-            pos!(1.0),
+            Positive::TWO,
+            pos_or_panic!(5.0),
+            Positive::ONE,
             spos!(100.0),
             spos!(30.0),
             spos!(0.2),
@@ -891,9 +896,9 @@ mod tests_transaction_status_pnl {
             OptionType::European,
             Side::Long,
             OptionStyle::Call,
-            pos!(2.0),
-            pos!(5.0),
-            pos!(1.0),
+            Positive::TWO,
+            pos_or_panic!(5.0),
+            Positive::ONE,
             spos!(100.0),
             spos!(0.0),
             spos!(0.2),
@@ -911,9 +916,9 @@ mod tests_transaction_status_pnl {
             OptionType::European,
             Side::Long,
             OptionStyle::Call,
-            pos!(2.0),
-            pos!(5.0),
-            pos!(1.0),
+            Positive::TWO,
+            pos_or_panic!(5.0),
+            Positive::ONE,
             spos!(110.0),
             spos!(0.0),
             spos!(0.2),
@@ -931,9 +936,9 @@ mod tests_transaction_status_pnl {
             OptionType::European,
             Side::Short,
             OptionStyle::Call,
-            pos!(2.0),
-            pos!(5.0),
-            pos!(1.0),
+            Positive::TWO,
+            pos_or_panic!(5.0),
+            Positive::ONE,
             spos!(110.0),
             spos!(0.0),
             spos!(0.2),
@@ -951,9 +956,9 @@ mod tests_transaction_status_pnl {
             OptionType::American, // Unsupported type
             Side::Long,
             OptionStyle::Call,
-            pos!(2.0),
-            pos!(5.0),
-            pos!(1.0),
+            Positive::TWO,
+            pos_or_panic!(5.0),
+            Positive::ONE,
             spos!(100.0),
             spos!(30.0),
             spos!(0.2),
@@ -975,9 +980,9 @@ mod tests_transaction_status_pnl {
             OptionType::American, // Unsupported type
             Side::Long,
             OptionStyle::Call,
-            pos!(2.0),
-            pos!(5.0),
-            pos!(1.0),
+            Positive::TWO,
+            pos_or_panic!(5.0),
+            Positive::ONE,
             spos!(100.0),
             spos!(30.0),
             spos!(0.2),

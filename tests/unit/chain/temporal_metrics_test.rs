@@ -15,7 +15,7 @@ use optionstratlib::chains::chain::OptionChain;
 use optionstratlib::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
 use optionstratlib::metrics::{CharmSurface, ColorSurface, ThetaSurface};
 use optionstratlib::model::ExpirationDate;
-use optionstratlib::{pos, spos};
+use positive::{Positive, pos_or_panic, spos};
 use rust_decimal_macros::dec;
 
 /// Creates a test option chain with proper Greeks data
@@ -27,16 +27,16 @@ fn create_test_chain() -> OptionChain {
         spos!(5.0),
         dec!(-0.15),
         dec!(0.08),
-        pos!(0.02),
+        pos_or_panic!(0.02),
         2,
         OptionDataPriceParams::new(
-            Some(Box::new(pos!(450.0))),
-            Some(ExpirationDate::Days(pos!(30.0))),
+            Some(Box::new(pos_or_panic!(450.0))),
+            Some(ExpirationDate::Days(pos_or_panic!(30.0))),
             Some(dec!(0.05)),
             spos!(0.01),
             Some("TEST".to_string()),
         ),
-        pos!(0.20),
+        pos_or_panic!(0.20),
     );
 
     OptionChain::build_chain(&params)
@@ -44,7 +44,13 @@ fn create_test_chain() -> OptionChain {
 
 /// Creates an empty option chain for edge case testing
 fn create_empty_chain() -> OptionChain {
-    OptionChain::new("EMPTY", pos!(100.0), "2024-12-31".to_string(), None, None)
+    OptionChain::new(
+        "EMPTY",
+        Positive::HUNDRED,
+        "2024-12-31".to_string(),
+        None,
+        None,
+    )
 }
 
 // ============================================================================
@@ -108,8 +114,8 @@ mod theta_surface_tests {
     #[test]
     fn test_theta_surface_basic() {
         let chain = create_test_chain();
-        let price_range = (pos!(400.0), pos!(500.0));
-        let days = vec![pos!(7.0), pos!(14.0), pos!(30.0)];
+        let price_range = (pos_or_panic!(400.0), pos_or_panic!(500.0));
+        let days = vec![pos_or_panic!(7.0), pos_or_panic!(14.0), pos_or_panic!(30.0)];
 
         let result = chain.theta_surface(price_range, days, 10);
         assert!(result.is_ok());
@@ -122,8 +128,8 @@ mod theta_surface_tests {
     #[test]
     fn test_theta_surface_single_day() {
         let chain = create_test_chain();
-        let price_range = (pos!(400.0), pos!(500.0));
-        let days = vec![pos!(30.0)];
+        let price_range = (pos_or_panic!(400.0), pos_or_panic!(500.0));
+        let days = vec![pos_or_panic!(30.0)];
 
         let result = chain.theta_surface(price_range, days, 10);
         assert!(result.is_ok());
@@ -135,7 +141,7 @@ mod theta_surface_tests {
     #[test]
     fn test_theta_surface_empty_days() {
         let chain = create_test_chain();
-        let price_range = (pos!(400.0), pos!(500.0));
+        let price_range = (pos_or_panic!(400.0), pos_or_panic!(500.0));
         let days: Vec<_> = vec![];
 
         let result = chain.theta_surface(price_range, days, 10);
@@ -145,8 +151,8 @@ mod theta_surface_tests {
     #[test]
     fn test_theta_surface_empty_chain() {
         let chain = create_empty_chain();
-        let price_range = (pos!(400.0), pos!(500.0));
-        let days = vec![pos!(30.0)];
+        let price_range = (pos_or_panic!(400.0), pos_or_panic!(500.0));
+        let days = vec![pos_or_panic!(30.0)];
 
         let result = chain.theta_surface(price_range, days, 10);
         assert!(result.is_err());
@@ -203,8 +209,8 @@ mod charm_surface_tests {
     #[test]
     fn test_charm_surface_basic() {
         let chain = create_test_chain();
-        let price_range = (pos!(400.0), pos!(500.0));
-        let days = vec![pos!(7.0), pos!(14.0), pos!(30.0)];
+        let price_range = (pos_or_panic!(400.0), pos_or_panic!(500.0));
+        let days = vec![pos_or_panic!(7.0), pos_or_panic!(14.0), pos_or_panic!(30.0)];
 
         let result = chain.charm_surface(price_range, days, 10);
         assert!(result.is_ok());
@@ -216,8 +222,8 @@ mod charm_surface_tests {
     #[test]
     fn test_charm_surface_single_day() {
         let chain = create_test_chain();
-        let price_range = (pos!(400.0), pos!(500.0));
-        let days = vec![pos!(30.0)];
+        let price_range = (pos_or_panic!(400.0), pos_or_panic!(500.0));
+        let days = vec![pos_or_panic!(30.0)];
 
         let result = chain.charm_surface(price_range, days, 10);
         assert!(result.is_ok());
@@ -229,7 +235,7 @@ mod charm_surface_tests {
     #[test]
     fn test_charm_surface_empty_days() {
         let chain = create_test_chain();
-        let price_range = (pos!(400.0), pos!(500.0));
+        let price_range = (pos_or_panic!(400.0), pos_or_panic!(500.0));
         let days: Vec<_> = vec![];
 
         let result = chain.charm_surface(price_range, days, 10);
@@ -239,8 +245,8 @@ mod charm_surface_tests {
     #[test]
     fn test_charm_surface_empty_chain() {
         let chain = create_empty_chain();
-        let price_range = (pos!(400.0), pos!(500.0));
-        let days = vec![pos!(30.0)];
+        let price_range = (pos_or_panic!(400.0), pos_or_panic!(500.0));
+        let days = vec![pos_or_panic!(30.0)];
 
         let result = chain.charm_surface(price_range, days, 10);
         assert!(result.is_err());
@@ -297,8 +303,8 @@ mod color_surface_tests {
     #[test]
     fn test_color_surface_basic() {
         let chain = create_test_chain();
-        let price_range = (pos!(400.0), pos!(500.0));
-        let days = vec![pos!(7.0), pos!(14.0), pos!(30.0)];
+        let price_range = (pos_or_panic!(400.0), pos_or_panic!(500.0));
+        let days = vec![pos_or_panic!(7.0), pos_or_panic!(14.0), pos_or_panic!(30.0)];
 
         let result = chain.color_surface(price_range, days, 10);
         assert!(result.is_ok());
@@ -310,8 +316,8 @@ mod color_surface_tests {
     #[test]
     fn test_color_surface_single_day() {
         let chain = create_test_chain();
-        let price_range = (pos!(400.0), pos!(500.0));
-        let days = vec![pos!(30.0)];
+        let price_range = (pos_or_panic!(400.0), pos_or_panic!(500.0));
+        let days = vec![pos_or_panic!(30.0)];
 
         let result = chain.color_surface(price_range, days, 10);
         assert!(result.is_ok());
@@ -323,7 +329,7 @@ mod color_surface_tests {
     #[test]
     fn test_color_surface_empty_days() {
         let chain = create_test_chain();
-        let price_range = (pos!(400.0), pos!(500.0));
+        let price_range = (pos_or_panic!(400.0), pos_or_panic!(500.0));
         let days: Vec<_> = vec![];
 
         let result = chain.color_surface(price_range, days, 10);
@@ -333,8 +339,8 @@ mod color_surface_tests {
     #[test]
     fn test_color_surface_empty_chain() {
         let chain = create_empty_chain();
-        let price_range = (pos!(400.0), pos!(500.0));
-        let days = vec![pos!(30.0)];
+        let price_range = (pos_or_panic!(400.0), pos_or_panic!(500.0));
+        let days = vec![pos_or_panic!(30.0)];
 
         let result = chain.color_surface(price_range, days, 10);
         assert!(result.is_err());
@@ -351,8 +357,8 @@ mod edge_case_tests {
     #[test]
     fn test_near_expiration_theta() {
         let chain = create_test_chain();
-        let price_range = (pos!(400.0), pos!(500.0));
-        let days = vec![pos!(1.0), pos!(2.0), pos!(3.0)];
+        let price_range = (pos_or_panic!(400.0), pos_or_panic!(500.0));
+        let days = vec![Positive::ONE, Positive::TWO, pos_or_panic!(3.0)];
 
         let result = chain.theta_surface(price_range, days, 5);
         assert!(result.is_ok());
@@ -361,8 +367,8 @@ mod edge_case_tests {
     #[test]
     fn test_near_expiration_charm() {
         let chain = create_test_chain();
-        let price_range = (pos!(400.0), pos!(500.0));
-        let days = vec![pos!(1.0), pos!(2.0), pos!(3.0)];
+        let price_range = (pos_or_panic!(400.0), pos_or_panic!(500.0));
+        let days = vec![Positive::ONE, Positive::TWO, pos_or_panic!(3.0)];
 
         let result = chain.charm_surface(price_range, days, 5);
         assert!(result.is_ok());
@@ -371,8 +377,8 @@ mod edge_case_tests {
     #[test]
     fn test_near_expiration_color() {
         let chain = create_test_chain();
-        let price_range = (pos!(400.0), pos!(500.0));
-        let days = vec![pos!(1.0), pos!(2.0), pos!(3.0)];
+        let price_range = (pos_or_panic!(400.0), pos_or_panic!(500.0));
+        let days = vec![Positive::ONE, Positive::TWO, pos_or_panic!(3.0)];
 
         let result = chain.color_surface(price_range, days, 5);
         assert!(result.is_ok());
@@ -381,8 +387,8 @@ mod edge_case_tests {
     #[test]
     fn test_wide_price_range() {
         let chain = create_test_chain();
-        let price_range = (pos!(200.0), pos!(700.0));
-        let days = vec![pos!(30.0)];
+        let price_range = (pos_or_panic!(200.0), pos_or_panic!(700.0));
+        let days = vec![pos_or_panic!(30.0)];
 
         let theta_result = chain.theta_surface(price_range, days.clone(), 20);
         let charm_result = chain.charm_surface(price_range, days.clone(), 20);
@@ -396,8 +402,8 @@ mod edge_case_tests {
     #[test]
     fn test_single_point_surface() {
         let chain = create_test_chain();
-        let price_range = (pos!(450.0), pos!(450.0));
-        let days = vec![pos!(30.0)];
+        let price_range = (pos_or_panic!(450.0), pos_or_panic!(450.0));
+        let days = vec![pos_or_panic!(30.0)];
 
         let theta_result = chain.theta_surface(price_range, days.clone(), 0);
         let charm_result = chain.charm_surface(price_range, days.clone(), 0);

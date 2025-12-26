@@ -3,10 +3,11 @@
    Email: jb@taunais.com
    Date: 16/8/24
 ******************************************************************************/
-use crate::Positive;
+
 use crate::model::Trade;
 pub use crate::pnl::PnLCalculator;
 use chrono::{DateTime, Utc};
+use positive::Positive;
 use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -82,13 +83,13 @@ impl PnL {
     /// use chrono::Utc;
     /// use rust_decimal_macros::dec;
     /// use optionstratlib::pnl::utils::PnL;
-    /// use optionstratlib::pos;
+    /// use positive::{pos_or_panic, Positive};
     ///
     /// let pnl = PnL::new(
     ///     Some(dec!(500.0)),  // Realized PnL
     ///     Some(dec!(250.0)),  // Unrealized PnL
-    ///     pos!(100.0),        // Initial costs
-    ///     pos!(350.0),        // Initial income
+    ///     Positive::HUNDRED,        // Initial costs
+    ///     pos_or_panic!(350.0),        // Initial income
     ///     Utc::now(),         // Current timestamp
     /// );
     /// ```
@@ -121,13 +122,13 @@ impl PnL {
     /// use chrono::Utc;
     /// use rust_decimal_macros::dec;
     /// use optionstratlib::pnl::utils::PnL;
-    /// use optionstratlib::pos;
+    /// use positive::{pos_or_panic, Positive};
     ///
     /// let pnl = PnL::new(
     ///     Some(dec!(500.0)),
     ///     Some(dec!(250.0)),
-    ///     pos!(100.0),
-    ///     pos!(350.0),
+    ///     Positive::HUNDRED,
+    ///     pos_or_panic!(350.0),
     ///     Utc::now(),
     /// );
     ///
@@ -271,7 +272,8 @@ impl From<&Trade> for PnL {
 #[cfg(test)]
 mod tests_sum {
     use super::*;
-    use crate::pos;
+    use positive::pos_or_panic;
+
     use rust_decimal_macros::dec;
 
     #[test]
@@ -279,16 +281,16 @@ mod tests_sum {
         let pnl1 = PnL {
             realized: Some(dec!(10.0)),
             unrealized: Some(dec!(5.0)),
-            initial_costs: pos!(2.0),
-            initial_income: pos!(1.0),
+            initial_costs: Positive::TWO,
+            initial_income: Positive::ONE,
             date_time: Utc::now(),
         };
 
         let pnl2 = PnL {
             realized: Some(dec!(20.0)),
             unrealized: Some(dec!(10.0)),
-            initial_costs: pos!(3.0),
-            initial_income: pos!(2.0),
+            initial_costs: pos_or_panic!(3.0),
+            initial_income: Positive::TWO,
             date_time: Utc::now(),
         };
 
@@ -296,8 +298,8 @@ mod tests_sum {
 
         assert_eq!(sum.realized, Some(dec!(30.0)));
         assert_eq!(sum.unrealized, Some(dec!(15.0)));
-        assert_eq!(sum.initial_costs, pos!(5.0));
-        assert_eq!(sum.initial_income, pos!(3.0));
+        assert_eq!(sum.initial_costs, pos_or_panic!(5.0));
+        assert_eq!(sum.initial_income, pos_or_panic!(3.0));
     }
 
     #[test]
@@ -305,16 +307,16 @@ mod tests_sum {
         let pnl1 = PnL {
             realized: None,
             unrealized: None,
-            initial_costs: pos!(2.0),
-            initial_income: pos!(1.0),
+            initial_costs: Positive::TWO,
+            initial_income: Positive::ONE,
             date_time: Utc::now(),
         };
 
         let pnl2 = PnL {
             realized: None,
             unrealized: None,
-            initial_costs: pos!(3.0),
-            initial_income: pos!(2.0),
+            initial_costs: pos_or_panic!(3.0),
+            initial_income: Positive::TWO,
             date_time: Utc::now(),
         };
 
@@ -322,8 +324,8 @@ mod tests_sum {
 
         assert_eq!(sum.realized, None);
         assert_eq!(sum.unrealized, None);
-        assert_eq!(sum.initial_costs, pos!(5.0));
-        assert_eq!(sum.initial_income, pos!(3.0));
+        assert_eq!(sum.initial_costs, pos_or_panic!(5.0));
+        assert_eq!(sum.initial_income, pos_or_panic!(3.0));
     }
 
     #[test]
@@ -331,16 +333,16 @@ mod tests_sum {
         let pnl1 = PnL {
             realized: None,
             unrealized: Some(dec!(5.0)),
-            initial_costs: pos!(2.0),
-            initial_income: pos!(1.0),
+            initial_costs: Positive::TWO,
+            initial_income: Positive::ONE,
             date_time: Utc::now(),
         };
 
         let pnl2 = PnL {
             realized: Some(dec!(20.0)),
             unrealized: None,
-            initial_costs: pos!(3.0),
-            initial_income: pos!(2.0),
+            initial_costs: pos_or_panic!(3.0),
+            initial_income: Positive::TWO,
             date_time: Utc::now(),
         };
 
@@ -348,8 +350,8 @@ mod tests_sum {
 
         assert_eq!(sum.realized, Some(dec!(20.0)));
         assert_eq!(sum.unrealized, Some(dec!(5.0)));
-        assert_eq!(sum.initial_costs, pos!(5.0));
-        assert_eq!(sum.initial_income, pos!(3.0));
+        assert_eq!(sum.initial_costs, pos_or_panic!(5.0));
+        assert_eq!(sum.initial_income, pos_or_panic!(3.0));
     }
 
     #[test]
@@ -357,16 +359,16 @@ mod tests_sum {
         let pnl1 = PnL {
             realized: Some(dec!(10.0)),
             unrealized: Some(dec!(5.0)),
-            initial_costs: pos!(2.0),
-            initial_income: pos!(1.0),
+            initial_costs: Positive::TWO,
+            initial_income: Positive::ONE,
             date_time: Utc::now(),
         };
 
         let pnl2 = PnL {
             realized: Some(dec!(20.0)),
             unrealized: Some(dec!(10.0)),
-            initial_costs: pos!(3.0),
-            initial_income: pos!(2.0),
+            initial_costs: pos_or_panic!(3.0),
+            initial_income: Positive::TWO,
             date_time: Utc::now(),
         };
 
@@ -374,15 +376,16 @@ mod tests_sum {
 
         assert_eq!(sum.realized, Some(dec!(30.0)));
         assert_eq!(sum.unrealized, Some(dec!(15.0)));
-        assert_eq!(sum.initial_costs, pos!(5.0));
-        assert_eq!(sum.initial_income, pos!(3.0));
+        assert_eq!(sum.initial_costs, pos_or_panic!(5.0));
+        assert_eq!(sum.initial_income, pos_or_panic!(3.0));
     }
 }
 
 #[cfg(test)]
 mod tests_add {
     use super::*;
-    use crate::pos;
+    use positive::pos_or_panic;
+
     use rust_decimal_macros::dec;
 
     #[test]
@@ -390,24 +393,24 @@ mod tests_add {
         let pnl1 = PnL {
             realized: Some(dec!(10.0)),
             unrealized: Some(dec!(5.0)),
-            initial_costs: pos!(2.0),
-            initial_income: pos!(1.0),
+            initial_costs: Positive::TWO,
+            initial_income: Positive::ONE,
             date_time: Utc::now(),
         };
 
         let pnl2 = PnL {
             realized: Some(dec!(20.0)),
             unrealized: Some(dec!(10.0)),
-            initial_costs: pos!(3.0),
-            initial_income: pos!(2.0),
+            initial_costs: pos_or_panic!(3.0),
+            initial_income: Positive::TWO,
             date_time: Utc::now(),
         };
 
         let sum = pnl1 + pnl2;
         assert_eq!(sum.realized, Some(dec!(30.0)));
         assert_eq!(sum.unrealized, Some(dec!(15.0)));
-        assert_eq!(sum.initial_costs, pos!(5.0));
-        assert_eq!(sum.initial_income, pos!(3.0));
+        assert_eq!(sum.initial_costs, pos_or_panic!(5.0));
+        assert_eq!(sum.initial_income, pos_or_panic!(3.0));
     }
 
     #[test]
@@ -415,31 +418,32 @@ mod tests_add {
         let pnl1 = PnL {
             realized: Some(dec!(10.0)),
             unrealized: Some(dec!(5.0)),
-            initial_costs: pos!(2.0),
-            initial_income: pos!(1.0),
+            initial_costs: Positive::TWO,
+            initial_income: Positive::ONE,
             date_time: Utc::now(),
         };
 
         let pnl2 = PnL {
             realized: Some(dec!(20.0)),
             unrealized: Some(dec!(10.0)),
-            initial_costs: pos!(3.0),
-            initial_income: pos!(2.0),
+            initial_costs: pos_or_panic!(3.0),
+            initial_income: Positive::TWO,
             date_time: Utc::now(),
         };
 
         let sum = &pnl1 + &pnl2;
         assert_eq!(sum.realized, Some(dec!(30.0)));
         assert_eq!(sum.unrealized, Some(dec!(15.0)));
-        assert_eq!(sum.initial_costs, pos!(5.0));
-        assert_eq!(sum.initial_income, pos!(3.0));
+        assert_eq!(sum.initial_costs, pos_or_panic!(5.0));
+        assert_eq!(sum.initial_income, pos_or_panic!(3.0));
     }
 }
 
 #[cfg(test)]
 mod tests_total_pnl {
     use super::*;
-    use crate::pos;
+    use positive::pos_or_panic;
+
     use rust_decimal_macros::dec;
 
     #[test]
@@ -447,8 +451,8 @@ mod tests_total_pnl {
         let pnl = PnL::new(
             Some(dec!(500.0)),
             Some(dec!(250.0)),
-            pos!(100.0),
-            pos!(350.0),
+            Positive::HUNDRED,
+            pos_or_panic!(350.0),
             Utc::now(),
         );
 
@@ -460,8 +464,8 @@ mod tests_total_pnl {
         let pnl = PnL::new(
             Some(dec!(300.0)),
             None,
-            pos!(100.0),
-            pos!(200.0),
+            Positive::HUNDRED,
+            pos_or_panic!(200.0),
             Utc::now(),
         );
 
@@ -470,14 +474,20 @@ mod tests_total_pnl {
 
     #[test]
     fn test_total_pnl_only_unrealized() {
-        let pnl = PnL::new(None, Some(dec!(150.0)), pos!(50.0), pos!(100.0), Utc::now());
+        let pnl = PnL::new(
+            None,
+            Some(dec!(150.0)),
+            pos_or_panic!(50.0),
+            Positive::HUNDRED,
+            Utc::now(),
+        );
 
         assert_eq!(pnl.total_pnl(), Some(dec!(150.0)));
     }
 
     #[test]
     fn test_total_pnl_both_none() {
-        let pnl = PnL::new(None, None, pos!(0.0), pos!(0.0), Utc::now());
+        let pnl = PnL::new(None, None, Positive::ZERO, Positive::ZERO, Utc::now());
 
         assert_eq!(pnl.total_pnl(), None);
     }
@@ -487,8 +497,8 @@ mod tests_total_pnl {
         let pnl = PnL::new(
             Some(dec!(-200.0)),
             Some(dec!(-100.0)),
-            pos!(50.0),
-            pos!(25.0),
+            pos_or_panic!(50.0),
+            pos_or_panic!(25.0),
             Utc::now(),
         );
 
@@ -500,8 +510,8 @@ mod tests_total_pnl {
         let pnl = PnL::new(
             Some(dec!(500.0)),
             Some(dec!(-200.0)),
-            pos!(100.0),
-            pos!(300.0),
+            Positive::HUNDRED,
+            pos_or_panic!(300.0),
             Utc::now(),
         );
 

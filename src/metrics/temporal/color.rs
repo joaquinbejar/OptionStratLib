@@ -44,11 +44,11 @@
 //! - **Y-axis**: Days to expiration
 //! - **Z-axis**: Color value
 
-use crate::Positive;
 use crate::curves::Curve;
 use crate::error::CurveError;
 use crate::error::SurfaceError;
 use crate::surfaces::Surface;
+use positive::Positive;
 
 /// A trait for computing color curves by strike price.
 ///
@@ -103,11 +103,11 @@ pub trait ColorCurve {
 /// ```ignore
 /// use optionstratlib::chains::chain::OptionChain;
 /// use optionstratlib::metrics::ColorSurface;
-/// use optionstratlib::pos;
+/// use positive::pos_or_panic;
 ///
 /// let chain = OptionChain::load_from_json("options.json")?;
-/// let price_range = (pos!(400.0), pos!(500.0));
-/// let days = vec![pos!(1.0), pos!(7.0), pos!(14.0), pos!(30.0)];
+/// let price_range = (pos_or_panic!(400.0), pos_or_panic!(500.0));
+/// let days = vec![Positive::ONE, pos_or_panic!(7.0), pos_or_panic!(14.0), pos_or_panic!(30.0)];
 /// let surface = chain.color_surface(price_range, days, 20)?;
 /// ```
 pub trait ColorSurface {
@@ -136,8 +136,9 @@ pub trait ColorSurface {
 mod tests_color {
     use super::*;
     use crate::curves::Point2D;
-    use crate::pos;
+
     use crate::surfaces::Point3D;
+    use positive::pos_or_panic;
     use rust_decimal::Decimal;
     use rust_decimal::MathematicalOps;
     use rust_decimal_macros::dec;
@@ -213,7 +214,7 @@ mod tests_color {
     #[test]
     fn test_color_curve_creation() {
         let color = TestColor {
-            underlying_price: pos!(450.0),
+            underlying_price: pos_or_panic!(450.0),
         };
         let curve = color.color_curve();
         assert!(curve.is_ok());
@@ -225,7 +226,7 @@ mod tests_color {
     #[test]
     fn test_color_curve_atm_highest() {
         let color = TestColor {
-            underlying_price: pos!(450.0),
+            underlying_price: pos_or_panic!(450.0),
         };
         let curve = color.color_curve().unwrap();
 
@@ -242,7 +243,7 @@ mod tests_color {
     #[test]
     fn test_color_curve_positive_values() {
         let color = TestColor {
-            underlying_price: pos!(450.0),
+            underlying_price: pos_or_panic!(450.0),
         };
         let curve = color.color_curve().unwrap();
 
@@ -254,10 +255,10 @@ mod tests_color {
     #[test]
     fn test_color_surface_creation() {
         let color = TestColor {
-            underlying_price: pos!(450.0),
+            underlying_price: pos_or_panic!(450.0),
         };
-        let price_range = (pos!(400.0), pos!(500.0));
-        let days = vec![pos!(7.0), pos!(14.0), pos!(30.0)];
+        let price_range = (pos_or_panic!(400.0), pos_or_panic!(500.0));
+        let days = vec![pos_or_panic!(7.0), pos_or_panic!(14.0), pos_or_panic!(30.0)];
 
         let surface = color.color_surface(price_range, days, 10);
         assert!(surface.is_ok());
@@ -269,10 +270,10 @@ mod tests_color {
     #[test]
     fn test_color_surface_time_effect() {
         let color = TestColor {
-            underlying_price: pos!(450.0),
+            underlying_price: pos_or_panic!(450.0),
         };
-        let price_range = (pos!(450.0), pos!(450.0));
-        let days = vec![pos!(7.0), pos!(30.0)];
+        let price_range = (pos_or_panic!(450.0), pos_or_panic!(450.0));
+        let days = vec![pos_or_panic!(7.0), pos_or_panic!(30.0)];
 
         let surface = color.color_surface(price_range, days, 0).unwrap();
 
@@ -290,9 +291,9 @@ mod tests_color {
     #[test]
     fn test_color_surface_empty_days() {
         let color = TestColor {
-            underlying_price: pos!(450.0),
+            underlying_price: pos_or_panic!(450.0),
         };
-        let price_range = (pos!(400.0), pos!(500.0));
+        let price_range = (pos_or_panic!(400.0), pos_or_panic!(500.0));
         let days: Vec<Positive> = vec![];
 
         let surface = color.color_surface(price_range, days, 10).unwrap();

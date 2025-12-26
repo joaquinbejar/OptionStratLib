@@ -3,8 +3,8 @@
    Email: jb@taunais.com
    Date: 2/10/24
 ******************************************************************************/
-use crate::Positive;
 use crate::model::position::Position;
+use positive::Positive;
 use rust_decimal::Decimal;
 
 /// Represents parameters for calculating margin requirements using the
@@ -269,9 +269,9 @@ mod tests_span {
     use super::*;
     use crate::model::types::{OptionStyle, Side};
     use crate::model::utils::create_sample_option;
-    use crate::pos;
 
     use chrono::Utc;
+    use positive::pos_or_panic;
     use rust_decimal_macros::dec;
     use tracing::info;
 
@@ -280,18 +280,18 @@ mod tests_span {
         let option = create_sample_option(
             OptionStyle::Call,
             Side::Short,
-            pos!(155.0),
-            pos!(1.0),
-            pos!(150.0),
-            pos!(0.2),
+            pos_or_panic!(155.0),
+            Positive::ONE,
+            pos_or_panic!(150.0),
+            pos_or_panic!(0.2),
         );
 
         let position = Position {
             option,
-            premium: pos!(5.0),
+            premium: pos_or_panic!(5.0),
             date: Utc::now(),
-            open_fee: pos!(0.5),
-            close_fee: pos!(0.5),
+            open_fee: pos_or_panic!(0.5),
+            close_fee: pos_or_panic!(0.5),
             epic: Some("Epic123".to_string()),
             extra_fields: None,
         };

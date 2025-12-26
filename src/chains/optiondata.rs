@@ -9,8 +9,9 @@ use crate::error::ChainError;
 use crate::greeks::{delta, gamma};
 use crate::model::Position;
 use crate::strategies::{BasicAble, FindOptimalSide};
-use crate::{ExpirationDate, OptionStyle, Options, Positive, Side, pos};
+use crate::{ExpirationDate, OptionStyle, Options, Side};
 use chrono::{DateTime, Utc};
+use positive::Positive;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -1025,11 +1026,11 @@ impl OptionData {
     /// Updates the `call_middle` and `put_middle` fields with the calculated mid-prices.
     pub fn set_mid_prices(&mut self) {
         self.call_middle = match (self.call_bid, self.call_ask) {
-            (Some(bid), Some(ask)) => Some(((bid + ask) / pos!(2.0)).round_to(4)),
+            (Some(bid), Some(ask)) => Some(((bid + ask) / Positive::TWO).round_to(4)),
             _ => None,
         };
         self.put_middle = match (self.put_bid, self.put_ask) {
-            (Some(bid), Some(ask)) => Some(((bid + ask) / pos!(2.0)).round_to(4)),
+            (Some(bid), Some(ask)) => Some(((bid + ask) / Positive::TWO).round_to(4)),
             _ => None,
         };
     }
@@ -1056,7 +1057,7 @@ impl OptionData {
     /// by 100.0 to convert it to a decimal value. This ensures that implied volatility is stored
     /// in the correct format, preventing potential misinterpretations and calculation errors.
     pub(super) fn check_and_convert_implied_volatility(&mut self) {
-        if self.implied_volatility > pos!(1.0) {
+        if self.implied_volatility > Positive::ONE {
             self.implied_volatility = self.implied_volatility / Positive::HUNDRED;
         }
     }
@@ -1166,29 +1167,28 @@ impl fmt::Display for OptionData {
 #[cfg(test)]
 mod optiondata_coverage_tests {
     use super::*;
-
-    use crate::spos;
+    use positive::{pos_or_panic, spos};
     use rust_decimal_macros::dec;
 
     // Helper function to create test option data
     fn create_test_option_data() -> OptionData {
         OptionData::new(
-            pos!(100.0),
+            Positive::HUNDRED,
             spos!(9.5),
             spos!(10.0),
             spos!(8.5),
             spos!(9.0),
-            pos!(0.2),
+            pos_or_panic!(0.2),
             Some(dec!(-0.3)),
             Some(dec!(0.7)),
             Some(dec!(0.5)),
             spos!(1000.0),
             Some(500),
-            Some("TEST".to_string()),               // symbol
-            Some(ExpirationDate::Days(pos!(30.0))), // expiration_date
-            Some(Box::new(pos!(100.0))),            // underlying_price
-            Some(dec!(0.05)),                       // risk_free_rate
-            Some(pos!(0.02)),                       // dividend_yield
+            Some("TEST".to_string()),                        // symbol
+            Some(ExpirationDate::Days(pos_or_panic!(30.0))), // expiration_date
+            Some(Box::new(Positive::HUNDRED)),               // underlying_price
+            Some(dec!(0.05)),                                // risk_free_rate
+            Some(pos_or_panic!(0.02)),                       // dividend_yield
             None,
             None,
         )
@@ -1210,7 +1210,7 @@ mod optiondata_coverage_tests {
     #[test]
     fn test_calculate_prices_with_refresh() {
         let mut option_data = create_test_option_data();
-        option_data.set_volatility(&pos!(0.25));
+        option_data.set_volatility(&pos_or_panic!(0.25));
 
         // Calculate prices with refresh flag set to true
         let result = option_data.calculate_prices(None);
@@ -1235,7 +1235,7 @@ mod optiondata_coverage_tests {
         let original_call_ask = option_data.call_ask;
 
         // Apply a spread
-        option_data.apply_spread(pos!(0.6), 2);
+        option_data.apply_spread(pos_or_panic!(0.6), 2);
 
         // Check that values were updated
         assert_ne!(option_data.call_bid, original_call_bid);
@@ -1244,7 +1244,7 @@ mod optiondata_coverage_tests {
         // Test with a spread that would make bid negative (should set to None)
         let mut option_data = create_test_option_data();
         option_data.call_bid = spos!(0.1);
-        option_data.apply_spread(pos!(1.0), 2);
+        option_data.apply_spread(Positive::ONE, 2);
 
         // Bid should be None as it would be negative
         assert_eq!(option_data.call_bid, Some(Positive::ZERO));
@@ -1258,7 +1258,7 @@ mod optiondata_coverage_tests {
         let original_put_ask = option_data.put_ask;
 
         // Apply a spread
-        option_data.apply_spread(pos!(0.6), 2);
+        option_data.apply_spread(pos_or_panic!(0.6), 2);
 
         // Check that values were updated
         assert_ne!(option_data.put_bid, original_put_bid);
@@ -1267,7 +1267,7 @@ mod optiondata_coverage_tests {
         // Test with a spread that would make bid negative (should set to None)
         let mut option_data = create_test_option_data();
         option_data.put_bid = spos!(0.1);
-        option_data.apply_spread(pos!(1.0), 2);
+        option_data.apply_spread(Positive::ONE, 2);
 
         // Bid should be None as it would be negative
         assert_eq!(option_data.put_bid, Some(Positive::ZERO));
@@ -1276,7 +1276,7 @@ mod optiondata_coverage_tests {
     #[test]
     fn test_calculate_gamma_no_implied_volatility() {
         let mut option_data = create_test_option_data();
-        option_data.set_volatility(&pos!(0.2));
+        option_data.set_volatility(&pos_or_panic!(0.2));
 
         // Calculate gamma
         option_data.calculate_gamma();
@@ -1308,30 +1308,29 @@ mod optiondata_coverage_tests {
 mod tests_get_position {
     use super::*;
     use crate::model::ExpirationDate;
-
-    use crate::{assert_pos_relative_eq, pos, spos};
     use chrono::{Duration, Utc};
+    use positive::{assert_pos_relative_eq, pos_or_panic, spos};
     use rust_decimal_macros::dec;
 
     // Helper function to create a standard test option data
     fn create_test_option_data() -> OptionData {
         OptionData::new(
-            pos!(100.0),                            // strike_price
-            spos!(9.5),                             // call_bid
-            spos!(10.0),                            // call_ask
-            spos!(8.5),                             // put_bid
-            spos!(9.0),                             // put_ask
-            pos!(0.2),                              // implied_volatility
-            Some(dec!(-0.3)),                       // delta_call
-            Some(dec!(0.7)),                        // delta_put
-            Some(dec!(0.5)),                        // gamma
-            spos!(1000.0),                          // volume
-            Some(500),                              // open_interest
-            Some("TEST".to_string()),               // symbol
-            Some(ExpirationDate::Days(pos!(30.0))), // expiration_date
-            Some(Box::new(pos!(100.0))),            // underlying_price
-            Some(dec!(0.05)),                       // risk_free_rate
-            Some(pos!(0.02)),                       // dividend_yield
+            Positive::HUNDRED,                               // strike_price
+            spos!(9.5),                                      // call_bid
+            spos!(10.0),                                     // call_ask
+            spos!(8.5),                                      // put_bid
+            spos!(9.0),                                      // put_ask
+            pos_or_panic!(0.2),                              // implied_volatility
+            Some(dec!(-0.3)),                                // delta_call
+            Some(dec!(0.7)),                                 // delta_put
+            Some(dec!(0.5)),                                 // gamma
+            spos!(1000.0),                                   // volume
+            Some(500),                                       // open_interest
+            Some("TEST".to_string()),                        // symbol
+            Some(ExpirationDate::Days(pos_or_panic!(30.0))), // expiration_date
+            Some(Box::new(Positive::HUNDRED)),               // underlying_price
+            Some(dec!(0.05)),                                // risk_free_rate
+            Some(pos_or_panic!(0.02)),                       // dividend_yield
             None,
             None,
         )
@@ -1340,8 +1339,8 @@ mod tests_get_position {
     // Helper function to create standard price parameters
     fn create_test_price_params() -> OptionDataPriceParams {
         OptionDataPriceParams::new(
-            Some(Box::new(pos!(100.0))),
-            Some(ExpirationDate::Days(pos!(30.0))),
+            Some(Box::new(Positive::HUNDRED)),
+            Some(ExpirationDate::Days(pos_or_panic!(30.0))),
             Some(dec!(0.05)),
             spos!(0.02),
             Some("AAPL".to_string()),
@@ -1368,7 +1367,7 @@ mod tests_get_position {
         // Verify position properties
         assert_eq!(position.option.side, Side::Long);
         assert_eq!(position.option.option_style, OptionStyle::Call);
-        assert_eq!(position.option.strike_price, pos!(100.0));
+        assert_eq!(position.option.strike_price, Positive::HUNDRED);
         assert!(
             position.premium > Positive::ZERO,
             "Premium should be positive"
@@ -1399,7 +1398,7 @@ mod tests_get_position {
         // Verify position properties
         assert_eq!(position.option.side, Side::Short);
         assert_eq!(position.option.option_style, OptionStyle::Put);
-        assert_eq!(position.option.strike_price, pos!(100.0));
+        assert_eq!(position.option.strike_price, Positive::HUNDRED);
         assert!(
             position.premium > Positive::ZERO,
             "Premium should be positive"
@@ -1429,8 +1428,8 @@ mod tests_get_position {
         let option_data = create_test_option_data();
 
         // Custom fees
-        let open_fee = pos!(1.5);
-        let close_fee = pos!(2.0);
+        let open_fee = pos_or_panic!(1.5);
+        let close_fee = Positive::TWO;
 
         // Test with custom fees
         let result = option_data.get_position(
@@ -1455,7 +1454,7 @@ mod tests_get_position {
 
         // Create params with underlying price higher than strike (ITM call)
         let mut price_params = create_test_price_params();
-        price_params.underlying_price = Some(Box::new(pos!(120.0)));
+        price_params.underlying_price = Some(Box::new(pos_or_panic!(120.0)));
         option_data.set_extra_params(price_params);
 
         let result = option_data.get_position(Side::Long, OptionStyle::Call, None, None, None);
@@ -1465,7 +1464,7 @@ mod tests_get_position {
 
         // An ITM call should have higher premium
         assert!(
-            position.premium >= pos!(10.0),
+            position.premium >= pos_or_panic!(10.0),
             "ITM call premium should be significant"
         );
     }
@@ -1507,8 +1506,8 @@ mod tests_get_position {
         let custom_date = Utc::now() - Duration::days(14);
 
         // Custom fees
-        let open_fee = pos!(2.5);
-        let close_fee = pos!(1.75);
+        let open_fee = pos_or_panic!(2.5);
+        let close_fee = pos_or_panic!(1.75);
 
         // Test with all custom parameters
         let result = option_data.get_position(
@@ -1550,7 +1549,7 @@ mod tests_get_position {
         // For a long call, should use call_ask (10.0)
         assert_eq!(
             position.premium,
-            pos!(10.0),
+            pos_or_panic!(10.0),
             "Should use call_ask price for long call"
         );
     }
@@ -1575,7 +1574,7 @@ mod tests_get_position {
         // For a short call, should use call_bid (9.5)
         assert_eq!(
             position.premium,
-            pos!(9.5),
+            pos_or_panic!(9.5),
             "Should use call_bid price for short call"
         );
     }
@@ -1600,7 +1599,7 @@ mod tests_get_position {
         // For a long put, should use put_ask (9.0)
         assert_eq!(
             position.premium,
-            pos!(9.0),
+            pos_or_panic!(9.0),
             "Should use put_ask price for long put"
         );
     }
@@ -1625,7 +1624,7 @@ mod tests_get_position {
         // For a short put, should use put_bid (8.5)
         assert_eq!(
             position.premium,
-            pos!(8.5),
+            pos_or_panic!(8.5),
             "Should use put_bid price for short put"
         );
     }
@@ -1634,22 +1633,22 @@ mod tests_get_position {
     fn test_get_position_fallback_to_black_scholes() {
         // Test with option data that doesn't have market prices
         let option_data = OptionData::new(
-            pos!(100.0),                            // strike_price
-            None,                                   // call_bid (missing)
-            None,                                   // call_ask (missing)
-            None,                                   // put_bid (missing)
-            None,                                   // put_ask (missing)
-            pos!(0.2),                              // implied_volatility
-            Some(dec!(-0.3)),                       // delta_call
-            Some(dec!(0.7)),                        // delta_put
-            Some(dec!(0.5)),                        // gamma
-            spos!(1000.0),                          // volume
-            Some(500),                              // open_interest
-            Some("TEST".to_string()),               // symbol
-            Some(ExpirationDate::Days(pos!(30.0))), // expiration_date
-            Some(Box::new(pos!(100.0))),            // underlying_price
-            Some(dec!(0.05)),                       // risk_free_rate
-            Some(pos!(0.02)),                       // dividend_yield
+            Positive::HUNDRED,                               // strike_price
+            None,                                            // call_bid (missing)
+            None,                                            // call_ask (missing)
+            None,                                            // put_bid (missing)
+            None,                                            // put_ask (missing)
+            pos_or_panic!(0.2),                              // implied_volatility
+            Some(dec!(-0.3)),                                // delta_call
+            Some(dec!(0.7)),                                 // delta_put
+            Some(dec!(0.5)),                                 // gamma
+            spos!(1000.0),                                   // volume
+            Some(500),                                       // open_interest
+            Some("TEST".to_string()),                        // symbol
+            Some(ExpirationDate::Days(pos_or_panic!(30.0))), // expiration_date
+            Some(Box::new(Positive::HUNDRED)),               // underlying_price
+            Some(dec!(0.05)),                                // risk_free_rate
+            Some(pos_or_panic!(0.02)),                       // dividend_yield
             None,
             None,
         );
@@ -1677,7 +1676,7 @@ mod tests_get_position {
         let bs_price = option.calculate_price_black_scholes().unwrap().abs();
         let bs_price_positive = Positive::from(bs_price);
 
-        assert_pos_relative_eq!(position.premium, bs_price_positive, pos!(0.00001));
+        assert_pos_relative_eq!(position.premium, bs_price_positive, pos_or_panic!(0.00001));
     }
 
     #[test]
@@ -1700,7 +1699,7 @@ mod tests_get_position {
         // Should still use market price (10.0 for long call)
         assert_eq!(
             position.premium,
-            pos!(10.0),
+            pos_or_panic!(10.0),
             "Should use call_ask even with custom date"
         );
     }
@@ -1710,8 +1709,8 @@ mod tests_get_position {
         let option_data = create_test_option_data();
 
         // Custom fees
-        let open_fee = pos!(1.5);
-        let close_fee = pos!(2.0);
+        let open_fee = pos_or_panic!(1.5);
+        let close_fee = Positive::TWO;
 
         // Test with custom fees for short put
         let result = option_data.get_position(
@@ -1732,7 +1731,7 @@ mod tests_get_position {
         // Should still use market price (8.5 for short put)
         assert_eq!(
             position.premium,
-            pos!(8.5),
+            pos_or_panic!(8.5),
             "Should use put_bid even with custom fees"
         );
     }
@@ -1761,25 +1760,25 @@ mod tests_get_position {
         let bs_price = option.calculate_price_black_scholes().unwrap().abs();
         let bs_price_positive = Positive::from(bs_price);
 
-        assert_pos_relative_eq!(position.premium, bs_price_positive, pos!(0.00001));
+        assert_pos_relative_eq!(position.premium, bs_price_positive, pos_or_panic!(0.00001));
     }
 }
 
 #[cfg(test)]
 mod tests_check_convert_implied_volatility {
     use super::*;
-    use crate::pos;
+    use positive::pos_or_panic;
 
     #[test]
     fn test_check_and_convert_implied_volatility_over_one() {
         // Line 219: Test the conversion of implied volatility when it's greater than 1.0
         let mut option_data = OptionData::new(
-            pos!(100.0),
+            Positive::HUNDRED,
             None,
             None,
             None,
             None,
-            pos!(20.0), // This is 2000% volatility, should be converted to 20%
+            pos_or_panic!(20.0), // This is 2000% volatility, should be converted to 20%
             None,
             None,
             None,
@@ -1798,19 +1797,19 @@ mod tests_check_convert_implied_volatility {
         option_data.check_and_convert_implied_volatility();
 
         // Assert that the volatility is now converted to a proper decimal (e.g., 0.2 instead of 20.0)
-        assert_eq!(option_data.implied_volatility, pos!(0.2));
+        assert_eq!(option_data.implied_volatility, pos_or_panic!(0.2));
     }
 
     #[test]
     fn test_check_and_convert_implied_volatility_under_one() {
         // Test that volatility under 1.0 is not modified
         let mut option_data = OptionData::new(
-            pos!(100.0),
+            Positive::HUNDRED,
             None,
             None,
             None,
             None,
-            pos!(0.15), // This is 15% volatility, should remain as is
+            pos_or_panic!(0.15), // This is 15% volatility, should remain as is
             None,
             None,
             None,
@@ -1839,15 +1838,16 @@ mod tests_check_convert_implied_volatility {
 #[cfg(test)]
 mod tests_get_option_for_iv {
     use super::*;
+    use crate::OptionType;
     use crate::model::ExpirationDate;
-    use crate::{OptionType, pos, spos};
+    use positive::{pos_or_panic, spos};
     use rust_decimal_macros::dec;
 
     // Helper function to create a standard OptionDataPriceParams for testing
     fn create_test_price_params() -> OptionDataPriceParams {
         OptionDataPriceParams::new(
-            Some(Box::new(pos!(100.0))),
-            Some(ExpirationDate::Days(pos!(30.0))),
+            Some(Box::new(Positive::HUNDRED)),
+            Some(ExpirationDate::Days(pos_or_panic!(30.0))),
             Some(dec!(0.05)),
             spos!(0.02),
             Some("AAPL".to_string()),
@@ -1857,29 +1857,29 @@ mod tests_get_option_for_iv {
     #[test]
     fn test_get_option_for_iv_success() {
         let mut option_data = OptionData::new(
-            pos!(100.0),
+            Positive::HUNDRED,
             spos!(5.0),
             spos!(5.5),
             spos!(4.5),
             spos!(5.0),
-            pos!(0.2),
+            pos_or_panic!(0.2),
             None,
             None,
             None,
             None,
             None,
-            Some("TEST".to_string()),               // symbol
-            Some(ExpirationDate::Days(pos!(30.0))), // expiration_date
-            Some(Box::new(pos!(100.0))),            // underlying_price
-            Some(dec!(0.05)),                       // risk_free_rate
-            Some(pos!(0.02)),                       // dividend_yield
+            Some("TEST".to_string()),                        // symbol
+            Some(ExpirationDate::Days(pos_or_panic!(30.0))), // expiration_date
+            Some(Box::new(Positive::HUNDRED)),               // underlying_price
+            Some(dec!(0.05)),                                // risk_free_rate
+            Some(pos_or_panic!(0.02)),                       // dividend_yield
             None,
             None,
         );
 
         let params = create_test_price_params();
         option_data.set_extra_params(params.clone());
-        let initial_iv = pos!(0.25); // Different from the option_data IV to confirm it's using this value
+        let initial_iv = pos_or_panic!(0.25); // Different from the option_data IV to confirm it's using this value
 
         // Call the method being tested
         let result = option_data.get_option_for_iv(Side::Long, OptionStyle::Call, initial_iv);
@@ -1890,10 +1890,10 @@ mod tests_get_option_for_iv {
 
         assert_eq!(option.option_type, OptionType::European);
         assert_eq!(option.side, Side::Long);
-        assert_eq!(option.strike_price, pos!(100.0));
+        assert_eq!(option.strike_price, Positive::HUNDRED);
         assert_eq!(option.expiration_date, params.expiration_date.unwrap());
         assert_eq!(option.implied_volatility, initial_iv.to_f64()); // Should use the provided initial_iv
-        assert_eq!(option.quantity, pos!(1.0));
+        assert_eq!(option.quantity, Positive::ONE);
         assert_eq!(option.underlying_price, *params.underlying_price.unwrap());
         assert_eq!(option.risk_free_rate, params.risk_free_rate.unwrap());
         assert_eq!(option.option_style, OptionStyle::Call);
@@ -1904,27 +1904,27 @@ mod tests_get_option_for_iv {
     fn test_get_option_for_iv_put() {
         // Test get_option_for_iv with Put option style
         let option_data = OptionData::new(
-            pos!(100.0),
+            Positive::HUNDRED,
             spos!(5.0),
             spos!(5.5),
             spos!(4.5),
             spos!(5.0),
-            pos!(0.2),
+            pos_or_panic!(0.2),
             None,
             None,
             None,
             None,
             None,
-            Some("TEST".to_string()),               // symbol
-            Some(ExpirationDate::Days(pos!(30.0))), // expiration_date
-            Some(Box::new(pos!(100.0))),            // underlying_price
-            Some(dec!(0.05)),                       // risk_free_rate
-            Some(pos!(0.02)),                       // dividend_yield
+            Some("TEST".to_string()),                        // symbol
+            Some(ExpirationDate::Days(pos_or_panic!(30.0))), // expiration_date
+            Some(Box::new(Positive::HUNDRED)),               // underlying_price
+            Some(dec!(0.05)),                                // risk_free_rate
+            Some(pos_or_panic!(0.02)),                       // dividend_yield
             None,
             None,
         );
 
-        let initial_iv = pos!(0.3);
+        let initial_iv = pos_or_panic!(0.3);
 
         // Call the method with Put option style
         let result = option_data.get_option_for_iv(Side::Long, OptionStyle::Put, initial_iv);
@@ -1939,27 +1939,27 @@ mod tests_get_option_for_iv {
     fn test_get_option_for_iv_short() {
         // Test get_option_for_iv with Short side
         let option_data = OptionData::new(
-            pos!(100.0),
+            Positive::HUNDRED,
             spos!(5.0),
             spos!(5.5),
             spos!(4.5),
             spos!(5.0),
-            pos!(0.2),
+            pos_or_panic!(0.2),
             None,
             None,
             None,
             None,
             None,
-            Some("TEST".to_string()),               // symbol
-            Some(ExpirationDate::Days(pos!(30.0))), // expiration_date
-            Some(Box::new(pos!(100.0))),            // underlying_price
-            Some(dec!(0.05)),                       // risk_free_rate
-            Some(pos!(0.02)),                       // dividend_yield
+            Some("TEST".to_string()),                        // symbol
+            Some(ExpirationDate::Days(pos_or_panic!(30.0))), // expiration_date
+            Some(Box::new(Positive::HUNDRED)),               // underlying_price
+            Some(dec!(0.05)),                                // risk_free_rate
+            Some(pos_or_panic!(0.02)),                       // dividend_yield
             None,
             None,
         );
 
-        let initial_iv = pos!(0.2);
+        let initial_iv = pos_or_panic!(0.2);
 
         // Call the method with Short side
         let result = option_data.get_option_for_iv(Side::Short, OptionStyle::Call, initial_iv);
@@ -1974,18 +1974,18 @@ mod tests_get_option_for_iv {
 #[cfg(test)]
 mod tests_some_price_is_none {
     use super::*;
-    use crate::{pos, spos};
+    use positive::{pos_or_panic, spos};
 
     #[test]
     fn test_some_price_is_none_all_prices_present() {
         // Line 626: Test some_price_is_none when all prices are present
         let option_data = OptionData::new(
-            pos!(100.0),
-            spos!(5.0), // call_bid
-            spos!(5.5), // call_ask
-            spos!(4.5), // put_bid
-            spos!(5.0), // put_ask
-            pos!(0.2),  // implied_volatility
+            Positive::HUNDRED,
+            spos!(5.0),         // call_bid
+            spos!(5.5),         // call_ask
+            spos!(4.5),         // put_bid
+            spos!(5.0),         // put_ask
+            pos_or_panic!(0.2), // implied_volatility
             None,
             None,
             None,
@@ -2008,12 +2008,12 @@ mod tests_some_price_is_none {
     fn test_some_price_is_none_with_missing_call_bid() {
         // Test with missing call_bid
         let option_data = OptionData::new(
-            pos!(100.0),
-            None,       // call_bid is None
-            spos!(5.5), // call_ask
-            spos!(4.5), // put_bid
-            spos!(5.0), // put_ask
-            pos!(0.2),  // implied_volatility
+            Positive::HUNDRED,
+            None,               // call_bid is None
+            spos!(5.5),         // call_ask
+            spos!(4.5),         // put_bid
+            spos!(5.0),         // put_ask
+            pos_or_panic!(0.2), // implied_volatility
             None,
             None,
             None,
@@ -2036,12 +2036,12 @@ mod tests_some_price_is_none {
     fn test_some_price_is_none_with_missing_call_ask() {
         // Test with missing call_ask
         let option_data = OptionData::new(
-            pos!(100.0),
-            spos!(5.0), // call_bid
-            None,       // call_ask is None
-            spos!(4.5), // put_bid
-            spos!(5.0), // put_ask
-            pos!(0.2),  // implied_volatility
+            Positive::HUNDRED,
+            spos!(5.0),         // call_bid
+            None,               // call_ask is None
+            spos!(4.5),         // put_bid
+            spos!(5.0),         // put_ask
+            pos_or_panic!(0.2), // implied_volatility
             None,
             None,
             None,
@@ -2064,12 +2064,12 @@ mod tests_some_price_is_none {
     fn test_some_price_is_none_with_missing_put_bid() {
         // Test with missing put_bid
         let option_data = OptionData::new(
-            pos!(100.0),
-            spos!(5.0), // call_bid
-            spos!(5.5), // call_ask
-            None,       // put_bid is None
-            spos!(5.0), // put_ask
-            pos!(0.2),  // implied_volatility
+            Positive::HUNDRED,
+            spos!(5.0),         // call_bid
+            spos!(5.5),         // call_ask
+            None,               // put_bid is None
+            spos!(5.0),         // put_ask
+            pos_or_panic!(0.2), // implied_volatility
             None,
             None,
             None,
@@ -2092,12 +2092,12 @@ mod tests_some_price_is_none {
     fn test_some_price_is_none_with_missing_put_ask() {
         // Test with missing put_ask
         let option_data = OptionData::new(
-            pos!(100.0),
-            spos!(5.0), // call_bid
-            spos!(5.5), // call_ask
-            spos!(4.5), // put_bid
-            None,       // put_ask is None
-            pos!(0.2),  // implied_volatility
+            Positive::HUNDRED,
+            spos!(5.0),         // call_bid
+            spos!(5.5),         // call_ask
+            spos!(4.5),         // put_bid
+            None,               // put_ask is None
+            pos_or_panic!(0.2), // implied_volatility
             None,
             None,
             None,
@@ -2120,12 +2120,12 @@ mod tests_some_price_is_none {
     fn test_some_price_is_none_with_all_prices_missing() {
         // Test with all prices missing
         let option_data = OptionData::new(
-            pos!(100.0),
-            None,      // call_bid is None
-            None,      // call_ask is None
-            None,      // put_bid is None
-            None,      // put_ask is None
-            pos!(0.2), // implied_volatility
+            Positive::HUNDRED,
+            None,               // call_bid is None
+            None,               // call_ask is None
+            None,               // put_bid is None
+            None,               // put_ask is None
+            pos_or_panic!(0.2), // implied_volatility
             None,
             None,
             None,
@@ -2148,21 +2148,21 @@ mod tests_some_price_is_none {
 #[cfg(test)]
 mod tests_is_valid_optimal_side_deltable {
     use super::*;
-    use crate::pos;
+    use positive::pos_or_panic;
     use rust_decimal_macros::dec;
 
     #[test]
     fn test_is_valid_optimal_side_deltable() {
         // Line 742-744: Test is_valid_optimal_side for Deltable threshold
         let option_data = OptionData::new(
-            pos!(100.0),
+            Positive::HUNDRED,
             None,
             None,
             None,
             None,
-            pos!(0.2),        // implied_volatility
-            Some(dec!(0.3)),  // delta_call
-            Some(dec!(-0.3)), // delta_put
+            pos_or_panic!(0.2), // implied_volatility
+            Some(dec!(0.3)),    // delta_call
+            Some(dec!(-0.3)),   // delta_put
             None,
             None,
             None,
@@ -2176,8 +2176,10 @@ mod tests_is_valid_optimal_side_deltable {
         );
 
         // Deltable should always return true
-        let result =
-            option_data.is_valid_optimal_side(&pos!(100.0), &FindOptimalSide::Deltable(pos!(0.5)));
+        let result = option_data.is_valid_optimal_side(
+            &Positive::HUNDRED,
+            &FindOptimalSide::Deltable(pos_or_panic!(0.5)),
+        );
 
         assert!(result);
     }
@@ -2186,12 +2188,12 @@ mod tests_is_valid_optimal_side_deltable {
     fn test_is_valid_optimal_side_center_panics() {
         // Lines 758-760: Test is_valid_optimal_side for Center (which should panic)
         let option_data = OptionData::new(
-            pos!(100.0),
+            Positive::HUNDRED,
             None,
             None,
             None,
             None,
-            pos!(0.2), // implied_volatility
+            pos_or_panic!(0.2), // implied_volatility
             None,
             None,
             None,
@@ -2208,7 +2210,7 @@ mod tests_is_valid_optimal_side_deltable {
 
         // Testing for panic
         let result = std::panic::catch_unwind(|| {
-            option_data.is_valid_optimal_side(&pos!(100.0), &FindOptimalSide::Center);
+            option_data.is_valid_optimal_side(&Positive::HUNDRED, &FindOptimalSide::Center);
         });
 
         assert!(result.is_err());
@@ -2218,13 +2220,13 @@ mod tests_is_valid_optimal_side_deltable {
     fn test_is_valid_optimal_side_delta_range_valid_call() {
         // Lines 812-814: Test is_valid_optimal_side for DeltaRange with valid call delta
         let option_data = OptionData::new(
-            pos!(100.0),
+            Positive::HUNDRED,
             None,
             None,
             None,
             None,
-            pos!(0.2),       // implied_volatility
-            Some(dec!(0.3)), // delta_call within range
+            pos_or_panic!(0.2), // implied_volatility
+            Some(dec!(0.3)),    // delta_call within range
             None,
             None,
             None,
@@ -2240,7 +2242,7 @@ mod tests_is_valid_optimal_side_deltable {
 
         // DeltaRange with min=0.2, max=0.4, which includes our delta_call=0.3
         let result = option_data.is_valid_optimal_side(
-            &pos!(100.0),
+            &Positive::HUNDRED,
             &FindOptimalSide::DeltaRange(dec!(0.2), dec!(0.4)),
         );
 
@@ -2251,12 +2253,12 @@ mod tests_is_valid_optimal_side_deltable {
     fn test_is_valid_optimal_side_delta_range_valid_put() {
         // Test is_valid_optimal_side for DeltaRange with valid put delta
         let option_data = OptionData::new(
-            pos!(100.0),
+            Positive::HUNDRED,
             None,
             None,
             None,
             None,
-            pos!(0.2), // implied_volatility
+            pos_or_panic!(0.2), // implied_volatility
             None,
             Some(dec!(0.3)), // delta_put within range
             None,
@@ -2273,7 +2275,7 @@ mod tests_is_valid_optimal_side_deltable {
 
         // DeltaRange with min=0.2, max=0.4, which includes our delta_put=0.3
         let result = option_data.is_valid_optimal_side(
-            &pos!(100.0),
+            &Positive::HUNDRED,
             &FindOptimalSide::DeltaRange(dec!(0.2), dec!(0.4)),
         );
 
@@ -2284,14 +2286,14 @@ mod tests_is_valid_optimal_side_deltable {
     fn test_is_valid_optimal_side_delta_range_invalid() {
         // Test is_valid_optimal_side for DeltaRange with invalid deltas
         let option_data = OptionData::new(
-            pos!(100.0),
+            Positive::HUNDRED,
             None,
             None,
             None,
             None,
-            pos!(0.2),       // implied_volatility
-            Some(dec!(0.1)), // delta_call outside range
-            Some(dec!(0.5)), // delta_put outside range
+            pos_or_panic!(0.2), // implied_volatility
+            Some(dec!(0.1)),    // delta_call outside range
+            Some(dec!(0.5)),    // delta_put outside range
             None,
             None,
             None,
@@ -2306,7 +2308,7 @@ mod tests_is_valid_optimal_side_deltable {
 
         // DeltaRange with min=0.2, max=0.4, which excludes both delta values
         let result = option_data.is_valid_optimal_side(
-            &pos!(100.0),
+            &Positive::HUNDRED,
             &FindOptimalSide::DeltaRange(dec!(0.2), dec!(0.4)),
         );
 
@@ -2317,14 +2319,14 @@ mod tests_is_valid_optimal_side_deltable {
     fn test_is_valid_optimal_side_delta_range_no_deltas() {
         // Test is_valid_optimal_side for DeltaRange when no deltas are present
         let option_data = OptionData::new(
-            pos!(100.0),
+            Positive::HUNDRED,
             None,
             None,
             None,
             None,
-            pos!(0.2), // implied_volatility
-            None,      // No delta_call
-            None,      // No delta_put
+            pos_or_panic!(0.2), // implied_volatility
+            None,               // No delta_call
+            None,               // No delta_put
             None,
             None,
             None,
@@ -2339,7 +2341,7 @@ mod tests_is_valid_optimal_side_deltable {
 
         // DeltaRange with min=0.2, max=0.4, but no deltas to check
         let result = option_data.is_valid_optimal_side(
-            &pos!(100.0),
+            &Positive::HUNDRED,
             &FindOptimalSide::DeltaRange(dec!(0.2), dec!(0.4)),
         );
 
@@ -2350,18 +2352,18 @@ mod tests_is_valid_optimal_side_deltable {
 #[cfg(test)]
 mod tests_set_mid_prices {
     use super::*;
-    use crate::{pos, spos};
+    use positive::{pos_or_panic, spos};
 
     #[test]
     fn test_set_mid_prices_with_both_call_prices() {
         // Line 852: Test set_mid_prices with both call bid and ask present
         let mut option_data = OptionData::new(
-            pos!(100.0),
+            Positive::HUNDRED,
             spos!(9.0),  // call_bid
             spos!(11.0), // call_ask
             None,
             None,
-            pos!(0.2), // implied_volatility
+            pos_or_panic!(0.2), // implied_volatility
             None,
             None,
             None,
@@ -2389,12 +2391,12 @@ mod tests_set_mid_prices {
     fn test_set_mid_prices_with_both_put_prices() {
         // Test set_mid_prices with both put bid and ask present
         let mut option_data = OptionData::new(
-            pos!(100.0),
+            Positive::HUNDRED,
             None,
             None,
-            spos!(8.0),  // put_bid
-            spos!(12.0), // put_ask
-            pos!(0.2),   // implied_volatility
+            spos!(8.0),         // put_bid
+            spos!(12.0),        // put_ask
+            pos_or_panic!(0.2), // implied_volatility
             None,
             None,
             None,
@@ -2422,12 +2424,12 @@ mod tests_set_mid_prices {
     fn test_set_mid_prices_with_all_prices() {
         // Test set_mid_prices with all prices present
         let mut option_data = OptionData::new(
-            pos!(100.0),
-            spos!(9.0),  // call_bid
-            spos!(11.0), // call_ask
-            spos!(8.0),  // put_bid
-            spos!(12.0), // put_ask
-            pos!(0.2),   // implied_volatility
+            Positive::HUNDRED,
+            spos!(9.0),         // call_bid
+            spos!(11.0),        // call_ask
+            spos!(8.0),         // put_bid
+            spos!(12.0),        // put_ask
+            pos_or_panic!(0.2), // implied_volatility
             None,
             None,
             None,
@@ -2454,12 +2456,12 @@ mod tests_set_mid_prices {
     fn test_set_mid_prices_with_missing_call_bid() {
         // Test set_mid_prices with missing call_bid
         let mut option_data = OptionData::new(
-            pos!(100.0),
-            None,        // call_bid is missing
-            spos!(11.0), // call_ask
-            spos!(8.0),  // put_bid
-            spos!(12.0), // put_ask
-            pos!(0.2),   // implied_volatility
+            Positive::HUNDRED,
+            None,               // call_bid is missing
+            spos!(11.0),        // call_ask
+            spos!(8.0),         // put_bid
+            spos!(12.0),        // put_ask
+            pos_or_panic!(0.2), // implied_volatility
             None,
             None,
             None,
@@ -2487,12 +2489,12 @@ mod tests_set_mid_prices {
     fn test_set_mid_prices_with_missing_call_ask() {
         // Test set_mid_prices with missing call_ask
         let mut option_data = OptionData::new(
-            pos!(100.0),
-            spos!(9.0),  // call_bid
-            None,        // call_ask is missing
-            spos!(8.0),  // put_bid
-            spos!(12.0), // put_ask
-            pos!(0.2),   // implied_volatility
+            Positive::HUNDRED,
+            spos!(9.0),         // call_bid
+            None,               // call_ask is missing
+            spos!(8.0),         // put_bid
+            spos!(12.0),        // put_ask
+            pos_or_panic!(0.2), // implied_volatility
             None,
             None,
             None,
@@ -2520,18 +2522,18 @@ mod tests_set_mid_prices {
 #[cfg(test)]
 mod tests_get_mid_prices {
     use super::*;
-    use crate::{pos, spos};
+    use positive::{pos_or_panic, spos};
 
     #[test]
     fn test_get_mid_prices_with_both_mid_prices() {
         // Lines 885, 887, 889-895: Test get_mid_prices when both mid prices are set
         let mut option_data = OptionData::new(
-            pos!(100.0),
+            Positive::HUNDRED,
             spos!(9.0),
             spos!(11.0),
             spos!(8.0),
             spos!(12.0),
-            pos!(0.2), // implied_volatility
+            pos_or_panic!(0.2), // implied_volatility
             None,
             None,
             None,
@@ -2561,12 +2563,12 @@ mod tests_get_mid_prices {
     fn test_get_mid_prices_with_only_call_mid() {
         // Test get_mid_prices when only call_middle is set
         let mut option_data = OptionData::new(
-            pos!(100.0),
+            Positive::HUNDRED,
             spos!(9.0),
             spos!(11.0),
             None, // missing put_bid
             spos!(12.0),
-            pos!(0.2), // implied_volatility
+            pos_or_panic!(0.2), // implied_volatility
             None,
             None,
             None,
@@ -2596,12 +2598,12 @@ mod tests_get_mid_prices {
     fn test_get_mid_prices_with_only_put_mid() {
         // Test get_mid_prices when only put_middle is set
         let mut option_data = OptionData::new(
-            pos!(100.0),
+            Positive::HUNDRED,
             None, // missing call_bid
             spos!(11.0),
             spos!(8.0),
             spos!(12.0),
-            pos!(0.2), // implied_volatility
+            pos_or_panic!(0.2), // implied_volatility
             None,
             None,
             None,
@@ -2631,12 +2633,12 @@ mod tests_get_mid_prices {
     fn test_get_mid_prices_with_no_mid_prices() {
         // Test get_mid_prices when no mid prices are set
         let option_data = OptionData::new(
-            pos!(100.0),
+            Positive::HUNDRED,
             None,
             None,
             None,
             None,
-            pos!(0.2), // implied_volatility
+            pos_or_panic!(0.2), // implied_volatility
             None,
             None,
             None,
@@ -2663,21 +2665,21 @@ mod tests_get_mid_prices {
 #[cfg(test)]
 mod tests_current_deltas {
     use super::*;
-    use crate::pos;
+    use positive::pos_or_panic;
     use rust_decimal_macros::dec;
 
     #[test]
     fn test_current_deltas_with_both_deltas() {
         // Lines 933-934: Test current_deltas method when both deltas are present
         let option_data = OptionData::new(
-            pos!(100.0),
+            Positive::HUNDRED,
             None,
             None,
             None,
             None,
-            pos!(0.2),        // implied_volatility
-            Some(dec!(0.5)),  // delta_call
-            Some(dec!(-0.5)), // delta_put
+            pos_or_panic!(0.2), // implied_volatility
+            Some(dec!(0.5)),    // delta_call
+            Some(dec!(-0.5)),   // delta_put
             None,
             None,
             None,
@@ -2702,14 +2704,14 @@ mod tests_current_deltas {
     fn test_current_deltas_with_only_call_delta() {
         // Test current_deltas with only call delta
         let option_data = OptionData::new(
-            pos!(100.0),
+            Positive::HUNDRED,
             None,
             None,
             None,
             None,
-            pos!(0.2),       // implied_volatility
-            Some(dec!(0.5)), // delta_call
-            None,            // No delta_put
+            pos_or_panic!(0.2), // implied_volatility
+            Some(dec!(0.5)),    // delta_call
+            None,               // No delta_put
             None,
             None,
             None,
@@ -2734,14 +2736,14 @@ mod tests_current_deltas {
     fn test_current_deltas_with_only_put_delta() {
         // Test current_deltas with only put delta
         let option_data = OptionData::new(
-            pos!(100.0),
+            Positive::HUNDRED,
             None,
             None,
             None,
             None,
-            pos!(0.2),        // implied_volatility
-            None,             // No delta_call
-            Some(dec!(-0.5)), // delta_put
+            pos_or_panic!(0.2), // implied_volatility
+            None,               // No delta_call
+            Some(dec!(-0.5)),   // delta_put
             None,
             None,
             None,
@@ -2766,14 +2768,14 @@ mod tests_current_deltas {
     fn test_current_deltas_with_no_deltas() {
         // Test current_deltas with no deltas
         let option_data = OptionData::new(
-            pos!(100.0),
+            Positive::HUNDRED,
             None,
             None,
             None,
             None,
-            pos!(0.2), // implied_volatility
-            None,      // No delta_call
-            None,      // No delta_put
+            pos_or_panic!(0.2), // implied_volatility
+            None,               // No delta_call
+            None,               // No delta_put
             None,
             None,
             None,
@@ -2798,17 +2800,17 @@ mod tests_current_deltas {
 #[cfg(test)]
 mod tests_spreads {
     use super::*;
-    use crate::{pos, spos};
+    use positive::{pos_or_panic, spos};
 
     #[test]
     fn test_get_call_spread_some() {
         let option_data = OptionData::new(
-            pos!(100.0),
+            Positive::HUNDRED,
             spos!(100.0),
             spos!(110.0),
             spos!(8.5),
             spos!(9.0),
-            pos!(0.2),
+            pos_or_panic!(0.2),
             None,
             None,
             None,
@@ -2822,19 +2824,19 @@ mod tests_spreads {
             None,
             None,
         );
-        assert_eq!(option_data.get_call_spread(), Some(pos!(10.0)));
+        assert_eq!(option_data.get_call_spread(), Some(pos_or_panic!(10.0)));
     }
 
     #[test]
     fn test_get_call_spread_none_when_missing_prices() {
         // Missing call_bid
         let od1 = OptionData::new(
-            pos!(100.0),
+            Positive::HUNDRED,
             None,
             spos!(10.0),
             None,
             None,
-            pos!(0.2),
+            pos_or_panic!(0.2),
             None,
             None,
             None,
@@ -2852,12 +2854,12 @@ mod tests_spreads {
 
         // Missing call_ask
         let od2 = OptionData::new(
-            pos!(100.0),
+            Positive::HUNDRED,
             spos!(9.5),
             None,
             None,
             None,
-            pos!(0.2),
+            pos_or_panic!(0.2),
             None,
             None,
             None,
@@ -2877,12 +2879,12 @@ mod tests_spreads {
     #[test]
     fn test_get_call_spread_per_some() {
         let option_data = OptionData::new(
-            pos!(95.0),
+            pos_or_panic!(95.0),
             spos!(95.0),
             spos!(105.0),
             None,
             None,
-            pos!(0.2),
+            pos_or_panic!(0.2),
             None,
             None,
             None,
@@ -2905,12 +2907,12 @@ mod tests_spreads {
     #[test]
     fn test_get_call_spread_per_none_when_missing_prices() {
         let od = OptionData::new(
-            pos!(100.0),
+            Positive::HUNDRED,
             None,
             spos!(10.0),
             None,
             None,
-            pos!(0.2),
+            pos_or_panic!(0.2),
             None,
             None,
             None,
@@ -2930,12 +2932,12 @@ mod tests_spreads {
     #[test]
     fn test_get_put_spread_some() {
         let option_data = OptionData::new(
-            pos!(100.0),
+            Positive::HUNDRED,
             None,
             None,
             spos!(8.5),
             spos!(9.0),
-            pos!(0.2),
+            pos_or_panic!(0.2),
             None,
             None,
             None,
@@ -2949,19 +2951,19 @@ mod tests_spreads {
             None,
             None,
         );
-        assert_eq!(option_data.get_put_spread(), Some(pos!(0.5)));
+        assert_eq!(option_data.get_put_spread(), Some(pos_or_panic!(0.5)));
     }
 
     #[test]
     fn test_get_put_spread_none_when_missing_prices() {
         // Missing put_bid
         let od1 = OptionData::new(
-            pos!(100.0),
+            Positive::HUNDRED,
             None,
             None,
             None,
             spos!(9.0),
-            pos!(0.2),
+            pos_or_panic!(0.2),
             None,
             None,
             None,
@@ -2979,12 +2981,12 @@ mod tests_spreads {
 
         // Missing put_ask
         let od2 = OptionData::new(
-            pos!(100.0),
+            Positive::HUNDRED,
             None,
             None,
             spos!(8.5),
             None,
-            pos!(0.2),
+            pos_or_panic!(0.2),
             None,
             None,
             None,
@@ -3004,12 +3006,12 @@ mod tests_spreads {
     #[test]
     fn test_get_put_spread_per_some() {
         let option_data = OptionData::new(
-            pos!(100.0),
+            Positive::HUNDRED,
             None,
             None,
             spos!(95.0),
             spos!(105.0),
-            pos!(0.2),
+            pos_or_panic!(0.2),
             None,
             None,
             None,
@@ -3032,12 +3034,12 @@ mod tests_spreads {
     #[test]
     fn test_get_put_spread_per_none_when_missing_prices() {
         let od = OptionData::new(
-            pos!(100.0),
+            Positive::HUNDRED,
             None,
             None,
             None,
             spos!(9.0),
-            pos!(0.2),
+            pos_or_panic!(0.2),
             None,
             None,
             None,
@@ -3058,28 +3060,29 @@ mod tests_spreads {
 #[cfg(test)]
 mod tests_validate_option_data {
     use super::*;
-    use crate::spos;
+    use positive::pos_or_panic;
+    use positive::spos;
     use rust_decimal_macros::dec;
 
     #[test]
     fn test_validate_option_data_missing_strike_price() {
         let option_data = OptionData::new(
-            pos!(0.0),   // strike_price is zero
-            spos!(9.5),  // call_bid
-            spos!(10.0), // call_ask
-            spos!(8.5),  // put_bid
-            spos!(9.0),  // put_ask
-            pos!(0.2),   // implied_volatility
+            Positive::ZERO,     // strike_price is zero
+            spos!(9.5),         // call_bid
+            spos!(10.0),        // call_ask
+            spos!(8.5),         // put_bid
+            spos!(9.0),         // put_ask
+            pos_or_panic!(0.2), // implied_volatility
             Some(dec!(-0.3)),
             Some(dec!(0.7)),
             Some(dec!(0.5)),
             spos!(1000.0),
             Some(500),
             Some("TEST".to_string()),
-            Some(ExpirationDate::Days(pos!(30.0))),
-            Some(Box::new(pos!(100.0))),
+            Some(ExpirationDate::Days(pos_or_panic!(30.0))),
+            Some(Box::new(Positive::HUNDRED)),
             Some(dec!(0.05)),
-            Some(pos!(0.02)),
+            Some(pos_or_panic!(0.02)),
             None,
             None,
         );
@@ -3091,22 +3094,22 @@ mod tests_validate_option_data {
     #[test]
     fn test_validate_option_data_missing_call_bid() {
         let option_data = OptionData::new(
-            pos!(100.0), // strike_price
-            None,        // call_bid is not provided
-            spos!(10.0), // call_ask
-            spos!(8.5),  // put_bid
-            spos!(9.0),  // put_ask
-            pos!(0.2),   // implied_volatility
+            Positive::HUNDRED,  // strike_price
+            None,               // call_bid is not provided
+            spos!(10.0),        // call_ask
+            spos!(8.5),         // put_bid
+            spos!(9.0),         // put_ask
+            pos_or_panic!(0.2), // implied_volatility
             Some(dec!(-0.3)),
             Some(dec!(0.7)),
             Some(dec!(0.5)),
             spos!(1000.0),
             Some(500),
             Some("TEST".to_string()),
-            Some(ExpirationDate::Days(pos!(30.0))),
-            Some(Box::new(pos!(100.0))),
+            Some(ExpirationDate::Days(pos_or_panic!(30.0))),
+            Some(Box::new(Positive::HUNDRED)),
             Some(dec!(0.05)),
-            Some(pos!(0.02)),
+            Some(pos_or_panic!(0.02)),
             None,
             None,
         );
@@ -3118,22 +3121,22 @@ mod tests_validate_option_data {
     #[test]
     fn test_validate_option_data_missing_call_ask() {
         let option_data = OptionData::new(
-            pos!(100.0), // strike_price
-            spos!(9.5),  // call_bid
-            None,        // call_ask is not provided
-            spos!(8.5),  // put_bid
-            spos!(9.0),  // put_ask
-            pos!(0.2),   // implied_volatility is zero
+            Positive::HUNDRED,  // strike_price
+            spos!(9.5),         // call_bid
+            None,               // call_ask is not provided
+            spos!(8.5),         // put_bid
+            spos!(9.0),         // put_ask
+            pos_or_panic!(0.2), // implied_volatility is zero
             Some(dec!(-0.3)),
             Some(dec!(0.7)),
             Some(dec!(0.5)),
             spos!(1000.0),
             Some(500),
             Some("TEST".to_string()),
-            Some(ExpirationDate::Days(pos!(30.0))),
-            Some(Box::new(pos!(100.0))),
+            Some(ExpirationDate::Days(pos_or_panic!(30.0))),
+            Some(Box::new(Positive::HUNDRED)),
             Some(dec!(0.05)),
-            Some(pos!(0.02)),
+            Some(pos_or_panic!(0.02)),
             None,
             None,
         );
@@ -3145,22 +3148,22 @@ mod tests_validate_option_data {
     #[test]
     fn test_validate_option_data_missing_put_bid() {
         let option_data = OptionData::new(
-            pos!(100.0), // strike_price
-            spos!(9.5),  // call_bid
-            spos!(10.0), // call_ask
-            None,        // put_bid is not provided
-            spos!(9.0),  // put_ask
-            pos!(0.2),   // implied_volatility
+            Positive::HUNDRED,  // strike_price
+            spos!(9.5),         // call_bid
+            spos!(10.0),        // call_ask
+            None,               // put_bid is not provided
+            spos!(9.0),         // put_ask
+            pos_or_panic!(0.2), // implied_volatility
             Some(dec!(-0.3)),
             Some(dec!(0.7)),
             Some(dec!(0.5)),
             spos!(1000.0),
             Some(500),
             Some("TEST".to_string()),
-            Some(ExpirationDate::Days(pos!(30.0))),
-            Some(Box::new(pos!(100.0))),
+            Some(ExpirationDate::Days(pos_or_panic!(30.0))),
+            Some(Box::new(Positive::HUNDRED)),
             Some(dec!(0.05)),
-            Some(pos!(0.02)),
+            Some(pos_or_panic!(0.02)),
             None,
             None,
         );
@@ -3172,22 +3175,22 @@ mod tests_validate_option_data {
     #[test]
     fn test_validate_option_data_missing_put_ask() {
         let option_data = OptionData::new(
-            pos!(100.0), // strike_price
-            spos!(9.5),  // call_bid
-            spos!(10.0), // call_ask
-            spos!(8.5),  // put_bid
-            None,        // put_ask is not provided
-            pos!(0.2),   // implied_volatility
+            Positive::HUNDRED,  // strike_price
+            spos!(9.5),         // call_bid
+            spos!(10.0),        // call_ask
+            spos!(8.5),         // put_bid
+            None,               // put_ask is not provided
+            pos_or_panic!(0.2), // implied_volatility
             Some(dec!(-0.3)),
             Some(dec!(0.7)),
             Some(dec!(0.5)),
             spos!(1000.0),
             Some(500),
             Some("TEST".to_string()),
-            Some(ExpirationDate::Days(pos!(30.0))),
-            Some(Box::new(pos!(100.0))),
+            Some(ExpirationDate::Days(pos_or_panic!(30.0))),
+            Some(Box::new(Positive::HUNDRED)),
             Some(dec!(0.05)),
-            Some(pos!(0.02)),
+            Some(pos_or_panic!(0.02)),
             None,
             None,
         );

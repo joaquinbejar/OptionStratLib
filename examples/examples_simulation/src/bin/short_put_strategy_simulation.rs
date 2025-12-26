@@ -40,6 +40,7 @@ use optionstratlib::error::Error;
 //! - PNG visualization of the last simulation in `Draws/Simulation/short_put_strategy_simulation.png`
 
 use optionstratlib::prelude::*;
+use positive::pos_or_panic;
 
 /// Walker implementation for the simulation.
 struct Walker;
@@ -64,11 +65,11 @@ fn main() -> Result<(), Error> {
     // Simulation parameters
     let n_simulations = 100; // Number of simulations to run
     let n_steps = 10080; // 7 days in minutes
-    let underlying_price = pos!(4007.7);
-    let days = pos!(7.0);
-    let implied_volatility = pos!(0.16); // 27% annual volatility
+    let underlying_price = pos_or_panic!(4007.7);
+    let days = pos_or_panic!(7.0);
+    let implied_volatility = pos_or_panic!(0.16); // 27% annual volatility
     let symbol = "GOLD".to_string();
-    let strike_price = pos!(3990.0); // Strike price for the short put (delta ~-0.3)
+    let strike_price = pos_or_panic!(3990.0); // Strike price for the short put (delta ~-0.3)
 
     // First, calculate the premium for the option
     let temp_option = Options::new(
@@ -82,11 +83,11 @@ fn main() -> Result<(), Error> {
         underlying_price,
         dec!(0.0), // risk_free_rate
         OptionStyle::Put,
-        pos!(0.0), // dividend_yield
+        Positive::ZERO, // dividend_yield
         None,
     );
     let initial_premium = temp_option.calculate_price_black_scholes()?.abs();
-    let premium_positive = Positive::new(initial_premium.to_f64().unwrap())?;
+    let premium_positive = Positive::new_decimal(initial_premium)?;
 
     // Create the short put strategy with the calculated premium
     let strategy = ShortPut::new(
@@ -96,11 +97,11 @@ fn main() -> Result<(), Error> {
         implied_volatility,
         Positive::ONE,
         underlying_price,
-        dec!(0.0),        // risk_free_rate
-        pos!(0.0),        // dividend_yield
-        premium_positive, // premium received
-        pos!(1.5),        // open_fee
-        pos!(1.5),        // close_fee
+        dec!(0.0),          // risk_free_rate
+        Positive::ZERO,     // dividend_yield
+        premium_positive,   // premium received
+        pos_or_panic!(1.5), // open_fee
+        pos_or_panic!(1.5), // close_fee
     );
 
     // Define exit policy: 50% profit OR 100% loss
@@ -118,7 +119,7 @@ fn main() -> Result<(), Error> {
 
     // Create WalkParams for the Simulator
     let walker = Box::new(Walker);
-    let dt = convert_time_frame(pos!(1.0) / days, &TimeFrame::Minute, &TimeFrame::Day);
+    let dt = convert_time_frame(Positive::ONE / days, &TimeFrame::Minute, &TimeFrame::Day);
 
     // Adjust volatility for the specific dt in the random walk
     let volatility_dt =
@@ -135,9 +136,9 @@ fn main() -> Result<(), Error> {
             dt,
             drift: dec!(-0.1),
             volatility: volatility_dt,
-            vov: pos!(0.02),         // Volatility of volatility (2%)
-            vol_speed: pos!(0.2),    // Mean reversion speed
-            vol_mean: volatility_dt, // Mean volatility level (same as initial)
+            vov: pos_or_panic!(0.02),      // Volatility of volatility (2%)
+            vol_speed: pos_or_panic!(0.2), // Mean reversion speed
+            vol_mean: volatility_dt,       // Mean volatility level (same as initial)
         },
         walker,
     };

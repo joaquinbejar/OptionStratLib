@@ -9,27 +9,28 @@
 //! This example shows portfolio-level Greeks and adjustment planning.
 
 use optionstratlib::prelude::*;
+use positive::pos_or_panic;
 
 fn main() -> Result<(), Error> {
     setup_logger();
-    let underlying_price = pos!(7138.5);
+    let underlying_price = pos_or_panic!(7138.5);
 
     let strategy = LongStrangle::new(
         "CL".to_string(),
         underlying_price,
-        pos!(7450.0),
-        pos!(7050.0),
-        ExpirationDate::Days(pos!(45.0)),
-        pos!(0.3745),
+        pos_or_panic!(7450.0),
+        pos_or_panic!(7050.0),
+        ExpirationDate::Days(pos_or_panic!(45.0)),
+        pos_or_panic!(0.3745),
         dec!(0.05),
         Positive::ZERO,
-        pos!(1.0),
-        pos!(85.04),
-        pos!(85.04),
-        pos!(0.78),
-        pos!(0.78),
-        pos!(0.73),
-        pos!(0.73),
+        Positive::ONE,
+        pos_or_panic!(85.04),
+        pos_or_panic!(85.04),
+        pos_or_panic!(0.78),
+        pos_or_panic!(0.78),
+        pos_or_panic!(0.73),
+        pos_or_panic!(0.73),
     );
 
     info!("=== LongStrangle Extended Delta Analysis ===");

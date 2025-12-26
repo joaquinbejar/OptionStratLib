@@ -18,7 +18,7 @@ use optionstratlib::metrics::{
     DollarGammaCurve, ImpliedVolatilityCurve, ImpliedVolatilitySurface, RiskReversalCurve,
 };
 use optionstratlib::model::{ExpirationDate, OptionStyle};
-use optionstratlib::{pos, spos};
+use positive::{Positive, pos_or_panic, spos};
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 
@@ -31,16 +31,16 @@ fn create_test_chain() -> OptionChain {
         spos!(5.0),
         dec!(-0.2),
         dec!(0.1),
-        pos!(0.02),
+        pos_or_panic!(0.02),
         2,
         OptionDataPriceParams::new(
-            Some(Box::new(pos!(100.0))),
-            Some(ExpirationDate::Days(pos!(30.0))),
+            Some(Box::new(Positive::HUNDRED)),
+            Some(ExpirationDate::Days(pos_or_panic!(30.0))),
             Some(dec!(0.05)),
             spos!(0.02),
             Some("TEST".to_string()),
         ),
-        pos!(0.20),
+        pos_or_panic!(0.20),
     );
 
     OptionChain::build_chain(&params)
@@ -48,7 +48,13 @@ fn create_test_chain() -> OptionChain {
 
 /// Creates an empty option chain for edge case testing.
 fn create_empty_chain() -> OptionChain {
-    OptionChain::new("EMPTY", pos!(100.0), "2024-12-31".to_string(), None, None)
+    OptionChain::new(
+        "EMPTY",
+        Positive::HUNDRED,
+        "2024-12-31".to_string(),
+        None,
+        None,
+    )
 }
 
 #[cfg(test)]
@@ -119,7 +125,7 @@ mod tests_implied_volatility_surface {
     #[test]
     fn test_iv_surface_basic() {
         let chain = create_test_chain();
-        let days = vec![pos!(7.0), pos!(14.0), pos!(30.0)];
+        let days = vec![pos_or_panic!(7.0), pos_or_panic!(14.0), pos_or_panic!(30.0)];
         let result = chain.iv_surface(days);
 
         assert!(result.is_ok());
@@ -134,7 +140,7 @@ mod tests_implied_volatility_surface {
     #[test]
     fn test_iv_surface_single_day() {
         let chain = create_test_chain();
-        let days = vec![pos!(30.0)];
+        let days = vec![pos_or_panic!(30.0)];
         let result = chain.iv_surface(days);
 
         assert!(result.is_ok());
@@ -148,7 +154,7 @@ mod tests_implied_volatility_surface {
     #[test]
     fn test_iv_surface_empty_days() {
         let chain = create_test_chain();
-        let days: Vec<optionstratlib::Positive> = vec![];
+        let days: Vec<Positive> = vec![];
         let result = chain.iv_surface(days);
 
         assert!(result.is_err());
@@ -157,7 +163,7 @@ mod tests_implied_volatility_surface {
     #[test]
     fn test_iv_surface_time_scaling() {
         let chain = create_test_chain();
-        let days = vec![pos!(30.0), pos!(90.0)];
+        let days = vec![pos_or_panic!(30.0), pos_or_panic!(90.0)];
         let surface = chain.iv_surface(days).unwrap();
 
         // Verify that longer-dated IVs are scaled appropriately
@@ -176,7 +182,7 @@ mod tests_implied_volatility_surface {
     #[test]
     fn test_iv_surface_empty_chain() {
         let chain = create_empty_chain();
-        let days = vec![pos!(30.0)];
+        let days = vec![pos_or_panic!(30.0)];
         let result = chain.iv_surface(days);
 
         assert!(result.is_err());
@@ -353,20 +359,20 @@ mod tests_edge_cases {
         // Add a single option data point
         use optionstratlib::chains::OptionData;
         let option_data = OptionData::new(
-            pos!(100.0),
+            Positive::HUNDRED,
             spos!(5.0),
             spos!(5.5),
             spos!(4.5),
             spos!(5.0),
-            pos!(0.20),
+            pos_or_panic!(0.20),
             Some(dec!(0.5)),
             Some(dec!(-0.5)),
             Some(dec!(0.05)),
             spos!(1000.0),
             Some(5000),
             Some("TEST".to_string()),
-            Some(ExpirationDate::Days(pos!(30.0))),
-            Some(Box::new(pos!(100.0))),
+            Some(ExpirationDate::Days(pos_or_panic!(30.0))),
+            Some(Box::new(Positive::HUNDRED)),
             Some(dec!(0.05)),
             spos!(0.02),
             None,
@@ -393,16 +399,16 @@ mod tests_edge_cases {
             spos!(10.0),
             dec!(-0.3),
             dec!(0.2),
-            pos!(0.02),
+            pos_or_panic!(0.02),
             2,
             OptionDataPriceParams::new(
-                Some(Box::new(pos!(100.0))),
-                Some(ExpirationDate::Days(pos!(30.0))),
+                Some(Box::new(Positive::HUNDRED)),
+                Some(ExpirationDate::Days(pos_or_panic!(30.0))),
                 Some(dec!(0.05)),
                 spos!(0.02),
                 Some("HIGH_VOL".to_string()),
             ),
-            pos!(0.80), // High base volatility
+            pos_or_panic!(0.80), // High base volatility
         );
 
         let chain = OptionChain::build_chain(&params);
@@ -422,16 +428,16 @@ mod tests_edge_cases {
             spos!(10.0),
             dec!(-0.1),
             dec!(0.05),
-            pos!(0.01),
+            pos_or_panic!(0.01),
             2,
             OptionDataPriceParams::new(
-                Some(Box::new(pos!(100.0))),
-                Some(ExpirationDate::Days(pos!(30.0))),
+                Some(Box::new(Positive::HUNDRED)),
+                Some(ExpirationDate::Days(pos_or_panic!(30.0))),
                 Some(dec!(0.05)),
                 spos!(0.01),
                 Some("LOW_VOL".to_string()),
             ),
-            pos!(0.05), // Low base volatility
+            pos_or_panic!(0.05), // Low base volatility
         );
 
         let chain = OptionChain::build_chain(&params);
@@ -451,16 +457,16 @@ mod tests_edge_cases {
             spos!(10.0),
             dec!(-0.5), // Extreme negative skew
             dec!(0.3),  // High smile curvature
-            pos!(0.02),
+            pos_or_panic!(0.02),
             2,
             OptionDataPriceParams::new(
-                Some(Box::new(pos!(100.0))),
-                Some(ExpirationDate::Days(pos!(30.0))),
+                Some(Box::new(Positive::HUNDRED)),
+                Some(ExpirationDate::Days(pos_or_panic!(30.0))),
                 Some(dec!(0.05)),
                 spos!(0.02),
                 Some("SKEW".to_string()),
             ),
-            pos!(0.25),
+            pos_or_panic!(0.25),
         );
 
         let chain = OptionChain::build_chain(&params);

@@ -1,3 +1,4 @@
+use positive::pos_or_panic;
 /******************************************************************************
    Author: Joaquín Béjar García
    Email: jb@taunais.com
@@ -10,11 +11,11 @@ fn create_sample_option() -> Options {
         OptionType::European,
         Side::Long,
         "AAPL".to_string(),
-        pos!(100.0),
-        ExpirationDate::Days(pos!(30.0)),
-        pos!(0.2),
-        pos!(1.0),
-        pos!(105.0),
+        Positive::HUNDRED,
+        ExpirationDate::Days(pos_or_panic!(30.0)),
+        pos_or_panic!(0.2),
+        Positive::ONE,
+        pos_or_panic!(105.0),
         dec!(0.05),
         OptionStyle::Call,
         Positive::ZERO,

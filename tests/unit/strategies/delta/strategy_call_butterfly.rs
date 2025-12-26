@@ -4,35 +4,36 @@ use optionstratlib::strategies::DELTA_THRESHOLD;
 use optionstratlib::strategies::DeltaAdjustment::BuyOptions;
 use optionstratlib::strategies::call_butterfly::CallButterfly;
 use optionstratlib::strategies::delta_neutral::DeltaNeutrality;
-use optionstratlib::{ExpirationDate, Positive, assert_decimal_eq, assert_pos_relative_eq, pos};
+use optionstratlib::{ExpirationDate, assert_decimal_eq};
+use positive::{Positive, assert_pos_relative_eq, pos_or_panic};
 use rust_decimal_macros::dec;
 use std::error::Error;
 
 #[test]
 fn test_call_butterfly_integration() -> Result<(), Box<dyn Error>> {
     // Define inputs for the CallButterfly strategy
-    let underlying_price = pos!(5781.88);
+    let underlying_price = pos_or_panic!(5781.88);
 
     let strategy = CallButterfly::new(
         "SP500".to_string(),
-        underlying_price, // underlying_price
-        pos!(5750.0),     // long_call_strike
-        pos!(5800.0),     // short_call_low_strike
-        pos!(5850.0),     // short_call_high_strike
-        ExpirationDate::Days(pos!(2.0)),
-        pos!(0.18),     // implied_volatility
-        dec!(0.05),     // risk_free_rate
-        Positive::ZERO, // dividend_yield
-        pos!(1.0),      // long quantity
-        pos!(85.04),    // premium_long_itm
-        pos!(53.04),    // premium_long_otm
-        pos!(28.85),    // premium_short
-        pos!(0.78),     // premium_short
-        pos!(0.78),     // open_fee_long
-        pos!(0.78),     // close_fee_long
-        pos!(0.73),     // close_fee_short
-        pos!(0.73),     // close_fee_short
-        pos!(0.73),     // open_fee_short
+        underlying_price,      // underlying_price
+        pos_or_panic!(5750.0), // long_call_strike
+        pos_or_panic!(5800.0), // short_call_low_strike
+        pos_or_panic!(5850.0), // short_call_high_strike
+        ExpirationDate::Days(Positive::TWO),
+        pos_or_panic!(0.18),  // implied_volatility
+        dec!(0.05),           // risk_free_rate
+        Positive::ZERO,       // dividend_yield
+        Positive::ONE,        // long quantity
+        pos_or_panic!(85.04), // premium_long_itm
+        pos_or_panic!(53.04), // premium_long_otm
+        pos_or_panic!(28.85), // premium_short
+        pos_or_panic!(0.78),  // premium_short
+        pos_or_panic!(0.78),  // open_fee_long
+        pos_or_panic!(0.78),  // close_fee_long
+        pos_or_panic!(0.73),  // close_fee_short
+        pos_or_panic!(0.73),  // close_fee_short
+        pos_or_panic!(0.73),  // open_fee_short
     );
 
     let greeks = strategy.greeks().unwrap();
@@ -69,8 +70,8 @@ fn test_call_butterfly_integration() -> Result<(), Box<dyn Error>> {
     assert_eq!(strategy.delta_adjustments().unwrap().len(), 3);
 
     let binding = strategy.delta_adjustments().unwrap();
-    let delta = pos!(0.13381901826077533);
-    let k = pos!(5800.0);
+    let delta = pos_or_panic!(0.13381901826077533);
+    let k = pos_or_panic!(5800.0);
     match &binding[1] {
         BuyOptions {
             quantity,

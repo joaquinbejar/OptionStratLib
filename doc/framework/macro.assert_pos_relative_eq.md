@@ -32,7 +32,7 @@ or equal to epsilon.
 
 ::: example-wrap
 ``` {.rust .rust-example-rendered}
-use optionstratlib::Positive;
+use positive::Positive;
 use optionstratlib::{assert_pos_relative_eq, pos};
 
 let a = pos!(1.0);

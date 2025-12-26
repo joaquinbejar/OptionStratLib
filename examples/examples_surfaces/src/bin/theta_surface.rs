@@ -1,4 +1,5 @@
 use optionstratlib::prelude::*;
+use positive::pos_or_panic;
 
 fn get_option(point2d: &Point2D) -> Options {
     let strike = Positive::new_decimal(point2d.x).unwrap();
@@ -9,10 +10,10 @@ fn get_option(point2d: &Point2D) -> Options {
         Side::Long,
         "XYZ".parse().unwrap(),
         strike,
-        ExpirationDate::Days(pos!(365.0)),
+        ExpirationDate::Days(pos_or_panic!(365.0)),
         volatilitity,
-        pos!(1.0),
-        pos!(50.0),
+        Positive::ONE,
+        pos_or_panic!(50.0),
         Decimal::ZERO,
         OptionStyle::Call,
         Positive::ZERO,

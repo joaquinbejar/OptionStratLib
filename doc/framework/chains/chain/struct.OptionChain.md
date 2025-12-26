@@ -168,7 +168,7 @@ set of options.
 ``` {.rust .rust-example-rendered}
 use rust_decimal_macros::dec;
 use optionstratlib::chains::chain::OptionChain;
-use optionstratlib::{pos, spos};
+use positive::{spos, pos_or_panic};
 
 let chain = OptionChain::new(
     "AAPL",
@@ -329,7 +329,7 @@ when there isn't an exact match for the underlying price.
 ``` {.rust .rust-example-rendered}
 use tracing::{error, info};
 use optionstratlib::chains::chain::OptionChain;
-use optionstratlib::pos;
+use positive::pos_or_panic;
 
 let chain = OptionChain::new("SPY", pos!(450.75), "2023-12-15".to_string(), None, None);
 // Add options to the chain...
@@ -786,8 +786,8 @@ potentially including self-pairs (e.g., `(option, option)`).
 ``` {.rust .rust-example-rendered}
 use tracing::info;
 use optionstratlib::chains::chain::OptionChain;
-use optionstratlib::Positive;
-use optionstratlib::pos;
+use positive::Positive;
+use positive::pos_or_panic;
 let mut option_chain = OptionChain::new("TEST", pos!(100.0), "2030-01-01".to_string(), None, None);
 for (option1, option2) in option_chain.get_double_inclusive_iter() {
     info!("{:?}, {:?}", option1, option2);
@@ -821,8 +821,8 @@ An iterator producing tuples containing references to three distinct
 ``` {.rust .rust-example-rendered}
 use tracing::info;
 use optionstratlib::chains::chain::OptionChain;
-use optionstratlib::Positive;
-use optionstratlib::pos;
+use positive::Positive;
+use positive::pos_or_panic;
 let mut option_chain = OptionChain::new("TEST", pos!(100.0), "2030-01-01".to_string(), None, None);
 for (option1, option2, option3) in option_chain.get_triple_iter() {
     info!("{:?}, {:?}, {:?}", option1, option2, option3);
@@ -858,8 +858,8 @@ potentially including repeated elements (e.g.,
 ``` {.rust .rust-example-rendered}
 use tracing::info;
 use optionstratlib::chains::chain::OptionChain;
-use optionstratlib::Positive;
-use optionstratlib::pos;
+use positive::Positive;
+use positive::pos_or_panic;
 let mut option_chain = OptionChain::new("TEST", pos!(100.0), "2030-01-01".to_string(), None, None);
 for (option1, option2, option3) in option_chain.get_triple_inclusive_iter() {
     info!("{:?}, {:?}, {:?}", option1, option2, option3);
@@ -893,8 +893,8 @@ An iterator producing tuples containing references to four distinct
 ``` {.rust .rust-example-rendered}
 use tracing::info;
 use optionstratlib::chains::chain::OptionChain;
-use optionstratlib::Positive;
-use optionstratlib::pos;
+use positive::Positive;
+use positive::pos_or_panic;
 let mut option_chain = OptionChain::new("TEST", pos!(100.0), "2030-01-01".to_string(), None, None);
 for (option1, option2, option3, option4) in option_chain.get_quad_iter() {
     info!("{:?}, {:?}, {:?}, {:?}", option1, option2, option3, option4);
@@ -930,8 +930,8 @@ potentially including repeated elements (e.g.,
 ``` {.rust .rust-example-rendered}
 use tracing::info;
 use optionstratlib::chains::chain::OptionChain;
-use optionstratlib::Positive;
-use optionstratlib::pos;
+use positive::Positive;
+use positive::pos_or_panic;
 let mut option_chain = OptionChain::new("TEST", pos!(100.0), "2030-01-01".to_string(), None, None);
 for (option1, option2, option3, option4) in option_chain.get_quad_inclusive_iter() {
     info!("{:?}, {:?}, {:?}, {:?}", option1, option2, option3, option4);

@@ -25,7 +25,8 @@
 //! use rust_decimal_macros::dec;
 //! use optionstratlib::chains::OptionChain;
 //! use optionstratlib::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
-//! use optionstratlib::{pos, spos, ExpirationDate, Positive};
+//! use positive::{pos_or_panic, spos, Positive};
+//! use optionstratlib::ExpirationDate;
 //!
 //! let option_chain_params = OptionChainBuildParams::new(
 //!             "SP500".to_string(),
@@ -34,16 +35,16 @@
 //!             spos!(1.0),
 //!             dec!(-0.2),
 //!             Decimal::ZERO,
-//!             pos!(0.02),
+//!             pos_or_panic!(0.02),
 //!             2,
 //!             OptionDataPriceParams::new(
-//!                 Some(Box::new(pos!(100.0))),
-//!                 Some(ExpirationDate::Days(pos!(30.0))),
+//!                 Some(Box::new(Positive::HUNDRED)),
+//!                 Some(ExpirationDate::Days(pos_or_panic!(30.0))),
 //!                 Some(dec!(0.0)),
 //!                 spos!(0.05),
 //!                 Some("SP500".to_string()),
 //!             ),
-//!             pos!(0.2),
+//!             pos_or_panic!(0.2),
 //!         );
 //!
 //! let built_chain = OptionChain::build_chain(&option_chain_params);
@@ -117,17 +118,18 @@
 //! use optionstratlib::chains::{RNDParameters, RNDAnalysis};
 //! use optionstratlib::chains::chain::OptionChain;
 //! use optionstratlib::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
-//! use optionstratlib::{pos, ExpirationDate, Positive};
+//! use positive::{pos_or_panic, Positive};
+//! use optionstratlib::ExpirationDate;
 //!
 //! // Create parameters for RND calculation
 //! let params = RNDParameters {
 //!     risk_free_rate: dec!(0.05),
 //!     interpolation_points: 100,
-//!     derivative_tolerance: pos!(0.001),
+//!     derivative_tolerance: pos_or_panic!(0.001),
 //! };
 //! let chain = OptionDataPriceParams::new(
 //!     Some(Box::new(Positive::new(2000.0).unwrap())),
-//!     Some(ExpirationDate::Days(pos!(10.0))),
+//!     Some(ExpirationDate::Days(pos_or_panic!(10.0))),
 //!     Some(dec!(0.01)),
 //!     Some(Positive::ZERO),
 //!     Some("Symbol".to_string()),
@@ -143,7 +145,7 @@
 //!     Positive::new(0.02).unwrap(),
 //!     2,
 //!     chain,
-//!     pos!(0.2),
+//!     pos_or_panic!(0.2),
 //! );
 //!
 //! let option_chain = OptionChain::build_chain(&option_chain_params);

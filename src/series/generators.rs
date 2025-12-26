@@ -5,8 +5,8 @@ use crate::simulation::{WalkParams, WalkType};
 use crate::utils::TimeFrame;
 use crate::utils::others::calculate_log_returns;
 use crate::volatility::{adjust_volatility, constant_volatility};
-use crate::{Positive, pos};
 use core::option::Option;
+use positive::{Positive, pos_or_panic};
 use rust_decimal::Decimal;
 use tracing::debug;
 
@@ -146,7 +146,7 @@ pub fn generator_optionseries(
                 let log_returns: Vec<Decimal> = calculate_log_returns(prices)
                     .unwrap()
                     .iter()
-                    .map(|p| p.to_dec())
+                    .map(|p: &Positive| p.to_dec())
                     .collect();
                 let constant_volatility = constant_volatility(&log_returns).unwrap();
                 let implied_volatility =
@@ -170,7 +170,7 @@ pub fn generator_optionseries(
     if let Some(volatility) = volatility {
         volatility
     } else {
-        pos!(0.20)
+        pos_or_panic!(0.20)
     };
 
     for y_step in y_steps.iter() {
@@ -197,6 +197,9 @@ pub fn generator_optionseries(
 #[cfg(test)]
 mod tests_generator_optionseries {
     use super::*;
+    use positive::{assert_pos_relative_eq, spos};
+
+    use crate::ExpirationDate;
     use crate::chains::utils::OptionChainBuildParams;
     use crate::chains::utils::OptionDataPriceParams;
     use crate::series::{OptionSeries, OptionSeriesBuildParams};
@@ -204,7 +207,6 @@ mod tests_generator_optionseries {
     use crate::simulation::{WalkParams, WalkType, WalkTypeAble};
     use crate::utils::TimeFrame;
     use crate::utils::time::convert_time_frame;
-    use crate::{ExpirationDate, assert_pos_relative_eq, spos};
     use rust_decimal_macros::dec;
 
     // Mock Walker for testing
@@ -221,8 +223,8 @@ mod tests_generator_optionseries {
     fn create_test_option_series() -> OptionSeries {
         // Create basic chain parameters
         let price_params = OptionDataPriceParams::new(
-            Some(Box::new(pos!(100.0))),
-            Some(ExpirationDate::Days(pos!(30.0))),
+            Some(Box::new(Positive::HUNDRED)),
+            Some(ExpirationDate::Days(pos_or_panic!(30.0))),
             Some(dec!(0.05)),
             spos!(0.02),
             Some("TEST".to_string()),
@@ -235,14 +237,18 @@ mod tests_generator_optionseries {
             spos!(5.0),
             dec!(-0.2),
             dec!(0.1),
-            pos!(0.02),
+            pos_or_panic!(0.02),
             2,
             price_params,
-            pos!(0.2),
+            pos_or_panic!(0.2),
         );
 
         // Create series with different expirations
-        let series = vec![pos!(30.0), pos!(60.0), pos!(90.0)];
+        let series = vec![
+            pos_or_panic!(30.0),
+            pos_or_panic!(60.0),
+            pos_or_panic!(90.0),
+        ];
         let series_params = OptionSeriesBuildParams::new(chain_params, series);
 
         // Build the option series
@@ -254,8 +260,8 @@ mod tests_generator_optionseries {
         // Setup
         let n_steps = 5;
         let initial_series = create_test_option_series();
-        let std_dev = pos!(0.2);
-        let days = pos!(30.0);
+        let std_dev = pos_or_panic!(0.2);
+        let days = pos_or_panic!(30.0);
         let walker = Box::new(TestWalker::new());
 
         let walk_params = WalkParams {
@@ -265,7 +271,7 @@ mod tests_generator_optionseries {
                 y: Ystep::new(0, initial_series),
             },
             walk_type: WalkType::GeometricBrownian {
-                dt: convert_time_frame(pos!(1.0), &TimeFrame::Day, &TimeFrame::Day),
+                dt: convert_time_frame(Positive::ONE, &TimeFrame::Day, &TimeFrame::Day),
                 drift: dec!(0.0),
                 volatility: std_dev,
             },
@@ -285,7 +291,10 @@ mod tests_generator_optionseries {
 
         // The first step should be the initial step
         let first_step = &steps[0];
-        assert_eq!(first_step.x.datetime().get_days().unwrap(), pos!(30.0));
+        assert_eq!(
+            first_step.x.datetime().get_days().unwrap(),
+            pos_or_panic!(30.0)
+        );
         assert_eq!(*first_step.y.index(), 0);
     }
 
@@ -304,14 +313,14 @@ mod tests_generator_optionseries {
                 x: Xstep::new(
                     Positive::ONE,
                     TimeFrame::Day,
-                    ExpirationDate::Days(pos!(30.0)),
+                    ExpirationDate::Days(pos_or_panic!(30.0)),
                 ),
                 y: Ystep::new(0, initial_series),
             },
             walk_type: WalkType::Brownian {
-                dt: pos!(0.01),
+                dt: pos_or_panic!(0.01),
                 drift: dec!(0.0),
-                volatility: pos!(0.2),
+                volatility: pos_or_panic!(0.2),
             },
             walker,
         };
@@ -335,7 +344,7 @@ mod tests_generator_optionseries {
                 x: Xstep::new(
                     Positive::ONE,
                     TimeFrame::Day,
-                    ExpirationDate::Days(pos!(30.0)),
+                    ExpirationDate::Days(pos_or_panic!(30.0)),
                 ),
                 y: Ystep::new(0, initial_series),
             },
@@ -369,13 +378,13 @@ mod tests_generator_optionseries {
                 x: Xstep::new(
                     Positive::ONE,
                     TimeFrame::Day,
-                    ExpirationDate::Days(pos!(30.0)),
+                    ExpirationDate::Days(pos_or_panic!(30.0)),
                 ),
                 y: Ystep::new(0, initial_series),
             },
             walk_type: WalkType::Historical {
                 timeframe: TimeFrame::Day,
-                prices: vec![pos!(100.0), pos!(101.0)], // Less than size
+                prices: vec![Positive::HUNDRED, pos_or_panic!(101.0)], // Less than size
                 symbol: None,
             },
             walker,
@@ -396,63 +405,63 @@ mod tests_generator_optionseries {
         // This is more of an integration test checking that all walk types are handled
         let initial_series = create_test_option_series();
         let walker = Box::new(TestWalker::new());
-        let volatility = pos!(0.2);
+        let volatility = pos_or_panic!(0.2);
 
         // Define all walk types to test
         let walk_types = vec![
             WalkType::Brownian {
-                dt: pos!(0.01),
+                dt: pos_or_panic!(0.01),
                 drift: dec!(0.0),
                 volatility,
             },
             WalkType::GeometricBrownian {
-                dt: pos!(0.01),
+                dt: pos_or_panic!(0.01),
                 drift: dec!(0.0),
                 volatility,
             },
             WalkType::LogReturns {
-                dt: pos!(0.01),
+                dt: pos_or_panic!(0.01),
                 expected_return: dec!(0.0),
                 volatility,
                 autocorrelation: Some(dec!(0.0)),
             },
             WalkType::MeanReverting {
-                dt: pos!(0.01),
+                dt: pos_or_panic!(0.01),
                 volatility,
-                speed: pos!(0.1),
-                mean: pos!(100.0),
+                speed: pos_or_panic!(0.1),
+                mean: Positive::HUNDRED,
             },
             WalkType::JumpDiffusion {
-                dt: pos!(0.01),
+                dt: pos_or_panic!(0.01),
                 drift: dec!(0.0),
                 volatility,
-                intensity: pos!(0.1),
+                intensity: pos_or_panic!(0.1),
                 jump_mean: dec!(0.0),
-                jump_volatility: pos!(0.1),
+                jump_volatility: pos_or_panic!(0.1),
             },
             WalkType::Garch {
-                dt: pos!(0.01),
+                dt: pos_or_panic!(0.01),
                 drift: dec!(0.0),
                 volatility,
-                alpha: pos!(0.1),
-                beta: pos!(0.8),
+                alpha: pos_or_panic!(0.1),
+                beta: pos_or_panic!(0.8),
             },
             WalkType::Heston {
-                dt: pos!(0.01),
+                dt: pos_or_panic!(0.01),
                 drift: dec!(0.0),
                 volatility,
-                kappa: pos!(2.0),
-                theta: pos!(0.04),
-                xi: pos!(0.1),
+                kappa: Positive::TWO,
+                theta: pos_or_panic!(0.04),
+                xi: pos_or_panic!(0.1),
                 rho: dec!(-0.7),
             },
             WalkType::Custom {
-                dt: pos!(0.01),
+                dt: pos_or_panic!(0.01),
                 drift: dec!(0.0),
                 volatility,
-                vov: pos!(0.1),
-                vol_speed: pos!(0.1),
-                vol_mean: pos!(0.2),
+                vov: pos_or_panic!(0.1),
+                vol_speed: pos_or_panic!(0.1),
+                vol_mean: pos_or_panic!(0.2),
             },
         ];
 
@@ -464,7 +473,7 @@ mod tests_generator_optionseries {
                     x: Xstep::new(
                         Positive::ONE,
                         TimeFrame::Day,
-                        ExpirationDate::Days(pos!(30.0)),
+                        ExpirationDate::Days(pos_or_panic!(30.0)),
                     ),
                     y: Ystep::new(0, initial_series.clone()),
                 },
@@ -484,16 +493,16 @@ mod tests_generator_optionseries {
         let initial_series = create_test_option_series();
         let walker = Box::new(TestWalker {});
         let historical_prices = vec![
-            pos!(100.0),
-            pos!(102.0),
-            pos!(98.0),
-            pos!(105.0),
-            pos!(110.0),
-            pos!(115.0),
-            pos!(112.0),
-            pos!(118.0),
-            pos!(120.0),
-            pos!(125.0),
+            Positive::HUNDRED,
+            pos_or_panic!(102.0),
+            pos_or_panic!(98.0),
+            pos_or_panic!(105.0),
+            pos_or_panic!(110.0),
+            pos_or_panic!(115.0),
+            pos_or_panic!(112.0),
+            pos_or_panic!(118.0),
+            pos_or_panic!(120.0),
+            pos_or_panic!(125.0),
         ];
 
         let walk_params = WalkParams {
@@ -502,7 +511,7 @@ mod tests_generator_optionseries {
                 x: Xstep::new(
                     Positive::ONE,
                     TimeFrame::Day,
-                    ExpirationDate::Days(pos!(30.0)),
+                    ExpirationDate::Days(pos_or_panic!(30.0)),
                 ),
                 y: Ystep::new(0, initial_series),
             },
@@ -531,7 +540,7 @@ mod tests_generator_optionseries {
         // Test the create_series_from_step function directly
         let initial_series = create_test_option_series();
         let y_step = Ystep::new(0, initial_series);
-        let new_price = pos!(105.0);
+        let new_price = pos_or_panic!(105.0);
         let volatility = spos!(0.22);
 
         // Execute
@@ -548,7 +557,7 @@ mod tests_generator_optionseries {
         // Verify the implied volatility was updated if we can access it
         if let Ok(params) = new_series.to_build_params() {
             let iv = params.chain_params.get_implied_volatility();
-            assert_pos_relative_eq!(iv, volatility.unwrap(), pos!(0.01));
+            assert_pos_relative_eq!(iv, volatility.unwrap(), pos_or_panic!(0.01));
         }
     }
 
@@ -565,14 +574,14 @@ mod tests_generator_optionseries {
                 x: Xstep::new(
                     Positive::ONE,
                     TimeFrame::Day,
-                    ExpirationDate::Days(pos!(30.0)),
+                    ExpirationDate::Days(pos_or_panic!(30.0)),
                 ),
                 y: Ystep::new(0, initial_series),
             },
             walk_type: WalkType::GeometricBrownian {
-                dt: pos!(0.01),
+                dt: pos_or_panic!(0.01),
                 drift: dec!(0.0),
-                volatility: pos!(0.2),
+                volatility: pos_or_panic!(0.2),
             },
             walker,
         };

@@ -110,7 +110,7 @@ use tracing::{error, info};
 use optionstratlib::greeks::theta;
 use optionstratlib::{ExpirationDate, Options};
 use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
-use optionstratlib::pos;
+use positive::pos_or_panic;
 let option = Options {
     option_type: OptionType::European,
     side: Side::Long,

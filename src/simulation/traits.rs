@@ -1,4 +1,3 @@
-use crate::Positive;
 use crate::backtesting::results::SimulationStatsResult;
 use crate::error::SimulationError;
 use crate::model::decimal::decimal_normal_sample;
@@ -6,6 +5,7 @@ use crate::simulation::simulator::Simulator;
 use crate::simulation::{ExitPolicy, WalkParams, WalkType};
 use crate::volatility::generate_ou_process;
 use num_traits::ToPrimitive;
+use positive::Positive;
 use rust_decimal::{Decimal, MathematicalOps};
 use std::fmt::{Debug, Display};
 use std::ops::AddAssign;
@@ -685,13 +685,13 @@ where
 mod tests_walk_type_able {
     use super::*;
     use crate::ExpirationDate;
-    use crate::Positive;
-    use crate::pos;
+
     use crate::simulation::model::WalkType;
     use crate::simulation::params::WalkParams;
     use crate::simulation::steps::Step;
     use crate::simulation::traits::WalkTypeAble;
     use crate::utils::TimeFrame;
+    use positive::pos_or_panic;
     use rust_decimal::Decimal;
     use std::error::Error;
     use std::fmt::Display;
@@ -720,7 +720,7 @@ mod tests_walk_type_able {
         let init_step = Step::new(
             x_value,
             TimeFrame::Day,
-            ExpirationDate::Days(pos!(30.0)),
+            ExpirationDate::Days(pos_or_panic!(30.0)),
             y_value,
         );
 
@@ -739,9 +739,9 @@ mod tests_walk_type_able {
             10.0,
             100.0,
             WalkType::Brownian {
-                dt: pos!(1.0),
+                dt: Positive::ONE,
                 drift: Decimal::ZERO,
-                volatility: pos!(0.2),
+                volatility: pos_or_panic!(0.2),
             },
         );
 
@@ -759,9 +759,9 @@ mod tests_walk_type_able {
             10.0,
             100.0,
             WalkType::GeometricBrownian {
-                dt: pos!(1.0),
+                dt: Positive::ONE,
                 drift: Decimal::new(5, 2), // 0.05
-                volatility: pos!(0.2),
+                volatility: pos_or_panic!(0.2),
             },
         );
 
@@ -779,9 +779,9 @@ mod tests_walk_type_able {
             10.0,
             100.0,
             WalkType::LogReturns {
-                dt: pos!(1.0),
+                dt: Positive::ONE,
                 expected_return: Decimal::new(5, 2), // 0.05
-                volatility: pos!(0.2),
+                volatility: pos_or_panic!(0.2),
                 autocorrelation: None,
             },
         );
@@ -795,15 +795,15 @@ mod tests_walk_type_able {
 
     #[test]
     fn test_mean_reverting_walk() -> Result<(), Box<dyn Error>> {
-        let mean_value = pos!(150.0);
+        let mean_value = pos_or_panic!(150.0);
         let params = create_test_params(
             5,
             10.0,
             100.0,
             WalkType::MeanReverting {
-                dt: pos!(1.0),
-                volatility: pos!(0.2),
-                speed: pos!(0.1),
+                dt: Positive::ONE,
+                volatility: pos_or_panic!(0.2),
+                speed: pos_or_panic!(0.1),
                 mean: mean_value,
             },
         );
@@ -812,7 +812,7 @@ mod tests_walk_type_able {
         let result = walker.mean_reverting(&params)?;
 
         assert_eq!(result.len(), 5);
-        assert_eq!(result[0], pos!(100.0));
+        assert_eq!(result[0], Positive::HUNDRED);
         Ok(())
     }
 
@@ -823,12 +823,12 @@ mod tests_walk_type_able {
             10.0,
             100.0,
             WalkType::JumpDiffusion {
-                dt: pos!(1.0),
+                dt: Positive::ONE,
                 drift: Decimal::ZERO,
-                volatility: pos!(0.2),
-                intensity: pos!(0.1),
+                volatility: pos_or_panic!(0.2),
+                intensity: pos_or_panic!(0.1),
                 jump_mean: Decimal::ZERO,
-                jump_volatility: pos!(1.0),
+                jump_volatility: Positive::ONE,
             },
         );
 
@@ -846,11 +846,11 @@ mod tests_walk_type_able {
             10.0,
             100.0,
             WalkType::Garch {
-                dt: pos!(1.0),
+                dt: Positive::ONE,
                 drift: Decimal::ZERO,
-                volatility: pos!(0.2),
-                alpha: pos!(0.1),
-                beta: pos!(0.8),
+                volatility: pos_or_panic!(0.2),
+                alpha: pos_or_panic!(0.1),
+                beta: pos_or_panic!(0.8),
             },
         );
 
@@ -868,12 +868,12 @@ mod tests_walk_type_able {
             10.0,
             100.0,
             WalkType::Heston {
-                dt: pos!(1.0),
+                dt: Positive::ONE,
                 drift: Decimal::ZERO,
-                volatility: pos!(0.2),
-                kappa: pos!(2.0),
-                theta: pos!(0.04),
-                xi: pos!(0.4),
+                volatility: pos_or_panic!(0.2),
+                kappa: Positive::TWO,
+                theta: pos_or_panic!(0.04),
+                xi: pos_or_panic!(0.4),
                 rho: Decimal::new(-5, 1), // -0.5
             },
         );
@@ -892,12 +892,12 @@ mod tests_walk_type_able {
             10.0,
             100.0,
             WalkType::Custom {
-                dt: pos!(1.0),
+                dt: Positive::ONE,
                 drift: Decimal::ZERO,
-                volatility: pos!(0.2),
-                vov: pos!(0.4),
-                vol_speed: pos!(1.0),
-                vol_mean: pos!(0.2),
+                volatility: pos_or_panic!(0.2),
+                vov: pos_or_panic!(0.4),
+                vol_speed: Positive::ONE,
+                vol_mean: pos_or_panic!(0.2),
             },
         );
 
@@ -915,13 +915,13 @@ mod tests_walk_type_able {
             10.0,
             100.0,
             WalkType::Telegraph {
-                dt: pos!(1.0),
+                dt: Positive::ONE,
                 drift: Decimal::new(5, 2), // 0.05
-                volatility: pos!(0.2),
-                lambda_up: pos!(0.5),
-                lambda_down: pos!(0.3),
-                vol_multiplier_up: Some(pos!(1.5)),
-                vol_multiplier_down: Some(pos!(0.8)),
+                volatility: pos_or_panic!(0.2),
+                lambda_up: pos_or_panic!(0.5),
+                lambda_down: pos_or_panic!(0.3),
+                vol_multiplier_up: Some(pos_or_panic!(1.5)),
+                vol_multiplier_down: Some(pos_or_panic!(0.8)),
             },
         );
 
@@ -929,7 +929,7 @@ mod tests_walk_type_able {
         let result = walker.telegraph(&params)?;
 
         assert_eq!(result.len(), 5);
-        assert_eq!(result[0], pos!(100.0)); // Initial value should be preserved
+        assert_eq!(result[0], Positive::HUNDRED); // Initial value should be preserved
         Ok(())
     }
 
@@ -940,7 +940,7 @@ mod tests_walk_type_able {
 
         impl From<XType> for Positive {
             fn from(val: XType) -> Self {
-                pos!(val.0)
+                pos_or_panic!(val.0)
             }
         }
 
@@ -961,7 +961,7 @@ mod tests_walk_type_able {
 
         impl From<YType> for Positive {
             fn from(val: YType) -> Self {
-                pos!(val.0)
+                pos_or_panic!(val.0)
             }
         }
 
@@ -976,9 +976,9 @@ mod tests_walk_type_able {
             XType(10.0),
             YType(100.0),
             WalkType::Brownian {
-                dt: pos!(1.0),
+                dt: Positive::ONE,
                 drift: Decimal::ZERO,
-                volatility: pos!(0.2),
+                volatility: pos_or_panic!(0.2),
             },
         );
 
@@ -1051,9 +1051,9 @@ mod tests_walk_type_able {
             10.0,
             100.0,
             WalkType::Brownian {
-                dt: pos!(1.0),
+                dt: Positive::ONE,
                 drift: Decimal::ZERO,
-                volatility: pos!(0.2),
+                volatility: pos_or_panic!(0.2),
             },
         );
 

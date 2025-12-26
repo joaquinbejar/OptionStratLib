@@ -3,13 +3,11 @@
    Email: jb@taunais.com
    Date: 10/12/24
 ******************************************************************************/
-use crate::error::position::PositionValidationErrorKind;
-use crate::error::{GreeksError, PositionError, StrategyError};
-use crate::prelude::OperationErrorKind;
-
 use super::adjustment::{AdjustmentConfig, AdjustmentPlan};
 use super::optimizer::AdjustmentOptimizer;
 use super::portfolio::{AdjustmentTarget, PortfolioGreeks};
+use crate::error::position::PositionValidationErrorKind;
+use crate::error::{GreeksError, PositionError, StrategyError};
 /// # Delta Neutrality Management Module
 ///
 /// This module provides tools and structures to manage and maintain delta neutrality
@@ -49,9 +47,11 @@ use crate::greeks::Greeks;
 use crate::greeks::calculate_delta_neutral_sizes;
 use crate::model::types::{Action, OptionStyle};
 use crate::model::{Trade, TradeStatusAble};
+use crate::prelude::OperationErrorKind;
 use crate::strategies::Strategies;
 use crate::strategies::base::Positionable;
-use crate::{Options, Positive, Side};
+use crate::{Options, Side};
+use positive::Positive;
 use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
@@ -1145,15 +1145,16 @@ pub struct DeltaNeutralResponse {
 #[cfg(test)]
 mod tests_display_implementations {
     use super::*;
-    use crate::pos;
+    use positive::pos_or_panic;
+
     use rust_decimal_macros::dec;
 
     #[test]
     fn test_delta_adjustment_display() {
         // Test BuyOptions display
         let buy_options = DeltaAdjustment::BuyOptions {
-            quantity: pos!(3.0),
-            strike: pos!(105.0),
+            quantity: pos_or_panic!(3.0),
+            strike: pos_or_panic!(105.0),
             option_style: OptionStyle::Call,
             side: Side::Long,
         };
@@ -1164,8 +1165,8 @@ mod tests_display_implementations {
 
         // Test SellOptions display
         let sell_options = DeltaAdjustment::SellOptions {
-            quantity: pos!(2.5),
-            strike: pos!(95.0),
+            quantity: pos_or_panic!(2.5),
+            strike: pos_or_panic!(95.0),
             option_style: OptionStyle::Put,
             side: Side::Short,
         };
@@ -1175,14 +1176,14 @@ mod tests_display_implementations {
         );
 
         // Test BuyUnderlying display
-        let buy_underlying = DeltaAdjustment::BuyUnderlying(pos!(10.0));
+        let buy_underlying = DeltaAdjustment::BuyUnderlying(pos_or_panic!(10.0));
         assert_eq!(
             buy_underlying.to_string(),
             "Buy 10 units of the underlying asset"
         );
 
         // Test SellUnderlying display
-        let sell_underlying = DeltaAdjustment::SellUnderlying(pos!(5.0));
+        let sell_underlying = DeltaAdjustment::SellUnderlying(pos_or_panic!(5.0));
         assert_eq!(
             sell_underlying.to_string(),
             "Sell 5 units of the underlying asset"
@@ -1194,14 +1195,14 @@ mod tests_display_implementations {
 
         let same_size = DeltaAdjustmentSameSize {
             first: Box::new(DeltaAdjustment::BuyOptions {
-                quantity: pos!(1.0),
-                strike: pos!(100.0),
+                quantity: Positive::ONE,
+                strike: Positive::HUNDRED,
                 option_style: OptionStyle::Call,
                 side: Side::Long,
             }),
             second: Box::new(DeltaAdjustment::SellOptions {
-                quantity: pos!(1.0),
-                strike: pos!(110.0),
+                quantity: Positive::ONE,
+                strike: pos_or_panic!(110.0),
                 option_style: OptionStyle::Call,
                 side: Side::Short,
             }),
@@ -1219,8 +1220,8 @@ mod tests_display_implementations {
         let position_info = DeltaPositionInfo {
             delta: dec!(0.5),
             delta_per_contract: dec!(0.25),
-            quantity: pos!(2.0),
-            strike: pos!(100.0),
+            quantity: Positive::TWO,
+            strike: Positive::HUNDRED,
             option_style: OptionStyle::Call,
             side: Side::Long,
         };
@@ -1244,23 +1245,23 @@ mod tests_display_implementations {
                 DeltaPositionInfo {
                     delta: dec!(0.5),
                     delta_per_contract: dec!(0.25),
-                    quantity: pos!(1.0),
-                    strike: pos!(100.0),
+                    quantity: Positive::ONE,
+                    strike: Positive::HUNDRED,
                     option_style: OptionStyle::Call,
                     side: Side::Long,
                 },
                 DeltaPositionInfo {
                     delta: dec!(-0.75),
                     delta_per_contract: dec!(-0.375),
-                    quantity: pos!(2.0),
-                    strike: pos!(95.0),
+                    quantity: Positive::TWO,
+                    strike: pos_or_panic!(95.0),
                     option_style: OptionStyle::Put,
                     side: Side::Short,
                 },
             ],
             is_neutral: false,
             neutrality_threshold: dec!(0.1),
-            underlying_price: pos!(102.5),
+            underlying_price: pos_or_panic!(102.5),
         };
 
         // Similarly, we'll check for the presence of key components in the display string
@@ -1282,8 +1283,9 @@ mod tests_display_implementations {
 #[cfg(test)]
 mod tests_serialization {
     use super::*;
+    use crate::ExpirationDate;
     use crate::strategies::ShortStrangle;
-    use crate::{ExpirationDate, pos};
+    use positive::pos_or_panic;
     use rust_decimal_macros::dec;
     use serde_json;
     use tracing::info;
@@ -1292,8 +1294,8 @@ mod tests_serialization {
     fn test_delta_adjustment_serialization() {
         // Test BuyOptions serialization/deserialization
         let buy_options = DeltaAdjustment::BuyOptions {
-            quantity: pos!(3.0),
-            strike: pos!(105.0),
+            quantity: pos_or_panic!(3.0),
+            strike: pos_or_panic!(105.0),
             option_style: OptionStyle::Call,
             side: Side::Long,
         };
@@ -1303,8 +1305,8 @@ mod tests_serialization {
 
         // Test SellOptions serialization/deserialization
         let sell_options = DeltaAdjustment::SellOptions {
-            quantity: pos!(2.5),
-            strike: pos!(95.0),
+            quantity: pos_or_panic!(2.5),
+            strike: pos_or_panic!(95.0),
             option_style: OptionStyle::Put,
             side: Side::Short,
         };
@@ -1313,13 +1315,13 @@ mod tests_serialization {
         assert_eq!(sell_options, deserialized);
 
         // Test BuyUnderlying serialization/deserialization
-        let buy_underlying = DeltaAdjustment::BuyUnderlying(pos!(10.0));
+        let buy_underlying = DeltaAdjustment::BuyUnderlying(pos_or_panic!(10.0));
         let serialized = serde_json::to_string(&buy_underlying).unwrap();
         let deserialized: DeltaAdjustment = serde_json::from_str(&serialized).unwrap();
         assert_eq!(buy_underlying, deserialized);
 
         // Test SellUnderlying serialization/deserialization
-        let sell_underlying = DeltaAdjustment::SellUnderlying(pos!(5.0));
+        let sell_underlying = DeltaAdjustment::SellUnderlying(pos_or_panic!(5.0));
         let serialized = serde_json::to_string(&sell_underlying).unwrap();
         let deserialized: DeltaAdjustment = serde_json::from_str(&serialized).unwrap();
         assert_eq!(sell_underlying, deserialized);
@@ -1332,14 +1334,14 @@ mod tests_serialization {
 
         let same_size = DeltaAdjustmentSameSize {
             first: Box::new(DeltaAdjustment::BuyOptions {
-                quantity: pos!(1.0),
-                strike: pos!(100.0),
+                quantity: Positive::ONE,
+                strike: Positive::HUNDRED,
                 option_style: OptionStyle::Call,
                 side: Side::Long,
             }),
             second: Box::new(DeltaAdjustment::SellOptions {
-                quantity: pos!(1.0),
-                strike: pos!(110.0),
+                quantity: Positive::ONE,
+                strike: pos_or_panic!(110.0),
                 option_style: OptionStyle::Call,
                 side: Side::Short,
             }),
@@ -1356,8 +1358,8 @@ mod tests_serialization {
         let position_info = DeltaPositionInfo {
             delta: dec!(0.5),
             delta_per_contract: dec!(0.25),
-            quantity: pos!(2.0),
-            strike: pos!(100.0),
+            quantity: Positive::TWO,
+            strike: Positive::HUNDRED,
             option_style: OptionStyle::Call,
             side: Side::Long,
         };
@@ -1383,23 +1385,23 @@ mod tests_serialization {
                 DeltaPositionInfo {
                     delta: dec!(0.5),
                     delta_per_contract: dec!(0.25),
-                    quantity: pos!(1.0),
-                    strike: pos!(100.0),
+                    quantity: Positive::ONE,
+                    strike: Positive::HUNDRED,
                     option_style: OptionStyle::Call,
                     side: Side::Long,
                 },
                 DeltaPositionInfo {
                     delta: dec!(-0.75),
                     delta_per_contract: dec!(-0.375),
-                    quantity: pos!(2.0),
-                    strike: pos!(95.0),
+                    quantity: Positive::TWO,
+                    strike: pos_or_panic!(95.0),
                     option_style: OptionStyle::Put,
                     side: Side::Short,
                 },
             ],
             is_neutral: false,
             neutrality_threshold: dec!(0.1),
-            underlying_price: pos!(102.5),
+            underlying_price: pos_or_panic!(102.5),
         };
 
         let serialized = serde_json::to_string(&delta_info).unwrap();
@@ -1435,8 +1437,8 @@ mod tests_serialization {
     fn test_specific_json_formats() {
         // Test that the JSON format is as expected
         let buy_options = DeltaAdjustment::BuyOptions {
-            quantity: pos!(3.0),
-            strike: pos!(105.0),
+            quantity: pos_or_panic!(3.0),
+            strike: pos_or_panic!(105.0),
             option_style: OptionStyle::Call,
             side: Side::Long,
         };
@@ -1461,8 +1463,8 @@ mod tests_serialization {
                 option_style,
                 side,
             } => {
-                assert_eq!(quantity, pos!(3.0));
-                assert_eq!(strike, pos!(105.0));
+                assert_eq!(quantity, pos_or_panic!(3.0));
+                assert_eq!(strike, pos_or_panic!(105.0));
                 assert_eq!(option_style, OptionStyle::Call);
                 assert_eq!(side, Side::Long);
             }
@@ -1474,21 +1476,21 @@ mod tests_serialization {
     fn test_delta_response_serialization() {
         let strategy = ShortStrangle::new(
             "CL".to_string(),
-            pos!(7250.0), // underlying_price
-            pos!(7450.0), // call_strike
-            pos!(7050.0), // put_strike
-            ExpirationDate::Days(pos!(45.0)),
-            pos!(0.3745),   // implied_volatility
-            pos!(0.3745),   // implied_volatility
-            dec!(0.05),     // risk_free_rate
-            Positive::ZERO, // dividend_yield
-            pos!(2.0),      // quantity
-            pos!(84.2),     // premium_short_call
-            pos!(353.2),    // premium_short_put
-            pos!(7.01),     // open_fee_short_call
-            pos!(7.01),     // close_fee_short_call
-            pos!(7.01),     // open_fee_short_put
-            pos!(7.01),     // close_fee_short_put
+            pos_or_panic!(7250.0), // underlying_price
+            pos_or_panic!(7450.0), // call_strike
+            pos_or_panic!(7050.0), // put_strike
+            ExpirationDate::Days(pos_or_panic!(45.0)),
+            pos_or_panic!(0.3745), // implied_volatility
+            pos_or_panic!(0.3745), // implied_volatility
+            dec!(0.05),            // risk_free_rate
+            Positive::ZERO,        // dividend_yield
+            Positive::TWO,         // quantity
+            pos_or_panic!(84.2),   // premium_short_call
+            pos_or_panic!(353.2),  // premium_short_put
+            pos_or_panic!(7.01),   // open_fee_short_call
+            pos_or_panic!(7.01),   // close_fee_short_call
+            pos_or_panic!(7.01),   // open_fee_short_put
+            pos_or_panic!(7.01),   // close_fee_short_put
         );
         let delta_info = strategy.delta_neutrality().unwrap();
         let adjustments = strategy.delta_adjustments().unwrap();
@@ -1506,9 +1508,10 @@ mod tests_serialization {
 #[cfg(test)]
 mod tests_generate_delta_adjustments {
     use super::*;
+    use crate::ExpirationDate;
     use crate::strategies::base::BreakEvenable;
     use crate::strategies::{BasicAble, Validable};
-    use crate::{ExpirationDate, pos};
+    use positive::pos_or_panic;
 
     struct MockDeltaNeutral;
     impl Greeks for MockDeltaNeutral {
@@ -1529,14 +1532,14 @@ mod tests_generate_delta_adjustments {
             option_type: crate::model::types::OptionType::European,
             side,
             underlying_symbol: "TEST".to_string(),
-            strike_price: pos!(100.0),
-            expiration_date: ExpirationDate::Days(pos!(30.0)),
-            implied_volatility: pos!(0.2),
+            strike_price: Positive::HUNDRED,
+            expiration_date: ExpirationDate::Days(pos_or_panic!(30.0)),
+            implied_volatility: pos_or_panic!(0.2),
             quantity: size,
-            underlying_price: pos!(100.0),
+            underlying_price: Positive::HUNDRED,
             risk_free_rate: dec!(0.05),
             option_style,
-            dividend_yield: pos!(0.01),
+            dividend_yield: pos_or_panic!(0.01),
             exotic_params: None,
         }
     }
@@ -1547,7 +1550,7 @@ mod tests_generate_delta_adjustments {
         let delta_neutral = MockDeltaNeutral;
         let net_delta = dec!(0.5); // Positive net delta
         let option_delta_per_contract = dec!(0.25); // Positive option delta
-        let option = create_test_option(OptionStyle::Call, Side::Long, pos!(2.7));
+        let option = create_test_option(OptionStyle::Call, Side::Long, pos_or_panic!(2.7));
 
         // Act
         let adjustment = delta_neutral
@@ -1577,7 +1580,7 @@ mod tests_generate_delta_adjustments {
         let delta_neutral = MockDeltaNeutral;
         let net_delta = dec!(0.5); // Positive net delta
         let option_delta_per_contract = dec!(-0.25); // Negative option delta
-        let option = create_test_option(OptionStyle::Put, Side::Long, pos!(3.7));
+        let option = create_test_option(OptionStyle::Put, Side::Long, pos_or_panic!(3.7));
 
         // Act
         let adjustment = delta_neutral
@@ -1609,7 +1612,7 @@ mod tests_generate_delta_adjustments {
         let delta_neutral = MockDeltaNeutral;
         let net_delta = dec!(0.5); // Positive net delta
         let option_delta_per_contract = dec!(-0.25); // Negative option delta
-        let option = create_test_option(OptionStyle::Put, Side::Long, pos!(1.7));
+        let option = create_test_option(OptionStyle::Put, Side::Long, pos_or_panic!(1.7));
 
         // Act
         let adjustment = delta_neutral
@@ -1641,7 +1644,7 @@ mod tests_generate_delta_adjustments {
         let delta_neutral = MockDeltaNeutral;
         let net_delta = dec!(-0.5); // Negative net delta
         let option_delta_per_contract = dec!(0.25); // Positive option delta
-        let option = create_test_option(OptionStyle::Call, Side::Long, pos!(21.7));
+        let option = create_test_option(OptionStyle::Call, Side::Long, pos_or_panic!(21.7));
 
         // Act
         let adjustment = delta_neutral
@@ -1673,7 +1676,7 @@ mod tests_generate_delta_adjustments {
         let delta_neutral = MockDeltaNeutral;
         let net_delta = dec!(-0.5); // Negative net delta
         let option_delta_per_contract = dec!(0.25); // Positive option delta
-        let option = create_test_option(OptionStyle::Call, Side::Long, pos!(1.7));
+        let option = create_test_option(OptionStyle::Call, Side::Long, pos_or_panic!(1.7));
 
         // Act
         let adjustment = delta_neutral
@@ -1705,7 +1708,7 @@ mod tests_generate_delta_adjustments {
         let delta_neutral = MockDeltaNeutral;
         let net_delta = dec!(-0.5); // Negative net delta
         let option_delta_per_contract = dec!(-0.25); // Negative option delta
-        let option = create_test_option(OptionStyle::Put, Side::Long, pos!(1.5));
+        let option = create_test_option(OptionStyle::Put, Side::Long, pos_or_panic!(1.5));
 
         // Act
         let adjustment =
@@ -1720,7 +1723,7 @@ mod tests_generate_delta_adjustments {
         let delta_neutral = MockDeltaNeutral;
         let net_delta = dec!(-0.5); // Negative net delta
         let option_delta_per_contract = dec!(-0.25); // Negative option delta
-        let option = create_test_option(OptionStyle::Put, Side::Long, pos!(10.5));
+        let option = create_test_option(OptionStyle::Put, Side::Long, pos_or_panic!(10.5));
 
         // Act
         let adjustment = delta_neutral
@@ -1735,7 +1738,7 @@ mod tests_generate_delta_adjustments {
                 option_style,
                 side,
             } => {
-                assert_eq!(quantity, pos!(2.0));
+                assert_eq!(quantity, Positive::TWO);
                 assert_eq!(strike, option.strike_price);
                 assert_eq!(option_style, option.option_style);
                 assert_eq!(side, option.side);
@@ -1750,7 +1753,7 @@ mod tests_generate_delta_adjustments {
         let delta_neutral = MockDeltaNeutral;
         let net_delta = dec!(0.5); // Any non-zero value
         let option_delta_per_contract = dec!(0.0); // Zero option delta
-        let option = create_test_option(OptionStyle::Call, Side::Long, pos!(7.0));
+        let option = create_test_option(OptionStyle::Call, Side::Long, pos_or_panic!(7.0));
 
         // Division by zero should be handled gracefully
         let result =
@@ -1765,7 +1768,7 @@ mod tests_generate_delta_adjustments {
         let delta_neutral = MockDeltaNeutral;
         let net_delta = dec!(0.0); // Zero net delta
         let option_delta_per_contract = dec!(0.25); // Non-zero option delta
-        let option = create_test_option(OptionStyle::Call, Side::Long, pos!(2.7223423));
+        let option = create_test_option(OptionStyle::Call, Side::Long, pos_or_panic!(2.7223423));
 
         // Act
         let adjustment = delta_neutral
@@ -1787,7 +1790,8 @@ mod tests_generate_delta_adjustments {
         let delta_neutral = MockDeltaNeutral;
         let net_delta = dec!(0.5);
         let option_delta_per_contract = dec!(0.25);
-        let put_option = create_test_option(OptionStyle::Put, Side::Long, pos!(5.7534523452435));
+        let put_option =
+            create_test_option(OptionStyle::Put, Side::Long, pos_or_panic!(5.7534523452435));
 
         let adjustment = delta_neutral
             .generate_delta_adjustments(net_delta, option_delta_per_contract, &put_option)
@@ -1800,7 +1804,7 @@ mod tests_generate_delta_adjustments {
                 ..
             } => {
                 assert_eq!(option_style, OptionStyle::Put);
-                let expected = pos!(2.0);
+                let expected = Positive::TWO;
                 assert_eq!(quantity, expected);
             }
             _ => panic!("Expected SellOptions adjustment"),
@@ -1813,7 +1817,7 @@ mod tests_generate_delta_adjustments {
         let delta_neutral = MockDeltaNeutral;
         let net_delta = dec!(0.5);
         let option_delta_per_contract = dec!(0.25);
-        let short_option = create_test_option(OptionStyle::Call, Side::Short, pos!(1.0));
+        let short_option = create_test_option(OptionStyle::Call, Side::Short, Positive::ONE);
 
         let adjustment = delta_neutral.generate_delta_adjustments(
             net_delta,
@@ -1831,7 +1835,7 @@ mod tests_generate_delta_adjustments {
         let delta_neutral = MockDeltaNeutral;
         let net_delta = dec!(-0.5); // Negative net delta
         let option_delta_per_contract = dec!(-0.25); // Negative option delta
-        let option = create_test_option(OptionStyle::Put, Side::Long, pos!(3.0)); // Más de lo necesario
+        let option = create_test_option(OptionStyle::Put, Side::Long, pos_or_panic!(3.0)); // Más de lo necesario
 
         // Act
         let adjustment = delta_neutral
@@ -1864,7 +1868,7 @@ mod tests_generate_delta_adjustments {
         let delta_neutral = MockDeltaNeutral;
         let net_delta = dec!(1000.0);
         let option_delta_per_contract = dec!(0.01);
-        let option = create_test_option(OptionStyle::Call, Side::Long, pos!(1.7));
+        let option = create_test_option(OptionStyle::Call, Side::Long, pos_or_panic!(1.7));
 
         let adjustment =
             delta_neutral.generate_delta_adjustments(net_delta, option_delta_per_contract, &option);

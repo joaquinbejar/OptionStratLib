@@ -26,6 +26,7 @@ use optionstratlib::error::CurveError;
 use optionstratlib::metrics::DollarGammaCurve;
 use optionstratlib::model::OptionStyle;
 use optionstratlib::prelude::*;
+use positive::pos_or_panic;
 use rust_decimal_macros::dec;
 
 fn main() -> Result<(), CurveError> {
@@ -36,20 +37,20 @@ fn main() -> Result<(), CurveError> {
     let params = OptionChainBuildParams::new(
         "SPY".to_string(),
         None,
-        15,          // 15 strikes on each side of ATM
-        spos!(5.0),  // $5 strike intervals
-        dec!(-0.15), // Slight negative skew
-        dec!(0.08),  // Smile curvature
-        pos!(0.02),  // Spread
-        2,           // Decimal places
+        15,                  // 15 strikes on each side of ATM
+        spos!(5.0),          // $5 strike intervals
+        dec!(-0.15),         // Slight negative skew
+        dec!(0.08),          // Smile curvature
+        pos_or_panic!(0.02), // Spread
+        2,                   // Decimal places
         OptionDataPriceParams::new(
-            Some(Box::new(pos!(450.0))),            // Underlying price
-            Some(ExpirationDate::Days(pos!(30.0))), // 30 days to expiry
-            Some(dec!(0.05)),                       // Risk-free rate
-            spos!(0.01),                            // Dividend yield
+            Some(Box::new(pos_or_panic!(450.0))), // Underlying price
+            Some(ExpirationDate::Days(pos_or_panic!(30.0))), // 30 days to expiry
+            Some(dec!(0.05)),                     // Risk-free rate
+            spos!(0.01),                          // Dividend yield
             Some("SPY".to_string()),
         ),
-        pos!(0.20), // Base IV of 20%
+        pos_or_panic!(0.20), // Base IV of 20%
     );
 
     let option_chain = OptionChain::build_chain(&params);

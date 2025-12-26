@@ -19,6 +19,7 @@
 //! - Using the Priceable trait for clean API
 
 use optionstratlib::prelude::*;
+use positive::pos_or_panic;
 use std::fmt::Display;
 use std::ops::AddAssign;
 
@@ -38,7 +39,7 @@ fn demo_generator(params: &WalkParams<Positive, Positive>) -> Vec<Step<Positive,
     let mut current = params.init_step.clone();
     out.push(current.clone());
     for i in 1..params.size {
-        let new_y = current.get_positive_value() + pos!(i as f64 * 0.05);
+        let new_y = current.get_positive_value() + pos_or_panic!(i as f64 * 0.05);
         current = current.next(new_y).expect("step.next should succeed");
         out.push(current.clone());
     }
@@ -53,14 +54,14 @@ fn main() {
         option_type: OptionType::European,
         side: Side::Long,
         underlying_symbol: "AAPL".to_string(),
-        strike_price: pos!(150.0),
-        expiration_date: ExpirationDate::Days(pos!(30.0)),
-        implied_volatility: pos!(0.25),
+        strike_price: pos_or_panic!(150.0),
+        expiration_date: ExpirationDate::Days(pos_or_panic!(30.0)),
+        implied_volatility: pos_or_panic!(0.25),
         quantity: Positive::ONE,
-        underlying_price: pos!(155.0),
+        underlying_price: pos_or_panic!(155.0),
         risk_free_rate: dec!(0.05),
         option_style: OptionStyle::Call,
-        dividend_yield: pos!(0.02),
+        dividend_yield: pos_or_panic!(0.02),
         exotic_params: None,
     };
 
@@ -91,15 +92,15 @@ fn main() {
     let size = 365;
     let init_step = Step {
         x: Xstep::new(
-            pos!(1.0),
+            Positive::ONE,
             TimeFrame::Day,
-            ExpirationDate::Days(pos!(size as f64)),
+            ExpirationDate::Days(pos_or_panic!(size as f64)),
         ),
         y: Ystep::new(0, option.underlying_price),
     };
 
     let gbm_walk = WalkType::GeometricBrownian {
-        dt: pos!(1.0),
+        dt: Positive::ONE,
         drift: dec!(0.0),
         volatility: option.implied_volatility,
     };
@@ -129,13 +130,13 @@ fn main() {
     // 3. Monte Carlo with Heston Model
     println!("3. Monte Carlo with Heston Stochastic Volatility:");
     let heston_walk = WalkType::Heston {
-        dt: pos!(1.0),
+        dt: Positive::ONE,
         drift: dec!(0.0),
         volatility: option.implied_volatility,
-        kappa: pos!(2.0),  // Mean reversion speed
-        theta: pos!(0.04), // Long-term variance
-        xi: pos!(0.3),     // Volatility of volatility
-        rho: dec!(-0.7),   // Correlation
+        kappa: Positive::TWO,       // Mean reversion speed
+        theta: pos_or_panic!(0.04), // Long-term variance
+        xi: pos_or_panic!(0.3),     // Volatility of volatility
+        rho: dec!(-0.7),            // Correlation
     };
 
     let heston_params = WalkParams {
@@ -163,12 +164,12 @@ fn main() {
     // 4. Monte Carlo with Jump Diffusion
     println!("4. Monte Carlo with Jump Diffusion:");
     let jump_walk = WalkType::JumpDiffusion {
-        dt: pos!(1.0),
+        dt: Positive::ONE,
         drift: dec!(0.0),
         volatility: option.implied_volatility,
-        intensity: pos!(0.5),        // Jump frequency
-        jump_mean: dec!(-0.02),      // Average jump size
-        jump_volatility: pos!(0.15), // Jump size volatility
+        intensity: pos_or_panic!(0.5),        // Jump frequency
+        jump_mean: dec!(-0.02),               // Average jump size
+        jump_volatility: pos_or_panic!(0.15), // Jump size volatility
     };
 
     let jump_params = WalkParams {
@@ -196,11 +197,11 @@ fn main() {
     // 5. Monte Carlo with Telegraph Process
     println!("5. Monte Carlo with Telegraph Process:");
     let telegraph_walk = WalkType::Telegraph {
-        dt: pos!(1.0),
+        dt: Positive::ONE,
         drift: dec!(0.0),
         volatility: option.implied_volatility,
-        lambda_up: pos!(0.8),   // Transition rate to up state
-        lambda_down: pos!(1.2), // Transition rate to down state
+        lambda_up: pos_or_panic!(0.8),   // Transition rate to up state
+        lambda_down: pos_or_panic!(1.2), // Transition rate to down state
         vol_multiplier_up: None,
         vol_multiplier_down: None,
     };

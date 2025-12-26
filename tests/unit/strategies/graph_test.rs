@@ -5,10 +5,10 @@ use optionstratlib::{
         position::Position,
         types::{OptionStyle, OptionType, Side},
     },
-    pos,
     strategies::{BasicAble, base::Positionable, long_put::LongPut, short_call::ShortCall},
     visualization::{Graph, GraphData},
 };
+use positive::{Positive, pos_or_panic};
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use std::error::Error;
@@ -27,24 +27,24 @@ fn create_test_long_put() -> LongPut {
         OptionType::European,
         Side::Long,
         "AAPL".to_string(),
-        pos!(100.0), // Strike price
-        ExpirationDate::Days(pos!(30.0)),
-        pos!(0.3),        // Implied volatility
-        pos!(1.0),        // Quantity
-        pos!(95.0),       // Underlying price
-        dec!(0.02),       // Risk-free rate
-        OptionStyle::Put, // Put option
-        pos!(0.01),       // Dividend yield
-        None,             // Exotic parameters
+        Positive::HUNDRED, // Strike price
+        ExpirationDate::Days(pos_or_panic!(30.0)),
+        pos_or_panic!(0.3),  // Implied volatility
+        Positive::ONE,       // Quantity
+        pos_or_panic!(95.0), // Underlying price
+        dec!(0.02),          // Risk-free rate
+        OptionStyle::Put,    // Put option
+        pos_or_panic!(0.01), // Dividend yield
+        None,                // Exotic parameters
     );
 
     // Create a position with the option
     let position = Position::new(
         option,
-        pos!(5.0),  // Premium
-        Utc::now(), // Entry date
-        pos!(0.5),  // Open fee
-        pos!(0.5),  // Close fee
+        pos_or_panic!(5.0), // Premium
+        Utc::now(),         // Entry date
+        pos_or_panic!(0.5), // Open fee
+        pos_or_panic!(0.5), // Close fee
         None,
         None,
     );
@@ -53,7 +53,7 @@ fn create_test_long_put() -> LongPut {
     long_put.add_position(&position).unwrap();
 
     // Update the break even points
-    long_put.break_even_points = vec![pos!(95.0)];
+    long_put.break_even_points = vec![pos_or_panic!(95.0)];
 
     long_put
 }
@@ -72,24 +72,24 @@ fn create_test_short_call() -> ShortCall {
         OptionType::European,
         Side::Short, // Short side
         "AAPL".to_string(),
-        pos!(100.0), // Strike price
-        ExpirationDate::Days(pos!(30.0)),
-        pos!(0.3),         // Implied volatility
-        pos!(1.0),         // Quantity
-        pos!(95.0),        // Underlying price
-        dec!(0.02),        // Risk-free rate
-        OptionStyle::Call, // Call option
-        pos!(0.01),        // Dividend yield
-        None,              // Exotic parameters
+        Positive::HUNDRED, // Strike price
+        ExpirationDate::Days(pos_or_panic!(30.0)),
+        pos_or_panic!(0.3),  // Implied volatility
+        Positive::ONE,       // Quantity
+        pos_or_panic!(95.0), // Underlying price
+        dec!(0.02),          // Risk-free rate
+        OptionStyle::Call,   // Call option
+        pos_or_panic!(0.01), // Dividend yield
+        None,                // Exotic parameters
     );
 
     // Create a position with the option
     let position = Position::new(
         option,
-        pos!(4.0),  // Premium
-        Utc::now(), // Entry date
-        pos!(0.5),  // Open fee
-        pos!(0.5),  // Close fee
+        pos_or_panic!(4.0), // Premium
+        Utc::now(),         // Entry date
+        pos_or_panic!(0.5), // Open fee
+        pos_or_panic!(0.5), // Close fee
         None,
         None,
     );
@@ -98,7 +98,7 @@ fn create_test_short_call() -> ShortCall {
     short_call.add_position(&position).unwrap();
 
     // Update the break even points
-    short_call.break_even_points = vec![pos!(104.0)];
+    short_call.break_even_points = vec![pos_or_panic!(104.0)];
 
     short_call
 }
