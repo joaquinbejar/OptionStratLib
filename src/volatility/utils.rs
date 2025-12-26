@@ -498,7 +498,7 @@ pub fn volatility_for_dt(
 ///
 /// ```rust
 /// use rust_decimal_macros::dec;
-/// use positive::pos_or_panic;
+/// use positive::{pos_or_panic, Positive};
 /// use optionstratlib::volatility::generate_ou_process;
 ///
 /// // Simulate an OU process with initial value 1.0, mean 1.5,

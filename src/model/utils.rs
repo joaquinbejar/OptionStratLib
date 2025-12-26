@@ -122,7 +122,7 @@ pub fn create_sample_option(
 /// ```rust
 /// use optionstratlib::model::utils::create_sample_position;
 /// use optionstratlib::{OptionStyle, Side};
-/// use positive::pos_or_panic;
+/// use positive::{pos_or_panic, Positive};
 /// let sample_call = create_sample_position(
 ///     OptionStyle::Call,
 ///     Side::Long,
