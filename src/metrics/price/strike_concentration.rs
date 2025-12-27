@@ -14,7 +14,7 @@
 //! The Strike Concentration identifies specific strike prices with unusually high open
 //! interest or trading volume. It looks for clusters of activity where a large number of
 //! contracts are concentrated.
-//! It is often used to understand which are the key price levels where market posisitioning
+//! It is often used to understand which are the key price levels where market positioning
 //! is the heaviest.
 //!
 //! ## Mathematical Background

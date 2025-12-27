@@ -3488,9 +3488,14 @@ impl PutCallRatioCurve for OptionChain {
         for opt in self.options.iter() {
             // Calculate Put/Call Ratio premium weighted
             if let (Some(put_mid), Some(call_mid)) = (opt.put_middle, opt.call_middle) {
+                let call_mid_dec = call_mid.to_dec();
+                // Avoid division by zero
+                if call_mid_dec.is_zero() {
+                    continue;
+                }
                 points.insert(Point2D::new(
                     opt.strike_price.to_dec(),
-                    put_mid.to_dec() / call_mid.to_dec(),
+                    put_mid.to_dec() / call_mid_dec,
                 ));
             }
         }

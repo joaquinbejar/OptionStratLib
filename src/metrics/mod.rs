@@ -74,7 +74,7 @@
 //! }
 //! ```
 //!
-//! ### Strike Concetration
+//! ### Strike Concentration
 //!
 //! ```rust
 //! use std::collections::BTreeSet;
