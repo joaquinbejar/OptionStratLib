@@ -402,7 +402,7 @@ impl Options {
             spot_max: None,
         };
         let payoff = self.option_type.payoff(&payoff_info) * self.quantity.to_f64();
-        Ok(Decimal::from_f64(payoff).unwrap())
+        Ok(Decimal::from_f64(payoff).unwrap_or_default())
     }
 
     /// Calculates the financial payoff value of the option at a specific underlying price.
@@ -431,7 +431,7 @@ impl Options {
             spot_max: None,
         };
         let price = self.option_type.payoff(&payoff_info) * self.quantity.to_f64();
-        Ok(Decimal::from_f64(price).unwrap())
+        Ok(Decimal::from_f64(price).unwrap_or_default())
     }
 
     /// Calculates the intrinsic value of the option.
@@ -458,7 +458,7 @@ impl Options {
             spot_max: None,
         };
         let iv = self.option_type.payoff(&payoff_info) * self.quantity.to_f64();
-        Ok(Decimal::from_f64(iv).unwrap())
+        Ok(Decimal::from_f64(iv).unwrap_or_default())
     }
 
     /// Determines whether an option is "in-the-money" based on its current price relative to strike price.
@@ -680,12 +680,18 @@ impl From<&OptionData> for Options {
         Options {
             option_type: OptionType::European,
             side: Side::Long,
-            underlying_symbol: option_data.symbol.clone().unwrap(),
+            underlying_symbol: option_data.symbol.clone().unwrap_or_default(),
             strike_price: option_data.strike_price,
-            expiration_date: option_data.expiration_date.unwrap(),
+            expiration_date: option_data
+                .expiration_date
+                .unwrap_or(ExpirationDate::Days(Positive::ZERO)),
             implied_volatility: option_data.implied_volatility,
             quantity: Positive::ONE,
-            underlying_price: *option_data.underlying_price.clone().unwrap(),
+            underlying_price: option_data
+                .underlying_price
+                .clone()
+                .map(|p| *p)
+                .unwrap_or(Positive::ZERO),
             risk_free_rate: option_data.risk_free_rate.unwrap_or(Decimal::ZERO),
             option_style: OptionStyle::Call,
             dividend_yield: option_data.dividend_yield.unwrap_or(Positive::ZERO),
@@ -922,21 +928,29 @@ impl Graph for Options {
 
         for i in range.0.to_u64()..range.1.to_u64() {
             let profit = self
-                .payoff_at_price(&Positive::new(i as f64).unwrap())
-                .unwrap();
+                .payoff_at_price(&Positive::new(i as f64).unwrap_or(Positive::ONE))
+                .unwrap_or_default();
             match profit {
                 p if p == Decimal::ZERO => {
-                    positive_series.x.push(Decimal::from_u64(i).unwrap());
+                    positive_series
+                        .x
+                        .push(Decimal::from_u64(i).unwrap_or_default());
                     positive_series.y.push(profit);
-                    negative_series.x.push(Decimal::from_u64(i).unwrap());
+                    negative_series
+                        .x
+                        .push(Decimal::from_u64(i).unwrap_or_default());
                     negative_series.y.push(profit);
                 }
                 p if p > Decimal::ZERO => {
-                    positive_series.x.push(Decimal::from_u64(i).unwrap());
+                    positive_series
+                        .x
+                        .push(Decimal::from_u64(i).unwrap_or_default());
                     positive_series.y.push(profit);
                 }
                 _ => {
-                    negative_series.x.push(Decimal::from_u64(i).unwrap());
+                    negative_series
+                        .x
+                        .push(Decimal::from_u64(i).unwrap_or_default());
                     negative_series.y.push(profit);
                 }
             }
