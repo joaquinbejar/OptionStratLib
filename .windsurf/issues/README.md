@@ -1,86 +1,125 @@
-# OptionStratLib Refactoring Issues
+# OptionStratLib Open Issues - Prioritized Roadmap
 
-This directory contains individual issue files for the refactoring of OptionStratLib.
-Each file describes a self-contained issue that can be worked on independently.
+This document tracks the 26 open GitHub issues and their recommended implementation order.
 
-## Issue Index
+> **Note:** All issues are now tracked on GitHub. Local issue files have been removed.
 
-### Priority High (Critical Fixes)
+## 🔴 Priority High (Implement First)
 
-| Issue | Title | Effort | File |
-|-------|-------|--------|------|
-| #1 | Reduce unwrap() in chains/chain.rs | Medium | [issue_001](./issue_001_unwrap_chains_chain.md) |
-| #2 | Reduce unwrap() in greeks/equations.rs | Medium | [issue_002](./issue_002_unwrap_greeks_equations.md) |
-| #3 | Reduce unwrap() in model/option.rs | Medium | [issue_003](./issue_003_unwrap_model_option.md) |
-| #4 | Resolve TODOs in black_scholes_model.rs | High | [issue_004](./issue_004_todos_black_scholes.md) |
-| #16 | Improve Positive type safety and API | High | [issue_016](./issue_016_improve_positive_type.md) |
-| #17 | Reduce unwrap() in src/model (remaining files) | High | [issue_017](./issue_017_unwrap_model_remaining.md) |
+| Order | GitHub Issue | Title | Labels | Effort |
+|-------|--------------|-------|--------|--------|
+| 1 | [#227](https://github.com/joaquinbejar/OptionStratLib/issues/227) | refactor: Replace unwrap() calls with proper error handling in src/model | refactor, error-handling, priority-high | High |
+| 2 | [#235](https://github.com/joaquinbejar/OptionStratLib/issues/235) | feat: Implement American option pricing model | enhancement, priority-high, pricing | High |
 
-### Priority Medium (Code Quality)
+## 🟡 Priority Medium (Implement After High Priority)
 
-| Issue | Title | Effort | File |
-|-------|-------|--------|------|
-| #5 | Resolve TODOs in model/position.rs | Low | [issue_005](./issue_005_todos_position.md) |
-| #6 | Extract common strategy logic | High | [issue_006](./issue_006_extract_strategy_logic.md) |
-| #7 | Reduce unnecessary clone() calls | Medium | [issue_007](./issue_007_reduce_clone_calls.md) |
-| #8 | Implement Collar strategy | High | [issue_008](./issue_008_implement_collar.md) |
-| #9 | Implement Protective Put strategy | Medium | [issue_009](./issue_009_implement_protective_put.md) |
-| #15 | Reduce expect() usage | Medium | [issue_015](./issue_015_reduce_expect_usage.md) |
+### Error Handling & Code Quality
 
-### Priority Low (Polish)
+| Order | GitHub Issue | Title | Labels | Effort |
+|-------|--------------|-------|--------|--------|
+| 3 | [#225](https://github.com/joaquinbejar/OptionStratLib/issues/225) | refactor: Replace expect() calls with proper error handling | refactor, error-handling, priority-medium | Medium |
+| 4 | [#215](https://github.com/joaquinbejar/OptionStratLib/issues/215) | fix: Resolve 4 TODO/FIXME items in model/position.rs | priority-medium | Low |
 
-| Issue | Title | Effort | File |
-|-------|-------|--------|------|
-| #10 | Improve error context with anyhow | Low | [issue_010](./issue_010_error_context_anyhow.md) |
-| #11 | Add benchmarks for critical paths | Medium | [issue_011](./issue_011_add_benchmarks.md) |
-| #12 | Add property-based testing | Medium | [issue_012](./issue_012_property_based_testing.md) |
-| #13 | Add async feature flag | Medium | [issue_013](./issue_013_async_feature_flag.md) |
-| #14 | Improve metrics documentation | Low | [issue_014](./issue_014_improve_metrics_docs.md) |
+### Pricing Models (Common Exotics)
 
-## Recommended Execution Order
+| Order | GitHub Issue | Title | Labels | Effort |
+|-------|--------------|-------|--------|--------|
+| 5 | [#236](https://github.com/joaquinbejar/OptionStratLib/issues/236) | feat: Implement Bermuda option pricing model | enhancement, priority-medium, pricing | High |
+| 6 | [#237](https://github.com/joaquinbejar/OptionStratLib/issues/237) | feat: Implement Asian option pricing model | enhancement, priority-medium, pricing | High |
+| 7 | [#238](https://github.com/joaquinbejar/OptionStratLib/issues/238) | feat: Implement Barrier option pricing model | enhancement, priority-medium, pricing | High |
+| 8 | [#239](https://github.com/joaquinbejar/OptionStratLib/issues/239) | feat: Implement Binary option pricing model | enhancement, priority-medium, pricing | Medium |
+| 9 | [#240](https://github.com/joaquinbejar/OptionStratLib/issues/240) | feat: Implement Lookback option pricing model | enhancement, priority-medium, pricing | High |
+| 10 | [#245](https://github.com/joaquinbejar/OptionStratLib/issues/245) | feat: Implement Spread option pricing model | enhancement, priority-medium, pricing | Medium |
+| 11 | [#247](https://github.com/joaquinbejar/OptionStratLib/issues/247) | feat: Implement Exchange option pricing model | enhancement, priority-medium, pricing | Medium |
 
-### Phase 1: Critical Fixes (3-4 weeks)
-1. Issue #16 - Improve Positive type safety and API
-2. Issue #4 - Resolve TODOs in black_scholes_model.rs
-3. Issue #1 - Reduce unwrap() in chains/chain.rs
-4. Issue #2 - Reduce unwrap() in greeks/equations.rs
-5. Issue #3 - Reduce unwrap() in model/option.rs
-6. Issue #17 - Reduce unwrap() in src/model (remaining files)
+### Strategies
 
-### Phase 2: Code Quality (2 weeks)
-7. Issue #5 - Resolve TODOs in model/position.rs
-8. Issue #15 - Reduce expect() usage
-9. Issue #6 - Extract common strategy logic
-10. Issue #7 - Reduce unnecessary clone() calls
+| Order | GitHub Issue | Title | Labels | Effort |
+|-------|--------------|-------|--------|--------|
+| 12 | [#218](https://github.com/joaquinbejar/OptionStratLib/issues/218) | feat: Complete implementation of Collar strategy | enhancement, priority-medium, strategies | High |
+| 13 | [#219](https://github.com/joaquinbejar/OptionStratLib/issues/219) | feat: Complete implementation of Protective Put strategy | enhancement, priority-medium, strategies | Medium |
 
-### Phase 3: Feature Completion (1-2 weeks)
-11. Issue #8 - Implement Collar strategy
-12. Issue #9 - Implement Protective Put strategy
+### Refactoring & Performance
 
-### Phase 4: Polish (2 weeks)
-13. Issue #11 - Add benchmarks for critical paths
-14. Issue #12 - Add property-based testing
-15. Issue #10 - Improve error context with anyhow
-16. Issue #13 - Add async feature flag
-17. Issue #14 - Improve metrics documentation
+| Order | GitHub Issue | Title | Labels | Effort |
+|-------|--------------|-------|--------|--------|
+| 14 | [#216](https://github.com/joaquinbejar/OptionStratLib/issues/216) | refactor: Extract common strategy logic to reduce file sizes | refactor, priority-medium, strategies | High |
+| 15 | [#217](https://github.com/joaquinbejar/OptionStratLib/issues/217) | perf: Reduce unnecessary clone() calls across the codebase | refactor, priority-medium, performance | Medium |
+
+## 🟢 Priority Low (Nice-to-Have)
+
+### Exotic Pricing Models
+
+| Order | GitHub Issue | Title | Labels | Effort |
+|-------|--------------|-------|--------|--------|
+| 16 | [#241](https://github.com/joaquinbejar/OptionStratLib/issues/241) | feat: Implement Compound option pricing model | enhancement, priority-low, pricing | High |
+| 17 | [#242](https://github.com/joaquinbejar/OptionStratLib/issues/242) | feat: Implement Chooser option pricing model | enhancement, priority-low, pricing | Medium |
+| 18 | [#243](https://github.com/joaquinbejar/OptionStratLib/issues/243) | feat: Implement Cliquet option pricing model | enhancement, priority-low, pricing | High |
+| 19 | [#244](https://github.com/joaquinbejar/OptionStratLib/issues/244) | feat: Implement Rainbow option pricing model | enhancement, priority-low, pricing | High |
+| 20 | [#246](https://github.com/joaquinbejar/OptionStratLib/issues/246) | feat: Implement Quanto option pricing model | enhancement, priority-low, pricing | High |
+| 21 | [#248](https://github.com/joaquinbejar/OptionStratLib/issues/248) | feat: Implement Power option pricing model | enhancement, priority-low, pricing | Medium |
+
+### Infrastructure & Testing
+
+| Order | GitHub Issue | Title | Labels | Effort |
+|-------|--------------|-------|--------|--------|
+| 22 | [#220](https://github.com/joaquinbejar/OptionStratLib/issues/220) | refactor: Add error context using anyhow at API boundaries | refactor, error-handling, priority-low | Low |
+| 23 | [#221](https://github.com/joaquinbejar/OptionStratLib/issues/221) | test: Add comprehensive benchmarks for critical code paths | priority-low, testing, performance | Medium |
+| 24 | [#222](https://github.com/joaquinbejar/OptionStratLib/issues/222) | test: Add property-based testing for mathematical invariants | priority-low, testing | Medium |
+| 25 | [#223](https://github.com/joaquinbejar/OptionStratLib/issues/223) | feat: Add async feature flag for asynchronous I/O operations | enhancement, priority-low | Medium |
+| 26 | [#224](https://github.com/joaquinbejar/OptionStratLib/issues/224) | docs: Add comprehensive documentation for metrics modules | documentation, priority-low | Low |
+
+---
+
+## Recommended Implementation Phases
+
+### Phase 1: Stability & Error Handling (1-2 weeks)
+- **#227** - Replace unwrap() in src/model
+- **#225** - Replace expect() calls
+- **#215** - Resolve TODO/FIXME in position.rs
+
+### Phase 2: Core Pricing (2-3 weeks)
+- **#235** - American options (most requested)
+- **#236** - Bermuda options
+- **#237** - Asian options
+- **#238** - Barrier options
+- **#239** - Binary options
+
+### Phase 3: Strategies & Refactoring (1-2 weeks)
+- **#218** - Collar strategy
+- **#219** - Protective Put strategy
+- **#216** - Extract common strategy logic
+- **#217** - Reduce clone() calls
+
+### Phase 4: Advanced Pricing (2-3 weeks)
+- **#240** - Lookback options
+- **#245** - Spread options
+- **#247** - Exchange options
+- Remaining exotic pricing models
+
+### Phase 5: Polish & Infrastructure (Optional)
+- Testing improvements (#221, #222)
+- Documentation (#224)
+- Async support (#223)
+- Error context (#220)
+
+---
 
 ## Labels Reference
 
-| Label | Description |
-|-------|-------------|
-| `priority-high` | Critical issues that should be addressed first |
-| `priority-medium` | Important but not blocking |
-| `priority-low` | Nice-to-have improvements |
-| `refactor` | Code refactoring without changing behavior |
-| `bug` | Something isn't working correctly |
-| `enhancement` | New feature or request |
-| `error-handling` | Related to error handling improvements |
-| `performance` | Performance optimization |
-| `testing` | Testing improvements |
-| `documentation` | Documentation improvements |
-| `strategies` | Related to trading strategies |
-| `pricing` | Related to options pricing |
-| `model` | Related to core data models |
+| Label | Description | Color |
+|-------|-------------|-------|
+| `priority-high` | Critical issues that should be addressed first | 🔴 Red |
+| `priority-medium` | Important but not blocking | 🟡 Yellow |
+| `priority-low` | Nice-to-have improvements | 🟢 Green |
+| `refactor` | Code refactoring without changing behavior | 🔵 Blue |
+| `enhancement` | New feature or request | 🩵 Cyan |
+| `error-handling` | Related to error handling improvements | 🟠 Orange |
+| `performance` | Performance optimization | 🌊 Teal |
+| `testing` | Testing improvements | 💜 Purple |
+| `documentation` | Documentation improvements | 📘 Blue |
+| `strategies` | Related to trading strategies | 🔷 Blue |
+| `pricing` | Related to options pricing | ⬜ Light Blue |
 
 ## Effort Estimates
 
@@ -92,12 +131,13 @@ Each file describes a self-contained issue that can be worked on independently.
 
 ## Total Estimated Effort
 
-- **Phase 1**: 35-51 hours (includes Issue #16: 8-12h, Issue #17: 10-14h)
-- **Phase 2**: 17-26 hours
-- **Phase 3**: 10-14 hours
-- **Phase 4**: 12-19 hours
-- **Total**: 74-110 hours
+- **Phase 1 (Stability)**: 12-18 hours
+- **Phase 2 (Core Pricing)**: 30-50 hours
+- **Phase 3 (Strategies)**: 18-28 hours
+- **Phase 4 (Advanced Pricing)**: 24-40 hours
+- **Phase 5 (Polish)**: 12-18 hours
+- **Total**: ~96-154 hours
 
 ---
 
-*Updated on: 2024-12-25*
+*Updated on: 2025-12-28*
