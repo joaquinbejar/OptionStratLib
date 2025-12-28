@@ -14,45 +14,109 @@ use tracing::trace;
 ///
 /// # Arguments
 ///
-/// * `option`: An `Options` struct containing all the relevant parameters for the option (e.g., strike price, underlying asset price, etc.).
-/// * `time_to_expiry`: An optional `f64` representing the time until the option's expiration in years.
+/// * `option` - An `Options` struct containing all the relevant parameters for the option
+///   (e.g., strike price, underlying asset price, volatility, etc.).
 ///
 /// # Returns
 ///
-/// A `f64` representing the calculated price of the option.
+/// * `Ok(Decimal)` - The calculated price of the option.
+/// * `Err(PricingError)` - If the option type is not supported or calculation fails.
+///
+/// # Supported Option Types
+///
+/// Currently, only **European** options are supported by the Black-Scholes model.
+/// The following exotic option types will return `PricingError::UnsupportedOptionType`:
+/// - American, Bermuda, Asian, Barrier, Binary, Lookback, Compound, Chooser,
+///   Cliquet, Rainbow, Spread, Quanto, Exchange, Power
 ///
 /// # Description
 ///
 /// This function leverages the Black-Scholes model to determine the price of
 /// either a call option or a put option. It first calculates the `d1` and `d2`
-/// parameters required for the model and then matches the `option_style` to
-/// use the appropriate pricing formula for call or put options.
+/// parameters required for the model and then uses the appropriate pricing
+/// formula based on the option style (Call or Put).
 ///
-/// The function calls helper functions:
-/// - `calculate_d1_d2_and_time()`: Computes the necessary `d1`, `d2`, and expiry time.
-/// - `calculate_call_option_price()`: Computes the price of a call option.
-/// - `calculate_put_option_price()`: Computes the price of a put option.
+/// ## Black-Scholes Formula
 ///
-/// The function returns the computed price based on the type of option provided.
+/// For a **Call** option:
+/// ```text
+/// C = S * N(d1) - K * e^(-rT) * N(d2)
+/// ```
+///
+/// For a **Put** option:
+/// ```text
+/// P = K * e^(-rT) * N(-d2) - S * N(-d1)
+/// ```
+///
+/// Where:
+/// - `S` = Current underlying price
+/// - `K` = Strike price
+/// - `r` = Risk-free interest rate
+/// - `T` = Time to expiration (in years)
+/// - `N()` = Cumulative standard normal distribution
+/// - `d1 = (ln(S/K) + (r + σ²/2) * T) / (σ * √T)`
+/// - `d2 = d1 - σ * √T`
 ///
 pub fn black_scholes(option: &Options) -> Result<Decimal, PricingError> {
     let (d1, d2, expiry_time) = calculate_d1_d2_and_time(option)?;
     match option.option_type {
         OptionType::European => calculate_european_option_price(option, d1, d2, expiry_time),
-        OptionType::American => Ok(Decimal::ZERO), // TODO: calculate this
-        OptionType::Bermuda { .. } => Ok(Decimal::ZERO), // TODO: calculate this
-        OptionType::Asian { .. } => Ok(Decimal::ZERO), // TODO: calculate this
-        OptionType::Barrier { .. } => Ok(Decimal::ZERO), // TODO: calculate this
-        OptionType::Binary { .. } => Ok(Decimal::ZERO), // TODO: calculate this
-        OptionType::Lookback { .. } => Ok(Decimal::ZERO), // TODO: calculate this
-        OptionType::Compound { .. } => Ok(Decimal::ZERO), // TODO: calculate this
-        OptionType::Chooser { .. } => Ok(Decimal::ZERO), // TODO: calculate this
-        OptionType::Cliquet { .. } => Ok(Decimal::ZERO), // TODO: calculate this
-        OptionType::Rainbow { .. } => Ok(Decimal::ZERO), // TODO: calculate this
-        OptionType::Spread { .. } => Ok(Decimal::ZERO), // TODO: calculate this
-        OptionType::Quanto { .. } => Ok(Decimal::ZERO), // TODO: calculate this
-        OptionType::Exchange { .. } => Ok(Decimal::ZERO), // TODO: calculate this
-        OptionType::Power { .. } => Ok(Decimal::ZERO), // TODO: calculate this
+        OptionType::American => Err(PricingError::unsupported_option_type(
+            "American",
+            "Black-Scholes",
+        )),
+        OptionType::Bermuda { .. } => Err(PricingError::unsupported_option_type(
+            "Bermuda",
+            "Black-Scholes",
+        )),
+        OptionType::Asian { .. } => Err(PricingError::unsupported_option_type(
+            "Asian",
+            "Black-Scholes",
+        )),
+        OptionType::Barrier { .. } => Err(PricingError::unsupported_option_type(
+            "Barrier",
+            "Black-Scholes",
+        )),
+        OptionType::Binary { .. } => Err(PricingError::unsupported_option_type(
+            "Binary",
+            "Black-Scholes",
+        )),
+        OptionType::Lookback { .. } => Err(PricingError::unsupported_option_type(
+            "Lookback",
+            "Black-Scholes",
+        )),
+        OptionType::Compound { .. } => Err(PricingError::unsupported_option_type(
+            "Compound",
+            "Black-Scholes",
+        )),
+        OptionType::Chooser { .. } => Err(PricingError::unsupported_option_type(
+            "Chooser",
+            "Black-Scholes",
+        )),
+        OptionType::Cliquet { .. } => Err(PricingError::unsupported_option_type(
+            "Cliquet",
+            "Black-Scholes",
+        )),
+        OptionType::Rainbow { .. } => Err(PricingError::unsupported_option_type(
+            "Rainbow",
+            "Black-Scholes",
+        )),
+        OptionType::Spread { .. } => Err(PricingError::unsupported_option_type(
+            "Spread",
+            "Black-Scholes",
+        )),
+        OptionType::Quanto { .. } => Err(PricingError::unsupported_option_type(
+            "Quanto",
+            "Black-Scholes",
+        )),
+        OptionType::Exchange { .. } => Err(PricingError::unsupported_option_type(
+            "Exchange",
+            "Black-Scholes",
+        )),
+        OptionType::Power { .. } => Err(PricingError::unsupported_option_type(
+            "Power",
+            "Black-Scholes",
+        )),
     }
 }
 

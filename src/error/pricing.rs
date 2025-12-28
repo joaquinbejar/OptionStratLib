@@ -52,6 +52,15 @@ pub enum PricingError {
         /// Detailed reason for the error
         reason: String,
     },
+
+    /// Error for unsupported option types.
+    #[error("Unsupported option type '{option_type}' for pricing method '{method}'")]
+    UnsupportedOptionType {
+        /// The option type that is not supported
+        option_type: String,
+        /// The pricing method that does not support this option type
+        method: String,
+    },
 }
 
 impl PricingError {
@@ -94,6 +103,18 @@ impl PricingError {
     pub fn other(reason: &str) -> Self {
         PricingError::OtherError {
             reason: reason.to_string(),
+        }
+    }
+
+    /// Creates a new `UnsupportedOptionType` variant.
+    ///
+    /// # Arguments
+    /// * `option_type` - The option type that is not supported
+    /// * `method` - The pricing method that does not support this option type
+    pub fn unsupported_option_type(option_type: &str, method: &str) -> Self {
+        PricingError::UnsupportedOptionType {
+            option_type: option_type.to_string(),
+            method: method.to_string(),
         }
     }
 }
