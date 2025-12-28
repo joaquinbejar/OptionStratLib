@@ -16,7 +16,10 @@ fn main() -> Result<(), Error> {
     setup_logger();
     let ohlc = read_ohlcv_from_zip("examples/Data/cl-1m-sample.zip", None, None)?;
     let ohlc = ohlc.iter().take(1000).collect::<Vec<_>>(); // Take only 1000 minutes
-    let prices: Vec<Positive> = ohlc.iter().map(|x| Positive::from(x.close)).collect();
+    let prices: Vec<Positive> = ohlc
+        .iter()
+        .filter_map(|x| Positive::new_decimal(x.close).ok())
+        .collect();
     let log_returns: Vec<Decimal> = calculate_log_returns(&prices)?
         .iter()
         .map(|p| p.to_dec())
@@ -88,7 +91,7 @@ fn main() -> Result<(), Error> {
         generator_optionchain,
     );
     debug!("Random Walk: {}", random_walk);
-    let path: &std::path::Path = "Draws/Simulation/historical_build_chain.png".as_ref();
+    let path: &Path = "Draws/Simulation/historical_build_chain.png".as_ref();
     random_walk.write_png(path)?;
 
     info!("First Chain: {}", random_walk.first().unwrap().y.value());

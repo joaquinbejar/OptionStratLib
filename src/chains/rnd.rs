@@ -286,7 +286,7 @@ impl RNDStatistics {
         }
 
         if !total_density.is_zero() {
-            (variance / total_density).into()
+            Positive::new_decimal(variance / total_density).unwrap_or_default()
         } else {
             Positive::ZERO
         }

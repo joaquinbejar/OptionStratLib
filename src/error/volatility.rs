@@ -89,6 +89,10 @@ pub enum VolatilityError {
         /// The last volatility value that was calculated before giving up.
         last_volatility: Positive,
     },
+
+    /// Positive value errors
+    #[error(transparent)]
+    PositiveError(#[from] positive::PositiveError),
 }
 
 impl From<&str> for VolatilityError {

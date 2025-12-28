@@ -28,6 +28,7 @@ use crate::{
     test_strategy_traits,
 };
 use chrono::Utc;
+use num_traits::FromPrimitive;
 use positive::{Positive, pos_or_panic};
 use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
@@ -671,26 +672,29 @@ impl BasicAble for LongButterflySpread {
     }
     fn set_underlying_price(&mut self, price: &Positive) -> Result<(), StrategyError> {
         self.long_call_low.option.underlying_price = *price;
-        self.long_call_low.premium = Positive::from(
+        self.long_call_low.premium = Positive::new_decimal(
             self.long_call_low
                 .option
                 .calculate_price_black_scholes()?
                 .abs(),
-        );
+        )
+        .unwrap_or(Positive::ZERO);
         self.short_call.option.underlying_price = *price;
-        self.short_call.premium = Positive::from(
+        self.short_call.premium = Positive::new_decimal(
             self.short_call
                 .option
                 .calculate_price_black_scholes()?
                 .abs(),
-        );
+        )
+        .unwrap_or(Positive::ZERO);
         self.long_call_high.option.underlying_price = *price;
-        self.long_call_high.premium = Positive::from(
+        self.long_call_high.premium = Positive::new_decimal(
             self.long_call_high
                 .option
                 .calculate_price_black_scholes()?
                 .abs(),
-        );
+        )
+        .unwrap_or(Positive::ZERO);
         Ok(())
     }
     fn set_implied_volatility(&mut self, volatility: &Positive) -> Result<(), StrategyError> {
@@ -698,24 +702,27 @@ impl BasicAble for LongButterflySpread {
         self.short_call.option.implied_volatility = *volatility;
         self.long_call_high.option.implied_volatility = *volatility;
 
-        self.long_call_low.premium = Positive(
+        self.long_call_low.premium = Positive::new_decimal(
             self.long_call_low
                 .option
                 .calculate_price_black_scholes()?
                 .abs(),
-        );
-        self.short_call.premium = Positive(
+        )
+        .unwrap_or(Positive::ZERO);
+        self.short_call.premium = Positive::new_decimal(
             self.short_call
                 .option
                 .calculate_price_black_scholes()?
                 .abs(),
-        );
-        self.long_call_high.premium = Positive(
+        )
+        .unwrap_or(Positive::ZERO);
+        self.long_call_high.premium = Positive::new_decimal(
             self.long_call_high
                 .option
                 .calculate_price_black_scholes()?
                 .abs(),
-        );
+        )
+        .unwrap_or(Positive::ZERO);
         Ok(())
     }
 }
@@ -724,7 +731,7 @@ impl Strategies for LongButterflySpread {
     fn get_max_profit(&self) -> Result<Positive, StrategyError> {
         let profit = self.calculate_profit_at(&self.short_call.option.strike_price)?;
         if profit > Decimal::ZERO {
-            Ok(profit.into())
+            Ok(Positive::new_decimal(profit)?)
         } else {
             Err(StrategyError::ProfitLossError(
                 ProfitLossErrorKind::MaxProfitError {
@@ -744,7 +751,7 @@ impl Strategies for LongButterflySpread {
                 },
             ))
         } else {
-            Ok(max_loss.abs().into())
+            Ok(Positive::new_decimal(max_loss.abs()).unwrap_or(Positive::ZERO))
         }
     }
     fn get_profit_area(&self) -> Result<Decimal, StrategyError> {
@@ -757,14 +764,20 @@ impl Strategies for LongButterflySpread {
             let break_even_point = break_even_points[0];
 
             if break_even_point < self.short_call.option.strike_price {
-                self.calculate_profit_at(&self.long_call_high.option.strike_price)?
-                    .into()
+                Positive::new_decimal(
+                    self.calculate_profit_at(&self.long_call_high.option.strike_price)?
+                        .abs(),
+                )
+                .unwrap_or(Positive::ZERO)
             } else {
-                self.calculate_profit_at(&self.long_call_low.option.strike_price)?
-                    .into()
+                Positive::new_decimal(
+                    self.calculate_profit_at(&self.long_call_low.option.strike_price)?
+                        .abs(),
+                )
+                .unwrap_or(Positive::ZERO)
             }
         };
-        Ok((high * base / 200.0).into())
+        Ok(Decimal::from_f64(high.to_f64() * base.to_f64() / 200.0).unwrap_or(Decimal::ZERO))
     }
     fn get_profit_ratio(&self) -> Result<Decimal, StrategyError> {
         let max_profit = self.get_max_profit().unwrap_or(Positive::ZERO);
@@ -772,7 +785,10 @@ impl Strategies for LongButterflySpread {
         match (max_profit, max_loss) {
             (value, _) if value == Positive::ZERO => Ok(Decimal::ZERO),
             (_, value) if value == Positive::ZERO => Ok(Decimal::MAX),
-            _ => Ok((max_profit / max_loss * 100.0).into()),
+            _ => Ok(
+                Decimal::from_f64(max_profit.to_f64() / max_loss.to_f64() * 100.0)
+                    .unwrap_or(Decimal::ZERO),
+            ),
         }
     }
 }

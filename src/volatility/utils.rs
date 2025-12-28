@@ -34,7 +34,7 @@ pub fn constant_volatility(returns: &[Decimal]) -> Result<Positive, VolatilityEr
     let variance =
         returns.iter().map(|&r| (r - mean).powi(2)).sum::<Decimal>() / (n - Decimal::ONE);
 
-    Ok(variance.sqrt().unwrap().into())
+    Ok(Positive::new_decimal(variance.sqrt().unwrap()).unwrap_or(Positive::ZERO))
 }
 
 /// Calculates historical volatility using a moving window approach.
@@ -114,7 +114,7 @@ pub fn implied_volatility(
         .map(|i| {
             let mut option = base_option.clone();
             option.side = Side::Long; // Ensure the option is long
-            let iv = Positive::from(i as f64 / iterations as f64);
+            let iv = Positive::new(i as f64 / iterations as f64).unwrap_or(Positive::ZERO);
             option.implied_volatility = iv;
 
             match option.calculate_price_black_scholes() {
@@ -131,7 +131,7 @@ pub fn implied_volatility(
     match result {
         Some((best_iv, _)) => {
             let iv = best_iv.clamp(MIN_VOLATILITY, MAX_VOLATILITY);
-            if iv == Positive::from(1f64 / iterations as f64) {
+            if iv == Positive::new(1f64 / iterations as f64)? {
                 Err("Implied volatility not found".into())
             } else {
                 Ok(iv)
@@ -688,19 +688,21 @@ mod tests_ewma_volatility {
         // Test the EWMA calculation
         let expected = [
             pos_or_panic!(0.02),
-            Positive::from(
+            Positive::try_from(
                 (lambda * single_value.powi(2) + (Decimal::ONE - lambda) * single_value.powi(2))
                     .sqrt()
                     .unwrap(),
-            ),
-            Positive::from(
+            )
+            .unwrap_or_default(),
+            Positive::try_from(
                 (lambda * single_value.powi(2) + (Decimal::ONE - lambda) * single_value.powi(2))
                     .sqrt()
                     .unwrap()
                     .powi(2),
             )
+            .unwrap_or_default()
             .sqrt(),
-            Positive::from(
+            Positive::try_from(
                 (lambda * single_value.powi(2) + (Decimal::ONE - lambda) * single_value.powi(2))
                     .sqrt()
                     .unwrap()
@@ -709,6 +711,7 @@ mod tests_ewma_volatility {
                     .unwrap()
                     .powi(2),
             )
+            .unwrap_or_default()
             .sqrt(),
         ];
 
@@ -859,7 +862,11 @@ mod tests_implied_volatility {
 
         // For very short-term options, use a more lenient tolerance
         option.implied_volatility = pos_or_panic!(0.4); // Start with different IV
-        let iv_result = implied_volatility(market_price.into(), &mut option, 10);
+        let iv_result = implied_volatility(
+            Positive::new_decimal(market_price).unwrap(),
+            &mut option,
+            10,
+        );
 
         // For zero DTE options, expect either convergence or a reasonable approximation
         match iv_result {
@@ -902,7 +909,11 @@ mod tests_implied_volatility {
 
         // For very short-term options, use a more lenient tolerance
         option.implied_volatility = pos_or_panic!(0.4); // Start with different IV
-        let iv_result = implied_volatility(market_price.into(), &mut option, 10);
+        let iv_result = implied_volatility(
+            Positive::new_decimal(market_price).unwrap(),
+            &mut option,
+            10,
+        );
 
         // For zero DTE options, expect either convergence or a reasonable approximation
         match iv_result {
@@ -962,7 +973,11 @@ mod tests_implied_volatility {
 
         // For very short-term options, use a more lenient tolerance
         option.implied_volatility = pos_or_panic!(0.4); // Start with different IV
-        let iv_result = implied_volatility(market_price.into(), &mut option, 10);
+        let iv_result = implied_volatility(
+            Positive::new_decimal(market_price).unwrap(),
+            &mut option,
+            10,
+        );
 
         // For zero DTE options, expect either convergence or a reasonable approximation
         match iv_result {
@@ -1005,7 +1020,11 @@ mod tests_implied_volatility {
 
         // For very short-term options, use a more lenient tolerance
         option.implied_volatility = pos_or_panic!(0.4); // Start with different IV
-        let iv_result = implied_volatility(market_price.into(), &mut option, 10);
+        let iv_result = implied_volatility(
+            Positive::new_decimal(market_price).unwrap(),
+            &mut option,
+            10,
+        );
 
         // For zero DTE options, expect either convergence or a reasonable approximation
         match iv_result {
@@ -1065,7 +1084,11 @@ mod tests_implied_volatility {
 
         // For very short-term options, use a more lenient tolerance
         option.implied_volatility = pos_or_panic!(0.4); // Start with different IV
-        let iv_result = implied_volatility(market_price.into(), &mut option, 10);
+        let iv_result = implied_volatility(
+            Positive::new_decimal(market_price).unwrap(),
+            &mut option,
+            10,
+        );
 
         // For zero DTE options, expect either convergence or a reasonable approximation
         match iv_result {
@@ -1108,7 +1131,11 @@ mod tests_implied_volatility {
 
         // For very short-term options, use a more lenient tolerance
         option.implied_volatility = pos_or_panic!(0.4); // Start with different IV
-        let iv_result = implied_volatility(market_price.into(), &mut option, 10);
+        let iv_result = implied_volatility(
+            Positive::new_decimal(market_price).unwrap(),
+            &mut option,
+            10,
+        );
 
         // For zero DTE options, expect either convergence or a reasonable approximation
         match iv_result {
@@ -1228,7 +1255,11 @@ mod tests_implied_volatility {
 
         // For very short-term options, use a more lenient tolerance
         option.implied_volatility = pos_or_panic!(0.4); // Start with different IV
-        let iv_result = implied_volatility(market_price.into(), &mut option, 10);
+        let iv_result = implied_volatility(
+            Positive::new_decimal(market_price).unwrap(),
+            &mut option,
+            10,
+        );
 
         // For zero DTE options, expect either convergence or a reasonable approximation
         match iv_result {

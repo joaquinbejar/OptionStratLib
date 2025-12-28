@@ -655,7 +655,7 @@ impl OptionData {
             Some(premium) => premium,
             None => {
                 let premium_dec = option.calculate_price_black_scholes()?.abs();
-                Positive::from(premium_dec)
+                Positive::new_decimal(premium_dec)?
             }
         };
         let date = if let Some(date) = date {
@@ -748,12 +748,12 @@ impl OptionData {
         ) {
             (Ok(price), true) => {
                 if price.is_sign_positive() {
-                    self.call_middle = Some(price.into());
+                    self.call_middle = Positive::new_decimal(price).ok();
                     self.apply_spread(spread.unwrap(), 2);
                 }
             }
             (Ok(price), false) => {
-                self.call_middle = Some(price.into());
+                self.call_middle = Positive::new_decimal(price).ok();
                 self.call_ask = self.call_middle;
                 self.call_bid = self.call_middle;
             }
@@ -769,12 +769,12 @@ impl OptionData {
         match (put_option.calculate_price_black_scholes(), spread.is_some()) {
             (Ok(price), true) => {
                 if price.is_sign_positive() {
-                    self.put_middle = Some(price.into());
+                    self.put_middle = Positive::new_decimal(price).ok();
                     self.apply_spread(spread.unwrap(), 2);
                 }
             }
             (Ok(price), false) => {
-                self.put_middle = Some(price.into());
+                self.put_middle = Positive::new_decimal(price).ok();
                 self.put_ask = self.put_middle;
                 self.put_bid = self.put_middle;
             }
@@ -1674,7 +1674,7 @@ mod tests_get_position {
             .get_option(Side::Long, OptionStyle::Call)
             .unwrap();
         let bs_price = option.calculate_price_black_scholes().unwrap().abs();
-        let bs_price_positive = Positive::from(bs_price);
+        let bs_price_positive = Positive::new_decimal(bs_price).unwrap();
 
         assert_pos_relative_eq!(position.premium, bs_price_positive, pos_or_panic!(0.00001));
     }
@@ -1758,7 +1758,7 @@ mod tests_get_position {
             .get_option(Side::Long, OptionStyle::Call)
             .unwrap();
         let bs_price = option.calculate_price_black_scholes().unwrap().abs();
-        let bs_price_positive = Positive::from(bs_price);
+        let bs_price_positive = Positive::new_decimal(bs_price).unwrap();
 
         assert_pos_relative_eq!(position.premium, bs_price_positive, pos_or_panic!(0.00001));
     }

@@ -35,8 +35,8 @@ use std::ops::{AddAssign, Index, IndexMut};
 #[derive(Debug, Clone, Default)]
 pub struct RandomWalk<X, Y>
 where
-    X: Copy + Into<Positive> + AddAssign + Display,
-    Y: Into<Positive> + Display + Clone,
+    X: Copy + TryInto<Positive> + AddAssign + Display,
+    Y: TryInto<Positive> + Display + Clone,
 {
     /// The descriptive title of the random walk
     title: String,
@@ -47,8 +47,8 @@ where
 
 impl<X, Y> RandomWalk<X, Y>
 where
-    X: Copy + Into<Positive> + AddAssign + Display,
-    Y: Into<Positive> + Display + Clone,
+    X: Copy + TryInto<Positive> + AddAssign + Display,
+    Y: TryInto<Positive> + Display + Clone,
 {
     /// Creates a new random walk instance with the given title and steps.
     ///
@@ -68,8 +68,8 @@ where
     pub fn new<F>(title: String, params: &WalkParams<X, Y>, generator: F) -> Self
     where
         F: FnOnce(&WalkParams<X, Y>) -> Vec<Step<X, Y>>,
-        X: Copy + Into<Positive> + AddAssign + Display,
-        Y: Into<Positive> + Display + Clone,
+        X: Copy + TryInto<Positive> + AddAssign + Display,
+        Y: TryInto<Positive> + Display + Clone,
     {
         let steps = generator(params);
         Self { title, steps }
@@ -172,8 +172,8 @@ where
 ///   and implement the `Walktypable` trait.
 impl<X, Y> Len for RandomWalk<X, Y>
 where
-    X: Copy + Into<Positive> + AddAssign + Display,
-    Y: Into<Positive> + Display + Clone,
+    X: Copy + TryInto<Positive> + AddAssign + Display,
+    Y: TryInto<Positive> + Display + Clone,
 {
     /// Returns the number of steps in the random walk.
     ///
@@ -205,8 +205,8 @@ where
 /// * `Y` - The type for y-axis values, with constraints as described above.
 impl<X, Y> Index<usize> for RandomWalk<X, Y>
 where
-    X: Copy + Into<Positive> + AddAssign + Display,
-    Y: Into<Positive> + Display + Clone,
+    X: Copy + TryInto<Positive> + AddAssign + Display,
+    Y: TryInto<Positive> + Display + Clone,
 {
     /// The type returned when indexing the random walk.
     type Output = Step<X, Y>;
@@ -240,8 +240,8 @@ where
 /// * `Y` - The type for y-axis values, with constraints as described above.
 impl<X, Y> IndexMut<usize> for RandomWalk<X, Y>
 where
-    X: Copy + Into<Positive> + AddAssign + Display,
-    Y: Into<Positive> + Display + Clone,
+    X: Copy + TryInto<Positive> + AddAssign + Display,
+    Y: TryInto<Positive> + Display + Clone,
 {
     /// Provides mutable access to a specific step in the random walk by index.
     ///
@@ -263,8 +263,8 @@ where
 
 impl<X, Y> Display for RandomWalk<X, Y>
 where
-    X: Copy + Into<Positive> + AddAssign + Display,
-    Y: Into<Positive> + Display + Clone,
+    X: Copy + TryInto<Positive> + AddAssign + Display,
+    Y: TryInto<Positive> + Display + Clone,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "RandomWalk Title: {}, Steps:  ", self.title)?;
@@ -277,8 +277,8 @@ where
 
 impl<X, Y> Profit for RandomWalk<X, Y>
 where
-    X: AddAssign + Copy + Display + Into<Positive>,
-    Y: Into<Positive> + Display + Clone,
+    X: AddAssign + Copy + Display + TryInto<Positive>,
+    Y: TryInto<Positive> + Display + Clone,
 {
     fn calculate_profit_at(&self, _price: &Positive) -> Result<Decimal, PricingError> {
         Err(PricingError::other(
@@ -289,8 +289,8 @@ where
 
 impl<X, Y> BasicAble for RandomWalk<X, Y>
 where
-    X: AddAssign + Copy + Display + Into<Positive>,
-    Y: Clone + Display + Into<Positive>,
+    X: AddAssign + Copy + Display + TryInto<Positive>,
+    Y: Clone + Display + TryInto<Positive>,
 {
     fn get_title(&self) -> String {
         self.title.clone()
@@ -299,14 +299,14 @@ where
 
 impl<X, Y> Graph for RandomWalk<X, Y>
 where
-    X: Copy + Into<Positive> + AddAssign + Display,
-    Y: Into<Positive> + Display + Clone,
+    X: Copy + TryInto<Positive> + AddAssign + Display,
+    Y: TryInto<Positive> + Display + Clone,
 {
     fn graph_data(&self) -> GraphData {
         let steps = self.get_steps();
         let y: Vec<Decimal> = steps
             .iter()
-            .map(|step| step.get_graph_y_value().to_dec())
+            .map(|step| step.get_graph_y_value().unwrap_or(Positive::ZERO).to_dec())
             .collect();
         let x: Vec<Decimal> = steps
             .iter()
@@ -364,13 +364,13 @@ mod tests_random_walk {
 
     impl<X, Y> WalkTypeAble<X, Y> for TestWalker
     where
-        X: Copy + Into<Positive> + AddAssign + Display,
-        Y: Into<Positive> + Display + Clone,
+        X: Copy + TryInto<Positive> + AddAssign + Display,
+        Y: TryInto<Positive> + Display + Clone,
     {
         // We'll implement the simplest possible method for testing
         fn brownian(&self, params: &WalkParams<X, Y>) -> Result<Vec<Positive>, SimulationError> {
             let mut values = Vec::new();
-            let init_value: Positive = params.ystep_as_positive();
+            let init_value: Positive = params.ystep_as_positive()?;
             values.push(init_value);
 
             // Generate some simple steps for test purposes
@@ -392,8 +392,8 @@ mod tests_random_walk {
         walk_type: WalkType,
     ) -> WalkParams<X, Y>
     where
-        X: Copy + Into<Positive> + AddAssign + Display,
-        Y: Into<Positive> + Display + Clone,
+        X: Copy + TryInto<Positive> + AddAssign + Display,
+        Y: TryInto<Positive> + Display + Clone,
     {
         let init_step = Step::new(
             x_value,
@@ -413,8 +413,8 @@ mod tests_random_walk {
     // Helper function to generate test steps for a random walk
     fn generate_test_steps<X, Y>(params: &WalkParams<X, Y>) -> Vec<Step<X, Y>>
     where
-        X: Copy + Into<Positive> + AddAssign + Display,
-        Y: Into<Positive> + Display + Clone,
+        X: Copy + TryInto<Positive> + AddAssign + Display,
+        Y: TryInto<Positive> + Display + Clone,
     {
         let mut steps = Vec::new();
         steps.push(params.init_step.clone());

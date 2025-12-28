@@ -9,6 +9,7 @@ use crate::utils::TimeFrame;
 use crate::utils::time::convert_time_frame;
 use positive::Positive;
 use serde::{Serialize, Serializer};
+use std::convert::TryInto;
 use std::fmt::{Display, Formatter};
 use std::ops::AddAssign;
 use tracing::debug;
@@ -43,7 +44,7 @@ use tracing::debug;
 #[derive(Debug, Copy, Clone)]
 pub struct Xstep<T>
 where
-    T: Copy + Into<Positive> + AddAssign + Display,
+    T: Copy + TryInto<Positive> + AddAssign + Display,
 {
     index: i32,
     step_size_in_time: T,
@@ -67,11 +68,11 @@ where
 /// ```rust
 ///
 /// // Create a step with 7 days as the value, using days as the time unit
-/// use positive::pos_or_panic;
+/// use positive::{pos_or_panic, Positive};
 /// use optionstratlib::ExpirationDate;
 /// use optionstratlib::simulation::steps::Xstep;
 /// use optionstratlib::utils::TimeFrame;
-/// let step = Xstep::new(7, TimeFrame::Day, ExpirationDate::Days(pos_or_panic!(30.0)));
+/// let step = Xstep::new(pos_or_panic!(7.0), TimeFrame::Day, ExpirationDate::Days(pos_or_panic!(30.0)));
 ///
 /// // Move to the next step (forward in time)
 /// let next_step = step.next();
@@ -81,7 +82,7 @@ where
 /// ```
 impl<T> Xstep<T>
 where
-    T: Copy + Into<Positive> + AddAssign + Display,
+    T: Copy + TryInto<Positive> + AddAssign + Display,
 {
     /// Creates a new `Xstep` with the specified value, time unit, and datetime.
     ///
@@ -189,7 +190,9 @@ where
             return Err("Cannot generate next step. Expiration date is already reached.".into());
         }
         let days_to_rest = convert_time_frame(
-            self.step_size_in_time.into(),
+            self.step_size_in_time.try_into().map_err(|_| {
+                SimulationError::step_error("Failed to convert step size to Positive")
+            })?,
             &self.time_unit,
             &TimeFrame::Day,
         );
@@ -221,7 +224,9 @@ where
     pub fn previous(&self) -> Result<Self, SimulationError> {
         let days = self.datetime.get_days().unwrap();
         let days_to_rest = convert_time_frame(
-            self.step_size_in_time.into(),
+            self.step_size_in_time.try_into().map_err(|_| {
+                SimulationError::step_error("Failed to convert step size to Positive")
+            })?,
             &self.time_unit,
             &TimeFrame::Day,
         );
@@ -237,7 +242,7 @@ where
 
 impl<T> Display for Xstep<T>
 where
-    T: Copy + Into<Positive> + AddAssign + Display,
+    T: Copy + TryInto<Positive> + AddAssign + Display,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
@@ -250,7 +255,7 @@ where
 
 impl<T> Serialize for Xstep<T>
 where
-    T: Copy + Into<Positive> + AddAssign + Display + Serialize,
+    T: Copy + TryInto<Positive> + AddAssign + Display + Serialize,
 {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -258,7 +263,8 @@ where
     {
         // Use a struct with 4 fields to represent Xstep
         use serde::ser::SerializeStruct;
-        let step_size_in_time: Positive = self.step_size_in_time.into();
+        let step_size_in_time: Positive =
+            self.step_size_in_time.try_into().unwrap_or(Positive::ZERO);
         let mut state = serializer.serialize_struct("Xstep", 4)?;
         state.serialize_field("index", &self.index)?;
         state.serialize_field("step_size_in_time", &step_size_in_time)?;

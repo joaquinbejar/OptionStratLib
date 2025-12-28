@@ -118,7 +118,8 @@ impl AtmIvProvider for OptionChain {
 mod tests_volatility_traits {
     use super::*;
     use crate::curves::{Curve, Point2D};
-    use crate::metrics::VolatilitySkew;
+    use crate::error::CurveError;
+    use crate::metrics::VolatilitySkewCurve;
 
     use positive::pos_or_panic;
     use rust_decimal::Decimal;
@@ -454,17 +455,18 @@ mod tests_volatility_traits {
             }
         }
 
-        impl VolatilitySkew for CombinedVolatility {
-            fn volatility_skew(&self) -> Curve {
+        impl VolatilitySkewCurve for CombinedVolatility {
+            fn volatility_skew(&self) -> Result<Curve, CurveError> {
                 let mut points = BTreeSet::new();
                 points.insert(Point2D::new(dec!(-10.0), dec!(0.25)));
                 points.insert(Point2D::new(dec!(0.0), dec!(0.20)));
                 points.insert(Point2D::new(dec!(10.0), dec!(0.25)));
 
-                Curve {
+                let curve = Curve {
                     points,
                     x_range: (dec!(-10.0), dec!(10.0)),
-                }
+                };
+                Ok(curve)
             }
         }
 
@@ -475,7 +477,7 @@ mod tests_volatility_traits {
         assert_eq!(smile_curve.points.len(), 5);
 
         // Test skew
-        let skew_curve = vol.volatility_skew();
+        let skew_curve = vol.volatility_skew().unwrap();
         assert_eq!(skew_curve.points.len(), 3);
     }
 }

@@ -1,6 +1,8 @@
+use crate::error::SimulationError;
 use crate::simulation::steps::{Step, Ystep};
 use crate::simulation::{WalkType, WalkTypeAble};
 use positive::Positive;
+use std::convert::TryInto;
 use std::fmt::{Display, Formatter};
 use std::ops::AddAssign;
 
@@ -34,8 +36,8 @@ use std::ops::AddAssign;
 #[derive(Debug, Clone)]
 pub struct WalkParams<X, Y>
 where
-    X: Copy + Into<Positive> + AddAssign + Display + Sized,
-    Y: Into<Positive> + Display + Sized + Clone,
+    X: Copy + TryInto<Positive> + AddAssign + Display + Sized,
+    Y: TryInto<Positive> + Display + Sized + Clone,
 {
     /// Number of steps or data points to generate in the simulation
     /// Determines the resolution and length of the resulting random walk
@@ -63,8 +65,8 @@ where
 /// ensures the value can be converted to a positive number.
 impl<X, Y> WalkParams<X, Y>
 where
-    X: Copy + Into<Positive> + AddAssign + Display + Sized,
-    Y: Into<Positive> + Display + Sized + Clone,
+    X: Copy + TryInto<Positive> + AddAssign + Display + Sized,
+    Y: TryInto<Positive> + Display + Sized + Clone,
 {
     /// Returns an immutable reference to the initial y-axis value.
     ///
@@ -108,15 +110,15 @@ where
     /// # Returns
     ///
     /// The initial y-axis value as a `Positive` number.
-    pub fn ystep_as_positive(&self) -> Positive {
+    pub fn ystep_as_positive(&self) -> Result<Positive, SimulationError> {
         self.ystep_ref().positive()
     }
 }
 
 impl<X, Y> Display for WalkParams<X, Y>
 where
-    X: Copy + Into<Positive> + AddAssign + Display,
-    Y: Into<Positive> + Display + Clone,
+    X: Copy + TryInto<Positive> + AddAssign + Display,
+    Y: TryInto<Positive> + Display + Clone,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
@@ -143,8 +145,8 @@ mod tests {
 
     impl<X, Y> WalkTypeAble<X, Y> for MockWalker
     where
-        X: Copy + Into<Positive> + AddAssign + Display,
-        Y: Copy + Into<Positive> + Display,
+        X: Copy + TryInto<Positive> + AddAssign + Display,
+        Y: Copy + TryInto<Positive> + Display,
     {
     }
 

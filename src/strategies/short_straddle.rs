@@ -592,28 +592,32 @@ impl BasicAble for ShortStraddle {
     }
     fn set_underlying_price(&mut self, price: &Positive) -> Result<(), StrategyError> {
         self.short_call.option.underlying_price = *price;
-        self.short_call.premium = Positive::from(
+        self.short_call.premium = Positive::new_decimal(
             self.short_call
                 .option
                 .calculate_price_black_scholes()?
                 .abs(),
-        );
+        )
+        .unwrap_or(Positive::ZERO);
         self.short_put.option.underlying_price = *price;
         self.short_put.premium =
-            Positive::from(self.short_put.option.calculate_price_black_scholes()?.abs());
+            Positive::new_decimal(self.short_put.option.calculate_price_black_scholes()?.abs())
+                .unwrap_or(Positive::ZERO);
         Ok(())
     }
     fn set_implied_volatility(&mut self, volatility: &Positive) -> Result<(), StrategyError> {
         self.short_call.option.implied_volatility = *volatility;
         self.short_put.option.implied_volatility = *volatility;
-        self.short_call.premium = Positive(
+        self.short_call.premium = Positive::new_decimal(
             self.short_call
                 .option
                 .calculate_price_black_scholes()?
                 .abs(),
-        );
+        )
+        .unwrap_or(Positive::ZERO);
         self.short_put.premium =
-            Positive(self.short_put.option.calculate_price_black_scholes()?.abs());
+            Positive::new_decimal(self.short_put.option.calculate_price_black_scholes()?.abs())
+                .unwrap_or(Positive::ZERO);
         Ok(())
     }
 }
@@ -628,7 +632,7 @@ impl Strategies for ShortStraddle {
                 },
             ))
         } else {
-            Ok(max_profit.into())
+            Ok(Positive::new(max_profit)?)
         }
     }
     fn get_max_loss(&self) -> Result<Positive, StrategyError> {

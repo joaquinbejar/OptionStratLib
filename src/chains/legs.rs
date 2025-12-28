@@ -146,7 +146,7 @@ mod tests {
     // Helper function to create a test OptionData with a specific strike price
     fn create_test_option(strike: Decimal) -> OptionData {
         OptionData::new(
-            strike.into(),
+            Positive::new_decimal(strike).unwrap(),
             None,
             None,
             None,

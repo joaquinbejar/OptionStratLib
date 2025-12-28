@@ -506,7 +506,7 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
             (true, true, true) => {
                 // We already have more contracts than needed, sell the excess
                 DeltaAdjustment::SellOptions {
-                    quantity: Positive::from(total_contracts_needed),
+                    quantity: Positive::new_decimal(total_contracts_needed)?,
                     strike: option.strike_price,
                     option_style: option.option_style,
                     side: option.side,
@@ -525,14 +525,16 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
                 // Calculate how many additional contracts we need to buy
                 // discounting those we already have
                 DeltaAdjustment::BuyOptions {
-                    quantity: Positive::from(total_contracts_needed.abs()),
+                    quantity: Positive::new_decimal(total_contracts_needed.abs())
+                        .unwrap_or(Positive::ZERO),
                     strike: option.strike_price,
                     option_style: option.option_style,
                     side: option.side,
                 }
             }
             (true, false, false) => DeltaAdjustment::BuyOptions {
-                quantity: Positive::from(total_contracts_needed.abs()),
+                quantity: Positive::new_decimal(total_contracts_needed.abs())
+                    .unwrap_or(Positive::ZERO),
                 strike: option.strike_price,
                 option_style: option.option_style,
                 side: option.side,
@@ -543,7 +545,8 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
                 // Calculate how many additional contracts we need to buy
                 // discounting those we already have
                 DeltaAdjustment::BuyOptions {
-                    quantity: Positive::from(total_contracts_needed.abs()),
+                    quantity: Positive::new_decimal(total_contracts_needed.abs())
+                        .unwrap_or(Positive::ZERO),
                     strike: option.strike_price,
                     option_style: option.option_style,
                     side: option.side,
@@ -551,7 +554,8 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
             }
             // We don't have enough contracts
             (false, true, false) => DeltaAdjustment::BuyOptions {
-                quantity: Positive::from(total_contracts_needed.abs()),
+                quantity: Positive::new_decimal(total_contracts_needed.abs())
+                    .unwrap_or(Positive::ZERO),
                 strike: option.strike_price,
                 option_style: option.option_style,
                 side: option.side,
@@ -561,7 +565,8 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
             (false, false, true) => {
                 // We already have more contracts than needed, sell the excess
                 DeltaAdjustment::SellOptions {
-                    quantity: Positive::from(total_contracts_needed.abs()),
+                    quantity: Positive::new_decimal(total_contracts_needed.abs())
+                        .unwrap_or(Positive::ZERO),
                     strike: option.strike_price,
                     option_style: option.option_style,
                     side: option.side,

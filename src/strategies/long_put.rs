@@ -30,6 +30,7 @@ use crate::strategies::{
 use crate::utils::Len;
 use crate::{ExpirationDate, Options, test_strategy_traits};
 use chrono::Utc;
+use num_traits::FromPrimitive;
 use positive::Positive;
 use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
@@ -230,13 +231,15 @@ impl BasicAble for LongPut {
     fn set_underlying_price(&mut self, price: &Positive) -> Result<(), StrategyError> {
         self.long_put.option.underlying_price = *price;
         self.long_put.premium =
-            Positive::from(self.long_put.option.calculate_price_black_scholes()?.abs());
+            Positive::new_decimal(self.long_put.option.calculate_price_black_scholes()?.abs())
+                .unwrap_or(Positive::ZERO);
         Ok(())
     }
     fn set_implied_volatility(&mut self, volatility: &Positive) -> Result<(), StrategyError> {
         self.long_put.option.implied_volatility = *volatility;
         self.long_put.premium =
-            Positive(self.long_put.option.calculate_price_black_scholes()?.abs());
+            Positive::new_decimal(self.long_put.option.calculate_price_black_scholes()?.abs())
+                .unwrap_or(Positive::ZERO);
         Ok(())
     }
 }
@@ -273,7 +276,7 @@ impl Strategies for LongPut {
     fn get_max_profit(&self) -> Result<Positive, StrategyError> {
         let profit = self.calculate_profit_at(&self.long_put.option.strike_price)?;
         if profit >= Decimal::ZERO {
-            Ok(profit.into())
+            Ok(Positive::new_decimal(profit)?)
         } else {
             Err(StrategyError::ProfitLossError(
                 ProfitLossErrorKind::MaxProfitError {
@@ -285,7 +288,7 @@ impl Strategies for LongPut {
     fn get_max_loss(&self) -> Result<Positive, StrategyError> {
         let loss = self.calculate_profit_at(&self.long_put.option.strike_price)?;
         if loss <= Decimal::ZERO {
-            Ok(loss.abs().into())
+            Ok(Positive::new_decimal(loss.abs()).unwrap_or(Positive::ZERO))
         } else {
             Err(StrategyError::ProfitLossError(
                 ProfitLossErrorKind::MaxLossError {
@@ -297,7 +300,7 @@ impl Strategies for LongPut {
     fn get_profit_area(&self) -> Result<Decimal, StrategyError> {
         let high = self.get_max_profit().unwrap_or(Positive::ZERO);
         let base = self.long_put.option.strike_price - self.break_even_points[0];
-        Ok((high * base / 200.0).into())
+        Ok(Decimal::from_f64(high.to_f64() * base.to_f64() / 200.0).unwrap_or(Decimal::ZERO))
     }
     fn get_profit_ratio(&self) -> Result<Decimal, StrategyError> {
         let max_profit = self.get_max_profit().unwrap_or(Positive::ZERO);
@@ -305,7 +308,10 @@ impl Strategies for LongPut {
         match (max_profit, max_loss) {
             (value, _) if value == Positive::ZERO => Ok(Decimal::ZERO),
             (_, value) if value == Positive::ZERO => Ok(Decimal::MAX),
-            _ => Ok((max_profit / max_loss * 100.0).into()),
+            _ => Ok(
+                Decimal::from_f64(max_profit.to_f64() / max_loss.to_f64() * 100.0)
+                    .unwrap_or(Decimal::ZERO),
+            ),
         }
     }
 }
@@ -591,7 +597,7 @@ where
 
                 // Calculate current option premium
                 let mut current_option = self.long_put.option.clone();
-                current_option.underlying_price = step.y.positive();
+                current_option.underlying_price = step.y.positive()?;
                 current_option.expiration_date = ExpirationDate::Days(days_left);
 
                 let current_premium = current_option.calculate_price_black_scholes()?.abs();
@@ -645,7 +651,7 @@ where
             if final_pnl.is_none()
                 && let Some(last_step) = random_walk.last()
             {
-                let final_price = last_step.y.positive();
+                let final_price = last_step.y.positive()?;
                 let pnl = self.calculate_pnl_at_expiration(&final_price)?;
 
                 // Calculate expiration premium

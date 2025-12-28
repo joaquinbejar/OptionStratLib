@@ -80,7 +80,8 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
                 probability_of_max_loss: Positive::ZERO, // Default value when no volatility adjustment
                 expected_value,
                 break_even_points: break_even_points.to_vec(),
-                risk_reward_ratio: self.get_profit_ratio().unwrap().into(),
+                risk_reward_ratio: Positive::new_decimal(self.get_profit_ratio().unwrap())
+                    .unwrap_or(Positive::ZERO),
             });
         }
 
@@ -90,7 +91,8 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
         let expected_value = self.expected_value(volatility_adj.clone(), trend.clone())?;
         let (prob_max_profit, prob_max_loss) =
             self.calculate_extreme_probabilities(volatility_adj, trend)?;
-        let risk_reward_ratio = self.get_profit_ratio().unwrap().into();
+        let risk_reward_ratio =
+            Positive::new_decimal(self.get_profit_ratio().unwrap()).unwrap_or(Positive::ZERO);
 
         Ok(StrategyProbabilityAnalysis {
             probability_of_profit,
@@ -141,7 +143,7 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
             return if current_profit <= Decimal::ZERO {
                 Ok(Positive::ZERO)
             } else {
-                Ok(current_profit.into())
+                Ok(Positive::new_decimal(current_profit)?)
             };
         }
 
@@ -150,7 +152,7 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
         let expiration = *self.get_expiration().values().next().unwrap();
 
         let mut probabilities = Vec::with_capacity(range.len());
-        let mut last_prob = 0.0;
+        let mut last_prob = Decimal::ZERO;
 
         for price in range.iter() {
             let prob = calculate_single_point_probability(
@@ -164,7 +166,7 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
 
             let marginal_prob = prob.0 - last_prob;
             probabilities.push(marginal_prob);
-            last_prob = prob.0.into();
+            last_prob = prob.0.to_dec();
         }
 
         let expected_value =

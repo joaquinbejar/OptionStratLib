@@ -272,9 +272,10 @@ impl Payoff for OptionType {
             OptionType::Chooser { .. } => (info.spot - info.strike)
                 .max(Positive::ZERO)
                 .max(
-                    (info.strike.to_dec() - info.spot.to_dec())
-                        .max(Decimal::ZERO)
-                        .into(),
+                    Positive::new_decimal(
+                        (info.strike.to_dec() - info.spot.to_dec()).max(Decimal::ZERO),
+                    )
+                    .unwrap_or(Positive::ZERO),
                 )
                 .to_f64(),
             OptionType::Cliquet { .. } => standard_payoff(info),

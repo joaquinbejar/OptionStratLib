@@ -4,8 +4,10 @@
    Date: 24/3/25
 ******************************************************************************/
 
+use crate::error::SimulationError;
 use positive::Positive;
 use serde::{Serialize, Serializer};
+use std::convert::TryInto;
 use std::fmt::{Display, Formatter};
 
 /// A step entity in a Y-axis progression with an associated numeric value.
@@ -32,7 +34,7 @@ use std::fmt::{Display, Formatter};
 #[derive(Debug, Clone)]
 pub struct Ystep<T>
 where
-    T: Into<Positive> + Display + Clone,
+    T: TryInto<Positive> + Display + Clone,
 {
     /// An integer index representing the step's position in a sequence
     index: i32,
@@ -44,7 +46,7 @@ where
 /// A step value holder for simulation values that must be positive.
 ///
 /// `Ystep<T>` maintains an index counter and a value of type `T`, where `T`
-/// must be `Into<Positive>` + Display and convertible to a `Positive` value.
+/// must be `TryInto<Positive>` + Display and convertible to a `Positive` value.
 ///
 /// This struct is typically used in financial simulations where values need
 /// to be tracked across simulation steps while ensuring they remain positive.
@@ -67,7 +69,7 @@ where
 /// ```
 impl<T> Ystep<T>
 where
-    T: Into<Positive> + Display + Clone,
+    T: TryInto<Positive> + Display + Clone,
 {
     /// Creates a new `Ystep` instance with the specified value.
     ///
@@ -115,8 +117,11 @@ where
     /// # Returns
     ///
     /// A reference to the stored value of type `T`
-    pub fn positive(&self) -> Positive {
-        self.value.clone().into()
+    pub fn positive(&self) -> Result<Positive, SimulationError> {
+        self.value
+            .clone()
+            .try_into()
+            .map_err(|_| SimulationError::step_error("Failed to convert value to Positive"))
     }
 
     /// Returns an immutable reference to the index of this step.
@@ -145,10 +150,10 @@ where
 
 impl<T> Display for Ystep<T>
 where
-    T: Into<Positive> + Display + Clone,
+    T: TryInto<Positive> + Display + Clone,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let positive_value: Positive = self.positive();
+        let positive_value: Positive = self.positive().unwrap_or(Positive::ZERO);
         write!(
             f,
             "Ystep {{ index: {}, value: {} }}",
@@ -160,14 +165,14 @@ where
 
 impl<T> Serialize for Ystep<T>
 where
-    T: Into<Positive> + Display + Serialize + Clone,
+    T: TryInto<Positive> + Display + Serialize + Clone,
 {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
         // Convert value to Positive for consistent serialization
-        let value: Positive = self.positive();
+        let value: Positive = self.positive().unwrap_or(Positive::ZERO);
 
         // Use a struct with 2 fields to represent Ystep
         use serde::ser::SerializeStruct;
@@ -178,11 +183,13 @@ where
     }
 }
 
-impl<T> From<Ystep<T>> for Positive
+impl<T> TryFrom<Ystep<T>> for Positive
 where
-    T: Into<Positive> + Display + Clone,
+    T: TryInto<Positive> + Display + Clone,
 {
-    fn from(step: Ystep<T>) -> Self {
+    type Error = SimulationError;
+
+    fn try_from(step: Ystep<T>) -> Result<Self, Self::Error> {
         step.positive()
     }
 }
