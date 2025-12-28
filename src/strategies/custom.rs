@@ -636,7 +636,7 @@ impl Strategies for CustomStrategy {
         if max_profit <= Decimal::ZERO {
             Ok(Positive::ZERO)
         } else {
-            Ok(max_profit.into())
+            Ok(Positive::new_decimal(max_profit)?)
         }
     }
 
@@ -668,7 +668,7 @@ impl Strategies for CustomStrategy {
         if max_loss >= Decimal::ZERO {
             Ok(Positive::ZERO)
         } else {
-            Ok((-max_loss).into())
+            Ok(Positive::new_decimal(-max_loss)?)
         }
     }
 

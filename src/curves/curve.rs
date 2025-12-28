@@ -2476,7 +2476,9 @@ mod tests_extended {
     #[test]
     fn test_construct_parametric_invalid_function() {
         let f = |_t: Decimal| -> Result<Point2D, ChainError> {
-            Err(CurveError::ConstructionError("Function evaluation failed".to_string()).into())
+            Err(ChainError::DynError {
+                message: "Function evaluation failed".to_string(),
+            })
         };
         let params = ConstructionParams::D2 {
             t_start: Decimal::ZERO,

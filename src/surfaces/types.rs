@@ -6,6 +6,7 @@
 use crate::curves::Point2D;
 use crate::error::SurfaceError;
 use crate::geometrics::HasX;
+use num_traits::FromPrimitive;
 use positive::is_positive;
 use rust_decimal::Decimal;
 use rust_decimal::prelude::*;
@@ -107,9 +108,9 @@ impl Point3D {
     /// - `U`: Type for y-coordinate
     /// - `V`: Type for z-coordinate
     pub fn to_tuple<
-        T: From<Decimal> + 'static,
-        U: From<Decimal> + 'static,
-        V: From<Decimal> + 'static,
+        T: TryFrom<Decimal> + 'static,
+        U: TryFrom<Decimal> + 'static,
+        V: TryFrom<Decimal> + 'static,
     >(
         &self,
     ) -> Result<(T, U, V), SurfaceError> {
@@ -131,7 +132,17 @@ impl Point3D {
             });
         }
 
-        Ok((T::from(self.x), U::from(self.y), V::from(self.z)))
+        let x = T::try_from(self.x).map_err(|_| SurfaceError::Point3DError {
+            reason: "failed to convert x",
+        })?;
+        let y = U::try_from(self.y).map_err(|_| SurfaceError::Point3DError {
+            reason: "failed to convert y",
+        })?;
+        let z = V::try_from(self.z).map_err(|_| SurfaceError::Point3DError {
+            reason: "failed to convert z",
+        })?;
+
+        Ok((x, y, z))
     }
 
     /// Creates a Point3D from a tuple of three values.

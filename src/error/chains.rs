@@ -127,6 +127,10 @@ pub enum ChainError {
         /// A descriptive message explaining the error
         message: String,
     },
+
+    /// Positive value errors
+    #[error(transparent)]
+    PositiveError(#[from] positive::PositiveError),
 }
 
 /// Represents specific error types related to option data validation and calculations.

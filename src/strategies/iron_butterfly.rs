@@ -731,21 +731,25 @@ impl BasicAble for IronButterfly {
     }
     fn set_underlying_price(&mut self, price: &Positive) -> Result<(), StrategyError> {
         self.short_call.option.underlying_price = *price;
-        self.short_call.premium = Positive::from(
+        self.short_call.premium = Positive::new_decimal(
             self.short_call
                 .option
                 .calculate_price_black_scholes()?
                 .abs(),
-        );
+        )
+        .unwrap_or(Positive::ZERO);
         self.short_put.option.underlying_price = *price;
         self.short_put.premium =
-            Positive::from(self.short_put.option.calculate_price_black_scholes()?.abs());
+            Positive::new_decimal(self.short_put.option.calculate_price_black_scholes()?.abs())
+                .unwrap_or(Positive::ZERO);
         self.long_call.option.underlying_price = *price;
         self.long_call.premium =
-            Positive::from(self.long_call.option.calculate_price_black_scholes()?.abs());
+            Positive::new_decimal(self.long_call.option.calculate_price_black_scholes()?.abs())
+                .unwrap_or(Positive::ZERO);
         self.long_put.option.underlying_price = *price;
         self.long_put.premium =
-            Positive::from(self.long_put.option.calculate_price_black_scholes()?.abs());
+            Positive::new_decimal(self.long_put.option.calculate_price_black_scholes()?.abs())
+                .unwrap_or(Positive::ZERO);
         Ok(())
     }
     fn set_implied_volatility(&mut self, volatility: &Positive) -> Result<(), StrategyError> {
@@ -753,18 +757,22 @@ impl BasicAble for IronButterfly {
         self.short_put.option.implied_volatility = *volatility;
         self.long_call.option.implied_volatility = *volatility;
         self.long_put.option.implied_volatility = *volatility;
-        self.short_call.premium = Positive(
+        self.short_call.premium = Positive::new_decimal(
             self.short_call
                 .option
                 .calculate_price_black_scholes()?
                 .abs(),
-        );
+        )
+        .unwrap_or(Positive::ZERO);
         self.short_put.premium =
-            Positive(self.short_put.option.calculate_price_black_scholes()?.abs());
+            Positive::new_decimal(self.short_put.option.calculate_price_black_scholes()?.abs())
+                .unwrap_or(Positive::ZERO);
         self.long_call.premium =
-            Positive(self.long_call.option.calculate_price_black_scholes()?.abs());
+            Positive::new_decimal(self.long_call.option.calculate_price_black_scholes()?.abs())
+                .unwrap_or(Positive::ZERO);
         self.long_put.premium =
-            Positive(self.long_put.option.calculate_price_black_scholes()?.abs());
+            Positive::new_decimal(self.long_put.option.calculate_price_black_scholes()?.abs())
+                .unwrap_or(Positive::ZERO);
         Ok(())
     }
 }
@@ -781,9 +789,10 @@ impl Strategies for IronButterfly {
             ));
         }
 
-        Ok(self
-            .calculate_profit_at(&self.short_call.option.strike_price)?
-            .into())
+        Ok(
+            Positive::new_decimal(self.calculate_profit_at(&self.short_call.option.strike_price)?)
+                .unwrap_or(Positive::ZERO),
+        )
     }
 
     fn get_max_loss(&self) -> Result<Positive, StrategyError> {
@@ -796,7 +805,7 @@ impl Strategies for IronButterfly {
                 },
             ));
         }
-        Ok(left_loss.abs().max(right_loss.abs()).into())
+        Ok(Positive::new_decimal(left_loss.abs().max(right_loss.abs())).unwrap_or(Positive::ZERO))
     }
 
     fn get_profit_area(&self) -> Result<Decimal, StrategyError> {
@@ -820,7 +829,10 @@ impl Strategies for IronButterfly {
         match (max_profit, max_loss) {
             (value, _) if value == Positive::ZERO => Ok(Decimal::ZERO),
             (_, value) if value == Positive::ZERO => Ok(Decimal::MAX),
-            _ => Ok((max_profit / max_loss * 100.0).into()),
+            _ => Ok(
+                Decimal::from_f64(max_profit.to_f64() / max_loss.to_f64() * 100.0)
+                    .unwrap_or(Decimal::ZERO),
+            ),
         }
     }
 }

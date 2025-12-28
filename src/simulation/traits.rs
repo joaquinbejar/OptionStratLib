@@ -7,6 +7,7 @@ use crate::volatility::generate_ou_process;
 use num_traits::ToPrimitive;
 use positive::Positive;
 use rust_decimal::{Decimal, MathematicalOps};
+use std::convert::TryInto;
 use std::fmt::{Debug, Display};
 use std::ops::AddAssign;
 
@@ -39,8 +40,8 @@ use std::ops::AddAssign;
 /// - Custom stochastic process with mean-reverting volatility
 pub trait WalkTypeAble<X, Y>
 where
-    X: Copy + Into<Positive> + AddAssign + Display,
-    Y: Into<Positive> + Display + Clone,
+    X: Copy + TryInto<Positive> + AddAssign + Display,
+    Y: TryInto<Positive> + Display + Clone,
 {
     /// Generates a Brownian motion (standard random walk) process.
     ///
@@ -63,7 +64,7 @@ where
                 volatility,
             } => {
                 let mut values = Vec::with_capacity(params.size + 1);
-                let mut x: Positive = params.ystep_as_positive();
+                let mut x: Positive = params.ystep_as_positive()?;
                 values.push(x);
                 let sigma_abs = volatility * x;
                 let sqrt_dt = dt.to_f64().sqrt();
@@ -107,7 +108,7 @@ where
                 volatility,
             } => {
                 let mut values = Vec::with_capacity(params.size);
-                let mut current_value: Positive = params.ystep_as_positive();
+                let mut current_value: Positive = params.ystep_as_positive()?;
                 values.push(current_value);
                 let sqrt_dt = dt.sqrt();
 
@@ -149,7 +150,7 @@ where
                 autocorrelation,
             } => {
                 let mut values = Vec::with_capacity(params.size + 1);
-                let mut price: Positive = params.ystep_as_positive();
+                let mut price: Positive = params.ystep_as_positive()?;
                 values.push(price);
 
                 let sqrt_dt = dt.to_f64().sqrt();
@@ -202,7 +203,7 @@ where
             } => {
                 let sigma_abs = volatility * mean;
                 Ok(generate_ou_process(
-                    params.ystep_as_positive(),
+                    params.ystep_as_positive()?,
                     mean,
                     speed,
                     sigma_abs,
@@ -241,7 +242,7 @@ where
                 jump_volatility,
             } => {
                 let mut values = Vec::with_capacity(params.size + 1);
-                let mut x: Decimal = params.ystep_as_positive().to_dec();
+                let mut x: Decimal = params.ystep_as_positive()?.to_dec();
                 values.push(Positive(x));
 
                 let sqrt_dt = dt.sqrt();
@@ -302,7 +303,7 @@ where
                 }
 
                 let mut path = Vec::with_capacity(params.size + 1);
-                let mut price = params.ystep_as_positive().to_dec();
+                let mut price = params.ystep_as_positive()?.to_dec();
                 path.push(Positive(price));
 
                 // --- initial conditional variance (annualised) ---
@@ -398,7 +399,7 @@ where
                 }
 
                 let mut values = Vec::with_capacity(params.size);
-                let mut price: Positive = params.ystep_as_positive();
+                let mut price: Positive = params.ystep_as_positive()?;
 
                 // Initial variance is the square of initial volatility
                 let mut variance = volatility.to_dec() * volatility.to_dec();
@@ -466,7 +467,7 @@ where
                     generate_ou_process(volatility, vol_mean, vol_speed, vov, dt, params.size);
 
                 let sqrt_dt = dt.sqrt();
-                let mut price = params.ystep_as_positive().to_dec();
+                let mut price = params.ystep_as_positive()?.to_dec();
                 let mut path = Vec::with_capacity(params.size + 1);
                 path.push(Positive(price));
 
@@ -512,7 +513,7 @@ where
                 vol_multiplier_down,
             } => {
                 let mut values = Vec::with_capacity(params.size);
-                let mut price = params.ystep_as_positive().to_dec();
+                let mut price = params.ystep_as_positive()?.to_dec();
                 values.push(Positive(price));
 
                 // Initialize telegraph state randomly
@@ -648,8 +649,8 @@ impl<X, Y> Clone for Box<dyn WalkTypeAble<X, Y>> {
 /// ```
 pub trait Simulate<X, Y>
 where
-    X: Copy + Into<Positive> + AddAssign + Display,
-    Y: Into<Positive> + Display + Clone,
+    X: Copy + TryInto<Positive> + AddAssign + Display,
+    Y: TryInto<Positive> + Display + Clone,
 {
     /// Simulates the strategy across multiple price paths.
     ///
@@ -702,8 +703,8 @@ mod tests_walk_type_able {
 
     impl<X, Y> WalkTypeAble<X, Y> for TestWalker
     where
-        X: Copy + Into<Positive> + AddAssign + Display,
-        Y: Copy + Into<Positive> + Display,
+        X: Copy + TryInto<Positive> + AddAssign + Display,
+        Y: Copy + TryInto<Positive> + Display,
     {
     }
 
@@ -714,8 +715,8 @@ mod tests_walk_type_able {
         walk_type: WalkType,
     ) -> WalkParams<X, Y>
     where
-        X: Copy + Into<Positive> + AddAssign + Display,
-        Y: Copy + Into<Positive> + Display,
+        X: Copy + TryInto<Positive> + AddAssign + Display,
+        Y: Copy + TryInto<Positive> + Display,
     {
         let init_step = Step::new(
             x_value,
@@ -995,8 +996,8 @@ mod tests_walk_type_able {
 
         impl<X, Y> WalkTypeAble<X, Y> for ErrorWalker
         where
-            X: Copy + Into<Positive> + AddAssign + Display,
-            Y: Copy + Into<Positive> + Display,
+            X: Copy + TryInto<Positive> + AddAssign + Display,
+            Y: Copy + TryInto<Positive> + Display,
         {
             fn brownian(
                 &self,

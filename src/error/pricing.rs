@@ -1,4 +1,5 @@
 use crate::error::{DecimalError, GreeksError, OptionsError, PositionError};
+use positive::PositiveError;
 use thiserror::Error;
 
 /// Error type for option pricing operations.
@@ -52,6 +53,10 @@ pub enum PricingError {
         /// Detailed reason for the error
         reason: String,
     },
+
+    /// Error from Positive operations.
+    #[error(transparent)]
+    Positive(#[from] PositiveError),
 }
 
 impl PricingError {

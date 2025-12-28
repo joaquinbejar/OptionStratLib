@@ -124,6 +124,10 @@ pub enum StrategyError {
     /// Greeks errors
     #[error(transparent)]
     GreeksError(#[from] GreeksError),
+
+    /// Positive value errors
+    #[error(transparent)]
+    PositiveError(#[from] positive::PositiveError),
 }
 
 /// Represents different types of errors that can occur during price-related operations.

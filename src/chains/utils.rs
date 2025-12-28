@@ -628,7 +628,7 @@ pub(crate) fn rounder(reference_price: Positive, strike_interval: Positive) -> P
         base
     };
 
-    rounded.into()
+    Positive::new_decimal(rounded).unwrap_or(reference_price)
 }
 
 /// Rounds an interval to clean market-friendly values like 0.25, 0.5, 1, 2.5, 5, 10, etc.

@@ -75,7 +75,7 @@ pub fn price_option(option: &Options, engine: &PricingEngine) -> PricingResult<P
                 .map_err(|e| PricingError::method_error("Black-Scholes", &e.to_string()))?;
 
             // Convert Decimal to Positive using From trait
-            Ok(Positive::from(price_decimal.abs()))
+            Ok(Positive::new_decimal(price_decimal.abs())?)
         }
         PricingEngine::MonteCarlo { simulator } => simulator
             .get_mc_option_price(option)

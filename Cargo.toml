@@ -121,4 +121,4 @@ utoipa = { version = "5.4", features = ["axum_extras", "chrono", "decimal"] }
 indicatif = "0.18"
 thiserror = "2.0"
 #positive = { path = "../positive", features = ["utoipa"] }
-positive = { version = "0.1.2", features = ["utoipa"] }
+positive = { version = "0.2.1", features = ["utoipa"] }

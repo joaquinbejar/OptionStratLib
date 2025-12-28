@@ -124,8 +124,9 @@ pub fn calculate_single_point_probability(
         f2du!((log_ratio.to_f64() - drift_rate * time_to_expiry) / std_dev).unwrap();
 
     // Calculate probabilities using the standard normal distribution
-    let prob_below: Positive = big_n(z_score).unwrap().into();
-    let prob_above: Positive = (1.0 - prob_below).into();
+    let prob_below: Positive =
+        Positive::new_decimal(big_n(z_score).unwrap()).unwrap_or(Positive::ZERO);
+    let prob_above: Positive = Positive::new(1.0 - prob_below.to_f64()).unwrap_or(Positive::ZERO);
 
     Ok((prob_below, prob_above))
 }
