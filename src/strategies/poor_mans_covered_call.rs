@@ -583,28 +583,32 @@ impl BasicAble for PoorMansCoveredCall {
     }
     fn set_underlying_price(&mut self, price: &Positive) -> Result<(), StrategyError> {
         self.short_call.option.underlying_price = *price;
-        self.short_call.premium = Positive::from(
+        self.short_call.premium = Positive::new_decimal(
             self.short_call
                 .option
                 .calculate_price_black_scholes()?
                 .abs(),
-        );
+        )
+        .unwrap_or(Positive::ZERO);
         self.long_call.option.underlying_price = *price;
         self.long_call.premium =
-            Positive::from(self.long_call.option.calculate_price_black_scholes()?.abs());
+            Positive::new_decimal(self.long_call.option.calculate_price_black_scholes()?.abs())
+                .unwrap_or(Positive::ZERO);
         Ok(())
     }
     fn set_implied_volatility(&mut self, volatility: &Positive) -> Result<(), StrategyError> {
         self.short_call.option.implied_volatility = *volatility;
         self.long_call.option.implied_volatility = *volatility;
-        self.short_call.premium = Positive(
+        self.short_call.premium = Positive::new_decimal(
             self.short_call
                 .option
                 .calculate_price_black_scholes()?
                 .abs(),
-        );
+        )
+        .unwrap_or(Positive::ZERO);
         self.long_call.premium =
-            Positive(self.long_call.option.calculate_price_black_scholes()?.abs());
+            Positive::new_decimal(self.long_call.option.calculate_price_black_scholes()?.abs())
+                .unwrap_or(Positive::ZERO);
         Ok(())
     }
 }
@@ -619,7 +623,7 @@ impl Strategies for PoorMansCoveredCall {
                 },
             ))
         } else {
-            Ok(profit.into())
+            Ok(Positive::new_decimal(profit)?)
         }
     }
 
@@ -632,7 +636,7 @@ impl Strategies for PoorMansCoveredCall {
                 },
             ))
         } else {
-            Ok(loss.abs().into())
+            Ok(Positive::new_decimal(loss.abs()).unwrap_or(Positive::ZERO))
         }
     }
 

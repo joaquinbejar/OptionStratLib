@@ -39,6 +39,10 @@ pub enum SimulationError {
     /// Error during graph generation.
     #[error(transparent)]
     GraphError(#[from] GraphError),
+
+    /// Positive value errors
+    #[error(transparent)]
+    PositiveError(#[from] positive::PositiveError),
 }
 
 impl SimulationError {

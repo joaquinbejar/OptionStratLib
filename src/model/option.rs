@@ -756,8 +756,8 @@ impl PnLCalculator for Options {
         Ok(PnL::new(
             None, // No realized PnL yet
             unrealized,
-            initial_costs.into(),
-            initial_income.into(),
+            Positive::new_decimal(initial_costs)?,
+            Positive::new_decimal(initial_income)?,
             current_option.expiration_date.get_date()?,
         ))
     }
@@ -777,8 +777,8 @@ impl PnLCalculator for Options {
         Ok(PnL::new(
             realized, // No realized PnL yet
             None,
-            initial_costs.into(),
-            initial_income.into(),
+            Positive::new_decimal(initial_costs)?,
+            Positive::new_decimal(initial_income)?,
             self.expiration_date.get_date()?,
         ))
     }

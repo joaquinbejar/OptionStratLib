@@ -146,6 +146,10 @@ pub enum ProbabilityError {
     /// or why they cannot be analyzed.
     #[error("No positions available: {0}")]
     NoPositions(String),
+
+    /// Positive value errors
+    #[error(transparent)]
+    PositiveError(#[from] positive::PositiveError),
 }
 
 /// Error types that can occur during financial probability calculations.
@@ -457,6 +461,7 @@ impl From<StrategyError> for ProbabilityError {
                 ProbabilityError::StdError("Strategy not implemented".to_string())
             }
             StrategyError::GreeksError(err) => ProbabilityError::StdError(err.to_string()),
+            StrategyError::PositiveError(err) => ProbabilityError::StdError(err.to_string()),
         }
     }
 }

@@ -5,6 +5,7 @@
 ******************************************************************************/
 use crate::error::curves::CurveError;
 use crate::geometrics::HasX;
+use num_traits::FromPrimitive;
 use positive::is_positive;
 use rust_decimal::Decimal;
 use rust_decimal::prelude::*;
@@ -130,7 +131,7 @@ impl Point2D {
     /// # Errors
     /// This function returns an error if the positivity constraints are violated or if
     /// conversions fail due to invalid type requirements.
-    pub fn to_tuple<T: From<Decimal> + 'static, U: From<Decimal> + 'static>(
+    pub fn to_tuple<T: TryFrom<Decimal> + 'static, U: TryFrom<Decimal> + 'static>(
         &self,
     ) -> Result<(T, U), CurveError> {
         if is_positive::<T>() && self.x <= Decimal::ZERO {
@@ -145,7 +146,14 @@ impl Point2D {
             });
         }
 
-        Ok((T::from(self.x), U::from(self.y)))
+        let x = T::try_from(self.x).map_err(|_| CurveError::Point2DError {
+            reason: "failed to convert x",
+        })?;
+        let y = U::try_from(self.y).map_err(|_| CurveError::Point2DError {
+            reason: "failed to convert y",
+        })?;
+
+        Ok((x, y))
     }
 
     /// Creates a new `Point2D` instance from a tuple containing `x` and `y` values.

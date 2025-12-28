@@ -45,6 +45,7 @@ use crate::{
     test_strategy_traits,
 };
 use chrono::Utc;
+use num_traits::FromPrimitive;
 use positive::Positive;
 use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
@@ -554,28 +555,32 @@ impl BasicAble for BearCallSpread {
     }
     fn set_underlying_price(&mut self, price: &Positive) -> Result<(), StrategyError> {
         self.short_call.option.underlying_price = *price;
-        self.short_call.premium = Positive::from(
+        self.short_call.premium = Positive::new_decimal(
             self.short_call
                 .option
                 .calculate_price_black_scholes()?
                 .abs(),
-        );
+        )
+        .unwrap_or(Positive::ZERO);
         self.long_call.option.underlying_price = *price;
         self.long_call.premium =
-            Positive::from(self.long_call.option.calculate_price_black_scholes()?.abs());
+            Positive::new_decimal(self.long_call.option.calculate_price_black_scholes()?.abs())
+                .unwrap_or(Positive::ZERO);
         Ok(())
     }
     fn set_implied_volatility(&mut self, volatility: &Positive) -> Result<(), StrategyError> {
         self.short_call.option.implied_volatility = *volatility;
         self.long_call.option.implied_volatility = *volatility;
-        self.short_call.premium = Positive(
+        self.short_call.premium = Positive::new_decimal(
             self.short_call
                 .option
                 .calculate_price_black_scholes()?
                 .abs(),
-        );
+        )
+        .unwrap_or(Positive::ZERO);
         self.long_call.premium =
-            Positive(self.long_call.option.calculate_price_black_scholes()?.abs());
+            Positive::new_decimal(self.long_call.option.calculate_price_black_scholes()?.abs())
+                .unwrap_or(Positive::ZERO);
         Ok(())
     }
 }
@@ -608,17 +613,17 @@ impl Strategies for BearCallSpread {
         }
     }
     fn get_profit_area(&self) -> Result<Decimal, StrategyError> {
-        let high = self.get_max_profit().unwrap_or(Positive::ZERO);
-        let base = self.break_even_points[0] - self.short_call.option.strike_price;
-        Ok((high * base / 200.0).into())
+        let high = self.get_max_profit().unwrap_or(Positive::ZERO).to_f64();
+        let base = (self.break_even_points[0] - self.short_call.option.strike_price).to_f64();
+        Ok(Decimal::from_f64(high * base / 200.0).unwrap_or(Decimal::ZERO))
     }
     fn get_profit_ratio(&self) -> Result<Decimal, StrategyError> {
-        let max_profit = self.get_max_profit().unwrap_or(Positive::ZERO);
-        let max_loss = self.get_max_loss().unwrap_or(Positive::ZERO);
+        let max_profit = self.get_max_profit().unwrap_or(Positive::ZERO).to_f64();
+        let max_loss = self.get_max_loss().unwrap_or(Positive::ZERO).to_f64();
         match (max_profit, max_loss) {
-            (value, _) if value == Positive::ZERO => Ok(Decimal::ZERO),
-            (_, value) if value == Positive::ZERO => Ok(Decimal::MAX),
-            _ => Ok((max_profit / max_loss * 100.0).into()),
+            (0.0, _) => Ok(Decimal::ZERO),
+            (_, 0.0) => Ok(Decimal::MAX),
+            _ => Ok(Decimal::from_f64(max_profit / max_loss * 100.0).unwrap_or(Decimal::ZERO)),
         }
     }
 }

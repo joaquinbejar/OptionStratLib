@@ -68,6 +68,10 @@ pub enum GreeksError {
     /// for consistent error handling.
     #[error("Standard error: {0}")]
     StdError(String),
+
+    /// Positive value errors
+    #[error(transparent)]
+    PositiveError(#[from] positive::PositiveError),
 }
 
 /// Represents various types of mathematical errors that can occur during calculations.

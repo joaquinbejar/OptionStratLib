@@ -218,7 +218,7 @@ pub fn generate_binomial_tree(params: &BinomialPricingParams) -> BinomialTreeRes
         .enumerate()
         .take(params.no_steps + 1)
     {
-        info.spot = (*node_val).into();
+        info.spot = Positive::new_decimal(*node_val)?;
         option_tree[params.no_steps][node] = f2d!(params.option_type.payoff(&info));
     }
 
@@ -235,7 +235,7 @@ pub fn generate_binomial_tree(params: &BinomialPricingParams) -> BinomialTreeRes
                     if (step == 0) & (node_idx == 0) {
                         *node_val = node_value;
                     } else {
-                        info.spot = asset_tree[step][node_idx].into();
+                        info.spot = Positive::new_decimal(asset_tree[step][node_idx])?;
                         let intrinsic_value = params.option_type.payoff(&info);
                         let dec_node_val = d2f!(node_value);
                         *node_val = f2d!(intrinsic_value.max(dec_node_val));

@@ -12,6 +12,7 @@ use positive::Positive;
 use rust_decimal::Decimal;
 use serde::ser::SerializeStruct;
 use serde::{Serialize, Serializer};
+use std::convert::TryInto;
 use std::fmt::{Display, Formatter};
 use std::ops::AddAssign;
 
@@ -48,8 +49,8 @@ use std::ops::AddAssign;
 #[derive(Debug, Clone)]
 pub struct Step<X, Y>
 where
-    X: Copy + Into<Positive> + AddAssign + Display,
-    Y: Into<Positive> + Display + Clone,
+    X: Copy + TryInto<Positive> + AddAssign + Display,
+    Y: TryInto<Positive> + Display + Clone,
 {
     /// The x-axis step containing temporal information and an associated value
     pub x: Xstep<X>,
@@ -72,8 +73,8 @@ where
 ///
 impl<X, Y> Step<X, Y>
 where
-    X: Copy + Into<Positive> + AddAssign + Display,
-    Y: Into<Positive> + Display + Clone,
+    X: Copy + TryInto<Positive> + AddAssign + Display,
+    Y: TryInto<Positive> + Display + Clone,
 {
     /// Creates a new Step with the given X and Y coordinates
     ///
@@ -189,7 +190,7 @@ where
     /// # Returns
     ///
     /// A `Positive` representation of the y-axis value
-    pub fn get_graph_y_value(&self) -> Positive {
+    pub fn get_graph_y_value(&self) -> Result<Positive, SimulationError> {
         self.y.positive()
     }
 
@@ -250,15 +251,15 @@ where
     ///
     /// This function internally calls the `positive` method on `self.y`
     /// and returns the resulting value.
-    pub fn get_positive_value(&self) -> Positive {
+    pub fn get_positive_value(&self) -> Result<Positive, SimulationError> {
         self.y.positive()
     }
 }
 
 impl<X, Y> Display for Step<X, Y>
 where
-    X: Copy + Into<Positive> + AddAssign + Display,
-    Y: Into<Positive> + Display + Clone,
+    X: Copy + TryInto<Positive> + AddAssign + Display,
+    Y: TryInto<Positive> + Display + Clone,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "Step {{ x: {}, y: {} }}", self.x, self.y)
@@ -267,8 +268,8 @@ where
 
 impl<X, Y> Serialize for Step<X, Y>
 where
-    X: Copy + Into<Positive> + AddAssign + Display + Serialize,
-    Y: Into<Positive> + Display + Serialize + Clone,
+    X: Copy + TryInto<Positive> + AddAssign + Display + Serialize,
+    Y: TryInto<Positive> + Display + Serialize + Clone,
 {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where

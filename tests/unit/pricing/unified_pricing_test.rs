@@ -32,7 +32,8 @@ fn simple_generator(params: &WalkParams<Positive, Positive>) -> Vec<Step<Positiv
     let mut current = params.init_step.clone();
     out.push(current.clone());
     for i in 1..params.size {
-        let new_y = current.get_positive_value() + pos_or_panic!(i as f64 * 0.1);
+        let new_y =
+            current.get_positive_value().unwrap_or_default() + pos_or_panic!(i as f64 * 0.1);
         current = current.next(new_y).expect("step.next should succeed");
         out.push(current.clone());
     }

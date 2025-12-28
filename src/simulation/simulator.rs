@@ -18,12 +18,12 @@ use std::ops::{AddAssign, Index, IndexMut};
 /// # Type Parameters
 /// * `X`: A type that represents the state or value within the random walk. It must adhere to the following bounds:
 ///    - `Copy`: Allows for efficient copying of values.
-///    - `Into<Positive>`: Ensures values can be converted into a `Positive` type (potentially for validation or numerical operations).
+///    - `TryInto<Positive>`: Ensures values can be converted into a `Positive` type (potentially for validation or numerical operations).
 ///    - `AddAssign`: Allows addition and assignment (`+=`) operations.
 ///    - `Display`: Enables the formatting of values as strings for user-facing output.
 ///
 /// * `Y`: A type that represents the step or transition within the random walk. It must adhere to the following bounds:
-///    - `Into<Positive>`: Ensures values can be converted into a `Positive` type.
+///    - `TryInto<Positive>`: Ensures values can be converted into a `Positive` type.
 ///    - `Display`: Enables the formatting of values as strings for user-facing output.
 ///    - `Clone`: Allows for creating deep copies of the values.
 ///
@@ -40,8 +40,8 @@ use std::ops::{AddAssign, Index, IndexMut};
 /// trait bounds.
 pub struct Simulator<X, Y>
 where
-    X: Copy + Into<Positive> + AddAssign + Display,
-    Y: Into<Positive> + Display + Clone,
+    X: Copy + TryInto<Positive> + AddAssign + Display,
+    Y: TryInto<Positive> + Display + Clone,
 {
     title: String,
     random_walks: Vec<RandomWalk<X, Y>>,
@@ -49,8 +49,8 @@ where
 
 impl<X, Y> Simulator<X, Y>
 where
-    X: Copy + Into<Positive> + AddAssign + Display,
-    Y: Into<Positive> + Display + Clone,
+    X: Copy + TryInto<Positive> + AddAssign + Display,
+    Y: TryInto<Positive> + Display + Clone,
 {
     /// Creates a new random walk instance with the given title and steps.
     ///
@@ -70,8 +70,8 @@ where
     pub fn new<F>(title: String, size: usize, params: &WalkParams<X, Y>, generator: F) -> Self
     where
         F: Fn(&WalkParams<X, Y>) -> Vec<Step<X, Y>> + Clone,
-        X: Copy + Into<Positive> + AddAssign + Display,
-        Y: Into<Positive> + Display + Clone,
+        X: Copy + TryInto<Positive> + AddAssign + Display,
+        Y: TryInto<Positive> + Display + Clone,
     {
         let mut random_walks = Vec::new();
         for i in 0..size {
@@ -252,7 +252,7 @@ where
         let last_values = self.get_last_values();
         last_values
             .iter()
-            .map(|step| step.get_positive_value())
+            .filter_map(|step| step.get_positive_value().ok())
             .collect::<Vec<Positive>>()
     }
 
@@ -290,8 +290,8 @@ where
 
 impl<X, Y> Len for Simulator<X, Y>
 where
-    X: Copy + Into<Positive> + AddAssign + Display,
-    Y: Into<Positive> + Display + Clone,
+    X: Copy + TryInto<Positive> + AddAssign + Display,
+    Y: TryInto<Positive> + Display + Clone,
 {
     /// Returns the number of elements in the `random_walks` collection.
     ///
@@ -317,8 +317,8 @@ where
 
 impl<X, Y> Index<usize> for Simulator<X, Y>
 where
-    X: Copy + Into<Positive> + AddAssign + Display,
-    Y: Into<Positive> + Display + Clone,
+    X: Copy + TryInto<Positive> + AddAssign + Display,
+    Y: TryInto<Positive> + Display + Clone,
 {
     /// Defines an alias `Output` for the type `RandomWalk<X, Y>`.
     ///
@@ -352,8 +352,8 @@ where
 
 impl<X, Y> IndexMut<usize> for Simulator<X, Y>
 where
-    X: Copy + Into<Positive> + AddAssign + Display,
-    Y: Into<Positive> + Display + Clone,
+    X: Copy + TryInto<Positive> + AddAssign + Display,
+    Y: TryInto<Positive> + Display + Clone,
 {
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
         &mut self.random_walks[index]
@@ -362,8 +362,8 @@ where
 
 impl<X, Y> Display for Simulator<X, Y>
 where
-    X: Copy + Into<Positive> + AddAssign + Display,
-    Y: Into<Positive> + Display + Clone,
+    X: Copy + TryInto<Positive> + AddAssign + Display,
+    Y: TryInto<Positive> + Display + Clone,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "{}", self.title)?;
@@ -376,8 +376,8 @@ where
 
 impl<X, Y> Profit for Simulator<X, Y>
 where
-    X: AddAssign + Copy + Display + Into<Positive>,
-    Y: Clone + Display + Into<Positive>,
+    X: AddAssign + Copy + Display + TryInto<Positive>,
+    Y: Clone + Display + TryInto<Positive>,
 {
     fn calculate_profit_at(&self, _price: &Positive) -> Result<Decimal, PricingError> {
         Err(PricingError::other(
@@ -388,8 +388,8 @@ where
 
 impl<X, Y> BasicAble for Simulator<X, Y>
 where
-    X: AddAssign + Copy + Display + Into<Positive>,
-    Y: Clone + Display + Into<Positive>,
+    X: AddAssign + Copy + Display + TryInto<Positive>,
+    Y: Clone + Display + TryInto<Positive>,
 {
     fn get_title(&self) -> String {
         self.title.clone()
@@ -398,8 +398,8 @@ where
 
 impl<X, Y> Graph for Simulator<X, Y>
 where
-    X: Copy + Into<Positive> + AddAssign + Display,
-    Y: Into<Positive> + Display + Clone,
+    X: Copy + TryInto<Positive> + AddAssign + Display,
+    Y: TryInto<Positive> + Display + Clone,
 {
     fn graph_data(&self) -> GraphData {
         let mut series: Vec<Series2D> = Vec::new();
@@ -407,7 +407,7 @@ where
         for (i, steps) in random_walks.iter().enumerate() {
             let y: Vec<Decimal> = steps
                 .iter()
-                .map(|step| step.get_graph_y_value().to_dec())
+                .map(|step| step.get_graph_y_value().unwrap_or(Positive::ZERO).to_dec())
                 .collect();
             let x: Vec<Decimal> = steps
                 .iter()
@@ -444,8 +444,8 @@ where
 
 impl<'a, X, Y> IntoIterator for &'a Simulator<X, Y>
 where
-    X: Copy + Into<Positive> + AddAssign + Display,
-    Y: Into<Positive> + Display + Clone,
+    X: Copy + TryInto<Positive> + AddAssign + Display,
+    Y: TryInto<Positive> + Display + Clone,
 {
     type Item = &'a RandomWalk<X, Y>;
     type IntoIter = std::slice::Iter<'a, RandomWalk<X, Y>>;
@@ -836,7 +836,7 @@ mod tests {
         let y_step = step.get_y_step();
         assert_eq!(*y_step.index(), 0);
         assert_eq!(*y_step.value(), Positive::HUNDRED);
-        assert_eq!(y_step.positive(), Positive::HUNDRED);
+        assert_eq!(y_step.positive().unwrap(), Positive::HUNDRED);
 
         let last_steps: Vec<&Step<Positive, Positive>> = simulator
             .into_iter()
