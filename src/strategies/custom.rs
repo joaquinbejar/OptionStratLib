@@ -786,7 +786,10 @@ impl Optimizable for CustomStrategy {
 
             // Update each position with the new data
             for (position, option_data) in current_positions.iter_mut().zip(combination.iter()) {
-                position.update_from_option_data(option_data)
+                // TODO now update_from_option_data is returning a Result
+                // consider the opportunity to propagate the error by adding a Result return type
+                // also to the find_optimal method.
+                let _ = position.update_from_option_data(option_data);
             }
 
             // check if the positions are valid

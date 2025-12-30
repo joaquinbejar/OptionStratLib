@@ -13,10 +13,11 @@
 //! ## Error Types
 //!
 //! ### Position Error (`PositionError`)
-//! The main error type with three variants:
+//! The main error type with four variants:
 //! * `StrategyError` - For strategy operation failures
 //! * `ValidationError` - For position validation failures
 //! * `LimitError` - For position limit violations
+//! * `UpdateError` - For position update failures
 //!
 //! ### Strategy Errors (`StrategyErrorKind`)
 //! Handles specific strategy-related errors:
@@ -104,6 +105,20 @@ pub enum PositionError {
     /// Errors related to position limits
     #[error("Limit error: {0}")]
     LimitError(PositionLimitErrorKind),
+
+    /// Error during position update
+    ///
+    /// This variant is triggered when attempts to update option position parameters or data fail.
+    // #[error("Position update error for field '{field}': {reason}")]
+    // UpdateError {
+    //     /// The position field that failed to update
+    //     field: String,
+    //     /// Detailed explanation of the position update failure
+    //     reason: String,
+    // },
+    /// Errors related to position update
+    #[error("Update error: {0}")]
+    UpdateError(PositionUpdateErrorKind),
 }
 
 /// Specific errors that can occur in strategy operations
@@ -304,6 +319,34 @@ pub enum PositionLimitErrorKind {
     },
 }
 
+/// Represents errors related to position update in trading operations.
+///
+/// This enum captures a specific error in an option position update.
+/// The specified field to be updated can return an error.
+///
+/// # Variants
+///
+/// * `PositionFieldUpdateFailure` - Error in the update of a specific positon field.
+///
+/// # Usage
+///
+/// This error type is typically used in position management systems and trading platforms to
+/// prevent a wrong position update.
+///
+#[derive(Error, Debug)]
+pub enum PositionUpdateErrorKind {
+    /// Error during position update
+    ///
+    /// This variant is triggered when attempts to update option position parameters or data fail.
+    #[error("Position update error for field '{field}': {reason}")]
+    PositionFieldUpdateFailure {
+        /// The position field that failed to update
+        field: String,
+        /// Detailed explanation of the position update failure reason
+        reason: String,
+    },
+}
+
 /// Factory methods for creating position-related errors
 ///
 /// This implementation provides a set of convenience factory methods for creating
@@ -412,6 +455,23 @@ impl PositionError {
     pub fn invalid_position(reason: &str) -> Self {
         PositionError::ValidationError(PositionValidationErrorKind::InvalidPosition {
             reason: reason.to_string(),
+        })
+    }
+
+    /// Creates an error for invalid position update
+    ///
+    /// # Parameters
+    ///
+    /// * `field` - The option position field that failed to update
+    /// * `reason` - A description of why the option position field failed to update
+    ///
+    /// # Returns
+    ///
+    /// A `PositionError::UpdateError` variant with PositionFieldUpdateFailure details
+    pub fn invalid_position_update(field: String, reason: String) -> Self {
+        PositionError::UpdateError(PositionUpdateErrorKind::PositionFieldUpdateFailure {
+            field,
+            reason,
         })
     }
 }
@@ -671,5 +731,29 @@ mod tests_extended {
             reason: "Unexpected null value".to_string(),
         };
         assert_eq!(format!("{error}"), "Standard error: Unexpected null value");
+    }
+
+    #[test]
+    fn test_position_update_error() {
+        let error = PositionUpdateErrorKind::PositionFieldUpdateFailure {
+            field: "premium".to_string(),
+            reason: "Missing call ask price for long call position".to_string(),
+        };
+        assert_eq!(
+            format!("{error}"),
+            "Position update error for field 'premium': Missing call ask price for long call position"
+        );
+    }
+
+    #[test]
+    fn test_position_update_error_helper_method() {
+        let error = PositionError::invalid_position_update(
+            "premium".to_string(),
+            "Missing call ask price for long call position".to_string(),
+        );
+        assert_eq!(
+            format!("{error}"),
+            "Update error: Position update error for field 'premium': Missing call ask price for long call position"
+        );
     }
 }

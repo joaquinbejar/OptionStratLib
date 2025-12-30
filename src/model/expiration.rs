@@ -48,6 +48,8 @@ impl Hash for ExpirationDate {
 
 impl PartialEq for ExpirationDate {
     fn eq(&self, other: &Self) -> bool {
+        // We know get_days() should never fail for valid expiration dates,
+        // so we can unwrap safely in this implementation.
         let (s, o) = match (self, other) {
             (ExpirationDate::Days(a), ExpirationDate::Days(b)) => (*a, *b),
             (ExpirationDate::DateTime(_), ExpirationDate::DateTime(_)) => {

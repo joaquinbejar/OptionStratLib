@@ -68,7 +68,7 @@
 //!
 //! Provides `StrategyResult<T>` for convenient error handling in strategy operations.
 use crate::error::common::OperationErrorKind;
-use crate::error::{GreeksError, OptionsError, PositionError, SimulationError};
+use crate::error::{GreeksError, OptionsError, PositionError, SimulationError, TradeError};
 use thiserror::Error;
 
 /// Represents the different types of errors that can occur in options trading strategies.
@@ -384,6 +384,15 @@ impl From<SimulationError> for StrategyError {
     }
 }
 
+impl From<TradeError> for StrategyError {
+    fn from(value: TradeError) -> Self {
+        StrategyError::OperationError(OperationErrorKind::InvalidParameters {
+            operation: "Trade".to_string(),
+            reason: value.to_string(),
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests_from_str {
     use super::*;
@@ -542,5 +551,25 @@ mod tests_extended {
             Box::new(std::io::Error::other("Underlying failure"));
         let error: StrategyError = boxed_error.into();
         assert_eq!(format!("{error}"), "Standard error: Underlying failure");
+    }
+
+    #[test]
+    fn test_strategy_error_from_trade_error_invalid_trade() {
+        let trade_error = TradeError::invalid_trade("Trade failure");
+        let error: StrategyError = trade_error.into();
+        assert_eq!(
+            format!("{error}"),
+            "Operation error: Invalid parameters for operation 'Trade': Invalid trade: Trade failure"
+        );
+    }
+
+    #[test]
+    fn test_strategy_error_from_trade_error_invalid_trade_status() {
+        let trade_error = TradeError::invalid_trade_status("Trade status failure");
+        let error: StrategyError = trade_error.into();
+        assert_eq!(
+            format!("{error}"),
+            "Operation error: Invalid parameters for operation 'Trade': Invalid trade status: Trade status failure"
+        );
     }
 }

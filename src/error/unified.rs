@@ -102,6 +102,10 @@ pub enum Error {
     #[error(transparent)]
     Positive(#[from] positive::error::PositiveError),
 
+    /// Trade errors.
+    #[error(transparent)]
+    Trade(#[from] crate::error::TradeError),
+
     /// Generic error with a custom message.
     #[error("{0}")]
     Other(String),
