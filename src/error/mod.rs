@@ -18,6 +18,7 @@
 //!
 //! ### Trading and Analysis
 //! * `ChainError` - Option chain operations and data management
+//! * `TradeError` - Trade position opening and status management
 //! * `PositionError` - Position management and trading operations
 //! * `StrategyError` - Trading strategy validation and execution
 //! * `ProbabilityError` - Statistical analysis and probability calculations
@@ -82,6 +83,7 @@
 //! ├── probability.rs  - Statistical analysis errors
 //! ├── strategies.rs   - Trading strategy errors
 //! ├── surfaces.rs     - Surface construction errors
+//! ├── trade.rs        - Trade management errors
 //! └── volatility.rs   - Volatility calculation errors
 //! ```
 
@@ -156,6 +158,12 @@ pub mod probability;
 /// * Profit/Loss calculations
 /// * Operation validation
 pub mod strategies;
+
+/// ### Trade Errors (`TradeError`)
+/// Covers:
+/// * Trade execution issues
+/// * Trade parameter validation
+pub mod trade;
 
 /// ### Interpolation Errors (`InterpolationError`)
 /// Manages:
@@ -237,6 +245,7 @@ pub use probability::ProbabilityError;
 pub use simulation::{SimulationError, SimulationResult};
 pub use strategies::StrategyError;
 pub use surfaces::SurfaceError;
+pub use trade::TradeError;
 pub use transaction::TransactionError;
 pub use unified::Error;
 pub use volatility::VolatilityError;

@@ -112,7 +112,8 @@ impl DecimalStats for Vec<Decimal> {
     }
 
     fn std_dev(&self) -> Decimal {
-        if self.is_empty() {
+        // Population variance of a single value is zero
+        if self.len() < 2usize {
             return Decimal::ZERO;
         }
         let mean = self.mean();

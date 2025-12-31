@@ -6,7 +6,9 @@
 
 use crate::chains::OptionData;
 use crate::error::position::PositionValidationErrorKind;
-use crate::error::{GreeksError, PositionError, PricingError, StrategyError, TransactionError};
+use crate::error::{
+    GreeksError, PositionError, PricingError, StrategyError, TradeError, TransactionError,
+};
 use crate::greeks::Greeks;
 use crate::model::trade::TradeStatusAble;
 use crate::model::types::{Action, OptionBasicType, OptionStyle, Side};
@@ -179,24 +181,48 @@ impl Position {
     /// This method will panic if the required premium value is `None` in the provided `option_data`.
     ///
     #[allow(dead_code)]
-    pub(crate) fn update_from_option_data(&mut self, option_data: &OptionData) {
+    pub(crate) fn update_from_option_data(
+        &mut self,
+        option_data: &OptionData,
+    ) -> Result<(), PositionError> {
         self.date = Utc::now();
         self.option.update_from_option_data(option_data);
         match (self.option.side, self.option.option_style) {
             (Side::Long, OptionStyle::Call) => {
-                self.premium = option_data.call_ask.unwrap();
+                self.premium = option_data.call_ask.ok_or_else(|| {
+                    PositionError::invalid_position_update(
+                        "premium".to_string(),
+                        "Missing call ask price for long call position".to_string(),
+                    )
+                })?;
             }
             (Side::Long, OptionStyle::Put) => {
-                self.premium = option_data.put_ask.unwrap();
+                self.premium = option_data.put_ask.ok_or_else(|| {
+                    PositionError::invalid_position_update(
+                        "premium".to_string(),
+                        "Missing put ask price for long put position".to_string(),
+                    )
+                })?;
             }
             (Side::Short, OptionStyle::Call) => {
-                self.premium = option_data.call_bid.unwrap();
+                self.premium = option_data.call_bid.ok_or_else(|| {
+                    PositionError::invalid_position_update(
+                        "premium".to_string(),
+                        "Missing call bid price for short call position".to_string(),
+                    )
+                })?;
             }
             (Side::Short, OptionStyle::Put) => {
-                self.premium = option_data.put_bid.unwrap();
+                self.premium = option_data.put_bid.ok_or_else(|| {
+                    PositionError::invalid_position_update(
+                        "premium".to_string(),
+                        "Missing put bid price for short put position".to_string(),
+                    )
+                })?;
             }
         }
         trace!("Updated position: {:#?}", self);
+        Ok(())
     }
 
     /// Calculates the total cost of the position based on the option's side and fees.
@@ -535,26 +561,31 @@ impl Position {
     /// # Returns
     ///
     /// - `Some(Positive)` containing the break-even price if the position has non-zero quantity
-    /// - `None` if the position has zero quantity (no contracts)
+    /// - `None` if the position has zero quantity (no contracts) or if the position total
+    ///   cost cannot be calculated
     ///
     pub fn break_even(&self) -> Option<Positive> {
         if self.option.quantity == Positive::ZERO {
             return None;
         }
-        let total_cost_per_contract = self.total_cost().unwrap() / self.option.quantity;
-        match (&self.option.side, &self.option.option_style) {
-            (Side::Long, OptionStyle::Call) => {
-                Some(self.option.strike_price + total_cost_per_contract)
+        if let Ok(position_total_cost) = self.total_cost() {
+            let total_cost_per_contract = position_total_cost / self.option.quantity;
+            match (&self.option.side, &self.option.option_style) {
+                (Side::Long, OptionStyle::Call) => {
+                    Some(self.option.strike_price + total_cost_per_contract)
+                }
+                (Side::Short, OptionStyle::Call) => {
+                    Some(self.option.strike_price + self.premium - total_cost_per_contract)
+                }
+                (Side::Long, OptionStyle::Put) => {
+                    Some(self.option.strike_price - total_cost_per_contract)
+                }
+                (Side::Short, OptionStyle::Put) => {
+                    Some(self.option.strike_price - self.premium + total_cost_per_contract)
+                }
             }
-            (Side::Short, OptionStyle::Call) => {
-                Some(self.option.strike_price + self.premium - total_cost_per_contract)
-            }
-            (Side::Long, OptionStyle::Put) => {
-                Some(self.option.strike_price - total_cost_per_contract)
-            }
-            (Side::Short, OptionStyle::Put) => {
-                Some(self.option.strike_price - self.premium + total_cost_per_contract)
-            }
+        } else {
+            None
         }
     }
 
@@ -707,77 +738,90 @@ impl TransactionAble for Position {
 }
 
 impl TradeAble for Position {
-    fn trade(&self) -> Trade {
-        Trade {
-            id: uuid::Uuid::new_v4(),
-            action: Action::Buy,
-            side: self.option.side,
-            option_style: self.option.option_style,
-            fee: self.open_fee + self.close_fee,
-            symbol: None,
-            strike: self.option.strike_price,
-            expiry: self.option.expiration_date.get_date().unwrap(),
-            timestamp: Utc::now().timestamp_nanos_opt().unwrap(),
-            quantity: self.option.quantity,
-            premium: self.premium,
-            underlying_price: self.option.underlying_price,
-            notes: None,
-            status: TradeStatus::Other("Not yet initialized".to_string()),
+    fn trade(&self) -> Result<Trade, TradeError> {
+        if let (Ok(expiry), Some(timestamp)) = (
+            self.option.expiration_date.get_date(),
+            Utc::now().timestamp_nanos_opt(),
+        ) {
+            Ok(Trade {
+                id: uuid::Uuid::new_v4(),
+                action: Action::Buy,
+                side: self.option.side,
+                option_style: self.option.option_style,
+                fee: self.open_fee + self.close_fee,
+                symbol: None,
+                strike: self.option.strike_price,
+                expiry,
+                timestamp,
+                quantity: self.option.quantity,
+                premium: self.premium,
+                underlying_price: self.option.underlying_price,
+                notes: None,
+                status: TradeStatus::Other("Not yet initialized".to_string()),
+            })
+        } else {
+            Err(TradeError::invalid_trade(
+                "Could not create trade from position",
+            ))
         }
     }
 
-    fn trade_ref(&self) -> &Trade {
-        todo!("trade_ref() is not implemented for Position");
+    fn trade_ref(&self) -> Result<&Trade, TradeError> {
+        Err(TradeError::invalid_trade(
+            "trade_ref() is not implemented for Position",
+        ))
     }
 
-    fn trade_mut(&mut self) -> &mut Trade {
-        todo!("trade_mut() is not implemented for Position");
+    fn trade_mut(&mut self) -> Result<&mut Trade, TradeError> {
+        Err(TradeError::invalid_trade(
+            "trade_mut() is not implemented for Position",
+        ))
     }
 }
 
 impl TradeStatusAble for Position {
-    fn open(&self) -> Trade {
-        let mut trade = self.trade();
+    fn open(&self) -> Result<Trade, TradeError> {
+        let mut trade = self.trade()?;
         trade.status = TradeStatus::Open;
-        trade
+        Ok(trade)
     }
 
-    fn close(&self) -> Trade {
-        let mut trade = self.trade();
+    fn close(&self) -> Result<Trade, TradeError> {
+        let mut trade = self.trade()?;
         if trade.premium <= pos_or_panic!(0.01) {
             trade.premium = Positive::ZERO;
         }
         trade.status = TradeStatus::Closed;
         trade.action = Action::Sell;
-        trade
+        Ok(trade)
     }
 
-    fn expired(&self) -> Trade {
-        let mut trade = self.trade();
+    fn expired(&self) -> Result<Trade, TradeError> {
+        let mut trade = self.trade()?;
         trade.status = TradeStatus::Expired;
         trade.action = Action::Sell;
-        trade
+        Ok(trade)
     }
 
-    fn exercised(&self) -> Trade {
-        let mut trade = self.trade();
+    fn exercised(&self) -> Result<Trade, TradeError> {
+        let mut trade = self.trade()?;
         trade.status = TradeStatus::Exercised;
         trade.action = Action::Sell;
-        trade
+        Ok(trade)
     }
 
-    fn assigned(&self) -> Trade {
-        let mut trade = self.trade();
+    fn assigned(&self) -> Result<Trade, TradeError> {
+        let mut trade = self.trade()?;
         trade.status = TradeStatus::Assigned;
         trade.action = Action::Other;
-        trade
+        Ok(trade)
     }
 
-    fn status_other(&self) -> Trade {
-        let mut trade = self.trade();
+    fn status_other(&self) -> Result<Trade, TradeError> {
+        let mut trade = self.trade()?;
         trade.status = TradeStatus::Other("Not yet initialized".to_string());
         trade.action = Action::Other;
-        trade
+        Ok(trade)
     }
 }
 
@@ -965,13 +1009,21 @@ impl PnLCalculator for Position {
         let cost_diff = self_pnl.initial_costs.to_dec() - other_pnl.initial_costs.to_dec();
         let income_diff = self_pnl.initial_income.to_dec() - other_pnl.initial_income.to_dec();
 
+        let initial_costs = Positive::new(cost_diff.abs().to_f64().ok_or_else(|| {
+            PricingError::other("initial_costs: cost_diff Decimal cannot be represented as f64")
+        })?)
+        .map_err(|_| PricingError::other("initial_costs value is not strictly positive"))?;
+
+        let initial_income = Positive::new(income_diff.abs().to_f64().ok_or_else(|| {
+            PricingError::other("initial_income: income_diff Decimal cannot be represented as f64")
+        })?)
+        .map_err(|_| PricingError::other("initial_income value is not strictly positive"))?;
+
         Ok(PnL {
             realized: realized_diff,
             unrealized: unrealized_diff,
-            initial_costs: Positive::new(cost_diff.abs().to_f64().unwrap_or(0.0))
-                .unwrap_or(Positive::ZERO),
-            initial_income: Positive::new(income_diff.abs().to_f64().unwrap_or(0.0))
-                .unwrap_or(Positive::ZERO),
+            initial_costs,
+            initial_income,
             date_time: self.date,
         })
     }
@@ -2288,6 +2340,29 @@ mod tests_update_from_option_data {
         )
     }
 
+    fn create_wrong_test_option_data() -> OptionData {
+        OptionData::new(
+            pos_or_panic!(110.0),
+            spos!(9.5),          // call_bid
+            None,                // call_ask
+            spos!(8.5),          // put_bid
+            spos!(9.0),          // put_ask
+            pos_or_panic!(0.25), // iv
+            Some(dec!(-0.3)),    // delta
+            Some(dec!(0.3)),     // gamma
+            Some(dec!(0.3)),     // vega
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        )
+    }
+
     #[test]
     fn test_update_long_call() {
         let mut position = Position::default();
@@ -2295,7 +2370,7 @@ mod tests_update_from_option_data {
         position.option.option_style = OptionStyle::Call;
 
         let option_data = create_test_option_data();
-        position.update_from_option_data(&option_data);
+        let _ = position.update_from_option_data(&option_data);
 
         assert_eq!(position.option.strike_price, pos_or_panic!(110.0));
         assert_eq!(position.option.implied_volatility, 0.25);
@@ -2309,7 +2384,7 @@ mod tests_update_from_option_data {
         position.option.option_style = OptionStyle::Call;
 
         let option_data = create_test_option_data();
-        position.update_from_option_data(&option_data);
+        let _ = position.update_from_option_data(&option_data);
 
         assert_eq!(position.premium, 9.5); // call_bid
     }
@@ -2321,7 +2396,7 @@ mod tests_update_from_option_data {
         position.option.option_style = OptionStyle::Put;
 
         let option_data = create_test_option_data();
-        position.update_from_option_data(&option_data);
+        let _ = position.update_from_option_data(&option_data);
 
         assert_eq!(position.premium, 9.0); // put_ask
     }
@@ -2333,9 +2408,21 @@ mod tests_update_from_option_data {
         position.option.option_style = OptionStyle::Put;
 
         let option_data = create_test_option_data();
-        position.update_from_option_data(&option_data);
+        let _ = position.update_from_option_data(&option_data);
 
         assert_eq!(position.premium, 8.5); // put_bid
+    }
+
+    #[test]
+    fn test_update_wrong_long_call() {
+        let mut position = Position::default();
+        position.option.side = Side::Long;
+        position.option.option_style = OptionStyle::Call;
+
+        let option_data = create_wrong_test_option_data();
+        let result = position.update_from_option_data(&option_data);
+
+        assert!(result.is_err());
     }
 }
 

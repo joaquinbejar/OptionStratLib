@@ -753,10 +753,10 @@ impl Strategies for ShortStrangle {
                 let mut result: HashMap<Action, Trade> = HashMap::new();
 
                 let close_trade = self.short_call.close();
-                result.insert(Action::Sell, close_trade);
+                result.insert(Action::Sell, close_trade?);
                 self.replace_position(position)?;
                 let open_trade = self.short_call.open();
-                result.insert(Action::Buy, open_trade);
+                result.insert(Action::Buy, open_trade?);
                 Ok(result)
             }
             (OptionStyle::Put, Side::Short) => {
@@ -780,10 +780,10 @@ impl Strategies for ShortStrangle {
                 }
                 let mut result: HashMap<Action, Trade> = HashMap::new();
                 let close_trade = self.short_put.close();
-                result.insert(Action::Sell, close_trade);
+                result.insert(Action::Sell, close_trade?);
                 self.replace_position(position)?;
                 let open_trade = self.short_put.open();
-                result.insert(Action::Buy, open_trade);
+                result.insert(Action::Buy, open_trade?);
                 Ok(result)
             }
             _ => Err(StrategyError::operation_not_supported(
@@ -814,10 +814,10 @@ impl Strategies for ShortStrangle {
                 }
                 let mut result: HashMap<Action, Trade> = HashMap::new();
                 let close_trade = self.short_call.close();
-                result.insert(Action::Sell, close_trade);
+                result.insert(Action::Sell, close_trade?);
                 self.replace_position(position)?;
                 let open_trade = self.short_call.open();
-                result.insert(Action::Buy, open_trade);
+                result.insert(Action::Buy, open_trade?);
                 Ok(result)
             }
             (OptionStyle::Put, Side::Short) => {
@@ -841,10 +841,10 @@ impl Strategies for ShortStrangle {
                 }
                 let mut result: HashMap<Action, Trade> = HashMap::new();
                 let close_trade = self.short_put.close();
-                result.insert(Action::Sell, close_trade);
+                result.insert(Action::Sell, close_trade?);
                 self.replace_position(position)?;
                 let open_trade = self.short_put.open();
-                result.insert(Action::Buy, open_trade);
+                result.insert(Action::Buy, open_trade?);
                 Ok(result)
             }
             _ => Err(StrategyError::operation_not_supported(

@@ -918,7 +918,7 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
                         if let Some(position) = positions.first() {
                             let mut position_clone = (*position).clone();
                             position_clone.option.quantity = *quantity;
-                            Ok(Some(position_clone.open()))
+                            Ok(Some(position_clone.open()?))
                         } else {
                             Ok(None)
                         }
@@ -936,7 +936,7 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
                         if let Some(position) = positions.first() {
                             let mut position_clone = (*position).clone();
                             position_clone.option.quantity = *quantity;
-                            Ok(Some(position_clone.close()))
+                            Ok(Some(position_clone.close()?))
                         } else {
                             Ok(None)
                         }
