@@ -2074,6 +2074,28 @@ mod tests_position_break_even {
         );
         assert_eq!(position.break_even().unwrap(), 97.0);
     }
+
+    #[test]
+    fn test_zero_quantity() {
+        let option = setup_option(
+            Side::Short,
+            OptionStyle::Put,
+            Positive::HUNDRED,
+            pos_or_panic!(105.0),
+            Positive::ZERO, // zero quantity
+            pos_or_panic!(30.0),
+        );
+        let position = Position::new(
+            option,
+            pos_or_panic!(5.0),
+            Utc::now(),
+            Positive::ONE,
+            Positive::ONE,
+            None,
+            None,
+        );
+        assert!(position.break_even().is_none());
+    }
 }
 
 #[cfg(test)]
@@ -2340,12 +2362,81 @@ mod tests_update_from_option_data {
         )
     }
 
-    fn create_wrong_test_option_data() -> OptionData {
+    fn create_wrong_call_ask_test_option_data() -> OptionData {
         OptionData::new(
             pos_or_panic!(110.0),
             spos!(9.5),          // call_bid
-            None,                // call_ask
+            None,                // call_ask missing value
             spos!(8.5),          // put_bid
+            spos!(9.0),          // put_ask
+            pos_or_panic!(0.25), // iv
+            Some(dec!(-0.3)),    // delta
+            Some(dec!(0.3)),     // gamma
+            Some(dec!(0.3)),     // vega
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        )
+    }
+
+    fn create_wrong_put_ask_test_option_data() -> OptionData {
+        OptionData::new(
+            pos_or_panic!(110.0),
+            spos!(9.5),          // call_bid
+            spos!(10.0),         // call_ask
+            spos!(8.5),          // put_bid
+            None,                // put_ask missing value
+            pos_or_panic!(0.25), // iv
+            Some(dec!(-0.3)),    // delta
+            Some(dec!(0.3)),     // gamma
+            Some(dec!(0.3)),     // vega
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        )
+    }
+
+    fn create_wrong_call_bid_test_option_data() -> OptionData {
+        OptionData::new(
+            pos_or_panic!(110.0),
+            None,                // call_bid missing value
+            spos!(10.0),         // call_ask
+            spos!(8.5),          // put_bid
+            spos!(9.0),          // put_ask
+            pos_or_panic!(0.25), // iv
+            Some(dec!(-0.3)),    // delta
+            Some(dec!(0.3)),     // gamma
+            Some(dec!(0.3)),     // vega
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        )
+    }
+
+    fn create_wrong_put_bid_test_option_data() -> OptionData {
+        OptionData::new(
+            pos_or_panic!(110.0),
+            spos!(9.5),          // call_bid
+            spos!(10.0),         // call_ask
+            None,                // put_bid missing value
             spos!(9.0),          // put_ask
             pos_or_panic!(0.25), // iv
             Some(dec!(-0.3)),    // delta
@@ -2419,7 +2510,43 @@ mod tests_update_from_option_data {
         position.option.side = Side::Long;
         position.option.option_style = OptionStyle::Call;
 
-        let option_data = create_wrong_test_option_data();
+        let option_data = create_wrong_call_ask_test_option_data();
+        let result = position.update_from_option_data(&option_data);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_update_wrong_long_put() {
+        let mut position = Position::default();
+        position.option.side = Side::Long;
+        position.option.option_style = OptionStyle::Put;
+
+        let option_data = create_wrong_put_ask_test_option_data();
+        let result = position.update_from_option_data(&option_data);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_update_wrong_short_call() {
+        let mut position = Position::default();
+        position.option.side = Side::Short;
+        position.option.option_style = OptionStyle::Call;
+
+        let option_data = create_wrong_call_bid_test_option_data();
+        let result = position.update_from_option_data(&option_data);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_update_wrong_short_put() {
+        let mut position = Position::default();
+        position.option.side = Side::Short;
+        position.option.option_style = OptionStyle::Put;
+
+        let option_data = create_wrong_put_bid_test_option_data();
         let result = position.update_from_option_data(&option_data);
 
         assert!(result.is_err());
@@ -3157,5 +3284,109 @@ mod tests_position_serde {
 
         assert_eq!(short_position, deserialized);
         assert_eq!(deserialized.option.side, Side::Short);
+    }
+}
+
+#[cfg(test)]
+mod tests_position_tradeable_trait {
+    use super::*;
+
+    use crate::model::utils::create_sample_position;
+
+    #[test]
+    fn test_tradeable_trade_ref() {
+        let position = create_sample_position(
+            OptionStyle::Call,
+            Side::Short,
+            pos_or_panic!(90.0),
+            Positive::ONE,
+            pos_or_panic!(95.0),
+            pos_or_panic!(0.2),
+        );
+
+        let result = position.trade_ref();
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_tradeable_trade_mut() {
+        let mut position = create_sample_position(
+            OptionStyle::Call,
+            Side::Short,
+            pos_or_panic!(90.0),
+            Positive::ONE,
+            pos_or_panic!(95.0),
+            pos_or_panic!(0.2),
+        );
+
+        let result = position.trade_mut();
+        assert!(result.is_err());
+    }
+}
+
+#[cfg(test)]
+mod tests_position_tradestatusable_trait {
+    use super::*;
+
+    use crate::model::utils::create_sample_position;
+
+    #[test]
+    fn test_tradestatusable_expired() {
+        let position = create_sample_position(
+            OptionStyle::Call,
+            Side::Short,
+            pos_or_panic!(90.0), // underlying price
+            Positive::ONE,       // quantity
+            pos_or_panic!(95.0), // strike price
+            pos_or_panic!(0.2),  // implied volatility
+        );
+
+        let result = position.expired();
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_tradestatusable_exercised() {
+        let position = create_sample_position(
+            OptionStyle::Call,
+            Side::Short,
+            pos_or_panic!(90.0), // underlying price
+            Positive::ONE,       // quantity
+            pos_or_panic!(95.0), // strike price
+            pos_or_panic!(0.2),  // implied volatility
+        );
+
+        let result = position.exercised();
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_tradestatusable_assigned() {
+        let position = create_sample_position(
+            OptionStyle::Call,
+            Side::Short,
+            pos_or_panic!(90.0), // underlying price
+            Positive::ONE,       // quantity
+            pos_or_panic!(95.0), // strike price
+            pos_or_panic!(0.2),  // implied volatility
+        );
+
+        let result = position.assigned();
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_tradestatusable_status_other() {
+        let position = create_sample_position(
+            OptionStyle::Call,
+            Side::Short,
+            pos_or_panic!(90.0), // underlying price
+            Positive::ONE,       // quantity
+            pos_or_panic!(95.0), // strike price
+            pos_or_panic!(0.2),  // implied volatility
+        );
+
+        let result = position.status_other();
+        assert!(result.is_ok());
     }
 }

@@ -132,3 +132,33 @@ mod tests_trade_errors {
         );
     }
 }
+
+#[cfg(test)]
+mod tests_trade_error_from {
+    use super::*;
+
+    #[test]
+    fn from_str_creates_invalid_trade_error() {
+        let err: TradeError = "some error reason".into();
+
+        match err {
+            TradeError::InvalidTrade { reason } => {
+                assert_eq!(reason, "some error reason");
+            }
+            _ => panic!("Expected TradeError::InvalidTrade"),
+        }
+    }
+
+    #[test]
+    fn from_string_creates_invalid_trade_error() {
+        let input = String::from("string-based error reason");
+        let err: TradeError = input.clone().into();
+
+        match err {
+            TradeError::InvalidTrade { reason } => {
+                assert_eq!(reason, input);
+            }
+            _ => panic!("Expected TradeError::InvalidTrade"),
+        }
+    }
+}

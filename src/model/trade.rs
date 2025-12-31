@@ -667,6 +667,33 @@ mod tests {
         assert!(tr.is_closed());
     }
 
+    #[test]
+    fn tradeable_returns_cloned_trade() {
+        let tr = sample_trade_bis(Action::Buy, Side::Long, TradeStatus::Open);
+        let trait_obj: &dyn TradeAble = &tr;
+
+        // Get a Trade cloned object
+        let tr_cloned = trait_obj
+            .trade()
+            .expect("trade() should return a cloned Trade object");
+
+        // Cloned object and original reference have the same values
+        assert_eq!(tr_cloned, tr);
+
+        // Must not be the same allocation
+        assert!(!std::ptr::eq(
+            &tr_cloned as *const Trade,
+            &tr as *const Trade
+        ));
+
+        // Mutating the clone does not affect the original reference
+        let mut tr_cloned = tr_cloned;
+        tr_cloned.status = TradeStatus::Closed;
+
+        assert!(tr_cloned.is_closed());
+        assert!(!tr.is_closed());
+    }
+
     /* ---------- TradeStatusAble ---------- */
 
     /// helper: assert that two trades are identical except for the `status` field
