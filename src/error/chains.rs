@@ -544,6 +544,24 @@ impl ChainError {
             reason: reason.to_string(),
         })
     }
+
+    /// Creates a new error for invalid chain option data price calculation.
+    ///
+    /// This method constructs a `OptionDataError` with the `PriceCalculationError` variant when
+    /// parameters used to build an option chain fail to calculate the option price.
+    ///
+    /// # Parameters
+    ///
+    /// * `reason` - A description explaining why the option price failed to calculate
+    ///
+    /// # Returns
+    ///
+    /// A `ChainError` containing the parameter validation error details
+    pub fn invalid_price_calculation(reason: &str) -> Self {
+        ChainError::OptionDataError(OptionDataErrorKind::PriceCalculationError(
+            reason.to_string(),
+        ))
+    }
 }
 
 impl From<String> for ChainError {
@@ -764,6 +782,15 @@ mod tests_extended {
             error,
             ChainError::OptionDataError(OptionDataErrorKind::InvalidVolatility { .. })
         ));
+    }
+
+    #[test]
+    fn test_invalid_price_calculation_helper_method() {
+        let error = ChainError::invalid_price_calculation("Division by zero");
+        assert_eq!(
+            format!("{error}"),
+            "Option data error: Price calculation error: Division by zero"
+        );
     }
 
     #[test]

@@ -473,10 +473,14 @@ pub fn calculate_optimal_price_range(
 ) -> Result<(Positive, Positive), ChainError> {
     let days_to_expiry = expiration_date.get_days()?;
     let years_to_expiry = Decimal::from(days_to_expiry) / dec!(365.0);
+    let years_to_expiry_sqrt = years_to_expiry.sqrt().ok_or_else(|| {
+        ChainError::invalid_price_calculation(
+            "sqrt() failed to calculate for years_to_expiry value",
+        )
+    })?;
 
     let confidence_interval = dec!(4.0);
-    let volatility_factor =
-        implied_volatility * years_to_expiry.sqrt().unwrap() * confidence_interval;
+    let volatility_factor = implied_volatility * years_to_expiry_sqrt * confidence_interval;
 
     let lower_bound = underlying_price * (dec!(1.0) - volatility_factor);
     let upper_bound = underlying_price * (dec!(1.0) + volatility_factor);
@@ -681,5 +685,29 @@ mod tests_mean_and_std {
 
         assert_relative_eq!(mean.to_f64(), 0.13456786, epsilon = 0.00000001);
         assert_relative_eq!(std.to_f64(), 0.00907213, epsilon = 0.00000001);
+    }
+}
+
+#[cfg(test)]
+mod tests_model_utils {
+    use super::*;
+
+    #[test]
+    fn test_calculate_optimal_price_range() {
+        let underlying_price = pos_or_panic!(100.0);
+        let strike_price = pos_or_panic!(90.0);
+        let implied_volatility = pos_or_panic!(0.20);
+        let expiration_date = ExpirationDate::Days(Positive::TWO);
+
+        let (min_price, max_price) = calculate_optimal_price_range(
+            underlying_price,
+            strike_price,
+            implied_volatility,
+            expiration_date,
+        )
+        .unwrap();
+
+        assert_eq!(min_price, pos_or_panic!(62.0));
+        assert_eq!(max_price, pos_or_panic!(118.0));
     }
 }
