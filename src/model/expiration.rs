@@ -1005,7 +1005,7 @@ mod tests_serialization {
 mod tests_hash {
     use super::*;
     use chrono::{Duration, TimeZone};
-    use positive::pos_or_panic;
+
     use std::collections::hash_map::DefaultHasher;
     use std::hash::{Hash, Hasher};
 
