@@ -1217,7 +1217,9 @@ mod tests_position {
             None,
         );
         assert_eq!(
-            position.total_cost().unwrap(),
+            position
+                .total_cost()
+                .expect("total_cost should succeed for valid position"),
             7.0,
             "Total cost calculation is incorrect."
         );
@@ -1243,7 +1245,9 @@ mod tests_position {
             None,
         );
         assert_eq!(
-            position.total_cost().unwrap(),
+            position
+                .total_cost()
+                .expect("total_cost should succeed for position with quantity"),
             70.0,
             "Total cost calculation is incorrect."
         );
@@ -1269,7 +1273,9 @@ mod tests_position {
             None,
         );
         assert_eq!(
-            position.total_cost().unwrap(),
+            position
+                .total_cost()
+                .expect("total_cost should succeed for short position"),
             2.0,
             "Total cost calculation is incorrect."
         );
@@ -1295,7 +1301,9 @@ mod tests_position {
             None,
         );
         assert_eq!(
-            position.total_cost().unwrap(),
+            position
+                .total_cost()
+                .expect("total_cost should succeed for short position with quantity"),
             20.0,
             "Total cost calculation is incorrect."
         );
@@ -1321,7 +1329,9 @@ mod tests_position {
             None,
         );
         assert_eq!(
-            position.pnl_at_expiration(&None).unwrap(),
+            position
+                .pnl_at_expiration(&None)
+                .expect("pnl_at_expiration should succeed"),
             dec!(3.0),
             "PNL at expiration for long call ITM is incorrect."
         );
@@ -1347,7 +1357,9 @@ mod tests_position {
             None,
         );
         assert_eq!(
-            position.pnl_at_expiration(&None).unwrap(),
+            position
+                .pnl_at_expiration(&None)
+                .expect("pnl_at_expiration should succeed for long call ITM"),
             dec!(3.0),
             "PNL at expiration for long call ITM is incorrect."
         );

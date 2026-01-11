@@ -664,13 +664,28 @@ mod tests_expiration_date {
     #[test]
     fn test_expiration_date_days() {
         let expiration = ExpirationDate::Days(DAYS_IN_A_YEAR);
-        assert_eq!(expiration.get_years().unwrap(), 1.0);
+        assert_eq!(
+            expiration
+                .get_years()
+                .expect("get_years should succeed for 365 days"),
+            1.0
+        );
 
         let expiration = ExpirationDate::Days(pos_or_panic!(182.5));
-        assert_eq!(expiration.get_years().unwrap(), 0.5);
+        assert_eq!(
+            expiration
+                .get_years()
+                .expect("get_years should succeed for 182.5 days"),
+            0.5
+        );
 
         let expiration = ExpirationDate::Days(Positive::ZERO);
-        assert_eq!(expiration.get_years().unwrap(), ZERO);
+        assert_eq!(
+            expiration
+                .get_years()
+                .expect("get_years should succeed for zero days"),
+            ZERO
+        );
     }
 
     #[test]
@@ -678,12 +693,28 @@ mod tests_expiration_date {
         // Test for a date exactly one year in the future
         let one_year_future = Utc::now() + Duration::days(365);
         let expiration = ExpirationDate::DateTime(one_year_future);
-        assert!((expiration.get_years().unwrap().to_f64() - 1.0).abs() < 0.01); // Allow small deviation due to leap years
+        assert!(
+            (expiration
+                .get_years()
+                .expect("get_years should succeed for datetime one year future")
+                .to_f64()
+                - 1.0)
+                .abs()
+                < 0.01
+        ); // Allow small deviation due to leap years
 
         // Test for a date 6 months in the future
         let six_months_future = Utc::now() + Duration::days(182);
         let expiration = ExpirationDate::DateTime(six_months_future);
-        assert!((expiration.get_years().unwrap().to_f64() - 0.5).abs() < 0.01);
+        assert!(
+            (expiration
+                .get_years()
+                .expect("get_years should succeed for datetime six months future")
+                .to_f64()
+                - 0.5)
+                .abs()
+                < 0.01
+        );
     }
 
     #[test]
@@ -692,14 +723,21 @@ mod tests_expiration_date {
         // let specific_date = Utc.with_ymd_and_hms(2024, 1, 1, 0, 0, 0).unwrap();
         let specific_date = Utc::now() + Duration::days(1);
         let expiration = ExpirationDate::DateTime(specific_date);
-        assert!(expiration.get_years().unwrap() > Positive::ZERO);
+        assert!(
+            expiration
+                .get_years()
+                .expect("get_years should succeed for specific datetime")
+                > Positive::ZERO
+        );
     }
 
     #[test]
     fn test_get_date_from_datetime() {
         let future_date = Utc::now() + Duration::days(60);
         let expiration = ExpirationDate::DateTime(future_date);
-        let result = expiration.get_date().unwrap();
+        let result = expiration
+            .get_date()
+            .expect("get_date should succeed for future datetime");
 
         assert_eq!(result, future_date);
     }
@@ -708,14 +746,18 @@ mod tests_expiration_date {
     fn test_get_date_from_past_datetime() {
         let past_date = Utc::now() - Duration::days(30);
         let expiration = ExpirationDate::DateTime(past_date);
-        let result = expiration.get_date().unwrap();
+        let result = expiration
+            .get_date()
+            .expect("get_date should succeed for past datetime");
         assert_eq!(result, past_date);
     }
 
     #[test]
     fn test_positive_days() {
         let expiration = ExpirationDate::Days(DAYS_IN_A_YEAR);
-        let years = expiration.get_years().unwrap();
+        let years = expiration
+            .get_years()
+            .expect("get_years should succeed for positive days");
         assert_eq!(years, 1.0);
     }
 

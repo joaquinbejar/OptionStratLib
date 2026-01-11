@@ -1018,7 +1018,10 @@ mod tests_options {
     fn test_time_to_expiration() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         assert_relative_eq!(
-            option.time_to_expiration().unwrap().to_f64(),
+            option
+                .time_to_expiration()
+                .expect("time_to_expiration should succeed for valid option")
+                .to_f64(),
             30.0 / 365.0,
             epsilon = 0.0001
         );
@@ -1038,8 +1041,18 @@ mod tests_options {
             pos_or_panic!(0.01),
             None,
         );
-        assert!(option_with_datetime.time_to_expiration().unwrap() >= 59.0 / 365.0);
-        assert!(option_with_datetime.time_to_expiration().unwrap() < 61.0 / 365.0);
+        assert!(
+            option_with_datetime
+                .time_to_expiration()
+                .expect("time_to_expiration should succeed for datetime option")
+                >= 59.0 / 365.0
+        );
+        assert!(
+            option_with_datetime
+                .time_to_expiration()
+                .expect("time_to_expiration should succeed for datetime option")
+                < 61.0 / 365.0
+        );
     }
 
     #[test]
@@ -1069,14 +1082,18 @@ mod tests_options {
     #[test]
     fn test_calculate_price_binomial() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        let price = option.calculate_price_binomial(100).unwrap();
+        let price = option
+            .calculate_price_binomial(100)
+            .expect("binomial pricing should succeed for valid option");
         assert!(price > Decimal::ZERO);
     }
 
     #[test]
     fn test_calculate_price_binomial_tree() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        let (price, asset_tree, option_tree) = option.calculate_price_binomial_tree(5).unwrap();
+        let (price, asset_tree, option_tree) = option
+            .calculate_price_binomial_tree(5)
+            .expect("binomial tree pricing should succeed");
         assert!(price > Decimal::ZERO);
         assert_eq!(asset_tree.len(), 6);
         assert_eq!(option_tree.len(), 6);
@@ -1085,7 +1102,9 @@ mod tests_options {
     #[test]
     fn test_calculate_price_binomial_tree_short() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Short);
-        let (price, asset_tree, option_tree) = option.calculate_price_binomial_tree(5).unwrap();
+        let (price, asset_tree, option_tree) = option
+            .calculate_price_binomial_tree(5)
+            .expect("binomial tree pricing should succeed for short option");
         assert!(price > Decimal::ZERO);
         assert_eq!(asset_tree.len(), 6);
         assert_eq!(option_tree.len(), 6);
@@ -1094,14 +1113,18 @@ mod tests_options {
     #[test]
     fn test_calculate_price_black_scholes() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        let price = option.calculate_price_black_scholes().unwrap();
+        let price = option
+            .calculate_price_black_scholes()
+            .expect("Black-Scholes pricing should succeed for valid option");
         assert!(price > Decimal::ZERO);
     }
 
     #[test]
     fn test_payoff_european_call_long() {
         let call_option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        let call_payoff = call_option.payoff().unwrap();
+        let call_payoff = call_option
+            .payoff()
+            .expect("payoff calculation should succeed for call option");
         assert_eq!(call_payoff, Decimal::ZERO); // max(100 - 100, 0) = 0
 
         let put_option = Options::new(
@@ -1118,8 +1141,13 @@ mod tests_options {
             pos_or_panic!(0.01),
             None,
         );
-        let put_payoff = put_option.payoff().unwrap();
-        assert_eq!(put_payoff.to_f64().unwrap(), 5.0); // max(100 - 95, 0) = 5
+        let put_payoff = put_option
+            .payoff()
+            .expect("payoff calculation should succeed for put option");
+        assert_eq!(
+            put_payoff.to_f64().expect("payoff should convert to f64"),
+            5.0
+        ); // max(100 - 95, 0) = 5
     }
 
     #[test]
@@ -1139,9 +1167,16 @@ mod tests_options {
             None,
         );
 
-        let time_value = option.time_value().unwrap();
+        let time_value = option
+            .time_value()
+            .expect("time_value calculation should succeed");
         assert!(time_value > Decimal::ZERO);
-        assert!(time_value < option.calculate_price_black_scholes().unwrap());
+        assert!(
+            time_value
+                < option
+                    .calculate_price_black_scholes()
+                    .expect("Black-Scholes pricing should succeed")
+        );
     }
 }
 
