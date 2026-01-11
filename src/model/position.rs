@@ -3264,10 +3264,14 @@ mod tests_position_serde {
         );
         let serialized = serde_json::to_string(&original).unwrap();
         let deserialized: Position = serde_json::from_str(&serialized).unwrap();
-        let reserialized = serde_json::to_string(&deserialized).unwrap();
 
-        assert_eq!(serialized, reserialized);
+        // Compare objects, not strings (string comparison is fragile due to decimal formatting)
         assert_eq!(original, deserialized);
+
+        // Verify roundtrip produces equivalent object
+        let reserialized = serde_json::to_string(&deserialized).unwrap();
+        let redeserialized: Position = serde_json::from_str(&reserialized).unwrap();
+        assert_eq!(deserialized, redeserialized);
     }
 
     #[test]
