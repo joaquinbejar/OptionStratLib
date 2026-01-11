@@ -1,7 +1,7 @@
 use crate::constants::{DAYS_IN_A_YEAR, EPSILON};
 use crate::error::{ChainError, DecimalError};
 use chrono::{DateTime, Duration, NaiveDate, NaiveDateTime, Utc};
-use positive::{Positive, pos_or_panic};
+use positive::Positive;
 use serde::de::{MapAccess, Visitor};
 use serde::ser::SerializeMap;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
@@ -123,7 +123,12 @@ impl ExpirationDate {
     /// ```
     pub fn get_years(&self) -> Result<Positive, DecimalError> {
         let days = self.get_days()?;
-        Ok(pos_or_panic!(days.to_f64() / DAYS_IN_A_YEAR))
+        let years = days.to_f64() / DAYS_IN_A_YEAR;
+        Positive::new(years).map_err(|e| DecimalError::ConversionError {
+            from_type: "f64".to_string(),
+            to_type: "Positive".to_string(),
+            reason: format!("failed to convert years: {}", e),
+        })
     }
 
     /// Calculates the number of days until expiration for this `ExpirationDate` instance.
@@ -159,7 +164,11 @@ impl ExpirationDate {
                 if num_days <= 0.0 {
                     return Ok(Positive::ZERO);
                 }
-                Ok(pos_or_panic!(num_days))
+                Positive::new(num_days).map_err(|e| DecimalError::ConversionError {
+                    from_type: "f64".to_string(),
+                    to_type: "Positive".to_string(),
+                    reason: format!("failed to convert days: {}", e),
+                })
             }
         }
     }
@@ -522,7 +531,8 @@ impl ExpirationDate {
 
 impl Default for ExpirationDate {
     fn default() -> Self {
-        ExpirationDate::Days(pos_or_panic!(365.0))
+        // SAFETY: dec!(365.0) is a valid positive constant
+        ExpirationDate::Days(unsafe { Positive::new_unchecked(rust_decimal_macros::dec!(365.0)) })
     }
 }
 
@@ -613,7 +623,7 @@ impl<'de> Deserialize<'de> for ExpirationDate {
                                 return Err(serde::de::Error::duplicate_field("days"));
                             }
                             let value: f64 = map.next_value()?;
-                            days = Some(pos_or_panic!(value));
+                            days = Some(Positive::new(value).map_err(serde::de::Error::custom)?);
                         }
                         Field::datetime => {
                             if datetime.is_some() {
@@ -649,6 +659,7 @@ mod tests_expiration_date {
     use super::*;
     use crate::constants::{DAYS_IN_A_YEAR, ZERO};
     use chrono::Duration;
+    use positive::pos_or_panic;
 
     #[test]
     fn test_expiration_date_days() {
@@ -733,6 +744,7 @@ mod tests_expiration_date {
     mod tests_expiration_date_formatting {
         use super::*;
         use chrono::TimeZone;
+        use positive::pos_or_panic;
 
         #[test]
         fn test_get_date_string_days() {
@@ -908,6 +920,7 @@ mod test_expiration_date {
 mod tests_serialization {
     use super::*;
     use chrono::{TimeZone, Utc};
+    use positive::pos_or_panic;
 
     #[test]
     fn test_expiration_date_days_serialization() {
@@ -992,6 +1005,7 @@ mod tests_serialization {
 mod tests_hash {
     use super::*;
     use chrono::{Duration, TimeZone};
+    use positive::pos_or_panic;
     use std::collections::hash_map::DefaultHasher;
     use std::hash::{Hash, Hasher};
 
@@ -1104,6 +1118,7 @@ mod tests_comparisons {
     use crate::constants::EPSILON;
 
     use chrono::{TimeZone, Utc};
+    use positive::pos_or_panic;
     use rust_decimal_macros::dec;
     use std::cmp::Ordering;
 
