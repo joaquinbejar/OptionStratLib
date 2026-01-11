@@ -6,6 +6,7 @@
 use crate::chains::utils::{OptionDataPriceParams, default_empty_string, empty_string_round_to_2};
 use crate::chains::{DeltasInStrike, OptionsInStrike};
 use crate::error::ChainError;
+use crate::error::chains::OptionDataErrorKind;
 use crate::greeks::{delta, gamma};
 use crate::model::Position;
 use crate::strategies::{BasicAble, FindOptimalSide};
@@ -560,7 +561,8 @@ impl OptionData {
         side: Side,
         option_style: OptionStyle,
     ) -> Result<Options, ChainError> {
-        let mut option = Options::from(self);
+        let mut option = Options::try_from(self)
+            .map_err(|e| ChainError::OptionDataError(OptionDataErrorKind::Other(e.to_string())))?;
         option.side = side;
         option.option_style = option_style;
         Ok(option)
