@@ -667,36 +667,50 @@ impl Options {
     }
 }
 
-impl From<&OptionData> for Options {
-    fn from(option_data: &OptionData) -> Self {
-        if option_data.symbol.is_none() {
-            error!("OptionData symbol is None");
-            panic!("OptionData must have a valid symbol");
-        }
-        assert!(option_data.symbol.is_some(), "OptionData symbol is None");
-        assert!(option_data.expiration_date.is_some());
-        assert!(option_data.underlying_price.is_some());
+impl TryFrom<&OptionData> for Options {
+    type Error = OptionsError;
 
-        Options {
+    fn try_from(option_data: &OptionData) -> Result<Self, Self::Error> {
+        let underlying_symbol =
+            option_data
+                .symbol
+                .clone()
+                .ok_or_else(|| OptionsError::ValidationError {
+                    field: "symbol".to_string(),
+                    reason: "OptionData must have a valid symbol".to_string(),
+                })?;
+
+        let expiration_date =
+            option_data
+                .expiration_date
+                .ok_or_else(|| OptionsError::ValidationError {
+                    field: "expiration_date".to_string(),
+                    reason: "OptionData must have a valid expiration date".to_string(),
+                })?;
+
+        let underlying_price = option_data
+            .underlying_price
+            .as_ref()
+            .map(|p| **p)
+            .ok_or_else(|| OptionsError::ValidationError {
+                field: "underlying_price".to_string(),
+                reason: "OptionData must have a valid underlying price".to_string(),
+            })?;
+
+        Ok(Options {
             option_type: OptionType::European,
             side: Side::Long,
-            underlying_symbol: option_data.symbol.clone().unwrap_or_default(),
+            underlying_symbol,
             strike_price: option_data.strike_price,
-            expiration_date: option_data
-                .expiration_date
-                .unwrap_or(ExpirationDate::Days(Positive::ZERO)),
+            expiration_date,
             implied_volatility: option_data.implied_volatility,
             quantity: Positive::ONE,
-            underlying_price: option_data
-                .underlying_price
-                .clone()
-                .map(|p| *p)
-                .unwrap_or(Positive::ZERO),
+            underlying_price,
             risk_free_rate: option_data.risk_free_rate.unwrap_or(Decimal::ZERO),
             option_style: OptionStyle::Call,
             dividend_yield: option_data.dividend_yield.unwrap_or(Positive::ZERO),
             exotic_params: None,
-        }
+        })
     }
 }
 
@@ -907,7 +921,12 @@ impl Graph for Options {
             self.implied_volatility,
             self.expiration_date,
         )
-        .expect("Failed to calculate optimal price range in graph_data");
+        .unwrap_or_else(|_| {
+            // Fallback to a reasonable default range based on strike price
+            let lower = self.strike_price * Positive::new(0.5).unwrap_or(Positive::ONE);
+            let upper = self.strike_price * Positive::new(1.5).unwrap_or(Positive::ONE);
+            (lower, upper)
+        });
 
         let mut positive_series = Series2D {
             x: vec![],
