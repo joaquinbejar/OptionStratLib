@@ -113,7 +113,7 @@ pub fn price_option_monte_carlo(
         .map(|&final_price| {
             option
                 .payoff_at_price(&final_price)
-                .expect("Payoff calculation failed")
+                .unwrap_or(Decimal::ZERO)
         })
         .sum();
 
