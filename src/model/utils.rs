@@ -8,7 +8,7 @@ use crate::model::Position;
 use crate::model::types::{OptionStyle, OptionType, Side};
 use crate::{ExpirationDate, Options};
 use chrono::{NaiveDateTime, TimeZone, Utc};
-use positive::Positive;
+use positive::{Positive, pos_or_panic};
 use rust_decimal::{Decimal, MathematicalOps};
 use rust_decimal_macros::dec;
 use std::ops::Mul;
@@ -552,6 +552,7 @@ mod tests_mean_and_std {
     use super::*;
 
     use approx::assert_relative_eq;
+    use positive::pos_or_panic;
 
     #[test]
     fn test_basic_mean_and_std() {
@@ -691,6 +692,7 @@ mod tests_mean_and_std {
 #[cfg(test)]
 mod tests_model_utils {
     use super::*;
+    use positive::pos_or_panic;
 
     #[test]
     fn test_calculate_optimal_price_range() {
