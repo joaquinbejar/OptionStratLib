@@ -118,7 +118,9 @@ impl DecimalStats for Vec<Decimal> {
         }
         let mean = self.mean();
         let variance: Decimal = self.iter().map(|x| (x - mean).powd(Decimal::TWO)).sum();
-        (variance / Decimal::from(self.len() - 1)).sqrt().unwrap()
+        (variance / Decimal::from(self.len() - 1))
+            .sqrt()
+            .unwrap_or(Decimal::ZERO)
     }
 }
 
@@ -217,8 +219,10 @@ pub fn f64_to_decimal(value: f64) -> Result<Decimal, DecimalError> {
 /// ```
 pub fn decimal_normal_sample() -> Decimal {
     let mut t_rng = rand::rng();
-    let normal = Normal::new(0.0, 1.0).unwrap();
-    Decimal::from_f64(normal.sample(&mut t_rng)).unwrap()
+    // SAFETY: Normal::new(0.0, 1.0) is always valid (mean=0, std=1 are valid parameters)
+    let normal =
+        Normal::new(0.0, 1.0).expect("standard normal distribution parameters are always valid");
+    Decimal::from_f64(normal.sample(&mut t_rng)).unwrap_or(Decimal::ZERO)
 }
 
 impl HasX for Decimal {

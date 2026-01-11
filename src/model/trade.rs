@@ -165,9 +165,10 @@ impl Trade {
         notes: Option<String>,
         status: TradeStatus,
     ) -> Self {
+        // Use current timestamp in nanoseconds, fallback to seconds * 1e9 if nanos overflow
         let timestamp = Utc::now()
             .timestamp_nanos_opt()
-            .expect("system time outside chrono range");
+            .unwrap_or_else(|| Utc::now().timestamp() * 1_000_000_000);
         Self {
             id,
             action,
@@ -196,14 +197,14 @@ impl Trade {
     /// # Parameters
     /// - `datetime`: A `DateTime<Utc>` object representing the new timestamp to be set.
     ///
-    /// # Panics
-    /// This function will panic if the calculated nanosecond representation of the provided
-    /// `datetime` falls outside the valid range that can be represented by the `chrono` library.
+    /// # Note
+    /// If the nanosecond representation overflows, falls back to seconds * 1e9.
     ///
     pub fn set_timestamp(&mut self, datetime: DateTime<Utc>) {
+        // Use timestamp in nanoseconds, fallback to seconds * 1e9 if nanos overflow
         self.timestamp = datetime
             .timestamp_nanos_opt()
-            .expect("system time outside chrono range");
+            .unwrap_or_else(|| datetime.timestamp() * 1_000_000_000);
     }
 
     /// Calculates the total cost associated with a transaction based on the action,
