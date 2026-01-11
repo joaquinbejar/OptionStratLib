@@ -147,6 +147,16 @@
 //! For high-frequency calculations, consider using the Black-Scholes model
 //! when applicable, as it provides the fastest computation times.
 
+/// American option pricing using analytical approximations.
+///
+/// This module provides fast analytical methods for pricing American options,
+/// including the Barone-Adesi-Whaley (BAW) approximation which offers O(1)
+/// complexity compared to O(n²) for binomial tree methods.
+///
+/// American options can be exercised at any time before expiration, making them
+/// more valuable than European options but also more complex to price.
+pub mod american;
+
 /// Binomial Tree model for option pricing.
 pub mod binomial_model;
 
@@ -240,6 +250,7 @@ pub(crate) mod utils;
 /// ```
 pub mod unified;
 
+pub use american::barone_adesi_whaley;
 pub use binomial_model::{BinomialPricingParams, generate_binomial_tree, price_binomial};
 pub use black_scholes_model::{BlackScholes, black_scholes};
 pub use monte_carlo::monte_carlo_option_pricing;
