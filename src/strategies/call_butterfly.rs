@@ -182,7 +182,7 @@ impl CallButterfly {
             None,
         );
         strategy
-            .add_position(&long_call.clone())
+            .add_position(&long_call)
             .expect("Invalid short call");
         strategy.long_call = long_call;
 
@@ -210,7 +210,7 @@ impl CallButterfly {
             None,
         );
         strategy
-            .add_position(&short_call_low.clone())
+            .add_position(&short_call_low)
             .expect("Invalid long call itm");
         strategy.short_call_low = short_call_low;
 
@@ -238,7 +238,7 @@ impl CallButterfly {
             None,
         );
         strategy
-            .add_position(&short_call_high.clone())
+            .add_position(&short_call_high)
             .expect("Invalid long call otm");
         strategy.short_call_high = short_call_high;
 

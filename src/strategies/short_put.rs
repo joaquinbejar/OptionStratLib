@@ -147,7 +147,7 @@ impl ShortPut {
             None,
         );
         strategy
-            .add_position(&short_put.clone())
+            .add_position(&short_put)
             .expect("Invalid short put option");
 
         strategy

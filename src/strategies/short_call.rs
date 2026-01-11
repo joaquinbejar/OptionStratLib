@@ -145,7 +145,7 @@ impl ShortCall {
             None,
         );
         strategy
-            .add_position(&short_call.clone())
+            .add_position(&short_call)
             .expect("Invalid short call option");
 
         strategy

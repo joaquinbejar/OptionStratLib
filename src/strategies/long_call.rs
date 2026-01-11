@@ -145,7 +145,7 @@ impl LongCall {
             None,
         );
         strategy
-            .add_position(&long_call.clone())
+            .add_position(&long_call)
             .expect("Invalid long call option");
 
         strategy

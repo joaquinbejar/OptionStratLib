@@ -222,7 +222,7 @@ impl IronButterfly {
             None,
         );
         strategy
-            .add_position(&short_call.clone())
+            .add_position(&short_call)
             .expect("Invalid short call");
 
         // Short Put
@@ -250,7 +250,7 @@ impl IronButterfly {
             None,
         );
         strategy
-            .add_position(&short_put.clone())
+            .add_position(&short_put)
             .expect("Invalid short put");
 
         // Long Call
@@ -278,7 +278,7 @@ impl IronButterfly {
             None,
         );
         strategy
-            .add_position(&long_call.clone())
+            .add_position(&long_call)
             .expect("Invalid long call");
 
         // Long Put
@@ -305,9 +305,7 @@ impl IronButterfly {
             None,
             None,
         );
-        strategy
-            .add_position(&long_put.clone())
-            .expect("Invalid long put");
+        strategy.add_position(&long_put).expect("Invalid long put");
 
         strategy
             .update_break_even_points()
@@ -1564,7 +1562,7 @@ mod tests_iron_butterfly_strategies {
             None,
         );
         butterfly
-            .add_position(&new_short_call.clone())
+            .add_position(&new_short_call)
             .expect("Failed to add short call");
         assert_eq!(
             butterfly.short_call.option.strike_price,
@@ -1595,7 +1593,7 @@ mod tests_iron_butterfly_strategies {
             None,
         );
         butterfly
-            .add_position(&new_long_put.clone())
+            .add_position(&new_long_put)
             .expect("Failed to add long put");
         assert_eq!(butterfly.long_put.option.strike_price, pos_or_panic!(90.0));
     }

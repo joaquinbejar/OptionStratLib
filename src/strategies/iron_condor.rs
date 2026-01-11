@@ -228,7 +228,7 @@ impl IronCondor {
             None,
         );
         strategy
-            .add_position(&short_call.clone())
+            .add_position(&short_call)
             .expect("Invalid short call");
 
         // Short Put
@@ -256,7 +256,7 @@ impl IronCondor {
             None,
         );
         strategy
-            .add_position(&short_put.clone())
+            .add_position(&short_put)
             .expect("Invalid short put");
 
         // Long Call
@@ -284,7 +284,7 @@ impl IronCondor {
             None,
         );
         strategy
-            .add_position(&long_call.clone())
+            .add_position(&long_call)
             .expect("Invalid long call");
 
         // Long Put
@@ -311,9 +311,7 @@ impl IronCondor {
             None,
             None,
         );
-        strategy
-            .add_position(&long_put.clone())
-            .expect("Invalid long put");
+        strategy.add_position(&long_put).expect("Invalid long put");
 
         strategy
             .update_break_even_points()
@@ -1555,7 +1553,7 @@ mod tests_iron_condor_strategies {
             None,
         );
         condor
-            .add_position(&new_short_call.clone())
+            .add_position(&new_short_call)
             .expect("Invalid short call");
         assert_eq!(condor.short_call.option.strike_price, pos_or_panic!(106.0));
 
@@ -1583,7 +1581,7 @@ mod tests_iron_condor_strategies {
             None,
         );
         condor
-            .add_position(&new_long_put.clone())
+            .add_position(&new_long_put)
             .expect("Invalid long put");
         assert_eq!(condor.long_put.option.strike_price, pos_or_panic!(89.0));
     }

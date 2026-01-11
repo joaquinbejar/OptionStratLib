@@ -498,8 +498,7 @@ impl OptionChain {
         }
 
         let atm_strike = rounder(underlying_price, strike_interval);
-        let atm_strike_option_data =
-            create_chain_data(&atm_strike.clone(), params, underlying_price)?;
+        let atm_strike_option_data = create_chain_data(&atm_strike, params, underlying_price)?;
         option_chain.options.insert(atm_strike_option_data);
 
         // Generate strikes above and below ATM based on chain_size parameter

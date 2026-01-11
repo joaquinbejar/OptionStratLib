@@ -2712,7 +2712,7 @@ mod tests_butterfly_strategies {
         );
 
         butterfly
-            .add_position(&new_long.clone())
+            .add_position(&new_long)
             .expect("Failed to add position");
         assert_eq!(
             butterfly.long_call_low.option.strike_price,

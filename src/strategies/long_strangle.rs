@@ -214,9 +214,7 @@ impl LongStrangle {
             None,
             None,
         );
-        strategy
-            .add_position(&long_call.clone())
-            .expect("Invalid position");
+        strategy.add_position(&long_call).expect("Invalid position");
 
         let long_put_option = Options::new(
             OptionType::European,
@@ -241,9 +239,7 @@ impl LongStrangle {
             None,
             None,
         );
-        strategy
-            .add_position(&long_put.clone())
-            .expect("Invalid position");
+        strategy.add_position(&long_put).expect("Invalid position");
 
         strategy
             .update_break_even_points()

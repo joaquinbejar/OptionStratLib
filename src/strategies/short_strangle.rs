@@ -203,7 +203,7 @@ impl ShortStrangle {
             None,
         );
         strategy
-            .add_position(&short_call.clone())
+            .add_position(&short_call)
             .expect("Invalid position");
 
         let short_put_option = Options::new(
@@ -229,9 +229,7 @@ impl ShortStrangle {
             None,
             None,
         );
-        strategy
-            .add_position(&short_put.clone())
-            .expect("Invalid position");
+        strategy.add_position(&short_put).expect("Invalid position");
 
         strategy
             .update_break_even_points()
@@ -1386,13 +1384,13 @@ is expected and the underlying asset's price is anticipated to remain stable."
 
         // Test adding a new call leg
         strategy
-            .add_position(&original_call.clone())
+            .add_position(&original_call)
             .expect("Invalid position");
         assert_eq!(strategy.short_call, original_call);
 
         // Test adding a new put leg
         strategy
-            .add_position(&original_put.clone())
+            .add_position(&original_put)
             .expect("Invalid position");
         assert_eq!(strategy.short_put, original_put);
     }

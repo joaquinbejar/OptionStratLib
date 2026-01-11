@@ -203,7 +203,7 @@ impl LongStraddle {
             None,
         );
         strategy
-            .add_position(&long_call.clone())
+            .add_position(&long_call)
             .expect("Invalid long call");
 
         let long_put_option = Options::new(
@@ -229,9 +229,7 @@ impl LongStraddle {
             None,
             None,
         );
-        strategy
-            .add_position(&long_put.clone())
-            .expect("Invalid long put");
+        strategy.add_position(&long_put).expect("Invalid long put");
 
         strategy
             .update_break_even_points()
