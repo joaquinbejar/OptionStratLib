@@ -8,7 +8,7 @@ use crate::model::Position;
 use crate::model::types::{OptionStyle, OptionType, Side};
 use crate::{ExpirationDate, Options};
 use chrono::{NaiveDateTime, TimeZone, Utc};
-use positive::{Positive, pos_or_panic};
+use positive::Positive;
 use rust_decimal::{Decimal, MathematicalOps};
 use rust_decimal_macros::dec;
 use std::ops::Mul;
@@ -79,13 +79,13 @@ pub fn create_sample_option(
         side,
         "AAPL".to_string(),
         strike_price,
-        ExpirationDate::Days(pos_or_panic!(30.0)),
+        ExpirationDate::Days(Positive::THIRTY),
         volatility,
         quantity,
         underlying_price,
         dec!(0.05),
         option_style,
-        pos_or_panic!(0.01),
+        Positive::new(0.01).expect("0.01 is valid"),
         None,
     )
 }
@@ -147,19 +147,19 @@ pub fn create_sample_position(
             side,
             underlying_symbol: "AAPL".to_string(),
             strike_price,
-            expiration_date: ExpirationDate::Days(pos_or_panic!(30.0)),
+            expiration_date: ExpirationDate::Days(Positive::THIRTY),
             implied_volatility,
             quantity,
             underlying_price,
             risk_free_rate: dec!(0.05),
             option_style,
-            dividend_yield: pos_or_panic!(0.01),
+            dividend_yield: Positive::new(0.01).expect("0.01 is valid"),
             exotic_params: None,
         },
-        premium: pos_or_panic!(5.0),
+        premium: Positive::FIVE,
         date: Utc::now(),
-        open_fee: pos_or_panic!(0.5),
-        close_fee: pos_or_panic!(0.5),
+        open_fee: Positive::new(0.5).expect("0.5 is valid"),
+        close_fee: Positive::new(0.5).expect("0.5 is valid"),
         epic: Some("Epic123".to_string()),
         extra_fields: None,
     }
@@ -205,7 +205,7 @@ pub fn create_sample_option_with_date(
         underlying_price,
         dec!(0.05),
         option_style,
-        pos_or_panic!(0.01),
+        Positive::new(0.01).expect("0.01 is valid"),
         None,
     )
 }
@@ -251,7 +251,7 @@ pub fn create_sample_option_with_days(
         underlying_price,
         dec!(0.05),
         option_style,
-        pos_or_panic!(0.01),
+        Positive::new(0.01).expect("0.01 is valid"),
         None,
     )
 }
@@ -296,13 +296,13 @@ pub fn create_sample_option_simplest(option_style: OptionStyle, side: Side) -> O
         side,
         "AAPL".to_string(),
         Positive::HUNDRED,
-        ExpirationDate::Days(pos_or_panic!(30.0)),
-        pos_or_panic!(0.2),
+        ExpirationDate::Days(Positive::THIRTY),
+        Positive::new(0.2).expect("0.2 is valid"),
         Positive::ONE,
         Positive::HUNDRED,
         dec!(0.05),
         option_style,
-        pos_or_panic!(0.01),
+        Positive::new(0.01).expect("0.01 is valid"),
         None,
     )
 }
@@ -349,13 +349,13 @@ pub fn create_sample_option_simplest_strike(
         side,
         "AAPL".to_string(),
         strike,
-        ExpirationDate::Days(pos_or_panic!(30.0)),
-        pos_or_panic!(0.2),
+        ExpirationDate::Days(Positive::THIRTY),
+        Positive::new(0.2).expect("0.2 is valid"),
         Positive::ONE,
         Positive::HUNDRED,
         dec!(0.05),
         option_style,
-        pos_or_panic!(0.01),
+        Positive::new(0.01).expect("0.01 is valid"),
         None,
     )
 }
@@ -396,13 +396,14 @@ pub fn create_sample_option_simplest_strike(
 /// Note: The `Positive` type and associated operations are defined in the `crate::model::types` module.
 pub fn mean_and_std(vec: Vec<Positive>) -> (Positive, Positive) {
     let mean = vec.iter().sum::<Positive>() / vec.len() as f64;
-    let variance = vec
+    let variance_sum: f64 = vec
         .iter()
-        .map(|x| pos_or_panic!((x.to_f64() - mean.to_f64()).powi(2)))
-        .sum::<Positive>()
-        / vec.len() as f64;
-    let std = variance.to_f64().sqrt();
-    (mean, pos_or_panic!(std))
+        .map(|x| (x.to_f64() - mean.to_f64()).powi(2))
+        .sum();
+    let variance = variance_sum / vec.len() as f64;
+    let std = variance.sqrt();
+    // Both variance and std are guaranteed non-negative by construction
+    (mean, Positive::new(std).unwrap_or(Positive::ZERO))
 }
 
 /// Trait for rounding operations on numeric types, specifically for financial calculations.
@@ -552,6 +553,7 @@ mod tests_mean_and_std {
     use super::*;
 
     use approx::assert_relative_eq;
+    use positive::pos_or_panic;
 
     #[test]
     fn test_basic_mean_and_std() {
@@ -596,7 +598,11 @@ mod tests_mean_and_std {
 
     #[test]
     fn test_small_numbers() {
-        let values = vec![pos_or_panic!(0.1), pos_or_panic!(0.2), pos_or_panic!(0.3)];
+        let values = vec![
+            pos_or_panic!(0.1),
+            Positive::new(0.2).expect("0.2 is valid"),
+            pos_or_panic!(0.3),
+        ];
         let (mean, std) = mean_and_std(values);
 
         assert_relative_eq!(mean.to_f64(), 0.2, epsilon = 0.0001);
@@ -691,6 +697,7 @@ mod tests_mean_and_std {
 #[cfg(test)]
 mod tests_model_utils {
     use super::*;
+    use positive::pos_or_panic;
 
     #[test]
     fn test_calculate_optimal_price_range() {

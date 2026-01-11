@@ -99,7 +99,7 @@ optionstratlib = { path = "." }
 tracing = "0.1"
 rust_decimal = { version = "1.39", features = ["maths", "serde"] }
 rust_decimal_macros = "1.39"
-plotly = { version = "0.13", default-features = false, features = ["static_export_default"] }
+plotly = { version = "0.14", default-features = false, features = ["static_export_default"] }
 chrono = { version = "0.4", features = ["serde"] }
 rand = { version = "0.9" }
 statrs = "0.18"
@@ -110,7 +110,7 @@ csv = { version = "1.4"}
 serde = { version = "1.0", features = ["derive"] }
 rayon = { version = "1.11" }
 itertools = "0.14"
-zip = "6.0"
+zip = "7.0"
 lazy_static = "1.5"
 uuid = { version = "1.19", features = ["v4", "serde"] }
 approx = "0.5"
@@ -121,4 +121,4 @@ utoipa = { version = "5.4", features = ["axum_extras", "chrono", "decimal"] }
 indicatif = "0.18"
 thiserror = "2.0"
 #positive = { path = "../positive", features = ["utoipa"] }
-positive = { version = "0.2.1", features = ["utoipa"] }
+positive = { version = "0.3", features = ["utoipa"] }
