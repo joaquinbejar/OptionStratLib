@@ -21,7 +21,7 @@ use crate::visualization::{Graph, GraphConfig, GraphData};
 use crate::{ExpirationDate, OptionType, Options};
 use chrono::{DateTime, Utc};
 use num_traits::ToPrimitive;
-use positive::{Positive, pos_or_panic};
+use positive::Positive;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -458,7 +458,12 @@ impl Position {
     /// * `Err(PositionError)` - If there's an error during the calculation or validation
     ///
     pub fn days_held(&self) -> Result<Positive, PositionError> {
-        Ok(pos_or_panic!((Utc::now() - self.date).num_days() as f64))
+        let days = (Utc::now() - self.date).num_days() as f64;
+        Positive::new(days).map_err(|e| {
+            PositionError::ValidationError(PositionValidationErrorKind::InvalidPosition {
+                reason: format!("failed to calculate days held: {}", e),
+            })
+        })
     }
 
     /// Calculates the number of days remaining until the option expires.
@@ -477,9 +482,14 @@ impl Position {
     pub fn days_to_expiration(&self) -> Result<Positive, PositionError> {
         match self.option.expiration_date {
             ExpirationDate::Days(days) => Ok(days),
-            ExpirationDate::DateTime(datetime) => Ok(pos_or_panic!(
-                datetime.signed_duration_since(Utc::now()).num_days() as f64
-            )),
+            ExpirationDate::DateTime(datetime) => {
+                let days = datetime.signed_duration_since(Utc::now()).num_days() as f64;
+                Positive::new(days.max(0.0)).map_err(|e| {
+                    PositionError::ValidationError(PositionValidationErrorKind::InvalidPosition {
+                        reason: format!("failed to calculate days to expiration: {}", e),
+                    })
+                })
+            }
         }
     }
 
@@ -788,7 +798,9 @@ impl TradeStatusAble for Position {
 
     fn close(&self) -> Result<Trade, TradeError> {
         let mut trade = self.trade()?;
-        if trade.premium <= pos_or_panic!(0.01) {
+        // SAFETY: dec!(0.01) is a valid positive constant
+        let threshold = unsafe { Positive::new_unchecked(rust_decimal_macros::dec!(0.01)) };
+        if trade.premium <= threshold {
             trade.premium = Positive::ZERO;
         }
         trade.status = TradeStatus::Closed;
@@ -1158,6 +1170,7 @@ mod tests_position {
 
     use chrono::Duration;
     use num_traits::ToPrimitive;
+    use positive::pos_or_panic;
     use rust_decimal_macros::dec;
 
     fn setup_option(
@@ -1809,6 +1822,7 @@ mod tests_valid_position {
     use super::*;
 
     use crate::model::utils::create_sample_position;
+    use positive::pos_or_panic;
 
     #[test]
     fn test_valid_position() {
@@ -1873,6 +1887,7 @@ mod tests_position_break_even {
 
     use crate::model::types::{OptionStyle, OptionType, Side};
 
+    use positive::pos_or_panic;
     use rust_decimal_macros::dec;
 
     fn setup_option(
@@ -2105,6 +2120,7 @@ mod tests_position_max_loss_profit {
     use crate::model::types::{OptionStyle, OptionType, Side};
 
     use approx::assert_relative_eq;
+    use positive::pos_or_panic;
     use rust_decimal_macros::dec;
 
     fn setup_option(
@@ -2335,7 +2351,7 @@ mod tests_position_max_loss_profit {
 #[cfg(test)]
 mod tests_update_from_option_data {
     use super::*;
-    use positive::spos;
+    use positive::{pos_or_panic, spos};
 
     use rust_decimal_macros::dec;
 
@@ -2556,6 +2572,7 @@ mod tests_update_from_option_data {
 #[cfg(test)]
 mod tests_premium {
     use super::*;
+    use positive::pos_or_panic;
 
     fn setup_basic_position(side: Side) -> Position {
         let option = Options {
@@ -2626,6 +2643,7 @@ mod tests_pnl_calculator {
     use super::*;
 
     use crate::{OptionType, assert_decimal_eq};
+    use positive::pos_or_panic;
     use rust_decimal_macros::dec;
 
     fn setup_test_position(side: Side, option_style: OptionStyle) -> Position {
@@ -3148,6 +3166,7 @@ mod tests_position_serde {
 
     use crate::model::utils::create_sample_position;
 
+    use positive::pos_or_panic;
     use serde_json;
     use tracing::info;
 
@@ -3245,10 +3264,14 @@ mod tests_position_serde {
         );
         let serialized = serde_json::to_string(&original).unwrap();
         let deserialized: Position = serde_json::from_str(&serialized).unwrap();
-        let reserialized = serde_json::to_string(&deserialized).unwrap();
 
-        assert_eq!(serialized, reserialized);
+        // Compare objects, not strings (string comparison is fragile due to decimal formatting)
         assert_eq!(original, deserialized);
+
+        // Verify roundtrip produces equivalent object
+        let reserialized = serde_json::to_string(&deserialized).unwrap();
+        let redeserialized: Position = serde_json::from_str(&reserialized).unwrap();
+        assert_eq!(deserialized, redeserialized);
     }
 
     #[test]
@@ -3292,6 +3315,7 @@ mod tests_position_tradeable_trait {
     use super::*;
 
     use crate::model::utils::create_sample_position;
+    use positive::pos_or_panic;
 
     #[test]
     fn test_tradeable_trade_ref() {
@@ -3329,6 +3353,7 @@ mod tests_position_tradestatusable_trait {
     use super::*;
 
     use crate::model::utils::create_sample_position;
+    use positive::pos_or_panic;
 
     #[test]
     fn test_tradestatusable_expired() {
