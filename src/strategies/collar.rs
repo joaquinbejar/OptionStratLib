@@ -381,14 +381,12 @@ impl Collar {
         if call_strike >= cost_basis {
             let capital_gain = (call_strike - cost_basis) * quantity;
             let total_profit = capital_gain.to_dec() + net_premium - total_fees.to_dec();
-            Ok(Positive::new_decimal(total_profit.max(Decimal::ZERO))
-                .unwrap_or(Positive::ZERO))
+            Ok(Positive::new_decimal(total_profit.max(Decimal::ZERO)).unwrap_or(Positive::ZERO))
         } else {
             // Call strike below cost basis
             let capital_loss = (cost_basis - call_strike) * quantity;
             let total_profit = net_premium - capital_loss.to_dec() - total_fees.to_dec();
-            Ok(Positive::new_decimal(total_profit.max(Decimal::ZERO))
-                .unwrap_or(Positive::ZERO))
+            Ok(Positive::new_decimal(total_profit.max(Decimal::ZERO)).unwrap_or(Positive::ZERO))
         }
     }
 
@@ -405,14 +403,12 @@ impl Collar {
         if cost_basis >= put_strike {
             let capital_loss = (cost_basis - put_strike) * quantity;
             let total_loss = capital_loss.to_dec() - net_premium + total_fees.to_dec();
-            Ok(Positive::new_decimal(total_loss.max(Decimal::ZERO))
-                .unwrap_or(Positive::ZERO))
+            Ok(Positive::new_decimal(total_loss.max(Decimal::ZERO)).unwrap_or(Positive::ZERO))
         } else {
             // Put strike above cost basis (unusual but possible)
             let capital_gain = (put_strike - cost_basis) * quantity;
             let total_loss = total_fees.to_dec() - net_premium - capital_gain.to_dec();
-            Ok(Positive::new_decimal(total_loss.max(Decimal::ZERO))
-                .unwrap_or(Positive::ZERO))
+            Ok(Positive::new_decimal(total_loss.max(Decimal::ZERO)).unwrap_or(Positive::ZERO))
         }
     }
 
@@ -497,7 +493,7 @@ impl BreakEvenable for Collar {
         let fees_per_share = self.total_fees().to_dec() / self.spot_leg.quantity.to_dec();
 
         let break_even = self.spot_leg.cost_basis.to_dec() - net_premium_per_share + fees_per_share;
-        
+
         if let Ok(be) = Positive::new_decimal(break_even) {
             self.break_even_points.push(be.round_to(2));
         }
@@ -601,7 +597,7 @@ impl BasicAble for Collar {
 
     fn get_option_basic_type(&self) -> HashSet<OptionBasicType<'_>> {
         let mut hash_set = HashSet::new();
-        
+
         let long_put = &self.long_put.option;
         hash_set.insert(OptionBasicType {
             option_style: &long_put.option_style,
@@ -623,7 +619,7 @@ impl BasicAble for Collar {
 
     fn get_implied_volatility(&self) -> HashMap<OptionBasicType<'_>, &Positive> {
         let mut map = HashMap::new();
-        
+
         let long_put = &self.long_put.option;
         map.insert(
             OptionBasicType {
@@ -651,7 +647,7 @@ impl BasicAble for Collar {
 
     fn get_quantity(&self) -> HashMap<OptionBasicType<'_>, &Positive> {
         let mut map = HashMap::new();
-        
+
         let long_put = &self.long_put.option;
         map.insert(
             OptionBasicType {
@@ -801,8 +797,11 @@ impl ProbabilityAnalysis for Collar {
         let risk_free_rate = option.risk_free_rate;
 
         // Loss range: from put strike up to break-even
-        let mut loss_range =
-            ProfitLossRange::new(Some(self.put_strike()), Some(break_even_point), Positive::ZERO)?;
+        let mut loss_range = ProfitLossRange::new(
+            Some(self.put_strike()),
+            Some(break_even_point),
+            Positive::ZERO,
+        )?;
 
         loss_range.calculate_probability(
             &self.spot_leg.cost_basis,
@@ -844,22 +843,22 @@ mod tests {
     fn create_test_collar() -> Collar {
         Collar::new(
             "AAPL".to_string(),
-            pos_or_panic!(150.0),    // underlying price
-            pos_or_panic!(145.0),    // put strike
-            pos_or_panic!(160.0),    // call strike
+            pos_or_panic!(150.0), // underlying price
+            pos_or_panic!(145.0), // put strike
+            pos_or_panic!(160.0), // call strike
             ExpirationDate::Days(pos_or_panic!(30.0)),
-            pos_or_panic!(0.25),     // implied volatility
-            dec!(0.05),              // risk-free rate
-            pos_or_panic!(0.01),     // dividend yield
-            Positive::HUNDRED,       // quantity
-            pos_or_panic!(2.50),     // put premium
-            pos_or_panic!(3.00),     // call premium
-            Positive::ONE,           // spot open fee
-            Positive::ONE,           // spot close fee
-            pos_or_panic!(0.65),     // put open fee
-            pos_or_panic!(0.65),     // put close fee
-            pos_or_panic!(0.65),     // call open fee
-            pos_or_panic!(0.65),     // call close fee
+            pos_or_panic!(0.25), // implied volatility
+            dec!(0.05),          // risk-free rate
+            pos_or_panic!(0.01), // dividend yield
+            Positive::HUNDRED,   // quantity
+            pos_or_panic!(2.50), // put premium
+            pos_or_panic!(3.00), // call premium
+            Positive::ONE,       // spot open fee
+            Positive::ONE,       // spot close fee
+            pos_or_panic!(0.65), // put open fee
+            pos_or_panic!(0.65), // put close fee
+            pos_or_panic!(0.65), // call open fee
+            pos_or_panic!(0.65), // call close fee
         )
     }
 
@@ -996,7 +995,7 @@ mod tests {
     fn test_is_put_itm() {
         let collar = create_test_collar();
 
-        assert!(collar.is_put_itm(pos_or_panic!(140.0)));  // Below put strike
+        assert!(collar.is_put_itm(pos_or_panic!(140.0))); // Below put strike
         assert!(!collar.is_put_itm(pos_or_panic!(145.0))); // At put strike
         assert!(!collar.is_put_itm(pos_or_panic!(150.0))); // Above put strike
     }
@@ -1007,7 +1006,7 @@ mod tests {
 
         assert!(!collar.is_call_itm(pos_or_panic!(155.0))); // Below call strike
         assert!(!collar.is_call_itm(pos_or_panic!(160.0))); // At call strike
-        assert!(collar.is_call_itm(pos_or_panic!(165.0)));  // Above call strike
+        assert!(collar.is_call_itm(pos_or_panic!(165.0))); // Above call strike
     }
 
     #[test]
