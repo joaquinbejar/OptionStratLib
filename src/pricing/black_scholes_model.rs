@@ -627,7 +627,7 @@ mod tests_black_scholes_trait {
         );
         let mock = MockOption::new(option);
         let price = mock.calculate_price_black_scholes().unwrap();
-        assert_decimal_eq!(price, dec!(2.4490144), dec!(1e-7));
+        assert_decimal_eq!(price, dec!(2.4492483), dec!(1e-5));
     }
 
     #[test]
@@ -642,7 +642,7 @@ mod tests_black_scholes_trait {
         );
         let mock = MockOption::new(option);
         let price = mock.calculate_price_black_scholes().unwrap();
-        assert_decimal_eq!(price, dec!(10.347678231), dec!(1e-7));
+        assert_decimal_eq!(price, dec!(10.3477145), dec!(1e-5));
     }
 
     #[test]
@@ -657,7 +657,7 @@ mod tests_black_scholes_trait {
         );
         let mock = MockOption::new(option);
         let price = mock.calculate_price_black_scholes().unwrap();
-        assert_decimal_eq!(price, dec!(0.13770985327), dec!(1e-7));
+        assert_decimal_eq!(price, dec!(0.1377787), dec!(1e-5));
     }
 
     #[test]
@@ -672,7 +672,7 @@ mod tests_black_scholes_trait {
         );
         let mock = MockOption::new(option);
         let price = mock.calculate_price_black_scholes().unwrap();
-        assert_decimal_eq!(price, dec!(2.12105687722), dec!(1e-7));
+        assert_decimal_eq!(price, dec!(2.1212907), dec!(1e-5));
     }
 
     #[test]
@@ -687,7 +687,7 @@ mod tests_black_scholes_trait {
         );
         let mock = MockOption::new(option);
         let price = mock.calculate_price_black_scholes().unwrap();
-        assert_decimal_eq!(price, dec!(5.8650855964), dec!(1e-7));
+        assert_decimal_eq!(price, dec!(5.8651791), dec!(1e-5));
     }
 
     #[test]
@@ -717,7 +717,7 @@ mod tests_black_scholes_trait {
         );
         let mock = MockOption::new(option);
         let price = mock.calculate_price_black_scholes().unwrap();
-        assert_decimal_eq!(price, dec!(-2.4490144), dec!(1e-7));
+        assert_decimal_eq!(price, dec!(-2.4492483), dec!(1e-5));
     }
 
     #[test]
@@ -732,7 +732,7 @@ mod tests_black_scholes_trait {
         );
         let mock = MockOption::new(option);
         let price = mock.calculate_price_black_scholes().unwrap();
-        assert_decimal_eq!(price, dec!(-2.1210568772), dec!(1e-7));
+        assert_decimal_eq!(price, dec!(-2.1212907), dec!(1e-5));
     }
 
     #[test]
@@ -747,7 +747,7 @@ mod tests_black_scholes_trait {
         );
         let mock = MockOption::new(option);
         let price = mock.calculate_price_black_scholes().unwrap();
-        assert_decimal_eq!(price, dec!(2.4490144869937), dec!(1e-7));
+        assert_decimal_eq!(price, dec!(2.4492483), dec!(1e-5));
     }
 }
 

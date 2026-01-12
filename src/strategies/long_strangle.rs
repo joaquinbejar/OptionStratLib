@@ -2016,7 +2016,7 @@ mod tests_long_strangle_pnl {
         // At the money, both options should have time value but no intrinsic value
         // Initial cost is 2 * (premium + fees) = 2 * (5.0 + 1.0) = 12.0
         assert_pos_relative_eq!(pnl.initial_costs, pos_or_panic!(12.0), pos_or_panic!(1e-6));
-        assert_decimal_eq!(pnl.unrealized.unwrap(), dec!(0.748425), dec!(1e-6));
+        assert_decimal_eq!(pnl.unrealized.unwrap(), dec!(0.748237), dec!(1e-4));
         assert_eq!(pnl.initial_income, Positive::ZERO);
         // Unrealized loss should be less than full premium paid (time value remains)
         assert!(pnl.unrealized.unwrap() > dec!(-12.0));

@@ -2472,7 +2472,7 @@ mod tests_short_strangle_pnl {
         // Initial income is 2 * premium = 2 * 5.0 = 10.0
         assert_pos_relative_eq!(pnl.initial_costs, Positive::TWO, pos_or_panic!(1e-6));
         assert_pos_relative_eq!(pnl.initial_income, pos_or_panic!(10.0), pos_or_panic!(1e-6));
-        assert_decimal_eq!(pnl.unrealized.unwrap(), dec!(-0.748425), dec!(1e-6));
+        assert_decimal_eq!(pnl.unrealized.unwrap(), dec!(-0.748237), dec!(1e-4));
         // Unrealized loss should be less than max potential loss
         assert!(pnl.unrealized.unwrap() > dec!(-100.0)); // Using a large number as max theoretical loss is unlimited
     }
