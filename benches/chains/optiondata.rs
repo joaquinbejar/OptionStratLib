@@ -103,7 +103,6 @@ fn benchmark_complex_operations(
     group: &mut criterion::BenchmarkGroup<'_, criterion::measurement::WallTime>,
 ) {
     let option_data = create_test_option_data();
-    let _params = create_standard_price_params();
 
     // Combined operations benchmark
     group.bench_function("complete option processing", |b| {
@@ -112,6 +111,18 @@ fn benchmark_complex_operations(
             black_box(data.validate());
             let _ = black_box(data.calculate_prices(None));
             black_box(data)
+        })
+    });
+
+    // Simulated large chain processing
+    let chain_data: Vec<OptionData> = (0..50).map(|_| create_test_option_data()).collect();
+    group.bench_function("process 50 option data items", |b| {
+        b.iter(|| {
+            let mut processed = chain_data.clone();
+            for item in processed.iter_mut() {
+                let _ = black_box(item.calculate_prices(None));
+            }
+            black_box(processed)
         })
     });
 }

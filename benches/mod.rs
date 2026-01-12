@@ -8,9 +8,11 @@ use model::positive::{
     benchmark_arithmetic, benchmark_comparisons, benchmark_conversions, benchmark_creation,
     benchmark_math_operations,
 };
+use model::strategy::benchmark_strategies;
 
 use model::option::{
-    benchmark_binary_tree, benchmark_greeks, benchmark_pricing, benchmark_valuations,
+    benchmark_binary_tree, benchmark_greeks, benchmark_maturities, benchmark_pricing,
+    benchmark_valuations,
 };
 
 use model::position::{
@@ -30,9 +32,11 @@ criterion_group!(
     benchmark_greeks,
     benchmark_valuations,
     benchmark_binary_tree,
+    benchmark_maturities,
     benchmark_costs_and_fees,
     benchmark_profit_calculations,
     benchmark_time_calculations,
-    benchmark_validations
+    benchmark_validations,
+    benchmark_strategies
 );
 criterion_main!(benches);

@@ -4,7 +4,7 @@
    Date: 7/1/25
 ******************************************************************************/
 
-use criterion::{Criterion, criterion_group, criterion_main};
+use criterion::Criterion;
 use optionstratlib::greeks::Greeks;
 use optionstratlib::pnl::utils::PnLCalculator;
 use optionstratlib::{ExpirationDate, OptionStyle, OptionType, Options, Side};
@@ -138,7 +138,7 @@ pub(crate) fn benchmark_binary_tree(c: &mut Criterion) {
 
     let option = create_test_option();
 
-    for steps in [10, 50, 100].iter() {
+    for steps in [10, 50, 100, 200].iter() {
         group.bench_function(format!("binomial_tree_{steps}_steps"), |bencher| {
             bencher.iter(|| black_box(option.calculate_price_binomial_tree(*steps)))
         });
@@ -147,11 +147,16 @@ pub(crate) fn benchmark_binary_tree(c: &mut Criterion) {
     group.finish();
 }
 
-criterion_group!(
-    benches,
-    benchmark_pricing,
-    benchmark_greeks,
-    benchmark_valuations,
-    benchmark_binary_tree
-);
-criterion_main!(benches);
+pub(crate) fn benchmark_maturities(c: &mut Criterion) {
+    let mut group = c.benchmark_group("Maturity Impact on Pricing");
+    let mut option = create_test_option();
+
+    for days in [1, 7, 30, 90, 365].iter() {
+        option.expiration_date = ExpirationDate::Days(pos_or_panic!(*days as f64));
+        group.bench_function(format!("black_scholes_{days}_days"), |bencher| {
+            bencher.iter(|| black_box(option.calculate_price_black_scholes()))
+        });
+    }
+
+    group.finish();
+}
