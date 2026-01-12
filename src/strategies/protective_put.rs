@@ -95,7 +95,7 @@ impl ProtectivePut {
             put_strike,
             expiration,
             implied_volatility,
-            quantity / Positive::HUNDRED,
+            quantity,
             underlying_price,
             risk_free_rate,
             OptionStyle::Put,
@@ -107,8 +107,8 @@ impl ProtectivePut {
             long_put_option,
             premium_long_put,
             Utc::now(),
-            put_open_fee,
-            put_close_fee,
+            put_open_fee / Positive::HUNDRED,
+            put_close_fee / Positive::HUNDRED,
             None,
             None,
         );
@@ -196,8 +196,7 @@ impl ProtectivePut {
     pub fn total_fees(&self) -> Positive {
         self.spot_leg.open_fee
             + self.spot_leg.close_fee
-            + self.long_put.open_fee
-            + self.long_put.close_fee
+            + (self.long_put.open_fee + self.long_put.close_fee) * self.long_put.option.quantity
     }
 
     /// Returns the protection level as a percentage below current price.
@@ -206,6 +205,14 @@ impl ProtectivePut {
         let current_price = self.spot_leg.cost_basis.to_dec();
         let put_strike = self.long_put.option.strike_price.to_dec();
         ((current_price - put_strike) / current_price) * Decimal::ONE_HUNDRED
+    }
+
+    /// Calculates the effective cost basis (Price paid for spot + Premium paid for put).
+    #[must_use]
+    pub fn effective_cost_basis(&self) -> Positive {
+        let premium_per_share =
+            self.long_put.premium * self.long_put.option.quantity / self.spot_leg.quantity;
+        self.spot_leg.cost_basis + premium_per_share
     }
 
     /// Checks if the put is out-of-the-money.
@@ -271,6 +278,37 @@ impl Positionable for ProtectivePut {
 
     fn get_positions(&self) -> Result<Vec<&Position>, PositionError> {
         Ok(vec![&self.long_put])
+    }
+
+    fn get_position(
+        &mut self,
+        option_style: &OptionStyle,
+        side: &Side,
+        strike: &Positive,
+    ) -> Result<Vec<&mut Position>, PositionError> {
+        if *option_style == OptionStyle::Put
+            && *side == Side::Long
+            && *strike == self.long_put.option.strike_price
+        {
+            Ok(vec![&mut self.long_put])
+        } else {
+            Err(PositionError::invalid_position(
+                "Position not found in ProtectivePut",
+            ))
+        }
+    }
+
+    fn modify_position(&mut self, position: &Position) -> Result<(), PositionError> {
+        if position.option.option_style != OptionStyle::Put || position.option.side != Side::Long {
+            return Err(PositionError::invalid_position_type(
+                position.option.side,
+                "ProtectivePut only accepts long put positions".to_string(),
+            ));
+        }
+
+        self.long_put = position.clone();
+        let _ = self.update_break_even_points();
+        Ok(())
     }
 }
 
