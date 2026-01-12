@@ -127,11 +127,30 @@ pub fn price_binomial(params: BinomialPricingParams) -> Result<Decimal, PricingE
                     let intrinsic_value = f2d!(params.option_type.payoff(&info));
                     prices[i] = option_value.max(intrinsic_value);
                 }
+                OptionType::Bermuda { exercise_dates } => {
+                    // Calculate time at this step
+                    let time_at_step = dt * Decimal::from(step as u32);
+                    // Check if this step is an exercise date
+                    let is_exercise_date = exercise_dates.iter().any(|&t| {
+                        let t_dec = Decimal::try_from(t).unwrap_or(Decimal::ZERO);
+                        (time_at_step - t_dec).abs() < dt / Decimal::TWO
+                    });
+                    if is_exercise_date {
+                        let spot = params.asset * u.powi(i as i64) * d.powi((step - i) as i64);
+                        info.spot = spot;
+                        let intrinsic_value = f2d!(params.option_type.payoff(&info));
+                        prices[i] = option_value.max(intrinsic_value);
+                    } else {
+                        prices[i] = option_value;
+                    }
+                }
                 OptionType::European => {
                     prices[i] = option_value;
                 }
                 _ => {
-                    panic!("OptionType not implemented.")
+                    return Err(PricingError::other(
+                        "OptionType not supported for binomial pricing",
+                    ));
                 }
             }
         }
@@ -241,8 +260,27 @@ pub fn generate_binomial_tree(params: &BinomialPricingParams) -> BinomialTreeRes
                         *node_val = f2d!(intrinsic_value.max(dec_node_val));
                     }
                 }
+                OptionType::Bermuda { exercise_dates } => {
+                    // Calculate time at this step
+                    let time_at_step = dt * Decimal::from(step as u32);
+                    // Check if this step is an exercise date
+                    let is_exercise_date = exercise_dates.iter().any(|&t| {
+                        let t_dec = Decimal::try_from(t).unwrap_or(Decimal::ZERO);
+                        (time_at_step - t_dec).abs() < dt / Decimal::TWO
+                    });
+                    if is_exercise_date && !((step == 0) & (node_idx == 0)) {
+                        info.spot = Positive::new_decimal(asset_tree[step][node_idx])?;
+                        let intrinsic_value = params.option_type.payoff(&info);
+                        let dec_node_val = d2f!(node_value);
+                        *node_val = f2d!(intrinsic_value.max(dec_node_val));
+                    } else {
+                        *node_val = node_value;
+                    }
+                }
                 _ => {
-                    panic!("OptionType not implemented.")
+                    return Err(PricingError::other(
+                        "OptionType not supported for binomial tree generation",
+                    ));
                 }
             }
         }
@@ -638,5 +676,180 @@ mod tests_generate_binomial_tree {
 
         assert_decimal_eq!(option_tree[1][1], params.strike - asset_tree[1][1], EPSILON);
         assert_decimal_eq!(option_tree[0][0], dec!(4.887966), EPSILON);
+    }
+}
+
+#[cfg(test)]
+mod tests_bermuda_option {
+    use super::*;
+    use crate::assert_decimal_eq;
+    use crate::model::types::OptionType;
+    use rust_decimal_macros::dec;
+
+    const EPSILON: Decimal = dec!(1e-4);
+
+    #[test]
+    fn test_bermuda_price_between_european_and_american() {
+        // Bermuda price should be: European <= Bermuda <= American
+        let european_params = BinomialPricingParams {
+            asset: pos_or_panic!(50.0),
+            volatility: pos_or_panic!(0.2),
+            int_rate: dec!(0.05),
+            strike: pos_or_panic!(52.0),
+            expiry: Positive::ONE,
+            no_steps: 100,
+            option_type: &OptionType::European,
+            option_style: &OptionStyle::Put,
+            side: &Side::Long,
+        };
+
+        let american_params = BinomialPricingParams {
+            option_type: &OptionType::American,
+            ..european_params.clone()
+        };
+
+        // Exercise at 3 months, 6 months, 9 months
+        let bermuda_type = OptionType::Bermuda {
+            exercise_dates: vec![0.25, 0.5, 0.75],
+        };
+        let bermuda_params = BinomialPricingParams {
+            option_type: &bermuda_type,
+            ..european_params.clone()
+        };
+
+        let european_price = price_binomial(european_params).unwrap();
+        let american_price = price_binomial(american_params).unwrap();
+        let bermuda_price = price_binomial(bermuda_params).unwrap();
+
+        assert!(
+            european_price <= bermuda_price,
+            "European {} should be <= Bermuda {}",
+            european_price,
+            bermuda_price
+        );
+        assert!(
+            bermuda_price <= american_price,
+            "Bermuda {} should be <= American {}",
+            bermuda_price,
+            american_price
+        );
+    }
+
+    #[test]
+    fn test_bermuda_single_exercise_date() {
+        // Single exercise date should give price between European and American
+        let bermuda_type = OptionType::Bermuda {
+            exercise_dates: vec![0.5],
+        };
+        let params = BinomialPricingParams {
+            asset: Positive::HUNDRED,
+            volatility: pos_or_panic!(0.3),
+            int_rate: dec!(0.05),
+            strike: pos_or_panic!(105.0),
+            expiry: Positive::ONE,
+            no_steps: 50,
+            option_type: &bermuda_type,
+            option_style: &OptionStyle::Put,
+            side: &Side::Long,
+        };
+
+        let price = price_binomial(params).unwrap();
+        assert!(
+            price > Decimal::ZERO,
+            "Bermuda put price should be positive"
+        );
+    }
+
+    #[test]
+    fn test_bermuda_many_exercise_dates_approaches_american() {
+        // With many exercise dates, Bermuda should approach American price
+        let european_params = BinomialPricingParams {
+            asset: pos_or_panic!(50.0),
+            volatility: pos_or_panic!(0.2),
+            int_rate: dec!(0.05),
+            strike: pos_or_panic!(52.0),
+            expiry: Positive::ONE,
+            no_steps: 52,
+            option_type: &OptionType::European,
+            option_style: &OptionStyle::Put,
+            side: &Side::Long,
+        };
+
+        let american_params = BinomialPricingParams {
+            option_type: &OptionType::American,
+            ..european_params.clone()
+        };
+
+        // Weekly exercise dates (52 dates for 1 year)
+        let exercise_dates: Vec<f64> = (1..=52).map(|i| i as f64 / 52.0).collect();
+        let bermuda_type = OptionType::Bermuda { exercise_dates };
+        let bermuda_params = BinomialPricingParams {
+            option_type: &bermuda_type,
+            ..european_params.clone()
+        };
+
+        let american_price = price_binomial(american_params).unwrap();
+        let bermuda_price = price_binomial(bermuda_params).unwrap();
+
+        // Bermuda with weekly exercise should be close to American
+        let diff = (american_price - bermuda_price).abs();
+        assert!(
+            diff < dec!(0.5),
+            "Bermuda with 52 exercise dates should be close to American: diff = {}",
+            diff
+        );
+    }
+
+    #[test]
+    fn test_bermuda_no_exercise_dates_equals_european() {
+        // Empty exercise dates results in European-like behavior
+        let european_params = BinomialPricingParams {
+            asset: Positive::HUNDRED,
+            volatility: pos_or_panic!(0.2),
+            int_rate: dec!(0.05),
+            strike: Positive::HUNDRED,
+            expiry: Positive::ONE,
+            no_steps: 50,
+            option_type: &OptionType::European,
+            option_style: &OptionStyle::Put,
+            side: &Side::Long,
+        };
+
+        let bermuda_type = OptionType::Bermuda {
+            exercise_dates: vec![],
+        };
+        let bermuda_params = BinomialPricingParams {
+            option_type: &bermuda_type,
+            ..european_params.clone()
+        };
+
+        let european_price = price_binomial(european_params).unwrap();
+        let bermuda_price = price_binomial(bermuda_params).unwrap();
+
+        assert_decimal_eq!(european_price, bermuda_price, EPSILON);
+    }
+
+    #[test]
+    fn test_bermuda_call_option() {
+        let bermuda_type = OptionType::Bermuda {
+            exercise_dates: vec![0.25, 0.5, 0.75],
+        };
+        let params = BinomialPricingParams {
+            asset: Positive::HUNDRED,
+            volatility: pos_or_panic!(0.25),
+            int_rate: dec!(0.05),
+            strike: pos_or_panic!(95.0),
+            expiry: Positive::ONE,
+            no_steps: 100,
+            option_type: &bermuda_type,
+            option_style: &OptionStyle::Call,
+            side: &Side::Long,
+        };
+
+        let price = price_binomial(params).unwrap();
+        assert!(
+            price > dec!(5.0),
+            "ITM Bermuda call should have value > intrinsic"
+        );
     }
 }
