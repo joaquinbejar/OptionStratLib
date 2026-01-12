@@ -376,5 +376,6 @@ impl_graph_for_payoff_strategy!(
     PoorMansCoveredCall,
     CallButterfly,
     crate::strategies::custom::CustomStrategy,
-    crate::strategies::covered_call::CoveredCall
+    crate::strategies::covered_call::CoveredCall,
+    crate::strategies::collar::Collar
 );
