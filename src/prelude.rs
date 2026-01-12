@@ -40,6 +40,7 @@ pub use crate::strategies::{
     bull_put_spread::BullPutSpread,
     call_butterfly::CallButterfly,
     collar::Collar,
+    covered_call::CoveredCall,
     custom::CustomStrategy,
     delta_neutral::{
         AdjustmentAction, AdjustmentConfig, AdjustmentError, AdjustmentOptimizer, AdjustmentPlan,
@@ -54,6 +55,7 @@ pub use crate::strategies::{
     long_strangle::LongStrangle,
     poor_mans_covered_call::PoorMansCoveredCall,
     probabilities::ProbabilityAnalysis,
+    protective_put::ProtectivePut,
     short_butterfly_spread::ShortButterflySpread,
     short_call::ShortCall,
     short_put::ShortPut,

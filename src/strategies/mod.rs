@@ -284,6 +284,7 @@ pub use bull_call_spread::BullCallSpread;
 pub use bull_put_spread::BullPutSpread;
 pub use call_butterfly::CallButterfly;
 pub use collar::Collar;
+pub use covered_call::CoveredCall;
 pub use delta_neutral::{
     AdjustmentAction, AdjustmentConfig, AdjustmentError, AdjustmentOptimizer, AdjustmentPlan,
     AdjustmentTarget, DELTA_THRESHOLD, DeltaAdjustment, DeltaInfo, DeltaNeutrality,
@@ -297,6 +298,7 @@ pub use long_put::LongPut;
 pub use long_straddle::LongStraddle;
 pub use long_strangle::LongStrangle;
 pub use poor_mans_covered_call::PoorMansCoveredCall;
+pub use protective_put::ProtectivePut;
 pub use shared::{
     ButterflyStrategy, CondorStrategy, SpreadStrategy, StraddleStrategy, StrangleStrategy,
     aggregate_fees, aggregate_premiums, calculate_profit_ratio, credit_spread_break_even,
