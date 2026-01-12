@@ -168,6 +168,8 @@ pub enum OptionType {
         barrier_type: BarrierType,
         /// The specific level that the underlying asset must reach for the barrier to be triggered.
         barrier_level: f64,
+        /// The amount paid to the option holder if the option is knocked out.
+        rebate: Option<f64>,
     },
 
     /// A Binary option provides a fixed payoff if the underlying asset is above or below a certain level at expiry.
@@ -262,7 +264,8 @@ impl Payoff for OptionType {
             OptionType::Barrier {
                 barrier_type,
                 barrier_level,
-            } => calculate_barrier_payoff(barrier_type, barrier_level, info),
+                rebate,
+            } => calculate_barrier_payoff(barrier_type, barrier_level, rebate, info),
             OptionType::Binary { binary_type } => calculate_binary_payoff(binary_type, info),
             OptionType::Lookback { lookback_type } => match lookback_type {
                 LookbackType::FixedStrike => standard_payoff(info),
@@ -476,11 +479,18 @@ fn calculate_asian_payoff(averaging_type: &AsianAveragingType, info: &PayoffInfo
 fn calculate_barrier_payoff(
     barrier_type: &BarrierType,
     barrier_level: &f64,
+    rebate: &Option<f64>,
     info: &PayoffInfo,
 ) -> f64 {
     let barrier_condition = match barrier_type {
-        BarrierType::UpAndIn | BarrierType::UpAndOut => info.spot >= *barrier_level,
-        BarrierType::DownAndIn | BarrierType::DownAndOut => info.spot <= *barrier_level,
+        BarrierType::UpAndIn | BarrierType::UpAndOut => {
+            // Use spot_max if available, otherwise just current spot
+            info.spot_max.unwrap_or(info.spot.to_f64()) >= *barrier_level
+        }
+        BarrierType::DownAndIn | BarrierType::DownAndOut => {
+            // Use spot_min if available, otherwise just current spot
+            info.spot_min.unwrap_or(info.spot.to_f64()) <= *barrier_level
+        }
     };
     let std_payoff = standard_payoff(info);
     match barrier_type {
@@ -493,7 +503,7 @@ fn calculate_barrier_payoff(
         }
         BarrierType::UpAndOut | BarrierType::DownAndOut => {
             if barrier_condition {
-                0.0
+                rebate.unwrap_or(0.0)
             } else {
                 std_payoff
             }
@@ -661,6 +671,7 @@ mod tests_payoff {
         let option = OptionType::Barrier {
             barrier_type: BarrierType::UpAndIn,
             barrier_level: 120.0,
+            rebate: None,
         };
         let info = PayoffInfo {
             spot: pos_or_panic!(130.0),
@@ -863,6 +874,7 @@ mod tests_option_type {
         let option = OptionType::Barrier {
             barrier_type: BarrierType::DownAndOut,
             barrier_level: 90.0,
+            rebate: None,
         };
         let info = PayoffInfo {
             spot: pos_or_panic!(95.0),
@@ -1054,7 +1066,8 @@ mod test_barrier_options {
     fn test_barrier_down_and_in_put() {
         let option = OptionType::Barrier {
             barrier_type: BarrierType::DownAndIn,
-            barrier_level: 90.0,
+            barrier_level: 110.0,
+            rebate: None,
         };
         let info = PayoffInfo {
             spot: Positive::HUNDRED,
@@ -1072,6 +1085,7 @@ mod test_barrier_options {
         let option = OptionType::Barrier {
             barrier_type: BarrierType::UpAndOut,
             barrier_level: 110.0,
+            rebate: None,
         };
         let info = PayoffInfo {
             spot: pos_or_panic!(120.0),

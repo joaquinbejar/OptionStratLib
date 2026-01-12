@@ -6,7 +6,7 @@
 use crate::constants::{TRADING_DAYS, ZERO};
 use crate::error::greeks::GreeksError;
 use crate::greeks::utils::{big_n, d1, d2, n};
-use crate::model::types::OptionStyle;
+use crate::model::types::{OptionStyle, OptionType};
 use crate::{Options, Side};
 use positive::Positive;
 use pretty_simple_display::{DebugPretty, DisplaySimple};
@@ -472,6 +472,9 @@ pub trait Greeks {
 /// }
 /// ```
 pub fn delta(option: &Options) -> Result<Decimal, GreeksError> {
+    if !matches!(option.option_type, OptionType::European) {
+        return crate::greeks::numerical::numerical_delta(option);
+    }
     let expiration_date = option.expiration_date.get_years()?;
 
     // For an option when the time to expiration is zero (i.e., at the moment of expiration),
@@ -644,6 +647,9 @@ pub fn delta(option: &Options) -> Result<Decimal, GreeksError> {
 /// - If the implied volatility or time to expiration is very small, the result may be close to 0,
 ///   as gamma becomes negligible in those cases.
 pub fn gamma(option: &Options) -> Result<Decimal, GreeksError> {
+    if !matches!(option.option_type, OptionType::European) {
+        return crate::greeks::numerical::numerical_gamma(option);
+    }
     if option.implied_volatility == ZERO {
         return Ok(Decimal::ZERO);
     }
