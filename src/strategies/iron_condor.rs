@@ -12,6 +12,7 @@ Key characteristics:
 use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, StrategyBasics, StrategyType, Validable,
 };
+use super::shared::CondorStrategy;
 use crate::{
     ExpirationDate, Options,
     chains::{StrategyLegs, chain::OptionChain, utils::OptionDataGroup},
@@ -1091,6 +1092,26 @@ impl Greeks for IronCondor {
 }
 
 impl DeltaNeutrality for IronCondor {}
+
+impl CondorStrategy for IronCondor {
+    fn strikes(&self) -> (Positive, Positive, Positive, Positive) {
+        (
+            self.long_put.option.strike_price,
+            self.short_put.option.strike_price,
+            self.short_call.option.strike_price,
+            self.long_call.option.strike_price,
+        )
+    }
+
+    fn get_condor_positions(&self) -> Vec<&Position> {
+        vec![
+            &self.long_put,
+            &self.short_put,
+            &self.short_call,
+            &self.long_call,
+        ]
+    }
+}
 
 impl PnLCalculator for IronCondor {
     fn calculate_pnl(

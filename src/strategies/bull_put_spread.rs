@@ -17,6 +17,7 @@ Key characteristics:
 use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, StrategyBasics, StrategyType, Validable,
 };
+use super::shared::SpreadStrategy;
 use crate::{
     ExpirationDate, Options,
     chains::{StrategyLegs, chain::OptionChain, utils::OptionDataGroup},
@@ -933,6 +934,24 @@ impl Greeks for BullPutSpread {
 }
 
 impl DeltaNeutrality for BullPutSpread {}
+
+impl SpreadStrategy for BullPutSpread {
+    fn lower_strike(&self) -> Positive {
+        self.long_put.option.strike_price
+    }
+
+    fn upper_strike(&self) -> Positive {
+        self.short_put.option.strike_price
+    }
+
+    fn short_leg(&self) -> &Position {
+        &self.short_put
+    }
+
+    fn long_leg(&self) -> &Position {
+        &self.long_put
+    }
+}
 
 impl PnLCalculator for BullPutSpread {
     fn calculate_pnl(

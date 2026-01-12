@@ -12,6 +12,7 @@ Key characteristics:
 use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, StrategyBasics, StrategyType, Validable,
 };
+use super::shared::StraddleStrategy;
 use crate::{
     ExpirationDate, Options,
     chains::{StrategyLegs, chain::OptionChain, utils::OptionDataGroup},
@@ -831,6 +832,24 @@ impl Greeks for LongStraddle {
 }
 
 impl DeltaNeutrality for LongStraddle {}
+
+impl StraddleStrategy for LongStraddle {
+    fn strike(&self) -> Positive {
+        self.long_call.option.strike_price
+    }
+
+    fn call_position(&self) -> &Position {
+        &self.long_call
+    }
+
+    fn put_position(&self) -> &Position {
+        &self.long_put
+    }
+
+    fn is_long(&self) -> bool {
+        true
+    }
+}
 
 impl PnLCalculator for LongStraddle {
     fn calculate_pnl(

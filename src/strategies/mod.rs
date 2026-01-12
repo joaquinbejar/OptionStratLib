@@ -260,6 +260,8 @@ pub mod poor_mans_covered_call;
 pub mod probabilities;
 /// Protective Put strategy implementation
 pub mod protective_put;
+/// Shared traits for strategy categories
+pub mod shared;
 /// Short Call strategy implementation
 pub mod short_butterfly_spread;
 /// Short Call strategy implementation
@@ -294,6 +296,11 @@ pub use long_put::LongPut;
 pub use long_straddle::LongStraddle;
 pub use long_strangle::LongStrangle;
 pub use poor_mans_covered_call::PoorMansCoveredCall;
+pub use shared::{
+    ButterflyStrategy, CondorStrategy, SpreadStrategy, StraddleStrategy, StrangleStrategy,
+    aggregate_fees, aggregate_premiums, calculate_profit_ratio, credit_spread_break_even,
+    debit_spread_break_even,
+};
 pub use short_butterfly_spread::ShortButterflySpread;
 pub use short_call::ShortCall;
 pub use short_put::ShortPut;
