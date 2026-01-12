@@ -29,7 +29,14 @@ include = [
 default = []
 plotly = ["dep:plotly"]
 static_export = [
-    "plotly"
+    "plotly",
+    "async",
+]
+async = [
+    "dep:tokio",
+    "dep:async-trait",
+    "dep:reqwest",
+    "dep:futures"
 ]
 
 [dependencies]
@@ -58,6 +65,10 @@ utoipa = { workspace = true, features = ["axum_extras", "chrono", "decimal"] }
 indicatif = { workspace = true }
 thiserror = { workspace = true }
 positive = { workspace = true }
+tokio = { workspace = true, optional = true }
+async-trait = { workspace = true, optional = true }
+reqwest = { workspace = true, optional = true }
+futures = { workspace = true, optional = true }
 
 
 [dev-dependencies]
@@ -127,3 +138,7 @@ indicatif = "0.18"
 thiserror = "2.0"
 #positive = { path = "../positive", features = ["utoipa"] }
 positive = { version = "0.3", features = ["utoipa"] }
+tokio = { version = "1.43", features = ["full"] }
+async-trait = "0.1"
+reqwest = { version = "0.12", features = ["json"] }
+futures = "0.3"

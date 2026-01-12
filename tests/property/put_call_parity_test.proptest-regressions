@@ -5,3 +5,4 @@
 # It is recommended to check this file in to source control so that
 # everyone who runs the test benefits from these saved cases.
 cc ac5f998629fd7102c2c1d04ea95fa27f0c9492910cf7af0e708af1d606a6c171 # shrinks to spot = 443.4708208412317, strike = 70.99319696195508, volatility = 0.2509494419001366, days = 170
+cc 4fb877dd081930bfbde71ca04c37ed94e4f9587ad75cb2fc66e4cb73eaeecf3e # shrinks to spot = 384.25812829198213, strike = 131.52033677372853, volatility = 0.12282354401031689, days = 246

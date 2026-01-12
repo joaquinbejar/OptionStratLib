@@ -146,6 +146,26 @@ pub fn read_ohlcv_from_zip(
     Ok(candles)
 }
 
+/// Reads OHLCV data from a zipped CSV file asynchronously and filters it by date range.
+///
+/// # Note
+///
+/// This method is only available with the `async` feature.
+#[cfg(feature = "async")]
+pub async fn read_ohlcv_from_zip_async(
+    zip_path: String,
+    start_date: Option<String>,
+    end_date: Option<String>,
+) -> Result<Vec<OhlcvCandle>, OhlcvError> {
+    tokio::task::spawn_blocking(move || {
+        read_ohlcv_from_zip(&zip_path, start_date.as_deref(), end_date.as_deref())
+    })
+    .await
+    .map_err(|e| OhlcvError::OtherError {
+        reason: format!("Async task error: {}", e),
+    })?
+}
+
 #[cfg(test)]
 mod ohlcv_tests {
     use super::*;

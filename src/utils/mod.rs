@@ -188,6 +188,8 @@ pub mod time;
 /// convenience.
 mod traits;
 
+#[cfg(feature = "async")]
+pub use csv::read_ohlcv_from_zip_async;
 pub use csv::{OhlcvCandle, read_ohlcv_from_zip};
 pub use logger::{setup_logger, setup_logger_with_level};
 pub use others::{approx_equal, get_random_element, process_n_times_iter, random_decimal};
