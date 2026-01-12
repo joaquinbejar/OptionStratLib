@@ -46,35 +46,101 @@
 //!
 //! ### Theta Curve and Surface
 //!
-//! ```ignore
-//! use optionstratlib::chains::chain::OptionChain;
+//! ```rust
+//! use std::collections::BTreeSet;
+//! use rust_decimal::Decimal;
+//! use optionstratlib::curves::Curve;
+//! use optionstratlib::error::{CurveError, SurfaceError};
+//! use optionstratlib::surfaces::Surface;
 //! use optionstratlib::metrics::{ThetaCurve, ThetaSurface};
+//! use positive::Positive;
 //!
-//! let chain = OptionChain::load_from_json("options.json")?;
-//! let theta_curve = chain.theta_curve()?;
-//! let theta_surface = chain.theta_surface(price_range, days)?;
+//! struct MyTheta;
+//!
+//! impl ThetaCurve for MyTheta {
+//!     fn theta_curve(&self) -> Result<Curve, CurveError> {
+//!         // Custom logic to compute theta by strike
+//!         Ok(Curve { points: BTreeSet::new(), x_range: (Decimal::ZERO, Decimal::ZERO) })
+//!     }
+//! }
+//!
+//! impl ThetaSurface for MyTheta {
+//!     fn theta_surface(
+//!         &self,
+//!         _price_range: (Positive, Positive),
+//!         _days_to_expiry: Vec<Positive>,
+//!         _price_steps: usize,
+//!     ) -> Result<Surface, SurfaceError> {
+//!         // Custom logic to compute theta surface
+//!         Ok(Surface::new(BTreeSet::new()))
+//!     }
+//! }
 //! ```
 //!
 //! ### Charm Curve and Surface
 //!
-//! ```ignore
-//! use optionstratlib::chains::chain::OptionChain;
+//! ```rust
+//! use std::collections::BTreeSet;
+//! use rust_decimal::Decimal;
+//! use optionstratlib::curves::Curve;
+//! use optionstratlib::error::{CurveError, SurfaceError};
+//! use optionstratlib::surfaces::Surface;
 //! use optionstratlib::metrics::{CharmCurve, CharmSurface};
+//! use positive::Positive;
 //!
-//! let chain = OptionChain::load_from_json("options.json")?;
-//! let charm_curve = chain.charm_curve()?;
-//! let charm_surface = chain.charm_surface(price_range, days)?;
+//! struct MyCharm;
+//!
+//! impl CharmCurve for MyCharm {
+//!     fn charm_curve(&self) -> Result<Curve, CurveError> {
+//!         // Custom logic to compute charm (delta decay) by strike
+//!         Ok(Curve { points: BTreeSet::new(), x_range: (Decimal::ZERO, Decimal::ZERO) })
+//!     }
+//! }
+//!
+//! impl CharmSurface for MyCharm {
+//!     fn charm_surface(
+//!         &self,
+//!         _price_range: (Positive, Positive),
+//!         _days_to_expiry: Vec<Positive>,
+//!         _price_steps: usize,
+//!     ) -> Result<Surface, SurfaceError> {
+//!         // Custom logic to compute charm surface
+//!         Ok(Surface::new(BTreeSet::new()))
+//!     }
+//! }
 //! ```
 //!
 //! ### Color Curve and Surface
 //!
-//! ```ignore
-//! use optionstratlib::chains::chain::OptionChain;
+//! ```rust
+//! use std::collections::BTreeSet;
+//! use rust_decimal::Decimal;
+//! use optionstratlib::curves::Curve;
+//! use optionstratlib::error::{CurveError, SurfaceError};
+//! use optionstratlib::surfaces::Surface;
 //! use optionstratlib::metrics::{ColorCurve, ColorSurface};
+//! use positive::Positive;
 //!
-//! let chain = OptionChain::load_from_json("options.json")?;
-//! let color_curve = chain.color_curve()?;
-//! let color_surface = chain.color_surface(price_range, days)?;
+//! struct MyColor;
+//!
+//! impl ColorCurve for MyColor {
+//!     fn color_curve(&self) -> Result<Curve, CurveError> {
+//!         // Custom logic to compute color (gamma decay) by strike
+//!         Ok(Curve { points: BTreeSet::new(), x_range: (Decimal::ZERO, Decimal::ZERO) })
+//!     }
+//! }
+//!
+//! impl ColorSurface for MyColor {
+//!     fn color_surface(
+//!         &self,
+//!         _price_range: (Positive, Positive),
+//!         _days_to_expiry: Vec<Positive>,
+//!         _price_steps: usize,
+//!     ) -> Result<Surface, SurfaceError> {
+//!         // Custom logic to compute color surface
+//!         Ok(Surface::new(BTreeSet::new()))
+//!     }
+//! }
 //! ```
 
 pub mod charm;

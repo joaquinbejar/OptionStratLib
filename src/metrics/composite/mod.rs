@@ -43,34 +43,91 @@
 //!
 //! ### Vanna-Volga Surface
 //!
-//! ```ignore
-//! use optionstratlib::chains::chain::OptionChain;
+//! ```rust
+//! use std::collections::BTreeSet;
+//! use optionstratlib::error::SurfaceError;
+//! use optionstratlib::surfaces::Surface;
 //! use optionstratlib::metrics::VannaVolgaSurface;
+//! use positive::Positive;
 //!
-//! let chain = OptionChain::load_from_json("options.json")?;
-//! let surface = chain.vanna_volga_surface(price_range, vol_range)?;
+//! struct MyVannaVolga;
+//!
+//! impl VannaVolgaSurface for MyVannaVolga {
+//!     fn vanna_volga_surface(
+//!         &self,
+//!         _price_range: (Positive, Positive),
+//!         _vol_range: (Positive, Positive),
+//!         _price_steps: usize,
+//!         _vol_steps: usize,
+//!     ) -> Result<Surface, SurfaceError> {
+//!         // Custom logic to compute Vanna-Volga hedge surface
+//!         Ok(Surface::new(BTreeSet::new()))
+//!     }
+//! }
 //! ```
 //!
 //! ### Delta-Gamma Profile
 //!
-//! ```ignore
-//! use optionstratlib::chains::chain::OptionChain;
+//! ```rust
+//! use std::collections::BTreeSet;
+//! use rust_decimal::Decimal;
+//! use optionstratlib::curves::Curve;
+//! use optionstratlib::error::{CurveError, SurfaceError};
+//! use optionstratlib::surfaces::Surface;
 //! use optionstratlib::metrics::{DeltaGammaProfileCurve, DeltaGammaProfileSurface};
+//! use positive::Positive;
 //!
-//! let chain = OptionChain::load_from_json("options.json")?;
-//! let curve = chain.delta_gamma_curve()?;
-//! let surface = chain.delta_gamma_surface(price_range, time_range)?;
+//! struct MyDeltaGamma;
+//!
+//! impl DeltaGammaProfileCurve for MyDeltaGamma {
+//!     fn delta_gamma_curve(&self) -> Result<Curve, CurveError> {
+//!         // Custom logic to compute delta-gamma profile by strike
+//!         Ok(Curve { points: BTreeSet::new(), x_range: (Decimal::ZERO, Decimal::ZERO) })
+//!     }
+//! }
+//!
+//! impl DeltaGammaProfileSurface for MyDeltaGamma {
+//!     fn delta_gamma_surface(
+//!         &self,
+//!         _price_range: (Positive, Positive),
+//!         _days_to_expiry: Vec<Positive>,
+//!         _price_steps: usize,
+//!     ) -> Result<Surface, SurfaceError> {
+//!         // Custom logic to compute delta-gamma surface
+//!         Ok(Surface::new(BTreeSet::new()))
+//!     }
+//! }
 //! ```
 //!
 //! ### Smile Dynamics
 //!
-//! ```ignore
-//! use optionstratlib::chains::chain::OptionChain;
+//! ```rust
+//! use std::collections::BTreeSet;
+//! use rust_decimal::Decimal;
+//! use optionstratlib::curves::Curve;
+//! use optionstratlib::error::{CurveError, SurfaceError};
+//! use optionstratlib::surfaces::Surface;
 //! use optionstratlib::metrics::{SmileDynamicsCurve, SmileDynamicsSurface};
+//! use positive::Positive;
 //!
-//! let chain = OptionChain::load_from_json("options.json")?;
-//! let curve = chain.smile_dynamics_curve()?;
-//! let surface = chain.smile_dynamics_surface(days_to_expiry)?;
+//! struct MySmileDynamics;
+//!
+//! impl SmileDynamicsCurve for MySmileDynamics {
+//!     fn smile_dynamics_curve(&self) -> Result<Curve, CurveError> {
+//!         // Custom logic to compute volatility smile curve
+//!         Ok(Curve { points: BTreeSet::new(), x_range: (Decimal::ZERO, Decimal::ZERO) })
+//!     }
+//! }
+//!
+//! impl SmileDynamicsSurface for MySmileDynamics {
+//!     fn smile_dynamics_surface(
+//!         &self,
+//!         _days_to_expiry: Vec<Positive>,
+//!     ) -> Result<Surface, SurfaceError> {
+//!         // Custom logic to compute smile dynamics surface
+//!         Ok(Surface::new(BTreeSet::new()))
+//!     }
+//! }
 //! ```
 
 pub mod delta_gamma_profile;

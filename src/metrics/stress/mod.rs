@@ -44,35 +44,103 @@
 //!
 //! ### Volatility Sensitivity
 //!
-//! ```ignore
-//! use optionstratlib::chains::chain::OptionChain;
+//! ```rust
+//! use std::collections::BTreeSet;
+//! use rust_decimal::Decimal;
+//! use optionstratlib::curves::Curve;
+//! use optionstratlib::error::{CurveError, SurfaceError};
+//! use optionstratlib::surfaces::Surface;
 //! use optionstratlib::metrics::{VolatilitySensitivityCurve, VolatilitySensitivitySurface};
+//! use positive::Positive;
 //!
-//! let chain = OptionChain::load_from_json("options.json")?;
-//! let vega_curve = chain.volatility_sensitivity_curve()?;
-//! let vol_surface = chain.volatility_sensitivity_surface(price_range, vol_range)?;
+//! struct MyVolSensitivity;
+//!
+//! impl VolatilitySensitivityCurve for MyVolSensitivity {
+//!     fn volatility_sensitivity_curve(&self) -> Result<Curve, CurveError> {
+//!         // Custom logic to compute vega exposure by strike
+//!         Ok(Curve { points: BTreeSet::new(), x_range: (Decimal::ZERO, Decimal::ZERO) })
+//!     }
+//! }
+//!
+//! impl VolatilitySensitivitySurface for MyVolSensitivity {
+//!     fn volatility_sensitivity_surface(
+//!         &self,
+//!         _price_range: (Positive, Positive),
+//!         _vol_range: (Positive, Positive),
+//!         _price_steps: usize,
+//!         _vol_steps: usize,
+//!     ) -> Result<Surface, SurfaceError> {
+//!         // Custom logic to compute P&L surface across price-vol space
+//!         Ok(Surface::new(BTreeSet::new()))
+//!     }
+//! }
 //! ```
 //!
 //! ### Time Decay Profile
 //!
-//! ```ignore
-//! use optionstratlib::chains::chain::OptionChain;
+//! ```rust
+//! use std::collections::BTreeSet;
+//! use rust_decimal::Decimal;
+//! use optionstratlib::curves::Curve;
+//! use optionstratlib::error::{CurveError, SurfaceError};
+//! use optionstratlib::surfaces::Surface;
 //! use optionstratlib::metrics::{TimeDecayCurve, TimeDecaySurface};
+//! use positive::Positive;
 //!
-//! let chain = OptionChain::load_from_json("options.json")?;
-//! let theta_curve = chain.time_decay_curve()?;
-//! let decay_surface = chain.time_decay_surface(price_range, days)?;
+//! struct MyTimeDecay;
+//!
+//! impl TimeDecayCurve for MyTimeDecay {
+//!     fn time_decay_curve(&self) -> Result<Curve, CurveError> {
+//!         // Custom logic to compute theta by strike
+//!         Ok(Curve { points: BTreeSet::new(), x_range: (Decimal::ZERO, Decimal::ZERO) })
+//!     }
+//! }
+//!
+//! impl TimeDecaySurface for MyTimeDecay {
+//!     fn time_decay_surface(
+//!         &self,
+//!         _price_range: (Positive, Positive),
+//!         _days_to_expiry: Vec<Positive>,
+//!         _price_steps: usize,
+//!     ) -> Result<Surface, SurfaceError> {
+//!         // Custom logic to compute value decay surface
+//!         Ok(Surface::new(BTreeSet::new()))
+//!     }
+//! }
 //! ```
 //!
 //! ### Price Shock Impact
 //!
-//! ```ignore
-//! use optionstratlib::chains::chain::OptionChain;
+//! ```rust
+//! use std::collections::BTreeSet;
+//! use rust_decimal::Decimal;
+//! use optionstratlib::curves::Curve;
+//! use optionstratlib::error::{CurveError, SurfaceError};
+//! use optionstratlib::surfaces::Surface;
 //! use optionstratlib::metrics::{PriceShockCurve, PriceShockSurface};
+//! use positive::Positive;
 //!
-//! let chain = OptionChain::load_from_json("options.json")?;
-//! let shock_curve = chain.price_shock_curve(shock_pct)?;
-//! let shock_surface = chain.price_shock_surface(price_range, vol_range)?;
+//! struct MyPriceShock;
+//!
+//! impl PriceShockCurve for MyPriceShock {
+//!     fn price_shock_curve(&self, _shock_pct: Decimal) -> Result<Curve, CurveError> {
+//!         // Custom logic to compute P&L impact by strike
+//!         Ok(Curve { points: BTreeSet::new(), x_range: (Decimal::ZERO, Decimal::ZERO) })
+//!     }
+//! }
+//!
+//! impl PriceShockSurface for MyPriceShock {
+//!     fn price_shock_surface(
+//!         &self,
+//!         _price_range: (Positive, Positive),
+//!         _vol_range: (Positive, Positive),
+//!         _price_steps: usize,
+//!         _vol_steps: usize,
+//!     ) -> Result<Surface, SurfaceError> {
+//!         // Custom logic to compute shock impact surface
+//!         Ok(Surface::new(BTreeSet::new()))
+//!     }
+//! }
 //! ```
 
 pub mod price_shock;
