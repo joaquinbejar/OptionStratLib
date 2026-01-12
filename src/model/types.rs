@@ -348,7 +348,7 @@ pub struct OptionBasicType<'a> {
 }
 
 /// Describes how the average price is calculated for Asian options.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, ToSchema)]
+#[derive(Copy, Clone, Debug, PartialEq, Serialize, Deserialize, ToSchema)]
 pub enum AsianAveragingType {
     /// Arithmetic averaging sums all observed prices and divides by the number of observations.
     Arithmetic,
@@ -357,7 +357,7 @@ pub enum AsianAveragingType {
 }
 
 /// Describes the type of barrier for Barrier options.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, ToSchema)]
+#[derive(Copy, Clone, Debug, PartialEq, Serialize, Deserialize, ToSchema)]
 pub enum BarrierType {
     /// The option becomes active if the underlying asset price goes above a certain level.
     UpAndIn,
@@ -382,7 +382,7 @@ pub enum BarrierType {
 /// - `Gap`:
 ///   Pays out based on how far the underlying asset price is above the strike price at expiration.
 ///   The payout is proportional to the difference between the asset price and the strike price.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, ToSchema)]
+#[derive(Copy, Clone, Debug, PartialEq, Serialize, Deserialize, ToSchema)]
 pub enum BinaryType {
     /// The option pays a fixed amount of cash if the underlying asset is above or below a certain level.
     CashOrNothing,
@@ -393,7 +393,7 @@ pub enum BinaryType {
 }
 
 /// Describes the type of lookback option.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, ToSchema)]
+#[derive(Copy, Clone, Debug, PartialEq, Serialize, Deserialize, ToSchema)]
 pub enum LookbackType {
     /// The strike price is fixed at the beginning, and the payoff is based on the maximum or minimum price of the underlying asset during the option's life.
     FixedStrike,

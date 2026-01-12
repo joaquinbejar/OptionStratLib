@@ -211,7 +211,7 @@ mod tests {
     use super::*;
     use crate::model::types::{BarrierType, OptionStyle, OptionType, Side};
     use crate::{ExpirationDate, Options};
-    use positive::{Positive, pos_or_panic};
+    use positive::pos_or_panic;
     use rust_decimal_macros::dec;
 
     fn create_test_option(style: OptionStyle, barrier_type: BarrierType, level: f64) -> Options {
@@ -230,7 +230,7 @@ mod tests {
             underlying_price: pos_or_panic!(100.0),
             risk_free_rate: dec!(0.08),
             option_style: style,
-            dividend_yield: Positive::ZERO,
+            dividend_yield: pos_or_panic!(0.04),
             exotic_params: None,
         }
     }
@@ -239,10 +239,10 @@ mod tests {
     fn test_down_and_out_call() {
         let option = create_test_option(OptionStyle::Call, BarrierType::DownAndOut, 95.0);
         let price = barrier_black_scholes(&option).unwrap();
-        // S=100, K=100, H=95, r=0.08, q=0.0, sigma=0.25, T=0.5
-        // Price should be approx 5.2998
+        // S=100, K=100, H=95, r=0.08, q=0.04, sigma=0.25, T=0.5
+        // Price should be approx 4.5126
         assert!(
-            price > dec!(5.2) && price < dec!(5.4),
+            price > dec!(4.5) && price < dec!(4.6),
             "Price was {}",
             price
         );
@@ -252,9 +252,9 @@ mod tests {
     fn test_down_and_in_call() {
         let option = create_test_option(OptionStyle::Call, BarrierType::DownAndIn, 95.0);
         let price = barrier_black_scholes(&option).unwrap();
-        // Price should be approx 3.7414
+        // Price should be approx 3.3368
         assert!(
-            price > dec!(3.7) && price < dec!(3.8),
+            price > dec!(3.3) && price < dec!(3.4),
             "Price was {}",
             price
         );

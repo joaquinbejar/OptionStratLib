@@ -108,6 +108,7 @@ members = [
     "examples/examples_curves",
     "examples/examples_surfaces",
     "examples/examples_metrics",
+    "examples/examples_exotics",
 ]
 
 [workspace.dependencies]
