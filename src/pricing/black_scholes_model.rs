@@ -69,10 +69,7 @@ pub fn black_scholes(option: &Options) -> Result<Decimal, PricingError> {
             "Bermuda",
             "Black-Scholes",
         )),
-        OptionType::Asian { .. } => Err(PricingError::unsupported_option_type(
-            "Asian",
-            "Black-Scholes",
-        )),
+        OptionType::Asian { .. } => crate::pricing::asian::asian_black_scholes(option),
         OptionType::Barrier { .. } => crate::pricing::barrier::barrier_black_scholes(option),
         OptionType::Binary { .. } => Err(PricingError::unsupported_option_type(
             "Binary",
