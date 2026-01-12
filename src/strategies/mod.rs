@@ -283,6 +283,7 @@ pub use build::traits::StrategyConstructor;
 pub use bull_call_spread::BullCallSpread;
 pub use bull_put_spread::BullPutSpread;
 pub use call_butterfly::CallButterfly;
+pub use collar::Collar;
 pub use delta_neutral::{
     AdjustmentAction, AdjustmentConfig, AdjustmentError, AdjustmentOptimizer, AdjustmentPlan,
     AdjustmentTarget, DELTA_THRESHOLD, DeltaAdjustment, DeltaInfo, DeltaNeutrality,

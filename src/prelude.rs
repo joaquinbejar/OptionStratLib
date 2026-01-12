@@ -39,6 +39,7 @@ pub use crate::strategies::{
     bull_call_spread::BullCallSpread,
     bull_put_spread::BullPutSpread,
     call_butterfly::CallButterfly,
+    collar::Collar,
     custom::CustomStrategy,
     delta_neutral::{
         AdjustmentAction, AdjustmentConfig, AdjustmentError, AdjustmentOptimizer, AdjustmentPlan,
