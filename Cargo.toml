@@ -65,10 +65,15 @@ criterion = { version = "0.8", default-features = false, features = ["html_repor
 mockall = "0.14"
 tempfile = "3.23"
 static_assertions = "1.1"
+proptest = "1.5"
 
 [[test]]
 name = "tests"
 path = "tests/unit/mod.rs"
+
+[[test]]
+name = "property_tests"
+path = "tests/property/mod.rs"
 
 [[bench]]
 name = "benches"
