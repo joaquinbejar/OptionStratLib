@@ -18,6 +18,7 @@ Key characteristics:
 use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, StrategyBasics, StrategyType, Validable,
 };
+use super::shared::SpreadStrategy;
 use crate::{
     ExpirationDate, Options,
     chains::{StrategyLegs, chain::OptionChain, utils::OptionDataGroup},
@@ -824,6 +825,24 @@ impl Greeks for BearCallSpread {
 }
 
 impl DeltaNeutrality for BearCallSpread {}
+
+impl SpreadStrategy for BearCallSpread {
+    fn lower_strike(&self) -> Positive {
+        self.short_call.option.strike_price
+    }
+
+    fn upper_strike(&self) -> Positive {
+        self.long_call.option.strike_price
+    }
+
+    fn short_leg(&self) -> &Position {
+        &self.short_call
+    }
+
+    fn long_leg(&self) -> &Position {
+        &self.long_call
+    }
+}
 
 impl PnLCalculator for BearCallSpread {
     fn calculate_pnl(

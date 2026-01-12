@@ -1,6 +1,7 @@
 use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, StrategyBasics, StrategyType, Validable,
 };
+use super::shared::ButterflyStrategy;
 use crate::{
     ExpirationDate, Options,
     chains::{StrategyLegs, chain::OptionChain, utils::OptionDataGroup},
@@ -1001,6 +1002,23 @@ impl Greeks for ShortButterflySpread {
 }
 
 impl DeltaNeutrality for ShortButterflySpread {}
+
+impl ButterflyStrategy for ShortButterflySpread {
+    fn wing_strikes(&self) -> (Positive, Positive) {
+        (
+            self.long_call.option.strike_price,
+            self.short_call_high.option.strike_price,
+        )
+    }
+
+    fn body_strike(&self) -> Positive {
+        self.short_call_low.option.strike_price
+    }
+
+    fn get_butterfly_positions(&self) -> Vec<&Position> {
+        vec![&self.long_call, &self.short_call_low, &self.short_call_high]
+    }
+}
 
 impl PnLCalculator for ShortButterflySpread {
     fn calculate_pnl(

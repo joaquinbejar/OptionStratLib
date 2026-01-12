@@ -13,6 +13,7 @@ Key characteristics:
 use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, StrategyBasics, StrategyType, Validable,
 };
+use super::shared::StrangleStrategy;
 use crate::{
     ExpirationDate, Options,
     chains::{StrategyLegs, chain::OptionChain, utils::OptionDataGroup},
@@ -1137,6 +1138,28 @@ impl Greeks for ShortStrangle {
 }
 
 impl DeltaNeutrality for ShortStrangle {}
+
+impl StrangleStrategy for ShortStrangle {
+    fn call_strike(&self) -> Positive {
+        self.short_call.option.strike_price
+    }
+
+    fn put_strike(&self) -> Positive {
+        self.short_put.option.strike_price
+    }
+
+    fn call_position(&self) -> &Position {
+        &self.short_call
+    }
+
+    fn put_position(&self) -> &Position {
+        &self.short_put
+    }
+
+    fn is_long(&self) -> bool {
+        false
+    }
+}
 
 impl PnLCalculator for ShortStrangle {
     fn calculate_pnl(

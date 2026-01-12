@@ -14,6 +14,7 @@ Key characteristics:
 use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, StrategyBasics, StrategyType, Validable,
 };
+use super::shared::ButterflyStrategy;
 use crate::{
     ExpirationDate, Options,
     chains::{StrategyLegs, chain::OptionChain, utils::OptionDataGroup},
@@ -1063,6 +1064,28 @@ impl Greeks for IronButterfly {
 }
 
 impl DeltaNeutrality for IronButterfly {}
+
+impl ButterflyStrategy for IronButterfly {
+    fn wing_strikes(&self) -> (Positive, Positive) {
+        (
+            self.long_put.option.strike_price,
+            self.long_call.option.strike_price,
+        )
+    }
+
+    fn body_strike(&self) -> Positive {
+        self.short_call.option.strike_price
+    }
+
+    fn get_butterfly_positions(&self) -> Vec<&Position> {
+        vec![
+            &self.long_put,
+            &self.short_put,
+            &self.short_call,
+            &self.long_call,
+        ]
+    }
+}
 
 impl PnLCalculator for IronButterfly {
     fn calculate_pnl(
