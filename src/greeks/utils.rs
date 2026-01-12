@@ -412,17 +412,18 @@ pub fn big_n(x: Decimal) -> Result<Decimal, DecimalError> {
 ///     - `d2_value`: The calculated d2 value.
 ///
 pub(crate) fn calculate_d_values(option: &Options) -> Result<(Decimal, Decimal), GreeksError> {
+    let b = option.risk_free_rate - option.dividend_yield.to_dec();
     let d1_value = d1(
         option.underlying_price,
         option.strike_price,
-        option.risk_free_rate,
+        b,
         option.expiration_date.get_years()?,
         option.implied_volatility,
     );
     let d2_value = d2(
         option.underlying_price,
         option.strike_price,
-        option.risk_free_rate,
+        b,
         option.expiration_date.get_years()?,
         option.implied_volatility,
     );

@@ -160,6 +160,9 @@ pub mod american;
 /// Binomial Tree model for option pricing.
 pub mod binomial_model;
 
+/// Barrier option pricing using analytical extensions.
+pub mod barrier;
+
 /// Black-Scholes model for option pricing and analysis.
 ///
 /// This module implements the Black-Scholes-Merton model for European option pricing
@@ -251,6 +254,7 @@ pub(crate) mod utils;
 pub mod unified;
 
 pub use american::barone_adesi_whaley;
+pub use barrier::barrier_black_scholes;
 pub use binomial_model::{BinomialPricingParams, generate_binomial_tree, price_binomial};
 pub use black_scholes_model::{BlackScholes, black_scholes};
 pub use monte_carlo::monte_carlo_option_pricing;

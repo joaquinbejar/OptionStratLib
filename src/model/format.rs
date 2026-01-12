@@ -171,10 +171,14 @@ impl fmt::Display for OptionType {
             OptionType::Barrier {
                 barrier_type,
                 barrier_level,
-            } => write!(
-                f,
-                "Barrier Option (Type: {barrier_type}, Level: {barrier_level})"
-            ),
+                rebate,
+            } => {
+                write!(
+                    f,
+                    "Barrier Option (Type: {}, Level: {}, Rebate: {:?})",
+                    barrier_type, barrier_level, rebate
+                )
+            }
             OptionType::Binary { binary_type } => {
                 write!(f, "Binary Option (Type: {binary_type})")
             }
@@ -407,6 +411,7 @@ mod tests_options {
             option_type: OptionType::Barrier {
                 barrier_type: BarrierType::UpAndIn,
                 barrier_level: 100.0,
+                rebate: None,
             },
             side: Side::Short,
             underlying_symbol: "GOOGL".to_string(),
@@ -423,7 +428,7 @@ mod tests_options {
 
         let display_output = format!("{options}");
         let expected_output = "\
-            Short Call Barrier Option (Type: Up-And-In Barrier, Level: 100)\n\
+            Short Call Barrier Option (Type: Up-And-In Barrier, Level: 100, Rebate: None)\n\
             Underlying: GOOGL @ $1900\n\
             Strike: $2000\n\
             Expiration: 2024-08-08 00:00:00 UTC\n\
@@ -612,11 +617,12 @@ mod tests_option_type_display_debug {
         let option = OptionType::Barrier {
             barrier_type: BarrierType::UpAndIn,
             barrier_level: 100.0,
+            rebate: None,
         };
         let debug_output = format!("{option:?}");
         assert_eq!(
             debug_output,
-            "Barrier { barrier_type: UpAndIn, barrier_level: 100.0 }"
+            "Barrier { barrier_type: UpAndIn, barrier_level: 100.0, rebate: None }"
         );
     }
 
@@ -625,11 +631,12 @@ mod tests_option_type_display_debug {
         let option = OptionType::Barrier {
             barrier_type: BarrierType::UpAndIn,
             barrier_level: 100.0,
+            rebate: None,
         };
         let display_output = format!("{option}");
         assert_eq!(
             display_output,
-            "Barrier Option (Type: Up-And-In Barrier, Level: 100)"
+            "Barrier Option (Type: Up-And-In Barrier, Level: 100, Rebate: None)"
         );
     }
 

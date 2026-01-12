@@ -184,6 +184,7 @@ use positive::pos_or_panic;
 //! ```
 
 mod equations;
+pub mod numerical;
 mod utils;
 
 pub use equations::{
