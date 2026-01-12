@@ -2588,7 +2588,7 @@ mod tests_butterfly_strategies {
         );
 
         butterfly
-            .add_position(&new_short.clone())
+            .add_position(&new_short)
             .expect("Failed to add position");
         assert_eq!(
             butterfly.short_call_low.option.strike_price,

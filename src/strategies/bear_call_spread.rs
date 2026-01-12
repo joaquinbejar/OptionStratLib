@@ -188,7 +188,7 @@ impl BearCallSpread {
             None,
         );
         strategy
-            .add_position(&short_call.clone())
+            .add_position(&short_call)
             .expect("Error adding short call");
 
         let long_call_option = Options::new(
@@ -215,7 +215,7 @@ impl BearCallSpread {
             None,
         );
         strategy
-            .add_position(&long_call.clone())
+            .add_position(&long_call)
             .expect("Error adding long call");
 
         strategy.validate();

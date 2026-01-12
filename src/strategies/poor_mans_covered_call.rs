@@ -220,7 +220,7 @@ impl PoorMansCoveredCall {
             None,
         );
         strategy
-            .add_position(&long_call.clone())
+            .add_position(&long_call)
             .expect("Invalid long call option");
 
         // Short Call
@@ -248,7 +248,7 @@ impl PoorMansCoveredCall {
             None,
         );
         strategy
-            .add_position(&short_call.clone())
+            .add_position(&short_call)
             .expect("Invalid short call option");
 
         strategy
@@ -921,7 +921,7 @@ mod tests_pmcc_validation {
             None,
         );
         strategy
-            .add_position(&position.clone())
+            .add_position(&position)
             .expect("Invalid long call option");
         assert_eq!(strategy.long_call, position);
     }
@@ -953,7 +953,7 @@ mod tests_pmcc_validation {
             None,
         );
         strategy
-            .add_position(&position.clone())
+            .add_position(&position)
             .expect("Invalid short call option");
         assert_eq!(strategy.short_call, position);
     }

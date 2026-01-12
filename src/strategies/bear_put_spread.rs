@@ -185,7 +185,7 @@ impl BearPutSpread {
             None,
         );
         strategy
-            .add_position(&long_put.clone())
+            .add_position(&long_put)
             .expect("Error adding long put");
 
         let short_put_option = Options::new(
@@ -212,7 +212,7 @@ impl BearPutSpread {
             None,
         );
         strategy
-            .add_position(&short_put.clone())
+            .add_position(&short_put)
             .expect("Error adding short put");
 
         strategy.validate();
@@ -921,7 +921,7 @@ mod tests_bear_put_spread_strategy {
         );
 
         spread
-            .add_position(&new_long_put.clone())
+            .add_position(&new_long_put)
             .expect("Error adding long put");
         assert_eq!(spread.long_put.option.strike_price, pos_or_panic!(110.0));
     }

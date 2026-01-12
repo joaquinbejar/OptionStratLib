@@ -190,7 +190,7 @@ impl BullCallSpread {
             None,
         );
         strategy
-            .add_position(&long_call.clone())
+            .add_position(&long_call)
             .expect("Failed to add long call");
 
         let short_call_option = Options::new(
@@ -217,7 +217,7 @@ impl BullCallSpread {
             None,
         );
         strategy
-            .add_position(&short_call.clone())
+            .add_position(&short_call)
             .expect("Failed to add short call");
 
         strategy.validate();
@@ -942,7 +942,7 @@ mod tests_bull_call_spread_strategy {
         );
 
         spread
-            .add_position(&new_long_call.clone())
+            .add_position(&new_long_call)
             .expect("Failed to add long call");
         assert_eq!(spread.long_call.option.strike_price, pos_or_panic!(90.0));
     }

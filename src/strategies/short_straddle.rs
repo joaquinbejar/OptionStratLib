@@ -215,7 +215,7 @@ impl ShortStraddle {
             None,
         );
         strategy
-            .add_position(&short_call.clone())
+            .add_position(&short_call)
             .expect("Invalid short call");
 
         let short_put_option = Options::new(
@@ -242,7 +242,7 @@ impl ShortStraddle {
             None,
         );
         strategy
-            .add_position(&short_put.clone())
+            .add_position(&short_put)
             .expect("Invalid short put");
 
         strategy
@@ -1092,15 +1092,11 @@ mod tests_short_straddle {
         let original_put = strategy.short_put.clone();
 
         // Test adding a new call leg
-        strategy
-            .add_position(&original_call.clone())
-            .expect("Invalid call");
+        strategy.add_position(&original_call).expect("Invalid call");
         assert_eq!(strategy.short_call, original_call);
 
         // Test adding a new put leg
-        strategy
-            .add_position(&original_put.clone())
-            .expect("Invalid put");
+        strategy.add_position(&original_put).expect("Invalid put");
         assert_eq!(strategy.short_put, original_put);
     }
 

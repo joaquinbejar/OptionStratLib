@@ -142,7 +142,7 @@ impl LongPut {
             None,
         );
         strategy
-            .add_position(&long_put.clone())
+            .add_position(&long_put)
             .expect("Invalid long put option");
 
         strategy
