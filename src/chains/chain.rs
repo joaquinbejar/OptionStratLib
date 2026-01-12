@@ -1086,6 +1086,20 @@ impl OptionChain {
         Ok(())
     }
 
+    /// Saves the option chain data to a CSV file asynchronously.
+    ///
+    /// # Note
+    ///
+    /// This method is only available on non-WebAssembly targets with the `async` feature.
+    #[cfg(feature = "async")]
+    pub async fn save_to_csv_async(&self, file_path: &str) -> Result<(), ChainError> {
+        let path = file_path.to_string();
+        let self_clone = self.clone();
+        tokio::task::spawn_blocking(move || self_clone.save_to_csv(&path))
+            .await
+            .map_err(|e| ChainError::invalid_parameters("async_task", &e.to_string()))?
+    }
+
     /// Saves the option chain data to a JSON file.
     ///
     /// This method serializes the option chain into JSON format and writes it to a file
@@ -1109,6 +1123,20 @@ impl OptionChain {
         let file = File::create(full_path)?;
         serde_json::to_writer_pretty(file, &self)?;
         Ok(())
+    }
+
+    /// Saves the option chain data to a JSON file asynchronously.
+    ///
+    /// # Note
+    ///
+    /// This method is only available on non-WebAssembly targets with the `async` feature.
+    #[cfg(feature = "async")]
+    pub async fn save_to_json_async(&self, file_path: &str) -> Result<(), ChainError> {
+        let path = file_path.to_string();
+        let self_clone = self.clone();
+        tokio::task::spawn_blocking(move || self_clone.save_to_json(&path))
+            .await
+            .map_err(|e| ChainError::invalid_parameters("async_task", &e.to_string()))?
     }
 
     /// Loads option chain data from a CSV file.
@@ -1174,6 +1202,19 @@ impl OptionChain {
         Ok(option_chain)
     }
 
+    /// Loads option chain data from a CSV file asynchronously.
+    ///
+    /// # Note
+    ///
+    /// This method is only available on non-WebAssembly targets with the `async` feature.
+    #[cfg(feature = "async")]
+    pub async fn load_from_csv_async(file_path: &str) -> Result<Self, ChainError> {
+        let path = file_path.to_string();
+        tokio::task::spawn_blocking(move || Self::load_from_csv(&path))
+            .await
+            .map_err(|e| ChainError::invalid_parameters("async_task", &e.to_string()))?
+    }
+
     /// Loads option chain data from a JSON file.
     ///
     /// This function deserializes an OptionChain from a JSON file and updates
@@ -1208,6 +1249,19 @@ impl OptionChain {
         // if implied volatility is in percentage, convert it to decimal
         option_chain.check_and_convert_implied_volatility();
         Ok(option_chain)
+    }
+
+    /// Loads option chain data from a JSON file asynchronously.
+    ///
+    /// # Note
+    ///
+    /// This method is only available on non-WebAssembly targets with the `async` feature.
+    #[cfg(feature = "async")]
+    pub async fn load_from_json_async(file_path: &str) -> Result<Self, ChainError> {
+        let path = file_path.to_string();
+        tokio::task::spawn_blocking(move || Self::load_from_json(&path))
+            .await
+            .map_err(|e| ChainError::invalid_parameters("async_task", &e.to_string()))?
     }
 
     fn check_and_convert_implied_volatility(&mut self) {

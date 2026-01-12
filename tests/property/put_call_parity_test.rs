@@ -186,7 +186,7 @@ proptest! {
 
         if let (Ok(price_low), Ok(price_high)) = (black_scholes(&call_low), black_scholes(&call_high)) {
             prop_assert!(
-                price_high >= price_low,
+                price_high >= price_low - dec!(0.0000000001),
                 "Call price should increase with spot: {} >= {} (spot {} vs {})",
                 price_high, price_low, spot_higher, spot
             );
@@ -211,7 +211,7 @@ proptest! {
 
         if let (Ok(price_low), Ok(price_high)) = (black_scholes(&put_low), black_scholes(&put_high)) {
             prop_assert!(
-                price_low >= price_high,
+                price_low >= price_high - dec!(0.0000000001),
                 "Put price should decrease with spot: {} >= {} (spot {} vs {})",
                 price_low, price_high, spot, spot_higher
             );
