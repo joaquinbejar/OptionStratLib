@@ -43,33 +43,68 @@
 //!
 //! ### Bid-Ask Spread Curve
 //!
-//! ```ignore
-//! use optionstratlib::chains::chain::OptionChain;
+//! ```rust
+//! use std::collections::BTreeSet;
+//! use rust_decimal::Decimal;
+//! use optionstratlib::curves::Curve;
+//! use optionstratlib::error::CurveError;
 //! use optionstratlib::metrics::BidAskSpreadCurve;
 //!
-//! let chain = OptionChain::load_from_json("options.json")?;
-//! let spread_curve = chain.bid_ask_spread_curve()?;
+//! struct MyBidAskSpread;
+//!
+//! impl BidAskSpreadCurve for MyBidAskSpread {
+//!     fn bid_ask_spread_curve(&self) -> Result<Curve, CurveError> {
+//!         // Custom logic to compute bid-ask spread by strike
+//!         Ok(Curve { points: BTreeSet::new(), x_range: (Decimal::ZERO, Decimal::ZERO) })
+//!     }
+//! }
 //! ```
 //!
 //! ### Volume Profile
 //!
-//! ```ignore
-//! use optionstratlib::chains::chain::OptionChain;
+//! ```rust
+//! use std::collections::BTreeSet;
+//! use rust_decimal::Decimal;
+//! use optionstratlib::curves::Curve;
+//! use optionstratlib::error::{CurveError, SurfaceError};
+//! use optionstratlib::surfaces::Surface;
 //! use optionstratlib::metrics::{VolumeProfileCurve, VolumeProfileSurface};
+//! use positive::Positive;
 //!
-//! let chain = OptionChain::load_from_json("options.json")?;
-//! let volume_curve = chain.volume_profile_curve()?;
-//! let volume_surface = chain.volume_profile_surface(days_to_expiry)?;
+//! struct MyVolumeProfile;
+//!
+//! impl VolumeProfileCurve for MyVolumeProfile {
+//!     fn volume_profile_curve(&self) -> Result<Curve, CurveError> {
+//!         // Custom logic to compute volume distribution by strike
+//!         Ok(Curve { points: BTreeSet::new(), x_range: (Decimal::ZERO, Decimal::ZERO) })
+//!     }
+//! }
+//!
+//! impl VolumeProfileSurface for MyVolumeProfile {
+//!     fn volume_profile_surface(&self, _days: Vec<Positive>) -> Result<Surface, SurfaceError> {
+//!         // Custom logic to compute volume surface over time
+//!         Ok(Surface::new(BTreeSet::new()))
+//!     }
+//! }
 //! ```
 //!
 //! ### Open Interest Distribution
 //!
-//! ```ignore
-//! use optionstratlib::chains::chain::OptionChain;
+//! ```rust
+//! use std::collections::BTreeSet;
+//! use rust_decimal::Decimal;
+//! use optionstratlib::curves::Curve;
+//! use optionstratlib::error::CurveError;
 //! use optionstratlib::metrics::OpenInterestCurve;
 //!
-//! let chain = OptionChain::load_from_json("options.json")?;
-//! let oi_curve = chain.open_interest_curve()?;
+//! struct MyOpenInterest;
+//!
+//! impl OpenInterestCurve for MyOpenInterest {
+//!     fn open_interest_curve(&self) -> Result<Curve, CurveError> {
+//!         // Custom logic to compute open interest distribution by strike
+//!         Ok(Curve { points: BTreeSet::new(), x_range: (Decimal::ZERO, Decimal::ZERO) })
+//!     }
+//! }
 //! ```
 
 pub mod bid_ask_spread;
