@@ -64,6 +64,19 @@ pub struct ExoticParams {
 
     /// Global floor for Cliquet options, limiting the total return.
     pub cliquet_global_floor: Option<Decimal>, // Cliquet
+
+    /// Price of the second underlying asset for Rainbow options.
+    pub rainbow_second_asset_price: Option<Positive>, // Rainbow
+
+    /// Volatility of the second underlying asset for Rainbow options.
+    pub rainbow_second_asset_volatility: Option<Positive>, // Rainbow
+
+    /// Dividend yield of the second underlying asset for Rainbow options.
+    pub rainbow_second_asset_dividend: Option<Positive>, // Rainbow
+
+    /// Correlation between the two underlying assets for Rainbow options.
+    /// Must be between -1.0 and 1.0.
+    pub rainbow_correlation: Option<Decimal>, // Rainbow
 }
 
 /// Represents a financial option contract with its essential parameters and characteristics.

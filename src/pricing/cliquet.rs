@@ -228,6 +228,10 @@ mod tests {
                 cliquet_local_floor: Some(dec!(0.0)),
                 cliquet_global_cap: None,
                 cliquet_global_floor: None,
+                rainbow_second_asset_price: None,
+                rainbow_second_asset_volatility: None,
+                rainbow_second_asset_dividend: None,
+                rainbow_correlation: None,
             }),
         )
     }

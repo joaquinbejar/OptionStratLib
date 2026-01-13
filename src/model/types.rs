@@ -220,6 +220,8 @@ pub enum OptionType {
     Rainbow {
         /// The number of underlying assets the option is based on.
         num_assets: usize,
+        /// The type of rainbow option (BestOf or WorstOf).
+        rainbow_type: RainbowType,
     },
 
     /// A Spread option is based on the difference between the prices of two underlying assets.
@@ -399,6 +401,24 @@ pub enum LookbackType {
     FixedStrike,
     /// The strike price is determined as the maximum or minimum price of the underlying asset during the option's life, providing the holder with the most advantageous strike price.
     FloatingStrike,
+}
+
+/// Describes the type of rainbow option based on how multiple assets are combined.
+///
+/// Rainbow options are multi-asset options where the payoff depends on the relative
+/// performance of two or more underlying assets. The type determines whether the
+/// option pays based on the best or worst performing asset.
+#[derive(Copy, Clone, Debug, PartialEq, Serialize, Deserialize, ToSchema, Default)]
+pub enum RainbowType {
+    /// Option on the maximum of multiple assets.
+    /// Call payoff: max(max(S1, S2, ..., Sn) - K, 0)
+    /// Put payoff: max(K - max(S1, S2, ..., Sn), 0)
+    #[default]
+    BestOf,
+    /// Option on the minimum of multiple assets.
+    /// Call payoff: max(min(S1, S2, ..., Sn) - K, 0)
+    /// Put payoff: max(K - min(S1, S2, ..., Sn), 0)
+    WorstOf,
 }
 
 /// Calculates the payoff of an Asian option based on the average spot prices.
@@ -1125,18 +1145,38 @@ mod test_cliquet_options {
 
 #[cfg(test)]
 mod test_rainbow_options {
-    use crate::model::{OptionStyle, OptionType, Side};
+    use crate::model::{OptionStyle, OptionType, RainbowType, Side};
     use positive::{Positive, pos_or_panic};
 
     use crate::pricing::{Payoff, PayoffInfo};
 
     #[test]
-    fn test_rainbow_option_multiple_assets() {
-        let option = OptionType::Rainbow { num_assets: 3 };
+    fn test_rainbow_option_best_of() {
+        let option = OptionType::Rainbow {
+            num_assets: 2,
+            rainbow_type: RainbowType::BestOf,
+        };
         let info = PayoffInfo {
             spot: pos_or_panic!(120.0),
             strike: Positive::HUNDRED,
             style: OptionStyle::Call,
+            side: Side::Long,
+            spot_prices: None,
+            ..Default::default()
+        };
+        assert_eq!(option.payoff(&info), 20.0);
+    }
+
+    #[test]
+    fn test_rainbow_option_worst_of() {
+        let option = OptionType::Rainbow {
+            num_assets: 2,
+            rainbow_type: RainbowType::WorstOf,
+        };
+        let info = PayoffInfo {
+            spot: pos_or_panic!(80.0),
+            strike: Positive::HUNDRED,
+            style: OptionStyle::Put,
             side: Side::Long,
             spot_prices: None,
             ..Default::default()
