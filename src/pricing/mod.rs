@@ -193,6 +193,9 @@ pub mod quanto;
 /// Exchange option pricing (Margrabe options).
 pub mod exchange;
 
+/// Power option pricing (non-linear payoffs).
+pub mod power;
+
 /// Black-Scholes model for option pricing and analysis.
 ///
 /// This module implements the Black-Scholes-Merton model for European option pricing
@@ -296,6 +299,7 @@ pub use exchange::exchange_black_scholes;
 pub use lookback::lookback_black_scholes;
 pub use monte_carlo::monte_carlo_option_pricing;
 pub use payoff::{Payoff, PayoffInfo, Profit};
+pub use power::power_black_scholes;
 pub use quanto::quanto_black_scholes;
 pub use rainbow::rainbow_black_scholes;
 pub use spread::spread_black_scholes;
