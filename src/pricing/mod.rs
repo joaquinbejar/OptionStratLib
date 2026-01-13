@@ -187,6 +187,9 @@ pub mod rainbow;
 /// Spread option pricing (price differential options).
 pub mod spread;
 
+/// Quanto option pricing (currency-protected options).
+pub mod quanto;
+
 /// Black-Scholes model for option pricing and analysis.
 ///
 /// This module implements the Black-Scholes-Merton model for European option pricing
@@ -289,6 +292,7 @@ pub use compound::compound_black_scholes;
 pub use lookback::lookback_black_scholes;
 pub use monte_carlo::monte_carlo_option_pricing;
 pub use payoff::{Payoff, PayoffInfo, Profit};
+pub use quanto::quanto_black_scholes;
 pub use rainbow::rainbow_black_scholes;
 pub use spread::spread_black_scholes;
 pub use telegraph::{TelegraphProcess, telegraph};

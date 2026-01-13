@@ -286,6 +286,9 @@ mod tests {
                 spread_second_asset_volatility: Some(pos_or_panic!(0.25)),
                 spread_second_asset_dividend: Some(Positive::ZERO),
                 spread_correlation: Some(dec!(0.5)),
+                quanto_fx_volatility: None,
+                quanto_fx_correlation: None,
+                quanto_foreign_rate: None,
             }),
         )
     }

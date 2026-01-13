@@ -124,6 +124,18 @@ impl fmt::Display for ExoticParams {
             fields.push(format!("Spread Correlation: {corr:.4}"));
         }
 
+        if let Some(ref vol) = self.quanto_fx_volatility {
+            fields.push(format!("Quanto FX Volatility: {vol}"));
+        }
+
+        if let Some(corr) = self.quanto_fx_correlation {
+            fields.push(format!("Quanto FX Correlation: {corr:.4}"));
+        }
+
+        if let Some(rate) = self.quanto_foreign_rate {
+            fields.push(format!("Quanto Foreign Rate: {rate:.4}"));
+        }
+
         write!(f, "{}", fields.join(", "))
     }
 }
@@ -462,6 +474,9 @@ mod tests_options {
             spread_second_asset_volatility: None,
             spread_second_asset_dividend: None,
             spread_correlation: None,
+            quanto_fx_volatility: None,
+            quanto_fx_correlation: None,
+            quanto_foreign_rate: None,
         };
         let naive_date = NaiveDate::from_ymd_opt(2024, 8, 8)
             .expect("Invalid date")
@@ -497,7 +512,7 @@ mod tests_options {
             Quantity: 5\n\
             Risk-free Rate: 1.50%\n\
             Dividend Yield: 1%\n\
-            Exotic Parameters: ExoticParams { spot_prices: None, spot_min: None, spot_max: None, cliquet_local_cap: None, cliquet_local_floor: None, cliquet_global_cap: None, cliquet_global_floor: None, rainbow_second_asset_price: None, rainbow_second_asset_volatility: None, rainbow_second_asset_dividend: None, rainbow_correlation: None, spread_second_asset_volatility: None, spread_second_asset_dividend: None, spread_correlation: None }";
+            Exotic Parameters: ExoticParams { spot_prices: None, spot_min: None, spot_max: None, cliquet_local_cap: None, cliquet_local_floor: None, cliquet_global_cap: None, cliquet_global_floor: None, rainbow_second_asset_price: None, rainbow_second_asset_volatility: None, rainbow_second_asset_dividend: None, rainbow_correlation: None, spread_second_asset_volatility: None, spread_second_asset_dividend: None, spread_correlation: None, quanto_fx_volatility: None, quanto_fx_correlation: None, quanto_foreign_rate: None }";
 
         assert_eq!(display_output, expected_output);
     }
