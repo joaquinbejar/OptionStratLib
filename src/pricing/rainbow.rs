@@ -455,6 +455,9 @@ mod tests {
                 rainbow_second_asset_volatility: Some(pos_or_panic!(0.25)),
                 rainbow_second_asset_dividend: Some(Positive::ZERO),
                 rainbow_correlation: Some(dec!(0.5)),
+                spread_second_asset_volatility: None,
+                spread_second_asset_dividend: None,
+                spread_correlation: None,
             }),
         )
     }

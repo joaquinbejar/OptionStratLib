@@ -46,6 +46,9 @@ fn main() {
             rainbow_second_asset_volatility: None,
             rainbow_second_asset_dividend: None,
             rainbow_correlation: None,
+            spread_second_asset_volatility: None,
+            spread_second_asset_dividend: None,
+            spread_correlation: None,
         }),
     );
 
