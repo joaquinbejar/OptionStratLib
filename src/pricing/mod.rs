@@ -175,6 +175,9 @@ pub mod lookback;
 /// Compound option pricing (options on options).
 pub mod compound;
 
+/// Chooser option pricing (choice between call and put).
+pub mod chooser;
+
 /// Black-Scholes model for option pricing and analysis.
 ///
 /// This module implements the Black-Scholes-Merton model for European option pricing
@@ -271,6 +274,7 @@ pub use barrier::barrier_black_scholes;
 pub use binary::binary_black_scholes;
 pub use binomial_model::{BinomialPricingParams, generate_binomial_tree, price_binomial};
 pub use black_scholes_model::{BlackScholes, black_scholes};
+pub use chooser::chooser_black_scholes;
 pub use compound::compound_black_scholes;
 pub use lookback::lookback_black_scholes;
 pub use monte_carlo::monte_carlo_option_pricing;
