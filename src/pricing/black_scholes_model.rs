@@ -79,10 +79,7 @@ pub fn black_scholes(option: &Options) -> Result<Decimal, PricingError> {
         OptionType::Rainbow { .. } => crate::pricing::rainbow::rainbow_black_scholes(option),
         OptionType::Spread { .. } => crate::pricing::spread::spread_black_scholes(option),
         OptionType::Quanto { .. } => crate::pricing::quanto::quanto_black_scholes(option),
-        OptionType::Exchange { .. } => Err(PricingError::unsupported_option_type(
-            "Exchange",
-            "Black-Scholes",
-        )),
+        OptionType::Exchange { .. } => crate::pricing::exchange::exchange_black_scholes(option),
         OptionType::Power { .. } => Err(PricingError::unsupported_option_type(
             "Power",
             "Black-Scholes",

@@ -238,6 +238,9 @@ mod tests {
                 quanto_fx_volatility: None,
                 quanto_fx_correlation: None,
                 quanto_foreign_rate: None,
+                exchange_second_asset_volatility: None,
+                exchange_second_asset_dividend: None,
+                exchange_correlation: None,
             }),
         )
     }

@@ -204,6 +204,9 @@ mod tests {
                 quanto_fx_volatility: Some(pos_or_panic!(0.1)),
                 quanto_fx_correlation: Some(dec!(0.3)),
                 quanto_foreign_rate: Some(dec!(0.03)),
+                exchange_second_asset_volatility: None,
+                exchange_second_asset_dividend: None,
+                exchange_correlation: None,
             }),
         )
     }
