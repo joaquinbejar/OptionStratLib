@@ -72,10 +72,7 @@ pub fn black_scholes(option: &Options) -> Result<Decimal, PricingError> {
         OptionType::Asian { .. } => crate::pricing::asian::asian_black_scholes(option),
         OptionType::Barrier { .. } => crate::pricing::barrier::barrier_black_scholes(option),
         OptionType::Binary { .. } => crate::pricing::binary::binary_black_scholes(option),
-        OptionType::Lookback { .. } => Err(PricingError::unsupported_option_type(
-            "Lookback",
-            "Black-Scholes",
-        )),
+        OptionType::Lookback { .. } => crate::pricing::lookback::lookback_black_scholes(option),
         OptionType::Compound { .. } => Err(PricingError::unsupported_option_type(
             "Compound",
             "Black-Scholes",
