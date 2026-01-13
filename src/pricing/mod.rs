@@ -181,6 +181,9 @@ pub mod chooser;
 /// Cliquet option pricing (periodic strike resets).
 pub mod cliquet;
 
+/// Rainbow option pricing (multi-asset options).
+pub mod rainbow;
+
 /// Black-Scholes model for option pricing and analysis.
 ///
 /// This module implements the Black-Scholes-Merton model for European option pricing
@@ -283,6 +286,7 @@ pub use compound::compound_black_scholes;
 pub use lookback::lookback_black_scholes;
 pub use monte_carlo::monte_carlo_option_pricing;
 pub use payoff::{Payoff, PayoffInfo, Profit};
+pub use rainbow::rainbow_black_scholes;
 pub use telegraph::{TelegraphProcess, telegraph};
 pub use unified::{Priceable, PricingEngine, price_option};
 pub use utils::{probability_keep_under_strike, simulate_returns};

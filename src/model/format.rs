@@ -96,6 +96,22 @@ impl fmt::Display for ExoticParams {
             fields.push(format!("Cliquet Global Floor: {floor:.2}"));
         }
 
+        if let Some(ref price) = self.rainbow_second_asset_price {
+            fields.push(format!("Rainbow Second Asset Price: {price}"));
+        }
+
+        if let Some(ref vol) = self.rainbow_second_asset_volatility {
+            fields.push(format!("Rainbow Second Asset Volatility: {vol}"));
+        }
+
+        if let Some(ref div) = self.rainbow_second_asset_dividend {
+            fields.push(format!("Rainbow Second Asset Dividend: {div}"));
+        }
+
+        if let Some(corr) = self.rainbow_correlation {
+            fields.push(format!("Rainbow Correlation: {corr:.4}"));
+        }
+
         write!(f, "{}", fields.join(", "))
     }
 }
@@ -210,8 +226,14 @@ impl fmt::Display for OptionType {
             OptionType::Cliquet { reset_dates } => {
                 write!(f, "Cliquet Option (Reset Dates: {reset_dates:?})")
             }
-            OptionType::Rainbow { num_assets } => {
-                write!(f, "Rainbow Option (Number of Assets: {num_assets})")
+            OptionType::Rainbow {
+                num_assets,
+                rainbow_type,
+            } => {
+                write!(
+                    f,
+                    "Rainbow Option (Type: {rainbow_type:?}, Number of Assets: {num_assets})"
+                )
             }
             OptionType::Spread { second_asset } => {
                 write!(f, "Spread Option (Second Asset: {second_asset})")
@@ -421,6 +443,10 @@ mod tests_options {
             cliquet_local_floor: None,
             cliquet_global_cap: None,
             cliquet_global_floor: None,
+            rainbow_second_asset_price: None,
+            rainbow_second_asset_volatility: None,
+            rainbow_second_asset_dividend: None,
+            rainbow_correlation: None,
         };
         let naive_date = NaiveDate::from_ymd_opt(2024, 8, 8)
             .expect("Invalid date")
@@ -456,7 +482,7 @@ mod tests_options {
             Quantity: 5\n\
             Risk-free Rate: 1.50%\n\
             Dividend Yield: 1%\n\
-            Exotic Parameters: ExoticParams { spot_prices: None, spot_min: None, spot_max: None, cliquet_local_cap: None, cliquet_local_floor: None, cliquet_global_cap: None, cliquet_global_floor: None }";
+            Exotic Parameters: ExoticParams { spot_prices: None, spot_min: None, spot_max: None, cliquet_local_cap: None, cliquet_local_floor: None, cliquet_global_cap: None, cliquet_global_floor: None, rainbow_second_asset_price: None, rainbow_second_asset_volatility: None, rainbow_second_asset_dividend: None, rainbow_correlation: None }";
 
         assert_eq!(display_output, expected_output);
     }
@@ -561,6 +587,7 @@ mod tests_side_option_style_display_debug {
 #[cfg(test)]
 mod tests_option_type_display_debug {
     use super::*;
+    use crate::model::types::RainbowType;
 
     #[test]
     fn test_debug_european_option() {
@@ -757,16 +784,28 @@ mod tests_option_type_display_debug {
 
     #[test]
     fn test_debug_rainbow_option() {
-        let option = OptionType::Rainbow { num_assets: 3 };
+        let option = OptionType::Rainbow {
+            num_assets: 2,
+            rainbow_type: RainbowType::BestOf,
+        };
         let debug_output = format!("{option:?}");
-        assert_eq!(debug_output, "Rainbow { num_assets: 3 }");
+        assert_eq!(
+            debug_output,
+            "Rainbow { num_assets: 2, rainbow_type: BestOf }"
+        );
     }
 
     #[test]
     fn test_display_rainbow_option() {
-        let option = OptionType::Rainbow { num_assets: 3 };
+        let option = OptionType::Rainbow {
+            num_assets: 2,
+            rainbow_type: RainbowType::WorstOf,
+        };
         let display_output = format!("{option}");
-        assert_eq!(display_output, "Rainbow Option (Number of Assets: 3)");
+        assert_eq!(
+            display_output,
+            "Rainbow Option (Type: WorstOf, Number of Assets: 2)"
+        );
     }
 
     #[test]
