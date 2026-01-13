@@ -77,6 +77,16 @@ pub struct ExoticParams {
     /// Correlation between the two underlying assets for Rainbow options.
     /// Must be between -1.0 and 1.0.
     pub rainbow_correlation: Option<Decimal>, // Rainbow
+
+    /// Volatility of the second underlying asset for Spread options.
+    pub spread_second_asset_volatility: Option<Positive>, // Spread
+
+    /// Dividend yield of the second underlying asset for Spread options.
+    pub spread_second_asset_dividend: Option<Positive>, // Spread
+
+    /// Correlation between the two underlying assets for Spread options.
+    /// Must be between -1.0 and 1.0.
+    pub spread_correlation: Option<Decimal>, // Spread
 }
 
 /// Represents a financial option contract with its essential parameters and characteristics.
