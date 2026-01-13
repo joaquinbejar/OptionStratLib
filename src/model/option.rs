@@ -52,6 +52,18 @@ pub struct ExoticParams {
     /// Maximum observed spot price during the option's lifetime,
     /// used for lookback option pricing.
     pub spot_max: Option<Decimal>, // Lookback
+
+    /// Local cap for Cliquet options, limiting the periodic return.
+    pub cliquet_local_cap: Option<Decimal>, // Cliquet
+
+    /// Local floor for Cliquet options, limiting the periodic return.
+    pub cliquet_local_floor: Option<Decimal>, // Cliquet
+
+    /// Global cap for Cliquet options, limiting the total return.
+    pub cliquet_global_cap: Option<Decimal>, // Cliquet
+
+    /// Global floor for Cliquet options, limiting the total return.
+    pub cliquet_global_floor: Option<Decimal>, // Cliquet
 }
 
 /// Represents a financial option contract with its essential parameters and characteristics.

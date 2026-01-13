@@ -229,7 +229,7 @@ impl CoveredCall {
     /// Returns the option leg as a `Leg` enum.
     #[must_use]
     pub fn get_option_leg(&self) -> Leg {
-        Leg::Option(self.short_call.clone())
+        Leg::option(self.short_call.clone())
     }
 
     /// Returns all legs of the strategy.

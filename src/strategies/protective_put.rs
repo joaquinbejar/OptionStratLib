@@ -138,7 +138,7 @@ impl ProtectivePut {
     /// Returns the long put leg as a Leg enum.
     #[must_use]
     pub fn get_put_leg(&self) -> Leg {
-        Leg::Option(self.long_put.clone())
+        Leg::option(self.long_put.clone())
     }
 
     /// Returns all legs of the strategy.
