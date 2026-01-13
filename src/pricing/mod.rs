@@ -190,6 +190,9 @@ pub mod spread;
 /// Quanto option pricing (currency-protected options).
 pub mod quanto;
 
+/// Exchange option pricing (Margrabe options).
+pub mod exchange;
+
 /// Black-Scholes model for option pricing and analysis.
 ///
 /// This module implements the Black-Scholes-Merton model for European option pricing
@@ -289,6 +292,7 @@ pub use black_scholes_model::{BlackScholes, black_scholes};
 pub use chooser::chooser_black_scholes;
 pub use cliquet::cliquet_black_scholes;
 pub use compound::compound_black_scholes;
+pub use exchange::exchange_black_scholes;
 pub use lookback::lookback_black_scholes;
 pub use monte_carlo::monte_carlo_option_pricing;
 pub use payoff::{Payoff, PayoffInfo, Profit};

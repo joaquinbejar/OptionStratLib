@@ -97,6 +97,16 @@ pub struct ExoticParams {
 
     /// Foreign risk-free interest rate for Quanto options.
     pub quanto_foreign_rate: Option<Decimal>, // Quanto
+
+    /// Volatility of the second underlying asset for Exchange options.
+    pub exchange_second_asset_volatility: Option<Positive>, // Exchange
+
+    /// Dividend yield of the second underlying asset for Exchange options.
+    pub exchange_second_asset_dividend: Option<Positive>, // Exchange
+
+    /// Correlation between the two underlying assets for Exchange options.
+    /// Must be between -1.0 and 1.0.
+    pub exchange_correlation: Option<Decimal>, // Exchange
 }
 
 /// Represents a financial option contract with its essential parameters and characteristics.
