@@ -60,7 +60,7 @@ use utoipa::ToSchema;
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, ToSchema)]
 pub enum Leg {
     /// Standard option position (Call/Put).
-    Option(Position),
+    Option(Box<Position>),
 
     /// Spot/underlying asset position.
     Spot(SpotPosition),
@@ -76,7 +76,7 @@ impl Leg {
     /// Creates a new option leg from a Position.
     #[must_use]
     pub fn option(position: Position) -> Self {
-        Self::Option(position)
+        Self::Option(Box::new(position))
     }
 
     /// Creates a new spot leg from a SpotPosition.
@@ -358,7 +358,7 @@ impl std::fmt::Display for Leg {
 
 impl From<Position> for Leg {
     fn from(position: Position) -> Self {
-        Self::Option(position)
+        Self::Option(Box::new(position))
     }
 }
 

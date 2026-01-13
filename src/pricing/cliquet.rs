@@ -49,7 +49,6 @@ pub fn cliquet_black_scholes(option: &Options) -> Result<Decimal, PricingError> 
 }
 
 fn price_cliquet(option: &Options, reset_dates: &[f64]) -> Result<Decimal, PricingError> {
-
     // Retrieve caps/floors from exotic_params
     let (local_cap, local_floor) = if let Some(ref params) = option.exotic_params {
         (

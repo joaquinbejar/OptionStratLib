@@ -47,7 +47,7 @@
 //! let spot_leg = Leg::Spot(spot);
 //!
 //! // The option leg would be created from a Position
-//! // let call_leg = Leg::Option(short_call_position);
+//! // let call_leg = Leg::option(short_call_position);
 //!
 //! // Both legs can be handled uniformly via LegAble trait
 //! use optionstratlib::model::leg::LegAble;
