@@ -166,6 +166,9 @@ pub mod barrier;
 /// Asian option pricing with geometric and arithmetic averaging.
 pub mod asian;
 
+/// Binary option pricing (cash-or-nothing, asset-or-nothing, gap).
+pub mod binary;
+
 /// Black-Scholes model for option pricing and analysis.
 ///
 /// This module implements the Black-Scholes-Merton model for European option pricing
@@ -259,6 +262,7 @@ pub mod unified;
 pub use american::barone_adesi_whaley;
 pub use asian::asian_black_scholes;
 pub use barrier::barrier_black_scholes;
+pub use binary::binary_black_scholes;
 pub use binomial_model::{BinomialPricingParams, generate_binomial_tree, price_binomial};
 pub use black_scholes_model::{BlackScholes, black_scholes};
 pub use monte_carlo::monte_carlo_option_pricing;
