@@ -49,6 +49,9 @@ fn main() {
             spread_second_asset_volatility: None,
             spread_second_asset_dividend: None,
             spread_correlation: None,
+            quanto_fx_volatility: None,
+            quanto_fx_correlation: None,
+            quanto_foreign_rate: None,
         }),
     );
 

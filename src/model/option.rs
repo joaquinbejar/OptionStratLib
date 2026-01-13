@@ -87,6 +87,16 @@ pub struct ExoticParams {
     /// Correlation between the two underlying assets for Spread options.
     /// Must be between -1.0 and 1.0.
     pub spread_correlation: Option<Decimal>, // Spread
+
+    /// Volatility of the exchange rate for Quanto options.
+    pub quanto_fx_volatility: Option<Positive>, // Quanto
+
+    /// Correlation between the underlying asset and the exchange rate for Quanto options.
+    /// Must be between -1.0 and 1.0.
+    pub quanto_fx_correlation: Option<Decimal>, // Quanto
+
+    /// Foreign risk-free interest rate for Quanto options.
+    pub quanto_foreign_rate: Option<Decimal>, // Quanto
 }
 
 /// Represents a financial option contract with its essential parameters and characteristics.
