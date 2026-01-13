@@ -75,10 +75,7 @@ pub fn black_scholes(option: &Options) -> Result<Decimal, PricingError> {
         OptionType::Lookback { .. } => crate::pricing::lookback::lookback_black_scholes(option),
         OptionType::Compound { .. } => crate::pricing::compound::compound_black_scholes(option),
         OptionType::Chooser { .. } => crate::pricing::chooser::chooser_black_scholes(option),
-        OptionType::Cliquet { .. } => Err(PricingError::unsupported_option_type(
-            "Cliquet",
-            "Black-Scholes",
-        )),
+        OptionType::Cliquet { .. } => crate::pricing::cliquet::cliquet_black_scholes(option),
         OptionType::Rainbow { .. } => Err(PricingError::unsupported_option_type(
             "Rainbow",
             "Black-Scholes",

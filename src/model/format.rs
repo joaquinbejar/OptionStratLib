@@ -80,6 +80,22 @@ impl fmt::Display for ExoticParams {
             fields.push(format!("Spot Max: {max:.2}"));
         }
 
+        if let Some(cap) = self.cliquet_local_cap {
+            fields.push(format!("Cliquet Local Cap: {cap:.2}"));
+        }
+
+        if let Some(floor) = self.cliquet_local_floor {
+            fields.push(format!("Cliquet Local Floor: {floor:.2}"));
+        }
+
+        if let Some(cap) = self.cliquet_global_cap {
+            fields.push(format!("Cliquet Global Cap: {cap:.2}"));
+        }
+
+        if let Some(floor) = self.cliquet_global_floor {
+            fields.push(format!("Cliquet Global Floor: {floor:.2}"));
+        }
+
         write!(f, "{}", fields.join(", "))
     }
 }
@@ -401,6 +417,10 @@ mod tests_options {
             spot_prices: None,
             spot_min: None,
             spot_max: None,
+            cliquet_local_cap: None,
+            cliquet_local_floor: None,
+            cliquet_global_cap: None,
+            cliquet_global_floor: None,
         };
         let naive_date = NaiveDate::from_ymd_opt(2024, 8, 8)
             .expect("Invalid date")
@@ -436,7 +456,7 @@ mod tests_options {
             Quantity: 5\n\
             Risk-free Rate: 1.50%\n\
             Dividend Yield: 1%\n\
-            Exotic Parameters: ExoticParams { spot_prices: None, spot_min: None, spot_max: None }";
+            Exotic Parameters: ExoticParams { spot_prices: None, spot_min: None, spot_max: None, cliquet_local_cap: None, cliquet_local_floor: None, cliquet_global_cap: None, cliquet_global_floor: None }";
 
         assert_eq!(display_output, expected_output);
     }
