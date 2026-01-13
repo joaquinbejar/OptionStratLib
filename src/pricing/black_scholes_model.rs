@@ -73,10 +73,7 @@ pub fn black_scholes(option: &Options) -> Result<Decimal, PricingError> {
         OptionType::Barrier { .. } => crate::pricing::barrier::barrier_black_scholes(option),
         OptionType::Binary { .. } => crate::pricing::binary::binary_black_scholes(option),
         OptionType::Lookback { .. } => crate::pricing::lookback::lookback_black_scholes(option),
-        OptionType::Compound { .. } => Err(PricingError::unsupported_option_type(
-            "Compound",
-            "Black-Scholes",
-        )),
+        OptionType::Compound { .. } => crate::pricing::compound::compound_black_scholes(option),
         OptionType::Chooser { .. } => Err(PricingError::unsupported_option_type(
             "Chooser",
             "Black-Scholes",
