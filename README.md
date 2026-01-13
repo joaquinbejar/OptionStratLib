@@ -42,6 +42,8 @@ and a modular architecture built on modern Rust 2024 edition.
 - **Binomial Tree Model**: American and European options with early exercise capability
 - **Monte Carlo Simulations**: Complex pricing scenarios and path-dependent options
 - **Telegraph Process Model**: Advanced stochastic modeling for jump-diffusion processes
+- **American Options**: Barone-Adesi-Whaley approximation for early exercise
+- **Exotic Options**: Complete support for 14 exotic option types (see below)
 
 #### 2. **Greeks Calculation**
 - Complete Greeks suite: Delta, Gamma, Theta, Vega, Rho, Vanna, Vomma, Veta,
@@ -117,6 +119,21 @@ and a modular architecture built on modern Rust 2024 edition.
 - Geometric operations for financial modeling
 - Advanced mathematical utilities for options pricing
 
+#### 12. **Exotic Option Pricing**
+Complete pricing support for all exotic option types:
+- **Asian**: Arithmetic and geometric average price options
+- **Barrier**: Up/Down, In/Out barrier options with rebates
+- **Binary**: Cash-or-nothing and asset-or-nothing options
+- **Lookback**: Fixed and floating strike lookback options
+- **Compound**: Options on options
+- **Chooser**: Options to choose call or put at future date
+- **Cliquet**: Forward-starting options with local caps/floors
+- **Rainbow**: Multi-asset best-of/worst-of options
+- **Spread**: Kirk's approximation for price differentials
+- **Quanto**: Currency-protected options
+- **Exchange**: Margrabe's formula for asset exchange
+- **Power**: Non-linear payoff options
+
 
 ### Core Modules
 
@@ -145,6 +162,20 @@ Advanced pricing engines for options valuation:
 - `monte_carlo.rs`: Path-dependent and exotic options pricing
 - `telegraph.rs`: Jump-diffusion process modeling
 - `payoff.rs`: Payoff function implementations
+- `american.rs`: Barone-Adesi-Whaley approximation
+- **Exotic Options**:
+  - `asian.rs`: Asian option pricing
+  - `barrier.rs`: Barrier option pricing
+  - `binary.rs`: Binary/Digital option pricing
+  - `lookback.rs`: Lookback option pricing
+  - `compound.rs`: Compound option pricing
+  - `chooser.rs`: Chooser option pricing
+  - `cliquet.rs`: Cliquet option pricing
+  - `rainbow.rs`: Rainbow option pricing
+  - `spread.rs`: Spread option pricing
+  - `quanto.rs`: Quanto option pricing
+  - `exchange.rs`: Exchange option pricing
+  - `power.rs`: Power option pricing
 
 #### **Strategies** (`strategies/`)
 Comprehensive trading strategy implementations:
@@ -353,6 +384,19 @@ class OptionType {
 <<enumeration>>
 European
 American
+Bermuda
+Asian
+Barrier
+Binary
+Lookback
+Compound
+Chooser
+Cliquet
+Rainbow
+Spread
+Quanto
+Exchange
+Power
 }
 
 class Side {
@@ -394,6 +438,153 @@ Options *-- OptionType : has
 Options *-- Side : has
 Options *-- ExpirationDate : has
 Options *-- Positive : uses
+```
+
+### Pricing Models Architecture
+
+```mermaid
+flowchart TB
+    subgraph Standard["Standard Options"]
+        EU[European]
+        AM[American]
+        BE[Bermuda]
+    end
+
+    subgraph PathDependent["Path-Dependent"]
+        AS[Asian]
+        LB[Lookback]
+        BA[Barrier]
+        CL[Cliquet]
+    end
+
+    subgraph MultiAsset["Multi-Asset"]
+        RB[Rainbow]
+        SP[Spread]
+        EX[Exchange]
+    end
+
+    subgraph Special["Special Payoffs"]
+        BI[Binary]
+        PW[Power]
+        QU[Quanto]
+        CO[Compound]
+        CH[Chooser]
+    end
+
+    BS[black_scholes] --> EU
+    BS --> PathDependent
+    BS --> MultiAsset
+    BS --> Special
+    BAW[barone_adesi_whaley] --> AM
+    BIN[binomial_model] --> AM
+    BIN --> BE
+    MC[monte_carlo] --> PathDependent
+```
+
+### Strategy Traits System
+
+```mermaid
+classDiagram
+    class Strategable {
+        <<trait>>
+        Master trait combining all capabilities
+    }
+
+    class BasicAble {
+        <<trait>>
+        +get_underlying_price()
+        +get_underlying_symbol()
+        +get_expiration()
+        +get_title()
+    }
+
+    class Positionable {
+        <<trait>>
+        +get_positions()
+        +add_position()
+        +modify_position()
+    }
+
+    class Strategies {
+        <<trait>>
+        +get_net_premium_received()
+        +get_max_profit()
+        +get_max_loss()
+        +get_total_cost()
+    }
+
+    class BreakEvenable {
+        <<trait>>
+        +get_break_even_points()
+        +calculate_break_even()
+    }
+
+    class Profit {
+        <<trait>>
+        +get_point_at_price()
+        +calculate_profit_at()
+    }
+
+    class Greeks {
+        <<trait>>
+        +delta()
+        +gamma()
+        +theta()
+        +vega()
+    }
+
+    class DeltaNeutrality {
+        <<trait>>
+        +get_delta()
+        +suggest_delta_adjustments()
+    }
+
+    class Graph {
+        <<trait>>
+        +to_plot()
+        +write_html()
+        +write_png()
+    }
+
+    Strategable --|> BasicAble
+    Strategable --|> Positionable
+    Strategable --|> Strategies
+    Strategable --|> BreakEvenable
+    Strategable --|> Profit
+    Strategable --|> Greeks
+    Strategable --|> DeltaNeutrality
+    Strategable --|> Graph
+```
+
+### Metrics Framework
+
+```mermaid
+flowchart LR
+    subgraph OptionChain
+        OC[OptionChain]
+    end
+
+    subgraph Curves["Curve Metrics"]
+        IV_C[IV Curve]
+        RR_C[Risk Reversal]
+        DG_C[Dollar Gamma]
+        TH_C[Theta Curve]
+        VA_C[Vanna Curve]
+        SK_C[Skew Curve]
+    end
+
+    subgraph Surfaces["Surface Metrics"]
+        IV_S[IV Surface]
+        TH_S[Theta Surface]
+        CH_S[Charm Surface]
+        VS_S[Vol Sensitivity]
+        TD_S[Time Decay]
+    end
+
+    OC --> Curves
+    OC --> Surfaces
+    Curves --> |"2D Analysis"| Analysis[Risk Analysis]
+    Surfaces --> |"3D Analysis"| Analysis
 ```
 
 ### Trading Strategies
@@ -486,7 +677,7 @@ Add OptionStratLib to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-optionstratlib = "0.6.1"
+optionstratlib = "0.14.0"
 ```
 
 Or use cargo to add it to your project:
@@ -501,10 +692,11 @@ The library includes optional features for enhanced functionality:
 
 ```toml
 [dependencies]
-optionstratlib = { version = "0.6.1", features = ["plotly"] }
+optionstratlib = { version = "0.14.0", features = ["plotly"] }
 ```
 
 - `plotly`: Enables interactive visualization using plotly.rs
+- `async`: Enables asynchronous I/O operations for OptionChain and OHLCV data
 
 #### Building from Source
 
@@ -749,7 +941,7 @@ tracing::info!("Strategy created: {}", strategy.get_title());
 
 ### Testing
 
-OptionStratLib includes a comprehensive test suite with over 1000 unit and integration tests:
+OptionStratLib includes a comprehensive test suite with over 3800 unit and integration tests:
 
 #### **Running Tests**
 
@@ -778,6 +970,8 @@ cargo test -- --nocapture
 - **Pricing Model Tests**: Accuracy and performance testing
 - **Greeks Tests**: Mathematical precision validation
 - **Visualization Tests**: Chart generation and export testing
+- **Property-Based Tests**: Mathematical invariant testing with `proptest`
+- **Exotic Options Tests**: Complete coverage for all 14 exotic option types
 
 #### **Benchmarking**
 
@@ -801,6 +995,7 @@ The library includes extensive examples organized by functionality:
 - **`examples/examples_visualization/`**: Interactive chart examples
 - **`examples/examples_volatility/`**: Volatility analysis examples
 - **`examples/examples_simulation/`**: Monte Carlo and simulation examples
+- **`examples/examples_exotics/`**: Exotic option pricing examples
 
 Run examples:
 ```bash
@@ -847,7 +1042,7 @@ cargo test --all-features
 
 ---
 
-**OptionStratLib v0.7.0** - Built with ❤️ in Rust for the financial community
+**OptionStratLib v0.14.0** - Built with ❤️ in Rust for the financial community
 
 
 
