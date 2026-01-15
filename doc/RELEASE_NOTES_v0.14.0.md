@@ -1,4 +1,4 @@
-# Release Notes - OptionStratLib v0.14.0
+# Release Notes - OptionStratLib v0.14.1
 
 **Release Date:** January 2025
 
@@ -185,7 +185,7 @@ The internal `Positive` type has been migrated to the external `positive` crate:
 use optionstratlib::Positive;
 use optionstratlib::pos!;
 
-// After (v0.14.0)
+// After (v0.14.1)
 use positive::{Positive, pos_or_panic};
 ```
 
@@ -205,7 +205,7 @@ fn calculate_price(&self) -> Result<Decimal, PricingError>;
 
 ## Migration Guide
 
-### From v0.13.x to v0.14.0
+### From v0.13.x to v0.14.1
 
 1. **Update Positive imports**:
    ```rust

@@ -1,6 +1,6 @@
 [package]
 name = "optionstratlib"
-version = "0.14.0"
+version = "0.14.1"
 edition = "2024"
 authors = ["Joaquin Bejar <jb@taunais.com>"]
 description = "OptionStratLib is a comprehensive Rust library for options trading and strategy development across multiple asset classes."
@@ -127,7 +127,7 @@ csv = { version = "1.4"}
 serde = { version = "1.0", features = ["derive"] }
 rayon = { version = "1.11" }
 itertools = "0.14"
-zip = "7.0"
+zip = "7.1"
 lazy_static = "1.5"
 uuid = { version = "1.19", features = ["v4", "serde"] }
 approx = "0.5"
@@ -137,9 +137,8 @@ pretty-simple-display = "0.1"
 utoipa = { version = "5.4", features = ["axum_extras", "chrono", "decimal"] }
 indicatif = "0.18"
 thiserror = "2.0"
-#positive = { path = "../positive", features = ["utoipa"] }
 positive = { version = "0.3", features = ["utoipa"] }
 tokio = { version = "1.43", features = ["full"] }
 async-trait = "0.1"
-reqwest = { version = "0.12", features = ["json"] }
+reqwest = { version = "0.13", features = ["json"] }
 futures = "0.3"

@@ -1,7 +1,7 @@
 #![allow(unknown_lints)]
 #![allow(clippy::literal_string_with_formatting_args)]
 
-//! # OptionStratLib v0.14.0: Financial Options Library
+//! # OptionStratLib v0.14.1: Financial Options Library
 //!
 //! ## Table of Contents
 //! 1. [Introduction](#introduction)
@@ -663,7 +663,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! optionstratlib = "0.14.0"
+//! optionstratlib = "0.14.1"
 //! ```
 //!
 //! Or use cargo to add it to your project:
@@ -678,7 +678,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! optionstratlib = { version = "0.14.0", features = ["plotly"] }
+//! optionstratlib = { version = "0.14.1", features = ["plotly"] }
 //! ```
 //!
 //! - `plotly`: Enables interactive visualization using plotly.rs
@@ -1028,7 +1028,7 @@
 //!
 //! ---
 //!
-//! **OptionStratLib v0.14.0** - Built with ❤️ in Rust for the financial community
+//! **OptionStratLib v0.14.1** - Built with ❤️ in Rust for the financial community
 //!
 
 /// # OptionsStratLib: Financial Options Trading Library
