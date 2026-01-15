@@ -421,7 +421,10 @@ impl OptionData {
             return false;
         }
         if !self.valid_call() || !self.valid_put() {
-            error!("Error: No valid prices for call or put options");
+            error!(
+                "Error: No valid prices for call or put options {} Deltas C {:?} P {:?}",
+                self.strike_price, self.delta_call, self.delta_put
+            );
             return false;
         }
         true
