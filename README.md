@@ -15,7 +15,7 @@
 [![Wiki](https://img.shields.io/badge/wiki-latest-blue.svg)](https://deepwiki.com/joaquinbejar/OptionStratLib)
 
 
-## OptionStratLib v0.14.2: Financial Options Library
+## OptionStratLib v0.14.3: Financial Options Library
 
 ### Table of Contents
 1. [Introduction](#introduction)
@@ -677,7 +677,7 @@ Add OptionStratLib to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-optionstratlib = "0.14.2"
+optionstratlib = "0.14.3"
 ```
 
 Or use cargo to add it to your project:
@@ -692,7 +692,7 @@ The library includes optional features for enhanced functionality:
 
 ```toml
 [dependencies]
-optionstratlib = { version = "0.14.2", features = ["plotly"] }
+optionstratlib = { version = "0.14.3", features = ["plotly"] }
 ```
 
 - `plotly`: Enables interactive visualization using plotly.rs
@@ -1042,7 +1042,7 @@ cargo test --all-features
 
 ---
 
-**OptionStratLib v0.14.2** - Built with ❤️ in Rust for the financial community
+**OptionStratLib v0.14.3** - Built with ❤️ in Rust for the financial community
 
 
 
