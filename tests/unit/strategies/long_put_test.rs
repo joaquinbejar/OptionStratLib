@@ -189,66 +189,19 @@ fn test_long_put_break_even_points() {
 #[test]
 fn test_long_put_get_max_profit() {
     let long_put = create_test_long_put();
-    let result = long_put.get_max_profit();
-
-    // For a Long Put, the maximum profit is the strike price minus the premium and fees
-    match result {
-        Ok(profit) => {
-            // Verify that the maximum profit is positive
-            assert!(profit > Positive::ZERO);
-
-            // For a long put with strike 100, premium 5, and fees 1,
-            // the max profit would be approximately: 100 - 5 - 0.5 - 0.5 = 94
-            let expected_profit = Positive::new(94.0).unwrap();
-            assert!(
-                (profit.to_f64() - expected_profit.to_f64()).abs() < 1.0,
-                "Max profit should be close to {expected_profit}, but was {profit}"
-            );
-        }
-        Err(e) => {
-            // If there is an error, it could be due to various reasons related to profit calculation
-            assert!(
-                e.to_string().contains("profit")
-                    || e.to_string().contains("Profit")
-                    || e.to_string().contains("premium")
-                    || e.to_string().contains("infinite")
-                    || e.to_string().contains("unlimited"),
-                "Error message should be related to profit calculation: {e}"
-            );
-        }
-    }
+    let max_profit = long_put.get_max_profit().unwrap();
+    // Max profit for a long put: strike - premium - fees = 100 - 5 - 0.5 - 0.5 = 94
+    let expected_profit = Positive::new(94.0).unwrap();
+    assert_eq!(max_profit, expected_profit);
 }
 
 #[test]
 fn test_long_put_get_max_loss() {
     let long_put = create_test_long_put();
-    let result = long_put.get_max_loss();
-
-    // For a Long Put, the maximum loss is limited to the premium paid plus fees
-    match result {
-        Ok(loss) => {
-            // Verify that the maximum loss is positive
-            assert!(loss > Positive::ZERO);
-
-            // For a long put with premium 5 and fees 0.5 + 0.5 = 1, the max loss should be 6
-            let expected_max_loss = Positive::new(6.0).unwrap();
-            assert!(
-                (loss.to_f64() - expected_max_loss.to_f64()).abs() < 1.0,
-                "Max loss should be close to {expected_max_loss}, but was {loss}"
-            );
-        }
-        Err(e) => {
-            // If there is an error, it could be due to various reasons related to loss calculation
-            assert!(
-                e.to_string().contains("loss")
-                    || e.to_string().contains("Loss")
-                    || e.to_string().contains("negative")
-                    || e.to_string().contains("infinite")
-                    || e.to_string().contains("unlimited"),
-                "Error message should be related to loss calculation: {e}"
-            );
-        }
-    }
+    let max_loss = long_put.get_max_loss().unwrap();
+    // Max loss for a long put is the total cost: premium + fees = 5 + 0.5 + 0.5 = 6
+    let expected_max_loss = Positive::new(6.0).unwrap();
+    assert_eq!(max_loss, expected_max_loss);
 }
 
 #[test]
@@ -357,29 +310,12 @@ fn test_long_put_get_positions() {
 #[test]
 fn test_long_put_get_profit_ratio() {
     let long_put = create_test_long_put();
-
-    // The profit/loss ratio can be positive, zero, or even undefined
-    // depending on how the calculation is implemented
-    match long_put.get_profit_ratio() {
-        Ok(ratio) => {
-            // If a ratio is returned, we simply verify that it exists
-            // The actual ratio may vary depending on implementation details
-            assert!(
-                ratio >= Decimal::ZERO,
-                "Profit ratio should be non-negative, but was {ratio}"
-            );
-        }
-        Err(e) => {
-            // If there is an error, we verify that it's because the ratio is undefined
-            // (for example, if the maximum loss is zero or the profit is infinite)
-            assert!(
-                e.to_string().contains("division")
-                    || e.to_string().contains("infinite")
-                    || e.to_string().contains("undefined"),
-                "Error message should indicate an issue with ratio calculation: {e}"
-            );
-        }
-    }
+    let ratio = long_put.get_profit_ratio().unwrap();
+    // Max profit (94) / Max loss (6) * 100 ≈ 1566.67%
+    assert!(
+        ratio > Decimal::ZERO,
+        "Profit ratio should be positive, got {ratio}"
+    );
 }
 
 #[test]

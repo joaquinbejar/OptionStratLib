@@ -199,40 +199,10 @@ fn test_short_put_get_max_profit() {
 #[test]
 fn test_short_put_get_max_loss() {
     let short_put = create_test_short_put();
-    let result = short_put.get_max_loss();
-
-    // For a Short Put, the maximum loss can be the strike price minus the premium received
-    // or it can be theoretically infinite if the underlying reaches zero
-    match result {
-        Ok(loss) => {
-            // If a value is returned, verify that it is positive
-            assert!(loss > Positive::ZERO);
-
-            // If we want to be more specific, we can verify that it is close to the expected value
-            // In this case: 100 (strike) - 5 (premium) + 0.5 + 0.5 (fees) = 96
-            let expected_max_loss = Positive::new(96.0).unwrap();
-            assert!(
-                (loss.to_f64() - expected_max_loss.to_f64()).abs() < 1.0,
-                "Max loss should be close to {expected_max_loss}, but was {loss}"
-            );
-
-            // Also verify that the loss is less than the strike price
-            let strike = Positive::new(100.0).unwrap();
-            assert!(loss < strike, "Max loss should be less than strike price");
-        }
-        Err(e) => {
-            // If there is an error, it could be due to various reasons related to loss calculation
-            // The actual error message might vary depending on implementation
-            assert!(
-                e.to_string().contains("loss")
-                    || e.to_string().contains("Loss")
-                    || e.to_string().contains("negative")
-                    || e.to_string().contains("infinite")
-                    || e.to_string().contains("unlimited"),
-                "Error message should be related to loss calculation: {e}"
-            );
-        }
-    }
+    let max_loss = short_put.get_max_loss().unwrap();
+    // Max loss for a short put: strike - premium + fees = 100 - 5 + 0.5 + 0.5 = 96
+    let expected_max_loss = Positive::new(96.0).unwrap();
+    assert_eq!(max_loss, expected_max_loss);
 }
 
 #[test]

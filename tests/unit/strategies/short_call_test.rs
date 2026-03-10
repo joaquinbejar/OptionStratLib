@@ -1,8 +1,6 @@
 use chrono::Utc;
 use optionstratlib::{
     ExpirationDate, Options,
-    error::StrategyError,
-    error::strategies::ProfitLossErrorKind,
     model::{
         position::Position,
         types::{OptionStyle, OptionType, Side},
@@ -293,13 +291,11 @@ fn test_short_call_get_positions() {
 fn test_short_call_get_profit_ratio() {
     let short_call = create_test_short_call();
     let ratio_result = short_call.get_profit_ratio();
-    // For a short call, max loss is unlimited, so profit ratio should be Decimal::MAX (or an error if not handled gracefully)
-    // The current implementation returns Decimal::MAX if max_loss is zero, which is not the case here.
     // Max loss is Positive::INFINITY, so profit_ratio = max_profit / INFINITY * 100 ≈ 0.
     assert!(ratio_result.is_ok());
     let ratio = ratio_result.unwrap();
     assert!(
-        ratio < Decimal::new(1, 10),
+        ratio < Decimal::new(1, 1),
         "Expected near-zero ratio, got {ratio}"
     );
 }
