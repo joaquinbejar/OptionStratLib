@@ -164,16 +164,9 @@ fn test_short_call_get_max_profit() {
 fn test_short_call_get_max_loss() {
     let short_call = create_test_short_call();
     let result = short_call.get_max_loss();
-    assert!(result.is_err());
-    match result.err().unwrap() {
-        StrategyError::ProfitLossError(kind) => match kind {
-            ProfitLossErrorKind::MaxLossError { reason } => {
-                assert!(reason.to_lowercase().contains("unlimited"));
-            }
-            _ => panic!("Expected MaxLossError, got {kind:?}"),
-        },
-        e => panic!("Expected ProfitLossError, got {e:?}"),
-    }
+    // Max loss for a short call is theoretically unlimited (Positive::INFINITY).
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap(), Positive::INFINITY);
 }
 
 #[test]
@@ -302,10 +295,11 @@ fn test_short_call_get_profit_ratio() {
     let ratio_result = short_call.get_profit_ratio();
     // For a short call, max loss is unlimited, so profit ratio should be Decimal::MAX (or an error if not handled gracefully)
     // The current implementation returns Decimal::MAX if max_loss is zero, which is not the case here.
-    // If max_profit > 0 and max_loss is effectively infinite (represented by an error), then the ratio is effectively zero or very small.
-    // However, the current `short_call.get_max_loss()` returns an error because loss is unlimited.
-    // The `get_profit_ratio` in `short_call.rs` handles this by returning Decimal::MAX if `get_max_loss` is an error (interpreted as max_loss -> infinity, so profit/infinity -> 0, but the code has it as Decimal::MAX)
-    // Let's adjust the expectation based on the `ShortCall` implementation of `get_profit_ratio`.
+    // Max loss is Positive::INFINITY, so profit_ratio = max_profit / INFINITY * 100 ≈ 0.
     assert!(ratio_result.is_ok());
-    assert_eq!(ratio_result.unwrap(), Decimal::MAX); // Based on current ShortCall impl
+    let ratio = ratio_result.unwrap();
+    assert!(
+        ratio < Decimal::new(1, 10),
+        "Expected near-zero ratio, got {ratio}"
+    );
 }

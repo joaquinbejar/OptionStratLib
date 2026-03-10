@@ -1,7 +1,6 @@
 use super::base::{BreakEvenable, Positionable, StrategyType};
 use crate::backtesting::results::{SimulationResult, SimulationStatsResult};
 use crate::chains::OptionChain;
-use crate::error::strategies::ProfitLossErrorKind;
 use crate::error::{
     GreeksError, PricingError, ProbabilityError, SimulationError, StrategyError,
     position::{PositionError, PositionValidationErrorKind},
@@ -277,28 +276,11 @@ impl BreakEvenable for LongCall {
 
 impl Strategies for LongCall {
     fn get_max_profit(&self) -> Result<Positive, StrategyError> {
-        let profit = self.calculate_profit_at(&self.long_call.option.strike_price)?;
-        if profit >= Decimal::ZERO {
-            Ok(Positive::new_decimal(profit)?)
-        } else {
-            Err(StrategyError::ProfitLossError(
-                ProfitLossErrorKind::MaxProfitError {
-                    reason: "Net premium received is negative".to_string(),
-                },
-            ))
-        }
+        Ok(Positive::INFINITY) // Theoretically unlimited
     }
     fn get_max_loss(&self) -> Result<Positive, StrategyError> {
-        let loss = self.calculate_profit_at(&self.long_call.option.strike_price)?;
-        if loss <= Decimal::ZERO {
-            Ok(Positive::new_decimal(loss.abs()).unwrap_or(Positive::ZERO))
-        } else {
-            Err(StrategyError::ProfitLossError(
-                ProfitLossErrorKind::MaxLossError {
-                    reason: "Max loss is negative".to_string(),
-                },
-            ))
-        }
+        // Max loss for a long call is the premium paid (at any price ≤ strike).
+        Ok(self.get_total_cost()?)
     }
     fn get_profit_area(&self) -> Result<Decimal, StrategyError> {
         let high = self.get_max_profit().unwrap_or(Positive::ZERO);
