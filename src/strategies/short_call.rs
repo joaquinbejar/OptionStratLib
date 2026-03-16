@@ -2,7 +2,6 @@ use super::base::{BreakEvenable, Positionable, StrategyType};
 use crate::backtesting::results::{SimulationResult, SimulationStatsResult};
 
 use crate::chains::OptionChain;
-use crate::error::strategies::ProfitLossErrorKind;
 use crate::error::{
     GreeksError, PricingError, ProbabilityError, SimulationError, StrategyError,
     position::{PositionError, PositionValidationErrorKind},
@@ -289,24 +288,11 @@ impl BreakEvenable for ShortCall {
 
 impl Strategies for ShortCall {
     fn get_max_profit(&self) -> Result<Positive, StrategyError> {
-        let profit = self.calculate_profit_at(&self.short_call.option.strike_price)?;
-        if profit >= Decimal::ZERO {
-            Ok(Positive::new_decimal(profit)?)
-        } else {
-            Err(StrategyError::ProfitLossError(
-                ProfitLossErrorKind::MaxProfitError {
-                    reason: "Net premium received is negative".to_string(),
-                },
-            ))
-        }
+        // Max profit for a short call is the net premium received (at any price ≤ strike).
+        self.get_net_premium_received()
     }
     fn get_max_loss(&self) -> Result<Positive, StrategyError> {
-        // Max loss for a short call is theoretically unlimited.
-        Err(StrategyError::ProfitLossError(
-            ProfitLossErrorKind::MaxLossError {
-                reason: "Maximum loss is unlimited for a short call.".to_string(),
-            },
-        ))
+        Ok(Positive::INFINITY) // Theoretically unlimited
     }
     fn get_profit_area(&self) -> Result<Decimal, StrategyError> {
         let high = self.get_max_profit().unwrap_or(Positive::ZERO);

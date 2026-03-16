@@ -188,36 +188,9 @@ fn test_long_call_break_even_points() {
 #[test]
 fn test_long_call_get_max_profit() {
     let long_call = create_test_long_call();
-    let result = long_call.get_max_profit();
-    // For a Long Call, the maximum profit is theoretically infinite
-    // but in practice it depends on the implementation
-    match result {
-        Ok(profit) => {
-            // Verify that the maximum profit is positive
-            assert!(profit > Positive::ZERO);
-            // For a long call with strike 100, premium 5, and underlying at 100,
-            // the profit at a very high price like 200 would be approximately:
-            // (200 - 100) - 5 - 0.5 - 0.5 = 94
-            // This is a rough approximation of what the max profit could be
-            let expected_min_profit = Positive::new(90.0).unwrap();
-            assert!(
-                profit >= expected_min_profit,
-                "Max profit should be at least {expected_min_profit}"
-            );
-        }
-        Err(e) => {
-            // If there is an error, it could be due to various reasons related to profit calculation
-            // The actual error message might vary depending on implementation
-            assert!(
-                e.to_string().contains("profit")
-                    || e.to_string().contains("Profit")
-                    || e.to_string().contains("premium")
-                    || e.to_string().contains("infinite")
-                    || e.to_string().contains("unlimited"),
-                "Error message should be related to profit calculation: {e}"
-            );
-        }
-    }
+    let max_profit = long_call.get_max_profit().unwrap();
+    // Long Call has theoretically unlimited upside
+    assert_eq!(max_profit, Positive::INFINITY);
 }
 
 #[test]
@@ -331,7 +304,10 @@ fn test_long_call_get_positions() {
 #[test]
 fn test_long_call_get_profit_ratio() {
     let long_call = create_test_long_call();
-
     let ratio = long_call.get_profit_ratio().unwrap();
-    assert_eq!(ratio, Decimal::ZERO);
+    // max_profit = INFINITY, so INFINITY / max_loss * 100 overflows Decimal → unwrap_or(ZERO)
+    assert!(
+        ratio < Decimal::new(1, 1),
+        "Expected near-zero ratio for unlimited profit strategy, got {ratio}"
+    );
 }

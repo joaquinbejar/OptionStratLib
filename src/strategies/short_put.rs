@@ -279,19 +279,12 @@ impl BreakEvenable for ShortPut {
 
 impl Strategies for ShortPut {
     fn get_max_profit(&self) -> Result<Positive, StrategyError> {
-        let profit = self.calculate_profit_at(&self.short_put.option.strike_price)?;
-        if profit >= Decimal::ZERO {
-            Ok(Positive::new_decimal(profit)?)
-        } else {
-            Err(StrategyError::ProfitLossError(
-                ProfitLossErrorKind::MaxProfitError {
-                    reason: "Net premium received is negative".to_string(),
-                },
-            ))
-        }
+        // Max profit for a short put is the net premium received (at any price ≥ strike).
+        self.get_net_premium_received()
     }
     fn get_max_loss(&self) -> Result<Positive, StrategyError> {
-        let loss = self.calculate_profit_at(&self.short_put.option.strike_price)?;
+        // Max loss for a short put occurs at price = 0: strike - premium.
+        let loss = self.calculate_profit_at(&Positive::ZERO)?;
         if loss <= Decimal::ZERO {
             Ok(Positive::new_decimal(loss.abs()).unwrap_or(Positive::ZERO))
         } else {

@@ -274,28 +274,21 @@ impl BreakEvenable for LongPut {
 
 impl Strategies for LongPut {
     fn get_max_profit(&self) -> Result<Positive, StrategyError> {
-        let profit = self.calculate_profit_at(&self.long_put.option.strike_price)?;
+        // Max profit for a long put occurs at price = 0: strike - premium.
+        let profit = self.calculate_profit_at(&Positive::ZERO)?;
         if profit >= Decimal::ZERO {
             Ok(Positive::new_decimal(profit)?)
         } else {
             Err(StrategyError::ProfitLossError(
                 ProfitLossErrorKind::MaxProfitError {
-                    reason: "Net premium received is negative".to_string(),
+                    reason: "Max profit is negative".to_string(),
                 },
             ))
         }
     }
     fn get_max_loss(&self) -> Result<Positive, StrategyError> {
-        let loss = self.calculate_profit_at(&self.long_put.option.strike_price)?;
-        if loss <= Decimal::ZERO {
-            Ok(Positive::new_decimal(loss.abs()).unwrap_or(Positive::ZERO))
-        } else {
-            Err(StrategyError::ProfitLossError(
-                ProfitLossErrorKind::MaxLossError {
-                    reason: "Max loss is negative".to_string(),
-                },
-            ))
-        }
+        // Max loss for a long put is the premium paid (at any price ≥ strike).
+        Ok(self.get_total_cost()?)
     }
     fn get_profit_area(&self) -> Result<Decimal, StrategyError> {
         let high = self.get_max_profit().unwrap_or(Positive::ZERO);
