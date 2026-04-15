@@ -472,14 +472,14 @@ mod tests {
             action: Action::Buy,
             side: Side::Long,
             option_style: OptionStyle::Call,
-            fee: Positive(Decimal::new(15, 2)), // 0.15
+            fee: Positive::new_decimal(Decimal::new(15, 2)).unwrap(), // 0.15
             symbol: Some("AAPL".to_string()),
-            strike: Positive(Decimal::new(1800, 1)), // 180.0
+            strike: Positive::new_decimal(Decimal::new(1800, 1)).unwrap(), // 180.0
             expiry: Utc.with_ymd_and_hms(2025, 6, 20, 0, 0, 0).unwrap(),
             timestamp: 1_700_000_000_000_000_000, // arbitrary nanos
-            quantity: Positive(Decimal::from(3u32)),
-            premium: pos_or_panic!(2.5),                       // 2.50
-            underlying_price: Positive(Decimal::new(1850, 1)), // 185.0
+            quantity: Positive::new_decimal(Decimal::from(3u32)).unwrap(),
+            premium: pos_or_panic!(2.5), // 2.50
+            underlying_price: Positive::new_decimal(Decimal::new(1850, 1)).unwrap(), // 185.0
             notes: Some("unit-test".to_string()),
             status: TradeStatus::Open,
         }
@@ -517,13 +517,13 @@ mod tests {
             Action::Sell,
             Side::Short,
             OptionStyle::Put,
-            Positive(Decimal::new(25, 2)),
+            Positive::new_decimal(Decimal::new(25, 2)).unwrap(),
             None,
-            Positive(Decimal::new(2000, 1)), // 200.0
+            Positive::new_decimal(Decimal::new(2000, 1)).unwrap(), // 200.0
             Utc::now(),
-            Positive(Decimal::from(1u32)),
-            pos_or_panic!(3.0),              // 3.00
-            Positive(Decimal::new(1900, 1)), // 190.0
+            Positive::new_decimal(Decimal::from(1u32)).unwrap(),
+            pos_or_panic!(3.0),                                    // 3.00
+            Positive::new_decimal(Decimal::new(1900, 1)).unwrap(), // 190.0
             None,
             TradeStatus::Open,
         );

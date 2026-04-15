@@ -643,14 +643,14 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
             // Create adjustment for the first option
             let adjustment1 = if size_diff1.is_sign_positive() {
                 DeltaAdjustment::BuyOptions {
-                    quantity: Positive(size_diff1.abs()),
+                    quantity: Positive::new_decimal(size_diff1.abs()).unwrap_or(Positive::ZERO),
                     strike: options[0].strike_price,
                     option_style: options[0].option_style,
                     side: options[0].side,
                 }
             } else if !size_diff1.is_zero() {
                 DeltaAdjustment::SellOptions {
-                    quantity: Positive(size_diff1.abs()),
+                    quantity: Positive::new_decimal(size_diff1.abs()).unwrap_or(Positive::ZERO),
                     strike: options[0].strike_price,
                     option_style: options[0].option_style,
                     side: options[0].side,
@@ -662,14 +662,14 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
             // Create adjustment for the second option
             let adjustment2 = if size_diff2.is_sign_positive() {
                 DeltaAdjustment::BuyOptions {
-                    quantity: Positive(size_diff2.abs()),
+                    quantity: Positive::new_decimal(size_diff2.abs()).unwrap_or(Positive::ZERO),
                     strike: options[1].strike_price,
                     option_style: options[1].option_style,
                     side: options[1].side,
                 }
             } else if !size_diff2.is_zero() {
                 DeltaAdjustment::SellOptions {
-                    quantity: Positive(size_diff2.abs()),
+                    quantity: Positive::new_decimal(size_diff2.abs()).unwrap_or(Positive::ZERO),
                     strike: options[1].strike_price,
                     option_style: options[1].option_style,
                     side: options[1].side,

@@ -147,7 +147,9 @@ pub fn units_per_year(time_frame: &TimeFrame) -> Positive {
         TimeFrame::Minute => pos_or_panic!(525600.0),              // 365 * 24 * 60
         TimeFrame::Hour => pos_or_panic!(8760.0),                  // 365 * 24
         TimeFrame::Day => pos_or_panic!(365.0),                    // 365
-        TimeFrame::Week => Positive(dec!(365.0) / dec!(7.0)),      // 365 / 7
+        TimeFrame::Week => {
+            Positive::new_decimal(dec!(365.0) / dec!(7.0)).expect("365/7 is positive")
+        } // 365 / 7
         TimeFrame::Month => pos_or_panic!(12.0),                   // 12
         TimeFrame::Quarter => pos_or_panic!(4.0),                  // 4
         TimeFrame::Year => Positive::ONE,                          // 1

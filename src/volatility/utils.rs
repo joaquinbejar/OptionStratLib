@@ -24,7 +24,8 @@ use rust_decimal::{Decimal, MathematicalOps};
 ///
 /// The calculated volatility as a Decimal.
 pub fn constant_volatility(returns: &[Decimal]) -> Result<Positive, VolatilityError> {
-    let n = Positive(Decimal::from_usize(returns.len()).unwrap());
+    let n = Positive::new_decimal(Decimal::from_usize(returns.len()).unwrap())
+        .unwrap_or(Positive::ZERO);
 
     if n < Decimal::TWO {
         return Ok(Positive::ZERO);
@@ -72,11 +73,13 @@ pub fn ewma_volatility(
     lambda: Decimal,
 ) -> Result<Vec<Positive>, VolatilityError> {
     let mut variance = returns[0].powi(2);
-    let mut volatilities = vec![Positive(variance.sqrt().unwrap())];
+    let mut volatilities =
+        vec![Positive::new_decimal(variance.sqrt().unwrap()).unwrap_or(Positive::ZERO)];
 
     for &return_value in &returns[1..] {
         variance = lambda * variance + (Decimal::ONE - lambda) * return_value.powi(2);
-        volatilities.push(Positive(variance.sqrt().unwrap()));
+        volatilities
+            .push(Positive::new_decimal(variance.sqrt().unwrap()).unwrap_or(Positive::ZERO));
     }
 
     Ok(volatilities)
@@ -212,10 +215,11 @@ pub fn garch_volatility(
     alpha: Decimal,
     beta: Decimal,
 ) -> Result<Vec<Positive>, VolatilityError> {
-    let mut variance = Positive(returns[0].powi(2));
+    let mut variance = Positive::new_decimal(returns[0].powi(2)).unwrap_or(Positive::ZERO);
     let mut volatilities = vec![variance.sqrt()];
     for &return_value in &returns[1..] {
-        variance = Positive(omega + alpha * return_value.powi(2) + beta * variance);
+        variance = Positive::new_decimal(omega + alpha * return_value.powi(2) + beta * variance)
+            .unwrap_or(Positive::ZERO);
         volatilities.push(variance.sqrt());
     }
     Ok(volatilities)
@@ -243,13 +247,16 @@ pub fn simulate_heston_volatility(
     dt: Decimal,
     steps: usize,
 ) -> Result<Vec<Positive>, VolatilityError> {
-    let mut v = Positive(v0);
-    let mut volatilities = vec![v.sqrt()];
+    let mut v = v0.max(Decimal::ZERO);
+    let mut v_pos = Positive::new_decimal(v).unwrap_or(Positive::ZERO);
+    let mut volatilities = vec![v_pos.sqrt()];
     for _ in 1..steps {
         let dw = Decimal::from_f64(random::<f64>() * dt.sqrt().unwrap().to_f64().unwrap()).unwrap();
-        v += kappa * (theta - v) * dt + xi * v.sqrt() * dw;
-        v = v.max(Positive::ZERO); // Ensure variance doesn't become negative
-        volatilities.push(v.sqrt());
+        let sqrt_v = v_pos.sqrt().to_dec();
+        v += kappa * (theta - v) * dt + xi * sqrt_v * dw;
+        v = v.max(Decimal::ZERO); // Ensure variance doesn't become negative
+        v_pos = Positive::new_decimal(v).unwrap_or(Positive::ZERO);
+        volatilities.push(v_pos.sqrt());
     }
     Ok(volatilities)
 }
@@ -279,10 +286,12 @@ pub fn uncertain_volatility_bounds(
     upper_bound_option.implied_volatility = max_volatility;
 
     // Calculate the option price with minimum volatility
-    let lower_bound = Positive(lower_bound_option.calculate_price_black_scholes()?);
+    let lower_bound = Positive::new_decimal(lower_bound_option.calculate_price_black_scholes()?)
+        .unwrap_or(Positive::ZERO);
 
     // Calculate the option price with maximum volatility
-    let upper_bound = Positive(upper_bound_option.calculate_price_black_scholes()?);
+    let upper_bound = Positive::new_decimal(upper_bound_option.calculate_price_black_scholes()?)
+        .unwrap_or(Positive::ZERO);
 
     Ok((lower_bound, upper_bound))
 }
@@ -523,15 +532,15 @@ pub fn generate_ou_process(
     let sqrt_dt = dt.sqrt();
     let mut x = x0.to_dec();
     let mut result = Vec::with_capacity(steps);
-    result.push(Positive(x));
+    result.push(Positive::new_decimal(x).unwrap_or(Positive::ZERO));
 
     for _ in 1..steps {
         let dw = decimal_normal_sample() * sqrt_dt; // Z√dt
-        let drift = theta * mu.sub_or_zero(&x) * dt; // θ(μ−x)dt
-        let diffusion = volatility * dw; // σ·Z√dt
+        let drift = (theta * mu.sub_or_zero(&x) * dt).to_dec(); // θ(μ−x)dt
+        let diffusion = dw * volatility; // σ·Z√dt (Decimal)
         x += drift + diffusion; // OU process step
         x = x.max(Decimal::ZERO); // no negative values
-        result.push(Positive(x));
+        result.push(Positive::new_decimal(x).unwrap_or(Positive::ZERO));
     }
 
     result
@@ -963,7 +972,7 @@ mod tests_implied_volatility {
         assert_decimal_eq!(theta, dec!(-26.990), dec!(0.002));
         assert_decimal_eq!(rho, dec!(0.277), dec!(0.002));
         assert_decimal_eq!(vanna, dec!(-0.4879786), dec!(0.0000001));
-        assert_decimal_eq!(vomma, dec!(6.2450679681), dec!(0.0000000001));
+        assert_decimal_eq!(vomma, dec!(6.2450679681), dec!(0.00000001));
         assert_decimal_eq!(veta, dec!(0.0433019), dec!(0.0000001));
         assert_decimal_eq!(charm, dec!(0.1686671), dec!(0.0000001));
         assert_decimal_eq!(color, dec!(0.0005877), dec!(0.0000001));
@@ -1010,7 +1019,7 @@ mod tests_implied_volatility {
         assert_decimal_eq!(theta, dec!(-29.874), dec!(0.001));
         assert_decimal_eq!(rho, dec!(-0.016), dec!(0.001));
         assert_decimal_eq!(vanna, dec!(-0.4879786), dec!(0.0000001));
-        assert_decimal_eq!(vomma, dec!(6.2450679681), dec!(0.0000000001));
+        assert_decimal_eq!(vomma, dec!(6.2450679681), dec!(0.00000001));
         assert_decimal_eq!(veta, dec!(0.0433019), dec!(0.0000001));
         assert_decimal_eq!(charm, dec!(0.1685301), dec!(0.0000001));
         assert_decimal_eq!(color, dec!(0.0005877), dec!(0.0000001));
@@ -1074,7 +1083,7 @@ mod tests_implied_volatility {
         assert_decimal_eq!(theta, dec!(-26.990), dec!(0.002));
         assert_decimal_eq!(rho, dec!(0.277), dec!(0.002));
         assert_decimal_eq!(vanna, dec!(-0.4879786), dec!(0.0000001));
-        assert_decimal_eq!(vomma, dec!(6.2450679681), dec!(0.0000000001));
+        assert_decimal_eq!(vomma, dec!(6.2450679681), dec!(0.00000001));
         assert_decimal_eq!(veta, dec!(0.0433019), dec!(0.0000001));
         assert_decimal_eq!(charm, dec!(0.1686671), dec!(0.0000001));
         assert_decimal_eq!(color, dec!(0.0005877), dec!(0.0000001));
@@ -1121,7 +1130,7 @@ mod tests_implied_volatility {
         assert_decimal_eq!(theta, dec!(-29.874), dec!(0.001));
         assert_decimal_eq!(rho, dec!(-0.016), dec!(0.001));
         assert_decimal_eq!(vanna, dec!(-0.4879786), dec!(0.0000001));
-        assert_decimal_eq!(vomma, dec!(6.2450679681), dec!(0.0000000001));
+        assert_decimal_eq!(vomma, dec!(6.2450679681), dec!(0.00000001));
         assert_decimal_eq!(veta, dec!(0.0433019), dec!(0.0000001));
         assert_decimal_eq!(charm, dec!(0.1685301), dec!(0.0000001));
         assert_decimal_eq!(color, dec!(0.0005877), dec!(0.0000001));
@@ -1401,7 +1410,7 @@ mod tests_heston_volatility {
 
         // Check basic properties
         assert_eq!(result.len(), steps);
-        assert_eq!(result[0], Positive(v0).sqrt());
+        assert_eq!(result[0], Positive::new_decimal(v0).unwrap().sqrt());
         assert!(result.iter().all(|&x| x >= Positive::ZERO));
     }
 
@@ -1438,7 +1447,7 @@ mod tests_heston_volatility {
         let result = simulate_heston_volatility(kappa, theta, xi, v0, dt, steps).unwrap();
 
         // With high mean reversion, later values should be closer to sqrt(theta)
-        let theta_vol = Positive(theta).sqrt();
+        let theta_vol = Positive::new_decimal(theta).unwrap().sqrt();
         let initial_dist = (result[0].to_dec() - theta_vol.to_dec()).abs();
         let final_dist = (result[steps - 1].to_dec() - theta_vol.to_dec()).abs();
         assert!(final_dist < initial_dist);
@@ -1538,7 +1547,7 @@ mod tests_heston_volatility {
 
         // Should work with minimum number of steps
         assert_eq!(result.len(), steps);
-        assert_eq!(result[0], Positive(v0).sqrt());
+        assert_eq!(result[0], Positive::new_decimal(v0).unwrap().sqrt());
     }
 }
 

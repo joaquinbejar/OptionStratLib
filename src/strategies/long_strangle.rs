@@ -1227,8 +1227,16 @@ mod tests_long_strangle_delta {
                 option_style,
                 side,
             } => {
-                assert_pos_relative_eq!(*quantity, delta, Positive(DELTA_THRESHOLD));
-                assert_pos_relative_eq!(*strike, k, Positive(DELTA_THRESHOLD));
+                assert_pos_relative_eq!(
+                    *quantity,
+                    delta,
+                    Positive::new_decimal(DELTA_THRESHOLD).unwrap()
+                );
+                assert_pos_relative_eq!(
+                    *strike,
+                    k,
+                    Positive::new_decimal(DELTA_THRESHOLD).unwrap()
+                );
                 assert_eq!(*option_style, OptionStyle::Call);
                 assert_eq!(*side, Side::Long);
             }
@@ -1267,8 +1275,12 @@ mod tests_long_strangle_delta {
                 option_style,
                 side,
             } => {
-                assert_pos_relative_eq!(quantity, delta, Positive(DELTA_THRESHOLD));
-                assert_pos_relative_eq!(strike, k, Positive(DELTA_THRESHOLD));
+                assert_pos_relative_eq!(
+                    quantity,
+                    delta,
+                    Positive::new_decimal(DELTA_THRESHOLD).unwrap()
+                );
+                assert_pos_relative_eq!(strike, k, Positive::new_decimal(DELTA_THRESHOLD).unwrap());
                 assert_eq!(option_style, OptionStyle::Put);
                 assert_eq!(side, Side::Long);
             }
@@ -1349,12 +1361,12 @@ mod tests_long_strangle_delta_size {
                     assert_pos_relative_eq!(
                         *quantity,
                         pos_or_panic!(0.41400176840722),
-                        Positive(DELTA_THRESHOLD)
+                        Positive::new_decimal(DELTA_THRESHOLD).unwrap()
                     );
                     assert_pos_relative_eq!(
                         *strike,
                         pos_or_panic!(7450.0),
-                        Positive(DELTA_THRESHOLD)
+                        Positive::new_decimal(DELTA_THRESHOLD).unwrap()
                     );
                     assert_eq!(*option_style, OptionStyle::Call);
                     assert_eq!(*side, Side::Long);
@@ -1378,12 +1390,12 @@ mod tests_long_strangle_delta_size {
                     assert_pos_relative_eq!(
                         *quantity,
                         pos_or_panic!(0.3430003853562),
-                        Positive(DELTA_THRESHOLD)
+                        Positive::new_decimal(DELTA_THRESHOLD).unwrap()
                     );
                     assert_pos_relative_eq!(
                         *strike,
                         pos_or_panic!(7250.0),
-                        Positive(DELTA_THRESHOLD)
+                        Positive::new_decimal(DELTA_THRESHOLD).unwrap()
                     );
                     assert_eq!(*option_style, OptionStyle::Put);
                     assert_eq!(*side, Side::Long);
@@ -1409,12 +1421,12 @@ mod tests_long_strangle_delta_size {
                             assert_pos_relative_eq!(
                                 quantity,
                                 pos_or_panic!(0.1875856830735),
-                                Positive(DELTA_THRESHOLD)
+                                Positive::new_decimal(DELTA_THRESHOLD).unwrap()
                             );
                             assert_pos_relative_eq!(
                                 strike,
                                 pos_or_panic!(7450.0),
-                                Positive(DELTA_THRESHOLD)
+                                Positive::new_decimal(DELTA_THRESHOLD).unwrap()
                             );
                             assert_eq!(option_style, OptionStyle::Call);
                             assert_eq!(side, Side::Long);
@@ -1432,12 +1444,12 @@ mod tests_long_strangle_delta_size {
                             assert_pos_relative_eq!(
                                 quantity,
                                 pos_or_panic!(0.187585683073),
-                                Positive(DELTA_THRESHOLD)
+                                Positive::new_decimal(DELTA_THRESHOLD).unwrap()
                             );
                             assert_pos_relative_eq!(
                                 strike,
                                 pos_or_panic!(7250.0),
-                                Positive(DELTA_THRESHOLD)
+                                Positive::new_decimal(DELTA_THRESHOLD).unwrap()
                             );
                             assert_eq!(option_style, OptionStyle::Put);
                             assert_eq!(side, Side::Long);
@@ -1510,8 +1522,16 @@ mod tests_long_strangle_delta_size {
                 option_style,
                 side,
             } => {
-                assert_pos_relative_eq!(*quantity, delta, Positive(DELTA_THRESHOLD));
-                assert_pos_relative_eq!(*strike, k, Positive(DELTA_THRESHOLD));
+                assert_pos_relative_eq!(
+                    *quantity,
+                    delta,
+                    Positive::new_decimal(DELTA_THRESHOLD).unwrap()
+                );
+                assert_pos_relative_eq!(
+                    *strike,
+                    k,
+                    Positive::new_decimal(DELTA_THRESHOLD).unwrap()
+                );
                 assert_eq!(*option_style, OptionStyle::Call);
                 assert_eq!(*side, Side::Long);
             }
@@ -1551,8 +1571,16 @@ mod tests_long_strangle_delta_size {
                 option_style,
                 side,
             } => {
-                assert_pos_relative_eq!(*quantity, delta, Positive(DELTA_THRESHOLD));
-                assert_pos_relative_eq!(*strike, pos_or_panic!(7150.0), Positive(DELTA_THRESHOLD));
+                assert_pos_relative_eq!(
+                    *quantity,
+                    delta,
+                    Positive::new_decimal(DELTA_THRESHOLD).unwrap()
+                );
+                assert_pos_relative_eq!(
+                    *strike,
+                    pos_or_panic!(7150.0),
+                    Positive::new_decimal(DELTA_THRESHOLD).unwrap()
+                );
                 assert_eq!(*option_style, OptionStyle::Call);
                 assert_eq!(*side, Side::Long);
             }

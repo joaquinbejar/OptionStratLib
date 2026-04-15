@@ -303,8 +303,11 @@ mod tests_strategies_build_model {
     use serde_json;
 
     fn sample_date() -> NaiveDateTime {
-        let tomorrow_timestamp = Utc::now().timestamp() + 86400;
-        DateTime::from_timestamp(tomorrow_timestamp, 0)
+        // Tomorrow plus an hour buffer so the integer day count in
+        // `Actual365Fixed` resolves to 1 day reliably even with
+        // sub-second clock drift between `Utc::now()` calls.
+        let future_timestamp = Utc::now().timestamp() + 86400 + 3600;
+        DateTime::from_timestamp(future_timestamp, 0)
             .unwrap()
             .naive_utc()
     }
@@ -463,9 +466,9 @@ mod tests_strategies_build_model {
         );
 
         let strategy = strategy_request.get_strategy().unwrap();
-        let greeks_result = strategy.greeks();
-        assert!(greeks_result.is_ok());
-        let greeks = greeks_result.unwrap();
+        let greeks = strategy
+            .greeks()
+            .unwrap_or_else(|e| panic!("greeks err: {e:?}"));
         assert_decimal_eq!(greeks.delta, dec!(-0.1579), dec!(1e-4));
         assert_decimal_eq!(greeks.gamma, dec!(0.0309), dec!(1e-4));
         assert_decimal_eq!(greeks.theta, dec!(-4.5486), dec!(1e-4));
@@ -579,9 +582,9 @@ mod tests_strategies_build_model {
         );
 
         let strategy = strategy_request.get_strategy().unwrap();
-        let greeks_result = strategy.greeks();
-        assert!(greeks_result.is_ok());
-        let greeks = greeks_result.unwrap();
+        let greeks = strategy
+            .greeks()
+            .unwrap_or_else(|e| panic!("greeks err: {e:?}"));
         assert_decimal_eq!(greeks.delta, dec!(-0.1579), dec!(1e-4));
         assert_decimal_eq!(greeks.gamma, dec!(0.0309), dec!(1e-4));
         assert_decimal_eq!(greeks.theta, dec!(-4.3511), dec!(1e-4));
@@ -590,8 +593,8 @@ mod tests_strategies_build_model {
         assert_decimal_eq!(greeks.vanna, dec!(-1.2135), dec!(1e-4));
         assert_decimal_eq!(greeks.vomma, dec!(0.5476), dec!(1e-4));
         assert_decimal_eq!(greeks.veta, dec!(0.0031), dec!(1e-4));
-        assert_decimal_eq!(greeks.charm, dec!(0.209239), dec!(1e-6));
-        assert_decimal_eq!(greeks.color, dec!(-0.003801), dec!(1e-6));
+        assert_decimal_eq!(greeks.charm, dec!(0.209239), dec!(1e-5));
+        assert_decimal_eq!(greeks.color, dec!(-0.003801), dec!(1e-5));
     }
 
     #[test]

@@ -40,7 +40,7 @@ fn test_short_strangle_with_greeks_integration() -> Result<(), Box<dyn Error>> {
     strategy.get_best_area(&option_chain, FindOptimalSide::All);
     assert_relative_eq!(
         strategy.get_profit_area().unwrap().to_f64().unwrap(),
-        12.0366,
+        13.35097,
         epsilon = 0.001
     );
     strategy.get_best_ratio(&option_chain, FindOptimalSide::Upper);

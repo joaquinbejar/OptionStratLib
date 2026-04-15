@@ -249,7 +249,7 @@ impl OptionData {
         match (self.call_bid, self.call_ask) {
             (Some(call_bid), Some(call_ask)) => {
                 let spread = (call_ask.to_dec() - call_bid.to_dec()).abs();
-                Some(Positive(spread))
+                Positive::new_decimal(spread).ok()
             }
             _ => None,
         }
@@ -284,7 +284,7 @@ impl OptionData {
             (Some(call_bid), Some(call_ask)) => {
                 let spread = (call_ask.to_dec() - call_bid.to_dec()).abs();
                 let mid_price = (call_ask + call_bid) / 2.0;
-                Some(Positive(spread) / mid_price)
+                Positive::new_decimal(spread).ok().map(|s| s / mid_price)
             }
             _ => None,
         }
@@ -311,7 +311,7 @@ impl OptionData {
         match (self.put_bid, self.put_ask) {
             (Some(put_bid), Some(put_ask)) => {
                 let spread = (put_ask.to_dec() - put_bid.to_dec()).abs();
-                Some(Positive(spread))
+                Positive::new_decimal(spread).ok()
             }
             _ => None,
         }
@@ -338,7 +338,7 @@ impl OptionData {
             (Some(put_bid), Some(put_ask)) => {
                 let spread = (put_ask.to_dec() - put_bid.to_dec()).abs();
                 let mid_price = (put_ask + put_bid) / 2.0;
-                Some(Positive(spread) / mid_price)
+                Positive::new_decimal(spread).ok().map(|s| s / mid_price)
             }
             _ => None,
         }

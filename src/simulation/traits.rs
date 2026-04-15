@@ -4,7 +4,7 @@ use crate::model::decimal::decimal_normal_sample;
 use crate::simulation::simulator::Simulator;
 use crate::simulation::{ExitPolicy, WalkParams, WalkType};
 use crate::volatility::generate_ou_process;
-use num_traits::ToPrimitive;
+use num_traits::{FromPrimitive, ToPrimitive};
 use positive::Positive;
 use rust_decimal::{Decimal, MathematicalOps};
 use std::convert::TryInto;
@@ -64,17 +64,21 @@ where
                 volatility,
             } => {
                 let mut values = Vec::with_capacity(params.size + 1);
-                let mut x: Positive = params.ystep_as_positive()?;
-                values.push(x);
-                let sigma_abs = volatility * x;
+                let start: Positive = params.ystep_as_positive()?;
+                values.push(start);
+                let mut x: Decimal = start.to_dec();
+                let sigma_abs = (volatility * start).to_dec();
                 let sqrt_dt = dt.to_f64().sqrt();
+                let sqrt_dt_dec = Decimal::from_f64(sqrt_dt).unwrap_or(Decimal::ZERO);
 
                 for _ in 1..params.size {
                     let z = decimal_normal_sample();
-                    let diffusion = sigma_abs * sqrt_dt * z;
+                    let diffusion = sigma_abs * sqrt_dt_dec * z;
                     let drift_term = drift * dt;
                     x += drift_term + diffusion;
-                    values.push(x);
+                    values.push(
+                        Positive::new_decimal(x.max(Decimal::ZERO)).unwrap_or(Positive::ZERO),
+                    );
                 }
 
                 Ok(values)
@@ -154,11 +158,12 @@ where
                 values.push(price);
 
                 let sqrt_dt = dt.to_f64().sqrt();
+                let sqrt_dt_dec = Decimal::from_f64(sqrt_dt).unwrap_or(Decimal::ZERO);
                 let mut prev_log_ret = Decimal::ZERO;
 
                 for _ in 1..params.size {
                     let z = decimal_normal_sample();
-                    let diffusion = volatility * sqrt_dt * z;
+                    let diffusion = z * volatility * sqrt_dt_dec;
                     let mut log_ret = (expected_return * dt) + diffusion;
 
                     if let Some(ac) = autocorrelation {
@@ -243,27 +248,27 @@ where
             } => {
                 let mut values = Vec::with_capacity(params.size + 1);
                 let mut x: Decimal = params.ystep_as_positive()?.to_dec();
-                values.push(Positive(x));
+                values.push(Positive::new_decimal(x).unwrap_or(Positive::ZERO));
 
                 let sqrt_dt = dt.sqrt();
                 let lambda_dt = intensity * dt;
 
                 for _ in 1..params.size {
                     let z = decimal_normal_sample();
-                    let sigma_abs = volatility * x;
-                    let diffusion = sigma_abs * sqrt_dt * z;
+                    let sigma_abs = volatility.to_dec() * x;
+                    let diffusion = sigma_abs * sqrt_dt.to_dec() * z;
 
                     let drift_term = drift * dt;
                     let jump = if decimal_normal_sample() < lambda_dt.to_dec() {
                         // Bernoulli(λdt)
-                        jump_mean + jump_volatility * decimal_normal_sample()
+                        jump_mean + decimal_normal_sample() * jump_volatility
                     } else {
                         Decimal::ZERO
                     };
 
                     x += drift_term + diffusion + jump;
                     x = x.max(Decimal::ZERO);
-                    values.push(Positive(x));
+                    values.push(Positive::new_decimal(x).unwrap_or(Positive::ZERO));
                 }
 
                 Ok(values)
@@ -304,7 +309,7 @@ where
 
                 let mut path = Vec::with_capacity(params.size + 1);
                 let mut price = params.ystep_as_positive()?.to_dec();
-                path.push(Positive(price));
+                path.push(Positive::new_decimal(price).unwrap_or(Positive::ZERO));
 
                 // --- initial conditional variance (annualised) ---
                 let mut var = volatility * volatility; // σ₀²
@@ -313,6 +318,7 @@ where
 
                 // pre-compute √dt
                 let sqrt_dt = dt.to_f64().sqrt();
+                let sqrt_dt_dec = Decimal::from_f64(sqrt_dt).unwrap_or(Decimal::ZERO);
 
                 for _ in 1..params.size {
                     // 1) update variance
@@ -320,17 +326,17 @@ where
 
                     // 2) shock with the right scale σ√dt·Z
                     let z = decimal_normal_sample();
-                    let eps = var.sqrt() * sqrt_dt * z; // εₜ
+                    let eps = z * var.sqrt() * sqrt_dt_dec; // εₜ
 
                     // 3) drift  (use μ dt, or μ dt − ½σ² dt if μ is arithmetic)
                     let ret = drift * dt + eps;
 
                     // 4) price update
                     price *= (ret).exp();
-                    path.push(Positive(price));
+                    path.push(Positive::new_decimal(price).unwrap_or(Positive::ZERO));
 
                     // 5) store ε²
-                    prev_eps2 = eps.powu(2).to_dec(); // εₜ²
+                    prev_eps2 = eps.powu(2); // εₜ²
                 }
                 Ok(path)
             }
@@ -469,15 +475,17 @@ where
                 let sqrt_dt = dt.sqrt();
                 let mut price = params.ystep_as_positive()?.to_dec();
                 let mut path = Vec::with_capacity(params.size + 1);
-                path.push(Positive(price));
+                path.push(Positive::new_decimal(price).unwrap_or(Positive::ZERO));
 
                 for &vol in vols.iter().take(params.size - 1) {
                     let z = decimal_normal_sample();
-                    let sigma_abs = vol * price;
-                    let random_step = z * sigma_abs * sqrt_dt;
+                    let sigma_abs = vol.to_dec() * price;
+                    let random_step = z * sigma_abs * sqrt_dt.to_dec();
 
                     price += drift * dt + random_step;
-                    path.push(Positive(price));
+                    path.push(
+                        Positive::new_decimal(price.max(Decimal::ZERO)).unwrap_or(Positive::ZERO),
+                    );
                 }
 
                 Ok(path)
@@ -514,7 +522,7 @@ where
             } => {
                 let mut values = Vec::with_capacity(params.size);
                 let mut price = params.ystep_as_positive()?.to_dec();
-                values.push(Positive(price));
+                values.push(Positive::new_decimal(price).unwrap_or(Positive::ZERO));
 
                 // Initialize telegraph state randomly
                 let mut state: i8 = if decimal_normal_sample().to_f64().unwrap_or(0.0) < 0.0 {
@@ -560,7 +568,7 @@ where
                     let price_change = drift_term + diffusion;
                     price *= price_change.exp();
 
-                    values.push(Positive(price));
+                    values.push(Positive::new_decimal(price).unwrap_or(Positive::ZERO));
                 }
 
                 Ok(values)

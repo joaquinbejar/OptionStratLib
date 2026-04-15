@@ -615,7 +615,8 @@ impl OptionChain {
 
         // Default spread if we couldn't calculate it
         let spread = if count > 0 {
-            Positive(total_spread / Decimal::from(count))
+            Positive::new_decimal(total_spread / Decimal::from(count))
+                .unwrap_or_else(|_| pos_or_panic!(0.02))
         } else {
             pos_or_panic!(0.02) // 0.02 is a reasonable default spread
         };
@@ -2570,7 +2571,7 @@ impl OptionChain {
             if rounded_interval == Decimal::ZERO {
                 Positive::ONE // Minimum interval is 1
             } else {
-                Positive(rounded_interval)
+                Positive::new_decimal(rounded_interval).unwrap_or(Positive::ONE)
             }
         }
     }
@@ -3076,7 +3077,7 @@ impl OptionChain {
         // Add data rows
         for option in &self.options {
             // Check if strike price is a multiple of 25
-            let is_multiple_of_25 = option.strike_price.is_multiple(25.0);
+            let is_multiple_of_25 = option.strike_price.is_multiple_of_dec(dec!(25));
 
             let cells = vec![
                 Cell::new(&option.strike_price.to_string()),

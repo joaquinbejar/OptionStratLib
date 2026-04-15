@@ -74,14 +74,14 @@ mod tests {
         };
 
         // Verify that the fields were set correctly
-        assert_eq!(analysis.probability_of_profit.0, dec!(0.65));
-        assert_eq!(analysis.probability_of_max_profit.0, dec!(0.30));
-        assert_eq!(analysis.probability_of_max_loss.0, dec!(0.20));
-        assert_eq!(analysis.expected_value.0, dec!(250.00));
+        assert_eq!(analysis.probability_of_profit.to_dec(), dec!(0.65));
+        assert_eq!(analysis.probability_of_max_profit.to_dec(), dec!(0.30));
+        assert_eq!(analysis.probability_of_max_loss.to_dec(), dec!(0.20));
+        assert_eq!(analysis.expected_value.to_dec(), dec!(250.00));
         assert_eq!(analysis.break_even_points.len(), 2);
-        assert_eq!(analysis.break_even_points[0].0, dec!(45.50));
-        assert_eq!(analysis.break_even_points[1].0, dec!(55.50));
-        assert_eq!(analysis.risk_reward_ratio.0, dec!(0.75));
+        assert_eq!(analysis.break_even_points[0].to_dec(), dec!(45.50));
+        assert_eq!(analysis.break_even_points[1].to_dec(), dec!(55.50));
+        assert_eq!(analysis.risk_reward_ratio.to_dec(), dec!(0.75));
     }
 
     #[test]
@@ -136,9 +136,9 @@ mod tests {
 
         // Verify that multiple break-even points are handled correctly
         assert_eq!(analysis.break_even_points.len(), 3);
-        assert_eq!(analysis.break_even_points[0].0, dec!(40.00));
-        assert_eq!(analysis.break_even_points[1].0, dec!(50.00));
-        assert_eq!(analysis.break_even_points[2].0, dec!(60.00));
+        assert_eq!(analysis.break_even_points[0].to_dec(), dec!(40.00));
+        assert_eq!(analysis.break_even_points[1].to_dec(), dec!(50.00));
+        assert_eq!(analysis.break_even_points[2].to_dec(), dec!(60.00));
     }
 
     #[test]
@@ -155,16 +155,16 @@ mod tests {
 
         // Verify that probabilities are within expected range
         assert!(
-            analysis.probability_of_profit.0 >= dec!(0)
-                && analysis.probability_of_profit.0 <= dec!(1)
+            analysis.probability_of_profit.to_dec() >= dec!(0)
+                && analysis.probability_of_profit.to_dec() <= dec!(1)
         );
         assert!(
-            analysis.probability_of_max_profit.0 >= dec!(0)
-                && analysis.probability_of_max_profit.0 <= dec!(1)
+            analysis.probability_of_max_profit.to_dec() >= dec!(0)
+                && analysis.probability_of_max_profit.to_dec() <= dec!(1)
         );
         assert!(
-            analysis.probability_of_max_loss.0 >= dec!(0)
-                && analysis.probability_of_max_loss.0 <= dec!(1)
+            analysis.probability_of_max_loss.to_dec() >= dec!(0)
+                && analysis.probability_of_max_loss.to_dec() <= dec!(1)
         );
     }
 }

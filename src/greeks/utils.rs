@@ -481,7 +481,9 @@ pub fn calculate_delta_neutral_sizes(
             .into());
     }
 
-    let size1: Positive = Positive((-total_size.to_dec() * delta2) / (delta1 - delta2));
+    let size1: Positive =
+        Positive::new_decimal((-total_size.to_dec() * delta2) / (delta1 - delta2))
+            .map_err(|e| e.to_string())?;
     let size2 = total_size - size1;
 
     // Validate results
@@ -510,6 +512,7 @@ pub fn calculate_delta_neutral_sizes(
 #[cfg(test)]
 mod tests_calculate_delta_neutral_sizes {
     use super::*;
+    use crate::assert_decimal_eq;
     use positive::{assert_pos_relative_eq, pos_or_panic};
     use rust_decimal_macros::dec;
 
@@ -527,9 +530,9 @@ mod tests_calculate_delta_neutral_sizes {
         // Check total size constraint
         assert_pos_relative_eq!(size1 + size2, pos_or_panic!(7.0), pos_or_panic!(0.0001));
 
-        // Check delta neutrality
-        let total_delta = size1 * dec!(-0.30) + size2 * dec!(0.20);
-        assert_pos_relative_eq!(total_delta, Positive::ZERO, pos_or_panic!(0.0001));
+        // Check delta neutrality (mixed-sign deltas — compute in Decimal).
+        let total_delta = size1.to_dec() * dec!(-0.30) + size2.to_dec() * dec!(0.20);
+        assert_decimal_eq!(total_delta, Decimal::ZERO, dec!(0.0001));
     }
 
     #[test]

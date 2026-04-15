@@ -318,14 +318,11 @@ impl Position {
             Side::Short => {
                 // max profit is premium received - fees (cost)
                 let premium = self.premium * self.option.quantity;
-                let cost = -self.total_cost()?.to_dec();
-                match premium > cost {
-                    true => Ok(premium + cost),
-                    false => Err(PositionError::ValidationError(
-                        PositionValidationErrorKind::InvalidPosition {
-                            reason: "Max profit is negative.".to_string(),
-                        },
-                    )),
+                let total_cost = self.total_cost()?;
+                if premium >= total_cost {
+                    Ok(premium - total_cost)
+                } else {
+                    Ok(Positive::ZERO)
                 }
             }
         }

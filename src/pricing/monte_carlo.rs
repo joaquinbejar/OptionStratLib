@@ -44,7 +44,8 @@ pub fn monte_carlo_option_pricing(
         let mut st = option.underlying_price.to_dec();
         for _ in 0..steps {
             let w = wiener_increment(dt.to_dec())?;
-            st *= Decimal::ONE + option.risk_free_rate * dt + option.implied_volatility * w;
+            st *=
+                Decimal::ONE + option.risk_free_rate * dt + option.implied_volatility.to_dec() * w;
         }
         // Calculate the payoff for a call option
         let payoff: f64 = (st - option.strike_price)
@@ -120,7 +121,7 @@ pub fn price_option_monte_carlo(
     // Average payoff discounted to present value
     let avg_payoff =
         discount_factor * (total_payoff / Decimal::from_usize(num_simulations).unwrap());
-    Ok(Positive(avg_payoff.abs()))
+    Ok(Positive::new_decimal(avg_payoff.abs()).unwrap_or(Positive::ZERO))
 }
 
 #[cfg(test)]
@@ -327,7 +328,11 @@ mod tests_price_option_monte_carlo {
         assert!(result.is_ok());
 
         let bs = option.calculate_price_black_scholes().unwrap();
-        assert_pos_relative_eq!(result.unwrap(), Positive(bs), pos_or_panic!(10.0));
+        assert_pos_relative_eq!(
+            result.unwrap(),
+            Positive::new_decimal(bs).unwrap(),
+            pos_or_panic!(10.0)
+        );
     }
 
     // #[test]

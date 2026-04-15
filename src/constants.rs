@@ -25,7 +25,7 @@ pub const EPSILON: Decimal = dec!(1e-16);
 
 /// Minimum allowed volatility value as a Positive decimal.
 /// Prevents numerical issues in financial calculations with near-zero volatility.
-pub(crate) const MIN_VOLATILITY: Positive = Positive(dec!(1e-16));
+pub(crate) const MIN_VOLATILITY: Positive = unsafe { Positive::new_unchecked(dec!(1e-16)) };
 
 /// Maximum allowed volatility value as a Positive decimal (100%).
 /// Sets an upper bound for volatility inputs in financial models.
@@ -41,39 +41,41 @@ pub(crate) const STRIKE_PRICE_UPPER_BOUND_MULTIPLIER: f64 = 1.02;
 
 /// Standard number of trading days in a year as a Positive decimal.
 /// Used for business day-based financial calculations.
-pub(crate) const TRADING_DAYS: Positive = Positive(dec!(252.0));
+pub(crate) const TRADING_DAYS: Positive = unsafe { Positive::new_unchecked(dec!(252.0)) };
 
 /// Standard number of trading hours in a market day as a Positive decimal.
 /// Typically represents a standard U.S. market session (9:30 AM to 4:00 PM).
-pub(crate) const TRADING_HOURS: Positive = Positive(dec!(6.5));
+pub(crate) const TRADING_HOURS: Positive = unsafe { Positive::new_unchecked(dec!(6.5)) };
 
 /// Number of seconds in an hour as a Positive decimal value.
 /// Used for time-based conversions and calculations.
-pub(crate) const SECONDS_PER_HOUR: Positive = Positive(dec!(3600.0));
+pub(crate) const SECONDS_PER_HOUR: Positive = unsafe { Positive::new_unchecked(dec!(3600.0)) };
 
 /// Number of minutes in an hour as a Positive decimal value.
 /// Used for time-based conversions and calculations.
-pub(crate) const MINUTES_PER_HOUR: Positive = Positive(dec!(60.0));
+pub(crate) const MINUTES_PER_HOUR: Positive = unsafe { Positive::new_unchecked(dec!(60.0)) };
 
 /// Number of milliseconds in a second as a Positive decimal value.
 /// Used for precise time measurements and conversions.
-pub(crate) const MILLISECONDS_PER_SECOND: Positive = Positive(dec!(1000.0));
+pub(crate) const MILLISECONDS_PER_SECOND: Positive =
+    unsafe { Positive::new_unchecked(dec!(1000.0)) };
 
 /// Number of microseconds in a second as a Positive decimal value.
 /// Used for high-precision time measurements and conversions.
-pub(crate) const MICROSECONDS_PER_SECOND: Positive = Positive(dec!(1_000_000.0));
+pub(crate) const MICROSECONDS_PER_SECOND: Positive =
+    unsafe { Positive::new_unchecked(dec!(1_000_000.0)) };
 
 /// Standard number of weeks in a year as a Positive decimal value.
 /// Used for time-based financial calculations and annualization.
-pub(crate) const WEEKS_PER_YEAR: Positive = Positive(dec!(52.0));
+pub(crate) const WEEKS_PER_YEAR: Positive = unsafe { Positive::new_unchecked(dec!(52.0)) };
 
 /// Number of months in a year as a Positive decimal value.
 /// Used for monthly-based financial calculations and conversions.
-pub(crate) const MONTHS_PER_YEAR: Positive = Positive(dec!(12.0));
+pub(crate) const MONTHS_PER_YEAR: Positive = unsafe { Positive::new_unchecked(dec!(12.0)) };
 
 /// Number of quarters in a year as a Positive decimal value.
 /// Used for quarterly financial calculations and reporting periods.
-pub(crate) const QUARTERS_PER_YEAR: Positive = Positive(dec!(4.0));
+pub(crate) const QUARTERS_PER_YEAR: Positive = unsafe { Positive::new_unchecked(dec!(4.0)) };
 
 /// Maximum number of iterations for implied volatility calculation algorithms.
 /// Prevents infinite loops in numerical methods like Newton-Raphson or bisection.

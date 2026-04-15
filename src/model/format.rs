@@ -246,7 +246,7 @@ mod tests_options {
             side: Side::Long, \
             underlying_symbol: \"AAPL\", \
             strike_price: 150, \
-            expiration_date: ExpirationDate::DateTime(2024-08-08 00:00:00 UTC), \
+            expiration_date: DateTime(2024-08-08T00:00:00Z), \
             implied_volatility: 0.25, \
             quantity: 10, \
             underlying_price: 155, \
@@ -284,13 +284,13 @@ mod tests_options {
         let display_output = format!("{options}");
         let expected_output = "\
             Long Call European Option\n\
-            Underlying: AAPL @ $155\n\
-            Strike: $150\n\
+            Underlying: AAPL @ $155.00\n\
+            Strike: $150.00\n\
             Expiration: 2024-08-08 00:00:00 UTC\n\
-            Implied Volatility: 25%\n\
+            Implied Volatility: 25.00%\n\
             Quantity: 10\n\
             Risk-free Rate: 1.00%\n\
-            Dividend Yield: 2%";
+            Dividend Yield: 2.00%";
 
         assert_eq!(display_output, expected_output);
     }
@@ -346,13 +346,13 @@ mod tests_options {
         let display_output = format!("{options}");
         let expected_output = "\
             Short Call Barrier Option (Type: Up-And-In Barrier, Level: 100, Rebate: None)\n\
-            Underlying: GOOGL @ $1900\n\
-            Strike: $2000\n\
+            Underlying: GOOGL @ $1900.00\n\
+            Strike: $2000.00\n\
             Expiration: 2024-08-08 00:00:00 UTC\n\
-            Implied Volatility: 30%\n\
+            Implied Volatility: 30.00%\n\
             Quantity: 5\n\
             Risk-free Rate: 1.50%\n\
-            Dividend Yield: 1%\n\
+            Dividend Yield: 1.00%\n\
             Exotic Parameters: ExoticParams { spot_prices: None, spot_min: None, spot_max: None, cliquet_local_cap: None, cliquet_local_floor: None, cliquet_global_cap: None, cliquet_global_floor: None, rainbow_second_asset_price: None, rainbow_second_asset_volatility: None, rainbow_second_asset_dividend: None, rainbow_correlation: None, spread_second_asset_volatility: None, spread_second_asset_dividend: None, spread_correlation: None, quanto_fx_volatility: None, quanto_fx_correlation: None, quanto_foreign_rate: None, exchange_second_asset_volatility: None, exchange_second_asset_dividend: None, exchange_correlation: None }";
 
         assert_eq!(display_output, expected_output);
@@ -387,7 +387,7 @@ mod tests_expiration_date {
     fn test_debug_days() {
         let expiration = ExpirationDate::Days(pos_or_panic!(45.75));
         let debug_string = format!("{expiration:?}");
-        assert_eq!(debug_string, "ExpirationDate::Days(45.75)");
+        assert_eq!(debug_string, "Days(45.75)");
     }
 
     #[test]
@@ -401,10 +401,7 @@ mod tests_expiration_date {
 
         let expiration = ExpirationDate::DateTime(date);
         let debug_string = format!("{expiration:?}");
-        assert_eq!(
-            debug_string,
-            "ExpirationDate::DateTime(2023-12-31 23:59:59 UTC)"
-        );
+        assert_eq!(debug_string, "DateTime(2023-12-31T23:59:59Z)");
     }
 
     #[test]
@@ -475,13 +472,13 @@ mod tests_position_type_display_debug {
 
         let expected_display = "Position Details:\n\
                 Option: Long Call European Option\n\
-                Underlying: AAPL @ $155\n\
-                Strike: $150\n\
+                Underlying: AAPL @ $155.00\n\
+                Strike: $150.00\n\
                 Expiration: 2024-08-08 00:00:00 UTC\n\
-                Implied Volatility: 25%\n\
+                Implied Volatility: 25.00%\n\
                 Quantity: 10\n\
                 Risk-free Rate: 1.00%\n\
-                Dividend Yield: 2%\n\
+                Dividend Yield: 2.00%\n\
                 Premium per contract: $5.75\n\
                 Date: 2024-08-08 00:00:00 UTC\n\
                 Open Fee per contract: $0.50\n\
@@ -510,7 +507,7 @@ mod tests_position_type_display_debug {
             side: Side::Long, \
             underlying_symbol: \"AAPL\", \
             strike_price: 150, \
-            expiration_date: ExpirationDate::DateTime(2024-08-08 00:00:00 UTC), \
+            expiration_date: DateTime(2024-08-08T00:00:00Z), \
             implied_volatility: 0.25, \
             quantity: 10, \
             underlying_price: 155, \
@@ -598,7 +595,7 @@ mod tests_strategy_type_display_debug {
             break_even_points: vec![pos_or_panic!(102.0), pos_or_panic!(108.0)],
         };
 
-        let expected_output = "Strategy: Bull Call Spread\nType: BullCallSpread\nDescription: A bullish options strategy\nLegs:\n  Position Details:\nOption: Long Call European Option\nUnderlying: AAPL @ $100\nStrike: $100\nExpiration: 2024-08-08 00:00:00 UTC\nImplied Volatility: 2%\nQuantity: 1\nRisk-free Rate: 5.00%\nDividend Yield: 1%\nPremium per contract: $5.75\nDate: 2024-08-08 00:00:00 UTC\nOpen Fee per contract: $0.50\nClose Fee per contract: $0.45\n  Position Details:\nOption: Short Call European Option\nUnderlying: AAPL @ $100\nStrike: $100\nExpiration: 2024-08-08 00:00:00 UTC\nImplied Volatility: 2%\nQuantity: 1\nRisk-free Rate: 5.00%\nDividend Yield: 1%\nPremium per contract: $5.75\nDate: 2024-08-08 00:00:00 UTC\nOpen Fee per contract: $0.50\nClose Fee per contract: $0.45\nMax Profit: $10.00\nMax Loss: $5.00\nBreak-even Points:\n  $102\n  $108\n";
+        let expected_output = "Strategy: Bull Call Spread\nType: BullCallSpread\nDescription: A bullish options strategy\nLegs:\n  Position Details:\nOption: Long Call European Option\nUnderlying: AAPL @ $100.00\nStrike: $100.00\nExpiration: 2024-08-08 00:00:00 UTC\nImplied Volatility: 2.00%\nQuantity: 1\nRisk-free Rate: 5.00%\nDividend Yield: 1.00%\nPremium per contract: $5.75\nDate: 2024-08-08 00:00:00 UTC\nOpen Fee per contract: $0.50\nClose Fee per contract: $0.45\n  Position Details:\nOption: Short Call European Option\nUnderlying: AAPL @ $100.00\nStrike: $100.00\nExpiration: 2024-08-08 00:00:00 UTC\nImplied Volatility: 2.00%\nQuantity: 1\nRisk-free Rate: 5.00%\nDividend Yield: 1.00%\nPremium per contract: $5.75\nDate: 2024-08-08 00:00:00 UTC\nOpen Fee per contract: $0.50\nClose Fee per contract: $0.45\nMax Profit: $10.00\nMax Loss: $5.00\nBreak-even Points:\n  $102.00\n  $108.00\n";
 
         assert_eq!(format!("{strategy}"), expected_output);
     }
@@ -662,7 +659,7 @@ mod tests_strategy_type_display_debug {
             break_even_points: vec![pos_or_panic!(82.0), pos_or_panic!(88.0)],
         };
 
-        let expected_output = "Strategy { name: \"Bear Put Spread\", kind: BearPutSpread, description: \"A bearish options strategy\", legs: [Position { option: Options { option_type: European, side: Side::Long, underlying_symbol: \"AAPL\", strike_price: 110, expiration_date: ExpirationDate::DateTime(2024-08-08 00:00:00 UTC), implied_volatility: 0.02, quantity: 1, underlying_price: 100, risk_free_rate: 0.05, option_style: OptionStyle::Call, dividend_yield: 0.01, exotic_params: None }, premium: 5.75, date: 2024-08-08T00:00:00Z, open_fee: 0.5, close_fee: 0.45 }, Position { option: Options { option_type: European, side: Side::Short, underlying_symbol: \"AAPL\", strike_price: 110, expiration_date: ExpirationDate::DateTime(2024-08-08 00:00:00 UTC), implied_volatility: 0.02, quantity: 1, underlying_price: 100, risk_free_rate: 0.05, option_style: OptionStyle::Call, dividend_yield: 0.01, exotic_params: None }, premium: 5.75, date: 2024-08-08T00:00:00Z, open_fee: 0.5, close_fee: 0.45 }], max_profit: Some(8.0), max_loss: Some(2.0), break_even_points: [82, 88] }";
+        let expected_output = "Strategy { name: \"Bear Put Spread\", kind: BearPutSpread, description: \"A bearish options strategy\", legs: [Position { option: Options { option_type: European, side: Side::Long, underlying_symbol: \"AAPL\", strike_price: 110, expiration_date: DateTime(2024-08-08T00:00:00Z), implied_volatility: 0.02, quantity: 1, underlying_price: 100, risk_free_rate: 0.05, option_style: OptionStyle::Call, dividend_yield: 0.01, exotic_params: None }, premium: 5.75, date: 2024-08-08T00:00:00Z, open_fee: 0.5, close_fee: 0.45 }, Position { option: Options { option_type: European, side: Side::Short, underlying_symbol: \"AAPL\", strike_price: 110, expiration_date: DateTime(2024-08-08T00:00:00Z), implied_volatility: 0.02, quantity: 1, underlying_price: 100, risk_free_rate: 0.05, option_style: OptionStyle::Call, dividend_yield: 0.01, exotic_params: None }, premium: 5.75, date: 2024-08-08T00:00:00Z, open_fee: 0.5, close_fee: 0.45 }], max_profit: Some(8.0), max_loss: Some(2.0), break_even_points: [82, 88] }";
 
         assert_eq!(format!("{strategy:?}"), expected_output);
     }

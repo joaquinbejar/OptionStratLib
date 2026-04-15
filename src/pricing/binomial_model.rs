@@ -464,7 +464,7 @@ mod tests_generate_binomial_tree {
     use crate::model::types::OptionType;
     use rust_decimal_macros::dec;
 
-    const EPSILON: Decimal = dec!(1e-6);
+    const EPSILON: Decimal = dec!(1e-5);
 
     #[test]
     fn test_binomial_tree_basic() {

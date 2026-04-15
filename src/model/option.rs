@@ -686,7 +686,8 @@ impl Options {
         for _ in 0..MAX_ITERATIONS_IV {
             // Calculate midpoint volatility
             let mid_vol = (high.to_dec() + low.to_dec()) / Decimal::TWO;
-            let volatility = Positive(mid_vol);
+            let volatility = Positive::new_decimal(mid_vol)
+                .expect("mid_vol derived from Positive bounds is non-negative");
 
             // Calculate option price at this volatility
             let mut option_copy = self.clone();
@@ -2332,7 +2333,11 @@ mod tests_calculate_implied_volatility {
         let market_price = dec!(60.30);
         let iv = option.calculate_implied_volatility(market_price).unwrap();
 
-        assert_pos_relative_eq!(iv, pos_or_panic!(0.111618041), Positive(IV_TOLERANCE));
+        assert_pos_relative_eq!(
+            iv,
+            pos_or_panic!(0.111618041),
+            Positive::new_decimal(IV_TOLERANCE).unwrap()
+        );
     }
 
     #[test]
@@ -2354,7 +2359,11 @@ mod tests_calculate_implied_volatility {
 
         let market_price = dec!(132.16);
         let iv = option.calculate_implied_volatility(market_price).unwrap();
-        assert_pos_relative_eq!(iv, pos_or_panic!(0.125961), Positive(IV_TOLERANCE));
+        assert_pos_relative_eq!(
+            iv,
+            pos_or_panic!(0.125961),
+            Positive::new_decimal(IV_TOLERANCE).unwrap()
+        );
     }
 
     #[test]
@@ -2377,7 +2386,11 @@ mod tests_calculate_implied_volatility {
         let market_price = dec!(-114.16);
         let iv = option.calculate_implied_volatility(market_price).unwrap();
 
-        assert_pos_relative_eq!(iv, pos_or_panic!(0.1258087), Positive(IV_TOLERANCE));
+        assert_pos_relative_eq!(
+            iv,
+            pos_or_panic!(0.1258087),
+            Positive::new_decimal(IV_TOLERANCE).unwrap()
+        );
     }
 
     #[test]
@@ -2399,7 +2412,11 @@ mod tests_calculate_implied_volatility {
 
         let market_price = dec!(-132.27);
         let iv = option.calculate_implied_volatility(market_price).unwrap();
-        assert_pos_relative_eq!(iv, pos_or_panic!(0.12611389), Positive(IV_TOLERANCE));
+        assert_pos_relative_eq!(
+            iv,
+            pos_or_panic!(0.12611389),
+            Positive::new_decimal(IV_TOLERANCE).unwrap()
+        );
     }
 
     #[test]
