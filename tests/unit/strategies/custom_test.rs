@@ -84,6 +84,7 @@ fn create_test_custom_strategy() -> CustomStrategy {
         30,                           // Days to expiration
         Positive::new(0.25).unwrap(), // Implied volatility
     )
+    .unwrap()
 }
 
 // Helper function to create a complex Custom Strategy for testing
@@ -208,6 +209,7 @@ fn create_complex_custom_strategy() -> CustomStrategy {
         45,
         Positive::new(0.21).unwrap(),
     )
+    .unwrap()
 }
 
 #[cfg(test)]

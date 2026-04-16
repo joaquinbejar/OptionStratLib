@@ -30,7 +30,7 @@ fn test_poor_mans_covered_call_integration() -> Result<(), Box<dyn Error>> {
         pos_or_panic!(1.74),                       // close_fee_short_call
         pos_or_panic!(0.85),                       // open_fee_short_put
         pos_or_panic!(0.85),                       // close_fee_short_put
-    );
+    )?;
 
     let greeks = strategy.greeks().unwrap();
     let epsilon = dec!(0.001);

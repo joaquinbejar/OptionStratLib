@@ -29,7 +29,7 @@ fn test_long_straddle_integration() -> Result<(), Box<dyn Error>> {
         pos_or_panic!(7.01),   // close_fee_short_call
         pos_or_panic!(7.01),   // open_fee_short_put
         pos_or_panic!(7.01),   // close_fee_short_put
-    );
+    )?;
 
     let greeks = strategy.greeks().unwrap();
     let epsilon = dec!(0.001);

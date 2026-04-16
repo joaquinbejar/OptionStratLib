@@ -22,7 +22,7 @@ fn main() -> Result<(), Error> {
         pos_or_panic!(0.82), // close_fee_short_call
         pos_or_panic!(0.82), // open_fee_short_put
         pos_or_panic!(0.82), // close_fee_short_put
-    );
+    )?;
     strategy.get_best_area(&option_chain, FindOptimalSide::Center);
     debug!("Strategy:  {:#?}", strategy);
     let range = strategy.get_range_of_profit().unwrap_or(Positive::ZERO);

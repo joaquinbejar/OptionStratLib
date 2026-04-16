@@ -102,7 +102,7 @@ fn main() -> Result<(), Error> {
         premium_positive,   // premium received
         pos_or_panic!(1.5), // open_fee
         pos_or_panic!(1.5), // close_fee
-    );
+    )?;
 
     // Define exit policy: 50% profit OR 100% loss
     let exit_policy = ExitPolicy::profit_or_loss(dec!(0.7), dec!(0.6));

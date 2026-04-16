@@ -31,7 +31,7 @@ fn test_short_strangle_with_greeks_integration() -> Result<(), Box<dyn Error>> {
         pos_or_panic!(7.01),   // close_fee_short_call
         pos_or_panic!(7.01),   // open_fee_short_put
         pos_or_panic!(7.01),   // close_fee_short_put
-    );
+    )?;
 
     let greeks = strategy.greeks().unwrap();
     let epsilon = DELTA_THRESHOLD;

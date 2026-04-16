@@ -174,6 +174,12 @@ impl PoorMansCoveredCall {
     /// * The investor wants to generate income from the short calls while maintaining upside potential
     /// * The investor seeks a capital-efficient alternative to traditional covered calls
     ///
+    /// # Errors
+    ///
+    /// Returns `StrategyError` if either freshly-constructed leg cannot be
+    /// added to the strategy or if the break-even calculation fails. In
+    /// practice these branches are unreachable for a freshly-built PMCC and
+    /// are surfaced only to keep the constructor panic-free.
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         underlying_symbol: String,
@@ -192,7 +198,7 @@ impl PoorMansCoveredCall {
         close_fee_long_call: Positive,
         open_fee_short_call: Positive,
         close_fee_short_call: Positive,
-    ) -> Self {
+    ) -> Result<Self, StrategyError> {
         let mut strategy = PoorMansCoveredCall::default();
 
         // Long Call (LEAPS)
@@ -219,9 +225,7 @@ impl PoorMansCoveredCall {
             None,
             None,
         );
-        strategy
-            .add_position(&long_call)
-            .expect("Invalid long call option");
+        strategy.add_position(&long_call)?;
 
         // Short Call
         let short_call_option = Options::new(
@@ -247,14 +251,10 @@ impl PoorMansCoveredCall {
             None,
             None,
         );
-        strategy
-            .add_position(&short_call)
-            .expect("Invalid short call option");
+        strategy.add_position(&short_call)?;
 
-        strategy
-            .update_break_even_points()
-            .expect("Unable to update break even points");
-        strategy
+        strategy.update_break_even_points()?;
+        Ok(strategy)
     }
 }
 
@@ -272,11 +272,12 @@ impl StrategyConstructor for PoorMansCoveredCall {
 
         // Sort options by strike price to identify long and short positions
         let mut sorted_positions = vec_positions.to_vec();
+        // SAFETY: total order on Positive; f64 fallback to Equal is safe for stable sort
         sorted_positions.sort_by(|a, b| {
             a.option
                 .strike_price
                 .partial_cmp(&b.option.strike_price)
-                .unwrap()
+                .unwrap_or(std::cmp::Ordering::Equal)
         });
 
         let lower_strike_position = &sorted_positions[0];
@@ -647,7 +648,7 @@ impl Strategies for PoorMansCoveredCall {
         .to_f64();
         let high = self.get_max_profit().unwrap_or(Positive::ZERO).to_f64();
         let result = base * high / 200.0;
-        Ok(Decimal::from_f64(result).unwrap())
+        Decimal::from_f64(result).ok_or_else(|| StrategyError::numeric_conversion(result))
     }
 
     fn get_profit_ratio(&self) -> Result<Decimal, StrategyError> {
@@ -655,7 +656,7 @@ impl Strategies for PoorMansCoveredCall {
             (Ok(profit), Ok(loss)) => (profit / loss).to_f64() * 100.0,
             _ => ZERO,
         };
-        Ok(Decimal::from_f64(result).unwrap())
+        Decimal::from_f64(result).ok_or_else(|| StrategyError::numeric_conversion(result))
     }
 }
 
@@ -704,16 +705,33 @@ impl Optimizable for PoorMansCoveredCall {
                     first: long_call_option,
                     second: short_call_option,
                 };
-                let strategy: PoorMansCoveredCall = self.create_strategy(option_chain, &legs);
+                let strategy: PoorMansCoveredCall = match self.create_strategy(option_chain, &legs)
+                {
+                    Ok(s) => s,
+                    Err(e) => {
+                        tracing::warn!(
+                            error = %e,
+                            "skipping invalid strategy combination"
+                        );
+                        continue;
+                    }
+                };
 
                 if !strategy.validate() {
                     debug!("Invalid strategy");
                     continue;
                 }
 
-                let current_value = match criteria {
-                    OptimizationCriteria::Ratio => strategy.get_profit_ratio().unwrap(),
-                    OptimizationCriteria::Area => strategy.get_profit_area().unwrap(),
+                let metric = match criteria {
+                    OptimizationCriteria::Ratio => strategy.get_profit_ratio(),
+                    OptimizationCriteria::Area => strategy.get_profit_area(),
+                };
+                let current_value = match metric {
+                    Ok(v) => v,
+                    Err(e) => {
+                        tracing::warn!(error = %e, "skipping candidate with unscorable metric");
+                        continue;
+                    }
                 };
 
                 if current_value > best_value {
@@ -724,13 +742,37 @@ impl Optimizable for PoorMansCoveredCall {
         }
     }
 
-    fn create_strategy(&self, chain: &OptionChain, legs: &StrategyLegs) -> Self::Strategy {
+    /// Constructs a `PoorMansCoveredCall` from the supplied chain and legs.
+    ///
+    /// # Errors
+    ///
+    /// Returns `StrategyError::OperationError` when the supplied legs are
+    /// missing required quotes (`long.call_ask`, `short.call_bid`) needed to
+    /// price the strategy.
+    fn create_strategy(
+        &self,
+        chain: &OptionChain,
+        legs: &StrategyLegs,
+    ) -> Result<Self::Strategy, StrategyError> {
         let (long, short) = match legs {
             StrategyLegs::TwoLegs { first, second } => (first, second),
             _ => panic!("Invalid number of legs for this strategy"),
         };
         let implied_volatility = short.implied_volatility;
         assert!(implied_volatility <= Positive::ONE);
+
+        let long_call_ask = long.call_ask.ok_or_else(|| {
+            StrategyError::operation_not_supported(
+                "create_strategy",
+                "missing call_ask for long call leg",
+            )
+        })?;
+        let short_call_bid = short.call_bid.ok_or_else(|| {
+            StrategyError::operation_not_supported(
+                "create_strategy",
+                "missing call_bid for short call leg",
+            )
+        })?;
 
         PoorMansCoveredCall::new(
             chain.symbol.clone(),
@@ -743,8 +785,8 @@ impl Optimizable for PoorMansCoveredCall {
             self.short_call.option.risk_free_rate,
             self.short_call.option.dividend_yield,
             self.short_call.option.quantity,
-            long.call_ask.unwrap(),
-            short.call_bid.unwrap(),
+            long_call_ask,
+            short_call_bid,
             self.long_call.open_fee,
             self.long_call.close_fee,
             self.short_call.open_fee,
@@ -886,6 +928,7 @@ mod tests_pmcc_validation {
             pos_or_panic!(0.5),
             pos_or_panic!(0.5),
         )
+        .unwrap()
     }
 
     #[test]
@@ -1055,6 +1098,7 @@ mod tests_pmcc_optimization {
             pos_or_panic!(0.5),
             pos_or_panic!(0.5),
         )
+        .unwrap()
     }
 
     #[test]
@@ -1211,6 +1255,7 @@ mod tests_pmcc_pnl {
             pos_or_panic!(0.5),
             pos_or_panic!(0.5),
         )
+        .unwrap()
     }
 
     #[test]
@@ -1304,7 +1349,8 @@ mod tests_pmcc_best_area {
             Positive::ONE,
             pos_or_panic!(0.5),
             pos_or_panic!(0.5),
-        );
+        )
+        .unwrap();
 
         Ok((strategy, option_chain))
     }
@@ -1381,7 +1427,8 @@ mod tests_pmcc_best_ratio {
             Positive::ONE,
             pos_or_panic!(0.5),
             pos_or_panic!(0.5),
-        );
+        )
+        .unwrap();
 
         Ok((strategy, option_chain))
     }
@@ -1458,6 +1505,7 @@ mod tests_short_straddle_delta {
             pos_or_panic!(7.01),   // open_fee_long_call
             pos_or_panic!(7.01),   // close_fee_long_call
         )
+        .unwrap()
     }
 
     #[test]
@@ -1603,6 +1651,7 @@ mod tests_short_straddle_delta_size {
             pos_or_panic!(7.01),   // open_fee_long_call
             pos_or_panic!(7.01),   // close_fee_long_call
         )
+        .unwrap()
     }
 
     #[test]
@@ -1744,6 +1793,7 @@ mod tests_poor_mans_covered_call_probability {
             pos_or_panic!(0.85),                        // open_fee_long_call
             pos_or_panic!(0.85),                        // close_fee_long_call
         )
+        .unwrap()
     }
 
     #[test]
@@ -1954,6 +2004,7 @@ mod tests_poor_mans_covered_call_position_management {
             pos_or_panic!(0.85),                       // open_fee_long_call
             pos_or_panic!(0.85),                       // close_fee_long_call
         )
+        .unwrap()
     }
 
     #[test]
@@ -2082,6 +2133,7 @@ mod tests_adjust_option_position {
             pos_or_panic!(0.85),                       // open_fee_long_call
             pos_or_panic!(0.85),                       // close_fee_long_call
         )
+        .unwrap()
     }
 
     #[test]

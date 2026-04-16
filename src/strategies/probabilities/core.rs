@@ -10,6 +10,7 @@
 use positive::{Positive, pos_or_panic};
 
 use crate::error::probability::ProbabilityError;
+use crate::error::strategies::StrategyError;
 use crate::model::ProfitLossRange;
 use crate::pricing::payoff::Profit;
 use crate::strategies::base::Strategies;
@@ -68,7 +69,7 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
         volatility_adj: Option<VolatilityAdjustment>,
         trend: Option<PriceTrend>,
     ) -> Result<StrategyProbabilityAnalysis, ProbabilityError> {
-        let break_even_points = self.get_break_even_points().unwrap();
+        let break_even_points = self.get_break_even_points()?;
         // If both parameters are None, return default probabilities based on profit ranges
         if volatility_adj.is_none() && trend.is_none() {
             let probability_of_profit = self.probability_of_profit(None, None)?;
@@ -80,7 +81,7 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
                 probability_of_max_loss: Positive::ZERO, // Default value when no volatility adjustment
                 expected_value,
                 break_even_points: break_even_points.to_vec(),
-                risk_reward_ratio: Positive::new_decimal(self.get_profit_ratio().unwrap())
+                risk_reward_ratio: Positive::new_decimal(self.get_profit_ratio()?)
                     .unwrap_or(Positive::ZERO),
             });
         }
@@ -92,7 +93,7 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
         let (prob_max_profit, prob_max_loss) =
             self.calculate_extreme_probabilities(volatility_adj, trend)?;
         let risk_reward_ratio =
-            Positive::new_decimal(self.get_profit_ratio().unwrap()).unwrap_or(Positive::ZERO);
+            Positive::new_decimal(self.get_profit_ratio()?).unwrap_or(Positive::ZERO);
 
         Ok(StrategyProbabilityAnalysis {
             probability_of_profit,
@@ -148,8 +149,10 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
         }
 
         let step = self.get_underlying_price() / 100.0;
-        let range = self.get_best_range_to_show(step).unwrap();
-        let expiration = *self.get_expiration().values().next().unwrap();
+        let range = self.get_best_range_to_show(step)?;
+        let expiration = *self.get_expiration().values().next().ok_or_else(|| {
+            StrategyError::empty_collection("expected_value: no expiration on strategy")
+        })?;
 
         let mut probabilities = Vec::with_capacity(range.len());
         let mut last_prob = Decimal::ZERO;
@@ -169,13 +172,14 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
             last_prob = prob.0.to_dec();
         }
 
-        let expected_value =
-            range
-                .iter()
-                .zip(probabilities.iter())
-                .fold(0.0, |acc, (price, prob)| {
-                    acc + self.calculate_profit_at(price).unwrap().to_f64().unwrap() * *prob
-                });
+        let mut expected_value = 0.0_f64;
+        for (price, prob) in range.iter().zip(probabilities.iter()) {
+            let profit_dec = self.calculate_profit_at(price)?;
+            let profit = profit_dec
+                .to_f64()
+                .ok_or_else(|| StrategyError::numeric_conversion(0.0))?;
+            expected_value += profit * prob.to_f64();
+        }
 
         let total_prob: f64 = probabilities.iter().map(|p| p.to_f64()).sum();
         if (total_prob - 1.0).abs() > 0.05 {
@@ -293,8 +297,16 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
             .find(|range| range.upper_bound.is_none());
 
         let max_loss_range = loss_ranges.iter().find(|range| range.lower_bound.is_none());
-        let expiration = *self.get_expiration().values().next().unwrap();
-        let risk_free_rate = *self.get_risk_free_rate().values().next().unwrap();
+        let expiration = *self.get_expiration().values().next().ok_or_else(|| {
+            StrategyError::empty_collection(
+                "calculate_extreme_probabilities: no expiration on strategy",
+            )
+        })?;
+        let risk_free_rate = *self.get_risk_free_rate().values().next().ok_or_else(|| {
+            StrategyError::empty_collection(
+                "calculate_extreme_probabilities: no risk_free_rate on strategy",
+            )
+        })?;
         let underlying_price = self.get_underlying_price();
 
         let mut max_profit_prob = Positive::ZERO;
@@ -375,6 +387,7 @@ mod tests_probability_analysis {
             pos_or_panic!(0.55),  // close_fee_short
             pos_or_panic!(0.54),  // open_fee_short
         )
+        .unwrap()
     }
 
     #[test]
@@ -528,6 +541,7 @@ mod tests_expected_value {
             pos_or_panic!(0.55),  // close_fee_short
             pos_or_panic!(0.54),  // open_fee_short
         )
+        .unwrap()
     }
 
     #[test]

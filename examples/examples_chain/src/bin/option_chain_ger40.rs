@@ -36,7 +36,7 @@ fn main() -> Result<(), optionstratlib::error::Error> {
         pos_or_panic!(0.10), // close_fee_short_call
         pos_or_panic!(0.10), // open_fee_short_put
         pos_or_panic!(0.10), // close_fee_short_put
-    );
+    )?;
     strategy.get_best_ratio(
         &option_chain,
         FindOptimalSide::DeltaRange(dec!(-0.3), dec!(0.3)),

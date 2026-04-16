@@ -150,6 +150,12 @@ impl LongStraddle {
     /// # Returns
     /// A fully initialized Long Straddle strategy with calculated break-even points
     ///
+    /// # Errors
+    ///
+    /// Returns `StrategyError` if either freshly-constructed leg cannot be
+    /// added to the strategy or if the break-even calculation fails. In
+    /// practice these branches are unreachable for a freshly-built long
+    /// straddle and are surfaced only to keep the constructor panic-free.
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         underlying_symbol: String,
@@ -166,7 +172,7 @@ impl LongStraddle {
         close_fee_long_call: Positive,
         open_fee_long_put: Positive,
         close_fee_long_put: Positive,
-    ) -> Self {
+    ) -> Result<Self, StrategyError> {
         if strike == Positive::ZERO {
             strike = underlying_price;
         }
@@ -203,9 +209,7 @@ impl LongStraddle {
             None,
             None,
         );
-        strategy
-            .add_position(&long_call)
-            .expect("Invalid long call");
+        strategy.add_position(&long_call)?;
 
         let long_put_option = Options::new(
             OptionType::European,
@@ -230,12 +234,10 @@ impl LongStraddle {
             None,
             None,
         );
-        strategy.add_position(&long_put).expect("Invalid long put");
+        strategy.add_position(&long_put)?;
 
-        strategy
-            .update_break_even_points()
-            .expect("Unable to update break even points");
-        strategy
+        strategy.update_break_even_points()?;
+        Ok(strategy)
     }
 }
 
@@ -613,7 +615,7 @@ impl Strategies for LongStraddle {
         let cat = (strike_diff / 2.0_f64.sqrt()).to_f64();
         let loss_area = (cat.powf(2.0)) / (2.0 * 10.0_f64.powf(cat.log10().ceil()));
         let result = (1.0 / loss_area) * 10000.0; // Invert the value to get the profit area: the lower, the better
-        Ok(Decimal::from_f64(result).unwrap())
+        Decimal::from_f64(result).ok_or_else(|| StrategyError::numeric_conversion(result))
     }
 
     fn get_profit_ratio(&self) -> Result<Decimal, StrategyError> {
@@ -622,7 +624,7 @@ impl Strategies for LongStraddle {
             Ok(max_loss) => ((break_even_diff / max_loss) * 100.0).to_f64(),
             Err(_) => ZERO,
         };
-        Ok(Decimal::from_f64(result).unwrap())
+        Decimal::from_f64(result).ok_or_else(|| StrategyError::numeric_conversion(result))
     }
 }
 
@@ -671,10 +673,10 @@ impl Optimizable for LongStraddle {
                     first: both,
                     second: both,
                 };
-                let strategy = strategy.create_strategy(option_chain, &legs);
-                strategy.validate()
-                    && strategy.get_max_profit().is_ok()
-                    && strategy.get_max_loss().is_ok()
+                match strategy.create_strategy(option_chain, &legs) {
+                    Ok(s) => s.validate() && s.get_max_profit().is_ok() && s.get_max_loss().is_ok(),
+                    Err(_) => false,
+                }
             })
             // Map to OptionDataGroup
             .map(OptionDataGroup::One)
@@ -701,11 +703,24 @@ impl Optimizable for LongStraddle {
                 first: both,
                 second: both,
             };
-            let strategy = self.create_strategy(option_chain, &legs);
+            let strategy = match self.create_strategy(option_chain, &legs) {
+                Ok(s) => s,
+                Err(e) => {
+                    tracing::warn!(error = %e, "skipping invalid strategy combination");
+                    continue;
+                }
+            };
             // Calculate the current value based on the optimization criteria
-            let current_value = match criteria {
-                OptimizationCriteria::Ratio => strategy.get_profit_ratio().unwrap(),
-                OptimizationCriteria::Area => strategy.get_profit_area().unwrap(),
+            let metric = match criteria {
+                OptimizationCriteria::Ratio => strategy.get_profit_ratio(),
+                OptimizationCriteria::Area => strategy.get_profit_area(),
+            };
+            let current_value = match metric {
+                Ok(v) => v,
+                Err(e) => {
+                    tracing::warn!(error = %e, "skipping candidate with unscorable metric");
+                    continue;
+                }
             };
 
             if current_value > best_value {
@@ -717,13 +732,36 @@ impl Optimizable for LongStraddle {
         }
     }
 
-    fn create_strategy(&self, chain: &OptionChain, legs: &StrategyLegs) -> Self::Strategy {
+    /// Constructs a `LongStraddle` from the supplied chain and legs.
+    ///
+    /// # Errors
+    ///
+    /// Returns `StrategyError::OperationError` when the supplied legs are
+    /// missing required quotes (`call.call_ask`, `put.put_ask`) needed to
+    /// price the strategy.
+    fn create_strategy(
+        &self,
+        chain: &OptionChain,
+        legs: &StrategyLegs,
+    ) -> Result<Self::Strategy, StrategyError> {
         let (call, put) = match legs {
             StrategyLegs::TwoLegs { first, second } => (first, second),
             _ => panic!("Invalid number of legs for this strategy"),
         };
         let implied_volatility = call.implied_volatility;
         assert!(implied_volatility <= Positive::ONE);
+        let call_ask = call.call_ask.ok_or_else(|| {
+            StrategyError::operation_not_supported(
+                "create_strategy",
+                "missing call_ask for long call leg",
+            )
+        })?;
+        let put_ask = put.put_ask.ok_or_else(|| {
+            StrategyError::operation_not_supported(
+                "create_strategy",
+                "missing put_ask for long put leg",
+            )
+        })?;
         LongStraddle::new(
             chain.symbol.clone(),
             chain.underlying_price,
@@ -733,8 +771,8 @@ impl Optimizable for LongStraddle {
             self.long_call.option.risk_free_rate,
             self.long_call.option.dividend_yield,
             self.long_call.option.quantity,
-            call.call_ask.unwrap(),
-            put.put_ask.unwrap(),
+            call_ask,
+            put_ask,
             self.long_call.open_fee,
             self.long_call.close_fee,
             self.long_put.open_fee,
@@ -907,6 +945,7 @@ mod tests_long_straddle_probability {
             Positive::ZERO,                            // open_fee_long_put
             Positive::ZERO,                            // close_fee_long_put
         )
+        .unwrap()
     }
 
     #[test]
@@ -1056,6 +1095,7 @@ mod tests_long_straddle_delta {
             pos_or_panic!(7.01),   // open_fee_long_put
             pos_or_panic!(7.01),   // close_fee_long_put
         )
+        .unwrap()
     }
 
     #[test]
@@ -1201,6 +1241,7 @@ mod tests_long_straddle_delta_size {
             pos_or_panic!(7.01),   // open_fee_long_put
             pos_or_panic!(7.01),   // close_fee_long_put
         )
+        .unwrap()
     }
 
     #[test]
@@ -1342,6 +1383,7 @@ mod tests_straddle_position_management {
             pos_or_panic!(0.1), // open_fee_long_put
             pos_or_panic!(0.1), // close_fee_long_put
         )
+        .unwrap()
     }
 
     #[test]
@@ -1451,6 +1493,7 @@ mod tests_adjust_option_position {
             pos_or_panic!(0.1), // open_fee_long_put
             pos_or_panic!(0.1), // close_fee_long_put
         )
+        .unwrap()
     }
 
     #[test]

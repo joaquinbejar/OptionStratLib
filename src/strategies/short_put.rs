@@ -102,10 +102,11 @@ impl ShortPut {
     ///
     /// A new instance of `ShortPut` containing the initialized short put position.
     ///
-    /// # Panics
-    ///
-    /// This function will panic if adding the short put position to the strategy fails,
-    /// which may happen if the position is deemed invalid.
+    /// # Errors
+    /// Returns `StrategyError` if the freshly-constructed short put leg
+    /// cannot be added to the strategy. In practice this branch is
+    /// unreachable for a freshly-built single-leg strategy and is surfaced
+    /// only to keep the constructor panic-free.
     ///
     #[allow(clippy::too_many_arguments, dead_code)]
     pub fn new(
@@ -120,7 +121,7 @@ impl ShortPut {
         premium_short_put: Positive,
         open_fee_short_put: Positive,
         close_fee_short_put: Positive,
-    ) -> Self {
+    ) -> Result<Self, StrategyError> {
         let mut strategy = ShortPut::default();
 
         let short_put_option = Options::new(
@@ -146,11 +147,9 @@ impl ShortPut {
             None,
             None,
         );
-        strategy
-            .add_position(&short_put)
-            .expect("Invalid short put option");
+        strategy.add_position(&short_put)?;
 
-        strategy
+        Ok(strategy)
     }
 }
 
@@ -566,7 +565,9 @@ where
                 .template(
                     "{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} simulations ({eta})",
                 )
-                .expect("Failed to set progress bar template")
+                .map_err(|e| SimulationError::OtherError {
+                    reason: format!("Failed to set progress bar template: {}", e),
+                })?
                 .progress_chars("#>-"),
         );
 
@@ -656,7 +657,7 @@ where
                 // Calculate expiration premium (use very small time instead of zero)
                 let mut exp_option = self.short_put.option.clone();
                 exp_option.underlying_price = final_price;
-                exp_option.expiration_date = ExpirationDate::Days(Positive::new(0.001).unwrap());
+                exp_option.expiration_date = ExpirationDate::Days(Positive::new(0.001)?);
                 expiration_premium = Some(exp_option.calculate_price_black_scholes()?.abs());
 
                 expired = true;
@@ -801,6 +802,7 @@ mod tests_simulate {
             Positive::ZERO,      // open fee
             Positive::ZERO,      // close fee
         )
+        .unwrap()
     }
 
     /// Helper to create WalkParams with Historical data

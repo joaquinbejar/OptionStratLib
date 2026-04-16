@@ -32,7 +32,7 @@ fn main() -> Result<(), Error> {
         pos_or_panic!(16.0),
         pos_or_panic!(0.96),
         pos_or_panic!(0.96),
-    );
+    )?;
 
     info!("=== IronButterfly Extended Delta Analysis ===");
     info!("Title: {}", strategy.get_title());

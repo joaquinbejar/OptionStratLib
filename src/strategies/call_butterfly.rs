@@ -128,6 +128,13 @@ impl CallButterfly {
     /// # Returns
     ///
     /// A fully initialized `CallButterfly` strategy with all positions and break-even points calculated.
+    ///
+    /// # Errors
+    ///
+    /// Returns `StrategyError` if any freshly-constructed leg cannot be added
+    /// to the strategy or if the break-even calculation fails. In practice
+    /// these branches are unreachable for a freshly-built call butterfly and
+    /// are surfaced only to keep the constructor panic-free.
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         underlying_symbol: String,
@@ -149,7 +156,7 @@ impl CallButterfly {
         close_fee_short_low: Positive,
         open_fee_short_high: Positive,
         close_fee_short_high: Positive,
-    ) -> Self {
+    ) -> Result<Self, StrategyError> {
         let mut strategy = CallButterfly {
             name: underlying_symbol.to_string(),
             kind: StrategyType::CallButterfly,
@@ -182,9 +189,7 @@ impl CallButterfly {
             None,
             None,
         );
-        strategy
-            .add_position(&long_call)
-            .expect("Invalid short call");
+        strategy.add_position(&long_call)?;
         strategy.long_call = long_call;
 
         let short_call_low_option = Options::new(
@@ -210,9 +215,7 @@ impl CallButterfly {
             None,
             None,
         );
-        strategy
-            .add_position(&short_call_low)
-            .expect("Invalid long call itm");
+        strategy.add_position(&short_call_low)?;
         strategy.short_call_low = short_call_low;
 
         let short_call_high_option = Options::new(
@@ -238,15 +241,11 @@ impl CallButterfly {
             None,
             None,
         );
-        strategy
-            .add_position(&short_call_high)
-            .expect("Invalid long call otm");
+        strategy.add_position(&short_call_high)?;
         strategy.short_call_high = short_call_high;
 
-        strategy
-            .update_break_even_points()
-            .expect("Unable to update break even points");
-        strategy
+        strategy.update_break_even_points()?;
+        Ok(strategy)
     }
 }
 
@@ -264,11 +263,12 @@ impl StrategyConstructor for CallButterfly {
 
         // Sort options by strike price
         let mut sorted_positions = vec_positions.to_vec();
+        // SAFETY: total order on Positive; f64 fallback to Equal is safe for stable sort
         sorted_positions.sort_by(|a, b| {
             a.option
                 .strike_price
                 .partial_cmp(&b.option.strike_price)
-                .unwrap()
+                .unwrap_or(std::cmp::Ordering::Equal)
         });
 
         let low_short_call_position = &sorted_positions[0];
@@ -725,7 +725,7 @@ impl Strategies for CallButterfly {
     }
 
     fn get_profit_ratio(&self) -> Result<Decimal, StrategyError> {
-        let max_loss = match self.get_max_loss().unwrap() {
+        let max_loss = match self.get_max_loss()? {
             value if value == Positive::ZERO => spos!(1.0),
             value if value == Positive::INFINITY => spos!(1.0),
             value => Some(value),
@@ -804,10 +804,10 @@ impl Optimizable for CallButterfly {
                     second: short_low,
                     third: short_high,
                 };
-                let strategy = strategy.create_strategy(option_chain, &legs);
-                strategy.validate()
-                    && strategy.get_max_profit().is_ok()
-                    && strategy.get_max_loss().is_ok()
+                match strategy.create_strategy(option_chain, &legs) {
+                    Ok(s) => s.validate() && s.get_max_profit().is_ok() && s.get_max_loss().is_ok(),
+                    Err(_) => false,
+                }
             })
             // Map to OptionDataGroup
             .map(move |(long, short_low, short_high)| {
@@ -837,11 +837,24 @@ impl Optimizable for CallButterfly {
                 second: short_low,
                 third: short_high,
             };
-            let strategy = self.create_strategy(option_chain, &legs);
+            let strategy = match self.create_strategy(option_chain, &legs) {
+                Ok(s) => s,
+                Err(e) => {
+                    tracing::warn!(error = %e, "skipping invalid strategy combination");
+                    continue;
+                }
+            };
             // Calculate the current value based on the optimization criteria
-            let current_value = match criteria {
-                OptimizationCriteria::Ratio => strategy.get_profit_ratio().unwrap(),
-                OptimizationCriteria::Area => strategy.get_profit_area().unwrap(),
+            let metric = match criteria {
+                OptimizationCriteria::Ratio => strategy.get_profit_ratio(),
+                OptimizationCriteria::Area => strategy.get_profit_area(),
+            };
+            let current_value = match metric {
+                Ok(v) => v,
+                Err(e) => {
+                    tracing::warn!(error = %e, "skipping candidate with unscorable metric");
+                    continue;
+                }
             };
 
             if current_value > best_value {
@@ -853,7 +866,19 @@ impl Optimizable for CallButterfly {
         }
     }
 
-    fn create_strategy(&self, option_chain: &OptionChain, legs: &StrategyLegs) -> CallButterfly {
+    /// Constructs a `CallButterfly` from the supplied chain and legs.
+    ///
+    /// # Errors
+    ///
+    /// Returns `StrategyError::OperationError` when the supplied legs are
+    /// missing required quotes (`long_call.call_ask`,
+    /// `short_call_low.call_bid`, `short_call_high.call_bid`) needed to
+    /// price the strategy.
+    fn create_strategy(
+        &self,
+        option_chain: &OptionChain,
+        legs: &StrategyLegs,
+    ) -> Result<CallButterfly, StrategyError> {
         let (long_call, short_call_low, short_call_high) = match legs {
             StrategyLegs::ThreeLegs {
                 first,
@@ -868,6 +893,24 @@ impl Optimizable for CallButterfly {
         }
         let implied_volatility = long_call.implied_volatility;
         assert!(implied_volatility <= Positive::ONE);
+        let long_call_ask = long_call.call_ask.ok_or_else(|| {
+            StrategyError::operation_not_supported(
+                "create_strategy",
+                "missing call_ask for long call leg",
+            )
+        })?;
+        let short_call_low_bid = short_call_low.call_bid.ok_or_else(|| {
+            StrategyError::operation_not_supported(
+                "create_strategy",
+                "missing call_bid for short_call_low leg",
+            )
+        })?;
+        let short_call_high_bid = short_call_high.call_bid.ok_or_else(|| {
+            StrategyError::operation_not_supported(
+                "create_strategy",
+                "missing call_bid for short_call_high leg",
+            )
+        })?;
         CallButterfly::new(
             option_chain.symbol.clone(),
             option_chain.underlying_price,
@@ -879,9 +922,9 @@ impl Optimizable for CallButterfly {
             self.long_call.option.risk_free_rate,
             self.long_call.option.dividend_yield,
             self.long_call.option.quantity,
-            long_call.call_ask.unwrap(),
-            short_call_low.call_bid.unwrap(),
-            short_call_high.call_bid.unwrap(),
+            long_call_ask,
+            short_call_low_bid,
+            short_call_high_bid,
             self.long_call.open_fee,
             self.long_call.close_fee,
             self.short_call_low.open_fee,
@@ -1078,6 +1121,7 @@ mod tests_call_butterfly {
             pos_or_panic!(0.1),
             pos_or_panic!(0.1),
         )
+        .unwrap()
     }
 
     #[test]
@@ -1161,6 +1205,7 @@ mod tests_call_butterfly_validation {
             pos_or_panic!(0.1),
             pos_or_panic!(0.1),
         )
+        .unwrap()
     }
 
     #[test]
@@ -1211,6 +1256,7 @@ mod tests_call_butterfly_delta {
             pos_or_panic!(0.73),  // close_fee_short
             pos_or_panic!(0.73),  // close_fee_short
         )
+        .unwrap()
     }
 
     #[test]
@@ -1382,6 +1428,7 @@ mod tests_call_butterfly_delta_size {
             pos_or_panic!(0.73),  // close_fee_short
             pos_or_panic!(0.73),
         )
+        .unwrap()
     }
 
     #[test]
@@ -1608,6 +1655,7 @@ mod tests_call_butterfly_optimizable {
             pos_or_panic!(0.1),
             pos_or_panic!(0.1),
         )
+        .unwrap()
     }
 
     #[test]
@@ -1665,7 +1713,7 @@ mod tests_call_butterfly_optimizable {
             third: chain.options.iter().nth(2).unwrap(),
         };
 
-        let new_strategy = butterfly.create_strategy(&chain, &legs);
+        let new_strategy = butterfly.create_strategy(&chain, &legs).unwrap();
 
         // Verify the new strategy has correct properties
         assert_relative_eq!(
@@ -1687,7 +1735,9 @@ mod tests_call_butterfly_optimizable {
             second: chain.options.iter().nth(1).unwrap(),
         };
 
-        butterfly.create_strategy(&chain, &legs); // Should panic
+        // Wrong number of legs is still a panic (that branch is owned by
+        // issue #292, not panic-free core).
+        let _ = butterfly.create_strategy(&chain, &legs);
     }
 
     #[test]
@@ -1744,6 +1794,7 @@ mod tests_call_butterfly_probability {
             pos_or_panic!(0.73),  // close_fee_short
             pos_or_panic!(0.72),  // open_fee_short
         )
+        .unwrap()
     }
 
     #[test]
@@ -1956,6 +2007,7 @@ mod tests_call_butterfly_position_management {
             pos_or_panic!(0.73),  // close_fee_short
             pos_or_panic!(0.72),  // open_fee_short
         )
+        .unwrap()
     }
 
     #[test]
@@ -2139,6 +2191,7 @@ mod tests_adjust_option_position {
             pos_or_panic!(0.73),  // close_fee_short
             pos_or_panic!(0.72),  // open_fee_short
         )
+        .unwrap()
     }
 
     #[test]
@@ -2447,6 +2500,7 @@ mod tests_call_butterfly_pnl {
             pos_or_panic!(0.1),
             pos_or_panic!(0.1),
         )
+        .unwrap()
     }
 
     fn create_test_call_butterfly() -> Result<CallButterfly, StrategyError> {

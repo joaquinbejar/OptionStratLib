@@ -124,7 +124,7 @@ fn main() -> Result<(), Error> {
         Default::default(),
         100,
         Default::default(),
-    );
+    )?;
 
     // Display strategy information
     info!("=== CUSTOM COMPLEX STRATEGY ===");

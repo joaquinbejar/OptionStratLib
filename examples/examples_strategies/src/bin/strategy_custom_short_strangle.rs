@@ -72,7 +72,7 @@ fn main() -> Result<(), Error> {
         Default::default(),
         100,
         Default::default(),
-    );
+    )?;
 
     // Calculate range between break-even points (if we have at least 2)
     let range = if strategy.break_even_points.len() >= 2 {

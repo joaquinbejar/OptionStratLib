@@ -838,11 +838,11 @@ pub trait Strategies: Validable + Positionable + BreakEvenable + BasicAble {
     /// * `Err(PositionError)` - If there is an error retrieving the positions.
     fn get_total_cost(&self) -> Result<Positive, PositionError> {
         let positions = self.get_positions()?;
-        let costs = positions
-            .iter()
-            .map(|p| p.total_cost().unwrap())
-            .sum::<Positive>();
-        Ok(costs)
+        let mut total = Positive::ZERO;
+        for p in positions {
+            total += p.total_cost()?;
+        }
+        Ok(total)
     }
 
     /// Calculates the net cost of the strategy, which is the sum of the costs of all positions,
@@ -853,11 +853,11 @@ pub trait Strategies: Validable + Positionable + BreakEvenable + BasicAble {
     /// * `Err(PositionError)` - If there is an error retrieving the positions.
     fn get_net_cost(&self) -> Result<Decimal, PositionError> {
         let positions = self.get_positions()?;
-        let costs = positions
-            .iter()
-            .map(|p| p.net_cost().unwrap())
-            .sum::<Decimal>();
-        Ok(costs)
+        let mut total = Decimal::ZERO;
+        for p in positions {
+            total += p.net_cost()?;
+        }
+        Ok(total)
     }
 
     /// Calculates the net premium received for the strategy. This is the total premium received from short positions
@@ -868,16 +868,15 @@ pub trait Strategies: Validable + Positionable + BreakEvenable + BasicAble {
     /// * `Err(StrategyError)` - If there is an error retrieving the positions.
     fn get_net_premium_received(&self) -> Result<Positive, StrategyError> {
         let positions = self.get_positions()?;
-        let costs = positions
-            .iter()
-            .filter(|p| p.option.side == Side::Long)
-            .map(|p| p.net_cost().unwrap())
-            .sum::<Decimal>();
-        let premiums = positions
-            .iter()
-            .filter(|p| p.option.side == Side::Short)
-            .map(|p| p.net_premium_received().unwrap())
-            .sum::<Positive>();
+        let mut costs = Decimal::ZERO;
+        let mut premiums = Positive::ZERO;
+        for p in positions {
+            if p.option.side == Side::Long {
+                costs += p.net_cost()?;
+            } else if p.option.side == Side::Short {
+                premiums += p.net_premium_received()?;
+            }
+        }
         match premiums > costs {
             true => Ok(premiums - costs),
             false => Ok(Positive::ZERO),
@@ -961,10 +960,17 @@ pub trait Strategies: Validable + Positionable + BreakEvenable + BasicAble {
         all_points.push((*underlying_price + max_diff).max(last_strike));
 
         // Sort to find min and max
-        all_points.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        // SAFETY: total order on Positive; f64 fallback to Equal is safe for stable sort
+        all_points.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
 
-        let start_price = *all_points.first().unwrap() * STRIKE_PRICE_LOWER_BOUND_MULTIPLIER;
-        let end_price = *all_points.last().unwrap() * STRIKE_PRICE_UPPER_BOUND_MULTIPLIER;
+        let first = all_points.first().ok_or_else(|| {
+            StrategyError::empty_collection("get_range_to_show: all_points is empty")
+        })?;
+        let last = all_points.last().ok_or_else(|| {
+            StrategyError::empty_collection("get_range_to_show: all_points is empty")
+        })?;
+        let start_price = *first * STRIKE_PRICE_LOWER_BOUND_MULTIPLIER;
+        let end_price = *last * STRIKE_PRICE_UPPER_BOUND_MULTIPLIER;
         Ok((start_price, end_price))
     }
 
@@ -1034,8 +1040,20 @@ pub trait Strategies: Validable + Positionable + BreakEvenable + BasicAble {
             2 => Ok(break_even_points[1] - break_even_points[0]),
             _ => {
                 // sort break even points and then get last minus first
-                break_even_points.sort_by(|a, b| a.partial_cmp(b).unwrap());
-                Ok(*break_even_points.last().unwrap() - *break_even_points.first().unwrap())
+                // SAFETY: total order on Positive; f64 fallback to Equal is safe for stable sort
+                break_even_points
+                    .sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+                let last = break_even_points.last().ok_or_else(|| {
+                    StrategyError::empty_collection(
+                        "get_range_of_profit: break_even_points is empty",
+                    )
+                })?;
+                let first = break_even_points.first().ok_or_else(|| {
+                    StrategyError::empty_collection(
+                        "get_range_of_profit: break_even_points is empty",
+                    )
+                })?;
+                Ok(*last - *first)
             }
         }
     }
@@ -1251,10 +1269,9 @@ pub trait Optimizable: Validable + Strategies {
             }
             FindOptimalSide::DeltaRange(min, max) => {
                 let (delta_call, delta_put) = option.current_deltas();
-                (delta_put.is_some() && delta_put.unwrap() >= *min && delta_put.unwrap() <= *max)
-                    || (delta_call.is_some()
-                        && delta_call.unwrap() >= *min
-                        && delta_call.unwrap() <= *max)
+                let put_in = delta_put.is_some_and(|d| d >= *min && d <= *max);
+                let call_in = delta_call.is_some_and(|d| d >= *min && d <= *max);
+                put_in || call_in
             }
         }
     }
@@ -1275,13 +1292,28 @@ pub trait Optimizable: Validable + Strategies {
     }
 
     /// Creates a new strategy from the given `OptionChain` and `StrategyLegs`.
-    /// The default implementation panics. Specific strategies must override this.
+    ///
+    /// Specific strategies must override this method. The default implementation
+    /// returns `StrategyError::OperationError(NotSupported { .. })`.
     ///
     /// # Arguments
     /// * `_chain` - A reference to the `OptionChain` providing option data.
     /// * `_legs` - A reference to the `StrategyLegs` defining the strategy's components.
-    fn create_strategy(&self, _chain: &OptionChain, _legs: &StrategyLegs) -> Self::Strategy {
-        unimplemented!("Create strategy is not applicable for this strategy");
+    ///
+    /// # Errors
+    ///
+    /// Returns `StrategyError::OperationError` if the strategy cannot be built
+    /// from the supplied legs (e.g., missing bid/ask quotes, invalid leg
+    /// combination, or operation not supported by the concrete strategy).
+    fn create_strategy(
+        &self,
+        _chain: &OptionChain,
+        _legs: &StrategyLegs,
+    ) -> Result<Self::Strategy, StrategyError> {
+        Err(StrategyError::operation_not_supported(
+            "create_strategy",
+            std::any::type_name::<Self>(),
+        ))
     }
 }
 

@@ -35,7 +35,7 @@ fn test_call_butterfly_integration() -> Result<(), Box<dyn Error>> {
         pos_or_panic!(0.73),  // close_fee_short
         pos_or_panic!(0.73),  // close_fee_short
         pos_or_panic!(0.73),  // open_fee_short
-    );
+    )?;
 
     let option_chain =
         OptionChain::load_from_json("./examples/Chains/SP500-18-oct-2024-5781.88.json")?;

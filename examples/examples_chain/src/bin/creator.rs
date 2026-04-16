@@ -45,7 +45,7 @@ fn main() -> Result<(), optionstratlib::error::Error> {
         pos_or_panic!(0.1), // close_fee_short_call
         pos_or_panic!(0.1), // open_fee_short_put
         pos_or_panic!(0.1), // close_fee_short_put
-    );
+    )?;
     let max_delta = dec!(0.3);
     let min_delta = dec!(0.15);
     strategy.get_best_area(

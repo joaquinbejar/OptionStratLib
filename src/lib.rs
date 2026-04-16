@@ -1,7 +1,7 @@
 #![allow(unknown_lints)]
 #![allow(clippy::literal_string_with_formatting_args)]
 
-//! # OptionStratLib v0.15.3: Financial Options Library
+//! # OptionStratLib v0.16.0: Financial Options Library
 //!
 //! ## Table of Contents
 //! 1. [Introduction](#introduction)
@@ -663,7 +663,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! optionstratlib = "0.15.3"
+//! optionstratlib = "0.16.0"
 //! ```
 //!
 //! Or use cargo to add it to your project:
@@ -678,7 +678,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! optionstratlib = { version = "0.15.3", features = ["plotly"] }
+//! optionstratlib = { version = "0.16.0", features = ["plotly"] }
 //! ```
 //!
 //! - `plotly`: Enables interactive visualization using plotly.rs
@@ -789,7 +789,7 @@
 //!         pos_or_panic!(1.20),   // short_call_close_fee
 //!         Default::default(), Default::default(),
 //!         Default::default(), Default::default()
-//!     );
+//!     )?;
 //!
 //!     // Analyze the strategy
 //!     tracing::info!("Strategy: {}", strategy.get_title());
@@ -920,7 +920,7 @@
 //!     Positive::ONE,
 //!     30,
 //!     implied_volatility,
-//! );
+//! ).expect("valid custom strategy");
 //!
 //! tracing::info!("Strategy created: {}", strategy.get_title());
 //! ```
@@ -1028,7 +1028,7 @@
 //!
 //! ---
 //!
-//! **OptionStratLib v0.15.3** - Built with ❤️ in Rust for the financial community
+//! **OptionStratLib v0.16.0** - Built with ❤️ in Rust for the financial community
 //!
 
 /// # OptionsStratLib: Financial Options Trading Library

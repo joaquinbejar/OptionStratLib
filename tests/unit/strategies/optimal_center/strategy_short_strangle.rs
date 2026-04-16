@@ -33,7 +33,7 @@ fn test_short_strangle_with_greeks_integration() -> Result<(), Box<dyn Error>> {
         pos_or_panic!(0.1),    // close_fee_short_call
         pos_or_panic!(0.1),    // open_fee_short_put
         pos_or_panic!(0.1),    // close_fee_short_put
-    );
+    )?;
 
     let option_chain = OptionChain::load_from_json(
         "./examples/Chains/Germany-40-2025-05-27-15-29-00-UTC-24209.json",

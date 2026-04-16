@@ -22,7 +22,7 @@ fn main() -> Result<(), Error> {
         pos_or_panic!(1.74),                       // close_fee_short_call
         pos_or_panic!(0.85),                       // open_fee_short_put
         pos_or_panic!(0.85),                       // close_fee_short_put
-    );
+    )?;
 
     info!("Title: {}", strategy.get_title());
     info!("Break Even Points: {:?}", strategy.break_even_points);

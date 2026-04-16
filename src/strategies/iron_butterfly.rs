@@ -168,6 +168,12 @@ impl IronButterfly {
     ///
     /// - **Ideal Market Outlook**: Neutral, expecting low volatility with the underlying price remaining near the short strike price.
     ///
+    /// # Errors
+    ///
+    /// Returns `StrategyError` if any freshly-constructed leg cannot be added
+    /// to the strategy or if the break-even calculation fails. In practice
+    /// these branches are unreachable for a freshly-built iron butterfly and
+    /// are surfaced only to keep the constructor panic-free.
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         underlying_symbol: String,
@@ -186,7 +192,7 @@ impl IronButterfly {
         premium_long_put: Positive,
         open_fee: Positive,
         close_fee: Positive,
-    ) -> Self {
+    ) -> Result<Self, StrategyError> {
         let mut strategy = IronButterfly {
             name: "Iron Butterfly".to_string(),
             kind: StrategyType::IronButterfly,
@@ -222,9 +228,7 @@ impl IronButterfly {
             None,
             None,
         );
-        strategy
-            .add_position(&short_call)
-            .expect("Invalid short call");
+        strategy.add_position(&short_call)?;
 
         // Short Put
         let short_put_option = Options::new(
@@ -250,9 +254,7 @@ impl IronButterfly {
             None,
             None,
         );
-        strategy
-            .add_position(&short_put)
-            .expect("Invalid short put");
+        strategy.add_position(&short_put)?;
 
         // Long Call
         let long_call_option = Options::new(
@@ -278,9 +280,7 @@ impl IronButterfly {
             None,
             None,
         );
-        strategy
-            .add_position(&long_call)
-            .expect("Invalid long call");
+        strategy.add_position(&long_call)?;
 
         // Long Put
         let long_put_option = Options::new(
@@ -306,12 +306,10 @@ impl IronButterfly {
             None,
             None,
         );
-        strategy.add_position(&long_put).expect("Invalid long put");
+        strategy.add_position(&long_put)?;
 
-        strategy
-            .update_break_even_points()
-            .expect("Unable to update break even points");
-        strategy
+        strategy.update_break_even_points()?;
+        Ok(strategy)
     }
 }
 
@@ -329,11 +327,12 @@ impl StrategyConstructor for IronButterfly {
 
         // Sort options by strike price to identify positions
         let mut sorted_positions = vec_positions.to_vec();
+        // SAFETY: total order on Positive; f64 fallback to Equal is safe for stable sort
         sorted_positions.sort_by(|a, b| {
             a.option
                 .strike_price
                 .partial_cmp(&b.option.strike_price)
-                .unwrap()
+                .unwrap_or(std::cmp::Ordering::Equal)
         });
 
         // Validate the positions and their structure
@@ -819,7 +818,7 @@ impl Strategies for IronButterfly {
 
         let result =
             (inner_area + outer_triangles) / self.short_call.option.underlying_price.to_f64();
-        Ok(Decimal::from_f64(result).unwrap())
+        Decimal::from_f64(result).ok_or_else(|| StrategyError::numeric_conversion(result))
     }
 
     fn get_profit_ratio(&self) -> Result<Decimal, StrategyError> {
@@ -881,10 +880,10 @@ impl Optimizable for IronButterfly {
                     third: mid,
                     fourth: high,
                 };
-                let strategy = strategy.create_strategy(option_chain, &legs);
-                strategy.validate()
-                    && strategy.get_max_profit().is_ok()
-                    && strategy.get_max_loss().is_ok()
+                match strategy.create_strategy(option_chain, &legs) {
+                    Ok(s) => s.validate() && s.get_max_profit().is_ok() && s.get_max_loss().is_ok(),
+                    Err(_) => false,
+                }
             })
             // Map to OptionDataGroup
             .map(move |(low, mid, high)| OptionDataGroup::Three(low, mid, high))
@@ -913,11 +912,24 @@ impl Optimizable for IronButterfly {
                 third: mid,
                 fourth: high,
             };
-            let strategy = self.create_strategy(option_chain, &legs);
+            let strategy = match self.create_strategy(option_chain, &legs) {
+                Ok(s) => s,
+                Err(e) => {
+                    tracing::warn!(error = %e, "skipping invalid strategy combination");
+                    continue;
+                }
+            };
             // Calculate the current value based on the optimization criteria
-            let current_value = match criteria {
-                OptimizationCriteria::Ratio => strategy.get_profit_ratio().unwrap(),
-                OptimizationCriteria::Area => strategy.get_profit_area().unwrap(),
+            let metric = match criteria {
+                OptimizationCriteria::Ratio => strategy.get_profit_ratio(),
+                OptimizationCriteria::Area => strategy.get_profit_area(),
+            };
+            let current_value = match metric {
+                Ok(v) => v,
+                Err(e) => {
+                    tracing::warn!(error = %e, "skipping candidate with unscorable metric");
+                    continue;
+                }
             };
 
             if current_value > best_value {
@@ -929,7 +941,19 @@ impl Optimizable for IronButterfly {
         }
     }
 
-    fn create_strategy(&self, chain: &OptionChain, legs: &StrategyLegs) -> Self::Strategy {
+    /// Constructs an `IronButterfly` from the supplied chain and legs.
+    ///
+    /// # Errors
+    ///
+    /// Returns `StrategyError::OperationError` when the supplied legs are
+    /// missing required quotes (`short_strike.call_bid`,
+    /// `short_strike.put_bid`, `long_call.call_ask`, `long_put.put_ask`)
+    /// needed to price the strategy.
+    fn create_strategy(
+        &self,
+        chain: &OptionChain,
+        legs: &StrategyLegs,
+    ) -> Result<Self::Strategy, StrategyError> {
         match legs {
             StrategyLegs::FourLegs {
                 first: long_put,
@@ -939,6 +963,31 @@ impl Optimizable for IronButterfly {
             } => {
                 let implied_volatility = short_strike.implied_volatility;
                 assert!(implied_volatility <= Positive::ONE);
+                let short_call_bid = short_strike.call_bid.ok_or_else(|| {
+                    StrategyError::operation_not_supported(
+                        "create_strategy",
+                        "missing call_bid for short strike leg",
+                    )
+                })?;
+                let short_put_bid = short_strike.put_bid.ok_or_else(|| {
+                    StrategyError::operation_not_supported(
+                        "create_strategy",
+                        "missing put_bid for short strike leg",
+                    )
+                })?;
+                let long_call_ask = long_call.call_ask.ok_or_else(|| {
+                    StrategyError::operation_not_supported(
+                        "create_strategy",
+                        "missing call_ask for long call leg",
+                    )
+                })?;
+                let long_put_ask = long_put.put_ask.ok_or_else(|| {
+                    StrategyError::operation_not_supported(
+                        "create_strategy",
+                        "missing put_ask for long put leg",
+                    )
+                })?;
+                let fee_per_leg = self.get_fees()? / 8.0;
                 IronButterfly::new(
                     chain.symbol.clone(),
                     chain.underlying_price,
@@ -950,12 +999,12 @@ impl Optimizable for IronButterfly {
                     self.short_call.option.risk_free_rate,
                     self.short_call.option.dividend_yield,
                     self.short_call.option.quantity,
-                    short_strike.call_bid.unwrap(),
-                    short_strike.put_bid.unwrap(),
-                    long_call.call_ask.unwrap(),
-                    long_put.put_ask.unwrap(),
-                    self.get_fees().unwrap() / 8.0,
-                    self.get_fees().unwrap() / 8.0,
+                    short_call_bid,
+                    short_put_bid,
+                    long_call_ask,
+                    long_put_ask,
+                    fee_per_leg,
+                    fee_per_leg,
                 )
             }
             _ => panic!("Invalid number of legs for Iron Butterfly strategy"),
@@ -1157,7 +1206,8 @@ mod tests_iron_butterfly {
             Positive::ONE,       // premium long put
             pos_or_panic!(5.0),  // open fee
             pos_or_panic!(5.0),  // close fee
-        );
+        )
+        .unwrap();
 
         assert_eq!(butterfly.name, "Iron Butterfly");
         assert_eq!(
@@ -1192,7 +1242,8 @@ mod tests_iron_butterfly {
             Positive::ONE,
             pos_or_panic!(5.0),
             pos_or_panic!(5.0),
-        );
+        )
+        .unwrap();
 
         assert_eq!(butterfly.get_max_loss().unwrap(), 49.0);
     }
@@ -1217,7 +1268,8 @@ mod tests_iron_butterfly {
             Positive::TWO,
             pos_or_panic!(0.07),
             pos_or_panic!(0.07),
-        );
+        )
+        .unwrap();
 
         let expected_profit: Positive = butterfly.get_net_premium_received().unwrap();
         assert_eq!(butterfly.get_max_profit().unwrap(), expected_profit);
@@ -1243,7 +1295,8 @@ mod tests_iron_butterfly {
             Positive::ONE,
             pos_or_panic!(5.0),
             pos_or_panic!(5.0),
-        );
+        )
+        .unwrap();
 
         assert_eq!(
             butterfly.get_break_even_points().unwrap()[0],
@@ -1281,7 +1334,8 @@ mod tests_iron_butterfly {
             Positive::ONE,
             pos_or_panic!(5.0),
             pos_or_panic!(5.0),
-        );
+        )
+        .unwrap();
 
         let expected_fees = butterfly.short_call.open_fee
             + butterfly.short_call.close_fee
@@ -1314,7 +1368,8 @@ mod tests_iron_butterfly {
             Positive::ONE,
             pos_or_panic!(5.0),
             pos_or_panic!(5.0),
-        );
+        )
+        .unwrap();
 
         // Test at short strike (maximum profit point)
         let price = butterfly.short_call.option.strike_price;
@@ -1396,6 +1451,7 @@ mod tests_iron_butterfly_validable {
             Positive::ZERO,     // open_fee
             Positive::ZERO,     // closing fee
         )
+        .unwrap()
     }
 
     #[test]
@@ -1555,6 +1611,7 @@ mod tests_iron_butterfly_strategies {
             pos_or_panic!(0.5), // open_fee
             pos_or_panic!(0.5), // closing fee
         )
+        .unwrap()
     }
 
     #[test]
@@ -1723,7 +1780,8 @@ mod tests_iron_butterfly_strategies {
             Positive::ONE,
             pos_or_panic!(0.5),
             pos_or_panic!(0.5),
-        );
+        )
+        .unwrap();
 
         assert_eq!(butterfly.get_net_premium_received().unwrap().to_f64(), 0.0);
     }
@@ -1747,7 +1805,8 @@ mod tests_iron_butterfly_strategies {
             Positive::ONE,
             pos_or_panic!(0.5),
             pos_or_panic!(0.5),
-        );
+        )
+        .unwrap();
 
         assert_eq!(butterfly.get_net_premium_received().unwrap().to_f64(), 0.0);
     }
@@ -1782,6 +1841,7 @@ mod tests_iron_butterfly_optimizable {
             pos_or_panic!(0.5), // open_fee
             pos_or_panic!(0.5), // closing fee
         )
+        .unwrap()
     }
 
     fn create_test_chain() -> OptionChain {
@@ -1945,7 +2005,7 @@ mod tests_iron_butterfly_optimizable {
             fourth: options[5], // 110.0 strike for long call
         };
 
-        let new_strategy = butterfly.create_strategy(&chain, &legs);
+        let new_strategy = butterfly.create_strategy(&chain, &legs).unwrap();
         assert!(new_strategy.validate());
         assert_eq!(
             new_strategy.long_put.option.strike_price,
@@ -1977,6 +2037,8 @@ mod tests_iron_butterfly_optimizable {
             second: options[1],
         };
 
+        // Wrong number of legs is still a panic (that branch is owned by
+        // issue #292, not panic-free core).
         let _ = butterfly.create_strategy(&chain, &legs);
     }
 }
@@ -2010,6 +2072,7 @@ mod tests_iron_butterfly_profit {
             Positive::ZERO,     // open_fee
             Positive::ZERO,     // closing fee
         )
+        .unwrap()
     }
 
     #[test]
@@ -2129,7 +2192,8 @@ mod tests_iron_butterfly_profit {
             Positive::ONE,
             pos_or_panic!(0.5), // open_fee
             pos_or_panic!(0.5), // closing fee
-        );
+        )
+        .unwrap();
 
         let profit = butterfly
             .calculate_profit_at(&Positive::HUNDRED)
@@ -2159,7 +2223,8 @@ mod tests_iron_butterfly_profit {
             Positive::ONE,
             Positive::ZERO,
             Positive::ZERO,
-        );
+        )
+        .unwrap();
 
         let profit = butterfly
             .calculate_profit_at(&butterfly.short_call.option.strike_price)
@@ -2241,6 +2306,7 @@ mod tests_iron_butterfly_delta {
             pos_or_panic!(0.96),   // open_fee
             pos_or_panic!(0.96),   // close_fee
         )
+        .unwrap()
     }
 
     #[test]
@@ -2434,6 +2500,7 @@ mod tests_iron_butterfly_delta_size {
             pos_or_panic!(0.96),   // open_fee
             pos_or_panic!(0.96),   // close_fee
         )
+        .unwrap()
     }
 
     #[test]
@@ -2626,6 +2693,7 @@ mod tests_iron_butterfly_probability {
             pos_or_panic!(0.96),   // open_fee
             pos_or_panic!(0.96),   // close_fee
         )
+        .unwrap()
     }
 
     #[test]
@@ -2831,6 +2899,7 @@ mod tests_iron_butterfly_position_management {
             pos_or_panic!(0.96),   // open_fee
             pos_or_panic!(0.96),   // close_fee
         )
+        .unwrap()
     }
 
     #[test]
@@ -3025,6 +3094,7 @@ mod tests_adjust_option_position {
             pos_or_panic!(0.96),   // open_fee
             pos_or_panic!(0.96),   // close_fee
         )
+        .unwrap()
     }
 
     #[test]

@@ -31,7 +31,7 @@ fn main() -> Result<(), Error> {
         pos_or_panic!(0.78),
         pos_or_panic!(0.73),
         pos_or_panic!(0.73),
-    );
+    )?;
 
     info!("=== BearCallSpread Extended Delta Analysis ===");
     info!("Title: {}", strategy.get_title());

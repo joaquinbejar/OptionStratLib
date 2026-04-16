@@ -105,7 +105,7 @@ fn main() -> Result<(), Error> {
         premium_positive, // premium paid
         Positive::ZERO,   // open_fee
         Positive::ZERO,   // close_fee
-    );
+    )?;
 
     // Define exit policy: 100% profit OR expiration
     let exit_policy = ExitPolicy::Or(vec![

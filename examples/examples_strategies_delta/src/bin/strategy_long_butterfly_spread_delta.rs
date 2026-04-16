@@ -25,7 +25,7 @@ fn main() -> Result<(), Error> {
         Positive::ZERO,
         Positive::ZERO,
         Positive::ZERO,
-    );
+    )?;
 
     info!("Title: {}", strategy.get_title());
     info!("Break Even Points: {:?}", strategy.break_even_points);

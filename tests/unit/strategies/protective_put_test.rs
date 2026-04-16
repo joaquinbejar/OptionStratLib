@@ -34,6 +34,7 @@ fn create_test_protective_put() -> ProtectivePut {
         Positive::new(0.65).unwrap(),
         Positive::new(0.65).unwrap(),
     )
+    .unwrap()
 }
 
 #[test]

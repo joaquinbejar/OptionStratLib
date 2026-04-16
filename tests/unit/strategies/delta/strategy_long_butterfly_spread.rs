@@ -34,7 +34,7 @@ fn test_long_butterfly_spread_integration() -> Result<(), Box<dyn Error>> {
         pos_or_panic!(0.07),  // fees
         pos_or_panic!(0.05),  // fees
         pos_or_panic!(0.03),  // fees
-    );
+    )?;
 
     let greeks = strategy.greeks().unwrap();
     let epsilon = dec!(0.001);

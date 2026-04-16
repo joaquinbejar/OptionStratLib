@@ -32,7 +32,7 @@ fn test_iron_butterfly_integration() -> Result<(), Box<dyn Error>> {
         pos_or_panic!(16.8),   // premium_long_put
         pos_or_panic!(0.96),   // open_fee
         pos_or_panic!(0.96),   // close_fee
-    );
+    )?;
 
     let option_chain =
         OptionChain::load_from_json("./examples/Chains/SP500-18-oct-2024-5781.88.json")?;

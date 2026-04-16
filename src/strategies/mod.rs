@@ -65,7 +65,7 @@
 //!     pos_or_panic!(0.78),   // open_fee_long
 //!     pos_or_panic!(0.73),   // close_fee_long
 //!     pos_or_panic!(0.73),   // close_fee_short
-//! );
+//! ).expect("valid bull call spread");
 //!
 //! let profit = spread.get_max_profit().unwrap_or(Positive::ZERO);
 //! let loss = spread.get_max_loss().unwrap_or(Positive::ZERO);
@@ -180,7 +180,7 @@
 //!     pos_or_panic!(1.8),   // premium_long_put
 //!     pos_or_panic!(5.0),   // open_fee
 //!     pos_or_panic!(5.0),   // close_fee
-//! );
+//! ).expect("valid iron condor");
 //!
 //! let max_profit = condor.get_max_profit().unwrap_or(Positive::ZERO);
 //! let max_loss = condor.get_max_loss().unwrap_or(Positive::ZERO);

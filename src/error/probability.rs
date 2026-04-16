@@ -462,6 +462,15 @@ impl From<StrategyError> for ProbabilityError {
             }
             StrategyError::GreeksError(err) => ProbabilityError::StdError(err.to_string()),
             StrategyError::PositiveError(err) => ProbabilityError::StdError(err.to_string()),
+            StrategyError::NumericConversion { value } => ProbabilityError::StdError(format!(
+                "numeric conversion failed: {value} is not a finite Decimal"
+            )),
+            StrategyError::MissingGreek { name } => {
+                ProbabilityError::StdError(format!("missing greek `{name}`"))
+            }
+            StrategyError::EmptyCollection { context } => {
+                ProbabilityError::StdError(format!("empty collection: {context}"))
+            }
         }
     }
 }

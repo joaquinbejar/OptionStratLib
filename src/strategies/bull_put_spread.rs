@@ -138,6 +138,14 @@ impl BullPutSpread {
     /// The created strategy is validated to ensure:
     /// 1. Both positions are valid
     /// 2. The long put strike price is lower than the short put strike price
+    ///
+    /// # Errors
+    ///
+    /// Returns `StrategyError` if either freshly-constructed leg cannot be
+    /// added to the strategy or if the break-even calculation fails. In
+    /// practice these branches are unreachable for a freshly-built bull
+    /// put spread and are surfaced only to keep the constructor
+    /// panic-free.
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         underlying_symbol: String,
@@ -155,7 +163,7 @@ impl BullPutSpread {
         close_fee_long_put: Positive,
         open_fee_short_put: Positive,
         close_fee_short_put: Positive,
-    ) -> Self {
+    ) -> Result<Self, StrategyError> {
         if long_strike == Positive::ZERO {
             long_strike = underlying_price;
         }
@@ -195,9 +203,7 @@ impl BullPutSpread {
             None,
             None,
         );
-        strategy
-            .add_position(&long_put)
-            .expect("Error adding long put");
+        strategy.add_position(&long_put)?;
 
         let short_put_option = Options::new(
             OptionType::European,
@@ -222,17 +228,13 @@ impl BullPutSpread {
             None,
             None,
         );
-        strategy
-            .add_position(&short_put)
-            .expect("Error adding short put");
+        strategy.add_position(&short_put)?;
 
         strategy.validate();
 
-        strategy
-            .update_break_even_points()
-            .expect("Unable to update break even points");
+        strategy.update_break_even_points()?;
 
-        strategy
+        Ok(strategy)
     }
 }
 
@@ -250,11 +252,12 @@ impl StrategyConstructor for BullPutSpread {
 
         // Sort options by strike price to identify short and long positions
         let mut sorted_positions = vec_positions.to_vec();
+        // SAFETY: total order on Positive; f64 fallback to Equal is safe for stable sort
         sorted_positions.sort_by(|a, b| {
             a.option
                 .strike_price
                 .partial_cmp(&b.option.strike_price)
-                .unwrap()
+                .unwrap_or(std::cmp::Ordering::Equal)
         });
 
         let lower_strike_option = &sorted_positions[0];
@@ -727,7 +730,7 @@ impl Optimizable for BullPutSpread {
     ///         pos_or_panic!(0.78),   // open_fee_long
     ///         pos_or_panic!(0.73),   // close_fee_long
     ///         pos_or_panic!(0.73),   // close_fee_short
-    ///     );
+    ///     ).expect("valid bull put spread");
     ///
     /// let side = FindOptimalSide::Lower;
     /// let filtered_combinations = bull_put_spread_strategy.filter_combinations(&option_chain, side);
@@ -783,10 +786,10 @@ impl Optimizable for BullPutSpread {
                     first: long_option,
                     second: short_option,
                 };
-                let strategy = strategy.create_strategy(option_chain, &legs);
-                strategy.validate()
-                    && strategy.get_max_profit().is_ok()
-                    && strategy.get_max_loss().is_ok()
+                match strategy.create_strategy(option_chain, &legs) {
+                    Ok(s) => s.validate() && s.get_max_profit().is_ok() && s.get_max_loss().is_ok(),
+                    Err(_) => false,
+                }
             })
             // Map to OptionDataGroup
             .map(move |(long, short)| OptionDataGroup::Two(long, short))
@@ -813,11 +816,24 @@ impl Optimizable for BullPutSpread {
                 first: long_option,
                 second: short_option,
             };
-            let strategy = self.create_strategy(option_chain, &legs);
+            let strategy = match self.create_strategy(option_chain, &legs) {
+                Ok(s) => s,
+                Err(e) => {
+                    tracing::warn!(error = %e, "skipping invalid strategy combination");
+                    continue;
+                }
+            };
             // Calculate the current value based on the optimization criteria
-            let current_value = match criteria {
-                OptimizationCriteria::Ratio => strategy.get_profit_ratio().unwrap(),
-                OptimizationCriteria::Area => strategy.get_profit_area().unwrap(),
+            let metric = match criteria {
+                OptimizationCriteria::Ratio => strategy.get_profit_ratio(),
+                OptimizationCriteria::Area => strategy.get_profit_area(),
+            };
+            let current_value = match metric {
+                Ok(v) => v,
+                Err(e) => {
+                    tracing::warn!(error = %e, "skipping candidate with unscorable metric");
+                    continue;
+                }
             };
 
             if current_value > best_value {
@@ -829,13 +845,36 @@ impl Optimizable for BullPutSpread {
         }
     }
 
-    fn create_strategy(&self, chain: &OptionChain, legs: &StrategyLegs) -> Self::Strategy {
+    /// Constructs a `BullPutSpread` from the supplied chain and legs.
+    ///
+    /// # Errors
+    ///
+    /// Returns `StrategyError::OperationError` when the supplied legs are
+    /// missing required quotes (`long.put_ask`, `short.put_bid`) needed to
+    /// price the spread.
+    fn create_strategy(
+        &self,
+        chain: &OptionChain,
+        legs: &StrategyLegs,
+    ) -> Result<Self::Strategy, StrategyError> {
         let (long, short) = match legs {
             StrategyLegs::TwoLegs { first, second } => (first, second),
             _ => panic!("Invalid number of legs for this strategy"),
         };
         let implied_volatility = long.implied_volatility;
         assert!(implied_volatility <= Positive::ONE);
+        let long_put_ask = long.put_ask.ok_or_else(|| {
+            StrategyError::operation_not_supported(
+                "create_strategy",
+                "missing put_ask for long leg",
+            )
+        })?;
+        let short_put_bid = short.put_bid.ok_or_else(|| {
+            StrategyError::operation_not_supported(
+                "create_strategy",
+                "missing put_bid for short leg",
+            )
+        })?;
         BullPutSpread::new(
             chain.symbol.clone(),
             chain.underlying_price,
@@ -846,8 +885,8 @@ impl Optimizable for BullPutSpread {
             self.long_put.option.risk_free_rate,
             self.long_put.option.dividend_yield,
             self.long_put.option.quantity,
-            long.put_ask.unwrap(),
-            short.put_bid.unwrap(),
+            long_put_ask,
+            short_put_bid,
             self.long_put.open_fee,
             self.long_put.close_fee,
             self.short_put.open_fee,
@@ -1004,6 +1043,7 @@ fn bull_put_spread_test() -> BullPutSpread {
         pos_or_panic!(0.73),  // close_fee_long
         pos_or_panic!(0.73),  // close_fee_short
     )
+    .unwrap()
 }
 
 #[cfg(test)]
@@ -1147,7 +1187,8 @@ mod tests_bull_put_spread_strategy {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
-        );
+        )
+        .unwrap();
 
         assert_eq!(spread.long_put.option.strike_price, Positive::HUNDRED);
         assert_eq!(spread.short_put.option.strike_price, Positive::HUNDRED);
@@ -1171,7 +1212,8 @@ mod tests_bull_put_spread_strategy {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
-        );
+        )
+        .unwrap();
 
         assert!(!spread.validate());
     }
@@ -1484,6 +1526,7 @@ mod tests_bull_put_spread_optimization {
             Positive::ZERO,
             Positive::ZERO,
         )
+        .unwrap()
     }
 
     #[test]
@@ -1686,7 +1729,7 @@ mod tests_bull_put_spread_optimization {
             first: long_option,
             second: short_option,
         };
-        let new_strategy = spread.create_strategy(&chain, &legs);
+        let new_strategy = spread.create_strategy(&chain, &legs).unwrap();
 
         assert!(new_strategy.validate());
         assert_eq!(
@@ -1806,7 +1849,8 @@ mod tests_bull_put_spread_profit {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
-        );
+        )
+        .unwrap();
 
         let price = pos_or_panic!(85.0);
         assert_eq!(
@@ -1874,6 +1918,7 @@ mod tests_bull_put_spread_probability {
             Positive::ZERO,                            // open_fee_short_put
             Positive::ZERO,                            // close_fee_short_put
         )
+        .unwrap()
     }
 
     #[test]
@@ -2024,6 +2069,7 @@ mod tests_delta {
             pos_or_panic!(0.73),  // close_fee_long
             pos_or_panic!(0.73),  // close_fee_short
         )
+        .unwrap()
     }
 
     #[test]
@@ -2167,6 +2213,7 @@ mod tests_delta_size {
             pos_or_panic!(0.73),  // close_fee_long
             pos_or_panic!(0.73),  // close_fee_short
         )
+        .unwrap()
     }
 
     #[test]
@@ -2307,6 +2354,7 @@ mod tests_bear_call_spread_position_management {
             pos_or_panic!(0.73),  // close_fee_long
             pos_or_panic!(0.73),  // close_fee_short
         )
+        .unwrap()
     }
 
     #[test]
@@ -2418,6 +2466,7 @@ mod tests_adjust_option_position {
             pos_or_panic!(0.73),  // close_fee_long
             pos_or_panic!(0.73),  // close_fee_short
         )
+        .unwrap()
     }
 
     #[test]

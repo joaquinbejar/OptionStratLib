@@ -25,7 +25,7 @@ fn main() -> Result<(), Error> {
         pos_or_panic!(0.05),
         pos_or_panic!(0.05),
         pos_or_panic!(0.05),
-    );
+    )?;
 
     info!("Title: {}", strategy.get_title());
     info!("Break Even Points: {:?}", strategy.break_even_points);

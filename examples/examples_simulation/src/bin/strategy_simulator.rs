@@ -37,7 +37,7 @@ fn main() -> Result<(), Error> {
         open_premium,
         Positive::ZERO,
         Positive::ZERO,
-    );
+    )?;
 
     let walk_params = WalkParams {
         size: n_steps,
