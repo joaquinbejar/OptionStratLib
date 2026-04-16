@@ -634,6 +634,22 @@ impl From<expiration_date::error::ExpirationDateError> for ChainError {
     }
 }
 
+impl From<crate::error::SimulationError> for ChainError {
+    fn from(err: crate::error::SimulationError) -> Self {
+        ChainError::DynError {
+            message: format!("simulation error: {err}"),
+        }
+    }
+}
+
+impl From<crate::error::VolatilityError> for ChainError {
+    fn from(err: crate::error::VolatilityError) -> Self {
+        ChainError::DynError {
+            message: format!("volatility error: {err}"),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
