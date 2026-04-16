@@ -162,6 +162,12 @@ impl ShortStraddle {
     /// - Calculated break-even points
     /// - Strategy metadata (name, description, etc.)
     ///
+    /// # Errors
+    ///
+    /// Returns `StrategyError` if either freshly-constructed leg cannot be
+    /// added to the strategy or if the break-even calculation fails. In
+    /// practice these branches are unreachable for a freshly-built short
+    /// straddle and are surfaced only to keep the constructor panic-free.
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         underlying_symbol: String,
@@ -178,7 +184,7 @@ impl ShortStraddle {
         close_fee_short_call: Positive,
         open_fee_short_put: Positive,
         close_fee_short_put: Positive,
-    ) -> Self {
+    ) -> Result<Self, StrategyError> {
         if strike == Positive::ZERO {
             strike = underlying_price;
         }
@@ -215,9 +221,7 @@ impl ShortStraddle {
             None,
             None,
         );
-        strategy
-            .add_position(&short_call)
-            .expect("Invalid short call");
+        strategy.add_position(&short_call)?;
 
         let short_put_option = Options::new(
             OptionType::European,
@@ -242,14 +246,10 @@ impl ShortStraddle {
             None,
             None,
         );
-        strategy
-            .add_position(&short_put)
-            .expect("Invalid short put");
+        strategy.add_position(&short_put)?;
 
-        strategy
-            .update_break_even_points()
-            .expect("Unable to update break even points");
-        strategy
+        strategy.update_break_even_points()?;
+        Ok(strategy)
     }
 }
 
@@ -643,13 +643,13 @@ impl Strategies for ShortStraddle {
         let strike_diff = self.break_even_points[1] - self.break_even_points[0];
         let cat = (strike_diff / 2.0_f64.sqrt()).to_f64();
         let result = (cat.powf(2.0)) / (2.0 * 10.0_f64.powf(cat.log10().ceil()));
-        Ok(Decimal::from_f64(result).unwrap())
+        Decimal::from_f64(result).ok_or_else(|| StrategyError::numeric_conversion(result))
     }
     fn get_profit_ratio(&self) -> Result<Decimal, StrategyError> {
         let break_even_diff = self.break_even_points[1] - self.break_even_points[0];
         let result =
             self.get_max_profit().unwrap_or(Positive::ZERO).to_f64() / break_even_diff * 100.0;
-        Ok(Decimal::from_f64(result).unwrap())
+        Decimal::from_f64(result).ok_or_else(|| StrategyError::numeric_conversion(result))
     }
 }
 
@@ -740,9 +740,16 @@ impl Optimizable for ShortStraddle {
                 }
             };
             // Calculate the current value based on the optimization criteria
-            let current_value = match criteria {
-                OptimizationCriteria::Ratio => strategy.get_profit_ratio().unwrap(),
-                OptimizationCriteria::Area => strategy.get_profit_area().unwrap(),
+            let metric = match criteria {
+                OptimizationCriteria::Ratio => strategy.get_profit_ratio(),
+                OptimizationCriteria::Area => strategy.get_profit_area(),
+            };
+            let current_value = match metric {
+                Ok(v) => v,
+                Err(e) => {
+                    tracing::warn!(error = %e, "skipping candidate with unscorable metric");
+                    continue;
+                }
             };
 
             if current_value > best_value {
@@ -793,7 +800,7 @@ impl Optimizable for ShortStraddle {
                 "missing put_bid for short put leg",
             )
         })?;
-        Ok(ShortStraddle::new(
+        ShortStraddle::new(
             chain.symbol.clone(),
             chain.underlying_price,
             call.strike_price,
@@ -808,7 +815,7 @@ impl Optimizable for ShortStraddle {
             self.short_call.close_fee,
             self.short_put.open_fee,
             self.short_put.close_fee,
-        ))
+        )
     }
 }
 
@@ -987,7 +994,7 @@ mod tests_short_straddle {
             pos_or_panic!(0.1),
             pos_or_panic!(0.1),
             pos_or_panic!(0.1),
-        )
+        ).unwrap()
     }
 
     #[test]
@@ -1008,7 +1015,7 @@ mod tests_short_straddle {
             pos_or_panic!(0.1),
             pos_or_panic!(0.1),
             pos_or_panic!(0.1),
-        );
+        ).unwrap();
 
         assert_eq!(
             strategy.short_call.option.strike_price, underlying_price,
@@ -1062,7 +1069,7 @@ mod tests_short_straddle {
             pos_or_panic!(0.1),
             pos_or_panic!(0.1),
             pos_or_panic!(0.1),
-        );
+        ).unwrap();
         assert!(valid_strategy.validate());
         assert_eq!(
             valid_strategy.short_call.option.strike_price,
@@ -1296,7 +1303,7 @@ mod tests_short_straddle_probability {
             Positive::ZERO,                            // close_fee_short_call
             Positive::ZERO,                            // open_fee_short_put
             Positive::ZERO,                            // close_fee_short_put
-        )
+        ).unwrap()
     }
 
     #[test]
@@ -1431,7 +1438,7 @@ mod tests_short_straddle_probability_bis {
             Positive::ZERO,                            // close_fee_short_call
             Positive::ZERO,                            // open_fee_short_put
             Positive::ZERO,                            // close_fee_short_put
-        )
+        ).unwrap()
     }
 
     #[test]
@@ -1568,7 +1575,7 @@ mod tests_short_straddle_delta {
             pos_or_panic!(7.01),   // close_fee_short_call
             pos_or_panic!(7.01),   // open_fee_short_put
             pos_or_panic!(7.01),   // close_fee_short_put
-        )
+        ).unwrap()
     }
 
     #[test]
@@ -1711,7 +1718,7 @@ mod tests_short_straddle_delta_size {
             pos_or_panic!(7.01),   // close_fee_short_call
             pos_or_panic!(7.01),   // open_fee_short_put
             pos_or_panic!(7.01),   // close_fee_short_put
-        )
+        ).unwrap()
     }
 
     #[test]
@@ -2148,7 +2155,7 @@ mod tests_straddle_position_management {
             pos_or_panic!(0.1), // close_fee_short_call
             pos_or_panic!(0.1), // open_fee_short_put
             pos_or_panic!(0.1), // close_fee_short_put
-        )
+        ).unwrap()
     }
 
     #[test]
@@ -2258,7 +2265,7 @@ mod tests_adjust_option_position {
             pos_or_panic!(0.1), // close_fee_short_call
             pos_or_panic!(0.1), // open_fee_short_put
             pos_or_panic!(0.1), // close_fee_short_put
-        )
+        ).unwrap()
     }
 
     #[test]

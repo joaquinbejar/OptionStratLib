@@ -31,7 +31,7 @@ fn main() -> Result<(), Error> {
         pos_or_panic!(0.73), // close_fee_short
         pos_or_panic!(0.73), // close_fee_short
         pos_or_panic!(0.73),
-    );
+    )?;
 
     strategy.get_best_ratio(
         &option_chain,

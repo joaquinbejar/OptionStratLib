@@ -29,7 +29,7 @@ fn test_short_straddle_integration() -> Result<(), Box<dyn Error>> {
         pos_or_panic!(7.01),   // close_fee_short_call
         pos_or_panic!(7.01),   // open_fee_short_put
         pos_or_panic!(7.01),   // close_fee_short_put
-    );
+    )?;
 
     // Assertions to validate strategy properties and computations
     assert_eq!(strategy.get_break_even_points().unwrap().len(), 2);
