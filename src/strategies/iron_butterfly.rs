@@ -881,10 +881,14 @@ impl Optimizable for IronButterfly {
                     third: mid,
                     fourth: high,
                 };
-                let strategy = strategy.create_strategy(option_chain, &legs);
-                strategy.validate()
-                    && strategy.get_max_profit().is_ok()
-                    && strategy.get_max_loss().is_ok()
+                match strategy.create_strategy(option_chain, &legs) {
+                    Ok(s) => {
+                        s.validate()
+                            && s.get_max_profit().is_ok()
+                            && s.get_max_loss().is_ok()
+                    }
+                    Err(_) => false,
+                }
             })
             // Map to OptionDataGroup
             .map(move |(low, mid, high)| OptionDataGroup::Three(low, mid, high))
@@ -913,7 +917,13 @@ impl Optimizable for IronButterfly {
                 third: mid,
                 fourth: high,
             };
-            let strategy = self.create_strategy(option_chain, &legs);
+            let strategy = match self.create_strategy(option_chain, &legs) {
+                Ok(s) => s,
+                Err(e) => {
+                    tracing::warn!(error = %e, "skipping invalid strategy combination");
+                    continue;
+                }
+            };
             // Calculate the current value based on the optimization criteria
             let current_value = match criteria {
                 OptimizationCriteria::Ratio => strategy.get_profit_ratio().unwrap(),
@@ -929,7 +939,19 @@ impl Optimizable for IronButterfly {
         }
     }
 
-    fn create_strategy(&self, chain: &OptionChain, legs: &StrategyLegs) -> Self::Strategy {
+    /// Constructs an `IronButterfly` from the supplied chain and legs.
+    ///
+    /// # Errors
+    ///
+    /// Returns `StrategyError::OperationError` when the supplied legs are
+    /// missing required quotes (`short_strike.call_bid`,
+    /// `short_strike.put_bid`, `long_call.call_ask`, `long_put.put_ask`)
+    /// needed to price the strategy.
+    fn create_strategy(
+        &self,
+        chain: &OptionChain,
+        legs: &StrategyLegs,
+    ) -> Result<Self::Strategy, StrategyError> {
         match legs {
             StrategyLegs::FourLegs {
                 first: long_put,
@@ -939,7 +961,31 @@ impl Optimizable for IronButterfly {
             } => {
                 let implied_volatility = short_strike.implied_volatility;
                 assert!(implied_volatility <= Positive::ONE);
-                IronButterfly::new(
+                let short_call_bid = short_strike.call_bid.ok_or_else(|| {
+                    StrategyError::operation_not_supported(
+                        "create_strategy",
+                        "missing call_bid for short strike leg",
+                    )
+                })?;
+                let short_put_bid = short_strike.put_bid.ok_or_else(|| {
+                    StrategyError::operation_not_supported(
+                        "create_strategy",
+                        "missing put_bid for short strike leg",
+                    )
+                })?;
+                let long_call_ask = long_call.call_ask.ok_or_else(|| {
+                    StrategyError::operation_not_supported(
+                        "create_strategy",
+                        "missing call_ask for long call leg",
+                    )
+                })?;
+                let long_put_ask = long_put.put_ask.ok_or_else(|| {
+                    StrategyError::operation_not_supported(
+                        "create_strategy",
+                        "missing put_ask for long put leg",
+                    )
+                })?;
+                Ok(IronButterfly::new(
                     chain.symbol.clone(),
                     chain.underlying_price,
                     short_strike.strike_price,
@@ -950,13 +996,13 @@ impl Optimizable for IronButterfly {
                     self.short_call.option.risk_free_rate,
                     self.short_call.option.dividend_yield,
                     self.short_call.option.quantity,
-                    short_strike.call_bid.unwrap(),
-                    short_strike.put_bid.unwrap(),
-                    long_call.call_ask.unwrap(),
-                    long_put.put_ask.unwrap(),
+                    short_call_bid,
+                    short_put_bid,
+                    long_call_ask,
+                    long_put_ask,
                     self.get_fees().unwrap() / 8.0,
                     self.get_fees().unwrap() / 8.0,
-                )
+                ))
             }
             _ => panic!("Invalid number of legs for Iron Butterfly strategy"),
         }
@@ -1945,7 +1991,7 @@ mod tests_iron_butterfly_optimizable {
             fourth: options[5], // 110.0 strike for long call
         };
 
-        let new_strategy = butterfly.create_strategy(&chain, &legs);
+        let new_strategy = butterfly.create_strategy(&chain, &legs).unwrap();
         assert!(new_strategy.validate());
         assert_eq!(
             new_strategy.long_put.option.strike_price,
@@ -1977,6 +2023,8 @@ mod tests_iron_butterfly_optimizable {
             second: options[1],
         };
 
+        // Wrong number of legs is still a panic (that branch is owned by
+        // issue #292, not panic-free core).
         let _ = butterfly.create_strategy(&chain, &legs);
     }
 }

@@ -671,10 +671,14 @@ impl Optimizable for LongStraddle {
                     first: both,
                     second: both,
                 };
-                let strategy = strategy.create_strategy(option_chain, &legs);
-                strategy.validate()
-                    && strategy.get_max_profit().is_ok()
-                    && strategy.get_max_loss().is_ok()
+                match strategy.create_strategy(option_chain, &legs) {
+                    Ok(s) => {
+                        s.validate()
+                            && s.get_max_profit().is_ok()
+                            && s.get_max_loss().is_ok()
+                    }
+                    Err(_) => false,
+                }
             })
             // Map to OptionDataGroup
             .map(OptionDataGroup::One)
@@ -701,7 +705,13 @@ impl Optimizable for LongStraddle {
                 first: both,
                 second: both,
             };
-            let strategy = self.create_strategy(option_chain, &legs);
+            let strategy = match self.create_strategy(option_chain, &legs) {
+                Ok(s) => s,
+                Err(e) => {
+                    tracing::warn!(error = %e, "skipping invalid strategy combination");
+                    continue;
+                }
+            };
             // Calculate the current value based on the optimization criteria
             let current_value = match criteria {
                 OptimizationCriteria::Ratio => strategy.get_profit_ratio().unwrap(),
@@ -717,14 +727,37 @@ impl Optimizable for LongStraddle {
         }
     }
 
-    fn create_strategy(&self, chain: &OptionChain, legs: &StrategyLegs) -> Self::Strategy {
+    /// Constructs a `LongStraddle` from the supplied chain and legs.
+    ///
+    /// # Errors
+    ///
+    /// Returns `StrategyError::OperationError` when the supplied legs are
+    /// missing required quotes (`call.call_ask`, `put.put_ask`) needed to
+    /// price the strategy.
+    fn create_strategy(
+        &self,
+        chain: &OptionChain,
+        legs: &StrategyLegs,
+    ) -> Result<Self::Strategy, StrategyError> {
         let (call, put) = match legs {
             StrategyLegs::TwoLegs { first, second } => (first, second),
             _ => panic!("Invalid number of legs for this strategy"),
         };
         let implied_volatility = call.implied_volatility;
         assert!(implied_volatility <= Positive::ONE);
-        LongStraddle::new(
+        let call_ask = call.call_ask.ok_or_else(|| {
+            StrategyError::operation_not_supported(
+                "create_strategy",
+                "missing call_ask for long call leg",
+            )
+        })?;
+        let put_ask = put.put_ask.ok_or_else(|| {
+            StrategyError::operation_not_supported(
+                "create_strategy",
+                "missing put_ask for long put leg",
+            )
+        })?;
+        Ok(LongStraddle::new(
             chain.symbol.clone(),
             chain.underlying_price,
             call.strike_price,
@@ -733,13 +766,13 @@ impl Optimizable for LongStraddle {
             self.long_call.option.risk_free_rate,
             self.long_call.option.dividend_yield,
             self.long_call.option.quantity,
-            call.call_ask.unwrap(),
-            put.put_ask.unwrap(),
+            call_ask,
+            put_ask,
             self.long_call.open_fee,
             self.long_call.close_fee,
             self.long_put.open_fee,
             self.long_put.close_fee,
-        )
+        ))
     }
 }
 

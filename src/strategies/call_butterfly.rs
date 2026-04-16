@@ -804,10 +804,14 @@ impl Optimizable for CallButterfly {
                     second: short_low,
                     third: short_high,
                 };
-                let strategy = strategy.create_strategy(option_chain, &legs);
-                strategy.validate()
-                    && strategy.get_max_profit().is_ok()
-                    && strategy.get_max_loss().is_ok()
+                match strategy.create_strategy(option_chain, &legs) {
+                    Ok(s) => {
+                        s.validate()
+                            && s.get_max_profit().is_ok()
+                            && s.get_max_loss().is_ok()
+                    }
+                    Err(_) => false,
+                }
             })
             // Map to OptionDataGroup
             .map(move |(long, short_low, short_high)| {
@@ -837,7 +841,13 @@ impl Optimizable for CallButterfly {
                 second: short_low,
                 third: short_high,
             };
-            let strategy = self.create_strategy(option_chain, &legs);
+            let strategy = match self.create_strategy(option_chain, &legs) {
+                Ok(s) => s,
+                Err(e) => {
+                    tracing::warn!(error = %e, "skipping invalid strategy combination");
+                    continue;
+                }
+            };
             // Calculate the current value based on the optimization criteria
             let current_value = match criteria {
                 OptimizationCriteria::Ratio => strategy.get_profit_ratio().unwrap(),
@@ -853,7 +863,19 @@ impl Optimizable for CallButterfly {
         }
     }
 
-    fn create_strategy(&self, option_chain: &OptionChain, legs: &StrategyLegs) -> CallButterfly {
+    /// Constructs a `CallButterfly` from the supplied chain and legs.
+    ///
+    /// # Errors
+    ///
+    /// Returns `StrategyError::OperationError` when the supplied legs are
+    /// missing required quotes (`long_call.call_ask`,
+    /// `short_call_low.call_bid`, `short_call_high.call_bid`) needed to
+    /// price the strategy.
+    fn create_strategy(
+        &self,
+        option_chain: &OptionChain,
+        legs: &StrategyLegs,
+    ) -> Result<CallButterfly, StrategyError> {
         let (long_call, short_call_low, short_call_high) = match legs {
             StrategyLegs::ThreeLegs {
                 first,
@@ -868,7 +890,25 @@ impl Optimizable for CallButterfly {
         }
         let implied_volatility = long_call.implied_volatility;
         assert!(implied_volatility <= Positive::ONE);
-        CallButterfly::new(
+        let long_call_ask = long_call.call_ask.ok_or_else(|| {
+            StrategyError::operation_not_supported(
+                "create_strategy",
+                "missing call_ask for long call leg",
+            )
+        })?;
+        let short_call_low_bid = short_call_low.call_bid.ok_or_else(|| {
+            StrategyError::operation_not_supported(
+                "create_strategy",
+                "missing call_bid for short_call_low leg",
+            )
+        })?;
+        let short_call_high_bid = short_call_high.call_bid.ok_or_else(|| {
+            StrategyError::operation_not_supported(
+                "create_strategy",
+                "missing call_bid for short_call_high leg",
+            )
+        })?;
+        Ok(CallButterfly::new(
             option_chain.symbol.clone(),
             option_chain.underlying_price,
             long_call.strike_price,
@@ -879,16 +919,16 @@ impl Optimizable for CallButterfly {
             self.long_call.option.risk_free_rate,
             self.long_call.option.dividend_yield,
             self.long_call.option.quantity,
-            long_call.call_ask.unwrap(),
-            short_call_low.call_bid.unwrap(),
-            short_call_high.call_bid.unwrap(),
+            long_call_ask,
+            short_call_low_bid,
+            short_call_high_bid,
             self.long_call.open_fee,
             self.long_call.close_fee,
             self.short_call_low.open_fee,
             self.short_call_low.close_fee,
             self.short_call_high.open_fee,
             self.short_call_high.close_fee,
-        )
+        ))
     }
 }
 
@@ -1665,7 +1705,7 @@ mod tests_call_butterfly_optimizable {
             third: chain.options.iter().nth(2).unwrap(),
         };
 
-        let new_strategy = butterfly.create_strategy(&chain, &legs);
+        let new_strategy = butterfly.create_strategy(&chain, &legs).unwrap();
 
         // Verify the new strategy has correct properties
         assert_relative_eq!(
@@ -1687,7 +1727,9 @@ mod tests_call_butterfly_optimizable {
             second: chain.options.iter().nth(1).unwrap(),
         };
 
-        butterfly.create_strategy(&chain, &legs); // Should panic
+        // Wrong number of legs is still a panic (that branch is owned by
+        // issue #292, not panic-free core).
+        let _ = butterfly.create_strategy(&chain, &legs);
     }
 
     #[test]

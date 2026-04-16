@@ -1275,13 +1275,28 @@ pub trait Optimizable: Validable + Strategies {
     }
 
     /// Creates a new strategy from the given `OptionChain` and `StrategyLegs`.
-    /// The default implementation panics. Specific strategies must override this.
+    ///
+    /// Specific strategies must override this method. The default implementation
+    /// returns `StrategyError::OperationError(NotSupported { .. })`.
     ///
     /// # Arguments
     /// * `_chain` - A reference to the `OptionChain` providing option data.
     /// * `_legs` - A reference to the `StrategyLegs` defining the strategy's components.
-    fn create_strategy(&self, _chain: &OptionChain, _legs: &StrategyLegs) -> Self::Strategy {
-        unimplemented!("Create strategy is not applicable for this strategy");
+    ///
+    /// # Errors
+    ///
+    /// Returns `StrategyError::OperationError` if the strategy cannot be built
+    /// from the supplied legs (e.g., missing bid/ask quotes, invalid leg
+    /// combination, or operation not supported by the concrete strategy).
+    fn create_strategy(
+        &self,
+        _chain: &OptionChain,
+        _legs: &StrategyLegs,
+    ) -> Result<Self::Strategy, StrategyError> {
+        Err(StrategyError::operation_not_supported(
+            "create_strategy",
+            std::any::type_name::<Self>(),
+        ))
     }
 }
 

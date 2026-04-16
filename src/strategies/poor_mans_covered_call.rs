@@ -704,7 +704,17 @@ impl Optimizable for PoorMansCoveredCall {
                     first: long_call_option,
                     second: short_call_option,
                 };
-                let strategy: PoorMansCoveredCall = self.create_strategy(option_chain, &legs);
+                let strategy: PoorMansCoveredCall =
+                    match self.create_strategy(option_chain, &legs) {
+                        Ok(s) => s,
+                        Err(e) => {
+                            tracing::warn!(
+                                error = %e,
+                                "skipping invalid strategy combination"
+                            );
+                            continue;
+                        }
+                    };
 
                 if !strategy.validate() {
                     debug!("Invalid strategy");
@@ -724,7 +734,18 @@ impl Optimizable for PoorMansCoveredCall {
         }
     }
 
-    fn create_strategy(&self, chain: &OptionChain, legs: &StrategyLegs) -> Self::Strategy {
+    /// Constructs a `PoorMansCoveredCall` from the supplied chain and legs.
+    ///
+    /// # Errors
+    ///
+    /// Returns `StrategyError::OperationError` when the supplied legs are
+    /// missing required quotes (`long.call_ask`, `short.call_bid`) needed to
+    /// price the strategy.
+    fn create_strategy(
+        &self,
+        chain: &OptionChain,
+        legs: &StrategyLegs,
+    ) -> Result<Self::Strategy, StrategyError> {
         let (long, short) = match legs {
             StrategyLegs::TwoLegs { first, second } => (first, second),
             _ => panic!("Invalid number of legs for this strategy"),
@@ -732,7 +753,20 @@ impl Optimizable for PoorMansCoveredCall {
         let implied_volatility = short.implied_volatility;
         assert!(implied_volatility <= Positive::ONE);
 
-        PoorMansCoveredCall::new(
+        let long_call_ask = long.call_ask.ok_or_else(|| {
+            StrategyError::operation_not_supported(
+                "create_strategy",
+                "missing call_ask for long call leg",
+            )
+        })?;
+        let short_call_bid = short.call_bid.ok_or_else(|| {
+            StrategyError::operation_not_supported(
+                "create_strategy",
+                "missing call_bid for short call leg",
+            )
+        })?;
+
+        Ok(PoorMansCoveredCall::new(
             chain.symbol.clone(),
             chain.underlying_price,
             long.strike_price,
@@ -743,13 +777,13 @@ impl Optimizable for PoorMansCoveredCall {
             self.short_call.option.risk_free_rate,
             self.short_call.option.dividend_yield,
             self.short_call.option.quantity,
-            long.call_ask.unwrap(),
-            short.call_bid.unwrap(),
+            long_call_ask,
+            short_call_bid,
             self.long_call.open_fee,
             self.long_call.close_fee,
             self.short_call.open_fee,
             self.short_call.close_fee,
-        )
+        ))
     }
 }
 

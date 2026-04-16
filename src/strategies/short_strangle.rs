@@ -926,10 +926,14 @@ impl Optimizable for ShortStrangle {
                     second: short_call,
                 };
                 trace!("Legs: {:?}", legs);
-                let strategy = strategy.create_strategy(option_chain, &legs);
-                strategy.validate()
-                    && strategy.get_max_profit().is_ok()
-                    && strategy.get_max_loss().is_ok()
+                match strategy.create_strategy(option_chain, &legs) {
+                    Ok(s) => {
+                        s.validate()
+                            && s.get_max_profit().is_ok()
+                            && s.get_max_loss().is_ok()
+                    }
+                    Err(_) => false,
+                }
             })
             // Map to OptionDataGroup
             .map(move |(short_put, short_call)| OptionDataGroup::Two(short_put, short_call))
@@ -969,7 +973,13 @@ impl Optimizable for ShortStrangle {
                 first: short_put,
                 second: short_call,
             };
-            let strategy = self.create_strategy(option_chain, &legs);
+            let strategy = match self.create_strategy(option_chain, &legs) {
+                Ok(s) => s,
+                Err(e) => {
+                    warn!(error = %e, "skipping invalid strategy combination");
+                    continue;
+                }
+            };
             // Calculate the current value based on the optimization criteria
             let current_value = match criteria {
                 OptimizationCriteria::Ratio => strategy.get_profit_ratio().unwrap(),
@@ -994,7 +1004,18 @@ impl Optimizable for ShortStrangle {
             && short_call.call_ask.unwrap_or(Positive::ZERO) > Positive::ZERO
     }
 
-    fn create_strategy(&self, chain: &OptionChain, legs: &StrategyLegs) -> Self::Strategy {
+    /// Constructs a `ShortStrangle` from the supplied chain and legs.
+    ///
+    /// # Errors
+    ///
+    /// Returns `StrategyError::OperationError` when the supplied legs are
+    /// missing required quotes (`call.call_bid`, `put.put_bid`) needed to
+    /// price the strategy.
+    fn create_strategy(
+        &self,
+        chain: &OptionChain,
+        legs: &StrategyLegs,
+    ) -> Result<Self::Strategy, StrategyError> {
         let (put, call) = match legs {
             StrategyLegs::TwoLegs { first, second } => (first, second),
             _ => panic!("Invalid number of legs for this strategy"),
@@ -1019,7 +1040,20 @@ impl Optimizable for ShortStrangle {
             self.one_option().expiration_date
         };
 
-        ShortStrangle::new(
+        let call_bid = call.call_bid.ok_or_else(|| {
+            StrategyError::operation_not_supported(
+                "create_strategy",
+                "missing call_bid for short call leg",
+            )
+        })?;
+        let put_bid = put.put_bid.ok_or_else(|| {
+            StrategyError::operation_not_supported(
+                "create_strategy",
+                "missing put_bid for short put leg",
+            )
+        })?;
+
+        Ok(ShortStrangle::new(
             chain.symbol.clone(),
             chain.underlying_price,
             call.strike_price,
@@ -1030,13 +1064,13 @@ impl Optimizable for ShortStrangle {
             self.one_option().risk_free_rate,
             self.one_option().dividend_yield,
             self.one_option().quantity,
-            call.call_bid.unwrap(),
-            put.put_bid.unwrap(),
+            call_bid,
+            put_bid,
             self.short_call.open_fee,
             self.short_call.close_fee,
             self.short_put.open_fee,
             self.short_put.close_fee,
-        )
+        ))
     }
 }
 
@@ -1501,7 +1535,7 @@ is expected and the underlying asset's price is anticipated to remain stable."
             second: call_option,
         };
 
-        let new_strategy = strategy.create_strategy(&chain, &legs);
+        let new_strategy = strategy.create_strategy(&chain, &legs).unwrap();
         assert!(new_strategy.validate());
     }
     fn create_test_option_chain() -> OptionChain {

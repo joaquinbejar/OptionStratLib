@@ -680,10 +680,14 @@ impl Optimizable for BearCallSpread {
                     first: short_option,
                     second: long_option,
                 };
-                let strategy = strategy.create_strategy(option_chain, &legs);
-                strategy.validate()
-                    && strategy.get_max_profit().is_ok()
-                    && strategy.get_max_loss().is_ok()
+                match strategy.create_strategy(option_chain, &legs) {
+                    Ok(s) => {
+                        s.validate()
+                            && s.get_max_profit().is_ok()
+                            && s.get_max_loss().is_ok()
+                    }
+                    Err(_) => false,
+                }
             })
             // Map to OptionDataGroup
             .map(move |(short, long)| OptionDataGroup::Two(short, long))
@@ -710,7 +714,13 @@ impl Optimizable for BearCallSpread {
                 first: short_option,
                 second: long_option,
             };
-            let strategy = self.create_strategy(option_chain, &legs);
+            let strategy = match self.create_strategy(option_chain, &legs) {
+                Ok(s) => s,
+                Err(e) => {
+                    tracing::warn!(error = %e, "skipping invalid strategy combination");
+                    continue;
+                }
+            };
             // Calculate the current value based on the optimization criteria
             let current_value = match criteria {
                 OptimizationCriteria::Ratio => strategy.get_profit_ratio().unwrap(),
@@ -726,14 +736,37 @@ impl Optimizable for BearCallSpread {
         }
     }
 
-    fn create_strategy(&self, chain: &OptionChain, legs: &StrategyLegs) -> Self::Strategy {
+    /// Constructs a `BearCallSpread` from the supplied chain and legs.
+    ///
+    /// # Errors
+    ///
+    /// Returns `StrategyError::OperationError` when the supplied legs are
+    /// missing required quotes (`short.call_bid`, `long.call_ask`) needed to
+    /// price the spread.
+    fn create_strategy(
+        &self,
+        chain: &OptionChain,
+        legs: &StrategyLegs,
+    ) -> Result<Self::Strategy, StrategyError> {
         let (short, long) = match legs {
             StrategyLegs::TwoLegs { first, second } => (first, second),
             _ => panic!("Invalid number of legs for this strategy"),
         };
         let implied_volatility = short.implied_volatility;
         assert!(implied_volatility <= Positive::ONE);
-        BearCallSpread::new(
+        let short_call_bid = short.call_bid.ok_or_else(|| {
+            StrategyError::operation_not_supported(
+                "create_strategy",
+                "missing call_bid for short leg",
+            )
+        })?;
+        let long_call_ask = long.call_ask.ok_or_else(|| {
+            StrategyError::operation_not_supported(
+                "create_strategy",
+                "missing call_ask for long leg",
+            )
+        })?;
+        Ok(BearCallSpread::new(
             chain.symbol.clone(),
             chain.underlying_price,
             short.strike_price,
@@ -743,13 +776,13 @@ impl Optimizable for BearCallSpread {
             self.short_call.option.risk_free_rate,
             self.short_call.option.dividend_yield,
             self.short_call.option.quantity,
-            short.call_bid.unwrap(),
-            long.call_ask.unwrap(),
+            short_call_bid,
+            long_call_ask,
             self.short_call.open_fee,
             self.short_call.close_fee,
             self.long_call.open_fee,
             self.long_call.close_fee,
-        )
+        ))
     }
 }
 
@@ -1874,7 +1907,7 @@ mod tests_bear_call_spread_optimizable {
             second: long_option,
         };
 
-        let new_strategy = strategy.create_strategy(&chain, &legs);
+        let new_strategy = strategy.create_strategy(&chain, &legs).unwrap();
 
         // Verify the new strategy
         assert!(new_strategy.validate());
@@ -1981,12 +2014,12 @@ mod tests_bear_call_spread_optimizable {
     }
 
     #[test]
-    #[should_panic]
     fn test_create_strategy_invalid_legs() {
         let strategy = create_test_strategy();
         let chain = create_mock_option_chain();
 
-        // Test with invalid leg configuration
+        // Test with invalid leg configuration: same option twice should
+        // either fail to construct or fail validation.
         let result = std::panic::catch_unwind(|| {
             strategy.create_strategy(
                 &chain,
@@ -1994,10 +2027,14 @@ mod tests_bear_call_spread_optimizable {
                     first: chain.options.iter().next().unwrap(),
                     second: chain.options.iter().next().unwrap(),
                 },
-            );
+            )
         });
 
-        assert!(result.is_err());
+        match result {
+            Err(_) => {}
+            Ok(Err(_)) => {}
+            Ok(Ok(s)) => assert!(!s.validate(), "duplicate legs should not validate"),
+        }
     }
 }
 

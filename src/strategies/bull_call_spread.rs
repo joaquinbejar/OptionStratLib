@@ -686,10 +686,14 @@ impl Optimizable for BullCallSpread {
                     first: long,
                     second: short,
                 };
-                let strategy = strategy.create_strategy(option_chain, &legs);
-                strategy.validate()
-                    && strategy.get_max_profit().is_ok()
-                    && strategy.get_max_loss().is_ok()
+                match strategy.create_strategy(option_chain, &legs) {
+                    Ok(s) => {
+                        s.validate()
+                            && s.get_max_profit().is_ok()
+                            && s.get_max_loss().is_ok()
+                    }
+                    Err(_) => false,
+                }
             })
             // Map to OptionDataGroup
             .map(move |(long, short)| OptionDataGroup::Two(long, short))
@@ -716,7 +720,13 @@ impl Optimizable for BullCallSpread {
                 first: long,
                 second: short,
             };
-            let strategy = self.create_strategy(option_chain, &legs);
+            let strategy = match self.create_strategy(option_chain, &legs) {
+                Ok(s) => s,
+                Err(e) => {
+                    tracing::warn!(error = %e, "skipping invalid strategy combination");
+                    continue;
+                }
+            };
             // Calculate the current value based on the optimization criteria
             let current_value = match criteria {
                 OptimizationCriteria::Ratio => strategy.get_profit_ratio().unwrap(),
@@ -732,14 +742,37 @@ impl Optimizable for BullCallSpread {
         }
     }
 
-    fn create_strategy(&self, chain: &OptionChain, legs: &StrategyLegs) -> Self::Strategy {
+    /// Constructs a `BullCallSpread` from the supplied chain and legs.
+    ///
+    /// # Errors
+    ///
+    /// Returns `StrategyError::OperationError` when the supplied legs are
+    /// missing required quotes (`long.call_ask`, `short.call_bid`) needed to
+    /// price the spread.
+    fn create_strategy(
+        &self,
+        chain: &OptionChain,
+        legs: &StrategyLegs,
+    ) -> Result<Self::Strategy, StrategyError> {
         let (long, short) = match legs {
             StrategyLegs::TwoLegs { first, second } => (first, second),
             _ => panic!("Invalid number of legs for this strategy"),
         };
         let implied_volatility = long.implied_volatility;
         assert!(implied_volatility <= Positive::ONE);
-        BullCallSpread::new(
+        let long_call_ask = long.call_ask.ok_or_else(|| {
+            StrategyError::operation_not_supported(
+                "create_strategy",
+                "missing call_ask for long leg",
+            )
+        })?;
+        let short_call_bid = short.call_bid.ok_or_else(|| {
+            StrategyError::operation_not_supported(
+                "create_strategy",
+                "missing call_bid for short leg",
+            )
+        })?;
+        Ok(BullCallSpread::new(
             chain.symbol.clone(),
             chain.underlying_price,
             long.strike_price,
@@ -749,13 +782,13 @@ impl Optimizable for BullCallSpread {
             self.long_call.option.risk_free_rate,
             self.long_call.option.dividend_yield,
             self.long_call.option.quantity,
-            long.call_ask.unwrap(),
-            short.call_bid.unwrap(),
+            long_call_ask,
+            short_call_bid,
             self.long_call.open_fee,
             self.long_call.close_fee,
             self.short_call.open_fee,
             self.short_call.close_fee,
-        )
+        ))
     }
 }
 
@@ -1675,7 +1708,7 @@ mod tests_bull_call_spread_optimization {
             first: long_option,
             second: short_option,
         };
-        let new_strategy = spread.create_strategy(&chain, &legs);
+        let new_strategy = spread.create_strategy(&chain, &legs).unwrap();
 
         assert!(new_strategy.validate());
         assert_eq!(

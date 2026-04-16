@@ -843,10 +843,14 @@ impl Optimizable for LongButterflySpread {
                     second: short,
                     third: long_high,
                 };
-                let strategy = strategy.create_strategy(option_chain, &legs);
-                strategy.validate()
-                    && strategy.get_max_profit().is_ok()
-                    && strategy.get_max_loss().is_ok()
+                match strategy.create_strategy(option_chain, &legs) {
+                    Ok(s) => {
+                        s.validate()
+                            && s.get_max_profit().is_ok()
+                            && s.get_max_loss().is_ok()
+                    }
+                    Err(_) => false,
+                }
             })
             // Map to OptionDataGroup
             .map(move |(long_low, short, long_high)| {
@@ -876,7 +880,13 @@ impl Optimizable for LongButterflySpread {
                 second: short,
                 third: long_high,
             };
-            let strategy = self.create_strategy(option_chain, &legs);
+            let strategy = match self.create_strategy(option_chain, &legs) {
+                Ok(s) => s,
+                Err(e) => {
+                    tracing::warn!(error = %e, "skipping invalid strategy combination");
+                    continue;
+                }
+            };
             // Calculate the current value based on the optimization criteria
             let current_value = match criteria {
                 OptimizationCriteria::Ratio => strategy.get_profit_ratio().unwrap(),
@@ -892,7 +902,19 @@ impl Optimizable for LongButterflySpread {
         }
     }
 
-    fn create_strategy(&self, chain: &OptionChain, legs: &StrategyLegs) -> Self::Strategy {
+    /// Constructs a `LongButterflySpread` from the supplied chain and legs.
+    ///
+    /// # Errors
+    ///
+    /// Returns `StrategyError::OperationError` when the supplied legs are
+    /// missing required quotes (`low_strike.call_ask`,
+    /// `middle_strike.call_bid`, `high_strike.call_ask`) needed to price the
+    /// strategy.
+    fn create_strategy(
+        &self,
+        chain: &OptionChain,
+        legs: &StrategyLegs,
+    ) -> Result<Self::Strategy, StrategyError> {
         match legs {
             StrategyLegs::ThreeLegs {
                 first: low_strike,
@@ -902,7 +924,26 @@ impl Optimizable for LongButterflySpread {
                 let implied_volatility = middle_strike.implied_volatility;
                 assert!(implied_volatility <= Positive::ONE);
 
-                LongButterflySpread::new(
+                let low_call_ask = low_strike.call_ask.ok_or_else(|| {
+                    StrategyError::operation_not_supported(
+                        "create_strategy",
+                        "missing call_ask for low strike leg",
+                    )
+                })?;
+                let middle_call_bid = middle_strike.call_bid.ok_or_else(|| {
+                    StrategyError::operation_not_supported(
+                        "create_strategy",
+                        "missing call_bid for middle strike leg",
+                    )
+                })?;
+                let high_call_ask = high_strike.call_ask.ok_or_else(|| {
+                    StrategyError::operation_not_supported(
+                        "create_strategy",
+                        "missing call_ask for high strike leg",
+                    )
+                })?;
+
+                Ok(LongButterflySpread::new(
                     chain.symbol.clone(),
                     chain.underlying_price,
                     low_strike.strike_price,
@@ -913,16 +954,16 @@ impl Optimizable for LongButterflySpread {
                     self.long_call_low.option.risk_free_rate,
                     self.long_call_low.option.dividend_yield,
                     self.long_call_low.option.quantity,
-                    low_strike.call_ask.unwrap(),
-                    middle_strike.call_bid.unwrap(),
-                    high_strike.call_ask.unwrap(),
+                    low_call_ask,
+                    middle_call_bid,
+                    high_call_ask,
                     self.short_call.open_fee,
                     self.short_call.close_fee,
                     self.long_call_low.open_fee,
                     self.long_call_low.close_fee,
                     self.long_call_high.open_fee,
                     self.long_call_high.close_fee,
-                )
+                ))
             }
             _ => panic!("Invalid number of legs for Long Butterfly strategy"),
         }
