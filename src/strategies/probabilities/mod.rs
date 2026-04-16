@@ -57,6 +57,7 @@ use positive::pos_or_panic;
 //! ### Basic Strategy Analysis
 //!
 //! ```rust
+//! # fn run() -> Result<(), Box<dyn std::error::Error>> {
 //! use rust_decimal_macros::dec;
 //! use tracing::info;
 //! use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
@@ -81,15 +82,18 @@ use positive::pos_or_panic;
 //!         pos_or_panic!(0.78),   // open_fee_long
 //!         pos_or_panic!(0.73),   // close_fee_long
 //!         pos_or_panic!(0.73),   // close_fee_short
-//!     );
-//! let analysis = strategy.analyze_probabilities(None, None);
+//!     )?;
+//! let analysis = strategy.analyze_probabilities(None, None)?;
 //!
 //! info!("Analysis: {:?}", analysis);
+//! # Ok(())
+//! # }
 //! ```
 //!
 //! ### Analysis with Volatility Adjustment
 //!
 //! ```rust
+//! # fn run() -> Result<(), Box<dyn std::error::Error>> {
 //! use rust_decimal_macros::dec;
 //! use optionstratlib::ExpirationDate;
 //! use optionstratlib::strategies::probabilities::{ProbabilityAnalysis, VolatilityAdjustment};
@@ -113,19 +117,22 @@ use positive::pos_or_panic;
 //!         pos_or_panic!(0.78),   // open_fee_long
 //!         pos_or_panic!(0.73),   // close_fee_long
 //!         pos_or_panic!(0.73),   // close_fee_short
-//!     );
+//!     )?;
 //!
 //! let vol_adj = Some(VolatilityAdjustment {
 //!     base_volatility: pos_or_panic!(0.20),   // 20% base volatility
 //!     std_dev_adjustment: pos_or_panic!(0.10),   // 10% adjustment
 //! });
 //!
-//! let analysis = strategy.analyze_probabilities(vol_adj, None);
+//! let _analysis = strategy.analyze_probabilities(vol_adj, None)?;
+//! # Ok(())
+//! # }
 //! ```
 //!
 //! ### Analysis with Price Trend
 //!
 //! ```rust
+//! # fn run() -> Result<(), Box<dyn std::error::Error>> {
 //! use rust_decimal_macros::dec;
 //! use optionstratlib::ExpirationDate;
 //! use positive::Positive;
@@ -148,18 +155,21 @@ use positive::pos_or_panic;
 //!         pos_or_panic!(0.78),   // open_fee_long
 //!         pos_or_panic!(0.73),   // close_fee_long
 //!         pos_or_panic!(0.73),   // close_fee_short
-//!     );
+//!     )?;
 //! let trend = Some(PriceTrend {
 //!     drift_rate: 0.05,   // 5% annual drift
 //!     confidence: 0.95,   // 95% confidence level
 //! });
 //!
-//! let analysis = strategy.analyze_probabilities(None, trend).unwrap();
+//! let _analysis = strategy.analyze_probabilities(None, trend)?;
+//! # Ok(())
+//! # }
 //! ```
 //!
 //! ### Price Range Probability Analysis
 //!
 //! ```rust
+//! # fn run() -> Result<(), Box<dyn std::error::Error>> {
 //! use tracing::info;
 //! use optionstratlib::strategies::probabilities::calculate_price_probability;
 //! use optionstratlib::ExpirationDate;
@@ -174,8 +184,10 @@ use positive::pos_or_panic;
 //!     None,   // trend
 //!     &ExpirationDate::Days(pos_or_panic!(30.0)),
 //!     None                 // risk-free rate
-//! ).unwrap();
+//! )?;
 //! info!("Probabilities: {}, {}, {}", prob_below, prob_in_range, prob_above);
+//! # Ok(())
+//! # }
 //! ```
 //!
 //! ## Mathematical Models

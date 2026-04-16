@@ -354,17 +354,18 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
             return Err(GreeksError::StdError("No options found".to_string()));
         }
         let underlying_price = *self.get_underlying_price();
-        let individual_deltas: Vec<DeltaPositionInfo> = options
-            .iter()
-            .map(|option| DeltaPositionInfo {
-                delta: option.delta().unwrap(),
-                delta_per_contract: option.delta().unwrap() / option.quantity,
+        let mut individual_deltas: Vec<DeltaPositionInfo> = Vec::with_capacity(options.len());
+        for option in options.iter() {
+            let delta = option.delta()?;
+            individual_deltas.push(DeltaPositionInfo {
+                delta,
+                delta_per_contract: delta / option.quantity,
                 quantity: option.quantity,
                 strike: option.strike_price,
                 option_style: option.option_style,
                 side: option.side,
-            })
-            .collect();
+            });
+        }
 
         Ok(DeltaInfo {
             net_delta: self.delta()?,

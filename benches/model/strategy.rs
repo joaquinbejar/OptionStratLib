@@ -29,6 +29,7 @@ fn create_long_call() -> LongCall {
         pos_or_panic!(0.5),                        // open_fee_long_call
         pos_or_panic!(0.5),                        // close_fee_long_call
     )
+    .unwrap()
 }
 
 fn create_bull_call_spread() -> BullCallSpread {

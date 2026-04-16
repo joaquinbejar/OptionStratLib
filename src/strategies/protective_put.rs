@@ -61,8 +61,13 @@ pub struct ProtectivePut {
 
 impl ProtectivePut {
     /// Creates a new Protective Put strategy.
+    ///
+    /// # Errors
+    ///
+    /// Returns `StrategyError` if the break-even calculation fails. In
+    /// practice this branch is unreachable for a freshly-built protective
+    /// put and is surfaced only to keep the constructor panic-free.
     #[allow(clippy::too_many_arguments)]
-    #[must_use]
     pub fn new(
         underlying_symbol: String,
         underlying_price: Positive,
@@ -77,7 +82,7 @@ impl ProtectivePut {
         spot_close_fee: Positive,
         put_open_fee: Positive,
         put_close_fee: Positive,
-    ) -> Self {
+    ) -> Result<Self, StrategyError> {
         let spot_leg = SpotPosition::new(
             underlying_symbol.clone(),
             quantity,
@@ -123,10 +128,8 @@ impl ProtectivePut {
         };
 
         strategy.validate();
-        strategy
-            .update_break_even_points()
-            .expect("Failed to calculate break-even points");
-        strategy
+        strategy.update_break_even_points()?;
+        Ok(strategy)
     }
 
     /// Returns the spot leg as a Leg enum.
@@ -541,7 +544,7 @@ mod tests {
             Positive::ONE,
             pos_or_panic!(0.65),
             pos_or_panic!(0.65),
-        )
+        ).unwrap()
     }
 
     #[test]

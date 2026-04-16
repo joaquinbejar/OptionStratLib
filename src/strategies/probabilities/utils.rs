@@ -110,9 +110,20 @@ pub fn calculate_single_point_probability(
                     },
                 ));
             }
-            risk_free.to_f64().unwrap() + (t.drift_rate * t.confidence)
+            let rf = risk_free.to_f64().ok_or_else(|| {
+                ProbabilityError::StdError(format!(
+                    "calculate_single_point_probability: risk_free Decimal {} not representable as f64",
+                    risk_free
+                ))
+            })?;
+            rf + (t.drift_rate * t.confidence)
         }
-        None => risk_free.to_f64().unwrap(),
+        None => risk_free.to_f64().ok_or_else(|| {
+            ProbabilityError::StdError(format!(
+                "calculate_single_point_probability: risk_free Decimal {} not representable as f64",
+                risk_free
+            ))
+        })?,
     };
 
     // Calculate parameters for the log-normal distribution
@@ -121,11 +132,11 @@ pub fn calculate_single_point_probability(
 
     // Calculate z-score considering drift
     let z_score: Decimal =
-        f2du!((log_ratio.to_f64() - drift_rate * time_to_expiry) / std_dev).unwrap();
+        f2du!((log_ratio.to_f64() - drift_rate * time_to_expiry) / std_dev)?;
 
     // Calculate probabilities using the standard normal distribution
     let prob_below: Positive =
-        Positive::new_decimal(big_n(z_score).unwrap()).unwrap_or(Positive::ZERO);
+        Positive::new_decimal(big_n(z_score)?).unwrap_or(Positive::ZERO);
     let prob_above: Positive = Positive::new(1.0 - prob_below.to_f64()).unwrap_or(Positive::ZERO);
 
     Ok((prob_below, prob_above))

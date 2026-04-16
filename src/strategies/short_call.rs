@@ -99,10 +99,11 @@ impl ShortCall {
     /// Returns an initialized `ShortCall` strategy instance. The instance includes the short call
     /// option position with the specified parameters.
     ///
-    /// # Panics
-    ///
-    /// This function will panic if the short call option created using the specified parameters
-    /// fails to meet validity requirements during the `add_position` operation.
+    /// # Errors
+    /// Returns `StrategyError` if the freshly-constructed short call leg
+    /// cannot be added to the strategy. In practice this branch is
+    /// unreachable for a freshly-built single-leg strategy and is surfaced
+    /// only to keep the constructor panic-free.
     ///
     #[allow(clippy::too_many_arguments, dead_code)]
     fn new(
@@ -117,7 +118,7 @@ impl ShortCall {
         premium_short_call: Positive,
         open_fee_short_call: Positive,
         close_fee_short_call: Positive,
-    ) -> Self {
+    ) -> Result<Self, StrategyError> {
         let mut strategy = ShortCall::default();
 
         let short_call_option = Options::new(
@@ -143,11 +144,9 @@ impl ShortCall {
             None,
             None,
         );
-        strategy
-            .add_position(&short_call)
-            .expect("Invalid short call option");
+        strategy.add_position(&short_call)?;
 
-        strategy
+        Ok(strategy)
     }
 }
 
@@ -570,7 +569,9 @@ where
                 .template(
                     "{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} simulations ({eta})",
                 )
-                .expect("Failed to set progress bar template")
+                .map_err(|e| SimulationError::OtherError {
+                    reason: format!("Failed to set progress bar template: {}", e),
+                })?
                 .progress_chars("#>-"),
         );
 
@@ -659,7 +660,7 @@ where
                 // Calculate expiration premium
                 let mut exp_option = self.short_call.option.clone();
                 exp_option.underlying_price = final_price;
-                exp_option.expiration_date = ExpirationDate::Days(Positive::new(0.001).unwrap());
+                exp_option.expiration_date = ExpirationDate::Days(Positive::new(0.001)?);
                 expiration_premium = Some(exp_option.calculate_price_black_scholes()?.abs());
 
                 expired = true;
@@ -800,7 +801,7 @@ mod tests_simulate {
             pos_or_panic!(5.0),
             Positive::ZERO,
             Positive::ZERO,
-        )
+        ).unwrap()
     }
 
     fn create_walk_params(prices: Vec<Positive>) -> WalkParams<Positive, Positive> {

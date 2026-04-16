@@ -145,8 +145,10 @@ impl<'a> AdjustmentOptimizer<'a> {
             && let Ok(plan) = self.optimize_with_new_legs(delta_gap, gamma_gap)
         {
             trace!("New legs plan quality: {:.4}", plan.quality_score);
-            if best_plan.is_none() || plan.quality_score < best_plan.as_ref().unwrap().quality_score
-            {
+            let beats_best = best_plan
+                .as_ref()
+                .is_none_or(|cur| plan.quality_score < cur.quality_score);
+            if beats_best {
                 best_plan = Some(plan);
             }
         }
@@ -157,8 +159,10 @@ impl<'a> AdjustmentOptimizer<'a> {
             && let Ok(plan) = self.optimize_with_underlying(delta_gap)
         {
             trace!("Underlying plan quality: {:.4}", plan.quality_score);
-            if best_plan.is_none() || plan.quality_score < best_plan.as_ref().unwrap().quality_score
-            {
+            let beats_best = best_plan
+                .as_ref()
+                .is_none_or(|cur| plan.quality_score < cur.quality_score);
+            if beats_best {
                 best_plan = Some(plan);
             }
         }
@@ -193,7 +197,12 @@ impl<'a> AdjustmentOptimizer<'a> {
             })
             .collect();
 
-        legs_with_delta.sort_by(|a, b| b.2.abs().partial_cmp(&a.2.abs()).unwrap());
+        // SAFETY: total order on Decimal; f64 fallback to Equal is safe for stable sort
+        legs_with_delta.sort_by(|a, b| {
+            b.2.abs()
+                .partial_cmp(&a.2.abs())
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
 
         // Greedily adjust quantities
         for (idx, _leg_delta, delta_per_contract) in legs_with_delta {
@@ -338,7 +347,8 @@ impl<'a> AdjustmentOptimizer<'a> {
                     .calculate_price_black_scholes()
                     .unwrap_or(dec!(1))
                     .max(dec!(0.01));
-            eff_b.partial_cmp(&eff_a).unwrap()
+            // SAFETY: total order on Decimal; f64 fallback to Equal is safe for stable sort
+            eff_b.partial_cmp(&eff_a).unwrap_or(std::cmp::Ordering::Equal)
         });
 
         Ok(candidates)

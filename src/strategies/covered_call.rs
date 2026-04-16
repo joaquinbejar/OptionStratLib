@@ -149,8 +149,13 @@ impl CoveredCall {
     /// # Returns
     ///
     /// A fully configured `CoveredCall` strategy instance.
+    ///
+    /// # Errors
+    ///
+    /// Returns `StrategyError` if the break-even calculation fails. In
+    /// practice this branch is unreachable for a freshly-built covered
+    /// call and is surfaced only to keep the constructor panic-free.
     #[allow(clippy::too_many_arguments)]
-    #[must_use]
     pub fn new(
         underlying_symbol: String,
         underlying_price: Positive,
@@ -165,7 +170,7 @@ impl CoveredCall {
         spot_close_fee: Positive,
         call_open_fee: Positive,
         call_close_fee: Positive,
-    ) -> Self {
+    ) -> Result<Self, StrategyError> {
         // Create the spot position (long underlying)
         let spot_leg = SpotPosition::new(
             underlying_symbol.clone(),
@@ -213,11 +218,9 @@ impl CoveredCall {
         };
 
         strategy.validate();
-        strategy
-            .update_break_even_points()
-            .expect("Failed to calculate break-even points");
+        strategy.update_break_even_points()?;
 
-        strategy
+        Ok(strategy)
     }
 
     /// Returns the spot leg as a `Leg` enum.
@@ -689,7 +692,7 @@ mod tests {
             Positive::ONE,
             pos_or_panic!(0.65),
             pos_or_panic!(0.65),
-        )
+        ).unwrap()
     }
 
     #[test]
