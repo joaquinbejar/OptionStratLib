@@ -803,7 +803,7 @@ let underlying_price = Positive::HUNDRED;
         pos_or_panic!(1.20),   // short_call_close_fee
         Default::default(), Default::default(),
         Default::default(), Default::default()
-    );
+    )?;
 
     // Analyze the strategy
     tracing::info!("Strategy: {}", strategy.get_title());
@@ -934,7 +934,7 @@ let strategy = CustomStrategy::new(
     Positive::ONE,
     30,
     implied_volatility,
-);
+).expect("valid custom strategy");
 
 tracing::info!("Strategy created: {}", strategy.get_title());
 ```
