@@ -468,10 +468,8 @@ impl<'a> AdjustmentOptimizer<'a> {
                         None,
                     ));
                 }
-                AdjustmentAction::CloseLeg { leg_index } => {
-                    if *leg_index < positions.len() {
-                        positions.remove(*leg_index);
-                    }
+                AdjustmentAction::CloseLeg { leg_index } if *leg_index < positions.len() => {
+                    positions.remove(*leg_index);
                 }
                 _ => {}
             }
