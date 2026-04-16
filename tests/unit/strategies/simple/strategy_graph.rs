@@ -27,7 +27,7 @@ fn test_bull_call_spread_basic_integration() -> Result<(), Box<dyn Error>> {
         pos_or_panic!(0.58),  // close_fee_long
         pos_or_panic!(0.55),  // close_fee_short
         pos_or_panic!(0.54),  // open_fee_short
-    );
+    )?;
 
     // Validate strategy properties
     assert_eq!(

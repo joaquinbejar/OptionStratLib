@@ -374,7 +374,7 @@ mod tests_probability_analysis {
             pos_or_panic!(0.58),  // close_fee_long
             pos_or_panic!(0.55),  // close_fee_short
             pos_or_panic!(0.54),  // open_fee_short
-        )
+        ).unwrap()
     }
 
     #[test]
@@ -527,7 +527,7 @@ mod tests_expected_value {
             pos_or_panic!(0.58),  // close_fee_long
             pos_or_panic!(0.55),  // close_fee_short
             pos_or_panic!(0.54),  // open_fee_short
-        )
+        ).unwrap()
     }
 
     #[test]

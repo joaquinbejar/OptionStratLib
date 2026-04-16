@@ -34,7 +34,7 @@ fn test_short_butterfly_spread_integration() -> Result<(), Box<dyn Error>> {
         Positive::ZERO,
         Positive::ZERO,
         Positive::ZERO,
-    );
+    )?;
 
     // Assertions to validate strategy properties and computations
     assert_eq!(strategy.get_break_even_points().unwrap().len(), 1);

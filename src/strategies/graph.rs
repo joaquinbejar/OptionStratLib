@@ -168,9 +168,9 @@ macro_rules! impl_graph_for_payoff_strategy {
                     };
 
                     // Get min and max values for reference lines
-                    if !range.is_empty() {
-                        let min_price = range.first().unwrap().to_dec();
-                        let max_price = range.last().unwrap().to_dec();
+                    if let (Some(first), Some(last)) = (range.first(), range.last()) {
+                        let min_price = first.to_dec();
+                        let max_price = last.to_dec();
 
                         // Add zero line points (horizontal line at y=0)
                         zero_line.x.push(min_price);
@@ -241,9 +241,16 @@ macro_rules! impl_graph_for_payoff_strategy {
 
                     // Calculate profit at each price point and add to the series
                     for price in range {
-                        let profit = self
-                            .calculate_profit_at(&price)
-                            .unwrap();
+                        let profit = match self.calculate_profit_at(&price) {
+                            Ok(p) => p,
+                            Err(e) => {
+                                ::tracing::warn!(
+                                    error = %e,
+                                    "skipping price point with unscorable profit"
+                                );
+                                continue;
+                            }
+                        };
 
                         profit_series.x.push(price.to_dec());
                         profit_series.y.push(profit);
@@ -266,10 +273,16 @@ macro_rules! impl_graph_for_payoff_strategy {
                         };
 
                         // If the sign changes or it's the first point
-                        if current_sign.is_none() || (sign != 0 && current_sign.unwrap() != sign) {
+                        let sign_changed = match current_sign {
+                            None => true,
+                            Some(cur) => sign != 0 && cur != sign,
+                        };
+                        if sign_changed {
                             // If there are already points in the current segment, save it
                             if !current_segment.is_empty() {
-                                segments.push((current_segment, current_sign.unwrap()));
+                                if let Some(cur) = current_sign {
+                                    segments.push((current_segment, cur));
+                                }
                                 current_segment = Vec::new();
                             }
                             current_sign = Some(sign);
@@ -280,8 +293,8 @@ macro_rules! impl_graph_for_payoff_strategy {
                     }
 
                     // Add the last segment if it's not empty
-                    if !current_segment.is_empty() && current_sign.is_some() {
-                        segments.push((current_segment, current_sign.unwrap()));
+                    if let (false, Some(cur)) = (current_segment.is_empty(), current_sign) {
+                        segments.push((current_segment, cur));
                     }
 
                     // Create series for each segment

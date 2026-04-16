@@ -32,7 +32,7 @@ fn test_short_butterfly_spread_integration() -> Result<(), Box<dyn Error>> {
         Positive::ZERO,
         Positive::ZERO,
         Positive::ZERO,
-    );
+    )?;
 
     let greeks = strategy.greeks().unwrap();
     let epsilon = dec!(0.001);

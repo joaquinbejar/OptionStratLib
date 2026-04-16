@@ -127,12 +127,13 @@ impl BullCallSpread {
     ///
     /// Returns a fully configured `BullCallSpread` strategy instance with positions and break-even points calculated.
     ///
-    /// # Panics
+    /// # Errors
     ///
-    /// This function will panic if:
-    /// - The long call position cannot be added to the strategy
-    /// - The short call position cannot be added to the strategy
-    /// - Break-even points cannot be calculated
+    /// Returns `StrategyError` if either freshly-constructed leg cannot be
+    /// added to the strategy or if the break-even calculation fails. In
+    /// practice these branches are unreachable for a freshly-built bull
+    /// call spread and are surfaced only to keep the constructor
+    /// panic-free.
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         underlying_symbol: String,
@@ -150,7 +151,7 @@ impl BullCallSpread {
         close_fee_long_call: Positive,
         open_fee_short_call: Positive,
         close_fee_short_call: Positive,
-    ) -> Self {
+    ) -> Result<Self, StrategyError> {
         if long_strike == Positive::ZERO {
             long_strike = underlying_price;
         }
@@ -190,9 +191,7 @@ impl BullCallSpread {
             None,
             None,
         );
-        strategy
-            .add_position(&long_call)
-            .expect("Failed to add long call");
+        strategy.add_position(&long_call)?;
 
         let short_call_option = Options::new(
             OptionType::European,
@@ -217,16 +216,12 @@ impl BullCallSpread {
             None,
             None,
         );
-        strategy
-            .add_position(&short_call)
-            .expect("Failed to add short call");
+        strategy.add_position(&short_call)?;
 
         strategy.validate();
 
-        strategy
-            .update_break_even_points()
-            .expect("Unable to update break even points");
-        strategy
+        strategy.update_break_even_points()?;
+        Ok(strategy)
     }
 }
 
@@ -244,11 +239,12 @@ impl StrategyConstructor for BullCallSpread {
 
         // Sort options by strike price to identify long and short positions
         let mut sorted_positions = vec_positions.to_vec();
+        // SAFETY: total order on Positive; f64 fallback to Equal is safe for stable sort
         sorted_positions.sort_by(|a, b| {
             a.option
                 .strike_price
                 .partial_cmp(&b.option.strike_price)
-                .unwrap()
+                .unwrap_or(std::cmp::Ordering::Equal)
         });
 
         let lower_strike_option = &sorted_positions[0];
@@ -728,9 +724,16 @@ impl Optimizable for BullCallSpread {
                 }
             };
             // Calculate the current value based on the optimization criteria
-            let current_value = match criteria {
-                OptimizationCriteria::Ratio => strategy.get_profit_ratio().unwrap(),
-                OptimizationCriteria::Area => strategy.get_profit_area().unwrap(),
+            let metric = match criteria {
+                OptimizationCriteria::Ratio => strategy.get_profit_ratio(),
+                OptimizationCriteria::Area => strategy.get_profit_area(),
+            };
+            let current_value = match metric {
+                Ok(v) => v,
+                Err(e) => {
+                    tracing::warn!(error = %e, "skipping candidate with unscorable metric");
+                    continue;
+                }
             };
 
             if current_value > best_value {
@@ -772,7 +775,7 @@ impl Optimizable for BullCallSpread {
                 "missing call_bid for short leg",
             )
         })?;
-        Ok(BullCallSpread::new(
+        BullCallSpread::new(
             chain.symbol.clone(),
             chain.underlying_price,
             long.strike_price,
@@ -788,7 +791,7 @@ impl Optimizable for BullCallSpread {
             self.long_call.close_fee,
             self.short_call.open_fee,
             self.short_call.close_fee,
-        ))
+        )
     }
 }
 
@@ -942,7 +945,7 @@ fn bull_call_spread_test() -> BullCallSpread {
         pos_or_panic!(0.78),  // open_fee_long
         pos_or_panic!(0.73),  // close_fee_long
         pos_or_panic!(0.73),  // close_fee_short
-    )
+    ).unwrap()
 }
 
 #[cfg(test)]
@@ -1049,7 +1052,7 @@ mod tests_bull_call_spread_strategy {
             pos_or_panic!(0.5), // close_fee_long_call
             pos_or_panic!(0.5), // open_fee_short_call
             pos_or_panic!(0.5), // close_fee_short_call
-        );
+        ).unwrap();
 
         assert_eq!(spread.get_fees().unwrap().to_f64(), 2.0);
     }
@@ -1095,7 +1098,7 @@ mod tests_bull_call_spread_strategy {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
-        );
+        ).unwrap();
 
         assert_eq!(spread.long_call.option.strike_price, Positive::HUNDRED);
         assert_eq!(spread.short_call.option.strike_price, Positive::HUNDRED);
@@ -1119,7 +1122,7 @@ mod tests_bull_call_spread_strategy {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
-        );
+        ).unwrap();
 
         assert!(!spread.validate());
     }
@@ -1451,7 +1454,7 @@ mod tests_bull_call_spread_optimization {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
-        )
+        ).unwrap()
     }
 
     #[test]
@@ -1834,7 +1837,7 @@ mod tests_bull_call_spread_profit {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
-        );
+        ).unwrap();
 
         let price = pos_or_panic!(105.0);
         assert_eq!(
@@ -1865,7 +1868,7 @@ mod tests_bull_call_spread_profit {
             pos_or_panic!(0.5), // close_fee_long_call
             pos_or_panic!(0.5), // open_fee_short_call
             pos_or_panic!(0.5), // close_fee_short_call
-        );
+        ).unwrap();
 
         let price = pos_or_panic!(105.0);
         assert_eq!(
@@ -2095,7 +2098,7 @@ mod tests_bull_call_spread_probability {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
-        );
+        ).unwrap();
 
         let result = spread.probability_of_profit(None, None);
         assert!(result.is_ok());
@@ -2122,7 +2125,7 @@ mod tests_bull_call_spread_probability {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
-        );
+        ).unwrap();
 
         let result = spread.probability_of_profit(None, None);
         assert!(result.is_ok());
@@ -2163,7 +2166,7 @@ mod tests_delta {
             pos_or_panic!(0.78),  // open_fee_long
             pos_or_panic!(0.73),  // close_fee_long
             pos_or_panic!(0.73),  // close_fee_short
-        )
+        ).unwrap()
     }
 
     #[test]
@@ -2308,7 +2311,7 @@ mod tests_delta_size {
             pos_or_panic!(0.78),  // open_fee_long
             pos_or_panic!(0.73),  // close_fee_long
             pos_or_panic!(0.73),  // close_fee_short
-        )
+        ).unwrap()
     }
 
     #[test]
@@ -2448,7 +2451,7 @@ mod tests_bull_call_spread_position_management {
             pos_or_panic!(0.78),  // open_fee_long
             pos_or_panic!(0.73),  // close_fee_long
             pos_or_panic!(0.73),  // close_fee_short
-        )
+        ).unwrap()
     }
 
     #[test]
@@ -2559,7 +2562,7 @@ mod tests_adjust_option_position {
             pos_or_panic!(0.78),  // open_fee_long
             pos_or_panic!(0.73),  // close_fee_long
             pos_or_panic!(0.73),  // close_fee_short
-        )
+        ).unwrap()
     }
 
     #[test]

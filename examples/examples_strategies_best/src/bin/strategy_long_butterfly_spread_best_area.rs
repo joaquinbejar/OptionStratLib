@@ -26,7 +26,7 @@ fn main() -> Result<(), Error> {
         Positive::ZERO,
         Positive::ZERO,
         Positive::ZERO,
-    );
+    )?;
     strategy.get_best_area(&option_chain, FindOptimalSide::All);
     debug!("Option Chain: {}", option_chain);
     debug!("Strategy:  {:#?}", strategy);

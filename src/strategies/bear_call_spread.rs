@@ -127,10 +127,13 @@ impl BearCallSpread {
     ///
     /// # Panics
     ///
-    /// This function will panic if:
-    /// - Adding the short or long call positions fails
-    /// - Validating the strategy fails (e.g., if short strike price is >= long strike price)
-    /// - Calculating break-even points fails
+    /// # Errors
+    ///
+    /// Returns `StrategyError` if either freshly-constructed leg cannot be
+    /// added to the strategy or if the break-even calculation fails. In
+    /// practice these branches are unreachable for a freshly-built bear
+    /// call spread and are surfaced only to keep the constructor
+    /// panic-free.
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         underlying_symbol: String,
@@ -148,7 +151,7 @@ impl BearCallSpread {
         close_fee_short_call: Positive,
         open_fee_long_call: Positive,
         close_fee_long_call: Positive,
-    ) -> Self {
+    ) -> Result<Self, StrategyError> {
         if short_strike == Positive::ZERO {
             short_strike = underlying_price;
         }
@@ -188,9 +191,7 @@ impl BearCallSpread {
             None,
             None,
         );
-        strategy
-            .add_position(&short_call)
-            .expect("Error adding short call");
+        strategy.add_position(&short_call)?;
 
         let long_call_option = Options::new(
             OptionType::European,
@@ -215,16 +216,12 @@ impl BearCallSpread {
             None,
             None,
         );
-        strategy
-            .add_position(&long_call)
-            .expect("Error adding long call");
+        strategy.add_position(&long_call)?;
 
         strategy.validate();
 
-        strategy
-            .update_break_even_points()
-            .expect("Unable to update break even points");
-        strategy
+        strategy.update_break_even_points()?;
+        Ok(strategy)
     }
 }
 
@@ -242,11 +239,12 @@ impl StrategyConstructor for BearCallSpread {
 
         // Sort options by strike price to identify short and long positions
         let mut sorted_positions = vec_positions.to_vec();
+        // SAFETY: total order on Positive; f64 fallback to Equal is safe for stable sort
         sorted_positions.sort_by(|a, b| {
             a.option
                 .strike_price
                 .partial_cmp(&b.option.strike_price)
-                .unwrap()
+                .unwrap_or(std::cmp::Ordering::Equal)
         });
 
         let lower_strike_position = &sorted_positions[0];
@@ -722,9 +720,16 @@ impl Optimizable for BearCallSpread {
                 }
             };
             // Calculate the current value based on the optimization criteria
-            let current_value = match criteria {
-                OptimizationCriteria::Ratio => strategy.get_profit_ratio().unwrap(),
-                OptimizationCriteria::Area => strategy.get_profit_area().unwrap(),
+            let metric = match criteria {
+                OptimizationCriteria::Ratio => strategy.get_profit_ratio(),
+                OptimizationCriteria::Area => strategy.get_profit_area(),
+            };
+            let current_value = match metric {
+                Ok(v) => v,
+                Err(e) => {
+                    tracing::warn!(error = %e, "skipping candidate with unscorable metric");
+                    continue;
+                }
             };
 
             if current_value > best_value {
@@ -766,7 +771,7 @@ impl Optimizable for BearCallSpread {
                 "missing call_ask for long leg",
             )
         })?;
-        Ok(BearCallSpread::new(
+        BearCallSpread::new(
             chain.symbol.clone(),
             chain.underlying_price,
             short.strike_price,
@@ -782,7 +787,7 @@ impl Optimizable for BearCallSpread {
             self.short_call.close_fee,
             self.long_call.open_fee,
             self.long_call.close_fee,
-        ))
+        )
     }
 }
 
@@ -934,7 +939,7 @@ mod tests_bear_call_spread_strategies {
             pos_or_panic!(0.5),                        // close_fee_short_call
             pos_or_panic!(0.5),                        // open_fee_long_call
             pos_or_panic!(0.5),                        // close_fee_long_call
-        )
+        ).unwrap()
     }
 
     #[test]
@@ -1105,7 +1110,7 @@ mod tests_bear_call_spread_strategies {
             pos_or_panic!(0.5),
             pos_or_panic!(0.5),
             pos_or_panic!(0.5),
-        );
+        ).unwrap();
 
         // Check that all calculations scale properly with quantity
         assert_relative_eq!(
@@ -1138,7 +1143,7 @@ mod tests_bear_call_spread_strategies {
             pos_or_panic!(0.5),
             pos_or_panic!(0.5),
             pos_or_panic!(0.5),
-        );
+        ).unwrap();
 
         // Check that strike width affects max loss calculation
         let base_spread = create_test_spread();
@@ -1206,7 +1211,7 @@ mod tests_bear_call_spread_positionable {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
-        );
+        ).unwrap();
 
         let short_position = create_test_position(Side::Short);
         let result = spread.add_position(&short_position);
@@ -1233,7 +1238,7 @@ mod tests_bear_call_spread_positionable {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
-        );
+        ).unwrap();
 
         let long_position = create_test_position(Side::Long);
         let result = spread.add_position(&long_position);
@@ -1260,7 +1265,7 @@ mod tests_bear_call_spread_positionable {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
-        );
+        ).unwrap();
 
         let result = spread.get_positions();
         assert!(result.is_ok());
@@ -1289,7 +1294,7 @@ mod tests_bear_call_spread_positionable {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
-        );
+        ).unwrap();
 
         let short_position = create_test_position(Side::Short);
         let long_position = create_test_position(Side::Long);
@@ -1319,7 +1324,7 @@ mod tests_bear_call_spread_positionable {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
-        );
+        ).unwrap();
 
         // Create new positions
         let new_short = create_test_position(Side::Short);
@@ -1348,7 +1353,7 @@ mod tests_bear_call_spread_positionable {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
-        );
+        ).unwrap();
 
         let short_position = create_test_position(Side::Short);
         let long_position = create_test_position(Side::Long);
@@ -1394,7 +1399,7 @@ mod tests_bear_call_spread_validable {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
-        )
+        ).unwrap()
     }
 
     #[test]
@@ -1421,7 +1426,7 @@ mod tests_bear_call_spread_validable {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
-        );
+        ).unwrap();
         assert!(!spread.validate());
     }
 
@@ -1443,7 +1448,7 @@ mod tests_bear_call_spread_validable {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
-        );
+        ).unwrap();
         assert!(!spread.validate());
     }
 
@@ -1482,7 +1487,7 @@ mod tests_bear_call_spread_validable {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
-        );
+        ).unwrap();
         assert!(!spread.validate());
     }
 
@@ -1504,7 +1509,7 @@ mod tests_bear_call_spread_validable {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
-        );
+        ).unwrap();
         assert!(!spread.validate());
     }
 
@@ -1526,7 +1531,7 @@ mod tests_bear_call_spread_validable {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
-        );
+        ).unwrap();
         // Should still be valid as long as strikes are different
         assert!(spread.validate());
     }
@@ -1549,7 +1554,7 @@ mod tests_bear_call_spread_validable {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
-        );
+        ).unwrap();
         // Should be valid as quantity > 0
         assert!(spread.validate());
     }
@@ -1584,7 +1589,7 @@ mod tests_bear_call_spread_profit {
             Positive::ZERO,                            // close_fee_short_call
             Positive::ZERO,                            // open_fee_long_call
             Positive::ZERO,                            // close_fee_long_call
-        )
+        ).unwrap()
     }
 
     #[test]
@@ -1691,7 +1696,7 @@ mod tests_bear_call_spread_profit {
             Positive::ZERO, // close_fee_short_call
             Positive::ZERO, // open_fee_long_call
             Positive::ZERO, // close_fee_long_call
-        );
+        ).unwrap();
 
         let profit = spread
             .calculate_profit_at(&pos_or_panic!(90.0))
@@ -1730,7 +1735,7 @@ mod tests_bear_call_spread_profit {
             pos_or_panic!(0.78),  // open_fee_long
             pos_or_panic!(0.73),  // close_fee_long
             pos_or_panic!(0.73),  // close_fee_short
-        );
+        ).unwrap();
 
         let profit = spread
             .calculate_profit_at(&pos_or_panic!(90.0))
@@ -1832,7 +1837,7 @@ mod tests_bear_call_spread_optimizable {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
-        )
+        ).unwrap()
     }
 
     #[test]
@@ -2062,7 +2067,7 @@ mod tests_bear_call_spread_graph {
             Positive::ZERO, // close_fee_short_call
             Positive::ZERO, // open_fee_long_call
             Positive::ZERO, // close_fee_long_call
-        )
+        ).unwrap()
     }
 
     #[test]
@@ -2100,7 +2105,7 @@ mod tests_bear_call_spread_probability {
             pos_or_panic!(0.78),  // open_fee_long
             pos_or_panic!(0.73),  // close_fee_long
             pos_or_panic!(0.73),  // close_fee_short
-        )
+        ).unwrap()
     }
 
     #[test]
@@ -2250,7 +2255,7 @@ mod tests_delta {
             pos_or_panic!(0.78),  // open_fee_long
             pos_or_panic!(0.73),  // close_fee_long
             pos_or_panic!(0.73),  // close_fee_short
-        )
+        ).unwrap()
     }
 
     #[test]
@@ -2396,7 +2401,7 @@ mod tests_delta_size {
             pos_or_panic!(0.78),  // open_fee_long
             pos_or_panic!(0.73),  // close_fee_long
             pos_or_panic!(0.73),  // close_fee_short
-        )
+        ).unwrap()
     }
 
     #[test]
@@ -2540,7 +2545,7 @@ mod tests_bear_call_spread_position_management {
             pos_or_panic!(0.78),  // open_fee_long
             pos_or_panic!(0.73),  // close_fee_long
             pos_or_panic!(0.73),  // close_fee_short
-        )
+        ).unwrap()
     }
 
     #[test]
@@ -2652,7 +2657,7 @@ mod tests_adjust_option_position_short {
             pos_or_panic!(0.78),  // open_fee_long
             pos_or_panic!(0.73),  // close_fee_long
             pos_or_panic!(0.73),  // close_fee_short
-        )
+        ).unwrap()
     }
 
     #[test]

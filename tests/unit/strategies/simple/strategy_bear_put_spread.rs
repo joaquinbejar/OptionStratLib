@@ -30,7 +30,7 @@ fn test_bear_put_spread_integration() -> Result<(), Box<dyn Error>> {
         pos_or_panic!(0.78),  // open_fee_long
         pos_or_panic!(0.73),  // close_fee_long
         pos_or_panic!(0.73),  // close_fee_short
-    );
+    )?;
 
     // Assertions to validate strategy properties and computations
     assert_eq!(

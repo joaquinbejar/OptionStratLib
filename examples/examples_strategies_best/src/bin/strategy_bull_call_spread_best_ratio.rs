@@ -22,7 +22,7 @@ fn main() -> Result<(), Error> {
         pos_or_panic!(0.82), // close_fee_short_call
         pos_or_panic!(0.82), // open_fee_short_put
         pos_or_panic!(0.82), // close_fee_short_put
-    );
+    )?;
     strategy.get_best_ratio(&option_chain, FindOptimalSide::All);
     debug!("Option Chain: {}", option_chain);
     debug!("Strategy:  {:#?}", strategy);

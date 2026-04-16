@@ -31,7 +31,7 @@ fn main() -> Result<(), Error> {
         pos_or_panic!(0.05),  // close_fee_long_call_low
         pos_or_panic!(0.05),  // open_fee_long_call_high
         pos_or_panic!(0.05),  // close_fee_long_call_high
-    );
+    )?;
 
     info!("Title: {}", strategy.get_title());
     info!("Break Even Points: {:?}", strategy.break_even_points);

@@ -128,6 +128,14 @@ impl BearPutSpread {
     ///
     /// The maximum profit is limited to the difference between strike prices minus
     /// the net premium paid, while the maximum loss is limited to the net premium paid.
+    ///
+    /// # Errors
+    ///
+    /// Returns `StrategyError` if either freshly-constructed leg cannot be
+    /// added to the strategy or if the break-even calculation fails. In
+    /// practice these branches are unreachable for a freshly-built bear
+    /// put spread and are surfaced only to keep the constructor
+    /// panic-free.
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         underlying_symbol: String,
@@ -145,7 +153,7 @@ impl BearPutSpread {
         close_fee_long_put: Positive,
         open_fee_short_put: Positive,
         close_fee_short_put: Positive,
-    ) -> Self {
+    ) -> Result<Self, StrategyError> {
         if long_strike == Positive::ZERO {
             long_strike = underlying_price;
         }
@@ -185,9 +193,7 @@ impl BearPutSpread {
             None,
             None,
         );
-        strategy
-            .add_position(&long_put)
-            .expect("Error adding long put");
+        strategy.add_position(&long_put)?;
 
         let short_put_option = Options::new(
             OptionType::European,
@@ -212,16 +218,12 @@ impl BearPutSpread {
             None,
             None,
         );
-        strategy
-            .add_position(&short_put)
-            .expect("Error adding short put");
+        strategy.add_position(&short_put)?;
 
         strategy.validate();
 
-        strategy
-            .update_break_even_points()
-            .expect("Unable to update break even points");
-        strategy
+        strategy.update_break_even_points()?;
+        Ok(strategy)
     }
 }
 
@@ -239,11 +241,12 @@ impl StrategyConstructor for BearPutSpread {
 
         // Sort options by strike price to identify short and long positions
         let mut sorted_positions = vec_positions.to_vec();
+        // SAFETY: total order on Positive; f64 fallback to Equal is safe for stable sort
         sorted_positions.sort_by(|a, b| {
             a.option
                 .strike_price
                 .partial_cmp(&b.option.strike_price)
-                .unwrap()
+                .unwrap_or(std::cmp::Ordering::Equal)
         });
 
         let lower_strike_position = &sorted_positions[0];
@@ -715,9 +718,16 @@ impl Optimizable for BearPutSpread {
                 }
             };
             // Calculate the current value based on the optimization criteria
-            let current_value = match criteria {
-                OptimizationCriteria::Ratio => strategy.get_profit_ratio().unwrap(),
-                OptimizationCriteria::Area => strategy.get_profit_area().unwrap(),
+            let metric = match criteria {
+                OptimizationCriteria::Ratio => strategy.get_profit_ratio(),
+                OptimizationCriteria::Area => strategy.get_profit_area(),
+            };
+            let current_value = match metric {
+                Ok(v) => v,
+                Err(e) => {
+                    tracing::warn!(error = %e, "skipping candidate with unscorable metric");
+                    continue;
+                }
             };
 
             if current_value > best_value {
@@ -759,7 +769,7 @@ impl Optimizable for BearPutSpread {
                 "missing put_bid for short leg",
             )
         })?;
-        Ok(BearPutSpread::new(
+        BearPutSpread::new(
             chain.symbol.clone(),
             chain.underlying_price,
             long.strike_price,
@@ -775,7 +785,7 @@ impl Optimizable for BearPutSpread {
             self.long_put.close_fee,
             self.short_put.open_fee,
             self.short_put.close_fee,
-        ))
+        )
     }
 }
 
@@ -931,7 +941,7 @@ mod tests_bear_put_spread_strategy {
             Positive::ZERO,                            // close_fee_long_put
             Positive::ZERO,                            // open_fee_short_put
             Positive::ZERO,                            // close_fee_short_put
-        )
+        ).unwrap()
     }
 
     #[test]
@@ -1036,7 +1046,7 @@ mod tests_bear_put_spread_strategy {
             pos_or_panic!(0.5), // close_fee_long_put
             pos_or_panic!(0.5), // open_fee_short_put
             pos_or_panic!(0.5), // close_fee_short_put
-        );
+        ).unwrap();
 
         assert_eq!(spread.get_fees().unwrap().to_f64(), 2.0); // Total fees = 0.5 * 4
     }
@@ -1085,7 +1095,7 @@ mod tests_bear_put_spread_strategy {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
-        );
+        ).unwrap();
 
         assert_eq!(spread.long_put.option.strike_price, Positive::HUNDRED);
         assert_eq!(spread.short_put.option.strike_price, Positive::HUNDRED);
@@ -1109,7 +1119,7 @@ mod tests_bear_put_spread_strategy {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
-        );
+        ).unwrap();
 
         let max_profit = spread.get_max_profit().unwrap();
         let max_loss = spread.get_max_loss().unwrap();
@@ -1443,7 +1453,7 @@ mod tests_bear_put_spread_optimization {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
-        )
+        ).unwrap()
     }
 
     #[test]
@@ -1591,7 +1601,7 @@ mod tests_bear_put_spread_optimization {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
-        );
+        ).unwrap();
 
         let chain = create_test_chain();
 
@@ -1689,7 +1699,7 @@ mod tests_bear_put_spread_optimizable {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
-        )
+        ).unwrap()
     }
 
     #[test]
@@ -1890,7 +1900,7 @@ mod tests_bear_put_spread_profit {
             Positive::ZERO,                            // close_fee_long_put
             Positive::ZERO,                            // open_fee_short_put
             Positive::ZERO,                            // close_fee_short_put
-        )
+        ).unwrap()
     }
 
     #[test]
@@ -2006,7 +2016,7 @@ mod tests_bear_put_spread_profit {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
-        );
+        ).unwrap();
 
         let max_profit_price = pos_or_panic!(90.0);
         let max_loss_price = pos_or_panic!(110.0);
@@ -2043,7 +2053,7 @@ mod tests_bear_put_spread_profit {
             pos_or_panic!(0.5), // close_fee_long_put
             pos_or_panic!(0.5), // open_fee_short_put
             pos_or_panic!(0.5), // close_fee_short_put
-        );
+        ).unwrap();
 
         let max_profit_price = pos_or_panic!(90.0);
 
@@ -2097,7 +2107,7 @@ mod tests_bear_put_spread_probability {
             Positive::ZERO,                            // close_fee_long_put
             Positive::ZERO,                            // open_fee_short_put
             Positive::ZERO,                            // close_fee_short_put
-        )
+        ).unwrap()
     }
 
     #[test]
@@ -2243,7 +2253,7 @@ mod tests_bear_put_spread_graph {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
-        )
+        ).unwrap()
     }
 
     #[test]
@@ -2286,7 +2296,7 @@ mod tests_delta {
             pos_or_panic!(0.78),  // open_fee_long
             pos_or_panic!(0.73),  // close_fee_long
             pos_or_panic!(0.73),  // close_fee_short
-        )
+        ).unwrap()
     }
 
     #[test]
@@ -2431,7 +2441,7 @@ mod tests_delta_size {
             pos_or_panic!(0.78),  // open_fee_long
             pos_or_panic!(0.73),  // close_fee_long
             pos_or_panic!(0.73),  // close_fee_short
-        )
+        ).unwrap()
     }
 
     #[test]
@@ -2576,7 +2586,7 @@ mod tests_bear_call_spread_position_management {
             pos_or_panic!(0.78),  // open_fee_long
             pos_or_panic!(0.73),  // close_fee_long
             pos_or_panic!(0.73),  // close_fee_short
-        )
+        ).unwrap()
     }
 
     #[test]
@@ -2687,7 +2697,7 @@ mod tests_adjust_option_position {
             pos_or_panic!(0.78),  // open_fee_long
             pos_or_panic!(0.73),  // close_fee_long
             pos_or_panic!(0.73),  // close_fee_short
-        )
+        ).unwrap()
     }
 
     #[test]

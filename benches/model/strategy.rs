@@ -49,6 +49,7 @@ fn create_bull_call_spread() -> BullCallSpread {
         pos_or_panic!(0.5),                        // open_fee_short_call
         pos_or_panic!(0.5),                        // close_fee_short_call
     )
+    .unwrap()
 }
 
 fn create_iron_condor() -> IronCondor {
