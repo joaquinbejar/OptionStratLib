@@ -326,6 +326,7 @@ impl OptionChain {
     /// # Examples
     ///
     /// ```
+    /// # fn run() -> Result<(), Box<dyn std::error::Error>> {
     /// use rust_decimal_macros::dec;
     /// use optionstratlib::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
     /// use positive::{pos_or_panic, spos, Positive};
@@ -352,7 +353,9 @@ impl OptionChain {
     ///     pos_or_panic!(0.2) // implied volatility
     /// );
     ///
-    /// let chain = OptionChain::build_chain(&build_params).unwrap();
+    /// let chain = OptionChain::build_chain(&build_params)?;
+    /// # Ok(())
+    /// # }
     /// ```
     /// Builds a complete option chain based on the provided parameters.
     ///
@@ -565,15 +568,18 @@ impl OptionChain {
 
         if !strike_prices.is_empty() {
             // Find the maximum distance from ATM in number of strikes
-            // SAFETY: We just checked that strike_prices is not empty
             let min_strike = strike_prices
                 .iter()
                 .min()
-                .expect("strike_prices is not empty");
+                .ok_or_else(|| ChainError::DynError {
+                    message: "strike_prices empty after non-empty check".to_string(),
+                })?;
             let max_strike = strike_prices
                 .iter()
                 .max()
-                .expect("strike_prices is not empty");
+                .ok_or_else(|| ChainError::DynError {
+                    message: "strike_prices empty after non-empty check".to_string(),
+                })?;
 
             let strikes_below = ((atm_strike.to_dec() - min_strike.to_dec())
                 / strike_interval.to_dec())

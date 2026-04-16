@@ -21,6 +21,7 @@
 //! ## Example Usage
 //!
 //! ```rust
+//! # fn run() -> Result<(), Box<dyn std::error::Error>> {
 //! use rust_decimal::Decimal;
 //! use rust_decimal_macros::dec;
 //! use optionstratlib::chains::OptionChain;
@@ -47,9 +48,11 @@
 //!             pos_or_panic!(0.2),
 //!         );
 //!
-//! let built_chain = OptionChain::build_chain(&option_chain_params).unwrap();
+//! let built_chain = OptionChain::build_chain(&option_chain_params)?;
 //! assert_eq!(built_chain.symbol, "SP500");
-//! assert_eq!(built_chain.underlying_price, Positive::new(100.0).unwrap());
+//! assert_eq!(built_chain.underlying_price, Positive::new(100.0)?);
+//! # Ok(())
+//! # }
 //! ```
 //!
 //! ## Strategy Legs Support
@@ -113,6 +116,7 @@
 //! ## Usage Example
 //!
 //! ```rust
+//! # fn run() -> Result<(), Box<dyn std::error::Error>> {
 //! use rust_decimal_macros::dec;
 //! use tracing::info;
 //! use optionstratlib::chains::{RNDParameters, RNDAnalysis};
@@ -128,7 +132,7 @@
 //!     derivative_tolerance: pos_or_panic!(0.001),
 //! };
 //! let chain = OptionDataPriceParams::new(
-//!     Some(Box::new(Positive::new(2000.0).unwrap())),
+//!     Some(Box::new(Positive::new(2000.0)?)),
 //!     Some(ExpirationDate::Days(pos_or_panic!(10.0))),
 //!     Some(dec!(0.01)),
 //!     Some(Positive::ZERO),
@@ -142,21 +146,23 @@
 //!     Some(Positive::ONE),
 //!     dec!(-0.2),
 //!     dec!(0.0001),
-//!     Positive::new(0.02).unwrap(),
+//!     Positive::new(0.02)?,
 //!     2,
 //!     chain,
 //!     pos_or_panic!(0.2),
 //! );
 //!
-//! let option_chain = OptionChain::build_chain(&option_chain_params).unwrap();
+//! let option_chain = OptionChain::build_chain(&option_chain_params)?;
 //! // Calculate RND from option chain
-//! let rnd_result = option_chain.calculate_rnd(&params).unwrap();
+//! let rnd_result = option_chain.calculate_rnd(&params)?;
 //!
 //! // Access statistical moments
 //! info!("Expected price: {}", rnd_result.statistics.mean);
 //! info!("Implied volatility: {}", rnd_result.statistics.volatility);
 //! info!("Market bias: {}", rnd_result.statistics.skewness);
 //! info!("Tail risk: {}", rnd_result.statistics.kurtosis);
+//! # Ok(())
+//! # }
 //! ```
 //!
 //! ## Market Insights from RND

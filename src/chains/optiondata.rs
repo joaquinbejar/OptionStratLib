@@ -754,7 +754,9 @@ impl OptionData {
             (Ok(price), true) => {
                 if price.is_sign_positive() {
                     self.call_middle = Positive::new_decimal(price).ok();
-                    self.apply_spread(spread.unwrap(), 2);
+                    if let Some(s) = spread {
+                        self.apply_spread(s, 2);
+                    }
                 }
             }
             (Ok(price), false) => {
@@ -775,7 +777,9 @@ impl OptionData {
             (Ok(price), true) => {
                 if price.is_sign_positive() {
                     self.put_middle = Positive::new_decimal(price).ok();
-                    self.apply_spread(spread.unwrap(), 2);
+                    if let Some(s) = spread {
+                        self.apply_spread(s, 2);
+                    }
                 }
             }
             (Ok(price), false) => {
@@ -821,7 +825,7 @@ impl OptionData {
 
         match (self.call_ask, self.call_bid, self.call_middle) {
             (_, _, Some(call_middle)) => {
-                if self.call_middle.unwrap() > spread {
+                if call_middle > spread {
                     self.call_ask = Some((call_middle + half_spread).round_to(decimal_places));
                     self.call_bid = Some(
                         call_middle
@@ -839,12 +843,12 @@ impl OptionData {
             }
             (Some(call_ask), Some(call_bid), None) => {
                 trace!("apply_spread: Call middle price is None, cannot apply spread");
-                self.call_ask = Some((call_ask + half_spread).round_to(decimal_places));
-                self.call_bid = Some(call_bid.sub_or_zero(&half_spread).round_to(decimal_places));
-                self.call_middle = Some(
-                    ((self.call_ask.unwrap() + self.call_bid.unwrap()) / Positive::TWO)
-                        .round_to(decimal_places),
-                );
+                let new_ask = (call_ask + half_spread).round_to(decimal_places);
+                let new_bid = call_bid.sub_or_zero(&half_spread).round_to(decimal_places);
+                self.call_ask = Some(new_ask);
+                self.call_bid = Some(new_bid);
+                self.call_middle =
+                    Some(((new_ask + new_bid) / Positive::TWO).round_to(decimal_places));
             }
             _ => {
                 trace!("apply_spread: Missing call ask or bid prices, cannot apply spread");
@@ -855,7 +859,7 @@ impl OptionData {
 
         match (self.put_ask, self.put_bid, self.put_middle) {
             (_, _, Some(put_middle)) => {
-                if self.put_middle.unwrap() > spread {
+                if put_middle > spread {
                     self.put_ask = Some((put_middle + half_spread).round_to(decimal_places));
                     self.put_bid = Some(
                         put_middle
@@ -873,12 +877,12 @@ impl OptionData {
             }
             (Some(put_ask), Some(put_bid), None) => {
                 trace!("apply_spread: Put middle price is None, cannot apply spread");
-                self.put_ask = Some((put_ask + half_spread).round_to(decimal_places));
-                self.put_bid = Some(put_bid.sub_or_zero(&half_spread).round_to(decimal_places));
-                self.put_middle = Some(
-                    ((self.put_ask.unwrap() + self.put_bid.unwrap()) / Positive::TWO)
-                        .round_to(decimal_places),
-                );
+                let new_ask = (put_ask + half_spread).round_to(decimal_places);
+                let new_bid = put_bid.sub_or_zero(&half_spread).round_to(decimal_places);
+                self.put_ask = Some(new_ask);
+                self.put_bid = Some(new_bid);
+                self.put_middle =
+                    Some(((new_ask + new_bid) / Positive::TWO).round_to(decimal_places));
             }
             _ => {
                 trace!("apply_spread: Missing put ask or bid prices, cannot apply spread");
@@ -1008,12 +1012,8 @@ impl OptionData {
                 panic!("Center should be managed by the strategy");
             }
             FindOptimalSide::DeltaRange(min, max) => {
-                (self.delta_put.is_some()
-                    && self.delta_put.unwrap() >= *min
-                    && self.delta_put.unwrap() <= *max)
-                    || (self.delta_call.is_some()
-                        && self.delta_call.unwrap() >= *min
-                        && self.delta_call.unwrap() <= *max)
+                self.delta_put.is_some_and(|d| d >= *min && d <= *max)
+                    || self.delta_call.is_some_and(|d| d >= *min && d <= *max)
             }
         }
     }
