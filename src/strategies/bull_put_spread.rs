@@ -730,7 +730,7 @@ impl Optimizable for BullPutSpread {
     ///         pos_or_panic!(0.78),   // open_fee_long
     ///         pos_or_panic!(0.73),   // close_fee_long
     ///         pos_or_panic!(0.73),   // close_fee_short
-    ///     );
+    ///     ).expect("valid bull put spread");
     ///
     /// let side = FindOptimalSide::Lower;
     /// let filtered_combinations = bull_put_spread_strategy.filter_combinations(&option_chain, side);

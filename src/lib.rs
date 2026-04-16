@@ -789,7 +789,7 @@
 //!         pos_or_panic!(1.20),   // short_call_close_fee
 //!         Default::default(), Default::default(),
 //!         Default::default(), Default::default()
-//!     );
+//!     )?;
 //!
 //!     // Analyze the strategy
 //!     tracing::info!("Strategy: {}", strategy.get_title());
@@ -920,7 +920,7 @@
 //!     Positive::ONE,
 //!     30,
 //!     implied_volatility,
-//! );
+//! ).expect("valid custom strategy");
 //!
 //! tracing::info!("Strategy created: {}", strategy.get_title());
 //! ```
