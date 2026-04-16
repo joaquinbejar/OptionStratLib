@@ -128,6 +128,38 @@ pub enum StrategyError {
     /// Positive value errors
     #[error(transparent)]
     PositiveError(#[from] positive::PositiveError),
+
+    /// Numeric conversion failed at the `f64` ↔ `Decimal` boundary.
+    ///
+    /// Raised when a non-finite (`NaN` / `±Inf`) `f64` cannot be represented
+    /// as a `Decimal`, or when a representation overflow occurs.
+    #[error("numeric conversion failed: {value} is not a finite Decimal")]
+    NumericConversion {
+        /// The offending `f64` value that could not be converted.
+        value: f64,
+    },
+
+    /// A required greek value was missing from an option.
+    ///
+    /// Raised when a strategy expects a greek (delta, gamma, vega, theta,
+    /// rho) to be present on an option (e.g., for delta-neutral validation)
+    /// but the option's greek calculation returned `None`.
+    #[error("missing greek `{name}`: option not initialized for greek calculation")]
+    MissingGreek {
+        /// Name of the greek (`"delta"`, `"gamma"`, `"vega"`, `"theta"`, `"rho"`).
+        name: &'static str,
+    },
+
+    /// A required collection was empty when at least one element was expected.
+    ///
+    /// Raised when a strategy operation needs to pick an element out of a
+    /// collection (option chain, break-even points, profit ranges) and the
+    /// collection turned out to be empty.
+    #[error("empty collection in strategy operation: {context}")]
+    EmptyCollection {
+        /// Description of where the empty collection was encountered.
+        context: String,
+    },
 }
 
 /// Represents different types of errors that can occur during price-related operations.
@@ -337,6 +369,45 @@ impl StrategyError {
             operation: operation.to_string(),
             reason: reason.to_string(),
         })
+    }
+
+    /// Builds a `NumericConversion` error for an `f64` that could not be
+    /// converted to a `Decimal` (typically `NaN` / `Inf` or overflow).
+    ///
+    /// # Errors
+    ///
+    /// This is an error constructor — it always returns the variant.
+    #[cold]
+    #[inline(never)]
+    #[must_use]
+    pub fn numeric_conversion(value: f64) -> Self {
+        StrategyError::NumericConversion { value }
+    }
+
+    /// Builds a `MissingGreek` error for an option missing a required greek.
+    ///
+    /// # Errors
+    ///
+    /// This is an error constructor — it always returns the variant.
+    #[cold]
+    #[inline(never)]
+    #[must_use]
+    pub fn missing_greek(name: &'static str) -> Self {
+        StrategyError::MissingGreek { name }
+    }
+
+    /// Builds an `EmptyCollection` error for an unexpectedly empty collection.
+    ///
+    /// # Errors
+    ///
+    /// This is an error constructor — it always returns the variant.
+    #[cold]
+    #[inline(never)]
+    #[must_use]
+    pub fn empty_collection(context: impl Into<String>) -> Self {
+        StrategyError::EmptyCollection {
+            context: context.into(),
+        }
     }
 }
 
