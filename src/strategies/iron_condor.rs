@@ -903,11 +903,7 @@ impl Optimizable for IronCondor {
                     fourth: long_call,
                 };
                 match strategy.create_strategy(option_chain, &legs) {
-                    Ok(s) => {
-                        s.validate()
-                            && s.get_max_profit().is_ok()
-                            && s.get_max_loss().is_ok()
-                    }
+                    Ok(s) => s.validate() && s.get_max_profit().is_ok() && s.get_max_loss().is_ok(),
                     Err(_) => false,
                 }
             })
@@ -1237,7 +1233,8 @@ mod tests_iron_condor {
             pos_or_panic!(1.8),
             pos_or_panic!(5.0),
             pos_or_panic!(5.0),
-        ).unwrap();
+        )
+        .unwrap();
 
         assert_eq!(iron_condor.name, "Iron Condor");
         assert_eq!(iron_condor.description, IRON_CONDOR_DESCRIPTION.to_string());
@@ -1270,7 +1267,8 @@ mod tests_iron_condor {
             pos_or_panic!(1.8),
             pos_or_panic!(5.0),
             pos_or_panic!(5.0),
-        ).unwrap();
+        )
+        .unwrap();
 
         assert_eq!(iron_condor.get_max_loss().unwrap_or(Positive::ZERO), 51.3);
     }
@@ -1296,7 +1294,8 @@ mod tests_iron_condor {
             pos_or_panic!(2.8),
             pos_or_panic!(0.07),
             pos_or_panic!(0.07),
-        ).unwrap();
+        )
+        .unwrap();
 
         let expected_profit = iron_condor.get_net_premium_received().unwrap().to_f64();
         assert_eq!(
@@ -1326,7 +1325,8 @@ mod tests_iron_condor {
             pos_or_panic!(1.8),
             pos_or_panic!(5.0),
             pos_or_panic!(5.0),
-        ).unwrap();
+        )
+        .unwrap();
 
         assert_eq!(
             iron_condor.get_break_even_points().unwrap()[0],
@@ -1355,7 +1355,8 @@ mod tests_iron_condor {
             pos_or_panic!(1.8),
             pos_or_panic!(5.0),
             pos_or_panic!(5.0),
-        ).unwrap();
+        )
+        .unwrap();
 
         let expected_fees = iron_condor.short_call.open_fee
             + iron_condor.short_call.close_fee
@@ -1389,7 +1390,8 @@ mod tests_iron_condor {
             pos_or_panic!(1.8),
             pos_or_panic!(5.0),
             pos_or_panic!(5.0),
-        ).unwrap();
+        )
+        .unwrap();
 
         let price = pos_or_panic!(150.0);
         let expected_profit = iron_condor
@@ -1473,7 +1475,8 @@ mod tests_iron_condor_validable {
             Positive::ONE,      // premium_long_put
             Positive::ZERO,     // open_fee
             Positive::ZERO,     // closing fee
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
@@ -1596,7 +1599,8 @@ mod tests_iron_condor_strategies {
             Positive::ONE,      // premium_long_put
             pos_or_panic!(0.5), // open_fee
             pos_or_panic!(0.5), // closing fee
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
@@ -1696,7 +1700,8 @@ mod tests_iron_condor_strategies {
             pos_or_panic!(16.8),   // premium_long_put
             pos_or_panic!(0.96),   // open_fee
             pos_or_panic!(0.96),   // close_fee
-        ).unwrap();
+        )
+        .unwrap();
         let break_even_points = condor.get_break_even_points().unwrap();
 
         assert_eq!(break_even_points.len(), 2);
@@ -1724,7 +1729,8 @@ mod tests_iron_condor_strategies {
             pos_or_panic!(10.0), // premium_long_put
             Positive::ZERO,      // open_fee
             Positive::ZERO,      // closing fee
-        ).unwrap();
+        )
+        .unwrap();
         let max_profit = condor.get_max_profit().unwrap();
         assert_eq!(max_profit, pos_or_panic!(ZERO));
     }
@@ -1749,7 +1755,8 @@ mod tests_iron_condor_strategies {
             pos_or_panic!(10.0), // premium_long_put
             pos_or_panic!(0.09), // open_fee
             pos_or_panic!(0.09), // closing fee
-        ).unwrap();
+        )
+        .unwrap();
         let max_profit = condor.get_max_profit().unwrap();
         assert_eq!(max_profit, pos_or_panic!(19.28));
     }
@@ -1774,7 +1781,8 @@ mod tests_iron_condor_strategies {
             pos_or_panic!(11.1), // premium_long_put
             pos_or_panic!(0.1),  // open_fee
             pos_or_panic!(0.1),  // closing fee
-        ).unwrap();
+        )
+        .unwrap();
         let max_loss = condor.get_max_loss().unwrap();
         assert_eq!(max_loss, pos_or_panic!(7.9999999999999964));
     }
@@ -1799,7 +1807,8 @@ mod tests_iron_condor_strategies {
             Positive::ONE,
             pos_or_panic!(0.5),
             pos_or_panic!(0.5),
-        ).unwrap();
+        )
+        .unwrap();
 
         let max_loss = condor.get_max_loss().unwrap();
         assert_eq!(max_loss, pos_or_panic!(12.0));
@@ -1838,7 +1847,8 @@ mod tests_iron_condor_strategies {
             pos_or_panic!(10.0), // premium_long_put
             Positive::ZERO,      // open_fee
             Positive::ZERO,      // closing fee
-        ).unwrap();
+        )
+        .unwrap();
         assert_eq!(condor.get_net_premium_received().unwrap().to_f64(), ZERO);
     }
 
@@ -1862,7 +1872,8 @@ mod tests_iron_condor_strategies {
             pos_or_panic!(10.0), // premium_long_put
             Positive::ONE,       // open_fee
             Positive::ONE,       // closing fee
-        ).unwrap();
+        )
+        .unwrap();
         assert_eq!(condor.get_net_premium_received().unwrap().to_f64(), 0.0);
     }
 
@@ -1886,7 +1897,8 @@ mod tests_iron_condor_strategies {
             pos_or_panic!(10.0), // premium_long_put
             Positive::ONE,       // open_fee
             Positive::ONE,       // closing fee
-        ).unwrap();
+        )
+        .unwrap();
         assert_eq!(condor.get_net_premium_received().unwrap().to_f64(), 0.0);
     }
 
@@ -1910,7 +1922,8 @@ mod tests_iron_condor_strategies {
             pos_or_panic!(10.0), // premium_long_put
             Positive::ONE,       // open_fee
             Positive::ONE,       // closing fee
-        ).unwrap();
+        )
+        .unwrap();
         assert_eq!(condor.get_net_premium_received().unwrap().to_f64(), 2.0);
     }
 
@@ -1934,7 +1947,8 @@ mod tests_iron_condor_strategies {
             pos_or_panic!(20.0), // premium_long_put
             Positive::ONE,       // open_fee
             Positive::ONE,       // closing fee
-        ).unwrap();
+        )
+        .unwrap();
         assert_eq!(condor.get_net_premium_received().unwrap().to_f64(), 0.0);
     }
 
@@ -1980,7 +1994,8 @@ mod tests_iron_condor_strategies {
             Positive::ONE,
             pos_or_panic!(0.5),
             pos_or_panic!(0.5),
-        ).unwrap();
+        )
+        .unwrap();
 
         assert!(condor.get_max_profit().is_err());
         assert_eq!(condor.get_max_loss().unwrap(), pos_or_panic!(14.0));
@@ -2028,7 +2043,8 @@ mod tests_iron_condor_optimizable {
             Positive::ONE,      // premium_long_put
             pos_or_panic!(0.5), // open_fee
             pos_or_panic!(0.5), // closing fee
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     fn create_test_chain() -> OptionChain {
@@ -2260,7 +2276,8 @@ mod tests_iron_condor_profit {
             Positive::ONE,      // premium_long_put
             Positive::ZERO,     // open_fee
             Positive::ZERO,     // closing fee
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
@@ -2397,7 +2414,8 @@ mod tests_iron_condor_profit {
             Positive::ONE,
             pos_or_panic!(0.5), // open_fee
             pos_or_panic!(0.5), // closing fee
-        ).unwrap();
+        )
+        .unwrap();
 
         let profit = condor
             .calculate_profit_at(&Positive::HUNDRED)
@@ -2429,7 +2447,8 @@ mod tests_iron_condor_profit {
             Positive::ONE,
             pos_or_panic!(0.5), // open_fee
             pos_or_panic!(0.5), // closing fee
-        ).unwrap();
+        )
+        .unwrap();
 
         let profit = condor
             .calculate_profit_at(&Positive::HUNDRED)
@@ -2460,7 +2479,8 @@ mod tests_iron_condor_profit {
             Positive::ONE,
             Positive::ZERO,
             Positive::ZERO,
-        ).unwrap();
+        )
+        .unwrap();
 
         let profit = condor
             .calculate_profit_at(&Positive::HUNDRED)
@@ -2523,7 +2543,8 @@ mod tests_iron_condor_delta {
             pos_or_panic!(16.8),   // premium_long_put
             pos_or_panic!(0.96),   // open_fee
             pos_or_panic!(0.96),   // close_fee
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
@@ -2718,7 +2739,8 @@ mod tests_iron_condor_delta_size {
             pos_or_panic!(16.8),   // premium_long_put
             pos_or_panic!(0.96),   // open_fee
             pos_or_panic!(0.96),   // close_fee
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
@@ -2909,7 +2931,8 @@ mod tests_iron_condor_probability {
             pos_or_panic!(16.8),   // premium_long_put
             pos_or_panic!(0.96),   // open_fee
             pos_or_panic!(0.96),   // close_fee
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
@@ -3109,7 +3132,8 @@ mod tests_iron_condor_position_management {
             pos_or_panic!(16.8),   // premium_long_put
             pos_or_panic!(0.96),   // open_fee
             pos_or_panic!(0.96),   // close_fee
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
@@ -3304,7 +3328,8 @@ mod tests_adjust_option_position {
             pos_or_panic!(16.8),   // premium_long_put
             pos_or_panic!(0.96),   // open_fee
             pos_or_panic!(0.96),   // close_fee
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]

@@ -692,7 +692,8 @@ mod tests {
             Positive::ONE,
             pos_or_panic!(0.65),
             pos_or_panic!(0.65),
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]

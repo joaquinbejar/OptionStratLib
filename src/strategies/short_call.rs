@@ -801,7 +801,8 @@ mod tests_simulate {
             pos_or_panic!(5.0),
             Positive::ZERO,
             Positive::ZERO,
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     fn create_walk_params(prices: Vec<Positive>) -> WalkParams<Positive, Positive> {

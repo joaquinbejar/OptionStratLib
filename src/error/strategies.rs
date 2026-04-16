@@ -512,6 +512,60 @@ mod tests {
 }
 
 #[cfg(test)]
+mod tests_panic_free_variants {
+    use super::*;
+
+    #[test]
+    fn test_numeric_conversion_constructor_and_display() {
+        let err = StrategyError::numeric_conversion(f64::NAN);
+        assert!(matches!(err, StrategyError::NumericConversion { .. }));
+        assert!(err.to_string().contains("NaN"));
+    }
+
+    #[test]
+    fn test_numeric_conversion_inf_message_includes_value() {
+        let err = StrategyError::numeric_conversion(f64::INFINITY);
+        assert!(err.to_string().contains("inf"));
+    }
+
+    #[test]
+    fn test_missing_greek_constructor() {
+        let err = StrategyError::missing_greek("delta");
+        match err {
+            StrategyError::MissingGreek { name } => assert_eq!(name, "delta"),
+            other => panic!("expected MissingGreek, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_missing_greek_display() {
+        let err = StrategyError::missing_greek("vega");
+        assert!(err.to_string().contains("missing greek `vega`"));
+    }
+
+    #[test]
+    fn test_empty_collection_constructor_accepts_str_and_string() {
+        let from_str = StrategyError::empty_collection("option chain");
+        let from_string = StrategyError::empty_collection(String::from("break-even points"));
+        assert!(matches!(from_str, StrategyError::EmptyCollection { .. }));
+        assert!(matches!(from_string, StrategyError::EmptyCollection { .. }));
+        assert!(from_str.to_string().contains("option chain"));
+        assert!(from_string.to_string().contains("break-even points"));
+    }
+
+    #[test]
+    fn test_panic_free_variants_route_through_probability_error() {
+        use crate::error::ProbabilityError;
+        let nc = ProbabilityError::from(StrategyError::numeric_conversion(f64::NAN));
+        let mg = ProbabilityError::from(StrategyError::missing_greek("delta"));
+        let ec = ProbabilityError::from(StrategyError::empty_collection("chain"));
+        assert!(nc.to_string().contains("numeric conversion"));
+        assert!(mg.to_string().contains("missing greek"));
+        assert!(ec.to_string().contains("empty collection"));
+    }
+}
+
+#[cfg(test)]
 mod tests_display {
     use super::*;
 

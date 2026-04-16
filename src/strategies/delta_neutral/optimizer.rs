@@ -348,7 +348,9 @@ impl<'a> AdjustmentOptimizer<'a> {
                     .unwrap_or(dec!(1))
                     .max(dec!(0.01));
             // SAFETY: total order on Decimal; f64 fallback to Equal is safe for stable sort
-            eff_b.partial_cmp(&eff_a).unwrap_or(std::cmp::Ordering::Equal)
+            eff_b
+                .partial_cmp(&eff_a)
+                .unwrap_or(std::cmp::Ordering::Equal)
         });
 
         Ok(candidates)

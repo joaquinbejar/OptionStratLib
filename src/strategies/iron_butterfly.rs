@@ -881,11 +881,7 @@ impl Optimizable for IronButterfly {
                     fourth: high,
                 };
                 match strategy.create_strategy(option_chain, &legs) {
-                    Ok(s) => {
-                        s.validate()
-                            && s.get_max_profit().is_ok()
-                            && s.get_max_loss().is_ok()
-                    }
+                    Ok(s) => s.validate() && s.get_max_profit().is_ok() && s.get_max_loss().is_ok(),
                     Err(_) => false,
                 }
             })
@@ -1210,7 +1206,8 @@ mod tests_iron_butterfly {
             Positive::ONE,       // premium long put
             pos_or_panic!(5.0),  // open fee
             pos_or_panic!(5.0),  // close fee
-        ).unwrap();
+        )
+        .unwrap();
 
         assert_eq!(butterfly.name, "Iron Butterfly");
         assert_eq!(
@@ -1245,7 +1242,8 @@ mod tests_iron_butterfly {
             Positive::ONE,
             pos_or_panic!(5.0),
             pos_or_panic!(5.0),
-        ).unwrap();
+        )
+        .unwrap();
 
         assert_eq!(butterfly.get_max_loss().unwrap(), 49.0);
     }
@@ -1270,7 +1268,8 @@ mod tests_iron_butterfly {
             Positive::TWO,
             pos_or_panic!(0.07),
             pos_or_panic!(0.07),
-        ).unwrap();
+        )
+        .unwrap();
 
         let expected_profit: Positive = butterfly.get_net_premium_received().unwrap();
         assert_eq!(butterfly.get_max_profit().unwrap(), expected_profit);
@@ -1296,7 +1295,8 @@ mod tests_iron_butterfly {
             Positive::ONE,
             pos_or_panic!(5.0),
             pos_or_panic!(5.0),
-        ).unwrap();
+        )
+        .unwrap();
 
         assert_eq!(
             butterfly.get_break_even_points().unwrap()[0],
@@ -1334,7 +1334,8 @@ mod tests_iron_butterfly {
             Positive::ONE,
             pos_or_panic!(5.0),
             pos_or_panic!(5.0),
-        ).unwrap();
+        )
+        .unwrap();
 
         let expected_fees = butterfly.short_call.open_fee
             + butterfly.short_call.close_fee
@@ -1367,7 +1368,8 @@ mod tests_iron_butterfly {
             Positive::ONE,
             pos_or_panic!(5.0),
             pos_or_panic!(5.0),
-        ).unwrap();
+        )
+        .unwrap();
 
         // Test at short strike (maximum profit point)
         let price = butterfly.short_call.option.strike_price;
@@ -1448,7 +1450,8 @@ mod tests_iron_butterfly_validable {
             Positive::ONE,      // premium_long_put
             Positive::ZERO,     // open_fee
             Positive::ZERO,     // closing fee
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
@@ -1607,7 +1610,8 @@ mod tests_iron_butterfly_strategies {
             Positive::ONE,      // premium_long_put
             pos_or_panic!(0.5), // open_fee
             pos_or_panic!(0.5), // closing fee
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
@@ -1776,7 +1780,8 @@ mod tests_iron_butterfly_strategies {
             Positive::ONE,
             pos_or_panic!(0.5),
             pos_or_panic!(0.5),
-        ).unwrap();
+        )
+        .unwrap();
 
         assert_eq!(butterfly.get_net_premium_received().unwrap().to_f64(), 0.0);
     }
@@ -1800,7 +1805,8 @@ mod tests_iron_butterfly_strategies {
             Positive::ONE,
             pos_or_panic!(0.5),
             pos_or_panic!(0.5),
-        ).unwrap();
+        )
+        .unwrap();
 
         assert_eq!(butterfly.get_net_premium_received().unwrap().to_f64(), 0.0);
     }
@@ -1834,7 +1840,8 @@ mod tests_iron_butterfly_optimizable {
             Positive::ONE,      // premium_long_put
             pos_or_panic!(0.5), // open_fee
             pos_or_panic!(0.5), // closing fee
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     fn create_test_chain() -> OptionChain {
@@ -2064,7 +2071,8 @@ mod tests_iron_butterfly_profit {
             Positive::ONE,      // premium_long_put
             Positive::ZERO,     // open_fee
             Positive::ZERO,     // closing fee
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
@@ -2184,7 +2192,8 @@ mod tests_iron_butterfly_profit {
             Positive::ONE,
             pos_or_panic!(0.5), // open_fee
             pos_or_panic!(0.5), // closing fee
-        ).unwrap();
+        )
+        .unwrap();
 
         let profit = butterfly
             .calculate_profit_at(&Positive::HUNDRED)
@@ -2214,7 +2223,8 @@ mod tests_iron_butterfly_profit {
             Positive::ONE,
             Positive::ZERO,
             Positive::ZERO,
-        ).unwrap();
+        )
+        .unwrap();
 
         let profit = butterfly
             .calculate_profit_at(&butterfly.short_call.option.strike_price)
@@ -2295,7 +2305,8 @@ mod tests_iron_butterfly_delta {
             pos_or_panic!(16.8),   // premium_long_put
             pos_or_panic!(0.96),   // open_fee
             pos_or_panic!(0.96),   // close_fee
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
@@ -2488,7 +2499,8 @@ mod tests_iron_butterfly_delta_size {
             pos_or_panic!(16.8),   // premium_long_put
             pos_or_panic!(0.96),   // open_fee
             pos_or_panic!(0.96),   // close_fee
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
@@ -2680,7 +2692,8 @@ mod tests_iron_butterfly_probability {
             pos_or_panic!(16.8),   // premium_long_put
             pos_or_panic!(0.96),   // open_fee
             pos_or_panic!(0.96),   // close_fee
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
@@ -2885,7 +2898,8 @@ mod tests_iron_butterfly_position_management {
             pos_or_panic!(16.8),   // premium_long_put
             pos_or_panic!(0.96),   // open_fee
             pos_or_panic!(0.96),   // close_fee
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
@@ -3079,7 +3093,8 @@ mod tests_adjust_option_position {
             pos_or_panic!(16.8),   // premium_long_put
             pos_or_panic!(0.96),   // open_fee
             pos_or_panic!(0.96),   // close_fee
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]

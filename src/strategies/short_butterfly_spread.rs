@@ -822,11 +822,7 @@ impl Optimizable for ShortButterflySpread {
                     third: short_high,
                 };
                 match strategy.create_strategy(option_chain, &legs) {
-                    Ok(s) => {
-                        s.validate()
-                            && s.get_max_profit().is_ok()
-                            && s.get_max_loss().is_ok()
-                    }
+                    Ok(s) => s.validate() && s.get_max_profit().is_ok() && s.get_max_loss().is_ok(),
                     Err(_) => false,
                 }
             })
@@ -1143,7 +1139,8 @@ mod tests_short_butterfly_spread {
             pos_or_panic!(0.05),                       // close_fee_short_call_low
             pos_or_panic!(0.05),                       // open_fee_short_call_high
             pos_or_panic!(0.05),                       // close_fee_short_call_high
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
@@ -1245,7 +1242,8 @@ mod tests_short_butterfly_spread {
             pos_or_panic!(0.05), // close_fee_short_call_low
             Positive::ONE,       // open_fee_short_call_high
             pos_or_panic!(0.05), // close_fee_short_call_high
-        ).unwrap();
+        )
+        .unwrap();
 
         assert_eq!(butterfly.short_call_low.open_fee, 1.0); // fees / 3
         assert_eq!(butterfly.long_call.open_fee, 1.0); // fees / 3
@@ -1286,7 +1284,8 @@ mod tests_short_butterfly_spread {
             pos_or_panic!(0.05), // close_fee_short_call_low
             pos_or_panic!(0.05), // open_fee_short_call_high
             pos_or_panic!(0.05), // close_fee_short_call_high
-        ).unwrap();
+        )
+        .unwrap();
 
         assert_eq!(butterfly.short_call_low.option.quantity, Positive::TWO);
         assert_eq!(butterfly.long_call.option.quantity, pos_or_panic!(4.0)); // 2 * 2
@@ -1360,7 +1359,8 @@ mod tests_short_butterfly_spread {
             pos_or_panic!(0.05), // close_fee_short_call_low
             pos_or_panic!(0.05), // open_fee_short_call_high
             pos_or_panic!(0.05), // close_fee_short_call_high
-        ).unwrap();
+        )
+        .unwrap();
         assert!(max_loss.get_max_loss().is_err());
     }
 
@@ -1434,7 +1434,8 @@ mod tests_short_butterfly_validation {
             pos_or_panic!(0.05), // close_fee_short_call_low
             pos_or_panic!(0.05), // open_fee_short_call_high
             pos_or_panic!(0.05), // close_fee_short_call_high
-        ).unwrap();
+        )
+        .unwrap();
         assert!(butterfly.validate());
     }
 
@@ -1460,7 +1461,8 @@ mod tests_short_butterfly_validation {
             pos_or_panic!(0.05), // close_fee_short_call_low
             pos_or_panic!(0.05), // open_fee_short_call_high
             pos_or_panic!(0.05), // close_fee_short_call_high
-        ).unwrap();
+        )
+        .unwrap();
         butterfly.short_call_low =
             create_valid_position(Side::Short, pos_or_panic!(90.0), Positive::ZERO);
         assert!(!butterfly.validate());
@@ -1488,7 +1490,8 @@ mod tests_short_butterfly_validation {
             pos_or_panic!(0.05), // close_fee_short_call_low
             pos_or_panic!(0.05), // open_fee_short_call_high
             pos_or_panic!(0.05), // close_fee_short_call_high
-        ).unwrap();
+        )
+        .unwrap();
         assert!(!butterfly.validate());
     }
 
@@ -1514,7 +1517,8 @@ mod tests_short_butterfly_validation {
             pos_or_panic!(0.05), // close_fee_short_call_low
             pos_or_panic!(0.05), // open_fee_short_call_high
             pos_or_panic!(0.05), // close_fee_short_call_high
-        ).unwrap();
+        )
+        .unwrap();
         butterfly.long_call = create_valid_position(Side::Long, Positive::HUNDRED, Positive::ONE);
         assert!(!butterfly.validate());
     }
@@ -1541,7 +1545,8 @@ mod tests_short_butterfly_validation {
             pos_or_panic!(0.05), // close_fee_short_call_low
             pos_or_panic!(0.05), // open_fee_short_call_high
             pos_or_panic!(0.05), // close_fee_short_call_high
-        ).unwrap();
+        )
+        .unwrap();
         butterfly.short_call_high =
             create_valid_position(Side::Short, pos_or_panic!(110.0), Positive::TWO);
         assert!(!butterfly.validate());
@@ -1581,7 +1586,8 @@ mod tests_short_butterfly_profit {
             pos_or_panic!(0.05), // close_fee_short_call_low
             pos_or_panic!(0.05), // open_fee_short_call_high
             pos_or_panic!(0.05), // close_fee_short_call_high
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
@@ -1631,7 +1637,8 @@ mod tests_short_butterfly_profit {
             pos_or_panic!(0.05), // close_fee_short_call_low
             pos_or_panic!(0.05), // open_fee_short_call_high
             pos_or_panic!(0.05), // close_fee_short_call_high
-        ).unwrap();
+        )
+        .unwrap();
         let scaled_profit = butterfly
             .calculate_profit_at(&pos_or_panic!(85.0))
             .unwrap()
@@ -1679,7 +1686,8 @@ mod tests_short_butterfly_profit {
             Positive::ZERO, // close_fee_short_call_low
             Positive::ZERO, // open_fee_short_call_high
             Positive::ZERO, // close_fee_short_call_high
-        ).unwrap();
+        )
+        .unwrap();
 
         let base_butterfly = create_test();
         let profit_without_fees = butterfly
@@ -1730,7 +1738,8 @@ mod tests_short_butterfly_delta {
             pos_or_panic!(0.05),   // close_fee_short_call_low
             pos_or_panic!(0.05),   // open_fee_short_call_high
             pos_or_panic!(0.05),   // close_fee_short_call_high
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
@@ -1902,7 +1911,8 @@ mod tests_short_butterfly_delta_size {
             pos_or_panic!(0.05),   // close_fee_short_call_low
             pos_or_panic!(0.05),   // open_fee_short_call_high
             pos_or_panic!(0.05),   // close_fee_short_call_high
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
@@ -2070,7 +2080,8 @@ mod tests_adjust_option_position_short {
             pos_or_panic!(0.05),
             pos_or_panic!(0.05),
             pos_or_panic!(0.05),
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
@@ -2194,7 +2205,8 @@ mod tests_short_butterfly_position_management {
             pos_or_panic!(0.05),
             pos_or_panic!(0.05),
             pos_or_panic!(0.05),
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
@@ -2672,7 +2684,8 @@ mod tests_butterfly_strategies {
             pos_or_panic!(0.05), // close_fee_short_call_low
             pos_or_panic!(0.05), // open_fee_short_call_high
             pos_or_panic!(0.05), // close_fee_short_call_high
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
@@ -2759,7 +2772,8 @@ mod tests_butterfly_strategies {
             Positive::ONE, // close_fee_short_call_low
             Positive::ONE, // open_fee_short_call_high
             Positive::ONE, // close_fee_short_call_high
-        ).unwrap();
+        )
+        .unwrap();
         assert_eq!(butterfly.get_fees().unwrap().to_f64(), 8.0);
     }
 
@@ -2785,7 +2799,8 @@ mod tests_butterfly_strategies {
             Positive::ONE, // close_fee_short_call_low
             Positive::ONE, // open_fee_short_call_high
             Positive::ONE, // close_fee_short_call_high
-        ).unwrap();
+        )
+        .unwrap();
 
         assert_eq!(butterfly.get_fees().unwrap(), pos_or_panic!(16.0));
     }
@@ -2838,7 +2853,8 @@ mod tests_butterfly_strategies {
             pos_or_panic!(0.05),
             pos_or_panic!(0.05),
             pos_or_panic!(0.05),
-        ).unwrap();
+        )
+        .unwrap();
         assert_eq!(
             short_butterfly.get_max_profit().unwrap().to_f64(),
             pos_or_panic!(18.106)
@@ -2904,7 +2920,8 @@ mod tests_butterfly_optimizable {
             pos_or_panic!(0.05), // close_fee_short_call_low
             pos_or_panic!(0.05), // open_fee_short_call_high
             pos_or_panic!(0.05), // close_fee_short_call_high
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
@@ -3025,7 +3042,8 @@ mod tests_butterfly_probability {
             pos_or_panic!(0.05), // close_fee_short_call_low
             pos_or_panic!(0.05), // open_fee_short_call_high
             pos_or_panic!(0.05), // close_fee_short_call_high
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     mod short_butterfly_tests {
@@ -3069,7 +3087,8 @@ mod tests_butterfly_probability {
                 pos_or_panic!(0.05),
                 pos_or_panic!(0.05),
                 pos_or_panic!(0.05),
-            ).unwrap();
+            )
+            .unwrap();
             let ranges = butterfly.get_profit_ranges().unwrap();
 
             assert!(ranges[0].upper_bound.is_some());

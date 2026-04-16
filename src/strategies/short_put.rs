@@ -801,7 +801,8 @@ mod tests_simulate {
             pos_or_panic!(5.0),  // premium received
             Positive::ZERO,      // open fee
             Positive::ZERO,      // close fee
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     /// Helper to create WalkParams with Historical data

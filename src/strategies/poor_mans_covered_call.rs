@@ -705,17 +705,17 @@ impl Optimizable for PoorMansCoveredCall {
                     first: long_call_option,
                     second: short_call_option,
                 };
-                let strategy: PoorMansCoveredCall =
-                    match self.create_strategy(option_chain, &legs) {
-                        Ok(s) => s,
-                        Err(e) => {
-                            tracing::warn!(
-                                error = %e,
-                                "skipping invalid strategy combination"
-                            );
-                            continue;
-                        }
-                    };
+                let strategy: PoorMansCoveredCall = match self.create_strategy(option_chain, &legs)
+                {
+                    Ok(s) => s,
+                    Err(e) => {
+                        tracing::warn!(
+                            error = %e,
+                            "skipping invalid strategy combination"
+                        );
+                        continue;
+                    }
+                };
 
                 if !strategy.validate() {
                     debug!("Invalid strategy");
@@ -927,7 +927,8 @@ mod tests_pmcc_validation {
             Positive::ONE,
             pos_or_panic!(0.5),
             pos_or_panic!(0.5),
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
@@ -1096,7 +1097,8 @@ mod tests_pmcc_optimization {
             Positive::ONE,
             pos_or_panic!(0.5),
             pos_or_panic!(0.5),
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
@@ -1252,7 +1254,8 @@ mod tests_pmcc_pnl {
             Positive::ONE,
             pos_or_panic!(0.5),
             pos_or_panic!(0.5),
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
@@ -1346,7 +1349,8 @@ mod tests_pmcc_best_area {
             Positive::ONE,
             pos_or_panic!(0.5),
             pos_or_panic!(0.5),
-        ).unwrap();
+        )
+        .unwrap();
 
         Ok((strategy, option_chain))
     }
@@ -1423,7 +1427,8 @@ mod tests_pmcc_best_ratio {
             Positive::ONE,
             pos_or_panic!(0.5),
             pos_or_panic!(0.5),
-        ).unwrap();
+        )
+        .unwrap();
 
         Ok((strategy, option_chain))
     }
@@ -1499,7 +1504,8 @@ mod tests_short_straddle_delta {
             pos_or_panic!(7.01),   // close_fee_short_call
             pos_or_panic!(7.01),   // open_fee_long_call
             pos_or_panic!(7.01),   // close_fee_long_call
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
@@ -1644,7 +1650,8 @@ mod tests_short_straddle_delta_size {
             pos_or_panic!(7.01),   // close_fee_short_call
             pos_or_panic!(7.01),   // open_fee_long_call
             pos_or_panic!(7.01),   // close_fee_long_call
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
@@ -1785,7 +1792,8 @@ mod tests_poor_mans_covered_call_probability {
             pos_or_panic!(1.74),                        // close_fee_short_call
             pos_or_panic!(0.85),                        // open_fee_long_call
             pos_or_panic!(0.85),                        // close_fee_long_call
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
@@ -1995,7 +2003,8 @@ mod tests_poor_mans_covered_call_position_management {
             pos_or_panic!(1.74),                       // close_fee_short_call
             pos_or_panic!(0.85),                       // open_fee_long_call
             pos_or_panic!(0.85),                       // close_fee_long_call
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
@@ -2123,7 +2132,8 @@ mod tests_adjust_option_position {
             pos_or_panic!(1.74),                       // close_fee_short_call
             pos_or_panic!(0.85),                       // open_fee_long_call
             pos_or_panic!(0.85),                       // close_fee_long_call
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]

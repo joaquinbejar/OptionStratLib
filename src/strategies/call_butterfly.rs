@@ -805,11 +805,7 @@ impl Optimizable for CallButterfly {
                     third: short_high,
                 };
                 match strategy.create_strategy(option_chain, &legs) {
-                    Ok(s) => {
-                        s.validate()
-                            && s.get_max_profit().is_ok()
-                            && s.get_max_loss().is_ok()
-                    }
+                    Ok(s) => s.validate() && s.get_max_profit().is_ok() && s.get_max_loss().is_ok(),
                     Err(_) => false,
                 }
             })
@@ -1124,7 +1120,8 @@ mod tests_call_butterfly {
             pos_or_panic!(0.1),
             pos_or_panic!(0.1),
             pos_or_panic!(0.1),
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
@@ -1207,7 +1204,8 @@ mod tests_call_butterfly_validation {
             pos_or_panic!(0.1),
             pos_or_panic!(0.1),
             pos_or_panic!(0.1),
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
@@ -1257,7 +1255,8 @@ mod tests_call_butterfly_delta {
             pos_or_panic!(0.73),  // close_fee_short
             pos_or_panic!(0.73),  // close_fee_short
             pos_or_panic!(0.73),  // close_fee_short
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
@@ -1428,7 +1427,8 @@ mod tests_call_butterfly_delta_size {
             pos_or_panic!(0.73),  // close_fee_short
             pos_or_panic!(0.73),  // close_fee_short
             pos_or_panic!(0.73),
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
@@ -1654,7 +1654,8 @@ mod tests_call_butterfly_optimizable {
             pos_or_panic!(0.1),
             pos_or_panic!(0.1),
             pos_or_panic!(0.1),
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
@@ -1792,7 +1793,8 @@ mod tests_call_butterfly_probability {
             pos_or_panic!(0.73),  // close_fee_short
             pos_or_panic!(0.73),  // close_fee_short
             pos_or_panic!(0.72),  // open_fee_short
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
@@ -2004,7 +2006,8 @@ mod tests_call_butterfly_position_management {
             pos_or_panic!(0.73),  // close_fee_short
             pos_or_panic!(0.73),  // close_fee_short
             pos_or_panic!(0.72),  // open_fee_short
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
@@ -2187,7 +2190,8 @@ mod tests_adjust_option_position {
             pos_or_panic!(0.73),  // close_fee_short
             pos_or_panic!(0.73),  // close_fee_short
             pos_or_panic!(0.72),  // open_fee_short
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
@@ -2495,7 +2499,8 @@ mod tests_call_butterfly_pnl {
             pos_or_panic!(0.1),
             pos_or_panic!(0.1),
             pos_or_panic!(0.1),
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     fn create_test_call_butterfly() -> Result<CallButterfly, StrategyError> {

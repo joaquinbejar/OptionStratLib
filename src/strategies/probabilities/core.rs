@@ -150,13 +150,9 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
 
         let step = self.get_underlying_price() / 100.0;
         let range = self.get_best_range_to_show(step)?;
-        let expiration = *self
-            .get_expiration()
-            .values()
-            .next()
-            .ok_or_else(|| {
-                StrategyError::empty_collection("expected_value: no expiration on strategy")
-            })?;
+        let expiration = *self.get_expiration().values().next().ok_or_else(|| {
+            StrategyError::empty_collection("expected_value: no expiration on strategy")
+        })?;
 
         let mut probabilities = Vec::with_capacity(range.len());
         let mut last_prob = Decimal::ZERO;
@@ -390,7 +386,8 @@ mod tests_probability_analysis {
             pos_or_panic!(0.58),  // close_fee_long
             pos_or_panic!(0.55),  // close_fee_short
             pos_or_panic!(0.54),  // open_fee_short
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
@@ -543,7 +540,8 @@ mod tests_expected_value {
             pos_or_panic!(0.58),  // close_fee_long
             pos_or_panic!(0.55),  // close_fee_short
             pos_or_panic!(0.54),  // open_fee_short
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]

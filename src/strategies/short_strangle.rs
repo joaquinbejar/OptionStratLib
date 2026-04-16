@@ -912,10 +912,7 @@ impl Optimizable for ShortStrangle {
                         return false;
                     };
                     let delta_put_positive = dp.abs();
-                    delta_put_positive > min
-                        && delta_put_positive < max
-                        && dc > min
-                        && dc < max
+                    delta_put_positive > min && delta_put_positive < max && dc > min && dc < max
                 }
                 FindOptimalSide::Center => {
                     short_put.is_valid_optimal_side(underlying_price, &FindOptimalSide::Lower)
@@ -941,11 +938,7 @@ impl Optimizable for ShortStrangle {
                 };
                 trace!("Legs: {:?}", legs);
                 match strategy.create_strategy(option_chain, &legs) {
-                    Ok(s) => {
-                        s.validate()
-                            && s.get_max_profit().is_ok()
-                            && s.get_max_loss().is_ok()
-                    }
+                    Ok(s) => s.validate() && s.get_max_profit().is_ok() && s.get_max_loss().is_ok(),
                     Err(_) => false,
                 }
             })
@@ -1368,7 +1361,8 @@ mod tests_short_strangle {
             pos_or_panic!(0.1),
             pos_or_panic!(0.1),
             pos_or_panic!(0.1),
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
@@ -1613,7 +1607,8 @@ mod tests_short_strangle_probability {
             Positive::ZERO,                            // close_fee_short_call
             Positive::ZERO,                            // open_fee_short_put
             Positive::ZERO,                            // close_fee_short_put
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
@@ -1750,7 +1745,8 @@ mod tests_short_strangle_probability_bis {
             Positive::ZERO,                            // close_fee_short_call
             Positive::ZERO,                            // open_fee_short_put
             Positive::ZERO,                            // close_fee_short_put
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
@@ -1889,7 +1885,8 @@ mod tests_short_strangle_delta {
             pos_or_panic!(7.01),  // close_fee_short_call
             pos_or_panic!(7.01),  // open_fee_short_put
             pos_or_panic!(7.01),  // close_fee_short_put
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
@@ -2078,7 +2075,8 @@ mod tests_short_strangle_delta_size {
             pos_or_panic!(7.01),  // close_fee_short_call
             pos_or_panic!(7.01),  // open_fee_short_put
             pos_or_panic!(7.01),  // close_fee_short_put
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
@@ -2412,7 +2410,8 @@ mod tests_adjust_option_position_short {
             pos_or_panic!(0.1),  // close_fee_short_call
             pos_or_panic!(0.1),  // open_fee_short_put
             pos_or_panic!(0.1),  // close_fee_short_put
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
@@ -3241,7 +3240,8 @@ mod test_adjustments_pnl {
             pos_or_panic!(7.01),  // close_fee_short_call
             pos_or_panic!(7.01),  // open_fee_short_put
             pos_or_panic!(7.01),  // close_fee_short_put
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
@@ -3381,7 +3381,8 @@ mod test_valid_premium_for_shorts {
             pos_or_panic!(7.01),  // close_fee_short_call
             pos_or_panic!(7.01),  // open_fee_short_put
             pos_or_panic!(7.01),  // close_fee_short_put
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
@@ -3421,7 +3422,8 @@ mod tests_strangle_position_management {
             pos_or_panic!(0.1),  // close_fee_short_call
             pos_or_panic!(0.1),  // open_fee_short_put
             pos_or_panic!(0.1),  // close_fee_short_put
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
@@ -3532,7 +3534,8 @@ mod tests_generate_delta_adjustments {
             pos_or_panic!(0.1),  // close_fee_short_call
             pos_or_panic!(0.1),  // open_fee_short_put
             pos_or_panic!(0.1),  // close_fee_short_put
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]

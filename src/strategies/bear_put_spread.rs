@@ -677,11 +677,7 @@ impl Optimizable for BearPutSpread {
                     second: long,
                 };
                 match strategy.create_strategy(option_chain, &legs) {
-                    Ok(s) => {
-                        s.validate()
-                            && s.get_max_profit().is_ok()
-                            && s.get_max_loss().is_ok()
-                    }
+                    Ok(s) => s.validate() && s.get_max_profit().is_ok() && s.get_max_loss().is_ok(),
                     Err(_) => false,
                 }
             })
@@ -941,7 +937,8 @@ mod tests_bear_put_spread_strategy {
             Positive::ZERO,                            // close_fee_long_put
             Positive::ZERO,                            // open_fee_short_put
             Positive::ZERO,                            // close_fee_short_put
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
@@ -1046,7 +1043,8 @@ mod tests_bear_put_spread_strategy {
             pos_or_panic!(0.5), // close_fee_long_put
             pos_or_panic!(0.5), // open_fee_short_put
             pos_or_panic!(0.5), // close_fee_short_put
-        ).unwrap();
+        )
+        .unwrap();
 
         assert_eq!(spread.get_fees().unwrap().to_f64(), 2.0); // Total fees = 0.5 * 4
     }
@@ -1095,7 +1093,8 @@ mod tests_bear_put_spread_strategy {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
-        ).unwrap();
+        )
+        .unwrap();
 
         assert_eq!(spread.long_put.option.strike_price, Positive::HUNDRED);
         assert_eq!(spread.short_put.option.strike_price, Positive::HUNDRED);
@@ -1119,7 +1118,8 @@ mod tests_bear_put_spread_strategy {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
-        ).unwrap();
+        )
+        .unwrap();
 
         let max_profit = spread.get_max_profit().unwrap();
         let max_loss = spread.get_max_loss().unwrap();
@@ -1453,7 +1453,8 @@ mod tests_bear_put_spread_optimization {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
@@ -1601,7 +1602,8 @@ mod tests_bear_put_spread_optimization {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
-        ).unwrap();
+        )
+        .unwrap();
 
         let chain = create_test_chain();
 
@@ -1699,7 +1701,8 @@ mod tests_bear_put_spread_optimizable {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
@@ -1900,7 +1903,8 @@ mod tests_bear_put_spread_profit {
             Positive::ZERO,                            // close_fee_long_put
             Positive::ZERO,                            // open_fee_short_put
             Positive::ZERO,                            // close_fee_short_put
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
@@ -2016,7 +2020,8 @@ mod tests_bear_put_spread_profit {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
-        ).unwrap();
+        )
+        .unwrap();
 
         let max_profit_price = pos_or_panic!(90.0);
         let max_loss_price = pos_or_panic!(110.0);
@@ -2053,7 +2058,8 @@ mod tests_bear_put_spread_profit {
             pos_or_panic!(0.5), // close_fee_long_put
             pos_or_panic!(0.5), // open_fee_short_put
             pos_or_panic!(0.5), // close_fee_short_put
-        ).unwrap();
+        )
+        .unwrap();
 
         let max_profit_price = pos_or_panic!(90.0);
 
@@ -2107,7 +2113,8 @@ mod tests_bear_put_spread_probability {
             Positive::ZERO,                            // close_fee_long_put
             Positive::ZERO,                            // open_fee_short_put
             Positive::ZERO,                            // close_fee_short_put
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
@@ -2253,7 +2260,8 @@ mod tests_bear_put_spread_graph {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
@@ -2296,7 +2304,8 @@ mod tests_delta {
             pos_or_panic!(0.78),  // open_fee_long
             pos_or_panic!(0.73),  // close_fee_long
             pos_or_panic!(0.73),  // close_fee_short
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
@@ -2441,7 +2450,8 @@ mod tests_delta_size {
             pos_or_panic!(0.78),  // open_fee_long
             pos_or_panic!(0.73),  // close_fee_long
             pos_or_panic!(0.73),  // close_fee_short
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
@@ -2586,7 +2596,8 @@ mod tests_bear_call_spread_position_management {
             pos_or_panic!(0.78),  // open_fee_long
             pos_or_panic!(0.73),  // close_fee_long
             pos_or_panic!(0.73),  // close_fee_short
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
@@ -2697,7 +2708,8 @@ mod tests_adjust_option_position {
             pos_or_panic!(0.78),  // open_fee_long
             pos_or_panic!(0.73),  // close_fee_long
             pos_or_panic!(0.73),  // close_fee_short
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]

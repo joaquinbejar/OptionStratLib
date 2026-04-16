@@ -683,11 +683,7 @@ impl Optimizable for BullCallSpread {
                     second: short,
                 };
                 match strategy.create_strategy(option_chain, &legs) {
-                    Ok(s) => {
-                        s.validate()
-                            && s.get_max_profit().is_ok()
-                            && s.get_max_loss().is_ok()
-                    }
+                    Ok(s) => s.validate() && s.get_max_profit().is_ok() && s.get_max_loss().is_ok(),
                     Err(_) => false,
                 }
             })
@@ -945,7 +941,8 @@ fn bull_call_spread_test() -> BullCallSpread {
         pos_or_panic!(0.78),  // open_fee_long
         pos_or_panic!(0.73),  // close_fee_long
         pos_or_panic!(0.73),  // close_fee_short
-    ).unwrap()
+    )
+    .unwrap()
 }
 
 #[cfg(test)]
@@ -1052,7 +1049,8 @@ mod tests_bull_call_spread_strategy {
             pos_or_panic!(0.5), // close_fee_long_call
             pos_or_panic!(0.5), // open_fee_short_call
             pos_or_panic!(0.5), // close_fee_short_call
-        ).unwrap();
+        )
+        .unwrap();
 
         assert_eq!(spread.get_fees().unwrap().to_f64(), 2.0);
     }
@@ -1098,7 +1096,8 @@ mod tests_bull_call_spread_strategy {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
-        ).unwrap();
+        )
+        .unwrap();
 
         assert_eq!(spread.long_call.option.strike_price, Positive::HUNDRED);
         assert_eq!(spread.short_call.option.strike_price, Positive::HUNDRED);
@@ -1122,7 +1121,8 @@ mod tests_bull_call_spread_strategy {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
-        ).unwrap();
+        )
+        .unwrap();
 
         assert!(!spread.validate());
     }
@@ -1454,7 +1454,8 @@ mod tests_bull_call_spread_optimization {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
@@ -1837,7 +1838,8 @@ mod tests_bull_call_spread_profit {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
-        ).unwrap();
+        )
+        .unwrap();
 
         let price = pos_or_panic!(105.0);
         assert_eq!(
@@ -1868,7 +1870,8 @@ mod tests_bull_call_spread_profit {
             pos_or_panic!(0.5), // close_fee_long_call
             pos_or_panic!(0.5), // open_fee_short_call
             pos_or_panic!(0.5), // close_fee_short_call
-        ).unwrap();
+        )
+        .unwrap();
 
         let price = pos_or_panic!(105.0);
         assert_eq!(
@@ -2098,7 +2101,8 @@ mod tests_bull_call_spread_probability {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
-        ).unwrap();
+        )
+        .unwrap();
 
         let result = spread.probability_of_profit(None, None);
         assert!(result.is_ok());
@@ -2125,7 +2129,8 @@ mod tests_bull_call_spread_probability {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
-        ).unwrap();
+        )
+        .unwrap();
 
         let result = spread.probability_of_profit(None, None);
         assert!(result.is_ok());
@@ -2166,7 +2171,8 @@ mod tests_delta {
             pos_or_panic!(0.78),  // open_fee_long
             pos_or_panic!(0.73),  // close_fee_long
             pos_or_panic!(0.73),  // close_fee_short
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
@@ -2311,7 +2317,8 @@ mod tests_delta_size {
             pos_or_panic!(0.78),  // open_fee_long
             pos_or_panic!(0.73),  // close_fee_long
             pos_or_panic!(0.73),  // close_fee_short
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
@@ -2451,7 +2458,8 @@ mod tests_bull_call_spread_position_management {
             pos_or_panic!(0.78),  // open_fee_long
             pos_or_panic!(0.73),  // close_fee_long
             pos_or_panic!(0.73),  // close_fee_short
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
@@ -2562,7 +2570,8 @@ mod tests_adjust_option_position {
             pos_or_panic!(0.78),  // open_fee_long
             pos_or_panic!(0.73),  // close_fee_long
             pos_or_panic!(0.73),  // close_fee_short
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]

@@ -787,11 +787,7 @@ impl Optimizable for BullPutSpread {
                     second: short_option,
                 };
                 match strategy.create_strategy(option_chain, &legs) {
-                    Ok(s) => {
-                        s.validate()
-                            && s.get_max_profit().is_ok()
-                            && s.get_max_loss().is_ok()
-                    }
+                    Ok(s) => s.validate() && s.get_max_profit().is_ok() && s.get_max_loss().is_ok(),
                     Err(_) => false,
                 }
             })
@@ -1046,7 +1042,8 @@ fn bull_put_spread_test() -> BullPutSpread {
         pos_or_panic!(0.78),  // open_fee_long
         pos_or_panic!(0.73),  // close_fee_long
         pos_or_panic!(0.73),  // close_fee_short
-    ).unwrap()
+    )
+    .unwrap()
 }
 
 #[cfg(test)]
@@ -1190,7 +1187,8 @@ mod tests_bull_put_spread_strategy {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
-        ).unwrap();
+        )
+        .unwrap();
 
         assert_eq!(spread.long_put.option.strike_price, Positive::HUNDRED);
         assert_eq!(spread.short_put.option.strike_price, Positive::HUNDRED);
@@ -1214,7 +1212,8 @@ mod tests_bull_put_spread_strategy {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
-        ).unwrap();
+        )
+        .unwrap();
 
         assert!(!spread.validate());
     }
@@ -1526,7 +1525,8 @@ mod tests_bull_put_spread_optimization {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
@@ -1849,7 +1849,8 @@ mod tests_bull_put_spread_profit {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
-        ).unwrap();
+        )
+        .unwrap();
 
         let price = pos_or_panic!(85.0);
         assert_eq!(
@@ -1916,7 +1917,8 @@ mod tests_bull_put_spread_probability {
             Positive::ZERO,                            // close_fee_long_put
             Positive::ZERO,                            // open_fee_short_put
             Positive::ZERO,                            // close_fee_short_put
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
@@ -2066,7 +2068,8 @@ mod tests_delta {
             pos_or_panic!(0.78),  // open_fee_long
             pos_or_panic!(0.73),  // close_fee_long
             pos_or_panic!(0.73),  // close_fee_short
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
@@ -2209,7 +2212,8 @@ mod tests_delta_size {
             pos_or_panic!(0.78),  // open_fee_long
             pos_or_panic!(0.73),  // close_fee_long
             pos_or_panic!(0.73),  // close_fee_short
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
@@ -2349,7 +2353,8 @@ mod tests_bear_call_spread_position_management {
             pos_or_panic!(0.78),  // open_fee_long
             pos_or_panic!(0.73),  // close_fee_long
             pos_or_panic!(0.73),  // close_fee_short
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
@@ -2460,7 +2465,8 @@ mod tests_adjust_option_position {
             pos_or_panic!(0.78),  // open_fee_long
             pos_or_panic!(0.73),  // close_fee_long
             pos_or_panic!(0.73),  // close_fee_short
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]

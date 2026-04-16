@@ -679,11 +679,7 @@ impl Optimizable for BearCallSpread {
                     second: long_option,
                 };
                 match strategy.create_strategy(option_chain, &legs) {
-                    Ok(s) => {
-                        s.validate()
-                            && s.get_max_profit().is_ok()
-                            && s.get_max_loss().is_ok()
-                    }
+                    Ok(s) => s.validate() && s.get_max_profit().is_ok() && s.get_max_loss().is_ok(),
                     Err(_) => false,
                 }
             })
@@ -939,7 +935,8 @@ mod tests_bear_call_spread_strategies {
             pos_or_panic!(0.5),                        // close_fee_short_call
             pos_or_panic!(0.5),                        // open_fee_long_call
             pos_or_panic!(0.5),                        // close_fee_long_call
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
@@ -1110,7 +1107,8 @@ mod tests_bear_call_spread_strategies {
             pos_or_panic!(0.5),
             pos_or_panic!(0.5),
             pos_or_panic!(0.5),
-        ).unwrap();
+        )
+        .unwrap();
 
         // Check that all calculations scale properly with quantity
         assert_relative_eq!(
@@ -1143,7 +1141,8 @@ mod tests_bear_call_spread_strategies {
             pos_or_panic!(0.5),
             pos_or_panic!(0.5),
             pos_or_panic!(0.5),
-        ).unwrap();
+        )
+        .unwrap();
 
         // Check that strike width affects max loss calculation
         let base_spread = create_test_spread();
@@ -1211,7 +1210,8 @@ mod tests_bear_call_spread_positionable {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
-        ).unwrap();
+        )
+        .unwrap();
 
         let short_position = create_test_position(Side::Short);
         let result = spread.add_position(&short_position);
@@ -1238,7 +1238,8 @@ mod tests_bear_call_spread_positionable {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
-        ).unwrap();
+        )
+        .unwrap();
 
         let long_position = create_test_position(Side::Long);
         let result = spread.add_position(&long_position);
@@ -1265,7 +1266,8 @@ mod tests_bear_call_spread_positionable {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
-        ).unwrap();
+        )
+        .unwrap();
 
         let result = spread.get_positions();
         assert!(result.is_ok());
@@ -1294,7 +1296,8 @@ mod tests_bear_call_spread_positionable {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
-        ).unwrap();
+        )
+        .unwrap();
 
         let short_position = create_test_position(Side::Short);
         let long_position = create_test_position(Side::Long);
@@ -1324,7 +1327,8 @@ mod tests_bear_call_spread_positionable {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
-        ).unwrap();
+        )
+        .unwrap();
 
         // Create new positions
         let new_short = create_test_position(Side::Short);
@@ -1353,7 +1357,8 @@ mod tests_bear_call_spread_positionable {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
-        ).unwrap();
+        )
+        .unwrap();
 
         let short_position = create_test_position(Side::Short);
         let long_position = create_test_position(Side::Long);
@@ -1399,7 +1404,8 @@ mod tests_bear_call_spread_validable {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
@@ -1426,7 +1432,8 @@ mod tests_bear_call_spread_validable {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
-        ).unwrap();
+        )
+        .unwrap();
         assert!(!spread.validate());
     }
 
@@ -1448,7 +1455,8 @@ mod tests_bear_call_spread_validable {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
-        ).unwrap();
+        )
+        .unwrap();
         assert!(!spread.validate());
     }
 
@@ -1487,7 +1495,8 @@ mod tests_bear_call_spread_validable {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
-        ).unwrap();
+        )
+        .unwrap();
         assert!(!spread.validate());
     }
 
@@ -1509,7 +1518,8 @@ mod tests_bear_call_spread_validable {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
-        ).unwrap();
+        )
+        .unwrap();
         assert!(!spread.validate());
     }
 
@@ -1531,7 +1541,8 @@ mod tests_bear_call_spread_validable {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
-        ).unwrap();
+        )
+        .unwrap();
         // Should still be valid as long as strikes are different
         assert!(spread.validate());
     }
@@ -1554,7 +1565,8 @@ mod tests_bear_call_spread_validable {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
-        ).unwrap();
+        )
+        .unwrap();
         // Should be valid as quantity > 0
         assert!(spread.validate());
     }
@@ -1589,7 +1601,8 @@ mod tests_bear_call_spread_profit {
             Positive::ZERO,                            // close_fee_short_call
             Positive::ZERO,                            // open_fee_long_call
             Positive::ZERO,                            // close_fee_long_call
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
@@ -1696,7 +1709,8 @@ mod tests_bear_call_spread_profit {
             Positive::ZERO, // close_fee_short_call
             Positive::ZERO, // open_fee_long_call
             Positive::ZERO, // close_fee_long_call
-        ).unwrap();
+        )
+        .unwrap();
 
         let profit = spread
             .calculate_profit_at(&pos_or_panic!(90.0))
@@ -1735,7 +1749,8 @@ mod tests_bear_call_spread_profit {
             pos_or_panic!(0.78),  // open_fee_long
             pos_or_panic!(0.73),  // close_fee_long
             pos_or_panic!(0.73),  // close_fee_short
-        ).unwrap();
+        )
+        .unwrap();
 
         let profit = spread
             .calculate_profit_at(&pos_or_panic!(90.0))
@@ -1837,7 +1852,8 @@ mod tests_bear_call_spread_optimizable {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
@@ -2067,7 +2083,8 @@ mod tests_bear_call_spread_graph {
             Positive::ZERO, // close_fee_short_call
             Positive::ZERO, // open_fee_long_call
             Positive::ZERO, // close_fee_long_call
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
@@ -2105,7 +2122,8 @@ mod tests_bear_call_spread_probability {
             pos_or_panic!(0.78),  // open_fee_long
             pos_or_panic!(0.73),  // close_fee_long
             pos_or_panic!(0.73),  // close_fee_short
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
@@ -2255,7 +2273,8 @@ mod tests_delta {
             pos_or_panic!(0.78),  // open_fee_long
             pos_or_panic!(0.73),  // close_fee_long
             pos_or_panic!(0.73),  // close_fee_short
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
@@ -2401,7 +2420,8 @@ mod tests_delta_size {
             pos_or_panic!(0.78),  // open_fee_long
             pos_or_panic!(0.73),  // close_fee_long
             pos_or_panic!(0.73),  // close_fee_short
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
@@ -2545,7 +2565,8 @@ mod tests_bear_call_spread_position_management {
             pos_or_panic!(0.78),  // open_fee_long
             pos_or_panic!(0.73),  // close_fee_long
             pos_or_panic!(0.73),  // close_fee_short
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
@@ -2657,7 +2678,8 @@ mod tests_adjust_option_position_short {
             pos_or_panic!(0.78),  // open_fee_long
             pos_or_panic!(0.73),  // close_fee_long
             pos_or_panic!(0.73),  // close_fee_short
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]

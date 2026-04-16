@@ -699,11 +699,7 @@ impl Optimizable for ShortStraddle {
                     second: both,
                 };
                 match strategy.create_strategy(option_chain, &legs) {
-                    Ok(s) => {
-                        s.validate()
-                            && s.get_max_profit().is_ok()
-                            && s.get_max_loss().is_ok()
-                    }
+                    Ok(s) => s.validate() && s.get_max_profit().is_ok() && s.get_max_loss().is_ok(),
                     Err(_) => false,
                 }
             })
@@ -994,7 +990,8 @@ mod tests_short_straddle {
             pos_or_panic!(0.1),
             pos_or_panic!(0.1),
             pos_or_panic!(0.1),
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
@@ -1015,7 +1012,8 @@ mod tests_short_straddle {
             pos_or_panic!(0.1),
             pos_or_panic!(0.1),
             pos_or_panic!(0.1),
-        ).unwrap();
+        )
+        .unwrap();
 
         assert_eq!(
             strategy.short_call.option.strike_price, underlying_price,
@@ -1069,7 +1067,8 @@ mod tests_short_straddle {
             pos_or_panic!(0.1),
             pos_or_panic!(0.1),
             pos_or_panic!(0.1),
-        ).unwrap();
+        )
+        .unwrap();
         assert!(valid_strategy.validate());
         assert_eq!(
             valid_strategy.short_call.option.strike_price,
@@ -1303,7 +1302,8 @@ mod tests_short_straddle_probability {
             Positive::ZERO,                            // close_fee_short_call
             Positive::ZERO,                            // open_fee_short_put
             Positive::ZERO,                            // close_fee_short_put
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
@@ -1438,7 +1438,8 @@ mod tests_short_straddle_probability_bis {
             Positive::ZERO,                            // close_fee_short_call
             Positive::ZERO,                            // open_fee_short_put
             Positive::ZERO,                            // close_fee_short_put
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
@@ -1575,7 +1576,8 @@ mod tests_short_straddle_delta {
             pos_or_panic!(7.01),   // close_fee_short_call
             pos_or_panic!(7.01),   // open_fee_short_put
             pos_or_panic!(7.01),   // close_fee_short_put
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
@@ -1718,7 +1720,8 @@ mod tests_short_straddle_delta_size {
             pos_or_panic!(7.01),   // close_fee_short_call
             pos_or_panic!(7.01),   // open_fee_short_put
             pos_or_panic!(7.01),   // close_fee_short_put
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
@@ -2155,7 +2158,8 @@ mod tests_straddle_position_management {
             pos_or_panic!(0.1), // close_fee_short_call
             pos_or_panic!(0.1), // open_fee_short_put
             pos_or_panic!(0.1), // close_fee_short_put
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
@@ -2265,7 +2269,8 @@ mod tests_adjust_option_position {
             pos_or_panic!(0.1), // close_fee_short_call
             pos_or_panic!(0.1), // open_fee_short_put
             pos_or_panic!(0.1), // close_fee_short_put
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]

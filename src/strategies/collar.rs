@@ -858,7 +858,8 @@ mod tests {
             pos_or_panic!(0.65), // put close fee
             pos_or_panic!(0.65), // call open fee
             pos_or_panic!(0.65), // call close fee
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
