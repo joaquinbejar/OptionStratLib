@@ -32,7 +32,7 @@ fn main() -> Result<(), Error> {
         pos_or_panic!(7.01),
         pos_or_panic!(7.01),
         pos_or_panic!(7.01),
-    );
+    )?;
 
     info!("=== ShortStrangle Extended Delta Analysis ===");
     info!("Title: {}", strategy.get_title());

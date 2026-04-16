@@ -1496,7 +1496,8 @@ mod tests_serialization {
             pos_or_panic!(7.01),   // close_fee_short_call
             pos_or_panic!(7.01),   // open_fee_short_put
             pos_or_panic!(7.01),   // close_fee_short_put
-        );
+        )
+        .unwrap();
         let delta_info = strategy.delta_neutrality().unwrap();
         let adjustments = strategy.delta_adjustments().unwrap();
         let response = DeltaNeutralResponse {

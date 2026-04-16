@@ -146,6 +146,13 @@ impl ShortStrangle {
     /// The strategy has two break-even points:
     /// - Lower break-even: Put strike minus the total premium received per contract
     /// - Upper break-even: Call strike plus the total premium received per contract
+    ///
+    /// # Errors
+    ///
+    /// Returns `StrategyError` if either freshly-constructed leg cannot be
+    /// added to the strategy or if the break-even calculation fails. In
+    /// practice these branches are unreachable for a freshly-built
+    /// strangle and are surfaced only to keep the constructor panic-free.
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         underlying_symbol: String,
@@ -164,7 +171,7 @@ impl ShortStrangle {
         close_fee_short_call: Positive,
         open_fee_short_put: Positive,
         close_fee_short_put: Positive,
-    ) -> Self {
+    ) -> Result<Self, StrategyError> {
         if call_strike == Positive::ZERO {
             call_strike = underlying_price * 1.1;
         }
@@ -203,9 +210,7 @@ impl ShortStrangle {
             None,
             None,
         );
-        strategy
-            .add_position(&short_call)
-            .expect("Invalid position");
+        strategy.add_position(&short_call)?;
 
         let short_put_option = Options::new(
             OptionType::European,
@@ -230,12 +235,10 @@ impl ShortStrangle {
             None,
             None,
         );
-        strategy.add_position(&short_put).expect("Invalid position");
+        strategy.add_position(&short_put)?;
 
-        strategy
-            .update_break_even_points()
-            .expect("Unable to update break even points");
-        strategy
+        strategy.update_break_even_points()?;
+        Ok(strategy)
     }
 }
 
@@ -253,11 +256,12 @@ impl StrategyConstructor for ShortStrangle {
 
         // Sort options by option style to identify call and put
         let mut sorted_positions = vec_positions.to_vec();
+        // SAFETY: total order on Positive; f64 fallback to Equal is safe for stable sort
         sorted_positions.sort_by(|a, b| {
             a.option
                 .strike_price
                 .partial_cmp(&b.option.strike_price)
-                .unwrap()
+                .unwrap_or(std::cmp::Ordering::Equal)
         });
 
         let put_position = &sorted_positions[0]; // Put will be first
@@ -683,7 +687,7 @@ impl Strategies for ShortStrangle {
     }
 
     fn get_max_profit(&self) -> Result<Positive, StrategyError> {
-        let max_profit = self.get_net_premium_received().unwrap().to_f64();
+        let max_profit = self.get_net_premium_received()?.to_f64();
         if max_profit < ZERO {
             Err(StrategyError::ProfitLossError(
                 ProfitLossErrorKind::MaxProfitError {
@@ -710,7 +714,7 @@ impl Strategies for ShortStrangle {
         let outer_square = break_even_diff * max_profit;
         let triangles = (outer_square - inner_square) / 2.0;
         let result = ((inner_square + triangles) / self.one_option().underlying_price).to_f64();
-        Ok(Decimal::from_f64(result).unwrap())
+        Decimal::from_f64(result).ok_or_else(|| StrategyError::numeric_conversion(result))
     }
 
     fn get_profit_ratio(&self) -> Result<Decimal, StrategyError> {
@@ -719,7 +723,7 @@ impl Strategies for ShortStrangle {
             Ok(max_profit) => max_profit.to_f64() / break_even_diff * 100.0,
             Err(_) => ZERO,
         };
-        Ok(Decimal::from_f64(result).unwrap())
+        Decimal::from_f64(result).ok_or_else(|| StrategyError::numeric_conversion(result))
     }
 
     fn get_best_range_to_show(&self, step: Positive) -> Result<Vec<Positive>, StrategyError> {
@@ -880,12 +884,19 @@ impl Optimizable for ShortStrangle {
                     let (_, delta_put) = short_put.current_deltas();
                     let (delta_call, _) = short_call.current_deltas();
 
-                    let is_valid = delta_put.unwrap() >= -delta.to_dec()
-                        && delta_call.unwrap() <= delta.to_dec()
-                        && delta_put.unwrap().is_sign_negative()
-                        && delta_call.unwrap().is_sign_positive()
-                        && !delta_call.unwrap().is_zero()
-                        && !delta_put.unwrap().is_zero();
+                    let (Some(dp), Some(dc)) = (delta_put, delta_call) else {
+                        trace!(
+                            "Missing delta on PUT {:?} or CALL {:?}",
+                            delta_put, delta_call
+                        );
+                        return false;
+                    };
+                    let is_valid = dp >= -delta.to_dec()
+                        && dc <= delta.to_dec()
+                        && dp.is_sign_negative()
+                        && dc.is_sign_positive()
+                        && !dc.is_zero()
+                        && !dp.is_zero();
                     if !is_valid {
                         trace!(
                             "Not Valid Delta combination: PUT {:?} and CALL {:?}",
@@ -897,11 +908,14 @@ impl Optimizable for ShortStrangle {
                 FindOptimalSide::DeltaRange(min, max) => {
                     let (_, delta_put) = short_put.current_deltas();
                     let (delta_call, _) = short_call.current_deltas();
-                    let delta_put_positive = delta_put.unwrap().abs();
+                    let (Some(dp), Some(dc)) = (delta_put, delta_call) else {
+                        return false;
+                    };
+                    let delta_put_positive = dp.abs();
                     delta_put_positive > min
                         && delta_put_positive < max
-                        && delta_call.unwrap() > min
-                        && delta_call.unwrap() < max
+                        && dc > min
+                        && dc < max
                 }
                 FindOptimalSide::Center => {
                     short_put.is_valid_optimal_side(underlying_price, &FindOptimalSide::Lower)
@@ -981,9 +995,16 @@ impl Optimizable for ShortStrangle {
                 }
             };
             // Calculate the current value based on the optimization criteria
-            let current_value = match criteria {
-                OptimizationCriteria::Ratio => strategy.get_profit_ratio().unwrap(),
-                OptimizationCriteria::Area => strategy.get_profit_area().unwrap(),
+            let metric = match criteria {
+                OptimizationCriteria::Ratio => strategy.get_profit_ratio(),
+                OptimizationCriteria::Area => strategy.get_profit_area(),
+            };
+            let current_value = match metric {
+                Ok(v) => v,
+                Err(e) => {
+                    warn!(error = %e, "skipping candidate with unscorable metric");
+                    continue;
+                }
             };
 
             if current_value > best_value {
@@ -1053,7 +1074,7 @@ impl Optimizable for ShortStrangle {
             )
         })?;
 
-        Ok(ShortStrangle::new(
+        ShortStrangle::new(
             chain.symbol.clone(),
             chain.underlying_price,
             call.strike_price,
@@ -1070,7 +1091,7 @@ impl Optimizable for ShortStrangle {
             self.short_call.close_fee,
             self.short_put.open_fee,
             self.short_put.close_fee,
-        ))
+        )
     }
 }
 
@@ -1241,8 +1262,8 @@ impl PnLCalculator for ShortStrangle {
                             PnL {
                                 realized: None,
                                 unrealized: None,
-                                initial_costs: position.total_cost().unwrap(),
-                                initial_income: position.premium_received().unwrap(),
+                                initial_costs: position.total_cost()?,
+                                initial_income: position.premium_received()?,
                                 date_time: Utc::now(),
                             }
                         }
@@ -1255,8 +1276,8 @@ impl PnLCalculator for ShortStrangle {
                             PnL {
                                 realized: None,
                                 unrealized: None,
-                                initial_costs: position.total_cost().unwrap(),
-                                initial_income: position.premium_received().unwrap(),
+                                initial_costs: position.total_cost()?,
+                                initial_income: position.premium_received()?,
                                 date_time: Utc::now(),
                             }
                         }
@@ -1275,15 +1296,15 @@ impl PnLCalculator for ShortStrangle {
                     match (side, option_style) {
                         (Side::Short, OptionStyle::Call) => {
                             let mut position = self.short_call.clone();
-                            position.option.side = Side::Long; // Sell the short call 
+                            position.option.side = Side::Long; // Sell the short call
                             position.option.quantity = *quantity;
                             position.option.strike_price = *strike;
 
                             PnL {
                                 realized: None,
                                 unrealized: None,
-                                initial_costs: position.total_cost().unwrap(),
-                                initial_income: position.premium_received().unwrap(),
+                                initial_costs: position.total_cost()?,
+                                initial_income: position.premium_received()?,
                                 date_time: Utc::now(),
                             }
                         }
@@ -1296,8 +1317,8 @@ impl PnLCalculator for ShortStrangle {
                             PnL {
                                 realized: None,
                                 unrealized: None,
-                                initial_costs: position.total_cost().unwrap(),
-                                initial_income: position.premium_received().unwrap(),
+                                initial_costs: position.total_cost()?,
+                                initial_income: position.premium_received()?,
                                 date_time: Utc::now(),
                             }
                         }
@@ -1347,7 +1368,7 @@ mod tests_short_strangle {
             pos_or_panic!(0.1),
             pos_or_panic!(0.1),
             pos_or_panic!(0.1),
-        )
+        ).unwrap()
     }
 
     #[test]
@@ -1592,7 +1613,7 @@ mod tests_short_strangle_probability {
             Positive::ZERO,                            // close_fee_short_call
             Positive::ZERO,                            // open_fee_short_put
             Positive::ZERO,                            // close_fee_short_put
-        )
+        ).unwrap()
     }
 
     #[test]
@@ -1729,7 +1750,7 @@ mod tests_short_strangle_probability_bis {
             Positive::ZERO,                            // close_fee_short_call
             Positive::ZERO,                            // open_fee_short_put
             Positive::ZERO,                            // close_fee_short_put
-        )
+        ).unwrap()
     }
 
     #[test]
@@ -1868,7 +1889,7 @@ mod tests_short_strangle_delta {
             pos_or_panic!(7.01),  // close_fee_short_call
             pos_or_panic!(7.01),  // open_fee_short_put
             pos_or_panic!(7.01),  // close_fee_short_put
-        )
+        ).unwrap()
     }
 
     #[test]
@@ -2057,7 +2078,7 @@ mod tests_short_strangle_delta_size {
             pos_or_panic!(7.01),  // close_fee_short_call
             pos_or_panic!(7.01),  // open_fee_short_put
             pos_or_panic!(7.01),  // close_fee_short_put
-        )
+        ).unwrap()
     }
 
     #[test]
@@ -2391,7 +2412,7 @@ mod tests_adjust_option_position_short {
             pos_or_panic!(0.1),  // close_fee_short_call
             pos_or_panic!(0.1),  // open_fee_short_put
             pos_or_panic!(0.1),  // close_fee_short_put
-        )
+        ).unwrap()
     }
 
     #[test]
@@ -3220,7 +3241,7 @@ mod test_adjustments_pnl {
             pos_or_panic!(7.01),  // close_fee_short_call
             pos_or_panic!(7.01),  // open_fee_short_put
             pos_or_panic!(7.01),  // close_fee_short_put
-        )
+        ).unwrap()
     }
 
     #[test]
@@ -3360,7 +3381,7 @@ mod test_valid_premium_for_shorts {
             pos_or_panic!(7.01),  // close_fee_short_call
             pos_or_panic!(7.01),  // open_fee_short_put
             pos_or_panic!(7.01),  // close_fee_short_put
-        )
+        ).unwrap()
     }
 
     #[test]
@@ -3400,7 +3421,7 @@ mod tests_strangle_position_management {
             pos_or_panic!(0.1),  // close_fee_short_call
             pos_or_panic!(0.1),  // open_fee_short_put
             pos_or_panic!(0.1),  // close_fee_short_put
-        )
+        ).unwrap()
     }
 
     #[test]
@@ -3511,7 +3532,7 @@ mod tests_generate_delta_adjustments {
             pos_or_panic!(0.1),  // close_fee_short_call
             pos_or_panic!(0.1),  // open_fee_short_put
             pos_or_panic!(0.1),  // close_fee_short_put
-        )
+        ).unwrap()
     }
 
     #[test]
