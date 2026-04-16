@@ -31,7 +31,7 @@ fn test_iron_butterfly_integration() -> Result<(), Box<dyn Error>> {
         pos_or_panic!(16.8),   // premium_long_put
         pos_or_panic!(0.96),   // open_fee
         pos_or_panic!(0.96),   // close_fee
-    );
+    )?;
 
     let greeks = strategy.greeks().unwrap();
     let epsilon = dec!(0.001);

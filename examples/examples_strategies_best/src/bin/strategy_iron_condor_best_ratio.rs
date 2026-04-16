@@ -25,7 +25,7 @@ fn main() -> Result<(), Error> {
         Positive::ZERO, // premium_long_put
         Positive::ONE,  // open_fee
         Positive::ONE,  // close_fee
-    );
+    )?;
 
     strategy.get_best_ratio(&option_chain, FindOptimalSide::All);
     debug!("Option Chain: {}", option_chain);

@@ -33,7 +33,7 @@ fn main() -> Result<(), Error> {
         pos_or_panic!(16.8),
         pos_or_panic!(0.96),
         pos_or_panic!(0.96),
-    );
+    )?;
 
     info!("=== IronCondor Extended Delta Analysis ===");
     info!("Title: {}", strategy.get_title());

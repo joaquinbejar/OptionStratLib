@@ -108,9 +108,12 @@ impl CustomStrategy {
     /// maximum profit, and maximum loss information.
     ///
     /// # Panics
-    /// Panics if the strategy validation fails or if break-even points cannot be calculated.
-    /// This typically occurs when the strategy has no positions or when the maximum loss point
-    /// cannot be determined.
+    /// Panics if the strategy validation fails (no positions). This is owned
+    /// by issue #292 and will be lifted to a `Result` variant separately.
+    ///
+    /// # Errors
+    ///
+    /// Returns `StrategyError` if the break-even calculation fails.
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         name: String,
@@ -121,7 +124,7 @@ impl CustomStrategy {
         epsilon: Positive,
         max_iterations: u32,
         step_by: Positive,
-    ) -> Self {
+    ) -> Result<Self, StrategyError> {
         let mut strategy = CustomStrategy {
             name,
             symbol,
@@ -140,10 +143,8 @@ impl CustomStrategy {
         if strategy.positions.is_empty() {
             panic!("Invalid strategy: No positions provided");
         }
-        strategy
-            .update_break_even_points()
-            .expect("Unable to update break even points");
-        strategy
+        strategy.update_break_even_points()?;
+        Ok(strategy)
     }
 
     fn update_positions(&mut self, new_positions: Vec<Position>) {
@@ -209,14 +210,17 @@ impl CustomStrategy {
         Ok(prices)
     }
 
-    /// Refine a break-even point guess using Newton-Raphson method
+    /// Refine a break-even point guess using Newton-Raphson method.
+    ///
+    /// Returns `None` instead of panicking if any per-iteration profit
+    /// evaluation or `Decimal -> f64` conversion fails.
     #[allow(dead_code)]
     fn refine_break_even_point(&self, initial_guess: Positive) -> Option<Positive> {
         let mut x = initial_guess;
         let mut iterations = 0;
 
         while iterations < self.max_iterations {
-            let f_x = self.calculate_profit_at(&x).unwrap().to_f64().unwrap();
+            let f_x = self.calculate_profit_at(&x).ok()?.to_f64()?;
 
             // Check if we're close enough to zero
             if f_x.abs() < self.epsilon {
@@ -224,15 +228,9 @@ impl CustomStrategy {
             }
 
             // Calculate derivative numerically with smaller step
-            let f_x = self.calculate_profit_at(&x).unwrap().to_f64().unwrap();
             let h = self.epsilon.sqrt();
-            let derivative = (self
-                .calculate_profit_at(&(x + h))
-                .unwrap()
-                .to_f64()
-                .unwrap()
-                - f_x)
-                / h;
+            let f_x_h = self.calculate_profit_at(&(x + h)).ok()?.to_f64()?;
+            let derivative = (f_x_h - f_x) / h;
 
             // Avoid division by very small numbers
             if derivative.abs() < self.epsilon {
@@ -342,7 +340,7 @@ impl CustomStrategy {
 
 impl StrategyConstructor for CustomStrategy {
     fn get_strategy(vec_options: &[Position]) -> Result<Self, StrategyError> {
-        Ok(Self::new(
+        Self::new(
             "CustomStrategy".to_string(),
             "".to_string(),
             format!("CustomStrategy: {:?}", vec_options),
@@ -351,7 +349,7 @@ impl StrategyConstructor for CustomStrategy {
             Default::default(),
             100,
             Default::default(),
-        ))
+        )
     }
 }
 
@@ -444,7 +442,11 @@ impl Positionable for CustomStrategy {
                 "Position not found: {:?} {:?}",
                 option_style, side
             ))),
-            1 => Ok(matching_positions.into_iter().next().unwrap()),
+            1 => matching_positions.into_iter().next().ok_or_else(|| {
+                PositionError::invalid_position(
+                    "matching_positions length is 1 but iterator yielded none",
+                )
+            }),
             _ => Err(PositionError::invalid_position(&format!(
                 "Multiple positions found: {:?} {:?}",
                 option_style, side
@@ -802,9 +804,16 @@ impl Optimizable for CustomStrategy {
 
             // Evaluate the current combination
             self.update_positions(current_positions.clone());
-            let current_value = match criteria {
-                OptimizationCriteria::Ratio => self.get_profit_ratio().unwrap(),
-                OptimizationCriteria::Area => self.get_profit_area().unwrap(),
+            let metric = match criteria {
+                OptimizationCriteria::Ratio => self.get_profit_ratio(),
+                OptimizationCriteria::Area => self.get_profit_area(),
+            };
+            let current_value = match metric {
+                Ok(v) => v,
+                Err(e) => {
+                    tracing::warn!(error = %e, "skipping candidate with unscorable metric");
+                    return best_positions.clone();
+                }
             };
 
             if current_value > best_value {
@@ -814,8 +823,10 @@ impl Optimizable for CustomStrategy {
             }
 
             best_positions.clone()
-        })
-        .unwrap();
+        });
+        if let Err(e) = _result {
+            tracing::warn!(error = ?e, "process_n_times_iter failed during find_optimal");
+        }
 
         if best_value == Decimal::MIN {
             error!("No valid combinations found");
@@ -860,20 +871,18 @@ impl ProbabilityAnalysis for CustomStrategy {
             .first()
             .map(|position| position.option.risk_free_rate);
 
-        profit_ranges.iter_mut().for_each(|range| {
-            range
-                .calculate_probability(
-                    &self.underlying_price,
-                    Some(VolatilityAdjustment {
-                        base_volatility: mean_volatility,
-                        std_dev_adjustment: std_dev,
-                    }),
-                    None, // PriceTrend
-                    &expiration,
-                    risk_free_rate,
-                )
-                .unwrap();
-        });
+        for range in profit_ranges.iter_mut() {
+            range.calculate_probability(
+                &self.underlying_price,
+                Some(VolatilityAdjustment {
+                    base_volatility: mean_volatility,
+                    std_dev_adjustment: std_dev,
+                }),
+                None, // PriceTrend
+                &expiration,
+                risk_free_rate,
+            )?;
+        }
 
         Ok(profit_ranges)
     }
@@ -899,20 +908,18 @@ impl ProbabilityAnalysis for CustomStrategy {
             .first()
             .map(|position| position.option.risk_free_rate);
 
-        loss_ranges.iter_mut().for_each(|range| {
-            range
-                .calculate_probability(
-                    &self.underlying_price,
-                    Some(VolatilityAdjustment {
-                        base_volatility: mean_volatility,
-                        std_dev_adjustment: std_dev,
-                    }),
-                    None, // PriceTrend
-                    &expiration,
-                    risk_free_rate,
-                )
-                .unwrap();
-        });
+        for range in loss_ranges.iter_mut() {
+            range.calculate_probability(
+                &self.underlying_price,
+                Some(VolatilityAdjustment {
+                    base_volatility: mean_volatility,
+                    std_dev_adjustment: std_dev,
+                }),
+                None, // PriceTrend
+                &expiration,
+                risk_free_rate,
+            )?;
+        }
 
         Ok(loss_ranges)
     }
@@ -937,30 +944,23 @@ impl PnLCalculator for CustomStrategy {
         expiration_date: ExpirationDate,
         implied_volatility: &Positive,
     ) -> Result<PnL, PricingError> {
-        Ok(self
-            .positions
-            .iter()
-            .map(|position| {
-                position
-                    .calculate_pnl(market_price, expiration_date, implied_volatility)
-                    .unwrap()
-            })
-            .sum())
+        let mut total = PnL::default();
+        for position in &self.positions {
+            total = total
+                + position.calculate_pnl(market_price, expiration_date, implied_volatility)?;
+        }
+        Ok(total)
     }
 
     fn calculate_pnl_at_expiration(
         &self,
         underlying_price: &Positive,
     ) -> Result<PnL, PricingError> {
-        Ok(self
-            .positions
-            .iter()
-            .map(|position| {
-                position
-                    .calculate_pnl_at_expiration(underlying_price)
-                    .unwrap()
-            })
-            .sum())
+        let mut total = PnL::default();
+        for position in &self.positions {
+            total = total + position.calculate_pnl_at_expiration(underlying_price)?;
+        }
+        Ok(total)
     }
 
     fn adjustments_pnl(&self, adjustment: &DeltaAdjustment) -> Result<PnL, PricingError> {

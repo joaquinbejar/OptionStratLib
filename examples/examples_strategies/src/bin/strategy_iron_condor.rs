@@ -23,7 +23,7 @@ fn main() -> Result<(), Error> {
         pos_or_panic!(30.7), // premium_long_put
         pos_or_panic!(0.1),  // open_fee
         pos_or_panic!(0.1),  // close_fee
-    );
+    )?;
     if !strategy.validate() {
         return Err("Invalid strategy".into());
     }

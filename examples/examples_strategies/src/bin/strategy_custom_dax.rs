@@ -103,7 +103,8 @@ fn main() {
         Positive::ONE, // Default quantity
         1,             // days to expiration
         implied_volatility,
-    );
+    )
+    .unwrap();
 
     // Fees are already set in Position::new() above
 

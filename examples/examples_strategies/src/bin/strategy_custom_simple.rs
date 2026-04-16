@@ -73,7 +73,7 @@ fn main() -> Result<(), Error> {
         Default::default(),
         50, // Fewer calculation points for simplicity
         Default::default(),
-    );
+    )?;
 
     // Display strategy information
     info!("=== CUSTOM COVERED CALL STRATEGY ===");
