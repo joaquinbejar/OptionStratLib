@@ -416,15 +416,16 @@ where
                     .to_dec()
                     .sqrt()
                     .ok_or_else(|| SimulationError::other("Heston: sqrt(dt) failed (overflow)"))?;
+                // sqrt(1 - rho^2) depends only on `rho`, hoist out of the
+                // hot loop so we don't recompute it per step.
+                let one_minus_rho_sq_sqrt = (Decimal::ONE - rho * rho).sqrt().ok_or_else(|| {
+                    SimulationError::other(
+                        "Heston: sqrt(1 - rho^2) failed (rho out of range or overflow)",
+                    )
+                })?;
                 for _ in 0..params.size - 1 {
                     // Generate correlated random numbers
                     let z1 = decimal_normal_sample();
-                    let one_minus_rho_sq_sqrt =
-                        (Decimal::ONE - rho * rho).sqrt().ok_or_else(|| {
-                            SimulationError::other(
-                                "Heston: sqrt(1 - rho^2) failed (rho out of range or overflow)",
-                            )
-                        })?;
                     let z2 = rho * z1 + one_minus_rho_sq_sqrt * decimal_normal_sample();
 
                     // Ensure variance stays positive (modified Euler scheme with truncation)

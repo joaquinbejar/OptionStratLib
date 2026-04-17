@@ -736,40 +736,43 @@ use positive::{pos_or_panic,Positive};
 use rust_decimal_macros::dec;
 use optionstratlib::greeks::Greeks;
 
-// Create a European call option
-let option = Options::new(
-    OptionType::European,
-    Side::Long,
-    "AAPL".to_string(),
-    pos_or_panic!(150.0),            // strike_price
-    ExpirationDate::Days(pos_or_panic!(30.0)),
-    pos_or_panic!(0.25),             // implied_volatility
-    Positive::ONE,              // quantity
-    pos_or_panic!(155.0),            // underlying_price
-    dec!(0.05),             // risk_free_rate
-    OptionStyle::Call,
-    pos_or_panic!(0.02),             // dividend_yield
-    None,                   // exotic_params
-);
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Create a European call option
+    let option = Options::new(
+        OptionType::European,
+        Side::Long,
+        "AAPL".to_string(),
+        pos_or_panic!(150.0),            // strike_price
+        ExpirationDate::Days(pos_or_panic!(30.0)),
+        pos_or_panic!(0.25),             // implied_volatility
+        Positive::ONE,              // quantity
+        pos_or_panic!(155.0),            // underlying_price
+        dec!(0.05),             // risk_free_rate
+        OptionStyle::Call,
+        pos_or_panic!(0.02),             // dividend_yield
+        None,                   // exotic_params
+    );
 
-// Calculate option price using Black-Scholes
-let price = option.calculate_price_black_scholes()?;
-tracing::info!("Option price: ${:.2}", price);
+    // Calculate option price using Black-Scholes
+    let price = option.calculate_price_black_scholes()?;
+    tracing::info!("Option price: ${:.2}", price);
 
-// Calculate Greeks for risk management
-let delta = option.delta()?;
-let gamma = option.gamma()?;
-let theta = option.theta()?;
-let vega = option.vega()?;
-let vanna = option.vanna()?;
-let vomma = option.vomma()?;
-let veta = option.veta()?;
-let charm = option.charm()?;
-let color = option.color()?;
-tracing::info!("Greeks - Delta: {:.4}, Gamma: {:.4}, Theta: {:.4},
-    Vega: {:.4}, Vanna: {:.4}, Vomma: {:.4}, Veta: {:.4}
-    Charm: {:.4}, Color: {:.4}",
-    delta, gamma, theta, vega, vanna, vomma, veta, charm, color);
+    // Calculate Greeks for risk management
+    let delta = option.delta()?;
+    let gamma = option.gamma()?;
+    let theta = option.theta()?;
+    let vega = option.vega()?;
+    let vanna = option.vanna()?;
+    let vomma = option.vomma()?;
+    let veta = option.veta()?;
+    let charm = option.charm()?;
+    let color = option.color()?;
+    tracing::info!("Greeks - Delta: {:.4}, Gamma: {:.4}, Theta: {:.4},
+        Vega: {:.4}, Vanna: {:.4}, Vomma: {:.4}, Veta: {:.4}
+        Charm: {:.4}, Color: {:.4}",
+        delta, gamma, theta, vega, vanna, vomma, veta, charm, color);
+    Ok(())
+}
 ```
 
 #### Working with Trading Strategies
@@ -864,79 +867,82 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 ```rust
 use optionstratlib::prelude::*;
 
-// Define common parameters
-let underlying_symbol = "DAX".to_string();
-let underlying_price = pos_or_panic!(24000.0);
-let expiration = ExpirationDate::Days(pos_or_panic!(30.0));
-let implied_volatility = pos_or_panic!(0.25);
-let risk_free_rate = dec!(0.05);
-let dividend_yield = pos_or_panic!(0.02);
-let fee = Positive::TWO;
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Define common parameters
+    let underlying_symbol = "DAX".to_string();
+    let underlying_price = pos_or_panic!(24000.0);
+    let expiration = ExpirationDate::Days(pos_or_panic!(30.0));
+    let implied_volatility = pos_or_panic!(0.25);
+    let risk_free_rate = dec!(0.05);
+    let dividend_yield = pos_or_panic!(0.02);
+    let fee = Positive::TWO;
 
-// Create a long put option
-let long_put_option = Options::new(
-    OptionType::European,
-    Side::Long,
-    underlying_symbol.clone(),
-    pos_or_panic!(24070.0), // strike
-    expiration.clone(),
-    implied_volatility,
-    Positive::ONE, // quantity
-    underlying_price,
-    risk_free_rate,
-    OptionStyle::Put,
-    dividend_yield,
-    None,
-);
-let long_put = Position::new(
-    long_put_option,
-    pos_or_panic!(150.0), // premium
-    Utc::now(),
-    fee,
-    fee,
-    None,
-    None,
-);
+    // Create a long put option
+    let long_put_option = Options::new(
+        OptionType::European,
+        Side::Long,
+        underlying_symbol.clone(),
+        pos_or_panic!(24070.0), // strike
+        expiration.clone(),
+        implied_volatility,
+        Positive::ONE, // quantity
+        underlying_price,
+        risk_free_rate,
+        OptionStyle::Put,
+        dividend_yield,
+        None,
+    );
+    let long_put = Position::new(
+        long_put_option,
+        pos_or_panic!(150.0), // premium
+        Utc::now(),
+        fee,
+        fee,
+        None,
+        None,
+    );
 
-// Create a long call option
-let long_call_option = Options::new(
-    OptionType::European,
-    Side::Long,
-    underlying_symbol.clone(),
-    pos_or_panic!(24030.0), // strike
-    expiration.clone(),
-    implied_volatility,
-    Positive::ONE, // quantity
-    underlying_price,
-    risk_free_rate,
-    OptionStyle::Call,
-    dividend_yield,
-    None,
-);
-let long_call = Position::new(
-    long_call_option,
-    pos_or_panic!(120.0), // premium
-    Utc::now(),
-    fee,
-    fee,
-    None,
-    None,
-);
+    // Create a long call option
+    let long_call_option = Options::new(
+        OptionType::European,
+        Side::Long,
+        underlying_symbol.clone(),
+        pos_or_panic!(24030.0), // strike
+        expiration.clone(),
+        implied_volatility,
+        Positive::ONE, // quantity
+        underlying_price,
+        risk_free_rate,
+        OptionStyle::Call,
+        dividend_yield,
+        None,
+    );
+    let long_call = Position::new(
+        long_call_option,
+        pos_or_panic!(120.0), // premium
+        Utc::now(),
+        fee,
+        fee,
+        None,
+        None,
+    );
 
-// Create CustomStrategy with the positions
-let positions = vec![long_call, long_put];
-let strategy = CustomStrategy::new(
-    "DAX Straddle Strategy".to_string(),
-    underlying_symbol,
-    "A DAX long straddle strategy".to_string(),
-    underlying_price,
-    positions,
-    Positive::ONE,
-    30,
-    implied_volatility,
-)?;
+    // Create CustomStrategy with the positions
+    let positions = vec![long_call, long_put];
+    let strategy = CustomStrategy::new(
+        "DAX Straddle Strategy".to_string(),
+        underlying_symbol,
+        "A DAX long straddle strategy".to_string(),
+        underlying_price,
+        positions,
+        Positive::ONE,
+        30,
+        implied_volatility,
+    )?;
 
-tracing::info!("Strategy created: {}", strategy.get_title());
+    tracing::info!("Strategy created: {}", strategy.get_title());
+    Ok(())
+}
 ```
 
 ### Testing

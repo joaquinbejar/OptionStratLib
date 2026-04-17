@@ -238,7 +238,15 @@ pub fn get_color_from_scheme(scheme: &ColorScheme, idx: usize) -> Option<String>
             let color = colors.get(idx % colors.len())?;
             Some(color.to_string())
         }
-        ColorScheme::Custom(list) => list.get(idx % list.len()).cloned(),
+        ColorScheme::Custom(list) => {
+            // Guard against `Custom(Vec::new())` — `idx % 0` would
+            // otherwise panic on integer division by zero.
+            if list.is_empty() {
+                None
+            } else {
+                list.get(idx % list.len()).cloned()
+            }
+        }
         ColorScheme::White => Some("#FFFFFF".to_string()),
         ColorScheme::HighContrast => {
             let colors = vec![

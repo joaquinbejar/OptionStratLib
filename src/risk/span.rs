@@ -3,6 +3,7 @@
    Email: jb@taunais.com
    Date: 2/10/24
 ******************************************************************************/
+use crate::error::PricingError;
 use crate::model::position::Position;
 use positive::Positive;
 use rust_decimal::Decimal;
@@ -100,15 +101,25 @@ impl SPANMargin {
     /// * `position` - The option position for which to calculate margin requirements
     ///
     /// # Returns
-    /// * `Decimal` - The calculated margin requirement for the position
-    pub fn calculate_margin(&self, position: &Position) -> Decimal {
-        let risk_array = self.calculate_risk_array(position);
+    /// * `Result<Decimal, PricingError>` - The calculated margin
+    ///   requirement for the position, or the underlying Black-Scholes
+    ///   pricing error if any scenario fails to price. Returning a
+    ///   typed error rather than silently falling back to `ZERO`
+    ///   prevents margin underestimation.
+    ///
+    /// # Errors
+    ///
+    /// Returns the propagated `PricingError` from
+    /// `Options::calculate_price_black_scholes` if any scenario price
+    /// cannot be computed.
+    pub fn calculate_margin(&self, position: &Position) -> Result<Decimal, PricingError> {
+        let risk_array = self.calculate_risk_array(position)?;
         let short_option_minimum = self.calculate_short_option_minimum(position);
         // risk_array is structurally non-empty (price_scenarios x
         // volatility_scenarios is at least 1x1) so the max_by is
         // expected to succeed; the fallback to ZERO + warn is a
         // defensive guard rather than an expected error path.
-        risk_array
+        let max_loss = risk_array
             .into_iter()
             .max_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
             .unwrap_or_else(|| {
@@ -117,8 +128,8 @@ impl SPANMargin {
                     position.option.underlying_symbol
                 );
                 Decimal::ZERO
-            })
-            .max(short_option_minimum)
+            });
+        Ok(max_loss.max(short_option_minimum))
     }
 
     /// Calculates a risk array for a given position using SPAN (Standard Portfolio Analysis of Risk) methodology.
@@ -145,18 +156,18 @@ impl SPANMargin {
     /// # Example Use Case
     /// This is typically used in risk management systems to determine the appropriate
     /// margin requirements for option positions.
-    fn calculate_risk_array(&self, position: &Position) -> Vec<Decimal> {
+    fn calculate_risk_array(&self, position: &Position) -> Result<Vec<Decimal>, PricingError> {
         let mut risk_array = Vec::new();
         let option = &position.option;
         let price_scenarios = self.generate_price_scenarios(option.underlying_price);
         let volatility_scenarios = self.generate_volatility_scenarios(option.implied_volatility);
         for &price in &price_scenarios {
             for &volatility in &volatility_scenarios {
-                let scenario_loss = self.calculate_scenario_loss(position, price, volatility);
+                let scenario_loss = self.calculate_scenario_loss(position, price, volatility)?;
                 risk_array.push(scenario_loss);
             }
         }
-        risk_array
+        Ok(risk_array)
     }
 
     /// Generates a vector of price scenarios for risk analysis based on the underlying asset price.
@@ -229,31 +240,23 @@ impl SPANMargin {
         position: &Position,
         scenario_price: Positive,
         scenario_volatility: Positive,
-    ) -> Decimal {
+    ) -> Result<Decimal, PricingError> {
         let option = &position.option;
-        // BS pricing failure here would skew margin to ZERO for that
-        // scenario; we log and continue rather than poison the whole
-        // margin calculation with a panic.
-        let current_price = option.calculate_price_black_scholes().unwrap_or_else(|e| {
-            tracing::warn!("calculate_scenario_loss: current BS price failed: {e}; using 0");
-            Decimal::ZERO
-        });
+        // Propagate BS pricing errors instead of falling back to ZERO,
+        // which would underestimate margin requirements (Copilot review
+        // on PR #355).
+        let current_price = option.calculate_price_black_scholes()?;
         let mut scenario_option = option.clone();
         scenario_option.underlying_price = scenario_price;
         scenario_option.implied_volatility = scenario_volatility;
-        let scenario_price = scenario_option
-            .calculate_price_black_scholes()
-            .unwrap_or_else(|e| {
-                tracing::warn!("calculate_scenario_loss: scenario BS price failed: {e}; using 0");
-                Decimal::ZERO
-            });
-        (scenario_price - current_price)
+        let scenario_price = scenario_option.calculate_price_black_scholes()?;
+        Ok((scenario_price - current_price)
             * option.quantity
             * if option.is_short() {
                 Decimal::NEGATIVE_ONE
             } else {
                 Decimal::ONE
-            }
+            })
     }
 
     /// Calculates the minimum margin requirement for short option positions.
@@ -297,7 +300,7 @@ mod tests_span {
     use tracing::info;
 
     #[test]
-    fn test_span_margin() {
+    fn test_span_margin() -> Result<(), Box<dyn std::error::Error>> {
         let option = create_sample_option(
             OptionStyle::Call,
             Side::Short,
@@ -323,8 +326,9 @@ mod tests_span {
             dec!(0.1),  // volatility_scan_range (10%)
         );
 
-        let margin = span.calculate_margin(&position);
+        let margin = span.calculate_margin(&position)?;
         assert!(margin > Decimal::ZERO, "Margin should be positive");
         info!("Calculated margin: {}", margin);
+        Ok(())
     }
 }
