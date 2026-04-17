@@ -134,7 +134,10 @@ pub fn generator_optionchain(
         }
     };
     if y_steps.is_empty() {
-        return Ok(vec![]);
+        // Preserve the init-step invariant when the underlying walk produces
+        // no points (e.g., Historical with insufficient `prices`); downstream
+        // consumers expect at least the initial step to be present.
+        return Ok(vec![walk_params.init_step.clone()]);
     }
 
     let _ = y_steps.remove(0); // remove initial step from y_steps to avoid early return

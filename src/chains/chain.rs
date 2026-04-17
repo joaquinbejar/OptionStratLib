@@ -566,21 +566,9 @@ impl OptionChain {
         let strike_prices: Vec<Positive> =
             self.options.iter().map(|opt| opt.strike_price).collect();
 
-        if !strike_prices.is_empty() {
-            // Find the maximum distance from ATM in number of strikes
-            let min_strike = strike_prices
-                .iter()
-                .min()
-                .ok_or_else(|| ChainError::DynError {
-                    message: "strike_prices empty after non-empty check".to_string(),
-                })?;
-            let max_strike = strike_prices
-                .iter()
-                .max()
-                .ok_or_else(|| ChainError::DynError {
-                    message: "strike_prices empty after non-empty check".to_string(),
-                })?;
-
+        if let Some((min_strike, max_strike)) =
+            strike_prices.iter().min().zip(strike_prices.iter().max())
+        {
             let strikes_below = ((atm_strike.to_dec() - min_strike.to_dec())
                 / strike_interval.to_dec())
             .ceil()

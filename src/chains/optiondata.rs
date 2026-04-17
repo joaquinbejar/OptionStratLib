@@ -842,7 +842,9 @@ impl OptionData {
                 }
             }
             (Some(call_ask), Some(call_bid), None) => {
-                trace!("apply_spread: Call middle price is None, cannot apply spread");
+                trace!(
+                    "apply_spread: Call middle price is None; recomputing from bid/ask after applying spread"
+                );
                 let new_ask = (call_ask + half_spread).round_to(decimal_places);
                 let new_bid = call_bid.sub_or_zero(&half_spread).round_to(decimal_places);
                 self.call_ask = Some(new_ask);
@@ -876,7 +878,9 @@ impl OptionData {
                 }
             }
             (Some(put_ask), Some(put_bid), None) => {
-                trace!("apply_spread: Put middle price is None, cannot apply spread");
+                trace!(
+                    "apply_spread: Put middle price is None; recomputing from bid/ask after applying spread"
+                );
                 let new_ask = (put_ask + half_spread).round_to(decimal_places);
                 let new_bid = put_bid.sub_or_zero(&half_spread).round_to(decimal_places);
                 self.put_ask = Some(new_ask);
