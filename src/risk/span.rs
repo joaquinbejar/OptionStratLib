@@ -104,10 +104,20 @@ impl SPANMargin {
     pub fn calculate_margin(&self, position: &Position) -> Decimal {
         let risk_array = self.calculate_risk_array(position);
         let short_option_minimum = self.calculate_short_option_minimum(position);
+        // risk_array is structurally non-empty (price_scenarios x
+        // volatility_scenarios is at least 1x1) so the max_by is
+        // expected to succeed; the fallback to ZERO + warn is a
+        // defensive guard rather than an expected error path.
         risk_array
             .into_iter()
-            .max_by(|a, b| a.partial_cmp(b).unwrap())
-            .unwrap()
+            .max_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
+            .unwrap_or_else(|| {
+                tracing::warn!(
+                    "calculate_margin: empty risk_array for position {}; using ZERO",
+                    position.option.underlying_symbol
+                );
+                Decimal::ZERO
+            })
             .max(short_option_minimum)
     }
 
@@ -221,11 +231,22 @@ impl SPANMargin {
         scenario_volatility: Positive,
     ) -> Decimal {
         let option = &position.option;
-        let current_price = option.calculate_price_black_scholes().unwrap();
+        // BS pricing failure here would skew margin to ZERO for that
+        // scenario; we log and continue rather than poison the whole
+        // margin calculation with a panic.
+        let current_price = option.calculate_price_black_scholes().unwrap_or_else(|e| {
+            tracing::warn!("calculate_scenario_loss: current BS price failed: {e}; using 0");
+            Decimal::ZERO
+        });
         let mut scenario_option = option.clone();
         scenario_option.underlying_price = scenario_price;
         scenario_option.implied_volatility = scenario_volatility;
-        let scenario_price = scenario_option.calculate_price_black_scholes().unwrap();
+        let scenario_price = scenario_option
+            .calculate_price_black_scholes()
+            .unwrap_or_else(|e| {
+                tracing::warn!("calculate_scenario_loss: scenario BS price failed: {e}; using 0");
+                Decimal::ZERO
+            });
         (scenario_price - current_price)
             * option.quantity
             * if option.is_short() {

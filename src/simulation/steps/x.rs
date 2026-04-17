@@ -185,7 +185,7 @@ where
     ///
     /// A new `Xstep<T>` instance with updated index and datetime values.
     pub fn next(&self) -> Result<Self, SimulationError> {
-        let days = self.datetime.get_days().unwrap();
+        let days = self.datetime.get_days()?;
         if days == Positive::ZERO {
             return Err("Cannot generate next step. Expiration date is already reached.".into());
         }
@@ -222,7 +222,7 @@ where
     ///
     /// A new `Xstep<T>` instance with updated index and datetime values.
     pub fn previous(&self) -> Result<Self, SimulationError> {
-        let days = self.datetime.get_days().unwrap();
+        let days = self.datetime.get_days()?;
         let days_to_rest = convert_time_frame(
             self.step_size_in_time.try_into().map_err(|_| {
                 SimulationError::step_error("Failed to convert step size to Positive")

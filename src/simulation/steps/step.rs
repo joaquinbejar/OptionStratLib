@@ -179,7 +179,13 @@ where
     ///   until expiration. This value is extracted from the step's x-component's expiration date.
     ///
     pub fn get_graph_x_in_days_left(&self) -> Positive {
-        self.x.days_left().unwrap()
+        // Used by visualization; on error we fall back to ZERO so the
+        // chart renders the step at the rightmost edge instead of
+        // panicking. Underlying error logged for diagnostics.
+        self.x.days_left().unwrap_or_else(|e| {
+            tracing::warn!("get_graph_x_in_days_left: days_left failed: {e}; using 0");
+            Positive::ZERO
+        })
     }
 
     /// Returns the y-value prepared for graphing operations
