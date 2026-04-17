@@ -1,14 +1,15 @@
-use optionstratlib::simulation::steps::{Step, Xstep, Ystep};
-use optionstratlib::simulation::{WalkParams, WalkType, WalkTypeAble};
-use optionstratlib::simulation::randomwalk::RandomWalk;
-use optionstratlib::simulation::simulator::Simulator;
-use optionstratlib::visualization::Graph; // to exercise graph_data/graph_config
-use optionstratlib::ExpirationDate;use positive::Positive;
-use optionstratlib::utils::TimeFrame;
-use positive::pos_or_panic;
-use rust_decimal::Decimal;
 #![allow(irrefutable_let_patterns)]
 
+use optionstratlib::ExpirationDate;
+use optionstratlib::simulation::randomwalk::RandomWalk;
+use optionstratlib::simulation::simulator::Simulator;
+use optionstratlib::simulation::steps::{Step, Xstep, Ystep};
+use optionstratlib::simulation::{WalkParams, WalkType, WalkTypeAble};
+use optionstratlib::utils::TimeFrame;
+use optionstratlib::visualization::Graph; // to exercise graph_data/graph_config
+use positive::Positive;
+use positive::pos_or_panic;
+use rust_decimal::Decimal;
 use std::convert::Infallible;
 use std::error::Error;
 use std::fmt::Display;
