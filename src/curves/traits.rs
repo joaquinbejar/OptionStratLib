@@ -221,10 +221,7 @@ pub trait StatisticalCurve: MetricsExtractor {
         let mut points = BTreeSet::new();
         for i in 0..num_points {
             let x_f = x_values[i].to_f64().ok_or_else(|| {
-                CurveError::invalid_parameters(
-                    "to_f64",
-                    "non-finite Decimal in regression x-input",
-                )
+                CurveError::invalid_parameters("to_f64", "non-finite Decimal in regression x-input")
             })?;
             let point = Point2D::from_f64_tuple(x_f, y_values[i])?;
             points.insert(point);

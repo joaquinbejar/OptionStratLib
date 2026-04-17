@@ -1306,16 +1306,12 @@ impl Arithmetic<Surface> for Surface {
                         MergeOperation::Max => z_values
                             .par_iter()
                             .cloned()
-                            .max_by(|a, b| {
-                                a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal)
-                            })
+                            .max_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
                             .unwrap_or(Decimal::ZERO),
                         MergeOperation::Min => z_values
                             .par_iter()
                             .cloned()
-                            .min_by(|a, b| {
-                                a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal)
-                            })
+                            .min_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
                             .unwrap_or(Decimal::ZERO),
                     };
 
