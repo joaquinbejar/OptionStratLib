@@ -85,9 +85,11 @@ fn main() -> Result<(), Error> {
         walker,
     };
 
-    let random_walk = RandomWalk::new("Random Walk".to_string(), &walk_params, |p| {
-        generator_optionchain(p).expect("generator_optionchain failed")
-    });
+    let random_walk = RandomWalk::new(
+        "Random Walk".to_string(),
+        &walk_params,
+        generator_optionchain,
+    )?;
     debug!("Random Walk: {}", random_walk);
     let path: &Path = "Draws/Simulation/historical_build_chain.png".as_ref();
     random_walk.write_png(path)?;

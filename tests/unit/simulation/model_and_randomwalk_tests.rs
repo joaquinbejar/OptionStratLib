@@ -1,12 +1,16 @@
-use optionstratlib::simulation::steps::{Step, Xstep, Ystep};
-use optionstratlib::simulation::{WalkParams, WalkType, WalkTypeAble};
+#![allow(irrefutable_let_patterns)]
+
+use optionstratlib::ExpirationDate;
 use optionstratlib::simulation::randomwalk::RandomWalk;
 use optionstratlib::simulation::simulator::Simulator;
-use optionstratlib::visualization::Graph; // to exercise graph_data/graph_config
-use optionstratlib::ExpirationDate;use positive::Positive;
+use optionstratlib::simulation::steps::{Step, Xstep, Ystep};
+use optionstratlib::simulation::{WalkParams, WalkType, WalkTypeAble};
 use optionstratlib::utils::TimeFrame;
+use optionstratlib::visualization::Graph; // to exercise graph_data/graph_config
+use positive::Positive;
 use positive::pos_or_panic;
 use rust_decimal::Decimal;
+use std::convert::Infallible;
 use std::error::Error;
 use std::fmt::Display;
 use std::ops::AddAssign;
@@ -34,7 +38,9 @@ fn make_params(size: usize, start_price: Positive) -> WalkParams<Positive, Posit
     }
 }
 
-fn simple_generator(params: &WalkParams<Positive, Positive>) -> Vec<Step<Positive, Positive>> {
+fn simple_generator(
+    params: &WalkParams<Positive, Positive>,
+) -> Result<Vec<Step<Positive, Positive>>, Infallible> {
     // Build a tiny deterministic series using Step::next
     let mut out = Vec::with_capacity(params.size);
     let mut current = params.init_step.clone();
@@ -45,7 +51,7 @@ fn simple_generator(params: &WalkParams<Positive, Positive>) -> Vec<Step<Positiv
         current = current.next(new_y).expect("step.next should succeed");
         out.push(current.clone());
     }
-    out
+    Ok(out)
 }
 
 #[test]
@@ -64,7 +70,9 @@ fn walktype_historical_display_is_covered() {
 #[test]
 fn randomwalk_profit_error_and_graph_paths() {
     let params = make_params(5, Positive::HUNDRED);
-    let rw = RandomWalk::new("RW_Title".to_string(), &params, simple_generator);
+    let Ok(rw) = RandomWalk::new("RW_Title".to_string(), &params, simple_generator) else {
+        unreachable!()
+    };
 
     // Exercise Profit::calculate_profit_at error branch
     let err = rw.calculate_profit_at(&pos_or_panic!(101.0)).unwrap_err();
@@ -92,7 +100,9 @@ fn randomwalk_profit_error_and_graph_paths() {
 fn simulator_last_values_and_profit_error() -> Result<(), Box<dyn Error>> {
     let params = make_params(4, pos_or_panic!(50.0));
     // build a simulator with 2 random walks
-    let mut sim = Simulator::new("SIM".to_string(), 2, &params, simple_generator);
+    let Ok(mut sim) = Simulator::new("SIM".to_string(), 2, &params, simple_generator) else {
+        unreachable!()
+    };
 
     // Accessors across random walks
     let _rws = sim.get_random_walks();

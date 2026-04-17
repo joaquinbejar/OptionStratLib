@@ -52,37 +52,51 @@ where
     X: Copy + TryInto<Positive> + AddAssign + Display,
     Y: TryInto<Positive> + Display + Clone,
 {
-    /// Creates a new random walk instance with the given title and steps.
+    /// Creates a new simulator that builds `size` random walks from the
+    /// supplied fallible generator.
     ///
-    /// This constructor takes a title, walk parameters, and a generator function
-    /// that produces the actual steps of the random walk based on the provided parameters.
+    /// The generator is invoked once per random walk; any error short
+    /// circuits the constructor and no partial `Simulator` is returned.
     ///
     /// # Parameters
     ///
-    /// * `title` - A descriptive title for the random walk
-    /// * `params` - Parameters that define the properties of the random walk
-    /// * `generator` - A function that generates the steps of the random walk
+    /// * `title` - A descriptive title; individual walks are titled
+    ///   `"{title}_{i}"`.
+    /// * `size` - Number of random walks to generate.
+    /// * `params` - Walk parameters shared across all generated walks.
+    /// * `generator` - A fallible step generator. Cloned per walk; pass a
+    ///   function pointer or a stateless closure for best ergonomics.
     ///
     /// # Returns
     ///
-    /// A new `RandomWalk` instance with the generated steps.
+    /// `Ok(Simulator)` on success, or `Err(E)` from the first generator
+    /// invocation that fails.
     ///
-    pub fn new<F>(title: String, size: usize, params: &WalkParams<X, Y>, generator: F) -> Self
+    /// # Errors
+    ///
+    /// Returns the error type produced by the supplied generator. For
+    /// chain-backed generators (e.g. [`crate::chains::generator_positive`])
+    /// this is [`crate::error::ChainError`].
+    pub fn new<F, E>(
+        title: String,
+        size: usize,
+        params: &WalkParams<X, Y>,
+        generator: F,
+    ) -> Result<Self, E>
     where
-        F: Fn(&WalkParams<X, Y>) -> Vec<Step<X, Y>> + Clone,
+        F: Fn(&WalkParams<X, Y>) -> Result<Vec<Step<X, Y>>, E> + Clone,
         X: Copy + TryInto<Positive> + AddAssign + Display,
         Y: TryInto<Positive> + Display + Clone,
     {
-        let mut random_walks = Vec::new();
+        let mut random_walks = Vec::with_capacity(size);
         for i in 0..size {
-            let title = format!("{title}_{i}");
-            let random_walk = RandomWalk::new(title, params, &generator);
-            random_walks.push(random_walk);
+            let walk_title = format!("{title}_{i}");
+            random_walks.push(RandomWalk::new(walk_title, params, generator.clone())?);
         }
-        Self {
+        Ok(Self {
             title,
             random_walks,
-        }
+        })
     }
 
     /// Returns the title of the random walk.
@@ -456,6 +470,7 @@ where
 }
 
 #[cfg(test)]
+#[allow(irrefutable_let_patterns)]
 mod tests {
     use super::*;
     use crate::ExpirationDate;
@@ -468,6 +483,7 @@ mod tests {
     use crate::utils::{TimeFrame, time::convert_time_frame};
     use positive::pos_or_panic;
     use rust_decimal_macros::dec;
+    use std::convert::Infallible;
     use tracing::{debug, info};
     #[cfg(feature = "plotly")]
     use {std::fs, std::path::Path};
@@ -482,8 +498,10 @@ mod tests {
     }
     impl WalkTypeAble<Positive, Positive> for TestWalker {}
 
-    fn test_generator(params: &WalkParams<Positive, Positive>) -> Vec<Step<Positive, Positive>> {
-        vec![params.init_step.clone()]
+    fn test_generator(
+        params: &WalkParams<Positive, Positive>,
+    ) -> Result<Vec<Step<Positive, Positive>>, Infallible> {
+        Ok(vec![params.init_step.clone()])
     }
 
     // Test Simulator creation
@@ -515,12 +533,14 @@ mod tests {
             walker,
         };
 
-        let simulator = Simulator::new(
+        let Ok(simulator) = Simulator::new(
             "Test Simulator".to_string(),
             5,
             &walk_params,
             test_generator,
-        );
+        ) else {
+            unreachable!()
+        };
 
         assert_eq!(simulator.get_title(), "Test Simulator");
         assert_eq!(simulator.len(), 5);
@@ -556,12 +576,14 @@ mod tests {
             walker,
         };
 
-        let mut simulator = Simulator::new(
+        let Ok(mut simulator) = Simulator::new(
             "Original Title".to_string(),
             3,
             &walk_params,
             test_generator,
-        );
+        ) else {
+            unreachable!()
+        };
 
         assert_eq!(simulator.get_title(), "Original Title");
 
@@ -598,12 +620,14 @@ mod tests {
             walker,
         };
 
-        let simulator = Simulator::new(
+        let Ok(simulator) = Simulator::new(
             "Test Simulator".to_string(),
             3,
             &walk_params,
             test_generator,
-        );
+        ) else {
+            unreachable!()
+        };
 
         // Test get_steps
         let steps = simulator.get_random_walks();
@@ -655,12 +679,14 @@ mod tests {
             walker,
         };
 
-        let mut simulator = Simulator::new(
+        let Ok(mut simulator) = Simulator::new(
             "Test Simulator".to_string(),
             3,
             &walk_params,
             test_generator,
-        );
+        ) else {
+            unreachable!()
+        };
 
         // Test immutable indexing
         assert_eq!(simulator[0].get_title(), "Test Simulator_0");
@@ -701,7 +727,11 @@ mod tests {
             walker,
         };
 
-        let simulator = Simulator::new("Display Test".to_string(), 2, &walk_params, test_generator);
+        let Ok(simulator) =
+            Simulator::new("Display Test".to_string(), 2, &walk_params, test_generator)
+        else {
+            unreachable!()
+        };
 
         let display_output = format!("{simulator}");
         assert!(display_output.starts_with("Display Test"));
@@ -722,6 +752,59 @@ mod tests {
         assert!(simulator.is_empty());
         assert!(simulator.first().is_none());
         assert!(simulator.last().is_none());
+    }
+
+    #[test]
+    fn test_simulator_new_propagates_generator_error_short_circuits() {
+        // Regression for #349: ensure the simulator constructor returns
+        // the first generator error and does not silently build a
+        // partial simulator.
+        use std::cell::Cell;
+        let walker = Box::new(TestWalker);
+        let initial_price = Positive::HUNDRED;
+        let init_step = Step {
+            x: Xstep::new(
+                Positive::ONE,
+                TimeFrame::Minute,
+                ExpirationDate::Days(pos_or_panic!(30.0)),
+            ),
+            y: Ystep::new(0, initial_price),
+        };
+
+        let walk_params = WalkParams {
+            size: 1,
+            init_step,
+            walk_type: WalkType::GeometricBrownian {
+                dt: convert_time_frame(
+                    Positive::ONE / pos_or_panic!(30.0),
+                    &TimeFrame::Minute,
+                    &TimeFrame::Day,
+                ),
+                drift: dec!(0.0),
+                volatility: pos_or_panic!(0.2),
+            },
+            walker,
+        };
+
+        let calls: Cell<u32> = Cell::new(0);
+        let result: Result<Simulator<Positive, Positive>, &'static str> =
+            Simulator::new("Err Sim".to_string(), 5, &walk_params, |p| {
+                let n = calls.get();
+                calls.set(n + 1);
+                if n == 1 {
+                    Err("boom")
+                } else {
+                    Ok(vec![p.init_step.clone()])
+                }
+            });
+
+        match result {
+            Err(msg) => assert_eq!(msg, "boom"),
+            Ok(_) => panic!("expected generator error to propagate"),
+        }
+        // Generator should have been called twice (success then failure)
+        // and not five times — short-circuited.
+        assert_eq!(calls.get(), 2);
     }
 
     // Test panic scenarios (these would typically be in separate test functions)
@@ -754,7 +837,11 @@ mod tests {
             walker,
         };
 
-        let simulator = Simulator::new("Panic Test".to_string(), 3, &walk_params, test_generator);
+        let Ok(simulator) =
+            Simulator::new("Panic Test".to_string(), 3, &walk_params, test_generator)
+        else {
+            unreachable!()
+        };
 
         // This should panic
         let _ = simulator[3];
@@ -787,10 +874,12 @@ mod tests {
         assert_eq!(walk_params.init_step.get_value(), &Positive::HUNDRED);
         assert_eq!(walk_params.y(), &Positive::HUNDRED);
 
-        let simulator =
-            Simulator::new("Simulator".to_string(), simulator_size, &walk_params, |p| {
-                generator_positive(p).unwrap()
-            });
+        let simulator = Simulator::new(
+            "Simulator".to_string(),
+            simulator_size,
+            &walk_params,
+            generator_positive,
+        )?;
         debug!("Simulator: {}", simulator);
         assert_eq!(simulator.get_title(), "Simulator");
         assert_eq!(simulator.len(), simulator_size);

@@ -36,9 +36,12 @@ fn main() -> Result<(), Error> {
         walker,
     };
 
-    let simulator = Simulator::new("Simulator".to_string(), simulator_size, &walk_params, |p| {
-        generator_positive(p).expect("generator_positive failed")
-    });
+    let simulator = Simulator::new(
+        "Simulator".to_string(),
+        simulator_size,
+        &walk_params,
+        generator_positive,
+    )?;
     debug!("Simulator: {}", simulator);
 
     let option: Options = Options::new(

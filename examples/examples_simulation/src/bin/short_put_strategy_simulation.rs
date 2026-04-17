@@ -152,8 +152,8 @@ fn main() -> Result<(), Error> {
         "Short Put Simulator".to_string(),
         n_simulations,
         &walk_params,
-        |p| generator_positive(p).expect("generator_positive failed"),
-    );
+        generator_positive,
+    )?;
 
     info!("Running simulations using Simulate trait...");
 

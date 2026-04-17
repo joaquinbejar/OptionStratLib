@@ -20,6 +20,7 @@
 
 use optionstratlib::prelude::*;
 use positive::pos_or_panic;
+use std::convert::Infallible;
 use std::fmt::Display;
 use std::ops::AddAssign;
 
@@ -34,7 +35,9 @@ where
 }
 
 // Simple generator for demonstration purposes
-fn demo_generator(params: &WalkParams<Positive, Positive>) -> Vec<Step<Positive, Positive>> {
+fn demo_generator(
+    params: &WalkParams<Positive, Positive>,
+) -> Result<Vec<Step<Positive, Positive>>, Infallible> {
     let mut out = Vec::with_capacity(params.size);
     let mut current = params.init_step.clone();
     out.push(current.clone());
@@ -44,10 +47,10 @@ fn demo_generator(params: &WalkParams<Positive, Positive>) -> Vec<Step<Positive,
         current = current.next(new_y).expect("step.next should succeed");
         out.push(current.clone());
     }
-    out
+    Ok(out)
 }
 
-fn main() {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("=== Unified Pricing System Example ===\n");
 
     // Create a sample European call option
@@ -118,7 +121,7 @@ fn main() {
         1000,
         &gbm_params,
         demo_generator,
-    );
+    )?;
 
     let mc_engine = PricingEngine::MonteCarlo {
         simulator: gbm_simulator,
@@ -152,7 +155,7 @@ fn main() {
         1000,
         &heston_params,
         demo_generator,
-    );
+    )?;
 
     let heston_engine = PricingEngine::MonteCarlo {
         simulator: heston_simulator,
@@ -185,7 +188,7 @@ fn main() {
         1000,
         &jump_params,
         demo_generator,
-    );
+    )?;
 
     let jump_engine = PricingEngine::MonteCarlo {
         simulator: jump_simulator,
@@ -219,7 +222,7 @@ fn main() {
         1000,
         &telegraph_params,
         demo_generator,
-    );
+    )?;
 
     let telegraph_engine = PricingEngine::MonteCarlo {
         simulator: telegraph_simulator,
@@ -230,4 +233,5 @@ fn main() {
     }
 
     println!("=== Example Complete ===");
+    Ok(())
 }

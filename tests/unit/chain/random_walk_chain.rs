@@ -41,9 +41,11 @@ fn create_chain_from_step(
     Ok(new_chain)
 }
 
-fn generator(walk_params: &WalkParams<Positive, OptionChain>) -> Vec<Step<Positive, OptionChain>> {
+fn generator(
+    walk_params: &WalkParams<Positive, OptionChain>,
+) -> Result<Vec<Step<Positive, OptionChain>>, Box<dyn Error>> {
     info!("{}", walk_params);
-    let mut y_steps = walk_params.walker.geometric_brownian(walk_params).unwrap();
+    let mut y_steps = walk_params.walker.geometric_brownian(walk_params)?;
     let _ = y_steps.remove(0);
     let mut steps: Vec<Step<Positive, OptionChain>> = vec![walk_params.init_step.clone()];
     let mut previous_x_step = walk_params.init_step.x;
@@ -56,7 +58,7 @@ fn generator(walk_params: &WalkParams<Positive, OptionChain>) -> Vec<Step<Positi
         };
         // convert y_step to OptionChain
         let y_step_chain: OptionChain =
-            create_chain_from_step(&previous_y_step, y_step, spos!(0.20)).unwrap();
+            create_chain_from_step(&previous_y_step, y_step, spos!(0.20))?;
         previous_y_step = previous_y_step.next(y_step_chain).clone();
         let step = Step {
             x: previous_x_step,
@@ -71,7 +73,7 @@ fn generator(walk_params: &WalkParams<Positive, OptionChain>) -> Vec<Step<Positi
     }
 
     assert!(steps.len() <= walk_params.size);
-    steps
+    Ok(steps)
 }
 #[test]
 fn test_random_walk_chain() -> Result<(), Box<dyn Error>> {
@@ -102,11 +104,12 @@ fn test_random_walk_chain() -> Result<(), Box<dyn Error>> {
         walker,
     };
 
-    let random_walk = RandomWalk::new("Random Walk".to_string(), &walk_params, generator);
+    let random_walk = RandomWalk::new("Random Walk".to_string(), &walk_params, generator)?;
     info!("Random Walk: {}", random_walk);
     assert_eq!(random_walk.len(), n_steps);
 
-    info!("Last Chain: {}", random_walk.last().unwrap().y.value());
+    let last_step = random_walk.last().ok_or("random walk produced no steps")?;
+    info!("Last Chain: {}", last_step.y.value());
 
     Ok(())
 }
