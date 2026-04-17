@@ -16,6 +16,7 @@
 //!
 //! ## Usage Examples
 //! ```rust
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! // Plot a single curve
 //! use std::fs;
 //! use std::path::{Path, PathBuf};
@@ -37,9 +38,9 @@
 //!     let filename = PathBuf::from("single_curve_doc.png");
 //!     curve.plot()
 //!         .title("My Curve")
-//!         .save(filename.clone()).expect("panic message");
+//!         .save(filename.clone())?;
 //!     if filename.exists() {
-//!        fs::remove_file(&filename).unwrap_or_else(|_| panic!("Failed to remove {:?}", filename));
+//!        fs::remove_file(&filename)?;
 //!     }
 //! }
 //!
@@ -52,11 +53,13 @@
 //!     curves.plot()
 //!         .title("Curve Comparison")
 //!         .dimensions(1000, 600)
-//!         .save(filename.clone()).expect("panic message");
+//!         .save(filename.clone())?;
 //!     if filename.exists() {
-//!         fs::remove_file(&filename).unwrap_or_else(|_| panic!("Failed to remove {:?}", filename));
+//!         fs::remove_file(&filename)?;
 //!     }
 //! }
+//! # Ok(())
+//! # }
 //! ```
 //!
 //! ## Plot Customization

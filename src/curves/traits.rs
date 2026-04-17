@@ -185,7 +185,13 @@ pub trait StatisticalCurve: MetricsExtractor {
         if slope.abs() > 0.001 {
             let intercept = trend_metrics.intercept.to_f64().unwrap_or(0.0);
             for i in 0..y_values.len() {
-                y_values[i] += slope * x_values[i].to_f64().unwrap() + intercept;
+                let x_f = x_values[i].to_f64().ok_or_else(|| {
+                    CurveError::invalid_parameters(
+                        "to_f64",
+                        "Decimal out of range / non-representable as f64 in regression x-input",
+                    )
+                })?;
+                y_values[i] += slope * x_f + intercept;
             }
         }
 
@@ -214,7 +220,13 @@ pub trait StatisticalCurve: MetricsExtractor {
         // Create points and construct curve
         let mut points = BTreeSet::new();
         for i in 0..num_points {
-            let point = Point2D::from_f64_tuple(x_values[i].to_f64().unwrap(), y_values[i])?;
+            let x_f = x_values[i].to_f64().ok_or_else(|| {
+                CurveError::invalid_parameters(
+                    "to_f64",
+                    "Decimal out of range / non-representable as f64 in regression x-input",
+                )
+            })?;
+            let point = Point2D::from_f64_tuple(x_f, y_values[i])?;
             points.insert(point);
         }
 

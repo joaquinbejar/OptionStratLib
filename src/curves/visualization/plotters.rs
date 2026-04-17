@@ -10,6 +10,7 @@
 //!
 //! ## Usage Examples
 //! ```rust
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! // Plot a single curve
 //! use std::fs;
 //! use std::path::{Path, PathBuf};
@@ -28,9 +29,9 @@
 //!     let filename = PathBuf::from("single_curve.png");
 //!     curve.plot()
 //!         .title("Single Curve")
-//!         .save(filename.clone()).expect("panic message");
+//!         .save(filename.clone())?;
 //!     if filename.exists() {
-//!        fs::remove_file(&filename).unwrap_or_else(|_| panic!("Failed to remove {:?}", filename));
+//!        fs::remove_file(&filename)?;
 //!     }
 //!     // Plot multiple curves
 //!     let curve1 = curve.clone();
@@ -40,12 +41,14 @@
 //!     let filename = "multiple_curves.png";
 //!     curves.plot()
 //!         .title("Curve Comparison")
-//!         .save(filename).expect("panic message");
-//!    
+//!         .save(filename)?;
+//!
 //!     if Path::new(filename).exists() {
-//!        fs::remove_file(&filename).unwrap_or_else(|_| panic!("Failed to remove {:?}", filename));
+//!        fs::remove_file(&filename)?;
 //!     }
 //! }
+//! # Ok(())
+//! # }
 //! ```
 
 use crate::curves::Curve;
