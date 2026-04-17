@@ -16,6 +16,7 @@
 //! # Example Usage
 //!
 //! ```
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! # use std::fs;
 //! use std::path::PathBuf;
 //! use rust_decimal_macros::dec;
@@ -38,13 +39,13 @@
 //!         .x_label("X Axis")
 //!         .y_label("Y Axis")
 //!         .z_label("Z Axis") // Example of z-axis label
-//!         .save(dst.clone())
-//!         .expect("Failed to save plot");
+//!         .save(dst.clone())?;
 //!     if dst.exists() {
-//!         fs::remove_file(dst)
-//!            .unwrap_or_else(|_| panic!("Failed to remove surface_plot.png"));
+//!         fs::remove_file(dst)?;
 //!     }
 //! }
+//! # Ok(())
+//! # }
 //! ```
 //!
 use crate::error::SurfaceError;
