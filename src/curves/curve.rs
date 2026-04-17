@@ -265,9 +265,18 @@ impl Index<usize> for Curve {
 
     /// Fetches the `Point2D` at the specified index.
     ///
-    /// Panics if the index is invalid.
+    /// # Panics
+    ///
+    /// Panics if `index >= self.points.len()`. This matches the
+    /// documented contract of [`std::ops::Index`].
     fn index(&self, index: usize) -> &Self::Output {
-        self.points.iter().nth(index).expect("Index out of bounds")
+        match self.points.iter().nth(index) {
+            Some(p) => p,
+            None => panic!(
+                "Curve::index: out of bounds (index = {index}, len = {})",
+                self.points.len()
+            ),
+        }
     }
 }
 
@@ -986,7 +995,7 @@ impl MetricsExtractor for Curve {
 
         // Median
         let mut sorted_values = y_values.clone();
-        sorted_values.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        sorted_values.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
         let median = if sorted_values.len().is_multiple_of(2) {
             (sorted_values[sorted_values.len() / 2 - 1] + sorted_values[sorted_values.len() / 2])
                 / Decimal::TWO
@@ -1092,21 +1101,21 @@ impl MetricsExtractor for Curve {
         }
 
         let mut y_values: Vec<Decimal> = self.points.iter().map(|p| p.y).collect();
-        y_values.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        y_values.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
 
         let len = y_values.len();
         let min_point = self
             .points
             .iter()
-            .min_by(|a, b| a.y.partial_cmp(&b.y).unwrap())
+            .min_by(|a, b| a.y.partial_cmp(&b.y).unwrap_or(std::cmp::Ordering::Equal))
             .cloned()
-            .unwrap();
+            .ok_or_else(|| MetricsError::BasicError("empty curve in min_point".to_string()))?;
         let max_point = self
             .points
             .iter()
-            .max_by(|a, b| a.y.partial_cmp(&b.y).unwrap())
+            .max_by(|a, b| a.y.partial_cmp(&b.y).unwrap_or(std::cmp::Ordering::Equal))
             .cloned()
-            .unwrap();
+            .ok_or_else(|| MetricsError::BasicError("empty curve in max_point".to_string()))?;
 
         let range = max_point.y - min_point.y;
 
@@ -1344,13 +1353,13 @@ impl Arithmetic<Curve> for Curve {
         let min_x = curves
             .iter()
             .map(|c| c.x_range.0)
-            .max_by(|a, b| a.partial_cmp(b).unwrap())
+            .max_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
             .unwrap_or(Decimal::ZERO);
 
         let max_x = curves
             .iter()
             .map(|c| c.x_range.1)
-            .min_by(|a, b| a.partial_cmp(b).unwrap())
+            .min_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
             .unwrap_or(Decimal::ZERO);
 
         // Check if ranges are compatible
@@ -1412,12 +1421,12 @@ impl Arithmetic<Curve> for Curve {
                     MergeOperation::Max => y_values
                         .par_iter()
                         .cloned()
-                        .max_by(|a, b| a.partial_cmp(b).unwrap())
+                        .max_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
                         .unwrap_or(Decimal::ZERO),
                     MergeOperation::Min => y_values
                         .par_iter()
                         .cloned()
-                        .min_by(|a, b| a.partial_cmp(b).unwrap())
+                        .min_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
                         .unwrap_or(Decimal::ZERO),
                 };
 
@@ -1491,7 +1500,9 @@ impl AxisOperations<Point2D, Decimal> for Curve {
             .min_by(|a, b| {
                 let dist_a = (a.x - *x).abs();
                 let dist_b = (b.x - *x).abs();
-                dist_a.partial_cmp(&dist_b).unwrap()
+                dist_a
+                    .partial_cmp(&dist_b)
+                    .unwrap_or(std::cmp::Ordering::Equal)
             })
             .ok_or(CurveError::Point2DError {
                 reason: "No points available",
@@ -1528,13 +1539,23 @@ where
 
         for x in &sorted_x_values {
             if self.contains_point(x) {
-                interpolated_self_points.insert(*self.get_point(x).unwrap());
+                let pt = self.get_point(x).ok_or_else(|| {
+                    CurveError::InterpolationError(format!(
+                        "missing self point at x={x} despite contains_point()"
+                    ))
+                })?;
+                interpolated_self_points.insert(*pt);
             } else {
                 let interpolated_point = self.interpolate(*x, interpolation)?;
                 interpolated_self_points.insert(interpolated_point);
             }
             if other.contains_point(x) {
-                interpolated_other_points.insert(*other.get_point(x).unwrap());
+                let pt = other.get_point(x).ok_or_else(|| {
+                    CurveError::InterpolationError(format!(
+                        "missing other point at x={x} despite contains_point()"
+                    ))
+                })?;
+                interpolated_other_points.insert(*pt);
             } else {
                 let interpolated_point = other.interpolate(*x, interpolation)?;
                 interpolated_other_points.insert(interpolated_point);
@@ -1625,16 +1646,20 @@ impl GeometricTransformations<Point2D> for Curve {
         let min_point = self
             .points
             .iter()
-            .min_by(|a, b| a.y.partial_cmp(&b.y).unwrap())
+            .min_by(|a, b| a.y.partial_cmp(&b.y).unwrap_or(std::cmp::Ordering::Equal))
             .cloned()
-            .unwrap();
+            .ok_or_else(|| {
+                CurveError::AnalysisError("extrema: empty curve in min_by".to_string())
+            })?;
 
         let max_point = self
             .points
             .iter()
-            .max_by(|a, b| a.y.partial_cmp(&b.y).unwrap())
+            .max_by(|a, b| a.y.partial_cmp(&b.y).unwrap_or(std::cmp::Ordering::Equal))
             .cloned()
-            .unwrap();
+            .ok_or_else(|| {
+                CurveError::AnalysisError("extrema: empty curve in max_by".to_string())
+            })?;
 
         Ok((min_point, max_point))
     }
