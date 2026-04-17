@@ -152,7 +152,11 @@ impl TelegraphProcess {
             self.lambda_up
         };
         let lambda_dt = -lambda * dt;
-        let probability = if lambda_dt < dec!(11.7) {
+        // lambda_dt is non-positive (lambda, dt >= 0). For very-negative
+        // values exp(lambda_dt) underflows to 0; treat as a guaranteed
+        // flip (probability = 1). Otherwise use the standard Poisson
+        // transition: P(flip in dt) = 1 - exp(-lambda * dt).
+        let probability = if lambda_dt < dec!(-11.7) {
             Decimal::ONE
         } else {
             Decimal::ONE - lambda_dt.exp()
@@ -410,6 +414,40 @@ mod tests_telegraph_process_basis {
         let new_state = tp.next_state(dec!(0.1));
         assert!(new_state == 1 || new_state == -1);
         // There's a chance the state didn't change, so we can't assert inequality
+    }
+
+    #[test]
+    fn test_next_state_empirical_flip_rate_matches_poisson() {
+        // Regression test for #351: prior code had an inverted underflow
+        // guard that forced probability = 1.0 every step. Verify the
+        // empirical flip rate now matches the Poisson transition
+        // probability  P(flip in dt) = 1 - exp(-lambda * dt)  within a
+        // 5 σ Monte-Carlo bound.
+        let lambda_f = 0.5_f64;
+        let dt_f = 0.01_f64;
+        let mut tp = TelegraphProcess::new(dec!(0.5), dec!(0.5));
+
+        let n = 100_000_u64;
+        let mut prev = tp.get_current_state();
+        let mut flips: u64 = 0;
+        for _ in 0..n {
+            let next = tp.next_state(dec!(0.01));
+            if next != prev {
+                flips += 1;
+            }
+            prev = next;
+        }
+        let empirical = flips as f64 / n as f64;
+        let expected = 1.0 - (-lambda_f * dt_f).exp();
+        let std_err = (expected * (1.0 - expected) / n as f64).sqrt();
+
+        assert!(
+            (empirical - expected).abs() < 5.0 * std_err,
+            "empirical flip rate {empirical} differs from expected {expected} by more than 5σ ({})",
+            5.0 * std_err
+        );
+        // Sanity: must be far below 1.0 (the buggy value).
+        assert!(empirical < 0.05, "flip rate suspiciously high: {empirical}");
     }
 
     #[test]
