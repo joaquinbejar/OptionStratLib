@@ -7,7 +7,6 @@
 use crate::constants::*;
 use chrono::{Duration, Local, NaiveTime, Utc};
 use positive::{Positive, pos_or_panic};
-use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 use utoipa::ToSchema;
@@ -147,9 +146,10 @@ pub fn units_per_year(time_frame: &TimeFrame) -> Positive {
         TimeFrame::Minute => pos_or_panic!(525600.0),              // 365 * 24 * 60
         TimeFrame::Hour => pos_or_panic!(8760.0),                  // 365 * 24
         TimeFrame::Day => pos_or_panic!(365.0),                    // 365
-        TimeFrame::Week => {
-            Positive::new_decimal(dec!(365.0) / dec!(7.0)).expect("365/7 is positive")
-        } // 365 / 7
+        // 365 / 7 — precomputed because the runtime division would
+        // otherwise force a fallible Positive::new_decimal call here.
+        // Value: 365 / 7 = 52.142857142857142857142857143 (Decimal precision).
+        TimeFrame::Week => pos_or_panic!(52.142857142857142857142857143),
         TimeFrame::Month => pos_or_panic!(12.0),                   // 12
         TimeFrame::Quarter => pos_or_panic!(4.0),                  // 4
         TimeFrame::Year => Positive::ONE,                          // 1
@@ -315,7 +315,11 @@ pub fn get_today_formatted() -> String {
 /// info!("{}", get_today_or_tomorrow_formatted());
 /// ```
 pub fn get_today_or_tomorrow_formatted() -> String {
-    let cutoff_time = NaiveTime::from_hms_opt(18, 30, 0).unwrap();
+    // 18:30 is a valid wall-clock time, so the Err arm is unreachable.
+    let cutoff_time = match NaiveTime::from_hms_opt(18, 30, 0) {
+        Some(t) => t,
+        None => unreachable!("18:30:00 is always a valid NaiveTime"),
+    };
     let now = Utc::now();
     // Get the date we should use based on current UTC time
     let target_date = if now.time() > cutoff_time {

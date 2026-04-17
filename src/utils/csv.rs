@@ -123,7 +123,7 @@ pub fn read_ohlcv_from_zip(
         let date = NaiveDate::parse_from_str(parts[0], "%d/%m/%Y")?;
 
         // Skip records outside our date range if dates are specified
-        if (start.is_some() && date < start.unwrap()) || (end.is_some() && date > end.unwrap()) {
+        if start.is_some_and(|s| date < s) || end.is_some_and(|e| date > e) {
             continue;
         }
 

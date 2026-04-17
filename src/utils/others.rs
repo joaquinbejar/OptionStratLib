@@ -4,10 +4,9 @@
    Date: 27/9/24
 ******************************************************************************/
 
-use crate::constants::TOLERANCE;
 use crate::error::{DecimalError, Error};
 use itertools::Itertools;
-use num_traits::{FromPrimitive, ToPrimitive};
+use num_traits::FromPrimitive;
 use positive::Positive;
 use rand::{Rng, RngExt, rng};
 use rayon::prelude::*;
@@ -42,9 +41,13 @@ use std::collections::BTreeSet;
 /// let y = 1.1;
 /// assert!(!approx_equal(x, y)); // Returns false
 /// ```
+/// Precomputed f64 form of `crate::constants::TOLERANCE` (= 1e-8) so the
+/// hot-path comparison can avoid the runtime fallible `Decimal::to_f64`.
+const TOLERANCE_F64: f64 = 1e-8;
+
 #[allow(dead_code)]
 pub fn approx_equal(a: f64, b: f64) -> bool {
-    (a - b).abs() < TOLERANCE.to_f64().unwrap()
+    (a - b).abs() < TOLERANCE_F64
 }
 
 /// Gets a random element from a BTreeSet.
@@ -165,7 +168,9 @@ where
     Ok(combinations
         .par_iter()
         .flat_map(|combination| {
-            let mut closure = process_combination.lock().unwrap();
+            // Mutex-poison recovery: a panic in one closure invocation
+            // shouldn't poison the entire combination scan.
+            let mut closure = process_combination.lock().unwrap_or_else(|e| e.into_inner());
             closure(combination)
         })
         .collect())
