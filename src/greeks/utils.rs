@@ -5,15 +5,15 @@
 ******************************************************************************/
 
 use crate::Options;
-use crate::constants::PI;
 use crate::error::decimal::DecimalError;
 use crate::error::greeks::{GreeksError, InputErrorKind, MathErrorKind};
 use crate::model::decimal::f64_to_decimal;
 use crate::strategies::DELTA_THRESHOLD;
 use core::f64;
-use num_traits::{FromPrimitive, ToPrimitive};
+use num_traits::ToPrimitive;
 use positive::Positive;
 use rust_decimal::{Decimal, MathematicalOps};
+use rust_decimal_macros::dec;
 use statrs::distribution::{ContinuousCDF, Normal};
 
 /// Calculates the `d1` parameter used in the Black-Scholes options pricing model.
@@ -176,13 +176,13 @@ pub fn d1(
 /// # Example
 ///
 /// ```rust
-///
+/// # fn run() -> Result<(), Box<dyn std::error::Error>> {
 /// use rust_decimal_macros::dec;
 /// use tracing::{error, info};
 /// use optionstratlib::greeks::d2;
 /// use positive::{pos_or_panic, Positive};
-/// let underlying_price = Positive::new(100.0).unwrap();
-/// let strike_price = Positive::new(95.0).unwrap();
+/// let underlying_price = Positive::new(100.0)?;
+/// let strike_price = Positive::new(95.0)?;
 /// let risk_free_rate = dec!(0.05);
 /// let expiration_date = pos_or_panic!(0.5); // 6 months
 /// let implied_volatility = pos_or_panic!(0.2);
@@ -197,6 +197,8 @@ pub fn d1(
 ///     Ok(result) => info!("d2: {}", result),
 ///     Err(e) => error!("Error: {:?}", e),
 /// }
+/// # Ok(())
+/// # }
 /// ```
 pub fn d2(
     underlying_price: Positive,
@@ -287,16 +289,18 @@ pub fn d2(
 ///
 /// The function uses the `Decimal` type for precision and error handling. The result is returned
 pub fn n(x: Decimal) -> Result<Decimal, GreeksError> {
-    let norm_factor = Decimal::ONE / (Decimal::TWO * PI).sqrt().unwrap();
+    // 1 / sqrt(2π) — standard normal PDF normalisation constant.
+    // Precomputed so we avoid the runtime fallible sqrt on Decimal.
+    const NORM_FACTOR: Decimal = dec!(0.3989422804014326779399461);
     let pre_pdf = -x.powd(Decimal::TWO) / Decimal::TWO;
 
     // avoid Exp underflowed
-    if pre_pdf < Decimal::from_f64(-11.7).unwrap() {
+    if pre_pdf < dec!(-11.7) {
         return Ok(Decimal::ZERO);
     }
 
     let pdf = pre_pdf.exp();
-    Ok(norm_factor * pdf) // N(x) = [1 / sqrt(2 * PI)] * e^(-x^2 / 2)
+    Ok(NORM_FACTOR * pdf) // N(x) = [1 / sqrt(2 * PI)] * e^(-x^2 / 2)
 }
 
 /// Calculate the derivative of the function `n` at a given point `x`.
@@ -381,20 +385,27 @@ pub(crate) fn n_prime(x: Decimal) -> Result<Decimal, GreeksError> {
 /// }
 /// ```
 pub fn big_n(x: Decimal) -> Result<Decimal, DecimalError> {
-    let x_f64 = x.to_f64();
-    if x_f64.is_none() {
+    let Some(x_f64) = x.to_f64() else {
         return Err(DecimalError::ConversionError {
             from_type: "Decimal".to_string(),
             to_type: "f64".to_string(),
             reason: "Conversion failed".to_string(),
         });
-    }
+    };
 
     const MEAN: f64 = 0.0;
     const STD_DEV: f64 = 1.0;
 
-    let normal_distribution = Normal::new(MEAN, STD_DEV).unwrap();
-    f64_to_decimal(normal_distribution.cdf(x_f64.unwrap()))
+    // Normal::new(0.0, 1.0) is infallible by construction (parameters
+    // hardcoded), but surface the error type via map_err to satisfy
+    // the panic-free rule.
+    let normal_distribution =
+        Normal::new(MEAN, STD_DEV).map_err(|e| DecimalError::ConversionError {
+            from_type: "(f64, f64)".to_string(),
+            to_type: "Normal".to_string(),
+            reason: format!("invalid Normal parameters: {e}"),
+        })?;
+    f64_to_decimal(normal_distribution.cdf(x_f64))
 }
 
 /// Calculates the d1 and d2 values used in financial option pricing models such as the Black-Scholes model.
@@ -444,6 +455,7 @@ pub(crate) fn calculate_d_values(option: &Options) -> Result<(Decimal, Decimal),
 ///
 /// # Example
 /// ```rust
+/// # fn run() -> Result<(), Box<dyn std::error::Error>> {
 /// use rust_decimal_macros::dec;
 /// use optionstratlib::greeks::calculate_delta_neutral_sizes;
 /// use positive::pos_or_panic;
@@ -451,7 +463,9 @@ pub(crate) fn calculate_d_values(option: &Options) -> Result<(Decimal, Decimal),
 ///     dec!(-0.30),  // Short call delta
 ///     dec!(0.20),   // Short put delta
 ///     pos_or_panic!(7.0)     // Total desired position size
-/// ).unwrap();
+/// )?;
+/// # Ok(())
+/// # }
 /// ```
 pub fn calculate_delta_neutral_sizes(
     delta1: Decimal,
