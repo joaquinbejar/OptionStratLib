@@ -258,9 +258,14 @@ pub fn d2(
 ///
 /// # Calculation Details
 ///
-/// - The denominator is computed as \(\sqrt{2 \pi}\), where \( \pi \) is approximated.
+/// - The normalisation factor \(1 / \sqrt{2 \pi}\) is held as a precomputed
+///   `Decimal` constant (`dec!(0.3989422804014326779399461)`), avoiding a
+///   runtime fallible `sqrt()` on `Decimal`.
 /// - The exponent is computed as \(-\frac{x^2}{2}\).
-/// - The PDF value is the product of the reciprocal of the denominator and the exponential term.
+/// - The PDF value is the product of the normalisation factor and the
+///   exponential term.
+/// - For very-negative exponents (`pre_pdf < -11.7`) `exp` underflows to
+///   `0` in `Decimal` arithmetic, so we short-circuit to `Decimal::ZERO`.
 ///
 /// # Errors
 ///
@@ -283,9 +288,6 @@ pub fn d2(
 /// ```
 ///
 /// # Notes
-///
-/// This function assumes that the constant `PI` is pre-defined as a `Decimal` representing the
-/// value of \(\pi\) to a sufficient precision for the application.
 ///
 /// The function uses the `Decimal` type for precision and error handling. The result is returned
 pub fn n(x: Decimal) -> Result<Decimal, GreeksError> {

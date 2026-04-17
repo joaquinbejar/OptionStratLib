@@ -61,8 +61,10 @@ fn create_series_from_step(
 /// Returns a `Vec<Step<Positive, OptionSeries>>` containing a series of steps generated based
 /// on the specified type of walk and its associated parameters. Each step combines both the
 /// progression in the x-axis and the calculated output (y-axis) using the mathematical rules
-/// of the given walk type. Returns an empty vector if the walk type does not yield any results
-/// (e.g., due to insufficient historical price data).
+/// of the given walk type. The returned vector always starts with
+/// `walk_params.init_step`; if the walk type cannot generate any further
+/// steps (e.g. Historical with empty / insufficient price data) only the
+/// initial step is returned.
 ///
 /// # Walk Types
 ///
@@ -83,7 +85,8 @@ fn create_series_from_step(
 ///
 /// - Volatility is extracted or calculated for each walk type to guide the stochastic process.
 /// - For the `Historical` walk type, log returns are calculated from the given price data.
-///   If the `prices` array is empty or has insufficient data, the resulting steps vector will be empty.
+///   If the `prices` array is empty or has insufficient data, the
+///   resulting vector contains only the initial step.
 ///
 /// - The initial step is removed from the generated steps to avoid duplication with the input
 ///   initialization step (`init_step`).
@@ -185,7 +188,14 @@ pub fn generator_optionseries(
         steps.push(step)
     }
 
-    debug_assert!(steps.len() <= walk_params.size);
+    if steps.len() > walk_params.size {
+        debug!(
+            "generated {} steps, truncating to configured size {}",
+            steps.len(),
+            walk_params.size
+        );
+        steps.truncate(walk_params.size);
+    }
     Ok(steps)
 }
 
