@@ -312,7 +312,10 @@ lazy_static! {
 
 // Helper function to get or create a lock for a specific file
 fn get_file_lock(file_path: &str) -> Arc<Mutex<()>> {
-    let mut locks = FILE_LOCKS.lock().unwrap();
+    // Mutex-poison recovery: if a previous panic poisoned the lock, we
+    // still want to vend a per-file lock rather than propagate the panic
+    // to every subsequent caller of `get_file_lock`.
+    let mut locks = FILE_LOCKS.lock().unwrap_or_else(|e| e.into_inner());
     locks
         .entry(file_path.to_string())
         .or_insert_with(|| Arc::new(Mutex::new(())))
@@ -376,7 +379,9 @@ pub fn save_pnl_metrics_with_document(
 ) -> io::Result<()> {
     // Get a lock for this specific file
     let file_lock = get_file_lock(file_path);
-    let _guard = file_lock.lock().unwrap();
+    // Poison-recover: a panic in a previous holder shouldn't permanently
+    // block file writes for this path.
+    let _guard = file_lock.lock().unwrap_or_else(|e| e.into_inner());
 
     // Check if file exists
     let file_exists = Path::new(file_path).exists();

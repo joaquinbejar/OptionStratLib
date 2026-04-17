@@ -219,9 +219,12 @@ pub fn f64_to_decimal(value: f64) -> Result<Decimal, DecimalError> {
 /// ```
 pub fn decimal_normal_sample() -> Decimal {
     let mut t_rng = rand::rng();
-    // SAFETY: Normal::new(0.0, 1.0) is always valid (mean=0, std=1 are valid parameters)
-    let normal =
-        Normal::new(0.0, 1.0).expect("standard normal distribution parameters are always valid");
+    // Normal::new(0.0, 1.0) is provably valid (mean=0, std=1 are accepted
+    // by `statrs::distribution::Normal`), so the Err arm is unreachable.
+    let normal = match Normal::new(0.0, 1.0) {
+        Ok(n) => n,
+        Err(_) => unreachable!("standard normal parameters are always valid"),
+    };
     Decimal::from_f64(normal.sample(&mut t_rng)).unwrap_or(Decimal::ZERO)
 }
 
