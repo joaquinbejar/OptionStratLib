@@ -854,12 +854,20 @@ impl CubicInterpolation<Point3D, Point2D> for Surface {
             .iter()
             .map(|&point| {
                 let sq = (point.x - xy.x).powi(2) + (point.y - xy.y).powi(2);
-                let dist = sq.sqrt().unwrap_or_else(|| {
-                    warn!(
-                        "cubic_interpolate: sqrt of non-finite operand ({sq}); falling back to 0"
-                    );
-                    Decimal::ZERO
-                });
+                let dist = match sq.sqrt() {
+                    Some(d) => d,
+                    None => {
+                        // sqrt only fails for negative input or a result that
+                        // cannot be represented as Decimal (overflow). Squared
+                        // distance is always >= 0, so this is the overflow
+                        // case — drop the point's contribution by giving it
+                        // zero weight rather than a misleadingly small one.
+                        warn!(
+                            "cubic_interpolate: sqrt failed for operand ({sq}); dropping point from weighting"
+                        );
+                        return Decimal::ZERO;
+                    }
+                };
                 Decimal::ONE / (dist + Decimal::new(1, 6)) // Avoid division by zero
             })
             .collect();
@@ -1353,26 +1361,15 @@ impl AxisOperations<Point3D, Point2D> for Surface {
     }
 
     fn get_closest_point(&self, x: &Point2D) -> Result<&Point3D, Self::Error> {
+        // Compare squared distances directly: ordering is monotonic on
+        // non-negative inputs, so the sqrt is unnecessary and would
+        // introduce a fallback that could otherwise distort ordering.
         self.points
             .iter()
             .min_by(|a, b| {
                 let sq_a = (a.x - x.x).powi(2) + (a.y - x.y).powi(2);
                 let sq_b = (b.x - x.x).powi(2) + (b.y - x.y).powi(2);
-                let dist_a = sq_a.sqrt().unwrap_or_else(|| {
-                    warn!(
-                        "get_closest_point: sqrt of non-finite operand ({sq_a}); falling back to 0"
-                    );
-                    Decimal::ZERO
-                });
-                let dist_b = sq_b.sqrt().unwrap_or_else(|| {
-                    warn!(
-                        "get_closest_point: sqrt of non-finite operand ({sq_b}); falling back to 0"
-                    );
-                    Decimal::ZERO
-                });
-                dist_a
-                    .partial_cmp(&dist_b)
-                    .unwrap_or(std::cmp::Ordering::Equal)
+                sq_a.partial_cmp(&sq_b).unwrap_or(std::cmp::Ordering::Equal)
             })
             .ok_or(SurfaceError::Point3DError {
                 reason: "No points found",
