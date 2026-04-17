@@ -61,8 +61,10 @@ fn create_series_from_step(
 /// Returns a `Vec<Step<Positive, OptionSeries>>` containing a series of steps generated based
 /// on the specified type of walk and its associated parameters. Each step combines both the
 /// progression in the x-axis and the calculated output (y-axis) using the mathematical rules
-/// of the given walk type. Returns an empty vector if the walk type does not yield any results
-/// (e.g., due to insufficient historical price data).
+/// of the given walk type. The returned vector always starts with
+/// `walk_params.init_step`; if the walk type cannot generate any further
+/// steps (e.g. Historical with empty / insufficient price data) only the
+/// initial step is returned.
 ///
 /// # Walk Types
 ///
@@ -83,7 +85,8 @@ fn create_series_from_step(
 ///
 /// - Volatility is extracted or calculated for each walk type to guide the stochastic process.
 /// - For the `Historical` walk type, log returns are calculated from the given price data.
-///   If the `prices` array is empty or has insufficient data, the resulting steps vector will be empty.
+///   If the `prices` array is empty or has insufficient data, the
+///   resulting vector contains only the initial step.
 ///
 /// - The initial step is removed from the generated steps to avoid duplication with the input
 ///   initialization step (`init_step`).
@@ -91,50 +94,47 @@ fn create_series_from_step(
 /// - The x-coordinates (`x`) and y-coordinates (`y`, i.e., `OptionSeries`) are iteratively calculated
 ///   and adjusted using the respective walk model.
 ///
-/// # Panics
+/// # Errors
 ///
-/// This function ensures that the total size of the generated steps does not exceed the `walk_params.size`.
-/// If any unexpected behavior occurs during step generation or transformation, it will panic.
-///
+/// Returns a `ChainError` if any of the underlying simulation,
+/// volatility-estimation or chain-construction primitives fail. The
+/// returned vector is guaranteed to start with `walk_params.init_step`
+/// (matching the contract of [`crate::chains::generator_optionchain`]).
 pub fn generator_optionseries(
     walk_params: &WalkParams<Positive, OptionSeries>,
-) -> Vec<Step<Positive, OptionSeries>> {
+) -> Result<Vec<Step<Positive, OptionSeries>>, ChainError> {
     debug!("{}", walk_params);
     let (mut y_steps, volatility) = match &walk_params.walk_type {
-        WalkType::Brownian { volatility, .. } => (
-            walk_params.walker.brownian(walk_params).unwrap(),
-            Some(*volatility),
-        ),
+        WalkType::Brownian { volatility, .. } => {
+            (walk_params.walker.brownian(walk_params)?, Some(*volatility))
+        }
         WalkType::GeometricBrownian { volatility, .. } => (
-            walk_params.walker.geometric_brownian(walk_params).unwrap(),
+            walk_params.walker.geometric_brownian(walk_params)?,
             Some(*volatility),
         ),
         WalkType::LogReturns { volatility, .. } => (
-            walk_params.walker.log_returns(walk_params).unwrap(),
+            walk_params.walker.log_returns(walk_params)?,
             Some(*volatility),
         ),
         WalkType::MeanReverting { volatility, .. } => (
-            walk_params.walker.mean_reverting(walk_params).unwrap(),
+            walk_params.walker.mean_reverting(walk_params)?,
             Some(*volatility),
         ),
         WalkType::JumpDiffusion { volatility, .. } => (
-            walk_params.walker.jump_diffusion(walk_params).unwrap(),
+            walk_params.walker.jump_diffusion(walk_params)?,
             Some(*volatility),
         ),
-        WalkType::Garch { volatility, .. } => (
-            walk_params.walker.garch(walk_params).unwrap(),
-            Some(*volatility),
-        ),
-        WalkType::Heston { volatility, .. } => (
-            walk_params.walker.heston(walk_params).unwrap(),
-            Some(*volatility),
-        ),
-        WalkType::Custom { volatility, .. } => (
-            walk_params.walker.custom(walk_params).unwrap(),
-            Some(*volatility),
-        ),
+        WalkType::Garch { volatility, .. } => {
+            (walk_params.walker.garch(walk_params)?, Some(*volatility))
+        }
+        WalkType::Heston { volatility, .. } => {
+            (walk_params.walker.heston(walk_params)?, Some(*volatility))
+        }
+        WalkType::Custom { volatility, .. } => {
+            (walk_params.walker.custom(walk_params)?, Some(*volatility))
+        }
         WalkType::Telegraph { volatility, .. } => (
-            walk_params.walker.telegraph(walk_params).unwrap(),
+            walk_params.walker.telegraph(walk_params)?,
             Some(*volatility),
         ),
         WalkType::Historical {
@@ -143,23 +143,25 @@ pub fn generator_optionseries(
             if prices.is_empty() || prices.len() < walk_params.size {
                 (Vec::new(), None)
             } else {
-                let log_returns: Vec<Decimal> = calculate_log_returns(prices)
-                    .unwrap()
+                let log_returns: Vec<Decimal> = calculate_log_returns(prices)?
                     .iter()
                     .map(|p: &Positive| p.to_dec())
                     .collect();
-                let constant_volatility = constant_volatility(&log_returns).unwrap();
+                let constant_volatility = constant_volatility(&log_returns)?;
                 let implied_volatility =
-                    adjust_volatility(constant_volatility, *timeframe, TimeFrame::Year).unwrap();
+                    adjust_volatility(constant_volatility, *timeframe, TimeFrame::Year)?;
                 (
-                    walk_params.walker.historical(walk_params).unwrap(),
+                    walk_params.walker.historical(walk_params)?,
                     Some(implied_volatility),
                 )
             }
         }
     };
     if y_steps.is_empty() {
-        return vec![];
+        // Preserve the contains-init-step contract used by the other
+        // generators; callers iterate over Step values and expect at
+        // least the initial state.
+        return Ok(vec![walk_params.init_step.clone()]);
     }
 
     let _ = y_steps.remove(0); // remove initial step from y_steps to avoid early return
@@ -167,11 +169,7 @@ pub fn generator_optionseries(
     let mut previous_x_step = walk_params.init_step.x;
     let mut previous_y_step = walk_params.ystep();
 
-    if let Some(volatility) = volatility {
-        volatility
-    } else {
-        pos_or_panic!(0.20)
-    };
+    let volatility = volatility.unwrap_or_else(|| pos_or_panic!(0.20));
 
     for y_step in y_steps.iter() {
         previous_x_step = match previous_x_step.next() {
@@ -180,7 +178,7 @@ pub fn generator_optionseries(
         };
         // convert y_step to OptionSeries
         let y_step_series: OptionSeries =
-            create_series_from_step(&previous_y_step, y_step, volatility).unwrap();
+            create_series_from_step(&previous_y_step, y_step, Some(volatility))?;
         previous_y_step = previous_y_step.next(y_step_series).clone();
         let step = Step {
             x: previous_x_step,
@@ -190,8 +188,15 @@ pub fn generator_optionseries(
         steps.push(step)
     }
 
-    assert!(steps.len() <= walk_params.size);
-    steps
+    if steps.len() > walk_params.size {
+        debug!(
+            "generated {} steps, truncating to configured size {}",
+            steps.len(),
+            walk_params.size
+        );
+        steps.truncate(walk_params.size);
+    }
+    Ok(steps)
 }
 
 #[cfg(test)]
@@ -279,7 +284,9 @@ mod tests_generator_optionseries {
         };
 
         // Execute
-        let steps = generator_optionseries(&walk_params);
+        let Ok(steps) = generator_optionseries(&walk_params) else {
+            panic!("test fixture failed")
+        };
 
         // Verify
         assert!(!steps.is_empty(), "Steps should not be empty");
@@ -326,7 +333,9 @@ mod tests_generator_optionseries {
         };
 
         // Execute
-        let steps = generator_optionseries(&walk_params);
+        let Ok(steps) = generator_optionseries(&walk_params) else {
+            panic!("test fixture failed")
+        };
 
         // Verify
         assert!(!steps.is_empty(), "Steps shouldn't be empty");
@@ -357,12 +366,17 @@ mod tests_generator_optionseries {
         };
 
         // Execute
-        let steps = generator_optionseries(&walk_params);
+        let Ok(steps) = generator_optionseries(&walk_params) else {
+            panic!("test fixture failed")
+        };
 
-        // Verify
-        assert!(
-            steps.is_empty(),
-            "Steps should be empty when historical prices are empty"
+        // Verify: contains the init step only (contract matches the
+        // chain-generator family — never silently returns an empty
+        // vector when an init_step is available).
+        assert_eq!(
+            steps.len(),
+            1,
+            "Steps should contain only the init step when historical prices are empty"
         );
     }
 
@@ -391,12 +405,16 @@ mod tests_generator_optionseries {
         };
 
         // Execute
-        let steps = generator_optionseries(&walk_params);
+        let Ok(steps) = generator_optionseries(&walk_params) else {
+            panic!("test fixture failed")
+        };
 
-        // Verify
-        assert!(
-            steps.is_empty(),
-            "Steps should be empty when historical prices are insufficient"
+        // Verify: contains the init step only (matches the new
+        // contract introduced in #320).
+        assert_eq!(
+            steps.len(),
+            1,
+            "Steps should contain only the init step when historical prices are insufficient"
         );
     }
 
@@ -524,7 +542,9 @@ mod tests_generator_optionseries {
         };
 
         // Execute
-        let steps = generator_optionseries(&walk_params);
+        let Ok(steps) = generator_optionseries(&walk_params) else {
+            panic!("test fixture failed")
+        };
 
         // Verify
         assert!(!steps.is_empty(), "Should have at least the initial step");
@@ -587,7 +607,9 @@ mod tests_generator_optionseries {
         };
 
         // Execute
-        let steps = generator_optionseries(&walk_params);
+        let Ok(steps) = generator_optionseries(&walk_params) else {
+            panic!("test fixture failed")
+        };
 
         // Verify
         assert!(

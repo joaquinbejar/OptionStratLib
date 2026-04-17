@@ -255,12 +255,14 @@ impl Serialize for OptionSeries {
         state.serialize_field("symbol", &self.symbol)?;
         state.serialize_field("underlying_price", &self.underlying_price)?;
 
-        // Serialize chains as a map of string dates to OptionChain
-        let chains_map: BTreeMap<String, &OptionChain> = self
-            .chains
-            .iter()
-            .map(|(date, chain)| (date.get_date_string().unwrap(), chain))
-            .collect();
+        // Serialize chains as a map of string dates to OptionChain.
+        // Surface any date-formatting failure as a serde error rather
+        // than panicking inside the closure.
+        let mut chains_map: BTreeMap<String, &OptionChain> = BTreeMap::new();
+        for (date, chain) in &self.chains {
+            let key = date.get_date_string().map_err(serde::ser::Error::custom)?;
+            chains_map.insert(key, chain);
+        }
         state.serialize_field("chains", &chains_map)?;
 
         // Serialize optional fields

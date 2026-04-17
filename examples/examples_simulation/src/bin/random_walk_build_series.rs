@@ -80,9 +80,11 @@ fn main() -> Result<(), Error> {
         },
         walker,
     };
-    let random_walk = RandomWalk::new("Random Walk".to_string(), &walk_params, |p| {
-        Ok::<_, Error>(generator_optionseries(p))
-    })?;
+    let random_walk = RandomWalk::new(
+        "Random Walk".to_string(),
+        &walk_params,
+        generator_optionseries,
+    )?;
     debug!("Random Walk: {}", random_walk);
     let path: &std::path::Path = "Draws/Simulation/random_walk_build_series.png".as_ref();
     random_walk.write_png(path)?;
