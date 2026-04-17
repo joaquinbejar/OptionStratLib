@@ -318,9 +318,15 @@ pub fn telegraph(
     lambda_up: Option<Decimal>,
     lambda_down: Option<Decimal>,
 ) -> Result<Decimal, PricingError> {
+    if no_steps == 0 {
+        return Err(PricingError::method_error(
+            "telegraph",
+            "no_steps must be greater than 0",
+        ));
+    }
     let mut price = option.underlying_price;
-    let no_steps_dec = Decimal::from_f64(no_steps as f64).ok_or_else(|| {
-        PricingError::method_error("telegraph", &format!("non-finite no_steps: {no_steps}"))
+    let no_steps_dec = Decimal::from_usize(no_steps).ok_or_else(|| {
+        PricingError::method_error("telegraph", &format!("invalid no_steps: {no_steps}"))
     })?;
     let dt = option.time_to_expiration()?.to_dec() / no_steps_dec;
 

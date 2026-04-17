@@ -100,8 +100,13 @@ pub fn monte_carlo_option_pricing(
 /// 5. Return the discounted average payoff as the estimated option price.
 ///
 /// # Errors
-/// - Returns an error if there are any issues while calculating the time to expiration (e.g., invalid dates).
-/// - Panics if the `option.payoff_at_price` method fails unexpectedly during payoff calculations.
+/// - Propagates any error from `option.expiration_date.get_years()?` (e.g.,
+///   invalid expiration date).
+/// - Returns `PricingError::method_error` when `num_simulations` cannot be
+///   represented as a `Decimal` (effectively unreachable for valid `usize`
+///   inputs but surfaced explicitly for completeness).
+/// - Per-simulation `option.payoff_at_price(...)` failures fall back silently
+///   to `Decimal::ZERO` for that simulation; the function does not panic.
 ///
 /// This function assumes that the `Options` struct and `Positive` type
 /// are implemented elsewhere in the codebase and provide necessary functionality (e.g., payoff calculation).
