@@ -306,9 +306,12 @@ mod tests {
             walker,
         };
 
-        let random_walk = RandomWalk::new("Random Walk".to_string(), &walk_params, |p| {
-            generator_optionchain(p).unwrap()
-        });
+        let random_walk = RandomWalk::new(
+            "Random Walk".to_string(),
+            &walk_params,
+            generator_optionchain,
+        )
+        .expect("random walk construction");
         assert_eq!(random_walk.len(), n_steps);
     }
 
@@ -341,9 +344,9 @@ mod tests {
             },
             walker,
         };
-        let random_walk = RandomWalk::new("Random Walk".to_string(), &walk_params, |p| {
-            generator_positive(p).unwrap()
-        });
+        let random_walk =
+            RandomWalk::new("Random Walk".to_string(), &walk_params, generator_positive)
+                .expect("random walk construction");
         assert_eq!(random_walk.len(), n_steps);
     }
 }

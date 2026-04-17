@@ -52,27 +52,35 @@ where
 {
     /// Creates a new random walk instance with the given title and steps.
     ///
-    /// This constructor takes a title, walk parameters, and a generator function
-    /// that produces the actual steps of the random walk based on the provided parameters.
+    /// This constructor takes a title, walk parameters, and a fallible
+    /// generator function that produces the steps of the random walk
+    /// from the provided parameters. Errors from the generator are
+    /// propagated unchanged.
     ///
     /// # Parameters
     ///
     /// * `title` - A descriptive title for the random walk
     /// * `params` - Parameters that define the properties of the random walk
-    /// * `generator` - A function that generates the steps of the random walk
+    /// * `generator` - A fallible function that generates the steps of
+    ///   the random walk
     ///
     /// # Returns
     ///
-    /// A new `RandomWalk` instance with the generated steps.
+    /// `Ok(RandomWalk)` on success, or `Err(E)` when the generator fails.
     ///
-    pub fn new<F>(title: String, params: &WalkParams<X, Y>, generator: F) -> Self
+    /// # Errors
+    ///
+    /// Returns the error type produced by the supplied generator. For
+    /// chain-backed generators (e.g. [`crate::chains::generator_positive`])
+    /// this is [`crate::error::ChainError`].
+    pub fn new<F, E>(title: String, params: &WalkParams<X, Y>, generator: F) -> Result<Self, E>
     where
-        F: FnOnce(&WalkParams<X, Y>) -> Vec<Step<X, Y>>,
+        F: FnOnce(&WalkParams<X, Y>) -> Result<Vec<Step<X, Y>>, E>,
         X: Copy + TryInto<Positive> + AddAssign + Display,
         Y: TryInto<Positive> + Display + Clone,
     {
-        let steps = generator(params);
-        Self { title, steps }
+        let steps = generator(params)?;
+        Ok(Self { title, steps })
     }
 
     /// Returns the title of the random walk.
@@ -340,6 +348,7 @@ where
 }
 
 #[cfg(test)]
+#[allow(irrefutable_let_patterns)]
 mod tests_random_walk {
     use super::*;
     use crate::ExpirationDate;
@@ -356,6 +365,7 @@ mod tests_random_walk {
     use rust_decimal::Decimal;
 
     use positive::pos_or_panic;
+    use std::convert::Infallible;
     use std::fmt::Display;
     use std::ops::AddAssign;
 
@@ -411,7 +421,7 @@ mod tests_random_walk {
     }
 
     // Helper function to generate test steps for a random walk
-    fn generate_test_steps<X, Y>(params: &WalkParams<X, Y>) -> Vec<Step<X, Y>>
+    fn generate_test_steps<X, Y>(params: &WalkParams<X, Y>) -> Result<Vec<Step<X, Y>>, Infallible>
     where
         X: Copy + TryInto<Positive> + AddAssign + Display,
         Y: TryInto<Positive> + Display + Clone,
@@ -420,7 +430,9 @@ mod tests_random_walk {
         steps.push(params.init_step.clone());
 
         let test_walker = TestWalker {};
-        let values = test_walker.brownian(params).unwrap();
+        let values = test_walker
+            .brownian(params)
+            .expect("test brownian generator");
 
         let mut current_step = params.init_step.clone();
 
@@ -430,13 +442,15 @@ mod tests_random_walk {
             let new_y_value = current_step.y.value();
 
             // Create next step
-            let next_step = current_step.next(new_y_value.clone()).unwrap();
+            let next_step = current_step
+                .next(new_y_value.clone())
+                .expect("test step.next");
             steps.push(next_step.clone());
 
             current_step = next_step;
         }
 
-        steps
+        Ok(steps)
     }
 
     #[test]
@@ -453,7 +467,9 @@ mod tests_random_walk {
         );
 
         let title = "Test Random Walk".to_string();
-        let walk = RandomWalk::new(title.clone(), &params, generate_test_steps);
+        let Ok(walk) = RandomWalk::new(title.clone(), &params, generate_test_steps) else {
+            unreachable!()
+        };
 
         assert_eq!(walk.get_title(), title);
         assert_eq!(walk.len(), 5);
@@ -474,7 +490,10 @@ mod tests_random_walk {
         );
 
         let title = "Empty Walk".to_string();
-        let walk = RandomWalk::new(title.clone(), &params, |_| Vec::new());
+        let Ok(walk) = RandomWalk::new(title.clone(), &params, |_| Ok::<_, Infallible>(Vec::new()))
+        else {
+            unreachable!()
+        };
 
         assert_eq!(walk.get_title(), title);
         assert_eq!(walk.len(), 0);
@@ -497,7 +516,9 @@ mod tests_random_walk {
         );
 
         let title = "Initial Title".to_string();
-        let mut walk = RandomWalk::new(title, &params, generate_test_steps);
+        let Ok(mut walk) = RandomWalk::new(title, &params, generate_test_steps) else {
+            unreachable!()
+        };
 
         let new_title = "Updated Title".to_string();
         walk.set_title(new_title.clone());
@@ -518,7 +539,10 @@ mod tests_random_walk {
             },
         );
 
-        let walk = RandomWalk::new("Test Walk".to_string(), &params, generate_test_steps);
+        let Ok(walk) = RandomWalk::new("Test Walk".to_string(), &params, generate_test_steps)
+        else {
+            unreachable!()
+        };
 
         let first = walk.first().unwrap();
         let last = walk.last().unwrap();
@@ -540,7 +564,10 @@ mod tests_random_walk {
             },
         );
 
-        let walk = RandomWalk::new("Test Walk".to_string(), &params, generate_test_steps);
+        let Ok(walk) = RandomWalk::new("Test Walk".to_string(), &params, generate_test_steps)
+        else {
+            unreachable!()
+        };
 
         let steps = walk.get_steps();
         assert_eq!(steps.len(), 5);
@@ -564,7 +591,10 @@ mod tests_random_walk {
             },
         );
 
-        let walk = RandomWalk::new("Test Walk".to_string(), &params, generate_test_steps);
+        let Ok(walk) = RandomWalk::new("Test Walk".to_string(), &params, generate_test_steps)
+        else {
+            unreachable!()
+        };
 
         let step_0 = walk.get_step(0);
         let step_3 = walk.get_step(3);
@@ -587,7 +617,10 @@ mod tests_random_walk {
             },
         );
 
-        let walk = RandomWalk::new("Test Walk".to_string(), &params, generate_test_steps);
+        let Ok(walk) = RandomWalk::new("Test Walk".to_string(), &params, generate_test_steps)
+        else {
+            unreachable!()
+        };
 
         // This should panic
         let _step = walk.get_step(10);
@@ -606,7 +639,10 @@ mod tests_random_walk {
             },
         );
 
-        let mut walk = RandomWalk::new("Test Walk".to_string(), &params, generate_test_steps);
+        let Ok(mut walk) = RandomWalk::new("Test Walk".to_string(), &params, generate_test_steps)
+        else {
+            unreachable!()
+        };
 
         // Get a mutable reference and verify initial state
         let step_2 = walk.get_step_mut(2);
@@ -634,7 +670,10 @@ mod tests_random_walk {
             },
         );
 
-        let walk = RandomWalk::new("Test Walk".to_string(), &params, generate_test_steps);
+        let Ok(walk) = RandomWalk::new("Test Walk".to_string(), &params, generate_test_steps)
+        else {
+            unreachable!()
+        };
 
         // Test read access via index operator
         let step_1 = &walk[1];
@@ -657,7 +696,10 @@ mod tests_random_walk {
             },
         );
 
-        let mut walk = RandomWalk::new("Test Walk".to_string(), &params, generate_test_steps);
+        let Ok(mut walk) = RandomWalk::new("Test Walk".to_string(), &params, generate_test_steps)
+        else {
+            unreachable!()
+        };
 
         // Get initial step via index
         let initial_index = *walk[2].x.index();
@@ -669,6 +711,33 @@ mod tests_random_walk {
 
         // Verify the change
         assert_ne!(*walk[2].x.index(), initial_index);
+    }
+
+    #[test]
+    fn test_random_walk_new_propagates_generator_error() {
+        // Regression for #349: ensure the fallible generator's error is
+        // surfaced unchanged to the caller.
+        #[derive(Debug, PartialEq)]
+        struct FakeError(&'static str);
+
+        let params = create_test_params(
+            3,
+            1.0_f64,
+            100.0_f64,
+            WalkType::Brownian {
+                dt: Positive::ONE,
+                drift: Decimal::ZERO,
+                volatility: pos_or_panic!(0.2),
+            },
+        );
+
+        let result: Result<RandomWalk<f64, f64>, FakeError> =
+            RandomWalk::new("err".to_string(), &params, |_| Err(FakeError("boom")));
+
+        match result {
+            Err(FakeError(msg)) => assert_eq!(msg, "boom"),
+            Ok(_) => panic!("expected generator error to propagate"),
+        }
     }
 
     #[test]
@@ -684,7 +753,10 @@ mod tests_random_walk {
             },
         );
 
-        let walk = RandomWalk::new("Display Test".to_string(), &params, generate_test_steps);
+        let Ok(walk) = RandomWalk::new("Display Test".to_string(), &params, generate_test_steps)
+        else {
+            unreachable!()
+        };
 
         // Test that the display output contains the title
         let display_output = format!("{walk}");
@@ -704,7 +776,10 @@ mod tests_random_walk {
             },
         );
 
-        let walk = RandomWalk::new("Graph Test".to_string(), &params, generate_test_steps);
+        let Ok(walk) = RandomWalk::new("Graph Test".to_string(), &params, generate_test_steps)
+        else {
+            unreachable!()
+        };
 
         // Test Graph implementation methods
         assert_eq!(walk.get_title(), "Graph Test");
@@ -762,21 +837,25 @@ mod tests_random_walk {
         );
 
         // Custom generator for TestX and TestY
-        let generator = |params: &WalkParams<TestX, TestY>| {
+        let generator = |params: &WalkParams<TestX, TestY>| -> Result<_, Infallible> {
             let mut steps = Vec::new();
             steps.push(params.init_step.clone());
 
             let mut current_step = params.init_step.clone();
             for i in 1..params.size {
-                let next_step = current_step.next(TestY((100.0 + i as f64) * 1.1)).unwrap();
+                let next_step = current_step
+                    .next(TestY((100.0 + i as f64) * 1.1))
+                    .expect("test step.next");
                 steps.push(next_step.clone());
                 current_step = next_step;
             }
 
-            steps
+            Ok(steps)
         };
 
-        let walk = RandomWalk::new("Custom Types Test".to_string(), &params, generator);
+        let Ok(walk) = RandomWalk::new("Custom Types Test".to_string(), &params, generator) else {
+            unreachable!()
+        };
 
         assert_eq!(walk.len(), 3);
         assert_eq!(*walk[0].y.value(), TestY(100.0));

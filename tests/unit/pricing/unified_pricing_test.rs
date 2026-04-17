@@ -13,6 +13,8 @@ use optionstratlib::utils::TimeFrame;
 use optionstratlib::{ExpirationDate, Options};
 use positive::{Positive, pos_or_panic};
 use rust_decimal_macros::dec;
+use std::convert::Infallible;
+use std::error::Error;
 use std::fmt::Display;
 use std::ops::AddAssign;
 
@@ -27,7 +29,9 @@ where
 }
 
 /// Simple generator function for testing
-fn simple_generator(params: &WalkParams<Positive, Positive>) -> Vec<Step<Positive, Positive>> {
+fn simple_generator(
+    params: &WalkParams<Positive, Positive>,
+) -> Result<Vec<Step<Positive, Positive>>, Infallible> {
     let mut out = Vec::with_capacity(params.size);
     let mut current = params.init_step.clone();
     out.push(current.clone());
@@ -37,7 +41,7 @@ fn simple_generator(params: &WalkParams<Positive, Positive>) -> Vec<Step<Positiv
         current = current.next(new_y).expect("step.next should succeed");
         out.push(current.clone());
     }
-    out
+    Ok(out)
 }
 
 /// Helper function to create a standard test option
@@ -92,7 +96,7 @@ fn test_priceable_trait_black_scholes() {
 }
 
 #[test]
-fn test_price_option_monte_carlo() {
+fn test_price_option_monte_carlo() -> Result<(), Box<dyn Error>> {
     let option = create_test_option();
     let init_price = option.underlying_price;
     let size = 365;
@@ -118,7 +122,7 @@ fn test_price_option_monte_carlo() {
         walk_type: walk,
         walker: Box::new(TestWalker),
     };
-    let simulator = Simulator::new("MC Test".to_string(), 1000, &params, simple_generator);
+    let simulator = Simulator::new("MC Test".to_string(), 1000, &params, simple_generator)?;
 
     let engine = PricingEngine::MonteCarlo { simulator };
     let result = price_option(&option, &engine);
@@ -126,10 +130,11 @@ fn test_price_option_monte_carlo() {
     assert!(result.is_ok(), "Monte Carlo pricing should succeed");
     let price = result.unwrap();
     assert!(price > Positive::ZERO, "Price should be positive");
+    Ok(())
 }
 
 #[test]
-fn test_priceable_trait_monte_carlo() {
+fn test_priceable_trait_monte_carlo() -> Result<(), Box<dyn Error>> {
     let option = create_test_option();
     let init_price = option.underlying_price;
     let size = 365;
@@ -155,7 +160,7 @@ fn test_priceable_trait_monte_carlo() {
         walk_type: walk,
         walker: Box::new(TestWalker),
     };
-    let simulator = Simulator::new("MC Test".to_string(), 1000, &params, simple_generator);
+    let simulator = Simulator::new("MC Test".to_string(), 1000, &params, simple_generator)?;
 
     let engine = PricingEngine::MonteCarlo { simulator };
     let result = option.price(&engine);
@@ -166,6 +171,7 @@ fn test_priceable_trait_monte_carlo() {
     );
     let price = result.unwrap();
     assert!(price > Positive::ZERO, "Price should be positive");
+    Ok(())
 }
 
 #[test]
@@ -196,7 +202,7 @@ fn test_short_position_pricing() {
 }
 
 #[test]
-fn test_monte_carlo_with_heston() {
+fn test_monte_carlo_with_heston() -> Result<(), Box<dyn Error>> {
     let option = create_test_option();
     let init_price = option.underlying_price;
     let size = 365;
@@ -226,7 +232,7 @@ fn test_monte_carlo_with_heston() {
         walk_type: walk,
         walker: Box::new(TestWalker),
     };
-    let simulator = Simulator::new("Heston Test".to_string(), 500, &params, simple_generator);
+    let simulator = Simulator::new("Heston Test".to_string(), 500, &params, simple_generator)?;
 
     let engine = PricingEngine::MonteCarlo { simulator };
     let result = price_option(&option, &engine);
@@ -234,10 +240,11 @@ fn test_monte_carlo_with_heston() {
     assert!(result.is_ok(), "Heston model pricing should succeed");
     let price = result.unwrap();
     assert!(price > Positive::ZERO, "Price should be positive");
+    Ok(())
 }
 
 #[test]
-fn test_monte_carlo_with_jump_diffusion() {
+fn test_monte_carlo_with_jump_diffusion() -> Result<(), Box<dyn Error>> {
     let option = create_test_option();
     let init_price = option.underlying_price;
     let size = 365;
@@ -271,7 +278,7 @@ fn test_monte_carlo_with_jump_diffusion() {
         500,
         &params,
         simple_generator,
-    );
+    )?;
 
     let engine = PricingEngine::MonteCarlo { simulator };
     let result = price_option(&option, &engine);
@@ -282,10 +289,11 @@ fn test_monte_carlo_with_jump_diffusion() {
     );
     let price = result.unwrap();
     assert!(price > Positive::ZERO, "Price should be positive");
+    Ok(())
 }
 
 #[test]
-fn test_monte_carlo_with_telegraph() {
+fn test_monte_carlo_with_telegraph() -> Result<(), Box<dyn Error>> {
     let option = create_test_option();
     let init_price = option.underlying_price;
     let size = 365;
@@ -315,7 +323,7 @@ fn test_monte_carlo_with_telegraph() {
         walk_type: walk,
         walker: Box::new(TestWalker),
     };
-    let simulator = Simulator::new("Telegraph Test".to_string(), 500, &params, simple_generator);
+    let simulator = Simulator::new("Telegraph Test".to_string(), 500, &params, simple_generator)?;
 
     let engine = PricingEngine::MonteCarlo { simulator };
     let result = price_option(&option, &engine);
@@ -323,6 +331,7 @@ fn test_monte_carlo_with_telegraph() {
     assert!(result.is_ok(), "Telegraph model pricing should succeed");
     let price = result.unwrap();
     assert!(price > Positive::ZERO, "Price should be positive");
+    Ok(())
 }
 
 #[test]

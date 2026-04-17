@@ -149,6 +149,14 @@ impl From<StrategyError> for SimulationError {
     }
 }
 
+impl From<crate::error::ChainError> for SimulationError {
+    fn from(err: crate::error::ChainError) -> Self {
+        SimulationError::OtherError {
+            reason: err.to_string(),
+        }
+    }
+}
+
 /// Type alias for Results that may return a `SimulationError`.
 ///
 /// This is a convenience type for functions that return simulation results.

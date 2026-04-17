@@ -837,9 +837,14 @@ mod tests_simulate {
         ];
 
         let walk_params = create_walk_params(prices);
-        let simulator = Simulator::new("Test Simulator".to_string(), 1, &walk_params, |p| {
-            generator_positive(p).unwrap()
-        });
+        let Ok(simulator) = Simulator::new(
+            "Test Simulator".to_string(),
+            1,
+            &walk_params,
+            generator_positive,
+        ) else {
+            panic!("simulator setup failed");
+        };
 
         let exit_policy = ExitPolicy::ProfitPercent(dec!(0.5));
         let results = strategy.simulate(&simulator, exit_policy);
@@ -861,9 +866,14 @@ mod tests_simulate {
         ];
 
         let walk_params = create_walk_params(prices);
-        let simulator = Simulator::new("Test Simulator".to_string(), 1, &walk_params, |p| {
-            generator_positive(p).unwrap()
-        });
+        let Ok(simulator) = Simulator::new(
+            "Test Simulator".to_string(),
+            1,
+            &walk_params,
+            generator_positive,
+        ) else {
+            panic!("simulator setup failed");
+        };
 
         let exit_policy = ExitPolicy::LossPercent(dec!(1.0));
         let results = strategy.simulate(&simulator, exit_policy);
@@ -885,9 +895,14 @@ mod tests_simulate {
         ];
 
         let walk_params = create_walk_params(prices);
-        let simulator = Simulator::new("Test Simulator".to_string(), 1, &walk_params, |p| {
-            generator_positive(p).unwrap()
-        });
+        let Ok(simulator) = Simulator::new(
+            "Test Simulator".to_string(),
+            1,
+            &walk_params,
+            generator_positive,
+        ) else {
+            panic!("simulator setup failed");
+        };
 
         let exit_policy = ExitPolicy::Expiration;
         let results = strategy.simulate(&simulator, exit_policy);
@@ -909,9 +924,14 @@ mod tests_simulate {
         ];
 
         let walk_params = create_walk_params(prices);
-        let simulator = Simulator::new("Test Simulator".to_string(), 1, &walk_params, |p| {
-            generator_positive(p).unwrap()
-        });
+        let Ok(simulator) = Simulator::new(
+            "Test Simulator".to_string(),
+            1,
+            &walk_params,
+            generator_positive,
+        ) else {
+            panic!("simulator setup failed");
+        };
 
         let exit_policy = ExitPolicy::Or(vec![
             ExitPolicy::ProfitPercent(dec!(0.5)),
@@ -935,9 +955,14 @@ mod tests_simulate {
         ];
 
         let walk_params = create_walk_params(prices);
-        let simulator = Simulator::new("Test Simulator".to_string(), 5, &walk_params, |p| {
-            generator_positive(p).unwrap()
-        });
+        let Ok(simulator) = Simulator::new(
+            "Test Simulator".to_string(),
+            5,
+            &walk_params,
+            generator_positive,
+        ) else {
+            panic!("simulator setup failed");
+        };
 
         let exit_policy = ExitPolicy::Expiration;
         let results = strategy.simulate(&simulator, exit_policy);
@@ -963,9 +988,14 @@ mod tests_simulate {
         ];
 
         let walk_params = create_walk_params(prices);
-        let simulator = Simulator::new("Test Simulator".to_string(), 1, &walk_params, |p| {
-            generator_positive(p).unwrap()
-        });
+        let Ok(simulator) = Simulator::new(
+            "Test Simulator".to_string(),
+            1,
+            &walk_params,
+            generator_positive,
+        ) else {
+            panic!("simulator setup failed");
+        };
 
         let exit_policy = ExitPolicy::TimeSteps(2);
         let results = strategy.simulate(&simulator, exit_policy);
@@ -982,9 +1012,14 @@ mod tests_simulate {
         let prices = vec![Positive::HUNDRED, pos_or_panic!(95.0), pos_or_panic!(90.0)];
 
         let walk_params = create_walk_params(prices);
-        let simulator = Simulator::new("Test Simulator".to_string(), 1, &walk_params, |p| {
-            generator_positive(p).unwrap()
-        });
+        let Ok(simulator) = Simulator::new(
+            "Test Simulator".to_string(),
+            1,
+            &walk_params,
+            generator_positive,
+        ) else {
+            panic!("simulator setup failed");
+        };
 
         let exit_policy = ExitPolicy::UnderlyingBelow(pos_or_panic!(92.0));
         let results = strategy.simulate(&simulator, exit_policy);
@@ -1005,9 +1040,14 @@ mod tests_simulate {
         ];
 
         let walk_params = create_walk_params(prices);
-        let simulator = Simulator::new("Test Simulator".to_string(), 1, &walk_params, |p| {
-            generator_positive(p).unwrap()
-        });
+        let Ok(simulator) = Simulator::new(
+            "Test Simulator".to_string(),
+            1,
+            &walk_params,
+            generator_positive,
+        ) else {
+            panic!("simulator setup failed");
+        };
 
         let exit_policy = ExitPolicy::And(vec![
             ExitPolicy::TimeSteps(2),
@@ -1030,9 +1070,14 @@ mod tests_simulate {
         ];
 
         let walk_params = create_walk_params(prices);
-        let simulator = Simulator::new("Test Simulator".to_string(), 10, &walk_params, |p| {
-            generator_positive(p).unwrap()
-        });
+        let Ok(simulator) = Simulator::new(
+            "Test Simulator".to_string(),
+            10,
+            &walk_params,
+            generator_positive,
+        ) else {
+            panic!("simulator setup failed");
+        };
 
         let exit_policy = ExitPolicy::Expiration;
         let results = strategy.simulate(&simulator, exit_policy);
@@ -1054,9 +1099,14 @@ mod tests_simulate {
         ];
 
         let walk_params = create_walk_params(prices);
-        let simulator = Simulator::new("Test Simulator".to_string(), 3, &walk_params, |p| {
-            generator_positive(p).unwrap()
-        });
+        let Ok(simulator) = Simulator::new(
+            "Test Simulator".to_string(),
+            3,
+            &walk_params,
+            generator_positive,
+        ) else {
+            panic!("simulator setup failed");
+        };
 
         let exit_policy = ExitPolicy::Expiration;
         let results = strategy.simulate(&simulator, exit_policy);
@@ -1083,9 +1133,14 @@ mod tests_simulate {
         ];
 
         let walk_params = create_walk_params(prices);
-        let simulator = Simulator::new("Test Simulator".to_string(), 1, &walk_params, |p| {
-            generator_positive(p).unwrap()
-        });
+        let Ok(simulator) = Simulator::new(
+            "Test Simulator".to_string(),
+            1,
+            &walk_params,
+            generator_positive,
+        ) else {
+            panic!("simulator setup failed");
+        };
 
         let exit_policy = ExitPolicy::Expiration;
         let results = strategy.simulate(&simulator, exit_policy);
@@ -1112,9 +1167,14 @@ mod tests_simulate {
         ];
 
         let walk_params = create_walk_params(prices);
-        let simulator = Simulator::new("Test Simulator".to_string(), 1, &walk_params, |p| {
-            generator_positive(p).unwrap()
-        });
+        let Ok(simulator) = Simulator::new(
+            "Test Simulator".to_string(),
+            1,
+            &walk_params,
+            generator_positive,
+        ) else {
+            panic!("simulator setup failed");
+        };
 
         let exit_policy = ExitPolicy::ProfitPercent(dec!(0.5));
         let results = strategy.simulate(&simulator, exit_policy);
@@ -1134,9 +1194,14 @@ mod tests_simulate {
         let prices = vec![Positive::HUNDRED, pos_or_panic!(85.0), pos_or_panic!(70.0)];
 
         let walk_params = create_walk_params(prices);
-        let simulator = Simulator::new("Test Simulator".to_string(), 1, &walk_params, |p| {
-            generator_positive(p).unwrap()
-        });
+        let Ok(simulator) = Simulator::new(
+            "Test Simulator".to_string(),
+            1,
+            &walk_params,
+            generator_positive,
+        ) else {
+            panic!("simulator setup failed");
+        };
 
         let exit_policy = ExitPolicy::LossPercent(dec!(1.0));
         let results = strategy.simulate(&simulator, exit_policy);
@@ -1160,9 +1225,14 @@ mod tests_simulate {
         ];
 
         let walk_params = create_walk_params(prices);
-        let simulator = Simulator::new("Test Simulator".to_string(), 1, &walk_params, |p| {
-            generator_positive(p).unwrap()
-        });
+        let Ok(simulator) = Simulator::new(
+            "Test Simulator".to_string(),
+            1,
+            &walk_params,
+            generator_positive,
+        ) else {
+            panic!("simulator setup failed");
+        };
 
         let exit_policy = ExitPolicy::Expiration;
         let results = strategy.simulate(&simulator, exit_policy);
@@ -1188,9 +1258,14 @@ mod tests_simulate {
         let price_count = prices.len();
 
         let walk_params = create_walk_params(prices);
-        let simulator = Simulator::new("Test Simulator".to_string(), 1, &walk_params, |p| {
-            generator_positive(p).unwrap()
-        });
+        let Ok(simulator) = Simulator::new(
+            "Test Simulator".to_string(),
+            1,
+            &walk_params,
+            generator_positive,
+        ) else {
+            panic!("simulator setup failed");
+        };
 
         let exit_policy = ExitPolicy::TimeSteps(1);
         let results = strategy.simulate(&simulator, exit_policy);
@@ -1209,9 +1284,14 @@ mod tests_simulate {
         let prices = vec![Positive::HUNDRED, pos_or_panic!(102.0), pos_or_panic!(98.0)];
 
         let walk_params = create_walk_params(prices);
-        let simulator = Simulator::new("Test Simulator".to_string(), 5, &walk_params, |p| {
-            generator_positive(p).unwrap()
-        });
+        let Ok(simulator) = Simulator::new(
+            "Test Simulator".to_string(),
+            5,
+            &walk_params,
+            generator_positive,
+        ) else {
+            panic!("simulator setup failed");
+        };
 
         let exit_policy = ExitPolicy::Or(vec![
             ExitPolicy::ProfitPercent(dec!(0.5)),
