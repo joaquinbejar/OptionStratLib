@@ -412,25 +412,37 @@ where
 
                 values.push(price); // Add initial value
 
+                let dt_sqrt = dt
+                    .to_dec()
+                    .sqrt()
+                    .ok_or_else(|| SimulationError::other("Heston: sqrt(dt) failed (overflow)"))?;
+                // sqrt(1 - rho^2) depends only on `rho`, hoist out of the
+                // hot loop so we don't recompute it per step.
+                let one_minus_rho_sq_sqrt = (Decimal::ONE - rho * rho).sqrt().ok_or_else(|| {
+                    SimulationError::other(
+                        "Heston: sqrt(1 - rho^2) failed (rho out of range or overflow)",
+                    )
+                })?;
                 for _ in 0..params.size - 1 {
                     // Generate correlated random numbers
                     let z1 = decimal_normal_sample();
-                    let z2 = rho * z1
-                        + (Decimal::ONE - rho * rho).sqrt().unwrap() * decimal_normal_sample();
+                    let z2 = rho * z1 + one_minus_rho_sq_sqrt * decimal_normal_sample();
 
                     // Ensure variance stays positive (modified Euler scheme with truncation)
+                    let variance_sqrt = variance.sqrt().ok_or_else(|| {
+                        SimulationError::other("Heston: sqrt(variance) failed (overflow)")
+                    })?;
                     let variance_new = (variance
                         + kappa.to_dec() * (theta.to_dec() - variance) * dt.to_dec()
-                        + xi.to_dec()
-                            * variance.sqrt().unwrap()
-                            * z2
-                            * dt.to_dec().sqrt().unwrap())
-                    .max(Decimal::ZERO);
+                        + xi.to_dec() * variance_sqrt * z2 * dt_sqrt)
+                        .max(Decimal::ZERO);
 
                     // Update price using the average variance over the step
                     let avg_variance = (variance + variance_new) / Decimal::TWO;
-                    let price_change = drift * dt.to_dec()
-                        + avg_variance.sqrt().unwrap() * z1 * dt.to_dec().sqrt().unwrap();
+                    let avg_variance_sqrt = avg_variance.sqrt().ok_or_else(|| {
+                        SimulationError::other("Heston: sqrt(avg_variance) failed (overflow)")
+                    })?;
+                    let price_change = drift * dt.to_dec() + avg_variance_sqrt * z1 * dt_sqrt;
 
                     price *= (price_change).exp();
                     variance = variance_new;

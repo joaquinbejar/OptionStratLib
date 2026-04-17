@@ -55,41 +55,44 @@ use positive::pos_or_panic;
 //! use rust_decimal_macros::dec;
 //! use optionstratlib::risk::SPANMargin;
 //!
-//! // Create an option position
-//! let option = Options::new(
-//!     OptionType::European,
-//!     Side::Short,
-//!     "STOCK".to_string(),
-//!     pos_or_panic!(150.0),   // Strike price
-//!     ExpirationDate::Days(pos_or_panic!(30.0)),
-//!     pos_or_panic!(0.2),   // Volatility
-//!     Positive::ONE,   // Quantity
-//!     pos_or_panic!(155.0),   // Current price
-//!     dec!(0.05),   // Risk-free rate
-//!     OptionStyle::Call,
-//!     Positive::ZERO,   // Dividend yield
-//!     None,   // Exotic parameters
-//! );
+//! fn main() -> Result<(), Box<dyn std::error::Error>> {
+//!     // Create an option position
+//!     let option = Options::new(
+//!         OptionType::European,
+//!         Side::Short,
+//!         "STOCK".to_string(),
+//!         pos_or_panic!(150.0),   // Strike price
+//!         ExpirationDate::Days(pos_or_panic!(30.0)),
+//!         pos_or_panic!(0.2),   // Volatility
+//!         Positive::ONE,   // Quantity
+//!         pos_or_panic!(155.0),   // Current price
+//!         dec!(0.05),   // Risk-free rate
+//!         OptionStyle::Call,
+//!         Positive::ZERO,   // Dividend yield
+//!         None,   // Exotic parameters
+//!     );
 //!
-//! let position = Position {
-//!     option,
-//!     premium: pos_or_panic!(5.0),
-//!     date: Utc::now(),
-//!     open_fee: pos_or_panic!(0.5),
-//!     close_fee: pos_or_panic!(0.5),
-//!     epic: None,
-//!     extra_fields: None,
-//! };
+//!     let position = Position {
+//!         option,
+//!         premium: pos_or_panic!(5.0),
+//!         date: Utc::now(),
+//!         open_fee: pos_or_panic!(0.5),
+//!         close_fee: pos_or_panic!(0.5),
+//!         epic: None,
+//!         extra_fields: None,
+//!     };
 //!
-//! // Create SPAN calculator
-//! let span = SPANMargin::new(
-//!     dec!(0.10),   // 10% short option minimum
-//!     dec!(0.05),   // 5% price scan range
-//!     dec!(0.10),   // 10% volatility scan range
-//! );
+//!     // Create SPAN calculator
+//!     let span = SPANMargin::new(
+//!         dec!(0.10),   // 10% short option minimum
+//!         dec!(0.05),   // 5% price scan range
+//!         dec!(0.10),   // 10% volatility scan range
+//!     );
 //!
-//! // Calculate margin requirement
-//! let margin = span.calculate_margin(&position);
+//!     // Calculate margin requirement
+//!     let margin = span.calculate_margin(&position)?;
+//!     Ok(())
+//! }
 //! ```
 //!
 //! ### Portfolio Analysis
@@ -105,48 +108,52 @@ use positive::pos_or_panic;
 //! use positive::pos_or_panic;
 //! use optionstratlib::risk::SPANMargin;
 //!
-//! let option = Options {
-//!             option_type: OptionType::European,
-//!             side: Side::Long,
-//!             underlying_symbol: "AAPL".to_string(),
-//!             strike_price: Positive::HUNDRED,
-//!             expiration_date: ExpirationDate::Days(pos_or_panic!(30.0)),
-//!             implied_volatility: pos_or_panic!(0.2),
-//!             quantity: Positive::ONE,
-//!             underlying_price: pos_or_panic!(105.0),
-//!             risk_free_rate: dec!(0.05),
-//!             option_style: OptionStyle::Call,
-//!             dividend_yield: pos_or_panic!(0.01),
-//!             exotic_params: None,
-//!         };
-//! // Create multiple positions
-//! let positions = vec![
-//!     Position {
-//!         option: option.clone(),
-//!         premium: pos_or_panic!(5.0),
-//!         date: Utc::now(),
-//!         open_fee: pos_or_panic!(0.5),
-//!         close_fee: pos_or_panic!(0.5),
-//!         epic: None,
-//!         extra_fields: None,
-//!     },
-//!     Position {
-//!         option,
-//!         premium: pos_or_panic!(3.0),
-//!         date: Utc::now(),
-//!         open_fee: pos_or_panic!(0.5),
-//!         close_fee: pos_or_panic!(0.5),
-//!         epic: None,
-//!         extra_fields: None,
-//!     },
-//! ];
+//! fn main() -> Result<(), Box<dyn std::error::Error>> {
+//!     let option = Options {
+//!         option_type: OptionType::European,
+//!         side: Side::Long,
+//!         underlying_symbol: "AAPL".to_string(),
+//!         strike_price: Positive::HUNDRED,
+//!         expiration_date: ExpirationDate::Days(pos_or_panic!(30.0)),
+//!         implied_volatility: pos_or_panic!(0.2),
+//!         quantity: Positive::ONE,
+//!         underlying_price: pos_or_panic!(105.0),
+//!         risk_free_rate: dec!(0.05),
+//!         option_style: OptionStyle::Call,
+//!         dividend_yield: pos_or_panic!(0.01),
+//!         exotic_params: None,
+//!     };
+//!     // Create multiple positions
+//!     let positions = vec![
+//!         Position {
+//!             option: option.clone(),
+//!             premium: pos_or_panic!(5.0),
+//!             date: Utc::now(),
+//!             open_fee: pos_or_panic!(0.5),
+//!             close_fee: pos_or_panic!(0.5),
+//!             epic: None,
+//!             extra_fields: None,
+//!         },
+//!         Position {
+//!             option,
+//!             premium: pos_or_panic!(3.0),
+//!             date: Utc::now(),
+//!             open_fee: pos_or_panic!(0.5),
+//!             close_fee: pos_or_panic!(0.5),
+//!             epic: None,
+//!             extra_fields: None,
+//!         },
+//!     ];
 //!
-//! let span = SPANMargin::new(dec!(0.10), dec!(0.05), dec!(0.10));
+//!     let span = SPANMargin::new(dec!(0.10), dec!(0.05), dec!(0.10));
 //!
-//! // Calculate margin for each position
-//! let margins: Vec<Decimal> = positions.iter()
-//!     .map(|pos| span.calculate_margin(pos))
-//!     .collect();
+//!     // Calculate margin for each position; propagate any pricing error.
+//!     let margins: Vec<Decimal> = positions
+//!         .iter()
+//!         .map(|pos| span.calculate_margin(pos))
+//!         .collect::<Result<Vec<_>, _>>()?;
+//!     Ok(())
+//! }
 //! ```
 //!
 //! ## Implementation Details

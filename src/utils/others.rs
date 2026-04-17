@@ -4,15 +4,18 @@
    Date: 27/9/24
 ******************************************************************************/
 
-use crate::constants::TOLERANCE;
 use crate::error::{DecimalError, Error};
 use itertools::Itertools;
-use num_traits::{FromPrimitive, ToPrimitive};
+use num_traits::FromPrimitive;
 use positive::Positive;
 use rand::{Rng, RngExt, rng};
 use rayon::prelude::*;
 use rust_decimal::Decimal;
 use std::collections::BTreeSet;
+
+/// Precomputed f64 form of `crate::constants::TOLERANCE` (= 1e-8) so the
+/// hot-path comparison can avoid the runtime fallible `Decimal::to_f64`.
+const TOLERANCE_F64: f64 = 1e-8;
 
 /// Checks for approximate equality between two f64 values within a defined tolerance.
 ///
@@ -44,7 +47,7 @@ use std::collections::BTreeSet;
 /// ```
 #[allow(dead_code)]
 pub fn approx_equal(a: f64, b: f64) -> bool {
-    (a - b).abs() < TOLERANCE.to_f64().unwrap()
+    (a - b).abs() < TOLERANCE_F64
 }
 
 /// Gets a random element from a BTreeSet.
@@ -132,15 +135,18 @@ pub fn random_decimal(rng: &mut impl Rng) -> Result<Decimal, DecimalError> {
 /// # Examples
 ///
 /// ```
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// use optionstratlib::utils::others::process_n_times_iter;
 ///
 /// let numbers = vec![1, 2, 3];
 /// let n = 2;
 /// let result = process_n_times_iter(&numbers, n, |combination| {
 ///     vec![combination[0] + combination[1]]
-/// }).unwrap();
+/// })?;
 ///
 /// assert_eq!(result, vec![2, 3, 4, 4, 5, 6]);
+/// # Ok(())
+/// # }
 /// ```
 pub fn process_n_times_iter<T, Y, F>(
     positions: &[T],
@@ -162,7 +168,11 @@ where
     Ok(combinations
         .par_iter()
         .flat_map(|combination| {
-            let mut closure = process_combination.lock().unwrap();
+            // Mutex-poison recovery: a panic in one closure invocation
+            // shouldn't poison the entire combination scan.
+            let mut closure = process_combination
+                .lock()
+                .unwrap_or_else(|e| e.into_inner());
             closure(combination)
         })
         .collect())

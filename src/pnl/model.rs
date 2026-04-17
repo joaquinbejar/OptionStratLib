@@ -3,6 +3,7 @@
    Email: jb@taunais.com
    Date: 26/2/25
 ******************************************************************************/
+use crate::error::DecimalError;
 use num_traits::ToPrimitive;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize, Serializer};
@@ -66,26 +67,42 @@ impl PnLRange {
     ///
     /// A new `PnLRange` instance with the bounds converted to integers.
     ///
-    /// # Panics
+    /// # Errors
     ///
-    /// This function will panic if either the lower or upper Decimal value cannot be
-    /// converted to an i32 (e.g., if the value is outside the i32 range or is not
-    /// representable as an integer).
+    /// Returns a [`DecimalError::ConversionError`] if either bound is
+    /// outside the `i32` range or cannot be represented as an integer.
     ///
     /// # Example
     ///
     /// ```rust
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// use rust_decimal_macros::dec;
     /// use optionstratlib::pnl::model::PnLRange;
     ///
-    /// let range = PnLRange::new_decimal(dec!(-50.5), dec!(75.25));
+    /// let range = PnLRange::new_decimal(dec!(-50.5), dec!(75.25))?;
     /// // Creates a PnL range from -50 (inclusive) to 75 (exclusive)
+    /// # Ok(())
+    /// # }
     /// ```
-    pub fn new_decimal(lower: Decimal, upper: Decimal) -> Self {
-        Self {
-            lower: lower.to_i32().unwrap(),
-            upper: upper.to_i32().unwrap(),
-        }
+    pub fn new_decimal(lower: Decimal, upper: Decimal) -> Result<Self, DecimalError> {
+        let lower_i32 = lower
+            .to_i32()
+            .ok_or_else(|| DecimalError::ConversionError {
+                from_type: "Decimal".to_string(),
+                to_type: "i32".to_string(),
+                reason: format!("lower bound {lower} out of i32 range"),
+            })?;
+        let upper_i32 = upper
+            .to_i32()
+            .ok_or_else(|| DecimalError::ConversionError {
+                from_type: "Decimal".to_string(),
+                to_type: "i32".to_string(),
+                reason: format!("upper bound {upper} out of i32 range"),
+            })?;
+        Ok(Self {
+            lower: lower_i32,
+            upper: upper_i32,
+        })
     }
 }
 

@@ -76,7 +76,7 @@ use crate::error::CurveError;
 ///
 /// // Find strike with tightest spread (most liquid)
 /// let min_spread = spread_curve.points.iter()
-///     .min_by(|a, b| a.y.partial_cmp(&b.y).unwrap());
+///     .min_by(|a, b| a.y.partial_cmp(&b.y).unwrap_or(std::cmp::Ordering::Equal));
 /// ```
 pub trait BidAskSpreadCurve {
     /// Computes the bid-ask spread curve by strike price.
@@ -147,7 +147,9 @@ mod tests_bid_ask_spread {
         let points: Vec<&Point2D> = curve.points.iter().collect();
 
         // Find minimum spread
-        let min_spread = points.iter().min_by(|a, b| a.y.partial_cmp(&b.y).unwrap());
+        let min_spread = points
+            .iter()
+            .min_by(|a, b| a.y.partial_cmp(&b.y).unwrap_or(std::cmp::Ordering::Equal));
 
         if let Some(min) = min_spread {
             // ATM should have tightest spread (around 450)

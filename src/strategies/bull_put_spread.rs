@@ -701,6 +701,7 @@ impl Optimizable for BullPutSpread {
     /// # Examples
     ///
     /// ```rust
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// use rust_decimal_macros::dec;
     /// use tracing::info;
     /// use optionstratlib::chains::chain::OptionChain;
@@ -730,7 +731,7 @@ impl Optimizable for BullPutSpread {
     ///         pos_or_panic!(0.78),   // open_fee_long
     ///         pos_or_panic!(0.73),   // close_fee_long
     ///         pos_or_panic!(0.73),   // close_fee_short
-    ///     ).expect("valid bull put spread");
+    ///     )?;
     ///
     /// let side = FindOptimalSide::Lower;
     /// let filtered_combinations = bull_put_spread_strategy.filter_combinations(&option_chain, side);
@@ -742,6 +743,8 @@ impl Optimizable for BullPutSpread {
     ///    };
     ///    info!("Long Option: {:?}, Short Option: {:?}", long, short);
     /// }
+    /// # Ok(())
+    /// # }
     /// ```
     ///
     /// # Notes

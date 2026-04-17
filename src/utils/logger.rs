@@ -82,9 +82,9 @@ static INIT: Once = Once::new();
 ///
 /// **Behavior:**
 /// - Concurrent calls to this function result in the logger being initialized only once.
-///
-/// # Panics
-/// This function panics if setting the default subscriber fails.
+/// - If a global subscriber is already installed (for example, by a binary
+///   wrapping the library) the second installation is silently ignored
+///   rather than panicking.
 pub fn setup_logger() {
     INIT.call_once(|| {
         let log_level = env::var("LOGLEVEL")
@@ -101,10 +101,12 @@ pub fn setup_logger() {
 
         let subscriber = FmtSubscriber::builder().with_max_level(level).finish();
 
-        tracing::subscriber::set_global_default(subscriber)
-            .expect("Error setting default subscriber");
-
-        tracing::debug!("Log level set to: {}", level);
+        // `set_global_default` returns Err only if a global subscriber is
+        // already installed; in that case the caller already has a
+        // working subscriber and we silently no-op.
+        if tracing::subscriber::set_global_default(subscriber).is_ok() {
+            tracing::debug!("Log level set to: {}", level);
+        }
     });
 }
 
@@ -115,9 +117,8 @@ pub fn setup_logger() {
 ///
 /// **Behavior:**
 /// - Concurrent calls to this function result in the logger being initialized only once.
-///
-/// # Panics
-/// This function panics if setting the default subscriber fails.
+/// - If a global subscriber is already installed the second installation
+///   is silently ignored rather than panicking.
 #[allow(unused_variables)]
 pub fn setup_logger_with_level(log_level: &str) {
     INIT.call_once(|| {
@@ -133,10 +134,9 @@ pub fn setup_logger_with_level(log_level: &str) {
 
         let subscriber = FmtSubscriber::builder().with_max_level(level).finish();
 
-        tracing::subscriber::set_global_default(subscriber)
-            .expect("Error setting default subscriber");
-
-        tracing::debug!("Log level set to: {}", level);
+        if tracing::subscriber::set_global_default(subscriber).is_ok() {
+            tracing::debug!("Log level set to: {}", level);
+        }
     });
 }
 

@@ -218,33 +218,22 @@ where
     /// This method assumes that each item in the iterator is an iterable itself.
     /// It retrieves the last element of each iterable and collects them into a new `Vec`.
     ///
-    /// # Panics
-    /// This method will panic if:
-    /// - Any of the iterables in the iterator are empty.
-    /// - The `last()` call on any of the items returns `None`.
-    ///
     /// # Returns
-    /// A vector of references to the last `Step<X, Y>` elements of each item in the iterator.
-    ///
+    /// A vector of references to the last `Step<X, Y>` of each non-empty
+    /// random walk. Empty walks are silently skipped, so the returned
+    /// vector may be shorter than `self.len()`.
     pub fn get_last_steps(&self) -> Vec<&Step<X, Y>> {
-        self.into_iter().map(|step| step.last().unwrap()).collect()
+        self.into_iter().filter_map(|step| step.last()).collect()
     }
 
-    /// Retrieves the last value of each item in the iterator.
-    ///
-    /// This function processes the current instance of the object (likely some iterable structure)
-    /// and extracts the last element from each `Step<X, Y>` item in it.
-    /// The result is a `Vec` containing references to the last value of each `Step`.
+    /// Retrieves the last value of each non-empty random walk.
     ///
     /// # Returns
-    /// A `Vec` of references to the last element of each `Step<X, Y>` in the iterator.
-    ///
-    /// # Panics
-    /// This method panics if any `Step<X, Y>` within the iterator is empty,
-    /// as it uses `unwrap()` on the result of `step.last()`.
-    ///
+    /// A `Vec` of references to the last `Step<X, Y>` of each non-empty
+    /// random walk. Empty walks are silently skipped, so the returned
+    /// vector may be shorter than `self.len()`.
     pub fn get_last_values(&self) -> Vec<&Step<X, Y>> {
-        self.into_iter().map(|step| step.last().unwrap()).collect()
+        self.into_iter().filter_map(|step| step.last()).collect()
     }
 
     /// Retrieves the last set of positive values from the internal state.

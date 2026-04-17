@@ -130,16 +130,12 @@ impl ProfitLossRange {
         expiration_date: &ExpirationDate,
         risk_free_rate: Option<Decimal>,
     ) -> Result<(), ProbabilityError> {
-        if self.lower_bound.unwrap_or(Positive::ZERO)
-            > self.upper_bound.unwrap_or(Positive::INFINITY)
-        {
+        let lower = self.lower_bound.unwrap_or(Positive::ZERO);
+        let upper = self.upper_bound.unwrap_or(Positive::INFINITY);
+        if lower > upper {
             return Err(ProbabilityError::PriceError(
                 PriceErrorKind::InvalidPriceRange {
-                    range: format!(
-                        "lower_bound: {} upper_bound: {}",
-                        self.lower_bound.unwrap().value(),
-                        self.upper_bound.unwrap().value()
-                    ),
+                    range: format!("lower_bound: {lower} upper_bound: {upper}"),
                     reason: "Lower bound must be less than upper bound".to_string(),
                 },
             ));

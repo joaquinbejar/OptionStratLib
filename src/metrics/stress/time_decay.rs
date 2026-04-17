@@ -73,7 +73,7 @@ use positive::Positive;
 ///
 /// // Find strike with maximum theta decay
 /// let max_theta = theta_curve.points.iter()
-///     .min_by(|a, b| a.y.partial_cmp(&b.y).unwrap()); // Most negative
+///     .min_by(|a, b| a.y.partial_cmp(&b.y).unwrap_or(std::cmp::Ordering::Equal)); // Most negative
 /// ```
 pub trait TimeDecayCurve {
     /// Computes the time decay profile curve by strike price.
@@ -243,7 +243,9 @@ mod tests_time_decay {
         let points: Vec<&Point2D> = curve.points.iter().collect();
 
         // Find most negative theta (ATM)
-        let min_theta = points.iter().min_by(|a, b| a.y.partial_cmp(&b.y).unwrap());
+        let min_theta = points
+            .iter()
+            .min_by(|a, b| a.y.partial_cmp(&b.y).unwrap_or(std::cmp::Ordering::Equal));
 
         if let Some(min) = min_theta {
             // ATM should have most negative theta

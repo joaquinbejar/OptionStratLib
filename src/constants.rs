@@ -17,6 +17,7 @@ pub const ZERO: f64 = 0.0;
 
 /// Small decimal value used as a threshold for convergence tests and equality comparisons.
 /// Represents a general tolerance level for numerical algorithms.
+#[allow(dead_code)]
 pub(crate) const TOLERANCE: Decimal = dec!(1e-8);
 
 /// Extremely small decimal value used for high-precision calculations.

@@ -90,11 +90,18 @@ where
             (0, _) => vec![],
             (_, 0) => vec![],
             _ => {
-                // Find the overlapping range
-                let min_self = self_indexes.first().unwrap();
-                let max_self = self_indexes.last().unwrap();
-                let min_other = other_indexes.first().unwrap();
-                let max_other = other_indexes.last().unwrap();
+                // Find the overlapping range. The match arm above
+                // guarantees both vectors are non-empty, so .first() /
+                // .last() are statically Some — fall back to a no-op
+                // empty result if that invariant is ever broken.
+                let (Some(min_self), Some(max_self), Some(min_other), Some(max_other)) = (
+                    self_indexes.first(),
+                    self_indexes.last(),
+                    other_indexes.first(),
+                    other_indexes.last(),
+                ) else {
+                    return vec![];
+                };
 
                 // Determine the common range
                 let start = std::cmp::max(min_self, min_other);
