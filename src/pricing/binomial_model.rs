@@ -114,8 +114,8 @@ pub fn price_binomial(params: BinomialPricingParams) -> Result<Decimal, PricingE
     let discount_factor = calculate_discount_factor(params.int_rate, dt)?;
 
     let mut prices: Vec<Decimal> = (0..=params.no_steps)
-        .map(|i| calculate_option_price(params.clone(), u, d, i).unwrap())
-        .collect();
+        .map(|i| calculate_option_price(params.clone(), u, d, i))
+        .collect::<Result<Vec<_>, _>>()?;
 
     for step in (0..params.no_steps).rev() {
         for i in 0..=step {
@@ -192,6 +192,7 @@ pub fn price_binomial(params: BinomialPricingParams) -> Result<Decimal, PricingE
 /// use positive::pos_or_panic;
 /// use optionstratlib::pricing::binomial_model::{BinomialPricingParams, generate_binomial_tree};
 /// use positive::Positive;
+/// # fn run() -> Result<(), Box<dyn std::error::Error>> {
 /// let params = BinomialPricingParams {
 ///             asset: Positive::HUNDRED,
 ///             volatility: pos_or_panic!(0.2),
@@ -203,7 +204,9 @@ pub fn price_binomial(params: BinomialPricingParams) -> Result<Decimal, PricingE
 ///             option_style: &OptionStyle::Call,
 ///             side: &Side::Long,
 ///         };
-/// let (asset_tree, option_tree) = generate_binomial_tree(&params).unwrap();
+/// let (asset_tree, option_tree) = generate_binomial_tree(&params)?;
+/// # Ok(())
+/// # }
 /// ```
 pub fn generate_binomial_tree(params: &BinomialPricingParams) -> BinomialTreeResult {
     let mut info = PayoffInfo {

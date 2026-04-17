@@ -84,6 +84,7 @@ use num_traits::{FromPrimitive, ToPrimitive};
 use rand::random;
 use rust_decimal::{Decimal, MathematicalOps};
 use rust_decimal_macros::dec;
+use tracing::warn;
 
 /// Represents a Telegraph Process, a two-state continuous-time Markov chain model
 /// used to simulate stochastic processes with discrete state transitions.
@@ -157,7 +158,17 @@ impl TelegraphProcess {
             Decimal::ONE - lambda_dt.exp()
         };
 
-        if random::<f64>() < probability.to_f64().unwrap() {
+        // probability is mathematically in [0, 1] (Decimal::ONE or 1 - exp(neg)); to_f64 is
+        // expected to succeed. If conversion ever fails we log and treat the period as
+        // "no transition" rather than panicking.
+        let p_f64 = probability.to_f64().unwrap_or_else(|| {
+            warn!(
+                probability = %probability,
+                "telegraph::next_state: probability.to_f64() returned None; treating as 0.0"
+            );
+            0.0
+        });
+        if random::<f64>() < p_f64 {
             self.current_state *= -1;
         }
 
@@ -249,20 +260,32 @@ pub(crate) fn estimate_telegraph_parameters(
 
     if sum_down == Decimal::ZERO {
         return Err(DecimalError::InvalidValue {
-            value: sum_down.to_f64().unwrap(),
+            value: sum_down.to_f64().unwrap_or(0.0),
             reason: "Sum of down durations must be non-zero".to_string(),
         });
     }
 
     if sum_up == Decimal::ZERO {
         return Err(DecimalError::InvalidValue {
-            value: sum_up.to_f64().unwrap(),
+            value: sum_up.to_f64().unwrap_or(0.0),
             reason: "Sum of up durations must be non-zero".to_string(),
         });
     }
 
-    let lambda_up = Decimal::ONE / sum_down * Decimal::from_usize(down_durations.len()).unwrap();
-    let lambda_down = Decimal::ONE / sum_up * Decimal::from_usize(up_durations.len()).unwrap();
+    let down_len = Decimal::from_usize(down_durations.len()).ok_or_else(|| {
+        DecimalError::invalid_value(
+            down_durations.len() as f64,
+            "down_durations length not representable as Decimal",
+        )
+    })?;
+    let up_len = Decimal::from_usize(up_durations.len()).ok_or_else(|| {
+        DecimalError::invalid_value(
+            up_durations.len() as f64,
+            "up_durations length not representable as Decimal",
+        )
+    })?;
+    let lambda_up = Decimal::ONE / sum_down * down_len;
+    let lambda_down = Decimal::ONE / sum_up * up_len;
     Ok((lambda_up, lambda_down))
 }
 
@@ -296,9 +319,14 @@ pub fn telegraph(
     lambda_down: Option<Decimal>,
 ) -> Result<Decimal, PricingError> {
     let mut price = option.underlying_price;
-    let dt = option.time_to_expiration()?.to_dec() / Decimal::from_f64(no_steps as f64).unwrap();
+    let no_steps_dec = Decimal::from_f64(no_steps as f64).ok_or_else(|| {
+        PricingError::method_error("telegraph", &format!("non-finite no_steps: {no_steps}"))
+    })?;
+    let dt = option.time_to_expiration()?.to_dec() / no_steps_dec;
 
-    let one_over_252 = Decimal::from_f64(1.0 / 252.0).unwrap();
+    let one_over_252 = Decimal::from_f64(1.0 / 252.0).ok_or_else(|| {
+        PricingError::method_error("telegraph", "could not represent 1/252 as Decimal")
+    })?;
 
     let (lambda_up_temp, lambda_down_temp) = match (lambda_up, lambda_down) {
         (None, None) => {
@@ -327,10 +355,21 @@ pub fn telegraph(
     for _ in 0..no_steps {
         let state = telegraph_process.next_state(dt);
         let drift: Decimal = option.risk_free_rate - dec!(0.5) * option.implied_volatility.powi(2);
-        let volatility: Decimal =
-            option.implied_volatility.to_dec() * Decimal::from_f64(state as f64).unwrap();
+        let state_dec = Decimal::from_f64(state as f64).ok_or_else(|| {
+            PricingError::method_error("telegraph", &format!("non-finite state: {state}"))
+        })?;
+        let volatility: Decimal = option.implied_volatility.to_dec() * state_dec;
 
-        let rh = Decimal::from_f64(dt.sqrt().unwrap().to_f64().unwrap() * random::<f64>()).unwrap();
+        let sqrt_dt = dt
+            .sqrt()
+            .ok_or_else(|| PricingError::method_error("telegraph", "non-finite dt sqrt"))?;
+        let sqrt_dt_f64 = sqrt_dt.to_f64().ok_or_else(|| {
+            PricingError::method_error("telegraph", "sqrt(dt) not representable as f64")
+        })?;
+        let rh_f64 = sqrt_dt_f64 * random::<f64>();
+        let rh = Decimal::from_f64(rh_f64).ok_or_else(|| {
+            PricingError::method_error("telegraph", &format!("non-finite rh: {rh_f64}"))
+        })?;
         let lhs = drift * dt + volatility;
 
         let update = (lhs * rh).exp();

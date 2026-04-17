@@ -48,15 +48,27 @@ pub fn monte_carlo_option_pricing(
                 Decimal::ONE + option.risk_free_rate * dt + option.implied_volatility.to_dec() * w;
         }
         // Calculate the payoff for a call option
-        let payoff: f64 = (st - option.strike_price)
-            .max(Decimal::ZERO)
-            .to_f64()
-            .unwrap();
+        let payoff_dec = (st - option.strike_price).max(Decimal::ZERO);
+        let payoff: f64 = payoff_dec.to_f64().ok_or_else(|| {
+            PricingError::method_error(
+                "monte_carlo_option_pricing",
+                &format!("payoff not representable as f64: {payoff_dec}"),
+            )
+        })?;
         payoff_sum += payoff;
     }
     // Average value of the payoffs discounted to present value
-    let average_payoff = (payoff_sum / simulations as f64)
-        * (-option.risk_free_rate.to_f64().unwrap() * option.expiration_date.get_years()?).exp();
+    let rate_f64 = option.risk_free_rate.to_f64().ok_or_else(|| {
+        PricingError::method_error(
+            "monte_carlo_option_pricing",
+            &format!(
+                "risk_free_rate not representable as f64: {}",
+                option.risk_free_rate
+            ),
+        )
+    })?;
+    let average_payoff =
+        (payoff_sum / simulations as f64) * (-rate_f64 * option.expiration_date.get_years()?).exp();
     Ok(f2d!(average_payoff))
 }
 
@@ -119,8 +131,13 @@ pub fn price_option_monte_carlo(
         .sum();
 
     // Average payoff discounted to present value
-    let avg_payoff =
-        discount_factor * (total_payoff / Decimal::from_usize(num_simulations).unwrap());
+    let n_dec = Decimal::from_usize(num_simulations).ok_or_else(|| {
+        PricingError::method_error(
+            "price_option_monte_carlo",
+            &format!("num_simulations not representable as Decimal: {num_simulations}"),
+        )
+    })?;
+    let avg_payoff = discount_factor * (total_payoff / n_dec);
     Ok(Positive::new_decimal(avg_payoff.abs()).unwrap_or(Positive::ZERO))
 }
 

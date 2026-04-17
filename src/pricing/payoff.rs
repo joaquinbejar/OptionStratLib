@@ -3,7 +3,7 @@ use crate::model::types::{OptionStyle, Side};
 use num_traits::ToPrimitive;
 use positive::Positive;
 use rust_decimal::Decimal;
-use tracing::trace;
+use tracing::{trace, warn};
 
 /// Defines a contract for calculating the payoff value of an option.
 ///
@@ -23,8 +23,8 @@ use tracing::trace;
 ///
 /// impl Payoff for CallOption {
 ///     fn payoff(&self, info: &PayoffInfo) -> f64 {
-///         let spot = info.spot.value().to_f64().unwrap();
-///         let strike = info.strike.value().to_f64().unwrap();
+///         let spot = info.spot.value().to_f64().unwrap_or(0.0);
+///         let strike = info.strike.value().to_f64().unwrap_or(0.0);
 ///         match info.side {
 ///             Side::Long => (spot - strike).max(0.0),
 ///             Side::Short => -1.0 * (spot - strike).max(0.0),
@@ -125,10 +125,10 @@ impl PayoffInfo {
     /// use optionstratlib::pricing::PayoffInfo;
     /// use positive::Positive;
     /// use optionstratlib::model::types::{OptionStyle, Side};
-    ///
+    /// # fn run() -> Result<(), Box<dyn std::error::Error>> {
     /// let payoff_info = PayoffInfo {
-    ///     spot: Positive::new(100.0).unwrap(),
-    ///     strike: Positive::new(105.0).unwrap(),
+    ///     spot: Positive::new(100.0)?,
+    ///     strike: Positive::new(105.0)?,
     ///     style: OptionStyle::Call,
     ///     side: Side::Long,
     ///     spot_prices: Some(vec![98.0, 99.0, 101.0, 102.0]),
@@ -137,6 +137,8 @@ impl PayoffInfo {
     /// };
     ///
     /// assert_eq!(payoff_info.spot_prices_len(), Some(4));
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn spot_prices_len(&self) -> Option<usize> {
         self.spot_prices.as_ref().map(|vec| vec.len())
@@ -167,9 +169,32 @@ pub(crate) fn standard_payoff(info: &PayoffInfo) -> f64 {
     let spot: Decimal = info.spot.into();
     let strike: Decimal = info.strike.into();
 
+    // The result of `(spot - strike).max(ZERO)` is a non-negative finite Decimal whenever
+    // the inputs are themselves finite (which Positive guarantees), so to_f64 is expected
+    // to succeed. We log and fall back to 0.0 instead of panicking if conversion ever fails.
     let payoff = match info.style {
-        OptionStyle::Call => (spot - strike).max(Decimal::ZERO).to_f64().unwrap(),
-        OptionStyle::Put => (strike - spot).max(Decimal::ZERO).to_f64().unwrap(),
+        OptionStyle::Call => (spot - strike)
+            .max(Decimal::ZERO)
+            .to_f64()
+            .unwrap_or_else(|| {
+                warn!(
+                    spot = %spot,
+                    strike = %strike,
+                    "standard_payoff(Call): to_f64 returned None; defaulting to 0.0"
+                );
+                0.0
+            }),
+        OptionStyle::Put => (strike - spot)
+            .max(Decimal::ZERO)
+            .to_f64()
+            .unwrap_or_else(|| {
+                warn!(
+                    spot = %spot,
+                    strike = %strike,
+                    "standard_payoff(Put): to_f64 returned None; defaulting to 0.0"
+                );
+                0.0
+            }),
     };
 
     match info.side {

@@ -96,7 +96,9 @@ fn geometric_asian_price(option: &Options) -> Result<Decimal, PricingError> {
 
     // Geometric average adjustments (Kemna-Vorst)
     let sigma_sq = sigma * sigma;
-    let sigma_adj = sigma / Positive::new(3.0_f64.sqrt()).unwrap();
+    let sqrt_three = Positive::new(3.0_f64.sqrt())
+        .map_err(|e| PricingError::method_error("geometric_asian_price", &e.to_string()))?;
+    let sigma_adj = sigma / sqrt_three;
     let b_adj = (r - q - sigma_sq / dec!(6)) / dec!(2);
 
     // Calculate d1 and d2 with adjusted parameters
@@ -184,16 +186,20 @@ fn arithmetic_asian_price(option: &Options) -> Result<Decimal, PricingError> {
     // Adjusted volatility from moment matching
     let variance = (m2 / m1.powi(2)).ln() / t_dec;
     let sigma_adj = variance.sqrt().unwrap_or(sigma.to_dec());
-    let sigma_adj_pos = Positive::new_decimal(sigma_adj.max(dec!(0.0001)))
-        .unwrap_or(Positive::new(0.0001).unwrap());
+    let floor_pos = Positive::new(0.0001)
+        .map_err(|e| PricingError::method_error("arithmetic_asian_price", &e.to_string()))?;
+    let sigma_adj_pos = Positive::new_decimal(sigma_adj.max(dec!(0.0001))).unwrap_or(floor_pos);
 
     // Forward price of the average
     let f_adj = m1;
 
     // Use Black-Scholes with adjusted parameters
-    let d1_val = ((f_adj / k).ln() + sigma_adj * sigma_adj * t_dec / dec!(2))
-        / (sigma_adj * t_dec.sqrt().unwrap());
-    let d2_val = d1_val - sigma_adj * t_dec.sqrt().unwrap();
+    let sqrt_t = t_dec.sqrt().ok_or_else(|| {
+        PricingError::method_error("arithmetic_asian_price", "non-finite sqrt(t)")
+    })?;
+    let d1_val =
+        ((f_adj / k).ln() + sigma_adj * sigma_adj * t_dec / dec!(2)) / (sigma_adj * sqrt_t);
+    let d2_val = d1_val - sigma_adj * sqrt_t;
 
     let discount = (-r * t).exp();
 
