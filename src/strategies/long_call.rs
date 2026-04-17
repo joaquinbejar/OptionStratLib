@@ -816,7 +816,9 @@ mod tests_simulate {
             pos_or_panic!(115.0),
         ];
         let walk_params = create_walk_params(prices);
-        let simulator = Simulator::new("Test".to_string(), 1, &walk_params, generator_positive);
+        let simulator = Simulator::new("Test".to_string(), 1, &walk_params, |p| {
+            generator_positive(p).unwrap()
+        });
         let results = strategy.simulate(&simulator, ExitPolicy::ProfitPercent(dec!(0.5)));
         assert!(results.is_ok());
         let stats = results.unwrap();
@@ -832,7 +834,9 @@ mod tests_simulate {
             pos_or_panic!(102.0),
         ];
         let walk_params = create_walk_params(prices);
-        let simulator = Simulator::new("Test".to_string(), 1, &walk_params, generator_positive);
+        let simulator = Simulator::new("Test".to_string(), 1, &walk_params, |p| {
+            generator_positive(p).unwrap()
+        });
         let results = strategy.simulate(&simulator, ExitPolicy::Expiration);
         assert!(results.is_ok(), "Simulate failed: {:?}", results.err());
         let stats = results.unwrap();
@@ -848,7 +852,9 @@ mod tests_simulate {
             pos_or_panic!(110.0),
         ];
         let walk_params = create_walk_params(prices);
-        let simulator = Simulator::new("Test".to_string(), 3, &walk_params, generator_positive);
+        let simulator = Simulator::new("Test".to_string(), 3, &walk_params, |p| {
+            generator_positive(p).unwrap()
+        });
         let results = strategy.simulate(&simulator, ExitPolicy::Expiration);
         assert!(results.is_ok(), "Simulate failed: {:?}", results.err());
         let stats = results.unwrap();

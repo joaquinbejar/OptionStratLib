@@ -159,7 +159,7 @@ fn main() -> Result<(), Error> {
         "Long Call Simulator".to_string(),
         n_simulations,
         &walk_params,
-        generator_positive,
+        |p| generator_positive(p).expect("generator_positive failed"),
     );
 
     info!("Running simulations using Simulate trait...");

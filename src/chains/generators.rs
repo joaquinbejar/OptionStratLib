@@ -66,47 +66,51 @@ fn create_chain_from_step(
 ///
 /// # Returns
 ///
-/// * `Vec<Step<Positive, OptionChain>>` - A vector of `Step`s representing the simulated walk.
+/// * `Ok(Vec<Step<Positive, OptionChain>>)` - A vector of `Step`s representing the simulated walk.
+/// * `Err(ChainError)` - If the underlying simulator, volatility helpers, or chain construction
+///   fails for any reason.
 ///
+/// # Errors
+///
+/// Returns `ChainError::DynError` (via the `From<SimulationError>` / `From<VolatilityError>`
+/// conversions) if the random-walk generator returns an error, the historical helpers
+/// (`calculate_log_returns`, `constant_volatility`, `adjust_volatility`) cannot complete,
+/// or `create_chain_from_step` fails to rebuild the chain.
 pub fn generator_optionchain(
     walk_params: &WalkParams<Positive, OptionChain>,
-) -> Vec<Step<Positive, OptionChain>> {
+) -> Result<Vec<Step<Positive, OptionChain>>, ChainError> {
     debug!("{}", walk_params);
     let (mut y_steps, volatility) = match &walk_params.walk_type {
-        WalkType::Brownian { volatility, .. } => (
-            walk_params.walker.brownian(walk_params).unwrap(),
-            Some(*volatility),
-        ),
+        WalkType::Brownian { volatility, .. } => {
+            (walk_params.walker.brownian(walk_params)?, Some(*volatility))
+        }
         WalkType::GeometricBrownian { volatility, .. } => (
-            walk_params.walker.geometric_brownian(walk_params).unwrap(),
+            walk_params.walker.geometric_brownian(walk_params)?,
             Some(*volatility),
         ),
         WalkType::LogReturns { volatility, .. } => (
-            walk_params.walker.log_returns(walk_params).unwrap(),
+            walk_params.walker.log_returns(walk_params)?,
             Some(*volatility),
         ),
         WalkType::MeanReverting { volatility, .. } => (
-            walk_params.walker.mean_reverting(walk_params).unwrap(),
+            walk_params.walker.mean_reverting(walk_params)?,
             Some(*volatility),
         ),
         WalkType::JumpDiffusion { volatility, .. } => (
-            walk_params.walker.jump_diffusion(walk_params).unwrap(),
+            walk_params.walker.jump_diffusion(walk_params)?,
             Some(*volatility),
         ),
-        WalkType::Garch { volatility, .. } => (
-            walk_params.walker.garch(walk_params).unwrap(),
-            Some(*volatility),
-        ),
-        WalkType::Heston { volatility, .. } => (
-            walk_params.walker.heston(walk_params).unwrap(),
-            Some(*volatility),
-        ),
-        WalkType::Custom { volatility, .. } => (
-            walk_params.walker.custom(walk_params).unwrap(),
-            Some(*volatility),
-        ),
+        WalkType::Garch { volatility, .. } => {
+            (walk_params.walker.garch(walk_params)?, Some(*volatility))
+        }
+        WalkType::Heston { volatility, .. } => {
+            (walk_params.walker.heston(walk_params)?, Some(*volatility))
+        }
+        WalkType::Custom { volatility, .. } => {
+            (walk_params.walker.custom(walk_params)?, Some(*volatility))
+        }
         WalkType::Telegraph { volatility, .. } => (
-            walk_params.walker.telegraph(walk_params).unwrap(),
+            walk_params.walker.telegraph(walk_params)?,
             Some(*volatility),
         ),
         WalkType::Historical {
@@ -115,23 +119,25 @@ pub fn generator_optionchain(
             if prices.is_empty() || prices.len() < walk_params.size {
                 (Vec::new(), None)
             } else {
-                let log_returns: Vec<Decimal> = calculate_log_returns(prices)
-                    .unwrap()
+                let log_returns: Vec<Decimal> = calculate_log_returns(prices)?
                     .iter()
                     .map(|p| p.to_dec())
                     .collect();
-                let constant_volatility = constant_volatility(&log_returns).unwrap();
+                let constant_volatility = constant_volatility(&log_returns)?;
                 let implied_volatility =
-                    adjust_volatility(constant_volatility, *timeframe, TimeFrame::Year).unwrap();
+                    adjust_volatility(constant_volatility, *timeframe, TimeFrame::Year)?;
                 (
-                    walk_params.walker.historical(walk_params).unwrap(),
+                    walk_params.walker.historical(walk_params)?,
                     Some(implied_volatility),
                 )
             }
         }
     };
     if y_steps.is_empty() {
-        return vec![];
+        // Preserve the init-step invariant when the underlying walk produces
+        // no points (e.g., Historical with insufficient `prices`); downstream
+        // consumers expect at least the initial step to be present.
+        return Ok(vec![walk_params.init_step.clone()]);
     }
 
     let _ = y_steps.remove(0); // remove initial step from y_steps to avoid early return
@@ -157,8 +163,7 @@ pub fn generator_optionchain(
             Some(Box::new(*y_step)),
             volatility,
             Some(expiration_date),
-        )
-        .unwrap();
+        )?;
         previous_y_step = previous_y_step.next(y_step_chain).clone();
         let step = Step {
             x: previous_x_step,
@@ -169,7 +174,7 @@ pub fn generator_optionchain(
     }
 
     assert!(steps.len() <= walk_params.size);
-    steps
+    Ok(steps)
 }
 
 /// Generates a vector of `Step`s containing `Positive` x-values and `Positive` y-values.
@@ -183,25 +188,28 @@ pub fn generator_optionchain(
 ///
 /// # Returns
 ///
-/// * `Vec<Step<Positive, Positive>>` - A vector of `Step`s representing the simulated walk.
+/// * `Ok(Vec<Step<Positive, Positive>>)` - A vector of `Step`s representing the simulated walk.
+/// * `Err(ChainError)` - If the underlying simulator fails for any reason.
 ///
+/// # Errors
+///
+/// Returns `ChainError::DynError` (via the `From<SimulationError>` conversion) if the
+/// random-walk generator returns an error.
 pub fn generator_positive(
     walk_params: &WalkParams<Positive, Positive>,
-) -> Vec<Step<Positive, Positive>> {
+) -> Result<Vec<Step<Positive, Positive>>, ChainError> {
     debug!("{}", walk_params);
     let mut y_steps = match &walk_params.walk_type {
-        WalkType::Brownian { .. } => walk_params.walker.brownian(walk_params).unwrap(),
-        WalkType::GeometricBrownian { .. } => {
-            walk_params.walker.geometric_brownian(walk_params).unwrap()
-        }
-        WalkType::LogReturns { .. } => walk_params.walker.log_returns(walk_params).unwrap(),
-        WalkType::MeanReverting { .. } => walk_params.walker.mean_reverting(walk_params).unwrap(),
-        WalkType::JumpDiffusion { .. } => walk_params.walker.jump_diffusion(walk_params).unwrap(),
-        WalkType::Garch { .. } => walk_params.walker.garch(walk_params).unwrap(),
-        WalkType::Heston { .. } => walk_params.walker.heston(walk_params).unwrap(),
-        WalkType::Custom { .. } => walk_params.walker.custom(walk_params).unwrap(),
-        WalkType::Telegraph { .. } => walk_params.walker.telegraph(walk_params).unwrap(),
-        WalkType::Historical { .. } => walk_params.walker.historical(walk_params).unwrap(),
+        WalkType::Brownian { .. } => walk_params.walker.brownian(walk_params)?,
+        WalkType::GeometricBrownian { .. } => walk_params.walker.geometric_brownian(walk_params)?,
+        WalkType::LogReturns { .. } => walk_params.walker.log_returns(walk_params)?,
+        WalkType::MeanReverting { .. } => walk_params.walker.mean_reverting(walk_params)?,
+        WalkType::JumpDiffusion { .. } => walk_params.walker.jump_diffusion(walk_params)?,
+        WalkType::Garch { .. } => walk_params.walker.garch(walk_params)?,
+        WalkType::Heston { .. } => walk_params.walker.heston(walk_params)?,
+        WalkType::Custom { .. } => walk_params.walker.custom(walk_params)?,
+        WalkType::Telegraph { .. } => walk_params.walker.telegraph(walk_params)?,
+        WalkType::Historical { .. } => walk_params.walker.historical(walk_params)?,
     };
 
     let _ = y_steps.remove(0);
@@ -224,7 +232,7 @@ pub fn generator_positive(
     }
     assert!(steps.len() <= walk_params.size);
 
-    steps
+    Ok(steps)
 }
 
 #[cfg(test)]
@@ -298,11 +306,9 @@ mod tests {
             walker,
         };
 
-        let random_walk = RandomWalk::new(
-            "Random Walk".to_string(),
-            &walk_params,
-            generator_optionchain,
-        );
+        let random_walk = RandomWalk::new("Random Walk".to_string(), &walk_params, |p| {
+            generator_optionchain(p).unwrap()
+        });
         assert_eq!(random_walk.len(), n_steps);
     }
 
@@ -335,8 +341,9 @@ mod tests {
             },
             walker,
         };
-        let random_walk =
-            RandomWalk::new("Random Walk".to_string(), &walk_params, generator_positive);
+        let random_walk = RandomWalk::new("Random Walk".to_string(), &walk_params, |p| {
+            generator_positive(p).unwrap()
+        });
         assert_eq!(random_walk.len(), n_steps);
     }
 }
@@ -395,7 +402,7 @@ mod generators_coverage_tests {
             walker,
         };
 
-        let steps = generator_optionchain(&walk_params);
+        let steps = generator_optionchain(&walk_params).unwrap();
 
         // We should just get the initial step back
         assert_eq!(steps.len(), 1);
@@ -426,7 +433,7 @@ mod generators_coverage_tests {
             walker,
         };
 
-        let steps = generator_positive(&walk_params);
+        let steps = generator_positive(&walk_params).unwrap();
 
         // We should just get the initial step back
         assert_eq!(steps.len(), 1);
@@ -463,7 +470,7 @@ mod generators_coverage_tests {
             walker,
         };
 
-        let steps = generator_optionchain(&walk_params);
+        let steps = generator_optionchain(&walk_params).unwrap();
 
         // We should just get the initial step back
         assert_eq!(steps.len(), 1);
@@ -501,7 +508,7 @@ mod generators_coverage_tests {
             walker,
         };
 
-        let steps = generator_optionchain(&walk_params);
+        let steps = generator_optionchain(&walk_params).unwrap();
 
         // We should just get the initial step back
         assert_eq!(steps.len(), 1);
@@ -539,7 +546,7 @@ mod generators_coverage_tests {
             walker,
         };
 
-        let steps = generator_optionchain(&walk_params);
+        let steps = generator_optionchain(&walk_params).unwrap();
 
         // We should just get the initial step back
         assert_eq!(steps.len(), 1);
@@ -579,7 +586,7 @@ mod generators_coverage_tests {
             walker,
         };
 
-        let steps = generator_optionchain(&walk_params);
+        let steps = generator_optionchain(&walk_params).unwrap();
 
         // We should just get the initial step back
         assert_eq!(steps.len(), 1);
@@ -618,7 +625,7 @@ mod generators_coverage_tests {
             walker,
         };
 
-        let steps = generator_optionchain(&walk_params);
+        let steps = generator_optionchain(&walk_params).unwrap();
 
         // We should just get the initial step back
         assert_eq!(steps.len(), 1);
@@ -659,7 +666,7 @@ mod generators_coverage_tests {
             walker,
         };
 
-        let steps = generator_optionchain(&walk_params);
+        let steps = generator_optionchain(&walk_params).unwrap();
 
         // We should just get the initial step back
         assert_eq!(steps.len(), 1);
@@ -699,7 +706,7 @@ mod generators_coverage_tests {
             walker,
         };
 
-        let steps = generator_optionchain(&walk_params);
+        let steps = generator_optionchain(&walk_params).unwrap();
 
         // We should just get the initial step back
         assert_eq!(steps.len(), 1);
@@ -740,7 +747,7 @@ mod generators_coverage_tests {
             walker,
         };
 
-        let steps = generator_optionchain(&walk_params);
+        let steps = generator_optionchain(&walk_params).unwrap();
 
         // We should just get the initial step back
         assert_eq!(steps.len(), 1);

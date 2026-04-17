@@ -37,12 +37,9 @@ fn main() -> Result<(), Error> {
         walker,
     };
 
-    let simulator = Simulator::new(
-        "Simulator".to_string(),
-        simulator_size,
-        &walk_params,
-        generator_positive,
-    );
+    let simulator = Simulator::new("Simulator".to_string(), simulator_size, &walk_params, |p| {
+        generator_positive(p).expect("generator_positive failed")
+    });
     debug!("Simulator: {}", simulator);
 
     // let last_steps: Vec<&Step<Positive, Positive>> = simulator

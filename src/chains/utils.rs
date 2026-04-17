@@ -375,7 +375,10 @@ impl Display for OptionDataPriceParams {
                 .map_or_else(|| "None".to_string(), |p| p.value().to_string()),
             self.expiration_date.map_or_else(
                 || "None".to_string(),
-                |d| d.get_years().unwrap().to_string()
+                // SAFETY: Display impl cannot return ChainError; fall back to "n/a" if get_years fails.
+                |d| d
+                    .get_years()
+                    .map_or_else(|_| "n/a".to_string(), |y| y.to_string())
             ),
             self.risk_free_rate
                 .map_or_else(|| "None".to_string(), |r| (r * dec!(100.0)).to_string()),
@@ -570,15 +573,31 @@ pub fn adjust_volatility(
     strike: &Positive,
     underlying_price: &Positive, // underlying_price
 ) -> Option<Positive> {
-    if base_vol.is_none() {
-        return None;
-    }
+    let base_vol = (*base_vol)?;
     if strike.is_zero() {
         return None;
     }
-    let base_vol = base_vol.unwrap();
-    let skew_slope = skew_slope.unwrap_or(SKEW_SLOPE).to_f64().unwrap();
-    let smile_curve = smile_curve.unwrap_or(SKEW_SMILE_CURVE).to_f64().unwrap();
+    // SAFETY: SKEW_SLOPE and SKEW_SMILE_CURVE are tiny `Decimal` constants
+    // (dec!(-0.2) and dec!(0.1)); `Decimal::to_f64` may only return `None`
+    // for values outside the f64 range. Fall back to 0.0 with a warning so
+    // that an unexpected non-finite override degrades gracefully instead
+    // of panicking.
+    let skew_slope = skew_slope
+        .unwrap_or(SKEW_SLOPE)
+        .to_f64()
+        .unwrap_or_else(|| {
+            tracing::warn!("adjust_volatility: skew_slope to_f64 returned None; defaulting to 0.0");
+            0.0
+        });
+    let smile_curve = smile_curve
+        .unwrap_or(SKEW_SMILE_CURVE)
+        .to_f64()
+        .unwrap_or_else(|| {
+            tracing::warn!(
+                "adjust_volatility: smile_curve to_f64 returned None; defaulting to 0.0"
+            );
+            0.0
+        });
     let m = (strike / underlying_price.to_f64()).ln();
     let factor: f64 = 1.0 + skew_slope * m + smile_curve * m * m;
     let clamped = factor.clamp(0.01, 3.0);
@@ -717,9 +736,11 @@ pub fn strike_step(
     bins.iter()
         .copied()
         .min_by(|a, b| {
+            // SAFETY: total order on Decimal; partial_cmp only returns None
+            // for NaN, which Decimal cannot represent. Fall back to Equal.
             ((a.to_dec() - raw_step.to_dec()).abs())
                 .partial_cmp(&(b.to_dec() - raw_step.to_dec()).abs())
-                .unwrap()
+                .unwrap_or(std::cmp::Ordering::Equal)
         })
         .unwrap_or(raw_step)
 }

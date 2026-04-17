@@ -32,6 +32,7 @@
 //! ## Usage Example
 //!
 //! ```rust
+//! # fn run() -> Result<(), Box<dyn std::error::Error>> {
 //! use rust_decimal::Decimal;
 //! use rust_decimal_macros::dec;
 //! use tracing::info;
@@ -66,15 +67,17 @@
 //!             pos_or_panic!(0.1),
 //!         );
 //!
-//! let option_chain = OptionChain::build_chain(&option_chain_params).unwrap();
+//! let option_chain = OptionChain::build_chain(&option_chain_params)?;
 //! // Calculate RND from option chain
-//! let rnd_result = option_chain.calculate_rnd(&params).unwrap();
+//! let rnd_result = option_chain.calculate_rnd(&params)?;
 //!
 //! // Access statistical moments
 //! info!("Expected price: {}", rnd_result.statistics.mean);
 //! info!("Implied volatility: {}", rnd_result.statistics.variance.sqrt());
 //! info!("Market bias: {}", rnd_result.statistics.skewness);
 //! info!("Tail risk: {}", rnd_result.statistics.kurtosis);
+//! # Ok(())
+//! # }
 //! ```
 //!
 //! ## Market Insights from RND
@@ -351,7 +354,11 @@ impl RNDStatistics {
 
         // Convert variance to decimal and calculate std_dev
         let variance_dec = variance.to_dec();
-        let std_dev = variance_dec.sqrt().unwrap();
+        // SAFETY: variance is `Positive` and the early-return above has
+        // already excluded zero, so `Decimal::sqrt` cannot return None for
+        // a strictly positive value. Default to zero defensively to avoid
+        // a panic if a future invariant change ever produces NaN-like input.
+        let std_dev = variance_dec.sqrt().unwrap_or(Decimal::ZERO);
         let std_dev_4 = std_dev.powi(4);
 
         let mut fourth_moment = Decimal::ZERO;

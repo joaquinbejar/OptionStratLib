@@ -311,12 +311,9 @@ mod tests_price_option_monte_carlo {
             walker,
         };
 
-        let simulator = Simulator::new(
-            "Test Simulator".to_string(),
-            100,
-            &walk_params,
-            generator_positive,
-        );
+        let simulator = Simulator::new("Test Simulator".to_string(), 100, &walk_params, |p| {
+            generator_positive(p).unwrap()
+        });
 
         #[cfg(feature = "static_export")]
         simulator

@@ -67,11 +67,9 @@ fn main() -> Result<(), Error> {
         walker,
     };
 
-    let random_walk = RandomWalk::new(
-        "Random Walk".to_string(),
-        &walk_params,
-        generator_optionchain,
-    );
+    let random_walk = RandomWalk::new("Random Walk".to_string(), &walk_params, |p| {
+        generator_optionchain(p).expect("generator_optionchain failed")
+    });
     debug!("Random Walk: {}", random_walk);
     let path: &std::path::Path = "Draws/Simulation/random_walk_build_chain.png".as_ref();
     random_walk.write_png(path)?;

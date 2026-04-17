@@ -787,12 +787,10 @@ mod tests {
         assert_eq!(walk_params.init_step.get_value(), &Positive::HUNDRED);
         assert_eq!(walk_params.y(), &Positive::HUNDRED);
 
-        let simulator = Simulator::new(
-            "Simulator".to_string(),
-            simulator_size,
-            &walk_params,
-            generator_positive,
-        );
+        let simulator =
+            Simulator::new("Simulator".to_string(), simulator_size, &walk_params, |p| {
+                generator_positive(p).unwrap()
+            });
         debug!("Simulator: {}", simulator);
         assert_eq!(simulator.get_title(), "Simulator");
         assert_eq!(simulator.len(), simulator_size);

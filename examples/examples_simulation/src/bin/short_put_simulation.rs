@@ -410,7 +410,7 @@ fn main() -> Result<(), Error> {
         "Short Put Simulator".to_string(),
         n_simulations,
         &walk_params,
-        generator_positive,
+        |p| generator_positive(p).expect("generator_positive failed"),
     );
 
     // Create progress bar

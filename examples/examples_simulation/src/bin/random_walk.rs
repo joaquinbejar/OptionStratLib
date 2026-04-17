@@ -34,7 +34,9 @@ fn main() -> Result<(), Error> {
         walker,
     };
 
-    let random_walk = RandomWalk::new("Random Walk".to_string(), &walk_params, generator_positive);
+    let random_walk = RandomWalk::new("Random Walk".to_string(), &walk_params, |p| {
+        generator_positive(p).expect("generator_positive failed")
+    });
     debug!("Random Walk: {}", random_walk);
     let path: &std::path::Path = "Draws/Simulation/random_walk.png".as_ref();
     random_walk.write_png(path)?;
