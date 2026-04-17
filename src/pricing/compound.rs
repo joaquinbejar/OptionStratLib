@@ -259,7 +259,9 @@ fn price_compound(
     // - T1: time to compound expiry (we have this)
     // - T2: time to underlying expiry (assume we're given an underlying with its own expiry)
     // For simplicity, assume underlying expires at 2*T1 if not specified differently
-    let t2 = t1 * Positive::new(2.0).unwrap(); // Underlying expires at 2*T1
+    let two = Positive::new(2.0)
+        .map_err(|e| PricingError::method_error("price_compound", &e.to_string()))?;
+    let t2 = t1 * two; // Underlying expires at 2*T1
 
     let b = r - q;
     let t1_dec = t1.to_dec();

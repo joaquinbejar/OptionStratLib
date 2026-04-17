@@ -20,11 +20,22 @@ pub fn barrier_black_scholes(option: &Options) -> Result<Decimal, PricingError> 
             barrier_type,
             barrier_level,
             rebate,
-        } => (
-            barrier_type,
-            Decimal::from_f64(*barrier_level).unwrap(),
-            Decimal::from_f64(rebate.unwrap_or(0.0)).unwrap(),
-        ),
+        } => {
+            let bl = Decimal::from_f64(*barrier_level).ok_or_else(|| {
+                PricingError::method_error(
+                    "barrier_black_scholes",
+                    &format!("non-finite barrier_level: {barrier_level}"),
+                )
+            })?;
+            let rebate_f = rebate.unwrap_or(0.0);
+            let rb = Decimal::from_f64(rebate_f).ok_or_else(|| {
+                PricingError::method_error(
+                    "barrier_black_scholes",
+                    &format!("non-finite rebate: {rebate_f}"),
+                )
+            })?;
+            (barrier_type, bl, rb)
+        }
         _ => {
             return Err(PricingError::unsupported_option_type(
                 "Non-Barrier",
@@ -55,9 +66,14 @@ pub fn barrier_black_scholes(option: &Options) -> Result<Decimal, PricingError> 
     let b = r - q; // Cost of carry
     let sigma2 = sigma * sigma;
     let mu = (b - sigma2 / dec!(2.0)) / sigma2;
-    let lambda = (mu * mu + dec!(2.0) * r / sigma2).sqrt().unwrap();
+    let lambda = (mu * mu + dec!(2.0) * r / sigma2).sqrt().ok_or_else(|| {
+        PricingError::method_error("barrier_black_scholes", "non-finite lambda discriminant")
+    })?;
 
-    let sigma_sqrt_t = sigma * t.sqrt().unwrap();
+    let sqrt_t = t
+        .sqrt()
+        .ok_or_else(|| PricingError::method_error("barrier_black_scholes", "non-finite sqrt(t)"))?;
+    let sigma_sqrt_t = sigma * sqrt_t;
 
     // Components used across different barrier types
     let x1 = (s / k).ln() / sigma_sqrt_t + (mu + dec!(1.0)) * sigma_sqrt_t;

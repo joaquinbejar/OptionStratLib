@@ -24,16 +24,18 @@
 //! use optionstratlib::pricing::american::barone_adesi_whaley;
 //! use optionstratlib::model::types::OptionStyle;
 //! use positive::Positive;
-//!
+//! # fn run() -> Result<(), Box<dyn std::error::Error>> {
 //! let price = barone_adesi_whaley(
 //!     Positive::HUNDRED,      // underlying price
 //!     Positive::HUNDRED,      // strike price
 //!     Positive::ONE,          // time to expiration (years)
 //!     dec!(0.05),             // risk-free rate
 //!     Positive::ZERO,         // dividend yield
-//!     Positive::new(0.2).unwrap(), // volatility
+//!     Positive::new(0.2)?,    // volatility
 //!     &OptionStyle::Call,
 //! );
+//! # Ok(())
+//! # }
 //! ```
 //!
 //! ## References
@@ -92,7 +94,7 @@ const TOLERANCE: f64 = 1e-6;
 /// use optionstratlib::pricing::american::barone_adesi_whaley;
 /// use optionstratlib::model::types::OptionStyle;
 /// use positive::Positive;
-///
+/// # fn run() -> Result<(), Box<dyn std::error::Error>> {
 /// // Price an American call option
 /// let call_price = barone_adesi_whaley(
 ///     Positive::HUNDRED,           // spot = 100
@@ -100,9 +102,9 @@ const TOLERANCE: f64 = 1e-6;
 ///     Positive::ONE,               // 1 year to expiry
 ///     dec!(0.05),                  // 5% risk-free rate
 ///     Positive::ZERO,              // no dividends
-///     Positive::new(0.2).unwrap(), // 20% volatility
+///     Positive::new(0.2)?,         // 20% volatility
 ///     &OptionStyle::Call,
-/// ).unwrap();
+/// )?;
 ///
 /// // Price an American put option
 /// let put_price = barone_adesi_whaley(
@@ -111,9 +113,11 @@ const TOLERANCE: f64 = 1e-6;
 ///     Positive::ONE,
 ///     dec!(0.05),
 ///     Positive::ZERO,
-///     Positive::new(0.2).unwrap(),
+///     Positive::new(0.2)?,
 ///     &OptionStyle::Put,
-/// ).unwrap();
+/// )?;
+/// # Ok(())
+/// # }
 /// ```
 pub fn barone_adesi_whaley(
     spot: Positive,

@@ -59,9 +59,16 @@ fn price_cliquet(option: &Options, reset_dates: &[f64]) -> Result<Decimal, Prici
         (dec!(0.1), dec!(0.0))
     };
 
-    // Sort reset dates and ensure they are positive and before expiration
+    // Sort reset dates and ensure they are positive and before expiration.
+    // Reject NaN reset dates explicitly (partial_cmp returns None for NaN).
+    if reset_dates.iter().any(|d| d.is_nan()) {
+        return Err(PricingError::method_error(
+            "cliquet_black_scholes",
+            "reset_dates contains NaN",
+        ));
+    }
     let mut dates = reset_dates.to_vec();
-    dates.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    dates.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
 
     // Total expiration in years
     let t_total = option
@@ -123,8 +130,12 @@ fn price_period(
     let q = option.dividend_yield.to_dec();
     let sigma = option.implied_volatility.to_dec();
 
-    let dt_dec = Decimal::from_f64(dt).unwrap();
-    let t_start_dec = Decimal::from_f64(t_start).unwrap();
+    let dt_dec = Decimal::from_f64(dt).ok_or_else(|| {
+        PricingError::method_error("price_period", &format!("non-finite dt: {dt}"))
+    })?;
+    let t_start_dec = Decimal::from_f64(t_start).ok_or_else(|| {
+        PricingError::method_error("price_period", &format!("non-finite t_start: {t_start}"))
+    })?;
 
     // S_0 * e^(-q * t_start) is the present value of the expected S_{t_prev}
     let s_prev_pv = s0 * (-q * t_start_dec).exp();

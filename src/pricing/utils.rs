@@ -46,7 +46,9 @@ pub fn simulate_returns(
         let u2 = random_decimal(rng)?;
 
         // Convert to normal distribution using Box-Muller transform
-        let r = (-Decimal::TWO * u1.ln()).sqrt().unwrap();
+        let r = (-Decimal::TWO * u1.ln()).sqrt().ok_or_else(|| {
+            DecimalError::arithmetic_error("sqrt", "non-finite operand in Box-Muller r")
+        })?;
         let theta = Decimal::TWO * Decimal::PI * u2;
 
         let x1 = r * theta.cos();
@@ -64,7 +66,10 @@ pub fn simulate_returns(
 
     // Adjust mean and standard deviation for the time step
     let adjusted_mean = mean * time_step;
-    let adjusted_std = std_dev * time_step.sqrt().unwrap();
+    let adjusted_std = std_dev
+        * time_step.sqrt().ok_or_else(|| {
+            DecimalError::arithmetic_error("sqrt", "invalid (negative or non-finite) time_step")
+        })?;
 
     // Special case: if std_dev is 0, return a vector of constant values
     if adjusted_std == Decimal::ZERO {
@@ -106,7 +111,10 @@ pub(crate) fn calculate_up_factor(
     volatility: Positive,
     dt: Decimal,
 ) -> Result<Decimal, DecimalError> {
-    Ok((dt.sqrt().unwrap() * volatility).exp())
+    let sqrt_dt = dt
+        .sqrt()
+        .ok_or_else(|| DecimalError::arithmetic_error("sqrt", "non-finite dt in up factor"))?;
+    Ok((sqrt_dt * volatility).exp())
 }
 
 /// Calculates the down factor for a given volatility and time step.
@@ -125,7 +133,10 @@ pub(crate) fn calculate_down_factor(
     volatility: Positive,
     dt: Decimal,
 ) -> Result<Decimal, DecimalError> {
-    Ok((dec!(-1.0) * dt.sqrt().unwrap() * volatility.to_dec()).exp())
+    let sqrt_dt = dt
+        .sqrt()
+        .ok_or_else(|| DecimalError::arithmetic_error("sqrt", "non-finite dt in down factor"))?;
+    Ok((dec!(-1.0) * sqrt_dt * volatility.to_dec()).exp())
 }
 
 /// Calculates the probability using a given interest rate, time interval,
@@ -228,13 +239,20 @@ pub(crate) fn option_node_value(
 ///
 /// * `params`: An instance of `BinomialPricingParams` containing the necessary parameters
 ///   such as the asset price, strike price, option type, and number of steps.
-/// * `u`: A `f64` representing the up factor in the binomial tree.
-/// * `d`: A `f64` representing the down factor in the binomial tree.
-/// * `i`: An `usize` representing the current step in the binomial tree.
+/// * `u`: A `Decimal` representing the up factor in the binomial tree.
+/// * `d`: A `Decimal` representing the down factor in the binomial tree.
+/// * `i`: A `usize` representing the current step in the binomial tree.
 ///
 /// # Returns
 ///
-/// Returns a `f64` representing the calculated option price at the given step.
+/// `Result<Decimal, DecimalError>` — the option price at the given step,
+/// or `DecimalError::InvalidValue` if the payoff cannot be represented as a
+/// finite `Decimal`.
+///
+/// # Errors
+///
+/// Returns `DecimalError::InvalidValue` when `params.option_type.payoff(...)`
+/// produces a non-finite `f64` (NaN / ±Inf).
 ///
 pub(crate) fn calculate_option_price(
     params: BinomialPricingParams,
@@ -251,7 +269,10 @@ pub(crate) fn calculate_option_price(
         spot_min: None,
         spot_max: None,
     };
-    let payoff = Decimal::from_f64(params.option_type.payoff(&info)).unwrap();
+    let payoff_f64 = params.option_type.payoff(&info);
+    let payoff = Decimal::from_f64(payoff_f64).ok_or_else(|| {
+        DecimalError::invalid_value(payoff_f64, "non-finite payoff in calculate_option_price")
+    })?;
 
     Ok(payoff)
 }
@@ -264,7 +285,9 @@ pub(crate) fn calculate_option_price(
 ///
 /// # Returns
 ///
-/// * `f64`: The discounted payoff value of the option.
+/// `Result<Decimal, DecimalError>` — the discounted payoff (sign-adjusted for
+/// `Side::Long` / `Side::Short`), or `DecimalError::InvalidValue` if the
+/// payoff cannot be represented as a finite `Decimal`.
 ///
 /// The function takes into account the future asset price, the interest rate, the expiry time,
 /// the type of option (call or put), and the style of the option (European or American).
@@ -272,6 +295,11 @@ pub(crate) fn calculate_option_price(
 /// It adjusts the future asset price with the provided interest rate and expiry time,
 /// calculates the payoff, discounts it by the interest rate, and then adjusts for the side
 /// of the trade (long or short).
+///
+/// # Errors
+///
+/// Returns `DecimalError::InvalidValue` when `params.option_type.payoff(...)`
+/// produces a non-finite `f64` (NaN / ±Inf).
 ///
 pub(crate) fn calculate_discounted_payoff(
     params: BinomialPricingParams,
@@ -286,7 +314,13 @@ pub(crate) fn calculate_discounted_payoff(
         spot_max: None,
     };
 
-    let payoff = Decimal::from_f64(params.option_type.payoff(&info)).unwrap();
+    let payoff_f64 = params.option_type.payoff(&info);
+    let payoff = Decimal::from_f64(payoff_f64).ok_or_else(|| {
+        DecimalError::invalid_value(
+            payoff_f64,
+            "non-finite payoff in calculate_discounted_payoff",
+        )
+    })?;
     let discounted_payoff = (-params.int_rate * params.expiry).exp() * payoff;
     match params.side {
         Side::Long => Ok(discounted_payoff),
@@ -307,20 +341,29 @@ pub(crate) fn calculate_discounted_payoff(
 ///
 /// # Returns
 ///
-/// * `f64` - The Wiener process increment for the given time step.
+/// `Result<Decimal, DecimalError>` — the Wiener process increment for the
+/// given time step.
 ///
-/// # Panics
+/// # Errors
 ///
-/// This function will panic if the creation of the normal distribution fails, which is
-/// highly unlikely with valid inputs.
+/// - `DecimalError::ArithmeticError` if `Normal::new(0.0, 1.0)` fails (effectively
+///   never; parameters are constants) or if `dt.sqrt()` is undefined for the
+///   given input (negative or non-finite `dt`).
+/// - `DecimalError::InvalidValue` if the sampled normal value is non-finite.
 ///
 pub(crate) fn wiener_increment(dt: Decimal) -> Result<Decimal, DecimalError> {
-    let normal = Normal::new(0.0, 1.0).unwrap();
+    let normal = Normal::new(0.0, 1.0)
+        .map_err(|e| DecimalError::arithmetic_error("Normal::new(0.0, 1.0)", &e.to_string()))?;
     let mut rng = rand::rng();
 
-    let sample = Decimal::from_f64(normal.sample(&mut rng)).unwrap();
+    let sample_f64 = normal.sample(&mut rng);
+    let sample = Decimal::from_f64(sample_f64)
+        .ok_or_else(|| DecimalError::invalid_value(sample_f64, "non-finite normal sample"))?;
 
-    Ok(sample * dt.sqrt().unwrap())
+    let sqrt_dt = dt.sqrt().ok_or_else(|| {
+        DecimalError::arithmetic_error("sqrt", "non-finite dt in wiener_increment")
+    })?;
+    Ok(sample * sqrt_dt)
 }
 
 /// Calculates the probability that the option will remain under the strike price.
@@ -328,11 +371,19 @@ pub(crate) fn wiener_increment(dt: Decimal) -> Result<Decimal, DecimalError> {
 /// # Parameters
 /// - `option`: An `Options` struct that contains various attributes necessary for the calculation,
 ///   such as underlying price, strike price, risk-free rate, expiration date, and implied volatility.
-/// - `strike`: An optional `f64` value representing the strike price. If `None` is provided, the function
-///   uses the `strike_price` from the `Options` struct.
+/// - `strike`: An optional `Positive` strike price. If `None`, the function uses
+///   the `strike_price` from the `Options` struct.
 ///
 /// # Returns
-/// A `f64` value representing the calculated probability.
+/// `Result<Decimal, DecimalError>` — the probability `N(-d2)` that the
+/// underlying remains under the strike at expiration.
+///
+/// # Errors
+///
+/// - `DecimalError::ArithmeticError` if `d2(...)` cannot be evaluated for the
+///   given option (e.g., zero volatility / non-positive time to expiration).
+/// - Whatever `expiration_date.get_years()?` propagates through
+///   `From<ExpirationDateError>`.
 pub fn probability_keep_under_strike(
     option: Options,
     strike: Option<Positive>,
@@ -341,16 +392,16 @@ pub fn probability_keep_under_strike(
         Some(strike) => strike,
         None => option.strike_price,
     };
-    big_n(
-        -d2(
-            option.underlying_price,
-            strike_price,
-            option.risk_free_rate,
-            option.expiration_date.get_years().unwrap(),
-            option.implied_volatility,
-        )
-        .unwrap(),
+    let years = option.expiration_date.get_years()?;
+    let d2_val = d2(
+        option.underlying_price,
+        strike_price,
+        option.risk_free_rate,
+        years,
+        option.implied_volatility,
     )
+    .map_err(|e| DecimalError::arithmetic_error("d2", &e.to_string()))?;
+    big_n(-d2_val)
 }
 
 #[cfg(test)]
@@ -619,8 +670,10 @@ mod tests_probability_keep_under_strike {
     }
 
     #[test]
-    #[should_panic]
     fn test_probability_keep_under_strike_zero_volatility() {
+        // Zero implied volatility makes d2 ill-defined (division by zero in the
+        // analytical form). Post panic-free refactor this surfaces as a typed Err
+        // instead of a panic.
         let option = Options {
             option_type: OptionType::European,
             side: Side::Long,
@@ -636,7 +689,10 @@ mod tests_probability_keep_under_strike {
             exotic_params: None,
         };
         let strike = None;
-        let _ = probability_keep_under_strike(option, strike);
+        assert!(
+            probability_keep_under_strike(option, strike).is_err(),
+            "zero volatility should produce a DecimalError, not a panic"
+        );
     }
 
     #[test]

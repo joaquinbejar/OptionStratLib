@@ -48,15 +48,27 @@ pub fn monte_carlo_option_pricing(
                 Decimal::ONE + option.risk_free_rate * dt + option.implied_volatility.to_dec() * w;
         }
         // Calculate the payoff for a call option
-        let payoff: f64 = (st - option.strike_price)
-            .max(Decimal::ZERO)
-            .to_f64()
-            .unwrap();
+        let payoff_dec = (st - option.strike_price).max(Decimal::ZERO);
+        let payoff: f64 = payoff_dec.to_f64().ok_or_else(|| {
+            PricingError::method_error(
+                "monte_carlo_option_pricing",
+                &format!("payoff not representable as f64: {payoff_dec}"),
+            )
+        })?;
         payoff_sum += payoff;
     }
     // Average value of the payoffs discounted to present value
-    let average_payoff = (payoff_sum / simulations as f64)
-        * (-option.risk_free_rate.to_f64().unwrap() * option.expiration_date.get_years()?).exp();
+    let rate_f64 = option.risk_free_rate.to_f64().ok_or_else(|| {
+        PricingError::method_error(
+            "monte_carlo_option_pricing",
+            &format!(
+                "risk_free_rate not representable as f64: {}",
+                option.risk_free_rate
+            ),
+        )
+    })?;
+    let average_payoff =
+        (payoff_sum / simulations as f64) * (-rate_f64 * option.expiration_date.get_years()?).exp();
     Ok(f2d!(average_payoff))
 }
 
@@ -88,8 +100,13 @@ pub fn monte_carlo_option_pricing(
 /// 5. Return the discounted average payoff as the estimated option price.
 ///
 /// # Errors
-/// - Returns an error if there are any issues while calculating the time to expiration (e.g., invalid dates).
-/// - Panics if the `option.payoff_at_price` method fails unexpectedly during payoff calculations.
+/// - Propagates any error from `option.expiration_date.get_years()?` (e.g.,
+///   invalid expiration date).
+/// - Returns `PricingError::method_error` when `num_simulations` cannot be
+///   represented as a `Decimal` (effectively unreachable for valid `usize`
+///   inputs but surfaced explicitly for completeness).
+/// - Per-simulation `option.payoff_at_price(...)` failures fall back silently
+///   to `Decimal::ZERO` for that simulation; the function does not panic.
 ///
 /// This function assumes that the `Options` struct and `Positive` type
 /// are implemented elsewhere in the codebase and provide necessary functionality (e.g., payoff calculation).
@@ -119,8 +136,13 @@ pub fn price_option_monte_carlo(
         .sum();
 
     // Average payoff discounted to present value
-    let avg_payoff =
-        discount_factor * (total_payoff / Decimal::from_usize(num_simulations).unwrap());
+    let n_dec = Decimal::from_usize(num_simulations).ok_or_else(|| {
+        PricingError::method_error(
+            "price_option_monte_carlo",
+            &format!("num_simulations not representable as Decimal: {num_simulations}"),
+        )
+    })?;
+    let avg_payoff = discount_factor * (total_payoff / n_dec);
     Ok(Positive::new_decimal(avg_payoff.abs()).unwrap_or(Positive::ZERO))
 }
 
