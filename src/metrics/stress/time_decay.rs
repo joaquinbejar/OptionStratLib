@@ -243,7 +243,9 @@ mod tests_time_decay {
         let points: Vec<&Point2D> = curve.points.iter().collect();
 
         // Find most negative theta (ATM)
-        let min_theta = points.iter().min_by(|a, b| a.y.partial_cmp(&b.y).unwrap_or(std::cmp::Ordering::Equal));
+        let min_theta = points
+            .iter()
+            .min_by(|a, b| a.y.partial_cmp(&b.y).unwrap_or(std::cmp::Ordering::Equal));
 
         if let Some(min) = min_theta {
             // ATM should have most negative theta

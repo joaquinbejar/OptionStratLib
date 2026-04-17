@@ -7,6 +7,7 @@
 use crate::constants::*;
 use chrono::{Duration, Local, NaiveTime, Utc};
 use positive::{Positive, pos_or_panic};
+use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 use utoipa::ToSchema;
@@ -146,14 +147,20 @@ pub fn units_per_year(time_frame: &TimeFrame) -> Positive {
         TimeFrame::Minute => pos_or_panic!(525600.0),              // 365 * 24 * 60
         TimeFrame::Hour => pos_or_panic!(8760.0),                  // 365 * 24
         TimeFrame::Day => pos_or_panic!(365.0),                    // 365
-        // 365 / 7 — precomputed because the runtime division would
-        // otherwise force a fallible Positive::new_decimal call here.
-        // Value: 365 / 7 = 52.142857142857142857142857143 (Decimal precision).
-        TimeFrame::Week => pos_or_panic!(52.142857142857142857142857143),
-        TimeFrame::Month => pos_or_panic!(12.0),                   // 12
-        TimeFrame::Quarter => pos_or_panic!(4.0),                  // 4
-        TimeFrame::Year => Positive::ONE,                          // 1
-        TimeFrame::Custom(periods) => *periods,                    // Custom periods per year
+        // 365 / 7 — kept as exact Decimal arithmetic to preserve the
+        // round-trip identity Week→Day→Week (an f64 literal would
+        // accumulate ~1 ulp of error and break the strict assertion in
+        // tests like `test_step_next_with_weeks`). The structural
+        // invariant (positive non-zero numerator and denominator)
+        // makes the Err arm unreachable.
+        TimeFrame::Week => match Positive::new_decimal(dec!(365.0) / dec!(7.0)) {
+            Ok(v) => v,
+            Err(_) => unreachable!("365/7 is structurally positive non-zero"),
+        },
+        TimeFrame::Month => pos_or_panic!(12.0),  // 12
+        TimeFrame::Quarter => pos_or_panic!(4.0), // 4
+        TimeFrame::Year => Positive::ONE,         // 1
+        TimeFrame::Custom(periods) => *periods,   // Custom periods per year
     }
 }
 

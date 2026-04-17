@@ -412,9 +412,10 @@ where
 
                 values.push(price); // Add initial value
 
-                let dt_sqrt = dt.to_dec().sqrt().ok_or_else(|| {
-                    SimulationError::other("Heston: sqrt(dt) failed (overflow)")
-                })?;
+                let dt_sqrt = dt
+                    .to_dec()
+                    .sqrt()
+                    .ok_or_else(|| SimulationError::other("Heston: sqrt(dt) failed (overflow)"))?;
                 for _ in 0..params.size - 1 {
                     // Generate correlated random numbers
                     let z1 = decimal_normal_sample();

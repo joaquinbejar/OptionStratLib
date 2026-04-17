@@ -87,8 +87,7 @@ pub fn ewma_volatility(
     let initial_std_dev = variance.sqrt().ok_or_else(|| {
         VolatilityError::from("ewma_volatility: sqrt(initial variance) failed (overflow)")
     })?;
-    let mut volatilities =
-        vec![Positive::new_decimal(initial_std_dev).unwrap_or(Positive::ZERO)];
+    let mut volatilities = vec![Positive::new_decimal(initial_std_dev).unwrap_or(Positive::ZERO)];
 
     for &return_value in &returns[1..] {
         variance = lambda * variance + (Decimal::ONE - lambda) * return_value.powi(2);
@@ -273,9 +272,7 @@ pub fn simulate_heston_volatility(
         })?
         .to_f64()
         .ok_or_else(|| {
-            VolatilityError::from(
-                "simulate_heston_volatility: sqrt(dt) not representable as f64",
-            )
+            VolatilityError::from("simulate_heston_volatility: sqrt(dt) not representable as f64")
         })?;
     for _ in 1..steps {
         let dw = Decimal::from_f64(random::<f64>() * dt_sqrt_f64).ok_or_else(|| {

@@ -137,7 +137,9 @@ mod tests_open_interest {
         let points: Vec<&Point2D> = curve.points.iter().collect();
 
         // Find maximum OI
-        let max_oi = points.iter().max_by(|a, b| a.y.partial_cmp(&b.y).unwrap_or(std::cmp::Ordering::Equal));
+        let max_oi = points
+            .iter()
+            .max_by(|a, b| a.y.partial_cmp(&b.y).unwrap_or(std::cmp::Ordering::Equal));
 
         if let Some(max) = max_oi {
             // ATM round strike should have highest OI

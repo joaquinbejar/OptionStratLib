@@ -13,6 +13,10 @@ use rayon::prelude::*;
 use rust_decimal::Decimal;
 use std::collections::BTreeSet;
 
+/// Precomputed f64 form of `crate::constants::TOLERANCE` (= 1e-8) so the
+/// hot-path comparison can avoid the runtime fallible `Decimal::to_f64`.
+const TOLERANCE_F64: f64 = 1e-8;
+
 /// Checks for approximate equality between two f64 values within a defined tolerance.
 ///
 /// This function compares two floating-point numbers and returns `true` if the absolute
@@ -41,10 +45,6 @@ use std::collections::BTreeSet;
 /// let y = 1.1;
 /// assert!(!approx_equal(x, y)); // Returns false
 /// ```
-/// Precomputed f64 form of `crate::constants::TOLERANCE` (= 1e-8) so the
-/// hot-path comparison can avoid the runtime fallible `Decimal::to_f64`.
-const TOLERANCE_F64: f64 = 1e-8;
-
 #[allow(dead_code)]
 pub fn approx_equal(a: f64, b: f64) -> bool {
     (a - b).abs() < TOLERANCE_F64
@@ -170,7 +170,9 @@ where
         .flat_map(|combination| {
             // Mutex-poison recovery: a panic in one closure invocation
             // shouldn't poison the entire combination scan.
-            let mut closure = process_combination.lock().unwrap_or_else(|e| e.into_inner());
+            let mut closure = process_combination
+                .lock()
+                .unwrap_or_else(|e| e.into_inner());
             closure(combination)
         })
         .collect())

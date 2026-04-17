@@ -85,16 +85,20 @@ impl PnLRange {
     /// # }
     /// ```
     pub fn new_decimal(lower: Decimal, upper: Decimal) -> Result<Self, DecimalError> {
-        let lower_i32 = lower.to_i32().ok_or_else(|| DecimalError::ConversionError {
-            from_type: "Decimal".to_string(),
-            to_type: "i32".to_string(),
-            reason: format!("lower bound {lower} out of i32 range"),
-        })?;
-        let upper_i32 = upper.to_i32().ok_or_else(|| DecimalError::ConversionError {
-            from_type: "Decimal".to_string(),
-            to_type: "i32".to_string(),
-            reason: format!("upper bound {upper} out of i32 range"),
-        })?;
+        let lower_i32 = lower
+            .to_i32()
+            .ok_or_else(|| DecimalError::ConversionError {
+                from_type: "Decimal".to_string(),
+                to_type: "i32".to_string(),
+                reason: format!("lower bound {lower} out of i32 range"),
+            })?;
+        let upper_i32 = upper
+            .to_i32()
+            .ok_or_else(|| DecimalError::ConversionError {
+                from_type: "Decimal".to_string(),
+                to_type: "i32".to_string(),
+                reason: format!("upper bound {upper} out of i32 range"),
+            })?;
         Ok(Self {
             lower: lower_i32,
             upper: upper_i32,

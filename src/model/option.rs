@@ -689,11 +689,10 @@ impl Options {
             // mid_vol is the average of two non-negative bounds, so it is
             // structurally non-negative; a None here would indicate a
             // breached invariant on the bounds themselves.
-            let volatility = Positive::new_decimal(mid_vol).map_err(|e| {
-                OptionsError::OtherError {
+            let volatility =
+                Positive::new_decimal(mid_vol).map_err(|e| OptionsError::OtherError {
                     reason: format!("mid_vol invariant breached: {e}"),
-                }
-            })?;
+                })?;
 
             // Calculate option price at this volatility
             let mut option_copy = self.clone();
