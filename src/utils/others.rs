@@ -132,15 +132,18 @@ pub fn random_decimal(rng: &mut impl Rng) -> Result<Decimal, DecimalError> {
 /// # Examples
 ///
 /// ```
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// use optionstratlib::utils::others::process_n_times_iter;
 ///
 /// let numbers = vec![1, 2, 3];
 /// let n = 2;
 /// let result = process_n_times_iter(&numbers, n, |combination| {
 ///     vec![combination[0] + combination[1]]
-/// }).unwrap();
+/// })?;
 ///
 /// assert_eq!(result, vec![2, 3, 4, 4, 5, 6]);
+/// # Ok(())
+/// # }
 /// ```
 pub fn process_n_times_iter<T, Y, F>(
     positions: &[T],

@@ -717,6 +717,7 @@
 //! ### Basic Option Creation and Pricing
 //!
 //! ```rust
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! use optionstratlib::{Options, OptionStyle, OptionType, Side, ExpirationDate};
 //! use positive::{pos_or_panic,Positive};
 //! use rust_decimal_macros::dec;
@@ -739,23 +740,25 @@
 //! );
 //!
 //! // Calculate option price using Black-Scholes
-//! let price = option.calculate_price_black_scholes().unwrap();
+//! let price = option.calculate_price_black_scholes()?;
 //! tracing::info!("Option price: ${:.2}", price);
 //!
 //! // Calculate Greeks for risk management
-//! let delta = option.delta().unwrap();
-//! let gamma = option.gamma().unwrap();
-//! let theta = option.theta().unwrap();
-//! let vega = option.vega().unwrap();
-//! let vanna = option.vanna().unwrap();
-//! let vomma = option.vomma().unwrap();
-//! let veta = option.veta().unwrap();
-//! let charm = option.charm().unwrap();
-//! let color = option.color().unwrap();
+//! let delta = option.delta()?;
+//! let gamma = option.gamma()?;
+//! let theta = option.theta()?;
+//! let vega = option.vega()?;
+//! let vanna = option.vanna()?;
+//! let vomma = option.vomma()?;
+//! let veta = option.veta()?;
+//! let charm = option.charm()?;
+//! let color = option.color()?;
 //! tracing::info!("Greeks - Delta: {:.4}, Gamma: {:.4}, Theta: {:.4},
 //!     Vega: {:.4}, Vanna: {:.4}, Vomma: {:.4}, Veta: {:.4}
 //!     Charm: {:.4}, Color: {:.4}",
 //!     delta, gamma, theta, vega, vanna, vomma, veta, charm, color);
+//! # Ok(())
+//! # }
 //! ```
 //!
 //! ### Working with Trading Strategies
@@ -848,6 +851,7 @@
 //! ### Custom Strategy Creation
 //!
 //! ```rust
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! use optionstratlib::prelude::*;
 //!
 //! // Define common parameters
@@ -920,9 +924,11 @@
 //!     Positive::ONE,
 //!     30,
 //!     implied_volatility,
-//! ).expect("valid custom strategy");
+//! )?;
 //!
 //! tracing::info!("Strategy created: {}", strategy.get_title());
+//! # Ok(())
+//! # }
 //! ```
 //!
 //! ## Testing

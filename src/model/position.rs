@@ -38,6 +38,7 @@ use utoipa::ToSchema;
 /// # Examples
 ///
 /// ```rust
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// use optionstratlib::{Options, Side, OptionStyle};
 /// use positive::pos_or_panic;
 /// use chrono::Utc;
@@ -56,8 +57,10 @@ use utoipa::ToSchema;
 ///     None,
 /// );
 ///
-/// let total_cost = position.total_cost().unwrap();
+/// let total_cost = position.total_cost()?;
 /// info!("Total position cost: {}", total_cost);
+/// # Ok(())
+/// # }
 /// ```
 #[derive(Clone, PartialEq, Serialize, Deserialize, ToSchema)]
 pub struct Position {
@@ -264,6 +267,7 @@ impl Position {
     /// # Examples
     ///
     /// ```rust
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// use optionstratlib::{ Side, OptionStyle};
     /// use positive::pos_or_panic;
     /// use optionstratlib::model::Position;
@@ -284,8 +288,10 @@ impl Position {
     /// );
     ///
     /// // Calculate premium received
-    /// let received = position.premium_received().unwrap();
+    /// let received = position.premium_received()?;
     /// info!("Premium received: {}", received);
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn premium_received(&self) -> Result<Positive, PositionError> {
         match self.option.side {
@@ -348,7 +354,7 @@ impl Position {
     /// # Examples
     ///
     /// ```rust
-    ///
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// // Assuming position is a properly initialized Position
     /// use chrono::Utc;
     /// use optionstratlib::model::utils::create_sample_option_simplest;
@@ -369,10 +375,12 @@ impl Position {
     /// let current_price = pos_or_panic!(105.0);
     ///
     /// // Calculate PnL at expiration with specified price
-    /// let pnl_specific = position.pnl_at_expiration(&Some(&current_price)).unwrap();
+    /// let pnl_specific = position.pnl_at_expiration(&Some(&current_price))?;
     ///
     /// // Calculate PnL at expiration using the option's current underlying price
-    /// let pnl_current = position.pnl_at_expiration(&None).unwrap();
+    /// let pnl_current = position.pnl_at_expiration(&None)?;
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn pnl_at_expiration(&self, price: &Option<&Positive>) -> Result<Decimal, PricingError> {
         match price {
@@ -406,6 +414,7 @@ impl Position {
     /// # Example
     ///
     /// ```rust
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// use chrono::Utc;
     /// use tracing::info;
     /// use optionstratlib::model::Position;
@@ -423,8 +432,10 @@ impl Position {
     ///    None,        // epic (optional)
     ///   None,        // extra fields (optional)
     /// );
-    /// let unrealized_pnl = position.unrealized_pnl(current_price).unwrap();
+    /// let unrealized_pnl = position.unrealized_pnl(current_price)?;
     /// info!("Current unrealized PnL: {}", unrealized_pnl);
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn unrealized_pnl(&self, price: Positive) -> Result<Decimal, PositionError> {
         match self.option.side {

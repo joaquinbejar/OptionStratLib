@@ -78,7 +78,7 @@ use positive::Positive;
 ///
 /// // Find strike with maximum theta decay
 /// let max_decay = theta_curve.points.iter()
-///     .min_by(|a, b| a.y.partial_cmp(&b.y).unwrap());
+///     .min_by(|a, b| a.y.partial_cmp(&b.y).unwrap_or(std::cmp::Ordering::Equal));
 /// ```
 pub trait ThetaCurve {
     /// Computes the theta curve by strike price.
@@ -244,7 +244,7 @@ mod tests_theta {
         let points: Vec<&Point2D> = curve.points.iter().collect();
 
         // Find most negative theta
-        let min_theta = points.iter().min_by(|a, b| a.y.partial_cmp(&b.y).unwrap());
+        let min_theta = points.iter().min_by(|a, b| a.y.partial_cmp(&b.y).unwrap_or(std::cmp::Ordering::Equal));
 
         if let Some(min) = min_theta {
             assert_eq!(min.x, dec!(450.0));

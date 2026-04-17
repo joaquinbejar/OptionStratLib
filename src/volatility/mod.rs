@@ -133,13 +133,16 @@ use positive::pos_or_panic;
 //! The module includes utilities for converting between different time frames:
 //!
 //! ```rust
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! use positive::pos_or_panic;
 //! use optionstratlib::utils::time::TimeFrame;
 //! use optionstratlib::volatility::{annualized_volatility, de_annualized_volatility};
 //!
 //! let daily_vol = pos_or_panic!(0.01);
-//! let annual_vol = annualized_volatility(daily_vol, TimeFrame::Day).unwrap();
+//! let annual_vol = annualized_volatility(daily_vol, TimeFrame::Day)?;
 //! let daily_vol_again = de_annualized_volatility(annual_vol, TimeFrame::Day);
+//! # Ok(())
+//! # }
 //! ```
 //!
 //! ## Performance Considerations

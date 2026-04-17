@@ -37,6 +37,7 @@
 //! ## Example: Covered Call Strategy
 //!
 //! ```rust
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! use optionstratlib::model::leg::{Leg, SpotPosition};
 //! use optionstratlib::model::Position;
 //! use optionstratlib::model::types::Side;
@@ -51,12 +52,15 @@
 //!
 //! // Both legs can be handled uniformly via LegAble trait
 //! use optionstratlib::model::leg::LegAble;
-//! println!("Spot delta: {}", spot_leg.delta().unwrap());
+//! println!("Spot delta: {}", spot_leg.delta()?);
+//! # Ok(())
+//! # }
 //! ```
 //!
 //! ## Example: Cash & Carry Arbitrage (Crypto)
 //!
 //! ```rust
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! use optionstratlib::model::leg::{Leg, SpotPosition, PerpetualPosition, MarginType};
 //! use optionstratlib::model::types::Side;
 //! use positive::{Positive, pos_or_panic};
@@ -80,8 +84,10 @@
 //!
 //! // Net delta should be approximately zero
 //! use optionstratlib::model::leg::LegAble;
-//! let net_delta = spot_leg.delta().unwrap() + perp_leg.delta().unwrap();
+//! let net_delta = spot_leg.delta()? + perp_leg.delta()?;
 //! assert_eq!(net_delta, rust_decimal::Decimal::ZERO);
+//! # Ok(())
+//! # }
 //! ```
 //!
 //! ## Strategies Enabled

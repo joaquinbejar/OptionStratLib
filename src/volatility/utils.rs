@@ -376,11 +376,14 @@ pub fn de_annualized_volatility(
 ///
 /// # Example
 /// ```
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// use positive::pos_or_panic;
 /// use optionstratlib::utils::TimeFrame;
 /// use optionstratlib::volatility::adjust_volatility;
 /// let daily_vol = pos_or_panic!(0.2); // 20% daily volatility
-/// let minute_vol = adjust_volatility(daily_vol, TimeFrame::Day, TimeFrame::Minute).unwrap();
+/// let minute_vol = adjust_volatility(daily_vol, TimeFrame::Day, TimeFrame::Minute)?;
+/// # Ok(())
+/// # }
 /// ```
 pub fn adjust_volatility(
     volatility: Positive,
@@ -447,6 +450,7 @@ pub fn adjust_volatility(
 /// # Examples
 ///
 /// ```
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// use positive::{pos_or_panic, Positive};
 /// use optionstratlib::utils::time::{TimeFrame, convert_time_frame};
 /// use optionstratlib::volatility::volatility_for_dt;
@@ -461,7 +465,9 @@ pub fn adjust_volatility(
 ///     dt,
 ///     TimeFrame::Minute,
 ///     TimeFrame::Day
-/// ).unwrap();
+/// )?;
+/// # Ok(())
+/// # }
 /// ```
 ///
 /// # Errors

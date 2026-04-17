@@ -41,6 +41,7 @@
 //! Example usage of the Bull Call Spread strategy:
 //!
 //! ```rust
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! use rust_decimal_macros::dec;
 //! use tracing::info;
 //! use optionstratlib::ExpirationDate;
@@ -52,7 +53,7 @@
 //! let spread = BullCallSpread::new(
 //!     "SP500".to_string(),
 //!     pos_or_panic!(5780.0),   // underlying_price
-//!     pos_or_panic!(5750.0),   // long_strike_itm  
+//!     pos_or_panic!(5750.0),   // long_strike_itm
 //!     pos_or_panic!(5820.0),   // short_strike
 //!     ExpirationDate::Days(Positive::TWO),
 //!     pos_or_panic!(0.18),   // implied_volatility
@@ -65,11 +66,13 @@
 //!     pos_or_panic!(0.78),   // open_fee_long
 //!     pos_or_panic!(0.73),   // close_fee_long
 //!     pos_or_panic!(0.73),   // close_fee_short
-//! ).expect("valid bull call spread");
+//! )?;
 //!
 //! let profit = spread.get_max_profit().unwrap_or(Positive::ZERO);
 //! let loss = spread.get_max_loss().unwrap_or(Positive::ZERO);
 //! info!("Max Profit: {}, Max Loss: {}", profit, loss);
+//! # Ok(())
+//! # }
 //! ```
 //!
 //! Refer to the documentation of each sub-module for more details on the specific
@@ -154,6 +157,7 @@
 //! //! Example usage of the Iron Condor strategy:
 //!
 //! ```rust
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! use rust_decimal_macros::dec;
 //! use tracing::info;
 //! use optionstratlib::ExpirationDate;
@@ -166,7 +170,7 @@
 //!     "AAPL".to_string(),
 //!     pos_or_panic!(150.0),   // underlying_price
 //!     pos_or_panic!(155.0),   // short_call_strike
-//!     pos_or_panic!(145.0),   // short_put_strike  
+//!     pos_or_panic!(145.0),   // short_put_strike
 //!     pos_or_panic!(160.0),   // long_call_strike
 //!     pos_or_panic!(140.0),   // long_put_strike
 //!     ExpirationDate::Days(pos_or_panic!(30.0)),
@@ -180,11 +184,13 @@
 //!     pos_or_panic!(1.8),   // premium_long_put
 //!     pos_or_panic!(5.0),   // open_fee
 //!     pos_or_panic!(5.0),   // close_fee
-//! ).expect("valid iron condor");
+//! )?;
 //!
 //! let max_profit = condor.get_max_profit().unwrap_or(Positive::ZERO);
 //! let max_loss = condor.get_max_loss().unwrap_or(Positive::ZERO);
 //! info!("Max Profit: {}, Max Loss: {}", max_profit, max_loss);
+//! # Ok(())
+//! # }
 //! ```
 //!
 //! Refer to the documentation of each sub-module for more details on the specific

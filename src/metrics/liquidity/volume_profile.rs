@@ -59,7 +59,7 @@ use positive::Positive;
 ///
 /// // Find strike with highest volume
 /// let max_volume = volume_curve.points.iter()
-///     .max_by(|a, b| a.y.partial_cmp(&b.y).unwrap());
+///     .max_by(|a, b| a.y.partial_cmp(&b.y).unwrap_or(std::cmp::Ordering::Equal));
 /// ```
 pub trait VolumeProfileCurve {
     /// Computes the volume profile curve by strike price.
@@ -216,7 +216,7 @@ mod tests_volume_profile {
         let points: Vec<&Point2D> = curve.points.iter().collect();
 
         // Find maximum volume
-        let max_vol = points.iter().max_by(|a, b| a.y.partial_cmp(&b.y).unwrap());
+        let max_vol = points.iter().max_by(|a, b| a.y.partial_cmp(&b.y).unwrap_or(std::cmp::Ordering::Equal));
 
         if let Some(max) = max_vol {
             // ATM should have highest volume (around 450)

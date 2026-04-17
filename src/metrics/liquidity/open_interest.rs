@@ -65,7 +65,7 @@ use crate::error::CurveError;
 ///
 /// // Find strike with maximum OI (potential support/resistance)
 /// let max_oi = oi_curve.points.iter()
-///     .max_by(|a, b| a.y.partial_cmp(&b.y).unwrap());
+///     .max_by(|a, b| a.y.partial_cmp(&b.y).unwrap_or(std::cmp::Ordering::Equal));
 /// ```
 pub trait OpenInterestCurve {
     /// Computes the open interest distribution curve by strike price.
@@ -137,7 +137,7 @@ mod tests_open_interest {
         let points: Vec<&Point2D> = curve.points.iter().collect();
 
         // Find maximum OI
-        let max_oi = points.iter().max_by(|a, b| a.y.partial_cmp(&b.y).unwrap());
+        let max_oi = points.iter().max_by(|a, b| a.y.partial_cmp(&b.y).unwrap_or(std::cmp::Ordering::Equal));
 
         if let Some(max) = max_oi {
             // ATM round strike should have highest OI

@@ -61,6 +61,7 @@
 //! ## Example: Simple Line Chart
 //!
 //! ```rust
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! use std::fs;
 //! use std::path::{Path, PathBuf};
 //! use rust_decimal::Decimal;
@@ -111,12 +112,13 @@
 //!     data.show();
 //!     // Save as PNG
 //!     let filename: PathBuf = PathBuf::from("my_chart.png");
-//!     data.render(OutputType::Png(&filename)).unwrap();
+//!     data.render(OutputType::Png(&filename))?;
 //!     if Path::new(&filename.clone()).exists() {
-//!             fs::remove_file(filename.clone())
-//!                 .unwrap_or_else(|_| panic!("Failed to remove {}", filename.to_str().unwrap()));
+//!         fs::remove_file(filename.clone())?;
 //!     }
 //! }
+//! # Ok(())
+//! # }
 //! ```
 //!
 //! ## Example: 3D Surface
@@ -272,8 +274,7 @@
 //!     chart.to_interactive_html(&filename)?;
 //!     info!("Interactive HTML chart created successfully!");
 //!     if Path::new(&filename.clone()).exists() {
-//!             fs::remove_file(filename.clone())
-//!                 .unwrap_or_else(|_| panic!("Failed to remove {}", filename.to_str().unwrap()));
+//!             fs::remove_file(filename.clone())?;
 //!         }
 //!     }
 //!     Ok(())

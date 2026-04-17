@@ -376,14 +376,20 @@ pub fn create_sample_option_simplest_strike(
 /// # Example
 ///
 /// ```rust
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// use positive::Positive;
 /// use optionstratlib::model::utils::mean_and_std;
 ///
-/// let data = vec![Positive::new(2.0).unwrap(), Positive::new(4.0).unwrap(), Positive::new(4.0).unwrap(), Positive::new(4.0).unwrap(), Positive::new(5.0).unwrap(), Positive::new(5.0).unwrap(), Positive::new(7.0).unwrap(), Positive::new(9.0).unwrap()];
+/// let data = vec![
+///     Positive::new(2.0)?, Positive::new(4.0)?, Positive::new(4.0)?, Positive::new(4.0)?,
+///     Positive::new(5.0)?, Positive::new(5.0)?, Positive::new(7.0)?, Positive::new(9.0)?,
+/// ];
 /// let (mean, std) = mean_and_std(data);
 ///
 /// assert_eq!(mean.to_f64(), 5.0);
 /// assert_eq!(std.to_f64(), 4.0_f64.sqrt());
+/// # Ok(())
+/// # }
 /// ```
 ///
 /// # Details
