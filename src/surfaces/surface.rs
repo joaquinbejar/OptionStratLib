@@ -44,6 +44,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
 use std::ops::Index;
 use std::sync::Arc;
+use tracing::warn;
 use utoipa::ToSchema;
 
 /// Represents a mathematical surface in 3D space.
@@ -206,7 +207,11 @@ impl Surface {
     {
         // Sort points by x coordinate
         let mut sorted_points = points.to_vec();
-        sorted_points.sort_by(|a, b| x_selector(a).partial_cmp(&x_selector(b)).unwrap());
+        sorted_points.sort_by(|a, b| {
+            x_selector(a)
+                .partial_cmp(&x_selector(b))
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
 
         // Ensure we have at least 2 points
         if sorted_points.len() < 2 {
@@ -441,6 +446,7 @@ impl GeometricObject<Point3D, Point2D> for Surface {
     ///
     /// ## Creating from existing points
     /// ```rust
+    /// # fn run() -> Result<(), Box<dyn std::error::Error>> {
     /// use std::collections::BTreeSet;
     /// use optionstratlib::geometrics::{ConstructionMethod, GeometricObject};
     /// use optionstratlib::surfaces::{Point3D, Surface};
@@ -449,11 +455,14 @@ impl GeometricObject<Point3D, Point2D> for Surface {
     ///     Point3D::new(1, 0, 1),
     ///     Point3D::new(0, 1, 1),
     /// ]);
-    /// let surface = Surface::construct(ConstructionMethod::FromData { points }).unwrap();
+    /// let surface = Surface::construct(ConstructionMethod::FromData { points })?;
+    /// # Ok(())
+    /// # }
     /// ```
     ///
     /// ## Creating from a parametric function
     /// ```rust,no_run
+    /// # fn run() -> Result<(), Box<dyn std::error::Error>> {
     /// use rust_decimal_macros::dec;
     /// use optionstratlib::curves::Point2D;
     /// use optionstratlib::geometrics::{ConstructionMethod, ConstructionParams, GeometricObject, ResultPoint};
@@ -476,7 +485,9 @@ impl GeometricObject<Point3D, Point2D> for Surface {
     ///     })
     /// });
     ///
-    /// let surface = Surface::construct(ConstructionMethod::Parametric { f, params }).unwrap();
+    /// let surface = Surface::construct(ConstructionMethod::Parametric { f, params })?;
+    /// # Ok(())
+    /// # }
     /// ```
     fn construct<T>(method: T) -> Result<Self, Self::Error>
     where
@@ -542,8 +553,9 @@ impl GeometricObject<Point3D, Point2D> for Surface {
 /// appear in the underlying `BTreeSet`.
 ///
 /// # Panics
-/// This implementation will panic with the message "Index out of bounds" if the provided index
-/// is greater than or equal to the number of points in the surface.
+///
+/// Panics if `index >= self.points.len()`. This matches the documented
+/// contract of [`std::ops::Index`].
 ///
 /// # Performance
 /// Note that this implementation uses `iter().nth(index)` which has O(n) time complexity
@@ -556,8 +568,18 @@ impl Index<usize> for Surface {
     ///
     /// This implementation allows using indexing syntax (e.g., `surface[i]`) to access
     /// individual points that make up the surface.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `index >= self.points.len()`.
     fn index(&self, index: usize) -> &Self::Output {
-        self.points.iter().nth(index).expect("Index out of bounds")
+        match self.points.iter().nth(index) {
+            Some(p) => p,
+            None => panic!(
+                "Surface::index: out of bounds (index = {index}, len = {})",
+                self.points.len()
+            ),
+        }
     }
 }
 
@@ -682,7 +704,9 @@ impl LinearInterpolation<Point3D, Point2D> for Surface {
         nearest_points.sort_by(|a, b| {
             let dist_a = (a.x - xy.x).powi(2) + (a.y - xy.y).powi(2);
             let dist_b = (b.x - xy.x).powi(2) + (b.y - xy.y).powi(2);
-            dist_a.partial_cmp(&dist_b).unwrap()
+            dist_a
+                .partial_cmp(&dist_b)
+                .unwrap_or(std::cmp::Ordering::Equal)
         });
 
         let p1 = nearest_points[0];
@@ -748,7 +772,9 @@ impl BiLinearInterpolation<Point3D, Point2D> for Surface {
         sorted_points.sort_by(|a, b| {
             let dist_a = (a.x - xy.x).powi(2) + (a.y - xy.y).powi(2);
             let dist_b = (b.x - xy.x).powi(2) + (b.y - xy.y).powi(2);
-            dist_a.partial_cmp(&dist_b).unwrap()
+            dist_a
+                .partial_cmp(&dist_b)
+                .unwrap_or(std::cmp::Ordering::Equal)
         });
 
         let closest_points = &sorted_points[0..4];
@@ -758,7 +784,9 @@ impl BiLinearInterpolation<Point3D, Point2D> for Surface {
         quad_points.sort_by(|a, b| {
             let a_key = (a.y, a.x);
             let b_key = (b.y, b.x);
-            a_key.partial_cmp(&b_key).unwrap()
+            a_key
+                .partial_cmp(&b_key)
+                .unwrap_or(std::cmp::Ordering::Equal)
         });
 
         // Get the four points for interpolation
@@ -811,7 +839,9 @@ impl CubicInterpolation<Point3D, Point2D> for Surface {
         sorted_points.sort_by(|a, b| {
             let dist_a = (a.x - xy.x).powi(2) + (a.y - xy.y).powi(2);
             let dist_b = (b.x - xy.x).powi(2) + (b.y - xy.y).powi(2);
-            dist_a.partial_cmp(&dist_b).unwrap()
+            dist_a
+                .partial_cmp(&dist_b)
+                .unwrap_or(std::cmp::Ordering::Equal)
         });
 
         let closest_points = &sorted_points[0..9];
@@ -823,9 +853,13 @@ impl CubicInterpolation<Point3D, Point2D> for Surface {
         let weights: Vec<Decimal> = closest_points
             .iter()
             .map(|&point| {
-                let dist = ((point.x - xy.x).powi(2) + (point.y - xy.y).powi(2))
-                    .sqrt()
-                    .unwrap();
+                let sq = (point.x - xy.x).powi(2) + (point.y - xy.y).powi(2);
+                let dist = sq.sqrt().unwrap_or_else(|| {
+                    warn!(
+                        "cubic_interpolate: sqrt of non-finite operand ({sq}); falling back to 0"
+                    );
+                    Decimal::ZERO
+                });
                 Decimal::ONE / (dist + Decimal::new(1, 6)) // Avoid division by zero
             })
             .collect();
@@ -884,7 +918,9 @@ impl SplineInterpolation<Point3D, Point2D> for Surface {
         sorted_points.sort_by(|a, b| {
             let a_key = (a.x, a.y);
             let b_key = (b.x, b.y);
-            a_key.partial_cmp(&b_key).unwrap()
+            a_key
+                .partial_cmp(&b_key)
+                .unwrap_or(std::cmp::Ordering::Equal)
         });
 
         // Group points by x and y coordinates
@@ -963,7 +999,7 @@ impl MetricsExtractor for Surface {
         let mean = z_values.iter().sum::<Decimal>() / Decimal::from(z_values.len());
 
         let mut sorted = z_values.clone();
-        sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        sorted.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
         let median = sorted[sorted.len() / 2];
 
         // Mode calculation using HashMap to count occurrences
@@ -1032,7 +1068,7 @@ impl MetricsExtractor for Surface {
     fn compute_range_metrics(&self) -> Result<RangeMetrics, MetricsError> {
         let z_values: Vec<Decimal> = self.points.iter().map(|p| p.z).collect();
         let mut sorted = z_values.clone();
-        sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        sorted.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
 
         let min = sorted.first().copied().unwrap_or(Decimal::ZERO);
         let max = sorted.last().copied().unwrap_or(Decimal::ZERO);
@@ -1270,12 +1306,16 @@ impl Arithmetic<Surface> for Surface {
                         MergeOperation::Max => z_values
                             .par_iter()
                             .cloned()
-                            .max_by(|a, b| a.partial_cmp(b).unwrap())
+                            .max_by(|a, b| {
+                                a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal)
+                            })
                             .unwrap_or(Decimal::ZERO),
                         MergeOperation::Min => z_values
                             .par_iter()
                             .cloned()
-                            .min_by(|a, b| a.partial_cmp(b).unwrap())
+                            .min_by(|a, b| {
+                                a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal)
+                            })
                             .unwrap_or(Decimal::ZERO),
                     };
 
@@ -1320,9 +1360,23 @@ impl AxisOperations<Point3D, Point2D> for Surface {
         self.points
             .iter()
             .min_by(|a, b| {
-                let dist_a = ((a.x - x.x).powi(2) + (a.y - x.y).powi(2)).sqrt().unwrap();
-                let dist_b = ((b.x - x.x).powi(2) + (b.y - x.y).powi(2)).sqrt().unwrap();
-                dist_a.partial_cmp(&dist_b).unwrap()
+                let sq_a = (a.x - x.x).powi(2) + (a.y - x.y).powi(2);
+                let sq_b = (b.x - x.x).powi(2) + (b.y - x.y).powi(2);
+                let dist_a = sq_a.sqrt().unwrap_or_else(|| {
+                    warn!(
+                        "get_closest_point: sqrt of non-finite operand ({sq_a}); falling back to 0"
+                    );
+                    Decimal::ZERO
+                });
+                let dist_b = sq_b.sqrt().unwrap_or_else(|| {
+                    warn!(
+                        "get_closest_point: sqrt of non-finite operand ({sq_b}); falling back to 0"
+                    );
+                    Decimal::ZERO
+                });
+                dist_a
+                    .partial_cmp(&dist_b)
+                    .unwrap_or(std::cmp::Ordering::Equal)
             })
             .ok_or(SurfaceError::Point3DError {
                 reason: "No points found",
@@ -1351,26 +1405,34 @@ where
 
         for xy in &merged_xy_values {
             if self.contains_point(xy) {
-                interpolated_self_points.insert(
-                    *self
-                        .points
-                        .iter()
-                        .find(|p| p.x == xy.x && p.y == xy.y)
-                        .unwrap(),
-                );
+                let pt = self
+                    .points
+                    .iter()
+                    .find(|p| p.x == xy.x && p.y == xy.y)
+                    .ok_or_else(|| {
+                        SurfaceError::AnalysisError(format!(
+                            "merge_axis_interpolate: missing self point at ({},{}) despite contains_point()",
+                            xy.x, xy.y
+                        ))
+                    })?;
+                interpolated_self_points.insert(*pt);
             } else {
                 let interpolated_point = self.interpolate(*xy, interpolation)?;
                 interpolated_self_points.insert(interpolated_point);
             }
 
             if other.contains_point(xy) {
-                interpolated_other_points.insert(
-                    *other
-                        .points
-                        .iter()
-                        .find(|p| p.x == xy.x && p.y == xy.y)
-                        .unwrap(),
-                );
+                let pt = other
+                    .points
+                    .iter()
+                    .find(|p| p.x == xy.x && p.y == xy.y)
+                    .ok_or_else(|| {
+                        SurfaceError::AnalysisError(format!(
+                            "merge_axis_interpolate: missing other point at ({},{}) despite contains_point()",
+                            xy.x, xy.y
+                        ))
+                    })?;
+                interpolated_other_points.insert(*pt);
             } else {
                 let interpolated_point = other.interpolate(*xy, interpolation)?;
                 interpolated_other_points.insert(interpolated_point);
@@ -1536,10 +1598,10 @@ impl GeometricTransformations<Point3D> for Surface {
 
         // Sort and find derivatives
         let mut x_sorted: Vec<_> = x_candidates.iter().collect();
-        x_sorted.sort_by(|a, b| a.x.partial_cmp(&b.x).unwrap());
+        x_sorted.sort_by(|a, b| a.x.partial_cmp(&b.x).unwrap_or(std::cmp::Ordering::Equal));
 
         let mut y_sorted: Vec<_> = y_candidates.iter().collect();
-        y_sorted.sort_by(|a, b| a.y.partial_cmp(&b.y).unwrap());
+        y_sorted.sort_by(|a, b| a.y.partial_cmp(&b.y).unwrap_or(std::cmp::Ordering::Equal));
 
         // Prevent division by zero
         let dx = if x_sorted[0].x == x_sorted[1].x {
@@ -1568,16 +1630,20 @@ impl GeometricTransformations<Point3D> for Surface {
         let min_point = self
             .points
             .iter()
-            .min_by(|a, b| a.z.partial_cmp(&b.z).unwrap())
+            .min_by(|a, b| a.z.partial_cmp(&b.z).unwrap_or(std::cmp::Ordering::Equal))
             .cloned()
-            .unwrap();
+            .ok_or_else(|| {
+                SurfaceError::AnalysisError("extrema: empty point set in min_by".to_string())
+            })?;
 
         let max_point = self
             .points
             .iter()
-            .max_by(|a, b| a.z.partial_cmp(&b.z).unwrap())
+            .max_by(|a, b| a.z.partial_cmp(&b.z).unwrap_or(std::cmp::Ordering::Equal))
             .cloned()
-            .unwrap();
+            .ok_or_else(|| {
+                SurfaceError::AnalysisError("extrema: empty point set in max_by".to_string())
+            })?;
 
         Ok((min_point, max_point))
     }
