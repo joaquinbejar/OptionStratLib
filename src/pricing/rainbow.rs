@@ -472,7 +472,7 @@ mod tests {
     fn test_rainbow_best_of_call() {
         let option = create_rainbow_option(RainbowType::BestOf, OptionStyle::Call);
         let price = rainbow_black_scholes(&option).unwrap();
-        println!("Best-of call price: {}", price);
+        tracing::debug!(price = %price, "Best-of call price");
         assert!(
             price > dec!(0.0),
             "Best-of call should have positive value, got {}",
