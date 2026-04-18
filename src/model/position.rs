@@ -889,9 +889,11 @@ impl TradeStatusAble for Position {
 
     fn close(&self) -> Result<Trade, TradeError> {
         let mut trade = self.trade()?;
-        // SAFETY: dec!(0.01) is a valid positive constant
-        let threshold = unsafe { Positive::new_unchecked(rust_decimal_macros::dec!(0.01)) };
-        if trade.premium <= threshold {
+        // Compare directly against the `Decimal` literal — `trade.premium`
+        // is a `Positive` whose internal `Decimal` is free to fetch, so the
+        // `Positive` round-trip is unnecessary here. Keeps this path
+        // kernel-only-Decimal per §Numerical Discipline.
+        if trade.premium.to_dec() <= rust_decimal_macros::dec!(0.01) {
             trade.premium = Positive::ZERO;
         }
         trade.status = TradeStatus::Closed;
