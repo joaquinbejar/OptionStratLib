@@ -11,6 +11,40 @@ use std::convert::TryInto;
 use std::fmt::{Debug, Display};
 use std::ops::AddAssign;
 
+/// Object-safe helper trait that exposes a `Clone`-compatible operation for
+/// [`WalkTypeAble`] trait objects.
+///
+/// `Clone::clone` requires `Self: Sized`, so it cannot be invoked through
+/// `dyn WalkTypeAble<X, Y>` directly. `WalkTypeAbleClone::clone_box` returns an
+/// owned `Box<dyn WalkTypeAble<X, Y>>` instead, which lets the generic
+/// `Clone for Box<dyn WalkTypeAble<X, Y>>` implementation work uniformly for
+/// any concrete walker that is `Clone + 'static`.
+///
+/// You should never implement this trait by hand: a blanket impl covers every
+/// `T: WalkTypeAble<X, Y> + Clone + 'static`. Just `#[derive(Clone)]` on your
+/// concrete walker and the trait object gains `Clone` for free.
+pub trait WalkTypeAbleClone<X, Y>
+where
+    X: Copy + TryInto<Positive> + AddAssign + Display,
+    Y: TryInto<Positive> + Display + Clone,
+{
+    /// Returns a boxed clone of this walker as a trait object.
+    #[must_use]
+    fn clone_box(&self) -> Box<dyn WalkTypeAble<X, Y>>;
+}
+
+impl<T, X, Y> WalkTypeAbleClone<X, Y> for T
+where
+    T: 'static + WalkTypeAble<X, Y> + Clone,
+    X: Copy + TryInto<Positive> + AddAssign + Display,
+    Y: TryInto<Positive> + Display + Clone,
+{
+    #[inline]
+    fn clone_box(&self) -> Box<dyn WalkTypeAble<X, Y>> {
+        Box::new(self.clone())
+    }
+}
+
 /// Trait for implementing various random walk models and stochastic processes.
 ///
 /// This trait provides methods to generate different types of stochastic processes commonly
@@ -38,7 +72,19 @@ use std::ops::AddAssign;
 /// - GARCH (Generalized Autoregressive Conditional Heteroskedasticity)
 /// - Heston stochastic volatility model
 /// - Custom stochastic process with mean-reverting volatility
-pub trait WalkTypeAble<X, Y>
+///
+/// # Object safety and cloning
+///
+/// `WalkTypeAble` is object-safe: you can hold it behind `Box<dyn WalkTypeAble<X, Y>>`
+/// (e.g., inside [`WalkParams`]). The super-trait [`WalkTypeAbleClone`] provides an
+/// object-safe `clone_box` hook that forwards to `Clone` on the concrete walker, which
+/// is how `Box<dyn WalkTypeAble<X, Y>>` implements `Clone`. Any concrete walker you
+/// want to store behind a trait object must therefore be `Clone + 'static` — in
+/// practice that means adding `#[derive(Clone)]` to your walker struct.
+///
+/// The blanket implementation of `WalkTypeAbleClone` is automatic; you never
+/// implement `clone_box` by hand.
+pub trait WalkTypeAble<X, Y>: WalkTypeAbleClone<X, Y>
 where
     X: Copy + TryInto<Positive> + AddAssign + Display,
     Y: TryInto<Positive> + Display + Clone,
@@ -643,19 +689,16 @@ impl<X, Y> Debug for Box<dyn WalkTypeAble<X, Y>> {
     }
 }
 
-impl<X, Y> Clone for Box<dyn WalkTypeAble<X, Y>> {
+impl<X, Y> Clone for Box<dyn WalkTypeAble<X, Y>>
+where
+    X: Copy + TryInto<Positive> + AddAssign + Display,
+    Y: TryInto<Positive> + Display + Clone,
+{
     fn clone(&self) -> Self {
-        // INVARIANT: a trait object cannot be cloned through `Clone::clone`
-        // because that requires `Self: Sized`, which `dyn WalkTypeAble` is
-        // not. This impl exists only so containers like `WalkParams` can
-        // still `#[derive(Clone)]`; the concrete walkers used in the crate
-        // live as `Box<ConcreteWalker>` (not `Box<dyn ...>`), so the
-        // derived clone paths never reach this branch. Calling it directly
-        // on a `Box<dyn WalkTypeAble>` is a programmer error — tracked by
-        // issue #358 as a follow-up to add a proper object-safe clone hook.
-        panic!(
-            "Box<dyn WalkTypeAble<X, Y>> cannot be cloned directly; keep walkers as Box<ConcreteWalker> or track the follow-up in issue #358."
-        )
+        // Delegate to the object-safe `clone_box` hook on `WalkTypeAbleClone`.
+        // The blanket impl for `T: WalkTypeAble<X, Y> + Clone + 'static`
+        // forwards to `Clone::clone` on the concrete walker.
+        self.clone_box()
     }
 }
 
@@ -733,7 +776,7 @@ mod tests_walk_type_able {
     use std::fmt::Display;
     use std::ops::AddAssign;
 
-    #[derive(Debug)]
+    #[derive(Debug, Clone)]
     struct TestWalker {}
 
     impl<X, Y> WalkTypeAble<X, Y> for TestWalker
@@ -1027,6 +1070,7 @@ mod tests_walk_type_able {
 
     #[test]
     fn test_error_handling() {
+        #[derive(Clone)]
         struct ErrorWalker {}
 
         impl<X, Y> WalkTypeAble<X, Y> for ErrorWalker
@@ -1095,5 +1139,56 @@ mod tests_walk_type_able {
 
         let error_walker = ErrorWalker {};
         assert!(error_walker.brownian(&params).is_err());
+    }
+
+    /// Regression for issue #358: cloning through `Box<dyn WalkTypeAble>`
+    /// delegates to `clone_box`, which forwards to the concrete walker's
+    /// `Clone::clone`. Calling `.clone()` must not panic and must produce a
+    /// walker that behaves identically to the original.
+    #[test]
+    fn test_box_dyn_walktypeable_clone_roundtrip() {
+        #[derive(Clone, Debug, PartialEq)]
+        struct CountingWalker {
+            label: &'static str,
+        }
+        impl<X, Y> WalkTypeAble<X, Y> for CountingWalker
+        where
+            X: Copy + TryInto<Positive> + AddAssign + Display,
+            Y: Copy + TryInto<Positive> + Display,
+        {
+        }
+
+        let original: Box<dyn WalkTypeAble<Positive, Positive>> =
+            Box::new(CountingWalker { label: "seed" });
+        // Would previously panic; now forwards through clone_box to
+        // CountingWalker::clone.
+        let cloned = original.clone();
+
+        // We cannot compare trait objects directly, so verify via downcast-ish
+        // behaviour: both walkers expose the same `brownian` result for the
+        // same WalkParams input.
+        let params = create_test_params(
+            3,
+            pos_or_panic!(1.0),
+            Positive::HUNDRED,
+            WalkType::Brownian {
+                dt: pos_or_panic!(0.01),
+                drift: Decimal::ZERO,
+                volatility: pos_or_panic!(0.2),
+            },
+        );
+        let original_len = original
+            .brownian(&params)
+            .map(|v| v.len())
+            .unwrap_or(usize::MAX);
+        let cloned_len = cloned
+            .brownian(&params)
+            .map(|v| v.len())
+            .unwrap_or(usize::MAX);
+        assert_eq!(original_len, cloned_len);
+
+        // The default `brownian` returns `Ok(Vec::new())` for
+        // `WalkType::Brownian` when ystep cannot be coerced, which is fine —
+        // we are asserting parity, not a specific length.
     }
 }
