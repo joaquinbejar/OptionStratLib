@@ -33,7 +33,7 @@ use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
-use tracing::debug;
+use tracing::{debug, warn};
 use utoipa::ToSchema;
 
 pub(super) const LONG_CALL_DESCRIPTION: &str = "A Long Call is an options strategy where the trader buys a call option, acquiring the right (but not the obligation) to purchase the underlying asset at the strike price until expiration. \
@@ -396,7 +396,10 @@ impl Positionable for LongCall {
 
 impl StrategyConstructor for LongCall {
     fn get_strategy(_vec_positions: &[Position]) -> Result<Self, StrategyError> {
-        todo!()
+        Err(StrategyError::operation_not_supported(
+            "get_strategy",
+            "LongCall",
+        ))
     }
 }
 
@@ -409,7 +412,7 @@ impl Optimizable for LongCall {
         _side: crate::strategies::FindOptimalSide,
         _criteria: OptimizationCriteria,
     ) {
-        todo!()
+        warn!("find_optimal: stub — no optimization performed for LongCall");
     }
 }
 
@@ -754,6 +757,17 @@ where
 }
 
 impl Strategable for LongCall {}
+
+#[cfg(test)]
+mod tests_get_strategy {
+    use super::*;
+
+    #[test]
+    fn test_get_strategy_returns_not_supported() {
+        let result = LongCall::get_strategy(&[]);
+        assert!(matches!(result, Err(StrategyError::OperationError(_))));
+    }
+}
 
 #[cfg(test)]
 mod tests_simulate {

@@ -36,7 +36,7 @@ use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
-use tracing::debug;
+use tracing::{debug, warn};
 use utoipa::ToSchema;
 
 pub(super) const LONG_PUT_DESCRIPTION: &str = "A Long Put is an options strategy where the trader purchases a put option, gaining the right (but not the obligation) to sell the underlying asset at the strike price until expiration. \
@@ -403,7 +403,10 @@ impl Positionable for LongPut {
 
 impl StrategyConstructor for LongPut {
     fn get_strategy(_vec_positions: &[Position]) -> Result<Self, StrategyError> {
-        todo!()
+        Err(StrategyError::operation_not_supported(
+            "get_strategy",
+            "LongPut",
+        ))
     }
 }
 
@@ -416,7 +419,7 @@ impl Optimizable for LongPut {
         _side: FindOptimalSide,
         _criteria: OptimizationCriteria,
     ) {
-        todo!()
+        warn!("find_optimal: stub — no optimization performed for LongPut");
     }
 }
 

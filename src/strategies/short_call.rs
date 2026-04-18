@@ -35,7 +35,7 @@ use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
-use tracing::debug;
+use tracing::{debug, warn};
 use utoipa::ToSchema;
 
 pub(super) const SHORT_CALL_DESCRIPTION: &str = "A Short Call (or Naked Call) is an options strategy where the trader sells a call option without owning the underlying stock. \
@@ -407,7 +407,10 @@ impl Positionable for ShortCall {
 
 impl StrategyConstructor for ShortCall {
     fn get_strategy(_vec_positions: &[Position]) -> Result<Self, StrategyError> {
-        todo!()
+        Err(StrategyError::operation_not_supported(
+            "get_strategy",
+            "ShortCall",
+        ))
     }
 }
 
@@ -420,7 +423,7 @@ impl Optimizable for ShortCall {
         _side: FindOptimalSide,
         _criteria: OptimizationCriteria,
     ) {
-        todo!()
+        warn!("find_optimal: stub — no optimization performed for ShortCall");
     }
 }
 
