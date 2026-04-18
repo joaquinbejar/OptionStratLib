@@ -95,22 +95,32 @@ impl TimeFrame {
     /// assert_eq!(periods_per_year, pos_or_panic!(360.0));
     /// ```
     pub fn periods_per_year(&self) -> Positive {
+        // Copy the `LazyLock<Positive>` values into locals once to avoid
+        // repeating the lazy-check on every factor of the match-arm products.
+        // `Positive: Copy`, so this is a trivial byte copy after the first
+        // access to each cell.
+        let trading_days = *TRADING_DAYS;
+        let trading_hours = *TRADING_HOURS;
+        let seconds_per_hour = *SECONDS_PER_HOUR;
+        let microseconds_per_second = *MICROSECONDS_PER_SECOND;
+        let weeks_per_year = *WEEKS_PER_YEAR;
+        let months_per_year = *MONTHS_PER_YEAR;
         match self {
             TimeFrame::Microsecond => {
-                *TRADING_DAYS * *TRADING_HOURS * *SECONDS_PER_HOUR * *MICROSECONDS_PER_SECOND
+                trading_days * trading_hours * seconds_per_hour * microseconds_per_second
             } // Microseconds in trading year
             TimeFrame::Millisecond => {
-                *TRADING_DAYS * *TRADING_HOURS * *SECONDS_PER_HOUR * MILLISECONDS_PER_SECOND
+                trading_days * trading_hours * seconds_per_hour * MILLISECONDS_PER_SECOND
             } // Milliseconds in trading year
-            TimeFrame::Second => *TRADING_DAYS * *TRADING_HOURS * *SECONDS_PER_HOUR, // Seconds in trading year
-            TimeFrame::Minute => *TRADING_DAYS * *TRADING_HOURS * MINUTES_PER_HOUR, // Minutes in trading year
-            TimeFrame::Hour => *TRADING_DAYS * *TRADING_HOURS, // Hours in trading year
-            TimeFrame::Day => *TRADING_DAYS,                   // Trading days in a year
-            TimeFrame::Week => *WEEKS_PER_YEAR,                // Weeks in a year
-            TimeFrame::Month => *MONTHS_PER_YEAR,              // Months in a year
-            TimeFrame::Quarter => QUARTERS_PER_YEAR,           // Quarters in a year
-            TimeFrame::Year => Positive::ONE,                  // Base unit
-            TimeFrame::Custom(periods) => *periods,            // Custom periods per year
+            TimeFrame::Second => trading_days * trading_hours * seconds_per_hour, // Seconds in trading year
+            TimeFrame::Minute => trading_days * trading_hours * MINUTES_PER_HOUR, // Minutes in trading year
+            TimeFrame::Hour => trading_days * trading_hours, // Hours in trading year
+            TimeFrame::Day => trading_days,                  // Trading days in a year
+            TimeFrame::Week => weeks_per_year,               // Weeks in a year
+            TimeFrame::Month => months_per_year,             // Months in a year
+            TimeFrame::Quarter => QUARTERS_PER_YEAR,         // Quarters in a year
+            TimeFrame::Year => Positive::ONE,                // Base unit
+            TimeFrame::Custom(periods) => *periods,          // Custom periods per year
         }
     }
 }
