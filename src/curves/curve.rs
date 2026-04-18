@@ -270,6 +270,10 @@ impl Index<usize> for Curve {
     /// Panics if `index >= self.points.len()`. This matches the
     /// documented contract of [`std::ops::Index`].
     fn index(&self, index: usize) -> &Self::Output {
+        // INVARIANT: `std::ops::Index` requires returning `&Self::Output`
+        // by value, so there is no safe way to signal an out-of-bounds
+        // index other than panicking. The contract mirrors `Vec<T>::index`
+        // and is documented above.
         match self.points.iter().nth(index) {
             Some(p) => p,
             None => panic!(
@@ -1057,7 +1061,9 @@ impl MetricsExtractor for Curve {
             / Decimal::from(y_values.len());
         let std_dev = variance.sqrt().unwrap_or(Decimal::ONE);
         if std_dev.is_zero() || std_dev < dec!(1e-9) {
-            panic!("The standard deviation is too small or zero.");
+            return Err(MetricsError::ShapeError(format!(
+                "standard deviation ({std_dev}) is too small to compute skewness/kurtosis; the curve is degenerate"
+            )));
         }
 
         // Skewness calculation (Fisher-Pearson standardized moment)

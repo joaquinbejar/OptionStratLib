@@ -167,7 +167,12 @@ where
                     let mut log_ret = (expected_return * dt) + diffusion;
 
                     if let Some(ac) = autocorrelation {
-                        assert!((-Decimal::ONE..=Decimal::ONE).contains(&ac));
+                        if !(-Decimal::ONE..=Decimal::ONE).contains(&ac) {
+                            return Err(format!(
+                                "LogReturns: autocorrelation {ac} must lie in [-1, 1]"
+                            )
+                            .into());
+                        }
                         log_ret += ac * prev_log_ret;
                     }
 
@@ -640,6 +645,12 @@ impl<X, Y> Debug for Box<dyn WalkTypeAble<X, Y>> {
 
 impl<X, Y> Clone for Box<dyn WalkTypeAble<X, Y>> {
     fn clone(&self) -> Self {
+        // INVARIANT: a trait object cannot be cloned through `Clone` directly —
+        // `Clone::clone` requires `Self: Sized`, which `dyn WalkTypeAble` is
+        // not. The idiomatic workaround is `clone_box()` (defined on the trait
+        // itself). This impl exists solely so generic code parameterised by
+        // `Box<dyn WalkTypeAble<...>>` type-checks against `Clone` bounds;
+        // calling it is a programmer error.
         panic!("Box<dyn WalkTypeAble<X, Y>> cannot be cloned. Use clone_box() instead.")
     }
 }

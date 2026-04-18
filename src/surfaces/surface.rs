@@ -573,6 +573,9 @@ impl Index<usize> for Surface {
     ///
     /// Panics if `index >= self.points.len()`.
     fn index(&self, index: usize) -> &Self::Output {
+        // INVARIANT: same as `Curve::index` above — `std::ops::Index`
+        // requires returning `&Self::Output` with no signalling channel,
+        // so panic on out-of-bounds is the documented contract.
         match self.points.iter().nth(index) {
             Some(p) => p,
             None => panic!(

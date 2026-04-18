@@ -331,9 +331,10 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "ExpirationDate::DateTime is not supported")]
-    fn test_step_new_with_datetime_should_panic() {
-        // Using DateTime should panic
+    fn test_step_new_with_datetime_is_normalized_to_days() {
+        // `Xstep::new` used to panic on `ExpirationDate::DateTime`. After
+        // issue #323 it normalizes the variant to `Days(N)` where `N` is
+        // the future days (or 0 if the conversion fails).
         use chrono::{Duration, Utc};
 
         let value = TestValue(5);
@@ -341,8 +342,11 @@ mod tests {
         let dt = Utc::now() + Duration::days(30);
         let datetime = ExpirationDate::DateTime(dt);
 
-        // This should panic
-        let _step = Xstep::new(value, time_unit, datetime);
+        let step = Xstep::new(value, time_unit, datetime);
+        match step.datetime() {
+            ExpirationDate::Days(_) => {}
+            other => panic!("expected ExpirationDate::Days, got {other:?}"),
+        }
     }
 
     #[test]
@@ -520,9 +524,9 @@ mod tests_positive {
     }
 
     #[test]
-    #[should_panic(expected = "ExpirationDate::DateTime is not supported")]
-    fn test_step_new_with_datetime_should_panic() {
-        // Using DateTime should panic
+    fn test_step_new_with_datetime_is_normalized_to_days() {
+        // `Xstep::new` now normalizes `ExpirationDate::DateTime` into
+        // `Days(N)` rather than panicking (issue #323).
         use chrono::{Duration, Utc};
 
         let value = pos_or_panic!(5.0);
@@ -530,8 +534,11 @@ mod tests_positive {
         let dt = Utc::now() + Duration::days(30);
         let datetime = ExpirationDate::DateTime(dt);
 
-        // This should panic
-        let _step = Xstep::new(value, time_unit, datetime);
+        let step = Xstep::new(value, time_unit, datetime);
+        match step.datetime() {
+            ExpirationDate::Days(_) => {}
+            other => panic!("expected ExpirationDate::Days, got {other:?}"),
+        }
     }
 
     #[test]
@@ -976,16 +983,20 @@ mod tests_step_serialization {
     }
 
     #[test]
-    #[should_panic(expected = "ExpirationDate::DateTime is not supported for Step yet")]
-    fn test_step_with_datetime_panics() {
-        // Based on the test in Xstep serialization, the constructor panics with DateTime
+    fn test_step_with_datetime_is_normalized() {
+        // `Step::new` now normalizes `ExpirationDate::DateTime` into
+        // `Days(N)` via `Xstep::new` (issue #323) instead of panicking.
         let x_value = 2.5;
         let time_unit = TimeFrame::Hour;
         let expiration_date =
             ExpirationDate::DateTime(Utc.with_ymd_and_hms(2024, 12, 31, 23, 59, 59).unwrap());
         let y_value = 200.0;
 
-        Step::new(x_value, time_unit, expiration_date, y_value);
+        let step = Step::new(x_value, time_unit, expiration_date, y_value);
+        match step.x.datetime() {
+            ExpirationDate::Days(_) => {}
+            other => panic!("expected ExpirationDate::Days, got {other:?}"),
+        }
     }
 
     #[test]
