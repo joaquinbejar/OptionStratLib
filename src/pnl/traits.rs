@@ -50,7 +50,8 @@ pub trait PnLCalculator {
         _underlying_price: &Positive,
     ) -> Result<PnL, PricingError>;
 
-    /// Calculates the Profit and Loss (PnL) for a series of delta adjustments in a trading strategy.
+    /// Calculates the Profit and Loss (PnL) for a single delta adjustment
+    /// applied to a trading strategy.
     ///
     /// The default implementation is a no-op: strategies that do not track
     /// delta-adjustment PnL return a typed error so callers can detect the
@@ -58,8 +59,8 @@ pub trait PnLCalculator {
     ///
     /// # Arguments
     ///
-    /// * `_adjustments` - A vector of `DeltaAdjustment` instances representing the adjustments made
-    ///   to maintain delta neutrality in a trading strategy.
+    /// * `_adjustments` - A `DeltaAdjustment` value describing the adjustment
+    ///   applied to maintain delta neutrality in a trading strategy.
     ///
     /// # Returns
     ///

@@ -616,8 +616,9 @@ impl OptionChain {
         };
 
         // Get ATM implied volatility with a default fallback. `Positive` is
-        // already non-negative by construction; additionally clamp to <=1 so
-        // the downstream pricing code never sees an out-of-range IV.
+        // already non-negative by construction; values above 1.0 are treated
+        // as out-of-range and fall back to a 0.2 sentinel with a warning so
+        // downstream pricing never sees an implausible IV.
         let implied_volatility = match self.get_atm_implied_volatility() {
             Ok(iv) if *iv <= Positive::ONE => *iv,
             Ok(iv) => {

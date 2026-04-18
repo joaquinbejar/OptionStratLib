@@ -101,8 +101,6 @@ fn test_pnl_calculator_trait() {
 
 #[test]
 fn test_pnl_calculator_adjustments_pnl_default_implementation() {
-    use optionstratlib::error::PricingError;
-
     let calculator = TestPnLCalculator;
     let adjustments = DeltaAdjustment::NoAdjustmentNeeded;
 

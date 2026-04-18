@@ -175,7 +175,7 @@ pub fn generator_optionchain(
 
     debug_assert!(
         steps.len() <= walk_params.size,
-        "generator_optiondata produced {} steps but WalkParams.size is {}",
+        "generator_optionchain produced {} steps but WalkParams.size is {}",
         steps.len(),
         walk_params.size
     );

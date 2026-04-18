@@ -155,7 +155,12 @@ impl CustomStrategy {
             );
             return;
         }
-        let _ = self.update_break_even_points();
+        if let Err(err) = self.update_break_even_points() {
+            tracing::error!(
+                error = ?err,
+                "CustomStrategy::update_positions failed to recompute break-even points"
+            );
+        }
     }
 
     /// Calculate the best range to show for price analysis

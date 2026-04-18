@@ -645,13 +645,17 @@ impl<X, Y> Debug for Box<dyn WalkTypeAble<X, Y>> {
 
 impl<X, Y> Clone for Box<dyn WalkTypeAble<X, Y>> {
     fn clone(&self) -> Self {
-        // INVARIANT: a trait object cannot be cloned through `Clone` directly —
-        // `Clone::clone` requires `Self: Sized`, which `dyn WalkTypeAble` is
-        // not. The idiomatic workaround is `clone_box()` (defined on the trait
-        // itself). This impl exists solely so generic code parameterised by
-        // `Box<dyn WalkTypeAble<...>>` type-checks against `Clone` bounds;
-        // calling it is a programmer error.
-        panic!("Box<dyn WalkTypeAble<X, Y>> cannot be cloned. Use clone_box() instead.")
+        // INVARIANT: a trait object cannot be cloned through `Clone::clone`
+        // because that requires `Self: Sized`, which `dyn WalkTypeAble` is
+        // not. This impl exists only so containers like `WalkParams` can
+        // still `#[derive(Clone)]`; the concrete walkers used in the crate
+        // live as `Box<ConcreteWalker>` (not `Box<dyn ...>`), so the
+        // derived clone paths never reach this branch. Calling it directly
+        // on a `Box<dyn WalkTypeAble>` is a programmer error — tracked by
+        // issue #358 as a follow-up to add a proper object-safe clone hook.
+        panic!(
+            "Box<dyn WalkTypeAble<X, Y>> cannot be cloned directly; keep walkers as Box<ConcreteWalker> or track the follow-up in issue #358."
+        )
     }
 }
 
