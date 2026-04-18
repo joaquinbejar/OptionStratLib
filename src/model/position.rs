@@ -889,9 +889,12 @@ impl TradeStatusAble for Position {
 
     fn close(&self) -> Result<Trade, TradeError> {
         let mut trade = self.trade()?;
-        // SAFETY: dec!(0.01) is a valid positive constant
-        let threshold = unsafe { Positive::new_unchecked(rust_decimal_macros::dec!(0.01)) };
-        if trade.premium <= threshold {
+        // Compare directly against the `Decimal` literal because
+        // `trade.premium` already stores a `Decimal` internally. Reading
+        // that value with `to_dec()` avoids an unnecessary conversion
+        // through `Positive` just to check whether the premium should be
+        // treated as effectively zero.
+        if trade.premium.to_dec() <= rust_decimal_macros::dec!(0.01) {
             trade.premium = Positive::ZERO;
         }
         trade.status = TradeStatus::Closed;
@@ -3504,5 +3507,42 @@ mod tests_position_tradestatusable_trait {
 
         let result = position.status_other();
         assert!(result.is_ok());
+    }
+
+    /// Regression for issue #331: `Position::close()` must zero out the
+    /// trade premium when it is at or below the 0.01 cutoff and preserve
+    /// it otherwise. This is the only observable effect of the rewritten
+    /// threshold comparison (previously backed by an `unsafe`
+    /// `Positive::new_unchecked` block).
+    #[test]
+    fn test_tradestatusable_close_zeros_tiny_premium() {
+        use crate::model::utils::create_sample_option_simplest;
+
+        let build = |premium: Positive| {
+            Position::new(
+                create_sample_option_simplest(OptionStyle::Call, Side::Long),
+                premium,
+                Utc::now(),
+                pos_or_panic!(0.01),
+                pos_or_panic!(0.01),
+                None,
+                None,
+            )
+        };
+
+        // Just above the cutoff: premium is preserved.
+        let position = build(pos_or_panic!(0.02));
+        let trade = position.close().expect("close() should succeed");
+        assert_eq!(trade.premium, pos_or_panic!(0.02));
+
+        // Exactly at the cutoff: premium is zeroed.
+        let position = build(pos_or_panic!(0.01));
+        let trade = position.close().expect("close() should succeed");
+        assert_eq!(trade.premium, Positive::ZERO);
+
+        // Below the cutoff: premium is zeroed.
+        let position = build(pos_or_panic!(0.005));
+        let trade = position.close().expect("close() should succeed");
+        assert_eq!(trade.premium, Positive::ZERO);
     }
 }
