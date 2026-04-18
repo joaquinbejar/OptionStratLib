@@ -658,7 +658,12 @@ impl Strategies for LongStrangle {
     fn get_best_range_to_show(&self, step: Positive) -> Result<Vec<Positive>, StrategyError> {
         let (first_option, last_option) = (self.break_even_points[0], self.break_even_points[1]);
         debug!("First: {} Last: {}", first_option, last_option);
-        assert!(first_option < last_option);
+        if first_option >= last_option {
+            return Err(StrategyError::invalid_parameters(
+                "get_best_range_to_show",
+                "break-even points are not strictly ordered (first >= last)",
+            ));
+        }
         let diff = last_option - first_option.to_dec();
         debug!(
             "First break even point: {} Last break even point: {}",
@@ -747,7 +752,13 @@ impl Optimizable for LongStrangle {
             // Unpack the OptionDataGroup into individual options
             let (long_put, long_call) = match option_data_group {
                 OptionDataGroup::Two(first, second) => (first, second),
-                _ => panic!("Invalid OptionDataGroup"),
+                other => {
+                    tracing::warn!(
+                        group = ?other,
+                        "find_optimal: skipping unexpected OptionDataGroup variant"
+                    );
+                    continue;
+                }
             };
 
             let legs = StrategyLegs::TwoLegs {
@@ -786,7 +797,13 @@ impl Optimizable for LongStrangle {
     fn are_valid_legs(&self, legs: &StrategyLegs) -> bool {
         let (long_put, long_call) = match legs {
             StrategyLegs::TwoLegs { first, second } => (first, second),
-            _ => panic!("Invalid number of legs for this strategy"),
+            other => {
+                tracing::warn!(
+                    legs = ?other,
+                    "are_valid_legs: expected TwoLegs for LongStrangle"
+                );
+                return false;
+            }
         };
         long_call.call_bid.unwrap_or(Positive::ZERO) > Positive::ZERO
             && long_put.put_bid.unwrap_or(Positive::ZERO) > Positive::ZERO
@@ -806,10 +823,22 @@ impl Optimizable for LongStrangle {
     ) -> Result<Self::Strategy, StrategyError> {
         let (put, call) = match legs {
             StrategyLegs::TwoLegs { first, second } => (first, second),
-            _ => panic!("Invalid number of legs for this strategy"),
+            _ => {
+                return Err(StrategyError::operation_not_supported(
+                    "create_strategy",
+                    "LongStrangle requires exactly two legs (TwoLegs)",
+                ));
+            }
         };
         let implied_volatility = call.implied_volatility;
-        assert!(implied_volatility <= Positive::ONE);
+        if implied_volatility > Positive::ONE {
+            return Err(StrategyError::invalid_parameters(
+                "create_strategy",
+                &format!(
+                    "implied volatility {implied_volatility} exceeds the supported maximum of 1.0"
+                ),
+            ));
+        }
         let call_ask = call.call_ask.ok_or_else(|| {
             StrategyError::operation_not_supported(
                 "create_strategy",

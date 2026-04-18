@@ -756,10 +756,22 @@ impl Optimizable for PoorMansCoveredCall {
     ) -> Result<Self::Strategy, StrategyError> {
         let (long, short) = match legs {
             StrategyLegs::TwoLegs { first, second } => (first, second),
-            _ => panic!("Invalid number of legs for this strategy"),
+            _ => {
+                return Err(StrategyError::operation_not_supported(
+                    "create_strategy",
+                    "PoorMansCoveredCall requires exactly two legs (TwoLegs)",
+                ));
+            }
         };
         let implied_volatility = short.implied_volatility;
-        assert!(implied_volatility <= Positive::ONE);
+        if implied_volatility > Positive::ONE {
+            return Err(StrategyError::invalid_parameters(
+                "create_strategy",
+                &format!(
+                    "implied volatility {implied_volatility} exceeds the supported maximum of 1.0"
+                ),
+            ));
+        }
 
         let long_call_ask = long.call_ask.ok_or_else(|| {
             StrategyError::operation_not_supported(

@@ -721,7 +721,13 @@ impl Optimizable for ShortStraddle {
             // Unpack the OptionDataGroup into individual options
             let both = match option_data_group {
                 OptionDataGroup::One(first) => first,
-                _ => panic!("Invalid OptionDataGroup"),
+                other => {
+                    tracing::warn!(
+                        group = ?other,
+                        "find_optimal: skipping unexpected OptionDataGroup variant"
+                    );
+                    continue;
+                }
             };
 
             let legs = StrategyLegs::TwoLegs {
@@ -771,19 +777,37 @@ impl Optimizable for ShortStraddle {
     ) -> Result<Self::Strategy, StrategyError> {
         let (call, put) = match legs {
             StrategyLegs::TwoLegs { first, second } => (first, second),
-            _ => panic!("Invalid number of legs for this strategy"),
+            _ => {
+                return Err(StrategyError::operation_not_supported(
+                    "create_strategy",
+                    "ShortStraddle requires exactly two legs (TwoLegs)",
+                ));
+            }
         };
 
         if !call.validate() {
-            panic!("Invalid Call option");
+            return Err(StrategyError::invalid_parameters(
+                "create_strategy",
+                "call leg failed OptionData::validate",
+            ));
         }
 
         if !put.validate() {
-            panic!("Invalid Put option");
+            return Err(StrategyError::invalid_parameters(
+                "create_strategy",
+                "put leg failed OptionData::validate",
+            ));
         }
 
         let implied_volatility = call.implied_volatility;
-        assert!(implied_volatility <= Positive::ONE);
+        if implied_volatility > Positive::ONE {
+            return Err(StrategyError::invalid_parameters(
+                "create_strategy",
+                &format!(
+                    "implied volatility {implied_volatility} exceeds the supported maximum of 1.0"
+                ),
+            ));
+        }
         let call_bid = call.call_bid.ok_or_else(|| {
             StrategyError::operation_not_supported(
                 "create_strategy",

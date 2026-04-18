@@ -829,7 +829,13 @@ impl Optimizable for CallButterfly {
             // Unpack the OptionDataGroup into individual options
             let (long, short_low, short_high) = match option_data_group {
                 OptionDataGroup::Three(first, second, third) => (first, second, third),
-                _ => panic!("Invalid OptionDataGroup"),
+                other => {
+                    tracing::warn!(
+                        group = ?other,
+                        "find_optimal: skipping unexpected OptionDataGroup variant"
+                    );
+                    continue;
+                }
             };
 
             let legs = StrategyLegs::ThreeLegs {
@@ -885,14 +891,29 @@ impl Optimizable for CallButterfly {
                 second,
                 third,
             } => (first, second, third),
-            _ => panic!("Invalid number of legs for this strategy"),
+            _ => {
+                return Err(StrategyError::operation_not_supported(
+                    "create_strategy",
+                    "CallButterfly requires exactly three legs (ThreeLegs)",
+                ));
+            }
         };
 
         if !long_call.validate() || !short_call_low.validate() || !short_call_high.validate() {
-            panic!("Invalid options");
+            return Err(StrategyError::invalid_parameters(
+                "create_strategy",
+                "one or more legs failed OptionData::validate",
+            ));
         }
         let implied_volatility = long_call.implied_volatility;
-        assert!(implied_volatility <= Positive::ONE);
+        if implied_volatility > Positive::ONE {
+            return Err(StrategyError::invalid_parameters(
+                "create_strategy",
+                &format!(
+                    "implied volatility {implied_volatility} exceeds the supported maximum of 1.0"
+                ),
+            ));
+        }
         let long_call_ask = long_call.call_ask.ok_or_else(|| {
             StrategyError::operation_not_supported(
                 "create_strategy",
@@ -1725,7 +1746,6 @@ mod tests_call_butterfly_optimizable {
     }
 
     #[test]
-    #[should_panic(expected = "Invalid number of legs for this strategy")]
     fn test_create_strategy_invalid_legs() {
         let butterfly = setup_test_butterfly();
         let chain = create_test_option_chain();
@@ -1735,9 +1755,15 @@ mod tests_call_butterfly_optimizable {
             second: chain.options.iter().nth(1).unwrap(),
         };
 
-        // Wrong number of legs is still a panic (that branch is owned by
-        // issue #292, not panic-free core).
-        let _ = butterfly.create_strategy(&chain, &legs);
+        // Wrong number of legs now returns a typed error (issue #323).
+        let result = butterfly.create_strategy(&chain, &legs);
+        match result {
+            Err(StrategyError::OperationError(OperationErrorKind::NotSupported {
+                operation,
+                ..
+            })) => assert_eq!(operation, "create_strategy"),
+            other => panic!("expected NotSupported error, got {other:?}"),
+        }
     }
 
     #[test]

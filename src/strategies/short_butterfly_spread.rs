@@ -846,7 +846,13 @@ impl Optimizable for ShortButterflySpread {
             // Unpack the OptionDataGroup into individual options
             let (short_low, short, short_high) = match option_data_group {
                 OptionDataGroup::Three(first, second, third) => (first, second, third),
-                _ => panic!("Invalid OptionDataGroup"),
+                other => {
+                    tracing::warn!(
+                        group = ?other,
+                        "find_optimal: skipping unexpected OptionDataGroup variant"
+                    );
+                    continue;
+                }
             };
 
             let legs = StrategyLegs::ThreeLegs {
@@ -903,7 +909,14 @@ impl Optimizable for ShortButterflySpread {
                 third: high_strike,
             } => {
                 let implied_volatility = middle_strike.implied_volatility;
-                assert!(implied_volatility <= Positive::ONE);
+                if implied_volatility > Positive::ONE {
+                    return Err(StrategyError::invalid_parameters(
+                        "create_strategy",
+                        &format!(
+                            "implied volatility {implied_volatility} exceeds the supported maximum of 1.0"
+                        ),
+                    ));
+                }
 
                 let low_call_bid = low_strike.call_bid.ok_or_else(|| {
                     StrategyError::operation_not_supported(
@@ -946,7 +959,10 @@ impl Optimizable for ShortButterflySpread {
                     self.short_call_high.close_fee,
                 )
             }
-            _ => panic!("Invalid number of legs for Short Butterfly strategy"),
+            _ => Err(StrategyError::operation_not_supported(
+                "create_strategy",
+                "ShortButterflySpread requires exactly three legs (ThreeLegs)",
+            )),
         }
     }
 }
