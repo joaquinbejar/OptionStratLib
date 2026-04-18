@@ -746,12 +746,93 @@ impl Greeks for Position {
 }
 
 impl TransactionAble for Position {
+    /// Default no-op stub. `Position` does not currently track an
+    /// internal transaction history; callers that need this should
+    /// store transactions in a higher-level container.
+    ///
+    /// # Errors
+    ///
+    /// Always returns a `TransactionError` indicating the operation is
+    /// not implemented for `Position`.
     fn add_transaction(&mut self, _transaction: Transaction) -> Result<(), TransactionError> {
-        todo!()
+        Err(TransactionError {
+            message: "add_transaction not implemented for Position".to_string(),
+        })
     }
 
+    /// Default no-op stub. See [`Self::add_transaction`].
+    ///
+    /// # Errors
+    ///
+    /// Always returns a `TransactionError` indicating the operation is
+    /// not implemented for `Position`.
     fn get_transactions(&self) -> Result<Vec<Transaction>, TransactionError> {
-        todo!()
+        Err(TransactionError {
+            message: "get_transactions not implemented for Position".to_string(),
+        })
+    }
+}
+
+#[cfg(test)]
+mod tests_transaction_able_default {
+    use super::*;
+    use crate::model::TradeStatus;
+    use crate::model::types::{OptionStyle, OptionType, Side};
+    use crate::model::utils::create_sample_option_simplest;
+    use chrono::Utc;
+    use positive::pos_or_panic;
+
+    fn make_position() -> Position {
+        let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
+        Position::new(
+            option,
+            pos_or_panic!(5.25),
+            Utc::now(),
+            pos_or_panic!(0.65),
+            pos_or_panic!(0.65),
+            None,
+            None,
+        )
+    }
+
+    fn make_transaction() -> Transaction {
+        Transaction::new(
+            TradeStatus::Open,
+            None,
+            OptionType::European,
+            Side::Long,
+            OptionStyle::Call,
+            pos_or_panic!(1.0),
+            pos_or_panic!(5.25),
+            pos_or_panic!(0.65),
+            None,
+            None,
+            None,
+        )
+    }
+
+    #[test]
+    fn test_add_transaction_returns_not_implemented() {
+        let mut position = make_position();
+        let result = position.add_transaction(make_transaction());
+        match result {
+            Err(TransactionError { message }) => {
+                assert!(message.contains("add_transaction not implemented"));
+            }
+            Ok(()) => panic!("expected TransactionError, got Ok"),
+        }
+    }
+
+    #[test]
+    fn test_get_transactions_returns_not_implemented() {
+        let position = make_position();
+        let result = position.get_transactions();
+        match result {
+            Err(TransactionError { message }) => {
+                assert!(message.contains("get_transactions not implemented"));
+            }
+            Ok(_) => panic!("expected TransactionError, got Ok"),
+        }
     }
 }
 
