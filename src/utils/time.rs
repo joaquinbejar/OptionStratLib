@@ -141,7 +141,7 @@ impl fmt::Display for TimeFrame {
 ///
 /// # Returns
 ///
-/// A Decimal representing how many of the given time frame fit in a year
+/// A `Positive` representing how many of the given time frame fit in a year
 fn pos_lit(d: rust_decimal::Decimal) -> Positive {
     Positive::new_decimal(d).unwrap_or(Positive::ZERO)
 }
