@@ -151,7 +151,7 @@ pub fn implied_volatility(
 
     match result {
         Some((best_iv, _)) => {
-            let iv = best_iv.clamp(MIN_VOLATILITY, MAX_VOLATILITY);
+            let iv = best_iv.clamp(*MIN_VOLATILITY, MAX_VOLATILITY);
             if iv == Positive::new(1f64 / iterations as f64)? {
                 Err("Implied volatility not found".into())
             } else {
@@ -847,7 +847,7 @@ mod tests_implied_volatility {
         assert!(result.is_ok()); // Should still return a result
 
         let iv = result.unwrap();
-        assert!(iv >= MIN_VOLATILITY && iv <= MAX_VOLATILITY);
+        assert!(iv >= *MIN_VOLATILITY && iv <= MAX_VOLATILITY);
 
         let result = calculate_iv(
             market_price,
@@ -860,7 +860,7 @@ mod tests_implied_volatility {
         assert!(result.is_ok());
 
         let iv = result.unwrap();
-        assert!(iv >= MIN_VOLATILITY && iv <= MAX_VOLATILITY);
+        assert!(iv >= *MIN_VOLATILITY && iv <= MAX_VOLATILITY);
         assert_pos_relative_eq!(iv, pos_or_panic!(0.437), pos_or_panic!(1e-3));
     }
 

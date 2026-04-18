@@ -6,6 +6,7 @@
 use positive::Positive;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
+use std::sync::LazyLock;
 
 /// Mathematical constant representing π (pi) with high precision using Decimal type.
 /// Used for circular calculations, angle conversions, and geometric computations.
@@ -24,11 +25,17 @@ pub(crate) const TOLERANCE: Decimal = dec!(1e-8);
 /// Represents the smallest meaningful difference in numerical computations.
 pub const EPSILON: Decimal = dec!(1e-16);
 
-/// Minimum allowed volatility value as a Positive decimal.
+/// Minimum allowed volatility value as a `Positive` decimal.
+///
 /// Prevents numerical issues in financial calculations with near-zero volatility.
-pub(crate) const MIN_VOLATILITY: Positive = unsafe { Positive::new_unchecked(dec!(1e-16)) };
+/// Initialized once via `LazyLock`; `Positive::new_decimal` on the compile-time
+/// non-negative literal `1e-16` is total, so the `Positive::ZERO` fallback is
+/// unreachable and only exists to keep the initializer `.unwrap()`-free.
+pub(crate) static MIN_VOLATILITY: LazyLock<Positive> =
+    LazyLock::new(|| Positive::new_decimal(dec!(1e-16)).unwrap_or(Positive::ZERO));
 
-/// Maximum allowed volatility value as a Positive decimal (100%).
+/// Maximum allowed volatility value as a `Positive` decimal (100%).
+///
 /// Sets an upper bound for volatility inputs in financial models.
 pub(crate) const MAX_VOLATILITY: Positive = Positive::HUNDRED;
 
@@ -40,43 +47,60 @@ pub(crate) const STRIKE_PRICE_LOWER_BOUND_MULTIPLIER: f64 = 0.98;
 /// Used to establish the maximum strike price in option chains or pricing models.
 pub(crate) const STRIKE_PRICE_UPPER_BOUND_MULTIPLIER: f64 = 1.02;
 
-/// Standard number of trading days in a year as a Positive decimal.
-/// Used for business day-based financial calculations.
-pub(crate) const TRADING_DAYS: Positive = unsafe { Positive::new_unchecked(dec!(252.0)) };
+/// Standard number of trading days in a year as a `Positive` decimal.
+///
+/// Used for business day-based financial calculations. See `MIN_VOLATILITY`
+/// for the `LazyLock` rationale.
+pub(crate) static TRADING_DAYS: LazyLock<Positive> =
+    LazyLock::new(|| Positive::new_decimal(dec!(252.0)).unwrap_or(Positive::ZERO));
 
-/// Standard number of trading hours in a market day as a Positive decimal.
+/// Standard number of trading hours in a market day as a `Positive` decimal.
+///
 /// Typically represents a standard U.S. market session (9:30 AM to 4:00 PM).
-pub(crate) const TRADING_HOURS: Positive = unsafe { Positive::new_unchecked(dec!(6.5)) };
+pub(crate) static TRADING_HOURS: LazyLock<Positive> =
+    LazyLock::new(|| Positive::new_decimal(dec!(6.5)).unwrap_or(Positive::ZERO));
 
-/// Number of seconds in an hour as a Positive decimal value.
+/// Number of seconds in an hour as a `Positive` decimal value.
+///
 /// Used for time-based conversions and calculations.
-pub(crate) const SECONDS_PER_HOUR: Positive = unsafe { Positive::new_unchecked(dec!(3600.0)) };
+pub(crate) static SECONDS_PER_HOUR: LazyLock<Positive> =
+    LazyLock::new(|| Positive::new_decimal(dec!(3600.0)).unwrap_or(Positive::ZERO));
 
-/// Number of minutes in an hour as a Positive decimal value.
-/// Used for time-based conversions and calculations.
-pub(crate) const MINUTES_PER_HOUR: Positive = unsafe { Positive::new_unchecked(dec!(60.0)) };
+/// Number of minutes in an hour as a `Positive` decimal value.
+///
+/// Aliased to `positive::constants::SIXTY`, which already exists upstream —
+/// no runtime initialization required.
+pub(crate) const MINUTES_PER_HOUR: Positive = positive::constants::SIXTY;
 
-/// Number of milliseconds in a second as a Positive decimal value.
-/// Used for precise time measurements and conversions.
-pub(crate) const MILLISECONDS_PER_SECOND: Positive =
-    unsafe { Positive::new_unchecked(dec!(1000.0)) };
+/// Number of milliseconds in a second as a `Positive` decimal value.
+///
+/// Aliased to `positive::constants::THOUSAND`, which already exists upstream.
+pub(crate) const MILLISECONDS_PER_SECOND: Positive = positive::constants::THOUSAND;
 
-/// Number of microseconds in a second as a Positive decimal value.
-/// Used for high-precision time measurements and conversions.
-pub(crate) const MICROSECONDS_PER_SECOND: Positive =
-    unsafe { Positive::new_unchecked(dec!(1_000_000.0)) };
+/// Number of microseconds in a second as a `Positive` decimal value.
+///
+/// No matching `positive::constants::*` entry for `1_000_000`, so the value
+/// is built once via `LazyLock`.
+pub(crate) static MICROSECONDS_PER_SECOND: LazyLock<Positive> =
+    LazyLock::new(|| Positive::new_decimal(dec!(1_000_000.0)).unwrap_or(Positive::ZERO));
 
-/// Standard number of weeks in a year as a Positive decimal value.
+/// Standard number of weeks in a year as a `Positive` decimal value.
+///
 /// Used for time-based financial calculations and annualization.
-pub(crate) const WEEKS_PER_YEAR: Positive = unsafe { Positive::new_unchecked(dec!(52.0)) };
+pub(crate) static WEEKS_PER_YEAR: LazyLock<Positive> =
+    LazyLock::new(|| Positive::new_decimal(dec!(52.0)).unwrap_or(Positive::ZERO));
 
-/// Number of months in a year as a Positive decimal value.
-/// Used for monthly-based financial calculations and conversions.
-pub(crate) const MONTHS_PER_YEAR: Positive = unsafe { Positive::new_unchecked(dec!(12.0)) };
+/// Number of months in a year as a `Positive` decimal value.
+///
+/// Upstream `positive::constants` skips 11/12 in its integer ladder, so the
+/// value is built once via `LazyLock`.
+pub(crate) static MONTHS_PER_YEAR: LazyLock<Positive> =
+    LazyLock::new(|| Positive::new_decimal(dec!(12.0)).unwrap_or(Positive::ZERO));
 
-/// Number of quarters in a year as a Positive decimal value.
-/// Used for quarterly financial calculations and reporting periods.
-pub(crate) const QUARTERS_PER_YEAR: Positive = unsafe { Positive::new_unchecked(dec!(4.0)) };
+/// Number of quarters in a year as a `Positive` decimal value.
+///
+/// Aliased to `positive::constants::FOUR`, which already exists upstream.
+pub(crate) const QUARTERS_PER_YEAR: Positive = positive::constants::FOUR;
 
 /// Maximum number of iterations for implied volatility calculation algorithms.
 /// Prevents infinite loops in numerical methods like Newton-Raphson or bisection.

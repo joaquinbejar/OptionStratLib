@@ -97,20 +97,20 @@ impl TimeFrame {
     pub fn periods_per_year(&self) -> Positive {
         match self {
             TimeFrame::Microsecond => {
-                TRADING_DAYS * TRADING_HOURS * SECONDS_PER_HOUR * MICROSECONDS_PER_SECOND
+                *TRADING_DAYS * *TRADING_HOURS * *SECONDS_PER_HOUR * *MICROSECONDS_PER_SECOND
             } // Microseconds in trading year
             TimeFrame::Millisecond => {
-                TRADING_DAYS * TRADING_HOURS * SECONDS_PER_HOUR * MILLISECONDS_PER_SECOND
+                *TRADING_DAYS * *TRADING_HOURS * *SECONDS_PER_HOUR * MILLISECONDS_PER_SECOND
             } // Milliseconds in trading year
-            TimeFrame::Second => TRADING_DAYS * TRADING_HOURS * SECONDS_PER_HOUR, // Seconds in trading year
-            TimeFrame::Minute => TRADING_DAYS * TRADING_HOURS * MINUTES_PER_HOUR, // Minutes in trading year
-            TimeFrame::Hour => TRADING_DAYS * TRADING_HOURS, // Hours in trading year
-            TimeFrame::Day => TRADING_DAYS,                  // Trading days in a year
-            TimeFrame::Week => WEEKS_PER_YEAR,               // Weeks in a year
-            TimeFrame::Month => MONTHS_PER_YEAR,             // Months in a year
-            TimeFrame::Quarter => QUARTERS_PER_YEAR,         // Quarters in a year
-            TimeFrame::Year => Positive::ONE,                // Base unit
-            TimeFrame::Custom(periods) => *periods,          // Custom periods per year
+            TimeFrame::Second => *TRADING_DAYS * *TRADING_HOURS * *SECONDS_PER_HOUR, // Seconds in trading year
+            TimeFrame::Minute => *TRADING_DAYS * *TRADING_HOURS * MINUTES_PER_HOUR, // Minutes in trading year
+            TimeFrame::Hour => *TRADING_DAYS * *TRADING_HOURS, // Hours in trading year
+            TimeFrame::Day => *TRADING_DAYS,                   // Trading days in a year
+            TimeFrame::Week => *WEEKS_PER_YEAR,                // Weeks in a year
+            TimeFrame::Month => *MONTHS_PER_YEAR,              // Months in a year
+            TimeFrame::Quarter => QUARTERS_PER_YEAR,           // Quarters in a year
+            TimeFrame::Year => Positive::ONE,                  // Base unit
+            TimeFrame::Custom(periods) => *periods,            // Custom periods per year
         }
     }
 }
@@ -351,37 +351,38 @@ mod tests_timeframe {
 
     #[test]
     fn test_microsecond_periods() {
-        let expected = TRADING_DAYS * TRADING_HOURS * SECONDS_PER_HOUR * MICROSECONDS_PER_SECOND;
+        let expected =
+            *TRADING_DAYS * *TRADING_HOURS * *SECONDS_PER_HOUR * *MICROSECONDS_PER_SECOND;
         assert_eq!(TimeFrame::Microsecond.periods_per_year(), expected);
     }
 
     #[test]
     fn test_millisecond_periods() {
-        let expected = TRADING_DAYS * TRADING_HOURS * SECONDS_PER_HOUR * MILLISECONDS_PER_SECOND;
+        let expected = *TRADING_DAYS * *TRADING_HOURS * *SECONDS_PER_HOUR * MILLISECONDS_PER_SECOND;
         assert_eq!(TimeFrame::Millisecond.periods_per_year(), expected);
     }
 
     #[test]
     fn test_second_periods() {
-        let expected = TRADING_DAYS * TRADING_HOURS * SECONDS_PER_HOUR;
+        let expected = *TRADING_DAYS * *TRADING_HOURS * *SECONDS_PER_HOUR;
         assert_eq!(TimeFrame::Second.periods_per_year(), expected);
     }
 
     #[test]
     fn test_minute_periods() {
-        let expected = TRADING_DAYS * TRADING_HOURS * MINUTES_PER_HOUR;
+        let expected = *TRADING_DAYS * *TRADING_HOURS * MINUTES_PER_HOUR;
         assert_eq!(TimeFrame::Minute.periods_per_year(), expected);
     }
 
     #[test]
     fn test_hour_periods() {
-        let expected = TRADING_DAYS * TRADING_HOURS;
+        let expected = *TRADING_DAYS * *TRADING_HOURS;
         assert_eq!(TimeFrame::Hour.periods_per_year(), expected);
     }
 
     #[test]
     fn test_day_periods() {
-        assert_eq!(TimeFrame::Day.periods_per_year(), TRADING_DAYS);
+        assert_eq!(TimeFrame::Day.periods_per_year(), *TRADING_DAYS);
     }
 
     #[test]
@@ -434,7 +435,7 @@ mod tests_timeframe {
         // Test specific conversion ratios between timeframes
         assert_pos_relative_eq!(
             TimeFrame::Hour.periods_per_year() / TimeFrame::Day.periods_per_year(),
-            TRADING_HOURS,
+            *TRADING_HOURS,
             pos_or_panic!(1e-10)
         );
 
@@ -456,13 +457,13 @@ mod tests_timeframe {
         // Verify relationships with trading days
         assert_pos_relative_eq!(
             TimeFrame::Day.periods_per_year(),
-            TRADING_DAYS,
+            *TRADING_DAYS,
             pos_or_panic!(1e-10)
         );
 
         assert_pos_relative_eq!(
-            TimeFrame::Hour.periods_per_year() / TRADING_HOURS,
-            TRADING_DAYS,
+            TimeFrame::Hour.periods_per_year() / *TRADING_HOURS,
+            *TRADING_DAYS,
             pos_or_panic!(1e-10)
         );
     }

@@ -1552,7 +1552,7 @@ pub fn veta(option: &Options) -> Result<Decimal, GreeksError> {
     // It is common practice to divide the mathematical result of veta by
     // 100 times the number of days per year to reduce the value to the
     // percentage change in vega per one day
-    let veta_adj: Decimal = veta / (TRADING_DAYS * Decimal::ONE_HUNDRED);
+    let veta_adj: Decimal = veta / (*TRADING_DAYS * Decimal::ONE_HUNDRED);
 
     let quantity: Decimal = option.quantity.into();
     Ok(veta_adj * quantity)
