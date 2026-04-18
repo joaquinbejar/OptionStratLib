@@ -3,8 +3,11 @@ use crate::model::types::{OptionStyle, OptionType, Side};
 use crate::pricing::payoff::{Payoff, PayoffInfo};
 use crate::pricing::utils::*;
 use crate::{d2f, f2d};
-use positive::{Positive, pos_or_panic};
+use positive::Positive;
 use rust_decimal::{Decimal, MathematicalOps};
+
+#[cfg(test)]
+use positive::pos_or_panic;
 
 type BinomialTreeResult = Result<(Vec<Vec<Decimal>>, Vec<Vec<Decimal>>), PricingError>;
 
@@ -107,7 +110,7 @@ pub fn price_binomial(params: BinomialPricingParams) -> Result<Decimal, PricingE
         return Ok(calculate_discounted_payoff(params)?);
     }
 
-    let dt = (params.expiry / pos_or_panic!(params.no_steps as f64)).to_dec();
+    let dt = (params.expiry / Positive::new(params.no_steps as f64)?).to_dec();
     let u = calculate_up_factor(params.volatility, dt)?;
     let d = calculate_down_factor(params.volatility, dt)?;
     let p = calculate_probability(params.int_rate, dt, d, u)?;

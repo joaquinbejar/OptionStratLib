@@ -9,10 +9,13 @@ use crate::model::decimal::decimal_normal_sample;
 use crate::utils::time::TimeFrame;
 use crate::{ExpirationDate, OptionStyle, OptionType, Options, Side};
 use num_traits::{FromPrimitive, ToPrimitive};
-use positive::{Positive, pos_or_panic};
+use positive::Positive;
 use rand::random;
 use rayon::prelude::*;
 use rust_decimal::{Decimal, MathematicalOps};
+
+#[cfg(test)]
+use positive::pos_or_panic;
 
 /// Calculates the constant volatility from a series of returns.
 ///
@@ -437,8 +440,10 @@ pub fn adjust_volatility(
         });
     }
 
-    // Scale factor is square root of (from_periods / to_periods)
-    let scale_factor = pos_or_panic!((from_periods / to_periods).to_f64().sqrt());
+    // Scale factor is square root of (from_periods / to_periods). `Positive`
+    // already implements `sqrt()`, so skip the f64 round-trip and keep the
+    // computation in `Decimal` precision end-to-end.
+    let scale_factor = (from_periods / to_periods).sqrt();
 
     Ok(volatility * scale_factor)
 }
