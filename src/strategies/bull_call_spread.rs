@@ -46,7 +46,9 @@ use crate::{
 };
 use chrono::Utc;
 use num_traits::FromPrimitive;
-use positive::{Positive, pos_or_panic};
+use positive::Positive;
+#[cfg(test)]
+use positive::pos_or_panic;
 use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -834,7 +836,7 @@ impl ProbabilityAnalysis for BullCallSpread {
         let mut profit_range = ProfitLossRange::new(
             Some(break_even_point),
             Some(self.short_call.option.strike_price),
-            pos_or_panic!(self.get_max_profit()?.to_f64()),
+            Positive::ZERO,
         )?;
 
         profit_range.calculate_probability(
@@ -865,7 +867,7 @@ impl ProbabilityAnalysis for BullCallSpread {
         let mut loss_range = ProfitLossRange::new(
             Some(self.long_call.option.strike_price),
             Some(break_even_point),
-            pos_or_panic!(self.get_max_loss()?.to_f64()),
+            Positive::ZERO,
         )?;
 
         loss_range.calculate_probability(

@@ -30,7 +30,9 @@ use crate::{
 };
 use chrono::Utc;
 use num_traits::FromPrimitive;
-use positive::{Positive, pos_or_panic};
+use positive::Positive;
+#[cfg(test)]
+use positive::pos_or_panic;
 use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -1020,7 +1022,7 @@ impl ProbabilityAnalysis for LongButterflySpread {
         let mut profit_range = ProfitLossRange::new(
             Some(break_even_points[0]),
             Some(break_even_points[1]),
-            pos_or_panic!(self.get_max_profit()?.to_f64()),
+            Positive::ZERO,
         )?;
 
         profit_range.calculate_probability(
@@ -1060,7 +1062,7 @@ impl ProbabilityAnalysis for LongButterflySpread {
         let mut lower_loss_range = ProfitLossRange::new(
             None, // No lower bound (losses extend to zero)
             Some(break_even_points[0]),
-            pos_or_panic!(self.get_max_loss()?.to_f64()),
+            Positive::ZERO,
         )?;
 
         lower_loss_range.calculate_probability(
@@ -1078,7 +1080,7 @@ impl ProbabilityAnalysis for LongButterflySpread {
         let mut upper_loss_range = ProfitLossRange::new(
             Some(break_even_points[1]),
             None, // No upper bound (losses extend to infinity)
-            pos_or_panic!(self.get_max_loss()?.to_f64()),
+            Positive::ZERO,
         )?;
 
         upper_loss_range.calculate_probability(

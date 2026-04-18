@@ -1,4 +1,6 @@
-use positive::{Positive, pos_or_panic};
+use positive::Positive;
+#[cfg(test)]
+use positive::pos_or_panic;
 /*
 Bear Put Spread Strategy
 
@@ -825,7 +827,7 @@ impl ProbabilityAnalysis for BearPutSpread {
         let mut profit_range = ProfitLossRange::new(
             Some(self.short_put.option.strike_price), // Price below short strike is max profit
             Some(break_even_point),                   // Upper bound is break even point
-            pos_or_panic!(self.get_max_profit()?.to_f64()),
+            Positive::ZERO,
         )?;
 
         profit_range.calculate_probability(
@@ -855,7 +857,7 @@ impl ProbabilityAnalysis for BearPutSpread {
         let mut loss_range = ProfitLossRange::new(
             Some(break_even_point), // Lower bound is break even point
             None,                   // No upper bound (theoretically)
-            pos_or_panic!(self.get_max_loss()?.to_f64()),
+            Positive::ZERO,
         )?;
 
         loss_range.calculate_probability(
