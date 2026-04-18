@@ -6,9 +6,13 @@ use crate::utils::TimeFrame;
 use crate::utils::others::calculate_log_returns;
 use crate::volatility::{adjust_volatility, constant_volatility};
 use core::option::Option;
-use positive::{Positive, pos_or_panic};
+use positive::Positive;
 use rust_decimal::Decimal;
+use rust_decimal_macros::dec;
 use tracing::debug;
+
+#[cfg(test)]
+use positive::pos_or_panic;
 
 /// Creates a new `OptionSeries` from a given previous `Ystep` series, a new price,
 /// and an optional volatility value.
@@ -169,7 +173,8 @@ pub fn generator_optionseries(
     let mut previous_x_step = walk_params.init_step.x;
     let mut previous_y_step = walk_params.ystep();
 
-    let volatility = volatility.unwrap_or_else(|| pos_or_panic!(0.20));
+    let volatility =
+        volatility.unwrap_or_else(|| Positive::new_decimal(dec!(0.20)).unwrap_or(Positive::ZERO));
 
     for y_step in y_steps.iter() {
         previous_x_step = match previous_x_step.next() {

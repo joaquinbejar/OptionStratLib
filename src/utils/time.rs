@@ -6,11 +6,14 @@
 
 use crate::constants::*;
 use chrono::{Duration, Local, NaiveTime, Utc};
-use positive::{Positive, pos_or_panic};
+use positive::Positive;
 use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 use utoipa::ToSchema;
+
+#[cfg(test)]
+use positive::pos_or_panic;
 
 /// Represents different timeframes for volatility calculations.
 ///
@@ -139,14 +142,18 @@ impl fmt::Display for TimeFrame {
 /// # Returns
 ///
 /// A Decimal representing how many of the given time frame fit in a year
+fn pos_lit(d: rust_decimal::Decimal) -> Positive {
+    Positive::new_decimal(d).unwrap_or(Positive::ZERO)
+}
+
 pub fn units_per_year(time_frame: &TimeFrame) -> Positive {
     match time_frame {
-        TimeFrame::Microsecond => pos_or_panic!(31536000000000.0), // 365 * 24 * 60 * 60 * 1_000_000
-        TimeFrame::Millisecond => pos_or_panic!(31536000000.0),    // 365 * 24 * 60 * 60 * 1_000
-        TimeFrame::Second => pos_or_panic!(31536000.0),            // 365 * 24 * 60 * 60
-        TimeFrame::Minute => pos_or_panic!(525600.0),              // 365 * 24 * 60
-        TimeFrame::Hour => pos_or_panic!(8760.0),                  // 365 * 24
-        TimeFrame::Day => pos_or_panic!(365.0),                    // 365
+        TimeFrame::Microsecond => pos_lit(dec!(31536000000000.0)), // 365 * 24 * 60 * 60 * 1_000_000
+        TimeFrame::Millisecond => pos_lit(dec!(31536000000.0)),    // 365 * 24 * 60 * 60 * 1_000
+        TimeFrame::Second => pos_lit(dec!(31536000.0)),            // 365 * 24 * 60 * 60
+        TimeFrame::Minute => pos_lit(dec!(525600.0)),              // 365 * 24 * 60
+        TimeFrame::Hour => pos_lit(dec!(8760.0)),                  // 365 * 24
+        TimeFrame::Day => pos_lit(dec!(365.0)),                    // 365
         // 365 / 7 — kept as exact Decimal arithmetic to preserve the
         // round-trip identity Week→Day→Week (an f64 literal would
         // accumulate ~1 ulp of error and break the strict assertion in
@@ -157,8 +164,8 @@ pub fn units_per_year(time_frame: &TimeFrame) -> Positive {
             Ok(v) => v,
             Err(_) => unreachable!("365/7 is structurally positive non-zero"),
         },
-        TimeFrame::Month => pos_or_panic!(12.0),  // 12
-        TimeFrame::Quarter => pos_or_panic!(4.0), // 4
+        TimeFrame::Month => pos_lit(dec!(12.0)),  // 12
+        TimeFrame::Quarter => pos_lit(dec!(4.0)), // 4
         TimeFrame::Year => Positive::ONE,         // 1
         TimeFrame::Custom(periods) => *periods,   // Custom periods per year
     }
