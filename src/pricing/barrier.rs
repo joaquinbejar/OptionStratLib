@@ -378,10 +378,6 @@ mod tests {
             delta
         );
         // Barrier Greeks can be negative and have higher magnitudes than vanilla
-        // Output values for manual verification
-        println!(
-            "Barrier Greeks - Delta: {}, Gamma: {}, Vega: {}, Rho: {}",
-            delta, gamma, vega, rho
-        );
+        tracing::debug!(delta = %delta, gamma = %gamma, vega = %vega, rho = %rho, "Barrier Greeks");
     }
 }
