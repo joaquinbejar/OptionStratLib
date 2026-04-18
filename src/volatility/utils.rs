@@ -440,8 +440,10 @@ pub fn adjust_volatility(
         });
     }
 
-    // Scale factor is square root of (from_periods / to_periods)
-    let scale_factor = Positive::new((from_periods / to_periods).to_f64().sqrt())?;
+    // Scale factor is square root of (from_periods / to_periods). `Positive`
+    // already implements `sqrt()`, so skip the f64 round-trip and keep the
+    // computation in `Decimal` precision end-to-end.
+    let scale_factor = (from_periods / to_periods).sqrt();
 
     Ok(volatility * scale_factor)
 }
