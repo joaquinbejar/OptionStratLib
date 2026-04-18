@@ -27,7 +27,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::str::FromStr;
-use tracing::error;
+use tracing::{error, warn};
 use utoipa::ToSchema;
 
 /// Represents basic information about a trading strategy.
@@ -353,8 +353,9 @@ impl Strategy {
 /// expiration dates, and implied volatility.
 ///
 /// # Note
-/// Several methods in this trait are unimplemented and will panic if invoked
-/// without being explicitly implemented for the specific strategy.
+/// Most defaults return either an empty value (with a `tracing::warn!` log)
+/// or an `Err(...)` describing the unsupported operation. Concrete strategies
+/// should override the methods they need.
 ///
 /// # Methods
 /// - `get_title`: Returns the title of the strategy.
@@ -366,39 +367,41 @@ impl Strategy {
 /// - `get_type`: Retrieves the type of the option.
 /// - `get_style`: Maps option basic types to their corresponding styles.
 /// - `get_expiration`: Maps option basic types to their expiration dates.
-/// - `get_implied_volatility`: Retrieves implied volatility (currently unimplemented).
+/// - `get_implied_volatility`: Retrieves implied volatility.
 ///
 /// # Panics
-/// All methods with `unimplemented!` will panic when called unless properly implemented.
-/// Refer to the documentation for individual methods for more details.
+/// Only `one_option` and `one_option_mut` panic on the default implementation,
+/// because their reference return types do not allow a graceful fallback.
+/// Every strategy that owns `Options` must override both methods.
 ///
 pub trait BasicAble {
     /// Retrieves the title associated with the current instance of the strategy.
     ///
     /// # Returns
-    /// A `String` representing the title.  
+    /// A `String` representing the title.
     ///
-    /// # Panics
-    /// This method is not yet implemented and will panic with the message
-    /// `"get_title is not implemented for this strategy"`. Ensure this method
-    /// is properly implemented before using it.
+    /// # Default
+    /// The default implementation returns an empty `String` and emits a
+    /// `tracing::warn!` log so callers can detect strategies that did not
+    /// override this method.
     ///
     fn get_title(&self) -> String {
-        unimplemented!("get_title is not implemented for this strategy");
+        warn!("get_title default: strategy did not override; returning empty string");
+        String::new()
     }
     /// Retrieves a `HashSet` of `OptionBasicType` values associated with the current strategy.
     ///
     /// # Returns
     /// A `HashSet` containing the `OptionBasicType` elements relevant to the strategy.
-    /// However, this method is currently not implemented and will panic with the message
-    /// `"get_option_basic_type is not implemented for this strategy"`.
     ///
-    /// # Panics
-    /// This function will panic with the message:
-    /// `"get_option_basic_type is not implemented for this strategy"` if called.
+    /// # Default
+    /// The default implementation returns an empty `HashSet` and emits a
+    /// `tracing::warn!` log so callers can detect strategies that did not
+    /// override this method.
     ///
     fn get_option_basic_type(&self) -> HashSet<OptionBasicType<'_>> {
-        unimplemented!("get_option_basic_type is not implemented for this strategy");
+        warn!("get_option_basic_type default: strategy did not override; returning empty set");
+        HashSet::new()
     }
     /// Retrieves the symbol associated with the current instance by delegating the call to the `get_symbol`
     /// method of the `one_option` object.
@@ -549,17 +552,14 @@ pub trait BasicAble {
     /// pair corresponds to the implied volatility associated with a
     /// specific option type.
     ///
-    /// # Notes
+    /// # Default
     ///
-    /// This method is not yet implemented for the specific strategy
-    /// and will panic when invoked.
-    ///
-    /// # Panics
-    ///
-    /// This function will unconditionally panic with the message
-    /// `"get_implied_volatility is not implemented for this strategy"`.
+    /// The default implementation returns an empty `HashMap` and emits a
+    /// `tracing::warn!` log so callers can detect strategies that did not
+    /// override this method.
     fn get_implied_volatility(&self) -> HashMap<OptionBasicType<'_>, &Positive> {
-        unimplemented!("get_implied_volatility is not implemented for this strategy");
+        warn!("get_implied_volatility default: strategy did not override; returning empty map");
+        HashMap::new()
     }
     /// Retrieves the quantity information associated with the strategy.
     ///
@@ -568,18 +568,17 @@ pub trait BasicAble {
     /// to a `Positive` value (the value). This map represents the mapping of
     /// option basic types to their respective quantities.
     ///
-    /// # Notes
-    /// This method is not implemented in the current strategy and will
-    /// panic when called.
-    ///
-    /// # Panics
-    /// This function will panic with the message `"get_quantity is not implemented for this strategy"`.
+    /// # Default
+    /// The default implementation returns an empty `HashMap` and emits a
+    /// `tracing::warn!` log so callers can detect strategies that did not
+    /// override this method.
     ///
     /// # Example
     /// The function currently serves as a placeholder and should be implemented
     /// in a specific strategy that defines its behavior.
     fn get_quantity(&self) -> HashMap<OptionBasicType<'_>, &Positive> {
-        unimplemented!("get_quantity is not implemented for this strategy");
+        warn!("get_quantity default: strategy did not override; returning empty map");
+        HashMap::new()
     }
     /// Retrieves the underlying price of the financial instrument (e.g., option).
     ///
@@ -637,84 +636,68 @@ pub trait BasicAble {
     fn get_dividend_yield(&self) -> HashMap<OptionBasicType<'_>, &Positive> {
         self.one_option().get_dividend_yield()
     }
-    /// This method, `one_option`, is designed to retrieve a reference to an `Options` object.
-    /// However, in this implementation, the function is not currently functional, as it
-    /// explicitly triggers an unimplemented error when called.
+    /// Retrieves a shared reference to the strategy's primary `Options` value.
     ///
     /// # Returns
-    /// * `&Options` - A reference to an `Options` object. However, this is not currently
-    ///   available due to the method being unimplemented.
+    /// * `&Options` - A reference to an `Options` object owned by the strategy.
     ///
     /// # Panics
-    /// This method will unconditionally panic with the message
-    /// "one_option is not implemented for this strategy" whenever it is invoked.
+    /// The default implementation panics because there is no graceful fallback
+    /// for a borrowed `&Options` return. Every strategy that owns options
+    /// must override this method.
     ///
     /// # Note
-    /// This is a placeholder implementation and should be overridden or implemented in
-    /// a concrete type where this function is required.
+    /// This is a placeholder implementation and must be overridden in any
+    /// concrete strategy that holds option positions.
     fn one_option(&self) -> &Options {
-        unimplemented!("one_option is not implemented for this strategy");
+        panic!(
+            "one_option not implemented for this strategy — every strategy with options must override"
+        )
     }
-    /// Provides a mutable reference to an `Options` instance.
+    /// Provides a mutable reference to the strategy's primary `Options` value.
     ///
-    /// This function is intended to allow mutation of a single
-    /// `Options` instance managed within the strategy. It is
-    /// a stub and not currently implemented. When called,
-    /// it will panic with the message "one_option_mut is not implemented
-    /// for this strategy".
+    /// # Panics
     ///
-    /// # Errors
-    ///
-    /// Panics if this function is called since it is unimplemented.
+    /// The default implementation panics because there is no graceful fallback
+    /// for a borrowed `&mut Options` return. Every strategy that owns options
+    /// must override this method.
     ///
     /// # Returns
     ///
-    /// A mutable reference to an `Options` instance (in a fully
-    /// implemented version of this function).
+    /// A mutable reference to an `Options` instance.
     ///
     fn one_option_mut(&mut self) -> &mut Options {
-        unimplemented!("one_option_mut is not implemented for this strategy");
+        panic!(
+            "one_option_mut not implemented for this strategy — every strategy with options must override"
+        )
     }
 
     /// Sets the expiration date for the strategy.
     ///
-    /// This method is intended to allow the user to define an expiration date
-    /// for a given strategy. However, it is currently unimplemented for this
-    /// specific strategy and will result in a panic with a message indicating
-    /// that it is not supported.
-    ///
     /// # Parameters
     ///
     /// - `_expiration_date`: The expiration date to set for the strategy,
-    ///   represented as an `ExpirationDate` object. This parameter is accepted
-    ///   but not utilized, as the method is not implemented.
+    ///   represented as an `ExpirationDate` object.
     ///
     /// # Returns
     ///
-    /// This function returns a `Result`:
-    /// - `Ok(())` if the operation is successful (not applicable here as the
-    ///   function is unimplemented).
-    /// - `Err(StrategyError)` if an error occurs (though, in this case, the
-    ///   method only panics as it is unimplemented).
+    /// - `Ok(())` if the operation is successful.
+    /// - `Err(StrategyError)` if the strategy does not support setting
+    ///   expiration dates.
     ///
     /// # Errors
     ///
-    /// Always returns a panic with the message:
-    /// `"set_expiration_date is not implemented for this strategy"`. No actual
-    /// `StrategyError` is produced by this method, as it is incomplete.
-    ///
-    /// # Panics
-    ///
-    /// This function always panics when called with the message:
-    /// `"set_expiration_date is not implemented for this strategy"`.
-    ///
-    /// Note: Avoid using this method until it is fully implemented for this
-    /// specific strategy.
+    /// The default implementation returns
+    /// `StrategyError::OperationError(NotSupported { .. })`. Strategies that
+    /// support mutating expiration should override this method.
     fn set_expiration_date(
         &mut self,
         _expiration_date: ExpirationDate,
     ) -> Result<(), StrategyError> {
-        unimplemented!("set_expiration_date is not implemented for this strategy");
+        Err(StrategyError::operation_not_supported(
+            "set_expiration_date",
+            "default",
+        ))
     }
     /// Sets the underlying price for this strategy.
     ///
@@ -724,18 +707,19 @@ pub trait BasicAble {
     ///
     /// # Returns
     /// - `Ok(())` if the operation is successful.
-    /// - `Err(StrategyError)` if an error occurs during the operation.
+    /// - `Err(StrategyError)` if the strategy does not support setting the
+    ///   underlying price.
     ///
-    /// # Note
-    /// This function is currently not implemented for this strategy. Calling
-    /// this function will result in a runtime panic with the message
-    /// "set_underlying_price is not implemented for this strategy".
-    ///
-    /// # Panics
-    /// Always panics with the message `"set_underlying_price is not implemented for this strategy"`.
+    /// # Errors
+    /// The default implementation returns
+    /// `StrategyError::OperationError(NotSupported { .. })`. Strategies that
+    /// support mutating the underlying price should override this method.
     ///
     fn set_underlying_price(&mut self, _price: &Positive) -> Result<(), StrategyError> {
-        unimplemented!("set_underlying_price is not implemented for this strategy");
+        Err(StrategyError::operation_not_supported(
+            "set_underlying_price",
+            "default",
+        ))
     }
     /// Updates the volatility for the strategy.
     ///
@@ -743,15 +727,20 @@ pub trait BasicAble {
     /// - `_volatility`: A reference to a `Positive` value representing the new volatility to set.
     ///
     /// # Returns
-    /// - `Ok(())`: If the update operation succeeds (currently unimplemented).
-    /// - `Err(StrategyError)`: If there is an error during the update process (place-holder as functionality is not implemented).
+    /// - `Ok(())`: If the update operation succeeds.
+    /// - `Err(StrategyError)`: If the strategy does not support setting the
+    ///   implied volatility.
     ///
-    /// # Notes
-    /// This method is currently unimplemented, and calling it will result in the `unimplemented!` macro being triggered, which causes a panic.
-    /// This function is a stub and should be implemented to handle setting the volatility specific to the strategy.
+    /// # Errors
+    /// The default implementation returns
+    /// `StrategyError::OperationError(NotSupported { .. })`. Strategies that
+    /// support mutating implied volatility should override this method.
     ///
     fn set_implied_volatility(&mut self, _volatility: &Positive) -> Result<(), StrategyError> {
-        unimplemented!("set_implied_volatility is not implemented for this strategy");
+        Err(StrategyError::operation_not_supported(
+            "set_implied_volatility",
+            "default",
+        ))
     }
 }
 
@@ -1063,33 +1052,23 @@ pub trait Strategies: Validable + Positionable + BreakEvenable + BasicAble {
     /// # Parameters
     /// - `&mut self`: A mutable reference to the current instance of the strategy.
     /// - `_position: &Position`: A reference to the `Position` object, representing the current position
-    ///   in the market. This parameter is currently unused in the implementation.
+    ///   in the market. This parameter is currently unused by the default implementation.
     ///
     /// # Returns
     /// - `Result<HashMap<Action, Trade>, StrategyError>`:
     ///   - `Ok(HashMap<Action, Trade>)`: On success, a map of actions to trades, representing the changes
     ///     made during the roll-in process.
-    ///   - `Err(StrategyError)`: If an error occurs during the roll-in operation.
+    ///   - `Err(StrategyError)`: If the strategy does not support rolling in.
     ///
     /// # Errors
-    /// - Returns a `StrategyError` if the roll-in operation fails (not currently implemented).
-    ///
-    /// # Panics
-    /// - This function will panic if called, as it is currently unimplemented.
-    ///
-    /// # Note
-    /// - This method is not implemented and will panic upon invocation. Future implementations should
-    ///   define the specific logic for handling the roll-in operation for the associated strategy.
+    /// The default implementation returns
+    /// `StrategyError::OperationError(NotSupported { .. })`. Strategies that
+    /// support roll-in should override this method.
     fn roll_in(&mut self, _position: &Position) -> Result<HashMap<Action, Trade>, StrategyError> {
-        unimplemented!("roll_in is not implemented for this strategy")
+        Err(StrategyError::operation_not_supported("roll_in", "default"))
     }
 
     /// Executes the roll-out strategy for the provided position.
-    ///
-    /// This function is intended to evaluate and execute trading actions based
-    /// on the given `Position`. It returns a mapping of `Action` to `Trade` that
-    /// represents the proposed trades resulting from the strategy. However, this
-    /// method currently is not implemented and will panic if called.
     ///
     /// # Arguments
     ///
@@ -1100,26 +1079,18 @@ pub trait Strategies: Validable + Positionable + BreakEvenable + BasicAble {
     ///
     /// * `Result<HashMap<Action, Trade>, StrategyError>` - A `Result` object
     ///   containing:
-    ///   - `Ok(HashMap<Action, Trade>)` with the mapping of actions to trades if
-    ///     successfully implemented in the future.
-    ///   - `Err(StrategyError)` if an error occurs during execution (currently
-    ///     always unimplemented).
+    ///   - `Ok(HashMap<Action, Trade>)` with the mapping of actions to trades.
+    ///   - `Err(StrategyError)` if the strategy does not support rolling out.
     ///
     /// # Errors
     ///
-    /// * Returns an error of type `StrategyError` if the strategy encounters
-    ///   execution issues (in this case, always unimplemented).
-    ///
-    /// # Panics
-    ///
-    /// This function will panic with a message "roll_out is not implemented for this
-    /// strategy" since it is currently not implemented.
-    ///
-    /// # Note
-    ///
-    /// Until implemented, calling this method will result in a runtime panic.
+    /// The default implementation returns
+    /// `StrategyError::OperationError(NotSupported { .. })`. Strategies that
+    /// support roll-out should override this method.
     fn roll_out(&mut self, _position: &Position) -> Result<HashMap<Action, Trade>, StrategyError> {
-        unimplemented!("roll_out is not implemented for this strategy")
+        Err(StrategyError::operation_not_supported(
+            "roll_out", "default",
+        ))
     }
 }
 
@@ -1147,10 +1118,16 @@ pub trait BreakEvenable {
     /// This method is responsible for recalculating and updating the break-even points based on
     /// the current state of the strategy.
     ///
-    /// The default implementation returns a `NotImplemented` error. Strategies implementing this trait
-    /// should override this method to provide specific update logic.
+    /// # Errors
+    /// The default implementation returns
+    /// `StrategyError::OperationError(NotSupported { .. })`. Strategies
+    /// implementing this trait should override this method to provide
+    /// specific update logic.
     fn update_break_even_points(&mut self) -> Result<(), StrategyError> {
-        unimplemented!("Update break even points is not implemented for this strategy")
+        Err(StrategyError::operation_not_supported(
+            "update_break_even_points",
+            "default",
+        ))
     }
 }
 
@@ -1374,14 +1351,21 @@ pub trait Positionable {
     ///
     /// * `Result<Vec<&mut Position>, PositionError>` - A `Result` containing a vector of mutable
     ///   references to the matching `Position` objects, or a `PositionError` if the operation is not supported.
-    ///   This function currently uses `unimplemented!()`.
+    ///
+    /// # Errors
+    /// The default implementation returns
+    /// `PositionError::unsupported_operation(..)`. Strategies that manage
+    /// positions should override this method.
     fn get_position(
         &mut self,
         _option_style: &OptionStyle,
         _side: &Side,
         _strike: &Positive,
     ) -> Result<Vec<&mut Position>, PositionError> {
-        unimplemented!("Modify position is not implemented for this strategy")
+        Err(PositionError::unsupported_operation(
+            "default",
+            "get_position",
+        ))
     }
 
     /// Retrieves a unique position based on the given option style and side.
@@ -1395,23 +1379,22 @@ pub trait Positionable {
     /// returns a `PositionError`.
     ///
     /// # Errors
-    /// This function always returns an error as it is not implemented for this strategy but provides a placeholder
-    /// for functionality to be added later.
+    /// The default implementation returns
+    /// `PositionError::unsupported_operation(..)`. Strategies that expose a
+    /// unique position per (style, side) pair should override this method.
     ///
     fn get_position_unique(
         &mut self,
         _option_style: &OptionStyle,
         _side: &Side,
     ) -> Result<&mut Position, PositionError> {
-        unimplemented!("Get unique position is not implemented for this strategy")
+        Err(PositionError::unsupported_operation(
+            "default",
+            "get_position_unique",
+        ))
     }
 
     /// Retrieves a unique option based on the given style and side.
-    ///
-    /// This function is intended to retrieve a unique financial option of a specific
-    /// style (`_option_style`) and side (`_side`). However, the functionality has
-    /// not been implemented for the current strategy, and calling this function
-    /// will result in a runtime panic.
     ///
     /// # Parameters
     /// - `_option_style`: A reference to an `OptionStyle` that specifies the style
@@ -1421,25 +1404,23 @@ pub trait Positionable {
     ///
     /// # Returns
     /// - `Result<&mut Options, PositionError>`:
-    ///     - On success, a mutable reference to an `Options` object would be returned.
-    ///       However, the current implementation always results in an unimplemented
-    ///       error.
+    ///     - On success, a mutable reference to an `Options` object.
+    ///     - On failure, a `PositionError`.
     ///
     /// # Errors
-    /// - Always returns a `PositionError` due to the `unimplemented!` macro indicating
-    ///   that this functionality is not yet supported for the strategy.
-    ///
-    /// # Notes
-    /// This function should be implemented to support strategies that require
-    /// retrieving unique options. Until implemented, usage of this function
-    /// is not recommended.
+    /// The default implementation returns
+    /// `PositionError::unsupported_operation(..)`. Strategies that expose a
+    /// unique option per (style, side) pair should override this method.
     ///
     fn get_option_unique(
         &mut self,
         _option_style: &OptionStyle,
         _side: &Side,
     ) -> Result<&mut Options, PositionError> {
-        unimplemented!("Get unique option is not implemented for this strategy")
+        Err(PositionError::unsupported_operation(
+            "default",
+            "get_option_unique",
+        ))
     }
 
     /// Modifies an existing position.
@@ -1452,9 +1433,16 @@ pub trait Positionable {
     ///
     /// * `Result<(), PositionError>` - A `Result` indicating success or failure of the
     ///   modification, or a `PositionError` if the operation is not supported.
-    ///   This function currently uses `unimplemented!()`.
+    ///
+    /// # Errors
+    /// The default implementation returns
+    /// `PositionError::unsupported_operation(..)`. Strategies that allow
+    /// in-place modification of positions should override this method.
     fn modify_position(&mut self, _position: &Position) -> Result<(), PositionError> {
-        unimplemented!("Modify position is not implemented for this strategy")
+        Err(PositionError::unsupported_operation(
+            "default",
+            "modify_position",
+        ))
     }
 
     ///
@@ -1467,14 +1455,16 @@ pub trait Positionable {
     /// - `Ok(())`: If the position replacement is successful.
     /// - `Err(PositionError)`: If an error occurs while replacing the position.
     ///
-    /// # Notes
-    /// This function is currently not implemented for this strategy and will panic with a `not implemented` message when called.
-    ///
-    /// # Panics
-    /// This function will always panic with `unimplemented!()` since it hasn't been implemented yet.
+    /// # Errors
+    /// The default implementation returns
+    /// `PositionError::unsupported_operation(..)`. Strategies that allow
+    /// replacing positions should override this method.
     ///
     fn replace_position(&mut self, _position: &Position) -> Result<(), PositionError> {
-        unimplemented!("Replace position is not implemented for this strategy")
+        Err(PositionError::unsupported_operation(
+            "default",
+            "replace_position",
+        ))
     }
 
     /// Checks if all short positions have a net premium received that meets or exceeds a specified minimum.
