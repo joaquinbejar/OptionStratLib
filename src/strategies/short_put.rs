@@ -786,6 +786,7 @@ mod tests_simulate {
     use rust_decimal_macros::dec;
 
     /// Helper struct to implement WalkTypeAble for tests
+    #[derive(Clone)]
     struct TestWalker;
 
     impl WalkTypeAble<Positive, Positive> for TestWalker {}

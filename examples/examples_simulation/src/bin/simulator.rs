@@ -1,6 +1,7 @@
 use optionstratlib::prelude::*;
 use positive::pos_or_panic;
 
+#[derive(Clone)]
 struct Walker {}
 
 impl Walker {

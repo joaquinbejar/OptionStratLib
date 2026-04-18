@@ -478,6 +478,7 @@ mod tests {
     use {std::fs, std::path::Path};
 
     // Helper structs and functions for testing
+    #[derive(Clone)]
     struct TestWalker;
 
     impl TestWalker {

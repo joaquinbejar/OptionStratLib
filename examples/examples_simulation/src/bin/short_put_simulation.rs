@@ -40,6 +40,7 @@ use std::collections::HashMap;
 
 /// Walker implementation for the simulation.
 #[warn(dead_code)]
+#[derive(Clone)]
 struct Walker {}
 
 impl Walker {

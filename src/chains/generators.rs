@@ -280,6 +280,7 @@ mod tests {
         }
     }
 
+    #[derive(Clone)]
     struct WalkerOptionChain {}
     impl WalkerOptionChain {
         fn new() -> Self {
@@ -321,6 +322,7 @@ mod tests {
         assert_eq!(random_walk.len(), n_steps);
     }
 
+    #[derive(Clone)]
     struct Walker {}
     impl Walker {
         fn new() -> Self {
@@ -370,6 +372,7 @@ mod generators_coverage_tests {
     use crate::utils::time::get_tomorrow_formatted;
     use rust_decimal_macros::dec;
 
+    #[derive(Clone)]
     struct TestWalker {}
     impl TestWalker {
         fn new() -> Self {

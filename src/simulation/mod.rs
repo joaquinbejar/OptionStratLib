@@ -134,4 +134,4 @@ pub use exit::{ExitPolicy, check_exit_policy};
 pub use model::WalkType;
 pub use params::WalkParams;
 pub use stats::SimulationStats;
-pub use traits::{Simulate, WalkTypeAble};
+pub use traits::{Simulate, WalkTypeAble, WalkTypeAbleClone};

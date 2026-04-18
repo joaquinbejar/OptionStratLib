@@ -295,6 +295,7 @@ mod tests_price_option_monte_carlo {
 
     #[test]
     fn test_simulation() {
+        #[derive(Clone)]
         struct TestWalker;
         impl WalkTypeAble<Positive, Positive> for TestWalker {}
         let walker = Box::new(TestWalker);

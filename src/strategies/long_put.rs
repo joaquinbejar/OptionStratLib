@@ -779,6 +779,7 @@ mod tests_simulate {
     use crate::utils::TimeFrame;
     use rust_decimal_macros::dec;
 
+    #[derive(Clone)]
     struct TestWalker;
     impl WalkTypeAble<Positive, Positive> for TestWalker {}
 

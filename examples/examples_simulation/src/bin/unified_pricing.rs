@@ -25,6 +25,7 @@ use std::fmt::Display;
 use std::ops::AddAssign;
 
 // Simple walker implementation for demonstration
+#[derive(Clone)]
 struct SimpleWalker;
 
 impl<X, Y> WalkTypeAble<X, Y> for SimpleWalker

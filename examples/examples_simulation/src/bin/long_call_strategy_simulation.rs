@@ -42,6 +42,7 @@ use optionstratlib::prelude::*;
 use positive::pos_or_panic;
 
 /// Walker implementation for the simulation.
+#[derive(Clone)]
 struct Walker;
 
 impl WalkTypeAble<Positive, Positive> for Walker {}
