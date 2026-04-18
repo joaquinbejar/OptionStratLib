@@ -3,7 +3,9 @@
    Email: jb@taunais.com
    Date: 26/2/25
 ******************************************************************************/
-use positive::{Positive, pos_or_panic};
+use positive::Positive;
+#[cfg(test)]
+use positive::pos_or_panic;
 
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
@@ -34,12 +36,17 @@ pub struct RiskMetricsSimulation {
 
 impl Default for RiskMetricsSimulation {
     fn default() -> Self {
+        // `dec!(0.01)` is a compile-time positive literal; the checked
+        // constructor never fails, so the `Positive::ZERO` fallback is
+        // unreachable and only exists to keep the call site free of
+        // `.unwrap()`/`.expect()`.
+        let one_pct = Positive::new_decimal(dec!(0.01)).unwrap_or(Positive::ZERO);
         Self {
             var_95: dec!(0.0),
             var_99: dec!(0.0),
             cvar_95: dec!(0.0),
-            severe_loss_probability: pos_or_panic!(0.01),
-            max_drawdown: pos_or_panic!(0.01),
+            severe_loss_probability: one_pct,
+            max_drawdown: one_pct,
             sharpe_ratio: dec!(0.0),
         }
     }
