@@ -929,7 +929,13 @@ impl Optimizable for IronCondor {
                 OptionDataGroup::Four(first, second, third, fourth) => {
                     (first, second, third, fourth)
                 }
-                _ => panic!("Invalid OptionDataGroup"),
+                other => {
+                    tracing::warn!(
+                        group = ?other,
+                        "find_optimal: skipping unexpected OptionDataGroup variant"
+                    );
+                    continue;
+                }
             };
 
             let legs = StrategyLegs::FourLegs {
@@ -987,7 +993,14 @@ impl Optimizable for IronCondor {
                 fourth: long_call,
             } => {
                 let implied_volatility = short_call.implied_volatility;
-                assert!(implied_volatility <= Positive::ONE);
+                if implied_volatility > Positive::ONE {
+                    return Err(StrategyError::invalid_parameters(
+                        "create_strategy",
+                        &format!(
+                            "implied volatility {implied_volatility} exceeds the supported maximum of 1.0"
+                        ),
+                    ));
+                }
 
                 let short_call_bid = short_call.call_bid.ok_or_else(|| {
                     StrategyError::operation_not_supported(
@@ -1035,7 +1048,10 @@ impl Optimizable for IronCondor {
                     fee_per_leg,
                 )
             }
-            _ => panic!("Invalid number of legs for Iron Condor strategy"),
+            _ => Err(StrategyError::operation_not_supported(
+                "create_strategy",
+                "IronCondor requires exactly four legs (FourLegs)",
+            )),
         }
     }
 }
@@ -2230,7 +2246,6 @@ mod tests_iron_condor_optimizable {
     }
 
     #[test]
-    #[should_panic(expected = "Invalid number of legs for Iron Condor strategy")]
     fn test_create_strategy_invalid_legs() {
         let condor = create_test_condor();
         let chain = create_test_chain();
@@ -2241,9 +2256,15 @@ mod tests_iron_condor_optimizable {
             second: options[1],
         };
 
-        // Wrong number of legs is still a panic (that branch is owned by
-        // issue #292, not panic-free core).
-        let _ = condor.create_strategy(&chain, &legs);
+        // Wrong number of legs now returns a typed error (issue #323).
+        let result = condor.create_strategy(&chain, &legs);
+        match result {
+            Err(StrategyError::OperationError(OperationErrorKind::NotSupported {
+                operation,
+                ..
+            })) => assert_eq!(operation, "create_strategy"),
+            other => panic!("expected NotSupported error, got {other:?}"),
+        }
     }
 }
 

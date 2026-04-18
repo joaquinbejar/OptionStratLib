@@ -90,12 +90,11 @@ where
     ///
     /// * `value` - The step size value
     /// * `time_unit` - The time unit for this step (e.g., Day, Week, Month)
-    /// * `datetime` - The expiration date, which must be of type `ExpirationDate::Days`
-    ///
-    /// # Panics
-    ///
-    /// This method will panic if `datetime` is of type `ExpirationDate::DateTime` as only
-    /// the `ExpirationDate::Days` variant is currently supported.
+    /// * `datetime` - The expiration date. Stored as-is when the variant is
+    ///   [`ExpirationDate::Days`]; [`ExpirationDate::DateTime`] is normalized
+    ///   to `Days` via [`ExpirationDate::get_days`]. If that conversion fails
+    ///   (past date / invalid datetime), the step falls back to
+    ///   `ExpirationDate::Days(Positive::ZERO)` and emits `tracing::error!`.
     ///
     /// # Returns
     ///
@@ -103,9 +102,17 @@ where
     pub fn new(value: T, time_unit: TimeFrame, datetime: ExpirationDate) -> Self {
         let datetime = match datetime {
             ExpirationDate::Days(_) => datetime,
-            ExpirationDate::DateTime(_) => panic!(
-                "ExpirationDate::DateTime is not supported for Step yet. Please use ExpirationDate::Days instead."
-            ),
+            ExpirationDate::DateTime(dt) => match datetime.get_days() {
+                Ok(days) => ExpirationDate::Days(days),
+                Err(e) => {
+                    tracing::error!(
+                        datetime = %dt,
+                        error = %e,
+                        "Xstep::new: could not convert ExpirationDate::DateTime to Days; defaulting to Days(0)"
+                    );
+                    ExpirationDate::Days(Positive::ZERO)
+                }
+            },
         };
         Self {
             index: 0,
@@ -473,10 +480,14 @@ mod tests_serialize {
     }
 
     #[test]
-    #[should_panic(expected = "ExpirationDate::DateTime is not supported for Step yet")]
-    fn test_datetime_constructor_panics() {
-        // Test that the constructor panics with DateTime variant
-        let date_time = chrono::Utc::now();
-        let _step = Xstep::new(1.0f64, TimeFrame::Day, ExpirationDate::DateTime(date_time));
+    fn test_datetime_constructor_normalizes_to_days() {
+        // `Xstep::new` now normalizes `ExpirationDate::DateTime` to
+        // `Days(N)` rather than panicking (issue #323).
+        let date_time = chrono::Utc::now() + chrono::Duration::days(10);
+        let step = Xstep::new(1.0f64, TimeFrame::Day, ExpirationDate::DateTime(date_time));
+        match step.datetime() {
+            ExpirationDate::Days(_) => {}
+            other => panic!("expected ExpirationDate::Days, got {other:?}"),
+        }
     }
 }

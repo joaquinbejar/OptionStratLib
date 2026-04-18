@@ -964,16 +964,26 @@ impl Optimizable for ShortStrangle {
             .filter_combinations(option_chain, side)
             .peekable();
 
-        // Panic if no options are found
+        // No valid combinations for the supplied criteria: log and return
+        // without mutating `self` so the caller keeps its previous state.
         if options_iter.peek().is_none() {
-            panic!("No valid option combinations found for the given criteria");
+            tracing::warn!(
+                "ShortStrangle::find_optimal: no valid option combinations for supplied criteria"
+            );
+            return;
         }
 
         for option_data_group in options_iter {
             // Unpack the OptionDataGroup into individual options
             let (short_put, short_call) = match option_data_group {
                 OptionDataGroup::Two(first, second) => (first, second),
-                _ => panic!("Invalid OptionDataGroup"),
+                other => {
+                    tracing::warn!(
+                        group = ?other,
+                        "find_optimal: skipping unexpected OptionDataGroup variant"
+                    );
+                    continue;
+                }
             };
 
             let legs = StrategyLegs::TwoLegs {
@@ -1012,7 +1022,13 @@ impl Optimizable for ShortStrangle {
     fn are_valid_legs(&self, legs: &StrategyLegs) -> bool {
         let (short_put, short_call) = match legs {
             StrategyLegs::TwoLegs { first, second } => (first, second),
-            _ => panic!("Invalid number of legs for this strategy"),
+            other => {
+                tracing::warn!(
+                    legs = ?other,
+                    "are_valid_legs: expected TwoLegs for ShortStrangle"
+                );
+                return false;
+            }
         };
         short_put.put_ask.unwrap_or(Positive::ZERO) > Positive::ZERO
             && short_call.call_ask.unwrap_or(Positive::ZERO) > Positive::ZERO
@@ -1032,21 +1048,46 @@ impl Optimizable for ShortStrangle {
     ) -> Result<Self::Strategy, StrategyError> {
         let (put, call) = match legs {
             StrategyLegs::TwoLegs { first, second } => (first, second),
-            _ => panic!("Invalid number of legs for this strategy"),
+            _ => {
+                return Err(StrategyError::operation_not_supported(
+                    "create_strategy",
+                    "ShortStrangle requires exactly two legs (TwoLegs)",
+                ));
+            }
         };
 
         if !call.valid_call() {
-            panic!("Invalid Call options");
+            return Err(StrategyError::invalid_parameters(
+                "create_strategy",
+                "call leg failed OptionData::valid_call",
+            ));
         }
 
         if !put.valid_put() {
-            panic!("Invalid Put options");
+            return Err(StrategyError::invalid_parameters(
+                "create_strategy",
+                "put leg failed OptionData::valid_put",
+            ));
         }
         let call_implied_volatility = call.implied_volatility;
-        assert!(call_implied_volatility <= Positive::ONE);
+        if call_implied_volatility > Positive::ONE {
+            return Err(StrategyError::invalid_parameters(
+                "create_strategy",
+                &format!(
+                    "call implied volatility {call_implied_volatility} exceeds the supported maximum of 1.0"
+                ),
+            ));
+        }
 
         let put_implied_volatility = put.implied_volatility;
-        assert!(put_implied_volatility <= Positive::ONE);
+        if put_implied_volatility > Positive::ONE {
+            return Err(StrategyError::invalid_parameters(
+                "create_strategy",
+                &format!(
+                    "put implied volatility {put_implied_volatility} exceeds the supported maximum of 1.0"
+                ),
+            ));
+        }
 
         let expiration = if let Some(expiration) = chain.get_expiration() {
             expiration

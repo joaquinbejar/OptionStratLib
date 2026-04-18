@@ -107,13 +107,10 @@ impl CustomStrategy {
     /// A fully initialized `CustomStrategy` instance with calculated break-even points,
     /// maximum profit, and maximum loss information.
     ///
-    /// # Panics
-    /// Panics if the strategy validation fails (no positions). This is owned
-    /// by issue #292 and will be lifted to a `Result` variant separately.
-    ///
     /// # Errors
     ///
-    /// Returns `StrategyError` if the break-even calculation fails.
+    /// Returns `StrategyError::OperationError` when `positions` is empty, and
+    /// propagates any error from `update_break_even_points`.
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         name: String,
@@ -141,7 +138,10 @@ impl CustomStrategy {
         };
         // Basic validation - check positions are not empty
         if strategy.positions.is_empty() {
-            panic!("Invalid strategy: No positions provided");
+            return Err(StrategyError::invalid_parameters(
+                "CustomStrategy::new",
+                "positions cannot be empty",
+            ));
         }
         strategy.update_break_even_points()?;
         Ok(strategy)
@@ -150,9 +150,17 @@ impl CustomStrategy {
     fn update_positions(&mut self, new_positions: Vec<Position>) {
         self.positions = new_positions;
         if self.positions.is_empty() {
-            panic!("Invalid strategy: No positions provided");
+            tracing::warn!(
+                "CustomStrategy::update_positions received empty vector; leaving break-even points unchanged"
+            );
+            return;
         }
-        let _ = self.update_break_even_points();
+        if let Err(err) = self.update_break_even_points() {
+            tracing::error!(
+                error = ?err,
+                "CustomStrategy::update_positions failed to recompute break-even points"
+            );
+        }
     }
 
     /// Calculate the best range to show for price analysis

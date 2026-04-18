@@ -701,7 +701,13 @@ impl Optimizable for BearCallSpread {
             // Unpack the OptionDataGroup into individual options
             let (short_option, long_option) = match option_data_group {
                 OptionDataGroup::Two(first, second) => (first, second),
-                _ => panic!("Invalid OptionDataGroup"),
+                other => {
+                    tracing::warn!(
+                        group = ?other,
+                        "find_optimal: skipping unexpected OptionDataGroup variant"
+                    );
+                    continue;
+                }
             };
 
             let legs = StrategyLegs::TwoLegs {
@@ -751,10 +757,22 @@ impl Optimizable for BearCallSpread {
     ) -> Result<Self::Strategy, StrategyError> {
         let (short, long) = match legs {
             StrategyLegs::TwoLegs { first, second } => (first, second),
-            _ => panic!("Invalid number of legs for this strategy"),
+            _ => {
+                return Err(StrategyError::operation_not_supported(
+                    "create_strategy",
+                    "BearCallSpread requires exactly two legs (TwoLegs)",
+                ));
+            }
         };
         let implied_volatility = short.implied_volatility;
-        assert!(implied_volatility <= Positive::ONE);
+        if implied_volatility > Positive::ONE {
+            return Err(StrategyError::invalid_parameters(
+                "create_strategy",
+                &format!(
+                    "implied volatility {implied_volatility} exceeds the supported maximum of 1.0"
+                ),
+            ));
+        }
         let short_call_bid = short.call_bid.ok_or_else(|| {
             StrategyError::operation_not_supported(
                 "create_strategy",

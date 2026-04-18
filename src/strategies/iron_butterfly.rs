@@ -903,7 +903,13 @@ impl Optimizable for IronButterfly {
             // Unpack the OptionDataGroup into individual options
             let (low, mid, high) = match option_data_group {
                 OptionDataGroup::Three(first, second, third) => (first, second, third),
-                _ => panic!("Invalid OptionDataGroup"),
+                other => {
+                    tracing::warn!(
+                        group = ?other,
+                        "find_optimal: skipping unexpected OptionDataGroup variant"
+                    );
+                    continue;
+                }
             };
 
             let legs = StrategyLegs::FourLegs {
@@ -962,7 +968,14 @@ impl Optimizable for IronButterfly {
                 fourth: long_call,
             } => {
                 let implied_volatility = short_strike.implied_volatility;
-                assert!(implied_volatility <= Positive::ONE);
+                if implied_volatility > Positive::ONE {
+                    return Err(StrategyError::invalid_parameters(
+                        "create_strategy",
+                        &format!(
+                            "implied volatility {implied_volatility} exceeds the supported maximum of 1.0"
+                        ),
+                    ));
+                }
                 let short_call_bid = short_strike.call_bid.ok_or_else(|| {
                     StrategyError::operation_not_supported(
                         "create_strategy",
@@ -1007,7 +1020,10 @@ impl Optimizable for IronButterfly {
                     fee_per_leg,
                 )
             }
-            _ => panic!("Invalid number of legs for Iron Butterfly strategy"),
+            _ => Err(StrategyError::operation_not_supported(
+                "create_strategy",
+                "IronButterfly requires exactly four legs (FourLegs)",
+            )),
         }
     }
 }
@@ -2026,7 +2042,6 @@ mod tests_iron_butterfly_optimizable {
     }
 
     #[test]
-    #[should_panic(expected = "Invalid number of legs for Iron Butterfly strategy")]
     fn test_create_strategy_invalid_legs() {
         let butterfly = create_test_butterfly();
         let chain = create_test_chain();
@@ -2037,9 +2052,15 @@ mod tests_iron_butterfly_optimizable {
             second: options[1],
         };
 
-        // Wrong number of legs is still a panic (that branch is owned by
-        // issue #292, not panic-free core).
-        let _ = butterfly.create_strategy(&chain, &legs);
+        // Wrong number of legs now returns a typed error (issue #323).
+        let result = butterfly.create_strategy(&chain, &legs);
+        match result {
+            Err(StrategyError::OperationError(OperationErrorKind::NotSupported {
+                operation,
+                ..
+            })) => assert_eq!(operation, "create_strategy"),
+            other => panic!("expected NotSupported error, got {other:?}"),
+        }
     }
 }
 

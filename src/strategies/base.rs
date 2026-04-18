@@ -78,16 +78,21 @@ pub trait Strategable:
     ///
     /// This method attempts to retrieve the strategy type from the `info()` method.
     /// If `info()` returns an error (indicating it's not implemented for the specific strategy),
-    /// it asserts with a message and returns `StrategyType::Custom`.
+    /// the default falls back to `StrategyType::Custom` and emits a warning.
     ///
     /// # Returns
     ///
-    /// The `StrategyType` of the strategy.
+    /// The `StrategyType` of the strategy, or `StrategyType::Custom` on lookup
+    /// failure.
     fn type_name(&self) -> StrategyType {
         match self.info() {
             Ok(info) => info.kind,
-            Err(_) => {
-                panic!("Invalid strategy type");
+            Err(e) => {
+                tracing::warn!(
+                    error = %e,
+                    "type_name: info() failed; defaulting to StrategyType::Custom"
+                );
+                StrategyType::Custom
             }
         }
     }
@@ -96,16 +101,20 @@ pub trait Strategable:
     ///
     /// This method attempts to retrieve the strategy name from the `info()` method.
     /// If `info()` returns an error (indicating it's not implemented for the specific strategy),
-    /// it asserts with a message and returns "Unknown".
+    /// the default falls back to `"Unknown"` and emits a warning.
     ///
     /// # Returns
     ///
-    /// The name of the strategy as a `String`.
+    /// The name of the strategy as a `String`, or `"Unknown"` on lookup failure.
     fn name(&self) -> String {
         match self.info() {
             Ok(info) => info.name,
-            Err(_) => {
-                panic!("Invalid strategy name");
+            Err(e) => {
+                tracing::warn!(
+                    error = %e,
+                    "name: info() failed; defaulting to \"Unknown\""
+                );
+                String::from("Unknown")
             }
         }
     }
@@ -662,6 +671,11 @@ pub trait BasicAble {
     /// This is a placeholder implementation and must be overridden in any
     /// concrete strategy that holds option positions.
     fn one_option(&self) -> &Options {
+        // INVARIANT: a `&Options` return type admits no default — we cannot
+        // materialise a safe reference out of thin air. Every strategy that
+        // owns positions overrides this; the panic fires only when a caller
+        // dispatches through the trait default on a type with no options,
+        // which is a programmer error.
         panic!(
             "one_option not implemented for this strategy — every strategy with options must override"
         )
@@ -679,6 +693,9 @@ pub trait BasicAble {
     /// A mutable reference to an `Options` instance.
     ///
     fn one_option_mut(&mut self) -> &mut Options {
+        // INVARIANT: same rationale as `one_option` — `&mut Options` has no
+        // safe default value, so every strategy with positions must override
+        // this method. Reaching the panic is a programmer error.
         panic!(
             "one_option_mut not implemented for this strategy — every strategy with options must override"
         )
@@ -1155,13 +1172,18 @@ pub trait BreakEvenable {
 pub trait Validable {
     /// Validates the strategy.
     ///
-    /// The default implementation panics, indicating that validation is not
-    /// applicable.  Implementors should override this method to provide
-    /// appropriate validation logic.
+    /// The default implementation is a safe no-op: it emits a warning and
+    /// returns `false` so callers treat an unoverridden strategy as invalid.
+    /// Implementors should override this method to provide appropriate
+    /// validation logic.
     ///
     /// Returns `true` if the strategy is valid, and `false` otherwise.
     fn validate(&self) -> bool {
-        panic!("Validate is not applicable for this strategy");
+        tracing::warn!(
+            ty = std::any::type_name::<Self>(),
+            "Validable::validate default implementation invoked; treating strategy as invalid"
+        );
+        false
     }
 }
 
@@ -1227,8 +1249,9 @@ pub trait Optimizable: Validable + Strategies {
     }
 
     /// Finds the optimal strategy based on the given criteria.
-    /// The default implementation panics.  Specific strategies should override
-    /// this method to provide their own optimization logic.
+    /// The default implementation is a safe no-op: it emits a warning and
+    /// leaves `self` unchanged. Specific strategies should override this
+    /// method to provide their own optimization logic.
     ///
     /// # Arguments
     /// * `_option_chain` - A reference to the `OptionChain` containing option data.
@@ -1240,7 +1263,10 @@ pub trait Optimizable: Validable + Strategies {
         _side: FindOptimalSide,
         _criteria: OptimizationCriteria,
     ) {
-        panic!("Find optimal is not applicable for this strategy");
+        tracing::warn!(
+            ty = std::any::type_name::<Self>(),
+            "find_optimal default implementation invoked; strategy left unchanged"
+        );
     }
 
     /// Checks if a long option is valid based on the given criteria.
@@ -1258,7 +1284,14 @@ pub trait Optimizable: Validable + Strategies {
             }
             FindOptimalSide::Deltable(_threshold) => true,
             FindOptimalSide::Center => {
-                panic!("Center should be managed by the strategy");
+                // `Center` is a sentinel the concrete strategy is expected to
+                // intercept (it needs contextual state like the ATM strike to
+                // expand into a concrete side). The default trait impl has no
+                // such state: log and skip this candidate rather than panic.
+                tracing::warn!(
+                    "is_valid_optimal_option: FindOptimalSide::Center must be resolved by the concrete strategy; skipping option"
+                );
+                false
             }
             FindOptimalSide::DeltaRange(min, max) => {
                 let (delta_call, delta_put) = option.current_deltas();
@@ -1278,7 +1311,13 @@ pub trait Optimizable: Validable + Strategies {
         // by default, we assume Options are one long call and one short call
         let (long, short) = match legs {
             StrategyLegs::TwoLegs { first, second } => (first, second),
-            _ => panic!("Invalid number of legs for this strategy"),
+            other => {
+                tracing::warn!(
+                    legs = ?other,
+                    "are_valid_legs: default impl expects TwoLegs"
+                );
+                return false;
+            }
         };
         long.call_ask.unwrap_or(Positive::ZERO) > Positive::ZERO
             && short.call_bid.unwrap_or(Positive::ZERO) > Positive::ZERO

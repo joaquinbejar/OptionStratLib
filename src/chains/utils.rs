@@ -708,7 +708,16 @@ pub fn strike_step(
     k: Option<Positive>, // σ-multiplier you want to cover (2.0-3.0 typical)
 ) -> Positive {
     let k = k.unwrap_or_else(|| pos_or_panic!(4.0));
-    assert!(size > 1, "need at least two strikes");
+    // INVARIANT: `size` is the caller-supplied count of strikes; with `size <= 1`
+    // the denominator `(size - 1)` would collapse to zero. Clamp to the minimum
+    // meaningful value and emit a warning so miscalibrated callers are visible
+    // in logs instead of producing Inf / NaN downstream.
+    let size = if size > 1 {
+        size
+    } else {
+        tracing::warn!(size, "strike_step: size must be > 1; clamping to 2");
+        2
+    };
     let t = days_to_exp / 365.0;
     let sigma = underlying_price * implied_vol * t.sqrt();
     let raw_step = Positive::TWO * k * sigma / (size as f64 - 1.0);

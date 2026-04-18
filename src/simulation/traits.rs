@@ -167,7 +167,12 @@ where
                     let mut log_ret = (expected_return * dt) + diffusion;
 
                     if let Some(ac) = autocorrelation {
-                        assert!((-Decimal::ONE..=Decimal::ONE).contains(&ac));
+                        if !(-Decimal::ONE..=Decimal::ONE).contains(&ac) {
+                            return Err(format!(
+                                "LogReturns: autocorrelation {ac} must lie in [-1, 1]"
+                            )
+                            .into());
+                        }
                         log_ret += ac * prev_log_ret;
                     }
 
@@ -640,7 +645,17 @@ impl<X, Y> Debug for Box<dyn WalkTypeAble<X, Y>> {
 
 impl<X, Y> Clone for Box<dyn WalkTypeAble<X, Y>> {
     fn clone(&self) -> Self {
-        panic!("Box<dyn WalkTypeAble<X, Y>> cannot be cloned. Use clone_box() instead.")
+        // INVARIANT: a trait object cannot be cloned through `Clone::clone`
+        // because that requires `Self: Sized`, which `dyn WalkTypeAble` is
+        // not. This impl exists only so containers like `WalkParams` can
+        // still `#[derive(Clone)]`; the concrete walkers used in the crate
+        // live as `Box<ConcreteWalker>` (not `Box<dyn ...>`), so the
+        // derived clone paths never reach this branch. Calling it directly
+        // on a `Box<dyn WalkTypeAble>` is a programmer error — tracked by
+        // issue #358 as a follow-up to add a proper object-safe clone hook.
+        panic!(
+            "Box<dyn WalkTypeAble<X, Y>> cannot be cloned directly; keep walkers as Box<ConcreteWalker> or track the follow-up in issue #358."
+        )
     }
 }
 
