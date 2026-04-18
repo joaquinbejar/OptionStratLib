@@ -77,13 +77,14 @@ where
 ///
 /// `WalkTypeAble` is object-safe: you can hold it behind `Box<dyn WalkTypeAble<X, Y>>`
 /// (e.g., inside [`WalkParams`]). The super-trait [`WalkTypeAbleClone`] provides an
-/// object-safe `clone_box` hook that forwards to `Clone` on the concrete walker, which
-/// is how `Box<dyn WalkTypeAble<X, Y>>` implements `Clone`. Any concrete walker you
-/// want to store behind a trait object must therefore be `Clone + 'static` — in
-/// practice that means adding `#[derive(Clone)]` to your walker struct.
+/// object-safe `clone_box` hook that `Box<dyn WalkTypeAble<X, Y>>: Clone` delegates
+/// to. Concrete walkers must therefore implement `WalkTypeAbleClone` — a blanket
+/// impl covers every `T: WalkTypeAble<X, Y> + Clone + 'static`, so in practice it
+/// is enough to add `#[derive(Clone)]` to your walker struct and the object-safe
+/// clone path works automatically.
 ///
-/// The blanket implementation of `WalkTypeAbleClone` is automatic; you never
-/// implement `clone_box` by hand.
+/// Walkers that cannot be `Clone` may implement `WalkTypeAbleClone::clone_box`
+/// by hand, but doing so is rarely necessary.
 pub trait WalkTypeAble<X, Y>: WalkTypeAbleClone<X, Y>
 where
     X: Copy + TryInto<Positive> + AddAssign + Display,
@@ -1144,31 +1145,44 @@ mod tests_walk_type_able {
     /// Regression for issue #358: cloning through `Box<dyn WalkTypeAble>`
     /// delegates to `clone_box`, which forwards to the concrete walker's
     /// `Clone::clone`. Calling `.clone()` must not panic and must produce a
-    /// walker that behaves identically to the original.
+    /// walker that produces byte-identical output on the same input.
     #[test]
     fn test_box_dyn_walktypeable_clone_roundtrip() {
+        // Deterministic walker so we can compare the full `Vec<Positive>`
+        // output rather than just its length. `brownian` returns a ramp
+        // seeded with the struct's `seed` field, which survives `Clone`.
         #[derive(Clone, Debug, PartialEq)]
         struct CountingWalker {
-            label: &'static str,
+            seed: u32,
         }
         impl<X, Y> WalkTypeAble<X, Y> for CountingWalker
         where
             X: Copy + TryInto<Positive> + AddAssign + Display,
             Y: Copy + TryInto<Positive> + Display,
         {
+            fn brownian(
+                &self,
+                params: &WalkParams<X, Y>,
+            ) -> Result<Vec<Positive>, SimulationError> {
+                let start = params.ystep_as_positive()?;
+                let mut out = Vec::with_capacity(params.size);
+                out.push(start);
+                for i in 1..params.size {
+                    let offset = Positive::new(f64::from(self.seed) + i as f64)?;
+                    out.push(start + offset);
+                }
+                Ok(out)
+            }
         }
 
         let original: Box<dyn WalkTypeAble<Positive, Positive>> =
-            Box::new(CountingWalker { label: "seed" });
+            Box::new(CountingWalker { seed: 42 });
         // Would previously panic; now forwards through clone_box to
         // CountingWalker::clone.
         let cloned = original.clone();
 
-        // We cannot compare trait objects directly, so verify via downcast-ish
-        // behaviour: both walkers expose the same `brownian` result for the
-        // same WalkParams input.
         let params = create_test_params(
-            3,
+            4,
             pos_or_panic!(1.0),
             Positive::HUNDRED,
             WalkType::Brownian {
@@ -1177,18 +1191,10 @@ mod tests_walk_type_able {
                 volatility: pos_or_panic!(0.2),
             },
         );
-        let original_len = original
+        let original_out = original
             .brownian(&params)
-            .map(|v| v.len())
-            .unwrap_or(usize::MAX);
-        let cloned_len = cloned
-            .brownian(&params)
-            .map(|v| v.len())
-            .unwrap_or(usize::MAX);
-        assert_eq!(original_len, cloned_len);
-
-        // The default `brownian` returns `Ok(Vec::new())` for
-        // `WalkType::Brownian` when ystep cannot be coerced, which is fine —
-        // we are asserting parity, not a specific length.
+            .expect("deterministic walker succeeds");
+        let cloned_out = cloned.brownian(&params).expect("cloned walker succeeds");
+        assert_eq!(original_out, cloned_out);
     }
 }
