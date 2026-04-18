@@ -47,6 +47,7 @@ use crate::model::types::Side;
 use chrono::{DateTime, Utc};
 use positive::Positive;
 use rust_decimal::Decimal;
+use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
@@ -412,7 +413,13 @@ impl Default for FuturePosition {
             quantity: Positive::ZERO,
             entry_price: Positive::ZERO,
             side: Side::Long,
-            expiration_date: ExpirationDate::Days(positive::pos_or_panic!(30.0)),
+            // `dec!(30.0)` is a compile-time positive literal; the checked
+            // constructor never fails, so the `Positive::ZERO` fallback is
+            // unreachable and only exists to keep the call site free of
+            // `.unwrap()`/`.expect()`.
+            expiration_date: ExpirationDate::Days(
+                Positive::new_decimal(dec!(30.0)).unwrap_or(Positive::ZERO),
+            ),
             contract_size: positive::Positive::ONE,
             initial_margin_req: Positive::ZERO,
             maintenance_margin_req: Positive::ZERO,

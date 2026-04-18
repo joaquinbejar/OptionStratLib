@@ -8,10 +8,21 @@ use crate::model::Position;
 use crate::model::types::{OptionStyle, OptionType, Side};
 use crate::{ExpirationDate, Options};
 use chrono::{NaiveDateTime, TimeZone, Utc};
-use positive::{Positive, pos_or_panic};
+use positive::Positive;
 use rust_decimal::{Decimal, MathematicalOps};
 use rust_decimal_macros::dec;
 use std::ops::Mul;
+
+/// Build a `Positive` from a compile-time non-negative `Decimal` literal.
+///
+/// All call sites in this module pass `dec!(X.X)` with a statically
+/// non-negative value, so the checked constructor is total; the
+/// `Positive::ZERO` branch is unreachable and only exists to keep the
+/// call site free of `.unwrap()`/`.expect()`.
+#[inline]
+fn pos_lit(value: Decimal) -> Positive {
+    Positive::new_decimal(value).unwrap_or(Positive::ZERO)
+}
 
 /// Converts a vector of `Positive` values to a vector of `f64` values.
 ///
@@ -79,13 +90,13 @@ pub fn create_sample_option(
         side,
         "AAPL".to_string(),
         strike_price,
-        ExpirationDate::Days(pos_or_panic!(30.0)),
+        ExpirationDate::Days(pos_lit(dec!(30.0))),
         volatility,
         quantity,
         underlying_price,
         dec!(0.05),
         option_style,
-        pos_or_panic!(0.01),
+        pos_lit(dec!(0.01)),
         None,
     )
 }
@@ -147,19 +158,19 @@ pub fn create_sample_position(
             side,
             underlying_symbol: "AAPL".to_string(),
             strike_price,
-            expiration_date: ExpirationDate::Days(pos_or_panic!(30.0)),
+            expiration_date: ExpirationDate::Days(pos_lit(dec!(30.0))),
             implied_volatility,
             quantity,
             underlying_price,
             risk_free_rate: dec!(0.05),
             option_style,
-            dividend_yield: pos_or_panic!(0.01),
+            dividend_yield: pos_lit(dec!(0.01)),
             exotic_params: None,
         },
-        premium: pos_or_panic!(5.0),
+        premium: pos_lit(dec!(5.0)),
         date: Utc::now(),
-        open_fee: pos_or_panic!(0.5),
-        close_fee: pos_or_panic!(0.5),
+        open_fee: pos_lit(dec!(0.5)),
+        close_fee: pos_lit(dec!(0.5)),
         epic: Some("Epic123".to_string()),
         extra_fields: None,
     }
@@ -205,7 +216,7 @@ pub fn create_sample_option_with_date(
         underlying_price,
         dec!(0.05),
         option_style,
-        pos_or_panic!(0.01),
+        pos_lit(dec!(0.01)),
         None,
     )
 }
@@ -251,7 +262,7 @@ pub fn create_sample_option_with_days(
         underlying_price,
         dec!(0.05),
         option_style,
-        pos_or_panic!(0.01),
+        pos_lit(dec!(0.01)),
         None,
     )
 }
@@ -296,13 +307,13 @@ pub fn create_sample_option_simplest(option_style: OptionStyle, side: Side) -> O
         side,
         "AAPL".to_string(),
         Positive::HUNDRED,
-        ExpirationDate::Days(pos_or_panic!(30.0)),
-        pos_or_panic!(0.2),
+        ExpirationDate::Days(pos_lit(dec!(30.0))),
+        pos_lit(dec!(0.2)),
         Positive::ONE,
         Positive::HUNDRED,
         dec!(0.05),
         option_style,
-        pos_or_panic!(0.01),
+        pos_lit(dec!(0.01)),
         None,
     )
 }
@@ -349,13 +360,13 @@ pub fn create_sample_option_simplest_strike(
         side,
         "AAPL".to_string(),
         strike,
-        ExpirationDate::Days(pos_or_panic!(30.0)),
-        pos_or_panic!(0.2),
+        ExpirationDate::Days(pos_lit(dec!(30.0))),
+        pos_lit(dec!(0.2)),
         Positive::ONE,
         Positive::HUNDRED,
         dec!(0.05),
         option_style,
-        pos_or_panic!(0.01),
+        pos_lit(dec!(0.01)),
         None,
     )
 }
@@ -402,13 +413,17 @@ pub fn create_sample_option_simplest_strike(
 /// Note: The `Positive` type and associated operations are defined in the `crate::model::types` module.
 pub fn mean_and_std(vec: Vec<Positive>) -> (Positive, Positive) {
     let mean = vec.iter().sum::<Positive>() / vec.len() as f64;
+    // `(x - mean).powi(2)` is mathematically non-negative, and so is
+    // `sqrt(variance)`. The `Positive::ZERO` fallback on the checked
+    // constructors is therefore unreachable and only exists to keep these
+    // call sites free of `.unwrap()`/`.expect()`.
     let variance = vec
         .iter()
-        .map(|x| pos_or_panic!((x.to_f64() - mean.to_f64()).powi(2)))
+        .map(|x| Positive::new((x.to_f64() - mean.to_f64()).powi(2)).unwrap_or(Positive::ZERO))
         .sum::<Positive>()
         / vec.len() as f64;
     let std = variance.to_f64().sqrt();
-    (mean, pos_or_panic!(std))
+    (mean, Positive::new(std).unwrap_or(Positive::ZERO))
 }
 
 /// Trait for rounding operations on numeric types, specifically for financial calculations.

@@ -18,7 +18,9 @@ use crate::visualization::{
     ColorScheme, Graph, GraphConfig, GraphData, LineStyle, Series2D, TraceMode,
 };
 use num_traits::FromPrimitive;
-use positive::{Positive, pos_or_panic};
+use positive::Positive;
+#[cfg(test)]
+use positive::pos_or_panic;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
@@ -677,8 +679,8 @@ impl Options {
             market_price
         };
 
-        // Initialize high and low bounds for volatility
-        let mut high = pos_or_panic!(5.0); // 500% max volatility
+        // Initialize high and low bounds for volatility (500% max).
+        let mut high = Positive::new(5.0)?;
         let mut low = Positive::ZERO;
 
         // Binary search through volatilities until we find one that gives us our target price
