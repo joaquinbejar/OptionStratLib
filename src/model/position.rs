@@ -746,26 +746,28 @@ impl Greeks for Position {
 }
 
 impl TransactionAble for Position {
-    /// Default no-op stub. `Position` does not currently track an
-    /// internal transaction history; callers that need this should
-    /// store transactions in a higher-level container.
+    /// `Position` does not track an internal transaction history.
+    /// This impl is intentionally unsupported; callers that need
+    /// transaction tracking should store transactions in a
+    /// higher-level container.
     ///
     /// # Errors
     ///
-    /// Always returns a `TransactionError` indicating the operation is
-    /// not implemented for `Position`.
+    /// Always returns a `TransactionError` — this operation is
+    /// intentionally unsupported on `Position`.
     fn add_transaction(&mut self, _transaction: Transaction) -> Result<(), TransactionError> {
         Err(TransactionError {
             message: "add_transaction not implemented for Position".to_string(),
         })
     }
 
-    /// Default no-op stub. See [`Self::add_transaction`].
+    /// See [`Self::add_transaction`] — this method is intentionally
+    /// unsupported on `Position` and always errors.
     ///
     /// # Errors
     ///
-    /// Always returns a `TransactionError` indicating the operation is
-    /// not implemented for `Position`.
+    /// Always returns a `TransactionError` — this operation is
+    /// intentionally unsupported on `Position`.
     fn get_transactions(&self) -> Result<Vec<Transaction>, TransactionError> {
         Err(TransactionError {
             message: "get_transactions not implemented for Position".to_string(),

@@ -764,8 +764,21 @@ mod tests_get_strategy {
 
     #[test]
     fn test_get_strategy_returns_not_supported() {
+        use crate::prelude::OperationErrorKind;
         let result = LongCall::get_strategy(&[]);
-        assert!(matches!(result, Err(StrategyError::OperationError(_))));
+        match result {
+            Err(StrategyError::OperationError(OperationErrorKind::NotSupported {
+                operation,
+                reason,
+            })) => {
+                assert_eq!(operation, "get_strategy");
+                assert!(
+                    reason.contains("LongCall"),
+                    "expected reason to contain 'LongCall', got {reason}"
+                );
+            }
+            other => panic!("expected NotSupported error, got {other:?}"),
+        }
     }
 }
 

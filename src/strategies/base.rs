@@ -386,7 +386,10 @@ pub trait BasicAble {
     /// override this method.
     ///
     fn get_title(&self) -> String {
-        warn!("get_title default: strategy did not override; returning empty string");
+        warn!(
+            "get_title default: {} did not override; returning empty string",
+            std::any::type_name::<Self>()
+        );
         String::new()
     }
     /// Retrieves a `HashSet` of `OptionBasicType` values associated with the current strategy.
@@ -400,7 +403,10 @@ pub trait BasicAble {
     /// override this method.
     ///
     fn get_option_basic_type(&self) -> HashSet<OptionBasicType<'_>> {
-        warn!("get_option_basic_type default: strategy did not override; returning empty set");
+        warn!(
+            "get_option_basic_type default: {} did not override; returning empty set",
+            std::any::type_name::<Self>()
+        );
         HashSet::new()
     }
     /// Retrieves the symbol associated with the current instance by delegating the call to the `get_symbol`
@@ -558,7 +564,10 @@ pub trait BasicAble {
     /// `tracing::warn!` log so callers can detect strategies that did not
     /// override this method.
     fn get_implied_volatility(&self) -> HashMap<OptionBasicType<'_>, &Positive> {
-        warn!("get_implied_volatility default: strategy did not override; returning empty map");
+        warn!(
+            "get_implied_volatility default: {} did not override; returning empty map",
+            std::any::type_name::<Self>()
+        );
         HashMap::new()
     }
     /// Retrieves the quantity information associated with the strategy.
@@ -577,7 +586,10 @@ pub trait BasicAble {
     /// The function currently serves as a placeholder and should be implemented
     /// in a specific strategy that defines its behavior.
     fn get_quantity(&self) -> HashMap<OptionBasicType<'_>, &Positive> {
-        warn!("get_quantity default: strategy did not override; returning empty map");
+        warn!(
+            "get_quantity default: {} did not override; returning empty map",
+            std::any::type_name::<Self>()
+        );
         HashMap::new()
     }
     /// Retrieves the underlying price of the financial instrument (e.g., option).
@@ -696,7 +708,7 @@ pub trait BasicAble {
     ) -> Result<(), StrategyError> {
         Err(StrategyError::operation_not_supported(
             "set_expiration_date",
-            "default",
+            std::any::type_name::<Self>(),
         ))
     }
     /// Sets the underlying price for this strategy.
@@ -718,7 +730,7 @@ pub trait BasicAble {
     fn set_underlying_price(&mut self, _price: &Positive) -> Result<(), StrategyError> {
         Err(StrategyError::operation_not_supported(
             "set_underlying_price",
-            "default",
+            std::any::type_name::<Self>(),
         ))
     }
     /// Updates the volatility for the strategy.
@@ -739,7 +751,7 @@ pub trait BasicAble {
     fn set_implied_volatility(&mut self, _volatility: &Positive) -> Result<(), StrategyError> {
         Err(StrategyError::operation_not_supported(
             "set_implied_volatility",
-            "default",
+            std::any::type_name::<Self>(),
         ))
     }
 }
@@ -1065,7 +1077,10 @@ pub trait Strategies: Validable + Positionable + BreakEvenable + BasicAble {
     /// `StrategyError::OperationError(NotSupported { .. })`. Strategies that
     /// support roll-in should override this method.
     fn roll_in(&mut self, _position: &Position) -> Result<HashMap<Action, Trade>, StrategyError> {
-        Err(StrategyError::operation_not_supported("roll_in", "default"))
+        Err(StrategyError::operation_not_supported(
+            "roll_in",
+            std::any::type_name::<Self>(),
+        ))
     }
 
     /// Executes the roll-out strategy for the provided position.
@@ -1089,7 +1104,8 @@ pub trait Strategies: Validable + Positionable + BreakEvenable + BasicAble {
     /// support roll-out should override this method.
     fn roll_out(&mut self, _position: &Position) -> Result<HashMap<Action, Trade>, StrategyError> {
         Err(StrategyError::operation_not_supported(
-            "roll_out", "default",
+            "roll_out",
+            std::any::type_name::<Self>(),
         ))
     }
 }
@@ -1126,7 +1142,7 @@ pub trait BreakEvenable {
     fn update_break_even_points(&mut self) -> Result<(), StrategyError> {
         Err(StrategyError::operation_not_supported(
             "update_break_even_points",
-            "default",
+            std::any::type_name::<Self>(),
         ))
     }
 }
@@ -1363,7 +1379,7 @@ pub trait Positionable {
         _strike: &Positive,
     ) -> Result<Vec<&mut Position>, PositionError> {
         Err(PositionError::unsupported_operation(
-            "default",
+            std::any::type_name::<Self>(),
             "get_position",
         ))
     }
@@ -1389,7 +1405,7 @@ pub trait Positionable {
         _side: &Side,
     ) -> Result<&mut Position, PositionError> {
         Err(PositionError::unsupported_operation(
-            "default",
+            std::any::type_name::<Self>(),
             "get_position_unique",
         ))
     }
@@ -1418,7 +1434,7 @@ pub trait Positionable {
         _side: &Side,
     ) -> Result<&mut Options, PositionError> {
         Err(PositionError::unsupported_operation(
-            "default",
+            std::any::type_name::<Self>(),
             "get_option_unique",
         ))
     }
@@ -1440,7 +1456,7 @@ pub trait Positionable {
     /// in-place modification of positions should override this method.
     fn modify_position(&mut self, _position: &Position) -> Result<(), PositionError> {
         Err(PositionError::unsupported_operation(
-            "default",
+            std::any::type_name::<Self>(),
             "modify_position",
         ))
     }
@@ -1462,7 +1478,7 @@ pub trait Positionable {
     ///
     fn replace_position(&mut self, _position: &Position) -> Result<(), PositionError> {
         Err(PositionError::unsupported_operation(
-            "default",
+            std::any::type_name::<Self>(),
             "replace_position",
         ))
     }
