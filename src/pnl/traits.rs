@@ -52,6 +52,10 @@ pub trait PnLCalculator {
 
     /// Calculates the Profit and Loss (PnL) for a series of delta adjustments in a trading strategy.
     ///
+    /// The default implementation is a no-op: strategies that do not track
+    /// delta-adjustment PnL return a typed error so callers can detect the
+    /// missing override without panicking.
+    ///
     /// # Arguments
     ///
     /// * `_adjustments` - A vector of `DeltaAdjustment` instances representing the adjustments made
@@ -59,42 +63,44 @@ pub trait PnLCalculator {
     ///
     /// # Returns
     ///
-    /// * `Result<PnL, PricingError>` - If successful, returns a `PnL` object containing information
-    ///   about realized and unrealized profits/losses, costs, and income.
-    ///   Otherwise, returns an error.
+    /// * `Result<PnL, PricingError>` - Specific strategies return the computed
+    ///   `PnL`; the default implementation always returns an error.
     ///
-    /// # Panics
+    /// # Errors
     ///
-    /// This function always panics with the message "adjustments_pnl is not implemented for this Strategy."
-    /// It serves as a placeholder or trait method that must be implemented by specific strategy implementations.
-    ///
+    /// Returns `PricingError::MethodError` (method = `"adjustments_pnl"`) when
+    /// the implementing type does not override this method.
     fn adjustments_pnl(&self, _adjustments: &DeltaAdjustment) -> Result<PnL, PricingError> {
-        panic!("adjustments_pnl is not implemented for this Strategy.")
+        Err(PricingError::method_error(
+            "adjustments_pnl",
+            &format!("not implemented for {}", std::any::type_name::<Self>()),
+        ))
     }
 
     /// Calculates the profit and loss (PnL) for a given trading position.
     ///
+    /// The default implementation is a no-op: strategies that do not implement
+    /// per-position PnL return a typed error instead of panicking.
+    ///
     /// # Parameters
-    /// - `_position`: A reference to a trading position (`Position`) for which the PnL is to be calculated.
+    ///
+    /// * `_position` - A reference to a trading position (`Position`) for which
+    ///   the PnL is to be calculated.
     ///
     /// # Returns
-    /// - `Result<PnL, PricingError>`: This function is intended to return a `PnL` value on success,
-    ///   or an error wrapped in a `PricingError` on failure.
+    ///
+    /// * `Result<PnL, PricingError>` - Specific strategies return the computed
+    ///   `PnL`; the default implementation always returns an error.
     ///
     /// # Errors
-    /// This method will always return an error because it is not implemented.
-    /// A call to this function will result in a panic with the message:
-    /// `"from_position_pnl is not implemented for this Strategy."`
     ///
-    /// # Panics
-    /// This function will unconditionally panic when called. It serves as a placeholder to indicate
-    /// that the logic for calculating the PnL based on a given position has not been implemented yet.
-    ///
-    /// # Notes
-    /// Override this method in subclasses or implementations of the `Strategy` trait to provide the
-    /// desired functionality for calculating position PnL.
+    /// Returns `PricingError::MethodError` (method = `"diff_position_pnl"`)
+    /// when the implementing type does not override this method.
     fn diff_position_pnl(&self, _position: &Position) -> Result<PnL, PricingError> {
-        panic!("from_position_pnl is not implemented for this Strategy.")
+        Err(PricingError::method_error(
+            "diff_position_pnl",
+            &format!("not implemented for {}", std::any::type_name::<Self>()),
+        ))
     }
 }
 
@@ -228,5 +234,45 @@ mod tests_pnl_calculator {
         assert_eq!(pnl_at_expiration.unrealized, None);
         assert_eq!(pnl_at_expiration.initial_costs, pos_or_panic!(10.0));
         assert_eq!(pnl_at_expiration.initial_income, pos_or_panic!(20.0));
+    }
+
+    #[test]
+    fn test_default_adjustments_pnl_returns_method_error() {
+        let dummy = DummyOption;
+        let adj = DeltaAdjustment::NoAdjustmentNeeded;
+        match dummy.adjustments_pnl(&adj) {
+            Err(PricingError::MethodError { method, reason }) => {
+                assert_eq!(method, "adjustments_pnl");
+                assert!(reason.contains("not implemented"));
+                assert!(reason.contains("DummyOption"));
+            }
+            other => panic!("expected MethodError, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_default_diff_position_pnl_returns_method_error() {
+        use crate::model::types::{OptionStyle, Side};
+        use crate::model::utils::create_sample_option_simplest;
+
+        let dummy = DummyOption;
+        let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
+        let position = Position::new(
+            option,
+            pos_or_panic!(5.25),
+            Utc::now(),
+            pos_or_panic!(0.65),
+            pos_or_panic!(0.65),
+            None,
+            None,
+        );
+        match dummy.diff_position_pnl(&position) {
+            Err(PricingError::MethodError { method, reason }) => {
+                assert_eq!(method, "diff_position_pnl");
+                assert!(reason.contains("not implemented"));
+                assert!(reason.contains("DummyOption"));
+            }
+            other => panic!("expected MethodError, got {other:?}"),
+        }
     }
 }

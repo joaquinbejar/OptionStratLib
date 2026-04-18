@@ -100,13 +100,21 @@ fn test_pnl_calculator_trait() {
 }
 
 #[test]
-#[should_panic(expected = "adjustments_pnl is not implemented for this Strategy")]
 fn test_pnl_calculator_adjustments_pnl_default_implementation() {
+    use optionstratlib::error::PricingError;
+
     let calculator = TestPnLCalculator;
     let adjustments = DeltaAdjustment::NoAdjustmentNeeded;
 
-    // This should panic with the message "adjustments_pnl is not implemented for this Strategy"
-    let _ = calculator.adjustments_pnl(&adjustments);
+    // After issue #323 the default implementation returns a typed error
+    // (`PricingError::MethodError`) instead of panicking.
+    match calculator.adjustments_pnl(&adjustments) {
+        Err(PricingError::MethodError { method, reason }) => {
+            assert_eq!(method, "adjustments_pnl");
+            assert!(reason.contains("not implemented"));
+        }
+        other => panic!("expected MethodError, got {other:?}"),
+    }
 }
 
 #[test]
