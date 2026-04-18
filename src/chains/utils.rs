@@ -3,7 +3,9 @@
    Email: jb@taunais.com
    Date: 25/10/24
 ******************************************************************************/
-use positive::{Positive, pos_or_panic};
+use positive::Positive;
+#[cfg(test)]
+use positive::pos_or_panic;
 
 use crate::chains::OptionData;
 use crate::chains::chain::{SKEW_SLOPE, SKEW_SMILE_CURVE};
@@ -653,46 +655,60 @@ pub(crate) fn rounder(reference_price: Positive, strike_interval: Positive) -> P
 /// Rounds an interval to clean market-friendly values like 0.25, 0.5, 1, 2.5, 5, 10, etc.
 #[allow(dead_code)]
 fn round_to_clean_interval(interval: Positive, price: Positive) -> Positive {
+    // Market-grid constants. `dec!(X.X)` is a compile-time positive literal
+    // so each checked constructor is total; the `unwrap_or(Positive::ZERO)`
+    // fallback is unreachable and exists only to keep the call site free of
+    // `.unwrap()`/`.expect()` per §Error Handling.
+    let p025 = Positive::new_decimal(dec!(0.25)).unwrap_or(Positive::ZERO);
+    let p05 = Positive::new_decimal(dec!(0.5)).unwrap_or(Positive::ZERO);
+    let p25 = Positive::new_decimal(dec!(2.5)).unwrap_or(Positive::ZERO);
+    let p5 = Positive::new_decimal(dec!(5.0)).unwrap_or(Positive::ZERO);
+    let p10 = Positive::new_decimal(dec!(10.0)).unwrap_or(Positive::ZERO);
+    let p15 = Positive::new_decimal(dec!(15.0)).unwrap_or(Positive::ZERO);
+    let p20 = Positive::new_decimal(dec!(20.0)).unwrap_or(Positive::ZERO);
+    let p25_int = Positive::new_decimal(dec!(25.0)).unwrap_or(Positive::ZERO);
+    let p50 = Positive::new_decimal(dec!(50.0)).unwrap_or(Positive::ZERO);
+
     let v = interval.to_f64();
 
-    if price < pos_or_panic!(25.0) {
+    if price < p25_int {
         if v <= 0.25 {
-            pos_or_panic!(0.25)
+            p025
         } else if v <= 0.5 {
-            pos_or_panic!(0.5)
+            p05
         } else if v <= 1.0 {
             Positive::ONE
         } else if v <= 2.5 {
-            pos_or_panic!(2.5)
+            p25
         } else {
-            pos_or_panic!(5.0)
+            p5
         }
     } else if price < Positive::HUNDRED {
         if v <= 1.0 {
             Positive::ONE
         } else if v <= 2.5 {
-            pos_or_panic!(2.5)
+            p25
         } else if v <= 5.0 {
-            pos_or_panic!(5.0)
+            p5
         } else {
-            pos_or_panic!(10.0)
+            p10
         }
     } else if v <= 5.0 {
         Positive::ONE
     } else if v <= 8.0 {
         Positive::TWO
     } else if v <= 12.5 {
-        pos_or_panic!(5.0)
+        p5
     } else if v <= 15.0 {
-        pos_or_panic!(10.0)
+        p10
     } else if v <= 20.0 {
-        pos_or_panic!(15.0)
+        p15
     } else if v <= 25.0 {
-        pos_or_panic!(20.0)
+        p20
     } else if v <= 35.0 {
-        pos_or_panic!(25.0)
+        p25_int
     } else if v <= 50.0 {
-        pos_or_panic!(50.0)
+        p50
     } else {
         Positive::HUNDRED
     }
@@ -707,7 +723,13 @@ pub fn strike_step(
     size: usize,         // desired number of strikes
     k: Option<Positive>, // σ-multiplier you want to cover (2.0-3.0 typical)
 ) -> Positive {
-    let k = k.unwrap_or_else(|| pos_or_panic!(4.0));
+    // Helper for compile-time-safe literal positives. Each `dec!(X.X)` is a
+    // positive literal so the checked constructor is total; the
+    // `unwrap_or(Positive::ZERO)` branch is unreachable and only exists to
+    // keep this function free of `.unwrap()`/`.expect()`.
+    let lit = |d: Decimal| Positive::new_decimal(d).unwrap_or(Positive::ZERO);
+
+    let k = k.unwrap_or_else(|| lit(dec!(4.0)));
     // INVARIANT: `size` is the caller-supplied count of strikes; with `size <= 1`
     // the denominator `(size - 1)` would collapse to zero. Clamp to the minimum
     // meaningful value and emit a warning so miscalibrated callers are visible
@@ -724,21 +746,21 @@ pub fn strike_step(
 
     // Standard “nice” grids used by most exchanges
     let bins: &[Positive] = &[
-        pos_or_panic!(0.01),
-        pos_or_panic!(0.05),
-        pos_or_panic!(0.10),
-        pos_or_panic!(0.25),
-        pos_or_panic!(0.5),
+        lit(dec!(0.01)),
+        lit(dec!(0.05)),
+        lit(dec!(0.10)),
+        lit(dec!(0.25)),
+        lit(dec!(0.5)),
         Positive::ONE,
-        pos_or_panic!(2.5),
-        pos_or_panic!(5.0),
-        pos_or_panic!(10.0),
-        pos_or_panic!(25.0),
-        pos_or_panic!(50.0),
+        lit(dec!(2.5)),
+        lit(dec!(5.0)),
+        lit(dec!(10.0)),
+        lit(dec!(25.0)),
+        lit(dec!(50.0)),
         Positive::HUNDRED,
-        pos_or_panic!(150.0),
-        pos_or_panic!(200.0),
-        pos_or_panic!(250.0),
+        lit(dec!(150.0)),
+        lit(dec!(200.0)),
+        lit(dec!(250.0)),
     ];
 
     // Pick the closest one

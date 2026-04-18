@@ -31,7 +31,9 @@ use crate::utils::others::get_random_element;
 use crate::volatility::VolatilitySmile;
 use chrono::{NaiveDate, Utc};
 use num_traits::{FromPrimitive, ToPrimitive};
-use positive::{Positive, pos_or_panic};
+use positive::Positive;
+#[cfg(test)]
+use positive::pos_or_panic;
 use pretty_simple_display::DebugSimple;
 use prettytable::{Attr, Cell, Row, Table, color, format};
 use rust_decimal::{Decimal, MathematicalOps};
@@ -607,18 +609,20 @@ impl OptionChain {
             }
         }
 
-        // Default spread if we couldn't calculate it
+        // Default spread if we couldn't calculate it. `dec!(0.02)` is a
+        // compile-time literal so the checked constructor never fails; the
+        // `unwrap_or(Positive::ZERO)` fallback is unreachable and exists
+        // only to keep the call site `.unwrap`-free per §Error Handling.
+        let default_spread = Positive::new_decimal(dec!(0.02)).unwrap_or(Positive::ZERO);
         let spread = if count > 0 {
-            Positive::new_decimal(total_spread / Decimal::from(count))
-                .unwrap_or_else(|_| pos_or_panic!(0.02))
+            Positive::new_decimal(total_spread / Decimal::from(count)).unwrap_or(default_spread)
         } else {
-            pos_or_panic!(0.02) // 0.02 is a reasonable default spread
+            default_spread
         };
 
-        // Get ATM implied volatility with a default fallback. `Positive` is
-        // already non-negative by construction; values above 1.0 are treated
-        // as out-of-range and fall back to a 0.2 sentinel with a warning so
-        // downstream pricing never sees an implausible IV.
+        // Default ATM implied volatility fallback. See `default_spread`
+        // above for the rationale behind the `unwrap_or` fallback.
+        let default_iv = Positive::new_decimal(dec!(0.2)).unwrap_or(Positive::ZERO);
         let implied_volatility = match self.get_atm_implied_volatility() {
             Ok(iv) if *iv <= Positive::ONE => *iv,
             Ok(iv) => {
@@ -626,9 +630,9 @@ impl OptionChain {
                     iv = %*iv,
                     "ATM implied volatility > 1.0; falling back to default 0.2"
                 );
-                pos_or_panic!(0.2)
+                default_iv
             }
-            _ => pos_or_panic!(0.2), // 20% is a reasonable default IV
+            _ => default_iv,
         };
 
         let skew_slope = SKEW_SLOPE;
@@ -1004,7 +1008,7 @@ impl OptionChain {
                 "invalid underlying price format in file name",
             )
         })?;
-        self.underlying_price = pos_or_panic!(price);
+        self.underlying_price = Positive::new(price).map_err(ChainError::from)?;
         Ok(())
     }
 
@@ -1313,12 +1317,35 @@ impl OptionChain {
     pub fn strike_price_range_vec(&self, step: f64) -> Option<Vec<f64>> {
         let first = self.options.iter().next();
         let last = self.options.iter().next_back();
+        // Reject step <= 0 and non-finite inputs: without a strictly
+        // positive increment the while loop below would spin forever
+        // (step == 0) or never enter (step NaN). `Positive::new` already
+        // rejects negative / NaN values; the extra `is_zero` check closes
+        // the infinite-loop gap.
+        let step = match Positive::new(step) {
+            Ok(s) if !s.is_zero() => s,
+            Ok(_) => {
+                tracing::warn!(
+                    step,
+                    "strike_price_range_vec: step must be strictly positive; returning None"
+                );
+                return None;
+            }
+            Err(e) => {
+                tracing::warn!(
+                    step,
+                    error = %e,
+                    "strike_price_range_vec: step must be non-negative and finite; returning None"
+                );
+                return None;
+            }
+        };
         if let (Some(first), Some(last)) = (first, last) {
             let mut range = Vec::new();
             let mut current_price = first.strike_price;
             while current_price <= last.strike_price {
                 range.push(current_price.to_f64());
-                current_price += pos_or_panic!(step);
+                current_price += step;
             }
             Some(range)
         } else {
@@ -2562,8 +2589,12 @@ impl OptionChain {
     /// a default interval of 5.0 is returned. If the calculated median interval rounds to zero,
     /// a minimum interval of 1.0 is returned to ensure a valid positive interval.
     pub(crate) fn get_strike_interval(&self) -> Positive {
+        // `dec!(5.0)` is a compile-time positive constant; the checked
+        // constructor never fails, so the `unwrap_or(Positive::ZERO)`
+        // fallback is unreachable but keeps the call site `.unwrap`-free.
+        let default_interval = Positive::new_decimal(dec!(5.0)).unwrap_or(Positive::ZERO);
         if self.options.len() < 2 {
-            return pos_or_panic!(5.0); // Default interval if not enough options
+            return default_interval; // Default interval if not enough options
         }
 
         let strikes: Vec<Positive> = self.options.iter().map(|opt| opt.strike_price).collect();
@@ -2576,7 +2607,7 @@ impl OptionChain {
         // Return the median interval for robustness
         intervals.sort_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Equal));
         if intervals.is_empty() {
-            pos_or_panic!(5.0) // Default if something went wrong
+            default_interval // Default if something went wrong
         } else {
             // Get the median interval
             let median_interval = intervals[intervals.len() / 2];
@@ -4372,13 +4403,18 @@ impl VolatilitySensitivitySurface for OptionChain {
             }
         };
 
+        // `dec!(0.01)` is a compile-time positive literal; the checked
+        // constructor is total, so the `Positive::ZERO` branch is
+        // unreachable. Hoisted out of the nested loop so the fallback
+        // isn't rebuilt for every (price, vol) pair.
+        let vol_fallback = Positive::new_decimal(dec!(0.01)).unwrap_or(Positive::ZERO);
         for p in 0..=price_steps {
             let price = price_range.0.to_dec() + price_step * Decimal::from(p);
             let price_pos = Positive::new_decimal(price).unwrap_or(Positive::ONE);
 
             for v in 0..=vol_steps {
                 let vol = vol_range.0.to_dec() + vol_step * Decimal::from(v);
-                let vol_pos = Positive::new_decimal(vol).unwrap_or(pos_or_panic!(0.01));
+                let vol_pos = Positive::new_decimal(vol).unwrap_or(vol_fallback);
 
                 let modified_option = Options::new(
                     template.option_type.clone(),

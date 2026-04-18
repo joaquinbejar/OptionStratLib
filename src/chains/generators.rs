@@ -12,7 +12,9 @@ use crate::utils::TimeFrame;
 use crate::utils::others::calculate_log_returns;
 use crate::volatility::{adjust_volatility, constant_volatility};
 use core::option::Option;
-use positive::{Positive, pos_or_panic};
+use positive::Positive;
+#[cfg(test)]
+use positive::pos_or_panic;
 use rust_decimal::Decimal;
 use tracing::debug;
 
@@ -144,12 +146,6 @@ pub fn generator_optionchain(
     let mut steps: Vec<Step<Positive, OptionChain>> = vec![walk_params.init_step.clone()];
     let mut previous_x_step = walk_params.init_step.x;
     let mut previous_y_step = walk_params.ystep();
-
-    if let Some(volatility) = volatility {
-        volatility
-    } else {
-        pos_or_panic!(0.20)
-    };
 
     for y_step in y_steps.iter() {
         previous_x_step = match previous_x_step.next() {
