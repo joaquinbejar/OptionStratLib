@@ -36,7 +36,7 @@ use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
-use tracing::debug;
+use tracing::{debug, warn};
 use utoipa::ToSchema;
 
 pub(super) const SHORT_PUT_DESCRIPTION: &str = "A Short Put (or Naked Put) is an options strategy where the trader sells a put option without holding a short position in the underlying stock. \
@@ -408,7 +408,10 @@ impl Positionable for ShortPut {
 
 impl StrategyConstructor for ShortPut {
     fn get_strategy(_vec_positions: &[Position]) -> Result<Self, StrategyError> {
-        todo!()
+        Err(StrategyError::operation_not_supported(
+            "get_strategy",
+            "ShortPut",
+        ))
     }
 }
 
@@ -421,7 +424,7 @@ impl Optimizable for ShortPut {
         _side: FindOptimalSide,
         _criteria: OptimizationCriteria,
     ) {
-        todo!()
+        warn!("find_optimal: stub — no optimization performed for ShortPut");
     }
 }
 
