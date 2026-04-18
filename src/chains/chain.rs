@@ -615,11 +615,17 @@ impl OptionChain {
             pos_or_panic!(0.02) // 0.02 is a reasonable default spread
         };
 
-        // Get ATM implied volatility with a default fallback
+        // Get ATM implied volatility with a default fallback. `Positive` is
+        // already non-negative by construction; additionally clamp to <=1 so
+        // the downstream pricing code never sees an out-of-range IV.
         let implied_volatility = match self.get_atm_implied_volatility() {
+            Ok(iv) if *iv <= Positive::ONE => *iv,
             Ok(iv) => {
-                assert!(*iv >= Positive::ZERO && *iv <= Positive::ONE);
-                *iv
+                tracing::warn!(
+                    iv = %*iv,
+                    "ATM implied volatility > 1.0; falling back to default 0.2"
+                );
+                pos_or_panic!(0.2)
             }
             _ => pos_or_panic!(0.2), // 20% is a reasonable default IV
         };
@@ -690,7 +696,10 @@ impl OptionChain {
                 }
                 FindOptimalSide::Deltable(_threshold) => true,
                 FindOptimalSide::Center => {
-                    panic!("Center should be managed by the strategy");
+                    tracing::warn!(
+                        "FindOptimalSide::Center must be resolved by the concrete strategy; filtering out candidate"
+                    );
+                    false
                 }
                 FindOptimalSide::DeltaRange(min, max) => {
                     option
@@ -738,7 +747,10 @@ impl OptionChain {
                 }
                 FindOptimalSide::Deltable(_threshold) => true,
                 FindOptimalSide::Center => {
-                    panic!("Center should be managed by the strategy");
+                    tracing::warn!(
+                        "FindOptimalSide::Center must be resolved by the concrete strategy; filtering out candidate"
+                    );
+                    false
                 }
                 FindOptimalSide::DeltaRange(min, max) => {
                     option
@@ -773,9 +785,14 @@ impl OptionChain {
     /// * `volume` - Optional trading volume for the option
     /// * `open_interest` - Optional open interest for the option
     ///
-    /// # Panics
+    /// # Behavior on invalid expiration
     ///
-    /// Panics if the expiration date in the option chain cannot be parsed.
+    /// If the chain's `expiration_date` string cannot be parsed, the option
+    /// is **not** inserted and a `tracing::error!` is emitted describing the
+    /// parse failure. Callers that need explicit error handling should
+    /// construct the chain through [`OptionChain::build_chain`] (which
+    /// validates `expiration_date`) or inspect the chain with
+    /// [`OptionChain::len`] after the call.
     #[allow(clippy::too_many_arguments)]
     pub fn add_option(
         &mut self,
@@ -813,7 +830,12 @@ impl OptionChain {
         let expiration_date = match ExpirationDate::from_string(&self.expiration_date) {
             Ok(date) => date,
             Err(e) => {
-                panic!("Failed to parse expiration date: {e}");
+                tracing::error!(
+                    expiration_date = %self.expiration_date,
+                    error = %e,
+                    "add_option: failed to parse chain expiration_date; option not inserted"
+                );
+                return;
             }
         };
         let params = OptionDataPriceParams::new(

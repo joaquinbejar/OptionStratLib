@@ -173,7 +173,12 @@ pub fn generator_optionchain(
         steps.push(step)
     }
 
-    assert!(steps.len() <= walk_params.size);
+    debug_assert!(
+        steps.len() <= walk_params.size,
+        "generator_optiondata produced {} steps but WalkParams.size is {}",
+        steps.len(),
+        walk_params.size
+    );
     Ok(steps)
 }
 
@@ -230,7 +235,12 @@ pub fn generator_positive(
         };
         steps.push(step)
     }
-    assert!(steps.len() <= walk_params.size);
+    debug_assert!(
+        steps.len() <= walk_params.size,
+        "generator_positive produced {} steps but WalkParams.size is {}",
+        steps.len(),
+        walk_params.size
+    );
 
     Ok(steps)
 }

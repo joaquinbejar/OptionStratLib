@@ -1013,7 +1013,10 @@ impl OptionData {
             }
             FindOptimalSide::Deltable(_threshold) => true,
             FindOptimalSide::Center => {
-                panic!("Center should be managed by the strategy");
+                tracing::warn!(
+                    "FindOptimalSide::Center must be resolved by the concrete strategy; rejecting option"
+                );
+                false
             }
             FindOptimalSide::DeltaRange(min, max) => {
                 self.delta_put.is_some_and(|d| d >= *min && d <= *max)
@@ -2217,12 +2220,11 @@ mod tests_is_valid_optimal_side_deltable {
             None,
         );
 
-        // Testing for panic
-        let result = std::panic::catch_unwind(|| {
-            option_data.is_valid_optimal_side(&Positive::HUNDRED, &FindOptimalSide::Center);
-        });
-
-        assert!(result.is_err());
+        // `FindOptimalSide::Center` must be resolved by the concrete strategy
+        // before reaching `is_valid_optimal_side` on a leaf `OptionData`. The
+        // method now rejects the candidate (returns `false`) and logs a
+        // `tracing::warn!` instead of panicking.
+        assert!(!option_data.is_valid_optimal_side(&Positive::HUNDRED, &FindOptimalSide::Center));
     }
 
     #[test]
