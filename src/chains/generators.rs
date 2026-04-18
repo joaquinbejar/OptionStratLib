@@ -147,11 +147,6 @@ pub fn generator_optionchain(
     let mut previous_x_step = walk_params.init_step.x;
     let mut previous_y_step = walk_params.ystep();
 
-    // `volatility` is captured from the match above for diagnostics but is
-    // no longer used downstream — `create_chain_from_step` derives its own
-    // volatility from the chain. Keep the binding warning-free.
-    let _ = volatility;
-
     for y_step in y_steps.iter() {
         previous_x_step = match previous_x_step.next() {
             Ok(x_step) => x_step,

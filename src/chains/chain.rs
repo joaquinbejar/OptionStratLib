@@ -1317,13 +1317,25 @@ impl OptionChain {
     pub fn strike_price_range_vec(&self, step: f64) -> Option<Vec<f64>> {
         let first = self.options.iter().next();
         let last = self.options.iter().next_back();
+        // Reject step <= 0 and non-finite inputs: without a strictly
+        // positive increment the while loop below would spin forever
+        // (step == 0) or never enter (step NaN). `Positive::new` already
+        // rejects negative / NaN values; the extra `is_zero` check closes
+        // the infinite-loop gap.
         let step = match Positive::new(step) {
-            Ok(s) => s,
+            Ok(s) if !s.is_zero() => s,
+            Ok(_) => {
+                tracing::warn!(
+                    step,
+                    "strike_price_range_vec: step must be strictly positive; returning None"
+                );
+                return None;
+            }
             Err(e) => {
                 tracing::warn!(
                     step,
                     error = %e,
-                    "strike_price_range_vec: step must be non-negative; returning None"
+                    "strike_price_range_vec: step must be non-negative and finite; returning None"
                 );
                 return None;
             }
@@ -4391,14 +4403,15 @@ impl VolatilitySensitivitySurface for OptionChain {
             }
         };
 
+        // `dec!(0.01)` is a compile-time positive literal; the checked
+        // constructor is total, so the `Positive::ZERO` branch is
+        // unreachable. Hoisted out of the nested loop so the fallback
+        // isn't rebuilt for every (price, vol) pair.
+        let vol_fallback = Positive::new_decimal(dec!(0.01)).unwrap_or(Positive::ZERO);
         for p in 0..=price_steps {
             let price = price_range.0.to_dec() + price_step * Decimal::from(p);
             let price_pos = Positive::new_decimal(price).unwrap_or(Positive::ONE);
 
-            // `dec!(0.01)` is a compile-time positive literal; the checked
-            // constructor is total, so the `Positive::ZERO` branch below is
-            // unreachable.
-            let vol_fallback = Positive::new_decimal(dec!(0.01)).unwrap_or(Positive::ZERO);
             for v in 0..=vol_steps {
                 let vol = vol_range.0.to_dec() + vol_step * Decimal::from(v);
                 let vol_pos = Positive::new_decimal(vol).unwrap_or(vol_fallback);
