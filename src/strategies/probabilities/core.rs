@@ -7,7 +7,9 @@
 //! The `ProbabilityAnalysis` trait extends the `Strategies` and `Profit` traits to provide
 //! comprehensive probability analysis capabilities for option strategies.
 
-use positive::{Positive, pos_or_panic};
+use positive::Positive;
+#[cfg(test)]
+use positive::pos_or_panic;
 
 use crate::error::probability::ProbabilityError;
 use crate::error::strategies::StrategyError;
@@ -192,7 +194,7 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
             Ok(Positive::ZERO)
         } else {
             let trend_adjustment = trend.map_or(1.0, |t| 1.0 / (1.0 + t.drift_rate.abs()));
-            Ok(pos_or_panic!(expected_value * trend_adjustment))
+            Positive::new(expected_value * trend_adjustment).map_err(ProbabilityError::from)
         }
     }
 

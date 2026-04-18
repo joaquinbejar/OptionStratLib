@@ -11,8 +11,11 @@ use crate::f2du;
 use crate::greeks::big_n;
 use crate::model::ExpirationDate;
 use num_traits::ToPrimitive;
-use positive::{Positive, pos_or_panic};
+use positive::Positive;
+#[cfg(test)]
+use positive::pos_or_panic;
 use rust_decimal::Decimal;
+use rust_decimal_macros::dec;
 
 /// Struct to hold volatility adjustment parameters
 #[derive(Debug, Clone)]
@@ -97,7 +100,7 @@ pub fn calculate_single_point_probability(
             }
             adj.base_volatility * (1.0 + adj.std_dev_adjustment)
         }
-        None => pos_or_panic!(0.2), // Default volatility if not provided
+        None => Positive::new_decimal(dec!(0.2)).unwrap_or(Positive::ZERO), // Default volatility if not provided
     };
 
     // Adjust drift rate based on trend if provided
