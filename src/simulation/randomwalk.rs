@@ -370,6 +370,7 @@ mod tests_random_walk {
     use std::ops::AddAssign;
 
     // Mock implementation of WalkTypeAble for testing
+    #[derive(Clone)]
     struct TestWalker {}
 
     impl<X, Y> WalkTypeAble<X, Y> for TestWalker

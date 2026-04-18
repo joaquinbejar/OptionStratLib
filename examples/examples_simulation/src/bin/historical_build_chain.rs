@@ -2,6 +2,7 @@ use optionstratlib::prelude::*;
 use positive::pos_or_panic;
 
 #[warn(dead_code)]
+#[derive(Clone)]
 struct Walker {}
 
 impl Walker {

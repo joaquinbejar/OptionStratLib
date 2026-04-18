@@ -307,6 +307,7 @@ mod tests_generator_optionseries {
 
     #[test]
     fn test_generator_optionseries_empty_result() {
+        #[derive(Clone)]
         struct TestWalker {}
         // Create a walk with empty y_steps to test early return
         let initial_series = create_test_option_series();

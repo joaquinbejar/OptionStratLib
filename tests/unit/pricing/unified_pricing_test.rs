@@ -19,6 +19,7 @@ use std::fmt::Display;
 use std::ops::AddAssign;
 
 // A minimal walker for testing
+#[derive(Clone)]
 struct TestWalker;
 
 impl<X, Y> WalkTypeAble<X, Y> for TestWalker

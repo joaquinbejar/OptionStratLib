@@ -141,6 +141,7 @@ mod tests {
     use std::fmt::Display;
     use std::ops::AddAssign;
 
+    #[derive(Clone)]
     struct MockWalker;
 
     impl<X, Y> WalkTypeAble<X, Y> for MockWalker

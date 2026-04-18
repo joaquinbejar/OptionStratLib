@@ -15,6 +15,7 @@ use rust_decimal_macros::dec;
 use std::error::Error;
 use tracing::info;
 
+#[derive(Clone)]
 struct MockWalker {}
 impl MockWalker {
     fn new() -> Self {
