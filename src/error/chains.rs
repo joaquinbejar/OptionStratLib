@@ -85,8 +85,10 @@ use thiserror::Error;
 /// * `StrategyError` - Errors related to option trading strategies, including issues
 ///   with leg validation or invalid combinations of options.
 ///
+/// * `EmptyChain` - The option chain for the given symbol is empty (generic empty-chain
+///   condition, independent of ATM selection).
 /// * `EmptyChainAtm` - The option chain for the given symbol is empty and has no ATM option
-///   to select.
+///   to select. Reserved for ATM-selection paths; prefer `EmptyChain` for non-ATM lookups.
 /// * `AtmNotFound` - The option chain has options but none could be selected as the ATM
 ///   contract for the given symbol.
 /// * `EmptyDensities` - No valid risk-neutral densities could be produced.
@@ -133,8 +135,16 @@ pub enum ChainError {
     #[error("Strategy error: {0}")]
     StrategyError(StrategyErrorKind),
 
+    /// The option chain for the given symbol is empty. Generic empty-chain
+    /// condition, emitted by non-ATM lookups (e.g. strike-based selection).
+    #[error("option chain is empty: {symbol}")]
+    EmptyChain {
+        /// Ticker symbol of the chain that is empty.
+        symbol: String,
+    },
+
     /// The option chain for the given symbol is empty and has no ATM option
-    /// to select.
+    /// to select. Reserved for ATM-selection paths.
     #[error("cannot find ATM option for empty option chain: {symbol}")]
     EmptyChainAtm {
         /// Ticker symbol of the chain that is empty.

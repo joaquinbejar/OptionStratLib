@@ -87,7 +87,7 @@ pub fn read_ohlcv_from_zip(
         }
     }
 
-    let csv_index = csv_index.ok_or(OhlcvError::MissingColumn { column: "csv" })?;
+    let csv_index = csv_index.ok_or(OhlcvError::MissingZipEntry { extension: "csv" })?;
     let file = archive.by_index(csv_index)?;
     let reader = BufReader::new(file);
 
@@ -159,8 +159,8 @@ pub async fn read_ohlcv_from_zip_async(
         read_ohlcv_from_zip(&zip_path, start_date.as_deref(), end_date.as_deref())
     })
     .await
-    .map_err(|e| OhlcvError::RowParsing {
-        reason: format!("async task error: {e}"),
+    .map_err(|e| OhlcvError::AsyncTask {
+        reason: e.to_string(),
     })?
 }
 

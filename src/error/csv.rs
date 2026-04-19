@@ -112,6 +112,21 @@ pub enum OhlcvError {
         /// Human-readable description of why the row could not be parsed.
         reason: String,
     },
+
+    /// No file with the expected extension was found inside the ZIP archive.
+    #[error("no file with extension `{extension}` found in ZIP archive")]
+    MissingZipEntry {
+        /// Extension that was expected inside the ZIP payload (e.g. `"csv"`).
+        extension: &'static str,
+    },
+
+    /// An asynchronous background task (`tokio::task::spawn_blocking`) failed to
+    /// complete — typically a panic or cancellation of the worker thread.
+    #[error("async task failed: {reason}")]
+    AsyncTask {
+        /// Human-readable description of the underlying join failure.
+        reason: String,
+    },
 }
 
 impl From<std::io::Error> for OhlcvError {

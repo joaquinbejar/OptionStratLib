@@ -1,6 +1,7 @@
 use crate::error::{DecimalError, GreeksError, OptionsError, PositionError};
 use expiration_date::error::ExpirationDateError;
-use positive::{Positive, PositiveError};
+use positive::PositiveError;
+use rust_decimal::Decimal;
 use thiserror::Error;
 
 /// Error type for option pricing operations.
@@ -69,11 +70,14 @@ pub enum PricingError {
     },
 
     /// A square-root computation inside a pricing kernel failed (the operand
-    /// was negative or not representable).
+    /// was negative or not representable — e.g. a negative discriminant in a
+    /// closed-form solver).
     #[error("pricing sqrt failed for value {value}")]
     SqrtFailure {
         /// The value for which the square root could not be computed.
-        value: Positive,
+        ///
+        /// Stored as `Decimal` so negative operands are representable.
+        value: Decimal,
     },
 
     /// Error from Positive operations.

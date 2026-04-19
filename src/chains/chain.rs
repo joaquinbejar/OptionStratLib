@@ -2815,7 +2815,7 @@ impl OptionChain {
     pub fn get_optiondata_with_strike(&self, price: &Positive) -> Result<&OptionData, ChainError> {
         // Check for empty option chain
         if self.options.is_empty() {
-            return Err(ChainError::EmptyChainAtm {
+            return Err(ChainError::EmptyChain {
                 symbol: self.symbol.clone(),
             });
         }
@@ -11951,10 +11951,14 @@ mod tests_get_strikes_and_optiondata {
         assert!(result.is_err(), "Should return error for empty chain");
 
         let error = result.unwrap_err();
+        assert!(
+            matches!(error, ChainError::EmptyChain { ref symbol } if symbol == "EMPTY"),
+            "Should return ChainError::EmptyChain for EMPTY symbol, got: {error:?}"
+        );
         let error_msg = format!("{error}");
         assert!(
-            error_msg.contains("empty option chain"),
-            "Error should mention empty chain"
+            error_msg.contains("option chain is empty"),
+            "Error should mention empty chain, got: {error_msg}"
         );
         assert!(
             error_msg.contains("EMPTY"),

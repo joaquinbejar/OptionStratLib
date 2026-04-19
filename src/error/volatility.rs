@@ -115,9 +115,23 @@ pub enum VolatilityError {
         source: Box<VolatilityError>,
     },
 
+    /// A chain-layer error surfaced while retrieving volatility data
+    /// (e.g. empty option chain, ATM lookup failure on a chain).
+    ///
+    /// Boxed to avoid infinite enum size through the `ChainError::Volatility`
+    /// cycle.
+    #[error(transparent)]
+    Chain(Box<crate::error::ChainError>),
+
     /// Positive value errors
     #[error(transparent)]
     PositiveError(#[from] positive::PositiveError),
+}
+
+impl From<crate::error::ChainError> for VolatilityError {
+    fn from(error: crate::error::ChainError) -> Self {
+        Self::Chain(Box::new(error))
+    }
 }
 
 #[cfg(test)]

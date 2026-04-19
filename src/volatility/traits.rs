@@ -110,9 +110,7 @@ impl AtmIvProvider for OptionChain {
         match self.get_atm_implied_volatility() {
             Ok(iv) => Ok(iv),
             Err(e) => Err(VolatilityError::AtmIvUnavailable {
-                source: Box::new(VolatilityError::NumericalFailure {
-                    reason: e.to_string(),
-                }),
+                source: Box::new(VolatilityError::from(e)),
             }),
         }
     }
