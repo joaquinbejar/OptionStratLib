@@ -14,10 +14,38 @@ use crate::error::{DecimalError, Error};
 use itertools::Itertools;
 use num_traits::FromPrimitive;
 use positive::Positive;
-use rand::{Rng, RngExt, rng};
+use rand::rngs::StdRng;
+use rand::{Rng, RngExt, SeedableRng, rng};
 use rayon::prelude::*;
 use rust_decimal::Decimal;
 use std::collections::BTreeSet;
+
+/// Fixed seed used by `deterministic_rng()` when no seed is supplied.
+/// Chosen as an unremarkable prime so test authors can copy/paste the
+/// same seed elsewhere without having to guess what magic number is
+/// in play.
+pub const DETERMINISTIC_RNG_DEFAULT_SEED: u64 = 0x0B_AD_C0_FF_EE_15_DE_AD;
+
+/// Returns a seeded [`StdRng`] for reproducible Monte-Carlo / simulation
+/// tests.
+///
+/// Per `rules/global_rules.md` §Numerical Discipline, every Monte-Carlo
+/// and simulation test must seed deterministically so that an upstream
+/// arithmetic-precision shift cannot flip an assertion by luck. Use this
+/// helper instead of `rand::rng()` / `rand::random()` inside any
+/// `#[cfg(test)]` block whose expected values depend on the sample
+/// stream.
+///
+/// ```rust
+/// use optionstratlib::utils::deterministic_rng;
+/// let mut rng = deterministic_rng(42);
+/// let _ = <rand::rngs::StdRng as rand::Rng>::random::<u64>(&mut rng);
+/// ```
+#[must_use]
+#[inline]
+pub fn deterministic_rng(seed: u64) -> StdRng {
+    StdRng::seed_from_u64(seed)
+}
 
 /// Precomputed f64 form of `crate::constants::TOLERANCE` (= 1e-8) so the
 /// hot-path comparison can avoid the runtime fallible `Decimal::to_f64`.
@@ -758,5 +786,45 @@ mod tests_log_returns {
         assert!(result[0].to_f64() < 0.0001);
         assert!(result[1].to_f64() > 0.0);
         assert!(result[1].to_f64() < 0.0001);
+    }
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used)]
+mod tests_deterministic_rng {
+    use super::*;
+
+    #[test]
+    fn same_seed_yields_identical_stream() {
+        let mut a = deterministic_rng(12345);
+        let mut b = deterministic_rng(12345);
+        for _ in 0..16 {
+            assert_eq!(a.random::<u64>(), b.random::<u64>());
+        }
+    }
+
+    #[test]
+    fn different_seeds_diverge() {
+        let mut a = deterministic_rng(1);
+        let mut b = deterministic_rng(2);
+        // Not a strict guarantee for two draws, but vanishingly unlikely
+        // to collide on StdRng for the default seed-mixing routine.
+        let mut collisions = 0;
+        for _ in 0..32 {
+            if a.random::<u64>() == b.random::<u64>() {
+                collisions += 1;
+            }
+        }
+        assert!(
+            collisions <= 1,
+            "expected diverging streams, got {collisions} collisions"
+        );
+    }
+
+    #[test]
+    fn default_seed_is_stable_across_calls() {
+        let mut a = deterministic_rng(DETERMINISTIC_RNG_DEFAULT_SEED);
+        let mut b = deterministic_rng(DETERMINISTIC_RNG_DEFAULT_SEED);
+        assert_eq!(a.random::<u64>(), b.random::<u64>());
     }
 }
