@@ -7,6 +7,7 @@ use crate::Options;
 
 use crate::error::decimal::DecimalError;
 use crate::greeks::{big_n, d2};
+use crate::model::decimal::{d_add, d_mul, d_sub};
 use crate::model::types::Side;
 use crate::pricing::binomial_model::BinomialPricingParams;
 use crate::pricing::constants::{CLAMP_MAX, CLAMP_MIN};
@@ -237,7 +238,26 @@ pub(crate) fn option_node_value(
     price_down: Decimal,
     discount_factor: Decimal,
 ) -> Result<Decimal, DecimalError> {
-    Ok((probability * price_up + (Decimal::ONE - probability) * price_down) * discount_factor)
+    let up_branch = d_mul(
+        probability,
+        price_up,
+        "pricing::binomial::node::up_branch",
+    )?;
+    let down_branch = d_mul(
+        d_sub(
+            Decimal::ONE,
+            probability,
+            "pricing::binomial::node::down_weight",
+        )?,
+        price_down,
+        "pricing::binomial::node::down_branch",
+    )?;
+    let expected = d_add(up_branch, down_branch, "pricing::binomial::node::expected")?;
+    d_mul(
+        expected,
+        discount_factor,
+        "pricing::binomial::node::discounted",
+    )
 }
 
 /// Calculates the option price using the Binomial Pricing Model.
@@ -328,7 +348,12 @@ pub(crate) fn calculate_discounted_payoff(
             "non-finite payoff in calculate_discounted_payoff",
         )
     })?;
-    let discounted_payoff = (-params.int_rate * params.expiry).exp() * payoff;
+    let discount = (-params.int_rate * params.expiry).exp();
+    let discounted_payoff = d_mul(
+        discount,
+        payoff,
+        "pricing::binomial::discounted_payoff::discounted",
+    )?;
     match params.side {
         Side::Long => Ok(discounted_payoff),
         Side::Short => Ok(-discounted_payoff),

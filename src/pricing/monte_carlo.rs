@@ -1,6 +1,7 @@
 use crate::Options;
 use crate::error::PricingError;
 use crate::f2d;
+use crate::model::decimal::{d_div, d_mul, d_sub};
 use crate::pricing::utils::wiener_increment;
 use num_traits::{FromPrimitive, ToPrimitive};
 use positive::Positive;
@@ -57,7 +58,12 @@ pub fn monte_carlo_option_pricing(
                 Decimal::ONE + option.risk_free_rate * dt + option.implied_volatility.to_dec() * w;
         }
         // Calculate the payoff for a call option
-        let payoff_dec = (st - option.strike_price).max(Decimal::ZERO);
+        let payoff_dec = d_sub(
+            st,
+            option.strike_price.to_dec(),
+            "pricing::monte_carlo::gbm::payoff",
+        )?
+        .max(Decimal::ZERO);
         let payoff: f64 = payoff_dec.to_f64().ok_or_else(|| {
             PricingError::method_error(
                 "monte_carlo_option_pricing",
@@ -144,14 +150,17 @@ pub fn price_option_monte_carlo(
         })
         .sum();
 
-    // Average payoff discounted to present value
+    // Average payoff discounted to present value. Both the mean and the
+    // discounting are fused monetary flows, so they go through the checked
+    // helpers; `d_div` applies banker's rounding at `DIV_DEFAULT_SCALE`.
     let n_dec = Decimal::from_usize(num_simulations).ok_or_else(|| {
         PricingError::method_error(
             "price_option_monte_carlo",
             &format!("num_simulations not representable as Decimal: {num_simulations}"),
         )
     })?;
-    let avg_payoff = discount_factor * (total_payoff / n_dec);
+    let mean_payoff = d_div(total_payoff, n_dec, "pricing::monte_carlo::mean")?;
+    let avg_payoff = d_mul(discount_factor, mean_payoff, "pricing::monte_carlo::price")?;
     Ok(Positive::new_decimal(avg_payoff.abs()).unwrap_or(Positive::ZERO))
 }
 

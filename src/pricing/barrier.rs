@@ -7,6 +7,7 @@
 use crate::Options;
 use crate::error::PricingError;
 use crate::greeks::big_n;
+use crate::model::decimal::{d_add, d_sub};
 use crate::model::types::{BarrierType, OptionStyle, OptionType};
 use rust_decimal::prelude::FromPrimitive;
 use rust_decimal::{Decimal, MathematicalOps};
@@ -154,23 +155,32 @@ pub fn barrier_black_scholes(option: &Options) -> Result<Decimal, PricingError> 
         Ok(rebate * (h_s_ratio_mu_lambda * n1 + h_s_ratio_mu_lambda_neg * n2))
     };
 
+    // Each closure return is an addend of the final barrier price. The
+    // intermediate products inside each closure stay on the raw `*` / `-`
+    // operators because they are numerical-kernel internals; the final
+    // price composition that fuses them into the returned value is routed
+    // through `d_add` / `d_sub` so an overflow of the user-visible price
+    // surfaces a `DecimalError::Overflow` instead of wrapping silently.
+    const OP: &str = "pricing::barrier::price";
     match (option.option_style, barrier_type) {
         // Down-and-out call
         (OptionStyle::Call, BarrierType::DownAndOut) => {
             if k >= barrier_level {
-                Ok(f_a(dec!(1.0), x1)? - f_c(dec!(1.0), dec!(1.0), y1)? + f_e(dec!(1.0))?)
+                let lhs = d_sub(f_a(dec!(1.0), x1)?, f_c(dec!(1.0), dec!(1.0), y1)?, OP)?;
+                Ok(d_add(lhs, f_e(dec!(1.0))?, OP)?)
             } else {
-                Ok(f_b(dec!(1.0), x2)? - f_d(dec!(1.0), dec!(1.0), y2)? + f_e(dec!(1.0))?)
+                let lhs = d_sub(f_b(dec!(1.0), x2)?, f_d(dec!(1.0), dec!(1.0), y2)?, OP)?;
+                Ok(d_add(lhs, f_e(dec!(1.0))?, OP)?)
             }
         }
         // Down-and-in call
         (OptionStyle::Call, BarrierType::DownAndIn) => {
             if k >= barrier_level {
-                Ok(f_c(dec!(1.0), dec!(1.0), y1)? + f_f(dec!(1.0))?)
+                Ok(d_add(f_c(dec!(1.0), dec!(1.0), y1)?, f_f(dec!(1.0))?, OP)?)
             } else {
-                Ok(f_a(dec!(1.0), x1)? - f_b(dec!(1.0), x2)?
-                    + f_d(dec!(1.0), dec!(1.0), y2)?
-                    + f_f(dec!(1.0))?)
+                let s1 = d_sub(f_a(dec!(1.0), x1)?, f_b(dec!(1.0), x2)?, OP)?;
+                let s2 = d_add(s1, f_d(dec!(1.0), dec!(1.0), y2)?, OP)?;
+                Ok(d_add(s2, f_f(dec!(1.0))?, OP)?)
             }
         }
         // Up-and-out call
@@ -178,35 +188,42 @@ pub fn barrier_black_scholes(option: &Options) -> Result<Decimal, PricingError> 
             if k >= barrier_level {
                 Ok(f_f(dec!(-1.0))?)
             } else {
-                Ok(f_a(dec!(1.0), x1)? - f_b(dec!(1.0), x2)?
-                    + f_d(dec!(1.0), dec!(-1.0), y2)?
-                    + f_f(dec!(-1.0))?)
+                let s1 = d_sub(f_a(dec!(1.0), x1)?, f_b(dec!(1.0), x2)?, OP)?;
+                let s2 = d_add(s1, f_d(dec!(1.0), dec!(-1.0), y2)?, OP)?;
+                Ok(d_add(s2, f_f(dec!(-1.0))?, OP)?)
             }
         }
         // Up-and-in call
         (OptionStyle::Call, BarrierType::UpAndIn) => {
             if k >= barrier_level {
-                Ok(f_a(dec!(1.0), x1)? + f_f(dec!(-1.0))?)
+                Ok(d_add(f_a(dec!(1.0), x1)?, f_f(dec!(-1.0))?, OP)?)
             } else {
-                Ok(f_b(dec!(1.0), x2)? - f_d(dec!(1.0), dec!(-1.0), y2)? + f_f(dec!(-1.0))?)
+                let s1 = d_sub(f_b(dec!(1.0), x2)?, f_d(dec!(1.0), dec!(-1.0), y2)?, OP)?;
+                Ok(d_add(s1, f_f(dec!(-1.0))?, OP)?)
             }
         }
         // Down-and-out put
         (OptionStyle::Put, BarrierType::DownAndOut) => {
             if k >= barrier_level {
-                Ok(f_b(dec!(-1.0), x2)? - f_d(dec!(-1.0), dec!(1.0), y2)? + f_e(dec!(1.0))?)
+                let s1 = d_sub(f_b(dec!(-1.0), x2)?, f_d(dec!(-1.0), dec!(1.0), y2)?, OP)?;
+                Ok(d_add(s1, f_e(dec!(1.0))?, OP)?)
             } else {
-                Ok(f_a(dec!(-1.0), x1)? - f_c(dec!(-1.0), dec!(1.0), y1)? + f_e(dec!(1.0))?)
+                let s1 = d_sub(f_a(dec!(-1.0), x1)?, f_c(dec!(-1.0), dec!(1.0), y1)?, OP)?;
+                Ok(d_add(s1, f_e(dec!(1.0))?, OP)?)
             }
         }
         // Down-and-in put
         (OptionStyle::Put, BarrierType::DownAndIn) => {
             if k >= barrier_level {
-                Ok(f_a(dec!(-1.0), x1)? - f_b(dec!(-1.0), x2)?
-                    + f_d(dec!(-1.0), dec!(1.0), y2)?
-                    + f_f(dec!(1.0))?)
+                let s1 = d_sub(f_a(dec!(-1.0), x1)?, f_b(dec!(-1.0), x2)?, OP)?;
+                let s2 = d_add(s1, f_d(dec!(-1.0), dec!(1.0), y2)?, OP)?;
+                Ok(d_add(s2, f_f(dec!(1.0))?, OP)?)
             } else {
-                Ok(f_c(dec!(-1.0), dec!(1.0), y1)? + f_f(dec!(1.0))?)
+                Ok(d_add(
+                    f_c(dec!(-1.0), dec!(1.0), y1)?,
+                    f_f(dec!(1.0))?,
+                    OP,
+                )?)
             }
         }
         // Up-and-out put
@@ -214,17 +231,22 @@ pub fn barrier_black_scholes(option: &Options) -> Result<Decimal, PricingError> 
             if k >= barrier_level {
                 Ok(f_e(dec!(-1.0))?)
             } else {
-                Ok(f_a(dec!(-1.0), x1)? - f_b(dec!(-1.0), x2)?
-                    + f_d(dec!(-1.0), dec!(-1.0), y2)?
-                    + f_e(dec!(-1.0))?)
+                let s1 = d_sub(f_a(dec!(-1.0), x1)?, f_b(dec!(-1.0), x2)?, OP)?;
+                let s2 = d_add(s1, f_d(dec!(-1.0), dec!(-1.0), y2)?, OP)?;
+                Ok(d_add(s2, f_e(dec!(-1.0))?, OP)?)
             }
         }
         // Up-and-in put
         (OptionStyle::Put, BarrierType::UpAndIn) => {
             if k >= barrier_level {
-                Ok(f_a(dec!(-1.0), x1)? + f_f(dec!(-1.0))?)
+                Ok(d_add(f_a(dec!(-1.0), x1)?, f_f(dec!(-1.0))?, OP)?)
             } else {
-                Ok(f_b(dec!(-1.0), x2)? - f_d(dec!(-1.0), dec!(-1.0), y2)? + f_f(dec!(-1.0))?)
+                let s1 = d_sub(
+                    f_b(dec!(-1.0), x2)?,
+                    f_d(dec!(-1.0), dec!(-1.0), y2)?,
+                    OP,
+                )?;
+                Ok(d_add(s1, f_f(dec!(-1.0))?, OP)?)
             }
         }
     }

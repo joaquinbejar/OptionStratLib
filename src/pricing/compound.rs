@@ -28,6 +28,7 @@
 use crate::Options;
 use crate::error::PricingError;
 use crate::greeks::{big_n, d1, d2};
+use crate::model::decimal::{d_add, d_mul, d_sub};
 use crate::model::types::{OptionStyle, OptionType};
 use positive::Positive;
 use rust_decimal::Decimal;
@@ -244,8 +245,18 @@ fn price_compound(
         let underlying_value =
             value_underlying_option(compound, underlying_type).unwrap_or(Decimal::ZERO);
         let intrinsic = match compound.option_style {
-            OptionStyle::Call => (underlying_value - k1.to_dec()).max(Decimal::ZERO),
-            OptionStyle::Put => (k1.to_dec() - underlying_value).max(Decimal::ZERO),
+            OptionStyle::Call => d_sub(
+                underlying_value,
+                k1.to_dec(),
+                "pricing::compound::intrinsic::call",
+            )?
+            .max(Decimal::ZERO),
+            OptionStyle::Put => d_sub(
+                k1.to_dec(),
+                underlying_value,
+                "pricing::compound::intrinsic::put",
+            )?
+            .max(Decimal::ZERO),
         };
         return Ok(apply_side(intrinsic, compound));
     }
@@ -256,8 +267,26 @@ fn price_compound(
         let forward_value =
             value_underlying_option(compound, underlying_type)? * ((r - q) * t1).exp();
         let intrinsic = match compound.option_style {
-            OptionStyle::Call => (forward_value - k1.to_dec()).max(Decimal::ZERO) * discount,
-            OptionStyle::Put => (k1.to_dec() - forward_value).max(Decimal::ZERO) * discount,
+            OptionStyle::Call => d_mul(
+                d_sub(
+                    forward_value,
+                    k1.to_dec(),
+                    "pricing::compound::zero_vol::call::intrinsic",
+                )?
+                .max(Decimal::ZERO),
+                discount,
+                "pricing::compound::zero_vol::call::discounted",
+            )?,
+            OptionStyle::Put => d_mul(
+                d_sub(
+                    k1.to_dec(),
+                    forward_value,
+                    "pricing::compound::zero_vol::put::intrinsic",
+                )?
+                .max(Decimal::ZERO),
+                discount,
+                "pricing::compound::zero_vol::put::discounted",
+            )?,
         };
         return Ok(apply_side(intrinsic, compound));
     }
@@ -304,40 +333,55 @@ fn price_compound(
     let is_compound_call = matches!(compound.option_style, OptionStyle::Call);
     let is_underlying_call = is_underlying_option_call(underlying_type);
 
+    // Geske compound-option final composition: every branch fuses three
+    // underlying/strike·discount leg values into a signed sum. Intermediate
+    // products inside each leg stay on the raw `*` operator (numerical
+    // kernel internals); the user-visible price composition routes through
+    // `d_add` / `d_sub`.
     let price = if is_compound_call && is_underlying_call {
         // Call-on-Call
         let m1 = bivariate_normal_cdf(d1_t1, d1_t2, rho);
         let m2 = bivariate_normal_cdf(d2_t1, d2_t2, rho);
         let n_d2_t1 = big_n(d2_t1).unwrap_or(Decimal::ZERO);
 
-        s.to_dec() * dividend_discount_t2 * m1
-            - k2.to_dec() * discount_t2 * m2
-            - k1.to_dec() * discount_t1 * n_d2_t1
+        let leg_s = s.to_dec() * dividend_discount_t2 * m1;
+        let leg_k2 = k2.to_dec() * discount_t2 * m2;
+        let leg_k1 = k1.to_dec() * discount_t1 * n_d2_t1;
+        let step = d_sub(leg_s, leg_k2, "pricing::compound::call_call::step")?;
+        d_sub(step, leg_k1, "pricing::compound::call_call::price")?
     } else if is_compound_call && !is_underlying_call {
         // Call-on-Put
         let m1 = bivariate_normal_cdf(-d1_t1, -d1_t2, rho);
         let m2 = bivariate_normal_cdf(-d2_t1, -d2_t2, rho);
         let n_neg_d2_t1 = big_n(-d2_t1).unwrap_or(Decimal::ZERO);
 
-        k2.to_dec() * discount_t2 * m2
-            - s.to_dec() * dividend_discount_t2 * m1
-            - k1.to_dec() * discount_t1 * n_neg_d2_t1
+        let leg_k2 = k2.to_dec() * discount_t2 * m2;
+        let leg_s = s.to_dec() * dividend_discount_t2 * m1;
+        let leg_k1 = k1.to_dec() * discount_t1 * n_neg_d2_t1;
+        let step = d_sub(leg_k2, leg_s, "pricing::compound::call_put::step")?;
+        d_sub(step, leg_k1, "pricing::compound::call_put::price")?
     } else if !is_compound_call && is_underlying_call {
         // Put-on-Call
         let m1 = bivariate_normal_cdf(-d1_t1, d1_t2, -rho);
         let m2 = bivariate_normal_cdf(-d2_t1, d2_t2, -rho);
         let n_neg_d2_t1 = big_n(-d2_t1).unwrap_or(Decimal::ZERO);
 
-        k1.to_dec() * discount_t1 * n_neg_d2_t1 - s.to_dec() * dividend_discount_t2 * m1
-            + k2.to_dec() * discount_t2 * m2
+        let leg_k1 = k1.to_dec() * discount_t1 * n_neg_d2_t1;
+        let leg_s = s.to_dec() * dividend_discount_t2 * m1;
+        let leg_k2 = k2.to_dec() * discount_t2 * m2;
+        let step = d_sub(leg_k1, leg_s, "pricing::compound::put_call::step")?;
+        d_add(step, leg_k2, "pricing::compound::put_call::price")?
     } else {
         // Put-on-Put
         let m1 = bivariate_normal_cdf(d1_t1, -d1_t2, -rho);
         let m2 = bivariate_normal_cdf(d2_t1, -d2_t2, -rho);
         let n_d2_t1 = big_n(d2_t1).unwrap_or(Decimal::ZERO);
 
-        k1.to_dec() * discount_t1 * n_d2_t1 + s.to_dec() * dividend_discount_t2 * m1
-            - k2.to_dec() * discount_t2 * m2
+        let leg_k1 = k1.to_dec() * discount_t1 * n_d2_t1;
+        let leg_s = s.to_dec() * dividend_discount_t2 * m1;
+        let leg_k2 = k2.to_dec() * discount_t2 * m2;
+        let step = d_add(leg_k1, leg_s, "pricing::compound::put_put::step")?;
+        d_sub(step, leg_k2, "pricing::compound::put_put::price")?
     };
 
     Ok(apply_side(price.max(Decimal::ZERO), compound))

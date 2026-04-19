@@ -45,6 +45,7 @@
 
 use crate::error::PricingError;
 use crate::greeks::big_n;
+use crate::model::decimal::{d_add, d_mul, d_sub};
 use crate::model::types::OptionStyle;
 use positive::Positive;
 use rust_decimal::{Decimal, MathematicalOps};
@@ -148,17 +149,26 @@ pub fn barone_adesi_whaley(
     if t <= Decimal::ZERO {
         // At expiration, return intrinsic value
         return Ok(match option_style {
-            OptionStyle::Call => (s - k).max(Decimal::ZERO),
-            OptionStyle::Put => (k - s).max(Decimal::ZERO),
+            OptionStyle::Call => d_sub(s, k, "pricing::american::intrinsic::call")?.max(Decimal::ZERO),
+            OptionStyle::Put => d_sub(k, s, "pricing::american::intrinsic::put")?.max(Decimal::ZERO),
         });
     }
 
     if sigma <= Decimal::ZERO {
         // Zero volatility: deterministic pricing
-        let discount = (-r * t).exp();
+        let neg_rt = d_mul(-r, t, "pricing::american::zero_vol::rt")?;
+        let neg_qt = d_mul(-q, t, "pricing::american::zero_vol::qt")?;
+        let discount_r = neg_rt.exp();
+        let discount_q = neg_qt.exp();
+        let s_disc = d_mul(s, discount_q, "pricing::american::zero_vol::s_disc")?;
+        let k_disc = d_mul(k, discount_r, "pricing::american::zero_vol::k_disc")?;
         return Ok(match option_style {
-            OptionStyle::Call => (s * ((-q * t).exp()) - k * discount).max(Decimal::ZERO),
-            OptionStyle::Put => (k * discount - s * ((-q * t).exp())).max(Decimal::ZERO),
+            OptionStyle::Call => {
+                d_sub(s_disc, k_disc, "pricing::american::zero_vol::call")?.max(Decimal::ZERO)
+            }
+            OptionStyle::Put => {
+                d_sub(k_disc, s_disc, "pricing::american::zero_vol::put")?.max(Decimal::ZERO)
+            }
         });
     }
 
@@ -192,14 +202,20 @@ pub fn barone_adesi_whaley(
 
             if s >= s_star {
                 // Immediate exercise is optimal
-                Ok(s - k)
+                d_sub(s, k, "pricing::american::call::immediate_exercise")
+                    .map_err(PricingError::from)
             } else {
                 // Early exercise premium
                 let d1_val = d1(s_star, k, t, r, q, sigma)?;
                 let n_d1 = big_n(d1_val)?;
                 let a2 = (s_star / q2) * (dec!(1) - (-q * t).exp() * n_d1);
                 let early_exercise_premium = a2 * (s / s_star).powd(q2);
-                Ok(european_price + early_exercise_premium)
+                d_add(
+                    european_price,
+                    early_exercise_premium,
+                    "pricing::american::call::price",
+                )
+                .map_err(PricingError::from)
             }
         }
         OptionStyle::Put => {
@@ -217,14 +233,20 @@ pub fn barone_adesi_whaley(
 
             if s <= s_star_star {
                 // Immediate exercise is optimal
-                Ok(k - s)
+                d_sub(k, s, "pricing::american::put::immediate_exercise")
+                    .map_err(PricingError::from)
             } else {
                 // Early exercise premium
                 let d1_val = d1(s_star_star, k, t, r, q, sigma)?;
                 let n_minus_d1 = big_n(-d1_val)?;
                 let a1 = -(s_star_star / q1) * (dec!(1) - (-q * t).exp() * n_minus_d1);
                 let early_exercise_premium = a1 * (s / s_star_star).powd(q1);
-                Ok(european_price + early_exercise_premium)
+                d_add(
+                    european_price,
+                    early_exercise_premium,
+                    "pricing::american::put::price",
+                )
+                .map_err(PricingError::from)
             }
         }
     }
