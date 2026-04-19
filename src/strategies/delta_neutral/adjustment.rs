@@ -342,6 +342,7 @@ pub struct AdjustmentPlan {
 
 impl AdjustmentPlan {
     /// Creates a new adjustment plan.
+    #[must_use]
     pub fn new(
         actions: Vec<AdjustmentAction>,
         estimated_cost: Decimal,

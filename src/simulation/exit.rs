@@ -331,6 +331,7 @@ impl fmt::Display for ExitPolicy {
 /// - Profit: current_premium < initial_premium (premium decreases)
 /// - Loss: current_premium > initial_premium (premium increases)
 #[allow(clippy::only_used_in_recursion)]
+#[must_use]
 pub fn check_exit_policy(
     policy: &ExitPolicy,
     initial_premium: Decimal,

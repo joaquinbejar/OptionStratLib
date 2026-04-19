@@ -117,6 +117,7 @@ impl Curve {
     ///
     /// - [`Point2D`]: The type of points used to define the curve.
     /// - [`crate::curves::Curve::calculate_range`]: Computes the x-range of a set of points.
+    #[must_use]
     pub fn new(points: BTreeSet<Point2D>) -> Self {
         let x_range = Self::calculate_range(points.iter().map(|p| p.x));
         Curve { points, x_range }

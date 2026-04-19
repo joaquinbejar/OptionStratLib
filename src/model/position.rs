@@ -139,6 +139,7 @@ impl Position {
     ///   None,                  // extra fields (optional)
     /// );
     /// ```
+    #[must_use]
     pub fn new(
         option: Options,
         premium: Positive,
@@ -611,6 +612,7 @@ impl Position {
     /// * `true` if the position is long
     /// * `false` if the position is short
     ///
+    #[must_use]
     pub fn is_long(&self) -> bool {
         match self.option.side {
             Side::Long => true,
@@ -628,6 +630,7 @@ impl Position {
     /// * `true` if the position is short
     /// * `false` if the position is long
     ///
+    #[must_use]
     pub fn is_short(&self) -> bool {
         match self.option.side {
             Side::Long => false,
@@ -689,6 +692,7 @@ impl Position {
     /// - `None` if the position has zero quantity (no contracts) or if the position total
     ///   cost cannot be calculated
     ///
+    #[must_use]
     pub fn break_even(&self) -> Option<Positive> {
         if self.option.quantity == Positive::ZERO {
             return None;

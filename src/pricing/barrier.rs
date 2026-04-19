@@ -30,15 +30,11 @@ pub fn barrier_black_scholes(option: &Options) -> Result<Decimal, PricingError> 
             rebate,
         } => {
             let bl = finite_decimal(*barrier_level).ok_or_else(|| {
-                PricingError::non_finite(
-                    "pricing::barrier::barrier_level",
-                    *barrier_level,
-                )
+                PricingError::non_finite("pricing::barrier::barrier_level", *barrier_level)
             })?;
             let rebate_f = rebate.unwrap_or(0.0);
-            let rb = finite_decimal(rebate_f).ok_or_else(|| {
-                PricingError::non_finite("pricing::barrier::rebate", rebate_f)
-            })?;
+            let rb = finite_decimal(rebate_f)
+                .ok_or_else(|| PricingError::non_finite("pricing::barrier::rebate", rebate_f))?;
             (barrier_type, bl, rb)
         }
         _ => {

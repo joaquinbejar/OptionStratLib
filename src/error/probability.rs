@@ -495,6 +495,7 @@ impl From<OperationErrorKind> for ProbabilityError {
 // Helper functions to create common errors
 impl ProbabilityError {
     /// Creates a new invalid probability error
+    #[must_use]
     pub fn invalid_probability(value: f64, reason: &str) -> Self {
         ProbabilityError::CalculationError(ProbabilityCalculationErrorKind::InvalidProbability {
             value,
@@ -503,6 +504,7 @@ impl ProbabilityError {
     }
 
     /// Creates a new invalid profit range error
+    #[must_use]
     pub fn invalid_profit_range(range: &str, reason: &str) -> Self {
         ProbabilityError::RangeError(ProfitLossRangeErrorKind::InvalidProfitRange {
             range: range.to_string(),
@@ -511,6 +513,7 @@ impl ProbabilityError {
     }
 
     /// Creates a new invalid expiration error
+    #[must_use]
     pub fn invalid_expiration(reason: &str) -> Self {
         ProbabilityError::ExpirationError(ExpirationErrorKind::InvalidExpiration {
             reason: reason.to_string(),

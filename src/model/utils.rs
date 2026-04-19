@@ -38,6 +38,7 @@ fn pos_lit(value: Decimal) -> Positive {
 ///
 /// A vector of `f64` values corresponding to the input `Positive` values.
 ///
+#[must_use]
 pub fn positive_f64_to_f64(vec: Vec<Positive>) -> Vec<f64> {
     vec.into_iter().map(|pos_f64| pos_f64.to_f64()).collect()
 }
@@ -77,6 +78,7 @@ pub fn positive_f64_to_f64(vec: Vec<Positive>) -> Vec<f64> {
 /// );
 /// ```
 #[allow(dead_code)]
+#[must_use]
 pub fn create_sample_option(
     option_style: OptionStyle,
     side: Side,
@@ -144,6 +146,7 @@ pub fn create_sample_option(
 /// );
 /// ```
 #[allow(dead_code)]
+#[must_use]
 pub fn create_sample_position(
     option_style: OptionStyle,
     side: Side,
@@ -196,6 +199,7 @@ pub fn create_sample_position(
 /// # Returns
 ///
 /// Returns a fully configured Options instance with "AAPL" as the underlying symbol.
+#[must_use]
 pub fn create_sample_option_with_date(
     option_style: OptionStyle,
     side: Side,
@@ -242,6 +246,7 @@ pub fn create_sample_option_with_date(
 /// # Returns
 ///
 /// Returns a fully configured Options instance with "AAPL" as the underlying symbol.
+#[must_use]
 pub fn create_sample_option_with_days(
     option_style: OptionStyle,
     side: Side,
@@ -301,6 +306,7 @@ pub fn create_sample_option_with_days(
 /// let long_call = create_sample_option_simplest(OptionStyle::Call, Side::Long);
 /// let short_put = create_sample_option_simplest(OptionStyle::Put, Side::Short);
 /// ```
+#[must_use]
 pub fn create_sample_option_simplest(option_style: OptionStyle, side: Side) -> Options {
     Options::new(
         OptionType::European,
@@ -350,6 +356,7 @@ pub fn create_sample_option_simplest(option_style: OptionStyle, side: Side) -> O
 ///     pos_or_panic!(105.0)
 /// );
 /// ```
+#[must_use]
 pub fn create_sample_option_simplest_strike(
     side: Side,
     option_style: OptionStyle,
@@ -411,6 +418,7 @@ pub fn create_sample_option_simplest_strike(
 /// - This function assumes the vector is non-empty and filled with valid `Positive` values.
 ///
 /// Note: The `Positive` type and associated operations are defined in the `crate::model::types` module.
+#[must_use]
 pub fn mean_and_std(vec: Vec<Positive>) -> (Positive, Positive) {
     let mean = vec.iter().sum::<Positive>() / vec.len() as f64;
     // `(x - mean).powi(2)` is mathematically non-negative, and so is
@@ -519,6 +527,7 @@ pub fn calculate_optimal_price_range(
 }
 
 /// Generates a price vector for the payoff graph
+#[must_use]
 pub fn generate_price_points(
     min_price: Decimal,
     max_price: Decimal,

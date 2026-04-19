@@ -294,6 +294,7 @@ impl OptionChain {
     ///     spos!(0.0065) // 0.65% dividend yield
     /// );
     /// ```
+    #[must_use]
     pub fn new(
         symbol: &str,
         underlying_price: Positive,
@@ -963,6 +964,7 @@ impl OptionChain {
     ///
     /// A formatted string in the format "{symbol}-{expiration_date}-{underlying_price}"
     /// where spaces have been replaced with hyphens in the symbol and expiration date.
+    #[must_use]
     pub fn get_title(&self) -> String {
         let symbol_cleaned = self.symbol.replace(" ", "-");
         let expiration_date_cleaned = self.expiration_date.replace(" ", "-");
@@ -1890,6 +1892,7 @@ impl OptionChain {
     /// # Notes
     /// * Uses the ask price as it represents the cost to buy the option
     /// * Converts the price to Decimal for consistency in calculations
+    #[must_use]
     pub fn get_call_price(&self, strike: Positive) -> Option<Decimal> {
         self.options
             .iter()
@@ -2645,6 +2648,7 @@ impl OptionChain {
     /// # Returns
     ///
     /// A `String` representing the expiration date of the option chain.
+    #[must_use]
     pub fn get_expiration_date(&self) -> String {
         self.expiration_date.clone()
     }
@@ -2653,6 +2657,7 @@ impl OptionChain {
     ///
     /// # Returns
     /// * `Option<ExpirationDate>` - The expiration date if it can be parsed, or `None` if parsing fails.
+    #[must_use]
     pub fn get_expiration(&self) -> Option<ExpirationDate> {
         ExpirationDate::from_string(&self.expiration_date).ok()
     }

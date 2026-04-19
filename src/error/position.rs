@@ -369,6 +369,7 @@ impl PositionError {
     /// # Returns
     ///
     /// A `PositionError::StrategyError` variant with UnsupportedOperation details
+    #[must_use]
     pub fn unsupported_operation(strategy_type: &str, operation: &str) -> Self {
         PositionError::StrategyError(StrategyErrorKind::UnsupportedOperation {
             strategy_type: strategy_type.to_string(),
@@ -386,6 +387,7 @@ impl PositionError {
     /// # Returns
     ///
     /// A `PositionError::StrategyError` variant with StrategyFull details
+    #[must_use]
     pub fn strategy_full(strategy_type: &str, max_positions: usize) -> Self {
         PositionError::StrategyError(StrategyErrorKind::StrategyFull {
             strategy_type: strategy_type.to_string(),
@@ -403,6 +405,7 @@ impl PositionError {
     /// # Returns
     ///
     /// A `PositionError::ValidationError` variant with InvalidSize details
+    #[must_use]
     pub fn invalid_position_size(size: f64, reason: &str) -> Self {
         PositionError::ValidationError(PositionValidationErrorKind::InvalidSize {
             size,
@@ -420,6 +423,7 @@ impl PositionError {
     /// # Returns
     ///
     /// A `PositionError::ValidationError` variant with IncompatibleSide details
+    #[must_use]
     pub fn invalid_position_type(position_side: Side, reason: String) -> Self {
         PositionError::ValidationError(PositionValidationErrorKind::IncompatibleSide {
             position_side,
@@ -437,6 +441,7 @@ impl PositionError {
     /// # Returns
     ///
     /// A `PositionError::ValidationError` variant with IncompatibleStyle details
+    #[must_use]
     pub fn invalid_position_style(style: OptionStyle, reason: String) -> Self {
         PositionError::ValidationError(PositionValidationErrorKind::IncompatibleStyle {
             style,
@@ -453,6 +458,7 @@ impl PositionError {
     /// # Returns
     ///
     /// A `PositionError::ValidationError` variant with InvalidPosition details
+    #[must_use]
     pub fn invalid_position(reason: &str) -> Self {
         PositionError::ValidationError(PositionValidationErrorKind::InvalidPosition {
             reason: reason.to_string(),
@@ -469,6 +475,7 @@ impl PositionError {
     /// # Returns
     ///
     /// A `PositionError::UpdateError` variant with PositionFieldUpdateFailure details
+    #[must_use]
     pub fn invalid_position_update(field: String, reason: String) -> Self {
         PositionError::UpdateError(PositionUpdateErrorKind::PositionFieldUpdateFailure {
             field,

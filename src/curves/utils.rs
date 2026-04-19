@@ -89,6 +89,7 @@ use tracing::warn;
 /// `(0.0, 0.0)`, `(1.0, 1.0)`, ..., `(10.0, 10.0)`.
 ///
 /// From the above, it demonstrates how linearly spaced and
+#[must_use]
 pub fn create_linear_curve(start: Decimal, end: Decimal, slope: Decimal) -> Curve {
     let steps = 10;
     let step_size = (end - start) / Decimal::from(steps);
@@ -142,6 +143,7 @@ pub fn create_linear_curve(start: Decimal, end: Decimal, slope: Decimal) -> Curv
 /// # See Also
 /// - [`Point2D::new`]: Used to create individual points in the resulting curve.
 /// - [`Curve::from_vector`]: Used internally to convert the set of constant points into a `Curve` object.
+#[must_use]
 pub fn create_constant_curve(start: Decimal, end: Decimal, value: Decimal) -> Curve {
     let steps = 10;
     let step_size = (end - start) / Decimal::from(steps);

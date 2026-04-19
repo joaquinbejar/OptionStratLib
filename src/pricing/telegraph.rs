@@ -129,6 +129,7 @@ impl TelegraphProcess {
     /// # Returns
     ///
     /// A new TelegraphProcess with a randomly chosen initial state.
+    #[must_use]
     pub fn new(lambda_up: Decimal, lambda_down: Decimal) -> Self {
         let initial_state = if random::<f64>() < 0.5 { 1 } else { -1 };
         TelegraphProcess {
@@ -186,6 +187,7 @@ impl TelegraphProcess {
     /// # Returns
     ///
     /// The current state (-1 or 1)
+    #[must_use]
     pub fn get_current_state(&self) -> i8 {
         self.current_state
     }
@@ -339,9 +341,8 @@ pub fn telegraph(
     })?;
     let dt = option.time_to_expiration()?.to_dec() / no_steps_dec;
 
-    let one_over_252 = finite_decimal(1.0 / 252.0).ok_or_else(|| {
-        PricingError::non_finite("pricing::telegraph::one_over_252", 1.0 / 252.0)
-    })?;
+    let one_over_252 = finite_decimal(1.0 / 252.0)
+        .ok_or_else(|| PricingError::non_finite("pricing::telegraph::one_over_252", 1.0 / 252.0))?;
 
     let (lambda_up_temp, lambda_down_temp) = match (lambda_up, lambda_down) {
         (None, None) => {
@@ -371,9 +372,8 @@ pub fn telegraph(
         let state = telegraph_process.next_state(dt);
         let drift: Decimal = option.risk_free_rate - dec!(0.5) * option.implied_volatility.powi(2);
         let state_f64 = state as f64;
-        let state_dec = finite_decimal(state_f64).ok_or_else(|| {
-            PricingError::non_finite("pricing::telegraph::state_dec", state_f64)
-        })?;
+        let state_dec = finite_decimal(state_f64)
+            .ok_or_else(|| PricingError::non_finite("pricing::telegraph::state_dec", state_f64))?;
         let volatility: Decimal = option.implied_volatility.to_dec() * state_dec;
 
         let sqrt_dt = dt

@@ -128,6 +128,7 @@ impl Surface {
     ///
     /// let object = Surface::new(points);
     /// ```
+    #[must_use]
     pub fn new(points: BTreeSet<Point3D>) -> Self {
         let x_range = Self::calculate_range(points.iter().map(|p| p.x));
         let y_range = Self::calculate_range(points.iter().map(|p| p.y));
@@ -158,6 +159,7 @@ impl Surface {
     /// - For `Axis::X`, the returned curve contains points with (y, z) coordinates
     /// - For `Axis::Y`, the returned curve contains points with (x, z) coordinates
     /// - For `Axis::Z`, the returned curve contains points with (x, y) coordinates
+    #[must_use]
     pub fn get_curve(&self, axis: Axis) -> Curve {
         let points = self
             .points
@@ -282,6 +284,7 @@ impl Surface {
     /// // Will produce: [(1.5, 2.0, 3.0), (2.5, 3.0, 4.0)]
     /// let points = surface.get_f64_points();
     /// ```
+    #[must_use]
     pub fn get_f64_points(&self) -> Vec<(f64, f64, f64)> {
         self.points
             .iter()

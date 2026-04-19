@@ -121,6 +121,7 @@ impl PricingError {
     /// # Arguments
     /// * `method` - Name of the pricing method that failed
     /// * `reason` - Detailed reason for the failure
+    #[must_use]
     pub fn method_error(method: &str, reason: &str) -> Self {
         PricingError::MethodError {
             method: method.to_string(),
@@ -132,6 +133,7 @@ impl PricingError {
     ///
     /// # Arguments
     /// * `reason` - Detailed reason for the simulation failure
+    #[must_use]
     pub fn simulation_error(reason: &str) -> Self {
         PricingError::SimulationError {
             reason: reason.to_string(),
@@ -142,6 +144,7 @@ impl PricingError {
     ///
     /// # Arguments
     /// * `reason` - Detailed reason for the invalid engine
+    #[must_use]
     pub fn invalid_engine(reason: &str) -> Self {
         PricingError::InvalidEngine {
             reason: reason.to_string(),
@@ -165,6 +168,7 @@ impl PricingError {
     /// # Arguments
     /// * `option_type` - The option type that is not supported
     /// * `method` - The pricing method that does not support this option type
+    #[must_use]
     pub fn unsupported_option_type(option_type: &str, method: &str) -> Self {
         PricingError::UnsupportedOptionType {
             option_type: option_type.to_string(),

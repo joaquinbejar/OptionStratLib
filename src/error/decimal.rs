@@ -228,6 +228,7 @@ impl DecimalError {
     /// # Returns
     ///
     /// A new `DecimalError::InvalidValue` instance
+    #[must_use]
     pub fn invalid_value(value: f64, reason: &str) -> Self {
         DecimalError::InvalidValue {
             value,
@@ -248,6 +249,7 @@ impl DecimalError {
     /// # Returns
     ///
     /// A new `DecimalError::ArithmeticError` instance
+    #[must_use]
     pub fn arithmetic_error(operation: &str, reason: &str) -> Self {
         DecimalError::ArithmeticError {
             operation: operation.to_string(),
@@ -269,6 +271,7 @@ impl DecimalError {
     /// # Returns
     ///
     /// A new `DecimalError::ConversionError` instance
+    #[must_use]
     pub fn conversion_error(from_type: &str, to_type: &str, reason: &str) -> Self {
         DecimalError::ConversionError {
             from_type: from_type.to_string(),
@@ -290,6 +293,7 @@ impl DecimalError {
     /// # Returns
     ///
     /// A new `DecimalError::OutOfBounds` instance
+    #[must_use]
     pub fn out_of_bounds(value: f64, min: f64, max: f64) -> Self {
         DecimalError::OutOfBounds { value, min, max }
     }
@@ -307,6 +311,7 @@ impl DecimalError {
     /// # Returns
     ///
     /// A new `DecimalError::InvalidPrecision` instance
+    #[must_use]
     pub fn invalid_precision(precision: i32, reason: &str) -> Self {
         DecimalError::InvalidPrecision {
             precision,

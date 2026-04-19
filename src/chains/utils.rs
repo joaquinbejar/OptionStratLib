@@ -174,6 +174,7 @@ impl OptionChainBuildParams {
     ///
     /// A new instance of `OptionChainBuildParams` with the specified configuration parameters.
     ///
+    #[must_use]
     pub fn new(
         symbol: String,
         volume: Option<Positive>,
@@ -227,6 +228,7 @@ impl OptionChainBuildParams {
     ///
     /// # Returns
     /// * `Positive` - The current implied volatility as a positive decimal value.
+    #[must_use]
     pub fn get_implied_volatility(&self) -> Positive {
         self.implied_volatility
     }
@@ -306,6 +308,7 @@ impl OptionDataPriceParams {
     /// # Returns
     ///
     /// A new instance of `OptionDataPriceParams` containing the provided parameters
+    #[must_use]
     pub fn new(
         underlying_price: Option<Box<Positive>>,
         expiration_date: Option<ExpirationDate>,
@@ -327,6 +330,7 @@ impl OptionDataPriceParams {
     /// # Returns
     ///
     /// A `Positive` value representing the underlying asset's current market price
+    #[must_use]
     pub fn get_underlying_price(&self) -> Option<Box<Positive>> {
         self.underlying_price.clone()
     }
@@ -336,6 +340,7 @@ impl OptionDataPriceParams {
     /// # Returns
     ///
     /// An `ExpirationDate` representing when the option expires, either as days to expiration or a specific datetime
+    #[must_use]
     pub fn get_expiration_date(&self) -> Option<ExpirationDate> {
         self.expiration_date
     }
@@ -345,6 +350,7 @@ impl OptionDataPriceParams {
     /// # Returns
     ///
     /// A `Decimal` value representing the current risk-free rate
+    #[must_use]
     pub fn get_risk_free_rate(&self) -> Option<Decimal> {
         self.risk_free_rate
     }
@@ -354,6 +360,7 @@ impl OptionDataPriceParams {
     /// # Returns
     ///
     /// A `Positive` value representing the dividend yield of the underlying asset
+    #[must_use]
     pub fn get_dividend_yield(&self) -> Option<Positive> {
         self.dividend_yield
     }
@@ -362,6 +369,7 @@ impl OptionDataPriceParams {
     ///
     /// # Returns
     /// * `Option<String>` - The underlying symbol if available, or `None` if not set.
+    #[must_use]
     pub fn get_symbol(&self) -> Option<String> {
         self.underlying_symbol.clone()
     }
@@ -516,6 +524,7 @@ impl RandomPositionsParams {
     /// This function has many parameters, but this is justified by the complex nature
     /// of option position generation which requires detailed configuration.
     #[allow(clippy::too_many_arguments)]
+    #[must_use]
     pub fn new(
         qty_puts_long: Option<usize>,
         qty_puts_short: Option<usize>,
@@ -559,6 +568,7 @@ impl RandomPositionsParams {
     ///
     /// The total number of option positions to be generated.
     ///
+    #[must_use]
     pub fn total_positions(&self) -> usize {
         self.qty_puts_long.unwrap_or(0)
             + self.qty_puts_short.unwrap_or(0)
@@ -568,6 +578,7 @@ impl RandomPositionsParams {
 }
 
 /// Adjust vol with skew/smile, using *relative* distance to ATM.
+#[must_use]
 pub fn adjust_volatility(
     base_vol: &Option<Positive>,   // ATM vol (e.g. 0.17)
     skew_slope: &Option<Decimal>,  // slope per 10 % moneyness, e.g. -0.2

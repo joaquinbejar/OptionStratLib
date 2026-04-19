@@ -200,6 +200,7 @@ impl Options {
     /// A fully configured `Options` instance with all the specified parameters.
     ///
     #[allow(clippy::too_many_arguments)]
+    #[must_use]
     pub fn new(
         option_type: OptionType,
         side: Side,
@@ -276,6 +277,7 @@ impl Options {
     ///
     /// * `bool` - Returns true if the option is held as a long position, false otherwise.
     ///
+    #[must_use]
     pub fn is_long(&self) -> bool {
         matches!(self.side, Side::Long)
     }
@@ -289,6 +291,7 @@ impl Options {
     ///
     /// * `bool` - Returns true if the option is held as a short position, false otherwise.
     ///
+    #[must_use]
     pub fn is_short(&self) -> bool {
         matches!(self.side, Side::Short)
     }
@@ -576,6 +579,7 @@ impl Options {
     ///
     /// # Returns
     /// `true` if the option is in-the-money, `false` otherwise
+    #[must_use]
     pub fn is_in_the_money(&self) -> bool {
         match self.option_style {
             OptionStyle::Call => self.underlying_price >= self.strike_price,
@@ -1205,7 +1209,8 @@ mod tests_options {
     #[test]
     fn test_calculate_price_binomial_tree() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        let (price, asset_tree, option_tree) = option.calculate_price_binomial_tree(crate::nz!(5)).unwrap();
+        let (price, asset_tree, option_tree) =
+            option.calculate_price_binomial_tree(crate::nz!(5)).unwrap();
         assert!(price > Decimal::ZERO);
         assert_eq!(asset_tree.len(), 6);
         assert_eq!(option_tree.len(), 6);
@@ -1214,7 +1219,8 @@ mod tests_options {
     #[test]
     fn test_calculate_price_binomial_tree_short() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Short);
-        let (price, asset_tree, option_tree) = option.calculate_price_binomial_tree(crate::nz!(5)).unwrap();
+        let (price, asset_tree, option_tree) =
+            option.calculate_price_binomial_tree(crate::nz!(5)).unwrap();
         assert!(price > Decimal::ZERO);
         assert_eq!(asset_tree.len(), 6);
         assert_eq!(option_tree.len(), 6);
@@ -2246,10 +2252,18 @@ mod tests_calculate_price_binomial {
         let mut long_put_option = short_put_option.clone();
         long_put_option.side = Side::Long;
 
-        let long_call_price = long_call_option.calculate_price_binomial(crate::nz!(100)).unwrap();
-        let short_call_price = short_call_option.calculate_price_binomial(crate::nz!(100)).unwrap();
-        let long_put_price = long_put_option.calculate_price_binomial(crate::nz!(100)).unwrap();
-        let short_put_price = short_put_option.calculate_price_binomial(crate::nz!(100)).unwrap();
+        let long_call_price = long_call_option
+            .calculate_price_binomial(crate::nz!(100))
+            .unwrap();
+        let short_call_price = short_call_option
+            .calculate_price_binomial(crate::nz!(100))
+            .unwrap();
+        let long_put_price = long_put_option
+            .calculate_price_binomial(crate::nz!(100))
+            .unwrap();
+        let short_put_price = short_put_option
+            .calculate_price_binomial(crate::nz!(100))
+            .unwrap();
 
         // Short position should be negative of long position
         assert_eq!(long_call_price, -short_call_price);

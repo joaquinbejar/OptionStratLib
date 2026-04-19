@@ -61,6 +61,7 @@ impl Transaction {
     ///
     /// A new `Transaction` instance
     #[allow(clippy::too_many_arguments)]
+    #[must_use]
     pub fn new(
         status: TradeStatus,
         date_time: Option<DateTime<Utc>>,
@@ -94,51 +95,61 @@ impl Transaction {
     // Getters
 
     /// Gets the date and time of the transaction.
+    #[must_use]
     pub fn date_time(&self) -> Option<DateTime<Utc>> {
         self.date_time
     }
 
     /// Gets the option type.
+    #[must_use]
     pub fn option_type(&self) -> OptionType {
         self.option_type.clone()
     }
 
     /// Gets the side (Long or Short).
+    #[must_use]
     pub fn side(&self) -> Side {
         self.side
     }
 
     /// Gets the option style (Call or Put).
+    #[must_use]
     pub fn option_style(&self) -> OptionStyle {
         self.option_style
     }
 
     /// Gets the quantity of contracts.
+    #[must_use]
     pub fn quantity(&self) -> Positive {
         self.quantity
     }
 
     /// Gets the premium.
+    #[must_use]
     pub fn premium(&self) -> Positive {
         self.premium
     }
 
     /// Gets the fees.
+    #[must_use]
     pub fn fees(&self) -> Positive {
         self.fees
     }
 
     /// Gets the underlying price, if available.
+    #[must_use]
     pub fn underlying_price(&self) -> Option<Positive> {
         self.underlying_price
     }
 
     /// Gets the days to expiration, if available.
+    #[must_use]
     pub fn days_to_expiration(&self) -> Option<Positive> {
         self.days_to_expiration
     }
 
     /// Gets the implied volatility, if available.
+    #[must_use]
     pub fn implied_volatility(&self) -> Option<Positive> {
         self.implied_volatility
     }

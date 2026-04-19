@@ -269,6 +269,7 @@ pub(crate) fn finite_decimal(value: f64) -> Option<Decimal> {
 /// valid under the `statrs` contract and the arm is unreachable in
 /// practice. Kept as a panic rather than `Result` to preserve the
 /// infallible sampling API.
+#[must_use]
 pub fn decimal_normal_sample() -> Decimal {
     let mut t_rng = rand::rng();
     // Normal::new(0.0, 1.0) is provably valid (mean=0, std=1 are accepted

@@ -88,6 +88,7 @@ where
     /// # Returns
     ///
     /// A string slice containing the title of the random walk.
+    #[must_use]
     pub fn get_title(&self) -> &str {
         &self.title
     }
@@ -106,6 +107,7 @@ where
     /// # Returns
     ///
     /// A vector containing references to all steps in the random walk.
+    #[must_use]
     pub fn get_steps(&self) -> Vec<&Step<X, Y>> {
         self.steps.iter().collect::<Vec<&Step<X, Y>>>()
     }
@@ -123,6 +125,7 @@ where
     /// # Panics
     ///
     /// Panics if the index is out of bounds.
+    #[must_use]
     pub fn get_step(&self, index: usize) -> &Step<X, Y> {
         &self.steps[index]
     }
@@ -150,6 +153,7 @@ where
     ///
     /// * `Some(&Step<X, Y>)` - A reference to the first step if the random walk is not empty
     /// * `None` - If the random walk has no steps
+    #[must_use]
     pub fn first(&self) -> Option<&Step<X, Y>> {
         self.steps.first()
     }
@@ -160,6 +164,7 @@ where
     ///
     /// * `Some(&Step<X, Y>)` - A reference to the last step if the random walk is not empty
     /// * `None` - If the random walk has no steps
+    #[must_use]
     pub fn last(&self) -> Option<&Step<X, Y>> {
         self.steps.last()
     }

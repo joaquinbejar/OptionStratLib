@@ -385,6 +385,7 @@ impl RNDStatistics {
 
 impl RNDResult {
     /// Create a new RNDResult with calculated statistics
+    #[must_use]
     pub fn new(densities: BTreeMap<Positive, Decimal>) -> Self {
         let statistics = RNDStatistics::new(&densities);
         Self {

@@ -93,6 +93,7 @@ impl PnL {
     ///     Utc::now(),         // Current timestamp
     /// );
     /// ```
+    #[must_use]
     pub fn new(
         realized: Option<Decimal>,
         unrealized: Option<Decimal>,

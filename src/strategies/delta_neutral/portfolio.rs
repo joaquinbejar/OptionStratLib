@@ -61,6 +61,7 @@ pub struct PortfolioGreeks {
 
 impl PortfolioGreeks {
     /// Creates a new PortfolioGreeks with specified values.
+    #[must_use]
     pub fn new(
         delta: Decimal,
         gamma: Decimal,

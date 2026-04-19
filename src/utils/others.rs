@@ -46,6 +46,7 @@ const TOLERANCE_F64: f64 = 1e-8;
 /// assert!(!approx_equal(x, y)); // Returns false
 /// ```
 #[allow(dead_code)]
+#[must_use]
 pub fn approx_equal(a: f64, b: f64) -> bool {
     (a - b).abs() < TOLERANCE_F64
 }
@@ -67,6 +68,7 @@ pub fn approx_equal(a: f64, b: f64) -> bool {
 ///
 /// * `Option<&T>` - A reference to a random element from the set, or None if the set is empty
 ///
+#[must_use]
 pub fn get_random_element<T>(set: &BTreeSet<T>) -> Option<&T> {
     if set.is_empty() {
         return None;

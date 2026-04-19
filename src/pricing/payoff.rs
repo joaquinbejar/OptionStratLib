@@ -140,6 +140,7 @@ impl PayoffInfo {
     /// # Ok(())
     /// # }
     /// ```
+    #[must_use]
     pub fn spot_prices_len(&self) -> Option<usize> {
         self.spot_prices.as_ref().map(|vec| vec.len())
     }

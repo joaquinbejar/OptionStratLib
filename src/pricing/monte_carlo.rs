@@ -67,10 +67,7 @@ pub fn monte_carlo_option_pricing(
         )?
         .max(Decimal::ZERO);
         let payoff: f64 = payoff_dec.to_f64().ok_or_else(|| {
-            PricingError::non_finite(
-                "pricing::monte_carlo::gbm::payoff_cast",
-                f64::NAN,
-            )
+            PricingError::non_finite("pricing::monte_carlo::gbm::payoff_cast", f64::NAN)
         })?;
         if !payoff.is_finite() {
             return Err(PricingError::non_finite(
@@ -86,10 +83,7 @@ pub fn monte_carlo_option_pricing(
     // a tagged `PricingError::NonFinite` instead of silently collapsing
     // to `Decimal::ZERO` through the `f2d!` cast.
     let rate_f64 = option.risk_free_rate.to_f64().ok_or_else(|| {
-        PricingError::non_finite(
-            "pricing::monte_carlo::rate_f64::cast",
-            f64::NAN,
-        )
+        PricingError::non_finite("pricing::monte_carlo::rate_f64::cast", f64::NAN)
     })?;
     if !rate_f64.is_finite() {
         return Err(PricingError::non_finite(
@@ -270,8 +264,10 @@ mod tests {
     #[test]
     fn test_monte_carlo_option_pricing_consistency() {
         let option = create_test_option();
-        let _price1 = monte_carlo_option_pricing(&option, crate::nz!(100), crate::nz!(100)).unwrap();
-        let _price2 = monte_carlo_option_pricing(&option, crate::nz!(100), crate::nz!(100)).unwrap();
+        let _price1 =
+            monte_carlo_option_pricing(&option, crate::nz!(100), crate::nz!(100)).unwrap();
+        let _price2 =
+            monte_carlo_option_pricing(&option, crate::nz!(100), crate::nz!(100)).unwrap();
         // Two runs should produce similar results
         // assert_relative_eq!(price1, price2,  0.05);
     }

@@ -132,6 +132,7 @@ impl Metrics {
     /// #### Returns:
     /// - A new `CurveMetrics` instance containing the provided metrics.
     ///
+    #[must_use]
     pub fn new(
         basic: BasicMetrics,
         shape: ShapeMetrics,

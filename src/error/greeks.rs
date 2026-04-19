@@ -494,6 +494,7 @@ impl GreeksError {
     ///
     /// # Returns
     /// A `GreeksError::InputError` with `InvalidVolatility` kind
+    #[must_use]
     pub fn invalid_volatility(value: f64, reason: &str) -> Self {
         GreeksError::InputError(InputErrorKind::InvalidVolatility {
             value,
@@ -512,6 +513,7 @@ impl GreeksError {
     ///
     /// # Returns
     /// A `GreeksError::InputError` with `InvalidTime` kind
+    #[must_use]
     pub fn invalid_time(value: Positive, reason: &str) -> Self {
         GreeksError::InputError(InputErrorKind::InvalidTime {
             value,
@@ -530,6 +532,7 @@ impl GreeksError {
     ///
     /// # Returns
     /// A `GreeksError::CalculationError` with `DeltaError` kind
+    #[must_use]
     pub fn delta_error(reason: &str) -> Self {
         GreeksError::CalculationError(CalculationErrorKind::DeltaError {
             reason: reason.to_string(),

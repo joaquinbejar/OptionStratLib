@@ -227,6 +227,7 @@ impl StrategyType {
     /// assert!(StrategyType::is_valid("BullCallSpread"));
     /// assert!(!StrategyType::is_valid("InvalidStrategy"));
     /// ```
+    #[must_use]
     pub fn is_valid(strategy: &str) -> bool {
         StrategyType::from_str(strategy).is_ok()
     }
@@ -350,6 +351,7 @@ impl Strategy {
     /// assert_eq!(strategy.max_loss, None);
     /// assert!(strategy.break_even_points.is_empty());
     /// ```
+    #[must_use]
     pub fn new(name: String, kind: StrategyType, description: String) -> Self {
         Strategy {
             name,

@@ -71,6 +71,7 @@ impl OptionsInStrike {
     ///
     /// A new `OptionsInStrike` instance with the specified option positions.
     ///
+    #[must_use]
     pub fn new(
         long_call: Options,
         short_call: Options,

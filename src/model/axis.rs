@@ -121,6 +121,7 @@ impl BasicAxisTypes {
     ///     // Perform operations with each axis type
     /// }
     /// ```
+    #[must_use]
     pub fn iter() -> BasicAxisTypesIter {
         BasicAxisTypesIter { index: 0 }
     }

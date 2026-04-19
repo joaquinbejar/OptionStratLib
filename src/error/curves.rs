@@ -189,6 +189,7 @@ impl CurveError {
     ///   - Invoked when a requested operation is not compatible with the current context.
     ///   - For example, attempting an unsupported computation method on a specific curve type.
     ///
+    #[must_use]
     pub fn operation_not_supported(operation: &str, reason: &str) -> Self {
         CurveError::OperationError(OperationErrorKind::NotSupported {
             operation: operation.to_string(),
@@ -207,6 +208,7 @@ impl CurveError {
     ///   - Used when an operation fails due to issues with the provided input.
     ///   - For example, providing malformed or missing parameters for interpolation or curve construction.
     ///
+    #[must_use]
     pub fn invalid_parameters(operation: &str, reason: &str) -> Self {
         CurveError::OperationError(OperationErrorKind::InvalidParameters {
             operation: operation.to_string(),

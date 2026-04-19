@@ -331,6 +331,7 @@ impl StrategyError {
     /// // Creating an error when trying to calculate butterfly spread adjustment on an iron condor
     /// let error = StrategyError::operation_not_supported("butterfly_adjustment", "IronCondor");
     /// ```
+    #[must_use]
     pub fn operation_not_supported(operation: &str, strategy_type: &str) -> Self {
         StrategyError::OperationError(OperationErrorKind::NotSupported {
             operation: operation.to_string(),
@@ -361,6 +362,7 @@ impl StrategyError {
     ///     "Short strike must be higher than long strike for call spreads"
     /// );
     /// ```
+    #[must_use]
     pub fn invalid_parameters(operation: &str, reason: &str) -> Self {
         StrategyError::OperationError(OperationErrorKind::InvalidParameters {
             operation: operation.to_string(),

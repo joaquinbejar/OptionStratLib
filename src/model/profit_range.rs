@@ -182,6 +182,7 @@ impl ProfitLossRange {
     /// # Returns
     ///
     /// Returns true if the price is within the range, false otherwise
+    #[must_use]
     pub fn contains(&self, price: Positive) -> bool {
         let above_lower = match self.lower_bound {
             Some(lower) => price >= lower,

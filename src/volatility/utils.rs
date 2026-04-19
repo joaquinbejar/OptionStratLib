@@ -427,9 +427,8 @@ pub fn simulate_heston_volatility(
         })?;
     for _ in 1..steps {
         let dw_f64 = random::<f64>() * dt_sqrt_f64;
-        let dw = finite_decimal(dw_f64).ok_or_else(|| {
-            VolatilityError::non_finite("volatility::heston::dw", dw_f64)
-        })?;
+        let dw = finite_decimal(dw_f64)
+            .ok_or_else(|| VolatilityError::non_finite("volatility::heston::dw", dw_f64))?;
         let sqrt_v = v_pos.sqrt().to_dec();
         v += kappa * (theta - v) * dt + xi * sqrt_v * dw;
         v = v.max(Decimal::ZERO); // Ensure variance doesn't become negative
@@ -733,6 +732,7 @@ pub fn volatility_for_dt(
 ///     1000             // number of steps
 /// );
 /// ```
+#[must_use]
 pub fn generate_ou_process(
     x0: Positive,
     mu: Positive,

@@ -104,6 +104,7 @@ where
     /// # Returns
     ///
     /// A string slice containing the title of the random walk.
+    #[must_use]
     pub fn get_title(&self) -> &str {
         &self.title
     }
@@ -133,6 +134,7 @@ where
     /// The returned vector contains borrowed references to the `RandomWalk`
     /// elements within the struct, and the lifetime of these references
     /// is tied to the lifetime of the parent object.
+    #[must_use]
     pub fn get_random_walks(&self) -> Vec<&RandomWalk<X, Y>> {
         self.random_walks.iter().collect::<Vec<&RandomWalk<X, Y>>>()
     }
@@ -151,6 +153,7 @@ where
     ///
     /// Panics if the `index` is out of bounds for the `random_walks` collection.
     ///
+    #[must_use]
     pub fn get_random_walk(&self, index: usize) -> &RandomWalk<X, Y> {
         &self.random_walks[index]
     }
@@ -179,6 +182,7 @@ where
     /// - `Some(&RandomWalk<X, Y>)` if the `random_walks` collection is not empty.
     /// - `None` if the `random_walks` collection is empty.
     ///
+    #[must_use]
     pub fn first(&self) -> Option<&RandomWalk<X, Y>> {
         self.random_walks.first()
     }
@@ -191,6 +195,7 @@ where
     ///
     /// # Note
     /// The `last` method does not consume the collection; it returns a read-only reference to the last element.
+    #[must_use]
     pub fn last(&self) -> Option<&RandomWalk<X, Y>> {
         self.random_walks.last()
     }
@@ -209,6 +214,7 @@ where
     /// - `X`: The type of the first generic parameter in `Step`.
     /// - `Y`: The type of the second generic parameter in `Step`.
     ///
+    #[must_use]
     pub fn get_steps(&self) -> Vec<Vec<&Step<X, Y>>> {
         self.into_iter().map(|step| step.get_steps()).collect()
     }
@@ -222,6 +228,7 @@ where
     /// A vector of references to the last `Step<X, Y>` of each non-empty
     /// random walk. Empty walks are silently skipped, so the returned
     /// vector may be shorter than `self.len()`.
+    #[must_use]
     pub fn get_last_steps(&self) -> Vec<&Step<X, Y>> {
         self.into_iter().filter_map(|step| step.last()).collect()
     }
@@ -232,6 +239,7 @@ where
     /// A `Vec` of references to the last `Step<X, Y>` of each non-empty
     /// random walk. Empty walks are silently skipped, so the returned
     /// vector may be shorter than `self.len()`.
+    #[must_use]
     pub fn get_last_values(&self) -> Vec<&Step<X, Y>> {
         self.into_iter().filter_map(|step| step.last()).collect()
     }
@@ -251,6 +259,7 @@ where
     /// # Panics
     /// This function assumes that all steps in `last_values` have valid positive values accessible via
     /// `get_positive_value`. Ensure `last_values` returns valid data to avoid runtime errors.
+    #[must_use]
     pub fn get_last_positive_values(&self) -> Vec<Positive> {
         let last_values = self.get_last_values();
         last_values
