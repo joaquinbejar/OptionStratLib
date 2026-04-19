@@ -51,13 +51,22 @@ pub fn constant_volatility(returns: &[Decimal]) -> Result<Positive, VolatilityEr
         return Ok(Positive::ZERO);
     }
 
-    // Sample mean and sample variance. The sums are unbounded so checked_*
-    // is applied via `d_sum` (for the returns sum) and `d_div` (for the
-    // mean and variance projection onto bankers-rounded Decimal).
+    // Sample mean and sample variance. Every step is checked:
+    //   * the raw sum is folded with `d_sum`;
+    //   * the mean projection uses `d_div` with banker's rounding;
+    //   * each centred deviation is built with `d_sub`;
+    //   * the square is built with `d_mul` (no `.powi(2)`, which is
+    //     unchecked and can saturate on adversarial inputs);
+    //   * the sum of squares is folded inline so we do not allocate a
+    //     temporary `Vec`.
     let total = d_sum(returns, "volatility::constant::total")?;
     let mean = d_div(total, n.to_dec(), "volatility::constant::mean")?;
-    let centred_sq: Vec<Decimal> = returns.iter().map(|&r| (r - mean).powi(2)).collect();
-    let sq_total = d_sum(&centred_sq, "volatility::constant::sq_total")?;
+    let mut sq_total = Decimal::ZERO;
+    for &r in returns {
+        let centred = d_sub(r, mean, "volatility::constant::centred")?;
+        let centred_sq = d_mul(centred, centred, "volatility::constant::centred_sq")?;
+        sq_total = d_add(sq_total, centred_sq, "volatility::constant::sq_total")?;
+    }
     let variance = d_div(
         sq_total,
         (n - Decimal::ONE).to_dec(),
@@ -135,7 +144,13 @@ pub fn ewma_volatility(
         .ok_or_else(|| VolatilityError::NumericalFailure {
             reason: "ewma_volatility: returns slice is empty".to_string(),
         })?;
-    let mut variance = first_return.powi(2);
+    // `first_return^2` is built with a checked multiplication because
+    // `.powi(2)` on `Decimal` silently saturates on overflow.
+    let mut variance = d_mul(
+        *first_return,
+        *first_return,
+        "volatility::ewma::initial_variance",
+    )?;
     let initial_std_dev = variance
         .sqrt()
         .ok_or_else(|| VolatilityError::NumericalFailure {
@@ -145,11 +160,19 @@ pub fn ewma_volatility(
 
     for &return_value in &returns[1..] {
         // EWMA variance recursion: v' = λ·v + (1 - λ) · r².
+        // `r²` is built via `d_mul(r, r, ..)` so that a saturating
+        // squaring cannot feed a silently capped value into the
+        // innovation term.
         let persistent = d_mul(lambda, variance, "volatility::ewma::persistent")?;
         let innovation_weight = d_sub(Decimal::ONE, lambda, "volatility::ewma::innovation_weight")?;
+        let return_sq = d_mul(
+            return_value,
+            return_value,
+            "volatility::ewma::return_sq",
+        )?;
         let innovation = d_mul(
             innovation_weight,
-            return_value.powi(2),
+            return_sq,
             "volatility::ewma::innovation",
         )?;
         variance = d_add(persistent, innovation, "volatility::ewma::variance")?;
@@ -303,12 +326,18 @@ pub fn calculate_iv(
 ///
 /// # Errors
 ///
-/// Currently infallible — every `Positive::new_decimal(...)` call
-/// is clamped to `Positive::ZERO`, so neither `NumericalFailure` nor
-/// `PositiveError` is surfaced. The `Result` signature is retained
-/// so future implementations that add explicit stationarity checks
-/// (`alpha + beta < 1`) or overflow validation can return
-/// `VolatilityError::NumericalFailure` without a breaking change.
+/// - Propagates [`DecimalError::Overflow`] from the underlying
+///   checked arithmetic helpers (`d_mul`, `d_add`) wrapped as
+///   [`VolatilityError::DecimalError`] via the `#[from]` cascade.
+///   This happens when any of the four monetary products
+///   (`r^2`, `α · r²`, `β · v_prev`, `ω + α · r² + β · v_prev`)
+///   exceeds the representable `Decimal` range, or when the
+///   squared initial return itself overflows.
+/// - Returns [`VolatilityError::NumericalFailure`] when a recursion
+///   step produces a negative variance (e.g. pathological GARCH
+///   parameters with `omega` or `beta * v_prev` negative). This is
+///   a real diagnostic now instead of being silently clamped to
+///   `Positive::ZERO` as in earlier implementations.
 ///
 /// # Panics
 ///
@@ -320,16 +349,43 @@ pub fn garch_volatility(
     alpha: Decimal,
     beta: Decimal,
 ) -> Result<Vec<Positive>, VolatilityError> {
-    let mut variance = Positive::new_decimal(returns[0].powi(2)).unwrap_or(Positive::ZERO);
+    // Helper: project a variance `Decimal` onto `Positive`, mapping
+    // the rejection (negative variance) onto a readable
+    // `VolatilityError::NumericalFailure` instead of silently
+    // clamping to zero.
+    let to_positive_variance = |value: Decimal,
+                                context: &'static str|
+     -> Result<Positive, VolatilityError> {
+        Positive::new_decimal(value).map_err(|_| VolatilityError::NumericalFailure {
+            reason: format!(
+                "garch_volatility: negative variance at {context} ({value})"
+            ),
+        })
+    };
+
+    // Seed the recursion with `r_0^2` via `d_mul` so a saturating
+    // squaring cannot feed a silently capped value into the GARCH
+    // update below.
+    let seed = d_mul(
+        returns[0],
+        returns[0],
+        "volatility::garch::initial_variance",
+    )?;
+    let mut variance = to_positive_variance(seed, "initial_variance")?;
     let mut volatilities = vec![variance.sqrt()];
     for &return_value in &returns[1..] {
         // GARCH(1, 1) variance recursion:
         // v' = ω + α · r² + β · v_prev.
-        let alpha_r2 = d_mul(alpha, return_value.powi(2), "volatility::garch::alpha_r2")?;
+        let return_sq = d_mul(
+            return_value,
+            return_value,
+            "volatility::garch::return_sq",
+        )?;
+        let alpha_r2 = d_mul(alpha, return_sq, "volatility::garch::alpha_r2")?;
         let beta_v = d_mul(beta, variance.to_dec(), "volatility::garch::beta_v")?;
         let persistent = d_add(omega, alpha_r2, "volatility::garch::omega_plus_alpha")?;
         let next_variance = d_add(persistent, beta_v, "volatility::garch::variance")?;
-        variance = Positive::new_decimal(next_variance).unwrap_or(Positive::ZERO);
+        variance = to_positive_variance(next_variance, "variance")?;
         volatilities.push(variance.sqrt());
     }
     Ok(volatilities)
