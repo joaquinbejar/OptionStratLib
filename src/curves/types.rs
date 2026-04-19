@@ -168,6 +168,14 @@ impl Point2D {
     ///
     /// # Usage
     /// This function allows constructing a `Point2D` directly from a tuple representation.
+    ///
+    /// # Errors
+    ///
+    /// Currently infallible for the blanket `Into<Decimal>` bounds;
+    /// the `Result` signature is retained so future implementations
+    /// that can reject non-finite or out-of-range conversions (e.g.
+    /// via `TryFrom<f64>`) can surface
+    /// [`CurveError::ConstructionError`] without a breaking change.
     pub fn from_tuple<T: Into<Decimal>, U: Into<Decimal>>(x: T, y: U) -> Result<Self, CurveError> {
         Ok(Self::new(x, y))
     }

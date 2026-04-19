@@ -77,6 +77,14 @@ where
     /// # Returns
     /// - `Ok(Point)`: The successfully interpolated point
     /// - `Err(InterpolationError)`: If interpolation fails for any reason
+    ///
+    /// # Errors
+    ///
+    /// Dispatches to the requested algorithm and propagates any
+    /// [`InterpolationError`] it produces; see the per-algorithm
+    /// traits ([`LinearInterpolation`], [`CubicInterpolation`],
+    /// [`BiLinearInterpolation`], [`SplineInterpolation`]) for the
+    /// specific variant breakdown.
     fn interpolate(
         &self,
         x: Input,

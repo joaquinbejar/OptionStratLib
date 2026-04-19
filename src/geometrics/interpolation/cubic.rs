@@ -104,5 +104,14 @@ pub trait CubicInterpolation<Point, Input> {
     /// # Returns
     /// - `Ok(Point)`: Represents the interpolated point on the curve.
     /// - `Err(Self::Error)`: Describes why the interpolation failed (e.g., invalid input).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`InterpolationError::EmptyData`] when the sample is
+    /// empty, [`InterpolationError::OutOfRange`] when `x` falls
+    /// outside the sample domain, and
+    /// [`InterpolationError::DegenerateInterval`] when the local
+    /// four-point neighbourhood has collinear or duplicate
+    /// abscissae.
     fn cubic_interpolate(&self, x: Input) -> Result<Point, InterpolationError>;
 }

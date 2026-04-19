@@ -41,6 +41,14 @@ pub trait BasicCurves {
     ///
     /// * `Result<Curve, CurveError>` - A curve object containing the plotted data points,
     ///   or an error if the curve could not be generated
+    ///
+    /// # Errors
+    ///
+    /// Returns [`CurveError::ConstructionError`] when no strikes
+    /// produced valid samples for the requested axis, and propagates
+    /// any [`CurveError::GreeksError`] or
+    /// [`CurveError::InterpolationError`] surfaced by the per-strike
+    /// evaluator.
     fn curve(
         &self,
         axis: &BasicAxisTypes,
@@ -64,6 +72,13 @@ pub trait BasicCurves {
     /// * `Result<(Decimal, Decimal), CurveError>` - A tuple containing (strike price, metric value),
     ///   or an error if the values could not be extracted
     ///
+    /// # Errors
+    ///
+    /// Returns [`CurveError::ConstructionError`] when the requested
+    /// axis metric is not available for the option data (e.g.
+    /// missing implied volatility) and propagates any
+    /// [`CurveError::GreeksError`] surfaced while computing Greeks-
+    /// based axes.
     fn get_curve_strike_versus(
         &self,
         axis: &BasicAxisTypes,

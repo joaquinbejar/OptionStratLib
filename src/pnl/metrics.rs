@@ -213,6 +213,13 @@ impl fmt::Display for PnLMetricsStep {
 /// # Returns
 ///
 /// * `io::Result<()>` - Success or error result
+///
+/// # Errors
+///
+/// Returns [`std::io::Error`] when the output file cannot be created
+/// or written (permission denied, disk full, invalid path), or when
+/// `serde_json` serialization of the metrics slice surfaces a
+/// semantic failure wrapped as [`std::io::ErrorKind::InvalidData`].
 pub fn save_pnl_metrics(metrics: &[PnLMetricsStep], file_path: &str) -> io::Result<()> {
     // Serialize to compact JSON without pretty formatting
     let json = serde_json::to_string(metrics)
@@ -237,6 +244,12 @@ pub fn save_pnl_metrics(metrics: &[PnLMetricsStep], file_path: &str) -> io::Resu
 ///
 /// * `io::Result<Vec<PnLMetricsStep>>` - Vector of deserialized metrics or error
 ///
+/// # Errors
+///
+/// Returns [`std::io::Error`] when the file cannot be opened or read,
+/// or when `serde_json` deserialization fails (returned as
+/// [`std::io::ErrorKind::InvalidData`] with the underlying parse
+/// error as source).
 pub fn load_pnl_metrics(file_path: &str) -> io::Result<Vec<PnLMetricsStep>> {
     // Read the file content
     let file_content = std::fs::read_to_string(file_path)?;

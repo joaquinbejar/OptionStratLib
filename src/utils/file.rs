@@ -15,6 +15,13 @@ use tracing::{debug, error, trace};
 /// # Returns
 ///
 /// * `Result<(), std::io::Error>` - Ok if successful, or an IoError if it failed
+///
+/// # Errors
+///
+/// Returns [`std::io::Error`] when the target file exists but cannot
+/// be removed, or when the parent directory cannot be created
+/// (typically `PermissionDenied`, `NotFound` on a broken symlink
+/// ancestor, or the platform-specific disk-full case).
 pub fn prepare_file_path(path: &Path) -> Result<(), IoError> {
     // Remove file if it already exists
     if path.exists() {

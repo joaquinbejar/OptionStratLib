@@ -82,5 +82,13 @@ pub trait LinearInterpolation<Point, Input> {
     /// # Returns
     /// - `Ok(Point)`: The calculated interpolated value of type `Point`.
     /// - `Err(Self::Error)`: An error indicating the reason why interpolation failed.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`InterpolationError::EmptyData`] when the sample is
+    /// empty, [`InterpolationError::OutOfRange`] when `x` falls
+    /// outside the sample domain, and
+    /// [`InterpolationError::DegenerateInterval`] when two
+    /// bracketing samples share the same `x` coordinate.
     fn linear_interpolate(&self, x: Input) -> Result<Point, InterpolationError>;
 }

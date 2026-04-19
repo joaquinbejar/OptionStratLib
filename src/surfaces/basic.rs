@@ -33,6 +33,14 @@ pub trait BasicSurfaces {
     /// # Returns
     ///
     /// * `Result<Surface, SurfaceError>` - A constructed surface or an error if creation fails
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SurfaceError::ConstructionError`] when the sampling
+    /// grid is empty or the requested axis is not available, and
+    /// propagates [`SurfaceError::Point3DError`] or
+    /// [`SurfaceError::OperationError`] from the per-sample
+    /// evaluator.
     fn surface(
         &self,
         axis: &BasicAxisTypes,
@@ -361,6 +369,14 @@ pub trait BasicSurfaces {
     /// # Returns
     ///
     /// * `Result<Surface, SurfaceError>` - A constructed surface or an error if creation fails
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SurfaceError::ConstructionError`] when no expiration
+    /// shift produced a valid grid, and propagates
+    /// [`SurfaceError::Point3DError`] or
+    /// [`SurfaceError::OperationError`] from the per-sample
+    /// evaluator.
     fn time_surface(
         &self,
         axis: &BasicAxisTypes,

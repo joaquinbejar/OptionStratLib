@@ -309,6 +309,14 @@ pub trait Graph {
     }
 
     /// Show the plot in browser
+    ///
+    /// # Errors
+    ///
+    /// Currently infallible (the underlying `plotly` `show` call does
+    /// not return a `Result`); the `Result` signature is retained to
+    /// allow future plot kernels that can surface
+    /// [`GraphError::RenderError`] or [`GraphError::IoError`] without
+    /// a breaking change.
     #[cfg(feature = "plotly")]
     fn show(&self) -> Result<(), GraphError> {
         self.to_plot().show();
@@ -316,6 +324,13 @@ pub trait Graph {
     }
 
     /// One‑stop rendering with error propagation.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`GraphError::RenderError`] when the chosen
+    /// [`OutputType`] backend (PNG/SVG via static_export, HTML, etc.)
+    /// fails to serialize or render, and [`GraphError::IoError`] when
+    /// the destination path cannot be written.
     #[cfg(feature = "plotly")]
     fn render(&self, output: OutputType) -> Result<(), GraphError> {
         match output {
@@ -344,6 +359,13 @@ pub trait Graph {
     }
 
     /// Generate interactive HTML with hover info + annotations.
+    ///
+    /// # Errors
+    ///
+    /// Propagates any [`GraphError`] returned by
+    /// [`PlotlyChart::write_html`], typically
+    /// [`GraphError::IoError`] when the target file cannot be
+    /// created or written.
     #[cfg(feature = "plotly")]
     fn to_interactive_html(&self, path: &std::path::Path) -> Result<(), GraphError> {
         self.write_html(path)

@@ -107,6 +107,13 @@ where
     /// # Returns
     ///
     /// A new `Step<X, Y>` instance that represents the next step in the sequence
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SimulationError::ExpirationReached`] when the
+    /// current step is already at the end of the sequence, or
+    /// [`SimulationError::IndexConversion`] when the step index would
+    /// overflow `i32`.
     pub fn next(&self, new_y_value: Y) -> Result<Self, SimulationError> {
         let next_x = match self.x.next() {
             Ok(x_step) => x_step,
@@ -134,6 +141,13 @@ where
     /// # Returns
     ///
     /// A new `Step<X, Y>` instance that represents the previous step in the sequence
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SimulationError::IndexConversion`] when the step
+    /// index would wrap below `i32::MIN`, or
+    /// [`SimulationError::ExpirationDate`] when the underlying
+    /// [`Xstep::previous`] datetime shift fails.
     pub fn previous(&self, new_y_value: Y) -> Result<Self, SimulationError> {
         let previous_x = match self.x.previous() {
             Ok(x_step) => x_step,
@@ -157,6 +171,13 @@ where
     /// # Returns
     ///
     /// A `Positive` representation of the x-axis index as a floating point value
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SimulationError::IndexConversion`] when the step
+    /// index cannot be represented as a `Decimal` (practically
+    /// unreachable for `i32` inputs but retained for forward
+    /// compatibility).
     pub fn get_graph_x_value(&self) -> Result<Decimal, SimulationError> {
         match Decimal::from_i32(*self.x.index()) {
             Some(x) => Ok(x),
@@ -194,6 +215,13 @@ where
     /// # Returns
     ///
     /// A `Positive` representation of the y-axis value
+    ///
+    /// # Errors
+    ///
+    /// Propagates any [`SimulationError`] returned by
+    /// [`Ystep::positive`] (typically
+    /// [`SimulationError::PositiveError`] when the stored `y` value
+    /// violates the `Positive` invariant).
     pub fn get_graph_y_value(&self) -> Result<Positive, SimulationError> {
         self.y.positive()
     }
@@ -255,6 +283,13 @@ where
     ///
     /// This function internally calls the `positive` method on `self.y`
     /// and returns the resulting value.
+    ///
+    /// # Errors
+    ///
+    /// Propagates any [`SimulationError`] returned by
+    /// [`Ystep::positive`] (typically
+    /// [`SimulationError::PositiveError`] when the stored `y` value
+    /// violates the `Positive` invariant).
     pub fn get_positive_value(&self) -> Result<Positive, SimulationError> {
         self.y.positive()
     }

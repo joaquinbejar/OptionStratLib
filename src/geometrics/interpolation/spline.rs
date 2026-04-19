@@ -113,5 +113,14 @@ pub trait SplineInterpolation<Point, Input> {
     ///     Err(e) => info!("Interpolation failed: {:?}", e),
     /// }
     /// ```
+    ///
+    /// # Errors
+    ///
+    /// Returns [`InterpolationError::EmptyData`] when the sample is
+    /// empty, [`InterpolationError::OutOfRange`] when `x` falls
+    /// outside the sample domain, and
+    /// [`InterpolationError::DegenerateInterval`] when the spline
+    /// tridiagonal system is singular (duplicate or collinear
+    /// abscissae).
     fn spline_interpolate(&self, x: Input) -> Result<Point, InterpolationError>;
 }

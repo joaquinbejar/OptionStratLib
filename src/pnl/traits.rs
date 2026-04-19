@@ -27,6 +27,14 @@ pub trait PnLCalculator {
     ///
     /// # Returns
     /// * `Result<PnL, PricingError>` - The calculated PnL or an error
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PricingError::ExpirationDate`] when the expiration
+    /// cannot be converted, [`PricingError::MethodError`] when the
+    /// underlying Black–Scholes kernel fails, or propagates any other
+    /// [`PricingError`] surfaced by the strategy's component
+    /// evaluations.
     fn calculate_pnl(
         &self,
         _underlying_price: &Positive,
@@ -45,6 +53,12 @@ pub trait PnLCalculator {
     ///
     /// # Returns
     /// * `Result<PnL, PricingError>` - The calculated PnL at expiration or an error
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PricingError::MethodError`] when the terminal
+    /// payoff evaluation fails on any leg (typically propagated from
+    /// [`Position::pnl_at_expiration`]).
     fn calculate_pnl_at_expiration(
         &self,
         _underlying_price: &Positive,
@@ -124,9 +138,21 @@ pub trait PnLCalculator {
 ///
 pub trait TransactionAble {
     /// Adds a new transaction to the implementing entity.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`TransactionError`] when the transaction violates the
+    /// implementor's invariants (e.g. duplicate id, status mismatch, or
+    /// arithmetic overflow on the accumulator).
     fn add_transaction(&mut self, transaction: Transaction) -> Result<(), TransactionError>;
 
     /// Retrieves all transactions from the implementing entity.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`TransactionError`] when the transaction log cannot
+    /// be enumerated (typically due to a corrupted internal state or
+    /// a locked shared storage).
     fn get_transactions(&self) -> Result<Vec<Transaction>, TransactionError>;
 }
 

@@ -40,6 +40,13 @@ pub trait GeometricObject<Point: Clone, Input> {
     /// such as constructing from a set of data points or from a parametric function.
     ///
     /// This method returns a `Result` to handle potential errors during construction.
+    ///
+    /// # Errors
+    ///
+    /// Returns the implementation's `Self::Error` when the provided
+    /// construction method cannot produce a valid geometry, for
+    /// example when a `FromData` input is empty or a parametric
+    /// function surfaces a domain violation.
     fn construct<T>(method: T) -> Result<Self, Self::Error>
     where
         Self: Sized,
