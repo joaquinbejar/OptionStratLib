@@ -646,6 +646,14 @@ pub fn delta(option: &Options) -> Result<Decimal, GreeksError> {
 ///   provided in consistent units.
 /// - If the implied volatility or time to expiration is very small, the result may be close to 0,
 ///   as gamma becomes negligible in those cases.
+///
+/// # Errors
+///
+/// Returns [`GreeksError::ExpirationDate`] when the option's expiration
+/// cannot be converted to a positive year fraction, and propagates any
+/// [`GreeksError`] surfaced by [`numerical_gamma`] for non-European
+/// options (typically [`GreeksError::Pricing`] when the perturbation
+/// evaluation fails).
 pub fn gamma(option: &Options) -> Result<Decimal, GreeksError> {
     if !matches!(option.option_type, OptionType::European) {
         return crate::greeks::numerical::numerical_gamma(option);
@@ -780,6 +788,13 @@ pub fn gamma(option: &Options) -> Result<Decimal, GreeksError> {
 /// - A positive Theta means the option gains value as time passes (rare and usually for short positions).
 /// - A negative Theta is typical for long positions, as the option loses extrinsic value over time.
 /// - If the implied volatility is zero, Theta may be close to zero for far-out-of-the-money options.
+///
+/// # Errors
+///
+/// Returns [`GreeksError::ExpirationDate`] when the option's expiration
+/// cannot be converted to a positive year fraction, and propagates any
+/// [`GreeksError`] surfaced by [`numerical_theta`] for non-European
+/// options.
 pub fn theta(option: &Options) -> Result<Decimal, GreeksError> {
     let t = option.expiration_date.get_years()?;
     if t == Decimal::ZERO {
@@ -912,6 +927,13 @@ pub fn theta(option: &Options) -> Result<Decimal, GreeksError> {
 ///   in-the-money or out-of-the-money.
 /// - For shorter time to expiration, Vega is smaller as the sensitivity to volatility diminishes.
 /// - A positive Vega indicates that an increase in implied volatility will increase the option's value.
+///
+/// # Errors
+///
+/// Returns [`GreeksError::ExpirationDate`] when the option's expiration
+/// cannot be converted to a positive year fraction, and propagates any
+/// [`GreeksError`] surfaced by [`numerical_vega`] for non-European
+/// options.
 pub fn vega(option: &Options) -> Result<Decimal, GreeksError> {
     let expiration_date: Positive = option.expiration_date.get_years()?;
     if expiration_date == Decimal::ZERO {
@@ -1036,6 +1058,13 @@ pub fn vega(option: &Options) -> Result<Decimal, GreeksError> {
 ///   sensitive to changes in the risk-free rate.
 /// - Call options have positive rho values, as an increase in interest rates increases their value.
 /// - Put options have negative rho values, as an increase in interest rates decreases their value.
+///
+/// # Errors
+///
+/// Returns [`GreeksError::ExpirationDate`] when the option's expiration
+/// cannot be converted to a positive year fraction, and propagates any
+/// [`GreeksError`] surfaced by [`numerical_rho`] for non-European
+/// options.
 pub fn rho(option: &Options) -> Result<Decimal, GreeksError> {
     // Get time to expiration first and validate
     let t = option.expiration_date.get_years()?;
@@ -1171,6 +1200,13 @@ pub fn rho(option: &Options) -> Result<Decimal, GreeksError> {
 ///   leading to a positive dividend sensitivity.
 /// - This calculation assumes that dividends are continuously compounded at the dividend yield rate.
 /// - \( Rho_d \) is generally more significant for options with longer times to expiration.
+///
+/// # Errors
+///
+/// Returns [`GreeksError::ExpirationDate`] when the option's expiration
+/// cannot be converted to a positive year fraction, and propagates any
+/// [`GreeksError`] surfaced by intermediate Black–Scholes kernels
+/// (typically [`GreeksError::Pricing`] on numerical failure).
 pub fn rho_d(option: &Options) -> Result<Decimal, GreeksError> {
     let expiration_date: Positive = option.expiration_date.get_years()?;
     let d1 = d1(
@@ -1295,6 +1331,13 @@ pub fn alpha(option: &Options) -> Result<Decimal, GreeksError> {
 ///
 /// - This function assumes that the dividend yield \(q\) and the time to expiration \(T\) are
 ///   provided in consistent units.
+///
+/// # Errors
+///
+/// Returns [`GreeksError::ExpirationDate`] when the option's expiration
+/// cannot be converted to a positive year fraction, and propagates any
+/// [`GreeksError`] surfaced by the underlying Black–Scholes
+/// evaluation (typically [`GreeksError::Pricing`]).
 pub fn vanna(option: &Options) -> Result<Decimal, GreeksError> {
     if option.implied_volatility == ZERO {
         return Ok(Decimal::ZERO);
@@ -1413,6 +1456,13 @@ pub fn vanna(option: &Options) -> Result<Decimal, GreeksError> {
 /// less and less.
 /// If you think the implied volatility will be volatile in the short term
 /// you should typically try to find options with high Vomma.
+///
+/// # Errors
+///
+/// Returns [`GreeksError::ExpirationDate`] when the option's expiration
+/// cannot be converted to a positive year fraction, and propagates any
+/// [`GreeksError`] surfaced by the underlying Black–Scholes
+/// evaluation.
 pub fn vomma(option: &Options) -> Result<Decimal, GreeksError> {
     let expiration_date: Positive = option.expiration_date.get_years()?;
     if expiration_date == Decimal::ZERO {
@@ -1520,6 +1570,13 @@ pub fn vomma(option: &Options) -> Result<Decimal, GreeksError> {
 /// - It is common practice to divide the mathematical result of veta by 100 times
 ///   the number of days per year to reduce the value to the percentage change in
 ///   vega per one day.
+///
+/// # Errors
+///
+/// Returns [`GreeksError::ExpirationDate`] when the option's expiration
+/// cannot be converted to a positive year fraction, and propagates any
+/// [`GreeksError`] surfaced by the underlying Black–Scholes
+/// evaluation.
 pub fn veta(option: &Options) -> Result<Decimal, GreeksError> {
     let expiration_date: Positive = option.expiration_date.get_years()?;
     if expiration_date == Decimal::ZERO {
@@ -1669,6 +1726,12 @@ pub fn veta(option: &Options) -> Result<Decimal, GreeksError> {
 ///
 /// - With zero DTE Charm can be considered as zero.
 /// - Charm effects are more pronounced near expiration.
+///
+/// # Errors
+///
+/// Returns [`GreeksError::ExpirationDate`] when the option's expiration
+/// cannot be converted to a positive year fraction, and propagates any
+/// [`GreeksError`] surfaced by intermediate Black–Scholes kernels.
 pub fn charm(option: &Options) -> Result<Decimal, GreeksError> {
     let tau = option.expiration_date.get_years()?;
     // if DTE is zero we can assume Charm is also zero
@@ -1803,6 +1866,12 @@ pub fn charm(option: &Options) -> Result<Decimal, GreeksError> {
 /// - Color will be more pronounced as expiration date approaches.
 /// - When volatility increases Color sensitivity decrease.
 /// - Deep ITM and OTM options have negligible Color.
+///
+/// # Errors
+///
+/// Returns [`GreeksError::ExpirationDate`] when the option's expiration
+/// cannot be converted to a positive year fraction, and propagates any
+/// [`GreeksError`] surfaced by intermediate Black–Scholes kernels.
 pub fn color(option: &Options) -> Result<Decimal, GreeksError> {
     let tau = option.expiration_date.get_years()?;
     // if DTE is zero we can assume Color is also zero

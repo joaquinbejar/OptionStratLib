@@ -22,6 +22,14 @@ const H: Decimal = dec!(0.01);
 ///
 /// Delta measures the rate of change of the option price with respect to
 /// changes in the underlying asset's price.
+///
+/// # Errors
+///
+/// Propagates any [`PricingError`] returned by the unified-pricing
+/// evaluator on the perturbed option clones, wrapped as
+/// [`GreeksError::Pricing`]; typically
+/// [`PricingError::ExpirationDate`] or [`PricingError::MethodError`] on
+/// numerical failure.
 pub fn numerical_delta(option: &Options) -> Result<Decimal, GreeksError> {
     let mut opt_plus = option.clone();
     opt_plus.underlying_price =
@@ -41,6 +49,12 @@ pub fn numerical_delta(option: &Options) -> Result<Decimal, GreeksError> {
 ///
 /// Gamma measures the rate of change of delta with respect to changes in the
 /// underlying asset's price.
+///
+/// # Errors
+///
+/// Propagates any [`PricingError`] returned by the unified-pricing
+/// evaluator on the three perturbed option clones, wrapped as
+/// [`GreeksError::Pricing`].
 pub fn numerical_gamma(option: &Options) -> Result<Decimal, GreeksError> {
     let mut opt_plus = option.clone();
     opt_plus.underlying_price =
@@ -61,6 +75,12 @@ pub fn numerical_gamma(option: &Options) -> Result<Decimal, GreeksError> {
 ///
 /// Vega measures the sensitivity of the option price to changes in the
 /// underlying asset's volatility.
+///
+/// # Errors
+///
+/// Propagates any [`PricingError`] returned by the unified-pricing
+/// evaluator on the perturbed option clones, wrapped as
+/// [`GreeksError::Pricing`].
 pub fn numerical_vega(option: &Options) -> Result<Decimal, GreeksError> {
     let mut opt_plus = option.clone();
     opt_plus.implied_volatility =
@@ -79,6 +99,13 @@ pub fn numerical_vega(option: &Options) -> Result<Decimal, GreeksError> {
 /// Calculates theta numerically using finite differences.
 ///
 /// Theta measures the rate of decay of the option's value over time.
+///
+/// # Errors
+///
+/// Returns [`GreeksError::ExpirationDate`] when the option's expiration
+/// cannot be resolved, and propagates any [`PricingError`] returned by
+/// the unified-pricing evaluator on the perturbed option clones
+/// (wrapped as [`GreeksError::Pricing`]).
 pub fn numerical_theta(option: &Options) -> Result<Decimal, GreeksError> {
     let t = option.expiration_date.get_years()?;
     if t < H {
@@ -97,6 +124,12 @@ pub fn numerical_theta(option: &Options) -> Result<Decimal, GreeksError> {
 ///
 /// Rho measures the sensitivity of the option price to changes in the
 /// risk-free interest rate.
+///
+/// # Errors
+///
+/// Propagates any [`PricingError`] returned by the unified-pricing
+/// evaluator on the perturbed option clones, wrapped as
+/// [`GreeksError::Pricing`].
 pub fn numerical_rho(option: &Options) -> Result<Decimal, GreeksError> {
     let mut opt_plus = option.clone();
     opt_plus.risk_free_rate += H;
