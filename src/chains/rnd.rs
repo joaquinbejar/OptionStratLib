@@ -409,6 +409,13 @@ pub trait RNDAnalysis {
     ///
     /// # Returns
     /// Result containing either RNDResult or an error
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChainError::EmptyDensities`] when no valid density values
+    /// can be extracted from the chain, or [`ChainError::OptionDataError`]
+    /// when individual strikes produce numerical failures during the
+    /// finite-difference second-derivative approximation.
     fn calculate_rnd(&self, params: &RNDParameters) -> Result<RNDResult, ChainError>;
 
     /// Calculates the implied volatility skew
@@ -418,6 +425,13 @@ pub trait RNDAnalysis {
     ///
     /// # Returns
     /// Result containing vector of (strike_price, volatility) pairs or an error
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChainError::EmptySkewData`] when no strike in the chain
+    /// produced a valid implied-volatility sample, or
+    /// [`ChainError::OptionDataError`] if individual option records carry
+    /// invalid volatility values.
     fn calculate_skew(&self) -> Result<Vec<(Positive, Decimal)>, ChainError>;
 }
 
