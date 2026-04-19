@@ -43,6 +43,13 @@ impl ProfitLossRange {
     ///
     /// Returns a Result containing the ProfitRange if the boundaries are valid,
     /// or an error if the boundaries are invalid
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ProbabilityError`] wrapping a
+    /// [`ProbabilityCalculationErrorKind::InvalidProbability`] when `lower_bound`
+    /// is greater than `upper_bound`, or [`ProbabilityCalculationErrorKind::InvalidProbabilityRange`]
+    /// when the `probability` value lies outside the closed interval `[0, 1]`.
     pub fn new(
         lower_bound: Option<Positive>,
         upper_bound: Option<Positive>,

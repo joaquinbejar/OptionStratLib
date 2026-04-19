@@ -60,21 +60,56 @@ pub enum TradeStatus {
 pub trait TradeStatusAble {
     /// - `open`: Return a `Trade` instance representing the trade in its open status or a
     ///   TradeError if the transition is invalid.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`TradeError::InvalidTrade`] when the current state cannot
+    /// transition to the `Open` status (for example, attempting to re-open a
+    /// trade that has already been closed, exercised, or assigned).
     fn open(&self) -> Result<Trade, TradeError>;
     /// - `closed`: Return a `Trade` instance representing the trade in its closed status or a
     ///   TradeError if the transition is invalid.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`TradeError::InvalidTrade`] when the trade is not currently
+    /// in a state that allows transitioning to `Closed` (e.g. a trade that
+    /// has not been opened yet).
     fn close(&self) -> Result<Trade, TradeError>;
     /// - `expired`: Return a `Trade` instance representing the trade in its expired status or a
     ///   TradeError if the transition is invalid.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`TradeError::InvalidTrade`] when the trade is not in a state
+    /// that allows transitioning to `Expired` (e.g. already closed or
+    /// exercised).
     fn expired(&self) -> Result<Trade, TradeError>;
     /// - `exercised`: Return a `Trade` instance representing the trade in its exercised status or a
     ///   TradeError if the transition is invalid.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`TradeError::InvalidTrade`] when the option cannot legally
+    /// be exercised from the current trade state (e.g. the trade has
+    /// already expired or been assigned).
     fn exercised(&self) -> Result<Trade, TradeError>;
     /// - `assigned`: Return a `Trade` instance representing the trade in its assigned status or a
     ///   TradeError if the transition is invalid.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`TradeError::InvalidTrade`] when the trade cannot be moved
+    /// into the `Assigned` state from its current status.
     fn assigned(&self) -> Result<Trade, TradeError>;
     /// - `status_other`: Return a `Trade` instance representing undeclared status or a
     ///   TradeError if the transition is invalid.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`TradeError::InvalidTrade`] when the implementation rejects
+    /// the transition to a non-canonical status (the semantics are left to
+    /// the implementor).
     fn status_other(&self) -> Result<Trade, TradeError>;
 }
 
@@ -409,6 +444,12 @@ pub trait TradeAble {
     /// It ensures that the `Trade` is available for viewing or interaction.
     ///
     /// Note: This method returns an owned `Trade` instance, allowing modification.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`TradeError::InvalidTrade`] when the implementor cannot
+    /// materialize a `Trade` from its current state (typically when the
+    /// container does not yet hold a committed trade).
     fn trade(&self) -> Result<Trade, TradeError>;
 
     /// Returns a reference to the `Trade` associated with the current instance.
@@ -419,6 +460,11 @@ pub trait TradeAble {
     ///
     /// # Note
     /// The returned reference has the same lifetime as the instance it is called on.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`TradeError::InvalidTrade`] when the implementor does not
+    /// currently hold a materialized `Trade` to borrow.
     fn trade_ref(&self) -> Result<&Trade, TradeError>;
 
     /// Provides a mutable reference to the `Trade` instance contained within the current structure.
@@ -434,6 +480,11 @@ pub trait TradeAble {
     /// - Since this method provides a mutable reference, it enforces Rust's borrow rules.
     ///   Only one mutable reference to the `Trade` is allowed at a time.
     /// - Ensure that concurrent access to the structure is properly managed to avoid runtime issues.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`TradeError::InvalidTrade`] when the implementor does not
+    /// currently hold a materialized `Trade` to borrow mutably.
     fn trade_mut(&mut self) -> Result<&mut Trade, TradeError>;
 }
 

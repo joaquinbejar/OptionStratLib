@@ -139,6 +139,12 @@ impl DecimalStats for Vec<Decimal> {
 /// * `Result<f64, DecimalError>` - The converted f64 value if successful, or a DecimalError
 ///   if the conversion fails
 ///
+/// # Errors
+///
+/// Returns [`DecimalError::ConversionError`] when the `Decimal` operand cannot
+/// be represented as an `f64` (e.g. out-of-range magnitude or precision loss
+/// beyond the `f64` mantissa).
+///
 /// # Example
 ///
 /// ```rust
@@ -176,6 +182,12 @@ pub fn decimal_to_f64(value: Decimal) -> Result<f64, DecimalError> {
 ///
 /// * `Result<Decimal, DecimalError>` - The converted Decimal value if successful, or a DecimalError
 ///   if the conversion fails
+///
+/// # Errors
+///
+/// Returns [`DecimalError::ConversionError`] when the `f64` operand is not
+/// representable as a `Decimal`, for example `NaN`, `±Infinity`, or a value
+/// whose magnitude exceeds the `Decimal` range.
 ///
 /// # Example
 ///

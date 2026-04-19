@@ -242,6 +242,12 @@ impl Position {
     ///
     /// A `f64` representing the total cost of the position. THE VALUE IS ALWAYS POSITIVE
     ///
+    /// # Errors
+    ///
+    /// Returns [`PositionError`] wrapping a [`PositionValidationErrorKind::InvalidPosition`]
+    /// when the total cost computation underflows into a negative
+    /// `Positive`-representable value (typically a short position where the
+    /// received premium exceeds the declared costs).
     pub fn total_cost(&self) -> Result<Positive, PositionError> {
         let total_cost = match self.option.side {
             Side::Long => (self.premium + self.open_fee + self.close_fee) * self.option.quantity,
@@ -293,6 +299,13 @@ impl Position {
     /// # Ok(())
     /// # }
     /// ```
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PositionError::invalid_position_type`] for a long position
+    /// (which never receives a premium), or wraps a `Positive`-conversion
+    /// failure when `premium × quantity` cannot be represented as a
+    /// non-negative decimal.
     pub fn premium_received(&self) -> Result<Positive, PositionError> {
         match self.option.side {
             Side::Long => Ok(Positive::ZERO),
@@ -318,6 +331,12 @@ impl Position {
     /// - `Err(PositionError)` - If the position is invalid because the premium received
     ///   is less than the costs, resulting in a guaranteed loss
     ///
+    /// # Errors
+    ///
+    /// Returns [`PositionError`] wrapping a
+    /// [`PositionValidationErrorKind::InvalidPosition`] when the net
+    /// amount (premium minus fees) becomes negative, signalling a
+    /// guaranteed-loss short position.
     pub fn net_premium_received(&self) -> Result<Positive, PositionError> {
         match self.option.side {
             Side::Long => Ok(Positive::ZERO),
@@ -382,6 +401,12 @@ impl Position {
     /// # Ok(())
     /// # }
     /// ```
+    ///
+    /// # Errors
+    ///
+    /// Propagates any [`OptionsError`] returned by the underlying payoff
+    /// evaluation ([`Options::intrinsic_value`] or [`Options::payoff`]),
+    /// wrapped as [`PricingError::OptionError`].
     pub fn pnl_at_expiration(&self, price: &Option<&Positive>) -> Result<Decimal, PricingError> {
         match price {
             None => Ok(self.option.intrinsic_value(self.option.underlying_price)?
@@ -437,6 +462,13 @@ impl Position {
     /// # Ok(())
     /// # }
     /// ```
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PositionError`] wrapping any
+    /// [`PositionValidationErrorKind`] surfaced by the internal Black–Scholes
+    /// evaluation, or [`PositionError::PricingError`] when the
+    /// implied-volatility recomputation at `price` fails.
     pub fn unrealized_pnl(&self, price: Positive) -> Result<Decimal, PositionError> {
         match self.option.side {
             Side::Long => Ok((price.to_dec()
@@ -465,6 +497,12 @@ impl Position {
     /// * `Ok(Positive)` - The number of days the position has been held as a positive value
     /// * `Err(PositionError)` - If there's an error during the calculation or validation
     ///
+    /// # Errors
+    ///
+    /// Returns [`PositionError`] wrapping a
+    /// [`PositionValidationErrorKind::InvalidPositionSize`] if the elapsed
+    /// day-count is negative (future-dated open date) or cannot be
+    /// represented as a `Positive`.
     pub fn days_held(&self) -> Result<Positive, PositionError> {
         let days = (Utc::now() - self.date).num_days() as f64;
         Positive::new(days).map_err(|e| {
@@ -487,6 +525,13 @@ impl Position {
     ///
     /// For datetime-based expirations, the function calculates the difference between
     /// the expiration date and the current date, converting the result to days.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PositionError`] wrapping the underlying
+    /// [`expiration_date::error::ExpirationDateError`] when the expiration
+    /// cannot be converted (e.g. a past datetime that would produce a
+    /// negative day count).
     pub fn days_to_expiration(&self) -> Result<Positive, PositionError> {
         match self.option.expiration_date {
             ExpirationDate::Days(days) => Ok(days),
@@ -549,6 +594,13 @@ impl Position {
     /// A `Decimal` representing the net cost of the position.
     /// The value should be positive but if the fee is higher than the premium it will be negative
     /// in short positions
+    ///
+    /// # Errors
+    ///
+    /// Currently only propagates arithmetic-failure variants surfaced by the
+    /// premium × quantity and fee additions; in practice infallible for all
+    /// valid positions, but the `Result` signature is retained to let
+    /// callers handle future overflow paths uniformly.
     pub fn net_cost(&self) -> Result<Decimal, PositionError> {
         match self.option.side {
             Side::Long => Ok(self.total_cost()?.to_dec()),
@@ -657,6 +709,13 @@ impl Position {
     ///
     /// - `Ok(Positive)` - The total fees as a positive value
     /// - `Err(PositionError)` - If there's an issue calculating the fees
+    ///
+    /// # Errors
+    ///
+    /// Currently infallible in practice; the `Result` signature is retained
+    /// so that future fee models that can overflow `Positive` (e.g. tiered
+    /// fee schedules multiplied by very large quantities) can surface their
+    /// failures without a breaking API change.
     pub fn fees(&self) -> Result<Positive, PositionError> {
         Ok((self.open_fee + self.close_fee) * self.option.quantity)
     }
