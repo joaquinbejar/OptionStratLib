@@ -229,6 +229,14 @@ pub fn f64_to_decimal(value: f64) -> Result<Decimal, DecimalError> {
 /// use positive::Positive;
 /// let normal = decimal_normal_sample();
 /// ```
+///
+/// # Panics
+///
+/// The `unreachable!` branch fires only if
+/// `statrs::distribution::Normal::new(0.0, 1.0)` rejects the standard
+/// normal parameters — a provably impossible state the standard
+/// library upholds at all supported versions. Kept as a panic
+/// rather than `Result` to preserve the infallible sampling API.
 pub fn decimal_normal_sample() -> Decimal {
     let mut t_rng = rand::rng();
     // Normal::new(0.0, 1.0) is provably valid (mean=0, std=1 are accepted
