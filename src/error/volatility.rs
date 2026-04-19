@@ -126,6 +126,19 @@ pub enum VolatilityError {
     /// Positive value errors
     #[error(transparent)]
     PositiveError(#[from] positive::PositiveError),
+
+    /// Decimal arithmetic failures propagated from monetary-flow
+    /// computations in volatility kernels (overflow, division by
+    /// zero, conversion).
+    ///
+    /// Produced when a checked Decimal helper in `model::decimal`
+    /// surfaces a [`crate::error::DecimalError`] from inside a
+    /// volatility routine (for example `constant_volatility`,
+    /// `ewma_volatility`, or `garch_volatility`). Propagated
+    /// transparently via the `#[from]` cascade so callers keep
+    /// matching `VolatilityError`.
+    #[error(transparent)]
+    DecimalError(#[from] crate::error::DecimalError),
 }
 
 impl From<crate::error::ChainError> for VolatilityError {

@@ -21,6 +21,7 @@ use crate::metrics::{
     TimeDecayCurve, TimeDecaySurface, VannaVolgaSurface, VolatilitySensitivityCurve,
     VolatilitySensitivitySurface, VolatilitySkewCurve, VolumeProfileCurve, VolumeProfileSurface,
 };
+use crate::model::decimal::d_add;
 use crate::model::{
     BasicAxisTypes, ExpirationDate, OptionStyle, OptionType, Options, Position, Side,
 };
@@ -1941,7 +1942,11 @@ impl OptionChain {
     pub fn gamma_exposure(&self) -> Result<Decimal, ChainError> {
         let mut gamma_exposure = Decimal::ZERO;
         for option in &self.options {
-            gamma_exposure += option.gamma.unwrap_or(Decimal::ZERO);
+            gamma_exposure = d_add(
+                gamma_exposure,
+                option.gamma.unwrap_or(Decimal::ZERO),
+                "chains::gamma_exposure",
+            )?;
         }
         Ok(gamma_exposure)
     }
@@ -1968,8 +1973,16 @@ impl OptionChain {
     pub fn delta_exposure(&self) -> Result<Decimal, ChainError> {
         let mut delta_exposure = Decimal::ZERO;
         for option in &self.options {
-            delta_exposure += option.delta_call.unwrap_or(Decimal::ZERO);
-            delta_exposure += option.delta_put.unwrap_or(Decimal::ZERO);
+            delta_exposure = d_add(
+                delta_exposure,
+                option.delta_call.unwrap_or(Decimal::ZERO),
+                "chains::delta_exposure::call",
+            )?;
+            delta_exposure = d_add(
+                delta_exposure,
+                option.delta_put.unwrap_or(Decimal::ZERO),
+                "chains::delta_exposure::put",
+            )?;
         }
         Ok(delta_exposure)
     }
@@ -1999,11 +2012,19 @@ impl OptionChain {
             let vega = option_data
                 .get_option(Side::Long, OptionStyle::Call)?
                 .vega()?;
-            vega_exposure += vega;
+            vega_exposure = d_add(
+                vega_exposure,
+                vega,
+                "chains::vega_exposure::call",
+            )?;
             let vega = option_data
                 .get_option(Side::Long, OptionStyle::Put)?
                 .vega()?;
-            vega_exposure += vega;
+            vega_exposure = d_add(
+                vega_exposure,
+                vega,
+                "chains::vega_exposure::put",
+            )?;
         }
         Ok(vega_exposure)
     }
@@ -2033,11 +2054,19 @@ impl OptionChain {
             let theta = option_data
                 .get_option(Side::Long, OptionStyle::Call)?
                 .theta()?;
-            theta_exposure += theta;
+            theta_exposure = d_add(
+                theta_exposure,
+                theta,
+                "chains::theta_exposure::call",
+            )?;
             let theta = option_data
                 .get_option(Side::Long, OptionStyle::Put)?
                 .theta()?;
-            theta_exposure += theta;
+            theta_exposure = d_add(
+                theta_exposure,
+                theta,
+                "chains::theta_exposure::put",
+            )?;
         }
         Ok(theta_exposure)
     }
@@ -2067,11 +2096,19 @@ impl OptionChain {
             let vanna = option_data
                 .get_option(Side::Long, OptionStyle::Call)?
                 .vanna()?;
-            vanna_exposure += vanna;
+            vanna_exposure = d_add(
+                vanna_exposure,
+                vanna,
+                "chains::vanna_exposure::call",
+            )?;
             let vanna = option_data
                 .get_option(Side::Long, OptionStyle::Put)?
                 .vanna()?;
-            vanna_exposure += vanna;
+            vanna_exposure = d_add(
+                vanna_exposure,
+                vanna,
+                "chains::vanna_exposure::put",
+            )?;
         }
         Ok(vanna_exposure)
     }
@@ -2100,11 +2137,19 @@ impl OptionChain {
             let vomma = option_data
                 .get_option(Side::Long, OptionStyle::Call)?
                 .vomma()?;
-            vomma_exposure += vomma;
+            vomma_exposure = d_add(
+                vomma_exposure,
+                vomma,
+                "chains::vomma_exposure::call",
+            )?;
             let vomma = option_data
                 .get_option(Side::Long, OptionStyle::Put)?
                 .vomma()?;
-            vomma_exposure += vomma;
+            vomma_exposure = d_add(
+                vomma_exposure,
+                vomma,
+                "chains::vomma_exposure::put",
+            )?;
         }
         Ok(vomma_exposure)
     }
@@ -2133,11 +2178,19 @@ impl OptionChain {
             let veta = option_data
                 .get_option(Side::Long, OptionStyle::Call)?
                 .veta()?;
-            veta_exposure += veta;
+            veta_exposure = d_add(
+                veta_exposure,
+                veta,
+                "chains::veta_exposure::call",
+            )?;
             let veta = option_data
                 .get_option(Side::Long, OptionStyle::Put)?
                 .veta()?;
-            veta_exposure += veta;
+            veta_exposure = d_add(
+                veta_exposure,
+                veta,
+                "chains::veta_exposure::put",
+            )?;
         }
         Ok(veta_exposure)
     }
@@ -2167,11 +2220,19 @@ impl OptionChain {
             let charm = option_data
                 .get_option(Side::Long, OptionStyle::Call)?
                 .charm()?;
-            charm_exposure += charm;
+            charm_exposure = d_add(
+                charm_exposure,
+                charm,
+                "chains::charm_exposure::call",
+            )?;
             let charm = option_data
                 .get_option(Side::Long, OptionStyle::Put)?
                 .charm()?;
-            charm_exposure += charm;
+            charm_exposure = d_add(
+                charm_exposure,
+                charm,
+                "chains::charm_exposure::put",
+            )?;
         }
         Ok(charm_exposure)
     }
@@ -2201,11 +2262,19 @@ impl OptionChain {
             let color = option_data
                 .get_option(Side::Long, OptionStyle::Call)?
                 .color()?;
-            color_exposure += color;
+            color_exposure = d_add(
+                color_exposure,
+                color,
+                "chains::color_exposure::call",
+            )?;
             let color = option_data
                 .get_option(Side::Long, OptionStyle::Put)?
                 .color()?;
-            color_exposure += color;
+            color_exposure = d_add(
+                color_exposure,
+                color,
+                "chains::color_exposure::put",
+            )?;
         }
         Ok(color_exposure)
     }

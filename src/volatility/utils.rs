@@ -5,7 +5,7 @@
 ******************************************************************************/
 use crate::constants::{MAX_VOLATILITY, MIN_VOLATILITY};
 use crate::error::VolatilityError;
-use crate::model::decimal::decimal_normal_sample;
+use crate::model::decimal::{d_add, d_div, d_mul, d_sub, d_sum, decimal_normal_sample};
 use crate::utils::time::TimeFrame;
 use crate::{ExpirationDate, OptionStyle, OptionType, Options, Side};
 use num_traits::{FromPrimitive, ToPrimitive};
@@ -51,9 +51,21 @@ pub fn constant_volatility(returns: &[Decimal]) -> Result<Positive, VolatilityEr
         return Ok(Positive::ZERO);
     }
 
-    let mean = returns.iter().sum::<Decimal>() / n;
-    let variance =
-        returns.iter().map(|&r| (r - mean).powi(2)).sum::<Decimal>() / (n - Decimal::ONE);
+    // Sample mean and sample variance. The sums are unbounded so checked_*
+    // is applied via `d_sum` (for the returns sum) and `d_div` (for the
+    // mean and variance projection onto bankers-rounded Decimal).
+    let total = d_sum(returns, "volatility::constant::total")?;
+    let mean = d_div(total, n.to_dec(), "volatility::constant::mean")?;
+    let centred_sq: Vec<Decimal> = returns
+        .iter()
+        .map(|&r| (r - mean).powi(2))
+        .collect();
+    let sq_total = d_sum(&centred_sq, "volatility::constant::sq_total")?;
+    let variance = d_div(
+        sq_total,
+        (n - Decimal::ONE).to_dec(),
+        "volatility::constant::variance",
+    )?;
 
     let std_dev = variance
         .sqrt()
@@ -135,7 +147,19 @@ pub fn ewma_volatility(
     let mut volatilities = vec![Positive::new_decimal(initial_std_dev).unwrap_or(Positive::ZERO)];
 
     for &return_value in &returns[1..] {
-        variance = lambda * variance + (Decimal::ONE - lambda) * return_value.powi(2);
+        // EWMA variance recursion: v' = λ·v + (1 - λ) · r².
+        let persistent = d_mul(lambda, variance, "volatility::ewma::persistent")?;
+        let innovation_weight = d_sub(
+            Decimal::ONE,
+            lambda,
+            "volatility::ewma::innovation_weight",
+        )?;
+        let innovation = d_mul(
+            innovation_weight,
+            return_value.powi(2),
+            "volatility::ewma::innovation",
+        )?;
+        variance = d_add(persistent, innovation, "volatility::ewma::variance")?;
         let std_dev = variance
             .sqrt()
             .ok_or_else(|| VolatilityError::NumericalFailure {
@@ -306,8 +330,17 @@ pub fn garch_volatility(
     let mut variance = Positive::new_decimal(returns[0].powi(2)).unwrap_or(Positive::ZERO);
     let mut volatilities = vec![variance.sqrt()];
     for &return_value in &returns[1..] {
-        variance = Positive::new_decimal(omega + alpha * return_value.powi(2) + beta * variance)
-            .unwrap_or(Positive::ZERO);
+        // GARCH(1, 1) variance recursion:
+        // v' = ω + α · r² + β · v_prev.
+        let alpha_r2 = d_mul(
+            alpha,
+            return_value.powi(2),
+            "volatility::garch::alpha_r2",
+        )?;
+        let beta_v = d_mul(beta, variance.to_dec(), "volatility::garch::beta_v")?;
+        let persistent = d_add(omega, alpha_r2, "volatility::garch::omega_plus_alpha")?;
+        let next_variance = d_add(persistent, beta_v, "volatility::garch::variance")?;
+        variance = Positive::new_decimal(next_variance).unwrap_or(Positive::ZERO);
         volatilities.push(variance.sqrt());
     }
     Ok(volatilities)
