@@ -139,6 +139,35 @@ pub enum VolatilityError {
     /// matching `VolatilityError`.
     #[error(transparent)]
     DecimalError(#[from] crate::error::DecimalError),
+
+    /// A volatility kernel produced a non-finite `f64` value (`NaN` /
+    /// `±∞`) at an `f64` → `Decimal` boundary.
+    ///
+    /// Emitted by the Newton-Raphson implied-volatility solver, the
+    /// bisection fallback, Heston simulation discretisations, and
+    /// any other volatility routine that bridges `f64`
+    /// `sqrt`/`ln`/`exp` results back into `Decimal`. `context` is a
+    /// static call-site tag following the same convention as
+    /// [`crate::error::DecimalError::Overflow`].
+    #[error("volatility non-finite {context}: {value}")]
+    NonFinite {
+        /// Static tag identifying the kernel and step that produced
+        /// the non-finite value.
+        context: &'static str,
+        /// The offending `f64` value (`NaN`, `+∞`, or `-∞`).
+        value: f64,
+    },
+}
+
+impl VolatilityError {
+    /// Creates a [`VolatilityError::NonFinite`] from a static call-site
+    /// tag and the offending `f64` value.
+    #[must_use]
+    #[inline]
+    #[cold]
+    pub fn non_finite(context: &'static str, value: f64) -> Self {
+        VolatilityError::NonFinite { context, value }
+    }
 }
 
 impl From<crate::error::ChainError> for VolatilityError {
