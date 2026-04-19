@@ -11,6 +11,7 @@ use {
 
 /// Creates a Scatter trace from a Series2D and configuration
 #[cfg(feature = "plotly")]
+#[must_use]
 pub fn make_scatter(series: &Series2D) -> Box<Scatter<Decimal, Decimal>> {
     let mode = match series.mode {
         TraceMode::Lines => Mode::Lines,
@@ -84,6 +85,7 @@ pub fn make_scatter(series: &Series2D) -> Box<Scatter<Decimal, Decimal>> {
 
 /// Pick a color from config based on index
 #[cfg(feature = "plotly")]
+#[must_use]
 pub fn pick_color(cfg: &GraphConfig, idx: usize) -> Option<String> {
     get_color_from_scheme(&cfg.color_scheme, idx)
 }
@@ -118,6 +120,7 @@ pub fn pick_color(cfg: &GraphConfig, idx: usize) -> Option<String> {
 ///    - Create mappings (`x_to_col` and `y_to_row`) to translate x and y coordinates into column and row
 ///      indices of the `z_matrix`. Each coordinate is mapped to its respective index in the
 #[cfg(feature = "plotly")]
+#[must_use]
 pub fn make_surface(surf: &Surface3D) -> Box<Surface<Decimal, Decimal, Decimal>> {
     if surf.x.is_empty() || surf.y.is_empty() || surf.z.is_empty() {
         let z_matrix = vec![
@@ -174,6 +177,7 @@ pub fn make_surface(surf: &Surface3D) -> Box<Surface<Decimal, Decimal, Decimal>>
 
 /// Utility function to convert TraceMode to Mode
 #[cfg(feature = "plotly")]
+#[must_use]
 pub fn to_plotly_mode(mode: &TraceMode) -> Mode {
     match mode {
         TraceMode::Lines => Mode::Lines,
@@ -209,6 +213,7 @@ pub fn make_label_scatter(label: &Label2D) -> Box<Scatter<Decimal, Decimal>> {
 }
 
 /// Get color from a color scheme based on index
+#[must_use]
 pub fn get_color_from_scheme(scheme: &ColorScheme, idx: usize) -> Option<String> {
     match scheme {
         ColorScheme::Default => None,

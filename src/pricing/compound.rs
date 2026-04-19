@@ -28,7 +28,7 @@
 use crate::Options;
 use crate::error::PricingError;
 use crate::greeks::{big_n, d1, d2};
-use crate::model::decimal::{d_add, d_mul, d_sub};
+use crate::model::decimal::{d_add, d_mul, d_sub, finite_decimal};
 use crate::model::types::{OptionStyle, OptionType};
 use positive::Positive;
 use rust_decimal::Decimal;
@@ -39,7 +39,7 @@ use std::f64::consts::PI;
 /// Bivariate normal CDF approximation using Drezner-Wesolowsky (1990) algorithm.
 ///
 /// Computes P(X <= a, Y <= b) where X and Y are standard normal with correlation rho.
-fn bivariate_normal_cdf(a: Decimal, b: Decimal, rho: Decimal) -> Decimal {
+fn bivariate_normal_cdf(a: Decimal, b: Decimal, rho: Decimal) -> Result<Decimal, PricingError> {
     // Convert to f64 for computation
     let a_f = a.to_f64().unwrap_or(0.0);
     let b_f = b.to_f64().unwrap_or(0.0);
@@ -50,30 +50,34 @@ fn bivariate_normal_cdf(a: Decimal, b: Decimal, rho: Decimal) -> Decimal {
         // Independent case: P(X <= a, Y <= b) = N(a) * N(b)
         let n_a = big_n(a).unwrap_or(Decimal::ZERO);
         let n_b = big_n(b).unwrap_or(Decimal::ZERO);
-        return n_a * n_b;
+        return Ok(n_a * n_b);
     }
 
     if rho_f >= 1.0 - 1e-10 {
         // Perfect correlation: P(X <= a, Y <= b) = N(min(a, b))
         let min_ab = a.min(b);
-        return big_n(min_ab).unwrap_or(Decimal::ZERO);
+        return Ok(big_n(min_ab).unwrap_or(Decimal::ZERO));
     }
 
     if rho_f <= -1.0 + 1e-10 {
         // Perfect negative correlation
         if a + b >= Decimal::ZERO {
-            return big_n(a).unwrap_or(Decimal::ZERO);
+            return Ok(big_n(a).unwrap_or(Decimal::ZERO));
         } else {
-            return Decimal::ZERO;
+            return Ok(Decimal::ZERO);
         }
     }
 
-    // Drezner-Wesolowsky approximation
+    // Drezner-Wesolowsky approximation. Guard the f64 → Decimal
+    // boundary so a NaN / ±∞ from the approximation surfaces a
+    // `PricingError::NonFinite` instead of being silently clamped
+    // to `Decimal::ZERO` and hidden inside the `.max(0).min(1)`
+    // CDF-range clamp.
     let result = drezner_bivariate_normal(a_f, b_f, rho_f);
-    Decimal::from_f64(result)
-        .unwrap_or(Decimal::ZERO)
-        .max(Decimal::ZERO)
-        .min(Decimal::ONE)
+    let result_dec = finite_decimal(result).ok_or_else(|| {
+        PricingError::non_finite("pricing::compound::bivariate_normal_cdf", result)
+    })?;
+    Ok(result_dec.max(Decimal::ZERO).min(Decimal::ONE))
 }
 
 /// Drezner (1978) / Drezner-Wesolowsky approximation for bivariate normal CDF.
@@ -352,8 +356,8 @@ fn price_compound(
 
     let price = if is_compound_call && is_underlying_call {
         // Call-on-Call
-        let m1 = bivariate_normal_cdf(d1_t1, d1_t2, rho);
-        let m2 = bivariate_normal_cdf(d2_t1, d2_t2, rho);
+        let m1 = bivariate_normal_cdf(d1_t1, d1_t2, rho)?;
+        let m2 = bivariate_normal_cdf(d2_t1, d2_t2, rho)?;
         let n_d2_t1 = big_n(d2_t1).unwrap_or(Decimal::ZERO);
 
         let leg_s = build_leg(
@@ -381,8 +385,8 @@ fn price_compound(
         d_sub(step, leg_k1, "pricing::compound::call_call::price")?
     } else if is_compound_call && !is_underlying_call {
         // Call-on-Put
-        let m1 = bivariate_normal_cdf(-d1_t1, -d1_t2, rho);
-        let m2 = bivariate_normal_cdf(-d2_t1, -d2_t2, rho);
+        let m1 = bivariate_normal_cdf(-d1_t1, -d1_t2, rho)?;
+        let m2 = bivariate_normal_cdf(-d2_t1, -d2_t2, rho)?;
         let n_neg_d2_t1 = big_n(-d2_t1).unwrap_or(Decimal::ZERO);
 
         let leg_k2 = build_leg(
@@ -410,8 +414,8 @@ fn price_compound(
         d_sub(step, leg_k1, "pricing::compound::call_put::price")?
     } else if !is_compound_call && is_underlying_call {
         // Put-on-Call
-        let m1 = bivariate_normal_cdf(-d1_t1, d1_t2, -rho);
-        let m2 = bivariate_normal_cdf(-d2_t1, d2_t2, -rho);
+        let m1 = bivariate_normal_cdf(-d1_t1, d1_t2, -rho)?;
+        let m2 = bivariate_normal_cdf(-d2_t1, d2_t2, -rho)?;
         let n_neg_d2_t1 = big_n(-d2_t1).unwrap_or(Decimal::ZERO);
 
         let leg_k1 = build_leg(
@@ -439,8 +443,8 @@ fn price_compound(
         d_add(step, leg_k2, "pricing::compound::put_call::price")?
     } else {
         // Put-on-Put
-        let m1 = bivariate_normal_cdf(d1_t1, -d1_t2, -rho);
-        let m2 = bivariate_normal_cdf(d2_t1, -d2_t2, -rho);
+        let m1 = bivariate_normal_cdf(d1_t1, -d1_t2, -rho)?;
+        let m2 = bivariate_normal_cdf(d2_t1, -d2_t2, -rho)?;
         let n_d2_t1 = big_n(d2_t1).unwrap_or(Decimal::ZERO);
 
         let leg_k1 = build_leg(
@@ -598,7 +602,7 @@ mod tests {
         let a = dec!(0.0);
         let b = dec!(0.0);
         let rho = dec!(0.0);
-        let result = bivariate_normal_cdf(a, b, rho);
+        let result = bivariate_normal_cdf(a, b, rho).expect("finite CDF");
         // N(0)*N(0) = 0.5 * 0.5 = 0.25
         assert!(
             (result - dec!(0.25)).abs() < dec!(0.01),
@@ -613,7 +617,7 @@ mod tests {
         let a = dec!(1.0);
         let b = dec!(0.5);
         let rho = dec!(0.999);
-        let result = bivariate_normal_cdf(a, b, rho);
+        let result = bivariate_normal_cdf(a, b, rho).expect("finite CDF");
         let n_min = big_n(b).unwrap_or(Decimal::ZERO);
         assert!(
             (result - n_min).abs() < dec!(0.1),

@@ -210,6 +210,36 @@ pub fn f64_to_decimal(value: f64) -> Result<Decimal, DecimalError> {
     })
 }
 
+/// Attempts to convert a finite `f64` into a `Decimal`.
+///
+/// Returns `None` when `value` is not finite (`NaN`, `+∞`, `-∞`) or
+/// when `Decimal::from_f64` rejects the conversion (the latter is
+/// vanishingly rare for representable `f64`). Crate-private helper
+/// that standardises the `is_finite()` check paired with
+/// `Decimal::from_f64` at every `f64` → `Decimal` boundary inside
+/// pricing, Greeks, volatility, and simulation kernels.
+///
+/// Callers wrap the `None` case with a domain-specific
+/// `*Error::NonFinite { context, value }` via `ok_or_else`:
+///
+/// ```ignore
+/// let v = finite_decimal(v_f64)
+///     .ok_or_else(|| PricingError::non_finite("pricing::bs::call::d1", v_f64))?;
+/// ```
+///
+/// The guard is enforced at the public boundary of every `f64`
+/// numerical kernel per the rules (`rules/global_rules.md`
+/// §Arithmetic).
+#[must_use]
+#[inline]
+pub(crate) fn finite_decimal(value: f64) -> Option<Decimal> {
+    if value.is_finite() {
+        Decimal::from_f64(value)
+    } else {
+        None
+    }
+}
+
 /// Generates a random positive value from a standard normal distribution.
 ///
 /// This function samples from a normal distribution with mean 0.0 and standard
@@ -239,6 +269,7 @@ pub fn f64_to_decimal(value: f64) -> Result<Decimal, DecimalError> {
 /// valid under the `statrs` contract and the arm is unreachable in
 /// practice. Kept as a panic rather than `Result` to preserve the
 /// infallible sampling API.
+#[must_use]
 pub fn decimal_normal_sample() -> Decimal {
     let mut t_rng = rand::rng();
     // Normal::new(0.0, 1.0) is provably valid (mean=0, std=1 are accepted
@@ -400,6 +431,37 @@ macro_rules! d2f {
     ($val:expr) => {
         $crate::model::decimal::decimal_to_f64($val)?
     };
+}
+
+/// Builds a `NonZeroUsize` from a literal or constant expression.
+///
+/// Ergonomic shorthand for the `NonZeroUsize::new(N).expect(..)` pattern
+/// at call sites that know the value is non-zero by construction (tests,
+/// examples, benchmarks). Use this whenever passing literal step or
+/// simulation counts to one of the public pricing kernels migrated
+/// in #337.
+///
+/// # Panics
+///
+/// Panics with a descriptive message if `$val` evaluates to zero. For
+/// runtime values coming from JSON, CLI, or external APIs prefer
+/// `NonZeroUsize::new(x).ok_or_else(..)` at the boundary instead.
+///
+/// # Examples
+///
+/// ```rust
+/// use optionstratlib::nz;
+/// use std::num::NonZeroUsize;
+///
+/// let steps = nz!(100);
+/// assert_eq!(steps.get(), 100);
+/// ```
+#[macro_export]
+macro_rules! nz {
+    ($val:expr) => {{
+        ::std::num::NonZeroUsize::new($val)
+            .unwrap_or_else(|| panic!("nz!({}) must be non-zero", stringify!($val)))
+    }};
 }
 
 /// Converts an f64 value to Decimal without error checking.

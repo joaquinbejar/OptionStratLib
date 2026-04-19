@@ -24,7 +24,7 @@
 use crate::Options;
 use crate::error::PricingError;
 use crate::greeks::big_n;
-use crate::model::decimal::{d_add, d_mul, d_sub};
+use crate::model::decimal::{d_add, d_mul, d_sub, finite_decimal};
 use crate::model::types::OptionType;
 use num_traits::Inv;
 use rust_decimal::Decimal;
@@ -138,11 +138,10 @@ fn price_period(
     let q = option.dividend_yield.to_dec();
     let sigma = option.implied_volatility.to_dec();
 
-    let dt_dec = Decimal::from_f64(dt).ok_or_else(|| {
-        PricingError::method_error("price_period", &format!("non-finite dt: {dt}"))
-    })?;
-    let t_start_dec = Decimal::from_f64(t_start).ok_or_else(|| {
-        PricingError::method_error("price_period", &format!("non-finite t_start: {t_start}"))
+    let dt_dec = finite_decimal(dt)
+        .ok_or_else(|| PricingError::non_finite("pricing::cliquet::price_period::dt", dt))?;
+    let t_start_dec = finite_decimal(t_start).ok_or_else(|| {
+        PricingError::non_finite("pricing::cliquet::price_period::t_start", t_start)
     })?;
 
     // S_0 * e^(-q * t_start) is the present value of the expected S_{t_prev}

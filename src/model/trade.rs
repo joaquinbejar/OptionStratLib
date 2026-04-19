@@ -185,6 +185,7 @@ impl Trade {
     /// - The `symbol` and `notes` parameters are optional and can be set to `None` if not applicable.
     ///
     #[allow(clippy::too_many_arguments)]
+    #[must_use]
     pub fn new(
         id: uuid::Uuid,
         action: Action,
@@ -223,6 +224,7 @@ impl Trade {
     }
 
     /// Convert back to `DateTime<Utc>` when you need it for pretty printing.
+    #[must_use]
     pub fn datetime(&self) -> DateTime<Utc> {
         DateTime::<Utc>::from_timestamp_nanos(self.timestamp)
     }
@@ -262,6 +264,7 @@ impl Trade {
     /// # Assumptions
     /// - It assumes that `fee`, `premium`, and `quantity` are positive values.
     /// - The `Positive` type enforces that the resulting cost is non-negative.
+    #[must_use]
     pub fn cost(&self) -> Positive {
         let fees = self.fee * self.quantity;
         let premium = self.premium * self.quantity;
@@ -299,6 +302,7 @@ impl Trade {
     /// - `Action` enum (expected values: `Buy`, `Sell`)
     /// - `Side` enum (expected values: `Long`, `Short`)
     /// - `Positive` type for representing non-negative values.
+    #[must_use]
     pub fn income(&self) -> Positive {
         let premium = self.quantity * self.premium;
         match (self.action, self.side) {
@@ -319,6 +323,7 @@ impl Trade {
     /// - The `cost()` method is called to obtain the cost value, which is also converted to a `Decimal` using `to_dec()`.
     /// - The net value is computed as: `income.to_dec() - cost.to_dec()`.
     ///
+    #[must_use]
     pub fn net(&self) -> Decimal {
         self.income().to_dec() - self.cost().to_dec()
     }
@@ -331,6 +336,7 @@ impl Trade {
     /// * `false` - If the trade's status is not `Open`.
     ///
     /// This method is commonly used to determine whether a trade is still active and can be interacted with.
+    #[must_use]
     pub fn is_open(&self) -> bool {
         self.status == TradeStatus::Open
     }
@@ -343,6 +349,7 @@ impl Trade {
     /// # Implementation Details
     /// This function leverages the `Into` trait to convert the current object (`self`) into a `PnL` instance.
     ///
+    #[must_use]
     pub fn pnl(&self) -> PnL {
         self.into()
     }
@@ -355,6 +362,7 @@ impl Trade {
     /// # Returns
     /// * `bool` - `true` if the trade's status is `TradeStatus::Closed`, `false` otherwise.
     ///
+    #[must_use]
     pub fn is_closed(&self) -> bool {
         self.status == TradeStatus::Closed
     }
@@ -368,6 +376,7 @@ impl Trade {
     /// * `true` - If the trade's status is `TradeStatus::Expired`.
     /// * `false` - If the trade's status is not `TradeStatus::Expired`.
     ///
+    #[must_use]
     pub fn is_expired(&self) -> bool {
         self.status == TradeStatus::Expired
     }

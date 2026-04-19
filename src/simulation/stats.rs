@@ -48,6 +48,7 @@ impl SimulationStats {
     /// # Returns
     ///
     /// A new `SimulationStats` instance with all counters set to zero.
+    #[must_use]
     pub fn new() -> Self {
         Self {
             total_simulations: 0,

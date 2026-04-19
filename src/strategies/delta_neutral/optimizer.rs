@@ -56,6 +56,7 @@ impl<'a> AdjustmentOptimizer<'a> {
     /// * `positions` - Current positions to adjust
     /// * `config` - Configuration for adjustment behavior
     /// * `target` - Target Greeks to achieve
+    #[must_use]
     pub fn new(
         positions: &'a [Position],
         config: AdjustmentConfig,
@@ -77,6 +78,7 @@ impl<'a> AdjustmentOptimizer<'a> {
     /// * `chain` - Option chain for finding new legs
     /// * `config` - Configuration for adjustment behavior
     /// * `target` - Target Greeks to achieve
+    #[must_use]
     pub fn with_chain(
         positions: &'a [Position],
         chain: &'a OptionChain,

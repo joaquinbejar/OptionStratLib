@@ -6,6 +6,7 @@
 
 use criterion::Criterion;
 use optionstratlib::greeks::Greeks;
+use optionstratlib::nz;
 use optionstratlib::pnl::utils::PnLCalculator;
 use optionstratlib::{ExpirationDate, OptionStyle, OptionType, Options, Side};
 use positive::{Positive, pos_or_panic};
@@ -38,11 +39,11 @@ pub(crate) fn benchmark_pricing(c: &mut Criterion) {
     });
 
     group.bench_function("binomial_50_steps", |bencher| {
-        bencher.iter(|| black_box(option.calculate_price_binomial(50)))
+        bencher.iter(|| black_box(option.calculate_price_binomial(nz!(50))))
     });
 
     group.bench_function("telegraph_50_steps", |bencher| {
-        bencher.iter(|| black_box(option.calculate_price_telegraph(50)))
+        bencher.iter(|| black_box(option.calculate_price_telegraph(nz!(50))))
     });
 
     group.finish();
@@ -138,9 +139,10 @@ pub(crate) fn benchmark_binary_tree(c: &mut Criterion) {
 
     let option = create_test_option();
 
-    for steps in [10, 50, 100, 200].iter() {
+    for steps in [10usize, 50, 100, 200].iter() {
+        let nz_steps = nz!(*steps);
         group.bench_function(format!("binomial_tree_{steps}_steps"), |bencher| {
-            bencher.iter(|| black_box(option.calculate_price_binomial_tree(*steps)))
+            bencher.iter(|| black_box(option.calculate_price_binomial_tree(nz_steps)))
         });
     }
 

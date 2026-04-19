@@ -47,6 +47,7 @@ impl OptionSeries {
     /// - An empty `chains` field of type `BTreeMap`.
     /// - `None` for both `risk_free_rate` and `dividend_yield`.
     ///
+    #[must_use]
     pub fn new(symbol: String, underlying_price: Positive) -> Self {
         Self {
             symbol,
@@ -74,6 +75,7 @@ impl OptionSeries {
     ///
     /// # Errors
     /// This function does not return errors but may return `None` if no conditions are met.
+    #[must_use]
     pub fn odte(&self) -> Option<OptionChain> {
         match self.chains.first_key_value() {
             Some((expiration_date, option_chain)) => {

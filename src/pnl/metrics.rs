@@ -300,6 +300,7 @@ pub struct PnLMetricsDocument {
 /// # Returns
 ///
 /// A `PnLMetricsDocument` instance containing the provided metrics and parameters.
+#[must_use]
 pub fn create_pnl_metrics_document(
     metrics: Vec<PnLMetricsStep>,
     days: Positive,

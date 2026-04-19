@@ -74,6 +74,7 @@ impl SPANMargin {
     ///     dec!(0.15)   // 15% volatility scan range
     /// );
     /// ```
+    #[must_use]
     pub fn new(
         short_option_minimum: Decimal,
         price_scan_range: Decimal,

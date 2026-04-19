@@ -49,6 +49,7 @@ impl PnLRange {
     /// let range = PnLRange::new(-100, 100);
     /// // Creates a PnL range from -100 (inclusive) to 100 (exclusive)
     /// ```
+    #[must_use]
     pub fn new(lower: i32, upper: i32) -> Self {
         Self { lower, upper }
     }

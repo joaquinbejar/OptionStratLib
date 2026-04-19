@@ -241,6 +241,7 @@ impl Point3D {
     /// - Working with visualization that requires 2D projections of 3D points
     /// - Analyzing specific planes within a 3D model
     /// - Converting between coordinate systems from 3D to 2D
+    #[must_use]
     pub fn point2d(&self) -> Box<Point2D> {
         Box::new(Point2D::new(self.x, self.y))
     }

@@ -189,6 +189,7 @@ impl OptionData {
     /// This function allows many optional parameters to accommodate scenarios where not all market data
     /// is available from data providers.
     #[allow(clippy::too_many_arguments)]
+    #[must_use]
     pub fn new(
         strike_price: Positive,
         call_bid: Option<Positive>,
@@ -245,6 +246,7 @@ impl OptionData {
     ///
     /// # Note
     /// The `Positive` type is assumed to enforce non-negative values for correctness.
+    #[must_use]
     pub fn get_call_spread(&self) -> Option<Positive> {
         match (self.call_bid, self.call_ask) {
             (Some(call_bid), Some(call_ask)) => {
@@ -279,6 +281,7 @@ impl OptionData {
     ///
     /// # Errors
     /// This function does not return an error. It simply returns `None` if the calculation is not feasible.
+    #[must_use]
     pub fn get_call_spread_per(&self) -> Option<Positive> {
         match (self.call_bid, self.call_ask) {
             (Some(call_bid), Some(call_ask)) => {
@@ -307,6 +310,7 @@ impl OptionData {
     /// to convert to a numeric type for calculation purposes.
     /// The spread is always represented as a positive value.
     ///
+    #[must_use]
     pub fn get_put_spread(&self) -> Option<Positive> {
         match (self.put_bid, self.put_ask) {
             (Some(put_bid), Some(put_ask)) => {
@@ -333,6 +337,7 @@ impl OptionData {
     ///
     /// # Note
     /// This function returns `None` if there are missing values for either `put_bid` or `put_ask`.
+    #[must_use]
     pub fn get_put_spread_per(&self) -> Option<Positive> {
         match (self.put_bid, self.put_ask) {
             (Some(put_bid), Some(put_ask)) => {
@@ -359,6 +364,7 @@ impl OptionData {
     ///
     /// Ensure that the `Positive` type enforces constraints to prevent invalid values
     /// such as negative volatility.
+    #[must_use]
     pub fn get_volatility(&self) -> Positive {
         self.implied_volatility
     }
@@ -443,6 +449,7 @@ impl OptionData {
     /// a valid positive number.
     ///
     /// [`Positive`]: struct.Positive.html
+    #[must_use]
     pub fn strike(&self) -> Positive {
         self.strike_price
     }
@@ -483,6 +490,7 @@ impl OptionData {
     /// # Returns
     ///
     /// The call option's ask price as a `Positive` value, or `None` if the price is unavailable.
+    #[must_use]
     pub fn get_call_buy_price(&self) -> Option<Positive> {
         self.call_ask
     }
@@ -495,6 +503,7 @@ impl OptionData {
     /// # Returns
     ///
     /// The call option's bid price as a `Positive` value, or `None` if the price is unavailable.
+    #[must_use]
     pub fn get_call_sell_price(&self) -> Option<Positive> {
         self.call_bid
     }
@@ -507,6 +516,7 @@ impl OptionData {
     /// # Returns
     ///
     /// The put option's ask price as a `Positive` value, or `None` if the price is unavailable.
+    #[must_use]
     pub fn get_put_buy_price(&self) -> Option<Positive> {
         self.put_ask
     }
@@ -519,6 +529,7 @@ impl OptionData {
     /// # Returns
     ///
     /// The put option's bid price as a `Positive` value, or `None` if the price is unavailable.
+    #[must_use]
     pub fn get_put_sell_price(&self) -> Option<Positive> {
         self.put_bid
     }
@@ -529,6 +540,7 @@ impl OptionData {
     /// fields of the `OptionData` struct are `None`, indicating missing price information.
     /// It returns `false` if all four fields have valid price data.
     ///
+    #[must_use]
     pub fn some_price_is_none(&self) -> bool {
         self.call_bid.is_none()
             || self.call_ask.is_none()
@@ -1058,6 +1070,7 @@ impl OptionData {
     /// A tuple containing:
     /// * First element: The call option mid-price (bid+ask)/2, or `None` if not available
     /// * Second element: The put option mid-price (bid+ask)/2, or `None` if not available
+    #[must_use]
     pub fn get_mid_prices(&self) -> (Option<Positive>, Option<Positive>) {
         (self.call_middle, self.put_middle)
     }
@@ -1088,6 +1101,7 @@ impl OptionData {
     /// * Second element: `Option<Decimal>` - The delta value for the put option. May be `None` if
     ///   the delta value is not available or could not be calculated.
     ///
+    #[must_use]
     pub fn current_deltas(&self) -> (Option<Decimal>, Option<Decimal>) {
         (self.delta_call, self.delta_put)
     }
@@ -1103,6 +1117,7 @@ impl OptionData {
     /// * `Option<Decimal>` - The current gamma value wrapped in `Some` if it exists,
     ///   or `None` if the gamma value is not set.
     ///
+    #[must_use]
     pub fn current_gamma(&self) -> Option<Decimal> {
         self.gamma
     }

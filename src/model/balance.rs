@@ -51,6 +51,7 @@ impl Balance {
     /// # Returns
     ///
     /// A new Balance instance for the option position
+    #[must_use]
     pub fn new(
         symbol: String,
         quantity: Positive,
@@ -77,6 +78,7 @@ impl Balance {
     ///
     /// The total value (quantity * current_premium) if current_premium is available,
     /// otherwise returns the cost basis (quantity * average_premium)
+    #[must_use]
     pub fn get_total_value(&self) -> Positive {
         match self.current_premium {
             Some(current_price) => {
@@ -106,6 +108,7 @@ impl Balance {
     ///
     /// The unrealized PnL as a Decimal. Positive values indicate profit,
     /// negative values indicate loss. Returns zero if current_price is not available.
+    #[must_use]
     pub fn get_unrealized_pnl(&self) -> Decimal {
         match self.current_premium {
             Some(current_price) => {
@@ -132,6 +135,7 @@ impl Balance {
     ///
     /// `true` if the position has unrealized gains, `false` otherwise.
     /// Returns `false` if current_price is not available.
+    #[must_use]
     pub fn is_profitable(&self) -> bool {
         self.get_unrealized_pnl() > Decimal::ZERO
     }
@@ -141,6 +145,7 @@ impl Balance {
     /// # Returns
     ///
     /// The total cost basis (quantity * average_premium)
+    #[must_use]
     pub fn get_cost_basis(&self) -> Positive {
         Positive::new(
             (self.quantity.value() * self.average_premium.value())
@@ -155,6 +160,7 @@ impl Balance {
     /// # Returns
     ///
     /// The percentage return as a Decimal. Returns zero if current_price is not available.
+    #[must_use]
     pub fn get_percentage_return(&self) -> Decimal {
         match self.current_premium {
             Some(_current_price) => {
@@ -210,6 +216,7 @@ impl Portfolio {
     /// # Returns
     ///
     /// A new Portfolio instance with an empty balance collection
+    #[must_use]
     pub fn new(name: String) -> Self {
         Self {
             balances: Vec::new(),
@@ -259,6 +266,7 @@ impl Portfolio {
     /// # Returns
     ///
     /// An optional reference to the Balance if found
+    #[must_use]
     pub fn get_balance(&self, symbol: &str, exchange: &str) -> Option<&Balance> {
         self.balances
             .iter()
@@ -286,6 +294,7 @@ impl Portfolio {
     /// # Returns
     ///
     /// The sum of all balance values in the portfolio
+    #[must_use]
     pub fn get_total_value(&self) -> Positive {
         let total_value: f64 = self
             .balances
@@ -301,6 +310,7 @@ impl Portfolio {
     /// # Returns
     ///
     /// The sum of all unrealized PnL across all balances
+    #[must_use]
     pub fn get_total_unrealized_pnl(&self) -> Decimal {
         self.balances
             .iter()
@@ -317,6 +327,7 @@ impl Portfolio {
     /// # Returns
     ///
     /// A vector of references to balances from the specified exchange
+    #[must_use]
     pub fn get_balances_by_exchange(&self, exchange: &str) -> Vec<&Balance> {
         self.balances
             .iter()
@@ -329,6 +340,7 @@ impl Portfolio {
     /// # Returns
     ///
     /// `true` if any balance in the portfolio is profitable
+    #[must_use]
     pub fn has_profitable_positions(&self) -> bool {
         self.balances.iter().any(|balance| balance.is_profitable())
     }
@@ -338,6 +350,7 @@ impl Portfolio {
     /// # Returns
     ///
     /// The count of balances in the portfolio
+    #[must_use]
     pub fn balance_count(&self) -> usize {
         self.balances.len()
     }
@@ -347,6 +360,7 @@ impl Portfolio {
     /// # Returns
     ///
     /// `true` if the portfolio has no balances
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.balances.is_empty()
     }

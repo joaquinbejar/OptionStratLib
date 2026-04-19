@@ -55,6 +55,7 @@ impl StrategyRequest {
     ///
     /// # Returns
     /// A new `StrategyRequest` instance containing the provided strategy type and positions.
+    #[must_use]
     pub fn new(strategy_type: StrategyType, positions: Vec<Position>) -> Self {
         Self {
             strategy_type,

@@ -1217,6 +1217,7 @@ pub use model::types::{OptionStyle, OptionType, RainbowType, Side};
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 /// Returns the library version
+#[must_use]
 pub fn version() -> &'static str {
     VERSION
 }

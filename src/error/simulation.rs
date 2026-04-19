@@ -114,6 +114,24 @@ pub enum SimulationError {
     /// Positive value errors
     #[error(transparent)]
     PositiveError(#[from] positive::PositiveError),
+
+    /// A simulation kernel produced a non-finite `f64` value (`NaN` /
+    /// `±∞`) at an `f64` → `Decimal` boundary.
+    ///
+    /// Emitted by Brownian / geometric Brownian motion, Heston,
+    /// telegraph, and general random-walk path generators whenever
+    /// an intermediate `f64` would otherwise be silently cast into
+    /// `Decimal::ZERO`. `context` is a static call-site tag
+    /// following the same convention as
+    /// [`crate::error::DecimalError::Overflow`].
+    #[error("simulation non-finite {context}: {value}")]
+    NonFinite {
+        /// Static tag identifying the kernel and step that produced
+        /// the non-finite value.
+        context: &'static str,
+        /// The offending `f64` value (`NaN`, `+∞`, or `-∞`).
+        value: f64,
+    },
 }
 
 impl SimulationError {
@@ -151,6 +169,15 @@ impl SimulationError {
         SimulationError::StepError {
             reason: reason.to_string(),
         }
+    }
+
+    /// Creates a [`SimulationError::NonFinite`] from a static call-site
+    /// tag and the offending `f64` value.
+    #[must_use]
+    #[inline]
+    #[cold]
+    pub fn non_finite(context: &'static str, value: f64) -> Self {
+        SimulationError::NonFinite { context, value }
     }
 }
 

@@ -4,16 +4,15 @@
    Date: 5/8/24
 ******************************************************************************/
 use crate::Options;
-
+use crate::error::PricingError;
 use crate::error::decimal::DecimalError;
 use crate::greeks::{big_n, d2};
-use crate::model::decimal::{d_add, d_mul, d_sub};
+use crate::model::decimal::{d_add, d_mul, d_sub, finite_decimal};
 use crate::model::types::Side;
 use crate::pricing::binomial_model::BinomialPricingParams;
 use crate::pricing::constants::{CLAMP_MAX, CLAMP_MIN};
 use crate::pricing::payoff::{Payoff, PayoffInfo};
 use crate::utils::random_decimal;
-use num_traits::FromPrimitive;
 use positive::Positive;
 use rand::Rng;
 use rand_distr::{Distribution, Normal};
@@ -268,23 +267,23 @@ pub(crate) fn option_node_value(
 ///
 /// # Returns
 ///
-/// `Result<Decimal, DecimalError>` — the option price at the given step,
-/// or `DecimalError::InvalidValue` if the payoff cannot be represented as a
-/// finite `Decimal`.
+/// `Result<Decimal, PricingError>` — the option price at the given step,
+/// or `PricingError::NonFinite` if the payoff `f64` is `NaN` / `±∞`.
 ///
 /// # Errors
 ///
-/// Returns `DecimalError::InvalidValue` when `params.option_type.payoff(...)`
-/// produces a non-finite `f64` (NaN / ±Inf).
+/// Returns [`PricingError::NonFinite`] when `params.option_type.payoff(...)`
+/// produces a non-finite `f64` (NaN / ±Inf), tagged with
+/// `"pricing::binomial::option_price::payoff"`.
 ///
 pub(crate) fn calculate_option_price(
     params: BinomialPricingParams,
     u: Decimal,
     d: Decimal,
     i: usize,
-) -> Result<Decimal, DecimalError> {
+) -> Result<Decimal, PricingError> {
     let info = PayoffInfo {
-        spot: params.asset * u.powu(i as u64) * d.powi((params.no_steps - i) as i64),
+        spot: params.asset * u.powu(i as u64) * d.powi((params.no_steps.get() - i) as i64),
         strike: params.strike,
         style: *params.option_style,
         side: *params.side,
@@ -293,8 +292,8 @@ pub(crate) fn calculate_option_price(
         spot_max: None,
     };
     let payoff_f64 = params.option_type.payoff(&info);
-    let payoff = Decimal::from_f64(payoff_f64).ok_or_else(|| {
-        DecimalError::invalid_value(payoff_f64, "non-finite payoff in calculate_option_price")
+    let payoff = finite_decimal(payoff_f64).ok_or_else(|| {
+        PricingError::non_finite("pricing::binomial::option_price::payoff", payoff_f64)
     })?;
 
     Ok(payoff)
@@ -308,9 +307,9 @@ pub(crate) fn calculate_option_price(
 ///
 /// # Returns
 ///
-/// `Result<Decimal, DecimalError>` — the discounted payoff (sign-adjusted for
-/// `Side::Long` / `Side::Short`), or `DecimalError::InvalidValue` if the
-/// payoff cannot be represented as a finite `Decimal`.
+/// `Result<Decimal, PricingError>` — the discounted payoff (sign-adjusted for
+/// `Side::Long` / `Side::Short`), or `PricingError::NonFinite` if the
+/// payoff `f64` is non-finite.
 ///
 /// The function takes into account the future asset price, the interest rate, the expiry time,
 /// the type of option (call or put), and the style of the option (European or American).
@@ -321,12 +320,14 @@ pub(crate) fn calculate_option_price(
 ///
 /// # Errors
 ///
-/// Returns `DecimalError::InvalidValue` when `params.option_type.payoff(...)`
-/// produces a non-finite `f64` (NaN / ±Inf).
+/// - [`PricingError::NonFinite`] when `params.option_type.payoff(...)` produces a
+///   non-finite `f64`, tagged `"pricing::binomial::discounted_payoff::payoff"`.
+/// - [`PricingError::Decimal`] (via `#[from]`) when the checked multiplications
+///   `-rate * expiry` or `discount * payoff` overflow.
 ///
 pub(crate) fn calculate_discounted_payoff(
     params: BinomialPricingParams,
-) -> Result<Decimal, DecimalError> {
+) -> Result<Decimal, PricingError> {
     let info = PayoffInfo {
         spot: params.asset * (params.int_rate * params.expiry).exp(),
         strike: params.strike,
@@ -338,11 +339,8 @@ pub(crate) fn calculate_discounted_payoff(
     };
 
     let payoff_f64 = params.option_type.payoff(&info);
-    let payoff = Decimal::from_f64(payoff_f64).ok_or_else(|| {
-        DecimalError::invalid_value(
-            payoff_f64,
-            "non-finite payoff in calculate_discounted_payoff",
-        )
+    let payoff = finite_decimal(payoff_f64).ok_or_else(|| {
+        PricingError::non_finite("pricing::binomial::discounted_payoff::payoff", payoff_f64)
     })?;
     // Build the discount exponent through a checked multiplication so
     // that an overflow on `-rate * expiry` is tagged rather than
@@ -378,24 +376,26 @@ pub(crate) fn calculate_discounted_payoff(
 ///
 /// # Returns
 ///
-/// `Result<Decimal, DecimalError>` — the Wiener process increment for the
+/// `Result<Decimal, PricingError>` — the Wiener process increment for the
 /// given time step.
 ///
 /// # Errors
 ///
-/// - `DecimalError::ArithmeticError` if `Normal::new(0.0, 1.0)` fails (effectively
-///   never; parameters are constants) or if `dt.sqrt()` is undefined for the
-///   given input (negative or non-finite `dt`).
-/// - `DecimalError::InvalidValue` if the sampled normal value is non-finite.
+/// - [`PricingError::Decimal`] (via `#[from]`) if `Normal::new(0.0, 1.0)` fails
+///   (effectively never; parameters are constants) or if `dt.sqrt()` is
+///   undefined for the given input (negative or non-finite `dt`).
+/// - [`PricingError::NonFinite`] if the sampled normal value is non-finite,
+///   tagged `"pricing::monte_carlo::wiener_increment::sample"`.
 ///
-pub(crate) fn wiener_increment(dt: Decimal) -> Result<Decimal, DecimalError> {
+pub(crate) fn wiener_increment(dt: Decimal) -> Result<Decimal, PricingError> {
     let normal = Normal::new(0.0, 1.0)
         .map_err(|e| DecimalError::arithmetic_error("Normal::new(0.0, 1.0)", &e.to_string()))?;
     let mut rng = rand::rng();
 
     let sample_f64 = normal.sample(&mut rng);
-    let sample = Decimal::from_f64(sample_f64)
-        .ok_or_else(|| DecimalError::invalid_value(sample_f64, "non-finite normal sample"))?;
+    let sample = finite_decimal(sample_f64).ok_or_else(|| {
+        PricingError::non_finite("pricing::monte_carlo::wiener_increment::sample", sample_f64)
+    })?;
 
     let sqrt_dt = dt.sqrt().ok_or_else(|| {
         DecimalError::arithmetic_error("sqrt", "non-finite dt in wiener_increment")
@@ -444,6 +444,7 @@ pub fn probability_keep_under_strike(
 #[cfg(test)]
 mod tests_simulate_returns {
     use super::*;
+    use num_traits::FromPrimitive;
     use positive::pos_or_panic;
 
     use crate::assert_decimal_eq;
@@ -481,7 +482,7 @@ mod tests_simulate_returns_bis {
 
     use crate::assert_decimal_eq;
     use crate::model::decimal::DecimalStats;
-
+    use num_traits::FromPrimitive;
     use rust_decimal_macros::dec;
 
     #[test]

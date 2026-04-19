@@ -37,6 +37,7 @@ impl OptionSeriesBuildParams {
     /// # Returns
     /// - A new `Self` instance initialized with the provided `chain_params` and `series`.
     ///
+    #[must_use]
     pub fn new(chain_params: OptionChainBuildParams, series: Vec<Positive>) -> Self {
         Self {
             chain_params,

@@ -94,6 +94,7 @@ impl TimeFrame {
     /// let periods_per_year = custom.periods_per_year(); // Returns 360
     /// assert_eq!(periods_per_year, pos_or_panic!(360.0));
     /// ```
+    #[must_use]
     pub fn periods_per_year(&self) -> Positive {
         // Copy the `LazyLock<Positive>` values into locals once to avoid
         // repeating the lazy-check on every factor of the match-arm products.
@@ -156,6 +157,7 @@ fn pos_lit(d: rust_decimal::Decimal) -> Positive {
     Positive::new_decimal(d).unwrap_or(Positive::ZERO)
 }
 
+#[must_use]
 pub fn units_per_year(time_frame: &TimeFrame) -> Positive {
     match time_frame {
         TimeFrame::Microsecond => pos_lit(dec!(31536000000000.0)), // 365 * 24 * 60 * 60 * 1_000_000
@@ -209,6 +211,7 @@ pub fn units_per_year(time_frame: &TimeFrame) -> Positive {
 /// let result = convert_time_frame(pos_or_panic!(12.0), &TimeFrame::Hour, &TimeFrame::Day);
 /// assert_pos_relative_eq!(result, pos_or_panic!(0.5), pos_or_panic!(0.0000001));
 /// ```
+#[must_use]
 pub fn convert_time_frame(
     value: Positive,
     from_time_frame: &TimeFrame,
@@ -247,6 +250,7 @@ pub fn convert_time_frame(
 /// let tomorrow = get_tomorrow_formatted();
 /// info!("{}", tomorrow); // Output will vary depending on the current date.
 /// ```
+#[must_use]
 pub fn get_tomorrow_formatted() -> String {
     let tomorrow = Local::now().date_naive() + Duration::days(1);
     tomorrow.format("%d-%b-%Y").to_string().to_lowercase()
@@ -268,6 +272,7 @@ pub fn get_tomorrow_formatted() -> String {
 ///
 /// A lowercase string representing the calculated date in "dd-mmm-yyyy" format.
 ///
+#[must_use]
 pub fn get_x_days_formatted(days: i64) -> String {
     let tomorrow = Local::now().date_naive() + Duration::days(days);
     tomorrow.format("%d-%b-%Y").to_string().to_lowercase()
@@ -294,6 +299,7 @@ pub fn get_x_days_formatted(days: i64) -> String {
 /// # Note
 /// - The function uses the local time zone and the `chrono` crate for date manipulation.
 /// - The `Positive` type is expected to provide a `.ceiling()` method that converts it to an integer-compatible representation.
+#[must_use]
 pub fn get_x_days_formatted_pos(days: Positive) -> String {
     let ceiling = days.ceiling().to_i64();
     let tomorrow = Local::now().date_naive() + Duration::days(ceiling);
@@ -312,6 +318,7 @@ pub fn get_x_days_formatted_pos(days: Positive) -> String {
 /// let expected_format = Local::now().date_naive().format("%d-%b-%Y").to_string().to_lowercase();
 /// assert_eq!(today_formatted, expected_format);
 /// ```
+#[must_use]
 pub fn get_today_formatted() -> String {
     let today = Local::now().date_naive();
     today.format("%d-%b-%Y").to_string().to_lowercase()
@@ -338,6 +345,7 @@ pub fn get_today_formatted() -> String {
 ///
 /// info!("{}", get_today_or_tomorrow_formatted());
 /// ```
+#[must_use]
 pub fn get_today_or_tomorrow_formatted() -> String {
     // 18:30 is a valid wall-clock time, so the Err arm is unreachable.
     let cutoff_time = match NaiveTime::from_hms_opt(18, 30, 0) {
