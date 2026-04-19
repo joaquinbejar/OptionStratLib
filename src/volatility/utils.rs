@@ -332,7 +332,7 @@ pub fn calculate_iv(
 ///
 /// # Errors
 ///
-/// - Propagates [`DecimalError::Overflow`] from the underlying
+/// - Propagates [`crate::error::DecimalError::Overflow`] from the underlying
 ///   checked arithmetic helpers (`d_mul`, `d_add`) wrapped as
 ///   [`VolatilityError::DecimalError`] via the `#[from]` cascade.
 ///   This happens when any of the four monetary products

@@ -157,6 +157,9 @@ fn pos_lit(d: rust_decimal::Decimal) -> Positive {
     Positive::new_decimal(d).unwrap_or(Positive::ZERO)
 }
 
+/// Returns how many units of the given `TimeFrame` fit into a calendar year
+/// as a `Positive`. Used by annualisation helpers (volatility, yield
+/// curves) to scale per-period values to a standardised annual basis.
 #[must_use]
 pub fn units_per_year(time_frame: &TimeFrame) -> Positive {
     match time_frame {

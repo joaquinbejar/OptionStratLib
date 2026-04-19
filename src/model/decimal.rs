@@ -524,6 +524,7 @@ macro_rules! f2d {
     };
 }
 
+/// Conversion helpers' sanity tests (public module to support doctest wiring).
 #[cfg(test)]
 pub mod tests {
     use super::*;

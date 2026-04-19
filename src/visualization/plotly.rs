@@ -14,6 +14,13 @@ use plotly::plotly_static::ImageFormat;
 #[cfg(feature = "static_export")]
 use tracing::debug;
 
+/// Trait implemented by every strategy / chain / surface that can
+/// render itself as a Plotly figure.
+///
+/// Provides the data-only `graph_data()` / `graph_config()` hooks plus
+/// the feature-gated `to_plot` / `write_html` / `write_png` renderers.
+/// Implementers need only supply `graph_data`; the rest have safe
+/// defaults under the `plotly` (and `static_export`) features.
 pub trait Graph {
     /// Return the raw data ready for plotting.
     fn graph_data(&self) -> GraphData;
