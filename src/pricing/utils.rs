@@ -238,11 +238,7 @@ pub(crate) fn option_node_value(
     price_down: Decimal,
     discount_factor: Decimal,
 ) -> Result<Decimal, DecimalError> {
-    let up_branch = d_mul(
-        probability,
-        price_up,
-        "pricing::binomial::node::up_branch",
-    )?;
+    let up_branch = d_mul(probability, price_up, "pricing::binomial::node::up_branch")?;
     let down_branch = d_mul(
         d_sub(
             Decimal::ONE,

@@ -56,10 +56,7 @@ pub fn constant_volatility(returns: &[Decimal]) -> Result<Positive, VolatilityEr
     // mean and variance projection onto bankers-rounded Decimal).
     let total = d_sum(returns, "volatility::constant::total")?;
     let mean = d_div(total, n.to_dec(), "volatility::constant::mean")?;
-    let centred_sq: Vec<Decimal> = returns
-        .iter()
-        .map(|&r| (r - mean).powi(2))
-        .collect();
+    let centred_sq: Vec<Decimal> = returns.iter().map(|&r| (r - mean).powi(2)).collect();
     let sq_total = d_sum(&centred_sq, "volatility::constant::sq_total")?;
     let variance = d_div(
         sq_total,
@@ -149,11 +146,7 @@ pub fn ewma_volatility(
     for &return_value in &returns[1..] {
         // EWMA variance recursion: v' = λ·v + (1 - λ) · r².
         let persistent = d_mul(lambda, variance, "volatility::ewma::persistent")?;
-        let innovation_weight = d_sub(
-            Decimal::ONE,
-            lambda,
-            "volatility::ewma::innovation_weight",
-        )?;
+        let innovation_weight = d_sub(Decimal::ONE, lambda, "volatility::ewma::innovation_weight")?;
         let innovation = d_mul(
             innovation_weight,
             return_value.powi(2),
@@ -332,11 +325,7 @@ pub fn garch_volatility(
     for &return_value in &returns[1..] {
         // GARCH(1, 1) variance recursion:
         // v' = ω + α · r² + β · v_prev.
-        let alpha_r2 = d_mul(
-            alpha,
-            return_value.powi(2),
-            "volatility::garch::alpha_r2",
-        )?;
+        let alpha_r2 = d_mul(alpha, return_value.powi(2), "volatility::garch::alpha_r2")?;
         let beta_v = d_mul(beta, variance.to_dec(), "volatility::garch::beta_v")?;
         let persistent = d_add(omega, alpha_r2, "volatility::garch::omega_plus_alpha")?;
         let next_variance = d_add(persistent, beta_v, "volatility::garch::variance")?;

@@ -199,11 +199,7 @@ fn call_price_on_unit(
         // If K <= 0, the call is always in the money.
         // Value = S*e^{-qT} - K*e^{-rT}
         let s_pv = (-q * t).exp();
-        let k_pv = d_mul(
-            k,
-            (-r * t).exp(),
-            "pricing::cliquet::unit_call::itm::k_pv",
-        )?;
+        let k_pv = d_mul(k, (-r * t).exp(), "pricing::cliquet::unit_call::itm::k_pv")?;
         return d_sub(s_pv, k_pv, "pricing::cliquet::unit_call::itm::price")
             .map_err(PricingError::from);
     }
@@ -233,16 +229,8 @@ fn call_price_on_unit(
     let n1 = big_n(d1).unwrap_or(dec!(0.0));
     let n2 = big_n(d2).unwrap_or(dec!(0.0));
 
-    let s_leg = d_mul(
-        (-q * t).exp(),
-        n1,
-        "pricing::cliquet::unit_call::s_leg",
-    )?;
-    let k_leg = d_mul(
-        k * (-r * t).exp(),
-        n2,
-        "pricing::cliquet::unit_call::k_leg",
-    )?;
+    let s_leg = d_mul((-q * t).exp(), n1, "pricing::cliquet::unit_call::s_leg")?;
+    let k_leg = d_mul(k * (-r * t).exp(), n2, "pricing::cliquet::unit_call::k_leg")?;
     d_sub(s_leg, k_leg, "pricing::cliquet::unit_call::price").map_err(PricingError::from)
 }
 

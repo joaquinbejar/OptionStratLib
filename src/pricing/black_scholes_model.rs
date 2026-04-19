@@ -276,11 +276,7 @@ fn calculate_put_option_price(
         t,
         "pricing::black_scholes::put::qt",
     )?;
-    let rt = d_mul(
-        -option.risk_free_rate,
-        t,
-        "pricing::black_scholes::put::rt",
-    )?;
+    let rt = d_mul(-option.risk_free_rate, t, "pricing::black_scholes::put::rt")?;
     let s_discounted = d_mul(
         option.underlying_price.to_dec(),
         qt.exp(),

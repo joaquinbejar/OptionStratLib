@@ -512,11 +512,7 @@ pub fn calculate_delta_neutral_sizes(
         "greeks::delta_neutral::size1::weighted",
     )?;
     let spread = d_sub(delta1, delta2, "greeks::delta_neutral::size1::spread")?;
-    let size1 = Positive::new_decimal(d_div(
-        weighted,
-        spread,
-        "greeks::delta_neutral::size1",
-    )?)?;
+    let size1 = Positive::new_decimal(d_div(weighted, spread, "greeks::delta_neutral::size1")?)?;
     let size2 = total_size - size1;
 
     // Validate results

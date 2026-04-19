@@ -149,8 +149,12 @@ pub fn barone_adesi_whaley(
     if t <= Decimal::ZERO {
         // At expiration, return intrinsic value
         return Ok(match option_style {
-            OptionStyle::Call => d_sub(s, k, "pricing::american::intrinsic::call")?.max(Decimal::ZERO),
-            OptionStyle::Put => d_sub(k, s, "pricing::american::intrinsic::put")?.max(Decimal::ZERO),
+            OptionStyle::Call => {
+                d_sub(s, k, "pricing::american::intrinsic::call")?.max(Decimal::ZERO)
+            }
+            OptionStyle::Put => {
+                d_sub(k, s, "pricing::american::intrinsic::put")?.max(Decimal::ZERO)
+            }
         });
     }
 

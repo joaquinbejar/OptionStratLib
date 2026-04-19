@@ -31,8 +31,8 @@
 use crate::Options;
 use crate::error::PricingError;
 use crate::greeks::{big_n, d1, d2};
-use crate::model::types::{BinaryType, OptionStyle, OptionType};
 use crate::model::decimal::{d_mul, d_sub};
+use crate::model::types::{BinaryType, OptionStyle, OptionType};
 use positive::Positive;
 use rust_decimal::Decimal;
 use rust_decimal::prelude::*;

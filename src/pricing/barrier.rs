@@ -219,11 +219,7 @@ pub fn barrier_black_scholes(option: &Options) -> Result<Decimal, PricingError> 
                 let s2 = d_add(s1, f_d(dec!(-1.0), dec!(1.0), y2)?, OP)?;
                 Ok(d_add(s2, f_f(dec!(1.0))?, OP)?)
             } else {
-                Ok(d_add(
-                    f_c(dec!(-1.0), dec!(1.0), y1)?,
-                    f_f(dec!(1.0))?,
-                    OP,
-                )?)
+                Ok(d_add(f_c(dec!(-1.0), dec!(1.0), y1)?, f_f(dec!(1.0))?, OP)?)
             }
         }
         // Up-and-out put
@@ -241,11 +237,7 @@ pub fn barrier_black_scholes(option: &Options) -> Result<Decimal, PricingError> 
             if k >= barrier_level {
                 Ok(d_add(f_a(dec!(-1.0), x1)?, f_f(dec!(-1.0))?, OP)?)
             } else {
-                let s1 = d_sub(
-                    f_b(dec!(-1.0), x2)?,
-                    f_d(dec!(-1.0), dec!(-1.0), y2)?,
-                    OP,
-                )?;
+                let s1 = d_sub(f_b(dec!(-1.0), x2)?, f_d(dec!(-1.0), dec!(-1.0), y2)?, OP)?;
                 Ok(d_add(s1, f_f(dec!(-1.0))?, OP)?)
             }
         }

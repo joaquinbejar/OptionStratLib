@@ -48,7 +48,11 @@ pub fn numerical_delta(option: &Options) -> Result<Decimal, GreeksError> {
         p_minus.to_dec(),
         "greeks::numerical::delta::diff",
     )?;
-    Ok(d_div(diff, dec!(2.0) * H, "greeks::numerical::delta::scaled")?)
+    Ok(d_div(
+        diff,
+        dec!(2.0) * H,
+        "greeks::numerical::delta::scaled",
+    )?)
 }
 
 /// Calculates gamma numerically using finite differences.
@@ -79,11 +83,7 @@ pub fn numerical_gamma(option: &Options) -> Result<Decimal, GreeksError> {
         dec!(2.0) * p.to_dec(),
         "greeks::numerical::gamma::step",
     )?;
-    let numer = d_add(
-        step,
-        p_minus.to_dec(),
-        "greeks::numerical::gamma::numer",
-    )?;
+    let numer = d_add(step, p_minus.to_dec(), "greeks::numerical::gamma::numer")?;
     Ok(d_div(numer, H * H, "greeks::numerical::gamma::scaled")?)
 }
 
@@ -114,7 +114,11 @@ pub fn numerical_vega(option: &Options) -> Result<Decimal, GreeksError> {
         p_minus.to_dec(),
         "greeks::numerical::vega::diff",
     )?;
-    Ok(d_div(diff, dec!(2.0) * H, "greeks::numerical::vega::scaled")?)
+    Ok(d_div(
+        diff,
+        dec!(2.0) * H,
+        "greeks::numerical::vega::scaled",
+    )?)
 }
 
 /// Calculates theta numerically using finite differences.
@@ -166,5 +170,9 @@ pub fn numerical_rho(option: &Options) -> Result<Decimal, GreeksError> {
         p_minus.to_dec(),
         "greeks::numerical::rho::diff",
     )?;
-    Ok(d_div(diff, dec!(2.0) * H, "greeks::numerical::rho::scaled")?)
+    Ok(d_div(
+        diff,
+        dec!(2.0) * H,
+        "greeks::numerical::rho::scaled",
+    )?)
 }

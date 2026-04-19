@@ -95,12 +95,18 @@ fn simple_chooser_price(option: &Options, choice_date_days: f64) -> Result<Decim
         // Zero vol: deterministic choice
         let discount_t = (-r * t_big).exp();
         let forward = s.to_dec() * ((r - q) * t_big.to_dec()).exp();
-        let call_intrinsic =
-            d_sub(forward, k.to_dec(), "pricing::chooser::zero_vol::call::intrinsic")?
-                .max(Decimal::ZERO);
-        let put_intrinsic =
-            d_sub(k.to_dec(), forward, "pricing::chooser::zero_vol::put::intrinsic")?
-                .max(Decimal::ZERO);
+        let call_intrinsic = d_sub(
+            forward,
+            k.to_dec(),
+            "pricing::chooser::zero_vol::call::intrinsic",
+        )?
+        .max(Decimal::ZERO);
+        let put_intrinsic = d_sub(
+            k.to_dec(),
+            forward,
+            "pricing::chooser::zero_vol::put::intrinsic",
+        )?
+        .max(Decimal::ZERO);
         let call_val = d_mul(
             call_intrinsic,
             discount_t,

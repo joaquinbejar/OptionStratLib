@@ -964,7 +964,11 @@ impl Profit for CallButterfly {
         let long_call_otm_profit = self.short_call_low.pnl_at_expiration(&price)?;
         let short_call_profit = self.short_call_high.pnl_at_expiration(&price)?;
         Ok(d_sum(
-            &[long_call_itm_profit, long_call_otm_profit, short_call_profit],
+            &[
+                long_call_itm_profit,
+                long_call_otm_profit,
+                short_call_profit,
+            ],
             "strategies::call_butterfly::profit_at",
         )?)
     }

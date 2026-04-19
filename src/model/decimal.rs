@@ -263,7 +263,6 @@ impl HasX for Decimal {
 /// triggering a later rescale overflow. Divisions that need a different
 /// scale (for example a P&L that rounds to cents) should apply a subsequent
 /// explicit `.round_dp_with_strategy(dp, RoundingStrategy::MidpointNearestEven)`.
-#[allow(dead_code)] // referenced by d_div and by future monetary call-sites landed in follow-up commits.
 pub(crate) const DIV_DEFAULT_SCALE: u32 = 28;
 
 /// Checked `Decimal` addition with operand-preserving overflow reporting.
@@ -277,7 +276,6 @@ pub(crate) const DIV_DEFAULT_SCALE: u32 = 28;
 ///
 /// Returns [`DecimalError::Overflow`] when the result is outside the
 /// representable `Decimal` range.
-#[allow(dead_code)] // wired in by the monetary-flow conversion commits that follow.
 #[inline]
 pub(crate) fn d_add(lhs: Decimal, rhs: Decimal, op: &'static str) -> Result<Decimal, DecimalError> {
     lhs.checked_add(rhs)
@@ -298,7 +296,6 @@ pub(crate) fn d_add(lhs: Decimal, rhs: Decimal, op: &'static str) -> Result<Deci
 /// exceeds the representable `Decimal` range, tagged with the
 /// supplied `op` string so the caller can be identified without a
 /// stack trace.
-#[allow(dead_code)] // wired in by the strategy-P&L conversion commits that follow.
 #[inline]
 pub(crate) fn d_sum(values: &[Decimal], op: &'static str) -> Result<Decimal, DecimalError> {
     let mut acc = Decimal::ZERO;
@@ -321,7 +318,6 @@ pub(crate) fn d_sum(values: &[Decimal], op: &'static str) -> Result<Decimal, Dec
 ///
 /// Returns [`DecimalError::Overflow`] when the result is outside the
 /// representable `Decimal` range.
-#[allow(dead_code)] // wired in by the monetary-flow conversion commits that follow.
 #[inline]
 pub(crate) fn d_sub(lhs: Decimal, rhs: Decimal, op: &'static str) -> Result<Decimal, DecimalError> {
     lhs.checked_sub(rhs)
@@ -339,7 +335,6 @@ pub(crate) fn d_sub(lhs: Decimal, rhs: Decimal, op: &'static str) -> Result<Deci
 ///
 /// Returns [`DecimalError::Overflow`] when the result is outside the
 /// representable `Decimal` range.
-#[allow(dead_code)] // wired in by the monetary-flow conversion commits that follow.
 #[inline]
 pub(crate) fn d_mul(lhs: Decimal, rhs: Decimal, op: &'static str) -> Result<Decimal, DecimalError> {
     lhs.checked_mul(rhs)
@@ -359,7 +354,6 @@ pub(crate) fn d_mul(lhs: Decimal, rhs: Decimal, op: &'static str) -> Result<Deci
 /// - Returns [`DecimalError::Overflow`] when the quotient is outside the
 ///   representable `Decimal` range.
 /// - Returns [`DecimalError::ArithmeticError`] when `rhs` is zero.
-#[allow(dead_code)] // wired in by the monetary-flow conversion commits that follow.
 #[inline]
 pub(crate) fn d_div(lhs: Decimal, rhs: Decimal, op: &'static str) -> Result<Decimal, DecimalError> {
     if rhs.is_zero() {
@@ -590,7 +584,9 @@ mod checked_helpers_tests {
     #[test]
     fn d_sub_overflow_on_min_minus_max() {
         let err = d_sub(Decimal::MIN, Decimal::MAX, "test::sub").unwrap_err();
-        assert!(matches!(err, DecimalError::Overflow { operation, .. } if operation == "test::sub"));
+        assert!(
+            matches!(err, DecimalError::Overflow { operation, .. } if operation == "test::sub")
+        );
     }
 
     #[test]
@@ -602,7 +598,9 @@ mod checked_helpers_tests {
     #[test]
     fn d_mul_overflow_on_max_times_two() {
         let err = d_mul(Decimal::MAX, dec!(2), "test::mul").unwrap_err();
-        assert!(matches!(err, DecimalError::Overflow { operation, .. } if operation == "test::mul"));
+        assert!(
+            matches!(err, DecimalError::Overflow { operation, .. } if operation == "test::mul")
+        );
     }
 
     #[test]
@@ -644,16 +642,15 @@ mod checked_helpers_tests {
 
     #[test]
     fn d_sum_happy_path() {
-        let result = d_sum(
-            &[dec!(1.5), dec!(2.25), dec!(-0.75), dec!(10)],
-            "test::sum",
-        );
+        let result = d_sum(&[dec!(1.5), dec!(2.25), dec!(-0.75), dec!(10)], "test::sum");
         assert_eq!(result.unwrap(), dec!(13));
     }
 
     #[test]
     fn d_sum_overflow_returns_tagged_error() {
         let err = d_sum(&[Decimal::MAX, Decimal::MAX], "test::sum").unwrap_err();
-        assert!(matches!(err, DecimalError::Overflow { operation, .. } if operation == "test::sum"));
+        assert!(
+            matches!(err, DecimalError::Overflow { operation, .. } if operation == "test::sum")
+        );
     }
 }
