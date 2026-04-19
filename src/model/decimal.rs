@@ -8,7 +8,7 @@ use crate::geometrics::HasX;
 use num_traits::{FromPrimitive, ToPrimitive};
 use rand::distr::Distribution;
 use rand_distr::Normal;
-use rust_decimal::{Decimal, MathematicalOps};
+use rust_decimal::{Decimal, MathematicalOps, RoundingStrategy};
 use rust_decimal_macros::dec;
 
 /// Represents the daily interest rate factor used for financial calculations,
@@ -256,6 +256,95 @@ impl HasX for Decimal {
     }
 }
 
+/// Scale applied to banker's-rounding divisions in [`d_div`].
+///
+/// `28` matches `Decimal::MAX_SCALE` so a rounded division preserves every
+/// digit of precision the backing 96-bit mantissa can represent without
+/// triggering a later rescale overflow. Divisions that need a different
+/// scale (for example a P&L that rounds to cents) should apply a subsequent
+/// explicit `.round_dp_with_strategy(dp, RoundingStrategy::MidpointNearestEven)`.
+#[allow(dead_code)] // referenced by d_div and by future monetary call-sites landed in follow-up commits.
+pub(crate) const DIV_DEFAULT_SCALE: u32 = 28;
+
+/// Checked `Decimal` addition with operand-preserving overflow reporting.
+///
+/// Crate-private helper used by every monetary-flow kernel in place of the
+/// raw `+` operator. Wraps [`Decimal::checked_add`] and converts `None`
+/// into a [`DecimalError::Overflow`] tagged with the static `op` string
+/// passed in by the call-site.
+///
+/// # Errors
+///
+/// Returns [`DecimalError::Overflow`] when the result is outside the
+/// representable `Decimal` range.
+#[allow(dead_code)] // wired in by the monetary-flow conversion commits that follow.
+#[inline]
+pub(crate) fn d_add(lhs: Decimal, rhs: Decimal, op: &'static str) -> Result<Decimal, DecimalError> {
+    lhs.checked_add(rhs)
+        .ok_or_else(|| DecimalError::overflow(op, lhs, rhs))
+}
+
+/// Checked `Decimal` subtraction with operand-preserving overflow reporting.
+///
+/// Crate-private helper used by every monetary-flow kernel in place of the
+/// raw `-` operator. Wraps [`Decimal::checked_sub`] and converts `None`
+/// into a [`DecimalError::Overflow`] tagged with the static `op` string
+/// passed in by the call-site.
+///
+/// # Errors
+///
+/// Returns [`DecimalError::Overflow`] when the result is outside the
+/// representable `Decimal` range.
+#[allow(dead_code)] // wired in by the monetary-flow conversion commits that follow.
+#[inline]
+pub(crate) fn d_sub(lhs: Decimal, rhs: Decimal, op: &'static str) -> Result<Decimal, DecimalError> {
+    lhs.checked_sub(rhs)
+        .ok_or_else(|| DecimalError::overflow(op, lhs, rhs))
+}
+
+/// Checked `Decimal` multiplication with operand-preserving overflow reporting.
+///
+/// Crate-private helper used by every monetary-flow kernel in place of the
+/// raw `*` operator. Wraps [`Decimal::checked_mul`] and converts `None`
+/// into a [`DecimalError::Overflow`] tagged with the static `op` string
+/// passed in by the call-site.
+///
+/// # Errors
+///
+/// Returns [`DecimalError::Overflow`] when the result is outside the
+/// representable `Decimal` range.
+#[allow(dead_code)] // wired in by the monetary-flow conversion commits that follow.
+#[inline]
+pub(crate) fn d_mul(lhs: Decimal, rhs: Decimal, op: &'static str) -> Result<Decimal, DecimalError> {
+    lhs.checked_mul(rhs)
+        .ok_or_else(|| DecimalError::overflow(op, lhs, rhs))
+}
+
+/// Checked `Decimal` division with banker's rounding at scale 28.
+///
+/// Crate-private helper used by every monetary-flow kernel in place of the
+/// raw `/` operator. Performs [`Decimal::checked_div`] then re-rounds the
+/// quotient with [`RoundingStrategy::MidpointNearestEven`] to the default
+/// [`DIV_DEFAULT_SCALE`]. This policy is applied uniformly across the
+/// crate so long-chain divisions do not silently accumulate bias.
+///
+/// # Errors
+///
+/// - Returns [`DecimalError::Overflow`] when the quotient is outside the
+///   representable `Decimal` range.
+/// - Returns [`DecimalError::ArithmeticError`] when `rhs` is zero.
+#[allow(dead_code)] // wired in by the monetary-flow conversion commits that follow.
+#[inline]
+pub(crate) fn d_div(lhs: Decimal, rhs: Decimal, op: &'static str) -> Result<Decimal, DecimalError> {
+    if rhs.is_zero() {
+        return Err(DecimalError::arithmetic_error(op, "division by zero"));
+    }
+    let raw = lhs
+        .checked_div(rhs)
+        .ok_or_else(|| DecimalError::overflow(op, lhs, rhs))?;
+    Ok(raw.round_dp_with_strategy(DIV_DEFAULT_SCALE, RoundingStrategy::MidpointNearestEven))
+}
+
 /// Converts a Decimal value to f64 without error checking.
 ///
 /// This macro converts a Decimal type to an f64 floating-point value.
@@ -443,5 +532,82 @@ mod tests_random_generation {
         // It's statistically extremely unlikely to get the same value three times in a row
         // This verifies that the RNG is properly producing different values
         assert!(sample1 != sample2 || sample2 != sample3);
+    }
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used)]
+mod checked_helpers_tests {
+    use super::*;
+
+    #[test]
+    fn d_add_happy_path() {
+        let result = d_add(dec!(1.25), dec!(2.50), "test::add");
+        assert_eq!(result.unwrap(), dec!(3.75));
+    }
+
+    #[test]
+    fn d_add_overflow_on_max_plus_max() {
+        let err = d_add(Decimal::MAX, Decimal::MAX, "test::add").unwrap_err();
+        match err {
+            DecimalError::Overflow { operation, .. } => assert_eq!(operation, "test::add"),
+            other => panic!("expected Overflow, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn d_sub_happy_path() {
+        let result = d_sub(dec!(10), dec!(3.5), "test::sub");
+        assert_eq!(result.unwrap(), dec!(6.5));
+    }
+
+    #[test]
+    fn d_sub_overflow_on_min_minus_max() {
+        let err = d_sub(Decimal::MIN, Decimal::MAX, "test::sub").unwrap_err();
+        assert!(matches!(err, DecimalError::Overflow { operation, .. } if operation == "test::sub"));
+    }
+
+    #[test]
+    fn d_mul_happy_path() {
+        let result = d_mul(dec!(2.5), dec!(4), "test::mul");
+        assert_eq!(result.unwrap(), dec!(10.0));
+    }
+
+    #[test]
+    fn d_mul_overflow_on_max_times_two() {
+        let err = d_mul(Decimal::MAX, dec!(2), "test::mul").unwrap_err();
+        assert!(matches!(err, DecimalError::Overflow { operation, .. } if operation == "test::mul"));
+    }
+
+    #[test]
+    fn d_div_happy_path_exact() {
+        let result = d_div(dec!(10), dec!(4), "test::div");
+        assert_eq!(result.unwrap(), dec!(2.5));
+    }
+
+    #[test]
+    fn d_div_applies_banker_rounding() {
+        // Divide by three is recurring and must round half-to-even at the default scale.
+        let result = d_div(dec!(1), dec!(3), "test::div").unwrap();
+        // `1 / 3` at scale 28 under banker's rounding produces the canonical
+        // `0.3333333333333333333333333333` (scale 28). Any other trailing digit
+        // would signal the rounding strategy drifted.
+        assert_eq!(result, dec!(0.3333333333333333333333333333));
+    }
+
+    #[test]
+    fn d_div_zero_denominator_returns_arithmetic_error() {
+        let err = d_div(dec!(1), Decimal::ZERO, "test::div").unwrap_err();
+        assert!(matches!(err, DecimalError::ArithmeticError { .. }));
+    }
+
+    #[test]
+    fn d_div_tag_is_preserved_on_overflow() {
+        // `Decimal::MIN / 0.5` overflows because the quotient is 2 * MIN.
+        let err = d_div(Decimal::MIN, dec!(0.5), "test::div").unwrap_err();
+        match err {
+            DecimalError::Overflow { operation, .. } => assert_eq!(operation, "test::div"),
+            other => panic!("expected Overflow, got {other:?}"),
+        }
     }
 }
