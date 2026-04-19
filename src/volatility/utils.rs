@@ -26,6 +26,13 @@ use positive::pos_or_panic;
 /// # Returns
 ///
 /// The calculated volatility as a Decimal.
+///
+/// # Errors
+///
+/// Returns [`VolatilityError::NumericalFailure`] when the length of
+/// `returns` cannot be represented as a `Decimal` or when the
+/// variance computation overflows, and [`VolatilityError::PositiveError`]
+/// if the final square-root produces a non-positive candidate.
 pub fn constant_volatility(returns: &[Decimal]) -> Result<Positive, VolatilityError> {
     let n_dec =
         Decimal::from_usize(returns.len()).ok_or_else(|| VolatilityError::NumericalFailure {
@@ -62,6 +69,13 @@ pub fn constant_volatility(returns: &[Decimal]) -> Result<Positive, VolatilityEr
 /// # Returns
 ///
 /// A vector of Decimal values representing the historical volatility for each window.
+///
+/// # Errors
+///
+/// Returns [`VolatilityError::InvalidTime`] when `window_size` is zero
+/// or larger than `returns.len()`, and propagates any
+/// [`VolatilityError::NumericalFailure`] raised by
+/// [`constant_volatility`] on a given window.
 pub fn historical_volatility(
     returns: &[Decimal],
     window_size: usize,
@@ -82,6 +96,13 @@ pub fn historical_volatility(
 /// # Returns
 ///
 /// A vector of Decimal values representing the EWMA volatility.
+///
+/// # Errors
+///
+/// Returns [`VolatilityError::NumericalFailure`] when the EWMA
+/// recurrence overflows or produces a negative running variance, and
+/// [`VolatilityError::PositiveError`] when a running square-root
+/// violates the `Positive` invariant.
 pub fn ewma_volatility(
     returns: &[Decimal],
     lambda: Decimal,
@@ -132,6 +153,14 @@ pub fn ewma_volatility(
 ///   the current implied volatility is returned.
 /// - The function ensures that the implied volatility stays positive.
 ///
+/// # Errors
+///
+/// Returns [`VolatilityError::NoConvergence`] when the Newton–Raphson
+/// iteration exhausts [`MAX_ITERATIONS_IV`] without matching the target
+/// price, [`VolatilityError::IvNotFound`] when the search grid never
+/// produced a valid candidate, or propagates
+/// [`VolatilityError::Options`] from the underlying Black–Scholes
+/// evaluation on each iteration.
 pub fn implied_volatility(
     market_price: Positive,
     options: &mut Options,
@@ -236,6 +265,14 @@ pub fn calculate_iv(
 /// # Returns
 ///
 /// A vector of Decimal values representing the GARCH(1,1) volatility.
+///
+/// # Errors
+///
+/// Returns [`VolatilityError::NumericalFailure`] when the GARCH
+/// recurrence overflows, and [`VolatilityError::PositiveError`] when a
+/// running square-root produces a non-positive candidate (typically
+/// when `omega`, `alpha` or `beta` violate the GARCH(1,1) stationarity
+/// constraint).
 pub fn garch_volatility(
     returns: &[Decimal],
     omega: Decimal,
@@ -266,6 +303,14 @@ pub fn garch_volatility(
 /// # Returns
 ///
 /// A vector of Decimal values representing the simulated volatility.
+///
+/// # Errors
+///
+/// Returns [`VolatilityError::NumericalFailure`] when the Heston
+/// simulation kernel overflows a `Decimal` step or when a square-root
+/// operand turns negative under the truncated-Euler scheme, and
+/// [`VolatilityError::PositiveError`] when the resulting variance
+/// breaches the `Positive` invariant.
 pub fn simulate_heston_volatility(
     kappa: Decimal,
     theta: Decimal,
@@ -312,6 +357,14 @@ pub fn simulate_heston_volatility(
 /// # Returns
 ///
 /// A tuple of (lower_bound, upper_bound) for the option price.
+///
+/// # Errors
+///
+/// Propagates any [`VolatilityError::Options`] returned by the
+/// underlying Black–Scholes evaluation at the minimum or maximum
+/// volatility bound — typically
+/// [`OptionsError::PricingError`] with an
+/// [`PricingError::ExpirationDate`] inner cause.
 pub fn uncertain_volatility_bounds(
     option: &Options,
     min_volatility: Positive,
@@ -363,6 +416,12 @@ pub fn uncertain_volatility_bounds(
 /// let annual_vol = annualized_volatility(daily_vol, TimeFrame::Day);
 /// // annual_vol ≈ 0.1587 or about 15.87%
 /// ```
+///
+/// # Errors
+///
+/// Returns [`VolatilityError::PositiveError`] when the scaling factor
+/// multiplied by the base volatility cannot be represented as a
+/// `Positive` (e.g. overflow on an extreme timeframe annualisation).
 pub fn annualized_volatility(
     volatility: Positive,
     timeframe: TimeFrame,
@@ -397,6 +456,12 @@ pub fn annualized_volatility(
 /// let daily_vol = de_annualized_volatility(annual_vol, TimeFrame::Day);
 /// // daily_vol ≈ 0.0126 or about 1.26%
 /// ```
+///
+/// # Errors
+///
+/// Returns [`VolatilityError::PositiveError`] when the rescaling
+/// produces a value that violates the `Positive` invariant, typically
+/// due to division rounding on an extremely small timeframe.
 pub fn de_annualized_volatility(
     annual_volatility: Positive,
     timeframe: TimeFrame,
@@ -425,6 +490,12 @@ pub fn de_annualized_volatility(
 /// # Ok(())
 /// # }
 /// ```
+///
+/// # Errors
+///
+/// Propagates any [`VolatilityError::PositiveError`] surfaced by the
+/// intermediate [`annualized_volatility`] or [`de_annualized_volatility`]
+/// calls when either rescaling breaches the `Positive` invariant.
 pub fn adjust_volatility(
     volatility: Positive,
     from_frame: TimeFrame,

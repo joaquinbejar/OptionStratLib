@@ -96,6 +96,15 @@ pub trait AtmIvProvider {
     /// * `Ok(Some(Positive))` - If the ATM implied volatility is successfully retrieved.
     /// * `Ok(None)` - If the ATM implied volatility is not available or not applicable.
     /// * `Err(Box<dyn Error>)` - If an error occurs during the retrieval process.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`VolatilityError::AtmIvUnavailable`] with a wrapped
+    /// [`VolatilityError::Chain`] source when the underlying container
+    /// (typically an option chain) cannot supply an ATM implied
+    /// volatility for the current observation, or
+    /// [`VolatilityError::IvNotFound`] when no matching strike produced
+    /// a valid candidate.
     fn atm_iv(&self) -> Result<&Positive, VolatilityError>;
 }
 
