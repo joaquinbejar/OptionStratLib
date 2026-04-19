@@ -296,6 +296,7 @@ impl AdjustmentConfig {
     }
 
     /// Sets whether underlying hedging is allowed.
+    #[inline]
     #[must_use]
     pub fn with_allow_underlying(mut self, allow: bool) -> Self {
         self.allow_underlying = allow;
@@ -303,6 +304,7 @@ impl AdjustmentConfig {
     }
 
     /// Sets the maximum number of new legs.
+    #[inline]
     #[must_use]
     pub fn with_max_new_legs(mut self, max: usize) -> Self {
         self.max_new_legs = Some(max);
@@ -310,6 +312,7 @@ impl AdjustmentConfig {
     }
 
     /// Sets the minimum liquidity requirement.
+    #[inline]
     #[must_use]
     pub fn with_min_liquidity(mut self, min: u64) -> Self {
         self.min_liquidity = Some(min);
@@ -317,6 +320,7 @@ impl AdjustmentConfig {
     }
 
     /// Sets whether to prefer existing legs over new ones.
+    #[inline]
     #[must_use]
     pub fn with_prefer_existing_legs(mut self, prefer: bool) -> Self {
         self.prefer_existing_legs = prefer;
@@ -349,6 +353,7 @@ pub struct AdjustmentPlan {
 
 impl AdjustmentPlan {
     /// Creates a new adjustment plan.
+    #[inline]
     #[must_use]
     pub fn new(
         actions: Vec<AdjustmentAction>,
@@ -367,18 +372,21 @@ impl AdjustmentPlan {
     }
 
     /// Returns true if this plan achieves delta neutrality within tolerance.
+    #[inline]
     #[must_use]
     pub fn is_delta_neutral(&self, tolerance: Decimal) -> bool {
         self.residual_delta.abs() <= tolerance
     }
 
     /// Returns true if this plan has no actions.
+    #[inline]
     #[must_use]
     pub fn is_empty(&self) -> bool {
         self.actions.is_empty()
     }
 
     /// Returns the number of actions in the plan.
+    #[inline]
     #[must_use]
     pub fn action_count(&self) -> usize {
         self.actions.len()
