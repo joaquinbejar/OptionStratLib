@@ -95,60 +95,70 @@ impl Transaction {
     // Getters
 
     /// Gets the date and time of the transaction.
+    #[inline]
     #[must_use]
     pub fn date_time(&self) -> Option<DateTime<Utc>> {
         self.date_time
     }
 
     /// Gets the option type.
+    #[inline]
     #[must_use]
     pub fn option_type(&self) -> OptionType {
         self.option_type.clone()
     }
 
     /// Gets the side (Long or Short).
+    #[inline]
     #[must_use]
     pub fn side(&self) -> Side {
         self.side
     }
 
     /// Gets the option style (Call or Put).
+    #[inline]
     #[must_use]
     pub fn option_style(&self) -> OptionStyle {
         self.option_style
     }
 
     /// Gets the quantity of contracts.
+    #[inline]
     #[must_use]
     pub fn quantity(&self) -> Positive {
         self.quantity
     }
 
     /// Gets the premium.
+    #[inline]
     #[must_use]
     pub fn premium(&self) -> Positive {
         self.premium
     }
 
     /// Gets the fees.
+    #[inline]
     #[must_use]
     pub fn fees(&self) -> Positive {
         self.fees
     }
 
     /// Gets the underlying price, if available.
+    #[inline]
     #[must_use]
     pub fn underlying_price(&self) -> Option<Positive> {
         self.underlying_price
     }
 
     /// Gets the days to expiration, if available.
+    #[inline]
     #[must_use]
     pub fn days_to_expiration(&self) -> Option<Positive> {
         self.days_to_expiration
     }
 
     /// Gets the implied volatility, if available.
+    #[inline]
     #[must_use]
     pub fn implied_volatility(&self) -> Option<Positive> {
         self.implied_volatility
@@ -161,6 +171,7 @@ impl Transaction {
     /// # Parameters
     ///
     /// * `iv` - The new implied volatility value
+    #[inline]
     pub fn update_implied_volatility(&mut self, iv: Positive) {
         self.implied_volatility = Some(iv);
     }
@@ -170,6 +181,7 @@ impl Transaction {
     /// # Parameters
     ///
     /// * `price` - The new underlying price value
+    #[inline]
     pub fn update_underlying_price(&mut self, price: Positive) {
         self.underlying_price = Some(price);
     }
@@ -179,6 +191,7 @@ impl Transaction {
     /// # Parameters
     ///
     /// * `days` - The new days to expiration value
+    #[inline]
     pub fn update_days_to_expiration(&mut self, days: Positive) {
         self.days_to_expiration = Some(days);
     }

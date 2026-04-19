@@ -196,6 +196,7 @@ impl SimulationStatsResult {
     /// - P&L statistics (total, average, max, min)
     /// - Holding period information
     /// - Exit reason distribution
+    #[inline(never)]
     pub fn print_summary(&self) {
         use prettytable::{Cell, Row, Table, color, format};
         use rust_decimal_macros::dec;
@@ -351,6 +352,7 @@ impl SimulationStatsResult {
     /// - Final P&L
     /// - Holding period
     /// - Exit reason
+    #[inline(never)]
     pub fn print_individual_results(&self) {
         use prettytable::{Cell, Row, Table, color, format};
         use rust_decimal_macros::dec;

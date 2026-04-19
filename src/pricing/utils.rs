@@ -114,6 +114,7 @@ pub fn simulate_returns(
 ///
 /// * A floating point number representing the up factor calculated based on the given volatility and time increment.
 ///
+#[inline]
 pub(crate) fn calculate_up_factor(
     volatility: Positive,
     dt: Decimal,
@@ -136,6 +137,7 @@ pub(crate) fn calculate_up_factor(
 /// A floating-point number representing the down factor, calculated using the
 /// given volatility and time step.
 ///
+#[inline]
 pub(crate) fn calculate_down_factor(
     volatility: Positive,
     dt: Decimal,
@@ -159,6 +161,7 @@ pub(crate) fn calculate_down_factor(
 /// # Returns
 ///
 /// Returns the calculated probability which is clamped between `CLAMP_MIN` and `CLAMP_MAX`.
+#[inline]
 pub(crate) fn calculate_probability(
     int_rate: Decimal,
     dt: Decimal,
@@ -183,6 +186,7 @@ pub(crate) fn calculate_probability(
 /// # Returns
 /// A floating-point number representing the discount factor.
 ///
+#[inline]
 pub(crate) fn calculate_discount_factor(
     int_rate: Decimal,
     dt: Decimal,
@@ -207,6 +211,7 @@ pub(crate) fn calculate_discount_factor(
 /// # Returns
 ///
 /// * A `f64` representing the calculated value of the current option node.
+#[inline]
 pub(crate) fn option_node_value_wrapper(
     probability: Decimal,
     next: &mut [Vec<Decimal>],
@@ -231,6 +236,7 @@ pub(crate) fn option_node_value_wrapper(
 ///
 /// # Returns
 /// The discounted expected value of the option node.
+#[inline]
 pub(crate) fn option_node_value(
     probability: Decimal,
     price_up: Decimal,

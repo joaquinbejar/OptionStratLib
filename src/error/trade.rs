@@ -57,6 +57,8 @@ impl TradeError {
     ///
     /// A `TradeError::InvalidTrade` variant
     #[must_use]
+    #[cold]
+    #[inline(never)]
     pub fn invalid_trade(reason: &str) -> Self {
         TradeError::InvalidTrade {
             reason: reason.to_string(),
@@ -73,6 +75,8 @@ impl TradeError {
     ///
     /// A `TradeError::InvalidTradeStatus` variant
     #[must_use]
+    #[cold]
+    #[inline(never)]
     pub fn invalid_trade_status(reason: &str) -> Self {
         TradeError::InvalidTradeStatus {
             reason: reason.to_string(),

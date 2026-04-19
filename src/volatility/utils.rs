@@ -514,6 +514,7 @@ pub fn uncertain_volatility_bounds(
 /// Returns [`VolatilityError::PositiveError`] when the scaling factor
 /// multiplied by the base volatility cannot be represented as a
 /// `Positive` (e.g. overflow on an extreme timeframe annualisation).
+#[inline]
 pub fn annualized_volatility(
     volatility: Positive,
     timeframe: TimeFrame,
@@ -554,6 +555,7 @@ pub fn annualized_volatility(
 /// Returns [`VolatilityError::PositiveError`] when the rescaling
 /// produces a value that violates the `Positive` invariant, typically
 /// due to division rounding on an extremely small timeframe.
+#[inline]
 pub fn de_annualized_volatility(
     annual_volatility: Positive,
     timeframe: TimeFrame,
@@ -678,6 +680,7 @@ pub fn adjust_volatility(
 /// # Errors
 ///
 /// Returns an error if the de-annualization fails
+#[inline]
 pub fn volatility_for_dt(
     annual_volatility: Positive,
     _dt: Positive,

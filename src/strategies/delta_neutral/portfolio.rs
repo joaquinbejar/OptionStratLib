@@ -61,6 +61,7 @@ pub struct PortfolioGreeks {
 
 impl PortfolioGreeks {
     /// Creates a new PortfolioGreeks with specified values.
+    #[inline]
     #[must_use]
     pub fn new(
         delta: Decimal,
@@ -160,6 +161,7 @@ impl PortfolioGreeks {
     /// # Returns
     ///
     /// `true` if absolute delta is within tolerance
+    #[inline]
     #[must_use]
     pub fn is_delta_neutral(&self, tolerance: Decimal) -> bool {
         self.delta.abs() <= tolerance
@@ -174,6 +176,7 @@ impl PortfolioGreeks {
     /// # Returns
     ///
     /// `true` if absolute gamma is within tolerance
+    #[inline]
     #[must_use]
     pub fn is_gamma_neutral(&self, tolerance: Decimal) -> bool {
         self.gamma.abs() <= tolerance
@@ -188,6 +191,7 @@ impl PortfolioGreeks {
     /// # Returns
     ///
     /// `true` if absolute vega is within tolerance
+    #[inline]
     #[must_use]
     pub fn is_vega_neutral(&self, tolerance: Decimal) -> bool {
         self.vega.abs() <= tolerance
@@ -202,6 +206,7 @@ impl PortfolioGreeks {
     /// # Returns
     ///
     /// The difference between current delta and target
+    #[inline]
     #[must_use]
     pub fn delta_gap(&self, target: Decimal) -> Decimal {
         target - self.delta
@@ -216,6 +221,7 @@ impl PortfolioGreeks {
     /// # Returns
     ///
     /// The difference between current gamma and target
+    #[inline]
     #[must_use]
     pub fn gamma_gap(&self, target: Decimal) -> Decimal {
         target - self.gamma
@@ -224,6 +230,7 @@ impl PortfolioGreeks {
     /// Adds another PortfolioGreeks to this one.
     ///
     /// Useful for combining Greeks from multiple sources.
+    #[inline]
     pub fn add(&mut self, other: &PortfolioGreeks) {
         self.delta += other.delta;
         self.gamma += other.gamma;
@@ -233,6 +240,7 @@ impl PortfolioGreeks {
     }
 
     /// Returns a new PortfolioGreeks that is the sum of this and another.
+    #[inline]
     #[must_use]
     pub fn combined(&self, other: &PortfolioGreeks) -> PortfolioGreeks {
         PortfolioGreeks {
@@ -285,6 +293,7 @@ impl AdjustmentTarget {
     /// # Returns
     ///
     /// An AdjustmentTarget with delta = 0 and other Greeks unconstrained
+    #[inline]
     #[must_use]
     pub fn delta_neutral() -> Self {
         Self {
@@ -298,6 +307,7 @@ impl AdjustmentTarget {
     /// # Returns
     ///
     /// An AdjustmentTarget with delta = 0 and gamma = 0
+    #[inline]
     #[must_use]
     pub fn delta_gamma_neutral() -> Self {
         Self {
@@ -312,6 +322,7 @@ impl AdjustmentTarget {
     /// # Returns
     ///
     /// An AdjustmentTarget with delta = 0, gamma = 0, and vega = 0
+    #[inline]
     #[must_use]
     pub fn full_neutral() -> Self {
         Self {
@@ -327,6 +338,7 @@ impl AdjustmentTarget {
     /// # Arguments
     ///
     /// * `delta` - Target delta value
+    #[inline]
     #[must_use]
     pub fn with_delta(mut self, delta: Decimal) -> Self {
         self.delta = Some(delta);
@@ -338,6 +350,7 @@ impl AdjustmentTarget {
     /// # Arguments
     ///
     /// * `gamma` - Target gamma value
+    #[inline]
     #[must_use]
     pub fn with_gamma(mut self, gamma: Decimal) -> Self {
         self.gamma = Some(gamma);
@@ -349,6 +362,7 @@ impl AdjustmentTarget {
     /// # Arguments
     ///
     /// * `vega` - Target vega value
+    #[inline]
     #[must_use]
     pub fn with_vega(mut self, vega: Decimal) -> Self {
         self.vega = Some(vega);
@@ -360,6 +374,7 @@ impl AdjustmentTarget {
     /// # Arguments
     ///
     /// * `theta` - Target theta value
+    #[inline]
     #[must_use]
     pub fn with_theta(mut self, theta: Decimal) -> Self {
         self.theta = Some(theta);
@@ -375,6 +390,7 @@ impl AdjustmentTarget {
     /// # Returns
     ///
     /// The delta gap if delta target is set, otherwise zero
+    #[inline]
     #[must_use]
     pub fn delta_gap(&self, current: &PortfolioGreeks) -> Decimal {
         self.delta
@@ -391,6 +407,7 @@ impl AdjustmentTarget {
     /// # Returns
     ///
     /// The gamma gap if gamma target is set, otherwise None
+    #[inline]
     #[must_use]
     pub fn gamma_gap(&self, current: &PortfolioGreeks) -> Option<Decimal> {
         self.gamma.map(|t| t - current.gamma)
@@ -405,6 +422,7 @@ impl AdjustmentTarget {
     /// # Returns
     ///
     /// The vega gap if vega target is set, otherwise None
+    #[inline]
     #[must_use]
     pub fn vega_gap(&self, current: &PortfolioGreeks) -> Option<Decimal> {
         self.vega.map(|t| t - current.vega)

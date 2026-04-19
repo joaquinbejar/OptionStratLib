@@ -230,6 +230,7 @@ impl Default for AdjustmentConfig {
 
 impl AdjustmentConfig {
     /// Creates a configuration that only allows adjusting existing legs.
+    #[inline]
     #[must_use]
     pub fn existing_legs_only() -> Self {
         Self {
@@ -240,6 +241,7 @@ impl AdjustmentConfig {
     }
 
     /// Creates a configuration that allows underlying hedging.
+    #[inline]
     #[must_use]
     pub fn with_underlying() -> Self {
         Self {
@@ -249,6 +251,7 @@ impl AdjustmentConfig {
     }
 
     /// Creates a configuration for aggressive adjustment with new legs.
+    #[inline]
     #[must_use]
     pub fn aggressive() -> Self {
         Self {
@@ -261,6 +264,7 @@ impl AdjustmentConfig {
     }
 
     /// Sets the maximum cost constraint.
+    #[inline]
     #[must_use]
     pub fn with_max_cost(mut self, max_cost: Positive) -> Self {
         self.max_cost = Some(max_cost);
@@ -268,6 +272,7 @@ impl AdjustmentConfig {
     }
 
     /// Sets the delta tolerance.
+    #[inline]
     #[must_use]
     pub fn with_delta_tolerance(mut self, tolerance: Decimal) -> Self {
         self.delta_tolerance = tolerance;
@@ -275,6 +280,7 @@ impl AdjustmentConfig {
     }
 
     /// Sets the strike range for new legs.
+    #[inline]
     #[must_use]
     pub fn with_strike_range(mut self, min: Positive, max: Positive) -> Self {
         self.strike_range = Some((min, max));
@@ -282,6 +288,7 @@ impl AdjustmentConfig {
     }
 
     /// Sets whether new legs are allowed.
+    #[inline]
     #[must_use]
     pub fn with_allow_new_legs(mut self, allow: bool) -> Self {
         self.allow_new_legs = allow;

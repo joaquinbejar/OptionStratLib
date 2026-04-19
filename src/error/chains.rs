@@ -517,6 +517,8 @@ impl ChainError {
     ///
     /// A `ChainError` containing the strike validation error details
     #[must_use]
+    #[cold]
+    #[inline(never)]
     pub fn invalid_strike(strike: f64, reason: &str) -> Self {
         ChainError::OptionDataError(OptionDataErrorKind::InvalidStrike {
             strike,
@@ -538,6 +540,8 @@ impl ChainError {
     ///
     /// A `ChainError` containing the volatility validation error details
     #[must_use]
+    #[cold]
+    #[inline(never)]
     pub fn invalid_volatility(volatility: Option<f64>, reason: &str) -> Self {
         ChainError::OptionDataError(OptionDataErrorKind::InvalidVolatility {
             volatility,
@@ -560,6 +564,8 @@ impl ChainError {
     ///
     /// A `ChainError` containing the price validation error details
     #[must_use]
+    #[cold]
+    #[inline(never)]
     pub fn invalid_prices(bid: Option<f64>, ask: Option<f64>, reason: &str) -> Self {
         ChainError::OptionDataError(OptionDataErrorKind::InvalidPrices {
             bid,
@@ -583,6 +589,8 @@ impl ChainError {
     ///
     /// A `ChainError` containing the strategy legs validation error details
     #[must_use]
+    #[cold]
+    #[inline(never)]
     pub fn invalid_legs(expected: usize, found: usize, reason: &str) -> Self {
         ChainError::StrategyError(StrategyErrorKind::InvalidLegs {
             expected,
@@ -605,6 +613,8 @@ impl ChainError {
     ///
     /// A `ChainError` containing the parameter validation error details
     #[must_use]
+    #[cold]
+    #[inline(never)]
     pub fn invalid_parameters(parameter: &str, reason: &str) -> Self {
         ChainError::ChainBuildError(ChainBuildErrorKind::InvalidParameters {
             parameter: parameter.to_string(),
@@ -625,6 +635,8 @@ impl ChainError {
     ///
     /// A `ChainError` containing the parameter validation error details
     #[must_use]
+    #[cold]
+    #[inline(never)]
     pub fn invalid_price_calculation(reason: &str) -> Self {
         ChainError::OptionDataError(OptionDataErrorKind::PriceCalculationError(
             reason.to_string(),

@@ -37,6 +37,7 @@ impl OptionSeriesBuildParams {
     /// # Returns
     /// - A new `Self` instance initialized with the provided `chain_params` and `series`.
     ///
+    #[inline]
     #[must_use]
     pub fn new(chain_params: OptionChainBuildParams, series: Vec<Positive>) -> Self {
         Self {
@@ -60,6 +61,7 @@ impl OptionSeriesBuildParams {
     /// the `set_underlying_price` method of `chain_params` that could panic needs to
     /// be considered by the caller.
     ///
+    #[inline]
     pub fn set_underlying_price(&mut self, price: &Positive) {
         let price = Some(Box::new(*price));
         self.chain_params.set_underlying_price(price);
@@ -82,6 +84,7 @@ impl OptionSeriesBuildParams {
     /// - Use `Some(value)` to set a new positive implied volatility.
     /// - Pass `None` to clear the existing implied volatility.
     ///
+    #[inline]
     pub fn set_implied_volatility(&mut self, volatility: Positive) {
         self.chain_params.set_implied_volatility(volatility);
     }

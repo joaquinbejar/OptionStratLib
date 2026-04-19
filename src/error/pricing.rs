@@ -122,6 +122,8 @@ impl PricingError {
     /// * `method` - Name of the pricing method that failed
     /// * `reason` - Detailed reason for the failure
     #[must_use]
+    #[cold]
+    #[inline(never)]
     pub fn method_error(method: &str, reason: &str) -> Self {
         PricingError::MethodError {
             method: method.to_string(),
@@ -134,6 +136,8 @@ impl PricingError {
     /// # Arguments
     /// * `reason` - Detailed reason for the simulation failure
     #[must_use]
+    #[cold]
+    #[inline(never)]
     pub fn simulation_error(reason: &str) -> Self {
         PricingError::SimulationError {
             reason: reason.to_string(),
@@ -145,6 +149,8 @@ impl PricingError {
     /// # Arguments
     /// * `reason` - Detailed reason for the invalid engine
     #[must_use]
+    #[cold]
+    #[inline(never)]
     pub fn invalid_engine(reason: &str) -> Self {
         PricingError::InvalidEngine {
             reason: reason.to_string(),
@@ -155,7 +161,8 @@ impl PricingError {
     /// replacement for the former `OtherError` catch-all. Prefer
     /// [`PricingError::method_error`] with a specific method name when known.
     #[must_use]
-    #[inline]
+    #[cold]
+    #[inline(never)]
     pub fn other(reason: &str) -> Self {
         PricingError::MethodError {
             method: "pricing".to_string(),
@@ -169,6 +176,8 @@ impl PricingError {
     /// * `option_type` - The option type that is not supported
     /// * `method` - The pricing method that does not support this option type
     #[must_use]
+    #[cold]
+    #[inline(never)]
     pub fn unsupported_option_type(option_type: &str, method: &str) -> Self {
         PricingError::UnsupportedOptionType {
             option_type: option_type.to_string(),
@@ -182,9 +191,9 @@ impl PricingError {
     /// Intended to be used at `f64` → `Decimal` boundaries inside
     /// pricing kernels, as a thin constructor paired with an
     /// `if !value.is_finite() { .. }` guard.
-    #[must_use]
-    #[inline]
     #[cold]
+    #[inline(never)]
+    #[must_use]
     pub fn non_finite(context: &'static str, value: f64) -> Self {
         PricingError::NonFinite { context, value }
     }
