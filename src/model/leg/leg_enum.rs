@@ -57,7 +57,8 @@ use utoipa::ToSchema;
 /// * `Spot` - Direct ownership of underlying asset
 /// * `Future` - Exchange-traded futures contract
 /// * `Perpetual` - Crypto perpetual swap contract
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
 pub enum Leg {
     /// Standard option position (Call/Put).
     Option(Box<Position>),

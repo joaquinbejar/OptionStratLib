@@ -4,7 +4,9 @@ use serde::{Deserialize, Serialize};
 ///
 /// This enum defines different line styles that can be used when drawing lines
 /// in graphics contexts, charts, or UI elements.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[repr(u8)]
 pub enum LineStyle {
     /// A continuous unbroken line (default style).
     #[default]
@@ -19,7 +21,8 @@ pub enum LineStyle {
 ///
 /// This enum defines various color schemes that can be applied to charts, graphs,
 /// or any visual elements that require color differentiation.
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum ColorScheme {
     /// Default color scheme, used when no specific scheme is selected.
     #[default]
@@ -47,7 +50,9 @@ pub enum ColorScheme {
 ///
 /// This enum specifies how data points should be displayed in a visualization,
 /// such as connecting points with lines, showing individual markers, or both.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[repr(u8)]
 pub enum TraceMode {
     /// Display points connected by lines only.
     #[default]
@@ -65,7 +70,9 @@ pub enum TraceMode {
 /// This enum defines the various plot visualization types supported by the system.
 /// Each variant corresponds to a specific visualization method for data representation.
 ///
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[repr(u8)]
 pub enum PlotType {
     /// 2D line plot
     #[default]

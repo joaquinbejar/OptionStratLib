@@ -16,7 +16,9 @@ use serde::{Deserialize, Serialize};
 /// - Create parameter surfaces (e.g., volatility surface)
 /// - Define dimensions for multi-dimensional analysis
 /// - Specify which metrics to calculate or display
-#[derive(Debug, Serialize, Deserialize, PartialEq, Clone, Copy, Hash, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[repr(u8)]
 pub enum BasicAxisTypes {
     /// Sensitivity of option price to changes in underlying price (first derivative)
     Delta,
