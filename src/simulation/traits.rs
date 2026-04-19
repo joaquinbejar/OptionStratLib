@@ -1,10 +1,10 @@
 use crate::backtesting::results::SimulationStatsResult;
 use crate::error::SimulationError;
-use crate::model::decimal::decimal_normal_sample;
+use crate::model::decimal::{decimal_normal_sample, finite_decimal};
 use crate::simulation::simulator::Simulator;
 use crate::simulation::{ExitPolicy, WalkParams, WalkType};
 use crate::volatility::generate_ou_process;
-use num_traits::{FromPrimitive, ToPrimitive};
+use num_traits::ToPrimitive;
 use positive::Positive;
 use rust_decimal::{Decimal, MathematicalOps};
 use std::convert::TryInto;
@@ -129,7 +129,9 @@ where
                 let mut x: Decimal = start.to_dec();
                 let sigma_abs = (volatility * start).to_dec();
                 let sqrt_dt = dt.to_f64().sqrt();
-                let sqrt_dt_dec = Decimal::from_f64(sqrt_dt).unwrap_or(Decimal::ZERO);
+                let sqrt_dt_dec = finite_decimal(sqrt_dt).ok_or_else(|| {
+                    SimulationError::non_finite("simulation::brownian::sqrt_dt", sqrt_dt)
+                })?;
 
                 for _ in 1..params.size {
                     let z = decimal_normal_sample();
@@ -238,7 +240,9 @@ where
                 values.push(price);
 
                 let sqrt_dt = dt.to_f64().sqrt();
-                let sqrt_dt_dec = Decimal::from_f64(sqrt_dt).unwrap_or(Decimal::ZERO);
+                let sqrt_dt_dec = finite_decimal(sqrt_dt).ok_or_else(|| {
+                    SimulationError::non_finite("simulation::log_returns::sqrt_dt", sqrt_dt)
+                })?;
                 let mut prev_log_ret = Decimal::ZERO;
 
                 for _ in 1..params.size {
@@ -429,7 +433,9 @@ where
 
                 // pre-compute √dt
                 let sqrt_dt = dt.to_f64().sqrt();
-                let sqrt_dt_dec = Decimal::from_f64(sqrt_dt).unwrap_or(Decimal::ZERO);
+                let sqrt_dt_dec = finite_decimal(sqrt_dt).ok_or_else(|| {
+                    SimulationError::non_finite("simulation::garch::sqrt_dt", sqrt_dt)
+                })?;
 
                 for _ in 1..params.size {
                     // 1) update variance

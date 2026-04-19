@@ -395,6 +395,17 @@ pub fn big_n(x: Decimal) -> Result<Decimal, DecimalError> {
         });
     };
 
+    // Guard the `Decimal` → `f64` boundary: if `x` is outside the
+    // representable `f64` range the conversion returns `±∞` rather
+    // than `None`, and feeding that into `statrs::cdf` yields `NaN`
+    // which would later collapse silently in `f64_to_decimal`.
+    if !x_f64.is_finite() {
+        return Err(DecimalError::invalid_value(
+            x_f64,
+            "big_n: Decimal -> f64 produced a non-finite value",
+        ));
+    }
+
     const MEAN: f64 = 0.0;
     const STD_DEV: f64 = 1.0;
 
@@ -407,7 +418,14 @@ pub fn big_n(x: Decimal) -> Result<Decimal, DecimalError> {
             to_type: "Normal".to_string(),
             reason: format!("invalid Normal parameters: {e}"),
         })?;
-    f64_to_decimal(normal_distribution.cdf(x_f64))
+    let cdf = normal_distribution.cdf(x_f64);
+    if !cdf.is_finite() {
+        return Err(DecimalError::invalid_value(
+            cdf,
+            "big_n: CDF produced a non-finite value",
+        ));
+    }
+    f64_to_decimal(cdf)
 }
 
 /// Calculates the d1 and d2 values used in financial option pricing models such as the Black-Scholes model.
