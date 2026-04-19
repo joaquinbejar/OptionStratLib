@@ -7,7 +7,7 @@
 use crate::Options;
 use crate::error::decimal::DecimalError;
 use crate::error::greeks::{DeltaNeutralityErrorKind, GreeksError, InputErrorKind, MathErrorKind};
-use crate::model::decimal::f64_to_decimal;
+use crate::model::decimal::{d_div, d_mul, d_sub, f64_to_decimal};
 use crate::strategies::DELTA_THRESHOLD;
 use core::f64;
 use num_traits::ToPrimitive;
@@ -501,8 +501,22 @@ pub fn calculate_delta_neutral_sizes(
         return Err(DeltaNeutralityErrorKind::SameSignDeltas.into());
     }
 
-    let size1: Positive =
-        Positive::new_decimal((-total_size.to_dec() * delta2) / (delta1 - delta2))?;
+    // Delta-neutral sizing: size1 = -total_size · delta2 / (delta1 - delta2).
+    // The multiplication and subtraction are both monetary (signed position
+    // quantities on a potentially large total_size) and the division is the
+    // only site where the outcome is projected onto the `Positive` invariant,
+    // so overflow here has to surface explicitly rather than silently wrap.
+    let weighted = d_mul(
+        -total_size.to_dec(),
+        delta2,
+        "greeks::delta_neutral::size1::weighted",
+    )?;
+    let spread = d_sub(delta1, delta2, "greeks::delta_neutral::size1::spread")?;
+    let size1 = Positive::new_decimal(d_div(
+        weighted,
+        spread,
+        "greeks::delta_neutral::size1",
+    )?)?;
     let size2 = total_size - size1;
 
     // Validate results

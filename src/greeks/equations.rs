@@ -6,6 +6,7 @@
 use crate::constants::{TRADING_DAYS, ZERO};
 use crate::error::greeks::GreeksError;
 use crate::greeks::utils::{big_n, d1, d2, n};
+use crate::model::decimal::{d_div, d_mul};
 use crate::model::types::{OptionStyle, OptionType};
 use crate::{Options, Side};
 use positive::Positive;
@@ -838,8 +839,17 @@ pub fn theta(option: &Options) -> Result<Decimal, GreeksError> {
         }
     };
 
-    // Adjust for quantity and convert to daily value
-    Ok((theta * option.quantity.to_dec()) / Decimal::from(365))
+    // Adjust for quantity and convert to daily value (banker's-rounded annualisation).
+    let weighted = d_mul(
+        theta,
+        option.quantity.to_dec(),
+        "greeks::theta::position_weighted",
+    )?;
+    Ok(d_div(
+        weighted,
+        Decimal::from(365),
+        "greeks::theta::per_day",
+    )?)
 }
 
 /// Computes the vega of an option.
@@ -1102,8 +1112,17 @@ pub fn rho(option: &Options) -> Result<Decimal, GreeksError> {
         }
     };
 
-    // Adjust for quantity and convert to basis points
-    Ok((rho * option.quantity.to_dec()) / Decimal::from(100))
+    // Adjust for quantity and convert to basis points (banker's rounding).
+    let weighted = d_mul(
+        rho,
+        option.quantity.to_dec(),
+        "greeks::rho::position_weighted",
+    )?;
+    Ok(d_div(
+        weighted,
+        Decimal::from(100),
+        "greeks::rho::per_basis_point",
+    )?)
 }
 
 /// Computes the sensitivity of the option price to changes in the dividend yield (Rho_d).
@@ -1235,7 +1254,12 @@ pub fn rho_d(option: &Options) -> Result<Decimal, GreeksError> {
     };
 
     let quantity: Decimal = option.quantity.into();
-    Ok(rhod * quantity / Decimal::from(100))
+    let weighted = d_mul(rhod, quantity, "greeks::rho_d::position_weighted")?;
+    Ok(d_div(
+        weighted,
+        Decimal::from(100),
+        "greeks::rho_d::per_basis_point",
+    )?)
 }
 
 pub fn alpha(option: &Options) -> Result<Decimal, GreeksError> {
@@ -1767,8 +1791,17 @@ pub fn charm(option: &Options) -> Result<Decimal, GreeksError> {
             (-q * exp_minus_qt * big_n(-d1)?) - (exp_minus_qt * n(d1)? * common_term)
         }
     };
-    // Adjust for quantity and convert to daily value
-    Ok((charm * option.quantity) / Decimal::from(365))
+    // Adjust for quantity and convert to daily value.
+    let weighted = d_mul(
+        charm,
+        option.quantity.to_dec(),
+        "greeks::charm::position_weighted",
+    )?;
+    Ok(d_div(
+        weighted,
+        Decimal::from(365),
+        "greeks::charm::per_day",
+    )?)
 }
 
 /// Computes the Color of an option.
@@ -1902,7 +1935,8 @@ pub fn color(option: &Options) -> Result<Decimal, GreeksError> {
     let numerator = (Decimal::TWO * (r - q) * tau) - (d2 * sigma * tau.sqrt());
     let denominator = sigma * tau.sqrt();
     let factor2 = (Decimal::TWO * q * tau) + Decimal::ONE + ((numerator / denominator) * d1);
-    let color = (-exp_minus_qt * factor1 * factor2 * option.quantity) / Decimal::from(365);
+    let numerator = -exp_minus_qt * factor1 * factor2 * option.quantity;
+    let color = d_div(numerator, Decimal::from(365), "greeks::color::per_day")?;
     Ok(color)
 }
 
