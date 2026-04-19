@@ -381,19 +381,21 @@ impl BreakEvenable for CallButterfly {
     fn update_break_even_points(&mut self) -> Result<(), StrategyError> {
         self.break_even_points = Vec::new();
 
-        self.break_even_points.push(
-            (self.long_call.option.strike_price
-                - self.calculate_profit_at(&self.long_call.option.strike_price)?
-                    / self.long_call.option.quantity)
-                .round_to(2),
-        );
+        let long_strike = self.long_call.option.strike_price.to_dec();
+        let long_qty = self.long_call.option.quantity.to_dec();
+        let long_profit = self.calculate_profit_at(&self.long_call.option.strike_price)?;
+        let candidate_low = long_strike - long_profit / long_qty;
+        if let Ok(be) = Positive::new_decimal(candidate_low) {
+            self.break_even_points.push(be.round_to(2));
+        }
 
-        self.break_even_points.push(
-            (self.short_call_high.option.strike_price
-                + self.calculate_profit_at(&self.short_call_high.option.strike_price)?
-                    / self.short_call_high.option.quantity)
-                .round_to(2),
-        );
+        let short_strike = self.short_call_high.option.strike_price.to_dec();
+        let short_qty = self.short_call_high.option.quantity.to_dec();
+        let short_profit = self.calculate_profit_at(&self.short_call_high.option.strike_price)?;
+        let candidate_high = short_strike + short_profit / short_qty;
+        if let Ok(be) = Positive::new_decimal(candidate_high) {
+            self.break_even_points.push(be.round_to(2));
+        }
 
         self.break_even_points.sort();
         Ok(())
@@ -722,10 +724,15 @@ impl Strategies for CallButterfly {
                 BreakEvenErrorKind::NoBreakEvenPoints,
             ));
         }
-        let base_low = break_even[1] - break_even[0];
+        let be0 = break_even[0].to_dec();
+        let be1 = break_even[1].to_dec();
+        let base_low_dec = be1 - be0;
+        let base_low = Positive::new_decimal(base_low_dec).unwrap_or(Positive::ZERO);
         let max_profit = self.get_max_profit().unwrap_or(Positive::ZERO);
-        let base_high =
-            self.short_call_high.option.strike_price - self.short_call_low.option.strike_price;
+        let short_high = self.short_call_high.option.strike_price.to_dec();
+        let short_low = self.short_call_low.option.strike_price.to_dec();
+        let base_high_dec = short_high - short_low;
+        let base_high = Positive::new_decimal(base_high_dec).unwrap_or(Positive::ZERO);
         Ok(
             Decimal::from_f64((base_low.to_f64() + base_high.to_f64()) * max_profit.to_f64() / 2.0)
                 .unwrap_or(Decimal::ZERO),

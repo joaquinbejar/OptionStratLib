@@ -379,13 +379,17 @@ impl BreakEvenable for LongButterflySpread {
             / self.long_call_high.option.quantity;
 
         if left_net_value <= Decimal::ZERO {
-            self.break_even_points
-                .push((self.long_call_low.option.strike_price - left_net_value).round_to(2));
+            let candidate = self.long_call_low.option.strike_price.to_dec() - left_net_value;
+            if let Ok(be) = Positive::new_decimal(candidate) {
+                self.break_even_points.push(be.round_to(2));
+            }
         }
 
         if right_net_value <= Decimal::ZERO {
-            self.break_even_points
-                .push((self.long_call_high.option.strike_price + right_net_value).round_to(2));
+            let candidate = self.long_call_high.option.strike_price.to_dec() + right_net_value;
+            if let Ok(be) = Positive::new_decimal(candidate) {
+                self.break_even_points.push(be.round_to(2));
+            }
         }
 
         self.break_even_points.sort();
