@@ -87,5 +87,13 @@ pub trait BiLinearInterpolation<Point, Input> {
     ///     Err(e) => info!("Interpolation failed: {:?}", e),
     /// }
     /// ```
+    ///
+    /// # Errors
+    ///
+    /// Returns [`InterpolationError::EmptyData`] when the grid has
+    /// no samples, [`InterpolationError::OutOfRange`] when `x` falls
+    /// outside the covered domain, and
+    /// [`InterpolationError::DegenerateInterval`] when the
+    /// neighbouring grid cell has zero width on either axis.
     fn bilinear_interpolate(&self, x: Input) -> Result<Point, InterpolationError>;
 }

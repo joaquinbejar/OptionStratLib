@@ -110,6 +110,13 @@ where
     /// # Returns
     ///
     /// The initial y-axis value as a `Positive` number.
+    ///
+    /// # Errors
+    ///
+    /// Propagates any [`SimulationError`] returned by
+    /// [`Ystep::positive`] (typically
+    /// [`SimulationError::PositiveError`] when the current `y` value
+    /// breaches the `Positive` invariant).
     pub fn ystep_as_positive(&self) -> Result<Positive, SimulationError> {
         self.ystep_ref().positive()
     }

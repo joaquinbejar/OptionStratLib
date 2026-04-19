@@ -117,6 +117,12 @@ where
     /// # Returns
     ///
     /// A reference to the stored value of type `T`
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SimulationError::PositiveError`] when the stored
+    /// `y` value cannot be converted to a `Positive` (NaN, negative,
+    /// or otherwise invalid for the `Positive` invariant).
     pub fn positive(&self) -> Result<Positive, SimulationError> {
         self.value
             .clone()

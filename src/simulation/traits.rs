@@ -103,6 +103,19 @@ where
     ///
     /// * `Result<Vec<Positive>, SimulationError>` - A vector of positive values representing
     ///   the generated Brownian motion path, or an error if parameters are invalid.
+    ///
+    /// # Errors
+    ///
+    /// Returns `SimulationError::InvalidWalkType` when
+    /// `params.walk_type` is not a `WalkType::Brownian` variant, and
+    /// propagates `SimulationError::PositiveError` from
+    /// `params.ystep_as_positive()?` when the initial `y` value
+    /// violates the `Positive` invariant.
+    ///
+    /// Generated samples are clamped with
+    /// `Positive::new_decimal(x.max(Decimal::ZERO))
+    /// .unwrap_or(Positive::ZERO)`, so negative realisations do not
+    /// surface an error - they are replaced by `Positive::ZERO`.
     fn brownian(&self, params: &WalkParams<X, Y>) -> Result<Vec<Positive>, SimulationError> {
         match params.walk_type {
             WalkType::Brownian {
@@ -150,6 +163,13 @@ where
     ///
     /// * `Result<Vec<Positive>, SimulationError>` - A vector of positive values representing
     ///   the generated Geometric Brownian motion path, or an error if parameters are invalid.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SimulationError::InvalidWalkType`] when
+    /// `params.walk_type` is not a [`WalkType::GeometricBrownian`]
+    /// variant, and [`SimulationError::PositiveError`] when a
+    /// generated sample underflows below zero.
     fn geometric_brownian(
         &self,
         params: &WalkParams<X, Y>,
@@ -196,6 +216,15 @@ where
     ///
     /// * `Result<Vec<Positive>, SimulationError>` - A vector of positive values representing
     ///   the generated Log Returns path, or an error if parameters are invalid.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SimulationError::InvalidWalkType`] when
+    /// `params.walk_type` is not a [`WalkType::LogReturns`] variant,
+    /// [`SimulationError::InvalidAutocorrelation`] when the
+    /// autocorrelation coefficient is outside `[-1, 1]`, and
+    /// [`SimulationError::PositiveError`] when the exponentiated
+    /// sample underflows below zero.
     fn log_returns(&self, params: &WalkParams<X, Y>) -> Result<Vec<Positive>, SimulationError> {
         match params.walk_type {
             WalkType::LogReturns {
@@ -253,6 +282,13 @@ where
     ///
     /// * `Result<Vec<Positive>, SimulationError>` - A vector of positive values representing
     ///   the generated Mean Reverting path, or an error if parameters are invalid.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SimulationError::InvalidWalkType`] when
+    /// `params.walk_type` is not a [`WalkType::MeanReverting`]
+    /// variant, and [`SimulationError::PositiveError`] when an
+    /// intermediate sample breaches the `Positive` invariant.
     fn mean_reverting(&self, params: &WalkParams<X, Y>) -> Result<Vec<Positive>, SimulationError> {
         match params.walk_type {
             WalkType::MeanReverting {
@@ -293,6 +329,13 @@ where
     ///
     /// * `Result<Vec<Positive>, SimulationError>` - A vector of positive values representing
     ///   the generated Jump Diffusion path, or an error if parameters are invalid.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SimulationError::InvalidWalkType`] when
+    /// `params.walk_type` is not a [`WalkType::JumpDiffusion`]
+    /// variant, and [`SimulationError::PositiveError`] when a jumped
+    /// sample underflows below zero.
     fn jump_diffusion(&self, params: &WalkParams<X, Y>) -> Result<Vec<Positive>, SimulationError> {
         match params.walk_type {
             WalkType::JumpDiffusion {
@@ -353,6 +396,15 @@ where
     /// # Note
     ///
     /// This implementation is currently a placeholder and returns an empty vector.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SimulationError::InvalidWalkType`] when
+    /// `params.walk_type` is not a [`WalkType::Garch`] variant,
+    /// [`SimulationError::GarchStationarity`] when `alpha + beta ≥ 1`
+    /// (the recurrence is non-stationary), and
+    /// [`SimulationError::PositiveError`] when an intermediate
+    /// variance breaches the `Positive` invariant.
     fn garch(&self, params: &WalkParams<X, Y>) -> Result<Vec<Positive>, SimulationError> {
         match params.walk_type {
             WalkType::Garch {
@@ -447,6 +499,15 @@ where
     /// dS_t = μS_t dt + √v_t S_t dW^1_t
     /// dv_t = κ(θ - v_t) dt + ξ√v_t dW^2_t
     /// with dW^1_t dW^2_t = ρ dt
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SimulationError::InvalidWalkType`] when
+    /// `params.walk_type` is not a [`WalkType::Heston`] variant,
+    /// [`SimulationError::InvalidCorrelation`] when `rho` is outside
+    /// `[-1, 1]`, and [`SimulationError::PositiveError`] when an
+    /// intermediate price or variance breaches the `Positive`
+    /// invariant.
     fn heston(&self, params: &WalkParams<X, Y>) -> Result<Vec<Positive>, SimulationError> {
         match params.walk_type {
             WalkType::Heston {
@@ -529,6 +590,15 @@ where
     ///
     /// * `Result<Vec<Positive>, SimulationError>` - A vector of positive values representing
     ///   the generated custom process path, or an error if parameters are invalid.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SimulationError::InvalidWalkType`] when
+    /// `params.walk_type` is not a [`WalkType::Custom`] variant,
+    /// [`SimulationError::InsufficientHistoricalData`] when the
+    /// provided calibration sample is too small for the requested
+    /// process order, and [`SimulationError::PositiveError`] when a
+    /// generated sample violates the `Positive` invariant.
     fn custom(&self, params: &WalkParams<X, Y>) -> Result<Vec<Positive>, SimulationError> {
         match params.walk_type {
             WalkType::Custom {
@@ -579,6 +649,13 @@ where
     ///
     /// * `Result<Vec<Positive>, SimulationError>` - A vector of positive values representing
     ///   the generated Telegraph process path, or an error if parameters are invalid.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SimulationError::InvalidWalkType`] when
+    /// `params.walk_type` is not a [`WalkType::Telegraph`] variant,
+    /// and [`SimulationError::PositiveError`] when an intermediate
+    /// sample breaches the `Positive` invariant.
     fn telegraph(&self, params: &WalkParams<X, Y>) -> Result<Vec<Positive>, SimulationError> {
         match params.walk_type {
             WalkType::Telegraph {

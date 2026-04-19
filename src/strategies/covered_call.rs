@@ -263,6 +263,11 @@ impl CoveredCall {
     ///
     /// Net Delta = Spot Delta + Option Delta
     /// For a covered call: typically positive but less than 1.0 per share
+    ///
+    /// # Errors
+    ///
+    /// Propagates any [`GreeksError`] returned by
+    /// [`LegAble::delta`] on the spot leg or the short-call leg.
     pub fn net_delta(&self) -> Result<Decimal, GreeksError> {
         let spot_delta = self.spot_leg.delta()?;
         let option_delta = self.short_call.delta()?;
@@ -286,6 +291,16 @@ impl CoveredCall {
     /// Calculates the maximum profit potential.
     ///
     /// Max Profit = (Strike - Cost Basis) × Quantity + Premium Received - Fees
+    ///
+    /// # Errors
+    ///
+    /// Currently infallible — when `strike >= cost_basis` the
+    /// function returns the capital gain plus premium minus fees as
+    /// an `Ok(...)`, and otherwise clamps any negative worst-case
+    /// to `Ok(Positive::ZERO)`. The `Result` signature is retained
+    /// so future implementations that add checked arithmetic or
+    /// validate the strike layout can return
+    /// `PricingError::MethodError` without a breaking change.
     pub fn max_profit_potential(&self) -> Result<Positive, PricingError> {
         let strike = self.call_strike();
         let cost_basis = self.spot_leg.cost_basis;
@@ -312,6 +327,16 @@ impl CoveredCall {
     ///
     /// Max Loss = Cost Basis × Quantity - Premium Received + Fees
     /// (occurs if underlying goes to zero)
+    ///
+    /// # Errors
+    ///
+    /// Currently infallible. When `total_investment + total_fees`
+    /// exceeds `premium_received` the function returns the positive
+    /// delta, otherwise it clamps to `Ok(Positive::ZERO)`. The
+    /// `Result` signature is retained so future implementations
+    /// that add checked arithmetic or validate the premium/cost
+    /// relationship can return `PricingError::MethodError` without
+    /// a breaking change.
     pub fn max_loss_potential(&self) -> Result<Positive, PricingError> {
         let cost_basis = self.spot_leg.cost_basis;
         let quantity = self.spot_leg.quantity;

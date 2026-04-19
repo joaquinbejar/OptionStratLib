@@ -316,6 +316,14 @@ pub(crate) fn estimate_telegraph_parameters(
 /// The function handles parameter estimation automatically if transition rates are not provided.
 /// When missing, it simulates returns based on the option's implied volatility to estimate
 /// appropriate telegraph parameters.
+///
+/// # Errors
+///
+/// Returns `PricingError::ExpirationDate` when the option's
+/// expiration cannot be converted, `PricingError::MethodError`
+/// when the finite-difference recurrence fails to populate a node
+/// (e.g. parameter estimation produces degenerate rates) or when the
+/// terminal averaging yields a non-finite value.
 pub fn telegraph(
     option: &Options,
     no_steps: usize,

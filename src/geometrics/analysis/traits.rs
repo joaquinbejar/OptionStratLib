@@ -33,6 +33,13 @@ pub trait MetricsExtractor: Len {
     /// # Returns
     /// - `Ok(BasicMetrics)`: Struct containing mean, median, mode, and standard deviation.
     /// - `Err(CurvesError)`: If metrics computation fails.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`MetricsError::BasicError`] when the sample is
+    /// empty, when the variance cannot be computed in `Decimal`
+    /// precision, or when the mode aggregation is ambiguous for the
+    /// provided samples.
     fn compute_basic_metrics(&self) -> Result<BasicMetrics, MetricsError>;
 
     /// Computes shape-related metrics for the curve.
@@ -40,6 +47,12 @@ pub trait MetricsExtractor: Len {
     /// # Returns
     /// - `Ok(ShapeMetrics)`: Struct containing skewness, kurtosis, peaks, valleys, and inflection points.
     /// - `Err(CurvesError)`: If metrics computation fails.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`MetricsError::ShapeError`] when the sample has
+    /// fewer than three points (skewness/kurtosis undefined) or when
+    /// the central-moment computation overflows the `Decimal` range.
     fn compute_shape_metrics(&self) -> Result<ShapeMetrics, MetricsError>;
 
     /// Computes range-related metrics for the curve.
@@ -47,6 +60,12 @@ pub trait MetricsExtractor: Len {
     /// # Returns
     /// - `Ok(RangeMetrics)`: Struct containing min/max points, range, quartiles, and interquartile range.
     /// - `Err(CurvesError)`: If metrics computation fails.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`MetricsError::RangeError`] when the sample is
+    /// empty (no min/max available) or when the quartile
+    /// interpolation fails for a sparse sample.
     fn compute_range_metrics(&self) -> Result<RangeMetrics, MetricsError>;
 
     /// Computes trend-related metrics for the curve.
@@ -54,6 +73,12 @@ pub trait MetricsExtractor: Len {
     /// # Returns
     /// - `Ok(TrendMetrics)`: Struct containing slope, intercept, R-squared, and moving average.
     /// - `Err(CurvesError)`: If metrics computation fails.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`MetricsError::TrendError`] when the linear
+    /// regression cannot be fit (fewer than two samples or zero
+    /// variance on the independent axis).
     fn compute_trend_metrics(&self) -> Result<TrendMetrics, MetricsError>;
 
     /// Computes risk-related metrics for the curve.
@@ -61,6 +86,12 @@ pub trait MetricsExtractor: Len {
     /// # Returns
     /// - `Ok(RiskMetrics)`: Struct containing volatility, VaR, expected shortfall, beta, and Sharpe ratio.
     /// - `Err(CurvesError)`: If metrics computation fails.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`MetricsError::RiskError`] when the sample cannot
+    /// support VaR/ES estimation (fewer than the required quantile
+    /// sample count) or when the Sharpe ratio denominator is zero.
     fn compute_risk_metrics(&self) -> Result<RiskMetrics, MetricsError>;
 
     /// Computes and aggregates all curve metrics into a comprehensive `CurveMetrics` struct.
@@ -68,6 +99,13 @@ pub trait MetricsExtractor: Len {
     /// # Returns
     /// - `Ok(CurveMetrics)`: A struct containing all computed metrics.
     /// - `Err(CurvesError)`: If any metrics computation fails.
+    ///
+    /// # Errors
+    ///
+    /// Propagates any [`MetricsError`] returned by
+    /// `compute_basic_metrics`, `compute_shape_metrics`,
+    /// `compute_range_metrics`, `compute_trend_metrics` or
+    /// `compute_risk_metrics` (the first failing call short-circuits).
     fn compute_curve_metrics(&self) -> Result<Metrics, MetricsError> {
         let basic = self.compute_basic_metrics()?;
         let shape = self.compute_shape_metrics()?;

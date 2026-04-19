@@ -179,6 +179,11 @@ where
     /// * `Result<Positive, SimulationError>` - A positive decimal value representing the number of days
     ///   until expiration, or an error if the calculation cannot be performed.
     ///
+    /// # Errors
+    ///
+    /// Returns [`SimulationError::ExpirationDate`] when the stored
+    /// [`ExpirationDate`] cannot be resolved to a non-negative day
+    /// count (e.g. the datetime is in the past).
     pub fn days_left(&self) -> Result<Positive, SimulationError> {
         Ok(self.datetime.get_days()?)
     }
@@ -191,6 +196,13 @@ where
     /// # Returns
     ///
     /// A new `Xstep<T>` instance with updated index and datetime values.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SimulationError::ExpirationReached`] when the
+    /// current step is already at expiration (no forward step is
+    /// possible), or [`SimulationError::ExpirationDate`] when the
+    /// underlying [`ExpirationDate::get_days`] call fails.
     pub fn next(&self) -> Result<Self, SimulationError> {
         let days = self.datetime.get_days()?;
         if days == Positive::ZERO {
@@ -228,6 +240,21 @@ where
     /// # Returns
     ///
     /// A new `Xstep<T>` instance with updated index and datetime values.
+    ///
+    /// # Errors
+    ///
+    /// Returns `SimulationError::ExpirationDate` when the underlying
+    /// `ExpirationDate::get_days` call fails, or
+    /// `SimulationError::step_error` when the step-size conversion
+    /// to `Positive` fails.
+    ///
+    /// # Panics
+    ///
+    /// The decrement `self.index - 1` is unchecked and will panic in
+    /// debug builds (or silently wrap in release) if `self.index` is
+    /// already `i32::MIN`. In practice simulations start at `0` and
+    /// only call `previous` a bounded number of times, so this is
+    /// treated as a caller invariant rather than a runtime check.
     pub fn previous(&self) -> Result<Self, SimulationError> {
         let days = self.datetime.get_days()?;
         let days_to_rest = convert_time_frame(

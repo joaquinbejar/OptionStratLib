@@ -32,6 +32,15 @@ use rust_decimal::{Decimal, MathematicalOps};
 ///     - Calculate the payoff of the option for this simulation (for a call option, this is `max(st - strike_price, 0)`).
 ///     - Add the payoff to the `payoff_sum`.
 /// 4. Return the average payoff discounted to its present value.
+///
+/// # Errors
+///
+/// Returns `PricingError::ExpirationDate` when the option's
+/// expiration cannot be converted to a positive year fraction, and
+/// `PricingError::MethodError` when the GBM discretisation
+/// encounters a non-finite value (e.g. volatility overflow) or when
+/// the terminal payoff averaging produces a non-representable
+/// `Decimal`.
 pub fn monte_carlo_option_pricing(
     option: &Options,
     steps: usize,       // Number of time steps

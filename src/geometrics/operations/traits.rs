@@ -69,8 +69,19 @@ pub trait Arithmetic<Input> {
     type Error;
 
     /// Combines multiple geometries into one using the specified merge operation.
+    ///
+    /// # Errors
+    ///
+    /// Returns the implementation's `Self::Error` when the input
+    /// slice is empty, when the selected `operation` is undefined
+    /// for the provided geometries, or when axis alignment fails.
     fn merge(geometries: &[&Input], operation: MergeOperation) -> Result<Input, Self::Error>;
 
     /// Merges the current curve with another curve using the specified merge operation.
+    ///
+    /// # Errors
+    ///
+    /// Same failure surface as `merge` applied to the two-element
+    /// collection `[self, other]`.
     fn merge_with(&self, other: &Input, operation: MergeOperation) -> Result<Input, Self::Error>;
 }

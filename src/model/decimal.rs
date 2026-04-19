@@ -139,6 +139,12 @@ impl DecimalStats for Vec<Decimal> {
 /// * `Result<f64, DecimalError>` - The converted f64 value if successful, or a DecimalError
 ///   if the conversion fails
 ///
+/// # Errors
+///
+/// Returns [`DecimalError::ConversionError`] when the `Decimal` operand cannot
+/// be represented as an `f64` (e.g. out-of-range magnitude or precision loss
+/// beyond the `f64` mantissa).
+///
 /// # Example
 ///
 /// ```rust
@@ -176,6 +182,12 @@ pub fn decimal_to_f64(value: Decimal) -> Result<f64, DecimalError> {
 ///
 /// * `Result<Decimal, DecimalError>` - The converted Decimal value if successful, or a DecimalError
 ///   if the conversion fails
+///
+/// # Errors
+///
+/// Returns [`DecimalError::ConversionError`] when the `f64` operand is not
+/// representable as a `Decimal`, for example `NaN`, `±Infinity`, or a value
+/// whose magnitude exceeds the `Decimal` range.
 ///
 /// # Example
 ///
@@ -217,6 +229,16 @@ pub fn f64_to_decimal(value: f64) -> Result<Decimal, DecimalError> {
 /// use positive::Positive;
 /// let normal = decimal_normal_sample();
 /// ```
+///
+/// # Panics
+///
+/// The `unreachable!` branch fires only if
+/// `statrs::distribution::Normal::new(0.0, 1.0)` rejects the provided
+/// parameters. `statrs` accepts any finite mean together with a
+/// strictly positive standard deviation, so `(0.0, 1.0)` is always
+/// valid under the `statrs` contract and the arm is unreachable in
+/// practice. Kept as a panic rather than `Result` to preserve the
+/// infallible sampling API.
 pub fn decimal_normal_sample() -> Decimal {
     let mut t_rng = rand::rng();
     // Normal::new(0.0, 1.0) is provably valid (mean=0, std=1 are accepted

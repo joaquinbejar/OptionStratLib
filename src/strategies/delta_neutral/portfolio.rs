@@ -95,6 +95,13 @@ impl PortfolioGreeks {
     /// let greeks = PortfolioGreeks::from_positions(&positions)?;
     /// println!("Portfolio delta: {}", greeks.delta);
     /// ```
+    ///
+    /// # Errors
+    ///
+    /// Propagates any [`GreeksError`] returned by [`Greeks::delta`],
+    /// [`Greeks::gamma`], [`Greeks::theta`], [`Greeks::vega`] or
+    /// [`Greeks::rho`] on the input positions — typically
+    /// [`GreeksError::Pricing`] when Black–Scholes fails on a leg.
     pub fn from_positions(positions: &[Position]) -> Result<Self, GreeksError> {
         let mut greeks = Self::default();
 
@@ -127,6 +134,12 @@ impl PortfolioGreeks {
     /// # Returns
     ///
     /// * `Ok(PortfolioGreeks)` - Aggregated Greeks including underlying
+    ///
+    /// # Errors
+    ///
+    /// Same failure surface as [`PortfolioGreeks::from_positions`] —
+    /// only the option legs can fail; the underlying adjustment is pure
+    /// arithmetic and does not introduce new error paths.
     pub fn from_positions_with_underlying(
         positions: &[Position],
         underlying_quantity: Decimal,

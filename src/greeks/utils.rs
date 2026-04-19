@@ -469,6 +469,16 @@ pub(crate) fn calculate_d_values(option: &Options) -> Result<(Decimal, Decimal),
 /// # Ok(())
 /// # }
 /// ```
+///
+/// # Errors
+///
+/// Returns [`GreeksError::DeltaNeutrality`] with
+/// [`DeltaNeutralityErrorKind::ZeroDelta`] when both deltas are zero,
+/// [`DeltaNeutralityErrorKind::EqualDeltas`] when `delta1 == delta2`,
+/// [`DeltaNeutralityErrorKind::SameSignDeltas`] when the two deltas
+/// share the same sign (no neutral mix exists), or
+/// [`DeltaNeutralityErrorKind::NegativePositionSize`] when the derived
+/// sizes fall below zero for the provided `total_size`.
 pub fn calculate_delta_neutral_sizes(
     delta1: Decimal,
     delta2: Decimal,

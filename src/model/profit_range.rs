@@ -43,6 +43,15 @@ impl ProfitLossRange {
     ///
     /// Returns a Result containing the ProfitRange if the boundaries are valid,
     /// or an error if the boundaries are invalid
+    ///
+    /// # Errors
+    ///
+    /// Returns `ProbabilityError::RangeError` wrapping a
+    /// `ProfitLossRangeErrorKind::InvalidProfitRange` when both
+    /// bounds are present and `lower_bound >= upper_bound`. The
+    /// constructor does not currently validate that `probability`
+    /// lies in `[0, 1]`; values outside that interval are accepted
+    /// and must be validated upstream.
     pub fn new(
         lower_bound: Option<Positive>,
         upper_bound: Option<Positive>,

@@ -159,6 +159,13 @@ impl Metrics {
     /// The result provides the basic statistical measures (`BasicMetrics`) and
     /// shape metrics (`ShapeMetrics`) that were part of the `CurveMetrics` instance.
     ///
+    /// # Errors
+    ///
+    /// Currently infallible - the conversion is a direct field
+    /// re-pack. The `Result` signature is retained so future
+    /// implementations that validate the metrics invariants (e.g.
+    /// non-negative variance) can surface
+    /// [`CurveError::MetricsError`] without breaking callers.
     pub fn analysis_result(&self) -> Result<AnalysisResult, CurveError> {
         Ok(AnalysisResult {
             statistics: self.basic,

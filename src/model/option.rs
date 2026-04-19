@@ -256,6 +256,12 @@ impl Options {
     /// * `OptionsResult<Positive>` - A result containing the time to expiration in years
     ///   as a Positive value, or an error if the calculation failed.
     ///
+    /// # Errors
+    ///
+    /// Propagates any [`expiration_date::error::ExpirationDateError`] returned by
+    /// [`ExpirationDate::get_years`] (wrapped as [`OptionsError::ExpirationDate`])
+    /// when the stored expiration cannot be converted to a positive
+    /// year fraction (e.g. past expiration or invalid date).
     pub fn time_to_expiration(&self) -> OptionsResult<Positive> {
         Ok(self.expiration_date.get_years()?)
     }
@@ -355,6 +361,13 @@ impl Options {
     ///
     /// This method is particularly valuable for pricing American options and other early-exercise
     /// scenarios that cannot be accurately priced using closed-form solutions.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`OptionsError::ExpirationDate`] when the option's expiration
+    /// cannot be converted to a positive year fraction, or propagates any
+    /// `PricingError` surfaced by [`generate_binomial_tree`] (e.g.
+    /// [`PricingError::BinomialNodeMissing`] or [`PricingError::SqrtFailure`]).
     pub fn calculate_price_binomial_tree(&self, no_steps: usize) -> PriceBinomialTree {
         let expiry = self.time_to_expiration()?;
         let params = BinomialPricingParams {
@@ -389,6 +402,14 @@ impl Options {
     ///
     /// This method is computationally efficient but limited to European options without
     /// early exercise capabilities.
+    ///
+    /// # Errors
+    ///
+    /// Propagates any `PricingError` returned by [`black_scholes`] (wrapped as
+    /// `OptionsError::PricingError`), most commonly
+    /// `PricingError::ExpirationDate` when the expiration cannot be resolved
+    /// or `PricingError::MethodError` when the closed-form formula fails
+    /// numerically.
     pub fn calculate_price_black_scholes(&self) -> OptionsResult<Decimal> {
         Ok(black_scholes(self)?)
     }
@@ -430,6 +451,13 @@ impl Options {
     ///
     /// * `Result<Decimal, PricingError>` - A result containing the calculated option price
     ///   as a Decimal value, or a boxed error if the calculation failed.
+    ///
+    /// # Errors
+    ///
+    /// Propagates any `PricingError` returned by the `telegraph` pricing
+    /// kernel (wrapped as `OptionsError::PricingError`), typically
+    /// `PricingError::ExpirationDate` or `PricingError::MethodError`
+    /// when the finite-difference kernel fails to converge.
     pub fn calculate_price_telegraph(&self, no_steps: usize) -> OptionsResult<Decimal> {
         Ok(telegraph(self, no_steps, None, None)?)
     }
@@ -448,6 +476,13 @@ impl Options {
     ///
     /// This method is useful for determining the exercise value of an option and for
     /// analyzing whether an option has intrinsic value.
+    ///
+    /// # Errors
+    ///
+    /// Currently infallible in practice (the `f64` → `Decimal` conversion falls
+    /// back to `Decimal::default()`), but the `Result` signature is retained
+    /// for forward-compatibility with exotic payoff kernels that may surface
+    /// `OptionsError` variants.
     pub fn payoff(&self) -> OptionsResult<Decimal> {
         let payoff_info = PayoffInfo {
             spot: self.underlying_price,
@@ -477,6 +512,12 @@ impl Options {
     /// * `OptionsResult<Decimal>` - The calculated payoff value as a `Decimal`, wrapped in a `Result` type.
     ///   Returns an `Err` if the payoff calculation encounters an error.
     ///
+    /// # Errors
+    ///
+    /// Currently infallible in practice (the `f64` → `Decimal` conversion falls
+    /// back to `Decimal::default()`), but the `Result` signature is retained
+    /// for forward-compatibility with exotic payoff kernels that may surface
+    /// `OptionsError` variants.
     pub fn payoff_at_price(&self, price: &Positive) -> OptionsResult<Decimal> {
         let payoff_info = PayoffInfo {
             spot: *price,
@@ -504,6 +545,13 @@ impl Options {
     /// # Returns
     ///
     /// * `OptionsResult<Decimal>` - The intrinsic value of the option, or an error if the calculation fails.
+    ///
+    /// # Errors
+    ///
+    /// Currently infallible in practice (the `f64` → `Decimal` conversion falls
+    /// back to `Decimal::default()`), but the `Result` signature is retained
+    /// for forward-compatibility with exotic payoff kernels that may surface
+    /// `OptionsError` variants.
     pub fn intrinsic_value(&self, underlying_price: Positive) -> OptionsResult<Decimal> {
         let payoff_info = PayoffInfo {
             spot: underlying_price,
@@ -547,6 +595,13 @@ impl Options {
     /// # Returns
     /// - `Ok(Decimal)` containing the time value (never negative, minimum value is zero)
     /// - `Err` if the price calculation encounters an error
+    ///
+    /// # Errors
+    ///
+    /// Propagates any `OptionsError` returned by
+    /// [`Options::calculate_price_black_scholes`] or
+    /// [`Options::intrinsic_value`] (typically `OptionsError::PricingError`
+    /// with `PricingError::ExpirationDate` as the inner cause).
     pub fn time_value(&self) -> OptionsResult<Decimal> {
         let option_price = self.calculate_price_black_scholes()?.abs();
         let intrinsic_value = self.intrinsic_value(self.underlying_price)?;
@@ -668,6 +723,16 @@ impl Options {
     ///     Err(e) => error!("Failed to calculate implied volatility: {:?}", e),
     /// }
     /// ```
+    ///
+    /// # Errors
+    ///
+    /// Returns [`VolatilityError::PositiveError`] when the midpoint
+    /// volatility breaches the `Positive` invariant,
+    /// [`VolatilityError::NoConvergence`] when the bisection exhausts
+    /// `MAX_ITERATIONS_IV` without matching the target price, or propagates
+    /// [`VolatilityError::Options`] from the underlying Black–Scholes
+    /// evaluation (wrapped as [`OptionsError::ImpliedVolatilityInvariant`]
+    /// when the invariant check fails).
     pub fn calculate_implied_volatility(
         &self,
         market_price: Decimal,

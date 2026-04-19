@@ -124,6 +124,13 @@ pub trait ColorSurface {
     /// - `Ok(Surface)`: The color surface with price on x-axis,
     ///   days on y-axis, and color on z-axis
     /// - `Err(SurfaceError)`: If the surface cannot be computed
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SurfaceError::ConstructionError`] when the sampling
+    /// grid is empty, and propagates [`SurfaceError::Point3DError`] or
+    /// [`SurfaceError::OperationError`] from the intermediate
+    /// `color` evaluation at each `(price, days)` sample.
     fn color_surface(
         &self,
         price_range: (Positive, Positive),

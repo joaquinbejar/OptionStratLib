@@ -26,6 +26,17 @@ use positive::pos_or_panic;
 /// # Returns
 ///
 /// The calculated volatility as a Decimal.
+///
+/// # Errors
+///
+/// Returns `VolatilityError::NumericalFailure` when the length of
+/// `returns` cannot be represented as a `Decimal` or when the
+/// final `variance.sqrt()` fails (overflow).
+///
+/// When `returns.len() < 2` the function returns `Ok(Positive::ZERO)`
+/// rather than an error. Conversion of the final std-dev into
+/// `Positive` is clamped to `Positive::ZERO`, so `PositiveError` is
+/// never surfaced.
 pub fn constant_volatility(returns: &[Decimal]) -> Result<Positive, VolatilityError> {
     let n_dec =
         Decimal::from_usize(returns.len()).ok_or_else(|| VolatilityError::NumericalFailure {
@@ -62,6 +73,19 @@ pub fn constant_volatility(returns: &[Decimal]) -> Result<Positive, VolatilityEr
 /// # Returns
 ///
 /// A vector of Decimal values representing the historical volatility for each window.
+///
+/// # Errors
+///
+/// Propagates any `VolatilityError::NumericalFailure` raised by
+/// `constant_volatility` on an individual window.
+///
+/// # Panics
+///
+/// The underlying `slice::windows(window_size)` call panics when
+/// `window_size == 0`. When `window_size > returns.len()` the
+/// function returns `Ok(vec![])` instead of an error, so callers
+/// that need a non-empty result must validate the inputs
+/// themselves.
 pub fn historical_volatility(
     returns: &[Decimal],
     window_size: usize,
@@ -82,6 +106,17 @@ pub fn historical_volatility(
 /// # Returns
 ///
 /// A vector of Decimal values representing the EWMA volatility.
+///
+/// # Errors
+///
+/// Returns `VolatilityError::NumericalFailure` when `returns` is
+/// empty or when any `variance.sqrt()` call fails (negative operand
+/// reported as a generic overflow failure).
+///
+/// Each running std-dev is converted via
+/// `Positive::new_decimal(...).unwrap_or(Positive::ZERO)`, so
+/// `PositiveError` is never surfaced — negative intermediates are
+/// already caught by the `sqrt` check above.
 pub fn ewma_volatility(
     returns: &[Decimal],
     lambda: Decimal,
@@ -132,6 +167,18 @@ pub fn ewma_volatility(
 ///   the current implied volatility is returned.
 /// - The function ensures that the implied volatility stays positive.
 ///
+/// # Errors
+///
+/// The implementation is a parallel grid search over
+/// `100 * max_iterations` candidate volatilities rather than a
+/// Newton–Raphson iteration. It returns
+/// `VolatilityError::IvNotFound` when the best candidate is the
+/// lower boundary `1 / (100 * max_iterations)` (the search never
+/// improved), `VolatilityError::NoValidVolatility` when every grid
+/// point failed the Black–Scholes evaluation, and
+/// `VolatilityError::PositiveError` when the boundary `Positive`
+/// conversion fails. Black–Scholes errors on individual candidates
+/// are discarded by the parallel filter rather than propagated.
 pub fn implied_volatility(
     market_price: Positive,
     options: &mut Options,
@@ -236,6 +283,20 @@ pub fn calculate_iv(
 /// # Returns
 ///
 /// A vector of Decimal values representing the GARCH(1,1) volatility.
+///
+/// # Errors
+///
+/// Currently infallible — every `Positive::new_decimal(...)` call
+/// is clamped to `Positive::ZERO`, so neither `NumericalFailure` nor
+/// `PositiveError` is surfaced. The `Result` signature is retained
+/// so future implementations that add explicit stationarity checks
+/// (`alpha + beta < 1`) or overflow validation can return
+/// `VolatilityError::NumericalFailure` without a breaking change.
+///
+/// # Panics
+///
+/// Panics on `returns[0]` when `returns` is empty. Callers must
+/// validate the input slice length before invoking.
 pub fn garch_volatility(
     returns: &[Decimal],
     omega: Decimal,
@@ -266,6 +327,19 @@ pub fn garch_volatility(
 /// # Returns
 ///
 /// A vector of Decimal values representing the simulated volatility.
+///
+/// # Errors
+///
+/// Returns `VolatilityError::NumericalFailure` when the initial
+/// `sqrt(dt)` call overflows, when that square root is not
+/// representable as `f64`, or when the per-step `dw` sample cannot
+/// be converted back into `Decimal`.
+///
+/// Variance is clamped to zero on each step
+/// (`v = v.max(Decimal::ZERO)`) and converted via
+/// `Positive::new_decimal(...).unwrap_or(Positive::ZERO)`, so
+/// negative variance is silently recovered and `PositiveError` is
+/// never surfaced.
 pub fn simulate_heston_volatility(
     kappa: Decimal,
     theta: Decimal,
@@ -312,6 +386,14 @@ pub fn simulate_heston_volatility(
 /// # Returns
 ///
 /// A tuple of (lower_bound, upper_bound) for the option price.
+///
+/// # Errors
+///
+/// Propagates any [`VolatilityError::Options`] returned by the
+/// underlying Black–Scholes evaluation at the minimum or maximum
+/// volatility bound — typically
+/// `OptionsError::PricingError` with an
+/// `PricingError::ExpirationDate` inner cause.
 pub fn uncertain_volatility_bounds(
     option: &Options,
     min_volatility: Positive,
@@ -363,6 +445,12 @@ pub fn uncertain_volatility_bounds(
 /// let annual_vol = annualized_volatility(daily_vol, TimeFrame::Day);
 /// // annual_vol ≈ 0.1587 or about 15.87%
 /// ```
+///
+/// # Errors
+///
+/// Returns [`VolatilityError::PositiveError`] when the scaling factor
+/// multiplied by the base volatility cannot be represented as a
+/// `Positive` (e.g. overflow on an extreme timeframe annualisation).
 pub fn annualized_volatility(
     volatility: Positive,
     timeframe: TimeFrame,
@@ -397,6 +485,12 @@ pub fn annualized_volatility(
 /// let daily_vol = de_annualized_volatility(annual_vol, TimeFrame::Day);
 /// // daily_vol ≈ 0.0126 or about 1.26%
 /// ```
+///
+/// # Errors
+///
+/// Returns [`VolatilityError::PositiveError`] when the rescaling
+/// produces a value that violates the `Positive` invariant, typically
+/// due to division rounding on an extremely small timeframe.
 pub fn de_annualized_volatility(
     annual_volatility: Positive,
     timeframe: TimeFrame,
@@ -425,6 +519,12 @@ pub fn de_annualized_volatility(
 /// # Ok(())
 /// # }
 /// ```
+///
+/// # Errors
+///
+/// Propagates any [`VolatilityError::PositiveError`] surfaced by the
+/// intermediate [`annualized_volatility`] or [`de_annualized_volatility`]
+/// calls when either rescaling breaches the `Positive` invariant.
 pub fn adjust_volatility(
     volatility: Positive,
     from_frame: TimeFrame,

@@ -41,6 +41,13 @@ use rust_decimal_macros::dec;
 /// # Returns
 ///
 /// The option price as a `Decimal`, or a `PricingError` if pricing fails.
+///
+/// # Errors
+///
+/// Returns [`PricingError::UnsupportedOptionType`] when `option` is
+/// not an [`OptionType::Chooser`] variant, and propagates any
+/// `PricingError` raised by the Black–Scholes evaluation at the
+/// chooser date (call and put side).
 pub fn chooser_black_scholes(option: &Options) -> Result<Decimal, PricingError> {
     match &option.option_type {
         OptionType::Chooser { choice_date } => simple_chooser_price(option, *choice_date),

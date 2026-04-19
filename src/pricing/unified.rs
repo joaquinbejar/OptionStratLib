@@ -68,6 +68,15 @@ pub enum PricingEngine {
 /// let price = price_option(&option, &engine)?;
 /// Ok::<(), optionstratlib::error::PricingError>(())
 /// ```
+///
+/// # Errors
+///
+/// Propagates any `PricingError` returned by the selected engine:
+/// `PricingError::ExpirationDate` or `PricingError::MethodError`
+/// from Black–Scholes, [`PricingError::BinomialNodeMissing`] or
+/// [`PricingError::SqrtFailure`] from the binomial lattice, or the
+/// equivalent failures from exotic engines (barrier, binary,
+/// compound, chooser, cliquet, lookback, telegraph, Monte Carlo).
 pub fn price_option(option: &Options, engine: &PricingEngine) -> PricingResult<Positive> {
     match engine {
         PricingEngine::ClosedFormBS => {
@@ -96,6 +105,11 @@ pub trait Priceable {
     /// # Returns
     ///
     /// Returns the price as a `Positive` value, or a `PricingError` if pricing fails.
+    ///
+    /// # Errors
+    ///
+    /// Propagates any `PricingError` returned by the selected
+    /// engine; see [`price_option`] for the full variant breakdown.
     fn price(&self, engine: &PricingEngine) -> PricingResult<Positive>;
 }
 

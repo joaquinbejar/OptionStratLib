@@ -110,6 +110,13 @@ pub trait StatisticalCurve: MetricsExtractor {
     /// - `Result<Curve, CurveError>`: A curve matching the specified statistical properties,
     ///   or an error if generation fails.
     ///
+    /// # Errors
+    ///
+    /// Returns [`CurveError::ConstructionError`] when the requested
+    /// combination of basic, shape and range-parameter metrics is
+    /// infeasible (e.g. negative variance, inconsistent quantiles), and
+    /// propagates [`CurveError::MetricsError`] when the per-sample
+    /// metric evaluation fails.
     fn generate_statistical_curve(
         &self,
         basic_metrics: &BasicMetrics,
@@ -253,6 +260,13 @@ pub trait StatisticalCurve: MetricsExtractor {
     ///
     /// # Returns
     /// - `Result<Curve, CurveError>`: The generated curve or an error
+    ///
+    /// # Errors
+    ///
+    /// Same failure surface as
+    /// [`StatisticalCurve::generate_statistical_curve`], plus
+    /// [`CurveError::ConstructionError`] when the refinement loop
+    /// exhausts its iteration budget without matching the tolerance.
     #[allow(clippy::too_many_arguments)]
     fn generate_refined_statistical_curve(
         &self,
@@ -307,6 +321,14 @@ pub trait StatisticalCurve: MetricsExtractor {
     ///
     /// # Returns
     /// - `Result<bool, CurveError>`: True if metrics match within tolerance, false otherwise
+    ///
+    /// # Errors
+    ///
+    /// Propagates any [`CurveError::MetricsError`] or
+    /// [`CurveError::ConstructionError`] raised while recomputing the
+    /// curve's actual metrics (typically when the curve contains
+    /// non-finite samples or lacks the density required for the
+    /// requested metric).
     fn verify_curve_metrics(
         &self,
         curve: &Curve,

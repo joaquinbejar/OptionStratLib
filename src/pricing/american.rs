@@ -119,6 +119,15 @@ const TOLERANCE: f64 = 1e-6;
 /// # Ok(())
 /// # }
 /// ```
+///
+/// # Errors
+///
+/// Returns `PricingError::MethodError` (with method
+/// `barone_adesi_whaley`) when the intermediate Newton–Raphson
+/// iteration cannot converge on the early-exercise boundary
+/// `Sx`, and [`PricingError::SqrtFailure`] when the quadratic
+/// formula receives a negative discriminant from the approximation
+/// parameters.
 pub fn barone_adesi_whaley(
     spot: Positive,
     strike: Positive,

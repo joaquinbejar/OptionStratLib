@@ -149,6 +149,13 @@ pub fn read_ohlcv_from_zip(
 /// # Note
 ///
 /// This method is only available with the `async` feature.
+///
+/// # Errors
+///
+/// Returns the same variants as [`read_ohlcv_from_zip`]
+/// (I/O, ZIP, CSV and date/decimal parsing), plus
+/// [`OhlcvError::AsyncTask`] when the `spawn_blocking` worker fails
+/// (e.g. panics or cancellation).
 #[cfg(feature = "async")]
 pub async fn read_ohlcv_from_zip_async(
     zip_path: String,

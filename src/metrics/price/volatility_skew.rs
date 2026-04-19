@@ -127,6 +127,13 @@ pub trait VolatilitySkewCurve {
     /// # Note
     /// - The `Curve` returned should ideally conform to the constraints and
     ///   ordering requirements specified in the `Curve` documentation.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`CurveError::ConstructionError`] when no strikes in the
+    /// chain carry a valid implied volatility, and may propagate
+    /// [`CurveError::InterpolationError`] when the smoothing stage fails
+    /// on the raw skew samples.
     fn volatility_skew(&self) -> Result<Curve, CurveError>;
 }
 

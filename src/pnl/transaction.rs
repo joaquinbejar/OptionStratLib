@@ -183,6 +183,14 @@ impl Transaction {
     /// # Returns
     ///
     /// A Result containing the PnL or an error
+    ///
+    /// # Errors
+    ///
+    /// Returns [`TransactionError`] when the internal state is
+    /// inconsistent for the declared [`TradeStatus`] (missing close
+    /// price for a `Closed` trade, missing settlement data for an
+    /// `Expired` trade, or arithmetic overflow while combining
+    /// premium, fees and quantity).
     pub fn pnl(&self) -> Result<PnL, TransactionError> {
         match self.status {
             TradeStatus::Open => self.calculate_open_pnl(),

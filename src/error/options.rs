@@ -196,7 +196,7 @@ pub enum OptionsError {
 /// A specialized result type for operations related to Options calculations and processing.
 ///
 /// This type alias simplifies error handling for functions that can fail with various
-/// options-specific errors. It uses the [`OptionsError`] enum to provide structured
+/// options-specific errors. It uses the `OptionsError` enum to provide structured
 /// error information about validation failures, pricing issues, Greeks calculations,
 /// time-related problems, and other option-specific errors.
 ///
@@ -233,7 +233,7 @@ pub enum OptionsError {
 /// * Expiration and time value calculations
 /// * Option payoff analysis
 ///
-/// [`OptionsError`]: enum.OptionsError.html
+/// See `OptionsError` for the full variant list.
 pub type OptionsResult<T> = Result<T, OptionsError>;
 
 /// Helper methods for creating common options errors.

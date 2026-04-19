@@ -558,6 +558,12 @@ impl OptionChain {
     /// this option chain. The method calculates appropriate values for chain size, strike interval,
     /// and estimated spread based on the current data.
     ///
+    /// # Errors
+    ///
+    /// Returns [`ChainError::ChainBuildError`] when the chain is empty,
+    /// when no valid strike interval can be inferred from existing
+    /// strikes, or when the volatility-surface sampler fails to produce a
+    /// skew for the generated parameters.
     pub fn to_build_params(&self) -> Result<OptionChainBuildParams, ChainError> {
         // Calculate chain size based on the distance from ATM strike
         let atm_strike = self.atm_strike()?;
@@ -882,6 +888,12 @@ impl OptionChain {
     ///     Err(e) => error!("Error finding ATM strike: {}", e),
     /// }
     /// ```
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChainError::EmptyChainAtm`] when the chain contains no
+    /// options, or [`ChainError::AtmNotFound`] when no strike is close
+    /// enough to the underlying to be considered at-the-money.
     pub fn atm_strike(&self) -> Result<&Positive, ChainError> {
         let option_data = self.atm_option_data()?;
         Ok(&option_data.strike_price)
@@ -1069,6 +1081,12 @@ impl OptionChain {
     /// # Note
     ///
     /// This method is only available on non-WebAssembly targets.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChainError::FileError`] wrapping a `FileErrorKind::IOError`
+    /// when the file cannot be created or written, or
+    /// `FileErrorKind::ParseError` when `csv` serialization fails.
     pub fn save_to_csv(&self, file_path: &str) -> Result<(), ChainError> {
         let full_path = format!("{}/{}.csv", file_path, self.get_title());
         let mut wtr = WriterBuilder::new().from_path(full_path)?;
@@ -1109,6 +1127,13 @@ impl OptionChain {
     /// # Note
     ///
     /// This method is only available on non-WebAssembly targets with the `async` feature.
+    ///
+    /// # Errors
+    ///
+    /// Returns the same variants as [`OptionChain::save_to_csv`]
+    /// ([`ChainError::FileError`] wrapping `FileErrorKind::IOError` or
+    /// `FileErrorKind::ParseError`). A `spawn_blocking` join failure is
+    /// surfaced as `FileErrorKind::IOError`.
     #[cfg(feature = "async")]
     pub async fn save_to_csv_async(&self, file_path: &str) -> Result<(), ChainError> {
         let path = file_path.to_string();
@@ -1136,6 +1161,12 @@ impl OptionChain {
     /// # Note
     ///
     /// This method is only available on non-WebAssembly targets.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChainError::FileError`] wrapping a `FileErrorKind::IOError`
+    /// when the file cannot be created or written, or
+    /// `FileErrorKind::ParseError` when `serde_json` serialization fails.
     pub fn save_to_json(&self, file_path: &str) -> Result<(), ChainError> {
         let full_path = format!("{}/{}.json", file_path, self.get_title());
         let file = File::create(full_path)?;
@@ -1148,6 +1179,13 @@ impl OptionChain {
     /// # Note
     ///
     /// This method is only available on non-WebAssembly targets with the `async` feature.
+    ///
+    /// # Errors
+    ///
+    /// Returns the same variants as [`OptionChain::save_to_json`]
+    /// ([`ChainError::FileError`] wrapping `FileErrorKind::IOError` or
+    /// `FileErrorKind::ParseError`). A `spawn_blocking` join failure is
+    /// surfaced as `FileErrorKind::IOError`.
     #[cfg(feature = "async")]
     pub async fn save_to_json_async(&self, file_path: &str) -> Result<(), ChainError> {
         let path = file_path.to_string();
@@ -1174,6 +1212,14 @@ impl OptionChain {
     /// # Note
     ///
     /// This method is only available on non-WebAssembly targets.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChainError::FileError`] wrapping `FileErrorKind::IOError`
+    /// when the CSV file cannot be opened or read, or
+    /// `FileErrorKind::ParseError` when the CSV records cannot be parsed.
+    /// Invalid option data (bad strike, volatility or price) surfaces as
+    /// [`ChainError::OptionDataError`].
     pub fn load_from_csv(file_path: &str) -> Result<Self, ChainError> {
         let mut rdr = csv::Reader::from_path(file_path)?;
         let mut options = BTreeSet::new();
@@ -1227,6 +1273,12 @@ impl OptionChain {
     /// # Note
     ///
     /// This method is only available on non-WebAssembly targets with the `async` feature.
+    ///
+    /// # Errors
+    ///
+    /// Returns the same variants as [`OptionChain::load_from_csv`]. A
+    /// `spawn_blocking` join failure is surfaced as
+    /// [`ChainError::FileError`] wrapping `FileErrorKind::IOError`.
     #[cfg(feature = "async")]
     pub async fn load_from_csv_async(file_path: &str) -> Result<Self, ChainError> {
         let path = file_path.to_string();
@@ -1252,6 +1304,12 @@ impl OptionChain {
     /// # Note
     ///
     /// This method is only available on non-WebAssembly targets.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChainError::FileError`] wrapping `FileErrorKind::IOError`
+    /// when the file cannot be opened, or `FileErrorKind::ParseError`
+    /// when `serde_json` deserialization fails.
     pub fn load_from_json(file_path: &str) -> Result<Self, ChainError> {
         let file = File::open(file_path)?;
         let mut option_chain: OptionChain = serde_json::from_reader(file)?;
@@ -1276,6 +1334,12 @@ impl OptionChain {
     /// # Note
     ///
     /// This method is only available on non-WebAssembly targets with the `async` feature.
+    ///
+    /// # Errors
+    ///
+    /// Returns the same variants as [`OptionChain::load_from_json`]. A
+    /// `spawn_blocking` join failure is surfaced as
+    /// [`ChainError::FileError`] wrapping `FileErrorKind::IOError`.
     #[cfg(feature = "async")]
     pub async fn load_from_json_async(file_path: &str) -> Result<Self, ChainError> {
         let path = file_path.to_string();
@@ -1363,6 +1427,14 @@ impl OptionChain {
     /// # Returns
     ///
     /// * `Result<Vec<Position>, ChainError>` - Vector of created positions or error message
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChainError::StrategyError`] wrapping a
+    /// `StrategyErrorKind::InvalidLegs` when the requested position counts
+    /// exceed available strikes on either side of the chain, or propagates
+    /// any [`ChainError::OptionDataError`] produced while materialising the
+    /// selected strikes into [`Position`] instances.
     pub fn get_random_positions(
         &self,
         params: RandomPositionsParams,
@@ -2842,6 +2914,13 @@ impl OptionChain {
     ///
     /// # Returns
     /// * `Result<(), ChainError>` - Ok if successful, or an error if the operation fails.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChainError::ExpirationDate`] when the chain's expiration
+    /// string cannot be parsed, or propagates any
+    /// [`ChainError::OptionDataError`] surfaced while enriching individual
+    /// [`OptionData`] entries with extra pricing parameters.
     pub fn set_optiondata_extra_params(&mut self) -> Result<(), ChainError> {
         let params = OptionDataPriceParams::new(
             Some(Box::new(self.underlying_price)),

@@ -45,5 +45,13 @@ pub trait Surfacable {
     /// - `surface()`:
     ///   - Returns: `Result<Surface, SurfaceError>`
     ///   - Description: Generates a surface or returns an error if something goes wrong during the process.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SurfaceError::ConstructionError`] when the
+    /// implementor cannot produce any `(x, y, z)` sample
+    /// (empty data source, degenerate axes, or missing metric), and
+    /// propagates [`SurfaceError::Point3DError`] when a sample
+    /// cannot be represented as a `Point3D`.
     fn surface(&self) -> Result<Surface, SurfaceError>;
 }

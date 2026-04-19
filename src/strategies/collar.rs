@@ -360,6 +360,11 @@ impl Collar {
     /// Calculates the net delta of the collar.
     ///
     /// Net Delta = Spot Delta + Put Delta + Call Delta
+    ///
+    /// # Errors
+    ///
+    /// Propagates any [`GreeksError`] returned by
+    /// [`LegAble::delta`] on the spot leg, long-put leg or short-call leg.
     pub fn net_delta(&self) -> Result<Decimal, GreeksError> {
         let spot_delta = self.spot_leg.delta()?;
         let put_delta = self.long_put.delta()?;
@@ -370,6 +375,17 @@ impl Collar {
     /// Calculates the maximum profit potential.
     ///
     /// Max Profit = (Call Strike - Cost Basis) × Quantity + Net Premium - Fees
+    ///
+    /// # Errors
+    ///
+    /// Currently infallible — both branches compute
+    /// `Positive::new_decimal(total_profit.max(Decimal::ZERO))
+    /// .unwrap_or(Positive::ZERO)`, so negative decompositions are
+    /// clamped to `Positive::ZERO` rather than surfaced as an error.
+    /// The `Result` signature is retained so future implementations
+    /// that add checked arithmetic or validate the
+    /// `call_strike ≥ cost_basis` precondition can return
+    /// `PricingError::MethodError` without a breaking change.
     pub fn max_profit_potential(&self) -> Result<Positive, PricingError> {
         let call_strike = self.call_strike();
         let cost_basis = self.spot_leg.cost_basis;
@@ -392,6 +408,17 @@ impl Collar {
     /// Calculates the maximum loss potential.
     ///
     /// Max Loss = (Cost Basis - Put Strike) × Quantity - Net Premium + Fees
+    ///
+    /// # Errors
+    ///
+    /// Currently infallible — both branches compute
+    /// `Positive::new_decimal(total_loss.max(Decimal::ZERO))
+    /// .unwrap_or(Positive::ZERO)`, so negative decompositions are
+    /// clamped to `Positive::ZERO` rather than surfaced as an error.
+    /// The `Result` signature is retained so future implementations
+    /// that add checked arithmetic or validate the
+    /// `cost_basis ≥ put_strike` precondition can return
+    /// `PricingError::MethodError` without a breaking change.
     pub fn max_loss_potential(&self) -> Result<Positive, PricingError> {
         let put_strike = self.put_strike();
         let cost_basis = self.spot_leg.cost_basis;

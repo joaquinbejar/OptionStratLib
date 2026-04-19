@@ -69,6 +69,13 @@ pub trait LegAble {
     /// # Returns
     ///
     /// The position delta as a Decimal, or an error if calculation fails.
+    ///
+    /// # Errors
+    ///
+    /// Propagates any [`GreeksError`] returned by the underlying pricing
+    /// kernel, typically [`GreeksError::Pricing`] for option legs whose
+    /// Black–Scholes evaluation fails, or [`GreeksError::ExpirationDate`]
+    /// when the expiration cannot be resolved.
     fn delta(&self) -> Result<Decimal, GreeksError>;
 
     /// Returns the gamma of this position.
@@ -79,6 +86,13 @@ pub trait LegAble {
     /// # Returns
     ///
     /// The position gamma as a Decimal, or an error if calculation fails.
+    ///
+    /// # Errors
+    ///
+    /// The default implementation is infallible (returns `0`). Option-leg
+    /// implementors propagate [`GreeksError::Pricing`] on Black–Scholes
+    /// failure or [`GreeksError::ExpirationDate`] when the expiration is
+    /// invalid.
     fn gamma(&self) -> Result<Decimal, GreeksError> {
         Ok(Decimal::ZERO)
     }
@@ -93,6 +107,13 @@ pub trait LegAble {
     /// # Returns
     ///
     /// The position theta as a Decimal, or an error if calculation fails.
+    ///
+    /// # Errors
+    ///
+    /// The default implementation is infallible (returns `0`). Option-leg
+    /// implementors propagate [`GreeksError::Pricing`] when the closed-form
+    /// time-decay evaluation fails or [`GreeksError::ExpirationDate`] when
+    /// the expiration cannot be resolved.
     fn theta(&self) -> Result<Decimal, GreeksError> {
         Ok(Decimal::ZERO)
     }
@@ -105,6 +126,13 @@ pub trait LegAble {
     /// # Returns
     ///
     /// The position vega as a Decimal, or an error if calculation fails.
+    ///
+    /// # Errors
+    ///
+    /// The default implementation is infallible (returns `0`). Option-leg
+    /// implementors propagate [`GreeksError::Pricing`] when the Black–Scholes
+    /// vega evaluation fails or [`GreeksError::ExpirationDate`] when the
+    /// expiration cannot be resolved.
     fn vega(&self) -> Result<Decimal, GreeksError> {
         Ok(Decimal::ZERO)
     }
@@ -118,6 +146,13 @@ pub trait LegAble {
     /// # Returns
     ///
     /// The position rho as a Decimal, or an error if calculation fails.
+    ///
+    /// # Errors
+    ///
+    /// The default implementation is infallible (returns `0`). Option-leg
+    /// implementors propagate [`GreeksError::Pricing`] when the rho
+    /// evaluation fails or [`GreeksError::ExpirationDate`] when the
+    /// expiration cannot be resolved.
     fn rho(&self) -> Result<Decimal, GreeksError> {
         Ok(Decimal::ZERO)
     }

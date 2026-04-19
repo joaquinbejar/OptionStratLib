@@ -107,6 +107,18 @@ impl Point3D {
     /// - `T`: Type for x-coordinate
     /// - `U`: Type for y-coordinate
     /// - `V`: Type for z-coordinate
+    ///
+    /// # Errors
+    ///
+    /// Returns `SurfaceError::Point3DError` in three situations:
+    ///
+    /// - when one of the target types is `Positive`-like
+    ///   (detected via the `is_positive::<T>()` / `is_positive::<U>()`
+    ///   / `is_positive::<V>()` checks) and the corresponding
+    ///   coordinate is less than or equal to zero.
+    /// - when one of the `Decimal` coordinates cannot be converted
+    ///   into the target numeric type (e.g. out-of-range for `f32`,
+    ///   overflow for `u32`).
     pub fn to_tuple<
         T: TryFrom<Decimal> + 'static,
         U: TryFrom<Decimal> + 'static,
@@ -146,6 +158,14 @@ impl Point3D {
     }
 
     /// Creates a Point3D from a tuple of three values.
+    ///
+    /// # Errors
+    ///
+    /// Currently infallible for the blanket `Into<Decimal>`
+    /// bounds; the `Result` signature is retained so future
+    /// implementations that can reject non-finite or out-of-range
+    /// inputs (e.g. via `TryFrom<f64>`) can surface
+    /// [`SurfaceError::Point3DError`] without a breaking change.
     pub fn from_tuple<T: Into<Decimal>, U: Into<Decimal>, V: Into<Decimal>>(
         x: T,
         y: U,
@@ -155,6 +175,12 @@ impl Point3D {
     }
 
     /// Converts the Point3D to a tuple of f64 values.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SurfaceError::Point3DError`] when any coordinate
+    /// cannot be represented as an `f64` (typically a `Decimal`
+    /// magnitude that exceeds the `f64` range).
     pub fn to_f64_tuple(&self) -> Result<(f64, f64, f64), SurfaceError> {
         let x = self.x.to_f64();
         let y = self.y.to_f64();
@@ -169,6 +195,12 @@ impl Point3D {
     }
 
     /// Creates a Point3D from a tuple of f64 values.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SurfaceError::Point3DError`] when any of `x`,
+    /// `y` or `z` is `NaN` or infinite and therefore not
+    /// representable as a `Decimal`.
     pub fn from_f64_tuple(x: f64, y: f64, z: f64) -> Result<Self, SurfaceError> {
         let x = Decimal::from_f64(x);
         let y = Decimal::from_f64(y);

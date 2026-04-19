@@ -67,6 +67,14 @@ pub trait Strategable:
     ///
     /// A `Result` containing the `StrategyBasics` struct if successful, or a `StrategyError`
     /// if the operation is not supported.
+    ///
+    /// # Errors
+    ///
+    /// The default implementation returns [`StrategyError::OperationError`]
+    /// with [`OperationErrorKind::NotSupported`]; concrete strategies that
+    /// override it may surface [`StrategyError::PriceError`] or
+    /// [`StrategyError::BreakEvenError`] when the underlying computations
+    /// fail.
     fn info(&self) -> Result<StrategyBasics, StrategyError> {
         Err(StrategyError::operation_not_supported(
             "info",
@@ -809,6 +817,13 @@ pub trait Strategies: Validable + Positionable + BreakEvenable + BasicAble {
     /// # Returns
     /// * `Ok(Positive)` - The maximum possible profit.
     /// * `Err(StrategyError)` - If the operation is not supported for this strategy.
+    ///
+    /// # Errors
+    ///
+    /// The default implementation returns [`StrategyError::OperationError`]
+    /// with [`OperationErrorKind::NotSupported`]. Concrete strategies may
+    /// surface [`StrategyError::PriceError`] or
+    /// [`StrategyError::ProfitLossError`] when the payoff evaluation fails.
     fn get_max_profit(&self) -> Result<Positive, StrategyError> {
         Err(StrategyError::operation_not_supported(
             "max_profit",
@@ -822,6 +837,11 @@ pub trait Strategies: Validable + Positionable + BreakEvenable + BasicAble {
     /// # Returns
     /// * `Ok(Positive)` - The maximum possible profit.
     /// * `Err(StrategyError)` - If the operation is not supported for this strategy.
+    ///
+    /// # Errors
+    ///
+    /// Propagates any [`StrategyError`] returned by
+    /// `Strategable::get_max_profit` on `&self`.
     fn get_max_profit_mut(&mut self) -> Result<Positive, StrategyError> {
         self.get_max_profit()
     }
@@ -832,6 +852,13 @@ pub trait Strategies: Validable + Positionable + BreakEvenable + BasicAble {
     /// # Returns
     /// * `Ok(Positive)` - The maximum possible loss.
     /// * `Err(StrategyError)` - If the operation is not supported for this strategy.
+    ///
+    /// # Errors
+    ///
+    /// The default implementation returns [`StrategyError::OperationError`]
+    /// with [`OperationErrorKind::NotSupported`]. Concrete strategies may
+    /// surface [`StrategyError::PriceError`] or
+    /// [`StrategyError::ProfitLossError`] when the payoff evaluation fails.
     fn get_max_loss(&self) -> Result<Positive, StrategyError> {
         Err(StrategyError::operation_not_supported(
             "max_loss",
@@ -845,6 +872,11 @@ pub trait Strategies: Validable + Positionable + BreakEvenable + BasicAble {
     /// # Returns
     /// * `Ok(Positive)` - The maximum possible loss.
     /// * `Err(StrategyError)` - If the operation is not supported for this strategy.
+    ///
+    /// # Errors
+    ///
+    /// Propagates any [`StrategyError`] returned by
+    /// `Strategable::get_max_loss` on `&self`.
     fn get_max_loss_mut(&mut self) -> Result<Positive, StrategyError> {
         self.get_max_loss()
     }
@@ -854,6 +886,13 @@ pub trait Strategies: Validable + Positionable + BreakEvenable + BasicAble {
     /// # Returns
     /// * `Ok(Positive)` - The total cost of the strategy.
     /// * `Err(PositionError)` - If there is an error retrieving the positions.
+    ///
+    /// # Errors
+    ///
+    /// Propagates any [`PositionError`] returned by
+    /// `Strategable::get_positions` or by
+    /// [`Position::total_cost`] when the component legs surface invalid
+    /// state.
     fn get_total_cost(&self) -> Result<Positive, PositionError> {
         let positions = self.get_positions()?;
         let mut total = Positive::ZERO;
@@ -869,6 +908,13 @@ pub trait Strategies: Validable + Positionable + BreakEvenable + BasicAble {
     /// # Returns
     /// * `Ok(Decimal)` - The net cost of the strategy.
     /// * `Err(PositionError)` - If there is an error retrieving the positions.
+    ///
+    /// # Errors
+    ///
+    /// Propagates any [`PositionError`] returned by
+    /// `Strategable::get_positions` or by
+    /// [`Position::net_cost`] when the component legs surface invalid
+    /// state.
     fn get_net_cost(&self) -> Result<Decimal, PositionError> {
         let positions = self.get_positions()?;
         let mut total = Decimal::ZERO;
@@ -884,6 +930,12 @@ pub trait Strategies: Validable + Positionable + BreakEvenable + BasicAble {
     /// # Returns
     /// * `Ok(Positive)` - The net premium received.
     /// * `Err(StrategyError)` - If there is an error retrieving the positions.
+    ///
+    /// # Errors
+    ///
+    /// Returns `StrategyError::from(PositionError)` when
+    /// `Strategable::get_positions` or
+    /// [`Position::net_premium_received`] fail on any leg.
     fn get_net_premium_received(&self) -> Result<Positive, StrategyError> {
         let positions = self.get_positions()?;
         let mut costs = Decimal::ZERO;
@@ -906,6 +958,12 @@ pub trait Strategies: Validable + Positionable + BreakEvenable + BasicAble {
     /// # Returns
     /// * `Ok(Positive)` - The total fees.
     /// * `Err(StrategyError)` - If there is an error retrieving positions or calculating fees.
+    ///
+    /// # Errors
+    ///
+    /// Returns `StrategyError::from(PositionError)` when
+    /// `Strategable::get_positions` or [`Position::fees`] fail on any
+    /// leg.
     fn get_fees(&self) -> Result<Positive, StrategyError> {
         let mut fee = Positive::ZERO;
         let positions = match self.get_positions() {
@@ -931,6 +989,13 @@ pub trait Strategies: Validable + Positionable + BreakEvenable + BasicAble {
     /// # Returns
     /// * `Ok(Decimal)` - The profit area.
     /// * `Err(StrategyError)` - If the operation is not supported.
+    ///
+    /// # Errors
+    ///
+    /// The default implementation returns [`StrategyError::OperationError`]
+    /// with [`OperationErrorKind::NotSupported`]. Overriding strategies may
+    /// surface [`StrategyError::BreakEvenError`] or
+    /// [`StrategyError::PriceError`] when the payoff integral fails.
     fn get_profit_area(&self) -> Result<Decimal, StrategyError> {
         Err(StrategyError::operation_not_supported(
             "profit_area",
@@ -944,6 +1009,13 @@ pub trait Strategies: Validable + Positionable + BreakEvenable + BasicAble {
     /// # Returns
     /// * `Ok(Decimal)` - The profit ratio.
     /// * `Err(StrategyError)` - If the operation is not supported.
+    ///
+    /// # Errors
+    ///
+    /// The default implementation returns [`StrategyError::OperationError`]
+    /// with [`OperationErrorKind::NotSupported`]. Overriding strategies may
+    /// surface [`StrategyError::ProfitLossError`] when either
+    /// `get_max_profit` or `get_max_loss` fails.
     fn get_profit_ratio(&self) -> Result<Decimal, StrategyError> {
         Err(StrategyError::operation_not_supported(
             "profit_ratio",
@@ -959,6 +1031,12 @@ pub trait Strategies: Validable + Positionable + BreakEvenable + BasicAble {
     /// # Returns
     /// * `Ok((Positive, Positive))` - A tuple containing the start and end prices of the range.
     /// * `Err(StrategyError)` - If there is an error retrieving necessary data for the calculation.
+    ///
+    /// # Errors
+    ///
+    /// Propagates any [`StrategyError`] returned by
+    /// `Strategable::get_break_even_points` or
+    /// `Strategable::get_max_min_strikes`.
     fn get_range_to_show(&self) -> Result<(Positive, Positive), StrategyError> {
         let mut all_points = self.get_break_even_points()?.clone();
         let (first_strike, last_strike) = self.get_max_min_strikes()?;
@@ -997,6 +1075,11 @@ pub trait Strategies: Validable + Positionable + BreakEvenable + BasicAble {
     /// # Returns
     /// * `Ok(Vec<Positive>)` - A vector of prices.
     /// * `Err(StrategyError)` - If there is an error calculating the display range.
+    ///
+    /// # Errors
+    ///
+    /// Propagates any [`StrategyError`] returned by
+    /// `Strategable::get_range_to_show`.
     fn get_best_range_to_show(&self, step: Positive) -> Result<Vec<Positive>, StrategyError> {
         let (start_price, end_price) = self.get_range_to_show()?;
         Ok(calculate_price_range(start_price, end_price, step))
@@ -1008,6 +1091,12 @@ pub trait Strategies: Validable + Positionable + BreakEvenable + BasicAble {
     /// # Returns
     /// * `Ok((Positive, Positive))` - A tuple containing the minimum and maximum strike prices.
     /// * `Err(StrategyError)` - If no strikes are found or if an error occurs retrieving positions.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`StrategyError::PriceError`] when the strategy has no
+    /// strikes to compare against; propagates [`StrategyError`] variants
+    /// from `Strategable::get_positions` when position enumeration fails.
     fn get_max_min_strikes(&self) -> Result<(Positive, Positive), StrategyError> {
         let strikes: Vec<&Positive> = self.get_strikes();
         if strikes.is_empty() {
@@ -1048,6 +1137,12 @@ pub trait Strategies: Validable + Positionable + BreakEvenable + BasicAble {
     /// * `Ok(Positive)` - The difference between the highest and lowest break-even points.  Returns
     ///   `Positive::INFINITY` if there is only one break-even point.
     /// * `Err(StrategyError)` - if there are no break-even points.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`StrategyError::BreakEvenError`] when the strategy has
+    /// no break-even points, and propagates any other [`StrategyError`]
+    /// surfaced by `Strategable::get_break_even_points`.
     fn get_range_of_profit(&self) -> Result<Positive, StrategyError> {
         let mut break_even_points = self.get_break_even_points()?.clone();
         match break_even_points.len() {
@@ -1139,6 +1234,13 @@ pub trait BreakEvenable {
     ///
     /// The default implementation returns a `StrategyError::OperationError` with `OperationErrorKind::NotSupported`.
     /// Strategies implementing this trait should override this method if they support break-even point calculations.
+    ///
+    /// # Errors
+    ///
+    /// The default implementation returns [`StrategyError::OperationError`]
+    /// with [`OperationErrorKind::NotSupported`]. Concrete strategies may
+    /// surface [`StrategyError::BreakEvenError`] when no crossing is
+    /// found in the payoff profile.
     fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
         Err(StrategyError::operation_not_supported(
             "get_break_even_points",
@@ -1368,6 +1470,14 @@ pub trait Positionable {
     ///
     /// The default implementation returns an error indicating that adding a position is not
     /// supported. Strategies that support adding positions should override this method.
+    ///
+    /// # Errors
+    ///
+    /// The default implementation returns
+    /// [`PositionError::unsupported_operation`]. Overriding strategies may
+    /// surface [`PositionError::ValidationError`] when the added position
+    /// violates strategy invariants (e.g. mismatched underlying, wrong
+    /// side or invalid quantity).
     fn add_position(&mut self, _position: &Position) -> Result<(), PositionError> {
         Err(PositionError::unsupported_operation(
             std::any::type_name::<Self>(),
@@ -1387,6 +1497,14 @@ pub trait Positionable {
     ///
     /// The default implementation returns an error indicating that getting positions is not
     /// supported. Strategies that manage positions should override this method.
+    ///
+    /// # Errors
+    ///
+    /// The default implementation returns
+    /// [`PositionError::unsupported_operation`]. Overriding strategies
+    /// typically do not fail, but may surface
+    /// [`PositionError::ValidationError`] if the internal layout has been
+    /// corrupted.
     fn get_positions(&self) -> Result<Vec<&Position>, PositionError> {
         Err(PositionError::unsupported_operation(
             std::any::type_name::<Self>(),

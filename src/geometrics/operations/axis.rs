@@ -62,6 +62,12 @@ where
     ///
     /// # Returns
     /// * `Result<&Point, Self::Error>` - The closest point or an error if no points exist
+    ///
+    /// # Errors
+    ///
+    /// Returns the implementation's `Self::Error` (typically an
+    /// empty-set variant) when the underlying container holds no
+    /// points to compare against.
     fn get_closest_point(&self, x: &Input) -> Result<&Point, Self::Error>;
 
     /// Finds the closest point to the given coordinate value.
@@ -165,6 +171,12 @@ where
     /// # Returns
     /// * `Result<(Self, Self), Self::Error>` - A tuple containing both structures
     ///   with aligned coordinate points, or an error if interpolation fails
+    ///
+    /// # Errors
+    ///
+    /// Returns the implementation's `Self::Error` when either
+    /// structure is empty or when the per-axis interpolation on the
+    /// merged coordinate grid fails at any sample.
     fn merge_axis_interpolate(
         &self,
         other: &Self,
