@@ -71,8 +71,8 @@ pub enum PricingEngine {
 ///
 /// # Errors
 ///
-/// Propagates any [`PricingError`] returned by the selected engine:
-/// [`PricingError::ExpirationDate`] or [`PricingError::MethodError`]
+/// Propagates any `PricingError` returned by the selected engine:
+/// `PricingError::ExpirationDate` or `PricingError::MethodError`
 /// from Black–Scholes, [`PricingError::BinomialNodeMissing`] or
 /// [`PricingError::SqrtFailure`] from the binomial lattice, or the
 /// equivalent failures from exotic engines (barrier, binary,
@@ -108,7 +108,7 @@ pub trait Priceable {
     ///
     /// # Errors
     ///
-    /// Propagates any [`PricingError`] returned by the selected
+    /// Propagates any `PricingError` returned by the selected
     /// engine; see [`price_option`] for the full variant breakdown.
     fn price(&self, engine: &PricingEngine) -> PricingResult<Positive>;
 }

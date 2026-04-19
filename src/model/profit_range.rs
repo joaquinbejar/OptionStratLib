@@ -47,8 +47,8 @@ impl ProfitLossRange {
     /// # Errors
     ///
     /// Returns [`ProbabilityError`] wrapping a
-    /// [`ProbabilityCalculationErrorKind::InvalidProbability`] when `lower_bound`
-    /// is greater than `upper_bound`, or [`ProbabilityCalculationErrorKind::InvalidProbabilityRange`]
+    /// `ProbabilityCalculationErrorKind::InvalidProbability` when `lower_bound`
+    /// is greater than `upper_bound`, or `ProbabilityCalculationErrorKind::InvalidProbabilityRange`
     /// when the `probability` value lies outside the closed interval `[0, 1]`.
     pub fn new(
         lower_bound: Option<Positive>,

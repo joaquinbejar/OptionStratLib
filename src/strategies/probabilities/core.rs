@@ -70,8 +70,8 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
     /// # Errors
     ///
     /// Propagates any [`ProbabilityError`] returned by
-    /// [`probability_of_profit`], [`probability_of_loss`],
-    /// [`calculate_extreme_probabilities`] or [`expected_value`];
+    /// `probability_of_profit`, `probability_of_loss`,
+    /// `calculate_extreme_probabilities` or `expected_value`;
     /// typically [`ProbabilityError::CalculationError`] when an
     /// underlying break-even or payoff evaluation fails.
     fn analyze_probabilities(
@@ -146,8 +146,8 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
     /// Returns [`ProbabilityError::CalculationError`] when the display
     /// range cannot be computed or when profit evaluation fails at a
     /// sample point, and propagates any [`ProbabilityError`] surfaced by
-    /// [`probability_at`] (typically
-    /// [`ProbabilityCalculationErrorKind::InvalidProbabilityRange`]
+    /// `probability_at` (typically
+    /// `ProbabilityCalculationErrorKind::InvalidProbabilityRange`
     /// for malformed volatility adjustments).
     fn expected_value(
         &self,
@@ -321,7 +321,7 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
     /// # Errors
     ///
     /// Propagates any [`ProbabilityError`] returned by
-    /// [`probability_of_profit`] and [`probability_of_loss`]; typically
+    /// `probability_of_profit` and `probability_of_loss`; typically
     /// [`ProbabilityError::CalculationError`] when a tail integration
     /// beyond the break-even points fails.
     fn calculate_extreme_probabilities(

@@ -130,7 +130,7 @@ pub trait CharmSurface {
     /// Returns [`SurfaceError::ConstructionError`] when the sampling
     /// grid is empty, and propagates [`SurfaceError::Point3DError`] or
     /// [`SurfaceError::OperationError`] from the intermediate
-    /// [`charm`] evaluation at each `(price, days)` sample.
+    /// `charm` evaluation at each `(price, days)` sample.
     fn charm_surface(
         &self,
         price_range: (Positive, Positive),

@@ -378,10 +378,10 @@ impl Collar {
     ///
     /// # Errors
     ///
-    /// Returns [`PricingError::MethodError`] with method `collar` when
+    /// Returns `PricingError::MethodError` with method `collar` when
     /// the short-call strike is below the spot cost basis (the strategy
     /// is not economically well-formed). Arithmetic follows
-    /// [`PricingError::ArithmeticFailure`] if fee or premium conversions
+    /// `PricingError::ArithmeticFailure` if fee or premium conversions
     /// overflow.
     pub fn max_profit_potential(&self) -> Result<Positive, PricingError> {
         let call_strike = self.call_strike();
@@ -408,7 +408,7 @@ impl Collar {
     ///
     /// # Errors
     ///
-    /// Returns [`PricingError::MethodError`] with method `collar` when
+    /// Returns `PricingError::MethodError` with method `collar` when
     /// the loss decomposition underflows (for example when the put strike
     /// equals or exceeds the spot cost basis and the net premium net of
     /// fees is positive), or when arithmetic fails while converting

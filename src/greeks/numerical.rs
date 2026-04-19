@@ -25,10 +25,10 @@ const H: Decimal = dec!(0.01);
 ///
 /// # Errors
 ///
-/// Propagates any [`PricingError`] returned by the unified-pricing
+/// Propagates any `PricingError` returned by the unified-pricing
 /// evaluator on the perturbed option clones, wrapped as
 /// [`GreeksError::Pricing`]; typically
-/// [`PricingError::ExpirationDate`] or [`PricingError::MethodError`] on
+/// `PricingError::ExpirationDate` or `PricingError::MethodError` on
 /// numerical failure.
 pub fn numerical_delta(option: &Options) -> Result<Decimal, GreeksError> {
     let mut opt_plus = option.clone();
@@ -52,7 +52,7 @@ pub fn numerical_delta(option: &Options) -> Result<Decimal, GreeksError> {
 ///
 /// # Errors
 ///
-/// Propagates any [`PricingError`] returned by the unified-pricing
+/// Propagates any `PricingError` returned by the unified-pricing
 /// evaluator on the three perturbed option clones, wrapped as
 /// [`GreeksError::Pricing`].
 pub fn numerical_gamma(option: &Options) -> Result<Decimal, GreeksError> {
@@ -78,7 +78,7 @@ pub fn numerical_gamma(option: &Options) -> Result<Decimal, GreeksError> {
 ///
 /// # Errors
 ///
-/// Propagates any [`PricingError`] returned by the unified-pricing
+/// Propagates any `PricingError` returned by the unified-pricing
 /// evaluator on the perturbed option clones, wrapped as
 /// [`GreeksError::Pricing`].
 pub fn numerical_vega(option: &Options) -> Result<Decimal, GreeksError> {
@@ -103,7 +103,7 @@ pub fn numerical_vega(option: &Options) -> Result<Decimal, GreeksError> {
 /// # Errors
 ///
 /// Returns [`GreeksError::ExpirationDate`] when the option's expiration
-/// cannot be resolved, and propagates any [`PricingError`] returned by
+/// cannot be resolved, and propagates any `PricingError` returned by
 /// the unified-pricing evaluator on the perturbed option clones
 /// (wrapped as [`GreeksError::Pricing`]).
 pub fn numerical_theta(option: &Options) -> Result<Decimal, GreeksError> {
@@ -127,7 +127,7 @@ pub fn numerical_theta(option: &Options) -> Result<Decimal, GreeksError> {
 ///
 /// # Errors
 ///
-/// Propagates any [`PricingError`] returned by the unified-pricing
+/// Propagates any `PricingError` returned by the unified-pricing
 /// evaluator on the perturbed option clones, wrapped as
 /// [`GreeksError::Pricing`].
 pub fn numerical_rho(option: &Options) -> Result<Decimal, GreeksError> {

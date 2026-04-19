@@ -130,7 +130,7 @@ pub trait ColorSurface {
     /// Returns [`SurfaceError::ConstructionError`] when the sampling
     /// grid is empty, and propagates [`SurfaceError::Point3DError`] or
     /// [`SurfaceError::OperationError`] from the intermediate
-    /// [`color`] evaluation at each `(price, days)` sample.
+    /// `color` evaluation at each `(price, days)` sample.
     fn color_surface(
         &self,
         price_range: (Positive, Positive),

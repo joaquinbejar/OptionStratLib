@@ -319,8 +319,8 @@ pub(crate) fn estimate_telegraph_parameters(
 ///
 /// # Errors
 ///
-/// Returns [`PricingError::ExpirationDate`] when the option's
-/// expiration cannot be converted, [`PricingError::MethodError`]
+/// Returns `PricingError::ExpirationDate` when the option's
+/// expiration cannot be converted, `PricingError::MethodError`
 /// when the finite-difference recurrence fails to populate a node
 /// (e.g. parameter estimation produces degenerate rates) or when the
 /// terminal averaging yields a non-finite value.

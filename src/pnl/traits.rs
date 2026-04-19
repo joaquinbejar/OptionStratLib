@@ -30,10 +30,10 @@ pub trait PnLCalculator {
     ///
     /// # Errors
     ///
-    /// Returns [`PricingError::ExpirationDate`] when the expiration
-    /// cannot be converted, [`PricingError::MethodError`] when the
+    /// Returns `PricingError::ExpirationDate` when the expiration
+    /// cannot be converted, `PricingError::MethodError` when the
     /// underlying Black–Scholes kernel fails, or propagates any other
-    /// [`PricingError`] surfaced by the strategy's component
+    /// `PricingError` surfaced by the strategy's component
     /// evaluations.
     fn calculate_pnl(
         &self,
@@ -56,9 +56,9 @@ pub trait PnLCalculator {
     ///
     /// # Errors
     ///
-    /// Returns [`PricingError::MethodError`] when the terminal
+    /// Returns `PricingError::MethodError` when the terminal
     /// payoff evaluation fails on any leg (typically propagated from
-    /// [`Position::pnl_at_expiration`]).
+    /// `Position::pnl_at_expiration`).
     fn calculate_pnl_at_expiration(
         &self,
         _underlying_price: &Positive,

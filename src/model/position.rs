@@ -404,9 +404,9 @@ impl Position {
     ///
     /// # Errors
     ///
-    /// Propagates any [`OptionsError`] returned by the underlying payoff
+    /// Propagates any `OptionsError` returned by the underlying payoff
     /// evaluation ([`Options::intrinsic_value`] or [`Options::payoff`]),
-    /// wrapped as [`PricingError::OptionError`].
+    /// wrapped as `PricingError::OptionError`.
     pub fn pnl_at_expiration(&self, price: &Option<&Positive>) -> Result<Decimal, PricingError> {
         match price {
             None => Ok(self.option.intrinsic_value(self.option.underlying_price)?
@@ -467,7 +467,7 @@ impl Position {
     ///
     /// Returns [`PositionError`] wrapping any
     /// [`PositionValidationErrorKind`] surfaced by the internal Black–Scholes
-    /// evaluation, or [`PositionError::PricingError`] when the
+    /// evaluation, or `PositionError::PricingError` when the
     /// implied-volatility recomputation at `price` fails.
     pub fn unrealized_pnl(&self, price: Positive) -> Result<Decimal, PositionError> {
         match self.option.side {
@@ -500,7 +500,7 @@ impl Position {
     /// # Errors
     ///
     /// Returns [`PositionError`] wrapping a
-    /// [`PositionValidationErrorKind::InvalidPositionSize`] if the elapsed
+    /// `PositionValidationErrorKind::InvalidPositionSize` if the elapsed
     /// day-count is negative (future-dated open date) or cannot be
     /// represented as a `Positive`.
     pub fn days_held(&self) -> Result<Positive, PositionError> {

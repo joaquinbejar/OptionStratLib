@@ -104,9 +104,9 @@ impl<'a> AdjustmentOptimizer<'a> {
     /// # Errors
     ///
     /// Returns [`AdjustmentError::NoPositions`] when `positions` is
-    /// empty, [`AdjustmentError::InfeasibleTarget`] when no combination
+    /// empty, `AdjustmentError::InfeasibleTarget` when no combination
     /// of candidate strikes can close the delta gap within the
-    /// configured tolerance, or [`AdjustmentError::CostCeilingBreached`]
+    /// configured tolerance, or `AdjustmentError::CostCeilingBreached`
     /// when every viable plan exceeds the configured `max_cost`.
     pub fn optimize(&self) -> Result<AdjustmentPlan, AdjustmentError> {
         if self.positions.is_empty() {

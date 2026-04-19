@@ -47,7 +47,7 @@ use rust_decimal_macros::dec;
 ///
 /// Returns [`PricingError::UnsupportedOptionType`] when `option` is
 /// not an [`OptionType::Lookback`] variant, and propagates any
-/// [`PricingError`] raised by intermediate Black–Scholes kernels
+/// `PricingError` raised by intermediate Black–Scholes kernels
 /// on the running extremum decomposition.
 pub fn lookback_black_scholes(option: &Options) -> Result<Decimal, PricingError> {
     match &option.option_type {

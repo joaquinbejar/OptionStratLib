@@ -140,7 +140,7 @@ pub trait ThetaSurface {
     /// Returns [`SurfaceError::ConstructionError`] when the sampling
     /// grid is empty, and propagates [`SurfaceError::Point3DError`] or
     /// [`SurfaceError::OperationError`] from the intermediate
-    /// [`theta`] evaluation at each `(price, days)` sample.
+    /// `theta` evaluation at each `(price, days)` sample.
     fn theta_surface(
         &self,
         price_range: (Positive, Positive),

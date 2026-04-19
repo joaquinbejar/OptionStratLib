@@ -35,9 +35,9 @@ use rust_decimal::{Decimal, MathematicalOps};
 ///
 /// # Errors
 ///
-/// Returns [`PricingError::ExpirationDate`] when the option's
+/// Returns `PricingError::ExpirationDate` when the option's
 /// expiration cannot be converted to a positive year fraction, and
-/// [`PricingError::MethodError`] when the GBM discretisation
+/// `PricingError::MethodError` when the GBM discretisation
 /// encounters a non-finite value (e.g. volatility overflow) or when
 /// the terminal payoff averaging produces a non-representable
 /// `Decimal`.

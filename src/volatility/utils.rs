@@ -156,7 +156,7 @@ pub fn ewma_volatility(
 /// # Errors
 ///
 /// Returns [`VolatilityError::NoConvergence`] when the Newton–Raphson
-/// iteration exhausts [`MAX_ITERATIONS_IV`] without matching the target
+/// iteration exhausts `MAX_ITERATIONS_IV` without matching the target
 /// price, [`VolatilityError::IvNotFound`] when the search grid never
 /// produced a valid candidate, or propagates
 /// [`VolatilityError::Options`] from the underlying Black–Scholes
@@ -363,8 +363,8 @@ pub fn simulate_heston_volatility(
 /// Propagates any [`VolatilityError::Options`] returned by the
 /// underlying Black–Scholes evaluation at the minimum or maximum
 /// volatility bound — typically
-/// [`OptionsError::PricingError`] with an
-/// [`PricingError::ExpirationDate`] inner cause.
+/// `OptionsError::PricingError` with an
+/// `PricingError::ExpirationDate` inner cause.
 pub fn uncertain_volatility_bounds(
     option: &Options,
     min_volatility: Positive,

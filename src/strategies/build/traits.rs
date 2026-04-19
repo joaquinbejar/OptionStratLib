@@ -44,7 +44,7 @@ pub trait StrategyConstructor: Strategies + Greeks {
     ///
     /// # Errors
     ///
-    /// Returns [`StrategyError::StrategyInvalid`] when the provided
+    /// Returns `StrategyError::StrategyInvalid` when the provided
     /// positions do not match the leg count or side/style pattern
     /// required by the implementing strategy type.
     fn get_strategy(_vec_positions: &[Position]) -> Result<Self, StrategyError>

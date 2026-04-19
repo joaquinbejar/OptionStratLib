@@ -44,7 +44,7 @@ use rust_decimal_macros::dec;
 ///
 /// Returns [`PricingError::UnsupportedOptionType`] when `option` is
 /// not an [`OptionType::Cliquet`] variant, and propagates any
-/// [`PricingError`] raised by intermediate Black–Scholes kernels on
+/// `PricingError` raised by intermediate Black–Scholes kernels on
 /// the per-reset forward components.
 pub fn cliquet_black_scholes(option: &Options) -> Result<Decimal, PricingError> {
     match &option.option_type {

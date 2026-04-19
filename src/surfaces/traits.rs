@@ -52,6 +52,6 @@ pub trait Surfacable {
     /// implementor cannot produce any `(x, y, z)` sample
     /// (empty data source, degenerate axes, or missing metric), and
     /// propagates [`SurfaceError::Point3DError`] when a sample
-    /// cannot be represented as a [`Point3D`].
+    /// cannot be represented as a `Point3D`.
     fn surface(&self) -> Result<Surface, SurfaceError>;
 }

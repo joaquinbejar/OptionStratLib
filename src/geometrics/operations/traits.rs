@@ -81,7 +81,7 @@ pub trait Arithmetic<Input> {
     ///
     /// # Errors
     ///
-    /// Same failure surface as [`merge`] applied to the two-element
+    /// Same failure surface as `merge` applied to the two-element
     /// collection `[self, other]`.
     fn merge_with(&self, other: &Input, operation: MergeOperation) -> Result<Input, Self::Error>;
 }

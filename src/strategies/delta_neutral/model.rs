@@ -353,7 +353,7 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
     /// # Errors
     ///
     /// Propagates any [`GreeksError`] surfaced by
-    /// [`Strategable::get_options`] or by the per-option
+    /// `Strategable::get_options` or by the per-option
     /// [`Greeks::delta`] evaluation, and returns
     /// [`GreeksError::DeltaNeutrality`] with
     /// [`DeltaNeutralityErrorKind::NotAchievable`] when the portfolio
@@ -607,7 +607,7 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
     ///
     /// Propagates any [`GreeksError`] returned by
     /// [`Greeks::delta`] on individual legs, or by the internal
-    /// [`delta_neutrality`] computation.
+    /// `delta_neutrality` computation.
     fn delta_adjustments(&self) -> Result<Vec<DeltaAdjustment>, GreeksError> {
         let net_delta = self.delta()?;
 
@@ -740,9 +740,9 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
     /// # Errors
     ///
     /// Returns [`StrategyError::GreeksError`] when the underlying
-    /// [`delta_neutrality`] or [`delta_adjustments`] calls fail, and
-    /// [`StrategyError::PositionError`] (via
-    /// [`apply_single_adjustment`]) when the adjustment cannot be
+    /// `delta_neutrality` or `delta_adjustments` calls fail, and
+    /// `StrategyError::PositionError` (via
+    /// `apply_single_adjustment`) when the adjustment cannot be
     /// committed to the strategy.
     fn apply_delta_adjustments(&mut self, action: Option<Action>) -> Result<(), StrategyError> {
         let delta_info = self.delta_neutrality()?;
@@ -826,8 +826,8 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
     ///
     /// # Errors
     ///
-    /// Returns [`StrategyError::PositionError`] when the underlying
-    /// [`adjust_option_position`] rejects the requested quantity change
+    /// Returns `StrategyError::PositionError` when the underlying
+    /// `adjust_option_position` rejects the requested quantity change
     /// (e.g. strike not found, invalid side for the adjustment, or
     /// invariant violation on the resulting position).
     fn apply_single_adjustment(
@@ -925,8 +925,8 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
     /// # Errors
     ///
     /// Returns [`StrategyError::GreeksError`] when the internal
-    /// [`delta_adjustments`] call fails, and
-    /// [`StrategyError::PositionError`] when the adjustment cannot be
+    /// `delta_adjustments` call fails, and
+    /// `StrategyError::PositionError` when the adjustment cannot be
     /// converted into a committable trade (invalid side, strike not
     /// present in the chain, or quantity invariant breach).
     fn trade_from_delta_adjustment(&mut self, action: Action) -> Result<Vec<Trade>, StrategyError> {
@@ -1033,7 +1033,7 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
     /// # Errors
     ///
     /// Propagates any [`GreeksError`] surfaced by
-    /// [`Strategable::get_positions`] or by
+    /// `Strategable::get_positions` or by
     /// [`PortfolioGreeks::from_positions`], typically
     /// [`GreeksError::Pricing`] when individual Black–Scholes legs fail.
     fn portfolio_greeks(&self) -> Result<PortfolioGreeks, GreeksError> {
@@ -1080,8 +1080,8 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
     /// # Errors
     ///
     /// Returns [`StrategyError::GreeksError`] when the portfolio Greeks
-    /// cannot be computed, or [`StrategyError::Adjustment`] (mapped from
-    /// [`AdjustmentError`]) when the optimiser cannot find a viable plan
+    /// cannot be computed, or `StrategyError::Adjustment` (mapped from
+    /// `AdjustmentError`) when the optimiser cannot find a viable plan
     /// for the provided `config` and `target` (e.g. no positions,
     /// infeasible constraints, or cost ceiling breached).
     fn optimized_adjustment_plan(
@@ -1118,9 +1118,9 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
     /// # Errors
     ///
     /// Same failure surface as
-    /// [`optimized_adjustment_plan`] plus additional chain-driven
-    /// failures: returns [`StrategyError::Adjustment`] mapped from
-    /// [`AdjustmentError`] when the chain does not expose any candidate
+    /// `optimized_adjustment_plan` plus additional chain-driven
+    /// failures: returns `StrategyError::Adjustment` mapped from
+    /// `AdjustmentError` when the chain does not expose any candidate
     /// strike that satisfies the target delta direction.
     fn optimized_adjustment_plan_with_chain(
         &self,

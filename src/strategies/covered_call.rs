@@ -294,7 +294,7 @@ impl CoveredCall {
     ///
     /// # Errors
     ///
-    /// Returns [`PricingError::MethodError`] with method `covered_call`
+    /// Returns `PricingError::MethodError` with method `covered_call`
     /// when the call strike sits below the spot cost basis (the strategy
     /// has no upside), or when arithmetic on `Positive` operands
     /// overflows.
@@ -327,7 +327,7 @@ impl CoveredCall {
     ///
     /// # Errors
     ///
-    /// Returns [`PricingError::MethodError`] with method `covered_call`
+    /// Returns `PricingError::MethodError` with method `covered_call`
     /// when the premium net of fees exceeds `cost_basis × quantity`
     /// (which would imply a non-negative worst case), or when arithmetic
     /// on `Positive` operands overflows.

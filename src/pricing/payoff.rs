@@ -229,9 +229,9 @@ pub trait Profit {
     ///
     /// # Errors
     ///
-    /// Returns [`PricingError::MethodError`] when the strategy cannot
+    /// Returns `PricingError::MethodError` when the strategy cannot
     /// evaluate its payoff at `price` (typically propagated from the
-    /// underlying [`Position::pnl_at_expiration`] or Black–Scholes
+    /// underlying `Position::pnl_at_expiration` or Black–Scholes
     /// evaluation).
     fn calculate_profit_at(&self, price: &Positive) -> Result<Decimal, PricingError>;
 
@@ -251,7 +251,7 @@ pub trait Profit {
     ///
     /// # Errors
     ///
-    /// Propagates any [`PricingError`] returned by
+    /// Propagates any `PricingError` returned by
     /// [`Profit::calculate_profit_at`].
     fn get_point_at_price(&self, _price: &Positive) -> Result<(Decimal, Decimal), PricingError> {
         let profit = self.calculate_profit_at(_price)?;

@@ -103,9 +103,9 @@ pub trait MetricsExtractor: Len {
     /// # Errors
     ///
     /// Propagates any [`MetricsError`] returned by
-    /// [`compute_basic_metrics`], [`compute_shape_metrics`],
-    /// [`compute_range_metrics`], [`compute_trend_metrics`] or
-    /// [`compute_risk_metrics`] (the first failing call short-circuits).
+    /// `compute_basic_metrics`, `compute_shape_metrics`,
+    /// `compute_range_metrics`, `compute_trend_metrics` or
+    /// `compute_risk_metrics` (the first failing call short-circuits).
     fn compute_curve_metrics(&self) -> Result<Metrics, MetricsError> {
         let basic = self.compute_basic_metrics()?;
         let shape = self.compute_shape_metrics()?;

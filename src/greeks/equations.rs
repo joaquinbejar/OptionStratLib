@@ -651,7 +651,7 @@ pub fn delta(option: &Options) -> Result<Decimal, GreeksError> {
 ///
 /// Returns [`GreeksError::ExpirationDate`] when the option's expiration
 /// cannot be converted to a positive year fraction, and propagates any
-/// [`GreeksError`] surfaced by [`numerical_gamma`] for non-European
+/// [`GreeksError`] surfaced by `numerical_gamma` for non-European
 /// options (typically [`GreeksError::Pricing`] when the perturbation
 /// evaluation fails).
 pub fn gamma(option: &Options) -> Result<Decimal, GreeksError> {
@@ -793,7 +793,7 @@ pub fn gamma(option: &Options) -> Result<Decimal, GreeksError> {
 ///
 /// Returns [`GreeksError::ExpirationDate`] when the option's expiration
 /// cannot be converted to a positive year fraction, and propagates any
-/// [`GreeksError`] surfaced by [`numerical_theta`] for non-European
+/// [`GreeksError`] surfaced by `numerical_theta` for non-European
 /// options.
 pub fn theta(option: &Options) -> Result<Decimal, GreeksError> {
     let t = option.expiration_date.get_years()?;
@@ -932,7 +932,7 @@ pub fn theta(option: &Options) -> Result<Decimal, GreeksError> {
 ///
 /// Returns [`GreeksError::ExpirationDate`] when the option's expiration
 /// cannot be converted to a positive year fraction, and propagates any
-/// [`GreeksError`] surfaced by [`numerical_vega`] for non-European
+/// [`GreeksError`] surfaced by `numerical_vega` for non-European
 /// options.
 pub fn vega(option: &Options) -> Result<Decimal, GreeksError> {
     let expiration_date: Positive = option.expiration_date.get_years()?;
@@ -1063,7 +1063,7 @@ pub fn vega(option: &Options) -> Result<Decimal, GreeksError> {
 ///
 /// Returns [`GreeksError::ExpirationDate`] when the option's expiration
 /// cannot be converted to a positive year fraction, and propagates any
-/// [`GreeksError`] surfaced by [`numerical_rho`] for non-European
+/// [`GreeksError`] surfaced by `numerical_rho` for non-European
 /// options.
 pub fn rho(option: &Options) -> Result<Decimal, GreeksError> {
     // Get time to expiration first and validate

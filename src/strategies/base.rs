@@ -841,7 +841,7 @@ pub trait Strategies: Validable + Positionable + BreakEvenable + BasicAble {
     /// # Errors
     ///
     /// Propagates any [`StrategyError`] returned by
-    /// [`Strategable::get_max_profit`] on `&self`.
+    /// `Strategable::get_max_profit` on `&self`.
     fn get_max_profit_mut(&mut self) -> Result<Positive, StrategyError> {
         self.get_max_profit()
     }
@@ -876,7 +876,7 @@ pub trait Strategies: Validable + Positionable + BreakEvenable + BasicAble {
     /// # Errors
     ///
     /// Propagates any [`StrategyError`] returned by
-    /// [`Strategable::get_max_loss`] on `&self`.
+    /// `Strategable::get_max_loss` on `&self`.
     fn get_max_loss_mut(&mut self) -> Result<Positive, StrategyError> {
         self.get_max_loss()
     }
@@ -890,7 +890,7 @@ pub trait Strategies: Validable + Positionable + BreakEvenable + BasicAble {
     /// # Errors
     ///
     /// Propagates any [`PositionError`] returned by
-    /// [`Strategable::get_positions`] or by
+    /// `Strategable::get_positions` or by
     /// [`Position::total_cost`] when the component legs surface invalid
     /// state.
     fn get_total_cost(&self) -> Result<Positive, PositionError> {
@@ -912,7 +912,7 @@ pub trait Strategies: Validable + Positionable + BreakEvenable + BasicAble {
     /// # Errors
     ///
     /// Propagates any [`PositionError`] returned by
-    /// [`Strategable::get_positions`] or by
+    /// `Strategable::get_positions` or by
     /// [`Position::net_cost`] when the component legs surface invalid
     /// state.
     fn get_net_cost(&self) -> Result<Decimal, PositionError> {
@@ -933,8 +933,8 @@ pub trait Strategies: Validable + Positionable + BreakEvenable + BasicAble {
     ///
     /// # Errors
     ///
-    /// Returns [`StrategyError::from(PositionError)`] when
-    /// [`Strategable::get_positions`] or
+    /// Returns `StrategyError::from(PositionError)` when
+    /// `Strategable::get_positions` or
     /// [`Position::net_premium_received`] fail on any leg.
     fn get_net_premium_received(&self) -> Result<Positive, StrategyError> {
         let positions = self.get_positions()?;
@@ -961,8 +961,8 @@ pub trait Strategies: Validable + Positionable + BreakEvenable + BasicAble {
     ///
     /// # Errors
     ///
-    /// Returns [`StrategyError::from(PositionError)`] when
-    /// [`Strategable::get_positions`] or [`Position::fees`] fail on any
+    /// Returns `StrategyError::from(PositionError)` when
+    /// `Strategable::get_positions` or [`Position::fees`] fail on any
     /// leg.
     fn get_fees(&self) -> Result<Positive, StrategyError> {
         let mut fee = Positive::ZERO;
@@ -1035,8 +1035,8 @@ pub trait Strategies: Validable + Positionable + BreakEvenable + BasicAble {
     /// # Errors
     ///
     /// Propagates any [`StrategyError`] returned by
-    /// [`Strategable::get_break_even_points`] or
-    /// [`Strategable::get_max_min_strikes`].
+    /// `Strategable::get_break_even_points` or
+    /// `Strategable::get_max_min_strikes`.
     fn get_range_to_show(&self) -> Result<(Positive, Positive), StrategyError> {
         let mut all_points = self.get_break_even_points()?.clone();
         let (first_strike, last_strike) = self.get_max_min_strikes()?;
@@ -1079,7 +1079,7 @@ pub trait Strategies: Validable + Positionable + BreakEvenable + BasicAble {
     /// # Errors
     ///
     /// Propagates any [`StrategyError`] returned by
-    /// [`Strategable::get_range_to_show`].
+    /// `Strategable::get_range_to_show`.
     fn get_best_range_to_show(&self, step: Positive) -> Result<Vec<Positive>, StrategyError> {
         let (start_price, end_price) = self.get_range_to_show()?;
         Ok(calculate_price_range(start_price, end_price, step))
@@ -1096,7 +1096,7 @@ pub trait Strategies: Validable + Positionable + BreakEvenable + BasicAble {
     ///
     /// Returns [`StrategyError::PriceError`] when the strategy has no
     /// strikes to compare against; propagates [`StrategyError`] variants
-    /// from [`Strategable::get_positions`] when position enumeration fails.
+    /// from `Strategable::get_positions` when position enumeration fails.
     fn get_max_min_strikes(&self) -> Result<(Positive, Positive), StrategyError> {
         let strikes: Vec<&Positive> = self.get_strikes();
         if strikes.is_empty() {
@@ -1142,7 +1142,7 @@ pub trait Strategies: Validable + Positionable + BreakEvenable + BasicAble {
     ///
     /// Returns [`StrategyError::BreakEvenError`] when the strategy has
     /// no break-even points, and propagates any other [`StrategyError`]
-    /// surfaced by [`Strategable::get_break_even_points`].
+    /// surfaced by `Strategable::get_break_even_points`.
     fn get_range_of_profit(&self) -> Result<Positive, StrategyError> {
         let mut break_even_points = self.get_break_even_points()?.clone();
         match break_even_points.len() {

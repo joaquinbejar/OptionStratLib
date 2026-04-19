@@ -184,7 +184,7 @@ impl ProtectivePut {
     ///
     /// # Errors
     ///
-    /// Returns [`PricingError::MethodError`] with method
+    /// Returns `PricingError::MethodError` with method
     /// `protective_put` when the put strike equals or exceeds the spot
     /// cost basis (the hedge fully neutralises downside and the
     /// decomposition is ill-posed), or when arithmetic on `Positive`

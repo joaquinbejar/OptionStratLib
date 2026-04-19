@@ -1084,9 +1084,9 @@ impl OptionChain {
     ///
     /// # Errors
     ///
-    /// Returns [`ChainError::FileError`] wrapping a [`FileErrorKind::IOError`]
+    /// Returns [`ChainError::FileError`] wrapping a `FileErrorKind::IOError`
     /// when the file cannot be created or written, or
-    /// [`FileErrorKind::ParseError`] when `csv` serialization fails.
+    /// `FileErrorKind::ParseError` when `csv` serialization fails.
     pub fn save_to_csv(&self, file_path: &str) -> Result<(), ChainError> {
         let full_path = format!("{}/{}.csv", file_path, self.get_title());
         let mut wtr = WriterBuilder::new().from_path(full_path)?;
@@ -1131,9 +1131,9 @@ impl OptionChain {
     /// # Errors
     ///
     /// Returns the same variants as [`OptionChain::save_to_csv`]
-    /// ([`ChainError::FileError`] wrapping [`FileErrorKind::IOError`] or
-    /// [`FileErrorKind::ParseError`]). A `spawn_blocking` join failure is
-    /// surfaced as [`FileErrorKind::IOError`].
+    /// ([`ChainError::FileError`] wrapping `FileErrorKind::IOError` or
+    /// `FileErrorKind::ParseError`). A `spawn_blocking` join failure is
+    /// surfaced as `FileErrorKind::IOError`.
     #[cfg(feature = "async")]
     pub async fn save_to_csv_async(&self, file_path: &str) -> Result<(), ChainError> {
         let path = file_path.to_string();
@@ -1164,9 +1164,9 @@ impl OptionChain {
     ///
     /// # Errors
     ///
-    /// Returns [`ChainError::FileError`] wrapping a [`FileErrorKind::IOError`]
+    /// Returns [`ChainError::FileError`] wrapping a `FileErrorKind::IOError`
     /// when the file cannot be created or written, or
-    /// [`FileErrorKind::ParseError`] when `serde_json` serialization fails.
+    /// `FileErrorKind::ParseError` when `serde_json` serialization fails.
     pub fn save_to_json(&self, file_path: &str) -> Result<(), ChainError> {
         let full_path = format!("{}/{}.json", file_path, self.get_title());
         let file = File::create(full_path)?;
@@ -1183,9 +1183,9 @@ impl OptionChain {
     /// # Errors
     ///
     /// Returns the same variants as [`OptionChain::save_to_json`]
-    /// ([`ChainError::FileError`] wrapping [`FileErrorKind::IOError`] or
-    /// [`FileErrorKind::ParseError`]). A `spawn_blocking` join failure is
-    /// surfaced as [`FileErrorKind::IOError`].
+    /// ([`ChainError::FileError`] wrapping `FileErrorKind::IOError` or
+    /// `FileErrorKind::ParseError`). A `spawn_blocking` join failure is
+    /// surfaced as `FileErrorKind::IOError`.
     #[cfg(feature = "async")]
     pub async fn save_to_json_async(&self, file_path: &str) -> Result<(), ChainError> {
         let path = file_path.to_string();
@@ -1215,9 +1215,9 @@ impl OptionChain {
     ///
     /// # Errors
     ///
-    /// Returns [`ChainError::FileError`] wrapping [`FileErrorKind::IOError`]
+    /// Returns [`ChainError::FileError`] wrapping `FileErrorKind::IOError`
     /// when the CSV file cannot be opened or read, or
-    /// [`FileErrorKind::ParseError`] when the CSV records cannot be parsed.
+    /// `FileErrorKind::ParseError` when the CSV records cannot be parsed.
     /// Invalid option data (bad strike, volatility or price) surfaces as
     /// [`ChainError::OptionDataError`].
     pub fn load_from_csv(file_path: &str) -> Result<Self, ChainError> {
@@ -1278,7 +1278,7 @@ impl OptionChain {
     ///
     /// Returns the same variants as [`OptionChain::load_from_csv`]. A
     /// `spawn_blocking` join failure is surfaced as
-    /// [`ChainError::FileError`] wrapping [`FileErrorKind::IOError`].
+    /// [`ChainError::FileError`] wrapping `FileErrorKind::IOError`.
     #[cfg(feature = "async")]
     pub async fn load_from_csv_async(file_path: &str) -> Result<Self, ChainError> {
         let path = file_path.to_string();
@@ -1307,8 +1307,8 @@ impl OptionChain {
     ///
     /// # Errors
     ///
-    /// Returns [`ChainError::FileError`] wrapping [`FileErrorKind::IOError`]
-    /// when the file cannot be opened, or [`FileErrorKind::ParseError`]
+    /// Returns [`ChainError::FileError`] wrapping `FileErrorKind::IOError`
+    /// when the file cannot be opened, or `FileErrorKind::ParseError`
     /// when `serde_json` deserialization fails.
     pub fn load_from_json(file_path: &str) -> Result<Self, ChainError> {
         let file = File::open(file_path)?;
@@ -1339,7 +1339,7 @@ impl OptionChain {
     ///
     /// Returns the same variants as [`OptionChain::load_from_json`]. A
     /// `spawn_blocking` join failure is surfaced as
-    /// [`ChainError::FileError`] wrapping [`FileErrorKind::IOError`].
+    /// [`ChainError::FileError`] wrapping `FileErrorKind::IOError`.
     #[cfg(feature = "async")]
     pub async fn load_from_json_async(file_path: &str) -> Result<Self, ChainError> {
         let path = file_path.to_string();
@@ -1431,7 +1431,7 @@ impl OptionChain {
     /// # Errors
     ///
     /// Returns [`ChainError::StrategyError`] wrapping a
-    /// [`StrategyErrorKind::InvalidLegs`] when the requested position counts
+    /// `StrategyErrorKind::InvalidLegs` when the requested position counts
     /// exceed available strikes on either side of the chain, or propagates
     /// any [`ChainError::OptionDataError`] produced while materialising the
     /// selected strikes into [`Position`] instances.
