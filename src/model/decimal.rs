@@ -321,6 +321,9 @@ pub(crate) fn d_add(lhs: Decimal, rhs: Decimal, op: &'static str) -> Result<Deci
 /// semantics of the individual legs. Returns `Decimal::ZERO` on an
 /// empty slice.
 ///
+/// Delegates to [`d_sum_iter`] so the overflow-tagging semantics stay
+/// in lock-step between the slice and iterator entry points.
+///
 /// # Errors
 ///
 /// Returns [`DecimalError::Overflow`] on the first accumulation that
@@ -329,11 +332,32 @@ pub(crate) fn d_add(lhs: Decimal, rhs: Decimal, op: &'static str) -> Result<Deci
 /// stack trace.
 #[inline]
 pub(crate) fn d_sum(values: &[Decimal], op: &'static str) -> Result<Decimal, DecimalError> {
+    d_sum_iter(values.iter().copied(), op)
+}
+
+/// Checked sum over any `IntoIterator` of `Decimal` values.
+///
+/// Zero-allocation counterpart to [`d_sum`]. Use at aggregation sites
+/// that already have a natural iterator (e.g. `self.positions.iter()
+/// .map(..)`) to avoid the intermediate `Vec<Decimal>` that `d_sum`
+/// forces. Returns `Decimal::ZERO` on an empty iterator.
+///
+/// # Errors
+///
+/// Returns [`DecimalError::Overflow`] on the first accumulation that
+/// exceeds the representable `Decimal` range, tagged with the
+/// supplied `op` string so the caller can be identified without a
+/// stack trace.
+#[inline]
+pub(crate) fn d_sum_iter<I>(iter: I, op: &'static str) -> Result<Decimal, DecimalError>
+where
+    I: IntoIterator<Item = Decimal>,
+{
     let mut acc = Decimal::ZERO;
-    for v in values {
+    for v in iter {
         acc = acc
-            .checked_add(*v)
-            .ok_or_else(|| DecimalError::overflow(op, acc, *v))?;
+            .checked_add(v)
+            .ok_or_else(|| DecimalError::overflow(op, acc, v))?;
     }
     Ok(acc)
 }
@@ -713,6 +737,37 @@ mod checked_helpers_tests {
         let err = d_sum(&[Decimal::MAX, Decimal::MAX], "test::sum").unwrap_err();
         assert!(
             matches!(err, DecimalError::Overflow { operation, .. } if operation == "test::sum")
+        );
+    }
+
+    #[test]
+    fn d_sum_iter_empty_returns_zero() {
+        let empty: std::iter::Empty<Decimal> = std::iter::empty();
+        assert_eq!(d_sum_iter(empty, "test::sum_iter").unwrap(), Decimal::ZERO);
+    }
+
+    #[test]
+    fn d_sum_iter_happy_path_matches_d_sum() {
+        let values = [dec!(1.5), dec!(2.25), dec!(-0.75), dec!(10)];
+        let via_iter = d_sum_iter(values.iter().copied(), "test::sum_iter").unwrap();
+        let via_slice = d_sum(&values, "test::sum_iter").unwrap();
+        assert_eq!(via_iter, dec!(13));
+        assert_eq!(via_iter, via_slice);
+    }
+
+    #[test]
+    fn d_sum_iter_accepts_lazy_map() {
+        // Exercise the no-allocation pathway: a `map` adapter over a range
+        // should aggregate without any intermediate `Vec`.
+        let sum = d_sum_iter((1i64..=4).map(Decimal::from), "test::sum_iter_lazy").unwrap();
+        assert_eq!(sum, dec!(10));
+    }
+
+    #[test]
+    fn d_sum_iter_overflow_returns_tagged_error() {
+        let err = d_sum_iter([Decimal::MAX, Decimal::MAX], "test::sum_iter").unwrap_err();
+        assert!(
+            matches!(err, DecimalError::Overflow { operation, .. } if operation == "test::sum_iter")
         );
     }
 }
