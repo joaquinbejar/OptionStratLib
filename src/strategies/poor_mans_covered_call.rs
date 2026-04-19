@@ -41,6 +41,7 @@ use crate::{
     greeks::Greeks,
     model::{
         ProfitLossRange,
+        decimal::d_sum,
         position::Position,
         types::{OptionBasicType, OptionStyle, OptionType, Side},
         utils::mean_and_std,
@@ -810,10 +811,13 @@ impl Optimizable for PoorMansCoveredCall {
 impl Profit for PoorMansCoveredCall {
     fn calculate_profit_at(&self, price: &Positive) -> Result<Decimal, PricingError> {
         let price = Some(price);
-        Ok(
-            self.long_call.pnl_at_expiration(&price)?
-                + self.short_call.pnl_at_expiration(&price)?,
-        )
+        Ok(d_sum(
+            &[
+                self.long_call.pnl_at_expiration(&price)?,
+                self.short_call.pnl_at_expiration(&price)?,
+            ],
+            "strategies::poor_mans_covered_call::profit_at",
+        )?)
     }
 }
 

@@ -284,6 +284,32 @@ pub(crate) fn d_add(lhs: Decimal, rhs: Decimal, op: &'static str) -> Result<Deci
         .ok_or_else(|| DecimalError::overflow(op, lhs, rhs))
 }
 
+/// Checked sum over a slice of `Decimal` values.
+///
+/// Crate-private helper used by multi-leg strategy P&L aggregations
+/// (spreads, condors, butterflies) where each leg already returns a
+/// `Result<Decimal, _>` and the sum has to preserve the checked
+/// semantics of the individual legs. Returns `Decimal::ZERO` on an
+/// empty slice.
+///
+/// # Errors
+///
+/// Returns [`DecimalError::Overflow`] on the first accumulation that
+/// exceeds the representable `Decimal` range, tagged with the
+/// supplied `op` string so the caller can be identified without a
+/// stack trace.
+#[allow(dead_code)] // wired in by the strategy-P&L conversion commits that follow.
+#[inline]
+pub(crate) fn d_sum(values: &[Decimal], op: &'static str) -> Result<Decimal, DecimalError> {
+    let mut acc = Decimal::ZERO;
+    for v in values {
+        acc = acc
+            .checked_add(*v)
+            .ok_or_else(|| DecimalError::overflow(op, acc, *v))?;
+    }
+    Ok(acc)
+}
+
 /// Checked `Decimal` subtraction with operand-preserving overflow reporting.
 ///
 /// Crate-private helper used by every monetary-flow kernel in place of the
@@ -609,5 +635,25 @@ mod checked_helpers_tests {
             DecimalError::Overflow { operation, .. } => assert_eq!(operation, "test::div"),
             other => panic!("expected Overflow, got {other:?}"),
         }
+    }
+
+    #[test]
+    fn d_sum_empty_returns_zero() {
+        assert_eq!(d_sum(&[], "test::sum").unwrap(), Decimal::ZERO);
+    }
+
+    #[test]
+    fn d_sum_happy_path() {
+        let result = d_sum(
+            &[dec!(1.5), dec!(2.25), dec!(-0.75), dec!(10)],
+            "test::sum",
+        );
+        assert_eq!(result.unwrap(), dec!(13));
+    }
+
+    #[test]
+    fn d_sum_overflow_returns_tagged_error() {
+        let err = d_sum(&[Decimal::MAX, Decimal::MAX], "test::sum").unwrap_err();
+        assert!(matches!(err, DecimalError::Overflow { operation, .. } if operation == "test::sum"));
     }
 }
