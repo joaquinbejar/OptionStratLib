@@ -1,5 +1,6 @@
 #![allow(unknown_lints)]
 #![allow(clippy::literal_string_with_formatting_args)]
+#![deny(missing_docs, rustdoc::broken_intra_doc_links)]
 // Per rules/global_rules.md §Error Handling, unchecked `[]` / slicing is
 // banned in production code. Enforced crate-wide; individual modules that
 // need a transitional escape hatch carry a scoped `#![allow(..)]` with a
