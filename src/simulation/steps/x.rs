@@ -194,7 +194,7 @@ where
     pub fn next(&self) -> Result<Self, SimulationError> {
         let days = self.datetime.get_days()?;
         if days == Positive::ZERO {
-            return Err("Cannot generate next step. Expiration date is already reached.".into());
+            return Err(SimulationError::ExpirationReached);
         }
         let days_to_rest = convert_time_frame(
             self.step_size_in_time.try_into().map_err(|_| {

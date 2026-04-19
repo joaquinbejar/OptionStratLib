@@ -18,8 +18,8 @@ use crate::surfaces::Surface;
 /// Potential errors could include:
 /// - Invalid inputs or parameters leading to a [`SurfaceError::Point3DError`] or [`SurfaceError::ConstructionError`].
 /// - Failures during surface computation due to invalid operations (e.g., [`SurfaceError::OperationError`]).
-/// - General-purpose errors, such as I/O or analysis issues, represented as [`SurfaceError::StdError`]
-///   or [`SurfaceError::AnalysisError`].
+/// - General-purpose errors, such as I/O or analysis issues, represented as
+///   [`SurfaceError::RenderError`] or [`SurfaceError::AnalysisError`].
 ///
 /// # Implementors
 ///  of this trait should define how their specific type generates a [`Surface`].

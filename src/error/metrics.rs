@@ -21,7 +21,6 @@ use thiserror::Error;
 /// * `RiskError` - Errors in risk metrics calculations (like VaR, Sharpe ratio, etc.)
 /// * `Curve` - Errors related to curve-fitting or curve-based calculations
 /// * `Surface` - Errors in surface modeling or multi-dimensional metrics
-/// * `StdError` - Standard error conditions with additional context
 ///
 /// # Examples
 ///
@@ -66,19 +65,4 @@ pub enum MetricsError {
     /// such as volatility surfaces or correlation matrices.
     #[error(transparent)]
     Surface(#[from] SurfaceError),
-
-    /// Standard error with additional contextual information.
-    #[error("Standard Error: {reason}")]
-    StdError {
-        /// Detailed explanation of the error cause
-        reason: String,
-    },
-}
-
-impl From<Box<dyn std::error::Error>> for MetricsError {
-    fn from(err: Box<dyn std::error::Error>) -> Self {
-        MetricsError::StdError {
-            reason: err.to_string(),
-        }
-    }
 }

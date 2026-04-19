@@ -37,7 +37,7 @@
 //! ## Example: Covered Call Strategy
 //!
 //! ```rust
-//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
+//! # fn main() -> Result<(), optionstratlib::error::Error> {
 //! use optionstratlib::model::leg::{Leg, SpotPosition};
 //! use optionstratlib::model::Position;
 //! use optionstratlib::model::types::Side;
@@ -60,7 +60,7 @@
 //! ## Example: Cash & Carry Arbitrage (Crypto)
 //!
 //! ```rust
-//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
+//! # fn main() -> Result<(), optionstratlib::error::Error> {
 //! use optionstratlib::model::leg::{Leg, SpotPosition, PerpetualPosition, MarginType};
 //! use optionstratlib::model::types::Side;
 //! use positive::{Positive, pos_or_panic};

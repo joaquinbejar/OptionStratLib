@@ -45,13 +45,14 @@ pub enum SurfaceError {
     #[error("Operation error: {0}")]
     OperationError(OperationErrorKind),
 
-    /// Error originating from the standard library or external dependencies.
-    ///
-    /// Encapsulates errors that were generated outside of the surface module,
-    /// providing a clear transition between external and internal error handling.
-    #[error("Error: {reason}")]
-    StdError {
-        /// A reference to a static string that explains the reason for an error or a condition.
+    /// A rendering operation failed. Preserves the backend discriminator so
+    /// callers can distinguish plotters output paths from other backends
+    /// without resorting to a `String` catch-all.
+    #[error("rendering failed ({backend}): {reason}")]
+    RenderError {
+        /// Identifier of the rendering backend that failed (e.g. `"plotters"`).
+        backend: &'static str,
+        /// Detailed, human-readable reason for the failure.
         reason: String,
     },
 
@@ -177,9 +178,7 @@ impl SurfaceError {
 /// straightforward to trace and debug the underlying issue.
 impl From<InterpolationError> for SurfaceError {
     fn from(err: InterpolationError) -> Self {
-        SurfaceError::StdError {
-            reason: err.to_string(),
-        }
+        SurfaceError::AnalysisError(err.to_string())
     }
 }
 
@@ -189,75 +188,12 @@ impl From<GraphError> for SurfaceError {
     }
 }
 
-impl From<Box<dyn std::error::Error>> for SurfaceError {
-    fn from(err: Box<dyn std::error::Error>) -> Self {
-        SurfaceError::StdError {
-            reason: err.to_string(),
-        }
-    }
-}
-
-/// Implements the `From` trait to enable seamless conversion from a boxed `dyn Error`
-/// into a `SurfaceError`. This is particularly useful for integrating standard error
-/// handling mechanisms with the custom `SurfaceError` type.
-///
-/// # Behavior
-///
-/// When constructing a `SurfaceError` from a `Box<dyn std::error::Error>`, the `StdError` variant
-/// is utilized. The boxed error is unwrapped, and its string representation
-/// (via `to_string`) is used to populate the `reason` field of the `StdError` variant.
-///
-/// # Parameters
-///
-/// - `err`: A boxed standard error (`Box<dyn std::error::Error>`). Represents the error to be
-///   wrapped within a `SurfaceError` variant.
-///
-/// # Returns
-///
-/// - `SurfaceError::StdError`: The custom error type with a detailed `reason`
-///   string derived from the provided error.
-///
-/// # Usage
-///
-/// This implementation is commonly employed when you need to bridge standard Rust
-/// errors with the specific error handling system provided by the `curves` module.
-/// It facilitates scenarios where standard error contexts need to be preserved
-/// in a flexible, string-based `reason` for debugging or logging purposes.
-///
-/// # Example Scenario
-///
-/// Instead of handling standard errors separately, you can propagate them as `SurfaceError`
-/// within the larger error system of the `curves` module, ensuring consistent error
-/// wrapping and management.
-///
-/// # Notes
-///
-/// - This implementation assumes that all input errors (`Box<dyn std::error::Error>`) are stringifiable
-///   using the `to_string()` method.
-/// - This conversion is particularly useful for libraries integrating generalized errors
-///   (e.g., I/O errors, or third-party library errors) into a standardized error system.
-///
-/// # Module Context
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::error::CurveError;
     use crate::error::curves::CurvesResult;
     use crate::error::position::PositionValidationErrorKind;
-
-    // Custom error type for testing From<Box<dyn Error>>
-    #[derive(Debug)]
-    struct TestError {
-        message: String,
-    }
-
-    impl std::fmt::Display for TestError {
-        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            write!(f, "{}", self.message)
-        }
-    }
-
-    impl std::error::Error for TestError {}
 
     #[test]
     fn test_operation_not_supported() {
@@ -306,11 +242,15 @@ mod tests {
     }
 
     #[test]
-    fn test_display_std_error() {
-        let error = SurfaceError::StdError {
-            reason: "Standard error test".to_string(),
+    fn test_display_render_error() {
+        let error = SurfaceError::RenderError {
+            backend: "plotters",
+            reason: "rendering failed".to_string(),
         };
-        assert_eq!(error.to_string(), "Error: Standard error test");
+        assert_eq!(
+            error.to_string(),
+            "rendering failed (plotters): rendering failed"
+        );
     }
 
     #[test]
@@ -350,19 +290,10 @@ mod tests {
     }
 
     #[test]
-    fn test_from_box_dyn_error() {
-        let test_error = TestError {
-            message: "Test box error".to_string(),
-        };
-        let boxed_error: Box<dyn std::error::Error> = Box::new(test_error);
-        let surface_error = SurfaceError::from(boxed_error);
-
-        match surface_error {
-            SurfaceError::StdError { reason } => {
-                assert_eq!(reason, "Test box error");
-            }
-            _ => panic!("Wrong error variant"),
-        }
+    fn test_from_interpolation_error_surfaces() {
+        let interpolation_err = InterpolationError::EmptyData;
+        let surface_err = SurfaceError::from(interpolation_err);
+        assert!(matches!(surface_err, SurfaceError::AnalysisError(_)));
     }
 
     #[test]

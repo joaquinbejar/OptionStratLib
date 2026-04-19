@@ -6,6 +6,7 @@
 use super::adjustment::{AdjustmentConfig, AdjustmentPlan};
 use super::optimizer::AdjustmentOptimizer;
 use super::portfolio::{AdjustmentTarget, PortfolioGreeks};
+use crate::error::greeks::DeltaNeutralityErrorKind;
 use crate::error::position::PositionValidationErrorKind;
 use crate::error::{GreeksError, PositionError, StrategyError};
 /// # Delta Neutrality Management Module
@@ -351,7 +352,7 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
     fn delta_neutrality(&self) -> Result<DeltaInfo, GreeksError> {
         let options = self.get_options()?;
         if options.is_empty() {
-            return Err(GreeksError::StdError("No options found".to_string()));
+            return Err(DeltaNeutralityErrorKind::EmptyOptions.into());
         }
         let underlying_price = *self.get_underlying_price();
         let mut individual_deltas: Vec<DeltaPositionInfo> = Vec::with_capacity(options.len());
@@ -484,9 +485,7 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
             return Ok(DeltaAdjustment::NoAdjustmentNeeded);
         }
         if option_delta_per_contract.is_zero() {
-            return Err(GreeksError::StdError(
-                "Option delta per contract cannot be zero".to_string(),
-            ));
+            return Err(DeltaNeutralityErrorKind::OptionDeltaZero.into());
         }
 
         // Calculate how many contracts are needed to neutralize the net delta
@@ -516,9 +515,7 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
             // We have fewer contracts than needed, but since we need to sell,
             // we can't sell what we don't have, so no adjustment is possible
             (true, true, false) => {
-                return Err(GreeksError::StdError(
-                    "we can't sell what we don't have, so no adjustment is possible".to_string(),
-                ));
+                return Err(DeltaNeutralityErrorKind::InsufficientContracts.into());
             }
             // If net_delta is positive and option_delta is negative, we need to buy options
             // This means we have too much positive delta and need to add negative delta
@@ -576,9 +573,7 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
             // We have fewer contracts than needed, but since we need to sell,
             // we can't sell what we don't have, so no adjustment is possible
             (false, false, false) => {
-                return Err(GreeksError::StdError(
-                    "we can't sell what we don't have, so no adjustment is possible".to_string(),
-                ));
+                return Err(DeltaNeutralityErrorKind::InsufficientContracts.into());
             }
         };
 
@@ -1001,12 +996,17 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
     fn portfolio_greeks(&self) -> Result<PortfolioGreeks, GreeksError> {
         let positions: Vec<_> = self
             .get_positions()
-            .map_err(|e| GreeksError::StdError(e.to_string()))?
+            .map_err(|e| {
+                GreeksError::CalculationError(
+                    crate::error::greeks::CalculationErrorKind::DeltaError {
+                        reason: e.to_string(),
+                    },
+                )
+            })?
             .into_iter()
             .cloned()
             .collect();
         PortfolioGreeks::from_positions(&positions)
-            .map_err(|e| GreeksError::StdError(e.to_string()))
     }
 
     /// Generates an optimized adjustment plan to achieve target Greeks.

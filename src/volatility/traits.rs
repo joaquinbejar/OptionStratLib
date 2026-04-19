@@ -109,7 +109,11 @@ impl AtmIvProvider for OptionChain {
     fn atm_iv(&self) -> Result<&Positive, VolatilityError> {
         match self.get_atm_implied_volatility() {
             Ok(iv) => Ok(iv),
-            Err(e) => Err(format!("ATM IV not available: {e}").into()),
+            Err(e) => Err(VolatilityError::AtmIvUnavailable {
+                source: Box::new(VolatilityError::NumericalFailure {
+                    reason: e.to_string(),
+                }),
+            }),
         }
     }
 }
@@ -240,7 +244,9 @@ mod tests_volatility_traits {
 
         impl AtmIvProvider for ErrorIvProvider {
             fn atm_iv(&self) -> Result<&Positive, VolatilityError> {
-                Err("ATM IV not available: test error".into())
+                Err(VolatilityError::AtmIvUnavailable {
+                    source: Box::new(VolatilityError::IvNotFound),
+                })
             }
         }
 
@@ -249,7 +255,11 @@ mod tests_volatility_traits {
 
         assert!(result.is_err());
         let error = result.unwrap_err();
-        assert!(error.to_string().contains("ATM IV not available"));
+        assert!(
+            error
+                .to_string()
+                .contains("ATM implied volatility is not available")
+        );
     }
 
     #[test]
@@ -364,7 +374,11 @@ mod tests_volatility_traits {
         let result = chain.atm_iv();
         assert!(result.is_err());
         let error = result.unwrap_err();
-        assert!(error.to_string().contains("ATM IV not available"));
+        assert!(
+            error
+                .to_string()
+                .contains("ATM implied volatility is not available")
+        );
     }
 
     #[test]

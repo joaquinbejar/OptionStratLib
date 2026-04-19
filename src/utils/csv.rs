@@ -87,9 +87,7 @@ pub fn read_ohlcv_from_zip(
         }
     }
 
-    let csv_index = csv_index.ok_or(OhlcvError::OtherError {
-        reason: "No CSV file found in ZIP archive".to_string(),
-    })?;
+    let csv_index = csv_index.ok_or(OhlcvError::MissingColumn { column: "csv" })?;
     let file = archive.by_index(csv_index)?;
     let reader = BufReader::new(file);
 
@@ -161,8 +159,8 @@ pub async fn read_ohlcv_from_zip_async(
         read_ohlcv_from_zip(&zip_path, start_date.as_deref(), end_date.as_deref())
     })
     .await
-    .map_err(|e| OhlcvError::OtherError {
-        reason: format!("Async task error: {}", e),
+    .map_err(|e| OhlcvError::RowParsing {
+        reason: format!("async task error: {e}"),
     })?
 }
 
@@ -530,11 +528,18 @@ mod ohlcv_tests {
         };
         assert_eq!(format!("{param_error}"), "Invalid parameter: test reason");
 
-        // Test OtherError display
-        let other_error = OhlcvError::OtherError {
+        // Test MissingColumn display
+        let missing_column = OhlcvError::MissingColumn { column: "csv" };
+        assert_eq!(
+            format!("{missing_column}"),
+            "required column `csv` is missing"
+        );
+
+        // Test RowParsing display
+        let row_parsing = OhlcvError::RowParsing {
             reason: "test reason".to_string(),
         };
-        assert_eq!(format!("{other_error}"), "Error: test reason");
+        assert_eq!(format!("{row_parsing}"), "failed to parse row: test reason");
     }
 
     #[test]

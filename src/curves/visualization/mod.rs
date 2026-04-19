@@ -16,7 +16,7 @@
 //!
 //! ## Usage Examples
 //! ```rust
-//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
+//! # fn main() -> Result<(), optionstratlib::error::Error> {
 //! // Plot a single curve
 //! use std::fs;
 //! use std::path::{Path, PathBuf};

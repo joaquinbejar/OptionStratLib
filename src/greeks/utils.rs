@@ -6,7 +6,7 @@
 
 use crate::Options;
 use crate::error::decimal::DecimalError;
-use crate::error::greeks::{GreeksError, InputErrorKind, MathErrorKind};
+use crate::error::greeks::{DeltaNeutralityErrorKind, GreeksError, InputErrorKind, MathErrorKind};
 use crate::model::decimal::f64_to_decimal;
 use crate::strategies::DELTA_THRESHOLD;
 use core::f64;
@@ -176,7 +176,7 @@ pub fn d1(
 /// # Example
 ///
 /// ```rust
-/// # fn run() -> Result<(), Box<dyn std::error::Error>> {
+/// # fn run() -> Result<(), optionstratlib::error::Error> {
 /// use rust_decimal_macros::dec;
 /// use tracing::{error, info};
 /// use optionstratlib::greeks::d2;
@@ -457,7 +457,7 @@ pub(crate) fn calculate_d_values(option: &Options) -> Result<(Decimal, Decimal),
 ///
 /// # Example
 /// ```rust
-/// # fn run() -> Result<(), Box<dyn std::error::Error>> {
+/// # fn run() -> Result<(), optionstratlib::error::Error> {
 /// use rust_decimal_macros::dec;
 /// use optionstratlib::greeks::calculate_delta_neutral_sizes;
 /// use positive::pos_or_panic;
@@ -479,47 +479,40 @@ pub fn calculate_delta_neutral_sizes(
     // size1 + size2 = total_size
 
     if delta1.is_zero() || delta2.is_zero() {
-        return Err("Deltas cannot be zero for delta neutrality"
-            .to_string()
-            .into());
+        return Err(DeltaNeutralityErrorKind::ZeroDelta.into());
     }
 
     // Validate inputs
     if delta1 == delta2 {
-        return Err("Deltas cannot be equal for delta neutrality"
-            .to_string()
-            .into());
+        return Err(DeltaNeutralityErrorKind::EqualDeltas.into());
     }
 
     if delta1.is_sign_positive() == delta2.is_sign_positive() {
-        return Err("Deltas must have opposite signs for delta neutrality"
-            .to_string()
-            .into());
+        return Err(DeltaNeutralityErrorKind::SameSignDeltas.into());
     }
 
     let size1: Positive =
-        Positive::new_decimal((-total_size.to_dec() * delta2) / (delta1 - delta2))
-            .map_err(|e| e.to_string())?;
+        Positive::new_decimal((-total_size.to_dec() * delta2) / (delta1 - delta2))?;
     let size2 = total_size - size1;
 
     // Validate results
     if size1 < Decimal::ZERO || size2 < Decimal::ZERO {
-        return Err("Solution would require negative position sizes"
-            .to_string()
-            .into());
+        return Err(DeltaNeutralityErrorKind::NegativePositionSize.into());
     }
 
     // Verify the solution
     let total_delta: Decimal = size1.to_dec() * delta1 + size2.to_dec() * delta2;
     if total_delta.abs() > DELTA_THRESHOLD {
         // Allow small numerical errors
-        return Err("Could not achieve delta neutrality".to_string().into());
+        return Err(DeltaNeutralityErrorKind::NotAchievable.into());
     }
-    let toral_size_check = size1 + size2;
-    if (toral_size_check.to_dec() - total_size.to_dec()).abs() > DELTA_THRESHOLD {
-        return Err(format!(
-            "Calculated sizes {toral_size_check} do not match the total desired size of {total_size} "
-        ).into());
+    let total_size_check = size1 + size2;
+    if (total_size_check.to_dec() - total_size.to_dec()).abs() > DELTA_THRESHOLD {
+        return Err(DeltaNeutralityErrorKind::SizeMismatch {
+            calculated: total_size_check,
+            expected: total_size,
+        }
+        .into());
     }
 
     Ok((size1, size2))

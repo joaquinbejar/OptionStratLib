@@ -31,12 +31,8 @@ pub fn numerical_delta(option: &Options) -> Result<Decimal, GreeksError> {
     opt_minus.underlying_price =
         Positive::new_decimal((option.underlying_price.to_dec() - H).abs())?;
 
-    let p_plus = opt_plus
-        .price(&PricingEngine::ClosedFormBS)
-        .map_err(|e| GreeksError::StdError(e.to_string()))?;
-    let p_minus = opt_minus
-        .price(&PricingEngine::ClosedFormBS)
-        .map_err(|e| GreeksError::StdError(e.to_string()))?;
+    let p_plus = opt_plus.price(&PricingEngine::ClosedFormBS)?;
+    let p_minus = opt_minus.price(&PricingEngine::ClosedFormBS)?;
 
     Ok((p_plus.to_dec() - p_minus.to_dec()) / (dec!(2.0) * H))
 }
@@ -54,15 +50,9 @@ pub fn numerical_gamma(option: &Options) -> Result<Decimal, GreeksError> {
     opt_minus.underlying_price =
         Positive::new_decimal((option.underlying_price.to_dec() - H).abs())?;
 
-    let p_plus = opt_plus
-        .price(&PricingEngine::ClosedFormBS)
-        .map_err(|e| GreeksError::StdError(e.to_string()))?;
-    let p_minus = opt_minus
-        .price(&PricingEngine::ClosedFormBS)
-        .map_err(|e| GreeksError::StdError(e.to_string()))?;
-    let p = option
-        .price(&PricingEngine::ClosedFormBS)
-        .map_err(|e| GreeksError::StdError(e.to_string()))?;
+    let p_plus = opt_plus.price(&PricingEngine::ClosedFormBS)?;
+    let p_minus = opt_minus.price(&PricingEngine::ClosedFormBS)?;
+    let p = option.price(&PricingEngine::ClosedFormBS)?;
 
     Ok((p_plus.to_dec() - dec!(2.0) * p.to_dec() + p_minus.to_dec()) / (H * H))
 }
@@ -80,12 +70,8 @@ pub fn numerical_vega(option: &Options) -> Result<Decimal, GreeksError> {
     opt_minus.implied_volatility =
         Positive::new_decimal((option.implied_volatility.to_dec() - H).abs())?;
 
-    let p_plus = opt_plus
-        .price(&PricingEngine::ClosedFormBS)
-        .map_err(|e| GreeksError::StdError(e.to_string()))?;
-    let p_minus = opt_minus
-        .price(&PricingEngine::ClosedFormBS)
-        .map_err(|e| GreeksError::StdError(e.to_string()))?;
+    let p_plus = opt_plus.price(&PricingEngine::ClosedFormBS)?;
+    let p_minus = opt_minus.price(&PricingEngine::ClosedFormBS)?;
 
     Ok((p_plus.to_dec() - p_minus.to_dec()) / (dec!(2.0) * H))
 }
@@ -118,12 +104,8 @@ pub fn numerical_rho(option: &Options) -> Result<Decimal, GreeksError> {
     let mut opt_minus = option.clone();
     opt_minus.risk_free_rate -= H;
 
-    let p_plus = opt_plus
-        .price(&PricingEngine::ClosedFormBS)
-        .map_err(|e| GreeksError::StdError(e.to_string()))?;
-    let p_minus = opt_minus
-        .price(&PricingEngine::ClosedFormBS)
-        .map_err(|e| GreeksError::StdError(e.to_string()))?;
+    let p_plus = opt_plus.price(&PricingEngine::ClosedFormBS)?;
+    let p_minus = opt_minus.price(&PricingEngine::ClosedFormBS)?;
 
     Ok((p_plus.to_dec() - p_minus.to_dec()) / (dec!(2.0) * H))
 }

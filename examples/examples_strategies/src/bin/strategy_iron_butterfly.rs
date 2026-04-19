@@ -24,7 +24,9 @@ fn main() -> Result<(), Error> {
         pos_or_panic!(0.96),   // close_fee
     )?;
     if !strategy.validate() {
-        return Err("Invalid strategy".into());
+        return Err(optionstratlib::error::Error::EmptyCollection {
+            context: "iron_butterfly_validation",
+        });
     }
     let range = strategy.break_even_points[1] - strategy.break_even_points[0];
 

@@ -1,5 +1,6 @@
 use crate::error::{DecimalError, GreeksError, OptionsError, PositionError};
-use positive::PositiveError;
+use expiration_date::error::ExpirationDateError;
+use positive::{Positive, PositiveError};
 use thiserror::Error;
 
 /// Error type for option pricing operations.
@@ -47,11 +48,32 @@ pub enum PricingError {
     #[error(transparent)]
     Decimal(#[from] DecimalError),
 
-    /// Generic pricing error.
-    #[error("Pricing error: {reason}")]
-    OtherError {
-        /// Detailed reason for the error
-        reason: String,
+    /// Expiration-date conversion error surfaced during pricing.
+    #[error(transparent)]
+    ExpirationDate(#[from] ExpirationDateError),
+
+    /// A delta adjustment was requested on a strategy that does not support it.
+    #[error("delta adjustments are not applicable to single-leg {strategy} strategy")]
+    DeltaAdjustmentNotApplicable {
+        /// Name of the strategy, e.g. `"LongCall"`, `"ShortPut"`.
+        strategy: &'static str,
+    },
+
+    /// A required intermediate value on a binomial lattice or pricing kernel
+    /// was missing (typically a node that should have been populated by an
+    /// earlier induction step).
+    #[error("binomial pricing node `{node}` is missing")]
+    BinomialNodeMissing {
+        /// Identifier of the missing node, e.g. `"S_k"`, `"b"`.
+        node: &'static str,
+    },
+
+    /// A square-root computation inside a pricing kernel failed (the operand
+    /// was negative or not representable).
+    #[error("pricing sqrt failed for value {value}")]
+    SqrtFailure {
+        /// The value for which the square root could not be computed.
+        value: Positive,
     },
 
     /// Error from Positive operations.
@@ -101,12 +123,14 @@ impl PricingError {
         }
     }
 
-    /// Creates a new `OtherError` variant.
-    ///
-    /// # Arguments
-    /// * `reason` - Detailed reason for the error
+    /// Creates a typed `MethodError` with `method = "pricing"` as a lightweight
+    /// replacement for the former `OtherError` catch-all. Prefer
+    /// [`PricingError::method_error`] with a specific method name when known.
+    #[must_use]
+    #[inline]
     pub fn other(reason: &str) -> Self {
-        PricingError::OtherError {
+        PricingError::MethodError {
+            method: "pricing".to_string(),
             reason: reason.to_string(),
         }
     }
@@ -120,36 +144,6 @@ impl PricingError {
         PricingError::UnsupportedOptionType {
             option_type: option_type.to_string(),
             method: method.to_string(),
-        }
-    }
-}
-
-impl From<Box<dyn std::error::Error>> for PricingError {
-    fn from(err: Box<dyn std::error::Error>) -> Self {
-        PricingError::OtherError {
-            reason: err.to_string(),
-        }
-    }
-}
-
-impl From<String> for PricingError {
-    fn from(s: String) -> Self {
-        PricingError::OtherError { reason: s }
-    }
-}
-
-impl From<expiration_date::error::ExpirationDateError> for PricingError {
-    fn from(err: expiration_date::error::ExpirationDateError) -> Self {
-        PricingError::OtherError {
-            reason: err.to_string(),
-        }
-    }
-}
-
-impl From<&str> for PricingError {
-    fn from(s: &str) -> Self {
-        PricingError::OtherError {
-            reason: s.to_string(),
         }
     }
 }

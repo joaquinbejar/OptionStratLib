@@ -216,7 +216,10 @@ impl OptionSeries {
         let chain_params = match chain_params {
             Some((_, option_chain)) => option_chain.to_build_params()?,
             None => {
-                return Err("No chains found".into());
+                return Err(ChainError::invalid_parameters(
+                    "chains",
+                    "no chains available to derive build parameters",
+                ));
             }
         };
 
@@ -646,7 +649,7 @@ mod tests_option_series {
 
             // Verify the error message
             let error = result.unwrap_err();
-            assert!(error.to_string().contains("No chains found"));
+            assert!(error.to_string().contains("chains"));
         }
     }
 

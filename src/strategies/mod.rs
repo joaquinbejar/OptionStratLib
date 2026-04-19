@@ -41,7 +41,7 @@
 //! Example usage of the Bull Call Spread strategy:
 //!
 //! ```rust
-//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
+//! # fn main() -> Result<(), optionstratlib::error::Error> {
 //! use rust_decimal_macros::dec;
 //! use tracing::info;
 //! use optionstratlib::ExpirationDate;
@@ -157,7 +157,7 @@
 //! //! Example usage of the Iron Condor strategy:
 //!
 //! ```rust
-//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
+//! # fn main() -> Result<(), optionstratlib::error::Error> {
 //! use rust_decimal_macros::dec;
 //! use tracing::info;
 //! use optionstratlib::ExpirationDate;

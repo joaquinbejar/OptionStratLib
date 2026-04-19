@@ -35,6 +35,7 @@
 
 use crate::error::VolatilityError;
 use crate::error::decimal;
+use expiration_date::error::ExpirationDateError;
 use positive::Positive;
 use thiserror::Error;
 
@@ -64,14 +65,79 @@ pub enum GreeksError {
     #[error("Greek calculation error: {0}")]
     CalculationError(CalculationErrorKind),
 
-    /// Errors originating from standard Rust error types, wrapped as strings
-    /// for consistent error handling.
-    #[error("Standard error: {0}")]
-    StdError(String),
+    /// Errors specific to delta-neutrality calculations and adjustments.
+    #[error("Delta neutrality error: {0}")]
+    DeltaNeutrality(DeltaNeutralityErrorKind),
+
+    /// Expiration-date conversion error surfaced during Greeks calculations.
+    #[error(transparent)]
+    ExpirationDate(#[from] ExpirationDateError),
+
+    /// Pricing-layer error surfaced during Greeks calculations (e.g. numerical
+    /// Greeks falling back to a pricing engine).
+    #[error(transparent)]
+    Pricing(Box<crate::error::PricingError>),
 
     /// Positive value errors
     #[error(transparent)]
     PositiveError(#[from] positive::PositiveError),
+}
+
+impl From<crate::error::PricingError> for GreeksError {
+    #[inline]
+    fn from(err: crate::error::PricingError) -> Self {
+        GreeksError::Pricing(Box::new(err))
+    }
+}
+
+/// Errors raised by delta-neutrality sizing and adjustment helpers.
+///
+/// These variants replace the former `GreeksError::StdError(String)` catch-all for
+/// the `greeks::calculate_delta_neutral_sizes` and strategy delta-neutrality flows,
+/// providing a precise, typed description of why a neutral size could not be
+/// produced.
+#[derive(Error, Debug)]
+pub enum DeltaNeutralityErrorKind {
+    /// One (or both) of the input deltas is zero, which makes neutrality impossible.
+    #[error("deltas cannot be zero for delta neutrality")]
+    ZeroDelta,
+
+    /// The two deltas are equal, so their linear combination cannot produce a zero delta.
+    #[error("deltas cannot be equal for delta neutrality")]
+    EqualDeltas,
+
+    /// The two deltas share the same sign, so they cannot offset each other.
+    #[error("deltas must have opposite signs for delta neutrality")]
+    SameSignDeltas,
+
+    /// A candidate sizing would require negative contract counts.
+    #[error("delta neutrality would require negative position sizes")]
+    NegativePositionSize,
+
+    /// The delta residual after sizing exceeds the neutrality threshold.
+    #[error("could not achieve delta neutrality: residual above threshold")]
+    NotAchievable,
+
+    /// The sum of the calculated sizes does not match the requested total size.
+    #[error("calculated sizes {calculated} do not match requested total size {expected}")]
+    SizeMismatch {
+        /// Sum of the sizes produced by the neutrality solver.
+        calculated: Positive,
+        /// Total size originally requested by the caller.
+        expected: Positive,
+    },
+
+    /// The strategy has no options to evaluate, so delta neutrality is undefined.
+    #[error("no options found for delta-neutral calculation")]
+    EmptyOptions,
+
+    /// An option's delta-per-contract is zero, which prevents neutral sizing.
+    #[error("option delta per contract cannot be zero")]
+    OptionDeltaZero,
+
+    /// The strategy does not hold enough contracts to perform the required sell adjustment.
+    #[error("insufficient contracts to perform the requested delta adjustment")]
+    InsufficientContracts,
 }
 
 /// Represents various types of mathematical errors that can occur during calculations.
@@ -480,32 +546,10 @@ impl From<VolatilityError> for GreeksError {
     }
 }
 
-/// Implements conversion from `Box<dyn std::error::Error>` to `GreeksError`.
-///
-/// This implementation serves as a catch-all for converting any type that implements
-/// the standard Error trait into a `GreeksError`. This is useful for integrating with
-/// libraries or functions that return boxed standard error types for compatibility.
-impl From<Box<dyn std::error::Error>> for GreeksError {
-    fn from(error: Box<dyn std::error::Error>) -> Self {
-        GreeksError::StdError(error.to_string())
-    }
-}
-
-impl From<String> for GreeksError {
-    fn from(s: String) -> Self {
-        GreeksError::StdError(s)
-    }
-}
-
-impl From<&str> for GreeksError {
-    fn from(s: &str) -> Self {
-        GreeksError::StdError(s.to_string())
-    }
-}
-
-impl From<expiration_date::error::ExpirationDateError> for GreeksError {
-    fn from(err: expiration_date::error::ExpirationDateError) -> Self {
-        GreeksError::StdError(err.to_string())
+impl From<DeltaNeutralityErrorKind> for GreeksError {
+    #[inline]
+    fn from(kind: DeltaNeutralityErrorKind) -> Self {
+        GreeksError::DeltaNeutrality(kind)
     }
 }
 
@@ -635,9 +679,12 @@ mod tests_error_greeks_extended {
     use positive::pos_or_panic;
 
     #[test]
-    fn test_greeks_error_std_error() {
-        let error = GreeksError::StdError("An error occurred".to_string());
-        assert_eq!(format!("{error}"), "Standard error: An error occurred");
+    fn test_greeks_error_delta_neutrality() {
+        let error = GreeksError::DeltaNeutrality(DeltaNeutralityErrorKind::ZeroDelta);
+        assert_eq!(
+            format!("{error}"),
+            "Delta neutrality error: deltas cannot be zero for delta neutrality"
+        );
     }
 
     #[test]
@@ -793,10 +840,11 @@ mod tests_error_greeks_extended {
     }
 
     #[test]
-    fn test_boxed_error_conversion() {
-        let boxed_error: Box<dyn std::error::Error> =
-            Box::new(std::io::Error::other("Some IO error"));
-        let error: GreeksError = boxed_error.into();
-        assert_eq!(format!("{error}"), "Standard error: Some IO error");
+    fn test_delta_neutrality_zero_delta() {
+        let error = GreeksError::DeltaNeutrality(DeltaNeutralityErrorKind::ZeroDelta);
+        assert_eq!(
+            format!("{error}"),
+            "Delta neutrality error: deltas cannot be zero for delta neutrality"
+        );
     }
 }

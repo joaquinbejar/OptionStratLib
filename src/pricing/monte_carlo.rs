@@ -425,7 +425,7 @@ mod tests_price_option_monte_carlo {
     //
     //     // Create a custom implementation for get_years that returns an error
     //     impl ExpirationDate for MockOptions {
-    //         fn get_years(&self) -> Result<f64, Box<dyn Error>> {
+    //         fn get_years(&self) -> Result<f64, ExpirationDateError> {
     //             Err("Invalid expiration date".unwrap_or(Positive::ZERO))
     //         }
     //     }

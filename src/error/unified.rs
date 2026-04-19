@@ -106,25 +106,15 @@ pub enum Error {
     #[error(transparent)]
     Trade(#[from] crate::error::TradeError),
 
-    /// Generic error with a custom message.
-    #[error("{0}")]
-    Other(String),
-}
+    /// Empty input collection supplied to a utility that requires at least one element.
+    #[error("empty collection: {context}")]
+    EmptyCollection {
+        /// Description of the collection that was empty (e.g. `"positions"`).
+        context: &'static str,
+    },
 
-impl From<Box<dyn std::error::Error>> for Error {
-    fn from(err: Box<dyn std::error::Error>) -> Self {
-        Error::Other(err.to_string())
-    }
-}
-
-impl From<String> for Error {
-    fn from(msg: String) -> Self {
-        Error::Other(msg)
-    }
-}
-
-impl From<&str> for Error {
-    fn from(msg: &str) -> Self {
-        Error::Other(msg.to_string())
-    }
+    /// I/O error surfaced during file or network operations invoked from examples
+    /// and documentation snippets (plot saving, chain loading, etc.).
+    #[error(transparent)]
+    Io(#[from] std::io::Error),
 }

@@ -130,7 +130,9 @@ where
 
                 Ok(values)
             }
-            _ => Err("Invalid walk type for Brownian motion".into()),
+            _ => Err(SimulationError::InvalidWalkType {
+                expected: "Brownian",
+            }),
         }
     }
 
@@ -173,7 +175,9 @@ where
                 }
                 Ok(values)
             }
-            _ => Err("Invalid walk type for Geometric Brownian motion".into()),
+            _ => Err(SimulationError::InvalidWalkType {
+                expected: "GeometricBrownian",
+            }),
         }
     }
 
@@ -215,10 +219,7 @@ where
 
                     if let Some(ac) = autocorrelation {
                         if !(-Decimal::ONE..=Decimal::ONE).contains(&ac) {
-                            return Err(format!(
-                                "LogReturns: autocorrelation {ac} must lie in [-1, 1]"
-                            )
-                            .into());
+                            return Err(SimulationError::InvalidAutocorrelation { value: ac });
                         }
                         log_ret += ac * prev_log_ret;
                     }
@@ -231,7 +232,9 @@ where
                 }
                 Ok(values)
             }
-            _ => Err("Invalid walk type for Log Returns motion".into()),
+            _ => Err(SimulationError::InvalidWalkType {
+                expected: "LogReturns",
+            }),
         }
     }
 
@@ -269,7 +272,9 @@ where
                 ))
             }
 
-            _ => Err("Invalid walk type for Mean Reverting motion".into()),
+            _ => Err(SimulationError::InvalidWalkType {
+                expected: "MeanReverting",
+            }),
         }
     }
 
@@ -325,7 +330,9 @@ where
 
                 Ok(values)
             }
-            _ => Err("Invalid walk type for Jump Diffusion motion".into()),
+            _ => Err(SimulationError::InvalidWalkType {
+                expected: "JumpDiffusion",
+            }),
         }
     }
 
@@ -356,7 +363,7 @@ where
                 beta,
             } => {
                 if alpha + beta >= Decimal::ONE {
-                    return Err("alpha + beta must be < 1 for stationarity".into());
+                    return Err(SimulationError::GarchStationarity { alpha, beta });
                 }
 
                 let mut path = Vec::with_capacity(params.size + 1);
@@ -392,7 +399,7 @@ where
                 }
                 Ok(path)
             }
-            _ => Err("Invalid walk type for GARCH model".into()),
+            _ => Err(SimulationError::InvalidWalkType { expected: "GARCH" }),
         }
     }
 
@@ -453,7 +460,7 @@ where
             } => {
                 // Validate parameters
                 if rho < -Decimal::ONE || rho > Decimal::ONE {
-                    return Err("Correlation rho must be between -1 and 1".into());
+                    return Err(SimulationError::InvalidCorrelation { rho });
                 }
 
                 let mut values = Vec::with_capacity(params.size);
@@ -464,14 +471,13 @@ where
 
                 values.push(price); // Add initial value
 
-                let dt_sqrt = dt
-                    .to_dec()
-                    .sqrt()
-                    .ok_or_else(|| SimulationError::other("Heston: sqrt(dt) failed (overflow)"))?;
+                let dt_sqrt = dt.to_dec().sqrt().ok_or_else(|| {
+                    SimulationError::walk_error("Heston: sqrt(dt) failed (overflow)")
+                })?;
                 // sqrt(1 - rho^2) depends only on `rho`, hoist out of the
                 // hot loop so we don't recompute it per step.
                 let one_minus_rho_sq_sqrt = (Decimal::ONE - rho * rho).sqrt().ok_or_else(|| {
-                    SimulationError::other(
+                    SimulationError::walk_error(
                         "Heston: sqrt(1 - rho^2) failed (rho out of range or overflow)",
                     )
                 })?;
@@ -482,7 +488,7 @@ where
 
                     // Ensure variance stays positive (modified Euler scheme with truncation)
                     let variance_sqrt = variance.sqrt().ok_or_else(|| {
-                        SimulationError::other("Heston: sqrt(variance) failed (overflow)")
+                        SimulationError::walk_error("Heston: sqrt(variance) failed (overflow)")
                     })?;
                     let variance_new = (variance
                         + kappa.to_dec() * (theta.to_dec() - variance) * dt.to_dec()
@@ -492,7 +498,7 @@ where
                     // Update price using the average variance over the step
                     let avg_variance = (variance + variance_new) / Decimal::TWO;
                     let avg_variance_sqrt = avg_variance.sqrt().ok_or_else(|| {
-                        SimulationError::other("Heston: sqrt(avg_variance) failed (overflow)")
+                        SimulationError::walk_error("Heston: sqrt(avg_variance) failed (overflow)")
                     })?;
                     let price_change = drift * dt.to_dec() + avg_variance_sqrt * z1 * dt_sqrt;
 
@@ -504,7 +510,7 @@ where
 
                 Ok(values)
             }
-            _ => Err("Invalid walk type for Heston model".into()),
+            _ => Err(SimulationError::InvalidWalkType { expected: "Heston" }),
         }
     }
 
@@ -554,7 +560,7 @@ where
 
                 Ok(path)
             }
-            _ => Err("Invalid walk type for Custom motion".into()),
+            _ => Err(SimulationError::InvalidWalkType { expected: "Custom" }),
         }
     }
 
@@ -637,7 +643,9 @@ where
 
                 Ok(values)
             }
-            _ => Err("Invalid walk type for Telegraph process".into()),
+            _ => Err(SimulationError::InvalidWalkType {
+                expected: "Telegraph",
+            }),
         }
     }
 
@@ -676,10 +684,15 @@ where
                 if prices.len() >= params.size {
                     Ok(prices[0..params.size].to_vec())
                 } else {
-                    Err("Historical prices are not enough to generate the walk".into())
+                    Err(SimulationError::InsufficientHistoricalData {
+                        required: params.size,
+                        found: prices.len(),
+                    })
                 }
             }
-            _ => Err("Invalid walk type for Historical motion".into()),
+            _ => Err(SimulationError::InvalidWalkType {
+                expected: "Historical",
+            }),
         }
     }
 }
@@ -773,7 +786,6 @@ mod tests_walk_type_able {
     use crate::utils::TimeFrame;
     use positive::pos_or_panic;
     use rust_decimal::Decimal;
-    use std::error::Error;
     use std::fmt::Display;
     use std::ops::AddAssign;
 
@@ -813,7 +825,7 @@ mod tests_walk_type_able {
     }
 
     #[test]
-    fn test_brownian_walk() -> Result<(), Box<dyn Error>> {
+    fn test_brownian_walk() -> Result<(), SimulationError> {
         let params = create_test_params(
             5,
             10.0,
@@ -833,7 +845,7 @@ mod tests_walk_type_able {
     }
 
     #[test]
-    fn test_geometric_brownian_walk() -> Result<(), Box<dyn Error>> {
+    fn test_geometric_brownian_walk() -> Result<(), SimulationError> {
         let params = create_test_params(
             5,
             10.0,
@@ -853,7 +865,7 @@ mod tests_walk_type_able {
     }
 
     #[test]
-    fn test_log_returns_walk() -> Result<(), Box<dyn Error>> {
+    fn test_log_returns_walk() -> Result<(), SimulationError> {
         let params = create_test_params(
             5,
             10.0,
@@ -874,7 +886,7 @@ mod tests_walk_type_able {
     }
 
     #[test]
-    fn test_mean_reverting_walk() -> Result<(), Box<dyn Error>> {
+    fn test_mean_reverting_walk() -> Result<(), SimulationError> {
         let mean_value = pos_or_panic!(150.0);
         let params = create_test_params(
             5,
@@ -897,7 +909,7 @@ mod tests_walk_type_able {
     }
 
     #[test]
-    fn test_jump_diffusion_walk() -> Result<(), Box<dyn Error>> {
+    fn test_jump_diffusion_walk() -> Result<(), SimulationError> {
         let params = create_test_params(
             6,
             10.0,
@@ -920,7 +932,7 @@ mod tests_walk_type_able {
     }
 
     #[test]
-    fn test_garch_walk() -> Result<(), Box<dyn Error>> {
+    fn test_garch_walk() -> Result<(), SimulationError> {
         let params = create_test_params(
             5,
             10.0,
@@ -942,7 +954,7 @@ mod tests_walk_type_able {
     }
 
     #[test]
-    fn test_heston_walk() -> Result<(), Box<dyn Error>> {
+    fn test_heston_walk() -> Result<(), SimulationError> {
         let params = create_test_params(
             5,
             10.0,
@@ -966,7 +978,7 @@ mod tests_walk_type_able {
     }
 
     #[test]
-    fn test_custom_walk() -> Result<(), Box<dyn Error>> {
+    fn test_custom_walk() -> Result<(), SimulationError> {
         let params = create_test_params(
             5,
             10.0,
@@ -989,7 +1001,7 @@ mod tests_walk_type_able {
     }
 
     #[test]
-    fn test_telegraph_walk() -> Result<(), Box<dyn Error>> {
+    fn test_telegraph_walk() -> Result<(), SimulationError> {
         let params = create_test_params(
             5,
             10.0,
@@ -1014,7 +1026,7 @@ mod tests_walk_type_able {
     }
 
     #[test]
-    fn test_with_different_types() -> Result<(), Box<dyn Error>> {
+    fn test_with_different_types() -> Result<(), SimulationError> {
         #[derive(Debug, Copy, Clone, PartialEq)]
         struct XType(f64);
 
@@ -1083,7 +1095,7 @@ mod tests_walk_type_able {
                 &self,
                 _params: &WalkParams<X, Y>,
             ) -> Result<Vec<Positive>, SimulationError> {
-                Err("Error simulado para prueba".into())
+                Err(SimulationError::walk_error("Error simulado para prueba"))
             }
 
             fn geometric_brownian(

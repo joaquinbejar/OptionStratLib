@@ -2507,9 +2507,10 @@ mod tests_extended {
     #[test]
     fn test_construct_parametric_invalid_function() {
         let f = |_t: Decimal| -> Result<Point2D, ChainError> {
-            Err(ChainError::DynError {
-                message: "Function evaluation failed".to_string(),
-            })
+            Err(ChainError::invalid_parameters(
+                "parametric_f",
+                "Function evaluation failed",
+            ))
         };
         let params = ConstructionParams::D2 {
             t_start: Decimal::ZERO,
@@ -2535,13 +2536,15 @@ mod tests_extended {
     #[test]
     fn test_segment_not_found_error() {
         let segment: Option<Point2D> = None;
-        let result: Result<Point2D, CurveError> = segment.ok_or_else(|| CurveError::StdError {
-            reason: "Could not find valid segment for interpolation".to_string(),
+        let result: Result<Point2D, CurveError> = segment.ok_or_else(|| {
+            CurveError::ConstructionError(
+                "Could not find valid segment for interpolation".to_string(),
+            )
         });
         assert!(result.is_err());
         let error = result.unwrap_err();
         match error {
-            CurveError::StdError { reason } => {
+            CurveError::ConstructionError(reason) => {
                 assert_eq!(reason, "Could not find valid segment for interpolation");
             }
             _ => {
@@ -3538,7 +3541,12 @@ mod tests_curve_len_and_geometric {
     fn test_construct_method_error() {
         // Test ConstructionMethod errors (lines 168-175, 179, 181, 189)
         let result = Curve::construct(ConstructionMethod::Parametric {
-            f: Box::new(|_| Err("Test error".into())),
+            f: Box::new(|_| {
+                Err(crate::error::ChainError::invalid_parameters(
+                    "parametric_f",
+                    "Test error",
+                ))
+            }),
             params: ConstructionParams::D2 {
                 t_start: dec!(0.0),
                 t_end: dec!(1.0),

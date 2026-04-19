@@ -37,10 +37,11 @@
 //!
 //! ## Error Conversion
 //!
-//! The module supports conversion from:
-//! - `String`
-//! - `&str`
-//! - `Box<dyn std::error::Error>` (for compatibility)
+//! The module converts from typed domain errors:
+//! - `DecimalError` via `#[from]`
+//! - `GreeksError` via `#[from]`
+//! - `ExpirationDateError` via `#[from]`
+//! - `PricingError` via a manual `From` impl
 //!
 //! ## Examples
 //!
@@ -59,6 +60,7 @@
 //! ```
 
 use crate::error::{DecimalError, GreeksError, PricingError};
+use expiration_date::error::ExpirationDateError;
 use thiserror::Error;
 
 /// Custom errors that can occur during Options operations
@@ -88,8 +90,8 @@ use thiserror::Error;
 /// * `UpdateError` - Errors that occur when attempting to update option data
 ///   or parameters in an existing option object.
 ///
-/// * `OtherError` - A catch-all for errors that don't fit into other categories
-///   but still need to be represented in the options domain.
+/// * `InvalidStepCount` - Invalid pricing step count (typed replacement for the former `OtherError`).
+/// * `ImpliedVolatilityInvariant` - Implied-volatility invariant breach.
 ///
 /// # Usage
 ///
@@ -162,12 +164,19 @@ pub enum OptionsError {
         reason: String,
     },
 
-    /// Error when performing other operations
-    ///
-    /// A general-purpose error for cases not covered by other variants.
-    #[error("Other error: {reason}")]
-    OtherError {
-        /// Detailed explanation of the error
+    /// The caller requested a pricing operation with zero tree steps, which
+    /// is structurally invalid.
+    #[error("invalid step count: {operation} requires at least one step")]
+    InvalidStepCount {
+        /// Name of the operation that rejected the step count (e.g. `"binomial"`).
+        operation: &'static str,
+    },
+
+    /// A numerical invariant was breached while constructing a valid implied
+    /// volatility value from two non-negative bounds.
+    #[error("implied volatility invariant breached: {reason}")]
+    ImpliedVolatilityInvariant {
+        /// Detailed explanation of which invariant was breached.
         reason: String,
     },
 
@@ -178,6 +187,10 @@ pub enum OptionsError {
     /// Error when GreeksError occurs
     #[error(transparent)]
     Greeks(#[from] GreeksError),
+
+    /// Expiration-date conversion error surfaced during options operations.
+    #[error(transparent)]
+    ExpirationDate(#[from] ExpirationDateError),
 }
 
 /// A specialized result type for operations related to Options calculations and processing.
@@ -364,41 +377,8 @@ impl OptionsError {
     }
 }
 
-impl From<Box<dyn std::error::Error>> for OptionsError {
-    fn from(err: Box<dyn std::error::Error>) -> Self {
-        OptionsError::OtherError {
-            reason: err.to_string(),
-        }
-    }
-}
-
-impl From<&str> for OptionsError {
-    fn from(err: &str) -> Self {
-        OptionsError::ValidationError {
-            field: "unknown".to_string(),
-            reason: err.to_string(),
-        }
-    }
-}
-
-impl From<String> for OptionsError {
-    fn from(err: String) -> Self {
-        OptionsError::ValidationError {
-            field: "unknown".to_string(),
-            reason: err,
-        }
-    }
-}
-
-impl From<expiration_date::error::ExpirationDateError> for OptionsError {
-    fn from(err: expiration_date::error::ExpirationDateError) -> Self {
-        OptionsError::OtherError {
-            reason: err.to_string(),
-        }
-    }
-}
-
 impl From<PricingError> for OptionsError {
+    #[inline]
     fn from(value: PricingError) -> Self {
         Self::PricingError {
             method: "unknown".to_string(),
@@ -498,57 +478,25 @@ mod tests {
     }
 
     #[test]
-    fn test_from_str_conversion() {
-        let error: OptionsError = "test error".into();
-        match error {
-            OptionsError::ValidationError { field, reason } => {
-                assert_eq!(field, "unknown");
-                assert_eq!(reason, "test error");
-            }
-            _ => panic!("Expected ValidationError"),
-        }
+    fn test_invalid_step_count_variant() {
+        let error = OptionsError::InvalidStepCount {
+            operation: "binomial",
+        };
+        assert_eq!(
+            format!("{error}"),
+            "invalid step count: binomial requires at least one step"
+        );
     }
 
     #[test]
-    fn test_from_string_conversion() {
-        let error: OptionsError = String::from("test error").into();
-        match error {
-            OptionsError::ValidationError { field, reason } => {
-                assert_eq!(field, "unknown");
-                assert_eq!(reason, "test error");
-            }
-            _ => panic!("Expected ValidationError"),
-        }
-    }
-
-    #[test]
-    fn test_from_box_dyn_error_conversion() {
-        struct TestError(String);
-
-        impl std::fmt::Display for TestError {
-            fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-                write!(f, "{}", self.0)
-            }
-        }
-
-        impl std::fmt::Debug for TestError {
-            fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-                write!(f, "TestError({})", self.0)
-            }
-        }
-
-        impl std::error::Error for TestError {}
-
-        let original_error: Box<dyn std::error::Error> =
-            Box::new(TestError("test error".to_string()));
-        let error: OptionsError = original_error.into();
-
-        match error {
-            OptionsError::OtherError { reason } => {
-                assert_eq!(reason, "test error");
-            }
-            _ => panic!("Expected OtherError"),
-        }
+    fn test_implied_volatility_invariant_variant() {
+        let error = OptionsError::ImpliedVolatilityInvariant {
+            reason: "mid_vol must be non-negative".to_string(),
+        };
+        assert!(
+            format!("{error}")
+                .contains("implied volatility invariant breached: mid_vol must be non-negative")
+        );
     }
 
     #[test]
@@ -582,37 +530,18 @@ mod tests_extended {
     use super::*;
 
     #[test]
-    fn test_error_chaining() {
+    fn test_error_chaining_via_display() {
         let error1 = OptionsError::validation_error("strike", "invalid value");
-        let error2: OptionsError = error1.to_string().into();
-
-        match error2 {
-            OptionsError::ValidationError { field, reason } => {
-                assert!(reason.contains("invalid value"));
-                assert_eq!(field, "unknown");
-            }
-            _ => panic!("Expected ValidationError"),
-        }
-
-        // Segunda forma: usando From<&str>
-        let error3 = OptionsError::validation_error("price", "must be positive");
-        let error4: OptionsError = error3.to_string().as_str().into();
-
-        match error4 {
-            OptionsError::ValidationError { field, reason } => {
-                assert!(reason.contains("must be positive"));
-                assert_eq!(field, "unknown");
-            }
-            _ => panic!("Expected ValidationError"),
-        }
+        let rendered = error1.to_string();
+        assert!(rendered.contains("invalid value"));
+        assert!(rendered.contains("strike"));
     }
 
     #[test]
-    fn test_multiple_conversions() {
-        let io_error = std::io::Error::other("test error");
-        let boxed: Box<dyn std::error::Error> = Box::new(io_error);
-        let error: OptionsError = boxed.into();
-        assert!(matches!(error, OptionsError::OtherError { .. }));
+    fn test_pricing_error_conversion() {
+        let pricing = PricingError::invalid_engine("bad engine");
+        let error: OptionsError = pricing.into();
+        assert!(matches!(error, OptionsError::PricingError { .. }));
     }
 
     #[test]
@@ -664,12 +593,10 @@ mod tests_extended {
     }
 
     #[test]
-    fn test_error_conversion_preservation() {
+    fn test_error_display_preserves_message() {
         let original = "preserve this message";
-        let error1: OptionsError = original.into();
-        let error2: OptionsError = error1.to_string().into();
-
-        assert!(error2.to_string().contains(original));
+        let error = OptionsError::validation_error("field", original);
+        assert!(error.to_string().contains(original));
     }
 
     #[test]

@@ -111,14 +111,12 @@ where
         let points: Vec<&Point> = self.get_points().into_iter().collect();
         // Edge cases
         if points.len() < 2 {
-            return Err(InterpolationError::StdError(
-                "Need at least two points for interpolation".to_string(),
-            ));
+            return Err(InterpolationError::EmptyData);
         }
         if x.get_x() < points[0].get_x() || x.get_x() > points[points.len() - 1].get_x() {
-            return Err(InterpolationError::StdError(
-                "x is outside the range of points".to_string(),
-            ));
+            return Err(InterpolationError::OutOfRange {
+                target: x.get_x().to_string(),
+            });
         }
         // Find points that bracket x
         for i in 0..points.len() - 1 {
@@ -126,9 +124,7 @@ where
                 return Ok((i, i + 1));
             }
         }
-        Err(InterpolationError::StdError(
-            "Could not find bracketing points".to_string(),
-        ))
+        Err(InterpolationError::DegenerateInterval)
     }
 }
 

@@ -93,7 +93,7 @@ impl OptionsInStrike {
     ///
     /// # Returns
     ///
-    /// * `Result<DeltasInStrike, Box<dyn Error>>` - A Result containing delta values for all
+    /// * `Result<DeltasInStrike, ChainError>` - A Result containing delta values for all
     ///   four option positions if successful, or an error if any delta calculation fails.
     ///
     /// # Errors

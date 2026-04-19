@@ -135,7 +135,7 @@ pub fn random_decimal(rng: &mut impl Rng) -> Result<Decimal, DecimalError> {
 /// # Examples
 ///
 /// ```
-/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+/// # fn main() -> Result<(), optionstratlib::error::Error> {
 /// use optionstratlib::utils::others::process_n_times_iter;
 ///
 /// let numbers = vec![1, 2, 3];
@@ -159,7 +159,9 @@ where
     Y: Send,
 {
     if positions.is_empty() {
-        return Err(Error::Other("Vector empty".to_string()));
+        return Err(Error::EmptyCollection {
+            context: "positions",
+        });
     }
 
     let combinations: Vec<_> = positions.iter().combinations_with_replacement(n).collect();
@@ -391,7 +393,10 @@ mod tests_process_n_times_iter {
         let empty_vec: Vec<i32> = vec![];
         let result = process_n_times_iter(&empty_vec, 1, |_| vec![42]);
         assert!(result.is_err());
-        assert_eq!(result.unwrap_err().to_string(), "Vector empty");
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            "empty collection: positions"
+        );
     }
 
     #[test]

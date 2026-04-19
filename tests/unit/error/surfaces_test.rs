@@ -3,7 +3,6 @@ use optionstratlib::error::{
     GraphError, GreeksError, InterpolationError, OptionsError, PositionError, SurfaceError,
 };
 use std::error::Error;
-use std::io;
 
 // MockGraphError struct removed as it was unused.
 #[test]
@@ -16,19 +15,17 @@ fn test_from_interpolation_error() {
 
     // Verify the conversion was successful
     match surface_error {
-        SurfaceError::StdError { reason } => {
+        SurfaceError::AnalysisError(reason) => {
             assert!(reason.contains("interpolation error test"));
         }
-        _ => panic!("Expected StdError variant, got something else"),
+        _ => panic!("Expected AnalysisError variant, got something else"),
     }
 }
 
 #[test]
 fn test_from_options_error() {
     // Create an options error
-    let options_error = OptionsError::OtherError {
-        reason: "options error test".to_string(),
-    };
+    let options_error = OptionsError::validation_error("field", "options error test");
 
     // Convert to SurfaceError
     let surface_error = SurfaceError::from(options_error);
@@ -45,7 +42,7 @@ fn test_from_options_error() {
 #[test]
 fn test_from_greeks_error() {
     // Create a Greeks error
-    let greeks_error = GreeksError::StdError("greeks error test".to_string());
+    let greeks_error = GreeksError::invalid_volatility(-1.0, "greeks error test");
 
     // Convert to SurfaceError
     let surface_error = SurfaceError::from(greeks_error);
@@ -89,11 +86,12 @@ fn test_surface_error_debug() {
     let debug_str = format!("{op_error:?}");
     assert!(debug_str.contains("OperationError"));
 
-    let std_error = SurfaceError::StdError {
+    let render_error = SurfaceError::RenderError {
+        backend: "plotters",
         reason: "std debug test".to_string(),
     };
-    let debug_str = format!("{std_error:?}");
-    assert!(debug_str.contains("StdError"));
+    let debug_str = format!("{render_error:?}");
+    assert!(debug_str.contains("RenderError"));
 
     let construction_error = SurfaceError::ConstructionError("construction debug test".to_string());
     let debug_str = format!("{construction_error:?}");
@@ -114,20 +112,17 @@ fn test_error_trait_implementation() {
 }
 
 #[test]
-fn test_from_io_error() {
-    // Create an IO error
-    let io_error = io::Error::new(io::ErrorKind::NotFound, "file not found");
-    let boxed_error: Box<dyn Error> = Box::new(io_error);
-
-    // Convert to SurfaceError
-    let surface_error = SurfaceError::from(boxed_error);
-
-    // Verify the conversion was successful
-    match surface_error {
-        SurfaceError::StdError { reason } => {
+fn test_surface_error_render_error_variant() {
+    let error = SurfaceError::RenderError {
+        backend: "plotters",
+        reason: "file not found".to_string(),
+    };
+    match error {
+        SurfaceError::RenderError { backend, reason } => {
+            assert_eq!(backend, "plotters");
             assert!(reason.contains("file not found"));
         }
-        _ => panic!("Expected StdError variant, got something else"),
+        _ => panic!("Expected RenderError variant, got something else"),
     }
 }
 

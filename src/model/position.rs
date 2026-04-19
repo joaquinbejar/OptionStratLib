@@ -38,7 +38,7 @@ use utoipa::ToSchema;
 /// # Examples
 ///
 /// ```rust
-/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+/// # fn main() -> Result<(), optionstratlib::error::Error> {
 /// use optionstratlib::{Options, Side, OptionStyle};
 /// use positive::pos_or_panic;
 /// use chrono::Utc;
@@ -267,7 +267,7 @@ impl Position {
     /// # Examples
     ///
     /// ```rust
-    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// # fn main() -> Result<(), optionstratlib::error::Error> {
     /// use optionstratlib::{ Side, OptionStyle};
     /// use positive::pos_or_panic;
     /// use optionstratlib::model::Position;
@@ -354,7 +354,7 @@ impl Position {
     /// # Examples
     ///
     /// ```rust
-    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// # fn main() -> Result<(), optionstratlib::error::Error> {
     /// // Assuming position is a properly initialized Position
     /// use chrono::Utc;
     /// use optionstratlib::model::utils::create_sample_option_simplest;
@@ -414,7 +414,7 @@ impl Position {
     /// # Example
     ///
     /// ```rust
-    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// # fn main() -> Result<(), optionstratlib::error::Error> {
     /// use chrono::Utc;
     /// use tracing::info;
     /// use optionstratlib::model::Position;
@@ -1120,14 +1120,24 @@ impl PnLCalculator for Position {
         let income_diff = self_pnl.initial_income.to_dec() - other_pnl.initial_income.to_dec();
 
         let initial_costs = Positive::new(cost_diff.abs().to_f64().ok_or_else(|| {
-            PricingError::other("initial_costs: cost_diff Decimal cannot be represented as f64")
+            PricingError::method_error(
+                "pnl_diff",
+                "initial_costs: cost_diff Decimal cannot be represented as f64",
+            )
         })?)
-        .map_err(|_| PricingError::other("initial_costs value is not strictly positive"))?;
+        .map_err(|_| {
+            PricingError::method_error("pnl_diff", "initial_costs value is not strictly positive")
+        })?;
 
         let initial_income = Positive::new(income_diff.abs().to_f64().ok_or_else(|| {
-            PricingError::other("initial_income: income_diff Decimal cannot be represented as f64")
+            PricingError::method_error(
+                "pnl_diff",
+                "initial_income: income_diff Decimal cannot be represented as f64",
+            )
         })?)
-        .map_err(|_| PricingError::other("initial_income value is not strictly positive"))?;
+        .map_err(|_| {
+            PricingError::method_error("pnl_diff", "initial_income value is not strictly positive")
+        })?;
 
         Ok(PnL {
             realized: realized_diff,

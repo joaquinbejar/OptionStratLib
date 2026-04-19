@@ -24,7 +24,7 @@
 //! use optionstratlib::pricing::american::barone_adesi_whaley;
 //! use optionstratlib::model::types::OptionStyle;
 //! use positive::Positive;
-//! # fn run() -> Result<(), Box<dyn std::error::Error>> {
+//! # fn run() -> Result<(), optionstratlib::error::Error> {
 //! let price = barone_adesi_whaley(
 //!     Positive::HUNDRED,      // underlying price
 //!     Positive::HUNDRED,      // strike price
@@ -94,7 +94,7 @@ const TOLERANCE: f64 = 1e-6;
 /// use optionstratlib::pricing::american::barone_adesi_whaley;
 /// use optionstratlib::model::types::OptionStyle;
 /// use positive::Positive;
-/// # fn run() -> Result<(), Box<dyn std::error::Error>> {
+/// # fn run() -> Result<(), optionstratlib::error::Error> {
 /// // Price an American call option
 /// let call_price = barone_adesi_whaley(
 ///     Positive::HUNDRED,           // spot = 100
@@ -170,11 +170,12 @@ pub fn barone_adesi_whaley(
     match option_style {
         OptionStyle::Call => {
             let discriminant = (n - dec!(1)).powi(2) + dec!(4) * m / k_factor;
-            let sqrt_disc = discriminant
-                .sqrt()
-                .ok_or_else(|| PricingError::OtherError {
-                    reason: "Cannot calculate square root of negative discriminant".to_string(),
-                })?;
+            let sqrt_disc = discriminant.sqrt().ok_or_else(|| {
+                PricingError::method_error(
+                    "baw",
+                    "cannot calculate square root of negative discriminant",
+                )
+            })?;
             let q2 = (-(n - dec!(1)) + sqrt_disc) / dec!(2);
 
             // Find critical price S*
@@ -194,11 +195,12 @@ pub fn barone_adesi_whaley(
         }
         OptionStyle::Put => {
             let discriminant = (n - dec!(1)).powi(2) + dec!(4) * m / k_factor;
-            let sqrt_disc = discriminant
-                .sqrt()
-                .ok_or_else(|| PricingError::OtherError {
-                    reason: "Cannot calculate square root of negative discriminant".to_string(),
-                })?;
+            let sqrt_disc = discriminant.sqrt().ok_or_else(|| {
+                PricingError::method_error(
+                    "baw",
+                    "cannot calculate square root of negative discriminant",
+                )
+            })?;
             let q1 = (-(n - dec!(1)) - sqrt_disc) / dec!(2);
 
             // Find critical price S**
@@ -232,8 +234,8 @@ fn black_scholes_european(
     option_style: &OptionStyle,
 ) -> Result<Decimal, PricingError> {
     let d1_val = d1(s, k, t, r, q, sigma)?;
-    let sqrt_t = t.sqrt().ok_or_else(|| PricingError::OtherError {
-        reason: "Cannot calculate square root of time".to_string(),
+    let sqrt_t = t.sqrt().ok_or_else(|| {
+        PricingError::method_error("black_scholes", "cannot calculate square root of time")
     })?;
     let d2_val = d1_val - sigma * sqrt_t;
 
@@ -261,13 +263,14 @@ fn d1(
     sigma: Decimal,
 ) -> Result<Decimal, PricingError> {
     if t <= Decimal::ZERO || sigma <= Decimal::ZERO {
-        return Err(PricingError::OtherError {
-            reason: "Time and volatility must be positive".to_string(),
-        });
+        return Err(PricingError::method_error(
+            "d1",
+            "time and volatility must be positive",
+        ));
     }
-    let sqrt_t = t.sqrt().ok_or_else(|| PricingError::OtherError {
-        reason: "Cannot calculate square root of time".to_string(),
-    })?;
+    let sqrt_t = t
+        .sqrt()
+        .ok_or_else(|| PricingError::method_error("d1", "cannot calculate square root of time"))?;
     let ln_s_k = (s / k).ln();
     Ok((ln_s_k + (r - q + sigma * sigma / dec!(2)) * t) / (sigma * sqrt_t))
 }

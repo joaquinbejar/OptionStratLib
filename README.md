@@ -736,7 +736,7 @@ use positive::{pos_or_panic,Positive};
 use rust_decimal_macros::dec;
 use optionstratlib::greeks::Greeks;
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> Result<(), optionstratlib::error::Error> {
     // Create a European call option
     let option = Options::new(
         OptionType::European,
@@ -787,7 +787,7 @@ use optionstratlib::visualization::Graph;
 use rust_decimal_macros::dec;
 use std::error::Error;
 
-fn main() -> Result<(), Box<dyn Error>> {
+fn main() -> Result<(), optionstratlib::error::Error> {
     use optionstratlib::pricing::Profit;
 let underlying_price = Positive::HUNDRED;
 
@@ -837,7 +837,7 @@ let underlying_price = Positive::HUNDRED;
 ```rust
 use optionstratlib::prelude::*;
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> Result<(), optionstratlib::error::Error> {
     // Create an option for implied volatility calculation
     let mut option = Options::new(
         OptionType::European,
@@ -867,7 +867,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 ```rust
 use optionstratlib::prelude::*;
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> Result<(), optionstratlib::error::Error> {
     // Define common parameters
     let underlying_symbol = "DAX".to_string();
     let underlying_price = pos_or_panic!(24000.0);

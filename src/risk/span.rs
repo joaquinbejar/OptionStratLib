@@ -300,7 +300,7 @@ mod tests_span {
     use tracing::info;
 
     #[test]
-    fn test_span_margin() -> Result<(), Box<dyn std::error::Error>> {
+    fn test_span_margin() -> Result<(), crate::error::Error> {
         let option = create_sample_option(
             OptionStyle::Call,
             Side::Short,

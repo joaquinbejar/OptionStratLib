@@ -68,7 +68,7 @@
 //!
 //! Provides `StrategyResult<T>` for convenient error handling in strategy operations.
 use crate::error::common::OperationErrorKind;
-use crate::error::{GreeksError, OptionsError, PositionError, SimulationError, TradeError};
+use crate::error::{GreeksError, OptionsError, PositionError, TradeError};
 use thiserror::Error;
 
 /// Represents the different types of errors that can occur in options trading strategies.
@@ -84,8 +84,8 @@ use thiserror::Error;
 /// * `BreakEvenError` - Errors encountered when calculating strategy break-even points
 /// * `ProfitLossError` - Errors related to profit/loss calculations including maximum values
 /// * `OperationError` - General strategy operation errors including unsupported operations
-/// * `StdError` - Standard errors with a descriptive reason
 /// * `NotImplemented` - For features or operations that are not yet implemented
+/// * `Simulation` - Simulation-layer errors surfaced while evaluating a strategy
 ///
 /// # Usage
 ///
@@ -110,16 +110,13 @@ pub enum StrategyError {
     #[error("Operation error: {0}")]
     OperationError(OperationErrorKind),
 
-    /// Standard error with descriptive reason
-    #[error("Standard error: {reason}")]
-    StdError {
-        /// Detailed explanation of the standard error
-        reason: String,
-    },
-
     /// Indicates a feature or operation that has not been implemented yet
     #[error("Not implemented")]
     NotImplemented,
+
+    /// A simulation-layer error surfaced while evaluating a strategy.
+    #[error(transparent)]
+    Simulation(Box<crate::error::SimulationError>),
 
     /// Greeks errors
     #[error(transparent)]
@@ -429,11 +426,10 @@ impl From<OptionsError> for StrategyError {
     }
 }
 
-impl From<Box<dyn std::error::Error>> for StrategyError {
-    fn from(err: Box<dyn std::error::Error>) -> Self {
-        StrategyError::StdError {
-            reason: err.to_string(),
-        }
+impl From<crate::error::SimulationError> for StrategyError {
+    #[inline]
+    fn from(err: crate::error::SimulationError) -> Self {
+        StrategyError::Simulation(Box::new(err))
     }
 }
 
@@ -442,15 +438,6 @@ impl From<crate::error::PricingError> for StrategyError {
         StrategyError::OperationError(OperationErrorKind::InvalidParameters {
             operation: "Pricing".to_string(),
             reason: err.to_string(),
-        })
-    }
-}
-
-impl From<SimulationError> for StrategyError {
-    fn from(value: SimulationError) -> Self {
-        StrategyError::OperationError(OperationErrorKind::InvalidParameters {
-            operation: "Simulation".to_string(),
-            reason: value.to_string(),
         })
     }
 }
@@ -610,11 +597,10 @@ mod tests_extended {
     use super::*;
 
     #[test]
-    fn test_strategy_error_std_error() {
-        let error = StrategyError::StdError {
-            reason: "General failure".to_string(),
-        };
-        assert_eq!(format!("{error}"), "Standard error: General failure");
+    fn test_strategy_error_simulation() {
+        let sim_error = crate::error::SimulationError::walk_error("simulation failure");
+        let error = StrategyError::from(sim_error);
+        assert!(matches!(error, StrategyError::Simulation(_)));
     }
 
     #[test]
@@ -668,14 +654,6 @@ mod tests_extended {
             format!("{error}"),
             "Operation error: Invalid parameters for operation 'Open position': Margin insufficient"
         );
-    }
-
-    #[test]
-    fn test_strategy_error_from_boxed_error() {
-        let boxed_error: Box<dyn std::error::Error> =
-            Box::new(std::io::Error::other("Underlying failure"));
-        let error: StrategyError = boxed_error.into();
-        assert_eq!(format!("{error}"), "Standard error: Underlying failure");
     }
 
     #[test]

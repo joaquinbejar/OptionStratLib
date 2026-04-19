@@ -99,12 +99,17 @@ pub enum OhlcvError {
         reason: String,
     },
 
-    /// General error
-    ///
-    /// This variant is used for errors that don't fit into other categories.
-    #[error("Error: {reason}")]
-    OtherError {
-        /// Reason for the error
+    /// A required column was missing from the CSV payload.
+    #[error("required column `{column}` is missing")]
+    MissingColumn {
+        /// Name of the column that was expected but not found.
+        column: &'static str,
+    },
+
+    /// Row-level parsing failure, with a descriptive reason bound to the row.
+    #[error("failed to parse row: {reason}")]
+    RowParsing {
+        /// Human-readable description of why the row could not be parsed.
         reason: String,
     },
 }

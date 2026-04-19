@@ -27,12 +27,13 @@ use positive::pos_or_panic;
 ///
 /// The calculated volatility as a Decimal.
 pub fn constant_volatility(returns: &[Decimal]) -> Result<Positive, VolatilityError> {
-    let n_dec = Decimal::from_usize(returns.len()).ok_or_else(|| {
-        VolatilityError::from(format!(
-            "constant_volatility: returns.len() {} not representable as Decimal",
-            returns.len()
-        ))
-    })?;
+    let n_dec =
+        Decimal::from_usize(returns.len()).ok_or_else(|| VolatilityError::NumericalFailure {
+            reason: format!(
+                "constant_volatility: returns.len() {} not representable as Decimal",
+                returns.len()
+            ),
+        })?;
     let n = Positive::new_decimal(n_dec).unwrap_or(Positive::ZERO);
 
     if n < Decimal::TWO {
@@ -43,9 +44,11 @@ pub fn constant_volatility(returns: &[Decimal]) -> Result<Positive, VolatilityEr
     let variance =
         returns.iter().map(|&r| (r - mean).powi(2)).sum::<Decimal>() / (n - Decimal::ONE);
 
-    let std_dev = variance.sqrt().ok_or_else(|| {
-        VolatilityError::from("constant_volatility: sqrt(variance) failed (overflow)")
-    })?;
+    let std_dev = variance
+        .sqrt()
+        .ok_or_else(|| VolatilityError::NumericalFailure {
+            reason: "constant_volatility: sqrt(variance) failed (overflow)".to_string(),
+        })?;
     Ok(Positive::new_decimal(std_dev).unwrap_or(Positive::ZERO))
 }
 
@@ -85,18 +88,24 @@ pub fn ewma_volatility(
 ) -> Result<Vec<Positive>, VolatilityError> {
     let first_return = returns
         .first()
-        .ok_or_else(|| VolatilityError::from("ewma_volatility: returns slice is empty"))?;
+        .ok_or_else(|| VolatilityError::NumericalFailure {
+            reason: "ewma_volatility: returns slice is empty".to_string(),
+        })?;
     let mut variance = first_return.powi(2);
-    let initial_std_dev = variance.sqrt().ok_or_else(|| {
-        VolatilityError::from("ewma_volatility: sqrt(initial variance) failed (overflow)")
-    })?;
+    let initial_std_dev = variance
+        .sqrt()
+        .ok_or_else(|| VolatilityError::NumericalFailure {
+            reason: "ewma_volatility: sqrt(initial variance) failed (overflow)".to_string(),
+        })?;
     let mut volatilities = vec![Positive::new_decimal(initial_std_dev).unwrap_or(Positive::ZERO)];
 
     for &return_value in &returns[1..] {
         variance = lambda * variance + (Decimal::ONE - lambda) * return_value.powi(2);
-        let std_dev = variance.sqrt().ok_or_else(|| {
-            VolatilityError::from("ewma_volatility: sqrt(variance) failed (overflow)")
-        })?;
+        let std_dev = variance
+            .sqrt()
+            .ok_or_else(|| VolatilityError::NumericalFailure {
+                reason: "ewma_volatility: sqrt(variance) failed (overflow)".to_string(),
+            })?;
         volatilities.push(Positive::new_decimal(std_dev).unwrap_or(Positive::ZERO));
     }
 
@@ -153,12 +162,12 @@ pub fn implied_volatility(
         Some((best_iv, _)) => {
             let iv = best_iv.clamp(*MIN_VOLATILITY, MAX_VOLATILITY);
             if iv == Positive::new(1f64 / iterations as f64)? {
-                Err("Implied volatility not found".into())
+                Err(VolatilityError::IvNotFound)
             } else {
                 Ok(iv)
             }
         }
-        None => Err("No valid volatility found".into()),
+        None => Err(VolatilityError::NoValidVolatility),
     }
 }
 
@@ -270,16 +279,18 @@ pub fn simulate_heston_volatility(
     let mut volatilities = vec![v_pos.sqrt()];
     let dt_sqrt_f64 = dt
         .sqrt()
-        .ok_or_else(|| {
-            VolatilityError::from("simulate_heston_volatility: sqrt(dt) failed (overflow)")
+        .ok_or_else(|| VolatilityError::NumericalFailure {
+            reason: "simulate_heston_volatility: sqrt(dt) failed (overflow)".to_string(),
         })?
         .to_f64()
-        .ok_or_else(|| {
-            VolatilityError::from("simulate_heston_volatility: sqrt(dt) not representable as f64")
+        .ok_or_else(|| VolatilityError::NumericalFailure {
+            reason: "simulate_heston_volatility: sqrt(dt) not representable as f64".to_string(),
         })?;
     for _ in 1..steps {
         let dw = Decimal::from_f64(random::<f64>() * dt_sqrt_f64).ok_or_else(|| {
-            VolatilityError::from("simulate_heston_volatility: dw not representable as Decimal")
+            VolatilityError::NumericalFailure {
+                reason: "simulate_heston_volatility: dw not representable as Decimal".to_string(),
+            }
         })?;
         let sqrt_v = v_pos.sqrt().to_dec();
         v += kappa * (theta - v) * dt + xi * sqrt_v * dw;
@@ -405,7 +416,7 @@ pub fn de_annualized_volatility(
 ///
 /// # Example
 /// ```
-/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+/// # fn main() -> Result<(), optionstratlib::error::Error> {
 /// use positive::pos_or_panic;
 /// use optionstratlib::utils::TimeFrame;
 /// use optionstratlib::volatility::adjust_volatility;
@@ -481,7 +492,7 @@ pub fn adjust_volatility(
 /// # Examples
 ///
 /// ```
-/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+/// # fn main() -> Result<(), optionstratlib::error::Error> {
 /// use positive::{pos_or_panic, Positive};
 /// use optionstratlib::utils::time::{TimeFrame, convert_time_frame};
 /// use optionstratlib::volatility::volatility_for_dt;

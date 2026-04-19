@@ -30,14 +30,6 @@ fn test_metrics_error_display() {
         reason: "surface modeling error",
     });
     assert!(format!("{surface_err}").contains("surface modeling error"));
-
-    let std_err = MetricsError::StdError {
-        reason: "standard error occurred".to_string(),
-    };
-    assert_eq!(
-        format!("{std_err}"),
-        "Standard Error: standard error occurred"
-    );
 }
 
 #[test]
@@ -47,11 +39,9 @@ fn test_metrics_error_debug() {
     assert!(format!("{basic_err:?}").contains("BasicError"));
     assert!(format!("{basic_err:?}").contains("test message"));
 
-    let std_err = MetricsError::StdError {
-        reason: "debug test".to_string(),
-    };
-    assert!(format!("{std_err:?}").contains("StdError"));
-    assert!(format!("{std_err:?}").contains("debug test"));
+    let range_err = MetricsError::RangeError("debug test".to_string());
+    assert!(format!("{range_err:?}").contains("RangeError"));
+    assert!(format!("{range_err:?}").contains("debug test"));
 }
 
 #[test]
@@ -93,21 +83,9 @@ fn test_metrics_error_from_surface_error() {
 }
 
 #[test]
-fn test_metrics_error_from_box_dyn_error() {
-    // Create a simple error that implements Error trait
-    let std_err = std::io::Error::other("IO error occurred");
-    let boxed_err: Box<dyn std::error::Error> = Box::new(std_err);
-
-    // Convert to MetricsError using From trait
-    let metrics_err: MetricsError = boxed_err.into();
-
-    // Verify the conversion was successful
-    match metrics_err {
-        MetricsError::StdError { reason } => {
-            assert!(reason.contains("IO error occurred"));
-        }
-        _ => panic!("Expected StdError variant, got something else"),
-    }
+fn test_metrics_error_basic_error_display() {
+    let error = MetricsError::BasicError("basic calc failed".to_string());
+    assert_eq!(format!("{error}"), "Basic Error: basic calc failed");
 }
 
 #[test]
@@ -120,12 +98,7 @@ fn test_metrics_error_as_error() {
     assert_eq!(boxed_error.to_string(), "Basic Error: test error");
 
     // Test another variant
-    let error = MetricsError::StdError {
-        reason: "standard error test".to_string(),
-    };
+    let error = MetricsError::RangeError("out of range".to_string());
     let boxed_error: Box<dyn std::error::Error> = Box::new(error);
-    assert_eq!(
-        boxed_error.to_string(),
-        "Standard Error: standard error test"
-    );
+    assert_eq!(boxed_error.to_string(), "Range Error: out of range");
 }

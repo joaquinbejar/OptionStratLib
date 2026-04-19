@@ -111,10 +111,9 @@ where
         let next_x = match self.x.next() {
             Ok(x_step) => x_step,
             Err(e) => {
-                return Err(format!(
+                return Err(SimulationError::step_error(&format!(
                     "Cannot generate next step. Expiration date is already reached: {e}"
-                )
-                .into());
+                )));
             }
         };
         Ok(Self {
@@ -139,10 +138,9 @@ where
         let previous_x = match self.x.previous() {
             Ok(x_step) => x_step,
             Err(e) => {
-                return Err(format!(
+                return Err(SimulationError::step_error(&format!(
                     "Cannot generate previous step. Expiration date is already reached: {e}"
-                )
-                .into());
+                )));
             }
         };
         Ok(Self {
@@ -162,7 +160,7 @@ where
     pub fn get_graph_x_value(&self) -> Result<Decimal, SimulationError> {
         match Decimal::from_i32(*self.x.index()) {
             Some(x) => Ok(x),
-            None => Err("Cannot convert x-axis index to decimal".into()),
+            None => Err(SimulationError::IndexConversion),
         }
     }
 

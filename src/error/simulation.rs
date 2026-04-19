@@ -1,5 +1,8 @@
-use crate::error::{DecimalError, StrategyError};
+use crate::error::{ChainError, DecimalError, OptionsError, PricingError, StrategyError};
 use crate::prelude::GraphError;
+use expiration_date::error::ExpirationDateError;
+use positive::Positive;
+use rust_decimal::Decimal;
 use thiserror::Error;
 
 /// Error type for simulation operations.
@@ -29,12 +32,80 @@ pub enum SimulationError {
         reason: String,
     },
 
-    /// Generic simulation error.
-    #[error("Simulation error: {reason}")]
-    OtherError {
-        /// Detailed reason for the error
-        reason: String,
+    /// The walk type in the parameters does not match the generator being invoked.
+    ///
+    /// Raised from inside each `WalkTypeAble` implementation when the supplied
+    /// `walk_type` discriminator is not the one expected by the method.
+    #[error("invalid walk type: expected {expected}")]
+    InvalidWalkType {
+        /// Human-readable description of the expected walk type, e.g. `"Brownian"`.
+        expected: &'static str,
     },
+
+    /// Autocorrelation parameter is outside the required `[-1, 1]` interval.
+    #[error("autocorrelation {value} must lie in [-1, 1]")]
+    InvalidAutocorrelation {
+        /// The offending autocorrelation value.
+        value: Decimal,
+    },
+
+    /// GARCH stationarity constraint `alpha + beta < 1` violated.
+    #[error("GARCH stationarity violated: alpha ({alpha}) + beta ({beta}) must be < 1")]
+    GarchStationarity {
+        /// The GARCH alpha coefficient.
+        alpha: Positive,
+        /// The GARCH beta coefficient.
+        beta: Positive,
+    },
+
+    /// Heston correlation `rho` is outside the valid `[-1, 1]` interval.
+    #[error("Heston correlation rho {rho} must lie in [-1, 1]")]
+    InvalidCorrelation {
+        /// The offending correlation value.
+        rho: Decimal,
+    },
+
+    /// Not enough historical price observations to generate the requested walk.
+    #[error("historical walk requires at least {required} observations, found {found}")]
+    InsufficientHistoricalData {
+        /// Minimum number of observations required.
+        required: usize,
+        /// Number of observations actually available.
+        found: usize,
+    },
+
+    /// Failed to convert the x-axis step index into a `Decimal`.
+    #[error("cannot convert x-axis step index to Decimal")]
+    IndexConversion,
+
+    /// The simulated expiration has already been reached, no further steps
+    /// can be generated.
+    #[error("cannot generate next step: expiration date already reached")]
+    ExpirationReached,
+
+    /// Decimal arithmetic error surfaced from pricing or Greek calculations.
+    #[error(transparent)]
+    Decimal(#[from] DecimalError),
+
+    /// Options domain error surfaced during simulation.
+    #[error(transparent)]
+    Options(#[from] OptionsError),
+
+    /// Pricing error surfaced during simulation.
+    #[error(transparent)]
+    Pricing(#[from] PricingError),
+
+    /// Expiration-date conversion error.
+    #[error(transparent)]
+    ExpirationDate(#[from] ExpirationDateError),
+
+    /// Strategy-layer error surfaced during simulation.
+    #[error(transparent)]
+    Strategy(Box<StrategyError>),
+
+    /// Chain domain error surfaced during simulation.
+    #[error(transparent)]
+    Chain(Box<ChainError>),
 
     /// Error during graph generation.
     #[error(transparent)]
@@ -50,6 +121,8 @@ impl SimulationError {
     ///
     /// # Arguments
     /// * `reason` - Detailed reason for the walk generation failure
+    #[must_use]
+    #[inline]
     pub fn walk_error(reason: &str) -> Self {
         SimulationError::WalkError {
             reason: reason.to_string(),
@@ -60,6 +133,8 @@ impl SimulationError {
     ///
     /// # Arguments
     /// * `reason` - Detailed reason for the invalid parameters
+    #[must_use]
+    #[inline]
     pub fn invalid_parameters(reason: &str) -> Self {
         SimulationError::InvalidParameters {
             reason: reason.to_string(),
@@ -70,90 +145,26 @@ impl SimulationError {
     ///
     /// # Arguments
     /// * `reason` - Detailed reason for the step calculation failure
+    #[must_use]
+    #[inline]
     pub fn step_error(reason: &str) -> Self {
         SimulationError::StepError {
             reason: reason.to_string(),
         }
     }
-
-    /// Creates a new `OtherError` variant.
-    ///
-    /// # Arguments
-    /// * `reason` - Detailed reason for the error
-    pub fn other(reason: &str) -> Self {
-        SimulationError::OtherError {
-            reason: reason.to_string(),
-        }
-    }
-}
-
-impl From<Box<dyn std::error::Error>> for SimulationError {
-    fn from(err: Box<dyn std::error::Error>) -> Self {
-        SimulationError::OtherError {
-            reason: err.to_string(),
-        }
-    }
-}
-
-impl From<String> for SimulationError {
-    fn from(s: String) -> Self {
-        SimulationError::OtherError { reason: s }
-    }
-}
-
-impl From<&str> for SimulationError {
-    fn from(s: &str) -> Self {
-        SimulationError::OtherError {
-            reason: s.to_string(),
-        }
-    }
-}
-
-impl From<DecimalError> for SimulationError {
-    fn from(err: DecimalError) -> Self {
-        SimulationError::OtherError {
-            reason: err.to_string(),
-        }
-    }
-}
-
-impl From<crate::error::OptionsError> for SimulationError {
-    fn from(err: crate::error::OptionsError) -> Self {
-        SimulationError::OtherError {
-            reason: err.to_string(),
-        }
-    }
-}
-
-impl From<crate::error::PricingError> for SimulationError {
-    fn from(err: crate::error::PricingError) -> Self {
-        SimulationError::OtherError {
-            reason: err.to_string(),
-        }
-    }
-}
-
-impl From<expiration_date::error::ExpirationDateError> for SimulationError {
-    fn from(err: expiration_date::error::ExpirationDateError) -> Self {
-        SimulationError::OtherError {
-            reason: err.to_string(),
-        }
-    }
 }
 
 impl From<StrategyError> for SimulationError {
+    #[inline]
     fn from(err: StrategyError) -> Self {
-        SimulationError::OtherError {
-            reason: err.to_string(),
-        }
+        SimulationError::Strategy(Box::new(err))
     }
 }
 
-impl From<crate::error::ChainError> for SimulationError {
-    fn from(err: crate::error::ChainError) -> Self {
-        SimulationError::OtherError {
-            reason: err.to_string(),
-        }
+impl From<ChainError> for SimulationError {
+    #[inline]
+    fn from(err: ChainError) -> Self {
+        SimulationError::Chain(Box::new(err))
     }
 }
 

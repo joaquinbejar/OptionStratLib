@@ -94,7 +94,8 @@ use thiserror::Error;
 /// * `PriceError` - Errors related to price parameters, such as invalid underlying
 ///   prices or invalid price ranges.
 ///
-/// * `StdError` - Standard errors from external systems or libraries, wrapped as strings.
+/// * `NoPositions` - No positions available for probability analysis.
+/// * `MissingMetric` - A required metric is missing from the strategy evaluation.
 ///
 /// * `NoPositions` - Error indicating that no positions were available for analysis.
 ///
@@ -133,19 +134,19 @@ pub enum ProbabilityError {
     #[error("Price error: {0}")]
     PriceError(PriceErrorKind),
 
-    /// Standard error from an external system or library
-    ///
-    /// Contains a string description of an error from a standard library
-    /// or external dependency.
-    #[error("Standard error: {0}")]
-    StdError(String),
-
     /// Error indicating no positions are available for analysis
     ///
     /// Contains a string description explaining why positions are missing
     /// or why they cannot be analyzed.
     #[error("No positions available: {0}")]
     NoPositions(String),
+
+    /// A required metric is missing from the strategy evaluation.
+    #[error("missing metric `{metric}` for probability analysis")]
+    MissingMetric {
+        /// Identifier of the missing metric (e.g. `"max_profit"`).
+        metric: &'static str,
+    },
 
     /// Positive value errors
     #[error(transparent)]
@@ -375,108 +376,98 @@ pub enum PriceErrorKind {
     },
 }
 
-impl From<Box<dyn std::error::Error>> for ProbabilityError {
-    fn from(error: Box<dyn std::error::Error>) -> Self {
-        ProbabilityError::StdError(error.to_string())
-    }
-}
-
 impl From<GreeksError> for ProbabilityError {
+    #[inline]
     fn from(error: GreeksError) -> Self {
-        ProbabilityError::StdError(error.to_string())
+        ProbabilityError::CalculationError(ProbabilityCalculationErrorKind::ExpectedValueError {
+            reason: error.to_string(),
+        })
     }
 }
 
 impl From<crate::error::PricingError> for ProbabilityError {
+    #[inline]
     fn from(error: crate::error::PricingError) -> Self {
-        ProbabilityError::StdError(error.to_string())
+        ProbabilityError::CalculationError(ProbabilityCalculationErrorKind::ExpectedValueError {
+            reason: error.to_string(),
+        })
     }
 }
 
 impl From<crate::error::DecimalError> for ProbabilityError {
+    #[inline]
     fn from(error: crate::error::DecimalError) -> Self {
-        ProbabilityError::StdError(error.to_string())
+        ProbabilityError::CalculationError(ProbabilityCalculationErrorKind::ExpectedValueError {
+            reason: error.to_string(),
+        })
     }
 }
 
 /// Convenient type alias for Results with ProbabilityError
 pub type ProbabilityResult<T> = Result<T, ProbabilityError>;
 
-// Implementation of From<String> for compatibility with existing code
-impl From<String> for ProbabilityError {
-    fn from(msg: String) -> Self {
-        ProbabilityError::CalculationError(ProbabilityCalculationErrorKind::ExpectedValueError {
-            reason: msg,
-        })
-    }
-}
-
-impl From<&str> for ProbabilityError {
-    fn from(msg: &str) -> Self {
-        ProbabilityError::CalculationError(ProbabilityCalculationErrorKind::ExpectedValueError {
-            reason: msg.to_string(),
-        })
-    }
-}
-
 impl From<StrategyError> for ProbabilityError {
     fn from(error: StrategyError) -> Self {
+        let reason = |r: String| {
+            ProbabilityError::CalculationError(
+                ProbabilityCalculationErrorKind::ExpectedValueError { reason: r },
+            )
+        };
         match error {
             StrategyError::ProfitLossError(kind) => match kind {
-                ProfitLossErrorKind::MaxProfitError { reason }
-                | ProfitLossErrorKind::MaxLossError { reason }
-                | ProfitLossErrorKind::ProfitRangeError { reason } => {
-                    ProbabilityError::from(reason)
-                }
+                ProfitLossErrorKind::MaxProfitError { reason: r }
+                | ProfitLossErrorKind::MaxLossError { reason: r }
+                | ProfitLossErrorKind::ProfitRangeError { reason: r } => reason(r),
             },
             StrategyError::PriceError(kind) => match kind {
-                crate::error::strategies::PriceErrorKind::InvalidUnderlyingPrice { reason }
+                crate::error::strategies::PriceErrorKind::InvalidUnderlyingPrice { reason: r }
                 | crate::error::strategies::PriceErrorKind::InvalidPriceRange {
                     start: _,
                     end: _,
-                    reason,
-                } => ProbabilityError::from(reason),
+                    reason: r,
+                } => reason(r),
             },
             StrategyError::BreakEvenError(kind) => match kind {
-                BreakEvenErrorKind::CalculationError { reason } => ProbabilityError::from(reason),
+                BreakEvenErrorKind::CalculationError { reason: r } => reason(r),
                 BreakEvenErrorKind::NoBreakEvenPoints => {
-                    ProbabilityError::from("No break-even points found".to_string())
+                    reason("No break-even points found".to_string())
                 }
             },
             StrategyError::OperationError(kind) => match kind {
                 OperationErrorKind::NotSupported {
                     operation,
                     reason: strategy_type,
-                } => ProbabilityError::from(format!(
+                } => reason(format!(
                     "Operation '{operation}' not supported for strategy '{strategy_type}'"
                 )),
-                OperationErrorKind::InvalidParameters { operation, reason } => {
-                    ProbabilityError::from(format!(
-                        "Invalid parameters for operation '{operation}': {reason}"
-                    ))
-                }
+                OperationErrorKind::InvalidParameters {
+                    operation,
+                    reason: r,
+                } => reason(format!(
+                    "Invalid parameters for operation '{operation}': {r}"
+                )),
             },
-            StrategyError::StdError { reason: msg } => ProbabilityError::StdError(msg),
-            StrategyError::NotImplemented => {
-                ProbabilityError::StdError("Strategy not implemented".to_string())
-            }
-            StrategyError::GreeksError(err) => ProbabilityError::StdError(err.to_string()),
-            StrategyError::PositiveError(err) => ProbabilityError::StdError(err.to_string()),
-            StrategyError::NumericConversion { value } => ProbabilityError::StdError(format!(
+            StrategyError::NotImplemented => reason("Strategy not implemented".to_string()),
+            StrategyError::GreeksError(err) => reason(err.to_string()),
+            StrategyError::PositiveError(err) => reason(err.to_string()),
+            StrategyError::Simulation(err) => reason(err.to_string()),
+            StrategyError::NumericConversion { value } => reason(format!(
                 "numeric conversion failed: {value} is not a finite Decimal"
             )),
-            StrategyError::MissingGreek { name } => {
-                ProbabilityError::StdError(format!("missing greek `{name}`"))
-            }
+            StrategyError::MissingGreek { name } => reason(format!("missing greek `{name}`")),
             StrategyError::EmptyCollection { context } => {
-                ProbabilityError::StdError(format!("empty collection: {context}"))
+                reason(format!("empty collection: {context}"))
             }
         }
     }
 }
+
 impl From<expiration_date::error::ExpirationDateError> for ProbabilityError {
+    #[inline]
     fn from(err: expiration_date::error::ExpirationDateError) -> Self {
-        ProbabilityError::StdError(err.to_string())
+        ProbabilityError::CalculationError(ProbabilityCalculationErrorKind::ExpectedValueError {
+            reason: err.to_string(),
+        })
     }
 }
 
@@ -543,14 +534,14 @@ mod tests {
     }
 
     #[test]
-    fn test_string_conversion() {
-        let error = ProbabilityError::from("Test error message".to_string());
-        assert!(matches!(
-            error,
-            ProbabilityError::CalculationError(
-                ProbabilityCalculationErrorKind::ExpectedValueError { .. }
-            )
-        ));
+    fn test_missing_metric_variant() {
+        let error = ProbabilityError::MissingMetric {
+            metric: "max_profit",
+        };
+        assert_eq!(
+            error.to_string(),
+            "missing metric `max_profit` for probability analysis"
+        );
     }
 
     #[test]
@@ -579,17 +570,6 @@ mod tests {
         assert!(error.to_string().contains("Price cannot be negative"));
         assert!(error.to_string().contains("-10"));
     }
-
-    #[test]
-    fn test_str_conversion() {
-        let error = ProbabilityError::from("Test error message");
-        assert!(matches!(
-            error,
-            ProbabilityError::CalculationError(
-                ProbabilityCalculationErrorKind::ExpectedValueError { .. }
-            )
-        ));
-    }
 }
 
 #[cfg(test)]
@@ -604,17 +584,6 @@ mod tests_extended {
             error,
             ProbabilityError::CalculationError(
                 ProbabilityCalculationErrorKind::InvalidProbability { .. }
-            )
-        ));
-    }
-
-    #[test]
-    fn test_string_conversion() {
-        let error = ProbabilityError::from("Test error message".to_string());
-        assert!(matches!(
-            error,
-            ProbabilityError::CalculationError(
-                ProbabilityCalculationErrorKind::ExpectedValueError { .. }
             )
         ));
     }
@@ -712,11 +681,15 @@ mod tests_extended {
     }
 
     #[test]
-    fn test_box_dyn_error_conversion() {
-        let io_error = std::io::Error::other("test error");
-        let boxed_error: Box<dyn std::error::Error> = Box::new(io_error);
-        let prob_error = ProbabilityError::from(boxed_error);
-        assert!(matches!(prob_error, ProbabilityError::StdError(..)));
+    fn test_greeks_error_conversion() {
+        let greeks_error = GreeksError::invalid_volatility(-0.5, "negative");
+        let prob_error: ProbabilityError = greeks_error.into();
+        assert!(matches!(
+            prob_error,
+            ProbabilityError::CalculationError(
+                ProbabilityCalculationErrorKind::ExpectedValueError { .. }
+            )
+        ));
     }
 
     #[test]
@@ -736,9 +709,14 @@ mod tests_extended {
     }
 
     #[test]
-    fn test_probability_error_std_error() {
-        let error = ProbabilityError::StdError("Calculation failed".to_string());
-        assert_eq!(format!("{error}"), "Standard error: Calculation failed");
+    fn test_probability_error_missing_metric() {
+        let error = ProbabilityError::MissingMetric {
+            metric: "max_profit",
+        };
+        assert_eq!(
+            format!("{error}"),
+            "missing metric `max_profit` for probability analysis"
+        );
     }
 
     #[test]
@@ -812,17 +790,17 @@ mod tests_extended {
     }
 
     #[test]
-    fn test_strategy_error_std_error() {
-        let error = StrategyError::StdError {
-            reason: "General strategy failure".to_string(),
-        };
-
-        let converted_error: ProbabilityError = error.into();
-
-        assert_eq!(
-            format!("{converted_error}"),
-            "Standard error: General strategy failure"
-        );
+    fn test_strategy_error_simulation_conversion() {
+        let strategy_error = StrategyError::Simulation(Box::new(
+            crate::error::SimulationError::walk_error("simulation failed"),
+        ));
+        let converted_error: ProbabilityError = strategy_error.into();
+        assert!(matches!(
+            converted_error,
+            ProbabilityError::CalculationError(
+                ProbabilityCalculationErrorKind::ExpectedValueError { .. }
+            )
+        ));
     }
 
     #[test]
@@ -901,12 +879,13 @@ mod tests_extended {
             operation: "Calculate P/L".to_string(),
             reason: "Invalid input values".to_string(),
         };
-        let converted_error: ProbabilityError =
-            ProbabilityError::from(format!("Invalid parameters for operation {error}"));
-        assert_eq!(
-            format!("{converted_error}"),
-            "Probability calculation error: Expected value calculation error: Invalid parameters for operation Invalid parameters for operation 'Calculate P/L': Invalid input values"
-        );
+        let converted_error: ProbabilityError = error.into();
+        assert!(matches!(
+            converted_error,
+            ProbabilityError::CalculationError(
+                ProbabilityCalculationErrorKind::ExpectedValueError { .. }
+            )
+        ));
     }
 
     #[test]

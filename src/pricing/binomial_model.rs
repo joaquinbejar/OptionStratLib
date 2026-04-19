@@ -195,7 +195,7 @@ pub fn price_binomial(params: BinomialPricingParams) -> Result<Decimal, PricingE
 /// use positive::pos_or_panic;
 /// use optionstratlib::pricing::binomial_model::{BinomialPricingParams, generate_binomial_tree};
 /// use positive::Positive;
-/// # fn run() -> Result<(), Box<dyn std::error::Error>> {
+/// # fn run() -> Result<(), optionstratlib::error::Error> {
 /// let params = BinomialPricingParams {
 ///             asset: Positive::HUNDRED,
 ///             volatility: pos_or_panic!(0.2),

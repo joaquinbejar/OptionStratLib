@@ -106,10 +106,14 @@ pub enum CurveError {
         OperationErrorKind,
     ),
 
-    /// Standard error with additional context
-    #[error("Error: {reason}")]
-    StdError {
-        /// Detailed explanation of the error
+    /// A rendering operation failed. Preserves the backend discriminator so
+    /// callers can distinguish plotters output paths from other backends
+    /// without resorting to a `String` catch-all.
+    #[error("rendering failed ({backend}): {reason}")]
+    RenderError {
+        /// Identifier of the rendering backend that failed (e.g. `"plotters"`).
+        backend: &'static str,
+        /// Detailed, human-readable reason for the failure.
         reason: String,
     },
 
@@ -292,53 +296,6 @@ impl From<GraphError> for CurveError {
     }
 }
 
-impl From<Box<dyn std::error::Error>> for CurveError {
-    fn from(err: Box<dyn std::error::Error>) -> Self {
-        CurveError::StdError {
-            reason: err.to_string(),
-        }
-    }
-}
-
-/// Implements the `From` trait to enable seamless conversion from a boxed `dyn Error`
-/// into a `CurvesError`. This is particularly useful for integrating standard error
-/// handling mechanisms with the custom `CurvesError` type.
-///
-/// # Behavior
-///
-/// When constructing a `CurveError` from a `Box<dyn std::error::Error>`, the `StdError` variant
-/// is utilized. The boxed error is unwrapped, and its string representation
-/// (via `to_string`) is used to populate the `reason` field of the `StdError` variant.
-///
-/// # Parameters
-///
-/// - `err`: A boxed standard error (`Box<dyn std::error::Error>`). Represents the error to be
-///   wrapped within a `CurveError` variant.
-///
-/// # Returns
-///
-/// - `CurvesError::StdError`: The custom error type with a detailed `reason`
-///   string derived from the provided error.
-///
-/// # Usage
-///
-/// This implementation is commonly employed when you need to bridge standard Rust
-/// errors with the specific error handling system provided by the `curves` module.
-/// It facilitates scenarios where standard error contexts need to be preserved
-/// in a flexible, string-based `reason` for debugging or logging purposes.
-///
-/// # Example Scenario
-///
-/// Instead of handling standard errors separately, you can propagate them as `CurvesError`
-/// within the larger error system of the `curves` module, ensuring consistent error
-/// wrapping and management.
-///
-/// # Notes
-///
-/// - This implementation assumes that all input errors (`Box<dyn std::error::Error>`) are stringifiable
-///   using the `to_string()` method.
-/// - This conversion is particularly useful for libraries integrating generalized errors
-///   (e.g., I/O errors, or third-party library errors) into a standardized error system.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -351,10 +308,14 @@ mod tests {
         };
         assert_eq!(error.to_string(), "Error: Invalid coordinates");
 
-        let error = CurveError::StdError {
-            reason: "Standard error".to_string(),
+        let error = CurveError::RenderError {
+            backend: "plotters",
+            reason: "rendering failed".to_string(),
         };
-        assert_eq!(error.to_string(), "Error: Standard error");
+        assert_eq!(
+            error.to_string(),
+            "rendering failed (plotters): rendering failed"
+        );
 
         let error = CurveError::operation_not_supported("calculate", "Strategy");
         assert_eq!(
@@ -403,11 +364,16 @@ mod tests {
     }
 
     #[test]
-    fn test_from_box_dyn_error() {
-        let boxed_error: Box<dyn std::error::Error> = Box::new(std::io::Error::other("io error"));
-        let curves_error = CurveError::from(boxed_error);
-        match curves_error {
-            CurveError::StdError { reason } => assert_eq!(reason, "io error"),
+    fn test_render_error_constructor() {
+        let error = CurveError::RenderError {
+            backend: "plotters",
+            reason: "Draw error".to_string(),
+        };
+        match error {
+            CurveError::RenderError { backend, reason } => {
+                assert_eq!(backend, "plotters");
+                assert_eq!(reason, "Draw error");
+            }
             _ => panic!("Wrong error variant"),
         }
     }
@@ -432,7 +398,8 @@ mod tests {
         };
         assert!(format!("{error:?}").contains("test debug"));
 
-        let error = CurveError::StdError {
+        let error = CurveError::RenderError {
+            backend: "plotters",
             reason: "test debug".to_string(),
         };
         assert!(format!("{error:?}").contains("test debug"));
