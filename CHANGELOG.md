@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.16.1] - 2026-04-19
+
+Hot-fix for CI flakiness introduced by sub-day `ExpirationDate`
+arithmetic in test fixtures, plus a doc-link warning.
+
+### Fixed
+
+- Chain test fixtures (`create_test_option_chain`) now use
+  `get_x_days_formatted(30)` instead of `get_tomorrow_formatted()`.
+  `Actual365Fixed::day_count` in `expiration_date 0.2.0` truncates
+  to integer days, so tomorrow's fixed 18:30 UTC expiry evaluated
+  after that time collapsed to `t = 0` and broke every
+  Black-Scholes-driven axis on the chain curve/surface tests
+  (`test_curve_multiple_axes`, `test_curve_price_short_put`,
+  `test_surface_different_greeks`, `test_vanna_surface`). 30 days
+  puts every test well above the integer-truncation boundary.
+- `constants.rs`: `MAX_NEWTON_ITER` no longer links to the private
+  `MAX_ITERATIONS_IV` — the doc just names the crate-private
+  counterpart in prose, so `cargo doc` emits zero warnings again.
+
+[Unreleased]: https://github.com/joaquinbejar/OptionStratLib/compare/v0.16.1...HEAD
+[0.16.1]: https://github.com/joaquinbejar/OptionStratLib/releases/tag/v0.16.1
+
 ## [0.16.0] - 2026-04-19
 
 Breaking release. Focus: panic-free core, arithmetic discipline,
@@ -82,5 +105,4 @@ attributes, docs, and test hygiene.
 - `#[must_use]` applied across the pure / builder public
   surface to catch discarded results at compile time.
 
-[Unreleased]: https://github.com/joaquinbejar/OptionStratLib/compare/v0.16.0...HEAD
 [0.16.0]: https://github.com/joaquinbejar/OptionStratLib/releases/tag/v0.16.0
