@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.16.2] - 2026-04-19
+
+Hot-fix for two panic / I/O bugs caught while running every example
+binary under `examples/`.
+
+### Fixed
+
+- Strategy P&L / break-even arithmetic crossed the `Positive`
+  boundary without a guard and panicked mid-optimizer-scan
+  (`Positive invariant broken in add_decimal / sub`) in:
+  - `CallButterfly::update_break_even_points`,
+  - `CallButterfly::get_profit_area`,
+  - `LongButterflySpread::update_break_even_points`,
+  - `BullPutSpread::get_max_loss`.
+  All four sites now lower to `Decimal`, then rewrap via
+  `Positive::new_decimal(..)` — invalid candidates are dropped
+  cleanly or surfaced as typed `StrategyError` instead of
+  panicking. Unblocks `strategy_call_butterfly_best_{area,ratio}`,
+  `strategy_long_butterfly_spread_best_{area,ratio}`,
+  `strategy_call_butterfly_delta`, and
+  `strategy_bull_put_spread_extended_delta` examples. (#387)
+- `examples_chain::async_chain_ops` was passing a filename where a
+  directory was expected and failing with `ENOENT`; it now writes
+  under `std::env::temp_dir()/optionstratlib-async-chain-ops` and
+  creates the directory up front. (#388)
+- `examples_chain::creator` pointed at a Germany-40 JSON file that
+  was never committed; now reads the one that ships in
+  `examples/Chains/`. (#388)
+
+[Unreleased]: https://github.com/joaquinbejar/OptionStratLib/compare/v0.16.2...HEAD
+[0.16.2]: https://github.com/joaquinbejar/OptionStratLib/releases/tag/v0.16.2
+
 ## [0.16.1] - 2026-04-19
 
 Hot-fix for CI flakiness introduced by sub-day `ExpirationDate`
@@ -27,7 +59,6 @@ arithmetic in test fixtures, plus a doc-link warning.
   `MAX_ITERATIONS_IV` — the doc just names the crate-private
   counterpart in prose, so `cargo doc` emits zero warnings again.
 
-[Unreleased]: https://github.com/joaquinbejar/OptionStratLib/compare/v0.16.1...HEAD
 [0.16.1]: https://github.com/joaquinbejar/OptionStratLib/releases/tag/v0.16.1
 
 ## [0.16.0] - 2026-04-19
