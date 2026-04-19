@@ -135,6 +135,14 @@ pub trait PriceShockSurface {
     /// - `Ok(Surface)`: The shock surface with price on x-axis,
     ///   volatility on y-axis, and option value on z-axis
     /// - `Err(SurfaceError)`: If the surface cannot be computed
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SurfaceError::ConstructionError`] when the price or
+    /// volatility ranges yield an empty sampling grid, and propagates
+    /// any [`SurfaceError::Point3DError`] or
+    /// [`SurfaceError::OperationError`] raised while evaluating the
+    /// option at each `(price, volatility)` sample.
     fn price_shock_surface(
         &self,
         price_range: (Positive, Positive),

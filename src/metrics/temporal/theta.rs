@@ -134,6 +134,13 @@ pub trait ThetaSurface {
     /// - `Ok(Surface)`: The theta surface with price on x-axis,
     ///   days on y-axis, and theta on z-axis
     /// - `Err(SurfaceError)`: If the surface cannot be computed
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SurfaceError::ConstructionError`] when the sampling
+    /// grid is empty, and propagates [`SurfaceError::Point3DError`] or
+    /// [`SurfaceError::OperationError`] from the intermediate
+    /// [`theta`] evaluation at each `(price, days)` sample.
     fn theta_surface(
         &self,
         price_range: (Positive, Positive),

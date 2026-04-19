@@ -133,6 +133,14 @@ pub trait VolatilitySensitivitySurface {
     /// - `Ok(Surface)`: The sensitivity surface with price on x-axis,
     ///   volatility on y-axis, and option value on z-axis
     /// - `Err(SurfaceError)`: If the surface cannot be computed
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SurfaceError::ConstructionError`] when the price or
+    /// volatility ranges yield an empty sampling grid, and propagates
+    /// [`SurfaceError::Point3DError`] or
+    /// [`SurfaceError::OperationError`] from the underlying Black–Scholes
+    /// evaluator at each `(price, volatility)` sample.
     fn volatility_sensitivity_surface(
         &self,
         price_range: (Positive, Positive),

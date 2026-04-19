@@ -226,6 +226,13 @@ pub trait Profit {
     ///
     /// * `Result<Decimal, PricingError>` - The calculated profit as a Decimal value,
     ///   or an error if the calculation fails
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PricingError::MethodError`] when the strategy cannot
+    /// evaluate its payoff at `price` (typically propagated from the
+    /// underlying [`Position::pnl_at_expiration`] or Black–Scholes
+    /// evaluation).
     fn calculate_profit_at(&self, price: &Positive) -> Result<Decimal, PricingError>;
 
     /// Creates a chart point representation of the profit at the given price.
@@ -241,6 +248,11 @@ pub trait Profit {
     ///
     /// * `ChartPoint<(f64, f64)>` - A formatted chart point with coordinates (price, profit),
     ///   styling, and a formatted profit label
+    ///
+    /// # Errors
+    ///
+    /// Propagates any [`PricingError`] returned by
+    /// [`Profit::calculate_profit_at`].
     fn get_point_at_price(&self, _price: &Positive) -> Result<(Decimal, Decimal), PricingError> {
         let profit = self.calculate_profit_at(_price)?;
         let price: Decimal = _price.into();

@@ -14,6 +14,14 @@ use rust_decimal_macros::dec;
 
 /// Prices a barrier option using the Black-Scholes analytical extension.
 /// Supports Down-And-In, Up-And-In, Down-And-Out, and Up-And-Out variants.
+///
+/// # Errors
+///
+/// Returns [`PricingError::UnsupportedOptionType`] when `option`
+/// is not a [`OptionType::Barrier`] variant, and propagates any
+/// [`PricingError`] raised by the underlying Black\u2013Scholes closed
+/// form on the decomposed vanilla components (typically
+/// [`PricingError::ExpirationDate`] or [`PricingError::Positive`]).
 pub fn barrier_black_scholes(option: &Options) -> Result<Decimal, PricingError> {
     let (barrier_type, barrier_level, rebate) = match &option.option_type {
         OptionType::Barrier {

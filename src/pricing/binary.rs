@@ -49,6 +49,14 @@ const DEFAULT_CASH_PAYOUT: Decimal = dec!(1.0);
 /// # Returns
 ///
 /// The option price as a `Decimal`, or a `PricingError` if pricing fails.
+///
+/// # Errors
+///
+/// Returns [`PricingError::UnsupportedOptionType`] when `option` is
+/// not an [`OptionType::Binary`] variant, and propagates any
+/// [`PricingError`] raised by intermediate Black–Scholes kernels
+/// (typically [`PricingError::ExpirationDate`] or
+/// [`PricingError::Positive`]).
 pub fn binary_black_scholes(option: &Options) -> Result<Decimal, PricingError> {
     match &option.option_type {
         OptionType::Binary { binary_type } => match binary_type {

@@ -33,6 +33,13 @@ use rust_decimal_macros::dec;
 /// A Result containing either:
 /// - Ok(`Vec<Decimal>`): A vector of simulated returns as Decimal numbers
 /// - Err(DecimalError): If there's an error in decimal calculations
+///
+/// # Errors
+///
+/// Returns [`DecimalError::ConversionError`] when the sampled normal
+/// variate cannot be represented as a `Decimal` (e.g. NaN or out-of-range
+/// float), and [`DecimalError::ArithmeticError`] when the
+/// `mean + std_dev * z` combination overflows the `Decimal` range.
 pub fn simulate_returns(
     mean: Decimal,
     std_dev: Positive,

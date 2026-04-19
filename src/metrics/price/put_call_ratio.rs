@@ -125,6 +125,13 @@ pub trait PutCallRatioCurve {
     /// # Note
     /// - The `Curve` returned should ideally conform to the constraints and
     ///   ordering requirements specified in the `Curve` documentation.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`CurveError::ConstructionError`] when the premium data
+    /// cannot be aggregated into a monotonic curve (e.g. empty chain or
+    /// non-finite premium values), and may propagate
+    /// [`CurveError::InterpolationError`] from downstream smoothing.
     fn premium_weighted_pcr(&self) -> Result<Curve, CurveError>;
 }
 

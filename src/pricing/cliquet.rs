@@ -39,6 +39,13 @@ use rust_decimal_macros::dec;
 /// # Returns
 ///
 /// The option price as a `Decimal`, or a `PricingError` if pricing fails.
+///
+/// # Errors
+///
+/// Returns [`PricingError::UnsupportedOptionType`] when `option` is
+/// not an [`OptionType::Cliquet`] variant, and propagates any
+/// [`PricingError`] raised by intermediate Black–Scholes kernels on
+/// the per-reset forward components.
 pub fn cliquet_black_scholes(option: &Options) -> Result<Decimal, PricingError> {
     match &option.option_type {
         OptionType::Cliquet { reset_dates } => price_cliquet(option, reset_dates),

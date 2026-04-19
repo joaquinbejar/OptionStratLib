@@ -207,6 +207,13 @@ fn standard_normal_cdf(x: f64) -> f64 {
 /// # Returns
 ///
 /// The option price as a `Decimal`, or a `PricingError` if pricing fails.
+///
+/// # Errors
+///
+/// Returns [`PricingError::UnsupportedOptionType`] when `option` is
+/// not an [`OptionType::Compound`] variant, and propagates any
+/// [`PricingError`] raised by the Black–Scholes evaluation of the
+/// outer option on the inner-option implied value.
 pub fn compound_black_scholes(option: &Options) -> Result<Decimal, PricingError> {
     match &option.option_type {
         OptionType::Compound { underlying_option } => price_compound(option, underlying_option),

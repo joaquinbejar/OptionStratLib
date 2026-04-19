@@ -57,6 +57,14 @@ use tracing::trace;
 /// - `d1 = (ln(S/K) + (r + σ²/2) * T) / (σ * √T)`
 /// - `d2 = d1 - σ * √T`
 ///
+/// # Errors
+///
+/// Returns [`PricingError::ExpirationDate`] when the expiration
+/// cannot be converted to a positive year fraction,
+/// [`PricingError::MethodError`] when the `d1`/`d2` evaluation hits a
+/// numerical wall (e.g. zero volatility or non-finite intermediate
+/// value), and [`PricingError::UnsupportedOptionType`] for exotic
+/// option types not handled by the closed form.
 pub fn black_scholes(option: &Options) -> Result<Decimal, PricingError> {
     let (d1, d2, expiry_time) = calculate_d1_d2_and_time(option)?;
     match option.option_type {
@@ -282,6 +290,12 @@ pub trait BlackScholes {
     ///
     /// * `Result<&Options, PricingError>` - A reference to the Options struct on success,
     ///   or an error if the option data cannot be retrieved.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PricingError::MethodError`] when the implementor
+    /// cannot resolve the current option (e.g. a placeholder wrapper
+    /// before the option has been bound to a trade or position).
     fn get_option(&self) -> Result<&Options, PricingError>;
 
     /// Calculates the price of the option using the Black-Scholes model.
@@ -293,6 +307,13 @@ pub trait BlackScholes {
     ///
     /// * `Result<Decimal, PricingError>` - The calculated option price as a Decimal
     ///   on success, or an error if the calculation fails.
+    ///
+    /// # Errors
+    ///
+    /// Propagates any [`PricingError`] returned by
+    /// [`BlackScholesOption::get_option`] or by [`black_scholes`]
+    /// (typically [`PricingError::ExpirationDate`] or
+    /// [`PricingError::MethodError`]).
     fn calculate_price_black_scholes(&self) -> Result<Decimal, PricingError> {
         let option = self.get_option()?;
         black_scholes(option)

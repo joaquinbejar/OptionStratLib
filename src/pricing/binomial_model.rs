@@ -91,6 +91,14 @@ pub struct BinomialPricingParams<'a> {
 /// - The model's accuracy increases with the number of steps, but so does the computation time.
 /// - This model assumes that the underlying asset follows a multiplicative binomial process.
 /// - For American options, this model accounts for the possibility of early exercise.
+///
+/// # Errors
+///
+/// Returns [`PricingError::SqrtFailure`] when the up-factor exponent
+/// produces an invalid `Decimal`, [`PricingError::BinomialNodeMissing`]
+/// when the induction step cannot read an intermediate node, and
+/// [`PricingError::Positive`] when any `Positive` construction
+/// downstream (e.g. strike × discount factor) underflows below zero.
 pub fn price_binomial(params: BinomialPricingParams) -> Result<Decimal, PricingError> {
     let mut info = PayoffInfo {
         spot: params.asset,
@@ -211,6 +219,15 @@ pub fn price_binomial(params: BinomialPricingParams) -> Result<Decimal, PricingE
 /// # Ok(())
 /// # }
 /// ```
+///
+/// # Errors
+///
+/// Same failure surface as [`price_binomial`]:
+/// [`PricingError::SqrtFailure`] when the up-factor exponent cannot
+/// be represented, [`PricingError::BinomialNodeMissing`] when an
+/// intermediate node of the lattice is unexpectedly absent, and
+/// [`PricingError::Positive`] when a `Positive` construction
+/// downstream underflows.
 pub fn generate_binomial_tree(params: &BinomialPricingParams) -> BinomialTreeResult {
     let mut info = PayoffInfo {
         spot: params.asset,

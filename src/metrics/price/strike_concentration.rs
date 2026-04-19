@@ -108,6 +108,13 @@ pub trait StrikeConcentrationCurve {
     /// # Note
     /// - The `Curve` returned should ideally conform to the constraints and
     ///   ordering requirements specified in the `Curve` documentation.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`CurveError::ConstructionError`] when the per-strike
+    /// concentration cannot be computed (empty chain, invalid premium
+    /// weights, or denominator underflow), and may propagate
+    /// [`CurveError::InterpolationError`] from downstream smoothing.
     fn premium_concentration(&self) -> Result<Curve, CurveError>;
 }
 

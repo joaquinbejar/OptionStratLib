@@ -129,6 +129,14 @@ pub trait TimeDecaySurface {
     /// - `Ok(Surface)`: The decay surface with price on x-axis,
     ///   days on y-axis, and option value on z-axis
     /// - `Err(SurfaceError)`: If the surface cannot be computed
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SurfaceError::ConstructionError`] when the sampling
+    /// grid is empty or when all samples fail price evaluation, and
+    /// propagates [`SurfaceError::Point3DError`] or
+    /// [`SurfaceError::OperationError`] from the underlying Black–Scholes
+    /// evaluator at each `(price, days)` sample.
     fn time_decay_surface(
         &self,
         price_range: (Positive, Positive),
