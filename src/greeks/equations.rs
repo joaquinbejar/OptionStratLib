@@ -39,7 +39,7 @@ use utoipa::ToSchema;
 /// * `color`: Measures the rate of change of gamma in relation to changes in time
 ///
 /// These metrics help traders understand and manage the various dimensions of risk in option positions.
-#[derive(PartialEq, Clone, DebugPretty, DisplaySimple, ToSchema, Serialize)]
+#[derive(DebugPretty, DisplaySimple, Clone, PartialEq, Serialize, ToSchema)]
 pub struct Greek {
     /// Measures sensitivity to changes in the underlying asset's price (first derivative)
     pub delta: Decimal,
@@ -75,6 +75,7 @@ pub struct Greek {
 /// and deserialization for storage or communication purposes, and implements common traits like
 /// `Debug`, `Clone`, and `PartialEq`.
 #[derive(DebugPretty, DisplaySimple, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
 pub struct GreeksSnapshot {
     /// Measures sensitivity to changes in the underlying asset's price (first derivative)
     pub delta: Decimal,

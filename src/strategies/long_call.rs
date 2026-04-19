@@ -59,7 +59,7 @@ pub(super) const LONG_CALL_DESCRIPTION: &str = "A Long Call is an options strate
 /// This structure leverages the `Clone`, `Debug`, `Serialize`, and `Deserialize` traits for ease of duplication,
 /// debugging, and storage/transfer as structured data.
 ///
-#[derive(Clone, DebugPretty, DisplaySimple, Serialize, Deserialize, ToSchema)]
+#[derive(DebugPretty, DisplaySimple, Clone, Serialize, Deserialize, ToSchema)]
 pub struct LongCall {
     /// Name identifier for this specific strategy instance
     pub name: String,

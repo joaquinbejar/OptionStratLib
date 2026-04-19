@@ -49,7 +49,7 @@ use utoipa::ToSchema;
 ///   - Analyze curve properties for more accurate modeling and representation.
 ///   - Identify key points that define the geometric behavior of a curve.
 ///
-#[derive(Clone, DebugPretty, DisplaySimple, ToSchema, Serialize)]
+#[derive(DebugPretty, DisplaySimple, Clone, Serialize, ToSchema)]
 pub struct AnalysisResult {
     /// The fundamental statistical metrics of the dataset, including measures of
     /// central tendency (mean, median, mode) and dispersion (standard deviation).

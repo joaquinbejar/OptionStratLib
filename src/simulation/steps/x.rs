@@ -41,7 +41,7 @@ use tracing::debug;
 /// * `datetime` - The specific expiration date associated with this time step,
 ///   which can be either a relative number of days or an absolute datetime.
 ///
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct Xstep<T>
 where
     T: Copy + TryInto<Positive> + AddAssign + Display,

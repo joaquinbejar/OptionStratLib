@@ -50,7 +50,9 @@ use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 /// Margin type for perpetual positions.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
+#[repr(u8)]
 pub enum MarginType {
     /// Cross margin - shares margin across all positions
     Cross,
@@ -87,7 +89,7 @@ impl std::fmt::Display for MarginType {
 /// * `funding_rate` - Current funding rate (updated periodically)
 /// * `date` - Position open timestamp
 /// * `fees` - Trading fees (maker/taker)
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
 pub struct PerpetualPosition {
     /// Trading pair symbol (e.g., "BTC-USDT-PERP").
     pub symbol: String,

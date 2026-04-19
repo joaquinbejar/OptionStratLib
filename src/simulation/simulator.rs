@@ -38,6 +38,7 @@ use std::ops::{AddAssign, Index, IndexMut};
 ///
 /// Note: This struct is generic and requires types provided for both state (`X`) and step/transition (`Y`) that meet the respective
 /// trait bounds.
+#[derive(Debug, Clone)]
 pub struct Simulator<X, Y>
 where
     X: Copy + TryInto<Positive> + AddAssign + Display,

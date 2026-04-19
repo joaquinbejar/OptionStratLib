@@ -52,7 +52,8 @@
 /// This enum is part of a modular design, with each interpolation type defined in its own
 /// module for clarity and separation of concerns.
 ///
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[repr(u8)]
 pub enum InterpolationType {
     /// Linear interpolation that calculates values by drawing straight lines between data points.
     /// Efficient but may lack smoothness for certain applications.

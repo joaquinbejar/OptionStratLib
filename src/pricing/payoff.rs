@@ -64,7 +64,7 @@ pub trait Payoff {
 /// This structure is typically used within the options pricing module to calculate
 /// the final payoff value of different option types at expiration or exercise.
 ///
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct PayoffInfo {
     /// * `spot` - The current market price of the underlying asset.
     ///   This value is used as the reference price for calculating option payoffs.
