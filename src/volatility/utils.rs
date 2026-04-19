@@ -21,6 +21,7 @@ use positive::Positive;
 use rand::random;
 use rayon::prelude::*;
 use rust_decimal::{Decimal, MathematicalOps};
+use tracing::instrument;
 
 #[cfg(test)]
 use positive::pos_or_panic;
@@ -219,6 +220,11 @@ pub fn ewma_volatility(
 /// `VolatilityError::PositiveError` when the boundary `Positive`
 /// conversion fails. Black–Scholes errors on individual candidates
 /// are discarded by the parallel filter rather than propagated.
+#[instrument(skip(options), fields(
+    market_price = %market_price,
+    strike = %options.strike_price,
+    max_iterations,
+))]
 pub fn implied_volatility(
     market_price: Positive,
     options: &mut Options,

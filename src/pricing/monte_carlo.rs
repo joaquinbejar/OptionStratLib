@@ -6,6 +6,7 @@ use num_traits::{FromPrimitive, ToPrimitive};
 use positive::Positive;
 use rust_decimal::{Decimal, MathematicalOps};
 use std::num::NonZeroUsize;
+use tracing::instrument;
 
 /// This function performs Monte Carlo simulation to price an option.
 ///
@@ -42,6 +43,13 @@ use std::num::NonZeroUsize;
 /// encounters a non-finite value (e.g. volatility overflow) or when
 /// the terminal payoff averaging produces a non-representable
 /// `Decimal`.
+#[instrument(skip(option), fields(
+    steps = steps.get(),
+    simulations = simulations.get(),
+    strike = %option.strike_price,
+    style = ?option.option_style,
+    side = ?option.side,
+))]
 pub fn monte_carlo_option_pricing(
     option: &Options,
     steps: NonZeroUsize,       // Number of time steps per path

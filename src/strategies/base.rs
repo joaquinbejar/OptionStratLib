@@ -31,7 +31,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::str::FromStr;
-use tracing::{error, warn};
+use tracing::{error, instrument, warn};
 use utoipa::ToSchema;
 
 /// Represents basic information about a trading strategy.
@@ -1309,6 +1309,7 @@ pub trait Optimizable: Validable + Strategies {
     /// # Arguments
     /// * `option_chain` - A reference to the `OptionChain` containing option data.
     /// * `side` - A `FindOptimalSide` value specifying the filtering strategy.
+    #[instrument(skip(self, option_chain), fields(side = ?side, criteria = "Ratio"))]
     fn get_best_ratio(&mut self, option_chain: &OptionChain, side: FindOptimalSide) {
         self.find_optimal(option_chain, side, OptimizationCriteria::Ratio);
     }
@@ -1318,6 +1319,7 @@ pub trait Optimizable: Validable + Strategies {
     /// # Arguments
     /// * `option_chain` - A reference to the `OptionChain` containing option data.
     /// * `side` - A `FindOptimalSide` value specifying the filtering strategy.
+    #[instrument(skip(self, option_chain), fields(side = ?side, criteria = "Area"))]
     fn get_best_area(&mut self, option_chain: &OptionChain, side: FindOptimalSide) {
         self.find_optimal(option_chain, side, OptimizationCriteria::Area);
     }
