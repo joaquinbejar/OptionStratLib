@@ -79,7 +79,7 @@
 use crate::Options;
 use crate::error::PricingError;
 use crate::error::decimal::DecimalError;
-use crate::model::decimal::d_mul;
+use crate::model::decimal::{d_mul, finite_decimal};
 use crate::prelude::simulate_returns;
 use num_traits::{FromPrimitive, ToPrimitive};
 use rand::random;
@@ -343,8 +343,8 @@ pub fn telegraph(
     })?;
     let dt = option.time_to_expiration()?.to_dec() / no_steps_dec;
 
-    let one_over_252 = Decimal::from_f64(1.0 / 252.0).ok_or_else(|| {
-        PricingError::method_error("telegraph", "could not represent 1/252 as Decimal")
+    let one_over_252 = finite_decimal(1.0 / 252.0).ok_or_else(|| {
+        PricingError::non_finite("pricing::telegraph::one_over_252", 1.0 / 252.0)
     })?;
 
     let (lambda_up_temp, lambda_down_temp) = match (lambda_up, lambda_down) {
@@ -374,8 +374,9 @@ pub fn telegraph(
     for _ in 0..no_steps {
         let state = telegraph_process.next_state(dt);
         let drift: Decimal = option.risk_free_rate - dec!(0.5) * option.implied_volatility.powi(2);
-        let state_dec = Decimal::from_f64(state as f64).ok_or_else(|| {
-            PricingError::method_error("telegraph", &format!("non-finite state: {state}"))
+        let state_f64 = state as f64;
+        let state_dec = finite_decimal(state_f64).ok_or_else(|| {
+            PricingError::non_finite("pricing::telegraph::state_dec", state_f64)
         })?;
         let volatility: Decimal = option.implied_volatility.to_dec() * state_dec;
 
@@ -386,9 +387,8 @@ pub fn telegraph(
             PricingError::method_error("telegraph", "sqrt(dt) not representable as f64")
         })?;
         let rh_f64 = sqrt_dt_f64 * random::<f64>();
-        let rh = Decimal::from_f64(rh_f64).ok_or_else(|| {
-            PricingError::method_error("telegraph", &format!("non-finite rh: {rh_f64}"))
-        })?;
+        let rh = finite_decimal(rh_f64)
+            .ok_or_else(|| PricingError::non_finite("pricing::telegraph::rh", rh_f64))?;
         let lhs = drift * dt + volatility;
 
         let update = (lhs * rh).exp();

@@ -115,7 +115,7 @@ pub fn price_binomial(params: BinomialPricingParams) -> Result<Decimal, PricingE
         return Ok(intrinsic_value);
     }
     if params.volatility == Decimal::ZERO {
-        return Ok(calculate_discounted_payoff(params)?);
+        return calculate_discounted_payoff(params);
     }
 
     let dt = (params.expiry / Positive::new(params.no_steps as f64)?).to_dec();

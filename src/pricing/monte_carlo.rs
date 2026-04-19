@@ -1,7 +1,6 @@
 use crate::Options;
 use crate::error::PricingError;
-use crate::f2d;
-use crate::model::decimal::{d_div, d_mul, d_sub};
+use crate::model::decimal::{d_div, d_mul, d_sub, finite_decimal};
 use crate::pricing::utils::wiener_increment;
 use num_traits::{FromPrimitive, ToPrimitive};
 use positive::Positive;
@@ -65,26 +64,60 @@ pub fn monte_carlo_option_pricing(
         )?
         .max(Decimal::ZERO);
         let payoff: f64 = payoff_dec.to_f64().ok_or_else(|| {
-            PricingError::method_error(
-                "monte_carlo_option_pricing",
-                &format!("payoff not representable as f64: {payoff_dec}"),
+            PricingError::non_finite(
+                "pricing::monte_carlo::gbm::payoff_cast",
+                f64::NAN,
             )
         })?;
+        if !payoff.is_finite() {
+            return Err(PricingError::non_finite(
+                "pricing::monte_carlo::gbm::payoff",
+                payoff,
+            ));
+        }
         payoff_sum += payoff;
     }
-    // Average value of the payoffs discounted to present value
+    // Average value of the payoffs discounted to present value.
+    // Guard every `f64` boundary against NaN / ±∞ so saturation on
+    // the rate, the discount exponent, or the final average surfaces
+    // a tagged `PricingError::NonFinite` instead of silently collapsing
+    // to `Decimal::ZERO` through the `f2d!` cast.
     let rate_f64 = option.risk_free_rate.to_f64().ok_or_else(|| {
-        PricingError::method_error(
-            "monte_carlo_option_pricing",
-            &format!(
-                "risk_free_rate not representable as f64: {}",
-                option.risk_free_rate
-            ),
+        PricingError::non_finite(
+            "pricing::monte_carlo::rate_f64::cast",
+            f64::NAN,
         )
     })?;
-    let average_payoff =
-        (payoff_sum / simulations as f64) * (-rate_f64 * option.expiration_date.get_years()?).exp();
-    Ok(f2d!(average_payoff))
+    if !rate_f64.is_finite() {
+        return Err(PricingError::non_finite(
+            "pricing::monte_carlo::rate_f64",
+            rate_f64,
+        ));
+    }
+    let years = option.expiration_date.get_years()?.to_f64();
+    if !years.is_finite() {
+        return Err(PricingError::non_finite(
+            "pricing::monte_carlo::years",
+            years,
+        ));
+    }
+    let discount = (-rate_f64 * years).exp();
+    if !discount.is_finite() {
+        return Err(PricingError::non_finite(
+            "pricing::monte_carlo::discount",
+            discount,
+        ));
+    }
+    let average_payoff = (payoff_sum / simulations as f64) * discount;
+    if !average_payoff.is_finite() {
+        return Err(PricingError::non_finite(
+            "pricing::monte_carlo::average_payoff",
+            average_payoff,
+        ));
+    }
+    finite_decimal(average_payoff).ok_or_else(|| {
+        PricingError::non_finite("pricing::monte_carlo::average_payoff::cast", average_payoff)
+    })
 }
 
 /// Estimates the price of a financial option using the Monte Carlo simulation method.

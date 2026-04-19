@@ -210,6 +210,36 @@ pub fn f64_to_decimal(value: f64) -> Result<Decimal, DecimalError> {
     })
 }
 
+/// Attempts to convert a finite `f64` into a `Decimal`.
+///
+/// Returns `None` when `value` is not finite (`NaN`, `+∞`, `-∞`) or
+/// when `Decimal::from_f64` rejects the conversion (the latter is
+/// vanishingly rare for representable `f64`). Crate-private helper
+/// that standardises the `is_finite()` check paired with
+/// `Decimal::from_f64` at every `f64` → `Decimal` boundary inside
+/// pricing, Greeks, volatility, and simulation kernels.
+///
+/// Callers wrap the `None` case with a domain-specific
+/// `*Error::NonFinite { context, value }` via `ok_or_else`:
+///
+/// ```ignore
+/// let v = finite_decimal(v_f64)
+///     .ok_or_else(|| PricingError::non_finite("pricing::bs::call::d1", v_f64))?;
+/// ```
+///
+/// The guard is enforced at the public boundary of every `f64`
+/// numerical kernel per the rules (`rules/global_rules.md`
+/// §Arithmetic).
+#[must_use]
+#[inline]
+pub(crate) fn finite_decimal(value: f64) -> Option<Decimal> {
+    if value.is_finite() {
+        Decimal::from_f64(value)
+    } else {
+        None
+    }
+}
+
 /// Generates a random positive value from a standard normal distribution.
 ///
 /// This function samples from a normal distribution with mean 0.0 and standard

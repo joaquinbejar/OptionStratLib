@@ -7,9 +7,8 @@
 use crate::Options;
 use crate::error::PricingError;
 use crate::greeks::big_n;
-use crate::model::decimal::{d_add, d_sub};
+use crate::model::decimal::{d_add, d_sub, finite_decimal};
 use crate::model::types::{BarrierType, OptionStyle, OptionType};
-use rust_decimal::prelude::FromPrimitive;
 use rust_decimal::{Decimal, MathematicalOps};
 use rust_decimal_macros::dec;
 
@@ -30,18 +29,15 @@ pub fn barrier_black_scholes(option: &Options) -> Result<Decimal, PricingError> 
             barrier_level,
             rebate,
         } => {
-            let bl = Decimal::from_f64(*barrier_level).ok_or_else(|| {
-                PricingError::method_error(
-                    "barrier_black_scholes",
-                    &format!("non-finite barrier_level: {barrier_level}"),
+            let bl = finite_decimal(*barrier_level).ok_or_else(|| {
+                PricingError::non_finite(
+                    "pricing::barrier::barrier_level",
+                    *barrier_level,
                 )
             })?;
             let rebate_f = rebate.unwrap_or(0.0);
-            let rb = Decimal::from_f64(rebate_f).ok_or_else(|| {
-                PricingError::method_error(
-                    "barrier_black_scholes",
-                    &format!("non-finite rebate: {rebate_f}"),
-                )
+            let rb = finite_decimal(rebate_f).ok_or_else(|| {
+                PricingError::non_finite("pricing::barrier::rebate", rebate_f)
             })?;
             (barrier_type, bl, rb)
         }
@@ -401,5 +397,29 @@ mod tests {
         );
         // Barrier Greeks can be negative and have higher magnitudes than vanilla
         tracing::debug!(delta = %delta, gamma = %gamma, vega = %vega, rho = %rho, "Barrier Greeks");
+    }
+
+    #[test]
+    fn barrier_level_nan_surfaces_non_finite() {
+        let option = create_test_option(OptionStyle::Call, BarrierType::DownAndOut, f64::NAN);
+        match barrier_black_scholes(&option) {
+            Err(PricingError::NonFinite { context, value }) => {
+                assert_eq!(context, "pricing::barrier::barrier_level");
+                assert!(value.is_nan());
+            }
+            other => panic!("expected NonFinite barrier_level, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn barrier_level_infinity_surfaces_non_finite() {
+        let option = create_test_option(OptionStyle::Call, BarrierType::UpAndIn, f64::INFINITY);
+        match barrier_black_scholes(&option) {
+            Err(PricingError::NonFinite { context, value }) => {
+                assert_eq!(context, "pricing::barrier::barrier_level");
+                assert!(value.is_infinite());
+            }
+            other => panic!("expected NonFinite barrier_level, got {other:?}"),
+        }
     }
 }
