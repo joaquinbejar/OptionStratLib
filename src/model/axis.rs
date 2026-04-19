@@ -16,8 +16,10 @@ use serde::{Deserialize, Serialize};
 /// - Create parameter surfaces (e.g., volatility surface)
 /// - Define dimensions for multi-dimensional analysis
 /// - Specify which metrics to calculate or display
+// NOTE: `#[serde(rename_all = "snake_case")]` intentionally omitted — existing
+// consumers rely on the Pascal-case wire format (`"Delta"`, `"Volatility"`),
+// enforced by `tests_basic_axis_types::test_specific_serialization_format`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
 #[repr(u8)]
 pub enum BasicAxisTypes {
     /// Sensitivity of option price to changes in underlying price (first derivative)
@@ -133,13 +135,9 @@ impl Iterator for BasicAxisTypesIter {
     type Item = BasicAxisTypes;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.index < BasicAxisTypes::VALUES.len() {
-            let value = BasicAxisTypes::VALUES[self.index];
-            self.index += 1;
-            Some(value)
-        } else {
-            None
-        }
+        let value = *BasicAxisTypes::VALUES.get(self.index)?;
+        self.index += 1;
+        Some(value)
     }
 }
 
