@@ -85,6 +85,7 @@ use num_traits::{FromPrimitive, ToPrimitive};
 use rand::random;
 use rust_decimal::{Decimal, MathematicalOps};
 use rust_decimal_macros::dec;
+use std::num::NonZeroUsize;
 use tracing::warn;
 
 /// Represents a Telegraph Process, a two-state continuous-time Markov chain model
@@ -327,19 +328,14 @@ pub(crate) fn estimate_telegraph_parameters(
 /// terminal averaging yields a non-finite value.
 pub fn telegraph(
     option: &Options,
-    no_steps: usize,
+    no_steps: NonZeroUsize,
     lambda_up: Option<Decimal>,
     lambda_down: Option<Decimal>,
 ) -> Result<Decimal, PricingError> {
-    if no_steps == 0 {
-        return Err(PricingError::method_error(
-            "telegraph",
-            "no_steps must be greater than 0",
-        ));
-    }
+    let no_steps_raw = no_steps.get();
     let mut price = option.underlying_price;
-    let no_steps_dec = Decimal::from_usize(no_steps).ok_or_else(|| {
-        PricingError::method_error("telegraph", &format!("invalid no_steps: {no_steps}"))
+    let no_steps_dec = Decimal::from_usize(no_steps_raw).ok_or_else(|| {
+        PricingError::method_error("telegraph", &format!("invalid no_steps: {no_steps_raw}"))
     })?;
     let dt = option.time_to_expiration()?.to_dec() / no_steps_dec;
 
@@ -371,7 +367,7 @@ pub fn telegraph(
 
     let tp = telegraph_process;
     let mut telegraph_process = tp.clone();
-    for _ in 0..no_steps {
+    for _ in 0..no_steps_raw {
         let state = telegraph_process.next_state(dt);
         let drift: Decimal = option.risk_free_rate - dec!(0.5) * option.implied_volatility.powi(2);
         let state_f64 = state as f64;
@@ -511,7 +507,7 @@ mod tests_telegraph_process_basis {
             exotic_params: None,
         };
 
-        let _price = telegraph(&option, 1000, Some(dec!(0.7)), Some(dec!(0.5)));
+        let _price = telegraph(&option, crate::nz!(1000), Some(dec!(0.7)), Some(dec!(0.5)));
         // price is stochastic
         // assert_relative_eq!(price, 0.0, epsilon = 0.0001);
     }
@@ -624,22 +620,22 @@ mod tests_telegraph_process_extended {
     #[test]
     fn test_telegraph_with_provided_parameters() {
         let option = create_mock_option();
-        let _price = telegraph(&option, 100, Some(dec!(0.5)), Some(dec!(0.5)));
+        let _price = telegraph(&option, crate::nz!(100), Some(dec!(0.5)), Some(dec!(0.5)));
         // assert!(price > 0.0);
     }
 
     #[test]
     fn test_telegraph_with_estimated_parameters() {
         let option = create_mock_option();
-        let _price = telegraph(&option, 100, None, None);
+        let _price = telegraph(&option, crate::nz!(100), None, None);
         // assert!(price > 0.0);
     }
 
     #[test]
     fn test_telegraph_with_one_estimated_parameter() {
         let option = create_mock_option();
-        let _price_up = telegraph(&option, 100, Some(dec!(0.5)), None);
-        let _price_down = telegraph(&option, 100, None, Some(dec!(0.5)));
+        let _price_up = telegraph(&option, crate::nz!(100), Some(dec!(0.5)), None);
+        let _price_down = telegraph(&option, crate::nz!(100), None, Some(dec!(0.5)));
 
         // assert!(price_up > 0.0);
         // assert!(price_down > 0.0);
@@ -648,8 +644,8 @@ mod tests_telegraph_process_extended {
     #[test]
     fn test_telegraph_different_no_steps() {
         let option = create_mock_option();
-        let _price_100 = telegraph(&option, 100, Some(dec!(0.5)), Some(dec!(0.5)));
-        let _price_1000 = telegraph(&option, 1000, Some(dec!(0.5)), Some(dec!(0.5)));
+        let _price_100 = telegraph(&option, crate::nz!(100), Some(dec!(0.5)), Some(dec!(0.5)));
+        let _price_1000 = telegraph(&option, crate::nz!(1000), Some(dec!(0.5)), Some(dec!(0.5)));
 
         // assert!(price_100 > 0.0);
         // assert!(price_1000 > 0.0);
@@ -660,7 +656,7 @@ mod tests_telegraph_process_extended {
     fn test_telegraph_zero_volatility() {
         let mut option = create_mock_option();
         option.implied_volatility = Positive::ZERO;
-        let _price = telegraph(&option, 100, Some(dec!(0.5)), Some(dec!(0.5)));
+        let _price = telegraph(&option, crate::nz!(100), Some(dec!(0.5)), Some(dec!(0.5)));
         // assert_relative_eq!(price, 0.0, epsilon = 1e-6);
     }
 
@@ -668,14 +664,14 @@ mod tests_telegraph_process_extended {
     fn test_telegraph_zero_risk_free_rate() {
         let mut option = create_mock_option();
         option.risk_free_rate = Decimal::ZERO;
-        let _price = telegraph(&option, 100, Some(dec!(0.5)), Some(dec!(0.5)));
+        let _price = telegraph(&option, crate::nz!(100), Some(dec!(0.5)), Some(dec!(0.5)));
         // assert!(price > 0.0);
     }
 
     #[test]
     fn test_telegraph_zero_time_to_expiration() {
         let option = create_mock_option();
-        let price = telegraph(&option, 100, Some(dec!(0.5)), Some(dec!(0.5))).unwrap();
+        let price = telegraph(&option, crate::nz!(100), Some(dec!(0.5)), Some(dec!(0.5))).unwrap();
         assert_eq!(
             price,
             option.payoff_at_price(&option.underlying_price).unwrap()

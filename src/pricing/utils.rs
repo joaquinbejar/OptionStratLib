@@ -283,7 +283,7 @@ pub(crate) fn calculate_option_price(
     i: usize,
 ) -> Result<Decimal, PricingError> {
     let info = PayoffInfo {
-        spot: params.asset * u.powu(i as u64) * d.powi((params.no_steps - i) as i64),
+        spot: params.asset * u.powu(i as u64) * d.powi((params.no_steps.get() - i) as i64),
         strike: params.strike,
         style: *params.option_style,
         side: *params.side,

@@ -5,6 +5,7 @@ use crate::pricing::utils::wiener_increment;
 use num_traits::{FromPrimitive, ToPrimitive};
 use positive::Positive;
 use rust_decimal::{Decimal, MathematicalOps};
+use std::num::NonZeroUsize;
 
 /// This function performs Monte Carlo simulation to price an option.
 ///
@@ -43,15 +44,17 @@ use rust_decimal::{Decimal, MathematicalOps};
 /// `Decimal`.
 pub fn monte_carlo_option_pricing(
     option: &Options,
-    steps: usize,       // Number of time steps
-    simulations: usize, // Number of Monte Carlo simulations
+    steps: NonZeroUsize,       // Number of time steps per path
+    simulations: NonZeroUsize, // Number of Monte Carlo simulations
 ) -> Result<Decimal, PricingError> {
-    let dt = option.expiration_date.get_years()? / steps as f64;
+    let steps_raw = steps.get();
+    let simulations_raw = simulations.get();
+    let dt = option.expiration_date.get_years()? / steps_raw as f64;
     let mut payoff_sum = 0.0;
 
-    for _ in 0..simulations {
+    for _ in 0..simulations_raw {
         let mut st = option.underlying_price.to_dec();
-        for _ in 0..steps {
+        for _ in 0..steps_raw {
             let w = wiener_increment(dt.to_dec())?;
             st *=
                 Decimal::ONE + option.risk_free_rate * dt + option.implied_volatility.to_dec() * w;
@@ -108,7 +111,7 @@ pub fn monte_carlo_option_pricing(
             discount,
         ));
     }
-    let average_payoff = (payoff_sum / simulations as f64) * discount;
+    let average_payoff = (payoff_sum / simulations_raw as f64) * discount;
     if !average_payoff.is_finite() {
         return Err(PricingError::non_finite(
             "pricing::monte_carlo::average_payoff",
@@ -228,7 +231,7 @@ mod tests {
     #[test]
     fn test_monte_carlo_option_pricing_at_the_money() {
         let option = create_test_option();
-        let price = monte_carlo_option_pricing(&option, 252, 1000).unwrap();
+        let price = monte_carlo_option_pricing(&option, crate::nz!(252), crate::nz!(1000)).unwrap();
         // The price should be close to the Black-Scholes price for these parameters
         let expected_price = dec!(9.100); // Calculated using Black-Scholes
         assert_decimal_eq!(price, expected_price, dec!(5));
@@ -238,7 +241,7 @@ mod tests {
     fn test_monte_carlo_option_pricing_zero_volatility() {
         let mut option = create_test_option();
         option.implied_volatility = Positive::ZERO;
-        let price = monte_carlo_option_pricing(&option, 25, 100).unwrap();
+        let price = monte_carlo_option_pricing(&option, crate::nz!(25), crate::nz!(100)).unwrap();
         let expected_price = f64::max(
             (option.underlying_price - option.strike_price * (-option.risk_free_rate).exp()).into(),
             ZERO,
@@ -250,7 +253,7 @@ mod tests {
     fn test_monte_carlo_option_pricing_high_volatility() {
         let mut option = create_test_option();
         option.implied_volatility = pos_or_panic!(0.5);
-        let price = monte_carlo_option_pricing(&option, 252, 100).unwrap();
+        let price = monte_carlo_option_pricing(&option, crate::nz!(252), crate::nz!(100)).unwrap();
         // The price should be higher with higher volatility
         assert!(price > dec!(10.0));
     }
@@ -259,7 +262,7 @@ mod tests {
     fn test_monte_carlo_option_pricing_short_expiration() {
         let mut option = create_test_option();
         option.expiration_date = ExpirationDate::Days(pos_or_panic!(30.0)); // 30 days
-        let price = monte_carlo_option_pricing(&option, 30, 100).unwrap();
+        let price = monte_carlo_option_pricing(&option, crate::nz!(30), crate::nz!(100)).unwrap();
         // The price should be lower for a shorter expiration
         assert!(price < dec!(5.0));
     }
@@ -267,8 +270,8 @@ mod tests {
     #[test]
     fn test_monte_carlo_option_pricing_consistency() {
         let option = create_test_option();
-        let _price1 = monte_carlo_option_pricing(&option, 100, 100).unwrap();
-        let _price2 = monte_carlo_option_pricing(&option, 100, 100).unwrap();
+        let _price1 = monte_carlo_option_pricing(&option, crate::nz!(100), crate::nz!(100)).unwrap();
+        let _price2 = monte_carlo_option_pricing(&option, crate::nz!(100), crate::nz!(100)).unwrap();
         // Two runs should produce similar results
         // assert_relative_eq!(price1, price2,  0.05);
     }

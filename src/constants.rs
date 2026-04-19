@@ -6,6 +6,7 @@
 use positive::Positive;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
+use std::num::NonZeroUsize;
 use std::sync::LazyLock;
 
 /// Mathematical constant representing π (pi) with high precision using Decimal type.
@@ -125,3 +126,35 @@ pub(crate) const MAX_ITERATIONS_IV: u32 = 1000;
 /// Convergence tolerance for implied volatility calculations.
 /// Determines when the implied volatility solver has reached sufficient precision.
 pub(crate) const IV_TOLERANCE: Decimal = dec!(1e-5);
+
+/// Default number of binomial-tree steps for `calculate_price_binomial` and
+/// related lattice-based pricers.
+///
+/// Typed as `NonZeroUsize` so the type system enforces the non-zero invariant
+/// at call sites, matching the public signatures migrated in #337.
+pub const DEFAULT_BINOMIAL_STEPS: NonZeroUsize = match NonZeroUsize::new(100) {
+    Some(n) => n,
+    None => unreachable!(),
+};
+
+/// Default number of Monte-Carlo simulation paths used by
+/// `monte_carlo_option_pricing` and related samplers.
+pub const DEFAULT_MC_PATHS: NonZeroUsize = match NonZeroUsize::new(10_000) {
+    Some(n) => n,
+    None => unreachable!(),
+};
+
+/// Default number of time steps per Monte-Carlo path.
+pub const DEFAULT_MC_STEPS: NonZeroUsize = match NonZeroUsize::new(252) {
+    Some(n) => n,
+    None => unreachable!(),
+};
+
+/// Maximum Newton-Raphson iterations used by implied-volatility solvers.
+///
+/// Typed as `NonZeroUsize`; see [`MAX_ITERATIONS_IV`] for the `u32`
+/// diagnostic counterpart surfaced through `VolatilityError`.
+pub const MAX_NEWTON_ITER: NonZeroUsize = match NonZeroUsize::new(100) {
+    Some(n) => n,
+    None => unreachable!(),
+};

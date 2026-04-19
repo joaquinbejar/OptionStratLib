@@ -25,6 +25,7 @@ use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
+use std::num::NonZeroUsize;
 use tracing::{error, trace};
 use utoipa::ToSchema;
 
@@ -306,8 +307,11 @@ impl Options {
     ///
     /// # Parameters
     ///
-    /// * `no_steps` - The number of steps to use in the binomial tree calculation.
-    ///   Higher values increase accuracy but also computational cost.
+    /// * `no_steps` - The number of steps to use in the binomial tree calculation,
+    ///   as a [`NonZeroUsize`] so zero is structurally invalid at the type level
+    ///   (no runtime check required). Higher values increase accuracy but also
+    ///   computational cost. See [`crate::constants::DEFAULT_BINOMIAL_STEPS`]
+    ///   for a sensible default.
     ///
     /// # Returns
     ///
@@ -316,16 +320,10 @@ impl Options {
     ///
     /// # Errors
     ///
-    /// Returns an `OptionsError::OtherError` if:
-    /// * The number of steps is zero
+    /// Returns an `OptionsError` if:
     /// * The time to expiration calculation fails
     /// * The binomial price calculation fails
-    pub fn calculate_price_binomial(&self, no_steps: usize) -> OptionsResult<Decimal> {
-        if no_steps == 0 {
-            return Err(OptionsError::InvalidStepCount {
-                operation: "binomial",
-            });
-        }
+    pub fn calculate_price_binomial(&self, no_steps: NonZeroUsize) -> OptionsResult<Decimal> {
         let expiry = self.time_to_expiration()?;
         let cpb = price_binomial(BinomialPricingParams {
             asset: self.underlying_price,
@@ -349,8 +347,9 @@ impl Options {
     ///
     /// # Parameters
     ///
-    /// * `no_steps` - The number of discrete time steps to use in the model. Higher values
-    ///   increase precision but also computational cost.
+    /// * `no_steps` - The number of discrete time steps to use in the model,
+    ///   as a [`NonZeroUsize`] so zero is structurally invalid at the type
+    ///   level. Higher values increase precision but also computational cost.
     ///
     /// # Returns
     ///
@@ -368,7 +367,7 @@ impl Options {
     /// cannot be converted to a positive year fraction, or propagates any
     /// `PricingError` surfaced by [`generate_binomial_tree`] (e.g.
     /// [`PricingError::BinomialNodeMissing`] or [`PricingError::SqrtFailure`]).
-    pub fn calculate_price_binomial_tree(&self, no_steps: usize) -> PriceBinomialTree {
+    pub fn calculate_price_binomial_tree(&self, no_steps: NonZeroUsize) -> PriceBinomialTree {
         let expiry = self.time_to_expiration()?;
         let params = BinomialPricingParams {
             asset: self.underlying_price,
@@ -444,8 +443,9 @@ impl Options {
     ///
     /// # Parameters
     ///
-    /// * `no_steps` - The number of discrete time steps to use in the model. Higher values
-    ///   increase precision but also computational cost.
+    /// * `no_steps` - The number of discrete time steps to use in the model,
+    ///   as a [`NonZeroUsize`] so zero is structurally invalid at the type
+    ///   level. Higher values increase precision but also computational cost.
     ///
     /// # Returns
     ///
@@ -458,7 +458,7 @@ impl Options {
     /// kernel (wrapped as `OptionsError::PricingError`), typically
     /// `PricingError::ExpirationDate` or `PricingError::MethodError`
     /// when the finite-difference kernel fails to converge.
-    pub fn calculate_price_telegraph(&self, no_steps: usize) -> OptionsResult<Decimal> {
+    pub fn calculate_price_telegraph(&self, no_steps: NonZeroUsize) -> OptionsResult<Decimal> {
         Ok(telegraph(self, no_steps, None, None)?)
     }
 
@@ -1198,14 +1198,14 @@ mod tests_options {
     #[test]
     fn test_calculate_price_binomial() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        let price = option.calculate_price_binomial(100).unwrap();
+        let price = option.calculate_price_binomial(crate::nz!(100)).unwrap();
         assert!(price > Decimal::ZERO);
     }
 
     #[test]
     fn test_calculate_price_binomial_tree() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        let (price, asset_tree, option_tree) = option.calculate_price_binomial_tree(5).unwrap();
+        let (price, asset_tree, option_tree) = option.calculate_price_binomial_tree(crate::nz!(5)).unwrap();
         assert!(price > Decimal::ZERO);
         assert_eq!(asset_tree.len(), 6);
         assert_eq!(option_tree.len(), 6);
@@ -1214,7 +1214,7 @@ mod tests_options {
     #[test]
     fn test_calculate_price_binomial_tree_short() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Short);
-        let (price, asset_tree, option_tree) = option.calculate_price_binomial_tree(5).unwrap();
+        let (price, asset_tree, option_tree) = option.calculate_price_binomial_tree(crate::nz!(5)).unwrap();
         assert!(price > Decimal::ZERO);
         assert_eq!(asset_tree.len(), 6);
         assert_eq!(option_tree.len(), 6);
@@ -2118,7 +2118,7 @@ mod tests_calculate_price_binomial {
     fn test_european_call_option_basic() {
         // Test a basic European call option with standard parameters
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        let result = option.calculate_price_binomial(100);
+        let result = option.calculate_price_binomial(crate::nz!(100));
         assert!(result.is_ok());
         let price = result.unwrap();
         // Price should be positive for a long call at-the-money
@@ -2143,7 +2143,7 @@ mod tests_calculate_price_binomial {
             None,
         );
 
-        let result = option.calculate_price_binomial(100);
+        let result = option.calculate_price_binomial(crate::nz!(100));
         assert!(result.is_ok());
         let price = result.unwrap();
         // Price should be positive and reflect early exercise premium
@@ -2154,7 +2154,7 @@ mod tests_calculate_price_binomial {
     fn test_zero_volatility() {
         let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         option.implied_volatility = Positive::ZERO;
-        let result = option.calculate_price_binomial(100);
+        let result = option.calculate_price_binomial(crate::nz!(100));
         assert!(result.is_ok());
         // With zero volatility, price should equal discounted intrinsic value
     }
@@ -2173,19 +2173,19 @@ mod tests_calculate_price_binomial {
             now,
         );
 
-        let result = option.calculate_price_binomial(100);
+        let result = option.calculate_price_binomial(crate::nz!(100));
         assert!(result.is_ok());
         let price = result.unwrap();
         // At expiry, price should equal intrinsic value
         assert_eq!(price, Decimal::from(5));
     }
 
-    #[test]
-    fn test_invalid_steps() {
-        let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        let result = option.calculate_price_binomial(0);
-        assert!(result.is_err());
-    }
+    // The former `test_invalid_steps` test used to pass `0` to
+    // `calculate_price_binomial` and assert that the runtime guard
+    // returned `InvalidStepCount`. After #337 the signature is
+    // `NonZeroUsize`, so the invariant is enforced at the type level
+    // and the test is now obsolete (cannot construct the invalid
+    // input).
 
     #[test]
     fn test_deep_itm_call() {
@@ -2198,7 +2198,7 @@ mod tests_calculate_price_binomial {
             pos_or_panic!(0.2),
         );
 
-        let result = option.calculate_price_binomial(100);
+        let result = option.calculate_price_binomial(crate::nz!(100));
         assert!(result.is_ok());
         let price = result.unwrap();
         // Price should be close to intrinsic value for deep ITM
@@ -2216,7 +2216,7 @@ mod tests_calculate_price_binomial {
             pos_or_panic!(0.2),
         );
 
-        let result = option.calculate_price_binomial(100);
+        let result = option.calculate_price_binomial(crate::nz!(100));
         assert!(result.is_ok());
         let price = result.unwrap();
         // Price should be very small for deep OTM
@@ -2228,8 +2228,8 @@ mod tests_calculate_price_binomial {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
 
         // Test that increasing steps leads to convergence
-        let price_100 = option.calculate_price_binomial(100).unwrap();
-        let price_1000 = option.calculate_price_binomial(1000).unwrap();
+        let price_100 = option.calculate_price_binomial(crate::nz!(100)).unwrap();
+        let price_1000 = option.calculate_price_binomial(crate::nz!(1000)).unwrap();
 
         // Prices should be close to each other
         let diff = (price_1000 - price_100).abs();
@@ -2246,10 +2246,10 @@ mod tests_calculate_price_binomial {
         let mut long_put_option = short_put_option.clone();
         long_put_option.side = Side::Long;
 
-        let long_call_price = long_call_option.calculate_price_binomial(100).unwrap();
-        let short_call_price = short_call_option.calculate_price_binomial(100).unwrap();
-        let long_put_price = long_put_option.calculate_price_binomial(100).unwrap();
-        let short_put_price = short_put_option.calculate_price_binomial(100).unwrap();
+        let long_call_price = long_call_option.calculate_price_binomial(crate::nz!(100)).unwrap();
+        let short_call_price = short_call_option.calculate_price_binomial(crate::nz!(100)).unwrap();
+        let long_put_price = long_put_option.calculate_price_binomial(crate::nz!(100)).unwrap();
+        let short_put_price = short_put_option.calculate_price_binomial(crate::nz!(100)).unwrap();
 
         // Short position should be negative of long position
         assert_eq!(long_call_price, -short_call_price);

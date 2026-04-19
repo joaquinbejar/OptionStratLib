@@ -432,6 +432,37 @@ macro_rules! d2f {
     };
 }
 
+/// Builds a `NonZeroUsize` from a literal or constant expression.
+///
+/// Ergonomic shorthand for the `NonZeroUsize::new(N).expect(..)` pattern
+/// at call sites that know the value is non-zero by construction (tests,
+/// examples, benchmarks). Use this whenever passing literal step or
+/// simulation counts to one of the public pricing kernels migrated
+/// in #337.
+///
+/// # Panics
+///
+/// Panics with a descriptive message if `$val` evaluates to zero. For
+/// runtime values coming from JSON, CLI, or external APIs prefer
+/// `NonZeroUsize::new(x).ok_or_else(..)` at the boundary instead.
+///
+/// # Examples
+///
+/// ```rust
+/// use optionstratlib::nz;
+/// use std::num::NonZeroUsize;
+///
+/// let steps = nz!(100);
+/// assert_eq!(steps.get(), 100);
+/// ```
+#[macro_export]
+macro_rules! nz {
+    ($val:expr) => {{
+        ::std::num::NonZeroUsize::new($val)
+            .unwrap_or_else(|| panic!("nz!({}) must be non-zero", stringify!($val)))
+    }};
+}
+
 /// Converts an f64 value to Decimal without error checking.
 ///
 /// This macro converts an f64 floating-point value to a Decimal type.

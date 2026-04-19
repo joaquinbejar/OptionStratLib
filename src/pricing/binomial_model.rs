@@ -5,6 +5,7 @@ use crate::pricing::utils::*;
 use crate::{d2f, f2d};
 use positive::Positive;
 use rust_decimal::{Decimal, MathematicalOps};
+use std::num::NonZeroUsize;
 
 #[cfg(test)]
 use positive::pos_or_panic;
@@ -40,9 +41,13 @@ pub struct BinomialPricingParams<'a> {
     /// The time to expiration of the option in years, represented as a positive value.
     pub expiry: Positive,
 
-    /// The number of steps to use in the binomial tree calculation.
-    /// Higher values increase accuracy but also computational cost.
-    pub no_steps: usize,
+    /// The number of steps to use in the binomial tree calculation,
+    /// as a [`NonZeroUsize`] so zero is structurally invalid at the
+    /// type level. Higher values increase accuracy but also
+    /// computational cost. See
+    /// [`crate::constants::DEFAULT_BINOMIAL_STEPS`] for a sensible
+    /// default.
+    pub no_steps: NonZeroUsize,
 
     /// The type of option (European, American, etc.) which determines
     /// when the option can be exercised.
@@ -118,17 +123,18 @@ pub fn price_binomial(params: BinomialPricingParams) -> Result<Decimal, PricingE
         return calculate_discounted_payoff(params);
     }
 
-    let dt = (params.expiry / Positive::new(params.no_steps as f64)?).to_dec();
+    let no_steps_raw = params.no_steps.get();
+    let dt = (params.expiry / Positive::new(no_steps_raw as f64)?).to_dec();
     let u = calculate_up_factor(params.volatility, dt)?;
     let d = calculate_down_factor(params.volatility, dt)?;
     let p = calculate_probability(params.int_rate, dt, d, u)?;
     let discount_factor = calculate_discount_factor(params.int_rate, dt)?;
 
-    let mut prices: Vec<Decimal> = (0..=params.no_steps)
+    let mut prices: Vec<Decimal> = (0..=no_steps_raw)
         .map(|i| calculate_option_price(params.clone(), u, d, i))
         .collect::<Result<Vec<_>, _>>()?;
 
-    for step in (0..params.no_steps).rev() {
+    for step in (0..no_steps_raw).rev() {
         for i in 0..=step {
             let option_value = option_node_value(p, prices[i + 1], prices[i], discount_factor)?;
             match params.option_type {
@@ -200,6 +206,7 @@ pub fn price_binomial(params: BinomialPricingParams) -> Result<Decimal, PricingE
 /// use rust_decimal::Decimal;
 /// use rust_decimal_macros::dec;
 /// use optionstratlib::model::types::{OptionStyle, OptionType, Side};
+/// use optionstratlib::nz;
 /// use positive::pos_or_panic;
 /// use optionstratlib::pricing::binomial_model::{BinomialPricingParams, generate_binomial_tree};
 /// use positive::Positive;
@@ -210,7 +217,7 @@ pub fn price_binomial(params: BinomialPricingParams) -> Result<Decimal, PricingE
 ///             int_rate: dec!(0.05),
 ///             strike: Positive::HUNDRED,
 ///             expiry: Positive::ONE,
-///             no_steps: 1000,
+///             no_steps: nz!(1000),
 ///             option_type: &OptionType::European,
 ///             option_style: &OptionStyle::Call,
 ///             side: &Side::Long,
@@ -239,14 +246,15 @@ pub fn generate_binomial_tree(params: &BinomialPricingParams) -> BinomialTreeRes
         spot_max: None,
     };
 
-    let dt = (params.expiry / f2d!(params.no_steps as f64)).to_dec();
+    let no_steps_raw = params.no_steps.get();
+    let dt = (params.expiry / f2d!(no_steps_raw as f64)).to_dec();
     let up_factor = calculate_up_factor(params.volatility, dt)?;
     let down_factor = calculate_down_factor(params.volatility, dt)?;
     let probability = calculate_probability(params.int_rate, dt, down_factor, up_factor)?;
     let discount_factor = calculate_discount_factor(params.int_rate, dt)?;
 
-    let mut asset_tree = vec![vec![Decimal::ZERO; params.no_steps + 1]; params.no_steps + 1];
-    let mut option_tree = vec![vec![Decimal::ZERO; params.no_steps + 1]; params.no_steps + 1];
+    let mut asset_tree = vec![vec![Decimal::ZERO; no_steps_raw + 1]; no_steps_raw + 1];
+    let mut option_tree = vec![vec![Decimal::ZERO; no_steps_raw + 1]; no_steps_raw + 1];
 
     for (step, step_vec) in asset_tree.iter_mut().enumerate() {
         for (node, node_val) in step_vec.iter_mut().enumerate().take(step + 1) {
@@ -255,16 +263,16 @@ pub fn generate_binomial_tree(params: &BinomialPricingParams) -> BinomialTreeRes
         }
     }
 
-    for (node, node_val) in asset_tree[params.no_steps]
+    for (node, node_val) in asset_tree[no_steps_raw]
         .iter()
         .enumerate()
-        .take(params.no_steps + 1)
+        .take(no_steps_raw + 1)
     {
         info.spot = Positive::new_decimal(*node_val)?;
-        option_tree[params.no_steps][node] = f2d!(params.option_type.payoff(&info));
+        option_tree[no_steps_raw][node] = f2d!(params.option_type.payoff(&info));
     }
 
-    for step in (0..params.no_steps).rev() {
+    for step in (0..no_steps_raw).rev() {
         let (current_step_arr, next_step_arr) = option_tree.split_at_mut(step + 1);
         for (node_idx, node_val) in current_step_arr[step].iter_mut().enumerate().take(step + 1) {
             let node_value =
@@ -329,7 +337,7 @@ mod tests_price_binomial {
             int_rate: dec!(0.05),
             volatility: pos_or_panic!(0.2),
             expiry: Positive::ONE,
-            no_steps: 3,
+            no_steps: crate::nz!(3),
             option_type: &OptionType::European,
             option_style: &OptionStyle::Call,
             side: &Side::Long,
@@ -347,7 +355,7 @@ mod tests_price_binomial {
             int_rate: dec!(0.05),
             strike: Positive::HUNDRED,
             expiry: Positive::ONE,
-            no_steps: 1000,
+            no_steps: crate::nz!(1000),
             option_type: &OptionType::European,
             option_style: &OptionStyle::Put,
             side: &Side::Long,
@@ -365,7 +373,7 @@ mod tests_price_binomial {
             int_rate: dec!(0.05),
             strike: pos_or_panic!(52.0),
             expiry: Positive::ONE,
-            no_steps: 1,
+            no_steps: crate::nz!(1),
             option_type: &OptionType::European,
             option_style: &OptionStyle::Put,
             side: &Side::Long,
@@ -383,7 +391,7 @@ mod tests_price_binomial {
             int_rate: dec!(0.05),
             strike: Positive::HUNDRED,
             expiry: Positive::ONE,
-            no_steps: 1000,
+            no_steps: crate::nz!(1000),
             option_type: &OptionType::European,
             option_style: &OptionStyle::Call,
             side: &Side::Long,
@@ -411,7 +419,7 @@ mod tests_price_binomial {
             int_rate,
             strike,
             expiry,
-            no_steps: 1000,
+            no_steps: crate::nz!(1000),
             option_type: &OptionType::European,
             option_style: &OptionStyle::Call,
             side: &Side::Long,
@@ -433,7 +441,7 @@ mod tests_price_binomial {
             int_rate: dec!(0.05),
             strike: Positive::HUNDRED,
             expiry: Positive::ONE,
-            no_steps: 1000,
+            no_steps: crate::nz!(1000),
             option_type: &OptionType::European,
             option_style: &OptionStyle::Call,
             side: &Side::Long,
@@ -451,7 +459,7 @@ mod tests_price_binomial {
             int_rate: dec!(0.05),
             strike: Positive::HUNDRED,
             expiry: Positive::ONE,
-            no_steps: 1000,
+            no_steps: crate::nz!(1000),
             option_type: &OptionType::European,
             option_style: &OptionStyle::Call,
             side: &Side::Long,
@@ -469,7 +477,7 @@ mod tests_price_binomial {
             int_rate: dec!(0.05),
             strike: Positive::HUNDRED,
             expiry: Positive::ZERO,
-            no_steps: 1000,
+            no_steps: crate::nz!(1000),
             option_type: &OptionType::European,
             option_style: &OptionStyle::Call,
             side: &Side::Long,
@@ -497,7 +505,7 @@ mod tests_generate_binomial_tree {
             int_rate: dec!(0.05),
             volatility: pos_or_panic!(0.2),
             expiry: Positive::ONE,
-            no_steps: 3,
+            no_steps: crate::nz!(3),
             option_type: &OptionType::European,
             option_style: &OptionStyle::Call,
             side: &Side::Long,
@@ -529,7 +537,7 @@ mod tests_generate_binomial_tree {
             int_rate: dec!(0.05),
             volatility: pos_or_panic!(0.2),
             expiry: Positive::ONE,
-            no_steps: 3,
+            no_steps: crate::nz!(3),
             option_type: &OptionType::European,
             option_style: &OptionStyle::Put,
             side: &Side::Long,
@@ -551,7 +559,7 @@ mod tests_generate_binomial_tree {
             expiry: Positive::ONE,
             int_rate: dec!(0.05),
             volatility: pos_or_panic!(0.17),
-            no_steps: 1,
+            no_steps: crate::nz!(1),
             option_type: &OptionType::European,
             option_style: &OptionStyle::Call,
             side: &Side::Long,
@@ -574,7 +582,7 @@ mod tests_generate_binomial_tree {
             expiry: Positive::ONE,
             int_rate: dec!(0.05),
             volatility: pos_or_panic!(0.17),
-            no_steps: 2,
+            no_steps: crate::nz!(2),
             option_type: &OptionType::European,
             option_style: &OptionStyle::Call,
             side: &Side::Long,
@@ -607,7 +615,7 @@ mod tests_generate_binomial_tree {
             expiry: pos_or_panic!(3.0), // Assuming each time step is 1 unit of time
             int_rate: dec!(0.05),
             volatility: pos_or_panic!(0.09531018), // Calculated to match the 10% up/down movement
-            no_steps: 3,
+            no_steps: crate::nz!(3),
             option_type: &OptionType::European,
             option_style: &OptionStyle::Put,
             side: &Side::Long,
@@ -648,7 +656,7 @@ mod tests_generate_binomial_tree {
             int_rate: dec!(0.05),
             strike: pos_or_panic!(52.0),
             expiry: Positive::TWO,
-            no_steps: 2,
+            no_steps: crate::nz!(2),
             option_type: &OptionType::European,
             option_style: &OptionStyle::Put,
             side: &Side::Long,
@@ -679,7 +687,7 @@ mod tests_generate_binomial_tree {
             int_rate: dec!(0.05),
             strike: pos_or_panic!(52.0),
             expiry: Positive::TWO,
-            no_steps: 2,
+            no_steps: crate::nz!(2),
             option_type: &OptionType::American,
             option_style: &OptionStyle::Put,
             side: &Side::Long,
@@ -720,7 +728,7 @@ mod tests_bermuda_option {
             int_rate: dec!(0.05),
             strike: pos_or_panic!(52.0),
             expiry: Positive::ONE,
-            no_steps: 100,
+            no_steps: crate::nz!(100),
             option_type: &OptionType::European,
             option_style: &OptionStyle::Put,
             side: &Side::Long,
@@ -770,7 +778,7 @@ mod tests_bermuda_option {
             int_rate: dec!(0.05),
             strike: pos_or_panic!(105.0),
             expiry: Positive::ONE,
-            no_steps: 50,
+            no_steps: crate::nz!(50),
             option_type: &bermuda_type,
             option_style: &OptionStyle::Put,
             side: &Side::Long,
@@ -792,7 +800,7 @@ mod tests_bermuda_option {
             int_rate: dec!(0.05),
             strike: pos_or_panic!(52.0),
             expiry: Positive::ONE,
-            no_steps: 52,
+            no_steps: crate::nz!(52),
             option_type: &OptionType::European,
             option_style: &OptionStyle::Put,
             side: &Side::Long,
@@ -832,7 +840,7 @@ mod tests_bermuda_option {
             int_rate: dec!(0.05),
             strike: Positive::HUNDRED,
             expiry: Positive::ONE,
-            no_steps: 50,
+            no_steps: crate::nz!(50),
             option_type: &OptionType::European,
             option_style: &OptionStyle::Put,
             side: &Side::Long,
@@ -863,7 +871,7 @@ mod tests_bermuda_option {
             int_rate: dec!(0.05),
             strike: pos_or_panic!(95.0),
             expiry: Positive::ONE,
-            no_steps: 100,
+            no_steps: crate::nz!(100),
             option_type: &bermuda_type,
             option_style: &OptionStyle::Call,
             side: &Side::Long,
