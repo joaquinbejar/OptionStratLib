@@ -56,6 +56,7 @@ impl<'a> AdjustmentOptimizer<'a> {
     /// * `positions` - Current positions to adjust
     /// * `config` - Configuration for adjustment behavior
     /// * `target` - Target Greeks to achieve
+    #[inline]
     #[must_use]
     pub fn new(
         positions: &'a [Position],
@@ -78,6 +79,7 @@ impl<'a> AdjustmentOptimizer<'a> {
     /// * `chain` - Option chain for finding new legs
     /// * `config` - Configuration for adjustment behavior
     /// * `target` - Target Greeks to achieve
+    #[inline]
     #[must_use]
     pub fn with_chain(
         positions: &'a [Position],
@@ -110,6 +112,7 @@ impl<'a> AdjustmentOptimizer<'a> {
     /// of candidate strikes can close the delta gap within the
     /// configured tolerance, or `AdjustmentError::CostCeilingBreached`
     /// when every viable plan exceeds the configured `max_cost`.
+    #[inline(never)]
     pub fn optimize(&self) -> Result<AdjustmentPlan, AdjustmentError> {
         if self.positions.is_empty() {
             return Err(AdjustmentError::NoPositions);

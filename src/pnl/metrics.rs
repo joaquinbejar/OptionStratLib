@@ -220,6 +220,7 @@ impl fmt::Display for PnLMetricsStep {
 /// or written (permission denied, disk full, invalid path), or when
 /// `serde_json` serialization of the metrics slice surfaces a
 /// semantic failure wrapped as [`std::io::ErrorKind::InvalidData`].
+#[inline(never)]
 pub fn save_pnl_metrics(metrics: &[PnLMetricsStep], file_path: &str) -> io::Result<()> {
     // Serialize to compact JSON without pretty formatting
     let json = serde_json::to_string(metrics)
@@ -250,6 +251,7 @@ pub fn save_pnl_metrics(metrics: &[PnLMetricsStep], file_path: &str) -> io::Resu
 /// or when `serde_json` deserialization fails (returned as
 /// [`std::io::ErrorKind::InvalidData`] with the underlying parse
 /// error as source).
+#[inline(never)]
 pub fn load_pnl_metrics(file_path: &str) -> io::Result<Vec<PnLMetricsStep>> {
     // Read the file content
     let file_content = std::fs::read_to_string(file_path)?;
@@ -301,6 +303,7 @@ pub struct PnLMetricsDocument {
 ///
 /// A `PnLMetricsDocument` instance containing the provided metrics and parameters.
 #[must_use]
+#[inline(never)]
 pub fn create_pnl_metrics_document(
     metrics: Vec<PnLMetricsStep>,
     days: Positive,
@@ -387,6 +390,7 @@ fn get_file_lock(file_path: &str) -> Arc<Mutex<()>> {
 ///     Err(e) => error!("Error saving PnL metrics: {}", e),
 /// }
 /// ```
+#[inline(never)]
 pub fn save_pnl_metrics_with_document(
     document: &PnLMetricsDocument,
     file_path: &str,

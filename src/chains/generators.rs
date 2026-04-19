@@ -78,6 +78,7 @@ fn create_chain_from_step(
 /// conversions) if the random-walk generator returns an error, the historical helpers
 /// (`calculate_log_returns`, `constant_volatility`, `adjust_volatility`) cannot complete,
 /// or `create_chain_from_step` fails to rebuild the chain.
+#[inline(never)]
 pub fn generator_optionchain(
     walk_params: &WalkParams<Positive, OptionChain>,
 ) -> Result<Vec<Step<Positive, OptionChain>>, ChainError> {
@@ -196,6 +197,7 @@ pub fn generator_optionchain(
 ///
 /// Returns `ChainError::DynError` (via the `From<SimulationError>` conversion) if the
 /// random-walk generator returns an error.
+#[inline(never)]
 pub fn generator_positive(
     walk_params: &WalkParams<Positive, Positive>,
 ) -> Result<Vec<Step<Positive, Positive>>, ChainError> {

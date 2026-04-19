@@ -212,6 +212,7 @@ impl OptionChainBuildParams {
     /// * `price` - A `Positive` value representing the new underlying asset price.  The
     ///   `Positive` type ensures that the price is always a non-negative value.
     ///
+    #[inline]
     pub fn set_underlying_price(&mut self, price: Option<Box<Positive>>) {
         self.price_params.underlying_price = price;
     }
@@ -220,6 +221,7 @@ impl OptionChainBuildParams {
     ///
     /// # Arguments
     /// * `implied_vol` - A positive decimal value representing the implied volatility.
+    #[inline]
     pub fn set_implied_volatility(&mut self, implied_vol: Positive) {
         self.implied_volatility = implied_vol;
     }
@@ -228,6 +230,7 @@ impl OptionChainBuildParams {
     ///
     /// # Returns
     /// * `Positive` - The current implied volatility as a positive decimal value.
+    #[inline]
     #[must_use]
     pub fn get_implied_volatility(&self) -> Positive {
         self.implied_volatility
@@ -308,6 +311,7 @@ impl OptionDataPriceParams {
     /// # Returns
     ///
     /// A new instance of `OptionDataPriceParams` containing the provided parameters
+    #[inline]
     #[must_use]
     pub fn new(
         underlying_price: Option<Box<Positive>>,
@@ -330,6 +334,7 @@ impl OptionDataPriceParams {
     /// # Returns
     ///
     /// A `Positive` value representing the underlying asset's current market price
+    #[inline]
     #[must_use]
     pub fn get_underlying_price(&self) -> Option<Box<Positive>> {
         self.underlying_price.clone()
@@ -340,6 +345,7 @@ impl OptionDataPriceParams {
     /// # Returns
     ///
     /// An `ExpirationDate` representing when the option expires, either as days to expiration or a specific datetime
+    #[inline]
     #[must_use]
     pub fn get_expiration_date(&self) -> Option<ExpirationDate> {
         self.expiration_date
@@ -350,6 +356,7 @@ impl OptionDataPriceParams {
     /// # Returns
     ///
     /// A `Decimal` value representing the current risk-free rate
+    #[inline]
     #[must_use]
     pub fn get_risk_free_rate(&self) -> Option<Decimal> {
         self.risk_free_rate
@@ -360,6 +367,7 @@ impl OptionDataPriceParams {
     /// # Returns
     ///
     /// A `Positive` value representing the dividend yield of the underlying asset
+    #[inline]
     #[must_use]
     pub fn get_dividend_yield(&self) -> Option<Positive> {
         self.dividend_yield
@@ -369,6 +377,7 @@ impl OptionDataPriceParams {
     ///
     /// # Returns
     /// * `Option<String>` - The underlying symbol if available, or `None` if not set.
+    #[inline]
     #[must_use]
     pub fn get_symbol(&self) -> Option<String> {
         self.underlying_symbol.clone()
@@ -524,6 +533,7 @@ impl RandomPositionsParams {
     /// This function has many parameters, but this is justified by the complex nature
     /// of option position generation which requires detailed configuration.
     #[allow(clippy::too_many_arguments)]
+    #[inline(never)]
     #[must_use]
     pub fn new(
         qty_puts_long: Option<usize>,
@@ -568,6 +578,7 @@ impl RandomPositionsParams {
     ///
     /// The total number of option positions to be generated.
     ///
+    #[inline]
     #[must_use]
     pub fn total_positions(&self) -> usize {
         self.qty_puts_long.unwrap_or(0)

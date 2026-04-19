@@ -198,6 +198,7 @@ pub trait StrangleStrategy {
 /// # Returns
 ///
 /// The break-even price for the spread.
+#[inline]
 #[must_use]
 pub fn credit_spread_break_even(
     short_strike: Positive,
@@ -222,6 +223,7 @@ pub fn credit_spread_break_even(
 /// # Returns
 ///
 /// The break-even price for the spread.
+#[inline]
 #[must_use]
 pub fn debit_spread_break_even(
     long_strike: Positive,
@@ -253,6 +255,7 @@ pub fn debit_spread_break_even(
 /// signature is retained so future tweaks to the ratio definition (e.g.
 /// checked division with rounding) can surface numerical failures without
 /// breaking the public API.
+#[inline]
 pub fn calculate_profit_ratio(
     max_profit: Positive,
     max_loss: Positive,
@@ -275,6 +278,7 @@ pub fn calculate_profit_ratio(
 /// # Returns
 ///
 /// Total fees (open + close) for all positions.
+#[inline]
 #[must_use]
 pub fn aggregate_fees(positions: &[&Position]) -> Positive {
     positions
@@ -292,6 +296,7 @@ pub fn aggregate_fees(positions: &[&Position]) -> Positive {
 /// # Returns
 ///
 /// Total premium for all positions.
+#[inline]
 #[must_use]
 pub fn aggregate_premiums(positions: &[&Position]) -> Positive {
     positions

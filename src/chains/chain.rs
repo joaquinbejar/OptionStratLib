@@ -294,6 +294,7 @@ impl OptionChain {
     ///     spos!(0.0065) // 0.65% dividend yield
     /// );
     /// ```
+    #[inline]
     #[must_use]
     pub fn new(
         symbol: &str,

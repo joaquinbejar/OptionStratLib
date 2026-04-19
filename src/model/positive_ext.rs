@@ -16,34 +16,40 @@ use positive::Positive;
 use rust_decimal::Decimal;
 
 impl ToRound for Positive {
+    #[inline]
     fn round(&self) -> Decimal {
         Positive::round(self).to_dec()
     }
 
+    #[inline]
     fn round_to(&self, decimal_places: u32) -> Decimal {
         Positive::round_to(self, decimal_places).to_dec()
     }
 }
 
 impl From<&OptionChain> for Positive {
+    #[inline]
     fn from(value: &OptionChain) -> Self {
         value.underlying_price
     }
 }
 
 impl From<OptionChain> for Positive {
+    #[inline]
     fn from(value: OptionChain) -> Self {
         value.underlying_price
     }
 }
 
 impl From<&OptionSeries> for Positive {
+    #[inline]
     fn from(value: &OptionSeries) -> Self {
         value.underlying_price
     }
 }
 
 impl From<OptionSeries> for Positive {
+    #[inline]
     fn from(value: OptionSeries) -> Self {
         value.underlying_price
     }
