@@ -140,6 +140,7 @@ impl PayoffInfo {
     /// # Ok(())
     /// # }
     /// ```
+    #[inline]
     #[must_use]
     pub fn spot_prices_len(&self) -> Option<usize> {
         self.spot_prices.as_ref().map(|vec| vec.len())
@@ -159,6 +160,7 @@ impl PayoffInfo {
 /// This function evaluates the payoff based on the option style:
 /// - For a call option: Max(spot price - strike price, 0)
 /// - For a put option: Max(strike price - spot price, 0)
+#[inline]
 pub(crate) fn standard_payoff(info: &PayoffInfo) -> f64 {
     trace!("standard_payoff - spot: {}", info.spot);
     trace!("standard_payoff - info.strike: {}", info.strike);

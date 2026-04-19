@@ -274,6 +274,8 @@ impl OptionsError {
     ///
     /// An `OptionsError::ValidationError` variant with formatted fields
     #[must_use]
+    #[cold]
+    #[inline(never)]
     pub fn validation_error(field: &str, reason: &str) -> Self {
         OptionsError::ValidationError {
             field: field.to_string(),
@@ -294,6 +296,8 @@ impl OptionsError {
     ///
     /// An `OptionsError::PricingError` variant with formatted fields
     #[must_use]
+    #[cold]
+    #[inline(never)]
     pub fn pricing_error(method: &str, reason: &str) -> Self {
         OptionsError::PricingError {
             method: method.to_string(),
@@ -315,6 +319,8 @@ impl OptionsError {
     ///
     /// An `OptionsError::GreeksCalculationError` variant with formatted fields
     #[must_use]
+    #[cold]
+    #[inline(never)]
     pub fn greeks_error(greek: &str, reason: &str) -> Self {
         OptionsError::GreeksCalculationError {
             greek: greek.to_string(),
@@ -336,6 +342,8 @@ impl OptionsError {
     ///
     /// An `OptionsError::TimeError` variant with formatted fields
     #[must_use]
+    #[cold]
+    #[inline(never)]
     pub fn time_error(operation: &str, reason: &str) -> Self {
         OptionsError::TimeError {
             operation: operation.to_string(),
@@ -355,6 +363,8 @@ impl OptionsError {
     ///
     /// An `OptionsError::PayoffError` variant with formatted reason
     #[must_use]
+    #[cold]
+    #[inline(never)]
     pub fn payoff_error(reason: &str) -> Self {
         OptionsError::PayoffError {
             reason: reason.to_string(),
@@ -375,6 +385,8 @@ impl OptionsError {
     ///
     /// An `OptionsError::UpdateError` variant with formatted fields
     #[must_use]
+    #[cold]
+    #[inline(never)]
     pub fn update_error(field: &str, reason: &str) -> Self {
         OptionsError::UpdateError {
             field: field.to_string(),

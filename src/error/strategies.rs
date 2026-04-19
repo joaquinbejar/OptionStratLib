@@ -332,6 +332,8 @@ impl StrategyError {
     /// let error = StrategyError::operation_not_supported("butterfly_adjustment", "IronCondor");
     /// ```
     #[must_use]
+    #[cold]
+    #[inline(never)]
     pub fn operation_not_supported(operation: &str, strategy_type: &str) -> Self {
         StrategyError::OperationError(OperationErrorKind::NotSupported {
             operation: operation.to_string(),
@@ -363,6 +365,8 @@ impl StrategyError {
     /// );
     /// ```
     #[must_use]
+    #[cold]
+    #[inline(never)]
     pub fn invalid_parameters(operation: &str, reason: &str) -> Self {
         StrategyError::OperationError(OperationErrorKind::InvalidParameters {
             operation: operation.to_string(),

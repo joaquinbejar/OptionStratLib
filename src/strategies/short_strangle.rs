@@ -155,6 +155,7 @@ impl ShortStrangle {
     /// practice these branches are unreachable for a freshly-built
     /// strangle and are surfaced only to keep the constructor panic-free.
     #[allow(clippy::too_many_arguments)]
+    #[inline(never)]
     pub fn new(
         underlying_symbol: String,
         underlying_price: Positive,

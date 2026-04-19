@@ -107,6 +107,7 @@ impl LongCall {
     /// - Uses the `Options` and `Position` structures to model and manage the long call position.
     /// - Assumes the current time (_via `Utc::now()`) when opening the long call position for tracking purposes.
     #[allow(clippy::too_many_arguments, dead_code)]
+    #[inline(never)]
     pub fn new(
         underlying_symbol: String,
         long_call_strike: Positive,

@@ -150,6 +150,7 @@ impl BullPutSpread {
     /// put spread and are surfaced only to keep the constructor
     /// panic-free.
     #[allow(clippy::too_many_arguments)]
+    #[inline(never)]
     pub fn new(
         underlying_symbol: String,
         underlying_price: Positive,

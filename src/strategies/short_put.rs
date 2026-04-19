@@ -109,6 +109,7 @@ impl ShortPut {
     /// only to keep the constructor panic-free.
     ///
     #[allow(clippy::too_many_arguments, dead_code)]
+    #[inline(never)]
     pub fn new(
         underlying_symbol: String,
         short_put_strike: Positive,

@@ -47,6 +47,7 @@ impl OptionSeries {
     /// - An empty `chains` field of type `BTreeMap`.
     /// - `None` for both `risk_free_rate` and `dividend_yield`.
     ///
+    #[inline]
     #[must_use]
     pub fn new(symbol: String, underlying_price: Positive) -> Self {
         Self {
@@ -157,6 +158,7 @@ impl OptionSeries {
     /// - Failed to build any option chain in the series
     /// - Failed to get date string from expiration date
     /// - Missing underlying price in price params
+    #[inline(never)]
     pub fn build_series(params: &OptionSeriesBuildParams) -> Result<Self, ChainError> {
         let mut params = params.clone();
         let mut chains: BTreeMap<ExpirationDate, OptionChain> = BTreeMap::new();

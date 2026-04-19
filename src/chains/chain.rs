@@ -370,6 +370,7 @@ impl OptionChain {
     /// - `expiration_date` is missing from price params
     /// - Failed to get days from expiration date
     /// - Failed to get date string from expiration date
+    #[inline(never)]
     pub fn build_chain(params: &OptionChainBuildParams) -> Result<Self, ChainError> {
         let underlying_price = params
             .price_params
@@ -1090,6 +1091,7 @@ impl OptionChain {
     /// Returns [`ChainError::FileError`] wrapping a `FileErrorKind::IOError`
     /// when the file cannot be created or written, or
     /// `FileErrorKind::ParseError` when `csv` serialization fails.
+    #[inline(never)]
     pub fn save_to_csv(&self, file_path: &str) -> Result<(), ChainError> {
         let full_path = format!("{}/{}.csv", file_path, self.get_title());
         let mut wtr = WriterBuilder::new().from_path(full_path)?;
@@ -1170,6 +1172,7 @@ impl OptionChain {
     /// Returns [`ChainError::FileError`] wrapping a `FileErrorKind::IOError`
     /// when the file cannot be created or written, or
     /// `FileErrorKind::ParseError` when `serde_json` serialization fails.
+    #[inline(never)]
     pub fn save_to_json(&self, file_path: &str) -> Result<(), ChainError> {
         let full_path = format!("{}/{}.json", file_path, self.get_title());
         let file = File::create(full_path)?;
@@ -1223,6 +1226,7 @@ impl OptionChain {
     /// `FileErrorKind::ParseError` when the CSV records cannot be parsed.
     /// Invalid option data (bad strike, volatility or price) surfaces as
     /// [`ChainError::OptionDataError`].
+    #[inline(never)]
     pub fn load_from_csv(file_path: &str) -> Result<Self, ChainError> {
         let mut rdr = csv::Reader::from_path(file_path)?;
         let mut options = BTreeSet::new();
@@ -1313,6 +1317,7 @@ impl OptionChain {
     /// Returns [`ChainError::FileError`] wrapping `FileErrorKind::IOError`
     /// when the file cannot be opened, or `FileErrorKind::ParseError`
     /// when `serde_json` deserialization fails.
+    #[inline(never)]
     pub fn load_from_json(file_path: &str) -> Result<Self, ChainError> {
         let file = File::open(file_path)?;
         let mut option_chain: OptionChain = serde_json::from_reader(file)?;
@@ -1586,6 +1591,7 @@ impl OptionChain {
     /// # Returns
     ///
     /// An iterator where each item is a reference to an `OptionData`.
+    #[inline]
     pub fn iter(&self) -> impl Iterator<Item = &OptionData> {
         self.get_single_iter()
     }
@@ -1601,6 +1607,7 @@ impl OptionChain {
     /// Since the `options` field is stored as a `BTreeSet`, the elements are ordered
     /// in ascending order based on the sorting rules of `BTreeSet` (typically defined by `Ord` implementation).
     ///
+    #[inline]
     pub fn get_single_iter(&self) -> impl Iterator<Item = &OptionData> {
         self.options.iter().filter(|option| option.validate())
     }
@@ -2648,6 +2655,7 @@ impl OptionChain {
     /// # Returns
     ///
     /// A `String` representing the expiration date of the option chain.
+    #[inline]
     #[must_use]
     pub fn get_expiration_date(&self) -> String {
         self.expiration_date.clone()
@@ -2657,6 +2665,7 @@ impl OptionChain {
     ///
     /// # Returns
     /// * `Option<ExpirationDate>` - The expiration date if it can be parsed, or `None` if parsing fails.
+    #[inline]
     #[must_use]
     pub fn get_expiration(&self) -> Option<ExpirationDate> {
         ExpirationDate::from_string(&self.expiration_date).ok()
@@ -3181,6 +3190,7 @@ impl OptionChain {
     /// This method prints the option chain directly to stdout using prettytable's
     /// `printstd()` method, which properly displays colors in the terminal.
     /// Use this method instead of `info!("{}", chain)` to see colored headers.
+    #[inline(never)]
     pub fn show(&self) {
         // Print header information
         let mut header = Table::new();

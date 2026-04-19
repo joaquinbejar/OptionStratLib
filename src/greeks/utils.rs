@@ -82,6 +82,7 @@ use statrs::distribution::{ContinuousCDF, Normal};
 ///     Err(e) => error!("Error: {:?}", e),
 /// }
 /// ```
+#[inline]
 pub fn d1(
     underlying_price: Positive,
     strike_price: Positive,
@@ -200,6 +201,7 @@ pub fn d1(
 /// # Ok(())
 /// # }
 /// ```
+#[inline]
 pub fn d2(
     underlying_price: Positive,
     strike_price: Positive,
@@ -290,6 +292,7 @@ pub fn d2(
 /// # Notes
 ///
 /// The function uses the `Decimal` type for precision and error handling. The result is returned
+#[inline]
 pub fn n(x: Decimal) -> Result<Decimal, GreeksError> {
     // 1 / sqrt(2π) — standard normal PDF normalisation constant.
     // Precomputed so we avoid the runtime fallible sqrt on Decimal.
@@ -340,6 +343,7 @@ pub fn n(x: Decimal) -> Result<Decimal, GreeksError> {
 /// the provided input type `T`. Improper or undefined behavior of `n` may lead
 /// to unexpected results or runtime errors.
 #[allow(dead_code)]
+#[inline]
 pub(crate) fn n_prime(x: Decimal) -> Result<Decimal, GreeksError> {
     Ok(-x * n(x)?) // -x * n(x)
 }
@@ -386,6 +390,7 @@ pub(crate) fn n_prime(x: Decimal) -> Result<Decimal, GreeksError> {
 ///     Err(e) => error!("Error: {:?}", e),
 /// }
 /// ```
+#[inline]
 pub fn big_n(x: Decimal) -> Result<Decimal, DecimalError> {
     let Some(x_f64) = x.to_f64() else {
         return Err(DecimalError::ConversionError {
@@ -442,6 +447,7 @@ pub fn big_n(x: Decimal) -> Result<Decimal, DecimalError> {
 ///     - `d1_value`: The calculated d1 value.
 ///     - `d2_value`: The calculated d2 value.
 ///
+#[inline]
 pub(crate) fn calculate_d_values(option: &Options) -> Result<(Decimal, Decimal), GreeksError> {
     let b = option.risk_free_rate - option.dividend_yield.to_dec();
     let d1_value = d1(

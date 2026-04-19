@@ -93,6 +93,7 @@ impl PnL {
     ///     Utc::now(),         // Current timestamp
     /// );
     /// ```
+    #[inline]
     #[must_use]
     pub fn new(
         realized: Option<Decimal>,
@@ -135,6 +136,7 @@ impl PnL {
     ///
     /// assert_eq!(pnl.total_pnl(), Some(dec!(750.0)));
     /// ```
+    #[inline]
     #[must_use]
     pub fn total_pnl(&self) -> Option<Decimal> {
         match (self.realized, self.unrealized) {

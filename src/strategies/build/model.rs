@@ -55,6 +55,7 @@ impl StrategyRequest {
     ///
     /// # Returns
     /// A new `StrategyRequest` instance containing the provided strategy type and positions.
+    #[inline]
     #[must_use]
     pub fn new(strategy_type: StrategyType, positions: Vec<Position>) -> Self {
         Self {
@@ -78,6 +79,7 @@ impl StrategyRequest {
     /// # Errors
     /// This method can return errors from the underlying strategy constructors or
     /// `StrategyError::NotImplemented` for strategies that are defined but not yet implemented.
+    #[inline(never)]
     pub fn get_strategy(&self) -> Result<Box<dyn Strategable>, StrategyError> {
         match self.strategy_type {
             StrategyType::BullCallSpread => {

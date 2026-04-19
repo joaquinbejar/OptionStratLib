@@ -140,7 +140,8 @@ impl SimulationError {
     /// # Arguments
     /// * `reason` - Detailed reason for the walk generation failure
     #[must_use]
-    #[inline]
+    #[cold]
+    #[inline(never)]
     pub fn walk_error(reason: &str) -> Self {
         SimulationError::WalkError {
             reason: reason.to_string(),
@@ -152,7 +153,8 @@ impl SimulationError {
     /// # Arguments
     /// * `reason` - Detailed reason for the invalid parameters
     #[must_use]
-    #[inline]
+    #[cold]
+    #[inline(never)]
     pub fn invalid_parameters(reason: &str) -> Self {
         SimulationError::InvalidParameters {
             reason: reason.to_string(),
@@ -164,7 +166,8 @@ impl SimulationError {
     /// # Arguments
     /// * `reason` - Detailed reason for the step calculation failure
     #[must_use]
-    #[inline]
+    #[cold]
+    #[inline(never)]
     pub fn step_error(reason: &str) -> Self {
         SimulationError::StepError {
             reason: reason.to_string(),
@@ -173,9 +176,9 @@ impl SimulationError {
 
     /// Creates a [`SimulationError::NonFinite`] from a static call-site
     /// tag and the offending `f64` value.
-    #[must_use]
-    #[inline]
     #[cold]
+    #[inline(never)]
+    #[must_use]
     pub fn non_finite(context: &'static str, value: f64) -> Self {
         SimulationError::NonFinite { context, value }
     }

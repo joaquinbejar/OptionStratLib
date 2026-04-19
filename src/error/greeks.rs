@@ -495,6 +495,8 @@ impl GreeksError {
     /// # Returns
     /// A `GreeksError::InputError` with `InvalidVolatility` kind
     #[must_use]
+    #[cold]
+    #[inline(never)]
     pub fn invalid_volatility(value: f64, reason: &str) -> Self {
         GreeksError::InputError(InputErrorKind::InvalidVolatility {
             value,
@@ -514,6 +516,8 @@ impl GreeksError {
     /// # Returns
     /// A `GreeksError::InputError` with `InvalidTime` kind
     #[must_use]
+    #[cold]
+    #[inline(never)]
     pub fn invalid_time(value: Positive, reason: &str) -> Self {
         GreeksError::InputError(InputErrorKind::InvalidTime {
             value,
@@ -533,6 +537,8 @@ impl GreeksError {
     /// # Returns
     /// A `GreeksError::CalculationError` with `DeltaError` kind
     #[must_use]
+    #[cold]
+    #[inline(never)]
     pub fn delta_error(reason: &str) -> Self {
         GreeksError::CalculationError(CalculationErrorKind::DeltaError {
             reason: reason.to_string(),
@@ -545,9 +551,9 @@ impl GreeksError {
     /// Intended to be used at `f64` → `Decimal` boundaries inside
     /// Greeks kernels, as a thin constructor paired with an
     /// `if !value.is_finite() { .. }` guard.
-    #[must_use]
-    #[inline]
     #[cold]
+    #[inline(never)]
+    #[must_use]
     pub fn non_finite(context: &'static str, value: f64) -> Self {
         GreeksError::NonFinite { context, value }
     }

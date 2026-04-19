@@ -230,6 +230,7 @@ impl Default for AdjustmentConfig {
 
 impl AdjustmentConfig {
     /// Creates a configuration that only allows adjusting existing legs.
+    #[inline]
     #[must_use]
     pub fn existing_legs_only() -> Self {
         Self {
@@ -240,6 +241,7 @@ impl AdjustmentConfig {
     }
 
     /// Creates a configuration that allows underlying hedging.
+    #[inline]
     #[must_use]
     pub fn with_underlying() -> Self {
         Self {
@@ -249,6 +251,7 @@ impl AdjustmentConfig {
     }
 
     /// Creates a configuration for aggressive adjustment with new legs.
+    #[inline]
     #[must_use]
     pub fn aggressive() -> Self {
         Self {
@@ -261,6 +264,7 @@ impl AdjustmentConfig {
     }
 
     /// Sets the maximum cost constraint.
+    #[inline]
     #[must_use]
     pub fn with_max_cost(mut self, max_cost: Positive) -> Self {
         self.max_cost = Some(max_cost);
@@ -268,6 +272,7 @@ impl AdjustmentConfig {
     }
 
     /// Sets the delta tolerance.
+    #[inline]
     #[must_use]
     pub fn with_delta_tolerance(mut self, tolerance: Decimal) -> Self {
         self.delta_tolerance = tolerance;
@@ -275,6 +280,7 @@ impl AdjustmentConfig {
     }
 
     /// Sets the strike range for new legs.
+    #[inline]
     #[must_use]
     pub fn with_strike_range(mut self, min: Positive, max: Positive) -> Self {
         self.strike_range = Some((min, max));
@@ -282,6 +288,7 @@ impl AdjustmentConfig {
     }
 
     /// Sets whether new legs are allowed.
+    #[inline]
     #[must_use]
     pub fn with_allow_new_legs(mut self, allow: bool) -> Self {
         self.allow_new_legs = allow;
@@ -289,6 +296,7 @@ impl AdjustmentConfig {
     }
 
     /// Sets whether underlying hedging is allowed.
+    #[inline]
     #[must_use]
     pub fn with_allow_underlying(mut self, allow: bool) -> Self {
         self.allow_underlying = allow;
@@ -296,6 +304,7 @@ impl AdjustmentConfig {
     }
 
     /// Sets the maximum number of new legs.
+    #[inline]
     #[must_use]
     pub fn with_max_new_legs(mut self, max: usize) -> Self {
         self.max_new_legs = Some(max);
@@ -303,6 +312,7 @@ impl AdjustmentConfig {
     }
 
     /// Sets the minimum liquidity requirement.
+    #[inline]
     #[must_use]
     pub fn with_min_liquidity(mut self, min: u64) -> Self {
         self.min_liquidity = Some(min);
@@ -310,6 +320,7 @@ impl AdjustmentConfig {
     }
 
     /// Sets whether to prefer existing legs over new ones.
+    #[inline]
     #[must_use]
     pub fn with_prefer_existing_legs(mut self, prefer: bool) -> Self {
         self.prefer_existing_legs = prefer;
@@ -342,6 +353,7 @@ pub struct AdjustmentPlan {
 
 impl AdjustmentPlan {
     /// Creates a new adjustment plan.
+    #[inline]
     #[must_use]
     pub fn new(
         actions: Vec<AdjustmentAction>,
@@ -360,18 +372,21 @@ impl AdjustmentPlan {
     }
 
     /// Returns true if this plan achieves delta neutrality within tolerance.
+    #[inline]
     #[must_use]
     pub fn is_delta_neutral(&self, tolerance: Decimal) -> bool {
         self.residual_delta.abs() <= tolerance
     }
 
     /// Returns true if this plan has no actions.
+    #[inline]
     #[must_use]
     pub fn is_empty(&self) -> bool {
         self.actions.is_empty()
     }
 
     /// Returns the number of actions in the plan.
+    #[inline]
     #[must_use]
     pub fn action_count(&self) -> usize {
         self.actions.len()

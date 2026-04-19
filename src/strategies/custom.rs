@@ -125,6 +125,7 @@ impl CustomStrategy {
     /// Returns `StrategyError::OperationError` when `positions` is empty, and
     /// propagates any error from `update_break_even_points`.
     #[allow(clippy::too_many_arguments)]
+    #[inline(never)]
     pub fn new(
         name: String,
         symbol: String,

@@ -74,6 +74,7 @@ impl SPANMargin {
     ///     dec!(0.15)   // 15% volatility scan range
     /// );
     /// ```
+    #[inline]
     #[must_use]
     pub fn new(
         short_option_minimum: Decimal,
@@ -188,6 +189,7 @@ impl SPANMargin {
     /// # Returns
     ///
     /// A vector of three `Positive` values representing the price scenarios
+    #[inline]
     fn generate_price_scenarios(&self, underlying_price: Positive) -> Vec<Positive> {
         vec![
             underlying_price * (Decimal::ONE - self.price_scan_range),
@@ -213,6 +215,7 @@ impl SPANMargin {
     /// # Returns
     ///
     /// A vector of three `Positive` values representing the volatility scenarios
+    #[inline]
     fn generate_volatility_scenarios(&self, implied_volatility: Positive) -> Vec<Positive> {
         vec![
             implied_volatility * (Decimal::ONE - self.volatility_scan_range),
@@ -279,6 +282,7 @@ impl SPANMargin {
     /// `short_option_minimum * underlying_price * quantity`
     ///
     /// For long options, the function returns zero as the short option minimum doesn't apply.
+    #[inline]
     fn calculate_short_option_minimum(&self, position: &Position) -> Decimal {
         let option = &position.option;
         if option.is_short() {

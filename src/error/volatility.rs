@@ -162,9 +162,9 @@ pub enum VolatilityError {
 impl VolatilityError {
     /// Creates a [`VolatilityError::NonFinite`] from a static call-site
     /// tag and the offending `f64` value.
-    #[must_use]
-    #[inline]
     #[cold]
+    #[inline(never)]
+    #[must_use]
     pub fn non_finite(context: &'static str, value: f64) -> Self {
         VolatilityError::NonFinite { context, value }
     }
