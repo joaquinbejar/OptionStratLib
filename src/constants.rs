@@ -152,8 +152,9 @@ pub const DEFAULT_MC_STEPS: NonZeroUsize = match NonZeroUsize::new(252) {
 
 /// Maximum Newton-Raphson iterations used by implied-volatility solvers.
 ///
-/// Typed as `NonZeroUsize`; see [`MAX_ITERATIONS_IV`] for the `u32`
-/// diagnostic counterpart surfaced through `VolatilityError`.
+/// Typed as `NonZeroUsize`; the crate-private `MAX_ITERATIONS_IV` constant
+/// holds the `u32` diagnostic counterpart surfaced through
+/// `VolatilityError`.
 pub const MAX_NEWTON_ITER: NonZeroUsize = match NonZeroUsize::new(100) {
     Some(n) => n,
     None => unreachable!(),

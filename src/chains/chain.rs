@@ -8064,13 +8064,13 @@ mod tests_basic_curves {
     use positive::spos;
 
     use crate::model::types::{OptionStyle, Side};
-    use crate::utils::time::get_tomorrow_formatted;
+    use crate::utils::time::get_x_days_formatted;
 
     use rust_decimal_macros::dec;
 
     // Helper function to create a sample OptionChain for testing
     fn create_test_option_chain() -> OptionChain {
-        let tomorrow_date = get_tomorrow_formatted();
+        let tomorrow_date = get_x_days_formatted(30);
         let mut chain = OptionChain::new("TEST", Positive::HUNDRED, tomorrow_date, None, None);
 
         // Add some test options
@@ -8258,12 +8258,12 @@ mod tests_option_chain_surfaces {
     use super::*;
     use positive::spos;
 
-    use crate::utils::time::get_tomorrow_formatted;
+    use crate::utils::time::get_x_days_formatted;
 
     use rust_decimal_macros::dec;
 
     fn create_test_option_chain() -> OptionChain {
-        let tomorrow_date = get_tomorrow_formatted();
+        let tomorrow_date = get_x_days_formatted(30);
         let mut chain = OptionChain::new("TEST", Positive::HUNDRED, tomorrow_date, None, None);
 
         // Add some test options
@@ -8516,12 +8516,12 @@ mod tests_option_chain_time_surfaces {
     use super::*;
     use positive::spos;
 
-    use crate::utils::time::get_tomorrow_formatted;
+    use crate::utils::time::get_x_days_formatted;
 
     use rust_decimal_macros::dec;
 
     fn create_test_option_chain() -> OptionChain {
-        let tomorrow_date = get_tomorrow_formatted();
+        let tomorrow_date = get_x_days_formatted(30);
         let mut chain = OptionChain::new("TEST", Positive::HUNDRED, tomorrow_date, None, None);
 
         // Add some test options
@@ -9267,14 +9267,14 @@ mod tests_gamma_calculations {
     use positive::spos;
 
     use crate::assert_decimal_eq;
-    use crate::utils::time::get_tomorrow_formatted;
+    use crate::utils::time::get_x_days_formatted;
     use rust_decimal_macros::dec;
 
     // Helper function to create a test chain with predefined gamma values
     fn create_test_chain_with_gamma() -> OptionChain {
         let mut option_chain =
             OptionChain::load_from_json("examples/Chains/SP500-18-oct-2024-5781.88.json").unwrap();
-        option_chain.expiration_date = get_tomorrow_formatted();
+        option_chain.expiration_date = get_x_days_formatted(30);
         option_chain
     }
 
