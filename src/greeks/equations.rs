@@ -1935,7 +1935,21 @@ pub fn color(option: &Options) -> Result<Decimal, GreeksError> {
     let numerator = (Decimal::TWO * (r - q) * tau) - (d2 * sigma * tau.sqrt());
     let denominator = sigma * tau.sqrt();
     let factor2 = (Decimal::TWO * q * tau) + Decimal::ONE + ((numerator / denominator) * d1);
-    let numerator = -exp_minus_qt * factor1 * factor2 * option.quantity;
+    // Build the color numerator with checked multiplications so an
+    // overflow on `-exp(-qt) * factor1 * factor2 * quantity` surfaces
+    // a tagged `DecimalError::Overflow` instead of silently saturating
+    // before the final checked `d_div(/, 365)`.
+    let numerator = d_mul(
+        -exp_minus_qt,
+        factor1,
+        "greeks::color::numerator_exp_factor1",
+    )?;
+    let numerator = d_mul(numerator, factor2, "greeks::color::numerator_factor2")?;
+    let numerator = d_mul(
+        numerator,
+        option.quantity.to_dec(),
+        "greeks::color::numerator_quantity",
+    )?;
     let color = d_div(numerator, Decimal::from(365), "greeks::color::per_day")?;
     Ok(color)
 }

@@ -229,8 +229,18 @@ fn call_price_on_unit(
     let n1 = big_n(d1).unwrap_or(dec!(0.0));
     let n2 = big_n(d2).unwrap_or(dec!(0.0));
 
+    // `s_leg` is a unit-forward so its monetary boundary starts at
+    // `exp(-qt)`; no extra checked product is needed there.
     let s_leg = d_mul((-q * t).exp(), n1, "pricing::cliquet::unit_call::s_leg")?;
-    let k_leg = d_mul(k * (-r * t).exp(), n2, "pricing::cliquet::unit_call::k_leg")?;
+    // `k_leg` was `k * exp(-rt) * n2` with the first `*` unchecked,
+    // so build the discounted strike through `d_mul` first and then
+    // fold in `n2` so an overflow on either product is tagged.
+    let discounted_k = d_mul(
+        k,
+        (-r * t).exp(),
+        "pricing::cliquet::unit_call::discounted_k",
+    )?;
+    let k_leg = d_mul(discounted_k, n2, "pricing::cliquet::unit_call::k_leg")?;
     d_sub(s_leg, k_leg, "pricing::cliquet::unit_call::price").map_err(PricingError::from)
 }
 

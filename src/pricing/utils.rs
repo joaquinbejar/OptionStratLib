@@ -344,7 +344,16 @@ pub(crate) fn calculate_discounted_payoff(
             "non-finite payoff in calculate_discounted_payoff",
         )
     })?;
-    let discount = (-params.int_rate * params.expiry).exp();
+    // Build the discount exponent through a checked multiplication so
+    // that an overflow on `-rate * expiry` is tagged rather than
+    // saturating silently before `.exp()` compresses it back into a
+    // bounded range.
+    let discount_exponent = d_mul(
+        -params.int_rate,
+        params.expiry.to_dec(),
+        "pricing::binomial::discounted_payoff::discount_exponent",
+    )?;
+    let discount = discount_exponent.exp();
     let discounted_payoff = d_mul(
         discount,
         payoff,

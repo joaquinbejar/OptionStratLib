@@ -153,11 +153,51 @@ fn simple_chooser_price(option: &Options, choice_date_days: f64) -> Result<Decim
 
     // Rubinstein (1991) simple chooser formula:
     // V = S*e^(-qT)*N(d1) - K*e^(-rT)*N(d2) + K*e^(-rt)*N(-y2) - S*e^(-qt)*N(-y1)
-    // This equals: Call(K, T) + Put_component_for_choice_flexibility
-    let leg_s_t = s.to_dec() * dividend_discount_t * n_d1;
-    let leg_k_t = k.to_dec() * discount_t * n_d2;
-    let leg_k_choice = k.to_dec() * discount_choice * n_neg_y2;
-    let leg_s_choice = s.to_dec() * dividend_discount_choice * n_neg_y1;
+    // This equals: Call(K, T) + Put_component_for_choice_flexibility.
+    // Every leg is now built via two chained `d_mul` calls so the
+    // leading monetary product (underlying * dividend discount, or
+    // strike * discount) is checked and a subsequent saturation on
+    // the CDF weight cannot mask the original overflow.
+    let leg_s_t_discounted = d_mul(
+        s.to_dec(),
+        dividend_discount_t,
+        "pricing::chooser::price::leg_s_t_discounted",
+    )?;
+    let leg_s_t = d_mul(
+        leg_s_t_discounted,
+        n_d1,
+        "pricing::chooser::price::leg_s_t",
+    )?;
+    let leg_k_t_discounted = d_mul(
+        k.to_dec(),
+        discount_t,
+        "pricing::chooser::price::leg_k_t_discounted",
+    )?;
+    let leg_k_t = d_mul(
+        leg_k_t_discounted,
+        n_d2,
+        "pricing::chooser::price::leg_k_t",
+    )?;
+    let leg_k_choice_discounted = d_mul(
+        k.to_dec(),
+        discount_choice,
+        "pricing::chooser::price::leg_k_choice_discounted",
+    )?;
+    let leg_k_choice = d_mul(
+        leg_k_choice_discounted,
+        n_neg_y2,
+        "pricing::chooser::price::leg_k_choice",
+    )?;
+    let leg_s_choice_discounted = d_mul(
+        s.to_dec(),
+        dividend_discount_choice,
+        "pricing::chooser::price::leg_s_choice_discounted",
+    )?;
+    let leg_s_choice = d_mul(
+        leg_s_choice_discounted,
+        n_neg_y1,
+        "pricing::chooser::price::leg_s_choice",
+    )?;
     let diff1 = d_sub(leg_s_t, leg_k_t, "pricing::chooser::price::diff1")?;
     let diff2 = d_add(diff1, leg_k_choice, "pricing::chooser::price::diff2")?;
     let price = d_sub(diff2, leg_s_choice, "pricing::chooser::price")?;

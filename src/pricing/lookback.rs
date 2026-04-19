@@ -285,14 +285,26 @@ fn fixed_strike_lookback(option: &Options) -> Result<Decimal, PricingError> {
             let n_neg_d1 = big_n(-d1_val).unwrap_or(Decimal::ZERO);
             let n_neg_d2 = big_n(-d2_val).unwrap_or(Decimal::ZERO);
 
-            // Standard BS put
+            // Standard BS put. Mirror of the call branch: build the
+            // discounted strike / discounted forward with `d_mul`,
+            // then fold in the CDF weight with a second `d_mul`.
+            let k_discounted = d_mul(
+                k.to_dec(),
+                discount,
+                "pricing::lookback::fixed::put::k_discounted",
+            )?;
             let k_leg = d_mul(
-                k.to_dec() * discount,
+                k_discounted,
                 n_neg_d2,
                 "pricing::lookback::fixed::put::k_leg",
             )?;
+            let s_discounted = d_mul(
+                s.to_dec(),
+                dividend_discount,
+                "pricing::lookback::fixed::put::s_discounted",
+            )?;
             let s_leg = d_mul(
-                s.to_dec() * dividend_discount,
+                s_discounted,
                 n_neg_d1,
                 "pricing::lookback::fixed::put::s_leg",
             )?;

@@ -334,19 +334,47 @@ fn price_compound(
     let is_underlying_call = is_underlying_option_call(underlying_type);
 
     // Geske compound-option final composition: every branch fuses three
-    // underlying/strike·discount leg values into a signed sum. Intermediate
-    // products inside each leg stay on the raw `*` operator (numerical
-    // kernel internals); the user-visible price composition routes through
-    // `d_add` / `d_sub`.
+    // `underlying/strike * discount * cdf` leg values into a signed
+    // sum. Each leg is now built with two chained `d_mul` calls (once
+    // for the discount product, once for the CDF weight) so an
+    // overflow on either monetary product surfaces a tagged
+    // `DecimalError::Overflow` instead of saturating silently before
+    // the final `d_add` / `d_sub`.
+    let build_leg =
+        |base: Decimal, discount: Decimal, weight: Decimal, op_base: &'static str,
+         op_leg: &'static str|
+         -> Result<Decimal, PricingError> {
+            let discounted = d_mul(base, discount, op_base)?;
+            Ok(d_mul(discounted, weight, op_leg)?)
+        };
+
     let price = if is_compound_call && is_underlying_call {
         // Call-on-Call
         let m1 = bivariate_normal_cdf(d1_t1, d1_t2, rho);
         let m2 = bivariate_normal_cdf(d2_t1, d2_t2, rho);
         let n_d2_t1 = big_n(d2_t1).unwrap_or(Decimal::ZERO);
 
-        let leg_s = s.to_dec() * dividend_discount_t2 * m1;
-        let leg_k2 = k2.to_dec() * discount_t2 * m2;
-        let leg_k1 = k1.to_dec() * discount_t1 * n_d2_t1;
+        let leg_s = build_leg(
+            s.to_dec(),
+            dividend_discount_t2,
+            m1,
+            "pricing::compound::call_call::leg_s_discounted",
+            "pricing::compound::call_call::leg_s",
+        )?;
+        let leg_k2 = build_leg(
+            k2.to_dec(),
+            discount_t2,
+            m2,
+            "pricing::compound::call_call::leg_k2_discounted",
+            "pricing::compound::call_call::leg_k2",
+        )?;
+        let leg_k1 = build_leg(
+            k1.to_dec(),
+            discount_t1,
+            n_d2_t1,
+            "pricing::compound::call_call::leg_k1_discounted",
+            "pricing::compound::call_call::leg_k1",
+        )?;
         let step = d_sub(leg_s, leg_k2, "pricing::compound::call_call::step")?;
         d_sub(step, leg_k1, "pricing::compound::call_call::price")?
     } else if is_compound_call && !is_underlying_call {
@@ -355,9 +383,27 @@ fn price_compound(
         let m2 = bivariate_normal_cdf(-d2_t1, -d2_t2, rho);
         let n_neg_d2_t1 = big_n(-d2_t1).unwrap_or(Decimal::ZERO);
 
-        let leg_k2 = k2.to_dec() * discount_t2 * m2;
-        let leg_s = s.to_dec() * dividend_discount_t2 * m1;
-        let leg_k1 = k1.to_dec() * discount_t1 * n_neg_d2_t1;
+        let leg_k2 = build_leg(
+            k2.to_dec(),
+            discount_t2,
+            m2,
+            "pricing::compound::call_put::leg_k2_discounted",
+            "pricing::compound::call_put::leg_k2",
+        )?;
+        let leg_s = build_leg(
+            s.to_dec(),
+            dividend_discount_t2,
+            m1,
+            "pricing::compound::call_put::leg_s_discounted",
+            "pricing::compound::call_put::leg_s",
+        )?;
+        let leg_k1 = build_leg(
+            k1.to_dec(),
+            discount_t1,
+            n_neg_d2_t1,
+            "pricing::compound::call_put::leg_k1_discounted",
+            "pricing::compound::call_put::leg_k1",
+        )?;
         let step = d_sub(leg_k2, leg_s, "pricing::compound::call_put::step")?;
         d_sub(step, leg_k1, "pricing::compound::call_put::price")?
     } else if !is_compound_call && is_underlying_call {
@@ -366,9 +412,27 @@ fn price_compound(
         let m2 = bivariate_normal_cdf(-d2_t1, d2_t2, -rho);
         let n_neg_d2_t1 = big_n(-d2_t1).unwrap_or(Decimal::ZERO);
 
-        let leg_k1 = k1.to_dec() * discount_t1 * n_neg_d2_t1;
-        let leg_s = s.to_dec() * dividend_discount_t2 * m1;
-        let leg_k2 = k2.to_dec() * discount_t2 * m2;
+        let leg_k1 = build_leg(
+            k1.to_dec(),
+            discount_t1,
+            n_neg_d2_t1,
+            "pricing::compound::put_call::leg_k1_discounted",
+            "pricing::compound::put_call::leg_k1",
+        )?;
+        let leg_s = build_leg(
+            s.to_dec(),
+            dividend_discount_t2,
+            m1,
+            "pricing::compound::put_call::leg_s_discounted",
+            "pricing::compound::put_call::leg_s",
+        )?;
+        let leg_k2 = build_leg(
+            k2.to_dec(),
+            discount_t2,
+            m2,
+            "pricing::compound::put_call::leg_k2_discounted",
+            "pricing::compound::put_call::leg_k2",
+        )?;
         let step = d_sub(leg_k1, leg_s, "pricing::compound::put_call::step")?;
         d_add(step, leg_k2, "pricing::compound::put_call::price")?
     } else {
@@ -377,9 +441,27 @@ fn price_compound(
         let m2 = bivariate_normal_cdf(d2_t1, -d2_t2, -rho);
         let n_d2_t1 = big_n(d2_t1).unwrap_or(Decimal::ZERO);
 
-        let leg_k1 = k1.to_dec() * discount_t1 * n_d2_t1;
-        let leg_s = s.to_dec() * dividend_discount_t2 * m1;
-        let leg_k2 = k2.to_dec() * discount_t2 * m2;
+        let leg_k1 = build_leg(
+            k1.to_dec(),
+            discount_t1,
+            n_d2_t1,
+            "pricing::compound::put_put::leg_k1_discounted",
+            "pricing::compound::put_put::leg_k1",
+        )?;
+        let leg_s = build_leg(
+            s.to_dec(),
+            dividend_discount_t2,
+            m1,
+            "pricing::compound::put_put::leg_s_discounted",
+            "pricing::compound::put_put::leg_s",
+        )?;
+        let leg_k2 = build_leg(
+            k2.to_dec(),
+            discount_t2,
+            m2,
+            "pricing::compound::put_put::leg_k2_discounted",
+            "pricing::compound::put_put::leg_k2",
+        )?;
         let step = d_add(leg_k1, leg_s, "pricing::compound::put_put::step")?;
         d_sub(step, leg_k2, "pricing::compound::put_put::price")?
     };

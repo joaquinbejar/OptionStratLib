@@ -11,7 +11,7 @@
 
 use crate::Options;
 use crate::error::greeks::GreeksError;
-use crate::model::decimal::{d_add, d_div, d_sub};
+use crate::model::decimal::{d_add, d_div, d_mul, d_sub};
 use crate::pricing::unified::{Priceable, PricingEngine};
 use positive::Positive;
 use rust_decimal::Decimal;
@@ -78,13 +78,19 @@ pub fn numerical_gamma(option: &Options) -> Result<Decimal, GreeksError> {
     let p_minus = opt_minus.price(&PricingEngine::ClosedFormBS)?;
     let p = option.price(&PricingEngine::ClosedFormBS)?;
 
-    let step = d_sub(
-        p_plus.to_dec(),
-        dec!(2.0) * p.to_dec(),
-        "greeks::numerical::gamma::step",
+    // Central-second-difference numerator:
+    //   p_plus - 2*p + p_minus.
+    // Build `2*p` via `d_mul` so an overflow on the doubled price does
+    // not silently saturate before the checked `d_sub` / `d_add`.
+    let two_p = d_mul(
+        dec!(2.0),
+        p.to_dec(),
+        "greeks::numerical::gamma::two_p",
     )?;
+    let step = d_sub(p_plus.to_dec(), two_p, "greeks::numerical::gamma::step")?;
     let numer = d_add(step, p_minus.to_dec(), "greeks::numerical::gamma::numer")?;
-    Ok(d_div(numer, H * H, "greeks::numerical::gamma::scaled")?)
+    let h_squared = d_mul(H, H, "greeks::numerical::gamma::h_squared")?;
+    Ok(d_div(numer, h_squared, "greeks::numerical::gamma::scaled")?)
 }
 
 /// Calculates vega numerically using finite differences.
