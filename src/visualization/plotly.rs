@@ -1,3 +1,7 @@
+// Scoped allow: bulk migration of unchecked `[]` indexing to
+// `.get().ok_or_else(..)` tracked as follow-ups to #341.
+#![allow(clippy::indexing_slicing)]
+
 use crate::error::GraphError;
 use crate::utils::file::prepare_file_path;
 use crate::visualization::OutputType;

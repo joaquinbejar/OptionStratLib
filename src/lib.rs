@@ -1,5 +1,13 @@
 #![allow(unknown_lints)]
 #![allow(clippy::literal_string_with_formatting_args)]
+// Per rules/global_rules.md §Error Handling, unchecked `[]` / slicing is
+// banned in production code. Enforced crate-wide; individual modules that
+// need a transitional escape hatch carry a scoped `#![allow(..)]` with a
+// migration note (tracked as follow-ups to #341).
+#![deny(clippy::indexing_slicing)]
+// Unit and integration tests routinely index into `Vec`s they just pushed
+// into, so the lint is silenced in `#[cfg(test)]` only.
+#![cfg_attr(test, allow(clippy::indexing_slicing))]
 
 //! # OptionStratLib v0.16.0: Financial Options Library
 //!

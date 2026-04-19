@@ -1011,9 +1011,15 @@ impl OptionChain {
                 "expected exactly 5 parts (symbol, day, month, year, price)",
             ));
         }
-        self.symbol = parts[0].to_string();
-        self.expiration_date = format!("{}-{}-{}", parts[1], parts[2], parts[3]);
-        let underlying_price_str = parts[4].replace(",", ".");
+        let missing = || ChainError::invalid_parameters("file_name", "missing expected component");
+        let p0 = parts.first().ok_or_else(missing)?;
+        let p1 = parts.get(1).ok_or_else(missing)?;
+        let p2 = parts.get(2).ok_or_else(missing)?;
+        let p3 = parts.get(3).ok_or_else(missing)?;
+        let p4 = parts.get(4).ok_or_else(missing)?;
+        self.symbol = (*p0).to_string();
+        self.expiration_date = format!("{p1}-{p2}-{p3}");
+        let underlying_price_str = p4.replace(",", ".");
         let price = underlying_price_str.parse::<f64>().map_err(|_| {
             ChainError::invalid_parameters(
                 "underlying_price",
@@ -1233,24 +1239,33 @@ impl OptionChain {
         for result in rdr.records() {
             let record = result?;
             debug!("To CSV: {:?}", record);
+            let field = |idx: usize| -> Result<&str, ChainError> {
+                record.get(idx).ok_or_else(|| {
+                    ChainError::invalid_parameters(
+                        "csv_record",
+                        &format!("missing column at index {idx}"),
+                    )
+                })
+            };
+            let strike_str = field(0)?;
             let mut option_data = OptionData {
-                strike_price: record[0].parse::<Positive>().map_err(|e| {
-                    ChainError::invalid_strike(record[0].parse::<f64>().unwrap_or(f64::NAN), &e)
+                strike_price: strike_str.parse::<Positive>().map_err(|e| {
+                    ChainError::invalid_strike(strike_str.parse::<f64>().unwrap_or(f64::NAN), &e)
                 })?,
-                call_bid: parse(&record[1]),
-                call_ask: parse(&record[2]),
-                put_bid: parse(&record[3]),
-                put_ask: parse(&record[4]),
+                call_bid: parse(field(1)?),
+                call_ask: parse(field(2)?),
+                put_bid: parse(field(3)?),
+                put_ask: parse(field(4)?),
                 call_middle: None,
                 put_middle: None,
-                implied_volatility: parse(&record[5]).ok_or_else(|| {
+                implied_volatility: parse(field(5)?).ok_or_else(|| {
                     ChainError::invalid_volatility(None, "missing implied volatility in CSV record")
                 })?,
-                delta_call: parse(&record[6]),
-                delta_put: parse(&record[7]),
-                gamma: parse(&record[8]),
-                volume: parse(&record[9]),
-                open_interest: parse(&record[10]),
+                delta_call: parse(field(6)?),
+                delta_put: parse(field(7)?),
+                gamma: parse(field(8)?),
+                volume: parse(field(9)?),
+                open_interest: parse(field(10)?),
                 ..Default::default()
             };
             option_data.set_mid_prices();
@@ -2696,19 +2711,18 @@ impl OptionChain {
 
         let strikes: Vec<Positive> = self.options.iter().map(|opt| opt.strike_price).collect();
 
-        let mut intervals = Vec::new();
-        for i in 1..strikes.len() {
-            intervals.push(strikes[i].to_dec() - strikes[i - 1].to_dec());
-        }
+        let mut intervals: Vec<Decimal> = strikes
+            .windows(2)
+            .filter_map(|w| match w {
+                [prev, curr] => Some(curr.to_dec() - prev.to_dec()),
+                _ => None,
+            })
+            .collect();
 
         // Return the median interval for robustness
         intervals.sort_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Equal));
-        if intervals.is_empty() {
-            default_interval // Default if something went wrong
-        } else {
-            // Get the median interval
-            let median_interval = intervals[intervals.len() / 2];
-
+        let median_slot = intervals.len() / 2;
+        if let Some(&median_interval) = intervals.get(median_slot) {
             // Round to the nearest integer
             let rounded_interval = median_interval.round();
 
@@ -2718,6 +2732,8 @@ impl OptionChain {
             } else {
                 Positive::new_decimal(rounded_interval).unwrap_or(Positive::ONE)
             }
+        } else {
+            default_interval // Default if something went wrong
         }
     }
 
@@ -3056,7 +3072,10 @@ impl RNDAnalysis for OptionChain {
         // Calculate minimum strike interval
         let min_interval = strikes
             .windows(2)
-            .map(|w| w[1] - w[0])
+            .filter_map(|w| match w {
+                [prev, curr] => Some(*curr - *prev),
+                _ => None,
+            })
             .min()
             .ok_or_else(|| {
                 ChainError::invalid_parameters(
@@ -5092,6 +5111,7 @@ impl From<&Vec<OptionData>> for OptionChain {
 
 #[cfg(test)]
 mod tests_chain_base {
+    #![allow(clippy::indexing_slicing)]
     use super::*;
 
     use crate::model::ExpirationDate;
@@ -5441,6 +5461,7 @@ mod tests_chain_base {
 
 #[cfg(test)]
 mod tests_option_data {
+    #![allow(clippy::indexing_slicing)]
     use super::*;
     use num_traits::ToPrimitive;
     use positive::{assert_pos_relative_eq, spos};
@@ -5651,6 +5672,7 @@ mod tests_option_data {
 
 #[cfg(test)]
 mod tests_get_random_positions {
+    #![allow(clippy::indexing_slicing)]
     use super::*;
     use positive::spos;
 
@@ -5966,6 +5988,7 @@ mod tests_get_random_positions {
 
 #[cfg(test)]
 mod tests_option_data_get_prices {
+    #![allow(clippy::indexing_slicing)]
     use super::*;
     use positive::spos;
 
@@ -6049,6 +6072,7 @@ mod tests_option_data_get_prices {
 
 #[cfg(test)]
 mod tests_option_data_display {
+    #![allow(clippy::indexing_slicing)]
     use super::*;
     use positive::spos;
 
@@ -6100,6 +6124,7 @@ mod tests_option_data_display {
 
 #[cfg(test)]
 mod tests_filter_option_data {
+    #![allow(clippy::indexing_slicing)]
     use super::*;
 
     fn create_test_chain() -> OptionChain {
@@ -6180,6 +6205,7 @@ mod tests_filter_option_data {
 
 #[cfg(test)]
 mod tests_strike_price_range_vec {
+    #![allow(clippy::indexing_slicing)]
     use super::*;
 
     #[test]
@@ -6284,6 +6310,7 @@ mod tests_strike_price_range_vec {
 
 #[cfg(test)]
 mod tests_option_data_get_option {
+    #![allow(clippy::indexing_slicing)]
     use super::*;
 
     use num_traits::ToPrimitive;
@@ -6342,6 +6369,7 @@ mod tests_option_data_get_option {
 
 #[cfg(test)]
 mod tests_option_data_get_options_in_strike {
+    #![allow(clippy::indexing_slicing)]
     use super::*;
 
     use crate::assert_decimal_eq;
@@ -6475,6 +6503,7 @@ mod tests_option_data_get_options_in_strike {
 
 #[cfg(test)]
 mod tests_filter_options_in_strike {
+    #![allow(clippy::indexing_slicing)]
     use super::*;
     use positive::spos;
 
@@ -6626,6 +6655,7 @@ mod tests_filter_options_in_strike {
 
 #[cfg(test)]
 mod tests_chain_iterators {
+    #![allow(clippy::indexing_slicing)]
     use super::*;
     use positive::spos;
 
@@ -6822,6 +6852,7 @@ mod tests_chain_iterators {
 
 #[cfg(test)]
 mod tests_chain_iterators_bis {
+    #![allow(clippy::indexing_slicing)]
     use super::*;
     use positive::spos;
 
@@ -7189,6 +7220,7 @@ mod tests_chain_iterators_bis {
 
 #[cfg(test)]
 mod tests_is_valid_optimal_side {
+    #![allow(clippy::indexing_slicing)]
     use super::*;
 
     #[test]
@@ -7477,6 +7509,7 @@ mod tests_is_valid_optimal_side {
 
 #[cfg(test)]
 mod rnd_analysis_tests {
+    #![allow(clippy::indexing_slicing)]
     use super::*;
     use positive::spos;
 
@@ -7905,6 +7938,7 @@ mod rnd_analysis_tests {
 
 #[cfg(test)]
 mod tests_option_data_delta {
+    #![allow(clippy::indexing_slicing)]
     use super::*;
     use positive::spos;
 
@@ -8025,6 +8059,7 @@ mod tests_option_data_delta {
 
 #[cfg(test)]
 mod tests_basic_curves {
+    #![allow(clippy::indexing_slicing)]
     use super::*;
     use positive::spos;
 
@@ -8219,6 +8254,7 @@ mod tests_basic_curves {
 
 #[cfg(test)]
 mod tests_option_chain_surfaces {
+    #![allow(clippy::indexing_slicing)]
     use super::*;
     use positive::spos;
 
@@ -8476,6 +8512,7 @@ mod tests_option_chain_surfaces {
 
 #[cfg(test)]
 mod tests_option_chain_time_surfaces {
+    #![allow(clippy::indexing_slicing)]
     use super::*;
     use positive::spos;
 
@@ -8752,6 +8789,7 @@ mod tests_option_chain_time_surfaces {
 
 #[cfg(test)]
 mod tests_serialization {
+    #![allow(clippy::indexing_slicing)]
     use super::*;
     use positive::spos;
 
@@ -8858,6 +8896,7 @@ mod tests_serialization {
 
 #[cfg(test)]
 mod tests_option_data_serde {
+    #![allow(clippy::indexing_slicing)]
     use super::*;
     use positive::spos;
 
@@ -9023,6 +9062,7 @@ mod tests_option_data_serde {
 
 #[cfg(test)]
 mod tests_option_chain_serde {
+    #![allow(clippy::indexing_slicing)]
     use super::*;
     use positive::spos;
 
@@ -9222,6 +9262,7 @@ mod tests_option_chain_serde {
 
 #[cfg(test)]
 mod tests_gamma_calculations {
+    #![allow(clippy::indexing_slicing)]
     use super::*;
     use positive::spos;
 
@@ -9330,6 +9371,7 @@ mod tests_gamma_calculations {
 
 #[cfg(test)]
 mod tests_delta_calculations {
+    #![allow(clippy::indexing_slicing)]
     use super::*;
 
     use crate::assert_decimal_eq;
@@ -9459,6 +9501,7 @@ mod tests_delta_calculations {
 
 #[cfg(test)]
 mod tests_vega_calculations {
+    #![allow(clippy::indexing_slicing)]
     use super::*;
 
     use crate::assert_decimal_eq;
@@ -9588,6 +9631,7 @@ mod tests_vega_calculations {
 
 #[cfg(test)]
 mod tests_theta_calculations {
+    #![allow(clippy::indexing_slicing)]
     use super::*;
 
     use crate::assert_decimal_eq;
@@ -9717,6 +9761,7 @@ mod tests_theta_calculations {
 
 #[cfg(test)]
 mod tests_vanna_calculations {
+    #![allow(clippy::indexing_slicing)]
     use super::*;
 
     use crate::assert_decimal_eq;
@@ -9802,6 +9847,7 @@ mod tests_vanna_calculations {
 
 #[cfg(test)]
 mod tests_vomma_calculations {
+    #![allow(clippy::indexing_slicing)]
     use super::*;
 
     use crate::assert_decimal_eq;
@@ -9848,6 +9894,7 @@ mod tests_vomma_calculations {
 
 #[cfg(test)]
 mod tests_veta_calculations {
+    #![allow(clippy::indexing_slicing)]
     use super::*;
 
     use crate::assert_decimal_eq;
@@ -9933,6 +9980,7 @@ mod tests_veta_calculations {
 
 #[cfg(test)]
 mod tests_charm_calculations {
+    #![allow(clippy::indexing_slicing)]
     use super::*;
 
     use crate::assert_decimal_eq;
@@ -10018,6 +10066,7 @@ mod tests_charm_calculations {
 
 #[cfg(test)]
 mod tests_color_calculations {
+    #![allow(clippy::indexing_slicing)]
     use super::*;
 
     use crate::assert_decimal_eq;
@@ -10103,6 +10152,7 @@ mod tests_color_calculations {
 
 #[cfg(test)]
 mod tests_atm_strike {
+    #![allow(clippy::indexing_slicing)]
     use super::*;
     use positive::spos;
 
@@ -10310,6 +10360,7 @@ mod tests_atm_strike {
 
 #[cfg(test)]
 mod tests_atm_strike_bis {
+    #![allow(clippy::indexing_slicing)]
     use super::*;
     use positive::spos;
 
@@ -10501,6 +10552,7 @@ mod tests_atm_strike_bis {
 
 #[cfg(test)]
 mod tests_option_chain_utils {
+    #![allow(clippy::indexing_slicing)]
     use super::*;
     use positive::spos;
 
@@ -10655,6 +10707,7 @@ mod tests_option_chain_utils {
 
 #[cfg(test)]
 mod tests_option_chain_utils_bis {
+    #![allow(clippy::indexing_slicing)]
     use super::*;
     use positive::spos;
 
@@ -10851,6 +10904,7 @@ mod tests_option_chain_utils_bis {
 
 #[cfg(test)]
 mod tests_to_build_params_bis {
+    #![allow(clippy::indexing_slicing)]
     use super::*;
     use positive::spos;
 
@@ -10905,6 +10959,7 @@ mod tests_to_build_params_bis {
 
 #[cfg(test)]
 mod chain_coverage_tests {
+    #![allow(clippy::indexing_slicing)]
     use super::*;
     use positive::spos;
 
@@ -11177,6 +11232,7 @@ mod chain_coverage_tests {
 
 #[cfg(test)]
 mod chain_coverage_tests_bis {
+    #![allow(clippy::indexing_slicing)]
     use super::*;
     use positive::spos;
 
@@ -11471,6 +11527,7 @@ mod chain_coverage_tests_bis {
 
 #[cfg(test)]
 mod tests_get_position_with_delta {
+    #![allow(clippy::indexing_slicing)]
     use super::*;
     use positive::spos;
 
@@ -11872,6 +11929,7 @@ mod tests_get_position_with_delta {
 
 #[cfg(test)]
 mod tests_get_strikes_and_optiondata {
+    #![allow(clippy::indexing_slicing)]
     use super::*;
     use positive::spos;
 
@@ -12180,6 +12238,7 @@ mod tests_get_strikes_and_optiondata {
 #[cfg(test)]
 mod tests_option_chain_comparison {
 
+    #![allow(clippy::indexing_slicing)]
     use crate::chains::chain::OptionChain;
     use positive::Positive;
     use rust_decimal_macros::dec;
@@ -12469,6 +12528,7 @@ mod tests_option_chain_comparison {
 
 #[cfg(test)]
 mod tests_volatility_smile_skew {
+    #![allow(clippy::indexing_slicing)]
     use super::*;
 
     use rust_decimal_macros::dec;
@@ -12690,6 +12750,7 @@ mod tests_volatility_smile_skew {
 
 #[cfg(test)]
 mod tests_get_call_price {
+    #![allow(clippy::indexing_slicing)]
     use super::*;
 
     use rust_decimal_macros::dec;
@@ -12799,6 +12860,7 @@ mod tests_get_call_price {
 
 #[cfg(test)]
 mod tests_title_operations {
+    #![allow(clippy::indexing_slicing)]
     use super::*;
 
     #[test]
@@ -12888,6 +12950,7 @@ mod tests_title_operations {
 
 #[cfg(test)]
 mod tests_expiration_operations {
+    #![allow(clippy::indexing_slicing)]
     use super::*;
     use positive::spos;
 
@@ -12983,6 +13046,7 @@ mod tests_expiration_operations {
 
 #[cfg(test)]
 mod tests_from_vec_option_data {
+    #![allow(clippy::indexing_slicing)]
     use super::*;
     use positive::spos;
 
@@ -13118,6 +13182,7 @@ mod tests_from_vec_option_data {
 
 #[cfg(test)]
 mod tests_len_trait {
+    #![allow(clippy::indexing_slicing)]
     use super::*;
 
     use crate::utils::Len;
@@ -13196,6 +13261,7 @@ mod tests_len_trait {
 
 #[cfg(test)]
 mod tests_default_trait {
+    #![allow(clippy::indexing_slicing)]
     use super::*;
 
     #[test]
@@ -13213,6 +13279,7 @@ mod tests_default_trait {
 
 #[cfg(test)]
 mod tests_option_chain_params_trait {
+    #![allow(clippy::indexing_slicing)]
     use super::*;
     use positive::spos;
 
@@ -13268,6 +13335,7 @@ mod tests_option_chain_params_trait {
 
 #[cfg(test)]
 mod tests_price_metrics_traits {
+    #![allow(clippy::indexing_slicing)]
     use super::*;
     use crate::assert_decimal_eq;
     use rust_decimal_macros::dec;
