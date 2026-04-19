@@ -13,7 +13,7 @@ fn main() -> Result<(), optionstratlib::error::Error> {
     let symbol = "GER400";
     setup_logger();
     let option_chain = OptionChain::load_from_json(
-        "examples/Chains/Germany-40-2025-06-13-16:00:00-UTC-23794.5.json",
+        "examples/Chains/Germany-40-2025-05-27-15-29-00-UTC-24209.json",
     )?;
     info!("Successfully retrieved option chain for {}", symbol);
     info!("{}", option_chain);
