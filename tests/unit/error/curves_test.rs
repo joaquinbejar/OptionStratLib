@@ -2,14 +2,11 @@ use optionstratlib::error::{
     CurveError, GraphError, GreeksError, InterpolationError, MetricsError, OperationErrorKind,
     OptionsError,
 };
-use std::error::Error;
 
 #[test]
 fn test_curve_error_from_options_error() {
     // Create an OptionsError
-    let options_error = OptionsError::OtherError {
-        reason: "options error test".to_string(),
-    };
+    let options_error = OptionsError::validation_error("field", "options error test");
 
     // Convert to CurveError using From trait
     let curve_error: CurveError = options_error.into();
@@ -26,7 +23,7 @@ fn test_curve_error_from_options_error() {
 #[test]
 fn test_curve_error_from_greeks_error() {
     // Create a GreeksError
-    let greeks_error = GreeksError::StdError("greeks error test".to_string());
+    let greeks_error = GreeksError::invalid_volatility(-1.0, "greeks error test");
 
     // Convert to CurveError using From trait
     let curve_error: CurveError = greeks_error.into();
@@ -43,7 +40,7 @@ fn test_curve_error_from_greeks_error() {
 #[test]
 fn test_curve_error_from_interpolation_error() {
     // Create an InterpolationError
-    let interpolation_error = InterpolationError::StdError("interpolation error test".to_string());
+    let interpolation_error = InterpolationError::Linear("interpolation error test".to_string());
 
     // Convert to CurveError using From trait
     let curve_error: CurveError = interpolation_error.into();
@@ -173,19 +170,16 @@ fn test_curve_error_point2d_error() {
 }
 
 #[test]
-fn test_curve_error_from_box_dyn_error() {
-    // Create a standard error and box it
-    let std_error = std::io::Error::other("io error test");
-    let boxed_error: Box<dyn Error> = Box::new(std_error);
-
-    // Convert to CurveError
-    let curve_error = CurveError::from(boxed_error);
-
-    // Verify the conversion was successful
-    match curve_error {
-        CurveError::StdError { reason } => {
+fn test_curve_error_render_error() {
+    let error = CurveError::RenderError {
+        backend: "plotters",
+        reason: "io error test".to_string(),
+    };
+    match error {
+        CurveError::RenderError { backend, reason } => {
+            assert_eq!(backend, "plotters");
             assert!(reason.contains("io error test"));
         }
-        _ => panic!("Expected StdError variant, got something else"),
+        _ => panic!("Expected RenderError variant, got something else"),
     }
 }

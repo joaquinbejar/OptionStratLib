@@ -19,9 +19,12 @@ fn main() -> Result<(), optionstratlib::error::Error> {
     info!("{}", option_chain);
 
     let underlying_price = option_chain.underlying_price;
-    let expiration_date = option_chain
-        .get_expiration()
-        .ok_or("No expiration date found")?;
+    let expiration_date = option_chain.get_expiration().ok_or_else(|| {
+        optionstratlib::error::ChainError::invalid_parameters(
+            "expiration_date",
+            "missing on option chain",
+        )
+    })?;
     let symbol = option_chain.symbol.clone();
 
     info!("Underlying Price: {}", underlying_price);

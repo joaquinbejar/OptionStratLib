@@ -703,7 +703,7 @@ impl Optimizable for BullPutSpread {
     /// # Examples
     ///
     /// ```rust
-    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// # fn main() -> Result<(), optionstratlib::error::Error> {
     /// use rust_decimal_macros::dec;
     /// use tracing::info;
     /// use optionstratlib::chains::chain::OptionChain;

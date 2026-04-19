@@ -21,7 +21,7 @@
 //! ## Example Usage
 //!
 //! ```rust
-//! # fn run() -> Result<(), Box<dyn std::error::Error>> {
+//! # fn run() -> Result<(), optionstratlib::error::Error> {
 //! use rust_decimal::Decimal;
 //! use rust_decimal_macros::dec;
 //! use optionstratlib::chains::OptionChain;
@@ -116,7 +116,7 @@
 //! ## Usage Example
 //!
 //! ```rust
-//! # fn run() -> Result<(), Box<dyn std::error::Error>> {
+//! # fn run() -> Result<(), optionstratlib::error::Error> {
 //! use rust_decimal_macros::dec;
 //! use tracing::info;
 //! use optionstratlib::chains::{RNDParameters, RNDAnalysis};

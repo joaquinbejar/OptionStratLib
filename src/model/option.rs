@@ -316,8 +316,8 @@ impl Options {
     /// * The binomial price calculation fails
     pub fn calculate_price_binomial(&self, no_steps: usize) -> OptionsResult<Decimal> {
         if no_steps == 0 {
-            return Err(OptionsError::OtherError {
-                reason: "Number of steps cannot be zero".to_string(),
+            return Err(OptionsError::InvalidStepCount {
+                operation: "binomial",
             });
         }
         let expiry = self.time_to_expiration()?;
@@ -691,10 +691,11 @@ impl Options {
             // mid_vol is the average of two non-negative bounds, so it is
             // structurally non-negative; a None here would indicate a
             // breached invariant on the bounds themselves.
-            let volatility =
-                Positive::new_decimal(mid_vol).map_err(|e| OptionsError::OtherError {
+            let volatility = Positive::new_decimal(mid_vol).map_err(|e| {
+                OptionsError::ImpliedVolatilityInvariant {
                     reason: format!("mid_vol invariant breached: {e}"),
-                })?;
+                }
+            })?;
 
             // Calculate option price at this volatility
             let mut option_copy = self.clone();

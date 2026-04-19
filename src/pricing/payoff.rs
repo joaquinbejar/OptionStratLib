@@ -125,7 +125,7 @@ impl PayoffInfo {
     /// use optionstratlib::pricing::PayoffInfo;
     /// use positive::Positive;
     /// use optionstratlib::model::types::{OptionStyle, Side};
-    /// # fn run() -> Result<(), Box<dyn std::error::Error>> {
+    /// # fn run() -> Result<(), optionstratlib::error::Error> {
     /// let payoff_info = PayoffInfo {
     ///     spot: Positive::new(100.0)?,
     ///     strike: Positive::new(105.0)?,

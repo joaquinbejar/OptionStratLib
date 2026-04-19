@@ -55,7 +55,7 @@ use positive::pos_or_panic;
 //! use rust_decimal_macros::dec;
 //! use optionstratlib::risk::SPANMargin;
 //!
-//! fn main() -> Result<(), Box<dyn std::error::Error>> {
+//! fn main() -> Result<(), optionstratlib::error::Error> {
 //!     // Create an option position
 //!     let option = Options::new(
 //!         OptionType::European,
@@ -108,7 +108,7 @@ use positive::pos_or_panic;
 //! use positive::pos_or_panic;
 //! use optionstratlib::risk::SPANMargin;
 //!
-//! fn main() -> Result<(), Box<dyn std::error::Error>> {
+//! fn main() -> Result<(), optionstratlib::error::Error> {
 //!     let option = Options {
 //!         option_type: OptionType::European,
 //!         side: Side::Long,

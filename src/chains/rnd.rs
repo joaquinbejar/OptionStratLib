@@ -32,7 +32,7 @@
 //! ## Usage Example
 //!
 //! ```rust
-//! # fn run() -> Result<(), Box<dyn std::error::Error>> {
+//! # fn run() -> Result<(), optionstratlib::error::Error> {
 //! use rust_decimal::Decimal;
 //! use rust_decimal_macros::dec;
 //! use tracing::info;
@@ -601,7 +601,7 @@ mod tests {
                 result
                     .unwrap_err()
                     .to_string()
-                    .contains("Failed to calculate valid densities")
+                    .contains("failed to calculate any valid risk-neutral density value")
             );
         }
 
@@ -616,7 +616,7 @@ mod tests {
                 result
                     .unwrap_err()
                     .to_string()
-                    .contains("Derivative tolerance must be greater than zero")
+                    .contains("derivative_tolerance")
             );
         }
 
@@ -634,7 +634,7 @@ mod tests {
                 result
                     .unwrap_err()
                     .to_string()
-                    .contains("Derivative tolerance must be greater than zero")
+                    .contains("derivative_tolerance")
             );
         }
 
@@ -654,7 +654,7 @@ mod tests {
                 result
                     .unwrap_err()
                     .to_string()
-                    .contains("Failed to calculate valid densities")
+                    .contains("failed to calculate any valid risk-neutral density value")
             );
         }
     }
@@ -687,7 +687,7 @@ mod tests {
                 result
                     .unwrap_err()
                     .to_string()
-                    .contains("Cannot find ATM OptionData for empty option chain: TEST")
+                    .contains("cannot find ATM option for empty option chain: TEST")
             );
         }
 
@@ -767,7 +767,7 @@ mod tests {
                 rnd_result
                     .unwrap_err()
                     .to_string()
-                    .contains("Failed to calculate valid densities")
+                    .contains("failed to calculate any valid risk-neutral density value")
             );
         }
 
@@ -824,7 +824,7 @@ mod tests {
                 rnd_result
                     .unwrap_err()
                     .to_string()
-                    .contains("Failed to calculate valid densities")
+                    .contains("failed to calculate any valid risk-neutral density value")
             );
         }
     }
@@ -1001,7 +1001,7 @@ mod additional_tests {
                 result
                     .unwrap_err()
                     .to_string()
-                    .contains("Failed to calculate valid densities")
+                    .contains("failed to calculate any valid risk-neutral density value")
             );
         }
 
@@ -1020,7 +1020,7 @@ mod additional_tests {
                 result
                     .unwrap_err()
                     .to_string()
-                    .contains("Failed to calculate valid densities")
+                    .contains("failed to calculate any valid risk-neutral density value")
             );
         }
 
@@ -1048,7 +1048,7 @@ mod additional_tests {
                     result
                         .unwrap_err()
                         .to_string()
-                        .contains("Failed to calculate valid densities")
+                        .contains("failed to calculate any valid risk-neutral density value")
                 );
             }
         }

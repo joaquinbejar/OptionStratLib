@@ -38,9 +38,3 @@ impl From<SurfaceError> for GraphError {
         GraphError::Surface(err)
     }
 }
-
-impl From<Box<dyn std::error::Error>> for GraphError {
-    fn from(err: Box<dyn std::error::Error>) -> Self {
-        GraphError::Render(err.to_string())
-    }
-}

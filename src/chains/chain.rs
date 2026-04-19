@@ -328,7 +328,7 @@ impl OptionChain {
     /// # Examples
     ///
     /// ```
-    /// # fn run() -> Result<(), Box<dyn std::error::Error>> {
+    /// # fn run() -> Result<(), optionstratlib::error::Error> {
     /// use rust_decimal_macros::dec;
     /// use optionstratlib::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
     /// use positive::{pos_or_panic, spos, Positive};
@@ -909,11 +909,9 @@ impl OptionChain {
     pub fn atm_option_data(&self) -> Result<&OptionData, ChainError> {
         // Check for empty option chain
         if self.options.is_empty() {
-            return Err(format!(
-                "Cannot find ATM OptionData for empty option chain: {}",
-                self.symbol
-            )
-            .into());
+            return Err(ChainError::EmptyChainAtm {
+                symbol: self.symbol.clone(),
+            });
         }
 
         // First check for exact match
@@ -936,11 +934,9 @@ impl OptionChain {
 
         match option_data {
             Some(opt) => Ok(opt),
-            None => Err(format!(
-                "Failed to find ATM OptionData for option chain: {}",
-                self.symbol
-            )
-            .into()),
+            None => Err(ChainError::AtmNotFound {
+                symbol: self.symbol.clone(),
+            }),
         }
     }
 
@@ -1185,7 +1181,9 @@ impl OptionChain {
             let record = result?;
             debug!("To CSV: {:?}", record);
             let mut option_data = OptionData {
-                strike_price: record[0].parse()?,
+                strike_price: record[0].parse::<Positive>().map_err(|e| {
+                    ChainError::invalid_strike(record[0].parse::<f64>().unwrap_or(f64::NAN), &e)
+                })?,
                 call_bid: parse(&record[1]),
                 call_ask: parse(&record[2]),
                 put_bid: parse(&record[3]),
@@ -2817,11 +2815,9 @@ impl OptionChain {
     pub fn get_optiondata_with_strike(&self, price: &Positive) -> Result<&OptionData, ChainError> {
         // Check for empty option chain
         if self.options.is_empty() {
-            return Err(format!(
-                "Cannot find option data for empty option chain: {}",
-                self.symbol
-            )
-            .into());
+            return Err(ChainError::EmptyChain {
+                symbol: self.symbol.clone(),
+            });
         }
 
         // Find the option with strike price closest to the price parameter
@@ -2835,11 +2831,7 @@ impl OptionChain {
 
         match option_data {
             Some(opt) => Ok(opt),
-            None => Err(format!(
-                "Failed to find option data for price {} in chain: {}",
-                price, self.symbol
-            )
-            .into()),
+            None => Err(ChainError::StrikeNotFound { strike: *price }),
         }
     }
 
@@ -2943,17 +2935,16 @@ impl RNDAnalysis for OptionChain {
 
         // Step 1: Validate parameters
         if h == Positive::ZERO {
-            return Err("Derivative tolerance must be greater than zero"
-                .to_string()
-                .into());
+            return Err(ChainError::invalid_parameters(
+                "derivative_tolerance",
+                "must be greater than zero",
+            ));
         }
 
         // Step 2: Get all available strikes
         let strikes: Vec<Positive> = self.options.iter().map(|opt| opt.strike_price).collect();
         if strikes.is_empty() {
-            return Err("No strikes available for RND calculation"
-                .to_string()
-                .into());
+            return Err(ChainError::EmptyDensities);
         }
 
         // Calculate minimum strike interval
@@ -2961,7 +2952,12 @@ impl RNDAnalysis for OptionChain {
             .windows(2)
             .map(|w| w[1] - w[0])
             .min()
-            .ok_or("Cannot determine strike interval")?;
+            .ok_or_else(|| {
+                ChainError::invalid_parameters(
+                    "strike_interval",
+                    "cannot determine minimum strike interval",
+                )
+            })?;
 
         if h < min_interval.to_dec() {
             h = min_interval.to_dec();
@@ -2970,7 +2966,12 @@ impl RNDAnalysis for OptionChain {
         // Step 3: Calculate time to expiry
         let expiry_date = NaiveDate::parse_from_str(&self.expiration_date, "%Y-%m-%d")?
             .and_hms_opt(23, 59, 59)
-            .ok_or("Invalid expiry date time")?;
+            .ok_or_else(|| {
+                ChainError::invalid_parameters(
+                    "expiration_date",
+                    "invalid expiration date/time components",
+                )
+            })?;
 
         let now = Utc::now().naive_utc();
         let time_to_expiry =
@@ -3031,7 +3032,7 @@ impl RNDAnalysis for OptionChain {
 
         // Step 6: Validate and normalize densities
         if densities.is_empty() {
-            return Err("Failed to calculate valid densities".to_string().into());
+            return Err(ChainError::EmptyDensities);
         }
 
         let total: Decimal = densities.values().sum();
@@ -3070,7 +3071,7 @@ impl RNDAnalysis for OptionChain {
         }
 
         if skew.is_empty() {
-            return Err("No valid data for skew calculation".to_string().into());
+            return Err(ChainError::EmptySkewData);
         }
 
         Ok(skew)
@@ -7471,7 +7472,7 @@ mod rnd_analysis_tests {
                 result
                     .unwrap_err()
                     .to_string()
-                    .contains("Derivative tolerance must be greater than zero")
+                    .contains("derivative_tolerance")
             );
         }
 
@@ -7489,7 +7490,7 @@ mod rnd_analysis_tests {
                 result
                     .unwrap_err()
                     .to_string()
-                    .contains("Derivative tolerance must be greater than zero")
+                    .contains("derivative_tolerance")
             );
         }
 
@@ -7556,7 +7557,7 @@ mod rnd_analysis_tests {
                 result
                     .unwrap_err()
                     .to_string()
-                    .contains("Cannot find ATM OptionData for empty option chain: TEST")
+                    .contains("cannot find ATM option for empty option chain: TEST")
             );
         }
 
@@ -11950,10 +11951,14 @@ mod tests_get_strikes_and_optiondata {
         assert!(result.is_err(), "Should return error for empty chain");
 
         let error = result.unwrap_err();
+        assert!(
+            matches!(error, ChainError::EmptyChain { ref symbol } if symbol == "EMPTY"),
+            "Should return ChainError::EmptyChain for EMPTY symbol, got: {error:?}"
+        );
         let error_msg = format!("{error}");
         assert!(
-            error_msg.contains("empty option chain"),
-            "Error should mention empty chain"
+            error_msg.contains("option chain is empty"),
+            "Error should mention empty chain, got: {error_msg}"
         );
         assert!(
             error_msg.contains("EMPTY"),

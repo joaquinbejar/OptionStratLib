@@ -56,7 +56,7 @@
 //! ### Basic Strategy Analysis
 //!
 //! ```rust
-//! # fn run() -> Result<(), Box<dyn std::error::Error>> {
+//! # fn run() -> Result<(), optionstratlib::error::Error> {
 //! use rust_decimal_macros::dec;
 //! use tracing::info;
 //! use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
@@ -92,7 +92,7 @@
 //! ### Analysis with Volatility Adjustment
 //!
 //! ```rust
-//! # fn run() -> Result<(), Box<dyn std::error::Error>> {
+//! # fn run() -> Result<(), optionstratlib::error::Error> {
 //! use rust_decimal_macros::dec;
 //! use optionstratlib::ExpirationDate;
 //! use optionstratlib::strategies::probabilities::{ProbabilityAnalysis, VolatilityAdjustment};
@@ -131,7 +131,7 @@
 //! ### Analysis with Price Trend
 //!
 //! ```rust
-//! # fn run() -> Result<(), Box<dyn std::error::Error>> {
+//! # fn run() -> Result<(), optionstratlib::error::Error> {
 //! use rust_decimal_macros::dec;
 //! use optionstratlib::ExpirationDate;
 //! use positive::Positive;
@@ -168,7 +168,7 @@
 //! ### Price Range Probability Analysis
 //!
 //! ```rust
-//! # fn run() -> Result<(), Box<dyn std::error::Error>> {
+//! # fn run() -> Result<(), optionstratlib::error::Error> {
 //! use tracing::info;
 //! use optionstratlib::strategies::probabilities::calculate_price_probability;
 //! use optionstratlib::ExpirationDate;

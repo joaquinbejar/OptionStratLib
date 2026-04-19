@@ -58,7 +58,8 @@ fn test_graph_error_from_box_dyn_error() {
 #[test]
 fn test_graph_error_from_curve_error() {
     // Create a CurveError
-    let curve_error = CurveError::StdError {
+    let curve_error = CurveError::RenderError {
+        backend: "plotters",
         reason: "Invalid curve data".to_string(),
     };
 
@@ -77,7 +78,8 @@ fn test_graph_error_from_curve_error() {
 #[test]
 fn test_graph_error_from_surface_error() {
     // Create a SurfaceError
-    let surface_error = SurfaceError::StdError {
+    let surface_error = SurfaceError::RenderError {
+        backend: "plotters",
         reason: "Invalid surface data".to_string(),
     };
 

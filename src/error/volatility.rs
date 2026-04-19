@@ -90,22 +90,47 @@ pub enum VolatilityError {
         last_volatility: Positive,
     },
 
+    /// No implied-volatility candidate produced a price match after the grid search.
+    #[error("implied volatility not found within search grid")]
+    IvNotFound,
+
+    /// None of the generated volatility samples produced a valid price.
+    #[error("no valid volatility sample produced a finite price")]
+    NoValidVolatility,
+
+    /// A numerical precision or representation failure inside a Heston-style
+    /// volatility simulation kernel (e.g. `sqrt` overflow, `f64`/`Decimal` bridge).
+    #[error("volatility simulation numerical failure: {reason}")]
+    NumericalFailure {
+        /// Human-readable description of which numerical step failed.
+        reason: String,
+    },
+
+    /// The ATM implied volatility is unavailable; the boxed inner source
+    /// describes the failing lookup.
+    #[error("ATM implied volatility is not available: {source}")]
+    AtmIvUnavailable {
+        /// Underlying error that explains why the ATM IV could not be retrieved.
+        #[source]
+        source: Box<VolatilityError>,
+    },
+
+    /// A chain-layer error surfaced while retrieving volatility data
+    /// (e.g. empty option chain, ATM lookup failure on a chain).
+    ///
+    /// Boxed to avoid infinite enum size through the `ChainError::Volatility`
+    /// cycle.
+    #[error(transparent)]
+    Chain(Box<crate::error::ChainError>),
+
     /// Positive value errors
     #[error(transparent)]
     PositiveError(#[from] positive::PositiveError),
 }
 
-impl From<&str> for VolatilityError {
-    fn from(s: &str) -> Self {
-        VolatilityError::OptionError {
-            reason: s.to_string(),
-        }
-    }
-}
-
-impl From<String> for VolatilityError {
-    fn from(s: String) -> Self {
-        VolatilityError::OptionError { reason: s }
+impl From<crate::error::ChainError> for VolatilityError {
+    fn from(error: crate::error::ChainError) -> Self {
+        Self::Chain(Box::new(error))
     }
 }
 
@@ -199,11 +224,9 @@ mod tests_volatility_errors {
 
     #[test]
     fn test_from_options_error() {
-        let greeks_error = OptionsError::OtherError {
-            reason: "Invalid option parameters".to_string(),
-        };
+        let options_error = OptionsError::validation_error("strike", "Invalid option parameters");
 
-        let implied_vol_error: VolatilityError = greeks_error.into();
+        let implied_vol_error: VolatilityError = options_error.into();
 
         match implied_vol_error {
             VolatilityError::Options(_) => {
@@ -211,6 +234,36 @@ mod tests_volatility_errors {
             }
             _ => panic!("Wrong error variant"),
         }
+    }
+
+    #[test]
+    fn test_iv_not_found() {
+        let error = VolatilityError::IvNotFound;
+        assert_eq!(
+            error.to_string(),
+            "implied volatility not found within search grid"
+        );
+    }
+
+    #[test]
+    fn test_no_valid_volatility() {
+        let error = VolatilityError::NoValidVolatility;
+        assert_eq!(
+            error.to_string(),
+            "no valid volatility sample produced a finite price"
+        );
+    }
+
+    #[test]
+    fn test_atm_iv_unavailable() {
+        let error = VolatilityError::AtmIvUnavailable {
+            source: Box::new(VolatilityError::IvNotFound),
+        };
+        assert!(
+            error
+                .to_string()
+                .contains("ATM implied volatility is not available")
+        );
     }
 
     #[test]

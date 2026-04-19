@@ -596,11 +596,13 @@ impl crate::strategies::StrategyConstructor for CoveredCall {}
 
 impl ProbabilityAnalysis for CoveredCall {
     fn get_profit_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
-        let break_even_point = self
-            .break_even_points
-            .first()
-            .copied()
-            .ok_or_else(|| ProbabilityError::from("No break-even point found"))?;
+        let break_even_point =
+            self.break_even_points
+                .first()
+                .copied()
+                .ok_or(ProbabilityError::MissingMetric {
+                    metric: "break_even_point",
+                })?;
 
         let option = &self.short_call.option;
         let expiration_date = &option.expiration_date;
@@ -628,11 +630,13 @@ impl ProbabilityAnalysis for CoveredCall {
     }
 
     fn get_loss_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
-        let break_even_point = self
-            .break_even_points
-            .first()
-            .copied()
-            .ok_or_else(|| ProbabilityError::from("No break-even point found"))?;
+        let break_even_point =
+            self.break_even_points
+                .first()
+                .copied()
+                .ok_or(ProbabilityError::MissingMetric {
+                    metric: "break_even_point",
+                })?;
 
         let option = &self.short_call.option;
         let expiration_date = &option.expiration_date;

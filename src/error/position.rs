@@ -195,7 +195,6 @@ pub enum StrategyErrorKind {
 ///
 /// * `InvalidPosition` - The position is invalid for other specific reasons.
 ///
-/// * `StdError` - Standard error from external systems or libraries.
 ///
 /// # Usage
 ///
@@ -257,15 +256,6 @@ pub enum PositionValidationErrorKind {
     #[error("Invalid position: {reason}")]
     InvalidPosition {
         /// Explanation of why the position is invalid
-        reason: String,
-    },
-
-    /// Standard error from external systems
-    ///
-    /// Wraps standard errors from external libraries or systems.
-    #[error("Standard error: {reason}")]
-    StdError {
-        /// Description of the standard error
         reason: String,
     },
 }
@@ -476,30 +466,6 @@ impl PositionError {
     }
 }
 
-impl From<Box<dyn std::error::Error>> for PositionError {
-    fn from(err: Box<dyn std::error::Error>) -> Self {
-        PositionError::ValidationError(PositionValidationErrorKind::StdError {
-            reason: err.to_string(),
-        })
-    }
-}
-
-impl From<&str> for PositionError {
-    fn from(err: &str) -> Self {
-        PositionError::ValidationError(PositionValidationErrorKind::StdError {
-            reason: err.to_string(),
-        })
-    }
-}
-
-impl From<String> for PositionError {
-    fn from(err: String) -> Self {
-        PositionError::ValidationError(PositionValidationErrorKind::StdError {
-            reason: err.to_string(),
-        })
-    }
-}
-
 // Implement conversion from StrategyError to PositionError
 impl From<StrategyError> for PositionError {
     fn from(error: StrategyError) -> Self {
@@ -587,28 +553,11 @@ mod tests_extended {
     }
 
     #[test]
-    fn test_error_conversions() {
-        // Test de str a PositionError
-        let str_error: PositionError = "test error".into();
+    fn test_invalid_position_constructor() {
+        let error = PositionError::invalid_position("bad position");
         assert!(matches!(
-            str_error,
-            PositionError::ValidationError(PositionValidationErrorKind::StdError { .. })
-        ));
-
-        // Test de String a PositionError
-        let string_error: PositionError = "test error".to_string().into();
-        assert!(matches!(
-            string_error,
-            PositionError::ValidationError(PositionValidationErrorKind::StdError { .. })
-        ));
-
-        // Test de Box<dyn Error> a PositionError
-        let std_error: Box<dyn std::error::Error> =
-            Box::new(std::io::Error::other("dynamic error"));
-        let position_error = PositionError::from(std_error);
-        assert!(matches!(
-            position_error,
-            PositionError::ValidationError(PositionValidationErrorKind::StdError { .. })
+            error,
+            PositionError::ValidationError(PositionValidationErrorKind::InvalidPosition { .. })
         ));
     }
 
@@ -723,14 +672,6 @@ mod tests_extended {
             format!("{error}"),
             "Incompatible option style OptionStyle::Call: Unsupported for Call options"
         );
-    }
-
-    #[test]
-    fn test_position_validation_error_std_error() {
-        let error = PositionValidationErrorKind::StdError {
-            reason: "Unexpected null value".to_string(),
-        };
-        assert_eq!(format!("{error}"), "Standard error: Unexpected null value");
     }
 
     #[test]

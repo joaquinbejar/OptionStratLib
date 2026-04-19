@@ -46,15 +46,20 @@
 //!
 //! ## Conversions
 //!
-//! The module implements various conversion traits:
+//! The module implements the following conversion traits, all typed:
 //!
-//! * `From<io::Error>` - Converts IO errors to chain errors
-//! * `From<String>` - Converts string messages to price calculation errors
+//! * `From<io::Error>` via `#[from]` (to `FileErrorKind::IOError`)
+//! * `From<csv::Error>` and `From<serde_json::Error>` to `FileErrorKind::ParseError`
+//! * `From<DecimalError>`, `From<GreeksError>`, `From<OptionsError>` to the
+//!   appropriate `OptionDataErrorKind` variant
+//! * `From<CurveError>`, `From<VolatilityError>`, `From<SimulationError>`,
+//!   `From<ExpirationDateError>` with typed wrapping (see variants below)
 //!
-//! All error types implement `std::error::Error` and `std::fmt::Display` for proper error
-//! handling and formatting.
+//! All error types implement `std::error::Error` and `std::fmt::Display` for proper
+//! error handling and formatting.
 
 use crate::error::{DecimalError, GreeksError, OptionsError};
+use positive::Positive;
 use std::io;
 use thiserror::Error;
 
@@ -80,8 +85,20 @@ use thiserror::Error;
 /// * `StrategyError` - Errors related to option trading strategies, including issues
 ///   with leg validation or invalid combinations of options.
 ///
-/// * `DynError` - A generic error variant for capturing dynamic error messages that
-///   don't fit into the other specific categories.
+/// * `EmptyChain` - The option chain for the given symbol is empty (generic empty-chain
+///   condition, independent of ATM selection).
+/// * `EmptyChainAtm` - The option chain for the given symbol is empty and has no ATM option
+///   to select. Reserved for ATM-selection paths; prefer `EmptyChain` for non-ATM lookups.
+/// * `AtmNotFound` - The option chain has options but none could be selected as the ATM
+///   contract for the given symbol.
+/// * `EmptyDensities` - No valid risk-neutral densities could be produced.
+/// * `EmptySkewData` - No strikes produced valid data points to build a volatility skew.
+/// * `StrikeNotFound` - A requested strike was not present in the current chain.
+/// * `Curve` - A curve-layer error surfaced during chain construction or analytics.
+/// * `Volatility` - A volatility-layer error surfaced during chain construction or analytics.
+/// * `Simulation` - A simulation-layer error surfaced during chain construction.
+/// * `ExpirationDate` - Expiration-date conversion error.
+/// * `PositiveError` - Positive value errors
 ///
 /// # Usage
 ///
@@ -118,15 +135,60 @@ pub enum ChainError {
     #[error("Strategy error: {0}")]
     StrategyError(StrategyErrorKind),
 
-    /// Dynamic error with custom message
-    ///
-    /// This variant provides flexibility for error conditions that don't
-    /// fit into the other specific categories.
-    #[error("{message}")]
-    DynError {
-        /// A descriptive message explaining the error
-        message: String,
+    /// The option chain for the given symbol is empty. Generic empty-chain
+    /// condition, emitted by non-ATM lookups (e.g. strike-based selection).
+    #[error("option chain is empty: {symbol}")]
+    EmptyChain {
+        /// Ticker symbol of the chain that is empty.
+        symbol: String,
     },
+
+    /// The option chain for the given symbol is empty and has no ATM option
+    /// to select. Reserved for ATM-selection paths.
+    #[error("cannot find ATM option for empty option chain: {symbol}")]
+    EmptyChainAtm {
+        /// Ticker symbol of the chain that is empty.
+        symbol: String,
+    },
+
+    /// The option chain has options but none could be selected as the ATM
+    /// contract for the given symbol.
+    #[error("failed to find ATM option for option chain: {symbol}")]
+    AtmNotFound {
+        /// Ticker symbol of the chain for which no ATM contract was found.
+        symbol: String,
+    },
+
+    /// No valid risk-neutral densities could be produced.
+    #[error("failed to calculate any valid risk-neutral density value")]
+    EmptyDensities,
+
+    /// No strikes produced valid data points to build a volatility skew.
+    #[error("no valid data points available for volatility skew calculation")]
+    EmptySkewData,
+
+    /// A requested strike was not present in the current chain.
+    #[error("strike {strike} not found in option chain")]
+    StrikeNotFound {
+        /// The strike price that was requested but missing.
+        strike: Positive,
+    },
+
+    /// A curve-layer error surfaced during chain construction or analytics.
+    #[error(transparent)]
+    Curve(Box<crate::error::CurveError>),
+
+    /// A volatility-layer error surfaced during chain construction or analytics.
+    #[error(transparent)]
+    Volatility(Box<crate::error::VolatilityError>),
+
+    /// A simulation-layer error surfaced during chain construction.
+    #[error(transparent)]
+    Simulation(Box<crate::error::SimulationError>),
+
+    /// Expiration-date conversion error.
+    #[error(transparent)]
+    ExpirationDate(#[from] expiration_date::error::ExpirationDateError),
 
     /// Positive value errors
     #[error(transparent)]
@@ -564,29 +626,10 @@ impl ChainError {
     }
 }
 
-impl From<String> for ChainError {
-    fn from(msg: String) -> Self {
-        ChainError::OptionDataError(OptionDataErrorKind::PriceCalculationError(msg))
-    }
-}
-
-impl From<&str> for ChainError {
-    fn from(msg: &str) -> Self {
-        ChainError::OptionDataError(OptionDataErrorKind::PriceCalculationError(msg.to_string()))
-    }
-}
-
 impl From<GreeksError> for ChainError {
+    #[inline]
     fn from(err: GreeksError) -> Self {
         ChainError::OptionDataError(OptionDataErrorKind::Other(err.to_string()))
-    }
-}
-
-impl From<Box<dyn std::error::Error>> for ChainError {
-    fn from(error: Box<dyn std::error::Error>) -> Self {
-        ChainError::DynError {
-            message: error.to_string(),
-        }
     }
 }
 
@@ -623,30 +666,23 @@ impl From<std::num::ParseIntError> for ChainError {
 }
 
 impl From<crate::error::CurveError> for ChainError {
+    #[inline]
     fn from(err: crate::error::CurveError) -> Self {
-        ChainError::OptionDataError(OptionDataErrorKind::Other(err.to_string()))
-    }
-}
-
-impl From<expiration_date::error::ExpirationDateError> for ChainError {
-    fn from(err: expiration_date::error::ExpirationDateError) -> Self {
-        ChainError::OptionDataError(OptionDataErrorKind::PriceCalculationError(err.to_string()))
+        ChainError::Curve(Box::new(err))
     }
 }
 
 impl From<crate::error::SimulationError> for ChainError {
+    #[inline]
     fn from(err: crate::error::SimulationError) -> Self {
-        ChainError::DynError {
-            message: format!("simulation error: {err}"),
-        }
+        ChainError::Simulation(Box::new(err))
     }
 }
 
 impl From<crate::error::VolatilityError> for ChainError {
+    #[inline]
     fn from(err: crate::error::VolatilityError) -> Self {
-        ChainError::DynError {
-            message: format!("volatility error: {err}"),
-        }
+        ChainError::Volatility(Box::new(err))
     }
 }
 
@@ -770,13 +806,6 @@ mod tests_extended {
 
     #[test]
     fn test_error_conversions() {
-        // Test de String a ChainError
-        let string_error: ChainError = "test error".to_string().into();
-        assert!(matches!(
-            string_error,
-            ChainError::OptionDataError(OptionDataErrorKind::PriceCalculationError(_))
-        ));
-
         // Test de io::Error a ChainError
         let io_error = std::io::Error::new(std::io::ErrorKind::NotFound, "file not found");
         let chain_error = ChainError::from(io_error);
@@ -784,11 +813,6 @@ mod tests_extended {
             chain_error,
             ChainError::FileError(FileErrorKind::IOError(_))
         ));
-
-        let std_error: Box<dyn std::error::Error> =
-            Box::new(std::io::Error::other("dynamic error"));
-        let chain_error = ChainError::from(std_error);
-        assert!(matches!(chain_error, ChainError::DynError { .. }));
     }
 
     #[test]
@@ -825,11 +849,34 @@ mod tests_extended {
     }
 
     #[test]
-    fn test_chain_error_dyn_error() {
-        let error = ChainError::DynError {
-            message: "Dynamic error occurred".to_string(),
+    fn test_chain_error_empty_chain_atm() {
+        let error = ChainError::EmptyChainAtm {
+            symbol: "SPX".to_string(),
         };
-        assert_eq!(format!("{error}"), "Dynamic error occurred");
+        assert_eq!(
+            format!("{error}"),
+            "cannot find ATM option for empty option chain: SPX"
+        );
+    }
+
+    #[test]
+    fn test_chain_error_atm_not_found() {
+        let error = ChainError::AtmNotFound {
+            symbol: "SPX".to_string(),
+        };
+        assert_eq!(
+            format!("{error}"),
+            "failed to find ATM option for option chain: SPX"
+        );
+    }
+
+    #[test]
+    fn test_chain_error_empty_densities() {
+        let error = ChainError::EmptyDensities;
+        assert_eq!(
+            format!("{error}"),
+            "failed to calculate any valid risk-neutral density value"
+        );
     }
 
     #[test]

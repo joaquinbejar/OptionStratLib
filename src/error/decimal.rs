@@ -125,9 +125,9 @@ pub enum DecimalError {
         reason: String,
     },
 
-    /// Catch-all error for other decimal errors
-    #[error("Other decimal error: {0}")]
-    Other(String),
+    /// Expiration-date conversion error surfaced during decimal operations.
+    #[error(transparent)]
+    ExpirationDate(expiration_date::error::ExpirationDateError),
 }
 
 /// A specialized `Result` type for decimal calculation operations.
@@ -287,15 +287,10 @@ impl DecimalError {
     }
 }
 
-impl From<&str> for DecimalError {
-    fn from(s: &str) -> Self {
-        DecimalError::Other(s.to_string())
-    }
-}
-
 impl From<expiration_date::error::ExpirationDateError> for DecimalError {
+    #[inline]
     fn from(err: expiration_date::error::ExpirationDateError) -> Self {
-        DecimalError::Other(err.to_string())
+        DecimalError::ExpirationDate(err)
     }
 }
 

@@ -57,23 +57,25 @@ pub enum InterpolationError {
     #[error(transparent)]
     Surface(#[from] SurfaceError),
 
-    /// Standard errors not specific to a particular interpolation method.
-    ///
-    /// These represent general errors that may occur during interpolation
-    /// operations, such as memory allocation failures or system errors.
-    #[error("Standard error: {0}")]
-    StdError(String),
+    /// Input data set was empty so interpolation could not proceed.
+    #[error("interpolation input has no data points")]
+    EmptyData,
+
+    /// Requested point falls outside the valid interpolation range.
+    #[error("interpolation target {target} is outside the supported range")]
+    OutOfRange {
+        /// The offending coordinate (stringified for flexibility across axes).
+        target: String,
+    },
+
+    /// Interval degenerated into a point (two consecutive knots coincide).
+    #[error("interpolation interval is degenerate: knots collapse to a single point")]
+    DegenerateInterval,
 }
 
 impl From<CurveError> for InterpolationError {
     fn from(err: CurveError) -> Self {
         InterpolationError::Curve(err)
-    }
-}
-
-impl From<Box<dyn std::error::Error>> for InterpolationError {
-    fn from(err: Box<dyn std::error::Error>) -> Self {
-        InterpolationError::StdError(err.to_string())
     }
 }
 
@@ -83,18 +85,6 @@ mod tests {
     use crate::error::position::PositionValidationErrorKind;
     use std::error::Error as StdError;
     use std::fmt;
-
-    // Mock errors for testing the From implementations
-    #[derive(Debug)]
-    struct MockError(String);
-
-    impl fmt::Display for MockError {
-        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-            write!(f, "{}", self.0)
-        }
-    }
-
-    impl StdError for MockError {}
 
     // Mock implementations of the error types used in From implementations
     #[derive(Debug)]
@@ -161,7 +151,11 @@ mod tests {
         let bilinear_err = InterpolationError::Bilinear("out of grid boundary".to_string());
         let cubic_err = InterpolationError::Cubic("numerical instability".to_string());
         let spline_err = InterpolationError::Spline("invalid knot placement".to_string());
-        let std_err = InterpolationError::StdError("general error".to_string());
+        let empty_err = InterpolationError::EmptyData;
+        let out_of_range = InterpolationError::OutOfRange {
+            target: "1.23".to_string(),
+        };
+        let degenerate = InterpolationError::DegenerateInterval;
 
         // Verify the variants are created correctly
         match linear_err {
@@ -184,10 +178,12 @@ mod tests {
             _ => panic!("Expected Spline variant"),
         }
 
-        match std_err {
-            InterpolationError::StdError(msg) => assert_eq!(msg, "general error"),
-            _ => panic!("Expected StdError variant"),
-        }
+        assert!(matches!(empty_err, InterpolationError::EmptyData));
+        assert!(matches!(
+            out_of_range,
+            InterpolationError::OutOfRange { .. }
+        ));
+        assert!(matches!(degenerate, InterpolationError::DegenerateInterval));
     }
 
     #[test]
@@ -197,7 +193,7 @@ mod tests {
         let bilinear_err = InterpolationError::Bilinear("test error".to_string());
         let cubic_err = InterpolationError::Cubic("test error".to_string());
         let spline_err = InterpolationError::Spline("test error".to_string());
-        let std_err = InterpolationError::StdError("test error".to_string());
+        let empty_err = InterpolationError::EmptyData;
 
         assert_eq!(
             format!("{linear_err}"),
@@ -215,20 +211,10 @@ mod tests {
             format!("{spline_err}"),
             "Spline interpolation error: test error"
         );
-        assert_eq!(format!("{std_err}"), "Standard error: test error");
-    }
-
-    #[test]
-    fn test_from_box_dyn_error() {
-        // Create a Box<dyn Error> and convert it to an InterpolationError
-        let mock_error = Box::new(MockError("boxed error".to_string())) as Box<dyn StdError>;
-
-        let interpolation_err = InterpolationError::from(mock_error);
-
-        match interpolation_err {
-            InterpolationError::StdError(msg) => assert!(msg.contains("boxed error")),
-            _ => panic!("Expected StdError variant"),
-        }
+        assert_eq!(
+            format!("{empty_err}"),
+            "interpolation input has no data points"
+        );
     }
 
     #[test]

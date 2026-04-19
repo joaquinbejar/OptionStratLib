@@ -504,7 +504,9 @@ impl PnLCalculator for LongCall {
         // Single-leg strategies like LongCall don't typically require delta adjustments
         // as they are directional strategies. Delta adjustments are more relevant for
         // complex multi-leg strategies aiming for delta neutrality.
-        Err("Delta adjustments are not applicable to single-leg LongCall strategy".into())
+        Err(PricingError::DeltaAdjustmentNotApplicable {
+            strategy: "LongCall",
+        })
     }
 }
 
@@ -556,9 +558,9 @@ where
                 .template(
                     "{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} simulations ({eta})",
                 )
-                .map_err(|e| SimulationError::OtherError {
-                    reason: format!("Failed to set progress bar template: {}", e),
-                })?
+                .map_err(|e| SimulationError::walk_error(&format!(
+                    "Failed to set progress bar template: {e}"
+                )))?
                 .progress_chars("#>-"),
         );
 

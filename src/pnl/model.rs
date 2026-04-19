@@ -75,7 +75,7 @@ impl PnLRange {
     /// # Example
     ///
     /// ```rust
-    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// # fn main() -> Result<(), optionstratlib::error::Error> {
     /// use rust_decimal_macros::dec;
     /// use optionstratlib::pnl::model::PnLRange;
     ///

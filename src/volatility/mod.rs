@@ -133,7 +133,7 @@ use positive::pos_or_panic;
 //! The module includes utilities for converting between different time frames:
 //!
 //! ```rust
-//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
+//! # fn main() -> Result<(), optionstratlib::error::Error> {
 //! use positive::pos_or_panic;
 //! use optionstratlib::utils::time::TimeFrame;
 //! use optionstratlib::volatility::{annualized_volatility, de_annualized_volatility};

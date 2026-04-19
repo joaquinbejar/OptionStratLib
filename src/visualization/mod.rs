@@ -61,7 +61,7 @@
 //! ## Example: Simple Line Chart
 //!
 //! ```rust
-//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
+//! # fn main() -> Result<(), optionstratlib::error::Error> {
 //! use std::fs;
 //! use std::path::{Path, PathBuf};
 //! use rust_decimal::Decimal;

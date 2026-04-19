@@ -114,18 +114,24 @@ pub fn calculate_single_point_probability(
                 ));
             }
             let rf = risk_free.to_f64().ok_or_else(|| {
-                ProbabilityError::StdError(format!(
-                    "calculate_single_point_probability: risk_free Decimal {} not representable as f64",
-                    risk_free
-                ))
+                ProbabilityError::CalculationError(
+                    ProbabilityCalculationErrorKind::ExpectedValueError {
+                        reason: format!(
+                            "calculate_single_point_probability: risk_free Decimal {risk_free} not representable as f64"
+                        ),
+                    },
+                )
             })?;
             rf + (t.drift_rate * t.confidence)
         }
         None => risk_free.to_f64().ok_or_else(|| {
-            ProbabilityError::StdError(format!(
-                "calculate_single_point_probability: risk_free Decimal {} not representable as f64",
-                risk_free
-            ))
+            ProbabilityError::CalculationError(
+                ProbabilityCalculationErrorKind::ExpectedValueError {
+                    reason: format!(
+                        "calculate_single_point_probability: risk_free Decimal {risk_free} not representable as f64"
+                    ),
+                },
+            )
         })?,
     };
 

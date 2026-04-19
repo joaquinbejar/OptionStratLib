@@ -387,7 +387,7 @@ pub fn create_sample_option_simplest_strike(
 /// # Example
 ///
 /// ```rust
-/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+/// # fn main() -> Result<(), optionstratlib::error::Error> {
 /// use positive::Positive;
 /// use optionstratlib::model::utils::mean_and_std;
 ///

@@ -99,12 +99,32 @@ pub enum OhlcvError {
         reason: String,
     },
 
-    /// General error
-    ///
-    /// This variant is used for errors that don't fit into other categories.
-    #[error("Error: {reason}")]
-    OtherError {
-        /// Reason for the error
+    /// A required column was missing from the CSV payload.
+    #[error("required column `{column}` is missing")]
+    MissingColumn {
+        /// Name of the column that was expected but not found.
+        column: &'static str,
+    },
+
+    /// Row-level parsing failure, with a descriptive reason bound to the row.
+    #[error("failed to parse row: {reason}")]
+    RowParsing {
+        /// Human-readable description of why the row could not be parsed.
+        reason: String,
+    },
+
+    /// No file with the expected extension was found inside the ZIP archive.
+    #[error("no file with extension `{extension}` found in ZIP archive")]
+    MissingZipEntry {
+        /// Extension that was expected inside the ZIP payload (e.g. `"csv"`).
+        extension: &'static str,
+    },
+
+    /// An asynchronous background task (`tokio::task::spawn_blocking`) failed to
+    /// complete — typically a panic or cancellation of the worker thread.
+    #[error("async task failed: {reason}")]
+    AsyncTask {
+        /// Human-readable description of the underlying join failure.
         reason: String,
     },
 }

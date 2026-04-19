@@ -446,7 +446,7 @@ impl GeometricObject<Point3D, Point2D> for Surface {
     ///
     /// ## Creating from existing points
     /// ```rust
-    /// # fn run() -> Result<(), Box<dyn std::error::Error>> {
+    /// # fn run() -> Result<(), optionstratlib::error::Error> {
     /// use std::collections::BTreeSet;
     /// use optionstratlib::geometrics::{ConstructionMethod, GeometricObject};
     /// use optionstratlib::surfaces::{Point3D, Surface};
@@ -462,7 +462,7 @@ impl GeometricObject<Point3D, Point2D> for Surface {
     ///
     /// ## Creating from a parametric function
     /// ```rust,no_run
-    /// # fn run() -> Result<(), Box<dyn std::error::Error>> {
+    /// # fn run() -> Result<(), optionstratlib::error::Error> {
     /// use rust_decimal_macros::dec;
     /// use optionstratlib::curves::Point2D;
     /// use optionstratlib::geometrics::{ConstructionMethod, ConstructionParams, GeometricObject, ResultPoint};
@@ -1989,7 +1989,10 @@ mod tests_surface_geometric_object {
         let parametric_func: Box<dyn Fn(Point2D) -> ResultPoint<Point3D> + Send + Sync> =
             Box::new(move |t: Point2D| -> ResultPoint<Point3D> {
                 if t.x > dec!(0.5) && t.y > dec!(0.5) {
-                    Err("Test error".into())
+                    Err(crate::error::ChainError::invalid_parameters(
+                        "parametric_f",
+                        "Test error",
+                    ))
                 } else {
                     Ok(Point3D::new(t.x, t.y, t.x * t.y))
                 }
