@@ -327,10 +327,10 @@ pub trait Graph {
     ///
     /// # Errors
     ///
-    /// Returns `GraphError::RenderError` when the chosen
-    /// [`OutputType`] backend (PNG/SVG via static_export, HTML, etc.)
-    /// fails to serialize or render, and `GraphError::IoError` when
-    /// the destination path cannot be written.
+    /// Returns `GraphError::Render` when the chosen `OutputType`
+    /// backend (PNG/SVG via `static_export`, HTML, etc.) fails to
+    /// serialize or render, and `GraphError::Io` when the
+    /// destination path cannot be written.
     #[cfg(feature = "plotly")]
     fn render(&self, output: OutputType) -> Result<(), GraphError> {
         match output {

@@ -110,10 +110,15 @@ impl Point3D {
     ///
     /// # Errors
     ///
-    /// Returns [`SurfaceError::Point3DError`] when one of the
-    /// `Decimal` coordinates cannot be converted into the target
-    /// numeric type `T`, `U` or `V` (e.g. out-of-range for `f32`,
-    /// overflow for `u32`).
+    /// Returns `SurfaceError::Point3DError` in three situations:
+    ///
+    /// - when one of the target types is `Positive`-like
+    ///   (detected via the `is_positive::<T>()` / `is_positive::<U>()`
+    ///   / `is_positive::<V>()` checks) and the corresponding
+    ///   coordinate is less than or equal to zero.
+    /// - when one of the `Decimal` coordinates cannot be converted
+    ///   into the target numeric type (e.g. out-of-range for `f32`,
+    ///   overflow for `u32`).
     pub fn to_tuple<
         T: TryFrom<Decimal> + 'static,
         U: TryFrom<Decimal> + 'static,

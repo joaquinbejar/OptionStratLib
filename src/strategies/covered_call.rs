@@ -294,10 +294,13 @@ impl CoveredCall {
     ///
     /// # Errors
     ///
-    /// Returns `PricingError::MethodError` with method `covered_call`
-    /// when the call strike sits below the spot cost basis (the strategy
-    /// has no upside), or when arithmetic on `Positive` operands
-    /// overflows.
+    /// Currently infallible — when `strike >= cost_basis` the
+    /// function returns the capital gain plus premium minus fees as
+    /// an `Ok(...)`, and otherwise clamps any negative worst-case
+    /// to `Ok(Positive::ZERO)`. The `Result` signature is retained
+    /// so future implementations that add checked arithmetic or
+    /// validate the strike layout can return
+    /// `PricingError::MethodError` without a breaking change.
     pub fn max_profit_potential(&self) -> Result<Positive, PricingError> {
         let strike = self.call_strike();
         let cost_basis = self.spot_leg.cost_basis;
@@ -327,10 +330,13 @@ impl CoveredCall {
     ///
     /// # Errors
     ///
-    /// Returns `PricingError::MethodError` with method `covered_call`
-    /// when the premium net of fees exceeds `cost_basis × quantity`
-    /// (which would imply a non-negative worst case), or when arithmetic
-    /// on `Positive` operands overflows.
+    /// Currently infallible. When `total_investment + total_fees`
+    /// exceeds `premium_received` the function returns the positive
+    /// delta, otherwise it clamps to `Ok(Positive::ZERO)`. The
+    /// `Result` signature is retained so future implementations
+    /// that add checked arithmetic or validate the premium/cost
+    /// relationship can return `PricingError::MethodError` without
+    /// a breaking change.
     pub fn max_loss_potential(&self) -> Result<Positive, PricingError> {
         let cost_basis = self.spot_leg.cost_basis;
         let quantity = self.spot_leg.quantity;

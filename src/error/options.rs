@@ -233,7 +233,7 @@ pub enum OptionsError {
 /// * Expiration and time value calculations
 /// * Option payoff analysis
 ///
-/// `OptionsError`: enum.OptionsError.html
+/// See `OptionsError` for the full variant list.
 pub type OptionsResult<T> = Result<T, OptionsError>;
 
 /// Helper methods for creating common options errors.

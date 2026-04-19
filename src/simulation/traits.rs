@@ -106,10 +106,16 @@ where
     ///
     /// # Errors
     ///
-    /// Returns [`SimulationError::InvalidWalkType`] when
-    /// `params.walk_type` is not a [`WalkType::Brownian`] variant,
-    /// and [`SimulationError::PositiveError`] when a generated sample
-    /// cannot be represented as `Positive`.
+    /// Returns `SimulationError::InvalidWalkType` when
+    /// `params.walk_type` is not a `WalkType::Brownian` variant, and
+    /// propagates `SimulationError::PositiveError` from
+    /// `params.ystep_as_positive()?` when the initial `y` value
+    /// violates the `Positive` invariant.
+    ///
+    /// Generated samples are clamped with
+    /// `Positive::new_decimal(x.max(Decimal::ZERO))
+    /// .unwrap_or(Positive::ZERO)`, so negative realisations do not
+    /// surface an error - they are replaced by `Positive::ZERO`.
     fn brownian(&self, params: &WalkParams<X, Y>) -> Result<Vec<Positive>, SimulationError> {
         match params.walk_type {
             WalkType::Brownian {

@@ -29,10 +29,14 @@ use positive::pos_or_panic;
 ///
 /// # Errors
 ///
-/// Returns [`VolatilityError::NumericalFailure`] when the length of
+/// Returns `VolatilityError::NumericalFailure` when the length of
 /// `returns` cannot be represented as a `Decimal` or when the
-/// variance computation overflows, and [`VolatilityError::PositiveError`]
-/// if the final square-root produces a non-positive candidate.
+/// final `variance.sqrt()` fails (overflow).
+///
+/// When `returns.len() < 2` the function returns `Ok(Positive::ZERO)`
+/// rather than an error. Conversion of the final std-dev into
+/// `Positive` is clamped to `Positive::ZERO`, so `PositiveError` is
+/// never surfaced.
 pub fn constant_volatility(returns: &[Decimal]) -> Result<Positive, VolatilityError> {
     let n_dec =
         Decimal::from_usize(returns.len()).ok_or_else(|| VolatilityError::NumericalFailure {
@@ -72,10 +76,16 @@ pub fn constant_volatility(returns: &[Decimal]) -> Result<Positive, VolatilityEr
 ///
 /// # Errors
 ///
-/// Returns [`VolatilityError::InvalidTime`] when `window_size` is zero
-/// or larger than `returns.len()`, and propagates any
-/// [`VolatilityError::NumericalFailure`] raised by
-/// [`constant_volatility`] on a given window.
+/// Propagates any `VolatilityError::NumericalFailure` raised by
+/// `constant_volatility` on an individual window.
+///
+/// # Panics
+///
+/// The underlying `slice::windows(window_size)` call panics when
+/// `window_size == 0`. When `window_size > returns.len()` the
+/// function returns `Ok(vec![])` instead of an error, so callers
+/// that need a non-empty result must validate the inputs
+/// themselves.
 pub fn historical_volatility(
     returns: &[Decimal],
     window_size: usize,
@@ -99,10 +109,14 @@ pub fn historical_volatility(
 ///
 /// # Errors
 ///
-/// Returns [`VolatilityError::NumericalFailure`] when the EWMA
-/// recurrence overflows or produces a negative running variance, and
-/// [`VolatilityError::PositiveError`] when a running square-root
-/// violates the `Positive` invariant.
+/// Returns `VolatilityError::NumericalFailure` when `returns` is
+/// empty or when any `variance.sqrt()` call fails (negative operand
+/// reported as a generic overflow failure).
+///
+/// Each running std-dev is converted via
+/// `Positive::new_decimal(...).unwrap_or(Positive::ZERO)`, so
+/// `PositiveError` is never surfaced — negative intermediates are
+/// already caught by the `sqrt` check above.
 pub fn ewma_volatility(
     returns: &[Decimal],
     lambda: Decimal,
@@ -155,12 +169,16 @@ pub fn ewma_volatility(
 ///
 /// # Errors
 ///
-/// Returns [`VolatilityError::NoConvergence`] when the Newton–Raphson
-/// iteration exhausts `MAX_ITERATIONS_IV` without matching the target
-/// price, [`VolatilityError::IvNotFound`] when the search grid never
-/// produced a valid candidate, or propagates
-/// [`VolatilityError::Options`] from the underlying Black–Scholes
-/// evaluation on each iteration.
+/// The implementation is a parallel grid search over
+/// `100 * max_iterations` candidate volatilities rather than a
+/// Newton–Raphson iteration. It returns
+/// `VolatilityError::IvNotFound` when the best candidate is the
+/// lower boundary `1 / (100 * max_iterations)` (the search never
+/// improved), `VolatilityError::NoValidVolatility` when every grid
+/// point failed the Black–Scholes evaluation, and
+/// `VolatilityError::PositiveError` when the boundary `Positive`
+/// conversion fails. Black–Scholes errors on individual candidates
+/// are discarded by the parallel filter rather than propagated.
 pub fn implied_volatility(
     market_price: Positive,
     options: &mut Options,
@@ -268,11 +286,17 @@ pub fn calculate_iv(
 ///
 /// # Errors
 ///
-/// Returns [`VolatilityError::NumericalFailure`] when the GARCH
-/// recurrence overflows, and [`VolatilityError::PositiveError`] when a
-/// running square-root produces a non-positive candidate (typically
-/// when `omega`, `alpha` or `beta` violate the GARCH(1,1) stationarity
-/// constraint).
+/// Currently infallible — every `Positive::new_decimal(...)` call
+/// is clamped to `Positive::ZERO`, so neither `NumericalFailure` nor
+/// `PositiveError` is surfaced. The `Result` signature is retained
+/// so future implementations that add explicit stationarity checks
+/// (`alpha + beta < 1`) or overflow validation can return
+/// `VolatilityError::NumericalFailure` without a breaking change.
+///
+/// # Panics
+///
+/// Panics on `returns[0]` when `returns` is empty. Callers must
+/// validate the input slice length before invoking.
 pub fn garch_volatility(
     returns: &[Decimal],
     omega: Decimal,
@@ -306,11 +330,16 @@ pub fn garch_volatility(
 ///
 /// # Errors
 ///
-/// Returns [`VolatilityError::NumericalFailure`] when the Heston
-/// simulation kernel overflows a `Decimal` step or when a square-root
-/// operand turns negative under the truncated-Euler scheme, and
-/// [`VolatilityError::PositiveError`] when the resulting variance
-/// breaches the `Positive` invariant.
+/// Returns `VolatilityError::NumericalFailure` when the initial
+/// `sqrt(dt)` call overflows, when that square root is not
+/// representable as `f64`, or when the per-step `dw` sample cannot
+/// be converted back into `Decimal`.
+///
+/// Variance is clamped to zero on each step
+/// (`v = v.max(Decimal::ZERO)`) and converted via
+/// `Positive::new_decimal(...).unwrap_or(Positive::ZERO)`, so
+/// negative variance is silently recovered and `PositiveError` is
+/// never surfaced.
 pub fn simulate_heston_volatility(
     kappa: Decimal,
     theta: Decimal,

@@ -184,11 +184,13 @@ impl ProtectivePut {
     ///
     /// # Errors
     ///
-    /// Returns `PricingError::MethodError` with method
-    /// `protective_put` when the put strike equals or exceeds the spot
-    /// cost basis (the hedge fully neutralises downside and the
-    /// decomposition is ill-posed), or when arithmetic on `Positive`
-    /// operands overflows.
+    /// Currently infallible — both branches compute
+    /// `Positive::new_decimal(total_loss.max(Decimal::ZERO))
+    /// .unwrap_or(Positive::ZERO)`, so any negative decomposition is
+    /// clamped to `Positive::ZERO` rather than surfaced as an error.
+    /// The `Result` signature is retained so future implementations
+    /// that add checked arithmetic or validate the strike layout can
+    /// return `PricingError::MethodError` without a breaking change.
     pub fn max_loss_potential(&self) -> Result<Positive, PricingError> {
         let put_strike = self.put_strike();
         let cost_basis = self.spot_leg.cost_basis;

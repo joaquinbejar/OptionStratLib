@@ -378,11 +378,14 @@ impl Collar {
     ///
     /// # Errors
     ///
-    /// Returns `PricingError::MethodError` with method `collar` when
-    /// the short-call strike is below the spot cost basis (the strategy
-    /// is not economically well-formed). Arithmetic follows
-    /// `PricingError::ArithmeticFailure` if fee or premium conversions
-    /// overflow.
+    /// Currently infallible — both branches compute
+    /// `Positive::new_decimal(total_profit.max(Decimal::ZERO))
+    /// .unwrap_or(Positive::ZERO)`, so negative decompositions are
+    /// clamped to `Positive::ZERO` rather than surfaced as an error.
+    /// The `Result` signature is retained so future implementations
+    /// that add checked arithmetic or validate the
+    /// `call_strike ≥ cost_basis` precondition can return
+    /// `PricingError::MethodError` without a breaking change.
     pub fn max_profit_potential(&self) -> Result<Positive, PricingError> {
         let call_strike = self.call_strike();
         let cost_basis = self.spot_leg.cost_basis;
@@ -408,11 +411,14 @@ impl Collar {
     ///
     /// # Errors
     ///
-    /// Returns `PricingError::MethodError` with method `collar` when
-    /// the loss decomposition underflows (for example when the put strike
-    /// equals or exceeds the spot cost basis and the net premium net of
-    /// fees is positive), or when arithmetic fails while converting
-    /// `Positive` operands.
+    /// Currently infallible — both branches compute
+    /// `Positive::new_decimal(total_loss.max(Decimal::ZERO))
+    /// .unwrap_or(Positive::ZERO)`, so negative decompositions are
+    /// clamped to `Positive::ZERO` rather than surfaced as an error.
+    /// The `Result` signature is retained so future implementations
+    /// that add checked arithmetic or validate the
+    /// `cost_basis ≥ put_strike` precondition can return
+    /// `PricingError::MethodError` without a breaking change.
     pub fn max_loss_potential(&self) -> Result<Positive, PricingError> {
         let put_strike = self.put_strike();
         let cost_basis = self.spot_leg.cost_basis;

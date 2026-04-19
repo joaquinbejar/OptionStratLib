@@ -244,10 +244,13 @@ impl Position {
     ///
     /// # Errors
     ///
-    /// Returns [`PositionError`] wrapping a [`PositionValidationErrorKind::InvalidPosition`]
-    /// when the total cost computation underflows into a negative
-    /// `Positive`-representable value (typically a short position where the
-    /// received premium exceeds the declared costs).
+    /// Currently infallible — long positions accumulate only
+    /// non-negative `Positive` terms and short positions delegate
+    /// to `fees()`, which is itself infallible under the current
+    /// implementation. The `Result` signature is retained so future
+    /// implementations that validate fee configuration or surface
+    /// overflow on `Positive` arithmetic can return
+    /// `PositionError` without a breaking change.
     pub fn total_cost(&self) -> Result<Positive, PositionError> {
         let total_cost = match self.option.side {
             Side::Long => (self.premium + self.open_fee + self.close_fee) * self.option.quantity,
@@ -302,10 +305,13 @@ impl Position {
     ///
     /// # Errors
     ///
-    /// Returns [`PositionError::invalid_position_type`] for a long position
-    /// (which never receives a premium), or wraps a `Positive`-conversion
-    /// failure when `premium × quantity` cannot be represented as a
-    /// non-negative decimal.
+    /// Currently infallible — long positions return
+    /// `Ok(Positive::ZERO)` (no premium received) and short
+    /// positions return `Ok(self.premium * self.option.quantity)`.
+    /// The `Result` signature is retained so future implementations
+    /// that treat long-side calls as a programmer error, or that
+    /// surface overflow on the `premium × quantity` product, can
+    /// return `PositionError` without a breaking change.
     pub fn premium_received(&self) -> Result<Positive, PositionError> {
         match self.option.side {
             Side::Long => Ok(Positive::ZERO),
@@ -333,10 +339,14 @@ impl Position {
     ///
     /// # Errors
     ///
-    /// Returns [`PositionError`] wrapping a
-    /// [`PositionValidationErrorKind::InvalidPosition`] when the net
-    /// amount (premium minus fees) becomes negative, signalling a
-    /// guaranteed-loss short position.
+    /// Propagates any `PositionError` raised by `total_cost()` (no
+    /// variant is surfaced under the current implementation, but
+    /// the call site keeps the `?` for forward compatibility).
+    ///
+    /// When the short-side net amount `premium − total_cost` is
+    /// negative the function returns `Ok(Positive::ZERO)` (clamped)
+    /// rather than an error, so a guaranteed-loss short position is
+    /// reported as zero net received rather than as a failure.
     pub fn net_premium_received(&self) -> Result<Positive, PositionError> {
         match self.option.side {
             Side::Long => Ok(Positive::ZERO),
