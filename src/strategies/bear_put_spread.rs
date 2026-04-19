@@ -32,6 +32,7 @@ use crate::{
     greeks::Greeks,
     model::{
         ProfitLossRange,
+        decimal::d_sum,
         position::Position,
         types::{OptionBasicType, OptionStyle, OptionType, Side},
         utils::mean_and_std,
@@ -808,7 +809,13 @@ impl Optimizable for BearPutSpread {
 impl Profit for BearPutSpread {
     fn calculate_profit_at(&self, price: &Positive) -> Result<Decimal, PricingError> {
         let price = Some(price);
-        Ok(self.long_put.pnl_at_expiration(&price)? + self.short_put.pnl_at_expiration(&price)?)
+        Ok(d_sum(
+            &[
+                self.long_put.pnl_at_expiration(&price)?,
+                self.short_put.pnl_at_expiration(&price)?,
+            ],
+            "strategies::bear_put_spread::profit_at",
+        )?)
     }
 }
 

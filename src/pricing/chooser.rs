@@ -26,6 +26,7 @@
 use crate::Options;
 use crate::error::PricingError;
 use crate::greeks::{big_n, d1, d2};
+use crate::model::decimal::{d_add, d_mul, d_sub};
 use crate::model::types::OptionType;
 use positive::Positive;
 use rust_decimal::Decimal;
@@ -83,8 +84,10 @@ fn simple_chooser_price(option: &Options, choice_date_days: f64) -> Result<Decim
 
     if t_big == Positive::ZERO {
         // At expiration, intrinsic value
-        let call_intrinsic = (s.to_dec() - k.to_dec()).max(Decimal::ZERO);
-        let put_intrinsic = (k.to_dec() - s.to_dec()).max(Decimal::ZERO);
+        let call_intrinsic =
+            d_sub(s.to_dec(), k.to_dec(), "pricing::chooser::intrinsic::call")?.max(Decimal::ZERO);
+        let put_intrinsic =
+            d_sub(k.to_dec(), s.to_dec(), "pricing::chooser::intrinsic::put")?.max(Decimal::ZERO);
         return Ok(apply_side(call_intrinsic.max(put_intrinsic), option));
     }
 
@@ -92,8 +95,28 @@ fn simple_chooser_price(option: &Options, choice_date_days: f64) -> Result<Decim
         // Zero vol: deterministic choice
         let discount_t = (-r * t_big).exp();
         let forward = s.to_dec() * ((r - q) * t_big.to_dec()).exp();
-        let call_val = (forward - k.to_dec()).max(Decimal::ZERO) * discount_t;
-        let put_val = (k.to_dec() - forward).max(Decimal::ZERO) * discount_t;
+        let call_intrinsic = d_sub(
+            forward,
+            k.to_dec(),
+            "pricing::chooser::zero_vol::call::intrinsic",
+        )?
+        .max(Decimal::ZERO);
+        let put_intrinsic = d_sub(
+            k.to_dec(),
+            forward,
+            "pricing::chooser::zero_vol::put::intrinsic",
+        )?
+        .max(Decimal::ZERO);
+        let call_val = d_mul(
+            call_intrinsic,
+            discount_t,
+            "pricing::chooser::zero_vol::call::discounted",
+        )?;
+        let put_val = d_mul(
+            put_intrinsic,
+            discount_t,
+            "pricing::chooser::zero_vol::put::discounted",
+        )?;
         return Ok(apply_side(call_val.max(put_val), option));
     }
 
@@ -130,10 +153,46 @@ fn simple_chooser_price(option: &Options, choice_date_days: f64) -> Result<Decim
 
     // Rubinstein (1991) simple chooser formula:
     // V = S*e^(-qT)*N(d1) - K*e^(-rT)*N(d2) + K*e^(-rt)*N(-y2) - S*e^(-qt)*N(-y1)
-    // This equals: Call(K, T) + Put_component_for_choice_flexibility
-    let price = s.to_dec() * dividend_discount_t * n_d1 - k.to_dec() * discount_t * n_d2
-        + k.to_dec() * discount_choice * n_neg_y2
-        - s.to_dec() * dividend_discount_choice * n_neg_y1;
+    // This equals: Call(K, T) + Put_component_for_choice_flexibility.
+    // Every leg is now built via two chained `d_mul` calls so the
+    // leading monetary product (underlying * dividend discount, or
+    // strike * discount) is checked and a subsequent saturation on
+    // the CDF weight cannot mask the original overflow.
+    let leg_s_t_discounted = d_mul(
+        s.to_dec(),
+        dividend_discount_t,
+        "pricing::chooser::price::leg_s_t_discounted",
+    )?;
+    let leg_s_t = d_mul(leg_s_t_discounted, n_d1, "pricing::chooser::price::leg_s_t")?;
+    let leg_k_t_discounted = d_mul(
+        k.to_dec(),
+        discount_t,
+        "pricing::chooser::price::leg_k_t_discounted",
+    )?;
+    let leg_k_t = d_mul(leg_k_t_discounted, n_d2, "pricing::chooser::price::leg_k_t")?;
+    let leg_k_choice_discounted = d_mul(
+        k.to_dec(),
+        discount_choice,
+        "pricing::chooser::price::leg_k_choice_discounted",
+    )?;
+    let leg_k_choice = d_mul(
+        leg_k_choice_discounted,
+        n_neg_y2,
+        "pricing::chooser::price::leg_k_choice",
+    )?;
+    let leg_s_choice_discounted = d_mul(
+        s.to_dec(),
+        dividend_discount_choice,
+        "pricing::chooser::price::leg_s_choice_discounted",
+    )?;
+    let leg_s_choice = d_mul(
+        leg_s_choice_discounted,
+        n_neg_y1,
+        "pricing::chooser::price::leg_s_choice",
+    )?;
+    let diff1 = d_sub(leg_s_t, leg_k_t, "pricing::chooser::price::diff1")?;
+    let diff2 = d_add(diff1, leg_k_choice, "pricing::chooser::price::diff2")?;
+    let price = d_sub(diff2, leg_s_choice, "pricing::chooser::price")?;
 
     Ok(apply_side(price.max(Decimal::ZERO), option))
 }
@@ -153,8 +212,18 @@ fn price_at_choice_equals_expiry(option: &Options) -> Result<Decimal, PricingErr
         .map_err(|e| PricingError::other(&e.to_string()))?;
 
     if t == Positive::ZERO {
-        let call_intrinsic = (s.to_dec() - k.to_dec()).max(Decimal::ZERO);
-        let put_intrinsic = (k.to_dec() - s.to_dec()).max(Decimal::ZERO);
+        let call_intrinsic = d_sub(
+            s.to_dec(),
+            k.to_dec(),
+            "pricing::chooser::expiry::call::intrinsic",
+        )?
+        .max(Decimal::ZERO);
+        let put_intrinsic = d_sub(
+            k.to_dec(),
+            s.to_dec(),
+            "pricing::chooser::expiry::put::intrinsic",
+        )?
+        .max(Decimal::ZERO);
         return Ok(apply_side(call_intrinsic.max(put_intrinsic), option));
     }
 
@@ -174,13 +243,15 @@ fn price_at_choice_equals_expiry(option: &Options) -> Result<Decimal, PricingErr
     let discount = (-r * t).exp();
 
     // Call + Put = Straddle
-    let call_price = s.to_dec() * dividend_discount * n_d1 - k.to_dec() * discount * n_d2;
-    let put_price = k.to_dec() * discount * n_neg_d2 - s.to_dec() * dividend_discount * n_neg_d1;
+    let call_s_leg = s.to_dec() * dividend_discount * n_d1;
+    let call_k_leg = k.to_dec() * discount * n_d2;
+    let put_k_leg = k.to_dec() * discount * n_neg_d2;
+    let put_s_leg = s.to_dec() * dividend_discount * n_neg_d1;
+    let call_price = d_sub(call_s_leg, call_k_leg, "pricing::chooser::expiry::call")?;
+    let put_price = d_sub(put_k_leg, put_s_leg, "pricing::chooser::expiry::put")?;
+    let price = d_add(call_price, put_price, "pricing::chooser::expiry::price")?;
 
-    Ok(apply_side(
-        (call_price + put_price).max(Decimal::ZERO),
-        option,
-    ))
+    Ok(apply_side(price.max(Decimal::ZERO), option))
 }
 
 /// Applies the side (long/short) multiplier to the price.

@@ -27,6 +27,7 @@
 use crate::Options;
 use crate::error::PricingError;
 use crate::greeks::{big_n, d1, d2};
+use crate::model::decimal::{d_add, d_mul, d_sub};
 use crate::model::types::{LookbackType, OptionStyle, OptionType};
 use positive::Positive;
 use rust_decimal::Decimal;
@@ -142,7 +143,8 @@ fn floating_strike_lookback(option: &Options) -> Result<Decimal, PricingError> {
                     * (sigma_sq / (dec!(2) * b))
                     * (n_a2 - (b * t_dec).exp() * n_neg_a1);
 
-                term1 - term2 + term3
+                let diff = d_sub(term1, term2, "pricing::lookback::floating::call::diff")?;
+                d_add(diff, term3, "pricing::lookback::floating::call::price")?
             }
         }
         OptionStyle::Put => {
@@ -175,7 +177,8 @@ fn floating_strike_lookback(option: &Options) -> Result<Decimal, PricingError> {
                     * (sigma_sq / (dec!(2) * b))
                     * ((b * t_dec).exp() * n_a1 - n_a2);
 
-                term1 - term2 + term3
+                let diff = d_sub(term1, term2, "pricing::lookback::floating::put::diff")?;
+                d_add(diff, term3, "pricing::lookback::floating::put::price")?
             }
         }
     };
@@ -246,7 +249,17 @@ fn fixed_strike_lookback(option: &Options) -> Result<Decimal, PricingError> {
             let n_d2 = big_n(d2_val).unwrap_or(Decimal::ZERO);
 
             // Standard BS call
-            let bs_call = s.to_dec() * dividend_discount * n_d1 - k.to_dec() * discount * n_d2;
+            let s_leg = d_mul(
+                s.to_dec() * dividend_discount,
+                n_d1,
+                "pricing::lookback::fixed::call::s_leg",
+            )?;
+            let k_leg = d_mul(
+                k.to_dec() * discount,
+                n_d2,
+                "pricing::lookback::fixed::call::k_leg",
+            )?;
+            let bs_call = d_sub(s_leg, k_leg, "pricing::lookback::fixed::call::bs")?;
 
             // Lookback premium (value of being able to exercise at maximum)
             // For new contract from S, use simplified formula
@@ -259,7 +272,12 @@ fn fixed_strike_lookback(option: &Options) -> Result<Decimal, PricingError> {
             let lookback_premium =
                 s.to_dec() * sigma.to_dec() * sqrt_t * (n_lambda - dec!(0.5)) * dec!(0.5);
 
-            (bs_call + lookback_premium).max(Decimal::ZERO)
+            d_add(
+                bs_call,
+                lookback_premium,
+                "pricing::lookback::fixed::call::price",
+            )?
+            .max(Decimal::ZERO)
         }
         OptionStyle::Put => {
             // Fixed strike lookback put: pays max(K - S_min, 0)
@@ -267,9 +285,30 @@ fn fixed_strike_lookback(option: &Options) -> Result<Decimal, PricingError> {
             let n_neg_d1 = big_n(-d1_val).unwrap_or(Decimal::ZERO);
             let n_neg_d2 = big_n(-d2_val).unwrap_or(Decimal::ZERO);
 
-            // Standard BS put
-            let bs_put =
-                k.to_dec() * discount * n_neg_d2 - s.to_dec() * dividend_discount * n_neg_d1;
+            // Standard BS put. Mirror of the call branch: build the
+            // discounted strike / discounted forward with `d_mul`,
+            // then fold in the CDF weight with a second `d_mul`.
+            let k_discounted = d_mul(
+                k.to_dec(),
+                discount,
+                "pricing::lookback::fixed::put::k_discounted",
+            )?;
+            let k_leg = d_mul(
+                k_discounted,
+                n_neg_d2,
+                "pricing::lookback::fixed::put::k_leg",
+            )?;
+            let s_discounted = d_mul(
+                s.to_dec(),
+                dividend_discount,
+                "pricing::lookback::fixed::put::s_discounted",
+            )?;
+            let s_leg = d_mul(
+                s_discounted,
+                n_neg_d1,
+                "pricing::lookback::fixed::put::s_leg",
+            )?;
+            let bs_put = d_sub(k_leg, s_leg, "pricing::lookback::fixed::put::bs")?;
 
             // Lookback premium (value of being able to exercise at minimum)
             let lambda = if b.abs() < dec!(1e-10) {
@@ -281,7 +320,12 @@ fn fixed_strike_lookback(option: &Options) -> Result<Decimal, PricingError> {
             let lookback_premium =
                 s.to_dec() * sigma.to_dec() * sqrt_t * (n_lambda - dec!(0.5)) * dec!(0.5);
 
-            (bs_put + lookback_premium).max(Decimal::ZERO)
+            d_add(
+                bs_put,
+                lookback_premium,
+                "pricing::lookback::fixed::put::price",
+            )?
+            .max(Decimal::ZERO)
         }
     };
 

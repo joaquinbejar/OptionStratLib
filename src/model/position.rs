@@ -10,6 +10,7 @@ use crate::error::{
     GreeksError, PositionError, PricingError, StrategyError, TradeError, TransactionError,
 };
 use crate::greeks::Greeks;
+use crate::model::decimal::{d_add, d_mul, d_sub};
 use crate::model::trade::TradeStatusAble;
 use crate::model::types::{Action, OptionBasicType, OptionStyle, Side};
 use crate::model::{Trade, TradeAble, TradeStatus};
@@ -418,13 +419,24 @@ impl Position {
     /// evaluation ([`Options::intrinsic_value`] or [`Options::payoff`]),
     /// wrapped as `PricingError::OptionError`.
     pub fn pnl_at_expiration(&self, price: &Option<&Positive>) -> Result<Decimal, PricingError> {
-        match price {
-            None => Ok(self.option.intrinsic_value(self.option.underlying_price)?
-                - self.total_cost()?
-                + self.premium_received()?),
-            Some(price) => Ok(self.option.intrinsic_value(**price)? - self.total_cost()?
-                + self.premium_received()?),
-        }
+        // P&L = intrinsic_value - total_cost + premium_received.
+        // All three terms are monetary and the composition surfaces the
+        // user-visible P&L, so the fused arithmetic goes through `d_add` /
+        // `d_sub` to trip `DecimalError::Overflow` instead of wrapping on a
+        // pathological cost basis or premium.
+        let intrinsic = match price {
+            None => self.option.intrinsic_value(self.option.underlying_price)?,
+            Some(price) => self.option.intrinsic_value(**price)?,
+        };
+        let cost = self.total_cost()?.to_dec();
+        let premium_recv = self.premium_received()?.to_dec();
+        let net_after_cost = d_sub(intrinsic, cost, "position::pnl_at_expiration::net")?;
+        d_add(
+            net_after_cost,
+            premium_recv,
+            "position::pnl_at_expiration::total",
+        )
+        .map_err(PricingError::from)
     }
 
     /// Calculates the unrealized profit and loss (PnL) for an options position at a given price.
@@ -480,18 +492,51 @@ impl Position {
     /// evaluation, or `PositionError::PricingError` when the
     /// implied-volatility recomputation at `price` fails.
     pub fn unrealized_pnl(&self, price: Positive) -> Result<Decimal, PositionError> {
-        match self.option.side {
-            Side::Long => Ok((price.to_dec()
-                - self.premium.to_dec()
-                - self.open_fee.to_dec()
-                - self.close_fee.to_dec())
-                * self.option.quantity),
-            Side::Short => Ok((self.premium.to_dec()
-                - price.to_dec()
-                - self.open_fee.to_dec()
-                - self.close_fee.to_dec())
-                * self.option.quantity),
-        }
+        // Per-contract P&L (Long: price - premium - fees; Short: premium -
+        // price - fees) then scaled by the contract quantity. Each step is a
+        // monetary flow, so overflow surfaces a typed error rather than
+        // wrapping silently on Decimal::MIN or Decimal::MAX-class inputs.
+        let per_contract = match self.option.side {
+            Side::Long => {
+                let after_premium = d_sub(
+                    price.to_dec(),
+                    self.premium.to_dec(),
+                    "position::unrealized_pnl::long::after_premium",
+                )?;
+                let after_open = d_sub(
+                    after_premium,
+                    self.open_fee.to_dec(),
+                    "position::unrealized_pnl::long::after_open_fee",
+                )?;
+                d_sub(
+                    after_open,
+                    self.close_fee.to_dec(),
+                    "position::unrealized_pnl::long::net",
+                )?
+            }
+            Side::Short => {
+                let after_price = d_sub(
+                    self.premium.to_dec(),
+                    price.to_dec(),
+                    "position::unrealized_pnl::short::after_price",
+                )?;
+                let after_open = d_sub(
+                    after_price,
+                    self.open_fee.to_dec(),
+                    "position::unrealized_pnl::short::after_open_fee",
+                )?;
+                d_sub(
+                    after_open,
+                    self.close_fee.to_dec(),
+                    "position::unrealized_pnl::short::net",
+                )?
+            }
+        };
+        Ok(d_mul(
+            per_contract,
+            self.option.quantity.to_dec(),
+            "position::unrealized_pnl::scaled",
+        )?)
     }
 
     /// Calculates the number of days the position has been held.

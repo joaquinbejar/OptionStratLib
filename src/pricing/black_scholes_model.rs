@@ -6,6 +6,7 @@
 use crate::Options;
 use crate::error::PricingError;
 use crate::greeks::{big_n, calculate_d_values};
+use crate::model::decimal::{d_mul, d_sub};
 use crate::model::types::{OptionStyle, OptionType, Side};
 use rust_decimal::{Decimal, MathematicalOps};
 use tracing::trace;
@@ -187,16 +188,43 @@ fn calculate_call_option_price(
     let big_n_d2 = big_n(d2)?;
 
     // e^(−qT) * S * N(d1) − e^(−rT) * K * N(d2)
-    let s_discounted =
-        option.underlying_price.to_dec() * (-option.dividend_yield.to_dec() * t).exp();
-    let k_discounted = (-option.risk_free_rate * t).exp() * option.strike_price.to_dec();
+    let qt = d_mul(
+        -option.dividend_yield.to_dec(),
+        t,
+        "pricing::black_scholes::call::qt",
+    )?;
+    let rt = d_mul(
+        -option.risk_free_rate,
+        t,
+        "pricing::black_scholes::call::rt",
+    )?;
+    let s_discounted = d_mul(
+        option.underlying_price.to_dec(),
+        qt.exp(),
+        "pricing::black_scholes::call::discount_s",
+    )?;
+    let k_discounted = d_mul(
+        rt.exp(),
+        option.strike_price.to_dec(),
+        "pricing::black_scholes::call::discount_k",
+    )?;
 
-    let result = s_discounted * big_n_d1 - k_discounted * big_n_d2;
+    let s_leg = d_mul(
+        s_discounted,
+        big_n_d1,
+        "pricing::black_scholes::call::s_leg",
+    )?;
+    let k_leg = d_mul(
+        k_discounted,
+        big_n_d2,
+        "pricing::black_scholes::call::k_leg",
+    )?;
+    let result = d_sub(s_leg, k_leg, "pricing::black_scholes::call::price")?;
     trace!(
         "Call Option Price: {} - {} * {} * {} = {}",
         option.underlying_price,
         option.strike_price,
-        (-option.risk_free_rate * t).exp(),
+        rt.exp(),
         big_n_d2,
         result
     );
@@ -243,12 +271,35 @@ fn calculate_put_option_price(
     let big_n_neg_d2 = big_n(-d2)?;
 
     // Discount factors
-    let s_discounted =
-        option.underlying_price.to_dec() * (-option.dividend_yield.to_dec() * t).exp(); // e^(−qT)·S
-    let k_discounted = option.strike_price.to_dec() * (-option.risk_free_rate * t).exp(); // e^(−rT)·K
+    let qt = d_mul(
+        -option.dividend_yield.to_dec(),
+        t,
+        "pricing::black_scholes::put::qt",
+    )?;
+    let rt = d_mul(-option.risk_free_rate, t, "pricing::black_scholes::put::rt")?;
+    let s_discounted = d_mul(
+        option.underlying_price.to_dec(),
+        qt.exp(),
+        "pricing::black_scholes::put::discount_s",
+    )?;
+    let k_discounted = d_mul(
+        option.strike_price.to_dec(),
+        rt.exp(),
+        "pricing::black_scholes::put::discount_k",
+    )?;
 
     // P = K e^(−rT) N(−d2) − S e^(−qT) N(−d1)
-    let result = k_discounted * big_n_neg_d2 - s_discounted * big_n_neg_d1;
+    let k_leg = d_mul(
+        k_discounted,
+        big_n_neg_d2,
+        "pricing::black_scholes::put::k_leg",
+    )?;
+    let s_leg = d_mul(
+        s_discounted,
+        big_n_neg_d1,
+        "pricing::black_scholes::put::s_leg",
+    )?;
+    let result = d_sub(k_leg, s_leg, "pricing::black_scholes::put::price")?;
 
     Ok(result)
 }

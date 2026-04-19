@@ -16,6 +16,7 @@ use crate::{
     greeks::Greeks,
     model::{
         ProfitLossRange,
+        decimal::d_sum,
         position::Position,
         types::{OptionBasicType, OptionStyle, OptionType, Side},
         utils::mean_and_std,
@@ -962,7 +963,14 @@ impl Profit for CallButterfly {
         let long_call_itm_profit = self.long_call.pnl_at_expiration(&price)?;
         let long_call_otm_profit = self.short_call_low.pnl_at_expiration(&price)?;
         let short_call_profit = self.short_call_high.pnl_at_expiration(&price)?;
-        Ok(long_call_itm_profit + long_call_otm_profit + short_call_profit)
+        Ok(d_sum(
+            &[
+                long_call_itm_profit,
+                long_call_otm_profit,
+                short_call_profit,
+            ],
+            "strategies::call_butterfly::profit_at",
+        )?)
     }
 }
 

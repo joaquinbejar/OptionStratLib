@@ -16,6 +16,7 @@ use crate::{
     greeks::Greeks,
     model::{
         ProfitLossRange, Trade,
+        decimal::d_sum,
         position::Position,
         types::{Action, OptionBasicType, OptionStyle, Side},
         utils::mean_and_std,
@@ -860,10 +861,12 @@ impl Optimizable for CustomStrategy {
 impl Profit for CustomStrategy {
     fn calculate_profit_at(&self, price: &Positive) -> Result<Decimal, PricingError> {
         let price = Some(price);
-        self.positions
+        let pnls: Vec<Decimal> = self
+            .positions
             .iter()
             .map(|position| position.pnl_at_expiration(&price))
-            .try_fold(Decimal::ZERO, |acc, pnl| Ok(acc + pnl?))
+            .collect::<Result<Vec<_>, _>>()?;
+        d_sum(&pnls, "strategies::custom::profit_at").map_err(PricingError::from)
     }
 }
 

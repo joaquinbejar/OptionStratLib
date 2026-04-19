@@ -3,6 +3,7 @@
    Email: jb@taunais.com
    Date: 25/12/24
 ******************************************************************************/
+use rust_decimal::Decimal;
 use thiserror::Error;
 
 /// # Decimal Error Management
@@ -128,6 +129,33 @@ pub enum DecimalError {
     /// Expiration-date conversion error surfaced during decimal operations.
     #[error(transparent)]
     ExpirationDate(expiration_date::error::ExpirationDateError),
+
+    /// Error when a `Decimal` arithmetic operation overflows the representable range.
+    ///
+    /// Emitted by the crate-private `d_add` / `d_sub` / `d_mul` / `d_div` helpers
+    /// in [`crate::model::decimal`] when the underlying
+    /// `Decimal::checked_*` call returns `None`. The `operation` tag is a
+    /// short, static identifier describing the call-site (for example
+    /// `"pricing::black_scholes::discount_strike"`) so failures can be
+    /// traced back to their kernel without walking the call stack.
+    ///
+    /// The operands are captured verbatim for post-mortem debugging and
+    /// are included in the formatted error output (see the `#[error]`
+    /// template below). This `DecimalError` variant is propagated across
+    /// domain modules through the existing `#[from]` cascade, so the
+    /// operand values will appear in any log or wrapper-error string
+    /// produced downstream. Callers that need to redact them for
+    /// production logging should match on the `Overflow` variant
+    /// explicitly and reformat rather than rely on the default `Display`.
+    #[error("Decimal {operation} overflow: {lhs} op {rhs}")]
+    Overflow {
+        /// Short static tag identifying the call-site.
+        operation: &'static str,
+        /// Left-hand operand of the failed arithmetic.
+        lhs: Decimal,
+        /// Right-hand operand of the failed arithmetic.
+        rhs: Decimal,
+    },
 }
 
 /// A specialized `Result` type for decimal calculation operations.
@@ -285,6 +313,33 @@ impl DecimalError {
             reason: reason.to_string(),
         }
     }
+
+    /// Creates a new `Overflow` error for a failed checked arithmetic operation.
+    ///
+    /// Used by the crate-private `d_add` / `d_sub` / `d_mul` / `d_div` helpers
+    /// to surface an overflow of the underlying `Decimal::checked_*` call
+    /// with full operand context.
+    ///
+    /// # Parameters
+    ///
+    /// * `operation` - Short static tag identifying the call-site
+    ///   (for example `"pricing::black_scholes::discount_strike"`).
+    /// * `lhs` - Left-hand operand of the failed arithmetic.
+    /// * `rhs` - Right-hand operand of the failed arithmetic.
+    ///
+    /// # Returns
+    ///
+    /// A new `DecimalError::Overflow` instance.
+    #[cold]
+    #[inline(never)]
+    #[must_use]
+    pub fn overflow(operation: &'static str, lhs: Decimal, rhs: Decimal) -> Self {
+        DecimalError::Overflow {
+            operation,
+            lhs,
+            rhs,
+        }
+    }
 }
 
 impl From<expiration_date::error::ExpirationDateError> for DecimalError {
@@ -331,5 +386,32 @@ mod tests {
         let error = DecimalError::invalid_precision(-1, "Precision must be non-negative");
         assert!(matches!(error, DecimalError::InvalidPrecision { .. }));
         assert!(error.to_string().contains("non-negative"));
+    }
+
+    #[test]
+    fn test_overflow_error() {
+        let error = DecimalError::overflow("test::site", Decimal::MAX, Decimal::MAX);
+        assert!(matches!(error, DecimalError::Overflow { .. }));
+        let rendered = error.to_string();
+        assert!(rendered.contains("test::site"));
+        assert!(rendered.contains("overflow"));
+    }
+
+    #[test]
+    fn test_overflow_fields() {
+        let lhs = Decimal::MAX;
+        let rhs = Decimal::from(2);
+        if let DecimalError::Overflow {
+            operation,
+            lhs: captured_lhs,
+            rhs: captured_rhs,
+        } = DecimalError::overflow("test::mul", lhs, rhs)
+        {
+            assert_eq!(operation, "test::mul");
+            assert_eq!(captured_lhs, lhs);
+            assert_eq!(captured_rhs, rhs);
+        } else {
+            panic!("expected Overflow variant");
+        }
     }
 }

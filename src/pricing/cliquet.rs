@@ -24,6 +24,7 @@
 use crate::Options;
 use crate::error::PricingError;
 use crate::greeks::big_n;
+use crate::model::decimal::{d_add, d_mul, d_sub};
 use crate::model::types::OptionType;
 use num_traits::Inv;
 use rust_decimal::Decimal;
@@ -103,7 +104,7 @@ fn price_cliquet(option: &Options, reset_dates: &[f64]) -> Result<Decimal, Prici
         let dt = t_curr - t_prev;
 
         let delta_price = price_period(option, t_prev, dt, local_cap, local_floor)?;
-        total_price += delta_price;
+        total_price = d_add(total_price, delta_price, "pricing::cliquet::total")?;
     }
 
     // Apply global caps/floors if present
@@ -171,9 +172,19 @@ fn price_period(
 
     let floor_part = floor * (-r * dt_dec).exp();
 
-    let period_val_at_t_prev = floor_part + call_f - call_c;
+    let step = d_add(
+        floor_part,
+        call_f,
+        "pricing::cliquet::period::floor_plus_call_f",
+    )?;
+    let period_val_at_t_prev = d_sub(step, call_c, "pricing::cliquet::period::value")?;
 
-    Ok(s_prev_pv * period_val_at_t_prev)
+    d_mul(
+        s_prev_pv,
+        period_val_at_t_prev,
+        "pricing::cliquet::period::price",
+    )
+    .map_err(PricingError::from)
 }
 
 /// Black-Scholes call price for S=1, K=k, T=t
@@ -187,12 +198,26 @@ fn call_price_on_unit(
     if k <= dec!(0.0) {
         // If K <= 0, the call is always in the money.
         // Value = S*e^{-qT} - K*e^{-rT}
-        return Ok((-q * t).exp() - k * (-r * t).exp());
+        let s_pv = (-q * t).exp();
+        let k_pv = d_mul(k, (-r * t).exp(), "pricing::cliquet::unit_call::itm::k_pv")?;
+        return d_sub(s_pv, k_pv, "pricing::cliquet::unit_call::itm::price")
+            .map_err(PricingError::from);
     }
 
     if sigma == dec!(0.0) || t == dec!(0.0) {
         let forward = ((r - q) * t).exp();
-        return Ok((forward - k).max(dec!(0.0)) * (-r * t).exp());
+        let intrinsic = d_sub(
+            forward,
+            k,
+            "pricing::cliquet::unit_call::zero_vol::intrinsic",
+        )?
+        .max(dec!(0.0));
+        return d_mul(
+            intrinsic,
+            (-r * t).exp(),
+            "pricing::cliquet::unit_call::zero_vol::discounted",
+        )
+        .map_err(PricingError::from);
     }
 
     let sqrt_t = t.sqrt().unwrap_or(dec!(0.0));
@@ -204,7 +229,19 @@ fn call_price_on_unit(
     let n1 = big_n(d1).unwrap_or(dec!(0.0));
     let n2 = big_n(d2).unwrap_or(dec!(0.0));
 
-    Ok((-q * t).exp() * n1 - k * (-r * t).exp() * n2)
+    // `s_leg` is a unit-forward so its monetary boundary starts at
+    // `exp(-qt)`; no extra checked product is needed there.
+    let s_leg = d_mul((-q * t).exp(), n1, "pricing::cliquet::unit_call::s_leg")?;
+    // `k_leg` was `k * exp(-rt) * n2` with the first `*` unchecked,
+    // so build the discounted strike through `d_mul` first and then
+    // fold in `n2` so an overflow on either product is tagged.
+    let discounted_k = d_mul(
+        k,
+        (-r * t).exp(),
+        "pricing::cliquet::unit_call::discounted_k",
+    )?;
+    let k_leg = d_mul(discounted_k, n2, "pricing::cliquet::unit_call::k_leg")?;
+    d_sub(s_leg, k_leg, "pricing::cliquet::unit_call::price").map_err(PricingError::from)
 }
 
 fn apply_side(price: Decimal, option: &Options) -> Decimal {

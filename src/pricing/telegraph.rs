@@ -79,6 +79,7 @@
 use crate::Options;
 use crate::error::PricingError;
 use crate::error::decimal::DecimalError;
+use crate::model::decimal::d_mul;
 use crate::prelude::simulate_returns;
 use num_traits::{FromPrimitive, ToPrimitive};
 use rand::random;
@@ -395,7 +396,16 @@ pub fn telegraph(
     }
 
     let payoff = option.payoff_at_price(&price)?;
-    let result = payoff * (-option.risk_free_rate * option.time_to_expiration()?).exp();
+    // Build the discount exponent through a checked multiplication so
+    // an overflow on `-risk_free_rate * time_to_expiration` is tagged
+    // before `.exp()` compresses it back into a bounded range.
+    let discount_exponent = d_mul(
+        -option.risk_free_rate,
+        option.time_to_expiration()?.to_dec(),
+        "pricing::telegraph::discount_exponent",
+    )?;
+    let discount = discount_exponent.exp();
+    let result = d_mul(payoff, discount, "pricing::telegraph::price")?;
     Ok(result)
 }
 

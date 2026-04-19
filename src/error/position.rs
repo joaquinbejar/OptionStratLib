@@ -119,6 +119,17 @@ pub enum PositionError {
     /// Errors related to position update
     #[error("Update error: {0}")]
     UpdateError(PositionUpdateErrorKind),
+
+    /// Decimal arithmetic failures propagated from monetary-flow
+    /// computations (overflow, division by zero, conversion).
+    ///
+    /// Produced when a checked Decimal helper in `model::decimal`
+    /// surfaces a [`crate::error::DecimalError`] from inside a
+    /// `Position` method (for example `pnl_at_expiration` or
+    /// `unrealized_pnl`). Propagated transparently via the
+    /// `#[from]` cascade so callers keep matching `PositionError`.
+    #[error(transparent)]
+    DecimalError(#[from] crate::error::DecimalError),
 }
 
 /// Specific errors that can occur in strategy operations

@@ -31,6 +31,7 @@
 use crate::Options;
 use crate::error::PricingError;
 use crate::greeks::{big_n, d1, d2};
+use crate::model::decimal::{d_mul, d_sub};
 use crate::model::types::{BinaryType, OptionStyle, OptionType};
 use positive::Positive;
 use rust_decimal::Decimal;
@@ -102,7 +103,7 @@ fn cash_or_nothing_price(option: &Options, payout: Decimal) -> Result<Decimal, P
         };
         let discount = (-r * t).exp();
         let value = if itm {
-            payout * discount
+            d_mul(payout, discount, "pricing::binary::cash::zero_vol")?
         } else {
             Decimal::ZERO
         };
@@ -119,11 +120,13 @@ fn cash_or_nothing_price(option: &Options, payout: Decimal) -> Result<Decimal, P
     let price = match option.option_style {
         OptionStyle::Call => {
             let n_d2 = big_n(d2_val).unwrap_or(Decimal::ZERO);
-            payout * discount * n_d2
+            let payout_disc = d_mul(payout, discount, "pricing::binary::cash::call::payout")?;
+            d_mul(payout_disc, n_d2, "pricing::binary::cash::call::price")?
         }
         OptionStyle::Put => {
             let n_neg_d2 = big_n(-d2_val).unwrap_or(Decimal::ZERO);
-            payout * discount * n_neg_d2
+            let payout_disc = d_mul(payout, discount, "pricing::binary::cash::put::payout")?;
+            d_mul(payout_disc, n_neg_d2, "pricing::binary::cash::put::price")?
         }
     };
 
@@ -161,7 +164,7 @@ fn asset_or_nothing_price(option: &Options) -> Result<Decimal, PricingError> {
         };
         let discount = (-q * t).exp();
         let value = if itm {
-            s.to_dec() * discount
+            d_mul(s.to_dec(), discount, "pricing::binary::asset::zero_vol")?
         } else {
             Decimal::ZERO
         };
@@ -177,11 +180,21 @@ fn asset_or_nothing_price(option: &Options) -> Result<Decimal, PricingError> {
     let price = match option.option_style {
         OptionStyle::Call => {
             let n_d1 = big_n(d1_val).unwrap_or(Decimal::ZERO);
-            s.to_dec() * dividend_discount * n_d1
+            let s_disc = d_mul(
+                s.to_dec(),
+                dividend_discount,
+                "pricing::binary::asset::call::s_disc",
+            )?;
+            d_mul(s_disc, n_d1, "pricing::binary::asset::call::price")?
         }
         OptionStyle::Put => {
             let n_neg_d1 = big_n(-d1_val).unwrap_or(Decimal::ZERO);
-            s.to_dec() * dividend_discount * n_neg_d1
+            let s_disc = d_mul(
+                s.to_dec(),
+                dividend_discount,
+                "pricing::binary::asset::put::s_disc",
+            )?;
+            d_mul(s_disc, n_neg_d1, "pricing::binary::asset::put::price")?
         }
     };
 
@@ -209,10 +222,18 @@ fn gap_binary_price(option: &Options) -> Result<Decimal, PricingError> {
         crate::model::types::Side::Short => dec!(-1),
     };
 
-    // Remove side from components, compute gap, then reapply
+    // Remove side from components, compute gap, then reapply.
+    // `side_multiplier` is ±1 so the signed renormalisation cannot overflow,
+    // but the strike·unit_cash product and the following subtraction must be
+    // checked because they fuse two monetary flows into one.
     let asset_unsigned = asset_price * side_multiplier;
     let unit_cash_unsigned = unit_cash * side_multiplier;
-    let gap_unsigned = asset_unsigned - option.strike_price.to_dec() * unit_cash_unsigned;
+    let strike_cash = d_mul(
+        option.strike_price.to_dec(),
+        unit_cash_unsigned,
+        "pricing::binary::gap::strike_cash",
+    )?;
+    let gap_unsigned = d_sub(asset_unsigned, strike_cash, "pricing::binary::gap::price")?;
 
     // Suppress unused variable warning
     let _ = cash_price;
