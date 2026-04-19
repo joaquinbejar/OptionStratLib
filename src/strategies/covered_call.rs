@@ -263,6 +263,11 @@ impl CoveredCall {
     ///
     /// Net Delta = Spot Delta + Option Delta
     /// For a covered call: typically positive but less than 1.0 per share
+    ///
+    /// # Errors
+    ///
+    /// Propagates any [`GreeksError`] returned by
+    /// [`LegAble::delta`] on the spot leg or the short-call leg.
     pub fn net_delta(&self) -> Result<Decimal, GreeksError> {
         let spot_delta = self.spot_leg.delta()?;
         let option_delta = self.short_call.delta()?;
@@ -286,6 +291,13 @@ impl CoveredCall {
     /// Calculates the maximum profit potential.
     ///
     /// Max Profit = (Strike - Cost Basis) × Quantity + Premium Received - Fees
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PricingError::MethodError`] with method `covered_call`
+    /// when the call strike sits below the spot cost basis (the strategy
+    /// has no upside), or when arithmetic on `Positive` operands
+    /// overflows.
     pub fn max_profit_potential(&self) -> Result<Positive, PricingError> {
         let strike = self.call_strike();
         let cost_basis = self.spot_leg.cost_basis;
@@ -312,6 +324,13 @@ impl CoveredCall {
     ///
     /// Max Loss = Cost Basis × Quantity - Premium Received + Fees
     /// (occurs if underlying goes to zero)
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PricingError::MethodError`] with method `covered_call`
+    /// when the premium net of fees exceeds `cost_basis × quantity`
+    /// (which would imply a non-negative worst case), or when arithmetic
+    /// on `Positive` operands overflows.
     pub fn max_loss_potential(&self) -> Result<Positive, PricingError> {
         let cost_basis = self.spot_leg.cost_basis;
         let quantity = self.spot_leg.quantity;

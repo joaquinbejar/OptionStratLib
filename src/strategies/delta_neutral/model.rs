@@ -349,6 +349,15 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
     /// * The current price of the underlying asset.
     ///
     /// This provides an overview of the delta position and helps in determining adjustments.
+    ///
+    /// # Errors
+    ///
+    /// Propagates any [`GreeksError`] surfaced by
+    /// [`Strategable::get_options`] or by the per-option
+    /// [`Greeks::delta`] evaluation, and returns
+    /// [`GreeksError::DeltaNeutrality`] with
+    /// [`DeltaNeutralityErrorKind::NotAchievable`] when the portfolio
+    /// aggregation itself fails a sanity check.
     fn delta_neutrality(&self) -> Result<DeltaInfo, GreeksError> {
         let options = self.get_options()?;
         if options.is_empty() {
@@ -593,6 +602,12 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
     /// - Uses DELTA_THRESHOLD to determine if adjustments are needed
     /// - Suggests opposite positions to neutralize current delta exposure
     /// - Accounts for both option style (Put/Call) and position side (Long/Short)
+    ///
+    /// # Errors
+    ///
+    /// Propagates any [`GreeksError`] returned by
+    /// [`Greeks::delta`] on individual legs, or by the internal
+    /// [`delta_neutrality`] computation.
     fn delta_adjustments(&self) -> Result<Vec<DeltaAdjustment>, GreeksError> {
         let net_delta = self.delta()?;
 
@@ -721,6 +736,14 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
     ///   to determine the current state and required actions
     /// - SameSize adjustments are only applied when no specific action filter is provided
     /// - Incompatible adjustments for the specified action are skipped with a debug message
+    ///
+    /// # Errors
+    ///
+    /// Returns [`StrategyError::GreeksError`] when the underlying
+    /// [`delta_neutrality`] or [`delta_adjustments`] calls fail, and
+    /// [`StrategyError::PositionError`] (via
+    /// [`apply_single_adjustment`]) when the adjustment cannot be
+    /// committed to the strategy.
     fn apply_delta_adjustments(&mut self, action: Option<Action>) -> Result<(), StrategyError> {
         let delta_info = self.delta_neutrality()?;
         if delta_info.is_neutral {
@@ -801,6 +824,12 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
     /// The actual position adjustment is performed by the `adjust_option_position` method, which is
     /// called with positive quantities for buying options and negative quantities for selling options.
     ///
+    /// # Errors
+    ///
+    /// Returns [`StrategyError::PositionError`] when the underlying
+    /// [`adjust_option_position`] rejects the requested quantity change
+    /// (e.g. strike not found, invalid side for the adjustment, or
+    /// invariant violation on the resulting position).
     fn apply_single_adjustment(
         &mut self,
         adjustment: &DeltaAdjustment,
@@ -893,6 +922,13 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
     /// # Returns
     /// A `Trade` object derived from the delta adjustment logic.
     ///
+    /// # Errors
+    ///
+    /// Returns [`StrategyError::GreeksError`] when the internal
+    /// [`delta_adjustments`] call fails, and
+    /// [`StrategyError::PositionError`] when the adjustment cannot be
+    /// converted into a committable trade (invalid side, strike not
+    /// present in the chain, or quantity invariant breach).
     fn trade_from_delta_adjustment(&mut self, action: Action) -> Result<Vec<Trade>, StrategyError> {
         let adjustments = self.delta_adjustments()?;
         let mut trades = Vec::new();
@@ -993,6 +1029,13 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
     /// println!("Portfolio delta: {}", greeks.delta);
     /// println!("Portfolio gamma: {}", greeks.gamma);
     /// ```
+    ///
+    /// # Errors
+    ///
+    /// Propagates any [`GreeksError`] surfaced by
+    /// [`Strategable::get_positions`] or by
+    /// [`PortfolioGreeks::from_positions`], typically
+    /// [`GreeksError::Pricing`] when individual Black–Scholes legs fail.
     fn portfolio_greeks(&self) -> Result<PortfolioGreeks, GreeksError> {
         let positions: Vec<_> = self
             .get_positions()
@@ -1033,6 +1076,14 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
     /// let plan = strategy.optimized_adjustment_plan(config, target)?;
     /// println!("Actions needed: {}", plan.actions.len());
     /// ```
+    ///
+    /// # Errors
+    ///
+    /// Returns [`StrategyError::GreeksError`] when the portfolio Greeks
+    /// cannot be computed, or [`StrategyError::Adjustment`] (mapped from
+    /// [`AdjustmentError`]) when the optimiser cannot find a viable plan
+    /// for the provided `config` and `target` (e.g. no positions,
+    /// infeasible constraints, or cost ceiling breached).
     fn optimized_adjustment_plan(
         &self,
         config: AdjustmentConfig,
@@ -1063,6 +1114,14 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
     ///
     /// * `Ok(AdjustmentPlan)` - The optimal adjustment plan
     /// * `Err(StrategyError)` - If no viable plan can be found
+    ///
+    /// # Errors
+    ///
+    /// Same failure surface as
+    /// [`optimized_adjustment_plan`] plus additional chain-driven
+    /// failures: returns [`StrategyError::Adjustment`] mapped from
+    /// [`AdjustmentError`] when the chain does not expose any candidate
+    /// strike that satisfies the target delta direction.
     fn optimized_adjustment_plan_with_chain(
         &self,
         chain: &crate::chains::chain::OptionChain,
@@ -1106,6 +1165,12 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
     ///
     /// * `Ok(Decimal)` - The gap between current and target delta
     /// * `Err(GreeksError)` - If delta calculation fails
+    ///
+    /// # Errors
+    ///
+    /// Propagates any [`GreeksError`] returned by [`Greeks::delta`] on
+    /// the aggregate strategy (typically
+    /// [`GreeksError::Pricing`] for option-leg Black–Scholes failures).
     fn delta_gap(&self, target_delta: Decimal) -> Result<Decimal, GreeksError> {
         let current_delta = self.delta()?;
         Ok(target_delta - current_delta)

@@ -243,6 +243,14 @@ pub fn debit_spread_break_even(
 /// # Returns
 ///
 /// The profit ratio as a percentage, or an error if calculation fails.
+///
+/// # Errors
+///
+/// Currently infallible - every branch returns `Ok`, including the
+/// sentinel cases where `max_loss` or `max_profit` is zero. The `Result`
+/// signature is retained so future tweaks to the ratio definition (e.g.
+/// checked division with rounding) can surface numerical failures without
+/// breaking the public API.
 pub fn calculate_profit_ratio(
     max_profit: Positive,
     max_loss: Positive,

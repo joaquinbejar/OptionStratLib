@@ -169,6 +169,11 @@ impl ProtectivePut {
     }
 
     /// Calculates the net delta of the strategy.
+    ///
+    /// # Errors
+    ///
+    /// Propagates any [`GreeksError`] returned by
+    /// [`LegAble::delta`] on the spot leg or the long-put leg.
     pub fn net_delta(&self) -> Result<Decimal, GreeksError> {
         let spot_delta = self.spot_leg.delta()?;
         let put_delta = self.long_put.delta()?;
@@ -176,6 +181,14 @@ impl ProtectivePut {
     }
 
     /// Calculates the maximum loss potential.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PricingError::MethodError`] with method
+    /// `protective_put` when the put strike equals or exceeds the spot
+    /// cost basis (the hedge fully neutralises downside and the
+    /// decomposition is ill-posed), or when arithmetic on `Positive`
+    /// operands overflows.
     pub fn max_loss_potential(&self) -> Result<Positive, PricingError> {
         let put_strike = self.put_strike();
         let cost_basis = self.spot_leg.cost_basis;

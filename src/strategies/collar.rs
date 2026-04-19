@@ -360,6 +360,11 @@ impl Collar {
     /// Calculates the net delta of the collar.
     ///
     /// Net Delta = Spot Delta + Put Delta + Call Delta
+    ///
+    /// # Errors
+    ///
+    /// Propagates any [`GreeksError`] returned by
+    /// [`LegAble::delta`] on the spot leg, long-put leg or short-call leg.
     pub fn net_delta(&self) -> Result<Decimal, GreeksError> {
         let spot_delta = self.spot_leg.delta()?;
         let put_delta = self.long_put.delta()?;
@@ -370,6 +375,14 @@ impl Collar {
     /// Calculates the maximum profit potential.
     ///
     /// Max Profit = (Call Strike - Cost Basis) × Quantity + Net Premium - Fees
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PricingError::MethodError`] with method `collar` when
+    /// the short-call strike is below the spot cost basis (the strategy
+    /// is not economically well-formed). Arithmetic follows
+    /// [`PricingError::ArithmeticFailure`] if fee or premium conversions
+    /// overflow.
     pub fn max_profit_potential(&self) -> Result<Positive, PricingError> {
         let call_strike = self.call_strike();
         let cost_basis = self.spot_leg.cost_basis;
@@ -392,6 +405,14 @@ impl Collar {
     /// Calculates the maximum loss potential.
     ///
     /// Max Loss = (Cost Basis - Put Strike) × Quantity - Net Premium + Fees
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PricingError::MethodError`] with method `collar` when
+    /// the loss decomposition underflows (for example when the put strike
+    /// equals or exceeds the spot cost basis and the net premium net of
+    /// fees is positive), or when arithmetic fails while converting
+    /// `Positive` operands.
     pub fn max_loss_potential(&self) -> Result<Positive, PricingError> {
         let put_strike = self.put_strike();
         let cost_basis = self.spot_leg.cost_basis;

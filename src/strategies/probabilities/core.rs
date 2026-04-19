@@ -66,6 +66,14 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
     /// - Expected value
     /// - Break-even points
     /// - Risk-reward ratio
+    ///
+    /// # Errors
+    ///
+    /// Propagates any [`ProbabilityError`] returned by
+    /// [`probability_of_profit`], [`probability_of_loss`],
+    /// [`calculate_extreme_probabilities`] or [`expected_value`];
+    /// typically [`ProbabilityError::CalculationError`] when an
+    /// underlying break-even or payoff evaluation fails.
     fn analyze_probabilities(
         &self,
         volatility_adj: Option<VolatilityAdjustment>,
@@ -132,6 +140,15 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
     /// This function relies on several auxiliary methods and traits, such as
     /// `get_underlying_price`, `best_range_to_show`, and `calculate_profit_at`,
     /// which are defined in the module's traits and utilities.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ProbabilityError::CalculationError`] when the display
+    /// range cannot be computed or when profit evaluation fails at a
+    /// sample point, and propagates any [`ProbabilityError`] surfaced by
+    /// [`probability_at`] (typically
+    /// [`ProbabilityCalculationErrorKind::InvalidProbabilityRange`]
+    /// for malformed volatility adjustments).
     fn expected_value(
         &self,
         volatility_adj: Option<VolatilityAdjustment>,
@@ -211,6 +228,13 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
     /// # Returns
     ///
     /// - `Result<Positive, ProbabilityError>`: The probability of profit (between 0 and 1) or an error
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ProbabilityError::RangeError`] when the profit ranges
+    /// cannot be constructed, or propagates
+    /// [`ProbabilityError::CalculationError`] from the probability
+    /// integration over the computed ranges.
     fn probability_of_profit(
         &self,
         volatility_adj: Option<VolatilityAdjustment>,
@@ -248,6 +272,13 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
     /// # Returns
     ///
     /// - `Result<Positive, ProbabilityError>`: The probability of loss (between 0 and 1) or an error
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ProbabilityError::RangeError`] when the loss ranges
+    /// cannot be constructed, or propagates
+    /// [`ProbabilityError::CalculationError`] from the probability
+    /// integration over the computed ranges.
     fn probability_of_loss(
         &self,
         volatility_adj: Option<VolatilityAdjustment>,
@@ -286,6 +317,13 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
     ///
     /// - `Result<(Positive, Positive), ProbabilityError>`: A tuple containing (probability_of_max_profit,
     ///   probability_of_max_loss) or an error
+    ///
+    /// # Errors
+    ///
+    /// Propagates any [`ProbabilityError`] returned by
+    /// [`probability_of_profit`] and [`probability_of_loss`]; typically
+    /// [`ProbabilityError::CalculationError`] when a tail integration
+    /// beyond the break-even points fails.
     fn calculate_extreme_probabilities(
         &self,
         volatility_adj: Option<VolatilityAdjustment>,
@@ -345,6 +383,13 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
     /// # Returns
     /// - `Result<Vec<ProfitLossRange>, ProbabilityError>`: A vector of price ranges
     ///   that result in profit, or an error
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ProbabilityError::RangeError`] when no break-even
+    /// points can be derived from the strategy, or
+    /// [`ProbabilityError::CalculationError`] when the profit
+    /// evaluation fails at a sampled price.
     fn get_profit_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError>;
 
     /// # Get Profit/Loss Ranges
@@ -361,6 +406,12 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
     ///   profit/loss ranges sorted by their price boundaries. On failure, returns a
     ///   `ProbabilityError` indicating what went wrong during the analysis.
     ///
+    /// # Errors
+    ///
+    /// Returns [`ProbabilityError::RangeError`] when no break-even
+    /// points can be derived from the strategy, or
+    /// [`ProbabilityError::CalculationError`] when the loss evaluation
+    /// fails at a sampled price.
     fn get_loss_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError>;
 }
 
