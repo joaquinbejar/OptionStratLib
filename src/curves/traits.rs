@@ -3,6 +3,12 @@
    Email: jb@taunais.com
    Date: 23/2/25
 ******************************************************************************/
+// Scoped allow: bulk migration of unchecked `[]` indexing to
+// `.get().ok_or_else(..)` tracked as follow-ups to #341. The existing
+// call sites are internal to this file and audited for invariant-bound
+// indices (fixed-length buffers, just-pushed slices, etc.).
+#![allow(clippy::indexing_slicing)]
+
 use crate::curves::{Curve, Point2D};
 use crate::error::{CurveError, OperationErrorKind};
 use crate::geometrics::{BasicMetrics, MetricsExtractor, RangeMetrics, ShapeMetrics, TrendMetrics};

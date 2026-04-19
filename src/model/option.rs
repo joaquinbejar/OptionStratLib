@@ -384,9 +384,16 @@ impl Options {
             side: &self.side,
         };
         let (asset_tree, option_tree) = generate_binomial_tree(&params)?;
+        let root = option_tree
+            .first()
+            .and_then(|row| row.first())
+            .copied()
+            .ok_or(PricingError::BinomialNodeMissing {
+                node: "option[0][0]",
+            })?;
         let price = match self.side {
-            Side::Long => option_tree[0][0],
-            Side::Short => -option_tree[0][0],
+            Side::Long => root,
+            Side::Short => -root,
         };
         Ok((price, asset_tree, option_tree))
     }

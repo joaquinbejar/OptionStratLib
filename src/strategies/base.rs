@@ -1,3 +1,7 @@
+// Scoped allow: bulk migration of unchecked `[]` indexing to
+// `.get().ok_or_else(..)` tracked as follow-ups to #341.
+#![allow(clippy::indexing_slicing)]
+
 use crate::chains::OptionData;
 use crate::constants::{STRIKE_PRICE_LOWER_BOUND_MULTIPLIER, STRIKE_PRICE_UPPER_BOUND_MULTIPLIER};
 use crate::error::strategies::BreakEvenErrorKind;

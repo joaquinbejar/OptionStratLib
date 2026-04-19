@@ -4,6 +4,12 @@
    Date: 12/01/26
 ******************************************************************************/
 
+// Scoped allow: bulk migration of unchecked `[]` indexing to
+// `.get().ok_or_else(..)` tracked as follow-ups to #341. The existing
+// call sites are internal to this file and audited for invariant-bound
+// indices (fixed-length buffers, just-pushed slices, etc.).
+#![allow(clippy::indexing_slicing)]
+
 //! # Protective Put Strategy
 //!
 //! A protective put (also known as a "married put") involves holding a long

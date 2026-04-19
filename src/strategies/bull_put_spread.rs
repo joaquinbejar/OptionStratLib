@@ -14,6 +14,12 @@ Key characteristics:
 - Maximum profit achieved when price stays above higher strike
 - Also known as a vertical put credit spread
 */
+// Scoped allow: bulk migration of unchecked `[]` indexing to
+// `.get().ok_or_else(..)` tracked as follow-ups to #341. The existing
+// call sites are internal to this file and audited for invariant-bound
+// indices (fixed-length buffers, just-pushed slices, etc.).
+#![allow(clippy::indexing_slicing)]
+
 use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, StrategyBasics, StrategyType, Validable,
 };

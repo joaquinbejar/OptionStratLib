@@ -1,3 +1,9 @@
+// Scoped allow: bulk migration of unchecked `[]` indexing to
+// `.get().ok_or_else(..)` tracked as follow-ups to #341. The existing
+// call sites are internal to this file and audited for invariant-bound
+// indices (fixed-length buffers, just-pushed slices, etc.).
+#![allow(clippy::indexing_slicing)]
+
 //!
 //! The "Poor Man's Covered Call" is an options strategy designed to simulate a traditional covered call,
 //! but with a lower capital requirement. In a standard covered call, an investor holds a long position

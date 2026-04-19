@@ -131,13 +131,9 @@ impl Iterator for BasicAxisTypesIter {
     type Item = BasicAxisTypes;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.index < BasicAxisTypes::VALUES.len() {
-            let value = BasicAxisTypes::VALUES[self.index];
-            self.index += 1;
-            Some(value)
-        } else {
-            None
-        }
+        let value = *BasicAxisTypes::VALUES.get(self.index)?;
+        self.index += 1;
+        Some(value)
     }
 }
 

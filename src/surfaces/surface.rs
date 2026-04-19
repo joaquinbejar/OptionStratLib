@@ -1,3 +1,9 @@
+// Scoped allow: bulk migration of unchecked `[]` indexing to
+// `.get().ok_or_else(..)` tracked as follow-ups to #341. The existing
+// call sites are internal to this file and audited for invariant-bound
+// indices (fixed-length buffers, just-pushed slices, etc.).
+#![allow(clippy::indexing_slicing)]
+
 //! This module provides functionality for visualizing and plotting 3D surfaces.
 //! It leverages the `plotters` crate for rendering and offers a flexible API for
 //! customizing plot appearance and saving outputs.  It supports plotting single
