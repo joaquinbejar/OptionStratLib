@@ -27,7 +27,6 @@ use super::shared::SpreadStrategy;
 use crate::{
     ExpirationDate, Options,
     chains::{StrategyLegs, chain::OptionChain, utils::OptionDataGroup},
-    constants::ZERO,
     error::{
         GreeksError, OperationErrorKind, PricingError,
         position::{PositionError, PositionValidationErrorKind},
@@ -612,18 +611,24 @@ impl Strategies for BullPutSpread {
         }
     }
     fn get_max_loss(&self) -> Result<Positive, StrategyError> {
-        let width = self.short_put.option.strike_price - self.long_put.option.strike_price;
-        let max_loss =
-            (width * self.short_put.option.quantity) - self.get_net_premium_received()?;
-        if max_loss < ZERO {
-            Err(StrategyError::ProfitLossError(
+        let short_strike = self.short_put.option.strike_price.to_dec();
+        let long_strike = self.long_put.option.strike_price.to_dec();
+        let width = short_strike - long_strike;
+        if width < Decimal::ZERO {
+            return Err(StrategyError::ProfitLossError(
                 ProfitLossErrorKind::MaxLossError {
-                    reason: "Max loss is negative".to_string(),
+                    reason: "Short put strike must be above long put strike".to_string(),
                 },
-            ))
-        } else {
-            Ok(max_loss)
+            ));
         }
+        let qty = self.short_put.option.quantity.to_dec();
+        let net_prem = self.get_net_premium_received()?.to_dec();
+        let max_loss_dec = (width * qty) - net_prem;
+        Positive::new_decimal(max_loss_dec).map_err(|_| {
+            StrategyError::ProfitLossError(ProfitLossErrorKind::MaxLossError {
+                reason: "Max loss is negative".to_string(),
+            })
+        })
     }
     fn get_profit_area(&self) -> Result<Decimal, StrategyError> {
         let high = self.get_max_profit().unwrap_or(Positive::ZERO);
