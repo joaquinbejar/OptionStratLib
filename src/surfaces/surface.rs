@@ -89,6 +89,7 @@ use utoipa::ToSchema;
 /// option pricing surfaces, terrain models, or any other data that can be
 /// plotted in three dimensions.
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
 pub struct Surface {
     /// Collection of 3D points defining the surface
     pub points: BTreeSet<Point3D>,

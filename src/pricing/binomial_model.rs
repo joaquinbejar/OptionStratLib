@@ -23,7 +23,7 @@ type BinomialTreeResult = Result<(Vec<Vec<Decimal>>, Vec<Vec<Decimal>>), Pricing
 /// value at each node, working backwards from expiration to the present value.
 /// This approach is particularly valuable for American options or other early-exercise
 /// scenarios.
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct BinomialPricingParams<'a> {
     /// The current price of the underlying asset, represented as a positive value.
     pub asset: Positive,

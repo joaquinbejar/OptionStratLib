@@ -18,7 +18,8 @@ use utoipa::ToSchema;
 ///
 /// The operation specified will determine how values are combined when merging
 /// geometric objects that implement the `Arithmetic` trait.
-#[derive(Clone, Copy, Debug, PartialEq, ToSchema)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, ToSchema)]
+#[repr(u8)]
 pub enum MergeOperation {
     /// Adds values together (a + b)
     Add,

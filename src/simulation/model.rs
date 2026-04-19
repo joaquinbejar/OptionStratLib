@@ -6,7 +6,7 @@ use std::fmt::{Display, Formatter};
 use utoipa::ToSchema;
 
 /// Enum defining different types of random walks
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, ToSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
 pub enum WalkType {
     /// Standard Brownian motion (normal increments)
     Brownian {

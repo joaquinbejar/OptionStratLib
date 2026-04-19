@@ -23,7 +23,7 @@ use utoipa::ToSchema;
 ///
 /// Exit policies determine when a position should be closed based on various
 /// market conditions, profit/loss levels, or time constraints.
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, Default, ToSchema)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Default, Serialize, Deserialize, ToSchema)]
 pub enum ExitPolicy {
     /// Exit when profit reaches a percentage of initial premium.
     ///

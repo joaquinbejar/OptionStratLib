@@ -61,6 +61,7 @@ use utoipa::ToSchema;
 /// - [`Point2D`]: The fundamental data type for representing points in 2D space.
 /// - [`MergeOperation`]: Enum for combining multiple curves.
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
 pub struct Curve {
     /// A ordered set of `Point2D` objects that defines the curve in terms of its x-y plane coordinates.
     /// Points are stored in a `BTreeSet` which automatically maintains them in sorted order by their x-coordinate.

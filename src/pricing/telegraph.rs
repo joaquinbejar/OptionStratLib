@@ -103,7 +103,7 @@ use tracing::warn;
 /// - Representing asymmetric transition behaviors in stochastic systems
 /// - Pricing financial derivatives under regime-switching assumptions
 ///
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct TelegraphProcess {
     /// Transition rate from state -1 to +1, representing the intensity
     /// of the underlying Poisson process for upward state changes

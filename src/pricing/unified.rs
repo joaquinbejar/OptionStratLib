@@ -9,6 +9,7 @@ use positive::Positive;
 /// This enum allows selection between different pricing methods:
 /// - `ClosedFormBS`: Uses the Black-Scholes closed-form formula
 /// - `MonteCarlo`: Uses Monte Carlo simulation with a configured simulator
+#[derive(Debug, Clone)]
 pub enum PricingEngine {
     /// Black-Scholes closed-form pricing for European options.
     ///

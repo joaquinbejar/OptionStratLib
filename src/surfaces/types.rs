@@ -45,6 +45,7 @@ use utoipa::ToSchema;
 /// of 3D surfaces and for various geometric calculations. The high-precision `Decimal`
 /// type ensures accuracy in scientific and engineering applications.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
 pub struct Point3D {
     /// The x-coordinate in the Cartesian system
     pub x: Decimal,
@@ -268,6 +269,8 @@ impl HasX for Point3D {
 /// - `X`: The axis representing the horizontal direction.
 /// - `Y`: The axis representing the vertical direction or elevation.
 /// - `Z`: The axis representing depth or the third dimension.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[repr(u8)]
 pub enum Axis {
     X,
     Y,

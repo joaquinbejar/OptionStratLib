@@ -59,7 +59,7 @@ use utoipa::ToSchema;
 /// ## Remarks
 /// The `CurveMetrics` struct is designed to be reusable across various analytical contexts,
 /// providing a versatile and standardized way to represent curve characteristics.
-#[derive(Clone, DebugPretty, DisplaySimple, ToSchema, Serialize)]
+#[derive(DebugPretty, DisplaySimple, Clone, Serialize, ToSchema)]
 pub struct Metrics {
     /// - **Basic Metrics (`basic`)**:
     ///   Includes fundamental statistical measures such as mean, median, mode, and standard deviation.
@@ -235,7 +235,7 @@ impl Metrics {
 /// - [`ShapeMetrics`]: Captures shape-related properties like skewness and kurtosis.
 /// - [`RiskMetrics`]: Measures risk characteristics of financial instruments.
 /// - [`TrendMetrics`]: Represents time-based trends in data series.
-#[derive(Clone, Copy, DebugPretty, DisplaySimple, ToSchema, Serialize)]
+#[derive(DebugPretty, DisplaySimple, Clone, Copy, Serialize, ToSchema)]
 pub struct BasicMetrics {
     /// The arithmetic mean (average) of the dataset.
     /// Calculated by summing all values and dividing by the count of values.
@@ -297,7 +297,7 @@ pub struct BasicMetrics {
 /// `ShapeMetrics` is typically part of the larger `AnalysisResult` structure
 /// that provides comprehensive curve analysis. It uses `Point2D` to represent
 /// all positional data with high-precision `Decimal` values.
-#[derive(Clone, DebugPretty, DisplaySimple, ToSchema, Serialize)]
+#[derive(DebugPretty, DisplaySimple, Clone, Serialize, ToSchema)]
 pub struct ShapeMetrics {
     /// Describes the asymmetry of the curve's distribution.
     /// A positive value indicates a right tail (right-skewed distribution),
@@ -357,7 +357,7 @@ pub struct ShapeMetrics {
 ///
 /// This structure is part of the curves analysis module that provides comprehensive
 /// statistical and financial analysis tools for mathematical curves.
-#[derive(Clone, Copy, DebugPretty, DisplaySimple, ToSchema, Serialize)]
+#[derive(DebugPretty, DisplaySimple, Clone, Copy, Serialize, ToSchema)]
 pub struct RangeMetrics {
     /// The minimum point in the dataset, containing the smallest x and y coordinates observed.
     pub min: Point2D,
@@ -405,7 +405,7 @@ pub struct RangeMetrics {
 ///
 /// This structure is a key component of the curve analysis module and works
 /// alongside other metric types to provide comprehensive statistical analysis.
-#[derive(Clone, DebugPretty, DisplaySimple, ToSchema, Serialize)]
+#[derive(DebugPretty, DisplaySimple, Clone, Serialize, ToSchema)]
 pub struct TrendMetrics {
     /// The slope coefficient of the linear regression line, indicating the
     /// rate and direction of change in the dataset.
@@ -451,7 +451,7 @@ pub struct TrendMetrics {
 /// # Note
 /// For accuracy, ensure the data used to compute these metrics represents a
 /// sufficiently long time horizon and is free from anomalies.
-#[derive(Clone, Copy, DebugPretty, DisplaySimple, ToSchema, Serialize)]
+#[derive(DebugPretty, DisplaySimple, Clone, Copy, Serialize, ToSchema)]
 pub struct RiskMetrics {
     /// Measures the degree of variation in returns over time.
     /// Represents the standard deviation of returns and is a widely used
