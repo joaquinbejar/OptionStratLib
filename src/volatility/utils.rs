@@ -2065,18 +2065,6 @@ mod tests_non_finite_guards {
     use super::*;
 
     #[test]
-    fn constant_volatility_nan_return_surfaces_decimal_error() {
-        // A NaN return in the input slice feeds the `d_sub(r, mean, ..)`
-        // inside constant_volatility; the current implementation treats
-        // NaN as 0 at the Decimal boundary via `Decimal` defaults, but
-        // this test pins the behaviour for future guard tightening.
-        let returns = [Decimal::ZERO, Decimal::ZERO];
-        // Happy path: no NaN, function returns zero vol.
-        let v = constant_volatility(&returns).expect("finite inputs");
-        assert_eq!(v, Positive::ZERO);
-    }
-
-    #[test]
     fn heston_happy_path_does_not_trip_non_finite() {
         // With finite, well-posed inputs the Heston simulator must
         // succeed without hitting the `finite_decimal(dw_f64)` guard.

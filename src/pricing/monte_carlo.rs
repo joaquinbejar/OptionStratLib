@@ -1,5 +1,5 @@
 use crate::Options;
-use crate::error::PricingError;
+use crate::error::{DecimalError, PricingError};
 use crate::model::decimal::{d_div, d_mul, d_sub, finite_decimal};
 use crate::pricing::utils::wiener_increment;
 use num_traits::{FromPrimitive, ToPrimitive};
@@ -67,7 +67,13 @@ pub fn monte_carlo_option_pricing(
         )?
         .max(Decimal::ZERO);
         let payoff: f64 = payoff_dec.to_f64().ok_or_else(|| {
-            PricingError::non_finite("pricing::monte_carlo::gbm::payoff_cast", f64::NAN)
+            PricingError::Decimal(DecimalError::conversion_error(
+                "Decimal",
+                "f64",
+                &format!(
+                    "pricing::monte_carlo::gbm::payoff_cast: value {payoff_dec} outside f64 range"
+                ),
+            ))
         })?;
         if !payoff.is_finite() {
             return Err(PricingError::non_finite(
@@ -82,8 +88,15 @@ pub fn monte_carlo_option_pricing(
     // the rate, the discount exponent, or the final average surfaces
     // a tagged `PricingError::NonFinite` instead of silently collapsing
     // to `Decimal::ZERO` through the `f2d!` cast.
-    let rate_f64 = option.risk_free_rate.to_f64().ok_or_else(|| {
-        PricingError::non_finite("pricing::monte_carlo::rate_f64::cast", f64::NAN)
+    let rate_dec = option.risk_free_rate;
+    let rate_f64 = rate_dec.to_f64().ok_or_else(|| {
+        PricingError::Decimal(DecimalError::conversion_error(
+            "Decimal",
+            "f64",
+            &format!(
+                "pricing::monte_carlo::rate_f64::cast: value {rate_dec} outside f64 range"
+            ),
+        ))
     })?;
     if !rate_f64.is_finite() {
         return Err(PricingError::non_finite(

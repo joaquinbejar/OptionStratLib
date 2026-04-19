@@ -26,7 +26,7 @@
 //! max(0, underlying_option_value(T1) - K1) at time T1.
 
 use crate::Options;
-use crate::error::PricingError;
+use crate::error::{DecimalError, PricingError};
 use crate::greeks::{big_n, d1, d2};
 use crate::model::decimal::{d_add, d_mul, d_sub, finite_decimal};
 use crate::model::types::{OptionStyle, OptionType};
@@ -40,29 +40,48 @@ use std::f64::consts::PI;
 ///
 /// Computes P(X <= a, Y <= b) where X and Y are standard normal with correlation rho.
 fn bivariate_normal_cdf(a: Decimal, b: Decimal, rho: Decimal) -> Result<Decimal, PricingError> {
-    // Convert to f64 for computation
-    let a_f = a.to_f64().unwrap_or(0.0);
-    let b_f = b.to_f64().unwrap_or(0.0);
-    let rho_f = rho.to_f64().unwrap_or(0.0);
+    // Convert every `Decimal` input to `f64` through the checked
+    // cast so a non-representable input (e.g. saturated overflow)
+    // surfaces a typed `PricingError::Decimal(ConversionError)`
+    // instead of being silently replaced with `0.0` — that previous
+    // silent fallback would have undermined the non-finite discipline
+    // and could have produced materially wrong prices downstream.
+    let cast = |value: Decimal, tag: &'static str| -> Result<f64, PricingError> {
+        let v = value.to_f64().ok_or_else(|| {
+            PricingError::Decimal(DecimalError::conversion_error(
+                "Decimal",
+                "f64",
+                &format!("{tag}: value {value} outside f64 range"),
+            ))
+        })?;
+        if !v.is_finite() {
+            return Err(PricingError::non_finite(tag, v));
+        }
+        Ok(v)
+    };
+    let a_f = cast(a, "pricing::compound::bivariate_normal_cdf::a")?;
+    let b_f = cast(b, "pricing::compound::bivariate_normal_cdf::b")?;
+    let rho_f = cast(rho, "pricing::compound::bivariate_normal_cdf::rho")?;
 
-    // Handle special cases
+    // Handle special cases. `big_n` already returns `Result`, so
+    // propagate its failure instead of collapsing it to `Decimal::ZERO`.
     if rho_f.abs() < 1e-10 {
         // Independent case: P(X <= a, Y <= b) = N(a) * N(b)
-        let n_a = big_n(a).unwrap_or(Decimal::ZERO);
-        let n_b = big_n(b).unwrap_or(Decimal::ZERO);
+        let n_a = big_n(a)?;
+        let n_b = big_n(b)?;
         return Ok(n_a * n_b);
     }
 
     if rho_f >= 1.0 - 1e-10 {
         // Perfect correlation: P(X <= a, Y <= b) = N(min(a, b))
         let min_ab = a.min(b);
-        return Ok(big_n(min_ab).unwrap_or(Decimal::ZERO));
+        return Ok(big_n(min_ab)?);
     }
 
     if rho_f <= -1.0 + 1e-10 {
         // Perfect negative correlation
         if a + b >= Decimal::ZERO {
-            return Ok(big_n(a).unwrap_or(Decimal::ZERO));
+            return Ok(big_n(a)?);
         } else {
             return Ok(Decimal::ZERO);
         }
