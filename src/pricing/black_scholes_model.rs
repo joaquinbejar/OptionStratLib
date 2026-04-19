@@ -9,7 +9,7 @@ use crate::greeks::{big_n, calculate_d_values};
 use crate::model::decimal::{d_mul, d_sub};
 use crate::model::types::{OptionStyle, OptionType, Side};
 use rust_decimal::{Decimal, MathematicalOps};
-use tracing::trace;
+use tracing::{instrument, trace};
 
 /// Computes the price of an option using the Black-Scholes model.
 ///
@@ -66,6 +66,11 @@ use tracing::trace;
 /// numerical wall (e.g. zero volatility or non-finite intermediate
 /// value), and [`PricingError::UnsupportedOptionType`] for exotic
 /// option types not handled by the closed form.
+#[instrument(skip(option), fields(
+    strike = %option.strike_price,
+    style = ?option.option_style,
+    side = ?option.side,
+))]
 pub fn black_scholes(option: &Options) -> Result<Decimal, PricingError> {
     let (d1, d2, expiry_time) = calculate_d1_d2_and_time(option)?;
     match option.option_type {

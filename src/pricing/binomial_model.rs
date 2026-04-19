@@ -12,6 +12,7 @@ use crate::{d2f, f2d};
 use positive::Positive;
 use rust_decimal::{Decimal, MathematicalOps};
 use std::num::NonZeroUsize;
+use tracing::instrument;
 
 #[cfg(test)]
 use positive::pos_or_panic;
@@ -110,6 +111,13 @@ pub struct BinomialPricingParams<'a> {
 /// when the induction step cannot read an intermediate node, and
 /// [`PricingError::Positive`] when any `Positive` construction
 /// downstream (e.g. strike × discount factor) underflows below zero.
+#[instrument(skip(params), fields(
+    strike = %params.strike,
+    asset = %params.asset,
+    steps = params.no_steps.get(),
+    style = ?*params.option_style,
+    side = ?*params.side,
+))]
 pub fn price_binomial(params: BinomialPricingParams) -> Result<Decimal, PricingError> {
     let mut info = PayoffInfo {
         spot: params.asset,
