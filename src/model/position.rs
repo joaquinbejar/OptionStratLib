@@ -756,9 +756,10 @@ impl TransactionAble for Position {
     /// Always returns a `TransactionError` — this operation is
     /// intentionally unsupported on `Position`.
     fn add_transaction(&mut self, _transaction: Transaction) -> Result<(), TransactionError> {
-        Err(TransactionError {
-            message: "add_transaction not implemented for Position".to_string(),
-        })
+        Err(TransactionError::not_implemented(
+            "add_transaction",
+            "Position",
+        ))
     }
 
     /// See [`Self::add_transaction`] — this method is intentionally
@@ -766,12 +767,13 @@ impl TransactionAble for Position {
     ///
     /// # Errors
     ///
-    /// Always returns a `TransactionError` — this operation is
-    /// intentionally unsupported on `Position`.
+    /// Always returns a `TransactionError::NotImplemented` —
+    /// this operation is intentionally unsupported on `Position`.
     fn get_transactions(&self) -> Result<Vec<Transaction>, TransactionError> {
-        Err(TransactionError {
-            message: "get_transactions not implemented for Position".to_string(),
-        })
+        Err(TransactionError::not_implemented(
+            "get_transactions",
+            "Position",
+        ))
     }
 }
 
@@ -818,10 +820,11 @@ mod tests_transaction_able_default {
         let mut position = make_position();
         let result = position.add_transaction(make_transaction());
         match result {
-            Err(TransactionError { message }) => {
-                assert!(message.contains("add_transaction not implemented"));
+            Err(TransactionError::NotImplemented { method, type_name }) => {
+                assert_eq!(method, "add_transaction");
+                assert_eq!(type_name, "Position");
             }
-            Ok(()) => panic!("expected TransactionError, got Ok"),
+            other => panic!("expected NotImplemented, got {other:?}"),
         }
     }
 
@@ -830,10 +833,11 @@ mod tests_transaction_able_default {
         let position = make_position();
         let result = position.get_transactions();
         match result {
-            Err(TransactionError { message }) => {
-                assert!(message.contains("get_transactions not implemented"));
+            Err(TransactionError::NotImplemented { method, type_name }) => {
+                assert_eq!(method, "get_transactions");
+                assert_eq!(type_name, "Position");
             }
-            Ok(_) => panic!("expected TransactionError, got Ok"),
+            other => panic!("expected NotImplemented, got {other:?}"),
         }
     }
 }

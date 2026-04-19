@@ -205,9 +205,9 @@ impl Transaction {
     /// A Result containing the PnL with unrealized values or an error
     fn calculate_open_pnl(&self) -> Result<PnL, TransactionError> {
         if self.option_type != OptionType::European {
-            return Err(TransactionError {
-                message: "Unsupported option type in Transaction".to_string(),
-            });
+            return Err(TransactionError::unsupported_option_type(
+                self.option_type.clone(),
+            ));
         }
 
         let realized = match self.side {
@@ -235,9 +235,9 @@ impl Transaction {
     /// A Result containing the PnL with realized values or an error
     fn calculate_closed_pnl(&self) -> Result<PnL, TransactionError> {
         if self.option_type != OptionType::European {
-            return Err(TransactionError {
-                message: "Unsupported option type in Transaction".to_string(),
-            });
+            return Err(TransactionError::unsupported_option_type(
+                self.option_type.clone(),
+            ));
         }
 
         let realized = match self.side {
@@ -965,11 +965,12 @@ mod tests_transaction_status_pnl {
         );
 
         let result = transaction.pnl();
-        assert!(result.is_err());
-        assert_eq!(
-            result.unwrap_err().message,
-            "Unsupported option type in Transaction"
-        );
+        match result {
+            Err(TransactionError::UnsupportedOptionType { option_type }) => {
+                assert_eq!(option_type, OptionType::American);
+            }
+            other => panic!("expected UnsupportedOptionType, got {other:?}"),
+        }
     }
 
     #[test]
@@ -989,10 +990,11 @@ mod tests_transaction_status_pnl {
         );
 
         let result = transaction.pnl();
-        assert!(result.is_err());
-        assert_eq!(
-            result.unwrap_err().message,
-            "Unsupported option type in Transaction"
-        );
+        match result {
+            Err(TransactionError::UnsupportedOptionType { option_type }) => {
+                assert_eq!(option_type, OptionType::American);
+            }
+            other => panic!("expected UnsupportedOptionType, got {other:?}"),
+        }
     }
 }
