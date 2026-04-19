@@ -139,10 +139,14 @@ pub enum DecimalError {
     /// `"pricing::black_scholes::discount_strike"`) so failures can be
     /// traced back to their kernel without walking the call stack.
     ///
-    /// The operands are captured verbatim for post-mortem debugging; they
-    /// are never re-emitted through the public API surface because
-    /// `DecimalError` already reaches every domain module through the
-    /// existing `#[from]` cascade.
+    /// The operands are captured verbatim for post-mortem debugging and
+    /// are included in the formatted error output (see the `#[error]`
+    /// template below). This `DecimalError` variant is propagated across
+    /// domain modules through the existing `#[from]` cascade, so the
+    /// operand values will appear in any log or wrapper-error string
+    /// produced downstream. Callers that need to redact them for
+    /// production logging should match on the `Overflow` variant
+    /// explicitly and reformat rather than rely on the default `Display`.
     #[error("Decimal {operation} overflow: {lhs} op {rhs}")]
     Overflow {
         /// Short static tag identifying the call-site.

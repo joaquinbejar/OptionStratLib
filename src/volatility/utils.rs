@@ -165,16 +165,8 @@ pub fn ewma_volatility(
         // innovation term.
         let persistent = d_mul(lambda, variance, "volatility::ewma::persistent")?;
         let innovation_weight = d_sub(Decimal::ONE, lambda, "volatility::ewma::innovation_weight")?;
-        let return_sq = d_mul(
-            return_value,
-            return_value,
-            "volatility::ewma::return_sq",
-        )?;
-        let innovation = d_mul(
-            innovation_weight,
-            return_sq,
-            "volatility::ewma::innovation",
-        )?;
+        let return_sq = d_mul(return_value, return_value, "volatility::ewma::return_sq")?;
+        let innovation = d_mul(innovation_weight, return_sq, "volatility::ewma::innovation")?;
         variance = d_add(persistent, innovation, "volatility::ewma::variance")?;
         let std_dev = variance
             .sqrt()
@@ -353,15 +345,12 @@ pub fn garch_volatility(
     // the rejection (negative variance) onto a readable
     // `VolatilityError::NumericalFailure` instead of silently
     // clamping to zero.
-    let to_positive_variance = |value: Decimal,
-                                context: &'static str|
-     -> Result<Positive, VolatilityError> {
-        Positive::new_decimal(value).map_err(|_| VolatilityError::NumericalFailure {
-            reason: format!(
-                "garch_volatility: negative variance at {context} ({value})"
-            ),
-        })
-    };
+    let to_positive_variance =
+        |value: Decimal, context: &'static str| -> Result<Positive, VolatilityError> {
+            Positive::new_decimal(value).map_err(|_| VolatilityError::NumericalFailure {
+                reason: format!("garch_volatility: negative variance at {context} ({value})"),
+            })
+        };
 
     // Seed the recursion with `r_0^2` via `d_mul` so a saturating
     // squaring cannot feed a silently capped value into the GARCH
@@ -376,11 +365,7 @@ pub fn garch_volatility(
     for &return_value in &returns[1..] {
         // GARCH(1, 1) variance recursion:
         // v' = ω + α · r² + β · v_prev.
-        let return_sq = d_mul(
-            return_value,
-            return_value,
-            "volatility::garch::return_sq",
-        )?;
+        let return_sq = d_mul(return_value, return_value, "volatility::garch::return_sq")?;
         let alpha_r2 = d_mul(alpha, return_sq, "volatility::garch::alpha_r2")?;
         let beta_v = d_mul(beta, variance.to_dec(), "volatility::garch::beta_v")?;
         let persistent = d_add(omega, alpha_r2, "volatility::garch::omega_plus_alpha")?;

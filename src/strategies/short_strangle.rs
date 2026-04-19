@@ -1133,22 +1133,25 @@ impl Optimizable for ShortStrangle {
 impl Profit for ShortStrangle {
     fn calculate_profit_at(&self, price: &Positive) -> Result<Decimal, PricingError> {
         let price = &Some(price);
+        // Compute each leg's P&L exactly once and reuse for both the
+        // `trace!` line and the checked `d_sum`, so the evaluator
+        // never observes two different snapshots of the same leg.
+        let call_pnl = self.short_call.pnl_at_expiration(price)?;
+        let put_pnl = self.short_put.pnl_at_expiration(price)?;
+        let total = d_sum(
+            &[call_pnl, put_pnl],
+            "strategies::short_strangle::profit_at",
+        )?;
         trace!(
             "Price: {:?} Strike: {} Call: {:.2} Strike: {} Put: {:.2} Profit: {:.2}",
             price,
             self.one_option().strike_price,
-            self.short_call.pnl_at_expiration(price)?,
+            call_pnl,
             self.short_put.option.strike_price,
-            self.short_put.pnl_at_expiration(price)?,
-            self.short_call.pnl_at_expiration(price)? + self.short_put.pnl_at_expiration(price)?
+            put_pnl,
+            total
         );
-        Ok(d_sum(
-            &[
-                self.short_call.pnl_at_expiration(price)?,
-                self.short_put.pnl_at_expiration(price)?,
-            ],
-            "strategies::short_strangle::profit_at",
-        )?)
+        Ok(total)
     }
 }
 

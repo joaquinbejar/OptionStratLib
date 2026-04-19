@@ -163,21 +163,13 @@ fn simple_chooser_price(option: &Options, choice_date_days: f64) -> Result<Decim
         dividend_discount_t,
         "pricing::chooser::price::leg_s_t_discounted",
     )?;
-    let leg_s_t = d_mul(
-        leg_s_t_discounted,
-        n_d1,
-        "pricing::chooser::price::leg_s_t",
-    )?;
+    let leg_s_t = d_mul(leg_s_t_discounted, n_d1, "pricing::chooser::price::leg_s_t")?;
     let leg_k_t_discounted = d_mul(
         k.to_dec(),
         discount_t,
         "pricing::chooser::price::leg_k_t_discounted",
     )?;
-    let leg_k_t = d_mul(
-        leg_k_t_discounted,
-        n_d2,
-        "pricing::chooser::price::leg_k_t",
-    )?;
+    let leg_k_t = d_mul(leg_k_t_discounted, n_d2, "pricing::chooser::price::leg_k_t")?;
     let leg_k_choice_discounted = d_mul(
         k.to_dec(),
         discount_choice,

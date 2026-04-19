@@ -340,13 +340,15 @@ fn price_compound(
     // overflow on either monetary product surfaces a tagged
     // `DecimalError::Overflow` instead of saturating silently before
     // the final `d_add` / `d_sub`.
-    let build_leg =
-        |base: Decimal, discount: Decimal, weight: Decimal, op_base: &'static str,
-         op_leg: &'static str|
-         -> Result<Decimal, PricingError> {
-            let discounted = d_mul(base, discount, op_base)?;
-            Ok(d_mul(discounted, weight, op_leg)?)
-        };
+    let build_leg = |base: Decimal,
+                     discount: Decimal,
+                     weight: Decimal,
+                     op_base: &'static str,
+                     op_leg: &'static str|
+     -> Result<Decimal, PricingError> {
+        let discounted = d_mul(base, discount, op_base)?;
+        Ok(d_mul(discounted, weight, op_leg)?)
+    };
 
     let price = if is_compound_call && is_underlying_call {
         // Call-on-Call
