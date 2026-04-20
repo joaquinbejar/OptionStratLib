@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.16.5] - 2026-04-20
+
+Documentation-only release. Refresh the crate-level rustdoc and
+mermaid diagrams so they describe the 0.16.x quality discipline
+(checked arithmetic, `NonFinite` guards, `NonZeroUsize` step counts,
+`deny(indexing_slicing)` / `deny(missing_docs)`, structured tracing,
+deterministic RNG, pricing-identity regression tests) and the
+post-migration example layout.
+
+### Changed
+
+- `src/lib.rs`: new "Quality & Discipline (0.16.x)" section with the
+  full list of crate-wide invariants; new **Arithmetic-Error Cascade**
+  mermaid diagram (`d_add` / `d_sum_iter` / `finite_decimal` →
+  `DecimalError::Overflow` / `PricingError::NonFinite` / …); new
+  **Observability** diagram showing the five instrumented public hot
+  paths.
+- Testing section updated to the current count (3760 unit + 205
+  doctest) and mentions the seeded-RNG helper and the pricing-identity
+  regression tests.
+- Examples section lists every sub-crate under `examples/` and the
+  correct `--manifest-path=` invocation (with a note about the
+  demo-friendly hourly grid on simulation-heavy examples).
+- `README.tpl` passthrough regenerates `README.md` with the updated
+  module docs.
+
+[Unreleased]: https://github.com/joaquinbejar/OptionStratLib/compare/v0.16.5...HEAD
+[0.16.5]: https://github.com/joaquinbejar/OptionStratLib/releases/tag/v0.16.5
+
 ## [0.16.4] - 2026-04-20
 
 ### Changed
@@ -22,7 +51,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   counts with `nz!(..)`; the `utils::deterministic_rng` doctest
   uses `rand::RngExt` for `random::<u64>()`.
 
-[Unreleased]: https://github.com/joaquinbejar/OptionStratLib/compare/v0.16.4...HEAD
 [0.16.4]: https://github.com/joaquinbejar/OptionStratLib/releases/tag/v0.16.4
 
 ## [0.16.3] - 2026-04-20
